@@ -117,6 +117,91 @@ class MappingSpec extends HibernateGormDatastoreSpec {
         thrown(MissingMethodException)
     }
 
+    // --- getOrInitializePropertyConfig (protected, same-package access) ---
+
+    void "getOrInitializePropertyConfig creates a new PropertyConfig when none exists"() {
+        given:
+        Mapping mapping = new Mapping()
+
+        when:
+        PropertyConfig pc = mapping.getOrInitializePropertyConfig('age')
+
+        then:
+        pc != null
+        mapping.columns['age'].is(pc)
+    }
+
+    void "getOrInitializePropertyConfig returns existing PropertyConfig when already set"() {
+        given:
+        Mapping mapping = new Mapping()
+        PropertyConfig existing = new PropertyConfig()
+        mapping.columns['age'] = existing
+
+        when:
+        PropertyConfig pc = mapping.getOrInitializePropertyConfig('age')
+
+        then:
+        pc.is(existing)
+    }
+
+    void "getOrInitializePropertyConfig clones global constraint when present"() {
+        given:
+        Mapping mapping = new Mapping()
+        PropertyConfig global = new PropertyConfig()
+        global.column('default_col')
+        mapping.columns['*'] = global
+
+        when:
+        PropertyConfig pc = mapping.getOrInitializePropertyConfig('someField')
+
+        then:
+        pc != null
+        !pc.is(global)                  // cloned, not the same instance
+        pc.firstColumnIsColumnCopy      // single-column clone sets the flag
+    }
+
+    // --- cloneGlobalConstraint (protected, same-package access) ---
+
+    void "cloneGlobalConstraint returns a clone with firstColumnIsColumnCopy set for single column"() {
+        given:
+        Mapping mapping = new Mapping()
+        PropertyConfig global = new PropertyConfig()
+        global.column('shared_col')
+        mapping.columns['*'] = global
+
+        when:
+        PropertyConfig cloned = mapping.cloneGlobalConstraint()
+
+        then:
+        cloned != null
+        !cloned.is(global)
+        cloned.firstColumnIsColumnCopy
+    }
+
+    // --- PropertyConfig.checkHasSingleColumn (protected, same-package access) ---
+
+    void "checkHasSingleColumn does not throw when only one column is configured"() {
+        given:
+        PropertyConfig pc = new PropertyConfig()
+        pc.column('my_col')
+
+        expect:
+        pc.checkHasSingleColumn()  // no exception
+    }
+
+    void "checkHasSingleColumn throws when multiple columns are configured"() {
+        given:
+        PropertyConfig pc = new PropertyConfig()
+        pc.columns << new ColumnConfig(name: 'col_a')
+        pc.columns << new ColumnConfig(name: 'col_b')
+
+        when:
+        pc.checkHasSingleColumn()
+
+        then:
+        thrown(RuntimeException)
+    }
+
 }
 
 // --- Test Domain Classes ---

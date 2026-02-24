@@ -167,6 +167,291 @@ class CriteriaMethodInvokerSpec extends Specification {
         _ * builder.getMetaClass() >> GroovySystem.metaClassRegistry.getMetaClass(HibernateCriteriaBuilder)
         thrown(MissingMethodException)
     }
+
+    // ─── trySimpleCriteria ─────────────────────────────────────────────────
+    // Both methods are protected, so the same-package spec calls them directly.
+
+    void "trySimpleCriteria: idEq delegates to builder.eq('id', value)"() {
+        when:
+        invoker.trySimpleCriteria('idEq', CriteriaMethods.ID_EQUALS, [42L] as Object[])
+
+        then:
+        1 * builder.eq('id', 42L)
+    }
+
+    void "trySimpleCriteria: isNull with String delegates to hibernateQuery.isNull"() {
+        when:
+        invoker.trySimpleCriteria('isNull', CriteriaMethods.IS_NULL, ['branch'] as Object[])
+
+        then:
+        1 * builder.calculatePropertyName('branch') >> 'branch'
+        1 * query.isNull('branch')
+    }
+
+    void "trySimpleCriteria: isNotNull with String delegates to hibernateQuery.isNotNull"() {
+        when:
+        invoker.trySimpleCriteria('isNotNull', CriteriaMethods.IS_NOT_NULL, ['branch'] as Object[])
+
+        then:
+        1 * builder.calculatePropertyName('branch') >> 'branch'
+        1 * query.isNotNull('branch')
+    }
+
+    void "trySimpleCriteria: isEmpty with String delegates to hibernateQuery.isEmpty"() {
+        when:
+        invoker.trySimpleCriteria('isEmpty', CriteriaMethods.IS_EMPTY, ['transactions'] as Object[])
+
+        then:
+        1 * builder.calculatePropertyName('transactions') >> 'transactions'
+        1 * query.isEmpty('transactions')
+    }
+
+    void "trySimpleCriteria: isNotEmpty with String delegates to hibernateQuery.isNotEmpty"() {
+        when:
+        invoker.trySimpleCriteria('isNotEmpty', CriteriaMethods.IS_NOT_EMPTY, ['transactions'] as Object[])
+
+        then:
+        1 * builder.calculatePropertyName('transactions') >> 'transactions'
+        1 * query.isNotEmpty('transactions')
+    }
+
+    void "trySimpleCriteria: non-String arg to isNull calls throwRuntimeException"() {
+        given:
+        builder.throwRuntimeException(_ as RuntimeException) >> { throw it[0] }
+
+        when:
+        invoker.trySimpleCriteria('isNull', CriteriaMethods.IS_NULL, [42] as Object[])
+
+        then:
+        thrown(IllegalArgumentException)
+    }
+
+    void "trySimpleCriteria: null value returns UNHANDLED without touching builder"() {
+        when:
+        def result = invoker.trySimpleCriteria('isNull', CriteriaMethods.IS_NULL, [null] as Object[])
+
+        then:
+        result != null  // UNHANDLED sentinel object
+        0 * builder.calculatePropertyName(_)
+    }
+
+    void "trySimpleCriteria: null method returns UNHANDLED"() {
+        when:
+        def result = invoker.trySimpleCriteria('unknown', null, ['x'] as Object[])
+
+        then:
+        result != null  // UNHANDLED sentinel
+        0 * builder._
+    }
+
+    // ─── tryPropertyCriteria ───────────────────────────────────────────────
+
+    void "tryPropertyCriteria: rlike delegates to builder.rlike"() {
+        when:
+        invoker.tryPropertyCriteria(CriteriaMethods.RLIKE, ['firstName', '^F.*'] as Object[])
+
+        then:
+        1 * builder.calculatePropertyName('firstName') >> 'firstName'
+        1 * builder.rlike('firstName', '^F.*')
+    }
+
+    void "tryPropertyCriteria: between delegates to builder.between"() {
+        when:
+        invoker.tryPropertyCriteria(CriteriaMethods.BETWEEN, ['balance', 10, 100] as Object[])
+
+        then:
+        1 * builder.calculatePropertyName('balance') >> 'balance'
+        1 * builder.between('balance', 10, 100)
+    }
+
+    void "tryPropertyCriteria: eq delegates to builder.eq"() {
+        when:
+        invoker.tryPropertyCriteria(CriteriaMethods.EQUALS, ['firstName', 'Fred'] as Object[])
+
+        then:
+        1 * builder.calculatePropertyName('firstName') >> 'firstName'
+        1 * builder.eq('firstName', 'Fred')
+    }
+
+    void "tryPropertyCriteria: eq with Map params delegates to builder.eq(prop, val, map)"() {
+        given:
+        def params = [ignoreCase: true]
+
+        when:
+        invoker.tryPropertyCriteria(CriteriaMethods.EQUALS, ['firstName', 'Fred', params] as Object[])
+
+        then:
+        1 * builder.calculatePropertyName('firstName') >> 'firstName'
+        1 * builder.eq('firstName', 'Fred', params)
+    }
+
+    void "tryPropertyCriteria: eqProperty delegates to builder.eqProperty"() {
+        when:
+        invoker.tryPropertyCriteria(CriteriaMethods.EQUALS_PROPERTY, ['firstName', 'lastName'] as Object[])
+
+        then:
+        1 * builder.calculatePropertyName('firstName') >> 'firstName'
+        1 * builder.eqProperty('firstName', 'lastName')
+    }
+
+    void "tryPropertyCriteria: gt delegates to builder.gt"() {
+        when:
+        invoker.tryPropertyCriteria(CriteriaMethods.GREATER_THAN, ['balance', 100] as Object[])
+
+        then:
+        1 * builder.calculatePropertyName('balance') >> 'balance'
+        1 * builder.gt('balance', 100)
+    }
+
+    void "tryPropertyCriteria: gtProperty delegates to builder.gtProperty"() {
+        when:
+        invoker.tryPropertyCriteria(CriteriaMethods.GREATER_THAN_PROPERTY, ['balance', 'balance'] as Object[])
+
+        then:
+        1 * builder.calculatePropertyName('balance') >> 'balance'
+        1 * builder.gtProperty('balance', 'balance')
+    }
+
+    void "tryPropertyCriteria: ge delegates to builder.ge"() {
+        when:
+        invoker.tryPropertyCriteria(CriteriaMethods.GREATER_THAN_OR_EQUAL, ['balance', 100] as Object[])
+
+        then:
+        1 * builder.calculatePropertyName('balance') >> 'balance'
+        1 * builder.ge('balance', 100)
+    }
+
+    void "tryPropertyCriteria: geProperty delegates to builder.geProperty"() {
+        when:
+        invoker.tryPropertyCriteria(CriteriaMethods.GREATER_THAN_OR_EQUAL_PROPERTY, ['balance', 'balance'] as Object[])
+
+        then:
+        1 * builder.calculatePropertyName('balance') >> 'balance'
+        1 * builder.geProperty('balance', 'balance')
+    }
+
+    void "tryPropertyCriteria: ilike delegates to builder.ilike"() {
+        when:
+        invoker.tryPropertyCriteria(CriteriaMethods.ILIKE, ['firstName', 'fr%'] as Object[])
+
+        then:
+        1 * builder.calculatePropertyName('firstName') >> 'firstName'
+        1 * builder.ilike('firstName', 'fr%')
+    }
+
+    void "tryPropertyCriteria: in with Collection delegates to builder.in"() {
+        given:
+        def names = ['Fred', 'Barney']
+
+        when:
+        invoker.tryPropertyCriteria(CriteriaMethods.IN, ['firstName', names] as Object[])
+
+        then:
+        1 * builder.calculatePropertyName('firstName') >> 'firstName'
+        1 * builder.in('firstName', names)
+    }
+
+    void "tryPropertyCriteria: in with Object[] delegates to builder.in"() {
+        given:
+        def names = ['Fred', 'Barney'] as Object[]
+
+        when:
+        invoker.tryPropertyCriteria(CriteriaMethods.IN, ['firstName', names] as Object[])
+
+        then:
+        1 * builder.calculatePropertyName('firstName') >> 'firstName'
+        1 * builder.in('firstName', names)
+    }
+
+    void "tryPropertyCriteria: lt delegates to builder.lt"() {
+        when:
+        invoker.tryPropertyCriteria(CriteriaMethods.LESS_THAN, ['balance', 500] as Object[])
+
+        then:
+        1 * builder.calculatePropertyName('balance') >> 'balance'
+        1 * builder.lt('balance', 500)
+    }
+
+    void "tryPropertyCriteria: ltProperty delegates to builder.ltProperty"() {
+        when:
+        invoker.tryPropertyCriteria(CriteriaMethods.LESS_THAN_PROPERTY, ['balance', 'balance'] as Object[])
+
+        then:
+        1 * builder.calculatePropertyName('balance') >> 'balance'
+        1 * builder.ltProperty('balance', 'balance')
+    }
+
+    void "tryPropertyCriteria: le delegates to builder.le"() {
+        when:
+        invoker.tryPropertyCriteria(CriteriaMethods.LESS_THAN_OR_EQUAL, ['balance', 500] as Object[])
+
+        then:
+        1 * builder.calculatePropertyName('balance') >> 'balance'
+        1 * builder.le('balance', 500)
+    }
+
+    void "tryPropertyCriteria: leProperty delegates to builder.leProperty"() {
+        when:
+        invoker.tryPropertyCriteria(CriteriaMethods.LESS_THAN_OR_EQUAL_PROPERTY, ['balance', 'balance'] as Object[])
+
+        then:
+        1 * builder.calculatePropertyName('balance') >> 'balance'
+        1 * builder.leProperty('balance', 'balance')
+    }
+
+    void "tryPropertyCriteria: like delegates to builder.like"() {
+        when:
+        invoker.tryPropertyCriteria(CriteriaMethods.LIKE, ['firstName', 'Fr%'] as Object[])
+
+        then:
+        1 * builder.calculatePropertyName('firstName') >> 'firstName'
+        1 * builder.like('firstName', 'Fr%')
+    }
+
+    void "tryPropertyCriteria: ne delegates to builder.ne"() {
+        when:
+        invoker.tryPropertyCriteria(CriteriaMethods.NOT_EQUAL, ['firstName', 'Fred'] as Object[])
+
+        then:
+        1 * builder.calculatePropertyName('firstName') >> 'firstName'
+        1 * builder.ne('firstName', 'Fred')
+    }
+
+    void "tryPropertyCriteria: neProperty delegates to builder.neProperty"() {
+        when:
+        invoker.tryPropertyCriteria(CriteriaMethods.NOT_EQUAL_PROPERTY, ['firstName', 'lastName'] as Object[])
+
+        then:
+        1 * builder.calculatePropertyName('firstName') >> 'firstName'
+        1 * builder.neProperty('firstName', 'lastName')
+    }
+
+    void "tryPropertyCriteria: sizeEq delegates to builder.sizeEq"() {
+        when:
+        invoker.tryPropertyCriteria(CriteriaMethods.SIZE_EQUALS, ['transactions', 2] as Object[])
+
+        then:
+        1 * builder.calculatePropertyName('transactions') >> 'transactions'
+        1 * builder.sizeEq('transactions', 2)
+    }
+
+    void "tryPropertyCriteria: null method returns UNHANDLED"() {
+        when:
+        def result = invoker.tryPropertyCriteria(null, ['x', 'y'] as Object[])
+
+        then:
+        result != null  // UNHANDLED sentinel
+        0 * builder._
+    }
+
+    void "tryPropertyCriteria: non-String first arg returns UNHANDLED"() {
+        when:
+        def result = invoker.tryPropertyCriteria(CriteriaMethods.EQUALS, [42, 'Fred'] as Object[])
+
+        then:
+        result != null  // UNHANDLED sentinel
+        0 * builder._
+    }
 }
 
 class InvokerAccount {

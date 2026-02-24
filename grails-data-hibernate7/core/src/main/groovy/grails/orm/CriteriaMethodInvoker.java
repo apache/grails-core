@@ -200,7 +200,7 @@ public class CriteriaMethodInvoker {
     return UNHANDLED;
   }
 
-  private Object trySimpleCriteria(String name, CriteriaMethods method, Object[] args) {
+  protected Object trySimpleCriteria(String name, CriteriaMethods method, Object[] args) {
     if (args.length != 1 || args[0] == null) {
       return UNHANDLED;
     }
@@ -230,7 +230,7 @@ public class CriteriaMethodInvoker {
     return UNHANDLED;
   }
 
-  private Object tryPropertyCriteria(CriteriaMethods method, Object[] args) {
+  protected Object tryPropertyCriteria(CriteriaMethods method, Object[] args) {
     if (method == null || args.length < 2 || !(args[0] instanceof String)) {
       return UNHANDLED;
     }
