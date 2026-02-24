@@ -15,32 +15,23 @@
  */
 package org.grails.orm.hibernate
 
-import org.codehaus.groovy.runtime.InvokerHelper
-
-import jakarta.persistence.GenerationType
-
-import org.hibernate.engine.spi.SessionFactoryImplementor
-import org.hibernate.generator.Assigned
-import org.hibernate.generator.Generator
-
 import grails.gorm.validation.CascadingValidator
 import groovy.transform.CompileStatic
 import jakarta.persistence.FlushModeType
+import org.codehaus.groovy.runtime.InvokerHelper
 import org.grails.datastore.gorm.GormInstanceApi
 import org.grails.datastore.gorm.GormValidateable
 import org.grails.datastore.mapping.core.Datastore
-import org.grails.datastore.mapping.engine.event.PersistEvent
+import org.grails.datastore.mapping.engine.event.ValidationEvent
 import org.grails.datastore.mapping.model.config.GormProperties
 import org.grails.datastore.mapping.model.types.Embedded
-import org.grails.datastore.mapping.reflect.ClassUtils
-import org.grails.datastore.mapping.reflect.EntityReflector
-import org.grails.datastore.mapping.engine.event.ValidationEvent
 import org.grails.datastore.mapping.model.PersistentEntity
 import org.grails.datastore.mapping.model.PersistentProperty
 import org.grails.datastore.mapping.model.types.Association
 import org.grails.datastore.mapping.model.types.ToOne
+import org.grails.datastore.mapping.reflect.ClassUtils
+import org.grails.datastore.mapping.reflect.EntityReflector
 import org.grails.orm.hibernate.cfg.GrailsHibernateUtil
-import org.grails.orm.hibernate.query.HibernateHqlQuery
 import org.grails.orm.hibernate.support.HibernateRuntimeUtils
 
 import org.hibernate.HibernateException
@@ -165,12 +156,7 @@ class HibernateGormInstanceApi<D> extends GormInstanceApi<D> {
     }
 
 
-    private boolean isAssignedId(PersistentEntity entity) {
-        return ((SessionFactoryImplementor) sessionFactory)
-                .getMappingMetamodel()
-                .getEntityDescriptor(entity.getName())
-                .getGenerator() instanceof Assigned
-    }
+
 
 
     private void runDeferredBinding() {
@@ -336,14 +322,6 @@ class HibernateGormInstanceApi<D> extends GormInstanceApi<D> {
         return true
     }
 
-    private boolean shouldInsert(Map arguments) {
-        ClassUtils.getBooleanFromMap(ARGUMENT_INSERT, arguments)
-    }
-
-    private boolean shouldMerge(Map arguments) {
-        ClassUtils.getBooleanFromMap(ARGUMENT_MERGE, arguments)
-    }
-
     protected boolean shouldFlush(Map map) {
         if (map?.containsKey(ARGUMENT_FLUSH)) {
             return ClassUtils.getBooleanFromMap(ARGUMENT_FLUSH, map)
@@ -389,23 +367,6 @@ class HibernateGormInstanceApi<D> extends GormInstanceApi<D> {
 
     static void resetInsertActive() {
         insertActiveThreadLocal.remove();
-    }
-
-    protected void incrementVersion(Object target) {
-        if (target instanceof GroovyObject) {
-            GroovyObject groovyTarget = (GroovyObject) target
-            MetaProperty versionProp = groovyTarget.metaClass.hasProperty(groovyTarget, GormProperties.VERSION)
-            if (versionProp != null) {
-                Object version = groovyTarget.getProperty(GormProperties.VERSION)
-                if (version instanceof Long) {
-                    groovyTarget.setProperty(GormProperties.VERSION, ++((Long) version))
-                }
-            }
-        }
-    }
-
-    SessionFactory getSessionFactory() {
-        return this.sessionFactory
     }
 
     /**

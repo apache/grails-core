@@ -2,16 +2,14 @@
 package org.grails.orm.hibernate
 
 import grails.gorm.specs.HibernateGormDatastoreSpec
-import grails.gorm.specs.entities.Club
 import grails.persistence.Entity
 import org.springframework.validation.Errors
 
 class HibernateGormInstanceApiSpec extends HibernateGormDatastoreSpec {
 
     void setupSpec() {
-        manager.addAllDomainClasses([HibernateGormInstanceApiSpecPerson])
+        manager.addAllDomainClasses([HibernateGormInstanceApiSpecPerson, HibernateGormInstanceApiSpecJob])
     }
-
 
     def setup() {
         new HibernateGormInstanceApiSpecPerson(firstName: "Fred", lastName: "Flintstone", age: 40).save(flush: true)
@@ -156,6 +154,132 @@ class HibernateGormInstanceApiSpec extends HibernateGormDatastoreSpec {
         expect:
         person.errors instanceof Errors
         person.errors.hasErrors()
+    }
+
+    void "test save with validate:false skips validation"() {
+        given:
+        def person = new HibernateGormInstanceApiSpecPerson(firstName: "Betty", lastName: "Rubble", age: 36)
+        when:
+        def result = person.save(validate: false)
+        then:
+        result != null
+        result.id != null
+    }
+
+    void "test save with validate:true explicit"() {
+        given:
+        def person = new HibernateGormInstanceApiSpecPerson(firstName: "Betty", lastName: "Rubble", age: 36)
+        when:
+        def result = person.save(validate: true)
+        then:
+        result != null
+    }
+
+    void "test save with deepValidate:false"() {
+        given:
+        def person = new HibernateGormInstanceApiSpecPerson(firstName: "Betty", lastName: "Rubble", age: 36)
+        when:
+        def result = person.save(deepValidate: false)
+        then:
+        result != null
+        result.id != null
+    }
+
+    void "test save with explicit flush:false"() {
+        given:
+        def person = new HibernateGormInstanceApiSpecPerson(firstName: "Betty", lastName: "Rubble", age: 36)
+        when:
+        def result = person.save(flush: false)
+        then:
+        result != null
+    }
+
+    void "test merge with params"() {
+        given:
+        def person = HibernateGormInstanceApiSpecPerson.findByFirstName("Fred")
+        person.lastName = "Smith"
+        when:
+        def merged = person.merge(flush: true)
+        then:
+        merged.lastName == "Smith"
+    }
+
+    void "test isDirty returns false for new unsaved instance"() {
+        given:
+        def person = new HibernateGormInstanceApiSpecPerson(firstName: "New", lastName: "Person", age: 25)
+        expect:
+        !person.isDirty()
+    }
+
+    void "test isDirty(field) returns false for new unsaved instance"() {
+        given:
+        def person = new HibernateGormInstanceApiSpecPerson(firstName: "New", lastName: "Person", age: 25)
+        expect:
+        !person.isDirty("firstName")
+    }
+
+    void "test isDirty(field) returns false for field that has not changed"() {
+        given:
+        def person = HibernateGormInstanceApiSpecPerson.findByFirstName("Fred")
+        person.lastName = "Changed"
+        expect:
+        !person.isDirty("firstName")
+        person.isDirty("lastName")
+    }
+
+    void "test getDirtyPropertyNames returns empty list for new unsaved instance"() {
+        given:
+        def person = new HibernateGormInstanceApiSpecPerson(firstName: "New", lastName: "Person", age: 25)
+        expect:
+        person.getDirtyPropertyNames() == []
+    }
+
+    void "test getPersistentValue returns null for new unsaved instance"() {
+        given:
+        def person = new HibernateGormInstanceApiSpecPerson(firstName: "New", lastName: "Person", age: 25)
+        expect:
+        person.getPersistentValue("firstName") == null
+    }
+
+    void "test getPersistentValue returns null for unknown field name"() {
+        given:
+        def person = HibernateGormInstanceApiSpecPerson.findByFirstName("Fred")
+        expect:
+        person.getPersistentValue("nonExistentField") == null
+    }
+
+    void "test save succeeds on entity with ToOne association already in session"() {
+        given:
+        def person = HibernateGormInstanceApiSpecPerson.findByFirstName("Fred")
+        def job = new HibernateGormInstanceApiSpecJob(title: "Programmer", person: person)
+        when:
+        def result = job.save(flush: true)
+        then:
+        result != null
+        result.id != null
+    }
+
+    void "test save failure on entity with ToOne association calls handleValidationError"() {
+        given:
+        def person = HibernateGormInstanceApiSpecPerson.findByFirstName("Fred")
+        def job = new HibernateGormInstanceApiSpecJob(title: null, person: person)
+        when:
+        def result = job.save()
+        then:
+        result == null
+        job.errors.hasErrors()
+    }
+}
+
+@Entity
+class HibernateGormInstanceApiSpecJob {
+    String title
+    HibernateGormInstanceApiSpecPerson person
+
+    static belongsTo = [person: HibernateGormInstanceApiSpecPerson]
+
+    static constraints = {
+        title nullable: false
     }
 }
 
