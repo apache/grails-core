@@ -20,16 +20,13 @@ package org.grails.orm.hibernate.cfg.domainbinding.binder;
 
 import jakarta.annotation.Nonnull;
 import org.grails.datastore.mapping.model.types.Association;
-import org.grails.orm.hibernate.cfg.PersistentEntityNamingStrategy;
 import org.grails.orm.hibernate.cfg.domainbinding.hibernate.GrailsHibernatePersistentProperty;
 import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernateEmbeddedProperty;
 import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernateManyToOneProperty;
 import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernateOneToOneProperty;
 import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernateToManyProperty;
-import org.grails.orm.hibernate.cfg.domainbinding.util.ColumnNameForPropertyAndPathFetcher;
-import org.grails.orm.hibernate.cfg.domainbinding.util.PropertyFromValueCreator;
+
 import org.hibernate.boot.spi.InFlightMetadataCollector;
-import org.hibernate.boot.spi.MetadataBuildingContext;
 import org.hibernate.mapping.PersistentClass;
 import org.hibernate.mapping.Table;
 import org.hibernate.mapping.Value;
@@ -40,36 +37,26 @@ public class GrailsPropertyBinder {
 
   private static final Logger LOG = LoggerFactory.getLogger(GrailsPropertyBinder.class);
 
-  private final MetadataBuildingContext metadataBuildingContext;
   private final EnumTypeBinder enumTypeBinder;
   private final ComponentBinder componentBinder;
   private final CollectionBinder collectionBinder;
   private final SimpleValueBinder simpleValueBinder;
-  private final ColumnNameForPropertyAndPathFetcher columnNameForPropertyAndPathFetcher;
   private final OneToOneBinder oneToOneBinder;
   private final ManyToOneBinder manyToOneBinder;
-  private final PropertyFromValueCreator propertyFromValueCreator;
 
   public GrailsPropertyBinder(
-      MetadataBuildingContext metadataBuildingContext,
-      PersistentEntityNamingStrategy namingStrategy,
       EnumTypeBinder enumTypeBinder,
       ComponentBinder componentBinder,
       CollectionBinder collectionBinder,
       SimpleValueBinder simpleValueBinder,
-      ColumnNameForPropertyAndPathFetcher columnNameForPropertyAndPathFetcher,
       OneToOneBinder oneToOneBinder,
-      ManyToOneBinder manyToOneBinder,
-      PropertyFromValueCreator propertyFromValueCreator) {
-    this.metadataBuildingContext = metadataBuildingContext;
+      ManyToOneBinder manyToOneBinder) {
     this.enumTypeBinder = enumTypeBinder;
     this.componentBinder = componentBinder;
     this.collectionBinder = collectionBinder;
     this.simpleValueBinder = simpleValueBinder;
-    this.columnNameForPropertyAndPathFetcher = columnNameForPropertyAndPathFetcher;
     this.oneToOneBinder = oneToOneBinder;
     this.manyToOneBinder = manyToOneBinder;
-    this.propertyFromValueCreator = propertyFromValueCreator;
   }
 
   public Value bindProperty(

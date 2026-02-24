@@ -151,16 +151,16 @@ class GrailsPropertyBinderSpec extends HibernateGormDatastoreSpec {
                 componentUpdater
         )
         GrailsPropertyBinder propertyBinder = new GrailsPropertyBinder(
-                metadataBuildingContext,
-                namingStrategy,
+
+
                 enumTypeBinderToUse,
                 componentBinder,
                 collectionBinder,
-                simpleValueBinder,
-                columnNameForPropertyAndPathFetcher,
+                simpleValueBinder
+                ,
                 oneToOneBinder,
-                manyToOneBinder,
-                propertyFromValueCreator
+                manyToOneBinder
+
         )
         componentBinder.setGrailsPropertyBinder(propertyBinder)
         CompositeIdBinder compositeIdBinder = new CompositeIdBinder(metadataBuildingContext, componentBinder, componentUpdater, propertyBinder);
@@ -503,16 +503,16 @@ class GrailsPropertyBinderSpec extends HibernateGormDatastoreSpec {
 
         // Instantiate GrailsPropertyBinder using the protected constructor with necessary mocks
         def propertyBinder = new GrailsPropertyBinder(
-                metadataBuildingContext,
-                namingStrategy,
+
+
                 enumTypeBinder,
                 componentBinder,
                 collectionBinder,
-                simpleValueBinder,
-                columnNameForPropertyAndPathFetcher,
+                simpleValueBinder
+                ,
                 oneToOneBinder,
-                manyToOneBinder,
-                propertyFromValueCreator
+                manyToOneBinder
+
         )
 
         def mappings = Mock(org.hibernate.boot.spi.InFlightMetadataCollector)

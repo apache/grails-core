@@ -92,16 +92,16 @@ class MapSecondPassBinderSpec extends HibernateGormDatastoreSpec {
         )
 
         GrailsPropertyBinder propertyBinder = new GrailsPropertyBinder(
-                metadataBuildingContext,
-                namingStrategy,
+
+
                 enumTypeBinderToUse,
                 componentBinder,
                 collectionBinder,
-                simpleValueBinder,
-                columnNameForPropertyAndPathFetcher,
+                simpleValueBinder
+                ,
                 oneToOneBinder,
-                manyToOneBinder,
-                propertyFromValueCreator
+                manyToOneBinder
+
         )
         CompositeIdBinder compositeIdBinder = new CompositeIdBinder(metadataBuildingContext, componentBinder, componentUpdater, propertyBinder)
         PropertyBinder propertyBinderHelper = new PropertyBinder()

@@ -163,16 +163,13 @@ public class GrailsDomainBinder implements AdditionalMappingContributor, TypeCon
 
     GrailsPropertyBinder grailsPropertyBinder =
         new GrailsPropertyBinder(
-            metadataBuildingContext,
-            namingStrategy,
-            enumTypeBinder,
+                enumTypeBinder,
             componentBinder,
             collectionBinder,
             simpleValueBinder,
-            columnNameForPropertyAndPathFetcher,
-            oneToOneBinder,
-            manyToOneBinder,
-            propertyFromValueCreator);
+                oneToOneBinder,
+            manyToOneBinder
+        );
     componentBinder.setGrailsPropertyBinder(grailsPropertyBinder);
     CompositeIdBinder compositeIdBinder =
         new CompositeIdBinder(
