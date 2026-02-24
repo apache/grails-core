@@ -73,9 +73,9 @@ class WhereQueryVariableScopeService {
     }
 
     /**
-     * Non-transactional baseline - same query pattern works without
-     * @Transactional because VariableScopeVisitor is not re-run.
-     * Uses @Transactional(readOnly = true) to verify read-only variant.
+     * Read-only transactional variant - verifies the fix also works with
+     * @Transactional(readOnly = true) where VariableScopeVisitor is
+     * similarly re-run by the transactional transform.
      */
     @Transactional(readOnly = true)
     List<Book> findBooksByTitleReadOnly(String title) {
