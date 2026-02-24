@@ -19,9 +19,6 @@
 package org.apache.grails.data.testing.tck.tests
 
 import spock.lang.Requires
-
-
-import org.apache.grails.data.testing.tck.base.GrailsDataTckSpec
 import org.apache.grails.data.testing.tck.domains.DataServiceRoutingProduct
 import org.apache.grails.data.testing.tck.domains.DataServiceRoutingProductDataService
 import org.apache.grails.data.testing.tck.domains.DataServiceRoutingProductService
