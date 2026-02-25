@@ -18,22 +18,8 @@
  */
 package org.grails.orm.hibernate.cfg.domainbinding.hibernate;
 
-import java.beans.PropertyDescriptor;
-import org.grails.datastore.mapping.model.MappingContext;
-import org.grails.datastore.mapping.model.PersistentEntity;
-import org.grails.datastore.mapping.model.types.mapping.OneToOneWithMapping;
-import org.grails.orm.hibernate.cfg.PropertyConfig;
-
-/** Hibernate implementation of {@link org.grails.datastore.mapping.model.types.OneToOne} */
-public class HibernateOneToOneProperty extends OneToOneWithMapping<PropertyConfig>
-    implements HibernateToOneProperty {
-  public HibernateOneToOneProperty(
-      PersistentEntity entity, MappingContext context, PropertyDescriptor property) {
-    super(entity, context, property);
-  }
-
-  @Override
-  public GrailsHibernatePersistentEntity getHibernateAssociatedEntity() {
-    return (GrailsHibernatePersistentEntity) super.getAssociatedEntity();
-  }
-}
+/**
+ * Marker interface for Hibernate to-one associations ({@link HibernateManyToOneProperty} and
+ * {@link HibernateOneToOneProperty}). Parallel to {@link HibernateToManyProperty}.
+ */
+public interface HibernateToOneProperty extends HibernateAssociation {}

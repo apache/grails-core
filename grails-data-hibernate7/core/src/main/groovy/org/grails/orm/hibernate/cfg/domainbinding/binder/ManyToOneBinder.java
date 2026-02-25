@@ -20,7 +20,6 @@ package org.grails.orm.hibernate.cfg.domainbinding.binder;
 
 import static org.grails.orm.hibernate.cfg.domainbinding.binder.GrailsDomainBinder.FOREIGN_KEY_SUFFIX;
 
-import org.grails.datastore.mapping.model.types.Association;
 import org.grails.orm.hibernate.cfg.ColumnConfig;
 import org.grails.orm.hibernate.cfg.CompositeIdentity;
 import org.grails.orm.hibernate.cfg.JoinTable;
@@ -29,6 +28,8 @@ import org.grails.orm.hibernate.cfg.PersistentEntityNamingStrategy;
 import org.grails.orm.hibernate.cfg.PropertyConfig;
 import org.grails.orm.hibernate.cfg.domainbinding.hibernate.GrailsHibernatePersistentEntity;
 import org.grails.orm.hibernate.cfg.domainbinding.hibernate.GrailsHibernatePersistentProperty;
+import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernateAssociation;
+import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernateToOneProperty;
 import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernateManyToManyProperty;
 import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernateOneToOneProperty;
 import org.grails.orm.hibernate.cfg.domainbinding.util.SimpleValueColumnFetcher;
@@ -79,26 +80,23 @@ public class ManyToOneBinder {
   /** Binds a many-to-one relationship to the */
   @SuppressWarnings("unchecked")
   public ManyToOne bindManyToOne(
-      Association property, org.hibernate.mapping.Table table, String path) {
+      HibernateAssociation property, org.hibernate.mapping.Table table, String path) {
     ManyToOne manyToOne = new ManyToOne(metadataBuildingContext, table);
-    GrailsHibernatePersistentProperty hibernateProperty =
-        (GrailsHibernatePersistentProperty) property;
     manyToOneValuesBinder.bindManyToOneValues(property, manyToOne);
     GrailsHibernatePersistentEntity refDomainClass =
-        (GrailsHibernatePersistentEntity)
-            (property instanceof HibernateManyToManyProperty
-                ? property.getOwner()
-                : property.getAssociatedEntity());
+        (property instanceof HibernateManyToManyProperty
+            ? property.getHibernateOwner()
+            : property.getHibernateAssociatedEntity());
     Mapping mapping = refDomainClass.getMappedForm();
 
     boolean isComposite = mapping != null && mapping.hasCompositeIdentifier();
     if (isComposite) {
       CompositeIdentity ci = (CompositeIdentity) mapping.getIdentity();
       compositeIdentifierToManyToOneBinder.bindCompositeIdentifierToManyToOne(
-          hibernateProperty, manyToOne, ci, refDomainClass, path);
+          property, manyToOne, ci, refDomainClass, path);
     } else {
       if (property.isCircular() && (property instanceof HibernateManyToManyProperty)) {
-        PropertyConfig pc = hibernateProperty.getMappedForm();
+        PropertyConfig pc = property.getMappedForm();
 
         if (mapping != null && pc.getColumns().isEmpty()) {
           mapping.getColumns().put(property.getName(), pc);
@@ -112,15 +110,15 @@ public class ManyToOneBinder {
           pc.setJoinTable(jt);
         }
         // set type
-        simpleValueBinder.bindSimpleValue(hibernateProperty, null, manyToOne, path);
+        simpleValueBinder.bindSimpleValue(property, null, manyToOne, path);
       } else {
         // bind column
         // set type
-        simpleValueBinder.bindSimpleValue(hibernateProperty, null, manyToOne, path);
+        simpleValueBinder.bindSimpleValue(property, null, manyToOne, path);
       }
     }
 
-    PropertyConfig config = hibernateProperty.getMappedForm();
+    PropertyConfig config = property.getMappedForm();
     boolean isOneToOne = property instanceof HibernateOneToOneProperty;
     boolean notComposite = !isComposite;
     if (isOneToOne && notComposite) {
@@ -132,7 +130,9 @@ public class ManyToOneBinder {
       if (!config.isUniqueWithinGroup()) {
         c.setUnique(config.isUnique());
       } else {
-        if (property.isBidirectional() && property.getInverseSide().isHasOne()) {
+        if (property.isBidirectional()
+            && property.getHibernateInverseSide() instanceof HibernateToOneProperty inverseSide
+            && inverseSide.isHibernateOneToOne()) {
           c.setUnique(true);
         }
       }

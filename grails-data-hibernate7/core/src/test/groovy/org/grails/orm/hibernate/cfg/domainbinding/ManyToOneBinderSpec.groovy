@@ -1,7 +1,8 @@
 package org.grails.orm.hibernate.cfg.domainbinding
 
 import grails.gorm.specs.HibernateGormDatastoreSpec
-import org.grails.datastore.mapping.model.types.Association
+import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernateAssociation
+import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernateToOneProperty
 import org.grails.orm.hibernate.cfg.CompositeIdentity
 import org.grails.orm.hibernate.cfg.domainbinding.hibernate.GrailsHibernatePersistentEntity
 import org.grails.orm.hibernate.cfg.domainbinding.hibernate.GrailsHibernatePersistentProperty
@@ -43,16 +44,16 @@ class ManyToOneBinderSpec extends HibernateGormDatastoreSpec {
         }
         def propertyConfig = new PropertyConfig()
 
-        association.getAssociatedEntity() >> refDomainClass
+        association.getHibernateAssociatedEntity() >> refDomainClass
         association.getMappedForm() >> propertyConfig
         mapping.setIdentity(hasCompositeId ? new CompositeIdentity() : null)
 
         when:
-        def result = binder.bindManyToOne(association as Association, null, path)
+        def result = binder.bindManyToOne(association as HibernateAssociation, null, path)
 
         then:
         result instanceof ManyToOne
-        1 * manyToOneValuesBinder.bindManyToOneValues(association as Association, _ as ManyToOne)
+        1 * manyToOneValuesBinder.bindManyToOneValues(association as HibernateAssociation, _ as ManyToOne)
         compositeBinderCalls * compositeBinder.bindCompositeIdentifierToManyToOne(association as GrailsHibernatePersistentProperty, _ as ManyToOne, _, refDomainClass, path)
         simpleValueBinderCalls * simpleValueBinder.bindSimpleValue(association as GrailsHibernatePersistentProperty, null, _ as ManyToOne, path)
 
@@ -82,16 +83,17 @@ class ManyToOneBinderSpec extends HibernateGormDatastoreSpec {
 
         property.isCircular() >> true
         property.getOwner() >> ownerEntity
+        property.getHibernateOwner() >> ownerEntity
         property.getName() >> "myCircularProp"
         property.getMappedForm() >> propertyConfig
         namingStrategy.resolveColumnName("myCircularProp") >> "my_circular_prop"
 
         when:
-        def result = binder.bindManyToOne(property as Association, null, "/test")
+        def result = binder.bindManyToOne(property as HibernateAssociation, null, "/test")
 
         then:
         result instanceof ManyToOne
-        1 * manyToOneValuesBinder.bindManyToOneValues(property as Association, _ as ManyToOne)
+        1 * manyToOneValuesBinder.bindManyToOneValues(property as HibernateAssociation, _ as ManyToOne)
         1 * simpleValueBinder.bindSimpleValue(property as GrailsHibernatePersistentProperty, null, _ as ManyToOne, "/test")
         def resultConfig = mapping.getColumns().get("myCircularProp")
         resultConfig != null
@@ -116,9 +118,9 @@ class ManyToOneBinderSpec extends HibernateGormDatastoreSpec {
         }
         def propertyConfig = Mock(PropertyConfig)
         def column = new Column('test')
-        def inverseSide = Mock(Association)
+        def inverseSide = Mock(HibernateToOneProperty)
 
-        property.getAssociatedEntity() >> refDomainClass
+        property.getHibernateAssociatedEntity() >> refDomainClass
         mapping.setIdentity(null)
         property.getMappedForm() >> propertyConfig
         columnFetcher.getColumnForSimpleValue(_ as ManyToOne) >> column
@@ -126,11 +128,11 @@ class ManyToOneBinderSpec extends HibernateGormDatastoreSpec {
         propertyConfig.isUnique() >> isUnique
         propertyConfig.isUniqueWithinGroup() >> isUniqueWithinGroup
         property.isBidirectional() >> isBidirectional
-        property.getInverseSide() >> inverseSide
-        inverseSide.isHasOne() >> isInverseHasOne
+        property.getHibernateInverseSide() >> inverseSide
+        inverseSide.isHibernateOneToOne() >> isInverseHasOne
 
         when:
-        def result = binder.bindManyToOne(property as Association, null, "/test")
+        def result = binder.bindManyToOne(property as HibernateAssociation, null, "/test")
 
         then:
         result.isAlternateUniqueKey()
@@ -166,13 +168,13 @@ class ManyToOneBinderSpec extends HibernateGormDatastoreSpec {
         }
         def propertyConfig = new PropertyConfig()
 
-        property.getAssociatedEntity() >> refDomainClass
+        property.getHibernateAssociatedEntity() >> refDomainClass
         mapping.setIdentity(null)
         property.getMappedForm() >> propertyConfig
         columnFetcher.getColumnForSimpleValue(_ as ManyToOne) >> null
 
         when:
-        binder.bindManyToOne(property as Association, null, "/test")
+        binder.bindManyToOne(property as HibernateAssociation, null, "/test")
 
         then:
         thrown(MappingException)

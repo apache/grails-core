@@ -19,9 +19,8 @@
 package org.grails.orm.hibernate.cfg.domainbinding.binder;
 
 import java.util.Optional;
-import org.grails.datastore.mapping.model.types.Association;
 import org.grails.orm.hibernate.cfg.PropertyConfig;
-import org.grails.orm.hibernate.cfg.domainbinding.hibernate.GrailsHibernatePersistentProperty;
+import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernateAssociation;
 import org.hibernate.FetchMode;
 import org.hibernate.mapping.ManyToOne;
 
@@ -29,8 +28,8 @@ public class ManyToOneValuesBinder {
 
   public ManyToOneValuesBinder() {}
 
-  public void bindManyToOneValues(Association property, ManyToOne manyToOne) {
-    PropertyConfig config = ((GrailsHibernatePersistentProperty) property).getMappedForm();
+  public void bindManyToOneValues(HibernateAssociation property, ManyToOne manyToOne) {
+    PropertyConfig config = property.getMappedForm();
 
     var fetchMode = Optional.ofNullable(config.getFetchMode()).orElse(FetchMode.DEFAULT);
     manyToOne.setFetchMode(fetchMode);

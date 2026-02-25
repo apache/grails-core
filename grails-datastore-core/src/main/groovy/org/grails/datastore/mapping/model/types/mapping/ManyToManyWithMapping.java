@@ -43,10 +43,6 @@ public class ManyToManyWithMapping<T extends Property> extends ManyToMany<T> imp
         super(entity, context, property);
     }
 
-    public ManyToManyWithMapping(PersistentEntity entity, MappingContext context, PropertyDescriptor property, PropertyMapping<T> propertyMapping) {
-        super(entity, context, property);
-        this.propertyMapping = propertyMapping;
-    }
 
     @Override
     public PropertyMapping<T> getMapping() {

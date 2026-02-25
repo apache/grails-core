@@ -27,7 +27,7 @@ import org.springframework.util.StringUtils;
 
 /** Marker interface for Hibernate to-many associations */
 public interface HibernateToManyProperty
-    extends PropertyWithMapping<PropertyConfig>, GrailsHibernatePersistentProperty {
+    extends PropertyWithMapping<PropertyConfig>, HibernateAssociation {
 
   default boolean hasSort() {
     return StringUtils.hasText(getMappedForm().getSort());

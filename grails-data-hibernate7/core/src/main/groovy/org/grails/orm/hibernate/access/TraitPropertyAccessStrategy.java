@@ -114,7 +114,7 @@ public class TraitPropertyAccessStrategy implements PropertyAccessStrategy {
     }
   }
 
-  private String getTraitFieldName(Class traitClass, String fieldName) {
+  protected String getTraitFieldName(Class traitClass, String fieldName) {
     return traitClass.getName().replace('.', '_') + "__" + fieldName;
   }
 

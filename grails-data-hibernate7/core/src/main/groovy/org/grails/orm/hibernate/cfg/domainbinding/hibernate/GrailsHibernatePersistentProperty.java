@@ -48,9 +48,9 @@ public interface GrailsHibernatePersistentProperty extends PersistentProperty<Pr
     return this instanceof Association<?> association && association.isBidirectional();
   }
 
-  default GrailsHibernatePersistentProperty getHibernateInverseSide() {
+  default HibernateAssociation getHibernateInverseSide() {
     return this instanceof Association<?> association
-        ? (GrailsHibernatePersistentProperty) association.getInverseSide()
+        ? (HibernateAssociation) association.getInverseSide()
         : null;
   }
 
