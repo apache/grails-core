@@ -70,17 +70,32 @@ Full detail: [`GORM-QUERY-SAFETY-AUDIT.md`](GORM-QUERY-SAFETY-AUDIT.md)
 
 ## Test Coverage
 
-| Package | Coverage | Status |
-|---------|----------|--------|
-| `domainbinding/binder` | ~94% instructions | ✅ |
-| `domainbinding/util` | ~93% instructions | ✅ |
-| `compiler` | ~93% instructions | ✅ |
-| `query` | ~84% instructions | ✅ |
-| `grails.orm` | ~79% instructions | ⚠️ |
-| `org.grails.orm.hibernate` | ~74% instructions / ~54% branches | ⚠️ |
-| `transaction` | 0% | ❌ No tests at all |
-| `datasource` | 0% | ❌ No tests at all |
-| **Overall** | **80% instructions / 66% branches** | ⚠️ |
+> Last measured: 2026-02-24 (after MultiTenantEventListenerSpec, TraitPropertyAccessStrategySpec, HqlQueryContextSpec)
+
+| Package | Instructions | Branches | Status |
+|---------|-------------|----------|--------|
+| `org.hibernate.proxy` | 100% | 100% | ✅ |
+| `grails.gorm.hibernate.mapping` | 98% | 50% | ✅ |
+| `org.grails.orm.hibernate.cfg.domainbinding.collectionType` | 97% | N/A | ✅ |
+| `org.grails.orm.hibernate.cfg.domainbinding.binder` | 95% | 85% | ✅ |
+| `org.grails.orm.hibernate.cfg.domainbinding.util` | 93% | 83% | ✅ |
+| `org.grails.orm.hibernate.compiler` | 93% | 53% | ✅ |
+| `org.grails.orm.hibernate.cfg.domainbinding.generator` | 90% | 59% | ✅ |
+| `org.grails.orm.hibernate.cfg.domainbinding.hibernate` | 88% | 74% | ✅ |
+| `org.grails.orm.hibernate.dirty` | 88% | 76% | ✅ |
+| `org.grails.orm.hibernate.query` | 87% | 77% | ✅ |
+| `org.grails.orm.hibernate.event.listener` | 84% | 59% | ✅ |
+| `grails.orm` | 80% | 69% | ✅ |
+| `org.grails.orm.hibernate.connections` | 78% | 59% | ⚠️ |
+| `org.grails.orm.hibernate.cfg.domainbinding.secondpass` | 76% | 56% | ⚠️ |
+| `org.grails.orm.hibernate.multitenancy` | 76% | 79% | ⚠️ |
+| `org.grails.orm.hibernate` | 75% | 54% | ⚠️ |
+| `org.grails.orm.hibernate.access` | 73% | 56% | ⚠️ |
+| `org.grails.orm.hibernate.cfg` | 72% | 64% | ⚠️ |
+| `org.grails.orm.hibernate.proxy` | 62% | 61% | ⚠️ |
+| `org.grails.orm.hibernate.support` | 61% | 65% | ⚠️ |
+| `org.grails.orm.hibernate.exceptions` | 11% | N/A | ℹ️ No functional code — 4 exception classes (constructors only); low coverage expected |
+| **Overall** | **81%** | **68%** | ⚠️ |
 
 ---
 
@@ -94,4 +109,4 @@ Full detail: [`GORM-QUERY-SAFETY-AUDIT.md`](GORM-QUERY-SAFETY-AUDIT.md)
 | 1.4 | Static compilation — core module | ✅ 94% |
 | 2.6 | GORM query safety audit | ✅ Done |
 | 4.1 | `methodMissing` elimination | ⚠️ 8.1+ scope |
-| — | `transaction`/`datasource` test coverage | ❌ 0% |
+| — | `transaction`/`datasource` test coverage | ❌ 0% (+ `exceptions` 11%) |
