@@ -433,6 +433,14 @@ class PropertyConfig extends Property {
         return columns[0].scale
     }
 
+    /**
+     * @return The type name
+     */
+     String getTypeName() {
+        return type?.with { it instanceof Class ? it.name : it.toString() };
+    }
+
+
     @Override
     void setScale(int scale) {
         checkHasSingleColumn()

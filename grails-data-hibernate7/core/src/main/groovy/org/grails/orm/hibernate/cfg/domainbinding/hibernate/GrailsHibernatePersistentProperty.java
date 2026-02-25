@@ -19,6 +19,8 @@
 package org.grails.orm.hibernate.cfg.domainbinding.hibernate;
 
 import java.util.Optional;
+
+import static java.util.Optional.ofNullable;
 import org.grails.datastore.mapping.model.PersistentProperty;
 import org.grails.datastore.mapping.model.types.Association;
 import org.grails.datastore.mapping.model.types.Embedded;
@@ -41,15 +43,15 @@ public interface GrailsHibernatePersistentProperty extends PersistentProperty<Pr
 
   default HibernateAssociation getHibernateInverseSide() {
     return this instanceof Association<?> association
-        ? (HibernateAssociation) association.getInverseSide()
-        : null;
+            ? (HibernateAssociation) association.getInverseSide()
+            : null;
   }
 
 
   default GrailsHibernatePersistentEntity getHibernateAssociatedEntity() {
     return this instanceof Association<?> association
-        ? (GrailsHibernatePersistentEntity) association.getAssociatedEntity()
-        : null;
+            ? (GrailsHibernatePersistentEntity) association.getAssociatedEntity()
+            : null;
   }
 
   /**
@@ -83,19 +85,14 @@ public interface GrailsHibernatePersistentProperty extends PersistentProperty<Pr
    * @return The type name
    */
   default String getTypeName(Class<?> propertyType, PropertyConfig config, Mapping mapping) {
-    String typeName =
-        Optional.ofNullable(config)
-            .map(PropertyConfig::getType)
-            .map(
-                typeObj -> typeObj instanceof Class<?> clazz ? clazz.getName() : typeObj.toString())
-            .orElseGet(() -> mapping != null ? mapping.getTypeName(propertyType) : null);
 
-    if (typeName == null
-        && propertyType != null
-        && !propertyType.isEnum()) {
-      return propertyType.getName();
-    }
-    return typeName;
+    return ofNullable(config)
+            .map(PropertyConfig::getTypeName)
+            .orElseGet(() -> ofNullable(mapping).map(__ -> __.getTypeName(propertyType))
+                    .orElseGet(() -> Optional.ofNullable(propertyType)
+                            .filter(__ -> !__.isEnum())
+                            .map(Class::getName)
+                            .orElse(null)));
   }
 
   default GrailsHibernatePersistentEntity getHibernateOwner() {
@@ -143,18 +140,18 @@ public interface GrailsHibernatePersistentProperty extends PersistentProperty<Pr
   default void validateAssociation() {
     if (this instanceof Association && getUserType() != null) {
       throw new MappingException(
-          "Cannot bind association property ["
-              + getName()
-              + "] of type ["
-              + getType()
-              + "] to a user type");
+              "Cannot bind association property ["
+                      + getName()
+                      + "] of type ["
+                      + getType()
+                      + "] to a user type");
     }
     if (this instanceof org.grails.datastore.mapping.model.types.OneToOne oneToOne) {
       if (oneToOne.isHasOne() && !oneToOne.isBidirectional()) {
         throw new MappingException(
-            "hasOne property ["
-                + getName()
-                + "] is not bidirectional. Specify the other side of the relationship!");
+                "hasOne property ["
+                        + getName()
+                        + "] is not bidirectional. Specify the other side of the relationship!");
       }
     }
   }
@@ -168,8 +165,8 @@ public interface GrailsHibernatePersistentProperty extends PersistentProperty<Pr
    */
   default boolean isJoinKeyMapped() {
     return getMappedForm() != null
-        && getMappedForm().hasJoinKeyMapping()
-        && supportsJoinColumnMapping();
+            && getMappedForm().hasJoinKeyMapping()
+            && supportsJoinColumnMapping();
   }
 
   default String getMappedColumnName() {
@@ -181,13 +178,13 @@ public interface GrailsHibernatePersistentProperty extends PersistentProperty<Pr
 
   default String getColumnName(ColumnConfig cc) {
     return Optional.of(this)
-        .filter(GrailsHibernatePersistentProperty::isJoinKeyMapped)
-        .map(p -> p.getMappedForm().getJoinTable().getKey().getName())
-        .orElseGet(
-            () ->
-                Optional.ofNullable(cc)
-                    .map(ColumnConfig::getName)
-                    .orElseGet(this::getMappedColumnName));
+            .filter(GrailsHibernatePersistentProperty::isJoinKeyMapped)
+            .map(p -> p.getMappedForm().getJoinTable().getKey().getName())
+            .orElseGet(
+                    () ->
+                            Optional.ofNullable(cc)
+                                    .map(ColumnConfig::getName)
+                                    .orElseGet(this::getMappedColumnName));
   }
 
   /**
@@ -205,8 +202,8 @@ public interface GrailsHibernatePersistentProperty extends PersistentProperty<Pr
   default java.util.Properties getTypeParameters(SimpleValue simpleValue) {
     if (getTypeName(simpleValue) != null) {
       return Optional.ofNullable(getTypeProperty(simpleValue).getMappedForm())
-          .map(PropertyConfig::getTypeParams)
-          .orElse(null);
+              .map(PropertyConfig::getTypeParams)
+              .orElse(null);
     }
     return null;
   }
