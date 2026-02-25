@@ -696,6 +696,17 @@ public abstract class AbstractHibernateQuery extends Query {
     }
 
     @Override
+    public Query join(String property, JoinType joinType) {
+        this.hasJoins = true;
+        this.joinTypes.put(property, joinType);
+        if (criteria != null)
+            criteria.setFetchMode(property, FetchMode.JOIN);
+        else if (detachedCriteria != null)
+            detachedCriteria.setFetchMode(property, FetchMode.JOIN);
+        return this;
+    }
+
+    @Override
     public Query select(String property) {
         this.hasJoins = true;
         if (criteria != null)

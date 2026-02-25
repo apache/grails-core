@@ -23,6 +23,7 @@ import org.apache.grails.data.hibernate5.core.GrailsDataHibernate5TckManager
 import org.apache.grails.data.testing.tck.base.GrailsDataTckSpec
 import org.grails.datastore.gorm.finders.DynamicFinder
 import org.grails.orm.hibernate.query.HibernateQuery
+import org.hibernate.Hibernate
 
 import jakarta.persistence.criteria.JoinType
 
@@ -87,5 +88,18 @@ class DetachedCriteriaJoinSpec extends GrailsDataTckSpec<GrailsDataHibernate5Tck
         def joinType = query.hibernateCriteria.subcriteriaList.first().joinType
         expect:
         joinType == org.hibernate.sql.JoinType.RIGHT_OUTER_JOIN
+    }
+
+    def 'check get honours join and eagerly loads association'() {
+        given:
+        def club = new Club(name: 'Juventus').save(flush: true)
+        new Team(name: 'Torino', club: club).save(flush: true)
+
+        when:
+        Team team = Team.where { name == 'Torino' }.join('club').get()
+
+        then:
+        team != null
+        Hibernate.isInitialized(team.club)
     }
 }
