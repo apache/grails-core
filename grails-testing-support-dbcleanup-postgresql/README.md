@@ -14,7 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 -->
 
-## grails-testing-support-cleanup-postgresql
+## grails-testing-support-dbcleanup-postgresql
 
 Provides the PostgreSQL database cleanup implementation for the `DatabaseCleaner` SPI, enabling automatic table truncation in PostgreSQL-backed integration tests.
 

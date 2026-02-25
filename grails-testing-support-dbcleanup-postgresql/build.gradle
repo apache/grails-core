@@ -38,7 +38,7 @@ ext {
 dependencies {
     implementation platform(project(':grails-bom'))
 
-    api project(':grails-testing-support-cleanup-core')
+    api project(':grails-testing-support-dbcleanup-core')
     implementation 'org.springframework:spring-context'
     implementation 'org.slf4j:slf4j-api'
     implementation 'org.apache.groovy:groovy-sql'

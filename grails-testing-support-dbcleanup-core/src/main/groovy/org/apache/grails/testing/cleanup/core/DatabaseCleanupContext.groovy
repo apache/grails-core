@@ -129,7 +129,7 @@ class DatabaseCleanupContext {
                     throw new IllegalStateException(
                             'No DatabaseCleaner implementation found that supports ' +
                             "datasource '$beanName'. Ensure that a database-specific " +
-                            'cleanup library (e.g., grails-testing-support-cleanup-h2) ' +
+                            'cleanup library (e.g., grails-testing-support-dbcleanup-h2) ' +
                             'is on the classpath for each database type used in your tests. ' +
                             "Available cleaners: ${cleanersByType.values()*.databaseType()}"
                     )
@@ -179,7 +179,7 @@ class DatabaseCleanupContext {
                     throw new IllegalStateException(
                             "No DatabaseCleaner implementation found that supports datasource '$dsName'. " +
                             'Ensure that a database-specific cleanup library ' +
-                            '(e.g., grails-testing-support-cleanup-h2) is on the classpath, ' +
+                            '(e.g., grails-testing-support-dbcleanup-h2) is on the classpath, ' +
                             "or specify the database type explicitly: '$dsName:type'. " +
                             "Available cleaners: ${cleanersByType.values()*.databaseType()}"
                     )

@@ -14,7 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 -->
 
-## grails-testing-support-cleanup-core
+## grails-testing-support-dbcleanup-core
 
 Provides the core database cleanup testing support for Grails integration tests, including the `@DatabaseCleanup` annotation and the `DatabaseCleaner` SPI.
 
@@ -22,7 +22,7 @@ Provides the core database cleanup testing support for Grails integration tests,
 
 Database cleanup is automatically discovered and applied based on your datasource configuration. The following database implementations are available:
 
-#### H2 Database (`grails-testing-support-cleanup-h2`)
+#### H2 Database (`grails-testing-support-dbcleanup-h2`)
 
 **Supported Driver**: H2 Database Engine
 
@@ -41,7 +41,7 @@ jdbc:h2:mem:testdb
 jdbc:h2:file:/tmp/testdb
 ```
 
-#### PostgreSQL (`grails-testing-support-cleanup-postgresql`)
+#### PostgreSQL (`grails-testing-support-dbcleanup-postgresql`)
 
 **Supported Driver**: PostgreSQL JDBC Driver
 

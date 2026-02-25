@@ -44,7 +44,7 @@ dependencies {
     runtimeOnly 'com.zaxxer:HikariCP'
 
     integrationTestImplementation 'org.apache.grails.testing:grails-testing-support-core'
-    integrationTestImplementation project(':grails-testing-support-cleanup-h2')
+    integrationTestImplementation project(':grails-testing-support-dbcleanup-h2')
 }
 
 apply {

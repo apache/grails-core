@@ -154,12 +154,12 @@ Database cleanup is automatically discovered and applied based on your datasourc
 
 ====== H2 Database
 
-To use `@DatabaseCleanup` with H2 databases, add the `grails-testing-support-cleanup-h2` dependency:
+To use `@DatabaseCleanup` with H2 databases, add the `grails-testing-support-dbcleanup-h2` dependency:
 
 [source,groovy]
 ----
 dependencies {
-    integrationTestImplementation 'org.apache.grails:grails-testing-support-cleanup-h2'
+    integrationTestImplementation 'org.apache.grails:grails-testing-support-dbcleanup-h2'
 }
 ----
 
@@ -167,12 +167,12 @@ This module will clean up schema the specified schema by default, otherwise it w
 
 ====== PostgreSQL
 
-To use `@DatabaseCleanup` with PostgreSQL databases, add the `grails-testing-support-cleanup-postgresql` dependency:
+To use `@DatabaseCleanup` with PostgreSQL databases, add the `grails-testing-support-dbcleanup-postgresql` dependency:
 
 [source,groovy]
 ----
 dependencies {
-    integrationTestImplementation 'org.apache.grails:grails-testing-support-cleanup-postgresql'
+    integrationTestImplementation 'org.apache.grails:grails-testing-support-dbcleanup-postgresql'
 }
 ----
 

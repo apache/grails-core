@@ -171,9 +171,9 @@ include(
 
         // Testing Support
         'grails-testing-support-datamapping',
-        'grails-testing-support-cleanup-core',
-        'grails-testing-support-cleanup-h2',
-        'grails-testing-support-cleanup-postgresql',
+        'grails-testing-support-dbcleanup-core',
+        'grails-testing-support-dbcleanup-h2',
+        'grails-testing-support-dbcleanup-postgresql',
 
         // Test Report
         'grails-data-test-report',

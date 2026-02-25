@@ -14,7 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 -->
 
-## grails-testing-support-cleanup-h2
+## grails-testing-support-dbcleanup-h2
 
 Provides the H2 database cleanup implementation for the `DatabaseCleaner` SPI, enabling automatic table truncation in H2-backed integration tests.
 
