@@ -30,9 +30,11 @@ import org.grails.datastore.mapping.multitenancy.exceptions.TenantNotFoundExcept
 import org.grails.datastore.mapping.multitenancy.resolvers.SystemPropertyTenantResolver
 import org.grails.datastore.mapping.simple.SimpleMapDatastore
 import spock.lang.AutoCleanup
+import spock.util.environment.RestoreSystemProperties
 import spock.lang.Shared
 import spock.lang.Specification
 
+@RestoreSystemProperties
 class SchemaPerTenantSpec extends Specification {
 
     @Shared @AutoCleanup SimpleMapDatastore datastore = new SimpleMapDatastore(
@@ -42,10 +44,6 @@ class SchemaPerTenantSpec extends Specification {
             getClass().getPackage()
     )
     @Shared IBookService bookDataService = datastore.getService(IBookService)
-
-    def setup() {
-        System.setProperty(SystemPropertyTenantResolver.PROPERTY_NAME, "")
-    }
 
     void 'Test schema per tenant'() {
         when:"When there is no tenant"

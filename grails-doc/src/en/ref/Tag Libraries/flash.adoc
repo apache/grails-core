@@ -33,17 +33,20 @@ A temporary storage map that stores objects within the session for the next requ
 
 [source,groovy]
 ----
-class BookController {
+class ExamplesTagLib {
 
-    def index() {
+    def message = {
         flash.message = "Welcome!"
-        redirect(action: 'home')
+        out << "Flash: ${flash}"
     }
 
-    def home() {}
 }
 ----
 
+[source,xml]
+----
+<g:showRequest /> <!-- Outputs "Flash: [message:Welcome!]" -->
+----
 
 === Description
 

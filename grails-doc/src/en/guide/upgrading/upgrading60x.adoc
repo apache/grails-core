@@ -36,18 +36,17 @@ Grails {version} adopts Groovy {groovyVersion} as it's baseline requirement.
 Several changes in https://groovy-lang.org/releasenotes/groovy-4.0.html[Groovy 4] can affect your application.
 Changes that may affect a Grails Application or Plugin include:
 
-1. https://issues.apache.org/jira/browse/GROOVY-10621[GROOVY-10621] - Primitive booleans will no longer generate the form of isProperty & getProperty.
+* https://issues.apache.org/jira/browse/GROOVY-10621[GROOVY-10621] - Primitive booleans will no longer generate the form of isProperty & getProperty.
 They will only generate isProperty().
 For Grails Domain objects, grails sometimes generates these properties.
 It is advisable to switch to the new form of the property.
-2. https://issues.apache.org/jira/browse/GROOVY-5169[GROOVY-5169] & https://issues.apache.org/jira/browse/GROOVY-10449[GROOVY-10449] - Fields with a public modifier were not returned with MetaClassImpl#getProperties() in groovy 3, but are now.
-3. Closures using the DELEGATE_FIRST strategy now behave differently.
+* https://issues.apache.org/jira/browse/GROOVY-5169[GROOVY-5169] & https://issues.apache.org/jira/browse/GROOVY-10449[GROOVY-10449] - Fields with a public modifier were not returned with MetaClassImpl#getProperties() in groovy 3, but are now.
+* Closures using the DELEGATE_FIRST strategy now behave differently.
 The resolution order in Groovy 3 used to be Delegate's invokeMethod, Owner's invokeMethod, Delegate's invokeMissingMethod, Owner's invokeMissingMethod.
 In Groovy 4, the order is now Delegate's invokeMethod, Delegate's invokeMissingMethod, Owner's invokeMethod, Owner's invokeMissingMethod.
-4. Closures defined in a parent class that reference its private properties or methods may no longer have access to them in subclasses.
+* Closures defined in a parent class that reference its private properties or methods may no longer have access to them in subclasses.
 See https://issues.apache.org/jira/browse/GROOVY-11568[GROOVY-11568] for more details.
-
-Some older libraries may include an older version of groovy, but still be compatible with Groovy 4. One example is GPars.
+* Some older libraries may include an older version of groovy, but still be compatible with Groovy 4. One example is GPars.
 In your gradle file, you can force a dependency upgrade via this code:
 
 [source,groovy]
@@ -59,6 +58,27 @@ In your gradle file, you can force a dependency upgrade via this code:
               details.useTarget(group: 'org.apache.groovy', name: details.requested.name, version: '{groovyVersion}')
           }
       }
+  }
+----
+
+* By default, Groovy 4 switches away from callsite optimizations and uses invokedynamic instead. This can result in performance regressions compared to Grails 6. The Grails Gradle Plugins now automatically disables invokedynamic for all `GroovyCompile` tasks (see https://github.com/apache/grails-core/issues/15293[#15293]). If you have a manual `tasks.withType(GroovyCompile)` block in your `build.gradle` that sets `indy = false`, you can safely remove it:
+
+[source,groovy]
+.build.gradle - remove this block (no longer needed)
+----
+  // This is now handled by the Grails Gradle Plugin - remove it
+  tasks.withType(GroovyCompile).configureEach {
+        groovyOptions.optimizationOptions.indy = false
+  }
+----
+
+To re-enable invokedynamic, use the `grails` extension in your `build.gradle`:
+
+[source,groovy]
+.build.gradle
+----
+  grails {
+      indy = true
   }
 ----
 
@@ -85,7 +105,7 @@ Grails 7 introduces a BOM that includes all the dependencies required for a Grai
 .build.gradle
 ----
 dependencies {
-    implementation platform("org.apache.grails:grails-bom:${grailsVersion}")
+    implementation platform("org.apache.grails:grails-bom:{GrailsVersion}")
 }
 ----
 
@@ -93,6 +113,82 @@ Because all Grails projects will apply the Grails Gradle plugin, the BOM is auto
 You can override a version in the BOM by setting the associated Gradle property.
 The possible gradle properties are generated as part of this documentation.
 Please see link:{versionsRef}Grails BOM.html[Grails BOM Dependencies] for a quick reference.
+
+===== 4.1 BOM Property Changes
+
+The initial Grails 7.0.0 release had an issue where properties in the bom were not correctly populated. The 7.0.4 release restored properties, but the naming was inconsistent and duplicated. Later versions of Grails 7 reworked the properties for the following reasons:
+
+* to follow previous naming strategies used by Grails 6 and earlier.
+* to remove duplicate properties.
+* to clearly delineate between profile dependencies.
+* to remove non-published projects.
+* to fix invalid versions for properties used by asciidoctor & rxjava.
+
+Detailed differences follow in subsequent sections.
+
+===== 4.2 Property Name Standardization
+
+In the prior 7.0.0 Grails versions, there were numerous duplicated properties for third-party dependencies, with one variant using hyphens (e.g., byte-buddy.version) and an identical one using dots (e.g., byte.buddy.version), both set to the same value. This applies to properties like:
+
+    asset-pipeline-gradle.version / asset.pipeline.gradle.version
+    byte-buddy.version / byte.buddy.version
+    commons-text.version / commons.text.version
+    directory-watcher.version / directory.watcher.version
+    grails-publish-plugin.version / grails.publish.version (though this is slightly inconsistent in naming)
+    javaparser-core.version / javaparser.core.version
+    bootstrap-icons.version / bootstrap.icons.version (literal duplicate entries)
+    commons-codec.version / commons.codec.version
+    geb-spock.version / geb.spock.version
+    asset-pipeline-bom.version / asset.pipeline.bom.version
+    spock.version / spock.bom.version (values match but names differ slightly)
+    jackson.version / jackson.bom.version
+    groovy.version / groovy.bom.version
+    selenium.version / selenium.bom.version
+
+To resolve this duplication and standardize naming conventions, the Grails team has consolidated these properties. All dotted variants have been removed. Only the hyphenated forms are retained (e.g., byte-buddy.version, asset-pipeline-gradle.version).
+
+Additionally, Grails-specific properties in earlier Grails 7 versions used dots in their names (e.g., grails.async.version, grails.data.hibernate5.version). These have been refactored to use hyphens instead (e.g., grails-async.version, grails-data-hibernate5.version). This aligns them with the third-party property naming convention.
+
+These changes eliminate redundancy and enforce consistency across the Grails bom & the boms it inherits.
+
+===== 4.3 Profile Properties are renamed
+
+In previous Grails 7 versions, profile-specific properties were not prefixed with `grails-profile`.  These have been corrected as follows:
+
+    base.version - grails-profile-base.version
+    plugin.version - grails-profile-plugin.version
+    profile.version - grails-profile-profile.version
+    rest.api.version - grails-profile-rest-api.version
+    rest.api.plugin.version - grails-profile-rest-api-plugin.version
+    web.version - grails-profile-web.version
+    web.plugin.version - grails-profile-web-plugin.version
+
+===== 4.4 Removal of Redundant or Unused Properties
+
+Several groups of related properties have been consolidated or removed in later Grails 7 versions:
+
+* Liquibase: (liquibase-hibernate5.version, liquibase.version, liquibase.cdi.version, liquibase.core.version, liquibase5.hibernate.version) have been replaced by `liquibase-hibernate5.version`
+* MongoDB: (mongodb.version, bson.version, mongodb.driver.core.version, mongodb.driver.sync.version, bson.record.codec.version) have been replaced by `mongodb.version`
+* Sitemesh: (starter-sitemesh.version, spring.boot.starter.sitemesh.version) have been consolidated to `starter-sitemesh.version`
+* Ant: (ant.version and ant.junit.version) have been consolidated to `ant.version`
+* Spring Boot sub-components: (spring.boot.cli.version and spring.boot.gradle.plugin.version) have been consolidated to use `spring-boot.version`
+* Asciidoctor Gradle: asciidoctor.gradle.jvm.version was renamed to `asciidoctor-gradle-jvm.version`
+* Spring Boot dependencies: `spring.boot.dependencies.version` was renamed to `spring-boot.version`
+* Liquibase Hibernate: liquibase.hibernate5.version & liquibase-hibernate5.version were consolidated to liquibase-hibernate5.version
+
+===== 4.5 Specific Property Value Changes
+
+rxjava properties were incorrect previously, they are now fixed per the below:
+
+* `rxjava.version` (for RxJava 1.x, groupId io.reactivex) was set to 3.1.11 instead of 1.3.8
+* `rxjava2.version` (for RxJava 2.x, groupId io.reactivex.rxjava2) was set to 3.1.11 instead of 2.2.21
+* `rxjava3.version` (for RxJava 3.x, groupId io.reactivex.rxjava3) was set to 3.1.11 and remains 3.1.11
+
+===== 4.6 Additions and Refinements in <dependencyManagement>
+
+Several boms are imported and previously used customized property names for them. They now align with a single property name.  Most importantly, `spring-boot-dependencies` now uses `${spring-boot.version}` (aligning with the removal of spring.boot.dependencies.version).
+
+All published Grails projects continue to have separate properties to allow for overriding their versions individually.
 
 ==== 5. Coordinate Changes
 
@@ -228,7 +324,14 @@ plugins {
 }
 
 jakartaeeMigration {
-    includeTransform('org.grails.plugins:export')
+    // Exclude Grails dependencies since AST and jakartaeeMigration are not compatible
+    excludeTransform('org.apache.grails:**')
+    excludeTransform('org.apache.grails.**:**')
+
+    // Exclude logback-core to avoid extra logback debug messages  
+    excludeTransform('ch.qos.logback:logback-core')
+
+    // enable automatic migration from EE 8 (javax) or earlier to EE 10 (jakarta) or later
     migrate()
 }
 ----
@@ -278,6 +381,24 @@ Here's an example `gradle.properties` file:
 ----
 micronautPlatformVersion=4.9.2
 ----
+
+Please note that, due to https://github.com/micronaut-projects/micronaut-spring/issues/769[this issue], Spring Boot DevTools does not work with the Micronaut integration.
+
+The Grails Gradle Plugin automatically configures Groovy-based Micronaut bean registration via AST transforms (`micronaut-inject-groovy` on `compileOnlyApi`). Groovy classes annotated with `@Singleton`, `@Factory`, `@ConfigurationProperties`, etc. are processed automatically.
+
+IMPORTANT: If your project contains **Java source files** with Micronaut annotations (e.g. `@Singleton`, `@Factory`), you must manually add the Micronaut annotation processor to your `build.gradle`. The annotation processor is not configured automatically because it is incompatible with Groovy incremental compilation (see https://github.com/apache/grails-core/issues/15211[#15211]). For projects that mix Java and Groovy Micronaut beans, consider splitting them into separate source sets or modules to avoid incremental compilation issues.
+
+[source,groovy]
+.build.gradle - Adding annotation processor for Java Micronaut beans
+----
+dependencies {
+    annotationProcessor platform("io.micronaut.platform:micronaut-platform:$micronautPlatformVersion")
+    annotationProcessor 'io.micronaut:micronaut-inject-java'
+    annotationProcessor 'jakarta.annotation:jakarta.annotation-api'
+}
+----
+
+NOTE: The Grails Gradle Plugin automatically configures the Spring Boot `bootJar` and `bootWar` tasks to use the `CLASSIC` loader implementation when `grails-micronaut` is detected. This is required for `java -jar` execution to work correctly with the Micronaut-Spring integration (see https://github.com/apache/grails-core/issues/15207[#15207]). If you have explicitly set `loaderImplementation` in your `build.gradle`, you can remove it as the plugin now handles this automatically.
 
 ===== 12.5 hibernate-ehcache
 

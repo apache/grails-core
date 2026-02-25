@@ -1,0 +1,1 @@
+../../../.agents/skills/grails-developer/SKILL.md

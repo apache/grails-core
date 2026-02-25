@@ -25,6 +25,7 @@ import org.springframework.validation.Errors
 
 import grails.gorm.validation.ConstrainedProperty
 import grails.gorm.validation.Constraint
+import grails.gorm.validation.DisplayType
 
 /**
  * Bridge from the old API to the new
@@ -154,9 +155,15 @@ class ConstrainedDelegate implements Constrained, ConstrainedProperty {
         return property.isUrl()
     }
 
+    @Deprecated
     @Override
     boolean isDisplay() {
         return property.isDisplay()
+    }
+
+    @Override
+    DisplayType getDisplayType() {
+        return property.getDisplayType()
     }
 
     @Override

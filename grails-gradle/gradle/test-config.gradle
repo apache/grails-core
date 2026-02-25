@@ -41,14 +41,9 @@ tasks.withType(Test).configureEach {
     }
 
     useJUnitPlatform()
+    systemProperty 'projectVersion', projectVersion
+    systemProperty 'currentJdk', JavaVersion.current().majorVersion
     jvmArgs += java17moduleReflectionCompatibilityArguments
-    develocity {
-        testRetry {
-            maxRetries = 2
-            maxFailures = 20
-            failOnPassedAfterRetry = true
-        }
-    }
     testLogging {
         events('passed', 'skipped', 'failed')
         showExceptions = true

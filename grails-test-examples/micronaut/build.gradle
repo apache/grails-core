@@ -1,3 +1,5 @@
+import org.springframework.boot.gradle.tasks.bundling.BootArchive
+
 /*
  *  Licensed to the Apache Software Foundation (ASF) under one
  *  or more contributor license agreements.  See the NOTICE file
@@ -16,6 +18,10 @@
  *  specific language governing permissions and limitations
  *  under the License.
  */
+plugins {
+    id 'org.apache.grails.buildsrc.properties'
+    id 'org.apache.grails.buildsrc.compile'
+}
 
 version = '0.1'
 group = 'micronaut'
@@ -31,25 +37,34 @@ apply plugin: 'org.apache.grails.gradle.grails-gsp'
 dependencies {
     implementation platform(project(':grails-bom'))
 
+    implementation "io.micronaut:micronaut-http-client:$micronautHttpClientVersion"
+    implementation "io.micronaut:micronaut-retry:$micronautHttpClientVersion"
+    implementation "io.micronaut.serde:micronaut-serde-jackson:$micronautSerdeJacksonVersion"
     implementation 'org.apache.grails:grails-dependencies-starter-web'
     implementation 'org.apache.grails:grails-micronaut'
     implementation 'org.apache.grails:grails-scaffolding'
+    implementation project(':grails-test-examples-plugins-micronaut-singleton')
+
+    annotationProcessor platform("io.micronaut.platform:micronaut-platform:$micronautPlatformVersion")
+    annotationProcessor 'io.micronaut:micronaut-inject-java'
+    annotationProcessor 'jakarta.annotation:jakarta.annotation-api'
 
     testAndDevelopmentOnly platform(project(':grails-bom'))
     testAndDevelopmentOnly 'org.apache.grails:grails-dependencies-assets'
 
+    runtimeOnly 'cloud.wondrify:asset-pipeline-grails'
     runtimeOnly 'com.h2database:h2'
     runtimeOnly 'org.apache.tomcat:tomcat-jdbc'
-    runtimeOnly 'cloud.wondrify:asset-pipeline-grails'
 
+    testImplementation "io.micronaut:micronaut-http-client:$micronautHttpClientVersion"
     testImplementation 'org.apache.grails:grails-dependencies-test'
 
     integrationTestImplementation testFixtures('org.apache.grails:grails-geb')
+    integrationTestImplementation "io.github.cjstehno.ersatz:ersatz:$ersatzVersion"
 }
 
 apply {
     from rootProject.layout.projectDirectory.file('gradle/functional-test-config.gradle')
-    from rootProject.layout.projectDirectory.file('gradle/java-config.gradle')
     from rootProject.layout.projectDirectory.file('gradle/test-webjar-asset-config.gradle')
     from rootProject.layout.projectDirectory.file('gradle/grails-extension-gradle-config.gradle')
 }

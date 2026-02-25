@@ -38,7 +38,8 @@ buildscript {
         maven { url "https://repo.grails.org/grails/restricted" }
     }
     dependencies {
-        classpath "org.grails.plugins:views-gradle:{version}"
+        classpath platform('org.apache.grails:grails-bom:{version}')
+        classpath "org.apache.grails:grails-gradle-plugins"
     }
 }
 
@@ -51,9 +52,8 @@ repositories {
 }
 
 dependencies {
-    compile "org.grails.plugins:views-json:{version}"
-    compileOnly "org.grails:grails-plugin-rest:3.1.7"
-    compileOnly "jakarta.servlet:jakarta.servlet-api:6.0.0"
+    implementation "org.apache.grails:grails-views-gson"
+    implementation "org.apache.grails:grails-rest-transforms"
 }
 
 task( compileViews, type:JsonViewCompilerTask ) {

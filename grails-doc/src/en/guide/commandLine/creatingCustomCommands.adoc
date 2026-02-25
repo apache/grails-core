@@ -18,7 +18,7 @@ under the License.
 ////
 
 
-You can create your own commands by running the <<ref-command-line-create-command,create-command>> command from the root of your project. For example the following command will create a command called `grails-app/commands/HelloWorldCommand`:
+You can create your own commands by running the link:{commandLineRef}create-command.html[create-command] command from the root of your project. For example the following command will create a command called `grails-app/commands/HelloWorldCommand`:
 
 [source,groovy]
 ----

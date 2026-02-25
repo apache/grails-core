@@ -148,7 +148,7 @@ class DataSourceSettings extends ConnectionSourceSettings {
             properties.put('username', username)
         }
         if (password) {
-            properties.put('username', password)
+            properties.put('password', password)
         }
         if (readOnly) {
             properties.put('defaultReadOnly', String.valueOf(readOnly))

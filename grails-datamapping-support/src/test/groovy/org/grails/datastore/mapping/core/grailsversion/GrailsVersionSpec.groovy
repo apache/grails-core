@@ -36,7 +36,7 @@ class GrailsVersionSpec extends Specification {
         "3.2.0"         | true
         "3.1.0"         | true
         "3.3.0"         | true
-        "7.1.0"         | false
+        "8.1.0"         | false
     }
 
     @Unroll

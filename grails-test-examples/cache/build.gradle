@@ -18,9 +18,8 @@
  */
 
 plugins {
-    id 'groovy'
-    id 'idea'
-    id 'eclipse'
+    id 'org.apache.grails.buildsrc.properties'
+    id 'org.apache.grails.buildsrc.compile'
 }
 
 version = projectVersion
@@ -64,6 +63,8 @@ dependencies {
     runtimeOnly 'org.fusesource.jansi:jansi'
 
     integrationTestImplementation testFixtures('org.apache.grails:grails-geb')
+    integrationTestImplementation "io.micronaut:micronaut-http-client:$micronautHttpClientVersion"
+    integrationTestImplementation "io.micronaut.serde:micronaut-serde-jackson:$micronautSerdeJacksonVersion"
 
     testImplementation 'org.apache.grails:grails-testing-support-datamapping'
     testImplementation 'org.apache.grails:grails-testing-support-web'
@@ -72,6 +73,5 @@ dependencies {
 
 apply {
     from rootProject.layout.projectDirectory.file('gradle/functional-test-config.gradle')
-    from rootProject.layout.projectDirectory.file('gradle/java-config.gradle')
     from rootProject.layout.projectDirectory.file('gradle/grails-extension-gradle-config.gradle')
 }

@@ -78,7 +78,7 @@ class BookControllerUnitSpec extends HibernateSpec implements ControllerUnitTest
         when:"The save action is executed with a valid instance"
         response.reset()
         populateValidParams(params)
-        book = new Book(params)
+        book = new Book(params.subMap(['title']))
 
         controller.save(book)
 
@@ -97,7 +97,7 @@ class BookControllerUnitSpec extends HibernateSpec implements ControllerUnitTest
 
         when:"A domain instance is passed to the show action"
         populateValidParams(params)
-        def book = new Book(params)
+        def book = new Book(params.subMap(['title']))
         book.save(flush:true)
         controller.show(book.id)
 
@@ -114,7 +114,7 @@ class BookControllerUnitSpec extends HibernateSpec implements ControllerUnitTest
 
         when:"A domain instance is passed to the edit action"
         populateValidParams(params)
-        def book = new Book(params)
+        def book = new Book(params.subMap(['title']))
         controller.edit(book)
 
         then:"A model is populated containing the domain instance"
@@ -144,7 +144,7 @@ class BookControllerUnitSpec extends HibernateSpec implements ControllerUnitTest
         when:"A valid domain instance is passed to the update action"
         response.reset()
         populateValidParams(params)
-        book = new Book(params).save(flush: true)
+        book = new Book(params.subMap(['title'])).save(flush: true)
         controller.update(book)
 
         then:"A redirect is issued to the show action"
@@ -166,7 +166,7 @@ class BookControllerUnitSpec extends HibernateSpec implements ControllerUnitTest
         when:"A domain instance is created"
         response.reset()
         populateValidParams(params)
-        def book = new Book(params).save(flush: true)
+        def book = new Book(params.subMap(['title'])).save(flush: true)
 
         then:"It exists"
         Book.count() == 1

@@ -60,7 +60,7 @@ abstract class ExtractDependenciesTask extends DefaultTask {
     abstract RegularFileProperty getDestination()
 
     @Input
-    abstract MapProperty<String,String> getVersions()
+    abstract MapProperty<String, String> getVersions()
 
     @Input
     abstract Property<String> getConfigurationName()
@@ -76,6 +76,12 @@ abstract class ExtractDependenciesTask extends DefaultTask {
 
     @Input
     abstract Property<String> getProjectName()
+
+    @Input
+    abstract MapProperty<String, String> getForcedGroupPrefixes()
+
+    @Input
+    abstract MapProperty<String, String> getProjectCoordinateProperties()
 
     void setConfiguration(NamedDomainObjectProvider<Configuration> config) {
         dependencyArtifacts.from(config)
@@ -101,6 +107,13 @@ abstract class ExtractDependenciesTask extends DefaultTask {
                 getDefinitions().get(),
                 getVersions().get()
         )
+        for (Map.Entry<String, String> entry : getForcedGroupPrefixes().get().entrySet()) {
+            propertyNameCalculator.addForcedGroupPrefix(entry.key, entry.value)
+        }
+        for (Map.Entry<String, String> entry : getProjectCoordinateProperties().get().entrySet()) {
+            CoordinateVersionHolder coordinates = CoordinateVersionHolder.create(entry.key)
+            propertyNameCalculator.addProject(coordinates.groupId, coordinates.artifactId, coordinates.version, entry.value)
+        }
 
         Configuration configuration = project.configurations.named(configurationName.get()).get()
         if (!configuration.canBeResolved) {
@@ -148,14 +161,15 @@ abstract class ExtractDependenciesTask extends DefaultTask {
 
             ExtractedDependencyConstraint extractConstraint = propertyNameCalculator.calculate(groupId, artifactId, artifactVersion, false) ?: new ExtractedDependencyConstraint(groupId: groupId, artifactId: artifactId, version: artifactVersion)
             extractConstraint.source = getProjectName().get()
-            extractConstraint.versionPropertyReference = "\${${artifactId.replaceAll('-', '.')}.version}"
-            constraints.put(new CoordinateHolder(groupId: extractConstraint.groupId, artifactId: extractConstraint.artifactId), extractConstraint)
+
+            CoordinateHolder coordinates = new CoordinateHolder(groupId: extractConstraint.groupId, artifactId: extractConstraint.artifactId)
+            constraints.put(coordinates, extractConstraint)
         }
     }
 
     private Map<CoordinateHolder, List<CoordinateHolder>> determineExclusions(Configuration configuration) {
         Map<CoordinateHolder, List<CoordinateHolder>> exclusions = [:].withDefault { [] }
-        for (Dependency dep  : configuration.allDependencies) {
+        for (Dependency dep : configuration.allDependencies) {
             if (dep instanceof ModuleDependency) {
                 CoordinateHolder foundCoordinate = new CoordinateHolder(groupId: dep.group, artifactId: dep.name)
                 dep.excludeRules.each { ExcludeRule exclusionRule ->
@@ -168,7 +182,7 @@ abstract class ExtractDependenciesTask extends DefaultTask {
     }
 
     private void populateInheritedConstraints(Configuration configuration, Map<CoordinateHolder, List<CoordinateHolder>> exclusions, Map<CoordinateHolder, ExtractedDependencyConstraint> constraints, PropertyNameCalculator propertyNameCalculator) {
-        for (DependencyResult result  : configuration.incoming.resolutionResult.allDependencies) {
+        for (DependencyResult result : configuration.incoming.resolutionResult.allDependencies) {
             if (!(result instanceof ResolvedDependencyResult)) {
                 throw new GradleException('Dependencies should be resolved prior to running this task.')
             }

@@ -17,7 +17,7 @@ specific language governing permissions and limitations
 under the License.
 ////
 
-A domain class can be created with the <<ref-command-line-create-domain-class,create-domain-class>> command:
+A domain class can be created with the link:{commandLineRef}create-domain-class.html[create-domain-class] command:
 
 [source,groovy]
 ----
@@ -49,7 +49,7 @@ class Person {
 }
 ----
 
-Once you have a domain class try and manipulate it with the <<ref-command-line-shell,shell>> or <<ref-command-line-console,console>> by typing:
+Once you have a domain class try and manipulate it with the link:{commandLineRef}shell.html[shell] or link:{commandLineRef}console.html[console] by typing:
 
 [source,groovy]
 ----

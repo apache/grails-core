@@ -27,10 +27,12 @@ import org.grails.datastore.mapping.multitenancy.exceptions.TenantNotFoundExcept
 import org.grails.datastore.mapping.multitenancy.resolvers.SystemPropertyTenantResolver
 import org.springframework.beans.factory.annotation.Autowired
 import spock.lang.Specification
+import spock.util.environment.RestoreSystemProperties
 
 /**
  * Created by graemerocher on 17/10/16.
  */
+@RestoreSystemProperties
 @Integration(applicationClass = Application)
 class BookSpec extends Specification {
 
@@ -77,10 +79,7 @@ class BookSpec extends Specification {
         when:"We switch to another tenant"
         System.setProperty(SystemPropertyTenantResolver.PROPERTY_NAME, "test2")
 
-        then:"The count is correct"
+then:"The count is correct"
         Book.count == 0
-
-        cleanup:
-        System.setProperty(SystemPropertyTenantResolver.PROPERTY_NAME, "")
     }
 }

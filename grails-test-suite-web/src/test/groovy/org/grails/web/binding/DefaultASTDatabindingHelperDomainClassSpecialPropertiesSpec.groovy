@@ -19,11 +19,20 @@
 package org.grails.web.binding
 
 import grails.persistence.Entity
+import org.grails.validation.ConstraintEvalUtils
 import spock.lang.Issue
 import spock.lang.Specification
 
 class DefaultASTDatabindingHelperDomainClassSpecialPropertiesSpec extends
         Specification {
+
+    def setup() {
+        ConstraintEvalUtils.clearDefaultConstraints()
+    }
+
+    def cleanup() {
+        ConstraintEvalUtils.clearDefaultConstraints()
+    }
 
     @Issue('GRAILS-11173')
     void 'Test binding to special properties in a domain class'() {

@@ -23,7 +23,9 @@ import org.grails.forge.internal.tasks.PicocliBuildCompletionTask
 plugins {
     id 'groovy'
     id 'java-library'
+    id 'org.apache.grails.buildsrc.properties'
     id 'org.grails.forge.rocker'
+    id 'org.apache.grails.buildsrc.compile'
     id 'org.apache.grails.buildsrc.publish'
     id 'org.apache.grails.buildsrc.sbom'
 }
@@ -78,6 +80,11 @@ dependencies {
     annotationProcessor 'io.micronaut:micronaut-inject-java'
 
     implementation project(':grails-forge-core')
+    implementation("org.apache.grails.bootstrap:grails-bootstrap:$projectVersion") {
+        exclude group: 'org.apache.grails', module: 'grails-bom'
+        exclude group: 'org.apache.groovy'
+    }
+    compileOnly 'org.codehaus.groovy:groovy'
     implementation "com.fizzed:rocker-runtime:$rockerVersion"
     implementation "info.picocli:picocli:$picocliVersion"
     implementation "info.picocli:picocli-shell-jline3:$picocliVersion"
@@ -111,7 +118,6 @@ rocker {
 }
 
 apply {
-    from rootProject.layout.projectDirectory.file('gradle/java-config.gradle')
     from rootProject.layout.projectDirectory.file('gradle/code-style-config.gradle')
     from rootProject.layout.projectDirectory.file('gradle/test-config.gradle')
     from rootProject.layout.projectDirectory.file('gradle/doc-config.gradle')

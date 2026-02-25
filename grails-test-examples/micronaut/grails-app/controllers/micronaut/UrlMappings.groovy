@@ -28,6 +28,21 @@ class UrlMappings {
             }
         }
 
+        "/micronaut-test"(controller: 'micronautTest', action: 'index')
+
+        "/external-api"(controller: 'externalApi', action: 'index', method: 'GET')
+        "/external-api/search"(controller: 'externalApi', action: 'search', method: 'GET')
+        "/external-api/secure"(controller: 'externalApi', action: 'secureShow', method: 'GET')
+        "/external-api/$id"(controller: 'externalApi', action: 'show', method: 'GET')
+        "/external-api"(controller: 'externalApi', action: 'save', method: 'POST')
+        "/external-api/$id"(controller: 'externalApi', action: 'update', method: 'PUT')
+        "/external-api/$id"(controller: 'externalApi', action: 'patchAction', method: 'PATCH')
+        "/external-api/$id"(controller: 'externalApi', action: 'delete', method: 'DELETE')
+        "/external-api/safe/$id"(controller: 'externalApi', action: 'showWithErrorHandling')
+        "/external-api/async"(controller: 'externalApi', action: 'asyncShow', method: 'GET')
+        "/external-api/path/$id"(controller: 'externalApi', action: 'pathShow', method: 'GET')
+        "/external-api/filtered"(controller: 'externalApi', action: 'filteredShow', method: 'GET')
+
         "/"(view:"/index")
         "500"(view:'/error')
         "404"(view:'/notFound')

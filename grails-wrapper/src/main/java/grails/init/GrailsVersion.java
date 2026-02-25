@@ -111,15 +111,15 @@ public class GrailsVersion implements Comparable<GrailsVersion> {
         }
 
         return Arrays.stream(raw.split(","))
-                .map(String::trim)
-                .map(input -> {
-                    try {
-                        return GrailsReleaseType.valueOf(input);
-                    } catch (Exception e) {
-                        throw new IllegalStateException("Invalid Value in GRAILS_WRAPPER_ALLOWED_TYPES: " + input);
-                    }
-                })
-                .collect(Collectors.toCollection(LinkedHashSet::new));
+            .map(String::trim)
+            .map(input -> {
+                try {
+                    return GrailsReleaseType.valueOf(input);
+                } catch (Exception e) {
+                    throw new IllegalStateException("Invalid Value in GRAILS_WRAPPER_ALLOWED_TYPES: " + input);
+                }
+            })
+            .collect(Collectors.toCollection(LinkedHashSet::new));
     }
 
     public static GrailsVersion getPreferredGrailsVersion() {
@@ -177,10 +177,10 @@ public class GrailsVersion implements Comparable<GrailsVersion> {
         }
         GrailsVersion that = (GrailsVersion) o;
         return Objects.equals(releaseType, that.releaseType) &&
-                Objects.equals(major, that.major) &&
-                Objects.equals(minor, that.minor) &&
-                Objects.equals(patch, that.patch) &&
-                Objects.equals(candidate, that.candidate);
+            Objects.equals(major, that.major) &&
+            Objects.equals(minor, that.minor) &&
+            Objects.equals(patch, that.patch) &&
+            Objects.equals(candidate, that.candidate);
     }
 
     @Override

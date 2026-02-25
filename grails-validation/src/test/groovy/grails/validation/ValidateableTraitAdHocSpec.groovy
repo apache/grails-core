@@ -27,6 +27,20 @@ import spock.lang.Specification
 
 class ValidateableTraitAdHocSpec extends Specification {
 
+    /**
+     * Clear the static constraints cache for classes that use shared constraints.
+     * This prevents test environment pollution because the Validateable trait caches
+     * constraints in a static field, and constraints may be evaluated before configuration
+     * has registered the shared constraints.
+     */
+    void setup() {
+        PersonAdHocSharedConstraintsValidateable.clearConstraintsMapCache()
+    }
+
+    void cleanup() {
+        PersonAdHocSharedConstraintsValidateable.clearConstraintsMapCache()
+    }
+
     void 'Test that pre-declared constraints can be used'() {
         given:
         def person = new PersonAdHocValidateable(name: nameValue, age: ageValue)

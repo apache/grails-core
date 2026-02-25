@@ -25,7 +25,9 @@ import org.codehaus.groovy.ast.AnnotationNode
 import org.codehaus.groovy.ast.ClassNode
 import grails.compiler.ast.ClassInjector
 import spock.lang.Specification
+import spock.util.environment.RestoreSystemProperties
 
+@RestoreSystemProperties
 class GrailsArtefactTransformerSpec extends Specification {
     static testClass
     static gcl
@@ -35,10 +37,6 @@ class GrailsArtefactTransformerSpec extends Specification {
         def transformer = new TestTransformer()
         gcl.classInjectors = [transformer]as ClassInjector[]
         System.setProperty("grails.version", "3.0.0")
-    }
-
-    void cleanupSpec() {
-        System.setProperty("grails.version", "")
     }
 
     void "Test that a marker annotation can be added to weaved methods"() {

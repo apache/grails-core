@@ -1,0 +1,1 @@
+../../../.agents/skills/java-developer/SKILL.md

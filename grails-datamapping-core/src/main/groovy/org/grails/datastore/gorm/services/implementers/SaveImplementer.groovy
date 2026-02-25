@@ -23,12 +23,14 @@ import org.codehaus.groovy.ast.ClassNode
 import org.codehaus.groovy.ast.MethodNode
 import org.codehaus.groovy.ast.Parameter
 import org.codehaus.groovy.ast.expr.ConstantExpression
+import org.codehaus.groovy.ast.expr.Expression
 import org.codehaus.groovy.ast.expr.VariableExpression
 import org.codehaus.groovy.ast.stmt.BlockStatement
 
 import org.grails.datastore.gorm.GormEntity
 import org.grails.datastore.mapping.reflect.AstUtils
 
+import static org.codehaus.groovy.ast.tools.GeneralUtils.args
 import static org.codehaus.groovy.ast.tools.GeneralUtils.callX
 import static org.codehaus.groovy.ast.tools.GeneralUtils.ctorX
 import static org.codehaus.groovy.ast.tools.GeneralUtils.declS
@@ -63,9 +65,18 @@ class SaveImplementer extends AbstractSaveImplementer implements SingleResultSer
         Parameter[] parameters = newMethodNode.parameters
         int parameterCount = parameters.length
         if (parameterCount == 1 && AstUtils.isDomainClass(parameters[0].type)) {
-            body.addStatement(
-                returnS(callX(varX(parameters[0]), 'save', namedArgs(failOnError: ConstantExpression.TRUE)))
-            )
+            Expression connectionId = findConnectionId(abstractMethodNode)
+            if (connectionId != null) {
+                // Route save through the instance API for the specified connection
+                body.addStatement(
+                    returnS(callX(buildInstanceApiLookup(domainClassNode, connectionId), 'save', args(varX(parameters[0]), namedArgs(failOnError: ConstantExpression.TRUE))))
+                )
+            }
+            else {
+                body.addStatement(
+                    returnS(callX(varX(parameters[0]), 'save', namedArgs(failOnError: ConstantExpression.TRUE)))
+                )
+            }
         }
         else {
             VariableExpression entityVar = varX('$entity')
@@ -73,7 +84,7 @@ class SaveImplementer extends AbstractSaveImplementer implements SingleResultSer
                 declS(entityVar, ctorX(domainClassNode))
             )
             body.addStatement(
-                bindParametersAndSave(domainClassNode, abstractMethodNode, parameters, body, entityVar)
+                bindParametersAndSave(domainClassNode, abstractMethodNode, newMethodNode, parameters, body, entityVar)
             )
 
         }

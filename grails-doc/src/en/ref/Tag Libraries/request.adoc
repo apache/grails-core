@@ -25,7 +25,7 @@ under the License.
 === Purpose
 
 
-The link:{servletApiRefFromRef}request.html[request] object is an instance of the Servlet API's {javaee}javax/servlet/http/HttpServletRequest.html[HttpServletRequest] class
+The link:{servletApiRefFromRef}request.html[request] object is an instance of the Servlet API's {jakartaee}jakarta/servlet/http/HttpServletRequest.html[HttpServletRequest] class
 
 
 === Examples
@@ -33,19 +33,23 @@ The link:{servletApiRefFromRef}request.html[request] object is an instance of th
 
 [source,groovy]
 ----
-class BookController {
-    def list() {
-        log.info "User agent: ${request.getHeader("User-Agent")}"
+class ExamplesTagLib {
 
-        render(view: actionName)
+    def showRequest = { attrs, body ->
+        out << "Request ${request.getHeader('User-Agent')}"
     }
+
 }
 ----
 
+[source,xml]
+----
+<g:showRequest />
+----
 
 === Description
 
 
-The {javaee}javax/servlet/http/HttpServletRequest.html[HttpServletRequest] class is useful for, amongst other things, obtaining request headers, storing request scoped attributes and establishing information about the client. Refer to the Servlet API's javadocs for further information.
+The {jakartaee}jakarta/servlet/http/HttpServletRequest.html[HttpServletRequest] class is useful for, amongst other things, obtaining request headers, storing request scoped attributes and establishing information about the client. Refer to the Servlet API's javadocs for further information.
 
 NOTE: The additional methods added to the link:{servletApiRefFromRef}request.html[request] object are documented in the Grails Servlet API reference guide

@@ -25,7 +25,7 @@ under the License.
 === Purpose
 
 
-The {grailsdocs}ref/Servlet%20API/response.html[response] object is an instance of the Servlet API's {javaee}javax/servlet/http/HttpServletResponse.html[HttpServletResponse] class
+The link:{servletApiRefFromRef}response.html[response] object is an instance of the Servlet API's {jakartaee}jakarta/servlet/http/HttpServletResponse.html[HttpServletResponse] class
 
 
 === Examples
@@ -33,11 +33,12 @@ The {grailsdocs}ref/Servlet%20API/response.html[response] object is an instance 
 
 [source,groovy]
 ----
-class BookController {
-    def downloadFile() {
-        byte[] bytes = // read bytes
-        response.outputStream << bytes
+class ExamplesTagLib {
+
+    def setHeader = {
+        response.setHeader('Content-Type', 'text/html; charset=utf-8')
     }
+
 }
 ----
 
@@ -45,6 +46,6 @@ class BookController {
 === Description
 
 
-The Servlet API's `HttpServletResponse` class can be used within Grails to perform all typical activities such as writing out binary data, writing directly to the response and sending error response codes to name but a few. Refer to the documentation on the {javaee}javax/servlet/http/HttpServletResponse.html[HttpServletResponse] class in the Servlet API for more information.
+The Servlet API's `HttpServletResponse` class can be used within Grails to perform all typical activities such as writing out binary data, writing directly to the response and sending error response codes to name but a few. Refer to the documentation on the {jakartaee}jakarta/servlet/http/HttpServletResponse.html[HttpServletResponse] class in the Servlet API for more information.
 
 NOTE: The additional methods added to the link:{servletApiRefFromRef}response.html[response] object are documented in the Grails Servlet API reference guide

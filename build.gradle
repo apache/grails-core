@@ -39,10 +39,8 @@ ext {
             DateTimeFormatter.ISO_INSTANT.format(buildInstant) :
             DateTimeFormatter.ISO_DATE.format(LocalDate.ofInstant(buildInstant as Instant, ZoneOffset.UTC))
     buildDate = (buildInstant as Instant).atZone(ZoneOffset.UTC) // for reproducible builds
-
-    grailsVersion = projectVersion
     isCiBuild = System.getenv().get('CI') as Boolean
-    configuredTestParallel = findProperty('maxTestParallel') as Integer ?: (isCiBuild ? 3 : Runtime.runtime.availableProcessors() * 3 / 4 as int ?: 1)
+    configuredTestParallel = findProperty('maxTestParallel') as Integer ?: (isCiBuild ? 4 : Runtime.runtime.availableProcessors() * 3 / 4 as int ?: 1)
     excludeUnusedTransDeps = findProperty('excludeUnusedTransDeps')
 
     testProjectsStartWith = [

@@ -31,4 +31,11 @@ grails {
     // this means you MUST publish locally via ./gradlew :grails-bom:publishMavenPublicationToLocalBomRepository
     // this causes unexpected version mismatches in the various plugin projects
     springDependencyManagement = false
+
+    // Allow CI to toggle Groovy invokedynamic (indy) via -PgrailsIndy=true
+    // This enables testing functional tests with both indy enabled and disabled.
+    // See: https://github.com/apache/grails-core/issues/15321
+    if (project.hasProperty('grailsIndy')) {
+        indy = Boolean.parseBoolean(project.property('grailsIndy') as String)
+    }
 }

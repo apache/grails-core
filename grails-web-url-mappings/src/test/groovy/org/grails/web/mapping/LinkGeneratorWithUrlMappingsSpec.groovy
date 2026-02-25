@@ -26,6 +26,7 @@ import org.grails.support.MockApplicationContext
 import org.grails.web.mapping.DefaultLinkGenerator
 import org.grails.web.mapping.DefaultUrlMappingEvaluator
 import org.grails.web.mapping.DefaultUrlMappingsHolder
+import org.springframework.web.context.request.RequestContextHolder
 import spock.lang.IgnoreIf
 import spock.lang.Specification
 
@@ -46,6 +47,18 @@ class LinkGeneratorWithUrlMappingsSpec extends Specification{
     }
 
     def link = new LinkedHashMap(action)
+
+    def setup() {
+        // Reset RequestContextHolder to prevent ThreadLocal pollution from other tests
+        RequestContextHolder.resetRequestAttributes()
+        // Reset the link map to its original state for each test
+        link.clear()
+        link.putAll(action)
+    }
+
+    def cleanup() {
+        RequestContextHolder.resetRequestAttributes()
+    }
 
     protected getGenerator() {
         def generator = new DefaultLinkGenerator(baseUrl, context)
