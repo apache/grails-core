@@ -48,7 +48,7 @@ class DatabaseCleanupContext {
 
     private static Map<String, DatabaseCleaner> createCleanersMap(List<DatabaseCleaner> cleaners) {
         def typeMap = [:] as Map<String, DatabaseCleaner>
-        for(def it : cleaners) {
+        for (def it : cleaners) {
             def type = it.databaseType()?.trim()
             if (!type) {
                 throw new IllegalStateException(
