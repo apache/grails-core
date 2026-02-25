@@ -28,6 +28,8 @@ import org.grails.datastore.mapping.core.Session
 import org.grails.orm.hibernate.GrailsHibernateTransactionManager
 import org.grails.orm.hibernate.HibernateDatastore
 import org.grails.orm.hibernate.cfg.HibernateMappingContextConfiguration
+import org.grails.datastore.mapping.multitenancy.MultiTenancySettings
+import org.grails.datastore.mapping.multitenancy.resolvers.SystemPropertyTenantResolver
 import org.h2.Driver
 import org.hibernate.SessionFactory
 import org.hibernate.dialect.H2Dialect
@@ -50,6 +52,7 @@ class GrailsDataHibernate5TckManager extends GrailsDataTckManager {
     HibernateMappingContextConfiguration hibernateConfig
     ApplicationContext applicationContext
     HibernateDatastore multiDataSourceDatastore
+    HibernateDatastore multiTenantMultiDataSourceDatastore
 
     @Override
     void setup(Class<? extends Specification> spec) {
@@ -151,6 +154,47 @@ class GrailsDataHibernate5TckManager extends GrailsDataTckManager {
     @Override
     def getServiceForConnection(Class serviceType, String connectionName) {
         multiDataSourceDatastore
+                .getDatastoreForConnection(connectionName)
+                .getService(serviceType)
+    }
+
+    @Override
+    boolean supportsMultiTenantMultiDataSource() {
+        true
+    }
+
+    @Override
+    void setupMultiTenantMultiDataSource(Class... domainClasses) {
+        Map config = [
+                'grails.gorm.multiTenancy.mode'            : MultiTenancySettings.MultiTenancyMode.DISCRIMINATOR,
+                'grails.gorm.multiTenancy.tenantResolverClass': SystemPropertyTenantResolver,
+                'dataSource.url'                            : "jdbc:h2:mem:tckMtDefaultDB;LOCK_TIMEOUT=10000",
+                'dataSource.dbCreate'                       : 'create-drop',
+                'dataSource.dialect'                        : H2Dialect.name,
+                'dataSource.formatSql'                      : 'true',
+                'hibernate.flush.mode'                      : 'COMMIT',
+                'hibernate.cache.queries'                   : 'true',
+                'hibernate.hbm2ddl.auto'                    : 'create-drop',
+                'dataSources.secondary'                     : [url: "jdbc:h2:mem:tckMtSecondaryDB;LOCK_TIMEOUT=10000"],
+        ]
+        multiTenantMultiDataSourceDatastore = new HibernateDatastore(
+                DatastoreUtils.createPropertyResolver(config), domainClasses
+        )
+    }
+
+    @Override
+    void cleanupMultiTenantMultiDataSource() {
+        if (multiTenantMultiDataSourceDatastore != null) {
+            multiTenantMultiDataSourceDatastore.destroy()
+            multiTenantMultiDataSourceDatastore = null
+            shutdownInMemDb('jdbc:h2:mem:tckMtDefaultDB')
+            shutdownInMemDb('jdbc:h2:mem:tckMtSecondaryDB')
+        }
+    }
+
+    @Override
+    def getServiceForMultiTenantConnection(Class serviceType, String connectionName) {
+        multiTenantMultiDataSourceDatastore
                 .getDatastoreForConnection(connectionName)
                 .getService(serviceType)
     }

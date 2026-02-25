@@ -33,6 +33,8 @@ import org.grails.datastore.gorm.mongo.Birthday
 import org.grails.datastore.gorm.validation.constraints.eval.DefaultConstraintEvaluator
 import org.grails.datastore.gorm.validation.constraints.registry.DefaultConstraintRegistry
 import org.grails.datastore.mapping.core.Session
+import org.grails.datastore.mapping.multitenancy.MultiTenancySettings
+import org.grails.datastore.mapping.multitenancy.resolvers.SystemPropertyTenantResolver
 import org.grails.datastore.mapping.engine.types.AbstractMappingAwareCustomTypeMarshaller
 import org.grails.datastore.mapping.model.MappingContext
 import org.grails.datastore.mapping.model.PersistentEntity
@@ -61,6 +63,7 @@ class GrailsDataMongoTckManager extends GrailsDataTckManager {
 
     Map<String, Object> configuration
     MongoDatastore multiDataSourceDatastore
+    MongoDatastore multiTenantMultiDataSourceDatastore
 
     @Override
     void setupSpec() {
@@ -181,6 +184,46 @@ class GrailsDataMongoTckManager extends GrailsDataTckManager {
     @Override
     def getServiceForConnection(Class serviceType, String connectionName) {
         multiDataSourceDatastore
+                .getDatastoreForConnection(connectionName)
+                .getService(serviceType)
+    }
+
+    @Override
+    boolean supportsMultiTenantMultiDataSource() {
+        true
+    }
+
+    @Override
+    void setupMultiTenantMultiDataSource(Class... domainClasses) {
+        String host = mongoDBContainer.host
+        int port = mongoDBContainer.getMappedPort(AbstractMongoGrailsExtension.DEFAULT_MONGO_PORT)
+        Map config = [
+                'grails.gorm.multiTenancy.mode'               : MultiTenancySettings.MultiTenancyMode.DISCRIMINATOR,
+                'grails.gorm.multiTenancy.tenantResolverClass' : SystemPropertyTenantResolver,
+                'grails.mongodb.url'                           : "mongodb://${host}:${port}/tckMtDefaultDB" as String,
+                'grails.mongodb.connections'                   : [
+                        'secondary': ['url': "mongodb://${host}:${port}/tckMtSecondaryDB" as String],
+                ],
+        ]
+        multiTenantMultiDataSourceDatastore = new MongoDatastore(
+                DatastoreUtils.createPropertyResolver(config), domainClasses
+        )
+    }
+
+    @Override
+    void cleanupMultiTenantMultiDataSource() {
+        if (multiTenantMultiDataSourceDatastore != null) {
+            multiTenantMultiDataSourceDatastore.getMongoClient().listDatabaseNames()
+                    .findAll { it.startsWith('tckMt') }
+                    .each { multiTenantMultiDataSourceDatastore.getMongoClient().getDatabase(it).drop() }
+            multiTenantMultiDataSourceDatastore.close()
+            multiTenantMultiDataSourceDatastore = null
+        }
+    }
+
+    @Override
+    def getServiceForMultiTenantConnection(Class serviceType, String connectionName) {
+        multiTenantMultiDataSourceDatastore
                 .getDatastoreForConnection(connectionName)
                 .getService(serviceType)
     }
