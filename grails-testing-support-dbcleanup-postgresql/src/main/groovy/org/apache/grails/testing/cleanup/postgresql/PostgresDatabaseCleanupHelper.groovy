@@ -59,7 +59,7 @@ class PostgresDatabaseCleanupHelper {
         }
         throw new IllegalStateException(
                 'Because postgres defaults to the search_path ' +
-                'when currentSchema isn\'t defined, a schema ' +
+                'when currentSchema is not defined, a schema ' +
                 'should always be found'
         )
     }
