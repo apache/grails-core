@@ -31,9 +31,12 @@ import micronaut.client.MicronautHeaderClient
 import micronaut.client.MicronautTestClient
 import spock.lang.AutoCleanup
 import spock.lang.Specification
+import spock.util.concurrent.PollingConditions
 
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.beans.factory.annotation.Value
+
+import java.util.concurrent.CopyOnWriteArrayList
 
 import grails.testing.mixin.integration.Integration
 
@@ -556,7 +559,7 @@ class MicronautErsatzAdvancedSpec extends Specification {
 
     void "ersatz listener captures request details"() {
         given: 'ersatz captures request details'
-        List<Object> captured = []
+        CopyOnWriteArrayList<Object> captured = new CopyOnWriteArrayList<>()
         ersatz.expectations({ expect ->
             expect.GET('/micronaut-test/listen', { req ->
                 req.listener({ captured << it })
@@ -579,7 +582,11 @@ class MicronautErsatzAdvancedSpec extends Specification {
 
         then: 'a request was captured'
         response.status.code == 200
-        captured.size() == 1
+
+        and: 'the listener eventually captures the request'
+        new PollingConditions(timeout: 5).eventually {
+            assert captured.size() == 1
+        }
 
         and: 'ersatz verifies the call'
         ersatz.verify()
