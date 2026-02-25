@@ -1,7 +1,7 @@
 package org.grails.orm.hibernate.cfg.domainbinding
 
 import org.grails.orm.hibernate.cfg.ColumnConfig
-import org.grails.orm.hibernate.cfg.domainbinding.hibernate.GrailsHibernatePersistentProperty
+import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernatePersistentProperty
 import org.grails.orm.hibernate.cfg.PersistentEntityNamingStrategy
 import spock.lang.Specification
 import spock.lang.Unroll
@@ -24,7 +24,7 @@ class ColumnNameForPropertyAndPathFetcherSpec extends Specification {
                 backticksRemover
         )
 
-        def grailsProp = Mock(GrailsHibernatePersistentProperty)
+        def grailsProp = Mock(HibernatePersistentProperty)
         def cc = Mock(ColumnConfig)
 
         grailsProp.getColumnName(cc) >> "explicit_col"
@@ -47,7 +47,7 @@ class ColumnNameForPropertyAndPathFetcherSpec extends Specification {
                 backticksRemover
         )
 
-        def grailsProp = Mock(GrailsHibernatePersistentProperty)
+        def grailsProp = Mock(HibernatePersistentProperty)
 
         grailsProp.getColumnName(null) >> null
         namingStrategy.resolveColumnName(path) >> resolvedPath
@@ -75,7 +75,7 @@ class ColumnNameForPropertyAndPathFetcherSpec extends Specification {
                 backticksRemover
         )
 
-        def grailsProp = Mock(GrailsHibernatePersistentProperty)
+        def grailsProp = Mock(HibernatePersistentProperty)
 
         grailsProp.getColumnName(null) >> null
         defaultColumnFetcher.getDefaultColumnName(grailsProp) >> "only_default"

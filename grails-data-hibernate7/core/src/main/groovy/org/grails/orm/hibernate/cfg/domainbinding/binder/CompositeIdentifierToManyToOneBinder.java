@@ -28,7 +28,7 @@ import org.grails.orm.hibernate.cfg.ColumnConfig;
 import org.grails.orm.hibernate.cfg.CompositeIdentity;
 import org.grails.orm.hibernate.cfg.PersistentEntityNamingStrategy;
 import org.grails.orm.hibernate.cfg.domainbinding.hibernate.GrailsHibernatePersistentEntity;
-import org.grails.orm.hibernate.cfg.domainbinding.hibernate.GrailsHibernatePersistentProperty;
+import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernatePersistentProperty;
 import org.grails.orm.hibernate.cfg.domainbinding.util.BackticksRemover;
 import org.grails.orm.hibernate.cfg.domainbinding.util.DefaultColumnNameFetcher;
 import org.grails.orm.hibernate.cfg.domainbinding.util.ForeignKeyColumnCountCalculator;
@@ -69,7 +69,7 @@ public class CompositeIdentifierToManyToOneBinder {
   }
 
   public void bindCompositeIdentifierToManyToOne(
-      GrailsHibernatePersistentProperty property,
+      HibernatePersistentProperty property,
       SimpleValue value,
       CompositeIdentity compositeId,
       PersistentEntity refDomainClass,
@@ -116,7 +116,7 @@ public class CompositeIdentifierToManyToOneBinder {
                     backticksRemover.apply(prefix) + UNDERSCORE + backticksRemover.apply(string);
 
                 String suffix =
-                    cip instanceof GrailsHibernatePersistentProperty ghpp
+                    cip instanceof HibernatePersistentProperty ghpp
                         ? defaultColumnNameFetcher.getDefaultColumnName(ghpp)
                         : cip.getName();
                 String finalColumnName =
@@ -132,7 +132,7 @@ public class CompositeIdentifierToManyToOneBinder {
           }
 
           String suffix =
-              referencedProperty instanceof GrailsHibernatePersistentProperty ghpp
+              referencedProperty instanceof HibernatePersistentProperty ghpp
                   ? defaultColumnNameFetcher.getDefaultColumnName(ghpp)
                   : referencedProperty.getName();
           String finalColumnName =

@@ -20,7 +20,7 @@ package org.grails.orm.hibernate.cfg.domainbinding.binder;
 
 import java.util.Iterator;
 import org.grails.orm.hibernate.cfg.domainbinding.hibernate.GrailsHibernatePersistentEntity;
-import org.grails.orm.hibernate.cfg.domainbinding.hibernate.GrailsHibernatePersistentProperty;
+import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernatePersistentProperty;
 import org.grails.orm.hibernate.cfg.domainbinding.util.PropertyFromValueCreator;
 import org.hibernate.mapping.Column;
 import org.hibernate.mapping.Component;
@@ -37,8 +37,8 @@ public class ComponentUpdater {
 
   public void updateComponent(
       Component component,
-      GrailsHibernatePersistentProperty componentProperty,
-      GrailsHibernatePersistentProperty currentGrailsProp,
+      HibernatePersistentProperty componentProperty,
+      HibernatePersistentProperty currentGrailsProp,
       Value value) {
     Property persistentProperty = propertyFromValueCreator.createProperty(value, currentGrailsProp);
     component.addProperty(persistentProperty);

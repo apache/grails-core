@@ -5,7 +5,7 @@ import grails.persistence.Entity
 import org.grails.datastore.mapping.model.MappingContext
 import org.grails.datastore.mapping.model.PersistentEntity
 import org.grails.datastore.mapping.model.types.Association
-import org.grails.orm.hibernate.cfg.domainbinding.hibernate.GrailsHibernatePersistentProperty
+import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernatePersistentProperty
 import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernateAssociation
 import org.grails.orm.hibernate.cfg.PropertyConfig
 
@@ -18,7 +18,7 @@ import org.grails.orm.hibernate.cfg.domainbinding.util.CascadeBehaviorFetcher
 
 class PropertyBinderSpec extends HibernateGormDatastoreSpec {
 
-    abstract static class TestAssociation extends Association<PropertyConfig> implements GrailsHibernatePersistentProperty {
+    abstract static class TestAssociation extends Association<PropertyConfig> implements HibernatePersistentProperty {
         TestAssociation(PersistentEntity owner, MappingContext context, java.beans.PropertyDescriptor descriptor) {
             super(owner, context, descriptor)
         }
@@ -30,7 +30,7 @@ class PropertyBinderSpec extends HibernateGormDatastoreSpec {
         def cascadeBehaviorFetcher = Mock(CascadeBehaviorFetcher)
         def binder = new PropertyBinder(cascadeBehaviorFetcher)
 
-        def persistentProperty = Mock(GrailsHibernatePersistentProperty, additionalInterfaces: [HibernateAssociation])
+        def persistentProperty = Mock(HibernatePersistentProperty, additionalInterfaces: [HibernateAssociation])
         def value = Mock(Value)
         def config = Mock(PropertyConfig)
 
@@ -80,7 +80,7 @@ class PropertyBinderSpec extends HibernateGormDatastoreSpec {
         association.getMappedForm() >> config
         config.getAccessType() >> AccessType.PROPERTY
         cascadeBehaviorFetcher.getCascadeBehaviour(association as Association) >> "all-delete-orphan"
-        def property = binder.bindProperty(association as GrailsHibernatePersistentProperty, value)
+        def property = binder.bindProperty(association as HibernatePersistentProperty, value)
 
         then:
         property.getCascade() == "all-delete-orphan"
@@ -91,7 +91,7 @@ class PropertyBinderSpec extends HibernateGormDatastoreSpec {
         def cascadeBehaviorFetcher = Mock(CascadeBehaviorFetcher)
         def binder = new PropertyBinder(cascadeBehaviorFetcher)
 
-        def persistentProperty = Mock(GrailsHibernatePersistentProperty)
+        def persistentProperty = Mock(HibernatePersistentProperty)
         persistentProperty.getName() >> "name"
         def value = Mock(Value)
         def config = new PropertyConfig()

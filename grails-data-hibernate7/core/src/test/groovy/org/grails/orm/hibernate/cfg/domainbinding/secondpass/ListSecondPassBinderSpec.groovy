@@ -2,7 +2,7 @@ package org.grails.orm.hibernate.cfg.domainbinding.secondpass
 
 import grails.gorm.specs.HibernateGormDatastoreSpec
 import org.grails.orm.hibernate.cfg.domainbinding.hibernate.GrailsHibernatePersistentEntity
-import org.grails.orm.hibernate.cfg.domainbinding.hibernate.GrailsHibernatePersistentProperty
+import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernatePersistentProperty
 import org.hibernate.mapping.OneToMany
 import org.hibernate.mapping.RootClass
 import org.hibernate.boot.spi.MetadataBuildingContext
@@ -166,7 +166,7 @@ class ListSecondPassBinderSpec extends HibernateGormDatastoreSpec {
         rootClass.setEntityName(personEntity.name)
         rootClass.setTable(collector.addTable(null, null, "PERSON", null, false, binder.getMetadataBuildingContext()))
 
-        def petsProp = personEntity.getPropertyByName("pets") as GrailsHibernatePersistentProperty
+        def petsProp = personEntity.getPropertyByName("pets") as HibernatePersistentProperty
 
         when:
         def collection = collectionBinder.bindCollection(petsProp, rootClass, collector, "")

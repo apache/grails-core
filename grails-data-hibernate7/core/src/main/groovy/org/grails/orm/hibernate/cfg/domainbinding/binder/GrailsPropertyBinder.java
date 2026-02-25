@@ -19,7 +19,7 @@
 package org.grails.orm.hibernate.cfg.domainbinding.binder;
 
 import jakarta.annotation.Nonnull;
-import org.grails.orm.hibernate.cfg.domainbinding.hibernate.GrailsHibernatePersistentProperty;
+import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernatePersistentProperty;
 import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernateEmbeddedProperty;
 import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernateManyToOneProperty;
 import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernateOneToOneProperty;
@@ -63,8 +63,8 @@ public class GrailsPropertyBinder {
       PersistentClass persistentClass,
       Table table,
       String path,
-      GrailsHibernatePersistentProperty parentProperty,
-      @Nonnull GrailsHibernatePersistentProperty currentGrailsProp,
+      HibernatePersistentProperty parentProperty,
+      @Nonnull HibernatePersistentProperty currentGrailsProp,
       @Nonnull InFlightMetadataCollector mappings) {
     if (LOG.isDebugEnabled()) {
       LOG.debug(

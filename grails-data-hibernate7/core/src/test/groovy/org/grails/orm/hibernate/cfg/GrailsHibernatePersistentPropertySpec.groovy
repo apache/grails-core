@@ -3,7 +3,7 @@ package org.grails.orm.hibernate.cfg
 import grails.gorm.annotation.Entity
 import grails.gorm.specs.HibernateGormDatastoreSpec
 import org.grails.datastore.mapping.model.PersistentEntity
-import org.grails.orm.hibernate.cfg.domainbinding.hibernate.GrailsHibernatePersistentProperty
+import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernatePersistentProperty
 import org.grails.orm.hibernate.cfg.domainbinding.util.NamingStrategyWrapper
 import spock.lang.Unroll
 import org.hibernate.mapping.Property
@@ -16,7 +16,7 @@ class GrailsHibernatePersistentPropertySpec extends HibernateGormDatastoreSpec {
     void "test isEnumType for property #propertyName"() {
         given:
         PersistentEntity entity = createPersistentEntity(TestEntityWithEnum)
-        GrailsHibernatePersistentProperty property = (GrailsHibernatePersistentProperty) entity.getPropertyByName(propertyName)
+        HibernatePersistentProperty property = (HibernatePersistentProperty) entity.getPropertyByName(propertyName)
 
         expect:
         property.isEnumType() == expected
@@ -33,7 +33,7 @@ class GrailsHibernatePersistentPropertySpec extends HibernateGormDatastoreSpec {
         createPersistentEntity(AssociatedEntity)
         createPersistentEntity(ManyToOneEntity)
         PersistentEntity entity = createPersistentEntity(TestEntityWithAssociations)
-        GrailsHibernatePersistentProperty property = (GrailsHibernatePersistentProperty) entity.getPropertyByName(propertyName)
+        HibernatePersistentProperty property = (HibernatePersistentProperty) entity.getPropertyByName(propertyName)
 
         expect:
         property.isOneToOne() == isOneToOne
@@ -48,7 +48,7 @@ class GrailsHibernatePersistentPropertySpec extends HibernateGormDatastoreSpec {
     void "test isUserButNotCollectionType"() {
         given:
         PersistentEntity entity = createPersistentEntity(TestEntityWithEnum)
-        GrailsHibernatePersistentProperty property = (GrailsHibernatePersistentProperty) entity.getPropertyByName("myEnum")
+        HibernatePersistentProperty property = (HibernatePersistentProperty) entity.getPropertyByName("myEnum")
         
         expect:
         !property.isUserButNotCollectionType()
@@ -57,7 +57,7 @@ class GrailsHibernatePersistentPropertySpec extends HibernateGormDatastoreSpec {
     void "test isSerializableType"() {
         given:
         PersistentEntity entity = createPersistentEntity(TestEntityWithSerializable)
-        GrailsHibernatePersistentProperty property = (GrailsHibernatePersistentProperty) entity.getPropertyByName("payload")
+        HibernatePersistentProperty property = (HibernatePersistentProperty) entity.getPropertyByName("payload")
 
         expect:
         property.isSerializableType()
@@ -66,7 +66,7 @@ class GrailsHibernatePersistentPropertySpec extends HibernateGormDatastoreSpec {
     void "test isEmbedded() for embedded property"() {
         given:
         PersistentEntity entity = createPersistentEntity(TestEntityWithEmbedded)
-        GrailsHibernatePersistentProperty property = (GrailsHibernatePersistentProperty) entity.getPropertyByName("address")
+        HibernatePersistentProperty property = (HibernatePersistentProperty) entity.getPropertyByName("address")
 
         expect:
         property.isEmbedded()
@@ -75,7 +75,7 @@ class GrailsHibernatePersistentPropertySpec extends HibernateGormDatastoreSpec {
     void "test getTypeName()"() {
         given:
         PersistentEntity entity = createPersistentEntity(TestEntityWithTypeName)
-        GrailsHibernatePersistentProperty property = (GrailsHibernatePersistentProperty) entity.getPropertyByName("name")
+        HibernatePersistentProperty property = (HibernatePersistentProperty) entity.getPropertyByName("name")
 
         expect:
         property.getTypeName() == "string"
@@ -88,9 +88,9 @@ class GrailsHibernatePersistentPropertySpec extends HibernateGormDatastoreSpec {
         PersistentEntity entityWithCustomMap = createPersistentEntity(EntityWithCustomMapIndex)
         PersistentEntity entityWithList = createPersistentEntity(EntityWithList)
 
-        GrailsHibernatePersistentProperty defaultMapProp = (GrailsHibernatePersistentProperty) entityWithDefaultMap.getPropertyByName("tags")
-        GrailsHibernatePersistentProperty customMapProp = (GrailsHibernatePersistentProperty) entityWithCustomMap.getPropertyByName("tags")
-        GrailsHibernatePersistentProperty listProp = (GrailsHibernatePersistentProperty) entityWithList.getPropertyByName("items")
+        HibernatePersistentProperty defaultMapProp = (HibernatePersistentProperty) entityWithDefaultMap.getPropertyByName("tags")
+        HibernatePersistentProperty customMapProp = (HibernatePersistentProperty) entityWithCustomMap.getPropertyByName("tags")
+        HibernatePersistentProperty listProp = (HibernatePersistentProperty) entityWithList.getPropertyByName("items")
 
         expect:
         defaultMapProp.getIndexColumnType("string") == "string"
@@ -103,8 +103,8 @@ class GrailsHibernatePersistentPropertySpec extends HibernateGormDatastoreSpec {
         createPersistentEntity(AssociatedEntity)
         createPersistentEntity(ManyToOneEntity)
         PersistentEntity entity = createPersistentEntity(TestEntityWithAssociations)
-        GrailsHibernatePersistentProperty oneToOneProp = (GrailsHibernatePersistentProperty) entity.getPropertyByName("oneToOne")
-        GrailsHibernatePersistentProperty manyToOneProp = (GrailsHibernatePersistentProperty) entity.getPropertyByName("manyToOne")
+        HibernatePersistentProperty oneToOneProp = (HibernatePersistentProperty) entity.getPropertyByName("oneToOne")
+        HibernatePersistentProperty manyToOneProp = (HibernatePersistentProperty) entity.getPropertyByName("manyToOne")
 
         expect:
         oneToOneProp.isHibernateOneToOne()
@@ -121,7 +121,7 @@ class GrailsHibernatePersistentPropertySpec extends HibernateGormDatastoreSpec {
         createPersistentEntity(BMTOWLMBook)
         createPersistentEntity(BMTOWLMAuthor)
         PersistentEntity entity = createPersistentEntity(BMTOWLMAuthor)
-        GrailsHibernatePersistentProperty property = (GrailsHibernatePersistentProperty) entity.getPropertyByName(propertyName)
+        HibernatePersistentProperty property = (HibernatePersistentProperty) entity.getPropertyByName(propertyName)
 
         // Add this for the 'prop' parameter
         Property mockProperty = Mock(Property)
@@ -148,8 +148,8 @@ class GrailsHibernatePersistentPropertySpec extends HibernateGormDatastoreSpec {
         PersistentEntity entityWithList = createPersistentEntity(EntityWithList)
         PersistentEntity entityWithMap = createPersistentEntity(EntityWithMap)
 
-        GrailsHibernatePersistentProperty listProp = (GrailsHibernatePersistentProperty) entityWithList.getPropertyByName("items")
-        GrailsHibernatePersistentProperty mapProp = (GrailsHibernatePersistentProperty) entityWithMap.getPropertyByName("tags")
+        HibernatePersistentProperty listProp = (HibernatePersistentProperty) entityWithList.getPropertyByName("items")
+        HibernatePersistentProperty mapProp = (HibernatePersistentProperty) entityWithMap.getPropertyByName("tags")
 
         expect:
         listProp.getIndexColumnName(namingStrategy) == "items_idx"
@@ -162,7 +162,7 @@ class GrailsHibernatePersistentPropertySpec extends HibernateGormDatastoreSpec {
         def metadataBuildingContext = domainBinder.getMetadataBuildingContext()
         def table = new Table("TEST")
         PersistentEntity entity = createPersistentEntity(TestEntityWithTypeName)
-        GrailsHibernatePersistentProperty property = (GrailsHibernatePersistentProperty) entity.getPropertyByName("name")
+        HibernatePersistentProperty property = (HibernatePersistentProperty) entity.getPropertyByName("name")
         
         def sv = new org.hibernate.mapping.BasicValue(metadataBuildingContext, table)
         
@@ -177,7 +177,7 @@ class GrailsHibernatePersistentPropertySpec extends HibernateGormDatastoreSpec {
         def metadataBuildingContext = domainBinder.getMetadataBuildingContext()
         def table = new Table("TEST2")
         PersistentEntity entity = createPersistentEntity(TestEntityWithEnum)
-        GrailsHibernatePersistentProperty property = (GrailsHibernatePersistentProperty) entity.getPropertyByName("name")
+        HibernatePersistentProperty property = (HibernatePersistentProperty) entity.getPropertyByName("name")
         
         def sv = new org.hibernate.mapping.BasicValue(metadataBuildingContext, table)
         
@@ -191,7 +191,7 @@ class GrailsHibernatePersistentPropertySpec extends HibernateGormDatastoreSpec {
         def metadataBuildingContext = domainBinder.getMetadataBuildingContext()
         def table = new Table("TEST3")
         PersistentEntity entity = createPersistentEntity(BMTOWLMAuthor)
-        GrailsHibernatePersistentProperty property = (GrailsHibernatePersistentProperty) entity.getPropertyByName("books")
+        HibernatePersistentProperty property = (HibernatePersistentProperty) entity.getPropertyByName("books")
         
         // DependantValue usually represents a foreign key, it should use the identity type of the owner
         def dv = new org.hibernate.mapping.DependantValue(metadataBuildingContext, table, new org.hibernate.mapping.BasicValue(metadataBuildingContext, table))
@@ -203,7 +203,7 @@ class GrailsHibernatePersistentPropertySpec extends HibernateGormDatastoreSpec {
     void "test validateAssociation throws exception for user type"() {
         given:
         PersistentEntity entity = createPersistentEntity(TestEntityWithAssociations)
-        GrailsHibernatePersistentProperty prop = (GrailsHibernatePersistentProperty) entity.getPropertyByName("manyToOne")
+        HibernatePersistentProperty prop = (HibernatePersistentProperty) entity.getPropertyByName("manyToOne")
         
         // Mocking getUserType to return a non-null value for an association
         def proxyProp = Spy(prop)

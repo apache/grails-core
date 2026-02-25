@@ -2,7 +2,7 @@ package org.grails.orm.hibernate.cfg.domainbinding.secondpass
 
 import grails.gorm.annotation.Entity
 import grails.gorm.specs.HibernateGormDatastoreSpec
-import org.grails.orm.hibernate.cfg.domainbinding.hibernate.GrailsHibernatePersistentProperty
+import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernatePersistentProperty
 import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernateToManyProperty
 
 import org.hibernate.mapping.Bag
@@ -46,9 +46,9 @@ class CollectionSecondPassBinderSpec extends HibernateGormDatastoreSpec {
         binder = new CollectionSecondPassBinder(mtob, pkvc, cku, botml, dkvb, uotmb, cwjtb, cfpcb, dcnf, svcb)
     }
 
-    protected GrailsHibernatePersistentProperty createTestHibernateToManyProperty(Class<?> domainClass = CSPBTestEntityWithMany, String propertyName = "items") {
+    protected HibernatePersistentProperty createTestHibernateToManyProperty(Class<?> domainClass = CSPBTestEntityWithMany, String propertyName = "items") {
         PersistentEntity entity = createPersistentEntity(domainClass)
-        GrailsHibernatePersistentProperty property = (GrailsHibernatePersistentProperty) entity.getPropertyByName(propertyName)
+        HibernatePersistentProperty property = (HibernatePersistentProperty) entity.getPropertyByName(propertyName)
         return property
     }
 

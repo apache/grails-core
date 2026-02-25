@@ -4,7 +4,7 @@ import grails.gorm.specs.HibernateGormDatastoreSpec
 import org.grails.datastore.mapping.model.PersistentEntity
 import org.grails.datastore.mapping.model.PropertyMapping
 import org.grails.datastore.mapping.reflect.EntityReflector
-import org.grails.orm.hibernate.cfg.domainbinding.hibernate.GrailsHibernatePersistentProperty
+import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernatePersistentProperty
 import org.grails.orm.hibernate.cfg.PropertyConfig
 import org.hibernate.boot.spi.MetadataBuildingContext
 import org.hibernate.engine.OptimisticLockStyle
@@ -92,7 +92,7 @@ class VersionBinderSpec extends HibernateGormDatastoreSpec {
         basicValue.getTypeName() == "timestamp"
     }
 
-    static class StubGrailsHibernatePersistentProperty implements GrailsHibernatePersistentProperty {
+    static class StubGrailsHibernatePersistentProperty implements HibernatePersistentProperty {
         String name
         StubGrailsHibernatePersistentProperty(String name) { this.name = name }
         @Override String getName() { name }

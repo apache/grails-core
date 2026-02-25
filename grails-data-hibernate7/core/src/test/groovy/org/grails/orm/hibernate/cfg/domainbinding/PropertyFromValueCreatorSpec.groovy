@@ -5,7 +5,7 @@ import org.hibernate.mapping.Table
 import org.hibernate.mapping.Value
 import spock.lang.Specification
 
-import org.grails.orm.hibernate.cfg.domainbinding.hibernate.GrailsHibernatePersistentProperty
+import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernatePersistentProperty
 import org.grails.orm.hibernate.cfg.domainbinding.binder.PropertyBinder
 import org.grails.orm.hibernate.cfg.domainbinding.util.PropertyFromValueCreator
 
@@ -17,7 +17,7 @@ class PropertyFromValueCreatorSpec extends Specification {
         def creator = new PropertyFromValueCreator(propertyBinder)
         
         def value = Mock(Value)
-        def grailsProperty = Mock(GrailsHibernatePersistentProperty)
+        def grailsProperty = Mock(HibernatePersistentProperty)
         def table = new Table("my_table")
 
         grailsProperty.getOwnerClassName() >> "com.example.MyEntity"
@@ -44,7 +44,7 @@ class PropertyFromValueCreatorSpec extends Specification {
         def creator = new PropertyFromValueCreator(propertyBinder)
         
         def value = Mock(Value)
-        def grailsProperty = Mock(GrailsHibernatePersistentProperty)
+        def grailsProperty = Mock(HibernatePersistentProperty)
 
         grailsProperty.getOwnerClassName() >> "com.example.MyEntity"
         grailsProperty.getName() >> "myProp"

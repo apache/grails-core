@@ -23,7 +23,7 @@ import java.util.Iterator;
 import java.util.List;
 import org.grails.datastore.mapping.model.PersistentEntity;
 import org.grails.orm.hibernate.cfg.PropertyConfig;
-import org.grails.orm.hibernate.cfg.domainbinding.hibernate.GrailsHibernatePersistentProperty;
+import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernatePersistentProperty;
 import org.hibernate.MappingException;
 import org.hibernate.mapping.Column;
 import org.hibernate.mapping.Table;
@@ -47,7 +47,7 @@ public class CreateKeyForProps {
   }
 
   public void createKeyForProps(
-      GrailsHibernatePersistentProperty grailsProp, String path, Table table, String columnName) {
+          HibernatePersistentProperty grailsProp, String path, Table table, String columnName) {
     PropertyConfig mappedForm = grailsProp.getMappedForm();
 
     if (mappedForm.isUnique() && mappedForm.isUniqueWithinGroup()) {
@@ -58,8 +58,8 @@ public class CreateKeyForProps {
       PersistentEntity owner = grailsProp.getOwner();
       for (Iterator<?> i = propertyNames.iterator(); i.hasNext(); ) {
         String propertyName = (String) i.next();
-        GrailsHibernatePersistentProperty otherProp =
-            (GrailsHibernatePersistentProperty) owner.getPropertyByName(propertyName);
+        HibernatePersistentProperty otherProp =
+            (HibernatePersistentProperty) owner.getPropertyByName(propertyName);
         if (otherProp == null) {
           throw new MappingException(
               owner.getJavaClass().getName() + " references an unknown property " + propertyName);

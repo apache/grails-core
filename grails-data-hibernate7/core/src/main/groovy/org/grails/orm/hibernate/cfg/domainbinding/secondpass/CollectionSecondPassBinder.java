@@ -26,11 +26,10 @@ import java.util.Map;
 import java.util.Set;
 import org.grails.datastore.mapping.model.DatastoreConfigurationException;
 import org.grails.datastore.mapping.model.config.GormProperties;
-import org.grails.datastore.mapping.model.types.Association;
 import org.grails.orm.hibernate.cfg.domainbinding.binder.CollectionForPropertyConfigBinder;
 import org.grails.orm.hibernate.cfg.domainbinding.binder.ManyToOneBinder;
 import org.grails.orm.hibernate.cfg.domainbinding.binder.SimpleValueColumnBinder;
-import org.grails.orm.hibernate.cfg.domainbinding.hibernate.GrailsHibernatePersistentProperty;
+import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernatePersistentProperty;
 import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernateManyToManyProperty;
 import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernateOneToManyProperty;
 import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernateToManyProperty;
@@ -207,8 +206,8 @@ public class CollectionSecondPassBinder {
                           + property.getName()
                           + "] are not supported with unidirectional one to many relationships.");
                 }
-                GrailsHibernatePersistentProperty sortBy =
-                    (GrailsHibernatePersistentProperty)
+                HibernatePersistentProperty sortBy =
+                    (HibernatePersistentProperty)
                         referenced.getPropertyByName(property.getSort());
                 String order = Optional.ofNullable(property.getOrder()).orElse("asc");
                 collection.setOrderBy(

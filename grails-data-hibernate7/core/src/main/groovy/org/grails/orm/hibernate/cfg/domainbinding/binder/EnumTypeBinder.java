@@ -25,7 +25,7 @@ import java.util.Properties;
 import org.grails.orm.hibernate.cfg.ColumnConfig;
 import org.grails.orm.hibernate.cfg.IdentityEnumType;
 import org.grails.orm.hibernate.cfg.PropertyConfig;
-import org.grails.orm.hibernate.cfg.domainbinding.hibernate.GrailsHibernatePersistentProperty;
+import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernatePersistentProperty;
 import org.grails.orm.hibernate.cfg.domainbinding.util.ColumnNameForPropertyAndPathFetcher;
 import org.grails.orm.hibernate.cfg.domainbinding.util.GrailsEnumType;
 import org.hibernate.boot.spi.MetadataBuildingContext;
@@ -66,7 +66,7 @@ public class EnumTypeBinder {
   private static final Logger LOG = LoggerFactory.getLogger(EnumTypeBinder.class);
 
   public BasicValue bindEnumType(
-      GrailsHibernatePersistentProperty property, Class<?> propertyType, Table table, String path) {
+          HibernatePersistentProperty property, Class<?> propertyType, Table table, String path) {
     BasicValue simpleValue = new BasicValue(metadataBuildingContext, table);
     String columnName =
         columnNameForPropertyAndPathFetcher.getColumnNameForPropertyAndPath(property, path, null);
@@ -75,7 +75,7 @@ public class EnumTypeBinder {
   }
 
   public void bindEnumType(
-      GrailsHibernatePersistentProperty property,
+      HibernatePersistentProperty property,
       Class<?> propertyType,
       BasicValue simpleValue,
       String columnName) {

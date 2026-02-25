@@ -24,7 +24,7 @@ import jakarta.annotation.Nonnull;
 import org.grails.orm.hibernate.cfg.Identity;
 import org.grails.orm.hibernate.cfg.Mapping;
 import org.grails.orm.hibernate.cfg.domainbinding.hibernate.GrailsHibernatePersistentEntity;
-import org.grails.orm.hibernate.cfg.domainbinding.hibernate.GrailsHibernatePersistentProperty;
+import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernatePersistentProperty;
 import org.grails.orm.hibernate.cfg.domainbinding.util.BasicValueIdCreator;
 import org.hibernate.MappingException;
 import org.hibernate.boot.spi.MetadataBuildingContext;
@@ -76,7 +76,7 @@ public class SimpleIdBinder {
       String propertyName = mappedId.getName();
       if (propertyName != null && !propertyName.equals(domainClass.getName())) {
         var namedIdentityProp =
-            (GrailsHibernatePersistentProperty) domainClass.getPropertyByName(propertyName);
+            (HibernatePersistentProperty) domainClass.getPropertyByName(propertyName);
         if (namedIdentityProp == null) {
           throw new MappingException(
               "Mapping specifies an identifier property name that doesn't exist ["

@@ -3,7 +3,7 @@ package org.grails.orm.hibernate.cfg.domainbinding
 import grails.gorm.specs.HibernateGormDatastoreSpec
 import grails.persistence.Entity
 import org.grails.orm.hibernate.cfg.domainbinding.hibernate.GrailsHibernatePersistentEntity
-import org.grails.orm.hibernate.cfg.domainbinding.hibernate.GrailsHibernatePersistentProperty
+import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernatePersistentProperty
 import org.grails.orm.hibernate.cfg.JoinTable
 
 import spock.lang.Unroll
@@ -22,43 +22,43 @@ class TableForManyCalculatorSpec extends HibernateGormDatastoreSpec {
 
         GrailsHibernatePersistentEntity ownerEntityInstance
         GrailsHibernatePersistentEntity associatedEntityInstance
-        GrailsHibernatePersistentProperty propertyToTest
+        HibernatePersistentProperty propertyToTest
 
         // Setup entities and properties based on scenario
         switch (scenario) {
             case "an owning OneToMany":
                 ownerEntityInstance = createPersistentEntity(OwningSide)
                 associatedEntityInstance = createPersistentEntity(AssociatedSide)
-                propertyToTest = ownerEntityInstance.getPropertyByName("associated") as GrailsHibernatePersistentProperty
+                propertyToTest = ownerEntityInstance.getPropertyByName("associated") as HibernatePersistentProperty
                 break
             case "a Basic property":
                 ownerEntityInstance = createPersistentEntity(BasicCollectionOwner)
-                propertyToTest = ownerEntityInstance.getPropertyByName("items") as GrailsHibernatePersistentProperty
+                propertyToTest = ownerEntityInstance.getPropertyByName("items") as HibernatePersistentProperty
                 break
             case "a Map property":
                 ownerEntityInstance = createPersistentEntity(MapCollectionOwner)
-                propertyToTest = ownerEntityInstance.getPropertyByName("data") as GrailsHibernatePersistentProperty
+                propertyToTest = ownerEntityInstance.getPropertyByName("data") as HibernatePersistentProperty
                 break
             case "an owning ManyToMany":
                 ownerEntityInstance = createPersistentEntity(OwningSide)
                 associatedEntityInstance = createPersistentEntity(Tag)
-                propertyToTest = ownerEntityInstance.getPropertyByName("tags") as GrailsHibernatePersistentProperty
+                propertyToTest = ownerEntityInstance.getPropertyByName("tags") as HibernatePersistentProperty
                 break
             case "an inverse ManyToMany":
                 ownerEntityInstance = createPersistentEntity(Tag)
                 associatedEntityInstance = createPersistentEntity(OwningSide)
-                propertyToTest = ownerEntityInstance.getPropertyByName("owners") as GrailsHibernatePersistentProperty
+                propertyToTest = ownerEntityInstance.getPropertyByName("owners") as HibernatePersistentProperty
                 break
             case "a ManyToMany with explicit joinTable":
                 ownerEntityInstance = createPersistentEntity(OwningSide)
                 associatedEntityInstance = createPersistentEntity(Tag)
-                propertyToTest = ownerEntityInstance.getPropertyByName("tags") as GrailsHibernatePersistentProperty
+                propertyToTest = ownerEntityInstance.getPropertyByName("tags") as HibernatePersistentProperty
                 propertyToTest.getMappedForm().setJoinTable(new JoinTable(name: "my_custom_join_table"))
                 break
             case "a ToMany with supportsJoinColumnMapping":
                 ownerEntityInstance = createPersistentEntity(UnidirectionalOwner)
                 associatedEntityInstance = createPersistentEntity(UnidirectionalItem)
-                propertyToTest = ownerEntityInstance.getPropertyByName("items") as GrailsHibernatePersistentProperty
+                propertyToTest = ownerEntityInstance.getPropertyByName("items") as HibernatePersistentProperty
                 break
             default:
                 throw new IllegalArgumentException("Unknown scenario: $scenario")

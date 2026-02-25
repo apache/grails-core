@@ -22,7 +22,7 @@ import static org.grails.orm.hibernate.cfg.domainbinding.binder.GrailsDomainBind
 
 import java.util.function.BiFunction;
 import org.grails.orm.hibernate.cfg.PersistentEntityNamingStrategy;
-import org.grails.orm.hibernate.cfg.domainbinding.hibernate.GrailsHibernatePersistentProperty;
+import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernatePersistentProperty;
 import org.hibernate.boot.spi.MetadataBuildingContext;
 import org.hibernate.engine.OptimisticLockStyle;
 import org.hibernate.engine.jdbc.env.spi.JdbcEnvironment;
@@ -60,7 +60,7 @@ public class VersionBinder {
         BasicValue::new);
   }
 
-  public void bindVersion(GrailsHibernatePersistentProperty version, RootClass entity) {
+  public void bindVersion(HibernatePersistentProperty version, RootClass entity) {
 
     if (version != null) {
 

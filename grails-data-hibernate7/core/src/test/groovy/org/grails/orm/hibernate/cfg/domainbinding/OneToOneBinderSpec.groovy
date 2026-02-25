@@ -3,7 +3,7 @@ package org.grails.orm.hibernate.cfg.domainbinding
 import grails.gorm.specs.HibernateGormDatastoreSpec
 import org.grails.datastore.mapping.model.types.OneToOne as GormOneToOne
 import org.grails.datastore.mapping.model.PersistentEntity
-import org.grails.orm.hibernate.cfg.domainbinding.hibernate.GrailsHibernatePersistentProperty
+import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernatePersistentProperty
 import org.grails.orm.hibernate.cfg.PropertyConfig
 import org.hibernate.FetchMode
 import org.hibernate.mapping.OneToOne as HibernateOneToOne
@@ -30,7 +30,7 @@ class OneToOneBinderSpec extends HibernateGormDatastoreSpec {
         def metadataBuildingContext = getGrailsDomainBinder().getMetadataBuildingContext()
         def ownerRoot = new RootClass(metadataBuildingContext)
         
-        def gormOneToOne = Mock(GormOneToOne, additionalInterfaces: [GrailsHibernatePersistentProperty])
+        def gormOneToOne = Mock(GormOneToOne, additionalInterfaces: [HibernatePersistentProperty])
         def otherSide = Mock(GormOneToOne)
         def owner = Mock(PersistentEntity)
         def otherOwner = Mock(PersistentEntity)
@@ -45,7 +45,7 @@ class OneToOneBinderSpec extends HibernateGormDatastoreSpec {
         
         otherOwner.getName() >> "OtherEntity"
 
-        ((GrailsHibernatePersistentProperty)gormOneToOne).getMappedForm() >> new PropertyConfig()
+        ((HibernatePersistentProperty)gormOneToOne).getMappedForm() >> new PropertyConfig()
 
         when:
         def hibernateOneToOne = binder.bindOneToOne(gormOneToOne as GormOneToOne, ownerRoot, null, "")
@@ -66,7 +66,7 @@ class OneToOneBinderSpec extends HibernateGormDatastoreSpec {
         def metadataBuildingContext = getGrailsDomainBinder().getMetadataBuildingContext()
         def ownerRoot = new RootClass(metadataBuildingContext)
         
-        def gormOneToOne = Mock(GormOneToOne, additionalInterfaces: [GrailsHibernatePersistentProperty])
+        def gormOneToOne = Mock(GormOneToOne, additionalInterfaces: [HibernatePersistentProperty])
         def otherSide = Mock(GormOneToOne)
         def owner = Mock(PersistentEntity)
         def otherOwner = Mock(PersistentEntity)
@@ -81,7 +81,7 @@ class OneToOneBinderSpec extends HibernateGormDatastoreSpec {
         otherOwner.getName() >> "OtherEntity"
 
         def propertyConfig = new PropertyConfig()
-        ((GrailsHibernatePersistentProperty)gormOneToOne).getMappedForm() >> propertyConfig
+        ((HibernatePersistentProperty)gormOneToOne).getMappedForm() >> propertyConfig
 
         when:
         def hibernateOneToOne = binder.bindOneToOne(gormOneToOne as GormOneToOne, ownerRoot, null, "")
@@ -97,7 +97,7 @@ class OneToOneBinderSpec extends HibernateGormDatastoreSpec {
         def metadataBuildingContext = getGrailsDomainBinder().getMetadataBuildingContext()
         def ownerRoot = new RootClass(metadataBuildingContext)
         
-        def gormOneToOne = Mock(GormOneToOne, additionalInterfaces: [GrailsHibernatePersistentProperty])
+        def gormOneToOne = Mock(GormOneToOne, additionalInterfaces: [HibernatePersistentProperty])
         def otherSide = Mock(GormOneToOne)
         def owner = Mock(PersistentEntity)
         def otherOwner = Mock(PersistentEntity)
@@ -110,7 +110,7 @@ class OneToOneBinderSpec extends HibernateGormDatastoreSpec {
         otherSide.getOwner() >> otherOwner
         otherSide.isHasOne() >> false
         
-        ((GrailsHibernatePersistentProperty)gormOneToOne).getMappedForm() >> propertyConfig
+        ((HibernatePersistentProperty)gormOneToOne).getMappedForm() >> propertyConfig
 
         when:
         def hibernateOneToOne = binder.bindOneToOne(gormOneToOne as GormOneToOne, ownerRoot, null, "")

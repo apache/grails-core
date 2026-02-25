@@ -2,7 +2,7 @@ package org.grails.orm.hibernate.cfg.domainbinding.binder
 
 import grails.gorm.specs.HibernateGormDatastoreSpec
 import org.grails.orm.hibernate.cfg.domainbinding.hibernate.GrailsHibernatePersistentEntity
-import org.grails.orm.hibernate.cfg.domainbinding.hibernate.GrailsHibernatePersistentProperty
+import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernatePersistentProperty
 import org.grails.orm.hibernate.cfg.Mapping
 import org.grails.orm.hibernate.cfg.domainbinding.util.PropertyFromValueCreator
 import org.hibernate.boot.spi.InFlightMetadataCollector
@@ -25,9 +25,9 @@ class ClassPropertiesBinderSpec extends HibernateGormDatastoreSpec {
         def mappings = Mock(InFlightMetadataCollector)
         def sessionFactoryBeanName = "sessionFactory"
 
-        def prop1 = Mock(GrailsHibernatePersistentProperty)
+        def prop1 = Mock(HibernatePersistentProperty)
         prop1.getName() >> "prop1"
-        def prop2 = Mock(GrailsHibernatePersistentProperty)
+        def prop2 = Mock(HibernatePersistentProperty)
         prop2.getName() >> "prop2"
         domainClass.getPersistentPropertiesToBind() >> [prop1, prop2]
         

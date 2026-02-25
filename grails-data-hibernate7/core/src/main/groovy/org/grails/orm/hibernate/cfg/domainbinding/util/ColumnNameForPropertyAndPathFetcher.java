@@ -22,7 +22,7 @@ import java.util.Optional;
 import org.grails.orm.hibernate.cfg.ColumnConfig;
 import org.grails.orm.hibernate.cfg.GrailsHibernateUtil;
 import org.grails.orm.hibernate.cfg.PersistentEntityNamingStrategy;
-import org.grails.orm.hibernate.cfg.domainbinding.hibernate.GrailsHibernatePersistentProperty;
+import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernatePersistentProperty;
 public class ColumnNameForPropertyAndPathFetcher {
 
   private final PersistentEntityNamingStrategy namingStrategy;
@@ -41,7 +41,7 @@ public class ColumnNameForPropertyAndPathFetcher {
   private static final String UNDERSCORE = "_";
 
   public String getColumnNameForPropertyAndPath(
-      GrailsHibernatePersistentProperty grailsProp, String path, ColumnConfig cc) {
+          HibernatePersistentProperty grailsProp, String path, ColumnConfig cc) {
     return Optional.ofNullable(grailsProp.getColumnName(cc))
         .orElseGet(
             () -> {

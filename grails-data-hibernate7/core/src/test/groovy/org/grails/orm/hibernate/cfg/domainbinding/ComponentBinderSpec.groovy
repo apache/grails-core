@@ -5,7 +5,7 @@ import org.grails.datastore.mapping.model.MappingContext
 import org.grails.datastore.mapping.model.PersistentEntity
 import org.grails.datastore.mapping.model.PersistentProperty
 import org.grails.orm.hibernate.cfg.domainbinding.hibernate.GrailsHibernatePersistentEntity
-import org.grails.orm.hibernate.cfg.domainbinding.hibernate.GrailsHibernatePersistentProperty
+import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernatePersistentProperty
 import org.grails.orm.hibernate.cfg.Mapping
 import org.grails.orm.hibernate.cfg.MappingCacheHolder
 import org.grails.orm.hibernate.cfg.PropertyConfig
@@ -87,8 +87,8 @@ class ComponentBinderSpec extends HibernateGormDatastoreSpec {
     private void setupProperty(PersistentProperty prop, String name, Mapping mapping, PersistentEntity owner) {
         prop.getName() >> name
         _ * prop.getOwner() >> owner
-        if (prop instanceof GrailsHibernatePersistentProperty) {
-            _ * ((GrailsHibernatePersistentProperty)prop).getHibernateOwner() >> owner
+        if (prop instanceof HibernatePersistentProperty) {
+            _ * ((HibernatePersistentProperty)prop).getHibernateOwner() >> owner
         }
         def config = new PropertyConfig()
         mapping.getColumns().put(name, config)

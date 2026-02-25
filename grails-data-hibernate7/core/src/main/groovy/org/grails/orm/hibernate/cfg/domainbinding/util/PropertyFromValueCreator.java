@@ -19,7 +19,7 @@
 package org.grails.orm.hibernate.cfg.domainbinding.util;
 
 import org.grails.orm.hibernate.cfg.domainbinding.binder.PropertyBinder;
-import org.grails.orm.hibernate.cfg.domainbinding.hibernate.GrailsHibernatePersistentProperty;
+import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernatePersistentProperty;
 import org.hibernate.mapping.Property;
 import org.hibernate.mapping.Value;
 
@@ -35,7 +35,7 @@ public class PropertyFromValueCreator {
     this.propertyBinder = propertyBinder;
   }
 
-  public Property createProperty(Value value, GrailsHibernatePersistentProperty grailsProperty) {
+  public Property createProperty(Value value, HibernatePersistentProperty grailsProperty) {
     // set type
     if (!grailsProperty.isEnumType()) {
       value.setTypeUsingReflection(grailsProperty.getOwnerClassName(), grailsProperty.getName());

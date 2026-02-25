@@ -21,7 +21,7 @@ package org.grails.orm.hibernate.cfg.domainbinding.util;
 import org.grails.datastore.mapping.model.types.Association;
 import org.grails.datastore.mapping.model.types.Basic;
 import org.grails.orm.hibernate.cfg.PersistentEntityNamingStrategy;
-import org.grails.orm.hibernate.cfg.domainbinding.hibernate.GrailsHibernatePersistentProperty;
+import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernatePersistentProperty;
 import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernateManyToManyProperty;
 import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernateOneToManyProperty;
 
@@ -44,7 +44,7 @@ public class DefaultColumnNameFetcher {
     this.backticksRemover = backticksRemover;
   }
 
-  public String getDefaultColumnName(GrailsHibernatePersistentProperty property) {
+  public String getDefaultColumnName(HibernatePersistentProperty property) {
 
     String columnName = namingStrategyWrapper.resolveColumnName(property.getName());
     if (property instanceof Association) {

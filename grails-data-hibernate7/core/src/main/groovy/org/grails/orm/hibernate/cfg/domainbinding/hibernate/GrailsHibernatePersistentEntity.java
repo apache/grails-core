@@ -92,10 +92,10 @@ public interface GrailsHibernatePersistentEntity extends PersistentEntity {
   }
 
   @Override
-  GrailsHibernatePersistentProperty getIdentity();
+  HibernatePersistentProperty getIdentity();
 
   @Override
-  GrailsHibernatePersistentProperty[] getCompositeIdentity();
+  HibernatePersistentProperty[] getCompositeIdentity();
 
   default Optional<CompositeIdentity> getHibernateCompositeIdentity() {
     return Optional.ofNullable(getMappedForm())
@@ -125,8 +125,8 @@ public interface GrailsHibernatePersistentEntity extends PersistentEntity {
   /**
    * @return The properties that should be bound to the Hibernate meta model
    */
-  default List<GrailsHibernatePersistentProperty> getPersistentPropertiesToBind() {
-    List<GrailsHibernatePersistentProperty> properties = getHibernatePersistentProperties();
+  default List<HibernatePersistentProperty> getPersistentPropertiesToBind() {
+    List<HibernatePersistentProperty> properties = getHibernatePersistentProperties();
     if (properties == null) {
       return java.util.Collections.emptyList();
     }
@@ -141,15 +141,15 @@ public interface GrailsHibernatePersistentEntity extends PersistentEntity {
   }
 
   @Override
-  GrailsHibernatePersistentProperty getVersion();
+  HibernatePersistentProperty getVersion();
 
   /**
    * @param parentType The type of the parent entity
    * @return The parent property if it exists
    */
-  default Optional<GrailsHibernatePersistentProperty> getHibernateParentProperty(
+  default Optional<HibernatePersistentProperty> getHibernateParentProperty(
       Class<?> parentType) {
-    List<GrailsHibernatePersistentProperty> properties = getHibernatePersistentProperties();
+    List<HibernatePersistentProperty> properties = getHibernatePersistentProperties();
     if (properties == null) {
       return Optional.empty();
     }
@@ -163,9 +163,9 @@ public interface GrailsHibernatePersistentEntity extends PersistentEntity {
    * @param parentType The type of the parent entity to exclude from the results
    * @return The properties that should be bound to the Hibernate meta model
    */
-  default List<GrailsHibernatePersistentProperty> getHibernatePersistentProperties(
+  default List<HibernatePersistentProperty> getHibernatePersistentProperties(
       Class<?> parentType) {
-    List<GrailsHibernatePersistentProperty> properties = getHibernatePersistentProperties();
+    List<HibernatePersistentProperty> properties = getHibernatePersistentProperties();
     if (properties == null) {
       return java.util.Collections.emptyList();
     }
@@ -207,7 +207,7 @@ public interface GrailsHibernatePersistentEntity extends PersistentEntity {
     return Optional.ofNullable(getTenantId())
         .map(
             tenantId ->
-                tenantId instanceof GrailsHibernatePersistentProperty ghpp
+                tenantId instanceof HibernatePersistentProperty ghpp
                     ? fetcher.getDefaultColumnName(ghpp)
                     : tenantId.getName())
         .map(defaultColumnName -> ":tenantId = " + defaultColumnName)
@@ -258,12 +258,12 @@ public interface GrailsHibernatePersistentEntity extends PersistentEntity {
         : discriminatorConfig.getFormula();
   }
 
-  default List<GrailsHibernatePersistentProperty> getHibernatePersistentProperties() {
+  default List<HibernatePersistentProperty> getHibernatePersistentProperties() {
     var properties =
         new java.util.ArrayList<>(
             getPersistentProperties().stream()
-                .filter(GrailsHibernatePersistentProperty.class::isInstance)
-                .map(GrailsHibernatePersistentProperty.class::cast)
+                .filter(HibernatePersistentProperty.class::isInstance)
+                .map(HibernatePersistentProperty.class::cast)
                 .toList());
     properties.sort(
         (p1, p2) -> {

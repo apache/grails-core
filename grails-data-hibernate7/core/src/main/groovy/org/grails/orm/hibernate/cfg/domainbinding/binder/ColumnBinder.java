@@ -24,7 +24,7 @@ import org.grails.orm.hibernate.cfg.ColumnConfig;
 import org.grails.orm.hibernate.cfg.Mapping;
 import org.grails.orm.hibernate.cfg.PersistentEntityNamingStrategy;
 import org.grails.orm.hibernate.cfg.PropertyConfig;
-import org.grails.orm.hibernate.cfg.domainbinding.hibernate.GrailsHibernatePersistentProperty;
+import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernatePersistentProperty;
 import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernateManyToManyProperty;
 import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernateOneToOneProperty;
 import org.grails.orm.hibernate.cfg.domainbinding.util.BackticksRemover;
@@ -94,8 +94,8 @@ public class ColumnBinder {
    * @param table The table name
    */
   public void bindColumn(
-      GrailsHibernatePersistentProperty property,
-      GrailsHibernatePersistentProperty parentProperty,
+      HibernatePersistentProperty property,
+      HibernatePersistentProperty parentProperty,
       Column column,
       ColumnConfig cc,
       String path,

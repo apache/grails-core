@@ -5,7 +5,7 @@ import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernateAssociation
 import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernateToOneProperty
 import org.grails.orm.hibernate.cfg.CompositeIdentity
 import org.grails.orm.hibernate.cfg.domainbinding.hibernate.GrailsHibernatePersistentEntity
-import org.grails.orm.hibernate.cfg.domainbinding.hibernate.GrailsHibernatePersistentProperty
+import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernatePersistentProperty
 import org.grails.orm.hibernate.cfg.Mapping
 import org.grails.orm.hibernate.cfg.PersistentEntityNamingStrategy
 import org.grails.orm.hibernate.cfg.PropertyConfig
@@ -54,8 +54,8 @@ class ManyToOneBinderSpec extends HibernateGormDatastoreSpec {
         then:
         result instanceof ManyToOne
         1 * manyToOneValuesBinder.bindManyToOneValues(association as HibernateAssociation, _ as ManyToOne)
-        compositeBinderCalls * compositeBinder.bindCompositeIdentifierToManyToOne(association as GrailsHibernatePersistentProperty, _ as ManyToOne, _, refDomainClass, path)
-        simpleValueBinderCalls * simpleValueBinder.bindSimpleValue(association as GrailsHibernatePersistentProperty, null, _ as ManyToOne, path)
+        compositeBinderCalls * compositeBinder.bindCompositeIdentifierToManyToOne(association as HibernatePersistentProperty, _ as ManyToOne, _, refDomainClass, path)
+        simpleValueBinderCalls * simpleValueBinder.bindSimpleValue(association as HibernatePersistentProperty, null, _ as ManyToOne, path)
 
         where:
         scenario                 | hasCompositeId | compositeBinderCalls | simpleValueBinderCalls
@@ -94,7 +94,7 @@ class ManyToOneBinderSpec extends HibernateGormDatastoreSpec {
         then:
         result instanceof ManyToOne
         1 * manyToOneValuesBinder.bindManyToOneValues(property as HibernateAssociation, _ as ManyToOne)
-        1 * simpleValueBinder.bindSimpleValue(property as GrailsHibernatePersistentProperty, null, _ as ManyToOne, "/test")
+        1 * simpleValueBinder.bindSimpleValue(property as HibernatePersistentProperty, null, _ as ManyToOne, "/test")
         def resultConfig = mapping.getColumns().get("myCircularProp")
         resultConfig != null
         resultConfig.getJoinTable().getKey().getName() == "my_circular_prop_id"

@@ -22,7 +22,7 @@ import jakarta.annotation.Nonnull;
 import org.grails.orm.hibernate.cfg.CompositeIdentity;
 import org.grails.orm.hibernate.cfg.GrailsHibernateUtil;
 import org.grails.orm.hibernate.cfg.domainbinding.hibernate.GrailsHibernatePersistentEntity;
-import org.grails.orm.hibernate.cfg.domainbinding.hibernate.GrailsHibernatePersistentProperty;
+import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernatePersistentProperty;
 import org.hibernate.boot.spi.InFlightMetadataCollector;
 import org.hibernate.boot.spi.MetadataBuildingContext;
 import org.hibernate.mapping.Component;
@@ -64,11 +64,11 @@ public class CompositeIdBinder {
     if (compositeIdentity == null) {
       compositeIdentity = new CompositeIdentity();
     }
-    GrailsHibernatePersistentProperty[] composite =
+    HibernatePersistentProperty[] composite =
         compositeIdentity.getHibernateProperties(domainClass);
 
-    GrailsHibernatePersistentProperty identifierProp = domainClass.getIdentity();
-    for (GrailsHibernatePersistentProperty property : composite) {
+    HibernatePersistentProperty identifierProp = domainClass.getIdentity();
+    for (HibernatePersistentProperty property : composite) {
       var value =
           grailsPropertyBinder.bindProperty(
               root, root.getTable(), "", identifierProp, property, mappings);

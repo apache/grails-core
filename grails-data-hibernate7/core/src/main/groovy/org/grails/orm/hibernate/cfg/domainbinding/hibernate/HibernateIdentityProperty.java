@@ -26,7 +26,7 @@ import org.grails.orm.hibernate.cfg.PropertyConfig;
 
 /** Hibernate implementation of {@link org.grails.datastore.mapping.model.types.Identity} */
 public class HibernateIdentityProperty extends IdentityWithMapping<PropertyConfig>
-    implements GrailsHibernatePersistentProperty {
+    implements HibernatePersistentProperty {
   public HibernateIdentityProperty(
       PersistentEntity entity, MappingContext context, PropertyDescriptor property) {
     super(entity, context, property);

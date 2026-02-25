@@ -28,7 +28,7 @@ import org.grails.orm.hibernate.cfg.PropertyConfig;
 
 /**
  * Common interface for all Hibernate association properties (both ToOne and ToMany). Extends
- * {@link GrailsHibernatePersistentProperty} and declares the key {@link
+ * {@link HibernatePersistentProperty} and declares the key {@link
  * org.grails.datastore.mapping.model.types.Association} methods directly so callers can use them
  * without casting. Note: {@code Association} is an abstract class so cannot be listed as a
  * super-interface; the implementing classes satisfy these contracts through their class hierarchy.
@@ -36,7 +36,7 @@ import org.grails.orm.hibernate.cfg.PropertyConfig;
  * @see HibernateToOneProperty
  * @see HibernateToManyProperty
  */
-public interface HibernateAssociation extends GrailsHibernatePersistentProperty {
+public interface HibernateAssociation extends HibernatePersistentProperty {
 
   // --- Association contract (satisfied by the class hierarchy of all implementors) ---
 
@@ -83,6 +83,6 @@ public interface HibernateAssociation extends GrailsHibernatePersistentProperty 
     if (propertyType == getType() && getHibernateAssociatedEntity() != null) {
       return null;
     }
-    return GrailsHibernatePersistentProperty.super.getTypeName(propertyType, config, mapping);
+    return HibernatePersistentProperty.super.getTypeName(propertyType, config, mapping);
   }
 }

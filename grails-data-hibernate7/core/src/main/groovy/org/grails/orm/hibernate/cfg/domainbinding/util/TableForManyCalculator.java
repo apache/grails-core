@@ -27,7 +27,7 @@ import org.grails.orm.hibernate.cfg.JoinTable;
 import org.grails.orm.hibernate.cfg.PersistentEntityNamingStrategy;
 import org.grails.orm.hibernate.cfg.PropertyConfig;
 import org.grails.orm.hibernate.cfg.domainbinding.hibernate.GrailsHibernatePersistentEntity;
-import org.grails.orm.hibernate.cfg.domainbinding.hibernate.GrailsHibernatePersistentProperty;
+import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernatePersistentProperty;
 import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernateManyToManyProperty;
 import org.hibernate.MappingException;
 
@@ -52,7 +52,7 @@ public class TableForManyCalculator {
    * relationship so that there is not a situation where you have two mapping tables for left_right
    * and right_left
    */
-  public String calculateTableForMany(GrailsHibernatePersistentProperty property) {
+  public String calculateTableForMany(HibernatePersistentProperty property) {
     String propertyColumnName = namingStrategy.resolveColumnName(property.getName());
     PropertyConfig config = property.getMappedForm();
     JoinTable jt = config.getJoinTable();

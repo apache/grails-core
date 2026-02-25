@@ -22,7 +22,7 @@ import jakarta.annotation.Nonnull;
 import org.grails.orm.hibernate.cfg.GrailsHibernateUtil;
 import org.grails.orm.hibernate.cfg.MappingCacheHolder;
 import org.grails.orm.hibernate.cfg.domainbinding.hibernate.GrailsHibernatePersistentEntity;
-import org.grails.orm.hibernate.cfg.domainbinding.hibernate.GrailsHibernatePersistentProperty;
+import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernatePersistentProperty;
 import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernateEmbeddedProperty;
 import org.hibernate.boot.spi.InFlightMetadataCollector;
 import org.hibernate.boot.spi.MetadataBuildingContext;
@@ -75,7 +75,7 @@ public class ComponentBinder {
         .getHibernateParentProperty(propertyType)
         .ifPresent(p -> component.setParentProperty(p.getName()));
 
-    for (GrailsHibernatePersistentProperty peerProperty :
+    for (HibernatePersistentProperty peerProperty :
         domainClass.getHibernatePersistentProperties(propertyType)) {
       var value =
           grailsPropertyBinder.bindProperty(

@@ -31,7 +31,7 @@ import org.grails.datastore.mapping.model.PersistentEntity
 import org.grails.datastore.mapping.model.PersistentProperty
 import org.grails.datastore.mapping.model.types.Association
 import org.grails.orm.hibernate.cfg.domainbinding.hibernate.GrailsHibernatePersistentEntity
-import org.grails.orm.hibernate.cfg.domainbinding.hibernate.GrailsHibernatePersistentProperty
+import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernatePersistentProperty
 import org.grails.orm.hibernate.cfg.Mapping
 import org.grails.orm.hibernate.cfg.Identity
 import org.hibernate.mapping.PersistentClass
@@ -120,8 +120,8 @@ class GormColumnSnapshotGenerator implements SnapshotGenerator {
     protected PersistentProperty resolveGormProperty(GrailsHibernatePersistentEntity gpe, String columnName) {
         for (PersistentProperty prop : gpe.hibernatePersistentProperties) {
             String propColumnName = null
-            if (prop instanceof GrailsHibernatePersistentProperty) {
-                propColumnName = ((GrailsHibernatePersistentProperty) prop).mappedColumnName
+            if (prop instanceof HibernatePersistentProperty) {
+                propColumnName = ((HibernatePersistentProperty) prop).mappedColumnName
             }
             if (propColumnName == null) {
                 propColumnName = prop.name

@@ -25,7 +25,7 @@ import org.grails.orm.hibernate.cfg.PersistentEntityNamingStrategy;
 import org.grails.orm.hibernate.cfg.PropertyConfig;
 import org.grails.orm.hibernate.cfg.domainbinding.generator.GrailsSequenceWrapper;
 import org.grails.orm.hibernate.cfg.domainbinding.hibernate.GrailsHibernatePersistentEntity;
-import org.grails.orm.hibernate.cfg.domainbinding.hibernate.GrailsHibernatePersistentProperty;
+import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernatePersistentProperty;
 import org.hibernate.boot.spi.MetadataBuildingContext;
 import org.hibernate.engine.jdbc.env.spi.JdbcEnvironment;
 import org.hibernate.generator.Generator;
@@ -86,8 +86,8 @@ public class SimpleValueBinder {
   }
 
   public BasicValue bindSimpleValue(
-      @jakarta.annotation.Nonnull GrailsHibernatePersistentProperty property,
-      GrailsHibernatePersistentProperty parentProperty,
+      @jakarta.annotation.Nonnull HibernatePersistentProperty property,
+      HibernatePersistentProperty parentProperty,
       Table table,
       String path) {
     BasicValue basicValue = new BasicValue(metadataBuildingContext, table);
@@ -96,8 +96,8 @@ public class SimpleValueBinder {
   }
 
   public void bindSimpleValue(
-      @jakarta.annotation.Nonnull GrailsHibernatePersistentProperty property,
-      GrailsHibernatePersistentProperty parentProperty,
+      @jakarta.annotation.Nonnull HibernatePersistentProperty property,
+      HibernatePersistentProperty parentProperty,
       SimpleValue simpleValue,
       String path) {
 
@@ -138,7 +138,7 @@ public class SimpleValueBinder {
   }
 
   private Generator createGenerator(
-      GrailsHibernatePersistentProperty property,
+      HibernatePersistentProperty property,
       GeneratorCreationContext context,
       String generatorName) {
     return grailsSequenceWrapper.getGenerator(

@@ -24,7 +24,7 @@ import org.grails.datastore.mapping.model.types.Association;
 import org.grails.datastore.mapping.reflect.EntityReflector;
 import org.grails.orm.hibernate.access.TraitPropertyAccessStrategy;
 import org.grails.orm.hibernate.cfg.PropertyConfig;
-import org.grails.orm.hibernate.cfg.domainbinding.hibernate.GrailsHibernatePersistentProperty;
+import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernatePersistentProperty;
 import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernateAssociation;
 import org.grails.orm.hibernate.cfg.domainbinding.util.CascadeBehaviorFetcher;
 import org.hibernate.boot.spi.AccessType;
@@ -51,7 +51,7 @@ public class PropertyBinder {
    * @param value The Hibernate value
    * @return The Hibernate property
    */
-  public Property bindProperty(GrailsHibernatePersistentProperty persistentProperty, Value value) {
+  public Property bindProperty(HibernatePersistentProperty persistentProperty, Value value) {
     var prop = new Property();
     prop.setValue(value);
     // set the property name

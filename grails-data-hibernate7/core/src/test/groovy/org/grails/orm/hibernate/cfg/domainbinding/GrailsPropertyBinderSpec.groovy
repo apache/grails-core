@@ -4,7 +4,7 @@ import grails.gorm.annotation.Entity
 import grails.gorm.specs.HibernateGormDatastoreSpec
 import org.grails.datastore.mapping.model.PersistentProperty
 import org.grails.orm.hibernate.cfg.domainbinding.hibernate.GrailsHibernatePersistentEntity
-import org.grails.orm.hibernate.cfg.domainbinding.hibernate.GrailsHibernatePersistentProperty
+import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernatePersistentProperty
 import org.grails.orm.hibernate.cfg.domainbinding.binder.GrailsDomainBinder
 import org.grails.orm.hibernate.cfg.Mapping
 import org.grails.orm.hibernate.cfg.PropertyConfig
@@ -101,8 +101,8 @@ class GrailsPropertyBinderSpec extends HibernateGormDatastoreSpec {
     private void setupProperty(PersistentProperty prop, String name, Mapping mapping, PersistentEntity owner) {
         prop.getName() >> name
         _ * prop.getOwner() >> owner
-        if (prop instanceof GrailsHibernatePersistentProperty) {
-            _ * ((GrailsHibernatePersistentProperty)prop).getHibernateOwner() >> owner
+        if (prop instanceof HibernatePersistentProperty) {
+            _ * ((HibernatePersistentProperty)prop).getHibernateOwner() >> owner
         }
         def config = new PropertyConfig()
         mapping.getColumns().put(name, config)
@@ -227,7 +227,7 @@ class GrailsPropertyBinderSpec extends HibernateGormDatastoreSpec {
         rootClass.setTable(collector.addTable(null, null, "SIMPLE_BOOK", null, false, binder.getMetadataBuildingContext()))
 
         when:
-        def titleProp = persistentEntity.getPropertyByName("title") as GrailsHibernatePersistentProperty
+        def titleProp = persistentEntity.getPropertyByName("title") as HibernatePersistentProperty
         Value value = propertyBinder.bindProperty(rootClass, rootClass.table, EMPTY_PATH, null, titleProp, collector)
         rootClass.addProperty(new PropertyFromValueCreator().createProperty(value, titleProp))
 
@@ -282,7 +282,7 @@ class GrailsPropertyBinderSpec extends HibernateGormDatastoreSpec {
         rootClass.setTable(collector.addTable(null, null, "PET", null, false, binder.getMetadataBuildingContext()))
 
         when:
-        def ownerProp = petEntity.getPropertyByName("owner") as GrailsHibernatePersistentProperty
+        def ownerProp = petEntity.getPropertyByName("owner") as HibernatePersistentProperty
         Value value = propertyBinder.bindProperty(rootClass, rootClass.table, EMPTY_PATH, null, ownerProp, collector)
         rootClass.addProperty(new PropertyFromValueCreator().createProperty(value, ownerProp))
 
@@ -305,7 +305,7 @@ class GrailsPropertyBinderSpec extends HibernateGormDatastoreSpec {
         rootClass.setTable(collector.addTable(null, null, "EMPLOYEE", null, false, binder.getMetadataBuildingContext()))
 
         when:
-        def addressProp = persistentEntity.getPropertyByName("homeAddress") as GrailsHibernatePersistentProperty
+        def addressProp = persistentEntity.getPropertyByName("homeAddress") as HibernatePersistentProperty
         Value value = propertyBinder.bindProperty(rootClass, rootClass.table, EMPTY_PATH, null, addressProp, collector)
         rootClass.addProperty(new PropertyFromValueCreator().createProperty(value, addressProp))
 
@@ -333,7 +333,7 @@ class GrailsPropertyBinderSpec extends HibernateGormDatastoreSpec {
         rootClass.setTable(collector.addTable(null, null, "PERSON", null, false, binder.getMetadataBuildingContext()))
 
         when:
-        def petsProp = personEntity.getPropertyByName("pets") as GrailsHibernatePersistentProperty
+        def petsProp = personEntity.getPropertyByName("pets") as HibernatePersistentProperty
         Value value = propertyBinder.bindProperty(rootClass, rootClass.table, EMPTY_PATH, null, petsProp, collector)
         rootClass.addProperty(new PropertyFromValueCreator().createProperty(value, petsProp))
 
@@ -372,7 +372,7 @@ class GrailsPropertyBinderSpec extends HibernateGormDatastoreSpec {
         collector.addEntityBinding(rootClass)
 
         when:
-        def booksProp = authorEntity.getPropertyByName("books") as GrailsHibernatePersistentProperty
+        def booksProp = authorEntity.getPropertyByName("books") as HibernatePersistentProperty
         Value value = propertyBinder.bindProperty(rootClass, rootClass.table, EMPTY_PATH, null, booksProp, collector)
         rootClass.addProperty(new PropertyFromValueCreator().createProperty(value, booksProp))
         collector.processSecondPasses(binder.getMetadataBuildingContext())
@@ -411,7 +411,7 @@ class GrailsPropertyBinderSpec extends HibernateGormDatastoreSpec {
         collector.addEntityBinding(rootClass)
 
         when:
-        def booksProp = authorEntity.getPropertyByName("books") as GrailsHibernatePersistentProperty
+        def booksProp = authorEntity.getPropertyByName("books") as HibernatePersistentProperty
         Value value = propertyBinder.bindProperty(rootClass, rootClass.table, EMPTY_PATH, null, booksProp, collector)
         rootClass.addProperty(new PropertyFromValueCreator().createProperty(value, booksProp))
         collector.processSecondPasses(binder.getMetadataBuildingContext())
@@ -472,7 +472,7 @@ class GrailsPropertyBinderSpec extends HibernateGormDatastoreSpec {
         collector.addEntityBinding(rootClass)
 
         when:
-        def childBookProp = authorEntity.getPropertyByName("childBook") as GrailsHibernatePersistentProperty
+        def childBookProp = authorEntity.getPropertyByName("childBook") as HibernatePersistentProperty
         Value value = propertyBinder.bindProperty(rootClass, rootClass.table, EMPTY_PATH, null, childBookProp, collector)
         rootClass.addProperty(new PropertyFromValueCreator().createProperty(value, childBookProp))
         // Process second passes to ensure Hibernate's internal mappings are finalized
@@ -519,7 +519,7 @@ class GrailsPropertyBinderSpec extends HibernateGormDatastoreSpec {
         metadataBuildingContext.getMetadataCollector() >> mappings
 
         def rootClass = new RootClass(metadataBuildingContext)
-        def currentGrailsProp = Mock(GrailsHibernatePersistentProperty)
+        def currentGrailsProp = Mock(HibernatePersistentProperty)
         def table = new org.hibernate.mapping.Table("TEST_TABLE")
         rootClass.setTable(table)
 

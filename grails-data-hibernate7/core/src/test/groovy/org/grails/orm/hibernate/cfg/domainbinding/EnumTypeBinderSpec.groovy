@@ -3,7 +3,7 @@ package org.grails.orm.hibernate.cfg.domainbinding
 import grails.gorm.specs.HibernateGormDatastoreSpec
 import grails.persistence.Entity
 import org.grails.datastore.mapping.model.PersistentProperty
-import org.grails.orm.hibernate.cfg.domainbinding.hibernate.GrailsHibernatePersistentProperty
+import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernatePersistentProperty
 import org.grails.orm.hibernate.cfg.IdentityEnumType
 import jakarta.persistence.EnumType
 import org.grails.orm.hibernate.cfg.domainbinding.binder.GrailsDomainBinder
@@ -142,7 +142,7 @@ class EnumTypeBinderSpec extends HibernateGormDatastoreSpec {
         def table = new Table("person")
 
         when: "the enum is bound using the new signature"
-        def result = binder.bindEnumType(property as GrailsHibernatePersistentProperty, Status01, table, "")
+        def result = binder.bindEnumType(property as HibernatePersistentProperty, Status01, table, "")
 
         then: "a BasicValue is returned and bound correctly"
         result instanceof BasicValue

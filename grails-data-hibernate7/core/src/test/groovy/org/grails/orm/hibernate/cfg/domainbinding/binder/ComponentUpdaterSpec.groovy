@@ -2,7 +2,7 @@ package org.grails.orm.hibernate.cfg.domainbinding.binder
 
 import grails.gorm.specs.HibernateGormDatastoreSpec
 import org.grails.orm.hibernate.cfg.domainbinding.hibernate.GrailsHibernatePersistentEntity
-import org.grails.orm.hibernate.cfg.domainbinding.hibernate.GrailsHibernatePersistentProperty
+import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernatePersistentProperty
 import org.grails.orm.hibernate.cfg.domainbinding.util.PropertyFromValueCreator
 import org.hibernate.mapping.BasicValue
 import org.hibernate.mapping.Column
@@ -28,8 +28,8 @@ class ComponentUpdaterSpec extends HibernateGormDatastoreSpec {
         def root = new RootClass(metadataBuildingContext)
         def component = new Component(metadataBuildingContext, root)
         
-        def componentProperty = Mock(GrailsHibernatePersistentProperty)
-        def currentGrailsProp = Mock(GrailsHibernatePersistentProperty)
+        def componentProperty = Mock(HibernatePersistentProperty)
+        def currentGrailsProp = Mock(HibernatePersistentProperty)
         def value = new BasicValue(metadataBuildingContext, root.getTable())
         def column = new Column("test_col")
         value.addColumn(column)
@@ -56,8 +56,8 @@ class ComponentUpdaterSpec extends HibernateGormDatastoreSpec {
         def root = new RootClass(metadataBuildingContext)
         def component = new Component(metadataBuildingContext, root)
         
-        def componentProperty = Mock(GrailsHibernatePersistentProperty)
-        def currentGrailsProp = Mock(GrailsHibernatePersistentProperty)
+        def componentProperty = Mock(HibernatePersistentProperty)
+        def currentGrailsProp = Mock(HibernatePersistentProperty)
         def value = new BasicValue(metadataBuildingContext, root.getTable())
         def column = new Column("test_col")
         column.setNullable(false)

@@ -4,7 +4,7 @@ import grails.gorm.annotation.Entity
 import grails.gorm.specs.HibernateGormDatastoreSpec
 import org.grails.datastore.mapping.model.types.TenantId
 import org.grails.orm.hibernate.cfg.domainbinding.hibernate.GrailsHibernatePersistentEntity
-import org.grails.orm.hibernate.cfg.domainbinding.hibernate.GrailsHibernatePersistentProperty
+import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernatePersistentProperty
 import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernatePersistentEntity
 import org.grails.orm.hibernate.cfg.domainbinding.util.DefaultColumnNameFetcher
 
@@ -157,7 +157,7 @@ class GrailsHibernatePersistentEntitySpec extends HibernateGormDatastoreSpec {
         given:
         GrailsHibernatePersistentEntity entity = Spy(HibernatePersistentEntity, constructorArgs: [Person, getMappingContext()])
         // Force the stub to implement the required interface for the instanceof check in the default method
-        def tenantIdProp = Stub(TenantId, additionalInterfaces: [GrailsHibernatePersistentProperty])
+        def tenantIdProp = Stub(TenantId, additionalInterfaces: [HibernatePersistentProperty])
         tenantIdProp.getName() >> "tenantId"
         
         entity.getTenantId() >> tenantIdProp

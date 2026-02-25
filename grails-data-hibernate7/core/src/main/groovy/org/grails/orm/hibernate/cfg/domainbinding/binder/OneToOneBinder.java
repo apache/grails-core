@@ -21,7 +21,7 @@ package org.grails.orm.hibernate.cfg.domainbinding.binder;
 import org.grails.datastore.mapping.model.types.Association;
 import org.grails.orm.hibernate.cfg.PersistentEntityNamingStrategy;
 import org.grails.orm.hibernate.cfg.PropertyConfig;
-import org.grails.orm.hibernate.cfg.domainbinding.hibernate.GrailsHibernatePersistentProperty;
+import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernatePersistentProperty;
 import org.hibernate.FetchMode;
 import org.hibernate.boot.spi.MetadataBuildingContext;
 import org.hibernate.engine.jdbc.env.spi.JdbcEnvironment;
@@ -56,7 +56,7 @@ public class OneToOneBinder {
       org.hibernate.mapping.Table table,
       String path) {
     OneToOne oneToOne = new OneToOne(metadataBuildingContext, table, owner);
-    PropertyConfig config = ((GrailsHibernatePersistentProperty) property).getMappedForm();
+    PropertyConfig config = ((HibernatePersistentProperty) property).getMappedForm();
     final Association otherSide = property.getInverseSide();
 
     final boolean hasOne = otherSide != null && otherSide.isHasOne();
@@ -80,7 +80,7 @@ public class OneToOneBinder {
 
     if (hasOne || otherSide == null) {
       simpleValueBinder.bindSimpleValue(
-          (GrailsHibernatePersistentProperty) property, null, oneToOne, path);
+          (HibernatePersistentProperty) property, null, oneToOne, path);
     } else {
       oneToOne.setReferencedPropertyName(otherSide.getName());
     }

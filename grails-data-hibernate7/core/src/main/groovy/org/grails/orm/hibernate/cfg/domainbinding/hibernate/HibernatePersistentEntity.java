@@ -66,21 +66,21 @@ public class HibernatePersistentEntity extends AbstractPersistentEntity<Mapping>
   }
 
   @Override
-  public GrailsHibernatePersistentProperty getIdentity() {
-    return identity instanceof GrailsHibernatePersistentProperty ghpp ? ghpp : null;
+  public HibernatePersistentProperty getIdentity() {
+    return identity instanceof HibernatePersistentProperty ghpp ? ghpp : null;
   }
 
   @Override
-  public GrailsHibernatePersistentProperty[] getCompositeIdentity() {
+  public HibernatePersistentProperty[] getCompositeIdentity() {
     PersistentProperty[] compositeIdentity = super.getCompositeIdentity();
     if (compositeIdentity == null) {
       return null;
     }
-    GrailsHibernatePersistentProperty[] result =
-        new GrailsHibernatePersistentProperty[compositeIdentity.length];
+    HibernatePersistentProperty[] result =
+        new HibernatePersistentProperty[compositeIdentity.length];
     for (int i = 0; i < compositeIdentity.length; i++) {
       result[i] =
-          compositeIdentity[i] instanceof GrailsHibernatePersistentProperty ghpp ? ghpp : null;
+          compositeIdentity[i] instanceof HibernatePersistentProperty ghpp ? ghpp : null;
     }
     return result;
   }
@@ -98,7 +98,7 @@ public class HibernatePersistentEntity extends AbstractPersistentEntity<Mapping>
   }
 
   @Override
-  public GrailsHibernatePersistentProperty getVersion() {
-    return version instanceof GrailsHibernatePersistentProperty ghpp ? ghpp : null;
+  public HibernatePersistentProperty getVersion() {
+    return version instanceof HibernatePersistentProperty ghpp ? ghpp : null;
   }
 }

@@ -3,15 +3,15 @@ package org.grails.orm.hibernate.cfg
 import org.hibernate.MappingException
 import spock.lang.Specification
 import org.grails.orm.hibernate.cfg.domainbinding.hibernate.GrailsHibernatePersistentEntity
-import org.grails.orm.hibernate.cfg.domainbinding.hibernate.GrailsHibernatePersistentProperty
+import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernatePersistentProperty
 
 class CompositeIdentitySpec extends Specification {
 
     def "test getHibernateProperties with property names"() {
         given:
         def domainClass = Mock(GrailsHibernatePersistentEntity)
-        def prop1 = Mock(GrailsHibernatePersistentProperty)
-        def prop2 = Mock(GrailsHibernatePersistentProperty)
+        def prop1 = Mock(HibernatePersistentProperty)
+        def prop2 = Mock(HibernatePersistentProperty)
         def compositeIdentity = new CompositeIdentity(propertyNames: ['prop1', 'prop2'] as String[])
 
         when:
@@ -28,14 +28,14 @@ class CompositeIdentitySpec extends Specification {
     def "test getHibernateProperties with fallback to domain class"() {
         given:
         def domainClass = Mock(GrailsHibernatePersistentEntity)
-        def prop1 = Mock(GrailsHibernatePersistentProperty)
+        def prop1 = Mock(HibernatePersistentProperty)
         def compositeIdentity = new CompositeIdentity()
 
         when:
         def properties = compositeIdentity.getHibernateProperties(domainClass)
 
         then:
-        1 * domainClass.getCompositeIdentity() >> ([prop1] as GrailsHibernatePersistentProperty[])
+        1 * domainClass.getCompositeIdentity() >> ([prop1] as HibernatePersistentProperty[])
         0 * domainClass.getPropertyByName(_)
         properties.length == 1
         properties[0] == prop1

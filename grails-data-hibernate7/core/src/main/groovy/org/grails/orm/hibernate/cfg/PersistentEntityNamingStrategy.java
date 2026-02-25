@@ -19,7 +19,7 @@
 package org.grails.orm.hibernate.cfg;
 
 import org.grails.orm.hibernate.cfg.domainbinding.hibernate.GrailsHibernatePersistentEntity;
-import org.grails.orm.hibernate.cfg.domainbinding.hibernate.GrailsHibernatePersistentProperty;
+import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernatePersistentProperty;
 
 /**
  * Allows plugging into to custom naming strategies
@@ -37,5 +37,5 @@ public interface PersistentEntityNamingStrategy {
 
   String resolveTableName(String logicalName);
 
-  String resolveForeignKeyForPropertyDomainClass(GrailsHibernatePersistentProperty property);
+  String resolveForeignKeyForPropertyDomainClass(HibernatePersistentProperty property);
 }

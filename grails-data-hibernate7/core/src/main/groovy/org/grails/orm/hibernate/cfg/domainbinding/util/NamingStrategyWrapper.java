@@ -25,7 +25,7 @@ import java.util.Optional;
 import org.grails.datastore.mapping.reflect.NameUtils;
 import org.grails.orm.hibernate.cfg.PersistentEntityNamingStrategy;
 import org.grails.orm.hibernate.cfg.domainbinding.hibernate.GrailsHibernatePersistentEntity;
-import org.grails.orm.hibernate.cfg.domainbinding.hibernate.GrailsHibernatePersistentProperty;
+import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernatePersistentProperty;
 import org.hibernate.boot.model.naming.Identifier;
 import org.hibernate.boot.model.naming.PhysicalNamingStrategy;
 import org.hibernate.engine.jdbc.env.spi.JdbcEnvironment;
@@ -85,9 +85,9 @@ public class NamingStrategyWrapper implements PersistentEntityNamingStrategy {
 
   @Override
   public String resolveForeignKeyForPropertyDomainClass(
-      GrailsHibernatePersistentProperty property) {
+      HibernatePersistentProperty property) {
     return Optional.ofNullable(property)
-        .map(GrailsHibernatePersistentProperty::getHibernateOwner)
+        .map(HibernatePersistentProperty::getHibernateOwner)
         .map(GrailsHibernatePersistentEntity::getJavaClass)
         .map(Class::getSimpleName)
         .map(NameUtils::decapitalize)

@@ -25,7 +25,6 @@ import org.grails.datastore.mapping.model.PersistentProperty;
 import org.grails.datastore.mapping.model.types.Association;
 import org.grails.datastore.mapping.model.types.Embedded;
 import org.grails.orm.hibernate.cfg.ColumnConfig;
-import org.grails.orm.hibernate.cfg.JoinTable;
 import org.grails.orm.hibernate.cfg.Mapping;
 import org.grails.orm.hibernate.cfg.PropertyConfig;
 import org.hibernate.MappingException;
@@ -35,7 +34,7 @@ import org.hibernate.mapping.SimpleValue;
 import org.hibernate.usertype.UserCollectionType;
 
 /** Interface for Hibernate persistent properties */
-public interface GrailsHibernatePersistentProperty extends PersistentProperty<PropertyConfig> {
+public interface HibernatePersistentProperty extends PersistentProperty<PropertyConfig> {
 
   default boolean isBidirectionalManyToOneWithListMapping(Property prop) {
     return false;
@@ -178,7 +177,7 @@ public interface GrailsHibernatePersistentProperty extends PersistentProperty<Pr
 
   default String getColumnName(ColumnConfig cc) {
     return Optional.of(this)
-            .filter(GrailsHibernatePersistentProperty::isJoinKeyMapped)
+            .filter(HibernatePersistentProperty::isJoinKeyMapped)
             .map(p -> p.getMappedForm().getJoinTable().getKey().getName())
             .orElseGet(
                     () ->
@@ -212,7 +211,7 @@ public interface GrailsHibernatePersistentProperty extends PersistentProperty<Pr
    * @param simpleValue The Hibernate simple value
    * @return The property that defines the type
    */
-  default GrailsHibernatePersistentProperty getTypeProperty(SimpleValue simpleValue) {
+  default HibernatePersistentProperty getTypeProperty(SimpleValue simpleValue) {
     if (simpleValue instanceof DependantValue) {
       return Optional.ofNullable(getHibernateOwner().getIdentity()).orElse(this);
     }

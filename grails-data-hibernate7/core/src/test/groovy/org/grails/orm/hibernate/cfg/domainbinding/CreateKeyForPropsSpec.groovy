@@ -1,7 +1,7 @@
 package org.grails.orm.hibernate.cfg.domainbinding
 
 import org.grails.datastore.mapping.model.PersistentEntity
-import org.grails.orm.hibernate.cfg.domainbinding.hibernate.GrailsHibernatePersistentProperty
+import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernatePersistentProperty
 import org.hibernate.MappingException
 import org.hibernate.mapping.Table
 import spock.lang.Specification
@@ -19,7 +19,7 @@ class CreateKeyForPropsSpec extends Specification {
         def subject = new CreateKeyForProps(columnNameFetcher, uniqueKeyCreator)
 
         def owner = Mock(PersistentEntity)
-        def grailsProp = Mock(GrailsHibernatePersistentProperty) {
+        def grailsProp = Mock(HibernatePersistentProperty) {
             getOwner() >> owner
         }
 
@@ -30,8 +30,8 @@ class CreateKeyForPropsSpec extends Specification {
         }
         grailsProp.getMappedForm() >> mappedForm
 
-        def otherProp1 = Mock(GrailsHibernatePersistentProperty)
-        def otherProp2 = Mock(GrailsHibernatePersistentProperty)
+        def otherProp1 = Mock(HibernatePersistentProperty)
+        def otherProp2 = Mock(HibernatePersistentProperty)
         owner.getPropertyByName("p1") >> otherProp1
         owner.getPropertyByName("p2") >> otherProp2
 
@@ -65,7 +65,7 @@ class CreateKeyForPropsSpec extends Specification {
         def subject = new CreateKeyForProps(columnNameFetcher, uniqueKeyCreator)
 
         def owner = Mock(PersistentEntity)
-        def grailsProp = Mock(GrailsHibernatePersistentProperty) { getOwner() >> owner }
+        def grailsProp = Mock(HibernatePersistentProperty) { getOwner() >> owner }
 
         def mappedForm = Mock(org.grails.orm.hibernate.cfg.PropertyConfig) {
             isUnique() >> false
@@ -92,7 +92,7 @@ class CreateKeyForPropsSpec extends Specification {
         def subject = new CreateKeyForProps(columnNameFetcher, uniqueKeyCreator)
 
         def owner = Mock(PersistentEntity)
-        def grailsProp = Mock(GrailsHibernatePersistentProperty) { getOwner() >> owner }
+        def grailsProp = Mock(HibernatePersistentProperty) { getOwner() >> owner }
         owner.getJavaClass() >> CreateKeyForPropsSpec
 
         def mappedForm = Mock(org.grails.orm.hibernate.cfg.PropertyConfig) {
