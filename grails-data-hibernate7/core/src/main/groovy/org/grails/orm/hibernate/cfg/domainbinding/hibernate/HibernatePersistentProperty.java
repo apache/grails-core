@@ -137,22 +137,6 @@ public interface HibernatePersistentProperty extends PersistentProperty<Property
   }
 
   default void validateAssociation() {
-    if (this instanceof Association && getUserType() != null) {
-      throw new MappingException(
-              "Cannot bind association property ["
-                      + getName()
-                      + "] of type ["
-                      + getType()
-                      + "] to a user type");
-    }
-    if (this instanceof org.grails.datastore.mapping.model.types.OneToOne oneToOne) {
-      if (oneToOne.isHasOne() && !oneToOne.isBidirectional()) {
-        throw new MappingException(
-                "hasOne property ["
-                        + getName()
-                        + "] is not bidirectional. Specify the other side of the relationship!");
-      }
-    }
   }
 
   default boolean isSerializableType() {

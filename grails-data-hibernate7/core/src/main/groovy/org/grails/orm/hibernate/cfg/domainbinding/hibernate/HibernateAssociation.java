@@ -20,6 +20,7 @@ package org.grails.orm.hibernate.cfg.domainbinding.hibernate;
 
 import java.util.List;
 
+import org.hibernate.MappingException;
 import org.hibernate.mapping.ManyToOne;
 import org.hibernate.mapping.Property;
 
@@ -63,6 +64,18 @@ public interface HibernateAssociation extends HibernatePersistentProperty {
   @Override
   default GrailsHibernatePersistentEntity getHibernateAssociatedEntity() {
     return (GrailsHibernatePersistentEntity) getAssociatedEntity();
+  }
+
+  @Override
+  default void validateAssociation() {
+    if (getUserType() != null) {
+      throw new MappingException(
+          "Cannot bind association property ["
+              + getName()
+              + "] of type ["
+              + getType()
+              + "] to a user type");
+    }
   }
 
   default boolean isBidirectionalManyToOneWithListMapping(Property prop) {

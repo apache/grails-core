@@ -23,6 +23,7 @@ import org.grails.datastore.mapping.model.MappingContext;
 import org.grails.datastore.mapping.model.PersistentEntity;
 import org.grails.datastore.mapping.model.types.mapping.OneToOneWithMapping;
 import org.grails.orm.hibernate.cfg.PropertyConfig;
+import org.hibernate.MappingException;
 
 /** Hibernate implementation of {@link org.grails.datastore.mapping.model.types.OneToOne} */
 public class HibernateOneToOneProperty extends OneToOneWithMapping<PropertyConfig>
@@ -30,6 +31,17 @@ public class HibernateOneToOneProperty extends OneToOneWithMapping<PropertyConfi
   public HibernateOneToOneProperty(
       PersistentEntity entity, MappingContext context, PropertyDescriptor property) {
     super(entity, context, property);
+  }
+
+  @Override
+  public void validateAssociation() {
+    HibernateToOneProperty.super.validateAssociation();
+    if (isHasOne() && !isBidirectional()) {
+      throw new MappingException(
+          "hasOne property ["
+              + getName()
+              + "] is not bidirectional. Specify the other side of the relationship!");
+    }
   }
 
   @Override

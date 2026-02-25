@@ -19,34 +19,12 @@
 package org.grails.orm.hibernate.cfg.domainbinding.hibernate;
 
 import org.grails.datastore.mapping.model.types.OneToOne;
-import org.hibernate.MappingException;
-import org.hibernate.mapping.ManyToOne;
-import org.hibernate.mapping.Property;
 
 /**
  * Marker interface for Hibernate to-one associations ({@link HibernateManyToOneProperty} and
  * {@link HibernateOneToOneProperty}). Parallel to {@link HibernateToManyProperty}.
  */
 public interface HibernateToOneProperty extends HibernateAssociation {
-
-  default void validateAssociation() {
-    if (getUserType() != null) {
-      throw new MappingException(
-          "Cannot bind association property ["
-              + getName()
-              + "] of type ["
-              + getType()
-              + "] to a user type");
-    }
-    if (this instanceof OneToOne oneToOne) {
-      if (oneToOne.isHasOne() && !oneToOne.isBidirectional()) {
-        throw new MappingException(
-            "hasOne property ["
-                + getName()
-                + "] is not bidirectional. Specify the other side of the relationship!");
-      }
-    }
-  }
 
   default boolean isHibernateOneToOne() {
     validateAssociation();
