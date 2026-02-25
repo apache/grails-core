@@ -56,7 +56,6 @@ public class SimpleIdBinder {
     return metadataBuildingContext;
   }
 
-
   public void bindSimpleId(
       @Nonnull GrailsHibernatePersistentEntity domainClass,
       RootClass entity,

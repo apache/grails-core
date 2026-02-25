@@ -18,11 +18,10 @@
  */
 package org.grails.orm.hibernate;
 
-import java.io.Serial;
-
 import jakarta.transaction.Status;
 import jakarta.transaction.Transaction;
 import jakarta.transaction.TransactionManager;
+import java.io.Serial;
 import org.hibernate.FlushMode;
 import org.hibernate.HibernateException;
 import org.hibernate.Session;
@@ -50,8 +49,7 @@ import org.springframework.transaction.support.TransactionSynchronizationManager
  */
 public class GrailsSessionContext implements CurrentSessionContext {
 
-  @Serial
-  private static final long serialVersionUID = 1;
+  @Serial private static final long serialVersionUID = 1;
 
   private static final Logger LOG = LoggerFactory.getLogger(GrailsSessionContext.class);
 
@@ -196,8 +194,7 @@ public class GrailsSessionContext implements CurrentSessionContext {
         // holderToUse.addSession(session);
       }
       jtaTx.registerSynchronization(
-          new SpringJtaSynchronizationAdapter(
-              createSpringSessionSynchronization(holderToUse)));
+          new SpringJtaSynchronizationAdapter(createSpringSessionSynchronization(holderToUse)));
       holderToUse.setSynchronizedWithTransaction(true);
       if (holderToUse != sessionHolder) {
         TransactionSynchronizationManager.bindResource(sessionFactory, holderToUse);

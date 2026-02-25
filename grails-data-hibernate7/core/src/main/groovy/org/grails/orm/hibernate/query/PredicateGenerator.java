@@ -154,7 +154,8 @@ public class PredicateGenerator {
     JpaFromProvider childFroms = (JpaFromProvider) fromsByProvider.clone();
     childFroms.put("root", child);
     return cb.and(
-        getPredicates(cb, criteriaQuery, child, haq.getAssociationCriteria(), childFroms, haq.getEntity()));
+        getPredicates(
+            cb, criteriaQuery, child, haq.getAssociationCriteria(), childFroms, haq.getEntity()));
   }
 
   private Predicate handlePropertyCriterion(

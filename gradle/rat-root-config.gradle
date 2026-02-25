@@ -20,7 +20,6 @@ apply plugin: 'org.nosphere.apache.rat'
 tasks.named('rat') {
     def allExcludes = [
             '.asf.yaml', // ASF metadata for github integration excluded from src zip
-            '.mailmap', // authorship mapping for git history, will not be included in src zip
             'CODE_OF_CONDUCT.md',
             'BUILD_DATE', // build artifact for storing the build date / verifying
             'CHECKSUMS', // build artifact for storing checksums for easy verification

@@ -25,8 +25,8 @@ import org.grails.orm.hibernate.cfg.PersistentEntityNamingStrategy;
 import org.grails.orm.hibernate.cfg.PropertyConfig;
 import org.grails.orm.hibernate.cfg.domainbinding.collectionType.CollectionHolder;
 import org.grails.orm.hibernate.cfg.domainbinding.collectionType.CollectionType;
-import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernatePersistentProperty;
 import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernateOneToManyProperty;
+import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernatePersistentProperty;
 import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernateToManyProperty;
 import org.grails.orm.hibernate.cfg.domainbinding.secondpass.BidirectionalOneToManyLinker;
 import org.grails.orm.hibernate.cfg.domainbinding.secondpass.CollectionKeyColumnUpdater;
@@ -106,7 +106,7 @@ public class CollectionBinder {
             new CollectionKeyColumnUpdater(),
             new BidirectionalOneToManyLinker(grailsPropertyResolver),
             new DependentKeyValueBinder(simpleValueBinder, compositeIdentifierToManyToOneBinder),
-                new UnidirectionalOneToManyBinder(collectionWithJoinTableBinder),
+            new UnidirectionalOneToManyBinder(collectionWithJoinTableBinder),
             collectionWithJoinTableBinder,
             collectionForPropertyConfigBinder,
             new DefaultColumnNameFetcher(namingStrategy),
@@ -126,8 +126,6 @@ public class CollectionBinder {
             new ColumnConfigToColumnBinder(),
             simpleValueColumnFetcher);
   }
-
-
 
   /**
    * First pass to bind collection to Hibernate metamodel, sets up second pass
@@ -201,8 +199,7 @@ public class CollectionBinder {
     return collection;
   }
 
-  private String getNameForPropertyAndPath(
-          HibernatePersistentProperty property, String path) {
+  private String getNameForPropertyAndPath(HibernatePersistentProperty property, String path) {
     if (GrailsHibernateUtil.isNotEmpty(path)) {
       return GrailsHibernateUtil.qualify(path, property.getName());
     }

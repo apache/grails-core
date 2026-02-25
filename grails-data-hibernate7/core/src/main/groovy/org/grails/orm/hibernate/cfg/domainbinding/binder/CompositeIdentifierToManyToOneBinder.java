@@ -61,7 +61,7 @@ public class CompositeIdentifierToManyToOneBinder {
       PersistentEntityNamingStrategy namingStrategy,
       JdbcEnvironment jdbcEnvironment) {
     this(
-            new ForeignKeyColumnCountCalculator(),
+        new ForeignKeyColumnCountCalculator(),
         namingStrategy,
         new DefaultColumnNameFetcher(namingStrategy),
         new BackticksRemover(),

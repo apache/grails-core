@@ -26,6 +26,8 @@ plugins {
     id 'jacoco'
     id 'com.github.spotbugs'
     id 'pmd'
+    id 'com.diffplug.spotless'
+    id 'org.apache.grails.buildsrc.properties'
 }
 
 version = projectVersion
@@ -174,4 +176,24 @@ pmd {
 
 tasks.named('check') {
     dependsOn 'spotbugsMain', 'pmdMain'
+}
+
+// 2. Configure Spotless
+spotless {
+    java {
+        // Use rootProject.projectDir to ensure the path is absolute from the root
+        def licenseFile = new File(rootProject.projectDir, 'grails-forge/config/spotless.license.java')
+        if (licenseFile.exists()) {
+            licenseHeaderFile licenseFile
+        }
+
+        googleJavaFormat()
+
+        // This targets the specific file in your Checkstyle report
+        target 'src/main/java/**/*.java', 'src/main/groovy/**/*.java'
+
+        removeUnusedImports()
+        trimTrailingWhitespace()
+        endWithNewline()
+    }
 }

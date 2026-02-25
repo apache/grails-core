@@ -84,8 +84,7 @@ public class NamingStrategyWrapper implements PersistentEntityNamingStrategy {
   }
 
   @Override
-  public String resolveForeignKeyForPropertyDomainClass(
-      HibernatePersistentProperty property) {
+  public String resolveForeignKeyForPropertyDomainClass(HibernatePersistentProperty property) {
     return Optional.ofNullable(property)
         .map(HibernatePersistentProperty::getHibernateOwner)
         .map(GrailsHibernatePersistentEntity::getJavaClass)

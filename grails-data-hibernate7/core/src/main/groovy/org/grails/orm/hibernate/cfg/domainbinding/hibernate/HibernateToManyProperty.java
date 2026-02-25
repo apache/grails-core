@@ -58,7 +58,6 @@ public interface HibernateToManyProperty
     return getMappedForm().getLazy();
   }
 
-
   /**
    * @return Whether the collection should be bound with a foreign key
    */

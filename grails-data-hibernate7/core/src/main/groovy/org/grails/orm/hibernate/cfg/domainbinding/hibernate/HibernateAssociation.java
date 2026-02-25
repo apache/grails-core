@@ -19,17 +19,15 @@
 package org.grails.orm.hibernate.cfg.domainbinding.hibernate;
 
 import java.util.List;
-
+import org.grails.orm.hibernate.cfg.Mapping;
+import org.grails.orm.hibernate.cfg.PropertyConfig;
 import org.hibernate.MappingException;
 import org.hibernate.mapping.ManyToOne;
 import org.hibernate.mapping.Property;
 
-import org.grails.orm.hibernate.cfg.Mapping;
-import org.grails.orm.hibernate.cfg.PropertyConfig;
-
 /**
- * Common interface for all Hibernate association properties (both ToOne and ToMany). Extends
- * {@link HibernatePersistentProperty} and declares the key {@link
+ * Common interface for all Hibernate association properties (both ToOne and ToMany). Extends {@link
+ * HibernatePersistentProperty} and declares the key {@link
  * org.grails.datastore.mapping.model.types.Association} methods directly so callers can use them
  * without casting. Note: {@code Association} is an abstract class so cannot be listed as a
  * super-interface; the implementing classes satisfy these contracts through their class hierarchy.

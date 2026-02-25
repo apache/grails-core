@@ -147,8 +147,7 @@ public interface GrailsHibernatePersistentEntity extends PersistentEntity {
    * @param parentType The type of the parent entity
    * @return The parent property if it exists
    */
-  default Optional<HibernatePersistentProperty> getHibernateParentProperty(
-      Class<?> parentType) {
+  default Optional<HibernatePersistentProperty> getHibernateParentProperty(Class<?> parentType) {
     List<HibernatePersistentProperty> properties = getHibernatePersistentProperties();
     if (properties == null) {
       return Optional.empty();
@@ -163,8 +162,7 @@ public interface GrailsHibernatePersistentEntity extends PersistentEntity {
    * @param parentType The type of the parent entity to exclude from the results
    * @return The properties that should be bound to the Hibernate meta model
    */
-  default List<HibernatePersistentProperty> getHibernatePersistentProperties(
-      Class<?> parentType) {
+  default List<HibernatePersistentProperty> getHibernatePersistentProperties(Class<?> parentType) {
     List<HibernatePersistentProperty> properties = getHibernatePersistentProperties();
     if (properties == null) {
       return java.util.Collections.emptyList();

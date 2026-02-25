@@ -1,0 +1,1 @@
+grails.dev.commands.ApplicationCommand=org.grails.web.mapping.reporting.UrlMappingsReportCommand

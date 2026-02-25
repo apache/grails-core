@@ -66,7 +66,7 @@ public class EnumTypeBinder {
   private static final Logger LOG = LoggerFactory.getLogger(EnumTypeBinder.class);
 
   public BasicValue bindEnumType(
-          HibernatePersistentProperty property, Class<?> propertyType, Table table, String path) {
+      HibernatePersistentProperty property, Class<?> propertyType, Table table, String path) {
     BasicValue simpleValue = new BasicValue(metadataBuildingContext, table);
     String columnName =
         columnNameForPropertyAndPathFetcher.getColumnNameForPropertyAndPath(property, path, null);

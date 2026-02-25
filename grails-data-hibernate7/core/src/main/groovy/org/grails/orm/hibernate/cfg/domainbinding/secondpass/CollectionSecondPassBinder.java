@@ -29,9 +29,9 @@ import org.grails.datastore.mapping.model.config.GormProperties;
 import org.grails.orm.hibernate.cfg.domainbinding.binder.CollectionForPropertyConfigBinder;
 import org.grails.orm.hibernate.cfg.domainbinding.binder.ManyToOneBinder;
 import org.grails.orm.hibernate.cfg.domainbinding.binder.SimpleValueColumnBinder;
-import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernatePersistentProperty;
 import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernateManyToManyProperty;
 import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernateOneToManyProperty;
+import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernatePersistentProperty;
 import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernateToManyProperty;
 import org.grails.orm.hibernate.cfg.domainbinding.util.DefaultColumnNameFetcher;
 import org.grails.orm.hibernate.cfg.domainbinding.util.OrderByClauseBuilder;
@@ -159,8 +159,7 @@ public class CollectionSecondPassBinder {
       if (property.isBidirectional()) {
         var otherSide = property.getHibernateInverseSide();
         ManyToOne element =
-            manyToOneBinder.bindManyToOne(
-                otherSide, collection.getCollectionTable(), EMPTY_PATH);
+            manyToOneBinder.bindManyToOne(otherSide, collection.getCollectionTable(), EMPTY_PATH);
         element.setReferencedEntityName(otherSide.getOwner().getName());
         collection.setElement(element);
         collectionForPropertyConfigBinder.bindCollectionForPropertyConfig(collection, property);
@@ -207,8 +206,7 @@ public class CollectionSecondPassBinder {
                           + "] are not supported with unidirectional one to many relationships.");
                 }
                 HibernatePersistentProperty sortBy =
-                    (HibernatePersistentProperty)
-                        referenced.getPropertyByName(property.getSort());
+                    (HibernatePersistentProperty) referenced.getPropertyByName(property.getSort());
                 String order = Optional.ofNullable(property.getOrder()).orElse("asc");
                 collection.setOrderBy(
                     orderByClauseBuilder.buildOrderByClause(

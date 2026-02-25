@@ -21,8 +21,8 @@ package org.grails.orm.hibernate.cfg.domainbinding.hibernate;
 import org.grails.datastore.mapping.model.types.OneToOne;
 
 /**
- * Marker interface for Hibernate to-one associations ({@link HibernateManyToOneProperty} and
- * {@link HibernateOneToOneProperty}). Parallel to {@link HibernateToManyProperty}.
+ * Marker interface for Hibernate to-one associations ({@link HibernateManyToOneProperty} and {@link
+ * HibernateOneToOneProperty}). Parallel to {@link HibernateToManyProperty}.
  */
 public interface HibernateToOneProperty extends HibernateAssociation {
 

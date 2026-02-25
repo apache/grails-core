@@ -19,13 +19,12 @@
 package org.grails.orm.hibernate.cfg.domainbinding.binder;
 
 import jakarta.annotation.Nonnull;
-import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernatePersistentProperty;
 import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernateEmbeddedProperty;
 import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernateManyToOneProperty;
 import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernateOneToOneProperty;
+import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernatePersistentProperty;
 import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernateToManyProperty;
 import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernateToOneProperty;
-
 import org.hibernate.boot.spi.InFlightMetadataCollector;
 import org.hibernate.mapping.PersistentClass;
 import org.hibernate.mapping.Table;
@@ -90,10 +89,11 @@ public class GrailsPropertyBinder {
                 table,
                 path);
       } else {
-        value = manyToOneBinder.bindManyToOne((HibernateToOneProperty) currentGrailsProp, table, path);
+        value =
+            manyToOneBinder.bindManyToOne((HibernateToOneProperty) currentGrailsProp, table, path);
       }
     } else if (currentGrailsProp instanceof HibernateManyToOneProperty manyToOne) {
-      value = manyToOneBinder.bindManyToOne( manyToOne, table, path);
+      value = manyToOneBinder.bindManyToOne(manyToOne, table, path);
     } else if (currentGrailsProp instanceof HibernateToManyProperty toMany
         && !currentGrailsProp.isSerializableType()) {
       // HibernateToManyProperty

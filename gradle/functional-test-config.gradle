@@ -131,7 +131,6 @@ tasks.withType(Test).configureEach { Test task ->
     // Make Geb tests more resilient in slow CI environments
     if (project.hasProperty('gebAtCheckWaiting')) {
         systemProperty('grails.geb.atCheckWaiting.enabled', 'true')
-        systemProperty('grails.geb.timeouts.timeout', '10')
     }
 }
 

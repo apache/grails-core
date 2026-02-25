@@ -79,8 +79,7 @@ public class HibernatePersistentEntity extends AbstractPersistentEntity<Mapping>
     HibernatePersistentProperty[] result =
         new HibernatePersistentProperty[compositeIdentity.length];
     for (int i = 0; i < compositeIdentity.length; i++) {
-      result[i] =
-          compositeIdentity[i] instanceof HibernatePersistentProperty ghpp ? ghpp : null;
+      result[i] = compositeIdentity[i] instanceof HibernatePersistentProperty ghpp ? ghpp : null;
     }
     return result;
   }

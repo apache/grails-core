@@ -28,14 +28,14 @@ import org.grails.orm.hibernate.AbstractHibernateSession;
 /**
  * A thin wrapper over {@link HibernateQuery} that collects criteria for a single association scope.
  *
- * <p>When {@link HibernateQuery#createQuery(String)} is called (e.g. via
- * {@code Person.withCriteria { pets { eq 'name', 'Lucky' } }}), the
- * {@code AbstractCriteriaBuilder} sets the current query to this instance and routes all
- * criteria added inside the closure through {@link #add(Query.Criterion)}.
- * Those criteria are held by an inner {@link HibernateQuery} scoped to the associated entity.
+ * <p>When {@link HibernateQuery#createQuery(String)} is called (e.g. via {@code Person.withCriteria
+ * { pets { eq 'name', 'Lucky' } }}), the {@code AbstractCriteriaBuilder} sets the current query to
+ * this instance and routes all criteria added inside the closure through {@link
+ * #add(Query.Criterion)}. Those criteria are held by an inner {@link HibernateQuery} scoped to the
+ * associated entity.
  *
- * <p>At query-execution time, {@link PredicateGenerator} dispatches on this type and performs
- * a {@code LEFT JOIN} on {@link #associationPath}, then applies the collected predicates.
+ * <p>At query-execution time, {@link PredicateGenerator} dispatches on this type and performs a
+ * {@code LEFT JOIN} on {@link #associationPath}, then applies the collected predicates.
  *
  * @see PredicateGenerator
  * @see HibernateQuery#createQuery(String)

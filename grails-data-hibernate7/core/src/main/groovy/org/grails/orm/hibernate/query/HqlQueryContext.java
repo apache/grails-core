@@ -22,15 +22,14 @@ import groovy.lang.GString;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Set;
+import org.checkerframework.checker.nullness.qual.Nullable;
 import org.grails.datastore.mapping.model.PersistentEntity;
 
-import org.checkerframework.checker.nullness.qual.Nullable;
-
 /**
- * Immutable value object that holds all resolved HQL query state which can be computed
- * without a Hibernate {@code Session}: the final HQL string, the result target class,
- * any named parameters (including those expanded from a {@link GString}), and flags
- * for whether the query is an update or native SQL.
+ * Immutable value object that holds all resolved HQL query state which can be computed without a
+ * Hibernate {@code Session}: the final HQL string, the result target class, any named parameters
+ * (including those expanded from a {@link GString}), and flags for whether the query is an update
+ * or native SQL.
  *
  * <p>Use {@link #prepare} to build an instance from raw inputs.
  */
@@ -44,8 +43,8 @@ public record HqlQueryContext(
   // ─── Factory ─────────────────────────────────────────────────────────────
 
   /**
-   * Resolves the final HQL string, the result target class, and expands any
-   * {@link GString} into named parameters. No {@code Session} is required.
+   * Resolves the final HQL string, the result target class, and expands any {@link GString} into
+   * named parameters. No {@code Session} is required.
    */
   @SuppressWarnings("unchecked")
   public static HqlQueryContext prepare(
@@ -54,18 +53,21 @@ public record HqlQueryContext(
       boolean isUpdate,
       Map<?, ?> namedParams,
       PersistentEntity entity) {
-    Map<String, Object> params = namedParams != null ? new HashMap<>((Map<String, Object>) namedParams) : new HashMap<>();
+    Map<String, Object> params =
+        namedParams != null ? new HashMap<>((Map<String, Object>) namedParams) : new HashMap<>();
     String hql = resolveHql(queryCharseq, isNative, params);
-    return new HqlQueryContext(hql, getTarget(hql, entity.getJavaClass()), params, isUpdate, isNative);
+    return new HqlQueryContext(
+        hql, getTarget(hql, entity.getJavaClass()), params, isUpdate, isNative);
   }
 
   // ─── HQL resolution ──────────────────────────────────────────────────────
 
   public static @Nullable String resolveHql(
       CharSequence queryCharseq, boolean isNative, Map<String, Object> namedParams) {
-    String raw = queryCharseq instanceof GString gstr
-        ? buildNamedParameterQueryFromGString(gstr, namedParams)
-        : queryCharseq != null ? queryCharseq.toString() : "";
+    String raw =
+        queryCharseq instanceof GString gstr
+            ? buildNamedParameterQueryFromGString(gstr, namedParams)
+            : queryCharseq != null ? queryCharseq.toString() : "";
     String normalized = normalizeMultiLineQueryString(raw);
     return isNative ? normalized : normalizeNonAliasedSelect(normalized);
   }
@@ -73,24 +75,23 @@ public record HqlQueryContext(
   // ─── Projection analysis ─────────────────────────────────────────────────
 
   /**
-   * Returns the result target class for a query:
-   * the entity class when there is no explicit SELECT or a single entity projection,
-   * {@code Object.class} for a single scalar projection, or {@code Object[].class}
-   * for multiple projections.
+   * Returns the result target class for a query: the entity class when there is no explicit SELECT
+   * or a single entity projection, {@code Object.class} for a single scalar projection, or {@code
+   * Object[].class} for multiple projections.
    */
   public static Class<?> getTarget(CharSequence hql, Class<?> clazz) {
     String normalized = normalizeNonAliasedSelect(hql == null ? null : hql.toString());
     return switch (countHqlProjections(normalized)) {
-      case 0  -> clazz;
-      case 1  -> isPropertyProjection(normalized) ? Object.class : clazz;
+      case 0 -> clazz;
+      case 1 -> isPropertyProjection(normalized) ? Object.class : clazz;
       default -> Object[].class;
     };
   }
 
   /**
-   * Returns the number of top-level projections in the SELECT clause:
-   * 0 if no explicit SELECT, 1 for a single projection (including DISTINCT x or NEW map(…)),
-   * 2 for two or more comma-separated top-level projections.
+   * Returns the number of top-level projections in the SELECT clause: 0 if no explicit SELECT, 1
+   * for a single projection (including DISTINCT x or NEW map(…)), 2 for two or more comma-separated
+   * top-level projections.
    *
    * <p>Commas inside parentheses or string literals are ignored.
    */
@@ -102,13 +103,14 @@ public record HqlQueryContext(
     if (selectIdx < 0) return 0;
 
     int fromIdx = lower.indexOf(" from ", selectIdx);
-    String sel = s.substring(selectIdx + "select".length(), fromIdx < 0 ? s.length() : fromIdx).trim();
+    String sel =
+        s.substring(selectIdx + "select".length(), fromIdx < 0 ? s.length() : fromIdx).trim();
     if (sel.isEmpty()) return 0;
 
     // Strip leading DISTINCT/ALL
     String selLower = sel.toLowerCase();
-    if (selLower.startsWith("distinct "))  sel = sel.substring("distinct ".length()).trim();
-    else if (selLower.startsWith("all "))  sel = sel.substring("all ".length()).trim();
+    if (selLower.startsWith("distinct ")) sel = sel.substring("distinct ".length()).trim();
+    else if (selLower.startsWith("all ")) sel = sel.substring("all ".length()).trim();
 
     // Count top-level commas, ignoring those inside parens or string literals
     int depth = 0, commas = 0;
@@ -116,13 +118,16 @@ public record HqlQueryContext(
     for (int i = 0; i < sel.length(); i++) {
       char c = sel.charAt(i);
       if (!inDouble && c == '\'') {
-        if (inSingle && i + 1 < sel.length() && sel.charAt(i + 1) == '\'') { i++; continue; } // escaped ''
+        if (inSingle && i + 1 < sel.length() && sel.charAt(i + 1) == '\'') {
+          i++;
+          continue;
+        } // escaped ''
         inSingle = !inSingle;
       } else if (!inSingle && c == '"') {
         inDouble = !inDouble;
       } else if (!inSingle && !inDouble) {
-        if      (c == '(')               depth++;
-        else if (c == ')' && depth > 0)  depth--;
+        if (c == '(') depth++;
+        else if (c == ')' && depth > 0) depth--;
         else if (c == ',' && depth == 0) commas++;
       }
     }
@@ -132,11 +137,10 @@ public record HqlQueryContext(
   // ─── HQL normalization ────────────────────────────────────────────────────
 
   /**
-   * Injects a synthetic alias {@code "e"} into unaliased SELECT queries so that
-   * projection detection works uniformly. The FROM remainder is left intact.
-   * <p>
-   * Examples:
-   * {@code "select name from Person"} → {@code "select e.name from Person e"}<br>
+   * Injects a synthetic alias {@code "e"} into unaliased SELECT queries so that projection
+   * detection works uniformly. The FROM remainder is left intact.
+   *
+   * <p>Examples: {@code "select name from Person"} → {@code "select e.name from Person e"}<br>
    * {@code "select Person from Person"} → {@code "select e from Person e"}
    */
   static @Nullable String normalizeNonAliasedSelect(String hql) {
@@ -146,13 +150,13 @@ public record HqlQueryContext(
 
     String lower = s.toLowerCase();
     int selectIdx = lower.indexOf("select ");
-    if (selectIdx < 0) return s;  // no SELECT clause — nothing to normalize
+    if (selectIdx < 0) return s; // no SELECT clause — nothing to normalize
 
     int fromIdx = lower.indexOf(" from ", selectIdx);
-    if (fromIdx < 0) return s;  // malformed — leave as-is
+    if (fromIdx < 0) return s; // malformed — leave as-is
 
     int selectStart = selectIdx + "select ".length();
-    String selectClauseOrig  = s.substring(selectStart, fromIdx).trim();
+    String selectClauseOrig = s.substring(selectStart, fromIdx).trim();
     String selectClauseLower = lower.substring(selectStart, fromIdx).trim();
 
     // Parse entity name from the FROM head
@@ -174,31 +178,35 @@ public record HqlQueryContext(
     int tokenEnd = cur;
     while (tokenEnd < s.length() && !Character.isWhitespace(s.charAt(tokenEnd))) tokenEnd++;
     String token = s.substring(cur, tokenEnd).toLowerCase();
-    boolean hasAlias = !token.isEmpty()
-        && !Set.of("where", "join", "left", "right", "inner", "outer", "group", "order", "having")
-               .contains(token);
+    boolean hasAlias =
+        !token.isEmpty()
+            && !Set.of(
+                    "where", "join", "left", "right", "inner", "outer", "group", "order", "having")
+                .contains(token);
     if (hasAlias) return s;
 
     // Strip DISTINCT/ALL prefix before adjusting the projection
     String prefix = "", projOrig = selectClauseOrig, projLower = selectClauseLower;
     if (projLower.startsWith("distinct ")) {
-      prefix    = "distinct ";
-      projOrig  = selectClauseOrig.substring("distinct ".length()).trim();
+      prefix = "distinct ";
+      projOrig = selectClauseOrig.substring("distinct ".length()).trim();
       projLower = projLower.substring("distinct ".length()).trim();
     } else if (projLower.startsWith("all ")) {
-      prefix    = "all ";
-      projOrig  = selectClauseOrig.substring("all ".length()).trim();
+      prefix = "all ";
+      projOrig = selectClauseOrig.substring("all ".length()).trim();
       projLower = projLower.substring("all ".length()).trim();
     }
 
     // Qualify the projection with the synthetic alias
     String adjusted;
     if (projLower.equals(entityName.toLowerCase())) {
-      adjusted = "e";                    // "select Person from Person" → "select e"
-    } else if (!projLower.contains("(") && !projLower.contains(".") && !projLower.startsWith("new ")) {
-      adjusted = "e." + projOrig;        // "select name from Person"   → "select e.name"
+      adjusted = "e"; // "select Person from Person" → "select e"
+    } else if (!projLower.contains("(")
+        && !projLower.contains(".")
+        && !projLower.startsWith("new ")) {
+      adjusted = "e." + projOrig; // "select name from Person"   → "select e.name"
     } else {
-      adjusted = projOrig;               // functions / constructor expr / already qualified
+      adjusted = projOrig; // functions / constructor expr / already qualified
     }
 
     return "select " + prefix + adjusted + " from " + entityName + " e" + s.substring(entityEnd);
@@ -212,9 +220,10 @@ public record HqlQueryContext(
     int selectIdx = s.indexOf("select ");
     if (selectIdx < 0) return false;
     int fromIdx = s.indexOf(" from ", selectIdx);
-    String clause = s.substring(selectIdx + "select ".length(), fromIdx < 0 ? s.length() : fromIdx).trim();
+    String clause =
+        s.substring(selectIdx + "select ".length(), fromIdx < 0 ? s.length() : fromIdx).trim();
     if (clause.startsWith("distinct ")) clause = clause.substring("distinct ".length()).trim();
-    else if (clause.startsWith("all "))  clause = clause.substring("all ".length()).trim();
+    else if (clause.startsWith("all ")) clause = clause.substring("all ".length()).trim();
     return clause.contains(".");
   }
 

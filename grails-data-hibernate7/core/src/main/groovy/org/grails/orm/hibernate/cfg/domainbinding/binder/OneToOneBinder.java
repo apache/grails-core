@@ -35,8 +35,7 @@ public class OneToOneBinder {
   private final SimpleValueBinder simpleValueBinder;
 
   public OneToOneBinder(
-      MetadataBuildingContext metadataBuildingContext,
-      SimpleValueBinder simpleValueBinder) {
+      MetadataBuildingContext metadataBuildingContext, SimpleValueBinder simpleValueBinder) {
     this.metadataBuildingContext = metadataBuildingContext;
     this.simpleValueBinder = simpleValueBinder;
   }
@@ -47,7 +46,7 @@ public class OneToOneBinder {
       JdbcEnvironment jdbcEnvironment) {
     this(
         metadataBuildingContext,
-            new SimpleValueBinder(metadataBuildingContext, namingStrategy, jdbcEnvironment));
+        new SimpleValueBinder(metadataBuildingContext, namingStrategy, jdbcEnvironment));
   }
 
   public OneToOne bindOneToOne(

@@ -17,30 +17,7 @@
  *  under the License.
  */
 
-// 1. Apply the plugin
-apply plugin: 'com.diffplug.spotless'
-
-// 2. Configure Spotless
-spotless {
-    java {
-        // Use rootProject.projectDir to ensure the path is absolute from the root
-        def licenseFile = new File(rootProject.projectDir, 'grails-forge/config/spotless.license.java')
-        if (licenseFile.exists()) {
-            licenseHeaderFile licenseFile
-        }
-
-        googleJavaFormat()
-
-        // This targets the specific file in your Checkstyle report
-        target 'src/main/java/**/*.java', 'src/main/groovy/**/*.java'
-
-        removeUnusedImports()
-        trimTrailingWhitespace()
-        endWithNewline()
-    }
-}
-
-// ... rest of your existing GroovyCompile / Jar tasks ...
+// ... GroovyCompile / Jar tasks ...
 
 compileJava.options.release = javaVersion.toInteger()
 

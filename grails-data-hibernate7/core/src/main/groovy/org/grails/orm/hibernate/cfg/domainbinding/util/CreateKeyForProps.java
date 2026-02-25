@@ -47,7 +47,7 @@ public class CreateKeyForProps {
   }
 
   public void createKeyForProps(
-          HibernatePersistentProperty grailsProp, String path, Table table, String columnName) {
+      HibernatePersistentProperty grailsProp, String path, Table table, String columnName) {
     PropertyConfig mappedForm = grailsProp.getMappedForm();
 
     if (mappedForm.isUnique() && mappedForm.isUniqueWithinGroup()) {

@@ -141,7 +141,7 @@ public class HibernateQuery extends Query {
   }
 
   public List<Criterion> getAllCriteria() {
-    return  detachedCriteria.getCriteria();
+    return detachedCriteria.getCriteria();
   }
 
   public void add(Criterion criterion) {

@@ -64,8 +64,7 @@ public class CompositeIdBinder {
     if (compositeIdentity == null) {
       compositeIdentity = new CompositeIdentity();
     }
-    HibernatePersistentProperty[] composite =
-        compositeIdentity.getHibernateProperties(domainClass);
+    HibernatePersistentProperty[] composite = compositeIdentity.getHibernateProperties(domainClass);
 
     HibernatePersistentProperty identifierProp = domainClass.getIdentity();
     for (HibernatePersistentProperty property : composite) {

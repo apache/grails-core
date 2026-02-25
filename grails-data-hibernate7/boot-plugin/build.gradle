@@ -20,6 +20,7 @@
 plugins {
     id 'groovy'
     id 'java-library'
+    id 'org.apache.grails.buildsrc.properties'
 
 }
 

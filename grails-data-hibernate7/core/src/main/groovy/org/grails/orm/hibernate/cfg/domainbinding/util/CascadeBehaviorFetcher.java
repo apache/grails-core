@@ -28,11 +28,11 @@ import org.grails.datastore.mapping.model.types.Embedded;
 import org.grails.orm.hibernate.cfg.Mapping;
 import org.grails.orm.hibernate.cfg.PropertyConfig;
 import org.grails.orm.hibernate.cfg.domainbinding.hibernate.GrailsHibernatePersistentEntity;
-import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernatePersistentProperty;
 import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernateManyToManyProperty;
 import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernateManyToOneProperty;
 import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernateOneToManyProperty;
 import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernateOneToOneProperty;
+import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernatePersistentProperty;
 import org.hibernate.MappingException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -63,8 +63,7 @@ public class CascadeBehaviorFetcher {
     return cascadeStrategy.getValue();
   }
 
-  private Optional<CascadeBehavior> getDefinedBehavior(
-      HibernatePersistentProperty grailsProperty) {
+  private Optional<CascadeBehavior> getDefinedBehavior(HibernatePersistentProperty grailsProperty) {
     return Optional.ofNullable(grailsProperty.getMappedForm())
         .map(PropertyConfig::getCascade)
         .map(CascadeBehavior::fromString);

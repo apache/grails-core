@@ -128,13 +128,12 @@ public class GrailsDomainBinder implements AdditionalMappingContributor, TypeCon
     SimpleValueColumnFetcher simpleValueColumnFetcher = new SimpleValueColumnFetcher();
     CompositeIdentifierToManyToOneBinder compositeIdentifierToManyToOneBinder =
         new CompositeIdentifierToManyToOneBinder(
-                new org.grails.orm.hibernate.cfg.domainbinding.util.ForeignKeyColumnCountCalculator(),
+            new org.grails.orm.hibernate.cfg.domainbinding.util.ForeignKeyColumnCountCalculator(),
             namingStrategy,
             defaultColumnNameFetcher,
             backticksRemover,
             simpleValueBinder);
-    OneToOneBinder oneToOneBinder =
-        new OneToOneBinder(metadataBuildingContext, simpleValueBinder);
+    OneToOneBinder oneToOneBinder = new OneToOneBinder(metadataBuildingContext, simpleValueBinder);
     ManyToOneBinder manyToOneBinder =
         new ManyToOneBinder(
             metadataBuildingContext,
@@ -148,34 +147,32 @@ public class GrailsDomainBinder implements AdditionalMappingContributor, TypeCon
         new CollectionBinder(
             metadataBuildingContext,
             namingStrategy,
-                simpleValueBinder,
+            simpleValueBinder,
             enumTypeBinder,
             manyToOneBinder,
             compositeIdentifierToManyToOneBinder,
             simpleValueColumnFetcher,
-                collectionHolder);
+            collectionHolder);
     ComponentUpdater componentUpdater = new ComponentUpdater(propertyFromValueCreator);
     ComponentBinder componentBinder =
         new ComponentBinder(metadataBuildingContext, getMappingCacheHolder(), componentUpdater);
 
     GrailsPropertyBinder grailsPropertyBinder =
         new GrailsPropertyBinder(
-                enumTypeBinder,
+            enumTypeBinder,
             componentBinder,
             collectionBinder,
             simpleValueBinder,
-                oneToOneBinder,
-            manyToOneBinder
-        );
+            oneToOneBinder,
+            manyToOneBinder);
     componentBinder.setGrailsPropertyBinder(grailsPropertyBinder);
     CompositeIdBinder compositeIdBinder =
-        new CompositeIdBinder(
-            metadataBuildingContext, componentUpdater, grailsPropertyBinder);
+        new CompositeIdBinder(metadataBuildingContext, componentUpdater, grailsPropertyBinder);
     PropertyBinder propertyBinder = new PropertyBinder();
     SimpleIdBinder simpleIdBinder =
         new SimpleIdBinder(
             metadataBuildingContext,
-                new BasicValueIdCreator(jdbcEnvironment, namingStrategy),
+            new BasicValueIdCreator(jdbcEnvironment, namingStrategy),
             simpleValueBinder,
             propertyBinder);
     IdentityBinder identityBinder = new IdentityBinder(simpleIdBinder, compositeIdBinder);
@@ -229,8 +226,8 @@ public class GrailsDomainBinder implements AdditionalMappingContributor, TypeCon
             new ColumnConfigToColumnBinder());
     RootBinder rootBinder =
         new RootBinder(
-                dataSourceName,
-                multiTenantFilterBinder,
+            dataSourceName,
+            multiTenantFilterBinder,
             subClassBinder,
             defaultColumnNameFetcher,
             rootPersistentClassCommonValuesBinder,

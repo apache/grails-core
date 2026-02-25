@@ -18,16 +18,15 @@
  */
 package org.grails.orm.hibernate.cfg.domainbinding.hibernate;
 
-import java.util.Optional;
-
 import static java.util.Optional.ofNullable;
+
+import java.util.Optional;
 import org.grails.datastore.mapping.model.PersistentProperty;
 import org.grails.datastore.mapping.model.types.Association;
 import org.grails.datastore.mapping.model.types.Embedded;
 import org.grails.orm.hibernate.cfg.ColumnConfig;
 import org.grails.orm.hibernate.cfg.Mapping;
 import org.grails.orm.hibernate.cfg.PropertyConfig;
-import org.hibernate.MappingException;
 import org.hibernate.mapping.DependantValue;
 import org.hibernate.mapping.Property;
 import org.hibernate.mapping.SimpleValue;
@@ -42,15 +41,14 @@ public interface HibernatePersistentProperty extends PersistentProperty<Property
 
   default HibernateAssociation getHibernateInverseSide() {
     return this instanceof Association<?> association
-            ? (HibernateAssociation) association.getInverseSide()
-            : null;
+        ? (HibernateAssociation) association.getInverseSide()
+        : null;
   }
-
 
   default GrailsHibernatePersistentEntity getHibernateAssociatedEntity() {
     return this instanceof Association<?> association
-            ? (GrailsHibernatePersistentEntity) association.getAssociatedEntity()
-            : null;
+        ? (GrailsHibernatePersistentEntity) association.getAssociatedEntity()
+        : null;
   }
 
   /**
@@ -86,12 +84,17 @@ public interface HibernatePersistentProperty extends PersistentProperty<Property
   default String getTypeName(Class<?> propertyType, PropertyConfig config, Mapping mapping) {
 
     return ofNullable(config)
-            .map(PropertyConfig::getTypeName)
-            .orElseGet(() -> ofNullable(mapping).map(__ -> __.getTypeName(propertyType))
-                    .orElseGet(() -> Optional.ofNullable(propertyType)
-                            .filter(__ -> !__.isEnum())
-                            .map(Class::getName)
-                            .orElse(null)));
+        .map(PropertyConfig::getTypeName)
+        .orElseGet(
+            () ->
+                ofNullable(mapping)
+                    .map(__ -> __.getTypeName(propertyType))
+                    .orElseGet(
+                        () ->
+                            Optional.ofNullable(propertyType)
+                                .filter(__ -> !__.isEnum())
+                                .map(Class::getName)
+                                .orElse(null)));
   }
 
   default GrailsHibernatePersistentEntity getHibernateOwner() {
@@ -136,8 +139,7 @@ public interface HibernatePersistentProperty extends PersistentProperty<Property
     return this instanceof Embedded;
   }
 
-  default void validateAssociation() {
-  }
+  default void validateAssociation() {}
 
   default boolean isSerializableType() {
     return "serializable".equals(getTypeName());
@@ -148,8 +150,8 @@ public interface HibernatePersistentProperty extends PersistentProperty<Property
    */
   default boolean isJoinKeyMapped() {
     return getMappedForm() != null
-            && getMappedForm().hasJoinKeyMapping()
-            && supportsJoinColumnMapping();
+        && getMappedForm().hasJoinKeyMapping()
+        && supportsJoinColumnMapping();
   }
 
   default String getMappedColumnName() {
@@ -161,13 +163,13 @@ public interface HibernatePersistentProperty extends PersistentProperty<Property
 
   default String getColumnName(ColumnConfig cc) {
     return Optional.of(this)
-            .filter(HibernatePersistentProperty::isJoinKeyMapped)
-            .map(p -> p.getMappedForm().getJoinTable().getKey().getName())
-            .orElseGet(
-                    () ->
-                            Optional.ofNullable(cc)
-                                    .map(ColumnConfig::getName)
-                                    .orElseGet(this::getMappedColumnName));
+        .filter(HibernatePersistentProperty::isJoinKeyMapped)
+        .map(p -> p.getMappedForm().getJoinTable().getKey().getName())
+        .orElseGet(
+            () ->
+                Optional.ofNullable(cc)
+                    .map(ColumnConfig::getName)
+                    .orElseGet(this::getMappedColumnName));
   }
 
   /**
@@ -185,8 +187,8 @@ public interface HibernatePersistentProperty extends PersistentProperty<Property
   default java.util.Properties getTypeParameters(SimpleValue simpleValue) {
     if (getTypeName(simpleValue) != null) {
       return Optional.ofNullable(getTypeProperty(simpleValue).getMappedForm())
-              .map(PropertyConfig::getTypeParams)
-              .orElse(null);
+          .map(PropertyConfig::getTypeParams)
+          .orElse(null);
     }
     return null;
   }
