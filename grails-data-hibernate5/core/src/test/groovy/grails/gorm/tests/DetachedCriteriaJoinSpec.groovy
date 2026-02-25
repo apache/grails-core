@@ -126,4 +126,34 @@ class DetachedCriteriaJoinSpec extends GrailsDataTckSpec<GrailsDataHibernate5Tck
         then:
         result == 'Inter'
     }
+
+    def 'check list with association subquery plus join and projection works'() {
+        given:
+        def club = new Club(name: 'Ajax').save(flush: true)
+        new Team(name: 'Amsterdammers', club: club).save(flush: true)
+
+        when:
+        def result = Team.where {
+            club {
+                name == 'Ajax'
+            }
+        }.join('club').property('club.name').list()
+
+        then:
+        result == ['Ajax']
+    }
+
+    def 'check list can sort by joined association property'() {
+        given:
+        def clubA = new Club(name: 'A Club').save(flush: true)
+        def clubB = new Club(name: 'B Club').save(flush: true)
+        new Team(name: 'Team B', club: clubB).save(flush: true)
+        new Team(name: 'Team A', club: clubA).save(flush: true)
+
+        when:
+        def result = Team.where {}.join('club').sort('club.name', 'asc').property('name').list()
+
+        then:
+        result == ['Team A', 'Team B']
+    }
 }
