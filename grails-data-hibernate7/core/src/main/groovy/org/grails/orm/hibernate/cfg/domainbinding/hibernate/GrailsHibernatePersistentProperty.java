@@ -18,7 +18,6 @@
  */
 package org.grails.orm.hibernate.cfg.domainbinding.hibernate;
 
-import java.util.List;
 import java.util.Optional;
 import org.grails.datastore.mapping.model.PersistentProperty;
 import org.grails.datastore.mapping.model.types.Association;
@@ -26,13 +25,9 @@ import org.grails.datastore.mapping.model.types.Embedded;
 import org.grails.orm.hibernate.cfg.ColumnConfig;
 import org.grails.orm.hibernate.cfg.JoinTable;
 import org.grails.orm.hibernate.cfg.Mapping;
-import org.grails.orm.hibernate.cfg.PersistentEntityNamingStrategy;
 import org.grails.orm.hibernate.cfg.PropertyConfig;
-import org.grails.orm.hibernate.cfg.domainbinding.binder.GrailsDomainBinder;
 import org.hibernate.MappingException;
 import org.hibernate.mapping.DependantValue;
-import org.hibernate.mapping.IndexedCollection;
-import org.hibernate.mapping.ManyToOne;
 import org.hibernate.mapping.Property;
 import org.hibernate.mapping.SimpleValue;
 import org.hibernate.usertype.UserCollectionType;
@@ -40,12 +35,8 @@ import org.hibernate.usertype.UserCollectionType;
 /** Interface for Hibernate persistent properties */
 public interface GrailsHibernatePersistentProperty extends PersistentProperty<PropertyConfig> {
 
-  default boolean isOwningSide() {
-    return this instanceof Association<?> association && association.isOwningSide();
-  }
-
-  default boolean isBidirectional() {
-    return this instanceof Association<?> association && association.isBidirectional();
+  default boolean isBidirectionalManyToOneWithListMapping(Property prop) {
+    return false;
   }
 
   default HibernateAssociation getHibernateInverseSide() {
@@ -54,18 +45,11 @@ public interface GrailsHibernatePersistentProperty extends PersistentProperty<Pr
         : null;
   }
 
-  default boolean isCircular() {
-    return this instanceof Association<?> association && association.isCircular();
-  }
 
   default GrailsHibernatePersistentEntity getHibernateAssociatedEntity() {
     return this instanceof Association<?> association
         ? (GrailsHibernatePersistentEntity) association.getAssociatedEntity()
         : null;
-  }
-
-  default boolean isBidirectionalOneToManyMap() {
-    return this instanceof Association<?> association && association.isBidirectionalOneToManyMap();
   }
 
   /**
@@ -151,26 +135,14 @@ public interface GrailsHibernatePersistentProperty extends PersistentProperty<Pr
   }
 
   default boolean isHibernateOneToOne() {
-    validateAssociation();
-    return this instanceof org.grails.datastore.mapping.model.types.OneToOne association
-        && (association.canBindOneToOneWithSingleColumnAndForeignKey()
-            || (association.isHasOne()
-                && association.isBidirectional()
-                && association.getInverseSide() != null));
+    return false;
   }
 
   default boolean isHibernateManyToOne() {
-    validateAssociation();
-    if (!(this instanceof Association)) {
-      return false;
-    }
-    return this instanceof org.grails.datastore.mapping.model.types.ManyToOne
-        || (this instanceof org.grails.datastore.mapping.model.types.OneToOne
-            && !isHibernateOneToOne());
+    return false;
   }
 
   default boolean isEmbedded() {
-    validateAssociation();
     return this instanceof Embedded;
   }
 
@@ -197,36 +169,9 @@ public interface GrailsHibernatePersistentProperty extends PersistentProperty<Pr
     return "serializable".equals(getTypeName());
   }
 
-  default String getIndexColumnType(String defaultType) {
-    return Optional.ofNullable(getMappedForm())
-        .map(PropertyConfig::getIndexColumn)
-        .map(ic -> getTypeName(ic, getHibernateOwner().getMappedForm()))
-        .orElse(defaultType);
-  }
-
-  default String getIndexColumnName(PersistentEntityNamingStrategy namingStrategy) {
-    return Optional.ofNullable(getMappedForm())
-        .map(PropertyConfig::getIndexColumn)
-        .map(PropertyConfig::getColumn)
-        .orElseGet(
-            () ->
-                namingStrategy.resolveColumnName(getName())
-                    + GrailsDomainBinder.UNDERSCORE
-                    + IndexedCollection.DEFAULT_INDEX_COLUMN_NAME);
-  }
-
-  default String getMapElementName(PersistentEntityNamingStrategy namingStrategy) {
-    return Optional.ofNullable(getMappedForm())
-        .map(PropertyConfig::getJoinTable)
-        .map(JoinTable::getColumn)
-        .map(ColumnConfig::getName)
-        .orElseGet(
-            () ->
-                namingStrategy.resolveColumnName(getName())
-                    + GrailsDomainBinder.UNDERSCORE
-                    + IndexedCollection.DEFAULT_ELEMENT_COLUMN_NAME);
-  }
-
+  /**
+   * @return true if the property has a join key mapping
+   */
   default boolean isJoinKeyMapped() {
     return getMappedForm() != null
         && getMappedForm().hasJoinKeyMapping()
@@ -249,17 +194,6 @@ public interface GrailsHibernatePersistentProperty extends PersistentProperty<Pr
                 Optional.ofNullable(cc)
                     .map(ColumnConfig::getName)
                     .orElseGet(this::getMappedColumnName));
-  }
-
-  default boolean isBidirectionalManyToOneWithListMapping(Property prop) {
-    if (this instanceof Association<?> association) {
-      return association.isBidirectional()
-          && association.getInverseSide() != null
-          && List.class.isAssignableFrom(this.getType())
-          && prop != null
-          && prop.getValue() instanceof ManyToOne;
-    }
-    return false;
   }
 
   /**

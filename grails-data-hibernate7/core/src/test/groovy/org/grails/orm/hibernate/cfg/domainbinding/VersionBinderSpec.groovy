@@ -107,6 +107,6 @@ class VersionBinderSpec extends HibernateGormDatastoreSpec {
         @Override EntityReflector.PropertyWriter getWriter() { null }
         @Override String getOwnerClassName() { "Test" }
         @Override boolean isLazyAble() { false }
-        @Override boolean isBidirectionalManyToOneWithListMapping(Property prop) { false }
+        boolean isBidirectionalManyToOneWithListMapping(Property prop) { false }
     }
 }

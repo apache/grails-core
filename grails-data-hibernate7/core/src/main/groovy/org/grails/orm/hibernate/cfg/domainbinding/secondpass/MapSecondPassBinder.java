@@ -27,7 +27,6 @@ import org.grails.orm.hibernate.cfg.PersistentEntityNamingStrategy;
 import org.grails.orm.hibernate.cfg.PropertyConfig;
 import org.grails.orm.hibernate.cfg.domainbinding.binder.ColumnConfigToColumnBinder;
 import org.grails.orm.hibernate.cfg.domainbinding.binder.SimpleValueColumnBinder;
-import org.grails.orm.hibernate.cfg.domainbinding.hibernate.GrailsHibernatePersistentProperty;
 import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernateManyToManyProperty;
 import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernateOneToManyProperty;
 import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernateToManyProperty;
@@ -72,7 +71,7 @@ public class MapSecondPassBinder {
     collectionSecondPassBinder.bindCollectionSecondPass(property, mappings, persistentClasses, map);
     SimpleValue value = new BasicValue(metadataBuildingContext, map.getCollectionTable());
 
-    String type = ((GrailsHibernatePersistentProperty) property).getIndexColumnType("string");
+    String type = property.getIndexColumnType("string");
     String columnName1 = property.getIndexColumnName(namingStrategy);
     simpleValueColumnBinder.bindSimpleValue(value, type, columnName1, true);
     PropertyConfig mappedForm = property.getMappedForm();

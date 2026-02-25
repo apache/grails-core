@@ -6,6 +6,7 @@ import org.grails.datastore.mapping.model.MappingContext
 import org.grails.datastore.mapping.model.PersistentEntity
 import org.grails.datastore.mapping.model.types.Association
 import org.grails.orm.hibernate.cfg.domainbinding.hibernate.GrailsHibernatePersistentProperty
+import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernateAssociation
 import org.grails.orm.hibernate.cfg.PropertyConfig
 
 import spock.lang.Unroll
@@ -29,7 +30,7 @@ class PropertyBinderSpec extends HibernateGormDatastoreSpec {
         def cascadeBehaviorFetcher = Mock(CascadeBehaviorFetcher)
         def binder = new PropertyBinder(cascadeBehaviorFetcher)
 
-        def persistentProperty = Mock(GrailsHibernatePersistentProperty)
+        def persistentProperty = Mock(GrailsHibernatePersistentProperty, additionalInterfaces: [HibernateAssociation])
         def value = Mock(Value)
         def config = Mock(PropertyConfig)
 

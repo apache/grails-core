@@ -23,7 +23,6 @@ import org.grails.orm.hibernate.cfg.ColumnConfig;
 import org.grails.orm.hibernate.cfg.GrailsHibernateUtil;
 import org.grails.orm.hibernate.cfg.PersistentEntityNamingStrategy;
 import org.grails.orm.hibernate.cfg.domainbinding.hibernate.GrailsHibernatePersistentProperty;
-
 public class ColumnNameForPropertyAndPathFetcher {
 
   private final PersistentEntityNamingStrategy namingStrategy;

@@ -18,6 +18,10 @@
  */
 package org.grails.orm.hibernate.cfg.domainbinding.hibernate;
 
+import java.util.List;
+import org.hibernate.mapping.ManyToOne;
+import org.hibernate.mapping.Property;
+
 /**
  * Common interface for all Hibernate association properties (both ToOne and ToMany). Extends
  * {@link GrailsHibernatePersistentProperty} and declares the key {@link
@@ -42,6 +46,8 @@ public interface HibernateAssociation extends GrailsHibernatePersistentProperty 
 
   boolean isCircular();
 
+  boolean isBidirectionalOneToManyMap();
+
   // --- Hibernate-typed overrides, removing instanceof guards ---
 
   /** Returns the inverse side as a {@link HibernateAssociation}, eliminating cast at call sites. */
@@ -53,5 +59,13 @@ public interface HibernateAssociation extends GrailsHibernatePersistentProperty 
   @Override
   default GrailsHibernatePersistentEntity getHibernateAssociatedEntity() {
     return (GrailsHibernatePersistentEntity) getAssociatedEntity();
+  }
+
+  default boolean isBidirectionalManyToOneWithListMapping(Property prop) {
+    return isBidirectional()
+        && getInverseSide() != null
+        && List.class.isAssignableFrom(getType())
+        && prop != null
+        && prop.getValue() instanceof ManyToOne;
   }
 }

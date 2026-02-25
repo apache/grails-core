@@ -25,6 +25,7 @@ import org.grails.datastore.mapping.reflect.EntityReflector;
 import org.grails.orm.hibernate.access.TraitPropertyAccessStrategy;
 import org.grails.orm.hibernate.cfg.PropertyConfig;
 import org.grails.orm.hibernate.cfg.domainbinding.hibernate.GrailsHibernatePersistentProperty;
+import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernateAssociation;
 import org.grails.orm.hibernate.cfg.domainbinding.util.CascadeBehaviorFetcher;
 import org.hibernate.boot.spi.AccessType;
 import org.hibernate.mapping.Property;
@@ -60,7 +61,8 @@ public class PropertyBinder {
       config = new PropertyConfig();
     }
 
-    if (persistentProperty.isBidirectionalManyToOneWithListMapping(prop)) {
+    if (persistentProperty instanceof HibernateAssociation assoc
+        && assoc.isBidirectionalManyToOneWithListMapping(prop)) {
       prop.setInsertable(false);
       prop.setUpdatable(false);
     } else {
