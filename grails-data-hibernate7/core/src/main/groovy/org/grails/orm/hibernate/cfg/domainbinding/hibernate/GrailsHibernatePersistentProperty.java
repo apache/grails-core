@@ -83,11 +83,6 @@ public interface GrailsHibernatePersistentProperty extends PersistentProperty<Pr
    * @return The type name
    */
   default String getTypeName(Class<?> propertyType, PropertyConfig config, Mapping mapping) {
-    if (this instanceof Association
-        && propertyType == getType()
-        && getHibernateAssociatedEntity() != null) {
-      return null;
-    }
     String typeName =
         Optional.ofNullable(config)
             .map(PropertyConfig::getType)
@@ -97,7 +92,6 @@ public interface GrailsHibernatePersistentProperty extends PersistentProperty<Pr
 
     if (typeName == null
         && propertyType != null
-        && getHibernateAssociatedEntity() == null
         && !propertyType.isEnum()) {
       return propertyType.getName();
     }

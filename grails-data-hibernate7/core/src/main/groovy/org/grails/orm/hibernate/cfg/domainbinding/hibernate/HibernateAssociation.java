@@ -19,8 +19,12 @@
 package org.grails.orm.hibernate.cfg.domainbinding.hibernate;
 
 import java.util.List;
+
 import org.hibernate.mapping.ManyToOne;
 import org.hibernate.mapping.Property;
+
+import org.grails.orm.hibernate.cfg.Mapping;
+import org.grails.orm.hibernate.cfg.PropertyConfig;
 
 /**
  * Common interface for all Hibernate association properties (both ToOne and ToMany). Extends
@@ -67,5 +71,18 @@ public interface HibernateAssociation extends GrailsHibernatePersistentProperty 
         && List.class.isAssignableFrom(getType())
         && prop != null
         && prop.getValue() instanceof ManyToOne;
+  }
+
+  /**
+   * @param propertyType The property type
+   * @param config The property config
+   * @param mapping The mapping
+   * @return The type name
+   */
+  default String getTypeName(Class<?> propertyType, PropertyConfig config, Mapping mapping) {
+    if (propertyType == getType() && getHibernateAssociatedEntity() != null) {
+      return null;
+    }
+    return GrailsHibernatePersistentProperty.super.getTypeName(propertyType, config, mapping);
   }
 }
