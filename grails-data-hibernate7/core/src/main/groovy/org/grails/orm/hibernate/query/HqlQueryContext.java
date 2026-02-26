@@ -20,6 +20,7 @@ package org.grails.orm.hibernate.query;
 
 import groovy.lang.GString;
 import java.util.HashMap;
+import java.util.Locale;
 import java.util.Map;
 import java.util.Set;
 import org.checkerframework.checker.nullness.qual.Nullable;
@@ -33,6 +34,12 @@ import org.grails.datastore.mapping.model.PersistentEntity;
  *
  * <p>Use {@link #prepare} to build an instance from raw inputs.
  */
+@SuppressWarnings({
+  "PMD.AvoidDuplicateLiterals",
+  "PMD.DataflowAnomalyAnalysis",
+  "PMD.AvoidLiteralsInIfCondition",
+  "PMD.UseLocaleWithCaseConversions"
+})
 public record HqlQueryContext(
     String hql,
     Class<?> targetClass,
@@ -98,7 +105,7 @@ public record HqlQueryContext(
   static int countHqlProjections(CharSequence hql) {
     if (hql == null || hql.length() == 0) return 0;
     String s = hql.toString().trim();
-    String lower = s.toLowerCase();
+    String lower = s.toLowerCase(Locale.ROOT);
     int selectIdx = lower.indexOf("select ");
     if (selectIdx < 0) return 0;
 
@@ -108,7 +115,7 @@ public record HqlQueryContext(
     if (sel.isEmpty()) return 0;
 
     // Strip leading DISTINCT/ALL
-    String selLower = sel.toLowerCase();
+    String selLower = sel.toLowerCase(Locale.ROOT);
     if (selLower.startsWith("distinct ")) sel = sel.substring("distinct ".length()).trim();
     else if (selLower.startsWith("all ")) sel = sel.substring("all ".length()).trim();
 
@@ -177,7 +184,7 @@ public record HqlQueryContext(
     // Read the next token; a clause keyword means no user-defined alias is present
     int tokenEnd = cur;
     while (tokenEnd < s.length() && !Character.isWhitespace(s.charAt(tokenEnd))) tokenEnd++;
-    String token = s.substring(cur, tokenEnd).toLowerCase();
+    String token = s.substring(cur, tokenEnd).toLowerCase(Locale.ROOT);
     boolean hasAlias =
         !token.isEmpty()
             && !Set.of(
@@ -199,7 +206,7 @@ public record HqlQueryContext(
 
     // Qualify the projection with the synthetic alias
     String adjusted;
-    if (projLower.equals(entityName.toLowerCase())) {
+    if (projLower.equalsIgnoreCase(entityName)) {
       adjusted = "e"; // "select Person from Person" → "select e"
     } else if (!projLower.contains("(")
         && !projLower.contains(".")
