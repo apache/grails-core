@@ -42,6 +42,7 @@ import org.hibernate.proxy.HibernateProxyHelper;
  * @author Graeme Rocher
  * @since 1.2.2
  */
+@SuppressWarnings("PMD.CloseResource")
 public class HibernateProxyHandler implements ProxyHandler, ProxyFactory {
 
   @Override
