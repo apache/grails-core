@@ -71,6 +71,12 @@ import org.springframework.util.ClassUtils;
  *
  * @since 5.0
  */
+@SuppressWarnings({
+  "rawtypes",
+  "PMD.UseProperClassLoader",
+  "PMD.DataflowAnomalyAnalysis",
+  "PMD.CloseResource"
+})
 public class HibernateMappingContextConfiguration extends Configuration
     implements ApplicationContextAware {
   private static final long serialVersionUID = -7115087342689305517L;
