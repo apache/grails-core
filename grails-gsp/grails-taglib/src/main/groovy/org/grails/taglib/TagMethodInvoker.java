@@ -126,8 +126,9 @@ public final class TagMethodInvoker {
         Parameter[] parameters = method.getParameters();
         Object[] args = new Object[parameters.length];
         for (int i = 0; i < parameters.length; i++) {
+            String parameterName = parameters[i].getName();
             Class<?> parameterType = parameters[i].getType();
-            if (Map.class.isAssignableFrom(parameterType)) {
+            if (Map.class.isAssignableFrom(parameterType) && "attrs".equals(parameterName)) {
                 args[i] = attrs;
                 continue;
             }
@@ -135,7 +136,6 @@ public final class TagMethodInvoker {
                 args[i] = body != null ? body : TagOutput.EMPTY_BODY_CLOSURE;
                 continue;
             }
-            String parameterName = parameters[i].getName();
             Object value = attrs != null ? attrs.get(parameterName) : null;
             if (value == null && parameters.length == 1 && attrs != null && attrs.size() == 1) {
                 value = attrs.values().iterator().next();

@@ -43,6 +43,15 @@ class MethodDefinedTagLibSpec extends Specification implements TagLibUnitTest<Me
         applyTemplate('<g:multiTypedTag first="hello" second="world" />') == 'hello-world'
     }
 
+    void "method tag can bind map-valued attribute to map-typed argument by parameter name"() {
+        expect:
+        applyTemplate('<g:mapValueTag config="${[k:\'v\']}" />') == 'v'
+    }
+    void "method tag still supports reserved attrs map parameter"() {
+        expect:
+        applyTemplate('<g:attrsMapTag blah="duh" />') == 'duh'
+    }
+
     void "method tag can use implicit body closure"() {
         expect:
         applyTemplate('<g:bodyTag>abc</g:bodyTag>') == 'before-abc-after'
@@ -98,6 +107,14 @@ class MethodTagLib {
     }
     def multiTypedTag(String first, String second) {
         out << "${first}-${second}"
+    }
+
+    def mapValueTag(Map config) {
+        out << "${config.k}"
+    }
+
+    def attrsMapTag(Map attrs) {
+        out << "${attrs.blah}"
     }
 
     def bodyTag() {
