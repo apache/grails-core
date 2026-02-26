@@ -97,8 +97,8 @@ CloseResource,org.grails.orm.hibernate.HibernateDatastore,739,YES
 DataflowAnomalyAnalysis,org.grails.orm.hibernate.HibernateDatastore,751,YES
 CloseResource,org.grails.orm.hibernate.HibernateDatastore,752,YES
 DataflowAnomalyAnalysis,org.grails.orm.hibernate.HibernateDatastore,760,YES
-DataflowAnomalyAnalysis,org.grails.orm.hibernate.HibernateSession,80,
-DataflowAnomalyAnalysis,org.grails.orm.hibernate.HibernateSession,183,
+DataflowAnomalyAnalysis,org.grails.orm.hibernate.HibernateSession,80,YES
+DataflowAnomalyAnalysis,org.grails.orm.hibernate.HibernateSession,183,YES
 NullAssignment,org.grails.orm.hibernate.access.TraitPropertyAccessStrategy,50,
 DataflowAnomalyAnalysis,org.grails.orm.hibernate.access.TraitPropertyAccessStrategy,85,
 DataflowAnomalyAnalysis,org.grails.orm.hibernate.access.TraitPropertyAccessStrategy,85,

@@ -51,7 +51,7 @@ import org.springframework.context.ApplicationEventPublisher;
  * @author Graeme Rocher
  * @since 1.0
  */
-@SuppressWarnings("rawtypes")
+@SuppressWarnings({"rawtypes", "PMD.DataflowAnomalyAnalysis", "PMD.AvoidDuplicateLiterals"})
 public class HibernateSession extends AbstractHibernateSession {
 
   ProxyHandler proxyHandler = new HibernateProxyHandler();
@@ -70,6 +70,7 @@ public class HibernateSession extends AbstractHibernateSession {
   }
 
   @Override
+  @SuppressWarnings("PMD.DataflowAnomalyAnalysis")
   public Serializable getObjectIdentifier(Object instance) {
     if (instance == null) return null;
     if (proxyHandler.isProxy(instance)) {
@@ -93,6 +94,7 @@ public class HibernateSession extends AbstractHibernateSession {
    * @param criteria The criteria
    * @return The total number of records deleted
    */
+  @SuppressWarnings("PMD.DataflowAnomalyAnalysis")
   public long deleteAll(final QueryableCriteria criteria) {
     return getHibernateTemplate()
         .execute(
@@ -134,6 +136,7 @@ public class HibernateSession extends AbstractHibernateSession {
    * @param properties The properties
    * @return The total number of records updated
    */
+  @SuppressWarnings("PMD.DataflowAnomalyAnalysis")
   public long updateAll(final QueryableCriteria criteria, final Map<String, Object> properties) {
     return getHibernateTemplate()
         .execute(
@@ -179,6 +182,7 @@ public class HibernateSession extends AbstractHibernateSession {
                 });
   }
 
+  @SuppressWarnings("PMD.DataflowAnomalyAnalysis")
   public List retrieveAll(final Class type, final Iterable keys) {
     final PersistentEntity persistentEntity =
         getMappingContext().getPersistentEntity(type.getName());
