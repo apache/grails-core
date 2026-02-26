@@ -50,8 +50,9 @@ class GroovydocEnhancerExtension {
      * The Java language level string passed to the groovydoc Ant task's
      * {@code javaVersion} parameter (e.g. {@code "JAVA_17"}, {@code "JAVA_21"}).
      *
-     * <p>Defaults to {@code "JAVA_${javaVersion}"} where {@code javaVersion}
-     * is read from the project property, falling back to {@code "JAVA_17"}.</p>
+     * <p>Derived from the project's {@code javaVersion} property
+     * (e.g. {@code "JAVA_17"}). The property must be defined in
+     * {@code gradle.properties}; a missing value will cause a build failure.</p>
      */
     final Property<String> javaVersion
 
@@ -89,7 +90,16 @@ class GroovydocEnhancerExtension {
     @Inject
     GroovydocEnhancerExtension(ObjectFactory objects, Project project) {
         javaVersion = objects.property(String).convention(
-                project.provider { "JAVA_${GradleUtils.findProperty(project, 'javaVersion') ?: '17'}" as String }
+                project.provider {
+                    def ver = GradleUtils.findProperty(project, 'javaVersion')
+                    if (ver == null) {
+                        throw new IllegalStateException(
+                                "Required project property 'javaVersion' is not set. " +
+                                "Define it in gradle.properties (e.g. javaVersion=17)."
+                        )
+                    }
+                    "JAVA_${ver}" as String
+                }
         )
         javaVersionEnabled = objects.property(Boolean).convention(true)
         useAntBuilder = objects.property(Boolean).convention(true)
