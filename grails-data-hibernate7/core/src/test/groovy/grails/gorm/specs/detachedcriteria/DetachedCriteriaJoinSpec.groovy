@@ -7,6 +7,7 @@ import grails.gorm.specs.entities.Team
 import jakarta.persistence.criteria.JoinType
 import org.grails.datastore.gorm.finders.DynamicFinder
 import org.grails.orm.hibernate.query.HibernateQuery
+import org.hibernate.Hibernate
 
 class DetachedCriteriaJoinSpec  extends HibernateGormDatastoreSpec {
 
@@ -72,5 +73,72 @@ class DetachedCriteriaJoinSpec  extends HibernateGormDatastoreSpec {
             def joinType = query.hibernateCriteria.joinTypes["club"]
         expect:
             joinType == JoinType.RIGHT
+    }
+
+    def 'check get honours join and eagerly loads association'() {
+        given:
+        def club = new Club(name: 'Juventus').save(flush: true)
+        new Team(name: 'Torino', club: club).save(flush: true)
+
+        when:
+        Team team = Team.where { name == 'Torino' }.join('club').get()
+
+        then:
+        team != null
+        Hibernate.isInitialized(team.club)
+    }
+
+    def 'check list with join and projected association property works without explicit alias'() {
+        given:
+        def club = new Club(name: 'Milan').save(flush: true)
+        new Team(name: 'Rossoneri', club: club).save(flush: true)
+
+        when:
+        def result = Team.where { name == 'Rossoneri' }.join('club').property('club.name').list()
+
+        then:
+        result == ['Milan']
+    }
+
+    def 'check get with join and projected association property works without explicit alias'() {
+        given:
+        def club = new Club(name: 'Inter').save(flush: true)
+        new Team(name: 'Nerazzurri', club: club).save(flush: true)
+
+        when:
+        def result = Team.where { name == 'Nerazzurri' }.join('club').property('club.name').get()
+
+        then:
+        result == 'Inter'
+    }
+
+    def 'check list with association subquery plus join and projection works'() {
+        given:
+        def club = new Club(name: 'Ajax').save(flush: true)
+        new Team(name: 'Amsterdammers', club: club).save(flush: true)
+
+        when:
+        def result = Team.where {
+            club {
+                name == 'Ajax'
+            }
+        }.join('club').property('club.name').list()
+
+        then:
+        result == ['Ajax']
+    }
+
+    def 'check list can sort by joined association property'() {
+        given:
+        def clubA = new Club(name: 'A Club').save(flush: true)
+        def clubB = new Club(name: 'B Club').save(flush: true)
+        new Team(name: 'Team B', club: clubB).save(flush: true)
+        new Team(name: 'Team A', club: clubA).save(flush: true)
+
+        when:
+        def result = Team.where {}.join('club').sort('club.name', 'asc').property('name').list()
+
+        then:
+        result == ['Team A', 'Team B']
     }
 }
