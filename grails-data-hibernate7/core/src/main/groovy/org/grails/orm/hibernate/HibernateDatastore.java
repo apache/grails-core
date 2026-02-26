@@ -85,6 +85,11 @@ import org.springframework.transaction.support.TransactionSynchronizationManager
  * @author Graeme Rocher
  * @since 2.0
  */
+@SuppressWarnings({
+  "PMD.CloseResource",
+  "PMD.DataflowAnomalyAnalysis",
+  "PMD.ConstructorCallsOverridableMethod"
+})
 public class HibernateDatastore extends AbstractHibernateDatastore implements MessageSourceAware {
   private static final Logger LOG = LoggerFactory.getLogger(HibernateDatastore.class);
 
@@ -540,7 +545,7 @@ public class HibernateDatastore extends AbstractHibernateDatastore implements Me
       super.setApplicationContext(applicationContext);
 
       for (HibernateDatastore hibernateDatastore : datastoresByConnectionSource.values()) {
-        if (hibernateDatastore != this) {
+        if (!Objects.equals(hibernateDatastore, this)) {
           hibernateDatastore.setApplicationContext(applicationContext);
         }
       }
@@ -650,7 +655,7 @@ public class HibernateDatastore extends AbstractHibernateDatastore implements Me
     }
   }
 
-  public Metadata getMetadata() {
+  public final Metadata getMetadata() {
     return metadata;
   }
 
@@ -705,7 +710,7 @@ public class HibernateDatastore extends AbstractHibernateDatastore implements Me
             schemaHandler.useDefaultSchema(connection);
             connection.close();
           } catch (SQLException e) {
-            // ignore
+            LOG.trace("Failed to reset to default schema: {}", e.getMessage());
           }
         }
       }
