@@ -134,9 +134,6 @@ public class GrailsSessionContext implements CurrentSessionContext {
       SessionHolder holderToUse = sessionHolder;
       if (holderToUse == null) {
         holderToUse = new SessionHolder(session);
-      } else {
-        // it's up to the caller to manage concurrent sessions
-        // holderToUse.addSession(session);
       }
       if (TransactionSynchronizationManager.isCurrentTransactionReadOnly()) {
         session.setHibernateFlushMode(FlushMode.MANUAL);
@@ -144,7 +141,7 @@ public class GrailsSessionContext implements CurrentSessionContext {
       TransactionSynchronizationManager.registerSynchronization(
           createSpringSessionSynchronization(holderToUse));
       holderToUse.setSynchronizedWithTransaction(true);
-      if (holderToUse != sessionHolder) {
+      if (sessionHolder == null) {
         TransactionSynchronizationManager.bindResource(sessionFactory, holderToUse);
       }
     } else {
@@ -189,31 +186,33 @@ public class GrailsSessionContext implements CurrentSessionContext {
       // Create a new SessionHolder if none existed before.
       if (holderToUse == null) {
         holderToUse = new SessionHolder(session);
-      } else {
-        // it's up to the caller to manage concurrent sessions
-        // holderToUse.addSession(session);
       }
       jtaTx.registerSynchronization(
           new SpringJtaSynchronizationAdapter(createSpringSessionSynchronization(holderToUse)));
       holderToUse.setSynchronizedWithTransaction(true);
-      if (holderToUse != sessionHolder) {
+      if (sessionHolder == null) {
         TransactionSynchronizationManager.bindResource(sessionFactory, holderToUse);
       }
-    } catch (Throwable ex) {
+    } catch (Exception ex) {
       throw new DataAccessResourceFailureException(
           "Could not register synchronization with JTA TransactionManager", ex);
     }
   }
 
+  @SuppressWarnings("PMD.CloseResource")
   protected TransactionManager getJtaTransactionManager(Session session) {
-    SessionFactoryImplementor sessionFactoryImpl = null;
-    if (sessionFactory != null) {
-      sessionFactoryImpl = sessionFactory;
+    final SessionFactoryImplementor sessionFactoryImpl;
+    if (this.sessionFactory != null) {
+      sessionFactoryImpl = this.sessionFactory;
     } else if (session != null) {
       SessionFactory internalFactory = session.getSessionFactory();
       if (internalFactory instanceof SessionFactoryImplementor) {
         sessionFactoryImpl = (SessionFactoryImplementor) internalFactory;
+      } else {
+        sessionFactoryImpl = null;
       }
+    } else {
+      sessionFactoryImpl = null;
     }
 
     if (sessionFactoryImpl == null) {
@@ -221,7 +220,7 @@ public class GrailsSessionContext implements CurrentSessionContext {
     }
 
     ServiceBinding<JtaPlatform> sb =
-        sessionFactory.getServiceRegistry().locateServiceBinding(JtaPlatform.class);
+        sessionFactoryImpl.getServiceRegistry().locateServiceBinding(JtaPlatform.class);
     if (sb == null) {
       return null;
     }
