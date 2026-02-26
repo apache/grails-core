@@ -239,9 +239,9 @@ DataflowAnomalyAnalysis,org.grails.orm.hibernate.event.listener.HibernateEventLi
 DataflowAnomalyAnalysis,org.grails.orm.hibernate.event.listener.HibernateEventListener,164,
 DataflowAnomalyAnalysis,org.grails.orm.hibernate.event.listener.HibernateEventListener,182,
 CloseResource,org.grails.orm.hibernate.event.listener.HibernateEventListener,222,
-DataflowAnomalyAnalysis,org.grails.orm.hibernate.multitenancy.MultiTenantEventListener,59,
-DataflowAnomalyAnalysis,org.grails.orm.hibernate.multitenancy.MultiTenantEventListener,79,
-CompareObjectsWithEquals,org.grails.orm.hibernate.multitenancy.MultiTenantEventListener,93,
+DataflowAnomalyAnalysis,org.grails.orm.hibernate.multitenancy.MultiTenantEventListener,59,YES
+DataflowAnomalyAnalysis,org.grails.orm.hibernate.multitenancy.MultiTenantEventListener,79,YES
+CompareObjectsWithEquals,org.grails.orm.hibernate.multitenancy.MultiTenantEventListener,93,YES
 CloseResource,org.grails.orm.hibernate.proxy.HibernateProxyHandler,155,
 DataflowAnomalyAnalysis,org.grails.orm.hibernate.query.GrailsHibernateQueryUtils,68,
 DataflowAnomalyAnalysis,org.grails.orm.hibernate.query.GrailsHibernateQueryUtils,84,

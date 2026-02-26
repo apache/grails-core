@@ -53,34 +53,32 @@ public class MultiTenantEventListener implements PersistenceEventListener {
     return AbstractHibernateDatastore.class.isAssignableFrom(sourceType);
   }
 
+  @SuppressWarnings("PMD.DataflowAnomalyAnalysis")
   @Override
   public void onApplicationEvent(ApplicationEvent event) {
     if (supportsEventType(event.getClass())) {
-      Datastore hibernateDatastore = (Datastore) event.getSource();
-      if (event instanceof PreQueryEvent) {
-        PreQueryEvent preQueryEvent = (PreQueryEvent) event;
+      Datastore datastore = (Datastore) event.getSource();
+      if (event instanceof PreQueryEvent preQueryEvent) {
         Query query = preQueryEvent.getQuery();
 
         PersistentEntity entity = query.getEntity();
         if (entity.isMultiTenant()) {
-          if (hibernateDatastore == null) {
-            hibernateDatastore = GormEnhancer.findDatastore(entity.getJavaClass());
-          }
-          if (supportsSourceType(hibernateDatastore.getClass())) {
-            ((AbstractHibernateDatastore) hibernateDatastore).enableMultiTenancyFilter();
+          Datastore ds =
+              (datastore != null) ? datastore : GormEnhancer.findDatastore(entity.getJavaClass());
+          if (ds instanceof AbstractHibernateDatastore hibernateDatastore) {
+            hibernateDatastore.enableMultiTenancyFilter();
           }
         }
-      } else if ((event instanceof ValidationEvent)
-          || (event instanceof PreInsertEvent)
-          || (event instanceof PreUpdateEvent)) {
-        AbstractPersistenceEvent preInsertEvent = (AbstractPersistenceEvent) event;
-        PersistentEntity entity = preInsertEvent.getEntity();
+      } else if (event instanceof AbstractPersistenceEvent persistenceEvent
+          && (persistenceEvent instanceof ValidationEvent
+              || persistenceEvent instanceof PreInsertEvent
+              || persistenceEvent instanceof PreUpdateEvent)) {
+        PersistentEntity entity = persistenceEvent.getEntity();
         if (entity.isMultiTenant()) {
           TenantId tenantId = entity.getTenantId();
-          if (hibernateDatastore == null) {
-            hibernateDatastore = GormEnhancer.findDatastore(entity.getJavaClass());
-          }
-          if (supportsSourceType(hibernateDatastore.getClass())) {
+          Datastore ds =
+              (datastore != null) ? datastore : GormEnhancer.findDatastore(entity.getJavaClass());
+          if (ds instanceof AbstractHibernateDatastore hibernateDatastore) {
             Serializable currentId;
 
             if (hibernateDatastore instanceof MultiTenantCapableDatastore) {
@@ -90,12 +88,12 @@ public class MultiTenantEventListener implements PersistenceEventListener {
             }
             if (currentId != null) {
               try {
-                if (currentId == ConnectionSource.DEFAULT) {
+                if (ConnectionSource.DEFAULT.equals(currentId)) {
                   currentId =
                       (Serializable)
-                          preInsertEvent.getEntityAccess().getProperty(tenantId.getName());
+                          persistenceEvent.getEntityAccess().getProperty(tenantId.getName());
                 }
-                preInsertEvent.getEntityAccess().setProperty(tenantId.getName(), currentId);
+                persistenceEvent.getEntityAccess().setProperty(tenantId.getName(), currentId);
               } catch (Exception e) {
                 throw new TenantException(
                     "Could not assigned tenant id ["
