@@ -53,7 +53,7 @@ tasks.withType(Jar).configureEach {
 
     manifest.attributes(
             'Implementation-Title': 'Apache Grails',
-            'Implementation-Version': grailsVersion,
+            'Implementation-Version': project.findProperty('grailsVersion') ?: version,
             'Implementation-Vendor': 'grails.apache.org'
     )
 }

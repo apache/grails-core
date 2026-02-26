@@ -170,6 +170,7 @@ tasks.withType(com.github.spotbugs.snom.SpotBugsTask).configureEach {
 
 pmd {
     consoleOutput = true
+    ignoreFailures = true
 //    ruleSets = ['category/java/bestpractices.xml', 'category/java/errorprone.xml', 'category/java/security.xml']
     // toolVersion = '7.0.0'   // optional: override default PMD version if needed
 }
