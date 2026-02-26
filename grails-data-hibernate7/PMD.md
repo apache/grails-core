@@ -116,12 +116,12 @@ DataflowAnomalyAnalysis,org.grails.orm.hibernate.access.TraitPropertyAccessStrat
 DataflowAnomalyAnalysis,org.grails.orm.hibernate.access.TraitPropertyAccessStrategy,95,YES
 DataflowAnomalyAnalysis,org.grails.orm.hibernate.access.TraitPropertyAccessStrategy,95,YES
 DataflowAnomalyAnalysis,org.grails.orm.hibernate.access.TraitPropertyAccessStrategy,95,YES
-CloseResource,org.grails.orm.hibernate.cfg.GrailsHibernateUtil,84,
-CloseResource,org.grails.orm.hibernate.cfg.GrailsHibernateUtil,108,
-CloseResource,org.grails.orm.hibernate.cfg.GrailsHibernateUtil,113,
-DataflowAnomalyAnalysis,org.grails.orm.hibernate.cfg.GrailsHibernateUtil,120,
+CloseResource,org.grails.orm.hibernate.cfg.GrailsHibernateUtil,84,YES
+CloseResource,org.grails.orm.hibernate.cfg.GrailsHibernateUtil,108,YES
+CloseResource,org.grails.orm.hibernate.cfg.GrailsHibernateUtil,113,YES
+DataflowAnomalyAnalysis,org.grails.orm.hibernate.cfg.GrailsHibernateUtil,120,YES
 EmptyCatchBlock,org.grails.orm.hibernate.cfg.GrailsHibernateUtil,254,YES
-EmptyCatchBlock,org.grails.orm.hibernate.cfg.GrailsHibernateUtil,256,
+EmptyCatchBlock,org.grails.orm.hibernate.cfg.GrailsHibernateUtil,256,YES
 UseProperClassLoader,org.grails.orm.hibernate.cfg.HibernateMappingContextConfiguration,116,
 UseProperClassLoader,org.grails.orm.hibernate.cfg.HibernateMappingContextConfiguration,137,
 DataflowAnomalyAnalysis,org.grails.orm.hibernate.cfg.HibernateMappingContextConfiguration,190,
