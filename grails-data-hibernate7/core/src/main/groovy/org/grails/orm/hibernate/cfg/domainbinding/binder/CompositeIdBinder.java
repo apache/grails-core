@@ -43,6 +43,7 @@ public class CompositeIdBinder {
     this.grailsPropertyBinder = grailsPropertyBinder;
   }
 
+  @SuppressWarnings("PMD.DataflowAnomalyAnalysis")
   public void bindCompositeId(
       @Nonnull GrailsHibernatePersistentEntity domainClass,
       RootClass root,
