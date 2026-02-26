@@ -56,7 +56,7 @@ class FormatTagLib implements TagLibrary {
     GrailsTagDateHelper grailsTagDateHelper
 
     @CompileStatic
-    String messageHelper(String code, Object defaultMessage = null, List args = null, Locale locale = null) {
+    private String messageHelper(String code, Object defaultMessage = null, List args = null, Locale locale = null) {
         if (locale == null) {
             locale = GrailsWebRequest.lookup().getLocale()
         }

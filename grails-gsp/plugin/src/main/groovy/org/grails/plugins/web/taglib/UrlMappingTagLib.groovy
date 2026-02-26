@@ -90,7 +90,7 @@ class UrlMappingTagLib implements TagLibrary {
         }
     }
 
-    Map appendClass(Map attrs, String cssClass) {
+    private Map appendClass(Map attrs, String cssClass) {
         attrs['class'] = [attrs['class'] ?: '', cssClass].join(' ').trim()
         attrs
     }

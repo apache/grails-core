@@ -47,10 +47,10 @@ import org.grails.gsp.jsp.TagLibraryResolver;
 import org.grails.taglib.AbstractTemplateVariableBinding;
 import org.grails.taglib.GrailsTagException;
 import org.grails.taglib.GroovyPageAttributes;
-import org.grails.taglib.TagMethodContext;
-import org.grails.taglib.TagMethodInvoker;
 import org.grails.taglib.TagBodyClosure;
 import org.grails.taglib.TagLibraryLookup;
+import org.grails.taglib.TagMethodContext;
+import org.grails.taglib.TagMethodInvoker;
 import org.grails.taglib.TagOutput;
 import org.grails.taglib.encoder.OutputContext;
 import org.grails.taglib.encoder.OutputEncodingStack;
@@ -502,6 +502,7 @@ public abstract class GroovyPage extends Script {
             if (encodeAsPushedToStack) outputStack.pop();
         }
     }
+
     private void outputTagResult(boolean returnsObject, Object tagresult) {
         if (returnsObject && tagresult != null && !(tagresult instanceof Writer)) {
             if (tagresult instanceof String && isHtmlPart((String) tagresult)) {

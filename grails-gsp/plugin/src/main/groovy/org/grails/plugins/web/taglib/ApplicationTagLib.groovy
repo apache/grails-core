@@ -320,7 +320,7 @@ class ApplicationTagLib implements ApplicationContextAware, InitializingBean, Gr
      * @attr uri
      * @attr type
      */
-    protected renderResourceLink(attrs) {
+    private renderResourceLink(attrs) {
         def uri = attrs.remove('uri')
         def type = attrs.remove('type')
         if (!type) {
@@ -368,7 +368,7 @@ class ApplicationTagLib implements ApplicationContextAware, InitializingBean, Gr
     }
 
     @CompileStatic
-    protected String doCreateLink(Map attrs) {
+    private String doCreateLink(Map attrs) {
         Map urlAttrs = attrs
         if (attrs.url instanceof Map) {
             urlAttrs = (Map) attrs.url

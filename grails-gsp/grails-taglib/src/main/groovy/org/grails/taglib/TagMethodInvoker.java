@@ -18,11 +18,11 @@
  */
 package org.grails.taglib;
 
+import java.lang.reflect.Field;
+import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.lang.reflect.Modifier;
-import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Parameter;
-import java.lang.reflect.Field;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
@@ -46,11 +46,17 @@ public final class TagMethodInvoker {
             }
             Map<String, List<Method>> immutableMethodsByName = new HashMap<>(methodsByName.size());
             for (Map.Entry<String, List<Method>> entry : methodsByName.entrySet()) {
-                immutableMethodsByName.put(entry.getKey(), Collections.unmodifiableList(entry.getValue()));
+                // Sort methods by descending parameter count so that (Map, Closure) signatures
+                // are tried before (Map) signatures, preventing infinite recursion when a
+                // 1-arg convenience overload delegates to the 2-arg variant.
+                List<Method> sorted = new ArrayList<>(entry.getValue());
+                sorted.sort((a, b) -> Integer.compare(b.getParameterCount(), a.getParameterCount()));
+                immutableMethodsByName.put(entry.getKey(), Collections.unmodifiableList(sorted));
             }
             return Collections.unmodifiableMap(immutableMethodsByName);
         }
     };
+
     private TagMethodInvoker() {
     }
 

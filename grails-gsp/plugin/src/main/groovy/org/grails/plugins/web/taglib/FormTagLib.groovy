@@ -111,10 +111,6 @@ class FormTagLib implements ApplicationContextAware, InitializingBean, TagLibrar
         textFieldImpl(attrs)
     }
 
-    def textField(String name, Map attrs) {
-        textFieldImpl(attrs)
-    }
-
     private void textFieldImpl(Map attrs) {
         attrs.type = 'text'
         attrs.tagName = 'textField'
@@ -135,10 +131,6 @@ class FormTagLib implements ApplicationContextAware, InitializingBean, TagLibrar
         passwordFieldImpl(attrs)
     }
 
-    def passwordField(String name, Map attrs) {
-        passwordFieldImpl(attrs)
-    }
-
     private void passwordFieldImpl(Map attrs) {
         attrs.type = 'password'
         attrs.tagName = 'passwordField'
@@ -154,10 +146,6 @@ class FormTagLib implements ApplicationContextAware, InitializingBean, TagLibrar
      * @param attrs optional tag attributes including value and additional HTML attributes
      */
     def hiddenField(Map attrs) {
-        hiddenFieldTagImpl(attrs)
-    }
-
-    def hiddenField(String name, Map attrs) {
         hiddenFieldTagImpl(attrs)
     }
 
@@ -187,10 +175,6 @@ class FormTagLib implements ApplicationContextAware, InitializingBean, TagLibrar
         submitButtonImpl(attrs)
     }
 
-    def submitButton(String name, Map attrs) {
-        submitButtonImpl(attrs)
-    }
-
     private void submitButtonImpl(Map attrs) {
         attrs.type = attrs.type ?: 'submit'
         attrs.tagName = 'submitButton'
@@ -211,17 +195,6 @@ class FormTagLib implements ApplicationContextAware, InitializingBean, TagLibrar
     def field(Map attrs) {
         attrs.tagName = 'field'
         fieldImpl(out, attrs)
-    }
-
-    /**
-     * A general tag for creating fields with method-argument binding for required type.
-     *
-     * @param type required input type
-     * @param attrs tag attributes, including required name/field and optional value/id/class/etc
-     */
-    def field(String type, Map attrs) {
-        attrs.type = type
-        field(attrs)
     }
 
     @CompileStatic
@@ -990,7 +963,7 @@ class FormTagLib implements ApplicationContextAware, InitializingBean, TagLibrar
         }
     }
 
-    def renderNoSelectionOption(noSelectionKey, noSelectionValue, value) {
+    private def renderNoSelectionOption(noSelectionKey, noSelectionValue, value) {
         renderNoSelectionOptionImpl(out, noSelectionKey, noSelectionValue, value)
     }
 

@@ -682,7 +682,7 @@ class FormFieldsTagLib {
         message ?: defaultMessage
     }
 
-    protected CharSequence renderDefaultField(Map model, Map attrs = [:]) {
+    private CharSequence renderDefaultField(Map model, Map attrs = [:]) {
         List classes = [attrs['class'] ?: 'fieldcontain']
         if (model.invalid) classes << (attrs.remove('invalidClass') ?: 'error')
         if (model.required) classes << (attrs.remove('requiredClass') ?: 'required')
@@ -715,11 +715,11 @@ class FormFieldsTagLib {
         }
     }
 
-    protected CharSequence renderDefaultInput(Map model, Map attrs = [:]) {
+    private CharSequence renderDefaultInput(Map model, Map attrs = [:]) {
         renderDefaultInput(null, model, attrs)
     }
 
-    protected CharSequence renderDefaultInput(BeanPropertyAccessor propertyAccessor, Map model, Map attrs = [:]) {
+    private CharSequence renderDefaultInput(BeanPropertyAccessor propertyAccessor, Map model, Map attrs = [:]) {
         Constrained constrained = (Constrained) model.constraints
         attrs.name = (model.prefix ?: '') + model.property
         attrs.value = model.value
@@ -778,7 +778,7 @@ class FormFieldsTagLib {
         }
     }
 
-    protected CharSequence renderDateTimeInput(Map model, Map attrs) {
+    private CharSequence renderDateTimeInput(Map model, Map attrs) {
         attrs.precision = model.type in [java.sql.Time, LocalDateTime] ? 'minute' : 'day'
         if (!model.required) {
             attrs.noSelection = ['': '']
@@ -787,7 +787,7 @@ class FormFieldsTagLib {
         return g.datePicker(attrs)
     }
 
-    protected CharSequence renderStringInput(Map model, Map attrs) {
+    private CharSequence renderStringInput(Map model, Map attrs) {
         Constrained constrained = (Constrained) model.constraints
 
         if (!attrs.type) {
@@ -819,7 +819,7 @@ class FormFieldsTagLib {
         return g.field(attrs)
     }
 
-    protected CharSequence renderNumericInput(BeanPropertyAccessor propertyAccessor, Map model, Map attrs) {
+    private CharSequence renderNumericInput(BeanPropertyAccessor propertyAccessor, Map model, Map attrs) {
         Constrained constrained = (Constrained) model.constraints
 
         if (!attrs.type && constrained?.inList) {
@@ -845,12 +845,12 @@ class FormFieldsTagLib {
     }
 
     @CompileStatic
-    protected NumberFormat getNumberFormatter() {
+    private NumberFormat getNumberFormatter() {
         NumberFormat.getInstance(getLocale())
     }
 
     @CompileStatic
-    protected Locale getLocale() {
+    private Locale getLocale() {
         def locale
         def request = GrailsWebRequest.lookup()?.currentRequest
         if (request instanceof HttpServletRequest) {
@@ -863,7 +863,7 @@ class FormFieldsTagLib {
     }
 
     @CompileStatic
-    protected String getDefaultNumberType(Map model) {
+    private String getDefaultNumberType(Map model) {
         Class modelType = (Class) model.type
 
         def typeName = modelType.simpleName.toLowerCase()

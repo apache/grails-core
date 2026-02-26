@@ -27,6 +27,7 @@ import groovy.lang.Closure;
 public final class TagMethodContext {
 
     private static final ThreadLocal<Deque<TagMethodContextEntry>> CONTEXT_STACK = ThreadLocal.withInitial(ArrayDeque::new);
+
     private TagMethodContext() {
     }
 

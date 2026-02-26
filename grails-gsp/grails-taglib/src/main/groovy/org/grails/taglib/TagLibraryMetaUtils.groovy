@@ -53,13 +53,13 @@ class TagLibraryMetaUtils {
     @CompileStatic
     static void registerTagMethodContextMetaProperties(MetaClass metaClass) {
         GroovyObject mc = (GroovyObject) metaClass
-        if (!metaClass.hasProperty("attrs") && !doesMethodExist(metaClass, "getAttrs", [] as Class[])) {
-            mc.setProperty("getAttrs") { ->
+        if (!metaClass.hasProperty('attrs') && !doesMethodExist(metaClass, 'getAttrs', [] as Class[])) {
+            mc.setProperty('getAttrs') { ->
                 TagMethodContext.currentAttrs()
             }
         }
-        if (!metaClass.hasProperty("body") && !doesMethodExist(metaClass, "getBody", [] as Class[])) {
-            mc.setProperty("getBody") { ->
+        if (!metaClass.hasProperty('body') && !doesMethodExist(metaClass, 'getBody', [] as Class[])) {
+            mc.setProperty('getBody') { ->
                 TagMethodContext.currentBody()
             }
         }
