@@ -104,7 +104,7 @@ public abstract class AbstractHibernateSession extends AbstractAttributeStoringS
         Object id = ctx.getEntityReflector(pe).getIdentifier(o);
         return id == null ? null : (Serializable) id;
       }
-    } catch (Exception e) {
+    } catch (Exception ignored) {
       // ignore and return null when identifier cannot be obtained
     }
     return null;
