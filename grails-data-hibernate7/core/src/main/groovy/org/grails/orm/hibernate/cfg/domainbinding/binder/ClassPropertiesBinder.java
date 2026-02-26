@@ -63,6 +63,7 @@ public class ClassPropertiesBinder {
    * @param persistentClass The Hibernate PersistentClass instance
    * @param mappings The Hibernate InFlightMetadataCollector instance
    */
+  @SuppressWarnings("PMD.DataflowAnomalyAnalysis")
   public void bindClassProperties(
       @Nonnull GrailsHibernatePersistentEntity domainClass,
       PersistentClass persistentClass,
