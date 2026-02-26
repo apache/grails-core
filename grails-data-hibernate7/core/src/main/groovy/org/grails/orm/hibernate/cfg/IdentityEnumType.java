@@ -116,7 +116,7 @@ public class IdentityEnumType implements UserType, ParameterizedType, Serializab
 
   @Override
   public boolean equals(Object o1, Object o2) throws HibernateException {
-    return o1 == o2;
+    return java.util.Objects.equals(o1, o2);
   }
 
   @Override
