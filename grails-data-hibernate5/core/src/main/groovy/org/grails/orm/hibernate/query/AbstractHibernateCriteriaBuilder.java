@@ -621,6 +621,7 @@ public abstract class AbstractHibernateCriteriaBuilder extends GroovyObjectSuppo
      * @throws org.hibernate.HibernateException Indicates a problem creating the sub criteria
      */
     public Criteria createAlias(String associationPath, String alias) {
+        aliasMap.put(associationPath, alias);
         return criteria.createAlias(associationPath, alias);
     }
 

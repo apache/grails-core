@@ -123,6 +123,34 @@ class BasicCollectionInQuerySpec extends Specification {
         then: "all matching students are found (duplicates possible from OR on join table)"
         results.unique().sort() == ['dave@test.com', 'eve@test.com', 'frank@test.com']
     }
+
+    def "in query on basic collection with pre-existing alias should reuse it"() {
+        given:
+        def s1 = new BcStudent(name: "Grace", email: "grace@test.com")
+        s1.addToSchools("Yale")
+        s1.addToSchools("Princeton")
+        s1.save()
+
+        def s2 = new BcStudent(name: "Hank", email: "hank@test.com")
+        s2.addToSchools("Princeton")
+        s2.save()
+
+        def s3 = new BcStudent(name: "Ivy", email: "ivy@test.com")
+        s3.addToSchools("Columbia")
+        s3.save(flush: true)
+
+        when: "an alias is explicitly created before using in() with the raw property name"
+        def results = BcStudent.createCriteria().list {
+            createAlias("schools", "sch")
+            'in'('schools', ['Princeton'])
+            projections {
+                property 'email'
+            }
+        }
+
+        then: "the existing alias is reused instead of creating a duplicate"
+        results.sort() == ['grace@test.com', 'hank@test.com']
+    }
 }
 
 @Entity
