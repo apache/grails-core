@@ -247,7 +247,7 @@ class FormFieldsTagLib {
                 widgetAttrs.remove('class')
             }
             if (hasBody(body)) {
-                model.widget = raw(body(model + [attrs: widgetAttrs] + widgetAttrs))
+                model.widget = body(model + [attrs: widgetAttrs] + widgetAttrs)?.encodeAsRaw()
             } else {
                 model.widget = renderWidget(propertyAccessor, model, widgetAttrs, widgetFolder ?: templatesFolder, theme)
             }
@@ -389,7 +389,7 @@ class FormFieldsTagLib {
                 out << render(template: "/templates/_fields/$template", model: attrs + [domainClass: domainClass, domainProperties: properties]) { prop ->
                     BeanPropertyAccessor propertyAccessor = resolveProperty(bean, prop.name)
                     Map model = buildModel(propertyAccessor, attrs, 'HTML')
-                    out << raw(renderDisplayWidget(propertyAccessor, model, attrs, templatesFolder, theme))
+                    out << renderDisplayWidget(propertyAccessor, model, attrs, templatesFolder, theme)?.encodeAsRaw()
                 }
             }
         } else {
@@ -415,7 +415,7 @@ class FormFieldsTagLib {
             String widgetsFolderToUse = widgetFolder ?: templatesFolder
 
             if (hasBody(body)) {
-                model.widget = raw(body(model + [attrs: widgetAttrs] + widgetAttrs))
+                model.widget = body(model + [attrs: widgetAttrs] + widgetAttrs)?.encodeAsRaw()
                 model.value = body(model)
             } else {
                 model.widget = renderDisplayWidget(propertyAccessor, model, widgetAttrs, widgetsFolderToUse, theme)
@@ -426,7 +426,7 @@ class FormFieldsTagLib {
             if (template) {
                 out << render(template: template.path, plugin: template.plugin, model: model + [attrs: wrapperAttrs] + wrapperAttrs)
             } else {
-                out << raw(renderDisplayWidget(propertyAccessor, model, attrs, widgetsFolderToUse, theme))
+                out << renderDisplayWidget(propertyAccessor, model, attrs, widgetsFolderToUse, theme)?.encodeAsRaw()
             }
         }
 
@@ -715,11 +715,11 @@ class FormFieldsTagLib {
         }
     }
 
-    CharSequence renderDefaultInput(Map model, Map attrs = [:]) {
+    protected CharSequence renderDefaultInput(Map model, Map attrs = [:]) {
         renderDefaultInput(null, model, attrs)
     }
 
-    CharSequence renderDefaultInput(BeanPropertyAccessor propertyAccessor, Map model, Map attrs = [:]) {
+    protected CharSequence renderDefaultInput(BeanPropertyAccessor propertyAccessor, Map model, Map attrs = [:]) {
         Constrained constrained = (Constrained) model.constraints
         attrs.name = (model.prefix ?: '') + model.property
         attrs.value = model.value
@@ -778,7 +778,7 @@ class FormFieldsTagLib {
         }
     }
 
-    CharSequence renderDateTimeInput(Map model, Map attrs) {
+    protected CharSequence renderDateTimeInput(Map model, Map attrs) {
         attrs.precision = model.type in [java.sql.Time, LocalDateTime] ? 'minute' : 'day'
         if (!model.required) {
             attrs.noSelection = ['': '']
@@ -787,7 +787,7 @@ class FormFieldsTagLib {
         return g.datePicker(attrs)
     }
 
-    CharSequence renderStringInput(Map model, Map attrs) {
+    protected CharSequence renderStringInput(Map model, Map attrs) {
         Constrained constrained = (Constrained) model.constraints
 
         if (!attrs.type) {
@@ -819,7 +819,7 @@ class FormFieldsTagLib {
         return g.field(attrs)
     }
 
-    CharSequence renderNumericInput(BeanPropertyAccessor propertyAccessor, Map model, Map attrs) {
+    protected CharSequence renderNumericInput(BeanPropertyAccessor propertyAccessor, Map model, Map attrs) {
         Constrained constrained = (Constrained) model.constraints
 
         if (!attrs.type && constrained?.inList) {
@@ -992,7 +992,7 @@ class FormFieldsTagLib {
         buffer << render(template: '/templates/_fields/list', model: [domainClass: domainClass, domainProperties: properties]) { prop ->
             def propertyAccessor = resolveProperty(bean, prop.name)
             def model = buildModel(propertyAccessor, attrs)
-            out << raw(renderDisplayWidget(propertyAccessor, model, attrs, templatesFolder, theme))
+            out << renderDisplayWidget(propertyAccessor, model, attrs, templatesFolder, theme)?.encodeAsRaw()
         }
         buffer.buffer
     }

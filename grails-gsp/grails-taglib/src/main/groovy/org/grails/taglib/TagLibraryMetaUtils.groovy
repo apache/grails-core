@@ -176,6 +176,34 @@ class TagLibraryMetaUtils {
         Object[] args = makeObjectArray(argsParam)
         final GroovyObject tagBean = gspTagLibraryLookup.lookupTagLibrary(namespace, name)
         if (tagBean != null) {
+            Object tagLibProp = TagMethodInvoker.getClosureTagProperty(tagBean, name)
+            if (tagLibProp instanceof Closure || TagMethodInvoker.hasInvokableTagMethod(tagBean, name)) {
+                Map attrs = [:]
+                Object body = null
+                switch (args.length) {
+                    case 0:
+                        break
+                    case 1:
+                        if (args[0] instanceof Map) {
+                            attrs = (Map) args[0]
+                        } else if (args[0] instanceof Closure || args[0] instanceof CharSequence) {
+                            body = args[0]
+                        } else {
+                            attrs = [(name): args[0]]
+                        }
+                        break
+                    case 2:
+                        if (args[0] instanceof Map) {
+                            attrs = (Map) args[0]
+                            body = args[1]
+                        }
+                        break
+                }
+                if (addMethodsToMetaClass) {
+                    registerMethodMissingForTags(mc, gspTagLibraryLookup, namespace, name)
+                }
+                return captureTagOutputForMethodCall(gspTagLibraryLookup, namespace, name, attrs, body)
+            }
             MetaClass tagBeanMc = tagBean.getMetaClass()
             final MetaMethod method = tagBeanMc.respondsTo(tagBean, name, args).find { it }
             if (method != null) {

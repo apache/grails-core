@@ -122,6 +122,10 @@ class ValidationTagLib implements TagLibrary {
         }
     }
 
+    def fieldValue(Map attrs) {
+        fieldValue(attrs, null)
+    }
+
     private Object parseForRejectedValue(bean, field) {
         def rejectedValue = bean
         for (String fieldPart in field.split('\\.')) {
