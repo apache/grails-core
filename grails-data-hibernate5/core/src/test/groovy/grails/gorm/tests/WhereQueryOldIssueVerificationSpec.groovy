@@ -259,7 +259,6 @@ class WhereQueryOldIssueVerificationSpec extends Specification {
     }
 }
 
-// --- Domain classes for verification ---
 
 @Entity
 class WqFoo implements HibernateEntity<WqFoo> {
