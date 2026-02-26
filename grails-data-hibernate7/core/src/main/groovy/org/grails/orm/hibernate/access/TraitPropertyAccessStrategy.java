@@ -34,6 +34,7 @@ import org.springframework.util.ReflectionUtils;
  * @author Graeme Rocher
  * @since 6.1.3
  */
+@SuppressWarnings({"rawtypes", "PMD.DataflowAnomalyAnalysis"})
 public class TraitPropertyAccessStrategy implements PropertyAccessStrategy {
 
   public PropertyAccess buildPropertyAccess(Class containerJavaType, String propertyName) {
