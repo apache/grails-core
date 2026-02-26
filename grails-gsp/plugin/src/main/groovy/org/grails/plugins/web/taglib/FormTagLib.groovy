@@ -104,8 +104,19 @@ class FormTagLib implements ApplicationContextAware, InitializingBean, TagLibrar
      *
      * @attr name REQUIRED the field name
      * @attr value the field value
+     * @param name required field name
+     * @param attrs optional tag attributes including value, id, class and other HTML attributes
      */
     def textField(Map attrs) {
+        textFieldImpl(attrs)
+    }
+
+    def textField(String name, Map attrs) {
+        attrs.name = name
+        textFieldImpl(attrs)
+    }
+
+    private void textFieldImpl(Map attrs) {
         attrs.type = 'text'
         attrs.tagName = 'textField'
         fieldImpl(out, attrs)
@@ -118,8 +129,19 @@ class FormTagLib implements ApplicationContextAware, InitializingBean, TagLibrar
      *
      * @attr name REQUIRED the field name
      * @attr value the field value
+     * @param name required field name
+     * @param attrs optional tag attributes including value, id, class and other HTML attributes
      */
     def passwordField(Map attrs) {
+        passwordFieldImpl(attrs)
+    }
+
+    def passwordField(String name, Map attrs) {
+        attrs.name = name
+        passwordFieldImpl(attrs)
+    }
+
+    private void passwordFieldImpl(Map attrs) {
         attrs.type = 'password'
         attrs.tagName = 'passwordField'
         fieldImpl(out, attrs)
@@ -130,8 +152,19 @@ class FormTagLib implements ApplicationContextAware, InitializingBean, TagLibrar
      *
      * @attr name REQUIRED the field name
      * @attr value the field value
+     * @param name required field name
+     * @param attrs optional tag attributes including value and additional HTML attributes
      */
     def hiddenField(Map attrs) {
+        hiddenFieldTagImpl(attrs)
+    }
+
+    def hiddenField(String name, Map attrs) {
+        attrs.name = name
+        hiddenFieldTagImpl(attrs)
+    }
+
+    private void hiddenFieldTagImpl(Map attrs) {
         hiddenFieldImpl(out, attrs)
     }
 
@@ -150,8 +183,19 @@ class FormTagLib implements ApplicationContextAware, InitializingBean, TagLibrar
      * @attr value the button text
      * @attr type input type; defaults to 'submit'
      * @attr event the webflow event id
+     * @param name required field name
+     * @param attrs optional tag attributes including value, type, event and additional HTML attributes
      */
     def submitButton(Map attrs) {
+        submitButtonImpl(attrs)
+    }
+
+    def submitButton(String name, Map attrs) {
+        attrs.name = name
+        submitButtonImpl(attrs)
+    }
+
+    private void submitButtonImpl(Map attrs) {
         attrs.type = attrs.type ?: 'submit'
         attrs.tagName = 'submitButton'
         if (request.flowExecutionKey) {
@@ -171,6 +215,17 @@ class FormTagLib implements ApplicationContextAware, InitializingBean, TagLibrar
     def field(Map attrs) {
         attrs.tagName = 'field'
         fieldImpl(out, attrs)
+    }
+
+    /**
+     * A general tag for creating fields with method-argument binding for required type.
+     *
+     * @param type required input type
+     * @param attrs tag attributes, including required name/field and optional value/id/class/etc
+     */
+    def field(String type, Map attrs) {
+        attrs.type = type
+        field(attrs)
     }
 
     @CompileStatic

@@ -71,6 +71,20 @@ Used as:
 <g:greeting name="Graeme" />
 ----
 
+For tags with strict validation/error handling, keep a `Map attrs` handler and add typed overloads that delegate to it:
+
+[source,groovy]
+----
+def field(Map attrs) {
+    // existing validation + rendering path
+}
+
+def field(String type, Map attrs) {
+    attrs.type = type
+    field(attrs)
+}
+----
+
 As demonstrated above there is an implicit `out` variable that refers to the output `Writer` which you can use to append content to the response. Then you can reference the tag inside your GSP; no imports are necessary:
 
 [source,xml]

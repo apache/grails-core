@@ -21,6 +21,7 @@ package org.grails.web.taglib
 import grails.artefact.Artefact
 import grails.compiler.GrailsCompileStatic
 import grails.testing.web.taglib.TagLibUnitTest
+import org.grails.taglib.GrailsTagException
 import spock.lang.Specification
 
 class MethodDefinedTagLibSpec extends Specification implements TagLibUnitTest<MethodTagLib> {
@@ -76,6 +77,18 @@ class MethodDefinedTagLibSpec extends Specification implements TagLibUnitTest<Me
         expect:
         applyTemplate('<g:staticBodyTag>abc</g:staticBodyTag>') == 'before-abc-after'
     }
+
+    void "private and protected methods are not exposed as tags"() {
+        when:
+        applyTemplate('<g:privateOnlyTag/>')
+        then:
+        thrown(GrailsTagException)
+
+        when:
+        applyTemplate('<g:protectedOnlyTag/>')
+        then:
+        thrown(GrailsTagException)
+    }
 }
 
 @GrailsCompileStatic
@@ -115,6 +128,14 @@ class MethodTagLib {
 
     def attrsMapTag(Map attrs) {
         out << "${attrs.blah}"
+    }
+
+    private def privateOnlyTag() {
+        out << 'private'
+    }
+
+    protected def protectedOnlyTag() {
+        out << 'protected'
     }
 
     def bodyTag() {
