@@ -149,13 +149,13 @@ trait TagLibrary implements WebAttributes, ServletAttributes, TagLibraryInvoker 
         }
         TagLibraryLookup gspTagLibraryLookup = getTagLibraryLookup()
         if (gspTagLibraryLookup != null) {
-            boolean methodTagFallback = false
 
             Object result = gspTagLibraryLookup.lookupNamespaceDispatcher(name)
             if (result == null) {
-                String namespace = getTaglibNamespace()
-                GroovyObject tagLibrary = gspTagLibraryLookup.lookupTagLibrary(namespace, name)
+                String resolvedNamespace = getTaglibNamespace()
+                GroovyObject tagLibrary = gspTagLibraryLookup.lookupTagLibrary(resolvedNamespace, name)
                 if (tagLibrary == null) {
+                    resolvedNamespace = TagOutput.DEFAULT_NAMESPACE
                     tagLibrary = gspTagLibraryLookup.lookupTagLibrary(TagOutput.DEFAULT_NAMESPACE, name)
                 }
 
@@ -164,8 +164,7 @@ trait TagLibrary implements WebAttributes, ServletAttributes, TagLibraryInvoker 
                     if (tagProperty instanceof Closure) {
                         result = ((Closure<?>) tagProperty).clone()
                     } else if (TagMethodInvoker.hasInvokableTagMethod(tagLibrary, name)) {
-                        methodTagFallback = true
-                        final String currentNamespace = namespace
+                        final String currentNamespace = resolvedNamespace
                         result = { Map attrs = [:], Closure body = null ->
                             Object output = TagOutput.captureTagOutput(gspTagLibraryLookup, currentNamespace, name, attrs, body, OutputContextLookupHelper.lookupOutputContext())
                             boolean gspTagSyntaxCall = attrs instanceof GroovyPageAttributes && ((GroovyPageAttributes) attrs).isGspTagSyntaxCall()
@@ -179,7 +178,7 @@ trait TagLibrary implements WebAttributes, ServletAttributes, TagLibraryInvoker 
                     }
                 }
             }
-            if (result != null && !Environment.isDevelopmentMode() && !methodTagFallback) {
+            if (result != null && !Environment.isDevelopmentMode()) {
                 MetaClass mc = GrailsMetaClassUtils.getExpandoMetaClass(getClass())
 
                 // Register the property for the already-existing singleton instance of the taglib

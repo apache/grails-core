@@ -26,6 +26,7 @@ import java.lang.reflect.Field;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
@@ -34,6 +35,22 @@ import groovy.lang.GroovyObject;
 import groovy.lang.MissingMethodException;
 
 public final class TagMethodInvoker {
+    private static final ClassValue<Map<String, List<Method>>> INVOKABLE_METHODS_BY_NAME = new ClassValue<>() {
+        @Override
+        protected Map<String, List<Method>> computeValue(Class<?> type) {
+            Map<String, List<Method>> methodsByName = new HashMap<>();
+            for (Method method : type.getMethods()) {
+                if (isTagMethodCandidate(method)) {
+                    methodsByName.computeIfAbsent(method.getName(), ignored -> new ArrayList<>()).add(method);
+                }
+            }
+            Map<String, List<Method>> immutableMethodsByName = new HashMap<>(methodsByName.size());
+            for (Map.Entry<String, List<Method>> entry : methodsByName.entrySet()) {
+                immutableMethodsByName.put(entry.getKey(), Collections.unmodifiableList(entry.getValue()));
+            }
+            return Collections.unmodifiableMap(immutableMethodsByName);
+        }
+    };
     private TagMethodInvoker() {
     }
 
@@ -70,19 +87,16 @@ public final class TagMethodInvoker {
     }
 
     public static boolean hasInvokableTagMethod(GroovyObject tagLib, String tagName) {
-        for (Method method : tagLib.getClass().getMethods()) {
-            if (isTagMethodCandidate(method) && method.getName().equals(tagName)) {
-                return true;
-            }
-        }
-        return false;
+        List<Method> methods = INVOKABLE_METHODS_BY_NAME.get(tagLib.getClass()).get(tagName);
+        return methods != null && !methods.isEmpty();
     }
 
     public static Object invokeTagMethod(GroovyObject tagLib, String tagName, Map<?, ?> attrs, Closure<?> body) {
-        for (Method method : tagLib.getClass().getMethods()) {
-            if (!isTagMethodCandidate(method) || !method.getName().equals(tagName)) {
-                continue;
-            }
+        List<Method> methods = INVOKABLE_METHODS_BY_NAME.get(tagLib.getClass()).get(tagName);
+        if (methods == null) {
+            throw new MissingMethodException(tagName, tagLib.getClass(), new Object[] { attrs, body });
+        }
+        for (Method method : methods) {
             Object[] args = toMethodArguments(method, attrs, body);
             if (args != null) {
                 try {
