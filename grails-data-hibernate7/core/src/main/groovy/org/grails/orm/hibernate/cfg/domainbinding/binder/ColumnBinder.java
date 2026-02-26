@@ -36,6 +36,7 @@ import org.hibernate.mapping.Table;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+@SuppressWarnings("PMD.NullAssignment")
 public class ColumnBinder {
 
   private static final Logger LOG = LoggerFactory.getLogger(ColumnBinder.class);
@@ -93,6 +94,7 @@ public class ColumnBinder {
    * @param path
    * @param table The table name
    */
+  @SuppressWarnings("PMD.DataflowAnomalyAnalysis")
   public void bindColumn(
       HibernatePersistentProperty property,
       HibernatePersistentProperty parentProperty,
@@ -135,17 +137,15 @@ public class ColumnBinder {
       column.setName(columnName);
       column.setNullable(
           property.isNullable() || (parentProperty != null && parentProperty.isNullable()));
-      // We'll reuse the same PropertyConfig for any constraints and uniqueness
-      PropertyConfig mappedForm = null;
       // Use the constraints for this property to more accurately define
       // the column's length, precision, and scale
       Class<?> type = property.getType();
       if (type != null
           && (String.class.isAssignableFrom(type) || byte[].class.isAssignableFrom(type))) {
-        mappedForm = property.getMappedForm();
+        PropertyConfig mappedForm = property.getMappedForm();
         stringColumnConstraintsBinder.bindStringColumnConstraints(column, mappedForm);
       } else if (type != null && Number.class.isAssignableFrom(type)) {
-        mappedForm = property.getMappedForm();
+        PropertyConfig mappedForm = property.getMappedForm();
         numericColumnConstraintsBinder.bindNumericColumnConstraints(column, cc, mappedForm);
       }
     }
