@@ -68,6 +68,7 @@ public class CompositeIdentifierToManyToOneBinder {
         new SimpleValueBinder(metadataBuildingContext, namingStrategy, jdbcEnvironment));
   }
 
+  @SuppressWarnings("PMD.DataflowAnomalyAnalysis")
   public void bindCompositeIdentifierToManyToOne(
       HibernatePersistentProperty property,
       SimpleValue value,
@@ -84,7 +85,7 @@ public class CompositeIdentifierToManyToOneBinder {
     if (i != expectedForeignKeyColumnLength) {
       int j = 0;
       for (String propertyName : propertyNames) {
-        ColumnConfig cc;
+        final ColumnConfig cc;
         // if a column configuration exists in the mapping use it
         if (j < i) {
           cc = columns.get(j++);
@@ -123,9 +124,9 @@ public class CompositeIdentifierToManyToOneBinder {
                     backticksRemover.apply(compositeIdPrefix)
                         + UNDERSCORE
                         + backticksRemover.apply(suffix);
-                cc = new ColumnConfig();
-                cc.setName(finalColumnName);
-                columns.add(cc);
+                ColumnConfig newCc = new ColumnConfig();
+                newCc.setName(finalColumnName);
+                columns.add(newCc);
               }
               continue;
             }
