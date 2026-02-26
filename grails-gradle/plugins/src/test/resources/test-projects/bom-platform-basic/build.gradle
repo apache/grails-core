@@ -1,0 +1,16 @@
+plugins {
+    id 'org.apache.grails.gradle.grails-app'
+}
+
+tasks.register('inspectBomSetup') {
+    doLast {
+        def implDeps = configurations.implementation.allDependencies
+        def hasPlatform = implDeps.any { dep ->
+            dep.group == 'org.apache.grails' && dep.name == 'grails-bom'
+        }
+        println "HAS_PLATFORM_BOM=${hasPlatform}"
+
+        def hasSpringDm = project.plugins.findPlugin('io.spring.dependency-management') != null
+        println "HAS_SPRING_DM=${hasSpringDm}"
+    }
+}

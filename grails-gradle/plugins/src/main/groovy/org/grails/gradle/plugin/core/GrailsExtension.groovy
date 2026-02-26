@@ -83,8 +83,13 @@ class GrailsExtension {
     List<String> starImports = []
 
     /**
-     * Whether the spring dependency management plugin should be applied by default
+     * @deprecated The Spring Dependency Management plugin has been replaced with Gradle's native
+     * {@code platform()} support plus lightweight property-based version overrides.
+     * This property is no longer used. Set version overrides in {@code gradle.properties}
+     * or via {@code ext['property.name']} instead.
+     * @see BomManagedVersions
      */
+    @Deprecated
     boolean springDependencyManagement = true
 
     /**

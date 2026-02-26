@@ -60,28 +60,26 @@ dependencies {
 
 Note that version numbers are not present in the majority of the dependencies.
 
-This is thanks to the Spring dependency management plugin which automatically configures `grails-bom` as a Maven BOM via the Grails Gradle Plugin.  This defines the default dependency versions for most commonly used dependencies and plugins.
+This is thanks to Gradle's platform support which automatically imports `grails-bom` as a managed dependency platform via the Grails Gradle Plugin.  This defines the default dependency versions for most commonly used dependencies and plugins.
+
+To override a managed version, set the corresponding property in `gradle.properties` or `build.gradle`:
+[source,groovy]
+----
+// gradle.properties
+slf4j.version=1.7.36
+
+// or build.gradle
+ext['slf4j.version'] = '1.7.36'
+----
 
 For a Grails App, applying `org.apache.grails.gradle.grails-web` will automatically configure the `grails-bom`.  No other steps required.
 
-For Plugins and Projects which do not use `org.apache.grails.gradle.grails-web`, you can apply the `grails-bom` in one of the following two ways.
+For Plugins and Projects which do not use `org.apache.grails.gradle.grails-web`, you can apply the `grails-bom` using Gradle Platforms:
 
-build.gradle, using Gradle Platforms:
 [source,groovy]
 ----
 dependencies {
     implementation platform("org.apache.grails:grails-bom:{GrailsVersion}")
     //...
-}
-----
-
-build.gradle, using Spring dependency management plugin:
-[source,groovy]
-----
-dependencyManagement {
-    imports {
-        mavenBom 'org.apache.grails:grails-bom:{GrailsVersion}'
-    }
-    applyMavenExclusions false
 }
 ----

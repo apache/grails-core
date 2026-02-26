@@ -26,8 +26,6 @@ import grails.util.GrailsNameUtils
 import grails.util.Metadata
 import groovy.transform.CompileDynamic
 import groovy.transform.CompileStatic
-import io.spring.gradle.dependencymanagement.DependencyManagementPlugin
-import io.spring.gradle.dependencymanagement.dsl.DependencyManagementExtension
 import org.apache.grails.gradle.common.PropertyFileUtils
 import org.apache.tools.ant.filters.EscapeUnicode
 import org.apache.tools.ant.filters.ReplaceTokens
@@ -355,17 +353,45 @@ ${importStatements}
     protected void applyDefaultPlugins(Project project) {
         applySpringBootPlugin(project)
 
+        applyGrailsBom(project)
+    }
+
+    /**
+     * Applies the Grails BOM as a Gradle platform and configures property-based
+     * version overrides. This replaces the Spring Dependency Management plugin with
+     * a lightweight mechanism that:
+     * <ol>
+     *   <li>Imports {@code grails-bom} via Gradle's native {@code platform()} support</li>
+     *   <li>Parses the BOM POM chain to discover which Maven properties control which artifact versions</li>
+     *   <li>Checks project properties ({@code gradle.properties} or {@code ext['property.name']}) for overrides</li>
+     *   <li>Applies any overrides via {@code ResolutionStrategy.eachDependency()}</li>
+     * </ol>
+     *
+     * <p>Usage: to override a version managed by the Grails or Spring Boot BOM, set the
+     * corresponding property in {@code gradle.properties} or {@code build.gradle}:</p>
+     * <pre>
+     * // gradle.properties
+     * slf4j.version=1.7.36
+     *
+     * // or build.gradle
+     * ext['slf4j.version'] = '1.7.36'
+     * </pre>
+     *
+     * @see BomManagedVersions
+     * @since 8.0
+     */
+    protected void applyGrailsBom(Project project) {
+        String grailsVersion = (project.findProperty('grailsVersion') ?: BuildSettings.grailsVersion) as String
+        String bomCoordinates = "org.apache.grails:grails-bom:${grailsVersion}" as String
+
+        project.dependencies.add('implementation', project.dependencies.platform(bomCoordinates))
+
         project.afterEvaluate {
-            GrailsExtension ge = project.extensions.getByType(GrailsExtension)
-            if (ge.springDependencyManagement) {
-                Plugin dependencyManagementPlugin = project.plugins.findPlugin(DependencyManagementPlugin)
-                if (dependencyManagementPlugin == null) {
-                    project.plugins.apply(DependencyManagementPlugin)
+            BomManagedVersions managedVersions = BomManagedVersions.resolve(project, bomCoordinates)
+            if (managedVersions.hasOverrides()) {
+                project.configurations.configureEach { Configuration conf ->
+                    managedVersions.applyTo(conf)
                 }
-
-                DependencyManagementExtension dme = project.extensions.findByType(DependencyManagementExtension)
-
-                applyBomImport(dme, project)
             }
         }
     }
@@ -375,13 +401,6 @@ ${importStatements}
         if (!springBoot) {
             project.plugins.apply(SpringBootPlugin)
         }
-    }
-
-    @CompileDynamic
-    private void applyBomImport(DependencyManagementExtension dme, project) {
-        dme.imports({
-            mavenBom("org.apache.grails:grails-bom:${project.properties['grailsVersion']}")
-        })
     }
 
     protected String getDefaultProfile() {
