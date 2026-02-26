@@ -138,6 +138,27 @@ class CompositeIdCriteria extends Specification {
     results.size() == 1
     results[0] == compositeIdToMany
   }
+
+  @Issue("https://github.com/apache/grails-core/issues/14516")
+  def "test that eq on composite id component works with Hibernate proxy"() {
+    given: "an entity with composite ID saved and session cleared"
+    Author _author = new Author(name:"ProxyAuthor").save(flush:true)
+    Book _book = new Book(title:"ProxyBook").save(flush:true)
+    CompositeIdToMany compositeIdToMany = new CompositeIdToMany(author:_author, book:_book).save(failOnError:true, flush:true)
+    def authorId = _author.id
+    datastore.sessionFactory.currentSession.clear()
+
+    when: "querying with eq using a Hibernate proxy (uninitialized) for the composite ID component"
+    Author proxyAuthor = Author.load(authorId)
+    def results = CompositeIdToMany.createCriteria().list {
+      eq('author', proxyAuthor)
+    }
+
+    then: "the entity is found via the proxy's ID without initializing it"
+    results.size() == 1
+    results[0].author.id == authorId
+    results[0].book.title == "ProxyBook"
+  }
 }
 
 @Entity
