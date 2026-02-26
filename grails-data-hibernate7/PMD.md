@@ -144,8 +144,8 @@ AvoidCatchingThrowable,org.grails.orm.hibernate.cfg.HibernateMappingContextConfi
 CompareObjectsWithEquals,org.grails.orm.hibernate.cfg.IdentityEnumType,119,YES
 DataflowAnomalyAnalysis,org.grails.orm.hibernate.cfg.MappingCacheHolder,65,YES
 DataflowAnomalyAnalysis,org.grails.orm.hibernate.cfg.domainbinding.binder.ClassPropertiesBinder,72,YES
-DataflowAnomalyAnalysis,org.grails.orm.hibernate.cfg.domainbinding.binder.CollectionBinder,228,
-DataflowAnomalyAnalysis,org.grails.orm.hibernate.cfg.domainbinding.binder.CollectionBinder,229,
+DataflowAnomalyAnalysis,org.grails.orm.hibernate.cfg.domainbinding.binder.CollectionBinder,228,YES
+DataflowAnomalyAnalysis,org.grails.orm.hibernate.cfg.domainbinding.binder.CollectionBinder,229,YES
 NullAssignment,org.grails.orm.hibernate.cfg.domainbinding.binder.ColumnBinder,80,
 NullAssignment,org.grails.orm.hibernate.cfg.domainbinding.binder.ColumnBinder,81,
 NullAssignment,org.grails.orm.hibernate.cfg.domainbinding.binder.ColumnBinder,82,

@@ -211,6 +211,7 @@ public class CollectionBinder {
     one.setIgnoreNotFound(true);
   }
 
+  @SuppressWarnings("PMD.DataflowAnomalyAnalysis")
   private void bindCollectionTable(
       HibernateToManyProperty property,
       @Nonnull InFlightMetadataCollector mappings,
