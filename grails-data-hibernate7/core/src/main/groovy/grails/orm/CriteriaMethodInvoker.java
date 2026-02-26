@@ -106,11 +106,8 @@ public class CriteriaMethodInvoker {
         Map argMap = (Map) args[0];
         final String sortField = (String) argMap.get(HibernateQueryConstants.ARGUMENT_SORT);
         if (sortField != null) {
-          boolean ignoreCase = true;
-          Object caseArg = argMap.get(HibernateQueryConstants.ARGUMENT_IGNORE_CASE);
-          if (caseArg instanceof Boolean) {
-            ignoreCase = (Boolean) caseArg;
-          }
+          final boolean ignoreCase =
+              !(argMap.get(HibernateQueryConstants.ARGUMENT_IGNORE_CASE) instanceof Boolean b) || b;
           final String orderParam = (String) argMap.get(HibernateQueryConstants.ARGUMENT_ORDER);
           final Query.Order.Direction direction =
               Query.Order.Direction.DESC.name().equalsIgnoreCase(orderParam)
@@ -151,13 +148,11 @@ public class CriteriaMethodInvoker {
       return UNHANDLED;
     }
 
-    HibernateQuery hibernateQuery = builder.getHibernateQuery();
     final boolean hasMoreThanOneArg = args.length > 1;
-    Closure callable = hasMoreThanOneArg ? (Closure) args[1] : (Closure) args[0];
-    JoinType joinType =
-        hasMoreThanOneArg ? builder.convertFromInt((Integer) args[0]) : builder.convertFromInt(0);
 
     if (method != null) {
+      HibernateQuery hibernateQuery = builder.getHibernateQuery();
+      Closure callable = hasMoreThanOneArg ? (Closure) args[1] : (Closure) args[0];
       switch (method) {
         case AND:
           hibernateQuery.and(callable);
@@ -186,10 +181,16 @@ public class CriteriaMethodInvoker {
       if (attribute.isAssociation()) {
         Class oldTargetClass = builder.getTargetClass();
         builder.setTargetClass(builder.getClassForAssociationType(attribute));
+        JoinType joinType =
+            hasMoreThanOneArg
+                ? builder.convertFromInt((Integer) args[0])
+                : builder.convertFromInt(0);
         if (builder.getTargetClass().equals(oldTargetClass) && !hasMoreThanOneArg) {
           joinType = JoinType.LEFT; // default to left join if joining on the same table
         }
 
+        HibernateQuery hibernateQuery = builder.getHibernateQuery();
+        Closure callable = hasMoreThanOneArg ? (Closure) args[1] : (Closure) args[0];
         hibernateQuery.join(name, joinType);
         hibernateQuery.in(name, new DetachedCriteria(builder.getTargetClass()).build(callable));
         builder.setTargetClass(oldTargetClass);
@@ -205,9 +206,8 @@ public class CriteriaMethodInvoker {
       return UNHANDLED;
     }
 
-    Object value = args[0];
     if (method != null) {
-      HibernateQuery hibernateQuery = builder.getHibernateQuery();
+      Object value = args[0];
       switch (method) {
         case ID_EQUALS:
           return builder.eq("id", value);
@@ -218,6 +218,7 @@ public class CriteriaMethodInvoker {
                     "call to [" + name + "] with value [" + value + "] requires a String value."));
           }
           String propertyName = builder.calculatePropertyName((String) value);
+          HibernateQuery hibernateQuery = builder.getHibernateQuery();
           switch (method) {
             case IS_NULL -> hibernateQuery.isNull(propertyName);
             case IS_NOT_NULL -> hibernateQuery.isNotNull(propertyName);
@@ -230,6 +231,7 @@ public class CriteriaMethodInvoker {
     return UNHANDLED;
   }
 
+  @SuppressWarnings("PMD.AvoidLiteralsInIfCondition")
   protected Object tryPropertyCriteria(CriteriaMethods method, Object[] args) {
     if (method == null || args.length < 2 || !(args[0] instanceof String)) {
       return UNHANDLED;
