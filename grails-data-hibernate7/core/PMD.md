@@ -120,7 +120,7 @@ CloseResource,org.grails.orm.hibernate.cfg.GrailsHibernateUtil,84,
 CloseResource,org.grails.orm.hibernate.cfg.GrailsHibernateUtil,108,
 CloseResource,org.grails.orm.hibernate.cfg.GrailsHibernateUtil,113,
 DataflowAnomalyAnalysis,org.grails.orm.hibernate.cfg.GrailsHibernateUtil,120,
-EmptyCatchBlock,org.grails.orm.hibernate.cfg.GrailsHibernateUtil,254,
+EmptyCatchBlock,org.grails.orm.hibernate.cfg.GrailsHibernateUtil,254,YES
 EmptyCatchBlock,org.grails.orm.hibernate.cfg.GrailsHibernateUtil,256,
 UseProperClassLoader,org.grails.orm.hibernate.cfg.HibernateMappingContextConfiguration,116,
 UseProperClassLoader,org.grails.orm.hibernate.cfg.HibernateMappingContextConfiguration,137,

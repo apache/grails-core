@@ -252,9 +252,9 @@ public class GrailsHibernateUtil extends HibernateRuntimeUtils {
         // passes all conditions return true
         return true;
       } catch (SecurityException e) {
-        // ignore
+        LOG.trace("Security exception checking for GORM fields: {}", e.getMessage());
       } catch (NoSuchFieldException e) {
-        // ignore
+        LOG.trace("Field not found checking for GORM fields: {}", e.getMessage());
       }
       testClass = testClass.getSuperclass();
     }
