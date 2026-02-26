@@ -50,6 +50,11 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 @Slf4j
+@SuppressWarnings({
+  "PMD.DataflowAnomalyAnalysis",
+  "PMD.AvoidLiteralsInIfCondition",
+  "PMD.AvoidDuplicateLiterals"
+})
 public class PredicateGenerator {
   private static final Logger log = LoggerFactory.getLogger(PredicateGenerator.class);
 
