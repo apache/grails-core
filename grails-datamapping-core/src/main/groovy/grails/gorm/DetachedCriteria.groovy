@@ -512,6 +512,15 @@ class DetachedCriteria<T> extends AbstractDetachedCriteria<T> implements GormOpe
      * @return The count
      */
     Number count(Map args = Collections.emptyMap(), @DelegatesTo(DetachedCriteria) Closure additionalCriteria = null) {
+        if (!projections.isEmpty()) {
+            // When user-defined projections exist (e.g. groupProperty + count),
+            // a simple count() projection returns incorrect results because it
+            // appends to the existing projections rather than replacing them.
+            // Fall back to counting the grouped result rows.
+            return ((List) withPopulatedQuery(args, additionalCriteria) { Query query ->
+                query.list()
+            }).size()
+        }
         (Number) withPopulatedQuery(args, additionalCriteria) { Query query ->
             query.projections().count()
             query.singleResult()
@@ -525,10 +534,7 @@ class DetachedCriteria<T> extends AbstractDetachedCriteria<T> implements GormOpe
      * @return The count
      */
     Number count(@DelegatesTo(DetachedCriteria) Closure additionalCriteria) {
-        (Number) withPopulatedQuery(Collections.emptyMap(), additionalCriteria) { Query query ->
-            query.projections().count()
-            query.singleResult()
-        }
+        count(Collections.emptyMap(), additionalCriteria)
     }
 
     /**
