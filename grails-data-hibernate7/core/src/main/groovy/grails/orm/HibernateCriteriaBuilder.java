@@ -53,12 +53,15 @@ import org.slf4j.LoggerFactory;
 import org.springframework.core.convert.ConversionService;
 
 /**
- * Wraps the Hibernate Criteria API in a builder. The builder can be retrieved through the
- * "createCriteria()" dynamic static method of Grails domain classes (Example in Groovy):
+ * Implements the GORM criteria DSL for Hibernate 7+. The builder exposes a Groovy-closure
+ * DSL that is translated into JPA Criteria queries via {@link HibernateQuery}. It is the
+ * backing implementation for the {@code createCriteria()} and {@code withCriteria()} dynamic
+ * static methods that GORM adds to every domain class.
  *
+ * <h2>DSL usage via domain class</h2>
  * <pre>
  *         def c = Account.createCriteria()
- *         def results = c {
+ *         def results = c.list {
  *             projections {
  *                 groupProperty("branch")
  *             }
@@ -72,16 +75,27 @@ import org.springframework.core.convert.ConversionService;
  *         }
  * </pre>
  *
- * <p>The builder can also be instantiated standalone with a SessionFactory and persistent Class
- * instance:
+ * <h2>Programmatic instantiation</h2>
+ * <p>The builder requires a {@link SessionFactory}, the target persistent class, and the
+ * {@link org.grails.orm.hibernate.AbstractHibernateDatastore} that owns the session:
  *
  * <pre>
- *      new HibernateCriteriaBuilder(clazz, sessionFactory).list {
+ *      new HibernateCriteriaBuilder(Account, sessionFactory, datastore).list {
  *         eq("firstName", "Fred")
  *      }
  * </pre>
  *
+ * <h2>Architecture</h2>
+ * <p>Closure method calls in the DSL are dispatched through
+ * {@code invokeMethod} → {@code CriteriaMethodInvoker} → {@link HibernateQuery}, which
+ * translates each GORM constraint into the equivalent JPA Criteria predicate.
+ * {@link grails.gorm.DetachedCriteria} can also be passed in place of a closure to support
+ * multi-tenant and reusable query fragments.
+ *
  * @author Graeme Rocher
+ * @author walterduquedeestrada
+ * @see HibernateQuery
+ * @see grails.gorm.DetachedCriteria
  */
 @Slf4j
 @SuppressWarnings("PMD.AvoidDuplicateLiterals")

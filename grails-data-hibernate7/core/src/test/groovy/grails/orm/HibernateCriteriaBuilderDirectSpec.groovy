@@ -5,15 +5,15 @@ import grails.gorm.specs.HibernateGormDatastoreSpec
 import jakarta.persistence.criteria.JoinType
 import org.grails.datastore.mapping.query.Query
 import spock.lang.Shared
+import java.math.RoundingMode
 
 /**
- * Direct (non-DSL) tests for the thin-wrapper methods of {@link HibernateCriteriaBuilder}.
+ * Integration tests for {@link HibernateCriteriaBuilder}: covers both direct method
+ * invocations (for JaCoCo line-level coverage) and DSL-closure invocations against a real
+ * in-memory datastore.
  * <p>
- * The existing {@link HibernateCriteriaBuilderSpec} exercises the same methods through the
- * Groovy DSL (closures routed via {@code invokeMethod} → {@code CriteriaMethodInvoker}).
- * JaCoCo cannot trace method-body coverage through that dynamic dispatch path.
- * These tests call every wrapper method as a direct Java-style invocation so JaCoCo
- * sees the actual method bodies executed.
+ * For a readable, Mock-based living-documentation spec of the DSL API see
+ * {@link HibernateCriteriaBuilderSpec}.
  */
 class HibernateCriteriaBuilderDirectSpec extends HibernateGormDatastoreSpec {
 
@@ -28,6 +28,222 @@ class HibernateCriteriaBuilderDirectSpec extends HibernateGormDatastoreSpec {
                 DirectAccount,
                 manager.hibernateDatastore.sessionFactory,
                 manager.hibernateDatastore)
+    }
+
+    // ─── DSL integration: data-driven scenarios ────────────────────────────
+
+    def setupData() {
+        def fred = new DirectAccount(balance: 250, firstName: "Fred", lastName: "Flintstone", branch: "Bedrock").save(failOnError: true)
+        def barney = new DirectAccount(balance: 500, firstName: "Barney", lastName: "Rubble", branch: "Bedrock").save(failOnError: true)
+        new DirectAccount(balance: 100, firstName: "Wilma", lastName: "Flintstone", branch: "Bedrock").save(failOnError: true)
+        new DirectAccount(balance: 1000, firstName: "Pebbles", lastName: "Flintstone", branch: "Slate Rock and Gravel").save(failOnError: true)
+        new DirectAccount(balance: 50, firstName: "Bam-Bam", lastName: "Rubble", branch: null).save(failOnError: true)
+        fred.addToTransactions(new DirectTransaction(amount: 10))
+        fred.addToTransactions(new DirectTransaction(amount: 20))
+        fred.save()
+        barney.addToTransactions(new DirectTransaction(amount: 50))
+        barney.save(flush: true, failOnError: true)
+        fred
+    }
+
+    void "get with eq criteria returns matching entity"() {
+        given: setupData()
+        when:
+        def result = builder.get { eq("firstName", "Fred") }
+        then:
+        result.firstName == "Fred"
+    }
+
+    void "get with idEq criteria returns correct entity"() {
+        given:
+        def fred = setupData()
+        when:
+        def result = builder.get { idEq(fred.id) }
+        then:
+        result.id == fred.id
+        result.firstName == "Fred"
+    }
+
+    void "list with compound criteria filters correctly"() {
+        given: setupData()
+        when:
+        def results = builder.list {
+            gt("balance", BigDecimal.valueOf(200))
+            or {
+                eq("lastName", "Flintstone")
+                like("branch", "Bedrock")
+            }
+            'in'("firstName", ["Fred", "Barney", "Pebbles"])
+        }
+        then:
+        results.size() == 3
+        results*.firstName.sort() == ["Barney", "Fred", "Pebbles"]
+    }
+
+    void "ilike criteria matches case-insensitively"() {
+        given: setupData()
+        when:
+        def results = builder.list { ilike("firstName", "fr%") }
+        then:
+        results.size() == 1
+        results[0].firstName == "Fred"
+    }
+
+    void "rlike criteria matches by regexp"() {
+        given: setupData()
+        when:
+        def results = builder.list { rlike("firstName", "^F.*") }
+        then:
+        results.size() == 1
+        results[0].firstName == "Fred"
+    }
+
+    void "between criteria selects inclusive range"() {
+        given: setupData()
+        when:
+        def results = builder.list { between("balance", BigDecimal.valueOf(100), BigDecimal.valueOf(300)) }
+        then:
+        results.size() == 2
+        results*.firstName.sort() == ["Fred", "Wilma"]
+    }
+
+    void "sizeEq criteria filters by collection size"() {
+        given: setupData()
+        when:
+        def results = builder.list { sizeEq("transactions", 2) }
+        then:
+        results.size() == 1
+        results[0].firstName == "Fred"
+    }
+
+    void "isEmpty and isNotEmpty criteria split collection membership"() {
+        given: setupData()
+        when:
+        def emptyResults    = builder.list { isEmpty("transactions") }
+        def notEmptyResults = builder.list { isNotEmpty("transactions") }
+        then:
+        emptyResults.size() == 3
+        notEmptyResults.size() == 2
+    }
+
+    void "isNull criteria returns entities with null property"() {
+        given: setupData()
+        when:
+        def results = builder.list { isNull("branch") }
+        then:
+        results.size() == 1
+        results[0].firstName == "Bam-Bam"
+    }
+
+    void "count projection returns row count"() {
+        given: setupData()
+        when:
+        def count = builder.get {
+            projections { count() }
+            eq("lastName", "Flintstone")
+        }
+        then:
+        count == 3
+    }
+
+    void "sum and avg projections aggregate correctly"() {
+        given: setupData()
+        when:
+        def projections = builder.get {
+            projections {
+                sum('balance')
+                avg('balance')
+            }
+            eq("branch", "Bedrock")
+        }
+        then:
+        projections[0] == 850
+        new BigDecimal(projections[1]).setScale(2, RoundingMode.HALF_UP) == 283.33
+    }
+
+    void "ordering and pagination slice results correctly"() {
+        given: setupData()
+        when:
+        def results = builder.list(max: 2, offset: 1) { order("firstName", "asc") }
+        then:
+        results.size() == 2
+        results*.firstName == ["Barney", "Fred"]
+    }
+
+    void "association closure filters via join"() {
+        given: setupData()
+        when:
+        def results = builder.list {
+            transactions { gt("amount", 40) }
+        }
+        then:
+        results.size() == 1
+        results[0].firstName == "Barney"
+    }
+
+    void "ne ge le criteria filter correctly"() {
+        given: setupData()
+        when:
+        def results = builder.list {
+            ne("firstName", "Fred")
+            ge("balance", BigDecimal.valueOf(60))
+            le("balance", BigDecimal.valueOf(1000))
+        }
+        then:
+        results*.firstName.toSet() == ["Barney", "Wilma", "Pebbles"] as Set
+    }
+
+    void "isNotNull and sizeGe filter combined"() {
+        given: setupData()
+        when:
+        def results = builder.list {
+            isNotNull("branch")
+            sizeGe("transactions", 1)
+        }
+        then:
+        results*.firstName.toSet() == ["Fred", "Barney"] as Set
+    }
+
+    void "groupProperty countDistinct min max projections return results"() {
+        given: setupData()
+        when:
+        def results = builder.list {
+            projections {
+                groupProperty("lastName")
+                countDistinct("firstName")
+                min("balance")
+                max("balance")
+            }
+        }
+        then:
+        results.size() >= 1
+    }
+
+    void "inList array variant and firstResult paginate correctly"() {
+        given: setupData()
+        when:
+        def list1 = builder.list { 'in'("firstName", ["Fred", "Barney"] as Object[]) }
+        def list2 = builder.list { inList("firstName", ["Fred", "Wilma"] as Object[]) }
+        def paged = builder.list(max: 1) {
+            order("firstName", "asc")
+            firstResult(2)
+        }
+        then:
+        list1.size() > 0
+        list2.size() > 0
+        paged.size() == 1
+        paged[0].firstName == "Fred"
+    }
+
+    void "nested association criteria with between filters correctly"() {
+        given: setupData()
+        when:
+        def results = builder.list {
+            transactions { between("amount", BigDecimal.valueOf(15), BigDecimal.valueOf(25)) }
+        }
+        then:
+        results.size() == 1
+        results[0].firstName == "Fred"
     }
 
     // ─── Comparison predicates ─────────────────────────────────────────────
