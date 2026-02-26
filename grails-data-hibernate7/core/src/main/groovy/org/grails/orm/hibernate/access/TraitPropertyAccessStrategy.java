@@ -41,13 +41,13 @@ public class TraitPropertyAccessStrategy implements PropertyAccessStrategy {
         ReflectionUtils.findMethod(containerJavaType, NameUtils.getGetterName(propertyName));
     if (readMethod == null) {
       // See https://issues.apache.org/jira/browse/GROOVY-11512
-      readMethod =
+      Method booleanReadMethod =
           ReflectionUtils.findMethod(
               containerJavaType, NameUtils.getGetterName(propertyName, true));
-      if (readMethod != null
-          && readMethod.getReturnType() != Boolean.class
-          && readMethod.getReturnType() != boolean.class) {
-        readMethod = null;
+      if (booleanReadMethod != null
+          && (booleanReadMethod.getReturnType() == Boolean.class
+              || booleanReadMethod.getReturnType() == boolean.class)) {
+        readMethod = booleanReadMethod;
       }
     }
 
