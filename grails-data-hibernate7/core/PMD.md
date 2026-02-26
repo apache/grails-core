@@ -254,8 +254,8 @@ DataflowAnomalyAnalysis,org.grails.orm.hibernate.query.GrailsHibernateQueryUtils
 DataflowAnomalyAnalysis,org.grails.orm.hibernate.query.GrailsHibernateQueryUtils,252,YES
 DataflowAnomalyAnalysis,org.grails.orm.hibernate.query.GrailsHibernateQueryUtils,252,YES
 DataflowAnomalyAnalysis,org.grails.orm.hibernate.query.GrailsHibernateQueryUtils,252,YES
-AvoidDuplicateLiterals,org.grails.orm.hibernate.query.HibernateHqlQuery,67,
-AvoidDuplicateLiterals,org.grails.orm.hibernate.query.HibernateHqlQuery,84,
+AvoidDuplicateLiterals,org.grails.orm.hibernate.query.HibernateHqlQuery,67,YES
+AvoidDuplicateLiterals,org.grails.orm.hibernate.query.HibernateHqlQuery,84,YES
 DataflowAnomalyAnalysis,org.grails.orm.hibernate.query.HibernateQuery,336,
 DataflowAnomalyAnalysis,org.grails.orm.hibernate.query.HibernateQuery,336,
 CloneMethodReturnTypeMustMatchClassName,org.grails.orm.hibernate.query.HibernateQuery,630,

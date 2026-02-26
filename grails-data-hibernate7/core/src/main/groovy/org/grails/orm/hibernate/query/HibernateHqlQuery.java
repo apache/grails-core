@@ -48,6 +48,7 @@ import org.springframework.context.ApplicationEventPublisher;
  * @author Graeme Rocher
  * @since 6.0
  */
+@SuppressWarnings("PMD.AvoidDuplicateLiterals")
 public class HibernateHqlQuery extends Query {
 
   private org.hibernate.query.Query<?> query;
