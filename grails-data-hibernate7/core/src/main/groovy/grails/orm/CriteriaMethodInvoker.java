@@ -143,16 +143,17 @@ public class CriteriaMethodInvoker {
     return UNHANDLED;
   }
 
+  @SuppressWarnings("PMD.DataflowAnomalyAnalysis")
   private Object tryAssociationOrJunction(String name, CriteriaMethods method, Object[] args) {
     if (!isAssociationQueryMethod(args) && !isAssociationQueryWithJoinSpecificationMethod(args)) {
       return UNHANDLED;
     }
 
     final boolean hasMoreThanOneArg = args.length > 1;
+    final Closure callable = hasMoreThanOneArg ? (Closure) args[1] : (Closure) args[0];
+    final HibernateQuery hibernateQuery = builder.getHibernateQuery();
 
     if (method != null) {
-      HibernateQuery hibernateQuery = builder.getHibernateQuery();
-      Closure callable = hasMoreThanOneArg ? (Closure) args[1] : (Closure) args[0];
       switch (method) {
         case AND:
           hibernateQuery.and(callable);
@@ -181,16 +182,15 @@ public class CriteriaMethodInvoker {
       if (attribute.isAssociation()) {
         Class oldTargetClass = builder.getTargetClass();
         builder.setTargetClass(builder.getClassForAssociationType(attribute));
-        JoinType joinType =
-            hasMoreThanOneArg
-                ? builder.convertFromInt((Integer) args[0])
-                : builder.convertFromInt(0);
-        if (builder.getTargetClass().equals(oldTargetClass) && !hasMoreThanOneArg) {
+        JoinType joinType;
+        if (hasMoreThanOneArg) {
+          joinType = builder.convertFromInt((Integer) args[0]);
+        } else if (builder.getTargetClass().equals(oldTargetClass)) {
           joinType = JoinType.LEFT; // default to left join if joining on the same table
+        } else {
+          joinType = builder.convertFromInt(0);
         }
 
-        HibernateQuery hibernateQuery = builder.getHibernateQuery();
-        Closure callable = hasMoreThanOneArg ? (Closure) args[1] : (Closure) args[0];
         hibernateQuery.join(name, joinType);
         hibernateQuery.in(name, new DetachedCriteria(builder.getTargetClass()).build(callable));
         builder.setTargetClass(oldTargetClass);
@@ -201,29 +201,27 @@ public class CriteriaMethodInvoker {
     return UNHANDLED;
   }
 
-  protected Object trySimpleCriteria(String name, CriteriaMethods method, Object[] args) {
-    if (args.length != 1 || args[0] == null) {
+      @SuppressWarnings("PMD.DataflowAnomalyAnalysis")
+      protected Object trySimpleCriteria(String name, CriteriaMethods method, Object[] args) {    if (args.length != 1 || args[0] == null) {
       return UNHANDLED;
     }
 
     if (method != null) {
-      Object value = args[0];
       switch (method) {
         case ID_EQUALS:
-          return builder.eq("id", value);
+          return builder.eq("id", args[0]);
         case IS_NULL, IS_NOT_NULL, IS_EMPTY, IS_NOT_EMPTY:
-          if (!(value instanceof String)) {
+          if (!(args[0] instanceof String)) {
             builder.throwRuntimeException(
                 new IllegalArgumentException(
-                    "call to [" + name + "] with value [" + value + "] requires a String value."));
+                    "call to [" + name + "] with value [" + args[0] + "] requires a String value."));
           }
-          String propertyName = builder.calculatePropertyName((String) value);
-          HibernateQuery hibernateQuery = builder.getHibernateQuery();
+          final String value = (String) args[0];
           switch (method) {
-            case IS_NULL -> hibernateQuery.isNull(propertyName);
-            case IS_NOT_NULL -> hibernateQuery.isNotNull(propertyName);
-            case IS_EMPTY -> hibernateQuery.isEmpty(propertyName);
-            case IS_NOT_EMPTY -> hibernateQuery.isNotEmpty(propertyName);
+            case IS_NULL -> builder.getHibernateQuery().isNull(builder.calculatePropertyName(value));
+            case IS_NOT_NULL -> builder.getHibernateQuery().isNotNull(builder.calculatePropertyName(value));
+            case IS_EMPTY -> builder.getHibernateQuery().isEmpty(builder.calculatePropertyName(value));
+            case IS_NOT_EMPTY -> builder.getHibernateQuery().isNotEmpty(builder.calculatePropertyName(value));
           }
           return name;
       }
@@ -233,60 +231,60 @@ public class CriteriaMethodInvoker {
 
   @SuppressWarnings("PMD.AvoidLiteralsInIfCondition")
   protected Object tryPropertyCriteria(CriteriaMethods method, Object[] args) {
-    if (method == null || args.length < 2 || !(args[0] instanceof String)) {
+    if (method == null || args.length < 2 || !(args[0] instanceof String propertyName)) {
       return UNHANDLED;
     }
 
-    String propertyName = builder.calculatePropertyName((String) args[0]);
     switch (method) {
       case RLIKE:
-        return builder.rlike(propertyName, args[1]);
+        return builder.rlike(builder.calculatePropertyName(propertyName), args[1]);
       case BETWEEN:
         if (args.length >= 3) {
-          return builder.between(propertyName, args[1], args[2]);
+          return builder.between(builder.calculatePropertyName(propertyName), args[1], args[2]);
         }
         break;
       case EQUALS:
         if (args.length == 3 && args[2] instanceof Map) {
-          return builder.eq(propertyName, args[1], (Map) args[2]);
+          return builder.eq(builder.calculatePropertyName(propertyName), args[1], (Map) args[2]);
         }
-        return builder.eq(propertyName, args[1]);
+        return builder.eq(builder.calculatePropertyName(propertyName), args[1]);
       case EQUALS_PROPERTY:
-        return builder.eqProperty(propertyName, args[1].toString());
+        return builder.eqProperty(builder.calculatePropertyName(propertyName), args[1].toString());
       case GREATER_THAN:
-        return builder.gt(propertyName, args[1]);
+        return builder.gt(builder.calculatePropertyName(propertyName), args[1]);
       case GREATER_THAN_PROPERTY:
-        return builder.gtProperty(propertyName, args[1].toString());
+        return builder.gtProperty(builder.calculatePropertyName(propertyName), args[1].toString());
       case GREATER_THAN_OR_EQUAL:
-        return builder.ge(propertyName, args[1]);
+        return builder.ge(builder.calculatePropertyName(propertyName), args[1]);
       case GREATER_THAN_OR_EQUAL_PROPERTY:
-        return builder.geProperty(propertyName, args[1].toString());
+        return builder.geProperty(builder.calculatePropertyName(propertyName), args[1].toString());
       case ILIKE:
-        return builder.ilike(propertyName, args[1]);
+        return builder.ilike(builder.calculatePropertyName(propertyName), args[1]);
       case IN:
         if (args[1] instanceof Collection) {
-          return builder.in(propertyName, (Collection) args[1]);
+          return builder.in(builder.calculatePropertyName(propertyName), (Collection) args[1]);
         } else if (args[1] instanceof Object[]) {
-          return builder.in(propertyName, (Object[]) args[1]);
+          return builder.in(builder.calculatePropertyName(propertyName), (Object[]) args[1]);
         }
         break;
       case LESS_THAN:
-        return builder.lt(propertyName, args[1]);
+        return builder.lt(builder.calculatePropertyName(propertyName), args[1]);
       case LESS_THAN_PROPERTY:
-        return builder.ltProperty(propertyName, args[1].toString());
+        return builder.ltProperty(builder.calculatePropertyName(propertyName), args[1].toString());
       case LESS_THAN_OR_EQUAL:
-        return builder.le(propertyName, args[1]);
+        return builder.le(builder.calculatePropertyName(propertyName), args[1]);
       case LESS_THAN_OR_EQUAL_PROPERTY:
-        return builder.leProperty(propertyName, args[1].toString());
+        return builder.leProperty(builder.calculatePropertyName(propertyName), args[1].toString());
       case LIKE:
-        return builder.like(propertyName, args[1]);
+        return builder.like(builder.calculatePropertyName(propertyName), args[1]);
       case NOT_EQUAL:
-        return builder.ne(propertyName, args[1]);
+        return builder.ne(builder.calculatePropertyName(propertyName), args[1]);
       case NOT_EQUAL_PROPERTY:
-        return builder.neProperty(propertyName, args[1].toString());
+        return builder.neProperty(builder.calculatePropertyName(propertyName), args[1].toString());
       case SIZE_EQUALS:
         if (args[1] instanceof Number) {
-          return builder.sizeEq(propertyName, ((Number) args[1]).intValue());
+          return builder.sizeEq(
+              builder.calculatePropertyName(propertyName), ((Number) args[1]).intValue());
         }
         break;
     }
