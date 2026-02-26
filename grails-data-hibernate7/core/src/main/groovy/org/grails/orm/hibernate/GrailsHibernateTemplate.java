@@ -60,6 +60,12 @@ import org.springframework.transaction.support.TransactionSynchronization;
 import org.springframework.transaction.support.TransactionSynchronizationManager;
 import org.springframework.util.Assert;
 
+@SuppressWarnings({
+  "PMD.CloseResource",
+  "PMD.DataflowAnomalyAnalysis",
+  "PMD.CompareObjectsWithEquals",
+  "PMD.EmptyIfStmt"
+})
 public class GrailsHibernateTemplate implements IHibernateTemplate {
 
   private static final Logger LOG = LoggerFactory.getLogger(GrailsHibernateTemplate.class);
@@ -128,6 +134,7 @@ public class GrailsHibernateTemplate implements IHibernateTemplate {
     return execute(hibernateCallback);
   }
 
+  @SuppressWarnings("PMD.DataflowAnomalyAnalysis")
   @Override
   public <T> T executeWithNewSession(final Closure<T> callable) {
     SessionHolder sessionHolder =
@@ -377,12 +384,11 @@ public class GrailsHibernateTemplate implements IHibernateTemplate {
     } else {
       sessionIfcs = new Class[] {mainIfc};
     }
-    return (Session)
-        Proxy.newProxyInstance(
-            session.getClass().getClassLoader(),
-            sessionIfcs,
-            new CloseSuppressingInvocationHandler(session));
-  }
+          return (Session)
+              Proxy.newProxyInstance(
+                  Thread.currentThread().getContextClassLoader(),
+                  sessionIfcs,
+                  new CloseSuppressingInvocationHandler(session));  }
 
   @Deprecated(since = "7.0", forRemoval = true)
   public <T> T get(final Class<T> entityClass, final Serializable id) throws DataAccessException {
