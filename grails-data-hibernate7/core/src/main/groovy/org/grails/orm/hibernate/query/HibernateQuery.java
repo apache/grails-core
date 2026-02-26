@@ -332,22 +332,20 @@ public class HibernateQuery extends Query {
             + "]. Property is not an association!");
   }
 
+  @SuppressWarnings("PMD.DataflowAnomalyAnalysis")
   private CriteriaAndAlias getOrCreateAlias(String associationName, String alias) {
-    CriteriaAndAlias subCriteria = null;
     String associationPath = getAssociationPath(associationName);
-    if (alias == null) {
-      alias = generateAlias(associationName);
-    }
+    String effectiveAlias = (alias == null) ? generateAlias(associationName) : alias;
 
     if (createdAssociationPaths.containsKey(associationPath)) {
-      subCriteria = createdAssociationPaths.get(associationPath);
+      return createdAssociationPaths.get(associationPath);
     } else {
       CriteriaQuery criteriaQuery = getCriteriaBuilder().createQuery(entity.getJavaClass());
-      subCriteria = new CriteriaAndAlias(criteriaQuery, alias, associationPath);
+      CriteriaAndAlias subCriteria = new CriteriaAndAlias(criteriaQuery, effectiveAlias, associationPath);
       createdAssociationPaths.put(associationPath, subCriteria);
-      createdAssociationPaths.put(alias, subCriteria);
+      createdAssociationPaths.put(effectiveAlias, subCriteria);
+      return subCriteria;
     }
-    return subCriteria;
   }
 
   @Override
@@ -627,23 +625,25 @@ public class HibernateQuery extends Query {
   }
 
   @Override
-  public Object clone() {
+  @SuppressWarnings("PMD.CloneThrowsCloneNotSupportedException")
+  public HibernateQuery clone() {
     final HibernateSession hibernateSession = (HibernateSession) getSession();
     final GrailsHibernateTemplate hibernateTemplate =
         (GrailsHibernateTemplate) hibernateSession.getNativeInterface();
-    return hibernateTemplate.execute(
-        (GrailsHibernateTemplate.HibernateCallback<Object>)
-            session -> {
-              HibernateQuery hibernateQuery = new HibernateQuery(hibernateSession, entity);
-              if (this.max != null && this.max > 0) {
-                hibernateQuery.max(this.max);
-              }
-              if (this.offset != null && this.offset > 0) {
-                hibernateQuery.offset(this.offset);
-              }
-              hibernateQuery.setDetachedCriteria(this.detachedCriteria.clone());
+    return (HibernateQuery)
+        hibernateTemplate.execute(
+            (GrailsHibernateTemplate.HibernateCallback<Object>)
+                session -> {
+                  HibernateQuery hibernateQuery = new HibernateQuery(hibernateSession, entity);
+                  if (this.max != null && this.max > 0) {
+                    hibernateQuery.max(this.max);
+                  }
+                  if (this.offset != null && this.offset > 0) {
+                    hibernateQuery.offset(this.offset);
+                  }
+                  hibernateQuery.setDetachedCriteria(this.detachedCriteria.clone());
 
-              return hibernateQuery;
-            });
+                  return hibernateQuery;
+                });
   }
 }

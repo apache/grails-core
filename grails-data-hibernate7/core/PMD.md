@@ -256,10 +256,10 @@ DataflowAnomalyAnalysis,org.grails.orm.hibernate.query.GrailsHibernateQueryUtils
 DataflowAnomalyAnalysis,org.grails.orm.hibernate.query.GrailsHibernateQueryUtils,252,YES
 AvoidDuplicateLiterals,org.grails.orm.hibernate.query.HibernateHqlQuery,67,YES
 AvoidDuplicateLiterals,org.grails.orm.hibernate.query.HibernateHqlQuery,84,YES
-DataflowAnomalyAnalysis,org.grails.orm.hibernate.query.HibernateQuery,336,
-DataflowAnomalyAnalysis,org.grails.orm.hibernate.query.HibernateQuery,336,
-CloneMethodReturnTypeMustMatchClassName,org.grails.orm.hibernate.query.HibernateQuery,630,
-CloneThrowsCloneNotSupportedException,org.grails.orm.hibernate.query.HibernateQuery,630,
+DataflowAnomalyAnalysis,org.grails.orm.hibernate.query.HibernateQuery,336,YES
+DataflowAnomalyAnalysis,org.grails.orm.hibernate.query.HibernateQuery,336,YES
+CloneMethodReturnTypeMustMatchClassName,org.grails.orm.hibernate.query.HibernateQuery,630,YES
+CloneThrowsCloneNotSupportedException,org.grails.orm.hibernate.query.HibernateQuery,630,YES
 UseLocaleWithCaseConversions,org.grails.orm.hibernate.query.HqlQueryContext,101,
 AvoidDuplicateLiterals,org.grails.orm.hibernate.query.HqlQueryContext,102,
 AvoidDuplicateLiterals,org.grails.orm.hibernate.query.HqlQueryContext,105,
