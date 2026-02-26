@@ -142,7 +142,7 @@ CloseResource,org.grails.orm.hibernate.cfg.HibernateMappingContextConfiguration,
 CloseResource,org.grails.orm.hibernate.cfg.HibernateMappingContextConfiguration,315,
 AvoidCatchingThrowable,org.grails.orm.hibernate.cfg.HibernateMappingContextConfiguration,318,YES
 CompareObjectsWithEquals,org.grails.orm.hibernate.cfg.IdentityEnumType,119,YES
-DataflowAnomalyAnalysis,org.grails.orm.hibernate.cfg.MappingCacheHolder,65,
+DataflowAnomalyAnalysis,org.grails.orm.hibernate.cfg.MappingCacheHolder,65,YES
 DataflowAnomalyAnalysis,org.grails.orm.hibernate.cfg.domainbinding.binder.ClassPropertiesBinder,72,
 DataflowAnomalyAnalysis,org.grails.orm.hibernate.cfg.domainbinding.binder.CollectionBinder,228,
 DataflowAnomalyAnalysis,org.grails.orm.hibernate.cfg.domainbinding.binder.CollectionBinder,229,

@@ -61,6 +61,7 @@ public class MappingCacheHolder {
     MAPPING_CACHE.clear();
   }
 
+  @SuppressWarnings("PMD.DataflowAnomalyAnalysis")
   public void clear(Class<?> theClass) {
     String className = theClass.getName();
     for (Iterator<Map.Entry<Class<?>, Mapping>> it = MAPPING_CACHE.entrySet().iterator();
