@@ -92,10 +92,28 @@ tasks.register('generateConfigurationProperties') {
         ]
 
         configurationPropertiesFile.asFile.text = ''
-        configurationPropertiesFile.asFile << """= Configuration Properties
+        configurationPropertiesFile.asFile << '''////
+ Licensed to the Apache Software Foundation (ASF) under one or more
+ contributor license agreements.  See the NOTICE file distributed with
+ this work for additional information regarding copyright ownership.
+ The ASF licenses this file to You under the Apache License, Version 2.0
+ (the "License"); you may not use this file except in compliance with
+ the License.  You may obtain a copy of the License at
+
+     https://www.apache.org/licenses/LICENSE-2.0
+
+ Unless required by applicable law or agreed to in writing, software
+ distributed under the License is distributed on an "AS IS" BASIS,
+ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ See the License for the specific language governing permissions and
+ limitations under the License.
+////
+
+[[configuration-properties]]
+== Configuration Properties
 
 This page is generated from `spring-configuration-metadata.json`. For IDE auto-completion of these properties, ensure the plugin JAR is on your classpath.
-"""
+'''
 
         orderedGroupNames.each { groupName ->
             def group = groupsByName[groupName]
@@ -107,7 +125,7 @@ This page is generated from `spring-configuration-metadata.json`. For IDE auto-c
             def heading = group?.description ?: groupName
             configurationPropertiesFile.asFile << """
 
-== ${heading}
+=== ${heading}
 
 [cols=\"3,5,2\", options=\"header\"]
 |===
@@ -116,7 +134,16 @@ This page is generated from `spring-configuration-metadata.json`. For IDE auto-c
 
             properties.sort { it.name }.each { property ->
                 def defaultValue = property.containsKey('defaultValue') ? property.defaultValue : ''
-                def defaultText = defaultValue == null ? 'null' : defaultValue.toString()
+                def defaultText
+                if (defaultValue == null) {
+                    defaultText = '-'
+                } else if (defaultValue instanceof CharSequence && defaultValue.toString().isEmpty()) {
+                    defaultText = '`""`'
+                } else if (defaultValue instanceof List && ((List) defaultValue).isEmpty()) {
+                    defaultText = '`[]`'
+                } else {
+                    defaultText = "`${defaultValue}`"
+                }
                 configurationPropertiesFile.asFile << """
 |`${property.name}`
 |${property.description}

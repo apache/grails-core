@@ -70,7 +70,7 @@
       "name": "grails.plugin.springsecurity.userLookup.userDomainClassName",
       "type": "java.lang.String",
       "description": "User class name.",
-      "defaultValue": "_none_",
+      "defaultValue": null,
       "group": "grails.plugin.springsecurity.domain-classes"
     },
     {
@@ -133,14 +133,14 @@
       "name": "grails.plugin.springsecurity.userLookup.authorityJoinClassName",
       "type": "java.lang.String",
       "description": "User and role many-to-many join class name.",
-      "defaultValue": "_none_",
+      "defaultValue": null,
       "group": "grails.plugin.springsecurity.domain-classes"
     },
     {
       "name": "grails.plugin.springsecurity.authority.className",
       "type": "java.lang.String",
       "description": "Role class name.",
-      "defaultValue": "_none_",
+      "defaultValue": null,
       "group": "grails.plugin.springsecurity.domain-classes"
     },
     {
@@ -154,7 +154,7 @@
       "name": "grails.plugin.springsecurity.requestMap.className",
       "type": "java.lang.String",
       "description": "Requestmap class name.",
-      "defaultValue": "_none_",
+      "defaultValue": null,
       "group": "grails.plugin.springsecurity.domain-classes"
     },
     {
@@ -236,9 +236,9 @@
     },
     {
       "name": "grails.plugin.springsecurity.failureHandler.exceptionMappings",
-      "type": "java.util.Map",
+      "type": "java.util.List",
       "description": "Map of AuthenticationException subclasses to redirect URLs after authentication failure.",
-      "defaultValue": "_none_",
+      "defaultValue": [],
       "group": "grails.plugin.springsecurity.login-logout"
     },
     {
@@ -360,7 +360,7 @@
       "name": "grails.plugin.springsecurity.logout.targetUrlParameter",
       "type": "java.lang.String",
       "description": "The querystring parameter name for the post-logout URL.",
-      "defaultValue": "_none_",
+      "defaultValue": null,
       "group": "grails.plugin.springsecurity.login-logout"
     },
     {
@@ -416,7 +416,7 @@
       "name": "grails.plugin.springsecurity.ajaxCheckClosure",
       "type": "groovy.lang.Closure",
       "description": "An optional closure that can determine if a request is Ajax.",
-      "defaultValue": "_none_",
+      "defaultValue": null,
       "group": "grails.plugin.springsecurity.miscellaneous"
     },
     {
@@ -429,7 +429,7 @@
     {
       "name": "grails.plugin.springsecurity.fii.alwaysReauthenticate",
       "type": "java.lang.Boolean",
-      "description": "If true, re-authenticates when there is a Authentication in the SecurityContext.",
+      "description": "If true, re-authenticates when there is an Authentication in the SecurityContext.",
       "defaultValue": false,
       "group": "grails.plugin.springsecurity.authentication"
     },
@@ -457,7 +457,7 @@
     {
       "name": "grails.plugin.springsecurity.fii.observeOncePerRequest",
       "type": "java.lang.Boolean",
-      "description": "If false allow checks to happen multiple times.",
+      "description": "If false, allow checks to happen multiple times.",
       "defaultValue": true,
       "group": "grails.plugin.springsecurity.authentication"
     },
@@ -500,7 +500,7 @@
       "name": "grails.plugin.springsecurity.dao.reflectionSaltSourceProperty",
       "type": "java.lang.String",
       "description": "Which property to use for the reflection-based salt source.",
-      "defaultValue": "_none_",
+      "defaultValue": null,
       "group": "grails.plugin.springsecurity.password-encoding"
     },
     {
@@ -521,7 +521,7 @@
       "name": "grails.plugin.springsecurity.roleHierarchy",
       "type": "java.lang.String",
       "description": "Hierarchical role definition.",
-      "defaultValue": "_none_",
+      "defaultValue": "",
       "group": "grails.plugin.springsecurity.authentication"
     },
     {
@@ -564,14 +564,14 @@
       "name": "grails.plugin.springsecurity.controllerAnnotations.staticRules",
       "type": "java.util.List",
       "description": "Extra rules that cannot be mapped using annotations.",
-      "defaultValue": "_none_",
+      "defaultValue": [],
       "group": "grails.plugin.springsecurity.url-mapping"
     },
     {
       "name": "grails.plugin.springsecurity.interceptUrlMap",
       "type": "java.util.List",
       "description": "Request mapping definition when using InterceptUrlMap.",
-      "defaultValue": "_none_",
+      "defaultValue": [],
       "group": "grails.plugin.springsecurity.url-mapping"
     },
     {

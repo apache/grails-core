@@ -14,12 +14,14 @@
  See the License for the specific language governing permissions and
  limitations under the License.
 ////
-= Configuration Properties
+
+[[configuration-properties]]
+== Configuration Properties
 
 This page is generated from `spring-configuration-metadata.json`. For IDE auto-completion of these properties, ensure the plugin JAR is on your classpath.
 
 
-== General configuration properties.
+=== General configuration properties.
 
 [cols="3,5,2", options="header"]
 |===
@@ -27,24 +29,24 @@ This page is generated from `spring-configuration-metadata.json`. For IDE auto-c
 
 |`grails.plugin.springsecurity.active`
 |Whether the plugin is enabled.
-|true
+|`true`
 
 |`grails.plugin.springsecurity.excludeSpringSecurityAutoConfiguration`
 |Whether to automatically exclude Spring Boot security auto-configuration classes that conflict with the plugin.
-|true
+|`true`
 
 |`grails.plugin.springsecurity.printStatusMessages`
 |Whether to print status messages such as "Configuring Spring Security Core ...".
-|true
+|`true`
 
 |`grails.plugin.springsecurity.rejectIfNoRule`
 |Strict mode where a request mapping is required for all resources.
-|true
+|`true`
 
 |===
 
 
-== Domain class configuration properties.
+=== Domain class configuration properties.
 
 [cols="3,5,2", options="header"]
 |===
@@ -52,68 +54,68 @@ This page is generated from `spring-configuration-metadata.json`. For IDE auto-c
 
 |`grails.plugin.springsecurity.authority.className`
 |Role class name.
-|_none_
+|-
 
 |`grails.plugin.springsecurity.authority.nameField`
 |Role class role name property.
-|authority
+|`authority`
 
 |`grails.plugin.springsecurity.requestMap.className`
 |Requestmap class name.
-|_none_
+|-
 
 |`grails.plugin.springsecurity.requestMap.configAttributeField`
 |Requestmap class role and token property.
-|configAttribute
+|`configAttribute`
 
 |`grails.plugin.springsecurity.requestMap.urlField`
 |Requestmap class URL pattern property.
-|url
+|`url`
 
 |`grails.plugin.springsecurity.userLookup.accountExpiredPropertyName`
 |User class account expired property.
-|accountExpired
+|`accountExpired`
 
 |`grails.plugin.springsecurity.userLookup.accountLockedPropertyName`
 |User class account locked property.
-|accountLocked
+|`accountLocked`
 
 |`grails.plugin.springsecurity.userLookup.authoritiesPropertyName`
 |User class role collection property.
-|authorities
+|`authorities`
 
 |`grails.plugin.springsecurity.userLookup.authorityJoinClassName`
 |User and role many-to-many join class name.
-|_none_
+|-
 
 |`grails.plugin.springsecurity.userLookup.enabledPropertyName`
 |User class enabled property.
-|enabled
+|`enabled`
 
 |`grails.plugin.springsecurity.userLookup.passwordExpiredPropertyName`
 |User class password expired property.
-|passwordExpired
+|`passwordExpired`
 
 |`grails.plugin.springsecurity.userLookup.passwordPropertyName`
 |User class password property.
-|password
+|`password`
 
 |`grails.plugin.springsecurity.userLookup.userDomainClassName`
 |User class name.
-|_none_
+|-
 
 |`grails.plugin.springsecurity.userLookup.usernameIgnoreCase`
 |Ignore case when searching for usernamePropertyName.
-|false
+|`false`
 
 |`grails.plugin.springsecurity.userLookup.usernamePropertyName`
 |User class username property.
-|username
+|`username`
 
 |===
 
 
-== Authentication and authorization configuration properties.
+=== Authentication and authorization configuration properties.
 
 [cols="3,5,2", options="header"]
 |===
@@ -121,60 +123,60 @@ This page is generated from `spring-configuration-metadata.json`. For IDE auto-c
 
 |`grails.plugin.springsecurity.anon.key`
 |anonymousProcessingFilter key.
-|foo
+|`foo`
 
 |`grails.plugin.springsecurity.apf.continueChainBeforeSuccessfulAuthentication`
 |Whether to continue calling subsequent filters in the filter chain.
-|false
+|`false`
 
 |`grails.plugin.springsecurity.atr.anonymousClass`
 |Anonymous token class.
-|grails.plugin.springsecurity.authentication.GrailsAnonymousAuthenticationToken
+|`grails.plugin.springsecurity.authentication.GrailsAnonymousAuthenticationToken`
 
 |`grails.plugin.springsecurity.dao.hideUserNotFoundExceptions`
 |If true, throws BadCredentialsException for both bad username and bad password.
-|true
+|`true`
 
 |`grails.plugin.springsecurity.fii.alwaysReauthenticate`
-|If true, re-authenticates when there is a Authentication in the SecurityContext.
-|false
+|If true, re-authenticates when there is an Authentication in the SecurityContext.
+|`false`
 
 |`grails.plugin.springsecurity.fii.observeOncePerRequest`
-|If false allow checks to happen multiple times.
-|true
+|If false, allow checks to happen multiple times.
+|`true`
 
 |`grails.plugin.springsecurity.fii.publishAuthorizationSuccess`
 |Whether to publish an AuthorizedEvent after successful access check.
-|false
+|`false`
 
 |`grails.plugin.springsecurity.fii.rejectPublicInvocations`
 |Disallow URL access when there is no request mapping.
-|true
+|`true`
 
 |`grails.plugin.springsecurity.fii.validateConfigAttributes`
 |Whether to check that all ConfigAttribute instances are valid at startup.
-|true
+|`true`
 
 |`grails.plugin.springsecurity.providerManager.eraseCredentialsAfterAuthentication`
 |Whether to remove the password from the Authentication and its child objects after successful authentication.
-|true
+|`true`
 
 |`grails.plugin.springsecurity.providerNames`
 |Bean names of authentication providers.
-|[daoAuthenticationProvider, anonymousAuthenticationProvider, rememberMeAuthenticationProvider]
+|`[daoAuthenticationProvider, anonymousAuthenticationProvider, rememberMeAuthenticationProvider]`
 
 |`grails.plugin.springsecurity.roleHierarchy`
 |Hierarchical role definition.
-|_none_
+|`""`
 
 |`grails.plugin.springsecurity.voterNames`
 |Bean names of voters.
-|[authenticatedVoter, roleVoter, closureVoter]
+|`[authenticatedVoter, roleVoter, closureVoter]`
 
 |===
 
 
-== Login and logout configuration properties.
+=== Login and logout configuration properties.
 
 [cols="3,5,2", options="header"]
 |===
@@ -182,120 +184,120 @@ This page is generated from `spring-configuration-metadata.json`. For IDE auto-c
 
 |`grails.plugin.springsecurity.adh.ajaxErrorPage`
 |Location of the 403 error page for Ajax requests.
-|/login/ajaxDenied
+|`/login/ajaxDenied`
 
 |`grails.plugin.springsecurity.adh.errorPage`
 |Location of the 403 error page (or set to null to send a 403 error and not render a page).
-|/login/denied
+|`/login/denied`
 
 |`grails.plugin.springsecurity.adh.useForward`
 |If true a forward will be used to render the error page, otherwise a redirect is used.
-|true
+|`true`
 
 |`grails.plugin.springsecurity.apf.filterProcessesUrl`
 |Login form post URL, intercepted by Spring Security filter.
-|/login/authenticate
+|`/login/authenticate`
 
 |`grails.plugin.springsecurity.apf.passwordParameter`
 |Login form password parameter.
-|password
+|`password`
 
 |`grails.plugin.springsecurity.apf.postOnly`
 |Whether to allow only POST login requests.
-|true
+|`true`
 
 |`grails.plugin.springsecurity.apf.usernameParameter`
 |Login form username parameter.
-|username
+|`username`
 
 |`grails.plugin.springsecurity.auth.ajaxLoginFormUrl`
 |URL of Ajax login page.
-|/login/authAjax
+|`/login/authAjax`
 
 |`grails.plugin.springsecurity.auth.forceHttps`
 |If true, redirects login page requests to HTTPS.
-|false
+|`false`
 
 |`grails.plugin.springsecurity.auth.loginFormUrl`
 |URL of login page.
-|/login/auth
+|`/login/auth`
 
 |`grails.plugin.springsecurity.auth.useForward`
 |Whether to render the login page (true) or redirect (false).
-|false
+|`false`
 
 |`grails.plugin.springsecurity.failureHandler.ajaxAuthFailUrl`
 |Redirect URL for failed Ajax logins.
-|/login/authfail?ajax=true
+|`/login/authfail?ajax=true`
 
 |`grails.plugin.springsecurity.failureHandler.defaultFailureUrl`
 |Redirect URL for failed logins.
-|/login/authfail?login_error=1
+|`/login/authfail?login_error=1`
 
 |`grails.plugin.springsecurity.failureHandler.exceptionMappings`
 |Map of AuthenticationException subclasses to redirect URLs after authentication failure.
-|_none_
+|`[]`
 
 |`grails.plugin.springsecurity.failureHandler.useForward`
 |Whether to render the error page (true) or redirect (false).
-|false
+|`false`
 
 |`grails.plugin.springsecurity.logout.afterLogoutUrl`
 |URL for redirect after logout.
-|/
+|`/`
 
 |`grails.plugin.springsecurity.logout.alwaysUseDefaultTargetUrl`
 |Whether to always use afterLogoutUrl as the post-logout URL.
-|false
+|`false`
 
 |`grails.plugin.springsecurity.logout.clearAuthentication`
 |If true removes the Authentication from the SecurityContext to prevent issues with concurrent requests.
-|true
+|`true`
 
 |`grails.plugin.springsecurity.logout.filterProcessesUrl`
 |Logout URL, intercepted by Spring Security filter.
-|/logoff
+|`/logoff`
 
 |`grails.plugin.springsecurity.logout.handlerNames`
 |Logout handler bean names.
-|[rememberMeServices, securityContextLogoutHandler]
+|`[rememberMeServices, securityContextLogoutHandler]`
 
 |`grails.plugin.springsecurity.logout.postOnly`
 |If true only POST requests will be allowed to logout.
-|true
+|`true`
 
 |`grails.plugin.springsecurity.logout.redirectToReferer`
 |Whether to use the Referer header value as the post-logout URL.
-|false
+|`false`
 
 |`grails.plugin.springsecurity.logout.targetUrlParameter`
 |The querystring parameter name for the post-logout URL.
-|_none_
+|-
 
 |`grails.plugin.springsecurity.successHandler.ajaxSuccessUrl`
 |URL for redirect after successful Ajax login.
-|/login/ajaxSuccess
+|`/login/ajaxSuccess`
 
 |`grails.plugin.springsecurity.successHandler.alwaysUseDefault`
 |Whether to always redirect to successHandler.defaultTargetUrl after successful authentication.
-|false
+|`false`
 
 |`grails.plugin.springsecurity.successHandler.defaultTargetUrl`
 |Default post-login URL if there is no saved request that triggered the login.
-|/
+|`/`
 
 |`grails.plugin.springsecurity.successHandler.targetUrlParameter`
 |Name of optional login form parameter that specifies destination after successful login.
-|spring-security-redirect
+|`spring-security-redirect`
 
 |`grails.plugin.springsecurity.successHandler.useReferer`
 |Whether to use the HTTP Referer header to determine post-login destination.
-|false
+|`false`
 
 |===
 
 
-== Password encoding configuration properties.
+=== Password encoding configuration properties.
 
 [cols="3,5,2", options="header"]
 |===
@@ -303,12 +305,12 @@ This page is generated from `spring-configuration-metadata.json`. For IDE auto-c
 
 |`grails.plugin.springsecurity.dao.reflectionSaltSourceProperty`
 |Which property to use for the reflection-based salt source.
-|_none_
+|-
 
 |===
 
 
-== Session and security context configuration properties.
+=== Session and security context configuration properties.
 
 [cols="3,5,2", options="header"]
 |===
@@ -316,52 +318,52 @@ This page is generated from `spring-configuration-metadata.json`. For IDE auto-c
 
 |`grails.plugin.springsecurity.apf.allowSessionCreation`
 |Whether to allow authentication to create an HTTP session.
-|true
+|`true`
 
 |`grails.plugin.springsecurity.apf.storeLastUsername`
 |Whether to store the login username in the HTTP session.
-|false
+|`false`
 
 |`grails.plugin.springsecurity.failureHandler.allowSessionCreation`
 |Whether to enable session creation to store the authentication failure exception.
-|true
+|`true`
 
 |`grails.plugin.springsecurity.logout.invalidateHttpSession`
 |Whether to invalidate the HTTP session when logging out.
-|true
+|`true`
 
 |`grails.plugin.springsecurity.requestCache.createSession`
 |Whether caching SavedRequest can trigger the creation of a session.
-|true
+|`true`
 
 |`grails.plugin.springsecurity.sch.strategyName`
 |The strategy to use for storing the SecurityContext.
-|SecurityContextHolder.MODE_THREADLOCAL
+|`SecurityContextHolder.MODE_THREADLOCAL`
 
 |`grails.plugin.springsecurity.scpf.forceEagerSessionCreation`
 |Whether to eagerly create a session in the securityContextRepository bean.
-|false
+|`false`
 
 |`grails.plugin.springsecurity.scr.allowSessionCreation`
 |Whether to allow creating a session in the securityContextRepository bean.
-|true
+|`true`
 
 |`grails.plugin.springsecurity.scr.disableUrlRewriting`
 |Whether to disable URL rewriting (and the jsessionid attribute).
-|true
+|`true`
 
 |`grails.plugin.springsecurity.scr.springSecurityContextKey`
 |The HTTP session key to store the SecurityContext under.
-|HttpSessionSecurityContextRepository.SPRING_SECURITY_CONTEXT_KEY
+|`HttpSessionSecurityContextRepository.SPRING_SECURITY_CONTEXT_KEY`
 
 |`grails.plugin.springsecurity.useHttpSessionEventPublisher`
 |If true, an HttpSessionEventPublisher will be configured.
-|false
+|`false`
 
 |===
 
 
-== URL mapping configuration properties.
+=== URL mapping configuration properties.
 
 [cols="3,5,2", options="header"]
 |===
@@ -369,28 +371,28 @@ This page is generated from `spring-configuration-metadata.json`. For IDE auto-c
 
 |`grails.plugin.springsecurity.controllerAnnotations.lowercase`
 |Whether to do URL comparisons using lowercase.
-|true
+|`true`
 
 |`grails.plugin.springsecurity.controllerAnnotations.staticRules`
 |Extra rules that cannot be mapped using annotations.
-|_none_
+|`[]`
 
 |`grails.plugin.springsecurity.interceptUrlMap`
 |Request mapping definition when using InterceptUrlMap.
-|_none_
+|`[]`
 
 |`grails.plugin.springsecurity.redirectStrategy.contextRelative`
 |If true, the redirect URL will be the value after the request context path.
-|false
+|`false`
 
 |`grails.plugin.springsecurity.securityConfigType`
 |Type of request mapping to use, one of Annotation, Requestmap, or InterceptUrlMap.
-|Annotation
+|`Annotation`
 
 |===
 
 
-== Miscellaneous configuration properties.
+=== Miscellaneous configuration properties.
 
 [cols="3,5,2", options="header"]
 |===
@@ -398,26 +400,26 @@ This page is generated from `spring-configuration-metadata.json`. For IDE auto-c
 
 |`grails.plugin.springsecurity.ajaxCheckClosure`
 |An optional closure that can determine if a request is Ajax.
-|_none_
+|-
 
 |`grails.plugin.springsecurity.ajaxHeader`
 |Header name sent by Ajax library, used to detect Ajax.
-|X-Requested-With
+|`X-Requested-With`
 
 |`grails.plugin.springsecurity.cacheUsers`
 |If true, logins are cached using an EhCache.
-|false
+|`false`
 
 |`grails.plugin.springsecurity.debug.useFilter`
 |Whether to use the DebugFilter to log request debug information to the console.
-|false
+|`false`
 
 |`grails.plugin.springsecurity.registerLoggerListener`
 |If true, registers a LoggerListener that logs interceptor-related application events.
-|false
+|`false`
 
 |`grails.plugin.springsecurity.useSecurityEventListener`
 |If true, configure SecurityEventListener.
-|false
+|`false`
 
 |===
