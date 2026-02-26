@@ -84,7 +84,7 @@ class FormTagLib implements ApplicationContextAware, InitializingBean, TagLibrar
         configureCsrf()
     }
 
-    void configureCsrf() {
+    private void configureCsrf() {
         try {
             var filterChainProxy = applicationContext.getBean(
                     Class.forName('org.springframework.security.web.FilterChainProxy'))
@@ -105,7 +105,7 @@ class FormTagLib implements ApplicationContextAware, InitializingBean, TagLibrar
      * @attr name REQUIRED the field name
      * @attr value the field value
      */
-    Closure textField = { attrs ->
+    def textField(Map attrs) {
         attrs.type = 'text'
         attrs.tagName = 'textField'
         fieldImpl(out, attrs)
@@ -119,7 +119,7 @@ class FormTagLib implements ApplicationContextAware, InitializingBean, TagLibrar
      * @attr name REQUIRED the field name
      * @attr value the field value
      */
-    Closure passwordField = { attrs ->
+    def passwordField(Map attrs) {
         attrs.type = 'password'
         attrs.tagName = 'passwordField'
         fieldImpl(out, attrs)
@@ -131,11 +131,11 @@ class FormTagLib implements ApplicationContextAware, InitializingBean, TagLibrar
      * @attr name REQUIRED the field name
      * @attr value the field value
      */
-    Closure hiddenField = { attrs ->
+    def hiddenField(Map attrs) {
         hiddenFieldImpl(out, attrs)
     }
 
-    def hiddenFieldImpl(out, attrs) {
+    private def hiddenFieldImpl(out, attrs) {
         attrs.type = 'hidden'
         attrs.tagName = 'hiddenField'
         fieldImpl(out, attrs)
@@ -151,7 +151,7 @@ class FormTagLib implements ApplicationContextAware, InitializingBean, TagLibrar
      * @attr type input type; defaults to 'submit'
      * @attr event the webflow event id
      */
-    Closure submitButton = { attrs ->
+    def submitButton(Map attrs) {
         attrs.type = attrs.type ?: 'submit'
         attrs.tagName = 'submitButton'
         if (request.flowExecutionKey) {
@@ -168,13 +168,13 @@ class FormTagLib implements ApplicationContextAware, InitializingBean, TagLibrar
      *
      * @attr type REQUIRED the input type
      */
-    Closure field = { attrs ->
+    def field(Map attrs) {
         attrs.tagName = 'field'
         fieldImpl(out, attrs)
     }
 
     @CompileStatic
-    def fieldImpl(GrailsPrintWriter out, Map attrs) {
+    private def fieldImpl(GrailsPrintWriter out, Map attrs) {
         resolveAttributes(attrs)
 
         attrs.value = processFormFieldValueIfNecessary(attrs.name, attrs.value, attrs.type)
@@ -206,7 +206,7 @@ class FormTagLib implements ApplicationContextAware, InitializingBean, TagLibrar
      * @attr readonly if evaluates to true, sets to checkbox to read only
      * @attr id DOM element id; defaults to name
      */
-    Closure checkBox = { attrs ->
+    def checkBox(Map attrs) {
         def value = attrs.remove('value')
         def name = attrs.remove('name')
         def formName = attrs.get('form')
@@ -288,7 +288,7 @@ class FormTagLib implements ApplicationContextAware, InitializingBean, TagLibrar
      * @attr escapeHtml if true escapes the text as HTML
      * @attr id DOM element id; defaults to name
      */
-    Closure textArea = { attrs, body ->
+    def textArea(Map attrs, Closure body) {
         resolveAttributes(attrs)
         // Pull out the value to use as content not attrib
         def value = attrs.remove('value')
@@ -338,7 +338,7 @@ class FormTagLib implements ApplicationContextAware, InitializingBean, TagLibrar
     /**
      * Check required attributes, set the id to name if no id supplied, extract bean values etc.
      */
-    void resolveAttributes(Map attrs) {
+    private void resolveAttributes(Map attrs) {
         if (!attrs.name && !attrs.field) {
             throwTagError("Tag [${attrs.tagName}] is missing required attribute [name] or [field]")
         }
@@ -366,7 +366,7 @@ class FormTagLib implements ApplicationContextAware, InitializingBean, TagLibrar
      * Dump out attributes in HTML compliant fashion.
      */
     @CompileStatic
-    void outputAttributes(Map attrs, GrailsPrintWriter writer, boolean useNameAsIdIfIdDoesNotExist = false) {
+    private void outputAttributes(Map attrs, GrailsPrintWriter writer, boolean useNameAsIdIfIdDoesNotExist = false) {
         attrs.remove('tagName') // Just in case one is left
         Encoder htmlEncoder = codecLookup?.lookupEncoder('HTML')
         attrs.each { k, v ->
@@ -393,9 +393,9 @@ class FormTagLib implements ApplicationContextAware, InitializingBean, TagLibrar
      * @attr useToken Set whether to send a token in the request to handle duplicate form submissions. See Handling Duplicate Form Submissions
      * @attr method the form method to use, either 'POST' or 'GET'; defaults to 'POST'
      */
-    Closure uploadForm = { attrs, body ->
+    def uploadForm(Map attrs, Closure body) {
         attrs.enctype = 'multipart/form-data'
-        out << form(attrs, body)
+        form(attrs, body)
     }
 
     /**
@@ -412,7 +412,7 @@ class FormTagLib implements ApplicationContextAware, InitializingBean, TagLibrar
      * @attr useToken Set whether to send a token in the request to handle duplicate form submissions. See Handling Duplicate Form Submissions
      * @attr method the form method to use, either 'POST' or 'GET'; defaults to 'POST'
      */
-    Closure form = { attrs, body ->
+    def form(Map attrs, Closure body) {
 
         boolean useToken = false
         if (attrs.containsKey('useToken')) {
@@ -526,7 +526,7 @@ class FormTagLib implements ApplicationContextAware, InitializingBean, TagLibrar
      *
      */
     @Deprecated(since = '7.0.0')
-    Closure actionSubmit = { attrs ->
+    def actionSubmit(Map attrs) {
         if (!attrs.value) {
             throwTagError('Tag [actionSubmit] is missing required attribute [value]')
         }
@@ -580,7 +580,7 @@ class FormTagLib implements ApplicationContextAware, InitializingBean, TagLibrar
      * @attr base Sets the prefix to be added to the link target address, typically an absolute server URL. This overrides the behaviour of the absolute property, if both are specified.
      * @attr event Webflow _eventId parameter
      */
-    def formActionSubmit = { Map attrs ->
+    def formActionSubmit(Map attrs) {
         if (!attrs.value) {
             throwTagError('Tag [formActionSubmit] is missing required attribute [value]')
         }
@@ -634,7 +634,7 @@ class FormTagLib implements ApplicationContextAware, InitializingBean, TagLibrar
      * @attr src The source of the image to use
      * @attr disabled Makes the button to be disabled. Will be interpreted as a Groovy Truth
      */
-    Closure actionSubmitImage = { attrs ->
+    def actionSubmitImage(Map attrs) {
         attrs.tagName = 'actionSubmitImage'
 
         if (!attrs.value) {
@@ -683,7 +683,7 @@ class FormTagLib implements ApplicationContextAware, InitializingBean, TagLibrar
      * @attr locale The locale to use for display formatting. Defaults to the current request locale and then the system default locale if not specified.
      * @attr selectDateClass css class added to each select tag
      */
-    Closure datePicker = { attrs ->
+    def datePicker(Map attrs) {
         def out = out // let x = x ?
         def xdefault = attrs['default']
         if (xdefault == null) {
@@ -939,11 +939,11 @@ class FormTagLib implements ApplicationContextAware, InitializingBean, TagLibrar
         }
     }
 
-    Closure renderNoSelectionOption = { noSelectionKey, noSelectionValue, value ->
+    def renderNoSelectionOption(noSelectionKey, noSelectionValue, value) {
         renderNoSelectionOptionImpl(out, noSelectionKey, noSelectionValue, value)
     }
 
-    def renderNoSelectionOptionImpl(out, noSelectionKey, noSelectionValue, value) {
+    private def renderNoSelectionOptionImpl(out, noSelectionKey, noSelectionValue, value) {
         // If a label for the '--Please choose--' first item is supplied, write it out
         out << "<option value=\"${(noSelectionKey == null ? '' : noSelectionKey)}\"${noSelectionKey == value ? ' selected="selected"' : ''}>${noSelectionValue.encodeAsHTML()}</option>"
     }
@@ -958,7 +958,7 @@ class FormTagLib implements ApplicationContextAware, InitializingBean, TagLibrar
      * @attr value An instance of java.util.TimeZone. Defaults to the time zone for the current Locale if not specified
      * @attr locale The locale to use for formatting the time zone names. Defaults to the current request locale and then system default locale if not specified
      */
-    Closure timeZoneSelect = { attrs ->
+    def timeZoneSelect(Map attrs) {
         attrs.from = TimeZone.getAvailableIDs()
         attrs.value = (attrs.value ? attrs.value.ID : TimeZone.getDefault().ID)
         def date = new Date()
@@ -978,7 +978,7 @@ class FormTagLib implements ApplicationContextAware, InitializingBean, TagLibrar
         }
 
         // use generic select
-        out << select(attrs)
+        select(attrs)
     }
 
     /**
@@ -992,7 +992,7 @@ class FormTagLib implements ApplicationContextAware, InitializingBean, TagLibrar
      * @attr value The set locale, defaults to the current request locale if not specified
      * @attr locale The locale to use for formatting the locale names. Defaults to the current request locale and then the system default locale if not specified
      */
-    Closure localeSelect = { attrs ->
+    def localeSelect(Map attrs) {
         attrs.from = Locale.getAvailableLocales()
         attrs.value = (attrs.value ?: RCU.getLocale(request))?.toString()
         // set the key as a closure that formats the locale
@@ -1014,7 +1014,7 @@ class FormTagLib implements ApplicationContextAware, InitializingBean, TagLibrar
      * @attr from The currency symbols to select from, defaults to the major ones if not specified
      * @attr value The currency value as the currency code. Defaults to the currency for the current Locale if not specified
      */
-    Closure currencySelect = { attrs, body ->
+    def currencySelect(Map attrs, Closure body) {
         if (!attrs.from) {
             attrs.from = DEFAULT_CURRENCY_CODES
         }
@@ -1053,7 +1053,7 @@ class FormTagLib implements ApplicationContextAware, InitializingBean, TagLibrar
      * @attr dataAttrs a Map that adds data-* attributes to the &lt;option&gt; elements. Map's keys will be used as names of the data-* attributes like so: data-${key} (i.e. with a "data-" prefix). The object belonging to a Map's key determines the value of the data-* attribute. It can be a string referring to a property of beans in {@code from}, a Closure that accepts an item from {@code from} and returns the value or a List that contains a value for each of the &lt;option&gt;s.
      * @attr locale The locale to use for formatting. Defaults to the current request locale and then the system default locale if not specified
      */
-    Closure select = { attrs ->
+    def select(Map attrs) {
         if (!attrs.name) {
             throwTagError('Tag [select] is missing required attribute [name]')
         }
@@ -1257,7 +1257,7 @@ class FormTagLib implements ApplicationContextAware, InitializingBean, TagLibrar
      * @attr readonly boolean to indicate that the radio button should not be editable
      * @attr id the DOM element id
      */
-    Closure radio = { attrs ->
+    def radio(Map attrs) {
         def value = attrs.remove('value')
         def name = attrs.remove('name')
         booleanToAttribute(attrs, 'disabled')
@@ -1286,7 +1286,7 @@ class FormTagLib implements ApplicationContextAware, InitializingBean, TagLibrar
      * @attr disabled Disables the resulting radio buttons.
      * @attr readonly Makes the resulting radio buttons to not be editable
      */
-    Closure radioGroup = { attrs, body ->
+    def radioGroup(Map attrs, Closure body) {
         def value = attrs.remove('value')
         def values = attrs.remove('values')
         def labels = attrs.remove('labels')
@@ -1318,7 +1318,7 @@ class FormTagLib implements ApplicationContextAware, InitializingBean, TagLibrar
         }
     }
 
-    private processFormFieldValueIfNecessary(name, value, type) {
+    private def processFormFieldValueIfNecessary(name, value, type) {
         if (requestDataValueProcessor != null) {
             return requestDataValueProcessor.processFormFieldValue(request, name, "${value}", type)
         }
@@ -1328,7 +1328,7 @@ class FormTagLib implements ApplicationContextAware, InitializingBean, TagLibrar
     /**
      * Filters the url through the RequestDataValueProcessor bean if it is registered.
      */
-    String processedUrl(String link, request) {
+    private String processedUrl(String link, request) {
         if (requestDataValueProcessor == null) {
             return link
         }

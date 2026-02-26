@@ -94,7 +94,7 @@ class FormatTagLib implements TagLibrary {
      * @attr false text label for boolean false value
      * @attr locale Force the locale for formatting.
      */
-    Closure formatBoolean = { attrs ->
+    def formatBoolean(Map attrs) {
         if (!attrs.containsKey('boolean')) {
             throwTagError('Tag [formatBoolean] is missing required attribute [boolean]')
         }
@@ -144,7 +144,7 @@ class FormatTagLib implements TagLibrary {
      * @attr dateStyle Set separate style for the date part.
      * @attr timeStyle Set separate style for the time part.
      */
-    Closure formatDate = { attrs ->
+    def formatDate(Map attrs) {
 
         def date
         if (attrs.containsKey('date')) {
@@ -230,7 +230,7 @@ class FormatTagLib implements TagLibrary {
      * @attr roundingMode Sets the RoundingMode used in this DecimalFormat. Usual values: HALF_UP, HALF_DOWN. If roundingMode is UNNECESSARY and ArithemeticException raises, the original number formatted with default number formatting will be returned.
      * @attr nan String to be used for display if numberic value is NaN
      */
-    Closure formatNumber = { attrs ->
+    def formatNumber(Map attrs) {
         if (!attrs.containsKey('number')) {
             throwTagError('Tag [formatNumber] is missing required attribute [number]')
         }
@@ -360,7 +360,7 @@ class FormatTagLib implements TagLibrary {
      *
      * @attr codec REQUIRED the codec name
      */
-    Closure encodeAs = { attrs, body ->
+    def encodeAs(Map attrs, Closure body) {
         if (!attrs.codec) {
             throwTagError('Tag [encodeAs] requires a codec name in the [codec] attribute')
         }

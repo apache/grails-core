@@ -51,4 +51,18 @@ class MiscFunctionalSpec extends ContainerGebSpec {
         then:
         pageSource.contains('[test test test]')
     }
+
+    void 'Test method-defined taglibs render expected output end to end'() {
+        when:
+        go('/misc/tagMethods')
+
+        then:
+        pageSource.contains('duh - implicit')
+        pageSource.contains('duh2 - typed')
+        pageSource.contains('hello-world')
+        pageSource.contains('before-abc-after')
+        pageSource.contains('legacy-legacy')
+        pageSource.contains('method-1')
+        pageSource.contains('closure-2')
+    }
 }

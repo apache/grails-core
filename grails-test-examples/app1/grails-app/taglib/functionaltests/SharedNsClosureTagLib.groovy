@@ -16,23 +16,12 @@
  *  specific language governing permissions and limitations
  *  under the License.
  */
+package functionaltests
 
-// tag::basic_declaration[]
-package demo
+class SharedNsClosureTagLib {
+    static namespace = 'shared'
 
-class FirstTagLib {
-    static defaultEncodeAs = [taglib:'html']
-
-    static namespace = 'one'
-
-    def sayHello() {
-        out << 'BEFORE '
-
-        // this is invoking a tag from another tag library
-        out << two.sayHello()
-
-        out << ' AFTER'
+    Closure fromClosure = { attrs ->
+        out << "closure-${attrs.two}"
     }
 }
-// end::basic_declaration[]
-

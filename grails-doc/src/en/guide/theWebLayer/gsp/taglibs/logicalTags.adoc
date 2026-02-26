@@ -21,7 +21,7 @@ You can also create logical tags where the body of the tag is only output once a
 
 [source,groovy]
 ----
-def isAdmin = { attrs, body ->
+def isAdmin() {
     def user = attrs.user
     if (user && checkUserPrivs(user)) {
         out << body()

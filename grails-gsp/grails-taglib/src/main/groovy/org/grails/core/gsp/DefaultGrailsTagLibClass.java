@@ -33,6 +33,7 @@ import groovy.lang.MetaProperty;
 import grails.core.gsp.GrailsTagLibClass;
 import org.grails.core.AbstractInjectableGrailsClass;
 import org.grails.core.artefact.gsp.TagLibArtefactHandler;
+import org.grails.taglib.TagMethodInvoker;
 
 /**
  * Default implementation of a tag lib class.
@@ -69,6 +70,7 @@ public class DefaultGrailsTagLibClass extends AbstractInjectableGrailsClass impl
                 tags.add(prop.getName());
             }
         }
+        tags.addAll(TagMethodInvoker.getInvokableTagMethodNames(clazz));
 
         String ns = getStaticPropertyValue(NAMESPACE_FIELD_NAME, String.class);
         if (ns != null && !"".equals(ns.trim())) {

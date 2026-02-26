@@ -21,7 +21,7 @@ Iterative tags are easy too, since you can invoke the body multiple times:
 
 [source,groovy]
 ----
-def repeat = { attrs, body ->
+def repeat() {
     attrs.times?.toInteger()?.times { num ->
         out << body(num)
     }
@@ -48,7 +48,7 @@ That value is then passed as the default variable `it` to the tag. However, if y
 
 [source,groovy]
 ----
-def repeat = { attrs, body ->
+def repeat() {
     def var = attrs.var ?: "num"
     attrs.times?.toInteger()?.times { num ->
         out << body((var):num)

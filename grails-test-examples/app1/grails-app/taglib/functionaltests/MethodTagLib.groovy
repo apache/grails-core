@@ -16,23 +16,31 @@
  *  specific language governing permissions and limitations
  *  under the License.
  */
+package functionaltests
+import grails.compiler.GrailsCompileStatic
 
-// tag::basic_declaration[]
-package demo
+@GrailsCompileStatic
+class MethodTagLib {
 
-class FirstTagLib {
-    static defaultEncodeAs = [taglib:'html']
+    def implicitTag() {
+        Map tagAttrs = (Map) propertyMissing('attrs')
+        out << "${tagAttrs.blah} - implicit"
+    }
 
-    static namespace = 'one'
+    def typedTag(String blah) {
+        out << "${blah} - typed"
+    }
 
-    def sayHello() {
-        out << 'BEFORE '
+    def multiTypedTag(String first, String second) {
+        out << "${first}-${second}"
+    }
 
-        // this is invoking a tag from another tag library
-        out << two.sayHello()
+    def bodyTag() {
+        Closure tagBody = (Closure) propertyMissing('body')
+        out << "before-${tagBody?.call()}-after"
+    }
 
-        out << ' AFTER'
+    Closure legacyTag = { Map attrs ->
+        out << "legacy-${attrs.blah}"
     }
 }
-// end::basic_declaration[]
-

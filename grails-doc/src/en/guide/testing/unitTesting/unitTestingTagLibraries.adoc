@@ -39,7 +39,7 @@ Adding the `TagLibUnitTest` trait to a test causes a new `tagLib` field to be
 automatically created for the TagLib class under test.  The `tagLib` property can
 be used to test calling tags as function calls. The return value of a function
 call is either a `org.grails.buffer,StreamCharBuffer`
-instance or the object returned from the tag closure when
+instance or the object returned from the tag handler when
 `returnObjectForTags` feature is used.
 
 To test a tag which accepts parameters, specify the parameter values as named

@@ -25,7 +25,7 @@ class SecondTagLib {
 
     static namespace = 'two'
 
-    def sayHello = { attrs ->
+    def sayHello() {
         out << 'Hello From SecondTagLib'
     }
 }

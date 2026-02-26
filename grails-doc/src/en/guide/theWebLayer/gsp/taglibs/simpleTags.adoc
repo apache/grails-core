@@ -21,7 +21,7 @@ As demonstrated in the previous example it is easy to write simple tags that hav
 
 [source,groovy]
 ----
-def dateFormat = { attrs, body ->
+def dateFormat() {
     out << new java.text.SimpleDateFormat(attrs.format).format(attrs.date)
 }
 ----
@@ -37,7 +37,7 @@ With simple tags sometimes you need to write HTML mark-up to the response. One a
 
 [source,groovy]
 ----
-def formatBook = { attrs, body ->
+def formatBook() {
     out << "<div id=\"${attrs.book.id}\">"
     out << "Title : ${attrs.book.title}"
     out << "</div>"
@@ -48,7 +48,7 @@ Although this approach may be tempting it is not very clean. A better approach w
 
 [source,groovy]
 ----
-def formatBook = { attrs, body ->
+def formatBook() {
     out << render(template: "bookTemplate", model: [book: attrs.book])
 }
 ----

@@ -43,6 +43,10 @@ class MiscController {
         [:]
     }
 
+    def tagMethods() {
+        render(view: 'tagMethods')
+    }
+
     def interceptedByInterceptor() {
     	// no op
     }
