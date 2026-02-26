@@ -52,6 +52,7 @@ import javax.xml.parsers.DocumentBuilderFactory
 class BomManagedVersions {
 
     private static final Logger LOG = Logging.getLogger(BomManagedVersions)
+    private static final int MAX_PROPERTY_INTERPOLATION_DEPTH = 10
 
     private final Map<String, String> versionOverrides = new LinkedHashMap<>()
 
@@ -230,6 +231,7 @@ class BomManagedVersions {
             DocumentBuilderFactory factory = DocumentBuilderFactory.newInstance()
             factory.setNamespaceAware(false)
             factory.setValidating(false)
+            factory.setXIncludeAware(false)
             factory.setFeature('http://apache.org/xml/features/nonvalidating/load-external-dtd', false)
             factory.setFeature('http://xml.org/sax/features/external-general-entities', false)
             factory.setFeature('http://xml.org/sax/features/external-parameter-entities', false)
@@ -329,7 +331,7 @@ class BomManagedVersions {
         }
 
         String result = value
-        int maxIterations = 10
+        int maxIterations = MAX_PROPERTY_INTERPOLATION_DEPTH
         while (result.contains('${') && maxIterations-- > 0) {
             String propertyName = extractPropertyName(result)
             if (propertyName == null) {
