@@ -119,8 +119,8 @@ class UrlMappingTagLib implements TagLibrary {
      * @attr mapping The named URL mapping to use to rewrite the link
      * @attr fragment The link fragment (often called anchor tag) to use
      */
-    def paginate(Map attrsMap) {
-        TypeConvertingMap attrs = (TypeConvertingMap) attrsMap
+    def paginate(Map attrs) {
+        attrs = (TypeConvertingMap) attrs
         def writer = out
         if (attrs.total == null) {
             throwTagError('Tag [paginate] is missing required attribute [total]')
