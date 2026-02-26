@@ -112,7 +112,6 @@ class FormTagLib implements ApplicationContextAware, InitializingBean, TagLibrar
     }
 
     def textField(String name, Map attrs) {
-        attrs.name = name
         textFieldImpl(attrs)
     }
 
@@ -137,7 +136,6 @@ class FormTagLib implements ApplicationContextAware, InitializingBean, TagLibrar
     }
 
     def passwordField(String name, Map attrs) {
-        attrs.name = name
         passwordFieldImpl(attrs)
     }
 
@@ -160,7 +158,6 @@ class FormTagLib implements ApplicationContextAware, InitializingBean, TagLibrar
     }
 
     def hiddenField(String name, Map attrs) {
-        attrs.name = name
         hiddenFieldTagImpl(attrs)
     }
 
@@ -191,7 +188,6 @@ class FormTagLib implements ApplicationContextAware, InitializingBean, TagLibrar
     }
 
     def submitButton(String name, Map attrs) {
-        attrs.name = name
         submitButtonImpl(attrs)
     }
 
