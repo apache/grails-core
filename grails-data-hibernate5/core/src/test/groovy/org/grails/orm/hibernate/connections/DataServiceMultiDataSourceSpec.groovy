@@ -27,7 +27,6 @@ import grails.gorm.annotation.Entity
 import grails.gorm.services.Query
 import grails.gorm.services.Service
 import grails.gorm.transactions.Transactional
-import org.grails.datastore.gorm.GormEnhancer
 import org.grails.datastore.mapping.core.DatastoreUtils
 import org.grails.orm.hibernate.HibernateDatastore
 
@@ -79,22 +78,12 @@ class DataServiceMultiDataSourceSpec extends Specification {
     }
 
     void setup() {
-        def api = GormEnhancer.findStaticApi(Product, 'books')
-        api.withNewTransaction {
-            api.executeUpdate('delete from Product')
-        }
+        productService.deleteAll()
     }
 
     void "schema is created on the books datasource"() {
-        when: 'we query the books datasource for the product table'
-        def api = GormEnhancer.findStaticApi(Product, 'books')
-        def result = api.withNewTransaction {
-            api.executeQuery('SELECT 1 FROM Product p WHERE 1=0')
-        }
-
-        then: 'no exception - table exists on books'
-        noExceptionThrown()
-        result != null
+        expect: 'Product table exists on books - count succeeds without exception'
+        productService.count() == 0
     }
 
     void "save routes to books datasource"() {
@@ -108,9 +97,7 @@ class DataServiceMultiDataSourceSpec extends Specification {
         saved.amount == 42
 
         and: 'it exists on the books datasource'
-        GormEnhancer.findStaticApi(Product, 'books').withNewTransaction {
-            GormEnhancer.findStaticApi(Product, 'books').count()
-        } == 1
+        productService.count() == 1
     }
 
     void "get by ID routes to books datasource"() {
@@ -190,19 +177,16 @@ class DataServiceMultiDataSourceSpec extends Specification {
         found.every { it.name == 'Duplicate' }
     }
 
-    void "GormEnhancer escape-hatch HQL works on books datasource"() {
+    void "@Query aggregate works on books datasource"() {
         given: 'products saved on books'
         productService.save(new Product(name: 'Foo', amount: 100))
         productService.save(new Product(name: 'Bar', amount: 200))
 
-        when: 'we run aggregate HQL through GormEnhancer'
-        def api = GormEnhancer.findStaticApi(Product, 'books')
-        def result = api.withNewTransaction {
-            api.executeQuery('SELECT SUM(p.amount) FROM Product p')
-        }
+        when: 'we run an aggregate @Query through the data service'
+        def total = productService.getTotalAmount()
 
         then: 'the aggregation reflects books data'
-        result[0] == 300
+        total == 300
     }
 
     void "save, get, and find round-trip through Data Service"() {
@@ -245,9 +229,7 @@ class DataServiceMultiDataSourceSpec extends Specification {
         saved.amount == 42
 
         and: 'it exists on the books datasource'
-        GormEnhancer.findStaticApi(Product, 'books').withNewTransaction {
-            GormEnhancer.findStaticApi(Product, 'books').count()
-        } == 1
+        productDataService.count() == 1
     }
 
     void "interface service: get by ID routes to books datasource"() {
@@ -420,6 +402,12 @@ abstract class ProductService {
     abstract Product findByName(String name)
 
     abstract List<Product> findAllByName(String name)
+
+    @Query("delete from ${Product p} where 1=1")
+    abstract Number deleteAll()
+
+    @Query("select sum(p.amount) from ${Product p}")
+    abstract Number getTotalAmount()
 
     /**
      * Constructor-style save - GORM creates the entity from parameters.

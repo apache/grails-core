@@ -685,9 +685,92 @@ public abstract class AbstractHibernateQuery extends Query {
         c.addOrder(order.isIgnoreCase() ? hibernateOrder.ignoreCase() : hibernateOrder);
     }
 
+    private String calculateProjectionPropertyName(String propertyName) {
+        int firstDot = propertyName.indexOf('.');
+        if (firstDot < 0) {
+            return calculatePropertyName(propertyName);
+        }
+
+        PersistentEntity currentEntity = getEntity();
+        String currentAlias = null;
+        StringBuilder associationPath = new StringBuilder();
+        String[] tokens = propertyName.split("\\.");
+
+        for (int i = 0; i < tokens.length - 1; i++) {
+            String token = tokens[i];
+            PersistentProperty persistentProperty = currentEntity != null ? currentEntity.getPropertyByName(token) : null;
+            if (!(persistentProperty instanceof Association) || persistentProperty instanceof Embedded) {
+                return calculatePropertyName(propertyName);
+            }
+
+            if (associationPath.length() > 0) {
+                associationPath.append('.');
+            }
+            associationPath.append(token);
+
+            CriteriaAndAlias criteriaAndAlias = getOrCreateAlias(associationPath.toString(), generateAlias(token));
+            if (criteriaAndAlias == null) {
+                return calculatePropertyName(propertyName);
+            }
+            currentAlias = criteriaAndAlias.alias;
+            currentEntity = ((Association) persistentProperty).getAssociatedEntity();
+        }
+
+        if (currentAlias == null) {
+            return calculatePropertyName(propertyName);
+        }
+        return currentAlias + '.' + tokens[tokens.length - 1];
+    }
+
+    private Query.Projection normalizeProjectionPropertyPath(Query.Projection projection) {
+        if (!(projection instanceof Query.PropertyProjection)) {
+            return projection;
+        }
+
+        String propertyName = ((Query.PropertyProjection) projection).getPropertyName();
+        String normalizedPropertyName = calculateProjectionPropertyName(propertyName);
+        if (propertyName.equals(normalizedPropertyName)) {
+            return projection;
+        }
+
+        if (projection instanceof Query.DistinctPropertyProjection) {
+            return org.grails.datastore.mapping.query.Projections.distinct(normalizedPropertyName);
+        }
+        if (projection instanceof Query.CountDistinctProjection) {
+            return org.grails.datastore.mapping.query.Projections.countDistinct(normalizedPropertyName);
+        }
+        if (projection instanceof Query.GroupPropertyProjection) {
+            return org.grails.datastore.mapping.query.Projections.groupProperty(normalizedPropertyName);
+        }
+        if (projection instanceof Query.SumProjection) {
+            return org.grails.datastore.mapping.query.Projections.sum(normalizedPropertyName);
+        }
+        if (projection instanceof Query.MinProjection) {
+            return org.grails.datastore.mapping.query.Projections.min(normalizedPropertyName);
+        }
+        if (projection instanceof Query.MaxProjection) {
+            return org.grails.datastore.mapping.query.Projections.max(normalizedPropertyName);
+        }
+        if (projection instanceof Query.AvgProjection) {
+            return org.grails.datastore.mapping.query.Projections.avg(normalizedPropertyName);
+        }
+        return org.grails.datastore.mapping.query.Projections.property(normalizedPropertyName);
+    }
+
     @Override
     public Query join(String property) {
         this.hasJoins = true;
+        if (criteria != null)
+            criteria.setFetchMode(property, FetchMode.JOIN);
+        else if (detachedCriteria != null)
+            detachedCriteria.setFetchMode(property, FetchMode.JOIN);
+        return this;
+    }
+
+    @Override
+    public Query join(String property, JoinType joinType) {
+        this.hasJoins = true;
+        this.joinTypes.put(property, joinType);
         if (criteria != null)
             criteria.setFetchMode(property, FetchMode.JOIN);
         else if (detachedCriteria != null)
@@ -946,19 +1029,19 @@ public abstract class AbstractHibernateQuery extends Query {
 
         @Override
         public ProjectionList add(Projection p) {
-            projectionList.add(new HibernateProjectionAdapter(p).toHibernateProjection());
+            projectionList.add(new HibernateProjectionAdapter(normalizeProjectionPropertyPath(p)).toHibernateProjection());
             return this;
         }
 
         @Override
         public org.grails.datastore.mapping.query.api.ProjectionList countDistinct(String property) {
-            projectionList.add(Projections.countDistinct(calculatePropertyName(property)));
+            projectionList.add(Projections.countDistinct(calculateProjectionPropertyName(property)));
             return this;
         }
 
         @Override
         public org.grails.datastore.mapping.query.api.ProjectionList distinct(String property) {
-            projectionList.add(Projections.distinct(Projections.property(calculatePropertyName(property))));
+            projectionList.add(Projections.distinct(Projections.property(calculateProjectionPropertyName(property))));
             return this;
         }
 
@@ -984,31 +1067,31 @@ public abstract class AbstractHibernateQuery extends Query {
 
         @Override
         public ProjectionList property(String name) {
-            projectionList.add(Projections.property(calculatePropertyName(name)));
+            projectionList.add(Projections.property(calculateProjectionPropertyName(name)));
             return this;
         }
 
         @Override
         public ProjectionList sum(String name) {
-            projectionList.add(Projections.sum(calculatePropertyName(name)));
+            projectionList.add(Projections.sum(calculateProjectionPropertyName(name)));
             return this;
         }
 
         @Override
         public ProjectionList min(String name) {
-            projectionList.add(Projections.min(calculatePropertyName(name)));
+            projectionList.add(Projections.min(calculateProjectionPropertyName(name)));
             return this;
         }
 
         @Override
         public ProjectionList max(String name) {
-            projectionList.add(Projections.max(calculatePropertyName(name)));
+            projectionList.add(Projections.max(calculateProjectionPropertyName(name)));
             return this;
         }
 
         @Override
         public ProjectionList avg(String name) {
-            projectionList.add(Projections.avg(calculatePropertyName(name)));
+            projectionList.add(Projections.avg(calculateProjectionPropertyName(name)));
             return this;
         }
 

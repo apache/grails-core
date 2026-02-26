@@ -171,6 +171,9 @@ include(
 
         // Testing Support
         'grails-testing-support-datamapping',
+        'grails-testing-support-dbcleanup-core',
+        'grails-testing-support-dbcleanup-h2',
+        'grails-testing-support-dbcleanup-postgresql',
 
         // Test Report
         'grails-data-test-report',
@@ -364,6 +367,7 @@ include(
         'grails-test-examples-external-configuration',
         'grails-test-examples-exploded',
         'grails-test-examples-datasources',
+        'grails-test-examples-database-cleanup',
         'grails-test-examples-namespaces',
         'grails-test-examples-geb',
         'grails-test-examples-geb-gebconfig',
@@ -400,6 +404,7 @@ project(':grails-test-examples-app3').projectDir = file('grails-test-examples/ap
 project(':grails-test-examples-external-configuration').projectDir = file('grails-test-examples/external-configuration')
 project(':grails-test-examples-exploded').projectDir = file('grails-test-examples/exploded')
 project(':grails-test-examples-datasources').projectDir = file('grails-test-examples/datasources')
+project(':grails-test-examples-database-cleanup').projectDir = file('grails-test-examples/database-cleanup')
 project(':grails-test-examples-geb').projectDir = file('grails-test-examples/geb')
 project(':grails-test-examples-geb-gebconfig').projectDir = file('grails-test-examples/geb-gebconfig')
 project(':grails-test-examples-namespaces').projectDir = file('grails-test-examples/namespaces')

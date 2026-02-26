@@ -1806,7 +1806,46 @@ public abstract class AbstractHibernateCriteriaBuilder extends GroovyObjectSuppo
             if (pd != null && pd.getReadMethod() != null) {
                 final Metamodel metamodel = sessionFactory.getMetamodel();
                 final EntityType<?> entityType = metamodel.entity(targetClass);
-                final Attribute<?, ?> attribute = entityType.getAttribute(name);
+
+                Attribute<?, ?> attribute = null;
+                try {
+                    attribute = entityType.getAttribute(name);
+                } catch (IllegalArgumentException e) {
+                    // Composite ID components may not be registered as JPA Metamodel
+                    // attributes. Fall back to checking if the property type is a managed
+                    // entity so the criteria builder can navigate associations that form
+                    // part of a composite key (e.g. UserRole with composite: ['user', 'role']).
+                    Class<?> propertyType = pd.getPropertyType();
+                    try {
+                        metamodel.entity(propertyType);
+                        // Property type is a managed entity - treat as association
+                        Class oldTargetClass = targetClass;
+                        targetClass = propertyType;
+                        if (targetClass.equals(oldTargetClass) && !hasMoreThanOneArg) {
+                            joinType = org.hibernate.sql.JoinType.LEFT_OUTER_JOIN.getJoinTypeValue();
+                        }
+                        associationStack.add(name);
+                        final String associationPath = getAssociationPath();
+                        createAliasIfNeccessary(name, associationPath, joinType);
+                        logicalExpressionStack.add(new LogicalExpression(AND));
+                        invokeClosureNode(callable);
+                        aliasStack.remove(aliasStack.size() - 1);
+                        if (!aliasInstanceStack.isEmpty()) {
+                            aliasInstanceStack.remove(aliasInstanceStack.size() - 1);
+                        }
+                        LogicalExpression logicalExpression = logicalExpressionStack.remove(logicalExpressionStack.size() - 1);
+                        if (!logicalExpression.args.isEmpty()) {
+                            addToCriteria(logicalExpression.toCriterion());
+                        }
+                        associationStack.remove(associationStack.size() - 1);
+                        targetClass = oldTargetClass;
+                        return name;
+                    } catch (IllegalArgumentException ignored) {
+                        // Not a managed entity type - wrap the original exception to preserve stack trace
+                        throw new IllegalArgumentException(
+                                "Unable to locate attribute [" + name + "] on entity [" + entityType.getName() + "]", e);
+                    }
+                }
 
                 if (attribute.isAssociation()) {
                     Class oldTargetClass = targetClass;
