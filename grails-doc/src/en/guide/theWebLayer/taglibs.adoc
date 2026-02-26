@@ -53,6 +53,24 @@ class SimpleTagLib {
 }
 ----
 
+For method-based tags, named attributes can also bind directly to method signature arguments:
+
+[source,groovy]
+----
+class SimpleTagLib {
+    def greeting(String name) {
+        out << "Hello, ${name}!"
+    }
+}
+----
+
+Used as:
+
+[source,xml]
+----
+<g:greeting name="Graeme" />
+----
+
 As demonstrated above there is an implicit `out` variable that refers to the output `Writer` which you can use to append content to the response. Then you can reference the tag inside your GSP; no imports are necessary:
 
 [source,xml]
