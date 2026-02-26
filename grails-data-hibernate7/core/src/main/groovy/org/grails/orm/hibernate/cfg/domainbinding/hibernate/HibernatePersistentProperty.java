@@ -27,6 +27,8 @@ import org.grails.datastore.mapping.model.types.Embedded;
 import org.grails.orm.hibernate.cfg.ColumnConfig;
 import org.grails.orm.hibernate.cfg.Mapping;
 import org.grails.orm.hibernate.cfg.PropertyConfig;
+
+import org.checkerframework.checker.nullness.qual.Nullable;
 import org.hibernate.mapping.DependantValue;
 import org.hibernate.mapping.Property;
 import org.hibernate.mapping.SimpleValue;
@@ -82,19 +84,22 @@ public interface HibernatePersistentProperty extends PersistentProperty<Property
    * @return The type name
    */
   default String getTypeName(Class<?> propertyType, PropertyConfig config, Mapping mapping) {
-
     return ofNullable(config)
-        .map(PropertyConfig::getTypeName)
-        .orElseGet(
-            () ->
-                ofNullable(mapping)
-                    .map(__ -> __.getTypeName(propertyType))
-                    .orElseGet(
-                        () ->
-                            Optional.ofNullable(propertyType)
-                                .filter(__ -> !__.isEnum())
-                                .map(Class::getName)
-                                .orElse(null)));
+          .map(PropertyConfig::getTypeName)
+          .orElseGet(() -> getMappingName(propertyType, mapping));
+  }
+
+  private static @Nullable String getMappingName(Class<?> propertyClass, Mapping mapping) {
+    return ofNullable(mapping)
+            .map(__ -> __.getTypeName(propertyClass))
+            .orElseGet(() -> getClassName(propertyClass));
+  }
+
+  private static @Nullable String getClassName(Class<?> propertyClass) {
+    return ofNullable(propertyClass)
+            .filter(__ -> !__.isEnum())
+            .map(Class::getName)
+            .orElse(null);
   }
 
   default GrailsHibernatePersistentEntity getHibernateOwner() {
