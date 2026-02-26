@@ -50,6 +50,7 @@ public class ComponentBinder {
     this.grailsPropertyBinder = grailsPropertyBinder;
   }
 
+  @SuppressWarnings("PMD.DataflowAnomalyAnalysis")
   public Component bindComponent(
       PersistentClass owner,
       HibernateEmbeddedProperty embeddedProperty,
