@@ -61,6 +61,7 @@ import org.springframework.core.env.PropertyResolver;
  * @author Graeme Rocher
  * @since 2.0
  */
+@SuppressWarnings({"PMD.CloseResource", "PMD.AvoidFieldNameMatchingMethodName"})
 public abstract class AbstractHibernateDatastore extends AbstractDatastore
     implements ApplicationContextAware,
         Settings,
@@ -494,23 +495,18 @@ public abstract class AbstractHibernateDatastore extends AbstractDatastore
   protected <T> Closure<T> prepareMultiTenantClosure(final Closure<T> callable) {
     final boolean isMultiTenant =
         getMultiTenancyMode() == MultiTenancySettings.MultiTenancyMode.DISCRIMINATOR;
-    Closure<T> multiTenantCallable;
-    if (isMultiTenant) {
-      multiTenantCallable =
-          new Closure<T>(this) {
-            @Override
-            public T call(Object... args) {
-              enableMultiTenancyFilter();
-              try {
-                return callable.call(args);
-              } finally {
-                disableMultiTenancyFilter();
-              }
+    return isMultiTenant
+        ? new Closure<T>(this) {
+          @Override
+          public T call(Object... args) {
+            enableMultiTenancyFilter();
+            try {
+              return callable.call(args);
+            } finally {
+              disableMultiTenancyFilter();
             }
-          };
-    } else {
-      multiTenantCallable = callable;
-    }
-    return multiTenantCallable;
+          }
+        }
+        : callable;
   }
 }
