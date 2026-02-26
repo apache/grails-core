@@ -74,7 +74,7 @@ public class EventListenerIntegrator implements Integrator {
           EventType.POST_COLLECTION_REMOVE,
           EventType.POST_COLLECTION_UPDATE);
 
-  @SuppressWarnings({"unchecked", "rawtypes"})
+  @SuppressWarnings({"unchecked", "rawtypes", "PMD.DataflowAnomalyAnalysis"})
   @Override
   public void integrate(
       Metadata metadata, BootstrapContext bootstrapContext, SessionFactoryImplementor sfi) {
@@ -102,6 +102,7 @@ public class EventListenerIntegrator implements Integrator {
     }
   }
 
+  @SuppressWarnings("PMD.DataflowAnomalyAnalysis")
   protected <T> void appendListeners(
       EventListenerRegistry listenerRegistry, EventType<T> eventType, Collection<T> listeners) {
 

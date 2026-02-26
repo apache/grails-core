@@ -27,11 +27,11 @@ CloseResource,org.grails.orm.hibernate.AbstractHibernateDatastore,461,YES
 DataflowAnomalyAnalysis,org.grails.orm.hibernate.AbstractHibernateDatastore,499,YES
 DataflowAnomalyAnalysis,org.grails.orm.hibernate.AbstractHibernateDatastore,499,YES
 EmptyCatchBlock,org.grails.orm.hibernate.AbstractHibernateSession,107,YES
-DataflowAnomalyAnalysis,org.grails.orm.hibernate.EventListenerIntegrator,82,
-DataflowAnomalyAnalysis,org.grails.orm.hibernate.EventListenerIntegrator,87,
-DataflowAnomalyAnalysis,org.grails.orm.hibernate.EventListenerIntegrator,87,
-DataflowAnomalyAnalysis,org.grails.orm.hibernate.EventListenerIntegrator,98,
-DataflowAnomalyAnalysis,org.grails.orm.hibernate.EventListenerIntegrator,108,
+DataflowAnomalyAnalysis,org.grails.orm.hibernate.EventListenerIntegrator,82,YES
+DataflowAnomalyAnalysis,org.grails.orm.hibernate.EventListenerIntegrator,87,YES
+DataflowAnomalyAnalysis,org.grails.orm.hibernate.EventListenerIntegrator,87,YES
+DataflowAnomalyAnalysis,org.grails.orm.hibernate.EventListenerIntegrator,98,YES
+DataflowAnomalyAnalysis,org.grails.orm.hibernate.EventListenerIntegrator,108,YES
 DataflowAnomalyAnalysis,org.grails.orm.hibernate.GrailsHibernateTemplate,135,
 DataflowAnomalyAnalysis,org.grails.orm.hibernate.GrailsHibernateTemplate,136,
 CloseResource,org.grails.orm.hibernate.GrailsHibernateTemplate,138,
