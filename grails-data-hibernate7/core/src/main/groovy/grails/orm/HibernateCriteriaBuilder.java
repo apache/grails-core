@@ -84,6 +84,7 @@ import org.springframework.core.convert.ConversionService;
  * @author Graeme Rocher
  */
 @Slf4j
+@SuppressWarnings("PMD.AvoidDuplicateLiterals")
 public class HibernateCriteriaBuilder extends GroovyObjectSupport
     implements BuildableCriteria, ProjectionList {
   /*
@@ -98,7 +99,9 @@ public class HibernateCriteriaBuilder extends GroovyObjectSupport
   protected CriteriaQuery criteriaQuery;
   protected boolean uniqueResult = false;
   protected boolean participate;
+  @SuppressWarnings("PMD.AvoidFieldNameMatchingMethodName")
   protected boolean scroll;
+  @SuppressWarnings("PMD.AvoidFieldNameMatchingMethodName")
   protected boolean count;
   protected List<String> aliasStack = new ArrayList<String>();
   protected static final String ALIAS = "_alias";
@@ -111,7 +114,9 @@ public class HibernateCriteriaBuilder extends GroovyObjectSupport
   protected HibernateQuery hibernateQuery;
   private boolean shouldLock;
   private boolean shouldCache;
+  @SuppressWarnings("PMD.AvoidFieldNameMatchingMethodName")
   private boolean readOnly;
+  @SuppressWarnings("PMD.AvoidFieldNameMatchingMethodName")
   protected boolean distinct = false;
 
   @SuppressWarnings("rawtypes")
@@ -128,7 +133,7 @@ public class HibernateCriteriaBuilder extends GroovyObjectSupport
     setDefaultFlushMode(GrailsHibernateTemplate.FLUSH_AUTO);
   }
 
-  public void setDatastore(AbstractHibernateDatastore datastore) {
+  public final void setDatastore(AbstractHibernateDatastore datastore) {
     this.datastore = datastore;
     if (MultiTenant.class.isAssignableFrom(targetClass)
         && datastore.getMultiTenancyMode() == MultiTenancySettings.MultiTenancyMode.DISCRIMINATOR) {
@@ -852,7 +857,7 @@ public class HibernateCriteriaBuilder extends GroovyObjectSupport
    */
   @SuppressWarnings("rawtypes")
   public Criteria eq(String propertyName, Object propertyValue, Map params) {
-    if (params.get("ignoreCase") == Boolean.TRUE) {
+    if (Boolean.TRUE.equals(params.get("ignoreCase"))) {
       hibernateQuery.like(propertyName, "%" + propertyValue.toString() + "%");
     } else {
       hibernateQuery.eq(propertyName, propertyValue);
@@ -1208,6 +1213,7 @@ public class HibernateCriteriaBuilder extends GroovyObjectSupport
     throw t;
   }
 
+  @SuppressWarnings("PMD.NullAssignment")
   private void closeSessionFollowingException() {
     closeSession();
     criteriaQuery = null;
@@ -1224,7 +1230,7 @@ public class HibernateCriteriaBuilder extends GroovyObjectSupport
     return defaultFlushMode;
   }
 
-  public void setDefaultFlushMode(int defaultFlushMode) {
+  public final void setDefaultFlushMode(int defaultFlushMode) {
     this.defaultFlushMode = defaultFlushMode;
   }
 }
