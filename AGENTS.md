@@ -186,6 +186,10 @@ class MyService { }
 
 // DON'T: javax packages
 // import javax.servlet.*  ❌ → use jakarta.servlet.*
+
+// DON'T: Section separator or grouping comments
+// // --- Domain classes ---  ❌
+// // ===== Helpers =====     ❌
 ```
 
 ## Test Isolation
