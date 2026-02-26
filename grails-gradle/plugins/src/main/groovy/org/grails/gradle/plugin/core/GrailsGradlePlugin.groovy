@@ -384,7 +384,25 @@ ${importStatements}
         String grailsVersion = (project.findProperty('grailsVersion') ?: BuildSettings.grailsVersion) as String
         String bomCoordinates = "org.apache.grails:grails-bom:${grailsVersion}" as String
 
-        project.dependencies.add('implementation', project.dependencies.platform(bomCoordinates))
+        // Ensure the developmentOnly configuration exists. Spring Boot's plugin
+        // normally creates this, but using maybeCreate guarantees it is available
+        // even if plugin ordering changes or Spring Boot is not applied.
+        project.configurations.maybeCreate('developmentOnly')
+
+        // Apply the BOM platform to all declarable project configurations, matching
+        // the behavior of the Spring Dependency Management plugin which applied version
+        // constraints globally via configurations.all() + resolutionStrategy.eachDependency().
+        // Non-declarable configurations (e.g. apiElements, runtimeElements) inherit
+        // constraints through their parent configurations. Code quality tool
+        // configurations (checkstyle, codenarc, etc.) are excluded because adding BOM
+        // constraints to tool classpaths can upgrade transitive dependencies and break
+        // the tools - unlike resolutionStrategy hooks, platform() constraints
+        // participate in version conflict resolution.
+        project.configurations.configureEach { Configuration conf ->
+            if (conf.canBeDeclared && !isCodeQualityConfiguration(conf.name)) {
+                project.dependencies.add(conf.name, project.dependencies.platform(bomCoordinates))
+            }
+        }
 
         project.afterEvaluate {
             BomManagedVersions managedVersions = BomManagedVersions.resolve(project, bomCoordinates)
@@ -394,6 +412,17 @@ ${importStatements}
                 }
             }
         }
+    }
+
+    /**
+     * Returns {@code true} if the given configuration name belongs to a code quality
+     * tool (Checkstyle, CodeNarc, PMD, SpotBugs). These configurations hold tool
+     * classpaths and must not receive the BOM platform because {@code platform()}
+     * constraints can upgrade transitive dependencies and break the tools.
+     */
+    private static boolean isCodeQualityConfiguration(String name) {
+        name == 'checkstyle' || name == 'codenarc' || name == 'pmd' ||
+                name == 'spotbugs' || name == 'spotbugsPlugins'
     }
 
     protected void applySpringBootPlugin(Project project) {
