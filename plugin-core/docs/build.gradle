@@ -21,6 +21,8 @@ plugins {
     id 'groovy' // For groovydoc task
 }
 
+import groovy.json.JsonSlurper
+
 ext {
     apiDocsProjects = [
             'core-plugin': [
@@ -60,4 +62,75 @@ apply {
 dependencies {
     implementation platform("org.apache.grails:grails-bom:${grailsVersion}")
     implementation 'org.apache.groovy:groovy'
+}
+
+def configurationMetadataFile = rootProject.layout.projectDirectory.file(
+        'plugin-core/plugin/src/main/resources/META-INF/spring-configuration-metadata.json'
+)
+def configurationPropertiesFile = layout.projectDirectory.file('src/docs/configurationProperties.adoc')
+
+tasks.register('generateConfigurationProperties') {
+    inputs.file(configurationMetadataFile)
+    outputs.file(configurationPropertiesFile)
+    doLast {
+        def metadata = new JsonSlurper().parse(configurationMetadataFile.asFile)
+        def groupsByName = (metadata.groups ?: []).collectEntries { group ->
+            [(group.name): group]
+        }
+        def propertiesByGroup = (metadata.properties ?: []).groupBy { property ->
+            property.group ?: 'grails.plugin.springsecurity.miscellaneous'
+        }
+        def orderedGroupNames = [
+                'grails.plugin.springsecurity.general',
+                'grails.plugin.springsecurity.domain-classes',
+                'grails.plugin.springsecurity.authentication',
+                'grails.plugin.springsecurity.login-logout',
+                'grails.plugin.springsecurity.password-encoding',
+                'grails.plugin.springsecurity.session',
+                'grails.plugin.springsecurity.url-mapping',
+                'grails.plugin.springsecurity.miscellaneous'
+        ]
+
+        configurationPropertiesFile.asFile.text = ''
+        configurationPropertiesFile.asFile << """= Configuration Properties
+
+This page is generated from `spring-configuration-metadata.json`. For IDE auto-completion of these properties, ensure the plugin JAR is on your classpath.
+"""
+
+        orderedGroupNames.each { groupName ->
+            def group = groupsByName[groupName]
+            def properties = propertiesByGroup[groupName] ?: []
+            if (!properties) {
+                return
+            }
+
+            def heading = group?.description ?: groupName
+            configurationPropertiesFile.asFile << """
+
+== ${heading}
+
+[cols=\"3,5,2\", options=\"header\"]
+|===
+|Property |Description |Default
+"""
+
+            properties.sort { it.name }.each { property ->
+                def defaultValue = property.containsKey('defaultValue') ? property.defaultValue : ''
+                def defaultText = defaultValue == null ? 'null' : defaultValue.toString()
+                configurationPropertiesFile.asFile << """
+|`${property.name}`
+|${property.description}
+|${defaultText}
+"""
+            }
+
+            configurationPropertiesFile.asFile << """
+|===
+"""
+        }
+    }
+}
+
+tasks.named('asciidoctor') {
+    dependsOn tasks.named('generateConfigurationProperties')
 }

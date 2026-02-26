@@ -67,6 +67,8 @@ include::voters.adoc[]
 
 include::miscProperties.adoc[]
 
+include::configurationProperties.adoc[]
+
 include::tutorials.adoc[]
 
 include::examples.adoc[]
