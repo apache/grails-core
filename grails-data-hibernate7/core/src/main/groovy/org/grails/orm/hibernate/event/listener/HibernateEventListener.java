@@ -43,6 +43,7 @@ import org.springframework.context.ApplicationEvent;
  * @author Burt Beckwith
  * @since 2.0
  */
+@SuppressWarnings({"PMD.CloseResource", "PMD.DataflowAnomalyAnalysis"})
 public class HibernateEventListener extends AbstractHibernateEventListener {
 
   protected transient ConcurrentMap<SoftKey<Class<?>>, ClosureEventListener> eventListeners =
@@ -151,23 +152,15 @@ public class HibernateEventListener extends AbstractHibernateEventListener {
   }
 
   public boolean onPreInsert(PreInsertEvent event) {
-    boolean evict = false;
     ClosureEventListener eventListener =
         findEventListener(event.getEntity(), event.getPersister().getFactory());
-    if (eventListener != null) {
-      evict = eventListener.onPreInsert(event);
-    }
-    return evict;
+    return eventListener != null && eventListener.onPreInsert(event);
   }
 
   public boolean onPreUpdate(PreUpdateEvent event) {
-    boolean evict = false;
     ClosureEventListener eventListener =
         findEventListener(event.getEntity(), event.getPersister().getFactory());
-    if (eventListener != null) {
-      evict = eventListener.onPreUpdate(event);
-    }
-    return evict;
+    return eventListener != null && eventListener.onPreUpdate(event);
   }
 
   public void onPostUpdate(PostUpdateEvent event) {
@@ -179,13 +172,9 @@ public class HibernateEventListener extends AbstractHibernateEventListener {
   }
 
   public boolean onPreDelete(PreDeleteEvent event) {
-    boolean evict = false;
     ClosureEventListener eventListener =
         findEventListener(event.getEntity(), event.getPersister().getFactory());
-    if (eventListener != null) {
-      evict = eventListener.onPreDelete(event);
-    }
-    return evict;
+    return eventListener != null && eventListener.onPreDelete(event);
   }
 
   public void onPostDelete(PostDeleteEvent event) {
