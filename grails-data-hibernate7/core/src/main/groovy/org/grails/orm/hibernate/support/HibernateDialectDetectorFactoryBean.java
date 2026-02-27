@@ -55,6 +55,7 @@ import org.springframework.util.StringUtils;
  * @author Graeme Rocher
  * @author Burt Beckwith
  */
+@SuppressWarnings({"PMD.CloseResource", "PMD.DataflowAnomalyAnalysis"})
 public class HibernateDialectDetectorFactoryBean implements FactoryBean<String>, InitializingBean {
 
   private DataSource dataSource;

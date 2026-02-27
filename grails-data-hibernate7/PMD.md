@@ -120,9 +120,9 @@ DataflowAnomalyAnalysis,org.grails.orm.hibernate.support.ClosureEventTriggeringI
 DataflowAnomalyAnalysis,org.grails.orm.hibernate.support.ClosureEventTriggeringInterceptor,309,YES
 DataflowAnomalyAnalysis,org.grails.orm.hibernate.support.ClosureEventTriggeringInterceptor,332,YES
 DataflowAnomalyAnalysis,org.grails.orm.hibernate.support.ClosureEventTriggeringInterceptor,401,YES
-CloseResource,org.grails.orm.hibernate.support.HibernateDialectDetectorFactoryBean,94,
-DataflowAnomalyAnalysis,org.grails.orm.hibernate.support.HibernateDialectDetectorFactoryBean,94,
-DataflowAnomalyAnalysis,org.grails.orm.hibernate.support.HibernateDialectDetectorFactoryBean,96,
-DataflowAnomalyAnalysis,org.grails.orm.hibernate.support.HibernateDialectDetectorFactoryBean,103,
-CloseResource,org.grails.orm.hibernate.support.HibernateDialectDetectorFactoryBean,104,
-DataflowAnomalyAnalysis,org.grails.orm.hibernate.support.HibernateDialectDetectorFactoryBean,105,
+CloseResource,org.grails.orm.hibernate.support.HibernateDialectDetectorFactoryBean,94,YES
+DataflowAnomalyAnalysis,org.grails.orm.hibernate.support.HibernateDialectDetectorFactoryBean,94,YES
+DataflowAnomalyAnalysis,org.grails.orm.hibernate.support.HibernateDialectDetectorFactoryBean,96,YES
+DataflowAnomalyAnalysis,org.grails.orm.hibernate.support.HibernateDialectDetectorFactoryBean,103,YES
+CloseResource,org.grails.orm.hibernate.support.HibernateDialectDetectorFactoryBean,104,YES
+DataflowAnomalyAnalysis,org.grails.orm.hibernate.support.HibernateDialectDetectorFactoryBean,105,YES
