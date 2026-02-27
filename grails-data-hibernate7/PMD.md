@@ -62,7 +62,7 @@ DataflowAnomalyAnalysis,org.grails.orm.hibernate.cfg.domainbinding.secondpass.Co
 NonSerializableClass,org.grails.orm.hibernate.cfg.domainbinding.secondpass.ListSecondPass,32,YES
 DataflowAnomalyAnalysis,org.grails.orm.hibernate.cfg.domainbinding.secondpass.ListSecondPassBinder,73,YES
 DataflowAnomalyAnalysis,org.grails.orm.hibernate.cfg.domainbinding.secondpass.ListSecondPassBinder,106,YES
-NonSerializableClass,org.grails.orm.hibernate.cfg.domainbinding.secondpass.MapSecondPass,32,
+NonSerializableClass,org.grails.orm.hibernate.cfg.domainbinding.secondpass.MapSecondPass,32,YES
 DataflowAnomalyAnalysis,org.grails.orm.hibernate.cfg.domainbinding.secondpass.MapSecondPassBinder,95,
 NonSerializableClass,org.grails.orm.hibernate.cfg.domainbinding.secondpass.SetSecondPass,39,
 DataflowAnomalyAnalysis,org.grails.orm.hibernate.cfg.domainbinding.util.BasicValueIdCreator,67,
