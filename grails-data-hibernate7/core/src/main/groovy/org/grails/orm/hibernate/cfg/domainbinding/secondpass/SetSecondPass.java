@@ -32,7 +32,8 @@ import org.hibernate.mapping.Collection;
  *
  * @author Graeme
  */
-public class SetSecondPass implements org.hibernate.boot.spi.SecondPass, GrailsSecondPass {
+public class SetSecondPass
+    implements org.hibernate.boot.spi.SecondPass, GrailsSecondPass, java.io.Serializable {
 
   @Serial private static final long serialVersionUID = -5540526942092611348L;
 
