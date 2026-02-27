@@ -25,6 +25,7 @@ import org.grails.orm.hibernate.cfg.ColumnConfig;
 import org.grails.orm.hibernate.cfg.PropertyConfig;
 import org.hibernate.mapping.Column;
 
+@SuppressWarnings("PMD.DataflowAnomalyAnalysis")
 public class NumericColumnConstraintsBinder {
 
   public void bindNumericColumnConstraints(
