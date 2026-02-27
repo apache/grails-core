@@ -68,7 +68,7 @@ public class RootBinder {
       @Nonnull GrailsHibernatePersistentEntity entity,
       @Nonnull InFlightMetadataCollector mappings) {
     if (mappings.getEntityBinding(entity.getName()) != null) {
-      LOG.info("[RootBinder] Class [" + entity.getName() + "] is already mapped, skipping.. ");
+      LOG.warn("[RootBinder] Class [" + entity.getName() + "] is already mapped, skipping.. ");
       return;
     }
 
@@ -76,11 +76,12 @@ public class RootBinder {
     RootClass root =
         rootPersistentClassCommonValuesBinder.bindRootPersistentClassCommonValues(
             entity, children, mappings);
-    Mapping m = entity.getMappedForm();
 
     if (!children.isEmpty() && entity.isTablePerHierarchy()) {
-      discriminatorPropertyBinder.bindDiscriminatorProperty(root, m);
+      discriminatorPropertyBinder.bindDiscriminatorProperty(root);
     }
+
+    Mapping m = entity.getMappedForm();
 
     // bind the sub classes
     children.forEach(sub -> subClassBinder.bindSubClass(sub, root, mappings, m));

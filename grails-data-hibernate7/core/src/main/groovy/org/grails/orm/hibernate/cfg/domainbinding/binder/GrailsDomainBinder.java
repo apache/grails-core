@@ -223,8 +223,14 @@ public class GrailsDomainBinder implements AdditionalMappingContributor, TypeCon
     DiscriminatorPropertyBinder discriminatorPropertyBinder =
         new DiscriminatorPropertyBinder(
             metadataBuildingContext,
-            new SimpleValueColumnBinder(),
-            new ColumnConfigToColumnBinder());
+            mappingCacheHolder,
+            new ConfiguredDiscriminatorBinder(
+                new SimpleValueColumnBinder(),
+                new ColumnConfigToColumnBinder()
+            ),
+            new DefaultDiscriminatorBinder(
+                new SimpleValueColumnBinder()
+            ));
     RootBinder rootBinder =
         new RootBinder(
             dataSourceName,

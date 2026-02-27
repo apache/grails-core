@@ -57,6 +57,18 @@ public class MappingCacheHolder {
     }
   }
 
+  /**
+   * Testing method
+   *
+   * @param theClass The domain class
+   * @param mapping The mapping
+   */
+  public void cacheMapping(Class<?> theClass, Mapping mapping) {
+    if (theClass != null && mapping != null) {
+      MAPPING_CACHE.put(theClass, mapping);
+    }
+  }
+
   public void clear() {
     MAPPING_CACHE.clear();
   }
