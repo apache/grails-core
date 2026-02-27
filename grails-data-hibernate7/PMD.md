@@ -48,8 +48,8 @@ EmptyCatchBlock,org.grails.orm.hibernate.cfg.domainbinding.generator.GrailsNativ
 MissingSerialVersionUID,org.grails.orm.hibernate.cfg.domainbinding.generator.GrailsSequenceStyleGenerator,30,YES
 ConstructorCallsOverridableMethod,org.grails.orm.hibernate.cfg.domainbinding.generator.GrailsSequenceStyleGenerator,59,YES
 MissingSerialVersionUID,org.grails.orm.hibernate.cfg.domainbinding.generator.GrailsTableGenerator,30,YES
-ReturnEmptyArrayRatherThanNull,org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernateEmbeddedPersistentEntity,50,
-ReturnEmptyCollectionRatherThanNull,org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernateEmbeddedPersistentEntity,51,
+ReturnEmptyArrayRatherThanNull,org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernateEmbeddedPersistentEntity,50,YES
+ReturnEmptyCollectionRatherThanNull,org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernateEmbeddedPersistentEntity,51,YES
 ReturnEmptyCollectionRatherThanNull,org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernatePersistentEntity,77,
 DataflowAnomalyAnalysis,org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernatePersistentEntity,79,
 NullAssignment,org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernatePersistentEntity,82,

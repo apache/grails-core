@@ -48,7 +48,7 @@ public class HibernateEmbeddedPersistentEntity extends EmbeddedPersistentEntity<
 
   @Override
   public HibernatePersistentProperty[] getCompositeIdentity() {
-    return null;
+    return new HibernatePersistentProperty[0];
   }
 
   @Override
