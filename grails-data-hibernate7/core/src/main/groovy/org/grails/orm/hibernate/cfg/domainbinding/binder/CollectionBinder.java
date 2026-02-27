@@ -58,6 +58,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 /** Handles the binding of collections to the Hibernate runtime meta model. */
+@SuppressWarnings("PMD.DataflowAnomalyAnalysis")
 public class CollectionBinder {
 
   private static final Logger LOG = LoggerFactory.getLogger(CollectionBinder.class);
@@ -211,7 +212,6 @@ public class CollectionBinder {
     one.setIgnoreNotFound(true);
   }
 
-  @SuppressWarnings("PMD.DataflowAnomalyAnalysis")
   private void bindCollectionTable(
       HibernateToManyProperty property,
       @Nonnull InFlightMetadataCollector mappings,
