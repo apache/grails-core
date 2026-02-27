@@ -64,6 +64,7 @@ import org.springframework.context.ConfigurableApplicationContext;
  * @author Burt Beckwith
  * @since 1.0
  */
+@SuppressWarnings({"PMD.DataflowAnomalyAnalysis", "PMD.NonSerializableClass"})
 public class ClosureEventTriggeringInterceptor extends AbstractClosureEventTriggeringInterceptor
     implements Serializable {
 
