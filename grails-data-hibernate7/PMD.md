@@ -70,9 +70,9 @@ EmptyCatchBlock,org.grails.orm.hibernate.cfg.domainbinding.util.CascadeBehavior,
 DataflowAnomalyAnalysis,org.grails.orm.hibernate.cfg.domainbinding.util.CreateKeyForProps,58,YES
 DataflowAnomalyAnalysis,org.grails.orm.hibernate.cfg.domainbinding.util.DefaultColumnNameFetcher,49,YES
 DataflowAnomalyAnalysis,org.grails.orm.hibernate.cfg.domainbinding.util.DefaultColumnNameFetcher,51,YES
-DataflowAnomalyAnalysis,org.grails.orm.hibernate.cfg.domainbinding.util.ForeignKeyColumnCountCalculator,30,
-DataflowAnomalyAnalysis,org.grails.orm.hibernate.cfg.domainbinding.util.ForeignKeyColumnCountCalculator,38,
-DataflowAnomalyAnalysis,org.grails.orm.hibernate.cfg.domainbinding.util.ForeignKeyColumnCountCalculator,41,
+DataflowAnomalyAnalysis,org.grails.orm.hibernate.cfg.domainbinding.util.ForeignKeyColumnCountCalculator,30,YES
+DataflowAnomalyAnalysis,org.grails.orm.hibernate.cfg.domainbinding.util.ForeignKeyColumnCountCalculator,38,YES
+DataflowAnomalyAnalysis,org.grails.orm.hibernate.cfg.domainbinding.util.ForeignKeyColumnCountCalculator,41,YES
 LoggerIsNotStaticFinal,org.grails.orm.hibernate.cfg.domainbinding.util.LogCascadeMapping,30,
 DataflowAnomalyAnalysis,org.grails.orm.hibernate.cfg.domainbinding.util.OrderByClauseBuilder,57,
 UseLocaleWithCaseConversions,org.grails.orm.hibernate.cfg.domainbinding.util.OrderByClauseBuilder,68,

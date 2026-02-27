@@ -24,6 +24,7 @@ import org.grails.datastore.mapping.model.types.ToOne;
 
 // each property may consist of one or many columns (due to composite ids) so in order to get the
 // number of columns required for a column key we have to perform the calculation here
+@SuppressWarnings("PMD.DataflowAnomalyAnalysis")
 public class ForeignKeyColumnCountCalculator {
   public int calculateForeignKeyColumnCount(
       PersistentEntity refDomainClass, String[] propertyNames) {
