@@ -38,6 +38,7 @@ import org.hibernate.engine.jdbc.env.spi.JdbcEnvironment;
 import org.hibernate.mapping.Column;
 import org.hibernate.mapping.ManyToOne;
 
+@SuppressWarnings("PMD.DataflowAnomalyAnalysis")
 public class ManyToOneBinder {
 
   private final MetadataBuildingContext metadataBuildingContext;
