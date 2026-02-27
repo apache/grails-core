@@ -37,6 +37,7 @@ import org.hibernate.mapping.Formula;
 import org.hibernate.mapping.SimpleValue;
 import org.hibernate.mapping.Table;
 
+@SuppressWarnings("PMD.NullAssignment")
 public class SimpleValueBinder {
   private final MetadataBuildingContext metadataBuildingContext;
   private final PersistentEntityNamingStrategy namingStrategy;
