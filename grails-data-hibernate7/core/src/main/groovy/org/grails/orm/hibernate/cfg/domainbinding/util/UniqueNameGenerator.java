@@ -32,6 +32,8 @@ import org.hibernate.mapping.UniqueKey;
 
 public class UniqueNameGenerator {
 
+  private static final int MAX_LENGTH = 30;
+
   public void setGeneratedUniqueName(@NotNull UniqueKey uk) {
     if (uk.getTable() == null) {
       throw new MappingException(
@@ -48,8 +50,8 @@ public class UniqueNameGenerator {
       MessageDigest md = MessageDigest.getInstance("MD5");
       md.update(ukString.getBytes(StandardCharsets.UTF_8));
       String name = "UK" + new BigInteger(1, md.digest()).toString(16);
-      if (name.length() > 30) {
-        name = name.substring(0, 30);
+      if (name.length() > MAX_LENGTH) {
+        name = name.substring(0, MAX_LENGTH);
       }
       uk.setName(name);
     } catch (NoSuchAlgorithmException e) {
