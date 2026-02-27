@@ -36,6 +36,7 @@ import org.hibernate.boot.spi.MetadataBuildingContext;
 import org.hibernate.engine.jdbc.env.spi.JdbcEnvironment;
 import org.hibernate.mapping.SimpleValue;
 
+@SuppressWarnings("PMD.DataflowAnomalyAnalysis")
 public class CompositeIdentifierToManyToOneBinder {
   private final ForeignKeyColumnCountCalculator foreignKeyColumnCountCalculator;
   private final PersistentEntityNamingStrategy namingStrategy;
@@ -68,7 +69,6 @@ public class CompositeIdentifierToManyToOneBinder {
         new SimpleValueBinder(metadataBuildingContext, namingStrategy, jdbcEnvironment));
   }
 
-  @SuppressWarnings("PMD.DataflowAnomalyAnalysis")
   public void bindCompositeIdentifierToManyToOne(
       HibernatePersistentProperty property,
       SimpleValue value,
