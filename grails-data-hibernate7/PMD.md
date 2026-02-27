@@ -33,8 +33,8 @@ DataflowAnomalyAnalysis,org.grails.orm.hibernate.cfg.domainbinding.binder.Grails
 DataflowAnomalyAnalysis,org.grails.orm.hibernate.cfg.domainbinding.binder.ManyToOneBinder,120,YES
 DataflowAnomalyAnalysis,org.grails.orm.hibernate.cfg.domainbinding.binder.NumericColumnConstraintsBinder,36,YES
 DataflowAnomalyAnalysis,org.grails.orm.hibernate.cfg.domainbinding.binder.RootBinder,78,YES
-DataflowAnomalyAnalysis,org.grails.orm.hibernate.cfg.domainbinding.binder.SimpleIdBinder,69,
-DataflowAnomalyAnalysis,org.grails.orm.hibernate.cfg.domainbinding.binder.SimpleIdBinder,73,
+DataflowAnomalyAnalysis,org.grails.orm.hibernate.cfg.domainbinding.binder.SimpleIdBinder,69,YES
+DataflowAnomalyAnalysis,org.grails.orm.hibernate.cfg.domainbinding.binder.SimpleIdBinder,73,YES
 NullAssignment,org.grails.orm.hibernate.cfg.domainbinding.binder.SimpleValueBinder,80,
 NullAssignment,org.grails.orm.hibernate.cfg.domainbinding.binder.SimpleValueBinder,81,
 NullAssignment,org.grails.orm.hibernate.cfg.domainbinding.binder.SimpleValueBinder,82,

@@ -34,6 +34,7 @@ import org.hibernate.mapping.Property;
 import org.hibernate.mapping.RootClass;
 import org.hibernate.mapping.Table;
 
+@SuppressWarnings("PMD.DataflowAnomalyAnalysis")
 public class SimpleIdBinder {
 
   private final MetadataBuildingContext metadataBuildingContext;
