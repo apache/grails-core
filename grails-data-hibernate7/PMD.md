@@ -85,11 +85,11 @@ DataflowAnomalyAnalysis,org.grails.orm.hibernate.cfg.domainbinding.util.TableFor
 DataflowAnomalyAnalysis,org.grails.orm.hibernate.cfg.domainbinding.util.TableForManyCalculator,92,YES
 AvoidLiteralsInIfCondition,org.grails.orm.hibernate.cfg.domainbinding.util.UniqueNameGenerator,51,YES
 CloseResource,org.grails.orm.hibernate.connections.HibernateConnectionSource,53,YES
-CloseResource,org.grails.orm.hibernate.connections.HibernateConnectionSourceFactory,109,
-CloseResource,org.grails.orm.hibernate.connections.HibernateConnectionSourceFactory,172,
-AvoidCatchingThrowable,org.grails.orm.hibernate.connections.HibernateConnectionSourceFactory,237,
-CloseResource,org.grails.orm.hibernate.connections.HibernateConnectionSourceFactory,256,
-DataflowAnomalyAnalysis,org.grails.orm.hibernate.connections.HibernateConnectionSourceFactory,298,
+CloseResource,org.grails.orm.hibernate.connections.HibernateConnectionSourceFactory,109,YES
+CloseResource,org.grails.orm.hibernate.connections.HibernateConnectionSourceFactory,172,YES
+AvoidCatchingThrowable,org.grails.orm.hibernate.connections.HibernateConnectionSourceFactory,237,YES
+CloseResource,org.grails.orm.hibernate.connections.HibernateConnectionSourceFactory,256,YES
+DataflowAnomalyAnalysis,org.grails.orm.hibernate.connections.HibernateConnectionSourceFactory,298,YES
 DataflowAnomalyAnalysis,org.grails.orm.hibernate.query.JpaCriteriaQueryCreator,131,
 DataflowAnomalyAnalysis,org.grails.orm.hibernate.query.JpaFromProvider,62,
 AvoidLiteralsInIfCondition,org.grails.orm.hibernate.query.JpaFromProvider,150,

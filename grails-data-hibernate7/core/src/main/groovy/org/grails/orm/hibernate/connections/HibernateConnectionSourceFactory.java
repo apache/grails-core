@@ -61,6 +61,11 @@ import org.springframework.core.io.Resource;
  * @author Graeme Rocher
  * @since 6.0
  */
+@SuppressWarnings({
+  "PMD.CloseResource",
+  "PMD.AvoidCatchingThrowable",
+  "PMD.DataflowAnomalyAnalysis"
+})
 public class HibernateConnectionSourceFactory
     extends AbstractConnectionSourceFactory<SessionFactory, HibernateConnectionSourceSettings>
     implements ApplicationContextAware, MessageSourceAware {
@@ -193,7 +198,11 @@ public class HibernateConnectionSourceFactory
         hibernateSettings.getConfigLocations(), r -> configuration.configure(r.getURL()));
     applyResources(
         hibernateSettings.getMappingLocations(),
-        r -> configuration.addInputStream(r.getInputStream()));
+        r -> {
+          try (var is = r.getInputStream()) {
+            configuration.addInputStream(is);
+          }
+        });
     applyResources(
         hibernateSettings.getCacheableMappingLocations(),
         r -> configuration.addCacheableFile(r.getFile()));
