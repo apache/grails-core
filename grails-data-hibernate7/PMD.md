@@ -84,7 +84,7 @@ DataflowAnomalyAnalysis,org.grails.orm.hibernate.cfg.domainbinding.util.TableFor
 DataflowAnomalyAnalysis,org.grails.orm.hibernate.cfg.domainbinding.util.TableForManyCalculator,61,YES
 DataflowAnomalyAnalysis,org.grails.orm.hibernate.cfg.domainbinding.util.TableForManyCalculator,92,YES
 AvoidLiteralsInIfCondition,org.grails.orm.hibernate.cfg.domainbinding.util.UniqueNameGenerator,51,YES
-CloseResource,org.grails.orm.hibernate.connections.HibernateConnectionSource,53,
+CloseResource,org.grails.orm.hibernate.connections.HibernateConnectionSource,53,YES
 CloseResource,org.grails.orm.hibernate.connections.HibernateConnectionSourceFactory,109,
 CloseResource,org.grails.orm.hibernate.connections.HibernateConnectionSourceFactory,172,
 AvoidCatchingThrowable,org.grails.orm.hibernate.connections.HibernateConnectionSourceFactory,237,

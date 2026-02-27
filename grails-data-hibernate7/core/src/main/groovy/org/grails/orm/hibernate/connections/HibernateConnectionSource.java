@@ -47,6 +47,7 @@ public class HibernateConnectionSource
   }
 
   @Override
+  @SuppressWarnings("PMD.CloseResource")
   public void close() throws IOException {
     super.close();
     try {
