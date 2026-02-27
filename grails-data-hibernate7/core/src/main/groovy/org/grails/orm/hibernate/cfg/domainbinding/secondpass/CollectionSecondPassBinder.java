@@ -43,6 +43,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 /** Refactored from CollectionBinder to handle collection second pass binding. */
+@SuppressWarnings("PMD.DataflowAnomalyAnalysis")
 public class CollectionSecondPassBinder {
 
   private static final Logger LOG = LoggerFactory.getLogger(CollectionSecondPassBinder.class);
