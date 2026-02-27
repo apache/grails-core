@@ -96,7 +96,7 @@ AvoidLiteralsInIfCondition,org.grails.orm.hibernate.query.JpaFromProvider,150,YE
 ProperCloneImplementation,org.grails.orm.hibernate.query.JpaFromProvider,162,YES
 CloneMethodReturnTypeMustMatchClassName,org.grails.orm.hibernate.query.JpaFromProvider,162,YES
 CloneThrowsCloneNotSupportedException,org.grails.orm.hibernate.query.JpaFromProvider,162,YES
-MissingSerialVersionUID,org.grails.orm.hibernate.query.PagedResultList,31,
+MissingSerialVersionUID,org.grails.orm.hibernate.query.PagedResultList,31,YES
 AvoidAccessibilityAlteration,org.grails.orm.hibernate.support.ClosureEventListener,143,
 AvoidAccessibilityAlteration,org.grails.orm.hibernate.support.ClosureEventListener,145,
 EmptyCatchBlock,org.grails.orm.hibernate.support.ClosureEventListener,146,

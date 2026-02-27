@@ -30,6 +30,8 @@ import org.hibernate.query.Query;
 
 public class PagedResultList extends grails.gorm.PagedResultList {
 
+  private static final long serialVersionUID = 1L;
+
   private final CriteriaQuery criteriaQuery;
   private final Root queryRoot;
   private final CriteriaBuilder criteriaBuilder;
