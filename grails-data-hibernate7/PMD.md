@@ -91,11 +91,11 @@ AvoidCatchingThrowable,org.grails.orm.hibernate.connections.HibernateConnectionS
 CloseResource,org.grails.orm.hibernate.connections.HibernateConnectionSourceFactory,256,YES
 DataflowAnomalyAnalysis,org.grails.orm.hibernate.connections.HibernateConnectionSourceFactory,298,YES
 DataflowAnomalyAnalysis,org.grails.orm.hibernate.query.JpaCriteriaQueryCreator,131,YES
-DataflowAnomalyAnalysis,org.grails.orm.hibernate.query.JpaFromProvider,62,
-AvoidLiteralsInIfCondition,org.grails.orm.hibernate.query.JpaFromProvider,150,
-ProperCloneImplementation,org.grails.orm.hibernate.query.JpaFromProvider,162,
-CloneMethodReturnTypeMustMatchClassName,org.grails.orm.hibernate.query.JpaFromProvider,162,
-CloneThrowsCloneNotSupportedException,org.grails.orm.hibernate.query.JpaFromProvider,162,
+DataflowAnomalyAnalysis,org.grails.orm.hibernate.query.JpaFromProvider,62,YES
+AvoidLiteralsInIfCondition,org.grails.orm.hibernate.query.JpaFromProvider,150,YES
+ProperCloneImplementation,org.grails.orm.hibernate.query.JpaFromProvider,162,YES
+CloneMethodReturnTypeMustMatchClassName,org.grails.orm.hibernate.query.JpaFromProvider,162,YES
+CloneThrowsCloneNotSupportedException,org.grails.orm.hibernate.query.JpaFromProvider,162,YES
 MissingSerialVersionUID,org.grails.orm.hibernate.query.PagedResultList,31,
 AvoidAccessibilityAlteration,org.grails.orm.hibernate.support.ClosureEventListener,143,
 AvoidAccessibilityAlteration,org.grails.orm.hibernate.support.ClosureEventListener,145,
