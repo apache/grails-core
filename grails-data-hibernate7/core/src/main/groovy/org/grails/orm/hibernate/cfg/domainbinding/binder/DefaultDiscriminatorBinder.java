@@ -45,10 +45,6 @@ public class DefaultDiscriminatorBinder {
 
     // Bind with default column configuration
     simpleValueColumnBinder.bindSimpleValue(
-        discriminator,
-        STRING_TYPE,
-        JPA_DEFAULT_DISCRIMINATOR_TYPE,
-        false
-    );
+        discriminator, STRING_TYPE, JPA_DEFAULT_DISCRIMINATOR_TYPE, false);
   }
 }

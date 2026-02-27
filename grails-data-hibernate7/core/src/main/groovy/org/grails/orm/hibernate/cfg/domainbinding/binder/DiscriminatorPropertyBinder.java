@@ -18,19 +18,13 @@
  */
 package org.grails.orm.hibernate.cfg.domainbinding.binder;
 
-import static org.grails.orm.hibernate.cfg.domainbinding.binder.GrailsDomainBinder.JPA_DEFAULT_DISCRIMINATOR_TYPE;
-
-import org.grails.orm.hibernate.cfg.ColumnConfig;
 import org.grails.orm.hibernate.cfg.DiscriminatorConfig;
 import org.grails.orm.hibernate.cfg.Mapping;
 import org.grails.orm.hibernate.cfg.MappingCacheHolder;
 import org.hibernate.boot.spi.MetadataBuildingContext;
 import org.hibernate.mapping.BasicValue;
-import org.hibernate.mapping.Column;
-import org.hibernate.mapping.Formula;
 import org.hibernate.mapping.RootClass;
 import org.hibernate.mapping.SimpleValue;
-import org.hibernate.mapping.Table;
 
 @SuppressWarnings("PMD.DataflowAnomalyAnalysis")
 public class DiscriminatorPropertyBinder {

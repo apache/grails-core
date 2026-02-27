@@ -35,7 +35,12 @@ import java.util.stream.Stream;
 import org.grails.datastore.gorm.query.criteria.DetachedAssociationCriteria;
 import org.hibernate.query.criteria.JpaCriteriaQuery;
 
-@SuppressWarnings({"PMD.DataflowAnomalyAnalysis", "PMD.ProperCloneImplementation", "PMD.CloneMethodReturnTypeMustMatchClassName", "PMD.CloneThrowsCloneNotSupportedException"})
+@SuppressWarnings({
+  "PMD.DataflowAnomalyAnalysis",
+  "PMD.ProperCloneImplementation",
+  "PMD.CloneMethodReturnTypeMustMatchClassName",
+  "PMD.CloneThrowsCloneNotSupportedException"
+})
 public class JpaFromProvider implements Cloneable {
 
   private static final int SINGLE_PROPERTY = 1;

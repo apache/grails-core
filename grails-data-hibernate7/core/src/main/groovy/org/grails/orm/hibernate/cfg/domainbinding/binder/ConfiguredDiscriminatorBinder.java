@@ -48,7 +48,8 @@ public class ConfiguredDiscriminatorBinder {
    * @param discriminator The discriminator value to configure
    * @param config The discriminator configuration
    */
-  public void bindConfiguredDiscriminator(RootClass entity, SimpleValue discriminator, DiscriminatorConfig config) {
+  public void bindConfiguredDiscriminator(
+      RootClass entity, SimpleValue discriminator, DiscriminatorConfig config) {
     // Set discriminator value
     entity.setDiscriminatorValue(config.getValue());
 
@@ -73,25 +74,21 @@ public class ConfiguredDiscriminatorBinder {
       return STRING_TYPE;
     }
 
-    return (type instanceof Class)
-      ? ((Class<?>) type).getName()
-      : type.toString();
+    return (type instanceof Class) ? ((Class<?>) type).getName() : type.toString();
   }
 
-  private void bindDiscriminatorWithFormula(SimpleValue discriminator, String typeName, String formula) {
+  private void bindDiscriminatorWithFormula(
+      SimpleValue discriminator, String typeName, String formula) {
     discriminator.setTypeName(typeName);
     Formula f = new Formula();
     f.setFormula(formula);
     discriminator.addFormula(f);
   }
 
-  private void bindDiscriminatorWithColumn(SimpleValue discriminator, String typeName, ColumnConfig columnConfig) {
+  private void bindDiscriminatorWithColumn(
+      SimpleValue discriminator, String typeName, ColumnConfig columnConfig) {
     simpleValueColumnBinder.bindSimpleValue(
-        discriminator,
-        typeName,
-        JPA_DEFAULT_DISCRIMINATOR_TYPE,
-        false
-    );
+        discriminator, typeName, JPA_DEFAULT_DISCRIMINATOR_TYPE, false);
 
     if (columnConfig != null) {
       configureDiscriminatorColumn(discriminator, columnConfig);
