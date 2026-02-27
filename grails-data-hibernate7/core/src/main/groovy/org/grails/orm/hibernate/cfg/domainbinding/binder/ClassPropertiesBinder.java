@@ -33,6 +33,7 @@ import org.hibernate.mapping.Value;
  * @author Graeme Rocher
  * @since 7.0
  */
+@SuppressWarnings("PMD.DataflowAnomalyAnalysis")
 public class ClassPropertiesBinder {
 
   private final GrailsPropertyBinder grailsPropertyBinder;
@@ -63,7 +64,6 @@ public class ClassPropertiesBinder {
    * @param persistentClass The Hibernate PersistentClass instance
    * @param mappings The Hibernate InFlightMetadataCollector instance
    */
-  @SuppressWarnings("PMD.DataflowAnomalyAnalysis")
   public void bindClassProperties(
       @Nonnull GrailsHibernatePersistentEntity domainClass,
       PersistentClass persistentClass,

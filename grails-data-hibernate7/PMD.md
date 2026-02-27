@@ -13,7 +13,7 @@ DataflowAnomalyAnalysis,org.grails.orm.hibernate.cfg.HibernateMappingContextConf
 DataflowAnomalyAnalysis,org.grails.orm.hibernate.cfg.HibernateMappingContextConfiguration,275,YES
 CloseResource,org.grails.orm.hibernate.cfg.HibernateMappingContextConfiguration,290,YES
 CloseResource,org.grails.orm.hibernate.cfg.HibernateMappingContextConfiguration,315,YES
-DataflowAnomalyAnalysis,org.grails.orm.hibernate.cfg.domainbinding.binder.ClassPropertiesBinder,72,
+DataflowAnomalyAnalysis,org.grails.orm.hibernate.cfg.domainbinding.binder.ClassPropertiesBinder,72,YES
 DataflowAnomalyAnalysis,org.grails.orm.hibernate.cfg.domainbinding.binder.CollectionBinder,228,
 DataflowAnomalyAnalysis,org.grails.orm.hibernate.cfg.domainbinding.binder.CollectionBinder,229,
 NullAssignment,org.grails.orm.hibernate.cfg.domainbinding.binder.ColumnBinder,80,
