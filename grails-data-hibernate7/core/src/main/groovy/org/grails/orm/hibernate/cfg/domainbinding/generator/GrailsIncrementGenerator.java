@@ -39,6 +39,8 @@ import org.hibernate.id.IncrementGenerator;
  */
 public class GrailsIncrementGenerator extends IncrementGenerator {
 
+  private static final long serialVersionUID = 1L;
+
   public GrailsIncrementGenerator(
       GeneratorCreationContext context,
       Identity mappedId,
