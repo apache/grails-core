@@ -50,10 +50,10 @@ ConstructorCallsOverridableMethod,org.grails.orm.hibernate.cfg.domainbinding.gen
 MissingSerialVersionUID,org.grails.orm.hibernate.cfg.domainbinding.generator.GrailsTableGenerator,30,YES
 ReturnEmptyArrayRatherThanNull,org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernateEmbeddedPersistentEntity,50,YES
 ReturnEmptyCollectionRatherThanNull,org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernateEmbeddedPersistentEntity,51,YES
-ReturnEmptyCollectionRatherThanNull,org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernatePersistentEntity,77,
-DataflowAnomalyAnalysis,org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernatePersistentEntity,79,
-NullAssignment,org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernatePersistentEntity,82,
-DataflowAnomalyAnalysis,org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernatePersistentEntity,82,
+ReturnEmptyCollectionRatherThanNull,org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernatePersistentEntity,77,YES
+DataflowAnomalyAnalysis,org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernatePersistentEntity,79,YES
+NullAssignment,org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernatePersistentEntity,82,YES
+DataflowAnomalyAnalysis,org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernatePersistentEntity,82,YES
 DataflowAnomalyAnalysis,org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernatePersistentProperty,113,
 EmptyCatchBlock,org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernatePersistentProperty,120,
 ReturnEmptyCollectionRatherThanNull,org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernatePersistentProperty,198,

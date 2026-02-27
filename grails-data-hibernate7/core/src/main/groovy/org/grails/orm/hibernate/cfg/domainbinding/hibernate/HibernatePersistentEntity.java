@@ -71,10 +71,11 @@ public class HibernatePersistentEntity extends AbstractPersistentEntity<Mapping>
   }
 
   @Override
+  @SuppressWarnings({"PMD.DataflowAnomalyAnalysis", "PMD.NullAssignment"})
   public HibernatePersistentProperty[] getCompositeIdentity() {
     PersistentProperty[] compositeIdentity = super.getCompositeIdentity();
     if (compositeIdentity == null) {
-      return null;
+      return new HibernatePersistentProperty[0];
     }
     HibernatePersistentProperty[] result =
         new HibernatePersistentProperty[compositeIdentity.length];
