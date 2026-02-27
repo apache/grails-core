@@ -30,6 +30,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 /** Binder for root classes. */
+@SuppressWarnings("PMD.DataflowAnomalyAnalysis")
 public class RootBinder {
 
   private static final Logger LOG = LoggerFactory.getLogger(RootBinder.class);
