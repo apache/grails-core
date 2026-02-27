@@ -30,6 +30,7 @@ import org.hibernate.mapping.Component;
 import org.hibernate.mapping.PersistentClass;
 import org.hibernate.mapping.Table;
 
+@SuppressWarnings("PMD.DataflowAnomalyAnalysis")
 public class ComponentBinder {
 
   private final MetadataBuildingContext metadataBuildingContext;
@@ -50,7 +51,6 @@ public class ComponentBinder {
     this.grailsPropertyBinder = grailsPropertyBinder;
   }
 
-  @SuppressWarnings("PMD.DataflowAnomalyAnalysis")
   public Component bindComponent(
       PersistentClass owner,
       HibernateEmbeddedProperty embeddedProperty,

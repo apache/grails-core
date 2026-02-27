@@ -22,9 +22,9 @@ NullAssignment,org.grails.orm.hibernate.cfg.domainbinding.binder.ColumnBinder,82
 NullAssignment,org.grails.orm.hibernate.cfg.domainbinding.binder.ColumnBinder,83,YES
 NullAssignment,org.grails.orm.hibernate.cfg.domainbinding.binder.ColumnBinder,84,YES
 DataflowAnomalyAnalysis,org.grails.orm.hibernate.cfg.domainbinding.binder.ColumnBinder,139,YES
-DataflowAnomalyAnalysis,org.grails.orm.hibernate.cfg.domainbinding.binder.ComponentBinder,68,
-DataflowAnomalyAnalysis,org.grails.orm.hibernate.cfg.domainbinding.binder.ComponentBinder,69,
-DataflowAnomalyAnalysis,org.grails.orm.hibernate.cfg.domainbinding.binder.ComponentBinder,70,
+DataflowAnomalyAnalysis,org.grails.orm.hibernate.cfg.domainbinding.binder.ComponentBinder,68,YES
+DataflowAnomalyAnalysis,org.grails.orm.hibernate.cfg.domainbinding.binder.ComponentBinder,69,YES
+DataflowAnomalyAnalysis,org.grails.orm.hibernate.cfg.domainbinding.binder.ComponentBinder,70,YES
 DataflowAnomalyAnalysis,org.grails.orm.hibernate.cfg.domainbinding.binder.CompositeIdBinder,69,
 DataflowAnomalyAnalysis,org.grails.orm.hibernate.cfg.domainbinding.binder.CompositeIdentifierToManyToOneBinder,85,
 DataflowAnomalyAnalysis,org.grails.orm.hibernate.cfg.domainbinding.binder.DiscriminatorPropertyBinder,68,
