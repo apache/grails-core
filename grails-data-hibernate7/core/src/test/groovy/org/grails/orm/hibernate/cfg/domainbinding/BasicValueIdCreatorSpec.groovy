@@ -57,7 +57,7 @@ class BasicValueIdCreatorSpec extends HibernateGormDatastoreSpec {
         Generator generator = generatorCreator.createGenerator(context)
 
         then:
-        1 * grailsSequenceWrapper.getGenerator(generatorName, context, mappedId, domainClass, jdbcEnvironment, namingStrategy) >> mockGenerator
+        1 * grailsSequenceWrapper.getGenerator(generatorName, _, mappedId, domainClass, jdbcEnvironment, namingStrategy) >> mockGenerator
         generator == mockGenerator
 
         where:
@@ -86,7 +86,7 @@ class BasicValueIdCreatorSpec extends HibernateGormDatastoreSpec {
         Generator generator = generatorCreator.createGenerator(context)
 
         then:
-        1 * grailsSequenceWrapper.getGenerator(GrailsSequenceGeneratorEnum.NATIVE.toString(), context, null, domainClass, jdbcEnvironment, namingStrategy) >> mockGenerator
+        1 * grailsSequenceWrapper.getGenerator(GrailsSequenceGeneratorEnum.NATIVE.toString(), _, null, domainClass, jdbcEnvironment, namingStrategy) >> mockGenerator
         generator == mockGenerator
     }
 
@@ -102,7 +102,7 @@ class BasicValueIdCreatorSpec extends HibernateGormDatastoreSpec {
         Generator generator = generatorCreator.createGenerator(context)
 
         then:
-        1 * grailsSequenceWrapper.getGenerator(GrailsSequenceGeneratorEnum.SEQUENCE_IDENTITY.toString(), context, null, domainClass, jdbcEnvironment, namingStrategy) >> mockGenerator
+        1 * grailsSequenceWrapper.getGenerator(GrailsSequenceGeneratorEnum.SEQUENCE_IDENTITY.toString(), _, null, domainClass, jdbcEnvironment, namingStrategy) >> mockGenerator
         generator == mockGenerator
     }
 
@@ -120,7 +120,7 @@ class BasicValueIdCreatorSpec extends HibernateGormDatastoreSpec {
         Generator generator = generatorCreator.createGenerator(context)
 
         then:
-        1 * grailsSequenceWrapper.getGenerator(GrailsSequenceGeneratorEnum.SEQUENCE_IDENTITY.toString(), context, mappedId, domainClass, jdbcEnvironment, namingStrategy) >> mockGenerator
+        1 * grailsSequenceWrapper.getGenerator(GrailsSequenceGeneratorEnum.SEQUENCE_IDENTITY.toString(), _, mappedId, domainClass, jdbcEnvironment, namingStrategy) >> mockGenerator
         generator == mockGenerator
     }
 
@@ -137,6 +137,6 @@ class BasicValueIdCreatorSpec extends HibernateGormDatastoreSpec {
         generatorCreator.createGenerator(context)
 
         then:
-        1 * grailsSequenceWrapper.getGenerator("custom", context, mappedId, domainClass, jdbcEnvironment, namingStrategy) >> Mock(Generator)
+        1 * grailsSequenceWrapper.getGenerator("custom", _, mappedId, domainClass, jdbcEnvironment, namingStrategy) >> Mock(Generator)
     }
 }

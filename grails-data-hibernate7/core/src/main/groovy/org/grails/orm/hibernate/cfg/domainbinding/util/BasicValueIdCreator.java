@@ -67,7 +67,15 @@ public class BasicValueIdCreator {
     // because table differs)
     String generatorName = Identity.determineGeneratorName(mappedId, useSequence);
     id.setCustomIdGeneratorCreator(
-        context -> createGenerator(mappedId, domainClass, context, generatorName));
+        context ->
+            createGenerator(
+                mappedId,
+                domainClass,
+                context.getValue() == null
+                    ? new org.grails.orm.hibernate.cfg.domainbinding.util
+                        .GeneratorCreationContextWrapper(context, id)
+                    : context,
+                generatorName));
     return id;
   }
 

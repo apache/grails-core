@@ -23,7 +23,7 @@ import spock.lang.Shared
 import spock.lang.Unroll
 
 @Testcontainers
-@Requires({ HibernateGormDatastoreSpec.isDockerAvailable() })
+@Requires({ isDockerAvailable() })
 class GrailsSequenceGeneratorEnumSpec extends HibernateGormDatastoreSpec {
 
     @Shared PostgreSQLContainer postgres = new PostgreSQLContainer("postgres:16")
@@ -52,9 +52,11 @@ class GrailsSequenceGeneratorEnumSpec extends HibernateGormDatastoreSpec {
         // Use the real PostgreSQL database from the running datastore so DDL type
         // registries (needed by TableGenerator.registerExportables) are correct.
         def db = datastore.metadata.database
+        def table = new org.hibernate.mapping.Table("grails_sequence_generator_enum_spec_entity")
         def column = new Column("id")
         def value = Mock(Value) {
             getColumns() >> [column]
+            getTable()   >> table
         }
         def property = Mock(Property) {
             getName() >> "id"
@@ -67,6 +69,7 @@ class GrailsSequenceGeneratorEnumSpec extends HibernateGormDatastoreSpec {
             getServiceRegistry() >> serviceRegistry
             getDatabase()        >> db
             getProperty()        >> property
+            getValue()           >> value
             getType()            >> type
         }
     }

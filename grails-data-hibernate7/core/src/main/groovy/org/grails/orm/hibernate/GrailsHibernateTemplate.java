@@ -37,7 +37,6 @@ import java.util.List;
 import javax.sql.DataSource;
 import org.codehaus.groovy.runtime.DefaultGroovyMethods;
 import org.hibernate.*;
-import org.hibernate.engine.jdbc.connections.internal.DatasourceConnectionProviderImpl;
 import org.hibernate.engine.jdbc.connections.spi.ConnectionProvider;
 import org.hibernate.engine.spi.SessionFactoryImplementor;
 import org.hibernate.engine.spi.SessionImplementor;
@@ -97,12 +96,12 @@ public class GrailsHibernateTemplate implements IHibernateTemplate {
         ((SessionFactoryImplementor) sessionFactory)
             .getServiceRegistry()
             .getService(ConnectionProvider.class);
-    if (connectionProvider instanceof DatasourceConnectionProviderImpl) {
-      this.dataSource = ((DatasourceConnectionProviderImpl) connectionProvider).getDataSource();
-      if (dataSource instanceof TransactionAwareDataSourceProxy) {
-        this.dataSource = ((TransactionAwareDataSourceProxy) dataSource).getTargetDataSource();
+    this.dataSource = connectionProvider.unwrap(DataSource.class);
+    if (this.dataSource != null) {
+      if (this.dataSource instanceof TransactionAwareDataSourceProxy) {
+        this.dataSource = ((TransactionAwareDataSourceProxy) this.dataSource).getTargetDataSource();
       }
-      jdbcExceptionTranslator = new SQLErrorCodeSQLExceptionTranslator(dataSource);
+      jdbcExceptionTranslator = new SQLErrorCodeSQLExceptionTranslator(this.dataSource);
     } else {
       // must be in unit test mode, setup default translator
       SQLErrorCodeSQLExceptionTranslator sqlErrorCodeSQLExceptionTranslator =

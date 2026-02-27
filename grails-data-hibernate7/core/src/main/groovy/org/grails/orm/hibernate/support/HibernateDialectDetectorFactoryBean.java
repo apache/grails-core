@@ -193,6 +193,11 @@ public class HibernateDialectDetectorFactoryBean implements FactoryBean<String>,
           public ServiceRegistry getParentServiceRegistry() {
             return null;
           }
+
+          @Override
+          public boolean isActive() {
+            return true;
+          }
         });
     return factory;
   }

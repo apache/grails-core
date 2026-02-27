@@ -109,7 +109,14 @@ public class SimpleValueBinder {
     String generator = propertyConfig.getGenerator();
     if (generator != null && simpleValue instanceof BasicValue basicValue) {
       basicValue.setCustomIdGeneratorCreator(
-          context -> createGenerator(property, context, generator));
+          context ->
+              createGenerator(
+                  property,
+                  context.getValue() == null
+                      ? new org.grails.orm.hibernate.cfg.domainbinding.util
+                          .GeneratorCreationContextWrapper(context, basicValue)
+                      : context,
+                  generator));
     }
 
     if (propertyConfig.isDerived() && !(property instanceof TenantId)) {
