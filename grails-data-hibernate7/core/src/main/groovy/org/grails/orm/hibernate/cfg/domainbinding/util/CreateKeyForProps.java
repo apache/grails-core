@@ -28,6 +28,7 @@ import org.hibernate.MappingException;
 import org.hibernate.mapping.Column;
 import org.hibernate.mapping.Table;
 
+@SuppressWarnings("PMD.DataflowAnomalyAnalysis")
 public class CreateKeyForProps {
 
   private final ColumnNameForPropertyAndPathFetcher columnNameForPropertyAndPathFetcher;
