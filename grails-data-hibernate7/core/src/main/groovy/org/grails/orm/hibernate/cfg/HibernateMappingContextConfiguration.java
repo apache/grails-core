@@ -187,14 +187,14 @@ public class HibernateMappingContextConfiguration extends Configuration
    */
   public void scanPackages(String... packagesToScan) throws HibernateException {
     try {
+      MetadataReaderFactory readerFactory =
+          new CachingMetadataReaderFactory(resourcePatternResolver);
       for (String pkg : packagesToScan) {
         String pattern =
             ResourcePatternResolver.CLASSPATH_ALL_URL_PREFIX
                 + ClassUtils.convertClassNameToResourcePath(pkg)
                 + RESOURCE_PATTERN;
         Resource[] resources = resourcePatternResolver.getResources(pattern);
-        MetadataReaderFactory readerFactory =
-            new CachingMetadataReaderFactory(resourcePatternResolver);
         for (Resource resource : resources) {
           if (resource.isReadable()) {
             MetadataReader reader = readerFactory.getMetadataReader(resource);
@@ -318,13 +318,13 @@ public class HibernateMappingContextConfiguration extends Configuration
         createStandardServiceRegistryBuilder(bootstrapServiceRegistry)
             .applySettings(getProperties());
 
-    StandardServiceRegistry serviceRegistry = standardServiceRegistryBuilder.build();
+    StandardServiceRegistry ssr = standardServiceRegistryBuilder.build();
     try {
-      sessionFactory = super.buildSessionFactory(serviceRegistry);
+      sessionFactory = super.buildSessionFactory(ssr);
     } catch (Exception e) {
       throw new RuntimeException(e);
     }
-    this.serviceRegistry = serviceRegistry;
+    this.serviceRegistry = ssr;
 
     return sessionFactory;
   }
