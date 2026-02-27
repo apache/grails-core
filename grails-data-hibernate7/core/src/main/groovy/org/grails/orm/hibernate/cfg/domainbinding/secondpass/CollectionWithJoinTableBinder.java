@@ -38,6 +38,7 @@ import org.hibernate.mapping.*;
 import org.hibernate.mapping.Collection;
 
 /** Binds a collection with a join table. */
+@SuppressWarnings("PMD.DataflowAnomalyAnalysis")
 public class CollectionWithJoinTableBinder {
 
   private final MetadataBuildingContext metadataBuildingContext;

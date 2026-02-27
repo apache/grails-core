@@ -58,7 +58,7 @@ DataflowAnomalyAnalysis,org.grails.orm.hibernate.cfg.domainbinding.hibernate.Hib
 EmptyCatchBlock,org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernatePersistentProperty,120,YES
 ReturnEmptyCollectionRatherThanNull,org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernatePersistentProperty,198,YES
 DataflowAnomalyAnalysis,org.grails.orm.hibernate.cfg.domainbinding.secondpass.CollectionSecondPassBinder,94,YES
-DataflowAnomalyAnalysis,org.grails.orm.hibernate.cfg.domainbinding.secondpass.CollectionWithJoinTableBinder,96,
+DataflowAnomalyAnalysis,org.grails.orm.hibernate.cfg.domainbinding.secondpass.CollectionWithJoinTableBinder,96,YES
 NonSerializableClass,org.grails.orm.hibernate.cfg.domainbinding.secondpass.ListSecondPass,32,
 DataflowAnomalyAnalysis,org.grails.orm.hibernate.cfg.domainbinding.secondpass.ListSecondPassBinder,73,
 DataflowAnomalyAnalysis,org.grails.orm.hibernate.cfg.domainbinding.secondpass.ListSecondPassBinder,106,
