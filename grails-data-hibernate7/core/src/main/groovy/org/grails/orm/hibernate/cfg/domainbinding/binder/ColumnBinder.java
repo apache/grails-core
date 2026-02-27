@@ -36,7 +36,7 @@ import org.hibernate.mapping.Table;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-@SuppressWarnings("PMD.NullAssignment")
+@SuppressWarnings({"PMD.NullAssignment", "PMD.DataflowAnomalyAnalysis"})
 public class ColumnBinder {
 
   private static final Logger LOG = LoggerFactory.getLogger(ColumnBinder.class);
@@ -94,7 +94,6 @@ public class ColumnBinder {
    * @param path
    * @param table The table name
    */
-  @SuppressWarnings("PMD.DataflowAnomalyAnalysis")
   public void bindColumn(
       HibernatePersistentProperty property,
       HibernatePersistentProperty parentProperty,
