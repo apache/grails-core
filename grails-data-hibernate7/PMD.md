@@ -74,11 +74,11 @@ DataflowAnomalyAnalysis,org.grails.orm.hibernate.cfg.domainbinding.util.ForeignK
 DataflowAnomalyAnalysis,org.grails.orm.hibernate.cfg.domainbinding.util.ForeignKeyColumnCountCalculator,38,YES
 DataflowAnomalyAnalysis,org.grails.orm.hibernate.cfg.domainbinding.util.ForeignKeyColumnCountCalculator,41,YES
 LoggerIsNotStaticFinal,org.grails.orm.hibernate.cfg.domainbinding.util.LogCascadeMapping,30,YES
-DataflowAnomalyAnalysis,org.grails.orm.hibernate.cfg.domainbinding.util.OrderByClauseBuilder,57,
-UseLocaleWithCaseConversions,org.grails.orm.hibernate.cfg.domainbinding.util.OrderByClauseBuilder,68,
-DataflowAnomalyAnalysis,org.grails.orm.hibernate.cfg.domainbinding.util.OrderByClauseBuilder,95,
-DataflowAnomalyAnalysis,org.grails.orm.hibernate.cfg.domainbinding.util.OrderByClauseBuilder,96,
-CompareObjectsWithEquals,org.grails.orm.hibernate.cfg.domainbinding.util.OrderByClauseBuilder,106,
+DataflowAnomalyAnalysis,org.grails.orm.hibernate.cfg.domainbinding.util.OrderByClauseBuilder,57,YES
+UseLocaleWithCaseConversions,org.grails.orm.hibernate.cfg.domainbinding.util.OrderByClauseBuilder,68,YES
+DataflowAnomalyAnalysis,org.grails.orm.hibernate.cfg.domainbinding.util.OrderByClauseBuilder,95,YES
+DataflowAnomalyAnalysis,org.grails.orm.hibernate.cfg.domainbinding.util.OrderByClauseBuilder,96,YES
+CompareObjectsWithEquals,org.grails.orm.hibernate.cfg.domainbinding.util.OrderByClauseBuilder,106,YES
 DataflowAnomalyAnalysis,org.grails.orm.hibernate.cfg.domainbinding.util.TableForManyCalculator,56,
 DataflowAnomalyAnalysis,org.grails.orm.hibernate.cfg.domainbinding.util.TableForManyCalculator,59,
 DataflowAnomalyAnalysis,org.grails.orm.hibernate.cfg.domainbinding.util.TableForManyCalculator,61,

@@ -20,6 +20,7 @@ package org.grails.orm.hibernate.cfg.domainbinding.util;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Locale;
 import java.util.stream.Collectors;
 import java.util.stream.StreamSupport;
 import org.grails.datastore.mapping.model.DatastoreConfigurationException;
@@ -30,6 +31,7 @@ import org.hibernate.mapping.Selectable;
 import org.hibernate.mapping.SingleTableSubclass;
 
 /** Utility class to build SQL order by clauses from HQL-style order by strings. */
+@SuppressWarnings("PMD.DataflowAnomalyAnalysis")
 public class OrderByClauseBuilder {
 
   public String buildOrderByClause(
@@ -65,7 +67,7 @@ public class OrderByClauseBuilder {
           throw new DatastoreConfigurationException(
               "Error while parsing sort clause: " + hqlOrderBy + " (" + role + ")");
         }
-        currentEntry.direction = token.toLowerCase();
+        currentEntry.direction = token.toLowerCase(Locale.ROOT);
       } else {
         if (currentEntry != null && currentEntry.direction == null) {
           currentEntry.direction = "asc";
@@ -103,7 +105,7 @@ public class OrderByClauseBuilder {
   private String getTablePrefix(Property p, PersistentClass associatedClass) {
     PersistentClass pc = p.getPersistentClass();
     if (pc == null
-        || pc == associatedClass
+        || pc.equals(associatedClass)
         || (associatedClass instanceof SingleTableSubclass
             && pc.getMappedClass().isAssignableFrom(associatedClass.getMappedClass()))) {
       return "";
