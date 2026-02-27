@@ -148,6 +148,7 @@ public class HibernateCriteriaBuilder extends AbstractHibernateCriteriaBuilder {
      * @see #createAlias(String, String)
      */
     public Criteria createAlias(String associationPath, String alias, int joinType) {
+        aliasMap.put(associationPath, alias);
         return criteria.createAlias(associationPath, alias, JoinType.parse(joinType));
     }
 
