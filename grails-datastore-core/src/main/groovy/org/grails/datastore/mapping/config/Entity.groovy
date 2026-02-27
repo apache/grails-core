@@ -37,15 +37,15 @@ import org.grails.datastore.mapping.model.config.GormProperties
 class Entity<P extends Property> {
 
     /**
-     * @deprecated Use {@link ConnectionSource#DEFAULT} instead
+     * @deprecated Use {@link ConnectionSource#ALL} instead
      */
-    @Deprecated
+    @Deprecated(forRemoval = true)
     public static final String ALL_DATA_SOURCES = ConnectionSource.ALL
 
     /**
-     * @deprecated Use {@link ConnectionSource#ALL} instead
+     * @deprecated Use {@link ConnectionSource#DEFAULT} instead
      */
-    @Deprecated
+    @Deprecated(forRemoval = true)
     public static final String DEFAULT_DATA_SOURCE = ConnectionSource.DEFAULT
 
     /**
