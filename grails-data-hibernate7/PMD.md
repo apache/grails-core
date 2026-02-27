@@ -79,10 +79,10 @@ UseLocaleWithCaseConversions,org.grails.orm.hibernate.cfg.domainbinding.util.Ord
 DataflowAnomalyAnalysis,org.grails.orm.hibernate.cfg.domainbinding.util.OrderByClauseBuilder,95,YES
 DataflowAnomalyAnalysis,org.grails.orm.hibernate.cfg.domainbinding.util.OrderByClauseBuilder,96,YES
 CompareObjectsWithEquals,org.grails.orm.hibernate.cfg.domainbinding.util.OrderByClauseBuilder,106,YES
-DataflowAnomalyAnalysis,org.grails.orm.hibernate.cfg.domainbinding.util.TableForManyCalculator,56,
-DataflowAnomalyAnalysis,org.grails.orm.hibernate.cfg.domainbinding.util.TableForManyCalculator,59,
-DataflowAnomalyAnalysis,org.grails.orm.hibernate.cfg.domainbinding.util.TableForManyCalculator,61,
-DataflowAnomalyAnalysis,org.grails.orm.hibernate.cfg.domainbinding.util.TableForManyCalculator,92,
+DataflowAnomalyAnalysis,org.grails.orm.hibernate.cfg.domainbinding.util.TableForManyCalculator,56,YES
+DataflowAnomalyAnalysis,org.grails.orm.hibernate.cfg.domainbinding.util.TableForManyCalculator,59,YES
+DataflowAnomalyAnalysis,org.grails.orm.hibernate.cfg.domainbinding.util.TableForManyCalculator,61,YES
+DataflowAnomalyAnalysis,org.grails.orm.hibernate.cfg.domainbinding.util.TableForManyCalculator,92,YES
 AvoidLiteralsInIfCondition,org.grails.orm.hibernate.cfg.domainbinding.util.UniqueNameGenerator,51,
 CloseResource,org.grails.orm.hibernate.connections.HibernateConnectionSource,53,
 CloseResource,org.grails.orm.hibernate.connections.HibernateConnectionSourceFactory,109,

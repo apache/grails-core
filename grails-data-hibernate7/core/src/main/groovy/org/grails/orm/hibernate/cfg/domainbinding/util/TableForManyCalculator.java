@@ -31,6 +31,7 @@ import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernateManyToManyP
 import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernatePersistentProperty;
 import org.hibernate.MappingException;
 
+@SuppressWarnings("PMD.DataflowAnomalyAnalysis")
 public class TableForManyCalculator {
 
   private final PersistentEntityNamingStrategy namingStrategy;
