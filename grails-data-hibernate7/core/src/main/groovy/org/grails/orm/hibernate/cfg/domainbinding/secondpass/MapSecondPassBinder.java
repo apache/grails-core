@@ -40,6 +40,7 @@ import org.hibernate.mapping.SimpleValue;
 import org.hibernate.type.StandardBasicTypes;
 
 /** Refactored from CollectionBinder to handle map second pass binding. */
+@SuppressWarnings("PMD.DataflowAnomalyAnalysis")
 public class MapSecondPassBinder {
   private final MetadataBuildingContext metadataBuildingContext;
   private final PersistentEntityNamingStrategy namingStrategy;
