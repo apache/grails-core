@@ -47,6 +47,7 @@ class BeanPropertyAccessorImpl implements BeanPropertyAccessor {
 
     Object rootBean
     Class rootBeanType
+
     @Deprecated(forRemoval = true)
     GrailsDomainClass beanClass
     Class beanType
