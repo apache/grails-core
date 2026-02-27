@@ -27,7 +27,10 @@ import org.hibernate.engine.jdbc.env.spi.JdbcEnvironment;
 import org.hibernate.generator.GeneratorCreationContext;
 import org.hibernate.id.enhanced.SequenceStyleGenerator;
 
+@SuppressWarnings("PMD.ConstructorCallsOverridableMethod")
 public class GrailsSequenceStyleGenerator extends SequenceStyleGenerator {
+
+  private static final long serialVersionUID = 1L;
 
   public GrailsSequenceStyleGenerator(
       GeneratorCreationContext context, Identity mappedId, JdbcEnvironment jdbcEnvironment) {
