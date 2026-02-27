@@ -91,7 +91,7 @@ public enum CascadeBehavior {
         if (CascadeBehavior.fromString(trimmedProp).isSaveUpdate()) {
           return true;
         }
-      } catch (MappingException e) {
+      } catch (MappingException ignored) {
         // ignore
       }
     }

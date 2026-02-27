@@ -66,7 +66,7 @@ NonSerializableClass,org.grails.orm.hibernate.cfg.domainbinding.secondpass.MapSe
 DataflowAnomalyAnalysis,org.grails.orm.hibernate.cfg.domainbinding.secondpass.MapSecondPassBinder,95,YES
 NonSerializableClass,org.grails.orm.hibernate.cfg.domainbinding.secondpass.SetSecondPass,39,YES
 DataflowAnomalyAnalysis,org.grails.orm.hibernate.cfg.domainbinding.util.BasicValueIdCreator,67,YES
-EmptyCatchBlock,org.grails.orm.hibernate.cfg.domainbinding.util.CascadeBehavior,94,
+EmptyCatchBlock,org.grails.orm.hibernate.cfg.domainbinding.util.CascadeBehavior,94,YES
 DataflowAnomalyAnalysis,org.grails.orm.hibernate.cfg.domainbinding.util.CreateKeyForProps,58,
 DataflowAnomalyAnalysis,org.grails.orm.hibernate.cfg.domainbinding.util.DefaultColumnNameFetcher,49,
 DataflowAnomalyAnalysis,org.grails.orm.hibernate.cfg.domainbinding.util.DefaultColumnNameFetcher,51,
