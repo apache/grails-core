@@ -31,6 +31,7 @@ import org.hibernate.mapping.RootClass;
 import org.hibernate.mapping.SimpleValue;
 import org.hibernate.mapping.Table;
 
+@SuppressWarnings("PMD.DataflowAnomalyAnalysis")
 public class DiscriminatorPropertyBinder {
 
   private static final String STRING_TYPE = "string";
