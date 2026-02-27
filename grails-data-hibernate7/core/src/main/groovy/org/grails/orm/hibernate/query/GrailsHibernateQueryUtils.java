@@ -64,26 +64,27 @@ public class GrailsHibernateQueryUtils {
       Root queryRoot,
       CriteriaBuilder criteriaBuilder,
       Map argMap,
-              ConversionService conversionService,
-              boolean useDefaultMapping) {
-            Object fetchObj = argMap.get(DynamicFinder.ARGUMENT_FETCH);
-            if (fetchObj instanceof Map) {
-              Map fetch = (Map) fetchObj;
-              for (Object o : fetch.keySet()) {
-                String associationName = (String) o;
-      
-                final FetchMode fetchMode = getFetchMode(fetch.get(associationName));
-                if (fetchMode == FetchMode.JOIN) {
-                  queryRoot.join(associationName);
-                }
-              }
-            }
-      
-            final Object sortObj = argMap.get(DynamicFinder.ARGUMENT_SORT);
-            if (sortObj != null) {
-              final boolean ignoreCase =
-                  !(argMap.get(DynamicFinder.ARGUMENT_IGNORE_CASE) instanceof Boolean b) || b;
-              if (sortObj instanceof Map) {        Map sortMap = (Map) sortObj;
+      ConversionService conversionService,
+      boolean useDefaultMapping) {
+    Object fetchObj = argMap.get(DynamicFinder.ARGUMENT_FETCH);
+    if (fetchObj instanceof Map) {
+      Map fetch = (Map) fetchObj;
+      for (Object o : fetch.keySet()) {
+        String associationName = (String) o;
+
+        final FetchMode fetchMode = getFetchMode(fetch.get(associationName));
+        if (fetchMode == FetchMode.JOIN) {
+          queryRoot.join(associationName);
+        }
+      }
+    }
+
+    final Object sortObj = argMap.get(DynamicFinder.ARGUMENT_SORT);
+    if (sortObj != null) {
+      final boolean ignoreCase =
+          !(argMap.get(DynamicFinder.ARGUMENT_IGNORE_CASE) instanceof Boolean b) || b;
+      if (sortObj instanceof Map) {
+        Map sortMap = (Map) sortObj;
         for (Object sort : sortMap.keySet()) {
           final String order =
               DynamicFinder.ORDER_DESC.equalsIgnoreCase((String) sortMap.get(sort))
@@ -92,14 +93,16 @@ public class GrailsHibernateQueryUtils {
           addOrderPossiblyNested(
               query, queryRoot, criteriaBuilder, entity, (String) sort, order, ignoreCase);
         }
-              } else {
-                final String sort = (String) sortObj;
-                final String order =
-                    DynamicFinder.ORDER_DESC.equalsIgnoreCase((String) argMap.get(DynamicFinder.ARGUMENT_ORDER))
-                        ? DynamicFinder.ORDER_DESC
-                        : DynamicFinder.ORDER_ASC;
-                addOrderPossiblyNested(query, queryRoot, criteriaBuilder, entity, sort, order, ignoreCase);
-              }    } else if (useDefaultMapping) {
+      } else {
+        final String sort = (String) sortObj;
+        final String order =
+            DynamicFinder.ORDER_DESC.equalsIgnoreCase(
+                    (String) argMap.get(DynamicFinder.ARGUMENT_ORDER))
+                ? DynamicFinder.ORDER_DESC
+                : DynamicFinder.ORDER_ASC;
+        addOrderPossiblyNested(query, queryRoot, criteriaBuilder, entity, sort, order, ignoreCase);
+      }
+    } else if (useDefaultMapping) {
       Class<?> theClass = entity.getJavaClass();
       Mapping m = MappingCacheHolder.getInstance().getMapping(theClass);
       if (m != null) {
@@ -124,21 +127,22 @@ public class GrailsHibernateQueryUtils {
    * @param argMap The arguments map
    */
   @SuppressWarnings("rawtypes")
-      public static void populateArgumentsForCriteria(
-          PersistentEntity entity,
-          Query query,
-          Map argMap,
-          ConversionService conversionService,
-          boolean useDefaultMapping) {
-        final Integer maxParam =
-            argMap.containsKey(DynamicFinder.ARGUMENT_MAX)
-                ? conversionService.convert(argMap.get(DynamicFinder.ARGUMENT_MAX), Integer.class)
-                : null;
-        final Integer offsetParam =
-            argMap.containsKey(DynamicFinder.ARGUMENT_OFFSET)
-                ? conversionService.convert(argMap.get(DynamicFinder.ARGUMENT_OFFSET), Integer.class)
-                : null;
-        if (argMap.containsKey(DynamicFinder.ARGUMENT_FETCH_SIZE)) {      query.setFetchSize(
+  public static void populateArgumentsForCriteria(
+      PersistentEntity entity,
+      Query query,
+      Map argMap,
+      ConversionService conversionService,
+      boolean useDefaultMapping) {
+    final Integer maxParam =
+        argMap.containsKey(DynamicFinder.ARGUMENT_MAX)
+            ? conversionService.convert(argMap.get(DynamicFinder.ARGUMENT_MAX), Integer.class)
+            : null;
+    final Integer offsetParam =
+        argMap.containsKey(DynamicFinder.ARGUMENT_OFFSET)
+            ? conversionService.convert(argMap.get(DynamicFinder.ARGUMENT_OFFSET), Integer.class)
+            : null;
+    if (argMap.containsKey(DynamicFinder.ARGUMENT_FETCH_SIZE)) {
+      query.setFetchSize(
           conversionService.convert(argMap.get(DynamicFinder.ARGUMENT_FETCH_SIZE), Integer.class));
     }
     if (argMap.containsKey(DynamicFinder.ARGUMENT_TIMEOUT)) {

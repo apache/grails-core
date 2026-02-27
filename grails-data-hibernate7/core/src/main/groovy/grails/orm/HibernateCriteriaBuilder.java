@@ -53,12 +53,13 @@ import org.slf4j.LoggerFactory;
 import org.springframework.core.convert.ConversionService;
 
 /**
- * Implements the GORM criteria DSL for Hibernate 7+. The builder exposes a Groovy-closure
- * DSL that is translated into JPA Criteria queries via {@link HibernateQuery}. It is the
- * backing implementation for the {@code createCriteria()} and {@code withCriteria()} dynamic
- * static methods that GORM adds to every domain class.
+ * Implements the GORM criteria DSL for Hibernate 7+. The builder exposes a Groovy-closure DSL that
+ * is translated into JPA Criteria queries via {@link HibernateQuery}. It is the backing
+ * implementation for the {@code createCriteria()} and {@code withCriteria()} dynamic static methods
+ * that GORM adds to every domain class.
  *
  * <h2>DSL usage via domain class</h2>
+ *
  * <pre>
  *         def c = Account.createCriteria()
  *         def results = c.list {
@@ -76,8 +77,9 @@ import org.springframework.core.convert.ConversionService;
  * </pre>
  *
  * <h2>Programmatic instantiation</h2>
- * <p>The builder requires a {@link SessionFactory}, the target persistent class, and the
- * {@link org.grails.orm.hibernate.AbstractHibernateDatastore} that owns the session:
+ *
+ * <p>The builder requires a {@link SessionFactory}, the target persistent class, and the {@link
+ * org.grails.orm.hibernate.AbstractHibernateDatastore} that owns the session:
  *
  * <pre>
  *      new HibernateCriteriaBuilder(Account, sessionFactory, datastore).list {
@@ -86,11 +88,11 @@ import org.springframework.core.convert.ConversionService;
  * </pre>
  *
  * <h2>Architecture</h2>
- * <p>Closure method calls in the DSL are dispatched through
- * {@code invokeMethod} → {@code CriteriaMethodInvoker} → {@link HibernateQuery}, which
- * translates each GORM constraint into the equivalent JPA Criteria predicate.
- * {@link grails.gorm.DetachedCriteria} can also be passed in place of a closure to support
- * multi-tenant and reusable query fragments.
+ *
+ * <p>Closure method calls in the DSL are dispatched through {@code invokeMethod} → {@code
+ * CriteriaMethodInvoker} → {@link HibernateQuery}, which translates each GORM constraint into the
+ * equivalent JPA Criteria predicate. {@link grails.gorm.DetachedCriteria} can also be passed in
+ * place of a closure to support multi-tenant and reusable query fragments.
  *
  * @author Graeme Rocher
  * @author walterduquedeestrada
@@ -113,10 +115,13 @@ public class HibernateCriteriaBuilder extends GroovyObjectSupport
   protected CriteriaQuery criteriaQuery;
   protected boolean uniqueResult = false;
   protected boolean participate;
+
   @SuppressWarnings("PMD.AvoidFieldNameMatchingMethodName")
   protected boolean scroll;
+
   @SuppressWarnings("PMD.AvoidFieldNameMatchingMethodName")
   protected boolean count;
+
   protected List<String> aliasStack = new ArrayList<String>();
   protected static final String ALIAS = "_alias";
   protected boolean paginationEnabledList = false;
@@ -128,8 +133,10 @@ public class HibernateCriteriaBuilder extends GroovyObjectSupport
   protected HibernateQuery hibernateQuery;
   private boolean shouldLock;
   private boolean shouldCache;
+
   @SuppressWarnings("PMD.AvoidFieldNameMatchingMethodName")
   private boolean readOnly;
+
   @SuppressWarnings("PMD.AvoidFieldNameMatchingMethodName")
   protected boolean distinct = false;
 

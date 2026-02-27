@@ -341,7 +341,8 @@ public class HibernateQuery extends Query {
       return createdAssociationPaths.get(associationPath);
     } else {
       CriteriaQuery criteriaQuery = getCriteriaBuilder().createQuery(entity.getJavaClass());
-      CriteriaAndAlias subCriteria = new CriteriaAndAlias(criteriaQuery, effectiveAlias, associationPath);
+      CriteriaAndAlias subCriteria =
+          new CriteriaAndAlias(criteriaQuery, effectiveAlias, associationPath);
       createdAssociationPaths.put(associationPath, subCriteria);
       createdAssociationPaths.put(effectiveAlias, subCriteria);
       return subCriteria;

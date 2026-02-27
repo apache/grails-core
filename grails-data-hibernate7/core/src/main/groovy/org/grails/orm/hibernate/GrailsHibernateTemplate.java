@@ -384,11 +384,12 @@ public class GrailsHibernateTemplate implements IHibernateTemplate {
     } else {
       sessionIfcs = new Class[] {mainIfc};
     }
-          return (Session)
-              Proxy.newProxyInstance(
-                  Thread.currentThread().getContextClassLoader(),
-                  sessionIfcs,
-                  new CloseSuppressingInvocationHandler(session));  }
+    return (Session)
+        Proxy.newProxyInstance(
+            Thread.currentThread().getContextClassLoader(),
+            sessionIfcs,
+            new CloseSuppressingInvocationHandler(session));
+  }
 
   @Deprecated(since = "7.0", forRemoval = true)
   public <T> T get(final Class<T> entityClass, final Serializable id) throws DataAccessException {

@@ -201,8 +201,9 @@ public class CriteriaMethodInvoker {
     return UNHANDLED;
   }
 
-      @SuppressWarnings("PMD.DataflowAnomalyAnalysis")
-      protected Object trySimpleCriteria(String name, CriteriaMethods method, Object[] args) {    if (args.length != 1 || args[0] == null) {
+  @SuppressWarnings("PMD.DataflowAnomalyAnalysis")
+  protected Object trySimpleCriteria(String name, CriteriaMethods method, Object[] args) {
+    if (args.length != 1 || args[0] == null) {
       return UNHANDLED;
     }
 
@@ -214,14 +215,22 @@ public class CriteriaMethodInvoker {
           if (!(args[0] instanceof String)) {
             builder.throwRuntimeException(
                 new IllegalArgumentException(
-                    "call to [" + name + "] with value [" + args[0] + "] requires a String value."));
+                    "call to ["
+                        + name
+                        + "] with value ["
+                        + args[0]
+                        + "] requires a String value."));
           }
           final String value = (String) args[0];
           switch (method) {
-            case IS_NULL -> builder.getHibernateQuery().isNull(builder.calculatePropertyName(value));
-            case IS_NOT_NULL -> builder.getHibernateQuery().isNotNull(builder.calculatePropertyName(value));
-            case IS_EMPTY -> builder.getHibernateQuery().isEmpty(builder.calculatePropertyName(value));
-            case IS_NOT_EMPTY -> builder.getHibernateQuery().isNotEmpty(builder.calculatePropertyName(value));
+            case IS_NULL ->
+                builder.getHibernateQuery().isNull(builder.calculatePropertyName(value));
+            case IS_NOT_NULL ->
+                builder.getHibernateQuery().isNotNull(builder.calculatePropertyName(value));
+            case IS_EMPTY ->
+                builder.getHibernateQuery().isEmpty(builder.calculatePropertyName(value));
+            case IS_NOT_EMPTY ->
+                builder.getHibernateQuery().isNotEmpty(builder.calculatePropertyName(value));
           }
           return name;
       }
