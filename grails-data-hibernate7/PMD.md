@@ -68,8 +68,8 @@ NonSerializableClass,org.grails.orm.hibernate.cfg.domainbinding.secondpass.SetSe
 DataflowAnomalyAnalysis,org.grails.orm.hibernate.cfg.domainbinding.util.BasicValueIdCreator,67,YES
 EmptyCatchBlock,org.grails.orm.hibernate.cfg.domainbinding.util.CascadeBehavior,94,YES
 DataflowAnomalyAnalysis,org.grails.orm.hibernate.cfg.domainbinding.util.CreateKeyForProps,58,YES
-DataflowAnomalyAnalysis,org.grails.orm.hibernate.cfg.domainbinding.util.DefaultColumnNameFetcher,49,
-DataflowAnomalyAnalysis,org.grails.orm.hibernate.cfg.domainbinding.util.DefaultColumnNameFetcher,51,
+DataflowAnomalyAnalysis,org.grails.orm.hibernate.cfg.domainbinding.util.DefaultColumnNameFetcher,49,YES
+DataflowAnomalyAnalysis,org.grails.orm.hibernate.cfg.domainbinding.util.DefaultColumnNameFetcher,51,YES
 DataflowAnomalyAnalysis,org.grails.orm.hibernate.cfg.domainbinding.util.ForeignKeyColumnCountCalculator,30,
 DataflowAnomalyAnalysis,org.grails.orm.hibernate.cfg.domainbinding.util.ForeignKeyColumnCountCalculator,38,
 DataflowAnomalyAnalysis,org.grails.orm.hibernate.cfg.domainbinding.util.ForeignKeyColumnCountCalculator,41,
