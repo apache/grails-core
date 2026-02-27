@@ -44,6 +44,7 @@ import org.hibernate.mapping.Table;
 import org.hibernate.mapping.Value;
 
 /** Refactored from CollectionBinder to handle list second pass binding. */
+@SuppressWarnings("PMD.DataflowAnomalyAnalysis")
 public class ListSecondPassBinder {
 
   private final MetadataBuildingContext metadataBuildingContext;

@@ -60,8 +60,8 @@ ReturnEmptyCollectionRatherThanNull,org.grails.orm.hibernate.cfg.domainbinding.h
 DataflowAnomalyAnalysis,org.grails.orm.hibernate.cfg.domainbinding.secondpass.CollectionSecondPassBinder,94,YES
 DataflowAnomalyAnalysis,org.grails.orm.hibernate.cfg.domainbinding.secondpass.CollectionWithJoinTableBinder,96,YES
 NonSerializableClass,org.grails.orm.hibernate.cfg.domainbinding.secondpass.ListSecondPass,32,YES
-DataflowAnomalyAnalysis,org.grails.orm.hibernate.cfg.domainbinding.secondpass.ListSecondPassBinder,73,
-DataflowAnomalyAnalysis,org.grails.orm.hibernate.cfg.domainbinding.secondpass.ListSecondPassBinder,106,
+DataflowAnomalyAnalysis,org.grails.orm.hibernate.cfg.domainbinding.secondpass.ListSecondPassBinder,73,YES
+DataflowAnomalyAnalysis,org.grails.orm.hibernate.cfg.domainbinding.secondpass.ListSecondPassBinder,106,YES
 NonSerializableClass,org.grails.orm.hibernate.cfg.domainbinding.secondpass.MapSecondPass,32,
 DataflowAnomalyAnalysis,org.grails.orm.hibernate.cfg.domainbinding.secondpass.MapSecondPassBinder,95,
 NonSerializableClass,org.grails.orm.hibernate.cfg.domainbinding.secondpass.SetSecondPass,39,
