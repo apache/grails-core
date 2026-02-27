@@ -73,7 +73,7 @@ DataflowAnomalyAnalysis,org.grails.orm.hibernate.cfg.domainbinding.util.DefaultC
 DataflowAnomalyAnalysis,org.grails.orm.hibernate.cfg.domainbinding.util.ForeignKeyColumnCountCalculator,30,YES
 DataflowAnomalyAnalysis,org.grails.orm.hibernate.cfg.domainbinding.util.ForeignKeyColumnCountCalculator,38,YES
 DataflowAnomalyAnalysis,org.grails.orm.hibernate.cfg.domainbinding.util.ForeignKeyColumnCountCalculator,41,YES
-LoggerIsNotStaticFinal,org.grails.orm.hibernate.cfg.domainbinding.util.LogCascadeMapping,30,
+LoggerIsNotStaticFinal,org.grails.orm.hibernate.cfg.domainbinding.util.LogCascadeMapping,30,YES
 DataflowAnomalyAnalysis,org.grails.orm.hibernate.cfg.domainbinding.util.OrderByClauseBuilder,57,
 UseLocaleWithCaseConversions,org.grails.orm.hibernate.cfg.domainbinding.util.OrderByClauseBuilder,68,
 DataflowAnomalyAnalysis,org.grails.orm.hibernate.cfg.domainbinding.util.OrderByClauseBuilder,95,
