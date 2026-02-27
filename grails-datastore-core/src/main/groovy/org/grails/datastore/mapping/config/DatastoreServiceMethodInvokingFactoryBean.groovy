@@ -38,7 +38,9 @@ import org.grails.datastore.mapping.model.PersistentEntity
 import org.grails.datastore.mapping.services.Service
 
 /**
- * Variant of {#link MethodInvokingFactoryBean} which returns the correct data service type instead of {@code java.lang.Object} so the Autowire with type works correctly.
+ * Variant of {#link MethodInvokingFactoryBean} which returns the correct
+ * data service type instead of {@code java.lang.Object} so the Autowire
+ * with type works correctly.
  */
 @Internal
 @CompileStatic
@@ -60,12 +62,16 @@ class DatastoreServiceMethodInvokingFactoryBean extends MethodInvokingFactoryBea
 
     @Override
     protected Object invokeWithTargetException() throws Exception {
-        Object object = super.invokeWithTargetException()
+        def object = super.invokeWithTargetException()
         if (object) {
-            Datastore effectiveDatastore = resolveEffectiveDatastore((Datastore) targetObject)
-            ((Service) object).setDatastore(effectiveDatastore)
+            def effectiveDatastore = resolveEffectiveDatastore((Datastore) targetObject)
+            ((Service) object).datastore = effectiveDatastore
             if (beanFactory instanceof AutowireCapableBeanFactory) {
-                ((AutowireCapableBeanFactory) beanFactory).autowireBeanProperties(object, AutowireCapableBeanFactory.AUTOWIRE_BY_TYPE, false)
+                ((AutowireCapableBeanFactory) beanFactory).autowireBeanProperties(
+                        object,
+                        AutowireCapableBeanFactory.AUTOWIRE_BY_TYPE,
+                        false
+                )
             }
         }
         object
@@ -79,27 +85,29 @@ class DatastoreServiceMethodInvokingFactoryBean extends MethodInvokingFactoryBea
         // Check for explicit @Transactional(connection=...) on the service first - it takes precedence
         String serviceConnection = getServiceTransactionalConnection()
         if (serviceConnection != null
-                && !ConnectionSource.DEFAULT.equals(serviceConnection)
-                && !ConnectionSource.ALL.equals(serviceConnection)) {
-            return ((MultipleConnectionSourceCapableDatastore) defaultDatastore).getDatastoreForConnection(serviceConnection)
+                && ConnectionSource.DEFAULT != serviceConnection
+                && ConnectionSource.ALL != serviceConnection) {
+            return ((MultipleConnectionSourceCapableDatastore) defaultDatastore)
+                    .getDatastoreForConnection(serviceConnection)
         }
 
         // Fall back to domain class mapping datasource
-        Class<?> domainClass = getServiceDomainClass()
+        def domainClass = serviceDomainClass
         if (domainClass == null || domainClass == Object) {
             return defaultDatastore
         }
 
-        PersistentEntity entity = defaultDatastore.getMappingContext()?.getPersistentEntity(domainClass.getName())
+        def entity = defaultDatastore.mappingContext?.getPersistentEntity(domainClass.name)
         if (entity == null) {
             return defaultDatastore
         }
 
-        String domainConnection = ConnectionSourcesSupport.getDefaultConnectionSourceName(entity)
+        def domainConnection = ConnectionSourcesSupport.getDefaultConnectionSourceName(entity)
         if (domainConnection != null
-                && !ConnectionSource.DEFAULT.equals(domainConnection)
-                && !ConnectionSource.ALL.equals(domainConnection)) {
-            return ((MultipleConnectionSourceCapableDatastore) defaultDatastore).getDatastoreForConnection(domainConnection)
+                && ConnectionSource.DEFAULT != domainConnection
+                && ConnectionSource.ALL != domainConnection) {
+            return ((MultipleConnectionSourceCapableDatastore) defaultDatastore)
+                    .getDatastoreForConnection(domainConnection)
         }
 
         return defaultDatastore
@@ -107,9 +115,9 @@ class DatastoreServiceMethodInvokingFactoryBean extends MethodInvokingFactoryBea
 
     private String getServiceTransactionalConnection() {
         try {
-            for (Annotation ann : serviceClass.getAnnotations()) {
-                if ('grails.gorm.transactions.Transactional' == ann.annotationType().getName()) {
-                    String connection = (String) ann.annotationType().getMethod('connection').invoke(ann)
+            for (def ann : serviceClass.annotations) {
+                if ('grails.gorm.transactions.Transactional' == ann.annotationType().name) {
+                    def connection = ann.annotationType().getMethod('connection').invoke(ann) as String
                     if (connection != null && !connection.isEmpty()) {
                         return connection
                     }
@@ -123,8 +131,8 @@ class DatastoreServiceMethodInvokingFactoryBean extends MethodInvokingFactoryBea
 
     private Class<?> getServiceDomainClass() {
         try {
-            for (Annotation ann : serviceClass.getAnnotations()) {
-                if ('grails.gorm.services.Service' == ann.annotationType().getName()) {
+            for (def ann : serviceClass.annotations) {
+                if ('grails.gorm.services.Service' == ann.annotationType().name) {
                     return (Class<?>) ann.annotationType().getMethod('value').invoke(ann)
                 }
             }

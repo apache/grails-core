@@ -33,14 +33,16 @@ import org.grails.orm.hibernate.HibernateDatastore
 class DataServiceDatasourceInheritanceSpec extends Specification {
 
     @Shared Map config = [
-            'dataSource.url':"jdbc:h2:mem:grailsDB;LOCK_TIMEOUT=10000",
+            'dataSource.url': 'jdbc:h2:mem:grailsDB;LOCK_TIMEOUT=10000',
             'dataSource.dbCreate': 'create-drop',
             'dataSource.dialect': H2Dialect.name,
             'dataSource.formatSql': 'true',
             'hibernate.flush.mode': 'COMMIT',
             'hibernate.cache.queries': 'true',
             'hibernate.hbm2ddl.auto': 'create-drop',
-            'dataSources.warehouse':[url:"jdbc:h2:mem:warehouseDB;LOCK_TIMEOUT=10000"],
+            'dataSources.warehouse': [
+                    url: 'jdbc:h2:mem:warehouseDB;LOCK_TIMEOUT=10000'
+            ],
     ]
 
     @Shared @AutoCleanup HibernateDatastore datastore = new HibernateDatastore(
@@ -187,16 +189,17 @@ class DataServiceDatasourceInheritanceSpec extends Specification {
 
 @Entity
 class Inventory {
+
     Long id
     Long version
     String sku
     Integer quantity
 
     static mapping = {
-        datasource 'warehouse'
+        datasource('warehouse')
     }
     static constraints = {
-        sku blank: false
+        sku(blank: false)
     }
 }
 

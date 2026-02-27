@@ -283,10 +283,10 @@ class ServiceTransformation extends AbstractTraitApplyingGormASTTransformation i
             // Auto-inherit datasource from domain class's mapping if the service
             // does not already have an explicit @Transactional(connection=...)
             if (targetDomainClass != ClassHelper.OBJECT_TYPE) {
-                String domainConnection = resolveDomainDatasource(targetDomainClass)
+                def domainConnection = resolveDomainDatasource(targetDomainClass)
                 if (domainConnection != null
-                        && !ConnectionSource.DEFAULT.equals(domainConnection)
-                        && !ConnectionSource.ALL.equals(domainConnection)) {
+                        && ConnectionSource.DEFAULT != domainConnection
+                        && ConnectionSource.ALL != domainConnection) {
                     if (!hasExplicitConnectionAnnotation(classNode)) {
                         applyDomainConnectionToService(classNode, impl, domainConnection)
                     }
@@ -483,15 +483,15 @@ class ServiceTransformation extends AbstractTraitApplyingGormASTTransformation i
     }
 
     private static String resolveDomainDatasource(ClassNode domainClass) {
-        FieldNode mappingField = domainClass.getDeclaredField('mapping')
+        def mappingField = domainClass.getDeclaredField('mapping')
         if (mappingField == null) {
-            PropertyNode mappingProp = domainClass.getProperty('mapping')
+            def mappingProp = domainClass.getProperty('mapping')
             if (mappingProp != null) {
-                mappingField = mappingProp.getField()
+                mappingField = mappingProp.field
             }
         }
         if (mappingField != null) {
-            return extractDatasourceFromExpression(mappingField.getInitialValueExpression())
+            return extractDatasourceFromExpression(mappingField.initialValueExpression)
         }
         return null
     }
@@ -500,26 +500,26 @@ class ServiceTransformation extends AbstractTraitApplyingGormASTTransformation i
         if (!(expr instanceof ClosureExpression)) {
             return null
         }
-        Statement code = ((ClosureExpression) expr).getCode()
+        def code = ((ClosureExpression) expr).getCode()
         if (!(code instanceof BlockStatement)) {
             return null
         }
-        for (Statement stmt : ((BlockStatement) code).getStatements()) {
+        for (def stmt : ((BlockStatement) code).statements) {
             if (!(stmt instanceof ExpressionStatement)) {
                 continue
             }
-            Expression stmtExpr = ((ExpressionStatement) stmt).getExpression()
+            def stmtExpr = ((ExpressionStatement) stmt).expression
             if (!(stmtExpr instanceof MethodCallExpression)) {
                 continue
             }
-            MethodCallExpression call = (MethodCallExpression) stmtExpr
-            String methodName = call.getMethodAsString()
+            def call = (MethodCallExpression) stmtExpr
+            def methodName = call.methodAsString
             if ('datasource' == methodName || 'connection' == methodName || 'connections' == methodName) {
-                Expression args = call.getArguments()
+                def args = call.arguments
                 if (args instanceof ArgumentListExpression) {
-                    List<Expression> argExprs = ((ArgumentListExpression) args).getExpressions()
+                    def argExprs = ((ArgumentListExpression) args).expressions
                     if (!argExprs.isEmpty() && argExprs[0] instanceof ConstantExpression) {
-                        return ((ConstantExpression) argExprs[0]).getValue()?.toString()
+                        return ((ConstantExpression) argExprs[0]).value?.toString()
                     }
                 }
             }
@@ -528,11 +528,11 @@ class ServiceTransformation extends AbstractTraitApplyingGormASTTransformation i
     }
 
     private static boolean hasExplicitConnectionAnnotation(ClassNode classNode) {
-        AnnotationNode ann = findAnnotation(classNode, Transactional)
+        def ann = findAnnotation(classNode, Transactional)
         if (ann != null) {
-            Expression connection = ann.getMember('connection')
+            def connection = ann.getMember('connection')
             if (connection instanceof ConstantExpression) {
-                String value = ((ConstantExpression) connection).getValue()?.toString()
+                def value = ((ConstantExpression) connection).value?.toString()
                 return value != null && !value.isEmpty()
             }
         }
@@ -540,30 +540,26 @@ class ServiceTransformation extends AbstractTraitApplyingGormASTTransformation i
     }
 
     private static void applyDomainConnectionToService(ClassNode classNode, ClassNode implClass, String connectionName) {
-        ConstantExpression connectionExpr = new ConstantExpression(connectionName)
-        AnnotationNode classAnn = findAnnotation(classNode, Transactional)
-        if (classAnn != null) {
-            classAnn.setMember('connection', connectionExpr)
-        }
-        else {
-            AnnotationNode newAnn = new AnnotationNode(ClassHelper.make(Transactional))
-            newAnn.setMember('connection', connectionExpr)
-            classNode.addAnnotation(newAnn)
-        }
-        AnnotationNode implAnn = findAnnotation(implClass, Transactional)
-        if (implAnn != null) {
-            implAnn.setMember('connection', connectionExpr)
-        }
-        else {
-            AnnotationNode newImplAnn = new AnnotationNode(ClassHelper.make(Transactional))
-            newImplAnn.setMember('connection', connectionExpr)
-            implClass.addAnnotation(newImplAnn)
-        }
+        def connectionExpr = new ConstantExpression(connectionName)
+        applyDomainConnection(classNode, connectionExpr)
+        applyDomainConnection(implClass, connectionExpr)
 
         // TransactionalTransform runs before ServiceTransformation creates the impl class, so it never
         // gets a chance to weave getTransactionManager() with the correct connection-aware logic.
         // We generate it here directly to ensure the right transaction manager is used at runtime.
         generateConnectionAwareTransactionManager(implClass, connectionExpr)
+    }
+
+    private static void applyDomainConnection(ClassNode node, ConstantExpression connectionExpr) {
+        def ann = findAnnotation(node, Transactional)
+        if (ann) {
+            ann.setMember('connection', connectionExpr)
+        }
+        else {
+            def newAnn = new AnnotationNode(ClassHelper.make(Transactional))
+            newAnn.setMember('connection', connectionExpr)
+            node.addAnnotation(newAnn)
+        }
     }
 
     /**
@@ -574,36 +570,49 @@ class ServiceTransformation extends AbstractTraitApplyingGormASTTransformation i
      */
     private static void generateConnectionAwareTransactionManager(ClassNode implClass, ConstantExpression connectionExpr) {
         // Remove any existing getTransactionManager() that was added without connection awareness
-        implClass.getMethods('getTransactionManager').each { MethodNode existing ->
-            implClass.removeMethod(existing)
+        implClass.getMethods('getTransactionManager').each {
+            implClass.removeMethod(it)
         }
 
-        ClassNode transactionManagerClassNode = ClassHelper.make(PlatformTransactionManager)
-        ClassNode transactionCapableDatastore = ClassHelper.make(TransactionCapableDatastore)
-        ClassNode multipleConnectionDatastore = ClassHelper.make(MultipleConnectionSourceCapableDatastore)
-        ClassExpression gormEnhancerExpr = classX(GormEnhancer)
+        def transactionManagerClassNode = ClassHelper.make(PlatformTransactionManager)
+        def transactionCapableDatastore = ClassHelper.make(TransactionCapableDatastore)
+        def multipleConnectionDatastore = ClassHelper.make(MultipleConnectionSourceCapableDatastore)
+        def gormEnhancerExpr = classX(GormEnhancer)
 
         // datastore variable (field from Service trait)
-        VariableExpression datastoreVar = varX('datastore')
+        def datastoreVar = varX('datastore')
         // ((MultipleConnectionSourceCapableDatastore) datastore).getDatastoreForConnection(connectionName)
-        Expression datastoreForConnection = callD(castX(multipleConnectionDatastore, datastoreVar), 'getDatastoreForConnection', connectionExpr)
+        def datastoreForConnection = callD(
+                castX(multipleConnectionDatastore, datastoreVar),
+                'getDatastoreForConnection',
+                connectionExpr
+        )
         // .getTransactionManager()
-        Expression datastoreTxManager = propX(castX(transactionCapableDatastore, datastoreForConnection), 'transactionManager')
+        def datastoreTxManager = propX(
+                castX(transactionCapableDatastore, datastoreForConnection),
+                'transactionManager'
+        )
         // GormEnhancer.findSingleTransactionManager(connectionName)
-        Expression fallbackTxManager = callX(gormEnhancerExpr, 'findSingleTransactionManager', args(connectionExpr))
+        def fallbackTxManager = callX(
+                gormEnhancerExpr,
+                'findSingleTransactionManager',
+                args(connectionExpr)
+        )
 
         // if (datastore != null) { return <datastoreTxManager> } else { return <fallbackTxManager> }
-        Statement body = ifElseS(
+        def body = ifElseS(
                 notNullX(datastoreVar),
                 returnS(datastoreTxManager),
                 returnS(fallbackTxManager)
         )
 
-        MethodNode methodNode = implClass.addMethod('getTransactionManager',
+        def methodNode = implClass.addMethod(
+                'getTransactionManager',
                 Modifier.PUBLIC,
                 transactionManagerClassNode,
                 ZERO_PARAMETERS, null,
-                body)
+                body
+        )
         markAsGenerated(implClass, methodNode)
     }
 
