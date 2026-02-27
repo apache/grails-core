@@ -27,7 +27,6 @@ import spock.lang.AutoCleanup
 import spock.lang.Issue
 import spock.lang.Shared
 import spock.lang.Specification
-import spock.lang.PendingFeature
 
 /**
  * Verification tests for old where-query issues reported against GORM 6.x / Grails 3.x.
@@ -179,7 +178,6 @@ class WhereQueryOldIssueVerificationSpec extends Specification {
         results[0].user.username == "alice"
     }
 
-    @PendingFeature(reason = 'Basic collection type in query is still broken - tracked for a future fix')
     @Rollback
     @Issue('https://github.com/apache/grails-core/issues/14610')
     def "querying association with basic collection types works"() {
