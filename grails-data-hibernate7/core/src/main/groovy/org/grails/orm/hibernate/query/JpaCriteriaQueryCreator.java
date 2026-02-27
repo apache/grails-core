@@ -37,6 +37,7 @@ import org.hibernate.query.criteria.HibernateCriteriaBuilder;
 import org.hibernate.query.criteria.JpaCriteriaQuery;
 import org.hibernate.query.criteria.JpaExpression;
 
+@SuppressWarnings("PMD.DataflowAnomalyAnalysis")
 public class JpaCriteriaQueryCreator {
 
   private final Query.ProjectionList projections;

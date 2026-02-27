@@ -90,7 +90,7 @@ CloseResource,org.grails.orm.hibernate.connections.HibernateConnectionSourceFact
 AvoidCatchingThrowable,org.grails.orm.hibernate.connections.HibernateConnectionSourceFactory,237,YES
 CloseResource,org.grails.orm.hibernate.connections.HibernateConnectionSourceFactory,256,YES
 DataflowAnomalyAnalysis,org.grails.orm.hibernate.connections.HibernateConnectionSourceFactory,298,YES
-DataflowAnomalyAnalysis,org.grails.orm.hibernate.query.JpaCriteriaQueryCreator,131,
+DataflowAnomalyAnalysis,org.grails.orm.hibernate.query.JpaCriteriaQueryCreator,131,YES
 DataflowAnomalyAnalysis,org.grails.orm.hibernate.query.JpaFromProvider,62,
 AvoidLiteralsInIfCondition,org.grails.orm.hibernate.query.JpaFromProvider,150,
 ProperCloneImplementation,org.grails.orm.hibernate.query.JpaFromProvider,162,
