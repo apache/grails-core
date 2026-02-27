@@ -28,6 +28,7 @@ import org.hibernate.boot.spi.MetadataBuildingContext;
 import org.hibernate.mapping.Component;
 import org.hibernate.mapping.RootClass;
 
+@SuppressWarnings("PMD.DataflowAnomalyAnalysis")
 public class CompositeIdBinder {
 
   private final MetadataBuildingContext metadataBuildingContext;
@@ -43,7 +44,6 @@ public class CompositeIdBinder {
     this.grailsPropertyBinder = grailsPropertyBinder;
   }
 
-  @SuppressWarnings("PMD.DataflowAnomalyAnalysis")
   public void bindCompositeId(
       @Nonnull GrailsHibernatePersistentEntity domainClass,
       RootClass root,
