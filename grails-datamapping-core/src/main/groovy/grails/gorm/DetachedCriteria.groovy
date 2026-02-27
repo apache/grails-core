@@ -20,6 +20,7 @@
 package grails.gorm
 
 import groovy.transform.CompileStatic
+import groovy.util.logging.Slf4j
 
 import jakarta.persistence.criteria.JoinType
 
@@ -41,6 +42,7 @@ import org.grails.datastore.mapping.query.api.QueryableCriteria
  * @author Graeme Rocher
  * @since 1.0
  */
+@Slf4j
 @CompileStatic
 class DetachedCriteria<T> extends AbstractDetachedCriteria<T> implements GormOperations<T>, QueryableCriteria<T>, Iterable<T> {
 
@@ -517,6 +519,12 @@ class DetachedCriteria<T> extends AbstractDetachedCriteria<T> implements GormOpe
             // a simple count() projection returns incorrect results because it
             // appends to the existing projections rather than replacing them.
             // Fall back to counting the grouped result rows.
+            // This will be resolved properly in Grails 8 with Hibernate 7's
+            // JpaSelectCriteria.from(Subquery) support for derived tables.
+            log.warn('DetachedCriteria.count() with user-defined projections cannot use a SQL count query ' +
+                    'due to a Hibernate 5 limitation. All grouped result rows will be loaded into memory to ' +
+                    'determine the count. This may impact performance on large result sets. ' +
+                    'This will be resolved in Grails 8 (Hibernate 7) which supports derived table subqueries.')
             return ((List) withPopulatedQuery(args, additionalCriteria) { Query query ->
                 query.list()
             }).size()
