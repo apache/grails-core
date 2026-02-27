@@ -102,6 +102,7 @@ public interface HibernatePersistentProperty extends PersistentProperty<Property
     return getOwner() instanceof GrailsHibernatePersistentEntity ghpe ? ghpe : null;
   }
 
+  @SuppressWarnings("PMD.DataflowAnomalyAnalysis")
   default Class<?> getUserType() {
     PropertyConfig config = getMappedForm();
     if (config == null) return null;
@@ -113,8 +114,8 @@ public interface HibernatePersistentProperty extends PersistentProperty<Property
       String typeName = typeObj.toString();
       try {
         userType = Class.forName(typeName, true, Thread.currentThread().getContextClassLoader());
-      } catch (ClassNotFoundException e) {
-
+      } catch (ClassNotFoundException ignored) {
+        // ignore
       }
     }
     return userType;
@@ -189,9 +190,9 @@ public interface HibernatePersistentProperty extends PersistentProperty<Property
     if (getTypeName(simpleValue) != null) {
       return Optional.ofNullable(getTypeProperty(simpleValue).getMappedForm())
           .map(PropertyConfig::getTypeParams)
-          .orElse(null);
+          .orElse(new java.util.Properties());
     }
-    return null;
+    return new java.util.Properties();
   }
 
   /**

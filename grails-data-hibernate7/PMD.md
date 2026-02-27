@@ -54,9 +54,9 @@ ReturnEmptyCollectionRatherThanNull,org.grails.orm.hibernate.cfg.domainbinding.h
 DataflowAnomalyAnalysis,org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernatePersistentEntity,79,YES
 NullAssignment,org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernatePersistentEntity,82,YES
 DataflowAnomalyAnalysis,org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernatePersistentEntity,82,YES
-DataflowAnomalyAnalysis,org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernatePersistentProperty,113,
-EmptyCatchBlock,org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernatePersistentProperty,120,
-ReturnEmptyCollectionRatherThanNull,org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernatePersistentProperty,198,
+DataflowAnomalyAnalysis,org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernatePersistentProperty,113,YES
+EmptyCatchBlock,org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernatePersistentProperty,120,YES
+ReturnEmptyCollectionRatherThanNull,org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernatePersistentProperty,198,YES
 DataflowAnomalyAnalysis,org.grails.orm.hibernate.cfg.domainbinding.secondpass.CollectionSecondPassBinder,94,
 DataflowAnomalyAnalysis,org.grails.orm.hibernate.cfg.domainbinding.secondpass.CollectionWithJoinTableBinder,96,
 NonSerializableClass,org.grails.orm.hibernate.cfg.domainbinding.secondpass.ListSecondPass,32,

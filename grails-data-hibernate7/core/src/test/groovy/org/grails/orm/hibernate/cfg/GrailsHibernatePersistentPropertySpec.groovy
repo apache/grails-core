@@ -168,7 +168,7 @@ class GrailsHibernatePersistentPropertySpec extends HibernateGormDatastoreSpec {
         
         expect:
         property.getTypeName(sv) == "string"
-        property.getTypeParameters(sv) == null // No type params in TestEntityWithTypeName
+        property.getTypeParameters(sv).isEmpty() // No type params in TestEntityWithTypeName
     }
 
     void "test getTypeName(SimpleValue) with fallback"() {
