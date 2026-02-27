@@ -64,7 +64,15 @@ import org.springframework.validation.Errors;
  * @author Graeme Rocher
  * @since 1.3.5
  */
-@SuppressWarnings({"rawtypes", "unchecked", "serial"})
+@SuppressWarnings({
+  "rawtypes",
+  "unchecked",
+  "serial",
+  "PMD.AvoidAccessibilityAlteration",
+  "PMD.DataflowAnomalyAnalysis",
+  "PMD.CompareObjectsWithEquals",
+  "PMD.CloseResource"
+})
 public class ClosureEventListener
     implements PreLoadEventListener,
         PostLoadEventListener,
@@ -143,7 +151,7 @@ public class ClosureEventListener
       actionQueueUpdatesField.setAccessible(true);
       entityUpdateActionStateField = ReflectionUtils.findField(EntityUpdateAction.class, "state");
       entityUpdateActionStateField.setAccessible(true);
-    } catch (Exception e) {
+    } catch (Exception ignored) {
       // ignore
     }
   }
