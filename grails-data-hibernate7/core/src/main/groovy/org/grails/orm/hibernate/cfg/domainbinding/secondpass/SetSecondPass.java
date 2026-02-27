@@ -32,6 +32,7 @@ import org.hibernate.mapping.Collection;
  *
  * @author Graeme
  */
+@SuppressWarnings("PMD.NonSerializableClass")
 public class SetSecondPass
     implements org.hibernate.boot.spi.SecondPass, GrailsSecondPass, java.io.Serializable {
 

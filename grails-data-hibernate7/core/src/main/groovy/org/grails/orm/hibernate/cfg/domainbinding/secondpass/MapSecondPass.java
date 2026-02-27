@@ -26,6 +26,7 @@ import org.hibernate.MappingException;
 import org.hibernate.boot.spi.InFlightMetadataCollector;
 import org.hibernate.mapping.Collection;
 
+@SuppressWarnings("PMD.NonSerializableClass")
 public class MapSecondPass
     implements org.hibernate.boot.spi.SecondPass, GrailsSecondPass, java.io.Serializable {
   @Serial private static final long serialVersionUID = -3244991685626409031L;
