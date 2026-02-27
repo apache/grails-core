@@ -32,6 +32,7 @@ import org.hibernate.mapping.Value;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+@SuppressWarnings("PMD.DataflowAnomalyAnalysis")
 public class GrailsPropertyBinder {
 
   private static final Logger LOG = LoggerFactory.getLogger(GrailsPropertyBinder.class);

@@ -29,7 +29,7 @@ DataflowAnomalyAnalysis,org.grails.orm.hibernate.cfg.domainbinding.binder.Compos
 DataflowAnomalyAnalysis,org.grails.orm.hibernate.cfg.domainbinding.binder.CompositeIdentifierToManyToOneBinder,85,YES
 DataflowAnomalyAnalysis,org.grails.orm.hibernate.cfg.domainbinding.binder.DiscriminatorPropertyBinder,68,YES
 DataflowAnomalyAnalysis,org.grails.orm.hibernate.cfg.domainbinding.binder.GrailsDomainBinder,227,YES
-DataflowAnomalyAnalysis,org.grails.orm.hibernate.cfg.domainbinding.binder.GrailsPropertyBinder,75,
+DataflowAnomalyAnalysis,org.grails.orm.hibernate.cfg.domainbinding.binder.GrailsPropertyBinder,75,YES
 DataflowAnomalyAnalysis,org.grails.orm.hibernate.cfg.domainbinding.binder.ManyToOneBinder,120,
 DataflowAnomalyAnalysis,org.grails.orm.hibernate.cfg.domainbinding.binder.NumericColumnConstraintsBinder,36,
 DataflowAnomalyAnalysis,org.grails.orm.hibernate.cfg.domainbinding.binder.RootBinder,78,
