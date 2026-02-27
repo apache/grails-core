@@ -30,6 +30,7 @@ import org.hibernate.mapping.BasicValue;
 import org.hibernate.mapping.Table;
 
 /** The basic value id creator class. */
+@SuppressWarnings("PMD.DataflowAnomalyAnalysis")
 public class BasicValueIdCreator {
 
   private final JdbcEnvironment jdbcEnvironment;
