@@ -47,7 +47,7 @@ MissingSerialVersionUID,org.grails.orm.hibernate.cfg.domainbinding.generator.Gra
 EmptyCatchBlock,org.grails.orm.hibernate.cfg.domainbinding.generator.GrailsNativeGenerator,34,YES
 MissingSerialVersionUID,org.grails.orm.hibernate.cfg.domainbinding.generator.GrailsSequenceStyleGenerator,30,YES
 ConstructorCallsOverridableMethod,org.grails.orm.hibernate.cfg.domainbinding.generator.GrailsSequenceStyleGenerator,59,YES
-MissingSerialVersionUID,org.grails.orm.hibernate.cfg.domainbinding.generator.GrailsTableGenerator,30,
+MissingSerialVersionUID,org.grails.orm.hibernate.cfg.domainbinding.generator.GrailsTableGenerator,30,YES
 ReturnEmptyArrayRatherThanNull,org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernateEmbeddedPersistentEntity,50,
 ReturnEmptyCollectionRatherThanNull,org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernateEmbeddedPersistentEntity,51,
 ReturnEmptyCollectionRatherThanNull,org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernatePersistentEntity,77,
