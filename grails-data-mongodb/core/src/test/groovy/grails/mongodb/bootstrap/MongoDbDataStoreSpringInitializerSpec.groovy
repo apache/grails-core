@@ -214,15 +214,6 @@ class MongoDbDataStoreSpringInitializerSpec extends AutoStartedMongoSpec {
             }
         }
     }
-
-    private MongoDbDataStoreSpringInitializer makeInitializer(Map config, Class... domainClasses) {
-        new MongoDbDataStoreSpringInitializer(config, domainClasses) {
-            @Override
-            protected Map<String, Class<?>> loadDataServices(String secondaryDatastore = null) {
-                [:]
-            }
-        }
-    }
 }
 
 
