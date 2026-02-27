@@ -26,6 +26,8 @@ import org.hibernate.id.IdentityGenerator;
 
 public class GrailsIdentityGenerator extends IdentityGenerator {
 
+  private static final long serialVersionUID = 1L;
+
   public GrailsIdentityGenerator(GeneratorCreationContext context, Identity mappedId) {
     var generatorProps =
         Optional.ofNullable(mappedId).map(Identity::getProperties).orElse(new Properties());

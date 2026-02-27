@@ -41,7 +41,7 @@ NullAssignment,org.grails.orm.hibernate.cfg.domainbinding.binder.SimpleValueBind
 NullAssignment,org.grails.orm.hibernate.cfg.domainbinding.binder.SimpleValueBinder,83,YES
 NullAssignment,org.grails.orm.hibernate.cfg.domainbinding.binder.SimpleValueBinder,84,YES
 NullAssignment,org.grails.orm.hibernate.cfg.domainbinding.binder.SimpleValueBinder,85,YES
-MissingSerialVersionUID,org.grails.orm.hibernate.cfg.domainbinding.generator.GrailsIdentityGenerator,27,
+MissingSerialVersionUID,org.grails.orm.hibernate.cfg.domainbinding.generator.GrailsIdentityGenerator,27,YES
 MissingSerialVersionUID,org.grails.orm.hibernate.cfg.domainbinding.generator.GrailsIncrementGenerator,40,
 MissingSerialVersionUID,org.grails.orm.hibernate.cfg.domainbinding.generator.GrailsNativeGenerator,27,
 EmptyCatchBlock,org.grails.orm.hibernate.cfg.domainbinding.generator.GrailsNativeGenerator,34,
