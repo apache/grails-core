@@ -78,6 +78,7 @@ public class GrailsHibernateUtil extends HibernateRuntimeUtils {
    * @param target The target object
    * @param sessionFactory The SessionFactory instance
    */
+  @SuppressWarnings("PMD.CloseResource")
   public static void setObjectToReadyOnly(Object target, SessionFactory sessionFactory) {
     Object resource = TransactionSynchronizationManager.getResource(sessionFactory);
     if (resource != null) {
@@ -104,6 +105,7 @@ public class GrailsHibernateUtil extends HibernateRuntimeUtils {
    * @param target The target object
    * @param sessionFactory The SessionFactory instance
    */
+  @SuppressWarnings({"PMD.CloseResource", "PMD.DataflowAnomalyAnalysis"})
   public static void setObjectToReadWrite(final Object target, SessionFactory sessionFactory) {
     Session session = sessionFactory.getCurrentSession();
     if (!canModifyReadWriteState(session, target)) {
