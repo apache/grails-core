@@ -26,12 +26,14 @@ import org.hibernate.id.NativeGenerator;
 
 public class GrailsNativeGenerator extends NativeGenerator {
 
+  private static final long serialVersionUID = 1L;
+
   public GrailsNativeGenerator(GeneratorCreationContext context) {
     // This triggers the internal switch logic you provided earlier,
     // which calls setIdentity(true) on the column for H2.
     try {
       this.initialize(null, null, context);
-    } catch (Exception e) {
+    } catch (Exception ignored) {
       // ignore for now, helps with testing robustness where context might be incomplete
     }
   }

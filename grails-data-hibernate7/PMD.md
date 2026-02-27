@@ -43,8 +43,8 @@ NullAssignment,org.grails.orm.hibernate.cfg.domainbinding.binder.SimpleValueBind
 NullAssignment,org.grails.orm.hibernate.cfg.domainbinding.binder.SimpleValueBinder,85,YES
 MissingSerialVersionUID,org.grails.orm.hibernate.cfg.domainbinding.generator.GrailsIdentityGenerator,27,YES
 MissingSerialVersionUID,org.grails.orm.hibernate.cfg.domainbinding.generator.GrailsIncrementGenerator,40,YES
-MissingSerialVersionUID,org.grails.orm.hibernate.cfg.domainbinding.generator.GrailsNativeGenerator,27,
-EmptyCatchBlock,org.grails.orm.hibernate.cfg.domainbinding.generator.GrailsNativeGenerator,34,
+MissingSerialVersionUID,org.grails.orm.hibernate.cfg.domainbinding.generator.GrailsNativeGenerator,27,YES
+EmptyCatchBlock,org.grails.orm.hibernate.cfg.domainbinding.generator.GrailsNativeGenerator,34,YES
 MissingSerialVersionUID,org.grails.orm.hibernate.cfg.domainbinding.generator.GrailsSequenceStyleGenerator,30,
 ConstructorCallsOverridableMethod,org.grails.orm.hibernate.cfg.domainbinding.generator.GrailsSequenceStyleGenerator,59,
 MissingSerialVersionUID,org.grails.orm.hibernate.cfg.domainbinding.generator.GrailsTableGenerator,30,
