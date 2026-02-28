@@ -21,7 +21,6 @@ plugins {
     id 'org.apache.grails.buildsrc.compile'
 }
 
-apply plugin: 'groovy'
 apply plugin: 'org.apache.grails.gradle.grails-web'
 
 version = '0.1'

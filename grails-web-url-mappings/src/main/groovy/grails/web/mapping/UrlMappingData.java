@@ -70,4 +70,19 @@ public interface UrlMappingData {
      * @return Whether the pattern has an optional extension
      */
     boolean hasOptionalExtension();
+
+    /**
+     * @return Whether the parameter before the optional extension should use greedy matching (last-dot split)
+     */
+    boolean hasGreedyExtensionParam();
+
+    /**
+     * Returns the token index (0-based) of the greedy parameter, or -1 if no greedy parameter exists.
+     * This is used to determine if a specific logical URL includes the greedy parameter.
+     *
+     * @return The index of the greedy token, or -1 if none
+     */
+    default int getGreedyTokenIndex() {
+        return -1;
+    }
 }

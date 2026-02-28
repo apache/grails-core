@@ -19,6 +19,8 @@
 
 package org.grails.scaffolding.model.property
 
+import grails.gorm.validation.DisplayType
+
 class Constrained {
 
     grails.gorm.validation.Constrained constrained1
@@ -73,6 +75,24 @@ class Constrained {
         } else {
             true
         }
+    }
+
+    DisplayType getDisplayType() {
+        if (this.constrained1 != null) {
+            this.constrained1.getDisplayType()
+        } else {
+            null
+        }
+    }
+
+    boolean isDisplayInput() {
+        DisplayType type = getDisplayType()
+        type == null || type == DisplayType.ALL || type == DisplayType.INPUT_ONLY
+    }
+
+    boolean isDisplayOutput() {
+        DisplayType type = getDisplayType()
+        type == null || type == DisplayType.ALL || type == DisplayType.OUTPUT_ONLY
     }
 
     boolean isEditable() {

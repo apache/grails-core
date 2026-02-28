@@ -36,6 +36,7 @@ gettingStarted:
   developmentReloading: Development Reloading
 upgrading:
   title: Upgrading from the previous versions
+  upgrading70x: Upgrading from Grails 7 to Grails 8
   upgrading60x: Upgrading from Grails 6 to Grails 7
   upgrading50x: Upgrading from Grails 5 to Grails 6
   upgrading40x: Upgrading from Grails 4 to Grails 5
@@ -304,6 +305,9 @@ testing:
     usefulProperties: Useful Properties
   integrationTesting: Integration Testing
   functionalTesting: Functional Testing
+bestPractices:
+  title: Building a Successful Application
+  codeAnalysisGroovy: Code Analysis and Styling for Groovy
 i18n:
   title: Internationalization
   understandingMessageBundles: Understanding Message Bundles

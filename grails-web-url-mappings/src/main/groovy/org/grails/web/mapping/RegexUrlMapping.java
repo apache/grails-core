@@ -245,6 +245,17 @@ public class RegexUrlMapping extends AbstractUrlMapping {
                 // happen any time a URL mapping ends with a pattern like
                 // /$someVariable(.$someExtension)
                 pattern += "/([^/]+)\\.([^/.]+)?";
+            } else if (urlData.hasGreedyExtensionParam() && urlData.hasOptionalExtension() &&
+                       shouldApplyGreedyForUrl(url, urlData.getGreedyTokenIndex())) {
+                // Handle greedy extension param (+ marker): match everything up to the last dot
+                // The key is to make the entire dot+extension group optional using (?: )?
+                // For /(*)+(\.(*))?  we want regex: /(.+?)(?:\.([^/.]+))?  (required, greedy)
+                // For /(*)?+(\.(*))?  we want regex: /(.+?)?(?:\.([^/.]+))? (optional, greedy)
+                // Only apply greedy regex if this logical URL actually includes the greedy token
+                String processed = urlEnd
+                        .replace("/(*)?(\\.(*))?", "/(.+?)?(?:\\.([^/.]+))?")   // Optional greedy: (*)?+
+                        .replace("/(*)(\\.(*))?", "/(.+?)(?:\\.([^/.]+))?");    // Required greedy: (*)+
+                pattern += processed;
             } else {
                 pattern += urlEnd
                         .replace("(\\.(*))", "(\\.[^/]+)?")
@@ -263,6 +274,26 @@ public class RegexUrlMapping extends AbstractUrlMapping {
         }
 
         return regex;
+    }
+
+    /**
+     * Determines if greedy regex should be applied for a given logical URL.
+     * Greedy regex should only be applied when the logical URL includes the greedy token.
+     * This is determined by counting the path segments (slashes) in the URL.
+     *
+     * @param url The logical URL being processed
+     * @param greedyTokenIndex The 0-based index of the greedy token
+     * @return true if greedy regex should be applied, false otherwise
+     */
+    private boolean shouldApplyGreedyForUrl(String url, int greedyTokenIndex) {
+        if (greedyTokenIndex < 0) {
+            return false;
+        }
+        // Count the number of path segments by counting slashes
+        // A URL with N slashes has N tokens (e.g., /a/b/c has 3 slashes and 3 tokens)
+        int slashCount = org.springframework.util.StringUtils.countOccurrencesOf(url, "/");
+        // The greedy token at index N is present only if there are at least N+1 slashes
+        return slashCount > greedyTokenIndex;
     }
 
     /**

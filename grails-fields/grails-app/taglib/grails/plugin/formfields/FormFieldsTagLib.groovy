@@ -41,6 +41,7 @@ import org.springframework.context.MessageSourceResolvable
 import org.springframework.context.NoSuchMessageException
 import org.springframework.web.servlet.LocaleResolver
 
+import grails.gorm.validation.DisplayType
 import grails.util.GrailsStringUtils
 import org.grails.buffer.FastStringWriter
 import org.grails.datastore.mapping.model.MappingContext
@@ -617,12 +618,24 @@ class FormFieldsTagLib {
                 fieldsDomainPropertyFactory.build(domainClass.getPropertyByName(propertyName))
             }
         } else {
-            properties = list ? domainModelService.getListOutputProperties(domainClass) : domainModelService.getInputProperties(domainClass,
-                    exclusionType == ExclusionType.Input ? exclusionsInput : exclusionsDisplay)
+            if (list) {
+                properties = domainModelService.getListOutputProperties(domainClass)
+            } else if (exclusionType == ExclusionType.Display) {
+                properties = domainModelService.getOutputProperties(domainClass, exclusionsDisplay)
+            } else {
+                properties = domainModelService.getInputProperties(domainClass, exclusionsInput, true)
+            }
             // If 'except' is not set, but 'list' is, exclude 'id', 'dateCreated' and 'lastUpdated' by default
             List<String> blacklist = attrs.containsKey('except') ? getList(attrs.except) : (list ? exclusionsList : [])
 
-            properties.removeAll { it.name in blacklist }
+            properties.removeAll { property ->
+                if (property.name in blacklist) {
+                    DisplayType displayType = property.constrained?.displayType
+                    // DisplayType.ALL or OUTPUT_ONLY explicitly overrides the blacklist for output views
+                    return displayType != DisplayType.ALL && displayType != DisplayType.OUTPUT_ONLY
+                }
+                false
+            }
         }
 
         return properties

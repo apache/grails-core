@@ -1,0 +1,18 @@
+plugins {
+    id 'org.apache.grails.gradle.grails-app'
+}
+
+tasks.register('checkSysProps', JavaExec) {
+    classpath = files()
+    mainClass = 'does.not.Matter'
+}
+
+tasks.register('inspectSysProps') {
+    doLast {
+        def task = tasks.named('checkSysProps', JavaExec).get()
+        def sysProps = task.systemProperties
+        println "HAS_ENV=${sysProps.containsKey('grails.env')}"
+        println "MIN_HEAP=${task.minHeapSize}"
+        println "MAX_HEAP=${task.maxHeapSize}"
+    }
+}

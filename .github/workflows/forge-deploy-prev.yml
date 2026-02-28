@@ -22,7 +22,7 @@ jobs:
     runs-on: ubuntu-24.04
     steps:
       - name: "📥 Checkout repository"
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
       - name: "☕️ Setup JDK"
         uses: actions/setup-java@v4
         with:
@@ -45,7 +45,7 @@ jobs:
       IMAGE_NAME: us-docker.pkg.dev/${{ secrets.GCP_PROJECT_ID }}/${{ secrets.GCP_APP_NAME }}/${{ secrets.GCP_APP_NAME }}:prev
     steps:
       - name: "📥 Checkout repository"
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
       - name: "☕️ Setup JDK"
         uses: actions/setup-java@v4
         with:
@@ -104,7 +104,7 @@ jobs:
       IMAGE_NAME: us-docker.pkg.dev/${{ secrets.GCP_PROJECT_ID }}/${{ secrets.GCP_APP_NAME }}/${{ secrets.GCP_APP_NAME }}-analytics:prev
     steps:
       - name: "📥 Checkout repository"
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
       - name: "☕️ Setup JDK"
         uses: actions/setup-java@v4
         with:

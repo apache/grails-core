@@ -19,6 +19,7 @@
 package grails.ui.script
 
 import groovy.transform.CompileStatic
+import grails.ui.command.GrailsApplicationContextCommandRunner
 import org.codehaus.groovy.control.CompilerConfiguration
 import org.codehaus.groovy.control.customizers.ImportCustomizer
 
@@ -49,7 +50,13 @@ class GrailsApplicationScriptRunner extends DevelopmentGrailsApplication {
     ConfigurableApplicationContext run(String...args) {
         ConfigurableApplicationContext ctx
         try {
-            ctx = super.run(args)
+            // Filter out --prefixed options before passing to Spring Boot.
+            // Same fix as GrailsApplicationContextCommandRunner — Spring Boot's
+            // CommandLinePropertySource interprets --key=value as property overrides,
+            // which can corrupt GORM configuration when running scripts via:
+            //   ./gradlew runScript -Pargs="myscript.groovy --someOption=value"
+            String[] springBootArgs = GrailsApplicationContextCommandRunner.filterCommandOptions(args)
+            ctx = super.run(springBootArgs)
         } catch (Throwable e) {
             System.err.println("Context failed to load: $e.message")
             System.exit(1)

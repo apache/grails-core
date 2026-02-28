@@ -24,18 +24,16 @@ import spock.lang.Unroll
 
 class TestFrameworkSpec extends Specification {
 
-    @Unroll("expected test source path: #expected for path: #path , lang: #lang and test framework: #testFramework")
-    void "getSourcePath returns a path with the correct language extension and test framework suffix"(Language lang,
-                                                                                                      TestFramework testFramework,
+    @Unroll("expected test source path: #expected for path: #path and test framework: #testFramework")
+    void "getSourcePath returns a path with the correct language extension and test framework suffix"(TestFramework testFramework,
                                                                                                       String expected,
                                                                                                       String path) {
         expect:
-        expected == testFramework.getSourcePath(path, lang)
+        expected == testFramework.getSourcePath(path)
 
         where:
-        lang            | testFramework       || expected
-        Language.GROOVY | TestFramework.JUNIT || "src/test/groovy/{packagePath}/{className}Test.groovy"
-        Language.GROOVY | TestFramework.SPOCK || "src/test/groovy/{packagePath}/{className}Spec.groovy"
+        testFramework = TestFramework.SPOCK
+        expected = "src/test/groovy/{packagePath}/{className}Spec.groovy"
         path = '/{packagePath}/{className}'
     }
 
@@ -58,7 +56,6 @@ class TestFrameworkSpec extends Specification {
 
         where:
         expected          | testFramework
-        [Language.GROOVY] | TestFramework.JUNIT
         [Language.GROOVY] | TestFramework.SPOCK
     }
 }

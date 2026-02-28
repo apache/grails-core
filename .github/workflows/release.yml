@@ -53,7 +53,7 @@ jobs:
       - name: "🌐 Output Agent IP" # in the event RAO blocks this agent, this can be used to debug it
         run: curl -s https://api.ipify.org
       - name: "📥 Checkout repository"
-        uses: actions/checkout@v5
+        uses: actions/checkout@v6
         with:
           fetch-depth: 0 # needed for docs release dropdown, (fetch-tags: true with fetch-depth: 1 does not work; https://github.com/actions/checkout/issues/1471)
           filter: tree:0 # limit size, keeping tags for docs release dropdown
@@ -239,7 +239,7 @@ jobs:
       - name: "📝 Establish release version"
         run: echo "VERSION=${TAG#v}" >> "$GITHUB_ENV"
       - name: "📥 Checkout Grails Core repository"
-        uses: actions/checkout@v5
+        uses: actions/checkout@v6
         with:
           path: grails
           ref: ${{ env.TAG }}
@@ -434,7 +434,7 @@ jobs:
           tag_name: ${{ env.TAG }}
           files: dev-repo/DIST_SVN_REVISION.txt
       - name: "📥 Checkout repository"
-        uses: actions/checkout@v5
+        uses: actions/checkout@v6
         with:
           path: ${{ env.REPO_NAME }}
           ref: ${{ env.TAG }}
@@ -479,7 +479,7 @@ jobs:
       - name: "📝 Establish release version"
         run: echo "VERSION=${TAG#v}" >> "$GITHUB_ENV"
       - name: "📥 Checkout repository"
-        uses: actions/checkout@v5
+        uses: actions/checkout@v6
         with:
           ref: ${{ env.TAG }}
       - name: "🛠️️ Install tools"
@@ -560,7 +560,7 @@ jobs:
 
           df -h
       - name: "📥 Checkout repository"
-        uses: actions/checkout@v5
+        uses: actions/checkout@v6
         with:
           fetch-depth: 0 # needed for docs release dropdown, (fetch-tags: true with fetch-depth: 1 does not work; https://github.com/actions/checkout/issues/1471)
           filter: tree:0 # limit size, keeping tags for docs release dropdown
@@ -597,7 +597,7 @@ jobs:
       - name: "📝 Establish release version"
         run: echo "VERSION=${TAG#v}" >> "$GITHUB_ENV"
       - name: "📥 Checkout repository"
-        uses: actions/checkout@v5
+        uses: actions/checkout@v6
         with:
           ref: ${{ env.TAG }}
       - name: "☕️ Setup JDK"
@@ -637,7 +637,7 @@ jobs:
       - name: "📝 Establish release version"
         run: echo "VERSION=${TAG#v}" >> "$GITHUB_ENV"
       - name: "📥 Checkout repository"
-        uses: actions/checkout@v5
+        uses: actions/checkout@v6
         with:
           ref: ${{ env.TAG }}
           token: ${{ secrets.GITHUB_TOKEN }}

@@ -74,5 +74,11 @@
             <artifactId>gradle-jrebel-plugin</artifactId>
             <version>1.2.1</version>
         </dependency>
+        <dependency>
+            <!-- Force newer version to fix sun.misc.Unsafe::objectFieldOffset warning on Java 25 -->
+            <groupId>org.jboss.threads</groupId>
+            <artifactId>jboss-threads</artifactId>
+            <version>3.9.2</version>
+        </dependency>
     </dependencies>
 </project>

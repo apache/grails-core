@@ -23,12 +23,13 @@ import org.apache.grails.data.hibernate5.core.GrailsDataHibernate5TckManager
 import org.apache.grails.data.testing.tck.base.GrailsDataTckSpec
 import org.grails.datastore.gorm.finders.DynamicFinder
 import org.grails.orm.hibernate.query.HibernateQuery
+import org.hibernate.Hibernate
 
 import jakarta.persistence.criteria.JoinType
 
 class DetachedCriteriaJoinSpec extends GrailsDataTckSpec<GrailsDataHibernate5TckManager> {
     void setupSpec() {
-        manager.domainClasses.addAll([Team, Club])
+        manager.domainClasses.addAll([Team, Club, Player, Contract])
     }
 
     def "check if count works as expected"() {
@@ -87,5 +88,126 @@ class DetachedCriteriaJoinSpec extends GrailsDataTckSpec<GrailsDataHibernate5Tck
         def joinType = query.hibernateCriteria.subcriteriaList.first().joinType
         expect:
         joinType == org.hibernate.sql.JoinType.RIGHT_OUTER_JOIN
+    }
+
+    def 'check get honours join and eagerly loads association'() {
+        given:
+        def club = new Club(name: 'Juventus').save(flush: true)
+        new Team(name: 'Torino', club: club).save(flush: true)
+
+        when:
+        Team team = Team.where { name == 'Torino' }.join('club').get()
+
+        then:
+        team != null
+        Hibernate.isInitialized(team.club)
+    }
+
+    def 'check list with join and projected association property works without explicit alias'() {
+        given:
+        def club = new Club(name: 'Milan').save(flush: true)
+        new Team(name: 'Rossoneri', club: club).save(flush: true)
+
+        when:
+        def result = Team.where { name == 'Rossoneri' }.join('club').property('club.name').list()
+
+        then:
+        result == ['Milan']
+    }
+
+    def 'check get with join and projected association property works without explicit alias'() {
+        given:
+        def club = new Club(name: 'Inter').save(flush: true)
+        new Team(name: 'Nerazzurri', club: club).save(flush: true)
+
+        when:
+        def result = Team.where { name == 'Nerazzurri' }.join('club').property('club.name').get()
+
+        then:
+        result == 'Inter'
+    }
+
+    def 'check list with association subquery plus join and projection works'() {
+        given:
+        def club = new Club(name: 'Ajax').save(flush: true)
+        new Team(name: 'Amsterdammers', club: club).save(flush: true)
+
+        when:
+        def result = Team.where {
+            club {
+                name == 'Ajax'
+            }
+        }.join('club').property('club.name').list()
+
+        then:
+        result == ['Ajax']
+    }
+
+    def 'check list can sort by joined association property'() {
+        given:
+        def clubA = new Club(name: 'A Club').save(flush: true)
+        def clubB = new Club(name: 'B Club').save(flush: true)
+        new Team(name: 'Team B', club: clubB).save(flush: true)
+        new Team(name: 'Team A', club: clubA).save(flush: true)
+
+        when:
+        def result = Team.where {}.join('club').sort('club.name', 'asc').property('name').list()
+
+        then:
+        result == ['Team A', 'Team B']
+    }
+
+    def 'check get honours join with join type and eagerly loads association'() {
+        given:
+        def club = new Club(name: 'PSG').save(flush: true)
+        new Team(name: 'Paris', club: club).save(flush: true)
+
+        when:
+        Team team = Team.where { name == 'Paris' }.join('club', JoinType.LEFT).get()
+
+        then:
+        team != null
+        Hibernate.isInitialized(team.club)
+    }
+
+    def 'check list with multiple projections on joined association'() {
+        given:
+        def club = new Club(name: 'Benfica').save(flush: true)
+        new Team(name: 'Lisbon', club: club).save(flush: true)
+
+        when:
+        def result = Team.where { name == 'Lisbon' }.join('club').property('club.name').property('name').list()
+
+        then:
+        result.size() == 1
+        result[0][0] == 'Benfica'
+        result[0][1] == 'Lisbon'
+    }
+
+    def 'check list with deep nested projection path on players'() {
+        given:
+        def club = new Club(name: 'Boca Juniors').save(flush: true)
+        def team = new Team(name: 'Xeneizes', club: club).save(flush: true)
+        def player = new Player(name: 'Roman', team: team)
+        player.contract = new Contract(salary: 5_000_000G, player: player)
+        player.save(flush: true)
+
+        when:
+        def result = Team.where { name == 'Xeneizes' }.join('players').property('players.name').list()
+
+        then:
+        result == ['Roman']
+    }
+
+    def 'check invalid projection path throws exception'() {
+        when:
+        new DetachedCriteria(Team).build {
+            projections {
+                property('nonexistent.field')
+            }
+        }.list()
+
+        then:
+        thrown(Exception)
     }
 }

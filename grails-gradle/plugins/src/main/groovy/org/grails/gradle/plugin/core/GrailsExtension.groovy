@@ -23,6 +23,7 @@ import groovy.transform.CompileStatic
 import org.apache.tools.ant.taskdefs.condition.Os
 import org.gradle.api.Project
 import org.gradle.api.artifacts.dsl.DependencyHandler
+import org.gradle.api.provider.Property
 import org.gradle.util.internal.ConfigureUtil
 
 import grails.util.Environment
@@ -42,6 +43,7 @@ class GrailsExtension {
     GrailsExtension(Project project) {
         this.project = project
         this.pluginDefiner = new PluginDefiner(project)
+        this.indy = project.objects.property(Boolean).convention(false)
     }
 
     /**
@@ -65,6 +67,22 @@ class GrailsExtension {
     boolean importJavaTime = false
 
     /**
+     * Whether grails annotation packages and common validation annotations should be default import packages.
+     * When enabled, automatically imports:
+     * - jakarta.validation.constraints.*
+     * - grails.gorm.annotation.* (if grails-datamapping-core is in classpath)
+     * - grails.plugin.scaffolding.annotation.* (if grails-scaffolding is in classpath)
+     */
+    boolean importGrailsCommonAnnotations = false
+
+    /**
+     * Custom star imports to add to Groovy compilation configuration.
+     * Users can add their own package imports that will be combined with
+     * imports added by importJavaTime and importGrailsCommonAnnotations flags.
+     */
+    List<String> starImports = []
+
+    /**
      * Whether the spring dependency management plugin should be applied by default
      */
     boolean springDependencyManagement = true
@@ -75,6 +93,18 @@ class GrailsExtension {
      * Gradle property is enforced.
      */
     boolean micronautAutoSetup = true
+
+    /**
+     * Whether to enable Groovy's invokedynamic (indy) bytecode instruction for dynamic Groovy method dispatch.
+     * Disabled by default to improve performance (see GitHub issue #15293).
+     * When enabled, Groovy uses JVM invokedynamic instead of traditional callsite caching.
+     * To enable invokedynamic in build.gradle: grails { indy = true }
+     */
+    final Property<Boolean> indy
+
+    void setIndy(boolean enabled) {
+        this.indy.set(enabled)
+    }
 
     DependencyHandler getPlugins() {
         if (pluginDefiner == null) {

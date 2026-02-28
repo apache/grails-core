@@ -161,7 +161,7 @@ Here is an example of a "grails-forge-cli.yml" configuration for a default Grail
 ----
 applicationType: web
 defaultPackage: com.example
-testFramework: spock
+reloading: devtools
 sourceLanguage: groovy
 buildTool: gradle
 gormImpl: gorm-hibernate5

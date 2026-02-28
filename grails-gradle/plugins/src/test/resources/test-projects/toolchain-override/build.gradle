@@ -1,0 +1,30 @@
+import org.gradle.jvm.toolchain.JavaLanguageVersion
+
+plugins {
+    id 'org.apache.grails.gradle.grails-app'
+}
+
+java {
+    toolchain {
+        languageVersion = JavaLanguageVersion.of(__CURRENT_JDK__)
+    }
+}
+
+tasks.register('customExec', JavaExec) {
+    classpath = files()
+    mainClass = 'does.not.Matter'
+    javaLauncher.set(javaToolchains.launcherFor {
+        languageVersion = JavaLanguageVersion.of(__CURRENT_JDK__)
+    })
+}
+
+tasks.register('checkOverride') {
+    doLast {
+        def launcher = tasks.named('customExec', JavaExec).get().javaLauncher
+        if (launcher.isPresent()) {
+            println "OVERRIDE_VERSION=${launcher.get().metadata.languageVersion.asInt()}"
+        } else {
+            println 'OVERRIDE_VERSION=none'
+        }
+    }
+}

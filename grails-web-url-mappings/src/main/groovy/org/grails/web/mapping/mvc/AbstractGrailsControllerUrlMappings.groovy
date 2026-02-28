@@ -61,7 +61,17 @@ abstract class AbstractGrailsControllerUrlMappings implements UrlMappings {
         }
 
         for (Map.Entry<ControllerKey, GrailsControllerClass> entry: deferredMappings.entrySet()) {
-            mappingsToGrailsControllerMap.putIfAbsent(entry.key, entry.value)
+            ControllerKey key = entry.key
+            GrailsControllerClass deferredController = entry.value
+            GrailsControllerClass existingController = mappingsToGrailsControllerMap.get(key)
+
+            if (existingController == null) {
+                mappingsToGrailsControllerMap.put(key, deferredController)
+            } else if (key.namespace == null && deferredController.namespace == null && existingController.namespace != null) {
+                // A non-namespaced controller is a better match for a null-namespace key
+                // than a namespaced controller that registered here as a fallback
+                mappingsToGrailsControllerMap.put(key, deferredController)
+            }
         }
     }
 
