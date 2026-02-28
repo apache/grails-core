@@ -27,14 +27,3 @@ tasks.withType(Test).configureEach {
     useJUnitPlatform()
 }
 
-tasks.withType(GroovyCompile).configureEach {
-    // Preserve method parameter names in Groovy/Java classes for IDE parameter hints & bean reflection metadata.
-    groovyOptions.parameters = true
-    // https://github.com/apache/grails-core/issues/15321
-    groovyOptions.optimizationOptions.indy = false
-}
-
-tasks.withType(JavaCompile).configureEach {
-    // Preserve method parameter names in Groovy/Java classes for IDE parameter hints & bean reflection metadata.
-    options.compilerArgs.add('-parameters')
-}
