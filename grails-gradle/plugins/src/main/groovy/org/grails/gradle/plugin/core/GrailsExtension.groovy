@@ -44,6 +44,7 @@ class GrailsExtension {
         this.project = project
         this.pluginDefiner = new PluginDefiner(project)
         this.indy = project.objects.property(Boolean).convention(false)
+        this.preserveParameterNames = project.objects.property(Boolean).convention(true)
     }
 
     /**
@@ -104,6 +105,18 @@ class GrailsExtension {
 
     void setIndy(boolean enabled) {
         this.indy.set(enabled)
+    }
+
+    /**
+     * Preserve method parameter names in .class files (enables better IDE code completion for method parameters,
+     * reflection-based tools, bean introspection, etc.).
+     * Corresponds to groovyc `-parameters`.
+     * Default: true (See #13028)
+     */
+    final Property<Boolean> preserveParameterNames
+
+    void setPreserveParameterNames(boolean enabled) {
+        this.preserveParameterNames.set(enabled)
     }
 
     DependencyHandler getPlugins() {
