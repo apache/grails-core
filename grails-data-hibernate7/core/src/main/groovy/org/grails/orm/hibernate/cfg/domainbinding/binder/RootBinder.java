@@ -83,7 +83,7 @@ public class RootBinder {
     // bind the sub classes
     children.forEach(sub -> subClassBinder.bindSubClass(sub, root, mappings, m));
 
-    multiTenantFilterBinder.addMultiTenantFilterIfNecessary(entity, root);
+    multiTenantFilterBinder.bind(entity, root);
 
     mappings.addEntityBinding(root);
   }

@@ -19,12 +19,14 @@
 package org.grails.orm.hibernate.cfg.domainbinding.util;
 
 import jakarta.annotation.Nonnull;
+import jakarta.annotation.Nullable;
 import java.util.Collections;
 import java.util.Optional;
 import org.grails.datastore.mapping.model.config.GormProperties;
 import org.grails.datastore.mapping.model.types.TenantId;
 import org.grails.orm.hibernate.cfg.domainbinding.hibernate.GrailsHibernatePersistentEntity;
 import org.hibernate.boot.spi.InFlightMetadataCollector;
+import org.hibernate.engine.spi.FilterDefinition;
 import org.hibernate.mapping.PersistentClass;
 import org.hibernate.mapping.Property;
 import org.hibernate.mapping.RootClass;
@@ -53,27 +55,38 @@ public class MultiTenantFilterBinder {
   }
 
   /**
-   * Adds a multi-tenant filter to the given persistent class if necessary.
+   * Binds a multi-tenant filter to the given persistent class if necessary.
    *
    * @param entity The target persistent entity
    * @param persistentClass The persistent class to add the filter to
+   * @return The filter definition applied, or null if none
    */
-  public void addMultiTenantFilterIfNecessary(
+  @Nullable
+  public FilterDefinition bind(
       @Nonnull GrailsHibernatePersistentEntity entity, @Nonnull PersistentClass persistentClass) {
 
     if (!entity.isMultiTenant()) {
-      return;
+      return null;
     }
 
-    Optional.ofNullable(entity.getTenantId())
+    return Optional.ofNullable(entity.getTenantId())
         .map(TenantId::getName)
         .map(name -> grailsPropertyResolver.getProperty(persistentClass, name))
-        .ifPresent(
+        .map(
             property -> {
               var filterName = GormProperties.TENANT_IDENTITY;
-              filterDefinitionBinder.ensureGlobalFilterDefinition(mappings, filterName, property);
+              FilterDefinition filterDefinition = mappings.getFilterDefinition(filterName);
+              if (filterDefinition == null) {
+                filterDefinition = filterDefinitionBinder.create(filterName, property).orElse(null);
+                if (filterDefinition != null) {
+                  mappings.addFilterDefinition(filterDefinition);
+                }
+              }
+
               applyFilterToPersistentClass(entity, persistentClass, filterName, property);
-            });
+              return filterDefinition;
+            })
+        .orElse(null);
   }
 
   private void applyFilterToPersistentClass(

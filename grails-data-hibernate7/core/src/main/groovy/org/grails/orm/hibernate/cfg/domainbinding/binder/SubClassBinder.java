@@ -67,7 +67,7 @@ public class SubClassBinder {
     parent.addSubclass(subClass);
     mappings.addEntityBinding(subClass);
 
-    multiTenantFilterBinder.addMultiTenantFilterIfNecessary(sub, subClass);
+    multiTenantFilterBinder.bind(sub, subClass);
 
     Collection<GrailsHibernatePersistentEntity> children = sub.getChildEntities(dataSourceName);
     if (!children.isEmpty()) {

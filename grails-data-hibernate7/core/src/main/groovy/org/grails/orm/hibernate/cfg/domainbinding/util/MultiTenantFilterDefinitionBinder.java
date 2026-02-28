@@ -20,7 +20,7 @@ package org.grails.orm.hibernate.cfg.domainbinding.util;
 
 import jakarta.annotation.Nonnull;
 import java.util.Collections;
-import org.hibernate.boot.spi.InFlightMetadataCollector;
+import java.util.Optional;
 import org.hibernate.engine.spi.FilterDefinition;
 import org.hibernate.mapping.BasicValue;
 import org.hibernate.mapping.Property;
@@ -34,24 +34,22 @@ import org.hibernate.metamodel.mapping.JdbcMapping;
 public class MultiTenantFilterDefinitionBinder {
 
   /**
-   * Ensures that a global filter definition exists for the given filter name.
+   * Creates a global filter definition for the given filter name.
    *
-   * @param mappings The in-flight metadata collector
    * @param filterName The name of the filter
    * @param property The property to get the type from
+   * @return The FilterDefinition Optional
    */
-  public void ensureGlobalFilterDefinition(
-      @Nonnull InFlightMetadataCollector mappings,
-      @Nonnull String filterName,
-      @Nonnull Property property) {
-    if (mappings.getFilterDefinition(filterName) == null
-        && property.getValue() instanceof BasicValue basicValue) {
+  @Nonnull
+  public Optional<FilterDefinition> create(@Nonnull String filterName, @Nonnull Property property) {
+    if (property.getValue() instanceof BasicValue basicValue) {
       JdbcMapping jdbcMapping = basicValue.resolve().getJdbcMapping();
-      mappings.addFilterDefinition(
+      return Optional.of(
           new FilterDefinition(
               filterName,
               null, // No default condition; let classes specify their own
               Collections.singletonMap(filterName, jdbcMapping)));
     }
+    return Optional.empty();
   }
 }

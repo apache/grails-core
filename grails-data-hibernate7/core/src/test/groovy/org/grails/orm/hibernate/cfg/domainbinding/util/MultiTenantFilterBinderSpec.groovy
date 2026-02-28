@@ -58,7 +58,7 @@ class MultiTenantFilterBinderSpec extends HibernateGormDatastoreSpec {
         entity.getMultiTenantFilterCondition(fetcher) >> "tenant_id = :tenantId"
 
         when:
-        filterBinder.addMultiTenantFilterIfNecessary(entity, persistentClass)
+        filterBinder.bind(entity, persistentClass)
 
         then:
         1 * mockCollector.addFilterDefinition(_ as FilterDefinition)
@@ -93,7 +93,7 @@ class MultiTenantFilterBinderSpec extends HibernateGormDatastoreSpec {
         mockCollector.getFilterDefinition(_) >> Mock(FilterDefinition)
 
         when:
-        filterBinder.addMultiTenantFilterIfNecessary(entity, persistentClass)
+        filterBinder.bind(entity, persistentClass)
 
         then:
         !persistentClass.getFilters().any { it.getName() == GormProperties.TENANT_IDENTITY }
@@ -130,7 +130,7 @@ class MultiTenantFilterBinderSpec extends HibernateGormDatastoreSpec {
         mockCollector.getFilterDefinition(_) >> Mock(FilterDefinition)
 
         when:
-        filterBinder.addMultiTenantFilterIfNecessary(entity, persistentClass)
+        filterBinder.bind(entity, persistentClass)
 
         then:
         !persistentClass.getFilters().any { it.getName() == GormProperties.TENANT_IDENTITY }
@@ -165,7 +165,7 @@ class MultiTenantFilterBinderSpec extends HibernateGormDatastoreSpec {
         entity.getMultiTenantFilterCondition(fetcher) >> "tenant_id = :tenantId"
 
         when:
-        filterBinder.addMultiTenantFilterIfNecessary(entity, persistentClass)
+        filterBinder.bind(entity, persistentClass)
 
         then:
         persistentClass.getFilters().any { it.getName() == GormProperties.TENANT_IDENTITY && it.getCondition() == "tenant_id = :tenantId" }
