@@ -35,19 +35,16 @@ public class SubClassBinder {
   private final MappingCacheHolder mappingCacheHolder;
   private final SubclassMappingBinder subclassMappingBinder;
   private final MultiTenantFilterBinder multiTenantFilterBinder;
-  private final DefaultColumnNameFetcher defaultColumnNameFetcher;
   private final String dataSourceName;
 
   public SubClassBinder(
       MappingCacheHolder mappingCacheHolder,
       SubclassMappingBinder subclassMappingBinder,
       MultiTenantFilterBinder multiTenantFilterBinder,
-      DefaultColumnNameFetcher defaultColumnNameFetcher,
       String dataSourceName) {
     this.mappingCacheHolder = mappingCacheHolder;
     this.subclassMappingBinder = subclassMappingBinder;
     this.multiTenantFilterBinder = multiTenantFilterBinder;
-    this.defaultColumnNameFetcher = defaultColumnNameFetcher;
     this.dataSourceName = dataSourceName;
   }
 
@@ -70,8 +67,7 @@ public class SubClassBinder {
     parent.addSubclass(subClass);
     mappings.addEntityBinding(subClass);
 
-    multiTenantFilterBinder.addMultiTenantFilterIfNecessary(
-        sub, subClass, mappings, defaultColumnNameFetcher);
+    multiTenantFilterBinder.addMultiTenantFilterIfNecessary(sub, subClass);
 
     Collection<GrailsHibernatePersistentEntity> children = sub.getChildEntities(dataSourceName);
     if (!children.isEmpty()) {

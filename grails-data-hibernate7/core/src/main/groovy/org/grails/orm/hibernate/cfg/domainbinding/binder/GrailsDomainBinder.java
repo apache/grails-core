@@ -29,6 +29,7 @@ import org.grails.orm.hibernate.cfg.domainbinding.util.ColumnNameForPropertyAndP
 import org.grails.orm.hibernate.cfg.domainbinding.util.DefaultColumnNameFetcher;
 import org.grails.orm.hibernate.cfg.domainbinding.util.GrailsPropertyResolver;
 import org.grails.orm.hibernate.cfg.domainbinding.util.MultiTenantFilterBinder;
+import org.grails.orm.hibernate.cfg.domainbinding.util.MultiTenantFilterDefinitionBinder;
 import org.grails.orm.hibernate.cfg.domainbinding.util.NamingStrategyProvider;
 import org.grails.orm.hibernate.cfg.domainbinding.util.NamingStrategyWrapper;
 import org.grails.orm.hibernate.cfg.domainbinding.util.PropertyFromValueCreator;
@@ -185,7 +186,11 @@ public class GrailsDomainBinder implements AdditionalMappingContributor, TypeCon
         new ClassPropertiesBinder(
             grailsPropertyBinder, propertyFromValueCreator, naturalIdentifierBinder);
     MultiTenantFilterBinder multiTenantFilterBinder =
-        new MultiTenantFilterBinder(new GrailsPropertyResolver());
+        new MultiTenantFilterBinder(
+            new GrailsPropertyResolver(),
+            new MultiTenantFilterDefinitionBinder(),
+            metadataCollector,
+            defaultColumnNameFetcher);
     JoinedSubClassBinder joinedSubClassBinder =
         new JoinedSubClassBinder(
             metadataBuildingContext,
@@ -207,11 +212,7 @@ public class GrailsDomainBinder implements AdditionalMappingContributor, TypeCon
             classPropertiesBinder);
     SubClassBinder subClassBinder =
         new SubClassBinder(
-            mappingCacheHolder,
-            subclassMappingBinder,
-            multiTenantFilterBinder,
-            defaultColumnNameFetcher,
-            dataSourceName);
+            mappingCacheHolder, subclassMappingBinder, multiTenantFilterBinder, dataSourceName);
     RootPersistentClassCommonValuesBinder rootPersistentClassCommonValuesBinder =
         new RootPersistentClassCommonValuesBinder(
             metadataBuildingContext,
@@ -232,7 +233,6 @@ public class GrailsDomainBinder implements AdditionalMappingContributor, TypeCon
             dataSourceName,
             multiTenantFilterBinder,
             subClassBinder,
-            defaultColumnNameFetcher,
             rootPersistentClassCommonValuesBinder,
             discriminatorPropertyBinder);
 

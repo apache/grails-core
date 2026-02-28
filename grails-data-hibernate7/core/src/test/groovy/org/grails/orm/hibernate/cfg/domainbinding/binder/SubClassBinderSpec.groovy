@@ -5,7 +5,6 @@ import grails.gorm.specs.HibernateGormDatastoreSpec
 import org.grails.orm.hibernate.cfg.Mapping
 import org.grails.orm.hibernate.cfg.MappingCacheHolder
 import org.grails.orm.hibernate.cfg.domainbinding.hibernate.GrailsHibernatePersistentEntity
-import org.grails.orm.hibernate.cfg.domainbinding.util.DefaultColumnNameFetcher
 import org.grails.orm.hibernate.cfg.domainbinding.util.MultiTenantFilterBinder
 import org.hibernate.boot.spi.MetadataBuildingContext
 import org.hibernate.mapping.PersistentClass
@@ -18,7 +17,6 @@ class SubClassBinderSpec extends HibernateGormDatastoreSpec {
     SubClassBinder binder
     SubclassMappingBinder subclassMappingBinder
     MultiTenantFilterBinder multiTenantFilterBinder
-    DefaultColumnNameFetcher defaultColumnNameFetcher
     MappingCacheHolder mappingCacheHolder
     MetadataBuildingContext metadataBuildingContext
 
@@ -29,13 +27,11 @@ class SubClassBinderSpec extends HibernateGormDatastoreSpec {
         mappingCacheHolder = gdb.getMappingCacheHolder()
         subclassMappingBinder = Mock(SubclassMappingBinder)
         multiTenantFilterBinder = Mock(MultiTenantFilterBinder)
-        defaultColumnNameFetcher = Mock(DefaultColumnNameFetcher)
         
         binder = new SubClassBinder(
                 mappingCacheHolder,
                 subclassMappingBinder,
                 multiTenantFilterBinder,
-                defaultColumnNameFetcher,
                 "default"
         )
     }
@@ -59,7 +55,7 @@ class SubClassBinderSpec extends HibernateGormDatastoreSpec {
 
         then:
         1 * subclassMappingBinder.createSubclassMapping(subEntity, rootClass, mappings, mapping) >> subClass
-        1 * multiTenantFilterBinder.addMultiTenantFilterIfNecessary(subEntity, subClass, mappings, defaultColumnNameFetcher)
+        1 * multiTenantFilterBinder.addMultiTenantFilterIfNecessary(subEntity, subClass)
         rootClass.getSubclasses().contains(subClass)
         mappings.getEntityBinding(subClass.getEntityName()) == subClass
     }
@@ -92,7 +88,7 @@ class SubClassBinderSpec extends HibernateGormDatastoreSpec {
         then:
         1 * subclassMappingBinder.createSubclassMapping(subEntity, rootClass, mappings, mapping) >> subClass
         1 * subclassMappingBinder.createSubclassMapping(grandChildEntity, subClass, mappings, mapping) >> grandChildSubClass
-        2 * multiTenantFilterBinder.addMultiTenantFilterIfNecessary(_, _, mappings, defaultColumnNameFetcher)
+        2 * multiTenantFilterBinder.addMultiTenantFilterIfNecessary(_, _)
         rootClass.getSubclasses().contains(subClass)
         subClass.getSubclasses().contains(grandChildSubClass)
     }

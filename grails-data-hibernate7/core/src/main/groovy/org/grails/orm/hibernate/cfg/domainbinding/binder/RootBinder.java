@@ -38,7 +38,6 @@ public class RootBinder {
   private final String dataSourceName;
   private final MultiTenantFilterBinder multiTenantFilterBinder;
   private final SubClassBinder subClassBinder;
-  private final DefaultColumnNameFetcher defaultColumnNameFetcher;
   private final RootPersistentClassCommonValuesBinder rootPersistentClassCommonValuesBinder;
   private final DiscriminatorPropertyBinder discriminatorPropertyBinder;
 
@@ -46,13 +45,11 @@ public class RootBinder {
       String dataSourceName,
       MultiTenantFilterBinder multiTenantFilterBinder,
       SubClassBinder subClassBinder,
-      DefaultColumnNameFetcher defaultColumnNameFetcher,
       RootPersistentClassCommonValuesBinder rootPersistentClassCommonValuesBinder,
       DiscriminatorPropertyBinder discriminatorPropertyBinder) {
     this.dataSourceName = dataSourceName;
     this.multiTenantFilterBinder = multiTenantFilterBinder;
     this.subClassBinder = subClassBinder;
-    this.defaultColumnNameFetcher = defaultColumnNameFetcher;
     this.rootPersistentClassCommonValuesBinder = rootPersistentClassCommonValuesBinder;
     this.discriminatorPropertyBinder = discriminatorPropertyBinder;
   }
@@ -86,8 +83,7 @@ public class RootBinder {
     // bind the sub classes
     children.forEach(sub -> subClassBinder.bindSubClass(sub, root, mappings, m));
 
-    multiTenantFilterBinder.addMultiTenantFilterIfNecessary(
-        entity, root, mappings, defaultColumnNameFetcher);
+    multiTenantFilterBinder.addMultiTenantFilterIfNecessary(entity, root);
 
     mappings.addEntityBinding(root);
   }

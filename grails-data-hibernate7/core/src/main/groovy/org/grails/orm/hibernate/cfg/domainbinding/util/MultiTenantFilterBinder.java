@@ -25,12 +25,9 @@ import org.grails.datastore.mapping.model.config.GormProperties;
 import org.grails.datastore.mapping.model.types.TenantId;
 import org.grails.orm.hibernate.cfg.domainbinding.hibernate.GrailsHibernatePersistentEntity;
 import org.hibernate.boot.spi.InFlightMetadataCollector;
-import org.hibernate.engine.spi.FilterDefinition;
-import org.hibernate.mapping.BasicValue;
 import org.hibernate.mapping.PersistentClass;
 import org.hibernate.mapping.Property;
 import org.hibernate.mapping.RootClass;
-import org.hibernate.metamodel.mapping.JdbcMapping;
 
 /**
  * Utility class for binding multi-tenant filters to the Hibernate meta model.
@@ -40,9 +37,19 @@ import org.hibernate.metamodel.mapping.JdbcMapping;
 public class MultiTenantFilterBinder {
 
   private final GrailsPropertyResolver grailsPropertyResolver;
+  private final MultiTenantFilterDefinitionBinder filterDefinitionBinder;
+  private final InFlightMetadataCollector mappings;
+  private final DefaultColumnNameFetcher fetcher;
 
-  public MultiTenantFilterBinder(GrailsPropertyResolver grailsPropertyResolver) {
+  public MultiTenantFilterBinder(
+      @Nonnull GrailsPropertyResolver grailsPropertyResolver,
+      @Nonnull MultiTenantFilterDefinitionBinder filterDefinitionBinder,
+      @Nonnull InFlightMetadataCollector mappings,
+      @Nonnull DefaultColumnNameFetcher fetcher) {
     this.grailsPropertyResolver = grailsPropertyResolver;
+    this.filterDefinitionBinder = filterDefinitionBinder;
+    this.mappings = mappings;
+    this.fetcher = fetcher;
   }
 
   /**
@@ -50,14 +57,9 @@ public class MultiTenantFilterBinder {
    *
    * @param entity The target persistent entity
    * @param persistentClass The persistent class to add the filter to
-   * @param mappings The in-flight metadata collector
-   * @param fetcher The column name fetcher
    */
   public void addMultiTenantFilterIfNecessary(
-      @Nonnull GrailsHibernatePersistentEntity entity,
-      @Nonnull PersistentClass persistentClass,
-      @Nonnull InFlightMetadataCollector mappings,
-      @Nonnull DefaultColumnNameFetcher fetcher) {
+      @Nonnull GrailsHibernatePersistentEntity entity, @Nonnull PersistentClass persistentClass) {
 
     if (!entity.isMultiTenant()) {
       return;
@@ -69,28 +71,14 @@ public class MultiTenantFilterBinder {
         .ifPresent(
             property -> {
               var filterName = GormProperties.TENANT_IDENTITY;
-              ensureGlobalFilterDefinition(mappings, filterName, property);
-              applyFilterToPersistentClass(entity, persistentClass, fetcher, filterName, property);
+              filterDefinitionBinder.ensureGlobalFilterDefinition(mappings, filterName, property);
+              applyFilterToPersistentClass(entity, persistentClass, filterName, property);
             });
-  }
-
-  private void ensureGlobalFilterDefinition(
-      InFlightMetadataCollector mappings, String filterName, Property property) {
-    if (mappings.getFilterDefinition(filterName) == null
-        && property.getValue() instanceof BasicValue basicValue) {
-      JdbcMapping jdbcMapping = basicValue.resolve().getJdbcMapping();
-      mappings.addFilterDefinition(
-          new FilterDefinition(
-              filterName,
-              null, // No default condition; let classes specify their own
-              Collections.singletonMap(filterName, jdbcMapping)));
-    }
   }
 
   private void applyFilterToPersistentClass(
       GrailsHibernatePersistentEntity entity,
       PersistentClass persistentClass,
-      DefaultColumnNameFetcher fetcher,
       String filterName,
       Property property) {
 

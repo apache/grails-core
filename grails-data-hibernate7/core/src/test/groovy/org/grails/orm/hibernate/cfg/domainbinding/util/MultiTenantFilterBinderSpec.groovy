@@ -20,9 +20,14 @@ import org.grails.datastore.mapping.model.types.TenantId
 class MultiTenantFilterBinderSpec extends HibernateGormDatastoreSpec {
 
     GrailsPropertyResolver grailsPropertyResolver = Mock(GrailsPropertyResolver)
-    MultiTenantFilterBinder filterBinder = new MultiTenantFilterBinder(grailsPropertyResolver)
     DefaultColumnNameFetcher fetcher = Mock(DefaultColumnNameFetcher)
     InFlightMetadataCollector mockCollector = GroovyMock(InFlightMetadataCollector)
+    MultiTenantFilterDefinitionBinder filterDefinitionBinder = new MultiTenantFilterDefinitionBinder()
+    MultiTenantFilterBinder filterBinder
+
+    void setup() {
+        filterBinder = new MultiTenantFilterBinder(grailsPropertyResolver, filterDefinitionBinder, mockCollector, fetcher)
+    }
 
     void "test add multi tenant filter to root class"() {
         given:
@@ -53,7 +58,7 @@ class MultiTenantFilterBinderSpec extends HibernateGormDatastoreSpec {
         entity.getMultiTenantFilterCondition(fetcher) >> "tenant_id = :tenantId"
 
         when:
-        filterBinder.addMultiTenantFilterIfNecessary(entity, persistentClass, mockCollector, fetcher)
+        filterBinder.addMultiTenantFilterIfNecessary(entity, persistentClass)
 
         then:
         1 * mockCollector.addFilterDefinition(_ as FilterDefinition)
@@ -88,7 +93,7 @@ class MultiTenantFilterBinderSpec extends HibernateGormDatastoreSpec {
         mockCollector.getFilterDefinition(_) >> Mock(FilterDefinition)
 
         when:
-        filterBinder.addMultiTenantFilterIfNecessary(entity, persistentClass, mockCollector, fetcher)
+        filterBinder.addMultiTenantFilterIfNecessary(entity, persistentClass)
 
         then:
         !persistentClass.getFilters().any { it.getName() == GormProperties.TENANT_IDENTITY }
@@ -125,7 +130,7 @@ class MultiTenantFilterBinderSpec extends HibernateGormDatastoreSpec {
         mockCollector.getFilterDefinition(_) >> Mock(FilterDefinition)
 
         when:
-        filterBinder.addMultiTenantFilterIfNecessary(entity, persistentClass, mockCollector, fetcher)
+        filterBinder.addMultiTenantFilterIfNecessary(entity, persistentClass)
 
         then:
         !persistentClass.getFilters().any { it.getName() == GormProperties.TENANT_IDENTITY }
@@ -160,7 +165,7 @@ class MultiTenantFilterBinderSpec extends HibernateGormDatastoreSpec {
         entity.getMultiTenantFilterCondition(fetcher) >> "tenant_id = :tenantId"
 
         when:
-        filterBinder.addMultiTenantFilterIfNecessary(entity, persistentClass, mockCollector, fetcher)
+        filterBinder.addMultiTenantFilterIfNecessary(entity, persistentClass)
 
         then:
         persistentClass.getFilters().any { it.getName() == GormProperties.TENANT_IDENTITY && it.getCondition() == "tenant_id = :tenantId" }
