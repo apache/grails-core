@@ -65,17 +65,10 @@ public class SubClassBinder {
       Mapping m) {
     mappingCacheHolder.cacheMapping(sub);
     Subclass subClass = subclassMappingBinder.createSubclassMapping(sub, parent, mappings, m);
-
     parent.addSubclass(subClass);
     mappings.addEntityBinding(subClass);
-
     bindMultiTenantFilter(sub, subClass);
-
-    Collection<GrailsHibernatePersistentEntity> children = sub.getChildEntities(dataSourceName);
-    if (!children.isEmpty()) {
-      // bind the sub classes
-      children.forEach(sub1 -> bindSubClass(sub1, subClass, mappings, m));
-    }
+    sub.getChildEntities(dataSourceName).forEach(sub1 -> bindSubClass(sub1, subClass, mappings, m));
   }
 
   private void bindMultiTenantFilter(GrailsHibernatePersistentEntity sub, Subclass subClass) {

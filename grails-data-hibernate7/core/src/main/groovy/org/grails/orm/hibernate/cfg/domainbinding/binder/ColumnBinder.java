@@ -76,14 +76,6 @@ public class ColumnBinder {
         new IndexBinder());
   }
 
-  /** Protected constructor for testing purposes. */
-  protected ColumnBinder() {
-    this.columnNameForPropertyAndPathFetcher = null;
-    this.stringColumnConstraintsBinder = null;
-    this.numericColumnConstraintsBinder = null;
-    this.createKeyForProps = null;
-    this.indexBinder = null;
-  }
 
   /**
    * Binds a Column instance to the Hibernate meta model
@@ -154,8 +146,7 @@ public class ColumnBinder {
 
     var owner = property.getHibernateOwner();
     if (!owner.isRoot()) {
-      Mapping mapping = owner.getMappedForm();
-      if (mapping != null && mapping.getTablePerHierarchy()) {
+      if (owner.isTablePerHierarchy()) {
         if (LOG.isDebugEnabled())
           LOG.debug(
               "[GrailsDomainBinder] Sub class property ["

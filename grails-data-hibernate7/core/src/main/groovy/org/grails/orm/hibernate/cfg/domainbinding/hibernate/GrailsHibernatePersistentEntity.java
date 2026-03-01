@@ -55,21 +55,25 @@ public interface GrailsHibernatePersistentEntity extends PersistentEntity {
 
   default boolean isTablePerHierarchy() {
     Mapping mapping = getMappedForm();
-    return mapping == null || mapping.getTablePerHierarchy();
+    return mapping == null || mapping.isTablePerHierarchy();
   }
 
-  default boolean isTablePerConcreteClass() {
+  default boolean isJoinedSubclass() {
     Mapping mapping = getMappedForm();
-    return mapping != null && mapping.isTablePerConcreteClass();
+    return mapping != null && mapping.isJoinedSubclass();
+  }
+
+  default boolean isUnionSubclass() {
+    Mapping mapping = getMappedForm();
+    return mapping != null && mapping.isUnionSubclass();
   }
 
   default boolean isTableAbstract() {
-    return !isTablePerHierarchy() && isTablePerConcreteClass() && isAbstract();
+    return isUnionSubclass() && isAbstract();
   }
 
   default boolean isTablePerHierarchySubclass() {
-    Mapping rootMapping = getRootMapping();
-    return !this.isRoot() && (rootMapping == null || rootMapping.getTablePerHierarchy());
+    return !this.isRoot() && getHibernateRootEntity().isTablePerHierarchy();
   }
 
   default Set<String> buildDiscriminatorSet() {

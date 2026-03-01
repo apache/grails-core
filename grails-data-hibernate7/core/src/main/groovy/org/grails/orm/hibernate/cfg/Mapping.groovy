@@ -140,6 +140,18 @@ class Mapping extends Entity<PropertyConfig> {
     String comment
 
 
+    boolean isTablePerHierarchy() {
+        return tablePerHierarchy
+    }
+
+    boolean isJoinedSubclass() {
+        return !tablePerHierarchy && !tablePerConcreteClass
+    }
+
+    boolean isUnionSubclass() {
+        return tablePerConcreteClass
+    }
+
     boolean isTablePerConcreteClass() {
         return tablePerConcreteClass
     }

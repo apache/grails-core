@@ -59,11 +59,11 @@ public class SubclassMappingBinder {
       Mapping m) {
     Subclass subClass;
     subEntity.configureDerivedProperties();
-    if (!m.getTablePerHierarchy() && !m.isTablePerConcreteClass()) {
+    if (m.isJoinedSubclass()) {
       var joined = new JoinedSubclass(parent, this.metadataBuildingContext);
       joinedSubClassBinder.bindJoinedSubClass(subEntity, joined, mappings);
       subClass = joined;
-    } else if (m.isTablePerConcreteClass()) {
+    } else if (m.isUnionSubclass()) {
       var union = new UnionSubclass(parent, this.metadataBuildingContext);
       unionSubclassBinder.bindUnionSubclass(subEntity, union, mappings);
       subClass = union;
