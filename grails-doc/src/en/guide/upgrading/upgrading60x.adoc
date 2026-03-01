@@ -902,7 +902,7 @@ Update your `build.gradle` dependencies as follows:
 | `org.apache.grails:grails-spring-security-rest-datamapping`
 
 | `org.grails.plugins:spring-security-rest-grailscache`
-| `org.apache.grails:grails-spring-security-grails-cache`
+| `org.apache.grails:grails-spring-security-rest-grailscache`
 
 | `org.grails.plugins:spring-security-rest-memcached`
 | `org.apache.grails:grails-spring-security-rest-memcached`
@@ -935,7 +935,7 @@ NOTE: With the unified Grails BOM (see <<_4_unified_bill_of_materials>>), versio
 If you use the Spring Security REST plugin with a specific token storage backend, note the following renames:
 
 * `spring-security-rest-gorm` is now `grails-spring-security-rest-datamapping` (reflecting the rename of GORM to Grails Data Mapping)
-* `spring-security-rest-grailscache` is now `grails-spring-security-grails-cache`
+* `spring-security-rest-grailscache` is now `grails-spring-security-rest-grailscache`
 
 ====== Automated Migration
 
