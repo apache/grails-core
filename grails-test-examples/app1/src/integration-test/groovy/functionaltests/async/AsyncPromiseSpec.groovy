@@ -161,7 +161,7 @@ class AsyncPromiseSpec extends Specification implements HttpClientSupport {
             String
         )
 
-        and: "service processes input correctly"
+        then: "service processes input correctly"
         response.status == HttpStatus.OK
         def json = new JsonSlurper().parseText(response.body())
         json.input == input
