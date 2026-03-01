@@ -18,9 +18,9 @@
  */
 package org.grails.plugin.hibernate.support;
 
-import org.grails.orm.hibernate.AbstractHibernateDatastore;
 import org.hibernate.FlushMode;
 import org.hibernate.Session;
+
 import org.springframework.dao.DataAccessException;
 import org.springframework.dao.DataAccessResourceFailureException;
 import org.springframework.orm.hibernate5.SessionHolder;
@@ -29,57 +29,60 @@ import org.springframework.transaction.support.TransactionSynchronizationManager
 import org.springframework.ui.ModelMap;
 import org.springframework.web.context.request.WebRequest;
 
+import org.grails.orm.hibernate.AbstractHibernateDatastore;
+
 /**
- * Extends the default spring OSIV and doesn't flush the session if it has been set to MANUAL on the
- * session itself.
+ * Extends the default spring OSIV and doesn't flush the session if it has been set
+ * to MANUAL on the session itself.
  *
  * @author Graeme Rocher
  * @since 0.5
  */
 public class GrailsOpenSessionInViewInterceptor extends OpenSessionInViewInterceptor {
 
-  protected FlushMode hibernateFlushMode = FlushMode.MANUAL;
+    protected FlushMode hibernateFlushMode = FlushMode.MANUAL;
 
-  @Override
-  protected Session openSession() throws DataAccessResourceFailureException {
-    Session session = super.openSession();
-    applyFlushMode(session);
-    return session;
-  }
+    @Override
+    protected Session openSession() throws DataAccessResourceFailureException {
+        Session session = super.openSession();
+        applyFlushMode(session);
+        return session;
+    }
 
-  protected void applyFlushMode(Session session) {
-    session.setHibernateFlushMode(hibernateFlushMode);
-  }
+    protected void applyFlushMode(Session session) {
+        session.setHibernateFlushMode(hibernateFlushMode);
+    }
 
-  @Override
-  public void postHandle(WebRequest request, ModelMap model) throws DataAccessException {
-    SessionHolder sessionHolder =
-        (SessionHolder) TransactionSynchronizationManager.getResource(getSessionFactory());
-    Session session = sessionHolder != null ? sessionHolder.getSession() : null;
-    try {
-      super.postHandle(request, model);
-      FlushMode flushMode = session != null ? session.getHibernateFlushMode() : null;
-      boolean isNotManual = flushMode != FlushMode.MANUAL && flushMode != FlushMode.COMMIT;
-      if (session != null && isNotManual) {
-        if (logger.isDebugEnabled()) {
-          logger.debug("Eagerly flushing Hibernate session");
+    @Override
+    public void postHandle(WebRequest request, ModelMap model) throws DataAccessException {
+        SessionHolder sessionHolder = (SessionHolder) TransactionSynchronizationManager.getResource(getSessionFactory());
+        Session session = sessionHolder != null ? sessionHolder.getSession() : null;
+        try {
+            super.postHandle(request, model);
+            FlushMode flushMode = session != null ? session.getHibernateFlushMode() : null;
+            boolean isNotManual = flushMode != FlushMode.MANUAL && flushMode != FlushMode.COMMIT;
+            if (session != null && isNotManual) {
+                if (logger.isDebugEnabled()) {
+                    logger.debug("Eagerly flushing Hibernate session");
+                }
+                session.flush();
+            }
         }
-        session.flush();
-      }
-    } finally {
-      if (session != null) {
-        session.setHibernateFlushMode(FlushMode.MANUAL);
-      }
+        finally {
+            if (session != null) {
+                session.setHibernateFlushMode(FlushMode.MANUAL);
+            }
+        }
     }
-  }
 
-  public void setHibernateDatastore(AbstractHibernateDatastore hibernateDatastore) {
-    String defaultFlushModeName = hibernateDatastore.getDefaultFlushModeName();
-    if (hibernateDatastore.isOsivReadOnly()) {
-      this.hibernateFlushMode = FlushMode.MANUAL;
-    } else {
-      this.hibernateFlushMode = FlushMode.valueOf(defaultFlushModeName);
+    public void setHibernateDatastore(AbstractHibernateDatastore hibernateDatastore) {
+        String defaultFlushModeName = hibernateDatastore.getDefaultFlushModeName();
+        if (hibernateDatastore.isOsivReadOnly()) {
+            this.hibernateFlushMode = FlushMode.MANUAL;
+        }
+        else {
+            this.hibernateFlushMode = FlushMode.valueOf(defaultFlushModeName);
+        }
+        setSessionFactory(hibernateDatastore.getSessionFactory());
     }
-    setSessionFactory(hibernateDatastore.getSessionFactory());
-  }
 }
