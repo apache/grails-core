@@ -865,3 +865,87 @@ grails:
 * **8.0**: `SimpleEnumMarshaller` will become the default
 
 The legacy `org.grails.web.converters.marshaller.json.EnumMarshaller` and `org.grails.web.converters.marshaller.xml.EnumMarshaller` classes are marked as `@Deprecated(forRemoval = true, since = "7.0.2")` and will be removed in Grails 8.0.
+
+===== 12.27 Spring Security Plugins
+
+In Grails 7, the previously separate Spring Security plugin repositories have been consolidated into a single repository: https://github.com/apache/grails-spring-security[apache/grails-spring-security]. This repository now contains the core plugin and all extension plugins (ACL, CAS, LDAP, OAuth2, REST, and UI).
+
+Along with the consolidation, the artifact coordinates have changed to follow the new Apache namespace. The most notable change is that `spring-security-core` has been renamed to `grails-spring-security` (dropping the `-core` suffix).
+
+====== Dependency Changes
+
+Update your `build.gradle` dependencies as follows:
+
+[cols="1,1",options="header"]
+|===
+| Old Dependency | New Dependency
+
+| `org.grails.plugins:spring-security-core`
+| `org.apache.grails:grails-spring-security`
+
+| `org.grails.plugins:spring-security-acl`
+| `org.apache.grails:grails-spring-security-acl`
+
+| `org.grails.plugins:spring-security-cas`
+| `org.apache.grails:grails-spring-security-cas`
+
+| `org.grails.plugins:spring-security-ldap`
+| `org.apache.grails:grails-spring-security-ldap`
+
+| `org.grails.plugins:spring-security-oauth2`
+| `org.apache.grails:grails-spring-security-oauth2`
+
+| `org.grails.plugins:spring-security-rest`
+| `org.apache.grails:grails-spring-security-rest`
+
+| `org.grails.plugins:spring-security-rest-gorm`
+| `org.apache.grails:grails-spring-security-rest-datamapping`
+
+| `org.grails.plugins:spring-security-rest-grailscache`
+| `org.apache.grails:grails-spring-security-grails-cache`
+
+| `org.grails.plugins:spring-security-rest-memcached`
+| `org.apache.grails:grails-spring-security-rest-memcached`
+
+| `org.grails.plugins:spring-security-rest-redis`
+| `org.apache.grails:grails-spring-security-rest-redis`
+
+| `org.grails.plugins:spring-security-ui`
+| `org.apache.grails:grails-spring-security-ui`
+|===
+
+====== Example
+
+A typical Spring Security Core dependency change:
+
+[source,groovy]
+.build.gradle
+----
+// Before (Grails 6)
+implementation 'org.grails.plugins:spring-security-core:6.1.1'
+
+// After (Grails 7)
+implementation 'org.apache.grails:grails-spring-security'
+----
+
+NOTE: With the unified Grails BOM (see <<_4_unified_bill_of_materials>>), versions are managed automatically when using a Grails Gradle plugin. You no longer need to specify the version explicitly.
+
+====== REST Plugin Token Storage Submodules
+
+If you use the Spring Security REST plugin with a specific token storage backend, note the following renames:
+
+* `spring-security-rest-gorm` is now `grails-spring-security-rest-datamapping` (reflecting the rename of GORM to Grails Data Mapping)
+* `spring-security-rest-grailscache` is now `grails-spring-security-grails-cache`
+
+====== Automated Migration
+
+The coordinate rename script referenced in <<_5_coordinate_changes>> also handles Spring Security artifacts. Running it will update your Gradle files automatically:
+
+[source,bash]
+----
+./rename_gradle_artifacts.sh -l my/project/location
+----
+
+====== Documentation
+
+The Spring Security plugin documentation is available at https://apache.github.io/grails-spring-security/[apache.github.io/grails-spring-security].
