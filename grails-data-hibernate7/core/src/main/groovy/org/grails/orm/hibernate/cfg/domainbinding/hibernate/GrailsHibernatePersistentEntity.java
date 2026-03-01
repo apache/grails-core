@@ -201,13 +201,13 @@ public interface GrailsHibernatePersistentEntity extends PersistentEntity {
         .forEach(new ConfigureDerivedPropertiesConsumer(getMappedForm()));
   }
 
+  default HibernatePersistentProperty getHibernateTenantId() {
+    return (HibernatePersistentProperty) getTenantId();
+  }
+
   default String getMultiTenantFilterCondition(DefaultColumnNameFetcher fetcher) {
-    return Optional.ofNullable(getTenantId())
-        .map(
-            tenantId ->
-                tenantId instanceof HibernatePersistentProperty ghpp
-                    ? fetcher.getDefaultColumnName(ghpp)
-                    : tenantId.getName())
+    return Optional.ofNullable(getHibernateTenantId())
+        .map(fetcher::getDefaultColumnName)
         .map(defaultColumnName -> ":tenantId = " + defaultColumnName)
         .orElse(null);
   }

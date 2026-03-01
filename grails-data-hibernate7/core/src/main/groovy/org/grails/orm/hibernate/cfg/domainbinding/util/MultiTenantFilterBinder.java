@@ -23,13 +23,17 @@ import jakarta.annotation.Nullable;
 import java.util.Collections;
 import java.util.Optional;
 import org.grails.datastore.mapping.model.config.GormProperties;
-import org.grails.datastore.mapping.model.types.TenantId;
 import org.grails.orm.hibernate.cfg.domainbinding.hibernate.GrailsHibernatePersistentEntity;
+import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernatePersistentProperty;
 import org.hibernate.boot.spi.InFlightMetadataCollector;
 import org.hibernate.engine.spi.FilterDefinition;
+import org.hibernate.mapping.BasicValue;
+import org.hibernate.mapping.JoinedSubclass;
 import org.hibernate.mapping.PersistentClass;
 import org.hibernate.mapping.Property;
 import org.hibernate.mapping.RootClass;
+import org.hibernate.mapping.SingleTableSubclass;
+import org.hibernate.mapping.UnionSubclass;
 
 /**
  * Utility class for binding multi-tenant filters to the Hibernate meta model.
@@ -55,23 +59,69 @@ public class MultiTenantFilterBinder {
   }
 
   /**
-   * Binds a multi-tenant filter to the given persistent class if necessary.
+   * Binds a multi-tenant filter to the given root class if necessary.
    *
    * @param entity The target persistent entity
-   * @param persistentClass The persistent class to add the filter to
+   * @param rootClass The root class to add the filter to
    * @return The filter definition applied, or null if none
    */
   @Nullable
   public FilterDefinition bind(
+      @Nonnull GrailsHibernatePersistentEntity entity, @Nonnull RootClass rootClass) {
+    return doBind(entity, rootClass);
+  }
+
+  /**
+   * Binds a multi-tenant filter to the given single table subclass if necessary.
+   *
+   * @param entity The target persistent entity
+   * @param subclass The single table subclass
+   * @return null as it's redundant for single table subclasses
+   */
+  @Nullable
+  public FilterDefinition bind(
+      @Nonnull GrailsHibernatePersistentEntity entity, @Nonnull SingleTableSubclass subclass) {
+    return null; // Redundant for SingleTableSubclass
+  }
+
+  /**
+   * Binds a multi-tenant filter to the given joined subclass if necessary.
+   *
+   * @param entity The target persistent entity
+   * @param subclass The joined subclass
+   * @return The filter definition applied, or null if none
+   */
+  @Nullable
+  public FilterDefinition bind(
+      @Nonnull GrailsHibernatePersistentEntity entity, @Nonnull JoinedSubclass subclass) {
+    return doBind(entity, subclass);
+  }
+
+  /**
+   * Binds a multi-tenant filter to the given union subclass if necessary.
+   *
+   * @param entity The target persistent entity
+   * @param subclass The union subclass
+   * @return The filter definition applied, or null if none
+   */
+  @Nullable
+  public FilterDefinition bind(
+      @Nonnull GrailsHibernatePersistentEntity entity, @Nonnull UnionSubclass subclass) {
+    return doBind(entity, subclass);
+  }
+
+  @Nullable
+  private FilterDefinition doBind(
       @Nonnull GrailsHibernatePersistentEntity entity, @Nonnull PersistentClass persistentClass) {
 
     if (!entity.isMultiTenant()) {
       return null;
     }
 
-    return Optional.ofNullable(entity.getTenantId())
-        .map(TenantId::getName)
+    return Optional.ofNullable(entity.getHibernateTenantId())
+        .map(HibernatePersistentProperty::getName)
         .map(name -> grailsPropertyResolver.getProperty(persistentClass, name))
+        .filter(property -> shouldApplyFilter(entity, persistentClass, property))
         .map(
             property -> {
               var filterName = GormProperties.TENANT_IDENTITY;
@@ -83,33 +133,26 @@ public class MultiTenantFilterBinder {
                 }
               }
 
-              applyFilterToPersistentClass(entity, persistentClass, filterName, property);
+              if (filterDefinition != null) {
+                persistentClass.addFilter(
+                    filterName,
+                    entity.getMultiTenantFilterCondition(fetcher),
+                    true, // autoAliasInjection
+                    Collections.emptyMap(),
+                    Collections.emptyMap());
+              }
               return filterDefinition;
             })
         .orElse(null);
   }
 
-  private void applyFilterToPersistentClass(
-      GrailsHibernatePersistentEntity entity,
-      PersistentClass persistentClass,
-      String filterName,
-      Property property) {
-
-    if (shouldApplyFilter(entity, persistentClass, property)) {
-      persistentClass.addFilter(
-          filterName,
-          entity.getMultiTenantFilterCondition(fetcher),
-          true, // autoAliasInjection
-          Collections.emptyMap(),
-          Collections.emptyMap());
-    }
-  }
-
   private boolean shouldApplyFilter(
       GrailsHibernatePersistentEntity entity, PersistentClass persistentClass, Property property) {
-    boolean isRoot =
-        persistentClass instanceof RootClass
-            || persistentClass.equals(persistentClass.getRootClass());
+    if (!(property.getValue() instanceof BasicValue)) {
+      return false;
+    }
+
+    boolean isRoot = persistentClass instanceof RootClass;
 
     var table = persistentClass.getTable();
     var propertyValue = property.getValue();
@@ -117,10 +160,6 @@ public class MultiTenantFilterBinder {
 
     boolean isInherited = table != null && propertyTable != null && !table.equals(propertyTable);
 
-    // Apply if it's the root or if the subclass has its own table containing the column
-    // (UnionSubclass).
-    // Skip if it's a SingleTable subclass (redundant) or JoinedSubclass where column is in root
-    // (alias safety).
     if (isRoot || !isInherited) {
       return isRoot || !entity.isTablePerHierarchySubclass();
     }

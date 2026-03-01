@@ -23,11 +23,13 @@ import java.util.Collection;
 import org.grails.orm.hibernate.cfg.Mapping;
 import org.grails.orm.hibernate.cfg.MappingCacheHolder;
 import org.grails.orm.hibernate.cfg.domainbinding.hibernate.GrailsHibernatePersistentEntity;
-import org.grails.orm.hibernate.cfg.domainbinding.util.DefaultColumnNameFetcher;
 import org.grails.orm.hibernate.cfg.domainbinding.util.MultiTenantFilterBinder;
 import org.hibernate.boot.spi.InFlightMetadataCollector;
+import org.hibernate.mapping.JoinedSubclass;
 import org.hibernate.mapping.PersistentClass;
+import org.hibernate.mapping.SingleTableSubclass;
 import org.hibernate.mapping.Subclass;
+import org.hibernate.mapping.UnionSubclass;
 
 /** Binder for subclasses. */
 public class SubClassBinder {
@@ -67,12 +69,22 @@ public class SubClassBinder {
     parent.addSubclass(subClass);
     mappings.addEntityBinding(subClass);
 
-    multiTenantFilterBinder.bind(sub, subClass);
+    bindMultiTenantFilter(sub, subClass);
 
     Collection<GrailsHibernatePersistentEntity> children = sub.getChildEntities(dataSourceName);
     if (!children.isEmpty()) {
       // bind the sub classes
       children.forEach(sub1 -> bindSubClass(sub1, subClass, mappings, m));
+    }
+  }
+
+  private void bindMultiTenantFilter(GrailsHibernatePersistentEntity sub, Subclass subClass) {
+    if (subClass instanceof SingleTableSubclass singleTableSubclass) {
+      multiTenantFilterBinder.bind(sub, singleTableSubclass);
+    } else if (subClass instanceof JoinedSubclass joinedSubclass) {
+      multiTenantFilterBinder.bind(sub, joinedSubclass);
+    } else if (subClass instanceof UnionSubclass unionSubclass) {
+      multiTenantFilterBinder.bind(sub, unionSubclass);
     }
   }
 }
