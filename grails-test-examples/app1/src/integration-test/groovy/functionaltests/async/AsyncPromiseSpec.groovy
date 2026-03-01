@@ -52,10 +52,10 @@ class AsyncPromiseSpec extends Specification implements HttpClientSupport {
             '/asyncTest/simpleTask',
             String
         )
-        def json = new JsonSlurper().parseText(response.body())
 
         then: "task completes with success status"
         response.status == HttpStatus.OK
+        def json = new JsonSlurper().parseText(response.body())
         json.status == 'completed'
         json.message == 'Task finished'
     }
@@ -69,10 +69,10 @@ class AsyncPromiseSpec extends Specification implements HttpClientSupport {
             "/asyncTest/computeTask?value=${value}",
             String
         )
-        def json = new JsonSlurper().parseText(response.body())
 
         then: "computed result is correct"
         response.status == HttpStatus.OK
+        def json = new JsonSlurper().parseText(response.body())
         json.input == value
         json.result == value * value
     }
@@ -83,10 +83,10 @@ class AsyncPromiseSpec extends Specification implements HttpClientSupport {
             '/asyncTest/parallelTasks',
             String
         )
-        def json = new JsonSlurper().parseText(response.body())
 
         then: "all tasks complete"
         response.status == HttpStatus.OK
+        def json = new JsonSlurper().parseText(response.body())
         json.status == 'completed'
         json.results.size() == 3
         json.results.contains('Task 1 result')
@@ -103,10 +103,10 @@ class AsyncPromiseSpec extends Specification implements HttpClientSupport {
             "/asyncTest/chainedTasks?input=${input}",
             String
         )
-        def json = new JsonSlurper().parseText(response.body())
 
         then: "data is processed through all stages"
         response.status == HttpStatus.OK
+        def json = new JsonSlurper().parseText(response.body())
         json.original == input
         // HELLO reversed is OLLEH
         json.final == input.toUpperCase().reverse()
@@ -120,10 +120,10 @@ class AsyncPromiseSpec extends Specification implements HttpClientSupport {
             '/asyncTest/taskWithError?fail=false',
             String
         )
-        def json = new JsonSlurper().parseText(response.body())
 
         then: "success response returned"
         response.status == HttpStatus.OK
+        def json = new JsonSlurper().parseText(response.body())
         json.status == 'success'
         json.result == 'Success'
     }
@@ -135,10 +135,10 @@ class AsyncPromiseSpec extends Specification implements HttpClientSupport {
             "/asyncTest/taskWithTimeout?delay=$delay&timeout=$timeout",
             String
         )
-        def json = new JsonSlurper().parseText(response.body())
 
         then: "task completes as expected"
         response.status == HttpStatus.OK
+        def json = new JsonSlurper().parseText(response.body())
         json.status == status
         json.result.startsWith(result)
         json.elapsedMs >= elapsedMin
@@ -160,10 +160,10 @@ class AsyncPromiseSpec extends Specification implements HttpClientSupport {
             "/asyncTest/useAsyncService?input=${input}",
             String
         )
-        def json = new JsonSlurper().parseText(response.body())
 
-        then: "service processes input correctly"
+        and: "service processes input correctly"
         response.status == HttpStatus.OK
+        def json = new JsonSlurper().parseText(response.body())
         json.input == input
         json.result == "Processed: ${input.toUpperCase()}"
     }
@@ -177,10 +177,10 @@ class AsyncPromiseSpec extends Specification implements HttpClientSupport {
             "/asyncTest/asyncCalculation?value=${value}",
             String
         )
-        def json = new JsonSlurper().parseText(response.body())
 
         then: "calculation is correct"
         response.status == HttpStatus.OK
+        def json = new JsonSlurper().parseText(response.body())
         json.input == value
         json.squared == value * value
     }
@@ -191,10 +191,9 @@ class AsyncPromiseSpec extends Specification implements HttpClientSupport {
             '/asyncTest/asyncBatch',
             String
         )
-        def json = new JsonSlurper().parseText(response.body())
-
         then: "all items are reversed"
         response.status == HttpStatus.OK
+        def json = new JsonSlurper().parseText(response.body())
         json.original.size() == json.processed.size()
         json.original.eachWithIndex { item, idx ->
             assert json.processed[idx] == item.reverse()
@@ -210,10 +209,10 @@ class AsyncPromiseSpec extends Specification implements HttpClientSupport {
             "/asyncTest/longRunning?taskId=${taskId}",
             String
         )
-        def json = new JsonSlurper().parseText(response.body())
 
         then: "operation completes with expected info"
         response.status == HttpStatus.OK
+        def json = new JsonSlurper().parseText(response.body())
         json.taskId == taskId
         json.status == 'completed'
         json.durationMs >= 200
@@ -230,10 +229,10 @@ class AsyncPromiseSpec extends Specification implements HttpClientSupport {
             "/asyncTest/composeFutures?v1=${v1}&v2=${v2}",
             String
         )
-        def json = new JsonSlurper().parseText(response.body())
 
         then: "both futures are combined correctly"
         response.status == HttpStatus.OK
+        def json = new JsonSlurper().parseText(response.body())
         json.value1Squared == v1 * v1  // 9
         json.value2Squared == v2 * v2  // 16
         json.sum == (v1 * v1) + (v2 * v2)  // 25
@@ -251,10 +250,9 @@ class AsyncPromiseSpec extends Specification implements HttpClientSupport {
                 .contentType(MediaType.APPLICATION_JSON),
             String
         )
-        def json = new JsonSlurper().parseText(response.body())
-
         then: "data is processed correctly"
         response.status == HttpStatus.OK
+        def json = new JsonSlurper().parseText(response.body())
         json.original.name == 'test'
         json.processed.name == 'TEST'
         json.processed.value == 'HELLO'
@@ -266,10 +264,10 @@ class AsyncPromiseSpec extends Specification implements HttpClientSupport {
             '/asyncTest/multiStageProcess',
             String
         )
-        def json = new JsonSlurper().parseText(response.body())
 
         then: "all stages are reported"
         response.status == HttpStatus.OK
+        def json = new JsonSlurper().parseText(response.body())
         json.status == 'completed'
         json.totalStages == 3
         json.stages.size() == 3
@@ -284,10 +282,10 @@ class AsyncPromiseSpec extends Specification implements HttpClientSupport {
             '/asyncTest/multiStageProcess',
             String
         )
-        def json = new JsonSlurper().parseText(response.body())
 
         then: "stages have increasing timestamps"
         response.status == HttpStatus.OK
+        def json = new JsonSlurper().parseText(response.body())
         def times = json.stages.collect { it.time as Long }
         times[0] <= times[1]
         times[1] <= times[2]
@@ -304,10 +302,10 @@ class AsyncPromiseSpec extends Specification implements HttpClientSupport {
             "/asyncTest/conditionalAsync?async=true&input=${input}",
             String
         )
-        def json = new JsonSlurper().parseText(response.body())
 
         then: "async mode is used"
         response.status == HttpStatus.OK
+        def json = new JsonSlurper().parseText(response.body())
         json.mode == 'async'
         json.result.contains('Async')
         json.result.contains(input.toUpperCase())
@@ -322,10 +320,10 @@ class AsyncPromiseSpec extends Specification implements HttpClientSupport {
             "/asyncTest/conditionalAsync?async=false&input=${input}",
             String
         )
-        def json = new JsonSlurper().parseText(response.body())
 
         then: "sync mode is used"
         response.status == HttpStatus.OK
+        def json = new JsonSlurper().parseText(response.body())
         json.mode == 'sync'
         json.result.contains('Sync')
         json.result.contains(input.toUpperCase())
