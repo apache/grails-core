@@ -146,7 +146,8 @@ public class ColumnBinder {
 
     var owner = property.getHibernateOwner();
     if (!owner.isRoot()) {
-      if (owner.isTablePerHierarchy()) {
+      Mapping mapping = owner.getMappedForm();
+      if (mapping != null && mapping.getTablePerHierarchy()) {
         if (LOG.isDebugEnabled())
           LOG.debug(
               "[GrailsDomainBinder] Sub class property ["

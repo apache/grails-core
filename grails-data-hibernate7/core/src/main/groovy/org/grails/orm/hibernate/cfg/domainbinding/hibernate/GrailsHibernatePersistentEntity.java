@@ -49,22 +49,31 @@ public interface GrailsHibernatePersistentEntity extends PersistentEntity {
     return (GrailsHibernatePersistentEntity) getRootEntity();
   }
 
+  default GrailsHibernatePersistentEntity getStrategyOwner() {
+    List<HibernatePersistentProperty> props = getHibernatePersistentProperties();
+    return (props != null && !props.isEmpty()) ? props.get(0).getHibernateOwner() : this;
+  }
+
+  default Mapping getStrategyMapping() {
+    return getStrategyOwner().getMappedForm();
+  }
+
   default Mapping getRootMapping() {
     return getHibernateRootEntity().getMappedForm();
   }
 
   default boolean isTablePerHierarchy() {
-    Mapping mapping = getMappedForm();
+    Mapping mapping = getStrategyMapping();
     return mapping == null || mapping.isTablePerHierarchy();
   }
 
   default boolean isJoinedSubclass() {
-    Mapping mapping = getMappedForm();
+    Mapping mapping = getStrategyMapping();
     return mapping != null && mapping.isJoinedSubclass();
   }
 
   default boolean isUnionSubclass() {
-    Mapping mapping = getMappedForm();
+    Mapping mapping = getStrategyMapping();
     return mapping != null && mapping.isUnionSubclass();
   }
 
@@ -73,7 +82,7 @@ public interface GrailsHibernatePersistentEntity extends PersistentEntity {
   }
 
   default boolean isTablePerHierarchySubclass() {
-    return !this.isRoot() && getHibernateRootEntity().isTablePerHierarchy();
+    return !this.isRoot() && isTablePerHierarchy();
   }
 
   default Set<String> buildDiscriminatorSet() {

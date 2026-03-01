@@ -10,6 +10,7 @@ import org.hibernate.mapping.RootClass
 import org.hibernate.mapping.SingleTableSubclass
 import org.hibernate.mapping.Subclass
 import org.hibernate.mapping.UnionSubclass
+import org.grails.orm.hibernate.cfg.domainbinding.hibernate.GrailsHibernatePersistentEntity
 import spock.lang.Shared
 
 class SubclassMappingBinderSpec extends HibernateGormDatastoreSpec {
@@ -22,7 +23,6 @@ class SubclassMappingBinderSpec extends HibernateGormDatastoreSpec {
     ClassPropertiesBinder classPropertiesBinder
 
     void setup() {
-        manager.addAllDomainClasses([SMBSDefaultSuperEntity, SMBSDefaultSubEntity])
         def gdb = getGrailsDomainBinder()
         metadataBuildingContext = gdb.getMetadataBuildingContext()
         joinedSubClassBinder = Mock(JoinedSubClassBinder)
@@ -41,71 +41,101 @@ class SubclassMappingBinderSpec extends HibernateGormDatastoreSpec {
 
     def "test createSubclassMapping for single table inheritance"() {
         given:
-        def subEntity = createPersistentEntity(SMBSDefaultSubEntity) as org.grails.orm.hibernate.cfg.domainbinding.hibernate.GrailsHibernatePersistentEntity
+        createPersistentEntity(SMBSSingleSuper)
+        def subEntity = createPersistentEntity(SMBSSingleSub)
         def rootClass = new RootClass(metadataBuildingContext)
-        rootClass.setEntityName(SMBSDefaultSuperEntity.name)
+        rootClass.setEntityName(SMBSSingleSuper.name)
+        rootClass.setJpaEntityName(SMBSSingleSuper.name)
         def mappings = getCollector()
-        def mapping = new Mapping()
-        mapping.setTablePerHierarchy(true)
 
         when:
-        Subclass subClass = binder.createSubclassMapping(subEntity, rootClass, mappings, mapping)
+        Subclass subClass = binder.createSubclassMapping(subEntity, rootClass, mappings)
 
         then:
+        subEntity != null
         1 * singleTableSubclassBinder.bindSubClass(subEntity, _ as SingleTableSubclass, mappings)
         1 * classPropertiesBinder.bindClassProperties(subEntity, _ as Subclass, mappings)
         subClass instanceof SingleTableSubclass
-        subClass.getEntityName() == SMBSDefaultSubEntity.name
+        subClass.getEntityName() == SMBSSingleSub.name
     }
 
     def "test createSubclassMapping for joined table inheritance"() {
         given:
-        def subEntity = getPersistentEntity(SMBSDefaultSubEntity) as org.grails.orm.hibernate.cfg.domainbinding.hibernate.GrailsHibernatePersistentEntity
+        createPersistentEntity(SMBSJoinedSuper)
+        def subEntity = createPersistentEntity(SMBSJoinedSub)
         def rootClass = new RootClass(metadataBuildingContext)
-        rootClass.setEntityName(SMBSDefaultSuperEntity.name)
+        rootClass.setEntityName(SMBSJoinedSuper.name)
+        rootClass.setJpaEntityName(SMBSJoinedSuper.name)
         def mappings = getCollector()
-        def mapping = new Mapping()
-        mapping.@tablePerHierarchy = false
-        mapping.@tablePerConcreteClass = false
 
         when:
-        Subclass subClass = binder.createSubclassMapping(subEntity, rootClass, mappings, mapping)
+        Subclass subClass = binder.createSubclassMapping(subEntity, rootClass, mappings)
 
         then:
+        subEntity != null
         1 * joinedSubClassBinder.bindJoinedSubClass(subEntity, _ as JoinedSubclass, mappings)
         1 * classPropertiesBinder.bindClassProperties(subEntity, _ as Subclass, mappings)
         subClass instanceof JoinedSubclass
-        subClass.getEntityName() == SMBSDefaultSubEntity.name
+        subClass.getEntityName() == SMBSJoinedSub.name
     }
 
     def "test createSubclassMapping for table per concrete class inheritance"() {
         given:
-        def subEntity = getPersistentEntity(SMBSDefaultSubEntity) as org.grails.orm.hibernate.cfg.domainbinding.hibernate.GrailsHibernatePersistentEntity
+        createPersistentEntity(SMBSUnionSuper)
+        def subEntity = createPersistentEntity(SMBSUnionSub)
         def rootClass = new RootClass(metadataBuildingContext)
-        rootClass.setEntityName(SMBSDefaultSuperEntity.name)
+        rootClass.setEntityName(SMBSUnionSuper.name)
+        rootClass.setJpaEntityName(SMBSUnionSuper.name)
         def mappings = getCollector()
-        def mapping = new Mapping()
-        mapping.@tablePerHierarchy = false
-        mapping.@tablePerConcreteClass = true
 
         when:
-        Subclass subClass = binder.createSubclassMapping(subEntity, rootClass, mappings, mapping)
+        Subclass subClass = binder.createSubclassMapping(subEntity, rootClass, mappings)
 
         then:
+        subEntity != null
         1 * unionSubclassBinder.bindUnionSubclass(subEntity, _ as UnionSubclass, mappings)
         1 * classPropertiesBinder.bindClassProperties(subEntity, _ as Subclass, mappings)
         subClass instanceof UnionSubclass
-        subClass.getEntityName() == SMBSDefaultSubEntity.name
+        subClass.getEntityName() == SMBSUnionSub.name
     }
 }
 
 @Entity
-class SMBSDefaultSuperEntity {
+class SMBSSingleSuper {
     Long id
     String name
 }
 
 @Entity
-class SMBSDefaultSubEntity extends SMBSDefaultSuperEntity {
+class SMBSSingleSub extends SMBSSingleSuper {
+    String subName
+}
+
+@Entity
+class SMBSJoinedSuper {
+    Long id
+    String name
+    static mapping = {
+        tablePerHierarchy false
+    }
+}
+
+@Entity
+class SMBSJoinedSub extends SMBSJoinedSuper {
+    String subName
+}
+
+@Entity
+class SMBSUnionSuper {
+    Long id
+    String name
+    static mapping = {
+        tablePerHierarchy false
+        tablePerConcreteClass true
+    }
+}
+
+@Entity
+class SMBSUnionSub extends SMBSUnionSuper {
     String subName
 }

@@ -36,7 +36,14 @@ public class IndexBinder {
               if (indexObj instanceof Boolean b) {
                 return b ? of(format("%s_%s_idx", table.getName(), columnName)) : empty();
               }
-              return of(indexObj.toString());
+              String indexStr = indexObj.toString();
+              if ("true".equalsIgnoreCase(indexStr)) {
+                return of(format("%s_%s_idx", table.getName(), columnName));
+              }
+              if ("false".equalsIgnoreCase(indexStr)) {
+                return empty();
+              }
+              return of(indexStr);
             })
         .map(def -> def.split(","))
         .ifPresent(

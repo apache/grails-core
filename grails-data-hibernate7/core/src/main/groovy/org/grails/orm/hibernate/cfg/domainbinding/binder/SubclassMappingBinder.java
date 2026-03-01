@@ -55,24 +55,26 @@ public class SubclassMappingBinder {
   public @NonNull Subclass createSubclassMapping(
       @NonNull GrailsHibernatePersistentEntity subEntity,
       PersistentClass parent,
-      @NonNull InFlightMetadataCollector mappings,
-      Mapping m) {
+      @NonNull InFlightMetadataCollector mappings) {
     Subclass subClass;
     subEntity.configureDerivedProperties();
-    if (m.isJoinedSubclass()) {
+    Mapping m = subEntity.getMappedForm();
+    if (subEntity.isJoinedSubclass()) {
       var joined = new JoinedSubclass(parent, this.metadataBuildingContext);
       joinedSubClassBinder.bindJoinedSubClass(subEntity, joined, mappings);
       subClass = joined;
-    } else if (m.isUnionSubclass()) {
+    } else if (subEntity.isUnionSubclass()) {
       var union = new UnionSubclass(parent, this.metadataBuildingContext);
       unionSubclassBinder.bindUnionSubclass(subEntity, union, mappings);
       subClass = union;
     } else {
+
       var singleTableSubclass = new SingleTableSubclass(parent, this.metadataBuildingContext);
 
       singleTableSubclassBinder.bindSubClass(subEntity, singleTableSubclass, mappings);
       subClass = singleTableSubclass;
     }
+
     subClass.setBatchSize(Optional.ofNullable(m.getBatchSize()).orElse(-1));
     subClass.setDynamicUpdate(m.getDynamicUpdate());
     subClass.setDynamicInsert(m.getDynamicInsert());

@@ -56,19 +56,17 @@ public class SubClassBinder {
    * @param sub The sub domain class instance
    * @param parent The parent persistent class instance
    * @param mappings The mappings instance
-   * @param m The mapping config
    */
   public void bindSubClass(
       @Nonnull GrailsHibernatePersistentEntity sub,
       PersistentClass parent,
-      @Nonnull InFlightMetadataCollector mappings,
-      Mapping m) {
+      @Nonnull InFlightMetadataCollector mappings) {
     mappingCacheHolder.cacheMapping(sub);
-    Subclass subClass = subclassMappingBinder.createSubclassMapping(sub, parent, mappings, m);
+    Subclass subClass = subclassMappingBinder.createSubclassMapping(sub, parent, mappings);
     parent.addSubclass(subClass);
     mappings.addEntityBinding(subClass);
     bindMultiTenantFilter(sub, subClass);
-    sub.getChildEntities(dataSourceName).forEach(sub1 -> bindSubClass(sub1, subClass, mappings, m));
+    sub.getChildEntities(dataSourceName).forEach(sub1 -> bindSubClass(sub1, subClass, mappings));
   }
 
   private void bindMultiTenantFilter(GrailsHibernatePersistentEntity sub, Subclass subClass) {

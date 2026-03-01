@@ -78,10 +78,8 @@ public class RootBinder {
       discriminatorPropertyBinder.bindDiscriminatorProperty(root);
     }
 
-    Mapping m = entity.getMappedForm();
-
     // bind the sub classes
-    children.forEach(sub -> subClassBinder.bindSubClass(sub, root, mappings, m));
+    children.forEach(sub -> subClassBinder.bindSubClass(sub, root, mappings));
 
     multiTenantFilterBinder.bind(entity, root);
 
