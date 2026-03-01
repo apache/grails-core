@@ -25,8 +25,6 @@ plugins {
     id 'java-library'
     id 'jacoco'
     id 'com.github.spotbugs'
-    id 'pmd'
-    id 'com.diffplug.spotless'
     id 'org.apache.grails.buildsrc.properties'
 }
 
@@ -138,6 +136,7 @@ dependencies {
 
 apply {
     from rootProject.layout.projectDirectory.file('gradle/java-config.gradle')
+    from rootProject.layout.projectDirectory.file('gradle/code-style-config.gradle')
     from rootProject.layout.projectDirectory.file('gradle/hibernate7-test-config.gradle')
     from rootProject.layout.projectDirectory.file('gradle/grails-data-tck-config.gradle')
     from rootProject.layout.projectDirectory.file('gradle/docs-config.gradle')
@@ -168,33 +167,6 @@ tasks.withType(com.github.spotbugs.snom.SpotBugsTask).configureEach {
     }
 }
 
-pmd {
-    consoleOutput = true
-    ignoreFailures = true
-//    ruleSets = ['category/java/bestpractices.xml', 'category/java/errorprone.xml', 'category/java/security.xml']
-    // toolVersion = '7.0.0'   // optional: override default PMD version if needed
-}
-
 tasks.named('check') {
-    dependsOn 'spotbugsMain', 'pmdMain'
-}
-
-// 2. Configure Spotless
-spotless {
-    java {
-        // Use rootProject.projectDir to ensure the path is absolute from the root
-        def licenseFile = new File(rootProject.projectDir, 'grails-forge/config/spotless.license.java')
-        if (licenseFile.exists()) {
-            licenseHeaderFile licenseFile
-        }
-
-        googleJavaFormat()
-
-        // This targets the specific file in your Checkstyle report
-        target 'src/main/java/**/*.java', 'src/main/groovy/**/*.java'
-
-        removeUnusedImports()
-        trimTrailingWhitespace()
-        endWithNewline()
-    }
+    dependsOn 'spotbugsMain'
 }
