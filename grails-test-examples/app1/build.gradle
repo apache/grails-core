@@ -61,14 +61,13 @@ dependencies {
     testImplementation 'org.apache.grails:grails-testing-support-datamapping'
 
     console 'org.apache.grails:grails-console'
-    testImplementation "io.micronaut:micronaut-http-client:$micronautHttpClientVersion"
-    testImplementation "io.micronaut.serde:micronaut-serde-jackson:$micronautSerdeJacksonVersion"
 
     implementation project(':grails-test-examples-plugins-loadfirst')
     implementation project(':grails-test-examples-plugins-loadsecond')
     implementation project(':grails-test-examples-plugins-loadafter')
 
     integrationTestImplementation testFixtures('org.apache.grails:grails-geb')
+    integrationTestImplementation 'org.apache.grails:grails-testing-support-httpclient'
 }
 
 tasks.withType(JavaExec).configureEach {

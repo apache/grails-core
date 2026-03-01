@@ -33,13 +33,10 @@ dependencies {
     implementation 'org.apache.grails:grails-micronaut'
     implementation project(':grails-test-examples-plugins-issue-11767')
 
-    testImplementation platform("io.micronaut.platform:micronaut-platform:$micronautPlatformVersion")
-    testImplementation "io.micronaut:micronaut-http-client"
-    testImplementation "io.micronaut.serde:micronaut-serde-jackson"
-    testImplementation 'io.micronaut:micronaut-inject-groovy'
-
     testImplementation 'org.apache.grails:grails-testing-support-web'
     testImplementation 'org.spockframework:spock-core'
+
+    integrationTestImplementation 'org.apache.grails:grails-testing-support-httpclient'
 }
 
 apply {

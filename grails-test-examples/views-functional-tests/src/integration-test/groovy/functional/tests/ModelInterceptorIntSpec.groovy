@@ -16,27 +16,21 @@
  *  specific language governing permissions and limitations
  *  under the License.
  */
-
 package functional.tests
 
-import grails.testing.mixin.integration.Integration
-import grails.testing.spock.RunOnce
 import io.micronaut.http.HttpRequest
-import io.micronaut.http.HttpResponse
 import io.micronaut.http.HttpStatus
 import io.micronaut.http.MediaType
-import org.junit.jupiter.api.BeforeEach
-import org.springframework.beans.factory.annotation.Autowired
+import spock.lang.Specification
 import spock.lang.Unroll
 
-@Integration(applicationClass = Application)
-class ModelInterceptorIntSpec extends HttpClientSpec {
+import org.springframework.beans.factory.annotation.Autowired
 
-    @RunOnce
-    @BeforeEach
-    void init() {
-        super.init()
-    }
+import grails.testing.mixin.integration.Integration
+import org.apache.grails.testing.httpclient.HttpClientSupport
+
+@Integration
+class ModelInterceptorIntSpec extends Specification implements HttpClientSupport {
 
     @Autowired
     ModelInterceptor modelInterceptor
@@ -44,17 +38,20 @@ class ModelInterceptorIntSpec extends HttpClientSpec {
     @Unroll
     void "interceptor should get model from #controller"() {
         given:
-        def request = HttpRequest.GET("/$controller")
-                .contentType(MediaType.APPLICATION_JSON)
-        HttpResponse response = client.toBlocking().exchange(request, List<Map>)
+        def response = httpClient.exchange(
+                HttpRequest.GET("/$controller").contentType(MediaType.APPLICATION_JSON),
+                List<Map>
+        )
 
         expect:
         response.status == HttpStatus.OK
         modelInterceptor.latestModel != null
 
         where:
-        controller << ["modelAndView",
-                       "respond",
-                       "return"]
+        controller << [
+                'modelAndView',
+                'respond',
+                'return'
+        ]
     }
 }

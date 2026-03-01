@@ -19,29 +19,21 @@
 
 package functional.tests
 
-import grails.testing.mixin.integration.Integration
-import grails.testing.spock.RunOnce
-import io.micronaut.http.HttpRequest
-import io.micronaut.http.HttpResponse
 import io.micronaut.http.HttpStatus
-import org.junit.jupiter.api.BeforeEach
 import spock.lang.Issue
+import spock.lang.Specification
 
-@Integration(applicationClass = Application)
-class BulletinSpec extends HttpClientSpec {
+import grails.testing.mixin.integration.Integration
+import org.apache.grails.testing.httpclient.HttpClientSupport
 
-    @RunOnce
-    @BeforeEach
-    void init() {
-        super.init()
-    }
+@Integration
+class BulletinSpec extends Specification implements HttpClientSupport {
 
     @Issue('https://github.com/apache/grails-views/issues/175')
     void 'test render collections with same objects'() {
         when: 'a GET is issued'
-        HttpRequest request = HttpRequest.GET("/bulletin")
-        HttpResponse<Map> resp = client.toBlocking().exchange(request, Map)
-        Map json = resp.body()
+        def resp = httpClient.exchange('/bulletin', Map)
+        def json = resp.body()
 
         then: 'The REST resource is retrieved and the correct JSON is returned'
         resp.status == HttpStatus.OK

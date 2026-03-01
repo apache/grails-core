@@ -16,21 +16,19 @@
  *  specific language governing permissions and limitations
  *  under the License.
  */
-
 package functionaltests.caching
 
 import groovy.json.JsonSlurper
 
 import io.micronaut.http.HttpRequest
 import io.micronaut.http.HttpStatus
-import io.micronaut.http.client.HttpClient
 import spock.lang.Narrative
-import spock.lang.Shared
 import spock.lang.Specification
 
 import org.springframework.beans.factory.annotation.Autowired
 
 import grails.testing.mixin.integration.Integration
+import org.apache.grails.testing.httpclient.HttpClientSupport
 
 /**
  * Integration tests for Grails caching with @Cacheable, @CacheEvict, @CachePut.
@@ -48,25 +46,16 @@ Grails caching provides method-level caching via annotations @Cacheable,
 @CacheEvict, and @CachePut. This allows expensive operations to be cached
 and only recomputed when necessary.
 ''')
-class CachingSpec extends Specification {
+class CachingSpec extends Specification implements HttpClientSupport {
 
     @Autowired
     CacheTestService cacheTestService
 
-    @Shared
-    HttpClient client
-
     def setup() {
-        client = client ?: HttpClient.create(new URL("http://localhost:$serverPort"))
-
         // Evict all caches before each test to ensure clean state
         cacheTestService.evictBasicCache()
         cacheTestService.evictAllFromParamCache()
         cacheTestService.evictAllKeyedCache()
-    }
-
-    def cleanupSpec() {
-        client.close()
     }
 
     // ========== Basic @Cacheable Tests - Data Consistency ==========
@@ -280,15 +269,15 @@ class CachingSpec extends Specification {
 
     def "basic cache works via HTTP"() {
         // Evict cache to start fresh
-        client.toBlocking().exchange(HttpRequest.GET('/cacheTest/evictBasic'), String)
+        httpClient.retrieve('/cacheTest/evictBasic')
 
         when: "calling endpoint twice"
-        def response1 = client.toBlocking().exchange(
-            HttpRequest.GET('/cacheTest/basicData'),
+        def response1 = httpClient.exchange(
+            '/cacheTest/basicData',
             String
         )
-        def response2 = client.toBlocking().exchange(
-            HttpRequest.GET('/cacheTest/basicData'),
+        def response2 = httpClient.exchange(
+            '/cacheTest/basicData',
             String
         )
 
@@ -304,60 +293,48 @@ class CachingSpec extends Specification {
 
     def "parameter cache works via HTTP"() {
         // Evict cache
-        client.toBlocking().exchange(HttpRequest.GET('/cacheTest/evictAllParam'), String)
+        httpClient.retrieve('/cacheTest/evictAllParam')
 
         when: "calling with same ID twice"
-        def response1 = client.toBlocking().exchange(
-            HttpRequest.GET('/cacheTest/dataById?id=42'),
-            String
-        )
-        def response2 = client.toBlocking().exchange(
-            HttpRequest.GET('/cacheTest/dataById?id=42'),
-            String
-        )
+        def response1 = httpClient.retrieve('/cacheTest/dataById?id=42')
+        def response2 = httpClient.retrieve('/cacheTest/dataById?id=42')
 
         then: "cached result returned"
-        def json1 = new JsonSlurper().parseText(response1.body())
-        def json2 = new JsonSlurper().parseText(response2.body())
+        def json1 = new JsonSlurper().parseText(response1)
+        def json2 = new JsonSlurper().parseText(response2)
         
         json1.data == json2.data
     }
 
     def "eviction works via HTTP"() {
         // Evict cache and populate it
-        client.toBlocking().exchange(HttpRequest.GET('/cacheTest/evictBasic'), String)
-        def firstCall = client.toBlocking().exchange(
-                HttpRequest.GET('/cacheTest/basicData'),
-                String
-        )
-        def firstData = new JsonSlurper().parseText(firstCall.body()).data
+        httpClient.retrieve('/cacheTest/evictBasic')
+        def firstCall = httpClient.retrieve('/cacheTest/basicData')
+        def firstData = new JsonSlurper().parseText(firstCall).data
 
         when: "evicting via HTTP then calling again after delay"
-        client.toBlocking().exchange(HttpRequest.GET('/cacheTest/evictBasic'), String)
+        httpClient.retrieve('/cacheTest/evictBasic')
         Thread.sleep(10) // Ensure timestamp changes
-        def afterEvict = client.toBlocking().exchange(
-            HttpRequest.GET('/cacheTest/basicData'),
-            String
-        )
+        def afterEvict = httpClient.retrieve('/cacheTest/basicData')
 
         then: "new data generated after eviction"
-        def afterEvictData = new JsonSlurper().parseText(afterEvict.body()).data
+        def afterEvictData = new JsonSlurper().parseText(afterEvict).data
         firstData != afterEvictData
     }
 
     def "different IDs return different cached values via HTTP"() {
         given:
-        client.toBlocking().exchange(HttpRequest.GET('/cacheTest/evictAllParam'), String)
+        httpClient.retrieve('/cacheTest/evictAllParam')
 
         when: "fetching different IDs"
-        def response1 = client.toBlocking().exchange(HttpRequest.GET('/cacheTest/dataById?id=100'), String)
-        def response2 = client.toBlocking().exchange(HttpRequest.GET('/cacheTest/dataById?id=200'), String)
-        def response3 = client.toBlocking().exchange(HttpRequest.GET('/cacheTest/dataById?id=100'), String)
+        def response1 = httpClient.retrieve('/cacheTest/dataById?id=100')
+        def response2 = httpClient.retrieve('/cacheTest/dataById?id=200')
+        def response3 = httpClient.retrieve('/cacheTest/dataById?id=100')
 
         then: "different IDs have different data, same ID returns same data"
-        def json1 = new JsonSlurper().parseText(response1.body())
-        def json2 = new JsonSlurper().parseText(response2.body())
-        def json3 = new JsonSlurper().parseText(response3.body())
+        def json1 = new JsonSlurper().parseText(response1)
+        def json2 = new JsonSlurper().parseText(response2)
+        def json3 = new JsonSlurper().parseText(response3)
         
         json1.data != json2.data
         json1.data == json3.data
@@ -365,18 +342,12 @@ class CachingSpec extends Specification {
 
     def "complex data endpoint works with caching"() {
         when: "fetching complex data"
-        def response1 = client.toBlocking().exchange(
-            HttpRequest.GET('/cacheTest/complexData?category=electronics&page=3'),
-            String
-        )
-        def response2 = client.toBlocking().exchange(
-            HttpRequest.GET('/cacheTest/complexData?category=electronics&page=3'),
-            String
-        )
+        def response1 = httpClient.retrieve('/cacheTest/complexData?category=electronics&page=3')
+        def response2 = httpClient.retrieve('/cacheTest/complexData?category=electronics&page=3')
 
         then: "data is cached"
-        def json1 = new JsonSlurper().parseText(response1.body())
-        def json2 = new JsonSlurper().parseText(response2.body())
+        def json1 = new JsonSlurper().parseText(response1)
+        def json2 = new JsonSlurper().parseText(response2)
         
         json1.data == json2.data
         json1.data.category == 'electronics'
@@ -385,18 +356,15 @@ class CachingSpec extends Specification {
 
     def "CachePut works via HTTP with key closure"() {
         // Evict keyed cache and get initial value
-        client.toBlocking().exchange(HttpRequest.GET('/cacheTest/evictAllKeyed'), String)
+        httpClient.retrieve('/cacheTest/evictAllKeyed')
         def initial = new JsonSlurper().parseText(
-            client.toBlocking().exchange(HttpRequest.GET('/cacheTest/byKey?key=httpkey'), String).body()
+            httpClient.retrieve('/cacheTest/byKey?key=httpkey')
         ).data
 
         when: "updating via HTTP"
-        client.toBlocking().exchange(
-                HttpRequest.GET('/cacheTest/updateByKey?key=httpkey&value=HTTPUpdated'),
-                String
-        )
+        httpClient.retrieve('/cacheTest/updateByKey?key=httpkey&value=HTTPUpdated')
         def afterUpdate = new JsonSlurper().parseText(
-            client.toBlocking().exchange(HttpRequest.GET('/cacheTest/byKey?key=httpkey'), String).body()
+            httpClient.retrieve('/cacheTest/byKey?key=httpkey')
         ).data
 
         then: "cache contains updated value"

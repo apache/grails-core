@@ -16,47 +16,33 @@
  *  specific language governing permissions and limitations
  *  under the License.
  */
-
 package functional.tests
 
 import com.fasterxml.jackson.databind.ObjectMapper
-import grails.testing.mixin.integration.Integration
-import grails.testing.spock.RunOnce
-import grails.web.http.HttpHeaders
 import io.micronaut.http.HttpRequest
-import io.micronaut.http.HttpResponse
 import io.micronaut.http.HttpStatus
-import org.junit.jupiter.api.BeforeEach
 import spock.lang.IgnoreIf
 import spock.lang.Shared
+import spock.lang.Specification
 
-@Integration(applicationClass = Application)
-class TeamSpec extends HttpClientSpec {
+import org.springframework.beans.factory.annotation.Autowired
 
-    @RunOnce
-    @BeforeEach
-    void init() {
-        super.init()
-    }
+import grails.testing.mixin.integration.Integration
+import grails.web.http.HttpHeaders
+import org.apache.grails.testing.httpclient.HttpClientSupport
 
-    @Shared
-    String lang
+@Integration
+class TeamSpec extends Specification implements HttpClientSupport {
 
     @Shared
+    String lang = "${System.properties.getProperty('user.language')}_${System.properties.getProperty('user.country')}"
+
+    @Autowired
     ObjectMapper objectMapper
-
-    void setup() {
-        objectMapper = new ObjectMapper()
-    }
-
-    void setupSpec() {
-        this.lang = "${System.properties.getProperty('user.language')}_${System.properties.getProperty('user.country')}"
-    }
 
     void 'Test association template rendering'() {
         when:
-        HttpRequest request = HttpRequest.GET('/teams/1')
-        HttpResponse<String> resp = client.toBlocking().exchange(request, String)
+        def resp = httpClient.exchange('/teams/1', String)
 
         then: 'The response is correct'
         resp.status == HttpStatus.OK
@@ -80,8 +66,7 @@ class TeamSpec extends HttpClientSpec {
 
     void 'Test deep association template rendering'() {
         when:
-        HttpRequest request = HttpRequest.GET('/teams/deep/1')
-        HttpResponse<String> resp = client.toBlocking().exchange(request, String)
+        def resp = httpClient.exchange('/teams/deep/1', String)
 
         then: 'The response is correct'
         resp.status == HttpStatus.OK
@@ -104,8 +89,7 @@ class TeamSpec extends HttpClientSpec {
     @IgnoreIf({ System.getenv('GITHUB_REF') })
     void 'Test HAL rendering'() {
         when:
-        HttpRequest request = HttpRequest.GET('/teams/hal/1')
-        HttpResponse<String> resp = client.toBlocking().exchange(request, String)
+        def resp = httpClient.exchange('/teams/hal/1', String)
 
         then: 'The response is correct'
         resp.status == HttpStatus.OK
@@ -177,8 +161,7 @@ class TeamSpec extends HttpClientSpec {
         }
 
         when:
-        HttpRequest request = HttpRequest.GET('/team/composite')
-        HttpResponse<String> resp = client.toBlocking().exchange(request, String)
+        def resp = httpClient.exchange('/team/composite', String)
 
         then: 'The response is correct'
         resp.status == HttpStatus.OK

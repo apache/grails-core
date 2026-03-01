@@ -16,45 +16,31 @@
  *  specific language governing permissions and limitations
  *  under the License.
  */
-
 package issue11767.app
-
 
 import com.fasterxml.jackson.databind.ObjectMapper
 import io.micronaut.http.HttpRequest
 import io.micronaut.http.HttpStatus
 import io.micronaut.http.MediaType
-import io.micronaut.http.client.HttpClient
 import io.micronaut.http.client.exceptions.HttpClientResponseException
-import spock.lang.AutoCleanup
-import spock.lang.Shared
 import spock.lang.Specification
 
+import org.springframework.beans.factory.annotation.Autowired
+
 import grails.testing.mixin.integration.Integration
+import org.apache.grails.testing.httpclient.HttpClientSupport
 
 @Integration
-class GsonViewRespondSpec extends Specification {
+class GsonViewRespondSpec extends Specification implements HttpClientSupport {
 
-    @Shared
+    @Autowired
     ObjectMapper objectMapper
-
-    def setupSpec() {
-        objectMapper = new ObjectMapper()
-    }
-
-    @Shared
-    @AutoCleanup
-    HttpClient httpClient
-
-    void setup() {
-        def baseUrl = "http://localhost:$serverPort"
-        httpClient = HttpClient.create(baseUrl.toURL())
-    }
 
     void 'respond with Error gson view'() {
         when: 'The app controller is visited on errorView'
-        def request = HttpRequest.GET('/app/errorView?foo=Too+Short').accept(MediaType.APPLICATION_JSON)
-        httpClient.toBlocking().exchange(request, String)
+        httpClient.retrieve(
+                HttpRequest.GET('/app/errorView?foo=Too+Short').accept(MediaType.APPLICATION_JSON),
+        )
 
         then:
         def ex = thrown(HttpClientResponseException)
@@ -77,11 +63,12 @@ class GsonViewRespondSpec extends Specification {
 
     void 'respond with gson view from action name'() {
         when: 'The app controller is visited on normalView'
-        def request = HttpRequest.GET('/app/normalView?foo=Testing+normal+view').accept(MediaType.APPLICATION_JSON)
-        def response = httpClient.toBlocking().exchange(request, String)
+        def response = httpClient.retrieve(
+                HttpRequest.GET('/app/normalView?foo=Testing+normal+view').accept(MediaType.APPLICATION_JSON),
+        )
 
         then:
-        objectMapper.readTree(response.body() as String) == objectMapper.readTree('''{
+        objectMapper.readTree(response) == objectMapper.readTree('''{
               "normal": {
                 "foo": "Testing normal view"
               } 
@@ -90,11 +77,12 @@ class GsonViewRespondSpec extends Specification {
 
     void 'respond with gson view from type'() {
         when: 'The app controller is visited on typeView'
-        def request = HttpRequest.GET('/app/typeView?foo=Testing+type+view').accept(MediaType.APPLICATION_JSON)
-        def response = httpClient.toBlocking().exchange(request, String)
+        def response = httpClient.retrieve(
+                HttpRequest.GET('/app/typeView?foo=Testing+type+view').accept(MediaType.APPLICATION_JSON),
+        )
 
         then:
-        objectMapper.readTree(response.body() as String) == objectMapper.readTree('''{
+        objectMapper.readTree(response) == objectMapper.readTree('''{
               "type": {
                 "foo": "Testing type view"
               } 

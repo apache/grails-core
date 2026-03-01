@@ -16,30 +16,21 @@
  *  specific language governing permissions and limitations
  *  under the License.
  */
-
 package functional.tests
 
-import grails.testing.mixin.integration.Integration
-import grails.testing.spock.RunOnce
-import io.micronaut.http.HttpRequest
-import io.micronaut.http.HttpResponse
 import io.micronaut.http.HttpStatus
-import org.junit.jupiter.api.BeforeEach
 import spock.lang.Issue
+import spock.lang.Specification
 
-@Integration(applicationClass = Application)
-class PersonInheritanceSpec extends HttpClientSpec {
+import grails.testing.mixin.integration.Integration
+import org.apache.grails.testing.httpclient.HttpClientSupport
 
-    @RunOnce
-    @BeforeEach
-    void init() {
-        super.init()
-    }
+@Integration
+class PersonInheritanceSpec extends Specification implements HttpClientSupport {
 
     void 'test template inheritance produces correct json'() {
         when:
-        HttpRequest request = HttpRequest.GET('/person-inheritance')
-        HttpResponse<String> rsp = client.toBlocking().exchange(request, String)
+        def rsp = httpClient.exchange('/person-inheritance', String)
 
         then: 'the response is correct'
         rsp.status() == HttpStatus.OK
@@ -49,8 +40,7 @@ class PersonInheritanceSpec extends HttpClientSpec {
     @Issue("https://github.com/apache/grails-views/issues/234")
     void 'test template inheritance does not produce NPE when model variable is null'() {
         when:
-        HttpRequest request = HttpRequest.GET('/person-inheritance/npe')
-        HttpResponse<String> rsp = client.toBlocking().exchange(request, String)
+        def rsp = httpClient.exchange('/person-inheritance/npe', String)
 
         then: 'the response is correct'
         noExceptionThrown()

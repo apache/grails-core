@@ -16,33 +16,22 @@
  *  specific language governing permissions and limitations
  *  under the License.
  */
-
 package example
 
-import grails.testing.mixin.integration.Integration
-import grails.testing.spock.OnceBefore
-import spock.lang.Shared
 import spock.lang.Specification
-import io.micronaut.http.client.HttpClient
+
+import grails.testing.mixin.integration.Integration
+import org.apache.grails.testing.httpclient.HttpClientSupport
 
 @Integration
-class BookControllerSpec extends Specification {
-
-    @Shared
-    HttpClient client
-
-    @OnceBefore
-    void init() {
-        String baseUrl = "http://localhost:$serverPort"
-        this.client = HttpClient.create(baseUrl.toURL())
-    }
+class BookControllerSpec extends Specification implements HttpClientSupport {
 
     void 'test books can be fetched'() {
         expect:
-        client.toBlocking().retrieve('/book/grails').contains('The definitive Guide to Grails 2')
-        !client.toBlocking().retrieve('/book/grails').contains('Groovy in Action')
+        httpClient.retrieve('/book/grails').contains('The definitive Guide to Grails 2')
+        !httpClient.retrieve('/book/grails').contains('Groovy in Action')
 
-        client.toBlocking().retrieve('/book/groovy').contains('Groovy in Action')
-        !client.toBlocking().retrieve('/book/groovy').contains('The definitive Guide to Grails 2')
+        httpClient.retrieve('/book/groovy').contains('Groovy in Action')
+        !httpClient.retrieve('/book/groovy').contains('The definitive Guide to Grails 2')
     }
 }

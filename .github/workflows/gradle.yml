@@ -228,7 +228,7 @@ jobs:
           --continue
           --rerun-tasks
           --stacktrace
-          -PgebAtCheckWaiting
+          -PextendTestClientTimeouts
           -PgrailsIndy=${{ matrix.indy }}
           -PonlyFunctionalTests
           -PskipCodeStyle

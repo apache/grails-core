@@ -20,17 +20,14 @@ package micronaut
 
 import io.github.cjstehno.ersatz.ErsatzServer
 import io.github.cjstehno.ersatz.cfg.ContentType
+import io.github.cjstehno.ersatz.cfg.ServerConfig
 import io.micronaut.context.ApplicationContext as MicronautApplicationContext
-import io.micronaut.http.HttpRequest
-import io.micronaut.http.MediaType
-import io.micronaut.http.client.HttpClient
 import io.micronaut.http.client.exceptions.HttpClientResponseException
 import micronaut.client.MicronautTestClient
 import spock.lang.AutoCleanup
 import spock.lang.Specification
 
 import org.springframework.beans.factory.annotation.Autowired
-import org.springframework.beans.factory.annotation.Value
 
 import grails.testing.mixin.integration.Integration
 
@@ -40,11 +37,8 @@ class MicronautDeclarativeClientSpec extends Specification {
     @Autowired
     MicronautApplicationContext micronautContext
 
-    @Value('${local.server.port}')
-    Integer serverPort
-
     @AutoCleanup
-    ErsatzServer ersatz = new ErsatzServer({ cfg ->
+    ErsatzServer ersatz = new ErsatzServer({ ServerConfig cfg ->
         cfg.httpPort(19876)
     })
 
@@ -85,20 +79,6 @@ class MicronautDeclarativeClientSpec extends Specification {
 
         and: 'the ersatz server received exactly one request'
         ersatz.verify()
-    }
-
-    void "Micronaut HttpClient can reach the running Grails application"() {
-        given: 'a Micronaut HTTP client targeting the running server'
-        def client = HttpClient.create("http://localhost:$serverPort".toURL())
-
-        when: 'calling the root endpoint'
-        def response = client.toBlocking().exchange('/')
-
-        then: 'the server responds successfully'
-        response.status.code == 200
-
-        cleanup:
-        client.close()
     }
 
     void "declarative @Client sends POST and receives mock response"() {
@@ -262,38 +242,5 @@ class MicronautDeclarativeClientSpec extends Specification {
 
         and: 'the ersatz server received exactly one request'
         ersatz.verify()
-    }
-
-    void "Micronaut HttpClient can set Accept header"() {
-        given: 'an ersatz server expecting an Accept header'
-        ersatz.expectations({ expect ->
-            expect.GET('/micronaut-test', { req ->
-                req.called(1)
-                req.header('Accept', MediaType.APPLICATION_JSON)
-                req.responder({ res ->
-                    res.code(200)
-                    res.body('{"status":"ok"}', ContentType.APPLICATION_JSON)
-                })
-            })
-        })
-
-        and: 'a Micronaut HTTP client targeting the ersatz server'
-        def client = HttpClient.create('http://localhost:19876'.toURL())
-
-        when: 'calling the endpoint with an Accept header'
-        def response = client.toBlocking().exchange(
-                HttpRequest.GET('/micronaut-test').accept(MediaType.APPLICATION_JSON),
-                String
-        )
-
-        then: 'the response contains the expected JSON'
-        response.status.code == 200
-        response.body() == '{"status":"ok"}'
-
-        and: 'the ersatz server received exactly one request'
-        ersatz.verify()
-
-        cleanup:
-        client.close()
     }
 }

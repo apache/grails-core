@@ -19,11 +19,10 @@
 package functionaltests.interceptors
 
 import io.micronaut.http.HttpRequest
-import io.micronaut.http.client.HttpClient
-import spock.lang.Shared
 import spock.lang.Specification
 
 import grails.testing.mixin.integration.Integration
+import org.apache.grails.testing.httpclient.HttpClientSupport
 
 /**
  * Comprehensive integration tests for Grails interceptor functionality.
@@ -38,30 +37,22 @@ import grails.testing.mixin.integration.Integration
  * - Timing/performance tracking
  */
 @Integration
-class InterceptorOrderingSpec extends Specification {
-
-    @Shared
-    HttpClient client
+class InterceptorOrderingSpec extends Specification implements HttpClientSupport {
 
     def setup() {
-        client = client ?: HttpClient.create(new URL("http://localhost:$serverPort"))
         // Reset execution order before each test
-        client.toBlocking().exchange(
-                HttpRequest.GET('/interceptorTest/resetOrder'),
+        httpClient.exchange(
+                '/interceptorTest/resetOrder',
                 Map
         )
-    }
-
-    def cleanupSpec() {
-        client.close()
     }
 
     // ========== Interceptor Ordering Tests ==========
 
     def "test interceptors execute in order by 'order' property"() {
         when:
-        def response = client.toBlocking().exchange(
-            HttpRequest.GET('/interceptorTest/testOrder'),
+        def response = httpClient.exchange(
+            '/interceptorTest/testOrder',
             Map
         )
 
@@ -88,8 +79,8 @@ class InterceptorOrderingSpec extends Specification {
 
     def "test before interceptors run before controller action"() {
         when:
-        def response = client.toBlocking().exchange(
-            HttpRequest.GET('/interceptorTest/index'),
+        def response = httpClient.exchange(
+            '/interceptorTest/index',
             Map
         )
 
@@ -105,8 +96,8 @@ class InterceptorOrderingSpec extends Specification {
 
     def "test after interceptors run after controller action"() {
         when:
-        def response = client.toBlocking().exchange(
-            HttpRequest.GET('/interceptorTest/index'),
+        def response = httpClient.exchange(
+            '/interceptorTest/index',
             Map
         )
 
@@ -124,8 +115,8 @@ class InterceptorOrderingSpec extends Specification {
 
     def "test interceptor can block request by returning false"() {
         when:
-        def response = client.toBlocking().exchange(
-            HttpRequest.GET('/interceptorTest/blocked?block=true&reason=testing'),
+        def response = httpClient.exchange(
+            '/interceptorTest/blocked?block=true&reason=testing',
             Map
         )
 
@@ -138,8 +129,8 @@ class InterceptorOrderingSpec extends Specification {
 
     def "test interceptor allows request when returning true"() {
         when:
-        def response = client.toBlocking().exchange(
-            HttpRequest.GET('/interceptorTest/blocked?block=false'),
+        def response = httpClient.exchange(
+            '/interceptorTest/blocked?block=false',
             Map
         )
 
@@ -153,8 +144,8 @@ class InterceptorOrderingSpec extends Specification {
 
     def "test interceptor can set request attributes"() {
         when:
-        def response = client.toBlocking().exchange(
-            HttpRequest.GET('/interceptorTest/checkAttributes'),
+        def response = httpClient.exchange(
+            '/interceptorTest/checkAttributes',
             Map
         )
 
@@ -167,8 +158,8 @@ class InterceptorOrderingSpec extends Specification {
 
     def "test interceptor can set response headers"() {
         when:
-        def response = client.toBlocking().exchange(
-            HttpRequest.GET('/interceptorTest/checkAttributes'),
+        def response = httpClient.exchange(
+            '/interceptorTest/checkAttributes',
             Map
         )
 
@@ -181,8 +172,8 @@ class InterceptorOrderingSpec extends Specification {
 
     def "test interceptor can set session attributes"() {
         when:
-        def response = client.toBlocking().exchange(
-            HttpRequest.GET('/interceptorTest/checkSession'),
+        def response = httpClient.exchange(
+            '/interceptorTest/checkSession',
             Map
         )
 
@@ -196,15 +187,15 @@ class InterceptorOrderingSpec extends Specification {
 
     def "test interceptor conditional matching - matched"() {
         when:
-        def response = client.toBlocking().exchange(
-            HttpRequest.GET('/interceptorTest/conditionalAction?match=yes'),
+        def response = httpClient.exchange(
+            '/interceptorTest/conditionalAction?match=yes',
             Map
         )
 
         then:
         response.status.code == 200
-        def orderResponse = client.toBlocking().exchange(
-            HttpRequest.GET('/interceptorTest/getOrder'),
+        def orderResponse = httpClient.exchange(
+            '/interceptorTest/getOrder',
             Map
         )
         orderResponse.body().executionOrder.contains('conditional:before:matched')
@@ -212,15 +203,15 @@ class InterceptorOrderingSpec extends Specification {
 
     def "test interceptor conditional matching - not matched"() {
         when:
-        def response = client.toBlocking().exchange(
-            HttpRequest.GET('/interceptorTest/conditionalAction?match=no'),
+        def response = httpClient.exchange(
+            '/interceptorTest/conditionalAction?match=no',
             Map
         )
 
         then:
         response.status.code == 200
-        def orderResponse = client.toBlocking().exchange(
-            HttpRequest.GET('/interceptorTest/getOrder'),
+        def orderResponse = httpClient.exchange(
+            '/interceptorTest/getOrder',
             Map
         )
         orderResponse.body().executionOrder.contains('conditional:before:notmatched')
@@ -230,8 +221,8 @@ class InterceptorOrderingSpec extends Specification {
 
     def "test timing interceptor tracks request duration"() {
         when:
-        def response = client.toBlocking().exchange(
-            HttpRequest.GET('/interceptorTest/slowAction?delay=50'),
+        def response = httpClient.exchange(
+            '/interceptorTest/slowAction?delay=50',
             Map
         )
 
@@ -243,26 +234,26 @@ class InterceptorOrderingSpec extends Specification {
         // Check that timing interceptor's before phase ran and recorded start time
         // Note: We can only reliably verify before() since after() runs after response is committed
         // and its execution order entry may not be visible due to async timing
-        def orderResponse = client.toBlocking().exchange(
-            HttpRequest.GET('/interceptorTest/getOrder'),
+        def orderResponse = httpClient.retrieve(
+            '/interceptorTest/getOrder',
             Map
         )
-        orderResponse.body().executionOrder.any { it.startsWith('timing:before') }
+        orderResponse.executionOrder.any { it.startsWith('timing:before') }
     }
 
     // ========== Multiple Requests Tests ==========
 
     def "test interceptors work correctly across multiple requests"() {
         when: "make multiple requests"
-        def response1 = client.toBlocking().exchange(
-            HttpRequest.GET('/interceptorTest/index'),
+        def response1 = httpClient.exchange(
+            '/interceptorTest/index',
             Map
         )
         
         // Reset again for clean second request
-        client.toBlocking().exchange(HttpRequest.GET('/interceptorTest/resetOrder'), Map)
-        def response2 = client.toBlocking().exchange(
-            HttpRequest.GET('/interceptorTest/index'),
+        httpClient.retrieve('/interceptorTest/resetOrder')
+        def response2 = httpClient.exchange(
+            '/interceptorTest/index',
             Map
         )
 
@@ -279,8 +270,8 @@ class InterceptorOrderingSpec extends Specification {
 
     def "test interceptors work with data actions"() {
         when:
-        def response = client.toBlocking().exchange(
-            HttpRequest.GET('/interceptorTest/dataAction?data=testValue'),
+        def response = httpClient.exchange(
+            '/interceptorTest/dataAction?data=testValue',
             Map
         )
 
@@ -293,8 +284,8 @@ class InterceptorOrderingSpec extends Specification {
 
     def "test complete before-controller-after sequence"() {
         when:
-        def response = client.toBlocking().exchange(
-            HttpRequest.GET('/interceptorTest/index'),
+        def response = httpClient.exchange(
+            '/interceptorTest/index',
             Map
         )
 

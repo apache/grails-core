@@ -16,35 +16,24 @@
  *  specific language governing permissions and limitations
  *  under the License.
  */
-
 package views182
 
-import grails.gorm.transactions.Rollback
-import grails.testing.mixin.integration.Integration
-import grails.testing.spock.OnceBefore
-import io.micronaut.core.type.Argument
-import io.micronaut.http.HttpRequest
-import io.micronaut.http.HttpResponse
 import io.micronaut.http.HttpStatus
-import io.micronaut.http.client.HttpClient
 import io.micronaut.http.client.exceptions.HttpClientResponseException
+import spock.lang.Specification
+
+import grails.testing.mixin.integration.Integration
+import org.apache.grails.testing.httpclient.HttpClientSupport
 
 @Integration
-@Rollback
-class CustomErrorSpec extends HttpClientCommonSpec {
-
-    @OnceBefore
-    void init() {
-        this.baseUrl = "http://localhost:$serverPort"
-        this.client = HttpClient.create(new URL(baseUrl))
-    }
+class CustomErrorSpec extends Specification implements HttpClientSupport {
 
     void 'it is possible to use gson views for handling exception errors'() {
         when: 'executing get to custom error'
-        HttpResponse<String> response = client.toBlocking().exchange(HttpRequest.GET("/customError"), Argument.of(String), Argument.of(String))
+        httpClient.retrieve('/customError')
 
         then:
-        HttpClientResponseException e = thrown()
+        def e = thrown(HttpClientResponseException)
         e.response.status == HttpStatus.INTERNAL_SERVER_ERROR
         e.response.body() == '{"message":"My custom exception handler","error":500}'
     }

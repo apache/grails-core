@@ -21,32 +21,19 @@ package functionaltests.requestresponse
 import groovy.json.JsonSlurper
 
 import io.micronaut.http.HttpRequest
-import io.micronaut.http.HttpResponse
 import io.micronaut.http.HttpStatus
-import io.micronaut.http.client.HttpClient
 import io.micronaut.http.cookie.Cookie
-import spock.lang.Shared
 import spock.lang.Specification
 
 import grails.testing.mixin.integration.Integration
+import org.apache.grails.testing.httpclient.HttpClientSupport
 
 /**
  * Integration tests for request/response handling patterns including
  * headers, cookies, session management, and request attributes.
  */
 @Integration
-class RequestResponseSpec extends Specification {
-
-    @Shared
-    HttpClient client
-
-    def setup() {
-        client = client ?: HttpClient.create(new URL("http://localhost:${serverPort}"))
-    }
-
-    def cleanupSpec() {
-        client.close()
-    }
+class RequestResponseSpec extends Specification implements HttpClientSupport {
 
     /**
      * Helper method to find header value case-insensitively.
@@ -61,7 +48,7 @@ class RequestResponseSpec extends Specification {
 
     def "echo request headers returns all headers"() {
         when:
-        def response = client.toBlocking().exchange(
+        def response = httpClient.exchange(
             HttpRequest.GET('/requestResponseTest/echoHeaders')
                 .header('X-Custom-Header', 'TestValue')
                 .header('X-Another-Header', 'AnotherValue'),
@@ -77,7 +64,7 @@ class RequestResponseSpec extends Specification {
 
     def "get specific header returns correct value"() {
         when:
-        def response = client.toBlocking().exchange(
+        def response = httpClient.exchange(
             HttpRequest.GET('/requestResponseTest/getSpecificHeader?headerName=X-Test-Header')
                 .header('X-Test-Header', 'MyTestValue'),
             String
@@ -92,7 +79,7 @@ class RequestResponseSpec extends Specification {
 
     def "check accept header detects JSON accept type"() {
         when:
-        def response = client.toBlocking().exchange(
+        def response = httpClient.exchange(
             HttpRequest.GET('/requestResponseTest/checkAcceptHeader')
                 .accept('application/json'),
             String
@@ -108,8 +95,8 @@ class RequestResponseSpec extends Specification {
 
     def "set custom headers returns headers in response"() {
         when:
-        def response = client.toBlocking().exchange(
-            HttpRequest.GET('/requestResponseTest/setCustomHeaders'),
+        def response = httpClient.exchange(
+            '/requestResponseTest/setCustomHeaders',
             String
         )
 
@@ -122,8 +109,8 @@ class RequestResponseSpec extends Specification {
 
     def "set cache headers configures caching properly"() {
         when:
-        def response = client.toBlocking().exchange(
-            HttpRequest.GET('/requestResponseTest/setCacheHeaders'),
+        def response = httpClient.exchange(
+            '/requestResponseTest/setCacheHeaders',
             String
         )
 
@@ -136,8 +123,8 @@ class RequestResponseSpec extends Specification {
 
     def "set no-cache headers prevents caching"() {
         when:
-        def response = client.toBlocking().exchange(
-            HttpRequest.GET('/requestResponseTest/setNoCacheHeaders'),
+        def response = httpClient.exchange(
+            '/requestResponseTest/setNoCacheHeaders',
             String
         )
 
@@ -150,8 +137,8 @@ class RequestResponseSpec extends Specification {
 
     def "set content disposition for file download"() {
         when:
-        def response = client.toBlocking().exchange(
-            HttpRequest.GET('/requestResponseTest/setContentDisposition'),
+        def response = httpClient.exchange(
+            '/requestResponseTest/setContentDisposition',
             String
         )
 
@@ -162,8 +149,8 @@ class RequestResponseSpec extends Specification {
 
     def "set multiple custom headers returns all headers"() {
         when:
-        def response = client.toBlocking().exchange(
-            HttpRequest.GET('/requestResponseTest/setMultipleCustomHeaders'),
+        def response = httpClient.exchange(
+            '/requestResponseTest/setMultipleCustomHeaders',
             String
         )
 
@@ -178,8 +165,8 @@ class RequestResponseSpec extends Specification {
 
     def "set cookie returns Set-Cookie header"() {
         when:
-        def response = client.toBlocking().exchange(
-            HttpRequest.GET('/requestResponseTest/setCookie?name=myCookie&value=myValue'),
+        def response = httpClient.exchange(
+            '/requestResponseTest/setCookie?name=myCookie&value=myValue',
             String
         )
         def json = new JsonSlurper().parseText(response.body())
@@ -194,8 +181,8 @@ class RequestResponseSpec extends Specification {
 
     def "set multiple cookies returns multiple Set-Cookie headers"() {
         when:
-        def response = client.toBlocking().exchange(
-            HttpRequest.GET('/requestResponseTest/setMultipleCookies'),
+        def response = httpClient.exchange(
+            '/requestResponseTest/setMultipleCookies',
             String
         )
         def json = new JsonSlurper().parseText(response.body())
@@ -211,7 +198,7 @@ class RequestResponseSpec extends Specification {
         def request = HttpRequest.GET('/requestResponseTest/getCookies')
             .cookie(Cookie.of('testCookie1', 'value1'))
             .cookie(Cookie.of('testCookie2', 'value2'))
-        HttpResponse<String> response = client.toBlocking().exchange(request, String)
+        def response = httpClient.exchange(request, String)
         def json = new JsonSlurper().parseText(response.body())
 
         then:
@@ -224,7 +211,7 @@ class RequestResponseSpec extends Specification {
         when:
         def request = HttpRequest.GET('/requestResponseTest/getSpecificCookie?name=myCookie')
             .cookie(Cookie.of('myCookie', 'cookieValue'))
-        HttpResponse<String> response = client.toBlocking().exchange(request, String)
+        def response = httpClient.exchange(request, String)
         def json = new JsonSlurper().parseText(response.body())
 
         then:
@@ -236,8 +223,8 @@ class RequestResponseSpec extends Specification {
 
     def "delete cookie sets max-age to 0"() {
         when:
-        def response = client.toBlocking().exchange(
-            HttpRequest.GET('/requestResponseTest/deleteCookie?name=deletedCookie'),
+        def response = httpClient.exchange(
+            '/requestResponseTest/deleteCookie?name=deletedCookie',
             String
         )
         def json = new JsonSlurper().parseText(response.body())
@@ -252,8 +239,8 @@ class RequestResponseSpec extends Specification {
 
     def "set session attribute stores value in session"() {
         when:
-        def response = client.toBlocking().exchange(
-            HttpRequest.GET('/requestResponseTest/setSessionAttribute?key=testKey&value=testValue'),
+        def response = httpClient.exchange(
+            '/requestResponseTest/setSessionAttribute?key=testKey&value=testValue',
             String
         )
         def json = new JsonSlurper().parseText(response.body())
@@ -268,20 +255,22 @@ class RequestResponseSpec extends Specification {
     def "get session attribute retrieves stored value"() {
         given:
         // First set a session attribute
-        def setResponse = client.toBlocking().exchange(
-            HttpRequest.GET('/requestResponseTest/setSessionAttribute?key=retrieveKey&value=retrieveValue'),
+        def setResponse = httpClient.exchange(
+            '/requestResponseTest/setSessionAttribute?key=retrieveKey&value=retrieveValue',
             String
         )
         def sessionCookie = setResponse.header('Set-Cookie')
 
         when:
         // Then retrieve it with the same session
-        def getRequest = HttpRequest.GET('/requestResponseTest/getSessionAttribute?key=retrieveKey')
+        def getRequest = HttpRequest.GET(
+                '/requestResponseTest/getSessionAttribute?key=retrieveKey'
+        )
         if (sessionCookie) {
             def cookieValue = sessionCookie.split(';')[0]
             getRequest = getRequest.header('Cookie', cookieValue)
         }
-        def response = client.toBlocking().exchange(getRequest, String)
+        def response = httpClient.exchange(getRequest, String)
         def json = new JsonSlurper().parseText(response.body())
 
         then:
@@ -294,8 +283,8 @@ class RequestResponseSpec extends Specification {
     def "session counter increments on each request"() {
         given:
         // First request
-        def response1 = client.toBlocking().exchange(
-            HttpRequest.GET('/requestResponseTest/sessionCounter'),
+        def response1 = httpClient.exchange(
+            '/requestResponseTest/sessionCounter',
             String
         )
         def json1 = new JsonSlurper().parseText(response1.body())
@@ -308,7 +297,7 @@ class RequestResponseSpec extends Specification {
             def cookieValue = sessionCookie.split(';')[0]
             request2 = request2.header('Cookie', cookieValue)
         }
-        def response2 = client.toBlocking().exchange(request2, String)
+        def response2 = httpClient.exchange(request2, String)
         def json2 = new JsonSlurper().parseText(response2.body())
 
         then:
@@ -322,8 +311,8 @@ class RequestResponseSpec extends Specification {
 
     def "get request info returns server details"() {
         when:
-        def response = client.toBlocking().exchange(
-            HttpRequest.GET('/requestResponseTest/getRequestInfo'),
+        def response = httpClient.exchange(
+            '/requestResponseTest/getRequestInfo',
             String
         )
         def json = new JsonSlurper().parseText(response.body())
@@ -338,8 +327,8 @@ class RequestResponseSpec extends Specification {
 
     def "get request parameters returns query parameters"() {
         when:
-        def response = client.toBlocking().exchange(
-            HttpRequest.GET('/requestResponseTest/getRequestParameters?param1=value1&param2=value2'),
+        def response = httpClient.exchange(
+            '/requestResponseTest/getRequestParameters?param1=value1&param2=value2',
             String
         )
         def json = new JsonSlurper().parseText(response.body())
@@ -352,8 +341,8 @@ class RequestResponseSpec extends Specification {
 
     def "set request attribute stores and retrieves value"() {
         when:
-        def response = client.toBlocking().exchange(
-            HttpRequest.GET('/requestResponseTest/setRequestAttribute?key=myAttr&value=myVal'),
+        def response = httpClient.exchange(
+            '/requestResponseTest/setRequestAttribute?key=myAttr&value=myVal',
             String
         )
         def json = new JsonSlurper().parseText(response.body())
@@ -369,8 +358,8 @@ class RequestResponseSpec extends Specification {
 
     def "unicode response returns characters in multiple languages"() {
         when:
-        def response = client.toBlocking().exchange(
-            HttpRequest.GET('/requestResponseTest/unicodeResponse'),
+        def response = httpClient.exchange(
+            '/requestResponseTest/unicodeResponse',
             String
         )
         def json = new JsonSlurper().parseText(response.body())

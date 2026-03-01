@@ -19,37 +19,25 @@
 package functionaltests.commanddi
 
 import io.micronaut.http.HttpRequest
-import io.micronaut.http.client.HttpClient
-import spock.lang.Shared
 import spock.lang.Specification
 import spock.lang.Unroll
 
 import grails.testing.mixin.integration.Integration
+import org.apache.grails.testing.httpclient.HttpClientSupport
 
 /**
  * Integration tests for Command Objects with Dependency Injection.
  * Tests the ability to inject Spring services into Grails command objects.
  */
 @Integration
-class CommandObjectDISpec extends Specification {
-
-    @Shared
-    HttpClient client
-
-    def setup() {
-        client = client ?: HttpClient.create(new URL("http://localhost:$serverPort"))
-    }
-
-    def cleanupSpec() {
-        client.close()
-    }
+class CommandObjectDISpec extends Specification implements HttpClientSupport {
 
     // ========== Basic Service Injection Tests ==========
 
     def "service is properly injected into command object"() {
         when: "calling the test endpoint"
-        def response = client.toBlocking().exchange(
-            HttpRequest.GET('/commandDI/testServiceInjection'),
+        def response = httpClient.exchange(
+            '/commandDI/testServiceInjection',
             Map
         )
 
@@ -61,8 +49,8 @@ class CommandObjectDISpec extends Specification {
 
     def "multiple services can be injected into single command object"() {
         when: "calling the endpoint with order command"
-        def response = client.toBlocking().exchange(
-            HttpRequest.GET('/commandDI/testMultipleServices'),
+        def response = httpClient.exchange(
+            '/commandDI/testMultipleServices',
             Map
         )
 
@@ -76,8 +64,8 @@ class CommandObjectDISpec extends Specification {
 
     def "@Autowired annotation works for service injection"() {
         when: "calling the endpoint"
-        def response = client.toBlocking().exchange(
-            HttpRequest.GET('/commandDI/testAutowiredAnnotation'),
+        def response = httpClient.exchange(
+            '/commandDI/testAutowiredAnnotation',
             Map
         )
 
@@ -91,8 +79,8 @@ class CommandObjectDISpec extends Specification {
 
     def "custom validation using injected service - valid username"() {
         when: "registering with valid data"
-        def response = client.toBlocking().exchange(
-            HttpRequest.GET('/commandDI/registerUser?username=johndoe&email=john@example.com&age=25'),
+        def response = httpClient.exchange(
+            '/commandDI/registerUser?username=johndoe&email=john@example.com&age=25',
             Map
         )
 
@@ -106,8 +94,8 @@ class CommandObjectDISpec extends Specification {
 
     def "custom validation using injected service - reserved username rejected"() {
         when: "registering with reserved username 'admin'"
-        def response = client.toBlocking().exchange(
-            HttpRequest.GET('/commandDI/registerUser?username=admin&email=admin@example.com'),
+        def response = httpClient.exchange(
+            '/commandDI/registerUser?username=admin&email=admin@example.com',
             Map
         )
 
@@ -121,8 +109,8 @@ class CommandObjectDISpec extends Specification {
     @Unroll
     def "email domain validation - #email is #expectedResult"() {
         when: "registering with specific email"
-        def response = client.toBlocking().exchange(
-            HttpRequest.GET("/commandDI/registerUser?username=testuser&email=${URLEncoder.encode(email, 'UTF-8')}"),
+        def response = httpClient.exchange(
+            "/commandDI/registerUser?username=testuser&email=${URLEncoder.encode(email, 'UTF-8')}",
             Map
         )
 
@@ -142,8 +130,8 @@ class CommandObjectDISpec extends Specification {
     @Unroll
     def "age validation - age #age is #expectedResult"() {
         when: "registering with specific age"
-        def response = client.toBlocking().exchange(
-            HttpRequest.GET("/commandDI/registerUser?username=testuser&email=user@example.com&age=${age}"),
+        def response = httpClient.exchange(
+            "/commandDI/registerUser?username=testuser&email=user@example.com&age=${age}",
             Map
         )
 
@@ -166,8 +154,8 @@ class CommandObjectDISpec extends Specification {
 
     def "phone number validation using service"() {
         when: "registering with valid phone"
-        def response = client.toBlocking().exchange(
-            HttpRequest.GET('/commandDI/registerUser?username=testuser&email=user@example.com&phone=555-123-4567'),
+        def response = httpClient.exchange(
+            '/commandDI/registerUser?username=testuser&email=user@example.com&phone=555-123-4567',
             Map
         )
 
@@ -178,8 +166,8 @@ class CommandObjectDISpec extends Specification {
 
     def "phone number validation fails for invalid phone"() {
         when: "registering with too short phone"
-        def response = client.toBlocking().exchange(
-            HttpRequest.GET('/commandDI/registerUser?username=testuser&email=user@example.com&phone=123'),
+        def response = httpClient.exchange(
+            '/commandDI/registerUser?username=testuser&email=user@example.com&phone=123',
             Map
         )
 
@@ -193,8 +181,8 @@ class CommandObjectDISpec extends Specification {
     @Unroll
     def "discount calculation - quantity #quantity gives #expectedDiscount discount"() {
         when: "calculating order"
-        def response = client.toBlocking().exchange(
-            HttpRequest.GET("/commandDI/calculateOrder?productName=Widget&quantity=${quantity}&unitPrice=10.00"),
+        def response = httpClient.exchange(
+            "/commandDI/calculateOrder?productName=Widget&quantity=${quantity}&unitPrice=10.00",
             Map
         )
 
@@ -216,8 +204,8 @@ class CommandObjectDISpec extends Specification {
 
     def "total price calculation with discount"() {
         when: "calculating order"
-        def response = client.toBlocking().exchange(
-            HttpRequest.GET('/commandDI/calculateOrder?productName=Widget&quantity=100&unitPrice=10.00'),
+        def response = httpClient.exchange(
+            '/commandDI/calculateOrder?productName=Widget&quantity=100&unitPrice=10.00',
             Map
         )
 
@@ -228,8 +216,8 @@ class CommandObjectDISpec extends Specification {
 
     def "price with tax calculation"() {
         when: "calculating order"
-        def response = client.toBlocking().exchange(
-            HttpRequest.GET('/commandDI/calculateOrder?productName=Premium+Widget&quantity=10&unitPrice=100.00'),
+        def response = httpClient.exchange(
+            '/commandDI/calculateOrder?productName=Premium+Widget&quantity=10&unitPrice=100.00',
             Map
         )
 
@@ -243,8 +231,8 @@ class CommandObjectDISpec extends Specification {
 
     def "order validation with valid data"() {
         when: "validating order"
-        def response = client.toBlocking().exchange(
-            HttpRequest.GET('/commandDI/validateOrder?productName=Widget&quantity=5&unitPrice=25.00'),
+        def response = httpClient.exchange(
+            '/commandDI/validateOrder?productName=Widget&quantity=5&unitPrice=25.00',
             Map
         )
 
@@ -256,8 +244,8 @@ class CommandObjectDISpec extends Specification {
 
     def "order validation fails for price out of range"() {
         when: "validating order with excessive price"
-        def response = client.toBlocking().exchange(
-            HttpRequest.GET('/commandDI/validateOrder?productName=Widget&quantity=5&unitPrice=99999.00'),
+        def response = httpClient.exchange(
+            '/commandDI/validateOrder?productName=Widget&quantity=5&unitPrice=99999.00',
             Map
         )
 
@@ -271,8 +259,8 @@ class CommandObjectDISpec extends Specification {
 
     def "command object can invoke service method to send notification"() {
         when: "sending order notification"
-        def response = client.toBlocking().exchange(
-            HttpRequest.GET('/commandDI/sendOrderNotification?customerEmail=customer@example.com&orderId=ORD-12345&message=Thank+you+for+your+order!'),
+        def response = httpClient.exchange(
+            '/commandDI/sendOrderNotification?customerEmail=customer@example.com&orderId=ORD-12345&message=Thank+you+for+your+order!',
             Map
         )
 
@@ -287,8 +275,8 @@ class CommandObjectDISpec extends Specification {
 
     def "command object is prototype scoped - fresh instance per request"() {
         when: "making first request"
-        def response1 = client.toBlocking().exchange(
-            HttpRequest.GET('/commandDI/testPrototypeScope'),
+        def response1 = httpClient.exchange(
+            '/commandDI/testPrototypeScope',
             Map
         )
 
@@ -297,8 +285,8 @@ class CommandObjectDISpec extends Specification {
         response1.body().counter == 2
 
         when: "making second request"
-        def response2 = client.toBlocking().exchange(
-            HttpRequest.GET('/commandDI/testPrototypeScope'),
+        def response2 = httpClient.exchange(
+            '/commandDI/testPrototypeScope',
             Map
         )
 
@@ -312,8 +300,8 @@ class CommandObjectDISpec extends Specification {
 
     def "service remains injected after validation"() {
         when: "testing service after validation"
-        def response = client.toBlocking().exchange(
-            HttpRequest.GET('/commandDI/testServiceAfterValidation?username=admin&email=test@example.com'),
+        def response = httpClient.exchange(
+            '/commandDI/testServiceAfterValidation?username=admin&email=test@example.com',
             Map
         )
 
@@ -327,8 +315,8 @@ class CommandObjectDISpec extends Specification {
 
     def "missing optional service is handled gracefully"() {
         when: "testing optional service"
-        def response = client.toBlocking().exchange(
-            HttpRequest.GET('/commandDI/testOptionalService?data=test'),
+        def response = httpClient.exchange(
+            '/commandDI/testOptionalService?data=test',
             Map
         )
 
@@ -342,8 +330,8 @@ class CommandObjectDISpec extends Specification {
 
     def "validation can depend on service state"() {
         when: "validating with positive price"
-        def response = client.toBlocking().exchange(
-            HttpRequest.GET('/commandDI/validateWithServiceState?price=100.00'),
+        def response = httpClient.exchange(
+            '/commandDI/validateWithServiceState?price=100.00',
             Map
         )
 
@@ -357,8 +345,8 @@ class CommandObjectDISpec extends Specification {
 
     def "command object handles valid user request"() {
         when: "validating user"
-        def response = client.toBlocking().exchange(
-            HttpRequest.GET('/commandDI/registerUser?username=validuser&email=user@example.com'),
+        def response = httpClient.exchange(
+            '/commandDI/registerUser?username=validuser&email=user@example.com',
             Map
         )
 
@@ -370,8 +358,8 @@ class CommandObjectDISpec extends Specification {
     @Unroll
     def "reserved username '#username' is rejected"() {
         when: "registering with reserved username"
-        def response = client.toBlocking().exchange(
-            HttpRequest.GET("/commandDI/registerUser?username=${username}&email=test@example.com"),
+        def response = httpClient.exchange(
+            "/commandDI/registerUser?username=${username}&email=test@example.com",
             Map
         )
 

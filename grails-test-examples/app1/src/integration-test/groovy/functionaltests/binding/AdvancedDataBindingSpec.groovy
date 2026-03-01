@@ -20,11 +20,10 @@ package functionaltests.binding
 
 import io.micronaut.http.HttpRequest
 import io.micronaut.http.MediaType
-import io.micronaut.http.client.HttpClient
-import spock.lang.Shared
 import spock.lang.Specification
 
 import grails.testing.mixin.integration.Integration
+import org.apache.grails.testing.httpclient.HttpClientSupport
 
 /**
  * Comprehensive integration tests for advanced data binding features.
@@ -45,25 +44,14 @@ import grails.testing.mixin.integration.Integration
  * - String trimming
  */
 @Integration
-class AdvancedDataBindingSpec extends Specification {
-
-    @Shared
-    HttpClient client
-
-    def setup() {
-        client = client ?: HttpClient.create(new URL("http://localhost:$serverPort"))
-    }
-
-    def cleanupSpec() {
-        client.close()
-    }
+class AdvancedDataBindingSpec extends Specification implements HttpClientSupport {
 
     // ========== Map-Based Binding Tests ==========
 
     def "test basic map-based binding"() {
         when:
-        def response = client.toBlocking().exchange(
-            HttpRequest.GET('/advancedDataBinding/bindEmployee?firstName=John&lastName=Doe&salary=50000'),
+        def response = httpClient.exchange(
+            '/advancedDataBinding/bindEmployee?firstName=John&lastName=Doe&salary=50000',
             Map
         )
 
@@ -76,8 +64,8 @@ class AdvancedDataBindingSpec extends Specification {
 
     def "test nested object binding"() {
         when:
-        def response = client.toBlocking().exchange(
-            HttpRequest.GET('/advancedDataBinding/bindEmployee?firstName=Jane&homeAddress.street=123+Main+St&homeAddress.city=Springfield&homeAddress.state=IL'),
+        def response = httpClient.exchange(
+            '/advancedDataBinding/bindEmployee?firstName=Jane&homeAddress.street=123+Main+St&homeAddress.city=Springfield&homeAddress.state=IL',
             Map
         )
 
@@ -94,8 +82,8 @@ class AdvancedDataBindingSpec extends Specification {
 
     def "test @BindUsing annotation lowercases and trims email"() {
         when:
-        def response = client.toBlocking().exchange(
-            HttpRequest.GET('/advancedDataBinding/bindWithBindUsing?email=John.Doe%40Example.COM'),
+        def response = httpClient.exchange(
+            '/advancedDataBinding/bindWithBindUsing?email=John.Doe%40Example.COM',
             Map
         )
 
@@ -107,8 +95,8 @@ class AdvancedDataBindingSpec extends Specification {
 
     def "test @BindUsing with mixed case email"() {
         when:
-        def response = client.toBlocking().exchange(
-            HttpRequest.GET('/advancedDataBinding/bindWithBindUsing?email=TEST.User%40DOMAIN.org'),
+        def response = httpClient.exchange(
+            '/advancedDataBinding/bindWithBindUsing?email=TEST.User%40DOMAIN.org',
             Map
         )
 
@@ -121,8 +109,8 @@ class AdvancedDataBindingSpec extends Specification {
 
     def "test @BindingFormat for date parsing - MMddyyyy format"() {
         when:
-        def response = client.toBlocking().exchange(
-            HttpRequest.GET('/advancedDataBinding/bindWithDateFormat?hireDate=01152020'),
+        def response = httpClient.exchange(
+            '/advancedDataBinding/bindWithDateFormat?hireDate=01152020',
             Map
         )
 
@@ -134,8 +122,8 @@ class AdvancedDataBindingSpec extends Specification {
 
     def "test @BindingFormat for date parsing - yyyy-MM-dd format"() {
         when:
-        def response = client.toBlocking().exchange(
-            HttpRequest.GET('/advancedDataBinding/bindWithDateFormat?birthDate=1990-05-20'),
+        def response = httpClient.exchange(
+            '/advancedDataBinding/bindWithDateFormat?birthDate=1990-05-20',
             Map
         )
 
@@ -147,8 +135,8 @@ class AdvancedDataBindingSpec extends Specification {
 
     def "test multiple date formats in same request"() {
         when:
-        def response = client.toBlocking().exchange(
-            HttpRequest.GET('/advancedDataBinding/bindWithDateFormat?hireDate=03012021&birthDate=1985-12-25'),
+        def response = httpClient.exchange(
+            '/advancedDataBinding/bindWithDateFormat?hireDate=03012021&birthDate=1985-12-25',
             Map
         )
 
@@ -162,8 +150,8 @@ class AdvancedDataBindingSpec extends Specification {
 
     def "test binding to List collection"() {
         when:
-        def response = client.toBlocking().exchange(
-            HttpRequest.GET('/advancedDataBinding/bindTeamWithMembers?name=Engineering&members%5B0%5D.name=Alice&members%5B0%5D.role=Lead&members%5B1%5D.name=Bob&members%5B1%5D.role=Developer'),
+        def response = httpClient.exchange(
+            '/advancedDataBinding/bindTeamWithMembers?name=Engineering&members%5B0%5D.name=Alice&members%5B0%5D.role=Lead&members%5B1%5D.name=Bob&members%5B1%5D.role=Developer',
             Map
         )
 
@@ -179,8 +167,8 @@ class AdvancedDataBindingSpec extends Specification {
 
     def "test binding to List with gaps in indices"() {
         when:
-        def response = client.toBlocking().exchange(
-            HttpRequest.GET('/advancedDataBinding/bindTeamWithMembers?name=QA&members%5B0%5D.name=Carol&members%5B2%5D.name=Dave'),
+        def response = httpClient.exchange(
+            '/advancedDataBinding/bindTeamWithMembers?name=QA&members%5B0%5D.name=Carol&members%5B2%5D.name=Dave',
             Map
         )
 
@@ -197,8 +185,8 @@ class AdvancedDataBindingSpec extends Specification {
 
     def "test binding to Map collection"() {
         when:
-        def response = client.toBlocking().exchange(
-            HttpRequest.GET('/advancedDataBinding/bindProjectWithContributors?name=GrailsCore&contributors%5Blead%5D.name=John&contributors%5Blead%5D.expertise=Architecture&contributors%5Bdev%5D.name=Jane&contributors%5Bdev%5D.expertise=Testing'),
+        def response = httpClient.exchange(
+            '/advancedDataBinding/bindProjectWithContributors?name=GrailsCore&contributors%5Blead%5D.name=John&contributors%5Blead%5D.expertise=Architecture&contributors%5Bdev%5D.name=Jane&contributors%5Bdev%5D.expertise=Testing',
             Map
         )
 
@@ -215,8 +203,8 @@ class AdvancedDataBindingSpec extends Specification {
 
     def "test @RequestParameter maps different parameter names"() {
         when:
-        def response = client.toBlocking().exchange(
-            HttpRequest.GET('/advancedDataBinding/bindWithRequestParameter?firstName=Robert&lastName=Smith&age=30'),
+        def response = httpClient.exchange(
+            '/advancedDataBinding/bindWithRequestParameter?firstName=Robert&lastName=Smith&age=30',
             Map
         )
 
@@ -231,8 +219,8 @@ class AdvancedDataBindingSpec extends Specification {
 
     def "test bindData with include - only specified properties bound"() {
         when:
-        def response = client.toBlocking().exchange(
-            HttpRequest.GET('/advancedDataBinding/bindWithIncludeExclude?firstName=Test&lastName=User&email=test%40example.com&salary=100000'),
+        def response = httpClient.exchange(
+            '/advancedDataBinding/bindWithIncludeExclude?firstName=Test&lastName=User&email=test%40example.com&salary=100000',
             Map
         )
 
@@ -248,8 +236,8 @@ class AdvancedDataBindingSpec extends Specification {
 
     def "test selective property binding using subscript operator"() {
         when:
-        def response = client.toBlocking().exchange(
-            HttpRequest.GET('/advancedDataBinding/bindSelectiveProperties?firstName=Selective&lastName=Test&email=should.not.bind%40test.com&salary=999'),
+        def response = httpClient.exchange(
+            '/advancedDataBinding/bindSelectiveProperties?firstName=Selective&lastName=Test&email=should.not.bind%40test.com&salary=999',
             Map
         )
 
@@ -265,8 +253,8 @@ class AdvancedDataBindingSpec extends Specification {
 
     def "test using grailsWebDataBinder directly"() {
         when:
-        def response = client.toBlocking().exchange(
-            HttpRequest.GET('/advancedDataBinding/bindUsingDirectBinder?firstName=Direct&lastName=Binder&email=DIRECT%40TEST.COM'),
+        def response = httpClient.exchange(
+            '/advancedDataBinding/bindUsingDirectBinder?firstName=Direct&lastName=Binder&email=DIRECT%40TEST.COM',
             Map
         )
 
@@ -282,8 +270,8 @@ class AdvancedDataBindingSpec extends Specification {
 
     def "test command object binding with validation - valid data"() {
         when:
-        def response = client.toBlocking().exchange(
-            HttpRequest.GET('/advancedDataBinding/bindCommandObject?firstName=Valid&lastName=User&email=valid%40email.com'),
+        def response = httpClient.exchange(
+            '/advancedDataBinding/bindCommandObject?firstName=Valid&lastName=User&email=valid%40email.com',
             Map
         )
 
@@ -298,8 +286,8 @@ class AdvancedDataBindingSpec extends Specification {
 
     def "test command object binding with validation - invalid data"() {
         when:
-        def response = client.toBlocking().exchange(
-            HttpRequest.GET('/advancedDataBinding/bindCommandObject?firstName=&lastName=&email=invalid-email'),
+        def response = httpClient.exchange(
+            '/advancedDataBinding/bindCommandObject?firstName=&lastName=&email=invalid-email',
             Map
         )
 
@@ -312,8 +300,8 @@ class AdvancedDataBindingSpec extends Specification {
 
     def "test nested command object binding"() {
         when:
-        def response = client.toBlocking().exchange(
-            HttpRequest.GET('/advancedDataBinding/bindNestedCommandObject?name=Contact+Person&address.street=456+Oak+Ave&address.city=Portland'),
+        def response = httpClient.exchange(
+            '/advancedDataBinding/bindNestedCommandObject?name=Contact+Person&address.street=456+Oak+Ave&address.city=Portland',
             Map
         )
 
@@ -328,7 +316,7 @@ class AdvancedDataBindingSpec extends Specification {
 
     def "test JSON body binding to command object"() {
         when:
-        def response = client.toBlocking().exchange(
+        def response = httpClient.exchange(
             HttpRequest.POST('/advancedDataBinding/bindJsonBody', [
                 firstName: 'JsonFirst',
                 lastName: 'JsonLast',
@@ -349,8 +337,8 @@ class AdvancedDataBindingSpec extends Specification {
 
     def "test binding multiple command objects"() {
         when:
-        def response = client.toBlocking().exchange(
-            HttpRequest.GET('/advancedDataBinding/bindMultipleCommandObjects?employee.firstName=Multi&employee.lastName=Test&address.street=789+Pine+Rd&address.city=Seattle'),
+        def response = httpClient.exchange(
+            '/advancedDataBinding/bindMultipleCommandObjects?employee.firstName=Multi&employee.lastName=Test&address.street=789+Pine+Rd&address.city=Seattle',
             Map
         )
 
@@ -366,8 +354,8 @@ class AdvancedDataBindingSpec extends Specification {
 
     def "test empty string converts to null"() {
         when:
-        def response = client.toBlocking().exchange(
-            HttpRequest.GET('/advancedDataBinding/bindEmptyStrings?firstName=&lastName=HasValue'),
+        def response = httpClient.exchange(
+            '/advancedDataBinding/bindEmptyStrings?firstName=&lastName=HasValue',
             Map
         )
 
@@ -382,8 +370,8 @@ class AdvancedDataBindingSpec extends Specification {
 
     def "test string trimming during binding"() {
         when:
-        def response = client.toBlocking().exchange(
-            HttpRequest.GET('/advancedDataBinding/bindWithTrimming?firstName=+++Trimmed+++'),
+        def response = httpClient.exchange(
+            '/advancedDataBinding/bindWithTrimming?firstName=+++Trimmed+++',
             Map
         )
 
@@ -397,8 +385,8 @@ class AdvancedDataBindingSpec extends Specification {
 
     def "test valid type conversion"() {
         when:
-        def response = client.toBlocking().exchange(
-            HttpRequest.GET('/advancedDataBinding/bindWithTypeConversion?salary=75000&firstName=TypeTest'),
+        def response = httpClient.exchange(
+            '/advancedDataBinding/bindWithTypeConversion?salary=75000&firstName=TypeTest',
             Map
         )
 
@@ -412,8 +400,8 @@ class AdvancedDataBindingSpec extends Specification {
 
     def "test binding with special characters in values"() {
         when:
-        def response = client.toBlocking().exchange(
-            HttpRequest.GET('/advancedDataBinding/bindEmployee?firstName=O%27Brien&lastName=M%C3%BCller'),
+        def response = httpClient.exchange(
+            '/advancedDataBinding/bindEmployee?firstName=O%27Brien&lastName=M%C3%BCller',
             Map
         )
 
@@ -425,8 +413,8 @@ class AdvancedDataBindingSpec extends Specification {
 
     def "test binding with unicode characters"() {
         when:
-        def response = client.toBlocking().exchange(
-            HttpRequest.GET('/advancedDataBinding/bindEmployee?firstName=%E6%97%A5%E6%9C%AC%E8%AA%9E'),
+        def response = httpClient.exchange(
+            '/advancedDataBinding/bindEmployee?firstName=%E6%97%A5%E6%9C%AC%E8%AA%9E',
             Map
         )
 
@@ -437,8 +425,8 @@ class AdvancedDataBindingSpec extends Specification {
 
     def "test binding with null parameter values"() {
         when:
-        def response = client.toBlocking().exchange(
-            HttpRequest.GET('/advancedDataBinding/bindEmployee?firstName=TestNull'),
+        def response = httpClient.exchange(
+            '/advancedDataBinding/bindEmployee?firstName=TestNull',
             Map
         )
 

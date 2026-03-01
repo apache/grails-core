@@ -19,11 +19,10 @@
 package functionaltests.interceptors
 
 import io.micronaut.http.HttpRequest
-import io.micronaut.http.client.HttpClient
-import spock.lang.Shared
 import spock.lang.Specification
 
 import grails.testing.mixin.integration.Integration
+import org.apache.grails.testing.httpclient.HttpClientSupport
 
 /**
  * Integration tests for advanced interceptor matching patterns.
@@ -36,30 +35,22 @@ import grails.testing.mixin.integration.Integration
  * - Combined matching criteria
  */
 @Integration
-class InterceptorAdvancedMatchingSpec extends Specification {
-
-    @Shared
-    HttpClient client
+class InterceptorAdvancedMatchingSpec extends Specification implements HttpClientSupport {
 
     def setup() {
-        client = client ?: HttpClient.create(new URL("http://localhost:$serverPort"))
         // Reset interceptor tracking before each test
-        client.toBlocking().exchange(
-            HttpRequest.GET('/api/advancedMatching/reset'),
+        httpClient.exchange(
+            '/api/advancedMatching/reset',
             Map
         )
-    }
-
-    def cleanupSpec() {
-        client.close()
     }
 
     // ========== Namespace Matching Tests ==========
 
     def "test namespace interceptor matches controller in api namespace"() {
         when:
-        def response = client.toBlocking().exchange(
-            HttpRequest.GET('/api/advancedMatching/index'),
+        def response = httpClient.exchange(
+            '/api/advancedMatching/index',
             Map
         )
 
@@ -71,8 +62,8 @@ class InterceptorAdvancedMatchingSpec extends Specification {
 
     def "test namespace interceptor matches all actions in namespace"() {
         when:
-        def response = client.toBlocking().exchange(
-            HttpRequest.GET('/api/advancedMatching/list'),
+        def response = httpClient.exchange(
+            '/api/advancedMatching/list',
             Map
         )
 
@@ -86,7 +77,7 @@ class InterceptorAdvancedMatchingSpec extends Specification {
 
     def "test method interceptor matches POST requests"() {
         when:
-        def response = client.toBlocking().exchange(
+        def response = httpClient.exchange(
             HttpRequest.POST('/api/advancedMatching/save', [:]),
             Map
         )
@@ -99,8 +90,8 @@ class InterceptorAdvancedMatchingSpec extends Specification {
 
     def "test method interceptor does not match GET requests"() {
         when:
-        def response = client.toBlocking().exchange(
-            HttpRequest.GET('/api/advancedMatching/list'),
+        def response = httpClient.exchange(
+            '/api/advancedMatching/list',
             Map
         )
 
@@ -111,7 +102,7 @@ class InterceptorAdvancedMatchingSpec extends Specification {
 
     def "test method interceptor matches PUT requests as POST variant"() {
         when:
-        def response = client.toBlocking().exchange(
+        def response = httpClient.exchange(
             HttpRequest.PUT('/api/advancedMatching/update', [:]),
             Map
         )
@@ -126,8 +117,8 @@ class InterceptorAdvancedMatchingSpec extends Specification {
 
     def "test excludes interceptor does not match excluded index action"() {
         when:
-        def response = client.toBlocking().exchange(
-            HttpRequest.GET('/api/advancedMatching/index'),
+        def response = httpClient.exchange(
+            '/api/advancedMatching/index',
             Map
         )
 
@@ -139,8 +130,8 @@ class InterceptorAdvancedMatchingSpec extends Specification {
 
     def "test excludes interceptor matches non-excluded actions"() {
         when:
-        def response = client.toBlocking().exchange(
-            HttpRequest.GET('/api/advancedMatching/list'),
+        def response = httpClient.exchange(
+            '/api/advancedMatching/list',
             Map
         )
 
@@ -152,8 +143,8 @@ class InterceptorAdvancedMatchingSpec extends Specification {
 
     def "test excludes interceptor matches show action"() {
         when:
-        def response = client.toBlocking().exchange(
-            HttpRequest.GET('/api/advancedMatching/show/123'),
+        def response = httpClient.exchange(
+            '/api/advancedMatching/show/123',
             Map
         )
 
@@ -167,8 +158,8 @@ class InterceptorAdvancedMatchingSpec extends Specification {
 
     def "test multiple rules interceptor matches show action"() {
         when:
-        def response = client.toBlocking().exchange(
-            HttpRequest.GET('/api/advancedMatching/show/1'),
+        def response = httpClient.exchange(
+            '/api/advancedMatching/show/1',
             Map
         )
 
@@ -180,8 +171,8 @@ class InterceptorAdvancedMatchingSpec extends Specification {
 
     def "test multiple rules interceptor matches list action"() {
         when:
-        def response = client.toBlocking().exchange(
-            HttpRequest.GET('/api/advancedMatching/list'),
+        def response = httpClient.exchange(
+            '/api/advancedMatching/list',
             Map
         )
 
@@ -193,8 +184,8 @@ class InterceptorAdvancedMatchingSpec extends Specification {
 
     def "test multiple rules interceptor does not match create action"() {
         when:
-        def response = client.toBlocking().exchange(
-            HttpRequest.GET('/api/advancedMatching/create'),
+        def response = httpClient.exchange(
+            '/api/advancedMatching/create',
             Map
         )
 
@@ -208,8 +199,8 @@ class InterceptorAdvancedMatchingSpec extends Specification {
 
     def "test multiple interceptors can match same request"() {
         when: "accessing list action in api namespace"
-        def response = client.toBlocking().exchange(
-            HttpRequest.GET('/api/advancedMatching/list'),
+        def response = httpClient.exchange(
+            '/api/advancedMatching/list',
             Map
         )
 
@@ -222,7 +213,7 @@ class InterceptorAdvancedMatchingSpec extends Specification {
 
     def "test POST to save triggers namespace and method interceptors"() {
         when:
-        def response = client.toBlocking().exchange(
+        def response = httpClient.exchange(
             HttpRequest.POST('/api/advancedMatching/save', [:]),
             Map
         )
@@ -238,8 +229,8 @@ class InterceptorAdvancedMatchingSpec extends Specification {
 
     def "test index action only matches namespace interceptor"() {
         when:
-        def response = client.toBlocking().exchange(
-            HttpRequest.GET('/api/advancedMatching/index'),
+        def response = httpClient.exchange(
+            '/api/advancedMatching/index',
             Map
         )
 
@@ -255,8 +246,8 @@ class InterceptorAdvancedMatchingSpec extends Specification {
 
     def "test interceptors execute in defined order"() {
         when:
-        def response = client.toBlocking().exchange(
-            HttpRequest.GET('/api/advancedMatching/list'),
+        def response = httpClient.exchange(
+            '/api/advancedMatching/list',
             Map
         )
 

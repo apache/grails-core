@@ -19,11 +19,10 @@
 package functionaltests.codecs
 
 import io.micronaut.http.HttpRequest
-import io.micronaut.http.client.HttpClient
-import spock.lang.Shared
 import spock.lang.Specification
 
 import grails.testing.mixin.integration.Integration
+import org.apache.grails.testing.httpclient.HttpClientSupport
 
 /**
  * Comprehensive integration tests for Grails codec functionality.
@@ -40,25 +39,14 @@ import grails.testing.mixin.integration.Integration
  * - Hash consistency verification
  */
 @Integration
-class SecurityCodecsSpec extends Specification {
-
-    @Shared
-    HttpClient client
-
-    def setup() {
-        client = client ?: HttpClient.create(new URL("http://localhost:$serverPort"))
-    }
-
-    def cleanupSpec() {
-        client.close()
-    }
+class SecurityCodecsSpec extends Specification implements HttpClientSupport {
 
     // ========== HTML Encoding Tests (XSS Prevention) ==========
 
     def "test HTML encoding escapes dangerous tags"() {
         when:
-        def response = client.toBlocking().exchange(
-            HttpRequest.GET('/codecTest/encodeHtml?input=%3Cscript%3Ealert(%22XSS%22)%3C/script%3E'),
+        def response = httpClient.exchange(
+            '/codecTest/encodeHtml?input=%3Cscript%3Ealert(%22XSS%22)%3C/script%3E',
             Map
         )
 
@@ -73,8 +61,8 @@ class SecurityCodecsSpec extends Specification {
 
     def "test HTML encoding escapes quotes"() {
         when:
-        def response = client.toBlocking().exchange(
-            HttpRequest.GET('/codecTest/encodeHtml?input=%22quoted%22'),
+        def response = httpClient.exchange(
+            '/codecTest/encodeHtml?input=%22quoted%22',
             Map
         )
 
@@ -86,8 +74,8 @@ class SecurityCodecsSpec extends Specification {
 
     def "test HTML encoding escapes ampersands"() {
         when:
-        def response = client.toBlocking().exchange(
-            HttpRequest.GET('/codecTest/encodeHtml?input=foo%26bar'),
+        def response = httpClient.exchange(
+            '/codecTest/encodeHtml?input=foo%26bar',
             Map
         )
 
@@ -102,8 +90,8 @@ class SecurityCodecsSpec extends Specification {
 
     def "test URL encoding escapes spaces and special chars"() {
         when:
-        def response = client.toBlocking().exchange(
-            HttpRequest.GET('/codecTest/encodeUrl?input=hello+world%26foo%3Dbar'),
+        def response = httpClient.exchange(
+            '/codecTest/encodeUrl?input=hello+world%26foo%3Dbar',
             Map
         )
 
@@ -120,8 +108,8 @@ class SecurityCodecsSpec extends Specification {
 
     def "test Base64 encoding and decoding text"() {
         when:
-        def response = client.toBlocking().exchange(
-            HttpRequest.GET('/codecTest/encodeBase64?input=Hello%2C+World!'),
+        def response = httpClient.exchange(
+            '/codecTest/encodeBase64?input=Hello%2C+World!',
             Map
         )
 
@@ -134,8 +122,8 @@ class SecurityCodecsSpec extends Specification {
 
     def "test Base64 encoding with binary data"() {
         when:
-        def response = client.toBlocking().exchange(
-            HttpRequest.GET('/codecTest/encodeBase64Binary'),
+        def response = httpClient.exchange(
+            '/codecTest/encodeBase64Binary',
             Map
         )
 
@@ -150,8 +138,8 @@ class SecurityCodecsSpec extends Specification {
 
     def "test MD5 hashing produces consistent 32-char hex string"() {
         when:
-        def response = client.toBlocking().exchange(
-            HttpRequest.GET('/codecTest/encodeMd5?input=password123'),
+        def response = httpClient.exchange(
+            '/codecTest/encodeMd5?input=password123',
             Map
         )
 
@@ -164,8 +152,8 @@ class SecurityCodecsSpec extends Specification {
 
     def "test MD5 bytes produces 16 bytes"() {
         when:
-        def response = client.toBlocking().exchange(
-            HttpRequest.GET('/codecTest/encodeMd5Bytes?input=password123'),
+        def response = httpClient.exchange(
+            '/codecTest/encodeMd5Bytes?input=password123',
             Map
         )
 
@@ -179,8 +167,8 @@ class SecurityCodecsSpec extends Specification {
 
     def "test SHA1 hashing produces consistent 40-char hex string"() {
         when:
-        def response = client.toBlocking().exchange(
-            HttpRequest.GET('/codecTest/encodeSha1?input=password123'),
+        def response = httpClient.exchange(
+            '/codecTest/encodeSha1?input=password123',
             Map
         )
 
@@ -192,8 +180,8 @@ class SecurityCodecsSpec extends Specification {
 
     def "test SHA1 bytes produces 20 bytes"() {
         when:
-        def response = client.toBlocking().exchange(
-            HttpRequest.GET('/codecTest/encodeSha1Bytes?input=password123'),
+        def response = httpClient.exchange(
+            '/codecTest/encodeSha1Bytes?input=password123',
             Map
         )
 
@@ -206,8 +194,8 @@ class SecurityCodecsSpec extends Specification {
 
     def "test SHA256 hashing produces consistent 64-char hex string"() {
         when:
-        def response = client.toBlocking().exchange(
-            HttpRequest.GET('/codecTest/encodeSha256?input=password123'),
+        def response = httpClient.exchange(
+            '/codecTest/encodeSha256?input=password123',
             Map
         )
 
@@ -219,8 +207,8 @@ class SecurityCodecsSpec extends Specification {
 
     def "test SHA256 bytes produces 32 bytes"() {
         when:
-        def response = client.toBlocking().exchange(
-            HttpRequest.GET('/codecTest/encodeSha256Bytes?input=password123'),
+        def response = httpClient.exchange(
+            '/codecTest/encodeSha256Bytes?input=password123',
             Map
         )
 
@@ -233,8 +221,8 @@ class SecurityCodecsSpec extends Specification {
 
     def "test Hex encoding and decoding"() {
         when:
-        def response = client.toBlocking().exchange(
-            HttpRequest.GET('/codecTest/encodeHex?input=Hello'),
+        def response = httpClient.exchange(
+            '/codecTest/encodeHex?input=Hello',
             Map
         )
 
@@ -249,8 +237,8 @@ class SecurityCodecsSpec extends Specification {
 
     def "test JavaScript encoding escapes quotes and newlines"() {
         when:
-        def response = client.toBlocking().exchange(
-            HttpRequest.GET("/codecTest/encodeJavaScript"),
+        def response = httpClient.exchange(
+            '/codecTest/encodeJavaScript',
             Map
         )
 
@@ -267,8 +255,8 @@ class SecurityCodecsSpec extends Specification {
 
     def "test Raw encoding preserves content without escaping"() {
         when:
-        def response = client.toBlocking().exchange(
-            HttpRequest.GET('/codecTest/encodeRaw'),
+        def response = httpClient.exchange(
+            '/codecTest/encodeRaw',
             Map
         )
 
@@ -282,8 +270,8 @@ class SecurityCodecsSpec extends Specification {
 
     def "test chaining multiple encodings"() {
         when:
-        def response = client.toBlocking().exchange(
-            HttpRequest.GET('/codecTest/multipleEncodings'),
+        def response = httpClient.exchange(
+            '/codecTest/multipleEncodings',
             Map
         )
 
@@ -298,8 +286,8 @@ class SecurityCodecsSpec extends Specification {
 
     def "test encoding with Unicode and special characters"() {
         when:
-        def response = client.toBlocking().exchange(
-            HttpRequest.GET('/codecTest/encodeSpecialChars?input=%E6%97%A5%E6%9C%AC%E8%AA%9E+%26+%C3%A9moji+%F0%9F%91%8D+%3Ctag%3E'),
+        def response = httpClient.exchange(
+            '/codecTest/encodeSpecialChars?input=%E6%97%A5%E6%9C%AC%E8%AA%9E+%26+%C3%A9moji+%F0%9F%91%8D+%3Ctag%3E',
             Map
         )
 
@@ -315,8 +303,8 @@ class SecurityCodecsSpec extends Specification {
 
     def "test encoding null values returns null safely"() {
         when:
-        def response = client.toBlocking().exchange(
-            HttpRequest.GET('/codecTest/encodeNull'),
+        def response = httpClient.exchange(
+            '/codecTest/encodeNull',
             Map
         )
 
@@ -331,8 +319,8 @@ class SecurityCodecsSpec extends Specification {
 
     def "test encoding empty strings"() {
         when:
-        def response = client.toBlocking().exchange(
-            HttpRequest.GET('/codecTest/encodeEmpty'),
+        def response = httpClient.exchange(
+            '/codecTest/encodeEmpty',
             Map
         )
 
@@ -352,8 +340,8 @@ class SecurityCodecsSpec extends Specification {
 
     def "test hash functions produce consistent results"() {
         when:
-        def response = client.toBlocking().exchange(
-            HttpRequest.GET('/codecTest/hashConsistency?input=test-consistency'),
+        def response = httpClient.exchange(
+            '/codecTest/hashConsistency?input=test-consistency',
             Map
         )
 
@@ -366,12 +354,12 @@ class SecurityCodecsSpec extends Specification {
 
     def "test different inputs produce different hashes"() {
         when:
-        def response1 = client.toBlocking().exchange(
-            HttpRequest.GET('/codecTest/hashConsistency?input=input1'),
+        def response1 = httpClient.exchange(
+            '/codecTest/hashConsistency?input=input1',
             Map
         )
-        def response2 = client.toBlocking().exchange(
-            HttpRequest.GET('/codecTest/hashConsistency?input=input2'),
+        def response2 = httpClient.exchange(
+            '/codecTest/hashConsistency?input=input2',
             Map
         )
 
@@ -387,8 +375,8 @@ class SecurityCodecsSpec extends Specification {
 
     def "test MD5 produces known hash for 'hello'"() {
         when:
-        def response = client.toBlocking().exchange(
-            HttpRequest.GET('/codecTest/encodeMd5?input=hello'),
+        def response = httpClient.exchange(
+            '/codecTest/encodeMd5?input=hello',
             Map
         )
 
@@ -399,8 +387,8 @@ class SecurityCodecsSpec extends Specification {
 
     def "test SHA1 produces known hash for 'hello'"() {
         when:
-        def response = client.toBlocking().exchange(
-            HttpRequest.GET('/codecTest/encodeSha1?input=hello'),
+        def response = httpClient.exchange(
+            '/codecTest/encodeSha1?input=hello',
             Map
         )
 
@@ -411,8 +399,8 @@ class SecurityCodecsSpec extends Specification {
 
     def "test SHA256 produces known hash for 'hello'"() {
         when:
-        def response = client.toBlocking().exchange(
-            HttpRequest.GET('/codecTest/encodeSha256?input=hello'),
+        def response = httpClient.exchange(
+            '/codecTest/encodeSha256?input=hello',
             Map
         )
 

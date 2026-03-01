@@ -16,40 +16,29 @@
  *  specific language governing permissions and limitations
  *  under the License.
  */
-
 package functional.tests
 
 import com.fasterxml.jackson.databind.ObjectMapper
-import grails.testing.mixin.integration.Integration
-import grails.testing.spock.RunOnce
-import grails.web.http.HttpHeaders
 import io.micronaut.http.HttpRequest
-import io.micronaut.http.HttpResponse
 import io.micronaut.http.HttpStatus
-import org.junit.jupiter.api.BeforeEach
-import spock.lang.Shared
+import spock.lang.Specification
 
-@Integration(applicationClass = Application)
-class ProductSpec extends HttpClientSpec {
+import org.springframework.beans.factory.annotation.Autowired
 
-    @Shared
+import grails.testing.mixin.integration.Integration
+import grails.web.http.HttpHeaders
+import org.apache.grails.testing.httpclient.HttpClientSupport
+
+@Integration
+class ProductSpec extends Specification implements HttpClientSupport {
+
+    @Autowired
     ObjectMapper objectMapper
-
-    def setup() {
-        objectMapper = new ObjectMapper()
-    }
-
-    @RunOnce
-    @BeforeEach
-    void init() {
-        super.init()
-    }
 
     void testEmptyProducts() {
         when:
-        HttpRequest request = HttpRequest.GET('/products')
-        HttpResponse<String> resp = client.toBlocking().exchange(request, String)
-        Map body = objectMapper.readValue(resp.body(), Map)
+        def resp = httpClient.exchange('/products', String)
+        def body = objectMapper.readValue(resp.body(), Map)
 
         then:
         resp.status == HttpStatus.OK
@@ -65,7 +54,7 @@ class ProductSpec extends HttpClientSpec {
 
         and: 'the hal _links attribute is present'
         body._links.size() == 1
-        body._links.self.href.startsWith("${baseUrl}/product")
+        body._links.self.href.startsWith("$httpClientURL/product")
 
         and: 'there are no products yet'
         body._embedded.products.size() == 0
@@ -73,23 +62,22 @@ class ProductSpec extends HttpClientSpec {
 
     void testSingleProduct() {
         given:
-        HttpRequest request = HttpRequest.POST('/products', [
+        def request = HttpRequest.POST('/products', [
                 name: 'Product 1',
                 description: 'product 1 description',
                 price: 123.45
         ])
 
         when:
-        HttpResponse<String> createResp = client.toBlocking().exchange(request, String)
-        Map createBody = objectMapper.readValue(createResp.body(), Map)
+        def createResp = httpClient.exchange(request, String)
+        def createBody = objectMapper.readValue(createResp.body(), Map)
 
         then:
         createResp.status == HttpStatus.CREATED
 
         when: 'We get the products'
-        request = HttpRequest.GET('/products')
-        HttpResponse<String> resp = client.toBlocking().exchange(request, String)
-        Map body = objectMapper.readValue(resp.body(), Map)
+        def resp = httpClient.exchange('/products', String)
+        def body = objectMapper.readValue(resp.body(), Map)
 
         then:
         resp.status == HttpStatus.OK
@@ -105,14 +93,14 @@ class ProductSpec extends HttpClientSpec {
 
         and: 'the hal _links attribute is present'
         body._links.size() == 1
-        body._links.self.href.startsWith("${baseUrl}/product")
+        body._links.self.href.startsWith("$httpClientURL/product")
 
         and: 'the product is present'
         body._embedded.products.size() == 1
         body._embedded.products.first().name == 'Product 1'
 
         cleanup:
-        resp = client.toBlocking().exchange(HttpRequest.DELETE("/products/${createBody.id}"))
+        resp = httpClient.exchange(HttpRequest.DELETE("/products/${createBody.id}"))
         assert resp.status() == HttpStatus.OK
     }
 
@@ -120,22 +108,21 @@ class ProductSpec extends HttpClientSpec {
         given:
         def productsIds = []
         15.times { productNumber ->
-            ProductVM product = new ProductVM(
+            def product = new ProductVM(
                     name: "Product $productNumber",
                     description: "product ${productNumber} description",
                     price: productNumber + (productNumber / 100)
             )
-            HttpResponse<String> createResp = client.toBlocking()
+            def createResp = httpClient
                     .exchange(HttpRequest.POST('/products', product), String)
-            Map createBody = objectMapper.readValue(createResp.body(), Map)
+            def createBody = objectMapper.readValue(createResp.body(), Map)
             assert createResp.status == HttpStatus.CREATED
             productsIds << createBody.id
         }
 
         when: 'We get the products'
-        HttpRequest request = HttpRequest.GET('/products')
-        HttpResponse<String> resp = client.toBlocking().exchange(request, String)
-        Map body = objectMapper.readValue(resp.body(), Map)
+        def resp = httpClient.exchange('/products', String)
+        def body = objectMapper.readValue(resp.body(), Map)
 
         then:
         resp.status == HttpStatus.OK
@@ -151,18 +138,18 @@ class ProductSpec extends HttpClientSpec {
 
         and: 'the hal _links attribute is present'
         body._links.size() == 4
-        body._links.self.href.startsWith("${baseUrl}/product")
-        body._links.first.href.startsWith("${baseUrl}/product")
-        body._links.next.href.startsWith("${baseUrl}/product")
-        body._links.last.href.startsWith("${baseUrl}/product")
+        body._links.self.href.startsWith("$httpClientURL/product")
+        body._links.first.href.startsWith("$httpClientURL/product")
+        body._links.next.href.startsWith("$httpClientURL/product")
+        body._links.last.href.startsWith("$httpClientURL/product")
 
         and: 'the product is present'
         body._embedded.products.size() == 10
 
         cleanup:
         productsIds.each { id ->
-            resp = client.toBlocking().exchange(HttpRequest.DELETE("/products/${id}"))
-            assert resp.status() == HttpStatus.OK
+            def r = httpClient.exchange(HttpRequest.DELETE("/products/${id}"))
+            assert r.status() == HttpStatus.OK
         }
     }
 
@@ -175,16 +162,18 @@ class ProductSpec extends HttpClientSpec {
                     description: "product ${productNumber} description",
                     price: productNumber + (productNumber / 100)
             )
-            HttpResponse<String> createResp = client.toBlocking().exchange(HttpRequest.POST('/products', product), String)
+            def createResp = httpClient.exchange(
+                    HttpRequest.POST('/products', product),
+                    String
+            )
             assert createResp.status == HttpStatus.CREATED
-            Map createBody = objectMapper.readValue(createResp.body(), Map)
+            def createBody = objectMapper.readValue(createResp.body(), Map)
             productsIds << createBody.id
         }
 
         when: 'We get the products'
-        HttpRequest request = HttpRequest.GET('/products?offset=10')
-        HttpResponse<String> resp = client.toBlocking().exchange(request, String)
-        Map body = objectMapper.readValue(resp.body(), Map)
+        def resp = httpClient.exchange('/products?offset=10', String)
+        def body = objectMapper.readValue(resp.body(), Map)
 
         then:
         resp.status == HttpStatus.OK
@@ -200,19 +189,19 @@ class ProductSpec extends HttpClientSpec {
 
         and: 'the hal _links attribute is present'
         body._links.size() == 5
-        body._links.self.href.startsWith("${baseUrl}/product")
-        body._links.first.href.startsWith("${baseUrl}/product")
-        body._links.prev.href.startsWith("${baseUrl}/product")
-        body._links.next.href.startsWith("${baseUrl}/product")
-        body._links.last.href.startsWith("${baseUrl}/product")
+        body._links.self.href.startsWith("$httpClientURL/product")
+        body._links.first.href.startsWith("$httpClientURL/product")
+        body._links.prev.href.startsWith("$httpClientURL/product")
+        body._links.next.href.startsWith("$httpClientURL/product")
+        body._links.last.href.startsWith("$httpClientURL/product")
 
         and: 'the product is present'
         body._embedded.products.size() == 10
 
         cleanup:
         productsIds.each { id ->
-            resp = client.toBlocking().exchange(HttpRequest.DELETE("/products/${id}"))
-            assert resp.status() == HttpStatus.OK
+            def r = httpClient.exchange(HttpRequest.DELETE("/products/${id}"))
+            assert r.status() == HttpStatus.OK
         }
     }
 }

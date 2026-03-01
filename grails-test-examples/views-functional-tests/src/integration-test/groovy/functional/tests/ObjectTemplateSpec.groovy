@@ -16,31 +16,22 @@
  *  specific language governing permissions and limitations
  *  under the License.
  */
-
 package functional.tests
 
-import grails.testing.mixin.integration.Integration
-import grails.testing.spock.RunOnce
-import io.micronaut.http.HttpRequest
-import io.micronaut.http.HttpResponse
 import io.micronaut.http.HttpStatus
-import org.junit.jupiter.api.BeforeEach
+import spock.lang.Specification
+
+import grails.testing.mixin.integration.Integration
+import org.apache.grails.testing.httpclient.HttpClientSupport
 
 @Integration
-class ObjectTemplateSpec extends HttpClientSpec {
-
-    @RunOnce
-    @BeforeEach
-    void init() {
-        super.init()
-    }
+class ObjectTemplateSpec extends Specification implements HttpClientSupport {
 
     void "Test that if there is a global /object/_object template it is rendered if no template found"() {
-        when:"A POST is issued"
-        HttpRequest request = HttpRequest.GET('/place/test')
-        HttpResponse<String> rsp = client.toBlocking().exchange(request, String)
+        when: "A POST is issued"
+        def rsp = httpClient.exchange('/place/test', String)
 
-        then:"The correct response is returned"
+        then: "The correct response is returned"
         rsp.status() == HttpStatus.OK
         rsp.body() == '{"location":"UK","name":"London"}'
     }

@@ -16,35 +16,27 @@
  *  specific language governing permissions and limitations
  *  under the License.
  */
-
 package issue11102
 
-import grails.testing.mixin.integration.Integration
-import grails.testing.spock.OnceBefore
-import io.micronaut.http.HttpRequest
-import io.micronaut.http.HttpResponse
 import io.micronaut.http.HttpStatus
-import io.micronaut.http.client.HttpClient
+import spock.lang.Specification
+
+import grails.testing.mixin.integration.Integration
+import org.apache.grails.testing.httpclient.HttpClientSupport
 
 @Integration
-class TestControllerSpec extends HttpClientCommonSpec {
-
-    @OnceBefore
-    void init() {
-        this.baseUrl = "http://localhost:$serverPort"
-        this.client = HttpClient.create(new URL(baseUrl))
-    }
+class TestControllerSpec extends Specification implements HttpClientSupport {
 
     void 'can forward a request from a GET to another GET action'() {
         when: 'getting the get1 action'
-        HttpResponse<String> response = client.toBlocking().exchange(HttpRequest.GET("/get1"), String)
+        def response = httpClient.exchange('/get1', String)
 
         then: 'it is executed correctly'
         response.status == HttpStatus.OK
         response.body() == 'GET1'
 
         when: 'executing an action with a forward to the other one'
-        HttpResponse<String> response2 = client.toBlocking().exchange(HttpRequest.GET("/get2"), String)
+        def response2 = httpClient.exchange('/get2', String)
 
         then: 'the request is forwarded'
         response2.status == HttpStatus.OK

@@ -91,10 +91,6 @@ include(
         'grails-shell-cli',
         'grails-spring',
         'grails-test-core',
-        'grails-testing-support-core',
-        'grails-testing-support-mongodb',
-        'grails-testing-support-views-gson',
-        'grails-testing-support-web',
         'grails-url-mappings',
         'grails-validation',
         'grails-views-core',
@@ -170,10 +166,15 @@ include(
         //'grails-datamapping-rx',
 
         // Testing Support
+        'grails-testing-support-core',
         'grails-testing-support-datamapping',
         'grails-testing-support-dbcleanup-core',
         'grails-testing-support-dbcleanup-h2',
         'grails-testing-support-dbcleanup-postgresql',
+        'grails-testing-support-httpclient',
+        'grails-testing-support-mongodb',
+        'grails-testing-support-views-gson',
+        'grails-testing-support-web',
 
         // Test Report
         'grails-data-test-report',

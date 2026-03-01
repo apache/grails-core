@@ -21,16 +21,14 @@ package functionaltests.errorhandling
 import groovy.json.JsonSlurper
 
 import io.micronaut.http.HttpRequest
-import io.micronaut.http.HttpResponse
 import io.micronaut.http.HttpStatus
-import io.micronaut.http.client.HttpClient
 import io.micronaut.http.client.exceptions.HttpClientResponseException
-import spock.lang.Shared
 import spock.lang.Specification
 import spock.lang.Unroll
 
 import grails.gorm.transactions.Rollback
 import grails.testing.mixin.integration.Integration
+import org.apache.grails.testing.httpclient.HttpClientSupport
 
 /**
  * Integration tests for error handling patterns in Grails controllers.
@@ -39,26 +37,15 @@ import grails.testing.mixin.integration.Integration
  */
 @Rollback
 @Integration
-class ErrorHandlingSpec extends Specification {
-
-    @Shared
-    HttpClient client
-
-    def setup() {
-        client = client ?: HttpClient.create(new URL("http://localhost:${serverPort}"))
-    }
-
-    def cleanupSpec() {
-        client.close()
-    }
+class ErrorHandlingSpec extends Specification implements HttpClientSupport {
 
     // ========== HTTP Status Code Tests ==========
 
     @Unroll
     def "render #statusMsg status"(String action, HttpStatus status, String statusMsg) {
         when:
-        client.toBlocking().exchange(
-            HttpRequest.GET("/errorHandlingTest/$action"),
+        httpClient.exchange(
+            "/errorHandlingTest/$action",
             String
         )
 
@@ -86,7 +73,7 @@ class ErrorHandlingSpec extends Specification {
     @Unroll
     def "JSON #statusCode.code error response #assertion"(String action, HttpStatus statusCode, String assertion) {
         when:
-        client.toBlocking().exchange(
+        httpClient.exchange(
             HttpRequest.GET("/errorHandlingTest/$action")
                     .accept('application/json'),
             String
@@ -109,7 +96,7 @@ class ErrorHandlingSpec extends Specification {
     @Unroll
     def "conditional error returns #status.code when condition is #condition"(String condition, HttpStatus status) {
         when:
-        client.toBlocking().exchange(
+        httpClient.exchange(
             HttpRequest.GET("/errorHandlingTest/conditionalError?condition=$condition")
                     .accept('application/json'),
             String
@@ -128,7 +115,7 @@ class ErrorHandlingSpec extends Specification {
 
     def "conditional error returns success for unknown condition"() {
         when:
-        def response = client.toBlocking().exchange(
+        def response = httpClient.exchange(
             HttpRequest.GET('/errorHandlingTest/conditionalError?condition=normal')
                     .accept('application/json'),
             String
@@ -147,7 +134,7 @@ class ErrorHandlingSpec extends Specification {
 
     def "rate limit error includes appropriate headers"() {
         when:
-        client.toBlocking().exchange(
+        httpClient.exchange(
             HttpRequest.GET('/errorHandlingTest/errorWithHeaders').accept('application/json'),
             String
         )
@@ -166,7 +153,7 @@ class ErrorHandlingSpec extends Specification {
 
     def "not found error includes suggestion header"() {
         when:
-        client.toBlocking().exchange(
+        httpClient.exchange(
             HttpRequest.GET('/errorHandlingTest/notFoundWithHints').accept('application/json'),
             String
         )
@@ -183,7 +170,7 @@ class ErrorHandlingSpec extends Specification {
 
     def "success endpoint returns 200 OK"() {
         when:
-        HttpResponse<String> response = client.toBlocking().exchange(
+        def response = httpClient.exchange(
             HttpRequest.GET('/errorHandlingTest/success').accept('application/json'),
             String
         )
@@ -199,7 +186,7 @@ class ErrorHandlingSpec extends Specification {
 
     def "success with data returns structured response"() {
         when:
-        HttpResponse<String> response = client.toBlocking().exchange(
+        def response = httpClient.exchange(
             HttpRequest.GET('/errorHandlingTest/successWithData').accept('application/json'),
             String
         )

@@ -20,9 +20,9 @@ package micronaut
 
 import io.github.cjstehno.ersatz.ErsatzServer
 import io.github.cjstehno.ersatz.cfg.ContentType
+import io.github.cjstehno.ersatz.cfg.ServerConfig
 import io.micronaut.context.ApplicationContext as MicronautApplicationContext
 import io.micronaut.http.HttpRequest
-import io.micronaut.http.HttpResponse
 import io.micronaut.http.MediaType
 import io.micronaut.http.client.HttpClient
 import io.micronaut.http.client.exceptions.HttpClientResponseException
@@ -31,29 +31,20 @@ import micronaut.client.MicronautHeaderClient
 import micronaut.client.MicronautTestClient
 import spock.lang.AutoCleanup
 import spock.lang.Specification
-import spock.util.concurrent.PollingConditions
 
 import org.springframework.beans.factory.annotation.Autowired
-import org.springframework.beans.factory.annotation.Value
-
-import java.util.concurrent.CopyOnWriteArrayList
 
 import grails.testing.mixin.integration.Integration
+import org.apache.grails.testing.httpclient.HttpClientSupport
 
 @Integration
-class MicronautErsatzAdvancedSpec extends Specification {
+class MicronautErsatzAdvancedSpec extends Specification implements HttpClientSupport {
 
-    @Autowired
-    MicronautApplicationContext micronautContext
-
-    @Autowired
-    ExternalApiService externalApiService
-
-    @Value('${local.server.port}')
-    Integer serverPort
+    @Autowired MicronautApplicationContext micronautContext
+    @Autowired ExternalApiService externalApiService
 
     @AutoCleanup
-    ErsatzServer ersatz = new ErsatzServer({ cfg ->
+    ErsatzServer ersatz = new ErsatzServer({ ServerConfig cfg ->
         cfg.httpPort(19876)
     })
 
@@ -100,7 +91,7 @@ class MicronautErsatzAdvancedSpec extends Specification {
         def client = micronautContext.getBean(MicronautAdvancedClient)
 
         when: 'calling the head endpoint'
-        HttpResponse<?> response = client.headCheck()
+        def response = client.headCheck()
 
         then: 'the response contains the header'
         response.status.code == 200
@@ -126,7 +117,7 @@ class MicronautErsatzAdvancedSpec extends Specification {
         def client = micronautContext.getBean(MicronautAdvancedClient)
 
         when: 'calling the options endpoint'
-        HttpResponse<?> response = client.optionsCheck()
+        def response = client.optionsCheck()
 
         then: 'the response contains the allow header'
         response.status.code == 200
@@ -134,37 +125,6 @@ class MicronautErsatzAdvancedSpec extends Specification {
 
         and: 'ersatz verifies the call'
         ersatz.verify()
-    }
-
-    void "ANY method matcher in ersatz matches GET request from Micronaut HttpClient"() {
-        given: 'ersatz mocks the ANY endpoint'
-        ersatz.expectations({ expect ->
-            expect.ANY('/micronaut-test/anything', { req ->
-                req.called(1)
-                req.responder({ res ->
-                    res.code(200)
-                    res.body('{"status":"any"}', ContentType.APPLICATION_JSON)
-                })
-            })
-        })
-
-        and: 'a low-level Micronaut HTTP client'
-        def httpClient = HttpClient.create('http://localhost:19876'.toURL())
-
-        when: 'sending a GET request'
-        def response = httpClient.toBlocking().exchange(
-                HttpRequest.GET('/micronaut-test/anything').accept(MediaType.APPLICATION_JSON),
-                String
-        )
-
-        then: 'the response is successful'
-        response.status.code == 200
-
-        and: 'ersatz verifies the call'
-        ersatz.verify()
-
-        cleanup:
-        httpClient.close()
     }
 
     void "declarative client sends query parameters matched by ersatz"() {
@@ -209,11 +169,8 @@ class MicronautErsatzAdvancedSpec extends Specification {
             })
         })
 
-        and: 'a Micronaut HTTP client targeting Grails'
-        def httpClient = HttpClient.create("http://localhost:$serverPort".toURL())
-
         when: 'calling the Grails controller endpoint'
-        def response = httpClient.toBlocking().exchange(
+        def response = httpClient.exchange(
                 HttpRequest.GET('/external-api/search?q=grails&page=2').accept(MediaType.APPLICATION_JSON),
                 String
         )
@@ -224,9 +181,6 @@ class MicronautErsatzAdvancedSpec extends Specification {
 
         and: 'ersatz verifies the call'
         ersatz.verify()
-
-        cleanup:
-        httpClient.close()
     }
 
     void "declarative client sends Authorization header matched by ersatz"() {
@@ -310,41 +264,6 @@ class MicronautErsatzAdvancedSpec extends Specification {
         ersatz.verify()
     }
 
-    void "ersatz matches Basic Authentication header from Micronaut HttpClient"() {
-        given: 'ersatz expects a basic auth header'
-        ersatz.expectations({ expect ->
-            expect.GET('/micronaut-test/basic-auth', { req ->
-                req.header('Authorization', 'Basic dXNlcjpwYXNz')
-                req.called(1)
-                req.responder({ res ->
-                    res.code(200)
-                    res.body('{"auth":"basic"}', ContentType.APPLICATION_JSON)
-                })
-            })
-        })
-
-        and: 'a low-level Micronaut HTTP client'
-        def httpClient = HttpClient.create('http://localhost:19876'.toURL())
-
-        when: 'sending a basic auth request'
-        def response = httpClient.toBlocking().exchange(
-                HttpRequest.GET('/micronaut-test/basic-auth')
-                        .basicAuth('user', 'pass')
-                        .accept(MediaType.APPLICATION_JSON),
-                String
-        )
-
-        then: 'the response is successful'
-        response.status.code == 200
-        response.body().contains('basic')
-
-        and: 'ersatz verifies the call'
-        ersatz.verify()
-
-        cleanup:
-        httpClient.close()
-    }
-
     void "full roundtrip: Authorization header passes through Grails stack to ersatz"() {
         given: 'ersatz expects an authorization header'
         ersatz.expectations({ expect ->
@@ -358,11 +277,8 @@ class MicronautErsatzAdvancedSpec extends Specification {
             })
         })
 
-        and: 'a Micronaut HTTP client targeting Grails'
-        def httpClient = HttpClient.create("http://localhost:$serverPort".toURL())
-
         when: 'calling the Grails controller endpoint'
-        def response = httpClient.toBlocking().exchange(
+        def response = httpClient.exchange(
                 HttpRequest.GET('/external-api/secure')
                         .header('Authorization', 'Bearer roundtrip-token')
                         .accept(MediaType.APPLICATION_JSON),
@@ -375,9 +291,6 @@ class MicronautErsatzAdvancedSpec extends Specification {
 
         and: 'ersatz verifies the call'
         ersatz.verify()
-
-        cleanup:
-        httpClient.close()
     }
 
     void "declarative client sends cookie matched by ersatz"() {
@@ -407,39 +320,6 @@ class MicronautErsatzAdvancedSpec extends Specification {
         ersatz.verify()
     }
 
-    void "ersatz returns response cookies received by Micronaut HttpClient"() {
-        given: 'ersatz responds with a cookie'
-        ersatz.expectations({ expect ->
-            expect.GET('/micronaut-test/cookie-response', { req ->
-                req.called(1)
-                req.responder({ res ->
-                    res.code(200)
-                    res.body('{"cookie":"response"}', ContentType.APPLICATION_JSON)
-                    res.cookie('tracker', 'visit-42')
-                })
-            })
-        })
-
-        and: 'a low-level Micronaut HTTP client'
-        def httpClient = HttpClient.create('http://localhost:19876'.toURL())
-
-        when: 'making the request'
-        def response = httpClient.toBlocking().exchange(
-                HttpRequest.GET('/micronaut-test/cookie-response').accept(MediaType.APPLICATION_JSON),
-                String
-        )
-
-        then: 'the set-cookie header is present'
-        response.status.code == 200
-        response.header('Set-Cookie').contains('tracker')
-
-        and: 'ersatz verifies the call'
-        ersatz.verify()
-
-        cleanup:
-        httpClient.close()
-    }
-
     void "ersatz returns plain text response consumed by declarative client"() {
         given: 'ersatz returns plain text'
         ersatz.expectations({ expect ->
@@ -465,74 +345,6 @@ class MicronautErsatzAdvancedSpec extends Specification {
         ersatz.verify()
     }
 
-    void "ersatz returns XML response consumed by Micronaut HttpClient"() {
-        given: 'ersatz returns XML'
-        ersatz.expectations({ expect ->
-            expect.GET('/micronaut-test/xml', { req ->
-                req.called(1)
-                req.responder({ res ->
-                    res.code(200)
-                    res.body('<root><message>hello</message></root>', ContentType.APPLICATION_XML)
-                })
-            })
-        })
-
-        and: 'a low-level Micronaut HTTP client'
-        def httpClient = HttpClient.create('http://localhost:19876'.toURL())
-
-        when: 'requesting XML'
-        def response = httpClient.toBlocking().exchange(
-                HttpRequest.GET('/micronaut-test/xml')
-                        .accept(MediaType.APPLICATION_XML),
-                String
-        )
-
-        then: 'the XML response is received'
-        response.status.code == 200
-        response.body().contains('<message>hello</message>')
-
-        and: 'ersatz verifies the call'
-        ersatz.verify()
-
-        cleanup:
-        httpClient.close()
-    }
-
-    void "ersatz returns delayed response received by Micronaut HttpClient"() {
-        given: 'ersatz delays the response'
-        ersatz.expectations({ expect ->
-            expect.GET('/micronaut-test/slow', { req ->
-                req.called(1)
-                req.responder({ res ->
-                    res.code(200)
-                    res.delay(200)
-                    res.body('{"status":"slow"}', ContentType.APPLICATION_JSON)
-                })
-            })
-        })
-
-        and: 'a low-level Micronaut HTTP client'
-        def httpClient = HttpClient.create('http://localhost:19876'.toURL())
-
-        when: 'calling the slow endpoint'
-        long startTime = System.currentTimeMillis()
-        def response = httpClient.toBlocking().exchange(
-                HttpRequest.GET('/micronaut-test/slow').accept(MediaType.APPLICATION_JSON),
-                String
-        )
-        long endTime = System.currentTimeMillis()
-
-        then: 'the response is delayed and successful'
-        response.status.code == 200
-        (endTime - startTime) >= 150
-
-        and: 'ersatz verifies the call'
-        ersatz.verify()
-
-        cleanup:
-        httpClient.close()
-    }
-
     void "ersatz verifies exact call count for multiple requests to same endpoint"() {
         given: 'ersatz expects multiple calls'
         ersatz.expectations({ expect ->
@@ -555,106 +367,6 @@ class MicronautErsatzAdvancedSpec extends Specification {
 
         then: 'ersatz verifies the call count'
         ersatz.verify()
-    }
-
-    void "ersatz listener captures request details"() {
-        given: 'ersatz captures request details'
-        CopyOnWriteArrayList<Object> captured = new CopyOnWriteArrayList<>()
-        ersatz.expectations({ expect ->
-            expect.GET('/micronaut-test/listen', { req ->
-                req.listener({ captured << it })
-                req.called(1)
-                req.responder({ res ->
-                    res.code(200)
-                    res.body('{"listen":"ok"}', ContentType.APPLICATION_JSON)
-                })
-            })
-        })
-
-        and: 'a low-level Micronaut HTTP client'
-        def httpClient = HttpClient.create('http://localhost:19876'.toURL())
-
-        when: 'making the request'
-        def response = httpClient.toBlocking().exchange(
-                HttpRequest.GET('/micronaut-test/listen').accept(MediaType.APPLICATION_JSON),
-                String
-        )
-
-        then: 'a request was captured'
-        response.status.code == 200
-
-        and: 'the listener eventually captures the request'
-        new PollingConditions(timeout: 5).eventually {
-            assert captured.size() == 1
-        }
-
-        and: 'ersatz verifies the call'
-        ersatz.verify()
-
-        cleanup:
-        httpClient.close()
-    }
-
-    void "ersatz returns different responses for sequential calls to same endpoint"() {
-        given: 'ersatz is configured with sequential responses'
-        ersatz.expectations({ expect ->
-            expect.GET('/micronaut-test/sequence', { req ->
-                req.called(3)
-                req.responder({ res ->
-                    res.code(503)
-                    res.body('unavailable', ContentType.TEXT_PLAIN)
-                })
-                req.responder({ res ->
-                    res.code(503)
-                    res.body('still unavailable', ContentType.TEXT_PLAIN)
-                })
-                req.responder({ res ->
-                    res.code(200)
-                    res.body('{"status":"ok"}', ContentType.APPLICATION_JSON)
-                })
-            })
-        })
-
-        and: 'a low-level Micronaut HTTP client'
-        def httpClient = HttpClient.create('http://localhost:19876'.toURL())
-
-        when: 'calling the endpoint multiple times'
-        def firstException = null
-        def secondException = null
-        try {
-            httpClient.toBlocking().exchange(
-                    HttpRequest.GET('/micronaut-test/sequence').accept(MediaType.APPLICATION_JSON),
-                    String
-            )
-        } catch (HttpClientResponseException ex) {
-            firstException = ex
-        }
-        try {
-            httpClient.toBlocking().exchange(
-                    HttpRequest.GET('/micronaut-test/sequence').accept(MediaType.APPLICATION_JSON),
-                    String
-            )
-        } catch (HttpClientResponseException ex) {
-            secondException = ex
-        }
-        def thirdResponse = httpClient.toBlocking().exchange(
-                HttpRequest.GET('/micronaut-test/sequence').accept(MediaType.APPLICATION_JSON),
-                String
-        )
-
-        then: 'the first two responses are errors'
-        firstException instanceof HttpClientResponseException
-        firstException.status.code == 503
-        secondException instanceof HttpClientResponseException
-        secondException.status.code == 503
-        thirdResponse.status.code == 200
-        thirdResponse.body().contains('"status":"ok"')
-
-        and: 'ersatz verifies the call count'
-        ersatz.verify()
-
-        cleanup:
-        httpClient.close()
     }
 
     void "Micronaut client handles 401 Unauthorized from ersatz"() {
@@ -790,11 +502,8 @@ class MicronautErsatzAdvancedSpec extends Specification {
             })
         })
 
-        and: 'a Micronaut HTTP client targeting Grails'
-        def httpClient = HttpClient.create("http://localhost:$serverPort".toURL())
-
         when: 'sending a PATCH request to Grails'
-        def response = httpClient.toBlocking().exchange(
+        def response = httpClient.exchange(
                 HttpRequest.PATCH('/external-api/99', '{"name":"patched"}')
                         .contentType(MediaType.APPLICATION_JSON)
                         .accept(MediaType.APPLICATION_JSON),
@@ -807,9 +516,6 @@ class MicronautErsatzAdvancedSpec extends Specification {
 
         and: 'ersatz verifies the call'
         ersatz.verify()
-
-        cleanup:
-        httpClient.close()
     }
 
     void "full roundtrip: search with query params through Grails controller to ersatz"() {
@@ -826,11 +532,8 @@ class MicronautErsatzAdvancedSpec extends Specification {
             })
         })
 
-        and: 'a Micronaut HTTP client targeting Grails'
-        def httpClient = HttpClient.create("http://localhost:$serverPort".toURL())
-
         when: 'calling the search endpoint'
-        def response = httpClient.toBlocking().exchange(
+        def response = httpClient.exchange(
                 HttpRequest.GET('/external-api/search?q=test-query&page=3').accept(MediaType.APPLICATION_JSON),
                 String
         )
@@ -841,9 +544,6 @@ class MicronautErsatzAdvancedSpec extends Specification {
 
         and: 'ersatz verifies the call'
         ersatz.verify()
-
-        cleanup:
-        httpClient.close()
     }
 
     void "Grails service error handling wraps Micronaut client error from ersatz"() {

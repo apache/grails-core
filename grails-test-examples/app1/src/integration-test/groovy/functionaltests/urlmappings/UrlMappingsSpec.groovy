@@ -22,13 +22,12 @@ import groovy.json.JsonSlurper
 
 import io.micronaut.http.HttpRequest
 import io.micronaut.http.HttpStatus
-import io.micronaut.http.client.HttpClient
 import io.micronaut.http.client.exceptions.HttpClientResponseException
 import spock.lang.Narrative
-import spock.lang.Shared
 import spock.lang.Specification
 
 import grails.testing.mixin.integration.Integration
+import org.apache.grails.testing.httpclient.HttpClientSupport
 
 /**
  * Integration tests for Grails URL mappings features.
@@ -41,25 +40,14 @@ import grails.testing.mixin.integration.Integration
 Grails URL mappings provide flexible routing of HTTP requests to controller actions.
 This includes path variables, constraints, HTTP method-based routing, and redirects.
 ''')
-class UrlMappingsSpec extends Specification {
-
-    @Shared
-    HttpClient client
-
-    def setup() {
-        client = client ?: HttpClient.create(new URL("http://localhost:$serverPort"))
-    }
-
-    def cleanupSpec() {
-        client.close()
-    }
+class UrlMappingsSpec extends Specification implements HttpClientSupport {
 
     // ========== Static Path Mappings ==========
 
     def "static path mapping routes to correct action"() {
         when: "accessing static path"
-        def response = client.toBlocking().exchange(
-            HttpRequest.GET('/api/test'),
+        def response = httpClient.exchange(
+            '/api/test',
             String
         )
 
@@ -74,8 +62,8 @@ class UrlMappingsSpec extends Specification {
 
     def "single path variable is captured"() {
         when: "accessing path with variable"
-        def response = client.toBlocking().exchange(
-            HttpRequest.GET('/api/items/123'),
+        def response = httpClient.exchange(
+            '/api/items/123',
             String
         )
 
@@ -88,8 +76,8 @@ class UrlMappingsSpec extends Specification {
 
     def "path variable accepts alphanumeric values"() {
         when: "accessing path with alphanumeric id"
-        def response = client.toBlocking().exchange(
-            HttpRequest.GET('/api/items/abc-123'),
+        def response = httpClient.exchange(
+            '/api/items/abc-123',
             String
         )
 
@@ -101,8 +89,8 @@ class UrlMappingsSpec extends Specification {
 
     def "multiple path variables are captured"() {
         when: "accessing path with multiple variables"
-        def response = client.toBlocking().exchange(
-            HttpRequest.GET('/api/archive/2024/03/15'),
+        def response = httpClient.exchange(
+            '/api/archive/2024/03/15',
             String
         )
 
@@ -119,8 +107,8 @@ class UrlMappingsSpec extends Specification {
 
     def "named mapping routes correctly"() {
         when: "accessing named mapping"
-        def response = client.toBlocking().exchange(
-            HttpRequest.GET('/api/named/test-name'),
+        def response = httpClient.exchange(
+            '/api/named/test-name',
             String
         )
 
@@ -135,8 +123,8 @@ class UrlMappingsSpec extends Specification {
 
     def "constrained path accepts valid values"() {
         when: "accessing with valid constrained value"
-        def response = client.toBlocking().exchange(
-            HttpRequest.GET('/api/codes/ABC'),
+        def response = httpClient.exchange(
+            '/api/codes/ABC',
             String
         )
 
@@ -149,8 +137,8 @@ class UrlMappingsSpec extends Specification {
 
     def "constrained path rejects invalid values"() {
         when: "accessing with invalid constrained value (lowercase)"
-        client.toBlocking().exchange(
-            HttpRequest.GET('/api/codes/abc'),
+        httpClient.exchange(
+            '/api/codes/abc',
             String
         )
 
@@ -161,8 +149,8 @@ class UrlMappingsSpec extends Specification {
 
     def "constrained path rejects numeric values"() {
         when: "accessing with numeric value"
-        client.toBlocking().exchange(
-            HttpRequest.GET('/api/codes/123'),
+        httpClient.exchange(
+            '/api/codes/123',
             String
         )
 
@@ -175,8 +163,8 @@ class UrlMappingsSpec extends Specification {
 
     def "GET request routes to list action"() {
         when: "making GET request to resources"
-        def response = client.toBlocking().exchange(
-            HttpRequest.GET('/api/resources'),
+        def response = httpClient.exchange(
+            '/api/resources',
             String
         )
 
@@ -188,7 +176,7 @@ class UrlMappingsSpec extends Specification {
 
     def "POST request routes to save action"() {
         when: "making POST request to resources"
-        def response = client.toBlocking().exchange(
+        def response = httpClient.exchange(
             HttpRequest.POST('/api/resources', '{}'),
             String
         )
@@ -202,7 +190,7 @@ class UrlMappingsSpec extends Specification {
 
     def "PUT request routes to update action"() {
         when: "making PUT request to resources with id"
-        def response = client.toBlocking().exchange(
+        def response = httpClient.exchange(
             HttpRequest.PUT('/api/resources/42', '{}'),
             String
         )
@@ -217,7 +205,7 @@ class UrlMappingsSpec extends Specification {
 
     def "DELETE request routes to delete action"() {
         when: "making DELETE request to resources with id"
-        def response = client.toBlocking().exchange(
+        def response = httpClient.exchange(
             HttpRequest.DELETE('/api/resources/42'),
             String
         )
@@ -234,8 +222,8 @@ class UrlMappingsSpec extends Specification {
 
     def "optional path variable with value"() {
         when: "accessing with optional variable provided"
-        def response = client.toBlocking().exchange(
-            HttpRequest.GET('/api/optional/required-value/optional-value'),
+        def response = httpClient.exchange(
+            '/api/optional/required-value/optional-value',
             String
         )
 
@@ -248,8 +236,8 @@ class UrlMappingsSpec extends Specification {
 
     def "optional path variable without value uses default"() {
         when: "accessing without optional variable"
-        def response = client.toBlocking().exchange(
-            HttpRequest.GET('/api/optional/required-value'),
+        def response = httpClient.exchange(
+            '/api/optional/required-value',
             String
         )
 
@@ -264,7 +252,7 @@ class UrlMappingsSpec extends Specification {
 
     def "redirect mapping performs redirect"() {
         when: "accessing redirect mapping"
-        def response = client.toBlocking().exchange(
+        def response = httpClient.exchange(
             HttpRequest.GET('/api/old-endpoint').header('Accept', '*/*'),
             String
         )
@@ -279,8 +267,8 @@ class UrlMappingsSpec extends Specification {
 
     def "default mapping with controller and action"() {
         when: "using default mapping pattern"
-        def response = client.toBlocking().exchange(
-            HttpRequest.GET('/urlMappingsTest/show/99'),
+        def response = httpClient.exchange(
+            '/urlMappingsTest/show/99',
             String
         )
 
@@ -294,8 +282,8 @@ class UrlMappingsSpec extends Specification {
 
     def "default mapping with format extension"() {
         when: "using default mapping with format"
-        def response = client.toBlocking().exchange(
-            HttpRequest.GET('/urlMappingsTest/list.json'),
+        def response = httpClient.exchange(
+            '/urlMappingsTest/list.json',
             String
         )
 
@@ -309,8 +297,8 @@ class UrlMappingsSpec extends Specification {
 
     def "query parameters are accessible in action"() {
         when: "accessing with query parameters"
-        def response = client.toBlocking().exchange(
-            HttpRequest.GET('/api/test?param1=value1&param2=value2'),
+        def response = httpClient.exchange(
+            '/api/test?param1=value1&param2=value2',
             String
         )
 
@@ -325,8 +313,8 @@ class UrlMappingsSpec extends Specification {
 
     def "request method is correctly detected"() {
         when: "making request"
-        def response = client.toBlocking().exchange(
-            HttpRequest.GET('/api/method-test'),
+        def response = httpClient.exchange(
+            '/api/method-test',
             String
         )
 
@@ -340,10 +328,7 @@ class UrlMappingsSpec extends Specification {
 
     def "non-existent path returns 404"() {
         when: "accessing non-existent path"
-        client.toBlocking().exchange(
-            HttpRequest.GET('/api/does-not-exist'),
-            String
-        )
+        httpClient.retrieve('/api/does-not-exist')
 
         then: "returns 404"
         def e = thrown(HttpClientResponseException)

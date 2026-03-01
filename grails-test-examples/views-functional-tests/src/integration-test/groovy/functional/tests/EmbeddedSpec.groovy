@@ -16,41 +16,29 @@
  *  specific language governing permissions and limitations
  *  under the License.
  */
-
 package functional.tests
 
 import com.fasterxml.jackson.databind.ObjectMapper
-import grails.testing.mixin.integration.Integration
-import grails.testing.spock.RunOnce
-import io.micronaut.http.HttpRequest
-import io.micronaut.http.HttpResponse
 import io.micronaut.http.HttpStatus
-import org.junit.jupiter.api.BeforeEach
 import spock.lang.Issue
-import spock.lang.Shared
+import spock.lang.Specification
+
+import org.springframework.beans.factory.annotation.Autowired
+
+import grails.testing.mixin.integration.Integration
+import org.apache.grails.testing.httpclient.HttpClientSupport
 
 import static io.micronaut.http.HttpHeaders.CONTENT_TYPE
 
 @Integration
-class EmbeddedSpec extends HttpClientSpec {
+class EmbeddedSpec extends Specification implements HttpClientSupport {
 
-    @Shared
+    @Autowired
     ObjectMapper objectMapper
-
-    def setup() {
-        objectMapper = new ObjectMapper()
-    }
-
-    @RunOnce
-    @BeforeEach
-    void init() {
-        super.init()
-    }
 
     void 'Test render can handle a domain with an embedded src/groovy class'() {
         when:
-        HttpRequest request = HttpRequest.GET('/embedded')
-        HttpResponse<String> rsp = client.toBlocking().exchange(request, String)
+        def rsp = httpClient.exchange('/embedded', String)
 
         then: 'The response is correct'
         rsp.status() == HttpStatus.OK
@@ -72,8 +60,7 @@ class EmbeddedSpec extends HttpClientSpec {
 
     void 'Test jsonapi render can handle a domain with an embedded src/groovy class'() {
         when:
-        HttpRequest request = HttpRequest.GET('/embedded/jsonapi')
-        HttpResponse<String> rsp = client.toBlocking().exchange(request, String)
+        def rsp = httpClient.exchange('/embedded/jsonapi', String)
 
         then: 'The response is correct'
         rsp.status() == HttpStatus.OK
@@ -104,8 +91,7 @@ class EmbeddedSpec extends HttpClientSpec {
     @Issue('https://github.com/apache/grails-views/issues/171')
     void 'test render can handle a domain with an embedded and includes src/groovy class'() {
         when:
-        HttpRequest request = HttpRequest.GET('/embedded/embeddedWithIncludes')
-        HttpResponse<String> rsp = client.toBlocking().exchange(request, String)
+        def rsp = httpClient.exchange('/embedded/embeddedWithIncludes', String)
 
         then: 'the response is correct'
         rsp.status() == HttpStatus.OK
@@ -123,8 +109,7 @@ class EmbeddedSpec extends HttpClientSpec {
     @Issue('https://github.com/apache/grails-views/issues/171')
     void 'Test jsonapi render can handle a domain with an embedded and includes src/groovy class'() {
         when:
-        HttpRequest request = HttpRequest.GET('/embedded/embeddedWithIncludesJsonapi')
-        HttpResponse<String> rsp = client.toBlocking().exchange(request, String)
+        def rsp = httpClient.exchange('/embedded/embeddedWithIncludesJsonapi', String)
 
         then: 'the response is correct'
         rsp.status() == HttpStatus.OK

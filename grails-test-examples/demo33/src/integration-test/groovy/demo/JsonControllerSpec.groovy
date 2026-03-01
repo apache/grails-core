@@ -16,39 +16,32 @@
  *  specific language governing permissions and limitations
  *  under the License.
  */
-
 package demo
+
+import io.micronaut.http.HttpRequest
+import io.micronaut.http.MediaType
 
 import grails.testing.mixin.integration.Integration
 import spock.lang.Specification
 
-import java.net.http.HttpClient
-import java.net.http.HttpRequest
-import java.net.http.HttpResponse
-import java.time.Duration
+import org.apache.grails.testing.httpclient.HttpClientSupport
 
 @Integration
-class JsonControllerSpec extends Specification {
+class JsonControllerSpec extends Specification implements HttpClientSupport {
 
     void "test a json view is rendered"() {
-        given:
-        HttpRequest request = HttpRequest.newBuilder()
-            .uri(URI.create("http://localhost:$serverPort/json/index"))
-            .timeout(Duration.ofMinutes(2))
-            .header("Accept", "application/json")
-            .GET()
-            .build()
-
         when:
-        def response = HttpClient.newBuilder().build().send(request, HttpResponse.BodyHandlers.ofString())
+        def response1 = httpClient.retrieve(
+                HttpRequest.GET('/json/index').accept(MediaType.APPLICATION_JSON)
+        )
 
         then:
-        response.body() == '{"foo":"bar"}'
+        response1 == '{"foo":"bar"}'
     }
 
     void "test a html view is rendered"() {
         when:
-        def response = new URL("http://localhost:$serverPort/json/index").getText()
+        def response = httpClient.retrieve('json/index')
 
         then:
         response.contains('<html><head><title></title></head><body>Testing</body></html>')

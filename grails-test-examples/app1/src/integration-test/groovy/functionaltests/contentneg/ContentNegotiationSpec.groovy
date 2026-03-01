@@ -23,13 +23,12 @@ import groovy.json.JsonSlurper
 import io.micronaut.http.HttpRequest
 import io.micronaut.http.HttpStatus
 import io.micronaut.http.MediaType
-import io.micronaut.http.client.HttpClient
 import io.micronaut.http.client.exceptions.HttpClientResponseException
 import spock.lang.Narrative
-import spock.lang.Shared
 import spock.lang.Specification
 
 import grails.testing.mixin.integration.Integration
+import org.apache.grails.testing.httpclient.HttpClientSupport
 
 /**
  * Integration tests for Grails content negotiation features.
@@ -44,24 +43,13 @@ Grails provides content negotiation that allows the same controller action
 to return different response formats (JSON, XML, HTML) based on the client's
 Accept header or URL extension.
 ''')
-class ContentNegotiationSpec extends Specification {
-
-    @Shared
-    HttpClient client
-
-    def setup() {
-        client = client ?: HttpClient.create(new URL("http://localhost:$serverPort"))
-    }
-
-    def cleanupSpec() {
-        client.close()
-    }
+class ContentNegotiationSpec extends Specification implements HttpClientSupport {
 
     // ========== Accept Header-Based Negotiation ==========
 
     def "JSON response via Accept header application/json"() {
         when: "requesting with Accept: application/json"
-        def response = client.toBlocking().exchange(
+        def response = httpClient.exchange(
             HttpRequest.GET('/contentNegotiation/index')
                 .accept(MediaType.APPLICATION_JSON),
             String
@@ -79,7 +67,7 @@ class ContentNegotiationSpec extends Specification {
 
     def "XML response via Accept header application/xml"() {
         when: "requesting with Accept: application/xml"
-        def response = client.toBlocking().exchange(
+        def response = httpClient.exchange(
             HttpRequest.GET('/contentNegotiation/index')
                 .accept(MediaType.APPLICATION_XML),
             String
@@ -95,7 +83,7 @@ class ContentNegotiationSpec extends Specification {
 
     def "HTML response via Accept header text/html"() {
         when: "requesting with Accept: text/html"
-        def response = client.toBlocking().exchange(
+        def response = httpClient.exchange(
             HttpRequest.GET('/contentNegotiation/index')
                 .accept(MediaType.TEXT_HTML),
             String
@@ -114,8 +102,8 @@ class ContentNegotiationSpec extends Specification {
 
     def "JSON response via .json extension"() {
         when: "requesting URL with .json extension"
-        def response = client.toBlocking().exchange(
-            HttpRequest.GET('/contentNegotiation/index.json'),
+        def response = httpClient.exchange(
+            '/contentNegotiation/index.json',
             String
         )
 
@@ -129,8 +117,8 @@ class ContentNegotiationSpec extends Specification {
 
     def "XML response via .xml extension"() {
         when: "requesting URL with .xml extension"
-        def response = client.toBlocking().exchange(
-            HttpRequest.GET('/contentNegotiation/index.xml'),
+        def response = httpClient.exchange(
+            '/contentNegotiation/index.xml',
             String
         )
 
@@ -145,7 +133,7 @@ class ContentNegotiationSpec extends Specification {
 
     def "respond method returns JSON for Accept application/json"() {
         when: "calling respond action with Accept: application/json"
-        def response = client.toBlocking().exchange(
+        def response = httpClient.exchange(
             HttpRequest.GET('/contentNegotiation/respond')
                 .accept(MediaType.APPLICATION_JSON),
             String
@@ -163,7 +151,7 @@ class ContentNegotiationSpec extends Specification {
 
     def "respond method returns XML for Accept application/xml"() {
         when: "calling respond action with Accept: application/xml"
-        def response = client.toBlocking().exchange(
+        def response = httpClient.exchange(
             HttpRequest.GET('/contentNegotiation/respond')
                 .accept(MediaType.APPLICATION_XML),
             String
@@ -178,7 +166,7 @@ class ContentNegotiationSpec extends Specification {
 
     def "list action returns JSON array"() {
         when: "requesting list with Accept: application/json"
-        def response = client.toBlocking().exchange(
+        def response = httpClient.exchange(
             HttpRequest.GET('/contentNegotiation/list')
                 .accept(MediaType.APPLICATION_JSON),
             String
@@ -197,7 +185,7 @@ class ContentNegotiationSpec extends Specification {
 
     def "list action returns XML for XML accept"() {
         when: "requesting list with Accept: application/xml"
-        def response = client.toBlocking().exchange(
+        def response = httpClient.exchange(
             HttpRequest.GET('/contentNegotiation/list')
                 .accept(MediaType.APPLICATION_XML),
             String
@@ -212,8 +200,8 @@ class ContentNegotiationSpec extends Specification {
 
     def "explicit content type overrides negotiation"() {
         when: "calling action with explicit content type"
-        def response = client.toBlocking().exchange(
-            HttpRequest.GET('/contentNegotiation/explicitContentType'),
+        def response = httpClient.exchange(
+            '/contentNegotiation/explicitContentType',
             String
         )
 
@@ -230,7 +218,7 @@ class ContentNegotiationSpec extends Specification {
 
     def "error response in JSON format"() {
         when: "requesting error action with Accept: application/json"
-        client.toBlocking().exchange(
+        httpClient.exchange(
             HttpRequest.GET('/contentNegotiation/error')
                 .accept(MediaType.APPLICATION_JSON),
             String
@@ -249,7 +237,7 @@ class ContentNegotiationSpec extends Specification {
 
     def "error response in XML format"() {
         when: "requesting error action with Accept: application/xml"
-        client.toBlocking().exchange(
+        httpClient.exchange(
             HttpRequest.GET('/contentNegotiation/error')
                 .accept(MediaType.APPLICATION_XML),
             String
@@ -267,8 +255,8 @@ class ContentNegotiationSpec extends Specification {
 
     def "format parameter can specify JSON"() {
         when: "requesting with format=json parameter"
-        def response = client.toBlocking().exchange(
-            HttpRequest.GET('/contentNegotiation/formatParam?format=json'),
+        def response = httpClient.exchange(
+            '/contentNegotiation/formatParam?format=json',
             String
         )
 
@@ -283,8 +271,8 @@ class ContentNegotiationSpec extends Specification {
 
     def "format parameter can specify XML"() {
         when: "requesting with format=xml parameter"
-        def response = client.toBlocking().exchange(
-            HttpRequest.GET('/contentNegotiation/formatParam?format=xml'),
+        def response = httpClient.exchange(
+            '/contentNegotiation/formatParam?format=xml',
             String
         )
 
@@ -297,7 +285,7 @@ class ContentNegotiationSpec extends Specification {
 
     def "status by format returns correct status for JSON"() {
         when: "requesting statusByFormat with Accept: application/json"
-        def response = client.toBlocking().exchange(
+        def response = httpClient.exchange(
             HttpRequest.GET('/contentNegotiation/statusByFormat')
                 .accept(MediaType.APPLICATION_JSON),
             String
@@ -315,7 +303,7 @@ class ContentNegotiationSpec extends Specification {
 
     def "multiAccept action handles Accept header"() {
         when: "requesting with complex Accept header"
-        def response = client.toBlocking().exchange(
+        def response = httpClient.exchange(
             HttpRequest.GET('/contentNegotiation/multiAccept')
                 .accept(MediaType.APPLICATION_JSON),
             String
@@ -333,8 +321,8 @@ class ContentNegotiationSpec extends Specification {
 
     def "formatParam falls back to default for unknown format"() {
         when: "requesting with unknown format"
-        def response = client.toBlocking().exchange(
-            HttpRequest.GET('/contentNegotiation/formatParam?format=unknown'),
+        def response = httpClient.exchange(
+            '/contentNegotiation/formatParam?format=unknown',
             String
         )
 
@@ -351,7 +339,7 @@ class ContentNegotiationSpec extends Specification {
 
     def "JSON with charset in Accept header"() {
         when: "requesting with Accept including charset"
-        def response = client.toBlocking().exchange(
+        def response = httpClient.exchange(
             HttpRequest.GET('/contentNegotiation/respond')
                 .header('Accept', 'application/json; charset=utf-8'),
             String
@@ -366,8 +354,8 @@ class ContentNegotiationSpec extends Specification {
 
     def "respond action with .json extension"() {
         when: "requesting respond with .json extension"
-        def response = client.toBlocking().exchange(
-            HttpRequest.GET('/contentNegotiation/respond.json'),
+        def response = httpClient.exchange(
+            '/contentNegotiation/respond.json',
             String
         )
 
@@ -381,8 +369,8 @@ class ContentNegotiationSpec extends Specification {
 
     def "list action with .json extension"() {
         when: "requesting list with .json extension"
-        def response = client.toBlocking().exchange(
-            HttpRequest.GET('/contentNegotiation/list.json'),
+        def response = httpClient.exchange(
+            '/contentNegotiation/list.json',
             String
         )
 
@@ -399,8 +387,8 @@ class ContentNegotiationSpec extends Specification {
 
     def "custom JSON rendering produces valid output"() {
         when: "requesting custom JSON action"
-        def response = client.toBlocking().exchange(
-            HttpRequest.GET('/contentNegotiation/customJson'),
+        def response = httpClient.exchange(
+            '/contentNegotiation/customJson',
             String
         )
 

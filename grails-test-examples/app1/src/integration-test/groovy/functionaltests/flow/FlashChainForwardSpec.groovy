@@ -19,15 +19,16 @@
 package functionaltests.flow
 
 import groovy.json.JsonSlurper
+
 import io.micronaut.http.HttpRequest
-import io.micronaut.http.HttpStatus
-import io.micronaut.http.client.HttpClient
 import io.micronaut.http.client.DefaultHttpClientConfiguration
-import io.micronaut.http.client.exceptions.HttpClientResponseException
+import io.micronaut.http.client.HttpClient
 import spock.lang.Shared
 import spock.lang.Specification
 
 import grails.testing.mixin.integration.Integration
+import org.apache.grails.testing.httpclient.HttpClientConfigurationUtils
+import org.apache.grails.testing.httpclient.HttpClientSupport
 
 /**
  * Integration tests for controller flow features:
@@ -40,28 +41,21 @@ import grails.testing.mixin.integration.Integration
  * flash scope and chain model which rely on HTTP session state.
  */
 @Integration
-class FlashChainForwardSpec extends Specification {
-
-    @Shared
-    HttpClient client
+class FlashChainForwardSpec extends Specification implements HttpClientSupport {
 
     @Shared
     HttpClient noRedirectClient
 
     def setup() {
-        client = client ?: HttpClient.create(new URL("http://localhost:$serverPort"))
         if (!noRedirectClient) {
-            def config = new DefaultHttpClientConfiguration()
-            config.setFollowRedirects(false)
-            noRedirectClient = HttpClient.create(new URL("http://localhost:$serverPort"), config)
+            noRedirectClient = newHttpClient(
+                    HttpClientConfigurationUtils.fromSystemProperties().tap {
+                        followRedirects = false
+                    }
+            )
         }
     }
-
-    def cleanupSpec() {
-        client?.close()
-        noRedirectClient?.close()
-    }
-
+    
     /**
      * Helper to extract session cookie from Set-Cookie header.
      */
@@ -85,7 +79,7 @@ class FlashChainForwardSpec extends Specification {
         
         if (!location) {
             // Not a redirect, parse body
-            return new JsonSlurper().parseText(response1.body())
+            return new JsonSlurper().parseText(response1.body()) as Map
         }
         
         // Follow redirect with session cookie
@@ -98,8 +92,8 @@ class FlashChainForwardSpec extends Specification {
             request2 = request2.header('Cookie', sessionCookie)
         }
         
-        def response2 = client.toBlocking().exchange(request2, String)
-        new JsonSlurper().parseText(response2.body())
+        def response2 = httpClient.retrieve(request2)
+        new JsonSlurper().parseText(response2) as Map
     }
 
     /**
@@ -128,7 +122,7 @@ class FlashChainForwardSpec extends Specification {
             def location = response.header('Location')
             if (!location) {
                 // No more redirects, return parsed body
-                return new JsonSlurper().parseText(response.body())
+                return new JsonSlurper().parseText(response.body() as String) as Map
             }
             
             // Follow to next location
@@ -138,7 +132,7 @@ class FlashChainForwardSpec extends Specification {
             redirectCount++
         }
         
-        throw new RuntimeException("Too many redirects following chain")
+        throw new RuntimeException('Too many redirects following chain')
     }
 
     // ========== Flash Scope Tests ==========
@@ -166,8 +160,8 @@ class FlashChainForwardSpec extends Specification {
 
     def "test flash.now for same-request values"() {
         when: "using flash.now"
-        def response = client.toBlocking().exchange(
-            HttpRequest.GET('/flow/flashNow'),
+        def response = httpClient.exchange(
+            '/flow/flashNow',
             Map
         )
 
@@ -180,7 +174,7 @@ class FlashChainForwardSpec extends Specification {
     def "test flash is cleared after being read"() {
         when: "first request sets flash"
         def response1 = noRedirectClient.toBlocking().exchange(
-            HttpRequest.GET('/flow/setFlashOnly?message=TestMessage'),
+            '/flow/setFlashOnly?message=TestMessage',
             String
         )
         def sessionCookie = extractSessionCookie(response1.header('Set-Cookie'))
@@ -190,16 +184,16 @@ class FlashChainForwardSpec extends Specification {
         if (sessionCookie) {
             request2 = request2.header('Cookie', sessionCookie)
         }
-        def response2 = client.toBlocking().exchange(request2, String)
-        def json2 = new JsonSlurper().parseText(response2.body())
+        def response2 = httpClient.retrieve(request2)
+        def json2 = new JsonSlurper().parseText(response2)
 
         and: "third request tries to read again with same session"
         def request3 = HttpRequest.GET('/flow/readFlash')
         if (sessionCookie) {
             request3 = request3.header('Cookie', sessionCookie)
         }
-        def response3 = client.toBlocking().exchange(request3, String)
-        def json3 = new JsonSlurper().parseText(response3.body())
+        def response3 = httpClient.retrieve(request3)
+        def json3 = new JsonSlurper().parseText(response3)
 
         then: "flash available in second request"
         json2.message == 'TestMessage'
@@ -244,8 +238,8 @@ class FlashChainForwardSpec extends Specification {
 
     def "test forward keeps same request"() {
         when: "forwarding to another action"
-        def response = client.toBlocking().exchange(
-            HttpRequest.GET('/flow/forwardToAction'),
+        def response = httpClient.exchange(
+            '/flow/forwardToAction',
             Map
         )
 
@@ -257,8 +251,8 @@ class FlashChainForwardSpec extends Specification {
 
     def "test forward with params"() {
         when: "forwarding with additional params"
-        def response = client.toBlocking().exchange(
-            HttpRequest.GET('/flow/forwardWithParams?id=original'),
+        def response = httpClient.exchange(
+            '/flow/forwardWithParams?id=original',
             Map
         )
 
@@ -270,8 +264,8 @@ class FlashChainForwardSpec extends Specification {
 
     def "test forward to different controller"() {
         when: "forwarding to another controller"
-        def response = client.toBlocking().exchange(
-            HttpRequest.GET('/flow/forwardToOtherController'),
+        def response = httpClient.exchange(
+            '/flow/forwardToOtherController',
             Map
         )
 
@@ -285,8 +279,8 @@ class FlashChainForwardSpec extends Specification {
 
     def "test redirect preserves all params"() {
         when: "redirecting with params"
-        def response = client.toBlocking().exchange(
-            HttpRequest.GET('/flow/redirectWithAllParams?foo=bar&num=42'),
+        def response = httpClient.exchange(
+            '/flow/redirectWithAllParams?foo=bar&num=42',
             Map
         )
 
@@ -298,8 +292,8 @@ class FlashChainForwardSpec extends Specification {
 
     def "test redirect to uri"() {
         when: "redirecting to specific URI"
-        def response = client.toBlocking().exchange(
-            HttpRequest.GET('/flow/redirectToUri'),
+        def response = httpClient.exchange(
+            '/flow/redirectToUri',
             Map
         )
 
@@ -310,8 +304,8 @@ class FlashChainForwardSpec extends Specification {
 
     def "test redirect reaches target"() {
         when: "basic redirect"
-        def response = client.toBlocking().exchange(
-            HttpRequest.GET('/flow/permanentRedirect'),
+        def response = httpClient.exchange(
+            '/flow/permanentRedirect',
             Map
         )
 
@@ -324,8 +318,8 @@ class FlashChainForwardSpec extends Specification {
 
     def "test chain model is empty when not chained"() {
         when: "calling chain target directly"
-        def response = client.toBlocking().exchange(
-            HttpRequest.GET('/flow/chainThird'),
+        def response = httpClient.exchange(
+            '/flow/chainThird',
             Map
         )
 

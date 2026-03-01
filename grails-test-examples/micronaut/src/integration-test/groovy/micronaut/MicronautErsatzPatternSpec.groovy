@@ -20,11 +20,10 @@ package micronaut
 
 import io.github.cjstehno.ersatz.ErsatzServer
 import io.github.cjstehno.ersatz.cfg.ContentType
+import io.github.cjstehno.ersatz.cfg.ServerConfig
 import io.micronaut.context.ApplicationContext as MicronautApplicationContext
 import io.micronaut.http.HttpRequest
 import io.micronaut.http.MediaType
-import io.micronaut.http.client.HttpClient
-import io.micronaut.http.client.exceptions.HttpClientResponseException
 import micronaut.client.MicronautFilteredClient
 import micronaut.client.MicronautPathClient
 import micronaut.client.MicronautReactiveClient
@@ -33,12 +32,12 @@ import spock.lang.AutoCleanup
 import spock.lang.Specification
 
 import org.springframework.beans.factory.annotation.Autowired
-import org.springframework.beans.factory.annotation.Value
 
 import grails.testing.mixin.integration.Integration
+import org.apache.grails.testing.httpclient.HttpClientSupport
 
 @Integration
-class MicronautErsatzPatternSpec extends Specification {
+class MicronautErsatzPatternSpec extends Specification implements HttpClientSupport {
 
     @Autowired
     MicronautApplicationContext micronautContext
@@ -46,11 +45,8 @@ class MicronautErsatzPatternSpec extends Specification {
     @Autowired
     ExternalApiService externalApiService
 
-    @Value('${local.server.port}')
-    Integer serverPort
-
     @AutoCleanup
-    ErsatzServer ersatz = new ErsatzServer({ cfg ->
+    ErsatzServer ersatz = new ErsatzServer({ ServerConfig cfg ->
         cfg.httpPort(19876)
     })
 
@@ -394,11 +390,8 @@ class MicronautErsatzPatternSpec extends Specification {
             })
         })
 
-        and: 'a Micronaut HTTP client targeting Grails'
-        def httpClient = HttpClient.create("http://localhost:$serverPort".toURL())
-
         when: 'calling the Grails async controller endpoint'
-        def response = httpClient.toBlocking().exchange(
+        def response = httpClient.exchange(
                 HttpRequest.GET('/external-api/async').accept(MediaType.APPLICATION_JSON),
                 String
         )
@@ -409,9 +402,6 @@ class MicronautErsatzPatternSpec extends Specification {
 
         and: 'ersatz verifies the call'
         ersatz.verify()
-
-        cleanup:
-        httpClient.close()
     }
 
     void "full roundtrip: path client through Grails controller to ersatz"() {
@@ -426,11 +416,8 @@ class MicronautErsatzPatternSpec extends Specification {
             })
         })
 
-        and: 'a Micronaut HTTP client targeting Grails'
-        def httpClient = HttpClient.create("http://localhost:$serverPort".toURL())
-
         when: 'calling the Grails path controller endpoint'
-        def response = httpClient.toBlocking().exchange(
+        def response = httpClient.exchange(
                 HttpRequest.GET('/external-api/path/88').accept(MediaType.APPLICATION_JSON),
                 String
         )
@@ -441,9 +428,6 @@ class MicronautErsatzPatternSpec extends Specification {
 
         and: 'ersatz verifies the call'
         ersatz.verify()
-
-        cleanup:
-        httpClient.close()
     }
 
     void "full roundtrip: filtered client through Grails controller to ersatz with auto-injected header"() {
@@ -459,11 +443,8 @@ class MicronautErsatzPatternSpec extends Specification {
             })
         })
 
-        and: 'a Micronaut HTTP client targeting Grails'
-        def httpClient = HttpClient.create("http://localhost:$serverPort".toURL())
-
         when: 'calling the Grails filtered controller endpoint'
-        def response = httpClient.toBlocking().exchange(
+        def response = httpClient.exchange(
                 HttpRequest.GET('/external-api/filtered').accept(MediaType.APPLICATION_JSON),
                 String
         )
@@ -474,8 +455,5 @@ class MicronautErsatzPatternSpec extends Specification {
 
         and: 'ersatz verifies the header was auto-injected'
         ersatz.verify()
-
-        cleanup:
-        httpClient.close()
     }
 }

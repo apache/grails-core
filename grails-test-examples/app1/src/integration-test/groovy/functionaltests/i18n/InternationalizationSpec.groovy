@@ -19,11 +19,10 @@
 package functionaltests.i18n
 
 import io.micronaut.http.HttpRequest
-import io.micronaut.http.client.HttpClient
-import spock.lang.Shared
 import spock.lang.Specification
 
 import grails.testing.mixin.integration.Integration
+import org.apache.grails.testing.httpclient.HttpClientSupport
 
 /**
  * Comprehensive integration tests for internationalization (i18n) features.
@@ -39,25 +38,14 @@ import grails.testing.mixin.integration.Integration
  * - Accept-Language header handling
  */
 @Integration
-class InternationalizationSpec extends Specification {
-
-    @Shared
-    HttpClient client
-
-    def setup() {
-        client = client ?: HttpClient.create(new URL("http://localhost:$serverPort"))
-    }
-
-    def cleanupSpec() {
-        client.close()
-    }
+class InternationalizationSpec extends Specification implements HttpClientSupport {
 
     // ========== Basic Message Resolution Tests ==========
 
     def "test simple message in English"() {
         when:
-        def response = client.toBlocking().exchange(
-            HttpRequest.GET('/i18nTest/getMessage?code=app.welcome&lang=en'),
+        def response = httpClient.exchange(
+            '/i18nTest/getMessage?code=app.welcome&lang=en',
             Map
         )
 
@@ -70,8 +58,8 @@ class InternationalizationSpec extends Specification {
 
     def "test simple message in German"() {
         when:
-        def response = client.toBlocking().exchange(
-            HttpRequest.GET('/i18nTest/getMessage?code=app.welcome&lang=de'),
+        def response = httpClient.exchange(
+            '/i18nTest/getMessage?code=app.welcome&lang=de',
             Map
         )
 
@@ -84,8 +72,8 @@ class InternationalizationSpec extends Specification {
 
     def "test simple message in French"() {
         when:
-        def response = client.toBlocking().exchange(
-            HttpRequest.GET('/i18nTest/getMessage?code=app.welcome&lang=fr'),
+        def response = httpClient.exchange(
+            '/i18nTest/getMessage?code=app.welcome&lang=fr',
             Map
         )
 
@@ -100,8 +88,8 @@ class InternationalizationSpec extends Specification {
 
     def "test message with argument in English"() {
         when:
-        def response = client.toBlocking().exchange(
-            HttpRequest.GET('/i18nTest/getMessageWithArgs?code=app.greeting&arg=John&lang=en'),
+        def response = httpClient.exchange(
+            '/i18nTest/getMessageWithArgs?code=app.greeting&arg=John&lang=en',
             Map
         )
 
@@ -112,8 +100,8 @@ class InternationalizationSpec extends Specification {
 
     def "test message with argument in German"() {
         when:
-        def response = client.toBlocking().exchange(
-            HttpRequest.GET('/i18nTest/getMessageWithArgs?code=app.greeting&arg=Johann&lang=de'),
+        def response = httpClient.exchange(
+            '/i18nTest/getMessageWithArgs?code=app.greeting&arg=Johann&lang=de',
             Map
         )
 
@@ -124,8 +112,8 @@ class InternationalizationSpec extends Specification {
 
     def "test farewell message with argument"() {
         when:
-        def response = client.toBlocking().exchange(
-            HttpRequest.GET('/i18nTest/getMessageWithArgs?code=app.farewell&arg=Alice&lang=en'),
+        def response = httpClient.exchange(
+            '/i18nTest/getMessageWithArgs?code=app.farewell&arg=Alice&lang=en',
             Map
         )
 
@@ -138,8 +126,8 @@ class InternationalizationSpec extends Specification {
 
     def "test choice format - zero items in English"() {
         when:
-        def response = client.toBlocking().exchange(
-            HttpRequest.GET('/i18nTest/getChoiceMessage?count=0&lang=en'),
+        def response = httpClient.exchange(
+            '/i18nTest/getChoiceMessage?count=0&lang=en',
             Map
         )
 
@@ -151,8 +139,8 @@ class InternationalizationSpec extends Specification {
 
     def "test choice format - one item in English"() {
         when:
-        def response = client.toBlocking().exchange(
-            HttpRequest.GET('/i18nTest/getChoiceMessage?count=1&lang=en'),
+        def response = httpClient.exchange(
+            '/i18nTest/getChoiceMessage?count=1&lang=en',
             Map
         )
 
@@ -164,8 +152,8 @@ class InternationalizationSpec extends Specification {
 
     def "test choice format - multiple items in English"() {
         when:
-        def response = client.toBlocking().exchange(
-            HttpRequest.GET('/i18nTest/getChoiceMessage?count=5&lang=en'),
+        def response = httpClient.exchange(
+            '/i18nTest/getChoiceMessage?count=5&lang=en',
             Map
         )
 
@@ -177,8 +165,8 @@ class InternationalizationSpec extends Specification {
 
     def "test choice format in German"() {
         when:
-        def response = client.toBlocking().exchange(
-            HttpRequest.GET('/i18nTest/getChoiceMessage?count=0&lang=de'),
+        def response = httpClient.exchange(
+            '/i18nTest/getChoiceMessage?count=0&lang=de',
             Map
         )
 
@@ -189,8 +177,8 @@ class InternationalizationSpec extends Specification {
 
     def "test choice format - one item in German"() {
         when:
-        def response = client.toBlocking().exchange(
-            HttpRequest.GET('/i18nTest/getChoiceMessage?count=1&lang=de'),
+        def response = httpClient.exchange(
+            '/i18nTest/getChoiceMessage?count=1&lang=de',
             Map
         )
 
@@ -203,8 +191,8 @@ class InternationalizationSpec extends Specification {
 
     def "test date formatting in English"() {
         when:
-        def response = client.toBlocking().exchange(
-            HttpRequest.GET('/i18nTest/getDateMessage?lang=en'),
+        def response = httpClient.exchange(
+            '/i18nTest/getDateMessage?lang=en',
             Map
         )
 
@@ -217,8 +205,8 @@ class InternationalizationSpec extends Specification {
 
     def "test date formatting in German"() {
         when:
-        def response = client.toBlocking().exchange(
-            HttpRequest.GET('/i18nTest/getDateMessage?lang=de'),
+        def response = httpClient.exchange(
+            '/i18nTest/getDateMessage?lang=de',
             Map
         )
 
@@ -232,8 +220,8 @@ class InternationalizationSpec extends Specification {
 
     def "test currency formatting in English US"() {
         when:
-        def response = client.toBlocking().exchange(
-            HttpRequest.GET('/i18nTest/getCurrencyMessage?amount=1234.56&lang=en_US'),
+        def response = httpClient.exchange(
+            '/i18nTest/getCurrencyMessage?amount=1234.56&lang=en_US',
             Map
         )
 
@@ -244,8 +232,8 @@ class InternationalizationSpec extends Specification {
 
     def "test currency formatting in German"() {
         when:
-        def response = client.toBlocking().exchange(
-            HttpRequest.GET('/i18nTest/getCurrencyMessage?amount=1234.56&lang=de_DE'),
+        def response = httpClient.exchange(
+            '/i18nTest/getCurrencyMessage?amount=1234.56&lang=de_DE',
             Map
         )
 
@@ -259,8 +247,8 @@ class InternationalizationSpec extends Specification {
 
     def "test percentage formatting in English"() {
         when:
-        def response = client.toBlocking().exchange(
-            HttpRequest.GET('/i18nTest/getPercentMessage?value=0.75&lang=en'),
+        def response = httpClient.exchange(
+            '/i18nTest/getPercentMessage?value=0.75&lang=en',
             Map
         )
 
@@ -274,8 +262,8 @@ class InternationalizationSpec extends Specification {
 
     def "test default message for non-existent code"() {
         when:
-        def response = client.toBlocking().exchange(
-            HttpRequest.GET('/i18nTest/getMessageWithDefault?code=non.existent.key&defaultMsg=Fallback+Message&lang=en'),
+        def response = httpClient.exchange(
+            '/i18nTest/getMessageWithDefault?code=non.existent.key&defaultMsg=Fallback+Message&lang=en',
             Map
         )
 
@@ -288,8 +276,8 @@ class InternationalizationSpec extends Specification {
 
     def "test validation messages in English"() {
         when:
-        def response = client.toBlocking().exchange(
-            HttpRequest.GET('/i18nTest/getValidationMessages?lang=en'),
+        def response = httpClient.exchange(
+            '/i18nTest/getValidationMessages?lang=en',
             Map
         )
 
@@ -303,8 +291,8 @@ class InternationalizationSpec extends Specification {
 
     def "test validation messages in German"() {
         when:
-        def response = client.toBlocking().exchange(
-            HttpRequest.GET('/i18nTest/getValidationMessages?lang=de'),
+        def response = httpClient.exchange(
+            '/i18nTest/getValidationMessages?lang=de',
             Map
         )
 
@@ -316,8 +304,8 @@ class InternationalizationSpec extends Specification {
 
     def "test validation messages in French"() {
         when:
-        def response = client.toBlocking().exchange(
-            HttpRequest.GET('/i18nTest/getValidationMessages?lang=fr'),
+        def response = httpClient.exchange(
+            '/i18nTest/getValidationMessages?lang=fr',
             Map
         )
 
@@ -331,8 +319,8 @@ class InternationalizationSpec extends Specification {
 
     def "test multiple messages at once in English"() {
         when:
-        def response = client.toBlocking().exchange(
-            HttpRequest.GET('/i18nTest/getMultipleMessages?lang=en'),
+        def response = httpClient.exchange(
+            '/i18nTest/getMultipleMessages?lang=en',
             Map
         )
 
@@ -345,8 +333,8 @@ class InternationalizationSpec extends Specification {
 
     def "test multiple messages at once in German"() {
         when:
-        def response = client.toBlocking().exchange(
-            HttpRequest.GET('/i18nTest/getMultipleMessages?lang=de'),
+        def response = httpClient.exchange(
+            '/i18nTest/getMultipleMessages?lang=de',
             Map
         )
 
@@ -361,8 +349,8 @@ class InternationalizationSpec extends Specification {
 
     def "test current locale information"() {
         when:
-        def response = client.toBlocking().exchange(
-            HttpRequest.GET('/i18nTest/getCurrentLocale?lang=de_DE'),
+        def response = httpClient.exchange(
+            '/i18nTest/getCurrentLocale?lang=de_DE',
             Map
         )
 
@@ -376,7 +364,7 @@ class InternationalizationSpec extends Specification {
 
     def "test locale from Accept-Language header - German"() {
         when:
-        def response = client.toBlocking().exchange(
+        def response = httpClient.exchange(
             HttpRequest.GET('/i18nTest/getLocaleFromHeader')
                 .header('Accept-Language', 'de-DE'),
             Map
@@ -390,7 +378,7 @@ class InternationalizationSpec extends Specification {
 
     def "test locale from Accept-Language header - French"() {
         when:
-        def response = client.toBlocking().exchange(
+        def response = httpClient.exchange(
             HttpRequest.GET('/i18nTest/getLocaleFromHeader')
                 .header('Accept-Language', 'fr-FR'),
             Map
@@ -405,8 +393,8 @@ class InternationalizationSpec extends Specification {
 
     def "test controller message method"() {
         when:
-        def response = client.toBlocking().exchange(
-            HttpRequest.GET('/i18nTest/useControllerMessage?code=app.welcome&lang=en'),
+        def response = httpClient.exchange(
+            '/i18nTest/useControllerMessage?code=app.welcome&lang=en',
             Map
         )
 
@@ -419,8 +407,8 @@ class InternationalizationSpec extends Specification {
 
     def "test fallback to default locale when unsupported locale requested"() {
         when: "requesting a locale that doesn't have translations"
-        def response = client.toBlocking().exchange(
-            HttpRequest.GET('/i18nTest/getMessage?code=app.welcome&lang=xyz'),
+        def response = httpClient.exchange(
+            '/i18nTest/getMessage?code=app.welcome&lang=xyz',
             Map
         )
 
@@ -432,8 +420,8 @@ class InternationalizationSpec extends Specification {
 
     def "test message with special characters"() {
         when:
-        def response = client.toBlocking().exchange(
-            HttpRequest.GET('/i18nTest/getMessageWithArgs?code=app.greeting&arg=%C3%A9l%C3%A8ve&lang=en'),
+        def response = httpClient.exchange(
+            '/i18nTest/getMessageWithArgs?code=app.greeting&arg=%C3%A9l%C3%A8ve&lang=en',
             Map
         )
 

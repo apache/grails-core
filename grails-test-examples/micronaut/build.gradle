@@ -56,11 +56,11 @@ dependencies {
     runtimeOnly 'com.h2database:h2'
     runtimeOnly 'org.apache.tomcat:tomcat-jdbc'
 
-    testImplementation "io.micronaut:micronaut-http-client:$micronautHttpClientVersion"
     testImplementation 'org.apache.grails:grails-dependencies-test'
 
     integrationTestImplementation testFixtures('org.apache.grails:grails-geb')
     integrationTestImplementation "io.github.cjstehno.ersatz:ersatz:$ersatzVersion"
+    integrationTestImplementation 'org.apache.grails:grails-testing-support-httpclient'
 }
 
 apply {

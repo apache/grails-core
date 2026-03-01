@@ -16,32 +16,23 @@
  *  specific language governing permissions and limitations
  *  under the License.
  */
-
 package functional.tests
 
-import grails.testing.mixin.integration.Integration
-import grails.testing.spock.RunOnce
-import grails.web.http.HttpHeaders
-import io.micronaut.http.HttpRequest
-import io.micronaut.http.HttpResponse
 import io.micronaut.http.HttpStatus
-import org.junit.jupiter.api.BeforeEach
+import spock.lang.Specification
 
-@Integration(applicationClass = Application)
-class ProxySpec extends HttpClientSpec {
+import grails.testing.mixin.integration.Integration
+import grails.web.http.HttpHeaders
+import org.apache.grails.testing.httpclient.HttpClientSupport
 
-    @RunOnce
-    @BeforeEach
-    void init() {
-        super.init()
-    }
+@Integration
+class ProxySpec extends Specification implements HttpClientSupport {
 
     void "Test template is found for proxy instance that is initialized"() {
         when:
-        HttpRequest request = HttpRequest.GET("/proxy")
-        HttpResponse<String> resp = client.toBlocking().exchange(request, String)
+        def resp = httpClient.exchange('/proxy', String)
 
-        then:"The response is correct"
+        then: "The response is correct"
         resp.status == HttpStatus.OK
         resp.headers.getFirst(HttpHeaders.CONTENT_TYPE).isPresent()
         resp.headers.getFirst(HttpHeaders.CONTENT_TYPE).get() == 'application/json;charset=UTF-8'

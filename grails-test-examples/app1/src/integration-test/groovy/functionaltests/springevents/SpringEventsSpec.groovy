@@ -20,16 +20,14 @@ package functionaltests.springevents
 
 import groovy.json.JsonSlurper
 
-import io.micronaut.http.HttpRequest
 import io.micronaut.http.HttpStatus
-import io.micronaut.http.client.HttpClient
 import spock.lang.Narrative
-import spock.lang.Shared
 import spock.lang.Specification
 
 import org.springframework.beans.factory.annotation.Autowired
 
 import grails.testing.mixin.integration.Integration
+import org.apache.grails.testing.httpclient.HttpClientSupport
 
 /**
  * Integration tests for Spring application events in Grails.
@@ -43,7 +41,7 @@ Spring's ApplicationEvent mechanism allows decoupled communication between
 components. Grails integrates with Spring events via @EventListener annotations
 and ApplicationEventPublisher.
 ''')
-class SpringEventsSpec extends Specification {
+class SpringEventsSpec extends Specification implements HttpClientSupport {
 
     @Autowired
     EventListenerService eventListenerService
@@ -51,16 +49,8 @@ class SpringEventsSpec extends Specification {
     @Autowired
     EventPublisherService eventPublisherService
 
-    @Shared
-    HttpClient client
-
     def setup() {
-        client = client ?: HttpClient.create(new URL("http://localhost:$serverPort"))
         eventListenerService.clearEvents()
-    }
-
-    def cleanupSpec() {
-        client.close()
     }
 
     // ========== Basic Event Publishing ==========
@@ -161,8 +151,8 @@ class SpringEventsSpec extends Specification {
 
     def "event can be published via HTTP endpoint"() {
         when: "calling publish endpoint"
-        def response = client.toBlocking().exchange(
-            HttpRequest.GET('/springEvent/publishCustom?message=HTTP+Event'),
+        def response = httpClient.exchange(
+            '/springEvent/publishCustom?message=HTTP+Event',
             String
         )
 
@@ -175,8 +165,8 @@ class SpringEventsSpec extends Specification {
 
     def "user action event can be published via HTTP"() {
         when: "calling user action publish endpoint"
-        def response = client.toBlocking().exchange(
-            HttpRequest.GET('/springEvent/publishUserAction?userId=web-user&userAction=CLICK'),
+        def response = httpClient.exchange(
+            '/springEvent/publishUserAction?userId=web-user&userAction=CLICK',
             String
         )
 
@@ -190,8 +180,8 @@ class SpringEventsSpec extends Specification {
 
     def "priority event ordering works via HTTP"() {
         when: "calling priority publish endpoint"
-        def response = client.toBlocking().exchange(
-            HttpRequest.GET('/springEvent/publishPriority?data=http-test'),
+        def response = httpClient.exchange(
+            '/springEvent/publishPriority?data=http-test',
             String
         )
 
@@ -204,8 +194,8 @@ class SpringEventsSpec extends Specification {
 
     def "multiple events can be published via HTTP"() {
         when: "calling multiple publish endpoint"
-        def response = client.toBlocking().exchange(
-            HttpRequest.GET('/springEvent/publishMultiple?count=3'),
+        def response = httpClient.exchange(
+            '/springEvent/publishMultiple?count=3',
             String
         )
 
@@ -218,8 +208,8 @@ class SpringEventsSpec extends Specification {
 
     def "conditional event works via HTTP for matching message"() {
         when: "publishing important message"
-        def response = client.toBlocking().exchange(
-            HttpRequest.GET('/springEvent/publishConditional?important=true'),
+        def response = httpClient.exchange(
+            '/springEvent/publishConditional?important=true',
             String
         )
 
@@ -231,8 +221,8 @@ class SpringEventsSpec extends Specification {
 
     def "conditional event skipped via HTTP for non-matching message"() {
         when: "publishing normal message"
-        def response = client.toBlocking().exchange(
-            HttpRequest.GET('/springEvent/publishConditional?important=false'),
+        def response = httpClient.exchange(
+            '/springEvent/publishConditional?important=false',
             String
         )
 
@@ -251,8 +241,8 @@ class SpringEventsSpec extends Specification {
         eventPublisherService.publishUserAction('user', 'action')
 
         when: "getting stats"
-        def response = client.toBlocking().exchange(
-            HttpRequest.GET('/springEvent/stats'),
+        def response = httpClient.exchange(
+            '/springEvent/stats',
             String
         )
 
@@ -271,8 +261,8 @@ class SpringEventsSpec extends Specification {
         eventPublisherService.publishCustomEvent('To be cleared')
 
         when: "clearing events"
-        def response = client.toBlocking().exchange(
-            HttpRequest.GET('/springEvent/clearEvents'),
+        def response = httpClient.exchange(
+            '/springEvent/clearEvents',
             String
         )
 
@@ -285,8 +275,8 @@ class SpringEventsSpec extends Specification {
 
     def "event can be published in transactional context"() {
         when: "publishing transactional event"
-        def response = client.toBlocking().exchange(
-            HttpRequest.GET('/springEvent/publishTransactional?message=tx-test'),
+        def response = httpClient.exchange(
+            '/springEvent/publishTransactional?message=tx-test',
             String
         )
 

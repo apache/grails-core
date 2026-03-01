@@ -19,37 +19,25 @@
 package functionaltests.taglib
 
 import io.micronaut.http.HttpRequest
-import io.micronaut.http.client.HttpClient
-import spock.lang.Shared
 import spock.lang.Specification
 import spock.lang.Unroll
 
 import grails.testing.mixin.integration.Integration
+import org.apache.grails.testing.httpclient.HttpClientSupport
 
 /**
  * Integration tests for GSP Tag Libraries.
  * Tests both custom tag libraries and built-in Grails tags.
  */
 @Integration
-class TagLibSpec extends Specification {
-
-    @Shared
-    HttpClient client
-
-    def setup() {
-        client = client ?: HttpClient.create(new URL("http://localhost:$serverPort"))
-    }
-
-    def cleanupSpec() {
-        client.close()
-    }
+class TagLibSpec extends Specification implements HttpClientSupport {
 
     // ========== Custom Tag: hello ==========
 
     def "custom:hello tag renders greeting with name attribute"() {
         when: "calling the hello tag test endpoint"
-        def response = client.toBlocking().exchange(
-            HttpRequest.GET('/tagLibTest/testHelloTag?name=Grails'),
+        def response = httpClient.exchange(
+            '/tagLibTest/testHelloTag?name=Grails',
             String
         )
 
@@ -60,8 +48,8 @@ class TagLibSpec extends Specification {
 
     def "custom:hello tag uses default name when not provided"() {
         when: "calling the hello tag test endpoint"
-        def response = client.toBlocking().exchange(
-            HttpRequest.GET('/tagLibTest/testHelloTag'),
+        def response = httpClient.exchange(
+            '/tagLibTest/testHelloTag',
             String
         )
 
@@ -74,8 +62,8 @@ class TagLibSpec extends Specification {
 
     def "custom:wrapper tag renders title and body content"() {
         when: "calling the wrapper tag test endpoint"
-        def response = client.toBlocking().exchange(
-            HttpRequest.GET('/tagLibTest/testWrapperTag?title=My%20Section&content=Section%20content'),
+        def response = httpClient.exchange(
+            '/tagLibTest/testWrapperTag?title=My%20Section&content=Section%20content',
             String
         )
 
@@ -89,8 +77,8 @@ class TagLibSpec extends Specification {
 
     def "custom:wrapper tag applies custom CSS class"() {
         when: "calling the wrapper tag test endpoint"
-        def response = client.toBlocking().exchange(
-            HttpRequest.GET('/tagLibTest/testWrapperTag?title=Test&content=Test&cssClass=custom-wrapper'),
+        def response = httpClient.exchange(
+            '/tagLibTest/testWrapperTag?title=Test&content=Test&cssClass=custom-wrapper',
             String
         )
 
@@ -103,8 +91,8 @@ class TagLibSpec extends Specification {
 
     def "custom:iterate tag iterates over items"() {
         when: "calling the iterate tag test endpoint"
-        def response = client.toBlocking().exchange(
-            HttpRequest.GET('/tagLibTest/testIterateTag?items=A,B,C'),
+        def response = httpClient.exchange(
+            '/tagLibTest/testIterateTag?items=A,B,C',
             String
         )
 
@@ -118,8 +106,8 @@ class TagLibSpec extends Specification {
 
     def "custom:iterate tag uses separator between items"() {
         when: "calling the iterate tag test endpoint"
-        def response = client.toBlocking().exchange(
-            HttpRequest.GET('/tagLibTest/testIterateTag?items=X,Y,Z&separator=-'),
+        def response = httpClient.exchange(
+            '/tagLibTest/testIterateTag?items=X,Y,Z&separator=-',
             String
         )
 
@@ -133,8 +121,8 @@ class TagLibSpec extends Specification {
 
     def "custom:showIf tag shows content when condition is true"() {
         when: "calling the conditional tags test endpoint"
-        def response = client.toBlocking().exchange(
-            HttpRequest.GET('/tagLibTest/testConditionalTags?condition=true'),
+        def response = httpClient.exchange(
+            '/tagLibTest/testConditionalTags?condition=true',
             String
         )
 
@@ -147,8 +135,8 @@ class TagLibSpec extends Specification {
 
     def "custom:hideIf tag shows content when condition is false"() {
         when: "calling the conditional tags test endpoint"
-        def response = client.toBlocking().exchange(
-            HttpRequest.GET('/tagLibTest/testConditionalTags?condition=false'),
+        def response = httpClient.exchange(
+            '/tagLibTest/testConditionalTags?condition=false',
             String
         )
 
@@ -164,8 +152,8 @@ class TagLibSpec extends Specification {
     @Unroll
     def "custom:formatted tag formats value as #format"() {
         when: "calling the formatted tag test endpoint"
-        def response = client.toBlocking().exchange(
-            HttpRequest.GET("/tagLibTest/testFormattedTag?value=${value}&format=${format}&decimals=${decimals}"),
+        def response = httpClient.exchange(
+            "/tagLibTest/testFormattedTag?value=${value}&format=${format}&decimals=${decimals}",
             String
         )
 
@@ -184,8 +172,8 @@ class TagLibSpec extends Specification {
 
     def "custom:list tag renders unordered list by default"() {
         when: "calling the list tag test endpoint"
-        def response = client.toBlocking().exchange(
-            HttpRequest.GET('/tagLibTest/testListTag?items=Apple,Banana,Cherry'),
+        def response = httpClient.exchange(
+            '/tagLibTest/testListTag?items=Apple,Banana,Cherry',
             String
         )
 
@@ -201,8 +189,8 @@ class TagLibSpec extends Specification {
 
     def "custom:list tag renders ordered list when type is ordered"() {
         when: "calling the list tag test endpoint"
-        def response = client.toBlocking().exchange(
-            HttpRequest.GET('/tagLibTest/testListTag?items=First,Second,Third&type=ordered'),
+        def response = httpClient.exchange(
+            '/tagLibTest/testListTag?items=First,Second,Third&type=ordered',
             String
         )
 
@@ -217,8 +205,8 @@ class TagLibSpec extends Specification {
 
     def "custom:panel tag renders panel with title and body"() {
         when: "calling the panel tag test endpoint"
-        def response = client.toBlocking().exchange(
-            HttpRequest.GET('/tagLibTest/testPanelTag?title=Info%20Panel&type=info&content=Panel%20content'),
+        def response = httpClient.exchange(
+            '/tagLibTest/testPanelTag?title=Info%20Panel&type=info&content=Panel%20content',
             String
         )
 
@@ -234,8 +222,8 @@ class TagLibSpec extends Specification {
 
     def "custom:panel tag renders collapse button when collapsible"() {
         when: "calling the panel tag test endpoint"
-        def response = client.toBlocking().exchange(
-            HttpRequest.GET('/tagLibTest/testPanelTag?title=Collapsible&collapsible=true'),
+        def response = httpClient.exchange(
+            '/tagLibTest/testPanelTag?title=Collapsible&collapsible=true',
             String
         )
 
@@ -249,8 +237,8 @@ class TagLibSpec extends Specification {
     @Unroll
     def "custom:badge tag renders badge with type=#type and size=#size"() {
         when: "calling the badge tag test endpoint"
-        def response = client.toBlocking().exchange(
-            HttpRequest.GET("/tagLibTest/testBadgeTag?type=${type}&size=${size}&content=${content}"),
+        def response = httpClient.exchange(
+            "/tagLibTest/testBadgeTag?type=${type}&size=${size}&content=${content}",
             String
         )
 
@@ -272,8 +260,8 @@ class TagLibSpec extends Specification {
 
     def "custom:progress tag renders progress bar with percentage"() {
         when: "calling the progress tag test endpoint"
-        def response = client.toBlocking().exchange(
-            HttpRequest.GET('/tagLibTest/testProgressTag?value=75&max=100'),
+        def response = httpClient.exchange(
+            '/tagLibTest/testProgressTag?value=75&max=100',
             String
         )
 
@@ -288,8 +276,8 @@ class TagLibSpec extends Specification {
 
     def "custom:progress tag hides label when showLabel is false"() {
         when: "calling the progress tag test endpoint"
-        def response = client.toBlocking().exchange(
-            HttpRequest.GET('/tagLibTest/testProgressTag?value=50&max=100&showLabel=false'),
+        def response = httpClient.exchange(
+            '/tagLibTest/testProgressTag?value=50&max=100&showLabel=false',
             String
         )
 
@@ -304,8 +292,8 @@ class TagLibSpec extends Specification {
 
     def "custom:repeat tag repeats body content specified times"() {
         when: "calling the repeat tag test endpoint"
-        def response = client.toBlocking().exchange(
-            HttpRequest.GET('/tagLibTest/testRepeatTag?times=3'),
+        def response = httpClient.exchange(
+            '/tagLibTest/testRepeatTag?times=3',
             String
         )
 
@@ -319,8 +307,8 @@ class TagLibSpec extends Specification {
 
     def "custom:repeat tag uses separator between repetitions"() {
         when: "calling the repeat tag test endpoint"
-        def response = client.toBlocking().exchange(
-            HttpRequest.GET('/tagLibTest/testRepeatTag?times=2&separator=%20-%20'),
+        def response = httpClient.exchange(
+            '/tagLibTest/testRepeatTag?times=2&separator=%20-%20',
             String
         )
 
@@ -333,8 +321,8 @@ class TagLibSpec extends Specification {
 
     def "custom:raw tag outputs unescaped HTML content"() {
         when: "calling the raw tag test endpoint"
-        def response = client.toBlocking().exchange(
-            HttpRequest.GET('/tagLibTest/testRawTag'),
+        def response = httpClient.exchange(
+            '/tagLibTest/testRawTag',
             String
         )
 
@@ -347,8 +335,8 @@ class TagLibSpec extends Specification {
 
     def "custom:definitionList tag renders definition list from map"() {
         when: "calling the definition list tag test endpoint"
-        def response = client.toBlocking().exchange(
-            HttpRequest.GET('/tagLibTest/testDefinitionListTag'),
+        def response = httpClient.exchange(
+            '/tagLibTest/testDefinitionListTag',
             String
         )
 
@@ -367,8 +355,8 @@ class TagLibSpec extends Specification {
 
     def "custom:requestInfo tag retrieves request attributes"() {
         when: "calling the request info tag test endpoint"
-        def response = client.toBlocking().exchange(
-            HttpRequest.GET('/tagLibTest/testRequestInfoTag?attr=method'),
+        def response = httpClient.exchange(
+            '/tagLibTest/testRequestInfoTag?attr=method',
             String
         )
 
@@ -381,8 +369,8 @@ class TagLibSpec extends Specification {
 
     def "custom:sessionValue tag displays default when session value not set"() {
         when: "calling the session value tag test endpoint"
-        def response = client.toBlocking().exchange(
-            HttpRequest.GET('/tagLibTest/testSessionValueTag?key=nonexistent&default=DefaultUser'),
+        def response = httpClient.exchange(
+            '/tagLibTest/testSessionValueTag?key=nonexistent&default=DefaultUser',
             String
         )
 
@@ -395,8 +383,8 @@ class TagLibSpec extends Specification {
 
     def "custom:setVar tag sets pageScope variable"() {
         when: "calling the setVar tag test endpoint"
-        def response = client.toBlocking().exchange(
-            HttpRequest.GET('/tagLibTest/testSetVarTag?varName=testVar&varValue=TestValue'),
+        def response = httpClient.exchange(
+            '/tagLibTest/testSetVarTag?varName=testVar&varValue=TestValue',
             String
         )
 
@@ -410,8 +398,8 @@ class TagLibSpec extends Specification {
     @Unroll
     def "custom:alert tag renders #type alert"() {
         when: "calling the alert tag test endpoint"
-        def response = client.toBlocking().exchange(
-            HttpRequest.GET("/tagLibTest/testAlertTag?type=${type}&message=${URLEncoder.encode(message, 'UTF-8')}"),
+        def response = httpClient.exchange(
+            "/tagLibTest/testAlertTag?type=${type}&message=${URLEncoder.encode(message, 'UTF-8')}",
             String
         )
 
@@ -431,8 +419,8 @@ class TagLibSpec extends Specification {
 
     def "custom:alert tag renders dismissible button when dismissible=true"() {
         when: "calling the alert tag test endpoint"
-        def response = client.toBlocking().exchange(
-            HttpRequest.GET('/tagLibTest/testAlertTag?type=info&dismissible=true'),
+        def response = httpClient.exchange(
+            '/tagLibTest/testAlertTag?type=info&dismissible=true',
             String
         )
 
@@ -447,8 +435,8 @@ class TagLibSpec extends Specification {
 
     def "custom:join tag joins items with separator"() {
         when: "calling the join tag test endpoint"
-        def response = client.toBlocking().exchange(
-            HttpRequest.GET('/tagLibTest/testJoinTag?items=red,green,blue&separator=-'),
+        def response = httpClient.exchange(
+            '/tagLibTest/testJoinTag?items=red,green,blue&separator=-',
             String
         )
 
@@ -461,8 +449,8 @@ class TagLibSpec extends Specification {
 
     def "custom:cssClass tag builds class string from boolean attributes"() {
         when: "calling the cssClass tag test endpoint"
-        def response = client.toBlocking().exchange(
-            HttpRequest.GET('/tagLibTest/testCssClassTag?base=btn&active=true&disabled=false&highlighted=true'),
+        def response = httpClient.exchange(
+            '/tagLibTest/testCssClassTag?base=btn&active=true&disabled=false&highlighted=true',
             String
         )
 
@@ -479,8 +467,8 @@ class TagLibSpec extends Specification {
 
     def "g:if tag shows content when condition is true"() {
         when: "calling the built-in if test endpoint"
-        def response = client.toBlocking().exchange(
-            HttpRequest.GET('/tagLibTest/testBuiltInIf?value=10'),
+        def response = httpClient.exchange(
+            '/tagLibTest/testBuiltInIf?value=10',
             String
         )
 
@@ -493,8 +481,8 @@ class TagLibSpec extends Specification {
 
     def "g:elseif and g:else work correctly"() {
         when: "calling the built-in if test endpoint"
-        def response = client.toBlocking().exchange(
-            HttpRequest.GET('/tagLibTest/testBuiltInIf?value=30'),
+        def response = httpClient.exchange(
+            '/tagLibTest/testBuiltInIf?value=30',
             String
         )
 
@@ -507,8 +495,8 @@ class TagLibSpec extends Specification {
 
     def "g:each tag iterates over collection"() {
         when: "calling the built-in each test endpoint"
-        def response = client.toBlocking().exchange(
-            HttpRequest.GET('/tagLibTest/testBuiltInEach?items=A,B,C'),
+        def response = httpClient.exchange(
+            '/tagLibTest/testBuiltInEach?items=A,B,C',
             String
         )
 
@@ -522,8 +510,8 @@ class TagLibSpec extends Specification {
 
     def "g:each tag provides status variable"() {
         when: "calling the built-in each test endpoint"
-        def response = client.toBlocking().exchange(
-            HttpRequest.GET('/tagLibTest/testBuiltInEach?items=X,Y,Z'),
+        def response = httpClient.exchange(
+            '/tagLibTest/testBuiltInEach?items=X,Y,Z',
             String
         )
 
@@ -539,8 +527,8 @@ class TagLibSpec extends Specification {
 
     def "g:collect tag transforms items"() {
         when: "calling the built-in collect test endpoint"
-        def response = client.toBlocking().exchange(
-            HttpRequest.GET('/tagLibTest/testBuiltInCollect?items=apple,banana'),
+        def response = httpClient.exchange(
+            '/tagLibTest/testBuiltInCollect?items=apple,banana',
             String
         )
 
@@ -555,8 +543,8 @@ class TagLibSpec extends Specification {
 
     def "g:findAll tag filters items"() {
         when: "calling the built-in findAll test endpoint"
-        def response = client.toBlocking().exchange(
-            HttpRequest.GET('/tagLibTest/testBuiltInFindAll?threshold=7'),
+        def response = httpClient.exchange(
+            '/tagLibTest/testBuiltInFindAll?threshold=7',
             String
         )
 
@@ -573,8 +561,8 @@ class TagLibSpec extends Specification {
 
     def "g:link tag creates link with controller and action"() {
         when: "calling the built-in link test endpoint"
-        def response = client.toBlocking().exchange(
-            HttpRequest.GET('/tagLibTest/testBuiltInLink?targetController=book&targetAction=show&targetId=42&linkText=View'),
+        def response = httpClient.exchange(
+            '/tagLibTest/testBuiltInLink?targetController=book&targetAction=show&targetId=42&linkText=View',
             String
         )
 
@@ -590,8 +578,8 @@ class TagLibSpec extends Specification {
 
     def "g:createLink tag creates URL string"() {
         when: "calling the built-in createLink test endpoint"
-        def response = client.toBlocking().exchange(
-            HttpRequest.GET('/tagLibTest/testBuiltInCreateLink?targetController=book&targetAction=list'),
+        def response = httpClient.exchange(
+            '/tagLibTest/testBuiltInCreateLink?targetController=book&targetAction=list',
             String
         )
 
@@ -604,8 +592,8 @@ class TagLibSpec extends Specification {
 
     def "g:form tag creates form with action"() {
         when: "calling the built-in form test endpoint"
-        def response = client.toBlocking().exchange(
-            HttpRequest.GET('/tagLibTest/testBuiltInForm?targetController=book&targetAction=save'),
+        def response = httpClient.exchange(
+            '/tagLibTest/testBuiltInForm?targetController=book&targetAction=save',
             String
         )
 
@@ -622,8 +610,8 @@ class TagLibSpec extends Specification {
 
     def "g:message tag renders message with default"() {
         when: "calling the built-in message test endpoint"
-        def response = client.toBlocking().exchange(
-            HttpRequest.GET('/tagLibTest/testBuiltInMessage?code=nonexistent.key&default=Default%20Message'),
+        def response = httpClient.exchange(
+            '/tagLibTest/testBuiltInMessage?code=nonexistent.key&default=Default%20Message',
             String
         )
 
@@ -636,8 +624,8 @@ class TagLibSpec extends Specification {
 
     def "g:formatDate tag formats date"() {
         when: "calling the built-in formatDate test endpoint"
-        def response = client.toBlocking().exchange(
-            HttpRequest.GET('/tagLibTest/testBuiltInFormatDate'),
+        def response = httpClient.exchange(
+            '/tagLibTest/testBuiltInFormatDate',
             String
         )
 
@@ -651,8 +639,8 @@ class TagLibSpec extends Specification {
 
     def "g:formatNumber tag formats number"() {
         when: "calling the built-in formatNumber test endpoint"
-        def response = client.toBlocking().exchange(
-            HttpRequest.GET('/tagLibTest/testBuiltInFormatNumber?number=1234567.89'),
+        def response = httpClient.exchange(
+            '/tagLibTest/testBuiltInFormatNumber?number=1234567.89',
             String
         )
 
@@ -666,8 +654,8 @@ class TagLibSpec extends Specification {
 
     def "g:set tag sets and updates variables"() {
         when: "calling the built-in set test endpoint"
-        def response = client.toBlocking().exchange(
-            HttpRequest.GET('/tagLibTest/testBuiltInSet?initialValue=First&newValue=Second'),
+        def response = httpClient.exchange(
+            '/tagLibTest/testBuiltInSet?initialValue=First&newValue=Second',
             String
         )
 
@@ -682,8 +670,8 @@ class TagLibSpec extends Specification {
 
     def "g:join tag joins items with delimiter"() {
         when: "calling the built-in join test endpoint"
-        def response = client.toBlocking().exchange(
-            HttpRequest.GET('/tagLibTest/testBuiltInJoin?items=red,green,blue&delimiter=%20-%20'),
+        def response = httpClient.exchange(
+            '/tagLibTest/testBuiltInJoin?items=red,green,blue&delimiter=%20-%20',
             String
         )
 
@@ -696,8 +684,8 @@ class TagLibSpec extends Specification {
 
     def "g:include tag includes content from another action"() {
         when: "calling the built-in include test endpoint"
-        def response = client.toBlocking().exchange(
-            HttpRequest.GET('/tagLibTest/testBuiltInInclude?message=Test%20Message'),
+        def response = httpClient.exchange(
+            '/tagLibTest/testBuiltInInclude?message=Test%20Message',
             String
         )
 
@@ -710,8 +698,8 @@ class TagLibSpec extends Specification {
 
     def "g:render tag renders template with model"() {
         when: "calling the built-in render test endpoint"
-        def response = client.toBlocking().exchange(
-            HttpRequest.GET('/tagLibTest/testBuiltInRender?text=Hello%20Template'),
+        def response = httpClient.exchange(
+            '/tagLibTest/testBuiltInRender?text=Hello%20Template',
             String
         )
 
@@ -724,8 +712,8 @@ class TagLibSpec extends Specification {
 
     def "g:while tag loops while condition is true"() {
         when: "calling the built-in while test endpoint"
-        def response = client.toBlocking().exchange(
-            HttpRequest.GET('/tagLibTest/testBuiltInWhile?count=3'),
+        def response = httpClient.exchange(
+            '/tagLibTest/testBuiltInWhile?count=3',
             String
         )
 
@@ -742,8 +730,8 @@ class TagLibSpec extends Specification {
 
     def "g:uploadForm tag creates multipart form"() {
         when: "calling the built-in uploadForm test endpoint"
-        def response = client.toBlocking().exchange(
-            HttpRequest.GET('/tagLibTest/testBuiltInUploadForm'),
+        def response = httpClient.exchange(
+            '/tagLibTest/testBuiltInUploadForm',
             String
         )
 
@@ -758,8 +746,8 @@ class TagLibSpec extends Specification {
 
     def "g:select tag creates select element with options"() {
         when: "calling the built-in select test endpoint"
-        def response = client.toBlocking().exchange(
-            HttpRequest.GET('/tagLibTest/testBuiltInSelect?selected=2'),
+        def response = httpClient.exchange(
+            '/tagLibTest/testBuiltInSelect?selected=2',
             String
         )
 
@@ -775,8 +763,8 @@ class TagLibSpec extends Specification {
 
     def "g:radio tag creates radio buttons"() {
         when: "calling the built-in radio test endpoint"
-        def response = client.toBlocking().exchange(
-            HttpRequest.GET('/tagLibTest/testBuiltInRadio?selected=Option%20B'),
+        def response = httpClient.exchange(
+            '/tagLibTest/testBuiltInRadio?selected=Option%20B',
             String
         )
 
@@ -791,8 +779,8 @@ class TagLibSpec extends Specification {
 
     def "g:checkBox tag creates checkbox"() {
         when: "calling the built-in checkbox test endpoint"
-        def response = client.toBlocking().exchange(
-            HttpRequest.GET('/tagLibTest/testBuiltInCheckBox?checked=true'),
+        def response = httpClient.exchange(
+            '/tagLibTest/testBuiltInCheckBox?checked=true',
             String
         )
 
@@ -807,8 +795,8 @@ class TagLibSpec extends Specification {
 
     def "g:textArea tag creates textarea"() {
         when: "calling the built-in textarea test endpoint"
-        def response = client.toBlocking().exchange(
-            HttpRequest.GET('/tagLibTest/testBuiltInTextArea?value=Test%20Content&rows=5&cols=40'),
+        def response = httpClient.exchange(
+            '/tagLibTest/testBuiltInTextArea?value=Test%20Content&rows=5&cols=40',
             String
         )
 
@@ -825,8 +813,8 @@ class TagLibSpec extends Specification {
 
     def "g:textField tag creates text input"() {
         when: "calling the built-in textField test endpoint"
-        def response = client.toBlocking().exchange(
-            HttpRequest.GET('/tagLibTest/testBuiltInTextField?value=Test%20Value&maxlength=50'),
+        def response = httpClient.exchange(
+            '/tagLibTest/testBuiltInTextField?value=Test%20Value&maxlength=50',
             String
         )
 
@@ -842,8 +830,8 @@ class TagLibSpec extends Specification {
 
     def "g:passwordField tag creates password input"() {
         when: "calling the built-in passwordField test endpoint"
-        def response = client.toBlocking().exchange(
-            HttpRequest.GET('/tagLibTest/testBuiltInPasswordField'),
+        def response = httpClient.exchange(
+            '/tagLibTest/testBuiltInPasswordField',
             String
         )
 
@@ -856,8 +844,8 @@ class TagLibSpec extends Specification {
 
     def "g:hiddenField tag creates hidden input"() {
         when: "calling the built-in hiddenField test endpoint"
-        def response = client.toBlocking().exchange(
-            HttpRequest.GET('/tagLibTest/testBuiltInHiddenField?value=secret-value'),
+        def response = httpClient.exchange(
+            '/tagLibTest/testBuiltInHiddenField?value=secret-value',
             String
         )
 
@@ -872,8 +860,8 @@ class TagLibSpec extends Specification {
 
     def "g:fieldValue tag extracts bean field value"() {
         when: "calling the built-in fieldValue test endpoint"
-        def response = client.toBlocking().exchange(
-            HttpRequest.GET('/tagLibTest/testBuiltInFieldValue?field=title'),
+        def response = httpClient.exchange(
+            '/tagLibTest/testBuiltInFieldValue?field=title',
             String
         )
 
@@ -886,8 +874,8 @@ class TagLibSpec extends Specification {
 
     def "g:sortableColumn tag creates sortable table header"() {
         when: "calling the built-in sortableColumn test endpoint"
-        def response = client.toBlocking().exchange(
-            HttpRequest.GET('/tagLibTest/testBuiltInSortableColumn'),
+        def response = httpClient.exchange(
+            '/tagLibTest/testBuiltInSortableColumn',
             String
         )
 
@@ -903,8 +891,8 @@ class TagLibSpec extends Specification {
 
     def "g:paginate tag creates pagination links"() {
         when: "calling the built-in paginate test endpoint"
-        def response = client.toBlocking().exchange(
-            HttpRequest.GET('/tagLibTest/testBuiltInPaginate?total=100&max=10&offset=0'),
+        def response = httpClient.exchange(
+            '/tagLibTest/testBuiltInPaginate?total=100&max=10&offset=0',
             String
         )
 
@@ -919,8 +907,8 @@ class TagLibSpec extends Specification {
 
     def "nested custom tags render correctly"() {
         when: "calling the nested tags test endpoint"
-        def response = client.toBlocking().exchange(
-            HttpRequest.GET('/tagLibTest/testNestedTags'),
+        def response = httpClient.exchange(
+            '/tagLibTest/testNestedTags',
             String
         )
 
@@ -933,8 +921,8 @@ class TagLibSpec extends Specification {
 
     def "tags work with complex model data"() {
         when: "calling the tags with model test endpoint"
-        def response = client.toBlocking().exchange(
-            HttpRequest.GET('/tagLibTest/testTagsWithModel'),
+        def response = httpClient.exchange(
+            '/tagLibTest/testTagsWithModel',
             String
         )
 
@@ -952,8 +940,8 @@ class TagLibSpec extends Specification {
 
     def "encoding tags properly escape content"() {
         when: "calling the encoding tags test endpoint"
-        def response = client.toBlocking().exchange(
-            HttpRequest.GET('/tagLibTest/testEncodingTags'),
+        def response = httpClient.exchange(
+            '/tagLibTest/testEncodingTags',
             String
         )
 

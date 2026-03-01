@@ -20,54 +20,41 @@
 package functional.tests.api
 
 import com.fasterxml.jackson.databind.ObjectMapper
-import functional.tests.Application
-import functional.tests.HttpClientSpec
-import grails.testing.mixin.integration.Integration
-import grails.testing.spock.RunOnce
-import grails.web.http.HttpHeaders
 import io.micronaut.http.HttpRequest
-import io.micronaut.http.HttpResponse
 import io.micronaut.http.HttpStatus
 import io.micronaut.http.MediaType
-import org.junit.jupiter.api.BeforeEach
 import spock.lang.Issue
-import spock.lang.Shared
+import spock.lang.Specification
 
-@Integration(applicationClass = Application)
-class NamespacedBookSpec extends HttpClientSpec {
+import org.springframework.beans.factory.annotation.Autowired
 
-    @Shared
+import grails.testing.mixin.integration.Integration
+import grails.web.http.HttpHeaders
+import org.apache.grails.testing.httpclient.HttpClientSupport
+
+@Integration
+class NamespacedBookSpec extends Specification implements HttpClientSupport {
+
+    @Autowired
     ObjectMapper objectMapper
-
-    def setup() {
-        objectMapper = new ObjectMapper()
-    }
-
-    @RunOnce
-    @BeforeEach
-    void init() {
-        super.init()
-    }
 
     void 'test view rendering with a namespace'() {
         when: 'A request is sent to a controller with a namespace'
-        HttpRequest request = HttpRequest.GET('/api/book')
-        HttpResponse<Map> rsp = client.toBlocking().exchange(request, Map)
+        def rsp = httpClient.exchange('/api/book', Map)
 
         then: 'The rsponse is correct'
-            rsp.status() == HttpStatus.OK
-            rsp.headers.getFirst(HttpHeaders.CONTENT_TYPE).isPresent()
-            rsp.headers.getFirst(HttpHeaders.CONTENT_TYPE).get() == 'application/json;charset=UTF-8'
-            rsp.body().api == 'version 1.0 (Namespaced)'
-            rsp.body().title == 'API - The Shining'
+        rsp.status() == HttpStatus.OK
+        rsp.headers.getFirst(HttpHeaders.CONTENT_TYPE).isPresent()
+        rsp.headers.getFirst(HttpHeaders.CONTENT_TYPE).get() == 'application/json;charset=UTF-8'
+        rsp.body().api == 'version 1.0 (Namespaced)'
+        rsp.body().title == 'API - The Shining'
     }
 
     void 'test nested template rendering with a namespace'() {
         when: 'A request is sent to a controller with a namespace'
-        HttpRequest request = HttpRequest.GET('/api/book/nested')
-        HttpResponse<Map> rsp = client.toBlocking().exchange(request, Map)
+        def rsp = httpClient.exchange('/api/book/nested', Map)
 
-        then: 'The rsponse contains the child template'
+        then: 'The response contains the child template'
         rsp.status() == HttpStatus.OK
         rsp.headers.getFirst(HttpHeaders.CONTENT_TYPE).isPresent()
         rsp.headers.getFirst(HttpHeaders.CONTENT_TYPE).get() == 'application/json;charset=UTF-8'
@@ -76,8 +63,7 @@ class NamespacedBookSpec extends HttpClientSpec {
 
     void 'test the correct content type is chosen (json)'() {
         when: 'A request is sent to a controller with a namespace'
-        HttpRequest request = HttpRequest.GET('/api/book')
-        HttpResponse<Map> rsp = client.toBlocking().exchange(request, Map)
+        def rsp = httpClient.exchange('/api/book', Map)
 
         then: 'The response contains the child template'
         rsp.status() == HttpStatus.OK
@@ -90,9 +76,11 @@ class NamespacedBookSpec extends HttpClientSpec {
 
     void 'test the correct content type is chosen (hal)'() {
         when: 'A request is sent to a controller with a namespace'
-        HttpRequest request = HttpRequest.GET('/api/book').accept(MediaType.APPLICATION_HAL_JSON_TYPE)
-        HttpResponse<String> rsp = client.toBlocking().exchange(request, String)
-        Map body = objectMapper.readValue(rsp.body(), Map)
+        def rsp = httpClient.exchange(
+                HttpRequest.GET('/api/book').accept(MediaType.APPLICATION_HAL_JSON_TYPE),
+                String
+        )
+        def body = objectMapper.readValue(rsp.body(), Map)
 
         then: 'The response contains the child template'
         rsp.status() == HttpStatus.OK
@@ -105,8 +93,7 @@ class NamespacedBookSpec extends HttpClientSpec {
 
     void 'test render(view: "..", model: ..) in controllers with namespaces works'() {
         when: 'A request is sent to a controller with a namespace'
-        HttpRequest request = HttpRequest.GET('/api/book/testRender')
-        HttpResponse<Map> rsp = client.toBlocking().exchange(request, Map)
+        def rsp = httpClient.exchange('/api/book/testRender', Map)
 
         then: 'The rsponse is correct'
         rsp.status() == HttpStatus.OK
@@ -118,8 +105,7 @@ class NamespacedBookSpec extends HttpClientSpec {
 
     void 'test rspond(foo, view: ..) in controllers with namespaces works'() {
         when: 'A request is sent to a controller with a namespace'
-        HttpRequest request = HttpRequest.GET('/api/book/testRespond')
-        HttpResponse<Map> rsp = client.toBlocking().exchange(request, Map)
+        def rsp = httpClient.exchange('/api/book/testRespond', Map)
 
         then: 'The response is correct'
         rsp.status() == HttpStatus.OK
@@ -131,8 +117,7 @@ class NamespacedBookSpec extends HttpClientSpec {
 
     void 'test respond(foo, view: ..) in controllers with namespaces works, view outside of namespace'() {
         when: 'A request is sent to a controller with a namespace'
-        HttpRequest request = HttpRequest.GET('/api/book/testRespondOutsideNamespace')
-        HttpResponse<Map> rsp = client.toBlocking().exchange(request, Map)
+        def rsp = httpClient.exchange('/api/book/testRespondOutsideNamespace', Map)
 
         then: 'The response is correct'
         rsp.status() == HttpStatus.OK
@@ -145,8 +130,7 @@ class NamespacedBookSpec extends HttpClientSpec {
     @Issue('https://github.com/apache/grails-views/issues/186')
     void 'test view rendering with a namespace from a map'() {
         when: 'A request is sent to a controller with a namespace'
-        HttpRequest request = HttpRequest.GET('/api/book/message')
-        HttpResponse<Map> rsp = client.toBlocking().exchange(request, Map)
+        def rsp = httpClient.exchange('/api/book/message', Map)
 
         then: 'The response is correct'
         rsp.status() == HttpStatus.OK
