@@ -37,10 +37,10 @@ ext {
 
 dependencies {
 
-    implementation platform(project(':grails-bom'))
-
+    api platform("io.micronaut.platform:micronaut-platform:$micronautPlatformVersion")
     api 'io.micronaut:micronaut-http-client'
 
+    implementation platform(project(':grails-bom'))
     implementation 'org.springframework:spring-beans', {
         // @Value(runtime)
     }
