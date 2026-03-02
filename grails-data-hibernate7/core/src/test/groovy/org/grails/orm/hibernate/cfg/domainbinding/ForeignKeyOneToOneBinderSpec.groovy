@@ -22,6 +22,7 @@ import grails.gorm.specs.HibernateGormDatastoreSpec
 import org.grails.datastore.mapping.model.MappingContext
 import org.grails.datastore.mapping.model.PersistentEntity
 import org.grails.orm.hibernate.cfg.Mapping
+import java.util.Optional
 import org.grails.orm.hibernate.cfg.PersistentEntityNamingStrategy
 import org.grails.orm.hibernate.cfg.PropertyConfig
 import org.grails.orm.hibernate.cfg.domainbinding.hibernate.GrailsHibernatePersistentEntity
@@ -58,6 +59,7 @@ class ForeignKeyOneToOneBinderSpec extends HibernateGormDatastoreSpec {
         def mapping = new Mapping()
         def refDomainClass = Mock(GrailsHibernatePersistentEntity) {
             getMappedForm() >> mapping
+            getHibernateCompositeIdentity() >> Optional.empty()
         }
         def propertyConfig = Mock(PropertyConfig)
         def column = new Column('test')
@@ -111,6 +113,7 @@ class ForeignKeyOneToOneBinderSpec extends HibernateGormDatastoreSpec {
         def mapping = new Mapping()
         def refDomainClass = Mock(GrailsHibernatePersistentEntity) {
             getMappedForm() >> mapping
+            getHibernateCompositeIdentity() >> Optional.empty()
         }
         def propertyConfig = new PropertyConfig()
 

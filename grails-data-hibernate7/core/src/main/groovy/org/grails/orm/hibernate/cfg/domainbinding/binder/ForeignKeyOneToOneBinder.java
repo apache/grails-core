@@ -51,10 +51,8 @@ public class ForeignKeyOneToOneBinder {
   public ManyToOne bind(
       HibernateOneToOneProperty property, org.hibernate.mapping.Table table, String path) {
     GrailsHibernatePersistentEntity refDomainClass = property.getHibernateAssociatedEntity();
-    boolean isComposite = ManyToOneBinder.isCompositeIdentifier(refDomainClass);
-    ManyToOne manyToOne =
-        manyToOneBinder.doBind(property, refDomainClass, isComposite, table, path);
-    if (!isComposite) {
+    ManyToOne manyToOne = manyToOneBinder.doBind(property, refDomainClass, table, path);
+    if (refDomainClass.getHibernateCompositeIdentity().isEmpty()) {
       bindUniqueKey(property, manyToOne);
     }
     return manyToOne;
