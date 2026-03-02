@@ -30,7 +30,7 @@ import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernateManyToManyP
 import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernateOneToManyProperty;
 import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernatePersistentProperty;
 import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernateToManyProperty;
-import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernateToOneProperty;
+import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernateManyToOneProperty;
 import org.grails.orm.hibernate.cfg.domainbinding.util.DefaultColumnNameFetcher;
 import org.grails.orm.hibernate.cfg.domainbinding.util.OrderByClauseBuilder;
 import org.hibernate.MappingException;
@@ -215,7 +215,8 @@ public class CollectionSecondPassBinder {
 
   private void bindBidirectionalMapElement(
       HibernateToManyProperty property, Collection collection) {
-    HibernateToOneProperty otherSide = (HibernateToOneProperty) property.getHibernateInverseSide();
+    HibernateManyToOneProperty otherSide =
+        (HibernateManyToOneProperty) property.getHibernateInverseSide();
     ManyToOne element =
         manyToOneBinder.bindManyToOne(otherSide, collection.getCollectionTable(), EMPTY_PATH);
     element.setReferencedEntityName(otherSide.getOwner().getName());

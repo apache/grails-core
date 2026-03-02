@@ -20,9 +20,12 @@
 package org.grails.orm.hibernate.cfg.domainbinding
 
 import grails.gorm.specs.HibernateGormDatastoreSpec
+import org.grails.datastore.mapping.model.types.OneToOne as GormOneToOne
 import org.grails.datastore.mapping.model.MappingContext
 import org.grails.datastore.mapping.model.PersistentEntity
 import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernateOneToOneProperty
+import org.grails.orm.hibernate.cfg.domainbinding.hibernate.GrailsHibernatePersistentEntity
+import org.grails.orm.hibernate.cfg.PropertyConfig
 import org.hibernate.FetchMode
 import org.hibernate.mapping.OneToOne as HibernateOneToOne
 import org.hibernate.mapping.RootClass
@@ -48,25 +51,24 @@ class OneToOneBinderSpec extends HibernateGormDatastoreSpec {
         def metadataBuildingContext = getGrailsDomainBinder().getMetadataBuildingContext()
         def table = new org.hibernate.mapping.Table("OWNER_TABLE")
         def ownerRoot = new RootClass(metadataBuildingContext)
-        ownerRoot.setTable(table)
 
         def gormOneToOne = Mock(TestOneToOne)
-        def owner = Mock(org.grails.orm.hibernate.cfg.domainbinding.hibernate.GrailsHibernatePersistentEntity)
+        def otherSide = Mock(GormOneToOne)
+        def owner = Mock(PersistentEntity)
+        def otherOwner = Mock(PersistentEntity)
 
         gormOneToOne.getName() >> "myOneToOne"
         gormOneToOne.getOwner() >> owner
-        gormOneToOne.getHibernateOwner() >> owner
-        owner.getPersistentClass() >> ownerRoot
-        gormOneToOne.getTable() >> table
-        gormOneToOne.isHibernateConstrained() >> false
-        gormOneToOne.getHibernateForeignKeyDirection() >> ForeignKeyDirection.TO_PARENT
-        gormOneToOne.getHibernateFetchMode() >> FetchMode.DEFAULT
-        gormOneToOne.getHibernateReferencedEntityName() >> "OtherEntity"
-        gormOneToOne.getHibernateReferencedPropertyName() >> "otherSide"
-        gormOneToOne.needsSimpleValueBinding() >> false
+        gormOneToOne.getMappedForm() >> new PropertyConfig()
+
+        otherSide.isHasOne() >> false
+        otherSide.getOwner() >> otherOwner
+        otherSide.getName() >> "otherSide"
+
+        otherOwner.getName() >> "OtherEntity"
 
         when:
-        def hibernateOneToOne = binder.bindOneToOne(gormOneToOne, "")
+        def hibernateOneToOne = binder.bindOneToOne(gormOneToOne, ownerRoot, null, "")
 
         then:
         hibernateOneToOne instanceof HibernateOneToOne
@@ -84,24 +86,23 @@ class OneToOneBinderSpec extends HibernateGormDatastoreSpec {
         def metadataBuildingContext = getGrailsDomainBinder().getMetadataBuildingContext()
         def table = new org.hibernate.mapping.Table("OWNER_TABLE")
         def ownerRoot = new RootClass(metadataBuildingContext)
-        ownerRoot.setTable(table)
 
         def gormOneToOne = Mock(TestOneToOne)
-        def owner = Mock(org.grails.orm.hibernate.cfg.domainbinding.hibernate.GrailsHibernatePersistentEntity)
+        def otherSide = Mock(GormOneToOne)
+        def owner = Mock(PersistentEntity)
+        def otherOwner = Mock(PersistentEntity)
 
         gormOneToOne.getName() >> "myOneToOne"
         gormOneToOne.getOwner() >> owner
-        gormOneToOne.getHibernateOwner() >> owner
-        owner.getPersistentClass() >> ownerRoot
-        gormOneToOne.getTable() >> table
-        gormOneToOne.isHibernateConstrained() >> true
-        gormOneToOne.getHibernateForeignKeyDirection() >> ForeignKeyDirection.FROM_PARENT
-        gormOneToOne.getHibernateFetchMode() >> FetchMode.DEFAULT
-        gormOneToOne.getHibernateReferencedEntityName() >> "OtherEntity"
-        gormOneToOne.needsSimpleValueBinding() >> true
+        gormOneToOne.getMappedForm() >> new PropertyConfig()
+
+        otherSide.isHasOne() >> true
+        otherSide.getOwner() >> otherOwner
+
+        otherOwner.getName() >> "OtherEntity"
 
         when:
-        def hibernateOneToOne = binder.bindOneToOne(gormOneToOne, "")
+        def hibernateOneToOne = binder.bindOneToOne(gormOneToOne, ownerRoot, null, "")
 
         then:
         hibernateOneToOne.isConstrained()
@@ -114,24 +115,24 @@ class OneToOneBinderSpec extends HibernateGormDatastoreSpec {
         def metadataBuildingContext = getGrailsDomainBinder().getMetadataBuildingContext()
         def table = new org.hibernate.mapping.Table("OWNER_TABLE")
         def ownerRoot = new RootClass(metadataBuildingContext)
-        ownerRoot.setTable(table)
+
+        def propertyConfig = new PropertyConfig()
+        propertyConfig.setFetch("join")
 
         def gormOneToOne = Mock(TestOneToOne)
-        def owner = Mock(org.grails.orm.hibernate.cfg.domainbinding.hibernate.GrailsHibernatePersistentEntity)
+        def otherSide = Mock(GormOneToOne)
+        def owner = Mock(PersistentEntity)
+        def otherOwner = Mock(PersistentEntity)
 
-        gormOneToOne.getName() >> "myOneToOne"
+        gormOneToOne.getInverseSide() >> otherSide
         gormOneToOne.getOwner() >> owner
-        gormOneToOne.getHibernateOwner() >> owner
-        owner.getPersistentClass() >> ownerRoot
-        gormOneToOne.getTable() >> table
-        gormOneToOne.isHibernateConstrained() >> false
-        gormOneToOne.getHibernateForeignKeyDirection() >> ForeignKeyDirection.TO_PARENT
-        gormOneToOne.getHibernateFetchMode() >> FetchMode.JOIN
-        gormOneToOne.getHibernateReferencedEntityName() >> "OtherEntity"
-        gormOneToOne.needsSimpleValueBinding() >> true
+        gormOneToOne.getMappedForm() >> propertyConfig
+
+        otherSide.getOwner() >> otherOwner
+        otherSide.isHasOne() >> false
 
         when:
-        def hibernateOneToOne = binder.bindOneToOne(gormOneToOne, "")
+        def hibernateOneToOne = binder.bindOneToOne(gormOneToOne, ownerRoot, null, "")
 
         then:
         hibernateOneToOne.getFetchMode() == FetchMode.JOIN

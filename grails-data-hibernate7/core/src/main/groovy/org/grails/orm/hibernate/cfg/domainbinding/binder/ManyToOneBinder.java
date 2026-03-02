@@ -33,8 +33,14 @@ import org.grails.orm.hibernate.cfg.domainbinding.hibernate.GrailsHibernatePersi
 import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernateAssociation;
 import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernateManyToManyProperty;
 import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernateManyToOneProperty;
-
-import static org.grails.orm.hibernate.cfg.domainbinding.binder.GrailsDomainBinder.FOREIGN_KEY_SUFFIX;
+import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernateOneToOneProperty;
+import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernateToOneProperty;
+import org.grails.orm.hibernate.cfg.domainbinding.util.SimpleValueColumnFetcher;
+import org.hibernate.MappingException;
+import org.hibernate.boot.spi.MetadataBuildingContext;
+import org.hibernate.engine.jdbc.env.spi.JdbcEnvironment;
+import org.hibernate.mapping.Column;
+import org.hibernate.mapping.ManyToOne;
 
 @SuppressWarnings("PMD.DataflowAnomalyAnalysis")
 public class ManyToOneBinder {
@@ -74,14 +80,24 @@ public class ManyToOneBinder {
         new SimpleValueColumnFetcher());
   }
 
-  /** Binds a to-one (many-to-one or one-to-one) association. */
+  /** Binds a many-to-one association. */
   public ManyToOne bindManyToOne(
-      HibernateToOneProperty property, org.hibernate.mapping.Table table, String path) {
+      HibernateManyToOneProperty property, org.hibernate.mapping.Table table, String path) {
+    GrailsHibernatePersistentEntity refDomainClass = property.getHibernateAssociatedEntity();
+    return doBind(property, refDomainClass, isCompositeIdentifier(refDomainClass), table, path);
+  }
+
+  /**
+   * Binds a one-to-one association where the foreign key resides on the other side (not a true
+   * Hibernate one-to-one), i.e. {@code isHibernateOneToOne()} is false.
+   */
+  public ManyToOne bindManyToOne(
+      HibernateOneToOneProperty property, org.hibernate.mapping.Table table, String path) {
     GrailsHibernatePersistentEntity refDomainClass = property.getHibernateAssociatedEntity();
     boolean isComposite = isCompositeIdentifier(refDomainClass);
     ManyToOne manyToOne = doBind(property, refDomainClass, isComposite, table, path);
-    if (property instanceof HibernateOneToOneProperty oneToOne && !isComposite) {
-      bindOneToOneUniqueKey(oneToOne, manyToOne);
+    if (!isComposite) {
+      bindOneToOneUniqueKey(property, manyToOne);
     }
     return manyToOne;
   }

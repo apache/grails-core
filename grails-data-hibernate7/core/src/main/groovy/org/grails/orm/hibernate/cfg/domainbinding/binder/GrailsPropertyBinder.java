@@ -21,9 +21,10 @@ package org.grails.orm.hibernate.cfg.domainbinding.binder;
 import jakarta.annotation.Nonnull;
 import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernateEmbeddedProperty;
 import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernateEnumProperty;
+import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernateManyToOneProperty;
+import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernateOneToOneProperty;
 import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernatePersistentProperty;
 import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernateToManyProperty;
-import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernateToOneProperty;
 import org.hibernate.boot.spi.InFlightMetadataCollector;
 import org.hibernate.mapping.PersistentClass;
 import org.hibernate.mapping.Table;
@@ -80,17 +81,13 @@ public class GrailsPropertyBinder {
     if (currentGrailsProp instanceof HibernateEnumProperty) {
       value =
           enumTypeBinder.bindEnumType(currentGrailsProp, currentGrailsProp.getType(), table, path);
-    } else if (currentGrailsProp instanceof HibernateToOneProperty toOne) {
-      if (toOne.isValidHibernateOneToOne()) {
-        value =
-            oneToOneBinder.bindOneToOne(
-                (org.grails.datastore.mapping.model.types.OneToOne) toOne,
-                persistentClass,
-                table,
-                path);
-      } else {
-        value = manyToOneBinder.bindManyToOne(toOne, table, path);
-      }
+    } else if (currentGrailsProp instanceof HibernateOneToOneProperty oneToOne
+        && oneToOne.isValidHibernateOneToOne()) {
+      value = oneToOneBinder.bindOneToOne(oneToOne, persistentClass, table, path);
+    } else if (currentGrailsProp instanceof HibernateOneToOneProperty oneToOne) {
+      value = manyToOneBinder.bindManyToOne(oneToOne, table, path);
+    } else if (currentGrailsProp instanceof HibernateManyToOneProperty manyToOne) {
+      value = manyToOneBinder.bindManyToOne(manyToOne, table, path);
     } else if (currentGrailsProp instanceof HibernateToManyProperty toMany
         && !currentGrailsProp.isSerializableType()) {
       // HibernateToManyProperty
