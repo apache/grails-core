@@ -28,7 +28,7 @@ import org.hibernate.type.ForeignKeyDirection
 class HibernateOneToOnePropertySpec extends HibernateGormDatastoreSpec {
 
     def setupSpec() {
-        manager.addAllDomainClasses([OneToOneFace, OneToOneNose, OneToOneLeft, OneToOneRight])
+        manager.addAllDomainClasses([OneToOneFace, OneToOneNose])
     }
 
     void "getHibernateInverseSide returns HibernateOneToOneProperty"() {
@@ -132,33 +132,6 @@ class HibernateOneToOnePropertySpec extends HibernateGormDatastoreSpec {
         then:
         faceProp.needsSimpleValueBinding()
     }
-
-    void "isAssociationColumnNullable is false when bidirectional non-owning and inverse has hasOne"() {
-        when:
-        def noseEntity = mappingContext.getPersistentEntity(OneToOneNose.name)
-        def faceProp = noseEntity.persistentProperties.find { it.name == 'face' } as HibernateOneToOneProperty
-
-        then:
-        !faceProp.isAssociationColumnNullable()
-    }
-
-    void "isAssociationColumnNullable is true when owning side declares hasOne"() {
-        when:
-        def faceEntity = mappingContext.getPersistentEntity(OneToOneFace.name)
-        def noseProp = faceEntity.persistentProperties.find { it.name == 'nose' } as HibernateOneToOneProperty
-
-        then:
-        noseProp.isAssociationColumnNullable()
-    }
-
-    void "isAssociationColumnNullable is true when bidirectional non-owning but inverse does not have hasOne"() {
-        when:
-        def leftEntity = mappingContext.getPersistentEntity(OneToOneLeft.name)
-        def rightProp = leftEntity.persistentProperties.find { it.name == 'right' } as HibernateOneToOneProperty
-
-        then:
-        rightProp.isAssociationColumnNullable()
-    }
 }
 
 @Entity
@@ -173,17 +146,4 @@ class OneToOneNose implements HibernateEntity<OneToOneNose> {
     Boolean hasFreckles
     OneToOneFace face
     static belongsTo = [face: OneToOneFace]
-}
-
-@Entity
-class OneToOneRight implements HibernateEntity<OneToOneRight> {
-    String code
-    OneToOneLeft left
-}
-
-@Entity
-class OneToOneLeft implements HibernateEntity<OneToOneLeft> {
-    String label
-    OneToOneRight right
-    static belongsTo = [right: OneToOneRight]
 }

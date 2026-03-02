@@ -134,7 +134,7 @@ class ManyToOneBinderSpec extends HibernateGormDatastoreSpec {
         }
         def propertyConfig = Mock(PropertyConfig)
         def column = new Column('test')
-        def inverseSide = Mock(HibernateToOneProperty)
+        def inverseSide = Mock(TestOneToOneInverse)
 
         property.getHibernateAssociatedEntity() >> refDomainClass
         mapping.setIdentity(null)
@@ -194,5 +194,11 @@ class ManyToOneBinderSpec extends HibernateGormDatastoreSpec {
 
         then:
         thrown(MappingException)
+    }
+}
+
+abstract class TestOneToOneInverse extends HibernateOneToOneProperty {
+    TestOneToOneInverse(org.grails.datastore.mapping.model.PersistentEntity owner, org.grails.datastore.mapping.model.MappingContext context, java.beans.PropertyDescriptor descriptor) {
+        super(owner, context, descriptor)
     }
 }

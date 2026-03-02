@@ -34,7 +34,6 @@ import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernateAssociation
 import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernateManyToManyProperty;
 import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernateManyToOneProperty;
 import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernateOneToOneProperty;
-import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernateToOneProperty;
 import org.grails.orm.hibernate.cfg.domainbinding.util.SimpleValueColumnFetcher;
 import org.hibernate.MappingException;
 import org.hibernate.boot.spi.MetadataBuildingContext;
@@ -118,7 +117,6 @@ public class ManyToOneBinder {
     return mapping != null && mapping.hasCompositeIdentifier();
   }
 
-  @SuppressWarnings("unchecked")
   private ManyToOne doBind(
       HibernateAssociation property,
       GrailsHibernatePersistentEntity refDomainClass,
@@ -148,8 +146,7 @@ public class ManyToOneBinder {
     if (!config.isUniqueWithinGroup()) {
       c.setUnique(config.isUnique());
     } else if (property.isBidirectional()
-        && property.getHibernateInverseSide() instanceof HibernateToOneProperty inverseSide
-        && inverseSide.isValidHibernateOneToOne()) {
+        && property.getHibernateInverseSide().isValidHibernateOneToOne()) {
       c.setUnique(true);
     }
   }
