@@ -49,23 +49,40 @@ import static org.grails.orm.hibernate.cfg.domainbinding.binder.GrailsDomainBind
 @SuppressWarnings("PMD.DataflowAnomalyAnalysis")
 public class ListSecondPassBinder {
 
-    private final MetadataBuildingContext metadataBuildingContext;
-    private final CollectionSecondPassBinder collectionSecondPassBinder;
-    private final PersistentEntityNamingStrategy namingStrategy;
-    private final SimpleValueColumnBinder simpleValueColumnBinder;
-    private final InFlightMetadataCollector mappings;
+  private final MetadataBuildingContext metadataBuildingContext;
+  private final CollectionSecondPassBinder collectionSecondPassBinder;
+  private final PersistentEntityNamingStrategy namingStrategy;
+  private final SimpleValueColumnBinder simpleValueColumnBinder;
+  private final InFlightMetadataCollector mappings;
 
-    public ListSecondPassBinder(
-            MetadataBuildingContext metadataBuildingContext,
-            PersistentEntityNamingStrategy namingStrategy,
-            CollectionSecondPassBinder collectionSecondPassBinder,
-            SimpleValueColumnBinder simpleValueColumnBinder,
-            InFlightMetadataCollector mappings) {
-        this.metadataBuildingContext = metadataBuildingContext;
-        this.collectionSecondPassBinder = collectionSecondPassBinder;
-        this.namingStrategy = namingStrategy;
-        this.simpleValueColumnBinder = simpleValueColumnBinder;
-        this.mappings = mappings;
+  public ListSecondPassBinder(
+      MetadataBuildingContext metadataBuildingContext,
+      PersistentEntityNamingStrategy namingStrategy,
+      CollectionSecondPassBinder collectionSecondPassBinder,
+      SimpleValueColumnBinder simpleValueColumnBinder,
+      InFlightMetadataCollector mappings) {
+    this.metadataBuildingContext = metadataBuildingContext;
+    this.collectionSecondPassBinder = collectionSecondPassBinder;
+    this.namingStrategy = namingStrategy;
+    this.simpleValueColumnBinder = simpleValueColumnBinder;
+    this.mappings = mappings;
+  }
+
+  public void bindListSecondPass(
+      @Nonnull HibernateToManyProperty property,
+      Map<?, ?> persistentClasses,
+      @Nonnull List list) {
+
+    collectionSecondPassBinder.bindCollectionSecondPass(
+        property, mappings, persistentClasses, list);
+    String columnName = property.getIndexColumnName(namingStrategy);
+    final boolean isManyToMany = property instanceof HibernateManyToManyProperty;
+
+    if (isManyToMany && !property.isOwningSide()) {
+      throw new MappingException(
+          "Invalid association ["
+              + property
+              + "]. List collection types only supported on the owning side of a many-to-many relationship.");
     }
 
     public void bindListSecondPass(

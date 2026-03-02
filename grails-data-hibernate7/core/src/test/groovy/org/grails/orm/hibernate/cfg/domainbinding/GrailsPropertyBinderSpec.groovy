@@ -80,6 +80,35 @@ class GrailsPropertyBinderSpec extends HibernateGormDatastoreSpec {
 
 
 
+    abstract static class TestEmbedded extends HibernateEmbeddedProperty {
+        TestEmbedded(PersistentEntity owner, MappingContext context, java.beans.PropertyDescriptor descriptor) {
+            super(owner, context, descriptor);
+        }
+    }
+
+    abstract static class TestBasic extends HibernateBasicProperty {
+        TestBasic(GrailsHibernatePersistentEntity owner, MappingContext context, java.beans.PropertyDescriptor descriptor) {
+            super(owner, context, descriptor);
+        }
+    }
+
+    abstract static class TestSimple extends HibernateSimpleProperty {
+        TestSimple(PersistentEntity owner, MappingContext context, java.beans.PropertyDescriptor descriptor) {
+            super(owner, context, descriptor);
+        }
+    }
+
+    private void setupProperty(PersistentProperty prop, String name, Mapping mapping, PersistentEntity owner) {
+        prop.getName() >> name
+        _ * prop.getOwner() >> owner
+        if (prop instanceof HibernatePersistentProperty) {
+            _ * ((HibernatePersistentProperty)prop).getHibernateOwner() >> owner
+        }
+        def config = new PropertyConfig()
+        mapping.getColumns().put(name, config)
+        prop.getMappedForm() >> config
+    }
+
     protected Map getBinders(GrailsDomainBinder binder, InFlightMetadataCollector collector = getCollector()) {
         MetadataBuildingContext metadataBuildingContext = binder.getMetadataBuildingContext()
         PersistentEntityNamingStrategy namingStrategy = binder.getNamingStrategy()
@@ -149,13 +178,13 @@ class GrailsPropertyBinderSpec extends HibernateGormDatastoreSpec {
         MultiTenantFilterBinder multiTenantFilterBinder = new MultiTenantFilterBinder(new org.grails.orm.hibernate.cfg.domainbinding.util.GrailsPropertyResolver(), new org.grails.orm.hibernate.cfg.domainbinding.util.MultiTenantFilterDefinitionBinder(), collector, defaultColumnNameFetcher)
         JoinedSubClassBinder joinedSubClassBinder = new JoinedSubClassBinder(metadataBuildingContext, namingStrategy, new org.grails.orm.hibernate.cfg.domainbinding.binder.SimpleValueColumnBinder(), columnNameForPropertyAndPathFetcher, classBinder, collector)
         UnionSubclassBinder unionSubclassBinder = new UnionSubclassBinder(metadataBuildingContext, namingStrategy, classBinder, collector)
-        SingleTableSubclassBinder singleTableSubclassBinder = new SingleTableSubclassBinder(classBinder, metadataBuildingContext)
+        SingleTableSubclassBinder singleTableSubclassBinder = new SingleTableSubclassBinder(classBinder)
 
-        SubclassMappingBinder subclassMappingBinder = new SubclassMappingBinder(joinedSubClassBinder, unionSubclassBinder, singleTableSubclassBinder, classPropertiesBinder)
-        SubClassBinder subClassBinder = new SubClassBinder(subclassMappingBinder, multiTenantFilterBinder, "dataSource")
+        SubclassMappingBinder subclassMappingBinder = new SubclassMappingBinder(metadataBuildingContext, joinedSubClassBinder, unionSubclassBinder, singleTableSubclassBinder, classPropertiesBinder)
+        SubClassBinder subClassBinder = new SubClassBinder(binder.getMappingCacheHolder(), subclassMappingBinder, multiTenantFilterBinder, "dataSource", collector)
         RootPersistentClassCommonValuesBinder rootPersistentClassCommonValuesBinder = new RootPersistentClassCommonValuesBinder(metadataBuildingContext, namingStrategy, identityBinder, versionBinder, classBinder, classPropertiesBinder, collector)
         DiscriminatorPropertyBinder discriminatorPropertyBinder = new DiscriminatorPropertyBinder(metadataBuildingContext, binder.getMappingCacheHolder(), new org.grails.orm.hibernate.cfg.domainbinding.binder.ConfiguredDiscriminatorBinder(new org.grails.orm.hibernate.cfg.domainbinding.binder.SimpleValueColumnBinder(), new ColumnConfigToColumnBinder()), new org.grails.orm.hibernate.cfg.domainbinding.binder.DefaultDiscriminatorBinder(new org.grails.orm.hibernate.cfg.domainbinding.binder.SimpleValueColumnBinder()))
-        RootBinder rootBinder = new RootBinder("default", multiTenantFilterBinder, subClassBinder, rootPersistentClassCommonValuesBinder, discriminatorPropertyBinder, collector, binder.getMappingCacheHolder())
+        RootBinder rootBinder = new RootBinder("default", multiTenantFilterBinder, subClassBinder, rootPersistentClassCommonValuesBinder, discriminatorPropertyBinder, collector)
 
         return [
             propertyBinder: propertyBinder,

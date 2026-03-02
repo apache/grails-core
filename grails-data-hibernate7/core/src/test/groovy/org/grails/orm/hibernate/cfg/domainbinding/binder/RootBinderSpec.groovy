@@ -38,15 +38,13 @@ class RootBinderSpec extends HibernateGormDatastoreSpec {
     MetadataBuildingContext metadataBuildingContext
     PersistentEntityNamingStrategy namingStrategy
     def sharedCollector
-    org.grails.orm.hibernate.cfg.MappingCacheHolder mappingCacheHolder
 
     void setup() {
         def gdb = getGrailsDomainBinder()
         metadataBuildingContext = gdb.getMetadataBuildingContext()
         namingStrategy = gdb.getNamingStrategy()
         sharedCollector = getCollector()
-        mappingCacheHolder = Mock(org.grails.orm.hibernate.cfg.MappingCacheHolder)
-
+        
         multiTenantFilterBinder = Mock(MultiTenantFilterBinder)
         subClassBinder = Mock(SubClassBinder)
         rootPersistentClassCommonValuesBinder = Mock(RootPersistentClassCommonValuesBinder)
@@ -58,8 +56,7 @@ class RootBinderSpec extends HibernateGormDatastoreSpec {
                 subClassBinder,
                 rootPersistentClassCommonValuesBinder,
                 discriminatorPropertyBinder,
-                sharedCollector,
-                mappingCacheHolder
+                sharedCollector
         )
     }
 
@@ -79,7 +76,7 @@ class RootBinderSpec extends HibernateGormDatastoreSpec {
         binder.bindRoot(entity)
 
         then:
-        1 * rootPersistentClassCommonValuesBinder.bindRoot(entity) >> rootClass
+        1 * rootPersistentClassCommonValuesBinder.bindRootPersistentClassCommonValues(entity, []) >> rootClass
         0 * discriminatorPropertyBinder.bindDiscriminatorProperty(_)
         0 * subClassBinder.bindSubClass(_, _)
         1 * multiTenantFilterBinder.bind(entity, rootClass)
@@ -106,10 +103,9 @@ class RootBinderSpec extends HibernateGormDatastoreSpec {
         binder.bindRoot(entity)
 
         then:
-        1 * rootPersistentClassCommonValuesBinder.bindRoot(entity) >> rootClass
-        1 * mappingCacheHolder.cacheMapping(childEntity)
+        1 * rootPersistentClassCommonValuesBinder.bindRootPersistentClassCommonValues(entity, [childEntity]) >> rootClass
         1 * discriminatorPropertyBinder.bindDiscriminatorProperty(rootClass)
-        1 * subClassBinder.bindSubClass(childEntity, rootClass) >> []
+        1 * subClassBinder.bindSubClass(childEntity, rootClass)
         1 * multiTenantFilterBinder.bind(entity, rootClass)
         mappings.getEntityBinding("Parent") == rootClass
     }
@@ -128,6 +124,6 @@ class RootBinderSpec extends HibernateGormDatastoreSpec {
         binder.bindRoot(entity)
 
         then:
-        0 * rootPersistentClassCommonValuesBinder.bindRoot(_)
+        0 * rootPersistentClassCommonValuesBinder.bindRootPersistentClassCommonValues(_, _)
     }
 }

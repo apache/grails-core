@@ -22,7 +22,11 @@ import java.util.ArrayList;
 import java.util.List;
 
 import jakarta.annotation.Nonnull;
-
+import java.util.Collection;
+import org.grails.orm.hibernate.cfg.MappingCacheHolder;
+import org.grails.orm.hibernate.cfg.domainbinding.hibernate.GrailsHibernatePersistentEntity;
+import org.grails.orm.hibernate.cfg.domainbinding.util.MultiTenantFilterBinder;
+import org.hibernate.boot.spi.InFlightMetadataCollector;
 import org.hibernate.mapping.JoinedSubclass;
 import org.hibernate.mapping.PersistentClass;
 import org.hibernate.mapping.SingleTableSubclass;
@@ -35,43 +39,48 @@ import org.grails.orm.hibernate.cfg.domainbinding.util.MultiTenantFilterBinder;
 /** Binder for subclasses. */
 public class SubClassBinder {
 
-    private final SubclassMappingBinder subclassMappingBinder;
-    private final MultiTenantFilterBinder multiTenantFilterBinder;
-    private final String dataSourceName;
+  private final MappingCacheHolder mappingCacheHolder;
+  private final SubclassMappingBinder subclassMappingBinder;
+  private final MultiTenantFilterBinder multiTenantFilterBinder;
+  private final String dataSourceName;
+  private final InFlightMetadataCollector mappings;
 
-    public SubClassBinder(
-            SubclassMappingBinder subclassMappingBinder,
-            MultiTenantFilterBinder multiTenantFilterBinder,
-            String dataSourceName) {
-        this.subclassMappingBinder = subclassMappingBinder;
-        this.multiTenantFilterBinder = multiTenantFilterBinder;
-        this.dataSourceName = dataSourceName;
-    }
+  public SubClassBinder(
+      MappingCacheHolder mappingCacheHolder,
+      SubclassMappingBinder subclassMappingBinder,
+      MultiTenantFilterBinder multiTenantFilterBinder,
+      String dataSourceName,
+      InFlightMetadataCollector mappings) {
+    this.mappingCacheHolder = mappingCacheHolder;
+    this.subclassMappingBinder = subclassMappingBinder;
+    this.multiTenantFilterBinder = multiTenantFilterBinder;
+    this.dataSourceName = dataSourceName;
+    this.mappings = mappings;
+  }
 
-    /**
-     * Binds a sub class.
-     *
-     * @param sub The sub domain class instance
-     * @param parent The parent persistent class instance
-     * @return The list of subclasses created
-     */
-    public List<Subclass> bindSubClass(@Nonnull HibernatePersistentEntity sub, PersistentClass parent) {
-        Subclass subClass = subclassMappingBinder.createSubclassMapping(sub, parent);
-        sub.setPersistentClass(subClass);
-        bindMultiTenantFilter(sub, subClass);
-        List<Subclass> subclasses = new ArrayList<>();
-        subclasses.add(subClass);
-        sub.getChildEntities(dataSourceName).forEach(sub1 -> subclasses.addAll(bindSubClass(sub1, subClass)));
-        return subclasses;
-    }
+  /**
+   * Binds a sub class.
+   *
+   * @param sub The sub domain class instance
+   * @param parent The parent persistent class instance
+   */
+  public void bindSubClass(
+      @Nonnull GrailsHibernatePersistentEntity sub,
+      PersistentClass parent) {
+    mappingCacheHolder.cacheMapping(sub);
+    Subclass subClass = subclassMappingBinder.createSubclassMapping(sub, parent, mappings);
+    parent.addSubclass(subClass);
+    mappings.addEntityBinding(subClass);
+    bindMultiTenantFilter(sub, subClass);
+    sub.getChildEntities(dataSourceName).forEach(sub1 -> bindSubClass(sub1, subClass));
+  }
 
-    private void bindMultiTenantFilter(HibernatePersistentEntity sub, Subclass subClass) {
-        if (subClass instanceof SingleTableSubclass singleTableSubclass) {
-            multiTenantFilterBinder.bind(sub, singleTableSubclass);
-        } else if (subClass instanceof JoinedSubclass joinedSubclass) {
-            multiTenantFilterBinder.bind(sub, joinedSubclass);
-        } else if (subClass instanceof UnionSubclass unionSubclass) {
-            multiTenantFilterBinder.bind(sub, unionSubclass);
-        }
+  private void bindMultiTenantFilter(GrailsHibernatePersistentEntity sub, Subclass subClass) {
+    if (subClass instanceof SingleTableSubclass singleTableSubclass) {
+      multiTenantFilterBinder.bind(sub, singleTableSubclass);
+    } else if (subClass instanceof JoinedSubclass joinedSubclass) {
+      multiTenantFilterBinder.bind(sub, joinedSubclass);
+    } else if (subClass instanceof UnionSubclass unionSubclass) {
+      multiTenantFilterBinder.bind(sub, unionSubclass);
     }
 }

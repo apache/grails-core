@@ -96,12 +96,8 @@ class SubclassMappingBinderSpec extends HibernateGormDatastoreSpec {
 
         then:
         subEntity != null
-        1 * joinedSubClassBinder.bindJoinedSubClass(subEntity, rootClass) >> {
-            def s = new JoinedSubclass(rootClass, metadataBuildingContext)
-            s.setEntityName(subEntity.getName())
-            s
-        }
-        1 * classPropertiesBinder.bindClassProperties(subEntity)
+        1 * joinedSubClassBinder.bindJoinedSubClass(subEntity, _ as JoinedSubclass)
+        1 * classPropertiesBinder.bindClassProperties(subEntity, _ as Subclass, mappings)
         subClass instanceof JoinedSubclass
         subClass.getEntityName() == SMBSJoinedSub.name
     }
@@ -121,12 +117,8 @@ class SubclassMappingBinderSpec extends HibernateGormDatastoreSpec {
 
         then:
         subEntity != null
-        1 * unionSubclassBinder.bindUnionSubclass(subEntity, rootClass) >> {
-            def s = new UnionSubclass(rootClass, metadataBuildingContext)
-            s.setEntityName(subEntity.getName())
-            s
-        }
-        1 * classPropertiesBinder.bindClassProperties(subEntity)
+        1 * unionSubclassBinder.bindUnionSubclass(subEntity, _ as UnionSubclass)
+        1 * classPropertiesBinder.bindClassProperties(subEntity, _ as Subclass, mappings)
         subClass instanceof UnionSubclass
         subClass.getEntityName() == SMBSUnionSub.name
     }

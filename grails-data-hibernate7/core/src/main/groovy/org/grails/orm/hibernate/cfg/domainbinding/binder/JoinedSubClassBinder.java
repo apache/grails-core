@@ -43,26 +43,58 @@ public class JoinedSubClassBinder {
     private static final Logger LOG = LoggerFactory.getLogger(JoinedSubClassBinder.class);
     private static final String EMPTY_PATH = "";
 
-    private final MetadataBuildingContext metadataBuildingContext;
-    private final PersistentEntityNamingStrategy namingStrategy;
-    private final SimpleValueColumnBinder simpleValueColumnBinder;
-    private final ColumnNameForPropertyAndPathFetcher columnNameForPropertyAndPathFetcher;
-    private final ClassBinder classBinder;
-    private final InFlightMetadataCollector mappings;
+  private final MetadataBuildingContext metadataBuildingContext;
+  private final PersistentEntityNamingStrategy namingStrategy;
+  private final SimpleValueColumnBinder simpleValueColumnBinder;
+  private final ColumnNameForPropertyAndPathFetcher columnNameForPropertyAndPathFetcher;
+  private final ClassBinder classBinder;
+  private final InFlightMetadataCollector mappings;
 
-    public JoinedSubClassBinder(
-            MetadataBuildingContext metadataBuildingContext,
-            PersistentEntityNamingStrategy namingStrategy,
-            SimpleValueColumnBinder simpleValueColumnBinder,
-            ColumnNameForPropertyAndPathFetcher columnNameForPropertyAndPathFetcher,
-            ClassBinder classBinder,
-            InFlightMetadataCollector mappings) {
-        this.metadataBuildingContext = metadataBuildingContext;
-        this.namingStrategy = namingStrategy;
-        this.simpleValueColumnBinder = simpleValueColumnBinder;
-        this.columnNameForPropertyAndPathFetcher = columnNameForPropertyAndPathFetcher;
-        this.classBinder = classBinder;
-        this.mappings = mappings;
+  public JoinedSubClassBinder(
+      MetadataBuildingContext metadataBuildingContext,
+      PersistentEntityNamingStrategy namingStrategy,
+      SimpleValueColumnBinder simpleValueColumnBinder,
+      ColumnNameForPropertyAndPathFetcher columnNameForPropertyAndPathFetcher,
+      ClassBinder classBinder,
+      InFlightMetadataCollector mappings) {
+    this.metadataBuildingContext = metadataBuildingContext;
+    this.namingStrategy = namingStrategy;
+    this.simpleValueColumnBinder = simpleValueColumnBinder;
+    this.columnNameForPropertyAndPathFetcher = columnNameForPropertyAndPathFetcher;
+    this.classBinder = classBinder;
+    this.mappings = mappings;
+  }
+
+  /**
+   * Binds a joined sub-class mapping using table-per-subclass
+   *
+   * @param sub The Grails sub class
+   * @param joinedSubclass The Hibernate Subclass object
+   */
+  public void bindJoinedSubClass(
+      GrailsHibernatePersistentEntity sub,
+      JoinedSubclass joinedSubclass) {
+    classBinder.bindClass(sub, joinedSubclass);
+
+    String schemaName = sub.getSchema(mappings);
+    String catalogName = sub.getCatalog(mappings);
+
+    Table mytable =
+        mappings.addTable(
+            schemaName,
+            catalogName,
+            getJoinedSubClassTableName(sub, joinedSubclass, null),
+            null,
+            false,
+            metadataBuildingContext);
+
+    joinedSubclass.setTable(mytable);
+    if (LOG.isInfoEnabled()) {
+      LOG.info(
+          "Mapping joined-subclass: "
+              + joinedSubclass.getEntityName()
+              + " -> "
+              + joinedSubclass.getTable().getName());
     }
 
     /**
@@ -79,13 +111,10 @@ public class JoinedSubClassBinder {
         String schemaName = sub.getSchema(mappings);
         String catalogName = sub.getCatalog(mappings);
 
-        Table mytable = mappings.addTable(
-                schemaName,
-                catalogName,
-                getJoinedSubClassTableName(sub, joinedSubclass),
-                null,
-                false,
-                metadataBuildingContext);
+  private String getJoinedSubClassTableName(
+      GrailsHibernatePersistentEntity sub,
+      PersistentClass model,
+      Table denormalizedSuperTable) {
 
         joinedSubclass.setTable(mytable);
         if (LOG.isInfoEnabled()) {

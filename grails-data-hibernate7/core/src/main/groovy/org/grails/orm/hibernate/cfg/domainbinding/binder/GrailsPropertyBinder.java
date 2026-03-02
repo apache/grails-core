@@ -71,29 +71,34 @@ public class GrailsPropertyBinder {
             LOG.debug("[GrailsPropertyBinder] Binding persistent property [" + currentGrailsProp.getName() + "]");
         }
 
-        Value value;
-
-        // 1. Create Value and apply binders (consolidated block)
-        if (currentGrailsProp instanceof HibernateEnumProperty) {
-            value = enumTypeBinder.bindEnumType(currentGrailsProp, currentGrailsProp.getType(), table, path);
-        } else if (currentGrailsProp instanceof HibernateOneToOneProperty oneToOne &&
-                oneToOne.isValidHibernateOneToOne()) {
-            value = oneToOneBinder.bindOneToOne(oneToOne, path);
-        } else if (currentGrailsProp instanceof HibernateOneToOneProperty oneToOne) {
-            value = foreignKeyOneToOneBinder.bind(oneToOne, table, path);
-        } else if (currentGrailsProp instanceof HibernateManyToOneProperty manyToOne) {
-            value = manyToOneBinder.bindManyToOne(manyToOne, table, path);
-        } else if (currentGrailsProp instanceof HibernateToManyProperty toMany &&
-                !currentGrailsProp.isSerializableType()) {
-            // HibernateToManyProperty
-            value = collectionBinder.bindCollection(toMany, persistentClass, path);
-        } else if (currentGrailsProp instanceof HibernateEmbeddedProperty embedded) {
-            value = componentBinder.bindComponent(persistentClass, embedded, path);
-        } else {
-            // HibernateSimpleProperty
-            value = simpleValueBinder.bindSimpleValue(currentGrailsProp, parentProperty, table, path);
-        }
-
-        return value;
+    // 1. Create Value and apply binders (consolidated block)
+    if (currentGrailsProp.isEnumType()) {
+      // HibernateEnumTypeProperty
+      value =
+          enumTypeBinder.bindEnumType(currentGrailsProp, currentGrailsProp.getType(), table, path);
+    } else if (currentGrailsProp instanceof HibernateOneToOneProperty oneToOne) {
+      // HibernateOneToOneProperty
+      if (oneToOne.isHibernateOneToOne()) {
+        value =
+            oneToOneBinder.bindOneToOne(
+                (org.grails.datastore.mapping.model.types.OneToOne) currentGrailsProp,
+                persistentClass,
+                table,
+                path);
+      } else {
+        value =
+            manyToOneBinder.bindManyToOne((HibernateToOneProperty) currentGrailsProp, table, path);
+      }
+    } else if (currentGrailsProp instanceof HibernateManyToOneProperty manyToOne) {
+      value = manyToOneBinder.bindManyToOne(manyToOne, table, path);
+    } else if (currentGrailsProp instanceof HibernateToManyProperty toMany
+        && !currentGrailsProp.isSerializableType()) {
+      // HibernateToManyProperty
+      value = collectionBinder.bindCollection(toMany, persistentClass, path);
+    } else if (currentGrailsProp instanceof HibernateEmbeddedProperty embedded) {
+      value = componentBinder.bindComponent(persistentClass, embedded, mappings, path);
+    } else {
+      // HibernateSimpleProperty
+      value = simpleValueBinder.bindSimpleValue(currentGrailsProp, parentProperty, table, path);
     }
 }

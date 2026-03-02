@@ -35,15 +35,40 @@ public class SubclassMappingBinder {
     private final SingleTableSubclassBinder singleTableSubclassBinder;
     private final ClassPropertiesBinder classPropertiesBinder;
 
-    public SubclassMappingBinder(
-            JoinedSubClassBinder joinedSubClassBinder,
-            UnionSubclassBinder unionSubclassBinder,
-            SingleTableSubclassBinder singleTableSubclassBinder,
-            ClassPropertiesBinder classPropertiesBinder) {
-        this.joinedSubClassBinder = joinedSubClassBinder;
-        this.unionSubclassBinder = unionSubclassBinder;
-        this.singleTableSubclassBinder = singleTableSubclassBinder;
-        this.classPropertiesBinder = classPropertiesBinder;
+  public SubclassMappingBinder(
+      MetadataBuildingContext metadataBuildingContext,
+      JoinedSubClassBinder joinedSubClassBinder,
+      UnionSubclassBinder unionSubclassBinder,
+      SingleTableSubclassBinder singleTableSubclassBinder,
+      ClassPropertiesBinder classPropertiesBinder) {
+    this.metadataBuildingContext = metadataBuildingContext;
+    this.joinedSubClassBinder = joinedSubClassBinder;
+    this.unionSubclassBinder = unionSubclassBinder;
+    this.singleTableSubclassBinder = singleTableSubclassBinder;
+    this.classPropertiesBinder = classPropertiesBinder;
+  }
+
+  public @NonNull Subclass createSubclassMapping(
+      @NonNull GrailsHibernatePersistentEntity subEntity,
+      PersistentClass parent,
+      @NonNull InFlightMetadataCollector mappings) {
+    Subclass subClass;
+    subEntity.configureDerivedProperties();
+    Mapping m = subEntity.getMappedForm();
+    if (subEntity.isJoinedSubclass()) {
+      var joined = new JoinedSubclass(parent, this.metadataBuildingContext);
+      joinedSubClassBinder.bindJoinedSubClass(subEntity, joined);
+      subClass = joined;
+    } else if (subEntity.isUnionSubclass()) {
+      var union = new UnionSubclass(parent, this.metadataBuildingContext);
+      unionSubclassBinder.bindUnionSubclass(subEntity, union);
+      subClass = union;
+    } else {
+
+      var singleTableSubclass = new SingleTableSubclass(parent, this.metadataBuildingContext);
+
+      singleTableSubclassBinder.bindSubClass(subEntity, singleTableSubclass, mappings);
+      subClass = singleTableSubclass;
     }
 
     public @NonNull Subclass createSubclassMapping(HibernatePersistentEntity subEntity, PersistentClass parent) {

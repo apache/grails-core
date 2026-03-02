@@ -40,26 +40,25 @@ public class SingleTableSubclassBinder {
     private final ClassBinder classBinder;
     private final MetadataBuildingContext metadataBuildingContext;
 
-    public SingleTableSubclassBinder(ClassBinder classBinder, MetadataBuildingContext metadataBuildingContext) {
-        this.classBinder = classBinder;
-        this.metadataBuildingContext = metadataBuildingContext;
-    }
+  public SingleTableSubclassBinder(ClassBinder classBinder) {
+    this.classBinder = classBinder;
+  }
 
-    /**
-     * Binds a sub-class using table-per-hierarchy inheritance mapping
-     *
-     * @param sub      The Grails domain class instance representing the sub-class
-     * @param parent   The Hibernate Parent PersistentClass object
-     * @return The created SingleTableSubclass
-     */
-    public SingleTableSubclass bindSubClass(@Nonnull GrailsHibernatePersistentEntity sub, PersistentClass parent) {
-        SingleTableSubclass subClass = new SingleTableSubclass(parent, metadataBuildingContext);
-        classBinder.bindClass(sub, subClass);
-        subClass.setDiscriminatorValue(sub.getDiscriminatorValue());
-        if (LOG.isDebugEnabled()) {
-            LOG.debug("Mapping subclass: " + subClass.getEntityName() + " -> " +
-                    subClass.getTable().getName());
-        }
-        return subClass;
+  /**
+   * Binds a sub-class using table-per-hierarchy inheritance mapping
+   *
+   * @param sub The Grails domain class instance representing the sub-class
+   * @param subClass The Hibernate SubClass instance
+   * @param mappings The mappings instance
+   */
+  public void bindSubClass(
+      @Nonnull GrailsHibernatePersistentEntity sub,
+      SingleTableSubclass subClass,
+      @Nonnull InFlightMetadataCollector mappings) {
+    classBinder.bindClass(sub, subClass);
+    subClass.setDiscriminatorValue(sub.getDiscriminatorValue());
+    if (LOG.isDebugEnabled()) {
+      LOG.debug(
+          "Mapping subclass: " + subClass.getEntityName() + " -> " + subClass.getTable().getName());
     }
 }

@@ -89,12 +89,12 @@ public class CollectionSecondPassBinder {
         if (!collection.isOneToMany()) {
             return;
         }
-        OneToMany oneToMany = (OneToMany) collection.getElement();
-        oneToMany.setAssociatedClass(associatedClass);
-        if (property.shouldBindWithForeignKey()) {
-            collection.setCollectionTable(associatedClass.getTable());
-        }
-        collectionForPropertyConfigBinder.bindCollectionForPropertyConfig(collection, property);
+      }
+    } else if (property.isUnidirectionalOneToMany()) {
+      unidirectionalOneToManyBinder.bind(
+          (HibernateOneToManyProperty) property, collection);
+    } else if (property.supportsJoinColumnMapping()) {
+      collectionWithJoinTableBinder.bindCollectionWithJoinTable(property, mappings, collection);
     }
 
     private void bindCollectionElement(
