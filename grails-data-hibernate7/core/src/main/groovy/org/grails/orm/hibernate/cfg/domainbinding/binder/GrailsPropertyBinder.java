@@ -43,13 +43,13 @@ public class GrailsPropertyBinder {
 
     private static final Logger LOG = LoggerFactory.getLogger(GrailsPropertyBinder.class);
 
-    private final EnumTypeBinder enumTypeBinder;
-    private final ComponentBinder componentBinder;
-    private final CollectionBinder collectionBinder;
-    private final SimpleValueBinder simpleValueBinder;
-    private final OneToOneBinder oneToOneBinder;
-    private final ManyToOneBinder manyToOneBinder;
-    private final ForeignKeyOneToOneBinder foreignKeyOneToOneBinder;
+  private final EnumTypeBinder enumTypeBinder;
+  private final ComponentBinder componentBinder;
+  private final CollectionBinder collectionBinder;
+  private final SimpleValueBinder simpleValueBinder;
+  private final OneToOneBinder oneToOneBinder;
+  private final ManyToOneBinder manyToOneBinder;
+  private final ForeignKeyOneToOneBinder foreignKeyOneToOneBinder;
 
   public GrailsPropertyBinder(
       EnumTypeBinder enumTypeBinder,
@@ -57,13 +57,15 @@ public class GrailsPropertyBinder {
       CollectionBinder collectionBinder,
       SimpleValueBinder simpleValueBinder,
       OneToOneBinder oneToOneBinder,
-      ManyToOneBinder manyToOneBinder) {
+      ManyToOneBinder manyToOneBinder,
+      ForeignKeyOneToOneBinder foreignKeyOneToOneBinder) {
     this.enumTypeBinder = enumTypeBinder;
     this.componentBinder = componentBinder;
     this.collectionBinder = collectionBinder;
     this.simpleValueBinder = simpleValueBinder;
     this.oneToOneBinder = oneToOneBinder;
     this.manyToOneBinder = manyToOneBinder;
+    this.foreignKeyOneToOneBinder = foreignKeyOneToOneBinder;
   }
 
   public Value bindProperty(
@@ -95,7 +97,7 @@ public class GrailsPropertyBinder {
         && oneToOne.isValidHibernateOneToOne()) {
       value = oneToOneBinder.bindOneToOne(oneToOne, persistentClass, table, path);
     } else if (currentGrailsProp instanceof HibernateOneToOneProperty oneToOne) {
-      value = manyToOneBinder.bindManyToOne(oneToOne, table, path);
+      value = foreignKeyOneToOneBinder.bind(oneToOne, table, path);
     } else if (currentGrailsProp instanceof HibernateManyToOneProperty manyToOne) {
       value = manyToOneBinder.bindManyToOne(manyToOne, table, path);
     } else if (currentGrailsProp instanceof HibernateToManyProperty toMany
