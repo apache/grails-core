@@ -20,6 +20,7 @@
 package org.grails.orm.hibernate.cfg.domainbinding
 
 import grails.gorm.specs.HibernateGormDatastoreSpec
+import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernateToOneProperty
 import org.grails.orm.hibernate.cfg.CompositeIdentity
 import org.grails.orm.hibernate.cfg.domainbinding.hibernate.GrailsHibernatePersistentEntity
 import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernatePersistentProperty
@@ -113,5 +114,85 @@ class ManyToOneBinderSpec extends HibernateGormDatastoreSpec {
         def resultConfig = mapping.getColumns().get("myCircularProp")
         resultConfig != null
         resultConfig.getJoinTable().getKey().getName() == "my_circular_prop_id"
+    }
+
+    @Unroll
+    def "Test one-to-one binding with uniqueWithinGroup constraint for #scenario"() {
+        given:
+        def namingStrategy = Mock(PersistentEntityNamingStrategy)
+        def simpleValueBinder = Mock(SimpleValueBinder)
+        def manyToOneValuesBinder = Mock(ManyToOneValuesBinder)
+        def compositeBinder = Mock(CompositeIdentifierToManyToOneBinder)
+        def columnFetcher = Mock(SimpleValueColumnFetcher)
+
+        def binder = new ManyToOneBinder(getGrailsDomainBinder().getMetadataBuildingContext(), namingStrategy, simpleValueBinder, manyToOneValuesBinder, compositeBinder, columnFetcher)
+
+        def property = Mock(HibernateOneToOneProperty)
+        def mapping = new Mapping()
+        def refDomainClass = Mock(GrailsHibernatePersistentEntity) {
+            getMappedForm() >> mapping
+        }
+        def propertyConfig = Mock(PropertyConfig)
+        def column = new Column('test')
+        def inverseSide = Mock(HibernateToOneProperty)
+
+        property.getHibernateAssociatedEntity() >> refDomainClass
+        mapping.setIdentity(null)
+        property.getMappedForm() >> propertyConfig
+        columnFetcher.getColumnForSimpleValue(_ as ManyToOne) >> column
+
+        propertyConfig.isUnique() >> isUnique
+        propertyConfig.isUniqueWithinGroup() >> isUniqueWithinGroup
+        property.isBidirectional() >> isBidirectional
+        property.getHibernateInverseSide() >> inverseSide
+        inverseSide.isHibernateOneToOne() >> isInverseHasOne
+
+        when:
+        def result = binder.bindManyToOne(property, null, "/test")
+
+        then:
+        result.isAlternateUniqueKey()
+        if (expectedUniqueValue != null) {
+            assert column.isUnique() == expectedUniqueValue
+        } else {
+            assert !column.isUnique()
+        }
+
+        where:
+        scenario                               | isUnique | isUniqueWithinGroup | isBidirectional | isInverseHasOne | expectedUniqueValue
+        "simple unique=true"                   | true     | false               | false           | false           | true
+        "simple unique=false"                  | false    | false               | false           | false           | false
+        "uniqueWithinGroup and bidirectional"  | false    | true                | true            | true            | true
+        "uniqueWithinGroup and unidirectional" | false    | true                | false           | false           | null
+        "uniqueWithinGroup and not hasOne"     | false    | true                | true            | false           | null
+    }
+
+    def "Test one-to-one binding throws exception when column is not found"() {
+        given:
+        def namingStrategy = Mock(PersistentEntityNamingStrategy)
+        def simpleValueBinder = Mock(SimpleValueBinder)
+        def manyToOneValuesBinder = Mock(ManyToOneValuesBinder)
+        def compositeBinder = Mock(CompositeIdentifierToManyToOneBinder)
+        def columnFetcher = Mock(SimpleValueColumnFetcher)
+
+        def binder = new ManyToOneBinder(getGrailsDomainBinder().getMetadataBuildingContext(), namingStrategy, simpleValueBinder, manyToOneValuesBinder, compositeBinder, columnFetcher)
+
+        def property = Mock(HibernateOneToOneProperty)
+        def mapping = new Mapping()
+        def refDomainClass = Mock(GrailsHibernatePersistentEntity) {
+            getMappedForm() >> mapping
+        }
+        def propertyConfig = new PropertyConfig()
+
+        property.getHibernateAssociatedEntity() >> refDomainClass
+        mapping.setIdentity(null)
+        property.getMappedForm() >> propertyConfig
+        columnFetcher.getColumnForSimpleValue(_ as ManyToOne) >> null
+
+        when:
+        binder.bindManyToOne(property, null, "/test")
+
+        then:
+        thrown(MappingException)
     }
 }

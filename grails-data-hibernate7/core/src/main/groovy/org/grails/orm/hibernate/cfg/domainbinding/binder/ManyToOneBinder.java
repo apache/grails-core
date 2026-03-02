@@ -45,76 +45,111 @@ public class ManyToOneBinder {
     private final ManyToOneValuesBinder manyToOneValuesBinder;
     private final CompositeIdentifierToManyToOneBinder compositeIdentifierToManyToOneBinder;
 
-    public ManyToOneBinder(
-            MetadataBuildingContext metadataBuildingContext,
-            PersistentEntityNamingStrategy namingStrategy,
-            SimpleValueBinder simpleValueBinder,
-            ManyToOneValuesBinder manyToOneValuesBinder,
-            CompositeIdentifierToManyToOneBinder compositeIdentifierToManyToOneBinder) {
-        this.metadataBuildingContext = metadataBuildingContext;
-        this.namingStrategy = namingStrategy;
-        this.simpleValueBinder = simpleValueBinder;
-        this.manyToOneValuesBinder = manyToOneValuesBinder;
-        this.compositeIdentifierToManyToOneBinder = compositeIdentifierToManyToOneBinder;
-    }
+  public ManyToOneBinder(
+      MetadataBuildingContext metadataBuildingContext,
+      PersistentEntityNamingStrategy namingStrategy,
+      SimpleValueBinder simpleValueBinder,
+      ManyToOneValuesBinder manyToOneValuesBinder,
+      CompositeIdentifierToManyToOneBinder compositeIdentifierToManyToOneBinder,
+      SimpleValueColumnFetcher simpleValueColumnFetcher) {
+    this.metadataBuildingContext = metadataBuildingContext;
+    this.namingStrategy = namingStrategy;
+    this.simpleValueBinder = simpleValueBinder;
+    this.manyToOneValuesBinder = manyToOneValuesBinder;
+    this.compositeIdentifierToManyToOneBinder = compositeIdentifierToManyToOneBinder;
+    this.simpleValueColumnFetcher = simpleValueColumnFetcher;
+  }
 
-    public ManyToOneBinder(
-            MetadataBuildingContext metadataBuildingContext,
-            PersistentEntityNamingStrategy namingStrategy,
-            JdbcEnvironment jdbcEnvironment) {
-        this(
-                metadataBuildingContext,
-                namingStrategy,
-                new SimpleValueBinder(metadataBuildingContext, namingStrategy, jdbcEnvironment),
-                new ManyToOneValuesBinder(),
-                new CompositeIdentifierToManyToOneBinder(metadataBuildingContext, namingStrategy, jdbcEnvironment));
-    }
+  public ManyToOneBinder(
+      MetadataBuildingContext metadataBuildingContext,
+      PersistentEntityNamingStrategy namingStrategy,
+      JdbcEnvironment jdbcEnvironment) {
+    this(
+        metadataBuildingContext,
+        namingStrategy,
+        new SimpleValueBinder(metadataBuildingContext, namingStrategy, jdbcEnvironment),
+        new ManyToOneValuesBinder(),
+        new CompositeIdentifierToManyToOneBinder(
+            metadataBuildingContext, namingStrategy, jdbcEnvironment),
+        new SimpleValueColumnFetcher());
+  }
 
-    /** Binds a many-to-one association. */
-    public ManyToOne bindManyToOne(
-            HibernateManyToOneProperty property, org.hibernate.mapping.Table table, String path) {
-        return doBind(property, property.getHibernateAssociatedEntity(), table, path);
+  /** Binds a to-one (many-to-one or one-to-one) association. */
+  public ManyToOne bindManyToOne(
+      HibernateToOneProperty property, org.hibernate.mapping.Table table, String path) {
+    GrailsHibernatePersistentEntity refDomainClass = property.getHibernateAssociatedEntity();
+    boolean isComposite = isCompositeIdentifier(refDomainClass);
+    ManyToOne manyToOne = doBind(property, refDomainClass, isComposite, table, path);
+    if (property instanceof HibernateOneToOneProperty oneToOne && !isComposite) {
+      bindOneToOneUniqueKey(oneToOne, manyToOne);
     }
+    return manyToOne;
+  }
 
-    /** Binds the inverse side of a many-to-many association as a collection element. */
-    public ManyToOne bindManyToOne(
-            HibernateManyToManyProperty property, org.hibernate.mapping.Table table, String path) {
-        GrailsHibernatePersistentEntity refDomainClass = property.getHibernateOwner();
-        Optional<CompositeIdentity> compositeId = refDomainClass.getHibernateCompositeIdentity();
-        if (compositeId.isEmpty() && property.isCircular()) {
-            prepareCircularManyToMany(property);
-        }
-        return doBind(property, refDomainClass, table, path);
+  /** Binds the inverse side of a many-to-many association as a collection element. */
+  public ManyToOne bindManyToOne(
+      HibernateManyToManyProperty property, org.hibernate.mapping.Table table, String path) {
+    GrailsHibernatePersistentEntity refDomainClass = property.getHibernateOwner();
+    boolean isComposite = isCompositeIdentifier(refDomainClass);
+    if (!isComposite && property.isCircular()) {
+      prepareCircularManyToMany(property, refDomainClass.getMappedForm());
     }
+    return doBind(property, refDomainClass, isComposite, table, path);
+  }
 
-    ManyToOne doBind(
-            HibernateAssociation property,
-            GrailsHibernatePersistentEntity refDomainClass,
-            org.hibernate.mapping.Table table,
-            String path) {
-        ManyToOne manyToOne = new ManyToOne(metadataBuildingContext, table);
-        manyToOneValuesBinder.bindManyToOneValues(property, manyToOne);
-        Optional<CompositeIdentity> compositeId = refDomainClass.getHibernateCompositeIdentity();
-        if (compositeId.isPresent()) {
-            compositeIdentifierToManyToOneBinder.bindCompositeIdentifierToManyToOne(
-                    property, manyToOne, compositeId.get(), refDomainClass, path);
-        } else {
-            simpleValueBinder.bindSimpleValue(property, null, manyToOne, path);
-        }
-        return manyToOne;
-    }
+  private static boolean isCompositeIdentifier(GrailsHibernatePersistentEntity entity) {
+    Mapping mapping = entity.getMappedForm();
+    return mapping != null && mapping.hasCompositeIdentifier();
+  }
 
-    private void prepareCircularManyToMany(HibernateManyToManyProperty property) {
-        Mapping ownerMapping = property.getHibernateOwner().getMappedForm();
-        if (ownerMapping != null && !ownerMapping.getColumns().containsKey(property.getName())) {
-            ownerMapping.getColumns().put(property.getName(), property.getMappedForm());
-        }
-        if (!property.getMappedForm().hasJoinKeyMapping()) {
-            JoinTable jt = new JoinTable();
-            ColumnConfig columnConfig = new ColumnConfig();
-            columnConfig.setName(namingStrategy.resolveColumnName(property.getName()) + FOREIGN_KEY_SUFFIX);
-            jt.setKey(columnConfig);
-            property.getMappedForm().setJoinTable(jt);
-        }
+  @SuppressWarnings("unchecked")
+  private ManyToOne doBind(
+      HibernateAssociation property,
+      GrailsHibernatePersistentEntity refDomainClass,
+      boolean isComposite,
+      org.hibernate.mapping.Table table,
+      String path) {
+    ManyToOne manyToOne = new ManyToOne(metadataBuildingContext, table);
+    manyToOneValuesBinder.bindManyToOneValues(property, manyToOne);
+    if (isComposite) {
+      Mapping mapping = refDomainClass.getMappedForm();
+      CompositeIdentity ci = (CompositeIdentity) mapping.getIdentity();
+      compositeIdentifierToManyToOneBinder.bindCompositeIdentifierToManyToOne(
+          property, manyToOne, ci, refDomainClass, path);
+    } else {
+      simpleValueBinder.bindSimpleValue(property, null, manyToOne, path);
     }
+    return manyToOne;
+  }
+
+  private void bindOneToOneUniqueKey(HibernateOneToOneProperty property, ManyToOne manyToOne) {
+    PropertyConfig config = property.getMappedForm();
+    manyToOne.setAlternateUniqueKey(true);
+    Column c = simpleValueColumnFetcher.getColumnForSimpleValue(manyToOne);
+    if (c == null) {
+      throw new MappingException("There is no column for property [" + property.getName() + "]");
+    }
+    if (!config.isUniqueWithinGroup()) {
+      c.setUnique(config.isUnique());
+    } else if (property.isBidirectional()
+        && property.getHibernateInverseSide() instanceof HibernateToOneProperty inverseSide
+        && inverseSide.isHibernateOneToOne()) {
+      c.setUnique(true);
+    }
+  }
+
+  private void prepareCircularManyToMany(HibernateManyToManyProperty property, Mapping mapping) {
+    PropertyConfig pc = property.getMappedForm();
+    if (mapping != null && pc.getColumns().isEmpty()) {
+      mapping.getColumns().put(property.getName(), pc);
+    }
+    if (!pc.hasJoinKeyMapping()) {
+      JoinTable jt = new JoinTable();
+      ColumnConfig columnConfig = new ColumnConfig();
+      columnConfig.setName(
+          namingStrategy.resolveColumnName(property.getName()) + FOREIGN_KEY_SUFFIX);
+      jt.setKey(columnConfig);
+      pc.setJoinTable(jt);
+    }
+  }
 }

@@ -31,31 +31,17 @@ import org.grails.orm.hibernate.cfg.PropertyConfig;
 public class HibernateManyToManyProperty extends ManyToManyWithMapping<PropertyConfig>
         implements HibernateToManyProperty {
     private Collection collection;
-
     public HibernateManyToManyProperty(PersistentEntity entity, MappingContext context, PropertyDescriptor property) {
         super(entity, context, property);
     }
 
-    @Override
-    public GrailsHibernatePersistentEntity getHibernateAssociatedEntity() {
-        return (GrailsHibernatePersistentEntity) super.getAssociatedEntity();
-    }
+  @Override
+  public GrailsHibernatePersistentEntity getHibernateAssociatedEntity() {
+    return (GrailsHibernatePersistentEntity) super.getAssociatedEntity();
+  }
 
-    @Override
-    public HibernateManyToManyProperty getHibernateInverseSide() {
-        return (HibernateManyToManyProperty) getInverseSide();
-    }
-
-    @Override
-    public boolean isAssociationColumnNullable() {
-        return false;
-    }
-
-    public Collection getCollection() {
-        return collection;
-    }
-
-    public void setCollection(Collection collection) {
-        this.collection = collection;
-    }
+  @Override
+  public HibernateManyToManyProperty getHibernateInverseSide() {
+    return (HibernateManyToManyProperty) getInverseSide();
+  }
 }
