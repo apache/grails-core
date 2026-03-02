@@ -275,8 +275,8 @@ class GrailsPropertyBinderSpec extends HibernateGormDatastoreSpec {
         def statusProp = Mock(TestSimpleEnum)
         setupProperty(statusProp, "status", new Mapping(), persistentEntity)
         statusProp.getType() >> java.util.concurrent.TimeUnit
-        statusProp.isHibernateOneToOne() >> false
-        statusProp.isHibernateManyToOne() >> false
+        statusProp.isValidHibernateOneToOne() >> false
+        statusProp.isValidHibernateManyToOne() >> false
 
         when:
         Value value = propertyBinder.bindProperty(statusProp, null, EMPTY_PATH)

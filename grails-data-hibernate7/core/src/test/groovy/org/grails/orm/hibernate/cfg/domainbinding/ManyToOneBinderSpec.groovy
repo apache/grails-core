@@ -145,7 +145,7 @@ class ManyToOneBinderSpec extends HibernateGormDatastoreSpec {
         propertyConfig.isUniqueWithinGroup() >> isUniqueWithinGroup
         property.isBidirectional() >> isBidirectional
         property.getHibernateInverseSide() >> inverseSide
-        inverseSide.isHibernateOneToOne() >> isInverseHasOne
+        inverseSide.isValidHibernateOneToOne() >> isInverseHasOne
 
         when:
         def result = binder.bindManyToOne(property, null, "/test")

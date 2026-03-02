@@ -22,6 +22,7 @@ import java.beans.PropertyDescriptor;
 
 import org.grails.datastore.mapping.model.MappingContext;
 import org.grails.datastore.mapping.model.PersistentEntity;
+import org.grails.datastore.mapping.model.types.OneToOne;
 import org.grails.datastore.mapping.model.types.mapping.ManyToOneWithMapping;
 import org.grails.orm.hibernate.cfg.PropertyConfig;
 
@@ -31,18 +32,15 @@ public class HibernateManyToOneProperty extends ManyToOneWithMapping<PropertyCon
         super(entity, context, property);
     }
 
-    @Override
-    public GrailsHibernatePersistentEntity getHibernateAssociatedEntity() {
-        return (GrailsHibernatePersistentEntity) super.getAssociatedEntity();
-    }
+  @Override
+  public GrailsHibernatePersistentEntity getHibernateAssociatedEntity() {
+    return (GrailsHibernatePersistentEntity) super.getAssociatedEntity();
+  }
 
-    public String getReferencedEntityName() {
-        return getHibernateAssociatedEntity().getName();
-    }
 
-    public boolean isValidHibernateManyToOne() {
 
-        validateAssociation();
-        return true;
-    }
+ public  boolean isValidHibernateManyToOne() {
+    validateAssociation();
+     return true;
+  }
 }

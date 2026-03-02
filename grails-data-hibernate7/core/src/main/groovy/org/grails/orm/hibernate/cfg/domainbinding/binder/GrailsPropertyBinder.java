@@ -81,7 +81,7 @@ public class GrailsPropertyBinder {
       value =
           enumTypeBinder.bindEnumType(currentGrailsProp, currentGrailsProp.getType(), table, path);
     } else if (currentGrailsProp instanceof HibernateToOneProperty toOne) {
-      if (toOne.isHibernateOneToOne()) {
+      if (toOne.isValidHibernateOneToOne()) {
         value =
             oneToOneBinder.bindOneToOne(
                 (org.grails.datastore.mapping.model.types.OneToOne) toOne,

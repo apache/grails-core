@@ -22,4 +22,7 @@ package org.grails.orm.hibernate.cfg.domainbinding.hibernate;
  * Marker interface for Hibernate to-one associations ({@link HibernateManyToOneProperty} and {@link
  * HibernateOneToOneProperty}). Parallel to {@link HibernateToManyProperty}.
  */
-public interface HibernateToOneProperty extends HibernateAssociation {}
+public interface HibernateToOneProperty extends HibernateAssociation {
+
+
+}

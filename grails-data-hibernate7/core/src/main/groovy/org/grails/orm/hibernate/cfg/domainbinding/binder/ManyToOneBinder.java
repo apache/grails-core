@@ -133,7 +133,7 @@ public class ManyToOneBinder {
       c.setUnique(config.isUnique());
     } else if (property.isBidirectional()
         && property.getHibernateInverseSide() instanceof HibernateToOneProperty inverseSide
-        && inverseSide.isHibernateOneToOne()) {
+        && inverseSide.isValidHibernateOneToOne()) {
       c.setUnique(true);
     }
   }
