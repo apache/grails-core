@@ -261,6 +261,51 @@ Note that the datasource specified in a service has no bearing on which datasour
 If you have a `Foo` domain class in `dataSource1` and a `Bar` domain class in `dataSource2`, if `WahooService` uses `dataSource1`, a service method that saves a new `Foo` and a new `Bar` will only be transactional for `Foo` since they share the same datasource. The transaction won't affect the `Bar` instance. If you want both to be transactional you'd need to use two services and XA datasources for two-phase commit, e.g. with the Atomikos plugin.
 
 
+===== GORM Data Service Datasource Inheritance
+
+When using GORM Data Services (the `@Service` annotation), the service automatically inherits the datasource from its domain class's `mapping` block. This means you do not need to explicitly specify `@Transactional(connection = '...')` if the domain class already declares its datasource.
+
+For example, given a domain class mapped to the `'lookup'` datasource:
+
+[source,groovy]
+----
+class ZipCode {
+
+   String code
+
+   static mapping = {
+      datasource 'lookup'
+   }
+}
+----
+
+A GORM Data Service targeting this domain class will automatically route all auto-implemented operations (save, get, delete, find, count) to the `'lookup'` datasource:
+
+[source,groovy]
+----
+@Service(ZipCode)
+abstract class ZipCodeService {
+
+   abstract ZipCode get(Serializable id)
+   abstract ZipCode save(ZipCode zipCode)
+   abstract ZipCode delete(Serializable id)
+   abstract List<ZipCode> findAllByCode(String code)
+}
+----
+
+If you need to override the inherited datasource, you can still use an explicit `@Transactional(connection = '...')` annotation on the service, which takes precedence:
+
+[source,groovy]
+----
+@Service(ZipCode)
+@Transactional(connection = 'auditing')
+abstract class ZipCodeAuditService {
+
+   abstract ZipCode save(ZipCode zipCode)
+}
+----
+
+
 ==== GORM Data Services and Multiple Datasources
 
 
@@ -305,9 +350,9 @@ abstract class BookService implements BookDataService {
 }
 ----
 
-The `@Transactional(connection = 'books')` annotation on the abstract class ensures that all auto-implemented methods (`get`, `save`, `delete`, `findBy*`, `countBy*`, etc.) route to the `books` datasource. Without this annotation, queries silently route to the default datasource.
+The `@Transactional(connection = 'books')` annotation on the abstract class ensures that all auto-implemented methods (`get`, `save`, `delete`, `findBy*`, `countBy*`, etc.) route to the `books` datasource. Without this annotation, queries route to the datasource inherited from the domain class's mapping block, or the default datasource if none is declared.
 
-NOTE: The `@Service(Book)` annotation identifies the domain class but does not determine which datasource to use. Even if `Book` declares `datasource 'books'` in its mapping block, you must specify `@Transactional(connection = 'books')` on the abstract class to route operations to the correct datasource.
+NOTE: The `@Service(Book)` annotation identifies the domain class but does not determine which datasource to use. If `Book` declares `datasource 'books'` in its mapping block, the service inherits that datasource automatically. Use `@Transactional(connection = 'books')` on the abstract class to explicitly override the datasource routing.
 
 
 ===== How Connection Routing Works
@@ -502,7 +547,6 @@ abstract class MetricService {
 ----
 
 The `connection` parameter on the abstract class routes all auto-implemented operations - including `save()`, `get()`, and `delete()` - to the `analytics` datasource, regardless of multi-tenancy mode (DATABASE or DISCRIMINATOR).
-
 
 ==== Transactions across multiple data sources
 
