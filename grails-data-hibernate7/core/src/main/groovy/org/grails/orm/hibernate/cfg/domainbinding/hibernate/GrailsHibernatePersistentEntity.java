@@ -54,9 +54,26 @@ public interface GrailsHibernatePersistentEntity extends PersistentEntity {
         return (GrailsHibernatePersistentEntity) getRootEntity();
     }
 
-    default GrailsHibernatePersistentEntity getStrategyOwner() {
-        List<HibernatePersistentProperty> props = getHibernatePersistentProperties();
-        return (props != null && !props.isEmpty()) ? props.get(0).getHibernateOwner() : this;
+  @Override
+  HibernatePersistentProperty getVersion();
+
+  /**
+   * Returns the persistent property with the given name cast to {@link HibernatePersistentProperty},
+   * or {@code null} if no such property exists.
+   */
+  default HibernatePersistentProperty getHibernatePropertyByName(String name) {
+    var property = getPropertyByName(name);
+    return property instanceof HibernatePersistentProperty hpp ? hpp : null;
+  }
+
+  /**
+   * @param parentType The type of the parent entity
+   * @return The parent property if it exists
+   */
+  default Optional<HibernatePersistentProperty> getHibernateParentProperty(Class<?> parentType) {
+    List<HibernatePersistentProperty> properties = getHibernatePersistentProperties();
+    if (properties == null) {
+      return Optional.empty();
     }
 
     default Mapping getStrategyMapping() {
