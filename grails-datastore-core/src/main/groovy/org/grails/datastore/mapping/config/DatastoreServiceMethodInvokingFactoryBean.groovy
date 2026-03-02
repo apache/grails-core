@@ -32,7 +32,7 @@ import org.grails.datastore.mapping.core.Datastore
 import org.grails.datastore.mapping.services.Service
 
 /**
- * Variant of {#link MethodInvokingFactoryBean} which returns the correct data service type instead of {@code java.lang.Object} so the Autowire with type works correctly.
+ * Variant of {@link MethodInvokingFactoryBean} which returns the correct data service type instead of {@code java.lang.Object} so the Autowire with type works correctly.
  */
 @Internal
 @CompileStatic
