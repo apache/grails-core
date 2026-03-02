@@ -115,7 +115,8 @@ class ListSecondPassBinderSpec extends HibernateGormDatastoreSpec {
         ComponentBinder componentBinder = new ComponentBinder(
                 metadataBuildingContext,
                 binder.getMappingCacheHolder(),
-                componentUpdater
+                componentUpdater,
+                getCollector()
         )
 
         GrailsPropertyBinder propertyBinder = new GrailsPropertyBinder(

@@ -25,7 +25,6 @@ import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernateManyToOnePr
 import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernateOneToOneProperty;
 import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernatePersistentProperty;
 import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernateToManyProperty;
-import org.hibernate.boot.spi.InFlightMetadataCollector;
 import org.hibernate.mapping.PersistentClass;
 import org.hibernate.mapping.Table;
 import org.hibernate.mapping.Value;
@@ -52,21 +51,32 @@ public class GrailsPropertyBinder {
     private final ManyToOneBinder manyToOneBinder;
     private final ForeignKeyOneToOneBinder foreignKeyOneToOneBinder;
 
-    public GrailsPropertyBinder(
-            EnumTypeBinder enumTypeBinder,
-            ComponentBinder componentBinder,
-            CollectionBinder collectionBinder,
-            SimpleValueBinder simpleValueBinder,
-            OneToOneBinder oneToOneBinder,
-            ManyToOneBinder manyToOneBinder,
-            ForeignKeyOneToOneBinder foreignKeyOneToOneBinder) {
-        this.enumTypeBinder = enumTypeBinder;
-        this.componentBinder = componentBinder;
-        this.collectionBinder = collectionBinder;
-        this.simpleValueBinder = simpleValueBinder;
-        this.oneToOneBinder = oneToOneBinder;
-        this.manyToOneBinder = manyToOneBinder;
-        this.foreignKeyOneToOneBinder = foreignKeyOneToOneBinder;
+  public GrailsPropertyBinder(
+      EnumTypeBinder enumTypeBinder,
+      ComponentBinder componentBinder,
+      CollectionBinder collectionBinder,
+      SimpleValueBinder simpleValueBinder,
+      OneToOneBinder oneToOneBinder,
+      ManyToOneBinder manyToOneBinder) {
+    this.enumTypeBinder = enumTypeBinder;
+    this.componentBinder = componentBinder;
+    this.collectionBinder = collectionBinder;
+    this.simpleValueBinder = simpleValueBinder;
+    this.oneToOneBinder = oneToOneBinder;
+    this.manyToOneBinder = manyToOneBinder;
+  }
+
+  public Value bindProperty(
+      PersistentClass persistentClass,
+      Table table,
+      String path,
+      HibernatePersistentProperty parentProperty,
+      @Nonnull HibernatePersistentProperty currentGrailsProp) {
+    if (LOG.isDebugEnabled()) {
+      LOG.debug(
+          "[GrailsPropertyBinder] Binding persistent property ["
+              + currentGrailsProp.getName()
+              + "]");
     }
 
     public Value bindProperty(
@@ -93,7 +103,7 @@ public class GrailsPropertyBinder {
       // HibernateToManyProperty
       value = collectionBinder.bindCollection(toMany, persistentClass, path);
     } else if (currentGrailsProp instanceof HibernateEmbeddedProperty embedded) {
-      value = componentBinder.bindComponent(persistentClass, embedded, mappings, path);
+      value = componentBinder.bindComponent(persistentClass, embedded, path);
     } else {
       // HibernateSimpleProperty
       value = simpleValueBinder.bindSimpleValue(currentGrailsProp, parentProperty, table, path);

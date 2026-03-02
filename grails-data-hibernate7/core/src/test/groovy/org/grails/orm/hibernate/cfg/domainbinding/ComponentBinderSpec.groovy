@@ -45,7 +45,12 @@ class ComponentBinderSpec extends HibernateGormDatastoreSpec {
 
     def setup() {
         def metadataBuildingContext = getGrailsDomainBinder().getMetadataBuildingContext()
-        binder = new ComponentBinder(metadataBuildingContext, mappingCacheHolder, componentUpdater)
+        binder = new ComponentBinder(
+                metadataBuildingContext,
+                mappingCacheHolder,
+                componentUpdater,
+                metadataBuildingContext.getMetadataCollector()
+        )
         binder.setGrailsPropertyBinder(grailsPropertyBinder)
     }
 
@@ -89,7 +94,7 @@ class ComponentBinderSpec extends HibernateGormDatastoreSpec {
         component.getComponentClassName() == Address.name
         component.getRoleName() == Address.name + ".address"
         1 * mappingCacheHolder.cacheMapping(associatedEntity)
-        1 * grailsPropertyBinder.bindProperty(prop1, embeddedProp, "address") >> new BasicValue(metadataBuildingContext, root.getTable())
+        1 * grailsPropertyBinder.bindProperty(root, root.getTable(), "address", embeddedProp, prop1) >> new BasicValue(metadataBuildingContext, root.getTable())
         1 * componentUpdater.updateComponent(_ as Component, embeddedProp, prop1, _ as Value)
     }
 
@@ -128,7 +133,8 @@ class ComponentBinderSpec extends HibernateGormDatastoreSpec {
 
         then:
         0 * componentUpdater.updateComponent(_, _, idProp, _)
-        1 * grailsPropertyBinder.bindProperty(normalProp, embeddedProp, "address") >> new BasicValue(metadataBuildingContext, root.getTable())
+        0 * componentUpdater.updateComponent(_, _, versionProp, _)
+        1 * grailsPropertyBinder.bindProperty(root, root.getTable(), "address", embeddedProp, normalProp) >> new BasicValue(metadataBuildingContext, root.getTable())
         1 * componentUpdater.updateComponent(_, _, normalProp, _)
     }
 
@@ -180,7 +186,7 @@ class ComponentBinderSpec extends HibernateGormDatastoreSpec {
         def mappings = metadataBuildingContext.getMetadataCollector()
 
         when:
-        def component = binder.bindComponent(root, embeddedProp, mappings, "")
+        def component = binder.bindComponent(root, embeddedProp, "")
 
         then:
         component.getParentProperty() == "myEntity"

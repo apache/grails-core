@@ -81,7 +81,7 @@ class IdentityBinderSpec extends HibernateGormDatastoreSpec {
 
 
         then:
-        1 * compositeIdBinder.bindCompositeId(domainClass, root, compositeIdentity)
+        1 * compositeIdBinder.bindCompositeId(domainClass, root, null)
     }
 
     def "should delegate to compositeIdBinder when mapping specifies composite identity"() {

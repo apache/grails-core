@@ -106,7 +106,10 @@ public class RootPersistentClassCommonValuesBinder {
               + root.getTable().getName());
     }
 
-    public RootClass bindRoot(@Nonnull HibernatePersistentEntity hibernatePersistentEntity) {
+    identityBinder.bindIdentity(domainClass, root, mappings, gormMapping);
+    versionBinder.bindVersion(domainClass.getVersion(), root);
+    root.createPrimaryKey();
+    classPropertiesBinder.bindClassProperties(domainClass, root);
 
         RootClass root = new RootClass(this.metadataBuildingContext);
         classBinder.bindClass(hibernatePersistentEntity, root);

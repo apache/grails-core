@@ -71,26 +71,14 @@ public class SubclassMappingBinder {
       subClass = singleTableSubclass;
     }
 
-    public @NonNull Subclass createSubclassMapping(HibernatePersistentEntity subEntity, PersistentClass parent) {
-        Subclass subClass;
-        subEntity.configureDerivedProperties();
-        Mapping m = subEntity.getMappedForm();
-        if (subEntity.isJoinedSubclass()) {
-            subClass = joinedSubClassBinder.bindJoinedSubClass(subEntity, parent);
-        } else if (subEntity.isUnionSubclass()) {
-            subClass = unionSubclassBinder.bindUnionSubclass(subEntity, parent);
-        } else {
-            subClass = singleTableSubclassBinder.bindSubClass(subEntity, parent);
-        }
-
-        subClass.setBatchSize(Optional.ofNullable(m.getBatchSize()).orElse(-1));
-        subClass.setDynamicUpdate(m.getDynamicUpdate());
-        subClass.setDynamicInsert(m.getDynamicInsert());
-        subClass.setCached(parent.isCached());
-        subClass.setAbstract(subEntity.isAbstract());
-        subClass.setEntityName(subEntity.getName());
-        subClass.setJpaEntityName(GrailsHibernateUtil.unqualify(subEntity.getName()));
-        classPropertiesBinder.bindClassProperties(subEntity);
-        return subClass;
-    }
+    subClass.setBatchSize(Optional.ofNullable(m.getBatchSize()).orElse(-1));
+    subClass.setDynamicUpdate(m.getDynamicUpdate());
+    subClass.setDynamicInsert(m.getDynamicInsert());
+    subClass.setCached(parent.isCached());
+    subClass.setAbstract(subEntity.isAbstract());
+    subClass.setEntityName(subEntity.getName());
+    subClass.setJpaEntityName(GrailsHibernateUtil.unqualify(subEntity.getName()));
+    classPropertiesBinder.bindClassProperties(subEntity, subClass);
+    return subClass;
+  }
 }
