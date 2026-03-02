@@ -65,8 +65,8 @@ public class PropertyBinder {
             config = new PropertyConfig();
         }
 
-        if (persistentProperty instanceof HibernateAssociation assoc &&
-                assoc.isBidirectionalManyToOneWithListMapping(prop)) {
+        if (persistentProperty instanceof HibernateAssociation assoc
+                && assoc.isBidirectionalManyToOneWithListMapping(prop)) {
             prop.setInsertable(false);
             prop.setUpdatable(false);
         } else {
@@ -74,30 +74,9 @@ public class PropertyBinder {
             prop.setUpdatable(config.getUpdatable());
         }
 
-        var accessType = AccessType.getAccessStrategy(config.getAccessType());
-
-        var accessorName = accessType == AccessType.FIELD ?
-                Optional.ofNullable(persistentProperty.getReader())
-                        .map(EntityReflector.PropertyReader::getter)
-                        .map(getter -> getter.getAnnotation(Traits.Implemented.class))
-                        .map(annotation -> TraitPropertyAccessStrategy.class.getName())
-                        .orElse(accessType.getType()) :
-                accessType.getType();
-        prop.setPropertyAccessorName(accessorName);
-
-        prop.setOptional(persistentProperty.isNullable());
-        if (persistentProperty instanceof Association<?> association &&
-                !(persistentProperty instanceof HibernateEnumProperty)) {
-            prop.setCascade(cascadeBehaviorFetcher.getCascadeBehaviour(association));
-        }
-
-        // lazy to true
-
-        if (persistentProperty.isLazyAble()) {
-            final boolean isLazy =
-                    Optional.ofNullable(config.getLazy()).orElse(persistentProperty instanceof Association);
-            prop.setLazy(isLazy);
-        }
-        return prop;
+    prop.setOptional(persistentProperty.isNullable());
+    if (persistentProperty instanceof Association<?> association
+        && !(persistentProperty instanceof HibernateEnumProperty)) {
+      prop.setCascade(cascadeBehaviorFetcher.getCascadeBehaviour(association));
     }
 }

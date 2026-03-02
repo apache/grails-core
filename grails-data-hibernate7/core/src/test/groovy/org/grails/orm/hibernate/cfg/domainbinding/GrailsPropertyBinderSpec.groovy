@@ -30,6 +30,12 @@ import org.hibernate.mapping.Property
 import org.hibernate.mapping.RootClass
 import org.hibernate.mapping.Value
 
+import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernateBasicProperty
+import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernateEmbeddedProperty
+import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernateManyToOneProperty
+import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernateOneToOneProperty
+import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernateSimpleEnumProperty
+import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernateSimpleProperty
 import org.grails.orm.hibernate.cfg.domainbinding.binder.CollectionBinder
 import org.grails.orm.hibernate.cfg.domainbinding.binder.ClassBinder
 import org.grails.orm.hibernate.cfg.domainbinding.binder.ComponentBinder
@@ -94,6 +100,12 @@ class GrailsPropertyBinderSpec extends HibernateGormDatastoreSpec {
 
     abstract static class TestSimple extends HibernateSimpleProperty {
         TestSimple(PersistentEntity owner, MappingContext context, java.beans.PropertyDescriptor descriptor) {
+            super(owner, context, descriptor);
+        }
+    }
+
+    abstract static class TestSimpleEnum extends HibernateSimpleEnumProperty {
+        TestSimpleEnum(PersistentEntity owner, MappingContext context, java.beans.PropertyDescriptor descriptor) {
             super(owner, context, descriptor);
         }
     }
@@ -260,11 +272,11 @@ class GrailsPropertyBinderSpec extends HibernateGormDatastoreSpec {
         rootClass.setEntityName(persistentEntity.name)
         rootClass.setTable(collector.addTable(null, null, "ENUM_BOOK", null, false, binder.getMetadataBuildingContext()))
 
-        // --- THE FIX: Bridge the GORM entity to the Hibernate RootClass ---
-        ((GrailsHibernatePersistentEntity)persistentEntity).setPersistentClass(rootClass)
-        // ------------------------------------------------------------------
-
-        def statusProp = persistentEntity.getPropertyByName("status") as HibernatePersistentProperty
+        def statusProp = Mock(TestSimpleEnum)
+        setupProperty(statusProp, "status", new Mapping(), persistentEntity)
+        statusProp.getType() >> java.util.concurrent.TimeUnit
+        statusProp.isHibernateOneToOne() >> false
+        statusProp.isHibernateManyToOne() >> false
 
         when:
         Value value = propertyBinder.bindProperty(statusProp, null, EMPTY_PATH)
