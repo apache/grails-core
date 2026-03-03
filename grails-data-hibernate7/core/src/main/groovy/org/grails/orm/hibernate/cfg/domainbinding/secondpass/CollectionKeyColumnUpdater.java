@@ -29,7 +29,11 @@ import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernateToManyPrope
 /** Forces columns to be nullable and checks if the key is updatable. */
 public class CollectionKeyColumnUpdater {
 
-    private final CollectionKeyBinder collectionKeyBinder;
+  /** Force nullable and check updatable. */
+  public void forceNullableAndCheckUpdatable(DependantValue key, HibernateToManyProperty property) {
+    key.getColumns().stream()
+        .filter(Objects::nonNull)
+        .forEach(column -> column.setNullable(true));
 
     /** Creates a new {@link CollectionKeyColumnUpdater} instance. */
     public CollectionKeyColumnUpdater(CollectionKeyBinder collectionKeyBinder) {

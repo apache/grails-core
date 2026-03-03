@@ -33,23 +33,27 @@ public class CollectionKeyBinder {
   private final BidirectionalOneToManyLinker bidirectionalOneToManyLinker;
   private final DependentKeyValueBinder dependentKeyValueBinder;
   private final SimpleValueColumnBinder simpleValueColumnBinder;
+  private final PrimaryKeyValueCreator primaryKeyValueCreator;
 
   /** Creates a new {@link CollectionKeyBinder} instance. */
   public CollectionKeyBinder(
       BidirectionalOneToManyLinker bidirectionalOneToManyLinker,
       DependentKeyValueBinder dependentKeyValueBinder,
-      SimpleValueColumnBinder simpleValueColumnBinder) {
+      SimpleValueColumnBinder simpleValueColumnBinder,
+      PrimaryKeyValueCreator primaryKeyValueCreator) {
     this.bidirectionalOneToManyLinker = bidirectionalOneToManyLinker;
     this.dependentKeyValueBinder = dependentKeyValueBinder;
     this.simpleValueColumnBinder = simpleValueColumnBinder;
+    this.primaryKeyValueCreator = primaryKeyValueCreator;
   }
 
-  /** Binds the collection key for the given property and collection. */
-  public void bind(
+  /** Creates the {@link DependantValue} key, sets it on the collection, and binds it. */
+  public DependantValue bind(
       HibernateToManyProperty property,
-      DependantValue key,
       PersistentClass associatedClass,
       Collection collection) {
+    DependantValue key = primaryKeyValueCreator.createPrimaryKeyValue(collection);
+    collection.setKey(key);
     if (property.isBidirectional()) {
       var inverseSide = property.getHibernateInverseSide();
       if (inverseSide instanceof ToOne && property.shouldBindWithForeignKey()) {
@@ -66,5 +70,6 @@ public class CollectionKeyBinder {
         dependentKeyValueBinder.bind(property, key);
       }
     }
+    return key;
   }
 }

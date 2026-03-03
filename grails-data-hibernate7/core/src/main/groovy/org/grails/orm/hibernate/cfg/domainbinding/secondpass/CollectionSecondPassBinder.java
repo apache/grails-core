@@ -37,7 +37,6 @@ public class CollectionSecondPassBinder {
   private final CollectionKeyBinder collectionKeyBinder;
   private final BidirectionalMapElementBinder bidirectionalMapElementBinder;
   private final ManyToManyElementBinder manyToManyElementBinder;
-  private final PrimaryKeyValueCreator primaryKeyValueCreator;
   private final CollectionKeyColumnUpdater collectionKeyColumnUpdater;
   private final UnidirectionalOneToManyBinder unidirectionalOneToManyBinder;
   private final CollectionWithJoinTableBinder collectionWithJoinTableBinder;
@@ -45,7 +44,6 @@ public class CollectionSecondPassBinder {
 
   /** Creates a new {@link CollectionSecondPassBinder} instance. */
   public CollectionSecondPassBinder(
-      PrimaryKeyValueCreator primaryKeyValueCreator,
       CollectionKeyColumnUpdater collectionKeyColumnUpdater,
       UnidirectionalOneToManyBinder unidirectionalOneToManyBinder,
       CollectionWithJoinTableBinder collectionWithJoinTableBinder,
@@ -55,7 +53,6 @@ public class CollectionSecondPassBinder {
       ManyToManyElementBinder manyToManyElementBinder,
       CollectionOrderByBinder collectionOrderByBinder,
       CollectionMultiTenantFilterBinder collectionMultiTenantFilterBinder) {
-    this.primaryKeyValueCreator = primaryKeyValueCreator;
     this.collectionKeyColumnUpdater = collectionKeyColumnUpdater;
     this.unidirectionalOneToManyBinder = unidirectionalOneToManyBinder;
     this.collectionWithJoinTableBinder = collectionWithJoinTableBinder;
@@ -79,13 +76,9 @@ public class CollectionSecondPassBinder {
     bindOneToManyAssociation(property, associatedClass, collection);
 
     collectionMultiTenantFilterBinder.bind(property, collection);
-    if (property.isSorted()) {
-      collection.setSorted(true);
-    }
+    collection.setSorted(property.isSorted());
 
-    DependantValue key = primaryKeyValueCreator.createPrimaryKeyValue(collection);
-    collection.setKey(key);
-    collectionKeyBinder.bind(property, key, associatedClass, collection);
+    DependantValue key = collectionKeyBinder.bind(property, associatedClass, collection);
 
     Optional.ofNullable(property.getMappedForm().getCache())
         .ifPresent(cacheConfig -> collection.setCacheConcurrencyStrategy(cacheConfig.getUsage()));

@@ -60,7 +60,7 @@ class CollectionSecondPassBinderSpec extends HibernateGormDatastoreSpec {
         def svcb = new SimpleValueColumnBinder()
         def cku = new CollectionKeyColumnUpdater(new CollectionKeyBinder(botml, dkvb, svcb, pkvc))
 
-        binder = new CollectionSecondPassBinder(pkvc, cku, uotmb, cwjtb, cfpcb, new CollectionKeyBinder(botml, dkvb, svcb), new BidirectionalMapElementBinder(mtob, cfpcb), new ManyToManyElementBinder(mtob, cfpcb), new CollectionOrderByBinder(), new CollectionMultiTenantFilterBinder(dcnf))
+        binder = new CollectionSecondPassBinder(cku, uotmb, cwjtb, cfpcb, new CollectionKeyBinder(botml, dkvb, svcb, pkvc), new BidirectionalMapElementBinder(mtob, cfpcb), new ManyToManyElementBinder(mtob, cfpcb), new CollectionOrderByBinder(), new CollectionMultiTenantFilterBinder(dcnf))
     }
 
     protected HibernatePersistentProperty createTestHibernateToManyProperty(Class<?> domainClass = CSPBTestEntityWithMany, String propertyName = "items") {

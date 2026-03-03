@@ -118,7 +118,6 @@ public class CollectionBinder {
             new ColumnConfigToColumnBinder());
     this.collectionSecondPassBinder =
         new CollectionSecondPassBinder(
-            new PrimaryKeyValueCreator(metadataBuildingContext),
             new CollectionKeyColumnUpdater(),
             new UnidirectionalOneToManyBinder(collectionWithJoinTableBinder, mappings),
             collectionWithJoinTableBinder,
@@ -126,7 +125,8 @@ public class CollectionBinder {
             new CollectionKeyBinder(
                 new BidirectionalOneToManyLinker(grailsPropertyResolver),
                 new DependentKeyValueBinder(simpleValueBinder, compositeIdentifierToManyToOneBinder),
-                simpleValueColumnBinder),
+                simpleValueColumnBinder,
+                new PrimaryKeyValueCreator(metadataBuildingContext)),
             new BidirectionalMapElementBinder(manyToOneBinder, collectionForPropertyConfigBinder),
             new ManyToManyElementBinder(manyToOneBinder, collectionForPropertyConfigBinder),
             new CollectionOrderByBinder(),
