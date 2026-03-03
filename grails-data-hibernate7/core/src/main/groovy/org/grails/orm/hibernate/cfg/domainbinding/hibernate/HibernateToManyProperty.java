@@ -91,54 +91,26 @@ public interface HibernateToManyProperty extends PropertyWithMapping<PropertyCon
         return this instanceof Basic<?> basic ? basic.getComponentType() : null;
     }
 
-    /**
-     * @return Whether the collection should be bound with a foreign key
-     */
-    default boolean shouldBindWithForeignKey() {
-        return ((this instanceof HibernateOneToManyProperty) && isBidirectional() || !isUnidirectionalOneToMany()) &&
-                !Map.class.isAssignableFrom(getType()) &&
-                !(this instanceof HibernateManyToManyProperty) &&
-                !(this instanceof Basic);
-    }
+  default String getMapElementName(PersistentEntityNamingStrategy namingStrategy) {
+    return java.util.Optional.ofNullable(getMappedForm())
+        .map(PropertyConfig::getJoinTable)
+        .map(JoinTable::getColumn)
+        .map(ColumnConfig::getName)
+        .orElseGet(
+            () ->
+                namingStrategy.resolveColumnName(getName())
+                    + GrailsDomainBinder.UNDERSCORE
+                    + IndexedCollection.DEFAULT_ELEMENT_COLUMN_NAME);
+  }
 
-    default String getIndexColumnType(String defaultType) {
-        return java.util.Optional.ofNullable(getMappedForm())
-                .map(PropertyConfig::getIndexColumn)
-                .map(ic -> getTypeName(ic, getHibernateOwner().getMappedForm()))
-                .orElse(defaultType);
-    }
-
-    default String getIndexColumnName(PersistentEntityNamingStrategy namingStrategy) {
-        return java.util.Optional.ofNullable(getMappedForm())
-                .map(PropertyConfig::getIndexColumn)
-                .map(PropertyConfig::getColumn)
-                .orElseGet(() -> namingStrategy.resolveColumnName(getName()) +
-                        GrailsDomainBinder.UNDERSCORE +
-                        IndexedCollection.DEFAULT_INDEX_COLUMN_NAME);
-    }
-
-    default String getMapElementName(PersistentEntityNamingStrategy namingStrategy) {
-        return java.util.Optional.ofNullable(getMappedForm())
-                .map(PropertyConfig::getJoinTable)
-                .map(JoinTable::getColumn)
-                .map(ColumnConfig::getName)
-                .orElseGet(() -> namingStrategy.resolveColumnName(getName()) +
-                        GrailsDomainBinder.UNDERSCORE +
-                        IndexedCollection.DEFAULT_ELEMENT_COLUMN_NAME);
-    }
-
-    default String resolveJoinTableForeignKeyColumnName(PersistentEntityNamingStrategy namingStrategy) {
-        return java.util.Optional.ofNullable(getMappedForm())
-                .map(PropertyConfig::getJoinTableColumnConfig)
-                .map(ColumnConfig::getName)
-                .orElseGet(() -> namingStrategy.resolveColumnName(getHibernateAssociatedEntity()
-                                .getHibernateRootEntity()
-                                .getJavaClass()
-                                .getSimpleName()) +
-                        GrailsDomainBinder.FOREIGN_KEY_SUFFIX);
-    }
-
-    void setCollection(Collection collection);
-
-    Collection getCollection();
+  default String resolveJoinTableForeignKeyColumnName(PersistentEntityNamingStrategy namingStrategy) {
+    return java.util.Optional.ofNullable(getMappedForm())
+        .map(PropertyConfig::getJoinTableColumnConfig)
+        .map(ColumnConfig::getName)
+        .orElseGet(
+            () ->
+                namingStrategy.resolveColumnName(
+                        getHibernateAssociatedEntity().getHibernateRootEntity().getJavaClass().getSimpleName())
+                    + GrailsDomainBinder.FOREIGN_KEY_SUFFIX);
+  }
 }

@@ -19,7 +19,6 @@
 package org.grails.orm.hibernate.cfg.domainbinding.secondpass;
 
 import jakarta.annotation.Nonnull;
-import java.util.Optional;
 import org.grails.orm.hibernate.cfg.*;
 import org.grails.orm.hibernate.cfg.domainbinding.binder.CollectionForPropertyConfigBinder;
 import org.grails.orm.hibernate.cfg.domainbinding.binder.CompositeIdentifierToManyToOneBinder;
@@ -70,21 +69,13 @@ public class CollectionWithJoinTableBinder {
       element = unidirectionalOneToManyInverseValuesBinder.bind(property, collection);
       final var domainClass = property.getHibernateAssociatedEntity();
       if (domainClass != null) {
-        var joinColumnMappingOptional =
-            Optional.ofNullable(property.getMappedForm())
-                .map(PropertyConfig::getJoinTableColumnConfig);
-        if (domainClass.getHibernateCompositeIdentity().isPresent()) {
+          if (domainClass.getHibernateCompositeIdentity().isPresent()) {
           CompositeIdentity ci = domainClass.getHibernateCompositeIdentity().get();
           compositeIdentifierToManyToOneBinder.bindCompositeIdentifierToManyToOne(
               property, element, ci, domainClass, EMPTY_PATH);
         } else {
-          String columnName =
-              joinColumnMappingOptional.isPresent()
-                  ? joinColumnMappingOptional.get().getName()
-                  : namingStrategy.resolveColumnName(
-                          domainClass.getHibernateRootEntity().getJavaClass().getSimpleName())
-                      + FOREIGN_KEY_SUFFIX;
-          simpleValueColumnBinder.bindSimpleValue(element, "long", columnName, true);
+          simpleValueColumnBinder.bindSimpleValue(
+              element, "long", property.resolveJoinTableForeignKeyColumnName(namingStrategy), true);
         }
 
         collection.setElement(element);

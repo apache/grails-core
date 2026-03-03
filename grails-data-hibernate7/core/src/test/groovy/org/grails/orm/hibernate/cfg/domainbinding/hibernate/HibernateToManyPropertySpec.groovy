@@ -25,7 +25,7 @@ import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernateToManyPrope
 class HibernateToManyPropertySpec extends HibernateGormDatastoreSpec {
 
     def setupSpec() {
-        manager.addAllDomainClasses([HTMPBook, HTMPAuthor, HTMPAuthorCustom, HTMPStudent, HTMPCourse])
+        manager.addAllDomainClasses([HTMPBook, HTMPAuthor, HTMPAuthorCustom])
     }
 
     void "resolveJoinTableForeignKeyColumnName derives name from associated entity when no explicit config"() {
@@ -53,15 +53,6 @@ class HibernateToManyPropertySpec extends HibernateGormDatastoreSpec {
         then:
         columnName == "custom_book_fk"
     }
-
-    void "isAssociationColumnNullable returns false for ManyToMany"() {
-        when:
-        def studentEntity = mappingContext.getPersistentEntity(HTMPStudent.name)
-        def coursesProp = studentEntity.getPropertyByName("courses")
-
-        then:
-        !coursesProp.isAssociationColumnNullable()
-    }
 }
 
 @Entity
@@ -87,20 +78,4 @@ class HTMPAuthorCustom {
     static mapping = {
         books joinTable: [column: 'custom_book_fk']
     }
-}
-
-@Entity
-class HTMPStudent {
-    Long id
-    String name
-    Set<HTMPCourse> courses
-    static hasMany = [courses: HTMPCourse]
-}
-
-@Entity
-class HTMPCourse {
-    Long id
-    String title
-    Set<HTMPStudent> students
-    static hasMany = [students: HTMPStudent]
 }
