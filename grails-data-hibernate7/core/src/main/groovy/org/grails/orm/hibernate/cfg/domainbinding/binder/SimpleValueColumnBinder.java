@@ -35,48 +35,49 @@ public class SimpleValueColumnBinder {
     /** Protected constructor for testing purposes. */
     protected SimpleValueColumnBinder(Object... ignore) {}
 
-    /**
-     * Creates a {@link BasicValue}, binds it, and returns it.
-     *
-     * @param metadataBuildingContext The metadata building context
-     * @param table The table the value belongs to
-     * @param type The type of the property
-     * @param columnName The column name
-     * @param nullable Whether it is nullable
-     */
-    public BasicValue bindSimpleValue(
-            MetadataBuildingContext metadataBuildingContext,
-            Table table,
-            String type,
-            String columnName,
-            boolean nullable) {
-        BasicValue basicValue = new BasicValue(metadataBuildingContext, table);
-        bindSimpleValue(basicValue, type, columnName, nullable);
-        return basicValue;
-    }
+  /**
+   * Creates a {@link BasicValue}, binds it, and returns it.
+   *
+   * @param metadataBuildingContext The metadata building context
+   * @param table The table the value belongs to
+   * @param type The type of the property
+   * @param columnName The column name
+   * @param nullable Whether it is nullable
+   */
+  public BasicValue bindSimpleValue(
+      MetadataBuildingContext metadataBuildingContext,
+      Table table,
+      String type,
+      String columnName,
+      boolean nullable) {
+    BasicValue basicValue = new BasicValue(metadataBuildingContext, table);
+    bindSimpleValue(basicValue, type, columnName, nullable);
+    return basicValue;
+  }
 
-    /**
-     * Binds a value for the specified parameters to the meta model.
-     *
-     * @param simpleValue The simple value instance
-     * @param type The type of the property
-     * @param columnName The property name
-     * @param nullable Whether it is nullable
-     */
-    public void bindSimpleValue(SimpleValue simpleValue, String type, String columnName, boolean nullable) {
-        Optional.ofNullable(simpleValue.getTable())
-                .ifPresentOrElse(
-                        table -> {
-                            var column = new Column();
-                            column.setNullable(nullable);
-                            column.setValue(simpleValue);
-                            column.setName(columnName);
-                            table.addColumn(column);
-                            simpleValue.addColumn(column);
-                            simpleValue.setTypeName(type);
-                        },
-                        () -> {
-                            throw new MappingException("SimpleValue must have a table");
-                        });
-    }
+  /**
+   * Binds a value for the specified parameters to the meta model.
+   *
+   * @param simpleValue The simple value instance
+   * @param type The type of the property
+   * @param columnName The property name
+   * @param nullable Whether it is nullable
+   */
+  public void bindSimpleValue(
+      SimpleValue simpleValue, String type, String columnName, boolean nullable) {
+    Optional.ofNullable(simpleValue.getTable())
+        .ifPresentOrElse(
+            table -> {
+              var column = new Column();
+              column.setNullable(nullable);
+              column.setValue(simpleValue);
+              column.setName(columnName);
+              table.addColumn(column);
+              simpleValue.addColumn(column);
+              simpleValue.setTypeName(type);
+            },
+            () -> {
+              throw new MappingException("SimpleValue must have a table");
+            });
+  }
 }

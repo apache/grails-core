@@ -85,8 +85,12 @@ public class ListSecondPassBinder {
               + "]. List collection types only supported on the owning side of a many-to-many relationship.");
     }
 
-    public void bindListSecondPass(
-            @Nonnull HibernateToManyProperty property, Map<?, ?> persistentClasses, @Nonnull List list) {
+    Table collectionTable = list.getCollectionTable();
+    String type = property.getIndexColumnType("integer");
+    BasicValue iv = simpleValueColumnBinder.bindSimpleValue(metadataBuildingContext, collectionTable, type, columnName, true);
+    list.setIndex(iv);
+    list.setBaseIndex(0);
+    list.setInverse(false);
 
         collectionSecondPassBinder.bindCollectionSecondPass(property, persistentClasses, list);
         String columnName = property.getIndexColumnName(namingStrategy);

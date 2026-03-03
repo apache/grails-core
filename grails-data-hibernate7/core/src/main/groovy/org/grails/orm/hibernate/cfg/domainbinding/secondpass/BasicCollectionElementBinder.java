@@ -64,7 +64,6 @@ public class BasicCollectionElementBinder {
 
   /** Creates and binds a {@link BasicValue} element for the given basic collection property. */
   public BasicValue bind(HibernateToManyProperty property, Collection collection) {
-    BasicValue element = new BasicValue(metadataBuildingContext, collection.getCollectionTable());
     final Class<?> referencedType = ((Basic) property).getComponentType();
     final boolean isEnum = referencedType.isEnum();
     var joinColumnMappingOptional =
@@ -83,17 +82,21 @@ public class BasicCollectionElementBinder {
                   + new BackticksRemover().apply(clazz);
     }
     if (isEnum) {
+      BasicValue element = new BasicValue(metadataBuildingContext, collection.getCollectionTable());
       enumTypeBinder.bindEnumType(property, referencedType, element, columnName);
+      return element;
     } else {
       String typeName = property.getTypeName(referencedType);
-      simpleValueColumnBinder.bindSimpleValue(element, typeName, columnName, true);
+      BasicValue element =
+          simpleValueColumnBinder.bindSimpleValue(
+              metadataBuildingContext, collection.getCollectionTable(), typeName, columnName, true);
       if (joinColumnMappingOptional.isPresent()) {
         Column column = simpleValueColumnFetcher.getColumnForSimpleValue(element);
         ColumnConfig columnConfig = joinColumnMappingOptional.get();
         final PropertyConfig mappedForm = property.getMappedForm();
         columnConfigToColumnBinder.bindColumnConfigToColumn(column, columnConfig, mappedForm);
       }
+      return element;
     }
-    return element;
   }
 }
