@@ -18,10 +18,10 @@
  */
 package org.grails.orm.hibernate.cfg.domainbinding.secondpass;
 
+import jakarta.annotation.Nonnull;
 import java.util.*;
 import java.util.Map;
 import org.grails.orm.hibernate.cfg.domainbinding.binder.CollectionForPropertyConfigBinder;
-import org.grails.orm.hibernate.cfg.domainbinding.binder.ManyToOneBinder;
 import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernateManyToManyProperty;
 import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernateOneToManyProperty;
 import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernateToManyProperty;
@@ -36,7 +36,7 @@ public class CollectionSecondPassBinder {
   private final CollectionMultiTenantFilterBinder collectionMultiTenantFilterBinder;
   private final CollectionKeyBinder collectionKeyBinder;
   private final BidirectionalMapElementBinder bidirectionalMapElementBinder;
-  private final ManyToOneBinder manyToOneBinder;
+  private final ManyToManyElementBinder manyToManyElementBinder;
   private final PrimaryKeyValueCreator primaryKeyValueCreator;
   private final CollectionKeyColumnUpdater collectionKeyColumnUpdater;
   private final UnidirectionalOneToManyBinder unidirectionalOneToManyBinder;
@@ -45,7 +45,6 @@ public class CollectionSecondPassBinder {
 
   /** Creates a new {@link CollectionSecondPassBinder} instance. */
   public CollectionSecondPassBinder(
-      ManyToOneBinder manyToOneBinder,
       PrimaryKeyValueCreator primaryKeyValueCreator,
       CollectionKeyColumnUpdater collectionKeyColumnUpdater,
       UnidirectionalOneToManyBinder unidirectionalOneToManyBinder,
@@ -53,9 +52,9 @@ public class CollectionSecondPassBinder {
       CollectionForPropertyConfigBinder collectionForPropertyConfigBinder,
       CollectionKeyBinder collectionKeyBinder,
       BidirectionalMapElementBinder bidirectionalMapElementBinder,
+      ManyToManyElementBinder manyToManyElementBinder,
       CollectionOrderByBinder collectionOrderByBinder,
       CollectionMultiTenantFilterBinder collectionMultiTenantFilterBinder) {
-    this.manyToOneBinder = manyToOneBinder;
     this.primaryKeyValueCreator = primaryKeyValueCreator;
     this.collectionKeyColumnUpdater = collectionKeyColumnUpdater;
     this.unidirectionalOneToManyBinder = unidirectionalOneToManyBinder;
@@ -63,6 +62,7 @@ public class CollectionSecondPassBinder {
     this.collectionForPropertyConfigBinder = collectionForPropertyConfigBinder;
     this.collectionKeyBinder = collectionKeyBinder;
     this.bidirectionalMapElementBinder = bidirectionalMapElementBinder;
+    this.manyToManyElementBinder = manyToManyElementBinder;
     this.collectionOrderByBinder = collectionOrderByBinder;
     this.collectionMultiTenantFilterBinder = collectionMultiTenantFilterBinder;
   }
@@ -115,26 +115,13 @@ public class CollectionSecondPassBinder {
       InFlightMetadataCollector mappings,
       Collection collection) {
     if (property instanceof HibernateManyToManyProperty manyToMany && manyToMany.isBidirectional()) {
-      bindManyToManyElement(manyToMany, collection);
+      manyToManyElementBinder.bind(manyToMany, collection);
     } else if (property.isBidirectionalOneToManyMap() && property.isBidirectional()) {
       bidirectionalMapElementBinder.bind(property, collection);
     } else if (property instanceof HibernateOneToManyProperty oneToManyProperty && oneToManyProperty.isUnidirectionalOneToMany()) {
       unidirectionalOneToManyBinder.bind(oneToManyProperty, collection);
     } else if (property.supportsJoinColumnMapping()) {
       collectionWithJoinTableBinder.bindCollectionWithJoinTable(property, mappings, collection);
-    }
-  }
-
-  private void bindManyToManyElement(
-      HibernateManyToManyProperty manyToMany, Collection collection) {
-    HibernateManyToManyProperty otherSide = manyToMany.getHibernateInverseSide();
-    ManyToOne element =
-        manyToOneBinder.bindManyToOne(otherSide, collection.getCollectionTable(), EMPTY_PATH);
-    element.setReferencedEntityName(otherSide.getOwner().getName());
-    collection.setElement(element);
-    collectionForPropertyConfigBinder.bindCollectionForPropertyConfig(collection, manyToMany);
-    if (manyToMany.isCircular()) {
-      collection.setInverse(false);
     }
   }
 

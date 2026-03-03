@@ -42,6 +42,7 @@ import org.grails.orm.hibernate.cfg.domainbinding.secondpass.CollectionKeyBinder
 import org.grails.orm.hibernate.cfg.domainbinding.secondpass.CollectionKeyColumnUpdater;
 import org.grails.orm.hibernate.cfg.domainbinding.secondpass.BidirectionalMapElementBinder;
 import org.grails.orm.hibernate.cfg.domainbinding.secondpass.CollectionKeyBinder;
+import org.grails.orm.hibernate.cfg.domainbinding.secondpass.ManyToManyElementBinder;
 import org.grails.orm.hibernate.cfg.domainbinding.secondpass.CollectionMultiTenantFilterBinder;
 import org.grails.orm.hibernate.cfg.domainbinding.secondpass.CollectionOrderByBinder;
 import org.grails.orm.hibernate.cfg.domainbinding.secondpass.CollectionSecondPassBinder;
@@ -117,7 +118,6 @@ public class CollectionBinder {
             new ColumnConfigToColumnBinder());
     this.collectionSecondPassBinder =
         new CollectionSecondPassBinder(
-            manyToOneBinder,
             new PrimaryKeyValueCreator(metadataBuildingContext),
             new CollectionKeyColumnUpdater(),
             new UnidirectionalOneToManyBinder(collectionWithJoinTableBinder, mappings),
@@ -128,6 +128,7 @@ public class CollectionBinder {
                 new DependentKeyValueBinder(simpleValueBinder, compositeIdentifierToManyToOneBinder),
                 simpleValueColumnBinder),
             new BidirectionalMapElementBinder(manyToOneBinder, collectionForPropertyConfigBinder),
+            new ManyToManyElementBinder(manyToOneBinder, collectionForPropertyConfigBinder),
             new CollectionOrderByBinder(),
             new CollectionMultiTenantFilterBinder(new DefaultColumnNameFetcher(namingStrategy)));
     this.listSecondPassBinder =

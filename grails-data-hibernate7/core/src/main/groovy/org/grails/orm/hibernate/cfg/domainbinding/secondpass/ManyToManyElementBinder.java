@@ -18,37 +18,38 @@
  */
 package org.grails.orm.hibernate.cfg.domainbinding.secondpass;
 
-import org.hibernate.mapping.Collection;
-import org.hibernate.mapping.ManyToOne;
+import static org.grails.orm.hibernate.cfg.domainbinding.binder.GrailsDomainBinder.EMPTY_PATH;
 
 import org.grails.orm.hibernate.cfg.domainbinding.binder.CollectionForPropertyConfigBinder;
 import org.grails.orm.hibernate.cfg.domainbinding.binder.ManyToOneBinder;
 import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernateManyToManyProperty;
-
-import static org.grails.orm.hibernate.cfg.domainbinding.binder.GrailsDomainBinder.EMPTY_PATH;
+import org.hibernate.mapping.Collection;
+import org.hibernate.mapping.ManyToOne;
 
 /** Binds the element of a bidirectional many-to-many association. */
 public class ManyToManyElementBinder {
 
-    private final ManyToOneBinder manyToOneBinder;
-    private final CollectionForPropertyConfigBinder collectionForPropertyConfigBinder;
+  private final ManyToOneBinder manyToOneBinder;
+  private final CollectionForPropertyConfigBinder collectionForPropertyConfigBinder;
 
-    /** Creates a new {@link ManyToManyElementBinder} instance. */
-    public ManyToManyElementBinder(
-            ManyToOneBinder manyToOneBinder, CollectionForPropertyConfigBinder collectionForPropertyConfigBinder) {
-        this.manyToOneBinder = manyToOneBinder;
-        this.collectionForPropertyConfigBinder = collectionForPropertyConfigBinder;
-    }
+  /** Creates a new {@link ManyToManyElementBinder} instance. */
+  public ManyToManyElementBinder(
+      ManyToOneBinder manyToOneBinder,
+      CollectionForPropertyConfigBinder collectionForPropertyConfigBinder) {
+    this.manyToOneBinder = manyToOneBinder;
+    this.collectionForPropertyConfigBinder = collectionForPropertyConfigBinder;
+  }
 
-    /** Binds the ManyToOne element for a bidirectional many-to-many collection. */
-    public void bind(HibernateManyToManyProperty manyToMany, Collection collection) {
-        HibernateManyToManyProperty otherSide = manyToMany.getHibernateInverseSide();
-        ManyToOne element = manyToOneBinder.bindManyToOne(otherSide, collection.getCollectionTable(), EMPTY_PATH);
-        element.setReferencedEntityName(otherSide.getOwner().getName());
-        collection.setElement(element);
-        collectionForPropertyConfigBinder.bindCollectionForPropertyConfig(collection, manyToMany);
-        if (manyToMany.isCircular()) {
-            collection.setInverse(false);
-        }
+  /** Binds the ManyToOne element for a bidirectional many-to-many collection. */
+  public void bind(HibernateManyToManyProperty manyToMany, Collection collection) {
+    HibernateManyToManyProperty otherSide = manyToMany.getHibernateInverseSide();
+    ManyToOne element =
+        manyToOneBinder.bindManyToOne(otherSide, collection.getCollectionTable(), EMPTY_PATH);
+    element.setReferencedEntityName(otherSide.getOwner().getName());
+    collection.setElement(element);
+    collectionForPropertyConfigBinder.bindCollectionForPropertyConfig(collection, manyToMany);
+    if (manyToMany.isCircular()) {
+      collection.setInverse(false);
     }
+  }
 }
