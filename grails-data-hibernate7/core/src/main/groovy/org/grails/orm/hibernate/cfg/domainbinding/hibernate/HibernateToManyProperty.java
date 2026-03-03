@@ -21,12 +21,6 @@ package org.grails.orm.hibernate.cfg.domainbinding.hibernate;
 import java.util.Map;
 import java.util.Optional;
 
-import org.hibernate.FetchMode;
-import org.hibernate.mapping.Collection;
-import org.hibernate.mapping.IndexedCollection;
-
-import org.springframework.util.StringUtils;
-
 import org.grails.datastore.mapping.model.types.Basic;
 import org.grails.datastore.mapping.model.types.mapping.PropertyWithMapping;
 import org.grails.orm.hibernate.cfg.CacheConfig;
@@ -63,13 +57,23 @@ public interface HibernateToManyProperty extends PropertyWithMapping<PropertyCon
         return getMappedForm().getLazy();
     }
 
-    default String getCacheUsage() {
-        return Optional.ofNullable(getMappedForm())
-                .map(PropertyConfig::getCache)
-                .map(CacheConfig::getUsage)
-                .map(Object::toString)
-                .orElse(null);
-    }
+  default String getCacheUSage() {
+    return Optional.ofNullable(getMappedForm())
+            .map(PropertyConfig::getCache)
+            .map(CacheConfig::getUsage)
+            .orElse(null);
+  }
+
+  /**
+   * @return Whether the collection should be bound with a foreign key
+   */
+  default boolean shouldBindWithForeignKey() {
+    return ((this instanceof HibernateOneToManyProperty) && isBidirectional()
+            || !isUnidirectionalOneToMany())
+        && !Map.class.isAssignableFrom(getType())
+        && !(this instanceof HibernateManyToManyProperty)
+        && !(this instanceof Basic);
+  }
 
     default boolean isBasic() {
         return this instanceof Basic;

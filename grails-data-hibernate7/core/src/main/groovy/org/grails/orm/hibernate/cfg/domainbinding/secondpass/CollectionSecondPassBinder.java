@@ -79,9 +79,7 @@ public class CollectionSecondPassBinder {
     collection.setSorted(property.isSorted());
 
     DependantValue key = collectionKeyBinder.bind(property, associatedClass, collection);
-
-    Optional.ofNullable(property.getMappedForm().getCache())
-        .ifPresent(cacheConfig -> collection.setCacheConcurrencyStrategy(cacheConfig.getUsage()));
+    collection.setCacheConcurrencyStrategy(property.getCacheUSage());
 
     bindCollectionElement(property, mappings, collection);
     collectionKeyColumnUpdater.forceNullableAndCheckUpdatable(key, property);
