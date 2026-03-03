@@ -40,6 +40,7 @@ import org.grails.orm.hibernate.cfg.domainbinding.secondpass.BidirectionalMapEle
 import org.grails.orm.hibernate.cfg.domainbinding.secondpass.BidirectionalOneToManyLinker;
 import org.grails.orm.hibernate.cfg.domainbinding.secondpass.CollectionKeyBinder;
 import org.grails.orm.hibernate.cfg.domainbinding.secondpass.CollectionKeyColumnUpdater;
+import org.grails.orm.hibernate.cfg.domainbinding.secondpass.BidirectionalMapElementBinder;
 import org.grails.orm.hibernate.cfg.domainbinding.secondpass.CollectionKeyBinder;
 import org.grails.orm.hibernate.cfg.domainbinding.secondpass.CollectionMultiTenantFilterBinder;
 import org.grails.orm.hibernate.cfg.domainbinding.secondpass.CollectionOrderByBinder;
@@ -126,6 +127,7 @@ public class CollectionBinder {
                 new BidirectionalOneToManyLinker(grailsPropertyResolver),
                 new DependentKeyValueBinder(simpleValueBinder, compositeIdentifierToManyToOneBinder),
                 simpleValueColumnBinder),
+            new BidirectionalMapElementBinder(manyToOneBinder, collectionForPropertyConfigBinder),
             new CollectionOrderByBinder(),
             new CollectionMultiTenantFilterBinder(new DefaultColumnNameFetcher(namingStrategy)));
     this.listSecondPassBinder =
