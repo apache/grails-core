@@ -36,7 +36,6 @@ import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernateOneToManyPr
 import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernatePersistentProperty;
 import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernateToManyProperty;
 import org.grails.orm.hibernate.cfg.domainbinding.secondpass.BasicCollectionElementBinder;
-import org.grails.orm.hibernate.cfg.domainbinding.secondpass.BidirectionalMapElementBinder;
 import org.grails.orm.hibernate.cfg.domainbinding.secondpass.BidirectionalOneToManyLinker;
 import org.grails.orm.hibernate.cfg.domainbinding.secondpass.CollectionKeyBinder;
 import org.grails.orm.hibernate.cfg.domainbinding.secondpass.CollectionKeyColumnUpdater;
@@ -110,12 +109,16 @@ public class CollectionBinder {
             metadataBuildingContext,
             namingStrategy,
             unidirectionalOneToManyInverseValuesBinder,
-            enumTypeBinder,
             compositeIdentifierToManyToOneBinder,
-            simpleValueColumnFetcher,
             collectionForPropertyConfigBinder,
             simpleValueColumnBinder,
-            new ColumnConfigToColumnBinder());
+            new BasicCollectionElementBinder(
+                metadataBuildingContext,
+                namingStrategy,
+                enumTypeBinder,
+                simpleValueColumnBinder,
+                simpleValueColumnFetcher,
+                new ColumnConfigToColumnBinder()));
     this.collectionSecondPassBinder =
         new CollectionSecondPassBinder(
             new CollectionKeyColumnUpdater(

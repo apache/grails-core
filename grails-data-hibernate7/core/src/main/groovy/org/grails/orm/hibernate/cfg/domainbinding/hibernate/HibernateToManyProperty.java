@@ -64,6 +64,10 @@ public interface HibernateToManyProperty extends PropertyWithMapping<PropertyCon
             .orElse(null);
   }
 
+  default boolean isBasic() {
+    return this instanceof Basic;
+  }
+
   /**
    * @return Whether the collection should be bound with a foreign key
    */

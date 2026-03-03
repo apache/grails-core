@@ -53,7 +53,7 @@ class CollectionSecondPassBinderSpec extends HibernateGormDatastoreSpec {
         def pkvc = new PrimaryKeyValueCreator(mbc)
         def botml = new BidirectionalOneToManyLinker(new org.grails.orm.hibernate.cfg.domainbinding.util.GrailsPropertyResolver())
         def dkvb = new DependentKeyValueBinder(svb, citmto)
-        def cwjtb = new CollectionWithJoinTableBinder(mbc, ns, new UnidirectionalOneToManyInverseValuesBinder(), null, citmto, svcf, new CollectionForPropertyConfigBinder(), new SimpleValueColumnBinder(), null)
+        def cwjtb = new CollectionWithJoinTableBinder(mbc, ns, new UnidirectionalOneToManyInverseValuesBinder(), citmto, new CollectionForPropertyConfigBinder(), new SimpleValueColumnBinder(), new BasicCollectionElementBinder(mbc, ns, null, new SimpleValueColumnBinder(), svcf, null))
         def uotmb = new UnidirectionalOneToManyBinder(cwjtb, mbc.getMetadataCollector())
         def cfpcb = new CollectionForPropertyConfigBinder()
         def dcnf = new DefaultColumnNameFetcher(ns, new BackticksRemover())
