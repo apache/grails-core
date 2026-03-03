@@ -30,6 +30,7 @@ import org.codehaus.groovy.ast.AnnotatedNode
 import org.codehaus.groovy.ast.AnnotationNode
 import org.codehaus.groovy.ast.ClassHelper
 import org.codehaus.groovy.ast.ClassNode
+import org.codehaus.groovy.ast.ConstructorNode
 import org.codehaus.groovy.ast.GenericsType
 import org.codehaus.groovy.ast.InnerClassNode
 import org.codehaus.groovy.ast.MethodNode
@@ -69,6 +70,7 @@ import jakarta.persistence.Version
 
 import grails.gorm.annotation.Entity
 import org.apache.grails.common.compiler.GroovyTransformOrder
+import org.codehaus.groovy.runtime.InvokerHelper
 import org.grails.datastore.gorm.GormEnhancer
 import org.grails.datastore.gorm.GormEntity
 import org.grails.datastore.gorm.GormEntityDirtyCheckable
@@ -83,7 +85,12 @@ import static org.codehaus.groovy.ast.tools.GeneralUtils.args
 import static org.codehaus.groovy.ast.tools.GeneralUtils.callX
 import static org.codehaus.groovy.ast.tools.GeneralUtils.classX
 import static org.codehaus.groovy.ast.tools.GeneralUtils.constX
+import static org.codehaus.groovy.ast.tools.GeneralUtils.ifS
+import static org.codehaus.groovy.ast.tools.GeneralUtils.neX
+import static org.codehaus.groovy.ast.tools.GeneralUtils.nullX
 import static org.codehaus.groovy.ast.tools.GeneralUtils.returnS
+import static org.codehaus.groovy.ast.tools.GeneralUtils.stmt
+import static org.codehaus.groovy.ast.tools.GeneralUtils.varX
 
 /**
  * An AST transformation that adds the following features:<br><br>
@@ -225,6 +232,10 @@ class GormEntityTransformation extends AbstractASTTransformation implements Comp
         if (!isJpaEntity) {
             injectToStringMethod(classNode)
         }
+
+        // inject Map constructor so that new DomainClass(null) works the same as new DomainClass()
+        // Groovy 4 no longer resolves null to the implicit map constructor at runtime
+        injectMapConstructor(classNode)
 
         // inject the GORM entity trait unless it is an RX entity
         MethodNode addToMethodNode = ADD_TO_METHOD_NODE
@@ -451,6 +462,42 @@ class GormEntityTransformation extends AbstractASTTransformation implements Comp
             return Class.forName('org.hibernate.Hibernate', false, classLoader) != null
         } catch (Throwable e) {
             return false
+        }
+    }
+
+    protected void injectMapConstructor(ClassNode classNode) {
+        ClassNode mapType = ClassHelper.MAP_TYPE.getPlainNodeReference()
+        def declaredConstructors = classNode.getDeclaredConstructors()
+        boolean hasMapConstructor = declaredConstructors.any { ConstructorNode cn ->
+            cn.parameters.length == 1 && cn.parameters[0].type == mapType
+        }
+        if (hasMapConstructor) return
+
+        Parameter mapParam = new Parameter(mapType, 'args')
+        BlockStatement body = new BlockStatement()
+
+        MethodCallExpression setPropertiesCall = callX(
+            classX(ClassHelper.make(InvokerHelper)),
+            'setProperties',
+            args(varX('this'), varX('args'))
+        )
+        body.addStatement(ifS(neX(varX('args'), nullX()), stmt(setPropertiesCall)))
+
+        ConstructorNode constructor = classNode.addConstructor(
+            Modifier.PUBLIC, [mapParam] as Parameter[], null, body
+        )
+        markAsGenerated(classNode, constructor)
+
+        // Adding any explicit constructor prevents Groovy from auto-generating
+        // the default no-arg constructor, so ensure one exists
+        boolean hasNoArgConstructor = declaredConstructors.any { ConstructorNode cn ->
+            cn.parameters.length == 0
+        }
+        if (!hasNoArgConstructor) {
+            ConstructorNode noArgConstructor = classNode.addConstructor(
+                Modifier.PUBLIC, AstUtils.ZERO_PARAMETERS, null, new BlockStatement()
+            )
+            markAsGenerated(classNode, noArgConstructor)
         }
     }
 
