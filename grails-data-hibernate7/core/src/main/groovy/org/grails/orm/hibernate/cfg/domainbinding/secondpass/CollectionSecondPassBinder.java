@@ -20,7 +20,6 @@ package org.grails.orm.hibernate.cfg.domainbinding.secondpass;
 
 import java.util.*;
 import java.util.Map;
-import org.grails.datastore.mapping.model.config.GormProperties;
 import org.grails.orm.hibernate.cfg.domainbinding.binder.CollectionForPropertyConfigBinder;
 import org.grails.orm.hibernate.cfg.domainbinding.binder.ManyToOneBinder;
 import org.grails.orm.hibernate.cfg.domainbinding.binder.SimpleValueColumnBinder;
@@ -28,7 +27,6 @@ import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernateManyToManyP
 import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernateOneToManyProperty;
 import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernateToManyProperty;
 import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernateManyToOneProperty;
-import org.grails.orm.hibernate.cfg.domainbinding.util.DefaultColumnNameFetcher;
 import org.hibernate.MappingException;
 import org.hibernate.mapping.*;
 import org.hibernate.mapping.Collection;
@@ -52,8 +50,8 @@ public class CollectionSecondPassBinder {
 
   private static final Logger LOG = LoggerFactory.getLogger(CollectionSecondPassBinder.class);
 
-  private final DefaultColumnNameFetcher defaultColumnNameFetcher;
   private final CollectionOrderByBinder collectionOrderByBinder;
+  private final CollectionMultiTenantFilterBinder collectionMultiTenantFilterBinder;
   private final ManyToOneBinder manyToOneBinder;
   private final PrimaryKeyValueCreator primaryKeyValueCreator;
   private final CollectionKeyColumnUpdater collectionKeyColumnUpdater;
@@ -74,9 +72,9 @@ public class CollectionSecondPassBinder {
       UnidirectionalOneToManyBinder unidirectionalOneToManyBinder,
       CollectionWithJoinTableBinder collectionWithJoinTableBinder,
       CollectionForPropertyConfigBinder collectionForPropertyConfigBinder,
-      DefaultColumnNameFetcher defaultColumnNameFetcher,
       SimpleValueColumnBinder simpleValueColumnBinder,
-      CollectionOrderByBinder collectionOrderByBinder) {
+      CollectionOrderByBinder collectionOrderByBinder,
+      CollectionMultiTenantFilterBinder collectionMultiTenantFilterBinder) {
     this.manyToOneBinder = manyToOneBinder;
     this.primaryKeyValueCreator = primaryKeyValueCreator;
     this.collectionKeyColumnUpdater = collectionKeyColumnUpdater;
@@ -85,9 +83,9 @@ public class CollectionSecondPassBinder {
     this.unidirectionalOneToManyBinder = unidirectionalOneToManyBinder;
     this.collectionWithJoinTableBinder = collectionWithJoinTableBinder;
     this.collectionForPropertyConfigBinder = collectionForPropertyConfigBinder;
-    this.defaultColumnNameFetcher = defaultColumnNameFetcher;
     this.simpleValueColumnBinder = simpleValueColumnBinder;
     this.collectionOrderByBinder = collectionOrderByBinder;
+    this.collectionMultiTenantFilterBinder = collectionMultiTenantFilterBinder;
   }
 
   /** Bind collection second pass. */
@@ -101,8 +99,7 @@ public class CollectionSecondPassBinder {
     collectionOrderByBinder.bind(property, collection, associatedClass);
     bindOneToManyAssociation(property, associatedClass, collection);
 
-    applyMultiTenantFilter(property, collection);
-
+    collectionMultiTenantFilterBinder.bind(property, collection);
     if (property.isSorted()) {
       collection.setSorted(true);
     }
@@ -133,31 +130,6 @@ public class CollectionSecondPassBinder {
     collectionForPropertyConfigBinder.bindCollectionForPropertyConfig(collection, property);
   }
 
-  private void applyMultiTenantFilter(HibernateToManyProperty property, Collection collection) {
-    Optional.ofNullable(property.getHibernateAssociatedEntity())
-        .filter(
-            referenced ->
-                !(property instanceof HibernateManyToManyProperty) && referenced.isMultiTenant())
-        .map(referenced -> referenced.getMultiTenantFilterCondition(defaultColumnNameFetcher))
-        .ifPresent(
-            filterCondition -> {
-              if (property.isUnidirectionalOneToMany()) {
-                collection.addManyToManyFilter(
-                    GormProperties.TENANT_IDENTITY,
-                    filterCondition,
-                    true,
-                    Collections.emptyMap(),
-                    Collections.emptyMap());
-              } else {
-                collection.addFilter(
-                    GormProperties.TENANT_IDENTITY,
-                    filterCondition,
-                    true,
-                    Collections.emptyMap(),
-                    Collections.emptyMap());
-              }
-            });
-  }
 
   private void bindCollectionKey(
       HibernateToManyProperty property,
