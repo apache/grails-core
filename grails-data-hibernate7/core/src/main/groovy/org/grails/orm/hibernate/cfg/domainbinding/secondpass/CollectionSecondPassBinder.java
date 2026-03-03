@@ -31,6 +31,7 @@ import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernateOneToManyPr
 import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernatePersistentProperty;
 import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernateToManyProperty;
 import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernateManyToOneProperty;
+import org.grails.orm.hibernate.cfg.domainbinding.hibernate.GrailsHibernatePersistentEntity;
 import org.grails.orm.hibernate.cfg.domainbinding.util.DefaultColumnNameFetcher;
 import org.grails.orm.hibernate.cfg.domainbinding.util.OrderByClauseBuilder;
 import org.hibernate.MappingException;
@@ -100,7 +101,8 @@ public class CollectionSecondPassBinder {
       Map<?, ?> persistentClasses,
       @Nonnull Collection collection) {
 
-    PersistentClass associatedClass = bindOrderBy(property, collection, persistentClasses);
+    PersistentClass associatedClass = resolveAssociatedClass(property, persistentClasses);
+    bindOrderBy(property, collection, associatedClass);
     bindOneToManyAssociation(property, associatedClass, collection);
 
     applyMultiTenantFilter(property, collection);
@@ -224,25 +226,52 @@ public class CollectionSecondPassBinder {
     collectionForPropertyConfigBinder.bindCollectionForPropertyConfig(collection, property);
   }
 
-    private void bindCollectionElement(
-            HibernateToManyProperty property, Collection collection) {
-        if (property instanceof HibernateManyToManyProperty manyToMany && manyToMany.isBidirectional()) {
-            manyToManyElementBinder.bind(manyToMany, collection);
-        } else if (property.isBidirectionalOneToManyMap() && property.isBidirectional()) {
-            bidirectionalMapElementBinder.bind(property, collection);
-        } else if (property instanceof HibernateOneToManyProperty oneToManyProperty
-                && oneToManyProperty.isUnidirectionalOneToMany()) {
-            unidirectionalOneToManyBinder.bind(oneToManyProperty, collection);
-        } else if (property.supportsJoinColumnMapping()) {
-            collectionWithJoinTableBinder.bindCollectionWithJoinTable(property, collection);
-        }
+  private PersistentClass resolveAssociatedClass(
+      HibernateToManyProperty property, Map<?, ?> persistentClasses) {
+    return Optional.ofNullable(property.getHibernateAssociatedEntity())
+        .map(
+            referenced -> {
+              PersistentClass associatedClass =
+                  (PersistentClass) persistentClasses.get(referenced.getName());
+              if (associatedClass == null) {
+                throw new MappingException(
+                    "Association references unmapped class: " + referenced.getName());
+              }
+              return associatedClass;
+            })
+        .orElse(null);
+  }
+
+  private void bindOrderBy(
+      HibernateToManyProperty property, Collection collection, PersistentClass associatedClass) {
+    if (associatedClass == null) {
+      return;
+    }
+    GrailsHibernatePersistentEntity referenced = property.getHibernateAssociatedEntity();
+
+    if (referenced.isTablePerHierarchySubclass()) {
+      String discriminatorColumnName = referenced.getDiscriminatorColumnName();
+      Set<String> discSet = referenced.buildDiscriminatorSet();
+      String inclause = String.join(",", discSet);
+
+      collection.setWhere(discriminatorColumnName + " in (" + inclause + ")");
     }
 
-    private @Nonnull PersistentClass resolveAssociatedClass(
-            HibernateToManyProperty property, Map<?, ?> persistentClasses) {
-        return Optional.ofNullable(property.getHibernateAssociatedEntity())
-                .map(referenced -> (PersistentClass) persistentClasses.get(referenced.getName()))
-                .orElseThrow(
-                        () -> new MappingException("Association [" + property.getName() + "] has no associated class"));
+    if (property.hasSort()) {
+      if (!property.isBidirectional() && property instanceof HibernateOneToManyProperty) {
+        throw new DatastoreConfigurationException(
+            "Default sort for associations ["
+                + property.getHibernateOwner().getName()
+                + "->"
+                + property.getName()
+                + "] are not supported with unidirectional one to many relationships.");
+      }
+      HibernatePersistentProperty sortBy =
+          (HibernatePersistentProperty) referenced.getPropertyByName(property.getSort());
+      String order = Optional.ofNullable(property.getOrder()).orElse("asc");
+      collection.setOrderBy(
+          orderByClauseBuilder.buildOrderByClause(
+              sortBy.getName(), associatedClass, collection.getRole(), order));
     }
+  }
 }
