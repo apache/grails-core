@@ -3,6 +3,7 @@ package org.grails.orm.hibernate.cfg.domainbinding.secondpass
 import grails.gorm.annotation.Entity
 import grails.gorm.specs.HibernateGormDatastoreSpec
 import org.grails.orm.hibernate.cfg.domainbinding.binder.CompositeIdentifierToManyToOneBinder
+import org.grails.orm.hibernate.cfg.domainbinding.binder.ManyToOneValuesBinder
 import org.grails.orm.hibernate.cfg.domainbinding.binder.SimpleValueBinder
 import org.grails.orm.hibernate.cfg.domainbinding.binder.SimpleValueColumnBinder
 import org.grails.orm.hibernate.cfg.domainbinding.hibernate.GrailsHibernatePersistentEntity
@@ -11,6 +12,7 @@ import org.grails.orm.hibernate.cfg.domainbinding.util.GrailsPropertyResolver
 import org.hibernate.mapping.Bag
 import org.hibernate.mapping.BasicValue
 import org.hibernate.mapping.Column
+import org.hibernate.mapping.DependantValue
 import org.hibernate.mapping.Property
 import org.hibernate.mapping.RootClass
 import org.hibernate.mapping.Table
@@ -44,8 +46,7 @@ class CollectionKeyBinderSpec extends HibernateGormDatastoreSpec {
         def botml = new BidirectionalOneToManyLinker(new GrailsPropertyResolver())
         def dkvb = new DependentKeyValueBinder(svb, citmto)
         def svcb = new SimpleValueColumnBinder()
-        def pkvc = new PrimaryKeyValueCreator(mbc)
-        binder = new CollectionKeyBinder(botml, dkvb, svcb, pkvc)
+        binder = new CollectionKeyBinder(botml, dkvb, svcb)
     }
 
     private HibernateToManyProperty propertyFor(Class ownerClass, String name = "items") {
@@ -67,79 +68,71 @@ class CollectionKeyBinderSpec extends HibernateGormDatastoreSpec {
         return rootClass
     }
 
-    private RootClass ownerRootClass(String tableName) {
+    private DependantValue keyWithTable(String tableName = "test_table") {
         def mbc = getGrailsDomainBinder().getMetadataBuildingContext()
-        def rootClass = new RootClass(mbc)
         def table = new Table("test", tableName)
-        rootClass.setTable(table)
-        def idValue = new BasicValue(mbc, table)
-        idValue.setTypeName("long")
-        idValue.addColumn(new Column("id"))
-        rootClass.setIdentifier(idValue)
-        return rootClass
-    }
-
-    private Bag bagWithOwner(RootClass owner, String collectionTableName) {
-        def mbc = getGrailsDomainBinder().getMetadataBuildingContext()
-        def bag = new Bag(mbc, owner)
-        bag.setCollectionTable(new Table("test", collectionTableName))
-        return bag
+        def wrapped = new BasicValue(mbc, table)
+        return new DependantValue(mbc, table, wrapped)
     }
 
     def "bind sets collection inverse for bidirectional one-to-many with foreign key"() {
         given:
         def property = propertyFor(CKBBidOwner)
         def associatedClass = rootClassWith(CKBBidItem.name, "owner", "OWNER_ID")
-        def collection = bagWithOwner(ownerRootClass("ckb_bid_owner"), "ckb_bid_item")
+        def key = keyWithTable("ckb_bid_item")
+        def collection = new Bag(getGrailsDomainBinder().getMetadataBuildingContext(), null)
 
         when:
-        binder.bind(property, associatedClass, collection)
+        binder.bind(property, key, associatedClass, collection)
 
         then:
         collection.isInverse()
-        collection.getKey().getColumnSpan() > 0
+        key.getColumnSpan() > 0
     }
 
     def "bind delegates to dependentKeyValueBinder for bidirectional many-to-many"() {
         given:
         def property = propertyFor(CKBManyToManyOwner)
+        def key = new DependantValue(getGrailsDomainBinder().getMetadataBuildingContext(), null, null)
         def associatedClass = new RootClass(getGrailsDomainBinder().getMetadataBuildingContext())
-        def collection = bagWithOwner(ownerRootClass("ckb_mtm_owner"), "ckb_mtm_join")
+        def collection = new Bag(getGrailsDomainBinder().getMetadataBuildingContext(), null)
 
         when:
-        binder.bind(property, associatedClass, collection)
+        binder.bind(property, key, associatedClass, collection)
 
         then:
-        collection.getKey().getColumnSpan() > 0
+        key.getColumnSpan() > 0
         !collection.isInverse()
     }
 
     def "bind uses simpleValueColumnBinder for unidirectional with join key mapping"() {
         given:
         def property = propertyFor(CKBJoinKeyOwner)
+        def key = keyWithTable("ckb_join_key_owner_ckb_join_key_item")
         def associatedClass = new RootClass(getGrailsDomainBinder().getMetadataBuildingContext())
-        def collection = bagWithOwner(ownerRootClass("ckb_join_key_owner"), "ckb_join_key_owner_ckb_join_key_item")
+        def collection = new Bag(getGrailsDomainBinder().getMetadataBuildingContext(), null)
 
         when:
-        binder.bind(property, associatedClass, collection)
+        binder.bind(property, key, associatedClass, collection)
 
         then:
-        collection.getKey().getTypeName() == "long"
-        collection.getKey().getColumnSpan() > 0
+        key.getTypeName() == "long"
+        key.getColumnSpan() > 0
         !collection.isInverse()
     }
 
     def "bind delegates to dependentKeyValueBinder for unidirectional without join key mapping"() {
         given:
         def property = propertyFor(CKBUniOwner)
+        def key = new DependantValue(getGrailsDomainBinder().getMetadataBuildingContext(), null, null)
         def associatedClass = new RootClass(getGrailsDomainBinder().getMetadataBuildingContext())
-        def collection = bagWithOwner(ownerRootClass("ckb_uni_owner"), "ckb_uni_owner_ckb_uni_item")
+        def collection = new Bag(getGrailsDomainBinder().getMetadataBuildingContext(), null)
 
         when:
-        binder.bind(property, associatedClass, collection)
+        binder.bind(property, key, associatedClass, collection)
 
         then:
-        collection.getKey().getColumnSpan() > 0
+        key.getColumnSpan() > 0
         !collection.isInverse()
     }
 }

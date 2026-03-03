@@ -22,7 +22,6 @@ import java.util.*;
 import java.util.Map;
 import org.grails.orm.hibernate.cfg.domainbinding.binder.CollectionForPropertyConfigBinder;
 import org.grails.orm.hibernate.cfg.domainbinding.binder.ManyToOneBinder;
-import org.grails.orm.hibernate.cfg.domainbinding.binder.SimpleValueColumnBinder;
 import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernateManyToManyProperty;
 import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernateOneToManyProperty;
 import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernateToManyProperty;
@@ -31,59 +30,37 @@ import org.hibernate.MappingException;
 import org.hibernate.mapping.*;
 import org.hibernate.mapping.Collection;
 
-import org.grails.orm.hibernate.cfg.domainbinding.binder.CollectionForPropertyConfigBinder;
-import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernateManyToManyProperty;
-import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernateOneToManyProperty;
-import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernateToManyProperty;
-
 /** Refactored from CollectionBinder to handle collection second pass binding. */
 @SuppressWarnings("PMD.DataflowAnomalyAnalysis")
 public class CollectionSecondPassBinder {
-    private final CollectionOrderByBinder collectionOrderByBinder;
-    private final CollectionMultiTenantFilterBinder collectionMultiTenantFilterBinder;
-    private final CollectionKeyColumnUpdater collectionKeyColumnUpdater;
-    private final BidirectionalMapElementBinder bidirectionalMapElementBinder;
-    private final ManyToManyElementBinder manyToManyElementBinder;
-    private final UnidirectionalOneToManyBinder unidirectionalOneToManyBinder;
-    private final CollectionWithJoinTableBinder collectionWithJoinTableBinder;
-    private final CollectionForPropertyConfigBinder collectionForPropertyConfigBinder;
-
-  private static final Logger LOG = LoggerFactory.getLogger(CollectionSecondPassBinder.class);
-
   private final CollectionOrderByBinder collectionOrderByBinder;
   private final CollectionMultiTenantFilterBinder collectionMultiTenantFilterBinder;
+  private final CollectionKeyBinder collectionKeyBinder;
   private final ManyToOneBinder manyToOneBinder;
   private final PrimaryKeyValueCreator primaryKeyValueCreator;
   private final CollectionKeyColumnUpdater collectionKeyColumnUpdater;
-  private final BidirectionalOneToManyLinker bidirectionalOneToManyLinker;
-  private final DependentKeyValueBinder dependentKeyValueBinder;
   private final UnidirectionalOneToManyBinder unidirectionalOneToManyBinder;
   private final CollectionWithJoinTableBinder collectionWithJoinTableBinder;
   private final CollectionForPropertyConfigBinder collectionForPropertyConfigBinder;
-  private final SimpleValueColumnBinder simpleValueColumnBinder;
 
   /** Creates a new {@link CollectionSecondPassBinder} instance. */
   public CollectionSecondPassBinder(
       ManyToOneBinder manyToOneBinder,
       PrimaryKeyValueCreator primaryKeyValueCreator,
       CollectionKeyColumnUpdater collectionKeyColumnUpdater,
-      BidirectionalOneToManyLinker bidirectionalOneToManyLinker,
-      DependentKeyValueBinder dependentKeyValueBinder,
       UnidirectionalOneToManyBinder unidirectionalOneToManyBinder,
       CollectionWithJoinTableBinder collectionWithJoinTableBinder,
       CollectionForPropertyConfigBinder collectionForPropertyConfigBinder,
-      SimpleValueColumnBinder simpleValueColumnBinder,
+      CollectionKeyBinder collectionKeyBinder,
       CollectionOrderByBinder collectionOrderByBinder,
       CollectionMultiTenantFilterBinder collectionMultiTenantFilterBinder) {
     this.manyToOneBinder = manyToOneBinder;
     this.primaryKeyValueCreator = primaryKeyValueCreator;
     this.collectionKeyColumnUpdater = collectionKeyColumnUpdater;
-    this.bidirectionalOneToManyLinker = bidirectionalOneToManyLinker;
-    this.dependentKeyValueBinder = dependentKeyValueBinder;
     this.unidirectionalOneToManyBinder = unidirectionalOneToManyBinder;
     this.collectionWithJoinTableBinder = collectionWithJoinTableBinder;
     this.collectionForPropertyConfigBinder = collectionForPropertyConfigBinder;
-    this.simpleValueColumnBinder = simpleValueColumnBinder;
+    this.collectionKeyBinder = collectionKeyBinder;
     this.collectionOrderByBinder = collectionOrderByBinder;
     this.collectionMultiTenantFilterBinder = collectionMultiTenantFilterBinder;
   }
@@ -106,7 +83,7 @@ public class CollectionSecondPassBinder {
 
     DependantValue key = primaryKeyValueCreator.createPrimaryKeyValue(collection);
     collection.setKey(key);
-    bindCollectionKey(property, key, associatedClass, collection);
+    collectionKeyBinder.bind(property, key, associatedClass, collection);
 
     Optional.ofNullable(property.getMappedForm().getCache())
         .ifPresent(cacheConfig -> collection.setCacheConcurrencyStrategy(cacheConfig.getUsage()));
@@ -130,30 +107,6 @@ public class CollectionSecondPassBinder {
     collectionForPropertyConfigBinder.bindCollectionForPropertyConfig(collection, property);
   }
 
-
-  private void bindCollectionKey(
-      HibernateToManyProperty property,
-      DependantValue key,
-      PersistentClass associatedClass,
-      Collection collection) {
-    if (property.isBidirectional()) {
-      var inverseSide = property.getHibernateInverseSide();
-      if (inverseSide instanceof org.grails.datastore.mapping.model.types.ToOne
-          && property.shouldBindWithForeignKey()) {
-        bidirectionalOneToManyLinker.link(collection, associatedClass, key, inverseSide);
-      } else if (inverseSide instanceof HibernateManyToManyProperty
-          || java.util.Map.class.isAssignableFrom(property.getType())) {
-        dependentKeyValueBinder.bind(property, key);
-      }
-    } else {
-      if (property.getMappedForm().hasJoinKeyMapping()) {
-        simpleValueColumnBinder.bindSimpleValue(
-            key, "long", property.getMappedForm().getJoinTable().getKey().getName(), true);
-      } else {
-        dependentKeyValueBinder.bind(property, key);
-      }
-    }
-  }
 
   private void bindCollectionElement(
       HibernateToManyProperty property,
