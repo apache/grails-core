@@ -159,11 +159,16 @@ class DatastoreServiceMethodInvokingFactoryBeanSpec extends Specification {
     @Transactional(connection = ConnectionSource.DEFAULT)
     private static class TxDefaultService {
     }
+}
 
-    @Service(SampleDomain)
-    static class DomainService {
-    }
+/**
+ * Top-level class so that the @Service AST transformation can register it
+ * via META-INF/services and ServiceLoader can instantiate it.
+ * An inner class would cause ServiceConfigurationError in DefaultServiceRegistrySpec.
+ */
+@Service(SampleDomain)
+class DomainService {
+}
 
-    static class SampleDomain {
-    }
+class SampleDomain {
 }
