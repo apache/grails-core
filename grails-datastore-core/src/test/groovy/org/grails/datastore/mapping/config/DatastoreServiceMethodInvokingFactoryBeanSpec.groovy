@@ -161,9 +161,9 @@ class DatastoreServiceMethodInvokingFactoryBeanSpec extends Specification {
     }
 
     @Service(SampleDomain)
-    private static class DomainService {
+    static class DomainService {
     }
 
-    private static class SampleDomain {
+    static class SampleDomain {
     }
 }
