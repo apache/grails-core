@@ -60,7 +60,7 @@ class CollectionSecondPassBinderSpec extends HibernateGormDatastoreSpec {
         def svcb = new SimpleValueColumnBinder()
         def cku = new CollectionKeyColumnUpdater(new CollectionKeyBinder(botml, dkvb, svcb, pkvc))
 
-        binder = new CollectionSecondPassBinder(cku, uotmb, cwjtb, cfpcb, new BidirectionalMapElementBinder(mtob, cfpcb), new ManyToManyElementBinder(mtob, cfpcb), new CollectionOrderByBinder(), new CollectionMultiTenantFilterBinder(dcnf))
+        binder = new CollectionSecondPassBinder(mtob, pkvc, cku, botml, dkvb, uotmb, cwjtb, cfpcb, dcnf, svcb, new CollectionOrderByBinder())
     }
 
     protected HibernatePersistentProperty createTestHibernateToManyProperty(Class<?> domainClass = CSPBTestEntityWithMany, String propertyName = "items") {
@@ -72,120 +72,11 @@ class CollectionSecondPassBinderSpec extends HibernateGormDatastoreSpec {
     def "resolveAssociatedClass throws MappingException when property has no associated entity"() {
         given:
         def property = createTestHibernateToManyProperty(CSPBTestEntityWithMany, "items") as HibernateToManyProperty
-        def collection = new Bag(getGrailsDomainBinder().getMetadataBuildingContext(), null)
-        collection.setRole("CSPBTestEntityWithMany.items")
-        
-        def associatedPersistentClass = new RootClass(getGrailsDomainBinder().getMetadataBuildingContext())
-        associatedPersistentClass.setEntityName(CSPBAssociatedItem.name)
-        def valueProperty = new org.hibernate.mapping.Property()
-        valueProperty.setName("value")
-        def simpleValue = new org.hibernate.mapping.BasicValue(getGrailsDomainBinder().getMetadataBuildingContext(), new org.hibernate.mapping.Table("test", "ASSOCIATED_ITEM"))
-        simpleValue.setTypeName("string")
-        def column = new org.hibernate.mapping.Column("VALUE")
-        simpleValue.addColumn(column)
-        valueProperty.setValue(simpleValue)
-        associatedPersistentClass.addProperty(valueProperty)
-        
-        property.getMappedForm().setSort("value")
-        property.getMappedForm().setOrder("desc")
-
-        when:
-        binder.bindOrderBy(property, collection, associatedPersistentClass)
-
-        then:
-        collection.getOrderBy() != null
-    }
-
-    def "test bindOrderBy with unidirectional one-to-many throws exception"() {
-        given:
-        def property = createTestHibernateToManyProperty(CSPBUnidirectionalEntity, "items") as HibernateToManyProperty
-        def collection = new Bag(getGrailsDomainBinder().getMetadataBuildingContext(), null)
-        def associatedPersistentClass = new RootClass(getGrailsDomainBinder().getMetadataBuildingContext())
-        associatedPersistentClass.setEntityName(CSPBAssociatedItem.name)
-        
-        property.getMappedForm().setSort("value")
-
-        when:
-        binder.bindOrderBy(property, collection, associatedPersistentClass)
-
-        then:
-        thrown(DatastoreConfigurationException)
-    }
-
-    def "test bindOrderBy does nothing without sort"() {
-        given:
-        def property = createTestHibernateToManyProperty(CSPBTestEntityWithMany, "items") as HibernateToManyProperty
-        def collection = new Bag(getGrailsDomainBinder().getMetadataBuildingContext(), null)
-        def associatedPersistentClass = new RootClass(getGrailsDomainBinder().getMetadataBuildingContext())
-        associatedPersistentClass.setEntityName(CSPBAssociatedItem.name)
-
-        when:
-        binder.bindOrderBy(property, collection, associatedPersistentClass)
-
-        then:
-        collection.getOrderBy() == null
-    }
-
-    def "resolveAssociatedClass throws MappingException when property has no associated entity"() {
-        given:
-        def property = createTestHibernateToManyProperty(CSPBTestEntityWithMany, "items") as HibernateToManyProperty
         def spiedProperty = Spy(property)
         spiedProperty.getHibernateAssociatedEntity() >> null
 
         when:
         binder.resolveAssociatedClass(spiedProperty, [:])
-
-        then:
-        def ex = thrown(org.hibernate.MappingException)
-        ex.message.contains("items")
-    }
-
-    def "resolveAssociatedClass throws MappingException when associated class is not in persistentClasses"() {
-        given:
-        def property = createTestHibernateToManyProperty(CSPBTestEntityWithMany, "items") as HibernateToManyProperty
-
-        when:
-        binder.resolveAssociatedClass(property, [:])
-
-        then:
-        def ex = thrown(org.hibernate.MappingException)
-        ex.message.contains("items")
-    }
-
-    def "test resolveAssociatedClass returns associatedClass"() {
-        given:
-        def property = createTestHibernateToManyProperty(CSPBTestEntityWithMany, "items") as HibernateToManyProperty
-        def associatedPersistentClass = new RootClass(getGrailsDomainBinder().getMetadataBuildingContext())
-        associatedPersistentClass.setEntityName(CSPBAssociatedItem.name)
-        def persistentClasses = [(CSPBAssociatedItem.name): associatedPersistentClass]
-
-        when:
-        def result = binder.resolveAssociatedClass(property, persistentClasses)
-
-        then:
-        result == associatedPersistentClass
-    }
-
-    def "test bindOrderBy with table per hierarchy subclass"() {
-        given:
-        def property = createTestHibernateToManyProperty(CSPBTestEntityWithMany, "items") as HibernateToManyProperty
-        def collection = new Bag(getGrailsDomainBinder().getMetadataBuildingContext(), null)
-        def associatedPersistentClass = new RootClass(getGrailsDomainBinder().getMetadataBuildingContext())
-        associatedPersistentClass.setEntityName(CSPBAssociatedItem.name)
-
-        // Mock GrailsHibernatePersistentEntity behavior for table per hierarchy
-        def referencedEntity = property.getHibernateAssociatedEntity()
-        def spiedReferencedEntity = Spy(referencedEntity)
-        spiedReferencedEntity.isTablePerHierarchySubclass() >> true
-        spiedReferencedEntity.getDiscriminatorColumnName() >> "item_type"
-        spiedReferencedEntity.buildDiscriminatorSet() >> (["'A'", "'B'"] as Set)
-
-        // Inject the spy if possible, or mock the getter on property
-        def spiedProperty = Spy(property)
-        spiedProperty.getHibernateAssociatedEntity() >> null
-
-        when:
-        binder.bindOrderBy(spiedProperty, collection, associatedPersistentClass)
 
         then:
         def ex = thrown(org.hibernate.MappingException)

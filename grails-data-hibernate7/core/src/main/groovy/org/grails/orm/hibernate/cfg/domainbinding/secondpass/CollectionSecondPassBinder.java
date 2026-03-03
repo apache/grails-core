@@ -20,20 +20,15 @@ package org.grails.orm.hibernate.cfg.domainbinding.secondpass;
 
 import java.util.*;
 import java.util.Map;
-import java.util.Set;
-import org.grails.datastore.mapping.model.DatastoreConfigurationException;
 import org.grails.datastore.mapping.model.config.GormProperties;
 import org.grails.orm.hibernate.cfg.domainbinding.binder.CollectionForPropertyConfigBinder;
 import org.grails.orm.hibernate.cfg.domainbinding.binder.ManyToOneBinder;
 import org.grails.orm.hibernate.cfg.domainbinding.binder.SimpleValueColumnBinder;
 import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernateManyToManyProperty;
 import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernateOneToManyProperty;
-import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernatePersistentProperty;
 import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernateToManyProperty;
 import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernateManyToOneProperty;
-import org.grails.orm.hibernate.cfg.domainbinding.hibernate.GrailsHibernatePersistentEntity;
 import org.grails.orm.hibernate.cfg.domainbinding.util.DefaultColumnNameFetcher;
-import org.grails.orm.hibernate.cfg.domainbinding.util.OrderByClauseBuilder;
 import org.hibernate.MappingException;
 import org.hibernate.mapping.*;
 import org.hibernate.mapping.Collection;
@@ -58,7 +53,7 @@ public class CollectionSecondPassBinder {
   private static final Logger LOG = LoggerFactory.getLogger(CollectionSecondPassBinder.class);
 
   private final DefaultColumnNameFetcher defaultColumnNameFetcher;
-  private final OrderByClauseBuilder orderByClauseBuilder;
+  private final CollectionOrderByBinder collectionOrderByBinder;
   private final ManyToOneBinder manyToOneBinder;
   private final PrimaryKeyValueCreator primaryKeyValueCreator;
   private final CollectionKeyColumnUpdater collectionKeyColumnUpdater;
@@ -80,7 +75,8 @@ public class CollectionSecondPassBinder {
       CollectionWithJoinTableBinder collectionWithJoinTableBinder,
       CollectionForPropertyConfigBinder collectionForPropertyConfigBinder,
       DefaultColumnNameFetcher defaultColumnNameFetcher,
-      SimpleValueColumnBinder simpleValueColumnBinder) {
+      SimpleValueColumnBinder simpleValueColumnBinder,
+      CollectionOrderByBinder collectionOrderByBinder) {
     this.manyToOneBinder = manyToOneBinder;
     this.primaryKeyValueCreator = primaryKeyValueCreator;
     this.collectionKeyColumnUpdater = collectionKeyColumnUpdater;
@@ -91,7 +87,7 @@ public class CollectionSecondPassBinder {
     this.collectionForPropertyConfigBinder = collectionForPropertyConfigBinder;
     this.defaultColumnNameFetcher = defaultColumnNameFetcher;
     this.simpleValueColumnBinder = simpleValueColumnBinder;
-    this.orderByClauseBuilder = new OrderByClauseBuilder();
+    this.collectionOrderByBinder = collectionOrderByBinder;
   }
 
   /** Bind collection second pass. */
@@ -102,7 +98,7 @@ public class CollectionSecondPassBinder {
       @Nonnull Collection collection) {
 
     PersistentClass associatedClass = resolveAssociatedClass(property, persistentClasses);
-    bindOrderBy(property, collection, associatedClass);
+    collectionOrderByBinder.bind(property, collection, associatedClass);
     bindOneToManyAssociation(property, associatedClass, collection);
 
     applyMultiTenantFilter(property, collection);
@@ -234,36 +230,4 @@ public class CollectionSecondPassBinder {
         .orElseThrow(() -> new MappingException("Association [" + property.getName() + "] has no associated class"));
   }
 
-  private void bindOrderBy(
-      HibernateToManyProperty property, Collection collection, PersistentClass associatedClass) {
-    if (associatedClass == null) {
-      return;
-    }
-    GrailsHibernatePersistentEntity referenced = property.getHibernateAssociatedEntity();
-
-    if (referenced.isTablePerHierarchySubclass()) {
-      String discriminatorColumnName = referenced.getDiscriminatorColumnName();
-      Set<String> discSet = referenced.buildDiscriminatorSet();
-      String inclause = String.join(",", discSet);
-
-      collection.setWhere(discriminatorColumnName + " in (" + inclause + ")");
-    }
-
-    if (property.hasSort()) {
-      if (!property.isBidirectional() && property instanceof HibernateOneToManyProperty) {
-        throw new DatastoreConfigurationException(
-            "Default sort for associations ["
-                + property.getHibernateOwner().getName()
-                + "->"
-                + property.getName()
-                + "] are not supported with unidirectional one to many relationships.");
-      }
-      HibernatePersistentProperty sortBy =
-          (HibernatePersistentProperty) referenced.getPropertyByName(property.getSort());
-      String order = Optional.ofNullable(property.getOrder()).orElse("asc");
-      collection.setOrderBy(
-          orderByClauseBuilder.buildOrderByClause(
-              sortBy.getName(), associatedClass, collection.getRole(), order));
-    }
-  }
 }

@@ -20,50 +20,54 @@ package org.grails.orm.hibernate.cfg.domainbinding.secondpass;
 
 import java.util.Optional;
 import java.util.Set;
-
-import org.hibernate.mapping.Collection;
-import org.hibernate.mapping.PersistentClass;
-
 import org.grails.datastore.mapping.model.DatastoreConfigurationException;
 import org.grails.orm.hibernate.cfg.domainbinding.hibernate.GrailsHibernatePersistentEntity;
 import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernateOneToManyProperty;
 import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernatePersistentProperty;
 import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernateToManyProperty;
 import org.grails.orm.hibernate.cfg.domainbinding.util.OrderByClauseBuilder;
+import org.hibernate.mapping.Collection;
+import org.hibernate.mapping.PersistentClass;
 
 /** Binds the order-by clause and discriminator where condition to a collection. */
 public class CollectionOrderByBinder {
 
-    private final OrderByClauseBuilder orderByClauseBuilder;
+  private final OrderByClauseBuilder orderByClauseBuilder;
 
-    /** Creates a new {@link CollectionOrderByBinder} instance. */
-    public CollectionOrderByBinder() {
-        this.orderByClauseBuilder = new OrderByClauseBuilder();
+  /** Creates a new {@link CollectionOrderByBinder} instance. */
+  public CollectionOrderByBinder() {
+    this.orderByClauseBuilder = new OrderByClauseBuilder();
+  }
+
+  /** Binds the order-by clause and discriminator where condition to the given collection. */
+  public void bind(
+      HibernateToManyProperty property,
+      Collection collection,
+      PersistentClass associatedClass) {
+    GrailsHibernatePersistentEntity referenced = property.getHibernateAssociatedEntity();
+
+    if (referenced.isTablePerHierarchySubclass()) {
+      String discriminatorColumnName = referenced.getDiscriminatorColumnName();
+      Set<String> discSet = referenced.buildDiscriminatorSet();
+      String clause = String.join(",", discSet);
+      collection.setWhere(discriminatorColumnName + " in (" + clause + ")");
     }
 
-    /** Binds the order-by clause and discriminator where condition to the given collection. */
-    public void bind(HibernateToManyProperty property, Collection collection, PersistentClass associatedClass) {
-        GrailsHibernatePersistentEntity referenced = property.getHibernateAssociatedEntity();
-
-        if (referenced.isTablePerHierarchySubclass()) {
-            String discriminatorColumnName = referenced.getDiscriminatorColumnName();
-            Set<String> discSet = referenced.buildDiscriminatorSet();
-            String clause = String.join(",", discSet);
-            collection.setWhere(discriminatorColumnName + " in (" + clause + ")");
-        }
-
-        if (property.hasSort()) {
-            if (!property.isBidirectional() && property instanceof HibernateOneToManyProperty) {
-                throw new DatastoreConfigurationException("Default sort for associations [" +
-                        property.getHibernateOwner().getName() +
-                        "->" +
-                        property.getName() +
-                        "] are not supported with unidirectional one to many relationships.");
-            }
-            HibernatePersistentProperty sortBy = referenced.getHibernatePropertyByName(property.getSort());
-            String order = Optional.ofNullable(property.getOrder()).orElse("asc");
-            collection.setOrderBy(orderByClauseBuilder.buildOrderByClause(
-                    sortBy.getName(), associatedClass, collection.getRole(), order));
-        }
+    if (property.hasSort()) {
+      if (!property.isBidirectional() && property instanceof HibernateOneToManyProperty) {
+        throw new DatastoreConfigurationException(
+            "Default sort for associations ["
+                + property.getHibernateOwner().getName()
+                + "->"
+                + property.getName()
+                + "] are not supported with unidirectional one to many relationships.");
+      }
+      HibernatePersistentProperty sortBy =
+          (HibernatePersistentProperty) referenced.getPropertyByName(property.getSort());
+      String order = Optional.ofNullable(property.getOrder()).orElse("asc");
+      collection.setOrderBy(
+          orderByClauseBuilder.buildOrderByClause(
+              sortBy.getName(), associatedClass, collection.getRole(), order));
     }
+  }
 }
