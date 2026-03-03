@@ -126,16 +126,30 @@ class CollectionSecondPassBinderSpec extends HibernateGormDatastoreSpec {
         collection.getOrderBy() == null
     }
 
-    def "test resolveAssociatedClass throws MappingException when class is unmapped"() {
+    def "resolveAssociatedClass throws MappingException when property has no associated entity"() {
         given:
         def property = createTestHibernateToManyProperty(CSPBTestEntityWithMany, "items") as HibernateToManyProperty
-        def persistentClasses = [:] // Empty map, so CSPBAssociatedItem will be missing
+        def spiedProperty = Spy(property)
+        spiedProperty.getHibernateAssociatedEntity() >> null
 
         when:
-        binder.resolveAssociatedClass(property, persistentClasses)
+        binder.resolveAssociatedClass(spiedProperty, [:])
 
         then:
-        thrown(org.hibernate.MappingException)
+        def ex = thrown(org.hibernate.MappingException)
+        ex.message.contains("items")
+    }
+
+    def "resolveAssociatedClass throws MappingException when associated class is not in persistentClasses"() {
+        given:
+        def property = createTestHibernateToManyProperty(CSPBTestEntityWithMany, "items") as HibernateToManyProperty
+
+        when:
+        binder.resolveAssociatedClass(property, [:])
+
+        then:
+        def ex = thrown(org.hibernate.MappingException)
+        ex.message.contains("items")
     }
 
     def "test resolveAssociatedClass returns associatedClass"() {

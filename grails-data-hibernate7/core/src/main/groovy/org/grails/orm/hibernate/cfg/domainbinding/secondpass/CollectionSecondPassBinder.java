@@ -226,20 +226,12 @@ public class CollectionSecondPassBinder {
     collectionForPropertyConfigBinder.bindCollectionForPropertyConfig(collection, property);
   }
 
-  private PersistentClass resolveAssociatedClass(
+  private @Nonnull PersistentClass resolveAssociatedClass(
       HibernateToManyProperty property, Map<?, ?> persistentClasses) {
     return Optional.ofNullable(property.getHibernateAssociatedEntity())
         .map(
-            referenced -> {
-              PersistentClass associatedClass =
-                  (PersistentClass) persistentClasses.get(referenced.getName());
-              if (associatedClass == null) {
-                throw new MappingException(
-                    "Association references unmapped class: " + referenced.getName());
-              }
-              return associatedClass;
-            })
-        .orElse(null);
+            referenced -> (PersistentClass) persistentClasses.get(referenced.getName()))
+        .orElseThrow(() -> new MappingException("Association [" + property.getName() + "] has no associated class"));
   }
 
   private void bindOrderBy(
