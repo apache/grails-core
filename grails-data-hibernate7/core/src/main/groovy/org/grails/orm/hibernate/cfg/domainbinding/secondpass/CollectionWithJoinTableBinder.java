@@ -26,15 +26,12 @@ import org.grails.orm.hibernate.cfg.domainbinding.binder.CompositeIdentifierToMa
 import org.grails.orm.hibernate.cfg.domainbinding.binder.SimpleValueColumnBinder;
 import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernateToManyProperty;
 import org.hibernate.boot.spi.InFlightMetadataCollector;
-import org.hibernate.boot.spi.MetadataBuildingContext;
 import org.hibernate.mapping.*;
-import org.hibernate.mapping.Collection;
 
 /** Binds a collection with a join table. */
 @SuppressWarnings("PMD.DataflowAnomalyAnalysis")
 public class CollectionWithJoinTableBinder {
 
-  private final MetadataBuildingContext metadataBuildingContext;
   private final PersistentEntityNamingStrategy namingStrategy;
   private final UnidirectionalOneToManyInverseValuesBinder
       unidirectionalOneToManyInverseValuesBinder;
@@ -45,14 +42,12 @@ public class CollectionWithJoinTableBinder {
 
   /** Creates a new {@link CollectionWithJoinTableBinder} instance. */
   public CollectionWithJoinTableBinder(
-      MetadataBuildingContext metadataBuildingContext,
       PersistentEntityNamingStrategy namingStrategy,
       UnidirectionalOneToManyInverseValuesBinder unidirectionalOneToManyInverseValuesBinder,
       CompositeIdentifierToManyToOneBinder compositeIdentifierToManyToOneBinder,
       CollectionForPropertyConfigBinder collectionForPropertyConfigBinder,
       SimpleValueColumnBinder simpleValueColumnBinder,
       BasicCollectionElementBinder basicCollectionElementBinder) {
-    this.metadataBuildingContext = metadataBuildingContext;
     this.namingStrategy = namingStrategy;
     this.unidirectionalOneToManyInverseValuesBinder = unidirectionalOneToManyInverseValuesBinder;
     this.compositeIdentifierToManyToOneBinder = compositeIdentifierToManyToOneBinder;
@@ -72,9 +67,7 @@ public class CollectionWithJoinTableBinder {
     if (property.isBasic()) {
       element = basicCollectionElementBinder.bind(property, collection);
     } else {
-      element = new ManyToOne(metadataBuildingContext, collection.getCollectionTable());
-      unidirectionalOneToManyInverseValuesBinder.bindUnidirectionalOneToManyInverseValues(
-          property, (ManyToOne) element);
+      element = unidirectionalOneToManyInverseValuesBinder.bind(property, collection);
       final var domainClass = property.getHibernateAssociatedEntity();
       if (domainClass != null) {
         var joinColumnMappingOptional =

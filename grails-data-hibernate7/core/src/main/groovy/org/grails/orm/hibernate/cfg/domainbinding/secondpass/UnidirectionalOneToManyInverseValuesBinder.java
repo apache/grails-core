@@ -25,24 +25,21 @@ import org.hibernate.boot.spi.MetadataBuildingContext;
 import org.hibernate.mapping.Collection;
 import org.hibernate.mapping.ManyToOne;
 
-import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernateToManyProperty;
-
 /** Creates and binds a {@link ManyToOne} element for unidirectional to-many join-table associations. */
 public class UnidirectionalOneToManyInverseValuesBinder {
 
-    private final MetadataBuildingContext metadataBuildingContext;
+  private final MetadataBuildingContext metadataBuildingContext;
 
-    public UnidirectionalOneToManyInverseValuesBinder(MetadataBuildingContext metadataBuildingContext) {
-        this.metadataBuildingContext = metadataBuildingContext;
-    }
+  public UnidirectionalOneToManyInverseValuesBinder(MetadataBuildingContext metadataBuildingContext) {
+    this.metadataBuildingContext = metadataBuildingContext;
+  }
 
-    public ManyToOne bind(HibernateToManyProperty property, Collection collection) {
-        ManyToOne manyToOne = new ManyToOne(metadataBuildingContext, collection.getCollectionTable());
-        manyToOne.setIgnoreNotFound(property.getIgnoreNotFound());
-        manyToOne.setLazy(!FetchMode.JOIN.equals(property.getFetchMode()));
-        Optional.ofNullable(property.getLazy()).ifPresent(manyToOne::setLazy);
-        manyToOne.setReferencedEntityName(
-                property.getHibernateAssociatedEntity().getName());
-        return manyToOne;
-    }
+  public ManyToOne bind(HibernateToManyProperty property, Collection collection) {
+    ManyToOne manyToOne = new ManyToOne(metadataBuildingContext, collection.getCollectionTable());
+    manyToOne.setIgnoreNotFound(property.getIgnoreNotFound());
+    manyToOne.setLazy(!FetchMode.JOIN.equals(property.getFetchMode()));
+    Optional.ofNullable(property.getLazy()).ifPresent(manyToOne::setLazy);
+    manyToOne.setReferencedEntityName(property.getHibernateAssociatedEntity().getName());
+    return manyToOne;
+  }
 }

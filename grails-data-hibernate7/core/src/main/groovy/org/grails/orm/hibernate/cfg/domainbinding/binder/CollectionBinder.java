@@ -102,11 +102,10 @@ public class CollectionBinder {
     CollectionForPropertyConfigBinder collectionForPropertyConfigBinder =
         new CollectionForPropertyConfigBinder();
     UnidirectionalOneToManyInverseValuesBinder unidirectionalOneToManyInverseValuesBinder =
-        new UnidirectionalOneToManyInverseValuesBinder();
+        new UnidirectionalOneToManyInverseValuesBinder(metadataBuildingContext);
     SimpleValueColumnBinder simpleValueColumnBinder = new SimpleValueColumnBinder();
     CollectionWithJoinTableBinder collectionWithJoinTableBinder =
         new CollectionWithJoinTableBinder(
-            metadataBuildingContext,
             namingStrategy,
             unidirectionalOneToManyInverseValuesBinder,
             compositeIdentifierToManyToOneBinder,
