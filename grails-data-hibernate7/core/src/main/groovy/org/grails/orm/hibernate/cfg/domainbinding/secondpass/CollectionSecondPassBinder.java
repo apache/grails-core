@@ -34,10 +34,9 @@ import org.hibernate.mapping.Collection;
 public class CollectionSecondPassBinder {
   private final CollectionOrderByBinder collectionOrderByBinder;
   private final CollectionMultiTenantFilterBinder collectionMultiTenantFilterBinder;
-  private final CollectionKeyBinder collectionKeyBinder;
+  private final CollectionKeyColumnUpdater collectionKeyColumnUpdater;
   private final BidirectionalMapElementBinder bidirectionalMapElementBinder;
   private final ManyToManyElementBinder manyToManyElementBinder;
-  private final CollectionKeyColumnUpdater collectionKeyColumnUpdater;
   private final UnidirectionalOneToManyBinder unidirectionalOneToManyBinder;
   private final CollectionWithJoinTableBinder collectionWithJoinTableBinder;
   private final CollectionForPropertyConfigBinder collectionForPropertyConfigBinder;
@@ -48,7 +47,6 @@ public class CollectionSecondPassBinder {
       UnidirectionalOneToManyBinder unidirectionalOneToManyBinder,
       CollectionWithJoinTableBinder collectionWithJoinTableBinder,
       CollectionForPropertyConfigBinder collectionForPropertyConfigBinder,
-      CollectionKeyBinder collectionKeyBinder,
       BidirectionalMapElementBinder bidirectionalMapElementBinder,
       ManyToManyElementBinder manyToManyElementBinder,
       CollectionOrderByBinder collectionOrderByBinder,
@@ -57,7 +55,6 @@ public class CollectionSecondPassBinder {
     this.unidirectionalOneToManyBinder = unidirectionalOneToManyBinder;
     this.collectionWithJoinTableBinder = collectionWithJoinTableBinder;
     this.collectionForPropertyConfigBinder = collectionForPropertyConfigBinder;
-    this.collectionKeyBinder = collectionKeyBinder;
     this.bidirectionalMapElementBinder = bidirectionalMapElementBinder;
     this.manyToManyElementBinder = manyToManyElementBinder;
     this.collectionOrderByBinder = collectionOrderByBinder;
@@ -78,11 +75,11 @@ public class CollectionSecondPassBinder {
     collectionMultiTenantFilterBinder.bind(property, collection);
     collection.setSorted(property.isSorted());
 
-    DependantValue key = collectionKeyBinder.bind(property, associatedClass, collection);
+    collectionKeyColumnUpdater.bind(property, associatedClass, collection);
     collection.setCacheConcurrencyStrategy(property.getCacheUSage());
 
     bindCollectionElement(property, mappings, collection);
-    collectionKeyColumnUpdater.forceNullableAndCheckUpdatable(key, property);
+
   }
 
   private void bindOneToManyAssociation(
