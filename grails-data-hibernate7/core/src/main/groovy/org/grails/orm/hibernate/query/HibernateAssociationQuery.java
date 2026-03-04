@@ -50,17 +50,17 @@ public class HibernateAssociationQuery extends AssociationQuery {
     /** Criteria collector — a real HibernateQuery scoped to the associated entity */
     private final HibernateQuery innerQuery;
 
-    public HibernateAssociationQuery(
-            HibernateSession session,
-            PersistentEntity associatedEntity,
-            Association association,
-            String associationPath,
-            String alias) {
-        super(session, associatedEntity, association);
-        this.alias = alias;
-        this.associationPath = associationPath;
-        this.innerQuery = new HibernateQuery(session, associatedEntity);
-    }
+  public HibernateAssociationQuery(
+      HibernateSession session,
+      PersistentEntity associatedEntity,
+      Association association,
+      String associationPath,
+      String alias) {
+    super(session, associatedEntity, association);
+    this.alias = alias;
+    this.associationPath = associationPath;
+    this.innerQuery = new HibernateQuery(session, associatedEntity);
+  }
 
     /** Returns the criteria collected inside the association closure. */
     public List<Query.Criterion> getAssociationCriteria() {

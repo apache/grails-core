@@ -50,6 +50,7 @@ import org.grails.datastore.mapping.query.AssociationQuery;
 import org.grails.datastore.mapping.query.Projections;
 import org.grails.datastore.mapping.query.Query;
 import org.grails.datastore.mapping.query.api.QueryableCriteria;
+import org.grails.orm.hibernate.HibernateSession;
 import org.grails.orm.hibernate.GrailsHibernateTemplate;
 import org.grails.orm.hibernate.HibernateSession;
 import org.grails.orm.hibernate.IHibernateTemplate;
@@ -68,8 +69,70 @@ public class HibernateQuery extends Query {
     protected String alias;
     protected int aliasCount;
 
-    public DetachedCriteria<?> getDetachedCriteria() {
-        return detachedCriteria;
+  public DetachedCriteria<?> getDetachedCriteria() {
+    return detachedCriteria;
+  }
+
+  protected Map<String, CriteriaAndAlias> createdAssociationPaths = new HashMap<>();
+  protected LinkedList<String> aliasStack = new LinkedList<>();
+  protected LinkedList<PersistentEntity> entityStack = new LinkedList<PersistentEntity>();
+  protected LinkedList<Association> associationStack = new LinkedList<Association>();
+  protected DetachedCriteria<?> detachedCriteria;
+  protected ProxyHandler proxyHandler = new HibernateProxyHandler();
+
+  private Integer fetchSize;
+  private Integer timeout;
+  private FlushMode flushMode;
+  private Boolean readOnly;
+
+  public HibernateQuery(HibernateSession session, PersistentEntity entity) {
+    super(session, entity);
+    this.detachedCriteria = new DetachedCriteria(entity.getJavaClass());
+  }
+
+  public void setDetachedCriteria(DetachedCriteria<?> detachedCriteria) {
+    this.detachedCriteria = detachedCriteria;
+  }
+
+  @Override
+  protected Object resolveIdIfEntity(Object value) {
+    // for Hibernate queries, the object itself is used in queries, not the id
+    return value;
+  }
+
+  @Override
+  public Query isEmpty(String property) {
+    detachedCriteria.isEmpty(property);
+    return this;
+  }
+
+  @Override
+  public Query isNotEmpty(String property) {
+    detachedCriteria.isNotEmpty(property);
+    return this;
+  }
+
+  public Query count() {
+    projections.count();
+    return this;
+  }
+
+  @Override
+  public Query isNull(String property) {
+    detachedCriteria.isNull(property);
+    return this;
+  }
+
+  @Override
+  public Query isNotNull(String property) {
+    detachedCriteria.isNotNull(property);
+    return this;
+  }
+
+  @Override
+  public PersistentEntity getEntity() {
+    if (!entityStack.isEmpty()) {
+      return entityStack.getLast();
     }
 
     private final Map<String, CriteriaAndAlias> createdAssociationPaths = new HashMap<>();
@@ -233,7 +296,105 @@ public class HibernateQuery extends Query {
                 ((DetachedCriteria) getDelegate()).add(a);
             }
         });
-        return this;
+    return this;
+  }
+
+  public Query not(List<Criterion> criteria) {
+    var conjunction = new Conjunction();
+    criteria.forEach(conjunction::add);
+    var negation = new Negation();
+    negation.add(conjunction);
+    detachedCriteria.add(negation);
+    return this;
+  }
+
+  public Query not(Closure closure) {
+    detachedCriteria.not(closure);
+    return this;
+  }
+
+  @Override
+  public Query allEq(Map<String, Object> values) {
+    values.forEach(
+        (key, value) -> {
+          detachedCriteria.eq(key, value);
+        });
+    return this;
+  }
+
+  @Override
+  public Query ge(String property, Object value) {
+    detachedCriteria.ge(property, value);
+    return this;
+  }
+
+  @Override
+  public Query le(String property, Object value) {
+    detachedCriteria.le(property, value);
+    return this;
+  }
+
+  @Override
+  public Query gte(String property, Object value) {
+    detachedCriteria.gte(property, value);
+    return this;
+  }
+
+  @Override
+  public Query lte(String property, Object value) {
+    detachedCriteria.lte(property, value);
+    return this;
+  }
+
+  @Override
+  public Query lt(String property, Object value) {
+    detachedCriteria.lt(property, value);
+    return this;
+  }
+
+  @Override
+  public Query in(String property, List values) {
+    detachedCriteria.in(property, values);
+    return this;
+  }
+
+  @Override
+  public Query between(String property, Object start, Object end) {
+    detachedCriteria.between(property, start, end);
+    return this;
+  }
+
+  @Override
+  public Query like(String property, String expr) {
+    detachedCriteria.like(property, expr);
+    return this;
+  }
+
+  @Override
+  public Query ilike(String property, String expr) {
+    detachedCriteria.ilike(property, expr);
+    return this;
+  }
+
+  @Override
+  public Query rlike(String property, String expr) {
+    detachedCriteria.rlike(property, expr);
+    return this;
+  }
+
+  @Override
+  public AssociationQuery createQuery(String associationName) {
+    final PersistentProperty property =
+        entity.getPropertyByName(calculatePropertyName(associationName));
+    if ((property instanceof Association association)) {
+      String alias = generateAlias(associationName);
+      CriteriaAndAlias subCriteria = getOrCreateAlias(associationName, alias);
+      return new HibernateAssociationQuery(
+          (HibernateSession) getSession(),
+          association.getAssociatedEntity(),
+          association,
+          subCriteria.associationPath,
+          alias);
     }
 
     public Query not(List<Criterion> criteria) {

@@ -48,7 +48,7 @@ import org.grails.datastore.mapping.query.api.Criteria;
 import org.grails.datastore.mapping.query.api.ProjectionList;
 import org.grails.datastore.mapping.query.api.QueryableCriteria;
 import org.grails.orm.hibernate.HibernateDatastore;
-import org.grails.orm.hibernate.AbstractHibernateSession;
+import org.grails.orm.hibernate.HibernateSession;
 import org.grails.orm.hibernate.GrailsHibernateTemplate;
 import org.grails.orm.hibernate.HibernateDatastore;
 import org.grails.orm.hibernate.HibernateSession;
@@ -161,7 +161,7 @@ public class HibernateCriteriaBuilder extends GroovyObjectSupport implements Bui
     setDatastore(datastore);
     this.sessionFactory = sessionFactory;
     this.cb = sessionFactory.getCriteriaBuilder();
-    AbstractHibernateSession session = (AbstractHibernateSession) datastore.connect();
+    HibernateSession session = (HibernateSession) datastore.connect();
     hibernateQuery =
         new HibernateQuery(
             session, datastore.getMappingContext().getPersistentEntity(targetClass.getTypeName()));
