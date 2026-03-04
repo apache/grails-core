@@ -19,6 +19,7 @@
 
 package functionaltests.async
 
+import java.time.Duration
 import java.util.concurrent.TimeUnit
 
 import groovy.json.JsonSlurper
@@ -27,6 +28,7 @@ import functionaltests.services.AsyncProcessingService
 import io.micronaut.http.HttpRequest
 import io.micronaut.http.HttpStatus
 import io.micronaut.http.MediaType
+import io.micronaut.http.client.DefaultHttpClientConfiguration
 import io.micronaut.http.client.HttpClient
 import spock.lang.Shared
 import spock.lang.Specification
@@ -47,7 +49,11 @@ class AsyncPromiseSpec extends Specification {
     AsyncProcessingService asyncProcessingService
 
     def setup() {
-        client = client ?: HttpClient.create(new URL("http://localhost:${serverPort}"))
+        if (!client) {
+            def config = new DefaultHttpClientConfiguration()
+            config.setReadTimeout(Duration.ofSeconds(30))
+            client = HttpClient.create(new URL("http://localhost:${serverPort}"), config)
+        }
     }
 
     def cleanupSpec() {
