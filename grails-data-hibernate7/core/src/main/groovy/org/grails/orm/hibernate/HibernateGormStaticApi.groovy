@@ -17,6 +17,8 @@ package org.grails.orm.hibernate
 
 import org.hibernate.jpa.AvailableHints
 
+import org.grails.datastore.mapping.model.PersistentProperty
+
 import grails.orm.HibernateCriteriaBuilder
 import groovy.transform.CompileStatic
 import groovy.util.logging.Slf4j
@@ -86,13 +88,13 @@ class HibernateGormStaticApi<D> extends GormStaticApi<D> {
     }
 
     @Override
-    public <T> T withNewSession(Closure<T> callable) {
+     <T> T withNewSession(Closure<T> callable) {
         HibernateDatastore hibernateDatastore = (HibernateDatastore) datastore
         hibernateDatastore.withNewSession(callable)
     }
 
     @Override
-    def <T> T withSession(Closure<T> callable) {
+     <T> T withSession(Closure<T> callable) {
         HibernateDatastore hibernateDatastore = (HibernateDatastore) datastore
         hibernateDatastore.withSession(callable)
     }
@@ -173,22 +175,21 @@ class HibernateGormStaticApi<D> extends GormStaticApi<D> {
 
     @Override
     List<D> getAll() {
-        doListInternal("from ${persistentEntity.name}".toString(), [:], [], [:], false)
+        createHibernateQuery().list()
+    }
+
+    protected HibernateQuery createHibernateQuery() {
+        new HibernateQuery(hibernateSession, persistentEntity)
     }
 
     @Override
     Integer count() {
-        String entity = persistentEntity.name
-        doSingleInternal("select count(*) from $entity" as String, [:], [], [:], false) as Integer
+        createHibernateQuery().count().singleResult() as Integer
     }
 
     @Override
     boolean exists(Serializable id) {
-        def converted = convertIdentifier(id)
-        if (converted == null) return false
-        String entity = persistentEntity.name
-        String idName = persistentEntity.identity.name
-        (doSingleInternal("select count(*) from $entity where $idName = :id" as String, [id: converted], [], [:], false) as Long) > 0
+        !createHibernateQuery().idEq(convertIdentifier(id)).list().isEmpty()
     }
 
     @Override
@@ -404,9 +405,8 @@ class HibernateGormStaticApi<D> extends GormStaticApi<D> {
                 }
                 else if (conversionService.canConvert(idInstanceType, identityType)) {
                     try {
-                        return (Serializable) conversionService.convert(id, identityType)
-                    }
-                    catch (Throwable ignored) {
+                        return (Serializable)conversionService.convert(id, identityType)
+                    } catch (Throwable ignored) {
                         return null
                     }
                 }
@@ -417,6 +417,13 @@ class HibernateGormStaticApi<D> extends GormStaticApi<D> {
         }
         return id
     }
+
+
+
+
+
+
+
 
     @Override
     List<D> list(Map params = Collections.emptyMap()) {
