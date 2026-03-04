@@ -37,6 +37,7 @@ import grails.gorm.PagedResultList;
 import org.grails.datastore.mapping.query.Query;
 import org.grails.orm.hibernate.query.HibernateQuery;
 import org.grails.orm.hibernate.query.HibernateQueryArgument;
+import org.springframework.beans.BeanUtils;
 
 public class CriteriaMethodInvoker {
 
@@ -83,18 +84,99 @@ public class CriteriaMethodInvoker {
             default -> { }
         }
 
-        // Check for pagination params
-        if (method == CriteriaMethods.LIST_CALL && args.length == 2) {
-            builder.setPaginationEnabledList(true);
-            if (args[0] instanceof Map<?, ?> map) {
-                if (map.get("max") instanceof Number max) {
-                    hibernateQuery.maxResults(max.intValue());
-                }
-                if (map.get("offset") instanceof Number offset) {
-                    hibernateQuery.firstResult(offset.intValue());
-                }
-            }
-            invokeClosureNode(args[1]);
+    Object result;
+    if (!builder.isUniqueResult()) {
+      if (builder.isDistinct()) {
+        hibernateQuery.distinct();
+        result = hibernateQuery.list();
+      } else if (builder.isCount()) {
+        hibernateQuery.projections().count();
+        result = hibernateQuery.singleResult();
+      } else if (builder.isPaginationEnabledList()) {
+        Map argMap = (Map) args[0];
+        final String sortField = (String) argMap.get(HibernateQueryArgument.SORT.value());
+        if (sortField != null) {
+          final boolean ignoreCase =
+              !(argMap.get(HibernateQueryArgument.IGNORE_CASE.value()) instanceof Boolean b) || b;
+          final String orderParam = (String) argMap.get(HibernateQueryArgument.ORDER.value());
+          final Query.Order.Direction direction =
+              Query.Order.Direction.DESC.name().equalsIgnoreCase(orderParam)
+                  ? Query.Order.Direction.DESC
+                  : Query.Order.Direction.ASC;
+          Query.Order order;
+          if (ignoreCase) {
+            order = new Query.Order(sortField, direction);
+            order.ignoreCase();
+          } else {
+            order = new Query.Order(sortField, direction);
+          }
+          hibernateQuery.order(order);
+        }
+        result = new PagedResultList<>(hibernateQuery);
+      } else {
+        result = hibernateQuery.list();
+      }
+    } else {
+      result = hibernateQuery.singleResult();
+    }
+    if (!builder.isParticipate()) {
+      builder.closeSession();
+    }
+    return result;
+  }
+
+  private Object tryMetaMethod(String name, Object[] args) {
+    MetaMethod metaMethod = builder.getMetaClass().getMetaMethod(name, args);
+    if (metaMethod != null) {
+      return metaMethod.invoke(builder, args);
+    }
+    return UNHANDLED;
+  }
+
+  @SuppressWarnings("PMD.DataflowAnomalyAnalysis")
+  private Object tryAssociationOrJunction(String name, CriteriaMethods method, Object[] args) {
+    if (!isAssociationQueryMethod(args) && !isAssociationQueryWithJoinSpecificationMethod(args)) {
+      return UNHANDLED;
+    }
+
+    final boolean hasMoreThanOneArg = args.length > 1;
+    final Closure callable = hasMoreThanOneArg ? (Closure) args[1] : (Closure) args[0];
+    final HibernateQuery hibernateQuery = builder.getHibernateQuery();
+
+    if (method != null) {
+      switch (method) {
+        case AND:
+          hibernateQuery.and(callable);
+          return name;
+        case OR:
+          hibernateQuery.or(callable);
+          return name;
+        case NOT:
+          hibernateQuery.not(callable);
+          return name;
+        case PROJECTIONS:
+          if (args.length == 1 && (args[0] instanceof Closure)) {
+            invokeClosureNode(callable);
+            return name;
+          }
+          break;
+      }
+    }
+
+    final PropertyDescriptor pd = BeanUtils.getPropertyDescriptor(builder.getTargetClass(), name);
+    if (pd != null && pd.getReadMethod() != null) {
+      final Metamodel metamodel = builder.getSessionFactory().getMetamodel();
+      final EntityType<?> entityType = metamodel.entity(builder.getTargetClass());
+      final Attribute<?, ?> attribute = entityType.getAttribute(name);
+
+      if (attribute.isAssociation()) {
+        Class oldTargetClass = builder.getTargetClass();
+        builder.setTargetClass(builder.getClassForAssociationType(attribute));
+        JoinType joinType;
+        if (hasMoreThanOneArg) {
+          joinType = builder.convertFromInt((Integer) args[0]);
+        } else if (builder.getTargetClass().equals(oldTargetClass)) {
+          joinType = JoinType.LEFT; // default to left join if joining on the same table
         } else {
             invokeClosureNode(args[0]);
         }

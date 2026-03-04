@@ -73,6 +73,7 @@ import org.grails.orm.hibernate.cfg.MappingCacheHolder;
 import org.grails.orm.hibernate.cfg.Settings;
 import org.grails.orm.hibernate.connections.HibernateConnectionSource;
 import org.grails.orm.hibernate.connections.HibernateConnectionSourceFactory;
+import org.grails.orm.hibernate.query.HibernateQueryArgument;
 import org.grails.orm.hibernate.connections.HibernateConnectionSourceSettings;
 import org.grails.orm.hibernate.event.listener.HibernateEventListener;
 import org.grails.orm.hibernate.event.listener.HibernateEventListener;
@@ -169,15 +170,17 @@ public class HibernateDatastore extends AbstractDatastore
         MultipleConnectionSourceCapableDatastore {
   private static final Logger LOG = LoggerFactory.getLogger(HibernateDatastore.class);
 
-  /** The config property cache queries. */
-  public static final String CONFIG_PROPERTY_CACHE_QUERIES = "grails.hibernate.cache.queries";
+  /** @deprecated Use {@link HibernateQueryArgument#CONFIG_CACHE_QUERIES} */
+  @Deprecated(since = "8.0", forRemoval = true)
+  public static final String CONFIG_PROPERTY_CACHE_QUERIES = HibernateQueryArgument.CONFIG_CACHE_QUERIES.value();
 
-  /** The config property osiv readonly. */
-  public static final String CONFIG_PROPERTY_OSIV_READONLY = "grails.hibernate.osiv.readonly";
+  /** @deprecated Use {@link HibernateQueryArgument#CONFIG_OSIV_READONLY} */
+  @Deprecated(since = "8.0", forRemoval = true)
+  public static final String CONFIG_PROPERTY_OSIV_READONLY = HibernateQueryArgument.CONFIG_OSIV_READONLY.value();
 
-  /** The config property pass readonly to hibernate. */
-  public static final String CONFIG_PROPERTY_PASS_READONLY_TO_HIBERNATE =
-      "grails.hibernate.pass.readonly";
+  /** @deprecated Use {@link HibernateQueryArgument#CONFIG_PASS_READONLY} */
+  @Deprecated(since = "8.0", forRemoval = true)
+  public static final String CONFIG_PROPERTY_PASS_READONLY_TO_HIBERNATE = HibernateQueryArgument.CONFIG_PASS_READONLY.value();
 
   /** The session factory. */
   protected final SessionFactory sessionFactory;
@@ -589,11 +592,11 @@ public class HibernateDatastore extends AbstractDatastore
       setApplicationContext(applicationContext);
     }
 
-    this.osivReadOnly = config.getProperty(CONFIG_PROPERTY_OSIV_READONLY, Boolean.class, false);
+    this.osivReadOnly = config.getProperty(HibernateQueryArgument.CONFIG_OSIV_READONLY.value(), Boolean.class, false);
     this.passReadOnlyToHibernate =
-        config.getProperty(CONFIG_PROPERTY_PASS_READONLY_TO_HIBERNATE, Boolean.class, false);
+        config.getProperty(HibernateQueryArgument.CONFIG_PASS_READONLY.value(), Boolean.class, false);
     this.isCacheQueries =
-        config.getProperty(CONFIG_PROPERTY_CACHE_QUERIES, Boolean.class, false);
+        config.getProperty(HibernateQueryArgument.CONFIG_CACHE_QUERIES.value(), Boolean.class, false);
 
     if (config.getProperty(SETTING_AUTO_FLUSH, Boolean.class, false)) {
       this.defaultFlushModeName = FlushMode.AUTO.name();

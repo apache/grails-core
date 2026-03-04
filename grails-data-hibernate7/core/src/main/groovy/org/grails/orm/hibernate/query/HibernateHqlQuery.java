@@ -31,13 +31,7 @@ import jakarta.persistence.LockModeType;
 
 import org.apache.commons.collections.CollectionUtils;
 import org.apache.commons.collections.MapUtils;
-import org.hibernate.FlushMode;
-import org.hibernate.SessionFactory;
-import org.hibernate.query.QueryFlushMode;
-
-import org.springframework.context.ApplicationEventPublisher;
-import org.springframework.core.convert.ConversionService;
-
+import org.apache.groovy.parser.antlr4.util.StringUtils;
 import org.grails.datastore.mapping.core.Datastore;
 import org.grails.datastore.mapping.core.Session;
 import org.grails.datastore.mapping.model.PersistentEntity;
@@ -169,15 +163,15 @@ public class HibernateHqlQuery extends Query {
   }
 
   public void populateQuerySettings(Map<?, ?> args) {
-    ifPresent(args, DynamicFinder.ARGUMENT_MAX, v -> delegate.setMaxResults(toInt(v)));
-    ifPresent(args, DynamicFinder.ARGUMENT_OFFSET, v -> delegate.setFirstResult(toInt(v)));
-    ifPresent(args, DynamicFinder.ARGUMENT_CACHE, v -> delegate.setCacheable(toBool(v)));
-    ifPresent(args, DynamicFinder.ARGUMENT_FETCH_SIZE, v -> delegate.setFetchSize(toInt(v)));
-    ifPresent(args, DynamicFinder.ARGUMENT_TIMEOUT, v -> delegate.setTimeout(toInt(v)));
-    ifPresent(args, DynamicFinder.ARGUMENT_READ_ONLY, v -> delegate.setReadOnly(toBool(v)));
+    ifPresent(args, HibernateQueryArgument.MAX.value(), v -> delegate.setMaxResults(toInt(v)));
+    ifPresent(args, HibernateQueryArgument.OFFSET.value(), v -> delegate.setFirstResult(toInt(v)));
+    ifPresent(args, HibernateQueryArgument.CACHE.value(), v -> delegate.setCacheable(toBool(v)));
+    ifPresent(args, HibernateQueryArgument.FETCH_SIZE.value(), v -> delegate.setFetchSize(toInt(v)));
+    ifPresent(args, HibernateQueryArgument.TIMEOUT.value(), v -> delegate.setTimeout(toInt(v)));
+    ifPresent(args, HibernateQueryArgument.READ_ONLY.value(), v -> delegate.setReadOnly(toBool(v)));
     ifPresent(
         args,
-        DynamicFinder.ARGUMENT_FLUSH_MODE,
+        HibernateQueryArgument.FLUSH_MODE.value(),
         v -> delegate.setQueryFlushMode(GrailsHibernateQueryUtils.convertQueryFlushMode(v)));
   }
 
