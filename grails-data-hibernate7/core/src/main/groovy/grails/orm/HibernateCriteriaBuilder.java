@@ -47,6 +47,8 @@ import org.grails.datastore.mapping.query.api.BuildableCriteria;
 import org.grails.datastore.mapping.query.api.Criteria;
 import org.grails.datastore.mapping.query.api.ProjectionList;
 import org.grails.datastore.mapping.query.api.QueryableCriteria;
+import org.grails.orm.hibernate.HibernateDatastore;
+import org.grails.orm.hibernate.AbstractHibernateSession;
 import org.grails.orm.hibernate.GrailsHibernateTemplate;
 import org.grails.orm.hibernate.HibernateDatastore;
 import org.grails.orm.hibernate.HibernateSession;
@@ -134,31 +136,43 @@ public class HibernateCriteriaBuilder extends GroovyObjectSupport implements Bui
     @SuppressWarnings("PMD.AvoidFieldNameMatchingMethodName")
     private boolean count;
 
-    private boolean paginationEnabledList = false;
-    private int defaultFlushMode;
-    private final org.hibernate.query.criteria.HibernateCriteriaBuilder cb;
-    private final HibernateQuery hibernateQuery;
+  protected List<String> aliasStack = new ArrayList<String>();
+  protected static final String ALIAS = "_alias";
+  protected boolean paginationEnabledList = false;
+  protected ConversionService conversionService;
+  protected int defaultFlushMode;
+  protected HibernateDatastore datastore;
+  protected org.hibernate.query.criteria.HibernateCriteriaBuilder cb;
+  protected Root root;
+  protected HibernateQuery hibernateQuery;
+  private boolean shouldLock;
+  private boolean shouldCache;
 
     @SuppressWarnings("PMD.AvoidFieldNameMatchingMethodName")
     private boolean distinct = false;
 
-    @SuppressWarnings("rawtypes")
-    public HibernateCriteriaBuilder(Class targetClass, SessionFactory sessionFactory, HibernateDatastore datastore) {
-        this.targetClass = targetClass;
-        setDatastore(datastore);
-        this.sessionFactory = sessionFactory;
-        this.cb = sessionFactory.getCriteriaBuilder();
-        if (TransactionSynchronizationManager.hasResource(sessionFactory)) {
-            this.participate = true;
-        } else {
-            this.participate = false;
-            org.hibernate.Session session = sessionFactory.openSession();
-            TransactionSynchronizationManager.bindResource(sessionFactory, new SessionHolder(session));
-        }
-        HibernateSession session = (HibernateSession) datastore.connect();
-        hibernateQuery = new HibernateQuery(
-                session, datastore.getMappingContext().getPersistentEntity(targetClass.getTypeName()));
-        setDefaultFlushMode(GrailsHibernateTemplate.FLUSH_AUTO);
+  @SuppressWarnings("PMD.AvoidFieldNameMatchingMethodName")
+  protected boolean distinct = false;
+
+  @SuppressWarnings("rawtypes")
+  public HibernateCriteriaBuilder(
+      Class targetClass, SessionFactory sessionFactory, HibernateDatastore datastore) {
+    this.targetClass = targetClass;
+    setDatastore(datastore);
+    this.sessionFactory = sessionFactory;
+    this.cb = sessionFactory.getCriteriaBuilder();
+    AbstractHibernateSession session = (AbstractHibernateSession) datastore.connect();
+    hibernateQuery =
+        new HibernateQuery(
+            session, datastore.getMappingContext().getPersistentEntity(targetClass.getTypeName()));
+    setDefaultFlushMode(GrailsHibernateTemplate.FLUSH_AUTO);
+  }
+
+  public final void setDatastore(HibernateDatastore datastore) {
+    this.datastore = datastore;
+    if (MultiTenant.class.isAssignableFrom(targetClass)
+        && datastore.getMultiTenancyMode() == MultiTenancySettings.MultiTenancyMode.DISCRIMINATOR) {
+      datastore.enableMultiTenancyFilter();
     }
 
     public final void setDatastore(HibernateDatastore datastore) {

@@ -86,13 +86,13 @@ class HibernateGormStaticApi<D> extends GormStaticApi<D> {
     }
 
     @Override
-     <T> T withNewSession(Closure<T> callable) {
+    public <T> T withNewSession(Closure<T> callable) {
         HibernateDatastore hibernateDatastore = (HibernateDatastore) datastore
         hibernateDatastore.withNewSession(callable)
     }
 
     @Override
-     <T> T withSession(Closure<T> callable) {
+    def <T> T withSession(Closure<T> callable) {
         HibernateDatastore hibernateDatastore = (HibernateDatastore) datastore
         hibernateDatastore.withSession(callable)
     }
@@ -459,7 +459,9 @@ class HibernateGormStaticApi<D> extends GormStaticApi<D> {
 
     @Override
     GrailsCriteria createCriteria() {
-        return new HibernateCriteriaBuilder(persistentClass, sessionFactory, (HibernateDatastore) datastore)
+        def builder = new HibernateCriteriaBuilder(persistentClass, sessionFactory,(HibernateDatastore)datastore)
+        builder.conversionService = conversionService
+        return builder
     }
 
     protected void firePostQueryEvent(Object result) {
