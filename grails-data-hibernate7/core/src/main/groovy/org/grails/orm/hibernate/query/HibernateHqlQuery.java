@@ -50,7 +50,6 @@ import org.grails.orm.hibernate.HibernateSession;
 import org.grails.orm.hibernate.exceptions.GrailsQueryException;
 import org.hibernate.FlushMode;
 import org.hibernate.SessionFactory;
-import org.hibernate.query.MutationQuery;
 import org.springframework.context.ApplicationEventPublisher;
 
 /**
@@ -67,21 +66,21 @@ import org.springframework.context.ApplicationEventPublisher;
 @SuppressWarnings("PMD.AvoidDuplicateLiterals")
 public class HibernateHqlQuery extends Query {
 
-  private final org.hibernate.query.Query<?> query;
-  private final org.hibernate.query.MutationQuery mutationQuery;
+  /** Handles all query operations; the concrete type encodes whether this is SELECT or UPDATE/DELETE. */
+  private final HqlQueryDelegate delegate;
 
+  /** Constructs a SELECT query wrapper. */
   public HibernateHqlQuery(
       Session session, PersistentEntity entity, org.hibernate.query.Query<?> query) {
     super(session, entity);
-    this.query = query;
-    this.mutationQuery = null;
+    this.delegate = new SelectQueryDelegate(query);
   }
 
+  /** Constructs an UPDATE/DELETE query wrapper. */
   public HibernateHqlQuery(
       Session session, PersistentEntity entity, org.hibernate.query.MutationQuery mutationQuery) {
     super(session, entity);
-    this.query = null;
-    this.mutationQuery = mutationQuery;
+    this.delegate = new MutationQueryDelegate(mutationQuery);
   }
 
   @Override
@@ -95,8 +94,8 @@ public class HibernateHqlQuery extends Query {
     Datastore datastore = getSession().getDatastore();
     ApplicationEventPublisher publisher = datastore.getApplicationEventPublisher();
     publisher.publishEvent(new PreQueryEvent(datastore, this));
-    if (uniqueResult) query.setMaxResults(1);
-    List results = query.list();
+    if (uniqueResult) delegate.setMaxResults(1);
+    List results = delegate.list();
     publisher.publishEvent(new PostQueryEvent(datastore, this, results));
     return results;
   }
@@ -104,7 +103,7 @@ public class HibernateHqlQuery extends Query {
   // ─── Static factory API ──────────────────────────────────────────────────
 
   /**
-   * Session-bound step — creates the {@link org.hibernate.query.Query} from an open {@link
+   * Session-bound step — creates the appropriate Hibernate query from an open {@link
    * org.hibernate.Session} and wraps it in a {@link HibernateHqlQuery}.
    */
   protected static HibernateHqlQuery buildQuery(
@@ -113,22 +112,25 @@ public class HibernateHqlQuery extends Query {
       SessionFactory sessionFactory,
       PersistentEntity entity,
       HqlQueryContext ctx) {
-    org.hibernate.query.Query<?> q;
+    HibernateSession hibernateSession = new HibernateSession(dataStore, sessionFactory);
     if (StringUtils.isEmpty(ctx.hql())) {
-      q = session.createQuery("from " + ctx.targetClass().getName(), ctx.targetClass());
-      return new HibernateHqlQuery(new HibernateSession(dataStore, sessionFactory), entity, q);
+      var q = session.createQuery("from " + ctx.targetClass().getName(), ctx.targetClass());
+      return new HibernateHqlQuery(hibernateSession, entity, q);
     } else if (ctx.isUpdate()) {
-      org.hibernate.query.MutationQuery mq = session.createMutationQuery(ctx.hql());
-      HibernateHqlQuery result =
-          new HibernateHqlQuery(new HibernateSession(dataStore, sessionFactory), entity, mq);
+      var mq = session.createMutationQuery(ctx.hql());
+      var result = new HibernateHqlQuery(hibernateSession, entity, mq);
       result.setFlushMode(session.getHibernateFlushMode());
       return result;
     } else {
-      q =
+      var q =
           ctx.isNative()
               ? session.createNativeQuery(ctx.hql(), ctx.targetClass())
               : session.createQuery(ctx.hql(), ctx.targetClass());
+      var result = new HibernateHqlQuery(hibernateSession, entity, q);
+      result.setFlushMode(session.getHibernateFlushMode());
+      return result;
     }
+  }
 
   /**
    * Full factory — opens a session via the {@link GrailsHibernateTemplate}, builds the query from
@@ -145,8 +147,9 @@ public class HibernateHqlQuery extends Query {
       GrailsHibernateTemplate template) {
     HibernateHqlQuery hqlQuery =
         template.execute(session -> buildQuery(session, dataStore, sessionFactory, entity, ctx));
-    if (hqlQuery.getQuery() != null) {
-      template.applySettings(hqlQuery.getQuery());
+    var selectQuery = hqlQuery.selectQuery();
+    if (selectQuery != null) {
+      template.applySettings(selectQuery);
     }
     hqlQuery.populateQuerySettings(
         MapUtils.isNotEmpty(args) ? new HashMap<>(args) : Collections.emptyMap());
@@ -166,30 +169,20 @@ public class HibernateHqlQuery extends Query {
   }
 
   public void populateQuerySettings(Map<?, ?> args) {
-    if (mutationQuery != null) {
-      ifPresent(args, DynamicFinder.ARGUMENT_TIMEOUT, v -> mutationQuery.setTimeout(toInt(v)));
-      ifPresent(
-          args,
-          DynamicFinder.ARGUMENT_FLUSH_MODE,
-          v -> mutationQuery.setQueryFlushMode(GrailsHibernateQueryUtils.convertQueryFlushMode(v)));
-      return;
-    }
-    if (query == null) return;
-    ifPresent(args, DynamicFinder.ARGUMENT_MAX, v -> query.setMaxResults(toInt(v)));
-    ifPresent(args, DynamicFinder.ARGUMENT_OFFSET, v -> query.setFirstResult(toInt(v)));
-    ifPresent(args, DynamicFinder.ARGUMENT_CACHE, v -> query.setCacheable(toBool(v)));
-    ifPresent(args, DynamicFinder.ARGUMENT_FETCH_SIZE, v -> query.setFetchSize(toInt(v)));
-    ifPresent(args, DynamicFinder.ARGUMENT_TIMEOUT, v -> query.setTimeout(toInt(v)));
-    ifPresent(args, DynamicFinder.ARGUMENT_READ_ONLY, v -> query.setReadOnly(toBool(v)));
+    ifPresent(args, DynamicFinder.ARGUMENT_MAX, v -> delegate.setMaxResults(toInt(v)));
+    ifPresent(args, DynamicFinder.ARGUMENT_OFFSET, v -> delegate.setFirstResult(toInt(v)));
+    ifPresent(args, DynamicFinder.ARGUMENT_CACHE, v -> delegate.setCacheable(toBool(v)));
+    ifPresent(args, DynamicFinder.ARGUMENT_FETCH_SIZE, v -> delegate.setFetchSize(toInt(v)));
+    ifPresent(args, DynamicFinder.ARGUMENT_TIMEOUT, v -> delegate.setTimeout(toInt(v)));
+    ifPresent(args, DynamicFinder.ARGUMENT_READ_ONLY, v -> delegate.setReadOnly(toBool(v)));
     ifPresent(
         args,
         DynamicFinder.ARGUMENT_FLUSH_MODE,
-        v -> query.setQueryFlushMode(GrailsHibernateQueryUtils.convertQueryFlushMode(v)));
+        v -> delegate.setQueryFlushMode(GrailsHibernateQueryUtils.convertQueryFlushMode(v)));
   }
 
   public void populateQueryWithNamedArguments(Map<?, ?> namedArgs) {
     if (namedArgs == null) return;
-    org.hibernate.query.CommonQueryContract target = mutationQuery != null ? mutationQuery : query;
     namedArgs.forEach(
         (key, value) -> {
           if (!(key instanceof CharSequence)) {
@@ -197,40 +190,45 @@ public class HibernateHqlQuery extends Query {
           }
           String name = key.toString();
           if (value == null) {
-            target.setParameter(name, null);
-          } else if (mutationQuery == null && value instanceof Collection<?> col) {
-            query.setParameterList(name, col);
-          } else if (mutationQuery == null && value.getClass().isArray()) {
-            query.setParameterList(name, (Object[]) value);
+            delegate.setParameter(name, null);
+          } else if (value instanceof Collection<?> col) {
+            delegate.setParameterList(name, col);
+          } else if (value.getClass().isArray()) {
+            delegate.setParameterList(name, (Object[]) value);
           } else if (value instanceof CharSequence cs) {
-            target.setParameter(name, cs.toString(), String.class);
+            delegate.setParameter(name, cs.toString(), String.class);
           } else {
-            target.setParameter(name, value);
+            delegate.setParameter(name, value);
           }
         });
   }
 
   public void populateQueryWithIndexedArguments(List<?> params) {
     if (params == null) return;
-    org.hibernate.query.CommonQueryContract target = mutationQuery != null ? mutationQuery : query;
     for (int i = 0; i < params.size(); i++) {
       Object val = params.get(i);
-      if (val instanceof CharSequence cs) target.setParameter(i + 1, cs.toString(), String.class);
-      else if (val != null) target.setParameter(i + 1, val);
-      else target.setParameter(i + 1, null);
+      if (val instanceof CharSequence cs) delegate.setParameter(i + 1, cs.toString(), String.class);
+      else delegate.setParameter(i + 1, val);
     }
 
-    protected void populateQueryWithIndexedArguments(List<?> params) {
-        if (params == null) return;
-        for (int i = 0; i < params.size(); i++) {
-            Object val = params.get(i);
-            if (val instanceof CharSequence cs) delegate.setParameter(i + 1, cs.toString(), String.class);
-            else delegate.setParameter(i + 1, val);
-        }
-    }
+  /**
+   * Returns the underlying {@link org.hibernate.query.Query} for SELECT queries, or {@code null}
+   * for mutation queries.
+   */
+  public org.hibernate.query.Query<?> getQuery() {
+    return delegate.selectQuery();
+  }
+
+  /**
+   * Returns the underlying {@link org.hibernate.query.Query} for SELECT queries, or {@code null}
+   * for mutation queries.
+   */
+  public org.hibernate.query.Query<?> selectQuery() {
+    return delegate.selectQuery();
+  }
 
   public int executeUpdate() {
-    return mutationQuery != null ? mutationQuery.executeUpdate() : query.executeUpdate();
+    return delegate.executeUpdate();
   }
 
     /**
