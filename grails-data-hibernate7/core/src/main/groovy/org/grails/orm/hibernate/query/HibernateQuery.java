@@ -55,6 +55,13 @@ import org.grails.orm.hibernate.GrailsHibernateTemplate;
 import org.grails.orm.hibernate.IHibernateTemplate;
 import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernatePersistentEntity;
 import org.grails.orm.hibernate.proxy.HibernateProxyHandler;
+import org.hibernate.FlushMode;
+import org.hibernate.query.QueryFlushMode;
+import org.hibernate.Session;
+import org.hibernate.SessionFactory;
+import org.hibernate.query.criteria.HibernateCriteriaBuilder;
+import org.hibernate.query.criteria.JpaCriteriaQuery;
+import org.springframework.dao.InvalidDataAccessApiUsageException;
 
 /**
  * Bridges the Query API with the Hibernate Criteria API
@@ -80,7 +87,7 @@ public class HibernateQuery extends Query {
 
   private Integer fetchSize;
   private Integer timeout;
-  private FlushMode flushMode;
+  private QueryFlushMode flushMode;
   private Boolean readOnly;
 
   public HibernateQuery(HibernateSession session, PersistentEntity entity) {
@@ -431,11 +438,9 @@ public class HibernateQuery extends Query {
         return this;
     }
 
-    @Override
-    public Query lte(String property, Object value) {
-        detachedCriteria.lte(calculatePropertyName(property), value);
-        return this;
-    }
+  public void setHibernateFlushMode(FlushMode flushMode) {
+    this.flushMode = GrailsHibernateQueryUtils.convertQueryFlushMode(flushMode);
+  }
 
     @Override
     public Query lt(String property, Object value) {
