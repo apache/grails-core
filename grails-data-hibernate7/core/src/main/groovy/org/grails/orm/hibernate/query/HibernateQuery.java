@@ -79,7 +79,7 @@ public class HibernateQuery extends Query {
     return detachedCriteria;
   }
 
-  private Map<String, CriteriaAndAlias> createdAssociationPaths = new HashMap<>();
+  private final Map<String, CriteriaAndAlias> createdAssociationPaths = new HashMap<>();
   protected LinkedList<PersistentEntity> entityStack = new LinkedList<>();
   protected LinkedList<Association> associationStack = new LinkedList<>();
   protected DetachedCriteria<?> detachedCriteria;
@@ -294,12 +294,13 @@ public class HibernateQuery extends Query {
         return this;
     }
 
-    public Query not(Criterion a) {
-        not(new Closure(HibernateQuery.this) {
-            @SuppressWarnings("unused") // called reflectively by the Groovy runtime as the closure body
-            public void doCall() {
-                ((DetachedCriteria) getDelegate()).add(a);
-            }
+  public Query not(Criterion a) {
+    not(
+        new Closure(HibernateQuery.this) {
+          @SuppressWarnings("unused") // called reflectively by the Groovy runtime as the closure body
+          public void doCall() {
+            ((DetachedCriteria) getDelegate()).add(a);
+          }
         });
     return this;
   }
@@ -641,10 +642,28 @@ public class HibernateQuery extends Query {
         return getSessionFactory().getCriteriaBuilder();
     }
 
-    @Override
-    protected List executeQuery(PersistentEntity entity, Junction criteria) {
-        return list();
-    }
+  @Override
+  @SuppressWarnings({
+    "PMD.CloneThrowsCloneNotSupportedException",
+    "CloneDoesntCallSuperClone" // intentional: constructs a fresh instance via the session template
+                                // to avoid shallow-copying the live Session and DetachedCriteria state
+  })
+  public HibernateQuery clone() {
+    final HibernateSession hibernateSession = (HibernateSession) getSession();
+    final GrailsHibernateTemplate hibernateTemplate =
+        (GrailsHibernateTemplate) hibernateSession.getNativeInterface();
+    return (HibernateQuery)
+        hibernateTemplate.execute(
+            (GrailsHibernateTemplate.HibernateCallback<Object>)
+                session -> {
+                  HibernateQuery hibernateQuery = new HibernateQuery(hibernateSession, entity);
+                  if (this.max != null && this.max > 0) {
+                    hibernateQuery.max(this.max);
+                  }
+                  if (this.offset != null && this.offset > 0) {
+                    hibernateQuery.offset(this.offset);
+                  }
+                  hibernateQuery.setDetachedCriteria(this.detachedCriteria.clone());
 
     protected String calculatePropertyName(String property) {
         if (alias == null) {
