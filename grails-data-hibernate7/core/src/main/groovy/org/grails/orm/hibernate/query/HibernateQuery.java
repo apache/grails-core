@@ -79,7 +79,7 @@ public class HibernateQuery extends Query {
     return detachedCriteria;
   }
 
-  protected Map<String, CriteriaAndAlias> createdAssociationPaths = new HashMap<>();
+  private Map<String, CriteriaAndAlias> createdAssociationPaths = new HashMap<>();
   protected LinkedList<PersistentEntity> entityStack = new LinkedList<>();
   protected LinkedList<Association> associationStack = new LinkedList<>();
   protected DetachedCriteria<?> detachedCriteria;
@@ -92,7 +92,7 @@ public class HibernateQuery extends Query {
 
   public HibernateQuery(HibernateSession session, PersistentEntity entity) {
     super(session, entity);
-    this.detachedCriteria = new DetachedCriteria(entity.getJavaClass());
+    this.detachedCriteria = new DetachedCriteria<>(entity.getJavaClass());
   }
 
   public void setDetachedCriteria(DetachedCriteria<?> detachedCriteria) {
