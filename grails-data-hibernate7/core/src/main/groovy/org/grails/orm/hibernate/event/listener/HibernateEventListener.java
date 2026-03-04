@@ -18,6 +18,7 @@
  */
 package org.grails.orm.hibernate.event.listener;
 
+import grails.gorm.MultiTenant;
 import java.util.List;
 import java.util.Optional;
 import java.util.concurrent.ConcurrentHashMap;
@@ -25,9 +26,11 @@ import java.util.concurrent.ConcurrentMap;
 import org.grails.datastore.gorm.timestamp.DefaultTimestampProvider;
 import org.grails.datastore.gorm.timestamp.TimestampProvider;
 import org.grails.datastore.mapping.engine.event.AbstractPersistenceEvent;
+import org.grails.datastore.mapping.engine.event.AbstractPersistenceEventListener;
 import org.grails.datastore.mapping.engine.event.ValidationEvent;
 import org.grails.datastore.mapping.model.PersistentEntity;
 import org.grails.orm.hibernate.HibernateDatastore;
+import org.grails.orm.hibernate.connections.HibernateConnectionSourceSettings;
 import org.grails.orm.hibernate.support.ClosureEventListener;
 import org.grails.orm.hibernate.support.SoftKey;
 import org.hibernate.Hibernate;
@@ -69,12 +72,33 @@ import org.grails.orm.hibernate.support.SoftKey;
 @SuppressWarnings({"PMD.CloseResource", "PMD.DataflowAnomalyAnalysis"})
 public class HibernateEventListener extends AbstractPersistenceEventListener {
 
+  /** The cached should trigger. */
+  protected final transient ConcurrentMap<SoftKey<Class<?>>, Boolean> cachedShouldTrigger =
+      new ConcurrentHashMap<SoftKey<Class<?>>, Boolean>();
+
+  /** The fail on error. */
+  protected final boolean failOnError;
+
+  /** The fail on error packages. */
+  protected final List<?> failOnErrorPackages;
+
     /** The cached should trigger. */
     protected final transient ConcurrentMap<SoftKey<Class<?>>, Boolean> cachedShouldTrigger =
             new ConcurrentHashMap<SoftKey<Class<?>>, Boolean>();
 
   public HibernateEventListener(HibernateDatastore datastore) {
     super(datastore);
+    HibernateConnectionSourceSettings settings =
+        datastore.getConnectionSources().getDefaultConnectionSource().getSettings();
+    this.failOnError = settings.isFailOnError();
+    this.failOnErrorPackages = settings.getFailOnErrorPackages();
+  }
+
+  /**
+   * @return The hibernate datastore
+   */
+  protected HibernateDatastore getDatastore() {
+    return (HibernateDatastore) this.datastore;
   }
 
     /** The fail on error packages. */

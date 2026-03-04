@@ -74,7 +74,7 @@ import org.grails.orm.hibernate.cfg.Settings;
 import org.grails.orm.hibernate.connections.HibernateConnectionSource;
 import org.grails.orm.hibernate.connections.HibernateConnectionSourceFactory;
 import org.grails.orm.hibernate.connections.HibernateConnectionSourceSettings;
-import org.grails.orm.hibernate.event.listener.AbstractHibernateEventListener;
+import org.grails.orm.hibernate.event.listener.HibernateEventListener;
 import org.grails.orm.hibernate.event.listener.HibernateEventListener;
 import org.grails.orm.hibernate.multitenancy.MultiTenantEventListener;
 import org.grails.orm.hibernate.support.ClosureEventTriggeringInterceptor;
@@ -196,7 +196,7 @@ public class HibernateDatastore extends AbstractDatastore
   protected final SchemaHandler schemaHandler;
 
   /** The event triggering interceptor. */
-  protected AbstractHibernateEventListener eventTriggeringInterceptor;
+  protected HibernateEventListener eventTriggeringInterceptor;
 
   /** The auto timestamp event listener. */
   protected AutoTimestampEventListener autoTimestampEventListener;
@@ -1553,7 +1553,7 @@ public class HibernateDatastore extends AbstractDatastore
   }
 
   /** For testing: returns the event triggering interceptor. */
-  public AbstractHibernateEventListener getEventTriggeringInterceptor() {
+  public HibernateEventListener getEventTriggeringInterceptor() {
     return eventTriggeringInterceptor;
   }
 
