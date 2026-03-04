@@ -47,7 +47,6 @@ These tests live in `grails-datamapping-tck` and are deliberately excluded for H
 | TCK Spec | # skipped | Skip condition | Reason / notes                                                                                 |
 |----------|-----------|----------------|------------------------------------------------------------------------------------------------|
 | `DirtyCheckingSpec` | 6 | `@IgnoreIf(hibernate7.gorm.suite == true)` | Hibernate 7 dirty-checking semantics differ; the entire spec is disabled                       |
-| `NamedQuerySpec` | 38 | `@IgnoreIf(hibernate7.gorm.suite == true)` | Named query support not yet ported to Hibernate 7                                              |
 | `GroovyProxySpec` | 5 | `@IgnoreIf(hibernate5/6/7.gorm.suite)` | Groovy proxy support requires `ByteBuddyGroovyProxyFactory`; excluded for all Hibernate suites |
 | `OptimisticLockingSpec` | 3 | `@IgnoreIf` (detects Hibernate datastore on classpath) | Hibernate has its own `Hibernate7OptimisticLockingSpec` replacement                            |
 | `UpdateWithProxyPresentSpec` | 2 | `@IgnoreIf(hibernate7.gorm.suite == true)` | Proxy update behaviour differs in Hibernate 7                                                  |

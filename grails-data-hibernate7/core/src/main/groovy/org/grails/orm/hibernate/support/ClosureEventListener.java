@@ -22,10 +22,18 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.Callable;
-
-import groovy.lang.GroovySystem;
-import groovy.lang.MetaClass;
-
+import org.grails.datastore.gorm.GormValidateable;
+import org.grails.datastore.gorm.support.BeforeValidateHelper.BeforeValidateEventTriggerCaller;
+import org.grails.datastore.gorm.support.EventTriggerCaller;
+import org.grails.datastore.mapping.engine.event.AbstractPersistenceEvent;
+import org.grails.datastore.mapping.engine.event.ValidationEvent;
+import org.grails.datastore.mapping.model.PersistentEntity;
+import org.grails.datastore.mapping.model.PersistentProperty;
+import org.grails.datastore.mapping.model.config.GormProperties;
+import org.grails.datastore.mapping.reflect.ClassUtils;
+import org.grails.datastore.mapping.reflect.EntityReflector;
+import org.grails.datastore.mapping.validation.ValidationException;
+import org.grails.orm.hibernate.HibernateGormValidationApi;
 import org.hibernate.FlushMode;
 import org.hibernate.HibernateException;
 import org.hibernate.Session;
@@ -130,8 +138,14 @@ public class ClosureEventListener
                 ClassUtils.isClassBelowPackage(domainClazz, failOnErrorPackages) :
                 failOnError;
 
-        validateParams = new HashMap();
-        validateParams.put(HibernateGormValidationApi.ARGUMENT_DEEP_VALIDATE, Boolean.FALSE);
+    validateParams = new HashMap();
+    validateParams.put(HibernateGormValidationApi.ARGUMENT_DEEP_VALIDATE, Boolean.FALSE);
+  }
+
+  @Override
+  public void onPreLoad(PreLoadEvent event) {
+    if (preLoadEventCaller != null) {
+      doPreLoadWithManualSession(event, () -> preLoadEventCaller.call(event.getEntity()));
     }
 
     @Override

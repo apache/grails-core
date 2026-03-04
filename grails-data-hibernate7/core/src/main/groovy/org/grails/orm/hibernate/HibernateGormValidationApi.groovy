@@ -32,8 +32,8 @@ import org.springframework.validation.Validator
 @CompileStatic
 class HibernateGormValidationApi<D> extends GormValidationApi<D> {
 
-    public static final String ARGUMENT_DEEP_VALIDATE = 'deepValidate'
-    private static final String ARGUMENT_EVICT = 'evict'
+    public static final String ARGUMENT_DEEP_VALIDATE = "deepValidate"
+    private static final String ARGUMENT_EVICT = "evict"
 
     protected ClassLoader classLoader
     protected HibernateDatastore datastore
@@ -57,7 +57,7 @@ class HibernateGormValidationApi<D> extends GormValidationApi<D> {
         Validator validator = getValidator()
         if (validator == null) return true
 
-        boolean valid = true
+        Boolean valid = Boolean.TRUE
         boolean evict = false
         boolean deepValidate = true
         Set validatedFields = null
@@ -69,9 +69,7 @@ class HibernateGormValidationApi<D> extends GormValidationApi<D> {
             deepValidate = ClassUtils.getBooleanFromMap(ARGUMENT_DEEP_VALIDATE, arguments)
         }
 
-        if (arguments?.containsKey(ARGUMENT_EVICT)) {
-            evict = ClassUtils.getBooleanFromMap(ARGUMENT_EVICT, arguments)
-        }
+        evict = ClassUtils.getBooleanFromMap(ARGUMENT_EVICT, arguments)
 
         fireEvent(instance, validatedFieldsList)
 
@@ -97,7 +95,7 @@ class HibernateGormValidationApi<D> extends GormValidationApi<D> {
         errors = filterErrors(errors, validatedFields, instance)
 
         if (errors.hasErrors()) {
-            valid = false
+            valid = Boolean.FALSE
             if (evict) {
                 if (hibernateTemplate.contains(instance)) {
                     hibernateTemplate.evict(instance)
@@ -118,8 +116,8 @@ class HibernateGormValidationApi<D> extends GormValidationApi<D> {
         datastore.getApplicationEventPublisher().publishEvent(event)
     }
 
-    @SuppressWarnings('rawtypes')
-    private static Errors filterErrors(Errors errors, Set validatedFields, Object target) {
+    @SuppressWarnings("rawtypes")
+    private Errors filterErrors(Errors errors, Set validatedFields, Object target) {
         if (validatedFields == null) return errors
 
         ValidationErrors result = new ValidationErrors(target)
@@ -137,7 +135,7 @@ class HibernateGormValidationApi<D> extends GormValidationApi<D> {
         return result
     }
 
-    protected static Errors setupErrorsProperty(Object target) {
+    protected Errors setupErrorsProperty(Object target) {
         HibernateRuntimeUtils.setupErrorsProperty target
     }
 }
