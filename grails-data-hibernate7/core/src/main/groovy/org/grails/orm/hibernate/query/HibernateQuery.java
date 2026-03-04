@@ -52,7 +52,6 @@ import org.grails.datastore.mapping.query.Query;
 import org.grails.datastore.mapping.query.api.QueryableCriteria;
 import org.grails.orm.hibernate.HibernateSession;
 import org.grails.orm.hibernate.GrailsHibernateTemplate;
-import org.grails.orm.hibernate.HibernateSession;
 import org.grails.orm.hibernate.IHibernateTemplate;
 import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernatePersistentEntity;
 import org.grails.orm.hibernate.proxy.HibernateProxyHandler;
@@ -74,9 +73,8 @@ public class HibernateQuery extends Query {
   }
 
   protected Map<String, CriteriaAndAlias> createdAssociationPaths = new HashMap<>();
-  protected LinkedList<String> aliasStack = new LinkedList<>();
-  protected LinkedList<PersistentEntity> entityStack = new LinkedList<PersistentEntity>();
-  protected LinkedList<Association> associationStack = new LinkedList<Association>();
+  protected LinkedList<PersistentEntity> entityStack = new LinkedList<>();
+  protected LinkedList<Association> associationStack = new LinkedList<>();
   protected DetachedCriteria<?> detachedCriteria;
   protected ProxyHandler proxyHandler = new HibernateProxyHandler();
 
@@ -316,9 +314,7 @@ public class HibernateQuery extends Query {
   @Override
   public Query allEq(Map<String, Object> values) {
     values.forEach(
-        (key, value) -> {
-          detachedCriteria.eq(key, value);
-        });
+        (key, value) -> detachedCriteria.eq(key, value));
     return this;
   }
 
