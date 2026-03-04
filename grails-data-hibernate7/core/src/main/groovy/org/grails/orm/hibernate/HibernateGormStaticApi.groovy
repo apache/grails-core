@@ -72,7 +72,7 @@ class HibernateGormStaticApi<D> extends GormStaticApi<D> {
         this.conversionService = datastore.mappingContext.conversionService
         this.proxyHandler = datastore.mappingContext.proxyHandler
         this.hibernateSession = new HibernateSession(
-                (HibernateDatastore) datastore,
+                (HibernateDatastore)datastore,
                 hibernateTemplate.getSessionFactory()
         )
         this.classLoader = classLoader

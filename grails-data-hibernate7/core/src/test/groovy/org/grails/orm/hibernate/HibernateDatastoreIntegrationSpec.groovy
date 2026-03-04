@@ -119,8 +119,7 @@ class HibernateDatastoreIntegrationSpec extends HibernateGormDatastoreSpec {
 
     void "defaultFlushMode is COMMIT by default"() {
         expect:
-        // HibernateDatastore.FlushMode.COMMIT.level == 5
-        datastore.defaultFlushMode == HibernateDatastore.FlushMode.COMMIT.level
+        datastore.defaultFlushMode == FlushMode.COMMIT
     }
 
     void "defaultFlushModeName is COMMIT by default"() {
@@ -149,24 +148,16 @@ class HibernateDatastoreIntegrationSpec extends HibernateGormDatastoreSpec {
     }
 
     // -------------------------------------------------------------------------
-    // FlushMode enum (HibernateDatastore.FlushMode)
+    // FlushMode (org.hibernate.FlushMode)
     // -------------------------------------------------------------------------
-
-    void "FlushMode enum levels are correctly ordered"() {
-        expect:
-        HibernateDatastore.FlushMode.MANUAL.level  == 0
-        HibernateDatastore.FlushMode.COMMIT.level  == 5
-        HibernateDatastore.FlushMode.AUTO.level    == 10
-        HibernateDatastore.FlushMode.ALWAYS.level  == 20
-    }
 
     void "FlushMode enum values are all present"() {
         expect:
-        HibernateDatastore.FlushMode.values().size() == 4
-        HibernateDatastore.FlushMode.valueOf('MANUAL')  != null
-        HibernateDatastore.FlushMode.valueOf('COMMIT')  != null
-        HibernateDatastore.FlushMode.valueOf('AUTO')    != null
-        HibernateDatastore.FlushMode.valueOf('ALWAYS')  != null
+        FlushMode.values().size() == 4
+        FlushMode.valueOf('MANUAL')  != null
+        FlushMode.valueOf('COMMIT')  != null
+        FlushMode.valueOf('AUTO')    != null
+        FlushMode.valueOf('ALWAYS')  != null
     }
 
     // -------------------------------------------------------------------------
@@ -240,7 +231,7 @@ class HibernateDatastoreIntegrationSpec extends HibernateGormDatastoreSpec {
 
         when:
         DatastoreBook.withTransaction {
-            datastore.withFlushMode(HibernateDatastore.FlushMode.AUTO) {
+            datastore.withFlushMode(FlushMode.AUTO) {
                 executed = true
                 true
             }
@@ -259,7 +250,7 @@ class HibernateDatastoreIntegrationSpec extends HibernateGormDatastoreSpec {
             def sess = sessionFactory.currentSession
             org.hibernate.FlushMode modeBefore = sess.hibernateFlushMode
 
-            datastore.withFlushMode(HibernateDatastore.FlushMode.ALWAYS) { true }
+            datastore.withFlushMode(FlushMode.ALWAYS) { true }
 
             modeAfter = sess.hibernateFlushMode
         }

@@ -92,14 +92,11 @@ public class HibernateSession extends AbstractAttributeStoringSession
     protected HibernateDatastore datastore;
 
   public HibernateSession(
-      HibernateDatastore hibernateDatastore, SessionFactory sessionFactory, int defaultFlushMode) {
+      HibernateDatastore hibernateDatastore, SessionFactory sessionFactory) {
     datastore = hibernateDatastore;
     hibernateTemplate =
         new GrailsHibernateTemplate(sessionFactory, (HibernateDatastore) getDatastore());
   }
-
-    ProxyHandler proxyHandler = new HibernateProxyHandler();
-    DefaultTimestampProvider timestampProvider;
 
   @Override
   public boolean isSchemaless() {

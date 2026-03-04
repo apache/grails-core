@@ -87,13 +87,41 @@ public class GrailsHibernateTemplate implements IHibernateTemplate {
         T doInHibernate(Session session) throws HibernateException, SQLException;
     }
 
-    protected GrailsHibernateTemplate() {
-        // for testing
+  public GrailsHibernateTemplate(SessionFactory sessionFactory, HibernateDatastore datastore) {
+    this(sessionFactory);
+    if (datastore != null) {
+      cacheQueries = datastore.isCacheQueries();
+      this.osivReadOnly = datastore.isOsivReadOnly();
+      this.passReadOnlyToHibernate = datastore.isPassReadOnlyToHibernate();
+      this.flushMode = hibernateFlushModeToConstant(datastore.getDefaultFlushMode());
+    }
+  }
+
+  public GrailsHibernateTemplate(
+      SessionFactory sessionFactory, HibernateDatastore datastore, int defaultFlushMode) {
+    this(sessionFactory);
+    if (datastore != null) {
+      cacheQueries = datastore.isCacheQueries();
+      this.osivReadOnly = datastore.isOsivReadOnly();
+      this.passReadOnlyToHibernate = datastore.isPassReadOnlyToHibernate();
     }
 
-    public GrailsHibernateTemplate(SessionFactory sessionFactory) {
-        Assert.notNull(sessionFactory, "Property 'sessionFactory' is required");
-        this.sessionFactory = sessionFactory;
+  /** Maps a Hibernate {@link FlushMode} to one of the {@code FLUSH_*} constants of this class. */
+  static int hibernateFlushModeToConstant(FlushMode mode) {
+    switch (mode) {
+      case MANUAL: return FLUSH_NEVER;
+      case COMMIT: return FLUSH_COMMIT;
+      case ALWAYS: return FLUSH_ALWAYS;
+      default: return FLUSH_AUTO;
+    }
+  }
+
+  @Override
+  public <T> T execute(Closure<T> callable) {
+    HibernateCallback<T> hibernateCallback =
+        DefaultGroovyMethods.asType(callable, HibernateCallback.class);
+    return execute(hibernateCallback);
+  }
 
         ConnectionProvider connectionProvider = ((SessionFactoryImplementor) sessionFactory)
                 .getServiceRegistry()

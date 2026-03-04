@@ -34,8 +34,6 @@ import org.grails.datastore.gorm.events.AutoTimestampEventListener;
 import org.grails.datastore.gorm.events.ConfigurableApplicationContextEventPublisher;
 import org.grails.datastore.gorm.events.ConfigurableApplicationEventPublisher;
 import org.grails.datastore.gorm.events.DefaultApplicationEventPublisher;
-import org.grails.datastore.gorm.jdbc.MultiTenantConnection;
-import org.grails.datastore.gorm.jdbc.MultiTenantDataSource;
 import org.grails.datastore.gorm.jdbc.connections.DataSourceConnectionSource;
 import org.grails.datastore.gorm.jdbc.connections.DataSourceConnectionSourceFactory;
 import org.grails.datastore.gorm.jdbc.connections.DataSourceSettings;
@@ -76,9 +74,9 @@ import org.grails.orm.hibernate.connections.HibernateConnectionSourceFactory;
 import org.grails.orm.hibernate.query.HibernateQueryArgument;
 import org.grails.orm.hibernate.connections.HibernateConnectionSourceSettings;
 import org.grails.orm.hibernate.event.listener.HibernateEventListener;
-import org.grails.orm.hibernate.event.listener.HibernateEventListener;
 import org.grails.orm.hibernate.multitenancy.MultiTenantEventListener;
 import org.grails.orm.hibernate.support.ClosureEventTriggeringInterceptor;
+import org.hibernate.FlushMode;
 import org.hibernate.SessionFactory;
 import org.hibernate.boot.Metadata;
 import org.hibernate.cfg.Environment;
@@ -189,8 +187,8 @@ public class HibernateDatastore extends AbstractDatastore
   protected final ConnectionSources<SessionFactory, HibernateConnectionSourceSettings>
       connectionSources;
 
-  /** The default flush mode name. */
-  protected final String defaultFlushModeName;
+  /** The default flush mode. */
+  protected final FlushMode defaultFlushMode;
 
   /** The multi tenant mode. */
   protected final MultiTenancySettings.MultiTenancyMode multiTenantMode;
@@ -212,9 +210,6 @@ public class HibernateDatastore extends AbstractDatastore
 
   /** The is cache queries. */
   protected final boolean isCacheQueries;
-
-  /** The default flush mode. */
-  protected final int defaultFlushMode;
 
   /** The fail on error. */
   protected final boolean failOnError;
@@ -261,10 +256,8 @@ public class HibernateDatastore extends AbstractDatastore
     this.isCacheQueries = hibernateSettings.getCache().isQueries();
     this.failOnError = settings.isFailOnError();
     Boolean markDirty = settings.getMarkDirty();
-    this.markDirty = markDirty == null ? false : markDirty;
-    FlushMode flushMode = FlushMode.valueOf(hibernateSettings.getFlush().getMode().name());
-    this.defaultFlushModeName = flushMode.name();
-    this.defaultFlushMode = flushMode.getLevel();
+    this.markDirty = markDirty != null && markDirty;
+    this.defaultFlushMode = FlushMode.valueOf(hibernateSettings.getFlush().getMode().name());
     MultiTenancySettings multiTenancySettings = settings.getMultiTenancy();
     final TenantResolver multiTenantResolver = multiTenancySettings.getTenantResolver();
     this.multiTenantMode = multiTenancySettings.getMode();
@@ -284,17 +277,17 @@ public class HibernateDatastore extends AbstractDatastore
         new GrailsHibernateTransactionManager(
             defaultConnectionSource.getSource(),
             defaultConnectionSource.getDataSource(),
-            org.hibernate.FlushMode.valueOf(defaultFlushModeName));
+            defaultFlushMode);
     this.eventPublisher = eventPublisher;
     this.eventTriggeringInterceptor = new HibernateEventListener(this);
     this.autoTimestampEventListener = new AutoTimestampEventListener(this);
 
     ClosureEventTriggeringInterceptor interceptor =
-        (ClosureEventTriggeringInterceptor) hibernateSettings.getEventTriggeringInterceptor();
+            hibernateSettings.getEventTriggeringInterceptor();
     interceptor.setDatastore(this);
     interceptor.setEventPublisher(eventPublisher);
     registerEventListeners(this.eventPublisher);
-    configureValidatorRegistry(settings, mappingContext);
+    configureValidatorRegistry(mappingContext);
     this.mappingContext.addMappingContextListener(
         new MappingContext.Listener() {
           @Override
@@ -599,12 +592,9 @@ public class HibernateDatastore extends AbstractDatastore
         config.getProperty(HibernateQueryArgument.CONFIG_CACHE_QUERIES.value(), Boolean.class, false);
 
     if (config.getProperty(SETTING_AUTO_FLUSH, Boolean.class, false)) {
-      this.defaultFlushModeName = FlushMode.AUTO.name();
-      this.defaultFlushMode = FlushMode.AUTO.level;
+      this.defaultFlushMode = FlushMode.AUTO;
     } else {
-      FlushMode fm = config.getProperty(SETTING_FLUSH_MODE, FlushMode.class, FlushMode.COMMIT);
-      this.defaultFlushModeName = fm.name();
-      this.defaultFlushMode = fm.level;
+      this.defaultFlushMode = config.getProperty(SETTING_FLUSH_MODE, FlushMode.class, FlushMode.COMMIT);
     }
     this.failOnError = config.getProperty(SETTING_FAIL_ON_ERROR, Boolean.class, false);
     this.markDirty = config.getProperty(SETTING_MARK_DIRTY, Boolean.class, false);
@@ -676,9 +666,7 @@ public class HibernateDatastore extends AbstractDatastore
   public void setMessageSource(MessageSource messageSource) {
     HibernateMappingContext mappingContext = getMappingContext();
     ValidatorRegistry validatorRegistry = createValidatorRegistry(messageSource);
-    HibernateConnectionSourceSettings settings =
-        getConnectionSources().getDefaultConnectionSource().getSettings();
-    configureValidatorRegistry(settings, mappingContext, validatorRegistry, messageSource);
+    configureValidatorRegistry(mappingContext, validatorRegistry, messageSource);
   }
 
   protected void registerEventListeners(ConfigurableApplicationEventPublisher eventPublisher) {
@@ -690,14 +678,13 @@ public class HibernateDatastore extends AbstractDatastore
   }
 
   protected void configureValidatorRegistry(
-      HibernateConnectionSourceSettings settings, HibernateMappingContext mappingContext) {
+      HibernateMappingContext mappingContext) {
     StaticMessageSource messageSource = new StaticMessageSource();
     ValidatorRegistry defaultValidatorRegistry = createValidatorRegistry(messageSource);
-    configureValidatorRegistry(settings, mappingContext, defaultValidatorRegistry, messageSource);
+    configureValidatorRegistry(mappingContext, defaultValidatorRegistry, messageSource);
   }
 
   protected void configureValidatorRegistry(
-      HibernateConnectionSourceSettings settings,
       HibernateMappingContext mappingContext,
       ValidatorRegistry validatorRegistry,
       MessageSource messageSource) {
@@ -991,6 +978,26 @@ public class HibernateDatastore extends AbstractDatastore
         if (applicationContext != null) {
             setApplicationContext(applicationContext);
         }
+      }
+      this.eventPublisher =
+          new ConfigurableApplicationContextEventPublisher(
+              (ConfigurableApplicationContext) applicationContext);
+      HibernateConnectionSourceSettings settings =
+          getConnectionSources().getDefaultConnectionSource().getSettings();
+      HibernateConnectionSourceSettings.HibernateSettings hibernateSettings =
+          settings.getHibernate();
+      ClosureEventTriggeringInterceptor interceptor =
+              hibernateSettings.getEventTriggeringInterceptor();
+      interceptor.setDatastore(this);
+      interceptor.setEventPublisher(eventPublisher);
+      HibernateMappingContext mappingContext = getMappingContext();
+      // make messages from the application context available to validation
+      ValidatorRegistry validatorRegistry = createValidatorRegistry(applicationContext);
+      configureValidatorRegistry(
+              mappingContext,
+          validatorRegistry,
+          applicationContext);
+      mappingContext.setValidatorRegistry(validatorRegistry);
 
         this.osivReadOnly =
                 config.getProperty(HibernateQueryArgument.CONFIG_OSIV_READONLY.value(), Boolean.class, false);
@@ -1010,7 +1017,7 @@ public class HibernateDatastore extends AbstractDatastore
     try {
       if (session != null) {
         previousMode = session.getHibernateFlushMode();
-        session.setHibernateFlushMode(org.hibernate.FlushMode.valueOf(flushMode.name()));
+        session.setHibernateFlushMode(flushMode);
       }
       try {
         reset = callable.call();
@@ -1026,7 +1033,7 @@ public class HibernateDatastore extends AbstractDatastore
 
   public org.hibernate.Session openSession() {
     org.hibernate.Session session = this.sessionFactory.openSession();
-    session.setHibernateFlushMode(org.hibernate.FlushMode.valueOf(defaultFlushModeName));
+    session.setHibernateFlushMode(defaultFlushMode);
     return session;
   }
 
@@ -1034,7 +1041,7 @@ public class HibernateDatastore extends AbstractDatastore
   public Session getCurrentSession() throws ConnectionNotFoundException {
     // HibernateSession, just a thin wrapper around default session handling so simply return a new
     // instance here
-    return new HibernateSession(this, sessionFactory, getDefaultFlushMode());
+    return new HibernateSession(this, sessionFactory);
   }
 
   @Override
@@ -1073,32 +1080,113 @@ public class HibernateDatastore extends AbstractDatastore
       dataSource = ((TransactionAwareDataSourceProxy) dataSource).getTargetDataSource();
     }
     Object existing = TransactionSynchronizationManager.getResource(dataSource);
-    if (existing instanceof ConnectionHolder) {
-      ConnectionHolder connectionHolder = (ConnectionHolder) existing;
-      Connection connection = connectionHolder.getConnection();
+    if (existing instanceof ConnectionHolder connectionHolder) {
+        Connection connection = connectionHolder.getConnection();
       try {
         if (!connection.isClosed() && !connection.isReadOnly()) {
           schemaHandler.useDefaultSchema(connection);
         }
-        this.failOnError = config.getProperty(SETTING_FAIL_ON_ERROR, Boolean.class, false);
-        this.markDirty = config.getProperty(SETTING_MARK_DIRTY, Boolean.class, false);
-        this.tenantResolver = new FixedTenantResolver();
-        this.multiTenantMode = MultiTenancySettings.MultiTenancyMode.NONE;
-        this.schemaHandler = new DefaultSchemaHandler();
-        this.transactionManager = null;
-        this.gormEnhancer = null;
-        this.metadata = null;
+      } catch (SQLException e) {
+        throw new DatastoreConfigurationException(
+            "Failed to reset to default schema: " + e.getMessage(), e);
+      }
+    }
+  }
+
+  public final Metadata getMetadata() {
+    return metadata;
+  }
+
+  protected void registerAllEntitiesWithEnhancer() {
+    for (PersistentEntity persistentEntity : mappingContext.getPersistentEntities()) {
+      gormEnhancer.registerEntity(persistentEntity);
+    }
+  }
+
+  private void addTenantForSchemaInternal(final String schemaName) {
+    if (multiTenantMode != MultiTenancySettings.MultiTenancyMode.SCHEMA) {
+      throw new ConfigurationException(
+          "The method [addTenantForSchema] can only be called with multi-tenancy mode SCHEMA. Current mode is: "
+              + multiTenantMode);
+    }
+    HibernateConnectionSourceFactory factory =
+        (HibernateConnectionSourceFactory) connectionSources.getFactory();
+    HibernateConnectionSource defaultConnectionSource =
+        (HibernateConnectionSource) connectionSources.getDefaultConnectionSource();
+    HibernateConnectionSourceSettings tenantSettings;
+    try {
+      tenantSettings =
+              (HibernateConnectionSourceSettings)
+                  connectionSources.getDefaultConnectionSource().getSettings().clone();
+    } catch (CloneNotSupportedException e) {
+      throw new ConfigurationException(
+          "Couldn't clone default Hibernate settings! " + e.getMessage(), e);
+    }
+    tenantSettings.getHibernate().put(Environment.DEFAULT_SCHEMA, schemaName);
+
+    String dbCreate = tenantSettings.getDataSource().getDbCreate();
+
+    Action schemaAutoTooling = Action.interpretHbm2ddlSetting(dbCreate);
+    if (schemaAutoTooling != Action.VALIDATE && schemaAutoTooling != Action.NONE) {
+
+      Connection connection = null;
+      try {
+        connection = defaultConnectionSource.getDataSource().getConnection();
+        try {
+          schemaHandler.useSchema(connection, schemaName);
+        } catch (Exception e) {
+          // schema doesn't exist
+          schemaHandler.createSchema(connection, schemaName);
+        }
+
+      } catch (SQLException e) {
+        throw new DatastoreConfigurationException(
+            String.format("Failed to create schema for name [%s]", schemaName));
+      } finally {
+        if (connection != null) {
+          try {
+            schemaHandler.useDefaultSchema(connection);
+            connection.close();
+          } catch (SQLException e) {
+            LOG.trace("Failed to reset to default schema: {}", e.getMessage());
+          }
+        }
+      }
     }
 
-    /**
-     * Legacy three-argument constructor delegating to the five-argument constructor.
-     *
-     * @param mappingContext The mapping context
-     * @param sessionFactory The session factory
-     * @param config The property resolver configuration
-     */
-    public HibernateDatastore(MappingContext mappingContext, SessionFactory sessionFactory, PropertyResolver config) {
-        this(mappingContext, sessionFactory, config, null, ConnectionSource.DEFAULT);
+    DataSource dataSource = defaultConnectionSource.getDataSource();
+    dataSource = new SchemaTenantDataSource(dataSource, schemaName, schemaHandler);
+    DefaultConnectionSource<DataSource, DataSourceSettings> dataSourceConnectionSource =
+        new DefaultConnectionSource<>(schemaName, dataSource, tenantSettings.getDataSource());
+    ConnectionSource<SessionFactory, HibernateConnectionSourceSettings> connectionSource =
+        factory.create(schemaName, dataSourceConnectionSource, tenantSettings);
+    SingletonConnectionSources<SessionFactory, HibernateConnectionSourceSettings>
+        singletonConnectionSources =
+            new SingletonConnectionSources<>(
+                connectionSource, connectionSources.getBaseConfiguration());
+    HibernateDatastore childDatastore =
+        new HibernateDatastore(
+            singletonConnectionSources, (HibernateMappingContext) mappingContext, eventPublisher) {
+          @Override
+          protected HibernateGormEnhancer initialize() {
+            return null;
+          }
+        };
+    datastoresByConnectionSource.put(connectionSource.getName(), childDatastore);
+  }
+
+  private Metadata getMetadataInternal() {
+    Metadata metadata = null;
+    ServiceRegistry bootstrapServiceRegistry =
+        ((SessionFactoryImplementor) sessionFactory)
+            .getServiceRegistry()
+            .getParentServiceRegistry();
+    Iterable<Integrator> integrators =
+        bootstrapServiceRegistry.getService(IntegratorService.class).getIntegrators();
+    for (Integrator integrator : integrators) {
+      if (integrator instanceof MetadataIntegrator) {
+        metadata = ((MetadataIntegrator) integrator).getMetadata();
+      }
     }
 
     @Override
@@ -1503,13 +1591,13 @@ public class HibernateDatastore extends AbstractDatastore
 
   /** Returns whether auto flush. */
   public boolean isAutoFlush() {
-    return defaultFlushMode == FlushMode.AUTO.level;
+    return defaultFlushMode == FlushMode.AUTO;
   }
 
   /**
-   * @return Obtains the default flush mode level
+   * @return The default flush mode
    */
-  public int getDefaultFlushMode() {
+  public FlushMode getDefaultFlushMode() {
     return defaultFlushMode;
   }
 
@@ -1517,7 +1605,7 @@ public class HibernateDatastore extends AbstractDatastore
    * @return The name of the default flush mode
    */
   public String getDefaultFlushModeName() {
-    return defaultFlushModeName;
+    return defaultFlushMode.name();
   }
 
   /** Returns whether fail on error. */
@@ -1576,7 +1664,7 @@ public class HibernateDatastore extends AbstractDatastore
 
   /** Gets the hibernate template using the default flush mode. */
   public IHibernateTemplate getHibernateTemplate() {
-    return getHibernateTemplate(defaultFlushMode);
+    return new GrailsHibernateTemplate(getSessionFactory(), this);
   }
 
   @Override
@@ -1631,17 +1719,17 @@ public class HibernateDatastore extends AbstractDatastore
     final boolean isMultiTenant =
         getMultiTenancyMode() == MultiTenancySettings.MultiTenancyMode.DISCRIMINATOR;
     return isMultiTenant
-        ? new Closure<T>(this) {
-          @Override
-          public T call(Object... args) {
+        ? new Closure<>(this) {
+        @Override
+        public T call(Object... args) {
             enableMultiTenancyFilter();
             try {
-              return callable.call(args);
+                return callable.call(args);
             } finally {
-              disableMultiTenancyFilter();
+                disableMultiTenancyFilter();
             }
-          }
         }
+    }
         : callable;
   }
 
@@ -1655,30 +1743,4 @@ public class HibernateDatastore extends AbstractDatastore
     }
   }
 
-  /**
-   * We use a separate enum here because the classes differ between Hibernate 3 and 4
-   *
-   * @see org.hibernate.FlushMode
-   */
-  public enum FlushMode {
-    /** The manual constant. */
-    MANUAL(0),
-    /** The commit constant. */
-    COMMIT(5),
-    /** The auto constant. */
-    AUTO(10),
-    /** The always constant. */
-    ALWAYS(20);
-
-    private final int level;
-
-    FlushMode(int level) {
-      this.level = level;
-    }
-
-    /** Gets the level. */
-    public int getLevel() {
-      return level;
-    }
-  }
 }
