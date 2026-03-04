@@ -28,21 +28,6 @@ import javax.sql.DataSource;
 
 import jakarta.annotation.Nullable;
 
-import org.hibernate.Interceptor;
-import org.hibernate.SessionFactory;
-import org.hibernate.boot.model.naming.PhysicalNamingStrategy;
-import org.hibernate.cfg.Configuration;
-
-import org.springframework.beans.BeanUtils;
-import org.springframework.beans.BeansException;
-import org.springframework.context.ApplicationContext;
-import org.springframework.context.ApplicationContextAware;
-import org.springframework.context.MessageSource;
-import org.springframework.context.MessageSourceAware;
-import org.springframework.context.support.StaticMessageSource;
-import org.springframework.core.env.PropertyResolver;
-import org.springframework.core.io.Resource;
-
 import org.grails.datastore.gorm.jdbc.connections.CachedDataSourceConnectionSourceFactory;
 import org.grails.datastore.gorm.jdbc.connections.DataSourceConnectionSourceFactory;
 import org.grails.datastore.gorm.jdbc.connections.DataSourceSettings;
@@ -59,7 +44,19 @@ import org.grails.orm.hibernate.cfg.HibernateMappingContextConfiguration;
 import org.grails.orm.hibernate.cfg.Settings;
 import org.grails.orm.hibernate.cfg.domainbinding.binder.GrailsDomainBinder;
 import org.grails.orm.hibernate.support.ClosureEventTriggeringInterceptor;
-import org.grails.orm.hibernate.support.ClosureEventTriggeringInterceptor;
+import org.hibernate.Interceptor;
+import org.hibernate.SessionFactory;
+import org.hibernate.boot.model.naming.PhysicalNamingStrategy;
+import org.hibernate.cfg.Configuration;
+import org.springframework.beans.BeanUtils;
+import org.springframework.beans.BeansException;
+import org.springframework.context.ApplicationContext;
+import org.springframework.context.ApplicationContextAware;
+import org.springframework.context.MessageSource;
+import org.springframework.context.MessageSourceAware;
+import org.springframework.context.support.StaticMessageSource;
+import org.springframework.core.env.PropertyResolver;
+import org.springframework.core.io.Resource;
 
 /**
  * Constructs {@link SessionFactory} instances from a {@link HibernateMappingContext}
@@ -81,7 +78,7 @@ public class HibernateConnectionSourceFactory
       new CachedDataSourceConnectionSourceFactory();
 
   protected HibernateMappingContext mappingContext;
-  protected Class<?>[] persistentClasses = new Class<?>[0];
+  protected Class<?>[] persistentClasses;
   private ApplicationContext applicationContext;
   protected HibernateEventListeners hibernateEventListeners;
   protected Interceptor interceptor;
@@ -329,36 +326,18 @@ public class HibernateConnectionSourceFactory
         return create(name, dataSourceConnectionSource, settings);
     }
 
-    @Override
-    public Serializable getConnectionSourcesConfigurationKey() {
-        return Settings.SETTING_DATASOURCES;
-    }
-
-    @Override
-    public <F extends ConnectionSourceSettings> HibernateConnectionSourceSettings buildRuntimeSettings(
-            String name, PropertyResolver configuration, F fallbackSettings) {
-        return buildSettingsWithPrefix(configuration, fallbackSettings, "");
-    }
-
-    @Override
-    protected <F extends ConnectionSourceSettings> HibernateConnectionSourceSettings buildSettings(
-            String name, PropertyResolver configuration, F fallbackSettings, boolean isDefaultDataSource) {
-        if (isDefaultDataSource) {
-            String qualified = Settings.SETTING_DATASOURCES + '.' + Settings.SETTING_DATASOURCE;
-            HibernateConnectionSourceSettings settings =
-                    new HibernateConnectionSourceSettingsBuilder(configuration, "", fallbackSettings).build();
-            var config = configuration.getProperty(qualified, Map.class, Collections.emptyMap());
-            if (!config.isEmpty()) {
-                DataSourceSettings dsFallback = extractDataSourceFallback(fallbackSettings);
-                settings.setDataSource(new DataSourceSettingsBuilder(configuration, qualified, dsFallback).build());
-            }
-            return settings;
-        }
-        return buildSettingsWithPrefix(configuration, fallbackSettings, Settings.SETTING_DATASOURCES + "." + name);
-    }
-
-    private <F extends ConnectionSourceSettings> HibernateConnectionSourceSettings buildSettingsWithPrefix(
-            PropertyResolver configuration, F fallbackSettings, String prefix) {
+  @Override
+  protected <F extends ConnectionSourceSettings> HibernateConnectionSourceSettings buildSettings(
+      String name,
+      PropertyResolver configuration,
+      F fallbackSettings,
+      boolean isDefaultDataSource) {
+    if (isDefaultDataSource) {
+      String qualified = Settings.SETTING_DATASOURCES + '.' + Settings.SETTING_DATASOURCE;
+      HibernateConnectionSourceSettings settings =
+          new HibernateConnectionSourceSettingsBuilder(configuration, "", fallbackSettings).build();
+      var config = configuration.getProperty(qualified, Map.class, Collections.emptyMap());
+      if (!config.isEmpty()) {
         DataSourceSettings dsFallback = extractDataSourceFallback(fallbackSettings);
         HibernateConnectionSourceSettings settings =
                 new HibernateConnectionSourceSettingsBuilder(configuration, prefix, fallbackSettings).build();
@@ -392,4 +371,17 @@ public class HibernateConnectionSourceFactory
     public void setMessageSource(@Nullable MessageSource messageSource) {
         this.messageSource = messageSource;
     }
+    return null;
+  }
+
+  @Override
+  public void setApplicationContext(@Nullable  ApplicationContext applicationContext) throws BeansException {
+    this.applicationContext = applicationContext;
+    this.messageSource = applicationContext;
+  }
+
+  @Override
+  public void setMessageSource(@Nullable MessageSource messageSource) {
+    this.messageSource = messageSource;
+  }
 }

@@ -18,14 +18,6 @@
  */
 package org.grails.orm.hibernate.cfg.domainbinding.binder;
 
-import org.hibernate.FetchMode;
-import org.hibernate.boot.spi.InFlightMetadataCollector;
-import org.hibernate.boot.spi.MetadataBuildingContext;
-import org.hibernate.mapping.Collection;
-import org.hibernate.mapping.OneToMany;
-import org.hibernate.mapping.PersistentClass;
-import org.hibernate.mapping.Table;
-
 import org.grails.orm.hibernate.cfg.GrailsHibernateUtil;
 import org.grails.orm.hibernate.cfg.JoinTable;
 import org.grails.orm.hibernate.cfg.PersistentEntityNamingStrategy;
@@ -67,13 +59,6 @@ import org.grails.orm.hibernate.cfg.domainbinding.util.TableForManyCalculator;
 @SuppressWarnings("PMD.DataflowAnomalyAnalysis")
 public class CollectionBinder {
 
-    private final MetadataBuildingContext metadataBuildingContext;
-    private final PersistentEntityNamingStrategy namingStrategy;
-    private final CollectionHolder collectionHolder;
-    private final ListSecondPassBinder listSecondPassBinder;
-    private final CollectionSecondPassBinder collectionSecondPassBinder;
-    private final MapSecondPassBinder mapSecondPassBinder;
-    private final InFlightMetadataCollector mappings;
 
   private final MetadataBuildingContext metadataBuildingContext;
   private final PersistentEntityNamingStrategy namingStrategy;
