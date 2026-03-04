@@ -158,7 +158,10 @@ jobs:
       - name: "🔨 Build and test Grails using the locally built Groovy snapshot"
         run: >
           ./gradlew build
+          --continue
+          --stacktrace
           -x groovydoc
           -PskipCodeStyle
+          -PmaxTestParallel=3
         env:
           GRAILS_INCLUDE_MAVEN_LOCAL: true
