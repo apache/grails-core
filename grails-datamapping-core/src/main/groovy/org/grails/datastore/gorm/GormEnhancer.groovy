@@ -59,6 +59,11 @@ import org.grails.datastore.mapping.reflect.ClassUtils
 import org.grails.datastore.mapping.reflect.MetaClassUtils
 import org.grails.datastore.mapping.reflect.NameUtils
 import org.grails.datastore.mapping.transactions.TransactionCapableDatastore
+import org.grails.datastore.gorm.query.GormQueryOperations
+import org.grails.datastore.gorm.query.NamedCriteriaProxy
+import org.grails.datastore.gorm.query.NamedQueriesBuilder
+import org.grails.datastore.mapping.model.config.GormProperties
+import org.grails.datastore.mapping.reflect.ClassPropertyFetcher
 
 /**
  * Enhances a class with GORM behavior
@@ -310,6 +315,72 @@ class GormEnhancer implements Closeable {
             log.debug('Returning default tenant id for non-multitenant class [{}]', entity)
             return ConnectionSource.DEFAULT
         }
+    }
+
+    /**
+     * @deprecated Use #createNamedQuery(entity, queryName) instead
+     */
+    @Deprecated
+    static GormQueryOperations findNamedQuery(Class entity, String queryName) {
+        return createNamedQuery(entity, queryName)
+    }
+
+    /**
+     * Finds a named query for the given entity
+     *
+     * @param entity The entity name
+     * @param queryName The query name
+     *
+     * @return The named query or null if it doesn't exist
+     */
+    static GormQueryOperations createNamedQuery(Class entity, String queryName) {
+        createNamedQuery(entity, queryName, null)
+    }
+
+    /**
+     * Finds a named query for the given entity
+     *
+     * @param entity The entity name
+     * @param queryName The query name
+     *
+     * @return The named query or null if it doesn't exist
+     */
+    static GormQueryOperations createNamedQuery(Class entity, String queryName, Object... args) {
+        def className = entity.getName()
+        def namedQueries = NAMED_QUERIES.get(className)
+        if (namedQueries == null) {
+            synchronized (NAMED_QUERIES) {
+                namedQueries = NAMED_QUERIES.get(className)
+                if (namedQueries == null) {
+                    ClassPropertyFetcher cpf = ClassPropertyFetcher.forClass(entity)
+                    Closure closure = cpf.getStaticPropertyValue(GormProperties.NAMED_QUERIES, Closure.class)
+                    if (closure != null) {
+                        closure = (Closure) closure.clone()
+                        def evaluator = new NamedQueriesBuilder()
+                        namedQueries = evaluator.evaluate(closure)
+                        NAMED_QUERIES.put(className, namedQueries)
+                    }
+                    else {
+                        NAMED_QUERIES.put(className, Collections.emptyMap())
+                        return null
+                    }
+                }
+            }
+        }
+        return buildNamedCriteriaProxy(entity, namedQueries, queryName, args)
+    }
+
+    private static NamedCriteriaProxy buildNamedCriteriaProxy(Class entity, Map<String, Closure> namedQueries, String queryName, Object... args) {
+        NamedCriteriaProxy namedCriteriaProxy = null
+        GormStaticApi staticApi = findStaticApi(entity)
+        Closure namedQueryClosure = namedQueries.get(queryName)
+        if (namedQueryClosure != null) {
+            namedCriteriaProxy = new NamedCriteriaProxy((Closure) namedQueryClosure.clone(), staticApi.gormPersistentEntity, staticApi.gormDynamicFinders)
+            if (args != null) {
+                namedCriteriaProxy.call(args)
+            }
+        }
+        return namedCriteriaProxy
     }
 
     /**
