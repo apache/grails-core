@@ -188,8 +188,8 @@ class HibernateConnectionSourceSettings extends ConnectionSourceSettings {
         Properties additionalProperties = new Properties()
 
         @CompileStatic
-        static Map<String, Object> toHibernateEventListeners(ClosureEventTriggeringInterceptor eventTriggeringInterceptor) {
-            if (eventTriggeringInterceptor != null) {
+        Map<String, Object> toHibernateEventListeners(ClosureEventTriggeringInterceptor eventTriggeringInterceptor) {
+            if(eventTriggeringInterceptor != null) {
                 return [
 //                    'save': eventTriggeringInterceptor,
 //                    'save-update': eventTriggeringInterceptor,

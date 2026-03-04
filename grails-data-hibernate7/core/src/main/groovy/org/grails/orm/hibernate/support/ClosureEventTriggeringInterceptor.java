@@ -76,17 +76,29 @@ import org.hibernate.event.internal.DefaultMergeEventListener;
 import org.hibernate.event.internal.DefaultPersistEventListener;
 import org.hibernate.event.spi.MergeContext;
 import org.hibernate.event.spi.MergeEvent;
+import org.hibernate.event.spi.MergeEventListener;
 import org.hibernate.event.spi.PersistContext;
 import org.hibernate.event.spi.PersistEvent;
+import org.hibernate.event.spi.PersistEventListener;
 import org.hibernate.event.spi.PostDeleteEvent;
+import org.hibernate.event.spi.PostDeleteEventListener;
 import org.hibernate.event.spi.PostInsertEvent;
+import org.hibernate.event.spi.PostInsertEventListener;
 import org.hibernate.event.spi.PostLoadEvent;
+import org.hibernate.event.spi.PostLoadEventListener;
 import org.hibernate.event.spi.PostUpdateEvent;
+import org.hibernate.event.spi.PostUpdateEventListener;
 import org.hibernate.event.spi.PreDeleteEvent;
+import org.hibernate.event.spi.PreDeleteEventListener;
 import org.hibernate.event.spi.PreInsertEvent;
+import org.hibernate.event.spi.PreInsertEventListener;
 import org.hibernate.event.spi.PreLoadEvent;
+import org.hibernate.event.spi.PreLoadEventListener;
 import org.hibernate.event.spi.PreUpdateEvent;
+import org.hibernate.event.spi.PreUpdateEventListener;
 import org.hibernate.jpa.event.spi.CallbackRegistry;
+import org.hibernate.jpa.event.spi.CallbackRegistryConsumer;
+import org.springframework.context.ApplicationContextAware;
 import org.hibernate.metamodel.mapping.AttributeMapping;
 import org.hibernate.metamodel.mapping.EntityMappingType;
 import org.hibernate.persister.entity.EntityPersister;
@@ -104,19 +116,19 @@ import org.springframework.context.ConfigurableApplicationContext;
  */
 @SuppressWarnings({"PMD.DataflowAnomalyAnalysis", "PMD.NonSerializableClass"})
 public class ClosureEventTriggeringInterceptor
-        implements Serializable,
-                ApplicationContextAware,
-                PreLoadEventListener,
-                PostLoadEventListener,
-                PostInsertEventListener,
-                PostUpdateEventListener,
-                PostDeleteEventListener,
-                PreDeleteEventListener,
-                PreUpdateEventListener,
-                PreInsertEventListener,
-                MergeEventListener,
-                PersistEventListener,
-                CallbackRegistryConsumer {
+    implements Serializable,
+        ApplicationContextAware,
+        PreLoadEventListener,
+        PostLoadEventListener,
+        PostInsertEventListener,
+        PostUpdateEventListener,
+        PostDeleteEventListener,
+        PreDeleteEventListener,
+        PreUpdateEventListener,
+        PreInsertEventListener,
+        MergeEventListener,
+        PersistEventListener,
+        CallbackRegistryConsumer {
 
     //    private final Logger log = LoggerFactory.getLogger(getClass());
     private static final long serialVersionUID = 1;

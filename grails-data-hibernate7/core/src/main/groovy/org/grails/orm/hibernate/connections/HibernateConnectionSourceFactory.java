@@ -59,6 +59,7 @@ import org.grails.orm.hibernate.cfg.HibernateMappingContextConfiguration;
 import org.grails.orm.hibernate.cfg.Settings;
 import org.grails.orm.hibernate.cfg.domainbinding.binder.GrailsDomainBinder;
 import org.grails.orm.hibernate.support.ClosureEventTriggeringInterceptor;
+import org.grails.orm.hibernate.support.ClosureEventTriggeringInterceptor;
 
 /**
  * Constructs {@link SessionFactory} instances from a {@link HibernateMappingContext}
@@ -86,8 +87,41 @@ public class HibernateConnectionSourceFactory
     protected Interceptor interceptor;
     protected MessageSource messageSource = new StaticMessageSource();
 
-    public HibernateConnectionSourceFactory(Class<?>... classes) {
-        this.persistentClasses = classes;
+    if (interceptor != null) configuration.setInterceptor(interceptor);
+    if (hibernateSettings.getAnnotatedClasses() != null)
+      configuration.addAnnotatedClasses(hibernateSettings.getAnnotatedClasses());
+    if (hibernateSettings.getAnnotatedPackages() != null)
+      configuration.addPackages(hibernateSettings.getAnnotatedPackages());
+    if (hibernateSettings.getPackagesToScan() != null)
+      configuration.scanPackages(hibernateSettings.getPackagesToScan());
+
+    configureNamingStrategy(name, hibernateSettings);
+
+    ClosureEventTriggeringInterceptor eventTriggeringInterceptor =
+        resolveEventTriggeringInterceptor(
+            hibernateSettings.getClosureEventTriggeringInterceptorClass());
+    hibernateSettings.setEventTriggeringInterceptor(eventTriggeringInterceptor);
+
+    configuration.setEventListeners(
+        hibernateSettings.toHibernateEventListeners(eventTriggeringInterceptor));
+    configuration.setHibernateEventListeners(
+        this.hibernateEventListeners != null
+            ? this.hibernateEventListeners
+            : hibernateSettings.getHibernateEventListeners());
+    configuration.setHibernateMappingContext(mappingContext);
+    configuration.setDataSourceName(name);
+    configuration.setSessionFactoryBeanName(
+        ConnectionSource.DEFAULT.equals(name) ? "sessionFactory" : "sessionFactory_" + name);
+    configuration.addProperties(settings.toProperties());
+    return configuration;
+  }
+
+  private HibernateMappingContextConfiguration resolveConfiguration(
+      Class<? extends Configuration> configClass) {
+    if (configClass == null) return new HibernateMappingContextConfiguration();
+    if (!HibernateMappingContextConfiguration.class.isAssignableFrom(configClass)) {
+      throw new ConfigurationException(
+          "The configClass setting must be a subclass for [HibernateMappingContextConfiguration]");
     }
 
     public Class<?>[] getPersistentClasses() {
@@ -212,17 +246,12 @@ public class HibernateConnectionSourceFactory
         void apply(Resource resource) throws IOException;
     }
 
-    private static void applyResources(Resource[] resources, ResourceConfigurer configurer) {
-        if (resources == null) return;
-        for (Resource resource : resources) {
-            try {
-                configurer.apply(resource);
-            } catch (IOException e) {
-                throw new ConfigurationException(
-                        "Cannot configure Hibernate config for location: " + resource.getFilename(), e);
-            }
-        }
-    }
+  private static ClosureEventTriggeringInterceptor resolveEventTriggeringInterceptor(
+      Class<? extends ClosureEventTriggeringInterceptor> clazz) {
+    return clazz != null
+        ? BeanUtils.instantiateClass(clazz)
+        : new ClosureEventTriggeringInterceptor();
+  }
 
     private static void configureNamingStrategy(
             String name, HibernateConnectionSourceSettings.HibernateSettings hibernateSettings) {
