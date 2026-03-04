@@ -72,9 +72,58 @@ public class HibernateConnectionSourceFactory
         extends AbstractConnectionSourceFactory<SessionFactory, HibernateConnectionSourceSettings>
         implements ApplicationContextAware, MessageSourceAware {
 
-    static {
-        // use Slf4j logging by default
-        System.setProperty("org.jboss.logging.provider", "slf4j");
+  static {
+    // use Slf4j logging by default
+    System.setProperty("org.jboss.logging.provider", "slf4j");
+  }
+
+  protected DataSourceConnectionSourceFactory dataSourceConnectionSourceFactory =
+      new CachedDataSourceConnectionSourceFactory();
+
+  protected HibernateMappingContext mappingContext;
+  protected Class<?>[] persistentClasses = new Class<?>[0];
+  private ApplicationContext applicationContext;
+  protected HibernateEventListeners hibernateEventListeners;
+  protected Interceptor interceptor;
+  protected MessageSource messageSource = new StaticMessageSource();
+
+  public HibernateConnectionSourceFactory(Class<?>... classes) {
+    this.persistentClasses = classes;
+  }
+
+  public Class<?>[] getPersistentClasses() {
+    return persistentClasses;
+  }
+
+  public void setHibernateEventListeners(HibernateEventListeners hibernateEventListeners) {
+    this.hibernateEventListeners = hibernateEventListeners;
+  }
+
+  public void setInterceptor(Interceptor interceptor) {
+    this.interceptor = interceptor;
+  }
+
+  public HibernateMappingContext getMappingContext() {
+    return mappingContext;
+  }
+
+  public ConnectionSource<SessionFactory, HibernateConnectionSourceSettings> create(
+      String name,
+      ConnectionSource<DataSource, DataSourceSettings> dataSourceConnectionSource,
+      HibernateConnectionSourceSettings settings) {
+    HibernateMappingContextConfiguration configuration =
+        buildConfiguration(name, dataSourceConnectionSource, settings);
+    SessionFactory sessionFactory = configuration.buildSessionFactory();
+    return new HibernateConnectionSource(
+        name, sessionFactory, dataSourceConnectionSource, settings);
+  }
+
+  public HibernateMappingContextConfiguration buildConfiguration(
+      String name,
+      ConnectionSource<DataSource, DataSourceSettings> dataSourceConnectionSource,
+      HibernateConnectionSourceSettings settings) {
+    if (mappingContext == null) {
+      mappingContext = new HibernateMappingContext(settings, applicationContext, persistentClasses);
     }
 
     protected DataSourceConnectionSourceFactory dataSourceConnectionSourceFactory =
