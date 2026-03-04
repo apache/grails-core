@@ -44,15 +44,18 @@ The following tests are currently skipped in the `grails-data-hibernate7:core` t
 
 These tests live in `grails-datamapping-tck` and are deliberately excluded for Hibernate 7 because the underlying feature is not yet implemented or behaves differently:
 
-| TCK Spec | # skipped | Skip condition | Reason / notes                                                                                 |
-|----------|-----------|----------------|------------------------------------------------------------------------------------------------|
-| `DirtyCheckingSpec` | 6 | `@IgnoreIf(hibernate7.gorm.suite == true)` | Hibernate 7 dirty-checking semantics differ; the entire spec is disabled                       |
+| TCK Spec | # skipped | Skip condition | Reason / notes |
+|----------|-----------|----------------|----------------|
+| `DirtyCheckingSpec` | 6 | `@IgnoreIf(hibernate7.gorm.suite == true)` | Hibernate 7 dirty-checking semantics differ; the entire spec is disabled |
+| `NamedQuerySpec` | 38 | `@IgnoreIf(hibernate7.gorm.suite == true)` | Named query support not yet ported to Hibernate 7 |
 | `GroovyProxySpec` | 5 | `@IgnoreIf(hibernate5/6/7.gorm.suite)` | Groovy proxy support requires `ByteBuddyGroovyProxyFactory`; excluded for all Hibernate suites |
-| `OptimisticLockingSpec` | 3 | `@IgnoreIf` (detects Hibernate datastore on classpath) | Hibernate has its own `Hibernate7OptimisticLockingSpec` replacement                            |
-| `UpdateWithProxyPresentSpec` | 2 | `@IgnoreIf(hibernate7.gorm.suite == true)` | Proxy update behaviour differs in Hibernate 7                                                  |
-| `RLikeSpec` | 1 | `@IgnoreIf(hibernate7.gorm.suite == true)` | `rlike` not supported in HQL / H2 in Hibernate 7 mode                                          |
-| `DirtyCheckingAfterListenerSpec` | 1 | `@PendingFeatureIf(!hibernate5/6/mongodb)` | `test state change from listener update the object` — pending for Hibernate 7                  |
-| `DomainEventsSpec` | 1 | `@PendingFeature(reason='Was previously @Ignore')` | `Test bean autowiring` — pending across all suites                                             |
+| `OptimisticLockingSpec` | 3 | `@IgnoreIf` (detects Hibernate datastore on classpath) | Hibernate has its own `Hibernate6OptimisticLockingSpec` replacement |
+| `FindByExampleSpec` | 2 | `@IgnoreIf(hibernate6/7.gorm.suite == true)` | Find-by-example not implemented for Hibernate 7 |
+| `UpdateWithProxyPresentSpec` | 2 | `@IgnoreIf(hibernate7.gorm.suite == true)` | Proxy update behaviour differs in Hibernate 7 |
+| `RLikeSpec` | 1 | `@IgnoreIf(hibernate7.gorm.suite == true)` | `rlike` not supported in HQL / H2 in Hibernate 7 mode |
+| `DirtyCheckingAfterListenerSpec` | 1 | `@PendingFeatureIf(!hibernate5/6/mongodb)` | `test state change from listener update the object` — pending for Hibernate 7 |
+| `DomainEventsSpec` | 1 | `@PendingFeature(reason='Was previously @Ignore')` | `Test bean autowiring` — pending across all suites |
+| `WhereQueryConnectionRoutingSpec` | 5 | `@Requires(manager.supportsMultipleDataSources())` | Multiple datasource routing not supported in the TCK test manager |
 
 
 

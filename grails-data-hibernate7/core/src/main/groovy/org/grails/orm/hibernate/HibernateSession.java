@@ -96,9 +96,143 @@ public class HibernateSession extends AbstractAttributeStoringSession implements
         return false;
     }
 
-    @Override
-    public Serializable insert(Object o) {
-        return persist(o);
+  /**
+   * Deletes all objects matching the given criteria.
+   *
+   * @param criteria The criteria
+   * @return The total number of records deleted
+   */
+  @SuppressWarnings("PMD.DataflowAnomalyAnalysis")
+  public long deleteAll(final QueryableCriteria criteria) {
+    return getHibernateTemplate()
+        .execute(
+            (GrailsHibernateTemplate.HibernateCallback<Integer>)
+                session -> {
+                  JpaQueryBuilder builder = new JpaQueryBuilder(criteria);
+                  builder.setConversionService(getMappingContext().getConversionService());
+                  builder.setHibernateCompatible(true);
+                  JpaQueryInfo jpaQueryInfo = builder.buildDelete();
+
+                  org.hibernate.query.Query query = session.createQuery(jpaQueryInfo.getQuery());
+                  getHibernateTemplate().applySettings(query);
+
+                  List parameters = jpaQueryInfo.getParameters();
+                  if (parameters != null) {
+                    for (int i = 0, count = parameters.size(); i < count; i++) {
+                      query.setParameter(
+                          JpaQueryBuilder.PARAMETER_NAME_PREFIX + (i + 1), parameters.get(i));
+                    }
+                  }
+
+                  HibernateHqlQuery hqlQuery =
+                      new HibernateHqlQuery(
+                          HibernateSession.this, criteria.getPersistentEntity(), query);
+                  ApplicationEventPublisher applicationEventPublisher =
+                      datastore.getApplicationEventPublisher();
+                  applicationEventPublisher.publishEvent(new PreQueryEvent(datastore, hqlQuery));
+                  int result = query.executeUpdate();
+                  applicationEventPublisher.publishEvent(
+                      new PostQueryEvent(datastore, hqlQuery, Collections.singletonList(result)));
+                  return result;
+                });
+  }
+
+  /**
+   * Updates all objects matching the given criteria and property values.
+   *
+   * @param criteria The criteria
+   * @param properties The properties
+   * @return The total number of records updated
+   */
+  @SuppressWarnings("PMD.DataflowAnomalyAnalysis")
+  public long updateAll(final QueryableCriteria criteria, final Map<String, Object> properties) {
+    return getHibernateTemplate()
+        .execute(
+            (GrailsHibernateTemplate.HibernateCallback<Integer>)
+                session -> {
+                  JpaQueryBuilder builder = new JpaQueryBuilder(criteria);
+                  builder.setConversionService(getMappingContext().getConversionService());
+                  builder.setHibernateCompatible(true);
+                  PersistentEntity targetEntity = criteria.getPersistentEntity();
+                  PersistentProperty lastUpdated =
+                      targetEntity.getPropertyByName(GormProperties.LAST_UPDATED);
+                  if (lastUpdated != null
+                      && targetEntity.getMapping().getMappedForm().isAutoTimestamp()) {
+                    if (timestampProvider == null) {
+                      timestampProvider = new DefaultTimestampProvider();
+                    }
+                    properties.put(
+                        GormProperties.LAST_UPDATED,
+                        timestampProvider.createTimestamp(lastUpdated.getType()));
+                  }
+
+                  JpaQueryInfo jpaQueryInfo = builder.buildUpdate(properties);
+
+                  org.hibernate.query.Query query = session.createQuery(jpaQueryInfo.getQuery());
+                  getHibernateTemplate().applySettings(query);
+                  List parameters = jpaQueryInfo.getParameters();
+                  if (parameters != null) {
+                    for (int i = 0, count = parameters.size(); i < count; i++) {
+                      query.setParameter(
+                          JpaQueryBuilder.PARAMETER_NAME_PREFIX + (i + 1), parameters.get(i));
+                    }
+                  }
+
+                  HibernateHqlQuery hqlQuery =
+                      new HibernateHqlQuery(HibernateSession.this, targetEntity, query);
+                  ApplicationEventPublisher applicationEventPublisher =
+                      datastore.getApplicationEventPublisher();
+                  applicationEventPublisher.publishEvent(new PreQueryEvent(datastore, hqlQuery));
+                  int result = query.executeUpdate();
+                  applicationEventPublisher.publishEvent(
+                      new PostQueryEvent(datastore, hqlQuery, Collections.singletonList(result)));
+                  return result;
+                });
+  }
+
+  @SuppressWarnings("PMD.DataflowAnomalyAnalysis")
+  public List retrieveAll(final Class type, final Iterable keys) {
+    final PersistentEntity persistentEntity =
+        getMappingContext().getPersistentEntity(type.getName());
+    return getHibernateTemplate()
+        .execute(
+            session -> {
+              final CriteriaBuilder criteriaBuilder = session.getCriteriaBuilder();
+              CriteriaQuery criteriaQuery = criteriaBuilder.createQuery(type);
+              final Root root = criteriaQuery.from(type);
+              final String id = persistentEntity.getIdentity().getName();
+              criteriaQuery =
+                  criteriaQuery.where(
+                      criteriaBuilder.in(root.get(id).in(getIterableAsCollection(keys))));
+              final org.hibernate.query.Query jpaQuery = session.createQuery(criteriaQuery);
+              getHibernateTemplate().applySettings(jpaQuery);
+
+              return new HibernateHqlQuery(this, persistentEntity, jpaQuery).list();
+            });
+  }
+
+  public Query createQuery(Class type) {
+    return createQuery(type, null);
+  }
+
+  @Override
+  public Query createQuery(Class type, String alias) {
+    HibernateQuery query = new HibernateQuery(this, getMappingContext().getPersistentEntity(type.getName()));
+    if (alias != null) {
+      query.getDetachedCriteria().setAlias(alias);
+    }
+    return query;
+  }
+
+  protected GrailsHibernateTemplate getHibernateTemplate() {
+    return (GrailsHibernateTemplate) getNativeInterface();
+  }
+
+  public void setFlushMode(FlushModeType flushMode) {
+    if (flushMode == FlushModeType.AUTO) {
+      hibernateTemplate.setFlushMode(GrailsHibernateTemplate.FLUSH_AUTO);
+    } else if (flushMode == FlushModeType.COMMIT) {
+      hibernateTemplate.setFlushMode(GrailsHibernateTemplate.FLUSH_COMMIT);
     }
 
     @Override
