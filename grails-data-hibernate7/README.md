@@ -50,7 +50,6 @@ These tests live in `grails-datamapping-tck` and are deliberately excluded for H
 | `NamedQuerySpec` | 38 | `@IgnoreIf(hibernate7.gorm.suite == true)` | Named query support not yet ported to Hibernate 7                                              |
 | `GroovyProxySpec` | 5 | `@IgnoreIf(hibernate5/6/7.gorm.suite)` | Groovy proxy support requires `ByteBuddyGroovyProxyFactory`; excluded for all Hibernate suites |
 | `OptimisticLockingSpec` | 3 | `@IgnoreIf` (detects Hibernate datastore on classpath) | Hibernate has its own `Hibernate7OptimisticLockingSpec` replacement                            |
-| `FindByExampleSpec` | 2 | `@IgnoreIf(hibernate6/7.gorm.suite == true)` | Find-by-example not implemented for Hibernate 7                                                |
 | `UpdateWithProxyPresentSpec` | 2 | `@IgnoreIf(hibernate7.gorm.suite == true)` | Proxy update behaviour differs in Hibernate 7                                                  |
 | `RLikeSpec` | 1 | `@IgnoreIf(hibernate7.gorm.suite == true)` | `rlike` not supported in HQL / H2 in Hibernate 7 mode                                          |
 | `DirtyCheckingAfterListenerSpec` | 1 | `@PendingFeatureIf(!hibernate5/6/mongodb)` | `test state change from listener update the object` — pending for Hibernate 7                  |

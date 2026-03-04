@@ -289,13 +289,6 @@ class HibernateGormStaticApi<D> extends GormStaticApi<D> {
     }
 
     @Override
-    D findWhere(Map queryMap, Map args) {
-        if (!queryMap) return null
-        String hql = buildWhereHql(queryMap)
-        doSingleInternal(hql, queryMap, [], args, false)
-    }
-
-    @Override
     List<D> findAllWhere(Map queryMap, Map args) {
         if (!queryMap) return null
         String hql = buildWhereHql(queryMap)
