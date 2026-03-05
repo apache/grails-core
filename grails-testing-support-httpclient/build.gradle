@@ -51,6 +51,12 @@ dependencies {
     testRuntimeOnly 'org.slf4j:slf4j-nop' // Remove annoying warning
 }
 
+tasks.named('processResources', ProcessResources) {
+    filesMatching('META-INF/groovy/org.codehaus.groovy.runtime.ExtensionModule') {
+        expand(moduleVersion: projectVersion)
+    }
+}
+
 apply {
     from rootProject.layout.projectDirectory.file('gradle/test-config.gradle')
     from rootProject.layout.projectDirectory.file('gradle/docs-config.gradle')
