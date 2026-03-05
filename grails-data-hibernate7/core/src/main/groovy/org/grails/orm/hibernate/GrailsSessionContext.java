@@ -63,26 +63,43 @@ public class GrailsSessionContext implements CurrentSessionContext {
     // TODO make configurable?
     protected boolean allowCreate = false;
 
-    /**
-     * Constructor.
-     *
-     * @param sessionFactory the SessionFactory to provide current Sessions for
-     */
-    public GrailsSessionContext(SessionFactoryImplementor sessionFactory) {
-        this.sessionFactory = sessionFactory;
+  /**
+   * Constructor.
+   *
+   * @param sessionFactory the SessionFactory to provide current Sessions for
+   */
+  public GrailsSessionContext(SessionFactoryImplementor sessionFactory) {
+    this.sessionFactory = sessionFactory;
+  }
+
+  public void initJta() {
+    JtaPlatform jtaPlatform = sessionFactory.getServiceRegistry().getService(JtaPlatform.class);
+    TransactionManager transactionManager = jtaPlatform != null ? jtaPlatform.retrieveTransactionManager() : null;
+    jtaSessionContext =
+        transactionManager == null ? null : new SpringJtaSessionContext(sessionFactory);
+  }
+
+  /** Retrieve the Spring-managed Session for the current thread, if any. */
+  public Session currentSession() throws HibernateException {
+    Object value = TransactionSynchronizationManager.getResource(sessionFactory);
+    if (value instanceof Session) {
+      return (Session) value;
     }
 
-    public void initJta() {
-        JtaPlatform jtaPlatform = sessionFactory.getServiceRegistry().getService(JtaPlatform.class);
-        TransactionManager transactionManager = jtaPlatform != null ? jtaPlatform.retrieveTransactionManager() : null;
-        jtaSessionContext = transactionManager == null ? null : new SpringJtaSessionContext(sessionFactory);
-    }
-
-    /** Retrieve the Spring-managed Session for the current thread, if any. */
-    public Session currentSession() throws HibernateException {
-        Object value = TransactionSynchronizationManager.getResource(sessionFactory);
-        if (value instanceof Session) {
-            return (Session) value;
+    if (value instanceof SessionHolder sessionHolder) {
+        Session session = sessionHolder.getSession();
+      if (TransactionSynchronizationManager.isSynchronizationActive()
+          && !sessionHolder.isSynchronizedWithTransaction()) {
+        TransactionSynchronizationManager.registerSynchronization(
+            createSpringSessionSynchronization(sessionHolder));
+        sessionHolder.setSynchronizedWithTransaction(true);
+        // Switch to FlushMode.AUTO, as we have to assume a thread-bound Session
+        // with FlushMode.MANUAL, which needs to allow flushing within the transaction.
+        FlushMode flushMode = session.getHibernateFlushMode();
+        if (flushMode.equals(FlushMode.MANUAL)
+            && !TransactionSynchronizationManager.isCurrentTransactionReadOnly()) {
+          session.setHibernateFlushMode(FlushMode.AUTO);
+          sessionHolder.setPreviousFlushMode(flushMode);
         }
 
         if (value instanceof SessionHolder sessionHolder) {
@@ -199,33 +216,10 @@ public class GrailsSessionContext implements CurrentSessionContext {
         }
     }
 
-    @SuppressWarnings("PMD.CloseResource")
-    protected TransactionManager getJtaTransactionManager(Session session) {
-        final SessionFactoryImplementor sessionFactoryImpl;
-        if (this.sessionFactory != null) {
-            sessionFactoryImpl = this.sessionFactory;
-        } else if (session != null) {
-            SessionFactory internalFactory = session.getSessionFactory();
-            if (internalFactory instanceof SessionFactoryImplementor) {
-                sessionFactoryImpl = (SessionFactoryImplementor) internalFactory;
-            } else {
-                sessionFactoryImpl = null;
-            }
-        } else {
-            sessionFactoryImpl = null;
-        }
-
-        if (sessionFactoryImpl == null) {
-            return null;
-        }
-
-        ServiceBinding<JtaPlatform> sb =
-                sessionFactoryImpl.getServiceRegistry().locateServiceBinding(JtaPlatform.class);
-        if (sb == null || sb.getService() == null) {
-            return null;
-        }
-
-        return sb.getService().retrieveTransactionManager();
+    ServiceBinding<JtaPlatform> sb =
+        sessionFactoryImpl.getServiceRegistry().locateServiceBinding(JtaPlatform.class);
+    if (sb == null || sb.getService() == null) {
+      return null;
     }
 
     protected TransactionSynchronization createSpringFlushSynchronization(Session session) {
