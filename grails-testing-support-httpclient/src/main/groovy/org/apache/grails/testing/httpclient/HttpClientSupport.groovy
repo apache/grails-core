@@ -53,7 +53,7 @@ import org.springframework.beans.factory.annotation.Value
  * </pre>
  * <p>
  * Implementing tests must provide {@code local.server.port} (in Grails typically via {@code @Integration}),
- * or otherwise override {@code getHttpClientBaseURL()}.
+ * or otherwise override {@code getHttpClientRootUri()}.
  */
 @CompileStatic
 trait HttpClientSupport {
