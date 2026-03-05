@@ -18,33 +18,21 @@
  */
 package functional.tests
 
-import com.fasterxml.jackson.databind.ObjectMapper
-import io.micronaut.http.HttpStatus
 import spock.lang.Issue
 import spock.lang.Specification
-
-import org.springframework.beans.factory.annotation.Autowired
 
 import grails.testing.mixin.integration.Integration
 import org.apache.grails.testing.httpclient.HttpClientSupport
 
-import static io.micronaut.http.HttpHeaders.CONTENT_TYPE
-
 @Integration
 class EmbeddedSpec extends Specification implements HttpClientSupport {
 
-    @Autowired
-    ObjectMapper objectMapper
-
     void 'Test render can handle a domain with an embedded src/groovy class'() {
         when:
-        def rsp = httpClient.exchange('/embedded', String)
+        def response = http('/embedded')
 
         then: 'The response is correct'
-        rsp.status() == HttpStatus.OK
-        rsp.getHeaders().get(CONTENT_TYPE)  == 'application/json;charset=UTF-8'
-
-        objectMapper.readTree(rsp.body()) == objectMapper.readTree('''
+        response.expectJson(200, 'Content-Type': 'application/json;charset=UTF-8', '''
             {
                 "id": 1,
                 "customClass": {
@@ -60,13 +48,10 @@ class EmbeddedSpec extends Specification implements HttpClientSupport {
 
     void 'Test jsonapi render can handle a domain with an embedded src/groovy class'() {
         when:
-        def rsp = httpClient.exchange('/embedded/jsonapi', String)
+        def response = http('/embedded/jsonapi')
 
         then: 'The response is correct'
-        rsp.status() == HttpStatus.OK
-        rsp.getHeaders().get(CONTENT_TYPE)  == 'application/json;charset=UTF-8'
-
-        objectMapper.readTree(rsp.body()) == objectMapper.readTree('''
+        response.expectJson(200, 'Content-Type': 'application/json;charset=UTF-8', '''
             {
                 "data": {
                     "type": "embedded",
@@ -91,12 +76,10 @@ class EmbeddedSpec extends Specification implements HttpClientSupport {
     @Issue('https://github.com/apache/grails-views/issues/171')
     void 'test render can handle a domain with an embedded and includes src/groovy class'() {
         when:
-        def rsp = httpClient.exchange('/embedded/embeddedWithIncludes', String)
+        def response = http('/embedded/embeddedWithIncludes')
 
         then: 'the response is correct'
-        rsp.status() == HttpStatus.OK
-        rsp.getHeaders().get(CONTENT_TYPE)  == 'application/json;charset=UTF-8'
-        objectMapper.readTree(rsp.body()) == objectMapper.readTree('''
+        response.expectJson(200, 'Content-Type': 'application/json;charset=UTF-8', '''
             {
                 "customClass": {
                     "name": "Bar3"
@@ -109,12 +92,10 @@ class EmbeddedSpec extends Specification implements HttpClientSupport {
     @Issue('https://github.com/apache/grails-views/issues/171')
     void 'Test jsonapi render can handle a domain with an embedded and includes src/groovy class'() {
         when:
-        def rsp = httpClient.exchange('/embedded/embeddedWithIncludesJsonapi', String)
+        def response = http('/embedded/embeddedWithIncludesJsonapi')
 
         then: 'the response is correct'
-        rsp.status() == HttpStatus.OK
-        rsp.getHeaders().get(CONTENT_TYPE)  == 'application/json;charset=UTF-8'
-        objectMapper.readTree(rsp.body()) == objectMapper.readTree('''
+        response.expectJson(200, 'Content-Type': 'application/json;charset=UTF-8', '''
             {
                 "data": {
                     "type": "embedded",

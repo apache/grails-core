@@ -18,9 +18,6 @@
  */
 package functional.tests
 
-import io.micronaut.http.HttpRequest
-import io.micronaut.http.HttpStatus
-import io.micronaut.http.MediaType
 import spock.lang.Specification
 import spock.lang.Unroll
 
@@ -38,13 +35,10 @@ class ModelInterceptorIntSpec extends Specification implements HttpClientSupport
     @Unroll
     void "interceptor should get model from #controller"() {
         given:
-        def response = httpClient.exchange(
-                HttpRequest.GET("/$controller").contentType(MediaType.APPLICATION_JSON),
-                List<Map>
-        )
+        def response = http("/$controller")
 
         expect:
-        response.status == HttpStatus.OK
+        response.expectStatus(200)
         modelInterceptor.latestModel != null
 
         where:

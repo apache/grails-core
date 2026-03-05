@@ -31,10 +31,10 @@ class ConfigLoadingSpec extends Specification implements HttpClientSupport {
     void '#beanType beans can load plugin config values'(String beanType, String expectedResponseValue) {
 
         when: 'The app controller is visited'
-        def response = httpClient.retrieve('/app')
+        def response = http('/app')
 
         then: 'The value from the plugin is found'
-        response.contains(expectedResponseValue)
+        response.expectContains(expectedResponseValue)
 
         where:
         beanType                  || expectedResponseValue

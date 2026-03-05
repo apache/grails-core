@@ -18,11 +18,6 @@
  */
 package functionaltests.requestresponse
 
-import groovy.json.JsonSlurper
-
-import io.micronaut.http.HttpRequest
-import io.micronaut.http.HttpStatus
-import io.micronaut.http.cookie.Cookie
 import spock.lang.Specification
 
 import grails.testing.mixin.integration.Integration
@@ -35,274 +30,227 @@ import org.apache.grails.testing.httpclient.HttpClientSupport
 @Integration
 class RequestResponseSpec extends Specification implements HttpClientSupport {
 
-    /**
-     * Helper method to find header value case-insensitively.
-     * HTTP headers are case-insensitive per spec.
-     */
-    private String findHeader(Map headers, String name) {
-        def entry = headers.find { k, v -> k.equalsIgnoreCase(name) }
-        return entry?.value
-    }
-
     // ========== Request Header Tests ==========
 
     def "echo request headers returns all headers"() {
         when:
-        def response = httpClient.exchange(
-            HttpRequest.GET('/requestResponseTest/echoHeaders')
-                .header('X-Custom-Header', 'TestValue')
-                .header('X-Another-Header', 'AnotherValue'),
-            String
+        def response = http('/requestResponseTest/echoHeaders',
+                'X-Custom-Header': 'TestValue',
+                'X-Another-Header': 'AnotherValue'
         )
-        def json = new JsonSlurper().parseText(response.body())
 
         then:
-        response.status == HttpStatus.OK
-        findHeader(json.headers, 'X-Custom-Header') == 'TestValue'
-        findHeader(json.headers, 'X-Another-Header') == 'AnotherValue'
+        response.expectStatus(200)
+        def headers = response.json().headers as Map<String, String>
+        findHeader(headers, 'X-Custom-Header') == 'TestValue'
+        findHeader(headers, 'X-Another-Header') == 'AnotherValue'
     }
 
     def "get specific header returns correct value"() {
         when:
-        def response = httpClient.exchange(
-            HttpRequest.GET('/requestResponseTest/getSpecificHeader?headerName=X-Test-Header')
-                .header('X-Test-Header', 'MyTestValue'),
-            String
+        def response = http(
+                '/requestResponseTest/getSpecificHeader?headerName=X-Test-Header',
+                'X-Test-Header': 'MyTestValue'
         )
-        def json = new JsonSlurper().parseText(response.body())
 
         then:
-        response.status == HttpStatus.OK
-        // Header name might be normalized/lowercased
-        json.headerValue == 'MyTestValue'
+        response.expectJsonContains(200, [headerValue: 'MyTestValue'])
     }
 
     def "check accept header detects JSON accept type"() {
         when:
-        def response = httpClient.exchange(
-            HttpRequest.GET('/requestResponseTest/checkAcceptHeader')
-                .accept('application/json'),
-            String
+        def response = http(
+                '/requestResponseTest/checkAcceptHeader',
+                'Accept': 'application/json'
         )
-        def json = new JsonSlurper().parseText(response.body())
 
         then:
-        response.status == HttpStatus.OK
-        json.acceptsJson == true
+        response.expectJsonContains(200, [acceptsJson: true])
     }
 
     // ========== Response Header Tests ==========
 
     def "set custom headers returns headers in response"() {
         when:
-        def response = httpClient.exchange(
-            '/requestResponseTest/setCustomHeaders',
-            String
-        )
+        def response = http('/requestResponseTest/setCustomHeaders')
 
         then:
-        response.status == HttpStatus.OK
-        response.header('X-Custom-Header') == 'CustomValue'
-        response.header('X-Request-Id') != null
-        response.header('X-Timestamp') != null
+        response.expectHeaders(200, 'X-Custom-Header': 'CustomValue')
+        response.hasHeader('X-Request-Id')
+        response.hasHeader('X-Timestamp')
     }
 
     def "set cache headers configures caching properly"() {
         when:
-        def response = httpClient.exchange(
-            '/requestResponseTest/setCacheHeaders',
-            String
-        )
+        def response = http('/requestResponseTest/setCacheHeaders')
 
         then:
-        response.status == HttpStatus.OK
-        response.header('Cache-Control') == 'max-age=3600, public'
-        response.header('ETag') == '"abc123"'
-        response.header('Last-Modified') != null
+        response.expectHeaders(200,
+                'Cache-Control': 'max-age=3600, public',
+                'ETag': '"abc123"'
+        )
+        response.hasHeader('Last-Modified')
     }
 
     def "set no-cache headers prevents caching"() {
         when:
-        def response = httpClient.exchange(
-            '/requestResponseTest/setNoCacheHeaders',
-            String
-        )
+        def response = http('/requestResponseTest/setNoCacheHeaders')
 
         then:
-        response.status == HttpStatus.OK
-        response.header('Cache-Control') == 'no-cache, no-store, must-revalidate'
-        response.header('Pragma') == 'no-cache'
-        response.header('Expires') == '0'
+        response.expectHeaders(200,
+                'Cache-Control': 'no-cache, no-store, must-revalidate',
+                'Pragma': 'no-cache',
+                'Expires': '0'
+        )
     }
 
     def "set content disposition for file download"() {
         when:
-        def response = httpClient.exchange(
-            '/requestResponseTest/setContentDisposition',
-            String
-        )
+        def response = http('/requestResponseTest/setContentDisposition')
 
         then:
-        response.status == HttpStatus.OK
-        response.header('Content-Disposition') == 'attachment; filename="report.pdf"'
+        response.expectHeaders(200, 'Content-Disposition': 'attachment; filename="report.pdf"')
     }
 
     def "set multiple custom headers returns all headers"() {
         when:
-        def response = httpClient.exchange(
-            '/requestResponseTest/setMultipleCustomHeaders',
-            String
-        )
+        def response = http('/requestResponseTest/setMultipleCustomHeaders')
 
         then:
-        response.status == HttpStatus.OK
-        response.header('X-Custom-0') == 'Value-0'
-        response.header('X-Custom-1') == 'Value-1'
-        response.header('X-Custom-4') == 'Value-4'
+        response.expectHeaders(200,
+                'X-Custom-0': 'Value-0',
+                'X-Custom-1': 'Value-1',
+                'X-Custom-4': 'Value-4'
+        )
     }
 
     // ========== Cookie Tests ==========
 
     def "set cookie returns Set-Cookie header"() {
         when:
-        def response = httpClient.exchange(
-            '/requestResponseTest/setCookie?name=myCookie&value=myValue',
-            String
-        )
-        def json = new JsonSlurper().parseText(response.body())
+        def response = http('/requestResponseTest/setCookie?name=myCookie&value=myValue')
 
         then:
-        response.status == HttpStatus.OK
-        json.cookieSet == true
-        json.name == 'myCookie'
-        json.value == 'myValue'
-        response.header('Set-Cookie')?.contains('myCookie=myValue')
+        response.expectJsonContains(200, [
+                cookieSet: true,
+                name: 'myCookie',
+                value: 'myValue'
+        ])
+        response.headerValue('Set-Cookie')?.contains('myCookie=myValue')
     }
 
     def "set multiple cookies returns multiple Set-Cookie headers"() {
         when:
-        def response = httpClient.exchange(
-            '/requestResponseTest/setMultipleCookies',
-            String
-        )
-        def json = new JsonSlurper().parseText(response.body())
+        def response = http('/requestResponseTest/setMultipleCookies')
 
         then:
-        response.status == HttpStatus.OK
-        json.cookiesSet == 3
-        response.headers.getAll('Set-Cookie').size() >= 3
+        response.expectJsonContains(200, [cookiesSet: 3])
+        response.headers().allValues('Set-Cookie').size() >= 3
     }
 
     def "get cookies reads cookies from request"() {
         when:
-        def request = HttpRequest.GET('/requestResponseTest/getCookies')
-            .cookie(Cookie.of('testCookie1', 'value1'))
-            .cookie(Cookie.of('testCookie2', 'value2'))
-        def response = httpClient.exchange(request, String)
-        def json = new JsonSlurper().parseText(response.body())
+        def response = http(httpRequestWith('/requestResponseTest/getCookies') {
+            header('Cookie', 'testCookie1=value1; testCookie2=value2')
+        })
 
         then:
-        response.status == HttpStatus.OK
-        json.cookies['testCookie1'] == 'value1'
-        json.cookies['testCookie2'] == 'value2'
+        response.expectJson(200, [
+                cookies: [
+                        testCookie1: 'value1',
+                        testCookie2: 'value2'
+                ]
+        ])
     }
 
     def "get specific cookie returns correct cookie value"() {
         when:
-        def request = HttpRequest.GET('/requestResponseTest/getSpecificCookie?name=myCookie')
-            .cookie(Cookie.of('myCookie', 'cookieValue'))
-        def response = httpClient.exchange(request, String)
-        def json = new JsonSlurper().parseText(response.body())
+        def response = http(httpRequestWith('/requestResponseTest/getSpecificCookie?name=myCookie') {
+            header('Cookie', 'myCookie=cookieValue')
+        })
 
         then:
-        response.status == HttpStatus.OK
-        json.found == true
-        json.name == 'myCookie'
-        json.value == 'cookieValue'
+        response.expectJson(200, [
+                found: true,
+                name: 'myCookie',
+                value: 'cookieValue'
+        ])
     }
 
     def "delete cookie sets max-age to 0"() {
         when:
-        def response = httpClient.exchange(
-            '/requestResponseTest/deleteCookie?name=deletedCookie',
-            String
-        )
-        def json = new JsonSlurper().parseText(response.body())
+        def response = http('/requestResponseTest/deleteCookie?name=deletedCookie')
 
         then:
-        response.status == HttpStatus.OK
-        json.deleted == 'deletedCookie'
-        response.header('Set-Cookie')?.contains('Max-Age=0') || response.header('Set-Cookie')?.contains('Expires=')
+        response.expectJsonContains(200, [deleted: 'deletedCookie'])
+        response.headers().allValues('Set-Cookie')?.find { it.contains('Max-Age=0') } ||
+                response.headers().allValues('Set-Cookie')?.find { it.contains('Expires=') }
     }
 
     // ========== Session Tests ==========
 
     def "set session attribute stores value in session"() {
         when:
-        def response = httpClient.exchange(
-            '/requestResponseTest/setSessionAttribute?key=testKey&value=testValue',
-            String
+        def response = http(
+                '/requestResponseTest/setSessionAttribute?key=testKey&value=testValue'
         )
-        def json = new JsonSlurper().parseText(response.body())
 
         then:
-        response.status == HttpStatus.OK
-        json.key == 'testKey'
-        json.value == 'testValue'
-        json.sessionId != null
+        response.expectStatus(200)
+        with(response.json()) {
+            key == 'testKey'
+            value == 'testValue'
+            sessionId != null
+        }
     }
 
     def "get session attribute retrieves stored value"() {
         given:
         // First set a session attribute
-        def setResponse = httpClient.exchange(
-            '/requestResponseTest/setSessionAttribute?key=retrieveKey&value=retrieveValue',
-            String
+        def setResponse = http(
+            '/requestResponseTest/setSessionAttribute?key=retrieveKey&value=retrieveValue'
         )
-        def sessionCookie = setResponse.header('Set-Cookie')
+        def sessionCookie = setResponse.headerValue('Set-Cookie')
 
         when:
         // Then retrieve it with the same session
-        def getRequest = HttpRequest.GET(
-                '/requestResponseTest/getSessionAttribute?key=retrieveKey'
-        )
-        if (sessionCookie) {
-            def cookieValue = sessionCookie.split(';')[0]
-            getRequest = getRequest.header('Cookie', cookieValue)
-        }
-        def response = httpClient.exchange(getRequest, String)
-        def json = new JsonSlurper().parseText(response.body())
+        def response = http(httpRequestWith('/requestResponseTest/getSessionAttribute?key=retrieveKey') {
+            if (sessionCookie) {
+                def cookieValue = sessionCookie.split(';').first()
+                header('Cookie', cookieValue)
+            }
+            GET()
+        })
 
         then:
-        response.status == HttpStatus.OK
-        json.key == 'retrieveKey'
-        json.value == 'retrieveValue'
-        json.found == true
+        response.expectJsonContains(200, [
+                key: 'retrieveKey',
+                value: 'retrieveValue',
+                found: true
+        ])
     }
 
     def "session counter increments on each request"() {
         given:
         // First request
-        def response1 = httpClient.exchange(
-            '/requestResponseTest/sessionCounter',
-            String
-        )
-        def json1 = new JsonSlurper().parseText(response1.body())
-        def sessionCookie = response1.header('Set-Cookie')
+        def response1 = http('/requestResponseTest/sessionCounter')
+        def json1 = response1.json()
+        def sessionCookie = response1.headerValue('Set-Cookie')
 
         when:
         // Second request with same session
-        def request2 = HttpRequest.GET('/requestResponseTest/sessionCounter')
-        if (sessionCookie) {
-            def cookieValue = sessionCookie.split(';')[0]
-            request2 = request2.header('Cookie', cookieValue)
-        }
-        def response2 = httpClient.exchange(request2, String)
-        def json2 = new JsonSlurper().parseText(response2.body())
+        def response2 = http(httpRequestWith('/requestResponseTest/sessionCounter') {
+            if (sessionCookie) {
+                def cookieValue = sessionCookie.split(';').first()
+                header('Cookie', cookieValue)
+            }
+            GET()
+        })
+        def json2 = response2.json()
 
         then:
-        response1.status == HttpStatus.OK
-        response2.status == HttpStatus.OK
+        response1.expectStatus(200)
+        response2.expectStatus(200)
         json1.count == 1
         json2.count == 2
     }
@@ -311,65 +259,67 @@ class RequestResponseSpec extends Specification implements HttpClientSupport {
 
     def "get request info returns server details"() {
         when:
-        def response = httpClient.exchange(
-            '/requestResponseTest/getRequestInfo',
-            String
-        )
-        def json = new JsonSlurper().parseText(response.body())
+        def response = http('/requestResponseTest/getRequestInfo')
 
         then:
-        response.status == HttpStatus.OK
-        json.method == 'GET'
-        json.uri == '/requestResponseTest/getRequestInfo'
-        json.scheme == 'http'
-        json.serverPort == serverPort
+        response.expectJsonContains(200, [
+                method: 'GET',
+                uri: '/requestResponseTest/getRequestInfo',
+                scheme: 'http',
+                serverPort: localServerPort
+        ])
     }
 
     def "get request parameters returns query parameters"() {
         when:
-        def response = httpClient.exchange(
-            '/requestResponseTest/getRequestParameters?param1=value1&param2=value2',
-            String
+        def response = http(
+                '/requestResponseTest/getRequestParameters?param1=value1&param2=value2'
         )
-        def json = new JsonSlurper().parseText(response.body())
 
         then:
-        response.status == HttpStatus.OK
-        json.parameters['param1'] == 'value1'
-        json.parameters['param2'] == 'value2'
+        response.expectJson(200, [
+                parameters: [
+                        param1: 'value1',
+                        param2: 'value2'
+                ]
+        ])
     }
 
     def "set request attribute stores and retrieves value"() {
         when:
-        def response = httpClient.exchange(
-            '/requestResponseTest/setRequestAttribute?key=myAttr&value=myVal',
-            String
-        )
-        def json = new JsonSlurper().parseText(response.body())
+        def response = http('/requestResponseTest/setRequestAttribute?key=myAttr&value=myVal')
 
         then:
-        response.status == HttpStatus.OK
-        json.key == 'myAttr'
-        json.setValue == 'myVal'
-        json.retrievedValue == 'myVal'
+        response.expectJson(200, [
+                key: 'myAttr',
+                setValue: 'myVal',
+                retrievedValue: 'myVal'
+        ])
     }
 
     // ========== Content Type and Encoding Tests ==========
 
     def "unicode response returns characters in multiple languages"() {
         when:
-        def response = httpClient.exchange(
-            '/requestResponseTest/unicodeResponse',
-            String
-        )
-        def json = new JsonSlurper().parseText(response.body())
+        def response = http('/requestResponseTest/unicodeResponse')
 
         then:
-        response.status == HttpStatus.OK
-        json.english == 'Hello World'
-        json.chinese == '你好世界'
-        json.japanese == 'こんにちは世界'
-        json.korean == '안녕하세요 세계'
-        json.emoji == '👋🌍🎉'
+        response.expectJson(200, [
+                arabic: 'مرحبا بالعالم',
+                english: 'Hello World',
+                chinese: '你好世界',
+                japanese: 'こんにちは世界',
+                korean: '안녕하세요 세계',
+                emoji: '👋🌍🎉'
+        ])
+    }
+
+    /**
+     * Helper method to find echoed header value in json response case-insensitively.
+     * HTTP headers are case-insensitive per spec.
+     */
+    private String findHeader(Map<String, String> headers, String name) {
+        def entry = headers.find { k, v -> k.equalsIgnoreCase(name) }
+        return entry?.value
     }
 }

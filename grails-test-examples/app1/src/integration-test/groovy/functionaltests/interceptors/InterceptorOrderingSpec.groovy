@@ -18,7 +18,6 @@
  */
 package functionaltests.interceptors
 
-import io.micronaut.http.HttpRequest
 import spock.lang.Specification
 
 import grails.testing.mixin.integration.Integration
@@ -41,24 +40,18 @@ class InterceptorOrderingSpec extends Specification implements HttpClientSupport
 
     def setup() {
         // Reset execution order before each test
-        httpClient.exchange(
-                '/interceptorTest/resetOrder',
-                Map
-        )
+        http('/interceptorTest/resetOrder')
     }
 
     // ========== Interceptor Ordering Tests ==========
 
     def "test interceptors execute in order by 'order' property"() {
         when:
-        def response = httpClient.exchange(
-            '/interceptorTest/testOrder',
-            Map
-        )
+        def response = http('/interceptorTest/testOrder')
 
         then: "interceptors should run in order: first(10), second(20), third(30)"
-        response.status.code == 200
-        def order = response.body().executionOrder
+        response.expectStatus(200)
+        def order = response.json().executionOrder
         
         // Before interceptors run in ascending order
         def firstBeforeIdx = order.indexOf('first:before')
@@ -79,14 +72,11 @@ class InterceptorOrderingSpec extends Specification implements HttpClientSupport
 
     def "test before interceptors run before controller action"() {
         when:
-        def response = httpClient.exchange(
-            '/interceptorTest/index',
-            Map
-        )
+        def response = http('/interceptorTest/index')
 
         then:
-        response.status.code == 200
-        def order = response.body().executionOrder
+        response.expectStatus(200)
+        def order = response.json().executionOrder
         
         // All before interceptors should run before controller
         order.findAll { it.contains(':before') }.every { beforeEntry ->
@@ -96,14 +86,11 @@ class InterceptorOrderingSpec extends Specification implements HttpClientSupport
 
     def "test after interceptors run after controller action"() {
         when:
-        def response = httpClient.exchange(
-            '/interceptorTest/index',
-            Map
-        )
+        def response = http('/interceptorTest/index')
 
         then:
-        response.status.code == 200
-        def order = response.body().executionOrder
+        response.expectStatus(200)
+        def order = response.json().executionOrder
         
         // All after interceptors should run after controller
         order.findAll { it.contains(':after') }.every { afterEntry ->
@@ -115,183 +102,154 @@ class InterceptorOrderingSpec extends Specification implements HttpClientSupport
 
     def "test interceptor can block request by returning false"() {
         when:
-        def response = httpClient.exchange(
-            '/interceptorTest/blocked?block=true&reason=testing',
-            Map
-        )
+        def response = http('/interceptorTest/blocked?block=true&reason=testing')
 
         then: "controller action should not execute"
-        response.status.code == 200
-        response.body().blocked == true
-        response.body().message == 'Request blocked by interceptor'
-        response.body().reason == 'testing'
+        response.expectJson(200, [
+                blocked: true,
+                message: 'Request blocked by interceptor',
+                reason: 'testing'
+        ])
     }
 
     def "test interceptor allows request when returning true"() {
         when:
-        def response = httpClient.exchange(
-            '/interceptorTest/blocked?block=false',
-            Map
-        )
+        def response = http('/interceptorTest/blocked?block=false')
 
         then: "controller action should execute"
-        response.status.code == 200
-        response.body().action == 'blocked'
-        response.body().message == 'This should not be seen if blocked'
+        response.expectJson(200, [
+                action: 'blocked',
+                message: 'This should not be seen if blocked'
+        ])
     }
 
     // ========== Request Attribute Tests ==========
 
     def "test interceptor can set request attributes"() {
         when:
-        def response = httpClient.exchange(
-            '/interceptorTest/checkAttributes',
-            Map
-        )
+        def response = http('/interceptorTest/checkAttributes')
 
         then:
-        response.status.code == 200
-        response.body().fromBefore == true
-        response.body().interceptorSet != null
-        response.body().interceptorSet.source == 'AttributeSettingInterceptor'
+        response.expectStatus(200)
+        with(response.json()) {
+            fromBefore == true
+            interceptorSet != null
+            interceptorSet.source == 'AttributeSettingInterceptor'
+        }
     }
 
     def "test interceptor can set response headers"() {
         when:
-        def response = httpClient.exchange(
-            '/interceptorTest/checkAttributes',
-            Map
-        )
+        def response = http('/interceptorTest/checkAttributes')
 
         then:
-        response.status.code == 200
-        response.header('X-Interceptor-Header') == 'set-by-interceptor'
+        response.expectHeaders(200, 'X-Interceptor-Header': 'set-by-interceptor')
     }
 
     // ========== Session Tests ==========
 
     def "test interceptor can set session attributes"() {
         when:
-        def response = httpClient.exchange(
-            '/interceptorTest/checkSession',
-            Map
-        )
+        def response = http('/interceptorTest/checkSession')
 
         then:
-        response.status.code == 200
-        response.body().sessionData != null
-        response.body().sessionData.message == 'Session data from interceptor'
+        response.expectStatus(200)
+        with(response.json()) {
+            sessionData != null
+            sessionData.message == 'Session data from interceptor'
+        }
     }
 
     // ========== Conditional Matching Tests ==========
 
     def "test interceptor conditional matching - matched"() {
         when:
-        def response = httpClient.exchange(
-            '/interceptorTest/conditionalAction?match=yes',
-            Map
-        )
+        def response = http('/interceptorTest/conditionalAction?match=yes')
 
         then:
-        response.status.code == 200
-        def orderResponse = httpClient.exchange(
-            '/interceptorTest/getOrder',
-            Map
-        )
-        orderResponse.body().executionOrder.contains('conditional:before:matched')
+        response.expectStatus(200)
+
+        when:
+        def orderResponse = http('/interceptorTest/getOrder')
+
+        then:
+        orderResponse.json().executionOrder.contains('conditional:before:matched')
     }
 
     def "test interceptor conditional matching - not matched"() {
         when:
-        def response = httpClient.exchange(
-            '/interceptorTest/conditionalAction?match=no',
-            Map
-        )
+        def response = http('/interceptorTest/conditionalAction?match=no')
 
         then:
-        response.status.code == 200
-        def orderResponse = httpClient.exchange(
-            '/interceptorTest/getOrder',
-            Map
-        )
-        orderResponse.body().executionOrder.contains('conditional:before:notmatched')
+        response.expectStatus(200)
+
+        when:
+        def orderResponse = http('/interceptorTest/getOrder')
+
+        then:
+        orderResponse.json().executionOrder.contains('conditional:before:notmatched')
     }
 
     // ========== Timing Interceptor Tests ==========
 
     def "test timing interceptor tracks request duration"() {
         when:
-        def response = httpClient.exchange(
-            '/interceptorTest/slowAction?delay=50',
-            Map
-        )
+        def response = http('/interceptorTest/slowAction?delay=50')
 
         then:
-        response.status.code == 200
-        response.body().action == 'slowAction'
-        response.body().delay == 50
-        
+        response.expectJson(200, [
+            action: 'slowAction',
+            delay: 50
+        ])
+
         // Check that timing interceptor's before phase ran and recorded start time
         // Note: We can only reliably verify before() since after() runs after response is committed
         // and its execution order entry may not be visible due to async timing
-        def orderResponse = httpClient.retrieve(
-            '/interceptorTest/getOrder',
-            Map
-        )
-        orderResponse.executionOrder.any { it.startsWith('timing:before') }
+        def orderResponse = http('/interceptorTest/getOrder')
+        orderResponse.json().executionOrder.any { it.startsWith('timing:before') }
     }
 
     // ========== Multiple Requests Tests ==========
 
     def "test interceptors work correctly across multiple requests"() {
         when: "make multiple requests"
-        def response1 = httpClient.exchange(
-            '/interceptorTest/index',
-            Map
-        )
+        def response1 = http('/interceptorTest/index')
         
         // Reset again for clean second request
-        httpClient.retrieve('/interceptorTest/resetOrder')
-        def response2 = httpClient.exchange(
-            '/interceptorTest/index',
-            Map
-        )
+        http('/interceptorTest/resetOrder')
+        def response2 = http('/interceptorTest/index')
 
         then: "each request should have clean interceptor execution"
-        response1.status.code == 200
-        response2.status.code == 200
+        response1.expectStatus(200)
+        response2.expectStatus(200)
         
         // Both should have similar execution patterns
-        response1.body().executionOrder.contains('first:before')
-        response2.body().executionOrder.contains('first:before')
+        response1.json().executionOrder.contains('first:before')
+        response2.json().executionOrder.contains('first:before')
     }
 
     // ========== Data Action Tests ==========
 
     def "test interceptors work with data actions"() {
         when:
-        def response = httpClient.exchange(
-            '/interceptorTest/dataAction?data=testValue',
-            Map
-        )
+        def response = http('/interceptorTest/dataAction?data=testValue')
 
         then:
-        response.status.code == 200
-        response.body().data == 'testValue'
+        response.expectJson(200, [
+                data: 'testValue',
+                interceptorModified: false
+        ])
     }
 
     // ========== Execution Order Verification ==========
 
     def "test complete before-controller-after sequence"() {
         when:
-        def response = httpClient.exchange(
-            '/interceptorTest/index',
-            Map
-        )
+        def response = http('/interceptorTest/index')
 
         then:
-        response.status.code == 200
-        def order = response.body().executionOrder
+        response.expectStatus(200)
+        def order = response.json().executionOrder
         
         // Verify the complete sequence
         def beforeEntries = order.findAll { it.contains(':before') }

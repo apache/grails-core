@@ -18,7 +18,6 @@
  */
 package functional.tests
 
-import io.micronaut.http.HttpStatus
 import spock.lang.Issue
 import spock.lang.Specification
 
@@ -30,21 +29,18 @@ class PersonInheritanceSpec extends Specification implements HttpClientSupport {
 
     void 'test template inheritance produces correct json'() {
         when:
-        def rsp = httpClient.exchange('/person-inheritance', String)
+        def response = http('/person-inheritance')
 
         then: 'the response is correct'
-        rsp.status() == HttpStatus.OK
-        rsp.body() == '{"dob":"01/01/1970","lastName":"Doe","firstName":"John"}'
+        response.expect(200, '{"dob":"01/01/1970","lastName":"Doe","firstName":"John"}')
     }
 
     @Issue("https://github.com/apache/grails-views/issues/234")
     void 'test template inheritance does not produce NPE when model variable is null'() {
         when:
-        def rsp = httpClient.exchange('/person-inheritance/npe', String)
+        def response = http('/person-inheritance/npe')
 
         then: 'the response is correct'
-        noExceptionThrown()
-        rsp.status() == HttpStatus.OK
-
+        response.expectStatus(200)
     }
 }

@@ -18,16 +18,13 @@
  */
 package functionaltests.flow
 
-import groovy.json.JsonSlurper
+import java.net.http.HttpClient
+import java.net.http.HttpResponse
 
-import io.micronaut.http.HttpRequest
-import io.micronaut.http.client.DefaultHttpClientConfiguration
-import io.micronaut.http.client.HttpClient
 import spock.lang.Shared
 import spock.lang.Specification
 
 import grails.testing.mixin.integration.Integration
-import org.apache.grails.testing.httpclient.HttpClientConfigurationUtils
 import org.apache.grails.testing.httpclient.HttpClientSupport
 
 /**
@@ -44,85 +41,66 @@ import org.apache.grails.testing.httpclient.HttpClientSupport
 class FlashChainForwardSpec extends Specification implements HttpClientSupport {
 
     @Shared
-    HttpClient noRedirectClient
-
-    def setup() {
-        if (!noRedirectClient) {
-            noRedirectClient = newHttpClient(
-                    HttpClientConfigurationUtils.fromSystemProperties().tap {
-                        followRedirects = false
-                    }
-            )
-        }
-    }
-    
-    /**
-     * Helper to extract session cookie from Set-Cookie header.
-     */
-    private String extractSessionCookie(String setCookieHeader) {
-        if (!setCookieHeader) return null
-        setCookieHeader.split(';')[0]
+    HttpClient noRedirectClient = httpClientWith {
+        followRedirects(HttpClient.Redirect.NEVER)
     }
 
     /**
      * Helper to follow redirect manually with session cookie.
      */
-    private Map followRedirectWithSession(String path) {
+    private HttpResponse<String> followRedirectWithSession(String path) {
         // First request - get redirect and session cookie
-        def response1 = noRedirectClient.toBlocking().exchange(
-            HttpRequest.GET(path),
-            String
-        )
+        def response1 = http(path, noRedirectClient)
         
-        def sessionCookie = extractSessionCookie(response1.header('Set-Cookie'))
-        def location = response1.header('Location')
+        def sessionCookie = response1.headerValue('Set-Cookie')
+        def location = response1.headerValue('Location')
         
         if (!location) {
             // Not a redirect, parse body
-            return new JsonSlurper().parseText(response1.body()) as Map
+            return response1
         }
         
         // Follow redirect with session cookie
         def redirectPath = location.startsWith('http') ? 
-            new URL(location).path + (new URL(location).query ? "?${new URL(location).query}" : '') : 
-            location
+                new URL(location).path + (new URL(location).query ? "?${new URL(location).query}" : '') :
+                location
         
-        def request2 = HttpRequest.GET(redirectPath)
+        def headers = [:] as Map<String, String>
         if (sessionCookie) {
-            request2 = request2.header('Cookie', sessionCookie)
+            headers.put('Cookie', sessionCookie)
         }
         
-        def response2 = httpClient.retrieve(request2)
-        new JsonSlurper().parseText(response2) as Map
+        http(headers, redirectPath)
     }
 
     /**
      * Helper to follow chain redirects with session cookie (handles multiple redirects).
      */
-    private Map followChainWithSession(String path) {
+    private HttpResponse<String> followChainWithSession(String path) {
         String sessionCookie = null
         String currentPath = path
         int maxRedirects = 10
         int redirectCount = 0
         
         while (redirectCount < maxRedirects) {
-            def request = HttpRequest.GET(currentPath)
+            //def request = HttpRequest.GET(currentPath)
+            def headers = [:] as Map<String, String>
             if (sessionCookie) {
-                request = request.header('Cookie', sessionCookie)
+                headers.put('Cookie', sessionCookie)
             }
             
-            def response = noRedirectClient.toBlocking().exchange(request, String)
+            def response = http(headers, currentPath, noRedirectClient)
             
             // Update session cookie if new one provided
-            def newCookie = extractSessionCookie(response.header('Set-Cookie'))
+            def newCookie = response.headerValue('Set-Cookie')
             if (newCookie) {
                 sessionCookie = newCookie
             }
             
-            def location = response.header('Location')
+            def location = response.headerValue('Location')
             if (!location) {
                 // No more redirects, return parsed body
-                return new JsonSlurper().parseText(response.body() as String) as Map
+                return response
             }
             
             // Follow to next location
@@ -139,61 +117,58 @@ class FlashChainForwardSpec extends Specification implements HttpClientSupport {
 
     def "test flash message survives redirect"() {
         when: "setting flash and redirecting with session cookie propagation"
-        def result = followRedirectWithSession('/flow/setFlashAndRedirect')
+        def response = followRedirectWithSession('/flow/setFlashAndRedirect')
 
         then: "flash values are available after redirect"
-        result.message == 'This is a flash message'
-        result.type == 'success'
+        response.expectJsonContains([
+                message: 'This is a flash message',
+                type: 'success'
+        ])
     }
 
     def "test multiple flash values with different types"() {
         when: "setting multiple typed flash values with redirect"
-        def result = followRedirectWithSession('/flow/setMultipleFlashValues')
+        def response = followRedirectWithSession('/flow/setMultipleFlashValues')
 
         then: "all types preserved"
-        result.stringValue == 'Hello'
-        result.intValue == 42
-        result.listValue == ['a', 'b', 'c']
-        result.mapValue.key == 'value'
-        result.mapValue.nested.x == 1
+        with(response.json()) {
+            stringValue == 'Hello'
+            intValue == 42
+            listValue == ['a', 'b', 'c']
+            mapValue.key == 'value'
+            mapValue.nested.x == 1
+        }
     }
 
     def "test flash.now for same-request values"() {
         when: "using flash.now"
-        def response = httpClient.exchange(
-            '/flow/flashNow',
-            Map
-        )
+        def response = http('/flow/flashNow')
 
         then: "both immediate and persisted values available in same request"
-        response.status.code == 200
-        response.body().immediate == 'This is immediate'
-        response.body().persisted == 'This persists'
+        response.expectJson(200, [
+                immediate: 'This is immediate',
+                persisted: 'This persists'
+        ])
     }
 
     def "test flash is cleared after being read"() {
         when: "first request sets flash"
-        def response1 = noRedirectClient.toBlocking().exchange(
-            '/flow/setFlashOnly?message=TestMessage',
-            String
-        )
-        def sessionCookie = extractSessionCookie(response1.header('Set-Cookie'))
+        def response1 = http('/flow/setFlashOnly?message=TestMessage', noRedirectClient)
+        def sessionCookie = response1.headerValue('Set-Cookie')
 
         and: "second request reads flash with same session"
-        def request2 = HttpRequest.GET('/flow/readFlash')
+        def headers2 = [:] as Map<String, String>
         if (sessionCookie) {
-            request2 = request2.header('Cookie', sessionCookie)
+            headers2.put('Cookie', sessionCookie)
         }
-        def response2 = httpClient.retrieve(request2)
-        def json2 = new JsonSlurper().parseText(response2)
+        def json2 = http(headers2, '/flow/readFlash').json()
 
         and: "third request tries to read again with same session"
-        def request3 = HttpRequest.GET('/flow/readFlash')
+        def headers3 = [:] as Map<String, String>
         if (sessionCookie) {
-            request3 = request3.header('Cookie', sessionCookie)
+            headers3.put('Cookie', sessionCookie)
         }
-        def response3 = httpClient.retrieve(request3)
-        def json3 = new JsonSlurper().parseText(response3)
+        def json3 = http(headers3, '/flow/readFlash').json()
 
         then: "flash available in second request"
         json2.message == 'TestMessage'
@@ -207,126 +182,121 @@ class FlashChainForwardSpec extends Specification implements HttpClientSupport {
 
     def "test chain accumulates model across actions"() {
         when: "chaining through three actions with session propagation"
-        def result = followChainWithSession('/flow/chainFirst')
+        def response = followChainWithSession('/flow/chainFirst')
 
         then: "all model values accumulated"
-        result.first == 'value1'
-        result.second == 'value2'
-        result.third == 'value3'
-        result.totalSteps == 3
+        response.expectJsonContains([
+                first: 'value1',
+                second: 'value2',
+                third: 'value3',
+                totalSteps: 3
+        ])
     }
 
     def "test chain preserves params"() {
         when: "chain with params and session propagation"
-        def result = followChainWithSession('/flow/chainWithParams?id=123&name=test')
+        def response = followChainWithSession('/flow/chainWithParams?id=123&name=test')
 
         then: "both chainModel and params available"
-        result.fromChain == true
-        result.extraParam == 'extra'
+        response.expectJsonContains([
+                fromChain: true,
+                extraParam: 'extra'
+        ])
     }
 
     def "test chain to different controller"() {
         when: "chaining to another controller with session propagation"
-        def result = followChainWithSession('/flow/chainToOtherController')
+        def response = followChainWithSession('/flow/chainToOtherController')
 
         then: "chain model available in target controller"
-        result.controller == 'flowTarget'
-        result.source == 'flowController'
+        response.expectJsonContains([
+                controller: 'flowTarget',
+                source: 'flowController'
+        ])
     }
 
     // ========== Forward Tests ==========
 
     def "test forward keeps same request"() {
         when: "forwarding to another action"
-        def response = httpClient.exchange(
-            '/flow/forwardToAction',
-            Map
-        )
+        def response = http('/flow/forwardToAction')
 
         then: "request attributes preserved"
-        response.status.code == 200
-        response.body().forwardedFrom == 'forwardToAction'
-        response.body().sameRequest == true
+        response.expectJsonContains(200, [
+                forwardedFrom: 'forwardToAction',
+                sameRequest: true
+        ])
     }
 
     def "test forward with params"() {
         when: "forwarding with additional params"
-        def response = httpClient.exchange(
-            '/flow/forwardWithParams?id=original',
-            Map
-        )
+        def response = http('/flow/forwardWithParams?id=original')
 
         then: "both original and forwarded params available"
-        response.status.code == 200
-        response.body().forwarded == 'yes'
-        response.body().value == '123'
+        response.expectJsonContains(200, [
+                forwarded: 'yes',
+                value: '123'
+        ])
     }
 
     def "test forward to different controller"() {
         when: "forwarding to another controller"
-        def response = httpClient.exchange(
-            '/flow/forwardToOtherController',
-            Map
-        )
+        def response = http('/flow/forwardToOtherController')
 
         then: "forward reaches target controller"
-        response.status.code == 200
-        response.body().controller == 'flowTarget'
-        response.body().sourceController == 'flow'
+        response.expectJsonContains(200, [
+                controller: 'flowTarget',
+                sourceController: 'flow'
+        ])
     }
 
     // ========== Redirect Tests ==========
 
     def "test redirect preserves all params"() {
         when: "redirecting with params"
-        def response = httpClient.exchange(
-            '/flow/redirectWithAllParams?foo=bar&num=42',
-            Map
-        )
+        def response = http('/flow/redirectWithAllParams?foo=bar&num=42')
 
         then: "params preserved after redirect"
-        response.status.code == 200
-        response.body().params.foo == 'bar'
-        response.body().params.num == '42'
+        response.expectJson(200, [
+                params: [
+                        foo: 'bar',
+                        num: '42'
+                ]
+        ])
     }
 
     def "test redirect to uri"() {
         when: "redirecting to specific URI"
-        def response = httpClient.exchange(
-            '/flow/redirectToUri',
-            Map
-        )
+        def response = http('/flow/redirectToUri')
 
         then: "redirected to correct URI"
-        response.status.code == 200
-        response.body().fromRedirect == 'true'
+        response.expectJsonContains(200, [
+                fromRedirect: 'true'
+        ])
     }
 
     def "test redirect reaches target"() {
         when: "basic redirect"
-        def response = httpClient.exchange(
-            '/flow/permanentRedirect',
-            Map
-        )
+        def response = http('/flow/permanentRedirect')
 
         then: "reaches target action"
-        response.status.code == 200
-        response.body().action == 'redirectTarget'
+        response.expectJson(200, [
+                action: 'redirectTarget'
+        ])
     }
 
     // ========== Edge Cases ==========
 
     def "test chain model is empty when not chained"() {
         when: "calling chain target directly"
-        def response = httpClient.exchange(
-            '/flow/chainThird',
-            Map
-        )
+        def response = http('/flow/chainThird')
 
         then: "chainModel is empty/null"
-        response.status.code == 200
-        response.body().first == null
-        response.body().second == null
-        response.body().third == 'value3'
+        response.expectStatus(200)
+        with(response.json()) {
+            first == null
+            second == null
+            third == 'value3'
+        }
     }
 }

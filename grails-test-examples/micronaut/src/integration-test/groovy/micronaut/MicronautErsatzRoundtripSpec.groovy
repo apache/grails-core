@@ -21,11 +21,6 @@ package micronaut
 import io.github.cjstehno.ersatz.ErsatzServer
 import io.github.cjstehno.ersatz.cfg.ContentType
 import io.github.cjstehno.ersatz.cfg.ServerConfig
-import io.micronaut.http.HttpRequest
-import io.micronaut.http.HttpResponse
-import io.micronaut.http.MediaType
-import io.micronaut.http.client.HttpClient
-import io.micronaut.http.client.exceptions.HttpClientResponseException
 import spock.lang.AutoCleanup
 import spock.lang.Specification
 
@@ -223,15 +218,11 @@ class MicronautErsatzRoundtripSpec extends Specification implements HttpClientSu
         })
 
         when: 'hitting the Grails controller endpoint'
-        def response = httpClient.exchange(
-                HttpRequest.GET('/external-api').accept(MediaType.APPLICATION_JSON),
-                String
-        )
+        def response = http('/external-api', 'Accept': 'application/json')
 
         then: 'the Grails controller returns data that originated from the ersatz mock'
-        response.status.code == 200
-        response.body().contains('micronaut-client')
-        response.body().contains('from-ersatz')
+        response.expectContains(200, 'micronaut-client')
+                .expectContains('from-ersatz')
 
         and: 'ersatz confirms it served the mocked response'
         ersatz.verify()
@@ -250,14 +241,10 @@ class MicronautErsatzRoundtripSpec extends Specification implements HttpClientSu
         })
 
         when: 'hitting the Grails controller show endpoint'
-        def response = httpClient.exchange(
-                HttpRequest.GET('/external-api/42').accept(MediaType.APPLICATION_JSON),
-                String
-        )
+        def response = http('/external-api/42', 'Accept': 'application/json')
 
         then: 'the response contains the ersatz-mocked resource data'
-        response.status.code == 200
-        response.body().contains('the-answer')
+        response.expectContains(200, 'the-answer')
 
         and: 'ersatz confirms it served the mocked response'
         ersatz.verify()
@@ -276,16 +263,15 @@ class MicronautErsatzRoundtripSpec extends Specification implements HttpClientSu
         })
 
         when: 'POSTing to the Grails controller'
-        def response = httpClient.exchange(
-                HttpRequest.POST('/external-api', '{"name":"test"}')
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .accept(MediaType.APPLICATION_JSON),
-                String
+        def response = httpPost(
+                '/external-api',
+                '{"name":"test"}',
+                'Content-Type': 'application/json',
+                'Accept': 'application/json'
         )
 
         then: 'the response includes the ersatz-mocked creation result'
-        response.status.code == 201
-        response.body().contains('created-via-roundtrip')
+        response.expectContains(201, 'created-via-roundtrip')
 
         and: 'ersatz confirms it received the POST'
         ersatz.verify()
@@ -304,16 +290,15 @@ class MicronautErsatzRoundtripSpec extends Specification implements HttpClientSu
         })
 
         when: 'PUTting to the Grails controller'
-        def response = httpClient.exchange(
-                HttpRequest.PUT('/external-api/42', '{"name":"updated"}')
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .accept(MediaType.APPLICATION_JSON),
-                String
+        def response = httpPut(
+                '/external-api/42',
+                '{"name":"updated"}',
+                'Content-Type': 'application/json',
+                'Accept': 'application/json'
         )
 
         then: 'the response includes the ersatz-mocked update result'
-        response.status.code == 200
-        response.body().contains('updated-via-roundtrip')
+        response.expectContains(200, 'updated-via-roundtrip')
 
         and: 'ersatz confirms it received the PUT'
         ersatz.verify()
@@ -331,13 +316,10 @@ class MicronautErsatzRoundtripSpec extends Specification implements HttpClientSu
         })
 
         when: 'DELETEing via the Grails controller'
-        def response = httpClient.exchange(
-                HttpRequest.DELETE('/external-api/42').accept(MediaType.APPLICATION_JSON),
-                String
-        )
+        def response = httpDelete('/external-api/42', 'Accept': 'application/json')
 
         then: 'the Grails controller returns 204'
-        response.status.code == 204
+        response.expectStatus(204)
 
         and: 'ersatz confirms it received the DELETE'
         ersatz.verify()
@@ -356,25 +338,13 @@ class MicronautErsatzRoundtripSpec extends Specification implements HttpClientSu
         })
 
         when: 'hitting the error-handling endpoint that catches upstream errors'
-        HttpClientResponseException caught = null
-        HttpResponse<String> response = null
-        try {
-            response = httpClient.exchange(
-                    HttpRequest.GET('/external-api/safe/fail').accept(MediaType.APPLICATION_JSON),
-                    String
-            )
-        } catch (HttpClientResponseException ex) {
-            caught = ex
-        }
+        def response = http('/external-api/safe/fail', 'Accept': 'application/json')
 
         then: 'the Grails controller propagates the error status from the ersatz mock'
-        caught != null || response?.status?.code == 500
+        response.expectStatus(500)
 
         and: 'ersatz confirms it served the error response'
         ersatz.verify()
-
-        cleanup:
-        httpClient.close()
     }
 
     void "full roundtrip: ersatz mocks different responses for sequential calls"() {

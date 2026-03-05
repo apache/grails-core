@@ -18,47 +18,29 @@
  */
 package functional.tests
 
-import com.fasterxml.jackson.databind.ObjectMapper
-import io.micronaut.http.HttpRequest
-import io.micronaut.http.HttpStatus
 import spock.lang.IgnoreIf
-import spock.lang.Shared
 import spock.lang.Specification
 
-import org.springframework.beans.factory.annotation.Autowired
-
 import grails.testing.mixin.integration.Integration
-import grails.web.http.HttpHeaders
 import org.apache.grails.testing.httpclient.HttpClientSupport
 
 @Integration
 class TeamSpec extends Specification implements HttpClientSupport {
 
-    @Shared
-    String lang = "${System.properties.getProperty('user.language')}_${System.properties.getProperty('user.country')}"
-
-    @Autowired
-    ObjectMapper objectMapper
-
     void 'Test association template rendering'() {
         when:
-        def resp = httpClient.exchange('/teams/1', String)
+        def response = http('/teams/1')
 
         then: 'The response is correct'
-        resp.status == HttpStatus.OK
-        resp.headers.getFirst(HttpHeaders.CONTENT_TYPE).isPresent()
-        resp.headers.getFirst(HttpHeaders.CONTENT_TYPE).get() == 'application/json;charset=UTF-8'
-
-        // Note current behaviour is that the captain is not rendered twice
-        objectMapper.readTree(resp.body()) == objectMapper.readTree('''
+        response.expectJson(200, 'Content-Type': 'application/json;charset=UTF-8', '''
             {
                 "id": 1,
                 "name": "Barcelona",
                 "players": [
-                    { "id": 1},
-                    { "id": 2}
+                    { "id": 1 },
+                    { "id": 2 }
                 ],
-                "captain": { "id":1 },
+                "captain": { "id": 1 },
                 "sport": "football"
             }
         ''')
@@ -66,13 +48,10 @@ class TeamSpec extends Specification implements HttpClientSupport {
 
     void 'Test deep association template rendering'() {
         when:
-        def resp = httpClient.exchange('/teams/deep/1', String)
+        def response = http('/teams/deep/1')
 
         then: 'The response is correct'
-        resp.status == HttpStatus.OK
-        resp.headers.getFirst(HttpHeaders.CONTENT_TYPE).isPresent()
-        resp.headers.getFirst(HttpHeaders.CONTENT_TYPE).get() == 'application/json;charset=UTF-8'
-        objectMapper.readTree(resp.body()) == objectMapper.readTree('''
+        response.expectJson(200, 'Content-Type': 'application/json;charset=UTF-8', '''
             {
                 "id": 1,
                 "name": "Barcelona",
@@ -89,14 +68,11 @@ class TeamSpec extends Specification implements HttpClientSupport {
     @IgnoreIf({ System.getenv('GITHUB_REF') })
     void 'Test HAL rendering'() {
         when:
-        def resp = httpClient.exchange('/teams/hal/1', String)
+        def response = http('/teams/hal/1')
+        def lang = "${System.properties.getProperty('user.language')}_${System.properties.getProperty('user.country')}"
 
         then: 'The response is correct'
-        resp.status == HttpStatus.OK
-
-        resp.headers.getFirst(HttpHeaders.CONTENT_TYPE).isPresent()
-        resp.headers.getFirst(HttpHeaders.CONTENT_TYPE).get() == 'application/hal+json;charset=UTF-8'
-        objectMapper.readTree(resp.body()) == objectMapper.readTree("""
+        response.expectJson(200, 'Content-Type': 'application/hal+json;charset=UTF-8', """
             {
                 \"_embedded\": {
                     \"players\": [
@@ -161,13 +137,10 @@ class TeamSpec extends Specification implements HttpClientSupport {
         }
 
         when:
-        def resp = httpClient.exchange('/team/composite', String)
+        def response = http('/team/composite')
 
         then: 'The response is correct'
-        resp.status == HttpStatus.OK
-        resp.headers.getFirst(HttpHeaders.CONTENT_TYPE).isPresent()
-        resp.headers.getFirst(HttpHeaders.CONTENT_TYPE).get() == 'application/json;charset=UTF-8'
-        objectMapper.readTree(resp.body()) == objectMapper.readTree('''
+        response.expectJson(200, 'Content-Type': 'application/json;charset=UTF-8', '''
             {
                 "player": {
                     "id": 2,

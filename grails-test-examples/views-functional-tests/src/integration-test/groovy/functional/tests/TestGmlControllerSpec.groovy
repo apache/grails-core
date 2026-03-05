@@ -18,8 +18,6 @@
  */
 package functional.tests
 
-import groovy.xml.XmlSlurper
-
 import spock.lang.Specification
 
 import grails.testing.mixin.integration.Integration
@@ -30,10 +28,10 @@ class TestGmlControllerSpec extends Specification implements HttpClientSupport {
 
     void "Test GML response from action that returns a model"() {
         when: "When an action that renders a GML view is requested"
-        def rsp = httpClient.retrieve('/testGml/testView')
-        def content = new XmlSlurper().parseText(rsp)
+        def response = http('/testGml/testView')
 
         then: "The XML view is rendered"
+        def content = response.xml()
         content.car.size() == 1
         content.car[0].@make.text() == 'Audi'
     }

@@ -16,126 +16,112 @@
  *  specific language governing permissions and limitations
  *  under the License.
  */
-
 package functional.tests.api
 
-import com.fasterxml.jackson.databind.ObjectMapper
-import io.micronaut.http.HttpRequest
-import io.micronaut.http.HttpStatus
-import io.micronaut.http.MediaType
 import spock.lang.Issue
 import spock.lang.Specification
 
-import org.springframework.beans.factory.annotation.Autowired
-
 import grails.testing.mixin.integration.Integration
-import grails.web.http.HttpHeaders
 import org.apache.grails.testing.httpclient.HttpClientSupport
 
 @Integration
 class NamespacedBookSpec extends Specification implements HttpClientSupport {
 
-    @Autowired
-    ObjectMapper objectMapper
-
     void 'test view rendering with a namespace'() {
         when: 'A request is sent to a controller with a namespace'
-        def rsp = httpClient.exchange('/api/book', Map)
+        def response = http('/api/book')
 
-        then: 'The rsponse is correct'
-        rsp.status() == HttpStatus.OK
-        rsp.headers.getFirst(HttpHeaders.CONTENT_TYPE).isPresent()
-        rsp.headers.getFirst(HttpHeaders.CONTENT_TYPE).get() == 'application/json;charset=UTF-8'
-        rsp.body().api == 'version 1.0 (Namespaced)'
-        rsp.body().title == 'API - The Shining'
+        then: 'The response is correct'
+        response.expectJson(200, 'Content-Type': 'application/json;charset=UTF-8', [
+                api: 'version 1.0 (Namespaced)',
+                title: 'API - The Shining'
+        ])
     }
 
     void 'test nested template rendering with a namespace'() {
         when: 'A request is sent to a controller with a namespace'
-        def rsp = httpClient.exchange('/api/book/nested', Map)
+        def response = http('/api/book/nested')
 
         then: 'The response contains the child template'
-        rsp.status() == HttpStatus.OK
-        rsp.headers.getFirst(HttpHeaders.CONTENT_TYPE).isPresent()
-        rsp.headers.getFirst(HttpHeaders.CONTENT_TYPE).get() == 'application/json;charset=UTF-8'
-        rsp.body().foo == 'bar'
+        response.expectJson(200, 'Content-Type': 'application/json;charset=UTF-8', [
+                foo: 'bar'
+        ])
     }
 
     void 'test the correct content type is chosen (json)'() {
         when: 'A request is sent to a controller with a namespace'
-        def rsp = httpClient.exchange('/api/book', Map)
+        def response = http('/api/book')
 
         then: 'The response contains the child template'
-        rsp.status() == HttpStatus.OK
-        rsp.headers.getFirst(HttpHeaders.CONTENT_TYPE).isPresent()
-        rsp.headers.getFirst(HttpHeaders.CONTENT_TYPE).get() == 'application/json;charset=UTF-8'
-        !rsp.body()['_links']
-        rsp.body().api == 'version 1.0 (Namespaced)'
-        rsp.body().title == 'API - The Shining'
+        response.expectJson(200, 'Content-Type': 'application/json;charset=UTF-8', [
+                api: 'version 1.0 (Namespaced)',
+                title: 'API - The Shining'
+        ])
     }
 
     void 'test the correct content type is chosen (hal)'() {
         when: 'A request is sent to a controller with a namespace'
-        def rsp = httpClient.exchange(
-                HttpRequest.GET('/api/book').accept(MediaType.APPLICATION_HAL_JSON_TYPE),
-                String
+        def response = http(
+                '/api/book',
+                'Accept': 'application/hal+json'
         )
-        def body = objectMapper.readValue(rsp.body(), Map)
 
         then: 'The response contains the child template'
-        rsp.status() == HttpStatus.OK
-        rsp.headers.getFirst(HttpHeaders.CONTENT_TYPE).isPresent()
-        rsp.headers.getFirst(HttpHeaders.CONTENT_TYPE).get() == 'application/hal+json;charset=UTF-8'
-        body['_links']
-        body.api == 'version 1.0 (Namespaced HAL)'
-        body.title == 'API - The Shining'
+        response.expectJson(200, 'Content-Type': 'application/hal+json;charset=UTF-8', [
+                api: 'version 1.0 (Namespaced HAL)',
+                title: 'API - The Shining',
+                _links: [
+                        self: [
+                                href: "$httpClientRootUri/api/book/index",
+                                hreflang: 'en_US',
+                                type: 'application/hal+json'
+                        ]
+                ]
+        ])
     }
 
     void 'test render(view: "..", model: ..) in controllers with namespaces works'() {
         when: 'A request is sent to a controller with a namespace'
-        def rsp = httpClient.exchange('/api/book/testRender', Map)
+        def response = http('/api/book/testRender')
 
-        then: 'The rsponse is correct'
-        rsp.status() == HttpStatus.OK
-        rsp.headers.getFirst(HttpHeaders.CONTENT_TYPE).isPresent()
-        rsp.headers.getFirst(HttpHeaders.CONTENT_TYPE).get() == 'application/json;charset=UTF-8'
-        rsp.body().api == 'version 1.0 (Namespaced)'
-        rsp.body().title == 'API - The Shining'
+        then: 'The responseonse is correct'
+        response.expectJson(200, 'Content-Type': 'application/json;charset=UTF-8', [
+                api: 'version 1.0 (Namespaced)',
+                title: 'API - The Shining'
+        ])
     }
 
-    void 'test rspond(foo, view: ..) in controllers with namespaces works'() {
+    void 'test responseond(foo, view: ..) in controllers with namespaces works'() {
         when: 'A request is sent to a controller with a namespace'
-        def rsp = httpClient.exchange('/api/book/testRespond', Map)
+        def response = http('/api/book/testRespond')
 
         then: 'The response is correct'
-        rsp.status() == HttpStatus.OK
-        rsp.headers.getFirst(HttpHeaders.CONTENT_TYPE).isPresent()
-        rsp.headers.getFirst(HttpHeaders.CONTENT_TYPE).get() == 'application/json;charset=UTF-8'
-        rsp.body().api == 'version 1.0 (Namespaced)'
-        rsp.body().title == 'API - The Shining'
+        response.expectJson(200, 'Content-Type': 'application/json;charset=UTF-8', [
+                api: 'version 1.0 (Namespaced)',
+                title: 'API - The Shining'
+
+        ])
     }
 
     void 'test respond(foo, view: ..) in controllers with namespaces works, view outside of namespace'() {
         when: 'A request is sent to a controller with a namespace'
-        def rsp = httpClient.exchange('/api/book/testRespondOutsideNamespace', Map)
+        def response = http('/api/book/testRespondOutsideNamespace')
 
         then: 'The response is correct'
-        rsp.status() == HttpStatus.OK
-        rsp.headers.getFirst(HttpHeaders.CONTENT_TYPE).isPresent()
-        rsp.headers.getFirst(HttpHeaders.CONTENT_TYPE).get() == 'application/json;charset=UTF-8'
-        rsp.body().api == 'version 1.0 (Non-Namespaced)'
-        rsp.body().title == 'API - The Shining'
+        response.expectJson(200, 'Content-Type': 'application/json;charset=UTF-8', [
+                api: 'version 1.0 (Non-Namespaced)',
+                title: 'API - The Shining'
+        ])
     }
 
     @Issue('https://github.com/apache/grails-views/issues/186')
     void 'test view rendering with a namespace from a map'() {
         when: 'A request is sent to a controller with a namespace'
-        def rsp = httpClient.exchange('/api/book/message', Map)
+        def response = http('/api/book/message')
 
         then: 'The response is correct'
-        rsp.status() == HttpStatus.OK
-        rsp.headers.getFirst(HttpHeaders.CONTENT_TYPE).isPresent()
-        rsp.headers.getFirst(HttpHeaders.CONTENT_TYPE).get() == 'application/json;charset=UTF-8'
-        rsp.body().message == 'Controller says Hello API'
+        response.expectJson(200, 'Content-Type':'application/json;charset=UTF-8', [
+                message: 'Controller says Hello API'
+        ])
     }
 }

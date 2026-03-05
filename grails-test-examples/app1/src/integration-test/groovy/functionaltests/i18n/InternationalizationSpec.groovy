@@ -18,7 +18,6 @@
  */
 package functionaltests.i18n
 
-import io.micronaut.http.HttpRequest
 import spock.lang.Specification
 
 import grails.testing.mixin.integration.Integration
@@ -44,175 +43,140 @@ class InternationalizationSpec extends Specification implements HttpClientSuppor
 
     def "test simple message in English"() {
         when:
-        def response = httpClient.exchange(
-            '/i18nTest/getMessage?code=app.welcome&lang=en',
-            Map
-        )
+        def response = http('/i18nTest/getMessage?code=app.welcome&lang=en')
 
         then:
-        response.status.code == 200
-        response.body().code == 'app.welcome'
-        response.body().locale == 'en'
-        response.body().message == 'Welcome to the Application'
+        response.expectJson(200, [
+                code: 'app.welcome',
+                locale: 'en',
+                message: 'Welcome to the Application'
+
+        ])
     }
 
     def "test simple message in German"() {
         when:
-        def response = httpClient.exchange(
-            '/i18nTest/getMessage?code=app.welcome&lang=de',
-            Map
-        )
+        def response = http('/i18nTest/getMessage?code=app.welcome&lang=de')
 
         then:
-        response.status.code == 200
-        response.body().code == 'app.welcome'
-        response.body().locale == 'de'
-        response.body().message == 'Willkommen in der Anwendung'
+        response.expectJson(200, [
+                code: 'app.welcome',
+                locale: 'de',
+                message: 'Willkommen in der Anwendung'
+        ])
     }
 
     def "test simple message in French"() {
         when:
-        def response = httpClient.exchange(
-            '/i18nTest/getMessage?code=app.welcome&lang=fr',
-            Map
-        )
+        def response = http('/i18nTest/getMessage?code=app.welcome&lang=fr')
 
         then:
-        response.status.code == 200
-        response.body().code == 'app.welcome'
-        response.body().locale == 'fr'
-        response.body().message == "Bienvenue dans l'application"
+        response.expectJson(200, [
+                code: 'app.welcome',
+                locale: 'fr',
+                message: "Bienvenue dans l'application"
+        ])
     }
 
     // ========== Message With Arguments Tests ==========
 
     def "test message with argument in English"() {
         when:
-        def response = httpClient.exchange(
-            '/i18nTest/getMessageWithArgs?code=app.greeting&arg=John&lang=en',
-            Map
-        )
+        def response = http('/i18nTest/getMessageWithArgs?code=app.greeting&arg=John&lang=en')
 
         then:
-        response.status.code == 200
-        response.body().message == 'Hello, John!'
+        response.expectJsonContains(200, [message: 'Hello, John!'])
     }
 
     def "test message with argument in German"() {
         when:
-        def response = httpClient.exchange(
-            '/i18nTest/getMessageWithArgs?code=app.greeting&arg=Johann&lang=de',
-            Map
-        )
+        def response = http('/i18nTest/getMessageWithArgs?code=app.greeting&arg=Johann&lang=de')
 
         then:
-        response.status.code == 200
-        response.body().message == 'Hallo, Johann!'
+        response.expectJsonContains(200, [message: 'Hallo, Johann!'])
     }
 
     def "test farewell message with argument"() {
         when:
-        def response = httpClient.exchange(
-            '/i18nTest/getMessageWithArgs?code=app.farewell&arg=Alice&lang=en',
-            Map
-        )
+        def response = http('/i18nTest/getMessageWithArgs?code=app.farewell&arg=Alice&lang=en')
 
         then:
-        response.status.code == 200
-        response.body().message == 'Goodbye, Alice. See you soon!'
+        response.expectJsonContains(200, [message: 'Goodbye, Alice. See you soon!'])
     }
 
     // ========== Pluralization Tests (Choice Format) ==========
 
     def "test choice format - zero items in English"() {
         when:
-        def response = httpClient.exchange(
-            '/i18nTest/getChoiceMessage?count=0&lang=en',
-            Map
-        )
+        def response = http('/i18nTest/getChoiceMessage?count=0&lang=en')
 
         then:
-        response.status.code == 200
-        response.body().count == 0
-        response.body().message == 'You have no items.'
+        response.expectJsonContains(200, [
+                count: 0,
+                message: 'You have no items.'
+        ])
     }
 
     def "test choice format - one item in English"() {
         when:
-        def response = httpClient.exchange(
-            '/i18nTest/getChoiceMessage?count=1&lang=en',
-            Map
-        )
+        def response = http('/i18nTest/getChoiceMessage?count=1&lang=en')
 
         then:
-        response.status.code == 200
-        response.body().count == 1
-        response.body().message == 'You have one item.'
+        response.expectJsonContains(200, [
+                count: 1,
+                message: 'You have one item.'
+        ])
     }
 
     def "test choice format - multiple items in English"() {
         when:
-        def response = httpClient.exchange(
-            '/i18nTest/getChoiceMessage?count=5&lang=en',
-            Map
-        )
+        def response = http('/i18nTest/getChoiceMessage?count=5&lang=en')
 
         then:
-        response.status.code == 200
-        response.body().count == 5
-        response.body().message == 'You have 5 items.'
+        response.expectJsonContains(200, [
+                count: 5,
+                message: 'You have 5 items.'
+        ])
     }
 
     def "test choice format in German"() {
         when:
-        def response = httpClient.exchange(
-            '/i18nTest/getChoiceMessage?count=0&lang=de',
-            Map
-        )
+        def response = http('/i18nTest/getChoiceMessage?count=0&lang=de')
 
         then:
-        response.status.code == 200
-        response.body().message == 'Sie haben keine Artikel.'
+        response.expectJsonContains(200, [message: 'Sie haben keine Artikel.'])
     }
 
     def "test choice format - one item in German"() {
         when:
-        def response = httpClient.exchange(
-            '/i18nTest/getChoiceMessage?count=1&lang=de',
-            Map
-        )
+        def response = http('/i18nTest/getChoiceMessage?count=1&lang=de')
 
         then:
-        response.status.code == 200
-        response.body().message == 'Sie haben einen Artikel.'
+        response.expectJsonContains(200, [message: 'Sie haben einen Artikel.'])
     }
 
     // ========== Date Formatting Tests ==========
 
     def "test date formatting in English"() {
         when:
-        def response = httpClient.exchange(
-            '/i18nTest/getDateMessage?lang=en',
-            Map
-        )
+        def response = http('/i18nTest/getDateMessage?lang=en')
 
         then:
-        response.status.code == 200
-        response.body().message.startsWith('Today is ')
-        // English format: "Today is January 25, 2026."
-        response.body().message.contains(',')
+        response.expectStatus(200)
+        with(response.json()) {
+            message.startsWith('Today is ')
+            // English format: "Today is January 25, 2026."
+            message.contains(',')
+        }
     }
 
     def "test date formatting in German"() {
         when:
-        def response = httpClient.exchange(
-            '/i18nTest/getDateMessage?lang=de',
-            Map
-        )
+        def response = http('/i18nTest/getDateMessage?lang=de')
 
         then:
-        response.status.code == 200
-        response.body().message.startsWith('Heute ist der ')
+        response.expectStatus(200)
+        response.json().message.startsWith('Heute ist der ')
         // German format: "Heute ist der 25. Januar 2026."
     }
 
@@ -220,214 +184,192 @@ class InternationalizationSpec extends Specification implements HttpClientSuppor
 
     def "test currency formatting in English US"() {
         when:
-        def response = httpClient.exchange(
-            '/i18nTest/getCurrencyMessage?amount=1234.56&lang=en_US',
-            Map
-        )
+        def response = http('/i18nTest/getCurrencyMessage?amount=1234.56&lang=en_US')
 
         then:
-        response.status.code == 200
-        response.body().message.contains('$') || response.body().message.contains('1,234.56')
+        response.expectStatus(200)
+        def json = response.json()
+        json.message.contains('$') || json.message.contains('1,234.56')
     }
 
     def "test currency formatting in German"() {
         when:
-        def response = httpClient.exchange(
-            '/i18nTest/getCurrencyMessage?amount=1234.56&lang=de_DE',
-            Map
-        )
+        def response = http('/i18nTest/getCurrencyMessage?amount=1234.56&lang=de_DE')
 
         then:
-        response.status.code == 200
+        response.expectStatus(200)
         // German format uses € and different number formatting
-        response.body().message != null
+        response.json().message != null
     }
 
     // ========== Percentage Formatting Tests ==========
 
     def "test percentage formatting in English"() {
         when:
-        def response = httpClient.exchange(
-            '/i18nTest/getPercentMessage?value=0.75&lang=en',
-            Map
-        )
+        def response = http('/i18nTest/getPercentMessage?value=0.75&lang=en')
 
         then:
-        response.status.code == 200
-        response.body().message.contains('75')
-        response.body().message.contains('%')
+        response.expectStatus(200)
+        with(response.json()) {
+            message.contains('75')
+            message.contains('%')
+        }
     }
 
     // ========== Default Message Fallback Tests ==========
 
     def "test default message for non-existent code"() {
         when:
-        def response = httpClient.exchange(
-            '/i18nTest/getMessageWithDefault?code=non.existent.key&defaultMsg=Fallback+Message&lang=en',
-            Map
+        def response = http(
+                '/i18nTest/getMessageWithDefault?code=non.existent.key&defaultMsg=Fallback+Message&lang=en'
         )
 
         then:
-        response.status.code == 200
-        response.body().message == 'Fallback Message'
+        response.expectJsonContains(200, [message: 'Fallback Message'])
     }
 
     // ========== Validation Messages Tests ==========
 
     def "test validation messages in English"() {
         when:
-        def response = httpClient.exchange(
-            '/i18nTest/getValidationMessages?lang=en',
-            Map
-        )
+        def response = http('/i18nTest/getValidationMessages?lang=en')
 
         then:
-        response.status.code == 200
-        response.body().messages.blank.contains('cannot be blank')
-        response.body().messages.nullable.contains('cannot be null')
-        response.body().messages.paginate_prev == 'Previous'
-        response.body().messages.paginate_next == 'Next'
+        response.expectStatus(200)
+        with(response.json()) {
+            messages.blank.contains('cannot be blank')
+            messages.nullable.contains('cannot be null')
+            messages.paginate_prev == 'Previous'
+            messages.paginate_next == 'Next'
+        }
     }
 
     def "test validation messages in German"() {
         when:
-        def response = httpClient.exchange(
-            '/i18nTest/getValidationMessages?lang=de',
-            Map
-        )
+        def response = http('/i18nTest/getValidationMessages?lang=de')
 
         then:
-        response.status.code == 200
-        response.body().messages.paginate_prev == 'Vorherige'
-        response.body().messages.paginate_next == 'Nächste'
+        response.expectJsonContains(200, [
+            messages: [
+                    paginate_prev: 'Vorherige',
+                    paginate_next: 'Nächste'
+            ]
+        ])
     }
 
     def "test validation messages in French"() {
         when:
-        def response = httpClient.exchange(
-            '/i18nTest/getValidationMessages?lang=fr',
-            Map
-        )
+        def response = http('/i18nTest/getValidationMessages?lang=fr')
 
         then:
-        response.status.code == 200
-        response.body().messages.paginate_prev == 'Précédent'
-        response.body().messages.paginate_next == 'Suivant'
+        response.expectJsonContains(200, [
+                messages: [
+                        paginate_prev: 'Précédent',
+                        paginate_next: 'Suivant'
+                ]
+        ])
     }
 
     // ========== Multiple Messages Tests ==========
 
     def "test multiple messages at once in English"() {
         when:
-        def response = httpClient.exchange(
-            '/i18nTest/getMultipleMessages?lang=en',
-            Map
-        )
+        def response = http('/i18nTest/getMultipleMessages?lang=en')
 
         then:
-        response.status.code == 200
-        response.body().messages.welcome == 'Welcome to the Application'
-        response.body().messages.greeting == 'Hello, User!'
-        response.body().messages.farewell == 'Goodbye, User. See you soon!'
+        response.expectJsonContains(200, [
+                messages: [
+                        welcome: 'Welcome to the Application',
+                        greeting: 'Hello, User!',
+                        farewell: 'Goodbye, User. See you soon!'
+                ]
+        ])
     }
 
     def "test multiple messages at once in German"() {
         when:
-        def response = httpClient.exchange(
-            '/i18nTest/getMultipleMessages?lang=de',
-            Map
-        )
+        def response = http('/i18nTest/getMultipleMessages?lang=de')
 
         then:
-        response.status.code == 200
-        response.body().messages.welcome == 'Willkommen in der Anwendung'
-        response.body().messages.greeting == 'Hallo, User!'
-        response.body().messages.farewell == 'Auf Wiedersehen, User. Bis bald!'
+        response.expectJsonContains(200, [
+                messages: [
+                        welcome: 'Willkommen in der Anwendung',
+                        greeting: 'Hallo, User!',
+                        farewell: 'Auf Wiedersehen, User. Bis bald!'
+                ]
+        ])
     }
 
     // ========== Locale Information Tests ==========
 
     def "test current locale information"() {
         when:
-        def response = httpClient.exchange(
-            '/i18nTest/getCurrentLocale?lang=de_DE',
-            Map
-        )
+        def response = http('/i18nTest/getCurrentLocale?lang=de_DE')
 
         then:
-        response.status.code == 200
-        response.body().language == 'de'
-        response.body().country == 'DE'
+        response.expectJsonContains(200, [
+                language: 'de',
+                country: 'DE'
+        ])
     }
 
     // ========== Accept-Language Header Tests ==========
 
     def "test locale from Accept-Language header - German"() {
         when:
-        def response = httpClient.exchange(
-            HttpRequest.GET('/i18nTest/getLocaleFromHeader')
-                .header('Accept-Language', 'de-DE'),
-            Map
-        )
+        def response = http('/i18nTest/getLocaleFromHeader', 'Accept-Language': 'de-DE')
 
         then:
-        response.status.code == 200
+        response.expectStatus(200)
         // The request locale should reflect the Accept-Language header
-        response.body().requestLocale?.startsWith('de') || response.body().contextLocale?.startsWith('de')
+        with(response.json()) {
+            requestLocale?.startsWith('de') || contextLocale?.startsWith('de')
+        }
     }
 
     def "test locale from Accept-Language header - French"() {
         when:
-        def response = httpClient.exchange(
-            HttpRequest.GET('/i18nTest/getLocaleFromHeader')
-                .header('Accept-Language', 'fr-FR'),
-            Map
-        )
+        def response = http('/i18nTest/getLocaleFromHeader','Accept-Language': 'fr-FR')
 
         then:
-        response.status.code == 200
-        response.body().requestLocale?.startsWith('fr') || response.body().contextLocale?.startsWith('fr')
+        response.expectStatus(200)
+        with(response.json()) {
+            requestLocale?.startsWith('fr') || contextLocale?.startsWith('fr')
+        }
     }
 
     // ========== Controller Message Method Tests ==========
 
     def "test controller message method"() {
         when:
-        def response = httpClient.exchange(
-            '/i18nTest/useControllerMessage?code=app.welcome&lang=en',
-            Map
-        )
+        def response = http('/i18nTest/useControllerMessage?code=app.welcome&lang=en')
 
         then:
-        response.status.code == 200
-        response.body().message == 'Welcome to the Application'
+        response.expectJsonContains(200, [message: 'Welcome to the Application'])
     }
 
     // ========== Edge Cases ==========
 
     def "test fallback to default locale when unsupported locale requested"() {
         when: "requesting a locale that doesn't have translations"
-        def response = httpClient.exchange(
-            '/i18nTest/getMessage?code=app.welcome&lang=xyz',
-            Map
-        )
+        def response = http('/i18nTest/getMessage?code=app.welcome&lang=xyz')
 
         then: "should fall back to default (English) message"
-        response.status.code == 200
+        response.expectStatus(200)
         // Will either get the message or fall back
-        response.body().message != null
+        response.json().message != null
     }
 
     def "test message with special characters"() {
         when:
-        def response = httpClient.exchange(
-            '/i18nTest/getMessageWithArgs?code=app.greeting&arg=%C3%A9l%C3%A8ve&lang=en',
-            Map
+        def response = http(
+                '/i18nTest/getMessageWithArgs?code=app.greeting&arg=%C3%A9l%C3%A8ve&lang=en'
         )
 
         then: "special characters should be handled correctly"
-        response.status.code == 200
-        response.body().arg == 'élève'
-        response.body().message == 'Hello, élève!'
+        response.expectJsonContains(200, [
+                arg: 'élève',
+                message: 'Hello, élève!'
+        ])
     }
 }

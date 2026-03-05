@@ -32,43 +32,43 @@ class MultiDataSourceWithSessionSpec extends Specification implements HttpClient
     @Issue('https://github.com/apache/grails-core/issues/14333')
     void "withSession on secondary datasource does not throw No Session found"() {
         when:
-        def response = httpClient.retrieve('/secondaryBook/withSessionTest')
+        def response = http('/secondaryBook/withSessionTest')
 
         then:
-        response.contains('sessionObtained:true')
+        response.expectContains('sessionObtained:true')
     }
 
     @Issue('https://github.com/apache/grails-core/issues/14333')
     void "CRUD via withSession on secondary datasource works"() {
         when:
-        def response = httpClient.retrieve('/secondaryBook/crudViaWithSession')
+        def response = http('/secondaryBook/crudViaWithSession')
 
         then:
-        response.contains('count:1')
+        response.expectContains('count:1')
 
         cleanup:
-        httpClient.retrieve('/secondaryBook/cleanup')
+        http('/secondaryBook/cleanup')
     }
 
     @Issue('https://github.com/apache/grails-core/issues/11798')
     void "domain class on secondary datasource can be validated via withSession"() {
         when:
-        def response = httpClient.retrieve('/secondaryBook/validateCommandObject')
+        def response = http('/secondaryBook/validateCommandObject')
 
         then:
-        response.contains('validated:true')
-        response.contains('hasErrors:true')
+        response.expectContains('validated:true')
+                .expectContains('hasErrors:true')
     }
 
     @Issue('https://github.com/apache/grails-core/issues/14333')
     void "withSession works after executeUpdate on secondary datasource"() {
         when:
-        def response = httpClient.retrieve('/secondaryBook/sessionAfterExecuteUpdate')
+        def response = http('/secondaryBook/sessionAfterExecuteUpdate')
 
         then:
-        response.contains('title:After Update')
+        response.expectContains('title:After Update')
 
         cleanup:
-        httpClient.retrieve('/secondaryBook/cleanup')
+        http('/secondaryBook/cleanup')
     }
 }

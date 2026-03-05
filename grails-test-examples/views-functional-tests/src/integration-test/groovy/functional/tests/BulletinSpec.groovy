@@ -16,10 +16,8 @@
  *  specific language governing permissions and limitations
  *  under the License.
  */
-
 package functional.tests
 
-import io.micronaut.http.HttpStatus
 import spock.lang.Issue
 import spock.lang.Specification
 
@@ -32,11 +30,11 @@ class BulletinSpec extends Specification implements HttpClientSupport {
     @Issue('https://github.com/apache/grails-views/issues/175')
     void 'test render collections with same objects'() {
         when: 'a GET is issued'
-        def resp = httpClient.exchange('/bulletin', Map)
-        def json = resp.body()
+        def response = http('/bulletin')
 
         then: 'The REST resource is retrieved and the correct JSON is returned'
-        resp.status == HttpStatus.OK
+        response.expectStatus(200)
+        def json = response.json()
         json.content == 'Hi everyone!'
 
         and: 'the username is the same as the publicId'

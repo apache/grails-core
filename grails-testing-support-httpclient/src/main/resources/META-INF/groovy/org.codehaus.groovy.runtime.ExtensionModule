@@ -1,0 +1,3 @@
+moduleName=grails-testing-support-httpclient
+moduleVersion=1.0
+extensionClasses=org.apache.grails.testing.httpclient.HttpResponseExtensions

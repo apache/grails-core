@@ -18,47 +18,41 @@
  */
 package functional.tests
 
-import io.micronaut.http.HttpStatus
 import spock.lang.Specification
 
-import grails.gorm.transactions.Rollback
 import grails.testing.mixin.integration.Integration
-import grails.web.http.HttpHeaders
 import org.apache.grails.testing.httpclient.HttpClientSupport
 
-@Rollback
 @Integration
 class CircularSpec extends Specification implements HttpClientSupport {
 
     void "test deep rendering of circular domain relationships"() {
         when: "A GET is issued"
-        def resp = httpClient.exchange('/circular/show/1', Map)
-        def json = resp.body()
+        def response = http('/circular/show/1')
 
         then: "The REST resource is retrieved and the correct JSON is returned"
-        resp.status == HttpStatus.OK
-        resp.headers.getFirst(HttpHeaders.CONTENT_TYPE).isPresent()
-        resp.headers.getFirst(HttpHeaders.CONTENT_TYPE).get() == 'application/json;charset=UTF-8'
-        json.id == 1
-        json.name == 'topLevel'
-        json.myEnum == 'BAR'
-        json.circulars.size() == 2
-        json.circulars.find { it.id == 3 }.parent.id == 1
-        json.circulars.find { it.id == 2 }.parent.id == 1
+        response.expectHeaders(200, 'Content-Type': 'application/json;charset=UTF-8')
+        with(response.json()) {
+            id == 1
+            name == 'topLevel'
+            myEnum == 'BAR'
+            circulars.size() == 2
+            circulars.find { it.id == 3 }.parent.id == 1
+            circulars.find { it.id == 2 }.parent.id == 1
+        }
     }
 
     void "test nested template rendering of circular domain relationships"() {
         when: "A GET is issued"
-        def resp = httpClient.exchange('/circular/circular/1', Map)
-        def json = resp.body()
+        def response = http('/circular/circular/1')
 
         then: "The REST resource is retrieved and the correct JSON is returned"
-        resp.status == HttpStatus.OK
-        resp.headers.getFirst(HttpHeaders.CONTENT_TYPE).isPresent()
-        resp.headers.getFirst(HttpHeaders.CONTENT_TYPE).get() == 'application/json;charset=UTF-8'
-        json.name == 'topLevel'
-        json.children.size() == 2
-        json.children.find { it.name == 'topLevel-3' }
-        json.children.find { it.name == 'topLevel-2' }
+        response.expectHeaders(200, 'Content-Type': 'application/json;charset=UTF-8')
+        with(response.json()) {
+            name == 'topLevel'
+            children.size() == 2
+            children.find { it.name == 'topLevel-3' }
+            children.find { it.name == 'topLevel-2' }
+        }
     }
 }

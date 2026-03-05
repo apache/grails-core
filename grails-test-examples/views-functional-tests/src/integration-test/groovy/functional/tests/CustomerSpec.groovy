@@ -18,7 +18,6 @@
  */
 package functional.tests
 
-import io.micronaut.http.HttpStatus
 import spock.lang.Specification
 
 import grails.testing.mixin.integration.Integration
@@ -29,16 +28,17 @@ class CustomerSpec extends Specification implements HttpClientSupport {
 
     void "Test that circular references are correctly rendered for one to many relationship"() {
         when:
-        def resp = httpClient.exchange('/customer', Map)
-        def json = resp.body()
+        def response = http('/customer')
 
         then: "The correct response is returned"
-        resp.status == HttpStatus.OK
-        json.id == 1
-        json.name == 'Nokia'
-        json.sites.find { it.id == 1 }.name == 'Salo'
-        json.sites.find { it.id == 1 }.customer == null
-        json.sites.find { it.id == 2 }.name == 'Helsinki'
-        json.sites.find { it.id == 2 }.customer == null
+        response.expectStatus(200)
+        with(response.json()) {
+            id == 1
+            name == 'Nokia'
+            sites.find { it.id == 1 }.name == 'Salo'
+            sites.find { it.id == 1 }.customer == null
+            sites.find { it.id == 2 }.name == 'Helsinki'
+            sites.find { it.id == 2 }.customer == null
+        }
      }
 }

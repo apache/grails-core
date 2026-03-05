@@ -28,10 +28,10 @@ class BookControllerSpec extends Specification implements HttpClientSupport {
 
     void 'test books can be fetched'() {
         expect:
-        httpClient.retrieve('/book/grails').contains('The definitive Guide to Grails 2')
-        !httpClient.retrieve('/book/grails').contains('Groovy in Action')
+        http('/book/grails').expectContains('The definitive Guide to Grails 2')
+        http('/book/grails').expectNotContains('Groovy in Action')
 
-        httpClient.retrieve('/book/groovy').contains('Groovy in Action')
-        !httpClient.retrieve('/book/groovy').contains('The definitive Guide to Grails 2')
+        http('/book/groovy').expectContains('Groovy in Action')
+        http('/book/groovy').expectNotContains('The definitive Guide to Grails 2')
     }
 }

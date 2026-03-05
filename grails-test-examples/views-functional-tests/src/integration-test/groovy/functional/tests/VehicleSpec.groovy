@@ -18,7 +18,6 @@
  */
 package functional.tests
 
-import io.micronaut.http.HttpStatus
 import spock.lang.Specification
 
 import grails.testing.mixin.integration.Integration
@@ -29,22 +28,33 @@ class VehicleSpec extends Specification implements HttpClientSupport {
 
     void "Test that domain subclasses render their properties"() {
         when:
-        def resp = httpClient.exchange('/vehicle/list', String)
+        def response = http('/vehicle/list')
 
         then: "The correct response is returned"
-        resp.status == HttpStatus.OK
-        resp.body() == '[{"id":1,"route":"around town","maxPassengers":30},{"id":2,"make":"Subaru","model":"WRX","year":2016,"maxPassengers":4}]'
-
+        response.expectJson(200, '''
+            [
+                {
+                    "id": 1,
+                    "route": "around town",
+                    "maxPassengers": 30
+                },
+                {
+                    "id": 2,
+                    "make": "Subaru",
+                    "model": "WRX",
+                    "year": 2016,
+                    "maxPassengers": 4
+                }
+            ]
+        ''')
     }
 
     void "Test that domain association subclasses render their properties"() {
         when:
-        def resp = httpClient.exchange('/vehicle/garage', Map)
-        def json = resp.body()
+        def response = http('/vehicle/garage')
 
         then: "The correct response is returned"
-        resp.status == HttpStatus.OK
-
+        def json = response.expectStatus(200).json()
         json.id == 1
         json.owner == 'Jay Leno'
         json.vehicles.find { it.id == 1 }.maxPassengers == 30

@@ -18,8 +18,6 @@
  */
 package functional.tests
 
-import io.micronaut.http.HttpStatus
-import io.micronaut.http.client.exceptions.HttpClientResponseException
 import spock.lang.Issue
 import spock.lang.Specification
 
@@ -32,11 +30,9 @@ class TestControllerSpec extends Specification implements HttpClientSupport {
     @Issue('https://github.com/apache/grails-core/issues/10582')
     void 'test responding after an action triggered by a HTTP 401 response is possible'() {
         when:
-        httpClient.retrieve('/test/triggerUnauthorized')
+        def response = http('/test/triggerUnauthorized')
 
         then: 'the response is correct'
-        def e = thrown(HttpClientResponseException)
-        e.response.status == HttpStatus.UNAUTHORIZED
-        e.response.body() == '{"message":"Unauthorized GSON"}'
+        response.expect(401, '{"message":"Unauthorized GSON"}')
     }
 }

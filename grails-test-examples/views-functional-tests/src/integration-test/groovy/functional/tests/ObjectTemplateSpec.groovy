@@ -18,7 +18,6 @@
  */
 package functional.tests
 
-import io.micronaut.http.HttpStatus
 import spock.lang.Specification
 
 import grails.testing.mixin.integration.Integration
@@ -29,10 +28,9 @@ class ObjectTemplateSpec extends Specification implements HttpClientSupport {
 
     void "Test that if there is a global /object/_object template it is rendered if no template found"() {
         when: "A POST is issued"
-        def rsp = httpClient.exchange('/place/test', String)
+        def response = http('/place/test')
 
         then: "The correct response is returned"
-        rsp.status() == HttpStatus.OK
-        rsp.body() == '{"location":"UK","name":"London"}'
+        response.expect(200, '{"location":"UK","name":"London"}')
     }
 }

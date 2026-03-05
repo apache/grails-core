@@ -18,8 +18,6 @@
  */
 package views182
 
-import io.micronaut.http.HttpStatus
-import io.micronaut.http.client.exceptions.HttpClientResponseException
 import spock.lang.Specification
 
 import grails.testing.mixin.integration.Integration
@@ -30,11 +28,9 @@ class CustomErrorSpec extends Specification implements HttpClientSupport {
 
     void 'it is possible to use gson views for handling exception errors'() {
         when: 'executing get to custom error'
-        httpClient.retrieve('/customError')
+        def response = http('/customError')
 
         then:
-        def e = thrown(HttpClientResponseException)
-        e.response.status == HttpStatus.INTERNAL_SERVER_ERROR
-        e.response.body() == '{"message":"My custom exception handler","error":500}'
+        response.expectJson(500, '{"message":"My custom exception handler","error":500}')
     }
 }

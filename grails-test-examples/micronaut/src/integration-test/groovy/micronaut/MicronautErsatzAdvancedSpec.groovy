@@ -22,9 +22,6 @@ import io.github.cjstehno.ersatz.ErsatzServer
 import io.github.cjstehno.ersatz.cfg.ContentType
 import io.github.cjstehno.ersatz.cfg.ServerConfig
 import io.micronaut.context.ApplicationContext as MicronautApplicationContext
-import io.micronaut.http.HttpRequest
-import io.micronaut.http.MediaType
-import io.micronaut.http.client.HttpClient
 import io.micronaut.http.client.exceptions.HttpClientResponseException
 import micronaut.client.MicronautAdvancedClient
 import micronaut.client.MicronautHeaderClient
@@ -170,14 +167,10 @@ class MicronautErsatzAdvancedSpec extends Specification implements HttpClientSup
         })
 
         when: 'calling the Grails controller endpoint'
-        def response = httpClient.exchange(
-                HttpRequest.GET('/external-api/search?q=grails&page=2').accept(MediaType.APPLICATION_JSON),
-                String
-        )
+        def response = http('/external-api/search?q=grails&page=2', 'Accept': 'application/json')
 
         then: 'the response contains the mocked data'
-        response.status.code == 200
-        response.body().contains('roundtrip')
+        response.expectContains(200, 'roundtrip')
 
         and: 'ersatz verifies the call'
         ersatz.verify()
@@ -278,16 +271,14 @@ class MicronautErsatzAdvancedSpec extends Specification implements HttpClientSup
         })
 
         when: 'calling the Grails controller endpoint'
-        def response = httpClient.exchange(
-                HttpRequest.GET('/external-api/secure')
-                        .header('Authorization', 'Bearer roundtrip-token')
-                        .accept(MediaType.APPLICATION_JSON),
-                String
+        def response = http(
+                '/external-api/secure',
+                'Authorization': 'Bearer roundtrip-token',
+                'Accept': 'application/json'
         )
 
         then: 'the response contains the secured payload'
-        response.status.code == 200
-        response.body().contains('roundtrip')
+        response.expectContains(200, 'roundtrip')
 
         and: 'ersatz verifies the call'
         ersatz.verify()
@@ -503,16 +494,15 @@ class MicronautErsatzAdvancedSpec extends Specification implements HttpClientSup
         })
 
         when: 'sending a PATCH request to Grails'
-        def response = httpClient.exchange(
-                HttpRequest.PATCH('/external-api/99', '{"name":"patched"}')
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .accept(MediaType.APPLICATION_JSON),
-                String
+        def response = httpPatch(
+                '/external-api/99',
+                '{"name":"patched"}',
+                'Content-Type': 'application/json',
+                'Accept': 'application/json'
         )
 
         then: 'the response contains the patched payload'
-        response.status.code == 200
-        response.body().contains('patched')
+        response.expectContains(200, 'patched')
 
         and: 'ersatz verifies the call'
         ersatz.verify()
@@ -533,14 +523,13 @@ class MicronautErsatzAdvancedSpec extends Specification implements HttpClientSup
         })
 
         when: 'calling the search endpoint'
-        def response = httpClient.exchange(
-                HttpRequest.GET('/external-api/search?q=test-query&page=3').accept(MediaType.APPLICATION_JSON),
-                String
+        def response = http(
+                '/external-api/search?q=test-query&page=3',
+                'Accept': 'application/json'
         )
 
         then: 'the response contains the mocked data'
-        response.status.code == 200
-        response.body().contains('test-query')
+        response.expectContains(200, 'test-query')
 
         and: 'ersatz verifies the call'
         ersatz.verify()

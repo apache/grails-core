@@ -18,14 +18,7 @@
  */
 package issue11767.app
 
-import com.fasterxml.jackson.databind.ObjectMapper
-import io.micronaut.http.HttpRequest
-import io.micronaut.http.HttpStatus
-import io.micronaut.http.MediaType
-import io.micronaut.http.client.exceptions.HttpClientResponseException
 import spock.lang.Specification
-
-import org.springframework.beans.factory.annotation.Autowired
 
 import grails.testing.mixin.integration.Integration
 import org.apache.grails.testing.httpclient.HttpClientSupport
@@ -33,21 +26,12 @@ import org.apache.grails.testing.httpclient.HttpClientSupport
 @Integration
 class GsonViewRespondSpec extends Specification implements HttpClientSupport {
 
-    @Autowired
-    ObjectMapper objectMapper
-
     void 'respond with Error gson view'() {
         when: 'The app controller is visited on errorView'
-        httpClient.retrieve(
-                HttpRequest.GET('/app/errorView?foo=Too+Short').accept(MediaType.APPLICATION_JSON),
-        )
+        def response = http('/app/errorView?foo=Too+Short', Accept: 'application/json')
 
         then:
-        def ex = thrown(HttpClientResponseException)
-        ex.status == HttpStatus.UNPROCESSABLE_ENTITY
-
-        and:
-        objectMapper.readTree(ex.response.body() as String) == objectMapper.readTree('''
+        response.expectJson(422, '''
             {
               "error": {
                 "errors": [
@@ -58,35 +42,33 @@ class GsonViewRespondSpec extends Specification implements HttpClientSupport {
                   }
                 ]
               }
-            }''')
+            }
+        ''')
     }
 
     void 'respond with gson view from action name'() {
         when: 'The app controller is visited on normalView'
-        def response = httpClient.retrieve(
-                HttpRequest.GET('/app/normalView?foo=Testing+normal+view').accept(MediaType.APPLICATION_JSON),
-        )
+        def response = http('/app/normalView?foo=Testing+normal+view', Accept: 'application/json')
 
         then:
-        objectMapper.readTree(response) == objectMapper.readTree('''{
+        response.expectJson('''{
               "normal": {
                 "foo": "Testing normal view"
               } 
-           }''')
+           }
+       ''')
     }
 
     void 'respond with gson view from type'() {
         when: 'The app controller is visited on typeView'
-        def response = httpClient.retrieve(
-                HttpRequest.GET('/app/typeView?foo=Testing+type+view').accept(MediaType.APPLICATION_JSON),
-        )
+        def response = http('/app/typeView?foo=Testing+type+view', Accept: 'application/json')
 
         then:
-        objectMapper.readTree(response) == objectMapper.readTree('''{
+        response.expectJson('''{
               "type": {
                 "foo": "Testing type view"
               } 
-           }''')
+           }
+       ''')
     }
-
 }

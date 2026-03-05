@@ -18,11 +18,6 @@
  */
 package functionaltests.urlmappings
 
-import groovy.json.JsonSlurper
-
-import io.micronaut.http.HttpRequest
-import io.micronaut.http.HttpStatus
-import io.micronaut.http.client.exceptions.HttpClientResponseException
 import spock.lang.Narrative
 import spock.lang.Specification
 
@@ -46,292 +41,225 @@ class UrlMappingsSpec extends Specification implements HttpClientSupport {
 
     def "static path mapping routes to correct action"() {
         when: "accessing static path"
-        def response = httpClient.exchange(
-            '/api/test',
-            String
-        )
+        def response = http('/api/test')
 
         then: "routes to index action"
-        response.status == HttpStatus.OK
-        def json = new JsonSlurper().parseText(response.body())
-        json.controller == 'urlMappingsTest'
-        json.action == 'index'
+        response.expectJsonContains(200, [
+                controller: 'urlMappingsTest',
+                action: 'index'
+        ])
     }
 
     // ========== Path Variable Mappings ==========
 
     def "single path variable is captured"() {
         when: "accessing path with variable"
-        def response = httpClient.exchange(
-            '/api/items/123',
-            String
-        )
+        def response = http('/api/items/123')
 
         then: "variable is captured"
-        response.status == HttpStatus.OK
-        def json = new JsonSlurper().parseText(response.body())
-        json.action == 'show'
-        json.id == '123'
+        response.expectJsonContains(200, [
+                action: 'show',
+                id: '123'
+
+        ])
     }
 
     def "path variable accepts alphanumeric values"() {
         when: "accessing path with alphanumeric id"
-        def response = httpClient.exchange(
-            '/api/items/abc-123',
-            String
-        )
+        def response = http('/api/items/abc-123')
 
         then: "variable is captured correctly"
-        response.status == HttpStatus.OK
-        def json = new JsonSlurper().parseText(response.body())
-        json.id == 'abc-123'
+        response.expectJsonContains(200, [id: 'abc-123'])
     }
 
     def "multiple path variables are captured"() {
         when: "accessing path with multiple variables"
-        def response = httpClient.exchange(
-            '/api/archive/2024/03/15',
-            String
-        )
+        def response = http('/api/archive/2024/03/15')
 
         then: "all variables are captured"
-        response.status == HttpStatus.OK
-        def json = new JsonSlurper().parseText(response.body())
-        json.action == 'pathVars'
-        json.year == '2024'
-        json.month == '03'
-        json.day == '15'
+        response.expectJsonContains(200, [
+                action: 'pathVars',
+                year: '2024',
+                month: '03',
+                day: '15'
+        ])
     }
 
     // ========== Named URL Mappings ==========
 
     def "named mapping routes correctly"() {
         when: "accessing named mapping"
-        def response = httpClient.exchange(
-            '/api/named/test-name',
-            String
-        )
+        def response = http('/api/named/test-name')
 
         then: "routes to correct action with variable"
-        response.status == HttpStatus.OK
-        def json = new JsonSlurper().parseText(response.body())
-        json.action == 'named'
-        json.name == 'test-name'
+        response.expectJsonContains(200, [
+                action: 'named',
+                name: 'test-name'
+        ])
     }
 
     // ========== Constrained Path Variables ==========
 
     def "constrained path accepts valid values"() {
         when: "accessing with valid constrained value"
-        def response = httpClient.exchange(
-            '/api/codes/ABC',
-            String
-        )
+        def response = http('/api/codes/ABC')
 
         then: "request succeeds"
-        response.status == HttpStatus.OK
-        def json = new JsonSlurper().parseText(response.body())
-        json.action == 'constrained'
-        json.code == 'ABC'
+        response.expectJsonContains(200, [
+                action: 'constrained',
+                code: 'ABC'
+        ])
     }
 
     def "constrained path rejects invalid values"() {
         when: "accessing with invalid constrained value (lowercase)"
-        httpClient.exchange(
-            '/api/codes/abc',
-            String
-        )
+        def response = http('/api/codes/abc')
 
         then: "request is rejected with 404"
-        def e = thrown(HttpClientResponseException)
-        e.status == HttpStatus.NOT_FOUND
+        response.expectStatus(404)
     }
 
     def "constrained path rejects numeric values"() {
         when: "accessing with numeric value"
-        httpClient.exchange(
-            '/api/codes/123',
-            String
-        )
+        def response = http('/api/codes/123')
 
         then: "request is rejected with 404"
-        def e = thrown(HttpClientResponseException)
-        e.status == HttpStatus.NOT_FOUND
+        response.expectStatus(404)
     }
 
     // ========== HTTP Method Mappings ==========
 
     def "GET request routes to list action"() {
         when: "making GET request to resources"
-        def response = httpClient.exchange(
-            '/api/resources',
-            String
-        )
+        def response = http('/api/resources')
 
         then: "routes to list action"
-        response.status == HttpStatus.OK
-        def json = new JsonSlurper().parseText(response.body())
-        json.action == 'list'
+        response.expectJsonContains(200, [action: 'list'])
     }
 
     def "POST request routes to save action"() {
         when: "making POST request to resources"
-        def response = httpClient.exchange(
-            HttpRequest.POST('/api/resources', '{}'),
-            String
-        )
+        def response = httpPost('/api/resources', '{}')
 
         then: "routes to save action"
-        response.status == HttpStatus.OK
-        def json = new JsonSlurper().parseText(response.body())
-        json.action == 'save'
-        json.method == 'POST'
+        response.expectJsonContains(200, [
+                action: 'save',
+                method: 'POST'
+        ])
     }
 
     def "PUT request routes to update action"() {
         when: "making PUT request to resources with id"
-        def response = httpClient.exchange(
-            HttpRequest.PUT('/api/resources/42', '{}'),
-            String
-        )
+        def response = httpPut('/api/resources/42', '{}')
 
         then: "routes to update action"
-        response.status == HttpStatus.OK
-        def json = new JsonSlurper().parseText(response.body())
-        json.action == 'update'
-        json.id == '42'
-        json.method == 'PUT'
+        response.expectJsonContains(200, [
+                action: 'update',
+                id: '42',
+                method: 'PUT'
+        ])
     }
 
     def "DELETE request routes to delete action"() {
         when: "making DELETE request to resources with id"
-        def response = httpClient.exchange(
-            HttpRequest.DELETE('/api/resources/42'),
-            String
-        )
+        def response = httpDelete('/api/resources/42')
 
         then: "routes to delete action"
-        response.status == HttpStatus.OK
-        def json = new JsonSlurper().parseText(response.body())
-        json.action == 'delete'
-        json.id == '42'
-        json.method == 'DELETE'
+        response.expectJsonContains(200, [
+                action: 'delete',
+                id: '42',
+                method: 'DELETE'
+        ])
     }
 
     // ========== Optional Path Variables ==========
 
     def "optional path variable with value"() {
         when: "accessing with optional variable provided"
-        def response = httpClient.exchange(
-            '/api/optional/required-value/optional-value',
-            String
-        )
+        def response = http('/api/optional/required-value/optional-value')
 
         then: "both values captured"
-        response.status == HttpStatus.OK
-        def json = new JsonSlurper().parseText(response.body())
-        json.required == 'required-value'
-        json.optional == 'optional-value'
+        response.expectJsonContains(200, [
+                required: 'required-value',
+                optional: 'optional-value'
+        ])
     }
 
     def "optional path variable without value uses default"() {
         when: "accessing without optional variable"
-        def response = httpClient.exchange(
-            '/api/optional/required-value',
-            String
-        )
+        def response = http('/api/optional/required-value')
 
         then: "required captured, optional uses default"
-        response.status == HttpStatus.OK
-        def json = new JsonSlurper().parseText(response.body())
-        json.required == 'required-value'
-        json.optional == 'default'
+        response.expectJsonContains(200, [
+                required: 'required-value',
+                optional: 'default'
+        ])
     }
 
     // ========== Redirect Mappings ==========
 
     def "redirect mapping performs redirect"() {
         when: "accessing redirect mapping"
-        def response = httpClient.exchange(
-            HttpRequest.GET('/api/old-endpoint').header('Accept', '*/*'),
-            String
-        )
+        def response = http('/api/old-endpoint', 'Accept': '*/*')
 
         then: "redirect is performed and final response received"
-        response.status == HttpStatus.OK
-        def json = new JsonSlurper().parseText(response.body())
-        json.action == 'index'
+        response.expectJsonContains(200, [action: 'index'])
     }
 
     // ========== Default Controller/Action Mapping ==========
 
     def "default mapping with controller and action"() {
         when: "using default mapping pattern"
-        def response = httpClient.exchange(
-            '/urlMappingsTest/show/99',
-            String
-        )
+        def response = http('/urlMappingsTest/show/99')
 
         then: "routes correctly"
-        response.status == HttpStatus.OK
-        def json = new JsonSlurper().parseText(response.body())
-        json.controller == 'urlMappingsTest'
-        json.action == 'show'
-        json.id == '99'
+        response.expectJson(200, [
+                controller: 'urlMappingsTest',
+                action: 'show',
+                id: '99'
+        ])
     }
 
     def "default mapping with format extension"() {
         when: "using default mapping with format"
-        def response = httpClient.exchange(
-            '/urlMappingsTest/list.json',
-            String
-        )
+        def response = http('/urlMappingsTest/list.json')
 
         then: "routes correctly with format"
-        response.status == HttpStatus.OK
-        def json = new JsonSlurper().parseText(response.body())
-        json.action == 'list'
+        response.expectJsonContains(200, [action: 'list'])
     }
 
     // ========== Query Parameter Handling ==========
 
     def "query parameters are accessible in action"() {
         when: "accessing with query parameters"
-        def response = httpClient.exchange(
-            '/api/test?param1=value1&param2=value2',
-            String
-        )
+        def response = http('/api/test?param1=value1&param2=value2')
 
         then: "query params are accessible"
-        response.status == HttpStatus.OK
-        def json = new JsonSlurper().parseText(response.body())
-        json.params.param1 == 'value1'
-        json.params.param2 == 'value2'
+        response.expectJsonContains(200, [
+                params: [
+                        param1: 'value1',
+                        param2: 'value2'
+                ]
+        ])
     }
 
     // ========== HTTP Method Detection ==========
 
     def "request method is correctly detected"() {
         when: "making request"
-        def response = httpClient.exchange(
-            '/api/method-test',
-            String
-        )
+        def response = http('/api/method-test')
 
         then: "method is correctly detected"
-        response.status == HttpStatus.OK
-        def json = new JsonSlurper().parseText(response.body())
-        json.method == 'GET'
+        response.expectJsonContains(200, [method: 'GET'])
     }
 
     // ========== 404 Not Found ==========
 
     def "non-existent path returns 404"() {
         when: "accessing non-existent path"
-        httpClient.retrieve('/api/does-not-exist')
+        def response = http('/api/does-not-exist')
 
         then: "returns 404"
-        def e = thrown(HttpClientResponseException)
-        e.status == HttpStatus.NOT_FOUND
+        response.expectStatus(404)
     }
 }

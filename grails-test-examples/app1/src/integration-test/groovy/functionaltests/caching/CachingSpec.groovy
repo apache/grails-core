@@ -18,10 +18,6 @@
  */
 package functionaltests.caching
 
-import groovy.json.JsonSlurper
-
-import io.micronaut.http.HttpRequest
-import io.micronaut.http.HttpStatus
 import spock.lang.Narrative
 import spock.lang.Specification
 
@@ -268,73 +264,61 @@ class CachingSpec extends Specification implements HttpClientSupport {
     // ========== HTTP Endpoint Tests ==========
 
     def "basic cache works via HTTP"() {
-        // Evict cache to start fresh
-        httpClient.retrieve('/cacheTest/evictBasic')
+        setup: "Evict cache to start fresh"
+        http('/cacheTest/evictBasic')
 
         when: "calling endpoint twice"
-        def response1 = httpClient.exchange(
-            '/cacheTest/basicData',
-            String
-        )
-        def response2 = httpClient.exchange(
-            '/cacheTest/basicData',
-            String
-        )
+        def response1 = http('/cacheTest/basicData')
+        def response2 = http('/cacheTest/basicData')
 
         then: "same data returned (caching works)"
-        response1.status == HttpStatus.OK
-        response2.status == HttpStatus.OK
-        
-        def json1 = new JsonSlurper().parseText(response1.body())
-        def json2 = new JsonSlurper().parseText(response2.body())
-        
-        json1.data == json2.data
+        response1.expectStatus(200)
+        response2.expectStatus(200)
+        response1.json().data == response2.json().data
     }
 
     def "parameter cache works via HTTP"() {
-        // Evict cache
-        httpClient.retrieve('/cacheTest/evictAllParam')
+        setup: "Evict cache"
+        http('/cacheTest/evictAllParam')
 
         when: "calling with same ID twice"
-        def response1 = httpClient.retrieve('/cacheTest/dataById?id=42')
-        def response2 = httpClient.retrieve('/cacheTest/dataById?id=42')
+        def response1 = http('/cacheTest/dataById?id=42')
+        def response2 = http('/cacheTest/dataById?id=42')
 
         then: "cached result returned"
-        def json1 = new JsonSlurper().parseText(response1)
-        def json2 = new JsonSlurper().parseText(response2)
-        
-        json1.data == json2.data
+        response1.json().data == response2.json().data
     }
 
     def "eviction works via HTTP"() {
-        // Evict cache and populate it
-        httpClient.retrieve('/cacheTest/evictBasic')
-        def firstCall = httpClient.retrieve('/cacheTest/basicData')
-        def firstData = new JsonSlurper().parseText(firstCall).data
+        setup: "Evict cache and populate it"
+        http('/cacheTest/evictBasic')
 
-        when: "evicting via HTTP then calling again after delay"
-        httpClient.retrieve('/cacheTest/evictBasic')
+        when:
+        def firstCall = http('/cacheTest/basicData')
+        def firstData = firstCall.json().data
+
+        and: "evicting via HTTP then calling again after delay"
+        http('/cacheTest/evictBasic')
         Thread.sleep(10) // Ensure timestamp changes
-        def afterEvict = httpClient.retrieve('/cacheTest/basicData')
+        def afterEvict = http('/cacheTest/basicData')
 
         then: "new data generated after eviction"
-        def afterEvictData = new JsonSlurper().parseText(afterEvict).data
-        firstData != afterEvictData
+        firstData != afterEvict.json().data
     }
 
     def "different IDs return different cached values via HTTP"() {
-        given:
-        httpClient.retrieve('/cacheTest/evictAllParam')
+        setup:
+        http('/cacheTest/evictAllParam')
 
         when: "fetching different IDs"
-        def response1 = httpClient.retrieve('/cacheTest/dataById?id=100')
-        def response2 = httpClient.retrieve('/cacheTest/dataById?id=200')
-        def response3 = httpClient.retrieve('/cacheTest/dataById?id=100')
+        def response1 = http('/cacheTest/dataById?id=100')
+        def response2 = http('/cacheTest/dataById?id=200')
+        def response3 = http('/cacheTest/dataById?id=100')
 
         then: "different IDs have different data, same ID returns same data"
-        def json1 = new JsonSlurper().parseText(response1)
-        def json2 = new JsonSlurper().parseText(response2)
-        def json3 = new JsonSlurper().parseText(response3)
+        def json1 = response1.json()
+        def json2 = response2.json()
+        def json3 = response3.json()
         
         json1.data != json2.data
         json1.data == json3.data
@@ -342,12 +326,12 @@ class CachingSpec extends Specification implements HttpClientSupport {
 
     def "complex data endpoint works with caching"() {
         when: "fetching complex data"
-        def response1 = httpClient.retrieve('/cacheTest/complexData?category=electronics&page=3')
-        def response2 = httpClient.retrieve('/cacheTest/complexData?category=electronics&page=3')
+        def response1 = http('/cacheTest/complexData?category=electronics&page=3')
+        def response2 = http('/cacheTest/complexData?category=electronics&page=3')
 
         then: "data is cached"
-        def json1 = new JsonSlurper().parseText(response1)
-        def json2 = new JsonSlurper().parseText(response2)
+        def json1 = response1.json()
+        def json2 = response2.json()
         
         json1.data == json2.data
         json1.data.category == 'electronics'
@@ -355,17 +339,17 @@ class CachingSpec extends Specification implements HttpClientSupport {
     }
 
     def "CachePut works via HTTP with key closure"() {
-        // Evict keyed cache and get initial value
-        httpClient.retrieve('/cacheTest/evictAllKeyed')
-        def initial = new JsonSlurper().parseText(
-            httpClient.retrieve('/cacheTest/byKey?key=httpkey')
-        ).data
+        setup: "Evict keyed cache and get initial value"
+        http('/cacheTest/evictAllKeyed')
 
-        when: "updating via HTTP"
-        httpClient.retrieve('/cacheTest/updateByKey?key=httpkey&value=HTTPUpdated')
-        def afterUpdate = new JsonSlurper().parseText(
-            httpClient.retrieve('/cacheTest/byKey?key=httpkey')
-        ).data
+        when:
+        def initial = http('/cacheTest/byKey?key=httpkey').json().data
+
+        and: "updating via HTTP"
+        http('/cacheTest/updateByKey?key=httpkey&value=HTTPUpdated')
+
+        and: "loading the data again"
+        def afterUpdate = http('/cacheTest/byKey?key=httpkey').json().data
 
         then: "cache contains updated value"
         afterUpdate == 'HTTPUpdated'

@@ -18,28 +18,26 @@
  */
 package functional.tests
 
-import io.micronaut.http.HttpStatus
 import spock.lang.Specification
 
 import grails.testing.mixin.integration.Integration
-import grails.web.http.HttpHeaders
 import org.apache.grails.testing.httpclient.HttpClientSupport
 
 @Integration
 class InheritanceSpec extends Specification implements HttpClientSupport {
 
-
     void "Test template is found for proxy instance that is initialized"() {
         when:
-        def resp = httpClient.exchange('/inheritance/multiNested', String)
-
+        def response = http('/inheritance/multiNested')
 
         then: "The response is correct"
-        resp.status == HttpStatus.OK
-        resp.headers.getFirst(HttpHeaders.CONTENT_TYPE).isPresent()
-        resp.headers.getFirst(HttpHeaders.CONTENT_TYPE).get() == 'application/json;charset=UTF-8'
-
         // Note current behaviour is that the captain is not rendered twice
-        resp.body() == '{"levelTwo":true,"levelOne":true,"entry":true}'
+        response.expectJson(200, 'Content-Type': 'application/json;charset=UTF-8', '''
+            {
+                "levelTwo": true,
+                "levelOne": true,
+                "entry": true
+            }
+        ''')
     }
 }

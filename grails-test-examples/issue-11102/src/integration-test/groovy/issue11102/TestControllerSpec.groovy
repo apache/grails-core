@@ -18,7 +18,6 @@
  */
 package issue11102
 
-import io.micronaut.http.HttpStatus
 import spock.lang.Specification
 
 import grails.testing.mixin.integration.Integration
@@ -29,17 +28,15 @@ class TestControllerSpec extends Specification implements HttpClientSupport {
 
     void 'can forward a request from a GET to another GET action'() {
         when: 'getting the get1 action'
-        def response = httpClient.exchange('/get1', String)
+        def response = http('/get1')
 
         then: 'it is executed correctly'
-        response.status == HttpStatus.OK
-        response.body() == 'GET1'
+        response.expect(200, 'GET1')
 
         when: 'executing an action with a forward to the other one'
-        def response2 = httpClient.exchange('/get2', String)
+        def response2 = http('/get2')
 
         then: 'the request is forwarded'
-        response2.status == HttpStatus.OK
-        response.body() == 'GET1'
+        response2.expect(200, 'GET1')
     }
 }

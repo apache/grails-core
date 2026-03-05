@@ -18,7 +18,6 @@
  */
 package functionaltests
 
-import io.micronaut.http.HttpStatus
 import spock.lang.Specification
 
 import grails.testing.mixin.integration.Integration
@@ -29,10 +28,9 @@ class AtResourceSpec extends Specification implements HttpClientSupport {
 
     def "A domain class annotated with @Resources exposes an endpoint"() {
         when:
-        def rsp = httpClient.exchange('/stuffs', String)
+        def response = http('/stuffs')
 
         then:
-        noExceptionThrown()
-        rsp.status() == HttpStatus.OK
+        response.expectStatus(200)
     }
 }

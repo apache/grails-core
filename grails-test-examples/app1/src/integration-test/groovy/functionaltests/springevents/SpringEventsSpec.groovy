@@ -18,9 +18,6 @@
  */
 package functionaltests.springevents
 
-import groovy.json.JsonSlurper
-
-import io.micronaut.http.HttpStatus
 import spock.lang.Narrative
 import spock.lang.Specification
 
@@ -151,85 +148,66 @@ class SpringEventsSpec extends Specification implements HttpClientSupport {
 
     def "event can be published via HTTP endpoint"() {
         when: "calling publish endpoint"
-        def response = httpClient.exchange(
-            '/springEvent/publishCustom?message=HTTP+Event',
-            String
-        )
+        def response = http('/springEvent/publishCustom?message=HTTP+Event')
 
         then: "event is published successfully"
-        response.status == HttpStatus.OK
-        def json = new JsonSlurper().parseText(response.body())
-        json.published == true
-        json.message == 'HTTP Event'
+        response.expectJsonContains(200, [
+                published: true,
+                message: 'HTTP Event'
+        ])
     }
 
     def "user action event can be published via HTTP"() {
         when: "calling user action publish endpoint"
-        def response = httpClient.exchange(
-            '/springEvent/publishUserAction?userId=web-user&userAction=CLICK',
-            String
-        )
+        def response = http('/springEvent/publishUserAction?userId=web-user&userAction=CLICK')
 
         then: "event is published"
-        response.status == HttpStatus.OK
-        def json = new JsonSlurper().parseText(response.body())
-        json.published == true
-        json.userId == 'web-user'
-        json.userAction == 'CLICK'
+        response.expectJson(200, [
+                published: true,
+                userId: 'web-user',
+                userAction: 'CLICK'
+        ])
     }
 
     def "priority event ordering works via HTTP"() {
         when: "calling priority publish endpoint"
-        def response = httpClient.exchange(
-            '/springEvent/publishPriority?data=http-test',
-            String
-        )
+        def response = http('/springEvent/publishPriority?data=http-test')
 
         then: "ordered results are returned"
-        response.status == HttpStatus.OK
-        def json = new JsonSlurper().parseText(response.body())
-        json.orderedResults.size() == 3
-        json.orderedResults[0] == 'first-http-test'
+        response.expectStatus(200)
+        with(response.json()) {
+            orderedResults.size() == 3
+            orderedResults[0] == 'first-http-test'
+        }
     }
 
     def "multiple events can be published via HTTP"() {
         when: "calling multiple publish endpoint"
-        def response = httpClient.exchange(
-            '/springEvent/publishMultiple?count=3',
-            String
-        )
+        def response = http('/springEvent/publishMultiple?count=3')
 
         then: "all events are received"
-        response.status == HttpStatus.OK
-        def json = new JsonSlurper().parseText(response.body())
-        json.count == 3
-        json.receivedCount == 3
+        response.expectJsonContains(200, [
+                count: 3,
+                receivedCount: 3
+        ])
     }
 
     def "conditional event works via HTTP for matching message"() {
         when: "publishing important message"
-        def response = httpClient.exchange(
-            '/springEvent/publishConditional?important=true',
-            String
-        )
+        def response = http('/springEvent/publishConditional?important=true')
 
         then: "conditional handler triggers"
-        response.status == HttpStatus.OK
-        def json = new JsonSlurper().parseText(response.body())
-        json.conditionalResults.any { it.startsWith('CONDITIONAL:') }
+        response.expectStatus(200)
+        response.json().conditionalResults.any { it.startsWith('CONDITIONAL:') }
     }
 
     def "conditional event skipped via HTTP for non-matching message"() {
         when: "publishing normal message"
-        def response = httpClient.exchange(
-            '/springEvent/publishConditional?important=false',
-            String
-        )
+        def response = http('/springEvent/publishConditional?important=false')
 
         then: "conditional handler does not trigger"
-        response.status == HttpStatus.OK
-        def json = new JsonSlurper().parseText(response.body())
-        !json.conditionalResults.any { it.toString().startsWith('CONDITIONAL:') }
+        response.expectStatus(200)
+        !response.json().conditionalResults.any { it.toString().startsWith('CONDITIONAL:') }
     }
 
     // ========== Event Stats ==========
@@ -241,17 +219,16 @@ class SpringEventsSpec extends Specification implements HttpClientSupport {
         eventPublisherService.publishUserAction('user', 'action')
 
         when: "getting stats"
-        def response = httpClient.exchange(
-            '/springEvent/stats',
-            String
+        def response = http(
+            '/springEvent/stats'
         )
 
         then: "stats are returned"
-        response.status == HttpStatus.OK
-        def json = new JsonSlurper().parseText(response.body())
-        json.totalEvents == 3
-        json.customEvents == 2
-        json.userActionEvents == 1
+        response.expectJson(200, [
+                totalEvents: 3,
+                customEvents: 2,
+                userActionEvents: 1
+        ])
     }
 
     // ========== Clear Events ==========
@@ -261,13 +238,12 @@ class SpringEventsSpec extends Specification implements HttpClientSupport {
         eventPublisherService.publishCustomEvent('To be cleared')
 
         when: "clearing events"
-        def response = httpClient.exchange(
-            '/springEvent/clearEvents',
-            String
+        def response = http(
+            '/springEvent/clearEvents'
         )
 
         then: "events are cleared"
-        response.status == HttpStatus.OK
+        response.expectStatus(200)
         eventListenerService.eventCount == 0
     }
 
@@ -275,16 +251,13 @@ class SpringEventsSpec extends Specification implements HttpClientSupport {
 
     def "event can be published in transactional context"() {
         when: "publishing transactional event"
-        def response = httpClient.exchange(
-            '/springEvent/publishTransactional?message=tx-test',
-            String
-        )
+        def response = http('/springEvent/publishTransactional?message=tx-test')
 
         then: "event is published"
-        response.status == HttpStatus.OK
-        def json = new JsonSlurper().parseText(response.body())
-        json.published == true
-        
+        response.expectJsonContains(200, [
+                published: true
+        ])
+
         and: "event is received"
         eventListenerService.customEvents.any { it.message.contains('tx-test') }
     }

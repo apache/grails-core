@@ -94,3 +94,14 @@ The `g:form` tag now automatically provides csrf protection when Spring Security
 A Grails banner was introduced in Grails 7 that is displayed on application startup.
 From Grails 7.1 onwards, this banner now shows versions of foundational dependencies
 and can be xref:conf.adoc#customizing-the-banner[customized].
+
+==== Grails HTTP Client Testing Support (Grails 7.1+)
+
+Grails 7.1 introduces a new `grails-testing-support-httpclient` module that simplifies HTTP-based
+integration and functional tests.
+
+The module provides `HttpClientSupport` for JDK `HttpClient` request helpers (GET/POST/PUT/PATCH/DELETE),
+request and client builders, and fluent response assertions.
+
+See the xref:testing.adoc#httpClientTestingSupport[HTTP Client Testing Support] section in the Testing chapter
+for setup and examples.

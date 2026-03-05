@@ -286,6 +286,124 @@ Example usage:
 ----
 
 
+[[httpClientTestingSupport]]
+==== HTTP Client Testing Support
+
+For integration and functional tests that call live HTTP endpoints, Grails provides the
+`grails-testing-support-httpclient` module.
+
+Add the dependency to your integration test configuration:
+
+[source,groovy]
+----
+dependencies {
+    integrationTestImplementation 'org.apache.grails:grails-testing-support-httpclient'
+}
+----
+
+You can then implement `HttpClientSupport` in your Spock specification and use helper methods for
+request building and response assertions:
+
+[source,groovy]
+----
+import java.net.http.HttpTimeoutException
+
+import spock.lang.Specification
+
+import grails.testing.mixin.integration.Integration
+import org.apache.grails.testing.httpclient.HttpClientSupport
+
+@Integration
+class DemoSpec extends Specification implements HttpClientSupport {
+
+    void 'simple GET with status and body assertions'() {
+        when: 'invoking a GET request to the /health endpoint'
+        def response = http('/health')
+
+        then: 'verifies status, headers and body contents via fluent API'
+        response.expectStatus(200)
+                .expectHeaders('Content-Type': 'application/json')
+                .expectContains('UP')
+
+
+        and: 'can also verify all these under the hood in one go'
+        response.expectContains(200, 'Content-Type': 'application/json', 'UP')
+    }
+
+    void 'GET with headers and header assertions'() {
+        when:
+        def response = http('/api/info', 'Accept': 'application/json')
+
+        then:
+        response.expectHeadersIgnoreCase(200, 'content-type': 'application/json;charset=UTF-8')
+    }
+
+    void 'Posting and verifying JSON'() {
+        when: 'you post a map it is turned into a JSON payload'
+        def response = httpPost('/api/books', [title: 'Grails in Action', pages: 500])
+
+        then: 'you can also verify response bodies with maps'
+        response.expectJson(201, [id: 1, title: 'Grails in Action', pages: 500])
+
+        and: 'you can also verify against a JSON string'
+        response.expectJson('''
+            {
+                "id": 1,
+                "title": "Grails in Action",
+                "pages": 500
+            }
+        ''')
+
+        and: 'the canonicalized JSON tree structure is compared, not strings'
+        response.expectJson('{ "pages": 500, "id": 1, "title": "Grails in Action" }')
+
+        and: 'if you want to compare strings, use expectContains/expectNotContains'
+        response.expectNotContains('{ "id": 1, "title": "Grails in Action", "pages": 500 }')
+
+        and: 'you can also use expectJsonContains to verify sub trees in the response json'
+        response.expectJsonContains([title: 'Grails in Action'])
+    }
+
+    void 'custom request and custom client configuration'() {
+        when: 'you need a custom configured client'
+        def noRedirectClient = httpClientWith {
+            followRedirects(HttpClient.Redirect.NEVER)
+        }
+
+        and: 'or a custom configured request'
+        def request = httpRequestWith('/api/slow') {
+            timeout(Duration.ofSeconds(1))
+        }
+
+        when:
+        http(request, noRedirectClient)
+
+        then:
+        thrown(HttpTimeoutException)
+    }
+
+    void 'multipart upload'() {
+        given:
+        def multipart = MultipartBody.builder()
+                .addPart('description', 'test file')
+                .addPart('file', 'hello.txt', 'hello world'.bytes, 'text/plain')
+                .build()
+
+        when:
+        def response = httpPost('/api/upload', multipart)
+
+        then:
+        response.expectStatus(200)
+    }
+}
+----
+
+`HttpClientSupport` uses the JDK `HttpClient` and applies default request and connect timeouts of 60 seconds and
+a redirect policy of always follow redirects. You can use helpers `httpRequestWith(Closure configurer)` and
+`httpClientWith(Closure configurer)` to customize your own client and requests starting from the defaults.
+
+Additional request helper methods available include `httpPut()`, `httpPatch()`, `httpDelete()`, `httpOptions()`, and many assertion methods on responses.
+
 ==== Autowiring
 
 

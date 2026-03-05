@@ -18,8 +18,6 @@
  */
 package pubsub.demo
 
-import io.micronaut.http.HttpStatus
-import io.micronaut.http.client.exceptions.HttpClientResponseException
 import spock.lang.Specification
 
 import grails.testing.mixin.integration.Integration
@@ -30,11 +28,9 @@ class TaskControllerSpec extends Specification implements HttpClientSupport {
 
     void 'test async error handling'() {
         when: 'we invoke an endpoint that throws an exception'
-        httpClient.retrieve('/task/error')
+        def response = http('/task/error')
 
         then: 'the response is as expected'
-        def e = thrown(HttpClientResponseException)
-        e.response.status == HttpStatus.INTERNAL_SERVER_ERROR
-        e.response.body() == 'error occurred'
+        response.expect(500, 'error occurred')
     }
 }

@@ -18,11 +18,7 @@
  */
 package functional.tests
 
-import com.fasterxml.jackson.databind.ObjectMapper
-import io.micronaut.http.HttpRequest
 import spock.lang.Specification
-
-import org.springframework.beans.factory.annotation.Autowired
 
 import grails.testing.mixin.integration.Integration
 import org.apache.grails.testing.httpclient.HttpClientSupport
@@ -30,32 +26,29 @@ import org.apache.grails.testing.httpclient.HttpClientSupport
 @Integration
 class TestGsonControllerSpec extends Specification implements HttpClientSupport {
 
-    @Autowired
-    ObjectMapper objectMapper
-    
     void 'Test that responding with a map is possible'() {
         when: 'When JSON is requested'
-        def resp = httpClient.retrieve('/testGson/testRespondWithMap')
+        def response = http('/testGson/testRespondWithMap')
 
         then: 'The JSON view is rendered'
-        resp == '{"message":"two"}'
+        response.expect('{"message":"two"}')
     }
 
     void 'Test that responding with a map is possible with object template'() {
         when: 'When JSON is requested'
-        def resp = httpClient.retrieve('/testGson/testRespondWithMapObjectTemplate.json')
+        def response = http('/testGson/testRespondWithMapObjectTemplate.json')
 
         then: 'The JSON view is rendered'
-        resp == '{"one":"two"}'
+        response.expect('{"one":"two"}')
 
     }
     
     void 'Test that it is possible to use the template engine directly'() {
         when: 'When JSON is requested'
-        def resp = httpClient.retrieve('/testGson/testTemplateEngine')
+        def response = http('/testGson/testTemplateEngine')
 
         then: 'The JSON view is rendered'
-        objectMapper.readTree(resp) == objectMapper.readTree('''
+        response.expectJson('''
             {
                 "title": "The Stand",
                 "timeZone": "America/New_York",
@@ -66,24 +59,24 @@ class TestGsonControllerSpec extends Specification implements HttpClientSupport 
 
     void 'Test the respond method returns a GSON view for JSON request'() {
         when: 'When JSON is requested'
-        def resp = httpClient.retrieve('/testGson/testRespond.json')
+        def response = http('/testGson/testRespond.json')
 
         then: 'The JSON view is rendered'
-        resp == '{"test":{"name":"Bob"}}'
+        response.expect('{"test":{"name":"Bob"}}')
 
         when: 'When HTML is requested'
-        resp = httpClient.retrieve('/testGson/testRespond.html')
+        response = http('/testGson/testRespond.html')
 
         then: 'The GSP is rendered'
-        resp.contains('<h1>Test Bob HTML</h1>')
+        response.expectContains('<h1>Test Bob HTML</h1>')
     }
 
     void 'Test the respond method returns a GSON named after the domain view for JSON request'() {
         when: 'When JSON is requested'
-        def resp = httpClient.retrieve('/testGson/testRespondWithTemplateForDomain.json')
+        def response = http('/testGson/testRespondWithTemplateForDomain.json')
 
         then: 'The JSON view is rendered'
-        objectMapper.readTree(resp) == objectMapper.readTree('''
+        response.expectJson('''
             {
                 "test": {
                     "name": "Bob",
@@ -95,10 +88,10 @@ class TestGsonControllerSpec extends Specification implements HttpClientSupport 
 
     void 'Test template rendering works'() {
         when: 'A view that renders templates is rendered'
-        def resp = httpClient.retrieve('/testGson/testTemplate.json')
+        def response = http('/testGson/testTemplate.json')
 
         then: 'The result is correct'
-        objectMapper.readTree(resp) == objectMapper.readTree('''
+        response.expectJson('''
             {
                 "test": {
                     "name": "Bob",
@@ -123,18 +116,18 @@ class TestGsonControllerSpec extends Specification implements HttpClientSupport 
 
     void 'Test views from plugins are rendered'() {
         when: 'A view that renders templates is rendered'
-        def resp = httpClient.retrieve('/testGson/testGsonFromPlugin')
+        def response = http('/testGson/testGsonFromPlugin')
 
         then: 'The result is correct'
-        resp == '{"message":"Hello from Plugin"}'
+        response.expect('{"message":"Hello from Plugin"}')
     }
 
     void 'Test view that inherits from plugins are rendered'() {
         when:
-        def resp = httpClient.retrieve('/testGson/testInheritsFromPlugin')
+        def response = http('/testGson/testInheritsFromPlugin')
 
         then:
-        objectMapper.readTree(resp) == objectMapper.readTree('''
+        response.expectJson('''
             {
                 "message": "Hello from Plugin Template",
                 "foo": "bar"
@@ -144,10 +137,10 @@ class TestGsonControllerSpec extends Specification implements HttpClientSupport 
 
     void 'Test augmenting model'() {
         when: 'When JSON is requested'
-        def resp = httpClient.retrieve('/testGson/testAugmentModel.json')
+        def response = http('/testGson/testAugmentModel.json')
 
         then: 'The JSON view is rendered'
-        objectMapper.readTree(resp) == objectMapper.readTree('''
+        response.expectJson('''
             {
                 "test": {
                     "name": "John",
@@ -157,9 +150,9 @@ class TestGsonControllerSpec extends Specification implements HttpClientSupport 
         ''')
 
         when: 'When HTML is requested'
-        resp = httpClient.retrieve('/testGson/testAugmentModel.html')
+        response = http('/testGson/testAugmentModel.html')
 
         then: 'The GSP is rendered'
-        resp.contains('<h1>Test John (20) HTML</h1>')
+        response.expectContains('<h1>Test John (20) HTML</h1>')
     }
 }

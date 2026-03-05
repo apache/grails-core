@@ -18,9 +18,6 @@
  */
 package functionaltests
 
-import groovy.json.JsonSlurper
-
-import io.micronaut.http.HttpStatus
 import spock.lang.Specification
 
 import grails.testing.mixin.integration.Integration
@@ -31,17 +28,16 @@ class BookRestfulControllerSpec extends Specification implements HttpClientSuppo
 
     def "A RestfulController exposes an index endpoint for a domain class"() {
         when:
-        def rsp = httpClient.exchange('/bookRestful', String)
+        def response = http('/bookRestful')
 
         then:
-        noExceptionThrown()
-        rsp.status() == HttpStatus.OK
+        response.expectStatus(200)
 
         and: 'the book persisted in BootStrap is retrieved'
-        def json = new JsonSlurper().parseText(rsp.body()) as List<Map<String, Object>>
-        json[0]['id'] != null
-        json[0]['title'] == 'Example Book'
-        json[0]['lastUpdated'] != null
-        json[0]['dateCreated'] != null
+        def list = response.jsonList()
+        list[0]['id'] != null
+        list[0]['title'] == 'Example Book'
+        list[0]['lastUpdated'] != null
+        list[0]['dateCreated'] != null
     }
 }

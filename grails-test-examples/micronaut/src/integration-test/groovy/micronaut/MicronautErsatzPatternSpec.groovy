@@ -22,8 +22,6 @@ import io.github.cjstehno.ersatz.ErsatzServer
 import io.github.cjstehno.ersatz.cfg.ContentType
 import io.github.cjstehno.ersatz.cfg.ServerConfig
 import io.micronaut.context.ApplicationContext as MicronautApplicationContext
-import io.micronaut.http.HttpRequest
-import io.micronaut.http.MediaType
 import micronaut.client.MicronautFilteredClient
 import micronaut.client.MicronautPathClient
 import micronaut.client.MicronautReactiveClient
@@ -391,14 +389,13 @@ class MicronautErsatzPatternSpec extends Specification implements HttpClientSupp
         })
 
         when: 'calling the Grails async controller endpoint'
-        def response = httpClient.exchange(
-                HttpRequest.GET('/external-api/async').accept(MediaType.APPLICATION_JSON),
-                String
+        def response = http(
+                '/external-api/async',
+                'Accept': 'application/json'
         )
 
         then: 'the response contains the ersatz-mocked async data'
-        response.status.code == 200
-        response.body().contains('roundtrip-data')
+        response.expectContains(200, 'roundtrip-data')
 
         and: 'ersatz verifies the call'
         ersatz.verify()
@@ -417,14 +414,10 @@ class MicronautErsatzPatternSpec extends Specification implements HttpClientSupp
         })
 
         when: 'calling the Grails path controller endpoint'
-        def response = httpClient.exchange(
-                HttpRequest.GET('/external-api/path/88').accept(MediaType.APPLICATION_JSON),
-                String
-        )
+        def response = http('/external-api/path/88', 'Accept': 'application/json')
 
         then: 'the response contains the ersatz-mocked path data'
-        response.status.code == 200
-        response.body().contains('path-roundtrip')
+        response.expectContains(200, 'path-roundtrip')
 
         and: 'ersatz verifies the call'
         ersatz.verify()
@@ -444,14 +437,10 @@ class MicronautErsatzPatternSpec extends Specification implements HttpClientSupp
         })
 
         when: 'calling the Grails filtered controller endpoint'
-        def response = httpClient.exchange(
-                HttpRequest.GET('/external-api/filtered').accept(MediaType.APPLICATION_JSON),
-                String
-        )
+        def response = http('/external-api/filtered', 'Accept': 'application/json')
 
         then: 'the response contains the filtered data'
-        response.status.code == 200
-        response.body().contains('roundtrip-data')
+        response.expectContains(200, 'roundtrip-data')
 
         and: 'ersatz verifies the header was auto-injected'
         ersatz.verify()
