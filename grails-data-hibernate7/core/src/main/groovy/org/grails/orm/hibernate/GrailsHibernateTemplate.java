@@ -18,6 +18,11 @@
  */
 package org.grails.orm.hibernate;
 
+import groovy.lang.Closure;
+import jakarta.persistence.LockModeType;
+import jakarta.persistence.PersistenceException;
+import jakarta.persistence.criteria.CriteriaBuilder;
+import jakarta.persistence.criteria.CriteriaQuery;
 import java.io.Serializable;
 import java.lang.reflect.Proxy;
 import java.sql.Connection;
@@ -83,8 +88,37 @@ public class GrailsHibernateTemplate implements IHibernateTemplate {
     protected int flushMode = FLUSH_AUTO;
     private boolean applyFlushModeOnlyToNonExistingTransactions = false;
 
-    public interface HibernateCallback<T> {
-        T doInHibernate(Session session) throws HibernateException, SQLException;
+  public interface HibernateCallback<T> {
+    T doInHibernate(Session session) throws HibernateException, SQLException;
+  }
+
+  protected GrailsHibernateTemplate() {
+    // for testing
+  }
+
+  public GrailsHibernateTemplate(SessionFactory sessionFactory) {
+    Assert.notNull(sessionFactory, "Property 'sessionFactory' is required");
+    this.sessionFactory = sessionFactory;
+
+    ConnectionProvider connectionProvider =
+        ((SessionFactoryImplementor) sessionFactory)
+            .getServiceRegistry()
+            .getService(ConnectionProvider.class);
+    this.dataSource = connectionProvider != null ? connectionProvider.unwrap(DataSource.class) : null;
+    if (this.dataSource != null) {
+      if (this.dataSource instanceof TransactionAwareDataSourceProxy) {
+        DataSource target = ((TransactionAwareDataSourceProxy) this.dataSource).getTargetDataSource();
+        if (target != null) {
+          this.dataSource = target;
+        }
+      }
+      jdbcExceptionTranslator = new SQLErrorCodeSQLExceptionTranslator(this.dataSource);
+    } else {
+      // must be in unit test mode, setup default translator
+      SQLErrorCodeSQLExceptionTranslator sqlErrorCodeSQLExceptionTranslator =
+          new SQLErrorCodeSQLExceptionTranslator();
+      sqlErrorCodeSQLExceptionTranslator.setDatabaseProductName("H2");
+      jdbcExceptionTranslator = sqlErrorCodeSQLExceptionTranslator;
     }
 
   public GrailsHibernateTemplate(SessionFactory sessionFactory, HibernateDatastore datastore) {
@@ -108,12 +142,12 @@ public class GrailsHibernateTemplate implements IHibernateTemplate {
 
   /** Maps a Hibernate {@link FlushMode} to one of the {@code FLUSH_*} constants of this class. */
   static int hibernateFlushModeToConstant(FlushMode mode) {
-    switch (mode) {
-      case MANUAL: return FLUSH_NEVER;
-      case COMMIT: return FLUSH_COMMIT;
-      case ALWAYS: return FLUSH_ALWAYS;
-      default: return FLUSH_AUTO;
-    }
+      return switch (mode) {
+          case MANUAL -> FLUSH_NEVER;
+          case COMMIT -> FLUSH_COMMIT;
+          case ALWAYS -> FLUSH_ALWAYS;
+          default -> FLUSH_AUTO;
+      };
   }
 
   @Override
@@ -144,13 +178,24 @@ public class GrailsHibernateTemplate implements IHibernateTemplate {
         }
     }
 
-    public GrailsHibernateTemplate(SessionFactory sessionFactory, HibernateDatastore datastore) {
-        this(sessionFactory);
-        if (datastore != null) {
-            cacheQueries = datastore.isCacheQueries();
-            this.osivReadOnly = datastore.isOsivReadOnly();
-            this.passReadOnlyToHibernate = datastore.isPassReadOnlyToHibernate();
-            this.flushMode = hibernateFlushModeToConstant(datastore.getDefaultFlushMode());
+      // create and bind a new session holder for the new session
+      newSession = sessionFactory.openSession();
+      applyFlushMode(newSession, false);
+      sessionHolder = new SessionHolder(newSession);
+      TransactionSynchronizationManager.bindResource(sessionFactory, sessionHolder);
+
+      return callable.call(newSession);
+    } finally {
+      try {
+        // if an active synchronization was registered during the life time of the new session clear
+        // it
+        if (TransactionSynchronizationManager.isSynchronizationActive()) {
+          TransactionSynchronizationManager.clearSynchronization();
+        }
+        // If there is a synchronization active then leave it to the synchronization to close the
+        // session
+        if (newSession != null) {
+          SessionFactoryUtils.closeSession(newSession);
         }
     }
 
@@ -294,8 +339,14 @@ public class GrailsHibernateTemplate implements IHibernateTemplate {
         this.cacheQueries = cacheQueries;
     }
 
-    public boolean isCacheQueries() {
-        return cacheQueries;
+  public SessionFactory getSessionFactory() {
+    return sessionFactory;
+  }
+
+  @Override
+  public void applySettings(org.hibernate.query.Query<?> query) {
+    if (exposeNativeSession) {
+      prepareQuery(query);
     }
 
     public <T> T execute(HibernateCallback<T> action) throws DataAccessException {
@@ -328,370 +379,292 @@ public class GrailsHibernateTemplate implements IHibernateTemplate {
         return osivReadOnly;
     }
 
-    public void setOsivReadOnly(boolean osivReadOnly) {
-        this.osivReadOnly = osivReadOnly;
-    }
-
-    /**
-     * Execute the action specified by the given action object within a Session.
-     *
-     * @param action callback object that specifies the Hibernate action
-     * @param enforceNativeSession whether to enforce exposure of the native Hibernate Session to
-     *     callback code
-     * @return a result object returned by the action, or <code>null</code>
-     * @throws org.springframework.dao.DataAccessException in case of Hibernate errors
-     */
-    protected <T> T doExecute(HibernateCallback<T> action, boolean enforceNativeSession) throws DataAccessException {
-
-        Assert.notNull(action, "Callback object must not be null");
-
-        Session session = getSession();
-        boolean existingTransaction = isSessionTransactional(session);
-        if (existingTransaction) {
-            LOG.debug("Found thread-bound Session for HibernateTemplate");
+    FlushMode previousFlushMode = null;
+    try {
+      previousFlushMode = applyFlushMode(session, existingTransaction);
+      if (shouldPassReadOnlyToHibernate()) {
+        session.setDefaultReadOnly(true);
+      }
+      Session sessionToExpose =
+          (enforceNativeSession || exposeNativeSession ? session : createSessionProxy(session));
+      T result = action.doInHibernate(sessionToExpose);
+      flushIfNecessary(session, existingTransaction);
+      return result;
+    } catch (HibernateException ex) {
+      throw convertHibernateAccessException(ex);
+    } catch (PersistenceException ex) {
+      if (ex.getCause() instanceof HibernateException) {
+        throw SessionFactoryUtils.convertHibernateAccessException(
+            (HibernateException) ex.getCause());
+      }
+      throw ex;
+    } catch (SQLException ex) {
+      throw Objects.requireNonNull(jdbcExceptionTranslator.translate("Hibernate-related JDBC operation", null, ex));
+    } finally {
+      if (existingTransaction) {
+        LOG.debug("Not closing pre-bound Hibernate Session after HibernateTemplate");
+        if (previousFlushMode != null) {
+          session.setHibernateFlushMode(previousFlushMode);
         }
 
-        FlushMode previousFlushMode = null;
-        try {
-            previousFlushMode = applyFlushMode(session, existingTransaction);
-            if (shouldPassReadOnlyToHibernate()) {
-                session.setDefaultReadOnly(true);
-            }
-            Session sessionToExpose =
-                    (enforceNativeSession || exposeNativeSession ? session : createSessionProxy(session));
-            T result = action.doInHibernate(sessionToExpose);
-            flushIfNecessary(session, existingTransaction);
-            return result;
-        } catch (HibernateException ex) {
-            throw convertHibernateAccessException(ex);
-        } catch (PersistenceException ex) {
-            if (ex.getCause() instanceof HibernateException) {
-                throw SessionFactoryUtils.convertHibernateAccessException((HibernateException) ex.getCause());
-            }
-            throw ex;
-        } catch (SQLException ex) {
-            throw Objects.requireNonNull(
-                    jdbcExceptionTranslator.translate("Hibernate-related JDBC operation", null, ex));
-        } finally {
-            if (existingTransaction) {
-                LOG.debug("Not closing pre-bound Hibernate Session after HibernateTemplate");
-                if (previousFlushMode != null) {
-                    session.setHibernateFlushMode(previousFlushMode);
-                }
-            } else {
-                SessionFactoryUtils.closeSession(session);
-            }
-        }
-    }
+  protected boolean isSessionTransactional(Session session) {
+    SessionHolder sessionHolder =
+        (SessionHolder) TransactionSynchronizationManager.getResource(sessionFactory);
+    return sessionHolder != null && sessionHolder.getSession() == session;
+  }
 
-    protected boolean isSessionTransactional(Session session) {
-        SessionHolder sessionHolder = (SessionHolder) TransactionSynchronizationManager.getResource(sessionFactory);
-        return sessionHolder != null && sessionHolder.getSession() == session;
+  public Session getSession() {
+    try {
+      return sessionFactory.getCurrentSession();
+    } catch (HibernateException ex) {
+      throw new DataAccessResourceFailureException(
+          "Could not obtain current Hibernate Session", ex);
     }
+  }
 
-    public Session getSession() {
-        try {
-            return sessionFactory.getCurrentSession();
-        } catch (HibernateException ex) {
-            throw new DataAccessResourceFailureException("Could not obtain current Hibernate Session", ex);
-        }
+  /**
+   * Create a close-suppressing proxy for the given Hibernate Session. The proxy also prepares
+   * returned Query and Criteria objects.
+   *
+   * @param session the Hibernate Session to create a proxy for
+   * @return the Session proxy
+   * @see org.hibernate.Session#close()
+   * @see #prepareQuery
+   * @see #prepareCriteria
+   */
+  protected Session createSessionProxy(Session session) {
+    Class<?>[] sessionIfcs;
+    Class<?> mainIfc = Session.class;
+    if (session instanceof EventSource) {
+      sessionIfcs = new Class[] {mainIfc, EventSource.class};
+    } else if (session instanceof SessionImplementor) {
+      sessionIfcs = new Class[] {mainIfc, SessionImplementor.class};
+    } else {
+      sessionIfcs = new Class[] {mainIfc};
     }
+    return (Session)
+        Proxy.newProxyInstance(
+            Thread.currentThread().getContextClassLoader(),
+            sessionIfcs,
+            new CloseSuppressingInvocationHandler(session, this));
+  }
+
+  @Deprecated(since = "7.0", forRemoval = true)
+  public <T> T get(final Class<T> entityClass, final Serializable id) throws DataAccessException {
+    return doExecute(session -> session.find(entityClass, id), true);
+  }
+
+  @Deprecated(since = "7.0", forRemoval = true)
+  public <T> T get(final Class<T> entityClass, final Serializable id, final LockMode mode) {
+    return lock(entityClass, id, mode);
+  }
+
+  public void remove(final Object entity) throws DataAccessException {
+    doExecute(
+        session -> {
+          session.remove(entity);
+          return null;
+        },
+        true);
+  }
+
+
+  public <T> T load(final Class<T> entityClass, final Serializable id) throws DataAccessException {
+    return doExecute(session -> session.getReference(entityClass, id), true);
+  }
+
+  public <T> T lock(final Class<T> entityClass, final Serializable id, final LockMode lockMode)
+      throws DataAccessException {
+    return doExecute(session -> session.find(entityClass, id, lockMode), true);
+  }
+
+  public <T> List<T> loadAll(final Class<T> entityClass) throws DataAccessException {
+    return doExecute(
+        session -> {
+          final CriteriaBuilder criteriaBuilder = session.getCriteriaBuilder();
+          final CriteriaQuery<T> query = criteriaBuilder.createQuery(entityClass);
+          query.from(entityClass);
+          final Query<T> jpaQuery = session.createQuery(query);
+          prepareCriteria(jpaQuery);
+          return jpaQuery.getResultList();
+        },
+        true);
+  }
+
+  public boolean contains(final Object entity) throws DataAccessException {
+    return doExecute(session -> session.contains(entity), true);
+  }
+
+  public void evict(final Object entity) throws DataAccessException {
+    doExecute(
+        session -> {
+          session.evict(entity);
+          return null;
+        },
+        true);
+  }
+
+  public void lock(final Object entity, final LockMode lockMode) throws DataAccessException {
+    doExecute(
+        session -> {
+          session.lock(entity, LockModeType.PESSIMISTIC_WRITE);
+          return null;
+        },
+        true);
+  }
+
+  public void refresh(final Object entity) throws DataAccessException {
+    refresh(entity, null);
+  }
+
+  public void refresh(final Object entity, final LockMode lockMode) throws DataAccessException {
+    doExecute(
+        session -> {
+          if (lockMode == null) {
+            session.refresh(entity);
+          } else {
+            session.refresh(entity, lockMode);
+          }
+          return null;
+        },
+        true);
+  }
+
+  public void setExposeNativeSession(boolean exposeNativeSession) {
+    this.exposeNativeSession = exposeNativeSession;
+  }
+
+  public boolean isExposeNativeSession() {
+    return exposeNativeSession;
+  }
+
+  /**
+   * Prepare the given Query object, applying cache settings and/or a transaction timeout.
+   *
+   * @param query the Query object to prepare
+   */
+  void prepareQuery(org.hibernate.query.Query<?> query) {
+    internalQuery(query);
+  }
+
+  private void internalQuery(Query<?> query) {
+    if (cacheQueries) {
+      query.setCacheable(true);
+    }
+    if (shouldPassReadOnlyToHibernate()) {
+      query.setReadOnly(true);
+    }
+    SessionHolder sessionHolder =
+        (SessionHolder) TransactionSynchronizationManager.getResource(sessionFactory);
+    if (sessionHolder != null && sessionHolder.hasTimeout()) {
+      query.setTimeout(sessionHolder.getTimeToLiveInSeconds());
+    }
+  }
+
+  /**
+   * Prepare the given Query object, applying cache settings and/or a transaction timeout.
+   *
+   * @param jpaQuery the Query object to prepare
+   */
+  <T> void prepareCriteria(Query<T> jpaQuery) {
+    internalQuery(jpaQuery);
+  }
 
     /**
-     * Create a close-suppressing proxy for the given Hibernate Session. The proxy also prepares
-     * returned Query and Criteria objects.
-     *
-     * @param session the Hibernate Session to create a proxy for
-     * @return the Session proxy
-     * @see org.hibernate.Session#close()
-     * @see #prepareQuery
-     * @see #prepareCriteria
-     */
-    protected Session createSessionProxy(Session session) {
-        Class<?>[] sessionIfcs;
-        Class<?> mainIfc = Session.class;
-        if (session instanceof EventSource) {
-            sessionIfcs = new Class[] {mainIfc, EventSource.class};
-        } else if (session instanceof SessionImplementor) {
-            sessionIfcs = new Class[] {mainIfc, SessionImplementor.class};
-        } else {
-            sessionIfcs = new Class[] {mainIfc};
-        }
-        return (Session) Proxy.newProxyInstance(
-                Thread.currentThread().getContextClassLoader(),
-                sessionIfcs,
-                new CloseSuppressingInvocationHandler(session, this));
-    }
+    * Never flush is a good strategy for read-only units of work.
+ Hibernate will not track and look
+   * for changes in this case, avoiding any overhead of modification detection.
+   *
+   * <p>In case of an existing Session, FLUSH_NEVER will turn the flush mode to NEVER for the scope
+   * of the current operation, resetting the previous flush mode afterwards.
+   *
+   * @see #setFlushMode
+   */
+  public static final int FLUSH_NEVER = 0;
 
-    @Override
-    @Deprecated(since = "7.0", forRemoval = true)
-    public <T> T get(final Class<T> entityClass, final Serializable id) throws DataAccessException {
-        return doExecute(session -> session.find(entityClass, id), true);
-    }
+  /**
+   * Automatic flushing is the default mode for a Hibernate Session. A session will get flushed on
+   * transaction commit, and on certain find operations that might involve already modified
+   * instances, but not after each unit of work like with eager flushing.
+   *
+   * <p>In case of an existing Session, FLUSH_AUTO will participate in the existing flush mode, not
+   * modifying it for the current operation. This in particular means that this setting will not
+   * modify an existing flush mode NEVER, in contrast to FLUSH_EAGER.
+   *
+   * @see #setFlushMode
+   */
+  public static final int FLUSH_AUTO = 1;
 
-    @Override
-    @Deprecated(since = "7.0", forRemoval = true)
-    public <T> T get(final Class<T> entityClass, final Serializable id, final LockMode mode) {
-        return lock(entityClass, id, mode);
-    }
+  /**
+   * Eager flushing leads to immediate synchronization with the database, even if in a transaction.
+   * This causes inconsistencies to show up and throw a respective exception immediately, and JDBC
+   * access code that participates in the same transaction will see the changes as the database is
+   * already aware of them then. But the drawbacks are:
+   *
+   * <ul>
+   *   <li>additional communication roundtrips with the database, instead of a single batch at
+   *       transaction commit;
+   *   <li>the fact that an actual database rollback is needed if the Hibernate transaction rolls
+   *       back (due to already submitted SQL statements).
+   * </ul>
+   *
+   * <p>In case of an existing Session, FLUSH_EAGER will turn the flush mode to AUTO for the scope
+   * of the current operation and issue a flush at the end, resetting the previous flush mode
+   * afterwards.
+   *
+   * @see #setFlushMode
+   */
+  public static final int FLUSH_EAGER = 2;
 
-    @Override
-    public void remove(final Object entity) throws DataAccessException {
-        doExecute(
-                session -> {
-                    session.remove(entity);
-                    return null;
-                },
-                true);
-    }
+  /**
+   * Flushing at commit only is intended for units of work where no intermediate flushing is
+   * desired, not even for find operations that might involve already modified instances.
+   *
+   * <p>In case of an existing Session, FLUSH_COMMIT will turn the flush mode to COMMIT for the
+   * scope of the current operation, resetting the previous flush mode afterwards. The only
+   * exception is an existing flush mode NEVER, which will not be modified through this setting.
+   *
+   * @see #setFlushMode
+   */
+  public static final int FLUSH_COMMIT = 3;
 
-    @Override
-    public <T> T load(final Class<T> entityClass, final Serializable id) throws DataAccessException {
-        return doExecute(session -> session.getReference(entityClass, id), true);
-    }
+  /**
+   * Flushing before every query statement is rarely necessary. It is only available for special
+   * needs.
+   *
+   * <p>In case of an existing Session, FLUSH_ALWAYS will turn the flush mode to ALWAYS for the
+   * scope of the current operation, resetting the previous flush mode afterwards.
+   *
+   * @see #setFlushMode
+   */
+  public static final int FLUSH_ALWAYS = 4;
 
-    public <T> T lock(final Class<T> entityClass, final Serializable id, final LockMode lockMode)
-            throws DataAccessException {
-        return doExecute(session -> session.find(entityClass, id, lockMode), true);
-    }
+  /**
+   * Set the flush behavior to one of the constants in this class. Default is FLUSH_AUTO.
+   *
+   * @see #FLUSH_AUTO
+   */
+  public void setFlushMode(int flushMode) {
+    this.flushMode = flushMode;
+  }
 
-    public <T> List<T> loadAll(final Class<T> entityClass) throws DataAccessException {
-        return doExecute(
-                session -> {
-                    final CriteriaBuilder criteriaBuilder = session.getCriteriaBuilder();
-                    final CriteriaQuery<T> query = criteriaBuilder.createQuery(entityClass);
-                    query.from(entityClass);
-                    final Query<T> jpaQuery = session.createQuery(query);
-                    prepareCriteria(jpaQuery);
-                    return jpaQuery.getResultList();
-                },
-                true);
-    }
+  /** Return if a flush should be forced after executing the callback code. */
+  public int getFlushMode() {
+    return flushMode;
+  }
 
-    @Override
-    public boolean contains(final Object entity) throws DataAccessException {
-        return doExecute(session -> session.contains(entity), true);
-    }
-
-    @Override
-    public void evict(final Object entity) throws DataAccessException {
-        doExecute(
-                session -> {
-                    session.evict(entity);
-                    return null;
-                },
-                true);
-    }
-
-    @Override
-    public void lock(final Object entity, final LockMode lockMode) throws DataAccessException {
-        doExecute(
-                session -> {
-                    session.lock(entity, LockModeType.PESSIMISTIC_WRITE);
-                    return null;
-                },
-                true);
-    }
-
-    @Override
-    public void refresh(final Object entity) throws DataAccessException {
-        refresh(entity, null);
-    }
-
-    public void refresh(final Object entity, final LockMode lockMode) throws DataAccessException {
-        doExecute(
-                session -> {
-                    if (lockMode == null) {
-                        session.refresh(entity);
-                    } else {
-                        session.refresh(entity, lockMode);
-                    }
-                    return null;
-                },
-                true);
-    }
-
-    public void setExposeNativeSession(boolean exposeNativeSession) {
-        this.exposeNativeSession = exposeNativeSession;
-    }
-
-    public boolean isExposeNativeSession() {
-        return exposeNativeSession;
-    }
-
-    /**
-     * Prepare the given Query object, applying cache settings and/or a transaction timeout.
-     *
-     * @param query the Query object to prepare
-     */
-    void prepareQuery(org.hibernate.query.Query<?> query) {
-        internalQuery(query);
-    }
-
-    private void internalQuery(Query<?> query) {
-        if (cacheQueries) {
-            query.setCacheable(true);
-        }
-        if (shouldPassReadOnlyToHibernate()) {
-            query.setReadOnly(true);
-        }
-        SessionHolder sessionHolder = (SessionHolder) TransactionSynchronizationManager.getResource(sessionFactory);
-        if (sessionHolder != null && sessionHolder.hasTimeout()) {
-            query.setTimeout(sessionHolder.getTimeToLiveInSeconds());
-        }
-    }
-
-    /**
-     * Prepare the given Query object, applying cache settings and/or a transaction timeout.
-     *
-     * @param jpaQuery the Query object to prepare
-     */
-    <T> void prepareCriteria(Query<T> jpaQuery) {
-        internalQuery(jpaQuery);
-    }
-
-    /**
-     * Never flush is a good strategy for read-only units of work.
-     * Hibernate will not track and look
-     * for changes in this case, avoiding any overhead of modification detection.
-     *
-     * <p>In case of an existing Session, FLUSH_NEVER will turn the flush mode to NEVER for the scope
-     * of the current operation, resetting the previous flush mode afterwards.
-     *
-     * @see #setFlushMode
-     */
-    public static final int FLUSH_NEVER = 0;
-
-    /**
-     * Automatic flushing is the default mode for a Hibernate Session. A session will get flushed on
-     * transaction commit, and on certain find operations that might involve already modified
-     * instances, but not after each unit of work like with eager flushing.
-     *
-     * <p>In case of an existing Session, FLUSH_AUTO will participate in the existing flush mode, not
-     * modifying it for the current operation. This in particular means that this setting will not
-     * modify an existing flush mode NEVER, in contrast to FLUSH_EAGER.
-     *
-     * @see #setFlushMode
-     */
-    public static final int FLUSH_AUTO = 1;
-
-    /**
-     * Eager flushing leads to immediate synchronization with the database, even if in a transaction.
-     * This causes inconsistencies to show up and throw a respective exception immediately, and JDBC
-     * access code that participates in the same transaction will see the changes as the database is
-     * already aware of them then. But the drawbacks are:
-     *
-     * <ul>
-     *   <li>additional communication roundtrips with the database, instead of a single batch at
-     *       transaction commit;
-     *   <li>the fact that an actual database rollback is needed if the Hibernate transaction rolls
-     *       back (due to already submitted SQL statements).
-     * </ul>
-     *
-     * <p>In case of an existing Session, FLUSH_EAGER will turn the flush mode to AUTO for the scope
-     * of the current operation and issue a flush at the end, resetting the previous flush mode
-     * afterwards.
-     *
-     * @see #setFlushMode
-     */
-    public static final int FLUSH_EAGER = 2;
-
-    /**
-     * Flushing at commit only is intended for units of work where no intermediate flushing is
-     * desired, not even for find operations that might involve already modified instances.
-     *
-     * <p>In case of an existing Session, FLUSH_COMMIT will turn the flush mode to COMMIT for the
-     * scope of the current operation, resetting the previous flush mode afterwards. The only
-     * exception is an existing flush mode NEVER, which will not be modified through this setting.
-     *
-     * @see #setFlushMode
-     */
-    public static final int FLUSH_COMMIT = 3;
-
-    /**
-     * Flushing before every query statement is rarely necessary. It is only available for special
-     * needs.
-     *
-     * <p>In case of an existing Session, FLUSH_ALWAYS will turn the flush mode to ALWAYS for the
-     * scope of the current operation, resetting the previous flush mode afterwards.
-     *
-     * @see #setFlushMode
-     */
-    public static final int FLUSH_ALWAYS = 4;
-
-    /**
-     * Set the flush behavior to one of the constants in this class. Default is FLUSH_AUTO.
-     *
-     * @see #FLUSH_AUTO
-     */
-    @Override
-    public void setFlushMode(int flushMode) {
-        this.flushMode = flushMode;
-    }
-
-    /** Return if a flush should be forced after executing the callback code. */
-    @Override
-    public int getFlushMode() {
-        return flushMode;
-    }
-
-    /**
-     * Apply the flush mode that's been specified for this accessor to the given Session.
-     *
-     * @param session the current Hibernate Session
-     * @param existingTransaction if executing within an existing transaction
-     * @return the previous flush mode to restore after the operation, or <code>null</code> if none
-     * @see #setFlushMode
-     * @see org.hibernate.Session#setFlushMode
-     */
-    protected FlushMode applyFlushMode(Session session, boolean existingTransaction) {
-        if (isApplyFlushModeOnlyToNonExistingTransactions() && existingTransaction) {
-            return null;
-        }
-
-        if (getFlushMode() == FLUSH_NEVER) {
-            if (existingTransaction) {
-                FlushMode previousFlushMode = session.getHibernateFlushMode();
-                if (!previousFlushMode.lessThan(FlushMode.COMMIT)) {
-                    session.setHibernateFlushMode(FlushMode.MANUAL);
-                    return previousFlushMode;
-                }
-            } else {
-                session.setHibernateFlushMode(FlushMode.MANUAL);
-            }
-        } else if (getFlushMode() == FLUSH_EAGER) {
-            //noinspection StatementWithEmptyBody
-            if (existingTransaction) {
-                FlushMode previousFlushMode = session.getHibernateFlushMode();
-                if (!previousFlushMode.equals(FlushMode.AUTO)) {
-                    session.setHibernateFlushMode(FlushMode.AUTO);
-                    return previousFlushMode;
-                }
-            } else {
-                // rely on default FlushMode.AUTO
-            }
-        } else if (getFlushMode() == FLUSH_COMMIT) {
-            if (existingTransaction) {
-                FlushMode previousFlushMode = session.getHibernateFlushMode();
-                if (previousFlushMode.equals(FlushMode.AUTO) || previousFlushMode.equals(FlushMode.ALWAYS)) {
-                    session.setHibernateFlushMode(FlushMode.COMMIT);
-                    return previousFlushMode;
-                }
-            } else {
-                session.setHibernateFlushMode(FlushMode.COMMIT);
-            }
-        } else if (getFlushMode() == FLUSH_ALWAYS) {
-            if (existingTransaction) {
-                FlushMode previousFlushMode = session.getHibernateFlushMode();
-                if (!previousFlushMode.equals(FlushMode.ALWAYS)) {
-                    session.setHibernateFlushMode(FlushMode.ALWAYS);
-                    return previousFlushMode;
-                }
-            } else {
-                session.setHibernateFlushMode(FlushMode.ALWAYS);
-            }
-        }
-        return null;
+  /**
+   * Apply the flush mode that's been specified for this accessor to the given Session.
+   *
+   * @param session the current Hibernate Session
+   * @param existingTransaction if executing within an existing transaction
+   * @return the previous flush mode to restore after the operation, or <code>null</code> if none
+   * @see #setFlushMode
+   * @see org.hibernate.Session#setFlushMode
+   */
+  protected FlushMode applyFlushMode(Session session, boolean existingTransaction) {
+    if (isApplyFlushModeOnlyToNonExistingTransactions() && existingTransaction) {
+      return null;
     }
 
     protected void flushIfNecessary(Session session, boolean existingTransaction) throws HibernateException {
@@ -699,12 +672,16 @@ public class GrailsHibernateTemplate implements IHibernateTemplate {
             LOG.debug("Eagerly flushing Hibernate session");
             session.flush();
         }
-    }
-
-    @SuppressWarnings("ConstantConditions")
-    protected DataAccessException convertHibernateAccessException(HibernateException ex) {
-        if (ex instanceof JDBCException) {
-            return convertJdbcAccessException((JDBCException) ex, jdbcExceptionTranslator);
+      } else {
+        session.setHibernateFlushMode(FlushMode.MANUAL);
+      }
+    } else if (getFlushMode() == FLUSH_EAGER) {
+        //noinspection StatementWithEmptyBody
+        if (existingTransaction) {
+        FlushMode previousFlushMode = session.getHibernateFlushMode();
+        if (!previousFlushMode.equals(FlushMode.AUTO)) {
+          session.setHibernateFlushMode(FlushMode.AUTO);
+          return previousFlushMode;
         }
         if (GenericJDBCException.class.equals(ex.getClass())) {
             return convertJdbcAccessException((GenericJDBCException) ex, jdbcExceptionTranslator);
