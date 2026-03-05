@@ -75,14 +75,14 @@ class NamespacedBookSpec extends Specification implements HttpClientSupport {
         when: 'A request is sent to a controller with a namespace'
         def response = http('/api/book/testRender')
 
-        then: 'The responseonse is correct'
+        then: 'The response is correct'
         response.expectJson(200, 'Content-Type': 'application/json;charset=UTF-8', [
                 api: 'version 1.0 (Namespaced)',
                 title: 'API - The Shining'
         ])
     }
 
-    void 'test responseond(foo, view: ..) in controllers with namespaces works'() {
+    void 'test respond(foo, view: ..) in controllers with namespaces works'() {
         when: 'A request is sent to a controller with a namespace'
         def response = http('/api/book/testRespond')
 

@@ -196,7 +196,7 @@ class AdvancedCachingIntegrationSpec extends Specification implements HttpClient
 
         when: "evicting all and fetching again"
         http('/advancedCaching/evictAllKeyCache')
-        def second = http('/advancedCaching/getDataByKey?key=anykey',)
+        def second = http('/advancedCaching/getDataByKey?key=anykey')
         def secondData = second.json().data
 
         then: "new data is generated after eviction"

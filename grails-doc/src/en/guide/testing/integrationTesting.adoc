@@ -386,7 +386,7 @@ class DemoSpec extends Specification implements HttpClientSupport {
         given:
         def multipart = MultipartBody.builder()
                 .addPart('description', 'test file')
-                .addPart('file', 'hello.txt', 'hello world'.bytes, 'text/plain')
+                .addPart('file', 'hello.txt', 'hello world', 'text/plain')
                 .build()
 
         when:
