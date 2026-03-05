@@ -159,7 +159,7 @@ jobs:
         run: >
           ./gradlew build
           -x groovydoc
-          -PextendTestClientTimeouts
+          -PgebAtCheckWaiting
           -PskipCodeStyle
         env:
           GRAILS_INCLUDE_MAVEN_LOCAL: true

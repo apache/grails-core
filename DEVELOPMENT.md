@@ -31,7 +31,7 @@ These can be set on the command line like so:
 
 `./gradlew check -PskipCodeStyle`
 
-* `extendTestClientTimeouts` - enables Geb atCheckWaiting, and sets longer timeouts for Geb and Micronaut Http Client
+* `gebAtCheckWaiting` - enables Geb atCheckWaiting, and sets longer timeouts for Geb
 * `onlyCoreTests` - runs tests that do not include mongo, hibernate, or functional
 * `onlyFunctionalTests` - runs only grails-test-examples/* tests
 * `onlyHibernate5Tests` - runs only a hibernate5 related test

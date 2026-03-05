@@ -115,10 +115,9 @@ tasks.withType(Test).configureEach { Test task ->
     }
 
     // Make Geb tests more resilient in slow CI environments
-    if (project.hasProperty('extendTestClientTimeouts')) {
+    if (project.hasProperty('gebAtCheckWaiting')) {
         systemProperty('grails.geb.atCheckWaiting.enabled', 'true')
         systemProperty('grails.geb.timeouts.timeout', '10') // default = 5
-        systemProperty('micronaut.http.client.read-timeout', '30s') // default = 10s
     }
 }
 
