@@ -19,7 +19,6 @@
 
 package org.grails.orm.hibernate.cfg.domainbinding.binder
 
-import org.hibernate.mapping.SingleTableSubclass
 
 import grails.gorm.specs.HibernateGormDatastoreSpec
 import org.grails.orm.hibernate.cfg.Mapping
@@ -73,7 +72,7 @@ class SubClassBinderSpec extends HibernateGormDatastoreSpec {
         binder.bindSubClass(subEntity, rootClass)
 
         then:
-        1 * subclassMappingBinder.createSubclassMapping(subEntity, rootClass, _) >> subClass
+        1 * subclassMappingBinder.createSubclassMapping(subEntity, rootClass) >> subClass
         1 * multiTenantFilterBinder.bind(subEntity, subClass)
         results == [subClass]
     }
@@ -104,8 +103,8 @@ class SubClassBinderSpec extends HibernateGormDatastoreSpec {
         binder.bindSubClass(subEntity, rootClass)
 
         then:
-        1 * subclassMappingBinder.createSubclassMapping(subEntity, rootClass, _) >> subClass
-        1 * subclassMappingBinder.createSubclassMapping(grandChildEntity, subClass, _) >> grandChildSubClass
+        1 * subclassMappingBinder.createSubclassMapping(subEntity, rootClass) >> subClass
+        1 * subclassMappingBinder.createSubclassMapping(grandChildEntity, subClass) >> grandChildSubClass
         2 * multiTenantFilterBinder.bind(_, _)
         results == [subClass, grandChildSubClass]
     }

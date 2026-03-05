@@ -26,7 +26,14 @@ import org.hibernate.mapping.Subclass;
 
 import org.grails.orm.hibernate.cfg.GrailsHibernateUtil;
 import org.grails.orm.hibernate.cfg.Mapping;
-import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernatePersistentEntity;
+import org.grails.orm.hibernate.cfg.domainbinding.hibernate.GrailsHibernatePersistentEntity;
+
+import org.hibernate.boot.spi.MetadataBuildingContext;
+import org.hibernate.mapping.JoinedSubclass;
+import org.hibernate.mapping.PersistentClass;
+import org.hibernate.mapping.SingleTableSubclass;
+import org.hibernate.mapping.Subclass;
+import org.hibernate.mapping.UnionSubclass;
 
 public class SubclassMappingBinder {
 
@@ -50,8 +57,7 @@ public class SubclassMappingBinder {
 
   public @NonNull Subclass createSubclassMapping(
       @NonNull GrailsHibernatePersistentEntity subEntity,
-      PersistentClass parent,
-      @NonNull InFlightMetadataCollector mappings) {
+      PersistentClass parent) {
     Subclass subClass;
     subEntity.configureDerivedProperties();
     Mapping m = subEntity.getMappedForm();

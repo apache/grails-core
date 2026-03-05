@@ -18,6 +18,10 @@
  */
 package org.grails.orm.hibernate.cfg.domainbinding.generator;
 
+
+import static org.hibernate.id.PersistentIdentifierGenerator.CATALOG;
+import static org.hibernate.id.PersistentIdentifierGenerator.SCHEMA;
+
 import java.io.Serial;
 import java.util.Properties;
 
@@ -40,8 +44,8 @@ import static org.hibernate.id.PersistentIdentifierGenerator.SCHEMA;
  */
 public class GrailsIncrementGenerator extends IncrementGenerator {
 
-    @Serial
-    private static final long serialVersionUID = 1L;
+  @Serial
+  private static final long serialVersionUID = 1L;
 
     public GrailsIncrementGenerator(
             GeneratorCreationContext context,

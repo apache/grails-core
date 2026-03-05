@@ -32,8 +32,8 @@ import org.grails.orm.hibernate.cfg.Identity;
 
 public class GrailsTableGenerator extends TableGenerator {
 
-    @Serial
-    private static final long serialVersionUID = 1L;
+  @Serial
+  private static final long serialVersionUID = 1L;
 
     public GrailsTableGenerator(GeneratorCreationContext context, Identity mappedId, JdbcEnvironment jdbcEnvironment) {
         Properties generatorProps =

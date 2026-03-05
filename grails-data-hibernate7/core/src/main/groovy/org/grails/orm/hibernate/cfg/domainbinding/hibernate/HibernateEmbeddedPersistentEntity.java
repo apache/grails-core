@@ -76,10 +76,10 @@ public class HibernateEmbeddedPersistentEntity extends EmbeddedPersistentEntity<
         return false;
     }
 
-    public HibernateEmbeddedPersistentEntity(Class<?> type, MappingContext ctx) {
-        super(type, ctx);
-        this.classMapping = new HibernateEmbeddedClassMapping(this, ctx);
-    }
+  public HibernateEmbeddedPersistentEntity(Class<?> type, MappingContext ctx) {
+    super(type, ctx);
+    this.classMapping = new HibernateEmbeddedClassMapping(this, ctx);
+  }
 
     @Override
     public ClassMapping<Mapping> getMapping() {

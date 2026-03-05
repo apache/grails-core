@@ -33,8 +33,8 @@ import org.grails.orm.hibernate.cfg.Identity;
 @SuppressWarnings("PMD.ConstructorCallsOverridableMethod")
 public class GrailsSequenceStyleGenerator extends SequenceStyleGenerator {
 
-    @Serial
-    private static final long serialVersionUID = 1L;
+  @Serial
+  private static final long serialVersionUID = 1L;
 
     public GrailsSequenceStyleGenerator(
             GeneratorCreationContext context, Identity mappedId, JdbcEnvironment jdbcEnvironment) {

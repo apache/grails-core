@@ -89,10 +89,12 @@ public interface GrailsHibernatePersistentEntity extends PersistentEntity {
         return mapping == null || mapping.isTablePerHierarchy();
     }
 
-    default boolean isJoinedSubclass() {
-        Mapping mapping = getStrategyMapping();
-        return mapping != null && mapping.isJoinedSubclass();
-    }
+  default boolean isComponentPropertyNullable(PersistentProperty<?> embeddedProperty) {
+    if (embeddedProperty == null) return false;
+    final Mapping mapping = getMappedForm();
+    return !isRoot() && (mapping == null || mapping.isTablePerHierarchy())
+        || embeddedProperty.isNullable();
+  }
 
     default boolean isUnionSubclass() {
         Mapping mapping = getStrategyMapping();

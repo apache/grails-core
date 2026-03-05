@@ -67,7 +67,7 @@ public class SubClassBinder {
       @Nonnull GrailsHibernatePersistentEntity sub,
       PersistentClass parent) {
     mappingCacheHolder.cacheMapping(sub);
-    Subclass subClass = subclassMappingBinder.createSubclassMapping(sub, parent, mappings);
+    Subclass subClass = subclassMappingBinder.createSubclassMapping(sub, parent);
     parent.addSubclass(subClass);
     mappings.addEntityBinding(subClass);
     bindMultiTenantFilter(sub, subClass);
