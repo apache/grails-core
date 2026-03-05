@@ -61,17 +61,19 @@ public class CloseSuppressingInvocationHandler implements InvocationHandler {
             }
         }
 
-        Object retVal = method.invoke(target, args);
 
-        // If return value is a Query or Criteria, apply transaction timeout.
-        // Applies to createQuery, getNamedQuery, createCriteria.
-        if (retVal instanceof org.hibernate.query.Query<?> query) {
-            template.prepareQuery(query);
-        }
-        if (retVal instanceof Query<?> query) {
-            template.prepareCriteria(query);
-        }
+            Object retVal = method.invoke(target, args);
 
-        return retVal;
+            // If return value is a Query or Criteria, apply transaction timeout.
+            // Applies to createQuery, getNamedQuery, createCriteria.
+            if (retVal instanceof org.hibernate.query.Query<?> query) {
+                template.prepareQuery(query);
+            }
+            if (retVal instanceof Query<?> query) {
+                template.prepareCriteria(query);
+            }
+
+            return retVal;
+
     }
 }
