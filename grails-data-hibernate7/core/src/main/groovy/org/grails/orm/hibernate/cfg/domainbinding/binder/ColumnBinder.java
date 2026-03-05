@@ -18,6 +18,16 @@
  */
 package org.grails.orm.hibernate.cfg.domainbinding.binder;
 
+import org.grails.orm.hibernate.cfg.ColumnConfig;
+import org.grails.orm.hibernate.cfg.Mapping;
+import org.grails.orm.hibernate.cfg.PersistentEntityNamingStrategy;
+import org.grails.orm.hibernate.cfg.PropertyConfig;
+import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernateAssociation;
+import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernatePersistentProperty;
+import org.grails.orm.hibernate.cfg.domainbinding.util.BackticksRemover;
+import org.grails.orm.hibernate.cfg.domainbinding.util.ColumnNameForPropertyAndPathFetcher;
+import org.grails.orm.hibernate.cfg.domainbinding.util.CreateKeyForProps;
+import org.grails.orm.hibernate.cfg.domainbinding.util.DefaultColumnNameFetcher;
 import org.hibernate.mapping.Column;
 import org.hibernate.mapping.Table;
 import org.slf4j.Logger;
@@ -45,39 +55,69 @@ public class ColumnBinder {
     private final CreateKeyForProps createKeyForProps;
     private final IndexBinder indexBinder;
 
-    /** Public constructor that accepts all collaborators. */
-    public ColumnBinder(
-            ColumnNameForPropertyAndPathFetcher columnNameForPropertyAndPathFetcher,
-            StringColumnConstraintsBinder stringColumnConstraintsBinder,
-            NumericColumnConstraintsBinder numericColumnConstraintsBinder,
-            CreateKeyForProps createKeyForProps,
-            IndexBinder indexBinder) {
-        this.columnNameForPropertyAndPathFetcher = columnNameForPropertyAndPathFetcher;
-        this.stringColumnConstraintsBinder = stringColumnConstraintsBinder;
-        this.numericColumnConstraintsBinder = numericColumnConstraintsBinder;
-        this.createKeyForProps = createKeyForProps;
-        this.indexBinder = indexBinder;
+  /** Public constructor that accepts all collaborators. */
+  public ColumnBinder(
+      ColumnNameForPropertyAndPathFetcher columnNameForPropertyAndPathFetcher,
+      StringColumnConstraintsBinder stringColumnConstraintsBinder,
+      NumericColumnConstraintsBinder numericColumnConstraintsBinder,
+      CreateKeyForProps createKeyForProps,
+      IndexBinder indexBinder) {
+    this.columnNameForPropertyAndPathFetcher = columnNameForPropertyAndPathFetcher;
+    this.stringColumnConstraintsBinder = stringColumnConstraintsBinder;
+    this.numericColumnConstraintsBinder = numericColumnConstraintsBinder;
+    this.createKeyForProps = createKeyForProps;
+    this.indexBinder = indexBinder;
+  }
+
+  /** Convenience constructor for backward compatibility. */
+  public ColumnBinder(PersistentEntityNamingStrategy namingStrategy) {
+    this(
+        new ColumnNameForPropertyAndPathFetcher(
+            namingStrategy, new DefaultColumnNameFetcher(namingStrategy), new BackticksRemover()),
+        new StringColumnConstraintsBinder(),
+        new NumericColumnConstraintsBinder(),
+        new CreateKeyForProps(
+            new ColumnNameForPropertyAndPathFetcher(
+                namingStrategy,
+                new DefaultColumnNameFetcher(namingStrategy),
+                new BackticksRemover())),
+        new IndexBinder());
+  }
+
+
+  /**
+   * Binds a Column instance to the Hibernate meta model
+   *
+   * @param property The Grails domain class property
+   * @param parentProperty parent property
+   * @param column The column to bind
+   * @param path the path
+   * @param table The table name
+   */
+  public void bindColumn(
+      HibernatePersistentProperty property,
+      HibernatePersistentProperty parentProperty,
+      Column column,
+      ColumnConfig cc,
+      String path,
+      Table table) {
+
+    if (cc != null) {
+      column.setComment(cc.getComment());
+      column.setDefaultValue(cc.getDefaultValue());
+      column.setCustomRead(cc.getRead());
+      column.setCustomWrite(cc.getWrite());
     }
 
     Class<?> userType = property.getUserType();
     String columnName =
         columnNameForPropertyAndPathFetcher.getColumnNameForPropertyAndPath(property, path, cc);
-    if ((property instanceof Association association) && userType == null) {
+    if ((property instanceof HibernateAssociation assoc) && userType == null) {
       // Only use conventional naming when the column has not been explicitly mapped.
       if (column.getName() == null) {
         column.setName(columnName);
       }
-      if (property instanceof HibernateManyToManyProperty) {
-        column.setNullable(false);
-      } else if (property instanceof HibernateOneToOneProperty
-          && association.isBidirectional()
-          && !association.isOwningSide()) {
-          column.setNullable(!association.getInverseSide().isHasOne());
-      } else if ((property instanceof ToOne) && association.isCircular()) {
-        column.setNullable(true);
-      } else {
-        column.setNullable(true);
-      }
+      column.setNullable(assoc.isAssociationColumnNullable());
     } else {
       column.setName(columnName);
       column.setNullable(

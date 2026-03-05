@@ -53,12 +53,36 @@ public interface HibernateAssociation extends HibernatePersistentProperty {
 
     boolean isBidirectionalOneToManyMap();
 
-    /**
-     * Returns the nullable value for the FK column when this property is an association without a
-     * user type. The default is {@code true}; subtypes override for their specific semantics.
-     */
-    default boolean isAssociationColumnNullable() {
-        return true;
+  /**
+   * Returns the nullable value for the FK column when this property is an association without a
+   * user type. The default is {@code true}; subtypes override for their specific semantics.
+   */
+  default boolean isAssociationColumnNullable() {
+    return true;
+  }
+
+  // --- Hibernate-typed overrides, removing instanceof guards ---
+
+  /** Returns the inverse side as a {@link HibernateAssociation}, eliminating cast at call sites. */
+  @Override
+  default HibernateAssociation getHibernateInverseSide() {
+    return (HibernateAssociation) getInverseSide();
+  }
+
+  @Override
+  default GrailsHibernatePersistentEntity getHibernateAssociatedEntity() {
+    return (GrailsHibernatePersistentEntity) getAssociatedEntity();
+  }
+
+  @Override
+  default void validateAssociation() {
+    if (getUserType() != null) {
+      throw new MappingException(
+          "Cannot bind association property ["
+              + getName()
+              + "] of type ["
+              + getType()
+              + "] to a user type");
     }
 
     // --- Hibernate-typed overrides, removing instanceof guards ---

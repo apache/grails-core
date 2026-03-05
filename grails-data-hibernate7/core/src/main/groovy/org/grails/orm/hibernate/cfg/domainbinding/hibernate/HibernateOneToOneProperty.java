@@ -102,4 +102,13 @@ public class HibernateOneToOneProperty extends OneToOneWithMapping<PropertyConfi
     validateAssociation();
     return !isValidHibernateOneToOne();
   }
+
+  @Override
+  public boolean isAssociationColumnNullable() {
+    if (isBidirectional() && !isOwningSide()) {
+      HibernateOneToOneProperty inverseSide = getHibernateInverseSide();
+      return inverseSide == null || !inverseSide.isHasOne();
+    }
+    return true;
+  }
 }

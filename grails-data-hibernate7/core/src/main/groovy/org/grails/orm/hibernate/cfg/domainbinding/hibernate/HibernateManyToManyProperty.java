@@ -44,4 +44,9 @@ public class HibernateManyToManyProperty extends ManyToManyWithMapping<PropertyC
   public HibernateManyToManyProperty getHibernateInverseSide() {
     return (HibernateManyToManyProperty) getInverseSide();
   }
+
+  @Override
+  public boolean isAssociationColumnNullable() {
+    return false;
+  }
 }
