@@ -113,8 +113,7 @@ class CollectionBinderSpec extends HibernateGormDatastoreSpec {
         ComponentBinder componentBinder = new ComponentBinder(
                 metadataBuildingContext,
                 binder.getMappingCacheHolder(),
-                componentUpdater,
-                collector
+                componentUpdater
         )
 
         GrailsPropertyBinder propertyBinder = new GrailsPropertyBinder(

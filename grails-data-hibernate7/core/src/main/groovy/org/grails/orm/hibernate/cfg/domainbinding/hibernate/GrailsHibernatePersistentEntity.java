@@ -339,14 +339,12 @@ public interface GrailsHibernatePersistentEntity extends PersistentEntity {
             }
             return p1.getName().compareTo(p2.getName());
         });
-        return properties;
-    }
+    return properties;
+  }
 
-    default String getComment() {
-        return Optional.ofNullable(getMappedForm()).map(Mapping::getComment).orElse(null);
-    }
-
-    void setPersistentClass(PersistentClass persistentClass);
-
-    PersistentClass getPersistentClass();
+  default String getComment() {
+    return Optional.ofNullable(getMappedForm())
+        .map(Mapping::getComment)
+        .orElse(null);
+  }
 }

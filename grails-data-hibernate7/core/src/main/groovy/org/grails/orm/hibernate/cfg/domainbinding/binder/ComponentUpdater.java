@@ -30,22 +30,20 @@ public class ComponentUpdater {
 
     private final PropertyFromValueCreator propertyFromValueCreator;
 
-    public ComponentUpdater(PropertyFromValueCreator propertyFromValueCreator) {
-        this.propertyFromValueCreator = propertyFromValueCreator;
-    }
+  public ComponentUpdater(PropertyFromValueCreator propertyFromValueCreator) {
+    this.propertyFromValueCreator = propertyFromValueCreator;
+  }
 
-    public void updateComponent(
-            Component component,
-            HibernatePersistentProperty componentProperty,
-            HibernatePersistentProperty currentGrailsProp,
-            Value value) {
-        Property persistentProperty = propertyFromValueCreator.createProperty(value, currentGrailsProp);
-        component.addProperty(persistentProperty);
-        if (componentProperty != null &&
-                componentProperty.getHibernateOwner().isComponentPropertyNullable(componentProperty)) {
-            for (Column c : value.getColumns()) {
-                c.setNullable(true);
-            }
+  public void updateComponent(
+      Component component,
+      HibernatePersistentProperty componentProperty,
+      HibernatePersistentProperty currentGrailsProp,
+      Value value) {
+    Property persistentProperty = propertyFromValueCreator.createProperty(value, currentGrailsProp);
+    component.addProperty(persistentProperty);
+    if (componentProperty != null && componentProperty.getHibernateOwner().isComponentPropertyNullable(componentProperty)) {
+        for (Column c : value.getColumns()) {
+            c.setNullable(true);
         }
     }
 }

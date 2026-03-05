@@ -19,6 +19,8 @@
 package org.grails.orm.hibernate.cfg.domainbinding.binder;
 
 import jakarta.annotation.Nonnull;
+import jakarta.annotation.Nullable;
+
 import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernateEmbeddedProperty;
 import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernateEnumProperty;
 import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernateManyToOneProperty;
@@ -69,7 +71,7 @@ public class GrailsPropertyBinder {
   }
 
   public Value bindProperty(
-      PersistentClass persistentClass,
+      @Nullable PersistentClass persistentClass,
       Table table,
       String path,
       HibernatePersistentProperty parentProperty,

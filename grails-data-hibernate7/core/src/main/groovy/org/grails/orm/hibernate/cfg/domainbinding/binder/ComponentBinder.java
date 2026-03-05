@@ -18,12 +18,13 @@
  */
 package org.grails.orm.hibernate.cfg.domainbinding.binder;
 
+import jakarta.annotation.Nonnull;
+
 import org.grails.orm.hibernate.cfg.GrailsHibernateUtil;
 import org.grails.orm.hibernate.cfg.MappingCacheHolder;
 import org.grails.orm.hibernate.cfg.domainbinding.hibernate.GrailsHibernatePersistentEntity;
 import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernateEmbeddedProperty;
 import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernatePersistentProperty;
-import org.hibernate.boot.spi.InFlightMetadataCollector;
 import org.hibernate.boot.spi.MetadataBuildingContext;
 import org.hibernate.mapping.Component;
 import org.hibernate.mapping.PersistentClass;
@@ -41,18 +42,15 @@ public class ComponentBinder {
   private final MetadataBuildingContext metadataBuildingContext;
   private final MappingCacheHolder mappingCacheHolder;
   private final ComponentUpdater componentUpdater;
-  private final InFlightMetadataCollector metadataCollector;
   private GrailsPropertyBinder grailsPropertyBinder;
 
   public ComponentBinder(
       MetadataBuildingContext metadataBuildingContext,
       MappingCacheHolder mappingCacheHolder,
-      ComponentUpdater componentUpdater,
-      InFlightMetadataCollector metadataCollector) {
+      ComponentUpdater componentUpdater) {
     this.metadataBuildingContext = metadataBuildingContext;
     this.mappingCacheHolder = mappingCacheHolder;
     this.componentUpdater = componentUpdater;
-    this.metadataCollector = metadataCollector;
   }
 
   public void setGrailsPropertyBinder(GrailsPropertyBinder grailsPropertyBinder) {
@@ -61,7 +59,7 @@ public class ComponentBinder {
 
   public Component bindComponent(
       PersistentClass owner,
-      HibernateEmbeddedProperty embeddedProperty,
+      @Nonnull HibernateEmbeddedProperty embeddedProperty,
       String path) {
     Component component = new Component(metadataBuildingContext, owner);
     Class<?> type = embeddedProperty.getType();

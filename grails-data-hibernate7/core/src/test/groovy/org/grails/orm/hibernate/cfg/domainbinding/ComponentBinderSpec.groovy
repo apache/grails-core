@@ -48,8 +48,7 @@ class ComponentBinderSpec extends HibernateGormDatastoreSpec {
         binder = new ComponentBinder(
                 metadataBuildingContext,
                 mappingCacheHolder,
-                componentUpdater,
-                metadataBuildingContext.getMetadataCollector()
+                componentUpdater
         )
         binder.setGrailsPropertyBinder(grailsPropertyBinder)
     }
