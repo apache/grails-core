@@ -20,7 +20,9 @@ package org.grails.orm.hibernate.cfg.domainbinding.util;
 
 import java.util.ArrayList;
 import java.util.List;
-
+import org.grails.orm.hibernate.cfg.PropertyConfig;
+import org.grails.orm.hibernate.cfg.domainbinding.hibernate.GrailsHibernatePersistentEntity;
+import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernatePersistentProperty;
 import org.hibernate.MappingException;
 import org.hibernate.mapping.Column;
 import org.hibernate.mapping.Table;
@@ -35,39 +37,42 @@ public class CreateKeyForProps {
     private final ColumnNameForPropertyAndPathFetcher columnNameForPropertyAndPathFetcher;
     private final UniqueKeyForColumnsCreator uniqueKeyForColumnsCreator;
 
-    public CreateKeyForProps(ColumnNameForPropertyAndPathFetcher columnNameForPropertyAndPathFetcher) {
-        this.columnNameForPropertyAndPathFetcher = columnNameForPropertyAndPathFetcher;
-        this.uniqueKeyForColumnsCreator = new UniqueKeyForColumnsCreator();
-    }
+  public CreateKeyForProps(
+      ColumnNameForPropertyAndPathFetcher columnNameForPropertyAndPathFetcher) {
+    this.columnNameForPropertyAndPathFetcher = columnNameForPropertyAndPathFetcher;
+    this.uniqueKeyForColumnsCreator = new UniqueKeyForColumnsCreator();
+  }
 
-    protected CreateKeyForProps(
-            ColumnNameForPropertyAndPathFetcher columnNameForPropertyAndPathFetcher,
-            UniqueKeyForColumnsCreator uniqueKeyForColumnsCreator) {
-        this.columnNameForPropertyAndPathFetcher = columnNameForPropertyAndPathFetcher;
-        this.uniqueKeyForColumnsCreator = uniqueKeyForColumnsCreator;
-    }
+  protected CreateKeyForProps(
+      ColumnNameForPropertyAndPathFetcher columnNameForPropertyAndPathFetcher,
+      UniqueKeyForColumnsCreator uniqueKeyForColumnsCreator) {
+    this.columnNameForPropertyAndPathFetcher = columnNameForPropertyAndPathFetcher;
+    this.uniqueKeyForColumnsCreator = uniqueKeyForColumnsCreator;
+  }
 
-    public void createKeyForProps(HibernatePersistentProperty grailsProp, String path, Table table, String columnName) {
-        PropertyConfig mappedForm = grailsProp.getMappedForm();
+  public void createKeyForProps(
+      HibernatePersistentProperty grailsProp, String path, Table table, String columnName) {
+    PropertyConfig mappedForm = grailsProp.getMappedForm();
 
-        if (mappedForm.isUnique() && mappedForm.isUniqueWithinGroup()) {
+    if (mappedForm.isUnique() && mappedForm.isUniqueWithinGroup()) {
 
-            List<Column> keyList = new ArrayList<>();
-            keyList.add(new Column(columnName));
-            List<String> propertyNames = mappedForm.getUniquenessGroup();
-            GrailsHibernatePersistentEntity owner = grailsProp.getHibernateOwner();
-            for (String propertyName : propertyNames) {
-                HibernatePersistentProperty otherProp = owner.getHibernatePropertyByName(propertyName);
-                if (otherProp == null) {
-                    throw new MappingException(
-                            owner.getJavaClass().getName() + " references an unknown property " + propertyName);
-                }
-                String otherColumnName =
-                        columnNameForPropertyAndPathFetcher.getColumnNameForPropertyAndPath(otherProp, path, null);
-                keyList.add(new Column(otherColumnName));
+      List<Column> keyList = new ArrayList<>();
+      keyList.add(new Column(columnName));
+      List<String> propertyNames = mappedForm.getUniquenessGroup();
+      GrailsHibernatePersistentEntity owner = grailsProp.getHibernateOwner();
+        for (String propertyName : propertyNames) {
+            HibernatePersistentProperty otherProp =
+                    (HibernatePersistentProperty) owner.getPropertyByName(propertyName);
+            if (otherProp == null) {
+                throw new MappingException(
+                        owner.getJavaClass().getName() + " references an unknown property " + propertyName);
             }
-
-            uniqueKeyForColumnsCreator.createUniqueKeyForColumns(table, keyList);
+            String otherColumnName =
+                    columnNameForPropertyAndPathFetcher.getColumnNameForPropertyAndPath(
+                            otherProp, path, null);
+            keyList.add(new Column(otherColumnName));
         }
+
+      uniqueKeyForColumnsCreator.createUniqueKeyForColumns(table, keyList);
     }
 }
