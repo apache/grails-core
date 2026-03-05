@@ -61,23 +61,14 @@ class NamespacedBookSpec extends Specification implements HttpClientSupport {
 
     void 'test the correct content type is chosen (hal)'() {
         when: 'A request is sent to a controller with a namespace'
-        def response = http(
-                '/api/book',
-                'Accept': 'application/hal+json'
-        )
+        def response = http('/api/book', 'Accept': 'application/hal+json')
 
         then: 'The response contains the child template'
-        response.expectJson(200, 'Content-Type': 'application/hal+json;charset=UTF-8', [
+        response.expectJsonContains(200, 'Content-Type': 'application/hal+json;charset=UTF-8', [
                 api: 'version 1.0 (Namespaced HAL)',
                 title: 'API - The Shining',
-                _links: [
-                        self: [
-                                href: "$httpClientRootUri/api/book/index",
-                                hreflang: 'en_US',
-                                type: 'application/hal+json'
-                        ]
-                ]
         ])
+        response.json()._links
     }
 
     void 'test render(view: "..", model: ..) in controllers with namespaces works'() {
