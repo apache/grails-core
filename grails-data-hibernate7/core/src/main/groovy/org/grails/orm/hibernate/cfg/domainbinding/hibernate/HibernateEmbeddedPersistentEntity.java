@@ -81,18 +81,8 @@ public class HibernateEmbeddedPersistentEntity extends EmbeddedPersistentEntity<
     this.classMapping = new HibernateEmbeddedClassMapping(this, ctx);
   }
 
-    @Override
-    public ClassMapping<Mapping> getMapping() {
-        return classMapping;
-    }
-
-    @Override
-    public void setPersistentClass(PersistentClass persistentClass) {
-        this.persistentClass = persistentClass;
-    }
-
-    @Override
-    public PersistentClass getPersistentClass() {
-        return persistentClass;
-    }
+  @Override
+  public ClassMapping<Mapping> getMapping() {
+    return classMapping;
+  }
 }
