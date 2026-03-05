@@ -58,9 +58,9 @@ import org.grails.orm.hibernate.cfg.domainbinding.util.SimpleValueColumnFetcher;
  */
 public class GrailsDomainBinder implements AdditionalMappingContributor, TypeContributor {
 
-    public static final String FOREIGN_KEY_SUFFIX = "_id";
-    public static final String EMPTY_PATH = "";
-    public static final char UNDERSCORE = '_';
+  public static final String FOREIGN_KEY_SUFFIX = "_id";
+  public static final String EMPTY_PATH = "";
+  public static final char UNDERSCORE = '_';
 
     public static final String ENUM_CLASS_PROP = "enumClass";
     public static final Logger LOG = LoggerFactory.getLogger(GrailsDomainBinder.class);
@@ -228,8 +228,7 @@ public class GrailsDomainBinder implements AdditionalMappingContributor, TypeCon
     hibernateMappingContext.getHibernatePersistentEntities(dataSourceName).stream()
         .filter(persistentEntity -> persistentEntity.forGrailsDomainMapping(dataSourceName))
         .forEach(
-            hibernatePersistentEntity ->
-                rootBinder.bindRoot(hibernatePersistentEntity));
+                rootBinder::bindRoot);
   }
 
   /**

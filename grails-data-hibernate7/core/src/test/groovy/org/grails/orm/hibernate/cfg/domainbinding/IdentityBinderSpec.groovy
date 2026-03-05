@@ -59,8 +59,7 @@ class IdentityBinderSpec extends HibernateGormDatastoreSpec {
         domainClass.getCompositeIdentity() >> null
 
         when:
-        binder.bindIdentity(domainClass, root)
-
+        binder.bindIdentity(domainClass, root, null)
 
         then:
         1 * simpleIdBinder.bindSimpleId(domainClass, root, identity, _)
@@ -77,8 +76,7 @@ class IdentityBinderSpec extends HibernateGormDatastoreSpec {
         domainClass.getHibernateIdentity() >> compositeIdentity
 
         when:
-        binder.bindIdentity(domainClass, root)
-
+        binder.bindIdentity(domainClass, root, null)
 
         then:
         1 * compositeIdBinder.bindCompositeId(domainClass, root, null)
@@ -94,8 +92,7 @@ class IdentityBinderSpec extends HibernateGormDatastoreSpec {
         domainClass.getHibernateIdentity() >> compositeIdentity
 
         when:
-        binder.bindIdentity(domainClass, root)
-
+        binder.bindIdentity(domainClass, root, gormMapping)
 
         then:
         1 * compositeIdBinder.bindCompositeId(domainClass, root, compositeIdentity)
@@ -115,8 +112,7 @@ class IdentityBinderSpec extends HibernateGormDatastoreSpec {
         domainClass.getName() >> "MyEntity"
 
         when:
-        binder.bindIdentity(domainClass, root)
-
+        binder.bindIdentity(domainClass, root, gormMapping)
 
         then:
         1 * simpleIdBinder.bindSimpleId(domainClass, root, identity, _)
@@ -135,8 +131,7 @@ class IdentityBinderSpec extends HibernateGormDatastoreSpec {
         domainClass.getName() >> "MyEntity"
 
         when:
-        binder.bindIdentity(domainClass, root)
-
+        binder.bindIdentity(domainClass, root, gormMapping)
 
         then:
         1 * simpleIdBinder.bindSimpleId(domainClass, root, identity, _)
@@ -155,27 +150,7 @@ class IdentityBinderSpec extends HibernateGormDatastoreSpec {
         domainClass.getName() >> "MyEntity"
 
         when:
-        binder.bindIdentity(domainClass, root)
-
-
-        then:
-        1 * simpleIdBinder.bindSimpleId(domainClass, root, identity, _)
-    }
-
-    def "should create synthetic identifier property if it doesn't exist"() {
-        given:
-        def domainClass = Mock(HibernatePersistentEntity)
-        def root = new RootClass(getGrailsDomainBinder().getMetadataBuildingContext())
-        def mappings = Mock(InFlightMetadataCollector)
-        def identity = new Identity()
-        domainClass.getHibernateIdentity() >> identity
-        domainClass.getIdentity() >> null
-        domainClass.getName() >> "MyEntity"
-        domainClass.getMappingContext() >> getGrailsDomainBinder().hibernateMappingContext
-        domainClass.getMapping() >> Mock(ClassMapping)
-
-        when:
-        binder.bindIdentity(domainClass, root)
+        binder.bindIdentity(domainClass, root, gormMapping)
 
         then:
         1 * simpleIdBinder.bindSimpleId(domainClass, root, identity, _)

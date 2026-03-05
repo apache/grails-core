@@ -36,8 +36,8 @@ public class ManyToOneValuesBinder {
         var fetchMode = Optional.ofNullable(config.getFetchMode()).orElse(FetchMode.DEFAULT);
         manyToOne.setFetchMode(fetchMode);
 
-        var lazy = Optional.ofNullable(config.getLazy()).orElse(true);
-        manyToOne.setLazy(lazy);
+    var lazy = Optional.ofNullable(config.getLazy()).orElse(true);
+    manyToOne.setLazy(lazy);
 
         manyToOne.setIgnoreNotFound(config.getIgnoreNotFound());
 

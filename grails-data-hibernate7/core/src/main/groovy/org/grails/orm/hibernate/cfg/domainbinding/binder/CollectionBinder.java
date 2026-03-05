@@ -54,6 +54,14 @@ import org.grails.orm.hibernate.cfg.domainbinding.util.GrailsPropertyResolver;
 import org.grails.orm.hibernate.cfg.domainbinding.util.NamespaceNameExtractor;
 import org.grails.orm.hibernate.cfg.domainbinding.util.SimpleValueColumnFetcher;
 import org.grails.orm.hibernate.cfg.domainbinding.util.TableForManyCalculator;
+import org.hibernate.FetchMode;
+import org.hibernate.boot.spi.InFlightMetadataCollector;
+import org.hibernate.boot.spi.MetadataBuildingContext;
+import org.hibernate.mapping.Collection;
+import org.hibernate.mapping.OneToMany;
+import org.hibernate.mapping.PersistentClass;
+import org.hibernate.mapping.Table;
+
 
 /** Handles the binding of collections to the Hibernate runtime meta model. */
 @SuppressWarnings("PMD.DataflowAnomalyAnalysis")

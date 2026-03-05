@@ -19,9 +19,8 @@
 package org.grails.orm.hibernate.cfg.domainbinding.binder;
 
 import jakarta.annotation.Nonnull;
+import org.grails.orm.hibernate.cfg.domainbinding.hibernate.GrailsHibernatePersistentEntity;
 
-import org.hibernate.boot.spi.MetadataBuildingContext;
-import org.hibernate.mapping.PersistentClass;
 import org.hibernate.mapping.SingleTableSubclass;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -47,14 +46,12 @@ public class SingleTableSubclassBinder {
   /**
    * Binds a sub-class using table-per-hierarchy inheritance mapping
    *
-   * @param sub The Grails domain class instance representing the sub-class
+   * @param sub      The Grails domain class instance representing the sub-class
    * @param subClass The Hibernate SubClass instance
-   * @param mappings The mappings instance
    */
   public void bindSubClass(
       @Nonnull GrailsHibernatePersistentEntity sub,
-      SingleTableSubclass subClass,
-      @Nonnull InFlightMetadataCollector mappings) {
+      SingleTableSubclass subClass) {
     classBinder.bindClass(sub, subClass);
     subClass.setDiscriminatorValue(sub.getDiscriminatorValue());
     if (LOG.isDebugEnabled()) {

@@ -73,7 +73,7 @@ class RootPersistentClassCommonValuesBinderSpec extends HibernateGormDatastoreSp
         def mappings = getCollector()
 
         when:
-        RootClass rootClass = binder.bindRootPersistentClassCommonValues(entity, [])
+        RootClass rootClass = binder.bindRootPersistentClassCommonValues(entity)
 
         then:
         1 * classPropertiesBinder.bindClassProperties(entity, _)
@@ -89,7 +89,7 @@ class RootPersistentClassCommonValuesBinderSpec extends HibernateGormDatastoreSp
         def mappings = getCollector()
 
         when:
-        RootClass rootClass = binder.bindRootPersistentClassCommonValues(entity, [])
+        RootClass rootClass = binder.bindRootPersistentClassCommonValues(entity)
 
         then:
         rootClass != null

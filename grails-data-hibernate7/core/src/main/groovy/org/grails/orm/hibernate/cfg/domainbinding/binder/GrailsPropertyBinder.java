@@ -83,13 +83,7 @@ public class GrailsPropertyBinder {
               + "]");
     }
 
-    public Value bindProperty(
-            @Nonnull HibernatePersistentProperty currentGrailsProp, HibernatePersistentProperty parentProperty, String path) {
-        Table table = currentGrailsProp.getTable();
-        PersistentClass persistentClass = currentGrailsProp.getHibernateOwner().getPersistentClass();
-        if (LOG.isDebugEnabled()) {
-            LOG.debug("[GrailsPropertyBinder] Binding persistent property [" + currentGrailsProp.getName() + "]");
-        }
+    Value value;
 
     // 1. Create Value and apply binders (consolidated block)
     if (currentGrailsProp instanceof HibernateEnumProperty) {

@@ -24,7 +24,11 @@ import org.hibernate.mapping.RootClass;
 
 import org.grails.orm.hibernate.cfg.CompositeIdentity;
 import org.grails.orm.hibernate.cfg.Identity;
-import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernatePersistentEntity;
+import org.grails.orm.hibernate.cfg.Mapping;
+import org.grails.orm.hibernate.cfg.domainbinding.hibernate.GrailsHibernatePersistentEntity;
+import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernateIdentity;
+
+import org.hibernate.mapping.RootClass;
 
 public class IdentityBinder {
 
@@ -39,7 +43,6 @@ public class IdentityBinder {
   public void bindIdentity(
       @Nonnull GrailsHibernatePersistentEntity domainClass,
       RootClass root,
-      @Nonnull InFlightMetadataCollector mappings,
       Mapping gormMapping) {
 
     HibernateIdentity id = gormMapping != null ? gormMapping.getIdentity() : null;

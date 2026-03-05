@@ -19,7 +19,7 @@
 package org.grails.orm.hibernate.cfg.domainbinding.binder;
 
 import java.util.function.BiFunction;
-
+import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernatePersistentProperty;
 import org.hibernate.boot.spi.MetadataBuildingContext;
 import org.hibernate.engine.OptimisticLockStyle;
 import org.hibernate.mapping.BasicValue;
@@ -38,38 +38,38 @@ public class VersionBinder {
     private final PropertyBinder propertyBinder;
     private final BiFunction<MetadataBuildingContext, Table, BasicValue> basicValueFactory;
 
-    public VersionBinder(
-            MetadataBuildingContext metadataBuildingContext,
-            SimpleValueBinder simpleValueBinder,
-            PropertyBinder propertyBinder,
-            BiFunction<MetadataBuildingContext, Table, BasicValue> basicValueFactory) {
-        this.metadataBuildingContext = metadataBuildingContext;
-        this.simpleValueBinder = simpleValueBinder;
-        this.propertyBinder = propertyBinder;
-        this.basicValueFactory = basicValueFactory;
-    }
+  public VersionBinder(
+      MetadataBuildingContext metadataBuildingContext,
+      SimpleValueBinder simpleValueBinder,
+      PropertyBinder propertyBinder,
+      BiFunction<MetadataBuildingContext, Table, BasicValue> basicValueFactory) {
+    this.metadataBuildingContext = metadataBuildingContext;
+    this.simpleValueBinder = simpleValueBinder;
+    this.propertyBinder = propertyBinder;
+    this.basicValueFactory = basicValueFactory;
+  }
 
-    public void bindVersion(HibernatePersistentProperty version, RootClass entity) {
 
-        if (version != null) {
+  public void bindVersion(HibernatePersistentProperty version, RootClass entity) {
 
-            BasicValue val = basicValueFactory.apply(metadataBuildingContext, entity.getTable());
+    if (version != null) {
 
-            // set type
-            simpleValueBinder.bindSimpleValue(version, null, val, EMPTY_PATH);
+      BasicValue val = basicValueFactory.apply(metadataBuildingContext, entity.getTable());
 
-            if (!val.isTypeSpecified()) {
-                val.setTypeName("version".equals(version.getName()) ? "integer" : "timestamp");
-            }
-            Property prop = propertyBinder.bindProperty(version, val);
-            prop.setLazy(false);
-            val.setNullValue("undefined");
-            entity.setVersion(prop);
-            entity.setDeclaredVersion(prop);
-            entity.setOptimisticLockStyle(OptimisticLockStyle.VERSION);
-            entity.addProperty(prop);
-        } else {
-            entity.setOptimisticLockStyle(OptimisticLockStyle.NONE);
-        }
+      // set type
+      simpleValueBinder.bindSimpleValue(version, null, val, EMPTY_PATH);
+
+      if (!val.isTypeSpecified()) {
+        val.setTypeName("version".equals(version.getName()) ? "integer" : "timestamp");
+      }
+      Property prop = propertyBinder.bindProperty(version, val);
+      prop.setLazy(false);
+      val.setNullValue("undefined");
+      entity.setVersion(prop);
+      entity.setDeclaredVersion(prop);
+      entity.setOptimisticLockStyle(OptimisticLockStyle.VERSION);
+      entity.addProperty(prop);
+    } else {
+      entity.setOptimisticLockStyle(OptimisticLockStyle.NONE);
     }
 }

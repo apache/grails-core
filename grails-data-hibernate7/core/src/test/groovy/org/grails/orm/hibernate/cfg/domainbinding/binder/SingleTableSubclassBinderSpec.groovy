@@ -60,7 +60,7 @@ class SingleTableSubclassBinderSpec extends HibernateGormDatastoreSpec {
         // singleTableSubclass.setEntityName(SingleTableSubClassSub.name)
 
         when:
-        def singleTableSubclass = binder.bindSubClass(subEntity, rootClass)
+        binder.bindSubClass(subEntity, singleTableSubclass)
 
         then:
         singleTableSubclass != null

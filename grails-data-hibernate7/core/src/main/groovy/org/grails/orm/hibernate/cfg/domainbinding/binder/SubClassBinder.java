@@ -22,7 +22,6 @@ import java.util.ArrayList;
 import java.util.List;
 
 import jakarta.annotation.Nonnull;
-import java.util.Collection;
 import org.grails.orm.hibernate.cfg.MappingCacheHolder;
 import org.grails.orm.hibernate.cfg.domainbinding.hibernate.GrailsHibernatePersistentEntity;
 import org.grails.orm.hibernate.cfg.domainbinding.util.MultiTenantFilterBinder;

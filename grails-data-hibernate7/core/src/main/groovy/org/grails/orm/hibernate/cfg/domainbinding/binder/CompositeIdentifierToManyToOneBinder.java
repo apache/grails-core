@@ -138,6 +138,6 @@ public class CompositeIdentifierToManyToOneBinder {
     }
 
     private String join(String... parts) {
-        return Arrays.stream(parts).map(backticksRemover::apply).collect(Collectors.joining(String.valueOf(UNDERSCORE)));
+        return Arrays.stream(parts).map(backticksRemover).collect(Collectors.joining(String.valueOf(UNDERSCORE)));
     }
 }

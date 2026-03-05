@@ -67,7 +67,7 @@ public class SubclassMappingBinder {
 
       var singleTableSubclass = new SingleTableSubclass(parent, this.metadataBuildingContext);
 
-      singleTableSubclassBinder.bindSubClass(subEntity, singleTableSubclass, mappings);
+      singleTableSubclassBinder.bindSubClass(subEntity, singleTableSubclass);
       subClass = singleTableSubclass;
     }
 

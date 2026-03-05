@@ -20,6 +20,10 @@ package org.grails.orm.hibernate.cfg.domainbinding.binder;
 
 import jakarta.annotation.Nonnull;
 
+import org.grails.orm.hibernate.cfg.CacheConfig;
+import org.grails.orm.hibernate.cfg.Mapping;
+import org.grails.orm.hibernate.cfg.PersistentEntityNamingStrategy;
+import org.grails.orm.hibernate.cfg.domainbinding.hibernate.GrailsHibernatePersistentEntity;
 import org.hibernate.boot.spi.InFlightMetadataCollector;
 import org.hibernate.boot.spi.MetadataBuildingContext;
 import org.hibernate.mapping.RootClass;
@@ -60,8 +64,7 @@ public class RootPersistentClassCommonValuesBinder {
   }
 
   public RootClass bindRootPersistentClassCommonValues(
-      @Nonnull GrailsHibernatePersistentEntity domainClass,
-      @Nonnull Collection<GrailsHibernatePersistentEntity> children) {
+      @Nonnull GrailsHibernatePersistentEntity domainClass) {
 
     RootClass root = new RootClass(this.metadataBuildingContext);
     root.setAbstract(domainClass.isAbstract());
@@ -106,7 +109,7 @@ public class RootPersistentClassCommonValuesBinder {
               + root.getTable().getName());
     }
 
-    identityBinder.bindIdentity(domainClass, root, mappings, gormMapping);
+    identityBinder.bindIdentity(domainClass, root, gormMapping);
     versionBinder.bindVersion(domainClass.getVersion(), root);
     root.createPrimaryKey();
     classPropertiesBinder.bindClassProperties(domainClass, root);

@@ -78,7 +78,7 @@ public class RootBinder {
     Collection<GrailsHibernatePersistentEntity> children = entity.getChildEntities(dataSourceName);
     RootClass root =
         rootPersistentClassCommonValuesBinder.bindRootPersistentClassCommonValues(
-            entity, children);
+            entity);
 
         var children = entity.getChildEntities(dataSourceName);
         RootClass root = rootPersistentClassCommonValuesBinder.bindRoot(entity);
