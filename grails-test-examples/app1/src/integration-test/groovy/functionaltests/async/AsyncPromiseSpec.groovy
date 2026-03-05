@@ -18,6 +18,7 @@
  */
 package functionaltests.async
 
+import java.time.Duration
 import java.util.concurrent.TimeUnit
 
 import functionaltests.services.AsyncProcessingService
@@ -133,8 +134,14 @@ class AsyncPromiseSpec extends Specification implements HttpClientSupport {
         given: "an input string"
         def input = 'test'
 
+        and: "a request with an extra long timeout"
+        // This test times out regularly in CI
+        def request = httpRequestWith("/asyncTest/useAsyncService?input=${input}") {
+            timeout(Duration.ofMinutes(2))
+        }
+
         when: "calling async service endpoint"
-        def response = http("/asyncTest/useAsyncService?input=${input}")
+        def response = http(request)
 
         then: "service processes input correctly"
         response.expectJson(200, [
