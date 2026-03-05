@@ -25,12 +25,6 @@ import org.hibernate.mapping.Collection;
 import org.hibernate.mapping.DependantValue;
 import org.hibernate.mapping.PersistentClass;
 
-import org.hibernate.mapping.Collection;
-import org.hibernate.mapping.DependantValue;
-import org.hibernate.mapping.PersistentClass;
-
-import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernateToManyProperty;
-
 /** Forces columns to be nullable and checks if the key is updatable. */
 public class CollectionKeyColumnUpdater {
 

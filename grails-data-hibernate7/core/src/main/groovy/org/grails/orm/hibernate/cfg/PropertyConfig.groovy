@@ -94,7 +94,7 @@ class PropertyConfig extends Property {
      *
      * @deprecated Use {@link #getUpdatable()} instead
      */
-    @Deprecated(since = '7.0', forRemoval = true)
+    @Deprecated(since = "7.0", forRemoval = true)
     boolean getUpdateable() {
         return updatable
     }
@@ -104,7 +104,7 @@ class PropertyConfig extends Property {
      *
      * @deprecated Use {@code updatable} instead
      */
-    @Deprecated(since = '7.0', forRemoval = true)
+    @Deprecated(since = "7.0", forRemoval = true)
     void setUpdateable(boolean updateable) {
         this.updatable = updateable
     }
