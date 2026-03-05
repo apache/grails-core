@@ -96,10 +96,34 @@ public class ListSecondPassBinder {
         String columnName = property.getIndexColumnName(namingStrategy);
         final boolean isManyToMany = property instanceof HibernateManyToManyProperty;
 
-        if (isManyToMany && !property.isOwningSide()) {
-            throw new MappingException("Invalid association [" +
-                    property +
-                    "]. List collection types only supported on the owning side of a many-to-many relationship.");
+    if (property.isBidirectional()) {
+
+      String entityName;
+      Value element = list.getElement();
+      if (element instanceof ManyToOne manyToOne) {
+          entityName = manyToOne.getReferencedEntityName();
+      } else {
+        entityName = ((OneToMany) element).getReferencedEntityName();
+      }
+
+      PersistentClass referenced = mappings.getEntityBinding(entityName);
+
+      boolean compositeIdProperty = property.getHibernateInverseSide().isCompositeIdProperty();
+      if (!compositeIdProperty) {
+        Backref prop = new Backref();
+        final PersistentEntity owner = property.getOwner();
+        prop.setEntityName(owner.getName());
+        String s2 = property.getName();
+        prop.setName(
+            UNDERSCORE
+                + new BackticksRemover().apply(owner.getJavaClass().getSimpleName())
+                + UNDERSCORE
+                + new BackticksRemover().apply(s2)
+                + "Backref");
+        prop.setSelectable(false);
+        prop.setUpdatable(false);
+        if (isManyToMany) {
+          prop.setInsertable(false);
         }
 
         Table collectionTable = list.getCollectionTable();
@@ -131,11 +155,11 @@ public class ListSecondPassBinder {
                 final PersistentEntity owner = property.getOwner();
                 prop.setEntityName(owner.getName());
                 String s2 = property.getName();
-                prop.setName(UNDERSCORE +
-                        new BackticksRemover().apply(owner.getJavaClass().getSimpleName()) +
-                        UNDERSCORE +
-                        new BackticksRemover().apply(s2) +
-                        "Backref");
+                prop.setName(UNDERSCORE
+                        + new BackticksRemover().apply(owner.getJavaClass().getSimpleName())
+                        + UNDERSCORE
+                        + new BackticksRemover().apply(s2)
+                        + "Backref");
                 prop.setSelectable(false);
                 prop.setUpdatable(false);
                 if (isManyToMany) {

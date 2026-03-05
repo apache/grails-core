@@ -20,15 +20,6 @@ package org.grails.orm.hibernate.cfg.domainbinding.secondpass;
 
 import java.util.List;
 import java.util.Map;
-
-import jakarta.annotation.Nonnull;
-
-import org.hibernate.MappingException;
-import org.hibernate.boot.spi.MetadataBuildingContext;
-import org.hibernate.mapping.BasicValue;
-import org.hibernate.mapping.Column;
-import org.hibernate.type.StandardBasicTypes;
-
 import org.grails.orm.hibernate.cfg.ColumnConfig;
 import org.grails.orm.hibernate.cfg.PersistentEntityNamingStrategy;
 import org.grails.orm.hibernate.cfg.PropertyConfig;
@@ -105,8 +96,9 @@ public class MapSecondPassBinder {
         }
 
       String typeName = null;
-      if (property instanceof Basic basic) {
-        typeName = property.getTypeName(basic.getComponentType());
+      Class<?> componentType = property.getComponentType();
+      if (componentType != null) {
+        typeName = property.getTypeName(componentType);
       }
 
       if (typeName == null) {

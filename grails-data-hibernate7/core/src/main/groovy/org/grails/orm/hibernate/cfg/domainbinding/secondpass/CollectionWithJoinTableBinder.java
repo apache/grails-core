@@ -24,7 +24,7 @@ import org.grails.orm.hibernate.cfg.domainbinding.binder.CollectionForPropertyCo
 import org.grails.orm.hibernate.cfg.domainbinding.binder.CompositeIdentifierToManyToOneBinder;
 import org.grails.orm.hibernate.cfg.domainbinding.binder.SimpleValueColumnBinder;
 import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernateToManyProperty;
-import org.hibernate.boot.spi.InFlightMetadataCollector;
+
 import org.hibernate.mapping.*;
 
 /** Binds a collection with a join table. */
@@ -58,7 +58,6 @@ public class CollectionWithJoinTableBinder {
   /** Bind collection with join table. */
   public void bindCollectionWithJoinTable(
       @Nonnull HibernateToManyProperty property,
-      @Nonnull InFlightMetadataCollector mappings,
       @Nonnull Collection collection) {
 
     collection.setInverse(false);

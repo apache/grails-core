@@ -54,7 +54,7 @@ public class UnidirectionalOneToManyBinder {
       @Nonnull HibernateOneToManyProperty property,
       @Nonnull Collection collection) {
     if (!property.shouldBindWithForeignKey()) {
-      collectionWithJoinTableBinder.bindCollectionWithJoinTable(property, mappings, collection);
+      collectionWithJoinTableBinder.bindCollectionWithJoinTable(property, collection);
     } else {
       bindUnidirectionalOneToMany(property, collection);
     }

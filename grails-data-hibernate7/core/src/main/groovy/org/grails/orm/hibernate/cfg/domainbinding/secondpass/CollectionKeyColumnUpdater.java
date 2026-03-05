@@ -19,7 +19,6 @@
 package org.grails.orm.hibernate.cfg.domainbinding.secondpass;
 
 import java.util.Objects;
-import java.util.stream.StreamSupport;
 import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernateToManyProperty;
 import org.hibernate.mapping.Collection;
 import org.hibernate.mapping.DependantValue;

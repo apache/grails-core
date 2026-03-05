@@ -40,7 +40,6 @@ public class ListSecondPass implements org.hibernate.boot.spi.SecondPass, Grails
         this.property = property;
     }
 
-  @SuppressWarnings("rawtypes")
   @Override
   public void doSecondPass(Map persistentClasses) throws MappingException {
     listSecondPassBinder.bindListSecondPass(

@@ -21,7 +21,6 @@ package org.grails.orm.hibernate.cfg.domainbinding.secondpass;
 import static org.grails.orm.hibernate.cfg.domainbinding.binder.GrailsDomainBinder.UNDERSCORE;
 
 import java.util.Optional;
-import org.grails.datastore.mapping.model.types.Basic;
 import org.grails.orm.hibernate.cfg.ColumnConfig;
 import org.grails.orm.hibernate.cfg.PersistentEntityNamingStrategy;
 import org.grails.orm.hibernate.cfg.PropertyConfig;
@@ -64,7 +63,7 @@ public class BasicCollectionElementBinder {
 
   /** Creates and binds a {@link BasicValue} element for the given basic collection property. */
   public BasicValue bind(HibernateToManyProperty property, Collection collection) {
-    final Class<?> referencedType = ((Basic) property).getComponentType();
+    final Class<?> referencedType = property.getComponentType();
     final boolean isEnum = referencedType.isEnum();
     var joinColumnMappingOptional =
         Optional.ofNullable(property.getMappedForm()).map(PropertyConfig::getJoinTableColumnConfig);

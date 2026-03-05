@@ -109,7 +109,7 @@ public class CollectionSecondPassBinder {
     } else if (property instanceof HibernateOneToManyProperty oneToManyProperty && oneToManyProperty.isUnidirectionalOneToMany()) {
       unidirectionalOneToManyBinder.bind(oneToManyProperty, collection);
     } else if (property.supportsJoinColumnMapping()) {
-      collectionWithJoinTableBinder.bindCollectionWithJoinTable(property, mappings, collection);
+      collectionWithJoinTableBinder.bindCollectionWithJoinTable(property, collection);
     }
   }
 

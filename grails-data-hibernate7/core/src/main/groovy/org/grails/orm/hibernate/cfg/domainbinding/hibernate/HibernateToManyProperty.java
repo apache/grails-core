@@ -69,6 +69,14 @@ public interface HibernateToManyProperty extends PropertyWithMapping<PropertyCon
   }
 
   /**
+   * Returns the component type for basic (scalar/enum) collections, or {@code null} if this is not
+   * a basic collection.
+   */
+  default Class<?> getComponentType() {
+    return this instanceof Basic<?> basic ? basic.getComponentType() : null;
+  }
+
+  /**
    * @return Whether the collection should be bound with a foreign key
    */
   default boolean shouldBindWithForeignKey() {
