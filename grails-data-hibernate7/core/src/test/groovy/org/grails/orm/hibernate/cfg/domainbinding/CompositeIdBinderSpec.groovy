@@ -64,8 +64,8 @@ class CompositeIdBinderSpec extends HibernateGormDatastoreSpec {
         def prop1 = Mock(HibernatePersistentProperty)
         def prop2 = Mock(HibernatePersistentProperty)
         def identifierProp = Mock(HibernatePersistentProperty)
-
-        compositeIdentity.getHibernateProperties(domainClass) >> ([prop1, prop2] as HibernatePersistentProperty[])
+        domainClass.getHibernatePropertyByName("prop1") >> prop1
+        domainClass.getHibernatePropertyByName("prop2") >> prop2
         domainClass.getIdentity() >> identifierProp
         domainClass.getName() >> "MyEntity"
 

@@ -62,8 +62,7 @@ public interface GrailsHibernatePersistentEntity extends PersistentEntity {
    * or {@code null} if no such property exists.
    */
   default HibernatePersistentProperty getHibernatePropertyByName(String name) {
-    var property = getPropertyByName(name);
-    return property instanceof HibernatePersistentProperty hpp ? hpp : null;
+    return (HibernatePersistentProperty) getPropertyByName(name);
   }
 
   /**

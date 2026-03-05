@@ -65,6 +65,7 @@ import org.grails.datastore.mapping.query.jpa.JpaQueryBuilder;
 import org.grails.datastore.mapping.query.jpa.JpaQueryInfo;
 import org.grails.datastore.mapping.reflect.ClassPropertyFetcher;
 import org.grails.datastore.mapping.transactions.Transaction;
+import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernatePersistentEntity;
 import org.grails.orm.hibernate.proxy.HibernateProxyHandler;
 import org.grails.orm.hibernate.query.HibernateHqlQuery;
 import org.grails.orm.hibernate.query.HibernateQuery;
@@ -347,9 +348,9 @@ public class HibernateSession extends AbstractAttributeStoringSession
                   JpaQueryBuilder builder = new JpaQueryBuilder(criteria);
                   builder.setConversionService(getMappingContext().getConversionService());
                   builder.setHibernateCompatible(true);
-                  PersistentEntity targetEntity = criteria.getPersistentEntity();
+                  HibernatePersistentEntity targetEntity = (HibernatePersistentEntity)criteria.getPersistentEntity();
                   PersistentProperty lastUpdated =
-                      targetEntity.getPropertyByName(GormProperties.LAST_UPDATED);
+                      targetEntity.getHibernatePropertyByName(GormProperties.LAST_UPDATED);
                   if (lastUpdated != null
                       && targetEntity.getMapping().getMappedForm().isAutoTimestamp()) {
                     if (timestampProvider == null) {

@@ -30,6 +30,7 @@ import org.grails.datastore.mapping.engine.event.AbstractPersistenceEventListene
 import org.grails.datastore.mapping.engine.event.ValidationEvent;
 import org.grails.datastore.mapping.model.PersistentEntity;
 import org.grails.orm.hibernate.HibernateDatastore;
+import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernatePersistentEntity;
 import org.grails.orm.hibernate.connections.HibernateConnectionSourceSettings;
 import org.grails.orm.hibernate.support.ClosureEventListener;
 import org.grails.orm.hibernate.support.SoftKey;
@@ -179,7 +180,7 @@ public class HibernateEventListener extends AbstractPersistenceEventListener {
               MultiTenant.class.isAssignableFrom(clazz)
                   || factory == null
                   || datastore.getSessionFactory().equals(factory);
-          PersistentEntity persistentEntity =
+          HibernatePersistentEntity persistentEntity = (HibernatePersistentEntity)
               datastore.getMappingContext().getPersistentEntity(clazz.getName());
           shouldTrigger = (persistentEntity != null && isValidSessionFactory);
           if (shouldTrigger) {

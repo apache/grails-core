@@ -63,7 +63,7 @@ public class CollectionOrderByBinder {
                 + "] are not supported with unidirectional one to many relationships.");
       }
       HibernatePersistentProperty sortBy =
-          (HibernatePersistentProperty) referenced.getPropertyByName(property.getSort());
+              referenced.getHibernatePropertyByName(property.getSort());
       String order = Optional.ofNullable(property.getOrder()).orElse("asc");
       collection.setOrderBy(
           orderByClauseBuilder.buildOrderByClause(

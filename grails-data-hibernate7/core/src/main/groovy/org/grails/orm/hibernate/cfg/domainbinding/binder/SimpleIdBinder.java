@@ -47,15 +47,50 @@ public class SimpleIdBinder {
     private final PropertyBinder propertyBinder;
     private final BasicValueIdCreator basicValueIdCreator;
 
-    public SimpleIdBinder(
-            MetadataBuildingContext metadataBuildingContext,
-            BasicValueIdCreator basicValueIdCreator,
-            SimpleValueBinder simpleValueBinder,
-            PropertyBinder propertyBinder) {
-        this.metadataBuildingContext = metadataBuildingContext;
-        this.simpleValueBinder = simpleValueBinder;
-        this.propertyBinder = propertyBinder;
-        this.basicValueIdCreator = basicValueIdCreator;
+  public SimpleIdBinder(
+      MetadataBuildingContext metadataBuildingContext,
+      BasicValueIdCreator basicValueIdCreator,
+      SimpleValueBinder simpleValueBinder,
+      PropertyBinder propertyBinder) {
+    this.metadataBuildingContext = metadataBuildingContext;
+    this.simpleValueBinder = simpleValueBinder;
+    this.propertyBinder = propertyBinder;
+    this.basicValueIdCreator = basicValueIdCreator;
+  }
+
+  public MetadataBuildingContext getMetadataBuildingContext() {
+    return metadataBuildingContext;
+  }
+
+  public void bindSimpleId(
+      @Nonnull GrailsHibernatePersistentEntity domainClass,
+      RootClass entity,
+      Identity mappedId,
+      Table table) {
+
+    Mapping result = domainClass.getMappedForm();
+    boolean useSequence = result != null && result.isTablePerConcreteClass();
+    // create the id value
+
+    BasicValue id =
+        basicValueIdCreator.getBasicValueId(
+            metadataBuildingContext, table, mappedId, domainClass, useSequence);
+
+    var identifier = domainClass.getIdentity();
+    if (mappedId != null) {
+      String propertyName = mappedId.getName();
+      if (propertyName != null && !propertyName.equals(domainClass.getName())) {
+        var namedIdentityProp = domainClass.getHibernatePropertyByName(propertyName);
+        if (namedIdentityProp == null) {
+          throw new MappingException(
+              "Mapping specifies an identifier property name that doesn't exist ["
+                  + propertyName
+                  + "]");
+        }
+        if (!namedIdentityProp.equals(identifier)) {
+          identifier = namedIdentityProp;
+        }
+      }
     }
 
     public MetadataBuildingContext getMetadataBuildingContext() {

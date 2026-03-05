@@ -62,7 +62,7 @@ public class CreateKeyForProps {
       GrailsHibernatePersistentEntity owner = grailsProp.getHibernateOwner();
         for (String propertyName : propertyNames) {
             HibernatePersistentProperty otherProp =
-                    (HibernatePersistentProperty) owner.getPropertyByName(propertyName);
+                    owner.getHibernatePropertyByName(propertyName);
             if (otherProp == null) {
                 throw new MappingException(
                         owner.getJavaClass().getName() + " references an unknown property " + propertyName);

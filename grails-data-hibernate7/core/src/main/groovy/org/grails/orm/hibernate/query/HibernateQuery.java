@@ -389,7 +389,7 @@ public class HibernateQuery extends Query {
   @Override
   public AssociationQuery createQuery(String associationName) {
     final PersistentProperty property =
-        entity.getPropertyByName(calculatePropertyName(associationName));
+            ((HibernatePersistentEntity)entity).getHibernatePropertyByName(calculatePropertyName(associationName));
     if ((property instanceof Association association)) {
       String alias = generateAlias(associationName);
       CriteriaAndAlias subCriteria = getOrCreateAlias(associationName, alias);
