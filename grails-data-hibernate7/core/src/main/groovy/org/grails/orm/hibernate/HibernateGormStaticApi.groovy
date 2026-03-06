@@ -17,7 +17,6 @@ package org.grails.orm.hibernate
 
 import org.hibernate.jpa.AvailableHints
 
-import org.grails.datastore.mapping.model.PersistentProperty
 
 import grails.orm.HibernateCriteriaBuilder
 import groovy.transform.CompileStatic
@@ -177,21 +176,23 @@ class HibernateGormStaticApi<D> extends GormStaticApi<D> {
 
     @Override
     List<D> getAll() {
-        createHibernateQuery().list()
+        doListInternal("from ${persistentEntity.name}".toString(), [:], [], [:], false)
     }
 
-    protected HibernateQuery createHibernateQuery() {
-        new HibernateQuery(hibernateSession, persistentEntity)
-    }
 
     @Override
     Integer count() {
-        createHibernateQuery().count().singleResult() as Integer
+        String entity = persistentEntity.name
+        doSingleInternal("select count(*) from $entity" as String, [:], [], [:], false) as Integer
     }
 
     @Override
     boolean exists(Serializable id) {
-        !createHibernateQuery().idEq(convertIdentifier(id)).list().isEmpty()
+        def converted = convertIdentifier(id)
+        if (converted == null) return false
+        String entity = persistentEntity.name
+        String idName = persistentEntity.identity.name
+        (doSingleInternal("select count(*) from $entity where $idName = :id" as String, [id: converted], [], [:], false) as Long) > 0
     }
 
     @Override
@@ -292,15 +293,19 @@ class HibernateGormStaticApi<D> extends GormStaticApi<D> {
     }
 
     @Override
-    List<D> findAllWhere(Map queryMap, Map args) {
+    D findWhere(Map queryMap, Map args) {
         if (!queryMap) return null
-        String hql = buildWhereHql(queryMap)
-        doListInternal(hql, queryMap, [], args, false)
+        String entity = persistentEntity.name
+        String where = queryMap.keySet().collect { "$it = :$it" }.join(' and ')
+        doSingleInternal("from $entity where $where" as String, queryMap as Map, [], args, false)
     }
 
-    private String buildWhereHql(Map queryMap) {
-        String whereClause = queryMap.keySet().collect { Object key -> "$key = :$key" }.join(' and ')
-        return "from ${persistentEntity.name} where $whereClause"
+    @Override
+    List<D> findAllWhere(Map queryMap, Map args) {
+        if (!queryMap) return null
+        String entity = persistentEntity.name
+        String where = queryMap.keySet().collect { "$it = :$it" }.join(' and ')
+        doListInternal("from $entity where $where" as String, queryMap as Map, [], args, false)
     }
 
     @Override
@@ -383,6 +388,38 @@ class HibernateGormStaticApi<D> extends GormStaticApi<D> {
                 conversionService
         )
     }
+
+    @Override
+    List<D> findAll(CharSequence query, Collection positionalParams, Map args) {
+        doListInternal(query, [:], positionalParams, args, false)
+    }
+
+    private List<D> getAllInternal(List ids) {
+        if (!ids) return []
+        String idName = persistentEntity.identity.name
+        String entity = persistentEntity.name
+        Class<?> idType = persistentEntity.identity.type
+        List convertedIds = ids.collect { HibernateRuntimeUtils.convertValueToType(it, idType, conversionService) }
+        List<D> results = doListInternal("from $entity where $idName in (:ids)" as String, [ids: convertedIds], [], [:], false)
+        Map<Object, D> byId = results.collectEntries { [(it[idName]): it] }
+        ids.collect { byId[it] }
+    }
+
+    List<D> getAll(List ids) {
+        getAllInternal(ids)
+    }
+
+    List<D> getAll(Long... ids) {
+        getAllInternal(ids as List)
+    }
+
+    @Override
+    List<D> getAll(Serializable... ids) {
+        getAllInternal(ids as List)
+    }
+
+
+
 
     protected Serializable convertIdentifier(Serializable id) {
         def identity = persistentEntity.identity

@@ -119,11 +119,19 @@ public class HibernateHqlQuery extends Query {
       var q =
           ctx.isNative()
               ? session.createNativeQuery(ctx.hql(), ctx.targetClass())
-              : session.createQuery(ctx.hql(), ctx.targetClass());
+              : isScalarSelect(ctx.hql())
+                  ? session.createQuery(ctx.hql())
+                  : session.createQuery(ctx.hql(), ctx.targetClass());
       var result = new HibernateHqlQuery(hibernateSession, entity, q);
       result.setFlushMode(session.getHibernateFlushMode());
       return result;
     }
+  }
+
+  /** Returns true if the HQL starts with a {@code select} clause that doesn't project the entity. */
+  private static boolean isScalarSelect(String hql) {
+    String trimmed = hql.stripLeading().toLowerCase();
+    return trimmed.startsWith("select") && !trimmed.startsWith("select e ") && !trimmed.startsWith("select e,");
   }
 
   /**
