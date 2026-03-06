@@ -191,19 +191,34 @@ class MapSecondPassBinderSpec extends HibernateGormDatastoreSpec {
         def mapBinder = collectionBinder.mapSecondPassBinder
 
         def authorEntity = getPersistentEntity(MSBAuthor) as GrailsHibernatePersistentEntity
+        def bookEntity = getPersistentEntity(MSBBook) as GrailsHibernatePersistentEntity
         def booksProp = authorEntity.getPropertyByName("books") as HibernateToManyProperty
 
         def rootClass = new RootClass(metadataBuildingContext)
         rootClass.setEntityName(authorEntity.name)
+        rootClass.setClassName(authorEntity.name)
+        rootClass.setJpaEntityName(authorEntity.name)
         rootClass.setTable(collector.addTable(null, null, "MSB_AUTHOR", null, false, metadataBuildingContext))
         collector.addEntityBinding(rootClass)
+
+        def bookRootClass = new RootClass(metadataBuildingContext)
+        bookRootClass.setEntityName(bookEntity.name)
+        bookRootClass.setClassName(bookEntity.name)
+        bookRootClass.setJpaEntityName(bookEntity.name)
+        bookRootClass.setTable(collector.addTable(null, null, "MSB_BOOK", null, false, metadataBuildingContext))
+        collector.addEntityBinding(bookRootClass)
+
+        def persistentClasses = [
+            (authorEntity.name): rootClass,
+            (bookEntity.name): bookRootClass
+        ]
 
         def map = new org.hibernate.mapping.Map(metadataBuildingContext, rootClass)
         map.setRole("${authorEntity.name}.books".toString())
         map.setCollectionTable(rootClass.getTable())
 
         when:
-        mapBinder.bindMapSecondPass(booksProp, collector, [:], map)
+        mapBinder.bindMapSecondPass(booksProp, collector, persistentClasses, map)
 
         then:
         noExceptionThrown()
@@ -224,15 +239,20 @@ class MapSecondPassBinderSpec extends HibernateGormDatastoreSpec {
         def mapBinder = collectionBinder.mapSecondPassBinder
 
         def authorEntity = getPersistentEntity(MSBAuthor) as GrailsHibernatePersistentEntity
+        def bookEntity = getPersistentEntity(MSBBook) as GrailsHibernatePersistentEntity
         def booksProp = authorEntity.getPropertyByName("books") as HibernateToManyProperty
 
         def rootClass = new RootClass(metadataBuildingContext)
         rootClass.setEntityName(authorEntity.name)
+        rootClass.setClassName(authorEntity.name)
+        rootClass.setJpaEntityName(authorEntity.name)
         rootClass.setTable(collector.addTable(null, null, "MSB_AUTHOR", null, false, metadataBuildingContext))
         collector.addEntityBinding(rootClass)
 
         def bookRootClass = new RootClass(metadataBuildingContext)
-        bookRootClass.setEntityName(MSBBook.name)
+        bookRootClass.setEntityName(bookEntity.name)
+        bookRootClass.setClassName(bookEntity.name)
+        bookRootClass.setJpaEntityName(bookEntity.name)
         bookRootClass.setTable(collector.addTable(null, null, "MSB_BOOK", null, false, metadataBuildingContext))
         collector.addEntityBinding(bookRootClass)
 
@@ -256,7 +276,7 @@ class MapSecondPassBinderSpec extends HibernateGormDatastoreSpec {
         noExceptionThrown()
         map.index != null
         map.index.isTypeSpecified()
-        map.index.getColumnIterator().next().name == "BOOK_TITLE"
+        map.index.getColumns()[0].name == "books_idx"
     }
 }
 
