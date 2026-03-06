@@ -396,7 +396,8 @@ class HibernateGormStaticApi<D> extends GormStaticApi<D> {
                 ctx,
                 args,
                 positionalParams,
-                getHibernateTemplate()
+                getHibernateTemplate(),
+                conversionService
         )
     }
 

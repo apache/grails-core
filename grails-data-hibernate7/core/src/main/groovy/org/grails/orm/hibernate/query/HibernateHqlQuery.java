@@ -143,14 +143,15 @@ public class HibernateHqlQuery extends Query {
    * the prepared {@link HqlQueryContext}, then applies settings and parameters.
    */
   @SuppressWarnings({"unchecked", "rawtypes"})
-  public static HibernateHqlQuery createHqlQuery(
+  private static HibernateHqlQuery create(
       HibernateDatastore dataStore,
       SessionFactory sessionFactory,
       PersistentEntity entity,
       HqlQueryContext ctx,
       Map args,
       Collection positionalParams,
-      GrailsHibernateTemplate template) {
+      GrailsHibernateTemplate template,
+      ConversionService conversionService) {
     HibernateHqlQuery hqlQuery =
         template.execute(session -> buildQuery(session, dataStore, sessionFactory, entity, ctx));
     var selectQuery = hqlQuery.selectQuery();
@@ -158,12 +159,52 @@ public class HibernateHqlQuery extends Query {
       template.applySettings(selectQuery);
     }
     hqlQuery.populateQuerySettings(
-        MapUtils.isNotEmpty(args) ? new HashMap<>(args) : Collections.emptyMap());
+        MapUtils.isNotEmpty(args) ? new HashMap<>(args) : Collections.emptyMap(),
+        conversionService);
     if (MapUtils.isNotEmpty(ctx.namedParams())) {
       hqlQuery.populateQueryWithNamedArguments(ctx.namedParams());
     } else if (CollectionUtils.isNotEmpty(positionalParams)) {
       hqlQuery.populateQueryWithIndexedArguments(List.copyOf(positionalParams));
     }
+
+  @SuppressWarnings({"unchecked", "rawtypes"})
+  public static HibernateHqlQuery createHqlQuery(
+      HibernateDatastore dataStore,
+      SessionFactory sessionFactory,
+      PersistentEntity entity,
+      HqlQueryContext ctx,
+      Map args,
+      Collection positionalParams,
+      GrailsHibernateTemplate template,
+      ConversionService conversionService) {
+    return create(dataStore, sessionFactory, entity, ctx, args, positionalParams, template, conversionService);
+  }
+
+  /**
+   * Factory for {@code list(Map params)} — builds HQL with ORDER BY / JOIN FETCH from the params
+   * map, applies pagination settings, and wraps in a ready-to-execute {@link HibernateHqlQuery}.
+   */
+  @SuppressWarnings({"unchecked", "rawtypes"})
+  public static HibernateHqlQuery forList(
+      HibernateDatastore dataStore,
+      SessionFactory sessionFactory,
+      PersistentEntity entity,
+      Map<?, ?> params,
+      GrailsHibernateTemplate template,
+      ConversionService conversionService) {
+    HqlListQueryBuilder builder = new HqlListQueryBuilder(entity, params);
+    String hql = builder.buildListHql();
+    HqlQueryContext ctx = HqlQueryContext.prepare(hql, false, false, Collections.emptyMap(), entity);
+    Map<String, Object> mutableParams = params instanceof Map ? new HashMap<>((Map<String, Object>) params) : Collections.emptyMap();
+    return create(dataStore, sessionFactory, entity, ctx, mutableParams, Collections.emptyList(), template, conversionService);
+  }
+
+  /**
+   * Builds the count HQL string used by {@link PagedResultList} when paging is requested.
+   */
+  public static String buildCountHql(PersistentEntity entity) {
+    return new HqlListQueryBuilder(entity, Collections.emptyMap()).buildCountHql();
+  }
 
   // ─── Query configuration ─────────────────────────────────────────────────
 
@@ -195,49 +236,6 @@ public class HibernateHqlQuery extends Query {
         }
       }
     }
-  }
-
-  /** @deprecated Use {@link #populateQuerySettings(Map, ConversionService)} */
-  @Deprecated
-  public void populateQuerySettings(Map<?, ?> args) {
-    ifPresent(args, HibernateQueryArgument.MAX.value(), v -> delegate.setMaxResults(toInt(v)));
-    ifPresent(args, HibernateQueryArgument.OFFSET.value(), v -> delegate.setFirstResult(toInt(v)));
-    ifPresent(args, HibernateQueryArgument.CACHE.value(), v -> delegate.setCacheable(toBool(v)));
-    ifPresent(args, HibernateQueryArgument.FETCH_SIZE.value(), v -> delegate.setFetchSize(toInt(v)));
-    ifPresent(args, HibernateQueryArgument.TIMEOUT.value(), v -> delegate.setTimeout(toInt(v)));
-    ifPresent(args, HibernateQueryArgument.READ_ONLY.value(), v -> delegate.setReadOnly(toBool(v)));
-    ifPresent(args, HibernateQueryArgument.FLUSH_MODE.value(), v -> delegate.setQueryFlushMode(convertQueryFlushMode(v)));
-  }
-
-  /**
-   * Factory for {@code list(Map params)} — builds HQL with ORDER BY / JOIN FETCH from the params
-   * map, applies pagination settings, and wraps in a ready-to-execute {@link HibernateHqlQuery}.
-   */
-  @SuppressWarnings({"unchecked", "rawtypes"})
-  public static HibernateHqlQuery forList(
-      HibernateDatastore dataStore,
-      SessionFactory sessionFactory,
-      PersistentEntity entity,
-      Map<?, ?> params,
-      GrailsHibernateTemplate template,
-      ConversionService conversionService) {
-    HqlListQueryBuilder builder = new HqlListQueryBuilder(entity, params);
-    String hql = builder.buildListHql();
-    HqlQueryContext ctx = HqlQueryContext.prepare(hql, false, false, Collections.emptyMap(), entity);
-    HibernateHqlQuery hqlQuery =
-        template.execute(session -> buildQuery(session, dataStore, sessionFactory, entity, ctx));
-    org.hibernate.query.Query<?> q = hqlQuery.selectQuery();
-    if (q != null) template.applySettings(q);
-    Map<String, Object> mutableParams = params instanceof Map ? new HashMap<>((Map<String, Object>) params) : Collections.emptyMap();
-    hqlQuery.populateQuerySettings(mutableParams, conversionService);
-    return hqlQuery;
-  }
-
-  /**
-   * Builds the count HQL string used by {@link PagedResultList} when paging is requested.
-   */
-  public static String buildCountHql(PersistentEntity entity) {
-    return new HqlListQueryBuilder(entity, Collections.emptyMap()).buildCountHql();
   }
 
   public static QueryFlushMode convertQueryFlushMode(Object object) {
