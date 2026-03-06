@@ -524,7 +524,7 @@ public class HibernateQuery extends Query {
     }
 
   public void setHibernateFlushMode(FlushMode flushMode) {
-    this.flushMode = GrailsHibernateQueryUtils.convertQueryFlushMode(flushMode);
+    this.flushMode = HibernateHqlQuery.convertQueryFlushMode(flushMode);
   }
 
     @Override

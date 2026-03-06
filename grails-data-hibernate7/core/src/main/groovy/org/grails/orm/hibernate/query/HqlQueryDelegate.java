@@ -63,6 +63,8 @@ interface HqlQueryDelegate {
 
   default void setReadOnly(boolean b) {}
 
+  default void setLockMode(jakarta.persistence.LockModeType lockModeType) {}
+
   /** Sets a named collection parameter. For mutation queries, falls back to {@link #setParameter}. */
   default void setParameterList(String name, Collection<?> values) {}
 

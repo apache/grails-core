@@ -18,6 +18,8 @@
  */
 package org.grails.orm.hibernate.query;
 
+import jakarta.persistence.FlushModeType;
+import jakarta.persistence.LockModeType;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.HashMap;
@@ -44,7 +46,9 @@ import org.grails.orm.hibernate.HibernateSession;
 import org.grails.orm.hibernate.exceptions.GrailsQueryException;
 import org.hibernate.FlushMode;
 import org.hibernate.SessionFactory;
+import org.hibernate.query.QueryFlushMode;
 import org.springframework.context.ApplicationEventPublisher;
+import org.springframework.core.convert.ConversionService;
 
 /**
  * A query implementation for HQL queries.
@@ -170,6 +174,31 @@ public class HibernateHqlQuery extends Query {
             : FlushModeType.COMMIT);
   }
 
+  public void populateQuerySettings(Map<?, ?> args, ConversionService conversionService) {
+    ifPresent(args, HibernateQueryArgument.MAX.value(), v -> delegate.setMaxResults(toInt(v, conversionService)));
+    ifPresent(args, HibernateQueryArgument.OFFSET.value(), v -> delegate.setFirstResult(toInt(v, conversionService)));
+    ifPresent(args, HibernateQueryArgument.CACHE.value(), v -> delegate.setCacheable(toBool(v)));
+    ifPresent(args, HibernateQueryArgument.FETCH_SIZE.value(), v -> delegate.setFetchSize(toInt(v, conversionService)));
+    ifPresent(args, HibernateQueryArgument.TIMEOUT.value(), v -> delegate.setTimeout(toInt(v, conversionService)));
+    ifPresent(args, HibernateQueryArgument.READ_ONLY.value(), v -> delegate.setReadOnly(toBool(v)));
+    ifPresent(args, HibernateQueryArgument.FLUSH_MODE.value(), v -> delegate.setQueryFlushMode(convertQueryFlushMode(v)));
+    if (toBoolFromMap(args, HibernateQueryArgument.LOCK.value())) {
+      delegate.setLockMode(LockModeType.PESSIMISTIC_WRITE);
+      delegate.setCacheable(false);
+    } else {
+      if (!args.containsKey(HibernateQueryArgument.CACHE.value())) {
+        org.grails.orm.hibernate.cfg.Mapping m =
+            org.grails.orm.hibernate.cfg.MappingCacheHolder.getInstance()
+                .getMapping(getEntity().getJavaClass());
+        if (m != null && m.getCache() != null && m.getCache().getEnabled()) {
+          delegate.setCacheable(true);
+        }
+      }
+    }
+  }
+
+  /** @deprecated Use {@link #populateQuerySettings(Map, ConversionService)} */
+  @Deprecated
   public void populateQuerySettings(Map<?, ?> args) {
     ifPresent(args, HibernateQueryArgument.MAX.value(), v -> delegate.setMaxResults(toInt(v)));
     ifPresent(args, HibernateQueryArgument.OFFSET.value(), v -> delegate.setFirstResult(toInt(v)));
@@ -177,10 +206,58 @@ public class HibernateHqlQuery extends Query {
     ifPresent(args, HibernateQueryArgument.FETCH_SIZE.value(), v -> delegate.setFetchSize(toInt(v)));
     ifPresent(args, HibernateQueryArgument.TIMEOUT.value(), v -> delegate.setTimeout(toInt(v)));
     ifPresent(args, HibernateQueryArgument.READ_ONLY.value(), v -> delegate.setReadOnly(toBool(v)));
-    ifPresent(
-        args,
-        HibernateQueryArgument.FLUSH_MODE.value(),
-        v -> delegate.setQueryFlushMode(GrailsHibernateQueryUtils.convertQueryFlushMode(v)));
+    ifPresent(args, HibernateQueryArgument.FLUSH_MODE.value(), v -> delegate.setQueryFlushMode(convertQueryFlushMode(v)));
+  }
+
+  /**
+   * Factory for {@code list(Map params)} — builds HQL with ORDER BY / JOIN FETCH from the params
+   * map, applies pagination settings, and wraps in a ready-to-execute {@link HibernateHqlQuery}.
+   */
+  @SuppressWarnings({"unchecked", "rawtypes"})
+  public static HibernateHqlQuery forList(
+      HibernateDatastore dataStore,
+      SessionFactory sessionFactory,
+      PersistentEntity entity,
+      Map<?, ?> params,
+      GrailsHibernateTemplate template,
+      ConversionService conversionService) {
+    HqlListQueryBuilder builder = new HqlListQueryBuilder(entity, params);
+    String hql = builder.buildListHql();
+    HqlQueryContext ctx = HqlQueryContext.prepare(hql, false, false, Collections.emptyMap(), entity);
+    HibernateHqlQuery hqlQuery =
+        template.execute(session -> buildQuery(session, dataStore, sessionFactory, entity, ctx));
+    org.hibernate.query.Query<?> q = hqlQuery.selectQuery();
+    if (q != null) template.applySettings(q);
+    Map<String, Object> mutableParams = params instanceof Map ? new HashMap<>((Map<String, Object>) params) : Collections.emptyMap();
+    hqlQuery.populateQuerySettings(mutableParams, conversionService);
+    return hqlQuery;
+  }
+
+  /**
+   * Builds the count HQL string used by {@link PagedResultList} when paging is requested.
+   */
+  public static String buildCountHql(PersistentEntity entity) {
+    return new HqlListQueryBuilder(entity, Collections.emptyMap()).buildCountHql();
+  }
+
+  public static QueryFlushMode convertQueryFlushMode(Object object) {
+    FlushMode fm = convertFlushMode(object);
+    if (fm == null) return QueryFlushMode.DEFAULT;
+    return switch (fm) {
+      case ALWAYS -> QueryFlushMode.FLUSH;
+      case MANUAL, COMMIT -> QueryFlushMode.NO_FLUSH;
+      default -> QueryFlushMode.DEFAULT;
+    };
+  }
+
+  private static FlushMode convertFlushMode(Object object) {
+    if (object == null) return null;
+    if (object instanceof FlushMode flushMode) return flushMode;
+    try {
+      return FlushMode.valueOf(object.toString());
+    } catch (IllegalArgumentException e) {
+      return FlushMode.COMMIT;
+    }
   }
 
   public void populateQueryWithNamedArguments(Map<?, ?> namedArgs) {
@@ -245,24 +322,23 @@ public class HibernateHqlQuery extends Query {
         return delegate.executeUpdate();
     }
 
-    // ─── Private utilities ────────────────────────────────────────────────────
+  private static int toInt(Object v, ConversionService cs) {
+    if (v instanceof Integer i) return i;
+    return cs.convert(v, Integer.class);
+  }
 
-    private static int toInt(Object v, ConversionService cs) {
-        if (v instanceof Integer i) return i;
-        return cs.convert(v, Integer.class);
-    }
+  private static boolean toBool(Object v) {
+    return Boolean.parseBoolean(v.toString());
+  }
 
-    private static boolean toBool(Object v) {
-        return Boolean.parseBoolean(v.toString());
-    }
+  private static boolean toBoolFromMap(Map<?, ?> map, String key) {
+    Object v = map.get(key);
+    return v instanceof Boolean b ? b : v != null && Boolean.parseBoolean(v.toString());
+  }
 
-    private static boolean toBoolFromMap(Map<?, ?> map, String key) {
-        Object v = map.get(key);
-        return v instanceof Boolean b ? b : v != null && Boolean.parseBoolean(v.toString());
-    }
-
-    private static void ifPresent(Map<?, ?> map, String key, java.util.function.Consumer<Object> action) {
-        Object v = map.get(key);
-        if (v != null) action.accept(v);
-    }
+  private static void ifPresent(
+      Map<?, ?> map, String key, java.util.function.Consumer<Object> action) {
+    Object v = map.get(key);
+    if (v != null) action.accept(v);
+  }
 }

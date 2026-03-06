@@ -20,6 +20,7 @@ package org.grails.orm.hibernate.query;
 
 import java.util.Collection;
 import java.util.List;
+import jakarta.persistence.LockModeType;
 import org.hibernate.query.QueryFlushMode;
 
 /** {@link HqlQueryDelegate} for HQL SELECT queries backed by {@link org.hibernate.query.Query}. */
@@ -84,6 +85,11 @@ final class SelectQueryDelegate implements HqlQueryDelegate {
   @Override
   public void setReadOnly(boolean b) {
     query.setReadOnly(b);
+  }
+
+  @Override
+  public void setLockMode(LockModeType lockModeType) {
+    query.setLockMode(lockModeType);
   }
 
   @Override
