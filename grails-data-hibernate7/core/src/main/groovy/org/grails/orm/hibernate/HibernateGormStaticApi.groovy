@@ -63,6 +63,7 @@ class HibernateGormStaticApi<D> extends GormStaticApi<D> {
     protected final HibernateSession hibernateSession
     protected ProxyHandler proxyHandler
     protected SessionFactory sessionFactory
+    protected GrailsHibernateQueryUtils queryUtils
     protected Class identityType
     protected ClassLoader classLoader
     private HibernateGormInstanceApi<D> instanceApi
@@ -73,6 +74,7 @@ class HibernateGormStaticApi<D> extends GormStaticApi<D> {
         this.hibernateTemplate = new GrailsHibernateTemplate(datastore.getSessionFactory(), datastore)
         this.conversionService = datastore.mappingContext.conversionService
         this.proxyHandler = datastore.mappingContext.proxyHandler
+        this.queryUtils = new GrailsHibernateQueryUtils()
         this.hibernateSession = new HibernateSession(
                 (HibernateDatastore)datastore,
                 hibernateTemplate.getSessionFactory()
@@ -306,30 +308,19 @@ class HibernateGormStaticApi<D> extends GormStaticApi<D> {
         doListInternal(query, namedParams, [], args, false)
     }
 
-    @Override
-    List executeQuery(CharSequence query, Collection positionalParams, Map args) {
-        return doListInternal(query, [:], positionalParams, args, false)
-    }
-
-    @Override
-    List<D> findAll(CharSequence query, Collection positionalParams, Map args) {
-        doListInternal(query, [:], positionalParams, args, false)
-    }
-
-    private List<D> getAllInternal(List ids) {
-        if (!ids) return []
-        String idName = persistentEntity.identity.name
-        String entity = persistentEntity.name
-        Class<?> idType = persistentEntity.identity.type
-        List convertedIds = ids.collect { HibernateRuntimeUtils.convertValueToType(it, idType, conversionService) }
-        List<D> results = doListInternal("from $entity where $idName in (:ids)" as String, [ids: convertedIds], [], [:], false)
-        Map<Object, D> byId = results.collectEntries { [(it[idName]): it] }
-        ids.collect { byId[it] }
-    }
-
-    @Override
-    List<D> getAll(Serializable... ids) {
-        getAllInternal(ids as List)
+    @SuppressWarnings('GroovyAssignabilityCheck')
+    private HibernateHqlQuery prepareHqlQuery(CharSequence hql, boolean isNative, boolean isUpdate,
+                                              Map namedParams, Collection positionalParams, Map args) {
+        def ctx = HqlQueryContext.prepare(hql, isNative, isUpdate, namedParams, persistentEntity)
+        return HibernateHqlQuery.createHqlQuery(
+                (HibernateDatastore) datastore,
+                sessionFactory,
+                persistentEntity,
+                ctx,
+                args,
+                positionalParams,
+                getHibernateTemplate()
+        )
     }
 
     private List<D> doListInternal(CharSequence hql,
@@ -430,8 +421,8 @@ class HibernateGormStaticApi<D> extends GormStaticApi<D> {
         hibernateTemplate.execute { Session session ->
             CriteriaBuilder criteriaBuilder = session.getCriteriaBuilder()
             CriteriaQuery criteriaQuery = criteriaBuilder.createQuery(persistentEntity.javaClass)
-            Root queryRoot = criteriaQuery.from(persistentEntity.javaClass)
-            GrailsHibernateQueryUtils.populateArgumentsForCriteria(
+            var queryRoot = criteriaQuery.from(persistentEntity.javaClass)
+            queryUtils.populateArgumentsForCriteria(
                     persistentEntity,
                     criteriaQuery,
                     queryRoot,
@@ -442,13 +433,14 @@ class HibernateGormStaticApi<D> extends GormStaticApi<D> {
             )
             Query query = session.createQuery(criteriaQuery)
 
-            GrailsHibernateQueryUtils.populateArgumentsForCriteria(
+            queryUtils.populateArgumentsForCriteria(
                     persistentEntity,
                     query,
                     params,
                     datastore.mappingContext.conversionService
 
             )
+
 
             HibernateHqlQuery hibernateQuery = new HibernateHqlQuery(
                     new HibernateSession((HibernateDatastore)datastore, sessionFactory),

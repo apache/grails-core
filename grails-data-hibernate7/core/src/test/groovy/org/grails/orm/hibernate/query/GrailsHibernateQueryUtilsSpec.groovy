@@ -28,10 +28,12 @@ import spock.lang.Unroll
 
 class GrailsHibernateQueryUtilsSpec extends Specification {
 
+    GrailsHibernateQueryUtils queryUtils = new GrailsHibernateQueryUtils()
+
     @Unroll
     def "test convertQueryFlushMode for #input"() {
         expect:
-        GrailsHibernateQueryUtils.convertQueryFlushMode(input) == expected
+        queryUtils.convertQueryFlushMode(input) == expected
 
         where:
         input               | expected
@@ -46,7 +48,7 @@ class GrailsHibernateQueryUtilsSpec extends Specification {
     @Unroll
     def "test getFetchMode for #input"() {
         expect:
-        GrailsHibernateQueryUtils.getFetchMode(input) == expected
+        queryUtils.getFetchMode(input) == expected
 
         where:
         input               | expected
@@ -80,7 +82,7 @@ class GrailsHibernateQueryUtilsSpec extends Specification {
         conversionService.convert(30, Integer.class) >> 30
 
         when:
-        GrailsHibernateQueryUtils.populateArgumentsForCriteria(entity, query, argMap, conversionService)
+        queryUtils.populateArgumentsForCriteria(entity, query, argMap, conversionService)
 
         then:
         1 * query.setMaxResults(10)
@@ -108,7 +110,7 @@ class GrailsHibernateQueryUtilsSpec extends Specification {
         conversionService.convert(30, Integer.class) >> null
 
         when:
-        GrailsHibernateQueryUtils.populateArgumentsForCriteria(entity, query, argMap, conversionService)
+        queryUtils.populateArgumentsForCriteria(entity, query, argMap, conversionService)
 
         then:
         0 * query.setFetchSize(_)
