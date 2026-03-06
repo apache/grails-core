@@ -21,7 +21,15 @@ package org.grails.orm.hibernate.cfg.domainbinding.secondpass;
 import java.util.Map;
 
 import jakarta.annotation.Nonnull;
-
+import java.util.Map;
+import org.grails.datastore.mapping.model.PersistentEntity;
+import org.grails.orm.hibernate.cfg.PersistentEntityNamingStrategy;
+import org.grails.orm.hibernate.cfg.domainbinding.binder.SimpleValueColumnBinder;
+import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernateAssociation;
+import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernateManyToManyProperty;
+import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernateManyToOneProperty;
+import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernateToManyProperty;
+import org.grails.orm.hibernate.cfg.domainbinding.util.BackticksRemover;
 import org.hibernate.MappingException;
 import org.hibernate.boot.spi.InFlightMetadataCollector;
 import org.hibernate.boot.spi.MetadataBuildingContext;
@@ -99,11 +107,11 @@ public class ListSecondPassBinder {
     if (property.isBidirectional()) {
 
       String entityName;
-      Value element = list.getElement();
-      if (element instanceof ManyToOne manyToOne) {
-          entityName = manyToOne.getReferencedEntityName();
+      HibernateAssociation inverseSide = property.getHibernateInverseSide();
+      if (inverseSide instanceof HibernateManyToOneProperty manyToOne) {
+        entityName = manyToOne.getReferencedEntityName();
       } else {
-        entityName = ((OneToMany) element).getReferencedEntityName();
+        entityName = inverseSide.getReferencedEntityName();
       }
 
       PersistentClass referenced = mappings.getEntityBinding(entityName);

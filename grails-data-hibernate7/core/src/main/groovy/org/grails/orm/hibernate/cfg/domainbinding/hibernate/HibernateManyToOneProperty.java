@@ -39,7 +39,12 @@ public class HibernateManyToOneProperty extends ManyToOneWithMapping<PropertyCon
 
 
 
+ public String getReferencedEntityName() {
+   return getHibernateAssociatedEntity().getName();
+ }
+
  public  boolean isValidHibernateManyToOne() {
+
     validateAssociation();
      return true;
   }

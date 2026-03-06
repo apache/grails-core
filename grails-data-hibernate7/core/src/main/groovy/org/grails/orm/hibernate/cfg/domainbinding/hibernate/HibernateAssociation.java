@@ -74,6 +74,10 @@ public interface HibernateAssociation extends HibernatePersistentProperty {
     return (GrailsHibernatePersistentEntity) getAssociatedEntity();
   }
 
+  default String getReferencedEntityName() {
+    return getHibernateAssociatedEntity().getName();
+  }
+
   @Override
   default void validateAssociation() {
     if (getUserType() != null) {
