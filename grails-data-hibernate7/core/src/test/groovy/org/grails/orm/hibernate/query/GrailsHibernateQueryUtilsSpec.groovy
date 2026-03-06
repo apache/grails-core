@@ -18,7 +18,11 @@
  */
 package org.grails.orm.hibernate.query
 
+import org.grails.datastore.mapping.model.PersistentEntity
+import org.hibernate.FetchMode
+import org.hibernate.query.Query
 import org.hibernate.query.QueryFlushMode
+import org.springframework.core.convert.ConversionService
 import spock.lang.Specification
 import spock.lang.Unroll
 
@@ -27,7 +31,7 @@ class GrailsHibernateQueryUtilsSpec extends Specification {
     @Unroll
     def "test convertQueryFlushMode for #input"() {
         expect:
-        HibernateHqlQuery.convertQueryFlushMode(input) == expected
+        GrailsHibernateQueryUtils.convertQueryFlushMode(input) == expected
 
         where:
         input               | expected
@@ -37,5 +41,77 @@ class GrailsHibernateQueryUtilsSpec extends Specification {
         "AUTO"              | QueryFlushMode.DEFAULT
         null                | QueryFlushMode.DEFAULT
         "INVALID"           | QueryFlushMode.NO_FLUSH // defaults to COMMIT which is NO_FLUSH
+    }
+
+    @Unroll
+    def "test getFetchMode for #input"() {
+        expect:
+        GrailsHibernateQueryUtils.getFetchMode(input) == expected
+
+        where:
+        input               | expected
+        "JOIN"              | FetchMode.JOIN
+        "eager"             | FetchMode.JOIN
+        "SELECT"            | FetchMode.SELECT
+        "lazy"              | FetchMode.SELECT
+        "default"           | FetchMode.DEFAULT
+        null                | FetchMode.DEFAULT
+    }
+
+    def "test populateArgumentsForCriteria for Query"() {
+        given:
+        PersistentEntity entity = Mock(PersistentEntity)
+        Query query = Mock(Query)
+        ConversionService conversionService = Mock(ConversionService)
+        
+        Map argMap = [
+            max: 10,
+            offset: 20,
+            fetchSize: 50,
+            timeout: 30,
+            readOnly: true,
+            cache: true
+        ]
+
+        entity.getJavaClass() >> Object.class
+        conversionService.convert(10, Integer.class) >> 10
+        conversionService.convert(20, Integer.class) >> 20
+        conversionService.convert(50, Integer.class) >> 50
+        conversionService.convert(30, Integer.class) >> 30
+
+        when:
+        GrailsHibernateQueryUtils.populateArgumentsForCriteria(entity, query, argMap, conversionService)
+
+        then:
+        1 * query.setMaxResults(10)
+        1 * query.setFirstResult(20)
+        1 * query.setFetchSize(50)
+        1 * query.setTimeout(30)
+        1 * query.setReadOnly(true)
+        1 * query.setCacheable(true)
+    }
+
+    def "test populateArgumentsForCriteria for Query with null conversion results"() {
+        given:
+        PersistentEntity entity = Mock(PersistentEntity)
+        Query query = Mock(Query)
+        ConversionService conversionService = Mock(ConversionService)
+        
+        Map argMap = [
+            fetchSize: 50,
+            timeout: 30
+        ]
+
+        entity.getJavaClass() >> Object.class
+        // Simulate conversion returning null
+        conversionService.convert(50, Integer.class) >> null
+        conversionService.convert(30, Integer.class) >> null
+
+        when:
+        GrailsHibernateQueryUtils.populateArgumentsForCriteria(entity, query, argMap, conversionService)
+
+        then:
+        0 * query.setFetchSize(_)
+        0 * query.setTimeout(_)
     }
 }

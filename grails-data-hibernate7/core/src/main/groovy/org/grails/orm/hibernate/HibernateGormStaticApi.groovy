@@ -427,20 +427,52 @@ class HibernateGormStaticApi<D> extends GormStaticApi<D> {
 
     @Override
     List<D> list(Map params = Collections.emptyMap()) {
-        firePreQueryEvent()
-        HqlListQueryBuilder builder = new HqlListQueryBuilder(persistentEntity, params)
-        String hql = builder.buildListHql()
-        HqlQueryContext ctx = HqlQueryContext.prepare(persistentEntity, hql, Collections.emptyMap(), Collections.emptyList(), params, false, false)
-        HibernateHqlQuery hqlQuery = HibernateHqlQuery.createHqlQuery(
-                (HibernateDatastore) datastore,
-                sessionFactory,
-                persistentEntity,
-                ctx,
-                getHibernateTemplate(),
-                datastore.mappingContext.conversionService
-        )
-        if (params.containsKey('max')) {
-            return new PagedResultList(getHibernateTemplate(), persistentEntity, hqlQuery)
+        hibernateTemplate.execute { Session session ->
+            CriteriaBuilder criteriaBuilder = session.getCriteriaBuilder()
+            CriteriaQuery criteriaQuery = criteriaBuilder.createQuery(persistentEntity.javaClass)
+            Root queryRoot = criteriaQuery.from(persistentEntity.javaClass)
+            GrailsHibernateQueryUtils.populateArgumentsForCriteria(
+                    persistentEntity,
+                    criteriaQuery,
+                    queryRoot,
+                    criteriaBuilder,
+                    params
+                    ,
+                    true
+            )
+            Query query = session.createQuery(criteriaQuery)
+
+            GrailsHibernateQueryUtils.populateArgumentsForCriteria(
+                    persistentEntity,
+                    query,
+                    params,
+                    datastore.mappingContext.conversionService
+
+            )
+
+            HibernateHqlQuery hibernateQuery = new HibernateHqlQuery(
+                    new HibernateSession((HibernateDatastore)datastore, sessionFactory),
+                    persistentEntity,
+                    query
+            )
+            hibernateTemplate.applySettings(query)
+
+            params = params ? new HashMap(params) : Collections.emptyMap()
+            if(params.containsKey(DynamicFinder.ARGUMENT_MAX)) {
+                criteriaQuery = criteriaBuilder.createQuery(Object.class)
+                queryRoot = criteriaQuery.from(persistentEntity.javaClass)
+                return new PagedResultList(
+                        hibernateTemplate,
+                        persistentEntity,
+                        hibernateQuery,
+                        criteriaQuery,
+                        queryRoot,
+                        criteriaBuilder
+                )
+            }
+            else {
+                return hibernateQuery.list()
+            }
         }
         List<D> result = (List<D>) hqlQuery.list()
         firePostQueryEvent(result)
