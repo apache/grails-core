@@ -61,6 +61,7 @@ import org.hibernate.Session;
 import org.hibernate.SessionFactory;
 import org.hibernate.query.criteria.HibernateCriteriaBuilder;
 import org.hibernate.query.criteria.JpaCriteriaQuery;
+import org.springframework.core.convert.ConversionService;
 import org.springframework.dao.InvalidDataAccessApiUsageException;
 
 /**
@@ -415,10 +416,93 @@ public class HibernateQuery extends Query {
         return this;
     }
 
-    @Override
-    public Query allEq(Map<String, Object> values) {
-        values.forEach((key, value) -> detachedCriteria.eq(calculatePropertyName(key), value));
-        return this;
+  @Override
+  public Query join(String property) {
+    detachedCriteria.join(property);
+    return this;
+  }
+
+  @Override
+  public Query join(String property, JoinType joinType) {
+    detachedCriteria.join(property, joinType);
+    return this;
+  }
+
+  @Override
+  public Query select(String property) {
+    detachedCriteria.select(property);
+    // Ensure property is added to projections for Hibernate 7
+    projections.property(property);
+    return this;
+  }
+
+  @Override
+  public List list() {
+    return getHibernateQueryExecutor().list(getCurrentSession(), getJpaCriteriaQuery());
+  }
+
+  public List list(Session session) {
+    return getHibernateQueryExecutor().list(session, getJpaCriteriaQuery());
+  }
+
+  private HibernateQueryExecutor getHibernateQueryExecutor() {
+    return new HibernateQueryExecutor(
+        offset, max, lockResult, queryCache, fetchSize, timeout, flushMode, readOnly, proxyHandler);
+  }
+
+  public JpaCriteriaQuery<?> getJpaCriteriaQuery() {
+    ConversionService conversionService =
+        getSession().getMappingContext().getConversionService();
+    return new JpaCriteriaQueryCreator(projections, getCriteriaBuilder(), entity, detachedCriteria, conversionService)
+        .createQuery();
+  }
+
+  public void setFetchSize(Integer fetchSize) {
+    this.fetchSize = fetchSize;
+  }
+
+  @Override
+  protected void flushBeforeQuery() {
+    // do nothing
+  }
+
+  @Override
+  public Object singleResult() {
+    return getHibernateQueryExecutor().singleResult(getCurrentSession(), getJpaCriteriaQuery());
+  }
+
+  public Object singleResult(Session session) {
+    return getHibernateQueryExecutor().singleResult(session, getJpaCriteriaQuery());
+  }
+
+  public Object scroll() {
+    return getHibernateQueryExecutor().scroll(getCurrentSession(), getJpaCriteriaQuery());
+  }
+
+  public Object scroll(Session session) {
+    return getHibernateQueryExecutor().scroll(session, getJpaCriteriaQuery());
+  }
+
+  private Session getCurrentSession() {
+    return getSessionFactory().getCurrentSession();
+  }
+
+  private SessionFactory getSessionFactory() {
+    return ((IHibernateTemplate) session.getNativeInterface()).getSessionFactory();
+  }
+
+  public HibernateCriteriaBuilder getCriteriaBuilder() {
+    return getSessionFactory().getCriteriaBuilder();
+  }
+
+  @Override
+  protected List executeQuery(PersistentEntity entity, Junction criteria) {
+    return list();
+  }
+
+  protected String calculatePropertyName(String property) {
+    if (alias == null) {
+      return property;
     }
 
     @Override

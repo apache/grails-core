@@ -39,31 +39,27 @@ import org.hibernate.query.criteria.JpaSubQuery;
 
 import org.springframework.core.convert.ConversionService;
 
-import grails.gorm.DetachedCriteria;
-import org.grails.datastore.mapping.model.PersistentEntity;
-import org.grails.datastore.mapping.query.Query;
-
 @SuppressWarnings("PMD.DataflowAnomalyAnalysis")
 public class JpaCriteriaQueryCreator {
 
-    private final Query.ProjectionList projections;
-    private final HibernateCriteriaBuilder criteriaBuilder;
-    private final PersistentEntity entity;
-    private final DetachedCriteria<?> detachedCriteria;
-    private final ConversionService conversionService;
+  private final Query.ProjectionList projections;
+  private final HibernateCriteriaBuilder criteriaBuilder;
+  private final PersistentEntity entity;
+  private final DetachedCriteria<?> detachedCriteria;
+  private final ConversionService conversionService;
 
-    public JpaCriteriaQueryCreator(
-            Query.ProjectionList projections,
-            HibernateCriteriaBuilder criteriaBuilder,
-            PersistentEntity entity,
-            DetachedCriteria<?> detachedCriteria,
-            ConversionService conversionService) {
-        this.projections = projections;
-        this.criteriaBuilder = criteriaBuilder;
-        this.entity = entity;
-        this.detachedCriteria = detachedCriteria;
-        this.conversionService = conversionService;
-    }
+  public JpaCriteriaQueryCreator(
+      Query.ProjectionList projections,
+      HibernateCriteriaBuilder criteriaBuilder,
+      PersistentEntity entity,
+      DetachedCriteria<?> detachedCriteria,
+      ConversionService conversionService) {
+    this.projections = projections;
+    this.criteriaBuilder = criteriaBuilder;
+    this.entity = entity;
+    this.detachedCriteria = detachedCriteria;
+    this.conversionService = conversionService;
+  }
 
     public JpaCriteriaQuery<?> createQuery() {
 
@@ -140,18 +136,81 @@ public class JpaCriteriaQueryCreator {
         return cq;
     }
 
-    @SuppressWarnings("unchecked")
-    private <T> void assignProjections(
-            List<Query.Projection> projections, CriteriaQuery<T> cq, JpaFromProvider tablesByName) {
-        var projectionExpressions = projections.stream()
-                .map(projectionToJpaExpression(tablesByName))
-                .filter(Objects::nonNull)
-                .toList();
-        if (!projectionExpressions.isEmpty()) {
-            var tupleCriteriaQuery = (CriteriaQuery<Tuple>) cq;
-            tupleCriteriaQuery.select(criteriaBuilder.tuple(projectionExpressions.toArray(new Selection<?>[0])));
-        } else {
-            cq.select((Selection<? extends T>) tablesByName.getFullyQualifiedPath("root"));
+  private void assignGroupBy(CriteriaQuery<?> cq, JpaFromProvider tablesByName) {
+    var groupByPaths =
+        collectGroupProjections().stream()
+            .map(
+                groupPropertyProjection ->
+                    tablesByName.getFullyQualifiedPath(groupPropertyProjection.getPropertyName()))
+            .filter(Objects::nonNull)
+            .toArray(Path<?>[]::new);
+    cq.groupBy(groupByPaths);
+  }
+
+  @SuppressWarnings("unchecked")
+  private void assignOrderBy(CriteriaQuery<?> cq, JpaFromProvider tablesByName) {
+    List<Query.Order> orders = detachedCriteria.getOrders();
+    if (!orders.isEmpty()) {
+      var jpaOrders =
+          orders.stream()
+              .map(
+                  order -> {
+                    Path<?> expression = tablesByName.getFullyQualifiedPath(order.getProperty());
+                    if (order.isIgnoreCase() && expression.getJavaType().equals(String.class)) {
+                      return order.getDirection().equals(Query.Order.Direction.ASC)
+                          ? criteriaBuilder.asc(
+                              criteriaBuilder.lower((Expression<String>) expression))
+                          : criteriaBuilder.desc(
+                              criteriaBuilder.lower((Expression<String>) expression));
+                    } else {
+                      return order.getDirection().equals(Query.Order.Direction.ASC)
+                          ? criteriaBuilder.asc(expression)
+                          : criteriaBuilder.desc(expression);
+                    }
+                  })
+              .toArray(Order[]::new);
+      cq.orderBy(jpaOrders);
+    }
+  }
+
+  private void assignCriteria(
+      CriteriaQuery<?> cq, From<?, ?> root, JpaFromProvider tablesByName, PersistentEntity entity) {
+    List<Query.Criterion> criteriaList = detachedCriteria.getCriteria();
+    if (!criteriaList.isEmpty()) {
+      Predicate[] predicates =
+          new PredicateGenerator(conversionService)
+              .getPredicates(criteriaBuilder, cq, root, criteriaList, tablesByName, entity);
+      cq.where(criteriaBuilder.and(predicates));
+    }
+  }
+
+  @SuppressWarnings("unchecked")
+  private Function<Query.Projection, JpaExpression<?>> projectionToJpaExpression(
+      JpaFromProvider tablesByName) {
+    return projection -> {
+      if (projection instanceof Query.CountProjection) {
+        return criteriaBuilder.count(tablesByName.getFullyQualifiedPath("root"));
+      } else if (projection instanceof Query.CountDistinctProjection countDistinctProjection) {
+        var propertyName = countDistinctProjection.getPropertyName();
+        return criteriaBuilder.countDistinct(
+            tablesByName.getFullyQualifiedPath("root." + propertyName));
+      } else if (projection instanceof Query.IdProjection) {
+        return (JpaExpression<?>) tablesByName.getFullyQualifiedPath("root.id");
+      } else if (projection instanceof Query.DistinctProjection) {
+        return null;
+      } else {
+        var propertyName = ((Query.PropertyProjection) projection).getPropertyName();
+        Path<?> path = tablesByName.getFullyQualifiedPath(propertyName);
+        if (projection instanceof Query.MaxProjection) {
+          return criteriaBuilder.max((Expression<? extends Number>) path);
+        } else if (projection instanceof Query.MinProjection) {
+          return criteriaBuilder.min((Expression<? extends Number>) path);
+        } else if (projection instanceof Query.AvgProjection) {
+          return criteriaBuilder.avg((Expression<? extends Number>) path);
+        } else if (projection instanceof Query.SumProjection) {
+          return criteriaBuilder.sum((Expression<? extends Number>) path);
+        } else { // keep this last!!!
+          return (JpaExpression<?>) path;
         }
     }
 

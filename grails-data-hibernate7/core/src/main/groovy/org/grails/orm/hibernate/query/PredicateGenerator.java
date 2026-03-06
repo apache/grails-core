@@ -56,6 +56,7 @@ import org.hibernate.query.sqm.tree.domain.SqmPath;
 import org.hibernate.query.sqm.tree.predicate.SqmInListPredicate;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.core.convert.ConversionService;
 
 import org.springframework.core.convert.ConversionService;
 
@@ -81,7 +82,20 @@ import org.grails.datastore.mapping.query.api.QueryableCriteria;
 public class PredicateGenerator {
     private static final Logger log = LoggerFactory.getLogger(PredicateGenerator.class);
 
-    private final ConversionService conversionService;
+  private final ConversionService conversionService;
+
+
+  public PredicateGenerator(ConversionService conversionService) {
+    this.conversionService = conversionService;
+  }
+
+  public Predicate[] getPredicates(
+      HibernateCriteriaBuilder cb,
+      CriteriaQuery<?> criteriaQuery,
+      From<?, ?> root_,
+      List<? extends Query.QueryElement> criteriaList,
+      JpaFromProvider fromsByProvider,
+      PersistentEntity entity) {
 
     public PredicateGenerator(ConversionService conversionService) {
         this.conversionService = conversionService;
@@ -452,55 +466,21 @@ public class PredicateGenerator {
         .orElse(null);
   }
 
-    private JpaInPredicate findInPredicate(
-            HibernateCriteriaBuilder cb, Object projection, Path path, String subProperty) {
-        return projection instanceof Query.PropertyProjection ? cb.in(path) : cb.in(((SqmPath) path).get(subProperty));
+  private Number getNumericValue(Query.PropertyCriterion criterion) {
+    Object value = criterion.getValue();
+    if (value instanceof Number num) return num;
+    if (value != null && conversionService.canConvert(value.getClass(), Number.class)) {
+      try {
+        return conversionService.convert(value, Number.class);
+      } catch (org.springframework.core.convert.ConversionException ignored) {
+        // fall through to ConfigurationException
+      }
     }
-
-    private String findSubproperty(Object projection) {
-        return projection instanceof Query.PropertyProjection
-                ? ((Query.PropertyProjection) projection).getPropertyName()
-                : "id";
-    }
-
-    private Query.Projection findPropertyOrIdProjection(QueryableCriteria queryableCriteria) {
-        return (Query.Projection) queryableCriteria.getProjections().stream()
-                .filter(p -> p instanceof Query.PropertyProjection || p instanceof Query.IdProjection)
-                .findFirst()
-                .orElse(new Query.IdProjection());
-    }
-
-    private QueryableCriteria getQueryableCriteriaFromInCriteria(Query.Criterion criterion) {
-        return criterion instanceof Query.In
-                ? ((Query.In) criterion).getSubquery()
-                : ((Query.NotIn) criterion).getSubquery();
-    }
-
-    private Class getJavaTypeOfInClause(SqmInListPredicate predicate) {
-        return Optional.ofNullable(predicate.getTestExpression().getExpressible())
-                .map(expressible -> expressible.getExpressibleJavaType().getJavaTypeClass())
-                .orElse(null);
-    }
-
-    private Number getNumericValue(Query.PropertyCriterion criterion) {
-        Object value = criterion.getValue();
-        if (value instanceof Number num) return num;
-        if (value != null && conversionService.canConvert(value.getClass(), Number.class)) {
-            try {
-                Number convert = conversionService.convert(value, Number.class);
-                return convert;
-            } catch (org.springframework.core.convert.ConversionException ignored) {
-                throw new ConfigurationException(String.format(
-                        "Operation '%s' on property '%s' only accepts a numeric value, but received a %s",
-                        criterion.getClass().getSimpleName(),
-                        criterion.getProperty(),
-                        value.getClass().getName()));
-            }
-        }
-        throw new ConfigurationException(String.format(
-                "Operation '%s' on property '%s' only accepts a numeric value, but received a %s",
-                criterion.getClass().getSimpleName(),
-                criterion.getProperty(),
-                (value == null ? "null" : value.getClass().getName())));
-    }
+    throw new ConfigurationException(
+        String.format(
+            "Operation '%s' on property '%s' only accepts a numeric value, but received a %s",
+            criterion.getClass().getSimpleName(),
+            criterion.getProperty(),
+            (value == null ? "null" : value.getClass().getName())));
+  }
 }
