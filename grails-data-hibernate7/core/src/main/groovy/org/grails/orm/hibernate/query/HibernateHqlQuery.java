@@ -142,14 +142,11 @@ public class HibernateHqlQuery extends Query {
    * Full factory — opens a session via the {@link GrailsHibernateTemplate}, builds the query from
    * the prepared {@link HqlQueryContext}, then applies settings and parameters.
    */
-  @SuppressWarnings({"unchecked", "rawtypes"})
-  private static HibernateHqlQuery create(
+  protected static HibernateHqlQuery create(
       HibernateDatastore dataStore,
       SessionFactory sessionFactory,
       PersistentEntity entity,
       HqlQueryContext ctx,
-      Map args,
-      Collection positionalParams,
       GrailsHibernateTemplate template,
       ConversionService conversionService) {
     HibernateHqlQuery hqlQuery =
@@ -159,45 +156,24 @@ public class HibernateHqlQuery extends Query {
       template.applySettings(selectQuery);
     }
     hqlQuery.populateQuerySettings(
-        MapUtils.isNotEmpty(args) ? new HashMap<>(args) : Collections.emptyMap(),
+        MapUtils.isNotEmpty(ctx.querySettings()) ? new HashMap<>(ctx.querySettings()) : Collections.emptyMap(),
         conversionService);
     if (MapUtils.isNotEmpty(ctx.namedParams())) {
       hqlQuery.populateQueryWithNamedArguments(ctx.namedParams());
-    } else if (CollectionUtils.isNotEmpty(positionalParams)) {
-      hqlQuery.populateQueryWithIndexedArguments(List.copyOf(positionalParams));
+    } else if (CollectionUtils.isNotEmpty(ctx.positionalParams())) {
+      hqlQuery.populateQueryWithIndexedArguments(List.copyOf(ctx.positionalParams()));
     }
 
-  @SuppressWarnings({"unchecked", "rawtypes"})
   public static HibernateHqlQuery createHqlQuery(
       HibernateDatastore dataStore,
       SessionFactory sessionFactory,
       PersistentEntity entity,
       HqlQueryContext ctx,
-      Map args,
-      Collection positionalParams,
       GrailsHibernateTemplate template,
       ConversionService conversionService) {
-    return create(dataStore, sessionFactory, entity, ctx, args, positionalParams, template, conversionService);
+    return create(dataStore, sessionFactory, entity, ctx, template, conversionService);
   }
 
-  /**
-   * Factory for {@code list(Map params)} — builds HQL with ORDER BY / JOIN FETCH from the params
-   * map, applies pagination settings, and wraps in a ready-to-execute {@link HibernateHqlQuery}.
-   */
-  @SuppressWarnings({"unchecked", "rawtypes"})
-  public static HibernateHqlQuery forList(
-      HibernateDatastore dataStore,
-      SessionFactory sessionFactory,
-      PersistentEntity entity,
-      Map<?, ?> params,
-      GrailsHibernateTemplate template,
-      ConversionService conversionService) {
-    HqlListQueryBuilder builder = new HqlListQueryBuilder(entity, params);
-    String hql = builder.buildListHql();
-    HqlQueryContext ctx = HqlQueryContext.prepare(hql, false, false, Collections.emptyMap(), entity);
-    Map<String, Object> mutableParams = params instanceof Map ? new HashMap<>((Map<String, Object>) params) : Collections.emptyMap();
-    return create(dataStore, sessionFactory, entity, ctx, mutableParams, Collections.emptyList(), template, conversionService);
-  }
 
   /**
    * Builds the count HQL string used by {@link PagedResultList} when paging is requested.
@@ -208,14 +184,14 @@ public class HibernateHqlQuery extends Query {
 
   // ─── Query configuration ─────────────────────────────────────────────────
 
-  public void setFlushMode(FlushMode flushMode) {
+  protected void setFlushMode(FlushMode flushMode) {
     session.setFlushMode(
         flushMode == FlushMode.AUTO || flushMode == FlushMode.ALWAYS
             ? FlushModeType.AUTO
             : FlushModeType.COMMIT);
   }
 
-  public void populateQuerySettings(Map<?, ?> args, ConversionService conversionService) {
+  protected void populateQuerySettings(Map<?, ?> args, ConversionService conversionService) {
     ifPresent(args, HibernateQueryArgument.MAX.value(), v -> delegate.setMaxResults(toInt(v, conversionService)));
     ifPresent(args, HibernateQueryArgument.OFFSET.value(), v -> delegate.setFirstResult(toInt(v, conversionService)));
     ifPresent(args, HibernateQueryArgument.CACHE.value(), v -> delegate.setCacheable(toBool(v)));
@@ -248,7 +224,7 @@ public class HibernateHqlQuery extends Query {
     };
   }
 
-  private static FlushMode convertFlushMode(Object object) {
+  public static FlushMode convertFlushMode(Object object) {
     if (object == null) return null;
     if (object instanceof FlushMode flushMode) return flushMode;
     try {
@@ -258,7 +234,7 @@ public class HibernateHqlQuery extends Query {
     }
   }
 
-  public void populateQueryWithNamedArguments(Map<?, ?> namedArgs) {
+  protected void populateQueryWithNamedArguments(Map<?, ?> namedArgs) {
     if (namedArgs == null) return;
     namedArgs.forEach(
         (key, value) -> {
@@ -280,7 +256,7 @@ public class HibernateHqlQuery extends Query {
         });
   }
 
-  public void populateQueryWithIndexedArguments(List<?> params) {
+  protected void populateQueryWithIndexedArguments(List<?> params) {
     if (params == null) return;
     for (int i = 0; i < params.size(); i++) {
       Object val = params.get(i);
@@ -316,9 +292,7 @@ public class HibernateHqlQuery extends Query {
         return delegate.selectQuery();
     }
 
-    public int executeUpdate() {
-        return delegate.executeUpdate();
-    }
+
 
   private static int toInt(Object v, ConversionService cs) {
     if (v instanceof Integer i) return i;

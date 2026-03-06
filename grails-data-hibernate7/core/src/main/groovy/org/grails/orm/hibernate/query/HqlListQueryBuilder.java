@@ -37,18 +37,18 @@ import org.grails.orm.hibernate.cfg.MappingCacheHolder;
  * string so it passes through {@link HqlQueryContext} without GString interpolation.
  */
 @SuppressWarnings("PMD.DataflowAnomalyAnalysis")
-class HqlListQueryBuilder {
+public class HqlListQueryBuilder {
 
   private final PersistentEntity entity;
   private final Map<?, ?> params;
 
-  HqlListQueryBuilder(PersistentEntity entity, Map<?, ?> params) {
+  public HqlListQueryBuilder(PersistentEntity entity, Map<?, ?> params) {
     this.entity = entity;
     this.params = params;
   }
 
   /** Builds the SELECT HQL for the list query (no count). */
-  String buildListHql() {
+  public String buildListHql() {
     String alias = "e";
     StringBuilder hql = new StringBuilder("from ").append(entity.getName()).append(" ").append(alias);
     appendJoinFetch(hql, alias);

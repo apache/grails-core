@@ -34,6 +34,7 @@ import org.grails.datastore.mapping.query.event.PreQueryEvent
 import org.grails.datastore.mapping.proxy.ProxyHandler
 import org.grails.orm.hibernate.query.HibernateHqlQuery
 import org.grails.orm.hibernate.query.HibernateQuery
+import org.grails.orm.hibernate.query.HqlListQueryBuilder
 import org.grails.orm.hibernate.query.HqlQueryContext
 import org.grails.orm.hibernate.query.PagedResultList
 import org.grails.orm.hibernate.support.HibernateRuntimeUtils
@@ -387,15 +388,14 @@ class HibernateGormStaticApi<D> extends GormStaticApi<D> {
 
     @SuppressWarnings('GroovyAssignabilityCheck')
     private HibernateHqlQuery prepareHqlQuery(CharSequence hql, boolean isNative, boolean isUpdate,
-                                              Map namedParams, Collection positionalParams, Map args) {
-        def ctx = HqlQueryContext.prepare(hql, isNative, isUpdate, namedParams, persistentEntity)
+                                              Map namedParams, Collection positionalParams, Map querySettings) {
+        def ctx = HqlQueryContext.prepare(persistentEntity, hql, namedParams, positionalParams,querySettings, isNative, isUpdate,)
         return HibernateHqlQuery.createHqlQuery(
                 (HibernateDatastore) datastore,
                 sessionFactory,
                 persistentEntity,
-                ctx,
-                args,
-                positionalParams,
+                ctx
+                ,
                 getHibernateTemplate(),
                 conversionService
         )
@@ -431,11 +431,14 @@ class HibernateGormStaticApi<D> extends GormStaticApi<D> {
     @Override
     List<D> list(Map params = Collections.emptyMap()) {
         firePreQueryEvent()
-        HibernateHqlQuery hqlQuery = HibernateHqlQuery.forList(
+        HqlListQueryBuilder builder = new HqlListQueryBuilder(persistentEntity, params);
+        String hql = builder.buildListHql();
+        HqlQueryContext ctx = HqlQueryContext.prepare(persistentEntity, hql, Collections.emptyMap(), Collections.emptyList(), params , false, false );
+        HibernateHqlQuery hqlQuery = HibernateHqlQuery.createHqlQuery(
                 (HibernateDatastore) datastore,
                 sessionFactory,
                 persistentEntity,
-                params,
+                ctx,
                 getHibernateTemplate(),
                 datastore.mappingContext.conversionService
         )
