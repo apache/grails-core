@@ -32,8 +32,8 @@ import org.springframework.validation.Validator
 @CompileStatic
 class HibernateGormValidationApi<D> extends GormValidationApi<D> {
 
-    public static final String ARGUMENT_DEEP_VALIDATE = "deepValidate"
-    private static final String ARGUMENT_EVICT = "evict"
+    public static final String ARGUMENT_DEEP_VALIDATE = 'deepValidate'
+    private static final String ARGUMENT_EVICT = 'evict'
 
     protected ClassLoader classLoader
     protected HibernateDatastore datastore
