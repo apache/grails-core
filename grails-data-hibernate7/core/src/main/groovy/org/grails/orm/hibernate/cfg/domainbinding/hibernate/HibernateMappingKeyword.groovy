@@ -25,7 +25,6 @@ import groovy.transform.CompileStatic
  */
 @CompileStatic
 enum HibernateMappingKeyword {
-
     INCLUDES('includes'),
     HIBERNATE_CUSTOM_USER_TYPE('hibernateCustomUserType'),
     TABLE('table'),
