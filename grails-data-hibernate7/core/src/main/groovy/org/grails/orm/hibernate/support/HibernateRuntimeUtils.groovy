@@ -17,6 +17,7 @@ import org.grails.datastore.mapping.model.config.GormProperties
 import org.grails.datastore.mapping.model.types.Association
 import org.grails.datastore.mapping.model.types.OneToOne
 import org.grails.datastore.mapping.validation.ValidationErrors
+
 /**
  * Utility methods used at runtime by the GORM for Hibernate implementation
  *
@@ -26,14 +27,15 @@ import org.grails.datastore.mapping.validation.ValidationErrors
 @CompileStatic
 class HibernateRuntimeUtils {
 
-    private static final String DYNAMIC_FILTER_ENABLER = "dynamicFilterEnabler"
+    private static final String DYNAMIC_FILTER_ENABLER = 'dynamicFilterEnabler'
 
-    @SuppressWarnings("rawtypes")
+    @SuppressWarnings('rawtypes')
     static void enableDynamicFilterEnablerIfPresent(SessionFactory sessionFactory, Session session) {
         if (sessionFactory != null && session != null) {
             final Set definedFilterNames = sessionFactory.getDefinedFilterNames()
-            if (definedFilterNames != null && definedFilterNames.contains(DYNAMIC_FILTER_ENABLER))
+            if (definedFilterNames != null && definedFilterNames.contains(DYNAMIC_FILTER_ENABLER)) {
                 session.enableFilter(DYNAMIC_FILTER_ENABLER) // work around for HHH-2624
+            }
         }
     }
 
@@ -52,7 +54,7 @@ class HibernateRuntimeUtils {
 
         def errors = new ValidationErrors(target)
 
-        Errors originalErrors = isGormValidateable ? ((GormValidateable)target).getErrors() : (Errors) metaClass.getProperty(target, GormProperties.ERRORS)
+        Errors originalErrors = isGormValidateable ? ((GormValidateable) target).getErrors() : (Errors) metaClass.getProperty(target, GormProperties.ERRORS)
         // Copy binding failures and any existing object-level errors
         for (Object o in originalErrors.allErrors) {
             if (o instanceof FieldError) {
@@ -66,7 +68,8 @@ class HibernateRuntimeUtils {
                             fe.arguments,
                             fe.defaultMessage))
                 }
-            } else {
+            }
+            else {
                 errors.addError((ObjectError) o)
             }
         }
@@ -123,17 +126,15 @@ class HibernateRuntimeUtils {
                 if (value instanceof Number && (targetType == Long || targetType == Integer)) {
                     if (targetType == Long) {
                         value = ((Number) value).toLong()
-                    } else {
+                    }
+                    else {
                         value = ((Number) value).toInteger()
                     }
-                } else if (value instanceof String && Number.isAssignableFrom(targetType)) {
+                }
+                else if (value instanceof String && Number.isAssignableFrom(targetType)) {
                     String strValue = value.trim()
                     if (targetType == Long) {
                         value = Long.parseLong(strValue)
-                    } else if (targetType == Integer) {
-                        value = Integer.parseInt(strValue)
-                    } else {
-                        value = StringGroovyMethods.asType(strValue, targetType as Class<Object>)
                     }
                     else if (targetType == Integer) {
                         value = Integer.parseInt(strValue)
@@ -145,7 +146,8 @@ class HibernateRuntimeUtils {
                 else {
                     value = conversionService.convert(value, targetType)
                 }
-            } catch (ignored) {
+            }
+            catch (ignored) {
                 // ignore
             }
         }
