@@ -262,7 +262,6 @@ class HibernateGormInstanceApi<D> extends GormInstanceApi<D> {
         for (PersistentProperty prop in entity.associations) {
             if (prop instanceof ToOne && !(prop instanceof Embedded)) {
                 ToOne toOne = (ToOne) prop
-
                 def propertyName = prop.name
                 def propValue = reflector.getProperty(target, propertyName)
                 if (propValue == null || t.contains(propValue)) {
@@ -273,9 +272,7 @@ class HibernateGormInstanceApi<D> extends GormInstanceApi<D> {
                 if (otherSide == null) continue
 
                 def identity = otherSide.identity
-                if (identity == null) {
-                    continue
-                }
+                if (identity == null) continue
 
                 def otherSideReflector = datastore.mappingContext.getEntityReflector(otherSide)
                 try {
@@ -287,17 +284,13 @@ class HibernateGormInstanceApi<D> extends GormInstanceApi<D> {
                         }
                     }
                 }
-                catch (InvalidPropertyException ignored) {
-                    // property is not accessable
-                }
+                catch (InvalidPropertyException ignored) {}
             }
         }
     }
 
     private static boolean shouldValidate(Map arguments, PersistentEntity entity) {
-        if (!entity) {
-            return false
-        }
+        if (!entity) return false
         if (arguments?.containsKey(ARGUMENT_VALIDATE)) {
             return ClassUtils.getBooleanFromMap(ARGUMENT_VALIDATE, arguments)
         }
@@ -351,14 +344,8 @@ class HibernateGormInstanceApi<D> extends GormInstanceApi<D> {
         insertActiveThreadLocal.remove()
     }
 
-    /**
-     * Checks whether a field is dirty
-     *
-     * @param instance The instance
-     * @param fieldName The name of the field
-     *
-     * @return true if the field is dirty
-     */
+    // --- Dirty Checking Logic ---
+
     boolean isDirty(D instance, String fieldName) {
         SessionImplementor session = (SessionImplementor) sessionFactory.currentSession
         EntityEntry entry = findEntityEntry(instance, session)
@@ -377,16 +364,6 @@ class HibernateGormInstanceApi<D> extends GormInstanceApi<D> {
         return fieldIndex in dirtyProperties
     }
 
-    private int[] findDirty(EntityPersister persister, Object[] values, EntityEntry entry, D instance, SessionImplementor session) {
-        persister.findDirty(values, entry.loadedState, instance, session)
-    }
-
-    /**
-     * Checks whether an entity is dirty
-     *
-     * @param instance The instance
-     * @return true if it is dirty
-     */
     boolean isDirty(D instance) {
         SessionImplementor session = (SessionImplementor) sessionFactory.currentSession
         EntityEntry entry = findEntityEntry(instance, session)
@@ -428,7 +405,13 @@ class HibernateGormInstanceApi<D> extends GormInstanceApi<D> {
         return fieldIndex == -1 ? null : entry.loadedState[fieldIndex]
     }
 
-    protected EntityEntry findEntityEntry(D instance, SessionImplementor session, boolean forDirtyCheck = true) {
+    // --- Helper Methods using proper Generic definitions to satisfy stubs ---
+
+    private static <T> int[] findDirty(EntityPersister persister, Object[] values, EntityEntry entry, T instance, SessionImplementor session) {
+        persister.findDirty(values, entry.loadedState, instance, session)
+    }
+
+    protected static <T> EntityEntry findEntityEntry(T instance, SessionImplementor session, boolean forDirtyCheck = true) {
         def entry = session.persistenceContext.getEntry(instance)
         if (!entry) return null
         if (forDirtyCheck && !entry.requiresDirtyCheck(instance) && entry.loadedState) return null
