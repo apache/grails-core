@@ -377,7 +377,7 @@ class HibernateGormInstanceApi<D> extends GormInstanceApi<D> {
         return fieldIndex in dirtyProperties
     }
 
-    private static int[] findDirty(EntityPersister persister, Object[] values, EntityEntry entry, D instance, SessionImplementor session) {
+    private int[] findDirty(EntityPersister persister, Object[] values, EntityEntry entry, D instance, SessionImplementor session) {
         persister.findDirty(values, entry.loadedState, instance, session)
     }
 
@@ -428,7 +428,7 @@ class HibernateGormInstanceApi<D> extends GormInstanceApi<D> {
         return fieldIndex == -1 ? null : entry.loadedState[fieldIndex]
     }
 
-    protected static EntityEntry findEntityEntry(D instance, SessionImplementor session, boolean forDirtyCheck = true) {
+    protected EntityEntry findEntityEntry(D instance, SessionImplementor session, boolean forDirtyCheck = true) {
         def entry = session.persistenceContext.getEntry(instance)
         if (!entry) return null
         if (forDirtyCheck && !entry.requiresDirtyCheck(instance) && entry.loadedState) return null
