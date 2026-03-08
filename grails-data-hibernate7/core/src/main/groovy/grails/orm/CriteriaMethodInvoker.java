@@ -81,7 +81,7 @@ public class CriteriaMethodInvoker {
             case SCROLL_CALL -> builder.setScroll(true);
             case COUNT_CALL -> builder.setCount(true);
             case LIST_DISTINCT_CALL -> builder.setDistinct(true);
-            default -> { }
+            default -> {}
         }
 
     Object result;
@@ -113,6 +113,8 @@ public class CriteriaMethodInvoker {
           hibernateQuery.order(order);
         }
         result = new PagedResultList<>(hibernateQuery);
+      } else if (builder.isScroll()) {
+        result = hibernateQuery.scroll();
       } else {
         result = hibernateQuery.list();
       }
@@ -181,45 +183,110 @@ public class CriteriaMethodInvoker {
             invokeClosureNode(args[0]);
         }
 
-        Object result;
-        if (!builder.isUniqueResult()) {
-            if (builder.isDistinct()) {
-                hibernateQuery.distinct();
-                result = hibernateQuery.list();
-            } else if (builder.isCount()) {
-                hibernateQuery.projections().count();
-                result = hibernateQuery.singleResult();
-            } else if (builder.isPaginationEnabledList()) {
-                Map<?, ?> argMap = (Map<?, ?>) args[0];
-                final String sortField = (String) argMap.get(HibernateQueryArgument.SORT.value());
-                if (sortField != null) {
-                    final boolean ignoreCase =
-                            !(argMap.get(HibernateQueryArgument.IGNORE_CASE.value()) instanceof Boolean b) || b;
-                    final String orderParam = (String) argMap.get(HibernateQueryArgument.ORDER.value());
-                    final Query.Order.Direction direction =
-                            Query.Order.Direction.DESC.name().equalsIgnoreCase(orderParam) ?
-                                    Query.Order.Direction.DESC :
-                                    Query.Order.Direction.ASC;
-                    Query.Order order;
-                    order = new Query.Order(sortField, direction);
-                    if (ignoreCase) {
-                        order.ignoreCase();
-                    }
-                    hibernateQuery.order(order);
-                }
-                result = new PagedResultList<>(hibernateQuery);
-            } else if (builder.isScroll()) {
-                result = hibernateQuery.scroll();
-            } else {
-                result = hibernateQuery.list();
-            }
-        } else {
-            result = hibernateQuery.singleResult();
+        hibernateQuery.join(name, joinType);
+        hibernateQuery.in(name, new DetachedCriteria(builder.getTargetClass()).build(callable));
+        builder.setTargetClass(oldTargetClass);
+
+        return name;
+      }
+    }
+    return UNHANDLED;
+  }
+
+  @SuppressWarnings("PMD.DataflowAnomalyAnalysis")
+  protected Object trySimpleCriteria(String name, CriteriaMethods method, Object[] args) {
+    if (args.length != 1 || args[0] == null) {
+      return UNHANDLED;
+    }
+
+    if (method != null) {
+      switch (method) {
+        case ID_EQUALS:
+          return builder.eq("id", args[0]);
+        case IS_NULL, IS_NOT_NULL, IS_EMPTY, IS_NOT_EMPTY:
+          if (!(args[0] instanceof String)) {
+            builder.throwRuntimeException(
+                new IllegalArgumentException(
+                    "call to ["
+                        + name
+                        + "] with value ["
+                        + args[0]
+                        + "] requires a String value."));
+          }
+          final String value = (String) args[0];
+          switch (method) {
+            case IS_NULL ->
+                builder.getHibernateQuery().isNull(value);
+            case IS_NOT_NULL ->
+                builder.getHibernateQuery().isNotNull(value);
+            case IS_EMPTY ->
+                builder.getHibernateQuery().isEmpty(value);
+            case IS_NOT_EMPTY ->
+                builder.getHibernateQuery().isNotEmpty(value);
+          }
+          return name;
+      }
+    }
+    return UNHANDLED;
+  }
+
+  @SuppressWarnings("PMD.AvoidLiteralsInIfCondition")
+  protected Object tryPropertyCriteria(CriteriaMethods method, Object[] args) {
+    if (method == null || args.length < 2 || !(args[0] instanceof String propertyName)) {
+      return UNHANDLED;
+    }
+
+    switch (method) {
+      case RLIKE:
+        return builder.rlike(propertyName, args[1]);
+      case BETWEEN:
+        if (args.length >= 3) {
+          return builder.between(propertyName, args[1], args[2]);
         }
-        if (!builder.isParticipate()) {
-            builder.closeSession();
+        break;
+      case EQUALS:
+        if (args.length == 3 && args[2] instanceof Map) {
+          return builder.eq(propertyName, args[1], (Map) args[2]);
         }
-        return result;
+        return builder.eq(propertyName, args[1]);
+      case EQUALS_PROPERTY:
+        return builder.eqProperty(propertyName, args[1].toString());
+      case GREATER_THAN:
+        return builder.gt(propertyName, args[1]);
+      case GREATER_THAN_PROPERTY:
+        return builder.gtProperty(propertyName, args[1].toString());
+      case GREATER_THAN_OR_EQUAL:
+        return builder.ge(propertyName, args[1]);
+      case GREATER_THAN_OR_EQUAL_PROPERTY:
+        return builder.geProperty(propertyName, args[1].toString());
+      case ILIKE:
+        return builder.ilike(propertyName, args[1]);
+      case IN:
+        if (args[1] instanceof Collection) {
+          return builder.in(propertyName, (Collection) args[1]);
+        } else if (args[1] instanceof Object[]) {
+          return builder.in(propertyName, (Object[]) args[1]);
+        }
+        break;
+      case LESS_THAN:
+        return builder.lt(propertyName, args[1]);
+      case LESS_THAN_PROPERTY:
+        return builder.ltProperty(propertyName, args[1].toString());
+      case LESS_THAN_OR_EQUAL:
+        return builder.le(propertyName, args[1]);
+      case LESS_THAN_OR_EQUAL_PROPERTY:
+        return builder.leProperty(propertyName, args[1].toString());
+      case LIKE:
+        return builder.like(propertyName, args[1]);
+      case NOT_EQUAL:
+        return builder.ne(propertyName, args[1]);
+      case NOT_EQUAL_PROPERTY:
+        return builder.neProperty(propertyName, args[1].toString());
+      case SIZE_EQUALS:
+        if (args[1] instanceof Number) {
+          return builder.sizeEq(propertyName, ((Number) args[1]).intValue());
+        }
+        break;
     }
 
     private Object tryMetaMethod(String name, Object... args) {
@@ -323,7 +390,7 @@ public class CriteriaMethodInvoker {
                         case IS_NOT_NULL -> builder.getHibernateQuery().isNotNull(value);
                         case IS_EMPTY -> builder.getHibernateQuery().isEmpty(value);
                         case IS_NOT_EMPTY -> builder.getHibernateQuery().isNotEmpty(value);
-                        default -> { }
+                        default -> {}
                     }
                     return name;
                 default:
@@ -412,17 +479,17 @@ public class CriteriaMethodInvoker {
     }
 
     private boolean isCriteriaConstructionMethod(CriteriaMethods method, Object... args) {
-        return (method == CriteriaMethods.LIST_CALL &&
-                        args.length == 2 &&
-                        args[0] instanceof Map<?, ?> &&
-                        args[1] instanceof Closure) ||
-                (method == CriteriaMethods.ROOT_CALL ||
-                        method == CriteriaMethods.ROOT_DO_CALL ||
-                        method == CriteriaMethods.LIST_CALL ||
-                        method == CriteriaMethods.LIST_DISTINCT_CALL ||
-                        method == CriteriaMethods.GET_CALL ||
-                        method == CriteriaMethods.COUNT_CALL ||
-                        (method == CriteriaMethods.SCROLL_CALL && args.length == 1 && args[0] instanceof Closure));
+        return (method == CriteriaMethods.LIST_CALL
+                        && args.length == 2
+                        && args[0] instanceof Map<?, ?>
+                        && args[1] instanceof Closure)
+                || (method == CriteriaMethods.ROOT_CALL
+                        || method == CriteriaMethods.ROOT_DO_CALL
+                        || method == CriteriaMethods.LIST_CALL
+                        || method == CriteriaMethods.LIST_DISTINCT_CALL
+                        || method == CriteriaMethods.GET_CALL
+                        || method == CriteriaMethods.COUNT_CALL
+                        || (method == CriteriaMethods.SCROLL_CALL && args.length == 1 && args[0] instanceof Closure));
     }
 
     private void invokeClosureNode(Object args) {
