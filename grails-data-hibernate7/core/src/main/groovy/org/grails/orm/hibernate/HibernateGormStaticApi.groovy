@@ -307,7 +307,6 @@ class HibernateGormStaticApi<D> extends GormStaticApi<D> {
         return "from ${persistentEntity.name} where $whereClause"
     }
 
-
     @Override
     List executeQuery(CharSequence query, Map namedParams, Map args) {
         doListInternal(query, namedParams, [], args, false)
