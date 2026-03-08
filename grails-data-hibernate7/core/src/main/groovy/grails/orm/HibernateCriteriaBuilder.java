@@ -140,6 +140,7 @@ public class HibernateCriteriaBuilder extends GroovyObjectSupport implements Bui
   private Class<?> targetClass;
   private CriteriaQuery<?> criteriaQuery;
   private boolean uniqueResult = false;
+  //TODO Transactional behaviour is currently not supported, but we need to track whether the criteria should participate in a transaction or not
   private boolean participate;
 
   @SuppressWarnings("PMD.AvoidFieldNameMatchingMethodName")
@@ -632,14 +633,13 @@ public class HibernateCriteriaBuilder extends GroovyObjectSupport implements Bui
    * @return A Criterion instance
    */
   @Override
-  public Criteria gtAll(
-      String propertyName, @SuppressWarnings("rawtypes") QueryableCriteria propertyValue) {
+  public Criteria gtAll(String propertyName, QueryableCriteria<?> propertyValue) {
     hibernateQuery.gtAll(propertyName, propertyValue);
     return this;
   }
 
   @Override
-  public Criteria gtSome(String propertyName, QueryableCriteria propertyValue) {
+  public Criteria gtSome(String propertyName, QueryableCriteria<?> propertyValue) {
     return this;
   }
 
@@ -649,7 +649,7 @@ public class HibernateCriteriaBuilder extends GroovyObjectSupport implements Bui
   }
 
   @Override
-  public Criteria geSome(String propertyName, QueryableCriteria propertyValue) {
+  public Criteria geSome(String propertyName, QueryableCriteria<?> propertyValue) {
     hibernateQuery.geSome(propertyName, propertyValue);
     return this;
   }
@@ -660,7 +660,7 @@ public class HibernateCriteriaBuilder extends GroovyObjectSupport implements Bui
   }
 
   @Override
-  public Criteria ltSome(String propertyName, QueryableCriteria propertyValue) {
+  public Criteria ltSome(String propertyName, QueryableCriteria<?> propertyValue) {
     hibernateQuery.ltSome(propertyName, propertyValue);
     return this;
   }
@@ -671,7 +671,7 @@ public class HibernateCriteriaBuilder extends GroovyObjectSupport implements Bui
   }
 
   @Override
-  public Criteria leSome(String propertyName, QueryableCriteria propertyValue) {
+  public Criteria leSome(String propertyName, QueryableCriteria<?> propertyValue) {
     hibernateQuery.leSome(propertyName, propertyValue);
     return this;
   }
@@ -857,19 +857,19 @@ public class HibernateCriteriaBuilder extends GroovyObjectSupport implements Bui
   }
 
   @Override
-  public Criteria and(Closure callable) {
+  public Criteria and(Closure<?> callable) {
     hibernateQuery.and(callable);
     return this;
   }
 
   @Override
-  public Criteria or(Closure callable) {
+  public Criteria or(Closure<?> callable) {
     hibernateQuery.or(callable);
     return this;
   }
 
   @Override
-  public Criteria not(Closure callable) {
+  public Criteria not(Closure<?> callable) {
     hibernateQuery.not(callable);
     return this;
   }
@@ -1152,12 +1152,12 @@ public class HibernateCriteriaBuilder extends GroovyObjectSupport implements Bui
   }
 
   @Override
-  public Object list(@DelegatesTo(Criteria.class) Closure c) {
+  public Object list(@DelegatesTo(Criteria.class) Closure<?> c) {
     hibernateQuery.setDetachedCriteria(new DetachedCriteria<>(targetClass));
     return invokeMethod(CriteriaMethods.LIST_CALL.getName(), new Object[] {c});
   }
 
-  public List list() {
+  public List<?> list() {
     return hibernateQuery.list();
   }
 
@@ -1166,23 +1166,23 @@ public class HibernateCriteriaBuilder extends GroovyObjectSupport implements Bui
   }
 
   @Override
-  public Object list(Map params, @DelegatesTo(Criteria.class) Closure c) {
+  public Object list(Map<String,?> params, @DelegatesTo(Criteria.class) Closure<?> c) {
     hibernateQuery.setDetachedCriteria(new DetachedCriteria<>(targetClass));
     return invokeMethod(CriteriaMethods.LIST_CALL.getName(), new Object[] {params, c});
   }
 
   @Override
-  public Object listDistinct(@DelegatesTo(Criteria.class) Closure c) {
+  public Object listDistinct(@DelegatesTo(Criteria.class) Closure<?> c) {
     return invokeMethod(CriteriaMethods.LIST_DISTINCT_CALL.getName(), new Object[] {c});
   }
 
   @Override
-  public Object get(@DelegatesTo(Criteria.class) Closure c) {
+  public Object get(@DelegatesTo(Criteria.class) Closure<?> c) {
     return invokeMethod(CriteriaMethods.GET_CALL.getName(), new Object[] {c});
   }
 
   @Override
-  public Object scroll(@DelegatesTo(Criteria.class) Closure c) {
+  public Object scroll(@DelegatesTo(Criteria.class) Closure<?> c) {
     return invokeMethod(CriteriaMethods.SCROLL_CALL.getName(), new Object[] {c});
   }
 
