@@ -187,6 +187,7 @@ public class HibernateCriteriaBuilder extends GroovyObjectSupport implements Bui
    *
    * @param propertyName The name of the property
    */
+  @Override
   public ProjectionList property(String propertyName) {
     hibernateQuery.projections().property(propertyName);
     return this;
@@ -201,6 +202,7 @@ public class HibernateCriteriaBuilder extends GroovyObjectSupport implements Bui
    *
    * @param propertyName The property name
    */
+  @Override
   public ProjectionList distinct(String propertyName) {
     hibernateQuery.projections().distinct(propertyName);
     return this;
@@ -211,6 +213,7 @@ public class HibernateCriteriaBuilder extends GroovyObjectSupport implements Bui
    *
    * @param propertyName The name of the property
    */
+  @Override
   public ProjectionList avg(String propertyName) {
     hibernateQuery.projections().avg(propertyName);
     return this;
@@ -221,11 +224,13 @@ public class HibernateCriteriaBuilder extends GroovyObjectSupport implements Bui
    *
    * @param associationPath The path of the association
    */
+  @Override
   public BuildableCriteria join(String associationPath) {
     join(associationPath, JoinType.INNER);
     return this;
   }
 
+  @Override
   public BuildableCriteria join(String property, JoinType joinType) {
     hibernateQuery.join(property, joinType);
     return this;
@@ -245,6 +250,7 @@ public class HibernateCriteriaBuilder extends GroovyObjectSupport implements Bui
    *
    * @param associationPath The path of the association
    */
+  @Override
   public BuildableCriteria select(String associationPath) {
     hibernateQuery.select(associationPath);
     return this;
@@ -255,6 +261,7 @@ public class HibernateCriteriaBuilder extends GroovyObjectSupport implements Bui
    *
    * @param shouldCache True if the query should be cached
    */
+  @Override
   public BuildableCriteria cache(boolean shouldCache) {
     this.shouldCache = shouldCache;
     return this;
@@ -270,12 +277,13 @@ public class HibernateCriteriaBuilder extends GroovyObjectSupport implements Bui
    *
    * @param readOnly True to disable dirty checking
    */
+  @Override
   public BuildableCriteria readOnly(boolean readOnly) {
     this.readOnly = readOnly;
     return this;
   }
 
-
+  @Override
   public Class<?> getTargetClass() {
     return targetClass;
   }
@@ -304,11 +312,13 @@ public class HibernateCriteriaBuilder extends GroovyObjectSupport implements Bui
     return (Objects.nonNull(alias) ? alias + "." : "") + propertyName;
   }
 
+  @Override
   public ProjectionList id() {
     hibernateQuery.projections().id();
     return this;
   }
 
+  @Override
   public ProjectionList count() {
     return hibernateQuery.projections().count();
   }
@@ -318,6 +328,7 @@ public class HibernateCriteriaBuilder extends GroovyObjectSupport implements Bui
    *
    * @param propertyName The name of the property
    */
+  @Override
   public ProjectionList countDistinct(String propertyName) {
     return countDistinct(propertyName, null);
   }
@@ -327,10 +338,12 @@ public class HibernateCriteriaBuilder extends GroovyObjectSupport implements Bui
    *
    * @param propertyName The name of the property
    */
+  @Override
   public ProjectionList groupProperty(String propertyName) {
     return groupProperty(propertyName, null);
   }
 
+  @Override
   public ProjectionList distinct() {
     hibernateQuery.projections().distinct();
     return this;
@@ -363,6 +376,7 @@ public class HibernateCriteriaBuilder extends GroovyObjectSupport implements Bui
    *
    * @param propertyName The name of the property
    */
+  @Override
   public ProjectionList max(String propertyName) {
     return max(propertyName, null);
   }
@@ -383,6 +397,7 @@ public class HibernateCriteriaBuilder extends GroovyObjectSupport implements Bui
    *
    * @param propertyName The name of the property
    */
+  @Override
   public ProjectionList min(String propertyName) {
     return min(propertyName, null);
   }
@@ -398,6 +413,7 @@ public class HibernateCriteriaBuilder extends GroovyObjectSupport implements Bui
   }
 
   /** Adds a projection that allows the criteria to return the row count */
+  @Override
   public ProjectionList rowCount() {
     return count();
   }
@@ -407,6 +423,7 @@ public class HibernateCriteriaBuilder extends GroovyObjectSupport implements Bui
    *
    * @param propertyName The name of the property
    */
+  @Override
   public ProjectionList sum(String propertyName) {
     return sum(propertyName, null);
   }
@@ -442,6 +459,7 @@ public class HibernateCriteriaBuilder extends GroovyObjectSupport implements Bui
    * @param otherPropertyName The second property name
    * @return A Criterion instance
    */
+  @Override
   public Criteria eqProperty(String propertyName, String otherPropertyName) {
     hibernateQuery.eqProperty(propertyName, otherPropertyName);
     return this;
@@ -454,6 +472,7 @@ public class HibernateCriteriaBuilder extends GroovyObjectSupport implements Bui
    * @param otherPropertyName The second property name
    * @return A Criterion instance
    */
+  @Override
   public Criteria neProperty(String propertyName, String otherPropertyName) {
     hibernateQuery.neProperty(propertyName, otherPropertyName);
     return this;
@@ -466,6 +485,7 @@ public class HibernateCriteriaBuilder extends GroovyObjectSupport implements Bui
    * @param otherPropertyName The second property name
    * @return A Criterion instance
    */
+  @Override
   public Criteria gtProperty(String propertyName, String otherPropertyName) {
     hibernateQuery.gtProperty(propertyName, otherPropertyName);
     return this;
@@ -479,6 +499,7 @@ public class HibernateCriteriaBuilder extends GroovyObjectSupport implements Bui
    * @param otherPropertyName The second property name
    * @return A Criterion instance
    */
+  @Override
   public Criteria geProperty(String propertyName, String otherPropertyName) {
     hibernateQuery.geProperty(propertyName, otherPropertyName);
     return this;
@@ -491,6 +512,7 @@ public class HibernateCriteriaBuilder extends GroovyObjectSupport implements Bui
    * @param otherPropertyName The second property name
    * @return A Criterion instance
    */
+  @Override
   public Criteria ltProperty(String propertyName, String otherPropertyName) {
     hibernateQuery.ltProperty(propertyName, otherPropertyName);
     return this;
@@ -504,6 +526,7 @@ public class HibernateCriteriaBuilder extends GroovyObjectSupport implements Bui
    * @param otherPropertyName The second property name
    * @return A Criterion instance
    */
+  @Override
   public Criteria leProperty(String propertyName, String otherPropertyName) {
     hibernateQuery.leProperty(propertyName, otherPropertyName);
     return this;
@@ -523,6 +546,7 @@ public class HibernateCriteriaBuilder extends GroovyObjectSupport implements Bui
    * @param propertyValue The property value
    * @return A Criterion instance
    */
+  @Override
   @SuppressWarnings({"unchecked", "rawtypes"})
   public Criteria eqAll(String propertyName, Closure<?> propertyValue) {
     return eqAll(propertyName, new grails.gorm.DetachedCriteria(targetClass).build(propertyValue));
@@ -536,6 +560,7 @@ public class HibernateCriteriaBuilder extends GroovyObjectSupport implements Bui
    * @param propertyValue The property value
    * @return A Criterion instance
    */
+  @Override
   @SuppressWarnings({"unchecked", "rawtypes"})
   public Criteria gtAll(String propertyName, Closure<?> propertyValue) {
     return gtAll(propertyName, new grails.gorm.DetachedCriteria(targetClass).build(propertyValue));
@@ -549,6 +574,7 @@ public class HibernateCriteriaBuilder extends GroovyObjectSupport implements Bui
    * @param propertyValue The property value
    * @return A Criterion instance
    */
+  @Override
   @SuppressWarnings({"unchecked", "rawtypes"})
   public Criteria ltAll(String propertyName, Closure<?> propertyValue) {
     return ltAll(propertyName, new grails.gorm.DetachedCriteria(targetClass).build(propertyValue));
@@ -562,6 +588,7 @@ public class HibernateCriteriaBuilder extends GroovyObjectSupport implements Bui
    * @param propertyValue The property value
    * @return A Criterion instance
    */
+  @Override
   @SuppressWarnings({"unchecked", "rawtypes"})
   public Criteria geAll(String propertyName, Closure<?> propertyValue) {
     return geAll(propertyName, new grails.gorm.DetachedCriteria(targetClass).build(propertyValue));
@@ -575,6 +602,7 @@ public class HibernateCriteriaBuilder extends GroovyObjectSupport implements Bui
    * @param propertyValue The property value
    * @return A Criterion instance
    */
+  @Override
   @SuppressWarnings({"unchecked", "rawtypes"})
   public Criteria leAll(String propertyName, Closure<?> propertyValue) {
     return leAll(propertyName, new grails.gorm.DetachedCriteria(targetClass).build(propertyValue));
@@ -588,6 +616,7 @@ public class HibernateCriteriaBuilder extends GroovyObjectSupport implements Bui
    * @param propertyValue The property value
    * @return A Criterion instance
    */
+  @Override
   public Criteria eqAll(
       String propertyName, @SuppressWarnings("rawtypes") QueryableCriteria propertyValue) {
     hibernateQuery.eqAll(propertyName, propertyValue);
@@ -602,6 +631,7 @@ public class HibernateCriteriaBuilder extends GroovyObjectSupport implements Bui
    * @param propertyValue The property value
    * @return A Criterion instance
    */
+  @Override
   public Criteria gtAll(
       String propertyName, @SuppressWarnings("rawtypes") QueryableCriteria propertyValue) {
     hibernateQuery.gtAll(propertyName, propertyValue);
@@ -691,6 +721,7 @@ public class HibernateCriteriaBuilder extends GroovyObjectSupport implements Bui
    * @param propertyValue The property value
    * @return A Criterion instance
    */
+  @Override
   public Criteria ltAll(
       String propertyName, @SuppressWarnings("rawtypes") QueryableCriteria propertyValue) {
     hibernateQuery.ltAll(propertyName, propertyValue);
@@ -705,6 +736,7 @@ public class HibernateCriteriaBuilder extends GroovyObjectSupport implements Bui
    * @param propertyValue The property value
    * @return A Criterion instance
    */
+  @Override
   public Criteria geAll(
       String propertyName, @SuppressWarnings("rawtypes") QueryableCriteria propertyValue) {
     hibernateQuery.geAll(propertyName, propertyValue);
@@ -719,6 +751,7 @@ public class HibernateCriteriaBuilder extends GroovyObjectSupport implements Bui
    * @param propertyValue The property value
    * @return A Criterion instance
    */
+  @Override
   public Criteria leAll(
       String propertyName, @SuppressWarnings("rawtypes") QueryableCriteria propertyValue) {
     hibernateQuery.leAll(propertyName, propertyValue);
@@ -732,11 +765,13 @@ public class HibernateCriteriaBuilder extends GroovyObjectSupport implements Bui
    * @param propertyValue The property value
    * @return A Criterion instance
    */
+  @Override
   public Criteria gt(String propertyName, Object propertyValue) {
     hibernateQuery.gt(propertyName, propertyValue);
     return this;
   }
 
+  @Override
   public Criteria lte(String s, Object o) {
     return le(s, o);
   }
@@ -748,6 +783,7 @@ public class HibernateCriteriaBuilder extends GroovyObjectSupport implements Bui
    * @param propertyValue The property value
    * @return A Criterion instance
    */
+  @Override
   public Criteria ge(String propertyName, Object propertyValue) {
     hibernateQuery.ge(propertyName, propertyValue);
     return this;
@@ -760,6 +796,7 @@ public class HibernateCriteriaBuilder extends GroovyObjectSupport implements Bui
    * @param propertyValue The property value
    * @return A Criterion instance
    */
+  @Override
   public Criteria lt(String propertyName, Object propertyValue) {
     hibernateQuery.lt(propertyName, propertyValue);
     return this;
@@ -772,11 +809,13 @@ public class HibernateCriteriaBuilder extends GroovyObjectSupport implements Bui
    * @param propertyValue The property value
    * @return A Criterion instance
    */
+  @Override
   public Criteria le(String propertyName, Object propertyValue) {
     hibernateQuery.le(propertyName, propertyValue);
     return this;
   }
 
+  @Override
   public Criteria idEquals(Object o) {
     return idEq(o);
   }
@@ -793,21 +832,25 @@ public class HibernateCriteriaBuilder extends GroovyObjectSupport implements Bui
     return this;
   }
 
+  @Override
   public Criteria isEmpty(String property) {
     hibernateQuery.isEmpty(property);
     return this;
   }
 
+  @Override
   public Criteria isNotEmpty(String property) {
     hibernateQuery.isNotEmpty(property);
     return this;
   }
 
+  @Override
   public Criteria isNull(String property) {
     hibernateQuery.isNull(property);
     return this;
   }
 
+  @Override
   public Criteria isNotNull(String property) {
     hibernateQuery.isNotNull(property);
     return this;
@@ -838,10 +881,12 @@ public class HibernateCriteriaBuilder extends GroovyObjectSupport implements Bui
    * @param propertyValue The property value
    * @return A Criterion instance
    */
+  @Override
   public Criteria eq(String propertyName, Object propertyValue) {
     return eq(propertyName, propertyValue, Collections.emptyMap());
   }
 
+  @Override
   public Criteria idEq(Object o) {
     return eq("id", o);
   }
@@ -879,6 +924,7 @@ public class HibernateCriteriaBuilder extends GroovyObjectSupport implements Bui
    * @param propertyValue The like value
    * @return A Criterion instance
    */
+  @Override
   public Criteria like(String propertyName, Object propertyValue) {
     hibernateQuery.like(propertyName, propertyValue.toString());
     return this;
@@ -892,6 +938,7 @@ public class HibernateCriteriaBuilder extends GroovyObjectSupport implements Bui
    * @param propertyValue The ilike value
    * @return A Criterion instance
    */
+  @Override
   public Criteria ilike(String propertyName, Object propertyValue) {
     hibernateQuery.ilike(propertyName, propertyValue.toString());
     return this;
@@ -904,6 +951,7 @@ public class HibernateCriteriaBuilder extends GroovyObjectSupport implements Bui
    * @param values A collection of values
    * @return A Criterion instance
    */
+  @Override
   @SuppressWarnings("rawtypes")
   public Criteria in(String propertyName, Collection values) {
     hibernateQuery.in(propertyName, values.stream().toList());
@@ -911,13 +959,15 @@ public class HibernateCriteriaBuilder extends GroovyObjectSupport implements Bui
   }
 
   /** Delegates to in as in is a Groovy keyword */
+  @Override
   @SuppressWarnings("rawtypes")
   public Criteria inList(String propertyName, Collection values) {
     return in(propertyName, values);
   }
 
   /** Delegates to in as in is a Groovy keyword */
-  public Criteria inList(String propertyName, Object[] values) {
+  @Override
+  public Criteria inList(String propertyName, Object... values) {
     return in(propertyName, values);
   }
 
@@ -928,7 +978,8 @@ public class HibernateCriteriaBuilder extends GroovyObjectSupport implements Bui
    * @param values A collection of values
    * @return A Criterion instance
    */
-  public Criteria in(String propertyName, Object[] values) {
+  @Override
+  public Criteria in(String propertyName, Object... values) {
     hibernateQuery.in(propertyName, List.of(values));
     return this;
   }
@@ -939,6 +990,7 @@ public class HibernateCriteriaBuilder extends GroovyObjectSupport implements Bui
    * @param propertyName The property name to order by
    * @return A Order instance
    */
+  @Override
   public Criteria order(String propertyName) {
     order(new Query.Order(propertyName));
     return this;
@@ -962,6 +1014,7 @@ public class HibernateCriteriaBuilder extends GroovyObjectSupport implements Bui
    * @param directionString Either "asc" for ascending or "desc" for descending
    * @return A Order instance
    */
+  @Override
   public Criteria order(String propertyName, String directionString) {
     Query.Order.Direction direction =
         Query.Order.Direction.DESC.name().equalsIgnoreCase(directionString)
@@ -978,6 +1031,7 @@ public class HibernateCriteriaBuilder extends GroovyObjectSupport implements Bui
    * @param size The size to constrain by
    * @return A Criterion instance
    */
+  @Override
   public Criteria sizeEq(String propertyName, int size) {
     hibernateQuery.sizeEq(propertyName, size);
     return this;
@@ -990,6 +1044,7 @@ public class HibernateCriteriaBuilder extends GroovyObjectSupport implements Bui
    * @param size The size to constrain by
    * @return A Criterion instance
    */
+  @Override
   public Criteria sizeGt(String propertyName, int size) {
     hibernateQuery.sizeGt(propertyName, size);
     return this;
@@ -1003,6 +1058,7 @@ public class HibernateCriteriaBuilder extends GroovyObjectSupport implements Bui
    * @param size The size to constrain by
    * @return A Criterion instance
    */
+  @Override
   public Criteria sizeGe(String propertyName, int size) {
     hibernateQuery.sizeGe(propertyName, size);
     return this;
@@ -1016,6 +1072,7 @@ public class HibernateCriteriaBuilder extends GroovyObjectSupport implements Bui
    * @param size The size to constrain by
    * @return A Criterion instance
    */
+  @Override
   public Criteria sizeLe(String propertyName, int size) {
     hibernateQuery.sizeLe(propertyName, size);
     return this;
@@ -1028,6 +1085,7 @@ public class HibernateCriteriaBuilder extends GroovyObjectSupport implements Bui
    * @param size The size to constrain by
    * @return A Criterion instance
    */
+  @Override
   public Criteria sizeLt(String propertyName, int size) {
     hibernateQuery.sizeLt(propertyName, size);
     return this;
@@ -1041,6 +1099,7 @@ public class HibernateCriteriaBuilder extends GroovyObjectSupport implements Bui
    * @param propertyValue The ilike value
    * @return A Criterion instance
    */
+  @Override
   public org.grails.datastore.mapping.query.api.Criteria rlike(
       String propertyName, Object propertyValue) {
     hibernateQuery.rlike(propertyName, propertyValue.toString());
@@ -1054,6 +1113,7 @@ public class HibernateCriteriaBuilder extends GroovyObjectSupport implements Bui
    * @param size The size to constrain by
    * @return A Criterion instance
    */
+  @Override
   public Criteria sizeNe(String propertyName, int size) {
     hibernateQuery.sizeNe(propertyName, size);
     return this;
@@ -1066,6 +1126,7 @@ public class HibernateCriteriaBuilder extends GroovyObjectSupport implements Bui
    * @param propertyValue The property value
    * @return The criterion object
    */
+  @Override
   public Criteria ne(String propertyName, Object propertyValue) {
     hibernateQuery.ne(propertyName, propertyValue);
     return this;
@@ -1079,11 +1140,13 @@ public class HibernateCriteriaBuilder extends GroovyObjectSupport implements Bui
    * @param hi The high value
    * @return A Criterion instance
    */
+  @Override
   public Criteria between(String propertyName, Object lo, Object hi) {
     hibernateQuery.between(propertyName, lo, hi);
     return this;
   }
 
+  @Override
   public Criteria gte(String s, Object o) {
     return ge(s, o);
   }

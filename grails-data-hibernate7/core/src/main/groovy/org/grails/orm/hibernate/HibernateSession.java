@@ -103,7 +103,7 @@ public class HibernateSession extends AbstractAttributeStoringSession
       HibernateDatastore hibernateDatastore, SessionFactory sessionFactory) {
     datastore = hibernateDatastore;
     hibernateTemplate =
-        new GrailsHibernateTemplate(sessionFactory, (HibernateDatastore) getDatastore());
+        new GrailsHibernateTemplate(sessionFactory, datastore);
   }
 
   @Override
@@ -111,6 +111,7 @@ public class HibernateSession extends AbstractAttributeStoringSession
     return false;
   }
 
+  @Override
   public Serializable insert(Object o) {
     return persist(o);
   }
@@ -125,6 +126,7 @@ public class HibernateSession extends AbstractAttributeStoringSession
     connected = false; // don't actually do any disconnection here. This will be handled by OSVI
   }
 
+  @Override
   public Transaction beginTransaction() {
     throw new UnsupportedOperationException("Use HibernatePlatformTransactionManager instead");
   }
@@ -134,10 +136,12 @@ public class HibernateSession extends AbstractAttributeStoringSession
     throw new UnsupportedOperationException("Use HibernatePlatformTransactionManager instead");
   }
 
+  @Override
   public MappingContext getMappingContext() {
     return getDatastore().getMappingContext();
   }
 
+  @Override
   public Serializable persist(Object o) {
     hibernateTemplate.persist(o);
     try {
@@ -153,38 +157,47 @@ public class HibernateSession extends AbstractAttributeStoringSession
     return null;
   }
 
+  @Override
   public Object merge(Object o) {
     return hibernateTemplate.merge(o);
   }
 
+  @Override
   public void refresh(Object o) {
     hibernateTemplate.refresh(o);
   }
 
+  @Override
   public void attach(Object o) {
     hibernateTemplate.lock(o, LockMode.NONE);
   }
 
+  @Override
   public void flush() {
     hibernateTemplate.flush();
   }
 
+  @Override
   public void clear() {
     hibernateTemplate.clear();
   }
 
+  @Override
   public void clear(Object o) {
     hibernateTemplate.evict(o);
   }
 
+  @Override
   public boolean contains(Object o) {
     return hibernateTemplate.contains(o);
   }
 
+  @Override
   public void lock(Object o) {
     hibernateTemplate.lock(o, LockMode.PESSIMISTIC_WRITE);
   }
 
+  @Override
   public void unlock(Object o) {
     // do nothing
   }
@@ -195,6 +208,7 @@ public class HibernateSession extends AbstractAttributeStoringSession
    * @return the result
    */
   @Deprecated
+  @Override
   public List<Serializable> persist(Iterable objects) {
     List<Serializable> ids = new ArrayList<>();
     for (Object object : objects) {
@@ -204,18 +218,22 @@ public class HibernateSession extends AbstractAttributeStoringSession
     return ids;
   }
 
+  @Override
   public <T> T retrieve(Class<T> type, Serializable key) {
     return getHibernateTemplate().execute(session -> session.find(type, key));
   }
 
+  @Override
   public <T> T proxy(Class<T> type, Serializable key) {
     return hibernateTemplate.load(type, key);
   }
 
+  @Override
   public <T> T lock(Class<T> type, Serializable key) {
     return getHibernateTemplate().execute(session -> session.find(type, key, LockModeType.PESSIMISTIC_WRITE));
   }
 
+  @Override
   public void delete(Iterable objects) {
     Collection list = getIterableAsCollection(objects);
     hibernateTemplate.deleteAll(list);
@@ -232,18 +250,22 @@ public class HibernateSession extends AbstractAttributeStoringSession
     return list;
   }
 
+  @Override
   public void delete(Object obj) {
     hibernateTemplate.remove(obj);
   }
 
+  @Override
   public List retrieveAll(Class type, Serializable... keys) {
     return retrieveAll(type, Arrays.asList(keys));
   }
 
+  @Override
   public Persister getPersister(Object o) {
     return null;
   }
 
+  @Override
   public Transaction getTransaction() {
     throw new UnsupportedOperationException("Use HibernatePlatformTransactionManager instead");
   }
@@ -255,15 +277,18 @@ public class HibernateSession extends AbstractAttributeStoringSession
     return resource != null;
   }
 
+  @Override
   public Datastore getDatastore() {
     return datastore;
   }
 
+  @Override
   public boolean isDirty(Object o) {
     // not used, Hibernate manages dirty checking itself
     return true;
   }
 
+  @Override
   public Object getNativeInterface() {
     return hibernateTemplate;
   }
@@ -293,6 +318,7 @@ public class HibernateSession extends AbstractAttributeStoringSession
    * @param criteria The criteria
    * @return The total number of records deleted
    */
+  @Override
   @SuppressWarnings("PMD.DataflowAnomalyAnalysis")
   public long deleteAll(final QueryableCriteria criteria) {
     return getHibernateTemplate()
@@ -324,7 +350,7 @@ public class HibernateSession extends AbstractAttributeStoringSession
 
     List<?> parameters = jpaQueryInfo.getParameters();
     if (parameters != null) {
-      for (int i = 0, count = parameters.size(); i < count; i++) {
+      for (int i = 0; i < parameters.size(); i++) {
         query.setParameter(
             JpaQueryBuilder.PARAMETER_NAME_PREFIX + (i + 1), parameters.get(i));
       }
@@ -339,6 +365,7 @@ public class HibernateSession extends AbstractAttributeStoringSession
    * @param properties The properties
    * @return The total number of records updated
    */
+  @Override
   @SuppressWarnings("PMD.DataflowAnomalyAnalysis")
   public long updateAll(final QueryableCriteria criteria, final Map<String, Object> properties) {
     return getHibernateTemplate()
@@ -378,6 +405,7 @@ public class HibernateSession extends AbstractAttributeStoringSession
                 });
   }
 
+  @Override
   @SuppressWarnings({"PMD.DataflowAnomalyAnalysis", "unchecked"})
   public List retrieveAll(final Class type, final Iterable keys) {
     final PersistentEntity persistentEntity =
@@ -399,6 +427,7 @@ public class HibernateSession extends AbstractAttributeStoringSession
             });
   }
 
+  @Override
   public Query createQuery(Class type) {
     return createQuery(type, null);
   }
@@ -416,6 +445,7 @@ public class HibernateSession extends AbstractAttributeStoringSession
     return (GrailsHibernateTemplate) getNativeInterface();
   }
 
+  @Override
   public void setFlushMode(FlushModeType flushMode) {
     if (flushMode == FlushModeType.AUTO) {
       hibernateTemplate.setFlushMode(GrailsHibernateTemplate.FLUSH_AUTO);
@@ -423,6 +453,7 @@ public class HibernateSession extends AbstractAttributeStoringSession
       hibernateTemplate.setFlushMode(GrailsHibernateTemplate.FLUSH_COMMIT);
     }
 
+  @Override
   public FlushModeType getFlushMode() {
       if (hibernateTemplate.getFlushMode() == GrailsHibernateTemplate.FLUSH_COMMIT) {
           return FlushModeType.COMMIT;

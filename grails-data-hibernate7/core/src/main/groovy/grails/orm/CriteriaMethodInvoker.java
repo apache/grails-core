@@ -45,29 +45,43 @@ public class CriteriaMethodInvoker {
 
     private final HibernateCriteriaBuilder builder;
 
-    public CriteriaMethodInvoker(HibernateCriteriaBuilder builder) {
-        this.builder = builder;
+  public CriteriaMethodInvoker(HibernateCriteriaBuilder builder) {
+    this.builder = builder;
+  }
+
+  public Object invokeMethod(String name, Object... args) {
+    CriteriaMethods method = CriteriaMethods.fromName(name);
+
+    Object result = tryCriteriaConstruction(method, args);
+    if (result != UNHANDLED) return result;
+
+    result = tryMetaMethod(name, args);
+    if (result != UNHANDLED) return result;
+
+    result = tryAssociationOrJunction(name, method, args);
+    if (result != UNHANDLED) return result;
+
+    result = trySimpleCriteria(name, method, args);
+    if (result != UNHANDLED) return result;
+
+    result = tryPropertyCriteria(method, args);
+    if (result != UNHANDLED) return result;
+
+    return CriteriaMethods.fromName(name, HibernateCriteriaBuilder.class, args);
+  }
+
+  private Object tryCriteriaConstruction(CriteriaMethods method, Object... args) {
+    if (method == null || !isCriteriaConstructionMethod(method, args)) {
+      return UNHANDLED;
     }
 
-    public Object invokeMethod(String name, Object... args) {
-        CriteriaMethods method = CriteriaMethods.fromName(name);
-
-        Object result = tryCriteriaConstruction(method, args);
-        if (result != UNHANDLED) return result;
-
-        result = tryMetaMethod(name, args);
-        if (result != UNHANDLED) return result;
-
-        result = tryAssociationOrJunction(name, method, args);
-        if (result != UNHANDLED) return result;
-
-        result = trySimpleCriteria(name, method, args);
-        if (result != UNHANDLED) return result;
-
-        result = tryPropertyCriteria(method, args);
-        if (result != UNHANDLED) return result;
-
-        return CriteriaMethods.fromName(name, HibernateCriteriaBuilder.class, args);
+    HibernateQuery hibernateQuery = builder.getHibernateQuery();
+    switch (method) {
+      case GET_CALL -> builder.setUniqueResult(true);
+      case SCROLL_CALL -> builder.setScroll(true);
+      case COUNT_CALL -> builder.setCount(true);
+      case LIST_DISTINCT_CALL -> builder.setDistinct(true);
+      default -> {}
     }
 
     private Object tryCriteriaConstruction(CriteriaMethods method, Object... args) {
@@ -127,7 +141,7 @@ public class CriteriaMethodInvoker {
     return result;
   }
 
-  private Object tryMetaMethod(String name, Object[] args) {
+  private Object tryMetaMethod(String name, Object... args) {
     MetaMethod metaMethod = builder.getMetaClass().getMetaMethod(name, args);
     if (metaMethod != null) {
       return metaMethod.invoke(builder, args);
@@ -136,7 +150,7 @@ public class CriteriaMethodInvoker {
   }
 
   @SuppressWarnings("PMD.DataflowAnomalyAnalysis")
-  private Object tryAssociationOrJunction(String name, CriteriaMethods method, Object[] args) {
+  private Object tryAssociationOrJunction(String name, CriteriaMethods method, Object... args) {
     if (!isAssociationQueryMethod(args) && !isAssociationQueryWithJoinSpecificationMethod(args)) {
       return UNHANDLED;
     }
@@ -161,6 +175,8 @@ public class CriteriaMethodInvoker {
             invokeClosureNode(callable);
             return name;
           }
+          break;
+        default:
           break;
       }
     }
@@ -194,7 +210,7 @@ public class CriteriaMethodInvoker {
   }
 
   @SuppressWarnings("PMD.DataflowAnomalyAnalysis")
-  protected Object trySimpleCriteria(String name, CriteriaMethods method, Object[] args) {
+  protected Object trySimpleCriteria(String name, CriteriaMethods method, Object... args) {
     if (args.length != 1 || args[0] == null) {
       return UNHANDLED;
     }
@@ -223,15 +239,18 @@ public class CriteriaMethodInvoker {
                 builder.getHibernateQuery().isEmpty(value);
             case IS_NOT_EMPTY ->
                 builder.getHibernateQuery().isNotEmpty(value);
+            default -> {}
           }
           return name;
+        default:
+          break;
       }
     }
     return UNHANDLED;
   }
 
   @SuppressWarnings("PMD.AvoidLiteralsInIfCondition")
-  protected Object tryPropertyCriteria(CriteriaMethods method, Object[] args) {
+  protected Object tryPropertyCriteria(CriteriaMethods method, Object... args) {
     if (method == null || args.length < 2 || !(args[0] instanceof String propertyName)) {
       return UNHANDLED;
     }
@@ -287,25 +306,33 @@ public class CriteriaMethodInvoker {
           return builder.sizeEq(propertyName, ((Number) args[1]).intValue());
         }
         break;
+      default:
+        break;
     }
 
-    private Object tryMetaMethod(String name, Object... args) {
-        MetaMethod metaMethod = builder.getMetaClass().getMetaMethod(name, args);
-        if (metaMethod != null) {
-            return metaMethod.invoke(builder, args);
-        }
-        return UNHANDLED;
-    }
+  private boolean isAssociationQueryMethod(Object... args) {
+    return args.length == 1 && args[0] instanceof Closure;
+  }
 
-    @SuppressWarnings("PMD.DataflowAnomalyAnalysis")
-    private Object tryAssociationOrJunction(String name, CriteriaMethods method, Object... args) {
-        if (!isAssociationQueryMethod(args) && !isAssociationQueryWithJoinSpecificationMethod(args)) {
-            return UNHANDLED;
-        }
+  private boolean isAssociationQueryWithJoinSpecificationMethod(Object... args) {
+    return args.length == 2 && (args[0] instanceof Number) && (args[1] instanceof Closure);
+  }
 
-        final boolean hasMoreThanOneArg = args.length > 1;
-        final Closure<?> callable = hasMoreThanOneArg ? (Closure<?>) args[1] : (Closure<?>) args[0];
-        final HibernateQuery hibernateQuery = builder.getHibernateQuery();
+  private boolean isCriteriaConstructionMethod(CriteriaMethods method, Object... args) {
+    return (method == CriteriaMethods.LIST_CALL
+            && args.length == 2
+            && args[0] instanceof Map
+            && args[1] instanceof Closure)
+        || (method == CriteriaMethods.ROOT_CALL
+            || method == CriteriaMethods.ROOT_DO_CALL
+            || method == CriteriaMethods.LIST_CALL
+            || method == CriteriaMethods.LIST_DISTINCT_CALL
+            || method == CriteriaMethods.GET_CALL
+            || method == CriteriaMethods.COUNT_CALL
+            || (method == CriteriaMethods.SCROLL_CALL
+                && args.length == 1
+                && args[0] instanceof Closure));
+  }
 
         if (method != null) {
             switch (method) {

@@ -18,6 +18,10 @@
  */
 package org.grails.orm.hibernate.query;
 
+import grails.gorm.DetachedCriteria;
+import groovy.lang.Closure;
+import jakarta.persistence.criteria.CriteriaQuery;
+import jakarta.persistence.criteria.JoinType;
 import java.util.Deque;
 import java.util.HashMap;
 import java.util.LinkedList;
@@ -79,8 +83,8 @@ public class HibernateQuery extends Query {
   }
 
   private final Map<String, CriteriaAndAlias> createdAssociationPaths = new HashMap<>();
-  protected LinkedList<PersistentEntity> entityStack = new LinkedList<>();
-  protected LinkedList<Association> associationStack = new LinkedList<>();
+  protected Deque<PersistentEntity> entityStack = new LinkedList<>();
+  protected Deque<Association> associationStack = new LinkedList<>();
   protected DetachedCriteria<?> detachedCriteria;
   protected ProxyHandler proxyHandler = new HibernateProxyHandler();
 
@@ -159,11 +163,10 @@ public class HibernateQuery extends Query {
         this.detachedCriteria = detachedCriteria;
     }
 
-    @Override
-    protected Object resolveIdIfEntity(Object value) {
-        // for Hibernate queries, the object itself is used in queries, not the id
-        return value;
-    }
+  @Override
+  public void add(Criterion criterion) {
+    detachedCriteria.add(criterion);
+  }
 
     @Override
     public Query isEmpty(String property) {
@@ -171,67 +174,11 @@ public class HibernateQuery extends Query {
         return this;
     }
 
-    @Override
-    public Query isNotEmpty(String property) {
-        detachedCriteria.isNotEmpty(calculatePropertyName(property));
-        return this;
-    }
-
-    public Query count() {
-        projections.count();
-        return this;
-    }
-
-    @Override
-    public Query isNull(String property) {
-        detachedCriteria.isNull(calculatePropertyName(property));
-        return this;
-    }
-
-    @Override
-    public Query isNotNull(String property) {
-        detachedCriteria.isNotNull(calculatePropertyName(property));
-        return this;
-    }
-
-    @Override
-    public PersistentEntity getEntity() {
-        if (!entityStack.isEmpty()) {
-            return entityStack.getLast();
-        }
-        return super.getEntity();
-    }
-
-    private String getAssociationPath(String propertyName) {
-        if (propertyName.indexOf('.') > -1) {
-            return propertyName;
-        } else {
-            StringBuilder fullPath = new StringBuilder();
-            for (Association association : associationStack) {
-                fullPath.append(association.getName());
-                fullPath.append('.');
-            }
-            fullPath.append(propertyName);
-            return fullPath.toString();
-        }
-    }
-
-    public List<Criterion> getAllCriteria() {
-        return detachedCriteria.getCriteria();
-    }
-
-    @Override
-    public void add(Criterion criterion) {
-        detachedCriteria.add(criterion);
-    }
-
-    public void add(DetachedCriteria<?> detachedCriteria) {
-        detachedCriteria.add(new Conjunction(detachedCriteria.getCriteria()));
-    }
-
-    @Override
-    public void add(Junction currentJunction, Criterion criterion) {
-        Disjunction disjunction = (Disjunction) detachedCriteria.getCriteria().stream()
+  @Override
+  public void add(Junction currentJunction, Criterion criterion) {
+    Disjunction disjunction =
+        (Disjunction)
+            detachedCriteria.getCriteria().stream()
                 .filter(it -> it instanceof Disjunction)
                 .findFirst()
                 .orElse(new Disjunction());
@@ -663,9 +610,11 @@ public class HibernateQuery extends Query {
     return this;
   }
 
-    private SessionFactory getSessionFactory() {
-        return ((IHibernateTemplate) session.getNativeInterface()).getSessionFactory();
-    }
+  @Override
+  public Query maxResults(int maxResults) {
+    this.max = maxResults;
+    return this;
+  }
 
     public HibernateCriteriaBuilder getCriteriaBuilder() {
         return getSessionFactory().getCriteriaBuilder();

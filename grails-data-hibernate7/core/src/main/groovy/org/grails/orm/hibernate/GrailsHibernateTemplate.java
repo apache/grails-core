@@ -339,6 +339,7 @@ public class GrailsHibernateTemplate implements IHibernateTemplate {
         this.cacheQueries = cacheQueries;
     }
 
+  @Override
   public SessionFactory getSessionFactory() {
     return sessionFactory;
   }
@@ -449,16 +450,19 @@ public class GrailsHibernateTemplate implements IHibernateTemplate {
             new CloseSuppressingInvocationHandler(session, this));
   }
 
+  @Override
   @Deprecated(since = "7.0", forRemoval = true)
   public <T> T get(final Class<T> entityClass, final Serializable id) throws DataAccessException {
     return doExecute(session -> session.find(entityClass, id), true);
   }
 
+  @Override
   @Deprecated(since = "7.0", forRemoval = true)
   public <T> T get(final Class<T> entityClass, final Serializable id, final LockMode mode) {
     return lock(entityClass, id, mode);
   }
 
+  @Override
   public void remove(final Object entity) throws DataAccessException {
     doExecute(
         session -> {
@@ -469,6 +473,7 @@ public class GrailsHibernateTemplate implements IHibernateTemplate {
   }
 
 
+  @Override
   public <T> T load(final Class<T> entityClass, final Serializable id) throws DataAccessException {
     return doExecute(session -> session.getReference(entityClass, id), true);
   }
@@ -491,10 +496,12 @@ public class GrailsHibernateTemplate implements IHibernateTemplate {
         true);
   }
 
+  @Override
   public boolean contains(final Object entity) throws DataAccessException {
     return doExecute(session -> session.contains(entity), true);
   }
 
+  @Override
   public void evict(final Object entity) throws DataAccessException {
     doExecute(
         session -> {
@@ -504,6 +511,7 @@ public class GrailsHibernateTemplate implements IHibernateTemplate {
         true);
   }
 
+  @Override
   public void lock(final Object entity, final LockMode lockMode) throws DataAccessException {
     doExecute(
         session -> {
@@ -513,6 +521,7 @@ public class GrailsHibernateTemplate implements IHibernateTemplate {
         true);
   }
 
+  @Override
   public void refresh(final Object entity) throws DataAccessException {
     refresh(entity, null);
   }
@@ -644,11 +653,13 @@ public class GrailsHibernateTemplate implements IHibernateTemplate {
    *
    * @see #FLUSH_AUTO
    */
+  @Override
   public void setFlushMode(int flushMode) {
     this.flushMode = flushMode;
   }
 
   /** Return if a flush should be forced after executing the callback code. */
+  @Override
   public int getFlushMode() {
     return flushMode;
   }
@@ -722,20 +733,47 @@ public class GrailsHibernateTemplate implements IHibernateTemplate {
                 true);
     }
 
-    @Override
-    public void clear() throws DataAccessException {
-        doExecute(
-                session -> {
-                    session.clear();
-                    return null;
-                },
-                true);
-    }
+  @Override
+  public void persist(final Object entity) throws DataAccessException {
+    doExecute(
+        session -> {
+          session.persist(entity);
+          return null;
+        },
+        true);
+  }
 
-    @Override
-    public void deleteAll(final Collection<?> objects) {
-        execute((HibernateCallback<Void>) session -> {
-            for (Object entity : getIterableAsCollection(objects)) {
+  @Override
+  public Object merge(final Object entity) throws DataAccessException {
+    return doExecute(session -> session.merge(entity), true);
+  }
+
+  @Override
+  public void flush() throws DataAccessException {
+    doExecute(
+        session -> {
+          session.flush();
+          return null;
+        },
+        true);
+  }
+
+  @Override
+  public void clear() throws DataAccessException {
+    doExecute(
+        session -> {
+          session.clear();
+          return null;
+        },
+        true);
+  }
+
+  @Override
+  public void deleteAll(final Collection<?> objects) {
+    execute(
+        (HibernateCallback<Void>)
+            session -> {
+              for (Object entity : getIterableAsCollection(objects)) {
                 session.remove(entity);
             }
             return null;

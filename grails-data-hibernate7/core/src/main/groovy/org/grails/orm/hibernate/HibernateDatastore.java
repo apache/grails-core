@@ -571,6 +571,7 @@ public class HibernateDatastore extends AbstractDatastore
    * @param applicationContext The application context (may be null)
    * @param dataSourceName The data source name
    */
+  @SuppressWarnings("PMD.NullAssignment")
   protected HibernateDatastore(
       MappingContext mappingContext,
       SessionFactory sessionFactory,
@@ -639,9 +640,10 @@ public class HibernateDatastore extends AbstractDatastore
    * @param connectionName The connection name
    * @return The {@link HibernateDatastore}
    */
+  @Override
   public HibernateDatastore getDatastoreForConnection(String connectionName) {
-    if (connectionName.equals(Settings.SETTING_DATASOURCE)
-        || connectionName.equals(ConnectionSource.DEFAULT)) {
+    if (Settings.SETTING_DATASOURCE.equals(connectionName)
+        || ConnectionSource.DEFAULT.equals(connectionName)) {
       return this;
     } else {
       HibernateDatastore hibernateDatastore = this.datastoresByConnectionSource.get(connectionName);
@@ -1041,7 +1043,7 @@ public class HibernateDatastore extends AbstractDatastore
         try {
           connectionSources.close();
         } catch (IOException e) {
-          LOG.error("There was an error shutting down GORM for an entity: " + e.getMessage(), e);
+          LOG.error("There was an error shutting down GORM for an entity: {}", e.getMessage(), e);
         }
       } finally {
         MappingCacheHolder.getInstance().clear();
@@ -1118,28 +1120,17 @@ public class HibernateDatastore extends AbstractDatastore
     Action schemaAutoTooling = Action.interpretHbm2ddlSetting(dbCreate);
     if (schemaAutoTooling != Action.VALIDATE && schemaAutoTooling != Action.NONE) {
 
-      Connection connection = null;
-      try {
-        connection = defaultConnectionSource.getDataSource().getConnection();
+      try (Connection connection = defaultConnectionSource.getDataSource().getConnection()) {
         try {
           schemaHandler.useSchema(connection, schemaName);
         } catch (Exception e) {
           // schema doesn't exist
           schemaHandler.createSchema(connection, schemaName);
         }
-
+        schemaHandler.useDefaultSchema(connection);
       } catch (SQLException e) {
         throw new DatastoreConfigurationException(
-            String.format("Failed to create schema for name [%s]", schemaName));
-      } finally {
-        if (connection != null) {
-          try {
-            schemaHandler.useDefaultSchema(connection);
-            connection.close();
-          } catch (SQLException e) {
-            LOG.trace("Failed to reset to default schema: {}", e.getMessage());
-          }
-        }
+            String.format("Failed to create schema for name [%s]", schemaName), e);
       }
     }
 
@@ -1410,7 +1401,7 @@ public class HibernateDatastore extends AbstractDatastore
     try {
       destroy();
     } catch (Exception e) {
-      LOG.error("Error closing hibernate datastore: " + e.getMessage(), e);
+      LOG.error("Error closing hibernate datastore: {}", e.getMessage(), e);
     }
   }
 
