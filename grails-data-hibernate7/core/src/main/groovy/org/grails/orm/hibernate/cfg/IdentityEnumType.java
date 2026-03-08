@@ -105,7 +105,6 @@ public class IdentityEnumType implements UserType, ParameterizedType, Serializab
     }
   }
 
-  @Override
   public int[] getSqlTypes() {
     return sqlTypes != null ? sqlTypes.clone() : null;
   }

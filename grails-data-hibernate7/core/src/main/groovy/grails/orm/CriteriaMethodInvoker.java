@@ -84,9 +84,12 @@ public class CriteriaMethodInvoker {
       default -> {}
     }
 
-    private Object tryCriteriaConstruction(CriteriaMethods method, Object... args) {
-        if (method == null || !isCriteriaConstructionMethod(method, args)) {
-            return UNHANDLED;
+    // Check for pagination params
+    if (method == CriteriaMethods.LIST_CALL && args.length == 2) {
+      builder.setPaginationEnabledList(true);
+      if (args[0] instanceof Map<?, ?> map) {
+        if (map.get("max") instanceof Number max) {
+          hibernateQuery.maxResults(max.intValue());
         }
 
         HibernateQuery hibernateQuery = builder.getHibernateQuery();
@@ -107,7 +110,7 @@ public class CriteriaMethodInvoker {
         hibernateQuery.projections().count();
         result = hibernateQuery.singleResult();
       } else if (builder.isPaginationEnabledList()) {
-        Map argMap = (Map) args[0];
+        Map<?, ?> argMap = (Map<?, ?>) args[0];
         final String sortField = (String) argMap.get(HibernateQueryArgument.SORT.value());
         if (sortField != null) {
           final boolean ignoreCase =
@@ -118,13 +121,11 @@ public class CriteriaMethodInvoker {
                   ? Query.Order.Direction.DESC
                   : Query.Order.Direction.ASC;
           Query.Order order;
-          if (ignoreCase) {
             order = new Query.Order(sortField, direction);
-            order.ignoreCase();
-          } else {
-            order = new Query.Order(sortField, direction);
+            if (ignoreCase) {
+                order.ignoreCase();
           }
-          hibernateQuery.order(order);
+            hibernateQuery.order(order);
         }
         result = new PagedResultList<>(hibernateQuery);
       } else if (builder.isScroll()) {
@@ -156,7 +157,7 @@ public class CriteriaMethodInvoker {
     }
 
     final boolean hasMoreThanOneArg = args.length > 1;
-    final Closure callable = hasMoreThanOneArg ? (Closure) args[1] : (Closure) args[0];
+    final Closure<?> callable = hasMoreThanOneArg ? (Closure<?>) args[1] : (Closure<?>) args[0];
     final HibernateQuery hibernateQuery = builder.getHibernateQuery();
 
     if (method != null) {
@@ -188,7 +189,7 @@ public class CriteriaMethodInvoker {
       final Attribute<?, ?> attribute = entityType.getAttribute(name);
 
       if (attribute.isAssociation()) {
-        Class oldTargetClass = builder.getTargetClass();
+        Class<?> oldTargetClass = builder.getTargetClass();
         builder.setTargetClass(builder.getClassForAssociationType(attribute));
         JoinType joinType;
         if (hasMoreThanOneArg) {
@@ -200,7 +201,7 @@ public class CriteriaMethodInvoker {
         }
 
         hibernateQuery.join(name, joinType);
-        hibernateQuery.in(name, new DetachedCriteria(builder.getTargetClass()).build(callable));
+        hibernateQuery.in(name, new DetachedCriteria<>(builder.getTargetClass()).build(callable));
         builder.setTargetClass(oldTargetClass);
 
         return name;
@@ -219,6 +220,16 @@ public class CriteriaMethodInvoker {
       switch (method) {
         case ID_EQUALS:
           return builder.eq("id", args[0]);
+        case CACHE:
+          if (args[0] instanceof Boolean b) {
+            builder.cache(b);
+          }
+          return name;
+        case READ_ONLY:
+          if (args[0] instanceof Boolean b) {
+            builder.readOnly(b);
+          }
+          return name;
         case IS_NULL, IS_NOT_NULL, IS_EMPTY, IS_NOT_EMPTY:
           if (!(args[0] instanceof String)) {
             builder.throwRuntimeException(
@@ -264,8 +275,8 @@ public class CriteriaMethodInvoker {
         }
         break;
       case EQUALS:
-        if (args.length == 3 && args[2] instanceof Map) {
-          return builder.eq(propertyName, args[1], (Map) args[2]);
+        if (args.length == 3 && args[2] instanceof Map<?, ?> map) {
+          return builder.eq(propertyName, args[1], map);
         }
         return builder.eq(propertyName, args[1]);
       case EQUALS_PROPERTY:
@@ -282,7 +293,7 @@ public class CriteriaMethodInvoker {
         return builder.ilike(propertyName, args[1]);
       case IN:
         if (args[1] instanceof Collection) {
-          return builder.in(propertyName, (Collection) args[1]);
+          return builder.in(propertyName, (Collection<?>) args[1]);
         } else if (args[1] instanceof Object[]) {
           return builder.in(propertyName, (Object[]) args[1]);
         }
@@ -321,7 +332,7 @@ public class CriteriaMethodInvoker {
   private boolean isCriteriaConstructionMethod(CriteriaMethods method, Object... args) {
     return (method == CriteriaMethods.LIST_CALL
             && args.length == 2
-            && args[0] instanceof Map
+            && args[0] instanceof Map<?, ?>
             && args[1] instanceof Closure)
         || (method == CriteriaMethods.ROOT_CALL
             || method == CriteriaMethods.ROOT_DO_CALL

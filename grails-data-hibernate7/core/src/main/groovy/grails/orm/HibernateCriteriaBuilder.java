@@ -904,8 +904,7 @@ public class HibernateCriteriaBuilder extends GroovyObjectSupport implements Bui
    *     supported.
    * @return A Criterion instance
    */
-  @SuppressWarnings("rawtypes")
-  public Criteria eq(String propertyName, Object propertyValue, Map params) {
+  public Criteria eq(String propertyName, Object propertyValue, Map<?,?> params) {
     if (Boolean.TRUE.equals(params.get("ignoreCase"))) {
       hibernateQuery.like(propertyName, "%" + propertyValue.toString() + "%");
     } else {
