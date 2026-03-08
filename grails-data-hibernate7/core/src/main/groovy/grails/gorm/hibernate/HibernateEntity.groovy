@@ -24,7 +24,8 @@ trait HibernateEntity<D> extends GormEntity<D> {
      */
     @Generated
     static List<D> findAllWithNativeSql(CharSequence sql) {
-        HibernateEntity.currentHibernateStaticApi().findAllWithNativeSql sql, Collections.emptyMap()
+        HibernateGormStaticApi<D> api = (HibernateGormStaticApi<D>) GormEnhancer.findStaticApi(this)
+        return (List<D>) api.findAllWithNativeSql(sql, Collections.emptyMap())
     }
 
     /**
@@ -36,7 +37,8 @@ trait HibernateEntity<D> extends GormEntity<D> {
      */
     @Generated
     static D findWithNativeSql(CharSequence sql) {
-        HibernateEntity.currentHibernateStaticApi().findWithNativeSql(sql, Collections.emptyMap())
+        HibernateGormStaticApi<D> api = (HibernateGormStaticApi<D>) GormEnhancer.findStaticApi(this)
+        return (D) api.findWithNativeSql(sql, Collections.emptyMap())
     }
 
     /**
@@ -49,7 +51,8 @@ trait HibernateEntity<D> extends GormEntity<D> {
      */
     @Generated
     static List<D> findAllWithNativeSql(CharSequence sql, Map args) {
-        HibernateEntity.currentHibernateStaticApi().findAllWithNativeSql sql, args
+        HibernateGormStaticApi<D> api = (HibernateGormStaticApi<D>) GormEnhancer.findStaticApi(this)
+        return (List<D>) api.findAllWithNativeSql(sql, args)
     }
 
     /**
@@ -62,7 +65,8 @@ trait HibernateEntity<D> extends GormEntity<D> {
      */
     @Generated
     static D findWithNativeSql(CharSequence sql, Map args) {
-        HibernateEntity.currentHibernateStaticApi().findWithNativeSql(sql, args)
+        HibernateGormStaticApi<D> api = (HibernateGormStaticApi<D>) GormEnhancer.findStaticApi(this)
+        return (D) api.findWithNativeSql(sql, args)
     }
 
     /**
@@ -71,7 +75,8 @@ trait HibernateEntity<D> extends GormEntity<D> {
     @Deprecated
     @Generated
     static List<D> findAllWithSql(CharSequence sql) {
-        HibernateEntity.currentHibernateStaticApi().findAllWithNativeSql sql, Collections.emptyMap()
+        HibernateGormStaticApi<D> api = (HibernateGormStaticApi<D>) GormEnhancer.findStaticApi(this)
+        return (List<D>) api.findAllWithNativeSql(sql, Collections.emptyMap())
     }
 
     /**
@@ -80,7 +85,8 @@ trait HibernateEntity<D> extends GormEntity<D> {
     @Deprecated
     @Generated
     static D findWithSql(CharSequence sql) {
-        HibernateEntity.currentHibernateStaticApi().findWithNativeSql(sql, Collections.emptyMap())
+        HibernateGormStaticApi<D> api = (HibernateGormStaticApi<D>) GormEnhancer.findStaticApi(this)
+        return (D) api.findWithNativeSql(sql, Collections.emptyMap())
     }
 
     /**
@@ -89,7 +95,8 @@ trait HibernateEntity<D> extends GormEntity<D> {
     @Deprecated
     @Generated
     static List<D> findAllWithSql(CharSequence sql, Map args) {
-        HibernateEntity.currentHibernateStaticApi().findAllWithNativeSql sql, args
+        HibernateGormStaticApi<D> api = (HibernateGormStaticApi<D>) GormEnhancer.findStaticApi(this)
+        return (List<D>) api.findAllWithNativeSql(sql, args)
     }
 
     /**
@@ -98,11 +105,7 @@ trait HibernateEntity<D> extends GormEntity<D> {
     @Deprecated
     @Generated
     static D findWithSql(CharSequence sql, Map args) {
-        HibernateEntity.currentHibernateStaticApi().findWithNativeSql(sql, args)
-    }
-
-    @Generated
-    private static HibernateGormStaticApi currentHibernateStaticApi() {
-        (HibernateGormStaticApi) GormEnhancer.findStaticApi(this)
+        HibernateGormStaticApi<D> api = (HibernateGormStaticApi<D>) GormEnhancer.findStaticApi(this)
+        return (D) api.findWithNativeSql(sql, args)
     }
 }
