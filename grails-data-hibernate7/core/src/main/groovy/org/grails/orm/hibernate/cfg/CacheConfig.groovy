@@ -33,103 +33,13 @@ import org.springframework.validation.DataBinder
 @Builder(builderStrategy = SimpleStrategy, prefix = '')
 class CacheConfig implements Cloneable {
 
-    @AutoClone
-    @CompileStatic
-    static class Usage implements Cloneable {
-        public static final Usage READ_ONLY = new Usage('read-only')
-        public static final Usage READ_WRITE = new Usage('read-write')
-        public static final Usage NONSTRICT_READ_WRITE = new Usage('nonstrict-read-write')
-        public static final Usage TRANSACTIONAL = new Usage('transactional')
-
-        private final String value
-
-        Usage(String value) {
-            this.value = value
-        }
-
-        @Override
-        String toString() {
-            return value
-        }
-
-        @Override
-        boolean equals(Object o) {
-            if (this.is(o)) return true
-            if (o == null || getClass() != o.getClass()) return false
-            Usage usage = (Usage) o
-            return value == usage.value
-        }
-
-        @Override
-        int hashCode() {
-            return value != null ? value.hashCode() : 0
-        }
-
-        static List<Usage> values() {
-            [READ_ONLY, READ_WRITE, NONSTRICT_READ_WRITE, TRANSACTIONAL]
-        }
-
-        static Usage of(Object value) {
-            if (value instanceof Usage) return value
-            String str = value?.toString()
-            if (!str) return null
-            Usage found = values().find { it.value.equalsIgnoreCase(str) }
-            if (found) return found
-            return new Usage(str)
-        }
-    }
-
-    @AutoClone
-    @CompileStatic
-    static class Include implements Cloneable {
-        public static final Include ALL = new Include('all')
-        public static final Include NON_LAZY = new Include('non-lazy')
-
-        private final String value
-
-        Include(String value) {
-            this.value = value
-        }
-
-        @Override
-        String toString() {
-            return value
-        }
-
-        @Override
-        boolean equals(Object o) {
-            if (this.is(o)) return true
-            if (o == null || getClass() != o.getClass()) return false
-            Include include = (Include) o
-            return value == include.value
-        }
-
-        @Override
-        int hashCode() {
-            return value != null ? value.hashCode() : 0
-        }
-
-        static List<Include> values() {
-            [ALL, NON_LAZY]
-        }
-
-        static Include of(Object value) {
-            if (value instanceof Include) return value
-            String str = value?.toString()
-            if (!str) return null
-            Include found = values().find { it.value.equalsIgnoreCase(str) }
-            if (found) return found
-            return new Include(str)
-        }
-    }
-
-    static final List<String> USAGE_OPTIONS = Usage.values().collect { it.toString() }
-    static final List<String> INCLUDE_OPTIONS = Include.values().collect { it.toString() }
+    static final List USAGE_OPTIONS = ['read-only', 'read-write', 'nonstrict-read-write', 'transactional']
+    static final List INCLUDE_OPTIONS = ['all', 'non-lazy']
 
     /**
      * The cache usage
      */
-    Usage usage = Usage.READ_WRITE
+    String usage = 'read-write'
     /**
      * Whether caching is enabled
      */
@@ -137,31 +47,7 @@ class CacheConfig implements Cloneable {
     /**
      * What to include in caching
      */
-    Include include = Include.ALL
-
-    void setUsage(Object usage) {
-        Usage u = Usage.of(usage)
-        if (u != null) {
-            this.usage = u
-        }
-    }
-
-    void setInclude(Object include) {
-        Include i = Include.of(include)
-        if (i != null) {
-            this.include = i
-        }
-    }
-
-    CacheConfig usage(Object usage) {
-        setUsage(usage)
-        return this
-    }
-
-    CacheConfig include(Object include) {
-        setInclude(include)
-        return this
-    }
+    String include = 'all'
 
     /**
      * Configures a new CacheConfig instance
