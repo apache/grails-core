@@ -19,7 +19,10 @@
 import groovy.json.JsonBuilder
 
 // --- Configuration ---
-def githubToken = "YOUR_PERSONAL_ACCESS_TOKEN"
+def githubToken = System.getenv("GITHUB_TOKEN") ?: System.getProperty("github.token")
+if (!githubToken) {
+    throw new IllegalStateException("GitHub token not configured. Set the GITHUB_TOKEN environment variable or the 'github.token' system property.")
+}
 def repoOwner   = "apache"
 def repoName    = "grails-core"
 def baseApiUrl  = "https://api.github.com/repos/${repoOwner}/${repoName}"
