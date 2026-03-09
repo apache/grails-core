@@ -19,14 +19,14 @@
 import groovy.json.JsonBuilder
 
 // --- Configuration ---
-def githubToken = System.getenv('GITHUB_TOKEN')
+def githubToken = System.getenv('GITHUB_TOKEN') ?: System.getProperty('github.token')
 def repoOwner   = "apache"
 def repoName    = "grails-core"
 def baseApiUrl  = "https://api.github.com/repos/${repoOwner}/${repoName}"
 
 if (!githubToken || githubToken == "YOUR_PERSONAL_ACCESS_TOKEN") {
     throw new IllegalStateException(
-        "GitHub token is required. Set the GITHUB_TOKEN environment variable."
+        "GitHub token is required. Set the GITHUB_TOKEN environment variable or the -Dgithub.token system property."
     )
 }
 
@@ -57,9 +57,15 @@ def tableData = """
 | origin/6.0.x | 2024-04-09 | RELEASE |
 | origin/5.4.x | 2024-09-11 | RELEASE |
 | origin/6.2.x | 2025-01-03 | RELEASE |
+| origin/gh-pages | 2025-01-07 | RELEASE |
+| origin/7.0.x-hibernate6 | 2025-10-15 | RELEASE |
+| origin/7.0.x-binding-error-14947-15147 | 2025-10-21 | RELEASE |
+| origin/7.1.x-hibernate6 | 2025-12-03 | RELEASE |
 | origin/7.1.x | 2026-02-27 | RELEASE |
 | origin/8.0.x | 2026-02-28 | RELEASE |
+| origin/8.0.x-hibernate7 | 2026-03-01 | RELEASE |
 | origin/7.0.x | 2026-03-04 | RELEASE |
+| origin/8.0.x-hibernate7-dev | 2026-03-05 | RELEASE |
 """
 
 def failedBranches = []
@@ -72,6 +78,9 @@ tableData.eachLine { line ->
 
     def branch = parts[0].replace("origin/", "")
     def type   = parts[2]
+
+    // Skip the invalid 'origin' (no branch name) entry if it appears
+    if (branch == "origin" || !branch) return null
 
     if (type == "RELEASE") {
         try {
@@ -91,26 +100,23 @@ if (failedBranches) {
 }
 
 /**
- * Applies branch protection that requires status checks and at least one
- * approving review, applies to admins, and disallows force pushes and deletions.
+ * Sets the branch to 'Protected' with required reviews.
+ * Does not require specific status checks (null) to avoid 'useless' empty list config.
  */
 def protectBranch(baseUrl, token, branch) {
     println "PROTECTING: ${branch}"
     def url = new URL("${baseUrl}/branches/${branch}/protection")
     def body = new JsonBuilder([
             enforce_admins               : true,
-            required_status_checks       : [
-                    strict  : true,
-                    contexts: []
-            ],
+            required_status_checks       : null, 
             required_pull_request_reviews: [
                     required_approving_review_count: 1,
-                    dismiss_stale_reviews          : true,
-                    require_code_owner_reviews     : false
+                    dismiss_stale_reviews          : true
             ],
             restrictions                 : null,
-            allow_force_pushes           : [enabled: false],
-            allow_deletions              : [enabled: false]
+            allow_force_pushes           : false,
+            allow_deletions              : false,
+            lock_branch                  : false // Set to true only if you want the branch to be strictly read-only
     ]).toString()
 
     sendRequest(url, token, "PUT", body)
@@ -125,7 +131,6 @@ def sendRequest(url, token, method, body) {
         conn.requestMethod  = method
         conn.setRequestProperty("Authorization", "token ${token}")
         conn.setRequestProperty("Accept", "application/vnd.github.v3+json")
-        conn.setRequestProperty("User-Agent", "apache-grails-core-protect-branches-script")
         if (body) {
             conn.doOutput = true
             conn.setRequestProperty("Content-Type", "application/json")
