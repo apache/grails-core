@@ -98,8 +98,8 @@ if (failedBranches) {
 }
 
 /**
- * Sets the branch to 'Read Only' and prevents deletion
- * unless the 'enforce_admins' rule is manually toggled.
+ * Applies branch protection that requires status checks and at least one
+ * approving review, applies to admins, and disallows force pushes and deletions.
  */
 def protectBranch(baseUrl, token, branch) {
     println "PROTECTING: ${branch}"
