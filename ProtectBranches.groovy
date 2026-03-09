@@ -85,12 +85,19 @@ def protectBranch(baseUrl, token, branch) {
     println "PROTECTING: ${branch}"
     def url = new URL("${baseUrl}/branches/${branch}/protection")
     def body = new JsonBuilder([
-            enforce_admins: true,
-            required_status_checks: null,
-            required_pull_request_reviews: null,
-            restrictions: null,
-            allow_force_pushes: false,
-            allow_deletions: false
+            enforce_admins               : true,
+            required_status_checks       : [
+                    strict  : true,
+                    contexts: []
+            ],
+            required_pull_request_reviews: [
+                    required_approving_review_count: 1,
+                    dismiss_stale_reviews          : true,
+                    require_code_owner_reviews     : false
+            ],
+            restrictions                 : null,
+            allow_force_pushes           : false,
+            allow_deletions              : false
     ]).toString()
 
     sendRequest(url, token, "PUT", body)
