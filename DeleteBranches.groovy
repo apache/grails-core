@@ -23,7 +23,7 @@ def baseApiUrl  = "https://api.github.com/repos/${repoOwner}/${repoName}"
 
 if (!githubToken) {
     throw new IllegalStateException(
-        "GitHub token is required. Set the GITHUB_TOKEN environment variable."
+        "GitHub token is required. Set the GITHUB_TOKEN environment variable or the -Dgithub.token system property."
     )
 }
 def tableData = """
