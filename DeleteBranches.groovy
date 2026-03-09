@@ -16,11 +16,16 @@
  *  specific language governing permissions and limitations
  *  under the License.
  */
-def githubToken = "YOUR_PERSONAL_ACCESS_TOKEN"
+def githubToken = System.getenv('GITHUB_TOKEN') ?: System.getProperty('github.token')
 def repoOwner   = "apache"
 def repoName    = "grails-core"
 def baseApiUrl  = "https://api.github.com/repos/${repoOwner}/${repoName}"
 
+if (!githubToken || githubToken == "YOUR_PERSONAL_ACCESS_TOKEN") {
+    throw new IllegalStateException(
+        "GitHub token is required. Set the GITHUB_TOKEN environment variable or the -Dgithub.token system property."
+    )
+}
 def tableData = """
 | origin/GRAILS-6737-Groovy-1.7.5 | 2010-09-17 | CLOSED |
 | origin/GRAILS-6278 | 2010-09-17 | CLOSED |
