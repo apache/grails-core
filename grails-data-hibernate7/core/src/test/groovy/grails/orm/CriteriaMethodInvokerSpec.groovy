@@ -219,6 +219,22 @@ class CriteriaMethodInvokerSpec extends Specification {
         1 * builder.readOnly(true)
     }
 
+    void "trySimpleCriteria: singleResult delegates to builder.singleResult"() {
+        when:
+        invoker.trySimpleCriteria('singleResult', CriteriaMethods.SINGLE_RESULT, [42L] as Object[])
+
+        then:
+        1 * builder.singleResult()
+    }
+
+    void "tryPropertyCriteria: fetchMode delegates to builder.fetchMode"() {
+        when:
+        invoker.tryPropertyCriteria(CriteriaMethods.FETCH_MODE, ["transactions", org.hibernate.FetchMode.JOIN] as Object[])
+
+        then:
+        1 * builder.fetchMode("transactions", org.hibernate.FetchMode.JOIN)
+    }
+
     void "trySimpleCriteria: isNull with String delegates to hibernateQuery.isNull"() {
         when:
         invoker.trySimpleCriteria('isNull', CriteriaMethods.IS_NULL, ['branch'] as Object[])

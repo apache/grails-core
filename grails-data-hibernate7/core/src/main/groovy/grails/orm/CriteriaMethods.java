@@ -59,7 +59,9 @@ public enum CriteriaMethods {
   SCROLL_CALL("scroll"),
   PROJECTIONS("projections"),
   CACHE("cache"),
-  READ_ONLY("readOnly");
+  READ_ONLY("readOnly"),
+  FETCH_MODE("fetchMode"),
+  SINGLE_RESULT("singleResult");
 
     private final String name;
 

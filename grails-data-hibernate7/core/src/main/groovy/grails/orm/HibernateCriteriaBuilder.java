@@ -65,6 +65,8 @@ import org.grails.orm.hibernate.HibernateSession;
 import org.grails.orm.hibernate.query.HibernateQuery;
 import org.hibernate.FetchMode;
 import org.hibernate.SessionFactory;
+import org.springframework.orm.hibernate5.SessionHolder;
+import org.springframework.transaction.support.TransactionSynchronizationManager;
 
 /**
  * Implements the GORM criteria DSL for Hibernate 7+. The builder exposes a Groovy-closure DSL that
@@ -140,8 +142,7 @@ public class HibernateCriteriaBuilder extends GroovyObjectSupport implements Bui
   private Class<?> targetClass;
   private CriteriaQuery<?> criteriaQuery;
   private boolean uniqueResult = false;
-  //TODO Transactional behaviour is currently not supported, but we need to track whether the criteria should participate in a transaction or not
-  private boolean participate;
+  private final boolean participate;
 
   @SuppressWarnings("PMD.AvoidFieldNameMatchingMethodName")
   private boolean scroll;
@@ -153,11 +154,6 @@ public class HibernateCriteriaBuilder extends GroovyObjectSupport implements Bui
   private int defaultFlushMode;
   private final org.hibernate.query.criteria.HibernateCriteriaBuilder cb;
   private final HibernateQuery hibernateQuery;
-  private boolean shouldLock;
-  private boolean shouldCache;
-
-    @SuppressWarnings("PMD.AvoidFieldNameMatchingMethodName")
-    private boolean distinct = false;
 
   @SuppressWarnings("PMD.AvoidFieldNameMatchingMethodName")
   private boolean distinct = false;
@@ -169,6 +165,13 @@ public class HibernateCriteriaBuilder extends GroovyObjectSupport implements Bui
     setDatastore(datastore);
     this.sessionFactory = sessionFactory;
     this.cb = sessionFactory.getCriteriaBuilder();
+    if (TransactionSynchronizationManager.hasResource(sessionFactory)) {
+      this.participate = true;
+    } else {
+      this.participate = false;
+      org.hibernate.Session session = sessionFactory.openSession();
+      TransactionSynchronizationManager.bindResource(sessionFactory, new SessionHolder(session));
+    }
     HibernateSession session = (HibernateSession) datastore.connect();
     hibernateQuery =
         new HibernateQuery(
@@ -243,7 +246,7 @@ public class HibernateCriteriaBuilder extends GroovyObjectSupport implements Bui
    * @param shouldLock True if it should
    */
   public void lock(boolean shouldLock) {
-    this.shouldLock = shouldLock;
+    hibernateQuery.lock(shouldLock);
   }
 
   /**
@@ -264,7 +267,7 @@ public class HibernateCriteriaBuilder extends GroovyObjectSupport implements Bui
    */
   @Override
   public BuildableCriteria cache(boolean shouldCache) {
-    this.shouldCache = shouldCache;
+    hibernateQuery.cache(shouldCache);
     return this;
   }
 
@@ -280,7 +283,7 @@ public class HibernateCriteriaBuilder extends GroovyObjectSupport implements Bui
    */
   @Override
   public BuildableCriteria readOnly(boolean readOnly) {
-    this.readOnly = readOnly;
+    hibernateQuery.setReadOnly(readOnly);
     return this;
   }
 
@@ -1302,6 +1305,13 @@ public class HibernateCriteriaBuilder extends GroovyObjectSupport implements Bui
 
   /** Closes the session if it is copen */
   public void closeSession() {
+    if (!participate) {
+      SessionHolder sessionHolder =
+          (SessionHolder) TransactionSynchronizationManager.unbindResource(sessionFactory);
+      if (sessionHolder.getSession().isOpen()) {
+        sessionHolder.getSession().close();
+      }
+    }
     hibernateQuery.getSession().disconnect();
   }
 
