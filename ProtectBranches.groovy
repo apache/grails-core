@@ -116,8 +116,8 @@ def protectBranch(baseUrl, token, branch) {
                     require_code_owner_reviews     : false
             ],
             restrictions                 : null,
-            allow_force_pushes           : false,
-            allow_deletions              : false
+            allow_force_pushes           : [enabled: false],
+            allow_deletions              : [enabled: false]
     ]).toString()
 
     sendRequest(url, token, "PUT", body)
