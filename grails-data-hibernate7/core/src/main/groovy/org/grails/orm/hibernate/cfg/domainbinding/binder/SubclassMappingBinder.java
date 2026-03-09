@@ -28,27 +28,21 @@ import org.grails.orm.hibernate.cfg.GrailsHibernateUtil;
 import org.grails.orm.hibernate.cfg.Mapping;
 import org.grails.orm.hibernate.cfg.domainbinding.hibernate.GrailsHibernatePersistentEntity;
 
-import org.hibernate.boot.spi.MetadataBuildingContext;
-import org.hibernate.mapping.JoinedSubclass;
 import org.hibernate.mapping.PersistentClass;
-import org.hibernate.mapping.SingleTableSubclass;
 import org.hibernate.mapping.Subclass;
-import org.hibernate.mapping.UnionSubclass;
 
 public class SubclassMappingBinder {
 
-    private final JoinedSubClassBinder joinedSubClassBinder;
-    private final UnionSubclassBinder unionSubclassBinder;
-    private final SingleTableSubclassBinder singleTableSubclassBinder;
-    private final ClassPropertiesBinder classPropertiesBinder;
+  private final JoinedSubClassBinder joinedSubClassBinder;
+  private final UnionSubclassBinder unionSubclassBinder;
+  private final SingleTableSubclassBinder singleTableSubclassBinder;
+  private final ClassPropertiesBinder classPropertiesBinder;
 
   public SubclassMappingBinder(
-      MetadataBuildingContext metadataBuildingContext,
       JoinedSubClassBinder joinedSubClassBinder,
       UnionSubclassBinder unionSubclassBinder,
       SingleTableSubclassBinder singleTableSubclassBinder,
       ClassPropertiesBinder classPropertiesBinder) {
-    this.metadataBuildingContext = metadataBuildingContext;
     this.joinedSubClassBinder = joinedSubClassBinder;
     this.unionSubclassBinder = unionSubclassBinder;
     this.singleTableSubclassBinder = singleTableSubclassBinder;

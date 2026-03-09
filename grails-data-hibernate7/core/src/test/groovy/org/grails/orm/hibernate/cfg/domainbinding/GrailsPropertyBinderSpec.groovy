@@ -192,7 +192,7 @@ class GrailsPropertyBinderSpec extends HibernateGormDatastoreSpec {
         UnionSubclassBinder unionSubclassBinder = new UnionSubclassBinder(metadataBuildingContext, namingStrategy, classBinder, collector)
         SingleTableSubclassBinder singleTableSubclassBinder = new SingleTableSubclassBinder(classBinder, metadataBuildingContext)
 
-        SubclassMappingBinder subclassMappingBinder = new SubclassMappingBinder(metadataBuildingContext, joinedSubClassBinder, unionSubclassBinder, singleTableSubclassBinder, classPropertiesBinder)
+        SubclassMappingBinder subclassMappingBinder = new SubclassMappingBinder(joinedSubClassBinder, unionSubclassBinder, singleTableSubclassBinder, classPropertiesBinder)
         SubClassBinder subClassBinder = new SubClassBinder(binder.getMappingCacheHolder(), subclassMappingBinder, multiTenantFilterBinder, "dataSource")
         RootPersistentClassCommonValuesBinder rootPersistentClassCommonValuesBinder = new RootPersistentClassCommonValuesBinder(metadataBuildingContext, namingStrategy, identityBinder, versionBinder, classBinder, classPropertiesBinder, collector)
         DiscriminatorPropertyBinder discriminatorPropertyBinder = new DiscriminatorPropertyBinder(metadataBuildingContext, binder.getMappingCacheHolder(), new org.grails.orm.hibernate.cfg.domainbinding.binder.ConfiguredDiscriminatorBinder(new org.grails.orm.hibernate.cfg.domainbinding.binder.SimpleValueColumnBinder(), new ColumnConfigToColumnBinder()), new org.grails.orm.hibernate.cfg.domainbinding.binder.DefaultDiscriminatorBinder(new org.grails.orm.hibernate.cfg.domainbinding.binder.SimpleValueColumnBinder()))
