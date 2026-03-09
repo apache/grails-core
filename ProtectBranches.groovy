@@ -121,10 +121,13 @@ def sendRequest(url, token, method, body) {
         if (conn.responseCode in [200, 201, 204]) {
             println "SUCCESS: ${conn.responseCode}"
         } else {
-            println "FAILED: ${conn.responseCode} - ${conn.errorStream?.text}"
+            def errorText = conn.errorStream?.text
+            println "FAILED: ${conn.responseCode} - ${errorText}"
+            throw new IllegalStateException("Request to ${url} failed with HTTP ${conn.responseCode}: ${errorText}")
         }
     } catch (Exception e) {
         println "ERROR: ${e.message}"
+        throw e
     } finally {
         conn?.disconnect()
     }
