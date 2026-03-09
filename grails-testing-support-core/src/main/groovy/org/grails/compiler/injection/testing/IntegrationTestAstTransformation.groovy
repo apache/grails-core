@@ -77,6 +77,25 @@ import static org.codehaus.groovy.ast.tools.GeneralUtils.classX
 import static org.codehaus.groovy.ast.tools.GeneralUtils.propX
 
 /**
+ * AST transformation applied to classes annotated with {@link Integration}.
+ *
+ * <p>The transformation augments integration test classes with Spring test wiring,
+ * context configuration, and Grails-specific conveniences so tests can run with a
+ * fully initialized application context.</p>
+ *
+ * <p>Depending on the test style, it adds different annotations:</p>
+ * <ul>
+ *   <li>Spock specs receive {@code @ContextConfiguration} with
+ *   {@link GrailsApplicationContextLoader}.</li>
+ *   <li>JUnit 4 tests receive {@code @RunWith} and Grails test configuration annotations.</li>
+ *   <li>All integration tests receive {@code @SpringBootTest} (web random port when servlet API
+ *   is available).</li>
+ * </ul>
+ *
+ * <p>It also enables by-name autowiring through {@link ApplicationContextAware} and applies
+ * additional integration test auto-configuration discovered by
+ * {@code IntegrationTestAutoConfigurationSupport}.</p>
+ *
  * @author Graeme Rocher
  * @since 3.0
  */
@@ -94,6 +113,16 @@ class IntegrationTestAstTransformation implements ASTTransformation, TransformWi
     public static final ClassNode SPRING_JUNIT4_CLASS_RUNNER = ClassHelper.make(GrailsJunit4ClassRunner)
     public static final String SPEC_CLASS = 'spock.lang.Specification'
 
+    /**
+     * Entry point for the transformation.
+     *
+     * <p>Validates the target node, resolves the Grails application class from the
+     * {@code applicationClass} member (or by scanning for a main class), and then applies
+     * integration test enhancements to the annotated class.</p>
+     *
+     * @param astNodes the annotation node and annotated node
+     * @param source the source unit being compiled
+     */
     @Override
     void visit(ASTNode[] astNodes, SourceUnit source) {
         if (!(astNodes[0] instanceof AnnotationNode) || !(astNodes[1] instanceof AnnotatedNode)) {
@@ -126,12 +155,22 @@ class IntegrationTestAstTransformation implements ASTTransformation, TransformWi
         if (applicationClassNode) {
             ClassNode classNode = (ClassNode) parent
 
-            weaveIntegrationTestMixin(classNode, applicationClassNode)
+            weaveIntegrationTestMixin(classNode, applicationClassNode, source)
         }
 
     }
 
-    void weaveIntegrationTestMixin(ClassNode classNode, ClassNode applicationClassNode) {
+    /**
+     * Applies integration test mixin behavior to the target class.
+     *
+     * <p>This method wires Spring/Grails test annotations, adds port support for web tests,
+     * enables by-name autowiring, and imports integration test auto-configurations.</p>
+     *
+     * @param classNode the test class being transformed
+     * @param applicationClassNode the resolved Grails application class
+     * @param source the source unit used for compile-time error reporting
+     */
+    void weaveIntegrationTestMixin(ClassNode classNode, ClassNode applicationClassNode, SourceUnit source) {
         if (applicationClassNode == null) {
             return
         }
@@ -194,6 +233,12 @@ class IntegrationTestAstTransformation implements ASTTransformation, TransformWi
         IntegrationTestAutoConfigurationSupport.addIntegrationTestAutoConfigurations(classNode, source)
     }
 
+    /**
+     * Adds {@link ApplicationContextAware} support and generates {@code setApplicationContext}
+     * to autowire test instance properties by bean name.
+     *
+     * @param classNode the class to augment
+     */
     protected void enableAutowireByName(ClassNode classNode) {
         classNode.addInterface(ClassHelper.make(ApplicationContextAware))
 
@@ -210,6 +255,14 @@ class IntegrationTestAstTransformation implements ASTTransformation, TransformWi
         classNode.addMethod('setApplicationContext', Modifier.PUBLIC, ClassHelper.VOID_TYPE, [p] as Parameter[], null, body)
     }
 
+    /**
+     * Adds Geb base URL configuration for {@code geb.spock.GebSpec} subclasses.
+     *
+     * <p>The generated method sets the {@code geb.build.baseUrl} system property using
+     * the injected server context path and local server port.</p>
+     *
+     * @param classNode the class to enhance when it is a Geb spec
+     */
     protected void enhanceGebSpecWithPort(ClassNode classNode) {
         if (GrailsASTUtils.isSubclassOf(classNode, 'geb.spock.GebSpec')) {
             def contextPathParameter = new Parameter(ClassHelper.make(String), 'serverContextPath')
@@ -245,6 +298,11 @@ class IntegrationTestAstTransformation implements ASTTransformation, TransformWi
         }
     }
 
+    /**
+     * Returns the transform priority so this transformation runs in Grails' integration phase.
+     *
+     * @return the Grails transform order constant for integration processing
+     */
     @Override
     int priority() {
         GroovyTransformOrder.INTEGRATION_ORDER
