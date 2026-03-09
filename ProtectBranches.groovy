@@ -104,9 +104,12 @@ def protectBranch(baseUrl, token, branch) {
 }
 
 def sendRequest(url, token, method, body) {
+    HttpURLConnection conn = null
     try {
-        def conn = url.openConnection() as HttpURLConnection
-        conn.requestMethod = method
+        conn = url.openConnection() as HttpURLConnection
+        conn.connectTimeout = 10_000
+        conn.readTimeout    = 30_000
+        conn.requestMethod  = method
         conn.setRequestProperty("Authorization", "token ${token}")
         conn.setRequestProperty("Accept", "application/vnd.github.v3+json")
         if (body) {
@@ -122,5 +125,7 @@ def sendRequest(url, token, method, body) {
         }
     } catch (Exception e) {
         println "ERROR: ${e.message}"
+    } finally {
+        conn?.disconnect()
     }
 }
