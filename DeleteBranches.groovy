@@ -16,7 +16,6 @@
  *  specific language governing permissions and limitations
  *  under the License.
  */
-// --- Configuration ---
 def githubToken = "YOUR_PERSONAL_ACCESS_TOKEN"
 def repoOwner   = "apache"
 def repoName    = "grails-core"
