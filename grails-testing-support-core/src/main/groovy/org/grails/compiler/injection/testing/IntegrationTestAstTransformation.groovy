@@ -191,6 +191,7 @@ class IntegrationTestAstTransformation implements ASTTransformation, TransformWi
         } else {
             classNode.addAnnotation(new AnnotationNode(INTEGRATION_TEST_CLASS_NODE))
         }
+        IntegrationTestAutoConfigurationSupport.addIntegrationTestAutoConfigurations(classNode, source)
     }
 
     protected void enableAutowireByName(ClassNode classNode) {
