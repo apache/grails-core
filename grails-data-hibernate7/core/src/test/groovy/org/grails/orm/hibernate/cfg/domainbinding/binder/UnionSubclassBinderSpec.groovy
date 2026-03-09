@@ -62,7 +62,7 @@ class UnionSubclassBinderSpec extends HibernateGormDatastoreSpec {
         // unionSubclass.setEntityName(UnionSubClassSub.name)
 
         when:
-        binder.bindUnionSubclass(subEntity, unionSubclass)
+        def unionSubclass = binder.bindUnionSubclass(subEntity, rootClass)
 
         then:
         unionSubclass != null

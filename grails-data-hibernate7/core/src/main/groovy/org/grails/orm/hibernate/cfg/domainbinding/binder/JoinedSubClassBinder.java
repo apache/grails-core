@@ -69,11 +69,13 @@ public class JoinedSubClassBinder {
    * Binds a joined sub-class mapping using table-per-subclass
    *
    * @param sub The Grails sub class
-   * @param joinedSubclass The Hibernate Subclass object
+   * @param parent The Hibernate Parent PersistentClass object
+   * @return The created JoinedSubclass
    */
-  public void bindJoinedSubClass(
+  public JoinedSubclass bindJoinedSubClass(
       GrailsHibernatePersistentEntity sub,
-      JoinedSubclass joinedSubclass) {
+      PersistentClass parent) {
+    JoinedSubclass joinedSubclass = new JoinedSubclass(parent, metadataBuildingContext);
     classBinder.bindClass(sub, joinedSubclass);
 
     String schemaName = sub.getSchema(mappings);
@@ -108,8 +110,11 @@ public class JoinedSubClassBinder {
         JoinedSubclass joinedSubclass = new JoinedSubclass(parent, metadataBuildingContext);
         classBinder.bindClass(sub, joinedSubclass);
 
-        String schemaName = sub.getSchema(mappings);
-        String catalogName = sub.getCatalog(mappings);
+    joinedSubclass.createPrimaryKey();
+    joinedSubclass.createForeignKey();
+
+    return joinedSubclass;
+  }
 
   private String getJoinedSubClassTableName(
       GrailsHibernatePersistentEntity sub,

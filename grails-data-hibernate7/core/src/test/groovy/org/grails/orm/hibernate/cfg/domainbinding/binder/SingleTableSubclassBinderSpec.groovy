@@ -36,7 +36,7 @@ class SingleTableSubclassBinderSpec extends HibernateGormDatastoreSpec {
     void setup() {
         def buildingContext = getGrailsDomainBinder().getMetadataBuildingContext()
         classBinder = new ClassBinder(buildingContext.getMetadataCollector())
-        binder = new SingleTableSubclassBinder(classBinder)
+        binder = new SingleTableSubclassBinder(classBinder, buildingContext)
     }
 
     void "test bind single table subclass with real entities"() {
@@ -60,7 +60,7 @@ class SingleTableSubclassBinderSpec extends HibernateGormDatastoreSpec {
         // singleTableSubclass.setEntityName(SingleTableSubClassSub.name)
 
         when:
-        binder.bindSubClass(subEntity, singleTableSubclass)
+        def singleTableSubclass = binder.bindSubClass(subEntity, rootClass)
 
         then:
         singleTableSubclass != null

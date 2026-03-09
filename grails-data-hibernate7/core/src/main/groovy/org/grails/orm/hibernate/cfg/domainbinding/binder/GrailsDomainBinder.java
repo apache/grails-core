@@ -188,7 +188,7 @@ public class GrailsDomainBinder implements AdditionalMappingContributor, TypeCon
     UnionSubclassBinder unionSubclassBinder =
         new UnionSubclassBinder(metadataBuildingContext, namingStrategy, classBinder, metadataCollector);
     SingleTableSubclassBinder singleTableSubclassBinder =
-        new SingleTableSubclassBinder(classBinder);
+        new SingleTableSubclassBinder(classBinder, metadataBuildingContext);
 
     SubclassMappingBinder subclassMappingBinder =
         new SubclassMappingBinder(

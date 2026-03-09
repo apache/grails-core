@@ -62,19 +62,11 @@ public class SubclassMappingBinder {
     subEntity.configureDerivedProperties();
     Mapping m = subEntity.getMappedForm();
     if (subEntity.isJoinedSubclass()) {
-      var joined = new JoinedSubclass(parent, this.metadataBuildingContext);
-      joinedSubClassBinder.bindJoinedSubClass(subEntity, joined);
-      subClass = joined;
+      subClass = joinedSubClassBinder.bindJoinedSubClass(subEntity, parent);
     } else if (subEntity.isUnionSubclass()) {
-      var union = new UnionSubclass(parent, this.metadataBuildingContext);
-      unionSubclassBinder.bindUnionSubclass(subEntity, union);
-      subClass = union;
+      subClass = unionSubclassBinder.bindUnionSubclass(subEntity, parent);
     } else {
-
-      var singleTableSubclass = new SingleTableSubclass(parent, this.metadataBuildingContext);
-
-      singleTableSubclassBinder.bindSubClass(subEntity, singleTableSubclass);
-      subClass = singleTableSubclass;
+      subClass = singleTableSubclassBinder.bindSubClass(subEntity, parent);
     }
 
     subClass.setBatchSize(Optional.ofNullable(m.getBatchSize()).orElse(-1));

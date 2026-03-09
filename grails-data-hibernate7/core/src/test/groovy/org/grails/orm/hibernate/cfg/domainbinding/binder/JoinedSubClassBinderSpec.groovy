@@ -78,7 +78,7 @@ class JoinedSubClassBinderSpec extends HibernateGormDatastoreSpec {
         // joinedSubclass.setEntityName(JoinedSubClassSub.name)
 
         when:
-        binder.bindJoinedSubClass(subEntity, joinedSubclass)
+        def joinedSubclass = binder.bindJoinedSubClass(subEntity, rootClass)
 
         then:
         joinedSubclass != null

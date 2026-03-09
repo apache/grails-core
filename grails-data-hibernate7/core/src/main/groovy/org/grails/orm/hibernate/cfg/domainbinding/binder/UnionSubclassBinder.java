@@ -61,12 +61,14 @@ public class UnionSubclassBinder {
    * Binds a union sub-class mapping using table-per-concrete-class
    *
    * @param subClass The Grails sub class
-   * @param unionSubclass The Hibernate UnionSubclass object
+   * @param parent The Hibernate Parent PersistentClass object
+   * @return The created UnionSubclass
    */
-  public void bindUnionSubclass(
+  public UnionSubclass bindUnionSubclass(
       @Nonnull GrailsHibernatePersistentEntity subClass,
-      UnionSubclass unionSubclass)
+      PersistentClass parent)
       throws MappingException {
+    UnionSubclass unionSubclass = new UnionSubclass(parent, metadataBuildingContext);
     classBinder.bindClass(subClass, unionSubclass);
 
     String schema = subClass.getSchema(mappings);
@@ -92,4 +94,6 @@ public class UnionSubclassBinder {
               + " -> "
               + unionSubclass.getTable().getName());
     }
+    return unionSubclass;
+  }
 }
