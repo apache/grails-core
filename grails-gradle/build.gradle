@@ -47,11 +47,3 @@ ext {
 apply {
     from layout.projectDirectory.file('gradle/publish-root-config.gradle')
 }
-
-subprojects {
-    normalization {
-        runtimeClasspath {
-            ignore 'META-INF/sbom.json'
-        }
-    }
-}
