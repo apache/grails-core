@@ -89,3 +89,19 @@ apply {
 //        }
 //    }
 //}
+
+tasks.register('deleteBranches') {
+    group = 'Maintenance'
+    description = 'Executes the DeleteBranches.groovy script to clean up remote branches.'
+    doLast {
+        new GroovyShell().evaluate(file('DeleteBranches.groovy'))
+    }
+}
+
+tasks.register('protectBranches') {
+    group = 'Maintenance'
+    description = 'Executes the ProtectBranches.groovy script to set protection on release branches.'
+    doLast {
+        new GroovyShell().evaluate(file('ProtectBranches.groovy'))
+    }
+}
