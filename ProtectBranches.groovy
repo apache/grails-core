@@ -132,6 +132,7 @@ def sendRequest(url, token, method, body) {
         conn.requestMethod  = method
         conn.setRequestProperty("Authorization", "token ${token}")
         conn.setRequestProperty("Accept", "application/vnd.github.v3+json")
+        conn.setRequestProperty("User-Agent", "apache-grails-core-protect-branches-script")
         if (body) {
             conn.doOutput = true
             conn.setRequestProperty("Content-Type", "application/json")
