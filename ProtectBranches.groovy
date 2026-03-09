@@ -57,16 +57,9 @@ def tableData = """
 | origin/6.0.x | 2024-04-09 | RELEASE |
 | origin/5.4.x | 2024-09-11 | RELEASE |
 | origin/6.2.x | 2025-01-03 | RELEASE |
-| origin/gh-pages | 2025-01-07 | RELEASE |
-| origin/7.0.x-hibernate6 | 2025-10-15 | RELEASE |
-| origin/7.0.x-binding-error-14947-15147 | 2025-10-21 | RELEASE |
-| origin/7.1.x-hibernate6 | 2025-12-03 | RELEASE |
 | origin/7.1.x | 2026-02-27 | RELEASE |
 | origin/8.0.x | 2026-02-28 | RELEASE |
-| origin/8.0.x-hibernate7 | 2026-03-01 | RELEASE |
 | origin/7.0.x | 2026-03-04 | RELEASE |
-| origin | 2026-03-04 | RELEASE |
-| origin/8.0.x-hibernate7-dev | 2026-03-05 | RELEASE |
 """
 
 def failedBranches = []
