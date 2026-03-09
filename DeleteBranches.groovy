@@ -154,11 +154,11 @@ def tableData = """
 tableData.eachLine { line ->
     if (!line.contains("|") || line.contains("---") || line.contains("Branch")) return null
 
-    def parts = line.split("\\|").collect { it.trim() }
-    if (parts.size() < 4) return null
+    def parts = line.tokenize('|').collect { it.trim() }
+    if (parts.size() < 3) return null
 
-    def branch = parts[1].replace("origin/", "")
-    def type   = parts[3]
+    def branch = parts[0].replace("origin/", "")
+    def type   = parts[2]
 
     if (type == "MERGE" || type == "CLOSED") {
         deleteBranch(baseApiUrl, githubToken, branch)
