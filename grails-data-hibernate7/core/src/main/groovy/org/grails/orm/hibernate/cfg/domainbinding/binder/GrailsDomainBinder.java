@@ -199,7 +199,7 @@ public class GrailsDomainBinder implements AdditionalMappingContributor, TypeCon
             classPropertiesBinder);
     SubClassBinder subClassBinder =
         new SubClassBinder(
-            mappingCacheHolder, subclassMappingBinder, multiTenantFilterBinder, dataSourceName, metadataCollector);
+            mappingCacheHolder, subclassMappingBinder, multiTenantFilterBinder, dataSourceName);
     RootPersistentClassCommonValuesBinder rootPersistentClassCommonValuesBinder =
         new RootPersistentClassCommonValuesBinder(
             metadataBuildingContext,

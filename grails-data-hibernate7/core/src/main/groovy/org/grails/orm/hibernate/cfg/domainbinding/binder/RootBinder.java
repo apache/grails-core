@@ -98,7 +98,9 @@ public class RootBinder {
     }
 
     // bind the sub classes
-    children.forEach(sub -> subClassBinder.bindSubClass(sub, root));
+    children.stream()
+        .flatMap(sub -> subClassBinder.bindSubClass(sub, root).stream())
+        .forEach(mappings::addEntityBinding);
 
     private @NonNull Stream<Subclass> getSubclassStream(HibernatePersistentEntity entity, RootClass root) {
         mappingCacheHolder.cacheMapping(entity);
