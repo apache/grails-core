@@ -23,16 +23,18 @@ import spock.lang.Specification
 import spock.lang.Stepwise
 
 import grails.testing.mixin.integration.Integration
-import org.apache.grails.testing.httpclient.HttpClientSupport
+import org.apache.grails.testing.http.client.HttpClient
 
 @Stepwise
 @Integration
-class MultiDataSourceWithSessionSpec extends Specification implements HttpClientSupport {
+class MultiDataSourceWithSessionSpec extends Specification {
+
+    @Autowired HttpClient http
 
     @Issue('https://github.com/apache/grails-core/issues/14333')
     void "withSession on secondary datasource does not throw No Session found"() {
         when:
-        def response = http('/secondaryBook/withSessionTest')
+        def response = http.get('/secondaryBook/withSessionTest')
 
         then:
         response.expectContains('sessionObtained:true')
@@ -41,19 +43,19 @@ class MultiDataSourceWithSessionSpec extends Specification implements HttpClient
     @Issue('https://github.com/apache/grails-core/issues/14333')
     void "CRUD via withSession on secondary datasource works"() {
         when:
-        def response = http('/secondaryBook/crudViaWithSession')
+        def response = http.get('/secondaryBook/crudViaWithSession')
 
         then:
         response.expectContains('count:1')
 
         cleanup:
-        http('/secondaryBook/cleanup')
+        http.get('/secondaryBook/cleanup')
     }
 
     @Issue('https://github.com/apache/grails-core/issues/11798')
     void "domain class on secondary datasource can be validated via withSession"() {
         when:
-        def response = http('/secondaryBook/validateCommandObject')
+        def response = http.get('/secondaryBook/validateCommandObject')
 
         then:
         response.expectContains('validated:true')
@@ -63,12 +65,12 @@ class MultiDataSourceWithSessionSpec extends Specification implements HttpClient
     @Issue('https://github.com/apache/grails-core/issues/14333')
     void "withSession works after executeUpdate on secondary datasource"() {
         when:
-        def response = http('/secondaryBook/sessionAfterExecuteUpdate')
+        def response = http.get('/secondaryBook/sessionAfterExecuteUpdate')
 
         then:
         response.expectContains('title:After Update')
 
         cleanup:
-        http('/secondaryBook/cleanup')
+        http.get('/secondaryBook/cleanup')
     }
 }

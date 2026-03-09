@@ -24,7 +24,7 @@ import spock.lang.Specification
 import org.springframework.beans.factory.annotation.Autowired
 
 import grails.testing.mixin.integration.Integration
-import org.apache.grails.testing.httpclient.HttpClientSupport
+import org.apache.grails.testing.http.client.HttpClient
 
 /**
  * Integration tests for advanced @Cacheable scenarios via HTTP endpoints.
@@ -42,10 +42,10 @@ Advanced Grails caching scenarios tested via HTTP endpoints.
 These tests verify that complex caching behaviors work correctly
 in a full application context.
 ''')
-class AdvancedCachingIntegrationSpec extends Specification implements HttpClientSupport {
+class AdvancedCachingIntegrationSpec extends Specification {
 
-    @Autowired
-    AdvancedCachingService advancedCachingService
+    @Autowired AdvancedCachingService advancedCachingService
+    @Autowired HttpClient http
 
     def setup() {
         // Evict all caches before each test to ensure clean state
@@ -61,8 +61,8 @@ class AdvancedCachingIntegrationSpec extends Specification implements HttpClient
 
     def "list data is cached via HTTP"() {
         when: "fetching list data twice"
-        def response1 = http('/advancedCaching/listData?category=books')
-        def response2 = http('/advancedCaching/listData?category=books')
+        def response1 = http.get('/advancedCaching/listData?category=books')
+        def response2 = http.get('/advancedCaching/listData?category=books')
 
         then: "both calls return same data (cached)"
         response1.expectStatus(200)
@@ -76,8 +76,8 @@ class AdvancedCachingIntegrationSpec extends Specification implements HttpClient
 
     def "map data is cached via HTTP"() {
         when: "fetching map data twice"
-        def response1 = http('/advancedCaching/mapData?key=mykey')
-        def response2 = http('/advancedCaching/mapData?key=mykey')
+        def response1 = http.get('/advancedCaching/mapData?key=mykey')
+        def response2 = http.get('/advancedCaching/mapData?key=mykey')
 
         then: "both calls return same data (cached)"
         response1.expectStatus(200)
@@ -92,8 +92,8 @@ class AdvancedCachingIntegrationSpec extends Specification implements HttpClient
 
     def "different categories have separate list cache entries via HTTP"() {
         when: "fetching different categories"
-        def booksResponse = http('/advancedCaching/listData?category=books')
-        def moviesResponse = http('/advancedCaching/listData?category=movies')
+        def booksResponse = http.get('/advancedCaching/listData?category=books')
+        def moviesResponse = http.get('/advancedCaching/listData?category=movies')
 
         then: "different categories return different data"
         booksResponse.expectStatus(200)
@@ -109,7 +109,7 @@ class AdvancedCachingIntegrationSpec extends Specification implements HttpClient
 
     def "exception is thrown and not cached via HTTP"() {
         when: "calling endpoint that throws exception"
-        def response = http('/advancedCaching/dataOrThrow?input=error')
+        def response = http.get('/advancedCaching/dataOrThrow?input=error')
 
         then: "exception results in error response"
         response.expectStatus(500)
@@ -117,8 +117,8 @@ class AdvancedCachingIntegrationSpec extends Specification implements HttpClient
 
     def "successful calls are cached even after exceptions via HTTP"() {
         when: "calling with normal value twice"
-        def response1 = http('/advancedCaching/dataOrThrow?input=normal')
-        def response2 = http('/advancedCaching/dataOrThrow?input=normal')
+        def response1 = http.get('/advancedCaching/dataOrThrow?input=normal')
+        def response2 = http.get('/advancedCaching/dataOrThrow?input=normal')
 
         then: "second call returns cached result"
         response1.expectStatus(200)
@@ -133,12 +133,12 @@ class AdvancedCachingIntegrationSpec extends Specification implements HttpClient
     def "eviction clears list cache via HTTP"() {
         given:
         // First call to populate cache
-        def first = http('/advancedCaching/listData?category=books')
+        def first = http.get('/advancedCaching/listData?category=books')
         def firstData = first.json().data
 
         when: "evicting cache and fetching again"
-        http('/advancedCaching/evictListCache')
-        def second = http('/advancedCaching/listData?category=books')
+        http.get('/advancedCaching/evictListCache')
+        def second = http.get('/advancedCaching/listData?category=books')
         def secondData = second.json().data
 
         then: "new data is generated after eviction"
@@ -148,12 +148,12 @@ class AdvancedCachingIntegrationSpec extends Specification implements HttpClient
     def "eviction clears map cache via HTTP"() {
         given:
         // First call to populate cache
-        def first = http('/advancedCaching/mapData?key=mykey')
+        def first = http.get('/advancedCaching/mapData?key=mykey')
         def firstData = first.json().data
 
         when: "evicting cache and fetching again"
-        http('/advancedCaching/evictMapCache')
-        def second = http('/advancedCaching/mapData?key=mykey')
+        http.get('/advancedCaching/evictMapCache')
+        def second = http.get('/advancedCaching/mapData?key=mykey')
         def secondData = second.json().data
 
         then: "new data is generated after eviction"
@@ -164,8 +164,8 @@ class AdvancedCachingIntegrationSpec extends Specification implements HttpClient
 
     def "custom key caching works via HTTP"() {
         when: "fetching data by custom key twice"
-        def response1 = http('/advancedCaching/getDataByKey?key=testkey')
-        def response2 = http('/advancedCaching/getDataByKey?key=testkey')
+        def response1 = http.get('/advancedCaching/getDataByKey?key=testkey')
+        def response2 = http.get('/advancedCaching/getDataByKey?key=testkey')
 
         then: "second call returns cached result"
         response1.expectStatus(200)
@@ -176,12 +176,12 @@ class AdvancedCachingIntegrationSpec extends Specification implements HttpClient
     def "eviction by custom key works via HTTP"() {
         given:
         // First call to populate cache
-        def first = http('/advancedCaching/getDataByKey?key=mykey')
+        def first = http.get('/advancedCaching/getDataByKey?key=mykey')
         def firstData = first.json().data
 
         when: "evicting by key and fetching again"
-        http('/advancedCaching/evictByKey?key=mykey')
-        def second = http('/advancedCaching/getDataByKey?key=mykey')
+        http.get('/advancedCaching/evictByKey?key=mykey')
+        def second = http.get('/advancedCaching/getDataByKey?key=mykey')
         def secondData = second.json().data
 
         then: "new data is generated after eviction"
@@ -191,12 +191,12 @@ class AdvancedCachingIntegrationSpec extends Specification implements HttpClient
     def "eviction of all custom key cache works via HTTP"() {
         given:
         // First call to populate cache
-        def first = http('/advancedCaching/getDataByKey?key=anykey')
+        def first = http.get('/advancedCaching/getDataByKey?key=anykey')
         def firstData = first.json().data
 
         when: "evicting all and fetching again"
-        http('/advancedCaching/evictAllKeyCache')
-        def second = http('/advancedCaching/getDataByKey?key=anykey')
+        http.get('/advancedCaching/evictAllKeyCache')
+        def second = http.get('/advancedCaching/getDataByKey?key=anykey')
         def secondData = second.json().data
 
         then: "new data is generated after eviction"

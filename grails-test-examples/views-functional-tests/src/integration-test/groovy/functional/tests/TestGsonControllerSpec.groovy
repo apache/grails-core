@@ -21,14 +21,17 @@ package functional.tests
 import spock.lang.Specification
 
 import grails.testing.mixin.integration.Integration
-import org.apache.grails.testing.httpclient.HttpClientSupport
+import org.apache.grails.testing.http.client.HttpClient
+import org.springframework.beans.factory.annotation.Autowired
 
 @Integration
-class TestGsonControllerSpec extends Specification implements HttpClientSupport {
+class TestGsonControllerSpec extends Specification {
+
+    @Autowired HttpClient http
 
     void 'Test that responding with a map is possible'() {
         when: 'When JSON is requested'
-        def response = http('/testGson/testRespondWithMap')
+        def response = http.get('/testGson/testRespondWithMap')
 
         then: 'The JSON view is rendered'
         response.expect('{"message":"two"}')
@@ -36,7 +39,7 @@ class TestGsonControllerSpec extends Specification implements HttpClientSupport 
 
     void 'Test that responding with a map is possible with object template'() {
         when: 'When JSON is requested'
-        def response = http('/testGson/testRespondWithMapObjectTemplate.json')
+        def response = http.get('/testGson/testRespondWithMapObjectTemplate.json')
 
         then: 'The JSON view is rendered'
         response.expect('{"one":"two"}')
@@ -45,7 +48,7 @@ class TestGsonControllerSpec extends Specification implements HttpClientSupport 
     
     void 'Test that it is possible to use the template engine directly'() {
         when: 'When JSON is requested'
-        def response = http('/testGson/testTemplateEngine')
+        def response = http.get('/testGson/testTemplateEngine')
 
         then: 'The JSON view is rendered'
         response.expectJson('''
@@ -59,13 +62,13 @@ class TestGsonControllerSpec extends Specification implements HttpClientSupport 
 
     void 'Test the respond method returns a GSON view for JSON request'() {
         when: 'When JSON is requested'
-        def response = http('/testGson/testRespond.json')
+        def response = http.get('/testGson/testRespond.json')
 
         then: 'The JSON view is rendered'
         response.expect('{"test":{"name":"Bob"}}')
 
         when: 'When HTML is requested'
-        response = http('/testGson/testRespond.html')
+       response = http.get('/testGson/testRespond.html')
 
         then: 'The GSP is rendered'
         response.expectContains('<h1>Test Bob HTML</h1>')
@@ -73,7 +76,7 @@ class TestGsonControllerSpec extends Specification implements HttpClientSupport 
 
     void 'Test the respond method returns a GSON named after the domain view for JSON request'() {
         when: 'When JSON is requested'
-        def response = http('/testGson/testRespondWithTemplateForDomain.json')
+        def response = http.get('/testGson/testRespondWithTemplateForDomain.json')
 
         then: 'The JSON view is rendered'
         response.expectJson('''
@@ -88,7 +91,7 @@ class TestGsonControllerSpec extends Specification implements HttpClientSupport 
 
     void 'Test template rendering works'() {
         when: 'A view that renders templates is rendered'
-        def response = http('/testGson/testTemplate.json')
+        def response = http.get('/testGson/testTemplate.json')
 
         then: 'The result is correct'
         response.expectJson('''
@@ -116,7 +119,7 @@ class TestGsonControllerSpec extends Specification implements HttpClientSupport 
 
     void 'Test views from plugins are rendered'() {
         when: 'A view that renders templates is rendered'
-        def response = http('/testGson/testGsonFromPlugin')
+        def response = http.get('/testGson/testGsonFromPlugin')
 
         then: 'The result is correct'
         response.expect('{"message":"Hello from Plugin"}')
@@ -124,7 +127,7 @@ class TestGsonControllerSpec extends Specification implements HttpClientSupport 
 
     void 'Test view that inherits from plugins are rendered'() {
         when:
-        def response = http('/testGson/testInheritsFromPlugin')
+        def response = http.get('/testGson/testInheritsFromPlugin')
 
         then:
         response.expectJson('''
@@ -137,7 +140,7 @@ class TestGsonControllerSpec extends Specification implements HttpClientSupport 
 
     void 'Test augmenting model'() {
         when: 'When JSON is requested'
-        def response = http('/testGson/testAugmentModel.json')
+        def response = http.get('/testGson/testAugmentModel.json')
 
         then: 'The JSON view is rendered'
         response.expectJson('''
@@ -150,7 +153,7 @@ class TestGsonControllerSpec extends Specification implements HttpClientSupport 
         ''')
 
         when: 'When HTML is requested'
-        response = http('/testGson/testAugmentModel.html')
+       response = http.get('/testGson/testAugmentModel.html')
 
         then: 'The GSP is rendered'
         response.expectContains('<h1>Test John (20) HTML</h1>')

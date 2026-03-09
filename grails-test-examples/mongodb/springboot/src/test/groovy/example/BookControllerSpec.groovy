@@ -22,7 +22,6 @@ package example
 import grails.gorm.transactions.Rollback
 import org.grails.datastore.mapping.mongo.MongoDatastore
 import org.springframework.test.web.servlet.setup.MockMvcBuilders
-import spock.lang.AutoCleanup
 import spock.lang.Shared
 import spock.lang.Specification
 

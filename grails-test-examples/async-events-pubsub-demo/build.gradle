@@ -67,7 +67,7 @@ dependencies {
 
     testImplementation 'org.apache.grails:grails-testing-support-web'
 
-    integrationTestImplementation 'org.apache.grails:grails-testing-support-httpclient'
+    integrationTestImplementation 'org.apache.grails:grails-testing-support-http-client'
 }
 
 bootRun {

@@ -1,3 +1,0 @@
-moduleName=grails-testing-support-httpclient
-moduleVersion=${moduleVersion}
-extensionClasses=org.apache.grails.testing.httpclient.HttpResponseExtensions

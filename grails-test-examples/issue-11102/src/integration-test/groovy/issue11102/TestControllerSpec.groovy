@@ -21,20 +21,22 @@ package issue11102
 import spock.lang.Specification
 
 import grails.testing.mixin.integration.Integration
-import org.apache.grails.testing.httpclient.HttpClientSupport
+import org.apache.grails.testing.http.client.HttpClient
 
 @Integration
-class TestControllerSpec extends Specification implements HttpClientSupport {
+class TestControllerSpec extends Specification {
+
+    @Autowired HttpClient http
 
     void 'can forward a request from a GET to another GET action'() {
         when: 'getting the get1 action'
-        def response = http('/get1')
+        def response = http.get('/get1')
 
         then: 'it is executed correctly'
         response.expect(200, 'GET1')
 
         when: 'executing an action with a forward to the other one'
-        def response2 = http('/get2')
+        def response2 = http.get('/get2')
 
         then: 'the request is forwarded'
         response2.expect(200, 'GET1')

@@ -24,7 +24,7 @@ import spock.lang.Specification
 import org.springframework.beans.factory.annotation.Autowired
 
 import grails.testing.mixin.integration.Integration
-import org.apache.grails.testing.httpclient.HttpClientSupport
+import org.apache.grails.testing.http.client.HttpClient
 
 /**
  * Integration tests for Grails caching with @Cacheable, @CacheEvict, @CachePut.
@@ -42,10 +42,10 @@ Grails caching provides method-level caching via annotations @Cacheable,
 @CacheEvict, and @CachePut. This allows expensive operations to be cached
 and only recomputed when necessary.
 ''')
-class CachingSpec extends Specification implements HttpClientSupport {
+class CachingSpec extends Specification {
 
-    @Autowired
-    CacheTestService cacheTestService
+    @Autowired CacheTestService cacheTestService
+    @Autowired HttpClient http
 
     def setup() {
         // Evict all caches before each test to ensure clean state
@@ -265,11 +265,11 @@ class CachingSpec extends Specification implements HttpClientSupport {
 
     def "basic cache works via HTTP"() {
         setup: "Evict cache to start fresh"
-        http('/cacheTest/evictBasic')
+        http.get('/cacheTest/evictBasic')
 
         when: "calling endpoint twice"
-        def response1 = http('/cacheTest/basicData')
-        def response2 = http('/cacheTest/basicData')
+        def response1 = http.get('/cacheTest/basicData')
+        def response2 = http.get('/cacheTest/basicData')
 
         then: "same data returned (caching works)"
         response1.expectStatus(200)
@@ -279,11 +279,11 @@ class CachingSpec extends Specification implements HttpClientSupport {
 
     def "parameter cache works via HTTP"() {
         setup: "Evict cache"
-        http('/cacheTest/evictAllParam')
+        http.get('/cacheTest/evictAllParam')
 
         when: "calling with same ID twice"
-        def response1 = http('/cacheTest/dataById?id=42')
-        def response2 = http('/cacheTest/dataById?id=42')
+        def response1 = http.get('/cacheTest/dataById?id=42')
+        def response2 = http.get('/cacheTest/dataById?id=42')
 
         then: "cached result returned"
         response1.json().data == response2.json().data
@@ -291,16 +291,16 @@ class CachingSpec extends Specification implements HttpClientSupport {
 
     def "eviction works via HTTP"() {
         setup: "Evict cache and populate it"
-        http('/cacheTest/evictBasic')
+        http.get('/cacheTest/evictBasic')
 
         when:
-        def firstCall = http('/cacheTest/basicData')
+        def firstCall = http.get('/cacheTest/basicData')
         def firstData = firstCall.json().data
 
         and: "evicting via HTTP then calling again after delay"
-        http('/cacheTest/evictBasic')
+        http.get('/cacheTest/evictBasic')
         Thread.sleep(10) // Ensure timestamp changes
-        def afterEvict = http('/cacheTest/basicData')
+        def afterEvict = http.get('/cacheTest/basicData')
 
         then: "new data generated after eviction"
         firstData != afterEvict.json().data
@@ -308,12 +308,12 @@ class CachingSpec extends Specification implements HttpClientSupport {
 
     def "different IDs return different cached values via HTTP"() {
         setup:
-        http('/cacheTest/evictAllParam')
+        http.get('/cacheTest/evictAllParam')
 
         when: "fetching different IDs"
-        def response1 = http('/cacheTest/dataById?id=100')
-        def response2 = http('/cacheTest/dataById?id=200')
-        def response3 = http('/cacheTest/dataById?id=100')
+        def response1 = http.get('/cacheTest/dataById?id=100')
+        def response2 = http.get('/cacheTest/dataById?id=200')
+        def response3 = http.get('/cacheTest/dataById?id=100')
 
         then: "different IDs have different data, same ID returns same data"
         def json1 = response1.json()
@@ -326,8 +326,8 @@ class CachingSpec extends Specification implements HttpClientSupport {
 
     def "complex data endpoint works with caching"() {
         when: "fetching complex data"
-        def response1 = http('/cacheTest/complexData?category=electronics&page=3')
-        def response2 = http('/cacheTest/complexData?category=electronics&page=3')
+        def response1 = http.get('/cacheTest/complexData?category=electronics&page=3')
+        def response2 = http.get('/cacheTest/complexData?category=electronics&page=3')
 
         then: "data is cached"
         def json1 = response1.json()
@@ -340,16 +340,16 @@ class CachingSpec extends Specification implements HttpClientSupport {
 
     def "CachePut works via HTTP with key closure"() {
         setup: "Evict keyed cache and get initial value"
-        http('/cacheTest/evictAllKeyed')
+        http.get('/cacheTest/evictAllKeyed')
 
         when:
-        def initial = http('/cacheTest/byKey?key=httpkey').json().data
+        def initial = http.get('/cacheTest/byKey?key=httpkey').json().data
 
         and: "updating via HTTP"
-        http('/cacheTest/updateByKey?key=httpkey&value=HTTPUpdated')
+        http.get('/cacheTest/updateByKey?key=httpkey&value=HTTPUpdated')
 
         and: "loading the data again"
-        def afterUpdate = http('/cacheTest/byKey?key=httpkey').json().data
+        def afterUpdate = http.get('/cacheTest/byKey?key=httpkey').json().data
 
         then: "cache contains updated value"
         afterUpdate == 'HTTPUpdated'

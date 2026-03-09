@@ -21,14 +21,17 @@ package functional.tests
 import spock.lang.Specification
 
 import grails.testing.mixin.integration.Integration
-import org.apache.grails.testing.httpclient.HttpClientSupport
+import org.apache.grails.testing.http.client.HttpClient
+import org.springframework.beans.factory.annotation.Autowired
 
 @Integration
-class TestGmlControllerSpec extends Specification implements HttpClientSupport {
+class TestGmlControllerSpec extends Specification {
+
+    @Autowired HttpClient http
 
     void "Test GML response from action that returns a model"() {
         when: "When an action that renders a GML view is requested"
-        def response = http('/testGml/testView')
+        def response = http.get('/testGml/testView')
 
         then: "The XML view is rendered"
         def content = response.xml()

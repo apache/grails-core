@@ -22,14 +22,17 @@ import spock.lang.IgnoreIf
 import spock.lang.Specification
 
 import grails.testing.mixin.integration.Integration
-import org.apache.grails.testing.httpclient.HttpClientSupport
+import org.apache.grails.testing.http.client.HttpClient
+import org.springframework.beans.factory.annotation.Autowired
 
 @Integration
-class TeamSpec extends Specification implements HttpClientSupport {
+class TeamSpec extends Specification {
+
+    @Autowired HttpClient http
 
     void 'Test association template rendering'() {
         when:
-        def response = http('/teams/1')
+        def response = http.get('/teams/1')
 
         then: 'The response is correct'
         response.expectJson(200, 'Content-Type': 'application/json;charset=UTF-8', '''
@@ -48,7 +51,7 @@ class TeamSpec extends Specification implements HttpClientSupport {
 
     void 'Test deep association template rendering'() {
         when:
-        def response = http('/teams/deep/1')
+        def response = http.get('/teams/deep/1')
 
         then: 'The response is correct'
         response.expectJson(200, 'Content-Type': 'application/json;charset=UTF-8', '''
@@ -68,7 +71,7 @@ class TeamSpec extends Specification implements HttpClientSupport {
     @IgnoreIf({ System.getenv('GITHUB_REF') })
     void 'Test HAL rendering'() {
         when:
-        def response = http('/teams/hal/1')
+        def response = http.get('/teams/hal/1')
         def lang = "${System.properties.getProperty('user.language')}_${System.properties.getProperty('user.country')}"
 
         then: 'The response is correct'
@@ -137,7 +140,7 @@ class TeamSpec extends Specification implements HttpClientSupport {
         }
 
         when:
-        def response = http('/team/composite')
+        def response = http.get('/team/composite')
 
         then: 'The response is correct'
         response.expectJson(200, 'Content-Type': 'application/json;charset=UTF-8', '''

@@ -22,15 +22,18 @@ import spock.lang.Issue
 import spock.lang.Specification
 
 import grails.testing.mixin.integration.Integration
-import org.apache.grails.testing.httpclient.HttpClientSupport
+import org.apache.grails.testing.http.client.HttpClient
+import org.springframework.beans.factory.annotation.Autowired
 
 @Integration
-class BulletinSpec extends Specification implements HttpClientSupport {
+class BulletinSpec extends Specification {
+
+    @Autowired HttpClient http
 
     @Issue('https://github.com/apache/grails-views/issues/175')
     void 'test render collections with same objects'() {
         when: 'a GET is issued'
-        def response = http('/bulletin')
+        def response = http.get('/bulletin')
 
         then: 'The REST resource is retrieved and the correct JSON is returned'
         response.expectStatus(200)

@@ -21,21 +21,25 @@ package functionaltests.commanddi
 import spock.lang.Specification
 import spock.lang.Unroll
 
+import org.springframework.beans.factory.annotation.Autowired
+
 import grails.testing.mixin.integration.Integration
-import org.apache.grails.testing.httpclient.HttpClientSupport
+import org.apache.grails.testing.http.client.HttpClient
 
 /**
  * Integration tests for Command Objects with Dependency Injection.
  * Tests the ability to inject Spring services into Grails command objects.
  */
 @Integration
-class CommandObjectDISpec extends Specification implements HttpClientSupport {
+class CommandObjectDISpec extends Specification {
+
+    @Autowired HttpClient http
 
     // ========== Basic Service Injection Tests ==========
 
     def "service is properly injected into command object"() {
         when: "calling the test endpoint"
-        def response = http('/commandDI/testServiceInjection')
+        def response = http.get('/commandDI/testServiceInjection')
 
         then: "service is injected"
         response.expectJson(200, [
@@ -46,7 +50,7 @@ class CommandObjectDISpec extends Specification implements HttpClientSupport {
 
     def "multiple services can be injected into single command object"() {
         when: "calling the endpoint with order command"
-        def response = http('/commandDI/testMultipleServices')
+        def response = http.get('/commandDI/testMultipleServices')
 
         then: "both services are injected"
         response.expectJson(200, [
@@ -59,7 +63,7 @@ class CommandObjectDISpec extends Specification implements HttpClientSupport {
 
     def "@Autowired annotation works for service injection"() {
         when: "calling the endpoint"
-        def response = http('/commandDI/testAutowiredAnnotation')
+        def response = http.get('/commandDI/testAutowiredAnnotation')
 
         then: "service is injected via @Autowired"
         response.expectJson(200, [
@@ -72,7 +76,7 @@ class CommandObjectDISpec extends Specification implements HttpClientSupport {
 
     def "custom validation using injected service - valid username"() {
         when: "registering with valid data"
-        def response = http('/commandDI/registerUser?username=johndoe&email=john@example.com&age=25')
+        def response = http.get('/commandDI/registerUser?username=johndoe&email=john@example.com&age=25')
 
         then: "validation passes"
         response.expectStatus(200)
@@ -86,7 +90,7 @@ class CommandObjectDISpec extends Specification implements HttpClientSupport {
 
     def "custom validation using injected service - reserved username rejected"() {
         when: "registering with reserved username 'admin'"
-        def response = http('/commandDI/registerUser?username=admin&email=admin@example.com')
+        def response = http.get('/commandDI/registerUser?username=admin&email=admin@example.com')
 
         then: "validation fails with username error"
         response.expectStatus(200)
@@ -100,7 +104,7 @@ class CommandObjectDISpec extends Specification implements HttpClientSupport {
     @Unroll
     def "email domain validation - #email is #expectedResult"() {
         when: "registering with specific email"
-        def response = http("/commandDI/registerUser?username=testuser&email=${URLEncoder.encode(email, 'UTF-8')}")
+        def response = http.get("/commandDI/registerUser?username=testuser&email=${URLEncoder.encode(email, 'UTF-8')}")
 
         then: "validation result is as expected"
         response.expectStatus(200)
@@ -118,7 +122,7 @@ class CommandObjectDISpec extends Specification implements HttpClientSupport {
     @Unroll
     def "age validation - age #age is #expectedResult"() {
         when: "registering with specific age"
-        def response = http("/commandDI/registerUser?username=testuser&email=user@example.com&age=${age}")
+        def response = http.get("/commandDI/registerUser?username=testuser&email=user@example.com&age=${age}")
 
         then: "validation result matches expectation"
         response.expectStatus(200)
@@ -140,7 +144,7 @@ class CommandObjectDISpec extends Specification implements HttpClientSupport {
 
     def "phone number validation using service"() {
         when: "registering with valid phone"
-        def response = http('/commandDI/registerUser?username=testuser&email=user@example.com&phone=555-123-4567')
+        def response = http.get('/commandDI/registerUser?username=testuser&email=user@example.com&phone=555-123-4567')
 
         then: "validation passes for valid phone"
         response.expectStatus(200)
@@ -149,7 +153,7 @@ class CommandObjectDISpec extends Specification implements HttpClientSupport {
 
     def "phone number validation fails for invalid phone"() {
         when: "registering with too short phone"
-        def response = http('/commandDI/registerUser?username=testuser&email=user@example.com&phone=123')
+        def response = http.get('/commandDI/registerUser?username=testuser&email=user@example.com&phone=123')
 
         then: "validation fails for invalid phone"
         response.expectStatus(200)
@@ -161,7 +165,7 @@ class CommandObjectDISpec extends Specification implements HttpClientSupport {
     @Unroll
     def "discount calculation - quantity #quantity gives #expectedDiscount discount"() {
         when: "calculating order"
-        def response = http("/commandDI/calculateOrder?productName=Widget&quantity=${quantity}&unitPrice=10.00")
+        def response = http.get("/commandDI/calculateOrder?productName=Widget&quantity=${quantity}&unitPrice=10.00")
 
         then: "discount is calculated correctly"
         response.expectStatus(200)
@@ -181,7 +185,7 @@ class CommandObjectDISpec extends Specification implements HttpClientSupport {
 
     def "total price calculation with discount"() {
         when: "calculating order"
-        def response = http('/commandDI/calculateOrder?productName=Widget&quantity=100&unitPrice=10.00')
+        def response = http.get('/commandDI/calculateOrder?productName=Widget&quantity=100&unitPrice=10.00')
 
         then: "total price includes 25% discount (100*10=1000, minus 25% = 750)"
         response.expectStatus(200)
@@ -190,7 +194,7 @@ class CommandObjectDISpec extends Specification implements HttpClientSupport {
 
     def "price with tax calculation"() {
         when: "calculating order"
-        def response = http('/commandDI/calculateOrder?productName=Premium+Widget&quantity=10&unitPrice=100.00')
+        def response = http.get('/commandDI/calculateOrder?productName=Premium+Widget&quantity=10&unitPrice=100.00')
 
         then: "price with tax is calculated (10*100=1000, 10% discount=900, 8% tax=972)"
         response.expectStatus(200)
@@ -204,7 +208,7 @@ class CommandObjectDISpec extends Specification implements HttpClientSupport {
 
     def "order validation with valid data"() {
         when: "validating order"
-        def response = http('/commandDI/validateOrder?productName=Widget&quantity=5&unitPrice=25.00')
+        def response = http.get('/commandDI/validateOrder?productName=Widget&quantity=5&unitPrice=25.00')
 
         then: "order is valid"
         response.expectStatus(200)
@@ -216,7 +220,7 @@ class CommandObjectDISpec extends Specification implements HttpClientSupport {
 
     def "order validation fails for price out of range"() {
         when: "validating order with excessive price"
-        def response = http('/commandDI/validateOrder?productName=Widget&quantity=5&unitPrice=99999.00')
+        def response = http.get('/commandDI/validateOrder?productName=Widget&quantity=5&unitPrice=99999.00')
 
         then: "order is invalid due to price"
         response.expectStatus(200)
@@ -230,7 +234,7 @@ class CommandObjectDISpec extends Specification implements HttpClientSupport {
 
     def "command object can invoke service method to send notification"() {
         when: "sending order notification"
-        def response = http(
+        def response = http.get(
                 '/commandDI/sendOrderNotification?customerEmail=customer@example.com&orderId=ORD-12345&message=Thank+you+for+your+order!'
         )
 
@@ -247,13 +251,13 @@ class CommandObjectDISpec extends Specification implements HttpClientSupport {
 
     def "command object is prototype scoped - fresh instance per request"() {
         when: "making first request"
-        def response1 = http('/commandDI/testPrototypeScope')
+        def response1 = http.get('/commandDI/testPrototypeScope')
 
         then: "counter is 2 (incremented twice within request)"
         response1.expectJson(200, [counter: 2, expectedValue: 2])
 
         when: "making second request"
-        def response2 = http('/commandDI/testPrototypeScope')
+        def response2 = http.get('/commandDI/testPrototypeScope')
 
         then: "counter is still 2 (fresh command instance)"
         response2.expectJson(200, [counter: 2, expectedValue: 2])
@@ -263,7 +267,7 @@ class CommandObjectDISpec extends Specification implements HttpClientSupport {
 
     def "service remains injected after validation"() {
         when: "testing service after validation"
-        def response = http('/commandDI/testServiceAfterValidation?username=admin&email=test@example.com')
+        def response = http.get('/commandDI/testServiceAfterValidation?username=admin&email=test@example.com')
 
         then: "service remains available after multiple validations"
         response.expectJsonContains(200, [
@@ -276,7 +280,7 @@ class CommandObjectDISpec extends Specification implements HttpClientSupport {
 
     def "missing optional service is handled gracefully"() {
         when: "testing optional service"
-        def response = http('/commandDI/testOptionalService?data=test')
+        def response = http.get('/commandDI/testOptionalService?data=test')
 
         then: "required service present, optional is null"
         response.expectJsonContains(200, [
@@ -289,7 +293,7 @@ class CommandObjectDISpec extends Specification implements HttpClientSupport {
 
     def "validation can depend on service state"() {
         when: "validating with positive price"
-        def response = http('/commandDI/validateWithServiceState?price=100.00')
+        def response = http.get('/commandDI/validateWithServiceState?price=100.00')
 
         then: "validation passes and shows current tax rate"
         response.expectJsonContains(200, [
@@ -302,7 +306,7 @@ class CommandObjectDISpec extends Specification implements HttpClientSupport {
 
     def "command object handles valid user request"() {
         when: "validating user"
-        def response = http('/commandDI/registerUser?username=validuser&email=user@example.com')
+        def response = http.get('/commandDI/registerUser?username=validuser&email=user@example.com')
 
         then: "request succeeds"
         response.expectJsonContains(200, [username: 'validuser'])
@@ -311,7 +315,7 @@ class CommandObjectDISpec extends Specification implements HttpClientSupport {
     @Unroll
     def "reserved username '#username' is rejected"() {
         when: "registering with reserved username"
-        def response = http("/commandDI/registerUser?username=${username}&email=test@example.com")
+        def response = http.get("/commandDI/registerUser?username=${username}&email=test@example.com")
 
         then: "validation fails"
         response.expectJsonContains(200, [

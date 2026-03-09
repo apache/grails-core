@@ -22,15 +22,18 @@ import spock.lang.Issue
 import spock.lang.Specification
 
 import grails.testing.mixin.integration.Integration
-import org.apache.grails.testing.httpclient.HttpClientSupport
+import org.apache.grails.testing.http.client.HttpClient
+import org.springframework.beans.factory.annotation.Autowired
 
 @Integration
-class TestControllerSpec extends Specification implements HttpClientSupport {
+class TestControllerSpec extends Specification {
+
+    @Autowired HttpClient http
 
     @Issue('https://github.com/apache/grails-core/issues/10582')
     void 'test responding after an action triggered by a HTTP 401 response is possible'() {
         when:
-        def response = http('/test/triggerUnauthorized')
+        def response = http.get('/test/triggerUnauthorized')
 
         then: 'the response is correct'
         response.expect(401, '{"message":"Unauthorized GSON"}')

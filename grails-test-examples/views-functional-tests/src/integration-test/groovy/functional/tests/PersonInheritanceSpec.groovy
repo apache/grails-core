@@ -22,14 +22,17 @@ import spock.lang.Issue
 import spock.lang.Specification
 
 import grails.testing.mixin.integration.Integration
-import org.apache.grails.testing.httpclient.HttpClientSupport
+import org.apache.grails.testing.http.client.HttpClient
+import org.springframework.beans.factory.annotation.Autowired
 
 @Integration
-class PersonInheritanceSpec extends Specification implements HttpClientSupport {
+class PersonInheritanceSpec extends Specification {
+
+    @Autowired HttpClient http
 
     void 'test template inheritance produces correct json'() {
         when:
-        def response = http('/person-inheritance')
+        def response = http.get('/person-inheritance')
 
         then: 'the response is correct'
         response.expect(200, '{"dob":"01/01/1970","lastName":"Doe","firstName":"John"}')
@@ -38,7 +41,7 @@ class PersonInheritanceSpec extends Specification implements HttpClientSupport {
     @Issue("https://github.com/apache/grails-views/issues/234")
     void 'test template inheritance does not produce NPE when model variable is null'() {
         when:
-        def response = http('/person-inheritance/npe')
+        def response = http.get('/person-inheritance/npe')
 
         then: 'the response is correct'
         response.expectStatus(200)

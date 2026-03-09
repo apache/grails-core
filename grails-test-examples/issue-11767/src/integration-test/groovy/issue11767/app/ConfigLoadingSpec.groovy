@@ -22,16 +22,19 @@ import spock.lang.Specification
 import spock.lang.Unroll
 
 import grails.testing.mixin.integration.Integration
-import org.apache.grails.testing.httpclient.HttpClientSupport
+import org.apache.grails.testing.http.client.HttpClient
+import org.springframework.beans.factory.annotation.Autowired
 
 @Integration
-class ConfigLoadingSpec extends Specification implements HttpClientSupport {
+class ConfigLoadingSpec extends Specification {
+
+    @Autowired HttpClient http
 
     @Unroll
-    void '#beanType beans can load plugin config values'(String beanType, String expectedResponseValue) {
+    void '#beanType beans can load plugin config values'(String expectedResponseValue) {
 
         when: 'The app controller is visited'
-        def response = http('/app')
+        def response = http.get('/app')
 
         then: 'The value from the plugin is found'
         response.expectContains(expectedResponseValue)

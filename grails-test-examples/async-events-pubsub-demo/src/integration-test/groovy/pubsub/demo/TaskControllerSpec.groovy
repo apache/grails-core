@@ -20,15 +20,19 @@ package pubsub.demo
 
 import spock.lang.Specification
 
+import org.springframework.beans.factory.annotation.Autowired
+
 import grails.testing.mixin.integration.Integration
-import org.apache.grails.testing.httpclient.HttpClientSupport
+import org.apache.grails.testing.http.client.HttpClient
 
 @Integration
-class TaskControllerSpec extends Specification implements HttpClientSupport {
+class TaskControllerSpec extends Specification {
+
+    @Autowired HttpClient http
 
     void 'test async error handling'() {
         when: 'we invoke an endpoint that throws an exception'
-        def response = http('/task/error')
+        def response = http.get('/task/error')
 
         then: 'the response is as expected'
         response.expect(500, 'error occurred')

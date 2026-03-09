@@ -20,8 +20,10 @@ package functionaltests.cors
 
 import spock.lang.Specification
 
+import org.springframework.beans.factory.annotation.Autowired
+
 import grails.testing.mixin.integration.Integration
-import org.apache.grails.testing.httpclient.HttpClientSupport
+import org.apache.grails.testing.http.client.HttpClient
 
 /**
  * Integration tests for CORS (Cross-Origin Resource Sharing) functionality.
@@ -30,13 +32,15 @@ import org.apache.grails.testing.httpclient.HttpClientSupport
  * Note: CORS is enabled for /api/** in application.yml
  */
 @Integration
-class CorsAdvancedSpec extends Specification implements HttpClientSupport {
+class CorsAdvancedSpec extends Specification {
+
+    @Autowired HttpClient http
 
     // ========== Basic CORS Header Tests ==========
 
     def "GET request to CORS-enabled endpoint includes CORS headers"() {
         when:
-        def response = http('/api/cors', 'Origin': 'http://example.com')
+        def response = http.get('/api/cors', 'Origin': 'http://example.com')
 
         then: 'CORS headers should be present'
         response.expectHeaders(200, 'Access-Control-Allow-Origin': '*')
@@ -44,7 +48,7 @@ class CorsAdvancedSpec extends Specification implements HttpClientSupport {
 
     def "OPTIONS preflight request returns appropriate headers"() {
         when:
-        def response = httpOptions(
+        def response = http.options(
                 '/api/cors/data',
                 'Origin': 'http://example.com',
                 'Access-Control-Request-Method': 'GET'
@@ -59,7 +63,7 @@ class CorsAdvancedSpec extends Specification implements HttpClientSupport {
 
     def "preflight request for POST method succeeds"() {
         when:
-        def response = httpOptions(
+        def response = http.options(
                 '/api/cors/items',
                 'Origin': 'http://example.com',
                 'Access-Control-Request-Method': 'POST',
@@ -75,7 +79,7 @@ class CorsAdvancedSpec extends Specification implements HttpClientSupport {
 
     def "preflight request for PUT method succeeds"() {
         when:
-        def response = httpOptions(
+        def response = http.options(
                 '/api/cors/items/1',
                 'Origin': 'http://example.com',
                 'Access-Control-Request-Method': 'PUT',
@@ -88,7 +92,7 @@ class CorsAdvancedSpec extends Specification implements HttpClientSupport {
 
     def "preflight request for DELETE method succeeds"() {
         when:
-        def response = httpOptions(
+        def response = http.options(
                 '/api/cors/items/1',
                 'Origin': 'http://example.com',
                 'Access-Control-Request-Method': 'DELETE'
@@ -102,7 +106,7 @@ class CorsAdvancedSpec extends Specification implements HttpClientSupport {
 
     def "GET request to CORS endpoint returns data"() {
         when:
-        def response = http(
+        def response = http.get(
                 '/api/cors/data',
                 'Origin': 'http://example.com'
         )
@@ -117,7 +121,7 @@ class CorsAdvancedSpec extends Specification implements HttpClientSupport {
 
     def "POST request with CORS headers succeeds"() {
         when:
-        def response = httpPost(
+        def response = http.postJson(
                 '/api/cors/items',
                 '{"name":"New Item"}',
                 'Origin': 'http://example.com'
@@ -133,7 +137,7 @@ class CorsAdvancedSpec extends Specification implements HttpClientSupport {
 
     def "PUT request with CORS headers succeeds"() {
         when:
-        def response = httpPut(
+        def response = http.putJson(
                 '/api/cors/items/42',
                 '{"name":"Updated Item"}',
                 'Origin': 'http://example.com'
@@ -149,7 +153,7 @@ class CorsAdvancedSpec extends Specification implements HttpClientSupport {
 
     def "DELETE request with CORS headers succeeds"() {
         when:
-        def response = httpDelete(
+        def response = http.delete(
                 '/api/cors/items/99',
                 'Origin': 'http://example.com'
         )
@@ -166,7 +170,7 @@ class CorsAdvancedSpec extends Specification implements HttpClientSupport {
 
     def "response with custom headers includes CORS headers"() {
         when:
-        def response = http('/api/cors/custom-headers', 'Origin': 'http://example.com')
+        def response = http.get('/api/cors/custom-headers', 'Origin': 'http://example.com')
 
         then:
         response.expectJson(200, 'X-Custom-Response': 'custom-value', [
@@ -177,7 +181,7 @@ class CorsAdvancedSpec extends Specification implements HttpClientSupport {
 
     def "echo origin endpoint returns received origin"() {
         when:
-        def response = http('/api/cors/echo-origin', 'Origin': 'http://my-app.example.com')
+        def response = http.get('/api/cors/echo-origin', 'Origin': 'http://my-app.example.com')
 
         then:
         response.expectJson(200, [
@@ -190,7 +194,7 @@ class CorsAdvancedSpec extends Specification implements HttpClientSupport {
 
     def "authenticated endpoint receives authorization header"() {
         when:
-        def response = http(
+        def response = http.get(
                 '/api/cors/authenticated',
                 'Origin': 'http://example.com',
                 'Authorization': 'Bearer test-token-123'
@@ -206,7 +210,7 @@ class CorsAdvancedSpec extends Specification implements HttpClientSupport {
 
     def "authenticated endpoint without credentials returns unauthenticated"() {
         when:
-        def response = http('/api/cors/authenticated', 'Origin': 'http://example.com')
+        def response = http.get('/api/cors/authenticated', 'Origin': 'http://example.com')
 
         then:
         response.expectJson(200, [
@@ -220,7 +224,7 @@ class CorsAdvancedSpec extends Specification implements HttpClientSupport {
 
     def "request from localhost origin succeeds"() {
         when:
-        def response = http('/api/cors', 'Origin': 'http://localhost:3000')
+        def response = http.get('/api/cors', 'Origin': 'http://localhost:3000')
 
         then:
         response.expectJson(200, [
@@ -231,7 +235,7 @@ class CorsAdvancedSpec extends Specification implements HttpClientSupport {
 
     def "request from HTTPS origin succeeds"() {
         when:
-        def response = http('/api/cors', 'Origin': 'https://secure.example.com')
+        def response = http.get('/api/cors', 'Origin': 'https://secure.example.com')
 
         then:
         response.expectJson(200, [
@@ -242,7 +246,7 @@ class CorsAdvancedSpec extends Specification implements HttpClientSupport {
 
     def "request with port in origin succeeds"() {
         when:
-        def response = http('/api/cors', 'Origin': 'http://example.com:8080')
+        def response = http.get('/api/cors', 'Origin': 'http://example.com:8080')
 
         then:
         response.expectJson(200, [

@@ -22,14 +22,17 @@ import spock.lang.Issue
 import spock.lang.Specification
 
 import grails.testing.mixin.integration.Integration
-import org.apache.grails.testing.httpclient.HttpClientSupport
+import org.apache.grails.testing.http.client.HttpClient
+import org.springframework.beans.factory.annotation.Autowired
 
 @Integration
-class NamespacedBookSpec extends Specification implements HttpClientSupport {
+class NamespacedBookSpec extends Specification {
+
+    @Autowired HttpClient http
 
     void 'test view rendering with a namespace'() {
         when: 'A request is sent to a controller with a namespace'
-        def response = http('/api/book')
+        def response = http.get('/api/book')
 
         then: 'The response is correct'
         response.expectJson(200, 'Content-Type': 'application/json;charset=UTF-8', [
@@ -40,7 +43,7 @@ class NamespacedBookSpec extends Specification implements HttpClientSupport {
 
     void 'test nested template rendering with a namespace'() {
         when: 'A request is sent to a controller with a namespace'
-        def response = http('/api/book/nested')
+        def response = http.get('/api/book/nested')
 
         then: 'The response contains the child template'
         response.expectJson(200, 'Content-Type': 'application/json;charset=UTF-8', [
@@ -50,7 +53,7 @@ class NamespacedBookSpec extends Specification implements HttpClientSupport {
 
     void 'test the correct content type is chosen (json)'() {
         when: 'A request is sent to a controller with a namespace'
-        def response = http('/api/book')
+        def response = http.get('/api/book')
 
         then: 'The response contains the child template'
         response.expectJson(200, 'Content-Type': 'application/json;charset=UTF-8', [
@@ -61,7 +64,7 @@ class NamespacedBookSpec extends Specification implements HttpClientSupport {
 
     void 'test the correct content type is chosen (hal)'() {
         when: 'A request is sent to a controller with a namespace'
-        def response = http('/api/book', 'Accept': 'application/hal+json')
+        def response = http.get('/api/book', 'Accept': 'application/hal+json')
 
         then: 'The response contains the child template'
         response.expectJsonContains(200, 'Content-Type': 'application/hal+json;charset=UTF-8', [
@@ -73,7 +76,7 @@ class NamespacedBookSpec extends Specification implements HttpClientSupport {
 
     void 'test render(view: "..", model: ..) in controllers with namespaces works'() {
         when: 'A request is sent to a controller with a namespace'
-        def response = http('/api/book/testRender')
+        def response = http.get('/api/book/testRender')
 
         then: 'The response is correct'
         response.expectJson(200, 'Content-Type': 'application/json;charset=UTF-8', [
@@ -84,7 +87,7 @@ class NamespacedBookSpec extends Specification implements HttpClientSupport {
 
     void 'test respond(foo, view: ..) in controllers with namespaces works'() {
         when: 'A request is sent to a controller with a namespace'
-        def response = http('/api/book/testRespond')
+        def response = http.get('/api/book/testRespond')
 
         then: 'The response is correct'
         response.expectJson(200, 'Content-Type': 'application/json;charset=UTF-8', [
@@ -96,7 +99,7 @@ class NamespacedBookSpec extends Specification implements HttpClientSupport {
 
     void 'test respond(foo, view: ..) in controllers with namespaces works, view outside of namespace'() {
         when: 'A request is sent to a controller with a namespace'
-        def response = http('/api/book/testRespondOutsideNamespace')
+        def response = http.get('/api/book/testRespondOutsideNamespace')
 
         then: 'The response is correct'
         response.expectJson(200, 'Content-Type': 'application/json;charset=UTF-8', [
@@ -108,10 +111,10 @@ class NamespacedBookSpec extends Specification implements HttpClientSupport {
     @Issue('https://github.com/apache/grails-views/issues/186')
     void 'test view rendering with a namespace from a map'() {
         when: 'A request is sent to a controller with a namespace'
-        def response = http('/api/book/message')
+        def response = http.get('/api/book/message')
 
         then: 'The response is correct'
-        response.expectJson(200, 'Content-Type':'application/json;charset=UTF-8', [
+        response.expectJson(200, 'Content-Type': 'application/json;charset=UTF-8', [
                 message: 'Controller says Hello API'
         ])
     }

@@ -73,7 +73,7 @@ dependencies {
     testImplementation 'org.apache.grails:grails-testing-support-datamapping'
 
     integrationTestImplementation testFixtures('org.apache.grails:grails-geb')
-    integrationTestImplementation 'org.apache.grails:grails-testing-support-httpclient'
+    integrationTestImplementation 'org.apache.grails:grails-testing-support-http-client'
 }
 
 tasks.named('assetCompile').configure {

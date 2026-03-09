@@ -67,7 +67,7 @@ dependencies {
     testImplementation 'org.apache.grails:grails-testing-support-web'
     testImplementation 'org.apache.grails:grails-testing-support-datamapping'
 
-    integrationTestImplementation 'org.apache.grails:grails-testing-support-httpclient'
+    integrationTestImplementation 'org.apache.grails:grails-testing-support-http-client'
 }
 
 tasks.named('compileTestGroovy').configure {

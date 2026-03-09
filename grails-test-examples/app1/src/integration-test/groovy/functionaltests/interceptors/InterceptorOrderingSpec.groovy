@@ -20,8 +20,10 @@ package functionaltests.interceptors
 
 import spock.lang.Specification
 
+import org.springframework.beans.factory.annotation.Autowired
+
 import grails.testing.mixin.integration.Integration
-import org.apache.grails.testing.httpclient.HttpClientSupport
+import org.apache.grails.testing.http.client.HttpClient
 
 /**
  * Comprehensive integration tests for Grails interceptor functionality.
@@ -36,18 +38,20 @@ import org.apache.grails.testing.httpclient.HttpClientSupport
  * - Timing/performance tracking
  */
 @Integration
-class InterceptorOrderingSpec extends Specification implements HttpClientSupport {
+class InterceptorOrderingSpec extends Specification {
+
+    @Autowired HttpClient http
 
     def setup() {
         // Reset execution order before each test
-        http('/interceptorTest/resetOrder')
+        http.get('/interceptorTest/resetOrder')
     }
 
     // ========== Interceptor Ordering Tests ==========
 
     def "test interceptors execute in order by 'order' property"() {
         when:
-        def response = http('/interceptorTest/testOrder')
+        def response = http.get('/interceptorTest/testOrder')
 
         then: "interceptors should run in order: first(10), second(20), third(30)"
         response.expectStatus(200)
@@ -72,7 +76,7 @@ class InterceptorOrderingSpec extends Specification implements HttpClientSupport
 
     def "test before interceptors run before controller action"() {
         when:
-        def response = http('/interceptorTest/index')
+        def response = http.get('/interceptorTest/index')
 
         then:
         response.expectStatus(200)
@@ -86,7 +90,7 @@ class InterceptorOrderingSpec extends Specification implements HttpClientSupport
 
     def "test after interceptors run after controller action"() {
         when:
-        def response = http('/interceptorTest/index')
+        def response = http.get('/interceptorTest/index')
 
         then:
         response.expectStatus(200)
@@ -102,7 +106,7 @@ class InterceptorOrderingSpec extends Specification implements HttpClientSupport
 
     def "test interceptor can block request by returning false"() {
         when:
-        def response = http('/interceptorTest/blocked?block=true&reason=testing')
+        def response = http.get('/interceptorTest/blocked?block=true&reason=testing')
 
         then: "controller action should not execute"
         response.expectJson(200, [
@@ -114,7 +118,7 @@ class InterceptorOrderingSpec extends Specification implements HttpClientSupport
 
     def "test interceptor allows request when returning true"() {
         when:
-        def response = http('/interceptorTest/blocked?block=false')
+        def response = http.get('/interceptorTest/blocked?block=false')
 
         then: "controller action should execute"
         response.expectJson(200, [
@@ -127,7 +131,7 @@ class InterceptorOrderingSpec extends Specification implements HttpClientSupport
 
     def "test interceptor can set request attributes"() {
         when:
-        def response = http('/interceptorTest/checkAttributes')
+        def response = http.get('/interceptorTest/checkAttributes')
 
         then:
         response.expectStatus(200)
@@ -140,7 +144,7 @@ class InterceptorOrderingSpec extends Specification implements HttpClientSupport
 
     def "test interceptor can set response headers"() {
         when:
-        def response = http('/interceptorTest/checkAttributes')
+        def response = http.get('/interceptorTest/checkAttributes')
 
         then:
         response.expectHeaders(200, 'X-Interceptor-Header': 'set-by-interceptor')
@@ -150,7 +154,7 @@ class InterceptorOrderingSpec extends Specification implements HttpClientSupport
 
     def "test interceptor can set session attributes"() {
         when:
-        def response = http('/interceptorTest/checkSession')
+        def response = http.get('/interceptorTest/checkSession')
 
         then:
         response.expectStatus(200)
@@ -164,13 +168,13 @@ class InterceptorOrderingSpec extends Specification implements HttpClientSupport
 
     def "test interceptor conditional matching - matched"() {
         when:
-        def response = http('/interceptorTest/conditionalAction?match=yes')
+        def response = http.get('/interceptorTest/conditionalAction?match=yes')
 
         then:
         response.expectStatus(200)
 
         when:
-        def orderResponse = http('/interceptorTest/getOrder')
+        def orderResponse = http.get('/interceptorTest/getOrder')
 
         then:
         orderResponse.json().executionOrder.contains('conditional:before:matched')
@@ -178,13 +182,13 @@ class InterceptorOrderingSpec extends Specification implements HttpClientSupport
 
     def "test interceptor conditional matching - not matched"() {
         when:
-        def response = http('/interceptorTest/conditionalAction?match=no')
+        def response = http.get('/interceptorTest/conditionalAction?match=no')
 
         then:
         response.expectStatus(200)
 
         when:
-        def orderResponse = http('/interceptorTest/getOrder')
+        def orderResponse = http.get('/interceptorTest/getOrder')
 
         then:
         orderResponse.json().executionOrder.contains('conditional:before:notmatched')
@@ -194,7 +198,7 @@ class InterceptorOrderingSpec extends Specification implements HttpClientSupport
 
     def "test timing interceptor tracks request duration"() {
         when:
-        def response = http('/interceptorTest/slowAction?delay=50')
+        def response = http.get('/interceptorTest/slowAction?delay=50')
 
         then:
         response.expectJson(200, [
@@ -205,7 +209,7 @@ class InterceptorOrderingSpec extends Specification implements HttpClientSupport
         // Check that timing interceptor's before phase ran and recorded start time
         // Note: We can only reliably verify before() since after() runs after response is committed
         // and its execution order entry may not be visible due to async timing
-        def orderResponse = http('/interceptorTest/getOrder')
+        def orderResponse = http.get('/interceptorTest/getOrder')
         orderResponse.json().executionOrder.any { it.startsWith('timing:before') }
     }
 
@@ -213,11 +217,11 @@ class InterceptorOrderingSpec extends Specification implements HttpClientSupport
 
     def "test interceptors work correctly across multiple requests"() {
         when: "make multiple requests"
-        def response1 = http('/interceptorTest/index')
+        def response1 = http.get('/interceptorTest/index')
         
         // Reset again for clean second request
-        http('/interceptorTest/resetOrder')
-        def response2 = http('/interceptorTest/index')
+        http.get('/interceptorTest/resetOrder')
+        def response2 = http.get('/interceptorTest/index')
 
         then: "each request should have clean interceptor execution"
         response1.expectStatus(200)
@@ -232,7 +236,7 @@ class InterceptorOrderingSpec extends Specification implements HttpClientSupport
 
     def "test interceptors work with data actions"() {
         when:
-        def response = http('/interceptorTest/dataAction?data=testValue')
+        def response = http.get('/interceptorTest/dataAction?data=testValue')
 
         then:
         response.expectJson(200, [
@@ -245,7 +249,7 @@ class InterceptorOrderingSpec extends Specification implements HttpClientSupport
 
     def "test complete before-controller-after sequence"() {
         when:
-        def response = http('/interceptorTest/index')
+        def response = http.get('/interceptorTest/index')
 
         then:
         response.expectStatus(200)

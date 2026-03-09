@@ -21,14 +21,17 @@ package functional.tests
 import spock.lang.Specification
 
 import grails.testing.mixin.integration.Integration
-import org.apache.grails.testing.httpclient.HttpClientSupport
+import org.apache.grails.testing.http.client.HttpClient
+import org.springframework.beans.factory.annotation.Autowired
 
 @Integration
-class ProjectSpec extends Specification implements HttpClientSupport {
+class ProjectSpec extends Specification {
+
+    @Autowired HttpClient http
 
     void "Test that circular references are correctly rendered for many to many relationship"() {
         when: "A GET is issued"
-        def response = http('/project')
+        def response = http.get('/project')
 
         then:
         response.expectStatus(200)

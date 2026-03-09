@@ -97,11 +97,11 @@ and can be xref:conf.adoc#customizing-the-banner[customized].
 
 ==== Grails HTTP Client Testing Support (Grails 7.1+)
 
-Grails 7.1 introduces a new `grails-testing-support-httpclient` module that simplifies HTTP-based
+Grails 7.1 introduces a new `grails-testing-support-http-client` module that simplifies HTTP-based
 integration and functional tests.
 
-The module provides `HttpClientSupport` for JDK `HttpClient` request helpers (GET/POST/PUT/PATCH/DELETE),
-request and client builders, and fluent response assertions.
+The module provides an `HttpClient` with request helpers GET/POST/PUT/PATCH/DELETE for common use cases,
+and fluent response assertions via returning a TestHttpResponse wrapper of the actual HttpResponse.
 
 See the xref:testing.adoc#httpClientTestingSupport[HTTP Client Testing Support] section in the Testing chapter
 for setup and examples.

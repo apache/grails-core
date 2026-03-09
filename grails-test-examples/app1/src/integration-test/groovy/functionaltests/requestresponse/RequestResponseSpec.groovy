@@ -20,21 +20,25 @@ package functionaltests.requestresponse
 
 import spock.lang.Specification
 
+import org.springframework.beans.factory.annotation.Autowired
+
 import grails.testing.mixin.integration.Integration
-import org.apache.grails.testing.httpclient.HttpClientSupport
+import org.apache.grails.testing.http.client.HttpClient
 
 /**
  * Integration tests for request/response handling patterns including
  * headers, cookies, session management, and request attributes.
  */
 @Integration
-class RequestResponseSpec extends Specification implements HttpClientSupport {
+class RequestResponseSpec extends Specification {
+
+    @Autowired HttpClient http
 
     // ========== Request Header Tests ==========
 
     def "echo request headers returns all headers"() {
         when:
-        def response = http('/requestResponseTest/echoHeaders',
+        def response = http.get('/requestResponseTest/echoHeaders',
                 'X-Custom-Header': 'TestValue',
                 'X-Another-Header': 'AnotherValue'
         )
@@ -48,7 +52,7 @@ class RequestResponseSpec extends Specification implements HttpClientSupport {
 
     def "get specific header returns correct value"() {
         when:
-        def response = http(
+        def response = http.get(
                 '/requestResponseTest/getSpecificHeader?headerName=X-Test-Header',
                 'X-Test-Header': 'MyTestValue'
         )
@@ -59,7 +63,7 @@ class RequestResponseSpec extends Specification implements HttpClientSupport {
 
     def "check accept header detects JSON accept type"() {
         when:
-        def response = http(
+        def response = http.get(
                 '/requestResponseTest/checkAcceptHeader',
                 'Accept': 'application/json'
         )
@@ -72,7 +76,7 @@ class RequestResponseSpec extends Specification implements HttpClientSupport {
 
     def "set custom headers returns headers in response"() {
         when:
-        def response = http('/requestResponseTest/setCustomHeaders')
+        def response = http.get('/requestResponseTest/setCustomHeaders')
 
         then:
         response.expectHeaders(200, 'X-Custom-Header': 'CustomValue')
@@ -82,7 +86,7 @@ class RequestResponseSpec extends Specification implements HttpClientSupport {
 
     def "set cache headers configures caching properly"() {
         when:
-        def response = http('/requestResponseTest/setCacheHeaders')
+        def response = http.get('/requestResponseTest/setCacheHeaders')
 
         then:
         response.expectHeaders(200,
@@ -94,7 +98,7 @@ class RequestResponseSpec extends Specification implements HttpClientSupport {
 
     def "set no-cache headers prevents caching"() {
         when:
-        def response = http('/requestResponseTest/setNoCacheHeaders')
+        def response = http.get('/requestResponseTest/setNoCacheHeaders')
 
         then:
         response.expectHeaders(200,
@@ -106,7 +110,7 @@ class RequestResponseSpec extends Specification implements HttpClientSupport {
 
     def "set content disposition for file download"() {
         when:
-        def response = http('/requestResponseTest/setContentDisposition')
+        def response = http.get('/requestResponseTest/setContentDisposition')
 
         then:
         response.expectHeaders(200, 'Content-Disposition': 'attachment; filename="report.pdf"')
@@ -114,7 +118,7 @@ class RequestResponseSpec extends Specification implements HttpClientSupport {
 
     def "set multiple custom headers returns all headers"() {
         when:
-        def response = http('/requestResponseTest/setMultipleCustomHeaders')
+        def response = http.get('/requestResponseTest/setMultipleCustomHeaders')
 
         then:
         response.expectHeaders(200,
@@ -128,7 +132,7 @@ class RequestResponseSpec extends Specification implements HttpClientSupport {
 
     def "set cookie returns Set-Cookie header"() {
         when:
-        def response = http('/requestResponseTest/setCookie?name=myCookie&value=myValue')
+        def response = http.get('/requestResponseTest/setCookie?name=myCookie&value=myValue')
 
         then:
         response.expectJsonContains(200, [
@@ -141,7 +145,7 @@ class RequestResponseSpec extends Specification implements HttpClientSupport {
 
     def "set multiple cookies returns multiple Set-Cookie headers"() {
         when:
-        def response = http('/requestResponseTest/setMultipleCookies')
+        def response = http.get('/requestResponseTest/setMultipleCookies')
 
         then:
         response.expectJsonContains(200, [cookiesSet: 3])
@@ -150,7 +154,7 @@ class RequestResponseSpec extends Specification implements HttpClientSupport {
 
     def "get cookies reads cookies from request"() {
         when:
-        def response = http(httpRequestWith('/requestResponseTest/getCookies') {
+        def response = http.sendRequest(http.requestWith('/requestResponseTest/getCookies') {
             header('Cookie', 'testCookie1=value1; testCookie2=value2')
         })
 
@@ -165,7 +169,7 @@ class RequestResponseSpec extends Specification implements HttpClientSupport {
 
     def "get specific cookie returns correct cookie value"() {
         when:
-        def response = http(httpRequestWith('/requestResponseTest/getSpecificCookie?name=myCookie') {
+        def response = http.sendRequest(http.requestWith('/requestResponseTest/getSpecificCookie?name=myCookie') {
             header('Cookie', 'myCookie=cookieValue')
         })
 
@@ -179,7 +183,7 @@ class RequestResponseSpec extends Specification implements HttpClientSupport {
 
     def "delete cookie sets max-age to 0"() {
         when:
-        def response = http('/requestResponseTest/deleteCookie?name=deletedCookie')
+        def response = http.get('/requestResponseTest/deleteCookie?name=deletedCookie')
 
         then:
         response.expectJsonContains(200, [deleted: 'deletedCookie'])
@@ -191,7 +195,7 @@ class RequestResponseSpec extends Specification implements HttpClientSupport {
 
     def "set session attribute stores value in session"() {
         when:
-        def response = http(
+        def response = http.get(
                 '/requestResponseTest/setSessionAttribute?key=testKey&value=testValue'
         )
 
@@ -207,14 +211,14 @@ class RequestResponseSpec extends Specification implements HttpClientSupport {
     def "get session attribute retrieves stored value"() {
         given:
         // First set a session attribute
-        def setResponse = http(
+        def setResponse = http.get(
             '/requestResponseTest/setSessionAttribute?key=retrieveKey&value=retrieveValue'
         )
         def sessionCookie = setResponse.headerValue('Set-Cookie')
 
         when:
         // Then retrieve it with the same session
-        def response = http(httpRequestWith('/requestResponseTest/getSessionAttribute?key=retrieveKey') {
+        def response = http.sendRequest(http.requestWith('/requestResponseTest/getSessionAttribute?key=retrieveKey') {
             if (sessionCookie) {
                 def cookieValue = sessionCookie.split(';').first()
                 header('Cookie', cookieValue)
@@ -233,13 +237,13 @@ class RequestResponseSpec extends Specification implements HttpClientSupport {
     def "session counter increments on each request"() {
         given:
         // First request
-        def response1 = http('/requestResponseTest/sessionCounter')
+        def response1 = http.get('/requestResponseTest/sessionCounter')
         def json1 = response1.json()
         def sessionCookie = response1.headerValue('Set-Cookie')
 
         when:
         // Second request with same session
-        def response2 = http(httpRequestWith('/requestResponseTest/sessionCounter') {
+        def response2 = http.sendRequest(http.requestWith('/requestResponseTest/sessionCounter') {
             if (sessionCookie) {
                 def cookieValue = sessionCookie.split(';').first()
                 header('Cookie', cookieValue)
@@ -259,20 +263,20 @@ class RequestResponseSpec extends Specification implements HttpClientSupport {
 
     def "get request info returns server details"() {
         when:
-        def response = http('/requestResponseTest/getRequestInfo')
+        def response = http.get('/requestResponseTest/getRequestInfo')
 
         then:
         response.expectJsonContains(200, [
                 method: 'GET',
                 uri: '/requestResponseTest/getRequestInfo',
                 scheme: 'http',
-                serverPort: localServerPort
+                serverPort: serverPort
         ])
     }
 
     def "get request parameters returns query parameters"() {
         when:
-        def response = http(
+        def response = http.get(
                 '/requestResponseTest/getRequestParameters?param1=value1&param2=value2'
         )
 
@@ -287,7 +291,7 @@ class RequestResponseSpec extends Specification implements HttpClientSupport {
 
     def "set request attribute stores and retrieves value"() {
         when:
-        def response = http('/requestResponseTest/setRequestAttribute?key=myAttr&value=myVal')
+        def response = http.get('/requestResponseTest/setRequestAttribute?key=myAttr&value=myVal')
 
         then:
         response.expectJson(200, [
@@ -301,7 +305,7 @@ class RequestResponseSpec extends Specification implements HttpClientSupport {
 
     def "unicode response returns characters in multiple languages"() {
         when:
-        def response = http('/requestResponseTest/unicodeResponse')
+        def response = http.get('/requestResponseTest/unicodeResponse')
 
         then:
         response.expectJson(200, [

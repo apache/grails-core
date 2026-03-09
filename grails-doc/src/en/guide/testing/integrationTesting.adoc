@@ -290,18 +290,18 @@ Example usage:
 ==== HTTP Client Testing Support
 
 For integration and functional tests that call live HTTP endpoints, Grails provides the
-`grails-testing-support-httpclient` module.
+`grails-testing-support-http-client` module.
 
 Add the dependency to your integration test configuration:
 
 [source,groovy]
 ----
 dependencies {
-    integrationTestImplementation 'org.apache.grails:grails-testing-support-httpclient'
+    integrationTestImplementation 'org.apache.grails:grails-testing-support-http-client'
 }
 ----
 
-You can then implement `HttpClientSupport` in your Spock specification and use helper methods for
+You can then inject an `HttpClient` in your Spock specification and use helper methods for
 request building and response assertions:
 
 [source,groovy]
@@ -311,14 +311,16 @@ import java.net.http.HttpTimeoutException
 import spock.lang.Specification
 
 import grails.testing.mixin.integration.Integration
-import org.apache.grails.testing.httpclient.HttpClientSupport
+import org.apache.grails.testing.http.client.HttpClient
 
 @Integration
-class DemoSpec extends Specification implements HttpClientSupport {
+class DemoSpec extends Specification {
+
+    @Autowired HttpClient http
 
     void 'simple GET with status and body assertions'() {
         when: 'invoking a GET request to the /health endpoint'
-        def response = http('/health')
+        def response = http.get('/health')
 
         then: 'verifies status, headers and body contents via fluent API'
         response.expectStatus(200)
@@ -332,7 +334,7 @@ class DemoSpec extends Specification implements HttpClientSupport {
 
     void 'GET with headers and header assertions'() {
         when:
-        def response = http('/api/info', 'Accept': 'application/json')
+        def response = http.get('/api/info', 'Accept': 'application/json')
 
         then:
         response.expectHeadersIgnoreCase(200, 'content-type': 'application/json;charset=UTF-8')
@@ -340,7 +342,7 @@ class DemoSpec extends Specification implements HttpClientSupport {
 
     void 'Posting and verifying JSON'() {
         when: 'you post a map it is turned into a JSON payload'
-        def response = httpPost('/api/books', [title: 'Grails in Action', pages: 500])
+        def response = http.postJson('/api/books', [title: 'Grails in Action', pages: 500])
 
         then: 'you can also verify response bodies with maps'
         response.expectJson(201, [id: 1, title: 'Grails in Action', pages: 500])
@@ -366,17 +368,17 @@ class DemoSpec extends Specification implements HttpClientSupport {
 
     void 'custom request and custom client configuration'() {
         when: 'you need a custom configured client'
-        def noRedirectClient = httpClientWith {
-            followRedirects(HttpClient.Redirect.NEVER)
+        def noRedirectClient = http.newClientWith {
+            followRedirects(java.net.http.HttpClient.Redirect.NEVER)
         }
 
         and: 'or a custom configured request'
-        def request = httpRequestWith('/api/slow') {
+        def request = http.requestWith('/api/slow') {
             timeout(Duration.ofSeconds(1))
         }
 
         when:
-        http(request, noRedirectClient)
+        http.get(request, noRedirectClient)
 
         then:
         thrown(HttpTimeoutException)
@@ -384,13 +386,13 @@ class DemoSpec extends Specification implements HttpClientSupport {
 
     void 'multipart upload'() {
         given:
-        def multipart = MultipartBody.builder()
+        def body = MultipartBody.builder()
                 .addPart('description', 'test file')
-                .addPart('file', 'hello.txt', 'hello world', 'text/plain')
+                .addPart('file', 'hello.txt', 'text/plain', 'hello world')
                 .build()
 
         when:
-        def response = httpPost('/api/upload', multipart)
+        def response = http.postMultipart('/api/upload', body)
 
         then:
         response.expectStatus(200)
@@ -398,11 +400,12 @@ class DemoSpec extends Specification implements HttpClientSupport {
 }
 ----
 
-`HttpClientSupport` uses the JDK `HttpClient` and applies default request and connect timeouts of 60 seconds and
-a redirect policy of always follow redirects. You can use helpers `httpRequestWith(Closure configurer)` and
-`httpClientWith(Closure configurer)` to customize your own client and requests starting from the defaults.
+`HttpClient` uses the JDK `HttpClient` under the hood and applies default request and connect timeouts of 60 seconds and
+a redirect policy of always following redirects. You can use helpers `requestWith(Closure configurer)` and
+`newClientWith(Closure configurer)` to customize your own client and requests starting from the defaults.
 
-Additional request helper methods available include `httpPut()`, `httpPatch()`, `httpDelete()`, `httpOptions()`, and many assertion methods on responses.
+Additional request helper methods available include `put()`, `patch()`, `delete()`, `options()`, and many assertion
+methods on responses.
 
 ==== Autowiring
 
