@@ -18,13 +18,17 @@
  */
 import groovy.json.JsonBuilder
 
-def githubToken = System.getenv("GITHUB_TOKEN") ?: System.getProperty("github.token")
-if (!githubToken) {
-    throw new IllegalStateException("GitHub token not configured. Set the GITHUB_TOKEN environment variable or the 'github.token' system property.")
-}
+// --- Configuration ---
+def githubToken = System.getenv('GITHUB_TOKEN') ?: System.getProperty('github.token')
 def repoOwner   = "apache"
 def repoName    = "grails-core"
 def baseApiUrl  = "https://api.github.com/repos/${repoOwner}/${repoName}"
+
+if (!githubToken || githubToken == "YOUR_PERSONAL_ACCESS_TOKEN") {
+    throw new IllegalStateException(
+        "GitHub token is required. Set the GITHUB_TOKEN environment variable or the -Dgithub.token system property."
+    )
+}
 
 def tableData = """
 | origin/1.1.x | 2009-11-26 | RELEASE |
@@ -54,27 +58,43 @@ def tableData = """
 | origin/5.4.x | 2024-09-11 | RELEASE |
 | origin/6.2.x | 2025-01-03 | RELEASE |
 | origin/gh-pages | 2025-01-07 | RELEASE |
+| origin/7.0.x-hibernate6 | 2025-10-15 | RELEASE |
+| origin/7.0.x-binding-error-14947-15147 | 2025-10-21 | RELEASE |
+| origin/7.1.x-hibernate6 | 2025-12-03 | RELEASE |
 | origin/7.1.x | 2026-02-27 | RELEASE |
 | origin/8.0.x | 2026-02-28 | RELEASE |
+| origin/8.0.x-hibernate7 | 2026-03-01 | RELEASE |
 | origin/7.0.x | 2026-03-04 | RELEASE |
-| origin/main | 2026-03-04 | RELEASE |
+| origin | 2026-03-04 | RELEASE |
+| origin/8.0.x-hibernate7-dev | 2026-03-05 | RELEASE |
 """
+
+def failedBranches = []
 
 tableData.eachLine { line ->
     if (!line.contains("|") || line.contains("---") || line.contains("Branch")) return null
 
-    def parts = line.split("\\|").collect { it.trim() }
-    if (parts.size() < 4) return null
+    def parts = line.tokenize('|').collect { it.trim() }
+    if (parts.size() < 3) return null
 
-    def branch = parts[1].replace("origin/", "")
-    def type   = parts[3]
+    def branch = parts[0].replace("origin/", "")
+    def type   = parts[2]
 
     if (type == "RELEASE") {
-        protectBranch(baseApiUrl, githubToken, branch)
+        try {
+            protectBranch(baseApiUrl, githubToken, branch)
+        } catch (Exception e) {
+            println "CRITICAL ERROR processing ${branch}: ${e.message}"
+            failedBranches << branch
+        }
     } else {
         println "SKIPPING [${type}]: ${branch}"
     }
     return null
+}
+
+if (failedBranches) {
+    throw new RuntimeException("Failed to protect the following branches: ${failedBranches.join(', ')}. Check logs for details.")
 }
 
 /**
@@ -121,13 +141,9 @@ def sendRequest(url, token, method, body) {
         if (conn.responseCode in [200, 201, 204]) {
             println "SUCCESS: ${conn.responseCode}"
         } else {
-            def errorText = conn.errorStream?.text
-            println "FAILED: ${conn.responseCode} - ${errorText}"
-            throw new IllegalStateException("Request to ${url} failed with HTTP ${conn.responseCode}: ${errorText}")
+            def errorText = conn.errorStream?.text ?: "No error stream available"
+            throw new RuntimeException("HTTP ${conn.responseCode} - ${errorText}")
         }
-    } catch (Exception e) {
-        println "ERROR: ${e.message}"
-        throw e
     } finally {
         conn?.disconnect()
     }

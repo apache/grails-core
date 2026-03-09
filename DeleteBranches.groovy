@@ -151,6 +151,8 @@ def tableData = """
 | origin/fix/groovy-joint-ci-stability | 2026-03-03 | MERGE |
 """
 
+def failedBranches = []
+
 tableData.eachLine { line ->
     if (!line.contains("|") || line.contains("---") || line.contains("Branch")) return null
 
@@ -161,11 +163,20 @@ tableData.eachLine { line ->
     def type   = parts[2]
 
     if (type == "MERGE" || type == "CLOSED") {
-        deleteBranch(baseApiUrl, githubToken, branch)
+        try {
+            deleteBranch(baseApiUrl, githubToken, branch)
+        } catch (Exception e) {
+            println "CRITICAL ERROR processing ${branch}: ${e.message}"
+            failedBranches << branch
+        }
     } else {
         println "SKIPPING [${type}]: ${branch}"
     }
     return null
+}
+
+if (failedBranches) {
+    throw new RuntimeException("Failed to delete the following branches: ${failedBranches.join(', ')}. Check logs for details.")
 }
 
 /**
@@ -195,10 +206,9 @@ def sendRequest(url, token, method, body) {
         if (conn.responseCode in [200, 201, 204]) {
             println "SUCCESS: ${conn.responseCode}"
         } else {
-            println "FAILED: ${conn.responseCode} - ${conn.errorStream?.text}"
+            def errorText = conn.errorStream?.text ?: "No error stream available"
+            throw new RuntimeException("HTTP ${conn.responseCode} - ${errorText}")
         }
-    } catch (Exception e) {
-        println "ERROR: ${e.message}"
     } finally {
         conn?.disconnect()
     }
