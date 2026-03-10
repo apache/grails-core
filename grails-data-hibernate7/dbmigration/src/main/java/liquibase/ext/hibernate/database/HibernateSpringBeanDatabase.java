@@ -130,14 +130,10 @@ public class HibernateSpringBeanDatabase extends HibernateDatabase {
                         try {
                             Scope.getCurrentScope().getLog(getClass()).info("Found mappingLocation " + mappingLocation);
                             Resource[] resources = resourcePatternResolver.getResources(mappingLocation);
-                            if (resources != null) {
-                                for (Resource resource : resources) {
-                                    URL url = resource.getURL();
-                                    if (url != null) {
-                                        Scope.getCurrentScope().getLog(getClass()).info("Adding resource  " + url);
-                                        sources.addURL(url);
-                                    }
-                                }
+                            for (Resource resource : resources) {
+                                URL url = resource.getURL();
+                                Scope.getCurrentScope().getLog(getClass()).info("Adding resource  " + url);
+                                sources.addURL(url);
                             }
                         } catch (IOException e) {
                             throw new RuntimeException(e);
@@ -162,17 +158,13 @@ public class HibernateSpringBeanDatabase extends HibernateDatabase {
     }
 
     private Class<?> findClass(String className) {
-        return findClass(className, Object.class);
-    }
-
-    private <T> Class<? extends T> findClass(String className, Class<T> superClass) {
         try {
             Class<?> newClass = Class.forName(className);
-            if (superClass.isAssignableFrom(newClass)) {
-                return newClass.asSubclass(superClass);
+            if (Object.class.isAssignableFrom(newClass)) {
+                return newClass.asSubclass(Object.class);
             } else {
                 throw new IllegalStateException("The provided class '" + className + "' is not assignable from the '"
-                        + superClass.getName() + "' superclass.");
+                        + Object.class.getName() + "' superclass.");
             }
         } catch (ClassNotFoundException e) {
             throw new IllegalStateException(
