@@ -5,7 +5,6 @@ import java.util.Map;
 import jakarta.persistence.spi.PersistenceUnitInfo;
 
 import liquibase.database.DatabaseConnection;
-import liquibase.exception.DatabaseException;
 import liquibase.ext.hibernate.database.connection.HibernateDriver;
 import org.hibernate.jpa.boot.internal.EntityManagerFactoryBuilderImpl;
 import org.hibernate.jpa.boot.spi.Bootstrap;
@@ -19,7 +18,7 @@ import org.springframework.orm.jpa.persistenceunit.DefaultPersistenceUnitManager
 public class JpaPersistenceDatabase extends HibernateEjb3Database {
 
     @Override
-    public boolean isCorrectDatabaseImplementation(DatabaseConnection conn) throws DatabaseException {
+    public boolean isCorrectDatabaseImplementation(DatabaseConnection conn) {
         return conn.getURL().startsWith("jpa:persistence:");
     }
 
@@ -52,10 +51,8 @@ public class JpaPersistenceDatabase extends HibernateEjb3Database {
         internalPersistenceUnitManager.preparePersistenceUnitInfos();
         PersistenceUnitInfo persistenceUnitInfo = internalPersistenceUnitManager.obtainDefaultPersistenceUnitInfo();
 
-        EntityManagerFactoryBuilderImpl builder =
-                (EntityManagerFactoryBuilderImpl) Bootstrap.getEntityManagerFactoryBuilder(
-                        persistenceUnitInfo,
-                        Map.of(HibernateDatabase.HIBERNATE_TEMP_USE_JDBC_METADATA_DEFAULTS, Boolean.FALSE.toString()));
-        return builder;
+        return (EntityManagerFactoryBuilderImpl) Bootstrap.getEntityManagerFactoryBuilder(
+                persistenceUnitInfo,
+                Map.of(HibernateDatabase.HIBERNATE_TEMP_USE_JDBC_METADATA_DEFAULTS, Boolean.FALSE.toString()));
     }
 }

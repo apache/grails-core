@@ -17,7 +17,7 @@ public class HibernateClassicDatabase extends HibernateDatabase {
 
     protected Configuration configuration;
 
-    public boolean isCorrectDatabaseImplementation(DatabaseConnection conn) throws DatabaseException {
+    public boolean isCorrectDatabaseImplementation(DatabaseConnection conn)  {
         return conn.getURL().startsWith("hibernate:classic:");
     }
 
@@ -39,7 +39,7 @@ public class HibernateClassicDatabase extends HibernateDatabase {
     }
 
     @Override
-    protected void configureSources(MetadataSources sources) throws DatabaseException {
+    protected void configureSources(MetadataSources sources)  {
         Configuration config = new Configuration(sources);
         config.configure(getHibernateConnection().getPath());
 

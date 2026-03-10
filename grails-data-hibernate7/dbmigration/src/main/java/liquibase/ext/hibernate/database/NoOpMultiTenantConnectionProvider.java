@@ -21,24 +21,24 @@ class NoOpMultiTenantConnectionProvider implements MultiTenantConnectionProvider
     }
 
     @Override
-    public Connection getAnyConnection() throws SQLException {
+    public Connection getAnyConnection() {
         return null;
     }
 
     @Override
-    public void releaseAnyConnection(Connection connection) throws SQLException {}
+    public void releaseAnyConnection(Connection connection) {}
 
-    public Connection getConnection(String s) throws SQLException {
+    public Connection getConnection(String s) {
         return null;
     }
 
-    public void releaseConnection(String s, Connection connection) throws SQLException {}
+    public void releaseConnection(String s, Connection connection) {}
 
-    public Connection getConnection(Object tenantIdentifier) throws SQLException {
+    public Connection getConnection(Object tenantIdentifier) {
         return null;
     }
 
-    public void releaseConnection(Object tenantIdentifier, Connection connection) throws SQLException {}
+    public void releaseConnection(Object tenantIdentifier, Connection connection) {}
 
     @Override
     public boolean supportsAggressiveRelease() {

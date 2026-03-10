@@ -106,7 +106,7 @@ public abstract class HibernateDatabase extends AbstractJdbcDatabase {
         DatabaseConnection originalConnection = getConnection();
         if (originalConnection instanceof liquibase.database.jvm.JdbcConnection) {
             java.sql.Connection underlyingConnection =
-                    ((liquibase.database.jvm.JdbcConnection) originalConnection).getUnderlyingConnection();
+                    originalConnection.getUnderlyingConnection();
             if (underlyingConnection instanceof HibernateConnection) {
                 return (HibernateConnection) underlyingConnection;
             } else {
@@ -347,7 +347,7 @@ public abstract class HibernateDatabase extends AbstractJdbcDatabase {
     }
 
     @Override
-    protected String getConnectionCatalogName() throws DatabaseException {
+    protected String getConnectionCatalogName() {
         return getDefaultCatalogName();
     }
 
@@ -367,7 +367,7 @@ public abstract class HibernateDatabase extends AbstractJdbcDatabase {
     }
 
     @Override
-    public boolean isSafeToRunUpdate() throws DatabaseException {
+    public boolean isSafeToRunUpdate() {
         return true;
     }
 
@@ -376,13 +376,7 @@ public abstract class HibernateDatabase extends AbstractJdbcDatabase {
         return false;
     }
 
-    @Override
-    public boolean supportsSchemas() {
-        return true;
-    }
 
-    @Override
-    public boolean supportsCatalogs() {
-        return true;
-    }
+
+
 }

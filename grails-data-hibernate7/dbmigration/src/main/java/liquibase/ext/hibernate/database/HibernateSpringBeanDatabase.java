@@ -34,7 +34,7 @@ public class HibernateSpringBeanDatabase extends HibernateDatabase {
     private BeanDefinition beanDefinition;
     private ManagedProperties beanDefinitionProperties;
 
-    public boolean isCorrectDatabaseImplementation(DatabaseConnection conn) throws DatabaseException {
+    public boolean isCorrectDatabaseImplementation(DatabaseConnection conn) {
         return conn.getURL().startsWith("hibernate:spring:");
     }
 

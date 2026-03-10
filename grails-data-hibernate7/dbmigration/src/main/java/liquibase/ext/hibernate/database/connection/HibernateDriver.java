@@ -15,15 +15,15 @@ public class HibernateDriver implements Driver, LiquibaseExtDriver {
 
     private ResourceAccessor resourceAccessor;
 
-    public Connection connect(String url, Properties info) throws SQLException {
+    public Connection connect(String url, Properties info)  {
         return new HibernateConnection(url, resourceAccessor);
     }
 
-    public boolean acceptsURL(String url) throws SQLException {
+    public boolean acceptsURL(String url)  {
         return url.startsWith("hibernate:");
     }
 
-    public DriverPropertyInfo[] getPropertyInfo(String url, Properties info) throws SQLException {
+    public DriverPropertyInfo[] getPropertyInfo(String url, Properties info)  {
         return new DriverPropertyInfo[0];
     }
 

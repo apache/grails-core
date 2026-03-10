@@ -151,7 +151,7 @@ public class ColumnSnapshotGenerator extends HibernateSnapshotGenerator {
                 if (hibernatePrimaryKey != null) {
                     boolean isPrimaryKeyColumn = false;
                     for (org.hibernate.mapping.Column pkColumn :
-                            (List<org.hibernate.mapping.Column>) hibernatePrimaryKey.getColumns()) {
+                            hibernatePrimaryKey.getColumns()) {
                         if (pkColumn.getName().equalsIgnoreCase(hibernateColumn.getName())) {
                             isPrimaryKeyColumn = true;
                             break;

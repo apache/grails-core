@@ -10,7 +10,6 @@ import jakarta.persistence.spi.PersistenceUnitInfo;
 
 import liquibase.Scope;
 import liquibase.database.DatabaseConnection;
-import liquibase.exception.DatabaseException;
 import liquibase.ext.hibernate.database.connection.HibernateConnection;
 import org.hibernate.bytecode.enhance.spi.EnhancementContext;
 import org.hibernate.cfg.AvailableSettings;
@@ -32,7 +31,7 @@ import org.springframework.orm.jpa.vendor.HibernateJpaVendorAdapter;
 public class HibernateSpringPackageDatabase extends JpaPersistenceDatabase {
 
     @Override
-    public boolean isCorrectDatabaseImplementation(DatabaseConnection conn) throws DatabaseException {
+    public boolean isCorrectDatabaseImplementation(DatabaseConnection conn) {
         return conn.getURL().startsWith("hibernate:spring:") && !isXmlFile(conn);
     }
 
@@ -49,7 +48,7 @@ public class HibernateSpringPackageDatabase extends JpaPersistenceDatabase {
         HibernateConnection hibernateConnection;
         if (connection instanceof liquibase.database.jvm.JdbcConnection) {
             Object underlyingConnection =
-                    ((liquibase.database.jvm.JdbcConnection) connection).getUnderlyingConnection();
+                    connection.getUnderlyingConnection();
             if (underlyingConnection instanceof HibernateConnection) {
                 hibernateConnection = (HibernateConnection) underlyingConnection;
             } else {
@@ -67,11 +66,7 @@ public class HibernateSpringPackageDatabase extends JpaPersistenceDatabase {
         }
         ClassPathResource resource = new ClassPathResource(path);
         try {
-            if (resource.exists() && !resource.getFile().isDirectory()) {
-                return true;
-            } else {
-                return false;
-            }
+            return resource.exists() && !resource.getFile().isDirectory();
         } catch (IOException e) {
             return false;
         }

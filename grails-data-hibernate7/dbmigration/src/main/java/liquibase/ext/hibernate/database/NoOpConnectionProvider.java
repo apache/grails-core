@@ -16,7 +16,7 @@ class NoOpConnectionProvider implements ConnectionProvider {
     }
 
     @Override
-    public void closeConnection(Connection conn) throws SQLException {}
+    public void closeConnection(Connection conn) {}
 
     @Override
     public boolean supportsAggressiveRelease() {
@@ -41,7 +41,7 @@ class NoOpConnectionProvider implements ConnectionProvider {
         return getConnection();
     }
 
-    public void releaseConnection(Object tenantIdentifier, Connection connection) throws SQLException {}
+    public void releaseConnection(Object tenantIdentifier, Connection connection) {}
 
-    public void releaseConnection(String tenantIdentifier, Connection connection) throws SQLException {}
+    public void releaseConnection(String tenantIdentifier, Connection connection) {}
 }

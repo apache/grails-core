@@ -83,10 +83,8 @@ public class HibernateEjb3Database extends HibernateDatabase {
                 AvailableSettings.USE_NATIONALIZED_CHARACTER_DATA,
                 getProperty(AvailableSettings.USE_NATIONALIZED_CHARACTER_DATA));
 
-        final EntityManagerFactoryBuilderImpl builder =
-                (EntityManagerFactoryBuilderImpl) persistenceProvider.getEntityManagerFactoryBuilderOrNull(
-                        getHibernateConnection().getPath(), properties, null);
-        return builder;
+        return (EntityManagerFactoryBuilderImpl) persistenceProvider.getEntityManagerFactoryBuilderOrNull(
+                getHibernateConnection().getPath(), properties, null);
     }
 
     @Override
@@ -117,7 +115,7 @@ public class HibernateEjb3Database extends HibernateDatabase {
      * Adds sources based on what is in the saved entityManagerFactory
      */
     @Override
-    protected void configureSources(MetadataSources sources) throws DatabaseException {
+    protected void configureSources(MetadataSources sources) {
         for (ManagedType<?> managedType : entityManagerFactory.getMetamodel().getManagedTypes()) {
             Class<?> javaType = managedType.getJavaType();
             if (javaType == null) {
