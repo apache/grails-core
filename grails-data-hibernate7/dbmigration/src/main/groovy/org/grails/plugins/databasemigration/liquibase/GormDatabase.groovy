@@ -45,29 +45,27 @@ class GormDatabase extends HibernateDatabase {
 
     private final HibernateDatastore gormDatastore
 
-
-
     GormDatabase(Dialect dialect, HibernateDatastore hibernateDatastore) {
+        super()
         this.dialect = dialect
         this.gormDatastore = hibernateDatastore
-        setConnection(new JdbcConnection(new HibernateConnection('hibernate:gorm', null)))
-    }
-
-    @Override
-    protected String findDialectName() {
-        dialect?.getClass()?.getName()
+        SnapshotControl snapshotControl = new SnapshotControl(this, null, null)
+        GormDatabase database = this
+        OfflineConnection connection = new OfflineConnection('offline:gorm', null) {
+            DatabaseSnapshot getSnapshot(DatabaseObject[] examples) {
+                new JdbcDatabaseSnapshot(examples, database, snapshotControl)
+            }
+        }
+        setConnection(connection)
     }
 
     /**
      * Return the hibernate {@link Metadata} used by this database.
      */
+
     @Override
     Metadata getMetadata() {
         gormDatastore.getMetadata()
-    }
-
-    DatabaseConnection getDatabaseConnection() {
-        return super.getConnection()
     }
 
     HibernateDatastore getGormDatastore() {
