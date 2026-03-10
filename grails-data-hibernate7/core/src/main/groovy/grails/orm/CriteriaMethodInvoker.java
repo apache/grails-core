@@ -18,8 +18,9 @@
  */
 package grails.orm;
 
-import grails.gorm.DetachedCriteria;
-import grails.gorm.PagedResultList;
+import java.beans.PropertyDescriptor;
+import java.util.Collection;
+import java.util.Map;
 
 import groovy.lang.Closure;
 import groovy.lang.MetaMethod;
@@ -29,15 +30,13 @@ import jakarta.persistence.metamodel.Attribute;
 import jakarta.persistence.metamodel.EntityType;
 import jakarta.persistence.metamodel.Metamodel;
 
-import java.beans.PropertyDescriptor;
-import java.util.Collection;
-import java.util.Map;
+import org.springframework.beans.BeanUtils;
 
+import grails.gorm.DetachedCriteria;
+import grails.gorm.PagedResultList;
 import org.grails.datastore.mapping.query.Query;
 import org.grails.orm.hibernate.query.HibernateQuery;
 import org.grails.orm.hibernate.query.HibernateQueryArgument;
-
-import org.springframework.beans.BeanUtils;
 
 public class CriteriaMethodInvoker {
 
@@ -81,8 +80,7 @@ public class CriteriaMethodInvoker {
             case SCROLL_CALL -> builder.setScroll(true);
             case COUNT_CALL -> builder.setCount(true);
             case LIST_DISTINCT_CALL -> builder.setDistinct(true);
-            default -> {
-            }
+            default -> {}
         }
 
         // Check for pagination params
@@ -234,13 +232,8 @@ public class CriteriaMethodInvoker {
                     return builder.singleResult();
                 case IS_NULL, IS_NOT_NULL, IS_EMPTY, IS_NOT_EMPTY:
                     if (!(args[0] instanceof String)) {
-                        builder.throwRuntimeException(
-                                new IllegalArgumentException(
-                                        "call to ["
-                                                + name
-                                                + "] with value ["
-                                                + args[0]
-                                                + "] requires a String value."));
+                        builder.throwRuntimeException(new IllegalArgumentException(
+                                "call to [" + name + "] with value [" + args[0] + "] requires a String value."));
                     }
                     final String value = (String) args[0];
                     switch (method) {
@@ -248,8 +241,7 @@ public class CriteriaMethodInvoker {
                         case IS_NOT_NULL -> builder.getHibernateQuery().isNotNull(value);
                         case IS_EMPTY -> builder.getHibernateQuery().isEmpty(value);
                         case IS_NOT_EMPTY -> builder.getHibernateQuery().isNotEmpty(value);
-                        default -> {
-                        }
+                        default -> {}
                     }
                     return name;
                 default:
@@ -339,18 +331,16 @@ public class CriteriaMethodInvoker {
 
     private boolean isCriteriaConstructionMethod(CriteriaMethods method, Object... args) {
         return (method == CriteriaMethods.LIST_CALL
-                && args.length == 2
-                && args[0] instanceof Map<?, ?>
-                && args[1] instanceof Closure)
+                        && args.length == 2
+                        && args[0] instanceof Map<?, ?>
+                        && args[1] instanceof Closure)
                 || (method == CriteriaMethods.ROOT_CALL
-                || method == CriteriaMethods.ROOT_DO_CALL
-                || method == CriteriaMethods.LIST_CALL
-                || method == CriteriaMethods.LIST_DISTINCT_CALL
-                || method == CriteriaMethods.GET_CALL
-                || method == CriteriaMethods.COUNT_CALL
-                || (method == CriteriaMethods.SCROLL_CALL
-                && args.length == 1
-                && args[0] instanceof Closure));
+                        || method == CriteriaMethods.ROOT_DO_CALL
+                        || method == CriteriaMethods.LIST_CALL
+                        || method == CriteriaMethods.LIST_DISTINCT_CALL
+                        || method == CriteriaMethods.GET_CALL
+                        || method == CriteriaMethods.COUNT_CALL
+                        || (method == CriteriaMethods.SCROLL_CALL && args.length == 1 && args[0] instanceof Closure));
     }
 
     private void invokeClosureNode(Object args) {

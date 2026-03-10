@@ -19,6 +19,7 @@
 package org.grails.orm.hibernate.cfg.domainbinding.hibernate;
 
 import java.beans.PropertyDescriptor;
+
 import org.grails.datastore.mapping.engine.types.CustomTypeMarshaller;
 import org.grails.datastore.mapping.model.MappingContext;
 import org.grails.datastore.mapping.model.PersistentEntity;
@@ -28,13 +29,12 @@ import org.grails.datastore.mapping.model.PersistentEntity;
  * CustomTypeMarshaller}. Created by {@link HibernateMappingFactory#createCustom} when {@code
  * pd.propertyType.isEnum()} is true and a matching marshaller is found.
  */
-public class HibernateCustomEnumProperty extends HibernateCustomProperty
-    implements HibernateEnumProperty {
-  public HibernateCustomEnumProperty(
-      PersistentEntity entity,
-      MappingContext context,
-      PropertyDescriptor property,
-      CustomTypeMarshaller<?, ?, ?> customTypeMarshaller) {
-    super(entity, context, property, customTypeMarshaller);
-  }
+public class HibernateCustomEnumProperty extends HibernateCustomProperty implements HibernateEnumProperty {
+    public HibernateCustomEnumProperty(
+            PersistentEntity entity,
+            MappingContext context,
+            PropertyDescriptor property,
+            CustomTypeMarshaller<?, ?, ?> customTypeMarshaller) {
+        super(entity, context, property, customTypeMarshaller);
+    }
 }

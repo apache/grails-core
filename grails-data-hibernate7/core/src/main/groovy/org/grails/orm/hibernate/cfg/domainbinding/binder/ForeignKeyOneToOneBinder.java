@@ -18,13 +18,14 @@
  */
 package org.grails.orm.hibernate.cfg.domainbinding.binder;
 
+import org.hibernate.MappingException;
+import org.hibernate.mapping.Column;
+import org.hibernate.mapping.ManyToOne;
+
 import org.grails.orm.hibernate.cfg.PropertyConfig;
 import org.grails.orm.hibernate.cfg.domainbinding.hibernate.GrailsHibernatePersistentEntity;
 import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernateOneToOneProperty;
 import org.grails.orm.hibernate.cfg.domainbinding.util.SimpleValueColumnFetcher;
-import org.hibernate.MappingException;
-import org.hibernate.mapping.Column;
-import org.hibernate.mapping.ManyToOne;
 
 /**
  * Binds a {@link HibernateOneToOneProperty} whose foreign key resides on this side as a Hibernate
@@ -36,40 +37,39 @@ import org.hibernate.mapping.ManyToOne;
  */
 public class ForeignKeyOneToOneBinder {
 
-  private final ManyToOneBinder manyToOneBinder;
-  private final SimpleValueColumnFetcher simpleValueColumnFetcher;
+    private final ManyToOneBinder manyToOneBinder;
+    private final SimpleValueColumnFetcher simpleValueColumnFetcher;
 
-  public ForeignKeyOneToOneBinder(
-      ManyToOneBinder manyToOneBinder, SimpleValueColumnFetcher simpleValueColumnFetcher) {
-    this.manyToOneBinder = manyToOneBinder;
-    this.simpleValueColumnFetcher = simpleValueColumnFetcher;
-  }
+    public ForeignKeyOneToOneBinder(
+            ManyToOneBinder manyToOneBinder, SimpleValueColumnFetcher simpleValueColumnFetcher) {
+        this.manyToOneBinder = manyToOneBinder;
+        this.simpleValueColumnFetcher = simpleValueColumnFetcher;
+    }
 
-  /**
-   * Binds the one-to-one property as a {@link ManyToOne} value and applies unique-key constraints.
-   */
-  public ManyToOne bind(
-      HibernateOneToOneProperty property, org.hibernate.mapping.Table table, String path) {
-    GrailsHibernatePersistentEntity refDomainClass = property.getHibernateAssociatedEntity();
-    ManyToOne manyToOne = manyToOneBinder.doBind(property, refDomainClass, table, path);
-    if (refDomainClass.getHibernateCompositeIdentity().isEmpty()) {
-      bindUniqueKey(property, manyToOne);
+    /**
+     * Binds the one-to-one property as a {@link ManyToOne} value and applies unique-key constraints.
+     */
+    public ManyToOne bind(HibernateOneToOneProperty property, org.hibernate.mapping.Table table, String path) {
+        GrailsHibernatePersistentEntity refDomainClass = property.getHibernateAssociatedEntity();
+        ManyToOne manyToOne = manyToOneBinder.doBind(property, refDomainClass, table, path);
+        if (refDomainClass.getHibernateCompositeIdentity().isEmpty()) {
+            bindUniqueKey(property, manyToOne);
+        }
+        return manyToOne;
     }
-    return manyToOne;
-  }
 
-  private void bindUniqueKey(HibernateOneToOneProperty property, ManyToOne manyToOne) {
-    PropertyConfig config = property.getMappedForm();
-    manyToOne.setAlternateUniqueKey(true);
-    Column c = simpleValueColumnFetcher.getColumnForSimpleValue(manyToOne);
-    if (c == null) {
-      throw new MappingException("There is no column for property [" + property.getName() + "]");
+    private void bindUniqueKey(HibernateOneToOneProperty property, ManyToOne manyToOne) {
+        PropertyConfig config = property.getMappedForm();
+        manyToOne.setAlternateUniqueKey(true);
+        Column c = simpleValueColumnFetcher.getColumnForSimpleValue(manyToOne);
+        if (c == null) {
+            throw new MappingException("There is no column for property [" + property.getName() + "]");
+        }
+        if (!config.isUniqueWithinGroup()) {
+            c.setUnique(config.isUnique());
+        } else if (property.isBidirectional()
+                && property.getHibernateInverseSide().isValidHibernateOneToOne()) {
+            c.setUnique(true);
+        }
     }
-    if (!config.isUniqueWithinGroup()) {
-      c.setUnique(config.isUnique());
-    } else if (property.isBidirectional()
-        && property.getHibernateInverseSide().isValidHibernateOneToOne()) {
-      c.setUnique(true);
-    }
-  }
 }

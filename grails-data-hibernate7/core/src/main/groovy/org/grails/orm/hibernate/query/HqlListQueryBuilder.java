@@ -21,6 +21,7 @@ package org.grails.orm.hibernate.query;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
+
 import org.grails.datastore.gorm.finders.DynamicFinder;
 import org.grails.datastore.mapping.model.PersistentEntity;
 import org.grails.datastore.mapping.model.PersistentProperty;
@@ -39,116 +40,119 @@ import org.grails.orm.hibernate.cfg.MappingCacheHolder;
 @SuppressWarnings("PMD.DataflowAnomalyAnalysis")
 public class HqlListQueryBuilder {
 
-  private final PersistentEntity entity;
-  private final Map<?, ?> params;
+    private final PersistentEntity entity;
+    private final Map<?, ?> params;
 
-  public HqlListQueryBuilder(PersistentEntity entity, Map<?, ?> params) {
-    this.entity = entity;
-    this.params = params;
-  }
-
-  /** Builds the SELECT HQL for the list query (no count). */
-  public String buildListHql() {
-    String alias = "e";
-    StringBuilder hql = new StringBuilder("from ").append(entity.getName()).append(" ").append(alias);
-    appendJoinFetch(hql, alias);
-    appendOrderBy(hql, alias);
-    return hql.toString();
-  }
-
-  /** Builds the scalar count HQL for {@link PagedResultList}. */
-  String buildCountHql() {
-    return "select count(distinct e) from " + entity.getName() + " e";
-  }
-
-  // ─── JOIN FETCH ──────────────────────────────────────────────────────────
-
-  private void appendJoinFetch(StringBuilder hql, String alias) {
-    Object fetchObj = params.get(HibernateQueryArgument.FETCH.value());
-    if (!(fetchObj instanceof Map<?, ?> fetchMap)) return;
-    for (Object key : fetchMap.keySet()) {
-      String assocName = key.toString();
-      Object mode = fetchMap.get(key);
-      if (isJoinFetch(mode)) {
-        hql.append(" join fetch ").append(alias).append(".").append(assocName);
-      }
-    }
-  }
-
-  private static boolean isJoinFetch(Object mode) {
-    if (mode == null) return false;
-    String s = mode.toString();
-    return s.equalsIgnoreCase("join") || s.equalsIgnoreCase("eager");
-  }
-
-  // ─── ORDER BY ────────────────────────────────────────────────────────────
-
-  private void appendOrderBy(StringBuilder hql, String alias) {
-    List<String> clauses = new ArrayList<>();
-    Object sortObj = params.get(HibernateQueryArgument.SORT.value());
-    boolean ignoreCase = isIgnoreCase();
-
-    if (sortObj instanceof Map<?, ?> sortMap) {
-      for (Object sortKey : sortMap.keySet()) {
-        String prop = sortKey.toString();
-        String dir = direction((String) sortMap.get(sortKey));
-        clauses.add(orderClause(alias, prop, dir, ignoreCase && isStringProp(prop)));
-      }
-    } else if (sortObj instanceof String sort) {
-      String dir = direction((String) params.get(HibernateQueryArgument.ORDER.value()));
-      clauses.add(orderClause(alias, sort, dir, ignoreCase && isStringProp(sort)));
-    } else {
-      // fall back to default mapping sort
-      Mapping m = MappingCacheHolder.getInstance().getMapping(entity.getJavaClass());
-      if (m != null) {
-        m.getSort().getNamesAndDirections().forEach((prop, dir) ->
-            clauses.add(orderClause(alias, (String) prop, direction((String) dir), isStringProp((String) prop))));
-      }
+    public HqlListQueryBuilder(PersistentEntity entity, Map<?, ?> params) {
+        this.entity = entity;
+        this.params = params;
     }
 
-    if (!clauses.isEmpty()) {
-      hql.append(" order by ").append(String.join(", ", clauses));
+    /** Builds the SELECT HQL for the list query (no count). */
+    public String buildListHql() {
+        String alias = "e";
+        StringBuilder hql =
+                new StringBuilder("from ").append(entity.getName()).append(" ").append(alias);
+        appendJoinFetch(hql, alias);
+        appendOrderBy(hql, alias);
+        return hql.toString();
     }
-  }
 
-  private String orderClause(String alias, String prop, String dir, boolean upper) {
-    String path = alias + "." + prop;
-    return upper ? "upper(" + path + ") " + dir : path + " " + dir;
-  }
+    /** Builds the scalar count HQL for {@link PagedResultList}. */
+    String buildCountHql() {
+        return "select count(distinct e) from " + entity.getName() + " e";
+    }
 
-  private static String direction(String raw) {
-    return HibernateQueryArgument.ORDER_DESC.value().equalsIgnoreCase(raw)
-        ? HibernateQueryArgument.ORDER_DESC.value()
-        : HibernateQueryArgument.ORDER_ASC.value();
-  }
+    // ─── JOIN FETCH ──────────────────────────────────────────────────────────
 
-  private boolean isIgnoreCase() {
-    Object ic = params.get(HibernateQueryArgument.IGNORE_CASE.value());
-    return !(ic instanceof Boolean b) || b;
-  }
+    private void appendJoinFetch(StringBuilder hql, String alias) {
+        Object fetchObj = params.get(HibernateQueryArgument.FETCH.value());
+        if (!(fetchObj instanceof Map<?, ?> fetchMap)) return;
+        for (Object key : fetchMap.keySet()) {
+            String assocName = key.toString();
+            Object mode = fetchMap.get(key);
+            if (isJoinFetch(mode)) {
+                hql.append(" join fetch ").append(alias).append(".").append(assocName);
+            }
+        }
+    }
 
-  private boolean isStringProp(String name) {
-    // handle nested path: only check the leaf property's type
-    int dot = name.lastIndexOf('.');
-    String leaf = dot == -1 ? name : name.substring(dot + 1);
-    String head = dot == -1 ? null : name.substring(0, dot);
-    PersistentEntity owner = resolveOwner(head);
-    if (owner == null) return false;
-    PersistentProperty<?> prop = owner.getPropertyByName(leaf);
-    return prop != null && prop.getType() == String.class;
-  }
+    private static boolean isJoinFetch(Object mode) {
+        if (mode == null) return false;
+        String s = mode.toString();
+        return s.equalsIgnoreCase("join") || s.equalsIgnoreCase("eager");
+    }
 
-  private PersistentEntity resolveOwner(String path) {
-    if (path == null) return entity;
-    PersistentProperty<?> prop = entity.getPropertyByName(path);
-    if (prop instanceof Embedded<?> emb) return emb.getAssociatedEntity();
-    if (prop instanceof Association<?> assoc) return assoc.getAssociatedEntity();
-    return null;
-  }
+    // ─── ORDER BY ────────────────────────────────────────────────────────────
 
-  /** Returns true when the params indicate a paged query (i.e. {@code max} is set). */
-  @SuppressWarnings("rawtypes")
-  static boolean isPaged(Map params) {
-    return params.containsKey(DynamicFinder.ARGUMENT_MAX);
-  }
+    private void appendOrderBy(StringBuilder hql, String alias) {
+        List<String> clauses = new ArrayList<>();
+        Object sortObj = params.get(HibernateQueryArgument.SORT.value());
+        boolean ignoreCase = isIgnoreCase();
+
+        if (sortObj instanceof Map<?, ?> sortMap) {
+            for (Object sortKey : sortMap.keySet()) {
+                String prop = sortKey.toString();
+                String dir = direction((String) sortMap.get(sortKey));
+                clauses.add(orderClause(alias, prop, dir, ignoreCase && isStringProp(prop)));
+            }
+        } else if (sortObj instanceof String sort) {
+            String dir = direction((String) params.get(HibernateQueryArgument.ORDER.value()));
+            clauses.add(orderClause(alias, sort, dir, ignoreCase && isStringProp(sort)));
+        } else {
+            // fall back to default mapping sort
+            Mapping m = MappingCacheHolder.getInstance().getMapping(entity.getJavaClass());
+            if (m != null) {
+                m.getSort()
+                        .getNamesAndDirections()
+                        .forEach((prop, dir) -> clauses.add(orderClause(
+                                alias, (String) prop, direction((String) dir), isStringProp((String) prop))));
+            }
+        }
+
+        if (!clauses.isEmpty()) {
+            hql.append(" order by ").append(String.join(", ", clauses));
+        }
+    }
+
+    private String orderClause(String alias, String prop, String dir, boolean upper) {
+        String path = alias + "." + prop;
+        return upper ? "upper(" + path + ") " + dir : path + " " + dir;
+    }
+
+    private static String direction(String raw) {
+        return HibernateQueryArgument.ORDER_DESC.value().equalsIgnoreCase(raw)
+                ? HibernateQueryArgument.ORDER_DESC.value()
+                : HibernateQueryArgument.ORDER_ASC.value();
+    }
+
+    private boolean isIgnoreCase() {
+        Object ic = params.get(HibernateQueryArgument.IGNORE_CASE.value());
+        return !(ic instanceof Boolean b) || b;
+    }
+
+    private boolean isStringProp(String name) {
+        // handle nested path: only check the leaf property's type
+        int dot = name.lastIndexOf('.');
+        String leaf = dot == -1 ? name : name.substring(dot + 1);
+        String head = dot == -1 ? null : name.substring(0, dot);
+        PersistentEntity owner = resolveOwner(head);
+        if (owner == null) return false;
+        PersistentProperty<?> prop = owner.getPropertyByName(leaf);
+        return prop != null && prop.getType() == String.class;
+    }
+
+    private PersistentEntity resolveOwner(String path) {
+        if (path == null) return entity;
+        PersistentProperty<?> prop = entity.getPropertyByName(path);
+        if (prop instanceof Embedded<?> emb) return emb.getAssociatedEntity();
+        if (prop instanceof Association<?> assoc) return assoc.getAssociatedEntity();
+        return null;
+    }
+
+    /** Returns true when the params indicate a paged query (i.e. {@code max} is set). */
+    @SuppressWarnings("rawtypes")
+    static boolean isPaged(Map params) {
+        return params.containsKey(DynamicFinder.ARGUMENT_MAX);
+    }
 }

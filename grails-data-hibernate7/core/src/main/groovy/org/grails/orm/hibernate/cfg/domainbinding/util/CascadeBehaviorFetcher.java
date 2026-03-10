@@ -51,4 +51,55 @@ public class CascadeBehaviorFetcher {
         this.logCascadeMapping = logCascadeMapping;
     }
 
+    /** Creates a new {@link CascadeBehaviorFetcher} instance. */
+    public CascadeBehaviorFetcher() {
+        this(new LogCascadeMapping(LOG));
+    }
+
+    /** Gets the cascade behaviour. */
+    public String getCascadeBehaviour(Association<?> association) {
+        var cascadeStrategy =
+                getDefinedBehavior((HibernatePersistentProperty) association).orElse(getImpliedBehavior(association));
+        logCascadeMapping.logCascadeMapping(association, cascadeStrategy);
+        return cascadeStrategy.getValue();
+    }
+
+    private Optional<CascadeBehavior> getDefinedBehavior(HibernatePersistentProperty grailsProperty) {
+        return Optional.ofNullable(grailsProperty.getMappedForm())
+                .map(PropertyConfig::getCascade)
+                .map(CascadeBehavior::fromString);
+    }
+
+    private CascadeBehavior getImpliedBehavior(Association<?> association) {
+        if (association.getAssociatedEntity() == null) {
+            // NEW BEHAVIOR, FAIL-FAST
+            throw new MappingException("Relationship " + association + " has no associated entity");
+        }
+        if (association instanceof Embedded) {
+            return ALL;
+        }
+        if (association.isHasOne()) {
+            return ALL;
+        } else if (association instanceof HibernateOneToOneProperty) {
+            return association.isOwningSide() ? ALL : SAVE_UPDATE;
+        } else if (association instanceof HibernateOneToManyProperty) {
+            return association.isCorrectlyOwned() ? ALL : SAVE_UPDATE;
+        } else if (association instanceof HibernateManyToManyProperty) {
+            return association.isCorrectlyOwned() || association.isCircular() ? SAVE_UPDATE : NONE;
+        } else if (association instanceof HibernateManyToOneProperty) {
+            if (association.isCorrectlyOwned() && !association.isCircular()) {
+                return ALL;
+            } else if (association.isCompositeIdProperty()) {
+                return ALL;
+            } else {
+                return NONE;
+            }
+        } else if (association instanceof Basic) {
+            return ALL;
+        } else if (Map.class.isAssignableFrom(association.getType())) {
+            return association.isCorrectlyOwned() ? ALL : SAVE_UPDATE;
+        } else {
+            throw new MappingException("Unrecognized association type " + association.getType());
+        }
+    }
 }

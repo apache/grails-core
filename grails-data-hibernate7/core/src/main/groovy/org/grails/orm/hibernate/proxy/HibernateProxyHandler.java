@@ -52,33 +52,27 @@ public class HibernateProxyHandler implements ProxyHandler, ProxyFactory {
     public boolean isInitialized(Object o) {
         if (o == null) return false;
 
-    if (o instanceof HibernateProxy hp) {
-      return !hp.getHibernateLazyInitializer().isUninitialized();
-    }
-    if (o instanceof EntityProxy<?> ep) {
-      return ep.isInitialized();
-    }
-    if (o instanceof LazyInitializable li) {
-      return li.wasInitialized();
+        if (o instanceof HibernateProxy hp) {
+            return !hp.getHibernateLazyInitializer().isUninitialized();
+        }
+        if (o instanceof EntityProxy<?> ep) {
+            return ep.isInitialized();
+        }
+        if (o instanceof LazyInitializable li) {
+            return li.wasInitialized();
+        }
+
+        return Hibernate.isInitialized(o);
     }
 
-    return Hibernate.isInitialized(o);
-  }
-
-  @Override
-  public boolean isInitialized(Object obj, String associationName) {
-    try {
-      Object proxy = ClassPropertyFetcher.getInstancePropertyValue(obj, associationName);
-      return isInitialized(proxy);
-    } catch (RuntimeException e) {
-      return false;
-    }
-  }
-
-  @Override
-  public Object unwrap(Object object) {
-    if (object instanceof EntityProxy<?> ep) {
-      return ep.getTarget();
+    @Override
+    public boolean isInitialized(Object obj, String associationName) {
+        try {
+            Object proxy = ClassPropertyFetcher.getInstancePropertyValue(obj, associationName);
+            return isInitialized(proxy);
+        } catch (RuntimeException e) {
+            return false;
+        }
     }
 
     @Override
@@ -118,13 +112,9 @@ public class HibernateProxyHandler implements ProxyHandler, ProxyFactory {
         return null;
     }
 
-    return Hibernate.unproxy(object);
-  }
-
-  @Override
-  public Serializable getIdentifier(Object o) {
-    if (o instanceof EntityProxy<?> ep) {
-      return ep.getProxyKey();
+    @Override
+    public Class<?> getProxiedClass(Object o) {
+        return HibernateProxyHelper.getClassWithoutInitializingProxy(o);
     }
 
     @Override
@@ -150,27 +140,17 @@ public class HibernateProxyHandler implements ProxyHandler, ProxyFactory {
         }
     }
 
-    return null;
-  }
-
-  @Override
-  public Class<?> getProxiedClass(Object o) {
-    return HibernateProxyHelper.getClassWithoutInitializingProxy(o);
-  }
-
-  @Override
-  public boolean isProxy(Object o) {
-    return getProxyInstanceMetaClass(o) != null
-        || o instanceof EntityProxy
-        || o instanceof HibernateProxy
-        || o instanceof PersistentCollection;
-  }
-
-  @Override
-  public void initialize(Object o) {
-    if (o instanceof EntityProxy<?> ep) {
-      ep.initialize();
-      return;
+    private ProxyInstanceMetaClass getProxyInstanceMetaClass(Object o) {
+        if (o instanceof GroovyObject go) {
+            MetaClass mc = go.getMetaClass();
+            if (mc instanceof HandleMetaClass hmc) {
+                mc = hmc.getAdaptee();
+            }
+            if (mc instanceof ProxyInstanceMetaClass pmc) {
+                return pmc;
+            }
+        }
+        return null;
     }
 
     @Override

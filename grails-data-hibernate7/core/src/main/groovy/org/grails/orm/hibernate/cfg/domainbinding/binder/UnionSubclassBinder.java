@@ -41,59 +41,55 @@ public class UnionSubclassBinder {
 
     private static final Logger LOG = LoggerFactory.getLogger(UnionSubclassBinder.class);
 
-  private final MetadataBuildingContext metadataBuildingContext;
-  private final PersistentEntityNamingStrategy namingStrategy;
-  private final ClassBinder classBinder;
-  private final InFlightMetadataCollector mappings;
+    private final MetadataBuildingContext metadataBuildingContext;
+    private final PersistentEntityNamingStrategy namingStrategy;
+    private final ClassBinder classBinder;
+    private final InFlightMetadataCollector mappings;
 
-  public UnionSubclassBinder(
-      MetadataBuildingContext metadataBuildingContext,
-      PersistentEntityNamingStrategy namingStrategy,
-      ClassBinder classBinder,
-      InFlightMetadataCollector mappings) {
-    this.metadataBuildingContext = metadataBuildingContext;
-    this.namingStrategy = namingStrategy;
-    this.classBinder = classBinder;
-    this.mappings = mappings;
-  }
-
-  /**
-   * Binds a union sub-class mapping using table-per-concrete-class
-   *
-   * @param subClass The Grails sub class
-   * @param parent The Hibernate Parent PersistentClass object
-   * @return The created UnionSubclass
-   */
-  public UnionSubclass bindUnionSubclass(
-      @Nonnull GrailsHibernatePersistentEntity subClass,
-      PersistentClass parent)
-      throws MappingException {
-    UnionSubclass unionSubclass = new UnionSubclass(parent, metadataBuildingContext);
-    classBinder.bindClass(subClass, unionSubclass);
-
-    String schema = subClass.getSchema(mappings);
-    String catalog = subClass.getCatalog(mappings);
-
-    Table denormalizedSuperTable = unionSubclass.getSuperclass().getTable();
-    Table mytable =
-        mappings.addDenormalizedTable(
-            schema,
-            catalog,
-            subClass.getTableName(namingStrategy),
-            Boolean.TRUE.equals(unionSubclass.isAbstract()),
-            null,
-            denormalizedSuperTable,
-            metadataBuildingContext);
-    unionSubclass.setTable(mytable);
-    unionSubclass.setClassName(subClass.getName());
-
-    if (LOG.isInfoEnabled()) {
-      LOG.info(
-          "Mapping union-subclass: "
-              + unionSubclass.getEntityName()
-              + " -> "
-              + unionSubclass.getTable().getName());
+    public UnionSubclassBinder(
+            MetadataBuildingContext metadataBuildingContext,
+            PersistentEntityNamingStrategy namingStrategy,
+            ClassBinder classBinder,
+            InFlightMetadataCollector mappings) {
+        this.metadataBuildingContext = metadataBuildingContext;
+        this.namingStrategy = namingStrategy;
+        this.classBinder = classBinder;
+        this.mappings = mappings;
     }
-    return unionSubclass;
-  }
+
+    /**
+     * Binds a union sub-class mapping using table-per-concrete-class
+     *
+     * @param subClass The Grails sub class
+     * @param parent The Hibernate Parent PersistentClass object
+     * @return The created UnionSubclass
+     */
+    public UnionSubclass bindUnionSubclass(@Nonnull GrailsHibernatePersistentEntity subClass, PersistentClass parent)
+            throws MappingException {
+        UnionSubclass unionSubclass = new UnionSubclass(parent, metadataBuildingContext);
+        classBinder.bindClass(subClass, unionSubclass);
+
+        String schema = subClass.getSchema(mappings);
+        String catalog = subClass.getCatalog(mappings);
+
+        Table denormalizedSuperTable = unionSubclass.getSuperclass().getTable();
+        Table mytable = mappings.addDenormalizedTable(
+                schema,
+                catalog,
+                subClass.getTableName(namingStrategy),
+                Boolean.TRUE.equals(unionSubclass.isAbstract()),
+                null,
+                denormalizedSuperTable,
+                metadataBuildingContext);
+        unionSubclass.setTable(mytable);
+        unionSubclass.setClassName(subClass.getName());
+
+        if (LOG.isInfoEnabled()) {
+            LOG.info("Mapping union-subclass: "
+                    + unionSubclass.getEntityName()
+                    + " -> "
+                    + unionSubclass.getTable().getName());
+        }
+        return unionSubclass;
+    }
 }

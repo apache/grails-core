@@ -20,6 +20,7 @@ package org.grails.orm.hibernate.query;
 
 import java.util.Collection;
 import java.util.List;
+
 import org.hibernate.query.MutationQuery;
 import org.hibernate.query.QueryFlushMode;
 
@@ -33,67 +34,67 @@ import org.hibernate.query.QueryFlushMode;
  */
 final class MutationQueryDelegate implements HqlQueryDelegate {
 
-  private final MutationQuery mutationQuery;
+    private final MutationQuery mutationQuery;
 
-  MutationQueryDelegate(MutationQuery mutationQuery) {
-    this.mutationQuery = mutationQuery;
-  }
+    MutationQueryDelegate(MutationQuery mutationQuery) {
+        this.mutationQuery = mutationQuery;
+    }
 
-  @Override
-  public void setTimeout(int timeout) {
-    mutationQuery.setTimeout(timeout);
-  }
+    @Override
+    public void setTimeout(int timeout) {
+        mutationQuery.setTimeout(timeout);
+    }
 
-  @Override
-  public void setQueryFlushMode(QueryFlushMode mode) {
-    mutationQuery.setQueryFlushMode(mode);
-  }
+    @Override
+    public void setQueryFlushMode(QueryFlushMode mode) {
+        mutationQuery.setQueryFlushMode(mode);
+    }
 
-  @Override
-  public void setParameter(String name, Object value) {
-    mutationQuery.setParameter(name, value);
-  }
+    @Override
+    public void setParameter(String name, Object value) {
+        mutationQuery.setParameter(name, value);
+    }
 
-  @Override
-  public <T> void setParameter(String name, T value, Class<T> type) {
-    mutationQuery.setParameter(name, value, type);
-  }
+    @Override
+    public <T> void setParameter(String name, T value, Class<T> type) {
+        mutationQuery.setParameter(name, value, type);
+    }
 
-  @Override
-  public void setParameter(int position, Object value) {
-    mutationQuery.setParameter(position, value);
-  }
+    @Override
+    public void setParameter(int position, Object value) {
+        mutationQuery.setParameter(position, value);
+    }
 
-  @Override
-  public <T> void setParameter(int position, T value, Class<T> type) {
-    mutationQuery.setParameter(position, value, type);
-  }
+    @Override
+    public <T> void setParameter(int position, T value, Class<T> type) {
+        mutationQuery.setParameter(position, value, type);
+    }
 
-  @Override
-  public void setParameterList(String name, Collection<?> values) {
-    // MutationQuery has no setParameterList; pass collection directly as parameter value
-    mutationQuery.setParameter(name, values);
-  }
+    @Override
+    public void setParameterList(String name, Collection<?> values) {
+        // MutationQuery has no setParameterList; pass collection directly as parameter value
+        mutationQuery.setParameter(name, values);
+    }
 
-  @Override
-  public void setParameterList(String name, Object[] values) {
-    mutationQuery.setParameter(name, values);
-  }
+    @Override
+    public void setParameterList(String name, Object[] values) {
+        mutationQuery.setParameter(name, values);
+    }
 
-  @Override
-  @SuppressWarnings("rawtypes")
-  public List list() {
-    throw new UnsupportedOperationException(
-        "Mutation query (UPDATE/DELETE) cannot be used for list(); use executeUpdate() instead");
-  }
+    @Override
+    @SuppressWarnings("rawtypes")
+    public List list() {
+        throw new UnsupportedOperationException(
+                "Mutation query (UPDATE/DELETE) cannot be used for list(); use executeUpdate() instead");
+    }
 
-  @Override
-  public int executeUpdate() {
-    return mutationQuery.executeUpdate();
-  }
+    @Override
+    public int executeUpdate() {
+        return mutationQuery.executeUpdate();
+    }
 
-  @Override
-  public org.hibernate.query.Query<?> selectQuery() {
-    return null;
-  }
+    @Override
+    public org.hibernate.query.Query<?> selectQuery() {
+        return null;
+    }
 }

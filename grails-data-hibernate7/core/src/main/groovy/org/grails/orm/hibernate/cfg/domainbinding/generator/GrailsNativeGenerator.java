@@ -29,8 +29,8 @@ import org.hibernate.id.NativeGenerator;
 
 public class GrailsNativeGenerator extends NativeGenerator {
 
-  @Serial
-  private static final long serialVersionUID = 1L;
+    @Serial
+    private static final long serialVersionUID = 1L;
 
     public GrailsNativeGenerator(GeneratorCreationContext context) {
         // This triggers the internal switch logic you provided earlier,
@@ -50,7 +50,14 @@ public class GrailsNativeGenerator extends NativeGenerator {
             return currentValue;
         }
 
-    // 3. For Sequences/UUIDs, delegate to the standard logic
-    return super.generate(session, entity, null, eventType);
-  }
+        // 2. Fix the Hibernate 7 ClassCastException
+        // NativeGenerator.generate() tries to cast the delegate to BeforeExecutionGenerator.
+        // If the dialect chose IDENTITY, that cast fails. We bypass it by returning null.
+        if (this.getGenerationType() == GenerationType.IDENTITY) {
+            return null;
+        }
+
+        // 3. For Sequences/UUIDs, delegate to the standard logic
+        return super.generate(session, entity, null, eventType);
+    }
 }

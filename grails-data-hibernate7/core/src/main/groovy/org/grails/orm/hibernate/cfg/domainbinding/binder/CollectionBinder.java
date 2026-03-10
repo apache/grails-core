@@ -18,6 +18,14 @@
  */
 package org.grails.orm.hibernate.cfg.domainbinding.binder;
 
+import org.hibernate.FetchMode;
+import org.hibernate.boot.spi.InFlightMetadataCollector;
+import org.hibernate.boot.spi.MetadataBuildingContext;
+import org.hibernate.mapping.Collection;
+import org.hibernate.mapping.OneToMany;
+import org.hibernate.mapping.PersistentClass;
+import org.hibernate.mapping.Table;
+
 import org.grails.orm.hibernate.cfg.GrailsHibernateUtil;
 import org.grails.orm.hibernate.cfg.JoinTable;
 import org.grails.orm.hibernate.cfg.PersistentEntityNamingStrategy;
@@ -28,12 +36,10 @@ import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernateOneToManyPr
 import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernatePersistentProperty;
 import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernateToManyProperty;
 import org.grails.orm.hibernate.cfg.domainbinding.secondpass.BasicCollectionElementBinder;
+import org.grails.orm.hibernate.cfg.domainbinding.secondpass.BidirectionalMapElementBinder;
 import org.grails.orm.hibernate.cfg.domainbinding.secondpass.BidirectionalOneToManyLinker;
 import org.grails.orm.hibernate.cfg.domainbinding.secondpass.CollectionKeyBinder;
 import org.grails.orm.hibernate.cfg.domainbinding.secondpass.CollectionKeyColumnUpdater;
-import org.grails.orm.hibernate.cfg.domainbinding.secondpass.BidirectionalMapElementBinder;
-import org.grails.orm.hibernate.cfg.domainbinding.secondpass.CollectionKeyBinder;
-import org.grails.orm.hibernate.cfg.domainbinding.secondpass.ManyToManyElementBinder;
 import org.grails.orm.hibernate.cfg.domainbinding.secondpass.CollectionMultiTenantFilterBinder;
 import org.grails.orm.hibernate.cfg.domainbinding.secondpass.CollectionOrderByBinder;
 import org.grails.orm.hibernate.cfg.domainbinding.secondpass.CollectionSecondPassBinder;
@@ -54,136 +60,87 @@ import org.grails.orm.hibernate.cfg.domainbinding.util.GrailsPropertyResolver;
 import org.grails.orm.hibernate.cfg.domainbinding.util.NamespaceNameExtractor;
 import org.grails.orm.hibernate.cfg.domainbinding.util.SimpleValueColumnFetcher;
 import org.grails.orm.hibernate.cfg.domainbinding.util.TableForManyCalculator;
-import org.hibernate.FetchMode;
-import org.hibernate.boot.spi.InFlightMetadataCollector;
-import org.hibernate.boot.spi.MetadataBuildingContext;
-import org.hibernate.mapping.Collection;
-import org.hibernate.mapping.OneToMany;
-import org.hibernate.mapping.PersistentClass;
-import org.hibernate.mapping.Table;
-
 
 /** Handles the binding of collections to the Hibernate runtime meta model. */
 @SuppressWarnings("PMD.DataflowAnomalyAnalysis")
 public class CollectionBinder {
 
+    private final MetadataBuildingContext metadataBuildingContext;
+    private final PersistentEntityNamingStrategy namingStrategy;
+    private final CollectionHolder collectionHolder;
+    private final ListSecondPassBinder listSecondPassBinder;
+    private final CollectionSecondPassBinder collectionSecondPassBinder;
+    private final MapSecondPassBinder mapSecondPassBinder;
+    private final InFlightMetadataCollector mappings;
 
-  private final MetadataBuildingContext metadataBuildingContext;
-  private final PersistentEntityNamingStrategy namingStrategy;
-  private final CollectionHolder collectionHolder;
-  private final ListSecondPassBinder listSecondPassBinder;
-  private final CollectionSecondPassBinder collectionSecondPassBinder;
-  private final MapSecondPassBinder mapSecondPassBinder;
-  private final InFlightMetadataCollector mappings;
-
-  /** Creates a new {@link CollectionBinder} instance. */
-  public CollectionBinder(
-      MetadataBuildingContext metadataBuildingContext,
-      PersistentEntityNamingStrategy namingStrategy,
-      SimpleValueBinder simpleValueBinder,
-      EnumTypeBinder enumTypeBinder,
-      ManyToOneBinder manyToOneBinder,
-      CompositeIdentifierToManyToOneBinder compositeIdentifierToManyToOneBinder,
-      SimpleValueColumnFetcher simpleValueColumnFetcher,
-      CollectionHolder collectionHolder,
-      InFlightMetadataCollector mappings) {
-    this.metadataBuildingContext = metadataBuildingContext;
-    this.namingStrategy = namingStrategy;
-    this.collectionHolder = collectionHolder;
-    this.mappings = mappings;
-    GrailsPropertyResolver grailsPropertyResolver = new GrailsPropertyResolver();
-    CollectionForPropertyConfigBinder collectionForPropertyConfigBinder =
-        new CollectionForPropertyConfigBinder();
-    UnidirectionalOneToManyInverseValuesBinder unidirectionalOneToManyInverseValuesBinder =
-        new UnidirectionalOneToManyInverseValuesBinder(metadataBuildingContext);
-    SimpleValueColumnBinder simpleValueColumnBinder = new SimpleValueColumnBinder();
-    CollectionWithJoinTableBinder collectionWithJoinTableBinder =
-        new CollectionWithJoinTableBinder(
-            namingStrategy,
-            unidirectionalOneToManyInverseValuesBinder,
-            compositeIdentifierToManyToOneBinder,
-            collectionForPropertyConfigBinder,
-            simpleValueColumnBinder,
-            new BasicCollectionElementBinder(
+    /** Creates a new {@link CollectionBinder} instance. */
+    public CollectionBinder(
+            MetadataBuildingContext metadataBuildingContext,
+            PersistentEntityNamingStrategy namingStrategy,
+            SimpleValueBinder simpleValueBinder,
+            EnumTypeBinder enumTypeBinder,
+            ManyToOneBinder manyToOneBinder,
+            CompositeIdentifierToManyToOneBinder compositeIdentifierToManyToOneBinder,
+            SimpleValueColumnFetcher simpleValueColumnFetcher,
+            CollectionHolder collectionHolder,
+            InFlightMetadataCollector mappings) {
+        this.metadataBuildingContext = metadataBuildingContext;
+        this.namingStrategy = namingStrategy;
+        this.collectionHolder = collectionHolder;
+        this.mappings = mappings;
+        GrailsPropertyResolver grailsPropertyResolver = new GrailsPropertyResolver();
+        CollectionForPropertyConfigBinder collectionForPropertyConfigBinder = new CollectionForPropertyConfigBinder();
+        UnidirectionalOneToManyInverseValuesBinder unidirectionalOneToManyInverseValuesBinder =
+                new UnidirectionalOneToManyInverseValuesBinder(metadataBuildingContext);
+        SimpleValueColumnBinder simpleValueColumnBinder = new SimpleValueColumnBinder();
+        CollectionWithJoinTableBinder collectionWithJoinTableBinder = new CollectionWithJoinTableBinder(
+                namingStrategy,
+                unidirectionalOneToManyInverseValuesBinder,
+                compositeIdentifierToManyToOneBinder,
+                collectionForPropertyConfigBinder,
+                simpleValueColumnBinder,
+                new BasicCollectionElementBinder(
+                        metadataBuildingContext,
+                        namingStrategy,
+                        enumTypeBinder,
+                        simpleValueColumnBinder,
+                        simpleValueColumnFetcher,
+                        new ColumnConfigToColumnBinder()));
+        this.collectionSecondPassBinder = new CollectionSecondPassBinder(
+                new CollectionKeyColumnUpdater(new CollectionKeyBinder(
+                        new BidirectionalOneToManyLinker(grailsPropertyResolver),
+                        new DependentKeyValueBinder(simpleValueBinder, compositeIdentifierToManyToOneBinder),
+                        simpleValueColumnBinder,
+                        new PrimaryKeyValueCreator(metadataBuildingContext))),
+                new UnidirectionalOneToManyBinder(collectionWithJoinTableBinder, mappings),
+                collectionWithJoinTableBinder,
+                collectionForPropertyConfigBinder,
+                new BidirectionalMapElementBinder(manyToOneBinder, collectionForPropertyConfigBinder),
+                new ManyToManyElementBinder(manyToOneBinder, collectionForPropertyConfigBinder),
+                new CollectionOrderByBinder(),
+                new CollectionMultiTenantFilterBinder(new DefaultColumnNameFetcher(namingStrategy)));
+        this.listSecondPassBinder = new ListSecondPassBinder(
+                metadataBuildingContext, namingStrategy, collectionSecondPassBinder, simpleValueColumnBinder, mappings);
+        this.mapSecondPassBinder = new MapSecondPassBinder(
                 metadataBuildingContext,
                 namingStrategy,
-                enumTypeBinder,
+                collectionSecondPassBinder,
                 simpleValueColumnBinder,
-                simpleValueColumnFetcher,
-                new ColumnConfigToColumnBinder()));
-    this.collectionSecondPassBinder =
-        new CollectionSecondPassBinder(
-            new CollectionKeyColumnUpdater(
-                new CollectionKeyBinder(
-                    new BidirectionalOneToManyLinker(grailsPropertyResolver),
-                    new DependentKeyValueBinder(simpleValueBinder, compositeIdentifierToManyToOneBinder),
-                    simpleValueColumnBinder,
-                    new PrimaryKeyValueCreator(metadataBuildingContext))),
-            new UnidirectionalOneToManyBinder(collectionWithJoinTableBinder, mappings),
-            collectionWithJoinTableBinder,
-            collectionForPropertyConfigBinder,
-            new BidirectionalMapElementBinder(manyToOneBinder, collectionForPropertyConfigBinder),
-            new ManyToManyElementBinder(manyToOneBinder, collectionForPropertyConfigBinder),
-            new CollectionOrderByBinder(),
-            new CollectionMultiTenantFilterBinder(new DefaultColumnNameFetcher(namingStrategy)));
-    this.listSecondPassBinder =
-        new ListSecondPassBinder(
-            metadataBuildingContext,
-            namingStrategy,
-            collectionSecondPassBinder,
-            simpleValueColumnBinder,
-            mappings);
-    this.mapSecondPassBinder =
-        new MapSecondPassBinder(
-            metadataBuildingContext,
-            namingStrategy,
-            collectionSecondPassBinder,
-            simpleValueColumnBinder,
-            new ColumnConfigToColumnBinder(),
-            simpleValueColumnFetcher);
-  }
-
-  /**
-   * First pass to bind collection to Hibernate metamodel, sets up second pass
-   *
-   * @param property The GrailsDomainClassProperty instance
-   * @param owner The owning persistent class
-   * @param path The property path
-   * @return the result
-   */
-  public Collection bindCollection(
-      HibernateToManyProperty property,
-      PersistentClass owner,
-      String path) {
-    CollectionType collectionType = collectionHolder.get(property.getType());
-    Collection collection = collectionType.create(property, owner);
-
-    // set role
-    String propertyName = getNameForPropertyAndPath(property, path);
-    collection.setRole(GrailsHibernateUtil.qualify(property.getOwner().getName(), propertyName));
-
-    PropertyConfig pc = property.getMappedForm();
-    // configure eager fetching
-    final FetchMode fetchMode = pc.getFetchMode();
-    if (fetchMode == FetchMode.JOIN) {
-      collection.setFetchMode(FetchMode.JOIN);
-    } else if (pc.getFetchMode() != null) {
-      collection.setFetchMode(pc.getFetchMode());
-    } else {
-      collection.setFetchMode(FetchMode.DEFAULT);
+                new ColumnConfigToColumnBinder(),
+                simpleValueColumnFetcher);
     }
 
-    if (pc.getCascade() != null) {
-      collection.setOrphanDelete(
-          pc.getCascade().equals(CascadeBehavior.ALL_DELETE_ORPHAN.getValue()));
-    }
-    // if it's a one-to-many mapping
-    if (property.shouldBindWithForeignKey()) {
-      OneToMany oneToMany = new OneToMany(metadataBuildingContext, collection.getOwner());
-      collection.setElement(oneToMany);
-      bindOneToMany((HibernateOneToManyProperty) property, oneToMany);
-    } else {
-      bindCollectionTable(property, collection, owner.getTable());
+    /**
+     * First pass to bind collection to Hibernate metamodel, sets up second pass
+     *
+     * @param property The GrailsDomainClassProperty instance
+     * @param owner The owning persistent class
+     * @param path The property path
+     * @return the result
+     */
+    public Collection bindCollection(HibernateToManyProperty property, PersistentClass owner, String path) {
+        CollectionType collectionType = collectionHolder.get(property.getType());
+        Collection collection = collectionType.create(property, owner);
 
         // set role
         String propertyName = getNameForPropertyAndPath(property, path);
@@ -226,11 +183,11 @@ public class CollectionBinder {
 
         // set up second pass
         if (collection instanceof org.hibernate.mapping.List) {
-            mappings.addSecondPass(new ListSecondPass(listSecondPassBinder, property));
+            mappings.addSecondPass(new ListSecondPass(listSecondPassBinder, property, mappings, collection));
         } else if (collection instanceof org.hibernate.mapping.Map) {
-            mappings.addSecondPass(new MapSecondPass(mapSecondPassBinder, property));
+            mappings.addSecondPass(new MapSecondPass(mapSecondPassBinder, property, mappings, collection));
         } else { // Collection -> Bag
-            mappings.addSecondPass(new SetSecondPass(collectionSecondPassBinder, property));
+            mappings.addSecondPass(new SetSecondPass(collectionSecondPassBinder, property, mappings, collection));
         }
         mappings.addCollectionBinding(collection);
         return collection;
@@ -243,55 +200,10 @@ public class CollectionBinder {
         return property.getName();
     }
 
-    // set up second pass
-    if (collection instanceof org.hibernate.mapping.List) {
-      mappings.addSecondPass(
-          new ListSecondPass(listSecondPassBinder, property, mappings, collection));
-    } else if (collection instanceof org.hibernate.mapping.Map) {
-      mappings.addSecondPass(
-          new MapSecondPass(mapSecondPassBinder, property, mappings, collection));
-    } else { // Collection -> Bag
-      mappings.addSecondPass(
-          new SetSecondPass(collectionSecondPassBinder, property, mappings, collection));
-    }
-    mappings.addCollectionBinding(collection);
-    return collection;
-  }
-
-  private String getNameForPropertyAndPath(HibernatePersistentProperty property, String path) {
-    if (GrailsHibernateUtil.isNotEmpty(path)) {
-      return GrailsHibernateUtil.qualify(path, property.getName());
-    }
-    return property.getName();
-  }
-
-  private void bindOneToMany(HibernateOneToManyProperty currentGrailsProp, OneToMany one) {
-    one.setReferencedEntityName(currentGrailsProp.getHibernateAssociatedEntity().getName());
-    one.setIgnoreNotFound(true);
-  }
-
-  private void bindCollectionTable(
-      HibernateToManyProperty property,
-      Collection collection,
-      Table ownerTable) {
-
-    String owningTableSchema = ownerTable.getSchema();
-    PropertyConfig config = property.getMappedForm();
-    JoinTable jt = config.getJoinTable();
-
-    String s = new TableForManyCalculator(namingStrategy).calculateTableForMany(property);
-    String tableName =
-        (jt != null && jt.getName() != null ? jt.getName() : namingStrategy.resolveTableName(s));
-
-    String schemaName = NamespaceNameExtractor.getSchemaName(mappings);
-    String catalogName = NamespaceNameExtractor.getCatalogName(mappings);
-    if (jt != null) {
-      if (jt.getSchema() != null) {
-        schemaName = jt.getSchema();
-      }
-      if (jt.getCatalog() != null) {
-        catalogName = jt.getCatalog();
-      }
+    private void bindOneToMany(HibernateOneToManyProperty currentGrailsProp, OneToMany one) {
+        one.setReferencedEntityName(
+                currentGrailsProp.getHibernateAssociatedEntity().getName());
+        one.setIgnoreNotFound(true);
     }
 
     private void bindCollectionTable(HibernateToManyProperty property, Collection collection, Table ownerTable) {

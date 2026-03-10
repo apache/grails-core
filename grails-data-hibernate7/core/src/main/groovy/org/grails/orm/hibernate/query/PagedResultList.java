@@ -35,84 +35,82 @@ public class PagedResultList extends grails.gorm.PagedResultList {
 
     private static final long serialVersionUID = 1L;
 
-  private final PersistentEntity entity;
-  private transient GrailsHibernateTemplate hibernateTemplate;
+    private final PersistentEntity entity;
+    private transient GrailsHibernateTemplate hibernateTemplate;
 
-  // CriteriaQuery-based count (legacy path)
-  private final CriteriaQuery criteriaQuery;
-  private final Root queryRoot;
-  private final CriteriaBuilder criteriaBuilder;
-
-  // HQL-based count (new path)
-  private final String countHql;
-
-  /** Legacy constructor — count via CriteriaQuery. */
-  public PagedResultList(
-      GrailsHibernateTemplate template,
-      PersistentEntity entity,
-      HibernateHqlQuery hibernateHqlQuery,
-      CriteriaQuery criteriaQuery,
-      Root queryRoot,
-      CriteriaBuilder criteriaBuilder) {
-    super(hibernateHqlQuery);
-    this.hibernateTemplate = template;
-    this.entity = entity;
-    this.criteriaQuery = criteriaQuery;
-    this.queryRoot = queryRoot;
-    this.criteriaBuilder = criteriaBuilder;
-    this.countHql = null;
-  }
-
-  /** HQL constructor — count via scalar HQL. */
-  public PagedResultList(
-      GrailsHibernateTemplate template,
-      PersistentEntity entity,
-      HibernateHqlQuery hibernateHqlQuery) {
-    super(hibernateHqlQuery);
-    this.hibernateTemplate = template;
-    this.entity = entity;
-    this.countHql = HibernateHqlQuery.buildCountHql(entity);
-    this.criteriaQuery = null;
-    this.queryRoot = null;
-    this.criteriaBuilder = null;
-  }
+    // CriteriaQuery-based count (legacy path)
+    private final CriteriaQuery criteriaQuery;
+    private final Root queryRoot;
+    private final CriteriaBuilder criteriaBuilder;
 
     // HQL-based count (new path)
     private final String countHql;
 
-  @Override
-  public int getTotalCount() {
-    if (totalCount == Integer.MIN_VALUE) {
-      totalCount =
-          countHql != null ? countViaHql() : countViaCriteria();
+    /** Legacy constructor — count via CriteriaQuery. */
+    public PagedResultList(
+            GrailsHibernateTemplate template,
+            PersistentEntity entity,
+            HibernateHqlQuery hibernateHqlQuery,
+            CriteriaQuery criteriaQuery,
+            Root queryRoot,
+            CriteriaBuilder criteriaBuilder) {
+        super(hibernateHqlQuery);
+        this.hibernateTemplate = template;
+        this.entity = entity;
+        this.criteriaQuery = criteriaQuery;
+        this.queryRoot = queryRoot;
+        this.criteriaBuilder = criteriaBuilder;
+        this.countHql = null;
     }
 
-  private int countViaHql() {
-    return hibernateTemplate.execute(session -> {
-      Query<?> q = session.createQuery(countHql);
-      hibernateTemplate.applySettings(q);
-      return ((Number) q.uniqueResult()).intValue();
-    });
-  }
+    /** HQL constructor — count via scalar HQL. */
+    public PagedResultList(
+            GrailsHibernateTemplate template, PersistentEntity entity, HibernateHqlQuery hibernateHqlQuery) {
+        super(hibernateHqlQuery);
+        this.hibernateTemplate = template;
+        this.entity = entity;
+        this.countHql = HibernateHqlQuery.buildCountHql(entity);
+        this.criteriaQuery = null;
+        this.queryRoot = null;
+        this.criteriaBuilder = null;
+    }
 
-  private int countViaCriteria() {
-    return hibernateTemplate.execute(
-        new GrailsHibernateTemplate.HibernateCallback<Integer>() {
-          public Integer doInHibernate(Session session)
-              throws HibernateException, SQLException {
-            final CriteriaQuery finalQuery =
-                criteriaQuery
-                    .select(criteriaBuilder.count(queryRoot))
-                    .distinct(true)
-                    .orderBy();
-            final Query query = session.createQuery(finalQuery);
-            hibernateTemplate.applySettings(query);
-            return ((Number) query.uniqueResult()).intValue();
-          }
+    @Override
+    protected void initialize() {
+        // no-op, already initialized
+    }
+
+    @Override
+    public int getTotalCount() {
+        if (totalCount == Integer.MIN_VALUE) {
+            totalCount = countHql != null ? countViaHql() : countViaCriteria();
+        }
+        return totalCount;
+    }
+
+    private int countViaHql() {
+        return hibernateTemplate.execute(session -> {
+            Query<?> q = session.createQuery(countHql);
+            hibernateTemplate.applySettings(q);
+            return ((Number) q.uniqueResult()).intValue();
         });
-  }
+    }
 
-  public void setTotalCount(int totalCount) {
-    this.totalCount = totalCount;
-  }
+    private int countViaCriteria() {
+        return hibernateTemplate.execute(new GrailsHibernateTemplate.HibernateCallback<Integer>() {
+            public Integer doInHibernate(Session session) throws HibernateException, SQLException {
+                final CriteriaQuery finalQuery = criteriaQuery
+                        .select(criteriaBuilder.count(queryRoot))
+                        .distinct(true)
+                        .orderBy();
+                final Query query = session.createQuery(finalQuery);
+                hibernateTemplate.applySettings(query);
+                return ((Number) query.uniqueResult()).intValue();
+            }
+        });
+    }
+
+    public void setTotalCount(int totalCount) {
+        this.totalCount = totalCount;
+    }
 }

@@ -19,16 +19,13 @@
 package org.grails.orm.hibernate.cfg.domainbinding.binder;
 
 import jakarta.annotation.Nonnull;
-import org.grails.orm.hibernate.cfg.domainbinding.hibernate.GrailsHibernatePersistentEntity;
-import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernatePersistentProperty;
-import org.grails.orm.hibernate.cfg.domainbinding.util.PropertyFromValueCreator;
 
 import org.hibernate.MappingException;
 import org.hibernate.mapping.PersistentClass;
 import org.hibernate.mapping.Table;
 import org.hibernate.mapping.Value;
 
-import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernatePersistentEntity;
+import org.grails.orm.hibernate.cfg.domainbinding.hibernate.GrailsHibernatePersistentEntity;
 import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernatePersistentProperty;
 import org.grails.orm.hibernate.cfg.domainbinding.util.PropertyFromValueCreator;
 
@@ -45,53 +42,43 @@ public class ClassPropertiesBinder {
     private final PropertyFromValueCreator propertyFromValueCreator;
     private final NaturalIdentifierBinder naturalIdentifierBinder;
 
-  /** Creates a new {@link ClassPropertiesBinder} instance. */
-  public ClassPropertiesBinder(
-      GrailsPropertyBinder grailsPropertyBinder,
-      PropertyFromValueCreator propertyFromValueCreator,
-      NaturalIdentifierBinder naturalIdentifierBinder) {
-    this.grailsPropertyBinder = grailsPropertyBinder;
-    this.propertyFromValueCreator = propertyFromValueCreator;
-    this.naturalIdentifierBinder = naturalIdentifierBinder;
-  }
-
-  /** Creates a new {@link ClassPropertiesBinder} instance. */
-  public ClassPropertiesBinder(
-      GrailsPropertyBinder grailsPropertyBinder,
-      PropertyFromValueCreator propertyFromValueCreator) {
-    this(grailsPropertyBinder, propertyFromValueCreator, new NaturalIdentifierBinder());
-  }
-
-  public void bindClassProperties(
-      @Nonnull GrailsHibernatePersistentEntity domainClass,
-      PersistentClass persistentClass) {
-    @Nonnull Table table = getTable(persistentClass);
-    table.setComment(domainClass.getComment());
-
-
-    for (HibernatePersistentProperty currentGrailsProp :
-        domainClass.getPersistentPropertiesToBind()) {
-      Value value =
-          grailsPropertyBinder.bindProperty(
-              persistentClass,
-              table,
-              GrailsDomainBinder.EMPTY_PATH,
-              null,
-              currentGrailsProp);
-      persistentClass.addProperty(
-          propertyFromValueCreator.createProperty(value, currentGrailsProp));
+    /** Creates a new {@link ClassPropertiesBinder} instance. */
+    public ClassPropertiesBinder(
+            GrailsPropertyBinder grailsPropertyBinder,
+            PropertyFromValueCreator propertyFromValueCreator,
+            NaturalIdentifierBinder naturalIdentifierBinder) {
+        this.grailsPropertyBinder = grailsPropertyBinder;
+        this.propertyFromValueCreator = propertyFromValueCreator;
+        this.naturalIdentifierBinder = naturalIdentifierBinder;
     }
 
-    naturalIdentifierBinder.bindNaturalIdentifier(domainClass, persistentClass);
-  }
-
-  @Nonnull private Table getTable(PersistentClass persistentClass) {
-    if(persistentClass.getTable() == null) {
-      throw new MappingException(
-          "Persistent class ["
-              + persistentClass.getEntityName()
-              + "] does not have a table associated with it");
+    /** Creates a new {@link ClassPropertiesBinder} instance. */
+    public ClassPropertiesBinder(
+            GrailsPropertyBinder grailsPropertyBinder, PropertyFromValueCreator propertyFromValueCreator) {
+        this(grailsPropertyBinder, propertyFromValueCreator, new NaturalIdentifierBinder());
     }
-    return persistentClass.getTable();
-  }
+
+    public void bindClassProperties(
+            @Nonnull GrailsHibernatePersistentEntity domainClass, PersistentClass persistentClass) {
+        @Nonnull Table table = getTable(persistentClass);
+        table.setComment(domainClass.getComment());
+
+        for (HibernatePersistentProperty currentGrailsProp : domainClass.getPersistentPropertiesToBind()) {
+            Value value = grailsPropertyBinder.bindProperty(
+                    persistentClass, table, GrailsDomainBinder.EMPTY_PATH, null, currentGrailsProp);
+            persistentClass.addProperty(propertyFromValueCreator.createProperty(value, currentGrailsProp));
+        }
+
+        naturalIdentifierBinder.bindNaturalIdentifier(domainClass, persistentClass);
+    }
+
+    @Nonnull
+    private Table getTable(PersistentClass persistentClass) {
+        if (persistentClass.getTable() == null) {
+            throw new MappingException("Persistent class ["
+                    + persistentClass.getEntityName()
+                    + "] does not have a table associated with it");
+        }
+        return persistentClass.getTable();
+    }
 }

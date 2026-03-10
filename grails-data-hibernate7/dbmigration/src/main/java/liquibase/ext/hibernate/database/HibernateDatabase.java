@@ -42,17 +42,14 @@ public abstract class HibernateDatabase extends AbstractJdbcDatabase {
         setDefaultSchemaName(DEFAULT_SCHEMA);
     }
 
-    @Override
     public boolean requiresPassword() {
         return false;
     }
 
-    @Override
     public boolean requiresUsername() {
         return false;
     }
 
-    @Override
     public String getDefaultDriver(String url) {
         if (url.startsWith("hibernate")) {
             return HibernateDriver.class.getName();
@@ -60,7 +57,6 @@ public abstract class HibernateDatabase extends AbstractJdbcDatabase {
         return null;
     }
 
-    @Override
     public int getPriority() {
         return PRIORITY_DEFAULT;
     }
@@ -110,7 +106,7 @@ public abstract class HibernateDatabase extends AbstractJdbcDatabase {
         DatabaseConnection originalConnection = getConnection();
         if (originalConnection instanceof liquibase.database.jvm.JdbcConnection) {
             java.sql.Connection underlyingConnection =
-                    originalConnection.getUnderlyingConnection();
+                    ((liquibase.database.jvm.JdbcConnection) originalConnection).getUnderlyingConnection();
             if (underlyingConnection instanceof HibernateConnection) {
                 return (HibernateConnection) underlyingConnection;
             } else {
@@ -134,25 +130,21 @@ public abstract class HibernateDatabase extends AbstractJdbcDatabase {
         String path = getHibernateConnection().getPath();
         if (!path.contains("/")) {
             try {
-                // Fix: Use Thread Context ClassLoader for J2EE/Spring compliance (PMD #7)
-                ClassLoader contextClassLoader = Thread.currentThread().getContextClassLoader();
-                Class<?> clazz = contextClassLoader.loadClass(path);
-
+                Class<?> clazz = Thread.currentThread().getContextClassLoader().loadClass(path);
                 if (CustomMetadataFactory.class.isAssignableFrom(clazz)) {
                     try {
                         return ((CustomMetadataFactory)
-                                clazz.getDeclaredConstructor().newInstance())
+                                        clazz.getDeclaredConstructor().newInstance())
                                 .getMetadata(this, getHibernateConnection());
                     } catch (InstantiationException
-                             | IllegalAccessException
-                             | InvocationTargetException
-                             | NoSuchMethodException e) {
+                            | IllegalAccessException
+                            | InvocationTargetException
+                            | NoSuchMethodException e) {
                         throw new DatabaseException(e);
                     }
                 }
             } catch (ClassNotFoundException ignore) {
-                // Fix: Avoid empty catch blocks by documenting the intent (PMD #6)
-                Scope.getCurrentScope().getLog(getClass()).debug("Path " + path + " is not a CustomMetadataFactory, continuing with standard build.");
+                // not really a class, continue
             }
         }
 
@@ -175,13 +167,12 @@ public abstract class HibernateDatabase extends AbstractJdbcDatabase {
         AtomicReference<Metadata> result = new AtomicReference<>();
 
         Thread t = new Thread(() -> result.set(metadataBuilder.build()));
-        t.setContextClassLoader(Thread.currentThread().getContextClassLoader());
+        t.setContextClassLoader(Scope.getCurrentScope().getClassLoader());
         t.setUncaughtExceptionHandler((_t, e) -> thrownException.set(e));
         t.start();
         try {
             t.join();
         } catch (InterruptedException e) {
-            Thread.currentThread().interrupt(); // Restore interrupted status
             throw new DatabaseException(e);
         }
         Throwable thrown = thrownException.get();
@@ -206,10 +197,10 @@ public abstract class HibernateDatabase extends AbstractJdbcDatabase {
                         .newInstance();
                 Scope.getCurrentScope().getLog(getClass()).info("Using dialect " + dialectString);
             } catch (InstantiationException
-                     | IllegalAccessException
-                     | InvocationTargetException
-                     | NoSuchMethodException
-                     | ClassNotFoundException e) {
+                    | IllegalAccessException
+                    | InvocationTargetException
+                    | NoSuchMethodException
+                    | ClassNotFoundException e) {
                 throw new DatabaseException(e);
             }
         } else {
@@ -250,10 +241,10 @@ public abstract class HibernateDatabase extends AbstractJdbcDatabase {
                         .newInstance());
             }
         } catch (InstantiationException
-                 | IllegalAccessException
-                 | InvocationTargetException
-                 | NoSuchMethodException
-                 | ClassNotFoundException e) {
+                | IllegalAccessException
+                | InvocationTargetException
+                | NoSuchMethodException
+                | ClassNotFoundException e) {
             throw new DatabaseException(e);
         }
     }
@@ -295,10 +286,10 @@ public abstract class HibernateDatabase extends AbstractJdbcDatabase {
                 }
             }
         } catch (InstantiationException
-                 | IllegalAccessException
-                 | InvocationTargetException
-                 | NoSuchMethodException
-                 | ClassNotFoundException e) {
+                | IllegalAccessException
+                | InvocationTargetException
+                | NoSuchMethodException
+                | ClassNotFoundException e) {
             throw new DatabaseException(e);
         }
     }
@@ -356,7 +347,7 @@ public abstract class HibernateDatabase extends AbstractJdbcDatabase {
     }
 
     @Override
-    protected String getConnectionCatalogName() {
+    protected String getConnectionCatalogName() throws DatabaseException {
         return getDefaultCatalogName();
     }
 
@@ -376,12 +367,22 @@ public abstract class HibernateDatabase extends AbstractJdbcDatabase {
     }
 
     @Override
-    public boolean isSafeToRunUpdate() {
+    public boolean isSafeToRunUpdate() throws DatabaseException {
         return true;
     }
 
     @Override
     public boolean isCaseSensitive() {
         return false;
+    }
+
+    @Override
+    public boolean supportsSchemas() {
+        return true;
+    }
+
+    @Override
+    public boolean supportsCatalogs() {
+        return true;
     }
 }

@@ -28,49 +28,45 @@ import org.grails.orm.hibernate.cfg.GrailsHibernateUtil;
 import org.grails.orm.hibernate.cfg.Mapping;
 import org.grails.orm.hibernate.cfg.domainbinding.hibernate.GrailsHibernatePersistentEntity;
 
-import org.hibernate.mapping.PersistentClass;
-import org.hibernate.mapping.Subclass;
-
 public class SubclassMappingBinder {
 
-  private final JoinedSubClassBinder joinedSubClassBinder;
-  private final UnionSubclassBinder unionSubclassBinder;
-  private final SingleTableSubclassBinder singleTableSubclassBinder;
-  private final ClassPropertiesBinder classPropertiesBinder;
+    private final JoinedSubClassBinder joinedSubClassBinder;
+    private final UnionSubclassBinder unionSubclassBinder;
+    private final SingleTableSubclassBinder singleTableSubclassBinder;
+    private final ClassPropertiesBinder classPropertiesBinder;
 
-  public SubclassMappingBinder(
-      JoinedSubClassBinder joinedSubClassBinder,
-      UnionSubclassBinder unionSubclassBinder,
-      SingleTableSubclassBinder singleTableSubclassBinder,
-      ClassPropertiesBinder classPropertiesBinder) {
-    this.joinedSubClassBinder = joinedSubClassBinder;
-    this.unionSubclassBinder = unionSubclassBinder;
-    this.singleTableSubclassBinder = singleTableSubclassBinder;
-    this.classPropertiesBinder = classPropertiesBinder;
-  }
-
-  public @NonNull Subclass createSubclassMapping(
-      @NonNull GrailsHibernatePersistentEntity subEntity,
-      PersistentClass parent) {
-    Subclass subClass;
-    subEntity.configureDerivedProperties();
-    Mapping m = subEntity.getMappedForm();
-    if (subEntity.isJoinedSubclass()) {
-      subClass = joinedSubClassBinder.bindJoinedSubClass(subEntity, parent);
-    } else if (subEntity.isUnionSubclass()) {
-      subClass = unionSubclassBinder.bindUnionSubclass(subEntity, parent);
-    } else {
-      subClass = singleTableSubclassBinder.bindSubClass(subEntity, parent);
+    public SubclassMappingBinder(
+            JoinedSubClassBinder joinedSubClassBinder,
+            UnionSubclassBinder unionSubclassBinder,
+            SingleTableSubclassBinder singleTableSubclassBinder,
+            ClassPropertiesBinder classPropertiesBinder) {
+        this.joinedSubClassBinder = joinedSubClassBinder;
+        this.unionSubclassBinder = unionSubclassBinder;
+        this.singleTableSubclassBinder = singleTableSubclassBinder;
+        this.classPropertiesBinder = classPropertiesBinder;
     }
 
-    subClass.setBatchSize(Optional.ofNullable(m.getBatchSize()).orElse(-1));
-    subClass.setDynamicUpdate(m.getDynamicUpdate());
-    subClass.setDynamicInsert(m.getDynamicInsert());
-    subClass.setCached(parent.isCached());
-    subClass.setAbstract(subEntity.isAbstract());
-    subClass.setEntityName(subEntity.getName());
-    subClass.setJpaEntityName(GrailsHibernateUtil.unqualify(subEntity.getName()));
-    classPropertiesBinder.bindClassProperties(subEntity, subClass);
-    return subClass;
-  }
+    public @NonNull Subclass createSubclassMapping(
+            @NonNull GrailsHibernatePersistentEntity subEntity, PersistentClass parent) {
+        Subclass subClass;
+        subEntity.configureDerivedProperties();
+        Mapping m = subEntity.getMappedForm();
+        if (subEntity.isJoinedSubclass()) {
+            subClass = joinedSubClassBinder.bindJoinedSubClass(subEntity, parent);
+        } else if (subEntity.isUnionSubclass()) {
+            subClass = unionSubclassBinder.bindUnionSubclass(subEntity, parent);
+        } else {
+            subClass = singleTableSubclassBinder.bindSubClass(subEntity, parent);
+        }
+
+        subClass.setBatchSize(Optional.ofNullable(m.getBatchSize()).orElse(-1));
+        subClass.setDynamicUpdate(m.getDynamicUpdate());
+        subClass.setDynamicInsert(m.getDynamicInsert());
+        subClass.setCached(parent.isCached());
+        subClass.setAbstract(subEntity.isAbstract());
+        subClass.setEntityName(subEntity.getName());
+        subClass.setJpaEntityName(GrailsHibernateUtil.unqualify(subEntity.getName()));
+        classPropertiesBinder.bindClassProperties(subEntity, subClass);
+        return subClass;
+    }
 }

@@ -29,7 +29,6 @@ import java.util.stream.Stream;
 import jakarta.annotation.Nonnull;
 
 import org.hibernate.boot.spi.InFlightMetadataCollector;
-import org.hibernate.mapping.PersistentClass;
 
 import org.grails.datastore.mapping.model.PersistentEntity;
 import org.grails.datastore.mapping.model.PersistentProperty;
@@ -54,25 +53,9 @@ public interface GrailsHibernatePersistentEntity extends PersistentEntity {
         return (GrailsHibernatePersistentEntity) getRootEntity();
     }
 
-  @Override
-  HibernatePersistentProperty getVersion();
-
-  /**
-   * Returns the persistent property with the given name cast to {@link HibernatePersistentProperty},
-   * or {@code null} if no such property exists.
-   */
-  default HibernatePersistentProperty getHibernatePropertyByName(String name) {
-    return (HibernatePersistentProperty) getPropertyByName(name);
-  }
-
-  /**
-   * @param parentType The type of the parent entity
-   * @return The parent property if it exists
-   */
-  default Optional<HibernatePersistentProperty> getHibernateParentProperty(Class<?> parentType) {
-    List<HibernatePersistentProperty> properties = getHibernatePersistentProperties();
-    if (properties == null) {
-      return Optional.empty();
+    default GrailsHibernatePersistentEntity getStrategyOwner() {
+        List<HibernatePersistentProperty> props = getHibernatePersistentProperties();
+        return (props != null && !props.isEmpty()) ? props.get(0).getHibernateOwner() : this;
     }
 
     default Mapping getStrategyMapping() {
@@ -88,12 +71,10 @@ public interface GrailsHibernatePersistentEntity extends PersistentEntity {
         return mapping == null || mapping.isTablePerHierarchy();
     }
 
-  default boolean isComponentPropertyNullable(PersistentProperty<?> embeddedProperty) {
-    if (embeddedProperty == null) return false;
-    final Mapping mapping = getMappedForm();
-    return !isRoot() && (mapping == null || mapping.isTablePerHierarchy())
-        || embeddedProperty.isNullable();
-  }
+    default boolean isJoinedSubclass() {
+        Mapping mapping = getStrategyMapping();
+        return mapping != null && mapping.isJoinedSubclass();
+    }
 
     default boolean isUnionSubclass() {
         Mapping mapping = getStrategyMapping();
@@ -124,33 +105,6 @@ public interface GrailsHibernatePersistentEntity extends PersistentEntity {
                                 .map(GrailsHibernatePersistentEntity::buildDiscriminatorSet)
                                 .flatMap(Collection::stream))
                 .collect(Collectors.toSet());
-    }
-
-    default HibernateIdentity getHibernateIdentity() {
-        return Optional.ofNullable(getMappedForm())
-                .map(Mapping::getIdentity)
-                .or(this::resolveCompositeIdentity)
-                .orElseGet(this::getDefaultIdentity);
-    }
-
-    private Optional<HibernateIdentity> resolveCompositeIdentity() {
-        return Optional.ofNullable(getCompositeIdentity())
-                .filter(compositeId -> compositeId.length > 1)
-                .map(compositeId -> {
-                    CompositeIdentity ci = new CompositeIdentity();
-                    ci.setPropertyNames(java.util.Arrays.stream(compositeId)
-                            .map(PersistentProperty::getName)
-                            .toArray(String[]::new));
-                    return ci;
-                });
-    }
-
-    private @Nonnull Identity getDefaultIdentity() {
-        Identity identity = new Identity();
-        identity.setName(Optional.ofNullable(getIdentity())
-                .map(PersistentProperty::getName)
-                .orElseGet(this::getName));
-        return identity;
     }
 
     @Override
@@ -246,16 +200,14 @@ public interface GrailsHibernatePersistentEntity extends PersistentEntity {
                 .toList();
     }
 
-    default List<HibernatePersistentEntity> getChildEntities() {
+    default List<GrailsHibernatePersistentEntity> getChildEntities() {
         return getChildEntities(getDataSourceName());
     }
 
-    default List<HibernatePersistentEntity> getChildEntities(String dataSourceName) {
-        return getMappingContext()
-                .getDirectChildEntities(this)
-                .stream()
-                .filter(HibernatePersistentEntity.class::isInstance)
-                .map(HibernatePersistentEntity.class::cast)
+    default List<GrailsHibernatePersistentEntity> getChildEntities(String dataSourceName) {
+        return getMappingContext().getDirectChildEntities(this).stream()
+                .filter(GrailsHibernatePersistentEntity.class::isInstance)
+                .map(GrailsHibernatePersistentEntity.class::cast)
                 .filter(persistentEntity -> persistentEntity.usesConnectionSource(dataSourceName))
                 .filter(sub -> sub.getJavaClass().getSuperclass().equals(this.getJavaClass()))
                 .toList();
@@ -340,12 +292,10 @@ public interface GrailsHibernatePersistentEntity extends PersistentEntity {
             }
             return p1.getName().compareTo(p2.getName());
         });
-    return properties;
-  }
+        return properties;
+    }
 
-  default String getComment() {
-    return Optional.ofNullable(getMappedForm())
-        .map(Mapping::getComment)
-        .orElse(null);
-  }
+    default String getComment() {
+        return Optional.ofNullable(getMappedForm()).map(Mapping::getComment).orElse(null);
+    }
 }

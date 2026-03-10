@@ -24,17 +24,19 @@ import java.util.function.Consumer;
 import org.grails.orm.hibernate.cfg.Mapping;
 import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernatePersistentProperty;
 
-public class ConfigureDerivedPropertiesConsumer implements Consumer<HibernatePersistentProperty> {
+import static java.util.Optional.ofNullable;
 
 public class ConfigureDerivedPropertiesConsumer implements Consumer<HibernatePersistentProperty> {
 
     private final Mapping m;
 
-  @Override
-  public void accept(HibernatePersistentProperty persistentProperty) {
-    ofNullable(m.getPropertyConfig(persistentProperty.getName()))
-        .ifPresent(
-            propertyConfig ->
-                propertyConfig.setDerived(Objects.nonNull(propertyConfig.getFormula())));
-  }
+    public ConfigureDerivedPropertiesConsumer(Mapping m) {
+        this.m = m;
+    }
+
+    @Override
+    public void accept(HibernatePersistentProperty persistentProperty) {
+        ofNullable(m.getPropertyConfig(persistentProperty.getName()))
+                .ifPresent(propertyConfig -> propertyConfig.setDerived(Objects.nonNull(propertyConfig.getFormula())));
+    }
 }

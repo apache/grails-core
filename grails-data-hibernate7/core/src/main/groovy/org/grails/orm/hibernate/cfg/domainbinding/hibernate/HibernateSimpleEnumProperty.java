@@ -19,6 +19,7 @@
 package org.grails.orm.hibernate.cfg.domainbinding.hibernate;
 
 import java.beans.PropertyDescriptor;
+
 import org.grails.datastore.mapping.model.MappingContext;
 import org.grails.datastore.mapping.model.PersistentEntity;
 
@@ -26,10 +27,8 @@ import org.grails.datastore.mapping.model.PersistentEntity;
  * Hibernate simple property whose Java type is an enum (no custom type marshaller). Created by
  * {@link HibernateMappingFactory#createSimple} when {@code pd.propertyType.isEnum()} is true.
  */
-public class HibernateSimpleEnumProperty extends HibernateSimpleProperty
-    implements HibernateEnumProperty {
-  public HibernateSimpleEnumProperty(
-      PersistentEntity entity, MappingContext context, PropertyDescriptor property) {
-    super(entity, context, property);
-  }
+public class HibernateSimpleEnumProperty extends HibernateSimpleProperty implements HibernateEnumProperty {
+    public HibernateSimpleEnumProperty(PersistentEntity entity, MappingContext context, PropertyDescriptor property) {
+        super(entity, context, property);
+    }
 }

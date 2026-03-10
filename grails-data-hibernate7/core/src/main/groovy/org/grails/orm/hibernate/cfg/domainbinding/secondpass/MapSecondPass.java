@@ -25,6 +25,8 @@ import org.hibernate.MappingException;
 
 import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernateToManyProperty;
 
+import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernateToManyProperty;
+
 @SuppressWarnings("PMD.NonSerializableClass")
 public class MapSecondPass implements org.hibernate.boot.spi.SecondPass, GrailsSecondPass, java.io.Serializable {
     @Serial
@@ -32,18 +34,24 @@ public class MapSecondPass implements org.hibernate.boot.spi.SecondPass, GrailsS
 
     private final MapSecondPassBinder mapSecondPassBinder;
     protected final HibernateToManyProperty property;
+    protected final @Nonnull InFlightMetadataCollector mappings;
+    protected final Collection collection;
 
     public MapSecondPass(
             MapSecondPassBinder mapSecondPassBinder,
-            HibernateToManyProperty property) {
+            HibernateToManyProperty property,
+            @Nonnull InFlightMetadataCollector mappings,
+            @Nonnull Collection coll) {
         this.mapSecondPassBinder = mapSecondPassBinder;
         this.property = property;
+        this.mappings = mappings;
+        this.collection = coll;
     }
 
-  @Override
-  public void doSecondPass(Map persistentClasses) throws MappingException {
-    mapSecondPassBinder.bindMapSecondPass(
-        property, mappings, persistentClasses, (org.hibernate.mapping.Map) collection);
-    createCollectionKeys(collection);
-  }
+    @Override
+    public void doSecondPass(Map persistentClasses) throws MappingException {
+        mapSecondPassBinder.bindMapSecondPass(
+                property, mappings, persistentClasses, (org.hibernate.mapping.Map) collection);
+        createCollectionKeys(collection);
+    }
 }

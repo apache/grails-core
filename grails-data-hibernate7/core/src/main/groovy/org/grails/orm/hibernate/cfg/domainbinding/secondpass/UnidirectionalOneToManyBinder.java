@@ -38,32 +38,24 @@ import static org.grails.orm.hibernate.cfg.domainbinding.binder.GrailsDomainBind
 /** Binds unidirectional one-to-many associations. */
 public class UnidirectionalOneToManyBinder {
 
-  private static final Logger LOG = LoggerFactory.getLogger(UnidirectionalOneToManyBinder.class);
-  private final CollectionWithJoinTableBinder collectionWithJoinTableBinder;
-  private final BackticksRemover backticksRemover = new BackticksRemover();
-  private final InFlightMetadataCollector mappings;
+    private static final Logger LOG = LoggerFactory.getLogger(UnidirectionalOneToManyBinder.class);
+    private final CollectionWithJoinTableBinder collectionWithJoinTableBinder;
+    private final BackticksRemover backticksRemover = new BackticksRemover();
+    private final InFlightMetadataCollector mappings;
 
-  public UnidirectionalOneToManyBinder(
-      CollectionWithJoinTableBinder collectionWithJoinTableBinder,
-      InFlightMetadataCollector mappings) {
-    this.collectionWithJoinTableBinder = collectionWithJoinTableBinder;
-    this.mappings = mappings;
-  }
-
-  public void bind(
-      @Nonnull HibernateOneToManyProperty property,
-      @Nonnull Collection collection) {
-    if (!property.shouldBindWithForeignKey()) {
-      collectionWithJoinTableBinder.bindCollectionWithJoinTable(property, collection);
-    } else {
-      bindUnidirectionalOneToMany(property, collection);
+    public UnidirectionalOneToManyBinder(
+            CollectionWithJoinTableBinder collectionWithJoinTableBinder, InFlightMetadataCollector mappings) {
+        this.collectionWithJoinTableBinder = collectionWithJoinTableBinder;
+        this.mappings = mappings;
     }
 
-  private void bindUnidirectionalOneToMany(
-      @Nonnull HibernateOneToManyProperty property,
-      @Nonnull Collection collection) {
-    Value element = collection.getElement();
-    element.createForeignKey();
+    public void bind(@Nonnull HibernateOneToManyProperty property, @Nonnull Collection collection) {
+        if (!property.shouldBindWithForeignKey()) {
+            collectionWithJoinTableBinder.bindCollectionWithJoinTable(property, collection);
+        } else {
+            bindUnidirectionalOneToMany(property, collection);
+        }
+    }
 
     private void bindUnidirectionalOneToMany(
             @Nonnull HibernateOneToManyProperty property, @Nonnull Collection collection) {

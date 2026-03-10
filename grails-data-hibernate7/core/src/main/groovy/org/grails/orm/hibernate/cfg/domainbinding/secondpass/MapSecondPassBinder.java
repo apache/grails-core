@@ -20,6 +20,16 @@ package org.grails.orm.hibernate.cfg.domainbinding.secondpass;
 
 import java.util.List;
 import java.util.Map;
+
+import jakarta.annotation.Nonnull;
+
+import org.hibernate.MappingException;
+import org.hibernate.boot.spi.InFlightMetadataCollector;
+import org.hibernate.boot.spi.MetadataBuildingContext;
+import org.hibernate.mapping.BasicValue;
+import org.hibernate.mapping.Column;
+import org.hibernate.type.StandardBasicTypes;
+
 import org.grails.orm.hibernate.cfg.ColumnConfig;
 import org.grails.orm.hibernate.cfg.PersistentEntityNamingStrategy;
 import org.grails.orm.hibernate.cfg.PropertyConfig;
@@ -29,12 +39,6 @@ import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernateManyToManyP
 import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernateOneToManyProperty;
 import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernateToManyProperty;
 import org.grails.orm.hibernate.cfg.domainbinding.util.SimpleValueColumnFetcher;
-import org.hibernate.MappingException;
-import org.hibernate.boot.spi.InFlightMetadataCollector;
-import org.hibernate.boot.spi.MetadataBuildingContext;
-import org.hibernate.mapping.BasicValue;
-import org.hibernate.mapping.Column;
-import org.hibernate.type.StandardBasicTypes;
 
 /** Refactored from CollectionBinder to handle map second pass binding. */
 @SuppressWarnings("PMD.DataflowAnomalyAnalysis")
@@ -46,43 +50,27 @@ public class MapSecondPassBinder {
     private final ColumnConfigToColumnBinder columnConfigToColumnBinder;
     private final SimpleValueColumnFetcher simpleValueColumnFetcher;
 
-  public MapSecondPassBinder(
-      MetadataBuildingContext metadataBuildingContext,
-      PersistentEntityNamingStrategy namingStrategy,
-      CollectionSecondPassBinder collectionSecondPassBinder,
-      SimpleValueColumnBinder simpleValueColumnBinder,
-      ColumnConfigToColumnBinder columnConfigToColumnBinder,
-      SimpleValueColumnFetcher simpleValueColumnFetcher) {
-    this.metadataBuildingContext = metadataBuildingContext;
-    this.namingStrategy = namingStrategy;
-    this.collectionSecondPassBinder = collectionSecondPassBinder;
-    this.simpleValueColumnBinder = simpleValueColumnBinder;
-    this.columnConfigToColumnBinder = columnConfigToColumnBinder;
-    this.simpleValueColumnFetcher = simpleValueColumnFetcher;
-  }
-
-  public void bindMapSecondPass(
-      @Nonnull HibernateToManyProperty property,
-      @Nonnull InFlightMetadataCollector mappings,
-      Map<?, ?> persistentClasses,
-      @Nonnull org.hibernate.mapping.Map map) {
-    collectionSecondPassBinder.bindCollectionSecondPass(property, mappings, persistentClasses, map);
-
-    String type = property.getIndexColumnType("string");
-    String columnName1 = property.getIndexColumnName(namingStrategy);
-    BasicValue value = simpleValueColumnBinder.bindSimpleValue(metadataBuildingContext, map.getCollectionTable(), type, columnName1, true);
-    PropertyConfig mappedForm = property.getMappedForm();
-    if (mappedForm.getIndexColumn() != null) {
-      Column column = simpleValueColumnFetcher.getColumnForSimpleValue(value);
-      ColumnConfig columnConfig = getSingleColumnConfig(mappedForm.getIndexColumn());
-      columnConfigToColumnBinder.bindColumnConfigToColumn(column, columnConfig, mappedForm);
+    public MapSecondPassBinder(
+            MetadataBuildingContext metadataBuildingContext,
+            PersistentEntityNamingStrategy namingStrategy,
+            CollectionSecondPassBinder collectionSecondPassBinder,
+            SimpleValueColumnBinder simpleValueColumnBinder,
+            ColumnConfigToColumnBinder columnConfigToColumnBinder,
+            SimpleValueColumnFetcher simpleValueColumnFetcher) {
+        this.metadataBuildingContext = metadataBuildingContext;
+        this.namingStrategy = namingStrategy;
+        this.collectionSecondPassBinder = collectionSecondPassBinder;
+        this.simpleValueColumnBinder = simpleValueColumnBinder;
+        this.columnConfigToColumnBinder = columnConfigToColumnBinder;
+        this.simpleValueColumnFetcher = simpleValueColumnFetcher;
     }
 
     public void bindMapSecondPass(
             @Nonnull HibernateToManyProperty property,
+            @Nonnull InFlightMetadataCollector mappings,
             Map<?, ?> persistentClasses,
             @Nonnull org.hibernate.mapping.Map map) {
-        collectionSecondPassBinder.bindCollectionSecondPass(property, persistentClasses, map);
+        collectionSecondPassBinder.bindCollectionSecondPass(property, mappings, persistentClasses, map);
 
         String type = property.getIndexColumnType("string");
         String columnName1 = property.getIndexColumnName(namingStrategy);
@@ -95,21 +83,32 @@ public class MapSecondPassBinder {
             columnConfigToColumnBinder.bindColumnConfigToColumn(column, columnConfig, mappedForm);
         }
 
-      String typeName = null;
-      Class<?> componentType = property.getComponentType();
-      if (componentType != null) {
-        typeName = property.getTypeName(componentType);
-      }
+        if (!value.isTypeSpecified()) {
+            throw new MappingException("map index element must specify a type: " + map.getRole());
+        }
+        map.setIndex(value);
 
-      if (typeName == null) {
-        typeName = property.getTypeName();
-      }
-      if (typeName == null || typeName.equals(Object.class.getName())) {
-        typeName = StandardBasicTypes.STRING.getName();
-      }
-      String columnName = property.getMapElementName(namingStrategy);
-      BasicValue elt = simpleValueColumnBinder.bindSimpleValue(metadataBuildingContext, map.getCollectionTable(), typeName, columnName, false);
-      map.setElement(elt);
+        if (!(property instanceof HibernateOneToManyProperty) && !(property instanceof HibernateManyToManyProperty)) {
+
+            String typeName = null;
+            Class<?> componentType = property.getComponentType();
+            if (componentType != null) {
+                typeName = property.getTypeName(componentType);
+            }
+
+            if (typeName == null) {
+                typeName = property.getTypeName();
+            }
+            if (typeName == null || typeName.equals(Object.class.getName())) {
+                typeName = StandardBasicTypes.STRING.getName();
+            }
+            String columnName = property.getMapElementName(namingStrategy);
+            BasicValue elt = simpleValueColumnBinder.bindSimpleValue(
+                    metadataBuildingContext, map.getCollectionTable(), typeName, columnName, false);
+            map.setElement(elt);
+        }
+
+        map.setInverse(false);
     }
 
     private ColumnConfig getSingleColumnConfig(PropertyConfig propertyConfig) {

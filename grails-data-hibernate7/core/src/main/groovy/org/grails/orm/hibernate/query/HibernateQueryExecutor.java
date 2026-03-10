@@ -20,8 +20,9 @@ package org.grails.orm.hibernate.query;
 
 import java.util.List;
 import java.util.Optional;
-import org.grails.datastore.mapping.proxy.ProxyHandler;
-import org.hibernate.query.QueryFlushMode;
+
+import jakarta.persistence.LockModeType;
+
 import org.hibernate.NonUniqueResultException;
 import org.hibernate.Session;
 import org.hibernate.query.Query;
@@ -31,15 +32,15 @@ import org.hibernate.query.criteria.JpaCriteriaQuery;
 import org.grails.datastore.mapping.proxy.ProxyHandler;
 
 public record HibernateQueryExecutor(
-    Integer offset,
-    Integer maxResults,
-    LockModeType lockResult,
-    Boolean queryCache,
-    Integer fetchSize,
-    Integer timeout,
-    QueryFlushMode flushMode,
-    Boolean readOnly,
-    ProxyHandler proxyHandler) {
+        Integer offset,
+        Integer maxResults,
+        LockModeType lockResult,
+        Boolean queryCache,
+        Integer fetchSize,
+        Integer timeout,
+        QueryFlushMode flushMode,
+        Boolean readOnly,
+        ProxyHandler proxyHandler) {
 
     public List list(Session session, JpaCriteriaQuery jpaCq) {
         return configureQuery(session, jpaCq).getResultList();
@@ -77,14 +78,4 @@ public record HibernateQueryExecutor(
         Optional.ofNullable(readOnly).ifPresent(query::setReadOnly);
         return query;
     }
-    Optional.ofNullable(offset).filter(v -> v > 0).ifPresent(query::setFirstResult);
-    Optional.ofNullable(queryCache).ifPresent(qc -> query.setHint("org.hibernate.cacheable", qc));
-    Optional.ofNullable(maxResults).filter(v -> v > 0).ifPresent(query::setMaxResults);
-    Optional.ofNullable(lockResult).ifPresent(query::setLockMode);
-    Optional.ofNullable(fetchSize).filter(v -> v > 0).ifPresent(query::setFetchSize);
-    Optional.ofNullable(timeout).filter(v -> v > 0).ifPresent(query::setTimeout);
-    Optional.ofNullable(flushMode).ifPresent(query::setQueryFlushMode);
-    Optional.ofNullable(readOnly).ifPresent(query::setReadOnly);
-    return query;
-  }
 }

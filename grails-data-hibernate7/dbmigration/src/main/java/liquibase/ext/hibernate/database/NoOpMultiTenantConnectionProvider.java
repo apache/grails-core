@@ -1,6 +1,5 @@
 package liquibase.ext.hibernate.database;
 
-import java.io.Serial;
 import java.sql.Connection;
 import java.sql.SQLException;
 
@@ -11,12 +10,8 @@ import org.hibernate.engine.jdbc.connections.spi.MultiTenantConnectionProvider;
  */
 class NoOpMultiTenantConnectionProvider implements MultiTenantConnectionProvider {
 
-    // Fix: Classes implementing Serializable should set a serialVersionUID (PMD #13)
-    @Serial
-    private static final long serialVersionUID = 1L;
-
     @Override
-    public boolean isUnwrappableAs(Class<?> unwrapType) {
+    public boolean isUnwrappableAs(Class unwrapType) {
         return false;
     }
 
@@ -26,34 +21,24 @@ class NoOpMultiTenantConnectionProvider implements MultiTenantConnectionProvider
     }
 
     @Override
-    public Connection getAnyConnection() {
+    public Connection getAnyConnection() throws SQLException {
         return null;
     }
 
     @Override
-    public void releaseAnyConnection(Connection connection) {
-        // No-op
-    }
+    public void releaseAnyConnection(Connection connection) throws SQLException {}
 
-    public Connection getConnection(String tenantIdentifier) throws SQLException {
+    public Connection getConnection(String s) throws SQLException {
         return null;
     }
 
-    public void releaseConnection(String tenantIdentifier, Connection connection) {
-        // No-op
-    }
+    public void releaseConnection(String s, Connection connection) throws SQLException {}
 
-    @Override
     public Connection getConnection(Object tenantIdentifier) throws SQLException {
-        // Fix: Added missing @Override annotation (PMD #14)
         return null;
     }
 
-    @Override
-    public void releaseConnection(Object tenantIdentifier, Connection connection) {
-        // Fix: Added missing @Override annotation (PMD #15)
-        // No-op
-    }
+    public void releaseConnection(Object tenantIdentifier, Connection connection) throws SQLException {}
 
     @Override
     public boolean supportsAggressiveRelease() {

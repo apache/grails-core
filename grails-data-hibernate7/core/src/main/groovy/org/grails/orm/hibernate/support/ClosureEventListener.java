@@ -22,19 +22,9 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.Callable;
-import org.grails.datastore.gorm.GormValidateable;
-import org.grails.datastore.gorm.support.BeforeValidateHelper.BeforeValidateEventTriggerCaller;
-import org.grails.datastore.gorm.support.EventTriggerCaller;
-import org.grails.datastore.mapping.engine.event.AbstractPersistenceEvent;
-import org.grails.datastore.mapping.engine.event.ValidationEvent;
-import org.grails.datastore.mapping.model.PersistentEntity;
-import org.grails.datastore.mapping.model.PersistentProperty;
-import org.grails.datastore.mapping.model.config.GormProperties;
-import org.grails.datastore.mapping.reflect.ClassUtils;
-import org.grails.datastore.mapping.reflect.EntityReflector;
-import org.grails.datastore.mapping.validation.ValidationException;
-import org.grails.orm.hibernate.HibernateGormValidationApi;
-import org.grails.orm.hibernate.cfg.domainbinding.hibernate.GrailsHibernatePersistentEntity;
+
+import groovy.lang.GroovySystem;
+import groovy.lang.MetaClass;
 
 import org.hibernate.FlushMode;
 import org.hibernate.HibernateException;
@@ -102,25 +92,25 @@ public class ClosureEventListener
     private static final long serialVersionUID = 1;
     protected static final Logger LOG = LoggerFactory.getLogger(ClosureEventListener.class);
 
-  private final EventTriggerCaller beforeInsertCaller;
-  private final EventTriggerCaller preLoadEventCaller;
-  private final EventTriggerCaller postLoadEventListener;
-  private final EventTriggerCaller postInsertEventListener;
-  private final EventTriggerCaller postUpdateEventListener;
-  private final EventTriggerCaller postDeleteEventListener;
-  private final EventTriggerCaller preDeleteEventListener;
-  private final EventTriggerCaller preUpdateEventListener;
-  private final BeforeValidateEventTriggerCaller beforeValidateEventListener;
-  private final GrailsHibernatePersistentEntity persistentEntity;
-  private final MetaClass domainMetaClass;
-  private final boolean failOnErrorEnabled;
-  private final Map validateParams;
+    private final EventTriggerCaller beforeInsertCaller;
+    private final EventTriggerCaller preLoadEventCaller;
+    private final EventTriggerCaller postLoadEventListener;
+    private final EventTriggerCaller postInsertEventListener;
+    private final EventTriggerCaller postUpdateEventListener;
+    private final EventTriggerCaller postDeleteEventListener;
+    private final EventTriggerCaller preDeleteEventListener;
+    private final EventTriggerCaller preUpdateEventListener;
+    private final BeforeValidateEventTriggerCaller beforeValidateEventListener;
+    private final GrailsHibernatePersistentEntity persistentEntity;
+    private final MetaClass domainMetaClass;
+    private final boolean failOnErrorEnabled;
+    private final Map validateParams;
 
-  public ClosureEventListener(
-          GrailsHibernatePersistentEntity persistentEntity, boolean failOnError, List failOnErrorPackages) {
-    this.persistentEntity = persistentEntity;
-    Class domainClazz = persistentEntity.getJavaClass();
-    this.domainMetaClass = GroovySystem.getMetaClassRegistry().getMetaClass(domainClazz);
+    public ClosureEventListener(
+            GrailsHibernatePersistentEntity persistentEntity, boolean failOnError, List failOnErrorPackages) {
+        this.persistentEntity = persistentEntity;
+        Class domainClazz = persistentEntity.getJavaClass();
+        this.domainMetaClass = GroovySystem.getMetaClassRegistry().getMetaClass(domainClazz);
 
         beforeInsertCaller = buildCaller(AbstractPersistenceEvent.BEFORE_INSERT_EVENT, domainClazz);
         EventTriggerCaller preLoadCaller = buildCaller(AbstractPersistenceEvent.ONLOAD_EVENT, domainClazz);
@@ -140,14 +130,8 @@ public class ClosureEventListener
                 ClassUtils.isClassBelowPackage(domainClazz, failOnErrorPackages) :
                 failOnError;
 
-    validateParams = new HashMap();
-    validateParams.put(HibernateGormValidationApi.ARGUMENT_DEEP_VALIDATE, Boolean.FALSE);
-  }
-
-  @Override
-  public void onPreLoad(PreLoadEvent event) {
-    if (preLoadEventCaller != null) {
-      doPreLoadWithManualSession(event, () -> preLoadEventCaller.call(event.getEntity()));
+        validateParams = new HashMap();
+        validateParams.put(HibernateGormValidationApi.ARGUMENT_DEEP_VALIDATE, Boolean.FALSE);
     }
 
     @Override
@@ -178,23 +162,19 @@ public class ClosureEventListener
 
     // --- Specific manual session versions for PreLoad and PostLoad ---
 
-  private void synchronizePersisterState(AbstractPreDatabaseOperationEvent event, Object[] state) {
-    EntityPersister persister = event.getPersister();
-    Object entity = event.getEntity();
-    EntityReflector reflector = persistentEntity.getReflector();
-    EntityMappingType entityMappingType = persister.getEntityMappingType();
-    String[] propertyNames = persister.getPropertyNames();
-
-    for (String p : propertyNames) {
-      AttributeMapping attributeMapping = entityMappingType.findAttributeMapping(p);
-      if (attributeMapping == null) continue;
-
-      int index = attributeMapping.getStateArrayPosition();
-      PersistentProperty property = persistentEntity.getHibernatePropertyByName(p);
-
-      if (property != null && !GormProperties.VERSION.equals(property.getName())) {
-        state[index] = reflector.getProperty(entity, property.getName());
-      }
+    private void doPreLoadWithManualSession(PreLoadEvent event, Runnable action) {
+        SharedSessionContractImplementor sessionImpl = event.getSession();
+        if (sessionImpl instanceof Session session) {
+            FlushMode current = session.getHibernateFlushMode();
+            try {
+                session.setHibernateFlushMode(FlushMode.MANUAL);
+                action.run();
+            } finally {
+                session.setHibernateFlushMode(current);
+            }
+        } else {
+            action.run();
+        }
     }
 
     private void doPostLoadWithManualSession(PostLoadEvent event, Runnable action) {

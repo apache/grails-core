@@ -43,8 +43,10 @@ class GormDatabase extends HibernateDatabase {
 
     private final HibernateDatastore gormDatastore
 
-    GormDatabase(Dialect dialect, HibernateDatastore hibernateDatastore) {
-        super()
+    GormDatabase() {
+    }
+
+    GormDatabase(Dialect dialect, ServiceRegistry serviceRegistry, HibernateDatastore hibernateDatastore) {
         this.dialect = dialect
         this.gormDatastore = hibernateDatastore
         setConnection(new JdbcConnection(new HibernateConnection('hibernate:gorm', null)))

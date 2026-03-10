@@ -1,6 +1,5 @@
 package liquibase.ext.hibernate.database;
 
-import java.io.Serial;
 import java.sql.Connection;
 import java.sql.SQLException;
 
@@ -11,19 +10,13 @@ import org.hibernate.engine.jdbc.connections.spi.ConnectionProvider;
  */
 class NoOpConnectionProvider implements ConnectionProvider {
 
-    // Fix: Classes implementing Serializable should set a serialVersionUID (PMD #12)
-    @Serial
-    private static final long serialVersionUID = 1L;
-
     @Override
     public Connection getConnection() throws SQLException {
         throw new SQLException("No connection");
     }
 
     @Override
-    public void closeConnection(Connection conn) {
-        // No-op
-    }
+    public void closeConnection(Connection conn) throws SQLException {}
 
     @Override
     public boolean supportsAggressiveRelease() {
@@ -31,7 +24,7 @@ class NoOpConnectionProvider implements ConnectionProvider {
     }
 
     @Override
-    public boolean isUnwrappableAs(Class<?> unwrapType) {
+    public boolean isUnwrappableAs(Class unwrapType) {
         return false;
     }
 
@@ -40,31 +33,15 @@ class NoOpConnectionProvider implements ConnectionProvider {
         return null;
     }
 
-    /**
-     * Helper for multi-tenant or legacy calls.
-     */
     public Connection getConnection(String tenantIdentifier) throws SQLException {
         return getConnection();
     }
 
-    /**
-     * Helper for Hibernate 5/6 SPI calls.
-     */
     public Connection getConnection(Object o) throws SQLException {
         return getConnection();
     }
 
-    /**
-     * No-op release.
-     */
-    public void releaseConnection(Object tenantIdentifier, Connection connection) {
-        // No-op
-    }
+    public void releaseConnection(Object tenantIdentifier, Connection connection) throws SQLException {}
 
-    /**
-     * No-op release.
-     */
-    public void releaseConnection(String tenantIdentifier, Connection connection) {
-        // No-op
-    }
+    public void releaseConnection(String tenantIdentifier, Connection connection) throws SQLException {}
 }

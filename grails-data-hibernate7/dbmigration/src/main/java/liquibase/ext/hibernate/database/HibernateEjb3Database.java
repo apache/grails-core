@@ -1,10 +1,8 @@
 package liquibase.ext.hibernate.database;
 
 import java.lang.reflect.Field;
-import java.util.Arrays;
 import java.util.HashMap;
 import java.util.Map;
-import java.util.Optional;
 
 import jakarta.persistence.EntityManagerFactory;
 import jakarta.persistence.PersistenceUnitTransactionType;
@@ -40,10 +38,8 @@ public class HibernateEjb3Database extends HibernateDatabase {
     }
 
     @Override
-    public boolean isCorrectDatabaseImplementation(DatabaseConnection conn) {
-        return Optional.ofNullable(conn.getURL())
-                .map(url -> url.startsWith("hibernate:ejb3:"))
-                .orElse(false);
+    public boolean isCorrectDatabaseImplementation(DatabaseConnection conn) throws DatabaseException {
+        return conn.getURL().startsWith("hibernate:ejb3:");
     }
 
     /**
@@ -51,16 +47,18 @@ public class HibernateEjb3Database extends HibernateDatabase {
      */
     @Override
     protected Metadata buildMetadataFromPath() throws DatabaseException {
+
         EntityManagerFactoryBuilderImpl builder = createEntityManagerFactoryBuilder();
+
         this.entityManagerFactory = builder.build();
+
         Metadata metadata = builder.getMetadata();
 
         String dialectString = findDialectName();
         if (dialectString != null) {
             try {
-                dialect = (Dialect) Class.forName(dialectString)
-                        .getDeclaredConstructor()
-                        .newInstance();
+                dialect = (Dialect)
+                        Class.forName(dialectString).getDeclaredConstructor().newInstance();
                 Scope.getCurrentScope().getLog(getClass()).info("Using dialect " + dialectString);
             } catch (Exception e) {
                 throw new DatabaseException(e);
@@ -85,42 +83,53 @@ public class HibernateEjb3Database extends HibernateDatabase {
                 AvailableSettings.USE_NATIONALIZED_CHARACTER_DATA,
                 getProperty(AvailableSettings.USE_NATIONALIZED_CHARACTER_DATA));
 
-        String path = Optional.ofNullable(getHibernateConnection().getPath())
-                .orElseThrow(() -> new IllegalStateException("Hibernate connection path is null"));
-
-        return (EntityManagerFactoryBuilderImpl) persistenceProvider.getEntityManagerFactoryBuilderOrNull(
-                path, properties, null);
+        final EntityManagerFactoryBuilderImpl builder =
+                (EntityManagerFactoryBuilderImpl) persistenceProvider.getEntityManagerFactoryBuilderOrNull(
+                        getHibernateConnection().getPath(), properties, null);
+        return builder;
     }
 
     @Override
     public String getProperty(String name) {
-        return Optional.ofNullable(entityManagerFactory)
-                .map(emf -> (String) emf.getProperties().get(name))
-                .or(() -> Optional.ofNullable(super.getProperty(name)))
-                .orElse(null);
+        String property = null;
+        if (entityManagerFactory != null) {
+            property = (String) entityManagerFactory.getProperties().get(name);
+        }
+
+        if (property == null) {
+            return super.getProperty(name);
+        } else {
+            return property;
+        }
     }
 
     @Override
     protected String findDialectName() {
-        return Optional.ofNullable(super.findDialectName())
-                .or(() -> Optional.ofNullable(entityManagerFactory)
-                        .map(emf -> (String) emf.getProperties().get(AvailableSettings.DIALECT)))
-                .orElse(null);
+        String dialectName = super.findDialectName();
+        if (dialectName != null) {
+            return dialectName;
+        }
+
+        return (String) entityManagerFactory.getProperties().get(AvailableSettings.DIALECT);
     }
 
     /**
      * Adds sources based on what is in the saved entityManagerFactory
      */
     @Override
-    protected void configureSources(MetadataSources sources) {
-        Optional.ofNullable(entityManagerFactory)
-                .map(EntityManagerFactory::getMetamodel)
-                .ifPresent(metamodel -> metamodel.getManagedTypes().stream()
-                        .map(ManagedType::getJavaType)
-                        .filter(java.util.Objects::nonNull)
-                        .forEach(sources::addAnnotatedClass));
+    protected void configureSources(MetadataSources sources) throws DatabaseException {
+        for (ManagedType<?> managedType : entityManagerFactory.getMetamodel().getManagedTypes()) {
+            Class<?> javaType = managedType.getJavaType();
+            if (javaType == null) {
+                continue;
+            }
+            sources.addAnnotatedClass(javaType);
+        }
 
-        Arrays.stream(Package.getPackages()).forEach(sources::addPackage);
+        Package[] packages = Package.getPackages();
+        for (Package p : packages) {
+            sources.addPackage(p);
+        }
     }
 
     private static class MyHibernatePersistenceProvider extends HibernatePersistenceProvider {

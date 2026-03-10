@@ -34,42 +34,42 @@ import org.grails.datastore.gorm.finders.DynamicFinder;
  */
 public enum HibernateQueryArgument {
 
-  // ── pagination & execution ────────────────────────────────────────────────
-  MAX(DynamicFinder.ARGUMENT_MAX),
-  OFFSET(DynamicFinder.ARGUMENT_OFFSET),
-  FETCH_SIZE(DynamicFinder.ARGUMENT_FETCH_SIZE),
-  TIMEOUT(DynamicFinder.ARGUMENT_TIMEOUT),
-  FLUSH_MODE(DynamicFinder.ARGUMENT_FLUSH_MODE),
-  READ_ONLY(DynamicFinder.ARGUMENT_READ_ONLY),
-  CACHE(DynamicFinder.ARGUMENT_CACHE),
-  LOCK(DynamicFinder.ARGUMENT_LOCK),
-  FETCH(DynamicFinder.ARGUMENT_FETCH),
+    // ── pagination & execution ────────────────────────────────────────────────
+    MAX(DynamicFinder.ARGUMENT_MAX),
+    OFFSET(DynamicFinder.ARGUMENT_OFFSET),
+    FETCH_SIZE(DynamicFinder.ARGUMENT_FETCH_SIZE),
+    TIMEOUT(DynamicFinder.ARGUMENT_TIMEOUT),
+    FLUSH_MODE(DynamicFinder.ARGUMENT_FLUSH_MODE),
+    READ_ONLY(DynamicFinder.ARGUMENT_READ_ONLY),
+    CACHE(DynamicFinder.ARGUMENT_CACHE),
+    LOCK(DynamicFinder.ARGUMENT_LOCK),
+    FETCH(DynamicFinder.ARGUMENT_FETCH),
 
-  // ── sorting ───────────────────────────────────────────────────────────────
-  SORT(DynamicFinder.ARGUMENT_SORT),
-  ORDER(DynamicFinder.ARGUMENT_ORDER),
-  IGNORE_CASE(DynamicFinder.ARGUMENT_IGNORE_CASE),
-  ORDER_DESC(DynamicFinder.ORDER_DESC),
-  ORDER_ASC(DynamicFinder.ORDER_ASC),
+    // ── sorting ───────────────────────────────────────────────────────────────
+    SORT(DynamicFinder.ARGUMENT_SORT),
+    ORDER(DynamicFinder.ARGUMENT_ORDER),
+    IGNORE_CASE(DynamicFinder.ARGUMENT_IGNORE_CASE),
+    ORDER_DESC(DynamicFinder.ORDER_DESC),
+    ORDER_ASC(DynamicFinder.ORDER_ASC),
 
-  // ── Hibernate config properties ───────────────────────────────────────────
-  CONFIG_CACHE_QUERIES("grails.hibernate.cache.queries"),
-  CONFIG_OSIV_READONLY("grails.hibernate.osiv.readonly"),
-  CONFIG_PASS_READONLY("grails.hibernate.pass.readonly");
+    // ── Hibernate config properties ───────────────────────────────────────────
+    CONFIG_CACHE_QUERIES("grails.hibernate.cache.queries"),
+    CONFIG_OSIV_READONLY("grails.hibernate.osiv.readonly"),
+    CONFIG_PASS_READONLY("grails.hibernate.pass.readonly");
 
-  private final String value;
+    private final String value;
 
-  HibernateQueryArgument(String value) {
-    this.value = value;
-  }
+    HibernateQueryArgument(String value) {
+        this.value = value;
+    }
 
-  /** Returns the string key used for map lookups and config property resolution. */
-  public String value() {
-    return value;
-  }
+    /** Returns the string key used for map lookups and config property resolution. */
+    public String value() {
+        return value;
+    }
 
-  @Override
-  public String toString() {
-    return value;
-  }
+    @Override
+    public String toString() {
+        return value;
+    }
 }

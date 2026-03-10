@@ -43,60 +43,26 @@ public class JoinedSubClassBinder {
     private static final Logger LOG = LoggerFactory.getLogger(JoinedSubClassBinder.class);
     private static final String EMPTY_PATH = "";
 
-  private final MetadataBuildingContext metadataBuildingContext;
-  private final PersistentEntityNamingStrategy namingStrategy;
-  private final SimpleValueColumnBinder simpleValueColumnBinder;
-  private final ColumnNameForPropertyAndPathFetcher columnNameForPropertyAndPathFetcher;
-  private final ClassBinder classBinder;
-  private final InFlightMetadataCollector mappings;
+    private final MetadataBuildingContext metadataBuildingContext;
+    private final PersistentEntityNamingStrategy namingStrategy;
+    private final SimpleValueColumnBinder simpleValueColumnBinder;
+    private final ColumnNameForPropertyAndPathFetcher columnNameForPropertyAndPathFetcher;
+    private final ClassBinder classBinder;
+    private final InFlightMetadataCollector mappings;
 
-  public JoinedSubClassBinder(
-      MetadataBuildingContext metadataBuildingContext,
-      PersistentEntityNamingStrategy namingStrategy,
-      SimpleValueColumnBinder simpleValueColumnBinder,
-      ColumnNameForPropertyAndPathFetcher columnNameForPropertyAndPathFetcher,
-      ClassBinder classBinder,
-      InFlightMetadataCollector mappings) {
-    this.metadataBuildingContext = metadataBuildingContext;
-    this.namingStrategy = namingStrategy;
-    this.simpleValueColumnBinder = simpleValueColumnBinder;
-    this.columnNameForPropertyAndPathFetcher = columnNameForPropertyAndPathFetcher;
-    this.classBinder = classBinder;
-    this.mappings = mappings;
-  }
-
-  /**
-   * Binds a joined sub-class mapping using table-per-subclass
-   *
-   * @param sub The Grails sub class
-   * @param parent The Hibernate Parent PersistentClass object
-   * @return The created JoinedSubclass
-   */
-  public JoinedSubclass bindJoinedSubClass(
-      GrailsHibernatePersistentEntity sub,
-      PersistentClass parent) {
-    JoinedSubclass joinedSubclass = new JoinedSubclass(parent, metadataBuildingContext);
-    classBinder.bindClass(sub, joinedSubclass);
-
-    String schemaName = sub.getSchema(mappings);
-    String catalogName = sub.getCatalog(mappings);
-
-    Table mytable =
-        mappings.addTable(
-            schemaName,
-            catalogName,
-            getJoinedSubClassTableName(sub, joinedSubclass),
-            null,
-            false,
-            metadataBuildingContext);
-
-    joinedSubclass.setTable(mytable);
-    if (LOG.isInfoEnabled()) {
-      LOG.info(
-          "Mapping joined-subclass: "
-              + joinedSubclass.getEntityName()
-              + " -> "
-              + joinedSubclass.getTable().getName());
+    public JoinedSubClassBinder(
+            MetadataBuildingContext metadataBuildingContext,
+            PersistentEntityNamingStrategy namingStrategy,
+            SimpleValueColumnBinder simpleValueColumnBinder,
+            ColumnNameForPropertyAndPathFetcher columnNameForPropertyAndPathFetcher,
+            ClassBinder classBinder,
+            InFlightMetadataCollector mappings) {
+        this.metadataBuildingContext = metadataBuildingContext;
+        this.namingStrategy = namingStrategy;
+        this.simpleValueColumnBinder = simpleValueColumnBinder;
+        this.columnNameForPropertyAndPathFetcher = columnNameForPropertyAndPathFetcher;
+        this.classBinder = classBinder;
+        this.mappings = mappings;
     }
 
     /**
@@ -110,15 +76,16 @@ public class JoinedSubClassBinder {
         JoinedSubclass joinedSubclass = new JoinedSubclass(parent, metadataBuildingContext);
         classBinder.bindClass(sub, joinedSubclass);
 
-    joinedSubclass.createPrimaryKey();
-    joinedSubclass.createForeignKey();
+        String schemaName = sub.getSchema(mappings);
+        String catalogName = sub.getCatalog(mappings);
 
-    return joinedSubclass;
-  }
-
-  private String getJoinedSubClassTableName(
-      GrailsHibernatePersistentEntity sub,
-      PersistentClass model) {
+        Table mytable = mappings.addTable(
+                schemaName,
+                catalogName,
+                getJoinedSubClassTableName(sub, joinedSubclass),
+                null,
+                false,
+                metadataBuildingContext);
 
         joinedSubclass.setTable(mytable);
         if (LOG.isInfoEnabled()) {
@@ -135,8 +102,21 @@ public class JoinedSubClassBinder {
                 columnNameForPropertyAndPathFetcher.getColumnNameForPropertyAndPath(identifier, EMPTY_PATH, null);
         simpleValueColumnBinder.bindSimpleValue(key, identifier.getType().getName(), columnName, false);
 
-    mappings.addTableNameBinding(
-        schemaName, catalogName, logicalTableName, physicalTableName, null);
-    return physicalTableName;
-  }
+        joinedSubclass.createPrimaryKey();
+        joinedSubclass.createForeignKey();
+
+        return joinedSubclass;
+    }
+
+    private String getJoinedSubClassTableName(GrailsHibernatePersistentEntity sub, PersistentClass model) {
+
+        String logicalTableName = GrailsHibernateUtil.unqualify(model.getEntityName());
+        String physicalTableName = sub.getTableName(namingStrategy);
+
+        String schemaName = sub.getSchema(mappings);
+        String catalogName = sub.getCatalog(mappings);
+
+        mappings.addTableNameBinding(schemaName, catalogName, logicalTableName, physicalTableName, null);
+        return physicalTableName;
+    }
 }

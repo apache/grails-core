@@ -17,7 +17,7 @@ import liquibase.structure.core.Sequence;
 public class SequenceSnapshotGenerator extends HibernateSnapshotGenerator {
 
     public SequenceSnapshotGenerator() {
-        super(Sequence.class, Schema.class);
+        super(Sequence.class, new Class[] {Schema.class});
     }
 
     @Override
@@ -27,7 +27,6 @@ public class SequenceSnapshotGenerator extends HibernateSnapshotGenerator {
     }
 
     @Override
-    @SuppressWarnings("PMD.CloseResource")
     protected void addTo(DatabaseObject foundObject, DatabaseSnapshot snapshot)
             throws DatabaseException, InvalidExampleException {
         if (!snapshot.getSnapshotControl().shouldInclude(Sequence.class)) {
@@ -50,7 +49,6 @@ public class SequenceSnapshotGenerator extends HibernateSnapshotGenerator {
     }
 
     @Override
-    @SuppressWarnings("unchecked")
     public Class<? extends SnapshotGenerator>[] replaces() {
         return new Class[] {liquibase.snapshot.jvm.SequenceSnapshotGenerator.class};
     }

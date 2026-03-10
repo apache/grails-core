@@ -31,31 +31,7 @@ import static org.grails.orm.hibernate.cfg.GrailsHibernateUtil.unqualify;
 /** The class binder class. */
 public class ClassBinder {
 
-  private final InFlightMetadataCollector collector;
-
-  public ClassBinder(@Nonnull InFlightMetadataCollector collector) {
-    this.collector = collector;
-  }
-
-  /**
-   * Binds the specified persistant class to the runtime model based on the properties defined in
-   * the domain class
-   *
-   * @param persistentEntity The Grails domain class
-   * @param persistentClass The persistant class
-   */
-  public void bindClass(
-      @Nonnull GrailsHibernatePersistentEntity persistentEntity,
-      PersistentClass persistentClass) {
-    persistentClass.setLazy(true);
-    var entityName = persistentEntity.getName();
-    persistentClass.setEntityName(entityName);
-    persistentClass.setJpaEntityName(entityName);
-    persistentClass.setProxyInterfaceName(entityName);
-    persistentClass.setClassName(entityName);
-    persistentClass.setDynamicInsert(false);
-    persistentClass.setDynamicUpdate(false);
-    persistentClass.setSelectBeforeUpdate(false);
+    private final InFlightMetadataCollector collector;
 
     public ClassBinder(@Nonnull InFlightMetadataCollector collector) {
         this.collector = collector;
@@ -75,25 +51,18 @@ public class ClassBinder {
         persistentClass.setJpaEntityName(entityName);
         persistentClass.setProxyInterfaceName(entityName);
         persistentClass.setClassName(entityName);
-        persistentClass.setAbstract(persistentEntity.isAbstract());
+        persistentClass.setDynamicInsert(false);
+        persistentClass.setDynamicUpdate(false);
+        persistentClass.setSelectBeforeUpdate(false);
 
-        Mapping mappedForm = persistentEntity.getMappedForm();
         boolean autoImport;
+        Mapping mappedForm = persistentEntity.getMappedForm();
         if (mappedForm != null) {
             autoImport = mappedForm.isAutoImport();
-            persistentClass.setDynamicInsert(mappedForm.isDynamicInsert());
-            persistentClass.setDynamicUpdate(mappedForm.isDynamicUpdate());
-            persistentClass.setBatchSize(mappedForm.getBatchSize() != null ? mappedForm.getBatchSize() : 0);
         } else {
             autoImport =
                     collector.getMetadataBuildingOptions().getMappingDefaults().isAutoImportEnabled();
-            persistentClass.setDynamicInsert(false);
-            persistentClass.setDynamicUpdate(false);
-            persistentClass.setBatchSize(0);
         }
-        persistentClass.setSelectBeforeUpdate(false);
-        persistentEntity.setPersistentClass(persistentClass);
-
         if (autoImport) {
             String unqualified = unqualify(entityName);
             persistentClass.setJpaEntityName(unqualified);

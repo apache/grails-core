@@ -1,7 +1,6 @@
 package liquibase.ext.hibernate.snapshot;
 
 import java.util.List;
-import java.util.Locale;
 import java.util.Optional;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
@@ -44,7 +43,7 @@ public class ColumnSnapshotGenerator extends HibernateSnapshotGenerator {
             Pattern.compile("([^\\(]*)\\s*\\(?\\s*(\\d*)?\\s*,?\\s*(\\d*)?\\s*([^\\(]*?)\\)?");
 
     public ColumnSnapshotGenerator() {
-        super(Column.class, Table.class);
+        super(Column.class, new Class[] {Table.class});
     }
 
     @Override
@@ -91,7 +90,6 @@ public class ColumnSnapshotGenerator extends HibernateSnapshotGenerator {
         }
     }
 
-    @SuppressWarnings("PMD.CloseResource")
     protected void snapshotColumn(Column column, DatabaseSnapshot snapshot) throws DatabaseException {
         HibernateDatabase database = (HibernateDatabase) snapshot.getDatabase();
 
@@ -153,7 +151,7 @@ public class ColumnSnapshotGenerator extends HibernateSnapshotGenerator {
                 if (hibernatePrimaryKey != null) {
                     boolean isPrimaryKeyColumn = false;
                     for (org.hibernate.mapping.Column pkColumn :
-                            hibernatePrimaryKey.getColumns()) {
+                            (List<org.hibernate.mapping.Column>) hibernatePrimaryKey.getColumns()) {
                         if (pkColumn.getName().equalsIgnoreCase(hibernateColumn.getName())) {
                             isPrimaryKeyColumn = true;
                             break;
@@ -216,14 +214,14 @@ public class ColumnSnapshotGenerator extends HibernateSnapshotGenerator {
             // so we remove any 'with time zone' suffixes here.
             // The corresponding 'with timezone' suffix will then be added below,
             // because in that case hibernateType also ends with 'with time zone'.
-            if (typeName.toLowerCase(Locale.ROOT).endsWith(SQL_TIMEZONE_SUFFIX)) {
+            if (typeName.toLowerCase().endsWith(SQL_TIMEZONE_SUFFIX)) {
                 typeName = typeName.substring(0, typeName.length() - SQL_TIMEZONE_SUFFIX.length())
                         .stripTrailing();
             }
 
             // If hibernateType ends with 'with time zone' we need to add the corresponding
             // 'with timezone' suffix to the Liquibase type.
-            if (hibernateType.toLowerCase(Locale.ROOT).endsWith(SQL_TIMEZONE_SUFFIX)) {
+            if (hibernateType.toLowerCase().endsWith(SQL_TIMEZONE_SUFFIX)) {
                 typeName += (" " + LIQUIBASE_TIMEZONE_SUFFIX);
             }
 
@@ -239,13 +237,13 @@ public class ColumnSnapshotGenerator extends HibernateSnapshotGenerator {
 
             String extra = StringUtil.trimToNull(matcher.group(4));
             if (extra != null) {
-                if ("char".equalsIgnoreCase(extra)) {
+                if (extra.equalsIgnoreCase("char")) {
                     dataType.setColumnSizeUnit(DataType.ColumnSizeUnit.CHAR);
                 } else {
                     if (extra.startsWith(")")) {
                         extra = extra.substring(1);
                     }
-                    extra = StringUtil.trimToNull(extra.toLowerCase(Locale.ROOT).replace(SQL_TIMEZONE_SUFFIX, ""));
+                    extra = StringUtil.trimToNull(extra.toLowerCase().replace(SQL_TIMEZONE_SUFFIX, ""));
                     if (extra != null) {
                         dataType.setTypeName(dataType.getTypeName() + " " + extra);
                     }
@@ -263,7 +261,6 @@ public class ColumnSnapshotGenerator extends HibernateSnapshotGenerator {
     }
 
     @Override
-    @SuppressWarnings("unchecked")
     public Class<? extends SnapshotGenerator>[] replaces() {
         return new Class[] {liquibase.snapshot.jvm.ColumnSnapshotGenerator.class};
     }
@@ -306,6 +303,6 @@ public class ColumnSnapshotGenerator extends HibernateSnapshotGenerator {
         if (structure.getPhysicalName() != null) {
             return structure.getPhysicalName().render();
         }
-        return (hibernateTable.getName() + "_" + hibernateColumn.getName() + "_seq").toLowerCase(Locale.ROOT);
+        return (hibernateTable.getName() + "_" + hibernateColumn.getName() + "_seq").toLowerCase();
     }
 }

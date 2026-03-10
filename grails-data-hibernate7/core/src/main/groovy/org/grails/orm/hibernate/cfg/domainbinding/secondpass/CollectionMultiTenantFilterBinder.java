@@ -20,46 +20,45 @@ package org.grails.orm.hibernate.cfg.domainbinding.secondpass;
 
 import java.util.Collections;
 import java.util.Optional;
+
+import org.hibernate.mapping.Collection;
+
 import org.grails.datastore.mapping.model.config.GormProperties;
 import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernateManyToManyProperty;
 import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernateToManyProperty;
 import org.grails.orm.hibernate.cfg.domainbinding.util.DefaultColumnNameFetcher;
-import org.hibernate.mapping.Collection;
 
 /** Applies multi-tenant filters to a collection based on the associated entity's tenancy. */
 public class CollectionMultiTenantFilterBinder {
 
-  private final DefaultColumnNameFetcher defaultColumnNameFetcher;
+    private final DefaultColumnNameFetcher defaultColumnNameFetcher;
 
-  /** Creates a new {@link CollectionMultiTenantFilterBinder} instance. */
-  public CollectionMultiTenantFilterBinder(DefaultColumnNameFetcher defaultColumnNameFetcher) {
-    this.defaultColumnNameFetcher = defaultColumnNameFetcher;
-  }
+    /** Creates a new {@link CollectionMultiTenantFilterBinder} instance. */
+    public CollectionMultiTenantFilterBinder(DefaultColumnNameFetcher defaultColumnNameFetcher) {
+        this.defaultColumnNameFetcher = defaultColumnNameFetcher;
+    }
 
-  /** Applies the multi-tenant filter to the collection if the associated entity is multi-tenant. */
-  public void bind(HibernateToManyProperty property, Collection collection) {
-    Optional.ofNullable(property.getHibernateAssociatedEntity())
-        .filter(
-            referenced ->
-                !(property instanceof HibernateManyToManyProperty) && referenced.isMultiTenant())
-        .map(referenced -> referenced.getMultiTenantFilterCondition(defaultColumnNameFetcher))
-        .ifPresent(
-            filterCondition -> {
-              if (property.isUnidirectionalOneToMany()) {
-                collection.addManyToManyFilter(
-                    GormProperties.TENANT_IDENTITY,
-                    filterCondition,
-                    true,
-                    Collections.emptyMap(),
-                    Collections.emptyMap());
-              } else {
-                collection.addFilter(
-                    GormProperties.TENANT_IDENTITY,
-                    filterCondition,
-                    true,
-                    Collections.emptyMap(),
-                    Collections.emptyMap());
-              }
-            });
-  }
+    /** Applies the multi-tenant filter to the collection if the associated entity is multi-tenant. */
+    public void bind(HibernateToManyProperty property, Collection collection) {
+        Optional.ofNullable(property.getHibernateAssociatedEntity())
+                .filter(referenced -> !(property instanceof HibernateManyToManyProperty) && referenced.isMultiTenant())
+                .map(referenced -> referenced.getMultiTenantFilterCondition(defaultColumnNameFetcher))
+                .ifPresent(filterCondition -> {
+                    if (property.isUnidirectionalOneToMany()) {
+                        collection.addManyToManyFilter(
+                                GormProperties.TENANT_IDENTITY,
+                                filterCondition,
+                                true,
+                                Collections.emptyMap(),
+                                Collections.emptyMap());
+                    } else {
+                        collection.addFilter(
+                                GormProperties.TENANT_IDENTITY,
+                                filterCondition,
+                                true,
+                                Collections.emptyMap(),
+                                Collections.emptyMap());
+                    }
+                });
+    }
 }

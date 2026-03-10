@@ -5,7 +5,6 @@ import java.io.StringReader;
 import java.net.URLDecoder;
 import java.nio.charset.StandardCharsets;
 import java.sql.*;
-import java.util.Collections;
 import java.util.Map;
 import java.util.Properties;
 import java.util.concurrent.Executor;
@@ -17,12 +16,12 @@ import liquibase.resource.ResourceAccessor;
  * Beyond standard Connection methods, this class exposes {@link #getPrefix()}, {@link #getPath()} and {@link #getProperties()} to access the setting passed in the JDBC URL.
  */
 public class HibernateConnection implements Connection {
-    private final String prefix;
-    private final String url;
+    private String prefix;
+    private String url;
 
     private String path;
-    private final ResourceAccessor resourceAccessor;
-    private final Properties properties;
+    private ResourceAccessor resourceAccessor;
+    private Properties properties;
 
     public HibernateConnection(String url, ResourceAccessor resourceAccessor) {
         this.url = url;
@@ -53,12 +52,12 @@ public class HibernateConnection implements Connection {
     /**
      * Creates properties to attach to this connection based on the passed query string.
      */
-    protected final Properties readProperties(String queryString) {
+    protected Properties readProperties(String queryString) {
         Properties properties = new Properties();
-        String propertiesString = queryString.replaceAll("&", System.lineSeparator());
+        queryString = queryString.replaceAll("&", System.lineSeparator());
         try {
-            propertiesString = URLDecoder.decode(propertiesString, StandardCharsets.UTF_8);
-            properties.load(new StringReader(propertiesString));
+            queryString = URLDecoder.decode(queryString, StandardCharsets.UTF_8);
+            properties.load(new StringReader(queryString));
         } catch (IOException ioe) {
             throw new IllegalStateException("Failed to read properties from url", ioe);
         }
@@ -102,243 +101,196 @@ public class HibernateConnection implements Connection {
     /// JDBC METHODS
     ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-    @Override
-    public Statement createStatement() {
+    public Statement createStatement() throws SQLException {
         return null;
     }
 
-    @Override
-    public PreparedStatement prepareStatement(String sql) {
+    public PreparedStatement prepareStatement(String sql) throws SQLException {
         return null;
     }
 
-    @Override
-    public CallableStatement prepareCall(String sql) {
+    public CallableStatement prepareCall(String sql) throws SQLException {
         return null;
     }
 
-    @Override
-    public String nativeSQL(String sql) {
+    public String nativeSQL(String sql) throws SQLException {
         return null;
     }
 
-    @Override
-    public void setAutoCommit(boolean autoCommit) {}
+    public void setAutoCommit(boolean autoCommit) throws SQLException {}
 
-    @Override
-    public boolean getAutoCommit() {
+    public boolean getAutoCommit() throws SQLException {
         return false;
     }
 
-    @Override
-    public void commit() {}
+    public void commit() throws SQLException {}
 
-    @Override
-    public void rollback() {}
+    public void rollback() throws SQLException {}
 
-    @Override
-    public void close() {}
+    public void close() throws SQLException {}
 
-    @Override
-    public boolean isClosed() {
+    public boolean isClosed() throws SQLException {
         return false;
     }
 
-    @Override
-    public DatabaseMetaData getMetaData() {
+    public DatabaseMetaData getMetaData() throws SQLException {
         return new HibernateConnectionMetadata(url);
     }
 
-    @Override
-    public void setReadOnly(boolean readOnly) {}
+    public void setReadOnly(boolean readOnly) throws SQLException {}
 
-    @Override
-    public boolean isReadOnly() {
+    public boolean isReadOnly() throws SQLException {
         return true;
     }
 
-    @Override
-    public void setCatalog(String catalog) {}
+    public void setCatalog(String catalog) throws SQLException {}
 
-    @Override
-    public String getCatalog() {
+    public String getCatalog() throws SQLException {
         return "HIBERNATE";
     }
 
-    @Override
-    public void setTransactionIsolation(int level) {}
+    public void setTransactionIsolation(int level) throws SQLException {}
 
-    @Override
-    public int getTransactionIsolation() {
+    public int getTransactionIsolation() throws SQLException {
         return Connection.TRANSACTION_NONE;
     }
 
-    @Override
-    public SQLWarning getWarnings() {
+    public SQLWarning getWarnings() throws SQLException {
         return null;
     }
 
-    @Override
-    public void clearWarnings() {}
+    public void clearWarnings() throws SQLException {}
 
-    @Override
-    public Statement createStatement(int resultSetType, int resultSetConcurrency) {
+    public Statement createStatement(int resultSetType, int resultSetConcurrency) throws SQLException {
         return null;
     }
 
-    @Override
-    public PreparedStatement prepareStatement(String sql, int resultSetType, int resultSetConcurrency) {
+    public PreparedStatement prepareStatement(String sql, int resultSetType, int resultSetConcurrency)
+            throws SQLException {
         return null;
     }
 
-    @Override
-    public CallableStatement prepareCall(String sql, int resultSetType, int resultSetConcurrency) {
+    public CallableStatement prepareCall(String sql, int resultSetType, int resultSetConcurrency) throws SQLException {
         return null;
     }
 
-    @Override
-    public Map<String, Class<?>> getTypeMap() {
-        return Collections.emptyMap();
+    public Map<String, Class<?>> getTypeMap() throws SQLException {
+        return null;
     }
 
-    @Override
-    public void setTypeMap(Map<String, Class<?>> map) {}
+    public void setTypeMap(Map<String, Class<?>> map) throws SQLException {}
 
-    @Override
-    public void setHoldability(int holdability) {}
+    public void setHoldability(int holdability) throws SQLException {}
 
-    @Override
-    public int getHoldability() {
+    public int getHoldability() throws SQLException {
         return 0;
     }
 
-    @Override
-    public Savepoint setSavepoint() {
+    public Savepoint setSavepoint() throws SQLException {
         return null;
     }
 
-    @Override
-    public Savepoint setSavepoint(String name) {
+    public Savepoint setSavepoint(String name) throws SQLException {
         return null;
     }
 
-    @Override
-    public void rollback(Savepoint savepoint) {}
+    public void rollback(Savepoint savepoint) throws SQLException {}
 
-    @Override
-    public void releaseSavepoint(Savepoint savepoint) {}
+    public void releaseSavepoint(Savepoint savepoint) throws SQLException {}
 
-    @Override
-    public Statement createStatement(int resultSetType, int resultSetConcurrency, int resultSetHoldability) {
+    public Statement createStatement(int resultSetType, int resultSetConcurrency, int resultSetHoldability)
+            throws SQLException {
         return null;
     }
 
-    @Override
     public PreparedStatement prepareStatement(
-            String sql, int resultSetType, int resultSetConcurrency, int resultSetHoldability) {
+            String sql, int resultSetType, int resultSetConcurrency, int resultSetHoldability) throws SQLException {
         return null;
     }
 
-    @Override
     public CallableStatement prepareCall(
-            String sql, int resultSetType, int resultSetConcurrency, int resultSetHoldability) {
+            String sql, int resultSetType, int resultSetConcurrency, int resultSetHoldability) throws SQLException {
         return null;
     }
 
-    @Override
-    public PreparedStatement prepareStatement(String sql, int autoGeneratedKeys) {
+    public PreparedStatement prepareStatement(String sql, int autoGeneratedKeys) throws SQLException {
         return null;
     }
 
-    @Override
-    public PreparedStatement prepareStatement(String sql, int[] columnIndexes) {
+    public PreparedStatement prepareStatement(String sql, int[] columnIndexes) throws SQLException {
         return null;
     }
 
-    @Override
-    public PreparedStatement prepareStatement(String sql, String[] columnNames) {
+    public PreparedStatement prepareStatement(String sql, String[] columnNames) throws SQLException {
         return null;
     }
 
-    @Override
-    public Clob createClob() {
+    public Clob createClob() throws SQLException {
         return null;
     }
 
-    @Override
-    public Blob createBlob() {
+    public Blob createBlob() throws SQLException {
         return null;
     }
 
-    @Override
-    public NClob createNClob() {
+    public NClob createNClob() throws SQLException {
         return null;
     }
 
-    @Override
-    public SQLXML createSQLXML() {
+    public SQLXML createSQLXML() throws SQLException {
         return null;
     }
 
-    @Override
-    public boolean isValid(int timeout) {
+    public boolean isValid(int timeout) throws SQLException {
         return false;
     }
 
-    @Override
-    public void setClientInfo(String name, String value) {}
+    public void setClientInfo(String name, String value) throws SQLClientInfoException {}
 
-    @Override
-    public void setClientInfo(Properties properties) {}
+    public void setClientInfo(Properties properties) throws SQLClientInfoException {}
 
-    @Override
-    public String getClientInfo(String name) {
+    public String getClientInfo(String name) throws SQLException {
         return null;
     }
 
-    @Override
-    public Properties getClientInfo() {
-        return new Properties();
-    }
-
-    @Override
-    public Array createArrayOf(String typeName, Object[] elements) {
+    public Properties getClientInfo() throws SQLException {
         return null;
     }
 
-    @Override
-    public Struct createStruct(String typeName, Object[] attributes) {
+    public Array createArrayOf(String typeName, Object[] elements) throws SQLException {
         return null;
     }
 
-    @Override
-    public <T> T unwrap(Class<T> iface) {
+    public Struct createStruct(String typeName, Object[] attributes) throws SQLException {
         return null;
     }
 
-    @Override
-    public boolean isWrapperFor(Class<?> iface) {
+    public <T> T unwrap(Class<T> iface) throws SQLException {
+        return null;
+    }
+
+    public boolean isWrapperFor(Class<?> iface) throws SQLException {
         return false;
     }
 
-    @Override
-    public void abort(Executor arg0) {}
+    // @Override only in java 1.7
+    public void abort(Executor arg0) throws SQLException {}
 
-    @Override
-    public int getNetworkTimeout() {
+    // @Override only in java 1.7
+    public int getNetworkTimeout() throws SQLException {
         return 0;
     }
 
-    @Override
-    public String getSchema() {
+    // @Override only in java 1.7
+    public String getSchema() throws SQLException {
         return "HIBERNATE";
     }
 
-    @Override
-    public void setNetworkTimeout(Executor arg0, int arg1) {}
+    // @Override only in java 1.7
+    public void setNetworkTimeout(Executor arg0, int arg1) throws SQLException {}
 
-    @Override
-    public void setSchema(String arg0) {}
+    // @Override only in java 1.7
+    public void setSchema(String arg0) throws SQLException {}
 
     public ResourceAccessor getResourceAccessor() {
         return resourceAccessor;

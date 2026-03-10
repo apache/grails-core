@@ -28,32 +28,28 @@ import org.grails.orm.hibernate.cfg.Mapping;
 import org.grails.orm.hibernate.cfg.domainbinding.hibernate.GrailsHibernatePersistentEntity;
 import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernateIdentity;
 
-import org.hibernate.mapping.RootClass;
-
 public class IdentityBinder {
 
     private final SimpleIdBinder simpleIdBinder;
     private final CompositeIdBinder compositeIdBinder;
 
-  public IdentityBinder(SimpleIdBinder simpleIdBinder, CompositeIdBinder compositeIdBinder) {
-    this.simpleIdBinder = simpleIdBinder;
-    this.compositeIdBinder = compositeIdBinder;
-  }
+    public IdentityBinder(SimpleIdBinder simpleIdBinder, CompositeIdBinder compositeIdBinder) {
+        this.simpleIdBinder = simpleIdBinder;
+        this.compositeIdBinder = compositeIdBinder;
+    }
 
-  public void bindIdentity(
-      @Nonnull GrailsHibernatePersistentEntity domainClass,
-      RootClass root,
-      Mapping gormMapping) {
+    public void bindIdentity(
+            @Nonnull GrailsHibernatePersistentEntity domainClass, RootClass root, Mapping gormMapping) {
 
-    HibernateIdentity id = gormMapping != null ? gormMapping.getIdentity() : null;
-    if (id instanceof CompositeIdentity
-        || (id == null && domainClass.getCompositeIdentity() != null)) {
-      compositeIdBinder.bindCompositeId(domainClass, root, (CompositeIdentity) id);
-    } else {
-      Identity identity = id instanceof Identity ? (Identity) id : null;
-      if (identity != null && identity.getName() == null) {
-        identity.setName(root.getEntityName());
-      }
-      simpleIdBinder.bindSimpleId(domainClass, root, identity, root.getTable());
+        HibernateIdentity id = gormMapping != null ? gormMapping.getIdentity() : null;
+        if (id instanceof CompositeIdentity || (id == null && domainClass.getCompositeIdentity() != null)) {
+            compositeIdBinder.bindCompositeId(domainClass, root, (CompositeIdentity) id);
+        } else {
+            Identity identity = id instanceof Identity ? (Identity) id : null;
+            if (identity != null && identity.getName() == null) {
+                identity.setName(root.getEntityName());
+            }
+            simpleIdBinder.bindSimpleId(domainClass, root, identity, root.getTable());
+        }
     }
 }

@@ -24,7 +24,6 @@ import org.checkerframework.checker.nullness.qual.Nullable;
 import org.hibernate.mapping.DependantValue;
 import org.hibernate.mapping.Property;
 import org.hibernate.mapping.SimpleValue;
-import org.hibernate.mapping.Table;
 import org.hibernate.usertype.UserCollectionType;
 
 import org.grails.datastore.mapping.model.PersistentProperty;
@@ -43,50 +42,14 @@ public interface HibernatePersistentProperty extends PersistentProperty<Property
         return false;
     }
 
-  default boolean isUserButNotCollectionType() {
-    return getUserType() != null && !UserCollectionType.class.isAssignableFrom(getUserType());
-  }
-
-  default boolean isEnumType() {
-    return Optional.ofNullable(getType()).map(Class::isEnum).orElse(false);
-  }
-
-  default boolean isValidHibernateOneToOne() {
-    return false;
-  }
-
-  default boolean isValidHibernateManyToOne() {
-    return false;
-  }
-
-  default boolean isEmbedded() {
-    return this instanceof Embedded;
-  }
-
-  default void validateAssociation() {}
-
-  default boolean isSerializableType() {
-    return "serializable".equals(getTypeName());
-  }
-
-  /**
-   * @return true if the property has a join key mapping
-   */
-  default boolean isJoinKeyMapped() {
-    return getMappedForm() != null
-        && getMappedForm().hasJoinKeyMapping()
-        && supportsJoinColumnMapping();
-  }
-
-  default String getMappedColumnName() {
-    if (getMappedForm() != null) {
-      return getMappedForm().getColumn();
+    default HibernateAssociation getHibernateInverseSide() {
+        return this instanceof Association<?> association ? (HibernateAssociation) association.getInverseSide() : null;
     }
 
     default GrailsHibernatePersistentEntity getHibernateAssociatedEntity() {
-        return this instanceof Association<?> association ?
-                (GrailsHibernatePersistentEntity) association.getAssociatedEntity() :
-                null;
+        return this instanceof Association<?> association
+                ? (GrailsHibernatePersistentEntity) association.getAssociatedEntity()
+                : null;
     }
 
     /**
@@ -239,9 +202,5 @@ public interface HibernatePersistentProperty extends PersistentProperty<Property
             return Optional.ofNullable(getHibernateOwner().getIdentity()).orElse(this);
         }
         return this;
-    }
-
-    default Table getTable() {
-        return getHibernateOwner().getPersistentClass().getTable();
     }
 }

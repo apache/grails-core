@@ -3,7 +3,6 @@ package liquibase.ext.hibernate.snapshot;
 import java.math.BigInteger;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
-import java.util.Locale;
 
 import liquibase.Scope;
 import liquibase.exception.DatabaseException;
@@ -20,13 +19,8 @@ import org.hibernate.HibernateException;
 
 public class UniqueConstraintSnapshotGenerator extends HibernateSnapshotGenerator {
 
-    private static final int MAX_NAME_LENGTH = 64;
-    private static final int SHORTENED_NAME_LENGTH = 63;
-    private static final int START_INDEX = 0;
-    private static final int FIRST_COLUMN = 0;
-
     public UniqueConstraintSnapshotGenerator() {
-        super(UniqueConstraint.class, Table.class);
+        super(UniqueConstraint.class, new Class[] {Table.class});
     }
 
     @Override
@@ -51,7 +45,7 @@ public class UniqueConstraintSnapshotGenerator extends HibernateSnapshotGenerato
                 var uniqueConstraint = new UniqueConstraint();
                 uniqueConstraint.setName(hibernateUnique.getName());
                 uniqueConstraint.setRelation(table);
-                uniqueConstraint.setClustered(Boolean.FALSE); // No way to set true via Hibernate
+                uniqueConstraint.setClustered(false); // No way to set true via Hibernate
 
                 int i = 0;
                 for (var hibernateColumn : hibernateUnique.getColumns()) {
@@ -68,13 +62,13 @@ public class UniqueConstraintSnapshotGenerator extends HibernateSnapshotGenerato
                 if (column.isUnique()) {
                     UniqueConstraint uniqueConstraint = new UniqueConstraint();
                     uniqueConstraint.setRelation(table);
-                    uniqueConstraint.setClustered(Boolean.FALSE); // No way to set true via Hibernate
-                    String name = "UC_" + table.getName().toUpperCase(Locale.ROOT)
-                            + column.getName().toUpperCase(Locale.ROOT) + "_COL";
-                    if (name.length() > MAX_NAME_LENGTH) {
-                        name = name.substring(START_INDEX, SHORTENED_NAME_LENGTH);
+                    uniqueConstraint.setClustered(false); // No way to set true via Hibernate
+                    String name = "UC_" + table.getName().toUpperCase()
+                            + column.getName().toUpperCase() + "_COL";
+                    if (name.length() > 64) {
+                        name = name.substring(0, 63);
                     }
-                    uniqueConstraint.addColumn(FIRST_COLUMN, new Column(column.getName()).setRelation(table));
+                    uniqueConstraint.addColumn(0, new Column(column.getName()).setRelation(table));
                     uniqueConstraint.setName(name);
                     Scope.getCurrentScope().getLog(getClass()).info("Found unique constraint " + uniqueConstraint);
                     table.getUniqueConstraints().add(uniqueConstraint);
@@ -122,7 +116,6 @@ public class UniqueConstraintSnapshotGenerator extends HibernateSnapshotGenerato
     }
 
     @Override
-    @SuppressWarnings("unchecked")
     public Class<? extends SnapshotGenerator>[] replaces() {
         return new Class[] {liquibase.snapshot.jvm.UniqueConstraintSnapshotGenerator.class};
     }

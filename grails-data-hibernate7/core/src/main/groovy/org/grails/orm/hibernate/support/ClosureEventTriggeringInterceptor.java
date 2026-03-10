@@ -70,41 +70,6 @@ import org.grails.datastore.mapping.model.PersistentEntity;
 import org.grails.datastore.mapping.model.types.Embedded;
 import org.grails.datastore.mapping.proxy.ProxyHandler;
 import org.grails.orm.hibernate.HibernateDatastore;
-import org.hibernate.Hibernate;
-import org.hibernate.HibernateException;
-import org.hibernate.event.internal.DefaultMergeEventListener;
-import org.hibernate.event.internal.DefaultPersistEventListener;
-import org.hibernate.event.spi.MergeContext;
-import org.hibernate.event.spi.MergeEvent;
-import org.hibernate.event.spi.MergeEventListener;
-import org.hibernate.event.spi.PersistContext;
-import org.hibernate.event.spi.PersistEvent;
-import org.hibernate.event.spi.PersistEventListener;
-import org.hibernate.event.spi.PostDeleteEvent;
-import org.hibernate.event.spi.PostDeleteEventListener;
-import org.hibernate.event.spi.PostInsertEvent;
-import org.hibernate.event.spi.PostInsertEventListener;
-import org.hibernate.event.spi.PostLoadEvent;
-import org.hibernate.event.spi.PostLoadEventListener;
-import org.hibernate.event.spi.PostUpdateEvent;
-import org.hibernate.event.spi.PostUpdateEventListener;
-import org.hibernate.event.spi.PreDeleteEvent;
-import org.hibernate.event.spi.PreDeleteEventListener;
-import org.hibernate.event.spi.PreInsertEvent;
-import org.hibernate.event.spi.PreInsertEventListener;
-import org.hibernate.event.spi.PreLoadEvent;
-import org.hibernate.event.spi.PreLoadEventListener;
-import org.hibernate.event.spi.PreUpdateEvent;
-import org.hibernate.event.spi.PreUpdateEventListener;
-import org.hibernate.jpa.event.spi.CallbackRegistry;
-import org.hibernate.jpa.event.spi.CallbackRegistryConsumer;
-import org.springframework.context.ApplicationContextAware;
-import org.hibernate.metamodel.mapping.AttributeMapping;
-import org.hibernate.metamodel.mapping.EntityMappingType;
-import org.hibernate.persister.entity.EntityPersister;
-import org.springframework.beans.BeansException;
-import org.springframework.context.ApplicationContext;
-import org.springframework.context.ConfigurableApplicationContext;
 
 /**
  * Listens for Hibernate events and publishes corresponding Datastore events.
@@ -116,19 +81,19 @@ import org.springframework.context.ConfigurableApplicationContext;
  */
 @SuppressWarnings({"PMD.DataflowAnomalyAnalysis", "PMD.NonSerializableClass"})
 public class ClosureEventTriggeringInterceptor
-    implements Serializable,
-        ApplicationContextAware,
-        PreLoadEventListener,
-        PostLoadEventListener,
-        PostInsertEventListener,
-        PostUpdateEventListener,
-        PostDeleteEventListener,
-        PreDeleteEventListener,
-        PreUpdateEventListener,
-        PreInsertEventListener,
-        MergeEventListener,
-        PersistEventListener,
-        CallbackRegistryConsumer {
+        implements Serializable,
+                ApplicationContextAware,
+                PreLoadEventListener,
+                PostLoadEventListener,
+                PostInsertEventListener,
+                PostUpdateEventListener,
+                PostDeleteEventListener,
+                PreDeleteEventListener,
+                PreUpdateEventListener,
+                PreInsertEventListener,
+                MergeEventListener,
+                PersistEventListener,
+                CallbackRegistryConsumer {
 
     //    private final Logger log = LoggerFactory.getLogger(getClass());
     private static final long serialVersionUID = 1;
@@ -196,8 +161,8 @@ public class ClosureEventTriggeringInterceptor
     @Deprecated
     public static final String AFTER_LOAD_EVENT = AbstractPersistenceEvent.AFTER_LOAD_EVENT;
 
-  /** The datastore. */
-  protected HibernateDatastore datastore;
+    /** The datastore. */
+    protected HibernateDatastore datastore;
 
     /** The event publisher. */
     protected ConfigurableApplicationEventPublisher eventPublisher;
@@ -205,108 +170,11 @@ public class ClosureEventTriggeringInterceptor
     private MappingContext mappingContext;
     private ProxyHandler proxyHandler;
 
-  /** Sets the datastore. */
-  public void setDatastore(HibernateDatastore datastore) {
-    this.datastore = datastore;
-    this.mappingContext = datastore.getMappingContext();
-    this.proxyHandler = mappingContext.getProxyHandler();
-  }
-
-  /** Sets the event publisher. */
-  public void setEventPublisher(ConfigurableApplicationEventPublisher eventPublisher) {
-    this.eventPublisher = eventPublisher;
-  }
-
-  @Override
-  public void onMerge(MergeEvent hibernateEvent) throws HibernateException {
-    publishMergeEvent(hibernateEvent);
-    mergeEventListener.onMerge(hibernateEvent);
-  }
-
-  private Object getMergeEntity(MergeEvent hibernateEvent) {
-    return Optional.ofNullable(hibernateEvent.getOriginal()).orElse(hibernateEvent.getEntity());
-  }
-
-  @Override
-  public void onMerge(MergeEvent hibernateEvent, MergeContext copiedAlready)
-      throws HibernateException {
-    publishMergeEvent(hibernateEvent);
-    mergeEventListener.onMerge(hibernateEvent, copiedAlready);
-  }
-
-  private void publishMergeEvent(MergeEvent hibernateEvent) {
-    Object entity = getMergeEntity(hibernateEvent);
-    if (entity != null && proxyHandler.isInitialized(entity)) {
-      activateDirtyChecking(entity);
-      org.grails.datastore.mapping.engine.event.MergeEvent grailsEvent =
-          new org.grails.datastore.mapping.engine.event.MergeEvent(this.datastore, entity);
-      publishEvent(hibernateEvent, grailsEvent);
-    }
-  }
-
-  @Override
-  public void onPersist(PersistEvent event) throws HibernateException {
-    publishPersistEvent(event);
-    persistEventListener.onPersist(event);
-  }
-
-  @Override
-  public void onPersist(PersistEvent event, PersistContext createdAlready)
-      throws HibernateException {
-    publishPersistEvent(event);
-    persistEventListener.onPersist(event, createdAlready);
-  }
-
-  private Object getPersistEntity(PersistEvent hibernateEvent) {
-    return hibernateEvent.getObject();
-  }
-
-  private void publishPersistEvent(PersistEvent hibernateEvent) {
-    Object entity = getPersistEntity(hibernateEvent);
-    if (entity != null && proxyHandler.isInitialized(entity)) {
-      activateDirtyChecking(entity);
-      org.grails.datastore.mapping.engine.event.PersistEvent grailsEvent =
-          new org.grails.datastore.mapping.engine.event.PersistEvent(this.datastore, entity);
-      publishEvent(hibernateEvent, grailsEvent);
-    }
-  }
-
-  @Override
-  public void injectCallbackRegistry(CallbackRegistry callbackRegistry) {
-    persistEventListener.injectCallbackRegistry(callbackRegistry);
-  }
-
-  public void onPreLoad(PreLoadEvent hibernateEvent) {
-    org.grails.datastore.mapping.engine.event.PreLoadEvent grailsEvent =
-        new org.grails.datastore.mapping.engine.event.PreLoadEvent(
-            this.datastore, hibernateEvent.getEntity());
-    publishEvent(hibernateEvent, grailsEvent);
-  }
-
-  public void onPostLoad(PostLoadEvent hibernateEvent) {
-    Object entity = hibernateEvent.getEntity();
-    activateDirtyChecking(entity);
-    publishEvent(
-        hibernateEvent,
-        new org.grails.datastore.mapping.engine.event.PostLoadEvent(this.datastore, entity));
-  }
-
-  public boolean onPreInsert(PreInsertEvent hibernateEvent) {
-    Object entity = hibernateEvent.getEntity();
-    Class type = Hibernate.getClass(entity);
-    PersistentEntity persistentEntity = mappingContext.getPersistentEntity(type.getName());
-    AbstractPersistenceEvent grailsEvent;
-    ModificationTrackingEntityAccess entityAccess = null;
-    if (persistentEntity != null) {
-      entityAccess =
-          new ModificationTrackingEntityAccess(
-              mappingContext.createEntityAccess(persistentEntity, entity));
-      grailsEvent =
-          new org.grails.datastore.mapping.engine.event.PreInsertEvent(
-              this.datastore, persistentEntity, entityAccess);
-    } else {
-      grailsEvent =
-          new org.grails.datastore.mapping.engine.event.PreInsertEvent(this.datastore, entity);
+    /** Sets the datastore. */
+    public void setDatastore(HibernateDatastore datastore) {
+        this.datastore = datastore;
+        this.mappingContext = datastore.getMappingContext();
+        this.proxyHandler = mappingContext.getProxyHandler();
     }
 
     /** Sets the event publisher. */

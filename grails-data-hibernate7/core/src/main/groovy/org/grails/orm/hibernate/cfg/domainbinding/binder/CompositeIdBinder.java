@@ -19,10 +19,7 @@
 package org.grails.orm.hibernate.cfg.domainbinding.binder;
 
 import jakarta.annotation.Nonnull;
-import org.grails.orm.hibernate.cfg.CompositeIdentity;
-import org.grails.orm.hibernate.cfg.GrailsHibernateUtil;
-import org.grails.orm.hibernate.cfg.domainbinding.hibernate.GrailsHibernatePersistentEntity;
-import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernatePersistentProperty;
+
 import org.hibernate.boot.spi.MetadataBuildingContext;
 import org.hibernate.mapping.Component;
 import org.hibernate.mapping.PersistentClass;
@@ -34,6 +31,11 @@ import org.grails.orm.hibernate.cfg.GrailsHibernateUtil;
 import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernatePersistentEntity;
 import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernatePersistentProperty;
 
+import org.grails.orm.hibernate.cfg.CompositeIdentity;
+import org.grails.orm.hibernate.cfg.GrailsHibernateUtil;
+import org.grails.orm.hibernate.cfg.domainbinding.hibernate.GrailsHibernatePersistentEntity;
+import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernatePersistentProperty;
+
 @SuppressWarnings("PMD.DataflowAnomalyAnalysis")
 public class CompositeIdBinder {
 
@@ -41,41 +43,39 @@ public class CompositeIdBinder {
     private final ComponentUpdater componentUpdater;
     private final GrailsPropertyBinder grailsPropertyBinder;
 
-  public CompositeIdBinder(
-      MetadataBuildingContext metadataBuildingContext,
-      ComponentUpdater componentUpdater,
-      GrailsPropertyBinder grailsPropertyBinder) {
-    this.metadataBuildingContext = metadataBuildingContext;
-    this.componentUpdater = componentUpdater;
-    this.grailsPropertyBinder = grailsPropertyBinder;
-  }
-
-  public void bindCompositeId(
-      @Nonnull GrailsHibernatePersistentEntity domainClass,
-      RootClass root,
-      CompositeIdentity compositeIdentity) {
-    Component id = new Component(metadataBuildingContext, root);
-    id.setNullValue("undefined");
-    root.setIdentifier(id);
-    root.setIdentifierMapper(id);
-    root.setEmbeddedIdentifier(true);
-    id.setComponentClassName(domainClass.getName());
-    id.setKey(true);
-    id.setEmbedded(true);
-
-    String path = GrailsHibernateUtil.qualify(root.getEntityName(), "id");
-
-    id.setRoleName(path);
-
-    if (compositeIdentity == null) {
-      compositeIdentity = new CompositeIdentity();
+    public CompositeIdBinder(
+            MetadataBuildingContext metadataBuildingContext,
+            ComponentUpdater componentUpdater,
+            GrailsPropertyBinder grailsPropertyBinder) {
+        this.metadataBuildingContext = metadataBuildingContext;
+        this.componentUpdater = componentUpdater;
+        this.grailsPropertyBinder = grailsPropertyBinder;
     }
 
-    HibernatePersistentProperty identifierProp = domainClass.getIdentity();
-    for (HibernatePersistentProperty property : composite) {
-      var value =
-          grailsPropertyBinder.bindProperty(
-              root, root.getTable(), "", identifierProp, property);
-      componentUpdater.updateComponent(id, identifierProp, property, value);
+    public void bindCompositeId(
+            @Nonnull GrailsHibernatePersistentEntity domainClass, RootClass root, CompositeIdentity compositeIdentity) {
+        Component id = new Component(metadataBuildingContext, root);
+        id.setNullValue("undefined");
+        root.setIdentifier(id);
+        root.setIdentifierMapper(id);
+        root.setEmbeddedIdentifier(true);
+        id.setComponentClassName(domainClass.getName());
+        id.setKey(true);
+        id.setEmbedded(true);
+
+        String path = GrailsHibernateUtil.qualify(root.getEntityName(), "id");
+
+        id.setRoleName(path);
+
+        if (compositeIdentity == null) {
+            compositeIdentity = new CompositeIdentity();
+        }
+        HibernatePersistentProperty[] composite = compositeIdentity.getHibernateProperties(domainClass);
+
+        HibernatePersistentProperty identifierProp = domainClass.getIdentity();
+        for (HibernatePersistentProperty property : composite) {
+            var value = grailsPropertyBinder.bindProperty(root, root.getTable(), "", identifierProp, property);
+            componentUpdater.updateComponent(id, identifierProp, property, value);
+        }
     }
 }

@@ -19,7 +19,6 @@
 package org.grails.orm.hibernate.cfg.domainbinding.binder;
 
 import jakarta.annotation.Nonnull;
-import org.grails.orm.hibernate.cfg.domainbinding.hibernate.GrailsHibernatePersistentEntity;
 
 import org.hibernate.boot.spi.MetadataBuildingContext;
 import org.hibernate.mapping.PersistentClass;
@@ -38,31 +37,29 @@ public class SingleTableSubclassBinder {
 
     private static final Logger LOG = LoggerFactory.getLogger(SingleTableSubclassBinder.class);
 
-  private final ClassBinder classBinder;
-  private final MetadataBuildingContext metadataBuildingContext;
+    private final ClassBinder classBinder;
+    private final MetadataBuildingContext metadataBuildingContext;
 
-  public SingleTableSubclassBinder(ClassBinder classBinder, MetadataBuildingContext metadataBuildingContext) {
-    this.classBinder = classBinder;
-    this.metadataBuildingContext = metadataBuildingContext;
-  }
-
-  /**
-   * Binds a sub-class using table-per-hierarchy inheritance mapping
-   *
-   * @param sub      The Grails domain class instance representing the sub-class
-   * @param parent   The Hibernate Parent PersistentClass object
-   * @return The created SingleTableSubclass
-   */
-  public SingleTableSubclass bindSubClass(
-      @Nonnull GrailsHibernatePersistentEntity sub,
-      PersistentClass parent) {
-    SingleTableSubclass subClass = new SingleTableSubclass(parent, metadataBuildingContext);
-    classBinder.bindClass(sub, subClass);
-    subClass.setDiscriminatorValue(sub.getDiscriminatorValue());
-    if (LOG.isDebugEnabled()) {
-      LOG.debug(
-          "Mapping subclass: " + subClass.getEntityName() + " -> " + subClass.getTable().getName());
+    public SingleTableSubclassBinder(ClassBinder classBinder, MetadataBuildingContext metadataBuildingContext) {
+        this.classBinder = classBinder;
+        this.metadataBuildingContext = metadataBuildingContext;
     }
-    return subClass;
-  }
+
+    /**
+     * Binds a sub-class using table-per-hierarchy inheritance mapping
+     *
+     * @param sub      The Grails domain class instance representing the sub-class
+     * @param parent   The Hibernate Parent PersistentClass object
+     * @return The created SingleTableSubclass
+     */
+    public SingleTableSubclass bindSubClass(@Nonnull GrailsHibernatePersistentEntity sub, PersistentClass parent) {
+        SingleTableSubclass subClass = new SingleTableSubclass(parent, metadataBuildingContext);
+        classBinder.bindClass(sub, subClass);
+        subClass.setDiscriminatorValue(sub.getDiscriminatorValue());
+        if (LOG.isDebugEnabled()) {
+            LOG.debug("Mapping subclass: " + subClass.getEntityName() + " -> "
+                    + subClass.getTable().getName());
+        }
+        return subClass;
+    }
 }

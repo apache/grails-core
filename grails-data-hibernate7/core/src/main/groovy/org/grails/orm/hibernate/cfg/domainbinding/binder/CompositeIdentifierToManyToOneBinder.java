@@ -18,14 +18,16 @@
  */
 package org.grails.orm.hibernate.cfg.domainbinding.binder;
 
-import static org.grails.orm.hibernate.cfg.domainbinding.binder.GrailsDomainBinder.UNDERSCORE;
-
 import java.util.Arrays;
 import java.util.List;
 import java.util.Optional;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 import java.util.stream.Stream;
+
+import org.hibernate.boot.spi.MetadataBuildingContext;
+import org.hibernate.engine.jdbc.env.spi.JdbcEnvironment;
+import org.hibernate.mapping.SimpleValue;
 
 import org.grails.orm.hibernate.cfg.ColumnConfig;
 import org.grails.orm.hibernate.cfg.CompositeIdentity;
@@ -37,9 +39,7 @@ import org.grails.orm.hibernate.cfg.domainbinding.util.BackticksRemover;
 import org.grails.orm.hibernate.cfg.domainbinding.util.DefaultColumnNameFetcher;
 import org.grails.orm.hibernate.cfg.domainbinding.util.ForeignKeyColumnCountCalculator;
 
-import org.hibernate.boot.spi.MetadataBuildingContext;
-import org.hibernate.engine.jdbc.env.spi.JdbcEnvironment;
-import org.hibernate.mapping.SimpleValue;
+import static org.grails.orm.hibernate.cfg.domainbinding.binder.GrailsDomainBinder.UNDERSCORE;
 
 @SuppressWarnings("PMD.DataflowAnomalyAnalysis")
 public class CompositeIdentifierToManyToOneBinder {
@@ -84,7 +84,8 @@ public class CompositeIdentifierToManyToOneBinder {
         String[] propertyNames = compositeId.getPropertyNames();
         List<ColumnConfig> columns = property.getMappedForm().getColumns();
         int existingCount = columns.size();
-        if (existingCount != foreignKeyColumnCountCalculator.calculateForeignKeyColumnCount(refDomainClass, propertyNames)) {
+        if (existingCount
+                != foreignKeyColumnCountCalculator.calculateForeignKeyColumnCount(refDomainClass, propertyNames)) {
             String prefix = refDomainClass.getTableName(namingStrategy);
             IntStream.range(0, propertyNames.length)
                     .boxed()
@@ -118,15 +119,15 @@ public class CompositeIdentifierToManyToOneBinder {
             return Optional.empty();
         }
         return Optional.of(Arrays.stream(nestedComposite)
-                .map(cip -> namedColumn(join(prefix, namingStrategy.resolveColumnName(propertyName),
+                .map(cip -> namedColumn(join(
+                        prefix,
+                        namingStrategy.resolveColumnName(propertyName),
                         defaultColumnNameFetcher.getDefaultColumnName(cip)))));
     }
 
     private Stream<ColumnConfig> singleColumn(
             String prefix, String propertyName, HibernatePersistentProperty ref, ColumnConfig cc) {
-        String suffix = ref != null
-                ? defaultColumnNameFetcher.getDefaultColumnName(ref)
-                : propertyName;
+        String suffix = ref != null ? defaultColumnNameFetcher.getDefaultColumnName(ref) : propertyName;
         cc.setName(join(prefix, suffix));
         return Stream.of(cc);
     }

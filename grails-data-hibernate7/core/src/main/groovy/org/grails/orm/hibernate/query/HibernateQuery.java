@@ -18,10 +18,6 @@
  */
 package org.grails.orm.hibernate.query;
 
-import grails.gorm.DetachedCriteria;
-import groovy.lang.Closure;
-import jakarta.persistence.criteria.CriteriaQuery;
-import jakarta.persistence.criteria.JoinType;
 import java.util.Deque;
 import java.util.HashMap;
 import java.util.LinkedList;
@@ -52,19 +48,11 @@ import org.grails.datastore.mapping.query.AssociationQuery;
 import org.grails.datastore.mapping.query.Projections;
 import org.grails.datastore.mapping.query.Query;
 import org.grails.datastore.mapping.query.api.QueryableCriteria;
-import org.grails.orm.hibernate.HibernateSession;
 import org.grails.orm.hibernate.GrailsHibernateTemplate;
+import org.grails.orm.hibernate.HibernateSession;
 import org.grails.orm.hibernate.IHibernateTemplate;
 import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernatePersistentEntity;
 import org.grails.orm.hibernate.proxy.HibernateProxyHandler;
-import org.hibernate.FlushMode;
-import org.hibernate.query.QueryFlushMode;
-import org.hibernate.Session;
-import org.hibernate.SessionFactory;
-import org.hibernate.query.criteria.HibernateCriteriaBuilder;
-import org.hibernate.query.criteria.JpaCriteriaQuery;
-import org.springframework.core.convert.ConversionService;
-import org.springframework.dao.InvalidDataAccessApiUsageException;
 
 /**
  * Bridges the Query API with the Hibernate Criteria API
@@ -78,69 +66,8 @@ public class HibernateQuery extends Query {
     protected String alias;
     protected int aliasCount;
 
-  public DetachedCriteria<?> getDetachedCriteria() {
-    return detachedCriteria;
-  }
-
-  private final Map<String, CriteriaAndAlias> createdAssociationPaths = new HashMap<>();
-  protected Deque<PersistentEntity> entityStack = new LinkedList<>();
-  protected Deque<Association> associationStack = new LinkedList<>();
-  protected DetachedCriteria<?> detachedCriteria;
-  protected ProxyHandler proxyHandler = new HibernateProxyHandler();
-
-  private Integer fetchSize;
-  private Integer timeout;
-  private QueryFlushMode flushMode;
-  private Boolean readOnly;
-
-  public HibernateQuery(HibernateSession session, PersistentEntity entity) {
-    super(session, entity);
-    this.detachedCriteria = new DetachedCriteria<>(entity.getJavaClass());
-  }
-
-  public void setDetachedCriteria(DetachedCriteria<?> detachedCriteria) {
-    this.detachedCriteria = detachedCriteria;
-  }
-
-  @Override
-  protected Object resolveIdIfEntity(Object value) {
-    // for Hibernate queries, the object itself is used in queries, not the id
-    return value;
-  }
-
-  @Override
-  public Query isEmpty(String property) {
-    detachedCriteria.isEmpty(calculatePropertyName(property));
-    return this;
-  }
-
-  @Override
-  public Query isNotEmpty(String property) {
-    detachedCriteria.isNotEmpty(calculatePropertyName(property));
-    return this;
-  }
-
-  public Query count() {
-    projections.count();
-    return this;
-  }
-
-  @Override
-  public Query isNull(String property) {
-    detachedCriteria.isNull(calculatePropertyName(property));
-    return this;
-  }
-
-  @Override
-  public Query isNotNull(String property) {
-    detachedCriteria.isNotNull(calculatePropertyName(property));
-    return this;
-  }
-
-  @Override
-  public PersistentEntity getEntity() {
-    if (!entityStack.isEmpty()) {
-      return entityStack.getLast();
+    public DetachedCriteria<?> getDetachedCriteria() {
+        return detachedCriteria;
     }
 
     private final Map<String, CriteriaAndAlias> createdAssociationPaths = new HashMap<>();
@@ -163,10 +90,11 @@ public class HibernateQuery extends Query {
         this.detachedCriteria = detachedCriteria;
     }
 
-  @Override
-  public void add(Criterion criterion) {
-    detachedCriteria.add(criterion);
-  }
+    @Override
+    protected Object resolveIdIfEntity(Object value) {
+        // for Hibernate queries, the object itself is used in queries, not the id
+        return value;
+    }
 
     @Override
     public Query isEmpty(String property) {
@@ -174,11 +102,67 @@ public class HibernateQuery extends Query {
         return this;
     }
 
-  @Override
-  public void add(Junction currentJunction, Criterion criterion) {
-    Disjunction disjunction =
-        (Disjunction)
-            detachedCriteria.getCriteria().stream()
+    @Override
+    public Query isNotEmpty(String property) {
+        detachedCriteria.isNotEmpty(calculatePropertyName(property));
+        return this;
+    }
+
+    public Query count() {
+        projections.count();
+        return this;
+    }
+
+    @Override
+    public Query isNull(String property) {
+        detachedCriteria.isNull(calculatePropertyName(property));
+        return this;
+    }
+
+    @Override
+    public Query isNotNull(String property) {
+        detachedCriteria.isNotNull(calculatePropertyName(property));
+        return this;
+    }
+
+    @Override
+    public PersistentEntity getEntity() {
+        if (!entityStack.isEmpty()) {
+            return entityStack.getLast();
+        }
+        return super.getEntity();
+    }
+
+    private String getAssociationPath(String propertyName) {
+        if (propertyName.indexOf('.') > -1) {
+            return propertyName;
+        } else {
+            StringBuilder fullPath = new StringBuilder();
+            for (Association association : associationStack) {
+                fullPath.append(association.getName());
+                fullPath.append('.');
+            }
+            fullPath.append(propertyName);
+            return fullPath.toString();
+        }
+    }
+
+    public List<Criterion> getAllCriteria() {
+        return detachedCriteria.getCriteria();
+    }
+
+    @Override
+    public void add(Criterion criterion) {
+        detachedCriteria.add(criterion);
+    }
+
+    public void add(DetachedCriteria<?> detachedCriteria) {
+        detachedCriteria.add(new Conjunction(detachedCriteria.getCriteria()));
+    }
+
+    @Override
+    public void add(Junction currentJunction, Criterion criterion) {
+        Disjunction disjunction = (Disjunction) detachedCriteria.getCriteria().stream()
                 .filter(it -> it instanceof Disjunction)
                 .findFirst()
                 .orElse(new Disjunction());
@@ -186,11 +170,11 @@ public class HibernateQuery extends Query {
         detachedCriteria.add(disjunction);
     }
 
-  @Override
-  public Query eq(String property, Object value) {
-    detachedCriteria.eq(calculatePropertyName(property), value);
-    return this;
-  }
+    @Override
+    public Query eq(String property, Object value) {
+        detachedCriteria.eq(calculatePropertyName(property), value);
+        return this;
+    }
 
     @Override
     public Query idEq(Object value) {
@@ -198,11 +182,11 @@ public class HibernateQuery extends Query {
         return this;
     }
 
-  @Override
-  public Query gt(String property, Object value) {
-    detachedCriteria.gt(calculatePropertyName(property), value);
-    return this;
-  }
+    @Override
+    public Query gt(String property, Object value) {
+        detachedCriteria.gt(calculatePropertyName(property), value);
+        return this;
+    }
 
     @Override
     public Query and(Criterion a, Criterion b) {
@@ -240,111 +224,14 @@ public class HibernateQuery extends Query {
         return this;
     }
 
-  public Query not(Criterion a) {
-    not(
-        new Closure(HibernateQuery.this) {
-          @SuppressWarnings("unused") // called reflectively by the Groovy runtime as the closure body
-          public void doCall() {
-            ((DetachedCriteria) getDelegate()).add(a);
-          }
+    public Query not(Criterion a) {
+        not(new Closure(HibernateQuery.this) {
+            @SuppressWarnings("unused") // called reflectively by the Groovy runtime as the closure body
+            public void doCall() {
+                ((DetachedCriteria) getDelegate()).add(a);
+            }
         });
-    return this;
-  }
-
-  public Query not(List<Criterion> criteria) {
-    var conjunction = new Conjunction();
-    criteria.forEach(conjunction::add);
-    var negation = new Negation();
-    negation.add(conjunction);
-    detachedCriteria.add(negation);
-    return this;
-  }
-
-  public Query not(Closure closure) {
-    detachedCriteria.not(closure);
-    return this;
-  }
-
-  @Override
-  public Query allEq(Map<String, Object> values) {
-    values.forEach(
-        (key, value) -> detachedCriteria.eq(calculatePropertyName(key), value));
-    return this;
-  }
-
-  @Override
-  public Query ge(String property, Object value) {
-    detachedCriteria.ge(calculatePropertyName(property), value);
-    return this;
-  }
-
-  @Override
-  public Query le(String property, Object value) {
-    detachedCriteria.le(calculatePropertyName(property), value);
-    return this;
-  }
-
-  @Override
-  public Query gte(String property, Object value) {
-    detachedCriteria.gte(calculatePropertyName(property), value);
-    return this;
-  }
-
-  @Override
-  public Query lte(String property, Object value) {
-    detachedCriteria.lte(calculatePropertyName(property), value);
-    return this;
-  }
-
-  @Override
-  public Query lt(String property, Object value) {
-    detachedCriteria.lt(calculatePropertyName(property), value);
-    return this;
-  }
-
-  @Override
-  public Query in(String property, List values) {
-    detachedCriteria.in(calculatePropertyName(property), values);
-    return this;
-  }
-
-  @Override
-  public Query between(String property, Object start, Object end) {
-    detachedCriteria.between(calculatePropertyName(property), start, end);
-    return this;
-  }
-
-  @Override
-  public Query like(String property, String expr) {
-    detachedCriteria.like(calculatePropertyName(property), expr);
-    return this;
-  }
-
-  @Override
-  public Query ilike(String property, String expr) {
-    detachedCriteria.ilike(calculatePropertyName(property), expr);
-    return this;
-  }
-
-  @Override
-  public Query rlike(String property, String expr) {
-    detachedCriteria.rlike(calculatePropertyName(property), expr);
-    return this;
-  }
-
-  @Override
-  public AssociationQuery createQuery(String associationName) {
-    final PersistentProperty property =
-            ((HibernatePersistentEntity)entity).getHibernatePropertyByName(calculatePropertyName(associationName));
-    if ((property instanceof Association association)) {
-      String alias = generateAlias(associationName);
-      CriteriaAndAlias subCriteria = getOrCreateAlias(associationName, alias);
-      return new HibernateAssociationQuery(
-          (HibernateSession) getSession(),
-          association.getAssociatedEntity(),
-          association,
-          subCriteria.associationPath,
-          alias);
+        return this;
     }
 
     public Query not(List<Criterion> criteria) {
@@ -361,93 +248,10 @@ public class HibernateQuery extends Query {
         return this;
     }
 
-  @Override
-  public Query join(String property) {
-    detachedCriteria.join(property);
-    return this;
-  }
-
-  @Override
-  public Query join(String property, JoinType joinType) {
-    detachedCriteria.join(property, joinType);
-    return this;
-  }
-
-  @Override
-  public Query select(String property) {
-    detachedCriteria.select(property);
-    // Ensure property is added to projections for Hibernate 7
-    projections.property(property);
-    return this;
-  }
-
-  @Override
-  public List list() {
-    return getHibernateQueryExecutor().list(getCurrentSession(), getJpaCriteriaQuery());
-  }
-
-  public List list(Session session) {
-    return getHibernateQueryExecutor().list(session, getJpaCriteriaQuery());
-  }
-
-  private HibernateQueryExecutor getHibernateQueryExecutor() {
-    return new HibernateQueryExecutor(
-        offset, max, lockResult, queryCache, fetchSize, timeout, flushMode, readOnly, proxyHandler);
-  }
-
-  public JpaCriteriaQuery<?> getJpaCriteriaQuery() {
-    ConversionService conversionService =
-        getSession().getMappingContext().getConversionService();
-    return new JpaCriteriaQueryCreator(projections, getCriteriaBuilder(), entity, detachedCriteria, conversionService)
-        .createQuery();
-  }
-
-  public void setFetchSize(Integer fetchSize) {
-    this.fetchSize = fetchSize;
-  }
-
-  @Override
-  protected void flushBeforeQuery() {
-    // do nothing
-  }
-
-  @Override
-  public Object singleResult() {
-    return getHibernateQueryExecutor().singleResult(getCurrentSession(), getJpaCriteriaQuery());
-  }
-
-  public Object singleResult(Session session) {
-    return getHibernateQueryExecutor().singleResult(session, getJpaCriteriaQuery());
-  }
-
-  public Object scroll() {
-    return getHibernateQueryExecutor().scroll(getCurrentSession(), getJpaCriteriaQuery());
-  }
-
-  public Object scroll(Session session) {
-    return getHibernateQueryExecutor().scroll(session, getJpaCriteriaQuery());
-  }
-
-  private Session getCurrentSession() {
-    return getSessionFactory().getCurrentSession();
-  }
-
-  private SessionFactory getSessionFactory() {
-    return ((IHibernateTemplate) session.getNativeInterface()).getSessionFactory();
-  }
-
-  public HibernateCriteriaBuilder getCriteriaBuilder() {
-    return getSessionFactory().getCriteriaBuilder();
-  }
-
-  @Override
-  protected List executeQuery(PersistentEntity entity, Junction criteria) {
-    return list();
-  }
-
-  protected String calculatePropertyName(String property) {
-    if (alias == null) {
-      return property;
+    @Override
+    public Query allEq(Map<String, Object> values) {
+        values.forEach((key, value) -> detachedCriteria.eq(calculatePropertyName(key), value));
+        return this;
     }
 
     @Override
@@ -456,10 +260,11 @@ public class HibernateQuery extends Query {
         return this;
     }
 
-  public Query in(String propertyName, QueryableCriteria<?> subquery) {
-    detachedCriteria.inList(calculatePropertyName(propertyName), subquery);
-    return this;
-  }
+    @Override
+    public Query le(String property, Object value) {
+        detachedCriteria.le(calculatePropertyName(property), value);
+        return this;
+    }
 
     @Override
     public Query gte(String property, Object value) {
@@ -467,9 +272,11 @@ public class HibernateQuery extends Query {
         return this;
     }
 
-  public void setHibernateFlushMode(FlushMode flushMode) {
-    this.flushMode = HibernateHqlQuery.convertQueryFlushMode(flushMode);
-  }
+    @Override
+    public Query lte(String property, Object value) {
+        detachedCriteria.lte(calculatePropertyName(property), value);
+        return this;
+    }
 
     @Override
     public Query lt(String property, Object value) {
@@ -483,10 +290,11 @@ public class HibernateQuery extends Query {
         return this;
     }
 
-  public Query notIn(String propertyName, QueryableCriteria<?> subquery) {
-    detachedCriteria.notIn(calculatePropertyName(propertyName), subquery);
-    return this;
-  }
+    @Override
+    public Query between(String property, Object start, Object end) {
+        detachedCriteria.between(calculatePropertyName(property), start, end);
+        return this;
+    }
 
     @Override
     public Query like(String property, String expr) {
@@ -500,148 +308,159 @@ public class HibernateQuery extends Query {
         return this;
     }
 
-  public Query gtAll(String propertyName, QueryableCriteria<?> subquery) {
-    detachedCriteria.gtAll(calculatePropertyName(propertyName), subquery);
-    return this;
-  }
+    @Override
+    public Query rlike(String property, String expr) {
+        detachedCriteria.rlike(calculatePropertyName(property), expr);
+        return this;
+    }
 
-  public Query geAll(String propertyName, QueryableCriteria<?> subquery) {
-    detachedCriteria.geAll(calculatePropertyName(propertyName), subquery);
-    return this;
-  }
+    @Override
+    public AssociationQuery createQuery(String associationName) {
+        final PersistentProperty property =
+                ((HibernatePersistentEntity) entity).getHibernatePropertyByName(calculatePropertyName(associationName));
+        if ((property instanceof Association association)) {
+            String alias = generateAlias(associationName);
+            CriteriaAndAlias subCriteria = getOrCreateAlias(associationName, alias);
+            return new HibernateAssociationQuery(
+                    (HibernateSession) getSession(),
+                    association.getAssociatedEntity(),
+                    association,
+                    subCriteria.associationPath,
+                    alias);
+        }
+        throw new InvalidDataAccessApiUsageException("Cannot query association ["
+                + calculatePropertyName(associationName)
+                + "] of entity ["
+                + entity
+                + "]. Property is not an association!");
+    }
 
-  public Query ltAll(String propertyName, QueryableCriteria<?> subquery) {
-    detachedCriteria.ltAll(calculatePropertyName(propertyName), subquery);
-    return this;
-  }
+    @SuppressWarnings("PMD.DataflowAnomalyAnalysis")
+    private CriteriaAndAlias getOrCreateAlias(String associationName, String alias) {
+        String associationPath = getAssociationPath(associationName);
+        String effectiveAlias = (alias == null) ? generateAlias(associationName) : alias;
 
-  public Query leAll(String propertyName, QueryableCriteria<?> subquery) {
-    detachedCriteria.leAll(calculatePropertyName(propertyName), subquery);
-    return this;
-  }
+        if (createdAssociationPaths.containsKey(associationPath)) {
+            return createdAssociationPaths.get(associationPath);
+        } else {
+            CriteriaQuery criteriaQuery = getCriteriaBuilder().createQuery(entity.getJavaClass());
+            CriteriaAndAlias subCriteria = new CriteriaAndAlias(criteriaQuery, effectiveAlias, associationPath);
+            createdAssociationPaths.put(associationPath, subCriteria);
+            createdAssociationPaths.put(effectiveAlias, subCriteria);
+            return subCriteria;
+        }
+    }
 
-  public Query gtSome(String propertyName, QueryableCriteria<?> subquery) {
-    detachedCriteria.gtSome(calculatePropertyName(propertyName), subquery);
-    return this;
-  }
+    @Override
+    public Query firstResult(int offset) {
+        offset(offset);
+        return this;
+    }
 
-  public Query geSome(String propertyName, QueryableCriteria<?> subquery) {
-    detachedCriteria.geSome(calculatePropertyName(propertyName), subquery);
-    return this;
-  }
+    @Override
+    public Query cache(boolean cache) {
+        return super.cache(cache);
+    }
 
-  public Query ltSome(String propertyName, QueryableCriteria<?> subquery) {
-    detachedCriteria.ltSome(calculatePropertyName(propertyName), subquery);
-    return this;
-  }
+    @Override
+    public Query lock(boolean lock) {
+        return super.lock(lock);
+    }
 
-  public Query leSome(String propertyName, QueryableCriteria<?> subquery) {
-    detachedCriteria.leSome(calculatePropertyName(propertyName), subquery);
-    return this;
-  }
+    @Override
+    public Query order(Order order) {
+        // TODO HACK
+        if (order == null) {
+            detachedCriteria.getOrders().clear();
+        } else {
+            detachedCriteria.order(order);
+        }
+        return this;
+    }
 
-  public Query eqAll(String propertyName, QueryableCriteria propertyValue) {
-    detachedCriteria.eqAll(calculatePropertyName(propertyName), propertyValue);
-    return this;
-  }
+    @Override
+    public Query join(String property) {
+        detachedCriteria.join(property);
+        return this;
+    }
 
-  public Query ne(String propertyName, Object propertyValue) {
-    detachedCriteria.ne(calculatePropertyName(propertyName), propertyValue);
-    return this;
-  }
+    @Override
+    public Query join(String property, JoinType joinType) {
+        detachedCriteria.join(property, joinType);
+        return this;
+    }
 
-  public Query eqProperty(String propertyName, String otherPropertyName) {
-    detachedCriteria.eqProperty(calculatePropertyName(propertyName), otherPropertyName);
-    return this;
-  }
+    @Override
+    public Query select(String property) {
+        detachedCriteria.select(property);
+        // Ensure property is added to projections for Hibernate 7
+        projections.property(property);
+        return this;
+    }
 
-  public Query neProperty(String propertyName, String otherPropertyName) {
-    detachedCriteria.neProperty(calculatePropertyName(propertyName), otherPropertyName);
-    return this;
-  }
+    @Override
+    public List list() {
+        return getHibernateQueryExecutor().list(getCurrentSession(), getJpaCriteriaQuery());
+    }
 
-  public Query gtProperty(String propertyName, String otherPropertyName) {
-    detachedCriteria.gtProperty(calculatePropertyName(propertyName), otherPropertyName);
-    return this;
-  }
+    public List list(Session session) {
+        return getHibernateQueryExecutor().list(session, getJpaCriteriaQuery());
+    }
 
-  public Query geProperty(String propertyName, String otherPropertyName) {
-    detachedCriteria.geProperty(calculatePropertyName(propertyName), otherPropertyName);
-    return this;
-  }
+    private HibernateQueryExecutor getHibernateQueryExecutor() {
+        return new HibernateQueryExecutor(
+                offset, max, lockResult, queryCache, fetchSize, timeout, flushMode, readOnly, proxyHandler);
+    }
 
-  public Query ltProperty(String propertyName, String otherPropertyName) {
-    detachedCriteria.ltProperty(calculatePropertyName(propertyName), otherPropertyName);
-    return this;
-  }
+    public JpaCriteriaQuery<?> getJpaCriteriaQuery() {
+        ConversionService conversionService = getSession().getMappingContext().getConversionService();
+        return new JpaCriteriaQueryCreator(
+                        projections, getCriteriaBuilder(), entity, detachedCriteria, conversionService)
+                .createQuery();
+    }
 
-  public Query leProperty(String propertyName, String otherPropertyName) {
-    detachedCriteria.leProperty(calculatePropertyName(propertyName), otherPropertyName);
-    return this;
-  }
+    public void setFetchSize(Integer fetchSize) {
+        this.fetchSize = fetchSize;
+    }
 
-  public Query sizeEq(String propertyName, int size) {
-    detachedCriteria.sizeEq(calculatePropertyName(propertyName), size);
-    return this;
-  }
+    @Override
+    protected void flushBeforeQuery() {
+        // do nothing
+    }
 
-  public Query sizeGt(String propertyName, int size) {
-    detachedCriteria.sizeGt(calculatePropertyName(propertyName), size);
-    return this;
-  }
+    @Override
+    public Object singleResult() {
+        return getHibernateQueryExecutor().singleResult(getCurrentSession(), getJpaCriteriaQuery());
+    }
 
-  public Query sizeGe(String propertyName, int size) {
-    detachedCriteria.sizeGe(calculatePropertyName(propertyName), size);
-    return this;
-  }
+    public Object singleResult(Session session) {
+        return getHibernateQueryExecutor().singleResult(session, getJpaCriteriaQuery());
+    }
 
-  public Query sizeLe(String propertyName, int size) {
-    detachedCriteria.sizeLe(calculatePropertyName(propertyName), size);
-    return this;
-  }
+    public Object scroll() {
+        return getHibernateQueryExecutor().scroll(getCurrentSession(), getJpaCriteriaQuery());
+    }
 
-  public Query sizeLt(String propertyName, int size) {
-    detachedCriteria.sizeLt(calculatePropertyName(propertyName), size);
-    return this;
-  }
+    public Object scroll(Session session) {
+        return getHibernateQueryExecutor().scroll(session, getJpaCriteriaQuery());
+    }
 
-  public Query sizeNe(String propertyName, int size) {
-    detachedCriteria.sizeNe(calculatePropertyName(propertyName), size);
-    return this;
-  }
+    private Session getCurrentSession() {
+        return getSessionFactory().getCurrentSession();
+    }
 
-  @Override
-  public Query maxResults(int maxResults) {
-    this.max = maxResults;
-    return this;
-  }
+    private SessionFactory getSessionFactory() {
+        return ((IHibernateTemplate) session.getNativeInterface()).getSessionFactory();
+    }
 
     public HibernateCriteriaBuilder getCriteriaBuilder() {
         return getSessionFactory().getCriteriaBuilder();
     }
 
-  @Override
-  @SuppressWarnings({
-    "PMD.CloneThrowsCloneNotSupportedException",
-    "CloneDoesntCallSuperClone" // intentional: constructs a fresh instance via the session template
-                                // to avoid shallow-copying the live Session and DetachedCriteria state
-  })
-  public HibernateQuery clone() {
-    final HibernateSession hibernateSession = (HibernateSession) getSession();
-    final GrailsHibernateTemplate hibernateTemplate =
-        (GrailsHibernateTemplate) hibernateSession.getNativeInterface();
-    return (HibernateQuery)
-        hibernateTemplate.execute(
-            (GrailsHibernateTemplate.HibernateCallback<Object>)
-                session -> {
-                  HibernateQuery hibernateQuery = new HibernateQuery(hibernateSession, entity);
-                  if (this.max != null && this.max > 0) {
-                    hibernateQuery.max(this.max);
-                  }
-                  if (this.offset != null && this.offset > 0) {
-                    hibernateQuery.offset(this.offset);
-                  }
-                  hibernateQuery.setDetachedCriteria(this.detachedCriteria.clone());
+    @Override
+    protected List executeQuery(PersistentEntity entity, Junction criteria) {
+        return list();
+    }
 
     protected String calculatePropertyName(String property) {
         if (alias == null) {

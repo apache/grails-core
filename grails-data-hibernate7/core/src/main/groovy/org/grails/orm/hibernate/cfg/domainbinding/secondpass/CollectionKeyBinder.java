@@ -19,57 +19,60 @@
 package org.grails.orm.hibernate.cfg.domainbinding.secondpass;
 
 import java.util.Map;
-import org.grails.datastore.mapping.model.types.ToOne;
-import org.grails.orm.hibernate.cfg.domainbinding.binder.SimpleValueColumnBinder;
-import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernateManyToManyProperty;
-import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernateToManyProperty;
+
 import org.hibernate.mapping.Collection;
 import org.hibernate.mapping.DependantValue;
 import org.hibernate.mapping.PersistentClass;
 
+import org.grails.datastore.mapping.model.types.ToOne;
+import org.grails.orm.hibernate.cfg.domainbinding.binder.SimpleValueColumnBinder;
+import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernateManyToManyProperty;
+import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernateToManyProperty;
+
 /** Binds the collection key value for a to-many association. */
 public class CollectionKeyBinder {
 
-  private final BidirectionalOneToManyLinker bidirectionalOneToManyLinker;
-  private final DependentKeyValueBinder dependentKeyValueBinder;
-  private final SimpleValueColumnBinder simpleValueColumnBinder;
-  private final PrimaryKeyValueCreator primaryKeyValueCreator;
+    private final BidirectionalOneToManyLinker bidirectionalOneToManyLinker;
+    private final DependentKeyValueBinder dependentKeyValueBinder;
+    private final SimpleValueColumnBinder simpleValueColumnBinder;
+    private final PrimaryKeyValueCreator primaryKeyValueCreator;
 
-  /** Creates a new {@link CollectionKeyBinder} instance. */
-  public CollectionKeyBinder(
-      BidirectionalOneToManyLinker bidirectionalOneToManyLinker,
-      DependentKeyValueBinder dependentKeyValueBinder,
-      SimpleValueColumnBinder simpleValueColumnBinder,
-      PrimaryKeyValueCreator primaryKeyValueCreator) {
-    this.bidirectionalOneToManyLinker = bidirectionalOneToManyLinker;
-    this.dependentKeyValueBinder = dependentKeyValueBinder;
-    this.simpleValueColumnBinder = simpleValueColumnBinder;
-    this.primaryKeyValueCreator = primaryKeyValueCreator;
-  }
-
-  /** Creates the {@link DependantValue} key, sets it on the collection, and binds it. */
-  public DependantValue bind(
-      HibernateToManyProperty property,
-      PersistentClass associatedClass,
-      Collection collection) {
-    DependantValue key = primaryKeyValueCreator.createPrimaryKeyValue(collection);
-    collection.setKey(key);
-    if (property.isBidirectional()) {
-      var inverseSide = property.getHibernateInverseSide();
-      if (inverseSide instanceof ToOne && property.shouldBindWithForeignKey()) {
-        bidirectionalOneToManyLinker.link(collection, associatedClass, key, inverseSide);
-      } else if (inverseSide instanceof HibernateManyToManyProperty
-          || Map.class.isAssignableFrom(property.getType())) {
-        dependentKeyValueBinder.bind(property, key);
-      }
-    } else {
-      if (property.getMappedForm().hasJoinKeyMapping()) {
-        simpleValueColumnBinder.bindSimpleValue(
-            key, "long", property.getMappedForm().getJoinTable().getKey().getName(), true);
-      } else {
-        dependentKeyValueBinder.bind(property, key);
-      }
+    /** Creates a new {@link CollectionKeyBinder} instance. */
+    public CollectionKeyBinder(
+            BidirectionalOneToManyLinker bidirectionalOneToManyLinker,
+            DependentKeyValueBinder dependentKeyValueBinder,
+            SimpleValueColumnBinder simpleValueColumnBinder,
+            PrimaryKeyValueCreator primaryKeyValueCreator) {
+        this.bidirectionalOneToManyLinker = bidirectionalOneToManyLinker;
+        this.dependentKeyValueBinder = dependentKeyValueBinder;
+        this.simpleValueColumnBinder = simpleValueColumnBinder;
+        this.primaryKeyValueCreator = primaryKeyValueCreator;
     }
-    return key;
-  }
+
+    /** Creates the {@link DependantValue} key, sets it on the collection, and binds it. */
+    public DependantValue bind(
+            HibernateToManyProperty property, PersistentClass associatedClass, Collection collection) {
+        DependantValue key = primaryKeyValueCreator.createPrimaryKeyValue(collection);
+        collection.setKey(key);
+        if (property.isBidirectional()) {
+            var inverseSide = property.getHibernateInverseSide();
+            if (inverseSide instanceof ToOne && property.shouldBindWithForeignKey()) {
+                bidirectionalOneToManyLinker.link(collection, associatedClass, key, inverseSide);
+            } else if (inverseSide instanceof HibernateManyToManyProperty
+                    || Map.class.isAssignableFrom(property.getType())) {
+                dependentKeyValueBinder.bind(property, key);
+            }
+        } else {
+            if (property.getMappedForm().hasJoinKeyMapping()) {
+                simpleValueColumnBinder.bindSimpleValue(
+                        key,
+                        "long",
+                        property.getMappedForm().getJoinTable().getKey().getName(),
+                        true);
+            } else {
+                dependentKeyValueBinder.bind(property, key);
+            }
+        }
+        return key;
+    }
 }

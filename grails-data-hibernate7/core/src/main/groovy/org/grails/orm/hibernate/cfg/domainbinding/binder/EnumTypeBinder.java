@@ -18,10 +18,6 @@
  */
 package org.grails.orm.hibernate.cfg.domainbinding.binder;
 
-import static org.grails.orm.hibernate.cfg.domainbinding.binder.GrailsDomainBinder.ENUM_CLASS_PROP;
-
-import jakarta.annotation.Nonnull;
-import jakarta.persistence.EnumType;
 import java.util.Properties;
 
 import jakarta.annotation.Nonnull;
@@ -73,26 +69,15 @@ public class EnumTypeBinder {
 
     private static final Logger LOG = LoggerFactory.getLogger(EnumTypeBinder.class);
 
-  public BasicValue bindEnumType(
-          @Nonnull HibernatePersistentProperty property
-          , Class<?> propertyType
-          , Table table
-          , String path) {
-    BasicValue simpleValue = new BasicValue(metadataBuildingContext, table);
-    String columnName =
-        columnNameForPropertyAndPathFetcher.getColumnNameForPropertyAndPath(property, path, null);
-    bindEnumType(property, propertyType, simpleValue, columnName);
-    return simpleValue;
-  }
-
-    public BasicValue bindEnumTypeForColumn(
-            @Nonnull HibernatePersistentProperty property, Class<?> propertyType, Table table, @Nonnull String columnName) {
+    public BasicValue bindEnumType(
+            @Nonnull HibernatePersistentProperty property, Class<?> propertyType, Table table, String path) {
         BasicValue simpleValue = new BasicValue(metadataBuildingContext, table);
+        String columnName = columnNameForPropertyAndPathFetcher.getColumnNameForPropertyAndPath(property, path, null);
         bindEnumType(property, propertyType, simpleValue, columnName);
         return simpleValue;
     }
 
-    protected void bindEnumType(
+    public void bindEnumType(
             HibernatePersistentProperty property, Class<?> propertyType, BasicValue simpleValue, String columnName) {
         PropertyConfig pc = property.getMappedForm();
         Properties enumProperties = new Properties();

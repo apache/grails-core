@@ -1,25 +1,9 @@
-/*
- *  Licensed to the Apache Software Foundation (ASF) under one
- *  or more contributor license agreements.  See the NOTICE file
- *  distributed with this work for additional information
- *  regarding copyright ownership.  The ASF licenses this file
- *  to you under the Apache License, Version 2.0 (the
- *  "License"); you may not use this file except in compliance
- *  with the License.  You may obtain a copy of the License at
- *
- *    https://www.apache.org/licenses/LICENSE-2.0
- *
- *  Unless required by applicable law or agreed to in writing,
- *  software distributed under the License is distributed on an
- *  "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
- *  KIND, either express or implied.  See the License for the
- *  specific language governing permissions and limitations
- *  under the License.
- */
 package liquibase.ext.hibernate.diff;
 
-import java.util.Objects;
+import java.util.HashSet;
+import java.util.LinkedHashSet;
 import java.util.Set;
+import java.util.stream.Collectors;
 
 import liquibase.change.Change;
 import liquibase.database.Database;
@@ -38,20 +22,18 @@ import liquibase.structure.core.Sequence;
 public class ChangedSequenceChangeGenerator
         extends liquibase.diff.output.changelog.core.ChangedSequenceChangeGenerator {
 
-    private static final String FIELD_NAME = "name";
-    private static final String FIELD_START_VALUE = "startValue";
-    private static final String FIELD_INCREMENT_BY = "incrementBy";
+    private static final Set<String> HIBERNATE_SEQUENCE_FIELDS;
 
-    private static final Set<String> HIBERNATE_SEQUENCE_FIELDS = Set.of(FIELD_NAME, FIELD_START_VALUE, FIELD_INCREMENT_BY);
-    
-    // Default values used by Hibernate's SequenceStyleGenerator
-    private static final String DEFAULT_INITIAL_VALUE = "1";
-    private static final String DEFAULT_INCREMENT_SIZE = "50";
-    private static final Set<String> DEFAULT_VALUES = Set.of(DEFAULT_INITIAL_VALUE, DEFAULT_INCREMENT_SIZE);
+    static {
+        HIBERNATE_SEQUENCE_FIELDS = Set.of("name", "startValue", "incrementBy");
+    }
 
     @Override
     public int getPriority(Class<? extends DatabaseObject> objectType, Database database) {
-        return Sequence.class.isAssignableFrom(objectType) ? PRIORITY_ADDITIONAL : PRIORITY_NONE;
+        if (Sequence.class.isAssignableFrom(objectType)) {
+            return PRIORITY_ADDITIONAL;
+        }
+        return PRIORITY_NONE;
     }
 
     @Override
@@ -62,51 +44,55 @@ public class ChangedSequenceChangeGenerator
             Database referenceDatabase,
             Database comparisonDatabase,
             ChangeGeneratorChain chain) {
-        
-        if (isHibernateRelated(referenceDatabase, comparisonDatabase)) {
-            filterIrrelevantDifferences(differences, referenceDatabase, comparisonDatabase);
+        if (!(referenceDatabase instanceof HibernateDatabase || comparisonDatabase instanceof HibernateDatabase)) {
+            return super.fixChanged(changedObject, differences, control, referenceDatabase, comparisonDatabase, chain);
         }
 
+        // if any of the databases is a hibernate database, remove all differences that affect a field not managed by
+        // hibernate
+        Set<String> ignoredDifferenceFields = differences.getDifferences().stream()
+                .map(Difference::getField)
+                .filter(differenceField -> !HIBERNATE_SEQUENCE_FIELDS.contains(differenceField))
+                .collect(Collectors.toCollection(LinkedHashSet::new));
+        ignoredDifferenceFields.forEach(differences::removeDifference);
+        this.advancedIgnoredDifferenceFields(differences, referenceDatabase, comparisonDatabase);
         return super.fixChanged(changedObject, differences, control, referenceDatabase, comparisonDatabase, chain);
     }
 
-    private void filterIrrelevantDifferences(ObjectDifferences differences, Database refDb, Database compDb) {
-        differences.getDifferences().stream()
-                .filter(diff -> isIgnoredField(diff) || isAdvancedIgnoredDifference(diff, refDb, compDb))
-                .map(Difference::getField)
-                .toList()
-                .forEach(differences::removeDifference);
-    }
+    /**
+     * In some cases a value that was 1 can be null in the database, or the name field can be different only by case.
+     * This method removes these differences from the list of differences so we don't generate a change for them.
+     */
+    private void advancedIgnoredDifferenceFields(
+            ObjectDifferences differences, Database referenceDatabase, Database comparisonDatabase) {
+        Set<String> ignoredDifferenceFields = new HashSet<>();
+        for (Difference difference : differences.getDifferences()) {
+            String field = difference.getField();
+            String refValue = difference.getReferenceValue() != null
+                    ? difference.getReferenceValue().toString()
+                    : null;
+            String comparedValue = difference.getComparedValue() != null
+                    ? difference.getComparedValue().toString()
+                    : null;
 
-    private boolean isIgnoredField(Difference diff) {
-        return !HIBERNATE_SEQUENCE_FIELDS.contains(diff.getField());
-    }
+            // if the name field case is different and the databases are case-insensitive, we can ignore the difference
+            boolean isNameField = field.equals("name");
+            boolean isCaseInsensitive = !referenceDatabase.isCaseSensitive() || !comparisonDatabase.isCaseSensitive();
 
-    private boolean isAdvancedIgnoredDifference(Difference diff, Database refDb, Database compDb) {
-        String field = diff.getField();
-        String refValue = Objects.toString(diff.getReferenceValue(), null);
-        String compValue = Objects.toString(diff.getComparedValue(), null);
+            // if the startValue or incrementBy fields are 1 and the other is null, we can ignore the difference
+            // Or 50, as it is the default value for hibernate for allocationSize:
+            // https://github.com/hibernate/hibernate-orm/blob/bda95dfbe75c68f5c1b77a2f21c403cbe08548a2/hibernate-core/src/main/java/org/hibernate/boot/model/IdentifierGeneratorDefinition.java#L252
+            boolean isStartOrIncrementField = field.equals("startValue") || field.equals("incrementBy");
+            boolean isOneOrFiftyAndNull = "1".equals(refValue) && comparedValue == null
+                    || refValue == null && "1".equals(comparedValue)
+                    || "50".equals(refValue) && comparedValue == null
+                    || refValue == null && "50".equals(comparedValue);
 
-        if (FIELD_NAME.equals(field)) {
-            return isCaseInsensitiveMatch(refValue, compValue, refDb, compDb);
+            if ((isNameField && isCaseInsensitive && refValue != null && refValue.equalsIgnoreCase(comparedValue))
+                    || (isStartOrIncrementField && isOneOrFiftyAndNull)) {
+                ignoredDifferenceFields.add(field);
+            }
         }
-
-        if (FIELD_START_VALUE.equals(field) || FIELD_INCREMENT_BY.equals(field)) {
-            return isDefaultOrNullMatch(refValue, compValue);
-        }
-
-        return false;
-    }
-
-    private boolean isCaseInsensitiveMatch(String v1, String v2, Database d1, Database d2) {
-        return (!d1.isCaseSensitive() || !d2.isCaseSensitive()) && v1 != null && v1.equalsIgnoreCase(v2);
-    }
-
-    private boolean isDefaultOrNullMatch(String v1, String v2) {
-        return (v1 == null && DEFAULT_VALUES.contains(v2)) || (v2 == null && DEFAULT_VALUES.contains(v1));
-    }
-
-    private boolean isHibernateRelated(Database d1, Database d2) {
-        return d1 instanceof HibernateDatabase || d2 instanceof HibernateDatabase;
+        ignoredDifferenceFields.forEach(differences::removeDifference);
     }
 }

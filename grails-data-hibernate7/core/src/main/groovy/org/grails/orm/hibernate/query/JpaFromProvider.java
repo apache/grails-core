@@ -65,30 +65,27 @@ public class JpaFromProvider implements Cloneable {
                 .flatMap(List::stream)
                 .toList();
 
-    var aliasMap = createAliasMap(detachedAssociationCriteriaList);
-    // The join column is column for joining from the root entity
-    var detachedFroms = createDetachedFroms(cq, detachedAssociationCriteriaList);
-    Map<String, From<?, ?>> fromsByName =
-        Stream.concat(
-                aliasMap.keySet().stream(),
-                detachedCriteria.getFetchStrategies().entrySet().stream()
-                    .filter(entry -> entry.getValue().equals(FetchType.EAGER))
-                    .map(Map.Entry::getKey)
-                    .toList()
-                    .stream())
-            .distinct()
-            .map(
-                joinColumn -> {
-                  // Determine owner class for this join path from detached criteria
-                  var dac = aliasMap.get(joinColumn);
-                  Class<?> ownerClass =
-                      dac != null ? dac.getAssociation().getOwner().getJavaClass() : root.getJavaType();
-                  // Choose base From: use outer root only if join belongs to the outer root type;
-                  // otherwise create a detached root for the owner
-                  From<?, ?> base =
-                      ownerClass.equals(root.getJavaType())
-                          ? root
-                          : detachedFroms.computeIfAbsent(joinColumn, s -> cq.from(ownerClass));
+        var aliasMap = createAliasMap(detachedAssociationCriteriaList);
+        // The join column is column for joining from the root entity
+        var detachedFroms = createDetachedFroms(cq, detachedAssociationCriteriaList);
+        Map<String, From<?, ?>> fromsByName = Stream.concat(
+                        aliasMap.keySet().stream(),
+                        detachedCriteria.getFetchStrategies().entrySet().stream()
+                                .filter(entry -> entry.getValue().equals(FetchType.EAGER))
+                                .map(Map.Entry::getKey)
+                                .toList()
+                                .stream())
+                .distinct()
+                .map(joinColumn -> {
+                    // Determine owner class for this join path from detached criteria
+                    var dac = aliasMap.get(joinColumn);
+                    Class<?> ownerClass =
+                            dac != null ? dac.getAssociation().getOwner().getJavaClass() : root.getJavaType();
+                    // Choose base From: use outer root only if join belongs to the outer root type;
+                    // otherwise create a detached root for the owner
+                    From<?, ?> base = ownerClass.equals(root.getJavaType())
+                            ? root
+                            : detachedFroms.computeIfAbsent(joinColumn, s -> cq.from(ownerClass));
 
                     var table = base.join(
                             joinColumn,
@@ -105,54 +102,17 @@ public class JpaFromProvider implements Cloneable {
                     table.alias(column);
                     return new AbstractMap.SimpleEntry<>(column, table);
                 })
-            .collect(
-                Collectors.toMap(
-                    Map.Entry::getKey,
-                    Map.Entry::getValue,
-                    (existing, replacement) -> existing,
-                    java.util.LinkedHashMap::new));
-    fromsByName.put("root", root);
-    String rootAlias = detachedCriteria.getAlias();
-    if (rootAlias != null && !rootAlias.isEmpty()) {
-      fromsByName.put(rootAlias, root);
-    }
-    return fromsByName;
-  }
-
-  private Map<String, From<?, ?>> createDetachedFroms(
-      JpaCriteriaQuery<?> cq,
-      List<DetachedAssociationCriteria<?>> detachedAssociationCriteriaList) {
-    Function<DetachedAssociationCriteria<?>, String> getAssociationPath =
-        DetachedAssociationCriteria::getAssociationPath;
-    return detachedAssociationCriteriaList.stream()
-        .collect(
-            Collectors.toMap(
-                getAssociationPath,
-                criteria -> {
-                  Class<?> javaClass = criteria.getAssociation().getOwner().getJavaClass();
-                  return cq.from(javaClass);
-                },
-                (oldValue, newValue) -> newValue));
-  }
-
-  private Map<String, DetachedAssociationCriteria<?>> createAliasMap(
-      List<DetachedAssociationCriteria<?>> detachedAssociationCriteriaList) {
-    // Use a merge function and a stable map type to avoid DuplicateKey exceptions when the same
-    // association path/alias appears multiple times (e.g., referenced in both predicate and sort).
-    // Keep the first occurrence to preserve deterministic aliasing.
-    return detachedAssociationCriteriaList.stream()
-        .map(new AliasMapEntryFunction())
-        .collect(
-            Collectors.toMap(
-                Map.Entry::getKey,
-                Map.Entry::getValue,
-                (existing, replacement) -> existing,
-                java.util.LinkedHashMap::new));
-  }
-
-  public Path<?> getFullyQualifiedPath(String propertyName) {
-    if (Objects.isNull(propertyName) || propertyName.trim().isEmpty()) {
-      throw new IllegalArgumentException("propertyName cannot be null");
+                .collect(Collectors.toMap(
+                        Map.Entry::getKey,
+                        Map.Entry::getValue,
+                        (existing, replacement) -> existing,
+                        java.util.LinkedHashMap::new));
+        fromsByName.put("root", root);
+        String rootAlias = detachedCriteria.getAlias();
+        if (rootAlias != null && !rootAlias.isEmpty()) {
+            fromsByName.put(rootAlias, root);
+        }
+        return fromsByName;
     }
 
     private Map<String, From<?, ?>> createDetachedFroms(

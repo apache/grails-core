@@ -18,8 +18,6 @@
  */
 package org.grails.orm.hibernate.cfg.domainbinding.binder;
 
-import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernatePersistentProperty;
-import org.grails.orm.hibernate.cfg.domainbinding.util.PropertyFromValueCreator;
 import org.hibernate.mapping.Column;
 import org.hibernate.mapping.Component;
 import org.hibernate.mapping.Property;
@@ -32,20 +30,22 @@ public class ComponentUpdater {
 
     private final PropertyFromValueCreator propertyFromValueCreator;
 
-  public ComponentUpdater(PropertyFromValueCreator propertyFromValueCreator) {
-    this.propertyFromValueCreator = propertyFromValueCreator;
-  }
+    public ComponentUpdater(PropertyFromValueCreator propertyFromValueCreator) {
+        this.propertyFromValueCreator = propertyFromValueCreator;
+    }
 
-  public void updateComponent(
-      Component component,
-      HibernatePersistentProperty componentProperty,
-      HibernatePersistentProperty currentGrailsProp,
-      Value value) {
-    Property persistentProperty = propertyFromValueCreator.createProperty(value, currentGrailsProp);
-    component.addProperty(persistentProperty);
-    if (componentProperty != null && componentProperty.getHibernateOwner().isComponentPropertyNullable(componentProperty)) {
-        for (Column c : value.getColumns()) {
-            c.setNullable(true);
+    public void updateComponent(
+            Component component,
+            HibernatePersistentProperty componentProperty,
+            HibernatePersistentProperty currentGrailsProp,
+            Value value) {
+        Property persistentProperty = propertyFromValueCreator.createProperty(value, currentGrailsProp);
+        component.addProperty(persistentProperty);
+        if (componentProperty != null
+                && componentProperty.getHibernateOwner().isComponentPropertyNullable(componentProperty)) {
+            for (Column c : value.getColumns()) {
+                c.setNullable(true);
+            }
         }
     }
 }
