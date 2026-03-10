@@ -20,6 +20,8 @@ package issue11102
 
 import spock.lang.Specification
 
+import org.springframework.beans.factory.annotation.Autowired
+
 import grails.testing.mixin.integration.Integration
 import org.apache.grails.testing.http.client.HttpClient
 

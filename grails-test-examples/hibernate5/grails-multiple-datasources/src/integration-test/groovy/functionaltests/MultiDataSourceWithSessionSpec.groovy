@@ -22,6 +22,8 @@ import spock.lang.Issue
 import spock.lang.Specification
 import spock.lang.Stepwise
 
+import org.springframework.beans.factory.annotation.Autowired
+
 import grails.testing.mixin.integration.Integration
 import org.apache.grails.testing.http.client.HttpClient
 

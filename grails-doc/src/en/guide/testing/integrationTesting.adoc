@@ -310,6 +310,8 @@ import java.net.http.HttpTimeoutException
 
 import spock.lang.Specification
 
+import org.springframework.beans.factory.annotation.Autowired
+
 import grails.testing.mixin.integration.Integration
 import org.apache.grails.testing.http.client.HttpClient
 
