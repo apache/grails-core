@@ -1,5 +1,7 @@
 package liquibase.ext.hibernate.database;
 
+import java.util.Optional;
+
 import liquibase.database.DatabaseConnection;
 import liquibase.exception.DatabaseException;
 import org.hibernate.boot.Metadata;
@@ -17,31 +19,36 @@ public class HibernateClassicDatabase extends HibernateDatabase {
 
     protected Configuration configuration;
 
-    public boolean isCorrectDatabaseImplementation(DatabaseConnection conn)  {
-        return conn.getURL().startsWith("hibernate:classic:");
+    @Override
+    public boolean isCorrectDatabaseImplementation(DatabaseConnection conn) {
+        return Optional.ofNullable(conn.getURL())
+                .map(url -> url.startsWith("hibernate:classic:"))
+                .orElse(false);
     }
 
     @Override
     protected String findDialectName() {
-        String dialectName = super.findDialectName();
-
-        if (dialectName == null) {
-            dialectName = configuration.getProperty(AvailableSettings.DIALECT);
-        }
-        return dialectName;
+        return Optional.ofNullable(super.findDialectName())
+                .or(() -> Optional.ofNullable(configuration).map(c -> c.getProperty(AvailableSettings.DIALECT)))
+                .orElse(null);
     }
 
+    @Override
     protected Metadata buildMetadataFromPath() throws DatabaseException {
         this.configuration = new Configuration();
-        this.configuration.configure(getHibernateConnection().getPath());
+        String path = Optional.ofNullable(getHibernateConnection().getPath())
+                .orElseThrow(() -> new IllegalStateException("Hibernate connection path is null"));
+        this.configuration.configure(path);
 
         return super.buildMetadataFromPath();
     }
 
     @Override
-    protected void configureSources(MetadataSources sources)  {
+    protected void configureSources(MetadataSources sources) {
         Configuration config = new Configuration(sources);
-        config.configure(getHibernateConnection().getPath());
+        String path = Optional.ofNullable(getHibernateConnection().getPath())
+                .orElseThrow(() -> new IllegalStateException("Hibernate connection path is null"));
+        config.configure(path);
 
         config.setProperty(HibernateDatabase.HIBERNATE_TEMP_USE_JDBC_METADATA_DEFAULTS, Boolean.FALSE.toString());
         config.setProperty("hibernate.cache.use_second_level_cache", "false");

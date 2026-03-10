@@ -1,9 +1,11 @@
 package liquibase.ext.hibernate.database;
 
+import java.io.IOException;
 import java.net.URL;
 import java.util.List;
-import java.util.Map;
+import java.util.Optional;
 import java.util.Properties;
+import java.util.stream.Stream;
 
 import liquibase.Scope;
 import liquibase.database.DatabaseConnection;
@@ -34,8 +36,11 @@ public class HibernateSpringBeanDatabase extends HibernateDatabase {
     private BeanDefinition beanDefinition;
     private ManagedProperties beanDefinitionProperties;
 
+    @Override
     public boolean isCorrectDatabaseImplementation(DatabaseConnection conn) {
-        return conn.getURL().startsWith("hibernate:spring:");
+        return Optional.ofNullable(conn.getURL())
+                .map(url -> url.startsWith("hibernate:spring:"))
+                .orElse(false);
     }
 
     /**
@@ -49,95 +54,111 @@ public class HibernateSpringBeanDatabase extends HibernateDatabase {
 
     @Override
     public String getProperty(String name) {
-        String value = super.getProperty(name);
-        if (value == null && beanDefinitionProperties != null) {
-            for (Map.Entry entry : ((ManagedProperties) beanDefinition
-                            .getPropertyValues()
-                            .getPropertyValue("hibernateProperties")
-                            .getValue())
-                    .entrySet()) {
-                if (entry.getKey() instanceof TypedStringValue && entry.getValue() instanceof TypedStringValue) {
-                    if (((TypedStringValue) entry.getKey()).getValue().equals(name)) {
-                        return ((TypedStringValue) entry.getValue()).getValue();
-                    }
-                }
-            }
+        return Optional.ofNullable(super.getProperty(name))
+                .or(() -> findPropertyInBeanDefinition(name))
+                .orElseGet(() -> beanDefinitionProperties != null ? beanDefinitionProperties.getProperty(name) : null);
+    }
 
-            value = beanDefinitionProperties.getProperty(name);
+    private Optional<String> findPropertyInBeanDefinition(String name) {
+        return Optional.ofNullable(beanDefinitionProperties)
+                .flatMap(props -> props.entrySet().stream()
+                        .filter(entry -> name.equals(resolveString(entry.getKey())))
+                        .map(entry -> resolveString(entry.getValue()))
+                        .filter(java.util.Objects::nonNull)
+                        .findFirst());
+    }
+
+    private String resolveString(Object obj) {
+        if (obj instanceof TypedStringValue tsv) {
+            return tsv.getValue();
+        } else if (obj instanceof String s) {
+            return s;
         }
-        return value;
+        return null;
     }
 
     /**
      * Parse the given URL assuming it is a spring XML file
      */
-    protected void loadBeanDefinition() throws DatabaseException {
+    protected void loadBeanDefinition() {
         // Read configuration
         BeanDefinitionRegistry registry = new SimpleBeanDefinitionRegistry();
         XmlBeanDefinitionReader reader = new XmlBeanDefinitionReader(registry);
         reader.setNamespaceAware(true);
         HibernateConnection connection = getHibernateConnection();
-        reader.loadBeanDefinitions(new ClassPathResource(connection.getPath()));
+        String path = Optional.ofNullable(connection.getPath())
+                .orElseThrow(() -> new IllegalStateException("Hibernate connection path is null"));
+        reader.loadBeanDefinitions(new ClassPathResource(path));
 
-        Properties props = connection.getProperties();
+        Properties props = Optional.ofNullable(connection.getProperties())
+                .orElseThrow(() -> new IllegalStateException("Hibernate connection properties are null"));
 
-        String beanName = props.getProperty("bean", null);
-
-        if (beanName == null) {
-            throw new IllegalStateException("A 'bean' name is required, definition in '" + connection.getPath() + "'.");
-        }
+        String beanName = Optional.ofNullable(props.getProperty("bean"))
+                .orElseThrow(() -> new IllegalStateException("A 'bean' name is required, definition in '" + path + "'."));
 
         try {
             beanDefinition = registry.getBeanDefinition(beanName);
-            var hibernatePropertiesValue = beanDefinition.getPropertyValues().getPropertyValue("hibernateProperties");
-            if (hibernatePropertiesValue != null) {
-                beanDefinitionProperties = (ManagedProperties) hibernatePropertiesValue.getValue();
-            }
+            Optional.ofNullable(beanDefinition.getPropertyValues().getPropertyValue("hibernateProperties"))
+                    .map(PropertyValue::getValue)
+                    .filter(ManagedProperties.class::isInstance)
+                    .map(ManagedProperties.class::cast)
+                    .ifPresent(p -> beanDefinitionProperties = p);
         } catch (NoSuchBeanDefinitionException e) {
             throw new IllegalStateException(
-                    "A bean named '" + beanName + "' could not be found in '" + connection.getPath() + "'.");
+                    "A bean named '" + beanName + "' could not be found in '" + path + "'.", e);
         }
     }
 
     @Override
     protected void configureSources(MetadataSources sources) throws DatabaseException {
-        MutablePropertyValues properties = beanDefinition.getPropertyValues();
+        BeanDefinition bd = Optional.ofNullable(beanDefinition)
+                .orElseThrow(() -> new DatabaseException("Bean definition is not loaded."));
+        MutablePropertyValues properties = bd.getPropertyValues();
 
         // Add annotated classes list.
-        PropertyValue annotatedClassesProperty = properties.getPropertyValue("annotatedClasses");
-        if (annotatedClassesProperty != null) {
-            List<TypedStringValue> annotatedClasses = (List<TypedStringValue>) annotatedClassesProperty.getValue();
-            if (annotatedClasses != null) {
-                for (TypedStringValue className : annotatedClasses) {
-                    Scope.getCurrentScope().getLog(getClass()).info("Found annotated class " + className.getValue());
-                    sources.addAnnotatedClass(findClass(className.getValue()));
-                }
-            }
-        }
+        extractListProperty(properties, "annotatedClasses")
+                .forEach(className -> {
+                    Scope.getCurrentScope().getLog(getClass()).info("Found annotated class " + className);
+                    sources.addAnnotatedClass(findClass(className));
+                });
 
         try {
             // Add mapping locations
-            PropertyValue mappingLocationsProp = properties.getPropertyValue("mappingLocations");
-            if (mappingLocationsProp != null) {
-                List<TypedStringValue> mappingLocations = (List<TypedStringValue>) mappingLocationsProp.getValue();
-                if (mappingLocations != null) {
-                    ResourcePatternResolver resourcePatternResolver = new PathMatchingResourcePatternResolver();
-                    for (TypedStringValue mappingLocation : mappingLocations) {
-                        Scope.getCurrentScope()
-                                .getLog(getClass())
-                                .info("Found mappingLocation " + mappingLocation.getValue());
-                        Resource[] resources = resourcePatternResolver.getResources(mappingLocation.getValue());
-                        for (Resource resource : resources) {
-                            URL url = resource.getURL();
-                            Scope.getCurrentScope().getLog(getClass()).info("Adding resource  " + url);
-                            sources.addURL(url);
+            ResourcePatternResolver resourcePatternResolver = new PathMatchingResourcePatternResolver();
+            extractListProperty(properties, "mappingLocations")
+                    .forEach(mappingLocation -> {
+                        try {
+                            Scope.getCurrentScope().getLog(getClass()).info("Found mappingLocation " + mappingLocation);
+                            Resource[] resources = resourcePatternResolver.getResources(mappingLocation);
+                            if (resources != null) {
+                                for (Resource resource : resources) {
+                                    URL url = resource.getURL();
+                                    if (url != null) {
+                                        Scope.getCurrentScope().getLog(getClass()).info("Adding resource  " + url);
+                                        sources.addURL(url);
+                                    }
+                                }
+                            }
+                        } catch (IOException e) {
+                            throw new RuntimeException(e);
                         }
-                    }
-                }
-            }
+                    });
         } catch (Exception e) {
             throw new DatabaseException(e);
         }
+    }
+
+    private Stream<String> extractListProperty(MutablePropertyValues properties, String propertyName) {
+        return Optional.ofNullable(properties.getPropertyValue(propertyName))
+                .map(PropertyValue::getValue)
+                .filter(List.class::isInstance)
+                .map(v -> (List<?>) v)
+                .stream()
+                .flatMap(List::stream)
+                .filter(TypedStringValue.class::isInstance)
+                .map(TypedStringValue.class::cast)
+                .map(TypedStringValue::getValue)
+                .filter(java.util.Objects::nonNull);
     }
 
     private Class<?> findClass(String className) {

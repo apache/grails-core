@@ -61,6 +61,9 @@ public class HibernateSpringPackageDatabase extends JpaPersistenceDatabase {
         }
 
         String path = hibernateConnection.getPath();
+        if (path == null) {
+            return false;
+        }
         if (path.contains("/")) {
             return true;
         }
@@ -78,7 +81,11 @@ public class HibernateSpringPackageDatabase extends JpaPersistenceDatabase {
         internalPersistenceUnitManager.setResourceLoader(
                 new DefaultResourceLoader(Scope.getCurrentScope().getClassLoader()));
 
-        String[] packagesToScan = getHibernateConnection().getPath().split(",");
+        String path = getHibernateConnection().getPath();
+        if (path == null) {
+            throw new IllegalStateException("Hibernate connection path is null");
+        }
+        String[] packagesToScan = path.split(",");
 
         for (String packageName : packagesToScan) {
             Scope.getCurrentScope().getLog(getClass()).info("Found package " + packageName);

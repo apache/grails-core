@@ -1,6 +1,7 @@
 package liquibase.ext.hibernate.database;
 
 import java.util.Map;
+import java.util.Optional;
 
 import jakarta.persistence.spi.PersistenceUnitInfo;
 
@@ -19,12 +20,14 @@ public class JpaPersistenceDatabase extends HibernateEjb3Database {
 
     @Override
     public boolean isCorrectDatabaseImplementation(DatabaseConnection conn) {
-        return conn.getURL().startsWith("jpa:persistence:");
+        return Optional.ofNullable(conn.getURL())
+                .map(url -> url.startsWith("jpa:persistence:"))
+                .orElse(false);
     }
 
     @Override
     public String getDefaultDriver(String url) {
-        if (url.startsWith("jpa:persistence:")) {
+        if (url != null && url.startsWith("jpa:persistence:")) {
             return HibernateDriver.class.getName();
         }
         return null;
@@ -44,12 +47,14 @@ public class JpaPersistenceDatabase extends HibernateEjb3Database {
     protected EntityManagerFactoryBuilderImpl createEntityManagerFactoryBuilder() {
         DefaultPersistenceUnitManager internalPersistenceUnitManager = new DefaultPersistenceUnitManager();
 
-        internalPersistenceUnitManager.setPersistenceXmlLocation(
-                getHibernateConnection().getPath());
-        internalPersistenceUnitManager.setDefaultPersistenceUnitRootLocation(null);
+        String path = Optional.ofNullable(getHibernateConnection().getPath())
+                .orElseThrow(() -> new IllegalStateException("Hibernate connection path is null"));
+
+        internalPersistenceUnitManager.setPersistenceXmlLocation(path);
 
         internalPersistenceUnitManager.preparePersistenceUnitInfos();
-        PersistenceUnitInfo persistenceUnitInfo = internalPersistenceUnitManager.obtainDefaultPersistenceUnitInfo();
+        PersistenceUnitInfo persistenceUnitInfo = Optional.ofNullable(internalPersistenceUnitManager.obtainDefaultPersistenceUnitInfo())
+                .orElseThrow(() -> new IllegalStateException("No persistence unit info found for path: " + path));
 
         return (EntityManagerFactoryBuilderImpl) Bootstrap.getEntityManagerFactoryBuilder(
                 persistenceUnitInfo,

@@ -10,61 +10,61 @@ import org.hibernate.Version;
  */
 public class HibernateConnectionMetadata implements DatabaseMetaData {
 
-    private final String url;
+    private String url;
 
     public HibernateConnectionMetadata(String url) {
         this.url = url;
     }
 
-    public boolean allProceduresAreCallable()  {
+    public boolean allProceduresAreCallable() {
         return false;
     }
 
-    public boolean allTablesAreSelectable()  {
+    public boolean allTablesAreSelectable() {
         return false;
     }
 
-    public String getURL()  {
+    public String getURL() {
         return url;
     }
 
-    public String getUserName()  {
+    public String getUserName() {
         return null;
     }
 
-    public boolean isReadOnly()  {
+    public boolean isReadOnly() {
         return true;
     }
 
-    public boolean nullsAreSortedHigh()  {
+    public boolean nullsAreSortedHigh() {
         return false;
     }
 
-    public boolean nullsAreSortedLow()  {
+    public boolean nullsAreSortedLow() {
         return false;
     }
 
-    public boolean nullsAreSortedAtStart()  {
+    public boolean nullsAreSortedAtStart() {
         return false;
     }
 
-    public boolean nullsAreSortedAtEnd()  {
+    public boolean nullsAreSortedAtEnd() {
         return false;
     }
 
-    public String getDatabaseProductName()  {
+    public String getDatabaseProductName() {
         return "Hibernate";
     }
 
-    public String getDatabaseProductVersion()  {
+    public String getDatabaseProductVersion() {
         return Version.getVersionString();
     }
 
-    public String getDriverName()  {
+    public String getDriverName() {
         return null;
     }
 
-    public String getDriverVersion()  {
+    public String getDriverVersion() {
         return "0";
     }
 
@@ -76,479 +76,472 @@ public class HibernateConnectionMetadata implements DatabaseMetaData {
         return 0;
     }
 
-    public boolean usesLocalFiles()  {
+    public boolean usesLocalFiles() {
         return false;
     }
 
-    public boolean usesLocalFilePerTable()  {
+    public boolean usesLocalFilePerTable() {
         return false;
     }
 
-    public boolean supportsMixedCaseIdentifiers()  {
+    public boolean supportsMixedCaseIdentifiers() {
         return false;
     }
 
-    public boolean storesUpperCaseIdentifiers()  {
+    public boolean storesUpperCaseIdentifiers() {
         return false;
     }
 
-    public boolean storesLowerCaseIdentifiers()  {
+    public boolean storesLowerCaseIdentifiers() {
         return false;
     }
 
-    public boolean storesMixedCaseIdentifiers()  {
+    public boolean storesMixedCaseIdentifiers() {
         return false;
     }
 
-    public boolean supportsMixedCaseQuotedIdentifiers()  {
+    public boolean supportsMixedCaseQuotedIdentifiers() {
         return false;
     }
 
-    public boolean storesUpperCaseQuotedIdentifiers()  {
+    public boolean storesUpperCaseQuotedIdentifiers() {
         return false;
     }
 
-    public boolean storesLowerCaseQuotedIdentifiers()  {
+    public boolean storesLowerCaseQuotedIdentifiers() {
         return false;
     }
 
-    public boolean storesMixedCaseQuotedIdentifiers()  {
+    public boolean storesMixedCaseQuotedIdentifiers() {
         return false;
     }
 
-    public String getIdentifierQuoteString()  {
+    public String getIdentifierQuoteString() {
         return null;
     }
 
-    public String getSQLKeywords()  {
+    public String getSQLKeywords() {
         return ""; // do not return null here due to liquibase.database.jvm.JdbcConnection:30 to avoid NPE's there
     }
 
-    public String getNumericFunctions()  {
+    public String getNumericFunctions() {
         return null;
     }
 
-    public String getStringFunctions()  {
+    public String getStringFunctions() {
         return null;
     }
 
-    public String getSystemFunctions()  {
+    public String getSystemFunctions() {
         return null;
     }
 
-    public String getTimeDateFunctions()  {
+    public String getTimeDateFunctions() {
         return null;
     }
 
-    public String getSearchStringEscape()  {
+    public String getSearchStringEscape() {
         return null;
     }
 
-    public String getExtraNameCharacters()  {
+    public String getExtraNameCharacters() {
         return null;
     }
 
-    public boolean supportsAlterTableWithAddColumn()  {
+    public boolean supportsAlterTableWithAddColumn() {
         return false;
     }
 
-    public boolean supportsAlterTableWithDropColumn()  {
+    public boolean supportsAlterTableWithDropColumn() {
         return false;
     }
 
-    public boolean supportsColumnAliasing()  {
+    public boolean supportsColumnAliasing() {
         return false;
     }
 
-    public boolean nullPlusNonNullIsNull()  {
+    public boolean nullPlusNonNullIsNull() {
         return false;
     }
 
-    public boolean supportsConvert()  {
+    public boolean supportsConvert() {
         return false;
     }
 
-    public boolean supportsConvert(int fromType, int toType)  {
+    public boolean supportsConvert(int fromType, int toType) {
         return false;
     }
 
-    public boolean supportsTableCorrelationNames()  {
+    public boolean supportsTableCorrelationNames() {
         return false;
     }
 
-    public boolean supportsDifferentTableCorrelationNames()  {
+    public boolean supportsDifferentTableCorrelationNames() {
         return false;
     }
 
-    public boolean supportsExpressionsInOrderBy()  {
+    public boolean supportsExpressionsInOrderBy() {
         return false;
     }
 
-    public boolean supportsOrderByUnrelated()  {
+    public boolean supportsOrderByUnrelated() {
         return false;
     }
 
-    public boolean supportsGroupBy()  {
+    public boolean supportsGroupBy() {
         return false;
     }
 
-    public boolean supportsGroupByUnrelated()  {
+    public boolean supportsGroupByUnrelated() {
         return false;
     }
 
-    public boolean supportsGroupByBeyondSelect()  {
+    public boolean supportsGroupByBeyondSelect() {
         return false;
     }
 
-    public boolean supportsLikeEscapeClause()  {
+    public boolean supportsLikeEscapeClause() {
         return false;
     }
 
-    public boolean supportsMultipleResultSets()  {
+    public boolean supportsMultipleResultSets() {
         return false;
     }
 
-    public boolean supportsMultipleTransactions()  {
+    public boolean supportsMultipleTransactions() {
         return false;
     }
 
-    public boolean supportsNonNullableColumns()  {
+    public boolean supportsNonNullableColumns() {
         return false;
     }
 
-    public boolean supportsMinimumSQLGrammar()  {
+    public boolean supportsMinimumSQLGrammar() {
         return false;
     }
 
-    public boolean supportsCoreSQLGrammar()  {
+    public boolean supportsCoreSQLGrammar() {
         return false;
     }
 
-    public boolean supportsExtendedSQLGrammar()  {
+    public boolean supportsExtendedSQLGrammar() {
         return false;
     }
 
-    public boolean supportsANSI92EntryLevelSQL()  {
+    public boolean supportsANSI92EntryLevelSQL() {
         return false;
     }
 
-    public boolean supportsANSI92IntermediateSQL()  {
+    public boolean supportsANSI92IntermediateSQL() {
         return false;
     }
 
-    public boolean supportsANSI92FullSQL()  {
+    public boolean supportsANSI92FullSQL() {
         return false;
     }
 
-    public boolean supportsIntegrityEnhancementFacility()  {
+    public boolean supportsIntegrityEnhancementFacility() {
         return false;
     }
 
-    public boolean supportsOuterJoins()  {
+    public boolean supportsOuterJoins() {
         return false;
     }
 
-    public boolean supportsFullOuterJoins()  {
+    public boolean supportsFullOuterJoins() {
         return false;
     }
 
-    public boolean supportsLimitedOuterJoins()  {
+    public boolean supportsLimitedOuterJoins() {
         return false;
     }
 
-    public String getSchemaTerm()  {
+    public String getSchemaTerm() {
         return null;
     }
 
-    public String getProcedureTerm()  {
+    public String getProcedureTerm() {
         return null;
     }
 
-    public String getCatalogTerm()  {
+    public String getCatalogTerm() {
         return null;
     }
 
-    public boolean isCatalogAtStart()  {
+    public boolean isCatalogAtStart() {
         return false;
     }
 
-    public String getCatalogSeparator()  {
+    public String getCatalogSeparator() {
         return null;
     }
 
-    public boolean supportsSchemasInDataManipulation()  {
+    public boolean supportsSchemasInDataManipulation() {
         return false;
     }
 
-    public boolean supportsSchemasInProcedureCalls()  {
+    public boolean supportsSchemasInProcedureCalls() {
         return false;
     }
 
-    public boolean supportsSchemasInTableDefinitions()  {
+    public boolean supportsSchemasInTableDefinitions() {
         return false;
     }
 
-    public boolean supportsSchemasInIndexDefinitions()  {
+    public boolean supportsSchemasInIndexDefinitions() {
         return false;
     }
 
-    public boolean supportsSchemasInPrivilegeDefinitions()  {
+    public boolean supportsSchemasInPrivilegeDefinitions() {
         return false;
     }
 
-    public boolean supportsCatalogsInDataManipulation()  {
+    public boolean supportsCatalogsInDataManipulation() {
         return false;
     }
 
-    public boolean supportsCatalogsInProcedureCalls()  {
+    public boolean supportsCatalogsInProcedureCalls() {
         return false;
     }
 
-    public boolean supportsCatalogsInTableDefinitions()  {
+    public boolean supportsCatalogsInTableDefinitions() {
         return false;
     }
 
-    public boolean supportsCatalogsInIndexDefinitions()  {
+    public boolean supportsCatalogsInIndexDefinitions() {
         return false;
     }
 
-    public boolean supportsCatalogsInPrivilegeDefinitions()  {
+    public boolean supportsCatalogsInPrivilegeDefinitions() {
         return false;
     }
 
-    public boolean supportsPositionedDelete()  {
+    public boolean supportsPositionedDelete() {
         return false;
     }
 
-    public boolean supportsPositionedUpdate()  {
+    public boolean supportsPositionedUpdate() {
         return false;
     }
 
-    public boolean supportsSelectForUpdate()  {
+    public boolean supportsSelectForUpdate() {
         return false;
     }
 
-    public boolean supportsStoredProcedures()  {
+    public boolean supportsStoredProcedures() {
         return false;
     }
 
-    public boolean supportsSubqueriesInComparisons()  {
+    public boolean supportsSubqueriesInComparisons() {
         return false;
     }
 
-    public boolean supportsSubqueriesInExists()  {
+    public boolean supportsSubqueriesInExists() {
         return false;
     }
 
-    public boolean supportsSubqueriesInIns()  {
+    public boolean supportsSubqueriesInIns() {
         return false;
     }
 
-    public boolean supportsSubqueriesInQuantifieds()  {
+    public boolean supportsSubqueriesInQuantifieds() {
         return false;
     }
 
-    public boolean supportsCorrelatedSubqueries()  {
+    public boolean supportsCorrelatedSubqueries() {
         return false;
     }
 
-    public boolean supportsUnion()  {
+    public boolean supportsUnion() {
         return false;
     }
 
-    public boolean supportsUnionAll()  {
+    public boolean supportsUnionAll() {
         return false;
     }
 
-    public boolean supportsOpenCursorsAcrossCommit()  {
+    public boolean supportsOpenCursorsAcrossCommit() {
         return false;
     }
 
-    public boolean supportsOpenCursorsAcrossRollback()  {
+    public boolean supportsOpenCursorsAcrossRollback() {
         return false;
     }
 
-    public boolean supportsOpenStatementsAcrossCommit()  {
+    public boolean supportsOpenStatementsAcrossCommit() {
         return false;
     }
 
-    public boolean supportsOpenStatementsAcrossRollback()  {
+    public boolean supportsOpenStatementsAcrossRollback() {
         return false;
     }
 
-    public int getMaxBinaryLiteralLength()  {
+    public int getMaxBinaryLiteralLength() {
         return 0;
     }
 
-    public int getMaxCharLiteralLength()  {
+    public int getMaxCharLiteralLength() {
         return 0;
     }
 
-    public int getMaxColumnNameLength()  {
+    public int getMaxColumnNameLength() {
         return 0;
     }
 
-    public int getMaxColumnsInGroupBy()  {
+    public int getMaxColumnsInGroupBy() {
         return 0;
     }
 
-    public int getMaxColumnsInIndex()  {
+    public int getMaxColumnsInIndex() {
         return 0;
     }
 
-    public int getMaxColumnsInOrderBy()  {
+    public int getMaxColumnsInOrderBy() {
         return 0;
     }
 
-    public int getMaxColumnsInSelect()  {
+    public int getMaxColumnsInSelect() {
         return 0;
     }
 
-    public int getMaxColumnsInTable()  {
+    public int getMaxColumnsInTable() {
         return 0;
     }
 
-    public int getMaxConnections()  {
+    public int getMaxConnections() {
         return 0;
     }
 
-    public int getMaxCursorNameLength()  {
+    public int getMaxCursorNameLength() {
         return 0;
     }
 
-    public int getMaxIndexLength()  {
+    public int getMaxIndexLength() {
         return 0;
     }
 
-    public int getMaxSchemaNameLength()  {
+    public int getMaxSchemaNameLength() {
         return 0;
     }
 
-    public int getMaxProcedureNameLength()  {
+    public int getMaxProcedureNameLength() {
         return 0;
     }
 
-    public int getMaxCatalogNameLength()  {
+    public int getMaxCatalogNameLength() {
         return 0;
     }
 
-    public int getMaxRowSize()  {
+    public int getMaxRowSize() {
         return 0;
     }
 
-    public boolean doesMaxRowSizeIncludeBlobs()  {
+    public boolean doesMaxRowSizeIncludeBlobs() {
         return false;
     }
 
-    public int getMaxStatementLength()  {
+    public int getMaxStatementLength() {
         return 0;
     }
 
-    public int getMaxStatements()  {
+    public int getMaxStatements() {
         return 0;
     }
 
-    public int getMaxTableNameLength()  {
+    public int getMaxTableNameLength() {
         return 0;
     }
 
-    public int getMaxTablesInSelect()  {
+    public int getMaxTablesInSelect() {
         return 0;
     }
 
-    public int getMaxUserNameLength()  {
+    public int getMaxUserNameLength() {
         return 0;
     }
 
-    public int getDefaultTransactionIsolation()  {
+    public int getDefaultTransactionIsolation() {
         return 0;
     }
 
-    public boolean supportsTransactions()  {
+    public boolean supportsTransactions() {
         return false;
     }
 
-    public boolean supportsTransactionIsolationLevel(int level)  {
+    public boolean supportsTransactionIsolationLevel(int level) {
         return false;
     }
 
-    public boolean supportsDataDefinitionAndDataManipulationTransactions()  {
+    public boolean supportsDataDefinitionAndDataManipulationTransactions() {
         return false;
     }
 
-    public boolean supportsDataManipulationTransactionsOnly()  {
+    public boolean supportsDataManipulationTransactionsOnly() {
         return false;
     }
 
-    public boolean dataDefinitionCausesTransactionCommit()  {
+    public boolean dataDefinitionCausesTransactionCommit() {
         return false;
     }
 
-    public boolean dataDefinitionIgnoredInTransactions()  {
+    public boolean dataDefinitionIgnoredInTransactions() {
         return false;
     }
 
-    public ResultSet getProcedures(String catalog, String schemaPattern, String procedureNamePattern)
-             {
+    public ResultSet getProcedures(String catalog, String schemaPattern, String procedureNamePattern) {
         return null;
     }
 
     public ResultSet getProcedureColumns(
-            String catalog, String schemaPattern, String procedureNamePattern, String columnNamePattern)
-             {
+            String catalog, String schemaPattern, String procedureNamePattern, String columnNamePattern) {
         return null;
     }
 
-    public ResultSet getTables(String catalog, String schemaPattern, String tableNamePattern, String[] types)
-             {
+    public ResultSet getTables(String catalog, String schemaPattern, String tableNamePattern, String[] types) {
         return null;
     }
 
-    public ResultSet getSchemas()  {
+    public ResultSet getSchemas() {
         return null;
     }
 
-    public ResultSet getCatalogs()  {
+    public ResultSet getCatalogs() {
         return null;
     }
 
-    public ResultSet getTableTypes()  {
+    public ResultSet getTableTypes() {
         return null;
     }
 
-    public ResultSet getColumns(String catalog, String schemaPattern, String tableNamePattern, String columnNamePattern)
-             {
+    public ResultSet getColumns(String catalog, String schemaPattern, String tableNamePattern, String columnNamePattern) {
         return null;
     }
 
-    public ResultSet getColumnPrivileges(String catalog, String schema, String table, String columnNamePattern)
-             {
+    public ResultSet getColumnPrivileges(String catalog, String schema, String table, String columnNamePattern) {
         return null;
     }
 
-    public ResultSet getTablePrivileges(String catalog, String schemaPattern, String tableNamePattern)
-             {
+    public ResultSet getTablePrivileges(String catalog, String schemaPattern, String tableNamePattern) {
         return null;
     }
 
-    public ResultSet getBestRowIdentifier(String catalog, String schema, String table, int scope, boolean nullable)
-             {
+    public ResultSet getBestRowIdentifier(String catalog, String schema, String table, int scope, boolean nullable) {
         return null;
     }
 
-    public ResultSet getVersionColumns(String catalog, String schema, String table)  {
+    public ResultSet getVersionColumns(String catalog, String schema, String table) {
         return null;
     }
 
-    public ResultSet getPrimaryKeys(String catalog, String schema, String table)  {
+    public ResultSet getPrimaryKeys(String catalog, String schema, String table) {
         return null;
     }
 
-    public ResultSet getImportedKeys(String catalog, String schema, String table)  {
+    public ResultSet getImportedKeys(String catalog, String schema, String table) {
         return null;
     }
 
-    public ResultSet getExportedKeys(String catalog, String schema, String table)  {
+    public ResultSet getExportedKeys(String catalog, String schema, String table) {
         return null;
     }
 
@@ -558,189 +551,183 @@ public class HibernateConnectionMetadata implements DatabaseMetaData {
             String parentTable,
             String foreignCatalog,
             String foreignSchema,
-            String foreignTable)
-             {
+            String foreignTable) {
         return null;
     }
 
-    public ResultSet getTypeInfo()  {
+    public ResultSet getTypeInfo() {
         return null;
     }
 
-    public ResultSet getIndexInfo(String catalog, String schema, String table, boolean unique, boolean approximate)
-             {
+    public ResultSet getIndexInfo(String catalog, String schema, String table, boolean unique, boolean approximate) {
         return null;
     }
 
-    public boolean supportsResultSetType(int type)  {
+    public boolean supportsResultSetType(int type) {
         return false;
     }
 
-    public boolean supportsResultSetConcurrency(int type, int concurrency)  {
+    public boolean supportsResultSetConcurrency(int type, int concurrency) {
         return false;
     }
 
-    public boolean ownUpdatesAreVisible(int type)  {
+    public boolean ownUpdatesAreVisible(int type) {
         return false;
     }
 
-    public boolean ownDeletesAreVisible(int type)  {
+    public boolean ownDeletesAreVisible(int type) {
         return false;
     }
 
-    public boolean ownInsertsAreVisible(int type)  {
+    public boolean ownInsertsAreVisible(int type) {
         return false;
     }
 
-    public boolean othersUpdatesAreVisible(int type)  {
+    public boolean othersUpdatesAreVisible(int type) {
         return false;
     }
 
-    public boolean othersDeletesAreVisible(int type)  {
+    public boolean othersDeletesAreVisible(int type) {
         return false;
     }
 
-    public boolean othersInsertsAreVisible(int type)  {
+    public boolean othersInsertsAreVisible(int type) {
         return false;
     }
 
-    public boolean updatesAreDetected(int type)  {
+    public boolean updatesAreDetected(int type) {
         return false;
     }
 
-    public boolean deletesAreDetected(int type)  {
+    public boolean deletesAreDetected(int type) {
         return false;
     }
 
-    public boolean insertsAreDetected(int type)  {
+    public boolean insertsAreDetected(int type) {
         return false;
     }
 
-    public boolean supportsBatchUpdates()  {
+    public boolean supportsBatchUpdates() {
         return false;
     }
 
-    public ResultSet getUDTs(String catalog, String schemaPattern, String typeNamePattern, int[] types)
-             {
+    public ResultSet getUDTs(String catalog, String schemaPattern, String typeNamePattern, int[] types) {
         return null;
     }
 
-    public Connection getConnection()  {
+    public Connection getConnection() {
         return null;
     }
 
-    public boolean supportsSavepoints()  {
+    public boolean supportsSavepoints() {
         return false;
     }
 
-    public boolean supportsNamedParameters()  {
+    public boolean supportsNamedParameters() {
         return false;
     }
 
-    public boolean supportsMultipleOpenResults()  {
+    public boolean supportsMultipleOpenResults() {
         return false;
     }
 
-    public boolean supportsGetGeneratedKeys()  {
+    public boolean supportsGetGeneratedKeys() {
         return false;
     }
 
-    public ResultSet getSuperTypes(String catalog, String schemaPattern, String typeNamePattern)  {
+    public ResultSet getSuperTypes(String catalog, String schemaPattern, String typeNamePattern) {
         return null;
     }
 
-    public ResultSet getSuperTables(String catalog, String schemaPattern, String tableNamePattern)  {
+    public ResultSet getSuperTables(String catalog, String schemaPattern, String tableNamePattern) {
         return null;
     }
 
     public ResultSet getAttributes(
-            String catalog, String schemaPattern, String typeNamePattern, String attributeNamePattern)
-             {
+            String catalog, String schemaPattern, String typeNamePattern, String attributeNamePattern) {
         return null;
     }
 
-    public boolean supportsResultSetHoldability(int holdability)  {
+    public boolean supportsResultSetHoldability(int holdability) {
         return false;
     }
 
-    public int getResultSetHoldability()  {
+    public int getResultSetHoldability() {
         return 0;
     }
 
-    public int getDatabaseMajorVersion()  {
+    public int getDatabaseMajorVersion() {
         return 0;
     }
 
-    public int getDatabaseMinorVersion()  {
+    public int getDatabaseMinorVersion() {
         return 0;
     }
 
-    public int getJDBCMajorVersion()  {
+    public int getJDBCMajorVersion() {
         return 0;
     }
 
-    public int getJDBCMinorVersion()  {
+    public int getJDBCMinorVersion() {
         return 0;
     }
 
-    public int getSQLStateType()  {
-        return 0;
+    public int getSQLStateType() {
+        return DatabaseMetaData.sqlStateSQL;
     }
 
-    public boolean locatorsUpdateCopy()  {
+    public boolean locatorsUpdateCopy() {
         return false;
     }
 
-    public boolean supportsStatementPooling()  {
+    public boolean supportsStatementPooling() {
         return false;
     }
 
-    public RowIdLifetime getRowIdLifetime()  {
+    public RowIdLifetime getRowIdLifetime() {
         return null;
     }
 
-    public ResultSet getSchemas(String catalog, String schemaPattern)  {
+    public ResultSet getSchemas(String catalog, String schemaPattern) {
         return null;
     }
 
-    public boolean supportsStoredFunctionsUsingCallSyntax()  {
+    public boolean supportsStoredFunctionsUsingCallSyntax() {
         return false;
     }
 
-    public boolean autoCommitFailureClosesAllResultSets()  {
+    public boolean autoCommitFailureClosesAllResultSets() {
         return false;
     }
 
-    public ResultSet getClientInfoProperties()  {
+    public ResultSet getClientInfoProperties() {
         return null;
     }
 
-    public ResultSet getFunctions(String catalog, String schemaPattern, String functionNamePattern)
-             {
+    public ResultSet getFunctions(String catalog, String schemaPattern, String functionNamePattern) {
         return null;
     }
 
     public ResultSet getFunctionColumns(
-            String catalog, String schemaPattern, String functionNamePattern, String columnNamePattern)
-             {
+            String catalog, String schemaPattern, String functionNamePattern, String columnNamePattern) {
         return null;
     }
 
-    public <T> T unwrap(Class<T> iface)  {
+    public <T> T unwrap(Class<T> iface) {
         return null;
     }
 
-    public boolean isWrapperFor(Class<?> iface)  {
+    public boolean isWrapperFor(Class<?> iface) {
         return false;
     }
 
     // @Override only override for java 1.7
-    public boolean generatedKeyAlwaysReturned()  {
+    public boolean generatedKeyAlwaysReturned() {
         return false;
     }
 
     // @Override only override for java 1.7
-    public ResultSet getPseudoColumns(String arg0, String arg1, String arg2, String arg3)  {
+    public ResultSet getPseudoColumns(String arg0, String arg1, String arg2, String arg3) {
         return null;
     }
 }
