@@ -82,7 +82,7 @@ public class ClassPropertiesBinder {
           propertyFromValueCreator.createProperty(value, currentGrailsProp));
     }
 
-    naturalIdentifierBinder.bindNaturalIdentifier(domainClass.getMappedForm(), persistentClass);
+    naturalIdentifierBinder.bindNaturalIdentifier(domainClass, persistentClass);
   }
 
   @Nonnull private Table getTable(PersistentClass persistentClass) {
