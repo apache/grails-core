@@ -29,8 +29,6 @@ import org.hibernate.boot.Metadata
 import org.hibernate.boot.MetadataSources
 import org.hibernate.dialect.Dialect
 
-import org.grails.orm.hibernate.HibernateDatastore
-
 /**
  * A Liquibase database implementation that uses GORM's metadata.
  *
@@ -49,23 +47,24 @@ class GormDatabase extends HibernateDatabase {
         super()
         this.dialect = dialect
         this.gormDatastore = hibernateDatastore
-        SnapshotControl snapshotControl = new SnapshotControl(this, null, null)
-        GormDatabase database = this
-        OfflineConnection connection = new OfflineConnection('offline:gorm', null) {
-            DatabaseSnapshot getSnapshot(DatabaseObject[] examples) {
-                new JdbcDatabaseSnapshot(examples, database, snapshotControl)
-            }
-        }
-        setConnection(connection)
+        setConnection(new JdbcConnection(new HibernateConnection('hibernate:gorm', null)))
+    }
+
+    @Override
+    protected String findDialectName() {
+        dialect?.getClass()?.getName()
     }
 
     /**
      * Return the hibernate {@link Metadata} used by this database.
      */
-
     @Override
     Metadata getMetadata() {
         gormDatastore.getMetadata()
+    }
+
+    DatabaseConnection getDatabaseConnection() {
+        return super.getConnection()
     }
 
     HibernateDatastore getGormDatastore() {
