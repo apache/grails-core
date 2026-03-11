@@ -18,6 +18,9 @@
  */
 package org.grails.plugins.databasemigration
 
+import org.springframework.transaction.TransactionDefinition
+import org.springframework.transaction.TransactionStatus
+
 import grails.core.GrailsApplication
 import grails.spring.BeanBuilder
 import liquibase.parser.ChangeLogParserFactory
@@ -150,8 +153,8 @@ class DatabaseMigrationGrailsPluginSpec extends Specification {
         applicationContext.getBean('grailsLiquibaseFactory', GrailsLiquibase) >> grailsLiquibase
 
         // Mock PlatformTransactionManager and TransactionStatus
-        org.springframework.transaction.TransactionStatus transactionStatus = Mock(org.springframework.transaction.TransactionStatus)
-        transactionManager.getTransaction(_ as org.springframework.transaction.TransactionDefinition) >> transactionStatus
+        TransactionStatus transactionStatus = Mock(TransactionStatus)
+        transactionManager.getTransaction(_ as TransactionDefinition) >> transactionStatus
 
         // DatabaseMigrationTransactionManager uses applicationContext.getBean(beanName, PlatformTransactionManager)
         // Ensure ALL calls to getBean with any string and PlatformTransactionManager are handled

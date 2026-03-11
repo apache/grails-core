@@ -10,7 +10,7 @@ import org.hibernate.Version;
  */
 public class HibernateConnectionMetadata implements DatabaseMetaData {
 
-    private String url;
+    private final String url;
 
     public HibernateConnectionMetadata(String url) {
         this.url = url;

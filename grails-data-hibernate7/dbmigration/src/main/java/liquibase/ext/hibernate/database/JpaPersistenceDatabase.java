@@ -53,7 +53,7 @@ public class JpaPersistenceDatabase extends HibernateEjb3Database {
         internalPersistenceUnitManager.setPersistenceXmlLocation(path);
 
         internalPersistenceUnitManager.preparePersistenceUnitInfos();
-        PersistenceUnitInfo persistenceUnitInfo = Optional.ofNullable(internalPersistenceUnitManager.obtainDefaultPersistenceUnitInfo())
+        PersistenceUnitInfo persistenceUnitInfo = Optional.of(internalPersistenceUnitManager.obtainDefaultPersistenceUnitInfo())
                 .orElseThrow(() -> new IllegalStateException("No persistence unit info found for path: " + path));
 
         return (EntityManagerFactoryBuilderImpl) Bootstrap.getEntityManagerFactoryBuilder(
