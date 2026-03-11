@@ -8,6 +8,7 @@ import liquibase.snapshot.InvalidExampleException;
 import liquibase.snapshot.SnapshotGenerator;
 import liquibase.snapshot.SnapshotGeneratorChain;
 import liquibase.structure.DatabaseObject;
+import org.hibernate.boot.Metadata;
 import org.hibernate.boot.spi.MetadataImplementor;
 
 /**
@@ -87,16 +88,38 @@ public abstract class HibernateSnapshotGenerator implements SnapshotGenerator {
             throws DatabaseException, InvalidExampleException;
 
     protected org.hibernate.mapping.Table findHibernateTable(DatabaseObject example, DatabaseSnapshot snapshot) {
-        var database = (HibernateDatabase) snapshot.getDatabase();
-        var metadata = (MetadataImplementor) database.getMetadata();
+        Metadata metadata = null;
+        Database database = snapshot.getDatabase();
+        if (database instanceof HibernateDatabase hibernateDatabase) {
+            metadata = hibernateDatabase.getMetadata();
+        } else {
+            try {
+                metadata = (Metadata) database.getClass().getMethod("getMetadata").invoke(database);
+            } catch (Exception e) {
+                // not a metadata-bearing database
+            }
+        }
 
-        var tmapp = metadata.collectTableMappings();
+        if (metadata == null) {
+            return null;
+        }
 
-        for (var hibernateTable : tmapp) {
+        MetadataImplementor metadataImplementor = (MetadataImplementor) metadata;
+
+        for (var hibernateTable : metadataImplementor.collectTableMappings()) {
             if (hibernateTable.getName().equalsIgnoreCase(example.getName())) {
                 return hibernateTable;
             }
         }
+
+        for (var namespace : metadataImplementor.getDatabase().getNamespaces()) {
+            for (var hibernateTable : namespace.getTables()) {
+                if (hibernateTable.getName().equalsIgnoreCase(example.getName())) {
+                    return hibernateTable;
+                }
+            }
+        }
+
         return null;
     }
 }

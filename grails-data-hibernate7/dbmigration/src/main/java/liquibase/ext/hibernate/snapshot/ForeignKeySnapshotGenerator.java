@@ -1,8 +1,5 @@
 package liquibase.ext.hibernate.snapshot;
 
-import java.util.Collection;
-
-import liquibase.diff.compare.DatabaseObjectComparatorFactory;
 import liquibase.exception.DatabaseException;
 import liquibase.ext.hibernate.database.HibernateDatabase;
 import liquibase.snapshot.DatabaseSnapshot;
@@ -33,54 +30,45 @@ public class ForeignKeySnapshotGenerator extends HibernateSnapshotGenerator {
             return;
         }
         if (foundObject instanceof Table table) {
-            HibernateDatabase database = (HibernateDatabase) snapshot.getDatabase();
-            MetadataImplementor metadata = (MetadataImplementor) database.getMetadata();
+            org.hibernate.mapping.Table hibernateTable = findHibernateTable(table, snapshot);
+            if (hibernateTable == null) {
+                return;
+            }
 
-            Collection<org.hibernate.mapping.Table> tmapp = metadata.collectTableMappings();
-            for (org.hibernate.mapping.Table hibernateTable : tmapp) {
-                for (org.hibernate.mapping.ForeignKey hibernateForeignKey : hibernateTable.getForeignKeyCollection()) {
-                    Table currentTable = new Table().setName(hibernateTable.getName());
-                    currentTable.setSchema(hibernateTable.getCatalog(), hibernateTable.getSchema());
-
+            for (org.hibernate.mapping.ForeignKey hibernateForeignKey : hibernateTable.getForeignKeyCollection()) {
+                if (hibernateForeignKey.isCreationEnabled()) {
                     org.hibernate.mapping.Table hibernateReferencedTable = hibernateForeignKey.getReferencedTable();
+
                     Table referencedTable = new Table().setName(hibernateReferencedTable.getName());
                     referencedTable.setSchema(
                             hibernateReferencedTable.getCatalog(), hibernateReferencedTable.getSchema());
 
-                    if (hibernateForeignKey.isCreationEnabled() && hibernateForeignKey.isPhysicalConstraint()) {
-                        ForeignKey fk = new ForeignKey();
-                        fk.setName(hibernateForeignKey.getName());
-                        fk.setPrimaryKeyTable(referencedTable);
-                        fk.setForeignKeyTable(currentTable);
-                        for (Column column : hibernateForeignKey.getColumns()) {
-                            fk.addForeignKeyColumn(new liquibase.structure.core.Column(column.getName()));
-                        }
-                        for (Column column : hibernateForeignKey.getReferencedColumns()) {
-                            fk.addPrimaryKeyColumn(new liquibase.structure.core.Column(column.getName()));
-                        }
-                        if (fk.getPrimaryKeyColumns() == null
-                                || fk.getPrimaryKeyColumns().isEmpty()) {
+                    ForeignKey fk = new ForeignKey();
+                    fk.setName(hibernateForeignKey.getName());
+                    fk.setPrimaryKeyTable(referencedTable);
+                    fk.setForeignKeyTable(table);
+                    for (Column column : hibernateForeignKey.getColumns()) {
+                        fk.addForeignKeyColumn(new liquibase.structure.core.Column(column.getName()));
+                    }
+                    for (Column column : hibernateForeignKey.getReferencedColumns()) {
+                        fk.addPrimaryKeyColumn(new liquibase.structure.core.Column(column.getName()));
+                    }
+                    if (fk.getPrimaryKeyColumns() == null
+                            || fk.getPrimaryKeyColumns().isEmpty()) {
+                        if (hibernateReferencedTable.getPrimaryKey() != null) {
                             for (Column column :
                                     hibernateReferencedTable.getPrimaryKey().getColumns()) {
                                 fk.addPrimaryKeyColumn(new liquibase.structure.core.Column(column.getName()));
                             }
                         }
+                    }
 
-                        fk.setDeferrable(false);
-                        fk.setInitiallyDeferred(false);
+                    fk.setDeferrable(false);
+                    fk.setInitiallyDeferred(false);
 
-                        //			Index index = new Index();
-                        //			index.setName("IX_" + fk.getName());
-                        //			index.setTable(fk.getForeignKeyTable());
-                        //			index.setColumns(fk.getForeignKeyColumns());
-                        //			fk.setBackingIndex(index);
-                        //			table.getIndexes().add(index);
-
-                        if (DatabaseObjectComparatorFactory.getInstance()
-                                .isSameObject(currentTable, table, null, database)) {
-                            table.getOutgoingForeignKeys().add(fk);
-                            table.getSchema().addDatabaseObject(fk);
-                        }
+                    table.getOutgoingForeignKeys().add(fk);
+                    if (table.getSchema() != null) {
+                        table.getSchema().addDatabaseObject(fk);
                     }
                 }
             }
