@@ -206,6 +206,8 @@ def sendRequest(url, token, method, body) {
 
         if (conn.responseCode in [200, 201, 204]) {
             println "SUCCESS: ${conn.responseCode}"
+        } else if (method == "DELETE" && conn.responseCode == 404) {
+            println "SKIPPED (Not Found): ${conn.responseCode}"
         } else {
             def errorText = conn.errorStream?.text ?: "No error stream available"
             throw new RuntimeException("HTTP ${conn.responseCode} - ${errorText}")
