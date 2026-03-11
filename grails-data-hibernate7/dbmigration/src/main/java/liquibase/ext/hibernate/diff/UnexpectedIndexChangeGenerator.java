@@ -31,7 +31,7 @@ public class UnexpectedIndexChangeGenerator
             Database comparisonDatabase,
             ChangeGeneratorChain chain) {
         if (referenceDatabase instanceof HibernateDatabase || comparisonDatabase instanceof HibernateDatabase) {
-            return null;
+            return new Change[0];
         } else {
             return super.fixUnexpected(unexpectedObject, control, referenceDatabase, comparisonDatabase, chain);
         }

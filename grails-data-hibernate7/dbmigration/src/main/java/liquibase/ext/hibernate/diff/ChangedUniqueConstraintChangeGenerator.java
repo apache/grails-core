@@ -36,7 +36,7 @@ public class ChangedUniqueConstraintChangeGenerator
         if (referenceDatabase instanceof HibernateDatabase || comparisonDatabase instanceof HibernateDatabase) {
             differences.removeDifference("unique");
             if (!differences.hasDifferences()) {
-                return null;
+                return new Change[0];
             }
         }
         return super.fixChanged(changedObject, differences, control, referenceDatabase, comparisonDatabase, chain);

@@ -36,7 +36,7 @@ public class ChangedPrimaryKeyChangeGenerator
             differences.removeDifference("unique");
             differences.removeDifference("validate");
             if (!differences.hasDifferences()) {
-                return null;
+                return new Change[0];
             }
         }
 

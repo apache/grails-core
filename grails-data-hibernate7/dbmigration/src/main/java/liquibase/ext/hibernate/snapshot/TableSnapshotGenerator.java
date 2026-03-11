@@ -16,7 +16,7 @@ import org.hibernate.mapping.*;
 public class TableSnapshotGenerator extends HibernateSnapshotGenerator {
 
     public TableSnapshotGenerator() {
-        super(Table.class, new Class[] {Schema.class});
+        super(Table.class, Schema.class);
     }
 
     @Override
@@ -41,6 +41,7 @@ public class TableSnapshotGenerator extends HibernateSnapshotGenerator {
     }
 
     @Override
+    @SuppressWarnings("PMD.CloseResource")
     protected void addTo(DatabaseObject foundObject, DatabaseSnapshot snapshot)
             throws DatabaseException, InvalidExampleException {
         if (!snapshot.getSnapshotControl().shouldInclude(Table.class)) {
@@ -83,6 +84,7 @@ public class TableSnapshotGenerator extends HibernateSnapshotGenerator {
     }
 
     @Override
+    @SuppressWarnings("unchecked")
     public Class<? extends SnapshotGenerator>[] replaces() {
         return new Class[] {liquibase.snapshot.jvm.TableSnapshotGenerator.class};
     }

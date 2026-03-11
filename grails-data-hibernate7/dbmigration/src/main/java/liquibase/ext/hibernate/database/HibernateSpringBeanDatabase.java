@@ -85,27 +85,30 @@ public class HibernateSpringBeanDatabase extends HibernateDatabase {
         BeanDefinitionRegistry registry = new SimpleBeanDefinitionRegistry();
         XmlBeanDefinitionReader reader = new XmlBeanDefinitionReader(registry);
         reader.setNamespaceAware(true);
-        HibernateConnection connection = getHibernateConnection();
-        String path = Optional.ofNullable(connection.getPath())
-                .orElseThrow(() -> new IllegalStateException("Hibernate connection path is null"));
-        reader.loadBeanDefinitions(new ClassPathResource(path));
 
-        Properties props = Optional.ofNullable(connection.getProperties())
-                .orElseThrow(() -> new IllegalStateException("Hibernate connection properties are null"));
+        // Fix: Use try-with-resources to ensure HibernateConnection is closed (PMD #8)
+        try (HibernateConnection connection = getHibernateConnection()) {
+            String path = Optional.ofNullable(connection.getPath())
+                    .orElseThrow(() -> new IllegalStateException("Hibernate connection path is null"));
+            reader.loadBeanDefinitions(new ClassPathResource(path));
 
-        String beanName = Optional.ofNullable(props.getProperty("bean"))
-                .orElseThrow(() -> new IllegalStateException("A 'bean' name is required, definition in '" + path + "'."));
+            Properties props = Optional.ofNullable(connection.getProperties())
+                    .orElseThrow(() -> new IllegalStateException("Hibernate connection properties are null"));
 
-        try {
-            beanDefinition = registry.getBeanDefinition(beanName);
-            Optional.ofNullable(beanDefinition.getPropertyValues().getPropertyValue("hibernateProperties"))
-                    .map(PropertyValue::getValue)
-                    .filter(ManagedProperties.class::isInstance)
-                    .map(ManagedProperties.class::cast)
-                    .ifPresent(p -> beanDefinitionProperties = p);
-        } catch (NoSuchBeanDefinitionException e) {
-            throw new IllegalStateException(
-                    "A bean named '" + beanName + "' could not be found in '" + path + "'.", e);
+            String beanName = Optional.ofNullable(props.getProperty("bean"))
+                    .orElseThrow(() -> new IllegalStateException("A 'bean' name is required, definition in '" + path + "'."));
+
+            try {
+                beanDefinition = registry.getBeanDefinition(beanName);
+                Optional.ofNullable(beanDefinition.getPropertyValues().getPropertyValue("hibernateProperties"))
+                        .map(PropertyValue::getValue)
+                        .filter(ManagedProperties.class::isInstance)
+                        .map(ManagedProperties.class::cast)
+                        .ifPresent(p -> beanDefinitionProperties = p);
+            } catch (NoSuchBeanDefinitionException e) {
+                throw new IllegalStateException(
+                        "A bean named '" + beanName + "' could not be found in '" + path + "'.", e);
+            }
         }
     }
 
@@ -122,26 +125,23 @@ public class HibernateSpringBeanDatabase extends HibernateDatabase {
                     sources.addAnnotatedClass(findClass(className));
                 });
 
-        try {
-            // Add mapping locations
-            ResourcePatternResolver resourcePatternResolver = new PathMatchingResourcePatternResolver();
-            extractListProperty(properties, "mappingLocations")
-                    .forEach(mappingLocation -> {
-                        try {
-                            Scope.getCurrentScope().getLog(getClass()).info("Found mappingLocation " + mappingLocation);
-                            Resource[] resources = resourcePatternResolver.getResources(mappingLocation);
-                            for (Resource resource : resources) {
-                                URL url = resource.getURL();
-                                Scope.getCurrentScope().getLog(getClass()).info("Adding resource  " + url);
-                                sources.addURL(url);
-                            }
-                        } catch (IOException e) {
-                            throw new RuntimeException(e);
+        // Add mapping locations
+        ResourcePatternResolver resourcePatternResolver = new PathMatchingResourcePatternResolver();
+        extractListProperty(properties, "mappingLocations")
+                .forEach(mappingLocation -> {
+                    try {
+                        Scope.getCurrentScope().getLog(getClass()).info("Found mappingLocation " + mappingLocation);
+                        Resource[] resources = resourcePatternResolver.getResources(mappingLocation);
+                        for (Resource resource : resources) {
+                            URL url = resource.getURL();
+                            Scope.getCurrentScope().getLog(getClass()).info("Adding resource  " + url);
+                            sources.addURL(url);
                         }
-                    });
-        } catch (Exception e) {
-            throw new DatabaseException(e);
-        }
+                    } catch (IOException e) {
+                        // Fix: Pass 'e' as cause to preserve stack trace (PMD #9)
+                        throw new RuntimeException("Error resolving mapping location: " + mappingLocation, e);
+                    }
+                });
     }
 
     private Stream<String> extractListProperty(MutablePropertyValues properties, String propertyName) {
@@ -168,7 +168,7 @@ public class HibernateSpringBeanDatabase extends HibernateDatabase {
             }
         } catch (ClassNotFoundException e) {
             throw new IllegalStateException(
-                    "Unable to find required class: '" + className + "'. Please check classpath and class name.");
+                    "Unable to find required class: '" + className + "'. Please check classpath and class name.", e);
         }
     }
 

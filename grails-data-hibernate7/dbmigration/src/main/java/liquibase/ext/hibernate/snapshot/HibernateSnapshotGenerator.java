@@ -1,5 +1,9 @@
 package liquibase.ext.hibernate.snapshot;
 
+import java.lang.reflect.Method;
+import java.util.Arrays;
+
+import liquibase.Scope;
 import liquibase.database.Database;
 import liquibase.exception.DatabaseException;
 import liquibase.ext.hibernate.database.HibernateDatabase;
@@ -19,22 +23,25 @@ public abstract class HibernateSnapshotGenerator implements SnapshotGenerator {
     private static final int PRIORITY_HIBERNATE_ADDITIONAL = 200;
     private static final int PRIORITY_HIBERNATE_DEFAULT = 100;
 
-    private Class<? extends DatabaseObject> defaultFor = null;
-    private Class<? extends DatabaseObject>[] addsTo = null;
+    private final Class<? extends DatabaseObject> defaultFor;
+    private final Class<? extends DatabaseObject>[] addsToTypes;
 
+    @SuppressWarnings("unchecked")
     protected HibernateSnapshotGenerator(Class<? extends DatabaseObject> defaultFor) {
-        this.defaultFor = defaultFor;
+        this(defaultFor, (Class<? extends DatabaseObject>[]) new Class[0]);
     }
 
+    @SafeVarargs
+    @SuppressWarnings("PMD.ArrayIsStoredDirectly")
     protected HibernateSnapshotGenerator(
-            Class<? extends DatabaseObject> defaultFor, Class<? extends DatabaseObject>[] addsTo) {
+            Class<? extends DatabaseObject> defaultFor, Class<? extends DatabaseObject>... addsToTypes) {
         this.defaultFor = defaultFor;
-        this.addsTo = addsTo;
+        this.addsToTypes = addsToTypes == null ? null : Arrays.copyOf(addsToTypes, addsToTypes.length);
     }
 
     @Override
     public Class<? extends SnapshotGenerator>[] replaces() {
-        return null;
+        return new Class[0];
     }
 
     @Override
@@ -43,8 +50,9 @@ public abstract class HibernateSnapshotGenerator implements SnapshotGenerator {
             if (defaultFor != null && defaultFor.isAssignableFrom(objectType)) {
                 return PRIORITY_HIBERNATE_DEFAULT;
             }
-            if (addsTo() != null) {
-                for (Class<? extends DatabaseObject> type : addsTo()) {
+            Class<? extends DatabaseObject>[] types = addsTo();
+            if (types != null) {
+                for (Class<? extends DatabaseObject> type : types) {
                     if (type.isAssignableFrom(objectType)) {
                         return PRIORITY_HIBERNATE_ADDITIONAL;
                     }
@@ -55,8 +63,9 @@ public abstract class HibernateSnapshotGenerator implements SnapshotGenerator {
     }
 
     @Override
+    @SuppressWarnings("PMD.MethodReturnsInternalArray")
     public final Class<? extends DatabaseObject>[] addsTo() {
-        return addsTo;
+        return addsToTypes == null ? null : Arrays.copyOf(addsToTypes, addsToTypes.length);
     }
 
     @Override
@@ -64,15 +73,15 @@ public abstract class HibernateSnapshotGenerator implements SnapshotGenerator {
             DatabaseObject example, DatabaseSnapshot snapshot, SnapshotGeneratorChain chain)
             throws DatabaseException, InvalidExampleException {
         if (defaultFor != null && defaultFor.isAssignableFrom(example.getClass())) {
-            DatabaseObject result = snapshotObject(example, snapshot);
-            return result;
+            return snapshotObject(example, snapshot);
         }
         DatabaseObject chainResponse = chain.snapshot(example, snapshot);
         if (chainResponse == null) {
             return null;
         }
-        if (addsTo() != null) {
-            for (Class<? extends DatabaseObject> addType : addsTo()) {
+        Class<? extends DatabaseObject>[] types = addsTo();
+        if (types != null) {
+            for (Class<? extends DatabaseObject> addType : types) {
                 if (addType.isAssignableFrom(example.getClass())) {
                     addTo(chainResponse, snapshot);
                 }
@@ -87,6 +96,7 @@ public abstract class HibernateSnapshotGenerator implements SnapshotGenerator {
     protected abstract void addTo(DatabaseObject foundObject, DatabaseSnapshot snapshot)
             throws DatabaseException, InvalidExampleException;
 
+    @SuppressWarnings("PMD.CloseResource")
     protected org.hibernate.mapping.Table findHibernateTable(DatabaseObject example, DatabaseSnapshot snapshot) {
         Metadata metadata = null;
         Database database = snapshot.getDatabase();
@@ -94,9 +104,10 @@ public abstract class HibernateSnapshotGenerator implements SnapshotGenerator {
             metadata = hibernateDatabase.getMetadata();
         } else {
             try {
-                metadata = (Metadata) database.getClass().getMethod("getMetadata").invoke(database);
+                Method getMetadata = database.getClass().getMethod("getMetadata");
+                metadata = (Metadata) getMetadata.invoke(database);
             } catch (Exception e) {
-                // not a metadata-bearing database
+                Scope.getCurrentScope().getLog(getClass()).debug("Error getting metadata from database", e);
             }
         }
 

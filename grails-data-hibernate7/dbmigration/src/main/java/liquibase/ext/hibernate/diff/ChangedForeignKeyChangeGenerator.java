@@ -37,7 +37,7 @@ public class ChangedForeignKeyChangeGenerator
             differences.removeDifference("updateRule");
             differences.removeDifference("validate");
             if (!differences.hasDifferences()) {
-                return null;
+                return new Change[0];
             }
         }
 

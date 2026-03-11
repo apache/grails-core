@@ -21,8 +21,6 @@ package liquibase.ext.hibernate.diff;
 import java.util.Objects;
 import java.util.Set;
 
-import org.hibernate.id.enhanced.SequenceStyleGenerator;
-
 import liquibase.change.Change;
 import liquibase.database.Database;
 import liquibase.diff.Difference;
@@ -40,7 +38,11 @@ import liquibase.structure.core.Sequence;
 public class ChangedSequenceChangeGenerator
         extends liquibase.diff.output.changelog.core.ChangedSequenceChangeGenerator {
 
-    private static final Set<String> HIBERNATE_SEQUENCE_FIELDS = Set.of("name", "startValue", "incrementBy");
+    private static final String FIELD_NAME = "name";
+    private static final String FIELD_START_VALUE = "startValue";
+    private static final String FIELD_INCREMENT_BY = "incrementBy";
+
+    private static final Set<String> HIBERNATE_SEQUENCE_FIELDS = Set.of(FIELD_NAME, FIELD_START_VALUE, FIELD_INCREMENT_BY);
     
     // Default values used by Hibernate's SequenceStyleGenerator
     private static final String DEFAULT_INITIAL_VALUE = "1";
@@ -85,11 +87,11 @@ public class ChangedSequenceChangeGenerator
         String refValue = Objects.toString(diff.getReferenceValue(), null);
         String compValue = Objects.toString(diff.getComparedValue(), null);
 
-        if ("name".equals(field)) {
+        if (FIELD_NAME.equals(field)) {
             return isCaseInsensitiveMatch(refValue, compValue, refDb, compDb);
         }
 
-        if ("startValue".equals(field) || "incrementBy".equals(field)) {
+        if (FIELD_START_VALUE.equals(field) || FIELD_INCREMENT_BY.equals(field)) {
             return isDefaultOrNullMatch(refValue, compValue);
         }
 

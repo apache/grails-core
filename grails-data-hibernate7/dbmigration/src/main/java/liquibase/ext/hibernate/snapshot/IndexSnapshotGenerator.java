@@ -12,10 +12,10 @@ public class IndexSnapshotGenerator extends HibernateSnapshotGenerator {
 
     private static final String HIBERNATE_ORDER_ASC = "asc";
     private static final String HIBERNATE_ORDER_DESC = "desc";
+    private static final int SINGLE_COLUMN = 1;
 
-    @SuppressWarnings("unchecked")
     public IndexSnapshotGenerator() {
-        super(Index.class, new Class[] {Table.class, ForeignKey.class, UniqueConstraint.class});
+        super(Index.class, Table.class, ForeignKey.class, UniqueConstraint.class);
     }
 
     @Override
@@ -83,7 +83,7 @@ public class IndexSnapshotGenerator extends HibernateSnapshotGenerator {
         This seems to be necessary to explicitly tell liquibase that there's no
         actual diff in certain non-unique indexes
         */
-        if (hibernateIndex.getColumnSpan() == 1) {
+        if (hibernateIndex.getColumnSpan() == SINGLE_COLUMN) {
             var col = ((org.hibernate.mapping.Column)
                     hibernateIndex.getSelectables().get(0));
             return col.isUnique();
@@ -94,11 +94,12 @@ public class IndexSnapshotGenerator extends HibernateSnapshotGenerator {
             and the value read from the database is 'false', resulting in the generated changeSet after the Drop and
             Recreate Index.
             */
-            return false;
+            return Boolean.FALSE;
         }
     }
 
     @Override
+    @SuppressWarnings("unchecked")
     public Class<? extends SnapshotGenerator>[] replaces() {
         return new Class[] {liquibase.snapshot.jvm.IndexSnapshotGenerator.class};
     }
