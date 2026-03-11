@@ -79,7 +79,7 @@ class GroovyDiffToChangeLogCommandStep extends DiffChangelogCommandStep {
         return new String[][] { COMMAND_NAME }
     }
 
-    protected DiffCommandStep createDiffCommandStep() {
+    protected static DiffCommandStep createDiffCommandStep() {
         return new DiffCommandStep()
     }
 
