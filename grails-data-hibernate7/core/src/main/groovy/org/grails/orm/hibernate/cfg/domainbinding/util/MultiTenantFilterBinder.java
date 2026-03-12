@@ -83,7 +83,7 @@ public class MultiTenantFilterBinder {
      */
     @Nullable
     public FilterDefinition bind(
-            @Nonnull GrailsHibernatePersistentEntity entity, @Nonnull SingleTableSubclass subclass) {
+            @Nonnull HibernatePersistentEntity entity, @Nonnull SingleTableSubclass subclass) {
         return null; // Redundant for SingleTableSubclass
     }
 
@@ -95,7 +95,7 @@ public class MultiTenantFilterBinder {
      * @return The filter definition applied, or null if none
      */
     @Nullable
-    public FilterDefinition bind(@Nonnull GrailsHibernatePersistentEntity entity, @Nonnull JoinedSubclass subclass) {
+    public FilterDefinition bind(@Nonnull HibernatePersistentEntity entity, @Nonnull JoinedSubclass subclass) {
         return doBind(entity, subclass);
     }
 
@@ -107,13 +107,13 @@ public class MultiTenantFilterBinder {
      * @return The filter definition applied, or null if none
      */
     @Nullable
-    public FilterDefinition bind(@Nonnull GrailsHibernatePersistentEntity entity, @Nonnull UnionSubclass subclass) {
+    public FilterDefinition bind(@Nonnull HibernatePersistentEntity entity, @Nonnull UnionSubclass subclass) {
         return doBind(entity, subclass);
     }
 
     @Nullable
     private FilterDefinition doBind(
-            @Nonnull GrailsHibernatePersistentEntity entity, @Nonnull PersistentClass persistentClass) {
+            @Nonnull HibernatePersistentEntity entity, @Nonnull PersistentClass persistentClass) {
 
         if (!entity.isMultiTenant()) {
             return null;
@@ -149,7 +149,7 @@ public class MultiTenantFilterBinder {
     }
 
     private boolean shouldApplyFilter(
-            GrailsHibernatePersistentEntity entity, PersistentClass persistentClass, Property property) {
+            HibernatePersistentEntity entity, PersistentClass persistentClass, Property property) {
         if (!(property.getValue() instanceof BasicValue)) {
             return false;
         }

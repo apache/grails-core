@@ -31,6 +31,7 @@ import org.hibernate.mapping.UnionSubclass;
 
 import org.grails.orm.hibernate.cfg.MappingCacheHolder;
 import org.grails.orm.hibernate.cfg.domainbinding.hibernate.GrailsHibernatePersistentEntity;
+import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernatePersistentEntity;
 import org.grails.orm.hibernate.cfg.domainbinding.util.MultiTenantFilterBinder;
 
 /** Binder for subclasses. */
@@ -59,7 +60,7 @@ public class SubClassBinder {
      * @param parent The parent persistent class instance
      * @return The list of subclasses created
      */
-    public List<Subclass> bindSubClass(@Nonnull GrailsHibernatePersistentEntity sub, PersistentClass parent) {
+    public List<Subclass> bindSubClass(@Nonnull HibernatePersistentEntity sub, PersistentClass parent) {
         mappingCacheHolder.cacheMapping(sub);
         Subclass subClass = subclassMappingBinder.createSubclassMapping(sub, parent);
         parent.addSubclass(subClass);
@@ -70,7 +71,7 @@ public class SubClassBinder {
         return subclasses;
     }
 
-    private void bindMultiTenantFilter(GrailsHibernatePersistentEntity sub, Subclass subClass) {
+    private void bindMultiTenantFilter(HibernatePersistentEntity sub, Subclass subClass) {
         if (subClass instanceof SingleTableSubclass singleTableSubclass) {
             multiTenantFilterBinder.bind(sub, singleTableSubclass);
         } else if (subClass instanceof JoinedSubclass joinedSubclass) {
