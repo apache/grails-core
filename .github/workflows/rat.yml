@@ -45,6 +45,8 @@ jobs:
         uses: gradle/actions/setup-gradle@v4
         with:
           develocity-access-key: ${{ secrets.GRAILS_DEVELOCITY_ACCESS_KEY  }}
+      - name: "🔍 Setup TestLens"
+        uses: testlens-app/setup-testlens@v1
       - name: "🧐 Apache License - Release Audit Tool"
         run: ./gradlew rat
       - name: Upload RAT HTML report
