@@ -29,6 +29,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import org.grails.orm.hibernate.cfg.domainbinding.hibernate.GrailsHibernatePersistentEntity;
+import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernatePersistentEntity;
 import org.grails.orm.hibernate.cfg.domainbinding.util.MultiTenantFilterBinder;
 
 /** Binder for root classes. */
@@ -65,13 +66,13 @@ public class RootBinder {
      *
      * @param entity The Grails domain class
      */
-    public void bindRoot(@Nonnull GrailsHibernatePersistentEntity entity) {
+    public void bindRoot(@Nonnull HibernatePersistentEntity entity) {
         if (mappings.getEntityBinding(entity.getName()) != null) {
             LOG.warn("[RootBinder] Class [" + entity.getName() + "] is already mapped, skipping.. ");
             return;
         }
 
-        Collection<GrailsHibernatePersistentEntity> children = entity.getChildEntities(dataSourceName);
+        var children = entity.getChildEntities(dataSourceName);
         RootClass root = rootPersistentClassCommonValuesBinder.bindRoot(entity);
 
         if (!children.isEmpty() && entity.isTablePerHierarchy()) {

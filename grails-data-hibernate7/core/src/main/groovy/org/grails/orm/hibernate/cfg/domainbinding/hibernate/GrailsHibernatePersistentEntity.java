@@ -228,14 +228,16 @@ public interface GrailsHibernatePersistentEntity extends PersistentEntity {
                 .toList();
     }
 
-    default List<GrailsHibernatePersistentEntity> getChildEntities() {
+    default List<HibernatePersistentEntity> getChildEntities() {
         return getChildEntities(getDataSourceName());
     }
 
-    default List<GrailsHibernatePersistentEntity> getChildEntities(String dataSourceName) {
-        return getMappingContext().getDirectChildEntities(this).stream()
-                .filter(GrailsHibernatePersistentEntity.class::isInstance)
-                .map(GrailsHibernatePersistentEntity.class::cast)
+    default List<HibernatePersistentEntity> getChildEntities(String dataSourceName) {
+        return getMappingContext()
+                .getDirectChildEntities(this)
+                .stream()
+                .filter(HibernatePersistentEntity.class::isInstance)
+                .map(HibernatePersistentEntity.class::cast)
                 .filter(persistentEntity -> persistentEntity.usesConnectionSource(dataSourceName))
                 .filter(sub -> sub.getJavaClass().getSuperclass().equals(this.getJavaClass()))
                 .toList();

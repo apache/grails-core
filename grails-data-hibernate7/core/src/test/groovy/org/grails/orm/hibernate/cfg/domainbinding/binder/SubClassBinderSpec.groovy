@@ -19,6 +19,7 @@
 
 package org.grails.orm.hibernate.cfg.domainbinding.binder
 
+import org.hibernate.mapping.SingleTableSubclass
 
 import grails.gorm.specs.HibernateGormDatastoreSpec
 import org.grails.orm.hibernate.cfg.Mapping
@@ -59,7 +60,7 @@ class SubClassBinderSpec extends HibernateGormDatastoreSpec {
         def rootClass = new RootClass(metadataBuildingContext)
         rootClass.setEntityName("Parent")
         rootClass.setJpaEntityName("Parent")
-        def subClass = new org.hibernate.mapping.SingleTableSubclass(rootClass, metadataBuildingContext)
+        def subClass = new SingleTableSubclass(rootClass, metadataBuildingContext)
         subClass.setEntityName("Child")
         subClass.setJpaEntityName("Child")
 

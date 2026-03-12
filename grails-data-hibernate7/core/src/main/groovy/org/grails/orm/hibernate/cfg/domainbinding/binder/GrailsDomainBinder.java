@@ -37,6 +37,7 @@ import org.grails.orm.hibernate.cfg.MappingCacheHolder;
 import org.grails.orm.hibernate.cfg.PersistentEntityNamingStrategy;
 import org.grails.orm.hibernate.cfg.domainbinding.collectionType.CollectionHolder;
 import org.grails.orm.hibernate.cfg.domainbinding.hibernate.GrailsHibernatePersistentEntity;
+import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernatePersistentEntity;
 import org.grails.orm.hibernate.cfg.domainbinding.util.BackticksRemover;
 import org.grails.orm.hibernate.cfg.domainbinding.util.BasicValueIdCreator;
 import org.grails.orm.hibernate.cfg.domainbinding.util.ColumnNameForPropertyAndPathFetcher;
@@ -106,7 +107,7 @@ public class GrailsDomainBinder implements AdditionalMappingContributor, TypeCon
         this.mappingCacheHolder = MappingCacheHolder.getInstance();
 
         // pre-build mappings
-        for (GrailsHibernatePersistentEntity persistentEntity :
+        for (HibernatePersistentEntity persistentEntity :
                 hibernateMappingContext.getHibernatePersistentEntities(dataSourceName)) {
             mappingCacheHolder.cacheMapping(persistentEntity);
         }
@@ -237,7 +238,8 @@ public class GrailsDomainBinder implements AdditionalMappingContributor, TypeCon
                 discriminatorPropertyBinder,
                 metadataCollector);
 
-        hibernateMappingContext.getHibernatePersistentEntities(dataSourceName).stream()
+        hibernateMappingContext.getHibernatePersistentEntities(dataSourceName)
+                .stream()
                 .filter(persistentEntity -> persistentEntity.forGrailsDomainMapping(dataSourceName))
                 .forEach(rootBinder::bindRoot);
     }

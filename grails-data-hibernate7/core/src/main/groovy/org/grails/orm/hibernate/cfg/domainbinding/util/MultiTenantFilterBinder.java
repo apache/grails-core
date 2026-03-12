@@ -36,6 +36,7 @@ import org.hibernate.mapping.UnionSubclass;
 
 import org.grails.datastore.mapping.model.config.GormProperties;
 import org.grails.orm.hibernate.cfg.domainbinding.hibernate.GrailsHibernatePersistentEntity;
+import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernatePersistentEntity;
 import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernatePersistentProperty;
 
 /**
@@ -69,7 +70,7 @@ public class MultiTenantFilterBinder {
      * @return The filter definition applied, or null if none
      */
     @Nullable
-    public FilterDefinition bind(@Nonnull GrailsHibernatePersistentEntity entity, @Nonnull RootClass rootClass) {
+    public FilterDefinition bind(@Nonnull HibernatePersistentEntity entity, @Nonnull RootClass rootClass) {
         return doBind(entity, rootClass);
     }
 

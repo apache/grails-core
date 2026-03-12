@@ -120,16 +120,11 @@ public class HibernateMappingContext extends AbstractMappingContext {
         return super.getPersistentEntity(name);
     }
 
-    public Collection<GrailsHibernatePersistentEntity> getHibernatePersistentEntities(String dataSourceName) {
-        List<GrailsHibernatePersistentEntity> result = new ArrayList<>();
-        if (persistentEntities != null) {
-            for (PersistentEntity entity : persistentEntities) {
-                if (entity instanceof GrailsHibernatePersistentEntity hibernateEntity) {
-                    hibernateEntity.setDataSourceName(dataSourceName);
-                    result.add(hibernateEntity);
-                }
-            }
-        }
-        return result;
+    public List<HibernatePersistentEntity> getHibernatePersistentEntities(String dataSourceName) {
+        return persistentEntities.stream()
+                .filter(HibernatePersistentEntity.class::isInstance)
+                .map(HibernatePersistentEntity.class::cast)
+                .peek(hibernateEntity -> hibernateEntity.setDataSourceName(dataSourceName))
+                .toList();
     }
 }
