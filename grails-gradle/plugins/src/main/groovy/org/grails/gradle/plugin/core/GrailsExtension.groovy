@@ -110,11 +110,7 @@ class GrailsExtension {
     /**
      * Keep class file parameter names so autowire by name can be supported without additional annotations such as '@Qualifier'.
      */
-    final Property<Boolean> preserveParameterNames
-
-    void setPreserveParameterNames(boolean enabled) {
-        this.preserveParameterNames.set(enabled)
-    }
+    Property<Boolean> preserveParameterNames
 
     DependencyHandler getPlugins() {
         if (pluginDefiner == null) {

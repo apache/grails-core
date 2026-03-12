@@ -497,7 +497,7 @@ ${importStatements}
 
     protected GrailsExtension registerGrailsExtension(Project project) {
         if (project.extensions.findByName('grails') == null) {
-            project.extensions.add('grails', new GrailsExtension(project))
+            project.extensions.create('grails', GrailsExtension, project)
         }
     }
 
