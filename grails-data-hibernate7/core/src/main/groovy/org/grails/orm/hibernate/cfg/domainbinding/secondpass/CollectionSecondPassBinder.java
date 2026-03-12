@@ -79,7 +79,7 @@ public class CollectionSecondPassBinder {
         collection.setSorted(property.isSorted());
 
         collectionKeyColumnUpdater.bind(property, associatedClass, collection);
-        collection.setCacheConcurrencyStrategy(property.getCacheUSage());
+        collection.setCacheConcurrencyStrategy(property.getCacheUsage());
 
         bindCollectionElement(property, mappings, collection);
     }

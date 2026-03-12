@@ -70,12 +70,12 @@ public class RootPersistentClassCommonValuesBinder {
         domainClass.configureDerivedProperties();
         CacheConfig cc = gormMapping.getCache();
         if (cc != null && cc.getEnabled()) {
-            root.setCacheConcurrencyStrategy(cc.getUsage());
+            root.setCacheConcurrencyStrategy(cc.getUsage().toString());
             root.setCached(true);
-            if ("read-only".equals(cc.getUsage())) {
+            if ("read-only".equalsIgnoreCase(cc.getUsage().toString())) {
                 root.setMutable(false);
             }
-            root.setLazyPropertiesCacheable(!"non-lazy".equals(cc.getInclude()));
+            root.setLazyPropertiesCacheable(!"non-lazy".equalsIgnoreCase(cc.getInclude().toString()));
         }
 
         var schema = domainClass.getSchema(mappings);

@@ -62,10 +62,11 @@ public interface HibernateToManyProperty extends PropertyWithMapping<PropertyCon
         return getMappedForm().getLazy();
     }
 
-    default String getCacheUSage() {
+    default String getCacheUsage() {
         return Optional.ofNullable(getMappedForm())
                 .map(PropertyConfig::getCache)
                 .map(CacheConfig::getUsage)
+                .map(Object::toString)
                 .orElse(null);
     }
 
