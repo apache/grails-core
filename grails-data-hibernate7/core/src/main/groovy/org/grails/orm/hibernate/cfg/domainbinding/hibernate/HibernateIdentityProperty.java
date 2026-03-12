@@ -31,4 +31,8 @@ public class HibernateIdentityProperty extends IdentityWithMapping<PropertyConfi
     public HibernateIdentityProperty(PersistentEntity entity, MappingContext context, PropertyDescriptor property) {
         super(entity, context, property);
     }
+
+    public HibernateIdentityProperty(PersistentEntity entity, MappingContext context, String name, Class type) {
+        super(entity, context, name, type);
+    }
 }

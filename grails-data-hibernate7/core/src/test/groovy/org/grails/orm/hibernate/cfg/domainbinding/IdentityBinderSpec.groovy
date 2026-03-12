@@ -18,6 +18,7 @@
  */
 package org.grails.orm.hibernate.cfg.domainbinding
 
+
 import org.grails.datastore.mapping.model.PersistentProperty
 import org.grails.datastore.mapping.model.ClassMapping
 import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernatePersistentProperty
@@ -157,6 +158,25 @@ class IdentityBinderSpec extends HibernateGormDatastoreSpec {
         when:
         binder.bindIdentity(domainClass, root)
 
+
+        then:
+        1 * simpleIdBinder.bindSimpleId(domainClass, root, identity, _)
+    }
+
+    def "should create synthetic identifier property if it doesn't exist"() {
+        given:
+        def domainClass = Mock(GrailsHibernatePersistentEntity)
+        def root = new RootClass(getGrailsDomainBinder().getMetadataBuildingContext())
+        def mappings = Mock(InFlightMetadataCollector)
+        def identity = new Identity()
+        domainClass.getHibernateIdentity() >> identity
+        domainClass.getIdentity() >> null
+        domainClass.getName() >> "MyEntity"
+        domainClass.getMappingContext() >> getGrailsDomainBinder().hibernateMappingContext
+        domainClass.getMapping() >> Mock(ClassMapping)
+
+        when:
+        binder.bindIdentity(domainClass, root)
 
         then:
         1 * simpleIdBinder.bindSimpleId(domainClass, root, identity, _)
