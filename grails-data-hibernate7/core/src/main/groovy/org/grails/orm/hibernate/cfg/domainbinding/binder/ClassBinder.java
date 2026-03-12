@@ -51,18 +51,25 @@ public class ClassBinder {
         persistentClass.setJpaEntityName(entityName);
         persistentClass.setProxyInterfaceName(entityName);
         persistentClass.setClassName(entityName);
-        persistentClass.setDynamicInsert(false);
-        persistentClass.setDynamicUpdate(false);
-        persistentClass.setSelectBeforeUpdate(false);
+        persistentClass.setAbstract(persistentEntity.isAbstract());
 
-        boolean autoImport;
         Mapping mappedForm = persistentEntity.getMappedForm();
+        boolean autoImport;
         if (mappedForm != null) {
             autoImport = mappedForm.isAutoImport();
+            persistentClass.setDynamicInsert(mappedForm.isDynamicInsert());
+            persistentClass.setDynamicUpdate(mappedForm.isDynamicUpdate());
+            persistentClass.setBatchSize(mappedForm.getBatchSize() != null ? mappedForm.getBatchSize() : 0);
         } else {
             autoImport =
                     collector.getMetadataBuildingOptions().getMappingDefaults().isAutoImportEnabled();
+            persistentClass.setDynamicInsert(false);
+            persistentClass.setDynamicUpdate(false);
+            persistentClass.setBatchSize(0);
         }
+        persistentClass.setSelectBeforeUpdate(false);
+        persistentEntity.setPersistentClass(persistentClass);
+
         if (autoImport) {
             String unqualified = unqualify(entityName);
             persistentClass.setJpaEntityName(unqualified);

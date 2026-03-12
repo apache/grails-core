@@ -72,7 +72,7 @@ public class RootBinder {
         }
 
         Collection<GrailsHibernatePersistentEntity> children = entity.getChildEntities(dataSourceName);
-        RootClass root = rootPersistentClassCommonValuesBinder.bindRootPersistentClassCommonValues(entity);
+        RootClass root = rootPersistentClassCommonValuesBinder.bindRoot(entity);
 
         if (!children.isEmpty() && entity.isTablePerHierarchy()) {
             discriminatorPropertyBinder.bindDiscriminatorProperty(root);

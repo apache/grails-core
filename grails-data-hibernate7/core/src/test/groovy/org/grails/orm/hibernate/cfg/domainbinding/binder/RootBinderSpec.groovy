@@ -76,7 +76,7 @@ class RootBinderSpec extends HibernateGormDatastoreSpec {
         binder.bindRoot(entity)
 
         then:
-        1 * rootPersistentClassCommonValuesBinder.bindRootPersistentClassCommonValues(entity) >> rootClass
+        1 * rootPersistentClassCommonValuesBinder.bindRoot(entity) >> rootClass
         0 * discriminatorPropertyBinder.bindDiscriminatorProperty(_)
         0 * subClassBinder.bindSubClass(_, _)
         1 * multiTenantFilterBinder.bind(entity, rootClass)
@@ -103,7 +103,7 @@ class RootBinderSpec extends HibernateGormDatastoreSpec {
         binder.bindRoot(entity)
 
         then:
-        1 * rootPersistentClassCommonValuesBinder.bindRootPersistentClassCommonValues(entity) >> rootClass
+        1 * rootPersistentClassCommonValuesBinder.bindRoot(entity) >> rootClass
         1 * discriminatorPropertyBinder.bindDiscriminatorProperty(rootClass)
         1 * subClassBinder.bindSubClass(childEntity, rootClass) >> []
         1 * multiTenantFilterBinder.bind(entity, rootClass)
@@ -124,6 +124,6 @@ class RootBinderSpec extends HibernateGormDatastoreSpec {
         binder.bindRoot(entity)
 
         then:
-        0 * rootPersistentClassCommonValuesBinder.bindRootPersistentClassCommonValues(_, _)
+        0 * rootPersistentClassCommonValuesBinder.bindRoot(_, _)
     }
 }

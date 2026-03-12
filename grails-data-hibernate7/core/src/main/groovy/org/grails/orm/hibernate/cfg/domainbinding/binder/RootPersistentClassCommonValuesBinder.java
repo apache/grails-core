@@ -31,8 +31,6 @@ import org.grails.orm.hibernate.cfg.Mapping;
 import org.grails.orm.hibernate.cfg.PersistentEntityNamingStrategy;
 import org.grails.orm.hibernate.cfg.domainbinding.hibernate.GrailsHibernatePersistentEntity;
 
-import static java.util.Optional.ofNullable;
-
 public class RootPersistentClassCommonValuesBinder {
     public static final Logger LOG = LoggerFactory.getLogger(RootPersistentClassCommonValuesBinder.class);
 
@@ -61,10 +59,9 @@ public class RootPersistentClassCommonValuesBinder {
         this.mappings = mappings;
     }
 
-    public RootClass bindRootPersistentClassCommonValues(@Nonnull GrailsHibernatePersistentEntity domainClass) {
+    public RootClass bindRoot(@Nonnull GrailsHibernatePersistentEntity domainClass) {
 
         RootClass root = new RootClass(this.metadataBuildingContext);
-        root.setAbstract(domainClass.isAbstract());
         classBinder.bindClass(domainClass, root);
 
         // get the schema and catalog names from the configuration
@@ -80,9 +77,6 @@ public class RootPersistentClassCommonValuesBinder {
             }
             root.setLazyPropertiesCacheable(!"non-lazy".equals(cc.getInclude()));
         }
-        root.setBatchSize(ofNullable(gormMapping.getBatchSize()).orElse(0));
-        root.setDynamicUpdate(gormMapping.getDynamicUpdate());
-        root.setDynamicInsert(gormMapping.getDynamicInsert());
 
         var schema = domainClass.getSchema(mappings);
 

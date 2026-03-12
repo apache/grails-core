@@ -29,6 +29,7 @@ import java.util.stream.Stream;
 import jakarta.annotation.Nonnull;
 
 import org.hibernate.boot.spi.InFlightMetadataCollector;
+import org.hibernate.mapping.PersistentClass;
 
 import org.grails.datastore.mapping.model.PersistentEntity;
 import org.grails.datastore.mapping.model.PersistentProperty;
@@ -298,4 +299,8 @@ public interface GrailsHibernatePersistentEntity extends PersistentEntity {
     default String getComment() {
         return Optional.ofNullable(getMappedForm()).map(Mapping::getComment).orElse(null);
     }
+
+    void setPersistentClass(PersistentClass persistentClass);
+
+    PersistentClass getPersistentClass();
 }

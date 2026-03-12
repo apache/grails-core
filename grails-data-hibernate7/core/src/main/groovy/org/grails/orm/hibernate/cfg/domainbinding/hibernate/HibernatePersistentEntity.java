@@ -23,6 +23,8 @@ import java.util.Optional;
 
 import jakarta.persistence.Entity;
 
+import org.hibernate.mapping.PersistentClass;
+
 import org.grails.datastore.mapping.core.connections.ConnectionSourcesSupport;
 import org.grails.datastore.mapping.model.AbstractClassMapping;
 import org.grails.datastore.mapping.model.AbstractPersistentEntity;
@@ -41,6 +43,7 @@ public class HibernatePersistentEntity extends AbstractPersistentEntity<Mapping>
         implements GrailsHibernatePersistentEntity {
     private final AbstractClassMapping<Mapping> classMapping;
     private String dataSourceName;
+    private PersistentClass persistentClass;
 
     public HibernatePersistentEntity(Class<?> javaClass, final MappingContext context) {
         super(javaClass, context);
@@ -101,5 +104,15 @@ public class HibernatePersistentEntity extends AbstractPersistentEntity<Mapping>
     @Override
     public HibernatePersistentProperty getVersion() {
         return (HibernatePersistentProperty) version;
+    }
+
+    @Override
+    public void setPersistentClass(PersistentClass persistentClass) {
+        this.persistentClass = persistentClass;
+    }
+
+    @Override
+    public PersistentClass getPersistentClass() {
+        return persistentClass;
     }
 }

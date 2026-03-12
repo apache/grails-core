@@ -30,6 +30,7 @@ public class HibernateEmbeddedPersistentEntity extends EmbeddedPersistentEntity<
         implements GrailsHibernatePersistentEntity {
     private final ClassMapping<Mapping> classMapping;
     private String dataSourceName;
+    private PersistentClass persistentClass;
 
     public Mapping getMappedForm() {
         return classMapping.getMappedForm();
@@ -83,5 +84,15 @@ public class HibernateEmbeddedPersistentEntity extends EmbeddedPersistentEntity<
     @Override
     public ClassMapping<Mapping> getMapping() {
         return classMapping;
+    }
+
+    @Override
+    public void setPersistentClass(PersistentClass persistentClass) {
+        this.persistentClass = persistentClass;
+    }
+
+    @Override
+    public PersistentClass getPersistentClass() {
+        return persistentClass;
     }
 }
