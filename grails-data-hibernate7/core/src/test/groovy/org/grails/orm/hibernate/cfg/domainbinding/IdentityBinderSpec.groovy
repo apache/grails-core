@@ -18,7 +18,6 @@
  */
 package org.grails.orm.hibernate.cfg.domainbinding
 
-
 import org.grails.datastore.mapping.model.PersistentProperty
 import org.grails.datastore.mapping.model.ClassMapping
 import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernatePersistentProperty
@@ -82,7 +81,7 @@ class IdentityBinderSpec extends HibernateGormDatastoreSpec {
 
 
         then:
-        1 * compositeIdBinder.bindCompositeId(domainClass, root, null)
+        1 * compositeIdBinder.bindCompositeId(domainClass, root, compositeIdentity)
     }
 
     def "should delegate to compositeIdBinder when mapping specifies composite identity"() {
@@ -149,7 +148,7 @@ class IdentityBinderSpec extends HibernateGormDatastoreSpec {
         def root = new RootClass(getGrailsDomainBinder().getMetadataBuildingContext())
         def mappings = Mock(InFlightMetadataCollector)
         def gormMapping = Mock(Mapping)
-        def identity = new Identity()
+        def identity = new Identity(name: "MyEntity")
         domainClass.getHibernateIdentity() >> identity
         def identifierProp = Mock(HibernatePersistentProperty)
         domainClass.getIdentity() >> identifierProp

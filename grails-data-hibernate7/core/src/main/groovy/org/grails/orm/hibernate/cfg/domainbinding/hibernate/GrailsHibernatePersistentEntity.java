@@ -109,7 +109,30 @@ public interface GrailsHibernatePersistentEntity extends PersistentEntity {
     }
 
     default HibernateIdentity getHibernateIdentity() {
-        return Optional.ofNullable(getMappedForm()).map(Mapping::getIdentity).orElse(null);
+        return Optional.ofNullable(getMappedForm())
+                .map(Mapping::getIdentity)
+                .or(this::resolveCompositeIdentity)
+                .orElseGet(this::getDefaultIdentity);
+    }
+
+    private Optional<HibernateIdentity> resolveCompositeIdentity() {
+        return Optional.ofNullable(getCompositeIdentity())
+                .filter(compositeId -> compositeId.length > 1)
+                .map(compositeId -> {
+                    CompositeIdentity ci = new CompositeIdentity();
+                    ci.setPropertyNames(java.util.Arrays.stream(compositeId)
+                            .map(PersistentProperty::getName)
+                            .toArray(String[]::new));
+                    return ci;
+                });
+    }
+
+    private @Nonnull Identity getDefaultIdentity() {
+        Identity identity = new Identity();
+        identity.setName(Optional.ofNullable(getIdentity())
+                .map(PersistentProperty::getName)
+                .orElseGet(this::getName));
+        return identity;
     }
 
     @Override

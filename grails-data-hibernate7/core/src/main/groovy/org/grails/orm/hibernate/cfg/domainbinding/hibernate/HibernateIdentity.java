@@ -33,4 +33,9 @@ public interface HibernateIdentity {
      * @param natural The natural id definition
      */
     void setNatural(NaturalId natural);
+
+    /**
+     * @return The property names that make up the identity
+     */
+    String[] getPropertyNames();
 }

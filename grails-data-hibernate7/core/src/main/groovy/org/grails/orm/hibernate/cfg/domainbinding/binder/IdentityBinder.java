@@ -39,16 +39,11 @@ public class IdentityBinder {
     }
 
     public void bindIdentity(@Nonnull GrailsHibernatePersistentEntity domainClass, RootClass root) {
-
         var id = domainClass.getHibernateIdentity();
-        if (id instanceof CompositeIdentity || (id == null && domainClass.getCompositeIdentity() != null)) {
+        if (id instanceof CompositeIdentity) {
             compositeIdBinder.bindCompositeId(domainClass, root, (CompositeIdentity) id);
         } else {
-            Identity identity = id instanceof Identity ? (Identity) id : null;
-            if (identity != null && identity.getName() == null) {
-                identity.setName(root.getEntityName());
-            }
-            simpleIdBinder.bindSimpleId(domainClass, root, identity, root.getTable());
+            simpleIdBinder.bindSimpleId(domainClass, root, (Identity) id, root.getTable());
         }
     }
 }
