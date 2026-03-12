@@ -98,7 +98,7 @@ public class RootPersistentClassCommonValuesBinder {
                     + root.getTable().getName());
         }
 
-        identityBinder.bindIdentity(domainClass, root, gormMapping);
+        identityBinder.bindIdentity(domainClass, root);
         versionBinder.bindVersion(domainClass.getVersion(), root);
         root.createPrimaryKey();
         classPropertiesBinder.bindClassProperties(domainClass, root);

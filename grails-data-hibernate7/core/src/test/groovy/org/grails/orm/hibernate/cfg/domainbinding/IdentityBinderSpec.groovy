@@ -59,7 +59,8 @@ class IdentityBinderSpec extends HibernateGormDatastoreSpec {
         domainClass.getCompositeIdentity() >> null
 
         when:
-        binder.bindIdentity(domainClass, root, null)
+        binder.bindIdentity(domainClass, root)
+
 
         then:
         1 * simpleIdBinder.bindSimpleId(domainClass, root, identity, _)
@@ -76,7 +77,8 @@ class IdentityBinderSpec extends HibernateGormDatastoreSpec {
         domainClass.getHibernateIdentity() >> compositeIdentity
 
         when:
-        binder.bindIdentity(domainClass, root, null)
+        binder.bindIdentity(domainClass, root)
+
 
         then:
         1 * compositeIdBinder.bindCompositeId(domainClass, root, null)
@@ -92,7 +94,8 @@ class IdentityBinderSpec extends HibernateGormDatastoreSpec {
         domainClass.getHibernateIdentity() >> compositeIdentity
 
         when:
-        binder.bindIdentity(domainClass, root, gormMapping)
+        binder.bindIdentity(domainClass, root)
+
 
         then:
         1 * compositeIdBinder.bindCompositeId(domainClass, root, compositeIdentity)
@@ -112,7 +115,8 @@ class IdentityBinderSpec extends HibernateGormDatastoreSpec {
         domainClass.getName() >> "MyEntity"
 
         when:
-        binder.bindIdentity(domainClass, root, gormMapping)
+        binder.bindIdentity(domainClass, root)
+
 
         then:
         1 * simpleIdBinder.bindSimpleId(domainClass, root, identity, _)
@@ -131,7 +135,8 @@ class IdentityBinderSpec extends HibernateGormDatastoreSpec {
         domainClass.getName() >> "MyEntity"
 
         when:
-        binder.bindIdentity(domainClass, root, gormMapping)
+        binder.bindIdentity(domainClass, root)
+
 
         then:
         1 * simpleIdBinder.bindSimpleId(domainClass, root, identity, _)
@@ -143,14 +148,15 @@ class IdentityBinderSpec extends HibernateGormDatastoreSpec {
         def root = new RootClass(getGrailsDomainBinder().getMetadataBuildingContext())
         def mappings = Mock(InFlightMetadataCollector)
         def gormMapping = Mock(Mapping)
-        def identity = new Identity(name: "MyEntity")
+        def identity = new Identity()
         domainClass.getHibernateIdentity() >> identity
         def identifierProp = Mock(HibernatePersistentProperty)
         domainClass.getIdentity() >> identifierProp
         domainClass.getName() >> "MyEntity"
 
         when:
-        binder.bindIdentity(domainClass, root, gormMapping)
+        binder.bindIdentity(domainClass, root)
+
 
         then:
         1 * simpleIdBinder.bindSimpleId(domainClass, root, identity, _)

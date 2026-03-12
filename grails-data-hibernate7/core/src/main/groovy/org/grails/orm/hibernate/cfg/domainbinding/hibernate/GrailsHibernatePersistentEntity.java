@@ -108,6 +108,10 @@ public interface GrailsHibernatePersistentEntity extends PersistentEntity {
                 .collect(Collectors.toSet());
     }
 
+    default HibernateIdentity getHibernateIdentity() {
+        return Optional.ofNullable(getMappedForm()).map(Mapping::getIdentity).orElse(null);
+    }
+
     @Override
     HibernatePersistentProperty getIdentity();
 

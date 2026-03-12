@@ -38,10 +38,9 @@ public class IdentityBinder {
         this.compositeIdBinder = compositeIdBinder;
     }
 
-    public void bindIdentity(
-            @Nonnull GrailsHibernatePersistentEntity domainClass, RootClass root, Mapping gormMapping) {
+    public void bindIdentity(@Nonnull GrailsHibernatePersistentEntity domainClass, RootClass root) {
 
-        HibernateIdentity id = gormMapping != null ? gormMapping.getIdentity() : null;
+        var id = domainClass.getHibernateIdentity();
         if (id instanceof CompositeIdentity || (id == null && domainClass.getCompositeIdentity() != null)) {
             compositeIdBinder.bindCompositeId(domainClass, root, (CompositeIdentity) id);
         } else {
