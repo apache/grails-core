@@ -103,7 +103,10 @@ public class DataSourceBuilder {
         }
         MutablePropertyValues properties = new MutablePropertyValues(this.properties);
         new RelaxedDataBinder(result).withAlias("url", "jdbcUrl")
-                .withAlias("username", "user").bind(properties);
+                .withAlias("username", "user")
+                // The HikariConfig's property name is dataSourceProperties, not dbProperties so support both
+                .withAlias("dbProperties", "dataSourceProperties")
+                .bind(properties);
     }
 
     public DataSourceBuilder properties(Map<String, String> properties) {
