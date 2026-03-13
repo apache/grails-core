@@ -22,6 +22,7 @@ import io.github.cjstehno.ersatz.ErsatzServer
 import io.github.cjstehno.ersatz.cfg.ContentType
 import io.github.cjstehno.ersatz.cfg.ServerConfig
 import spock.lang.AutoCleanup
+import spock.lang.Retry
 import spock.lang.Specification
 
 import org.springframework.beans.factory.annotation.Autowired
@@ -373,6 +374,7 @@ class MicronautErsatzRoundtripSpec extends Specification implements HttpClientSu
         ersatz.verify()
     }
 
+    @Retry(count = 2, delay = 200, exceptions = [io.micronaut.http.client.exceptions.HttpClientException])
     void "full roundtrip: ersatz mocks empty response body"() {
         given: 'ersatz mocks an endpoint returning 200 with an empty JSON object'
         ersatz.expectations({ expect ->

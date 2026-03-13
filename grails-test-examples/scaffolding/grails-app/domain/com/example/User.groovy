@@ -61,7 +61,14 @@ class User implements UserDetails {
 
     @Override
     Collection<? extends GrantedAuthority> getAuthorities() {
-        roles.split('').collect { new SimpleGrantedAuthority(it) }
+        if (!roles) {
+            return []
+        }
+        roles
+                .split(',')
+                .collect { it.trim() }
+                .findAll { it }
+                .collect { new SimpleGrantedAuthority(it) }
     }
 
     @Override

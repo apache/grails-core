@@ -107,6 +107,7 @@ dependencies {
     testImplementation 'org.junit.jupiter:junit-jupiter-api'
     testImplementation 'org.spockframework:spock-core'
 
+    testImplementation 'com.zaxxer:HikariCP'
     testRuntimeOnly 'com.h2database:h2'
     testRuntimeOnly 'org.slf4j:slf4j-nop' // Get rid of warning about missing slf4j implementation during tests
 }
