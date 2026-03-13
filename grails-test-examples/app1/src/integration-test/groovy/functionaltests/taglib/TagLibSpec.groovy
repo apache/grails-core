@@ -21,25 +21,21 @@ package functionaltests.taglib
 import spock.lang.Specification
 import spock.lang.Unroll
 
-import org.springframework.beans.factory.annotation.Autowired
-
 import grails.testing.mixin.integration.Integration
-import org.apache.grails.testing.http.client.HttpClient
+import org.apache.grails.testing.http.client.HttpClientSupport
 
 /**
  * Integration tests for GSP Tag Libraries.
  * Tests both custom tag libraries and built-in Grails tags.
  */
 @Integration
-class TagLibSpec extends Specification {
-
-    @Autowired HttpClient http
+class TagLibSpec extends Specification implements HttpClientSupport {
 
     // ========== Custom Tag: hello ==========
 
     def "custom:hello tag renders greeting with name attribute"() {
         when: "calling the hello tag test endpoint"
-        def response = http.get('/tagLibTest/testHelloTag?name=Grails')
+        def response = http('/tagLibTest/testHelloTag?name=Grails')
 
         then: "greeting is rendered with the name"
         response.expectContains(200, 'Hello, Grails!')
@@ -47,7 +43,7 @@ class TagLibSpec extends Specification {
 
     def "custom:hello tag uses default name when not provided"() {
         when: "calling the hello tag test endpoint"
-        def response = http.get('/tagLibTest/testHelloTag')
+        def response = http('/tagLibTest/testHelloTag')
 
         then: "greeting is rendered with default name"
         response.expectContains(200, 'Hello, World!')
@@ -57,7 +53,7 @@ class TagLibSpec extends Specification {
 
     def "custom:wrapper tag renders title and body content"() {
         when: "calling the wrapper tag test endpoint"
-        def response = http.get(
+        def response = http(
             '/tagLibTest/testWrapperTag?title=My%20Section&content=Section%20content'
         )
 
@@ -69,7 +65,7 @@ class TagLibSpec extends Specification {
 
     def "custom:wrapper tag applies custom CSS class"() {
         when: "calling the wrapper tag test endpoint"
-        def response = http.get(
+        def response = http(
             '/tagLibTest/testWrapperTag?title=Test&content=Test&cssClass=custom-wrapper'
         )
 
@@ -81,7 +77,7 @@ class TagLibSpec extends Specification {
 
     def "custom:iterate tag iterates over items"() {
         when: "calling the iterate tag test endpoint"
-        def response = http.get('/tagLibTest/testIterateTag?items=A,B,C')
+        def response = http('/tagLibTest/testIterateTag?items=A,B,C')
 
         then: "all items are rendered"
         response.expectContains(200, 'Item: A')
@@ -91,7 +87,7 @@ class TagLibSpec extends Specification {
 
     def "custom:iterate tag uses separator between items"() {
         when: "calling the iterate tag test endpoint"
-        def response = http.get('/tagLibTest/testIterateTag?items=X,Y,Z&separator=-')
+        def response = http('/tagLibTest/testIterateTag?items=X,Y,Z&separator=-')
 
         then: "items are separated by the specified separator"
         response.expectContains(200, 'Item: X-Item: Y-Item: Z')
@@ -101,7 +97,7 @@ class TagLibSpec extends Specification {
 
     def "custom:showIf tag shows content when condition is true"() {
         when: "calling the conditional tags test endpoint"
-        def response = http.get('/tagLibTest/testConditionalTags?condition=true')
+        def response = http('/tagLibTest/testConditionalTags?condition=true')
 
         then: "showIf content is visible, hideIf content is hidden"
         response.expectContains(200, 'id="showIf-result">VISIBLE')
@@ -110,7 +106,7 @@ class TagLibSpec extends Specification {
 
     def "custom:hideIf tag shows content when condition is false"() {
         when: "calling the conditional tags test endpoint"
-        def response = http.get('/tagLibTest/testConditionalTags?condition=false')
+        def response = http('/tagLibTest/testConditionalTags?condition=false')
 
         then: "showIf content is hidden, hideIf content is visible"
         response.expectContains(200, 'id="hideIf-result">HIDDEN')
@@ -122,7 +118,7 @@ class TagLibSpec extends Specification {
     @Unroll
     def "custom:formatted tag formats value as #format"() {
         when: "calling the formatted tag test endpoint"
-        def response = http.get(
+        def response = http(
             "/tagLibTest/testFormattedTag?value=${value}&format=${format}&decimals=${decimals}"
         )
 
@@ -140,7 +136,7 @@ class TagLibSpec extends Specification {
 
     def "custom:list tag renders unordered list by default"() {
         when: "calling the list tag test endpoint"
-        def response = http.get('/tagLibTest/testListTag?items=Apple,Banana,Cherry')
+        def response = http('/tagLibTest/testListTag?items=Apple,Banana,Cherry')
 
         then: "unordered list is rendered"
         response.expectContains(200, '<ul>')
@@ -152,7 +148,7 @@ class TagLibSpec extends Specification {
 
     def "custom:list tag renders ordered list when type is ordered"() {
         when: "calling the list tag test endpoint"
-        def response = http.get('/tagLibTest/testListTag?items=First,Second,Third&type=ordered')
+        def response = http('/tagLibTest/testListTag?items=First,Second,Third&type=ordered')
 
         then: "ordered list is rendered"
         response.expectContains(200, '<ol>')
@@ -163,7 +159,7 @@ class TagLibSpec extends Specification {
 
     def "custom:panel tag renders panel with title and body"() {
         when: "calling the panel tag test endpoint"
-        def response = http.get(
+        def response = http(
                 '/tagLibTest/testPanelTag?title=Info%20Panel&type=info&content=Panel%20content'
         )
 
@@ -177,7 +173,7 @@ class TagLibSpec extends Specification {
 
     def "custom:panel tag renders collapse button when collapsible"() {
         when: "calling the panel tag test endpoint"
-        def response = http.get(
+        def response = http(
             '/tagLibTest/testPanelTag?title=Collapsible&collapsible=true'
         )
 
@@ -190,7 +186,7 @@ class TagLibSpec extends Specification {
     @Unroll
     def "custom:badge tag renders badge with type=#type and size=#size"() {
         when: "calling the badge tag test endpoint"
-        def response = http.get(
+        def response = http(
             "/tagLibTest/testBadgeTag?type=${type}&size=${size}&content=${content}"
         )
 
@@ -210,7 +206,7 @@ class TagLibSpec extends Specification {
 
     def "custom:progress tag renders progress bar with percentage"() {
         when: "calling the progress tag test endpoint"
-        def response = http.get('/tagLibTest/testProgressTag?value=75&max=100')
+        def response = http('/tagLibTest/testProgressTag?value=75&max=100')
 
         then: "progress bar is rendered"
         response.expectContains(200, 'class="progress"')
@@ -221,7 +217,7 @@ class TagLibSpec extends Specification {
 
     def "custom:progress tag hides label when showLabel is false"() {
         when: "calling the progress tag test endpoint"
-        def response = http.get('/tagLibTest/testProgressTag?value=50&max=100&showLabel=false')
+        def response = http('/tagLibTest/testProgressTag?value=50&max=100&showLabel=false')
 
         then: "progress bar is rendered without label text"
         response.expectContains(200, 'class="progress-bar"')
@@ -232,7 +228,7 @@ class TagLibSpec extends Specification {
 
     def "custom:repeat tag repeats body content specified times"() {
         when: "calling the repeat tag test endpoint"
-        def response = http.get('/tagLibTest/testRepeatTag?times=3')
+        def response = http('/tagLibTest/testRepeatTag?times=3')
 
         then: "content is repeated"
         response.expectContains(200, 'Repeat #1')
@@ -242,7 +238,7 @@ class TagLibSpec extends Specification {
 
     def "custom:repeat tag uses separator between repetitions"() {
         when: "calling the repeat tag test endpoint"
-        def response = http.get('/tagLibTest/testRepeatTag?times=2&separator=%20-%20')
+        def response = http('/tagLibTest/testRepeatTag?times=2&separator=%20-%20')
 
         then: "repetitions are separated"
         response.expectContains(200, 'Repeat #1 - Repeat #2')
@@ -252,7 +248,7 @@ class TagLibSpec extends Specification {
 
     def "custom:raw tag outputs unescaped HTML content"() {
         when: "calling the raw tag test endpoint"
-        def response = http.get('/tagLibTest/testRawTag')
+        def response = http('/tagLibTest/testRawTag')
 
         then: "HTML content is not escaped"
         response.expectContains(200, '<strong>Bold Text</strong>')
@@ -262,7 +258,7 @@ class TagLibSpec extends Specification {
 
     def "custom:definitionList tag renders definition list from map"() {
         when: "calling the definition list tag test endpoint"
-        def response = http.get('/tagLibTest/testDefinitionListTag')
+        def response = http('/tagLibTest/testDefinitionListTag')
 
         then: "definition list is rendered"
         response.expectContains(200, '<dl>')
@@ -277,7 +273,7 @@ class TagLibSpec extends Specification {
 
     def "custom:requestInfo tag retrieves request attributes"() {
         when: "calling the request info tag test endpoint"
-        def response = http.get('/tagLibTest/testRequestInfoTag?attr=method')
+        def response = http('/tagLibTest/testRequestInfoTag?attr=method')
 
         then: "request attribute is output"
         response.expectContains(200, 'GET')
@@ -287,7 +283,7 @@ class TagLibSpec extends Specification {
 
     def "custom:sessionValue tag displays default when session value not set"() {
         when: "calling the session value tag test endpoint"
-        def response = http.get(
+        def response = http(
             '/tagLibTest/testSessionValueTag?key=nonexistent&default=DefaultUser'
         )
 
@@ -299,7 +295,7 @@ class TagLibSpec extends Specification {
 
     def "custom:setVar tag sets pageScope variable"() {
         when: "calling the setVar tag test endpoint"
-        def response = http.get(
+        def response = http(
             '/tagLibTest/testSetVarTag?varName=testVar&varValue=TestValue'
         )
 
@@ -312,7 +308,7 @@ class TagLibSpec extends Specification {
     @Unroll
     def "custom:alert tag renders #type alert"() {
         when: "calling the alert tag test endpoint"
-        def response = http.get(
+        def response = http(
             "/tagLibTest/testAlertTag?type=${type}&message=${URLEncoder.encode(message, 'UTF-8')}"
         )
 
@@ -330,7 +326,7 @@ class TagLibSpec extends Specification {
 
     def "custom:alert tag renders dismissible button when dismissible=true"() {
         when: "calling the alert tag test endpoint"
-        def response = http.get('/tagLibTest/testAlertTag?type=info&dismissible=true')
+        def response = http('/tagLibTest/testAlertTag?type=info&dismissible=true')
 
         then: "close button is rendered"
         response.expectContains(200, 'alert-dismissible')
@@ -341,7 +337,7 @@ class TagLibSpec extends Specification {
 
     def "custom:join tag joins items with separator"() {
         when: "calling the join tag test endpoint"
-        def response = http.get(
+        def response = http(
             '/tagLibTest/testJoinTag?items=red,green,blue&separator=-'
         )
 
@@ -353,7 +349,7 @@ class TagLibSpec extends Specification {
 
     def "custom:cssClass tag builds class string from boolean attributes"() {
         when: "calling the cssClass tag test endpoint"
-        def response = http.get(
+        def response = http(
             '/tagLibTest/testCssClassTag?base=btn&active=true&disabled=false&highlighted=true'
         )
 
@@ -368,7 +364,7 @@ class TagLibSpec extends Specification {
 
     def "g:if tag shows content when condition is true"() {
         when: "calling the built-in if test endpoint"
-        def response = http.get('/tagLibTest/testBuiltInIf?value=10')
+        def response = http('/tagLibTest/testBuiltInIf?value=10')
 
         then: "if condition content is shown"
         response.expectContains(200, 'Greater than 5')
@@ -377,7 +373,7 @@ class TagLibSpec extends Specification {
 
     def "g:elseif and g:else work correctly"() {
         when: "calling the built-in if test endpoint"
-        def response = http.get('/tagLibTest/testBuiltInIf?value=30')
+        def response = http('/tagLibTest/testBuiltInIf?value=30')
 
         then: "elseif content is shown"
         response.expectContains(200, 'Over 20')
@@ -387,7 +383,7 @@ class TagLibSpec extends Specification {
 
     def "g:each tag iterates over collection"() {
         when: "calling the built-in each test endpoint"
-        def response = http.get('/tagLibTest/testBuiltInEach?items=A,B,C')
+        def response = http('/tagLibTest/testBuiltInEach?items=A,B,C')
 
         then: "each item is rendered"
         response.expectContains(200, '[A]')
@@ -397,7 +393,7 @@ class TagLibSpec extends Specification {
 
     def "g:each tag provides status variable"() {
         when: "calling the built-in each test endpoint"
-        def response = http.get('/tagLibTest/testBuiltInEach?items=X,Y,Z')
+        def response = http('/tagLibTest/testBuiltInEach?items=X,Y,Z')
 
         then: "status index is available"
         response.expectContains(200, '0:X')
@@ -409,7 +405,7 @@ class TagLibSpec extends Specification {
 
     def "g:collect tag transforms items"() {
         when: "calling the built-in collect test endpoint"
-        def response = http.get('/tagLibTest/testBuiltInCollect?items=apple,banana')
+        def response = http('/tagLibTest/testBuiltInCollect?items=apple,banana')
 
         then: "items are transformed"
         response.expectContains(200, 'APPLE')
@@ -420,7 +416,7 @@ class TagLibSpec extends Specification {
 
     def "g:findAll tag filters items"() {
         when: "calling the built-in findAll test endpoint"
-        def response = http.get('/tagLibTest/testBuiltInFindAll?threshold=7')
+        def response = http('/tagLibTest/testBuiltInFindAll?threshold=7')
 
         then: "only matching items are rendered"
         response.expectContains(200, '8')
@@ -433,7 +429,7 @@ class TagLibSpec extends Specification {
 
     def "g:link tag creates link with controller and action"() {
         when: "calling the built-in link test endpoint"
-        def response = http.get(
+        def response = http(
             '/tagLibTest/testBuiltInLink?targetController=book&targetAction=show&targetId=42&linkText=View'
         )
 
@@ -447,7 +443,7 @@ class TagLibSpec extends Specification {
 
     def "g:createLink tag creates URL string"() {
         when: "calling the built-in createLink test endpoint"
-        def response = http.get(
+        def response = http(
             '/tagLibTest/testBuiltInCreateLink?targetController=book&targetAction=list'
         )
 
@@ -459,7 +455,7 @@ class TagLibSpec extends Specification {
 
     def "g:form tag creates form with action"() {
         when: "calling the built-in form test endpoint"
-        def response = http.get(
+        def response = http(
             '/tagLibTest/testBuiltInForm?targetController=book&targetAction=save'
         )
 
@@ -474,7 +470,7 @@ class TagLibSpec extends Specification {
 
     def "g:message tag renders message with default"() {
         when: "calling the built-in message test endpoint"
-        def response = http.get(
+        def response = http(
             '/tagLibTest/testBuiltInMessage?code=nonexistent.key&default=Default%20Message'
         )
 
@@ -486,7 +482,7 @@ class TagLibSpec extends Specification {
 
     def "g:formatDate tag formats date"() {
         when: "calling the built-in formatDate test endpoint"
-        def response = http.get('/tagLibTest/testBuiltInFormatDate')
+        def response = http('/tagLibTest/testBuiltInFormatDate')
 
         then: "date is formatted"
         // Just verify it rendered something in date format
@@ -497,7 +493,7 @@ class TagLibSpec extends Specification {
 
     def "g:formatNumber tag formats number"() {
         when: "calling the built-in formatNumber test endpoint"
-        def response = http.get('/tagLibTest/testBuiltInFormatNumber?number=1234567.89')
+        def response = http('/tagLibTest/testBuiltInFormatNumber?number=1234567.89')
 
         then: "number is formatted"
         // Should contain formatted number (locale-dependent)
@@ -508,7 +504,7 @@ class TagLibSpec extends Specification {
 
     def "g:set tag sets and updates variables"() {
         when: "calling the built-in set test endpoint"
-        def response = http.get(
+        def response = http(
             '/tagLibTest/testBuiltInSet?initialValue=First&newValue=Second'
         )
 
@@ -521,7 +517,7 @@ class TagLibSpec extends Specification {
 
     def "g:join tag joins items with delimiter"() {
         when: "calling the built-in join test endpoint"
-        def response = http.get(
+        def response = http(
             '/tagLibTest/testBuiltInJoin?items=red,green,blue&delimiter=%20-%20'
         )
 
@@ -533,7 +529,7 @@ class TagLibSpec extends Specification {
 
     def "g:include tag includes content from another action"() {
         when: "calling the built-in include test endpoint"
-        def response = http.get('/tagLibTest/testBuiltInInclude?message=Test%20Message')
+        def response = http('/tagLibTest/testBuiltInInclude?message=Test%20Message')
 
         then: "included content is rendered"
         response.expectContains(200, 'Included content: Test Message')
@@ -543,7 +539,7 @@ class TagLibSpec extends Specification {
 
     def "g:render tag renders template with model"() {
         when: "calling the built-in render test endpoint"
-        def response = http.get('/tagLibTest/testBuiltInRender?text=Hello%20Template')
+        def response = http('/tagLibTest/testBuiltInRender?text=Hello%20Template')
 
         then: "template is rendered"
         response.expectContains(200, 'Template content: Hello Template')
@@ -553,7 +549,7 @@ class TagLibSpec extends Specification {
 
     def "g:while tag loops while condition is true"() {
         when: "calling the built-in while test endpoint"
-        def response = http.get('/tagLibTest/testBuiltInWhile?count=3')
+        def response = http('/tagLibTest/testBuiltInWhile?count=3')
 
         then: "loop executes correct number of times"
         response.expectContains(200, 'Count: 1')
@@ -566,7 +562,7 @@ class TagLibSpec extends Specification {
 
     def "g:uploadForm tag creates multipart form"() {
         when: "calling the built-in uploadForm test endpoint"
-        def response = http.get('/tagLibTest/testBuiltInUploadForm')
+        def response = http('/tagLibTest/testBuiltInUploadForm')
 
         then: "multipart form is rendered"
         response.expectContains(200, '<form')
@@ -577,7 +573,7 @@ class TagLibSpec extends Specification {
 
     def "g:select tag creates select element with options"() {
         when: "calling the built-in select test endpoint"
-        def response = http.get('/tagLibTest/testBuiltInSelect?selected=2')
+        def response = http('/tagLibTest/testBuiltInSelect?selected=2')
 
         then: "select with options is rendered"
         response.expectContains(200, '<select')
@@ -589,7 +585,7 @@ class TagLibSpec extends Specification {
 
     def "g:radio tag creates radio buttons"() {
         when: "calling the built-in radio test endpoint"
-        def response = http.get('/tagLibTest/testBuiltInRadio?selected=Option%20B')
+        def response = http('/tagLibTest/testBuiltInRadio?selected=Option%20B')
 
         then: "radio buttons are rendered"
         response.expectContains(200, 'type="radio"')
@@ -600,7 +596,7 @@ class TagLibSpec extends Specification {
 
     def "g:checkBox tag creates checkbox"() {
         when: "calling the built-in checkbox test endpoint"
-        def response = http.get('/tagLibTest/testBuiltInCheckBox?checked=true')
+        def response = http('/tagLibTest/testBuiltInCheckBox?checked=true')
 
         then: "checkbox is rendered"
         response.expectContains(200, 'type="checkbox"')
@@ -611,7 +607,7 @@ class TagLibSpec extends Specification {
 
     def "g:textArea tag creates textarea"() {
         when: "calling the built-in textarea test endpoint"
-        def response = http.get(
+        def response = http(
             '/tagLibTest/testBuiltInTextArea?value=Test%20Content&rows=5&cols=40'
         )
 
@@ -626,7 +622,7 @@ class TagLibSpec extends Specification {
 
     def "g:textField tag creates text input"() {
         when: "calling the built-in textField test endpoint"
-        def response = http.get('/tagLibTest/testBuiltInTextField?value=Test%20Value&maxlength=50')
+        def response = http('/tagLibTest/testBuiltInTextField?value=Test%20Value&maxlength=50')
 
         then: "text field is rendered"
         response.expectContains(200, 'type="text"')
@@ -638,7 +634,7 @@ class TagLibSpec extends Specification {
 
     def "g:passwordField tag creates password input"() {
         when: "calling the built-in passwordField test endpoint"
-        def response = http.get('/tagLibTest/testBuiltInPasswordField')
+        def response = http('/tagLibTest/testBuiltInPasswordField')
 
         then: "password field is rendered"
         response.expectContains(200, 'type="password"')
@@ -648,7 +644,7 @@ class TagLibSpec extends Specification {
 
     def "g:hiddenField tag creates hidden input"() {
         when: "calling the built-in hiddenField test endpoint"
-        def response = http.get('/tagLibTest/testBuiltInHiddenField?value=secret-value')
+        def response = http('/tagLibTest/testBuiltInHiddenField?value=secret-value')
 
         then: "hidden field is rendered"
         response.expectContains(200, 'type="hidden"')
@@ -659,7 +655,7 @@ class TagLibSpec extends Specification {
 
     def "g:fieldValue tag extracts bean field value"() {
         when: "calling the built-in fieldValue test endpoint"
-        def response = http.get('/tagLibTest/testBuiltInFieldValue?field=title')
+        def response = http('/tagLibTest/testBuiltInFieldValue?field=title')
 
         then: "field value is extracted"
         response.expectContains(200, 'Grails in Action')
@@ -669,7 +665,7 @@ class TagLibSpec extends Specification {
 
     def "g:sortableColumn tag creates sortable table header"() {
         when: "calling the built-in sortableColumn test endpoint"
-        def response = http.get('/tagLibTest/testBuiltInSortableColumn')
+        def response = http('/tagLibTest/testBuiltInSortableColumn')
 
         then: "sortable columns are rendered"
         response.expectContains(200, '<th')
@@ -681,7 +677,7 @@ class TagLibSpec extends Specification {
 
     def "g:paginate tag creates pagination links"() {
         when: "calling the built-in paginate test endpoint"
-        def response = http.get('/tagLibTest/testBuiltInPaginate?total=100&max=10&offset=0')
+        def response = http('/tagLibTest/testBuiltInPaginate?total=100&max=10&offset=0')
 
         then: "pagination links are rendered"
         // Pagination should contain some links
@@ -692,7 +688,7 @@ class TagLibSpec extends Specification {
 
     def "nested custom tags render correctly"() {
         when: "calling the nested tags test endpoint"
-        def response = http.get('/tagLibTest/testNestedTags')
+        def response = http('/tagLibTest/testNestedTags')
 
         then: "nested tags are rendered"
         response.expectContains(200, '<ul>')
@@ -701,7 +697,7 @@ class TagLibSpec extends Specification {
 
     def "tags work with complex model data"() {
         when: "calling the tags with model test endpoint"
-        def response = http.get('/tagLibTest/testTagsWithModel')
+        def response = http('/tagLibTest/testTagsWithModel')
 
         then: "model data is processed correctly"
         response.expectContains(200, 'panel-success')  // Alice is active
@@ -715,7 +711,7 @@ class TagLibSpec extends Specification {
 
     def "encoding tags properly escape content"() {
         when: "calling the encoding tags test endpoint"
-        def response = http.get('/tagLibTest/testEncodingTags')
+        def response = http('/tagLibTest/testEncodingTags')
 
         then: "content is properly encoded"
         response.expectContains(200, '&lt;script&gt;') // HTML encoded content should have escaped tags

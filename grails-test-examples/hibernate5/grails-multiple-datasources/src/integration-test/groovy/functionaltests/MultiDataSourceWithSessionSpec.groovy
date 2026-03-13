@@ -22,21 +22,17 @@ import spock.lang.Issue
 import spock.lang.Specification
 import spock.lang.Stepwise
 
-import org.springframework.beans.factory.annotation.Autowired
-
 import grails.testing.mixin.integration.Integration
-import org.apache.grails.testing.http.client.HttpClient
+import org.apache.grails.testing.http.client.HttpClientSupport
 
 @Stepwise
 @Integration
-class MultiDataSourceWithSessionSpec extends Specification {
-
-    @Autowired HttpClient http
+class MultiDataSourceWithSessionSpec extends Specification implements HttpClientSupport {
 
     @Issue('https://github.com/apache/grails-core/issues/14333')
     void "withSession on secondary datasource does not throw No Session found"() {
         when:
-        def response = http.get('/secondaryBook/withSessionTest')
+        def response = http('/secondaryBook/withSessionTest')
 
         then:
         response.expectContains('sessionObtained:true')
@@ -45,19 +41,19 @@ class MultiDataSourceWithSessionSpec extends Specification {
     @Issue('https://github.com/apache/grails-core/issues/14333')
     void "CRUD via withSession on secondary datasource works"() {
         when:
-        def response = http.get('/secondaryBook/crudViaWithSession')
+        def response = http('/secondaryBook/crudViaWithSession')
 
         then:
         response.expectContains('count:1')
 
         cleanup:
-        http.get('/secondaryBook/cleanup')
+        http('/secondaryBook/cleanup')
     }
 
     @Issue('https://github.com/apache/grails-core/issues/11798')
     void "domain class on secondary datasource can be validated via withSession"() {
         when:
-        def response = http.get('/secondaryBook/validateCommandObject')
+        def response = http('/secondaryBook/validateCommandObject')
 
         then:
         response.expectContains('validated:true')
@@ -67,12 +63,12 @@ class MultiDataSourceWithSessionSpec extends Specification {
     @Issue('https://github.com/apache/grails-core/issues/14333')
     void "withSession works after executeUpdate on secondary datasource"() {
         when:
-        def response = http.get('/secondaryBook/sessionAfterExecuteUpdate')
+        def response = http('/secondaryBook/sessionAfterExecuteUpdate')
 
         then:
         response.expectContains('title:After Update')
 
         cleanup:
-        http.get('/secondaryBook/cleanup')
+        http('/secondaryBook/cleanup')
     }
 }

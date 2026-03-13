@@ -21,17 +21,14 @@ package functional.tests
 import spock.lang.Specification
 
 import grails.testing.mixin.integration.Integration
-import org.apache.grails.testing.http.client.HttpClient
-import org.springframework.beans.factory.annotation.Autowired
+import org.apache.grails.testing.http.client.HttpClientSupport
 
 @Integration
-class ObjectTemplateSpec extends Specification {
-
-    @Autowired HttpClient http
+class ObjectTemplateSpec extends Specification implements HttpClientSupport {
 
     void "Test that if there is a global /object/_object template it is rendered if no template found"() {
         when: "A POST is issued"
-        def response = http.get('/place/test')
+        def response = http('/place/test')
 
         then: "The correct response is returned"
         response.expect(200, '{"location":"UK","name":"London"}')

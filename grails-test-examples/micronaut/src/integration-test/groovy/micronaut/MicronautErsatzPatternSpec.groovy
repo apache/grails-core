@@ -32,14 +32,13 @@ import spock.lang.Specification
 import org.springframework.beans.factory.annotation.Autowired
 
 import grails.testing.mixin.integration.Integration
-import org.apache.grails.testing.http.client.HttpClient
+import org.apache.grails.testing.http.client.HttpClientSupport
 
 @Integration
-class MicronautErsatzPatternSpec extends Specification {
+class MicronautErsatzPatternSpec extends Specification implements HttpClientSupport {
 
     @Autowired ExternalApiService externalApiService
     @Autowired MicronautApplicationContext micronautContext
-    @Autowired HttpClient http
 
     @AutoCleanup
     ErsatzServer ersatz = new ErsatzServer({ ServerConfig cfg ->
@@ -387,7 +386,7 @@ class MicronautErsatzPatternSpec extends Specification {
         })
 
         when: 'calling the Grails async controller endpoint'
-        def response = http.get(
+        def response = http(
                 '/external-api/async',
                 'Accept': 'application/json'
         )
@@ -412,7 +411,7 @@ class MicronautErsatzPatternSpec extends Specification {
         })
 
         when: 'calling the Grails path controller endpoint'
-        def response = http.get('/external-api/path/88', 'Accept': 'application/json')
+        def response = http('/external-api/path/88', 'Accept': 'application/json')
 
         then: 'the response contains the ersatz-mocked path data'
         response.expectContains(200, 'path-roundtrip')
@@ -435,7 +434,7 @@ class MicronautErsatzPatternSpec extends Specification {
         })
 
         when: 'calling the Grails filtered controller endpoint'
-        def response = http.get('/external-api/filtered', 'Accept': 'application/json')
+        def response = http('/external-api/filtered', 'Accept': 'application/json')
 
         then: 'the response contains the filtered data'
         response.expectContains(200, 'roundtrip-data')

@@ -20,19 +20,15 @@ package issue11767.app
 
 import spock.lang.Specification
 
-import org.springframework.beans.factory.annotation.Autowired
-
 import grails.testing.mixin.integration.Integration
-import org.apache.grails.testing.http.client.HttpClient
+import org.apache.grails.testing.http.client.HttpClientSupport
 
 @Integration
-class GsonViewRespondSpec extends Specification {
-
-    @Autowired HttpClient http
+class GsonViewRespondSpec extends Specification implements HttpClientSupport {
 
     void 'respond with Error gson view'() {
         when: 'The app controller is visited on errorView'
-        def response = http.get('/app/errorView?foo=Too+Short', Accept: 'application/json')
+        def response = http('/app/errorView?foo=Too+Short', Accept: 'application/json')
 
         then:
         response.expectJson(422, '''
@@ -52,7 +48,7 @@ class GsonViewRespondSpec extends Specification {
 
     void 'respond with gson view from action name'() {
         when: 'The app controller is visited on normalView'
-        def response = http.get('/app/normalView?foo=Testing+normal+view', Accept: 'application/json')
+        def response = http('/app/normalView?foo=Testing+normal+view', Accept: 'application/json')
 
         then:
         response.expectJson('''{
@@ -65,7 +61,7 @@ class GsonViewRespondSpec extends Specification {
 
     void 'respond with gson view from type'() {
         when: 'The app controller is visited on typeView'
-        def response = http.get('/app/typeView?foo=Testing+type+view', Accept: 'application/json')
+        def response = http('/app/typeView?foo=Testing+type+view', Accept: 'application/json')
 
         then:
         response.expectJson('''{

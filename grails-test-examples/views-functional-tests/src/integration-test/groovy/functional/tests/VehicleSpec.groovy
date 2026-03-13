@@ -21,17 +21,14 @@ package functional.tests
 import spock.lang.Specification
 
 import grails.testing.mixin.integration.Integration
-import org.apache.grails.testing.http.client.HttpClient
-import org.springframework.beans.factory.annotation.Autowired
+import org.apache.grails.testing.http.client.HttpClientSupport
 
 @Integration
-class VehicleSpec extends Specification {
-
-    @Autowired HttpClient http
+class VehicleSpec extends Specification implements HttpClientSupport {
 
     void "Test that domain subclasses render their properties"() {
         when:
-        def response = http.get('/vehicle/list')
+        def response = http('/vehicle/list')
 
         then: "The correct response is returned"
         response.expectJson(200, '''
@@ -54,7 +51,7 @@ class VehicleSpec extends Specification {
 
     void "Test that domain association subclasses render their properties"() {
         when:
-        def response = http.get('/vehicle/garage')
+        def response = http('/vehicle/garage')
 
         then: "The correct response is returned"
         def json = response.expectStatus(200).json()

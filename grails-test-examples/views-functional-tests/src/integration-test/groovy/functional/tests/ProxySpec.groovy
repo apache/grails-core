@@ -21,17 +21,14 @@ package functional.tests
 import spock.lang.Specification
 
 import grails.testing.mixin.integration.Integration
-import org.apache.grails.testing.http.client.HttpClient
-import org.springframework.beans.factory.annotation.Autowired
+import org.apache.grails.testing.http.client.HttpClientSupport
 
 @Integration
-class ProxySpec extends Specification {
-
-    @Autowired HttpClient http
+class ProxySpec extends Specification implements HttpClientSupport {
 
     void "Test template is found for proxy instance that is initialized"() {
         when:
-        def response = http.get('/proxy')
+        def response = http('/proxy')
 
         then: "The response is correct"
         // Note current behaviour is that the captain is not rendered twice

@@ -21,10 +21,8 @@ package functionaltests.urlmappings
 import spock.lang.Narrative
 import spock.lang.Specification
 
-import org.springframework.beans.factory.annotation.Autowired
-
 import grails.testing.mixin.integration.Integration
-import org.apache.grails.testing.http.client.HttpClient
+import org.apache.grails.testing.http.client.HttpClientSupport
 
 /**
  * Integration tests for Grails URL mappings features.
@@ -37,15 +35,13 @@ import org.apache.grails.testing.http.client.HttpClient
 Grails URL mappings provide flexible routing of HTTP requests to controller actions.
 This includes path variables, constraints, HTTP method-based routing, and redirects.
 ''')
-class UrlMappingsSpec extends Specification {
-
-    @Autowired HttpClient http
+class UrlMappingsSpec extends Specification implements HttpClientSupport{
 
     // ========== Static Path Mappings ==========
 
     def "static path mapping routes to correct action"() {
         when: "accessing static path"
-        def response = http.get('/api/test')
+        def response = http('/api/test')
 
         then: "routes to index action"
         response.expectJsonContains(200, [
@@ -58,7 +54,7 @@ class UrlMappingsSpec extends Specification {
 
     def "single path variable is captured"() {
         when: "accessing path with variable"
-        def response = http.get('/api/items/123')
+        def response = http('/api/items/123')
 
         then: "variable is captured"
         response.expectJsonContains(200, [
@@ -70,7 +66,7 @@ class UrlMappingsSpec extends Specification {
 
     def "path variable accepts alphanumeric values"() {
         when: "accessing path with alphanumeric id"
-        def response = http.get('/api/items/abc-123')
+        def response = http('/api/items/abc-123')
 
         then: "variable is captured correctly"
         response.expectJsonContains(200, [id: 'abc-123'])
@@ -78,7 +74,7 @@ class UrlMappingsSpec extends Specification {
 
     def "multiple path variables are captured"() {
         when: "accessing path with multiple variables"
-        def response = http.get('/api/archive/2024/03/15')
+        def response = http('/api/archive/2024/03/15')
 
         then: "all variables are captured"
         response.expectJsonContains(200, [
@@ -93,7 +89,7 @@ class UrlMappingsSpec extends Specification {
 
     def "named mapping routes correctly"() {
         when: "accessing named mapping"
-        def response = http.get('/api/named/test-name')
+        def response = http('/api/named/test-name')
 
         then: "routes to correct action with variable"
         response.expectJsonContains(200, [
@@ -106,7 +102,7 @@ class UrlMappingsSpec extends Specification {
 
     def "constrained path accepts valid values"() {
         when: "accessing with valid constrained value"
-        def response = http.get('/api/codes/ABC')
+        def response = http('/api/codes/ABC')
 
         then: "request succeeds"
         response.expectJsonContains(200, [
@@ -117,7 +113,7 @@ class UrlMappingsSpec extends Specification {
 
     def "constrained path rejects invalid values"() {
         when: "accessing with invalid constrained value (lowercase)"
-        def response = http.get('/api/codes/abc')
+        def response = http('/api/codes/abc')
 
         then: "request is rejected with 404"
         response.expectStatus(404)
@@ -125,7 +121,7 @@ class UrlMappingsSpec extends Specification {
 
     def "constrained path rejects numeric values"() {
         when: "accessing with numeric value"
-        def response = http.get('/api/codes/123')
+        def response = http('/api/codes/123')
 
         then: "request is rejected with 404"
         response.expectStatus(404)
@@ -135,7 +131,7 @@ class UrlMappingsSpec extends Specification {
 
     def "GET request routes to list action"() {
         when: "making GET request to resources"
-        def response = http.get('/api/resources')
+        def response = http('/api/resources')
 
         then: "routes to list action"
         response.expectJsonContains(200, [action: 'list'])
@@ -143,7 +139,7 @@ class UrlMappingsSpec extends Specification {
 
     def "POST request routes to save action"() {
         when: "making POST request to resources"
-        def response = http.postJson('/api/resources', '{}')
+        def response = httpPostJson('/api/resources', '{}')
 
         then: "routes to save action"
         response.expectJsonContains(200, [
@@ -154,7 +150,7 @@ class UrlMappingsSpec extends Specification {
 
     def "PUT request routes to update action"() {
         when: "making PUT request to resources with id"
-        def response = http.putJson('/api/resources/42', '{}')
+        def response = httpPutJson('/api/resources/42', '{}')
 
         then: "routes to update action"
         response.expectJsonContains(200, [
@@ -166,7 +162,7 @@ class UrlMappingsSpec extends Specification {
 
     def "DELETE request routes to delete action"() {
         when: "making DELETE request to resources with id"
-        def response = http.delete('/api/resources/42')
+        def response = httpDelete('/api/resources/42')
 
         then: "routes to delete action"
         response.expectJsonContains(200, [
@@ -180,7 +176,7 @@ class UrlMappingsSpec extends Specification {
 
     def "optional path variable with value"() {
         when: "accessing with optional variable provided"
-        def response = http.get('/api/optional/required-value/optional-value')
+        def response = http('/api/optional/required-value/optional-value')
 
         then: "both values captured"
         response.expectJsonContains(200, [
@@ -191,7 +187,7 @@ class UrlMappingsSpec extends Specification {
 
     def "optional path variable without value uses default"() {
         when: "accessing without optional variable"
-        def response = http.get('/api/optional/required-value')
+        def response = http('/api/optional/required-value')
 
         then: "required captured, optional uses default"
         response.expectJsonContains(200, [
@@ -204,7 +200,7 @@ class UrlMappingsSpec extends Specification {
 
     def "redirect mapping performs redirect"() {
         when: "accessing redirect mapping"
-        def response = http.get('/api/old-endpoint', 'Accept': '*/*')
+        def response = http('/api/old-endpoint', 'Accept': '*/*')
 
         then: "redirect is performed and final response received"
         response.expectJsonContains(200, [action: 'index'])
@@ -214,7 +210,7 @@ class UrlMappingsSpec extends Specification {
 
     def "default mapping with controller and action"() {
         when: "using default mapping pattern"
-        def response = http.get('/urlMappingsTest/show/99')
+        def response = http('/urlMappingsTest/show/99')
 
         then: "routes correctly"
         response.expectJson(200, [
@@ -226,7 +222,7 @@ class UrlMappingsSpec extends Specification {
 
     def "default mapping with format extension"() {
         when: "using default mapping with format"
-        def response = http.get('/urlMappingsTest/list.json')
+        def response = http('/urlMappingsTest/list.json')
 
         then: "routes correctly with format"
         response.expectJsonContains(200, [action: 'list'])
@@ -236,7 +232,7 @@ class UrlMappingsSpec extends Specification {
 
     def "query parameters are accessible in action"() {
         when: "accessing with query parameters"
-        def response = http.get('/api/test?param1=value1&param2=value2')
+        def response = http('/api/test?param1=value1&param2=value2')
 
         then: "query params are accessible"
         response.expectJsonContains(200, [
@@ -251,7 +247,7 @@ class UrlMappingsSpec extends Specification {
 
     def "request method is correctly detected"() {
         when: "making request"
-        def response = http.get('/api/method-test')
+        def response = http('/api/method-test')
 
         then: "method is correctly detected"
         response.expectJsonContains(200, [method: 'GET'])
@@ -261,7 +257,7 @@ class UrlMappingsSpec extends Specification {
 
     def "non-existent path returns 404"() {
         when: "accessing non-existent path"
-        def response = http.get('/api/does-not-exist')
+        def response = http('/api/does-not-exist')
 
         then: "returns 404"
         response.expectStatus(404)

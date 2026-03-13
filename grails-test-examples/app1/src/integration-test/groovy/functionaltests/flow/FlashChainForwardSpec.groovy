@@ -18,15 +18,13 @@
  */
 package functionaltests.flow
 
-import java.net.http.HttpClient as JdkClient
+import java.net.http.HttpClient
 
 import spock.lang.Shared
 import spock.lang.Specification
 
-import org.springframework.beans.factory.annotation.Autowired
-
 import grails.testing.mixin.integration.Integration
-import org.apache.grails.testing.http.client.HttpClient
+import org.apache.grails.testing.http.client.HttpClientSupport
 import org.apache.grails.testing.http.client.TestHttpResponse
 
 /**
@@ -40,17 +38,14 @@ import org.apache.grails.testing.http.client.TestHttpResponse
  * flash scope and chain model which rely on HTTP session state.
  */
 @Integration
-class FlashChainForwardSpec extends Specification {
-
-    @Autowired
-    HttpClient http
+class FlashChainForwardSpec extends Specification implements HttpClientSupport {
 
     @Shared
-    JdkClient noRedirectClient
+    HttpClient noRedirectClient
 
     void setup() {
-        noRedirectClient = noRedirectClient ?: http.newClientWith {
-            followRedirects(JdkClient.Redirect.NEVER)
+        noRedirectClient = noRedirectClient ?: httpClientWith {
+            followRedirects(HttpClient.Redirect.NEVER)
         }
     }
 
@@ -59,7 +54,7 @@ class FlashChainForwardSpec extends Specification {
      */
     private TestHttpResponse followRedirectWithSession(String path) {
         // First request - get redirect and session cookie
-        def response1 = http.get(path, noRedirectClient)
+        def response1 = http(path, noRedirectClient)
 
         def sessionCookie = response1.headerValue('Set-Cookie')?.split(';')?.first()
         def location = response1.headerValue('Location')
@@ -78,7 +73,7 @@ class FlashChainForwardSpec extends Specification {
             headers.put('Cookie', sessionCookie)
         }
         
-        http.get(headers, redirectPath)
+        http(headers, redirectPath)
     }
 
     /**
@@ -97,7 +92,7 @@ class FlashChainForwardSpec extends Specification {
                 headers.put('Cookie', sessionCookie)
             }
             
-            def response = http.get(headers, currentPath, noRedirectClient)
+            def response = http(headers, currentPath, noRedirectClient)
             
             // Update session cookie if new one provided
             def newCookie = response.headerValue('Set-Cookie')
@@ -150,7 +145,7 @@ class FlashChainForwardSpec extends Specification {
 
     def "test flash.now for same-request values"() {
         when: "using flash.now"
-        def response = http.get('/flow/flashNow')
+        def response = http('/flow/flashNow')
 
         then: "both immediate and persisted values available in same request"
         response.expectJson(200, [
@@ -161,7 +156,7 @@ class FlashChainForwardSpec extends Specification {
 
     def "test flash is cleared after being read"() {
         when: "first request sets flash"
-        def response1 = http.get('/flow/setFlashOnly?message=TestMessage', noRedirectClient)
+        def response1 = http('/flow/setFlashOnly?message=TestMessage', noRedirectClient)
         def sessionCookie = response1.headerValue('Set-Cookie')
 
         and: "second request reads flash with same session"
@@ -169,14 +164,14 @@ class FlashChainForwardSpec extends Specification {
         if (sessionCookie) {
             headers2.put('Cookie', sessionCookie)
         }
-        def json2 = http.get(headers2, '/flow/readFlash').json()
+        def json2 = http(headers2, '/flow/readFlash').json()
 
         and: "third request tries to read again with same session"
         def headers3 = [:] as Map<String, String>
         if (sessionCookie) {
             headers3.put('Cookie', sessionCookie)
         }
-        def json3 = http.get(headers3, '/flow/readFlash').json()
+        def json3 = http(headers3, '/flow/readFlash').json()
 
         then: "flash available in second request"
         json2.message == 'TestMessage'
@@ -227,7 +222,7 @@ class FlashChainForwardSpec extends Specification {
 
     def "test forward keeps same request"() {
         when: "forwarding to another action"
-        def response = http.get('/flow/forwardToAction')
+        def response = http('/flow/forwardToAction')
 
         then: "request attributes preserved"
         response.expectJsonContains(200, [
@@ -238,7 +233,7 @@ class FlashChainForwardSpec extends Specification {
 
     def "test forward with params"() {
         when: "forwarding with additional params"
-        def response = http.get('/flow/forwardWithParams?id=original')
+        def response = http('/flow/forwardWithParams?id=original')
 
         then: "both original and forwarded params available"
         response.expectJsonContains(200, [
@@ -249,7 +244,7 @@ class FlashChainForwardSpec extends Specification {
 
     def "test forward to different controller"() {
         when: "forwarding to another controller"
-        def response = http.get('/flow/forwardToOtherController')
+        def response = http('/flow/forwardToOtherController')
 
         then: "forward reaches target controller"
         response.expectJsonContains(200, [
@@ -262,7 +257,7 @@ class FlashChainForwardSpec extends Specification {
 
     def "test redirect preserves all params"() {
         when: "redirecting with params"
-        def response = http.get('/flow/redirectWithAllParams?foo=bar&num=42')
+        def response = http('/flow/redirectWithAllParams?foo=bar&num=42')
 
         then: "params preserved after redirect"
         response.expectJson(200, [
@@ -275,7 +270,7 @@ class FlashChainForwardSpec extends Specification {
 
     def "test redirect to uri"() {
         when: "redirecting to specific URI"
-        def response = http.get('/flow/redirectToUri')
+        def response = http('/flow/redirectToUri')
 
         then: "redirected to correct URI"
         response.expectJsonContains(200, [
@@ -285,7 +280,7 @@ class FlashChainForwardSpec extends Specification {
 
     def "test redirect reaches target"() {
         when: "basic redirect"
-        def response = http.get('/flow/permanentRedirect')
+        def response = http('/flow/permanentRedirect')
 
         then: "reaches target action"
         response.expectJson(200, [
@@ -297,7 +292,7 @@ class FlashChainForwardSpec extends Specification {
 
     def "test chain model is empty when not chained"() {
         when: "calling chain target directly"
-        def response = http.get('/flow/chainThird')
+        def response = http('/flow/chainThird')
 
         then: "chainModel is empty/null"
         response.expectStatus(200)

@@ -20,19 +20,15 @@ package functionaltests
 
 import spock.lang.Specification
 
-import org.springframework.beans.factory.annotation.Autowired
-
 import grails.testing.mixin.integration.Integration
-import org.apache.grails.testing.http.client.HttpClient
+import org.apache.grails.testing.http.client.HttpClientSupport
 
 @Integration
-class AtResourceSpec extends Specification {
-
-    @Autowired HttpClient http
+class AtResourceSpec extends Specification implements HttpClientSupport {
 
     def "A domain class annotated with @Resources exposes an endpoint"() {
         when:
-        def response = http.get('/stuffs')
+        def response = http('/stuffs')
 
         then:
         response.expectStatus(200)

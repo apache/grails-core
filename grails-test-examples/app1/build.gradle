@@ -67,7 +67,7 @@ dependencies {
     implementation project(':grails-test-examples-plugins-loadafter')
 
     integrationTestImplementation testFixtures('org.apache.grails:grails-geb')
-    integrationTestImplementation 'org.apache.grails:grails-testing-support-http-client'
+    integrationTestImplementation project(':grails-testing-support-http-client')
 }
 
 tasks.withType(JavaExec).configureEach {

@@ -20,10 +20,8 @@ package functionaltests.interceptors
 
 import spock.lang.Specification
 
-import org.springframework.beans.factory.annotation.Autowired
-
 import grails.testing.mixin.integration.Integration
-import org.apache.grails.testing.http.client.HttpClient
+import org.apache.grails.testing.http.client.HttpClientSupport
 
 /**
  * Integration tests for advanced interceptor matching patterns.
@@ -36,20 +34,18 @@ import org.apache.grails.testing.http.client.HttpClient
  * - Combined matching criteria
  */
 @Integration
-class InterceptorAdvancedMatchingSpec extends Specification {
-
-    @Autowired HttpClient http
+class InterceptorAdvancedMatchingSpec extends Specification implements HttpClientSupport {
 
     def setup() {
         // Reset interceptor tracking before each test
-        http.get('/api/advancedMatching/reset')
+        http('/api/advancedMatching/reset')
     }
 
     // ========== Namespace Matching Tests ==========
 
     def "test namespace interceptor matches controller in api namespace"() {
         when:
-        def response = http.get('/api/advancedMatching/index')
+        def response = http('/api/advancedMatching/index')
 
         then:
         response.expectStatus(200)
@@ -61,7 +57,7 @@ class InterceptorAdvancedMatchingSpec extends Specification {
 
     def "test namespace interceptor matches all actions in namespace"() {
         when:
-        def response = http.get('/api/advancedMatching/list')
+        def response = http('/api/advancedMatching/list')
 
         then:
         response.expectStatus(200)
@@ -75,7 +71,7 @@ class InterceptorAdvancedMatchingSpec extends Specification {
 
     def "test method interceptor matches POST requests"() {
         when:
-        def response = http.postJson('/api/advancedMatching/save', [:])
+        def response = httpPostJson('/api/advancedMatching/save', [:])
 
         then:
         response.expectStatus(200)
@@ -87,7 +83,7 @@ class InterceptorAdvancedMatchingSpec extends Specification {
 
     def "test method interceptor does not match GET requests"() {
         when:
-        def response = http.get('/api/advancedMatching/list')
+        def response = http('/api/advancedMatching/list')
 
         then:
         response.expectStatus(200)
@@ -96,7 +92,7 @@ class InterceptorAdvancedMatchingSpec extends Specification {
 
     def "test method interceptor matches PUT requests as POST variant"() {
         when:
-        def response = http.putJson('/api/advancedMatching/update', [:])
+        def response = httpPutJson('/api/advancedMatching/update', [:])
 
         then:
         response.expectStatus(200)
@@ -108,7 +104,7 @@ class InterceptorAdvancedMatchingSpec extends Specification {
 
     def "test excludes interceptor does not match excluded index action"() {
         when:
-        def response = http.get('/api/advancedMatching/index')
+        def response = http('/api/advancedMatching/index')
 
         then:
         response.expectStatus(200)
@@ -120,7 +116,7 @@ class InterceptorAdvancedMatchingSpec extends Specification {
 
     def "test excludes interceptor matches non-excluded actions"() {
         when:
-        def response = http.get('/api/advancedMatching/list')
+        def response = http('/api/advancedMatching/list')
 
         then:
         response.expectStatus(200)
@@ -132,7 +128,7 @@ class InterceptorAdvancedMatchingSpec extends Specification {
 
     def "test excludes interceptor matches show action"() {
         when:
-        def response = http.get('/api/advancedMatching/show/123')
+        def response = http('/api/advancedMatching/show/123')
 
         then:
         response.expectStatus(200)
@@ -146,7 +142,7 @@ class InterceptorAdvancedMatchingSpec extends Specification {
 
     def "test multiple rules interceptor matches show action"() {
         when:
-        def response = http.get('/api/advancedMatching/show/1')
+        def response = http('/api/advancedMatching/show/1')
 
         then:
         response.expectStatus(200)
@@ -158,7 +154,7 @@ class InterceptorAdvancedMatchingSpec extends Specification {
 
     def "test multiple rules interceptor matches list action"() {
         when:
-        def response = http.get('/api/advancedMatching/list')
+        def response = http('/api/advancedMatching/list')
 
         then:
         response.expectStatus(200)
@@ -170,7 +166,7 @@ class InterceptorAdvancedMatchingSpec extends Specification {
 
     def "test multiple rules interceptor does not match create action"() {
         when:
-        def response = http.get('/api/advancedMatching/create')
+        def response = http('/api/advancedMatching/create')
 
         then:
         response.expectStatus(200)
@@ -184,7 +180,7 @@ class InterceptorAdvancedMatchingSpec extends Specification {
 
     def "test multiple interceptors can match same request"() {
         when: "accessing list action in api namespace"
-        def response = http.get('/api/advancedMatching/list')
+        def response = http('/api/advancedMatching/list')
 
         then: "namespace, excludes, and multiRule interceptors all match"
         response.expectStatus(200)
@@ -197,7 +193,7 @@ class InterceptorAdvancedMatchingSpec extends Specification {
 
     def "test POST to save triggers namespace and method interceptors"() {
         when:
-        def response = http.postJson('/api/advancedMatching/save', [:])
+        def response = httpPostJson('/api/advancedMatching/save', [:])
 
         then:
         response.expectStatus(200)
@@ -212,7 +208,7 @@ class InterceptorAdvancedMatchingSpec extends Specification {
 
     def "test index action only matches namespace interceptor"() {
         when:
-        def response = http.get('/api/advancedMatching/index')
+        def response = http('/api/advancedMatching/index')
 
         then: "only namespace interceptor matches (others exclude index)"
         response.expectStatus(200)
@@ -228,7 +224,7 @@ class InterceptorAdvancedMatchingSpec extends Specification {
 
     def "test interceptors execute in defined order"() {
         when:
-        def response = http.get('/api/advancedMatching/list')
+        def response = http('/api/advancedMatching/list')
 
         then: "interceptors ordered by their order property"
         response.expectStatus(200)

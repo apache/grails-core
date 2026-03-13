@@ -32,12 +32,11 @@ import spock.lang.Specification
 import org.springframework.beans.factory.annotation.Autowired
 
 import grails.testing.mixin.integration.Integration
-import org.apache.grails.testing.http.client.HttpClient
+import org.apache.grails.testing.http.client.HttpClientSupport
 
 @Integration
-class MicronautErsatzAdvancedSpec extends Specification {
+class MicronautErsatzAdvancedSpec extends Specification implements HttpClientSupport {
 
-    @Autowired HttpClient http
     @Autowired MicronautApplicationContext micronautContext
     @Autowired ExternalApiService externalApiService
 
@@ -168,7 +167,7 @@ class MicronautErsatzAdvancedSpec extends Specification {
         })
 
         when: 'calling the Grails controller endpoint'
-        def response = http.get('/external-api/search?q=grails&page=2', 'Accept': 'application/json')
+        def response = http('/external-api/search?q=grails&page=2', 'Accept': 'application/json')
 
         then: 'the response contains the mocked data'
         response.expectContains(200, 'roundtrip')
@@ -272,7 +271,7 @@ class MicronautErsatzAdvancedSpec extends Specification {
         })
 
         when: 'calling the Grails controller endpoint'
-        def response = http.get(
+        def response = http(
                 '/external-api/secure',
                 'Authorization': 'Bearer roundtrip-token',
                 'Accept': 'application/json'
@@ -495,7 +494,7 @@ class MicronautErsatzAdvancedSpec extends Specification {
         })
 
         when: 'sending a PATCH request to Grails'
-        def response = http.patchJson(
+        def response = httpPatchJson(
                 '/external-api/99',
                 '{"name":"patched"}',
                 'Accept': 'application/json'
@@ -523,7 +522,7 @@ class MicronautErsatzAdvancedSpec extends Specification {
         })
 
         when: 'calling the search endpoint'
-        def response = http.get(
+        def response = http(
                 '/external-api/search?q=test-query&page=3',
                 'Accept': 'application/json'
         )

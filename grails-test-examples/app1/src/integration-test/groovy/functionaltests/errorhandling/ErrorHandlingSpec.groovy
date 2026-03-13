@@ -21,10 +21,8 @@ package functionaltests.errorhandling
 import spock.lang.Specification
 import spock.lang.Unroll
 
-import org.springframework.beans.factory.annotation.Autowired
-
 import grails.testing.mixin.integration.Integration
-import org.apache.grails.testing.http.client.HttpClient
+import org.apache.grails.testing.http.client.HttpClientSupport
 
 /**
  * Integration tests for error handling patterns in Grails controllers.
@@ -32,16 +30,14 @@ import org.apache.grails.testing.http.client.HttpClient
  * and error response headers.
  */
 @Integration
-class ErrorHandlingSpec extends Specification {
-
-    @Autowired HttpClient http
+class ErrorHandlingSpec extends Specification implements HttpClientSupport{
 
     // ========== HTTP Status Code Tests ==========
 
     @Unroll
     def "render #statusMsg status"(String action, int statusCode, String statusMsg) {
         when:
-        def response = http.get("/errorHandlingTest/$action")
+        def response = http("/errorHandlingTest/$action")
 
         then:
         response.expectStatus(statusCode)
@@ -66,7 +62,7 @@ class ErrorHandlingSpec extends Specification {
     @Unroll
     def "JSON #statusCode error response #assertion"(String action, int statusCode, String assertion) {
         when:
-        def response = http.get("/errorHandlingTest/$action", 'Accept': 'application/json')
+        def response = http("/errorHandlingTest/$action", 'Accept': 'application/json')
 
         then:
         response.expectStatus(statusCode)
@@ -84,7 +80,7 @@ class ErrorHandlingSpec extends Specification {
     @Unroll
     def "conditional error returns #statusCode when condition is #condition"(String condition, int statusCode) {
         when:
-        def response = http.get(
+        def response = http(
                 "/errorHandlingTest/conditionalError?condition=$condition",
                 'Accept': 'application/json'
         )
@@ -101,7 +97,7 @@ class ErrorHandlingSpec extends Specification {
 
     def "conditional error returns success for unknown condition"() {
         when:
-        def response = http.get(
+        def response = http(
                 '/errorHandlingTest/conditionalError?condition=normal',
                 'Accept': 'application/json'
         )
@@ -117,7 +113,7 @@ class ErrorHandlingSpec extends Specification {
 
     def "rate limit error includes appropriate headers"() {
         when:
-        def response = http.get('/errorHandlingTest/errorWithHeaders', 'Accept': 'application/json')
+        def response = http('/errorHandlingTest/errorWithHeaders', 'Accept': 'application/json')
 
         then:
         response.expectHeaders(429,
@@ -132,7 +128,7 @@ class ErrorHandlingSpec extends Specification {
 
     def "not found error includes suggestion header"() {
         when:
-        def response = http.get('/errorHandlingTest/notFoundWithHints', 'Accept': 'application/json')
+        def response = http('/errorHandlingTest/notFoundWithHints', 'Accept': 'application/json')
 
         then: "suggestion header is present"
         response.expectHeaders(404, 'X-Suggested-Resource': '/api/items')
@@ -142,7 +138,7 @@ class ErrorHandlingSpec extends Specification {
 
     def "success endpoint returns 200 OK"() {
         when:
-        def response = http.get('/errorHandlingTest/success', 'Accept': 'application/json')
+        def response = http('/errorHandlingTest/success', 'Accept': 'application/json')
 
         then:
         response.expectJson(200, [
@@ -153,7 +149,7 @@ class ErrorHandlingSpec extends Specification {
 
     def "success with data returns structured response"() {
         when:
-        def response = http.get('/errorHandlingTest/successWithData', 'Accept': 'application/json')
+        def response = http('/errorHandlingTest/successWithData', 'Accept': 'application/json')
 
         then:
         response.expectJsonContains(200, [

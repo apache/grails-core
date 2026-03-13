@@ -21,17 +21,14 @@ package functional.tests
 import spock.lang.Specification
 
 import grails.testing.mixin.integration.Integration
-import org.apache.grails.testing.http.client.HttpClient
-import org.springframework.beans.factory.annotation.Autowired
+import org.apache.grails.testing.http.client.HttpClientSupport
 
 @Integration
-class CircularSpec extends Specification {
-
-    @Autowired HttpClient http
+class CircularSpec extends Specification implements HttpClientSupport {
 
     void "test deep rendering of circular domain relationships"() {
         when: "A GET is issued"
-        def response = http.get('/circular/show/1')
+        def response = http('/circular/show/1')
 
         then: "The REST resource is retrieved and the correct JSON is returned"
         response.expectHeaders(200, 'Content-Type': 'application/json;charset=UTF-8')
@@ -47,7 +44,7 @@ class CircularSpec extends Specification {
 
     void "test nested template rendering of circular domain relationships"() {
         when: "A GET is issued"
-        def response = http.get('/circular/circular/1')
+        def response = http('/circular/circular/1')
 
         then: "The REST resource is retrieved and the correct JSON is returned"
         response.expectHeaders(200, 'Content-Type': 'application/json;charset=UTF-8')

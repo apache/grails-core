@@ -20,19 +20,15 @@ package demo
 
 import spock.lang.Specification
 
-import org.springframework.beans.factory.annotation.Autowired
-
 import grails.testing.mixin.integration.Integration
-import org.apache.grails.testing.http.client.HttpClient
+import org.apache.grails.testing.http.client.HttpClientSupport
 
 @Integration
-class JsonControllerSpec extends Specification {
-
-    @Autowired HttpClient http
+class JsonControllerSpec extends Specification implements HttpClientSupport {
 
     void "test a json view is rendered"() {
         when:
-        def response = http.get('/json/index', Accept: 'application/json')
+        def response = http('/json/index', Accept: 'application/json')
 
         then:
         response.expect('{"foo":"bar"}')
@@ -40,7 +36,7 @@ class JsonControllerSpec extends Specification {
 
     void "test a html view is rendered"() {
         when:
-        def response = http.get('json/index')
+        def response = http('json/index')
 
         then:
         response.expectContains('<html><head><title></title></head><body>Testing</body></html>')

@@ -20,22 +20,18 @@ package example
 
 import spock.lang.Specification
 
-import org.springframework.beans.factory.annotation.Autowired
-
 import grails.testing.mixin.integration.Integration
-import org.apache.grails.testing.http.client.HttpClient
+import org.apache.grails.testing.http.client.HttpClientSupport
 
 @Integration
-class BookControllerSpec extends Specification {
-
-    @Autowired HttpClient http
+class BookControllerSpec extends Specification implements HttpClientSupport {
 
     void 'test books can be fetched'() {
         expect:
-        http.get('/book/grails').expectContains('The definitive Guide to Grails 2')
-        http.get('/book/grails').expectNotBodyContains('Groovy in Action')
+        http('/book/grails').expectContains('The definitive Guide to Grails 2')
+        http('/book/grails').expectNotBodyContains('Groovy in Action')
 
-        http.get('/book/groovy').expectContains('Groovy in Action')
-        http.get('/book/groovy').expectNotBodyContains('The definitive Guide to Grails 2')
+        http('/book/groovy').expectContains('Groovy in Action')
+        http('/book/groovy').expectNotBodyContains('The definitive Guide to Grails 2')
     }
 }

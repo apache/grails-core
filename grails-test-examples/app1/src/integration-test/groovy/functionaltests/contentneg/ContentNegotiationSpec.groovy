@@ -21,10 +21,8 @@ package functionaltests.contentneg
 import spock.lang.Narrative
 import spock.lang.Specification
 
-import org.springframework.beans.factory.annotation.Autowired
-
 import grails.testing.mixin.integration.Integration
-import org.apache.grails.testing.http.client.HttpClient
+import org.apache.grails.testing.http.client.HttpClientSupport
 
 /**
  * Integration tests for Grails content negotiation features.
@@ -39,15 +37,13 @@ Grails provides content negotiation that allows the same controller action
 to return different response formats (JSON, XML, HTML) based on the client's
 Accept header or URL extension.
 ''')
-class ContentNegotiationSpec extends Specification {
-
-    @Autowired HttpClient http
+class ContentNegotiationSpec extends Specification implements HttpClientSupport {
 
     // ========== Accept Header-Based Negotiation ==========
 
     def "JSON response via Accept header application/json"() {
         when: "requesting with Accept: application/json"
-        def response = http.get('/contentNegotiation/index', 'Accept': 'application/json')
+        def response = http('/contentNegotiation/index', 'Accept': 'application/json')
 
         then: "response is JSON"
         response.expectStatus(200).contentType.contains('application/json')
@@ -61,7 +57,7 @@ class ContentNegotiationSpec extends Specification {
 
     def "XML response via Accept header application/xml"() {
         when: "requesting with Accept: application/xml"
-        def response = http.get('/contentNegotiation/index', 'Accept': 'application/xml')
+        def response = http('/contentNegotiation/index', 'Accept': 'application/xml')
 
         then: "response is XML"
         response.expectStatus(200).contentType.contains('xml')
@@ -72,7 +68,7 @@ class ContentNegotiationSpec extends Specification {
 
     def "HTML response via Accept header text/html"() {
         when: "requesting with Accept: text/html"
-        def response = http.get('/contentNegotiation/index', 'Accept': 'text/html')
+        def response = http('/contentNegotiation/index', 'Accept': 'text/html')
 
         then: "response is HTML"
         response.expectStatus(200).contentType.contains('text/html')
@@ -86,7 +82,7 @@ class ContentNegotiationSpec extends Specification {
 
     def "JSON response via .json extension"() {
         when: "requesting URL with .json extension"
-        def response = http.get('/contentNegotiation/index.json')
+        def response = http('/contentNegotiation/index.json')
 
         then: "response is JSON"
         response.expectStatus(200).contentType.contains('json')
@@ -97,7 +93,7 @@ class ContentNegotiationSpec extends Specification {
 
     def "XML response via .xml extension"() {
         when: "requesting URL with .xml extension"
-        def response = http.get('/contentNegotiation/index.xml')
+        def response = http('/contentNegotiation/index.xml')
 
         then: "response is XML"
         response.expectStatus(200).contentType.contains('xml')
@@ -110,7 +106,7 @@ class ContentNegotiationSpec extends Specification {
 
     def "respond method returns JSON for Accept application/json"() {
         when: "calling respond action with Accept: application/json"
-        def response = http.get('/contentNegotiation/respond','Accept': 'application/json')
+        def response = http('/contentNegotiation/respond','Accept': 'application/json')
 
         then: "response is JSON"
         response.expectStatus(200).contentType.contains('json')
@@ -124,7 +120,7 @@ class ContentNegotiationSpec extends Specification {
 
     def "respond method returns XML for Accept application/xml"() {
         when: "calling respond action with Accept: application/xml"
-        def response = http.get('/contentNegotiation/respond', 'Accept': 'application/xml')
+        def response = http('/contentNegotiation/respond', 'Accept': 'application/xml')
 
         then: "response is XML"
         response.expectStatus(200).contentType.contains('xml')
@@ -134,7 +130,7 @@ class ContentNegotiationSpec extends Specification {
 
     def "list action returns JSON array"() {
         when: "requesting list with Accept: application/json"
-        def response = http.get('/contentNegotiation/list', 'Accept': 'application/json')
+        def response = http('/contentNegotiation/list', 'Accept': 'application/json')
 
         then: "response is JSON array"
         response.expectStatus(200).contentType.contains('json')
@@ -149,7 +145,7 @@ class ContentNegotiationSpec extends Specification {
 
     def "list action returns XML for XML accept"() {
         when: "requesting list with Accept: application/xml"
-        def response = http.get('/contentNegotiation/list', 'Accept': 'application/xml')
+        def response = http('/contentNegotiation/list', 'Accept': 'application/xml')
 
         then: "response is XML"
         response.expectStatus(200).contentType.contains('xml')
@@ -159,7 +155,7 @@ class ContentNegotiationSpec extends Specification {
 
     def "explicit content type overrides negotiation"() {
         when: "calling action with explicit content type"
-        def response = http.get('/contentNegotiation/explicitContentType')
+        def response = http('/contentNegotiation/explicitContentType')
 
         then: "response has explicit content type"
         response.expectStatus(200).contentType.contains('application/json')
@@ -172,7 +168,7 @@ class ContentNegotiationSpec extends Specification {
 
     def "error response in JSON format"() {
         when: "requesting error action with Accept: application/json"
-        def response = http.get('/contentNegotiation/error', 'Accept': 'application/json')
+        def response = http('/contentNegotiation/error', 'Accept': 'application/json')
 
         then: "error response is returned"
         response.expectStatus(400)
@@ -187,7 +183,7 @@ class ContentNegotiationSpec extends Specification {
 
     def "error response in XML format"() {
         when: "requesting error action with Accept: application/xml"
-        def response = http.get('/contentNegotiation/error', 'Accept': 'application/xml')
+        def response = http('/contentNegotiation/error', 'Accept': 'application/xml')
 
         then: "error response is returned"
         response.expectStatus(400)
@@ -200,7 +196,7 @@ class ContentNegotiationSpec extends Specification {
 
     def "format parameter can specify JSON"() {
         when: "requesting with format=json parameter"
-        def response = http.get('/contentNegotiation/formatParam?format=json')
+        def response = http('/contentNegotiation/formatParam?format=json')
 
         then: "response is JSON"
         response.expectStatus(200)
@@ -214,7 +210,7 @@ class ContentNegotiationSpec extends Specification {
 
     def "format parameter can specify XML"() {
         when: "requesting with format=xml parameter"
-        def response = http.get('/contentNegotiation/formatParam?format=xml')
+        def response = http('/contentNegotiation/formatParam?format=xml')
 
         then: "response is XML"
         response.expectContains(200, '<entry key="format">xml</entry>')
@@ -224,7 +220,7 @@ class ContentNegotiationSpec extends Specification {
 
     def "status by format returns correct status for JSON"() {
         when: "requesting statusByFormat with Accept: application/json"
-        def response = http.get('/contentNegotiation/statusByFormat', 'Accept': 'application/json')
+        def response = http('/contentNegotiation/statusByFormat', 'Accept': 'application/json')
 
         then: "response status is OK"
         response.expectStatus(200)
@@ -237,7 +233,7 @@ class ContentNegotiationSpec extends Specification {
 
     def "multiAccept action handles Accept header"() {
         when: "requesting with complex Accept header"
-        def response = http.get('/contentNegotiation/multiAccept', 'Accept': 'application/json')
+        def response = http('/contentNegotiation/multiAccept', 'Accept': 'application/json')
 
         then: "response is successful"
         response.expectStatus(200)
@@ -253,7 +249,7 @@ class ContentNegotiationSpec extends Specification {
 
     def "formatParam falls back to default for unknown format"() {
         when: "requesting with unknown format"
-        def response = http.get('/contentNegotiation/formatParam?format=unknown')
+        def response = http('/contentNegotiation/formatParam?format=unknown')
 
         then: "response uses default format (JSON)"
         response.expectStatus(200)
@@ -269,7 +265,7 @@ class ContentNegotiationSpec extends Specification {
 
     def "JSON with charset in Accept header"() {
         when: "requesting with Accept including charset"
-        def response = http.get(
+        def response = http(
                 '/contentNegotiation/respond',
                 'Accept': 'application/json; charset=utf-8'
         )
@@ -282,7 +278,7 @@ class ContentNegotiationSpec extends Specification {
 
     def "respond action with .json extension"() {
         when: "requesting respond with .json extension"
-        def response = http.get('/contentNegotiation/respond.json')
+        def response = http('/contentNegotiation/respond.json')
 
         then: "response is JSON"
         response.expectStatus(200).contentType.contains('json')
@@ -293,7 +289,7 @@ class ContentNegotiationSpec extends Specification {
 
     def "list action with .json extension"() {
         when: "requesting list with .json extension"
-        def response = http.get('/contentNegotiation/list.json')
+        def response = http('/contentNegotiation/list.json')
 
         then: "response is JSON array"
         response.expectStatus(200).contentType.contains('json')
@@ -306,7 +302,7 @@ class ContentNegotiationSpec extends Specification {
 
     def "custom JSON rendering produces valid output"() {
         when: "requesting custom JSON action"
-        def response = http.get('/contentNegotiation/customJson')
+        def response = http('/contentNegotiation/customJson')
 
         then: "response is JSON"
         response.expectStatus(200).contentType.contains('application/json')

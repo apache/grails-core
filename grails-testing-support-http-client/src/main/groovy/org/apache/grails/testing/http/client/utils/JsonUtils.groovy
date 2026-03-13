@@ -27,7 +27,9 @@ import groovy.transform.CompileStatic
 import org.opentest4j.AssertionFailedError
 
 /**
- * JSON assertion helpers used by HTTP test response expectations.
+ * Utility method for handling JSON.
+ *
+ * <p>JSON assertion helpers used by HTTP test response expectations.</p>
  *
  * <p>This utility provides two styles of validation:</p>
  * <ul>
@@ -40,10 +42,10 @@ import org.opentest4j.AssertionFailedError
  *
  * <p>Failures include canonicalized JSON representations to make diffs easier to read.</p>
  *
- * @since 7.1
+ * @since 7.0.9
  */
 @CompileStatic
-class JsonAssertUtils {
+class JsonUtils {
 
     /**
      * Verifies that the response JSON is structurally equal to the expected object tree.

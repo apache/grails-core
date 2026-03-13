@@ -20,10 +20,8 @@ package functionaltests.fileupload
 
 import spock.lang.Specification
 
-import org.springframework.beans.factory.annotation.Autowired
-
 import grails.testing.mixin.integration.Integration
-import org.apache.grails.testing.http.client.HttpClient
+import org.apache.grails.testing.http.client.HttpClientSupport
 import org.apache.grails.testing.http.client.MultipartBody
 
 /**
@@ -33,9 +31,7 @@ import org.apache.grails.testing.http.client.MultipartBody
  * file validation, and metadata extraction.
  */
 @Integration
-class FileUploadSpec extends Specification {
-
-    @Autowired HttpClient http
+class FileUploadSpec extends Specification implements HttpClientSupport {
 
     // ========== Single File Upload Tests ==========
 
@@ -47,7 +43,7 @@ class FileUploadSpec extends Specification {
                 .build()
 
         when:
-        def response = http.postMultipart('/fileUploadTest/uploadSingle', body)
+        def response = httpPostMultipart('/fileUploadTest/uploadSingle', body)
 
         then:
         response.expectJson(200, [
@@ -65,7 +61,7 @@ class FileUploadSpec extends Specification {
                 .build()
 
         when:
-        def response = http.postMultipart('/fileUploadTest/uploadSingle', body)
+        def response = httpPostMultipart('/fileUploadTest/uploadSingle', body)
 
         then:
         response.expectStatus(400)
@@ -81,7 +77,7 @@ class FileUploadSpec extends Specification {
                 .build()
 
         when:
-        def response = http.postMultipart('/fileUploadTest/uploadWithMetadata', body)
+        def response = httpPostMultipart('/fileUploadTest/uploadWithMetadata', body)
 
         then:
         response.expectJsonContains(200, [
@@ -102,7 +98,7 @@ class FileUploadSpec extends Specification {
                 .build()
 
         when:
-        def response = http.postMultipart('/fileUploadTest/uploadMultiple', body)
+        def response = httpPostMultipart('/fileUploadTest/uploadMultiple', body)
 
         then:
         response.expectStatus(200)
@@ -129,7 +125,7 @@ class FileUploadSpec extends Specification {
                 .build()
 
         when:
-        def response = http.postMultipart('/fileUploadTest/uploadTextFile', body)
+        def response = httpPostMultipart('/fileUploadTest/uploadTextFile', body)
 
         then:
         response.expectStatus(200)
@@ -149,7 +145,7 @@ class FileUploadSpec extends Specification {
                 .build()
 
         when:
-        def response = http.postMultipart('/fileUploadTest/uploadAndEcho', body)
+        def response = httpPostMultipart('/fileUploadTest/uploadAndEcho', body)
 
         then:
         response.expectJsonContains(200, [
@@ -167,7 +163,7 @@ class FileUploadSpec extends Specification {
                 .build()
 
         when:
-        def response = http.postMultipart('/fileUploadTest/uploadWithValidation', body)
+        def response = httpPostMultipart('/fileUploadTest/uploadWithValidation', body)
 
         then:
         response.expectJsonContains(200, [
@@ -183,7 +179,7 @@ class FileUploadSpec extends Specification {
                 .build()
 
         when:
-        def response = http.postMultipart('/fileUploadTest/uploadWithExtensionValidation', body)
+        def response = httpPostMultipart('/fileUploadTest/uploadWithExtensionValidation', body)
 
         then:
         response.expectJsonContains(200, [
@@ -201,7 +197,7 @@ class FileUploadSpec extends Specification {
                 .build()
 
         when:
-        def response = http.postMultipart('/fileUploadTest/uploadWithExtensionValidation', body)
+        def response = httpPostMultipart('/fileUploadTest/uploadWithExtensionValidation', body)
 
         then:
         response.expectJsonContains(200, [
@@ -220,7 +216,7 @@ class FileUploadSpec extends Specification {
                 .build()
 
         when:
-        def response = http.postMultipart('/fileUploadTest/getFileInfo', body)
+        def response = httpPostMultipart('/fileUploadTest/getFileInfo', body)
 
         then:
         response.expectJsonContains(200, [
@@ -239,7 +235,7 @@ class FileUploadSpec extends Specification {
                 .build()
 
         when:
-        def response = http.postMultipart('/fileUploadTest/getFileInfo', body)
+        def response = httpPostMultipart('/fileUploadTest/getFileInfo', body)
 
         then:
         response.expectJsonContains(200, [
@@ -258,7 +254,7 @@ class FileUploadSpec extends Specification {
                 .build()
 
         when:
-        def response = http.postMultipart('/fileUploadTest/uploadViaParams', body)
+        def response = httpPostMultipart('/fileUploadTest/uploadViaParams', body)
 
         then:
         response.expectJsonContains(200, [
@@ -278,7 +274,7 @@ class FileUploadSpec extends Specification {
                 .build()
 
         when:
-        def response = http.postMultipart('/fileUploadTest/uploadSingle', body)
+        def response = httpPostMultipart('/fileUploadTest/uploadSingle', body)
 
         then:
         response.expectJsonContains(200, [
@@ -295,7 +291,7 @@ class FileUploadSpec extends Specification {
                 .build()
 
         when:
-        def response = http.postMultipart('/fileUploadTest/uploadAndEcho', body)
+        def response = httpPostMultipart('/fileUploadTest/uploadAndEcho', body)
 
         then:
         response.expectJson(200, [
@@ -313,7 +309,7 @@ class FileUploadSpec extends Specification {
                 .build()
 
         when:
-        def response = http.postMultipart('/fileUploadTest/uploadAndEcho', body)
+        def response = httpPostMultipart('/fileUploadTest/uploadAndEcho', body)
 
         then:
         response.expectJson(200, [

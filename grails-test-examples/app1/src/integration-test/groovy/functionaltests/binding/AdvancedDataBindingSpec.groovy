@@ -20,10 +20,8 @@ package functionaltests.binding
 
 import spock.lang.Specification
 
-import org.springframework.beans.factory.annotation.Autowired
-
 import grails.testing.mixin.integration.Integration
-import org.apache.grails.testing.http.client.HttpClient
+import org.apache.grails.testing.http.client.HttpClientSupport
 
 /**
  * Comprehensive integration tests for advanced data binding features.
@@ -44,15 +42,13 @@ import org.apache.grails.testing.http.client.HttpClient
  * - String trimming
  */
 @Integration
-class AdvancedDataBindingSpec extends Specification {
-
-    @Autowired HttpClient http
+class AdvancedDataBindingSpec extends Specification implements HttpClientSupport {
 
     // ========== Map-Based Binding Tests ==========
 
     def "test basic map-based binding"() {
         when:
-        def response = http.get(
+        def response = http(
             '/advancedDataBinding/bindEmployee?firstName=John&lastName=Doe&salary=50000'
         )
 
@@ -66,7 +62,7 @@ class AdvancedDataBindingSpec extends Specification {
 
     def "test nested object binding"() {
         when:
-        def response = http.get(
+        def response = http(
             '/advancedDataBinding/bindEmployee?firstName=Jane&homeAddress.street=123+Main+St&homeAddress.city=Springfield&homeAddress.state=IL'
         )
 
@@ -85,7 +81,7 @@ class AdvancedDataBindingSpec extends Specification {
 
     def "test @BindUsing annotation lowercases and trims email"() {
         when:
-        def response = http.get(
+        def response = http(
             '/advancedDataBinding/bindWithBindUsing?email=John.Doe%40Example.COM'
         )
 
@@ -98,7 +94,7 @@ class AdvancedDataBindingSpec extends Specification {
 
     def "test @BindUsing with mixed case email"() {
         when:
-        def response = http.get(
+        def response = http(
             '/advancedDataBinding/bindWithBindUsing?email=TEST.User%40DOMAIN.org'
         )
 
@@ -110,7 +106,7 @@ class AdvancedDataBindingSpec extends Specification {
 
     def "test @BindingFormat for date parsing - MMddyyyy format"() {
         when:
-        def response = http.get('/advancedDataBinding/bindWithDateFormat?hireDate=01152020')
+        def response = http('/advancedDataBinding/bindWithDateFormat?hireDate=01152020')
 
         then:
         response.expectJsonContains(200, [
@@ -121,7 +117,7 @@ class AdvancedDataBindingSpec extends Specification {
 
     def "test @BindingFormat for date parsing - yyyy-MM-dd format"() {
         when:
-        def response = http.get(
+        def response = http(
             '/advancedDataBinding/bindWithDateFormat?birthDate=1990-05-20',
         )
 
@@ -134,7 +130,7 @@ class AdvancedDataBindingSpec extends Specification {
 
     def "test multiple date formats in same request"() {
         when:
-        def response = http.get(
+        def response = http(
             '/advancedDataBinding/bindWithDateFormat?hireDate=03012021&birthDate=1985-12-25',
         )
 
@@ -149,7 +145,7 @@ class AdvancedDataBindingSpec extends Specification {
 
     def "test binding to List collection"() {
         when:
-        def response = http.get(
+        def response = http(
             '/advancedDataBinding/bindTeamWithMembers?name=Engineering&members%5B0%5D.name=Alice&members%5B0%5D.role=Lead&members%5B1%5D.name=Bob&members%5B1%5D.role=Developer',
         )
 
@@ -167,7 +163,7 @@ class AdvancedDataBindingSpec extends Specification {
 
     def "test binding to List with gaps in indices"() {
         when:
-        def response = http.get(
+        def response = http(
             '/advancedDataBinding/bindTeamWithMembers?name=QA&members%5B0%5D.name=Carol&members%5B2%5D.name=Dave',
         )
 
@@ -186,7 +182,7 @@ class AdvancedDataBindingSpec extends Specification {
 
     def "test binding to Map collection"() {
         when:
-        def response = http.get(
+        def response = http(
             '/advancedDataBinding/bindProjectWithContributors?name=GrailsCore&contributors%5Blead%5D.name=John&contributors%5Blead%5D.expertise=Architecture&contributors%5Bdev%5D.name=Jane&contributors%5Bdev%5D.expertise=Testing',
         )
 
@@ -205,7 +201,7 @@ class AdvancedDataBindingSpec extends Specification {
 
     def "test @RequestParameter maps different parameter names"() {
         when:
-        def response = http.get(
+        def response = http(
             '/advancedDataBinding/bindWithRequestParameter?firstName=Robert&lastName=Smith&age=30',
         )
 
@@ -221,7 +217,7 @@ class AdvancedDataBindingSpec extends Specification {
 
     def "test bindData with include - only specified properties bound"() {
         when:
-        def response = http.get(
+        def response = http(
             '/advancedDataBinding/bindWithIncludeExclude?firstName=Test&lastName=User&email=test%40example.com&salary=100000',
         )
 
@@ -239,7 +235,7 @@ class AdvancedDataBindingSpec extends Specification {
 
     def "test selective property binding using subscript operator"() {
         when:
-        def response = http.get(
+        def response = http(
             '/advancedDataBinding/bindSelectiveProperties?firstName=Selective&lastName=Test&email=should.not.bind%40test.com&salary=999',
         )
 
@@ -257,7 +253,7 @@ class AdvancedDataBindingSpec extends Specification {
 
     def "test using grailsWebDataBinder directly"() {
         when:
-        def response = http.get(
+        def response = http(
             '/advancedDataBinding/bindUsingDirectBinder?firstName=Direct&lastName=Binder&email=DIRECT%40TEST.COM',
         )
 
@@ -274,7 +270,7 @@ class AdvancedDataBindingSpec extends Specification {
 
     def "test command object binding with validation - valid data"() {
         when:
-        def response = http.get(
+        def response = http(
             '/advancedDataBinding/bindCommandObject?firstName=Valid&lastName=User&email=valid%40email.com',
         )
 
@@ -291,7 +287,7 @@ class AdvancedDataBindingSpec extends Specification {
 
     def "test command object binding with validation - invalid data"() {
         when:
-        def response = http.get(
+        def response = http(
             '/advancedDataBinding/bindCommandObject?firstName=&lastName=&email=invalid-email',
         )
 
@@ -306,7 +302,7 @@ class AdvancedDataBindingSpec extends Specification {
 
     def "test nested command object binding"() {
         when:
-        def response = http.get(
+        def response = http(
             '/advancedDataBinding/bindNestedCommandObject?name=Contact+Person&address.street=456+Oak+Ave&address.city=Portland',
         )
 
@@ -324,7 +320,7 @@ class AdvancedDataBindingSpec extends Specification {
 
     def "test JSON body binding to command object"() {
         when:
-        def response = http.postJson('/advancedDataBinding/bindJsonBody', [
+        def response = httpPostJson('/advancedDataBinding/bindJsonBody', [
                 firstName: 'JsonFirst',
                 lastName: 'JsonLast',
                 email: 'json@test.com'
@@ -344,7 +340,7 @@ class AdvancedDataBindingSpec extends Specification {
 
     def "test binding multiple command objects"() {
         when:
-        def response = http.get(
+        def response = http(
             '/advancedDataBinding/bindMultipleCommandObjects?employee.firstName=Multi&employee.lastName=Test&address.street=789+Pine+Rd&address.city=Seattle',
         )
 
@@ -365,7 +361,7 @@ class AdvancedDataBindingSpec extends Specification {
 
     def "test empty string converts to null"() {
         when:
-        def response = http.get(
+        def response = http(
             '/advancedDataBinding/bindEmptyStrings?firstName=&lastName=HasValue',
         )
 
@@ -381,7 +377,7 @@ class AdvancedDataBindingSpec extends Specification {
 
     def "test string trimming during binding"() {
         when:
-        def response = http.get(
+        def response = http(
             '/advancedDataBinding/bindWithTrimming?firstName=+++Trimmed+++',
         )
 
@@ -396,7 +392,7 @@ class AdvancedDataBindingSpec extends Specification {
 
     def "test valid type conversion"() {
         when:
-        def response = http.get(
+        def response = http(
             '/advancedDataBinding/bindWithTypeConversion?salary=75000&firstName=TypeTest',
         )
 
@@ -411,7 +407,7 @@ class AdvancedDataBindingSpec extends Specification {
 
     def "test binding with special characters in values"() {
         when:
-        def response = http.get(
+        def response = http(
             '/advancedDataBinding/bindEmployee?firstName=O%27Brien&lastName=M%C3%BCller',
         )
 
@@ -424,7 +420,7 @@ class AdvancedDataBindingSpec extends Specification {
 
     def "test binding with unicode characters"() {
         when:
-        def response = http.get(
+        def response = http(
             '/advancedDataBinding/bindEmployee?firstName=%E6%97%A5%E6%9C%AC%E8%AA%9E',
         )
 
@@ -434,7 +430,7 @@ class AdvancedDataBindingSpec extends Specification {
 
     def "test binding with null parameter values"() {
         when:
-        def response = http.get(
+        def response = http(
             '/advancedDataBinding/bindEmployee?firstName=TestNull',
         )
 

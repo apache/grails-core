@@ -22,17 +22,14 @@ import spock.lang.Issue
 import spock.lang.Specification
 
 import grails.testing.mixin.integration.Integration
-import org.apache.grails.testing.http.client.HttpClient
-import org.springframework.beans.factory.annotation.Autowired
+import org.apache.grails.testing.http.client.HttpClientSupport
 
 @Integration
-class NamespacedBookSpec extends Specification {
-
-    @Autowired HttpClient http
+class NamespacedBookSpec extends Specification implements HttpClientSupport {
 
     void 'test view rendering with a namespace'() {
         when: 'A request is sent to a controller with a namespace'
-        def response = http.get('/api/book')
+        def response = http('/api/book')
 
         then: 'The response is correct'
         response.expectJson(200, 'Content-Type': 'application/json;charset=UTF-8', [
@@ -43,7 +40,7 @@ class NamespacedBookSpec extends Specification {
 
     void 'test nested template rendering with a namespace'() {
         when: 'A request is sent to a controller with a namespace'
-        def response = http.get('/api/book/nested')
+        def response = http('/api/book/nested')
 
         then: 'The response contains the child template'
         response.expectJson(200, 'Content-Type': 'application/json;charset=UTF-8', [
@@ -53,7 +50,7 @@ class NamespacedBookSpec extends Specification {
 
     void 'test the correct content type is chosen (json)'() {
         when: 'A request is sent to a controller with a namespace'
-        def response = http.get('/api/book')
+        def response = http('/api/book')
 
         then: 'The response contains the child template'
         response.expectJson(200, 'Content-Type': 'application/json;charset=UTF-8', [
@@ -64,7 +61,7 @@ class NamespacedBookSpec extends Specification {
 
     void 'test the correct content type is chosen (hal)'() {
         when: 'A request is sent to a controller with a namespace'
-        def response = http.get('/api/book', 'Accept': 'application/hal+json')
+        def response = http('/api/book', 'Accept': 'application/hal+json')
 
         then: 'The response contains the child template'
         response.expectJsonContains(200, 'Content-Type': 'application/hal+json;charset=UTF-8', [
@@ -76,7 +73,7 @@ class NamespacedBookSpec extends Specification {
 
     void 'test render(view: "..", model: ..) in controllers with namespaces works'() {
         when: 'A request is sent to a controller with a namespace'
-        def response = http.get('/api/book/testRender')
+        def response = http('/api/book/testRender')
 
         then: 'The response is correct'
         response.expectJson(200, 'Content-Type': 'application/json;charset=UTF-8', [
@@ -87,7 +84,7 @@ class NamespacedBookSpec extends Specification {
 
     void 'test respond(foo, view: ..) in controllers with namespaces works'() {
         when: 'A request is sent to a controller with a namespace'
-        def response = http.get('/api/book/testRespond')
+        def response = http('/api/book/testRespond')
 
         then: 'The response is correct'
         response.expectJson(200, 'Content-Type': 'application/json;charset=UTF-8', [
@@ -99,7 +96,7 @@ class NamespacedBookSpec extends Specification {
 
     void 'test respond(foo, view: ..) in controllers with namespaces works, view outside of namespace'() {
         when: 'A request is sent to a controller with a namespace'
-        def response = http.get('/api/book/testRespondOutsideNamespace')
+        def response = http('/api/book/testRespondOutsideNamespace')
 
         then: 'The response is correct'
         response.expectJson(200, 'Content-Type': 'application/json;charset=UTF-8', [
@@ -111,7 +108,7 @@ class NamespacedBookSpec extends Specification {
     @Issue('https://github.com/apache/grails-views/issues/186')
     void 'test view rendering with a namespace from a map'() {
         when: 'A request is sent to a controller with a namespace'
-        def response = http.get('/api/book/message')
+        def response = http('/api/book/message')
 
         then: 'The response is correct'
         response.expectJson(200, 'Content-Type': 'application/json;charset=UTF-8', [

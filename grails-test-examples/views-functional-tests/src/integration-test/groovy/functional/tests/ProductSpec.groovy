@@ -21,17 +21,14 @@ package functional.tests
 import spock.lang.Specification
 
 import grails.testing.mixin.integration.Integration
-import org.apache.grails.testing.http.client.HttpClient
-import org.springframework.beans.factory.annotation.Autowired
+import org.apache.grails.testing.http.client.HttpClientSupport
 
 @Integration
-class ProductSpec extends Specification {
-
-    @Autowired HttpClient http
+class ProductSpec extends Specification implements HttpClientSupport {
 
     void testEmptyProducts() {
         when:
-        def response = http.get('/products')
+        def response = http('/products')
 
         then: 'The values returned are there'
         response.expectJsonContains(200, 'Content-Type': 'application/hal+json;charset=UTF-8', [
@@ -45,7 +42,7 @@ class ProductSpec extends Specification {
         and: 'the hal _links attribute is present'
         def json = response.json()
         json._links.size() == 1
-        json._links.self.href.startsWith("$http.baseUrl/product")
+        json._links.self.href.startsWith("$httpBaseUrl/product")
 
         and: 'there are no products yet'
         json._embedded.products.size() == 0
@@ -53,7 +50,7 @@ class ProductSpec extends Specification {
 
     void testSingleProduct() {
         when:
-        def createResponse = http.postJson('/products', [
+        def createResponse = httpPostJson('/products', [
                 name: 'Product 1',
                 description: 'product 1 description',
                 price: 123.45
@@ -64,7 +61,7 @@ class ProductSpec extends Specification {
         def createBody = createResponse.json()
 
         when: 'We get the products'
-        def response = http.get('/products')
+        def response = http('/products')
 
         then: 'The values returned are there'
         response.expectJsonContains(200, 'Content-Type': 'application/hal+json;charset=UTF-8', [
@@ -78,14 +75,14 @@ class ProductSpec extends Specification {
         and: 'the hal _links attribute is present'
         def json = response.json()
         json._links.size() == 1
-        json._links.self.href.startsWith("$http.baseUrl/product")
+        json._links.self.href.startsWith("$httpBaseUrl/product")
 
         and: 'the product is present'
         json._embedded.products.size() == 1
         json._embedded.products.first().name == 'Product 1'
 
         cleanup:
-        http.delete("/products/${createBody.id}")
+        httpDelete("/products/${createBody.id}")
     }
 
     void 'test a page worth of products'() {
@@ -97,13 +94,13 @@ class ProductSpec extends Specification {
                 description: "product ${productNumber} description",
                 price: productNumber + (productNumber / 100)
             ]
-            def createResponse = http.postJson('/products', product)
+            def createResponse = httpPostJson('/products', product)
             assert createResponse.statusCode() == 201
             productsIds << createResponse.json().id
         }
 
         when: 'We get the products'
-        def response = http.get('/products')
+        def response = http('/products')
 
         then:
         response.expectHeaders(200, 'Content-Type': 'application/hal+json;charset=UTF-8')
@@ -120,17 +117,17 @@ class ProductSpec extends Specification {
 
         and: 'the hal _links attribute is present'
         body._links.size() == 4
-        body._links.self.href.startsWith("$http.baseUrl/product")
-        body._links.first.href.startsWith("$http.baseUrl/product")
-        body._links.next.href.startsWith("$http.baseUrl/product")
-        body._links.last.href.startsWith("$http.baseUrl/product")
+        body._links.self.href.startsWith("$httpBaseUrl/product")
+        body._links.first.href.startsWith("$httpBaseUrl/product")
+        body._links.next.href.startsWith("$httpBaseUrl/product")
+        body._links.last.href.startsWith("$httpBaseUrl/product")
 
         and: 'the product is present'
         body._embedded.products.size() == 10
 
         cleanup:
         productsIds.each { id ->
-            http.delete("/products/$id")
+            httpDelete("/products/$id")
         }
     }
 
@@ -138,7 +135,7 @@ class ProductSpec extends Specification {
         given:
         def productsIds = []
         30.times { productNumber ->
-            def createResponse = http.postJson('/products', [
+            def createResponse = httpPostJson('/products', [
                     name: "Product $productNumber",
                     description: "product ${productNumber} description",
                     price: productNumber + (productNumber / 100)
@@ -148,7 +145,7 @@ class ProductSpec extends Specification {
         }
 
         when: 'We get the products'
-        def response = http.get('/products?offset=10')
+        def response = http('/products?offset=10')
 
         then: 'The values returned are there'
         response.expectJsonContains(200, 'Content-Type': 'application/hal+json;charset=UTF-8', [
@@ -162,18 +159,18 @@ class ProductSpec extends Specification {
         and: 'the hal _links attribute is present'
         def json = response.json()
         json._links.size() == 5
-        json._links.self.href.startsWith("$http.baseUrl/product")
-        json._links.first.href.startsWith("$http.baseUrl/product")
-        json._links.prev.href.startsWith("$http.baseUrl/product")
-        json._links.next.href.startsWith("$http.baseUrl/product")
-        json._links.last.href.startsWith("$http.baseUrl/product")
+        json._links.self.href.startsWith("$httpBaseUrl/product")
+        json._links.first.href.startsWith("$httpBaseUrl/product")
+        json._links.prev.href.startsWith("$httpBaseUrl/product")
+        json._links.next.href.startsWith("$httpBaseUrl/product")
+        json._links.last.href.startsWith("$httpBaseUrl/product")
 
         and: 'the product is present'
         json._embedded.products.size() == 10
 
         cleanup:
         productsIds.each { id ->
-            http.delete("/products/$id")
+            httpDelete("/products/$id")
         }
     }
 }

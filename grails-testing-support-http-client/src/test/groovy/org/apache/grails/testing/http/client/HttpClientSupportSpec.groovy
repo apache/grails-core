@@ -18,7 +18,7 @@
  */
 package org.apache.grails.testing.http.client
 
-import java.net.http.HttpClient as JdkHttpClient
+import java.net.http.HttpClient
 import java.net.http.HttpHeaders
 import java.net.http.HttpRequest
 import java.net.http.HttpResponse
@@ -37,14 +37,14 @@ import javax.net.ssl.SSLParameters
 
 import spock.lang.Specification
 
-class HttpClientSpec extends Specification {
+class HttpClientSupportSpec extends Specification {
 
-    void 'getBaseUrl() throws if not set'() {
+    void 'getHttpBaseUrl() throws if not set'() {
         given:
-        def testClient = new HttpClient()
+        def testClient = new TestClient()
 
         when:
-        testClient.baseUrl
+        testClient.httpBaseUrl
 
         then:
         def e = thrown(IllegalStateException)
@@ -53,11 +53,11 @@ class HttpClientSpec extends Specification {
 
     void 'shared client is singleton and reused across threads'() {
         given:
-        def testClient = new HttpClient()
+        def testClient = new TestClient()
         def mainThreadClient = testClient.httpClient
 
         and:
-        def otherThreadClientRef = new AtomicReference<JdkHttpClient>()
+        def otherThreadClientRef = new AtomicReference<HttpClient>()
         def latch = new CountDownLatch(1)
 
         when:
@@ -75,40 +75,40 @@ class HttpClientSpec extends Specification {
         mainThreadClient.is(otherThreadClientRef.get())
     }
 
-    void 'requestWith uses hard-coded default request timeout'() {
+    void 'httpRequestWith uses hard-coded default request timeout'() {
         given:
-        def testClient = new HttpClient('http://localhost:8080')
+        def testClient = new TestClient('http://localhost:8080')
 
         when:
-        def request = testClient.requestWith('/demo')
+        def request = testClient.httpRequestWith('/demo')
 
         then:
         request.timeout().isPresent()
         request.timeout().get() == Duration.ofSeconds(60)
     }
 
-    void 'newClientWith applies custom client builder configuration'() {
+    void 'httpClientWith applies custom client builder configuration'() {
         given:
-        def testClient = new HttpClient()
+        def testClient = new TestClient()
 
         when:
-        def client = testClient.newClientWith {
+        def client = testClient.httpClientWith {
             connectTimeout(Duration.ofSeconds(5))
-            followRedirects(JdkHttpClient.Redirect.NEVER)
+            followRedirects(HttpClient.Redirect.NEVER)
         }
 
         then:
         client.connectTimeout().isPresent()
         client.connectTimeout().get() == Duration.ofSeconds(5)
-        client.followRedirects() == JdkHttpClient.Redirect.NEVER
+        client.followRedirects() == HttpClient.Redirect.NEVER
     }
 
-    void 'requestWith allows overriding defaults and resolves relative URI'() {
+    void 'httpRequestWith allows overriding defaults and resolves relative URI'() {
         given:
-        def testClient = new HttpClient('http://localhost:8080')
+        def testClient = new TestClient('http://localhost:8080')
 
         when:
-        def request = testClient.requestWith('api/demo') {
+        def request = testClient.httpRequestWith('api/demo') {
             timeout(Duration.ofSeconds(10))
             GET()
         }
@@ -120,25 +120,25 @@ class HttpClientSpec extends Specification {
         request.method() == 'GET'
     }
 
-    void 'newClientWith without configurer keeps hard-coded defaults'() {
+    void 'httpClientWith without configurer keeps hard-coded defaults'() {
         given:
-        def testClient = new HttpClient()
+        def testClient = new TestClient()
 
         when:
-        def client = testClient.newClientWith()
+        def client = testClient.httpClientWith()
 
         then:
         client.connectTimeout().isPresent()
         client.connectTimeout().get() == Duration.ofSeconds(60)
-        client.followRedirects() == JdkHttpClient.Redirect.ALWAYS
+        client.followRedirects() == HttpClient.Redirect.ALWAYS
     }
 
-    void 'requestWith keeps absolute URI and default timeout when no configurer is provided'() {
+    void 'httpRequestWith keeps absolute URI and default timeout when no configurer is provided'() {
         given:
-        def testClient = new HttpClient('http://localhost:9999')
+        def testClient = new TestClient('http://localhost:9999')
 
         when:
-        def request = testClient.requestWith('https://example.org/ping')
+        def request = testClient.httpRequestWith('https://example.org/ping')
 
         then:
         request.uri() == URI.create('https://example.org/ping')
@@ -146,13 +146,13 @@ class HttpClientSpec extends Specification {
         request.timeout().get() == Duration.ofSeconds(60)
     }
 
-    void 'delete(path, client) uses DELETE method and provided client'() {
+    void 'httpDelete(path, client) uses DELETE method and provided client'() {
         given:
-        def testClient = new HttpClient('http://localhost:8080')
-        def jdkClient = new FakeJdkHttpClient(Optional.of(Duration.ofSeconds(2)))
+        def testClient = new TestClient('http://localhost:8080')
+        def jdkClient = new FakeHttpClient(Optional.of(Duration.ofSeconds(2)))
 
         when:
-        def result = testClient.delete('/products/1', jdkClient)
+        def result = testClient.httpDelete('/products/1', jdkClient)
 
         then:
         jdkClient.lastRequest != null
@@ -161,13 +161,13 @@ class HttpClientSpec extends Specification {
         result.statusCode() == 200
     }
 
-    void 'options(path, client) uses OPTIONS method and provided client'() {
+    void 'httpOptions(path, client) uses OPTIONS method and provided client'() {
         given:
-        def testClient = new HttpClient('http://localhost:8080')
-        def jdkClient = new FakeJdkHttpClient(Optional.of(Duration.ofSeconds(2)))
+        def testClient = new TestClient('http://localhost:8080')
+        def jdkClient = new FakeHttpClient(Optional.of(Duration.ofSeconds(2)))
 
         when:
-        def result = testClient.options('/products', jdkClient)
+        def result = testClient.httpOptions('/products', jdkClient)
 
         then:
         jdkClient.lastRequest != null
@@ -176,11 +176,11 @@ class HttpClientSpec extends Specification {
         result.statusCode() == 200
     }
 
-    void 'sendRequest(HttpRequest, client) prints timeout warning when request timeout is missing'() {
+    void 'sendHttpRequest(HttpRequest, client) prints timeout warning when request timeout is missing'() {
         given:
-        def testClient = new HttpClient('http://localhost:8080')
+        def testClient = new TestClient('http://localhost:8080')
         def request = HttpRequest.newBuilder(URI.create('http://localhost:8080/no-timeout')).GET().build()
-        def client = new FakeJdkHttpClient(Optional.of(Duration.ofSeconds(2)))
+        def client = new FakeHttpClient(Optional.of(Duration.ofSeconds(2)))
 
         and:
         def oldOut = System.out
@@ -188,7 +188,7 @@ class HttpClientSpec extends Specification {
         System.setOut(new PrintStream(out, true, 'UTF-8'))
 
         when:
-        def response = testClient.sendRequest(request, client)
+        def response = testClient.sendHttpRequest(request, client)
 
         then:
         response.statusCode() == 200
@@ -199,11 +199,11 @@ class HttpClientSpec extends Specification {
         System.setOut(oldOut)
     }
 
-    void 'sendRequest(HttpRequest, client) prints connect-timeout warning when custom client has no connect timeout'() {
+    void 'sendHttpRequest(HttpRequest, client) prints connect-timeout warning when custom client has no connect timeout'() {
         given:
-        def testClient = new HttpClient('http://localhost:8080')
-        def request = testClient.requestWith('/uses-custom-client') { GET() }
-        def client = new FakeJdkHttpClient(Optional.empty())
+        def testClient = new TestClient('http://localhost:8080')
+        def request = testClient.httpRequestWith('/uses-custom-client') { GET() }
+        def client = new FakeHttpClient(Optional.empty())
 
         and:
         def oldOut = System.out
@@ -211,7 +211,7 @@ class HttpClientSpec extends Specification {
         System.setOut(new PrintStream(out, true, 'UTF-8'))
 
         when:
-        def response = testClient.sendRequest(request, client)
+        def response = testClient.sendHttpRequest(request, client)
 
         then:
         response.statusCode() == 200
@@ -221,13 +221,13 @@ class HttpClientSpec extends Specification {
         System.setOut(oldOut)
     }
 
-    void 'get(headers, path, client) forwards request headers'() {
+    void 'http(headers, path, client) forwards request headers'() {
         given:
-        def testClient = new HttpClient('http://localhost:8080')
-        def jdkClient = new FakeJdkHttpClient(Optional.of(Duration.ofSeconds(2)))
+        def testClient = new TestClient('http://localhost:8080')
+        def jdkClient = new FakeHttpClient(Optional.of(Duration.ofSeconds(2)))
 
         when:
-        def result = testClient.get(['X-Trace-Id': 'abc-123'], '/products', jdkClient)
+        def result = testClient.http(['X-Trace-Id': 'abc-123'], '/products', jdkClient)
 
         then:
         result.statusCode() == 200
@@ -236,11 +236,11 @@ class HttpClientSpec extends Specification {
 
     void 'post with String body sets method content type and body'() {
         given:
-        def testClient = new HttpClient('http://localhost:8080')
-        def jdkClient = new FakeJdkHttpClient(Optional.of(Duration.ofSeconds(2)))
+        def testClient = new TestClient('http://localhost:8080')
+        def jdkClient = new FakeHttpClient(Optional.of(Duration.ofSeconds(2)))
 
         when:
-        def result = testClient.post(['X-Req': '1'], '/products', '{"name":"Widget"}', 'application/json', jdkClient)
+        def result = testClient.httpPost(['X-Req': '1'], '/products', '{"name":"Widget"}', 'application/json', jdkClient)
 
         then:
         result.statusCode() == 200
@@ -252,11 +252,11 @@ class HttpClientSpec extends Specification {
 
     void 'post with Map body serializes JSON'() {
         given:
-        def testClient = new HttpClient('http://localhost:8080')
-        def jdkClient = new FakeJdkHttpClient(Optional.of(Duration.ofSeconds(2)))
+        def testClient = new TestClient('http://localhost:8080')
+        def jdkClient = new FakeHttpClient(Optional.of(Duration.ofSeconds(2)))
 
         when:
-        testClient.postJson('/products', [name: 'Widget', qty: 2], jdkClient)
+        testClient.httpPostJson('/products', [name: 'Widget', qty: 2], jdkClient)
 
         then:
         jdkClient.lastRequest.method() == 'POST'
@@ -268,15 +268,15 @@ class HttpClientSpec extends Specification {
 
     void 'post with MultipartBody sends multipart content type and payload bytes'() {
         given:
-        def testClient = new HttpClient('http://localhost:8080')
-        def jdkClient = new FakeJdkHttpClient(Optional.of(Duration.ofSeconds(2)))
+        def testClient = new TestClient('http://localhost:8080')
+        def jdkClient = new FakeHttpClient(Optional.of(Duration.ofSeconds(2)))
         def multipart = MultipartBody.builder()
                 .addPart('title', 'demo')
                 .addPart('file', 'a.txt', 'text/plain', 'hello')
                 .build()
 
         when:
-        testClient.postMultipart('/upload', multipart, jdkClient)
+        testClient.httpPostMultipart('/upload', multipart, jdkClient)
 
         then:
         jdkClient.lastRequest.method() == 'POST'
@@ -290,11 +290,11 @@ class HttpClientSpec extends Specification {
 
     void 'put and patch map overloads serialize JSON and set correct methods'() {
         given:
-        def testClient = new HttpClient('http://localhost:8080')
-        def jdkClient = new FakeJdkHttpClient(Optional.of(Duration.ofSeconds(2)))
+        def testClient = new TestClient('http://localhost:8080')
+        def jdkClient = new FakeHttpClient(Optional.of(Duration.ofSeconds(2)))
 
         when: 'PUT with map body'
-        testClient.putJson('/products/1', [name: 'updated'], jdkClient)
+        testClient.httpPutJson('/products/1', [name: 'updated'], jdkClient)
 
         then:
         jdkClient.lastRequest.method() == 'PUT'
@@ -302,7 +302,7 @@ class HttpClientSpec extends Specification {
         readRequestBody(jdkClient.lastRequest).contains('"name":"updated"')
 
         when: 'PATCH with map body'
-        testClient.patchJson('/products/1', [name: 'patched'], jdkClient)
+        testClient.httpPatchJson('/products/1', [name: 'patched'], jdkClient)
 
         then:
         jdkClient.lastRequest.method() == 'PATCH'
@@ -312,11 +312,11 @@ class HttpClientSpec extends Specification {
 
     void 'postXml uses XML content type and generated payload'() {
         given:
-        def testClient = new HttpClient('http://localhost:8080')
-        def jdkClient = new FakeJdkHttpClient(Optional.of(Duration.ofSeconds(2)))
+        def testClient = new TestClient('http://localhost:8080')
+        def jdkClient = new FakeHttpClient(Optional.of(Duration.ofSeconds(2)))
 
         when:
-        testClient.postXml('/products', 'X-Req': '1', {
+        testClient.httpPostXml('/products', 'X-Req': '1', {
             product {
                 name('Widget')
             }
@@ -331,11 +331,11 @@ class HttpClientSpec extends Specification {
 
     void 'putXml uses XML content type and generated payload'() {
         given:
-        def testClient = new HttpClient('http://localhost:8080')
-        def jdkClient = new FakeJdkHttpClient(Optional.of(Duration.ofSeconds(2)))
+        def testClient = new TestClient('http://localhost:8080')
+        def jdkClient = new FakeHttpClient(Optional.of(Duration.ofSeconds(2)))
 
         when:
-        testClient.putXml('/products/1', 'X-Req': '2', {
+        testClient.httpPutXml('/products/1', 'X-Req': '2', {
             product {
                 name('Updated')
             }
@@ -350,11 +350,11 @@ class HttpClientSpec extends Specification {
 
     void 'patchXml uses XML content type and generated payload'() {
         given:
-        def testClient = new HttpClient('http://localhost:8080')
-        def jdkClient = new FakeJdkHttpClient(Optional.of(Duration.ofSeconds(2)))
+        def testClient = new TestClient('http://localhost:8080')
+        def jdkClient = new FakeHttpClient(Optional.of(Duration.ofSeconds(2)))
 
         when:
-        testClient.patchXml('/products/1', 'X-Req': '3', {
+        testClient.httpPatchXml('/products/1', 'X-Req': '3', {
             product {
                 name('Patched')
             }
@@ -369,11 +369,11 @@ class HttpClientSpec extends Specification {
 
     void 'patch map overload with headers and client serializes json payload'() {
         given:
-        def testClient = new HttpClient('http://localhost:8080')
-        def jdkClient = new FakeJdkHttpClient(Optional.of(Duration.ofSeconds(2)))
+        def testClient = new TestClient('http://localhost:8080')
+        def jdkClient = new FakeHttpClient(Optional.of(Duration.ofSeconds(2)))
 
         when:
-        testClient.patch('/products/1', 'X-Req': '4', [name: 'patched'], jdkClient)
+        testClient.httpPatchJson('/products/1', 'X-Req': '4', [name: 'patched'], jdkClient)
 
         then:
         jdkClient.lastRequest.method() == 'PATCH'
@@ -384,53 +384,53 @@ class HttpClientSpec extends Specification {
 
     void 'delete and options with headers forward header and method'() {
         given:
-        def testClient = new HttpClient('http://localhost:8080')
-        def jdkClient = new FakeJdkHttpClient(Optional.of(Duration.ofSeconds(2)))
+        def testClient = new TestClient('http://localhost:8080')
+        def jdkClient = new FakeHttpClient(Optional.of(Duration.ofSeconds(2)))
 
         when:
-        testClient.delete('/products/1', 'X-Req': '5', jdkClient)
+        testClient.httpDelete('/products/1', 'X-Req': '5', jdkClient)
 
         then:
         jdkClient.lastRequest.method() == 'DELETE'
         jdkClient.lastRequest.headers().firstValue('X-Req').orElse(null) == '5'
 
         when:
-        testClient.options('/products', 'X-Req': '6', jdkClient)
+        testClient.httpOptions('/products', 'X-Req': '6', jdkClient)
 
         then:
         jdkClient.lastRequest.method() == 'OPTIONS'
         jdkClient.lastRequest.headers().firstValue('X-Req').orElse(null) == '6'
     }
 
-    void 'requestWith throws IllegalArgumentException for null pathOrUrl'() {
+    void 'httpRequestWith throws IllegalArgumentException for null pathOrUrl'() {
         given:
-        def testClient = new HttpClient('http://localhost:8080')
+        def testClient = new TestClient('http://localhost:8080')
 
         when:
-        testClient.requestWith(null)
+        testClient.httpRequestWith(null)
 
         then:
         def e = thrown(IllegalArgumentException)
         e.message.contains('pathOrUrl must not be null')
     }
 
-    void 'requestWith relative path without baseUrl throws IllegalStateException'() {
+    void 'httpRequestWith relative path without baseUrl throws IllegalStateException'() {
         given:
-        def testClient = new HttpClient()
+        def testClient = new TestClient()
 
         when:
-        testClient.requestWith('/products')
+        testClient.httpRequestWith('/products')
 
         then:
         def e = thrown(IllegalStateException)
         e.message.contains('No baseUrl set')
     }
 
-    void 'sendRequest(HttpRequest, client) does not print timeout warnings when timeout is present and client is configured'() {
+    void 'sendHttpRequest(HttpRequest, client) does not print timeout warnings when timeout is present and client is configured'() {
         given:
-        def testClient = new HttpClient('http://localhost:8080')
-        def request = testClient.requestWith('/ok') { GET() }
-        def client = new FakeJdkHttpClient(Optional.of(Duration.ofSeconds(2)))
+        def testClient = new TestClient('http://localhost:8080')
+        def request = testClient.httpRequestWith('/ok') { GET() }
+        def client = new FakeHttpClient(Optional.of(Duration.ofSeconds(2)))
 
         and:
         def oldOut = System.out
@@ -438,7 +438,7 @@ class HttpClientSpec extends Specification {
         System.setOut(new PrintStream(out, true, 'UTF-8'))
 
         when:
-        def response = testClient.sendRequest(request, client)
+        def response = testClient.sendHttpRequest(request, client)
 
         then:
         response.statusCode() == 200
@@ -446,6 +446,24 @@ class HttpClientSpec extends Specification {
 
         cleanup:
         System.setOut(oldOut)
+    }
+
+    private static class TestClient implements HttpClientSupport {
+
+        private String base
+
+        TestClient() {}
+        TestClient(String baseUrl) {
+            this.base = baseUrl
+        }
+
+        @Override
+        String getHttpBaseUrl() {
+            if (base) {
+                return base
+            }
+            HttpClientSupport.super.getHttpBaseUrl()
+        }
     }
 
     private static String readRequestBody(HttpRequest request) {
@@ -493,12 +511,12 @@ class HttpClientSpec extends Specification {
         return new String(bytes.toByteArray(), StandardCharsets.UTF_8)
     }
 
-    private static class FakeJdkHttpClient extends JdkHttpClient {
+    private static class FakeHttpClient extends HttpClient {
 
         private final Optional<Duration> connectTimeoutValue
         HttpRequest lastRequest
 
-        FakeJdkHttpClient(Optional<Duration> connectTimeoutValue) {
+        FakeHttpClient(Optional<Duration> connectTimeoutValue) {
             this.connectTimeoutValue = connectTimeoutValue
         }
 

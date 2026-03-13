@@ -24,12 +24,10 @@ import spock.lang.Unroll
 import org.springframework.beans.factory.annotation.Autowired
 
 import grails.testing.mixin.integration.Integration
-import org.apache.grails.testing.http.client.HttpClient
+import org.apache.grails.testing.http.client.HttpClientSupport
 
 @Integration
-class ModelInterceptorIntSpec extends Specification {
-
-    @Autowired HttpClient http
+class ModelInterceptorIntSpec extends Specification implements HttpClientSupport {
 
     @Autowired
     ModelInterceptor modelInterceptor
@@ -37,7 +35,7 @@ class ModelInterceptorIntSpec extends Specification {
     @Unroll
     void "interceptor should get model from #controller"() {
         given:
-        def response = http.get("/$controller")
+        def response = http("/$controller")
 
         expect:
         response.expectStatus(200)

@@ -155,7 +155,7 @@ class IntegrationTestAstTransformation implements ASTTransformation, TransformWi
         if (applicationClassNode) {
             ClassNode classNode = (ClassNode) parent
 
-            weaveIntegrationTestMixin(classNode, applicationClassNode, source)
+            weaveIntegrationTestMixin(classNode, applicationClassNode)
         }
 
     }
@@ -164,13 +164,12 @@ class IntegrationTestAstTransformation implements ASTTransformation, TransformWi
      * Applies integration test mixin behavior to the target class.
      *
      * <p>This method wires Spring/Grails test annotations, adds port support for web tests,
-     * enables by-name autowiring, and imports integration test auto-configurations.</p>
+     * and enables by-name autowiring in tests</p>
      *
      * @param classNode the test class being transformed
      * @param applicationClassNode the resolved Grails application class
-     * @param source the source unit used for compile-time error reporting
      */
-    void weaveIntegrationTestMixin(ClassNode classNode, ClassNode applicationClassNode, SourceUnit source) {
+    void weaveIntegrationTestMixin(ClassNode classNode, ClassNode applicationClassNode) {
         if (applicationClassNode == null) {
             return
         }
@@ -230,7 +229,6 @@ class IntegrationTestAstTransformation implements ASTTransformation, TransformWi
         } else {
             classNode.addAnnotation(new AnnotationNode(INTEGRATION_TEST_CLASS_NODE))
         }
-        IntegrationTestAutoConfigurationSupport.addIntegrationTestAutoConfigurations(classNode, source)
     }
 
     /**
@@ -298,11 +296,6 @@ class IntegrationTestAstTransformation implements ASTTransformation, TransformWi
         }
     }
 
-    /**
-     * Returns the transform priority so this transformation runs in Grails' integration phase.
-     *
-     * @return the Grails transform order constant for integration processing
-     */
     @Override
     int priority() {
         GroovyTransformOrder.INTEGRATION_ORDER

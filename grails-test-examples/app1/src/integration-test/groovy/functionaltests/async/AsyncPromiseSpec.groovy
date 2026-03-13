@@ -28,23 +28,22 @@ import spock.lang.Unroll
 import org.springframework.beans.factory.annotation.Autowired
 
 import grails.testing.mixin.integration.Integration
-import org.apache.grails.testing.http.client.HttpClient
+import org.apache.grails.testing.http.client.HttpClientSupport
 
 /**
  * Integration tests for async/promise functionality in Grails.
  * Tests various async patterns including tasks, promises, chaining, and error handling.
  */
 @Integration
-class AsyncPromiseSpec extends Specification {
+class AsyncPromiseSpec extends Specification implements HttpClientSupport {
 
     @Autowired AsyncProcessingService asyncProcessingService
-    @Autowired HttpClient http
 
     // ========== Basic Async Task Tests ==========
 
     def "simple async task completes successfully"() {
         when: "calling simple task endpoint"
-        def response = http.get('/asyncTest/simpleTask')
+        def response = http('/asyncTest/simpleTask')
 
         then: "task completes with success status"
         response.expectJson(200, [
@@ -58,7 +57,7 @@ class AsyncPromiseSpec extends Specification {
         def value = 7
 
         when: "calling compute endpoint"
-        def response = http.get("/asyncTest/computeTask?value=${value}")
+        def response = http("/asyncTest/computeTask?value=${value}")
 
         then: "computed result is correct"
         response.expectJson(200, [
@@ -69,7 +68,7 @@ class AsyncPromiseSpec extends Specification {
 
     def "parallel tasks complete and return all results"() {
         when: "calling parallel tasks endpoint"
-        def response = http.get('/asyncTest/parallelTasks')
+        def response = http('/asyncTest/parallelTasks')
 
         then: "all tasks complete"
         response.expectJson(200, [
@@ -87,7 +86,7 @@ class AsyncPromiseSpec extends Specification {
         def input = 'hello'
 
         when: "calling chained endpoint"
-        def response = http.get("/asyncTest/chainedTasks?input=${input}")
+        def response = http("/asyncTest/chainedTasks?input=${input}")
 
         then: "data is processed through all stages"
         response.expectJson(200, [
@@ -100,7 +99,7 @@ class AsyncPromiseSpec extends Specification {
 
     def "async task handles success without error"() {
         when: "calling task that should succeed"
-        def response = http.get('/asyncTest/taskWithError?fail=false')
+        def response = http('/asyncTest/taskWithError?fail=false')
 
         then: "success response returned"
         response.expectJson(200, [
@@ -112,7 +111,7 @@ class AsyncPromiseSpec extends Specification {
     @Unroll
     def "async task with timeout completes within time limit"(int delay, int timeout, int elapsedMin, String status, String result) {
         when: "calling task with reasonable timeout"
-        def response = http.get("/asyncTest/taskWithTimeout?delay=$delay&timeout=$timeout")
+        def response = http("/asyncTest/taskWithTimeout?delay=$delay&timeout=$timeout")
 
         then: "task completes as expected"
         response.expectStatus(200)
@@ -134,14 +133,8 @@ class AsyncPromiseSpec extends Specification {
         given: "an input string"
         def input = 'test'
 
-        and: "a request with an extra long timeout"
-        // This test times out regularly in CI
-        def request = http.requestWith("/asyncTest/useAsyncService?input=${input}") {
-            timeout(Duration.ofMinutes(2))
-        }
-
         when: "calling async service endpoint"
-        def response = http.sendRequest(request)
+        def response = http("/asyncTest/useAsyncService?input=${input}")
 
         then: "service processes input correctly"
         response.expectJson(200, [
@@ -155,7 +148,7 @@ class AsyncPromiseSpec extends Specification {
         def value = 6
 
         when: "calling async calculation endpoint"
-        def response = http.get("/asyncTest/asyncCalculation?value=${value}")
+        def response = http("/asyncTest/asyncCalculation?value=${value}")
 
         then: "calculation is correct"
         response.expectJson(200, [
@@ -166,7 +159,7 @@ class AsyncPromiseSpec extends Specification {
 
     def "async batch processing reverses all items"() {
         when: "calling batch endpoint with default items"
-        def response = http.get('/asyncTest/asyncBatch')
+        def response = http('/asyncTest/asyncBatch')
 
         then: "all items are reversed"
         response.expectStatus(200)
@@ -184,7 +177,7 @@ class AsyncPromiseSpec extends Specification {
         def taskId = 'task-123'
 
         when: "calling long running endpoint"
-        def response = http.get("/asyncTest/longRunning?taskId=${taskId}")
+        def response = http("/asyncTest/longRunning?taskId=${taskId}")
 
         then: "operation completes with expected info"
         response.expectStatus(200)
@@ -202,7 +195,7 @@ class AsyncPromiseSpec extends Specification {
         def v2 = 4
 
         when: "calling compose endpoint"
-        def response = http.get("/asyncTest/composeFutures?v1=${v1}&v2=${v2}")
+        def response = http("/asyncTest/composeFutures?v1=${v1}&v2=${v2}")
 
         then: "both futures are combined correctly"
         response.expectJson(200, [
@@ -219,7 +212,7 @@ class AsyncPromiseSpec extends Specification {
         def body = '{"name": "test", "value": "hello"}'
 
         when: "posting to process endpoint"
-        def response = http.postJson('/asyncTest/processRequestData', body)
+        def response = httpPostJson('/asyncTest/processRequestData', body)
 
         then: "data is processed correctly"
         response.expectJson(200, [
@@ -236,7 +229,7 @@ class AsyncPromiseSpec extends Specification {
 
     def "multi-stage process reports all stages"() {
         when: "calling multi-stage endpoint"
-        def response = http.get('/asyncTest/multiStageProcess')
+        def response = http('/asyncTest/multiStageProcess')
 
         then: "all stages are reported"
         response.expectJsonContains(200, [
@@ -252,7 +245,7 @@ class AsyncPromiseSpec extends Specification {
 
     def "stages execute in correct order"() {
         when: "calling multi-stage endpoint"
-        def response = http.get('/asyncTest/multiStageProcess')
+        def response = http('/asyncTest/multiStageProcess')
 
         then: "stages have increasing timestamps"
         response.expectStatus(200)
@@ -268,7 +261,7 @@ class AsyncPromiseSpec extends Specification {
         def input = 'grails'
 
         when: "calling with async=true"
-        def response = http.get("/asyncTest/conditionalAsync?async=true&input=${input}")
+        def response = http("/asyncTest/conditionalAsync?async=true&input=${input}")
 
         then: "async mode is used"
         response.expectJson(200, [
@@ -282,7 +275,7 @@ class AsyncPromiseSpec extends Specification {
         def input = 'grails'
 
         when: "calling with async=false"
-        def response = http.get("/asyncTest/conditionalAsync?async=false&input=${input}")
+        def response = http("/asyncTest/conditionalAsync?async=false&input=${input}")
 
         then: "sync mode is used"
         response.expectJson(200, [

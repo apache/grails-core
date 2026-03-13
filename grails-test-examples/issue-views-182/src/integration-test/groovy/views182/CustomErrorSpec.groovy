@@ -20,19 +20,15 @@ package views182
 
 import spock.lang.Specification
 
-import org.springframework.beans.factory.annotation.Autowired
-
 import grails.testing.mixin.integration.Integration
-import org.apache.grails.testing.http.client.HttpClient
+import org.apache.grails.testing.http.client.HttpClientSupport
 
 @Integration
-class CustomErrorSpec extends Specification {
-
-    @Autowired HttpClient http
+class CustomErrorSpec extends Specification implements HttpClientSupport {
 
     void 'it is possible to use gson views for handling exception errors'() {
         when: 'executing get to custom error'
-        def response = http.get('/customError')
+        def response = http('/customError')
 
         then:
         response.expectJson(500, '{"message":"My custom exception handler","error":500}')

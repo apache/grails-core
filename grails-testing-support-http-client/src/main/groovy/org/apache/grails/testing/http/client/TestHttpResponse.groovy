@@ -30,7 +30,7 @@ import groovy.json.JsonSlurper
 import groovy.xml.XmlSlurper
 import groovy.xml.slurpersupport.GPathResult
 
-import org.apache.grails.testing.http.client.utils.JsonAssertUtils
+import org.apache.grails.testing.http.client.utils.JsonUtils
 import org.opentest4j.AssertionFailedError
 
 /**
@@ -42,6 +42,8 @@ import org.opentest4j.AssertionFailedError
  *
  * <p>Assertion helpers return {@code this} for chaining and throw assertion failures with
  * descriptive expected/actual values when checks do not pass.</p>
+ *
+ * @since 7.0.9
  */
 class TestHttpResponse implements HttpResponse {
 
@@ -484,19 +486,19 @@ class TestHttpResponse implements HttpResponse {
     }
 
     private static void verifyJsonTree(HttpResponse<?> r, Object expected) {
-        JsonAssertUtils.verifyJsonTree(r, expected)
+        JsonUtils.verifyJsonTree(r, expected)
     }
 
     private static void verifyJsonTree(HttpResponse<?> r, CharSequence expectedJson) {
-        JsonAssertUtils.verifyJsonTree(r, expectedJson)
+        JsonUtils.verifyJsonTree(r, expectedJson)
     }
 
     private static void verifyJsonTreeContains(HttpResponse<?> r, Object expected) {
-        JsonAssertUtils.verifyJsonTreeContains(r, expected)
+        JsonUtils.verifyJsonTreeContains(r, expected)
     }
 
     private static void verifyJsonTreeContains(HttpResponse<?> r, CharSequence expectedJson) {
-        JsonAssertUtils.verifyJsonTreeContains(r, expectedJson)
+        JsonUtils.verifyJsonTreeContains(r, expectedJson)
     }
 
     private static void verifyMatches(HttpResponse<?> r, Pattern pattern) {

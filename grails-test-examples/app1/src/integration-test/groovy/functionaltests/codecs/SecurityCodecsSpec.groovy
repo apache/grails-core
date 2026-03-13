@@ -20,10 +20,8 @@ package functionaltests.codecs
 
 import spock.lang.Specification
 
-import org.springframework.beans.factory.annotation.Autowired
-
 import grails.testing.mixin.integration.Integration
-import org.apache.grails.testing.http.client.HttpClient
+import org.apache.grails.testing.http.client.HttpClientSupport
 
 /**
  * Comprehensive integration tests for Grails codec functionality.
@@ -40,15 +38,13 @@ import org.apache.grails.testing.http.client.HttpClient
  * - Hash consistency verification
  */
 @Integration
-class SecurityCodecsSpec extends Specification {
-
-    @Autowired HttpClient http
+class SecurityCodecsSpec extends Specification implements HttpClientSupport {
 
     // ========== HTML Encoding Tests (XSS Prevention) ==========
 
     def "test HTML encoding escapes dangerous tags"() {
         when:
-        def response = http.get(
+        def response = http(
             '/codecTest/encodeHtml?input=%3Cscript%3Ealert(%22XSS%22)%3C/script%3E'
         )
 
@@ -65,7 +61,7 @@ class SecurityCodecsSpec extends Specification {
 
     def "test HTML encoding escapes quotes"() {
         when:
-        def response = http.get('/codecTest/encodeHtml?input=%22quoted%22')
+        def response = http('/codecTest/encodeHtml?input=%22quoted%22')
 
         then: "quotes should be HTML encoded"
         response.expectStatus(200)
@@ -77,7 +73,7 @@ class SecurityCodecsSpec extends Specification {
 
     def "test HTML encoding escapes ampersands"() {
         when:
-        def response = http.get('/codecTest/encodeHtml?input=foo%26bar')
+        def response = http('/codecTest/encodeHtml?input=foo%26bar')
 
         then: "ampersands should be HTML encoded"
         response.expectStatus(200)
@@ -92,7 +88,7 @@ class SecurityCodecsSpec extends Specification {
 
     def "test URL encoding escapes spaces and special chars"() {
         when:
-        def response = http.get('/codecTest/encodeUrl?input=hello+world%26foo%3Dbar')
+        def response = http('/codecTest/encodeUrl?input=hello+world%26foo%3Dbar')
 
         then: "spaces and special chars should be URL encoded"
         response.expectStatus(200)
@@ -109,7 +105,7 @@ class SecurityCodecsSpec extends Specification {
 
     def "test Base64 encoding and decoding text"() {
         when:
-        def response = http.get('/codecTest/encodeBase64?input=Hello%2C+World!')
+        def response = http('/codecTest/encodeBase64?input=Hello%2C+World!')
 
         then: "text should be Base64 encoded and decodable"
         response.expectJson(200, [
@@ -121,7 +117,7 @@ class SecurityCodecsSpec extends Specification {
 
     def "test Base64 encoding with binary data"() {
         when:
-        def response = http.get('/codecTest/encodeBase64Binary')
+        def response = http('/codecTest/encodeBase64Binary')
 
         then: "binary data should be correctly Base64 encoded"
         response.expectJson(200, [
@@ -135,7 +131,7 @@ class SecurityCodecsSpec extends Specification {
 
     def "test MD5 hashing produces consistent 32-char hex string"() {
         when:
-        def response = http.get('/codecTest/encodeMd5?input=password123')
+        def response = http('/codecTest/encodeMd5?input=password123')
 
         then: "MD5 hash should be 32 characters (hex)"
         response.expectStatus(200)
@@ -148,7 +144,7 @@ class SecurityCodecsSpec extends Specification {
 
     def "test MD5 bytes produces 16 bytes"() {
         when:
-        def response = http.get('/codecTest/encodeMd5Bytes?input=password123')
+        def response = http('/codecTest/encodeMd5Bytes?input=password123')
 
         then: "MD5 bytes should be 16 bytes"
         response.expectStatus(200)
@@ -162,7 +158,7 @@ class SecurityCodecsSpec extends Specification {
 
     def "test SHA1 hashing produces consistent 40-char hex string"() {
         when:
-        def response = http.get('/codecTest/encodeSha1?input=password123')
+        def response = http('/codecTest/encodeSha1?input=password123')
 
         then: "SHA1 hash should be 40 characters (hex)"
         response.expectStatus(200)
@@ -174,7 +170,7 @@ class SecurityCodecsSpec extends Specification {
 
     def "test SHA1 bytes produces 20 bytes"() {
         when:
-        def response = http.get('/codecTest/encodeSha1Bytes?input=password123')
+        def response = http('/codecTest/encodeSha1Bytes?input=password123')
 
         then: "SHA1 bytes should be 20 bytes"
         response.expectJsonContains(200, [bytesLength: 20])
@@ -184,7 +180,7 @@ class SecurityCodecsSpec extends Specification {
 
     def "test SHA256 hashing produces consistent 64-char hex string"() {
         when:
-        def response = http.get('/codecTest/encodeSha256?input=password123')
+        def response = http('/codecTest/encodeSha256?input=password123')
 
         then: "SHA256 hash should be 64 characters (hex)"
         response.expectStatus(200)
@@ -196,7 +192,7 @@ class SecurityCodecsSpec extends Specification {
 
     def "test SHA256 bytes produces 32 bytes"() {
         when:
-        def response = http.get('/codecTest/encodeSha256Bytes?input=password123')
+        def response = http('/codecTest/encodeSha256Bytes?input=password123')
 
         then: "SHA256 bytes should be 32 bytes"
         response.expectJsonContains(200, [bytesLength: 32])
@@ -206,7 +202,7 @@ class SecurityCodecsSpec extends Specification {
 
     def "test Hex encoding and decoding"() {
         when:
-        def response = http.get('/codecTest/encodeHex?input=Hello')
+        def response = http('/codecTest/encodeHex?input=Hello')
 
         then: "text should be Hex encoded and decodable"
         response.expectJson(200, [
@@ -220,7 +216,7 @@ class SecurityCodecsSpec extends Specification {
 
     def "test JavaScript encoding escapes quotes and newlines"() {
         when:
-        def response = http.get('/codecTest/encodeJavaScript')
+        def response = http('/codecTest/encodeJavaScript')
 
         then: "JavaScript special chars should be escaped"
         response.expectStatus(200)
@@ -237,7 +233,7 @@ class SecurityCodecsSpec extends Specification {
 
     def "test Raw encoding preserves content without escaping"() {
         when:
-        def response = http.get('/codecTest/encodeRaw')
+        def response = http('/codecTest/encodeRaw')
 
         then: "raw content should be preserved"
         response.expectJson(200, [
@@ -251,7 +247,7 @@ class SecurityCodecsSpec extends Specification {
 
     def "test chaining multiple encodings"() {
         when:
-        def response = http.get('/codecTest/multipleEncodings')
+        def response = http('/codecTest/multipleEncodings')
 
         then: "multiple encodings should be reversible"
         response.expectStatus(200)
@@ -266,7 +262,7 @@ class SecurityCodecsSpec extends Specification {
 
     def "test encoding with Unicode and special characters"() {
         when:
-        def response = http.get(
+        def response = http(
                 '/codecTest/encodeSpecialChars?input=%E6%97%A5%E6%9C%AC%E8%AA%9E+%26+%C3%A9moji+%F0%9F%91%8D+%3Ctag%3E'
         )
 
@@ -284,7 +280,7 @@ class SecurityCodecsSpec extends Specification {
 
     def "test encoding null values returns null safely"() {
         when:
-        def response = http.get('/codecTest/encodeNull')
+        def response = http('/codecTest/encodeNull')
 
         then: "null values should be handled gracefully"
         response.expectStatus(200)
@@ -299,7 +295,7 @@ class SecurityCodecsSpec extends Specification {
 
     def "test encoding empty strings"() {
         when:
-        def response = http.get('/codecTest/encodeEmpty')
+        def response = http('/codecTest/encodeEmpty')
 
         then: "empty strings should be encoded without errors"
         response.expectStatus(200)
@@ -319,7 +315,7 @@ class SecurityCodecsSpec extends Specification {
 
     def "test hash functions produce consistent results"() {
         when:
-        def response = http.get('/codecTest/hashConsistency?input=test-consistency')
+        def response = http('/codecTest/hashConsistency?input=test-consistency')
 
         then: "same input should always produce same hash"
         response.expectJsonContains(200, [
@@ -331,8 +327,8 @@ class SecurityCodecsSpec extends Specification {
 
     def "test different inputs produce different hashes"() {
         when:
-        def response1 = http.get('/codecTest/hashConsistency?input=input1')
-        def response2 = http.get('/codecTest/hashConsistency?input=input2')
+        def response1 = http('/codecTest/hashConsistency?input=input1')
+        def response2 = http('/codecTest/hashConsistency?input=input2')
 
         then: "different inputs should produce different hashes"
         response1.expectStatus(200)
@@ -348,7 +344,7 @@ class SecurityCodecsSpec extends Specification {
 
     def "test MD5 produces known hash for 'hello'"() {
         when:
-        def response = http.get('/codecTest/encodeMd5?input=hello')
+        def response = http('/codecTest/encodeMd5?input=hello')
 
         then: "MD5 of 'hello' should match known value"
         response.expectJsonContains(200, [
@@ -358,7 +354,7 @@ class SecurityCodecsSpec extends Specification {
 
     def "test SHA1 produces known hash for 'hello'"() {
         when:
-        def response = http.get('/codecTest/encodeSha1?input=hello')
+        def response = http('/codecTest/encodeSha1?input=hello')
 
         then: "SHA1 of 'hello' should match known value"
         response.expectJsonContains(200, [
@@ -368,7 +364,7 @@ class SecurityCodecsSpec extends Specification {
 
     def "test SHA256 produces known hash for 'hello'"() {
         when:
-        def response = http.get('/codecTest/encodeSha256?input=hello')
+        def response = http('/codecTest/encodeSha256?input=hello')
 
         then: "SHA256 of 'hello' should match known value"
         response.expectJsonContains(200, [

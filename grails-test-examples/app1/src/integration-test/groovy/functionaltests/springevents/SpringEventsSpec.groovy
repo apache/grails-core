@@ -24,7 +24,7 @@ import spock.lang.Specification
 import org.springframework.beans.factory.annotation.Autowired
 
 import grails.testing.mixin.integration.Integration
-import org.apache.grails.testing.http.client.HttpClient
+import org.apache.grails.testing.http.client.HttpClientSupport
 
 /**
  * Integration tests for Spring application events in Grails.
@@ -38,11 +38,10 @@ Spring's ApplicationEvent mechanism allows decoupled communication between
 components. Grails integrates with Spring events via @EventListener annotations
 and ApplicationEventPublisher.
 ''')
-class SpringEventsSpec extends Specification {
+class SpringEventsSpec extends Specification implements HttpClientSupport {
 
     @Autowired EventListenerService eventListenerService
     @Autowired EventPublisherService eventPublisherService
-    @Autowired HttpClient http
 
     def setup() {
         eventListenerService.clearEvents()
@@ -146,7 +145,7 @@ class SpringEventsSpec extends Specification {
 
     def "event can be published via HTTP endpoint"() {
         when: "calling publish endpoint"
-        def response = http.get('/springEvent/publishCustom?message=HTTP+Event')
+        def response = http('/springEvent/publishCustom?message=HTTP+Event')
 
         then: "event is published successfully"
         response.expectJsonContains(200, [
@@ -157,7 +156,7 @@ class SpringEventsSpec extends Specification {
 
     def "user action event can be published via HTTP"() {
         when: "calling user action publish endpoint"
-        def response = http.get('/springEvent/publishUserAction?userId=web-user&userAction=CLICK')
+        def response = http('/springEvent/publishUserAction?userId=web-user&userAction=CLICK')
 
         then: "event is published"
         response.expectJson(200, [
@@ -169,7 +168,7 @@ class SpringEventsSpec extends Specification {
 
     def "priority event ordering works via HTTP"() {
         when: "calling priority publish endpoint"
-        def response = http.get('/springEvent/publishPriority?data=http-test')
+        def response = http('/springEvent/publishPriority?data=http-test')
 
         then: "ordered results are returned"
         response.expectStatus(200)
@@ -181,7 +180,7 @@ class SpringEventsSpec extends Specification {
 
     def "multiple events can be published via HTTP"() {
         when: "calling multiple publish endpoint"
-        def response = http.get('/springEvent/publishMultiple?count=3')
+        def response = http('/springEvent/publishMultiple?count=3')
 
         then: "all events are received"
         response.expectJsonContains(200, [
@@ -192,7 +191,7 @@ class SpringEventsSpec extends Specification {
 
     def "conditional event works via HTTP for matching message"() {
         when: "publishing important message"
-        def response = http.get('/springEvent/publishConditional?important=true')
+        def response = http('/springEvent/publishConditional?important=true')
 
         then: "conditional handler triggers"
         response.expectStatus(200)
@@ -201,7 +200,7 @@ class SpringEventsSpec extends Specification {
 
     def "conditional event skipped via HTTP for non-matching message"() {
         when: "publishing normal message"
-        def response = http.get('/springEvent/publishConditional?important=false')
+        def response = http('/springEvent/publishConditional?important=false')
 
         then: "conditional handler does not trigger"
         response.expectStatus(200)
@@ -217,7 +216,7 @@ class SpringEventsSpec extends Specification {
         eventPublisherService.publishUserAction('user', 'action')
 
         when: "getting stats"
-        def response = http.get(
+        def response = http(
             '/springEvent/stats'
         )
 
@@ -236,7 +235,7 @@ class SpringEventsSpec extends Specification {
         eventPublisherService.publishCustomEvent('To be cleared')
 
         when: "clearing events"
-        def response = http.get(
+        def response = http(
             '/springEvent/clearEvents'
         )
 
@@ -249,7 +248,7 @@ class SpringEventsSpec extends Specification {
 
     def "event can be published in transactional context"() {
         when: "publishing transactional event"
-        def response = http.get('/springEvent/publishTransactional?message=tx-test')
+        def response = http('/springEvent/publishTransactional?message=tx-test')
 
         then: "event is published"
         response.expectJsonContains(200, [

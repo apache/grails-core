@@ -20,19 +20,15 @@ package functionaltests
 
 import spock.lang.Specification
 
-import org.springframework.beans.factory.annotation.Autowired
-
 import grails.testing.mixin.integration.Integration
-import org.apache.grails.testing.http.client.HttpClient
+import org.apache.grails.testing.http.client.HttpClientSupport
 
 @Integration
-class BookRestfulControllerSpec extends Specification {
-
-    @Autowired HttpClient http
+class BookRestfulControllerSpec extends Specification implements HttpClientSupport {
 
     def "A RestfulController exposes an index endpoint for a domain class"() {
         when:
-        def response = http.get('/bookRestful')
+        def response = http('/bookRestful')
 
         then:
         response.expectStatus(200)

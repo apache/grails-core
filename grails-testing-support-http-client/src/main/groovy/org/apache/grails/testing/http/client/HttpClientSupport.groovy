@@ -18,6 +18,7 @@
  */
 package org.apache.grails.testing.http.client
 
+import java.net.http.HttpClient
 import java.net.http.HttpRequest
 import java.net.http.HttpResponse
 import java.time.Duration
@@ -25,6 +26,8 @@ import java.time.Duration
 import groovy.json.JsonOutput
 import groovy.transform.CompileStatic
 import groovy.xml.MarkupBuilder
+
+import org.springframework.beans.factory.annotation.Value
 
 import org.apache.grails.testing.http.client.utils.XmlUtils
 
@@ -43,7 +46,7 @@ import org.apache.grails.testing.http.client.utils.XmlUtils
  *   <li>Redirect policy {@code ALWAYS} for the shared singleton client.</li>
  * </ul>
  * <p>
- * Relative URLs are resolved against {@link #baseUrl}. Absolute {@code http://} and {@code https://} URLs are
+ * Relative URLs are resolved against {@link #getHttpBaseUrl}. Absolute {@code http://} and {@code https://} URLs are
  * used as-is.
  * <p>
  * Typical usage in a Grails integration test:
@@ -51,16 +54,14 @@ import org.apache.grails.testing.http.client.utils.XmlUtils
  * import spock.lang.Specification
  *
  * import grails.testing.mixin.integration.Integration
- * import org.apache.grails.testing.http.client.HttpClient
+ * import org.apache.grails.testing.http.client.HttpClientSupport
  *
  * @Integration
- * class MySpec extends Specification {
- *
- *     @Autowired HttpClient http
+ * class MySpec extends Specification implements HttpClientSupport {
  *
  *     void 'health endpoint responds OK'() {
  *         when:
- *         def response = http.get('/health')
+ *         def response = http('/health')
  *
  *         then:
  *         response.expectStatus(200)
@@ -69,20 +70,28 @@ import org.apache.grails.testing.http.client.utils.XmlUtils
  * </pre>
  * <p>
  * Implementing tests must provide {@code local.server.port} (in Grails typically via {@code @Integration}),
- * or otherwise set {@code baseUrl} via constructor or property before issuing relative requests.
+ * or otherwise override {@code getBaseUrl()}.
+ *
+ * @since 7.0.9
  */
 @CompileStatic
-class HttpClient {
+trait HttpClientSupport {
+
+    @Value('${local.server.port}')
+    int httpLocalServerPort = -1
+
+    @Value('${server.servlet.context-path:/}')
+    String httpContextPath
 
     /**
      * Base URL used to resolve relative request targets, for example {@code http://localhost:8080}.
      */
-    String baseUrl
+    private String resolvedBaseUrl
 
     /**
      * Shared singleton client reused across tests.
      */
-    private static volatile java.net.http.HttpClient sharedClient
+    private static volatile HttpClient sharedClient
 
     private static final Map<String, String> EMPTY = Collections.emptyMap()
     private static final String APPLICATION_JSON = 'application/json'
@@ -90,17 +99,13 @@ class HttpClient {
     private static final String HTTP = 'http://'
     private static final String HTTPS = 'https://'
 
-    HttpClient(String baseUrl = null) {
-        this.baseUrl = baseUrl
-    }
-
     /**
      * @return the shared singleton JDK Http client instance, creating it on first access.
      */
-    static java.net.http.HttpClient getHttpClient() {
+    HttpClient getHttpClient() {
         def client = sharedClient
         if (!client) {
-            synchronized (HttpClient) {
+            synchronized (HttpClientSupport) {
                 client = sharedClient
                 if (!client) {
                     client = initClient()
@@ -111,13 +116,27 @@ class HttpClient {
         client
     }
 
+    String getResolvedBaseUrl() {
+        resolvedBaseUrl ?: resolveBaseUrl()
+    }
+
+    private String resolveBaseUrl() {
+        if (httpLocalServerPort == -1) {
+            return null
+        }
+        def path = httpContextPath?.trim()
+        path = (!path || path == '/') ? '' : path.startsWith('/') ? path : "/$path"
+        resolvedBaseUrl = "http://localhost:$httpLocalServerPort$path"
+    }
+
     /**
      * Base URL used when resolving relative request paths.
      *
      * @return base URL such as {@code http://localhost:8080}
-     * @throws IllegalStateException when no {@code baseUrl} has been set
+     * @throws IllegalStateException if value was not initialized correctly
      */
-    String getBaseUrl() {
+    String getHttpBaseUrl() {
+        def baseUrl = getResolvedBaseUrl()
         if (!baseUrl) {
             throw new IllegalStateException('No baseUrl set')
         }
@@ -132,12 +151,12 @@ class HttpClient {
      * @param pathOrUrl relative path or absolute URL
      * @return response with String body
      */
-    TestHttpResponse get(CharSequence pathOrUrl) {
-        get(EMPTY, pathOrUrl, null)
+    TestHttpResponse http(CharSequence pathOrUrl) {
+        http(EMPTY, pathOrUrl, null)
     }
 
-    TestHttpResponse get(Map<String, String> headers, CharSequence pathOrUrl) {
-        get(headers, pathOrUrl, null)
+    TestHttpResponse http(Map<String, String> headers, CharSequence pathOrUrl) {
+        http(headers, pathOrUrl, null)
     }
 
     /**
@@ -147,8 +166,8 @@ class HttpClient {
      * @param client client to execute request with
      * @return response with String body
      */
-    TestHttpResponse get(CharSequence pathOrUrl, java.net.http.HttpClient client) {
-        get(EMPTY, pathOrUrl, client)
+    TestHttpResponse http(CharSequence pathOrUrl, HttpClient client) {
+        http(EMPTY, pathOrUrl, client)
     }
 
     /**
@@ -159,7 +178,7 @@ class HttpClient {
      * @param client optional explicit client; if null, falls back to {@link #getHttpClient()}
      * @return response with String body
      */
-    TestHttpResponse get(Map<String, String> headers, CharSequence pathOrUrl, java.net.http.HttpClient client) {
+    TestHttpResponse http(Map<String, String> headers, CharSequence pathOrUrl, HttpClient client) {
         send(client, headers, requestBuilder(pathOrUrl).GET())
     }
 
@@ -174,28 +193,28 @@ class HttpClient {
      * @param contentType request {@code Content-Type}
      * @return response with String body
      */
-    TestHttpResponse post(CharSequence pathOrUrl, CharSequence body, CharSequence contentType) {
-        post(EMPTY, pathOrUrl, body, contentType, null)
+    TestHttpResponse httpPost(CharSequence pathOrUrl, CharSequence body, CharSequence contentType) {
+        httpPost(EMPTY, pathOrUrl, body, contentType, null)
     }
 
     /**
      * POST request with explicit content type and explicit client.
      */
-    TestHttpResponse post(CharSequence pathOrUrl, CharSequence body, CharSequence contentType, java.net.http.HttpClient client) {
-        post(EMPTY, pathOrUrl, body, contentType, client)
+    TestHttpResponse httpPost(CharSequence pathOrUrl, CharSequence body, CharSequence contentType, HttpClient client) {
+        httpPost(EMPTY, pathOrUrl, body, contentType, client)
     }
 
     /**
      * POST request with headers and explicit content type using the shared default client.
      */
-    TestHttpResponse post(Map<String, String> headers, CharSequence pathOrUrl, CharSequence body, CharSequence contentType) {
-        post(headers, pathOrUrl, body, contentType, null)
+    TestHttpResponse httpPost(Map<String, String> headers, CharSequence pathOrUrl, CharSequence body, CharSequence contentType) {
+        httpPost(headers, pathOrUrl, body, contentType, null)
     }
 
     /**
      * POST request with headers, explicit content type, and explicit client.
      */
-    TestHttpResponse post(Map<String, String> headers, CharSequence pathOrUrl, CharSequence body, CharSequence contentType, java.net.http.HttpClient client) {
+    TestHttpResponse httpPost(Map<String, String> headers, CharSequence pathOrUrl, CharSequence body, CharSequence contentType, HttpClient client) {
         send(client, headers,
                 requestBuilder(pathOrUrl)
                         .header('Content-Type', contentType.toString())
@@ -208,57 +227,57 @@ class HttpClient {
     /**
      * POST JSON string payload with shared default client.
      */
-    TestHttpResponse postJson(CharSequence pathOrUrl, CharSequence body) {
-        post(EMPTY, pathOrUrl, body, APPLICATION_JSON, null)
+    TestHttpResponse httpPostJson(CharSequence pathOrUrl, CharSequence body) {
+        httpPost(EMPTY, pathOrUrl, body, APPLICATION_JSON, null)
     }
 
     /**
      * POST JSON string payload with explicit client.
      */
-    TestHttpResponse postJson(CharSequence pathOrUrl, CharSequence body, java.net.http.HttpClient client) {
-        post(EMPTY, pathOrUrl, body, APPLICATION_JSON, client)
+    TestHttpResponse httpPostJson(CharSequence pathOrUrl, CharSequence body, HttpClient client) {
+        httpPost(EMPTY, pathOrUrl, body, APPLICATION_JSON, client)
     }
 
     /**
      * POST JSON string payload with custom headers.
      */
-    TestHttpResponse postJson(Map<String, String> headers, CharSequence pathOrUrl, CharSequence body) {
-        post(headers, pathOrUrl, body, APPLICATION_JSON, null)
+    TestHttpResponse httpPostJson(Map<String, String> headers, CharSequence pathOrUrl, CharSequence body) {
+        httpPost(headers, pathOrUrl, body, APPLICATION_JSON, null)
     }
 
     /**
      * POST JSON string payload with custom headers and explicit client.
      */
-    TestHttpResponse postJson(Map<String, String> headers, CharSequence pathOrUrl, CharSequence body, java.net.http.HttpClient client) {
-        post(headers, pathOrUrl, body, APPLICATION_JSON, client)
+    TestHttpResponse httpPostJson(Map<String, String> headers, CharSequence pathOrUrl, CharSequence body, HttpClient client) {
+        httpPost(headers, pathOrUrl, body, APPLICATION_JSON, client)
     }
 
     /**
      * POST JSON object payload (serialized with {@link JsonOutput#toJson(Object)}).
      */
-    TestHttpResponse postJson(CharSequence pathOrUrl, Map<String, Object> body) {
-        post(EMPTY, pathOrUrl, JsonOutput.toJson(body), APPLICATION_JSON, null)
+    TestHttpResponse httpPostJson(CharSequence pathOrUrl, Map<String, Object> body) {
+        httpPost(EMPTY, pathOrUrl, JsonOutput.toJson(body), APPLICATION_JSON, null)
     }
 
     /**
      * POST JSON object payload (serialized with {@link JsonOutput#toJson(Object)}) and explicit client.
      */
-    TestHttpResponse postJson(CharSequence pathOrUrl, Map<String, Object> body, java.net.http.HttpClient client) {
-        post(EMPTY, pathOrUrl, JsonOutput.toJson(body), APPLICATION_JSON, client)
+    TestHttpResponse httpPostJson(CharSequence pathOrUrl, Map<String, Object> body, HttpClient client) {
+        httpPost(EMPTY, pathOrUrl, JsonOutput.toJson(body), APPLICATION_JSON, client)
     }
 
     /**
      * POST JSON object payload with custom headers.
      */
-    TestHttpResponse postJson(Map<String, String> headers, CharSequence pathOrUrl, Map<String, Object> body) {
-        post(headers, pathOrUrl, JsonOutput.toJson(body), APPLICATION_JSON, null)
+    TestHttpResponse httpPostJson(Map<String, String> headers, CharSequence pathOrUrl, Map<String, Object> body) {
+        httpPost(headers, pathOrUrl, JsonOutput.toJson(body), APPLICATION_JSON, null)
     }
 
     /**
      * POST JSON object payload with custom headers and explicit client.
      */
-    TestHttpResponse postJson(Map<String, String> headers, CharSequence pathOrUrl, Map<String, Object> body, java.net.http.HttpClient client) {
-        post(headers, pathOrUrl, JsonOutput.toJson(body), APPLICATION_JSON, client)
+    TestHttpResponse httpPostJson(Map<String, String> headers, CharSequence pathOrUrl, Map<String, Object> body, HttpClient client) {
+        httpPost(headers, pathOrUrl, JsonOutput.toJson(body), APPLICATION_JSON, client)
     }
 
     // endregion
@@ -267,35 +286,35 @@ class HttpClient {
     /**
      * POST XML generated by the provided markup DSL closure.
      */
-    TestHttpResponse postXml(
+    TestHttpResponse httpPostXml(
             CharSequence pathOrUrl,
             @DelegatesTo(strategy = Closure.DELEGATE_FIRST, value = MarkupBuilder) Closure<?> body) {
-        post(EMPTY, pathOrUrl, XmlUtils.toXml(body), APPLICATION_XML, null)
+        httpPost(EMPTY, pathOrUrl, XmlUtils.toXml(body), APPLICATION_XML, null)
     }
 
-    TestHttpResponse postXml(
+    TestHttpResponse httpPostXml(
             CharSequence pathOrUrl,
             @DelegatesTo(strategy = Closure.DELEGATE_FIRST, value = MarkupBuilder) Closure<?> body,
-            java.net.http.HttpClient client
+            HttpClient client
     ) {
-        post(EMPTY, pathOrUrl, XmlUtils.toXml(body), APPLICATION_XML, client)
+        httpPost(EMPTY, pathOrUrl, XmlUtils.toXml(body), APPLICATION_XML, client)
     }
 
-    TestHttpResponse postXml(
+    TestHttpResponse httpPostXml(
             Map<String, String> headers,
             CharSequence pathOrUrl,
             @DelegatesTo(strategy = Closure.DELEGATE_FIRST, value = MarkupBuilder) Closure<?> body
     ) {
-        post(headers, pathOrUrl, XmlUtils.toXml(body), APPLICATION_XML, null)
+        httpPost(headers, pathOrUrl, XmlUtils.toXml(body), APPLICATION_XML, null)
     }
 
-    TestHttpResponse postXml(
+    TestHttpResponse httpPostXml(
             Map<String, String> headers,
             CharSequence pathOrUrl,
             @DelegatesTo(strategy = Closure.DELEGATE_FIRST, value = MarkupBuilder) Closure<?> body,
-            java.net.http.HttpClient client
+            HttpClient client
     ) {
-        post(headers, pathOrUrl, XmlUtils.toXml(body), APPLICATION_XML, client)
+        httpPost(headers, pathOrUrl, XmlUtils.toXml(body), APPLICATION_XML, client)
     }
 
     // endregion
@@ -308,8 +327,8 @@ class HttpClient {
      * @param body prebuilt multipart payload
      * @return response with String body
      */
-    TestHttpResponse postMultipart(CharSequence pathOrUrl, MultipartBody body) {
-        postMultipart(EMPTY, pathOrUrl, body, null)
+    TestHttpResponse httpPostMultipart(CharSequence pathOrUrl, MultipartBody body) {
+        httpPostMultipart(EMPTY, pathOrUrl, body, null)
     }
 
     /**
@@ -320,8 +339,8 @@ class HttpClient {
      * @param client explicit client; if null, falls back to {@link #getHttpClient()}
      * @return response with String body
      */
-    TestHttpResponse postMultipart(CharSequence pathOrUrl, MultipartBody body, java.net.http.HttpClient client) {
-        postMultipart(EMPTY, pathOrUrl, body, client)
+    TestHttpResponse httpPostMultipart(CharSequence pathOrUrl, MultipartBody body, HttpClient client) {
+        httpPostMultipart(EMPTY, pathOrUrl, body, client)
     }
 
     /**
@@ -332,8 +351,8 @@ class HttpClient {
      * @param body prebuilt multipart payload
      * @return response with String body
      */
-    TestHttpResponse postMultipart(Map<String, String> headers, CharSequence pathOrUrl, MultipartBody body) {
-        postMultipart(headers, pathOrUrl, body, null)
+    TestHttpResponse httpPostMultipart(Map<String, String> headers, CharSequence pathOrUrl, MultipartBody body) {
+        httpPostMultipart(headers, pathOrUrl, body, null)
     }
 
     /**
@@ -345,7 +364,7 @@ class HttpClient {
      * @param client explicit client; if null, falls back to {@link #getHttpClient()}
      * @return response with String body
      */
-    TestHttpResponse postMultipart(Map<String, String> headers, CharSequence pathOrUrl, MultipartBody body, java.net.http.HttpClient client) {
+    TestHttpResponse httpPostMultipart(Map<String, String> headers, CharSequence pathOrUrl, MultipartBody body, HttpClient client) {
         send(client, headers,
                 requestBuilder(pathOrUrl)
                         .header('Content-Type', body.contentType)
@@ -360,28 +379,28 @@ class HttpClient {
     /**
      * PUT request with explicit content type using the shared default client.
      */
-    TestHttpResponse put(CharSequence pathOrUrl, CharSequence body, CharSequence contentType) {
-        put(EMPTY, pathOrUrl, body, contentType, null)
+    TestHttpResponse httpPut(CharSequence pathOrUrl, CharSequence body, CharSequence contentType) {
+        httpPut(EMPTY, pathOrUrl, body, contentType, null)
     }
 
     /**
      * PUT request with explicit content type and explicit client.
      */
-    TestHttpResponse put(CharSequence pathOrUrl, CharSequence body, CharSequence contentType, java.net.http.HttpClient client) {
-        put(EMPTY, pathOrUrl, body, contentType, client)
+    TestHttpResponse httpPut(CharSequence pathOrUrl, CharSequence body, CharSequence contentType, HttpClient client) {
+        httpPut(EMPTY, pathOrUrl, body, contentType, client)
     }
 
     /**
      * PUT request with headers and explicit content type using the shared default client.
      */
-    TestHttpResponse put(Map<String, String> headers, CharSequence pathOrUrl, CharSequence body, CharSequence contentType) {
-        put(headers, pathOrUrl, body, contentType, null)
+    TestHttpResponse httpPut(Map<String, String> headers, CharSequence pathOrUrl, CharSequence body, CharSequence contentType) {
+        httpPut(headers, pathOrUrl, body, contentType, null)
     }
 
     /**
      * PUT request with headers, explicit content type, and explicit client.
      */
-    TestHttpResponse put(Map<String, String> headers, CharSequence pathOrUrl, CharSequence body, CharSequence contentType, java.net.http.HttpClient client) {
+    TestHttpResponse httpPut(Map<String, String> headers, CharSequence pathOrUrl, CharSequence body, CharSequence contentType, HttpClient client) {
         send(client, headers,
                 requestBuilder(pathOrUrl)
                         .header('Content-Type', contentType.toString())
@@ -394,36 +413,36 @@ class HttpClient {
     /**
      * PUT JSON string payload with shared default client.
      */
-    TestHttpResponse putJson(CharSequence pathOrUrl, CharSequence body) {
-        put(EMPTY, pathOrUrl, body, APPLICATION_JSON, null)
+    TestHttpResponse httpPutJson(CharSequence pathOrUrl, CharSequence body) {
+        httpPut(EMPTY, pathOrUrl, body, APPLICATION_JSON, null)
     }
 
-    TestHttpResponse putJson(CharSequence pathOrUrl, CharSequence body, java.net.http.HttpClient client) {
-        put(EMPTY, pathOrUrl, body, APPLICATION_JSON, client)
+    TestHttpResponse httpPutJson(CharSequence pathOrUrl, CharSequence body, HttpClient client) {
+        httpPut(EMPTY, pathOrUrl, body, APPLICATION_JSON, client)
     }
 
-    TestHttpResponse putJson(Map<String, String> headers, CharSequence pathOrUrl, CharSequence body) {
-        put(headers, pathOrUrl, body, APPLICATION_JSON, null)
+    TestHttpResponse httpPutJson(Map<String, String> headers, CharSequence pathOrUrl, CharSequence body) {
+        httpPut(headers, pathOrUrl, body, APPLICATION_JSON, null)
     }
 
-    TestHttpResponse putJson(Map<String, String> headers, CharSequence pathOrUrl, CharSequence body, java.net.http.HttpClient client) {
-        put(headers, pathOrUrl, body, APPLICATION_JSON, client)
+    TestHttpResponse httpPutJson(Map<String, String> headers, CharSequence pathOrUrl, CharSequence body, HttpClient client) {
+        httpPut(headers, pathOrUrl, body, APPLICATION_JSON, client)
     }
 
-    TestHttpResponse putJson(CharSequence pathOrUrl, Map<String, Object> body) {
-        put(EMPTY, pathOrUrl, JsonOutput.toJson(body), APPLICATION_JSON, null)
+    TestHttpResponse httpPutJson(CharSequence pathOrUrl, Map<String, Object> body) {
+        httpPut(EMPTY, pathOrUrl, JsonOutput.toJson(body), APPLICATION_JSON, null)
     }
 
-    TestHttpResponse putJson(CharSequence pathOrUrl, Map<String, Object> body, java.net.http.HttpClient client) {
-        put(EMPTY, pathOrUrl, JsonOutput.toJson(body), APPLICATION_JSON, client)
+    TestHttpResponse httpPutJson(CharSequence pathOrUrl, Map<String, Object> body, HttpClient client) {
+        httpPut(EMPTY, pathOrUrl, JsonOutput.toJson(body), APPLICATION_JSON, client)
     }
 
-    TestHttpResponse putJson(Map<String, String> headers, CharSequence pathOrUrl, Map<String, Object> body) {
-        put(headers, pathOrUrl, JsonOutput.toJson(body), APPLICATION_JSON, null)
+    TestHttpResponse httpPutJson(Map<String, String> headers, CharSequence pathOrUrl, Map<String, Object> body) {
+        httpPut(headers, pathOrUrl, JsonOutput.toJson(body), APPLICATION_JSON, null)
     }
 
-    TestHttpResponse putJson(Map<String, String> headers, CharSequence pathOrUrl, Map<String, Object> body, java.net.http.HttpClient client) {
-        put(headers, pathOrUrl, JsonOutput.toJson(body), APPLICATION_JSON, client)
+    TestHttpResponse httpPutJson(Map<String, String> headers, CharSequence pathOrUrl, Map<String, Object> body, HttpClient client) {
+        httpPut(headers, pathOrUrl, JsonOutput.toJson(body), APPLICATION_JSON, client)
     }
 
     // endregion
@@ -432,35 +451,35 @@ class HttpClient {
     /**
      * PUT XML generated by the provided markup DSL closure.
      */
-    TestHttpResponse putXml(
+    TestHttpResponse httpPutXml(
             CharSequence pathOrUrl,
             @DelegatesTo(strategy = Closure.DELEGATE_FIRST, value = MarkupBuilder) Closure<?> body) {
-        put(EMPTY, pathOrUrl, XmlUtils.toXml(body), APPLICATION_XML, null)
+        httpPut(EMPTY, pathOrUrl, XmlUtils.toXml(body), APPLICATION_XML, null)
     }
 
-    TestHttpResponse putXml(
+    TestHttpResponse httpPutXml(
             CharSequence pathOrUrl,
             @DelegatesTo(strategy = Closure.DELEGATE_FIRST, value = MarkupBuilder) Closure<?> body,
-            java.net.http.HttpClient client
+            HttpClient client
     ) {
-        put(EMPTY, pathOrUrl, XmlUtils.toXml(body), APPLICATION_XML, client)
+        httpPut(EMPTY, pathOrUrl, XmlUtils.toXml(body), APPLICATION_XML, client)
     }
 
-    TestHttpResponse putXml(
+    TestHttpResponse httpPutXml(
             Map<String, String> headers,
             CharSequence pathOrUrl,
             @DelegatesTo(strategy = Closure.DELEGATE_FIRST, value = MarkupBuilder) Closure<?> body
     ) {
-        put(headers, pathOrUrl, XmlUtils.toXml(body), APPLICATION_XML, null)
+        httpPut(headers, pathOrUrl, XmlUtils.toXml(body), APPLICATION_XML, null)
     }
 
-    TestHttpResponse putXml(
+    TestHttpResponse httpPutXml(
             Map<String, String> headers,
             CharSequence pathOrUrl,
             @DelegatesTo(strategy = Closure.DELEGATE_FIRST, value = MarkupBuilder) Closure<?> body,
-            java.net.http.HttpClient client
+            HttpClient client
     ) {
-        put(headers, pathOrUrl, XmlUtils.toXml(body), APPLICATION_XML, client)
+        httpPut(headers, pathOrUrl, XmlUtils.toXml(body), APPLICATION_XML, client)
     }
 
     // endregion
@@ -470,28 +489,28 @@ class HttpClient {
     /**
      * PATCH request with explicit content type using the shared default client.
      */
-    TestHttpResponse patch(CharSequence pathOrUrl, CharSequence body, CharSequence contentType) {
-        patch(EMPTY, pathOrUrl, body, contentType, null)
+    TestHttpResponse httpPatch(CharSequence pathOrUrl, CharSequence body, CharSequence contentType) {
+        httpPatch(EMPTY, pathOrUrl, body, contentType, null)
     }
 
     /**
      * PATCH request with explicit content type and explicit client.
      */
-    TestHttpResponse patch(CharSequence pathOrUrl, CharSequence body, CharSequence contentType, java.net.http.HttpClient client) {
-        patch(EMPTY, pathOrUrl, body, contentType, client)
+    TestHttpResponse httpPatch(CharSequence pathOrUrl, CharSequence body, CharSequence contentType, HttpClient client) {
+        httpPatch(EMPTY, pathOrUrl, body, contentType, client)
     }
 
     /**
      * PATCH request with headers and explicit content type using the shared default client.
      */
-    TestHttpResponse patch(Map<String, String> headers, CharSequence pathOrUrl, CharSequence body, CharSequence contentType) {
-        patch(headers, pathOrUrl, body, contentType, null)
+    TestHttpResponse httpPatch(Map<String, String> headers, CharSequence pathOrUrl, CharSequence body, CharSequence contentType) {
+        httpPatch(headers, pathOrUrl, body, contentType, null)
     }
 
     /**
      * PATCH request with headers, explicit content type, and explicit client.
      */
-    TestHttpResponse patch(Map<String, String> headers, CharSequence pathOrUrl, CharSequence body, CharSequence contentType, java.net.http.HttpClient client) {
+    TestHttpResponse httpPatch(Map<String, String> headers, CharSequence pathOrUrl, CharSequence body, CharSequence contentType, HttpClient client) {
         send(client, headers,
                 requestBuilder(pathOrUrl)
                         .header('Content-Type', contentType.toString())
@@ -504,29 +523,29 @@ class HttpClient {
     /**
      * PATCH JSON object payload (serialized with {@link JsonOutput#toJson(Object)}).
      */
-    TestHttpResponse patchJson(CharSequence pathOrUrl, Map<String, Object> body) {
-        patch(EMPTY, pathOrUrl, JsonOutput.toJson(body), APPLICATION_JSON, null)
+    TestHttpResponse httpPatchJson(CharSequence pathOrUrl, Map<String, Object> body) {
+        httpPatch(EMPTY, pathOrUrl, JsonOutput.toJson(body), APPLICATION_JSON, null)
     }
 
     /**
      * PATCH JSON object payload (serialized with {@link JsonOutput#toJson(Object)}) and explicit client.
      */
-    TestHttpResponse patchJson(CharSequence pathOrUrl, Map<String, Object> body, java.net.http.HttpClient client) {
-        patch(EMPTY, pathOrUrl, JsonOutput.toJson(body), APPLICATION_JSON, client)
+    TestHttpResponse httpPatchJson(CharSequence pathOrUrl, Map<String, Object> body, HttpClient client) {
+        httpPatch(EMPTY, pathOrUrl, JsonOutput.toJson(body), APPLICATION_JSON, client)
     }
 
     /**
      * PATCH JSON object payload with custom headers using the shared default client.
      */
-    TestHttpResponse patch(Map<String, String> headers, CharSequence pathOrUrl, Map<String, Object> body) {
-        patch(headers, pathOrUrl, JsonOutput.toJson(body), APPLICATION_JSON, null)
+    TestHttpResponse httpPatchJson(Map<String, String> headers, CharSequence pathOrUrl, Map<String, Object> body) {
+        httpPatch(headers, pathOrUrl, JsonOutput.toJson(body), APPLICATION_JSON, null)
     }
 
     /**
      * PATCH JSON object payload with custom headers and explicit client.
      */
-    TestHttpResponse patch(Map<String, String> headers, CharSequence pathOrUrl, Map<String, Object> body, java.net.http.HttpClient client) {
-        patch(headers, pathOrUrl, JsonOutput.toJson(body), APPLICATION_JSON, client)
+    TestHttpResponse httpPatchJson(Map<String, String> headers, CharSequence pathOrUrl, Map<String, Object> body, HttpClient client) {
+        httpPatch(headers, pathOrUrl, JsonOutput.toJson(body), APPLICATION_JSON, client)
     }
 
     // region PATCH JSON
@@ -534,20 +553,20 @@ class HttpClient {
     /**
      * PATCH JSON string payload with shared default client.
      */
-    TestHttpResponse patchJson(CharSequence pathOrUrl, CharSequence body) {
-        patch(EMPTY, pathOrUrl, body, APPLICATION_JSON, null)
+    TestHttpResponse httpPatchJson(CharSequence pathOrUrl, CharSequence body) {
+        httpPatch(EMPTY, pathOrUrl, body, APPLICATION_JSON, null)
     }
 
-    TestHttpResponse patchJson(CharSequence pathOrUrl, CharSequence body, java.net.http.HttpClient client) {
-        patch(EMPTY, pathOrUrl, body, APPLICATION_JSON, client)
+    TestHttpResponse httpPatchJson(CharSequence pathOrUrl, CharSequence body, HttpClient client) {
+        httpPatch(EMPTY, pathOrUrl, body, APPLICATION_JSON, client)
     }
 
-    TestHttpResponse patchJson(Map<String, String> headers, CharSequence pathOrUrl, CharSequence body) {
-        patch(headers, pathOrUrl, body, APPLICATION_JSON, null)
+    TestHttpResponse httpPatchJson(Map<String, String> headers, CharSequence pathOrUrl, CharSequence body) {
+        httpPatch(headers, pathOrUrl, body, APPLICATION_JSON, null)
     }
 
-    TestHttpResponse patchJson(Map<String, String> headers, CharSequence pathOrUrl, CharSequence body, java.net.http.HttpClient client) {
-        patch(headers, pathOrUrl, body, APPLICATION_JSON, client)
+    TestHttpResponse httpPatchJson(Map<String, String> headers, CharSequence pathOrUrl, CharSequence body, HttpClient client) {
+        httpPatch(headers, pathOrUrl, body, APPLICATION_JSON, client)
     }
 
     // endregion
@@ -556,35 +575,35 @@ class HttpClient {
     /**
      * PATCH XML generated by the provided markup DSL closure.
      */
-    TestHttpResponse patchXml(
+    TestHttpResponse httpPatchXml(
             CharSequence pathOrUrl,
             @DelegatesTo(strategy = Closure.DELEGATE_FIRST, value = MarkupBuilder) Closure<?> body) {
-        patch(EMPTY, pathOrUrl, XmlUtils.toXml(body), APPLICATION_XML, null)
+        httpPatch(EMPTY, pathOrUrl, XmlUtils.toXml(body), APPLICATION_XML, null)
     }
 
-    TestHttpResponse patchXml(
+    TestHttpResponse httpPatchXml(
             CharSequence pathOrUrl,
             @DelegatesTo(strategy = Closure.DELEGATE_FIRST, value = MarkupBuilder) Closure<?> body,
-            java.net.http.HttpClient client
+            HttpClient client
     ) {
-        patch(EMPTY, pathOrUrl, XmlUtils.toXml(body), APPLICATION_XML, client)
+        httpPatch(EMPTY, pathOrUrl, XmlUtils.toXml(body), APPLICATION_XML, client)
     }
 
-    TestHttpResponse patchXml(
+    TestHttpResponse httpPatchXml(
             Map<String, String> headers,
             CharSequence pathOrUrl,
             @DelegatesTo(strategy = Closure.DELEGATE_FIRST, value = MarkupBuilder) Closure<?> body
     ) {
-        patch(headers, pathOrUrl, XmlUtils.toXml(body), APPLICATION_XML, null)
+        httpPatch(headers, pathOrUrl, XmlUtils.toXml(body), APPLICATION_XML, null)
     }
 
-    TestHttpResponse patchXml(
+    TestHttpResponse httpPatchXml(
             Map<String, String> headers,
             CharSequence pathOrUrl,
             @DelegatesTo(strategy = Closure.DELEGATE_FIRST, value = MarkupBuilder) Closure<?> body,
-            java.net.http.HttpClient client
+            HttpClient client
     ) {
-        patch(headers, pathOrUrl, XmlUtils.toXml(body), APPLICATION_XML, client)
+        httpPatch(headers, pathOrUrl, XmlUtils.toXml(body), APPLICATION_XML, client)
     }
 
     // endregion
@@ -594,28 +613,28 @@ class HttpClient {
     /**
      * DELETE request using the shared default client.
      */
-    TestHttpResponse delete(CharSequence pathOrUrl) {
-        delete(EMPTY, pathOrUrl, null)
+    TestHttpResponse httpDelete(CharSequence pathOrUrl) {
+        httpDelete(EMPTY, pathOrUrl, null)
     }
 
     /**
      * DELETE request with explicit client.
      */
-    TestHttpResponse delete(CharSequence pathOrUrl, java.net.http.HttpClient client) {
-        delete(EMPTY, pathOrUrl, client)
+    TestHttpResponse httpDelete(CharSequence pathOrUrl, HttpClient client) {
+        httpDelete(EMPTY, pathOrUrl, client)
     }
 
     /**
      * DELETE request with custom headers using the shared default client.
      */
-    TestHttpResponse delete(Map<String, String> headers, CharSequence pathOrUrl) {
-        delete(headers, pathOrUrl, null)
+    TestHttpResponse httpDelete(Map<String, String> headers, CharSequence pathOrUrl) {
+        httpDelete(headers, pathOrUrl, null)
     }
 
     /**
      * DELETE request with custom headers and explicit client.
      */
-    TestHttpResponse delete(Map<String, String> headers, CharSequence pathOrUrl, java.net.http.HttpClient client) {
+    TestHttpResponse httpDelete(Map<String, String> headers, CharSequence pathOrUrl, HttpClient client) {
         send(client, headers, requestBuilder(pathOrUrl).DELETE())
     }
 
@@ -625,28 +644,28 @@ class HttpClient {
     /**
      * OPTIONS request using the shared default client.
      */
-    TestHttpResponse options(CharSequence pathOrUrl) {
-        options(EMPTY, pathOrUrl, null)
+    TestHttpResponse httpOptions(CharSequence pathOrUrl) {
+        httpOptions(EMPTY, pathOrUrl, null)
     }
 
     /**
      * OPTIONS request with explicit client.
      */
-    TestHttpResponse options(CharSequence pathOrUrl, java.net.http.HttpClient client) {
-        options(EMPTY, pathOrUrl, client)
+    TestHttpResponse httpOptions(CharSequence pathOrUrl, HttpClient client) {
+        httpOptions(EMPTY, pathOrUrl, client)
     }
 
     /**
      * OPTIONS request with custom headers using the shared default client.
      */
-    TestHttpResponse options(Map<String, String> headers, CharSequence pathOrUrl) {
-        options(headers, pathOrUrl, null)
+    TestHttpResponse httpOptions(Map<String, String> headers, CharSequence pathOrUrl) {
+        httpOptions(headers, pathOrUrl, null)
     }
 
     /**
      * OPTIONS request with custom headers and explicit client.
      */
-    TestHttpResponse options(Map<String, String> headers, CharSequence pathOrUrl, java.net.http.HttpClient client) {
+    TestHttpResponse httpOptions(Map<String, String> headers, CharSequence pathOrUrl, HttpClient client) {
         send(client, headers, requestBuilder(pathOrUrl).method('OPTIONS', HttpRequest.BodyPublishers.noBody()))
     }
 
@@ -660,11 +679,13 @@ class HttpClient {
      * @param client optional explicit client; falls back to {@link #getHttpClient()}
      * @return response with String body
      */
-    static TestHttpResponse sendRequest(HttpRequest request, java.net.http.HttpClient client = null) {
+    TestHttpResponse sendHttpRequest(HttpRequest request, HttpClient client = null) {
         if (!request.timeout().isPresent()) {
-            warn("Sending HttpRequest to [${request.uri()}] without timeout set.",
+            warn(
+                    "Sending HttpRequest to [${request.uri()}] without timeout set.",
                     "Offending class is [${getClass().name}].",
-                    'Consider using requestWith() or setting timeout(...) on your custom request.')
+                    'Consider using requestWith() or setting timeout(...) on your custom request.'
+            )
         }
         send(client, request)
     }
@@ -675,8 +696,8 @@ class HttpClient {
      * @param configurer optional http builder configurer closure
      * @return built client
      */
-    static java.net.http.HttpClient newClientWith(
-            @DelegatesTo(strategy = Closure.DELEGATE_FIRST, value = java.net.http.HttpClient.Builder)
+    HttpClient httpClientWith(
+            @DelegatesTo(strategy = Closure.DELEGATE_FIRST, value = HttpClient.Builder)
                     Closure<?> configurer = null
     ) {
         def builder = initClientBuilder()
@@ -698,9 +719,10 @@ class HttpClient {
      * @param configurer optional request builder configurer closure
      * @return built request
      */
-    HttpRequest requestWith(
+    HttpRequest httpRequestWith(
             CharSequence pathOrUrl,
-            @DelegatesTo(strategy = Closure.DELEGATE_FIRST, value = HttpRequest.Builder) Closure<?> configurer = null
+            @DelegatesTo(strategy = Closure.DELEGATE_FIRST, value = HttpRequest.Builder)
+                    Closure<?> configurer = null
     ) {
         def builder = requestBuilder(pathOrUrl)
         if (configurer) {
@@ -714,23 +736,25 @@ class HttpClient {
     // endregion
     // region PRIVATE HELPERS & UTILS
 
-    private static TestHttpResponse send(java.net.http.HttpClient client, Map<String, String> headers, HttpRequest.Builder requestBuilder) {
+    private TestHttpResponse send(HttpClient client, Map<String, String> headers, HttpRequest.Builder requestBuilder) {
         headers.each { k, v -> requestBuilder.header(k, v) }
         send(client, requestBuilder.build())
     }
 
-    private static TestHttpResponse send(java.net.http.HttpClient client, HttpRequest request) {
+    private TestHttpResponse send(HttpClient client, HttpRequest request) {
         if (client && !client.connectTimeout().isPresent()) {
-            warn("Using HttpClient without connect timeout set when connecting to [${request.uri()}].",
+            warn(
+                    "Using HttpClient without connect timeout set when connecting to [${request.uri()}].",
                     "Offending class is [${getClass().name}].",
-                    'Consider using newClientWith() or setting connectTimeout(...) on your custom client.')
+                    'Consider using newClientWith() or setting connectTimeout(...) on your custom client.'
+            )
         }
         def response = (client ?: httpClient).send(request, HttpResponse.BodyHandlers.ofString())
         TestHttpResponse.wrap(response)
     }
 
     /**
-     * Resolve a relative path (for example {@code /health}) against {@link #getBaseUrl()}.
+     * Resolve a relative path (for example {@code /health}) against {@link #getHttpBaseUrl()}.
      * Absolute HTTP/HTTPS URLs are returned as-is.
      *
      * @param pathOrUrl relative path or absolute URL
@@ -744,14 +768,14 @@ class HttpClient {
         if (!isRelativeUrl(str)) {
             return URI.create(str)
         }
-        return URI.create(normalizeUrl(getBaseUrl(), str))
+        return URI.create(normalizeUrl(getHttpBaseUrl(), str))
     }
 
-    private static boolean isRelativeUrl(String url) {
+    private boolean isRelativeUrl(String url) {
         !url.startsWith(HTTP) && !url.startsWith(HTTPS)
     }
 
-    private static String normalizeUrl(String base, String path) {
+    private String normalizeUrl(String base, String path) {
         def b = base.endsWith('/') ? base[0..-2] : base
         def p = path.startsWith('/') ? path : "/$path"
         "$b$p"
@@ -763,21 +787,21 @@ class HttpClient {
         builder
     }
 
-    private static java.net.http.HttpClient initClient() {
+    private HttpClient initClient() {
         initClientBuilder().build()
     }
 
-    private static java.net.http.HttpClient.Builder initClientBuilder() {
-        java.net.http.HttpClient.newBuilder()
+    private HttpClient.Builder initClientBuilder() {
+        HttpClient.newBuilder()
                 .connectTimeout(Duration.ofSeconds(60))
-                .followRedirects(java.net.http.HttpClient.Redirect.ALWAYS)
+                .followRedirects(HttpClient.Redirect.ALWAYS)
     }
 
-    private static void setDefaultRequestConfig(HttpRequest.Builder builder) {
+    private void setDefaultRequestConfig(HttpRequest.Builder builder) {
         builder.timeout(Duration.ofSeconds(60))
     }
 
-    private static warn(String[] lines) {
+    private void warn(String[] lines) {
         println('*** WARNING ***')
         lines.each {
             println(it)

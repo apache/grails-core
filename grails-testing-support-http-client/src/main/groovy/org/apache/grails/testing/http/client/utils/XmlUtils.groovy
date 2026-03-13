@@ -20,16 +20,21 @@ package org.apache.grails.testing.http.client.utils
 
 import groovy.xml.MarkupBuilder
 
+/**
+ * Utility methods for handling XML.
+ *
+ * @since 7.0.9
+ */
 class XmlUtils {
 
     /**
-     * Builds XML text using {@link groovy.xml.MarkupBuilder}.
+     * Renders XML from the given {@link groovy.xml.MarkupBuilder DSL} closure.
      * <p>
-     * The closure is cloned and delegated to a {@link groovy.xml.MarkupBuilder} with
-     * {@link Closure#DELEGATE_FIRST} resolution strategy.
+     * The closure is cloned and executed against a {@link groovy.xml.MarkupBuilder}
+     * delegate using {@link Closure#DELEGATE_FIRST}.
      *
-     * @param dsl closure that writes XML markup
-     * @return generated XML payload string
+     * @param dsl the closure that produces the XML markup
+     * @return the rendered XML string
      */
     static String toXml(@DelegatesTo(strategy = Closure.DELEGATE_FIRST, value = MarkupBuilder) Closure<?> dsl) {
         def writer = new StringWriter()

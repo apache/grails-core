@@ -165,7 +165,7 @@ class AsyncTestController {
         def future = asyncProcessingService.processAsync(input)
         
         // Wait for result (up to 5 seconds)
-        def result = future.get(5, TimeUnit.SECONDS)
+        def result = future.get(10, TimeUnit.SECONDS)
         
         render([
             input: input,
@@ -180,7 +180,7 @@ class AsyncTestController {
         def value = params.int('value', 5)
         
         def future = asyncProcessingService.calculateAsync(value)
-        def result = future.get(5, TimeUnit.SECONDS)
+        def result = future.get(10, TimeUnit.SECONDS)
         
         render([
             input: value,
@@ -195,7 +195,7 @@ class AsyncTestController {
         def items = params.list('items') ?: ['one', 'two', 'three']
         
         def future = asyncProcessingService.processBatchAsync(items)
-        def results = future.get(5, TimeUnit.SECONDS)
+        def results = future.get(10, TimeUnit.SECONDS)
         
         render([
             original: items,
@@ -210,7 +210,7 @@ class AsyncTestController {
         def taskId = params.taskId ?: UUID.randomUUID().toString()
         
         def future = asyncProcessingService.longRunningOperation(taskId)
-        def result = future.get(5, TimeUnit.SECONDS)
+        def result = future.get(10, TimeUnit.SECONDS)
         
         render(result as JSON)
     }
@@ -233,7 +233,7 @@ class AsyncTestController {
             ]
         }
         
-        def result = combined.get(5, TimeUnit.SECONDS)
+        def result = combined.get(10, TimeUnit.SECONDS)
         render(result as JSON)
     }
 

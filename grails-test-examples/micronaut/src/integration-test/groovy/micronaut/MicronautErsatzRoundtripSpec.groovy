@@ -27,13 +27,12 @@ import spock.lang.Specification
 import org.springframework.beans.factory.annotation.Autowired
 
 import grails.testing.mixin.integration.Integration
-import org.apache.grails.testing.http.client.HttpClient
+import org.apache.grails.testing.http.client.HttpClientSupport
 
 @Integration
-class MicronautErsatzRoundtripSpec extends Specification {
+class MicronautErsatzRoundtripSpec extends Specification implements HttpClientSupport {
 
     @Autowired ExternalApiService externalApiService
-    @Autowired HttpClient http
 
     @AutoCleanup
     ErsatzServer ersatz = new ErsatzServer({ ServerConfig cfg ->
@@ -218,7 +217,7 @@ class MicronautErsatzRoundtripSpec extends Specification {
         })
 
         when: 'hitting the Grails controller endpoint'
-        def response = http.get('/external-api', 'Accept': 'application/json')
+        def response = http('/external-api', 'Accept': 'application/json')
 
         then: 'the Grails controller returns data that originated from the ersatz mock'
         response.expectContains(200, 'micronaut-client')
@@ -241,7 +240,7 @@ class MicronautErsatzRoundtripSpec extends Specification {
         })
 
         when: 'hitting the Grails controller show endpoint'
-        def response = http.get('/external-api/42', 'Accept': 'application/json')
+        def response = http('/external-api/42', 'Accept': 'application/json')
 
         then: 'the response contains the ersatz-mocked resource data'
         response.expectContains(200, 'the-answer')
@@ -263,7 +262,7 @@ class MicronautErsatzRoundtripSpec extends Specification {
         })
 
         when: 'POSTing to the Grails controller'
-        def response = http.postJson(
+        def response = httpPostJson(
                 '/external-api',
                 '{"name":"test"}',
                 'Accept': 'application/json'
@@ -289,7 +288,7 @@ class MicronautErsatzRoundtripSpec extends Specification {
         })
 
         when: 'PUTting to the Grails controller'
-        def response = http.putJson('/external-api/42', '{"name":"updated"}')
+        def response = httpPutJson('/external-api/42', '{"name":"updated"}')
 
         then: 'the response includes the ersatz-mocked update result'
         response.expectContains(200, 'updated-via-roundtrip')
@@ -310,7 +309,7 @@ class MicronautErsatzRoundtripSpec extends Specification {
         })
 
         when: 'DELETEing via the Grails controller'
-        def response = http.delete('/external-api/42', 'Accept': 'application/json')
+        def response = httpDelete('/external-api/42', 'Accept': 'application/json')
 
         then: 'the Grails controller returns 204'
         response.expectStatus(204)
@@ -332,7 +331,7 @@ class MicronautErsatzRoundtripSpec extends Specification {
         })
 
         when: 'hitting the error-handling endpoint that catches upstream errors'
-        def response = http.get('/external-api/safe/fail', 'Accept': 'application/json')
+        def response = http('/external-api/safe/fail', 'Accept': 'application/json')
 
         then: 'the Grails controller propagates the error status from the ersatz mock'
         response.expectStatus(500)

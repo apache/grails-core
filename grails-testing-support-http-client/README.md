@@ -30,28 +30,23 @@ dependencies {
 
 ### Basic Usage
 
-In Grails integration tests, `HttpClient` is auto-configured and can be injected:
+In Grails integration tests, implement the `HttpClientSupport` trait:
 
 ```groovy
 import grails.testing.mixin.integration.Integration
 import org.springframework.beans.factory.annotation.Autowired
 import spock.lang.Specification
 
-import org.apache.grails.testing.http.client.HttpClient
+import org.apache.grails.testing.http.client.HttpClientSupport
 
 @Integration
-class HealthSpec extends Specification {
-
-    @Autowired HttpClient http
+class HealthSpec extends Specification implements HttpClientSupport {
 
     void 'health endpoint responds OK'() {
         expect:
-        http.get('/health')
+        http('/health')
             .expectStatus(200)
             .expectContains('UP')
     }
 }
 ```
-
-For non-`@Integration` Spring Boot tests, you can opt in explicitly with `@EnableHttpClientSupport`.
-

@@ -21,17 +21,14 @@ package functional.tests
 import spock.lang.Specification
 
 import grails.testing.mixin.integration.Integration
-import org.apache.grails.testing.http.client.HttpClient
-import org.springframework.beans.factory.annotation.Autowired
+import org.apache.grails.testing.http.client.HttpClientSupport
 
 @Integration
-class BookSpec extends Specification {
-
-    @Autowired HttpClient http
+class BookSpec extends Specification implements HttpClientSupport {
 
     void 'Test errors view rendering'() {
         when: 'A POST is issued with a missing title'
-        def response = http.postJson('/books', [title: ''])
+        def response = httpPostJson('/books', [title: ''])
 
         then: 'The proper error is returned'
         response.expectJson(422, 'Content-Type': 'application/vnd.error;charset=UTF-8', """
@@ -40,7 +37,7 @@ class BookSpec extends Specification {
               "path": "/book/index",
               "_links": {
                 "self": {
-                  "href": "$http.baseUrl/book/index"
+                  "href": "$httpBaseUrl/book/index"
                 }
               }
             }"""
@@ -49,13 +46,13 @@ class BookSpec extends Specification {
 
     void 'Test REST view rendering'() {
         when: 'A GET is issued to get all books'
-        def response = http.get('/books')
+        def response = http('/books')
 
         then: 'The response is correct'
         response.expectJson(200, 'Content-Type': 'application/json;charset=UTF-8', '[]')
 
         when: 'A POST is issued to create a new book'
-        response = http.postJson('/books', [title: 'The Stand'])
+        response = httpPostJson('/books', [title: 'The Stand'])
 
         then: 'The REST resource is created and the correct JSON is returned'
         response.expectJson(201, 'Content-Type': 'application/json;charset=UTF-8', [
@@ -66,7 +63,7 @@ class BookSpec extends Specification {
         ])
 
         when: 'A GET request is issued'
-       response = http.get('/books/1')
+       response = http('/books/1')
 
         then: 'The response is correct'
         response.expectJson(200, 'Content-Type': 'application/json;charset=UTF-8', [
@@ -77,7 +74,7 @@ class BookSpec extends Specification {
         ])
 
         when: 'A PUT is issued'
-        response = http.putJson('/books/1', [title: 'The Changeling'])
+        response = httpPutJson('/books/1', [title: 'The Changeling'])
 
         then: 'The resource is updated'
         response.expectJson(200, 'Content-Type': 'application/json;charset=UTF-8', [
@@ -88,7 +85,7 @@ class BookSpec extends Specification {
         ])
 
         when: 'A GET is issued for all books'
-       response = http.get('/books')
+       response = http('/books')
 
         then: 'The response is correct'
         response.expectJson(200, 'Content-Type': 'application/json;charset=UTF-8', '''
@@ -103,7 +100,7 @@ class BookSpec extends Specification {
         ''')
 
         when: 'A GET is issued for all books with excludes'
-       response = http.get('/books/listExcludes?testParam=3')
+       response = http('/books/listExcludes?testParam=3')
 
         then: 'Access to config and params works'
         response.expectJson(200, 'Content-Type': 'application/json;charset=UTF-8', '''
@@ -119,7 +116,7 @@ class BookSpec extends Specification {
         ''')
 
         when: 'A GET is issued for all books with excludes'
-       response = http.get('/books/listExcludesRespond?testParam=4')
+       response = http('/books/listExcludesRespond?testParam=4')
 
         then: 'view rendering works with a map with respond'
         response.expectJson(200, 'Content-Type': 'application/json;charset=UTF-8', '''
@@ -134,7 +131,7 @@ class BookSpec extends Specification {
         ''')
 
         when: 'A GET is issued for a specific book rendered by a template'
-       response = http.get('/books/showWithParams/1?expand=foo')
+       response = http('/books/showWithParams/1?expand=foo')
 
         then: 'view rendering with template passes parameters'
         response.expectStatus(200)
@@ -146,7 +143,7 @@ class BookSpec extends Specification {
 
     void 'View parameter passed to the render method can be used for non-standard view locations'() {
         when: 'A GET is issued to a request with a template at a non-standard location'
-        def response = http.get('/books/non-standard-template')
+        def response = http('/books/non-standard-template')
 
         then: 'The template was rendered successfully. The custom converter was also used'
         response.expectJson(200, 'Content-Type': 'application/json;charset=UTF-8', '''
@@ -159,7 +156,7 @@ class BookSpec extends Specification {
 
     void 'Object type of list is used for model variable when rendering templates'() {
         when:
-        def response = http.get('/books/listCallsTmpl')
+        def response = http('/books/listCallsTmpl')
 
         then: 'The template was rendered successfully'
         response.expectJson(200, 'Content-Type': 'application/json;charset=UTF-8', '''
@@ -173,7 +170,7 @@ class BookSpec extends Specification {
 
     void 'Object type of list is used for model variable in addition to specified model when rendering templates'() {
         when:
-        def response = http.get('/books/listCallsTmplExtraData')
+        def response = http('/books/listCallsTmplExtraData')
 
         then: 'The template was rendered successfully'
         response.expectJson(200, 'Content-Type': 'application/json;charset=UTF-8', '''
@@ -188,7 +185,7 @@ class BookSpec extends Specification {
 
     void 'Object type of list is used for model variable in addition to specified model and var when rendering templates'() {
         when:
-        def response = http.get('/books/listCallsTmplVar')
+        def response = http('/books/listCallsTmplVar')
 
         then: 'The template was rendered successfully'
         response.expectJson(200, 'Content-Type': 'application/json;charset=UTF-8', '''

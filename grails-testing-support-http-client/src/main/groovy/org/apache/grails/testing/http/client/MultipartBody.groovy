@@ -27,6 +27,8 @@ import groovy.transform.CompileStatic
  * Represents a pre-encoded {@code multipart/form-data} request body.
  * <p>
  * Use {@code builder()} to create instances.
+ *
+ * @since 7.0.9
  */
 @CompileStatic
 class MultipartBody {

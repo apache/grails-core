@@ -79,7 +79,6 @@ def publishedProjects = [
         'grails-testing-support-dbcleanup-core',
         'grails-testing-support-dbcleanup-h2',
         'grails-testing-support-dbcleanup-postgresql',
-        'grails-testing-support-http-client',
         'grails-testing-support-mongodb',
         'grails-testing-support-views-gson',
         'grails-testing-support-web',

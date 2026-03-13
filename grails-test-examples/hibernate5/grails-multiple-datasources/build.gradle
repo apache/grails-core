@@ -53,7 +53,7 @@ dependencies {
 
     testRuntimeOnly 'org.apache.grails:grails-testing-support-web'
 
-    integrationTestImplementation 'org.apache.grails:grails-testing-support-http-client'
+    integrationTestImplementation project(':grails-testing-support-http-client')
     integrationTestImplementation 'org.spockframework:spock-core'
 }
 

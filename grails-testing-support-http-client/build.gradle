@@ -22,8 +22,6 @@ plugins {
     id 'java-library'
     id 'org.apache.grails.buildsrc.properties'
     id 'org.apache.grails.buildsrc.compile'
-    id 'org.apache.grails.buildsrc.publish'
-    id 'org.apache.grails.buildsrc.sbom'
     id 'org.apache.grails.gradle.grails-code-style'
 }
 
@@ -46,8 +44,6 @@ dependencies {
     implementation 'org.apache.groovy:groovy-xml'
     implementation "org.opentest4j:opentest4j:$openTest4jVersion" // AssertionFailedError
     implementation 'org.springframework:spring-beans' // @Value
-    implementation 'org.springframework:spring-context' // @Bean, @Import, @Lazy
-    implementation 'org.springframework.boot:spring-boot-test' // @TestConfiguration
 
     testImplementation 'org.spockframework:spock-core'
 

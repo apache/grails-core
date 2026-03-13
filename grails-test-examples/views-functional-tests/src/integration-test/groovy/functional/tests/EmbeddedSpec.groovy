@@ -22,17 +22,14 @@ import spock.lang.Issue
 import spock.lang.Specification
 
 import grails.testing.mixin.integration.Integration
-import org.apache.grails.testing.http.client.HttpClient
-import org.springframework.beans.factory.annotation.Autowired
+import org.apache.grails.testing.http.client.HttpClientSupport
 
 @Integration
-class EmbeddedSpec extends Specification {
-
-    @Autowired HttpClient http
+class EmbeddedSpec extends Specification implements HttpClientSupport {
 
     void 'Test render can handle a domain with an embedded src/groovy class'() {
         when:
-        def response = http.get('/embedded')
+        def response = http('/embedded')
 
         then: 'The response is correct'
         response.expectJson(200, 'Content-Type': 'application/json;charset=UTF-8', '''
@@ -51,7 +48,7 @@ class EmbeddedSpec extends Specification {
 
     void 'Test jsonapi render can handle a domain with an embedded src/groovy class'() {
         when:
-        def response = http.get('/embedded/jsonapi')
+        def response = http('/embedded/jsonapi')
 
         then: 'The response is correct'
         response.expectJson(200, 'Content-Type': 'application/json;charset=UTF-8', '''
@@ -79,7 +76,7 @@ class EmbeddedSpec extends Specification {
     @Issue('https://github.com/apache/grails-views/issues/171')
     void 'test render can handle a domain with an embedded and includes src/groovy class'() {
         when:
-        def response = http.get('/embedded/embeddedWithIncludes')
+        def response = http('/embedded/embeddedWithIncludes')
 
         then: 'the response is correct'
         response.expectJson(200, 'Content-Type': 'application/json;charset=UTF-8', '''
@@ -95,7 +92,7 @@ class EmbeddedSpec extends Specification {
     @Issue('https://github.com/apache/grails-views/issues/171')
     void 'Test jsonapi render can handle a domain with an embedded and includes src/groovy class'() {
         when:
-        def response = http.get('/embedded/embeddedWithIncludesJsonapi')
+        def response = http('/embedded/embeddedWithIncludesJsonapi')
 
         then: 'the response is correct'
         response.expectJson(200, 'Content-Type': 'application/json;charset=UTF-8', '''
