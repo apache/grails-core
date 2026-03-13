@@ -38,13 +38,15 @@ class RootBinderSpec extends HibernateGormDatastoreSpec {
     MetadataBuildingContext metadataBuildingContext
     PersistentEntityNamingStrategy namingStrategy
     def sharedCollector
+    org.grails.orm.hibernate.cfg.MappingCacheHolder mappingCacheHolder
 
     void setup() {
         def gdb = getGrailsDomainBinder()
         metadataBuildingContext = gdb.getMetadataBuildingContext()
         namingStrategy = gdb.getNamingStrategy()
         sharedCollector = getCollector()
-        
+        mappingCacheHolder = Mock(org.grails.orm.hibernate.cfg.MappingCacheHolder)
+
         multiTenantFilterBinder = Mock(MultiTenantFilterBinder)
         subClassBinder = Mock(SubClassBinder)
         rootPersistentClassCommonValuesBinder = Mock(RootPersistentClassCommonValuesBinder)
@@ -56,7 +58,8 @@ class RootBinderSpec extends HibernateGormDatastoreSpec {
                 subClassBinder,
                 rootPersistentClassCommonValuesBinder,
                 discriminatorPropertyBinder,
-                sharedCollector
+                sharedCollector,
+                mappingCacheHolder
         )
     }
 
@@ -104,6 +107,7 @@ class RootBinderSpec extends HibernateGormDatastoreSpec {
 
         then:
         1 * rootPersistentClassCommonValuesBinder.bindRoot(entity) >> rootClass
+        1 * mappingCacheHolder.cacheMapping(childEntity)
         1 * discriminatorPropertyBinder.bindDiscriminatorProperty(rootClass)
         1 * subClassBinder.bindSubClass(childEntity, rootClass) >> []
         1 * multiTenantFilterBinder.bind(entity, rootClass)
@@ -124,6 +128,6 @@ class RootBinderSpec extends HibernateGormDatastoreSpec {
         binder.bindRoot(entity)
 
         then:
-        0 * rootPersistentClassCommonValuesBinder.bindRoot(_, _)
+        0 * rootPersistentClassCommonValuesBinder.bindRoot(_)
     }
 }

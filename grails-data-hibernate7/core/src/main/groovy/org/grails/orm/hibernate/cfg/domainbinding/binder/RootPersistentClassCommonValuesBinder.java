@@ -30,6 +30,7 @@ import org.grails.orm.hibernate.cfg.CacheConfig;
 import org.grails.orm.hibernate.cfg.Mapping;
 import org.grails.orm.hibernate.cfg.PersistentEntityNamingStrategy;
 import org.grails.orm.hibernate.cfg.domainbinding.hibernate.GrailsHibernatePersistentEntity;
+import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernatePersistentEntity;
 
 public class RootPersistentClassCommonValuesBinder {
     public static final Logger LOG = LoggerFactory.getLogger(RootPersistentClassCommonValuesBinder.class);
@@ -59,7 +60,7 @@ public class RootPersistentClassCommonValuesBinder {
         this.mappings = mappings;
     }
 
-    public RootClass bindRoot(@Nonnull GrailsHibernatePersistentEntity domainClass) {
+    public RootClass bindRoot(@Nonnull HibernatePersistentEntity domainClass) {
 
         RootClass root = new RootClass(this.metadataBuildingContext);
         classBinder.bindClass(domainClass, root);

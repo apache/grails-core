@@ -37,17 +37,14 @@ import org.grails.orm.hibernate.cfg.domainbinding.util.MultiTenantFilterBinder;
 /** Binder for subclasses. */
 public class SubClassBinder {
 
-    private final MappingCacheHolder mappingCacheHolder;
     private final SubclassMappingBinder subclassMappingBinder;
     private final MultiTenantFilterBinder multiTenantFilterBinder;
     private final String dataSourceName;
 
     public SubClassBinder(
-            MappingCacheHolder mappingCacheHolder,
             SubclassMappingBinder subclassMappingBinder,
             MultiTenantFilterBinder multiTenantFilterBinder,
             String dataSourceName) {
-        this.mappingCacheHolder = mappingCacheHolder;
         this.subclassMappingBinder = subclassMappingBinder;
         this.multiTenantFilterBinder = multiTenantFilterBinder;
         this.dataSourceName = dataSourceName;
@@ -61,9 +58,8 @@ public class SubClassBinder {
      * @return The list of subclasses created
      */
     public List<Subclass> bindSubClass(@Nonnull HibernatePersistentEntity sub, PersistentClass parent) {
-        mappingCacheHolder.cacheMapping(sub);
         Subclass subClass = subclassMappingBinder.createSubclassMapping(sub, parent);
-        parent.addSubclass(subClass);
+        sub.setPersistentClass(subClass);
         bindMultiTenantFilter(sub, subClass);
         List<Subclass> subclasses = new ArrayList<>();
         subclasses.add(subClass);

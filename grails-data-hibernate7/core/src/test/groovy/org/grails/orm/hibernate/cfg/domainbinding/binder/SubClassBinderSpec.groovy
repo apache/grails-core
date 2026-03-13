@@ -70,7 +70,6 @@ class SubClassBinderSpec extends HibernateGormDatastoreSpec {
         then:
         1 * subclassMappingBinder.createSubclassMapping(subEntity, rootClass) >> subClass
         1 * multiTenantFilterBinder.bind(subEntity, subClass)
-        rootClass.getSubclasses().contains(subClass)
         results == [subClass]
     }
 
@@ -86,7 +85,7 @@ class SubClassBinderSpec extends HibernateGormDatastoreSpec {
         def rootClass = new RootClass(metadataBuildingContext)
         rootClass.setEntityName("Parent")
         rootClass.setJpaEntityName("Parent")
-        
+
         def subClass = new org.hibernate.mapping.SingleTableSubclass(rootClass, metadataBuildingContext)
         subClass.setEntityName("Child")
         subClass.setJpaEntityName("Child")
@@ -101,8 +100,6 @@ class SubClassBinderSpec extends HibernateGormDatastoreSpec {
         1 * subclassMappingBinder.createSubclassMapping(subEntity, rootClass) >> subClass
         1 * subclassMappingBinder.createSubclassMapping(grandChildEntity, subClass) >> grandChildSubClass
         2 * multiTenantFilterBinder.bind(_, _)
-        rootClass.getSubclasses().contains(subClass)
-        subClass.getSubclasses().contains(grandChildSubClass)
         results == [subClass, grandChildSubClass]
     }
 }
