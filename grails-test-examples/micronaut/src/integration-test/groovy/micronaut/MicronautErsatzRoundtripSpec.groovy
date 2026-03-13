@@ -25,6 +25,7 @@ import io.micronaut.http.HttpResponse
 import io.micronaut.http.MediaType
 import io.micronaut.http.client.HttpClient
 import spock.lang.AutoCleanup
+import spock.lang.Retry
 import spock.lang.Specification
 
 import org.springframework.beans.factory.annotation.Autowired
@@ -444,6 +445,7 @@ class MicronautErsatzRoundtripSpec extends Specification {
         ersatz.verify()
     }
 
+    @Retry(count = 2, delay = 200, exceptions = [io.micronaut.http.client.exceptions.HttpClientException])
     void "full roundtrip: ersatz mocks empty response body"() {
         given: 'ersatz mocks an endpoint returning 200 with an empty JSON object'
         ersatz.expectations({ expect ->

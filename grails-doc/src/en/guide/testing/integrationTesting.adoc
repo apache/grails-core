@@ -255,6 +255,42 @@ These formats can be mixed. Entries without a `:` separator will auto-discover t
 
 If no names are specified, all datasources in the application context are cleaned.
 
+===== Deferred Cleanup (cleanupAfterSpec)
+
+By default, `@DatabaseCleanup` truncates tables after each individual test method. If you prefer to defer cleanup until after the entire spec finishes, set `cleanupAfterSpec = true`:
+
+[source,groovy]
+----
+@Integration
+@DatabaseCleanup(cleanupAfterSpec = true)
+@Stepwise
+class SharedDataSpec extends Specification {
+
+    @Transactional
+    void "test 1 - create data"() {
+        when:
+        new Book(title: 'Grails in Action').save(flush: true, failOnError: true)
+
+        then:
+        Book.count() == 1
+    }
+
+    @Transactional
+    void "test 2 - data from test 1 is still available"() {
+        expect: 'data persists across tests'
+        Book.count() == 1
+    }
+
+    // Database is cleaned once after both tests complete
+}
+----
+
+This is useful when test methods build on each other's data, or when per-test cleanup is too expensive and a single cleanup at the end of the spec is sufficient.
+
+NOTE: `cleanupAfterSpec` is only valid on class-level `@DatabaseCleanup` annotations. Using it on a method-level annotation will throw an `IllegalStateException`.
+
+NOTE: If individual methods within a `cleanupAfterSpec = true` spec also have their own `@DatabaseCleanup` annotation, those methods will still be cleaned up immediately after execution.
+
 WARNING: `@DatabaseCleanup` truncates *all* tables, including any data inserted by `BootStrap`. Tests using this annotation should create their own test data and not rely on bootstrap seed data.
 
 IMPORTANT: `@DatabaseCleanup` requires `@Integration`. Using `@DatabaseCleanup` on a spec without `@Integration` will throw an `IllegalStateException`, since the database cleanup framework depends on the Spring application context provided by the integration test infrastructure.

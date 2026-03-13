@@ -75,6 +75,10 @@ import java.lang.annotation.Target
  * // Use a custom ApplicationContext resolver
  * &#64;DatabaseCleanup(resolver = MyCustomResolver)
  * class MySpec extends Specification { ... }
+ *
+ * // Clean only once after the entire spec finishes (class-level only)
+ * &#64;DatabaseCleanup(cleanupAfterSpec = true)
+ * class MySpec extends Specification { ... }
  * </pre>
  */
 @Retention(RetentionPolicy.RUNTIME)
@@ -103,4 +107,19 @@ import java.lang.annotation.Target
      * @return the resolver class to use
      */
     Class<? extends ApplicationContextResolver> resolver() default DefaultApplicationContextResolver
+
+    /**
+     * When {@code true}, database cleanup is deferred until after the entire spec finishes
+     * ({@code cleanupSpec}) instead of running after each individual test method.
+     *
+     * <p>This attribute is only valid on class-level annotations. Setting it to {@code true}
+     * on a method-level annotation will result in an {@link IllegalStateException} at
+     * spec visit time.</p>
+     *
+     * <p>This is useful for specs where test methods build on each other's data, or where
+     * per-test cleanup is too expensive and a single cleanup at the end is sufficient.</p>
+     *
+     * @return {@code true} to defer cleanup until after the spec finishes; defaults to {@code false}
+     */
+    boolean cleanupAfterSpec() default false
 }
