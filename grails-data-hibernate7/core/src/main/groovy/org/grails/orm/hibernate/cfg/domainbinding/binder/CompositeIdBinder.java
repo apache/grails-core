@@ -35,6 +35,7 @@ import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernatePersistentP
 import org.grails.orm.hibernate.cfg.CompositeIdentity;
 import org.grails.orm.hibernate.cfg.GrailsHibernateUtil;
 import org.grails.orm.hibernate.cfg.domainbinding.hibernate.GrailsHibernatePersistentEntity;
+import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernatePersistentEntity;
 import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernatePersistentProperty;
 
 @SuppressWarnings("PMD.DataflowAnomalyAnalysis")
@@ -54,7 +55,7 @@ public class CompositeIdBinder {
     }
 
     public void bindCompositeId(
-            @Nonnull GrailsHibernatePersistentEntity domainClass, RootClass root,@Nonnull CompositeIdentity compositeIdentity) {
+            @Nonnull HibernatePersistentEntity domainClass, RootClass root, CompositeIdentity compositeIdentity) {
         Component id = new Component(metadataBuildingContext, root);
         id.setNullValue("undefined");
         root.setIdentifier(id);
@@ -68,12 +69,9 @@ public class CompositeIdBinder {
 
         id.setRoleName(path);
 
-        HibernatePersistentProperty[] composite;
-        if (compositeIdentity != null) {
-            composite = compositeIdentity.getHibernateProperties(domainClass);
-        } else {
-            composite = domainClass.getCompositeIdentity();
-        }
+        HibernatePersistentProperty[] composite = compositeIdentity != null
+                ? compositeIdentity.getHibernateProperties(domainClass)
+                : domainClass.getCompositeIdentity();
 
         if (composite == null || composite.length == 0) {
             throw new MappingException("No composite identifier properties found for class [" + domainClass.getName() + "]");

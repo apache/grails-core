@@ -164,7 +164,7 @@ class IdentityBinderSpec extends HibernateGormDatastoreSpec {
 
     def "should create synthetic identifier property if it doesn't exist"() {
         given:
-        def domainClass = Mock(GrailsHibernatePersistentEntity)
+        def domainClass = Mock(HibernatePersistentEntity)
         def root = new RootClass(getGrailsDomainBinder().getMetadataBuildingContext())
         def mappings = Mock(InFlightMetadataCollector)
         def identity = new Identity()

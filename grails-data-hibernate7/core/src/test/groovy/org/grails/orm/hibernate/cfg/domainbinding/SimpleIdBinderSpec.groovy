@@ -158,7 +158,7 @@ class SimpleIdBinderSpec extends HibernateGormDatastoreSpec {
             isTablePerConcreteClass() >> false
         }
         def reflector = Mock(EntityReflector)
-        def domainClass = Mock(GrailsHibernatePersistentEntity) {
+        def domainClass = Mock(HibernatePersistentEntity) {
             getMappedForm() >> mapping
             getIdentity() >> null
             getName() >> "TestEntity"

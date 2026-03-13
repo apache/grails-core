@@ -35,6 +35,7 @@ import org.grails.orm.hibernate.cfg.Mapping;
 import org.grails.orm.hibernate.cfg.PropertyConfig;
 import org.grails.orm.hibernate.cfg.domainbinding.hibernate.GrailsHibernatePersistentEntity;
 import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernateIdentityProperty;
+import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernatePersistentEntity;
 import org.grails.orm.hibernate.cfg.domainbinding.util.BasicValueIdCreator;
 
 import static org.grails.orm.hibernate.cfg.domainbinding.binder.GrailsDomainBinder.EMPTY_PATH;
@@ -63,7 +64,7 @@ public class SimpleIdBinder {
     }
 
     public void bindSimpleId(
-            @Nonnull GrailsHibernatePersistentEntity domainClass, RootClass entity, Identity mappedId, Table table) {
+            @Nonnull HibernatePersistentEntity domainClass, RootClass entity, Identity mappedId, Table table) {
 
         Mapping result = domainClass.getMappedForm();
         boolean useSequence = result != null && result.isTablePerConcreteClass();
