@@ -256,4 +256,176 @@ class DataSourceBuilderSpec extends Specification {
         cleanup:
         ds?.close()
     }
+
+    // ---- Nested map flattening tests (ConfigSlurper dotted key expansion) ----
+
+    def "nested map dbProperties are flattened to dotted keys on HikariDataSource"() {
+        given: "a properties map with nested dbProperties, simulating ConfigSlurper output"
+        Map config = [
+                url            : "jdbc:h2:mem:nestedMapTest;DB_CLOSE_DELAY=-1",
+                driverClassName: "org.h2.Driver",
+                username       : "sa",
+                password       : "",
+                dbProperties   : [
+                        oracle: [
+                                jdbc: [
+                                        sendBooleanAsNativeBoolean: false,
+                                        TcpNoDelay                : true,
+                                        implicitStatementCacheSize: 200
+                                ]
+                        ]
+                ]
+        ]
+
+        when:
+        HikariDataSource ds = (HikariDataSource) DataSourceBuilder.create()
+                .type(HikariDataSource)
+                .properties(config)
+                .build()
+
+        then: "dataSourceProperties contains flat dotted keys"
+        ds.dataSourceProperties.getProperty('oracle.jdbc.sendBooleanAsNativeBoolean') == 'false'
+        ds.dataSourceProperties.getProperty('oracle.jdbc.TcpNoDelay') == 'true'
+        ds.dataSourceProperties.getProperty('oracle.jdbc.implicitStatementCacheSize') == '200'
+
+        and: "no nested map entries exist"
+        !ds.dataSourceProperties.containsKey('oracle')
+
+        cleanup:
+        ds?.close()
+    }
+
+    def "mixed nested and flat dbProperties are all correctly set"() {
+        given:
+        Map config = [
+                url            : "jdbc:h2:mem:mixedPropsTest;DB_CLOSE_DELAY=-1",
+                driverClassName: "org.h2.Driver",
+                username       : "sa",
+                password       : "",
+                dbProperties   : [
+                        oracle: [
+                                jdbc: [
+                                        sendBooleanAsNativeBoolean: false
+                                ]
+                        ],
+                        defaultRowPrefetch: 50
+                ]
+        ]
+
+        when:
+        HikariDataSource ds = (HikariDataSource) DataSourceBuilder.create()
+                .type(HikariDataSource)
+                .properties(config)
+                .build()
+
+        then: "nested keys are flattened"
+        ds.dataSourceProperties.getProperty('oracle.jdbc.sendBooleanAsNativeBoolean') == 'false'
+
+        and: "flat keys are preserved"
+        ds.dataSourceProperties.getProperty('defaultRowPrefetch') == '50'
+
+        and: "no nested map structure exists"
+        !ds.dataSourceProperties.containsKey('oracle')
+
+        cleanup:
+        ds?.close()
+    }
+
+    def "deeply nested dbProperties are correctly flattened"() {
+        given:
+        Map config = [
+                url            : "jdbc:h2:mem:deepNestedTest;DB_CLOSE_DELAY=-1",
+                driverClassName: "org.h2.Driver",
+                username       : "sa",
+                password       : "",
+                dbProperties   : [
+                        a: [
+                                b: [
+                                        c: [
+                                                d: 'deepValue'
+                                        ]
+                                ]
+                        ]
+                ]
+        ]
+
+        when:
+        HikariDataSource ds = (HikariDataSource) DataSourceBuilder.create()
+                .type(HikariDataSource)
+                .properties(config)
+                .build()
+
+        then: "the deeply nested key is flattened correctly"
+        ds.dataSourceProperties.getProperty('a.b.c.d') == 'deepValue'
+
+        and: "no intermediate keys exist"
+        !ds.dataSourceProperties.containsKey('a')
+        !ds.dataSourceProperties.containsKey('a.b')
+        !ds.dataSourceProperties.containsKey('a.b.c')
+
+        cleanup:
+        ds?.close()
+    }
+
+    def "flat dotted key with boolean value from ConfigSlurper delegate syntax is coerced correctly"() {
+        given: "a properties map simulating ConfigSlurper delegate.\"dotted.key\" = false syntax"
+        // ConfigSlurper with delegate."oracle.jdbc.sendBooleanAsNativeBoolean" = false
+        // produces a flat String key with a Boolean value (not a nested map)
+        Map config = [
+                url            : "jdbc:h2:mem:delegateDottedKeyTest;DB_CLOSE_DELAY=-1",
+                driverClassName: "org.h2.Driver",
+                username       : "sa",
+                password       : "",
+                dbProperties   : [
+                        'oracle.jdbc.sendBooleanAsNativeBoolean': false
+                ]
+        ]
+
+        when:
+        HikariDataSource ds = (HikariDataSource) DataSourceBuilder.create()
+                .type(HikariDataSource)
+                .properties(config)
+                .build()
+
+        then: "the dotted key is preserved as-is and the boolean value is coerced to a string"
+        ds.dataSourceProperties.getProperty('oracle.jdbc.sendBooleanAsNativeBoolean') == 'false'
+
+        and: "no nested map structure was created"
+        !ds.dataSourceProperties.containsKey('oracle')
+
+        cleanup:
+        ds?.close()
+    }
+
+    def "flat dbProperties with non-string values are coerced to strings (grails-core#10673)"() {
+        given: "a properties map with flat dbProperties containing non-string values"
+        Map config = [
+                url            : "jdbc:h2:mem:coercionTest;DB_CLOSE_DELAY=-1",
+                driverClassName: "org.h2.Driver",
+                username       : "sa",
+                password       : "",
+                dbProperties   : [
+                        useSSL        : false,
+                        connectTimeout: 30000,
+                        cachePrepStmts: true
+                ]
+        ]
+
+        when:
+        HikariDataSource ds = (HikariDataSource) DataSourceBuilder.create()
+                .type(HikariDataSource)
+                .properties(config)
+                .build()
+
+        then: "dataSourceProperties contains string values"
+        ds.dataSourceProperties.getProperty('useSSL') == 'false'
+        ds.dataSourceProperties.getProperty('connectTimeout') == '30000'
+        ds.dataSourceProperties.getProperty('cachePrepStmts') == 'true'
+
+        and: "all values are String instances"
+        ds.dataSourceProperties.every { k, v -> v instanceof String }
+
+        cleanup:
+        ds?.close()
+    }
 }

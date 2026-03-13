@@ -114,19 +114,39 @@ public class DataSourceBuilder {
         return this;
     }
 
+    /**
+     * Coerces the dbProperties value into a flat {@link Properties} object suitable for
+     * passing to the underlying DataSource (e.g. HikariCP's dataSourceProperties).
+     *
+     * <p>When dbProperties originate from a Groovy ConfigSlurper DSL, dotted keys like
+     * {@code "oracle.jdbc.sendBooleanAsNativeBoolean"} are expanded into nested maps:
+     * {@code {oracle: {jdbc: {sendBooleanAsNativeBoolean: false}}}}. This method
+     * recursively flattens such nested maps back into dotted string keys.</p>
+     *
+     * <p>When dbProperties originate from YAML configuration, the keys are already flat
+     * strings and are simply converted to a Properties object.</p>
+     */
     private void coerceDbProperties() {
         Map propertiesMap = this.properties;
         Object dbPropertiesObject = propertiesMap.get("dbProperties");
         if (dbPropertiesObject instanceof Map) {
             Map dbProperties = (Map) dbPropertiesObject;
             Properties properties = new Properties();
-            for (Object key : dbProperties.keySet()) {
-                Object value = dbProperties.get(key);
-                if (value != null) {
-                    properties.put(key.toString(), value.toString());
-                }
-            }
+            flattenMap("", dbProperties, properties);
             propertiesMap.put("dbProperties", properties);
+        }
+    }
+
+    @SuppressWarnings("unchecked")
+    private void flattenMap(String prefix, Map<?, ?> map, Properties target) {
+        for (Map.Entry<?, ?> entry : map.entrySet()) {
+            String key = prefix.isEmpty() ? entry.getKey().toString() : prefix + "." + entry.getKey().toString();
+            Object value = entry.getValue();
+            if (value instanceof Map) {
+                flattenMap(key, (Map<?, ?>) value, target);
+            } else if (value != null) {
+                target.put(key, value.toString());
+            }
         }
     }
 
