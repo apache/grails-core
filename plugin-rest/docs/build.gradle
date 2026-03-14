@@ -21,27 +21,8 @@ plugins {
     id 'groovy' // For groovydoc task
 }
 
-ext {
-    apiDocsProjects = [
-            'spring-security-rest': [
-                    docTitle: "Grails Spring Security REST Plugins - $projectVersion",
-                    windowTitle: "spring-security-rest $projectVersion API"
-            ],
-            'spring-security-rest-gorm': [:],
-            'spring-security-rest-grailscache': [:],
-            'spring-security-rest-memcached': [:],
-            'spring-security-rest-redis': [:]
-    ]
-    asciidoctorAttributes = [
-            'experimental'    : 'true',
-            'compat-mode'     : 'true',
-            'toc'             : 'left',
-            'icons'           : 'font',
-            'version'         : projectVersion,
-            'sourcedir'       : "${rootProject.allprojects.find { it.name == 'spring-security-rest' }.projectDir}/src/main/groovy",
-            'baseGroovyApiUrl': "https://apache.github.io/grails-spring-security/${projectVersion}/rest-plugin/docs/gapi/"
-    ]
-}
+apply from: rootProject.layout.projectDirectory.file('gradle/groovydoc-config.gradle')
+apply from: rootProject.layout.projectDirectory.file('gradle/reproducible-config.gradle')
 
 // because the groovy plugin is being applied, a version of groovy must be provided
 dependencies {
@@ -49,7 +30,21 @@ dependencies {
     implementation 'org.apache.groovy:groovy'
 }
 
+tasks.withType(Groovydoc).configureEach {
+    it.docTitle = "Grails Spring Security REST Plugins - ${projectVersion}"
+    it.windowTitle = "spring-security-rest ${projectVersion} API"
+    def sources = []
+    ['spring-security-rest', 'spring-security-rest-gorm', 'spring-security-rest-grailscache',
+     'spring-security-rest-memcached', 'spring-security-rest-redis'].each { subprojectName ->
+        def sub = rootProject.findProject(":${subprojectName}")
+        if (sub) {
+            sources += sub.files('src/main/groovy')
+        }
+    }
+    it.source = sources
+    it.destinationDir = rootProject.layout.buildDirectory.dir('docs/rest-plugin/groovydoc').get().asFile
+}
+
 apply {
-    from rootProject.layout.projectDirectory.file('gradle/docs-config.gradle')
     from rootProject.layout.projectDirectory.file('gradle/reproducible-config.gradle')
 }

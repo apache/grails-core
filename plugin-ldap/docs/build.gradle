@@ -21,75 +21,22 @@ plugins {
     id 'groovy' // For groovydoc and resolveBomVersions tasks
 }
 
+apply from: rootProject.layout.projectDirectory.file('gradle/groovydoc-config.gradle')
+apply from: rootProject.layout.projectDirectory.file('gradle/reproducible-config.gradle')
+
+// because the groovy plugin is being applied, a version of groovy must be provided
 dependencies {
-    // These are added to be able to resolve versions from grails-bom
-    // in the resolveBomVersions task
-    implementation platform("org.apache.grails:grails-bom:$grailsVersion")
-    implementation 'org.springframework.security:spring-security-core'
-    implementation 'org.apache.grails.data:grails-datamapping-core'
-    implementation 'org.apache.groovy:groovy' // because groovy is applied, we need to provide a version
+    implementation platform("org.apache.grails:grails-bom:${grailsVersion}")
+    implementation 'org.apache.groovy:groovy'
 }
 
-String getGrailsDocumentationVersion(String version) {
-    if (version.endsWith('-SNAPSHOT')) {
-        return 'snapshot'
-    }
-    return version
-}
-
-tasks.register('bomVersions') {
-    group = 'documentation'
-    description = 'Resolve library versions from the BOM'
-    ext.springSecurity = configurations.compileClasspath
-            .resolvedConfiguration
-            .resolvedArtifacts
-            .find {
-                it.moduleVersion.id.group == 'org.springframework.security' &&
-                        it.moduleVersion.id.name == 'spring-security-core'
-            }.moduleVersion.id.version
-    ext.gorm = configurations.compileClasspath
-            .resolvedConfiguration
-            .resolvedArtifacts
-            .find {
-                it.moduleVersion.id.group == 'org.apache.grails.data' &&
-                        it.moduleVersion.id.name == 'grails-datamapping-core'
-            }.moduleVersion.id.version
-    logger.lifecycle('Resolved Spring Security version for Guide links: {}', springSecurity)
-    logger.lifecycle('Resolved GORM version for Guide links: {}', gorm)
-}
-
-ext {
-    apiDocsProjects = [
-            'ldap-plugin': [
-                    docTitle: "Grails Spring Security LDAP Plugin - $projectVersion",
-                    windowTitle: "spring-security-ldap $projectVersion API"
-            ]
-    ]
-    asciidoctorAttributes = [
-            'source-highlighter'              : 'coderay',
-            toc                               : 'left',
-            toclevels                         : '2',
-            'toc-title'                       : 'Table of Contents',
-            icons                             : 'font',
-            id                                : project.name + ':' + project.version,
-            idprefix                          : '',
-            idseparator                       : '-',
-            version                           : projectVersion,
-            projectUrl                        : 'https://github.com/apache/grails-spring-security',
-            sourcedir                         : "${rootProject.findProject(':ldap-plugin').projectDir}/src/main/groovy",
-            gormDetailedLink                  : "https://gorm.grails.org/${getGrailsDocumentationVersion(bomVersions.gorm)}/hibernate/manual/index.html",
-            gormSummaryLink                   : "https://docs.grails.org/${getGrailsDocumentationVersion(grailsVersion)}/guide/GORM.html",
-            grailsDocBase                     : "https://docs.grails.org/${getGrailsDocumentationVersion(grailsVersion)}",
-            functionalTestAppPath             : "${rootProject.findProject(':ldap-examples-functional-test-app').projectDir}",
-            customUserDetailsContextMapperPath: "${rootProject.findProject(':ldap-examples-custom-user-details-context-mapper').projectDir}",
-            grailsSpringSecurityCoreVersion   : projectVersion,
-            grailsSpringSecurityCoreLink      : "https://apache.github.io/grails-spring-security/${getGrailsDocumentationVersion(projectVersion)}/index.html",
-            springSecurityLdapLink            : "https://docs.spring.io/spring-security/reference/${bomVersions.springSecurity}/servlet/authentication/passwords/ldap.html",
-            springSecurityLdapApiLink         : "https://docs.spring.io/spring-security/site/docs/${bomVersions.springSecurity}/api"
-    ]
+tasks.withType(Groovydoc).configureEach {
+    it.docTitle = "Grails Spring Security LDAP Plugin - ${projectVersion}"
+    it.windowTitle = "spring-security-ldap ${projectVersion} API"
+    it.source = rootProject.findProject(':ldap-plugin').files('src/main/groovy')
+    it.destinationDir = rootProject.layout.buildDirectory.dir('docs/ldap-plugin/groovydoc').get().asFile
 }
 
 apply {
-    from rootProject.layout.projectDirectory.file('gradle/docs-config.gradle')
     from rootProject.layout.projectDirectory.file('gradle/reproducible-config.gradle')
 }

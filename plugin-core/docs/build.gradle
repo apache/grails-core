@@ -21,43 +21,22 @@ plugins {
     id 'groovy' // For groovydoc task
 }
 
-ext {
-    apiDocsProjects = [
-            'core-plugin': [
-                docTitle: 'Grails Spring Security Core Plugin - ' + projectVersion,
-                windowTitle: 'spring-security-core ' + projectVersion + ' API'
-            ]
-    ]
-
-    asciidoctorAttributes = [
-            copyright            : 'Apache License, Version 2.0',
-            docinfo1             : 'true',
-            doctype              : 'book',
-            encoding             : 'utf-8',
-            icons                : 'font',
-            id                   : name + ':' + version,
-            idprefix             : '',
-            idseparator          : '-',
-            lang                 : 'en',
-            linkattrs            : true,
-            numbered             : '',
-            producer             : 'Asciidoctor',
-            revnumber            : version,
-            setanchors           : true,
-            'source-highlighter' : 'prettify',
-            toc                  : 'left',
-            toc2                 : '',
-            toclevels            : '2'
-    ]
-}
-
-apply {
-    from rootProject.layout.projectDirectory.file('gradle/docs-config.gradle')
-    from rootProject.layout.projectDirectory.file('gradle/reproducible-config.gradle')
-}
+apply from: rootProject.layout.projectDirectory.file('gradle/groovydoc-config.gradle')
+apply from: rootProject.layout.projectDirectory.file('gradle/reproducible-config.gradle')
 
 // because the groovy plugin is being applied, a version of groovy must be provided
 dependencies {
     implementation platform("org.apache.grails:grails-bom:${grailsVersion}")
     implementation 'org.apache.groovy:groovy'
+}
+
+tasks.withType(Groovydoc).configureEach {
+    it.docTitle = "Grails Spring Security Core Plugin - ${projectVersion}"
+    it.windowTitle = "spring-security-core ${projectVersion} API"
+    it.source = rootProject.findProject(':core-plugin').files('src/main/groovy')
+    it.destinationDir = rootProject.layout.buildDirectory.dir('docs/core-plugin/groovydoc').get().asFile
+}
+
+apply {
+    from rootProject.layout.projectDirectory.file('gradle/reproducible-config.gradle')
 }

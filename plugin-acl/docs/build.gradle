@@ -21,35 +21,8 @@ plugins {
     id 'groovy' // For groovydoc task
 }
 
-ext {
-    apiDocsProjects = [
-            'acl-plugin': [
-                    docTitle: "Grails Spring Security ACL Plugin - $projectVersion",
-                    windowTitle: "spring-security-acl $projectVersion API"
-            ]
-    ]
-    asciidoctorAttributes = [
-            copyright            : 'Apache License, Version 2.0',
-            docinfo1             : 'true',
-            doctype              : 'book',
-            encoding             : 'utf-8',
-            icons                : 'font',
-            id                   : project.name + ':' + project.version.toString(),
-            idprefix             : '',
-            idseparator          : '-',
-            lang                 : 'en',
-            linkattrs            : true,
-            numbered             : '',
-            producer             : 'Asciidoctor',
-            revnumber            : project.projectVersion,
-            setanchors           : true,
-            'source-highlighter' : 'prettify',
-            toc                  : 'left',
-            toc2                 : '',
-            toclevels            : '2',
-            projectVersion       : project.projectVersion,
-    ]
-}
+apply from: rootProject.layout.projectDirectory.file('gradle/groovydoc-config.gradle')
+apply from: rootProject.layout.projectDirectory.file('gradle/reproducible-config.gradle')
 
 // because the groovy plugin is being applied, a version of groovy must be provided
 dependencies {
@@ -57,7 +30,14 @@ dependencies {
     implementation 'org.apache.groovy:groovy'
 }
 
+tasks.withType(Groovydoc).configureEach {
+    it.docTitle = "Grails Spring Security ACL Plugin - $projectVersion"
+    it.windowTitle = "spring-security-acl $projectVersion API"
+    it.source = rootProject.findProject(':acl-plugin').files('src/main/groovy')
+    it.destinationDir = rootProject.layout.buildDirectory.dir('docs/acl-plugin/groovydoc').get().asFile
+}
+
 apply {
-    from rootProject.layout.projectDirectory.file('gradle/docs-config.gradle')
     from rootProject.layout.projectDirectory.file('gradle/reproducible-config.gradle')
 }
+

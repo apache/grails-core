@@ -21,37 +21,8 @@ plugins {
     id 'groovy' // For groovydoc task
 }
 
-ext {
-    apiDocsProjects = ['oauth2-plugin']
-    apiDocsProjects = [
-            'oauth2-plugin': [
-                    docTitle: "Grails Spring Security oauth2 Plugin - $projectVersion",
-                    windowTitle: "spring-security-acl $projectVersion API"
-            ]
-    ]
-    asciidoctorAttributes = [
-            projectVersion  	: projectVersion,
-            copyright           : 'Apache License, Version 2.0',
-            docinfo1            : 'true',
-            doctype             : 'book',
-            encoding            : 'utf-8',
-            'front-cover-image'  : 'image:cover.png[Front Cover,800,600]',
-            icons               : 'font',
-            id                  : 'grails-spring-security-oauth2:' + projectVersion,
-            idprefix            : '',
-            idseparator         : '-',
-            lang                : 'en',
-            linkattrs           : true,
-            numbered            : '',
-            producer            : 'Asciidoctor',
-            revnumber           : projectVersion,
-            setanchors          : true,
-            'source-highlighter' : 'prettify',
-            toc                 : 'left',
-            toc2                : '',
-            toclevels           : '2'
-    ]
-}
+apply from: rootProject.layout.projectDirectory.file('gradle/groovydoc-config.gradle')
+apply from: rootProject.layout.projectDirectory.file('gradle/reproducible-config.gradle')
 
 // because the groovy plugin is being applied, a version of groovy must be provided
 dependencies {
@@ -59,7 +30,13 @@ dependencies {
     implementation 'org.apache.groovy:groovy'
 }
 
+tasks.withType(Groovydoc).configureEach {
+    it.docTitle = "Grails Spring Security OAuth2 Plugin - ${projectVersion}"
+    it.windowTitle = "spring-security-oauth2 ${projectVersion} API"
+    it.source = rootProject.findProject(':oauth2-plugin').files('src/main/groovy')
+    it.destinationDir = rootProject.layout.buildDirectory.dir('docs/oauth2-plugin/groovydoc').get().asFile
+}
+
 apply {
-    from rootProject.layout.projectDirectory.file('gradle/docs-config.gradle')
     from rootProject.layout.projectDirectory.file('gradle/reproducible-config.gradle')
 }

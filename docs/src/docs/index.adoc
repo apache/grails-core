@@ -101,6 +101,10 @@ include::{core-docs-dir}/scripts.adoc[leveloffset=+2]
 
 include::{core-docs-dir}/debugging.adoc[leveloffset=+2]
 
+=== API Reference
+
+The Core plugin Groovydoc API documentation is available at https://apache.github.io/grails-spring-security/{projectVersion}/core-plugin/groovydoc/index.html[Core Plugin API Reference].
+
 // =====================================================================
 // ACL Plugin
 // =====================================================================
@@ -125,6 +129,10 @@ include::{acl-docs-dir}/TagLibraries.adoc[leveloffset=+2]
 
 include::{acl-docs-dir}/history.adoc[leveloffset=+2]
 
+=== API Reference
+
+The ACL plugin Groovydoc API documentation is available at https://apache.github.io/grails-spring-security/{projectVersion}/acl-plugin/groovydoc/index.html[ACL Plugin API Reference].
+
 // =====================================================================
 // CAS Plugin
 // =====================================================================
@@ -139,6 +147,10 @@ include::{cas-docs-dir}/configuration.adoc[leveloffset=+2]
 
 include::{cas-docs-dir}/history.adoc[leveloffset=+2]
 
+=== API Reference
+
+The CAS plugin Groovydoc API documentation is available at https://apache.github.io/grails-spring-security/{projectVersion}/cas-plugin/groovydoc/index.html[CAS Plugin API Reference].
+
 // =====================================================================
 // LDAP Plugin
 // =====================================================================
@@ -150,6 +162,10 @@ include::{ldap-docs-dir}/introduction.adoc[leveloffset=+2]
 include::{ldap-docs-dir}/usage.adoc[leveloffset=+2]
 
 include::{ldap-docs-dir}/configuration.adoc[leveloffset=+2]
+
+=== API Reference
+
+The LDAP plugin Groovydoc API documentation is available at https://apache.github.io/grails-spring-security/{projectVersion}/ldap-plugin/groovydoc/index.html[LDAP Plugin API Reference].
 
 // =====================================================================
 // OAuth2 Plugin
@@ -164,6 +180,10 @@ include::{oauth2-docs-dir}/installation.adoc[leveloffset=+2]
 include::{oauth2-docs-dir}/configuration.adoc[leveloffset=+2]
 
 include::{oauth2-docs-dir}/extensions.adoc[leveloffset=+2]
+
+=== API Reference
+
+The OAuth2 plugin Groovydoc API documentation is available at https://apache.github.io/grails-spring-security/{projectVersion}/oauth2-plugin/groovydoc/index.html[OAuth2 Plugin API Reference].
 
 // =====================================================================
 // REST Plugin
@@ -205,6 +225,10 @@ include::{rest-docs-dir}/debugging.adoc[leveloffset=+2]
 
 include::{rest-docs-dir}/faq.adoc[leveloffset=+2]
 
+=== API Reference
+
+The REST plugin Groovydoc API documentation is available at https://apache.github.io/grails-spring-security/{projectVersion}/rest-plugin/groovydoc/index.html[REST Plugin API Reference].
+
 // =====================================================================
 // UI Plugin
 // =====================================================================
@@ -232,3 +256,7 @@ include::{ui-docs-dir}/configUI.adoc[leveloffset=+2]
 include::{ui-docs-dir}/customization.adoc[leveloffset=+2]
 
 include::{ui-docs-dir}/scripts.adoc[leveloffset=+2]
+
+=== API Reference
+
+The UI plugin Groovydoc API documentation is available at https://apache.github.io/grails-spring-security/{projectVersion}/ui-plugin/groovydoc/index.html[UI Plugin API Reference].
