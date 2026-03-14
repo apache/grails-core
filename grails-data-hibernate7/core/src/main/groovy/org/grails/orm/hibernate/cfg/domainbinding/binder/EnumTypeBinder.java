@@ -71,13 +71,18 @@ public class EnumTypeBinder {
 
     public BasicValue bindEnumType(
             @Nonnull HibernatePersistentProperty property, Class<?> propertyType, Table table, String path) {
-        BasicValue simpleValue = new BasicValue(metadataBuildingContext, table);
         String columnName = columnNameForPropertyAndPathFetcher.getColumnNameForPropertyAndPath(property, path, null);
+        return bindEnumTypeForColumn(property, propertyType, table, columnName);
+    }
+
+    public BasicValue bindEnumTypeForColumn(
+            @Nonnull HibernatePersistentProperty property, Class<?> propertyType, Table table, @Nonnull String columnName) {
+        BasicValue simpleValue = new BasicValue(metadataBuildingContext, table);
         bindEnumType(property, propertyType, simpleValue, columnName);
         return simpleValue;
     }
 
-    public void bindEnumType(
+    protected void bindEnumType(
             HibernatePersistentProperty property, Class<?> propertyType, BasicValue simpleValue, String columnName) {
         PropertyConfig pc = property.getMappedForm();
         Properties enumProperties = new Properties();

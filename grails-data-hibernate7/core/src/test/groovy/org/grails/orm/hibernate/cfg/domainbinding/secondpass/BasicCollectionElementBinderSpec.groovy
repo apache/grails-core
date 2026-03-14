@@ -53,7 +53,7 @@ class BasicCollectionElementBinderSpec extends HibernateGormDatastoreSpec {
         then:
         element != null
         element.getColumnSpan() > 0
-        0 * enumTypeBinder.bindEnumType(*_)
+        0 * enumTypeBinder._
     }
 
     void "bind delegates to enumTypeBinder for enum collection"() {
@@ -67,7 +67,7 @@ class BasicCollectionElementBinderSpec extends HibernateGormDatastoreSpec {
 
         then:
         element != null
-        1 * enumTypeBinder.bindEnumType(property, BCEBStatus, _ as BasicValue, _)
+        1 * enumTypeBinder.bindEnumTypeForColumn(property, BCEBStatus, collection.getCollectionTable(), _) >> Mock(BasicValue)
     }
 }
 

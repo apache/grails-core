@@ -80,9 +80,7 @@ public class BasicCollectionElementBinder {
                     : new BackticksRemover().apply(prop) + UNDERSCORE + new BackticksRemover().apply(clazz);
         }
         if (isEnum) {
-            BasicValue element = new BasicValue(metadataBuildingContext, collection.getCollectionTable());
-            enumTypeBinder.bindEnumType(property, referencedType, element, columnName);
-            return element;
+            return enumTypeBinder.bindEnumTypeForColumn(property, referencedType, collection.getCollectionTable(), columnName);
         } else {
             String typeName = property.getTypeName(referencedType);
             BasicValue element = simpleValueColumnBinder.bindSimpleValue(

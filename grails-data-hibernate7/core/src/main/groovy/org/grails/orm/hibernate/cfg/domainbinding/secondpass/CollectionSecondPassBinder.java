@@ -81,7 +81,7 @@ public class CollectionSecondPassBinder {
         collectionKeyColumnUpdater.bind(property, associatedClass, collection);
         collection.setCacheConcurrencyStrategy(property.getCacheUsage());
 
-        bindCollectionElement(property, mappings, collection);
+        bindCollectionElement(property, collection);
     }
 
     private void bindOneToManyAssociation(
@@ -98,7 +98,7 @@ public class CollectionSecondPassBinder {
     }
 
     private void bindCollectionElement(
-            HibernateToManyProperty property, InFlightMetadataCollector mappings, Collection collection) {
+            HibernateToManyProperty property, Collection collection) {
         if (property instanceof HibernateManyToManyProperty manyToMany && manyToMany.isBidirectional()) {
             manyToManyElementBinder.bind(manyToMany, collection);
         } else if (property.isBidirectionalOneToManyMap() && property.isBidirectional()) {
