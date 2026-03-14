@@ -78,7 +78,7 @@ public class GrailsPropertyBinder {
             value = enumTypeBinder.bindEnumType(currentGrailsProp, currentGrailsProp.getType(), table, path);
         } else if (currentGrailsProp instanceof HibernateOneToOneProperty oneToOne
                 && oneToOne.isValidHibernateOneToOne()) {
-            value = oneToOneBinder.bindOneToOne(oneToOne, persistentClass, table, path);
+            value = oneToOneBinder.bindOneToOne(oneToOne, path);
         } else if (currentGrailsProp instanceof HibernateOneToOneProperty oneToOne) {
             value = foreignKeyOneToOneBinder.bind(oneToOne, table, path);
         } else if (currentGrailsProp instanceof HibernateManyToOneProperty manyToOne) {

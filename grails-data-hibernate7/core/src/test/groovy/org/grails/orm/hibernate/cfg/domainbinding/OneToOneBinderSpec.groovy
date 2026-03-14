@@ -48,12 +48,16 @@ class OneToOneBinderSpec extends HibernateGormDatastoreSpec {
         def metadataBuildingContext = getGrailsDomainBinder().getMetadataBuildingContext()
         def table = new org.hibernate.mapping.Table("OWNER_TABLE")
         def ownerRoot = new RootClass(metadataBuildingContext)
+        ownerRoot.setTable(table)
 
         def gormOneToOne = Mock(TestOneToOne)
-        def owner = Mock(PersistentEntity)
+        def owner = Mock(org.grails.orm.hibernate.cfg.domainbinding.hibernate.GrailsHibernatePersistentEntity)
 
         gormOneToOne.getName() >> "myOneToOne"
         gormOneToOne.getOwner() >> owner
+        gormOneToOne.getHibernateOwner() >> owner
+        owner.getPersistentClass() >> ownerRoot
+        gormOneToOne.getTable() >> table
         gormOneToOne.isHibernateConstrained() >> false
         gormOneToOne.getHibernateForeignKeyDirection() >> ForeignKeyDirection.TO_PARENT
         gormOneToOne.getHibernateFetchMode() >> FetchMode.DEFAULT
@@ -62,7 +66,7 @@ class OneToOneBinderSpec extends HibernateGormDatastoreSpec {
         gormOneToOne.needsSimpleValueBinding() >> false
 
         when:
-        def hibernateOneToOne = binder.bindOneToOne(gormOneToOne, ownerRoot, null, "")
+        def hibernateOneToOne = binder.bindOneToOne(gormOneToOne, "")
 
         then:
         hibernateOneToOne instanceof HibernateOneToOne
@@ -80,12 +84,16 @@ class OneToOneBinderSpec extends HibernateGormDatastoreSpec {
         def metadataBuildingContext = getGrailsDomainBinder().getMetadataBuildingContext()
         def table = new org.hibernate.mapping.Table("OWNER_TABLE")
         def ownerRoot = new RootClass(metadataBuildingContext)
+        ownerRoot.setTable(table)
 
         def gormOneToOne = Mock(TestOneToOne)
-        def owner = Mock(PersistentEntity)
+        def owner = Mock(org.grails.orm.hibernate.cfg.domainbinding.hibernate.GrailsHibernatePersistentEntity)
 
         gormOneToOne.getName() >> "myOneToOne"
         gormOneToOne.getOwner() >> owner
+        gormOneToOne.getHibernateOwner() >> owner
+        owner.getPersistentClass() >> ownerRoot
+        gormOneToOne.getTable() >> table
         gormOneToOne.isHibernateConstrained() >> true
         gormOneToOne.getHibernateForeignKeyDirection() >> ForeignKeyDirection.FROM_PARENT
         gormOneToOne.getHibernateFetchMode() >> FetchMode.DEFAULT
@@ -93,7 +101,7 @@ class OneToOneBinderSpec extends HibernateGormDatastoreSpec {
         gormOneToOne.needsSimpleValueBinding() >> true
 
         when:
-        def hibernateOneToOne = binder.bindOneToOne(gormOneToOne, ownerRoot, null, "")
+        def hibernateOneToOne = binder.bindOneToOne(gormOneToOne, "")
 
         then:
         hibernateOneToOne.isConstrained()
@@ -106,11 +114,16 @@ class OneToOneBinderSpec extends HibernateGormDatastoreSpec {
         def metadataBuildingContext = getGrailsDomainBinder().getMetadataBuildingContext()
         def table = new org.hibernate.mapping.Table("OWNER_TABLE")
         def ownerRoot = new RootClass(metadataBuildingContext)
+        ownerRoot.setTable(table)
 
         def gormOneToOne = Mock(TestOneToOne)
-        def owner = Mock(PersistentEntity)
+        def owner = Mock(org.grails.orm.hibernate.cfg.domainbinding.hibernate.GrailsHibernatePersistentEntity)
 
+        gormOneToOne.getName() >> "myOneToOne"
         gormOneToOne.getOwner() >> owner
+        gormOneToOne.getHibernateOwner() >> owner
+        owner.getPersistentClass() >> ownerRoot
+        gormOneToOne.getTable() >> table
         gormOneToOne.isHibernateConstrained() >> false
         gormOneToOne.getHibernateForeignKeyDirection() >> ForeignKeyDirection.TO_PARENT
         gormOneToOne.getHibernateFetchMode() >> FetchMode.JOIN
@@ -118,7 +131,7 @@ class OneToOneBinderSpec extends HibernateGormDatastoreSpec {
         gormOneToOne.needsSimpleValueBinding() >> true
 
         when:
-        def hibernateOneToOne = binder.bindOneToOne(gormOneToOne, ownerRoot, null, "")
+        def hibernateOneToOne = binder.bindOneToOne(gormOneToOne, "")
 
         then:
         hibernateOneToOne.getFetchMode() == FetchMode.JOIN

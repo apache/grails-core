@@ -21,6 +21,7 @@ package org.grails.orm.hibernate.cfg.domainbinding.binder;
 import org.hibernate.boot.spi.MetadataBuildingContext;
 import org.hibernate.mapping.OneToOne;
 import org.hibernate.mapping.PersistentClass;
+import org.hibernate.mapping.Table;
 
 import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernateOneToOneProperty;
 
@@ -36,9 +37,9 @@ public class OneToOneBinder {
 
     public OneToOne bindOneToOne(
             final HibernateOneToOneProperty property,
-            PersistentClass owner,
-            org.hibernate.mapping.Table table,
             String path) {
+        Table table = property.getTable();
+        PersistentClass owner = property.getHibernateOwner().getPersistentClass();
         OneToOne oneToOne = new OneToOne(metadataBuildingContext, table, owner);
 
         oneToOne.setConstrained(property.isHibernateConstrained());
