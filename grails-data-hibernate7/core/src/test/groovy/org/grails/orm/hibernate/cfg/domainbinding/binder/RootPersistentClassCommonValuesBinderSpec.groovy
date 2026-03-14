@@ -76,7 +76,7 @@ class RootPersistentClassCommonValuesBinderSpec extends HibernateGormDatastoreSp
         RootClass rootClass = binder.bindRoot(entity)
 
         then:
-        1 * classPropertiesBinder.bindClassProperties(entity, _)
+        1 * classPropertiesBinder.bindClassProperties(entity)
         rootClass != null
         rootClass.getEntityName() == TestEntity.name
         rootClass.isAbstract() == false

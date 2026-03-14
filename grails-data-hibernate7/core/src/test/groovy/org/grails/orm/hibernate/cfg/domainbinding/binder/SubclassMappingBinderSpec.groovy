@@ -29,6 +29,8 @@ import org.hibernate.mapping.SingleTableSubclass
 import org.hibernate.mapping.Subclass
 import org.hibernate.mapping.UnionSubclass
 
+import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernatePersistentEntity
+
 class SubclassMappingBinderSpec extends HibernateGormDatastoreSpec {
 
     SubclassMappingBinder binder
@@ -74,7 +76,7 @@ class SubclassMappingBinderSpec extends HibernateGormDatastoreSpec {
             s.setEntityName(subEntity.getName())
             s
         }
-        1 * classPropertiesBinder.bindClassProperties(subEntity, _ as Subclass)
+        1 * classPropertiesBinder.bindClassProperties(subEntity)
         subClass instanceof SingleTableSubclass
         subClass.getEntityName() == SMBSSingleSub.name
     }
@@ -99,7 +101,7 @@ class SubclassMappingBinderSpec extends HibernateGormDatastoreSpec {
             s.setEntityName(subEntity.getName())
             s
         }
-        1 * classPropertiesBinder.bindClassProperties(subEntity, _ as Subclass)
+        1 * classPropertiesBinder.bindClassProperties(subEntity)
         subClass instanceof JoinedSubclass
         subClass.getEntityName() == SMBSJoinedSub.name
     }
@@ -124,7 +126,7 @@ class SubclassMappingBinderSpec extends HibernateGormDatastoreSpec {
             s.setEntityName(subEntity.getName())
             s
         }
-        1 * classPropertiesBinder.bindClassProperties(subEntity, _ as Subclass)
+        1 * classPropertiesBinder.bindClassProperties(subEntity)
         subClass instanceof UnionSubclass
         subClass.getEntityName() == SMBSUnionSub.name
     }

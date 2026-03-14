@@ -26,6 +26,7 @@ import org.hibernate.mapping.Table;
 import org.hibernate.mapping.Value;
 
 import org.grails.orm.hibernate.cfg.domainbinding.hibernate.GrailsHibernatePersistentEntity;
+import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernatePersistentEntity;
 import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernatePersistentProperty;
 import org.grails.orm.hibernate.cfg.domainbinding.util.PropertyFromValueCreator;
 
@@ -58,18 +59,18 @@ public class ClassPropertiesBinder {
         this(grailsPropertyBinder, propertyFromValueCreator, new NaturalIdentifierBinder());
     }
 
-    public void bindClassProperties(
-            @Nonnull GrailsHibernatePersistentEntity domainClass, PersistentClass persistentClass) {
+    public void bindClassProperties(HibernatePersistentEntity hibernatePersistentEntity) {
+        PersistentClass persistentClass = hibernatePersistentEntity.getPersistentClass();
         @Nonnull Table table = getTable(persistentClass);
-        table.setComment(domainClass.getComment());
+        table.setComment(hibernatePersistentEntity.getComment());
 
-        for (HibernatePersistentProperty currentGrailsProp : domainClass.getPersistentPropertiesToBind()) {
+        for (HibernatePersistentProperty currentGrailsProp : hibernatePersistentEntity.getPersistentPropertiesToBind()) {
             Value value = grailsPropertyBinder.bindProperty(
                     persistentClass, table, GrailsDomainBinder.EMPTY_PATH, null, currentGrailsProp);
             persistentClass.addProperty(propertyFromValueCreator.createProperty(value, currentGrailsProp));
         }
 
-        naturalIdentifierBinder.bindNaturalIdentifier(domainClass, persistentClass);
+        naturalIdentifierBinder.bindNaturalIdentifier(hibernatePersistentEntity, persistentClass);
     }
 
     @Nonnull
