@@ -75,7 +75,7 @@ public class ComponentBinder {
 
         for (HibernatePersistentProperty peerProperty : associatedEntity.getHibernatePersistentProperties(propertyType)) {
             var value = grailsPropertyBinder.bindProperty(
-                    persistentClass, table, currentPath, embeddedProperty, peerProperty);
+                    peerProperty, embeddedProperty, currentPath);
             componentUpdater.updateComponent(component, embeddedProperty, peerProperty, value);
         }
         return component;

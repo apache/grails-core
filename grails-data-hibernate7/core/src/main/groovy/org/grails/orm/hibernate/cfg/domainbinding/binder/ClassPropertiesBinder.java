@@ -25,7 +25,6 @@ import org.hibernate.mapping.PersistentClass;
 import org.hibernate.mapping.Table;
 import org.hibernate.mapping.Value;
 
-import org.grails.orm.hibernate.cfg.domainbinding.hibernate.GrailsHibernatePersistentEntity;
 import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernatePersistentEntity;
 import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernatePersistentProperty;
 import org.grails.orm.hibernate.cfg.domainbinding.util.PropertyFromValueCreator;
@@ -65,7 +64,7 @@ public class ClassPropertiesBinder {
         Table table = hibernatePersistentEntity.getPersistentClass().getTable();
         for (HibernatePersistentProperty currentGrailsProp : hibernatePersistentEntity.getPersistentPropertiesToBind()) {
             Value value = grailsPropertyBinder.bindProperty(
-                    persistentClass, table, GrailsDomainBinder.EMPTY_PATH, null, currentGrailsProp);
+                    currentGrailsProp, null, GrailsDomainBinder.EMPTY_PATH);
             persistentClass.addProperty(propertyFromValueCreator.createProperty(value, currentGrailsProp));
         }
 

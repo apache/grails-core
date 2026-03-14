@@ -19,7 +19,6 @@
 package org.grails.orm.hibernate.cfg.domainbinding.binder;
 
 import jakarta.annotation.Nonnull;
-import jakarta.annotation.Nullable;
 
 import org.hibernate.mapping.PersistentClass;
 import org.hibernate.mapping.Table;
@@ -65,11 +64,9 @@ public class GrailsPropertyBinder {
     }
 
     public Value bindProperty(
-            @Nullable PersistentClass persistentClass,
-            Table table,
-            String path,
-            HibernatePersistentProperty parentProperty,
-            @Nonnull HibernatePersistentProperty currentGrailsProp) {
+            @Nonnull HibernatePersistentProperty currentGrailsProp, HibernatePersistentProperty parentProperty, String path) {
+        Table table = currentGrailsProp.getTable();
+        PersistentClass persistentClass = currentGrailsProp.getHibernateOwner().getPersistentClass();
         if (LOG.isDebugEnabled()) {
             LOG.debug("[GrailsPropertyBinder] Binding persistent property [" + currentGrailsProp.getName() + "]");
         }

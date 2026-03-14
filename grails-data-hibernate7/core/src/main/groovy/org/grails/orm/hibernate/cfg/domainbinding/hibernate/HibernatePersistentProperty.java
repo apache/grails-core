@@ -24,6 +24,7 @@ import org.checkerframework.checker.nullness.qual.Nullable;
 import org.hibernate.mapping.DependantValue;
 import org.hibernate.mapping.Property;
 import org.hibernate.mapping.SimpleValue;
+import org.hibernate.mapping.Table;
 import org.hibernate.usertype.UserCollectionType;
 
 import org.grails.datastore.mapping.model.PersistentProperty;
@@ -202,5 +203,9 @@ public interface HibernatePersistentProperty extends PersistentProperty<Property
             return Optional.ofNullable(getHibernateOwner().getIdentity()).orElse(this);
         }
         return this;
+    }
+
+    default Table getTable() {
+      return getHibernateOwner().getPersistentClass().getTable();
     }
 }

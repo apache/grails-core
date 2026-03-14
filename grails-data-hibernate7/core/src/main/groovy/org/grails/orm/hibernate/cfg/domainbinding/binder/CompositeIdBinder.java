@@ -29,7 +29,6 @@ import org.hibernate.mapping.Table;
 
 import org.grails.orm.hibernate.cfg.CompositeIdentity;
 import org.grails.orm.hibernate.cfg.GrailsHibernateUtil;
-import org.grails.orm.hibernate.cfg.domainbinding.hibernate.GrailsHibernatePersistentEntity;
 import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernatePersistentEntity;
 import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernatePersistentProperty;
 
@@ -76,7 +75,7 @@ public class CompositeIdBinder {
         Table table = persistentClass.getTable();
         HibernatePersistentProperty identifierProp = hibernatePersistentEntity.getIdentity();
         for (HibernatePersistentProperty property : composite) {
-            var value = grailsPropertyBinder.bindProperty(persistentClass, table, "", identifierProp, property);
+            var value = grailsPropertyBinder.bindProperty(property, identifierProp, "");
             componentUpdater.updateComponent(id, identifierProp, property, value);
         }
     }

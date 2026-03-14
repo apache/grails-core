@@ -68,10 +68,10 @@ class ClassPropertiesBinderSpec extends HibernateGormDatastoreSpec {
         binder.bindClassProperties(domainClass)
 
         then:
-        1 * grailsPropertyBinder.bindProperty(persistentClass, persistentClass.table, GrailsDomainBinder.EMPTY_PATH, null, prop1) >> value1
+        1 * grailsPropertyBinder.bindProperty(prop1, null, GrailsDomainBinder.EMPTY_PATH) >> value1
         1 * propertyFromValueCreator.createProperty(value1, prop1) >> hibernateProp1
 
-        1 * grailsPropertyBinder.bindProperty(persistentClass, persistentClass.table, GrailsDomainBinder.EMPTY_PATH, null, prop2) >> value2
+        1 * grailsPropertyBinder.bindProperty(prop2, null, GrailsDomainBinder.EMPTY_PATH) >> value2
         1 * propertyFromValueCreator.createProperty(value2, prop2) >> hibernateProp2
 
         persistentClass.getProperty("hibernateProp1") == hibernateProp1

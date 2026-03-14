@@ -30,12 +30,6 @@ import org.hibernate.mapping.Property
 import org.hibernate.mapping.RootClass
 import org.hibernate.mapping.Value
 
-import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernateBasicProperty
-import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernateEmbeddedProperty
-import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernateManyToOneProperty
-import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernateOneToOneProperty
-import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernateSimpleEnumProperty
-import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernateSimpleProperty
 import org.grails.orm.hibernate.cfg.domainbinding.binder.CollectionBinder
 import org.grails.orm.hibernate.cfg.domainbinding.binder.ClassBinder
 import org.grails.orm.hibernate.cfg.domainbinding.binder.ComponentBinder
@@ -85,41 +79,6 @@ import static org.grails.orm.hibernate.cfg.domainbinding.binder.GrailsDomainBind
 class GrailsPropertyBinderSpec extends HibernateGormDatastoreSpec {
 
 
-
-    abstract static class TestEmbedded extends HibernateEmbeddedProperty {
-        TestEmbedded(PersistentEntity owner, MappingContext context, java.beans.PropertyDescriptor descriptor) {
-            super(owner, context, descriptor);
-        }
-    }
-
-    abstract static class TestBasic extends HibernateBasicProperty {
-        TestBasic(GrailsHibernatePersistentEntity owner, MappingContext context, java.beans.PropertyDescriptor descriptor) {
-            super(owner, context, descriptor);
-        }
-    }
-
-    abstract static class TestSimple extends HibernateSimpleProperty {
-        TestSimple(PersistentEntity owner, MappingContext context, java.beans.PropertyDescriptor descriptor) {
-            super(owner, context, descriptor);
-        }
-    }
-
-    abstract static class TestSimpleEnum extends HibernateSimpleEnumProperty {
-        TestSimpleEnum(PersistentEntity owner, MappingContext context, java.beans.PropertyDescriptor descriptor) {
-            super(owner, context, descriptor);
-        }
-    }
-
-    private void setupProperty(PersistentProperty prop, String name, Mapping mapping, PersistentEntity owner) {
-        prop.getName() >> name
-        _ * prop.getOwner() >> owner
-        if (prop instanceof HibernatePersistentProperty) {
-            _ * ((HibernatePersistentProperty)prop).getHibernateOwner() >> owner
-        }
-        def config = new PropertyConfig()
-        mapping.getColumns().put(name, config)
-        prop.getMappedForm() >> config
-    }
 
     protected Map getBinders(GrailsDomainBinder binder, InFlightMetadataCollector collector = getCollector()) {
         MetadataBuildingContext metadataBuildingContext = binder.getMetadataBuildingContext()
@@ -251,7 +210,8 @@ class GrailsPropertyBinderSpec extends HibernateGormDatastoreSpec {
 
         when:
         def titleProp = persistentEntity.getPropertyByName("title") as HibernatePersistentProperty
-        Value value = propertyBinder.bindProperty(rootClass, rootClass.table, EMPTY_PATH, null, titleProp)
+        // This call will now succeed because the table can be resolved through the bridge
+        Value value = propertyBinder.bindProperty(titleProp, null, EMPTY_PATH)
         rootClass.addProperty(new PropertyFromValueCreator().createProperty(value, titleProp))
 
         then:
@@ -271,14 +231,14 @@ class GrailsPropertyBinderSpec extends HibernateGormDatastoreSpec {
         rootClass.setEntityName(persistentEntity.name)
         rootClass.setTable(collector.addTable(null, null, "ENUM_BOOK", null, false, binder.getMetadataBuildingContext()))
 
-        def statusProp = Mock(TestSimpleEnum)
-        setupProperty(statusProp, "status", new Mapping(), persistentEntity)
-        statusProp.getType() >> java.util.concurrent.TimeUnit
-        statusProp.isValidHibernateOneToOne() >> false
-        statusProp.isValidHibernateManyToOne() >> false
+        // --- THE FIX: Bridge the GORM entity to the Hibernate RootClass ---
+        ((GrailsHibernatePersistentEntity)persistentEntity).setPersistentClass(rootClass)
+        // ------------------------------------------------------------------
+
+        def statusProp = persistentEntity.getPropertyByName("status") as HibernatePersistentProperty
 
         when:
-        Value value = propertyBinder.bindProperty(rootClass, rootClass.table, EMPTY_PATH, null, statusProp)
+        Value value = propertyBinder.bindProperty(statusProp, null, EMPTY_PATH)
         rootClass.addProperty(new PropertyFromValueCreator().createProperty(value, statusProp))
 
         then:
@@ -305,7 +265,7 @@ class GrailsPropertyBinderSpec extends HibernateGormDatastoreSpec {
 
         when:
         def ownerProp = petEntity.getPropertyByName("owner") as HibernatePersistentProperty
-        Value value = propertyBinder.bindProperty(rootClass, rootClass.table, EMPTY_PATH, null, ownerProp)
+        Value value = propertyBinder.bindProperty(ownerProp, null, EMPTY_PATH)
         rootClass.addProperty(new PropertyFromValueCreator().createProperty(value, ownerProp))
 
         then:
@@ -336,7 +296,14 @@ class GrailsPropertyBinderSpec extends HibernateGormDatastoreSpec {
 
         when:
         def addressProp = persistentEntity.getPropertyByName("homeAddress") as HibernatePersistentProperty
-        Value value = propertyBinder.bindProperty(rootClass, rootClass.table, EMPTY_PATH, null, addressProp)
+
+        // We must also ensure the associated entity (Address) has its metadata cached/linked
+        // if the binder logic traverses into it
+        if (addressProp.getAssociatedEntity() instanceof GrailsHibernatePersistentEntity) {
+            ((GrailsHibernatePersistentEntity)addressProp.getAssociatedEntity()).setPersistentClass(rootClass)
+        }
+
+        Value value = propertyBinder.bindProperty(addressProp, null, "")
         rootClass.addProperty(new PropertyFromValueCreator().createProperty(value, addressProp))
 
         then:
@@ -373,7 +340,7 @@ class GrailsPropertyBinderSpec extends HibernateGormDatastoreSpec {
 
         when:
         def petsProp = personEntity.getPropertyByName("pets") as HibernatePersistentProperty
-        Value value = propertyBinder.bindProperty(rootClass, rootClass.table, EMPTY_PATH, null, petsProp)
+        Value value = propertyBinder.bindProperty(petsProp, null, EMPTY_PATH)
         rootClass.addProperty(new PropertyFromValueCreator().createProperty(value, petsProp))
 
         then:
@@ -415,7 +382,7 @@ class GrailsPropertyBinderSpec extends HibernateGormDatastoreSpec {
 
         when:
         def booksProp = authorEntity.getPropertyByName("books") as HibernatePersistentProperty
-        Value value = propertyBinder.bindProperty(rootClass, rootClass.table, EMPTY_PATH, null, booksProp)
+        Value value = propertyBinder.bindProperty(booksProp, null, EMPTY_PATH)
         rootClass.addProperty(new PropertyFromValueCreator().createProperty(value, booksProp))
         collector.processSecondPasses(binder.getMetadataBuildingContext())
 
@@ -459,7 +426,8 @@ class GrailsPropertyBinderSpec extends HibernateGormDatastoreSpec {
 
         when:
         def booksProp = authorEntity.getPropertyByName("books") as HibernatePersistentProperty
-        Value value = propertyBinder.bindProperty(rootClass, rootClass.table, EMPTY_PATH, null, booksProp)
+        // This call to bindProperty will now succeed because currentGrailsProp.getTable() can resolve the table
+        Value value = propertyBinder.bindProperty(booksProp, null, EMPTY_PATH)
         rootClass.addProperty(new PropertyFromValueCreator().createProperty(value, booksProp))
         collector.processSecondPasses(binder.getMetadataBuildingContext())
 
@@ -527,7 +495,8 @@ class GrailsPropertyBinderSpec extends HibernateGormDatastoreSpec {
 
         when:
         def childBookProp = authorEntity.getPropertyByName("childBook") as HibernatePersistentProperty
-        Value value = propertyBinder.bindProperty(rootClass, rootClass.table, EMPTY_PATH, null, childBookProp)
+        // Line 73 will now succeed
+        Value value = propertyBinder.bindProperty(childBookProp, null, EMPTY_PATH)
         rootClass.addProperty(new PropertyFromValueCreator().createProperty(value, childBookProp))
         collector.processSecondPasses(binder.getMetadataBuildingContext())
 
@@ -605,7 +574,7 @@ class GrailsPropertyBinderSpec extends HibernateGormDatastoreSpec {
 
         when:
         // Capture the return value of bindProperty
-        def resultValue = propertyBinder.bindProperty(rootClass, table, EMPTY_PATH, null, currentGrailsProp)
+        def resultValue = propertyBinder.bindProperty(currentGrailsProp, null, EMPTY_PATH)
 
         then:
         // Assert that bindProperty returns a Value object

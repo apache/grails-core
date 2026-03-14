@@ -76,7 +76,7 @@ class CompositeIdBinderSpec extends HibernateGormDatastoreSpec {
         root.getIdentifier() instanceof Component
         root.getIdentifierMapper() instanceof Component
         root.hasEmbeddedIdentifier()
-        2 * grailsPropertyBinder.bindProperty(root, table, "", identifierProp, _ as HibernatePersistentProperty) >> Mock(Value)
+        2 * grailsPropertyBinder.bindProperty(_ as HibernatePersistentProperty, identifierProp, "") >> Mock(Value)
         2 * componentUpdater.updateComponent(_ as Component, identifierProp, _ as HibernatePersistentProperty, _ as Value)
     }
 
@@ -102,7 +102,7 @@ class CompositeIdBinderSpec extends HibernateGormDatastoreSpec {
         binder.bindCompositeId(domainClass, root, null)
 
         then:
-        1 * grailsPropertyBinder.bindProperty(root, table, "", identifierProp, prop1) >> Mock(Value)
+        1 * grailsPropertyBinder.bindProperty(prop1, identifierProp, "") >> Mock(Value)
         1 * componentUpdater.updateComponent(_ as Component, identifierProp, prop1, _ as Value)
     }
 
