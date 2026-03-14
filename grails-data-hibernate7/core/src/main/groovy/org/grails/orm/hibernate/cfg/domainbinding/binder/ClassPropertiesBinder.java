@@ -61,9 +61,8 @@ public class ClassPropertiesBinder {
 
     public void bindClassProperties(HibernatePersistentEntity hibernatePersistentEntity) {
         PersistentClass persistentClass = hibernatePersistentEntity.getPersistentClass();
-        @Nonnull Table table = getTable(persistentClass);
-        table.setComment(hibernatePersistentEntity.getComment());
-
+        getTable(persistentClass).setComment(hibernatePersistentEntity.getComment());
+        Table table = hibernatePersistentEntity.getPersistentClass().getTable();
         for (HibernatePersistentProperty currentGrailsProp : hibernatePersistentEntity.getPersistentPropertiesToBind()) {
             Value value = grailsPropertyBinder.bindProperty(
                     persistentClass, table, GrailsDomainBinder.EMPTY_PATH, null, currentGrailsProp);

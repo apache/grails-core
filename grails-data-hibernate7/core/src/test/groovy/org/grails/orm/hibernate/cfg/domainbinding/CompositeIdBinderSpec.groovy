@@ -22,8 +22,6 @@ package org.grails.orm.hibernate.cfg.domainbinding
 import grails.gorm.specs.HibernateGormDatastoreSpec
 import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernatePersistentProperty
 import org.grails.orm.hibernate.cfg.CompositeIdentity
-import org.grails.orm.hibernate.cfg.domainbinding.hibernate.GrailsHibernatePersistentEntity
-
 import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernatePersistentEntity
 import org.hibernate.mapping.Component
 import org.hibernate.mapping.RootClass
@@ -66,8 +64,8 @@ class CompositeIdBinderSpec extends HibernateGormDatastoreSpec {
         def prop1 = Mock(HibernatePersistentProperty)
         def prop2 = Mock(HibernatePersistentProperty)
         def identifierProp = Mock(HibernatePersistentProperty)
-        domainClass.getHibernatePropertyByName("prop1") >> prop1
-        domainClass.getHibernatePropertyByName("prop2") >> prop2
+
+        compositeIdentity.getHibernateProperties(domainClass) >> ([prop1, prop2] as HibernatePersistentProperty[])
         domainClass.getIdentity() >> identifierProp
         domainClass.getName() >> "MyEntity"
 

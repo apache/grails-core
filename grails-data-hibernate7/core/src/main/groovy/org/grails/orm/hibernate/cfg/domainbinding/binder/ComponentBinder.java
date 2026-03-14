@@ -60,18 +60,20 @@ public class ComponentBinder {
         component.setRoleName(role);
         component.setComponentClassName(type.getName());
 
-        GrailsHibernatePersistentEntity domainClass =
+        GrailsHibernatePersistentEntity associatedEntity =
                 (GrailsHibernatePersistentEntity) embeddedProperty.getAssociatedEntity();
-        mappingCacheHolder.cacheMapping(domainClass);
+        mappingCacheHolder.cacheMapping(associatedEntity);
 
-        Table table = component.getOwner().getTable();
+
         PersistentClass persistentClass = component.getOwner();
+        associatedEntity.setPersistentClass(persistentClass);
+        Table table = associatedEntity.getPersistentClass().getTable();
         String currentPath = path.isEmpty() ? embeddedProperty.getName() : path + "." + embeddedProperty.getName();
         Class<?> propertyType = embeddedProperty.getOwner().getJavaClass();
 
-        domainClass.getHibernateParentProperty(propertyType).ifPresent(p -> component.setParentProperty(p.getName()));
+        associatedEntity.getHibernateParentProperty(propertyType).ifPresent(p -> component.setParentProperty(p.getName()));
 
-        for (HibernatePersistentProperty peerProperty : domainClass.getHibernatePersistentProperties(propertyType)) {
+        for (HibernatePersistentProperty peerProperty : associatedEntity.getHibernatePersistentProperties(propertyType)) {
             var value = grailsPropertyBinder.bindProperty(
                     persistentClass, table, currentPath, embeddedProperty, peerProperty);
             componentUpdater.updateComponent(component, embeddedProperty, peerProperty, value);
