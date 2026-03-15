@@ -24,7 +24,6 @@ import java.util.Map;
 import jakarta.annotation.Nonnull;
 
 import org.hibernate.MappingException;
-import org.hibernate.boot.spi.InFlightMetadataCollector;
 import org.hibernate.boot.spi.MetadataBuildingContext;
 import org.hibernate.mapping.BasicValue;
 import org.hibernate.mapping.Column;
@@ -67,10 +66,9 @@ public class MapSecondPassBinder {
 
     public void bindMapSecondPass(
             @Nonnull HibernateToManyProperty property,
-            @Nonnull InFlightMetadataCollector mappings,
             Map<?, ?> persistentClasses,
             @Nonnull org.hibernate.mapping.Map map) {
-        collectionSecondPassBinder.bindCollectionSecondPass(property, mappings, persistentClasses, map);
+        collectionSecondPassBinder.bindCollectionSecondPass(property, persistentClasses, map);
 
         String type = property.getIndexColumnType("string");
         String columnName1 = property.getIndexColumnName(namingStrategy);

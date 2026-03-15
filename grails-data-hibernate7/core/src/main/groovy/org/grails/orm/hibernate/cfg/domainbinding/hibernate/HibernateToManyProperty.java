@@ -22,6 +22,7 @@ import java.util.Map;
 import java.util.Optional;
 
 import org.hibernate.FetchMode;
+import org.hibernate.mapping.Collection;
 import org.hibernate.mapping.IndexedCollection;
 
 import org.springframework.util.StringUtils;
@@ -128,4 +129,7 @@ public interface HibernateToManyProperty extends PropertyWithMapping<PropertyCon
                                 .getSimpleName())
                         + GrailsDomainBinder.FOREIGN_KEY_SUFFIX);
     }
+
+    void setCollection(Collection collection);
+    Collection getCollection();
 }

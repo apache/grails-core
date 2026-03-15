@@ -21,9 +21,8 @@ package org.grails.orm.hibernate.cfg.domainbinding.secondpass
 
 import grails.gorm.specs.HibernateGormDatastoreSpec
 import org.grails.orm.hibernate.cfg.domainbinding.hibernate.GrailsHibernatePersistentEntity
-import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernatePersistentProperty
 import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernateToManyProperty
-import org.hibernate.mapping.OneToMany
+
 import org.hibernate.mapping.RootClass
 import org.hibernate.boot.spi.MetadataBuildingContext
 import org.grails.orm.hibernate.cfg.PersistentEntityNamingStrategy
@@ -218,7 +217,7 @@ class MapSecondPassBinderSpec extends HibernateGormDatastoreSpec {
         map.setCollectionTable(rootClass.getTable())
 
         when:
-        mapBinder.bindMapSecondPass(booksProp, collector, persistentClasses, map)
+        mapBinder.bindMapSecondPass(booksProp, persistentClasses, map)
 
         then:
         noExceptionThrown()
@@ -270,7 +269,7 @@ class MapSecondPassBinderSpec extends HibernateGormDatastoreSpec {
         map.setElement(element)
 
         when:
-        mapBinder.bindMapSecondPass(booksProp, collector, persistentClasses, map)
+        mapBinder.bindMapSecondPass(booksProp, persistentClasses, map)
 
         then:
         noExceptionThrown()

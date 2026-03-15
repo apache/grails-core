@@ -20,6 +20,8 @@ package org.grails.orm.hibernate.cfg.domainbinding.hibernate;
 
 import java.beans.PropertyDescriptor;
 
+import org.hibernate.mapping.Collection;
+
 import org.grails.datastore.mapping.model.MappingContext;
 import org.grails.datastore.mapping.model.PersistentEntity;
 import org.grails.datastore.mapping.model.types.mapping.EmbeddedCollectionWithMapping;
@@ -30,8 +32,17 @@ import org.grails.orm.hibernate.cfg.PropertyConfig;
  */
 public class HibernateEmbeddedCollectionProperty extends EmbeddedCollectionWithMapping<PropertyConfig>
         implements HibernateToManyProperty {
+
+    private Collection collection;
     public HibernateEmbeddedCollectionProperty(
             PersistentEntity entity, MappingContext context, PropertyDescriptor property) {
         super(entity, context, property);
+    }
+
+    public Collection getCollection() {
+        return collection;
+    }
+    public void setCollection(Collection collection) {
+        this.collection = collection;
     }
 }

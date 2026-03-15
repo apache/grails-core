@@ -71,7 +71,7 @@ public class ListSecondPassBinder {
     public void bindListSecondPass(
             @Nonnull HibernateToManyProperty property, Map<?, ?> persistentClasses, @Nonnull List list) {
 
-        collectionSecondPassBinder.bindCollectionSecondPass(property, mappings, persistentClasses, list);
+        collectionSecondPassBinder.bindCollectionSecondPass(property, persistentClasses, list);
         String columnName = property.getIndexColumnName(namingStrategy);
         final boolean isManyToMany = property instanceof HibernateManyToManyProperty;
 

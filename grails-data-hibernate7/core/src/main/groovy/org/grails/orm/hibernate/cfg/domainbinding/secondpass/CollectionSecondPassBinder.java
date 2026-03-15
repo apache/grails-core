@@ -67,7 +67,6 @@ public class CollectionSecondPassBinder {
     /** Bind collection second pass. */
     public void bindCollectionSecondPass(
             @Nonnull HibernateToManyProperty property,
-            @Nonnull InFlightMetadataCollector mappings,
             Map<?, ?> persistentClasses,
             @Nonnull Collection collection) {
 

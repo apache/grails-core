@@ -25,8 +25,6 @@ import org.hibernate.MappingException;
 
 import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernateToManyProperty;
 
-import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernateToManyProperty;
-
 /**
  * Second pass class for grails relationships. This is required as all persistent classes need to be
  * loaded in the first pass and then relationships established in the second pass compile
@@ -41,22 +39,16 @@ public class SetSecondPass implements org.hibernate.boot.spi.SecondPass, GrailsS
 
     private final CollectionSecondPassBinder collectionSecondPassBinder;
     protected final HibernateToManyProperty property;
-    protected final @Nonnull InFlightMetadataCollector mappings;
-    protected final Collection collection;
 
     public SetSecondPass(
             CollectionSecondPassBinder collectionSecondPassBinder,
-            HibernateToManyProperty property,
-            @Nonnull InFlightMetadataCollector mappings,
-            Collection coll) {
+            HibernateToManyProperty property) {
         this.collectionSecondPassBinder = collectionSecondPassBinder;
         this.property = property;
-        this.mappings = mappings;
-        this.collection = coll;
     }
 
     public void doSecondPass(Map persistentClasses) throws MappingException {
-        collectionSecondPassBinder.bindCollectionSecondPass(property, mappings, persistentClasses, collection);
-        createCollectionKeys(collection);
+        collectionSecondPassBinder.bindCollectionSecondPass(property, persistentClasses, property.getCollection());
+        createCollectionKeys(property.getCollection());
     }
 }

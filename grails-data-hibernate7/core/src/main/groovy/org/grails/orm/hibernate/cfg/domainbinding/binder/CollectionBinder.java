@@ -141,6 +141,7 @@ public class CollectionBinder {
     public Collection bindCollection(HibernateToManyProperty property, PersistentClass owner, String path) {
         CollectionType collectionType = collectionHolder.get(property.getType());
         Collection collection = collectionType.create(property, owner);
+        property.setCollection(collection);
 
         // set role
         String propertyName = getNameForPropertyAndPath(property, path);
@@ -183,11 +184,11 @@ public class CollectionBinder {
 
         // set up second pass
         if (collection instanceof org.hibernate.mapping.List) {
-            mappings.addSecondPass(new ListSecondPass(listSecondPassBinder, property, mappings, collection));
+            mappings.addSecondPass(new ListSecondPass(listSecondPassBinder, property));
         } else if (collection instanceof org.hibernate.mapping.Map) {
-            mappings.addSecondPass(new MapSecondPass(mapSecondPassBinder, property, mappings, collection));
+            mappings.addSecondPass(new MapSecondPass(mapSecondPassBinder, property));
         } else { // Collection -> Bag
-            mappings.addSecondPass(new SetSecondPass(collectionSecondPassBinder, property, mappings, collection));
+            mappings.addSecondPass(new SetSecondPass(collectionSecondPassBinder, property));
         }
         mappings.addCollectionBinding(collection);
         return collection;

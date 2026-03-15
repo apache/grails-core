@@ -20,6 +20,8 @@ package org.grails.orm.hibernate.cfg.domainbinding.hibernate;
 
 import java.beans.PropertyDescriptor;
 
+import org.hibernate.mapping.Collection;
+
 import org.grails.datastore.mapping.model.MappingContext;
 import org.grails.datastore.mapping.model.PersistentEntity;
 import org.grails.datastore.mapping.model.types.mapping.OneToManyWithMapping;
@@ -28,6 +30,7 @@ import org.grails.orm.hibernate.cfg.PropertyConfig;
 /** Hibernate implementation of {@link org.grails.datastore.mapping.model.types.OneToMany} */
 public class HibernateOneToManyProperty extends OneToManyWithMapping<PropertyConfig>
         implements HibernateToManyProperty {
+    private Collection collection;
     public HibernateOneToManyProperty(PersistentEntity entity, MappingContext context, PropertyDescriptor property) {
         super(entity, context, property);
     }
@@ -39,5 +42,12 @@ public class HibernateOneToManyProperty extends OneToManyWithMapping<PropertyCon
 
     public String getReferencedEntityName() {
         return getHibernateAssociatedEntity().getName();
+    }
+
+    public Collection getCollection() {
+        return collection;
+    }
+    public void setCollection(Collection collection) {
+        this.collection = collection;
     }
 }
