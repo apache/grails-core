@@ -67,24 +67,25 @@ public class CollectionSecondPassBinder {
     /** Bind collection second pass. */
     public void bindCollectionSecondPass(
             @Nonnull HibernateToManyProperty property,
-            Map<?, ?> persistentClasses,
-            @Nonnull Collection collection) {
+            Map<?, ?> persistentClasses) {
 
+        Collection collection = property.getCollection();
         PersistentClass associatedClass = resolveAssociatedClass(property, persistentClasses);
-        collectionOrderByBinder.bind(property, collection, associatedClass);
-        bindOneToManyAssociation(property, associatedClass, collection);
+        collectionOrderByBinder.bind(property, associatedClass);
+        bindOneToManyAssociation(property, associatedClass);
 
-        collectionMultiTenantFilterBinder.bind(property, collection);
+        collectionMultiTenantFilterBinder.bind(property);
         collection.setSorted(property.isSorted());
 
-        collectionKeyColumnUpdater.bind(property, associatedClass, collection);
+        collectionKeyColumnUpdater.bind(property, associatedClass);
         collection.setCacheConcurrencyStrategy(property.getCacheUsage());
 
-        bindCollectionElement(property, collection);
+        bindCollectionElement(property);
     }
 
     private void bindOneToManyAssociation(
-            HibernateToManyProperty property, PersistentClass associatedClass, Collection collection) {
+            HibernateToManyProperty property, PersistentClass associatedClass) {
+        Collection collection = property.getCollection();
         if (!collection.isOneToMany()) {
             return;
         }
@@ -93,20 +94,20 @@ public class CollectionSecondPassBinder {
         if (property.shouldBindWithForeignKey()) {
             collection.setCollectionTable(associatedClass.getTable());
         }
-        collectionForPropertyConfigBinder.bindCollectionForPropertyConfig(collection, property);
+        collectionForPropertyConfigBinder.bindCollectionForPropertyConfig(property);
     }
 
     private void bindCollectionElement(
-            HibernateToManyProperty property, Collection collection) {
+            HibernateToManyProperty property) {
         if (property instanceof HibernateManyToManyProperty manyToMany && manyToMany.isBidirectional()) {
-            manyToManyElementBinder.bind(manyToMany, collection);
+            manyToManyElementBinder.bind(manyToMany);
         } else if (property.isBidirectionalOneToManyMap() && property.isBidirectional()) {
-            bidirectionalMapElementBinder.bind(property, collection);
+            bidirectionalMapElementBinder.bind(property);
         } else if (property instanceof HibernateOneToManyProperty oneToManyProperty
                 && oneToManyProperty.isUnidirectionalOneToMany()) {
-            unidirectionalOneToManyBinder.bind(oneToManyProperty, collection);
+            unidirectionalOneToManyBinder.bind(oneToManyProperty);
         } else if (property.supportsJoinColumnMapping()) {
-            collectionWithJoinTableBinder.bindCollectionWithJoinTable(property, collection);
+            collectionWithJoinTableBinder.bindCollectionWithJoinTable(property);
         }
     }
 

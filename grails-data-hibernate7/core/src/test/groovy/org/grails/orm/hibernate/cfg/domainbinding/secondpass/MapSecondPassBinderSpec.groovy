@@ -216,8 +216,10 @@ class MapSecondPassBinderSpec extends HibernateGormDatastoreSpec {
         map.setRole("${authorEntity.name}.books".toString())
         map.setCollectionTable(rootClass.getTable())
 
+        booksProp.setCollection(map)
+
         when:
-        mapBinder.bindMapSecondPass(booksProp, persistentClasses, map)
+        mapBinder.bindMapSecondPass(booksProp, persistentClasses)
 
         then:
         noExceptionThrown()
@@ -268,8 +270,10 @@ class MapSecondPassBinderSpec extends HibernateGormDatastoreSpec {
         element.setReferencedEntityName(MSBBook.name)
         map.setElement(element)
 
+        booksProp.setCollection(map)
+
         when:
-        mapBinder.bindMapSecondPass(booksProp, persistentClasses, map)
+        mapBinder.bindMapSecondPass(booksProp, persistentClasses)
 
         then:
         noExceptionThrown()

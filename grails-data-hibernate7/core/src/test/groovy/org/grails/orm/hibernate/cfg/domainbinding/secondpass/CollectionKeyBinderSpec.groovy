@@ -92,8 +92,10 @@ class CollectionKeyBinderSpec extends HibernateGormDatastoreSpec {
         def associatedClass = rootClassWith(CKBBidItem.name, "owner", "OWNER_ID")
         def collection = bagWithOwner(ownerRootClass("ckb_bid_owner"), "ckb_bid_item")
 
+        property.setCollection(collection)
+
         when:
-        binder.bind(property, associatedClass, collection)
+        binder.bind(property, associatedClass)
 
         then:
         collection.isInverse()
@@ -106,8 +108,10 @@ class CollectionKeyBinderSpec extends HibernateGormDatastoreSpec {
         def associatedClass = new RootClass(getGrailsDomainBinder().getMetadataBuildingContext())
         def collection = bagWithOwner(ownerRootClass("ckb_mtm_owner"), "ckb_mtm_join")
 
+        property.setCollection(collection)
+
         when:
-        binder.bind(property, associatedClass, collection)
+        binder.bind(property, associatedClass)
 
         then:
         collection.getKey().getColumnSpan() > 0
@@ -120,8 +124,10 @@ class CollectionKeyBinderSpec extends HibernateGormDatastoreSpec {
         def associatedClass = new RootClass(getGrailsDomainBinder().getMetadataBuildingContext())
         def collection = bagWithOwner(ownerRootClass("ckb_join_key_owner"), "ckb_join_key_owner_ckb_join_key_item")
 
+        property.setCollection(collection)
+
         when:
-        binder.bind(property, associatedClass, collection)
+        binder.bind(property, associatedClass)
 
         then:
         collection.getKey().getTypeName() == "long"
@@ -135,8 +141,10 @@ class CollectionKeyBinderSpec extends HibernateGormDatastoreSpec {
         def associatedClass = new RootClass(getGrailsDomainBinder().getMetadataBuildingContext())
         def collection = bagWithOwner(ownerRootClass("ckb_uni_owner"), "ckb_uni_owner_ckb_uni_item")
 
+        property.setCollection(collection)
+
         when:
-        binder.bind(property, associatedClass, collection)
+        binder.bind(property, associatedClass)
 
         then:
         collection.getKey().getColumnSpan() > 0

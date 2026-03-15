@@ -58,14 +58,14 @@ public class CollectionWithJoinTableBinder {
     }
 
     /** Bind collection with join table. */
-    public void bindCollectionWithJoinTable(@Nonnull HibernateToManyProperty property, @Nonnull Collection collection) {
-
+    public void bindCollectionWithJoinTable(@Nonnull HibernateToManyProperty property) {
+        Collection collection = property.getCollection();
         collection.setInverse(false);
         SimpleValue element;
         if (property.isBasic()) {
-            element = basicCollectionElementBinder.bind(property, collection);
+            element = basicCollectionElementBinder.bind(property);
         } else {
-            element = unidirectionalOneToManyInverseValuesBinder.bind(property, collection);
+            element = unidirectionalOneToManyInverseValuesBinder.bind(property);
             final var domainClass = property.getHibernateAssociatedEntity();
             if (domainClass != null) {
                 if (domainClass.getHibernateCompositeIdentity().isPresent()) {
@@ -81,6 +81,6 @@ public class CollectionWithJoinTableBinder {
         }
 
         collection.setElement(element);
-        collectionForPropertyConfigBinder.bindCollectionForPropertyConfig(collection, property);
+        collectionForPropertyConfigBinder.bindCollectionForPropertyConfig(property);
     }
 }

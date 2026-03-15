@@ -254,8 +254,10 @@ class ListSecondPassBinderSpec extends HibernateGormDatastoreSpec {
         element.setReferencedEntityName(LSBBook.name)
         list.setElement(element)
 
+        booksProp.setCollection(list)
+
         when:
-        listBinder.bindListSecondPass(booksProp, persistentClasses, list)
+        listBinder.bindListSecondPass(booksProp, persistentClasses)
 
         then:
         noExceptionThrown()

@@ -48,8 +48,10 @@ class BidirectionalMapElementBinderSpec extends HibernateGormDatastoreSpec {
         def collection = new Bag(mbc, null)
         collection.setCollectionTable(new Table("test", "bbme_owner_items"))
 
+        property.setCollection(collection)
+
         when:
-        binder.bind(property, collection)
+        binder.bind(property)
 
         then:
         collection.getElement() instanceof ManyToOne

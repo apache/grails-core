@@ -167,7 +167,7 @@ public class CollectionBinder {
             collection.setElement(oneToMany);
             bindOneToMany((HibernateOneToManyProperty) property, oneToMany);
         } else {
-            bindCollectionTable(property, collection, owner.getTable());
+            bindCollectionTable(property, owner.getTable());
 
             if (property.isBidirectional()) {
                 if (!property.isOwningSide()) {
@@ -207,8 +207,8 @@ public class CollectionBinder {
         one.setIgnoreNotFound(true);
     }
 
-    private void bindCollectionTable(HibernateToManyProperty property, Collection collection, Table ownerTable) {
-
+    private void bindCollectionTable(HibernateToManyProperty property, Table ownerTable) {
+        Collection collection = property.getCollection();
         String owningTableSchema = ownerTable.getSchema();
         PropertyConfig config = property.getMappedForm();
         JoinTable jt = config.getJoinTable();

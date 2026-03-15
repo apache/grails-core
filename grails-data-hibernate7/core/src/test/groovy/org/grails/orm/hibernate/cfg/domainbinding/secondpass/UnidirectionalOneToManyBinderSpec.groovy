@@ -100,8 +100,10 @@ class UnidirectionalOneToManyBinderSpec extends HibernateGormDatastoreSpec {
         collection.setElement(element)
         collection.setKey(new BasicValue(grailsDomainBinder.metadataBuildingContext, ownerPersistentClass.getTable()))
 
+        ownerToPetsProperty.setCollection(collection)
+
         when:
-        binder.bind(ownerToPetsProperty, collection)
+        binder.bind(ownerToPetsProperty)
 
         then:
         collection.isInverse() == false
@@ -115,33 +117,36 @@ class UnidirectionalOneToManyBinderSpec extends HibernateGormDatastoreSpec {
         def ownerEntity = grailsDomainBinder.hibernateMappingContext.getPersistentEntity(UniOwner.name) as GrailsHibernatePersistentEntity
         def petEntity = grailsDomainBinder.hibernateMappingContext.getPersistentEntity(UniPet.name) as GrailsHibernatePersistentEntity
 
-        // Use a Stub for the property to override shouldBindWithForeignKey
-        def ownerToPetsProperty = Stub(HibernateOneToManyProperty) {
-            shouldBindWithForeignKey() >> true
-            getOwner() >> ownerEntity
-            getName() >> "pets"
-        }
-
         def mappings = grailsDomainBinder.metadataBuildingContext.metadataCollector
         def ownerPersistentClass = mappings.getEntityBinding(UniOwner.name)
         def petPersistentClass = mappings.getEntityBinding(UniPet.name)
 
+        // 1. Initialize the collection
         def collection = new Bag(grailsDomainBinder.metadataBuildingContext, ownerPersistentClass)
         collection.setRole(UniOwner.name + ".pets")
 
+        // 2. IMPORTANT: Initialize and set the element (This fixes the NPE)
         def element = new OneToMany(grailsDomainBinder.metadataBuildingContext, ownerPersistentClass)
         element.setReferencedEntityName(petEntity.getName())
         collection.setElement(element)
-        collection.setKey(new BasicValue(grailsDomainBinder.metadataBuildingContext, ownerPersistentClass.getTable()))
+
+        // 3. Set the key (the FK column mapping on the other side)
+        collection.setKey(new BasicValue(grailsDomainBinder.metadataBuildingContext, petPersistentClass.getTable()))
+
+        def ownerToPetsProperty = Stub(HibernateOneToManyProperty) {
+            shouldBindWithForeignKey() >> true
+            getOwner() >> ownerEntity
+            getName() >> "pets"
+            getCollection() >> collection
+        }
 
         when:
-        binder.bind(ownerToPetsProperty, collection)
+        binder.bind(ownerToPetsProperty)
 
         then:
         collection.isInverse() == false
         petPersistentClass.getProperty("_UniOwner_petsBackref") != null
     }
-
 }
 
 @Entity

@@ -39,7 +39,8 @@ public class CollectionMultiTenantFilterBinder {
     }
 
     /** Applies the multi-tenant filter to the collection if the associated entity is multi-tenant. */
-    public void bind(HibernateToManyProperty property, Collection collection) {
+    public void bind(HibernateToManyProperty property) {
+        Collection collection = property.getCollection();
         Optional.ofNullable(property.getHibernateAssociatedEntity())
                 .filter(referenced -> !(property instanceof HibernateManyToManyProperty) && referenced.isMultiTenant())
                 .map(referenced -> referenced.getMultiTenantFilterCondition(defaultColumnNameFetcher))

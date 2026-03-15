@@ -57,8 +57,10 @@ class CollectionOrderByBinderSpec extends HibernateGormDatastoreSpec {
         property.getMappedForm().setSort("value")
         property.getMappedForm().setOrder("desc")
 
+        property.setCollection(collection)
+
         when:
-        binder.bind(property, collection, associatedClass)
+        binder.bind(property, associatedClass)
 
         then:
         collection.getOrderBy() != null
@@ -73,8 +75,10 @@ class CollectionOrderByBinderSpec extends HibernateGormDatastoreSpec {
         def associatedClass = rootClassWith(COBAssociatedItem.name, "value", "VALUE")
         property.getMappedForm().setSort("value")
 
+        property.setCollection(collection)
+
         when:
-        binder.bind(property, collection, associatedClass)
+        binder.bind(property, associatedClass)
 
         then:
         collection.getOrderBy() != null
@@ -88,8 +92,10 @@ class CollectionOrderByBinderSpec extends HibernateGormDatastoreSpec {
         def associatedClass = new RootClass(getGrailsDomainBinder().getMetadataBuildingContext())
         property.getMappedForm().setSort("value")
 
+        property.setCollection(collection)
+
         when:
-        binder.bind(property, collection, associatedClass)
+        binder.bind(property, associatedClass)
 
         then:
         thrown(DatastoreConfigurationException)
@@ -101,8 +107,10 @@ class CollectionOrderByBinderSpec extends HibernateGormDatastoreSpec {
         def collection = new Bag(getGrailsDomainBinder().getMetadataBuildingContext(), null)
         def associatedClass = new RootClass(getGrailsDomainBinder().getMetadataBuildingContext())
 
+        property.setCollection(collection)
+
         when:
-        binder.bind(property, collection, associatedClass)
+        binder.bind(property, associatedClass)
 
         then:
         collection.getOrderBy() == null
@@ -114,8 +122,10 @@ class CollectionOrderByBinderSpec extends HibernateGormDatastoreSpec {
         def collection = new Bag(getGrailsDomainBinder().getMetadataBuildingContext(), null)
         def associatedClass = new RootClass(getGrailsDomainBinder().getMetadataBuildingContext())
 
+        property.setCollection(collection)
+
         when:
-        binder.bind(property, collection, associatedClass)
+        binder.bind(property, associatedClass)
 
         then:
         collection.getWhere() != null

@@ -31,8 +31,8 @@ import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernateToManyPrope
 public class CollectionForPropertyConfigBinder {
 
     /** Bind collection for property config. */
-    public void bindCollectionForPropertyConfig(
-            @Nonnull Collection collection, @Nonnull HibernateToManyProperty property) {
+    public void bindCollectionForPropertyConfig(@Nonnull HibernateToManyProperty property) {
+        Collection collection = property.getCollection();
         collection.setLazy(!FetchMode.JOIN.equals(property.getFetchMode()));
         Optional.ofNullable(property.getLazy()).ifPresent(collection::setExtraLazy);
     }

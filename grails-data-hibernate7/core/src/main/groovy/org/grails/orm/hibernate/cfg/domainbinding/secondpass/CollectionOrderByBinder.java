@@ -42,7 +42,8 @@ public class CollectionOrderByBinder {
     }
 
     /** Binds the order-by clause and discriminator where condition to the given collection. */
-    public void bind(HibernateToManyProperty property, Collection collection, PersistentClass associatedClass) {
+    public void bind(HibernateToManyProperty property, PersistentClass associatedClass) {
+        Collection collection = property.getCollection();
         GrailsHibernatePersistentEntity referenced = property.getHibernateAssociatedEntity();
 
         if (referenced.isTablePerHierarchySubclass()) {

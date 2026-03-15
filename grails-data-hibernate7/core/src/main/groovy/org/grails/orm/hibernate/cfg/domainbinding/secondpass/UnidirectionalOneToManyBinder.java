@@ -49,9 +49,10 @@ public class UnidirectionalOneToManyBinder {
         this.mappings = mappings;
     }
 
-    public void bind(@Nonnull HibernateOneToManyProperty property, @Nonnull Collection collection) {
+    public void bind(@Nonnull HibernateOneToManyProperty property) {
+        Collection collection = property.getCollection();
         if (!property.shouldBindWithForeignKey()) {
-            collectionWithJoinTableBinder.bindCollectionWithJoinTable(property, collection);
+            collectionWithJoinTableBinder.bindCollectionWithJoinTable(property);
         } else {
             bindUnidirectionalOneToMany(property, collection);
         }

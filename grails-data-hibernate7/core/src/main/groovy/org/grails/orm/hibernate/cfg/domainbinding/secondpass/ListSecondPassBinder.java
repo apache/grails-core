@@ -27,6 +27,7 @@ import org.hibernate.boot.spi.InFlightMetadataCollector;
 import org.hibernate.boot.spi.MetadataBuildingContext;
 import org.hibernate.mapping.Backref;
 import org.hibernate.mapping.BasicValue;
+import org.hibernate.mapping.Collection;
 import org.hibernate.mapping.DependantValue;
 import org.hibernate.mapping.IndexBackref;
 import org.hibernate.mapping.List;
@@ -69,9 +70,10 @@ public class ListSecondPassBinder {
     }
 
     public void bindListSecondPass(
-            @Nonnull HibernateToManyProperty property, Map<?, ?> persistentClasses, @Nonnull List list) {
+            @Nonnull HibernateToManyProperty property, Map<?, ?> persistentClasses) {
 
-        collectionSecondPassBinder.bindCollectionSecondPass(property, persistentClasses, list);
+        List list = (List) property.getCollection();
+        collectionSecondPassBinder.bindCollectionSecondPass(property, persistentClasses);
         String columnName = property.getIndexColumnName(namingStrategy);
         final boolean isManyToMany = property instanceof HibernateManyToManyProperty;
 

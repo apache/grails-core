@@ -47,8 +47,10 @@ class BasicCollectionElementBinderSpec extends HibernateGormDatastoreSpec {
         HibernateToManyProperty property = (HibernateToManyProperty) entity.getPropertyByName("tags")
         Collection collection = collectionWithTable("bceb_author_tags")
 
+        property.setCollection(collection)
+
         when:
-        BasicValue element = binder.bind(property, collection)
+        BasicValue element = binder.bind(property)
 
         then:
         element != null
@@ -62,8 +64,10 @@ class BasicCollectionElementBinderSpec extends HibernateGormDatastoreSpec {
         HibernateToManyProperty property = (HibernateToManyProperty) entity.getPropertyByName("statuses")
         Collection collection = collectionWithTable("bceb_author_statuses")
 
+        property.setCollection(collection)
+
         when:
-        BasicValue element = binder.bind(property, collection)
+        BasicValue element = binder.bind(property)
 
         then:
         element != null

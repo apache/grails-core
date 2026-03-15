@@ -37,8 +37,8 @@ public class CollectionKeyColumnUpdater {
     }
 
     /** Creates the key, sets it on the collection, and updates its columns. */
-    public void bind(HibernateToManyProperty property, PersistentClass associatedClass, Collection collection) {
-        DependantValue key = collectionKeyBinder.bind(property, associatedClass, collection);
+    public void bind(HibernateToManyProperty property, PersistentClass associatedClass) {
+        DependantValue key = collectionKeyBinder.bind(property, associatedClass);
         forceNullableAndCheckUpdatable(key, property);
     }
 

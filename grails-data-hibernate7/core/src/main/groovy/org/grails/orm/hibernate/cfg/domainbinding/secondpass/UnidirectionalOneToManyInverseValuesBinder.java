@@ -36,7 +36,8 @@ public class UnidirectionalOneToManyInverseValuesBinder {
         this.metadataBuildingContext = metadataBuildingContext;
     }
 
-    public ManyToOne bind(HibernateToManyProperty property, Collection collection) {
+    public ManyToOne bind(HibernateToManyProperty property) {
+        Collection collection = property.getCollection();
         ManyToOne manyToOne = new ManyToOne(metadataBuildingContext, collection.getCollectionTable());
         manyToOne.setIgnoreNotFound(property.getIgnoreNotFound());
         manyToOne.setLazy(!FetchMode.JOIN.equals(property.getFetchMode()));

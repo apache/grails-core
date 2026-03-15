@@ -41,12 +41,13 @@ public class ManyToManyElementBinder {
     }
 
     /** Binds the ManyToOne element for a bidirectional many-to-many collection. */
-    public void bind(HibernateManyToManyProperty manyToMany, Collection collection) {
+    public void bind(HibernateManyToManyProperty manyToMany) {
+        Collection collection = manyToMany.getCollection();
         HibernateManyToManyProperty otherSide = manyToMany.getHibernateInverseSide();
         ManyToOne element = manyToOneBinder.bindManyToOne(otherSide, collection.getCollectionTable(), EMPTY_PATH);
         element.setReferencedEntityName(otherSide.getOwner().getName());
         collection.setElement(element);
-        collectionForPropertyConfigBinder.bindCollectionForPropertyConfig(collection, manyToMany);
+        collectionForPropertyConfigBinder.bindCollectionForPropertyConfig(manyToMany);
         if (manyToMany.isCircular()) {
             collection.setInverse(false);
         }

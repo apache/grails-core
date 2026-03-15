@@ -64,7 +64,8 @@ public class BasicCollectionElementBinder {
     }
 
     /** Creates and binds a {@link BasicValue} element for the given basic collection property. */
-    public BasicValue bind(HibernateToManyProperty property, Collection collection) {
+    public BasicValue bind(HibernateToManyProperty property) {
+        Collection collection = property.getCollection();
         final Class<?> referencedType = property.getComponentType();
         final boolean isEnum = referencedType.isEnum();
         var joinColumnMappingOptional =

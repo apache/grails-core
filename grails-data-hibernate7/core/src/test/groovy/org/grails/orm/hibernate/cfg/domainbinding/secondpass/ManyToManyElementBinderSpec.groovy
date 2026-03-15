@@ -50,8 +50,10 @@ class ManyToManyElementBinderSpec extends HibernateGormDatastoreSpec {
         def collection = new Bag(mbc, null)
         collection.setCollectionTable(new Table("test", "mtme_owner_mtme_item"))
 
+        property.setCollection(collection)
+
         when:
-        binder.bind(property, collection)
+        binder.bind(property)
 
         then:
         collection.getElement() instanceof ManyToOne
@@ -65,8 +67,10 @@ class ManyToManyElementBinderSpec extends HibernateGormDatastoreSpec {
         def collection = new Bag(mbc, null)
         collection.setCollectionTable(new Table("test", "mtme_subtype_mtme_base"))
 
+        property.setCollection(collection)
+
         when:
-        binder.bind(property, collection)
+        binder.bind(property)
 
         then:
         property.isCircular()

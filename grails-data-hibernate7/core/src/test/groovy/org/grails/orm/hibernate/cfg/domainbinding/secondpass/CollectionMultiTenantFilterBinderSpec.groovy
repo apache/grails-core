@@ -49,8 +49,10 @@ class CollectionMultiTenantFilterBinderSpec extends HibernateGormDatastoreSpec {
         def property = propertyFor(CMTBBidirectionalOwner)
         def collection = new Bag(getGrailsDomainBinder().getMetadataBuildingContext(), null)
 
+        property.setCollection(collection)
+
         when:
-        binder.bind(property, collection)
+        binder.bind(property)
 
         then:
         collection.getFilters().any { it.getName() == GormProperties.TENANT_IDENTITY }
@@ -62,8 +64,10 @@ class CollectionMultiTenantFilterBinderSpec extends HibernateGormDatastoreSpec {
         def property = propertyFor(CMTBUnidirectionalOwner)
         def collection = new Bag(getGrailsDomainBinder().getMetadataBuildingContext(), null)
 
+        property.setCollection(collection)
+
         when:
-        binder.bind(property, collection)
+        binder.bind(property)
 
         then:
         collection.getManyToManyFilters().any { it.getName() == GormProperties.TENANT_IDENTITY }
@@ -75,8 +79,10 @@ class CollectionMultiTenantFilterBinderSpec extends HibernateGormDatastoreSpec {
         def property = propertyFor(CMTBManyToManyOwner)
         def collection = new Bag(getGrailsDomainBinder().getMetadataBuildingContext(), null)
 
+        property.setCollection(collection)
+
         when:
-        binder.bind(property, collection)
+        binder.bind(property)
 
         then:
         collection.getFilters().isEmpty()
@@ -88,8 +94,10 @@ class CollectionMultiTenantFilterBinderSpec extends HibernateGormDatastoreSpec {
         def property = propertyFor(CMTBNonTenantOwner)
         def collection = new Bag(getGrailsDomainBinder().getMetadataBuildingContext(), null)
 
+        property.setCollection(collection)
+
         when:
-        binder.bind(property, collection)
+        binder.bind(property)
 
         then:
         collection.getFilters().isEmpty()

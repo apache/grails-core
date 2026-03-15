@@ -33,7 +33,9 @@ import org.slf4j.LoggerFactory;
 import org.grails.orm.hibernate.cfg.ColumnConfig;
 import org.grails.orm.hibernate.cfg.IdentityEnumType;
 import org.grails.orm.hibernate.cfg.PropertyConfig;
+import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernateEnumProperty;
 import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernatePersistentProperty;
+import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernateToManyProperty;
 import org.grails.orm.hibernate.cfg.domainbinding.util.ColumnNameForPropertyAndPathFetcher;
 import org.grails.orm.hibernate.cfg.domainbinding.util.GrailsEnumType;
 
@@ -70,14 +72,16 @@ public class EnumTypeBinder {
     private static final Logger LOG = LoggerFactory.getLogger(EnumTypeBinder.class);
 
     public BasicValue bindEnumType(
-            @Nonnull HibernatePersistentProperty property, Class<?> propertyType, Table table, String path) {
+            @Nonnull HibernateEnumProperty property, Class<?> propertyType, Table table, String path) {
         String columnName = columnNameForPropertyAndPathFetcher.getColumnNameForPropertyAndPath(property, path, null);
-        return bindEnumTypeForColumn(property, propertyType, table, columnName);
+        BasicValue simpleValue = new BasicValue(metadataBuildingContext, property.getTable());
+        bindEnumType(property, propertyType, simpleValue, columnName);
+        return simpleValue;
     }
 
     public BasicValue bindEnumTypeForColumn(
-            @Nonnull HibernatePersistentProperty property, Class<?> propertyType, Table table, @Nonnull String columnName) {
-        BasicValue simpleValue = new BasicValue(metadataBuildingContext, table);
+            @Nonnull HibernateToManyProperty property, Class<?> propertyType, Table table, @Nonnull String columnName) {
+        BasicValue simpleValue = new BasicValue(metadataBuildingContext, property.getTable());
         bindEnumType(property, propertyType, simpleValue, columnName);
         return simpleValue;
     }
