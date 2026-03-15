@@ -43,15 +43,22 @@ jobs:
         with:
           develocity-access-key: ${{ secrets.GRAILS_DEVELOCITY_ACCESS_KEY }}
       - name: "🔎 Check Core Projects"
-        run: ./gradlew codeStyle
+        run: |
+          ./gradlew codeStyle --continue 2>&1 | tee build/codestyle-output.log || true
+          # Extract Spotless violations into a separate report
+          sed -n '/The following files had format violations:/,/Run.*spotlessApply.*to fix all violations\./p' build/codestyle-output.log > build/reports/spotless-violations.txt || true
+          # Fail the step if the Gradle build actually failed
+          grep -q "BUILD SUCCESSFUL" build/codestyle-output.log
       - name: "📤 Upload Failure Reports"
         if: failure()
         uses: actions/upload-artifact@v6
         with:
           name: core-reports
           path: |
-            **/build/reports/checkstyle/
+            build/reports/spotless-violations.txt
             **/build/reports/codenarc/
+            **/build/reports/pmd/
+            **/build/reports/spotbugs/
   check_gradle_plugin_projects:
     name: "Gradle Plugin Projects"
     runs-on: ubuntu-24.04
@@ -71,15 +78,22 @@ jobs:
           develocity-access-key: ${{ secrets.GRAILS_DEVELOCITY_ACCESS_KEY }}
       - name: "🔎 Check Gradle Plugin Projects"
         working-directory: grails-gradle
-        run: ./gradlew codeStyle
+        run: |
+          ./gradlew codeStyle --continue 2>&1 | tee build/codestyle-output.log || true
+          # Extract Spotless violations into a separate report
+          sed -n '/The following files had format violations:/,/Run.*spotlessApply.*to fix all violations\./p' build/codestyle-output.log > build/reports/spotless-violations.txt || true
+          # Fail the step if the Gradle build actually failed
+          grep -q "BUILD SUCCESSFUL" build/codestyle-output.log
       - name: "📤 Upload Failure Reports"
         if: failure()
         uses: actions/upload-artifact@v6
         with:
           name: gradle-plugin-reports
           path: |
-            grails-gradle/**/build/reports/checkstyle/
+            grails-gradle/build/reports/spotless-violations.txt
             grails-gradle/**/build/reports/codenarc/
+            grails-gradle/**/build/reports/pmd/
+            grails-gradle/**/build/reports/spotbugs/
   check_grails_forge_projects:
     name: "Forge Projects"
     runs-on: ubuntu-24.04

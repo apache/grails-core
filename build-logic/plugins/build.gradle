@@ -38,6 +38,8 @@ dependencies {
     implementation "${gradleBomDependencies['grails-publish-plugin']}"
     implementation "org.gradle.crypto.checksum:org.gradle.crypto.checksum.gradle.plugin:${gradleProperties.gradleChecksumPluginVersion}"
     implementation "org.cyclonedx.bom:org.cyclonedx.bom.gradle.plugin:${gradleProperties.gradleCycloneDxPluginVersion}"
+    implementation "com.diffplug.spotless:spotless-plugin-gradle:${gradleProperties.spotlessVersion}"
+    implementation "com.github.spotbugs.snom:spotbugs-gradle-plugin:${gradleProperties.spotbugsPluginVersion}"
 }
 
 gradlePlugin {

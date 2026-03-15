@@ -21,8 +21,7 @@ plugins {
     id 'java-library'
     id 'org.apache.grails.buildsrc.properties'
     id 'org.apache.grails.gradle.grails-plugin'
-
-
+    id 'org.apache.grails.gradle.grails-code-style'
 }
 
 version = projectVersion
@@ -32,10 +31,6 @@ ext {
     gormApiDocs = true
     pomTitle = 'Grails Database Migration Plugin for Hibernate 7'
     pomDescription = 'The Database Migration plugin helps you manage database changes, via Liquibase, while developing Grails applications for Hibernate 7'
-    pomDevelopers = [
-            'kazukiyamamoto': 'Kazuki YAMAMOTO',
-            'jamesfredley'  : 'James Fredley',
-    ]
 }
 
 dependencies {
@@ -105,7 +100,6 @@ tasks.withType(Test).configureEach {
 
 apply {
     from rootProject.layout.projectDirectory.file('gradle/java-config.gradle')
-    from rootProject.layout.projectDirectory.file('gradle/code-style-config.gradle')
     from rootProject.layout.projectDirectory.file('gradle/hibernate7-test-config.gradle')
     from rootProject.layout.projectDirectory.file('gradle/docs-config.gradle')
     from rootProject.layout.projectDirectory.file('gradle/grails-extension-gradle-config.gradle')

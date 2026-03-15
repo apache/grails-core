@@ -25,18 +25,31 @@ import groovy.transform.CompileStatic
 import org.gradle.api.Project
 import org.gradle.api.file.DirectoryProperty
 import org.gradle.api.model.ObjectFactory
+import org.gradle.api.provider.Property
 
 @CompileStatic
 class GrailsCodeStyleExtension {
 
     /**
-     * Defaults to project.buildDir/checkstyle.
+     * Defaults to project.rootProject.buildDir/codestyle/checkstyle.
      * Default checkstyle files will be written here and used from this location.
      */
     final DirectoryProperty checkstyleDirectory
 
     /**
-     * Defaults to project.buildDir/codenarc.
+     * Defaults to project.rootProject.buildDir/codestyle/spotless.
+     * Directory for Spotless configuration files (e.g. greclipse.properties).
+     */
+    final DirectoryProperty spotlessDirectory
+
+    /**
+     * Defaults to project.rootProject.buildDir/codestyle/pmd.
+     * Directory for PMD configuration files (e.g. pmd.xml).
+     */
+    final DirectoryProperty pmdDirectory
+
+    /**
+     * Defaults to project.rootProject.buildDir/codestyle/codenarc.
      * Default codenarc files will be written here and used from this location.
      */
     final DirectoryProperty codenarcDirectory
@@ -44,10 +57,16 @@ class GrailsCodeStyleExtension {
     @Inject
     GrailsCodeStyleExtension(ObjectFactory objects, Project project) {
         checkstyleDirectory = objects.directoryProperty().convention(
-                project.rootProject.layout.buildDirectory.dir('checkstyle')
+                project.rootProject.layout.buildDirectory.dir('codestyle/checkstyle')
+        )
+        spotlessDirectory = objects.directoryProperty().convention(
+                project.rootProject.layout.buildDirectory.dir('codestyle/spotless')
+        )
+        pmdDirectory = objects.directoryProperty().convention(
+                project.rootProject.layout.buildDirectory.dir('codestyle/pmd')
         )
         codenarcDirectory = objects.directoryProperty().convention(
-                project.rootProject.layout.buildDirectory.dir('codenarc')
+                project.rootProject.layout.buildDirectory.dir('codestyle/codenarc')
         )
     }
 }
