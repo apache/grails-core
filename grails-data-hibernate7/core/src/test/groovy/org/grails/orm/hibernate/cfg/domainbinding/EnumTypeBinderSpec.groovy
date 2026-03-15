@@ -87,7 +87,7 @@ class EnumTypeBinderSpec extends HibernateGormDatastoreSpec {
         PersistentProperty property = setupEntity(clazz, table)
 
         when: "the enum is bound"
-        def simpleValue = binder.bindEnumTypeForColumn(property as HibernateToManyProperty, Status01, table, "status_col")
+        def simpleValue = binder.bindEnumTypeForColumn(property as HibernateToManyProperty, Status01, "status_col")
 
         then: "the correct hibernate type is set"
         simpleValue.getTypeName() == expectedHibernateType
@@ -114,7 +114,7 @@ class EnumTypeBinderSpec extends HibernateGormDatastoreSpec {
         PersistentProperty property = setupEntity(clazz, table)
 
         when: "the enum is bound"
-        def simpleValue = binder.bindEnumTypeForColumn(property as HibernateToManyProperty, Status01, table, columnName)
+        def simpleValue = binder.bindEnumTypeForColumn(property as HibernateToManyProperty, Status01, columnName)
 
         then:
         table.columns.size() == 1
@@ -140,7 +140,7 @@ class EnumTypeBinderSpec extends HibernateGormDatastoreSpec {
         PersistentProperty property = setupEntity(clazz, table)
 
         when: "the enum is bound"
-        binder.bindEnumTypeForColumn(property as HibernateToManyProperty, Status01, table, columnName)
+        binder.bindEnumTypeForColumn(property as HibernateToManyProperty, Status01, columnName)
 
         then: "the index and column binders are invoked the correct number of times"
         times * indexBinder.bindIndex(columnName, _ as Column, _, table)
@@ -158,7 +158,7 @@ class EnumTypeBinderSpec extends HibernateGormDatastoreSpec {
         PersistentProperty property = setupEntity(Person01, table)
 
         when: "the enum is bound using the new signature"
-        def result = binder.bindEnumType(property as HibernateEnumProperty, Status01, table, "")
+        def result = binder.bindEnumType(property as HibernateEnumProperty, Status01, "")
 
         then: "a BasicValue is returned and bound correctly"
         result instanceof BasicValue

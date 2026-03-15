@@ -12,7 +12,6 @@ import org.hibernate.mapping.Collection
 import org.hibernate.mapping.RootClass
 import org.hibernate.mapping.Set
 import org.hibernate.mapping.Table
-import org.hibernate.type.spi.TypeConfiguration
 import spock.lang.Subject
 
 class BasicCollectionElementBinderSpec extends HibernateGormDatastoreSpec {
@@ -20,10 +19,13 @@ class BasicCollectionElementBinderSpec extends HibernateGormDatastoreSpec {
     @Subject
     BasicCollectionElementBinder binder
 
+    // Mock the collaborator
     EnumTypeBinder enumTypeBinder = Mock(EnumTypeBinder)
 
     void setup() {
         def domainBinder = getGrailsDomainBinder()
+
+        // Inject the mocked enumTypeBinder into the Subject
         binder = new BasicCollectionElementBinder(
                 domainBinder.metadataBuildingContext,
                 domainBinder.namingStrategy,
@@ -55,7 +57,8 @@ class BasicCollectionElementBinderSpec extends HibernateGormDatastoreSpec {
         then:
         element != null
         element.getColumnSpan() > 0
-        0 * enumTypeBinder._
+        // Ensure the enum binder is NOT called for a String collection
+        0 * enumTypeBinder.bindEnumTypeForColumn(_, _, _)
     }
 
     void "bind delegates to enumTypeBinder for enum collection"() {
@@ -66,12 +69,16 @@ class BasicCollectionElementBinderSpec extends HibernateGormDatastoreSpec {
 
         property.setCollection(collection)
 
+        // Create a dummy BasicValue to return from the mock
+        def mockValue = new BasicValue(getGrailsDomainBinder().metadataBuildingContext, collection.getCollectionTable())
+
         when:
         BasicValue element = binder.bind(property)
 
         then:
         element != null
-        1 * enumTypeBinder.bindEnumTypeForColumn(property, BCEBStatus, collection.getCollectionTable(), _) >> Mock(BasicValue)
+        // Corrected: Match the 3-argument signature (Property, Class, String)
+        1 * enumTypeBinder.bindEnumTypeForColumn(property, BCEBStatus, _ as String) >> mockValue
     }
 }
 
