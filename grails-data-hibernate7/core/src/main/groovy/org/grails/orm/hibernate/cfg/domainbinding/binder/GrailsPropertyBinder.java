@@ -80,12 +80,11 @@ public class GrailsPropertyBinder {
                 && oneToOne.isValidHibernateOneToOne()) {
             value = oneToOneBinder.bindOneToOne(oneToOne, path);
         } else if (currentGrailsProp instanceof HibernateOneToOneProperty oneToOne) {
-            value = foreignKeyOneToOneBinder.bind(oneToOne, table, path);
+            value = foreignKeyOneToOneBinder.bind(oneToOne, path);
         } else if (currentGrailsProp instanceof HibernateManyToOneProperty manyToOne) {
             value = manyToOneBinder.bindManyToOne(manyToOne, table, path);
         } else if (currentGrailsProp instanceof HibernateToManyProperty toMany
                 && !currentGrailsProp.isSerializableType()) {
-            // HibernateToManyProperty
             value = collectionBinder.bindCollection(toMany, persistentClass, path);
         } else if (currentGrailsProp instanceof HibernateEmbeddedProperty embedded) {
             value = componentBinder.bindComponent(persistentClass, embedded, path);

@@ -22,7 +22,6 @@ import grails.gorm.specs.HibernateGormDatastoreSpec
 import org.grails.datastore.mapping.model.MappingContext
 import org.grails.datastore.mapping.model.PersistentEntity
 import org.grails.orm.hibernate.cfg.Mapping
-import java.util.Optional
 import org.grails.orm.hibernate.cfg.PersistentEntityNamingStrategy
 import org.grails.orm.hibernate.cfg.PropertyConfig
 import org.grails.orm.hibernate.cfg.domainbinding.hibernate.GrailsHibernatePersistentEntity
@@ -77,7 +76,7 @@ class ForeignKeyOneToOneBinderSpec extends HibernateGormDatastoreSpec {
         inverseSide.isValidHibernateOneToOne() >> isInverseHasOne
 
         when:
-        def result = binder.bind(property, null, "/test")
+        def result = binder.bind(property, "/test")
 
         then:
         result.isAlternateUniqueKey()
@@ -123,7 +122,7 @@ class ForeignKeyOneToOneBinderSpec extends HibernateGormDatastoreSpec {
         columnFetcher.getColumnForSimpleValue(_ as ManyToOne) >> null
 
         when:
-        binder.bind(property, null, "/test")
+        binder.bind(property, "/test")
 
         then:
         thrown(MappingException)
