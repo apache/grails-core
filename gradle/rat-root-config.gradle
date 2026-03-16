@@ -20,6 +20,7 @@ apply plugin: 'org.nosphere.apache.rat'
 tasks.named('rat') {
     def allExcludes = [
             '.asf.yaml', // ASF metadata for github integration excluded from src zip
+            '.mailmap', // authorship mapping for git history, will not be included in src zip
             'CODE_OF_CONDUCT.md',
             'BUILD_DATE', // build artifact for storing the build date / verifying
             'CHECKSUMS', // build artifact for storing checksums for easy verification
@@ -42,6 +43,9 @@ tasks.named('rat') {
             '.github/**', // github configuration isn't shipped in the source distro
             '**/.gitignore', // git configuration isn't code
             '**/.gitkeep', // git configuration isn't code
+            '**/.classpath', // Eclipse generated files
+            '**/.project', // Eclipse generated files
+            '**/.settings', // Eclipse generated files
             'etc/bin/results/**', // exclude build directories
             '**/*.png', '**/*.svg', '**/*.ico', '**/*.eps', '**/*.icns', '**/*.jpg', '**/*.jpeg', '**/*.gif', // Image files
             '**/*.db', // H2 database test files
@@ -50,6 +54,8 @@ tasks.named('rat') {
             'grails-fields/grails-app/views/templates/_fields/*.gsp', // template files that people are expected to use in the end application
             'grails-geb/src/main/templates/*.groovy', // template files that people are expected to use in the end application
             'grails-doc/src/en/ref/Versions/Grails BOM.adoc', // exclude generated data
+            'grails-doc/src/en/ref/Versions/Grails BOM Hibernate5.adoc', // exclude generated data
+            'grails-doc/src/en/ref/Versions/Grails BOM Hibernate7.adoc', // exclude generated data
             'grails-profiles/**/templates/**', // template files that people are expected to use in the end application
             'grails-profiles/**/commands/**', // template files that people are expected to use in the end application
             'grails-profiles/**/features/**', // template files that people are expected to use in the end application
@@ -67,6 +73,8 @@ tasks.named('rat') {
             'grails-forge/**/src/main/resources/**', // src/main/resources are included in generated application and should not include a license
             'grails-forge/**/src/test/resources/**', // src/test/resources are used in tests against files included in generated application and should not include a license
             'grails-gradle/**/build/**', // grails-gradle does not have a build package name so exclude any build directories
+            '*/build/**', // any build directories at the root
+            'grails-test-examples/**/build/**', // grails-test-examples build directories
             'grails-forge/*/build/**', // grails-forge build directories
             'grails-forge/build/**', // grails-forge build directories
             'build-logic/build/**', // grails-forge build directories
