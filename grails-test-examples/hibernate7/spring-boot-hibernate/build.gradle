@@ -19,7 +19,9 @@
 
 plugins {
     id 'groovy'
+    id 'org.apache.grails.buildsrc.properties'
     id 'org.springframework.boot'
+    id 'org.apache.grails.buildsrc.compile'
 }
 
 version = projectVersion
@@ -46,6 +48,5 @@ dependencies {
 }
 
 apply {
-    from rootProject.layout.projectDirectory.file('gradle/java-config.gradle')
     from rootProject.layout.projectDirectory.file('gradle/functional-test-config.gradle')
 }
