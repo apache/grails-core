@@ -160,7 +160,7 @@ ext {
     if (project.hasProperty('liquibaseHibernate5Version')) {
         combinedVersions += [
                 'liquibase-hibernate5.version': liquibaseHibernate5Version,
-                'liquibase-core.version'      : liquibaseHibernate5CoreVersion,
+                'liquibase.version'      : liquibaseHibernate5CoreVersion,
         ]
         combinedDependencies += [
                 'liquibase'           : "org.liquibase:liquibase:$liquibaseHibernate5CoreVersion",
@@ -172,7 +172,7 @@ ext {
     if (project.hasProperty('liquibaseHibernate7Version')) {
         combinedVersions += [
                 'liquibase-hibernate7.version': liquibaseHibernate7Version,
-                'liquibase-core.version'      : liquibaseHibernate7CoreVersion,
+                'liquibase.version'      : liquibaseHibernate7CoreVersion,
         ]
         combinedDependencies += [
                 'liquibase'           : "org.liquibase:liquibase:$liquibaseHibernate7CoreVersion",
