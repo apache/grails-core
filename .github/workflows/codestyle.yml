@@ -90,12 +90,7 @@ jobs:
           develocity-access-key: ${{ secrets.GRAILS_DEVELOCITY_ACCESS_KEY }}
       - name: "🔎 Check Gradle Plugin Projects"
         working-directory: grails-gradle
-        run: |
-          ./gradlew codeStyle --continue 2>&1 | tee build/codestyle-output.log || true
-          # Extract Spotless violations into a separate report
-          sed -n '/The following files had format violations:/,/Run.*spotlessApply.*to fix all violations\./p' build/codestyle-output.log > build/reports/codestyle/spotless-violations.txt || true
-          # Fail the step if the Gradle build actually failed
-          grep -q "BUILD SUCCESSFUL" build/codestyle-output.log
+        run: ./gradlew codeStyle
       - name: "📤 Upload Failure Reports"
         if: always()
         uses: actions/upload-artifact@v7.0.0
@@ -106,7 +101,7 @@ jobs:
         if: always()
         run: |
           echo "## 🔎 Code Style Report - Gradle Plugin Projects" >> $GITHUB_STEP_SUMMARY
-          for file in build/reports/codestyle/spotless-violations.txt grails-gradle/build/reports/codestyle/checkstyle/*.xml grails-gradle/build/reports/codestyle/codenarc/*.xml; do
+          for file in grails-gradle/build/reports/codestyle/checkstyle/*.xml grails-gradle/build/reports/codestyle/codenarc/*.xml; do
             [ -f "$file" ] || continue
             if grep -q "<error " "$file" || grep -q "<Violation " "$file"; then
               echo "### ❌ $(basename $file .xml)" >> $GITHUB_STEP_SUMMARY
