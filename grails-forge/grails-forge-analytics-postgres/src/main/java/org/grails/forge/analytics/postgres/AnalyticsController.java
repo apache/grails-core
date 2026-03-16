@@ -66,9 +66,9 @@ public class AnalyticsController {
         return featureRepository.topGorm();
     }
 
-    @Get("/top/testFrameworks")
-    List<TotalDTO> topTestFrameworks() {
-        return featureRepository.topTestFrameworks();
+    @Get("/top/reloading")
+    List<TotalDTO> topReloading() {
+        return featureRepository.topReloading();
     }
 
     /**
@@ -83,7 +83,7 @@ public class AnalyticsController {
         Application application = new Application(
                 generated.getType(),
                 generated.getGorm(),
-                generated.getTestFramework(),
+                generated.getReloading(),
                 generated.getJdkVersion(),
                 generated.getGrailsVersion()
         );

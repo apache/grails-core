@@ -68,6 +68,8 @@ jobs:
         uses: gradle/actions/setup-gradle@v4
         with:
           develocity-access-key: ${{ secrets.GRAILS_DEVELOCITY_ACCESS_KEY  }}
+      - name: "🔍 Setup TestLens"
+        uses: testlens-app/setup-testlens@v1
       - name: "📝 Store Groovy version to use when building Grails"
         id: groovy-version
         run: |
@@ -149,6 +151,8 @@ jobs:
         uses: gradle/actions/setup-gradle@v4
         with:
           develocity-access-key: ${{ secrets.GRAILS_DEVELOCITY_ACCESS_KEY  }}
+      - name: "🔍 Setup TestLens"
+        uses: testlens-app/setup-testlens@v1
       - name: "🗄️ Restore local Maven repository from cache"
         uses: actions/cache@v4
         with:
@@ -160,7 +164,10 @@ jobs:
       - name: "🔨 Build and test Grails using the locally built Groovy snapshot"
         run: >
           ./gradlew build
+          --continue
+          --stacktrace
           -x groovydoc
           -PskipCodeStyle
+          -PmaxTestParallel=3
         env:
           GRAILS_INCLUDE_MAVEN_LOCAL: true

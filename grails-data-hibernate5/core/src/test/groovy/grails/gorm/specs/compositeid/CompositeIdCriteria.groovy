@@ -79,6 +79,86 @@ class CompositeIdCriteria extends Specification {
       }
     } == [compositeIdToMany]
   }
+  @Issue("https://github.com/apache/grails-core/issues/14516")
+  def "test that composite id components can be used in criteria projections"() {
+    Author _author = new Author(name:"Author").save()
+    Book _book = new Book(title:"Book").save()
+    CompositeIdToMany compositeIdToMany = new CompositeIdToMany(author:_author, book:_book).save(failOnError:true, flush:true)
+
+    when: "querying with projections navigating composite ID component associations"
+    def results = CompositeIdToMany.createCriteria().list {
+      projections {
+        book {
+          property('id')
+        }
+      }
+      author {
+        eq('id', _author.id)
+      }
+    }
+
+    then: "the projection returns the expected ID"
+    results.size() == 1
+    results[0] == _book.id
+  }
+
+  @Issue("https://github.com/apache/grails-core/issues/14516")
+  def "test that composite id components can be used in criteria restrictions"() {
+    Author _author = new Author(name:"Author2").save()
+    Book _book = new Book(title:"Book2").save()
+    CompositeIdToMany compositeIdToMany = new CompositeIdToMany(author:_author, book:_book).save(failOnError:true, flush:true)
+
+    when: "querying with restrictions on composite ID component associations"
+    def results = CompositeIdToMany.createCriteria().list {
+      author {
+        eq('name', 'Author2')
+      }
+      book {
+        eq('title', 'Book2')
+      }
+    }
+
+    then: "the entity is found"
+    results.size() == 1
+    results[0] == compositeIdToMany
+  }
+
+  @Issue("https://github.com/apache/grails-core/issues/14516")
+  def "test that eq on composite id component entity works"() {
+    Author _author = new Author(name:"Author3").save()
+    Book _book = new Book(title:"Book3").save()
+    CompositeIdToMany compositeIdToMany = new CompositeIdToMany(author:_author, book:_book).save(failOnError:true, flush:true)
+
+    when: "querying with eq on composite ID component association"
+    def results = CompositeIdToMany.createCriteria().list {
+      eq('author', _author)
+    }
+
+    then: "the entity is found"
+    results.size() == 1
+    results[0] == compositeIdToMany
+  }
+
+  @Issue("https://github.com/apache/grails-core/issues/14516")
+  def "test that eq on composite id component works with Hibernate proxy"() {
+    given: "an entity with composite ID saved and session cleared"
+    Author _author = new Author(name:"ProxyAuthor").save(flush:true)
+    Book _book = new Book(title:"ProxyBook").save(flush:true)
+    CompositeIdToMany compositeIdToMany = new CompositeIdToMany(author:_author, book:_book).save(failOnError:true, flush:true)
+    def authorId = _author.id
+    datastore.sessionFactory.currentSession.clear()
+
+    when: "querying with eq using a Hibernate proxy (uninitialized) for the composite ID component"
+    Author proxyAuthor = Author.load(authorId)
+    def results = CompositeIdToMany.createCriteria().list {
+      eq('author', proxyAuthor)
+    }
+
+    then: "the entity is found via the proxy's ID without initializing it"
+    results.size() == 1
+    results[0].author.id == authorId
+    results[0].book.title == "ProxyBook"
+  }
 }
 
 @Entity

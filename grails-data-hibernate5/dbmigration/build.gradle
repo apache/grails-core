@@ -41,13 +41,16 @@ dependencies {
         exclude group: 'org.liquibase', module: 'liquibase-core'
     }
 
-    implementation("org.liquibase:liquibase-core:$liquibaseHibernate5CoreVersion")
+    implementation("org.liquibase:liquibase-core:$liquibaseHibernate5CoreVersion") {
+        exclude group: 'javax.xml.bind', module: 'jaxb-api'
+    }
     implementation("org.liquibase.ext:liquibase-hibernate5:$liquibaseHibernate5Version") {
         exclude group: 'org.hibernate', module: 'hibernate-core'
         exclude group: 'org.hibernate', module: 'hibernate-entitymanager'
         exclude group: 'org.hibernate', module: 'hibernate-envers'
         exclude group: 'com.h2database', module: 'h2'
         exclude group: 'org.liquibase', module: 'liquibase-commercial'
+        exclude group: 'org.liquibase', module: 'liquibase-core'
     }
 
     implementation(project(':grails-shell-cli')) {

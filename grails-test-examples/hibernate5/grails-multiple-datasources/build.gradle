@@ -44,11 +44,17 @@ dependencies {
     runtimeOnly 'com.zaxxer:HikariCP'
     runtimeOnly 'org.apache.grails:grails-databinding'
     runtimeOnly 'org.apache.grails:grails-controllers'
+    runtimeOnly 'org.apache.grails:grails-url-mappings'
     runtimeOnly 'org.springframework.boot:spring-boot-autoconfigure'
     runtimeOnly 'org.springframework.boot:spring-boot-starter-logging'
     runtimeOnly 'org.springframework.boot:spring-boot-starter-tomcat'
 
     testImplementation 'org.apache.grails.testing:grails-testing-support-core'
+
+    integrationTestImplementation "io.micronaut:micronaut-http-client:$micronautHttpClientVersion"
+    integrationTestImplementation 'org.spockframework:spock-core'
+
+    integrationTestRuntimeOnly "io.micronaut.serde:micronaut-serde-jackson:$micronautSerdeJacksonVersion"
 
     testRuntimeOnly 'org.apache.grails:grails-testing-support-web'
 }

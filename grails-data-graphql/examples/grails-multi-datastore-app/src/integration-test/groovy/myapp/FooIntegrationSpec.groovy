@@ -20,7 +20,6 @@
 package myapp
 
 import grails.test.mixin.integration.Integration
-import org.grails.datastore.gorm.GormEnhancer
 import org.grails.gorm.graphql.plugin.testing.GraphQLSpec
 import org.grails.orm.hibernate.HibernateDatastore
 
@@ -44,6 +43,6 @@ class FooIntegrationSpec implements GraphQLSpec {
 
         then:
         obj.id == 1
-        GormEnhancer.findStaticApi(Foo).datastore instanceof HibernateDatastore
+        Foo.withNewSession { session -> session.datastore instanceof HibernateDatastore }
     }
 }

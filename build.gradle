@@ -20,6 +20,10 @@ import java.time.LocalDate
 import java.time.ZoneOffset
 import java.time.format.DateTimeFormatter
 
+import javax.inject.Inject
+
+import org.apache.tools.ant.taskdefs.condition.Os
+
 ext {
     isReproducibleBuild = System.getenv("SOURCE_DATE_EPOCH") != null
     buildInstant = java.util.Optional.ofNullable(System.getenv("SOURCE_DATE_EPOCH"))
@@ -76,6 +80,38 @@ subprojects {
         jacoco {
             toolVersion = "0.8.14" // Set the specific tool version here
         }
+    }
+}
+
+interface ExecSupport {
+    @Inject ExecOperations getProcess()
+}
+tasks.register('publishAllToMavenLocal') {
+    description = 'Publishes grails-gradle, the root build, and grails-forge to the local Maven cache (in order).'
+    group = 'publishing'
+
+    def execSupport = objects.newInstance(ExecSupport)
+
+    doLast {
+        def projectRoot = layout.projectDirectory.asFile
+        def javaHome = System.getProperty('java.home')
+        def gradlew = Os.isFamily(Os.FAMILY_WINDOWS) ? 'gradlew.bat' : 'gradlew'
+
+        def runPublish = { File workingDir, String label ->
+            logger.lifecycle("--- Publishing ${label} to Maven Local ---")
+            execSupport.process.exec { ExecSpec exec ->
+                exec.environment('JAVA_HOME', javaHome)
+                exec.workingDir = workingDir
+                exec.commandLine = [new File(workingDir, gradlew).absolutePath, 'publishToMavenLocal']
+            }
+        }
+
+        // 1. Publish grails-gradle (provides Gradle plugins used by the main build)
+        runPublish(new File(projectRoot, 'grails-gradle'), 'grails-gradle')
+        // 2. Publish the root (main) build
+        runPublish(projectRoot, 'root build')
+        // 3. Publish grails-forge
+        runPublish(new File(projectRoot, 'grails-forge'), 'grails-forge')
     }
 }
 

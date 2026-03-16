@@ -209,6 +209,15 @@ class GrailsCodeStylePlugin implements Plugin<Project> {
         project.tasks.withType(Checkstyle).configureEach {
             it.group = 'verification'
             it.onlyIf { !project.hasProperty('skipCodeStyle') }
+
+            // Redirect XML report output to a single directory to consolidate
+            // reports across all subprojects into one known location
+            it.reports.xml.outputLocation.set(
+                    project.extensions.getByType(GrailsCodeStyleExtension)
+                            .reportsDirectory.get()
+                            .dir('checkstyle')
+                            .file(project.name + '.xml')
+            )
         }
 
         if (!GradleUtils.lookupProperty(project, TEST_STYLING_PROPERTY, false)) {
@@ -372,6 +381,16 @@ class GrailsCodeStylePlugin implements Plugin<Project> {
         project.tasks.withType(CodeNarc).configureEach {
             it.group = 'verification'
             it.onlyIf { !project.hasProperty('skipCodeStyle') }
+
+            // Redirect XML report output to a single directory to consolidate
+            // reports across all subprojects into one known location
+            it.reports.xml.required.set(true)
+            it.reports.xml.outputLocation.set(
+                    project.extensions.getByType(GrailsCodeStyleExtension)
+                            .reportsDirectory.get()
+                            .dir('codenarc')
+                            .file(project.name + '.xml')
+            )
         }
 
         if (!GradleUtils.lookupProperty(project, TEST_STYLING_PROPERTY, false)) {

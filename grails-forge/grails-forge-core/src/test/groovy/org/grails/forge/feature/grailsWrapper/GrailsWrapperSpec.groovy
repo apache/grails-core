@@ -22,6 +22,7 @@ package org.grails.forge.feature.grailsWrapper
 import org.grails.forge.ApplicationContextSpec
 import org.grails.forge.application.ApplicationType
 import org.grails.forge.fixture.CommandOutputFixture
+import org.grails.forge.options.DevelopmentReloading
 import org.grails.forge.options.JdkVersion
 import org.grails.forge.options.Options
 import org.grails.forge.options.TestFramework
@@ -32,7 +33,7 @@ class GrailsWrapperSpec extends ApplicationContextSpec implements CommandOutputF
     @Unroll
     void "test grails-wrapper.jar, grailsw and grailsw.bat files are present for #applicationType application"() {
         when:
-        def output = generate(applicationType, new Options(TestFramework.SPOCK))
+        def output = generate(applicationType, new Options(DevelopmentReloading.DEVTOOLS))
 
         then:
         output.containsKey("grails-wrapper.jar")

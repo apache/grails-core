@@ -47,19 +47,30 @@ jobs:
         run: |
           ./gradlew codeStyle --continue 2>&1 | tee build/codestyle-output.log || true
           # Extract Spotless violations into a separate report
-          sed -n '/The following files had format violations:/,/Run.*spotlessApply.*to fix all violations\./p' build/codestyle-output.log > build/reports/spotless-violations.txt || true
+          sed -n '/The following files had format violations:/,/Run.*spotlessApply.*to fix all violations\./p' build/codestyle-output.log > build/reports/codestyle/spotless-violations.txt || true
           # Fail the step if the Gradle build actually failed
           grep -q "BUILD SUCCESSFUL" build/codestyle-output.log
       - name: "📤 Upload Failure Reports"
-        if: failure()
-        uses: actions/upload-artifact@v6
+        if: always()
+        uses: actions/upload-artifact@v7.0.0
         with:
           name: core-reports
           path: |
-            build/reports/spotless-violations.txt
-            **/build/reports/codenarc/
+            build/reports/codestyle/
             **/build/reports/pmd/
             **/build/reports/spotbugs/
+      - name: "📋 Publish Code Style Report in Job Summary"
+        if: always()
+        run: |
+          echo "## 🔎 Code Style Report - Core Projects" >> $GITHUB_STEP_SUMMARY
+          for file in build/reports/codestyle/spotless-violations.txt build/reports/codestyle/checkstyle/*.xml build/reports/codestyle/codenarc/*.xml; do
+            [ -f "$file" ] || continue
+            if grep -q "<error " "$file" || grep -q "<Violation " "$file"; then
+              echo "### ❌ $(basename $file .xml)" >> $GITHUB_STEP_SUMMARY
+              grep "<error " "$file" | awk -F'"' '{print "- **Line " $2 "**: " $8}' >> $GITHUB_STEP_SUMMARY
+              grep "<Violation " "$file" | awk -F"'" '{print "- **Line " $6 "**: " $2}' >> $GITHUB_STEP_SUMMARY
+            fi
+          done
   check_gradle_plugin_projects:
     name: "Gradle Plugin Projects"
     runs-on: ubuntu-24.04
@@ -82,19 +93,27 @@ jobs:
         run: |
           ./gradlew codeStyle --continue 2>&1 | tee build/codestyle-output.log || true
           # Extract Spotless violations into a separate report
-          sed -n '/The following files had format violations:/,/Run.*spotlessApply.*to fix all violations\./p' build/codestyle-output.log > build/reports/spotless-violations.txt || true
+          sed -n '/The following files had format violations:/,/Run.*spotlessApply.*to fix all violations\./p' build/codestyle-output.log > build/reports/codestyle/spotless-violations.txt || true
           # Fail the step if the Gradle build actually failed
           grep -q "BUILD SUCCESSFUL" build/codestyle-output.log
       - name: "📤 Upload Failure Reports"
-        if: failure()
-        uses: actions/upload-artifact@v6
+        if: always()
+        uses: actions/upload-artifact@v7.0.0
         with:
           name: gradle-plugin-reports
-          path: |
-            grails-gradle/build/reports/spotless-violations.txt
-            grails-gradle/**/build/reports/codenarc/
-            grails-gradle/**/build/reports/pmd/
-            grails-gradle/**/build/reports/spotbugs/
+          path: grails-gradle/build/reports/codestyle/
+      - name: "📋 Publish Code Style Report in Job Summary"
+        if: always()
+        run: |
+          echo "## 🔎 Code Style Report - Gradle Plugin Projects" >> $GITHUB_STEP_SUMMARY
+          for file in build/reports/codestyle/spotless-violations.txt grails-gradle/build/reports/codestyle/checkstyle/*.xml grails-gradle/build/reports/codestyle/codenarc/*.xml; do
+            [ -f "$file" ] || continue
+            if grep -q "<error " "$file" || grep -q "<Violation " "$file"; then
+              echo "### ❌ $(basename $file .xml)" >> $GITHUB_STEP_SUMMARY
+              grep "<error " "$file" | awk -F'"' '{print "- **Line " $2 "**: " $8}' >> $GITHUB_STEP_SUMMARY
+              grep "<Violation " "$file" | awk -F"'" '{print "- **Line " $6 "**: " $2}' >> $GITHUB_STEP_SUMMARY
+            fi
+          done
   check_grails_forge_projects:
     name: "Forge Projects"
     runs-on: ubuntu-24.04
@@ -116,11 +135,20 @@ jobs:
         working-directory: grails-forge
         run: ./gradlew codeStyle
       - name: "📤 Upload Failure Reports"
-        if: failure()
-        uses: actions/upload-artifact@v6
+        if: always()
+        uses: actions/upload-artifact@v7.0.0
         with:
           name: forge-reports
-          path: |
-            grails-forge/**/build/reports/checkstyle/
-            grails-forge/**/build/reports/checkstyleNohttp/
-            grails-forge/**/build/reports/codenarc/
+          path: grails-forge/build/reports/codestyle/
+      - name: "📋 Publish Code Style Report in Job Summary"
+        if: always()
+        run: |
+          echo "## 🔎 Code Style Report - Forge Projects" >> $GITHUB_STEP_SUMMARY
+          for file in grails-forge/build/reports/codestyle/checkstyle/*.xml grails-forge/build/reports/codestyle/codenarc/*.xml; do
+            [ -f "$file" ] || continue
+            if grep -q "<error " "$file" || grep -q "<Violation " "$file"; then
+              echo "### ❌ $(basename $file .xml)" >> $GITHUB_STEP_SUMMARY
+              grep "<error " "$file" | awk -F'"' '{print "- **Line " $2 "**: " $8}' >> $GITHUB_STEP_SUMMARY
+              grep "<Violation " "$file" | awk -F"'" '{print "- **Line " $6 "**: " $2}' >> $GITHUB_STEP_SUMMARY
+            fi
+          done

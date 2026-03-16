@@ -66,6 +66,7 @@ dependencies {
 
     testImplementation project(':grails-testing-support-datamapping')
     testImplementation 'org.spockframework:spock-core'
+    testImplementation 'jakarta.servlet:jakarta.servlet-api'
 
     testRuntimeOnly 'com.h2database:h2'
     testRuntimeOnly 'org.apache.tomcat:tomcat-jdbc'

@@ -18,7 +18,7 @@ under the License.
 *@
 
 @import org.grails.forge.options.Language
-@import org.grails.forge.options.TestFramework
+@import org.grails.forge.options.DevelopmentReloading
 @import org.grails.forge.options.BuildTool
 @import org.grails.forge.options.GormImpl
 @import org.grails.forge.options.ServletImpl
@@ -29,7 +29,7 @@ under the License.
 
 @args (
 Language language,
-TestFramework testFramework,
+DevelopmentReloading reloading,
 BuildTool buildTool,
 GormImpl gormImpl,
 ServletImpl servletImpl,
@@ -40,7 +40,7 @@ ApplicationType applicationType
 
 applicationType: @applicationType.getName()
 defaultPackage: @project.getPackageName()
-testFramework: @testFramework.getName()
+reloading: @reloading.getName()
 sourceLanguage: @language.getName()
 buildTool: @buildTool.getName()
 gormImpl: @gormImpl.getName()

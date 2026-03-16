@@ -103,7 +103,7 @@ class GrailsGradlePlugin implements Plugin<Project> {
 
     void apply(Project project) {
 
-        project.pluginManager.apply('groovy')
+        project.pluginManager.apply(GroovyPlugin)
 
         // validate that only an app or a plugin is registered, and never both
         OnlyOneGrailsPlugin marker = (OnlyOneGrailsPlugin) project.getExtensions().findByName(OnlyOneGrailsPlugin.name)

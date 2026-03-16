@@ -41,7 +41,9 @@ extractTck.configure { Sync it ->
     it.finalizedBy(tasks.named('test', Test))
 
     it.from { zipTree(configurations.tck.singleFile) }
-    it.into(layout.buildDirectory.dir('extracted-tck-classes'))
+    it.into(layout.buildDirectory.dir('extracted-tck-classes')).exclude {
+        it.path == 'META-INF/sbom.json'
+    }
 }
 
 // There is a known issue with IntelliJ that can cause it's inspection process to lock up.

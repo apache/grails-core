@@ -32,6 +32,8 @@ jobs:
         uses: gradle/actions/setup-gradle@v4
         with:
           develocity-access-key: ${{ secrets.GRAILS_DEVELOCITY_ACCESS_KEY  }}
+      - name: "🔍 Setup TestLens"
+        uses: testlens-app/setup-testlens@v1
       - name: "🔨 Build"
         working-directory: grails-forge
         run: ./gradlew build
@@ -55,6 +57,8 @@ jobs:
         uses: gradle/actions/setup-gradle@v4
         with:
           develocity-access-key: ${{ secrets.GRAILS_DEVELOCITY_ACCESS_KEY  }}
+      - name: "🔍 Setup TestLens"
+        uses: testlens-app/setup-testlens@v1
       - name: "🔑 Login to Google Cloud"
         uses: google-github-actions/auth@140bb5113ffb6b65a7e9b937a81fa96cf5064462
         with:
@@ -114,6 +118,8 @@ jobs:
         uses: gradle/actions/setup-gradle@v4
         with:
           develocity-access-key: ${{ secrets.GRAILS_DEVELOCITY_ACCESS_KEY  }}
+      - name: "🔍 Setup TestLens"
+        uses: testlens-app/setup-testlens@v1
       - name: "🔑 Login to Google Cloud"
         uses: google-github-actions/auth@140bb5113ffb6b65a7e9b937a81fa96cf5064462
         with:

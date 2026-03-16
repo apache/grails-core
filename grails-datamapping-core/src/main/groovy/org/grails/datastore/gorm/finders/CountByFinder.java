@@ -50,7 +50,6 @@ public class CountByFinder extends DynamicFinder implements QueryBuildingFinder 
         return execute(new SessionCallback<Object>() {
             public Object doInSession(final Session session) {
                 Query query = buildQuery(invocation, session);
-                adjustQuery(query);
                 return invokeQuery(query);
             }
         });
@@ -60,12 +59,32 @@ public class CountByFinder extends DynamicFinder implements QueryBuildingFinder 
         return q.singleResult();
     }
 
-    protected Query adjustQuery(Query query) {
-        query.projections().count();
-        return query;
+    public Query buildQuery(DynamicFinderInvocation invocation, Session session) {
+        final Class<?> clazz = invocation.getJavaClass();
+        Query q = session.createQuery(clazz);
+        return buildQuery(invocation, clazz, q);
     }
 
-    public boolean firstExpressionIsRequiredBoolean() {
-        return super.firstExpressionIsRequiredBoolean();
+    protected Query buildQuery(DynamicFinderInvocation invocation, Class<?> clazz, Query q) {
+        applyAdditionalCriteria(q, invocation.getCriteria());
+        applyDetachedCriteria(q, invocation.getDetachedCriteria());
+        configureQueryWithArguments(clazz, q, invocation.getArguments());
+
+        String operatorInUse = invocation.getOperator();
+        if (operatorInUse != null && operatorInUse.equals(OPERATOR_OR)) {
+            Query.Junction disjunction = q.disjunction();
+
+            for (MethodExpression expression : invocation.getExpressions()) {
+                q.add(disjunction, expression.createCriterion());
+            }
+        }
+        else {
+            for (MethodExpression expression : invocation.getExpressions()) {
+                q.add(expression.createCriterion());
+            }
+        }
+
+        q.projections().count();
+        return q;
     }
 }

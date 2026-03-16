@@ -31,7 +31,7 @@ import org.grails.forge.io.FileSystemOutputHandler;
 import org.grails.forge.options.JdkVersion;
 import org.grails.forge.options.Language;
 import org.grails.forge.options.Options;
-import org.grails.forge.options.TestFramework;
+import org.grails.forge.options.DevelopmentReloading;
 import org.yaml.snakeyaml.Yaml;
 
 import java.io.File;
@@ -46,7 +46,7 @@ public class CodeGenConfig {
 
     private ApplicationType applicationType;
     private String defaultPackage;
-    private TestFramework testFramework;
+    private DevelopmentReloading reloading;
     private Language sourceLanguage;
     private List<String> features;
 
@@ -68,12 +68,12 @@ public class CodeGenConfig {
         this.defaultPackage = defaultPackage;
     }
 
-    public TestFramework getTestFramework() {
-        return testFramework;
+    public DevelopmentReloading getReloading() {
+        return reloading;
     }
 
-    public void setTestFramework(TestFramework testFramework) {
-        this.testFramework = testFramework;
+    public void setReloading(DevelopmentReloading reloading) {
+        this.reloading = reloading;
     }
 
     public Language getSourceLanguage() {
@@ -136,6 +136,11 @@ public class CodeGenConfig {
                     }
                 });
 
+                // Backwards compatibility: if old YAML has 'testFramework' field, default reloading to NONE
+                if (map.containsKey("testFramework") && !map.containsKey("reloading")) {
+                    codeGenConfig.setReloading(DevelopmentReloading.NONE);
+                }
+
                 if (map.containsKey("profile")) {
                     codeGenConfig.legacy = true;
                     String profile = map.get("profile").toString();
@@ -158,7 +163,7 @@ public class CodeGenConfig {
                             .map(DefaultFeature.class::cast)
                             .filter(f -> f.shouldApply(
                                     codeGenConfig.getApplicationType(),
-                                    new Options(codeGenConfig.getTestFramework(), JdkVersion.DEFAULT_OPTION),
+                                    new Options(codeGenConfig.getReloading(), JdkVersion.DEFAULT_OPTION),
                                     new HashSet<>()))
                             .map(Feature::getName)
                             .collect(Collectors.toList()));

@@ -23,7 +23,6 @@ import io.micronaut.context.env.Environment
 import io.micronaut.core.annotation.NonNull
 import io.micronaut.data.model.Pageable
 import io.micronaut.data.model.query.builder.sql.Dialect
-import io.micronaut.data.runtime.config.SchemaGenerate
 import io.micronaut.http.HttpStatus
 import io.micronaut.http.annotation.Body
 import io.micronaut.http.annotation.Post
@@ -31,11 +30,10 @@ import io.micronaut.http.client.annotation.Client
 import org.grails.forge.analytics.Generated
 import org.grails.forge.analytics.SelectedFeature
 import org.grails.forge.application.ApplicationType
-import org.grails.forge.options.BuildTool
+import org.grails.forge.options.DevelopmentReloading
 import org.grails.forge.options.JdkVersion
 import org.grails.forge.options.GormImpl
 import org.grails.forge.options.ServletImpl
-import org.grails.forge.options.TestFramework
 import org.grails.forge.util.VersionInfo
 import io.micronaut.test.extensions.spock.annotation.MicronautTest
 import io.micronaut.test.support.TestPropertyProvider
@@ -77,7 +75,7 @@ class StoreGeneratedProjectStatsSpec extends Specification implements TestProper
                 ApplicationType.WEB,
                 GormImpl.HIBERNATE,
                 ServletImpl.TOMCAT,
-                TestFramework.SPOCK,
+                DevelopmentReloading.DEVTOOLS,
                 JdkVersion.DEFAULT_OPTION
         )
         generated.setSelectedFeatures([new SelectedFeature("google-cloud-function")])
@@ -95,7 +93,7 @@ class StoreGeneratedProjectStatsSpec extends Specification implements TestProper
         application.type == generated.type
         application.gorm == generated.gorm
         application.jdkVersion == generated.jdkVersion
-        application.testFramework == generated.testFramework
+        application.reloading == generated.reloading
         application.features.find { it.name == 'google-cloud-function' }
         application.grailsVersion == VersionInfo.grailsVersion
         application.dateCreated
@@ -116,7 +114,7 @@ class StoreGeneratedProjectStatsSpec extends Specification implements TestProper
         gorm[0].name == 'HIBERNATE'
         featureRepository.topBuildTools()
         featureRepository.topJdkVersion()
-        featureRepository.topTestFrameworks()
+        featureRepository.topReloading()
     }
 
     @Client("/analytics")
