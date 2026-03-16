@@ -112,6 +112,8 @@ include(
         'grails-dependencies-test',
         'grails-dependencies-assets',
         'grails-bom',
+        'grails-hibernate5-bom',
+        'grails-hibernate7-bom',
 
         // Docs
         'grails-doc',

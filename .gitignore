@@ -52,6 +52,8 @@ prodDb.mv.db
 testWatchedFile.properties
 _alternativeTable.gsp
 **/src/en/ref/Versions/Grails BOM.adoc
+**/src/en/ref/Versions/Grails BOM Hibernate5.adoc
+**/src/en/ref/Versions/Grails BOM Hibernate7.adoc
 stacktrace.log
 target
 tmp/

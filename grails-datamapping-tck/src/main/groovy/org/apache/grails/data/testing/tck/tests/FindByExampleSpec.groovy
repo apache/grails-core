@@ -22,7 +22,7 @@ import org.apache.grails.data.testing.tck.domains.Plant
 import org.apache.grails.data.testing.tck.base.GrailsDataTckSpec
 import spock.lang.IgnoreIf
 
-@IgnoreIf({ System.getProperty('hibernate6.gorm.suite') == 'true' || System.getProperty('hibernate7.gorm.suite') == 'true' })
+@IgnoreIf({ System.getProperty('hibernate7.gorm.suite') == 'true' })
 class FindByExampleSpec extends GrailsDataTckSpec {
 
     void setupSpec() {

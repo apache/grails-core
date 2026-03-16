@@ -28,7 +28,6 @@ buildscript {
 plugins {
     id 'java-platform'
     id 'org.apache.grails.buildsrc.publish'
-    id 'org.apache.grails.buildsrc.sbom'
 }
 
 version = projectVersion
@@ -39,67 +38,23 @@ javaPlatform {
 }
 
 ext {
-    isReleaseBuild = System.getenv('GRAILS_PUBLISH_RELEASE') == 'true'
-    isPublishedExternal = System.getenv().containsKey('NEXUS_PUBLISH_STAGING_PROFILE_ID')
-    // TODO: It should be possible to pull these build names using includedBuild, but I haven't found a way to do so
-    gradleBuildProjects = [
-            'grails-gradle-plugins':'org.apache.grails',
-            'grails-gradle-model':'org.apache.grails.gradle',
-            'grails-gradle-common':'org.apache.grails.gradle',
-            'grails-gradle-tasks':'org.apache.grails',
-    ]
+    gradleBuildProjects = project(':grails-bom').ext.gradleBuildProjects
 }
 
 dependencies {
-    api platform(gradleBomPlatformDependencies['spring-boot-bom']), {
-        exclude group: 'org.apache.groovy'
-        exclude group: 'org.spockframework'
-        exclude group: 'com.fasterxml.jackson'
-    }
+    // Inherit everything from the default grails-bom
+    api platform(project(':grails-bom'))
 
-    for (def entry : bomPlatformDependencies.entrySet()) {
-        api platform(entry.value)
-    }
-
+    // Override liquibase dependencies for Hibernate 7 compatibility
     constraints {
-        for (def entry : gradleBomDependencies.entrySet()) {
-            api entry.value
-        }
-        for (def entry : bomDependencies.entrySet()) {
-            api entry.value
-        }
-
-        for (Project subproject : rootProject.subprojects) {
-            if (subproject.path == project.path || subproject.name in testProjects || subproject.name in docProjects || subproject.name in cliProjects) {
-                continue // ignore self & test projects
-            }
-
-            // skip other java-platform (BOM) projects - they are not library dependencies
-            if (subproject.pluginManager.hasPlugin('java-platform')) {
-                continue
-            }
-
-            boolean publishedProject = subproject.pluginManager.hasPlugin('org.apache.grails.gradle.grails-publish-profile') || subproject.pluginManager.hasPlugin('org.apache.grails.gradle.grails-publish')
-            if (!publishedProject) {
-                continue
-            }
-
-            api project(":${subproject.path}")
-        }
-
-        // since we're duplicating the bom instead of inheriting we have to add the grails-gradle projects
-        for (Map.Entry<String, String> dependency : project.ext.gradleBuildProjects.entrySet()) {
-            api "${dependency.value}:${dependency.key}:${projectVersion}"
-        }
-
         api("org.liquibase:liquibase-core") {
             version {
-                strictly "$liquibaseHibernate5Version"
+                strictly "${bomDependencyVersions['liquibase-hibernate7-core.version']}"
             }
         }
-        api("org.liquibase.ext:liquibase-hibernate5") {
+        api("org.liquibase.ext:liquibase-hibernate7") {
             version {
-                strictly "$liquibaseHibernate5Version"
+                strictly "${bomDependencyVersions['liquibase-hibernate7-ext.version']}"
             }
         }
     }
@@ -114,7 +69,7 @@ configurations.register('bomDependencies').configure {
 tasks.register('extractConstraints', ExtractDependenciesTask).configure { ExtractDependenciesTask it ->
     it.configuration = configurations.named('bomDependencies')
     it.configurationName = 'bomDependencies'
-    it.destination = project.layout.buildDirectory.file('grails-bom-constraints.adoc')
+    it.destination = project.layout.buildDirectory.file('grails-hibernate7-bom-constraints.adoc')
     it.platformDefinitions = combinedPlatforms
     it.definitions = combinedDependencies
     it.projectName = project.name
@@ -142,7 +97,7 @@ tasks.register('extractConstraints', ExtractDependenciesTask).configure { Extrac
         rootProject.subprojects.each { p ->
             String artifactId = p.findProperty('pomArtifactId') as String ?: p.name
             String baseVersionName = artifactId.replaceAll('[.]', '-')
-            projectCoordinates["${p.group}:${ artifactId}:${p.version}" as String] = baseVersionName
+            projectCoordinates["${p.group}:${artifactId}:${p.version}" as String] = baseVersionName
         }
 
         for (Map.Entry<String, String> dependency : project.ext.gradleBuildProjects.entrySet()) {
@@ -155,35 +110,8 @@ tasks.register('extractConstraints', ExtractDependenciesTask).configure { Extrac
     it.dependsOn(project.tasks.named('generateMetadataFileForMavenPublication'), project.tasks.named('generatePomFileForMavenPublication'))
 }
 
-def validateNoSnapshotDependencies = tasks.register('validateNoSnapshotDependencies')
-validateNoSnapshotDependencies.configure { Task it ->
-    it.group = 'publishing'
-    it.description = 'Validates that no snapshot dependencies are present in the project when performing a release.'
-
-    it.doLast {
-        configurations.each { config ->
-            config.allDependencies.each { dep ->
-                if (dep.version && dep.version.contains('-SNAPSHOT')) {
-                    throw new GradleException("Releases cannot have a snapshot dependency: ${dep.group}:${dep.name} (${dep.version})")
-                }
-            }
-        }
-    }
-}
-
-if (ext.isReleaseBuild && ext.isPublishedExternal) {
-    project.afterEvaluate {
-        tasks.named('generateMetadataFileForMavenPublication').configure {
-            dependsOn(validateNoSnapshotDependencies)
-        }
-        tasks.named('generatePomFileForMavenPublication').configure {
-            dependsOn(validateNoSnapshotDependencies)
-        }
-    }
-}
-
 ext {
-    pomDescription = 'Grails BOM (Bill of Materials) for managing dependency versions used by Grails Projects'
+    pomDescription = 'Grails Hibernate 7 BOM (Bill of Materials) for managing dependency versions used by Grails Projects with Hibernate 7'
     pomCustomization = { xml ->
         def root = xml.asNode()
 
@@ -213,11 +141,7 @@ ext {
                 if (inlineVersion) {
                     ExtractedDependencyConstraint extractedConstraint = propertyNameCalculator.calculate(groupId, artifactId, inlineVersion, isBom)
                     if (extractedConstraint?.versionPropertyReference) {
-                        // use the property reference instead of the hard coded version so that it can be
-                        // overriden by the spring boot dependency management plugin
                         dep.version[0].value = extractedConstraint.versionPropertyReference
-
-                        // Add an entry in the <properties> node with the actual version number
                         pomProperties.put(extractedConstraint.versionPropertyName, inlineVersion)
                     }
                 } else if (!inlineVersion) {

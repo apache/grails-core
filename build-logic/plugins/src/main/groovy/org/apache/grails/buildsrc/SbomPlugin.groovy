@@ -127,23 +127,6 @@ class SbomPlugin implements Plugin<Project> {
             'grails-data-hibernate5-dbmigration': [
                     'pkg:maven/javax.xml.bind/jaxb-api@2.3.1?type=jar': 'CDDL-1.1', // api export
             ],
-            'grails-data-hibernate6'       : [
-                    'pkg:maven/org.hibernate.orm/hibernate-ant@6.6.36.Final?type=jar'             : 'LGPL-2.1-only', // hibernate 5 is LGPL, we are migrating to ASF license in hibernate 7
-                    'pkg:maven/org.hibernate.tool/hibernate-tools-orm@6.6.36.Final?type=jar'             : 'LGPL-2.1-only', // hibernate 5 is LGPL, we are migrating to ASF license in hibernate 7
-                            'pkg:maven/org.hibernate.tool/hibernate-tools-utils@6.6.36.Final?type=jar'           : 'LGPL-2.1-only', // hibernate 5 is LGPL, we are migrating to ASF license in hibernate 7
-                    'pkg:maven/org.jboss/jandex@3.2.3?type=pom'                                    : 'CC0-1.0',
-            ],
-            'grails-data-hibernate6-core'       : [
-                    'pkg:maven/org.hibernate.orm/hibernate-core@6.6.36.Final?type=jar'             : 'LGPL-2.1-only', // hibernate 5 is LGPL, we are migrating to ASF license in hibernate 7
-            ],
-            'grails-data-hibernate6-spring-boot'       : [
-                    'pkg:maven/org.hibernate.orm/hibernate-core@6.6.36.Final?type=jar'             : 'LGPL-2.1-only', // hibernate 5 is LGPL, we are migrating to ASF license in hibernate 7
-            ],
-            'grails-data-hibernate6-dbmigration': [
-                    'pkg:maven/org.hibernate.orm/hibernate-core@6.6.36.Final?type=jar'             : 'LGPL-2.1-only',
-                    'pkg:maven/org.hibernate.orm/hibernate-envers@6.6.36.Final?type=jar'             : 'LGPL-2.1-only',
-                    'pkg:maven/javax.xml.bind/jaxb-api@2.3.1?type=jar': 'CDDL-1.1', // api export
-            ],
     ]
 
     @Override

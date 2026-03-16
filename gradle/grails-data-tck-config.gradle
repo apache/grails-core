@@ -42,9 +42,6 @@ extractTck.configure { Sync it ->
 
     it.from { zipTree(configurations.tck.singleFile) }
     it.into(layout.buildDirectory.dir('extracted-tck-classes'))
-    if (project.name == 'grails-data-hibernate6-core') {
-        it.exclude('**/NamedQuerySpec.class')
-    }
 }
 
 // There is a known issue with IntelliJ that can cause it's inspection process to lock up.
@@ -65,11 +62,11 @@ tasks.withType(Test).configureEach { Test it ->
             return false
         }
 
-        if (project.hasProperty('skipHibernate6Tests') && project.name.startsWith('grails-data-hibernate6')) {
+        if (project.hasProperty('skipHibernate7Tests') && project.name.startsWith('grails-data-hibernate7')) {
             return false
         }
 
-        if (project.hasProperty('onlyHibernate6Tests') && !project.name.startsWith('grails-data-hibernate6')) {
+        if (project.hasProperty('onlyHibernate7Tests') && !project.name.startsWith('grails-data-hibernate7')) {
             return false
         }
 

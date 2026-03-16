@@ -26,7 +26,7 @@ import org.springframework.orm.hibernate5.HibernateOptimisticLockingFailureExcep
 /**
  * @author Burt Beckwith
  */
-class Hibernate6OptimisticLockingSpec extends HibernateGormDatastoreSpec {
+class Hibernate7OptimisticLockingSpec extends HibernateGormDatastoreSpec {
 
     def setupSpec() {
         manager.addAllDomainClasses([OptLockVersioned, OptLockNotVersioned])

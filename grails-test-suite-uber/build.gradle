@@ -116,7 +116,7 @@ isolatedTestPatterns.keySet().each { taskName ->
             ![
                     'onlyFunctionalTests',
                     'onlyHibernate5Tests',
-                    'onlyHibernate6Tests',
+                    'onlyHibernate7Tests',
                     'onlyMongodbTests',
                     'skipCoreTests',
                     'skipTests'
@@ -138,7 +138,7 @@ tasks.withType(Test).configureEach {
     onlyIf {
         ![
                 'onlyHibernate5Tests',
-                'onlyHibernate6Tests',
+                'onlyHibernate7Tests',
                 'onlyMongodbTests',
                 'skipCoreTests'
         ].find {
@@ -161,7 +161,7 @@ tasks.named('test', Test).configure {
         ![
                 'onlyFunctionalTests',
                 'onlyHibernate5Tests',
-                'onlyHibernate6Tests',
+                'onlyHibernate7Tests',
                 'onlyMongodbTests',
                 'skipCoreTests',
                 'skipTests'
