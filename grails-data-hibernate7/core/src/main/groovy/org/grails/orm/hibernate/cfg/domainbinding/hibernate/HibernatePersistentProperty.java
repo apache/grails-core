@@ -22,6 +22,7 @@ import java.util.Optional;
 
 import org.checkerframework.checker.nullness.qual.Nullable;
 import org.hibernate.mapping.DependantValue;
+import org.hibernate.mapping.PersistentClass;
 import org.hibernate.mapping.Property;
 import org.hibernate.mapping.SimpleValue;
 import org.hibernate.mapping.Table;
@@ -103,7 +104,7 @@ public interface HibernatePersistentProperty extends PersistentProperty<Property
     }
 
     default GrailsHibernatePersistentEntity getHibernateOwner() {
-        return getOwner() instanceof GrailsHibernatePersistentEntity ghpe ? ghpe : null;
+        return (GrailsHibernatePersistentEntity )getOwner() ;
     }
 
     @SuppressWarnings("PMD.DataflowAnomalyAnalysis")
@@ -206,6 +207,10 @@ public interface HibernatePersistentProperty extends PersistentProperty<Property
     }
 
     default Table getTable() {
-      return getHibernateOwner().getPersistentClass().getTable();
+      return getPersistentClass().getTable();
+    }
+
+    default PersistentClass getPersistentClass(){
+        return getHibernateOwner().getPersistentClass();
     }
 }
