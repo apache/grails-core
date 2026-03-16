@@ -38,7 +38,11 @@ dependencies {
     documentation 'com.github.javaparser:javaparser-core'
     documentation "info.picocli:picocli:$picocliVersion"
     documentation 'org.apache.groovy:groovy-dateutil'
+    documentation 'org.apache.groovy:groovy-ant'
+    documentation 'org.apache.groovy:groovy-groovydoc'
+    documentation 'org.apache.groovy:groovy-templates'
     documentation 'org.fusesource.jansi:jansi'
+    documentation 'jline:jline'
     documentation project(':grails-bootstrap')
     documentation project(':grails-core')
     documentation project(':grails-spring')
@@ -77,10 +81,10 @@ tasks.named('asciidoctor', AsciidoctorTask) { AsciidoctorTask it ->
             'pluginVersion'             : projectVersion,
             'groupId'                   : project.group,
             'artifactId'                : project.name,
-            'migrationPluginExamplesDir': project.layout.projectDirectory.dir('src/docs/asciidoc/databaseMigration').asFile.relativePath(rootProject.findProject(':grails-data-hibernate7-dbmigration').layout.projectDirectory.asFile),
-            'migrationPluginGroupId'    : rootProject.findProject(':grails-data-hibernate7-dbmigration').group,
-            'migrationPluginArtifactId' : rootProject.findProject(':grails-data-hibernate7-dbmigration').name,
-            'liquibaseHibernate7Version': liquibaseHibernate7Version
+//            'migrationPluginExamplesDir': project.layout.projectDirectory.dir('src/docs/asciidoc/databaseMigration').asFile.relativePath(rootProject.findProject(':grails-data-hibernate7-dbmigration').layout.projectDirectory.asFile),
+//            'migrationPluginGroupId'    : rootProject.findProject(':grails-data-hibernate7-dbmigration').group,
+//            'migrationPluginArtifactId' : rootProject.findProject(':grails-data-hibernate7-dbmigration').name,
+//            'liquibaseHibernate7Version': liquibaseHibernate7Version
 
     ]
 }
