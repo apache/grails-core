@@ -41,7 +41,7 @@ dependencies {
         exclude group: 'org.liquibase', module: 'liquibase-core'
     }
 
-    implementation("org.liquibase:liquibase-core:$liquibaseHibernate5Version")
+    implementation("org.liquibase:liquibase-core:$liquibaseHibernate5CoreVersion")
     implementation("org.liquibase.ext:liquibase-hibernate5:$liquibaseHibernate5Version") {
         exclude group: 'org.hibernate', module: 'hibernate-core'
         exclude group: 'org.hibernate', module: 'hibernate-entitymanager'

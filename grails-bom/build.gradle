@@ -92,6 +92,16 @@ dependencies {
             api "${dependency.value}:${dependency.key}:${projectVersion}"
         }
 
+        api("org.liquibase:liquibase") {
+            version {
+                strictly "$liquibaseHibernate5Version"
+            }
+        }
+        api("org.liquibase:liquibase-cdi") {
+            version {
+                strictly "$liquibaseHibernate5Version"
+            }
+        }
         api("org.liquibase:liquibase-core") {
             version {
                 strictly "$liquibaseHibernate5Version"

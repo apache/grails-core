@@ -35,11 +35,11 @@ ext {
 
 dependencies {
     // TODO: Clarify and clean up dependencies
-    implementation platform(project(':grails-bom')) {
+    implementation platform(project(':grails-hibernate7-bom')) {
         exclude group: 'org.liquibase', module: 'liquibase-core'
     }
 
-    implementation("org.liquibase:liquibase-core:5.0.1")
+    implementation("org.liquibase:liquibase-core:$liquibaseHibernate7CoreVersion")
     implementation("org.liquibase.ext:liquibase-hibernate7:$liquibaseHibernate7Version") {
         exclude group: 'org.hibernate', module: 'hibernate-core'
         exclude group: 'org.hibernate', module: 'hibernate-entitymanager'
@@ -71,14 +71,6 @@ dependencies {
     testImplementation project(':grails-testing-support-datamapping')
     testImplementation project(':grails-testing-support-web')
     testImplementation 'com.h2database:h2'
-
-    constraints {
-        implementation("org.liquibase:liquibase-core") {
-            version {
-                strictly "5.0.1"
-            }
-        }
-    }
 }
 
 tasks.named('jar', Jar) {

@@ -47,14 +47,24 @@ dependencies {
 
     // Override liquibase dependencies for Hibernate 7 compatibility
     constraints {
+        api("org.liquibase:liquibase") {
+            version {
+                strictly "$liquibaseHibernate7CoreVersion"
+            }
+        }
+        api("org.liquibase:liquibase-cdi") {
+            version {
+                strictly "$liquibaseHibernate7CoreVersion"
+            }
+        }
         api("org.liquibase:liquibase-core") {
             version {
-                strictly "${bomDependencyVersions['liquibase-hibernate7-core.version']}"
+                strictly "$liquibaseHibernate7CoreVersion"
             }
         }
         api("org.liquibase.ext:liquibase-hibernate7") {
             version {
-                strictly "${bomDependencyVersions['liquibase-hibernate7-ext.version']}"
+                strictly "$liquibaseHibernate7Version"
             }
         }
     }

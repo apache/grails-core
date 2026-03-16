@@ -76,9 +76,6 @@ ext {
             'groovy.version'                   : '4.0.30',
             'jackson.version'                  : '2.19.1',
             'jquery.version'                   : '3.7.1',
-            'liquibase-hibernate5.version'     : '4.27.0',
-            'liquibase-hibernate7-core.version': '5.0.1',
-            'liquibase-hibernate7-ext.version' : '6.0.0-SNAPSHOT',
             'mongodb.version'                  : '5.5.1',
             'rxjava.version'                   : '1.3.8',
             'rxjava2.version'                  : '2.2.21',
@@ -138,12 +135,6 @@ ext {
             'groovy-yaml'              : "org.apache.groovy:groovy-yaml:${bomDependencyVersions['groovy.version']}",
             // end - restate the groovy-bom here because the spring dependency management
             'jquery'                   : "org.webjars.npm:jquery:${bomDependencyVersions['jquery.version']}",
-            'liquibase-hibernate5'     : "org.liquibase:liquibase:${bomDependencyVersions['liquibase-hibernate5.version']}",
-            'liquibase-hibernate5-cdi' : "org.liquibase:liquibase-cdi:${bomDependencyVersions['liquibase-hibernate5.version']}",
-            'liquibase-hibernate5-core': "org.liquibase:liquibase-core:${bomDependencyVersions['liquibase-hibernate5.version']}",
-            'liquibase-hibernate5-ext' : "org.liquibase.ext:liquibase-hibernate5:${bomDependencyVersions['liquibase-hibernate5.version']}",
-            'liquibase-hibernate7-core': "org.liquibase:liquibase-core:${bomDependencyVersions['liquibase-hibernate7-core.version']}",
-            'liquibase-hibernate7-ext' : "org.liquibase.ext:liquibase-hibernate7:${bomDependencyVersions['liquibase-hibernate7-ext.version']}",
             'mongodb-bson'             : "org.mongodb:bson:${bomDependencyVersions['mongodb.version']}",
             'mongodb-driver-core'      : "org.mongodb:mongodb-driver-core:${bomDependencyVersions['mongodb.version']}",
             'mongodb-driver-sync'      : "org.mongodb:mongodb-driver-sync:${bomDependencyVersions['mongodb.version']}",
@@ -160,4 +151,34 @@ ext {
     combinedPlatforms = ['spring-boot-bom': gradleBomPlatformDependencies['spring-boot-bom']] + bomPlatformDependencies
     combinedDependencies = gradleBomDependencies + bomDependencies
     combinedVersions = gradleBomDependencyVersions + bomDependencyVersions
+
+    // Liquibase dependency and version definitions used only for POM property name resolution
+    // by PropertyNameCalculator. The actual dependency constraints are declared directly in the
+    // BOM projects (grails-bom, grails-hibernate7-bom) to avoid conflicting version constraints
+    // when both hibernate5 and hibernate7 versions of liquibase-core appear in the same map.
+    // These use gradle.properties values which are only available in the root project context.
+    if (project.hasProperty('liquibaseHibernate5Version')) {
+        combinedVersions += [
+                'liquibase-hibernate5.version': liquibaseHibernate5Version,
+                'liquibase-core.version'      : liquibaseHibernate5CoreVersion,
+        ]
+        combinedDependencies += [
+                'liquibase'           : "org.liquibase:liquibase:$liquibaseHibernate5CoreVersion",
+                'liquibase-cdi'       : "org.liquibase:liquibase-cdi:$liquibaseHibernate5CoreVersion",
+                'liquibase-core'      : "org.liquibase:liquibase-core:$liquibaseHibernate5CoreVersion",
+                'liquibase-hibernate5': "org.liquibase.ext:liquibase-hibernate5:$liquibaseHibernate5Version",
+        ]
+    }
+    if (project.hasProperty('liquibaseHibernate7Version')) {
+        combinedVersions += [
+                'liquibase-hibernate7.version': liquibaseHibernate7Version,
+                'liquibase-core.version'      : liquibaseHibernate7CoreVersion,
+        ]
+        combinedDependencies += [
+                'liquibase'           : "org.liquibase:liquibase:$liquibaseHibernate7CoreVersion",
+                'liquibase-cdi'       : "org.liquibase:liquibase-cdi:$liquibaseHibernate7CoreVersion",
+                'liquibase-core'      : "org.liquibase:liquibase-core:$liquibaseHibernate7CoreVersion",
+                'liquibase-hibernate7': "org.liquibase.ext:liquibase-hibernate7:$liquibaseHibernate7Version",
+        ]
+    }
 }
