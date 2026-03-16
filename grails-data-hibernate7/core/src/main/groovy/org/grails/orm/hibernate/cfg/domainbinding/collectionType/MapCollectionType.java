@@ -19,18 +19,19 @@
 package org.grails.orm.hibernate.cfg.domainbinding.collectionType;
 
 import java.util.Map;
+
 import org.hibernate.boot.spi.MetadataBuildingContext;
 import org.hibernate.mapping.Collection;
 import org.hibernate.mapping.PersistentClass;
 
 public class MapCollectionType extends CollectionType {
 
-  public MapCollectionType(MetadataBuildingContext buildingContext) {
-    super(Map.class, buildingContext);
-  }
+    public MapCollectionType(MetadataBuildingContext buildingContext) {
+        super(Map.class, buildingContext);
+    }
 
-  @Override
-  public Collection createCollection(PersistentClass owner) {
-    return new org.hibernate.mapping.Map(buildingContext, owner);
-  }
+    @Override
+    public Collection createCollection(PersistentClass owner) {
+        return new org.hibernate.mapping.Map(buildingContext, owner);
+    }
 }

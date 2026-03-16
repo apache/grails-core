@@ -4,5 +4,6 @@ import grails.gorm.annotation.Entity
 
 @Entity
 class ChildPersister {
+
     String title
 }

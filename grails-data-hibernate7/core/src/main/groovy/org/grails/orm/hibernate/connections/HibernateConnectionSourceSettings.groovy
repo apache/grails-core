@@ -47,11 +47,10 @@ class HibernateConnectionSourceSettings extends ConnectionSourceSettings {
      */
     Properties toProperties() {
         Properties properties = new Properties()
-        properties.putAll( dataSource.toHibernateProperties() )
-        properties.putAll( hibernate.toProperties() )
+        properties.putAll(dataSource.toHibernateProperties())
+        properties.putAll(hibernate.toProperties())
         return properties
     }
-
 
     @Builder(builderStrategy = SimpleStrategy, prefix = '')
     @AutoClone
@@ -79,7 +78,6 @@ class HibernateConnectionSourceSettings extends ConnectionSourceSettings {
          * Flush settings
          */
         FlushSettings flush = new FlushSettings()
-
 
         /**
          * The configuration class
@@ -117,7 +115,6 @@ class HibernateConnectionSourceSettings extends ConnectionSourceSettings {
          * resources are specified locally via this bean.
          * @see org.hibernate.cfg.Configuration#configure(java.net.URL)
          */
-
         Resource[] configLocations
 
         /**
@@ -192,7 +189,7 @@ class HibernateConnectionSourceSettings extends ConnectionSourceSettings {
 
         @CompileStatic
         Map<String, Object> toHibernateEventListeners(AbstractClosureEventTriggeringInterceptor eventTriggeringInterceptor) {
-            if(eventTriggeringInterceptor != null) {
+            if (eventTriggeringInterceptor != null) {
                 return [
 //                    'save': eventTriggeringInterceptor,
 //                    'save-update': eventTriggeringInterceptor,
@@ -206,7 +203,7 @@ class HibernateConnectionSourceSettings extends ConnectionSourceSettings {
                     'post-update': eventTriggeringInterceptor,
                     'pre-delete': eventTriggeringInterceptor,
                     'post-delete': eventTriggeringInterceptor
-                ] as Map<String,Object>
+                ] as Map<String, Object>
             }
             return Collections.emptyMap()
         }
@@ -219,11 +216,11 @@ class HibernateConnectionSourceSettings extends ConnectionSourceSettings {
         @CompileStatic
         Properties toProperties() {
             Properties props = new Properties()
-            if(naming_strategy != null) {
-                props.put("hibernate.naming_strategy".toString(), naming_strategy.name)
+            if (naming_strategy != null) {
+                props.put('hibernate.naming_strategy'.toString(), naming_strategy.name)
             }
-            if(configClass != null) {
-                props.put("hibernate.config_class".toString(), configClass.name)
+            if (configClass != null) {
+                props.put('hibernate.config_class'.toString(), configClass.name)
             }
             props.put('hibernate.use_query_cache', String.valueOf(cache.queries))
             props.put('hibernate.jpa.compliance.cascade', String.valueOf(jpa.compliance.cascade))
@@ -235,23 +232,23 @@ class HibernateConnectionSourceSettings extends ConnectionSourceSettings {
             // Hibernate 5.1/5.2: manually enforce connection release mode ON_CLOSE (the former default)
             try {
                 // Try Hibernate 5.2
-                AvailableSettings.class.getField("CONNECTION_HANDLING")
-                props.put("hibernate.connection.handling_mode", "DELAYED_ACQUISITION_AND_HOLD")
+                AvailableSettings.getField('CONNECTION_HANDLING')
+                props.put('hibernate.connection.handling_mode', 'DELAYED_ACQUISITION_AND_HOLD')
             }
             catch (NoSuchFieldException ex) {
                 // Try Hibernate 5.1
                 try {
-                    AvailableSettings.class.getField("ACQUIRE_CONNECTIONS")
-                    props.put("hibernate.connection.release_mode", "ON_CLOSE")
+                    AvailableSettings.getField('ACQUIRE_CONNECTIONS')
+                    props.put('hibernate.connection.release_mode', 'ON_CLOSE')
                 }
                 catch (NoSuchFieldException ex2) {
                     // on Hibernate 5.0.x or lower - no need to change the default there
                 }
             }
 
-            String prefix = "hibernate"
-            props.putAll( additionalProperties )
-            populateProperties(props, this,prefix)
+            String prefix = 'hibernate'
+            props.putAll(additionalProperties)
+            populateProperties(props, this, prefix)
             return props
         }
 
@@ -259,7 +256,7 @@ class HibernateConnectionSourceSettings extends ConnectionSourceSettings {
         protected void populateProperties(Properties props, Map current, String prefix) {
             for (key in current.keySet()) {
                 def value = current.get(key)
-                if(value instanceof Map) {
+                if (value instanceof Map) {
                     populateProperties(props, (Map)value, "${prefix}.$key")
                 }
                 else {
@@ -328,14 +325,13 @@ class HibernateConnectionSourceSettings extends ConnectionSourceSettings {
         @Builder(builderStrategy = SimpleStrategy, prefix = '')
         @AutoClone
         static class JpaSettings {
-            JpaComplianceSettings compliance = new JpaComplianceSettings();
+            JpaComplianceSettings compliance = new JpaComplianceSettings()
         }
 
         @Builder(builderStrategy = SimpleStrategy, prefix = '')
         static class JpaComplianceSettings {
             boolean cascade = true
         }
-
 
     }
 }

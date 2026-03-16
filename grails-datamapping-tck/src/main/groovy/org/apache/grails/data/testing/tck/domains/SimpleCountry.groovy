@@ -4,6 +4,7 @@ import grails.persistence.Entity
 
 @Entity
 class SimpleCountry {
+
 //    Integer id
     String name
 

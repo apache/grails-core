@@ -35,6 +35,7 @@ import org.hibernate.MappingException
 @Builder(builderStrategy = SimpleStrategy, prefix = '')
 @CompileStatic
 class CompositeIdentity extends Property implements HibernateIdentity {
+
     /**
      * The property names that make up the custom identity
      */

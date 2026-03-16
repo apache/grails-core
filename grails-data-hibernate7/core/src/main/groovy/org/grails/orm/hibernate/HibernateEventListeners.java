@@ -22,13 +22,13 @@ import java.util.Map;
 
 public class HibernateEventListeners {
 
-  private Map<String, Object> listenerMap;
+    private Map<String, Object> listenerMap;
 
-  public Map<String, Object> getListenerMap() {
-    return listenerMap;
-  }
+    public Map<String, Object> getListenerMap() {
+        return listenerMap;
+    }
 
-  public void setListenerMap(Map<String, Object> listenerMap) {
-    this.listenerMap = listenerMap;
-  }
+    public void setListenerMap(Map<String, Object> listenerMap) {
+        this.listenerMap = listenerMap;
+    }
 }

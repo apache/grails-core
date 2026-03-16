@@ -18,14 +18,14 @@
  */
 package org.grails.datastore.mapping.model.types.mapping;
 
+import java.beans.PropertyDescriptor;
+
 import org.grails.datastore.mapping.config.Property;
 import org.grails.datastore.mapping.model.MappingContext;
 import org.grails.datastore.mapping.model.MappingFactory;
 import org.grails.datastore.mapping.model.PersistentEntity;
 import org.grails.datastore.mapping.model.PropertyMapping;
 import org.grails.datastore.mapping.model.types.ManyToMany;
-
-import java.beans.PropertyDescriptor;
 
 /**
  * A {@link org.grails.datastore.mapping.model.types.ManyToMany} property with a {@link org.grails.datastore.mapping.model.PropertyMapping}
@@ -42,7 +42,6 @@ public class ManyToManyWithMapping<T extends Property> extends ManyToMany<T> imp
     public ManyToManyWithMapping(PersistentEntity entity, MappingContext context, PropertyDescriptor property) {
         super(entity, context, property);
     }
-
 
     @Override
     public PropertyMapping<T> getMapping() {

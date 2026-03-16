@@ -24,12 +24,13 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.Properties;
 import java.util.stream.Collectors;
+
 import javax.sql.DataSource;
+
 import org.checkerframework.checker.initialization.qual.Initialized;
 import org.checkerframework.checker.nullness.qual.NonNull;
 import org.checkerframework.checker.nullness.qual.Nullable;
 import org.checkerframework.checker.nullness.qual.UnknownKeyFor;
-import org.grails.orm.hibernate.exceptions.CouldNotDetermineHibernateDialectException;
 import org.hibernate.HibernateException;
 import org.hibernate.boot.registry.classloading.internal.ClassLoaderServiceImpl;
 import org.hibernate.boot.registry.selector.internal.StrategySelectorImpl;
@@ -37,11 +38,16 @@ import org.hibernate.boot.registry.selector.spi.StrategySelector;
 import org.hibernate.dialect.Dialect;
 import org.hibernate.engine.jdbc.dialect.internal.DialectFactoryImpl;
 import org.hibernate.engine.jdbc.dialect.internal.StandardDialectResolver;
-import org.hibernate.engine.jdbc.dialect.spi.*;
+import org.hibernate.engine.jdbc.dialect.spi.DatabaseMetaDataDialectResolutionInfoAdapter;
+import org.hibernate.engine.jdbc.dialect.spi.DialectFactory;
+import org.hibernate.engine.jdbc.dialect.spi.DialectResolutionInfo;
+import org.hibernate.engine.jdbc.dialect.spi.DialectResolutionInfoSource;
+import org.hibernate.engine.jdbc.dialect.spi.DialectResolver;
 import org.hibernate.service.Service;
 import org.hibernate.service.ServiceRegistry;
 import org.hibernate.service.spi.ServiceBinding;
 import org.hibernate.service.spi.ServiceRegistryImplementor;
+
 import org.springframework.beans.factory.FactoryBean;
 import org.springframework.beans.factory.InitializingBean;
 import org.springframework.jdbc.datasource.DataSourceUtils;
@@ -49,6 +55,8 @@ import org.springframework.jdbc.support.JdbcUtils;
 import org.springframework.jdbc.support.MetaDataAccessException;
 import org.springframework.util.Assert;
 import org.springframework.util.StringUtils;
+
+import org.grails.orm.hibernate.exceptions.CouldNotDetermineHibernateDialectException;
 
 /**
  * @author Steven Devijver
@@ -58,147 +66,139 @@ import org.springframework.util.StringUtils;
 @SuppressWarnings({"PMD.CloseResource", "PMD.DataflowAnomalyAnalysis"})
 public class HibernateDialectDetectorFactoryBean implements FactoryBean<String>, InitializingBean {
 
-  private DataSource dataSource;
-  private Properties vendorNameDialectMappings;
-  private String hibernateDialectClassName;
-  private Dialect hibernateDialect;
-  private Properties hibernateProperties = new Properties();
+    private DataSource dataSource;
+    private Properties vendorNameDialectMappings;
+    private String hibernateDialectClassName;
+    private Dialect hibernateDialect;
+    private Properties hibernateProperties = new Properties();
 
-  public void setHibernateProperties(Properties hibernateProperties) {
-    this.hibernateProperties = hibernateProperties;
-  }
-
-  public void setDataSource(DataSource dataSource) {
-    this.dataSource = dataSource;
-  }
-
-  public void setVendorNameDialectMappings(Properties mappings) {
-    vendorNameDialectMappings = mappings;
-  }
-
-  public String getObject() {
-    return hibernateDialectClassName;
-  }
-
-  public Class<String> getObjectType() {
-    return String.class;
-  }
-
-  public boolean isSingleton() {
-    return true;
-  }
-
-  public void afterPropertiesSet() throws MetaDataAccessException {
-    Assert.notNull(dataSource, "Data source is not set!");
-    Assert.notNull(vendorNameDialectMappings, "Vendor name/dialect mappings are not set!");
-
-    Connection connection = null;
-
-    String dbName =
-        (String) JdbcUtils.extractDatabaseMetaData(dataSource, "getDatabaseProductName");
-
-    try {
-      connection = DataSourceUtils.getConnection(dataSource);
-
-      try {
-        final DialectFactory dialectFactory = createDialectFactory();
-        final Connection finalConnection = connection;
-        DialectResolutionInfoSource infoSource =
-            new DialectResolutionInfoSource() {
-              @Override
-              public DialectResolutionInfo getDialectResolutionInfo() {
-                try {
-                  return new DatabaseMetaDataDialectResolutionInfoAdapter(
-                      finalConnection.getMetaData());
-                } catch (SQLException e) {
-                  throw new CouldNotDetermineHibernateDialectException(
-                      "Could not determine Hibernate dialect", e);
-                }
-              }
-            };
-        HashMap<String, Object> collect =
-            hibernateProperties.entrySet().stream()
-                .collect(
-                    Collectors.toMap(
-                        e -> String.valueOf(e.getKey()),
-                        Map.Entry::getValue,
-                        (prev, next) -> next,
-                        HashMap::new));
-        hibernateDialect = dialectFactory.buildDialect(collect, infoSource);
-        hibernateDialectClassName = hibernateDialect.getClass().getName();
-      } catch (HibernateException e) {
-        hibernateDialectClassName = vendorNameDialectMappings.getProperty(dbName);
-      }
-
-      if (!StringUtils.hasText(hibernateDialectClassName)) {
-        throw new CouldNotDetermineHibernateDialectException(
-            "Could not determine Hibernate dialect for database name [" + dbName + "]!");
-      }
-    } finally {
-      DataSourceUtils.releaseConnection(connection, dataSource);
+    public void setHibernateProperties(Properties hibernateProperties) {
+        this.hibernateProperties = hibernateProperties;
     }
-  }
 
-  // should be using the ServiceRegistry, but getting it from the SessionFactory at startup fails in
-  // Spring
-  protected DialectFactory createDialectFactory() {
-    DialectFactoryImpl factory = new DialectFactoryImpl();
-    factory.injectServices(
-        new ServiceRegistryImplementor() {
+    public void setDataSource(DataSource dataSource) {
+        this.dataSource = dataSource;
+    }
 
-          @Override
-          public <R extends Service> R getService(Class<R> serviceRole) {
-            if (serviceRole == DialectResolver.class) {
-              return (R) new StandardDialectResolver();
-            } else if (serviceRole == StrategySelector.class) {
-              return (R)
-                  new StrategySelectorImpl(
-                      new ClassLoaderServiceImpl(Thread.currentThread().getContextClassLoader()));
+    public void setVendorNameDialectMappings(Properties mappings) {
+        vendorNameDialectMappings = mappings;
+    }
+
+    public String getObject() {
+        return hibernateDialectClassName;
+    }
+
+    public Class<String> getObjectType() {
+        return String.class;
+    }
+
+    public boolean isSingleton() {
+        return true;
+    }
+
+    public void afterPropertiesSet() throws MetaDataAccessException {
+        Assert.notNull(dataSource, "Data source is not set!");
+        Assert.notNull(vendorNameDialectMappings, "Vendor name/dialect mappings are not set!");
+
+        Connection connection = null;
+
+        String dbName = (String) JdbcUtils.extractDatabaseMetaData(dataSource, "getDatabaseProductName");
+
+        try {
+            connection = DataSourceUtils.getConnection(dataSource);
+
+            try {
+                final DialectFactory dialectFactory = createDialectFactory();
+                final Connection finalConnection = connection;
+                DialectResolutionInfoSource infoSource = new DialectResolutionInfoSource() {
+                    @Override
+                    public DialectResolutionInfo getDialectResolutionInfo() {
+                        try {
+                            return new DatabaseMetaDataDialectResolutionInfoAdapter(finalConnection.getMetaData());
+                        } catch (SQLException e) {
+                            throw new CouldNotDetermineHibernateDialectException(
+                                    "Could not determine Hibernate dialect", e);
+                        }
+                    }
+                };
+                HashMap<String, Object> collect = hibernateProperties.entrySet().stream()
+                        .collect(Collectors.toMap(
+                                e -> String.valueOf(e.getKey()),
+                                Map.Entry::getValue,
+                                (prev, next) -> next,
+                                HashMap::new));
+                hibernateDialect = dialectFactory.buildDialect(collect, infoSource);
+                hibernateDialectClassName = hibernateDialect.getClass().getName();
+            } catch (HibernateException e) {
+                hibernateDialectClassName = vendorNameDialectMappings.getProperty(dbName);
             }
-            return null;
-          }
 
-          @Override
-          public <R extends Service> R requireService(
-              @UnknownKeyFor @NonNull @Initialized Class<R> serviceRole) {
-            return ServiceRegistryImplementor.super.requireService(serviceRole);
-          }
+            if (!StringUtils.hasText(hibernateDialectClassName)) {
+                throw new CouldNotDetermineHibernateDialectException(
+                        "Could not determine Hibernate dialect for database name [" + dbName + "]!");
+            }
+        } finally {
+            DataSourceUtils.releaseConnection(connection, dataSource);
+        }
+    }
 
-          @Override
-          public <R extends Service> ServiceBinding<R> locateServiceBinding(Class<R> serviceRole) {
-            return null;
-          }
+    // should be using the ServiceRegistry, but getting it from the SessionFactory at startup fails in
+    // Spring
+    protected DialectFactory createDialectFactory() {
+        DialectFactoryImpl factory = new DialectFactoryImpl();
+        factory.injectServices(new ServiceRegistryImplementor() {
 
-          @Override
-          public void close() {
-            ServiceRegistryImplementor.super.close();
-          }
+            @Override
+            public <R extends Service> R getService(Class<R> serviceRole) {
+                if (serviceRole == DialectResolver.class) {
+                    return (R) new StandardDialectResolver();
+                } else if (serviceRole == StrategySelector.class) {
+                    return (R) new StrategySelectorImpl(
+                            new ClassLoaderServiceImpl(Thread.currentThread().getContextClassLoader()));
+                }
+                return null;
+            }
 
-          @Override
-          public void destroy() {}
+            @Override
+            public <R extends Service> R requireService(@UnknownKeyFor @NonNull @Initialized Class<R> serviceRole) {
+                return ServiceRegistryImplementor.super.requireService(serviceRole);
+            }
 
-          @Override
-          public void registerChild(ServiceRegistryImplementor child) {}
+            @Override
+            public <R extends Service> ServiceBinding<R> locateServiceBinding(Class<R> serviceRole) {
+                return null;
+            }
 
-          @Override
-          public void deRegisterChild(ServiceRegistryImplementor child) {}
+            @Override
+            public void close() {
+                ServiceRegistryImplementor.super.close();
+            }
 
-          @Override
-          public <T extends Service> @Nullable T fromRegistryOrChildren(
-              @UnknownKeyFor @NonNull @Initialized Class<T> serviceRole) {
-            return null;
-          }
+            @Override
+            public void destroy() {}
 
-          @Override
-          public ServiceRegistry getParentServiceRegistry() {
-            return null;
-          }
+            @Override
+            public void registerChild(ServiceRegistryImplementor child) {}
 
-          @Override
-          public boolean isActive() {
-            return true;
-          }
+            @Override
+            public void deRegisterChild(ServiceRegistryImplementor child) {}
+
+            @Override
+            public <T extends Service> @Nullable T fromRegistryOrChildren(
+                    @UnknownKeyFor @NonNull @Initialized Class<T> serviceRole) {
+                return null;
+            }
+
+            @Override
+            public ServiceRegistry getParentServiceRegistry() {
+                return null;
+            }
+
+            @Override
+            public boolean isActive() {
+                return true;
+            }
         });
-    return factory;
-  }
+        return factory;
+    }
 }

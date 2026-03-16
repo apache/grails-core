@@ -420,10 +420,6 @@ public class GrailsHibernateUtil extends HibernateRuntimeUtils {
         return proxyHandler.unwrap(instance);
     }
 
-
-
-
-
     public static boolean isMappedWithHibernate(PersistentEntity domainClass) {
         return domainClass instanceof HibernatePersistentEntity;
     }

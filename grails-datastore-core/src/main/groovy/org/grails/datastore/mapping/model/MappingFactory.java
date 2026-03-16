@@ -48,6 +48,17 @@ import org.grails.datastore.mapping.config.Entity;
 import org.grails.datastore.mapping.config.Property;
 import org.grails.datastore.mapping.engine.types.CustomTypeMarshaller;
 import org.grails.datastore.mapping.model.config.GormProperties;
+import org.grails.datastore.mapping.model.types.Association;
+import org.grails.datastore.mapping.model.types.Basic;
+import org.grails.datastore.mapping.model.types.Custom;
+import org.grails.datastore.mapping.model.types.Embedded;
+import org.grails.datastore.mapping.model.types.EmbeddedCollection;
+import org.grails.datastore.mapping.model.types.Identity;
+import org.grails.datastore.mapping.model.types.ManyToMany;
+import org.grails.datastore.mapping.model.types.OneToMany;
+import org.grails.datastore.mapping.model.types.Simple;
+import org.grails.datastore.mapping.model.types.TenantId;
+import org.grails.datastore.mapping.model.types.ToOne;
 import org.grails.datastore.mapping.model.types.mapping.BasicWithMapping;
 import org.grails.datastore.mapping.model.types.mapping.CustomWithMapping;
 import org.grails.datastore.mapping.model.types.mapping.EmbeddedCollectionWithMapping;
@@ -59,20 +70,6 @@ import org.grails.datastore.mapping.model.types.mapping.OneToManyWithMapping;
 import org.grails.datastore.mapping.model.types.mapping.OneToOneWithMapping;
 import org.grails.datastore.mapping.model.types.mapping.SimpleWithMapping;
 import org.grails.datastore.mapping.model.types.mapping.TenantIdWithMapping;
-import org.grails.datastore.mapping.model.types.mapping.PropertyWithMapping;
-import org.grails.datastore.mapping.model.types.Association;
-import org.grails.datastore.mapping.model.types.Basic;
-import org.grails.datastore.mapping.model.types.Custom;
-import org.grails.datastore.mapping.model.types.Embedded;
-import org.grails.datastore.mapping.model.types.EmbeddedCollection;
-import org.grails.datastore.mapping.model.types.Identity;
-import org.grails.datastore.mapping.model.types.ManyToMany;
-import org.grails.datastore.mapping.model.types.ManyToOne;
-import org.grails.datastore.mapping.model.types.OneToMany;
-import org.grails.datastore.mapping.model.types.OneToOne;
-import org.grails.datastore.mapping.model.types.Simple;
-import org.grails.datastore.mapping.model.types.TenantId;
-import org.grails.datastore.mapping.model.types.ToOne;
 import org.grails.datastore.mapping.reflect.ClassPropertyFetcher;
 
 /**
@@ -375,7 +372,7 @@ public abstract class MappingFactory<R extends Entity, T extends Property> {
      * @return The {@link Embedded} instance
      */
     public Embedded createEmbedded(PersistentEntity entity,
-            MappingContext context, PropertyDescriptor property) {
+                                   MappingContext context, PropertyDescriptor property) {
         EmbeddedWithMapping<T> embedded = new EmbeddedWithMapping<>(entity, context, property);
         embedded.setMapping(createPropertyMapping(embedded, entity));
         return embedded;
@@ -390,7 +387,7 @@ public abstract class MappingFactory<R extends Entity, T extends Property> {
      * @return The {@link Embedded} instance
      */
     public EmbeddedCollection createEmbeddedCollection(PersistentEntity entity,
-            MappingContext context, PropertyDescriptor property) {
+                                                       MappingContext context, PropertyDescriptor property) {
         EmbeddedCollectionWithMapping<T> embedded = new EmbeddedCollectionWithMapping<>(entity, context, property);
         embedded.setMapping(createPropertyMapping(embedded, entity));
         return embedded;
@@ -405,7 +402,7 @@ public abstract class MappingFactory<R extends Entity, T extends Property> {
      * @return The Basic collection type
      */
     public Basic createBasicCollection(PersistentEntity entity,
-            MappingContext context, PropertyDescriptor property, Class collectionType) {
+                                       MappingContext context, PropertyDescriptor property, Class collectionType) {
         BasicWithMapping<T> basic = new BasicWithMapping<>(entity, context, property);
         basic.setMapping(createPropertyMapping(basic, entity));
 
@@ -454,7 +451,7 @@ public abstract class MappingFactory<R extends Entity, T extends Property> {
 
     protected IdentityMapping createDefaultIdentityMapping(final ClassMapping classMapping, final T property) {
         String targetName = property != null ? property.getName() : null;
-        String[] identifierNames = targetName != null ? new String[] { targetName } : new String[] { IDENTITY_PROPERTY };
+        String[] identifierNames = targetName != null ? new String[]{targetName} : new String[]{IDENTITY_PROPERTY};
         String generatorName = property != null ? property.getGenerator() : null;
         ValueGenerator generator = generatorName != null ? ValueGenerator.valueOf(generatorName) : ValueGenerator.AUTO;
         return new DefaultIdentityMapping<>(classMapping, property, identifierNames, generator);

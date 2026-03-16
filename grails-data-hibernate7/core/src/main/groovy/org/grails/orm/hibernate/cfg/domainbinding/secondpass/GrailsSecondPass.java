@@ -22,7 +22,7 @@ import org.hibernate.mapping.Collection;
 
 public interface GrailsSecondPass {
 
-  default void createCollectionKeys(Collection collection) {
-    collection.createAllKeys();
-  }
+    default void createCollectionKeys(Collection collection) {
+        collection.createAllKeys();
+    }
 }

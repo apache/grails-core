@@ -31,7 +31,6 @@ class FindWhereSpec extends GrailsDataTckSpec {
         given:
         def entityId = new TestEntity(name: 'David', age: 27).save().id
 
-
         when:
         def entity = TestEntity.findWhere(name: 'David')
 
@@ -44,7 +43,7 @@ class FindWhereSpec extends GrailsDataTckSpec {
     def "Test findWhere with a GString property"() {
         given:
         def entityId = new TestEntity(name: 'David', age: 27).save().id
-        def property = "name"
+        def property = 'name'
 
         when:
         def entity = TestEntity.findWhere("${property}": 'David')
@@ -71,7 +70,7 @@ class FindWhereSpec extends GrailsDataTckSpec {
     def "Test findAllWhere with a GString property"() {
         given:
         def entityId = new TestEntity(name: 'David', age: 27).save().id
-        def property = "name"
+        def property = 'name'
 
         when:
         def entity = TestEntity.findAllWhere("${property}": 'David')

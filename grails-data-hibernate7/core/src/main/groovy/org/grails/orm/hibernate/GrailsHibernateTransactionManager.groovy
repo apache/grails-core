@@ -18,16 +18,11 @@ package org.grails.orm.hibernate
 import groovy.transform.CompileStatic
 import groovy.util.logging.Slf4j
 import org.hibernate.FlushMode
-import org.hibernate.Session
 import org.hibernate.SessionFactory
-import org.hibernate.engine.jdbc.spi.JdbcCoordinator
-import org.hibernate.engine.spi.SessionImplementor
 import org.springframework.orm.hibernate5.HibernateTransactionManager
 import org.springframework.orm.hibernate5.SessionHolder
 import org.springframework.transaction.TransactionDefinition
-import org.springframework.transaction.support.DefaultTransactionStatus
 import org.springframework.transaction.support.TransactionSynchronizationManager
-import org.springframework.util.Assert
 
 import javax.sql.DataSource
 
@@ -68,13 +63,10 @@ class GrailsHibernateTransactionManager extends HibernateTransactionManager {
             SessionHolder holder = (SessionHolder)TransactionSynchronizationManager.getResource(sessionFactory)
             holder.session.setHibernateFlushMode(FlushMode.MANUAL)
         }
-        else if(defaultFlushMode != FlushMode.AUTO) {
+        else if (defaultFlushMode != FlushMode.AUTO) {
             SessionHolder holder = (SessionHolder)TransactionSynchronizationManager.getResource(sessionFactory)
             holder.session.setHibernateFlushMode(defaultFlushMode)
         }
     }
-
-
-
 
 }

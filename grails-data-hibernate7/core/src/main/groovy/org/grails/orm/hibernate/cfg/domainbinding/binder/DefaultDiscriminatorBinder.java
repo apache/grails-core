@@ -18,33 +18,32 @@
  */
 package org.grails.orm.hibernate.cfg.domainbinding.binder;
 
-import static org.grails.orm.hibernate.cfg.domainbinding.binder.GrailsDomainBinder.JPA_DEFAULT_DISCRIMINATOR_TYPE;
-
 import org.hibernate.mapping.RootClass;
 import org.hibernate.mapping.SimpleValue;
 
+import static org.grails.orm.hibernate.cfg.domainbinding.binder.GrailsDomainBinder.JPA_DEFAULT_DISCRIMINATOR_TYPE;
+
 public class DefaultDiscriminatorBinder {
 
-  private static final String STRING_TYPE = "string";
+    private static final String STRING_TYPE = "string";
 
-  private final SimpleValueColumnBinder simpleValueColumnBinder;
+    private final SimpleValueColumnBinder simpleValueColumnBinder;
 
-  public DefaultDiscriminatorBinder(SimpleValueColumnBinder simpleValueColumnBinder) {
-    this.simpleValueColumnBinder = simpleValueColumnBinder;
-  }
+    public DefaultDiscriminatorBinder(SimpleValueColumnBinder simpleValueColumnBinder) {
+        this.simpleValueColumnBinder = simpleValueColumnBinder;
+    }
 
-  /**
-   * Binds a discriminator with default configuration (no explicit config)
-   *
-   * @param entity The root class entity
-   * @param discriminator The discriminator value to configure
-   */
-  public void bindDefaultDiscriminator(RootClass entity, SimpleValue discriminator) {
-    // Use class name as discriminator value
-    entity.setDiscriminatorValue(entity.getClassName());
+    /**
+     * Binds a discriminator with default configuration (no explicit config)
+     *
+     * @param entity The root class entity
+     * @param discriminator The discriminator value to configure
+     */
+    public void bindDefaultDiscriminator(RootClass entity, SimpleValue discriminator) {
+        // Use class name as discriminator value
+        entity.setDiscriminatorValue(entity.getClassName());
 
-    // Bind with default column configuration
-    simpleValueColumnBinder.bindSimpleValue(
-        discriminator, STRING_TYPE, JPA_DEFAULT_DISCRIMINATOR_TYPE, false);
-  }
+        // Bind with default column configuration
+        simpleValueColumnBinder.bindSimpleValue(discriminator, STRING_TYPE, JPA_DEFAULT_DISCRIMINATOR_TYPE, false);
+    }
 }

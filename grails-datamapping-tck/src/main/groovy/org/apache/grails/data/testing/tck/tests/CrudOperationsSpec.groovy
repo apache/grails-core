@@ -22,7 +22,6 @@ import org.apache.grails.data.testing.tck.domains.ChildEntity
 import org.apache.grails.data.testing.tck.domains.TestEntity
 import grails.validation.ValidationException
 import org.apache.grails.data.testing.tck.base.GrailsDataTckSpec
-import spock.lang.IgnoreRest
 
 /**
  * @author graemerocher
@@ -33,9 +32,9 @@ class CrudOperationsSpec extends GrailsDataTckSpec {
         manager.addAllDomainClasses([TestEntity, ChildEntity])
     }
 
-    void "Test get using a string-based key"() {
+    void 'Test get using a string-based key'() {
         given:
-        def t = new TestEntity(name: "Bob", child: new ChildEntity(name: "Child"))
+        def t = new TestEntity(name: 'Bob', child: new ChildEntity(name: 'Child'))
         t.save(flush: true)
 
         when:
@@ -45,7 +44,7 @@ class CrudOperationsSpec extends GrailsDataTckSpec {
         t != null
     }
 
-    void "Test get returns null of non-existent entity"() {
+    void 'Test get returns null of non-existent entity'() {
         given:
         def t
         when:
@@ -54,10 +53,10 @@ class CrudOperationsSpec extends GrailsDataTckSpec {
         t == null
     }
 
-    void "Test basic CRUD operations"() {
+    void 'Test basic CRUD operations'() {
         given:
 
-        def t = new TestEntity(name: "Bob", child: new ChildEntity(name: "Child"))
+        def t = new TestEntity(name: 'Bob', child: new ChildEntity(name: 'Child'))
         t.save(flush: true)
 
         when:
@@ -67,25 +66,25 @@ class CrudOperationsSpec extends GrailsDataTckSpec {
         then:
         t != null
         t.id != null
-        "Bob" == t.name
+        'Bob' == t.name
         1 == results.size()
-        "Bob" == results[0].name
+        'Bob' == results[0].name
     }
 
-    void "Test save method that takes a map"() {
+    void 'Test save method that takes a map'() {
 
         given:
-        def t = new TestEntity(name: "Bob", child: new ChildEntity(name: "Child"))
-        t.save(param: "one", flush: true)
+        def t = new TestEntity(name: 'Bob', child: new ChildEntity(name: 'Child'))
+        t.save(param: 'one', flush: true)
         when:
         t = TestEntity.get(t.id)
         then:
         t.id != null
     }
 
-    void "Test failOnError"() {
+    void 'Test failOnError'() {
         given:
-        def t = new TestEntity(child: new ChildEntity(name: "Child"))
+        def t = new TestEntity(child: new ChildEntity(name: 'Child'))
 
         when:
         t.save(failOnError: true)

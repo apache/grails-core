@@ -29,15 +29,15 @@ import org.hibernate.SessionFactory;
  */
 public class SessionFactoryHolder {
 
-  public static final String BEAN_ID = "org.grails.internal.SESSION_FACTORY_HOLDER";
+    public static final String BEAN_ID = "org.grails.internal.SESSION_FACTORY_HOLDER";
 
-  private SessionFactory sessionFactory;
+    private SessionFactory sessionFactory;
 
-  public SessionFactory getSessionFactory() {
-    return sessionFactory;
-  }
+    public SessionFactory getSessionFactory() {
+        return sessionFactory;
+    }
 
-  public void setSessionFactory(SessionFactory sessionFactory) {
-    this.sessionFactory = sessionFactory;
-  }
+    public void setSessionFactory(SessionFactory sessionFactory) {
+        this.sessionFactory = sessionFactory;
+    }
 }

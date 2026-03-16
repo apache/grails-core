@@ -35,13 +35,13 @@ class OrderBySpec extends GrailsDataTckSpec {
         given:
         def age = 40
 
-        ["Bob", "Fred", "Barney", "Frank", "Joe", "Ernie"].each {
+        ['Bob', 'Fred', 'Barney', 'Frank', 'Joe', 'Ernie'].each {
             new TestEntity(name: it, age: age++, child: new ChildEntity(name: "$it Child")).save()
         }
 
         when:
         def results = TestEntity.createCriteria().list {
-            order "age"
+            order 'age'
         }
         then:
         40 == results[0].age
@@ -50,7 +50,7 @@ class OrderBySpec extends GrailsDataTckSpec {
 
         when:
         results = TestEntity.createCriteria().list {
-            order "age", "desc"
+            order 'age', 'desc'
         }
 
         then:
@@ -63,12 +63,12 @@ class OrderBySpec extends GrailsDataTckSpec {
         given:
         def age = 40
 
-        ["Bob", "Fred", "Barney", "Frank", "Joe", "Ernie"].each {
+        ['Bob', 'Fred', 'Barney', 'Frank', 'Joe', 'Ernie'].each {
             new TestEntity(name: it, age: age++, child: new ChildEntity(name: "$it Child")).save()
         }
 
         when:
-        def results = TestEntity.list(sort: "age")
+        def results = TestEntity.list(sort: 'age')
 
         then:
         40 == results[0].age
@@ -76,7 +76,7 @@ class OrderBySpec extends GrailsDataTckSpec {
         42 == results[2].age
 
         when:
-        results = TestEntity.list(sort: "age", order: "desc")
+        results = TestEntity.list(sort: 'age', order: 'desc')
 
         then:
         45 == results[0].age
@@ -88,12 +88,12 @@ class OrderBySpec extends GrailsDataTckSpec {
         given:
         def age = 40
 
-        ["Bob", "Fred", "Barney", "Frank", "Joe", "Ernie"].each {
+        ['Bob', 'Fred', 'Barney', 'Frank', 'Joe', 'Ernie'].each {
             new TestEntity(name: it, age: age++, child: new ChildEntity(name: "$it Child")).save()
         }
 
         when:
-        def results = TestEntity.findAllByAgeGreaterThanEquals(40, [sort: "age"])
+        def results = TestEntity.findAllByAgeGreaterThanEquals(40, [sort: 'age'])
 
         then:
         40 == results[0].age
@@ -101,7 +101,7 @@ class OrderBySpec extends GrailsDataTckSpec {
         42 == results[2].age
 
         when:
-        results = TestEntity.findAllByAgeGreaterThanEquals(40, [sort: "age", order: "desc"])
+        results = TestEntity.findAllByAgeGreaterThanEquals(40, [sort: 'age', order: 'desc'])
 
         then:
         45 == results[0].age

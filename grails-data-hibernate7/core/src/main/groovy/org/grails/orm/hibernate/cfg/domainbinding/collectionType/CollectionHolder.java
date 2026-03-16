@@ -23,24 +23,24 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.SortedSet;
+
 import org.hibernate.boot.spi.MetadataBuildingContext;
 
 /** Collection holder. */
 public record CollectionHolder(Map<Class<?>, CollectionType> map) {
 
-  /** Creates a new {@link CollectionHolder} instance. */
-  public CollectionHolder(MetadataBuildingContext buildingContext) {
-    this(
-        Map.ofEntries(
-            Map.entry(Set.class, new SetCollectionType(buildingContext)),
-            Map.entry(SortedSet.class, new SetCollectionType(buildingContext)),
-            Map.entry(List.class, new ListCollectionType(buildingContext)),
-            Map.entry(Collection.class, new BagCollectionType(buildingContext)),
-            Map.entry(Map.class, new MapCollectionType(buildingContext))));
-  }
+    /** Creates a new {@link CollectionHolder} instance. */
+    public CollectionHolder(MetadataBuildingContext buildingContext) {
+        this(Map.ofEntries(
+                Map.entry(Set.class, new SetCollectionType(buildingContext)),
+                Map.entry(SortedSet.class, new SetCollectionType(buildingContext)),
+                Map.entry(List.class, new ListCollectionType(buildingContext)),
+                Map.entry(Collection.class, new BagCollectionType(buildingContext)),
+                Map.entry(Map.class, new MapCollectionType(buildingContext))));
+    }
 
-  /** Get. */
-  public CollectionType get(Class<?> collectionClass) {
-    return map.get(collectionClass);
-  }
+    /** Get. */
+    public CollectionType get(Class<?> collectionClass) {
+        return map.get(collectionClass);
+    }
 }

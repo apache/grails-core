@@ -25,20 +25,19 @@ import org.apache.grails.data.testing.tck.domains.OptLockNotVersioned
 import org.apache.grails.data.testing.tck.domains.OptLockVersioned
 import org.grails.datastore.mapping.core.OptimisticLockingException
 
-
 /**
  * @author Burt Beckwith
  */
 @IgnoreIf({
-    try {
-        // This class is specific to the Spring/Hibernate 5 integration. If it's on the classpath,
-        // it means we are running against a Hibernate datastore, which has its own specific
-        // optimistic locking tests. This generic TCK test should be skipped.
-        Class.forName('org.springframework.orm.hibernate5.HibernateOptimisticLockingFailureException', false, Thread.currentThread().contextClassLoader)
-        return true
-    } catch (ClassNotFoundException | LinkageError ignored) {
-        return false
-    }
+        try {
+            // This class is specific to the Spring/Hibernate 5 integration. If it's on the classpath,
+            // it means we are running against a Hibernate datastore, which has its own specific
+            // optimistic locking tests. This generic TCK test should be skipped.
+            Class.forName('org.springframework.orm.hibernate5.HibernateOptimisticLockingFailureException', false, Thread.currentThread().contextClassLoader)
+            return true
+        } catch (ClassNotFoundException | LinkageError ignored) {
+            return false
+        }
 })
 class OptimisticLockingSpec extends GrailsDataTckSpec {
 

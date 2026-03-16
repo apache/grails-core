@@ -266,8 +266,8 @@ public abstract class Association<T extends Property> extends AbstractPersistent
     }
 
     public boolean isCorrectlyOwned() {
-        return Optional.ofNullable( getAssociatedEntity())
-                .map(associatedEntity-> associatedEntity.isOwningEntity(getOwner()))
+        return Optional.ofNullable(getAssociatedEntity())
+                .map(associatedEntity -> associatedEntity.isOwningEntity(getOwner()))
                 .orElse(false);
     }
 
@@ -336,10 +336,9 @@ public abstract class Association<T extends Property> extends AbstractPersistent
         return cascade != null ? CascadeValidateType.fromMappedName(cascade) : CascadeValidateType.DEFAULT;
     }
 
-
     public boolean isHasOne() {
         return Optional.of(this)
-                .filter(OneToOne.class::isInstance )
+                .filter(OneToOne.class::isInstance)
                 .map(OneToOne.class::cast)
                 .map(ToOne::isForeignKeyInChild)
                 .orElse(false);

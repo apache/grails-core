@@ -29,13 +29,13 @@ import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernatePersistentP
  */
 public interface PersistentEntityNamingStrategy {
 
-  String resolveColumnName(String logicalName);
+    String resolveColumnName(String logicalName);
 
-  default String resolveTableName(GrailsHibernatePersistentEntity entity) {
-    return resolveTableName(entity.getJavaClass().getSimpleName());
-  }
+    default String resolveTableName(GrailsHibernatePersistentEntity entity) {
+        return resolveTableName(entity.getJavaClass().getSimpleName());
+    }
 
-  String resolveTableName(String logicalName);
+    String resolveTableName(String logicalName);
 
-  String resolveForeignKeyForPropertyDomainClass(HibernatePersistentProperty property);
+    String resolveForeignKeyForPropertyDomainClass(HibernatePersistentProperty property);
 }

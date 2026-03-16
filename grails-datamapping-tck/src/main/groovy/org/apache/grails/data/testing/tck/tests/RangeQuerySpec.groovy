@@ -38,9 +38,9 @@ class RangeQuerySpec extends GrailsDataTckSpec {
         given:
         def now = new Date()
         use(TimeCategory) {
-            new Publication(title: "The Guardian", datePublished: now - 5.minutes).save()
-            new Publication(title: "The Times", datePublished: now - 5.days).save()
-            new Publication(title: "The Observer", datePublished: now - 10.days).save()
+            new Publication(title: 'The Guardian', datePublished: now - 5.minutes).save()
+            new Publication(title: 'The Times', datePublished: now - 5.days).save()
+            new Publication(title: 'The Observer', datePublished: now - 10.days).save()
         }
 
         when:
@@ -56,7 +56,7 @@ class RangeQuerySpec extends GrailsDataTckSpec {
     void "Test between query"() {
         given:
         int age = 40
-        ["Bob", "Fred", "Barney", "Frank", "Joe", "Ernie"].each { new TestEntity(name: it, age: age--, child: new ChildEntity(name: "$it Child")).save() }
+        ['Bob', 'Fred', 'Barney', 'Frank', 'Joe', 'Ernie'].each { new TestEntity(name: it, age: age--, child: new ChildEntity(name: "$it Child")).save() }
 
         when:
         def results = TestEntity.findAllByAgeBetween(38, 40)
@@ -70,12 +70,12 @@ class RangeQuerySpec extends GrailsDataTckSpec {
         then:
         3 == results.size()
 
-        results.find { it.name == "Bob" } != null
-        results.find { it.name == "Fred" } != null
-        results.find { it.name == "Barney" } != null
+        results.find { it.name == 'Bob' } != null
+        results.find { it.name == 'Fred' } != null
+        results.find { it.name == 'Barney' } != null
 
         when:
-        results = TestEntity.findAllByAgeBetweenOrName(38, 40, "Ernie")
+        results = TestEntity.findAllByAgeBetweenOrName(38, 40, 'Ernie')
 
         then:
         4 == results.size()
@@ -85,7 +85,7 @@ class RangeQuerySpec extends GrailsDataTckSpec {
         given:
 
         int age = 40
-        ["Bob", "Fred", "Barney", "Frank", "Joe", "Ernie"].each { new TestEntity(name: it, age: age--, child: new ChildEntity(name: "$it Child")).save() }
+        ['Bob', 'Fred', 'Barney', 'Frank', 'Joe', 'Ernie'].each { new TestEntity(name: it, age: age--, child: new ChildEntity(name: "$it Child")).save() }
 
         when:
         def results = TestEntity.findAllByAgeGreaterThanEquals(38)

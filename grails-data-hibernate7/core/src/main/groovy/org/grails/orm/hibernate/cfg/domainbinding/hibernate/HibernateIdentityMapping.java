@@ -31,53 +31,52 @@ import org.grails.orm.hibernate.cfg.Identity;
  */
 public class HibernateIdentityMapping implements IdentityMapping<Property> {
 
-  private static final String[] DEFAULT_IDENTITY_MAPPING = new String[] {"id"};
+    private static final String[] DEFAULT_IDENTITY_MAPPING = new String[] {"id"};
 
-  private final Object identity;
-  private final ValueGenerator generator;
-  private final ClassMapping classMapping;
+    private final Object identity;
+    private final ValueGenerator generator;
+    private final ClassMapping classMapping;
 
-  /**
-   * Constructs a HibernateIdentityMapping.
-   *
-   * @param identity the identity mapped form ({@link Identity} or {@link CompositeIdentity})
-   * @param generator the resolved {@link ValueGenerator}
-   * @param classMapping the owning {@link ClassMapping}
-   */
-  public HibernateIdentityMapping(
-      Object identity, ValueGenerator generator, ClassMapping classMapping) {
-    this.identity = identity;
-    this.generator = generator;
-    this.classMapping = classMapping;
-  }
-
-  @Override
-  public String[] getIdentifierName() {
-    if (identity instanceof Identity) {
-      final String name = ((Identity) identity).getName();
-      if (name != null) {
-        return new String[] {name};
-      } else {
-        return DEFAULT_IDENTITY_MAPPING;
-      }
-    } else if (identity instanceof CompositeIdentity) {
-      return ((CompositeIdentity) identity).getPropertyNames();
+    /**
+     * Constructs a HibernateIdentityMapping.
+     *
+     * @param identity the identity mapped form ({@link Identity} or {@link CompositeIdentity})
+     * @param generator the resolved {@link ValueGenerator}
+     * @param classMapping the owning {@link ClassMapping}
+     */
+    public HibernateIdentityMapping(Object identity, ValueGenerator generator, ClassMapping classMapping) {
+        this.identity = identity;
+        this.generator = generator;
+        this.classMapping = classMapping;
     }
-    return DEFAULT_IDENTITY_MAPPING;
-  }
 
-  @Override
-  public ValueGenerator getGenerator() {
-    return generator;
-  }
+    @Override
+    public String[] getIdentifierName() {
+        if (identity instanceof Identity) {
+            final String name = ((Identity) identity).getName();
+            if (name != null) {
+                return new String[] {name};
+            } else {
+                return DEFAULT_IDENTITY_MAPPING;
+            }
+        } else if (identity instanceof CompositeIdentity) {
+            return ((CompositeIdentity) identity).getPropertyNames();
+        }
+        return DEFAULT_IDENTITY_MAPPING;
+    }
 
-  @Override
-  public ClassMapping getClassMapping() {
-    return classMapping;
-  }
+    @Override
+    public ValueGenerator getGenerator() {
+        return generator;
+    }
 
-  @Override
-  public Property getMappedForm() {
-    return (Property) identity;
-  }
+    @Override
+    public ClassMapping getClassMapping() {
+        return classMapping;
+    }
+
+    @Override
+    public Property getMappedForm() {
+        return (Property) identity;
+    }
 }

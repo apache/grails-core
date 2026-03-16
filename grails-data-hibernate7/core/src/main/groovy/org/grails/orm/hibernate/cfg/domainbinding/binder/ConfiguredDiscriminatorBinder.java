@@ -18,90 +18,86 @@
  */
 package org.grails.orm.hibernate.cfg.domainbinding.binder;
 
-import static org.grails.orm.hibernate.cfg.domainbinding.binder.GrailsDomainBinder.JPA_DEFAULT_DISCRIMINATOR_TYPE;
-
-import org.grails.orm.hibernate.cfg.ColumnConfig;
-import org.grails.orm.hibernate.cfg.DiscriminatorConfig;
 import org.hibernate.mapping.Column;
 import org.hibernate.mapping.Formula;
 import org.hibernate.mapping.RootClass;
 import org.hibernate.mapping.SimpleValue;
 
+import org.grails.orm.hibernate.cfg.ColumnConfig;
+import org.grails.orm.hibernate.cfg.DiscriminatorConfig;
+
+import static org.grails.orm.hibernate.cfg.domainbinding.binder.GrailsDomainBinder.JPA_DEFAULT_DISCRIMINATOR_TYPE;
+
 public class ConfiguredDiscriminatorBinder {
 
-  private static final String STRING_TYPE = "string";
+    private static final String STRING_TYPE = "string";
 
-  private final SimpleValueColumnBinder simpleValueColumnBinder;
-  private final ColumnConfigToColumnBinder columnConfigToColumnBinder;
+    private final SimpleValueColumnBinder simpleValueColumnBinder;
+    private final ColumnConfigToColumnBinder columnConfigToColumnBinder;
 
-  public ConfiguredDiscriminatorBinder(
-      SimpleValueColumnBinder simpleValueColumnBinder,
-      ColumnConfigToColumnBinder columnConfigToColumnBinder) {
-    this.simpleValueColumnBinder = simpleValueColumnBinder;
-    this.columnConfigToColumnBinder = columnConfigToColumnBinder;
-  }
-
-  /**
-   * Binds a discriminator with explicit configuration
-   *
-   * @param entity The root class entity
-   * @param discriminator The discriminator value to configure
-   * @param config The discriminator configuration
-   */
-  public void bindConfiguredDiscriminator(
-      RootClass entity, SimpleValue discriminator, DiscriminatorConfig config) {
-    // Set discriminator value
-    entity.setDiscriminatorValue(config.getValue());
-
-    // Configure insertable if specified
-    if (config.getInsertable() != null) {
-      entity.setDiscriminatorInsertable(config.getInsertable());
+    public ConfiguredDiscriminatorBinder(
+            SimpleValueColumnBinder simpleValueColumnBinder, ColumnConfigToColumnBinder columnConfigToColumnBinder) {
+        this.simpleValueColumnBinder = simpleValueColumnBinder;
+        this.columnConfigToColumnBinder = columnConfigToColumnBinder;
     }
 
-    // Resolve type name
-    String typeName = resolveTypeName(config.getType());
+    /**
+     * Binds a discriminator with explicit configuration
+     *
+     * @param entity The root class entity
+     * @param discriminator The discriminator value to configure
+     * @param config The discriminator configuration
+     */
+    public void bindConfiguredDiscriminator(RootClass entity, SimpleValue discriminator, DiscriminatorConfig config) {
+        // Set discriminator value
+        entity.setDiscriminatorValue(config.getValue());
 
-    // Bind based on configuration type
-    if (config.getFormula() != null) {
-      bindDiscriminatorWithFormula(discriminator, typeName, config.getFormula());
-    } else {
-      bindDiscriminatorWithColumn(discriminator, typeName, config.getColumn());
-    }
-  }
+        // Configure insertable if specified
+        if (config.getInsertable() != null) {
+            entity.setDiscriminatorInsertable(config.getInsertable());
+        }
 
-  private String resolveTypeName(Object type) {
-    if (type == null) {
-      return STRING_TYPE;
-    }
+        // Resolve type name
+        String typeName = resolveTypeName(config.getType());
 
-    return (type instanceof Class) ? ((Class<?>) type).getName() : type.toString();
-  }
-
-  private void bindDiscriminatorWithFormula(
-      SimpleValue discriminator, String typeName, String formula) {
-    discriminator.setTypeName(typeName);
-    Formula f = new Formula();
-    f.setFormula(formula);
-    discriminator.addFormula(f);
-  }
-
-  private void bindDiscriminatorWithColumn(
-      SimpleValue discriminator, String typeName, ColumnConfig columnConfig) {
-    simpleValueColumnBinder.bindSimpleValue(
-        discriminator, typeName, JPA_DEFAULT_DISCRIMINATOR_TYPE, false);
-
-    if (columnConfig != null) {
-      configureDiscriminatorColumn(discriminator, columnConfig);
-    }
-  }
-
-  private void configureDiscriminatorColumn(SimpleValue discriminator, ColumnConfig columnConfig) {
-    Column column = discriminator.getColumns().iterator().next();
-
-    if (columnConfig.getName() != null) {
-      column.setName(columnConfig.getName());
+        // Bind based on configuration type
+        if (config.getFormula() != null) {
+            bindDiscriminatorWithFormula(discriminator, typeName, config.getFormula());
+        } else {
+            bindDiscriminatorWithColumn(discriminator, typeName, config.getColumn());
+        }
     }
 
-    columnConfigToColumnBinder.bindColumnConfigToColumn(column, columnConfig, null);
-  }
+    private String resolveTypeName(Object type) {
+        if (type == null) {
+            return STRING_TYPE;
+        }
+
+        return (type instanceof Class) ? ((Class<?>) type).getName() : type.toString();
+    }
+
+    private void bindDiscriminatorWithFormula(SimpleValue discriminator, String typeName, String formula) {
+        discriminator.setTypeName(typeName);
+        Formula f = new Formula();
+        f.setFormula(formula);
+        discriminator.addFormula(f);
+    }
+
+    private void bindDiscriminatorWithColumn(SimpleValue discriminator, String typeName, ColumnConfig columnConfig) {
+        simpleValueColumnBinder.bindSimpleValue(discriminator, typeName, JPA_DEFAULT_DISCRIMINATOR_TYPE, false);
+
+        if (columnConfig != null) {
+            configureDiscriminatorColumn(discriminator, columnConfig);
+        }
+    }
+
+    private void configureDiscriminatorColumn(SimpleValue discriminator, ColumnConfig columnConfig) {
+        Column column = discriminator.getColumns().iterator().next();
+
+        if (columnConfig.getName() != null) {
+            column.setName(columnConfig.getName());
+        }
+
+        columnConfigToColumnBinder.bindColumnConfigToColumn(column, columnConfig, null);
+    }
 }

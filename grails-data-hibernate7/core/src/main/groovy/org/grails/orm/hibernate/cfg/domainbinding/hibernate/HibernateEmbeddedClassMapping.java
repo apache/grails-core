@@ -30,12 +30,12 @@ import org.grails.datastore.mapping.model.PersistentEntity;
  * @since 5.0
  */
 public class HibernateEmbeddedClassMapping extends HibernateClassMapping {
-  public HibernateEmbeddedClassMapping(PersistentEntity entity, MappingContext context) {
-    super(entity, context);
-  }
+    public HibernateEmbeddedClassMapping(PersistentEntity entity, MappingContext context) {
+        super(entity, context);
+    }
 
-  @Override
-  public IdentityMapping getIdentifier() {
-    return null;
-  }
+    @Override
+    public IdentityMapping getIdentifier() {
+        return null;
+    }
 }

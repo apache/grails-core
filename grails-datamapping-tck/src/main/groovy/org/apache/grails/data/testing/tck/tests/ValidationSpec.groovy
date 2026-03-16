@@ -41,7 +41,7 @@ class ValidationSpec extends GrailsDataTckSpec {
 
     void setupSpec() {
         manager.addAllDomainClasses([ClassWithListArgBeforeValidate, ClassWithNoArgBeforeValidate,
-                                     ClassWithOverloadedBeforeValidate, TestEntity,Task])
+                                     ClassWithOverloadedBeforeValidate, TestEntity, Task])
     }
 
     @Rollback
@@ -51,7 +51,7 @@ class ValidationSpec extends GrailsDataTckSpec {
         def t
 
         when:
-        t = new TestEntity(name: "")
+        t = new TestEntity(name: '')
         boolean validationResult = t.validate()
         def errors = t.errors
 
@@ -68,14 +68,13 @@ class ValidationSpec extends GrailsDataTckSpec {
         !t.hasErrors()
     }
 
-
     @Rollback
     void "Test that validate is called on save()"() {
         given:
         def t
 
         when:
-        t = new TestEntity(name: "")
+        t = new TestEntity(name: '')
 
         then:
         t.save() == null
@@ -84,9 +83,9 @@ class ValidationSpec extends GrailsDataTckSpec {
 
         when:
         t.clearErrors()
-        t.name = "Bob"
+        t.name = 'Bob'
         t.age = 45
-        t.child = new ChildEntity(name: "Fred")
+        t.child = new ChildEntity(name: 'Fred')
         t = t.save()
 
         then:
@@ -172,7 +171,7 @@ class ValidationSpec extends GrailsDataTckSpec {
             resource = TransactionSynchronizationManager.unbindResource(manager.session.datastore.sessionFactory)
         }
 
-        t = new TestEntity(name: "")
+        t = new TestEntity(name: '')
 
         then:
         TransactionSynchronizationManager.getResource(manager.session.datastore.sessionFactory) == null
@@ -188,9 +187,9 @@ class ValidationSpec extends GrailsDataTckSpec {
 
         when:
         t.clearErrors()
-        t.name = "Bob"
+        t.name = 'Bob'
         t.age = 45
-        t.child = new ChildEntity(name: "Fred")
+        t.child = new ChildEntity(name: 'Fred')
         t = t.save(flush: true)
 
         then:
@@ -387,7 +386,6 @@ class ValidationSpec extends GrailsDataTckSpec {
         t != null
         TestEntity.count() == initialCount + 1
     }
-
 
     @Unroll
     void 'Two parameter validate is called on entity validator if it implements Validator interface'() {

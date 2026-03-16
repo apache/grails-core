@@ -32,8 +32,9 @@ import org.grails.datastore.gorm.query.transform.ApplyDetachedCriteriaTransform
 //@groovy.transform.EqualsAndHashCode - breaks gorm-neo4j: TODO: http://jira.grails.org/browse/GPNEO4J-10
 @EqualsAndHashCode(includes = ['firstName', 'lastName', 'age'])
 class Person implements Serializable, Comparable<Person>, AsyncEntity<Person> {
+
     static simpsons = where {
-        lastName == "Simpson"
+        lastName == 'Simpson'
     }
 
 //    Long id

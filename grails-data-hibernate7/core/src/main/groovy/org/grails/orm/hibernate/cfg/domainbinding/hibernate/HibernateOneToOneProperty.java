@@ -19,33 +19,31 @@
 package org.grails.orm.hibernate.cfg.domainbinding.hibernate;
 
 import java.beans.PropertyDescriptor;
+
+import org.hibernate.MappingException;
+
 import org.grails.datastore.mapping.model.MappingContext;
 import org.grails.datastore.mapping.model.PersistentEntity;
 import org.grails.datastore.mapping.model.types.mapping.OneToOneWithMapping;
 import org.grails.orm.hibernate.cfg.PropertyConfig;
-import org.hibernate.MappingException;
 
 /** Hibernate implementation of {@link org.grails.datastore.mapping.model.types.OneToOne} */
-public class HibernateOneToOneProperty extends OneToOneWithMapping<PropertyConfig>
-    implements HibernateToOneProperty {
-  public HibernateOneToOneProperty(
-      PersistentEntity entity, MappingContext context, PropertyDescriptor property) {
-    super(entity, context, property);
-  }
-
-  @Override
-  public void validateAssociation() {
-    HibernateToOneProperty.super.validateAssociation();
-    if (isHasOne() && !isBidirectional()) {
-      throw new MappingException(
-          "hasOne property ["
-              + getName()
-              + "] is not bidirectional. Specify the other side of the relationship!");
+public class HibernateOneToOneProperty extends OneToOneWithMapping<PropertyConfig> implements HibernateToOneProperty {
+    public HibernateOneToOneProperty(PersistentEntity entity, MappingContext context, PropertyDescriptor property) {
+        super(entity, context, property);
     }
-  }
 
-  @Override
-  public GrailsHibernatePersistentEntity getHibernateAssociatedEntity() {
-    return (GrailsHibernatePersistentEntity) super.getAssociatedEntity();
-  }
+    @Override
+    public void validateAssociation() {
+        HibernateToOneProperty.super.validateAssociation();
+        if (isHasOne() && !isBidirectional()) {
+            throw new MappingException("hasOne property [" + getName() +
+                    "] is not bidirectional. Specify the other side of the relationship!");
+        }
+    }
+
+    @Override
+    public GrailsHibernatePersistentEntity getHibernateAssociatedEntity() {
+        return (GrailsHibernatePersistentEntity) super.getAssociatedEntity();
+    }
 }

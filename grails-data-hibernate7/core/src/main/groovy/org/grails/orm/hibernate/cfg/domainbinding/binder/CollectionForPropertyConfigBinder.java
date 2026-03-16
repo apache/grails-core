@@ -18,19 +18,22 @@
  */
 package org.grails.orm.hibernate.cfg.domainbinding.binder;
 
-import jakarta.annotation.Nonnull;
 import java.util.Optional;
-import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernateToManyProperty;
+
+import jakarta.annotation.Nonnull;
+
 import org.hibernate.FetchMode;
 import org.hibernate.mapping.Collection;
+
+import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernateToManyProperty;
 
 /** The collection for property config binder class. */
 public class CollectionForPropertyConfigBinder {
 
-  /** Bind collection for property config. */
-  public void bindCollectionForPropertyConfig(
-      @Nonnull Collection collection, @Nonnull HibernateToManyProperty property) {
-    collection.setLazy(!FetchMode.JOIN.equals(property.getFetchMode()));
-    Optional.ofNullable(property.getLazy()).ifPresent(collection::setExtraLazy);
-  }
+    /** Bind collection for property config. */
+    public void bindCollectionForPropertyConfig(
+            @Nonnull Collection collection, @Nonnull HibernateToManyProperty property) {
+        collection.setLazy(!FetchMode.JOIN.equals(property.getFetchMode()));
+        Optional.ofNullable(property.getLazy()).ifPresent(collection::setExtraLazy);
+    }
 }

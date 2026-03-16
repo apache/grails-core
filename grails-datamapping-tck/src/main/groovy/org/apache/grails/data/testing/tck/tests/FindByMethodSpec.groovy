@@ -146,7 +146,6 @@ class FindByMethodSpec extends GrailsDataTckSpec {
         'Not Bypassed Highway' == highways[0].name
         'Not Bypassed Highway' == highways[1].name
 
-
         when:
         Book.newInstance(author: 'Jeff', title: 'Fly Fishing For Everyone', published: false).save()
         Book.newInstance(author: 'Jeff', title: 'DGGv2', published: true).save()

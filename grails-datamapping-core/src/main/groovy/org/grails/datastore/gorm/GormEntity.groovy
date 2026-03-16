@@ -28,7 +28,6 @@ import org.springframework.transaction.TransactionDefinition
 
 import grails.gorm.DetachedCriteria
 import org.grails.datastore.gorm.finders.FinderMethod
-import org.grails.datastore.gorm.query.GormQueryOperations
 import org.grails.datastore.mapping.dirty.checking.DirtyCheckable
 import org.grails.datastore.mapping.model.MappingContext
 import org.grails.datastore.mapping.model.PersistentEntity
@@ -1449,9 +1448,6 @@ trait GormEntity<D> implements GormValidateable, DirtyCheckable, GormEntityApi<D
     static List<D> findAll(CharSequence query, Collection params, Map args) {
         currentGormStaticApi().findAll(query, params, args)
     }
-
-
-
 
     @Generated
     private GormInstanceApi<D> currentGormInstanceApi() {

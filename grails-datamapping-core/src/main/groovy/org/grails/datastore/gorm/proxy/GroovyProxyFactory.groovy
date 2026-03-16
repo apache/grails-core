@@ -72,7 +72,7 @@ class GroovyProxyFactory implements ProxyFactory {
 
     @groovy.transform.CompileDynamic
     protected Serializable getIdDynamic(obj) {
-        if(obj.respondsTo('getId')) {
+        if (obj.respondsTo('getId')) {
             return (Serializable)obj.invokeMethod('getId', null)
         }
         return null
@@ -128,7 +128,7 @@ class GroovyProxyFactory implements ProxyFactory {
 
     @Override
     <T, K extends Serializable> T createProxy(Session session, AssociationQueryExecutor<K, T> executor, K associationKey) {
-        throw new UnsupportedOperationException("Association proxies are not supported by GroovyProxyFactory")
+        throw new UnsupportedOperationException('Association proxies are not supported by GroovyProxyFactory')
     }
 
     @Override

@@ -18,61 +18,62 @@
  */
 package org.grails.orm.hibernate.cfg.domainbinding.util;
 
+import org.slf4j.Logger;
+
 import org.grails.datastore.mapping.model.types.Association;
 import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernateManyToManyProperty;
 import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernateManyToOneProperty;
 import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernateOneToManyProperty;
 import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernateOneToOneProperty;
-import org.slf4j.Logger;
 
 @SuppressWarnings("PMD.LoggerIsNotStaticFinal")
 public class LogCascadeMapping {
 
-  private final Logger log;
+    private final Logger log;
 
-  public LogCascadeMapping(Logger log) {
-    this.log = log;
-  }
-
-  /**
-   * Logs the cascade mapping strategy for a given association if debug logging is enabled.
-   *
-   * @param association The association property.
-   * @param cascadeStrategy The calculated cascade string.
-   */
-  public void logCascadeMapping(Association association, CascadeBehavior cascadeStrategy) {
-    if (log.isDebugEnabled()) {
-      String assType = getAssociationType(association);
-      log.debug(
-          "Mapping cascade strategy for {} property {}.{} referencing type [{}] -> [CASCADE: {}]",
-          assType,
-          association.getOwner().getName(),
-          association.getName(),
-          association.getAssociatedEntity().getJavaClass().getName(),
-          cascadeStrategy);
+    public LogCascadeMapping(Logger log) {
+        this.log = log;
     }
-  }
 
-  /**
-   * Determines the string representation of an association's type using a modern switch expression
-   * with pattern matching.
-   *
-   * @param association The association to inspect.
-   * @return A string describing the association type (e.g., "one-to-many").
-   */
-  private String getAssociationType(Association association) {
-    // Use a standard if-else-if chain for compatibility with Java 17 and earlier.
-    if (association instanceof HibernateManyToManyProperty) {
-      return "many-to-many";
-    } else if (association instanceof HibernateOneToManyProperty) {
-      return "one-to-many";
-    } else if (association instanceof HibernateOneToOneProperty) {
-      return "one-to-one";
-    } else if (association instanceof HibernateManyToOneProperty) {
-      return "many-to-one";
-    } else if (association.isEmbedded()) {
-      return "embedded";
+    /**
+     * Logs the cascade mapping strategy for a given association if debug logging is enabled.
+     *
+     * @param association The association property.
+     * @param cascadeStrategy The calculated cascade string.
+     */
+    public void logCascadeMapping(Association association, CascadeBehavior cascadeStrategy) {
+        if (log.isDebugEnabled()) {
+            String assType = getAssociationType(association);
+            log.debug(
+                    "Mapping cascade strategy for {} property {}.{} referencing type [{}] -> [CASCADE: {}]",
+                    assType,
+                    association.getOwner().getName(),
+                    association.getName(),
+                    association.getAssociatedEntity().getJavaClass().getName(),
+                    cascadeStrategy);
+        }
     }
-    return "unknown";
-  }
+
+    /**
+     * Determines the string representation of an association's type using a modern switch expression
+     * with pattern matching.
+     *
+     * @param association The association to inspect.
+     * @return A string describing the association type (e.g., "one-to-many").
+     */
+    private String getAssociationType(Association association) {
+        // Use a standard if-else-if chain for compatibility with Java 17 and earlier.
+        if (association instanceof HibernateManyToManyProperty) {
+            return "many-to-many";
+        } else if (association instanceof HibernateOneToManyProperty) {
+            return "one-to-many";
+        } else if (association instanceof HibernateOneToOneProperty) {
+            return "one-to-one";
+        } else if (association instanceof HibernateManyToOneProperty) {
+            return "many-to-one";
+        } else if (association.isEmbedded()) {
+            return "embedded";
+        }
+        return "unknown";
+    }
 }

@@ -20,26 +20,24 @@ package org.grails.orm.hibernate.cfg.domainbinding.secondpass;
 
 import java.util.Objects;
 import java.util.stream.StreamSupport;
-import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernateToManyProperty;
+
 import org.hibernate.mapping.DependantValue;
+
+import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernateToManyProperty;
 
 /** Forces columns to be nullable and checks if the key is updateable. */
 public class CollectionKeyColumnUpdater {
 
-  /** Force nullable and check updatable. */
-  public void forceNullableAndCheckUpdatable(DependantValue key, HibernateToManyProperty property) {
-    StreamSupport.stream(key.getColumns().spliterator(), false)
-        .filter(Objects::nonNull)
-        .forEach(column -> column.setNullable(true));
+    /** Force nullable and check updatable. */
+    public void forceNullableAndCheckUpdatable(DependantValue key, HibernateToManyProperty property) {
+        StreamSupport.stream(key.getColumns().spliterator(), false)
+                .filter(Objects::nonNull)
+                .forEach(column -> column.setNullable(true));
 
-    long unidirectionalCount =
-        property.getHibernateOwner().getPersistentPropertiesToBind().stream()
-            .filter(
-                p ->
-                    p instanceof HibernateToManyProperty association
-                        && !association.isBidirectional())
-            .count();
+        long unidirectionalCount = property.getHibernateOwner().getPersistentPropertiesToBind().stream()
+                .filter(p -> p instanceof HibernateToManyProperty association && !association.isBidirectional())
+                .count();
 
-    key.setUpdateable(unidirectionalCount <= 1);
-  }
+        key.setUpdateable(unidirectionalCount <= 1);
+    }
 }

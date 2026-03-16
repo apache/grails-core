@@ -33,61 +33,61 @@ import org.hibernate.type.Type;
  */
 public class GeneratorCreationContextWrapper implements GeneratorCreationContext {
 
-  private final GeneratorCreationContext delegate;
-  private final Value value;
+    private final GeneratorCreationContext delegate;
+    private final Value value;
 
-  public GeneratorCreationContextWrapper(GeneratorCreationContext delegate, Value value) {
-    this.delegate = delegate;
-    this.value = value;
-  }
+    public GeneratorCreationContextWrapper(GeneratorCreationContext delegate, Value value) {
+        this.delegate = delegate;
+        this.value = value;
+    }
 
-  @Override
-  public Database getDatabase() {
-    return delegate.getDatabase();
-  }
+    @Override
+    public Database getDatabase() {
+        return delegate.getDatabase();
+    }
 
-  @Override
-  public ServiceRegistry getServiceRegistry() {
-    return delegate.getServiceRegistry();
-  }
+    @Override
+    public ServiceRegistry getServiceRegistry() {
+        return delegate.getServiceRegistry();
+    }
 
-  @Override
-  public String getDefaultCatalog() {
-    return delegate.getDefaultCatalog();
-  }
+    @Override
+    public String getDefaultCatalog() {
+        return delegate.getDefaultCatalog();
+    }
 
-  @Override
-  public String getDefaultSchema() {
-    return delegate.getDefaultSchema();
-  }
+    @Override
+    public String getDefaultSchema() {
+        return delegate.getDefaultSchema();
+    }
 
-  @Override
-  public PersistentClass getPersistentClass() {
-    return delegate.getPersistentClass();
-  }
+    @Override
+    public PersistentClass getPersistentClass() {
+        return delegate.getPersistentClass();
+    }
 
-  @Override
-  public RootClass getRootClass() {
-    return delegate.getRootClass();
-  }
+    @Override
+    public RootClass getRootClass() {
+        return delegate.getRootClass();
+    }
 
-  @Override
-  public Property getProperty() {
-    return delegate.getProperty();
-  }
+    @Override
+    public Property getProperty() {
+        return delegate.getProperty();
+    }
 
-  @Override
-  public Value getValue() {
-    return value != null ? value : delegate.getValue();
-  }
+    @Override
+    public Value getValue() {
+        return value != null ? value : delegate.getValue();
+    }
 
-  @Override
-  public Type getType() {
-    return delegate.getType();
-  }
+    @Override
+    public Type getType() {
+        return delegate.getType();
+    }
 
-  @Override
-  public SqlStringGenerationContext getSqlStringGenerationContext() {
-    return delegate.getSqlStringGenerationContext();
-  }
+    @Override
+    public SqlStringGenerationContext getSqlStringGenerationContext() {
+        return delegate.getSqlStringGenerationContext();
+    }
 }

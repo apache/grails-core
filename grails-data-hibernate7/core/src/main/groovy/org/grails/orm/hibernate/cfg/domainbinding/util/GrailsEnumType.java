@@ -21,31 +21,31 @@ package org.grails.orm.hibernate.cfg.domainbinding.util;
 import org.hibernate.MappingException;
 
 public enum GrailsEnumType {
-  DEFAULT("default"),
-  STRING("string"),
-  ORDINAL("ordinal"),
-  IDENTITY("identity");
+    DEFAULT("default"),
+    STRING("string"),
+    ORDINAL("ordinal"),
+    IDENTITY("identity");
 
-  private final String type;
+    private final String type;
 
-  GrailsEnumType(String type) {
-    this.type = type;
-  }
-
-  public String getType() {
-    return type;
-  }
-
-  public static GrailsEnumType fromString(String value) {
-    if (value == null || DEFAULT.type.equalsIgnoreCase(value)) {
-      return DEFAULT;
+    GrailsEnumType(String type) {
+        this.type = type;
     }
-    for (GrailsEnumType candidate : values()) {
-      if (candidate.type.equalsIgnoreCase(value)) {
-        return candidate;
-      }
+
+    public String getType() {
+        return type;
     }
-    throw new MappingException(
-        "Invalid enum type [" + value + "]. Valid values are: default, string, ordinal, identity.");
-  }
+
+    public static GrailsEnumType fromString(String value) {
+        if (value == null || DEFAULT.type.equalsIgnoreCase(value)) {
+            return DEFAULT;
+        }
+        for (GrailsEnumType candidate : values()) {
+            if (candidate.type.equalsIgnoreCase(value)) {
+                return candidate;
+            }
+        }
+        throw new MappingException(
+                "Invalid enum type [" + value + "]. Valid values are: default, string, ordinal, identity.");
+    }
 }

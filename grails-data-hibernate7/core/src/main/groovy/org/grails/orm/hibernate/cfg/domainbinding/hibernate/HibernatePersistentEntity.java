@@ -18,10 +18,16 @@
  */
 package org.grails.orm.hibernate.cfg.domainbinding.hibernate;
 
-import jakarta.persistence.Entity;
 import java.util.Optional;
+
+import jakarta.persistence.Entity;
+
 import org.grails.datastore.mapping.core.connections.ConnectionSourcesSupport;
-import org.grails.datastore.mapping.model.*;
+import org.grails.datastore.mapping.model.AbstractClassMapping;
+import org.grails.datastore.mapping.model.AbstractPersistentEntity;
+import org.grails.datastore.mapping.model.ClassMapping;
+import org.grails.datastore.mapping.model.MappingContext;
+import org.grails.datastore.mapping.model.PersistentProperty;
 import org.grails.orm.hibernate.cfg.Mapping;
 
 /**
@@ -31,74 +37,75 @@ import org.grails.orm.hibernate.cfg.Mapping;
  * @since 5.0
  */
 public class HibernatePersistentEntity extends AbstractPersistentEntity<Mapping>
-    implements GrailsHibernatePersistentEntity {
-  private final AbstractClassMapping<Mapping> classMapping;
-  private String dataSourceName;
+        implements GrailsHibernatePersistentEntity {
+    private final AbstractClassMapping<Mapping> classMapping;
+    private String dataSourceName;
 
-  public HibernatePersistentEntity(Class javaClass, final MappingContext context) {
-    super(javaClass, context);
+    public HibernatePersistentEntity(Class javaClass, final MappingContext context) {
+        super(javaClass, context);
 
-    this.classMapping = new HibernateClassMapping(this, context);
-  }
-
-  @Override
-  public void setDataSourceName(String dataSourceName) {
-    this.dataSourceName = dataSourceName;
-  }
-
-  @Override
-  public String getDataSourceName() {
-    return dataSourceName;
-  }
-
-  @Override
-  protected boolean includeIdentifiers() {
-    return true;
-  }
-
-  @Override
-  public ClassMapping<Mapping> getMapping() {
-    return this.classMapping;
-  }
-
-  public Mapping getMappedForm() {
-    return Optional.ofNullable(getMapping()).map(ClassMapping::getMappedForm).orElse(null);
-  }
-
-  @Override
-  public HibernatePersistentProperty getIdentity() {
-    return identity instanceof HibernatePersistentProperty ghpp ? ghpp : null;
-  }
-
-  @Override
-  @SuppressWarnings({"PMD.DataflowAnomalyAnalysis", "PMD.NullAssignment"})
-  public HibernatePersistentProperty[] getCompositeIdentity() {
-    PersistentProperty[] compositeIdentity = super.getCompositeIdentity();
-    if (compositeIdentity == null) {
-      return new HibernatePersistentProperty[0];
+        this.classMapping = new HibernateClassMapping(this, context);
     }
-    HibernatePersistentProperty[] result =
-        new HibernatePersistentProperty[compositeIdentity.length];
-    for (int i = 0; i < compositeIdentity.length; i++) {
-      result[i] = compositeIdentity[i] instanceof HibernatePersistentProperty ghpp ? ghpp : null;
+
+    @Override
+    public void setDataSourceName(String dataSourceName) {
+        this.dataSourceName = dataSourceName;
     }
-    return result;
-  }
 
-  private boolean isAnnotatedEntity() {
-    return getJavaClass().isAnnotationPresent(Entity.class);
-  }
+    @Override
+    public String getDataSourceName() {
+        return dataSourceName;
+    }
 
-  public boolean usesConnectionSource(String dataSourceName) {
-    return ConnectionSourcesSupport.usesConnectionSource(this, dataSourceName);
-  }
+    @Override
+    protected boolean includeIdentifiers() {
+        return true;
+    }
 
-  public boolean forGrailsDomainMapping(String dataSourceName) {
-    return !isAnnotatedEntity() && usesConnectionSource(dataSourceName) && isRoot();
-  }
+    @Override
+    public ClassMapping<Mapping> getMapping() {
+        return this.classMapping;
+    }
 
-  @Override
-  public HibernatePersistentProperty getVersion() {
-    return version instanceof HibernatePersistentProperty ghpp ? ghpp : null;
-  }
+    public Mapping getMappedForm() {
+        return Optional.ofNullable(getMapping())
+                .map(ClassMapping::getMappedForm)
+                .orElse(null);
+    }
+
+    @Override
+    public HibernatePersistentProperty getIdentity() {
+        return identity instanceof HibernatePersistentProperty ghpp ? ghpp : null;
+    }
+
+    @Override
+    @SuppressWarnings({"PMD.DataflowAnomalyAnalysis", "PMD.NullAssignment"})
+    public HibernatePersistentProperty[] getCompositeIdentity() {
+        PersistentProperty[] compositeIdentity = super.getCompositeIdentity();
+        if (compositeIdentity == null) {
+            return new HibernatePersistentProperty[0];
+        }
+        HibernatePersistentProperty[] result = new HibernatePersistentProperty[compositeIdentity.length];
+        for (int i = 0; i < compositeIdentity.length; i++) {
+            result[i] = compositeIdentity[i] instanceof HibernatePersistentProperty ghpp ? ghpp : null;
+        }
+        return result;
+    }
+
+    private boolean isAnnotatedEntity() {
+        return getJavaClass().isAnnotationPresent(Entity.class);
+    }
+
+    public boolean usesConnectionSource(String dataSourceName) {
+        return ConnectionSourcesSupport.usesConnectionSource(this, dataSourceName);
+    }
+
+    public boolean forGrailsDomainMapping(String dataSourceName) {
+        return !isAnnotatedEntity() && usesConnectionSource(dataSourceName) && isRoot();
+    }
+
+    @Override
+    public HibernatePersistentProperty getVersion() {
+        return version instanceof HibernatePersistentProperty ghpp ? ghpp : null;
+    }
 }

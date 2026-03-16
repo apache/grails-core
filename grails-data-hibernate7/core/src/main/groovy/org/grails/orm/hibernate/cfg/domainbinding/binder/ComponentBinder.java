@@ -19,70 +19,67 @@
 package org.grails.orm.hibernate.cfg.domainbinding.binder;
 
 import jakarta.annotation.Nonnull;
-import org.grails.orm.hibernate.cfg.GrailsHibernateUtil;
-import org.grails.orm.hibernate.cfg.MappingCacheHolder;
-import org.grails.orm.hibernate.cfg.domainbinding.hibernate.GrailsHibernatePersistentEntity;
-import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernateEmbeddedProperty;
-import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernatePersistentProperty;
+
 import org.hibernate.boot.spi.InFlightMetadataCollector;
 import org.hibernate.boot.spi.MetadataBuildingContext;
 import org.hibernate.mapping.Component;
 import org.hibernate.mapping.PersistentClass;
 import org.hibernate.mapping.Table;
 
+import org.grails.orm.hibernate.cfg.GrailsHibernateUtil;
+import org.grails.orm.hibernate.cfg.MappingCacheHolder;
+import org.grails.orm.hibernate.cfg.domainbinding.hibernate.GrailsHibernatePersistentEntity;
+import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernateEmbeddedProperty;
+import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernatePersistentProperty;
+
 @SuppressWarnings("PMD.DataflowAnomalyAnalysis")
 public class ComponentBinder {
 
-  private final MetadataBuildingContext metadataBuildingContext;
-  private final MappingCacheHolder mappingCacheHolder;
-  private final ComponentUpdater componentUpdater;
-  private GrailsPropertyBinder grailsPropertyBinder;
+    private final MetadataBuildingContext metadataBuildingContext;
+    private final MappingCacheHolder mappingCacheHolder;
+    private final ComponentUpdater componentUpdater;
+    private GrailsPropertyBinder grailsPropertyBinder;
 
-  public ComponentBinder(
-      MetadataBuildingContext metadataBuildingContext,
-      MappingCacheHolder mappingCacheHolder,
-      ComponentUpdater componentUpdater) {
-    this.metadataBuildingContext = metadataBuildingContext;
-    this.mappingCacheHolder = mappingCacheHolder;
-    this.componentUpdater = componentUpdater;
-  }
-
-  public void setGrailsPropertyBinder(GrailsPropertyBinder grailsPropertyBinder) {
-    this.grailsPropertyBinder = grailsPropertyBinder;
-  }
-
-  public Component bindComponent(
-      PersistentClass owner,
-      HibernateEmbeddedProperty embeddedProperty,
-      @Nonnull InFlightMetadataCollector mappings,
-      String path) {
-    Component component = new Component(metadataBuildingContext, owner);
-    Class<?> type = embeddedProperty.getType();
-    String role = GrailsHibernateUtil.qualify(type.getName(), embeddedProperty.getName());
-    component.setRoleName(role);
-    component.setComponentClassName(type.getName());
-
-    GrailsHibernatePersistentEntity domainClass =
-        (GrailsHibernatePersistentEntity) embeddedProperty.getAssociatedEntity();
-    mappingCacheHolder.cacheMapping(domainClass);
-
-    Table table = component.getOwner().getTable();
-    PersistentClass persistentClass = component.getOwner();
-    String currentPath =
-        path.isEmpty() ? embeddedProperty.getName() : path + "." + embeddedProperty.getName();
-    Class<?> propertyType = embeddedProperty.getOwner().getJavaClass();
-
-    domainClass
-        .getHibernateParentProperty(propertyType)
-        .ifPresent(p -> component.setParentProperty(p.getName()));
-
-    for (HibernatePersistentProperty peerProperty :
-        domainClass.getHibernatePersistentProperties(propertyType)) {
-      var value =
-          grailsPropertyBinder.bindProperty(
-              persistentClass, table, currentPath, embeddedProperty, peerProperty, mappings);
-      componentUpdater.updateComponent(component, embeddedProperty, peerProperty, value);
+    public ComponentBinder(
+            MetadataBuildingContext metadataBuildingContext,
+            MappingCacheHolder mappingCacheHolder,
+            ComponentUpdater componentUpdater) {
+        this.metadataBuildingContext = metadataBuildingContext;
+        this.mappingCacheHolder = mappingCacheHolder;
+        this.componentUpdater = componentUpdater;
     }
-    return component;
-  }
+
+    public void setGrailsPropertyBinder(GrailsPropertyBinder grailsPropertyBinder) {
+        this.grailsPropertyBinder = grailsPropertyBinder;
+    }
+
+    public Component bindComponent(
+            PersistentClass owner,
+            HibernateEmbeddedProperty embeddedProperty,
+            @Nonnull InFlightMetadataCollector mappings,
+            String path) {
+        Component component = new Component(metadataBuildingContext, owner);
+        Class<?> type = embeddedProperty.getType();
+        String role = GrailsHibernateUtil.qualify(type.getName(), embeddedProperty.getName());
+        component.setRoleName(role);
+        component.setComponentClassName(type.getName());
+
+        GrailsHibernatePersistentEntity domainClass =
+                (GrailsHibernatePersistentEntity) embeddedProperty.getAssociatedEntity();
+        mappingCacheHolder.cacheMapping(domainClass);
+
+        Table table = component.getOwner().getTable();
+        PersistentClass persistentClass = component.getOwner();
+        String currentPath = path.isEmpty() ? embeddedProperty.getName() : path + "." + embeddedProperty.getName();
+        Class<?> propertyType = embeddedProperty.getOwner().getJavaClass();
+
+        domainClass.getHibernateParentProperty(propertyType).ifPresent(p -> component.setParentProperty(p.getName()));
+
+        for (HibernatePersistentProperty peerProperty : domainClass.getHibernatePersistentProperties(propertyType)) {
+            var value = grailsPropertyBinder.bindProperty(
+                    persistentClass, table, currentPath, embeddedProperty, peerProperty, mappings);
+            componentUpdater.updateComponent(component, embeddedProperty, peerProperty, value);
+        }
+        return component;
+    }
 }

@@ -21,12 +21,14 @@ package org.grails.orm.hibernate.event.listener;
 import java.util.List;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
+
+import org.springframework.context.ApplicationEvent;
+
 import org.grails.datastore.mapping.engine.event.AbstractPersistenceEvent;
 import org.grails.datastore.mapping.engine.event.AbstractPersistenceEventListener;
 import org.grails.orm.hibernate.AbstractHibernateDatastore;
 import org.grails.orm.hibernate.connections.HibernateConnectionSourceSettings;
 import org.grails.orm.hibernate.support.SoftKey;
-import org.springframework.context.ApplicationEvent;
 
 /**
  * Invokes closure events on domain entities such as beforeInsert, beforeUpdate and beforeDelete.
@@ -38,39 +40,39 @@ import org.springframework.context.ApplicationEvent;
  */
 public abstract class AbstractHibernateEventListener extends AbstractPersistenceEventListener {
 
-  /** The cached should trigger. */
-  protected final transient ConcurrentMap<SoftKey<Class<?>>, Boolean> cachedShouldTrigger =
-      new ConcurrentHashMap<SoftKey<Class<?>>, Boolean>();
+    /** The cached should trigger. */
+    protected final transient ConcurrentMap<SoftKey<Class<?>>, Boolean> cachedShouldTrigger =
+            new ConcurrentHashMap<SoftKey<Class<?>>, Boolean>();
 
-  /** The fail on error. */
-  protected final boolean failOnError;
+    /** The fail on error. */
+    protected final boolean failOnError;
 
-  /** The fail on error packages. */
-  protected final List<?> failOnErrorPackages;
+    /** The fail on error packages. */
+    protected final List<?> failOnErrorPackages;
 
-  /** Creates a new {@link AbstractHibernateEventListener} instance. */
-  protected AbstractHibernateEventListener(AbstractHibernateDatastore datastore) {
-    super(datastore);
-    HibernateConnectionSourceSettings settings =
-        datastore.getConnectionSources().getDefaultConnectionSource().getSettings();
-    this.failOnError = settings.isFailOnError();
-    this.failOnErrorPackages = settings.getFailOnErrorPackages();
-  }
+    /** Creates a new {@link AbstractHibernateEventListener} instance. */
+    protected AbstractHibernateEventListener(AbstractHibernateDatastore datastore) {
+        super(datastore);
+        HibernateConnectionSourceSettings settings =
+                datastore.getConnectionSources().getDefaultConnectionSource().getSettings();
+        this.failOnError = settings.isFailOnError();
+        this.failOnErrorPackages = settings.getFailOnErrorPackages();
+    }
 
-  /**
-   * {@inheritDoc}
-   *
-   * @see org.springframework.context.event.SmartApplicationListener#supportsEventType(
-   *     java.lang.Class)
-   */
-  public boolean supportsEventType(Class<? extends ApplicationEvent> eventType) {
-    return AbstractPersistenceEvent.class.isAssignableFrom(eventType);
-  }
+    /**
+     * {@inheritDoc}
+     *
+     * @see org.springframework.context.event.SmartApplicationListener#supportsEventType(
+     *     java.lang.Class)
+     */
+    public boolean supportsEventType(Class<? extends ApplicationEvent> eventType) {
+        return AbstractPersistenceEvent.class.isAssignableFrom(eventType);
+    }
 
-  /**
-   * @return The hibernate datastore
-   */
-  protected AbstractHibernateDatastore getDatastore() {
-    return (AbstractHibernateDatastore) this.datastore;
-  }
+    /**
+     * @return The hibernate datastore
+     */
+    protected AbstractHibernateDatastore getDatastore() {
+        return (AbstractHibernateDatastore) this.datastore;
+    }
 }

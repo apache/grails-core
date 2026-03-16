@@ -18,10 +18,13 @@
  */
 package org.grails.orm.hibernate.cfg.domainbinding.util;
 
-import static org.grails.orm.hibernate.cfg.domainbinding.util.CascadeBehavior.*;
-
 import java.util.Map;
 import java.util.Optional;
+
+import org.hibernate.MappingException;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import org.grails.datastore.mapping.model.types.Association;
 import org.grails.datastore.mapping.model.types.Basic;
 import org.grails.datastore.mapping.model.types.Embedded;
@@ -33,79 +36,79 @@ import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernateManyToOnePr
 import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernateOneToManyProperty;
 import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernateOneToOneProperty;
 import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernatePersistentProperty;
-import org.hibernate.MappingException;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+
+import static org.grails.orm.hibernate.cfg.domainbinding.util.CascadeBehavior.ALL;
+import static org.grails.orm.hibernate.cfg.domainbinding.util.CascadeBehavior.NONE;
+import static org.grails.orm.hibernate.cfg.domainbinding.util.CascadeBehavior.SAVE_UPDATE;
 
 /** The cascade behavior fetcher class. */
 public class CascadeBehaviorFetcher {
 
-  private static final Logger LOG = LoggerFactory.getLogger(CascadeBehaviorFetcher.class);
+    private static final Logger LOG = LoggerFactory.getLogger(CascadeBehaviorFetcher.class);
 
-  private final LogCascadeMapping logCascadeMapping;
+    private final LogCascadeMapping logCascadeMapping;
 
-  /** Creates a new {@link CascadeBehaviorFetcher} instance. */
-  public CascadeBehaviorFetcher(LogCascadeMapping logCascadeMapping) {
-    this.logCascadeMapping = logCascadeMapping;
-  }
-
-  /** Creates a new {@link CascadeBehaviorFetcher} instance. */
-  public CascadeBehaviorFetcher() {
-    this(new LogCascadeMapping(LOG));
-  }
-
-  /** Gets the cascade behaviour. */
-  public String getCascadeBehaviour(Association<?> association) {
-    var cascadeStrategy =
-        getDefinedBehavior((HibernatePersistentProperty) association)
-            .orElse(getImpliedBehavior(association));
-    logCascadeMapping.logCascadeMapping(association, cascadeStrategy);
-    return cascadeStrategy.getValue();
-  }
-
-  private Optional<CascadeBehavior> getDefinedBehavior(HibernatePersistentProperty grailsProperty) {
-    return Optional.ofNullable(grailsProperty.getMappedForm())
-        .map(PropertyConfig::getCascade)
-        .map(CascadeBehavior::fromString);
-  }
-
-  private CascadeBehavior getImpliedBehavior(Association<?> association) {
-    if (association.getAssociatedEntity() == null) {
-      // NEW BEHAVIOR, FAIL-FAST
-      throw new MappingException("Relationship " + association + " has no associated entity");
+    /** Creates a new {@link CascadeBehaviorFetcher} instance. */
+    public CascadeBehaviorFetcher(LogCascadeMapping logCascadeMapping) {
+        this.logCascadeMapping = logCascadeMapping;
     }
-    if (association instanceof Embedded) {
-      return ALL;
-    }
-    if (association.isHasOne()) {
-      return ALL;
-    } else if (association instanceof HibernateOneToOneProperty) {
-      return association.isOwningSide() ? ALL : SAVE_UPDATE;
-    } else if (association instanceof HibernateOneToManyProperty) {
-      return association.isCorrectlyOwned() ? ALL : SAVE_UPDATE;
-    } else if (association instanceof HibernateManyToManyProperty) {
-      return association.isCorrectlyOwned() || association.isCircular() ? SAVE_UPDATE : NONE;
-    } else if (association instanceof HibernateManyToOneProperty) {
-      if (association.isCorrectlyOwned() && !association.isCircular()) {
-        return ALL;
-      } else if (association.isCompositeIdProperty()) {
-        return ALL;
-      } else {
-        return NONE;
-      }
-    } else if (association instanceof Basic) {
-      return ALL;
-    } else if (Map.class.isAssignableFrom(association.getType())) {
-      return association.isCorrectlyOwned() ? ALL : SAVE_UPDATE;
-    } else {
-      throw new MappingException("Unrecognized association type " + association.getType());
-    }
-  }
 
-  private Mapping getOwnersWrappedForm(Association<?> association) {
-    if (association.getOwner() instanceof GrailsHibernatePersistentEntity persistentEntity) {
-      return persistentEntity.getMappedForm();
+    /** Creates a new {@link CascadeBehaviorFetcher} instance. */
+    public CascadeBehaviorFetcher() {
+        this(new LogCascadeMapping(LOG));
     }
-    return null;
-  }
+
+    /** Gets the cascade behaviour. */
+    public String getCascadeBehaviour(Association<?> association) {
+        var cascadeStrategy =
+                getDefinedBehavior((HibernatePersistentProperty) association).orElse(getImpliedBehavior(association));
+        logCascadeMapping.logCascadeMapping(association, cascadeStrategy);
+        return cascadeStrategy.getValue();
+    }
+
+    private Optional<CascadeBehavior> getDefinedBehavior(HibernatePersistentProperty grailsProperty) {
+        return Optional.ofNullable(grailsProperty.getMappedForm())
+                .map(PropertyConfig::getCascade)
+                .map(CascadeBehavior::fromString);
+    }
+
+    private CascadeBehavior getImpliedBehavior(Association<?> association) {
+        if (association.getAssociatedEntity() == null) {
+            // NEW BEHAVIOR, FAIL-FAST
+            throw new MappingException("Relationship " + association + " has no associated entity");
+        }
+        if (association instanceof Embedded) {
+            return ALL;
+        }
+        if (association.isHasOne()) {
+            return ALL;
+        } else if (association instanceof HibernateOneToOneProperty) {
+            return association.isOwningSide() ? ALL : SAVE_UPDATE;
+        } else if (association instanceof HibernateOneToManyProperty) {
+            return association.isCorrectlyOwned() ? ALL : SAVE_UPDATE;
+        } else if (association instanceof HibernateManyToManyProperty) {
+            return association.isCorrectlyOwned() || association.isCircular() ? SAVE_UPDATE : NONE;
+        } else if (association instanceof HibernateManyToOneProperty) {
+            if (association.isCorrectlyOwned() && !association.isCircular()) {
+                return ALL;
+            } else if (association.isCompositeIdProperty()) {
+                return ALL;
+            } else {
+                return NONE;
+            }
+        } else if (association instanceof Basic) {
+            return ALL;
+        } else if (Map.class.isAssignableFrom(association.getType())) {
+            return association.isCorrectlyOwned() ? ALL : SAVE_UPDATE;
+        } else {
+            throw new MappingException("Unrecognized association type " + association.getType());
+        }
+    }
+
+    private Mapping getOwnersWrappedForm(Association<?> association) {
+        if (association.getOwner() instanceof GrailsHibernatePersistentEntity persistentEntity) {
+            return persistentEntity.getMappedForm();
+        }
+        return null;
+    }
 }

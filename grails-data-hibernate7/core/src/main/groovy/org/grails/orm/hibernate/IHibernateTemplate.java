@@ -18,9 +18,11 @@
  */
 package org.grails.orm.hibernate;
 
-import groovy.lang.Closure;
 import java.io.Serializable;
 import java.util.Collection;
+
+import groovy.lang.Closure;
+
 import org.hibernate.LockMode;
 import org.hibernate.SessionFactory;
 import org.hibernate.query.Query;
@@ -33,48 +35,47 @@ import org.hibernate.query.Query;
  */
 public interface IHibernateTemplate {
 
-  void persist(Object o);
+    void persist(Object o);
 
-  /**
-   * Merge the state of the given entity into the current persistence context. Returns the managed
-   * instance that the state was merged to.
-   */
-  Object merge(Object o);
+    /**
+     * Merge the state of the given entity into the current persistence context. Returns the managed
+     * instance that the state was merged to.
+     */
+    Object merge(Object o);
 
-  void refresh(Object o);
+    void refresh(Object o);
 
-  void lock(Object o, LockMode lockMode);
+    void lock(Object o, LockMode lockMode);
 
-  void flush();
+    void flush();
 
-  void clear();
+    void clear();
 
-  void evict(Object o);
+    void evict(Object o);
 
-  boolean contains(Object o);
+    boolean contains(Object o);
 
-  void setFlushMode(int mode);
+    void setFlushMode(int mode);
 
-  int getFlushMode();
+    int getFlushMode();
 
-  void deleteAll(Collection<?> list);
+    void deleteAll(Collection<?> list);
 
-  void applySettings(Query<?> query);
+    void applySettings(Query<?> query);
 
-  <T> T get(Class<T> type, Serializable key);
+    <T> T get(Class<T> type, Serializable key);
 
-  <T> T get(Class<T> type, Serializable key, LockMode mode);
+    <T> T get(Class<T> type, Serializable key, LockMode mode);
 
-  <T> T load(Class<T> type, Serializable key);
+    <T> T load(Class<T> type, Serializable key);
 
-  void remove(Object o);
+    void remove(Object o);
 
-  SessionFactory getSessionFactory();
+    SessionFactory getSessionFactory();
 
-  <T> T execute(Closure<T> callable);
+    <T> T execute(Closure<T> callable);
 
-  <T> T executeWithNewSession(Closure<T> callable);
+    <T> T executeWithNewSession(Closure<T> callable);
 
-  <T1> T1 executeWithExistingOrCreateNewSession(
-      SessionFactory sessionFactory, Closure<T1> callable);
+    <T1> T1 executeWithExistingOrCreateNewSession(SessionFactory sessionFactory, Closure<T1> callable);
 }

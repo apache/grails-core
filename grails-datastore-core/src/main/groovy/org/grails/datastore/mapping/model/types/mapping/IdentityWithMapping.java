@@ -18,13 +18,13 @@
  */
 package org.grails.datastore.mapping.model.types.mapping;
 
+import java.beans.PropertyDescriptor;
+
 import org.grails.datastore.mapping.config.Property;
 import org.grails.datastore.mapping.model.MappingContext;
 import org.grails.datastore.mapping.model.PersistentEntity;
 import org.grails.datastore.mapping.model.PropertyMapping;
 import org.grails.datastore.mapping.model.types.Identity;
-
-import java.beans.PropertyDescriptor;
 
 /**
  * An {@link org.grails.datastore.mapping.model.types.Identity} property with a {@link org.grails.datastore.mapping.model.PropertyMapping}

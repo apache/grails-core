@@ -18,71 +18,69 @@
  */
 package org.grails.orm.hibernate.cfg.domainbinding.binder;
 
-import jakarta.annotation.Nonnull;
 import java.util.Collection;
-import org.grails.orm.hibernate.cfg.Mapping;
-import org.grails.orm.hibernate.cfg.domainbinding.hibernate.GrailsHibernatePersistentEntity;
-import org.grails.orm.hibernate.cfg.domainbinding.util.DefaultColumnNameFetcher;
-import org.grails.orm.hibernate.cfg.domainbinding.util.MultiTenantFilterBinder;
+
+import jakarta.annotation.Nonnull;
+
 import org.hibernate.boot.spi.InFlightMetadataCollector;
 import org.hibernate.mapping.RootClass;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import org.grails.orm.hibernate.cfg.domainbinding.hibernate.GrailsHibernatePersistentEntity;
+import org.grails.orm.hibernate.cfg.domainbinding.util.MultiTenantFilterBinder;
+
 /** Binder for root classes. */
 @SuppressWarnings("PMD.DataflowAnomalyAnalysis")
 public class RootBinder {
 
-  private static final Logger LOG = LoggerFactory.getLogger(RootBinder.class);
+    private static final Logger LOG = LoggerFactory.getLogger(RootBinder.class);
 
-  private final String dataSourceName;
-  private final MultiTenantFilterBinder multiTenantFilterBinder;
-  private final SubClassBinder subClassBinder;
-  private final RootPersistentClassCommonValuesBinder rootPersistentClassCommonValuesBinder;
-  private final DiscriminatorPropertyBinder discriminatorPropertyBinder;
+    private final String dataSourceName;
+    private final MultiTenantFilterBinder multiTenantFilterBinder;
+    private final SubClassBinder subClassBinder;
+    private final RootPersistentClassCommonValuesBinder rootPersistentClassCommonValuesBinder;
+    private final DiscriminatorPropertyBinder discriminatorPropertyBinder;
 
-  public RootBinder(
-      String dataSourceName,
-      MultiTenantFilterBinder multiTenantFilterBinder,
-      SubClassBinder subClassBinder,
-      RootPersistentClassCommonValuesBinder rootPersistentClassCommonValuesBinder,
-      DiscriminatorPropertyBinder discriminatorPropertyBinder) {
-    this.dataSourceName = dataSourceName;
-    this.multiTenantFilterBinder = multiTenantFilterBinder;
-    this.subClassBinder = subClassBinder;
-    this.rootPersistentClassCommonValuesBinder = rootPersistentClassCommonValuesBinder;
-    this.discriminatorPropertyBinder = discriminatorPropertyBinder;
-  }
-
-  /**
-   * Binds a root class (one with no super classes) to the runtime meta model based on the supplied
-   * Grails domain class
-   *
-   * @param entity The Grails domain class
-   * @param mappings The Hibernate Mappings object
-   */
-  public void bindRoot(
-      @Nonnull GrailsHibernatePersistentEntity entity,
-      @Nonnull InFlightMetadataCollector mappings) {
-    if (mappings.getEntityBinding(entity.getName()) != null) {
-      LOG.warn("[RootBinder] Class [" + entity.getName() + "] is already mapped, skipping.. ");
-      return;
+    public RootBinder(
+            String dataSourceName,
+            MultiTenantFilterBinder multiTenantFilterBinder,
+            SubClassBinder subClassBinder,
+            RootPersistentClassCommonValuesBinder rootPersistentClassCommonValuesBinder,
+            DiscriminatorPropertyBinder discriminatorPropertyBinder) {
+        this.dataSourceName = dataSourceName;
+        this.multiTenantFilterBinder = multiTenantFilterBinder;
+        this.subClassBinder = subClassBinder;
+        this.rootPersistentClassCommonValuesBinder = rootPersistentClassCommonValuesBinder;
+        this.discriminatorPropertyBinder = discriminatorPropertyBinder;
     }
 
-    Collection<GrailsHibernatePersistentEntity> children = entity.getChildEntities(dataSourceName);
-    RootClass root =
-        rootPersistentClassCommonValuesBinder.bindRootPersistentClassCommonValues(
-            entity, children, mappings);
+    /**
+     * Binds a root class (one with no super classes) to the runtime meta model based on the supplied
+     * Grails domain class
+     *
+     * @param entity The Grails domain class
+     * @param mappings The Hibernate Mappings object
+     */
+    public void bindRoot(@Nonnull GrailsHibernatePersistentEntity entity, @Nonnull InFlightMetadataCollector mappings) {
+        if (mappings.getEntityBinding(entity.getName()) != null) {
+            LOG.warn("[RootBinder] Class [" + entity.getName() + "] is already mapped, skipping.. ");
+            return;
+        }
 
-    if (!children.isEmpty() && entity.isTablePerHierarchy()) {
-      discriminatorPropertyBinder.bindDiscriminatorProperty(root);
+        Collection<GrailsHibernatePersistentEntity> children = entity.getChildEntities(dataSourceName);
+        RootClass root =
+                rootPersistentClassCommonValuesBinder.bindRootPersistentClassCommonValues(entity, children, mappings);
+
+        if (!children.isEmpty() && entity.isTablePerHierarchy()) {
+            discriminatorPropertyBinder.bindDiscriminatorProperty(root);
+        }
+
+        // bind the sub classes
+        children.forEach(sub -> subClassBinder.bindSubClass(sub, root, mappings));
+
+        multiTenantFilterBinder.bind(entity, root);
+
+        mappings.addEntityBinding(root);
     }
-
-    // bind the sub classes
-    children.forEach(sub -> subClassBinder.bindSubClass(sub, root, mappings));
-
-    multiTenantFilterBinder.bind(entity, root);
-
-    mappings.addEntityBinding(root);
-  }
 }

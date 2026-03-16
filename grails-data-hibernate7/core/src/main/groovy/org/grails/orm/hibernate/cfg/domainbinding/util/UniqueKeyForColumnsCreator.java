@@ -20,6 +20,7 @@ package org.grails.orm.hibernate.cfg.domainbinding.util;
 
 import java.util.Collections;
 import java.util.List;
+
 import org.hibernate.mapping.Column;
 import org.hibernate.mapping.Table;
 import org.hibernate.mapping.UniqueKey;
@@ -28,30 +29,30 @@ import org.slf4j.LoggerFactory;
 
 public class UniqueKeyForColumnsCreator {
 
-  private final UniqueNameGenerator uniqueNameGenerator;
+    private final UniqueNameGenerator uniqueNameGenerator;
 
-  public UniqueKeyForColumnsCreator() {
-    uniqueNameGenerator = new UniqueNameGenerator();
-  }
-
-  protected UniqueKeyForColumnsCreator(UniqueNameGenerator uniqueNameGenerator) {
-    this.uniqueNameGenerator = uniqueNameGenerator;
-  }
-
-  private static final Logger LOG = LoggerFactory.getLogger(UniqueKeyForColumnsCreator.class);
-
-  public void createUniqueKeyForColumns(Table table, List<Column> columns) {
-    Collections.reverse(columns);
-
-    UniqueKey uk = new UniqueKey(table);
-    for (Column column : columns) {
-      uk.addColumn(column);
+    public UniqueKeyForColumnsCreator() {
+        uniqueNameGenerator = new UniqueNameGenerator();
     }
 
-    if (LOG.isDebugEnabled()) {
-      LOG.debug("create unique key for {} columns = {}", table.getName(), columns);
+    protected UniqueKeyForColumnsCreator(UniqueNameGenerator uniqueNameGenerator) {
+        this.uniqueNameGenerator = uniqueNameGenerator;
     }
-    uniqueNameGenerator.setGeneratedUniqueName(uk);
-    table.addUniqueKey(uk);
-  }
+
+    private static final Logger LOG = LoggerFactory.getLogger(UniqueKeyForColumnsCreator.class);
+
+    public void createUniqueKeyForColumns(Table table, List<Column> columns) {
+        Collections.reverse(columns);
+
+        UniqueKey uk = new UniqueKey(table);
+        for (Column column : columns) {
+            uk.addColumn(column);
+        }
+
+        if (LOG.isDebugEnabled()) {
+            LOG.debug("create unique key for {} columns = {}", table.getName(), columns);
+        }
+        uniqueNameGenerator.setGeneratedUniqueName(uk);
+        table.addUniqueKey(uk);
+    }
 }

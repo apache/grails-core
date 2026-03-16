@@ -19,65 +19,67 @@
 package org.grails.orm.hibernate.cfg.domainbinding.hibernate;
 
 import org.grails.datastore.mapping.core.connections.ConnectionSourcesSupport;
-import org.grails.datastore.mapping.model.*;
+import org.grails.datastore.mapping.model.ClassMapping;
+import org.grails.datastore.mapping.model.EmbeddedPersistentEntity;
+import org.grails.datastore.mapping.model.MappingContext;
 import org.grails.orm.hibernate.cfg.Mapping;
 
 public class HibernateEmbeddedPersistentEntity extends EmbeddedPersistentEntity<Mapping>
-    implements GrailsHibernatePersistentEntity {
-  private final ClassMapping<Mapping> classMapping;
-  private String dataSourceName;
+        implements GrailsHibernatePersistentEntity {
+    private final ClassMapping<Mapping> classMapping;
+    private String dataSourceName;
 
-  public Mapping getMappedForm() {
-    return classMapping.getMappedForm();
-  }
+    public Mapping getMappedForm() {
+        return classMapping.getMappedForm();
+    }
 
-  @Override
-  public void setDataSourceName(String dataSourceName) {
-    this.dataSourceName = dataSourceName;
-  }
+    @Override
+    public void setDataSourceName(String dataSourceName) {
+        this.dataSourceName = dataSourceName;
+    }
 
-  @Override
-  public String getDataSourceName() {
-    return dataSourceName;
-  }
+    @Override
+    public String getDataSourceName() {
+        return dataSourceName;
+    }
 
-  @Override
-  public HibernatePersistentProperty getIdentity() {
-    return super.getIdentity() instanceof HibernatePersistentProperty ghpp ? ghpp : null;
-  }
+    @Override
+    public HibernatePersistentProperty getIdentity() {
+        return super.getIdentity() instanceof HibernatePersistentProperty ghpp ? ghpp : null;
+    }
 
-  @Override
-  public HibernatePersistentProperty[] getCompositeIdentity() {
-    return new HibernatePersistentProperty[0];
-  }
+    @Override
+    public HibernatePersistentProperty[] getCompositeIdentity() {
+        return new HibernatePersistentProperty[0];
+    }
 
-  @Override
-  public HibernatePersistentProperty getVersion() {
-    return super.getVersion() instanceof HibernatePersistentProperty ghpp ? ghpp : null;
-  }
+    @Override
+    public HibernatePersistentProperty getVersion() {
+        return super.getVersion() instanceof HibernatePersistentProperty ghpp ? ghpp : null;
+    }
 
-  @Override
-  public boolean forGrailsDomainMapping(String dataSourceName) {
-    return false;
-  }
+    @Override
+    public boolean forGrailsDomainMapping(String dataSourceName) {
+        return false;
+    }
 
-  @Override
-  public boolean usesConnectionSource(String dataSourceName) {
-    return ConnectionSourcesSupport.usesConnectionSource(this, dataSourceName);
-  }
+    @Override
+    public boolean usesConnectionSource(String dataSourceName) {
+        return ConnectionSourcesSupport.usesConnectionSource(this, dataSourceName);
+    }
 
-  @Override
-  public boolean isAbstract() {
-    return false;
-  }
+    @Override
+    public boolean isAbstract() {
+        return false;
+    }
 
-  public HibernateEmbeddedPersistentEntity(Class type, MappingContext ctx) {
-    super(type, ctx);
-    this.classMapping = new HibernateEmbeddedClassMapping(this, ctx);
-  }
+    public HibernateEmbeddedPersistentEntity(Class type, MappingContext ctx) {
+        super(type, ctx);
+        this.classMapping = new HibernateEmbeddedClassMapping(this, ctx);
+    }
 
-  @Override
-  public ClassMapping getMapping() {
-    return classMapping;
-  }
+    @Override
+    public ClassMapping getMapping() {
+        return classMapping;
+    }
 }

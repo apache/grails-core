@@ -59,7 +59,7 @@ public class FindAllByFinder extends DynamicFinder {
         return q.list();
     }
 
-    protected void adjustQuery( Query query) {
+    protected void adjustQuery(Query query) {
         query.projections().distinct();
     }
 

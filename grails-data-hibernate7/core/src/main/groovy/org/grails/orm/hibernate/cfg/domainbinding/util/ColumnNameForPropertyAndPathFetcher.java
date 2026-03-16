@@ -19,6 +19,7 @@
 package org.grails.orm.hibernate.cfg.domainbinding.util;
 
 import java.util.Optional;
+
 import org.grails.orm.hibernate.cfg.ColumnConfig;
 import org.grails.orm.hibernate.cfg.GrailsHibernateUtil;
 import org.grails.orm.hibernate.cfg.PersistentEntityNamingStrategy;
@@ -26,35 +27,31 @@ import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernatePersistentP
 
 public class ColumnNameForPropertyAndPathFetcher {
 
-  private final PersistentEntityNamingStrategy namingStrategy;
-  private final DefaultColumnNameFetcher defaultColumnNameFetcher;
-  private final BackticksRemover backticksRemover;
+    private final PersistentEntityNamingStrategy namingStrategy;
+    private final DefaultColumnNameFetcher defaultColumnNameFetcher;
+    private final BackticksRemover backticksRemover;
 
-  public ColumnNameForPropertyAndPathFetcher(
-      PersistentEntityNamingStrategy namingStrategy,
-      DefaultColumnNameFetcher defaultColumnNameFetcher,
-      BackticksRemover backticksRemover) {
-    this.namingStrategy = namingStrategy;
-    this.defaultColumnNameFetcher = defaultColumnNameFetcher;
-    this.backticksRemover = backticksRemover;
-  }
+    public ColumnNameForPropertyAndPathFetcher(
+            PersistentEntityNamingStrategy namingStrategy,
+            DefaultColumnNameFetcher defaultColumnNameFetcher,
+            BackticksRemover backticksRemover) {
+        this.namingStrategy = namingStrategy;
+        this.defaultColumnNameFetcher = defaultColumnNameFetcher;
+        this.backticksRemover = backticksRemover;
+    }
 
-  private static final String UNDERSCORE = "_";
+    private static final String UNDERSCORE = "_";
 
-  public String getColumnNameForPropertyAndPath(
-      HibernatePersistentProperty grailsProp, String path, ColumnConfig cc) {
-    return Optional.ofNullable(grailsProp.getColumnName(cc))
-        .orElseGet(
-            () -> {
-              String suffix = defaultColumnNameFetcher.getDefaultColumnName(grailsProp);
-              return Optional.ofNullable(path)
-                  .filter(GrailsHibernateUtil::isNotEmpty)
-                  .map(
-                      p ->
-                          backticksRemover.apply(namingStrategy.resolveColumnName(p))
-                              + UNDERSCORE
-                              + backticksRemover.apply(suffix))
-                  .orElse(suffix);
-            });
-  }
+    public String getColumnNameForPropertyAndPath(
+            HibernatePersistentProperty grailsProp, String path, ColumnConfig cc) {
+        return Optional.ofNullable(grailsProp.getColumnName(cc)).orElseGet(() -> {
+            String suffix = defaultColumnNameFetcher.getDefaultColumnName(grailsProp);
+            return Optional.ofNullable(path)
+                    .filter(GrailsHibernateUtil::isNotEmpty)
+                    .map(p -> backticksRemover.apply(namingStrategy.resolveColumnName(p)) +
+                            UNDERSCORE +
+                            backticksRemover.apply(suffix))
+                    .orElse(suffix);
+        });
+    }
 }

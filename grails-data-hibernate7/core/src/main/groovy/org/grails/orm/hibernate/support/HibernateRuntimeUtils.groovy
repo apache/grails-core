@@ -3,7 +3,6 @@ package org.grails.orm.hibernate.support
 import groovy.transform.CompileStatic
 import org.grails.datastore.gorm.GormValidateable
 import org.grails.datastore.mapping.model.config.GormProperties
-import org.grails.datastore.mapping.proxy.ProxyHandler
 import org.grails.datastore.mapping.validation.ValidationErrors
 import org.codehaus.groovy.runtime.StringGroovyMethods
 import org.grails.datastore.mapping.model.PersistentEntity
@@ -24,14 +23,14 @@ import org.springframework.validation.FieldError
 @CompileStatic
 class HibernateRuntimeUtils {
 
-    private static final String DYNAMIC_FILTER_ENABLER = "dynamicFilterEnabler";
+    private static final String DYNAMIC_FILTER_ENABLER = 'dynamicFilterEnabler'
 
-    @SuppressWarnings("rawtypes")
-    public static void enableDynamicFilterEnablerIfPresent(SessionFactory sessionFactory, Session session) {
+    @SuppressWarnings('rawtypes')
+    static void enableDynamicFilterEnablerIfPresent(SessionFactory sessionFactory, Session session) {
         if (sessionFactory != null && session != null) {
-            final Set definedFilterNames = sessionFactory.getDefinedFilterNames();
+            final Set definedFilterNames = sessionFactory.getDefinedFilterNames()
             if (definedFilterNames != null && definedFilterNames.contains(DYNAMIC_FILTER_ENABLER))
-                session.enableFilter(DYNAMIC_FILTER_ENABLER); // work around for HHH-2624
+                session.enableFilter(DYNAMIC_FILTER_ENABLER) // work around for HHH-2624
         }
     }
 
@@ -43,7 +42,7 @@ class HibernateRuntimeUtils {
      * @param target object to initialize
      * @return the new Errors object
      */
-    public static Errors setupErrorsProperty(Object target) {
+    static Errors setupErrorsProperty(Object target) {
 
         boolean isGormValidateable = target instanceof GormValidateable
 
@@ -69,31 +68,29 @@ class HibernateRuntimeUtils {
             }
         }
 
-        if(isGormValidateable) {
+        if (isGormValidateable) {
             ((GormValidateable)target).setErrors(errors)
         }
         else {
-            mc.setProperty(target, GormProperties.ERRORS, errors);
+            mc.setProperty(target, GormProperties.ERRORS, errors)
         }
-        return errors;
+        return errors
     }
 
-    public static void autoAssociateBidirectionalOneToOnes(PersistentEntity entity, Object target) {
+    static void autoAssociateBidirectionalOneToOnes(PersistentEntity entity, Object target) {
         def mappingContext = entity.mappingContext
-        for (Association association :  entity.associations) {
+        for (Association association : entity.associations) {
             if (!(association instanceof OneToOne) || !association.bidirectional || !association.owningSide) {
                 continue
             }
 
             def propertyName = association.name
 
-
             def otherSide = association.inverseSide
 
             if (otherSide == null) {
                 continue
             }
-
 
             def entityReflector = mappingContext.getEntityReflector(entity)
             Object inverseObject = entityReflector.getProperty(target, propertyName)
@@ -114,23 +111,23 @@ class HibernateRuntimeUtils {
     static Object convertValueToType(Object passedValue, Class targetType, ConversionService conversionService) {
         // workaround for GROOVY-6127, do not assign directly in parameters before it's fixed
         Object value = passedValue
-        if(targetType != null && value != null && !(value in targetType)) {
+        if (targetType != null && value != null && !(value in targetType)) {
             if (value instanceof CharSequence) {
                 value = value.toString()
-                if(value in targetType) {
+                if (value in targetType) {
                     return value
                 }
             }
             try {
-                if (value instanceof Number && (targetType==Long || targetType==Integer)) {
-                    if(targetType == Long) {
+                if (value instanceof Number && (targetType == Long || targetType == Integer)) {
+                    if (targetType == Long) {
                         value = ((Number)value).toLong()
                     } else {
                         value = ((Number)value).toInteger()
                     }
                 } else if (value instanceof String && targetType in Number) {
                     String strValue = value.trim()
-                    if(targetType == Long) {
+                    if (targetType == Long) {
                         value = Long.parseLong(strValue)
                     } else if (targetType == Integer) {
                         value = Integer.parseInt(strValue)

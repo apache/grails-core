@@ -17,7 +17,6 @@ import org.springframework.transaction.PlatformTransactionManager
 
 import javax.sql.DataSource
 
-
 /**
  * A factory bean that looks up a datastore by connection name
  *
@@ -35,12 +34,12 @@ class HibernateDatastoreConnectionSourcesRegistrar implements BeanDefinitionRegi
 
     @Override
     void postProcessBeanDefinitionRegistry(BeanDefinitionRegistry registry) throws BeansException {
-        for(String dataSourceName in dataSourceNames) {
+        for (String dataSourceName in dataSourceNames) {
             boolean isDefault = dataSourceName == ConnectionSource.DEFAULT || dataSourceName == Settings.SETTING_DATASOURCE
-            boolean shouldConfigureDataSourceBean = GrailsVersion.isAtLeastMajorMinor(3,3)
+            boolean shouldConfigureDataSourceBean = GrailsVersion.isAtLeastMajorMinor(3, 3)
             String dataSourceBeanName = isDefault ? Settings.SETTING_DATASOURCE : "${Settings.SETTING_DATASOURCE}_$dataSourceName"
 
-            if(!registry.containsBeanDefinition(dataSourceBeanName) && shouldConfigureDataSourceBean) {
+            if (!registry.containsBeanDefinition(dataSourceBeanName) && shouldConfigureDataSourceBean) {
                 def dataSourceBean = new RootBeanDefinition()
                 dataSourceBean.setTargetType(DataSource)
                 dataSourceBean.setBeanClass(InstanceFactoryBean)
@@ -53,7 +52,7 @@ class HibernateDatastoreConnectionSourcesRegistrar implements BeanDefinitionRegi
                 registry.registerBeanDefinition(dataSourceBeanName, dataSourceBean)
             }
 
-            if(!isDefault) {
+            if (!isDefault) {
                 String suffix = '_' + dataSourceName
                 String sessionFactoryName = "sessionFactory$suffix"
                 String transactionManagerBeanName = "transactionManager$suffix"

@@ -22,21 +22,22 @@ import grails.gorm.annotation.Entity
 import org.apache.grails.data.testing.tck.base.GrailsDataTckSpec
 import spock.lang.IgnoreIf
 
-@IgnoreIf({ System.getProperty("hibernate7.gorm.suite") == "true" })
+@IgnoreIf({ System.getProperty('hibernate7.gorm.suite') == 'true' })
 class RLikeSpec extends GrailsDataTckSpec {
+
     void setupSpec() {
         manager.addAllDomainClasses([RlikeFoo])
     }
 
     void "test rlike works"() {
         given:
-        new RlikeFoo(name: "ABC").save(flush: true)
-        new RlikeFoo(name: "ABCDEF").save(flush: true)
-        new RlikeFoo(name: "ABCDEFGHI").save(flush: true)
+        new RlikeFoo(name: 'ABC').save(flush: true)
+        new RlikeFoo(name: 'ABCDEF').save(flush: true)
+        new RlikeFoo(name: 'ABCDEFGHI').save(flush: true)
 
         when:
         manager.session.clear()
-        List<RlikeFoo> allFoos = RlikeFoo.findAllByNameRlike("ABCD.*")
+        List<RlikeFoo> allFoos = RlikeFoo.findAllByNameRlike('ABCD.*')
 
         then:
         allFoos.size() == 2
@@ -45,5 +46,6 @@ class RLikeSpec extends GrailsDataTckSpec {
 
 @Entity
 class RlikeFoo {
+
     String name
 }

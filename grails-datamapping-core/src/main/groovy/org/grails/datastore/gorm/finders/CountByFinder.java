@@ -19,7 +19,6 @@
 package org.grails.datastore.gorm.finders;
 
 import java.util.regex.Pattern;
-import java.util.stream.Collectors;
 
 import org.grails.datastore.mapping.core.Datastore;
 import org.grails.datastore.mapping.core.Session;
@@ -60,7 +59,6 @@ public class CountByFinder extends DynamicFinder implements QueryBuildingFinder 
     protected Object invokeQuery(Query q) {
         return q.singleResult();
     }
-
 
     protected Query adjustQuery(Query query) {
         query.projections().count();

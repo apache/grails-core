@@ -35,6 +35,7 @@ import org.grails.orm.hibernate.cfg.domainbinding.generator.GrailsSequenceGenera
 @CompileStatic
 @Builder(builderStrategy = SimpleStrategy, prefix = '')
 class Identity extends Property implements HibernateIdentity {
+
     /**
      * The generator to use
      */

@@ -26,18 +26,18 @@ import org.grails.datastore.mapping.model.types.OneToOne;
  */
 public interface HibernateToOneProperty extends HibernateAssociation {
 
-  default boolean isHibernateOneToOne() {
-    validateAssociation();
-    return this instanceof OneToOne association
-        && (association.canBindOneToOneWithSingleColumnAndForeignKey()
-            || (association.isHasOne()
-                && association.isBidirectional()
-                && association.getInverseSide() != null));
-  }
+    default boolean isHibernateOneToOne() {
+        validateAssociation();
+        return this instanceof OneToOne association &&
+                (association.canBindOneToOneWithSingleColumnAndForeignKey() ||
+                        (association.isHasOne() &&
+                                association.isBidirectional() &&
+                                association.getInverseSide() != null));
+    }
 
-  default boolean isHibernateManyToOne() {
-    validateAssociation();
-    return this instanceof org.grails.datastore.mapping.model.types.ManyToOne
-        || (this instanceof OneToOne && !isHibernateOneToOne());
-  }
+    default boolean isHibernateManyToOne() {
+        validateAssociation();
+        return this instanceof org.grails.datastore.mapping.model.types.ManyToOne ||
+                (this instanceof OneToOne && !isHibernateOneToOne());
+    }
 }

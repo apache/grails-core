@@ -18,20 +18,22 @@
  */
 package org.grails.orm.hibernate.cfg.domainbinding.generator;
 
-import static org.hibernate.id.IncrementGenerator.COLUMN;
-import static org.hibernate.id.IncrementGenerator.TABLES;
-import static org.hibernate.id.PersistentIdentifierGenerator.CATALOG;
-import static org.hibernate.id.PersistentIdentifierGenerator.SCHEMA;
-
 import java.util.Properties;
-import org.grails.orm.hibernate.cfg.Identity;
-import org.grails.orm.hibernate.cfg.PersistentEntityNamingStrategy;
-import org.grails.orm.hibernate.cfg.domainbinding.hibernate.GrailsHibernatePersistentEntity;
+
 import org.hibernate.boot.model.relational.SqlStringGenerationContext;
 import org.hibernate.boot.model.relational.internal.SqlStringGenerationContextImpl;
 import org.hibernate.engine.jdbc.env.spi.JdbcEnvironment;
 import org.hibernate.generator.GeneratorCreationContext;
 import org.hibernate.id.IncrementGenerator;
+
+import org.grails.orm.hibernate.cfg.Identity;
+import org.grails.orm.hibernate.cfg.PersistentEntityNamingStrategy;
+import org.grails.orm.hibernate.cfg.domainbinding.hibernate.GrailsHibernatePersistentEntity;
+
+import static org.hibernate.id.IncrementGenerator.COLUMN;
+import static org.hibernate.id.IncrementGenerator.TABLES;
+import static org.hibernate.id.PersistentIdentifierGenerator.CATALOG;
+import static org.hibernate.id.PersistentIdentifierGenerator.SCHEMA;
 
 /**
  * Grails-aware increment ID generator. Builds the standard {@link IncrementGenerator} parameters
@@ -39,53 +41,52 @@ import org.hibernate.id.IncrementGenerator;
  */
 public class GrailsIncrementGenerator extends IncrementGenerator {
 
-  private static final long serialVersionUID = 1L;
+    private static final long serialVersionUID = 1L;
 
-  public GrailsIncrementGenerator(
-      GeneratorCreationContext context,
-      Identity mappedId,
-      GrailsHibernatePersistentEntity domainClass,
-      PersistentEntityNamingStrategy namingStrategy) {
+    public GrailsIncrementGenerator(
+            GeneratorCreationContext context,
+            Identity mappedId,
+            GrailsHibernatePersistentEntity domainClass,
+            PersistentEntityNamingStrategy namingStrategy) {
 
-    Properties params = new Properties();
-    if (mappedId != null && mappedId.getProperties() != null) {
-      params.putAll(mappedId.getProperties());
+        Properties params = new Properties();
+        if (mappedId != null && mappedId.getProperties() != null) {
+            params.putAll(mappedId.getProperties());
+        }
+
+        // Use the entity's naming-strategy-aware table resolution:
+        // handles explicit mapping, table-per-hierarchy root, and PhysicalNamingStrategy fallback.
+        params.put(TABLES, domainClass.getTableName(namingStrategy));
+
+        org.grails.orm.hibernate.cfg.Mapping mapping = domainClass.getMappedForm();
+        if (mapping != null && mapping.getTable() != null) {
+            if (mapping.getTable().getCatalog() != null)
+                params.put(CATALOG, mapping.getTable().getCatalog());
+            if (mapping.getTable().getSchema() != null)
+                params.put(SCHEMA, mapping.getTable().getSchema());
+        }
+
+        // Resolve column name — fall back to "id" if the property path is dotted (composite)
+        String columnName = context.getProperty().getName();
+        if (columnName == null || columnName.contains(".")) {
+            columnName = (mappedId != null &&
+                            mappedId.getName() != null &&
+                            !mappedId.getName().contains(".")) ?
+                    mappedId.getName() :
+                    "id";
+        }
+        params.put(COLUMN, columnName);
+
+        // Delegate to the standard configure() — sets returnClass, column, physicalTableNames
+        configure(context, params);
+
+        // Build SqlStringGenerationContext and initialize the SQL query
+        JdbcEnvironment jdbcEnvironment = context.getDatabase().getJdbcEnvironment();
+        var physicalName = context.getDatabase().getDefaultNamespace().getPhysicalName();
+        String catalog = physicalName.catalog() != null ? physicalName.catalog().getCanonicalName() : null;
+        String schema = physicalName.schema() != null ? physicalName.schema().getCanonicalName() : null;
+        SqlStringGenerationContext sqlContext =
+                SqlStringGenerationContextImpl.fromExplicit(jdbcEnvironment, context.getDatabase(), catalog, schema);
+        initialize(sqlContext);
     }
-
-    // Use the entity's naming-strategy-aware table resolution:
-    // handles explicit mapping, table-per-hierarchy root, and PhysicalNamingStrategy fallback.
-    params.put(TABLES, domainClass.getTableName(namingStrategy));
-
-    org.grails.orm.hibernate.cfg.Mapping mapping = domainClass.getMappedForm();
-    if (mapping != null && mapping.getTable() != null) {
-      if (mapping.getTable().getCatalog() != null)
-        params.put(CATALOG, mapping.getTable().getCatalog());
-      if (mapping.getTable().getSchema() != null)
-        params.put(SCHEMA, mapping.getTable().getSchema());
-    }
-
-    // Resolve column name — fall back to "id" if the property path is dotted (composite)
-    String columnName = context.getProperty().getName();
-    if (columnName == null || columnName.contains(".")) {
-      columnName =
-          (mappedId != null && mappedId.getName() != null && !mappedId.getName().contains("."))
-              ? mappedId.getName()
-              : "id";
-    }
-    params.put(COLUMN, columnName);
-
-    // Delegate to the standard configure() — sets returnClass, column, physicalTableNames
-    configure(context, params);
-
-    // Build SqlStringGenerationContext and initialize the SQL query
-    JdbcEnvironment jdbcEnvironment = context.getDatabase().getJdbcEnvironment();
-    var physicalName = context.getDatabase().getDefaultNamespace().getPhysicalName();
-    String catalog =
-        physicalName.catalog() != null ? physicalName.catalog().getCanonicalName() : null;
-    String schema = physicalName.schema() != null ? physicalName.schema().getCanonicalName() : null;
-    SqlStringGenerationContext sqlContext =
-        SqlStringGenerationContextImpl.fromExplicit(
-            jdbcEnvironment, context.getDatabase(), catalog, schema);
-    initialize(sqlContext);
-  }
 }

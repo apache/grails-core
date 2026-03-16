@@ -27,44 +27,45 @@ import spock.lang.Unroll
  * Tests for querying the size of collections etc.
  */
 class SizeQuerySpec extends GrailsDataTckSpec {
+
     void setupSpec() {
         manager.addAllDomainClasses([Owner_Default_Bi_P, Child_BT_Default_P])
     }
 
     private void setupTestData() {
         // Owner A has 1 child
-        new Owner_Default_Bi_P(name: "Owner A")
-                .addToChildren(new Child_BT_Default_P(title: "Child 1"))
+        new Owner_Default_Bi_P(name: 'Owner A')
+                .addToChildren(new Child_BT_Default_P(title: 'Child 1'))
                 .save(flush: true)
 
         // Owner B has 2 children
-        new Owner_Default_Bi_P(name: "Owner B")
-                .addToChildren(new Child_BT_Default_P(title: "Child 5"))
-                .addToChildren(new Child_BT_Default_P(title: "Child 6"))
+        new Owner_Default_Bi_P(name: 'Owner B')
+                .addToChildren(new Child_BT_Default_P(title: 'Child 5'))
+                .addToChildren(new Child_BT_Default_P(title: 'Child 6'))
                 .save(flush: true)
 
         // Owner C has 3 children
-        new Owner_Default_Bi_P(name: "Owner C")
-                .addToChildren(new Child_BT_Default_P(title: "Child 2"))
-                .addToChildren(new Child_BT_Default_P(title: "Child 3"))
-                .addToChildren(new Child_BT_Default_P(title: "Child 4"))
+        new Owner_Default_Bi_P(name: 'Owner C')
+                .addToChildren(new Child_BT_Default_P(title: 'Child 2'))
+                .addToChildren(new Child_BT_Default_P(title: 'Child 3'))
+                .addToChildren(new Child_BT_Default_P(title: 'Child 4'))
                 .save(flush: true)
 
         manager.session.clear()
     }
 
-    @Unroll("Test sizeLe criterion with size #size expects #expectedNames")
+    @Unroll('Test sizeLe criterion with size #size expects #expectedNames')
     void "Test sizeLe criterion"(int size, List<String> expectedNames) {
-        given: "A set of owners with 1, 2, and 3 children"
+        given: 'A set of owners with 1, 2, and 3 children'
         setupTestData()
 
-        when: "We query for owners with at most #size children"
+        when: 'We query for owners with at most #size children'
         def results = Owner_Default_Bi_P.withCriteria {
-            sizeLe "children", size
-            order "name"
+            sizeLe 'children', size
+            order 'name'
         }
 
-        then: "We get the correct owners back"
+        then: 'We get the correct owners back'
         results*.name == expectedNames
 
         where:
@@ -75,18 +76,18 @@ class SizeQuerySpec extends GrailsDataTckSpec {
         0    | []
     }
 
-    @Unroll("Test sizeLt criterion with size #size expects #expectedNames")
+    @Unroll('Test sizeLt criterion with size #size expects #expectedNames')
     void "Test sizeLt criterion"(int size, List<String> expectedNames) {
-        given: "A set of owners with 1, 2, and 3 children"
+        given: 'A set of owners with 1, 2, and 3 children'
         setupTestData()
 
-        when: "We query for owners with less than #size children"
+        when: 'We query for owners with less than #size children'
         def results = Owner_Default_Bi_P.withCriteria {
-            sizeLt "children", size
-            order "name"
+            sizeLt 'children', size
+            order 'name'
         }
 
-        then: "We get the correct owners back"
+        then: 'We get the correct owners back'
         results*.name == expectedNames
 
         where:
@@ -96,18 +97,18 @@ class SizeQuerySpec extends GrailsDataTckSpec {
         1    | []
     }
 
-    @Unroll("Test sizeGt criterion with size #size expects #expectedNames")
+    @Unroll('Test sizeGt criterion with size #size expects #expectedNames')
     void "Test sizeGt criterion"(int size, List<String> expectedNames) {
-        given: "A set of owners with 1, 2, and 3 children"
+        given: 'A set of owners with 1, 2, and 3 children'
         setupTestData()
 
-        when: "We query for owners with more than #size children"
+        when: 'We query for owners with more than #size children'
         def results = Owner_Default_Bi_P.withCriteria {
-            sizeGt "children", size
-            order "name"
+            sizeGt 'children', size
+            order 'name'
         }
 
-        then: "We get the correct owners back"
+        then: 'We get the correct owners back'
         results*.name == expectedNames
 
         where:
@@ -118,18 +119,18 @@ class SizeQuerySpec extends GrailsDataTckSpec {
         3    | []
     }
 
-    @Unroll("Test sizeGe criterion with size #size expects #expectedNames")
+    @Unroll('Test sizeGe criterion with size #size expects #expectedNames')
     void "Test sizeGe criterion"(int size, List<String> expectedNames) {
-        given: "A set of owners with 1, 2, and 3 children"
+        given: 'A set of owners with 1, 2, and 3 children'
         setupTestData()
 
-        when: "We query for owners with at least #size children"
+        when: 'We query for owners with at least #size children'
         def results = Owner_Default_Bi_P.withCriteria {
-            sizeGe "children", size
-            order "name"
+            sizeGe 'children', size
+            order 'name'
         }
 
-        then: "We get the correct owners back"
+        then: 'We get the correct owners back'
         results*.name == expectedNames
 
         where:
@@ -140,18 +141,18 @@ class SizeQuerySpec extends GrailsDataTckSpec {
         4    | []
     }
 
-    @Unroll("Test sizeEq criterion with size #size expects #expectedNames")
+    @Unroll('Test sizeEq criterion with size #size expects #expectedNames')
     void "Test sizeEq criterion"(int size, List<String> expectedNames) {
-        given: "A set of owners with 1, 2, and 3 children"
+        given: 'A set of owners with 1, 2, and 3 children'
         setupTestData()
 
-        when: "We query for owners with exactly #size children"
+        when: 'We query for owners with exactly #size children'
         def results = Owner_Default_Bi_P.withCriteria {
-            sizeEq "children", size
-            order "name"
+            sizeEq 'children', size
+            order 'name'
         }
 
-        then: "We get the correct owners back"
+        then: 'We get the correct owners back'
         results*.name == expectedNames
 
         where:
@@ -162,28 +163,28 @@ class SizeQuerySpec extends GrailsDataTckSpec {
         4    | []
     }
 
-    @Unroll("Test sizeNe criterion for #description expects #expectedNames")
+    @Unroll('Test sizeNe criterion for #description expects #expectedNames')
     void "Test sizeNe criterion"(String description, Closure queryLogic, List<String> expectedNames) {
-        given: "A set of owners with 1, 2, and 3 children"
+        given: 'A set of owners with 1, 2, and 3 children'
         setupTestData()
 
-        when: "We query for owners where the number of children meets a condition"
+        when: 'We query for owners where the number of children meets a condition'
         
         def results = Owner_Default_Bi_P.withCriteria {
             // Set the delegate of the query closure to the criteria builder and call it
             queryLogic.delegate = delegate
             queryLogic.call()
-            order "name"
+            order 'name'
         }
 
-        then: "We get the correct owners back"
+        then: 'We get the correct owners back'
         results*.name == expectedNames
 
         where:
         description           | queryLogic                                           | expectedNames
-        "size != 1"           | { sizeNe "children", 1 }                             | ['Owner B', 'Owner C']
-        "size != 2"           | { sizeNe "children", 2 }                             | ['Owner A', 'Owner C']
-        "size != 3"           | { sizeNe "children", 3 }                             | ['Owner A', 'Owner B']
-        "size != 1 and != 3"  | { and { sizeNe "children", 1; sizeNe "children", 3 } } | ['Owner B']
+        'size != 1'           | { sizeNe 'children', 1 }                             | ['Owner B', 'Owner C']
+        'size != 2'           | { sizeNe 'children', 2 }                             | ['Owner A', 'Owner C']
+        'size != 3'           | { sizeNe 'children', 3 }                             | ['Owner A', 'Owner B']
+        'size != 1 and != 3'  | { and { sizeNe 'children', 1; sizeNe 'children', 3 } } | ['Owner B']
     }
 }

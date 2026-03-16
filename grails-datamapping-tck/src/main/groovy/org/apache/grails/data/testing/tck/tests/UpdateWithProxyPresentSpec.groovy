@@ -30,7 +30,7 @@ import org.apache.grails.data.testing.tck.domains.PetType
 /**
  * @author graemerocher
  */
-@IgnoreIf({ System.getProperty("hibernate7.gorm.suite") == "true" })
+@IgnoreIf({ System.getProperty('hibernate7.gorm.suite') == 'true' })
 class UpdateWithProxyPresentSpec extends GrailsDataTckSpec {
 
     void setupSpec() {

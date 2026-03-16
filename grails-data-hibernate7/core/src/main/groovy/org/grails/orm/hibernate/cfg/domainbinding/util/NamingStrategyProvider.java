@@ -20,74 +20,76 @@ package org.grails.orm.hibernate.cfg.domainbinding.util;
 
 import java.util.Objects;
 import java.util.concurrent.ConcurrentHashMap;
-import org.grails.datastore.mapping.core.connections.ConnectionSource;
+
 import org.hibernate.boot.model.naming.PhysicalNamingStrategy;
 import org.hibernate.boot.model.naming.PhysicalNamingStrategySnakeCaseImpl;
 
+import org.grails.datastore.mapping.core.connections.ConnectionSource;
+
 public class NamingStrategyProvider {
-  private final ConcurrentHashMap<String, PhysicalNamingStrategy> physicalProviderMap;
+    private final ConcurrentHashMap<String, PhysicalNamingStrategy> physicalProviderMap;
 
-  public NamingStrategyProvider() {
-    physicalProviderMap = new ConcurrentHashMap<>();
-    physicalProviderMap.put(ConnectionSource.DEFAULT, new PhysicalNamingStrategySnakeCaseImpl());
-  }
-
-  /**
-   * Configures the naming strategy for a given datasource.
-   *
-   * @param datasourceName the datasource name
-   * @param strategy the naming strategy (instance, Class, or class name)
-   * @throws ClassNotFoundException when the strategy class cannot be found
-   * @throws IllegalAccessException when the strategy class cannot be accessed
-   * @throws InstantiationException when the strategy class cannot be instantiated
-   */
-  public void configureNamingStrategy(final String datasourceName, final Object strategy)
-      throws ClassNotFoundException, InstantiationException, IllegalAccessException {
-
-    if (strategy == null) {
-      throw new IllegalArgumentException("Naming strategy cannot be null");
+    public NamingStrategyProvider() {
+        physicalProviderMap = new ConcurrentHashMap<>();
+        physicalProviderMap.put(ConnectionSource.DEFAULT, new PhysicalNamingStrategySnakeCaseImpl());
     }
 
-    var strategyClass = getStrategyClass(strategy);
-    var strategyInstance = getStrategyInstance(strategy, strategyClass);
+    /**
+     * Configures the naming strategy for a given datasource.
+     *
+     * @param datasourceName the datasource name
+     * @param strategy the naming strategy (instance, Class, or class name)
+     * @throws ClassNotFoundException when the strategy class cannot be found
+     * @throws IllegalAccessException when the strategy class cannot be accessed
+     * @throws InstantiationException when the strategy class cannot be instantiated
+     */
+    public void configureNamingStrategy(final String datasourceName, final Object strategy)
+            throws ClassNotFoundException, InstantiationException, IllegalAccessException {
 
-    if (strategyInstance instanceof PhysicalNamingStrategy physicalStrategy) {
-      physicalProviderMap.put(datasourceName, physicalStrategy);
-    } else {
-      physicalProviderMap.put(datasourceName, new PhysicalNamingStrategySnakeCaseImpl());
-    }
-  }
+        if (strategy == null) {
+            throw new IllegalArgumentException("Naming strategy cannot be null");
+        }
 
-  private Class<?> getStrategyClass(Object strategy) throws ClassNotFoundException {
-    if (strategy instanceof Class<?>) {
-      return (Class<?>) strategy;
-    }
-    if (strategy instanceof CharSequence) {
-      return Thread.currentThread().getContextClassLoader().loadClass(strategy.toString());
-    }
-    return strategy.getClass();
-  }
+        var strategyClass = getStrategyClass(strategy);
+        var strategyInstance = getStrategyInstance(strategy, strategyClass);
 
-  private Object getStrategyInstance(Object strategy, Class<?> strategyClass)
-      throws InstantiationException, IllegalAccessException {
-    if (strategy instanceof PhysicalNamingStrategy) {
-      return strategy;
+        if (strategyInstance instanceof PhysicalNamingStrategy physicalStrategy) {
+            physicalProviderMap.put(datasourceName, physicalStrategy);
+        } else {
+            physicalProviderMap.put(datasourceName, new PhysicalNamingStrategySnakeCaseImpl());
+        }
     }
-    return strategyClass.newInstance();
-  }
 
-  public PhysicalNamingStrategy getPhysicalNamingStrategy(String sessionFactoryBeanName) {
-    String key = getKey(sessionFactoryBeanName);
-    physicalProviderMap.putIfAbsent(key, new PhysicalNamingStrategySnakeCaseImpl());
-    return physicalProviderMap.get(key);
-  }
-
-  private static String getKey(String sessionFactoryBeanName) {
-    if (Objects.isNull(sessionFactoryBeanName) || sessionFactoryBeanName.isBlank()) {
-      return ConnectionSource.DEFAULT;
+    private Class<?> getStrategyClass(Object strategy) throws ClassNotFoundException {
+        if (strategy instanceof Class<?>) {
+            return (Class<?>) strategy;
+        }
+        if (strategy instanceof CharSequence) {
+            return Thread.currentThread().getContextClassLoader().loadClass(strategy.toString());
+        }
+        return strategy.getClass();
     }
-    return "sessionFactory".equals(sessionFactoryBeanName)
-        ? ConnectionSource.DEFAULT
-        : sessionFactoryBeanName.substring("sessionFactory_".length());
-  }
+
+    private Object getStrategyInstance(Object strategy, Class<?> strategyClass)
+            throws InstantiationException, IllegalAccessException {
+        if (strategy instanceof PhysicalNamingStrategy) {
+            return strategy;
+        }
+        return strategyClass.newInstance();
+    }
+
+    public PhysicalNamingStrategy getPhysicalNamingStrategy(String sessionFactoryBeanName) {
+        String key = getKey(sessionFactoryBeanName);
+        physicalProviderMap.putIfAbsent(key, new PhysicalNamingStrategySnakeCaseImpl());
+        return physicalProviderMap.get(key);
+    }
+
+    private static String getKey(String sessionFactoryBeanName) {
+        if (Objects.isNull(sessionFactoryBeanName) || sessionFactoryBeanName.isBlank()) {
+            return ConnectionSource.DEFAULT;
+        }
+        return "sessionFactory".equals(sessionFactoryBeanName) ?
+                ConnectionSource.DEFAULT :
+                sessionFactoryBeanName.substring("sessionFactory_".length());
+    }
 }

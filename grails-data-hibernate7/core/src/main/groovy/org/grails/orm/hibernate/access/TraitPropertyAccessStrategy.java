@@ -20,13 +20,24 @@ package org.grails.orm.hibernate.access;
 
 import java.lang.reflect.Field;
 import java.lang.reflect.Method;
+
+import org.codehaus.groovy.transform.trait.Traits;
+
 import org.checkerframework.checker.initialization.qual.Initialized;
 import org.checkerframework.checker.nullness.qual.NonNull;
 import org.checkerframework.checker.nullness.qual.UnknownKeyFor;
-import org.codehaus.groovy.transform.trait.Traits;
-import org.grails.datastore.mapping.reflect.NameUtils;
-import org.hibernate.property.access.spi.*;
+import org.hibernate.property.access.spi.Getter;
+import org.hibernate.property.access.spi.GetterFieldImpl;
+import org.hibernate.property.access.spi.GetterMethodImpl;
+import org.hibernate.property.access.spi.PropertyAccess;
+import org.hibernate.property.access.spi.PropertyAccessStrategy;
+import org.hibernate.property.access.spi.Setter;
+import org.hibernate.property.access.spi.SetterFieldImpl;
+import org.hibernate.property.access.spi.SetterMethodImpl;
+
 import org.springframework.util.ReflectionUtils;
+
+import org.grails.datastore.mapping.reflect.NameUtils;
 
 /**
  * Support reading and writing trait fields with Hibernate 5+
@@ -37,94 +48,85 @@ import org.springframework.util.ReflectionUtils;
 @SuppressWarnings({"rawtypes", "PMD.DataflowAnomalyAnalysis"})
 public class TraitPropertyAccessStrategy implements PropertyAccessStrategy {
 
-  public PropertyAccess buildPropertyAccess(Class containerJavaType, String propertyName) {
-    Method readMethod =
-        ReflectionUtils.findMethod(containerJavaType, NameUtils.getGetterName(propertyName));
-    if (readMethod == null) {
-      // See https://issues.apache.org/jira/browse/GROOVY-11512
-      Method booleanReadMethod =
-          ReflectionUtils.findMethod(
-              containerJavaType, NameUtils.getGetterName(propertyName, true));
-      if (booleanReadMethod != null
-          && (booleanReadMethod.getReturnType() == Boolean.class
-              || booleanReadMethod.getReturnType() == boolean.class)) {
-        readMethod = booleanReadMethod;
-      }
-    }
+    public PropertyAccess buildPropertyAccess(Class containerJavaType, String propertyName) {
+        Method readMethod = ReflectionUtils.findMethod(containerJavaType, NameUtils.getGetterName(propertyName));
+        if (readMethod == null) {
+            // See https://issues.apache.org/jira/browse/GROOVY-11512
+            Method booleanReadMethod =
+                    ReflectionUtils.findMethod(containerJavaType, NameUtils.getGetterName(propertyName, true));
+            if (booleanReadMethod != null &&
+                    (booleanReadMethod.getReturnType() == Boolean.class ||
+                            booleanReadMethod.getReturnType() == boolean.class)) {
+                readMethod = booleanReadMethod;
+            }
+        }
 
-    if (readMethod == null) {
-      throw new IllegalStateException(
-          "TraitPropertyAccessStrategy used on property ["
-              + propertyName
-              + "] of class ["
-              + containerJavaType.getName()
-              + "] that is not provided by a trait!");
-    } else {
-
-      Traits.Implemented traitImplemented = readMethod.getAnnotation(Traits.Implemented.class);
-      final String traitFieldName;
-      if (traitImplemented == null) {
-        Traits.TraitBridge traitBridge = readMethod.getAnnotation(Traits.TraitBridge.class);
-        if (traitBridge != null) {
-          traitFieldName = getTraitFieldName(traitBridge.traitClass(), propertyName);
+        if (readMethod == null) {
+            throw new IllegalStateException("TraitPropertyAccessStrategy used on property [" + propertyName +
+                    "] of class [" +
+                    containerJavaType.getName() +
+                    "] that is not provided by a trait!");
         } else {
-          throw new IllegalStateException(
-              "TraitPropertyAccessStrategy used on property ["
-                  + propertyName
-                  + "] of class ["
-                  + containerJavaType.getName()
-                  + "] that is not provided by a trait!");
+
+            Traits.Implemented traitImplemented = readMethod.getAnnotation(Traits.Implemented.class);
+            final String traitFieldName;
+            if (traitImplemented == null) {
+                Traits.TraitBridge traitBridge = readMethod.getAnnotation(Traits.TraitBridge.class);
+                if (traitBridge != null) {
+                    traitFieldName = getTraitFieldName(traitBridge.traitClass(), propertyName);
+                } else {
+                    throw new IllegalStateException("TraitPropertyAccessStrategy used on property [" + propertyName +
+                            "] of class [" +
+                            containerJavaType.getName() +
+                            "] that is not provided by a trait!");
+                }
+            } else {
+                traitFieldName = getTraitFieldName(readMethod.getDeclaringClass(), propertyName);
+            }
+
+            Field field = ReflectionUtils.findField(containerJavaType, traitFieldName);
+            final Getter getter;
+            final Setter setter;
+            if (field == null) {
+                getter = new GetterMethodImpl(containerJavaType, propertyName, readMethod);
+                Method writeMethod = ReflectionUtils.findMethod(
+                        containerJavaType, NameUtils.getSetterName(propertyName), readMethod.getReturnType());
+                setter = new SetterMethodImpl(containerJavaType, propertyName, writeMethod);
+            } else {
+
+                getter = new GetterFieldImpl(containerJavaType, propertyName, field);
+                setter = new SetterFieldImpl(containerJavaType, propertyName, field);
+            }
+
+            return new PropertyAccess() {
+                @Override
+                public PropertyAccessStrategy getPropertyAccessStrategy() {
+                    return TraitPropertyAccessStrategy.this;
+                }
+
+                @Override
+                public Getter getGetter() {
+                    return getter;
+                }
+
+                @Override
+                public Setter getSetter() {
+                    return setter;
+                }
+            };
         }
-      } else {
-        traitFieldName = getTraitFieldName(readMethod.getDeclaringClass(), propertyName);
-      }
-
-      Field field = ReflectionUtils.findField(containerJavaType, traitFieldName);
-      final Getter getter;
-      final Setter setter;
-      if (field == null) {
-        getter = new GetterMethodImpl(containerJavaType, propertyName, readMethod);
-        Method writeMethod =
-            ReflectionUtils.findMethod(
-                containerJavaType,
-                NameUtils.getSetterName(propertyName),
-                readMethod.getReturnType());
-        setter = new SetterMethodImpl(containerJavaType, propertyName, writeMethod);
-      } else {
-
-        getter = new GetterFieldImpl(containerJavaType, propertyName, field);
-        setter = new SetterFieldImpl(containerJavaType, propertyName, field);
-      }
-
-      return new PropertyAccess() {
-        @Override
-        public PropertyAccessStrategy getPropertyAccessStrategy() {
-          return TraitPropertyAccessStrategy.this;
-        }
-
-        @Override
-        public Getter getGetter() {
-          return getter;
-        }
-
-        @Override
-        public Setter getSetter() {
-          return setter;
-        }
-      };
     }
-  }
 
-  protected String getTraitFieldName(Class traitClass, String fieldName) {
-    return traitClass.getName().replace('.', '_') + "__" + fieldName;
-  }
+    protected String getTraitFieldName(Class traitClass, String fieldName) {
+        return traitClass.getName().replace('.', '_') + "__" + fieldName;
+    }
 
-  @java.lang.Override
-  public @UnknownKeyFor @NonNull @Initialized PropertyAccess buildPropertyAccess(
-      java.lang.@UnknownKeyFor @NonNull @Initialized Class<@UnknownKeyFor @NonNull @Initialized ?>
-          containerJavaType,
-      java.lang.@UnknownKeyFor @NonNull @Initialized String propertyName,
-      @UnknownKeyFor @NonNull @Initialized boolean setterRequired) {
-    return buildPropertyAccess(containerJavaType, propertyName);
-  }
+    @java.lang.Override
+    public @UnknownKeyFor @NonNull @Initialized PropertyAccess buildPropertyAccess(
+            java.lang.@UnknownKeyFor @NonNull @Initialized Class<@UnknownKeyFor @NonNull @Initialized ?>
+                    containerJavaType,
+            java.lang.@UnknownKeyFor @NonNull @Initialized String propertyName,
+            @UnknownKeyFor @NonNull @Initialized boolean setterRequired) {
+        return buildPropertyAccess(containerJavaType, propertyName);
+    }
 }

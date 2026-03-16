@@ -16,17 +16,18 @@ import org.grails.orm.hibernate.cfg.Identity
  */
 @CompileStatic
 enum GrailsSequenceGeneratorEnum {
-    IDENTITY("identity"),
-    SEQUENCE("sequence"),
-    SEQUENCE_IDENTITY("sequence-identity"),
-    INCREMENT("increment"),
-    UUID("uuid"),
-    UUID2("uuid2"),
-    ASSIGNED("assigned"),
-    TABLE("table"),
-    ENHANCED_TABLE("enhanced-table"),
-    HILO("hilo"),
-    NATIVE("native")
+
+    IDENTITY('identity'),
+    SEQUENCE('sequence'),
+    SEQUENCE_IDENTITY('sequence-identity'),
+    INCREMENT('increment'),
+    UUID('uuid'),
+    UUID2('uuid2'),
+    ASSIGNED('assigned'),
+    TABLE('table'),
+    ENHANCED_TABLE('enhanced-table'),
+    HILO('hilo'),
+    NATIVE('native')
 
     private final String name
 

@@ -19,27 +19,29 @@
 package org.grails.orm.hibernate.cfg.domainbinding.binder;
 
 import java.util.Optional;
-import org.grails.orm.hibernate.cfg.PropertyConfig;
-import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernateAssociation;
+
 import org.hibernate.FetchMode;
 import org.hibernate.mapping.ManyToOne;
 
+import org.grails.orm.hibernate.cfg.PropertyConfig;
+import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernateAssociation;
+
 public class ManyToOneValuesBinder {
 
-  public ManyToOneValuesBinder() {}
+    public ManyToOneValuesBinder() {}
 
-  public void bindManyToOneValues(HibernateAssociation property, ManyToOne manyToOne) {
-    PropertyConfig config = property.getMappedForm();
+    public void bindManyToOneValues(HibernateAssociation property, ManyToOne manyToOne) {
+        PropertyConfig config = property.getMappedForm();
 
-    var fetchMode = Optional.ofNullable(config.getFetchMode()).orElse(FetchMode.DEFAULT);
-    manyToOne.setFetchMode(fetchMode);
+        var fetchMode = Optional.ofNullable(config.getFetchMode()).orElse(FetchMode.DEFAULT);
+        manyToOne.setFetchMode(fetchMode);
 
-    var lazy = Optional.ofNullable(config.getLazy()).orElse(property != null);
-    manyToOne.setLazy(lazy);
+        var lazy = Optional.ofNullable(config.getLazy()).orElse(property != null);
+        manyToOne.setLazy(lazy);
 
-    manyToOne.setIgnoreNotFound(config.getIgnoreNotFound());
+        manyToOne.setIgnoreNotFound(config.getIgnoreNotFound());
 
-    // set referenced entity
-    manyToOne.setReferencedEntityName(property.getAssociatedEntity().getName());
-  }
+        // set referenced entity
+        manyToOne.setReferencedEntityName(property.getAssociatedEntity().getName());
+    }
 }

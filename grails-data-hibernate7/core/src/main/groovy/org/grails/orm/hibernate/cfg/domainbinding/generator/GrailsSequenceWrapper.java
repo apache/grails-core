@@ -18,31 +18,27 @@
  */
 package org.grails.orm.hibernate.cfg.domainbinding.generator;
 
-import static org.grails.orm.hibernate.cfg.domainbinding.generator.GrailsSequenceGeneratorEnum.NATIVE;
-import static org.grails.orm.hibernate.cfg.domainbinding.generator.GrailsSequenceGeneratorEnum.fromName;
-
-import org.grails.orm.hibernate.cfg.Identity;
-import org.grails.orm.hibernate.cfg.PersistentEntityNamingStrategy;
-import org.grails.orm.hibernate.cfg.domainbinding.hibernate.GrailsHibernatePersistentEntity;
 import org.hibernate.engine.jdbc.env.spi.JdbcEnvironment;
 import org.hibernate.generator.Generator;
 import org.hibernate.generator.GeneratorCreationContext;
 
+import org.grails.orm.hibernate.cfg.Identity;
+import org.grails.orm.hibernate.cfg.PersistentEntityNamingStrategy;
+import org.grails.orm.hibernate.cfg.domainbinding.hibernate.GrailsHibernatePersistentEntity;
+
+import static org.grails.orm.hibernate.cfg.domainbinding.generator.GrailsSequenceGeneratorEnum.NATIVE;
+import static org.grails.orm.hibernate.cfg.domainbinding.generator.GrailsSequenceGeneratorEnum.fromName;
+
 public class GrailsSequenceWrapper {
 
-  public Generator getGenerator(
-      String name,
-      GeneratorCreationContext context,
-      Identity mappedId,
-      GrailsHibernatePersistentEntity domainClass,
-      JdbcEnvironment jdbcEnvironment,
-      PersistentEntityNamingStrategy namingStrategy) {
-    return GrailsSequenceGeneratorEnum.getGenerator(
-        fromName(name).orElse(NATIVE),
-        context,
-        mappedId,
-        domainClass,
-        jdbcEnvironment,
-        namingStrategy);
-  }
+    public Generator getGenerator(
+            String name,
+            GeneratorCreationContext context,
+            Identity mappedId,
+            GrailsHibernatePersistentEntity domainClass,
+            JdbcEnvironment jdbcEnvironment,
+            PersistentEntityNamingStrategy namingStrategy) {
+        return GrailsSequenceGeneratorEnum.getGenerator(
+                fromName(name).orElse(NATIVE), context, mappedId, domainClass, jdbcEnvironment, namingStrategy);
+    }
 }

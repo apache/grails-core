@@ -21,29 +21,29 @@ package org.grails.orm.hibernate.query;
 import java.util.List;
 import java.util.Objects;
 import java.util.function.Function;
+
 import org.grails.datastore.gorm.query.criteria.DetachedAssociationCriteria;
 import org.grails.datastore.mapping.query.Query;
 
 @SuppressWarnings({"unchecked", "rawtypes"})
-public class DetachedAssociationFunction
-    implements Function<Query.Criterion, List<DetachedAssociationCriteria<?>>> {
-  @Override
-  public List<DetachedAssociationCriteria<?>> apply(Query.Criterion o) {
-    List<Query.Criterion> criteria;
-    if (o instanceof Query.In c && Objects.nonNull(c.getSubquery())) {
-      criteria = c.getSubquery().getCriteria();
-    } else if (o instanceof Query.Exists c && Objects.nonNull(c.getSubquery())) {
-      criteria = c.getSubquery().getCriteria();
-    } else if (o instanceof Query.NotExists c && Objects.nonNull(c.getSubquery())) {
-      criteria = c.getSubquery().getCriteria();
-    } else if (o instanceof Query.SubqueryCriterion c && Objects.nonNull(c.getValue())) {
-      criteria = c.getValue().getCriteria();
-    } else {
-      criteria = List.of(o);
+public class DetachedAssociationFunction implements Function<Query.Criterion, List<DetachedAssociationCriteria<?>>> {
+    @Override
+    public List<DetachedAssociationCriteria<?>> apply(Query.Criterion o) {
+        List<Query.Criterion> criteria;
+        if (o instanceof Query.In c && Objects.nonNull(c.getSubquery())) {
+            criteria = c.getSubquery().getCriteria();
+        } else if (o instanceof Query.Exists c && Objects.nonNull(c.getSubquery())) {
+            criteria = c.getSubquery().getCriteria();
+        } else if (o instanceof Query.NotExists c && Objects.nonNull(c.getSubquery())) {
+            criteria = c.getSubquery().getCriteria();
+        } else if (o instanceof Query.SubqueryCriterion c && Objects.nonNull(c.getValue())) {
+            criteria = c.getValue().getCriteria();
+        } else {
+            criteria = List.of(o);
+        }
+        return criteria.stream()
+                .filter(it -> it instanceof DetachedAssociationCriteria)
+                .map(it -> (DetachedAssociationCriteria<?>) it)
+                .collect(java.util.stream.Collectors.toList());
     }
-    return criteria.stream()
-        .filter(it -> it instanceof DetachedAssociationCriteria)
-        .map(it -> (DetachedAssociationCriteria<?>) it)
-        .collect(java.util.stream.Collectors.toList());
-  }
 }

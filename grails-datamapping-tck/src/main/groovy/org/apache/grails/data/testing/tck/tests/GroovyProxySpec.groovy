@@ -27,9 +27,10 @@ import spock.lang.IgnoreIf
 /**
  * @author graemerocher
  */
-@IgnoreIf({ System.getProperty('hibernate5.gorm.suite')
-        || System.getProperty('hibernate6.gorm.suite')
-        || System.getProperty('hibernate7.gorm.suite')
+@IgnoreIf({
+        System.getProperty('hibernate5.gorm.suite')
+            || System.getProperty('hibernate6.gorm.suite')
+            || System.getProperty('hibernate7.gorm.suite')
 })
 // this test is ignored because Groovy proxies are not used with Hibernate
 class GroovyProxySpec extends GrailsDataTckSpec {
@@ -44,20 +45,20 @@ class GroovyProxySpec extends GrailsDataTckSpec {
             manager.session.mappingContext.proxyFactory = new GroovyProxyFactory()
         }
 
-        when: "A proxy is loaded for an instance that doesn't exist"
+        when: 'A proxy is loaded for an instance that doesn\'t exist'
         def location = Location.proxy(123)
 
-        then: "The proxy is in a valid state"
+        then: 'The proxy is in a valid state'
 
         location != null
         123 == location.id
         false == location.isInitialized()
         false == location.initialized
 
-        when: "The proxy is loaded"
+        when: 'The proxy is loaded'
         location.code
 
-        then: "An exception is thrown"
+        then: 'An exception is thrown'
         thrown DataIntegrityViolationException
 
         where:
@@ -70,7 +71,7 @@ class GroovyProxySpec extends GrailsDataTckSpec {
             manager.session.mappingContext.proxyFactory = new GroovyProxyFactory()
         }
 
-        def id = new Location(name: "United Kingdom", code: "UK").save(flush: true)?.id
+        def id = new Location(name: 'United Kingdom', code: 'UK').save(flush: true)?.id
         manager.session.clear()
 
         when:
@@ -85,8 +86,8 @@ class GroovyProxySpec extends GrailsDataTckSpec {
         false == location.isInitialized()
         false == location.initialized
 
-        "UK" == location.code
-        "United Kingdom - UK" == location.namedAndCode()
+        'UK' == location.code
+        'United Kingdom - UK' == location.namedAndCode()
         true == location.isInitialized()
         true == location.initialized
         null != location.target
@@ -133,7 +134,7 @@ class GroovyProxySpec extends GrailsDataTckSpec {
         if (useGroovyProxyFactory) {
             manager.session.mappingContext.proxyFactory = new GroovyProxyFactory()
         }
-        def id = new Location(name: "United Kingdom", code: "UK").save(flush: true)?.id
+        def id = new Location(name: 'United Kingdom', code: 'UK').save(flush: true)?.id
         manager.session.clear()
 
         when:
@@ -148,8 +149,8 @@ class GroovyProxySpec extends GrailsDataTckSpec {
         false == location.isInitialized()
         false == location.initialized
 
-        "United Kingdom - UK" == location.namedAndCode() // method first
-        "UK" == location.code
+        'United Kingdom - UK' == location.namedAndCode() // method first
+        'UK' == location.code
         true == location.isInitialized()
         true == location.initialized
         null != location.target

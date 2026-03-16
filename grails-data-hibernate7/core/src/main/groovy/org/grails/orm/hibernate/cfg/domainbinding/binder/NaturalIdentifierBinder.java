@@ -19,31 +19,32 @@
 package org.grails.orm.hibernate.cfg.domainbinding.binder;
 
 import java.util.Optional;
+
+import org.hibernate.mapping.PersistentClass;
+
 import org.grails.orm.hibernate.cfg.Mapping;
 import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernateIdentity;
 import org.grails.orm.hibernate.cfg.domainbinding.util.UniqueNameGenerator;
-import org.hibernate.mapping.PersistentClass;
 
 public class NaturalIdentifierBinder {
 
-  private final UniqueNameGenerator uniqueNameGenerator;
+    private final UniqueNameGenerator uniqueNameGenerator;
 
-  public NaturalIdentifierBinder(UniqueNameGenerator uniqueNameGenerator) {
-    this.uniqueNameGenerator = uniqueNameGenerator;
-  }
+    public NaturalIdentifierBinder(UniqueNameGenerator uniqueNameGenerator) {
+        this.uniqueNameGenerator = uniqueNameGenerator;
+    }
 
-  public NaturalIdentifierBinder() {
-    this(new UniqueNameGenerator());
-  }
+    public NaturalIdentifierBinder() {
+        this(new UniqueNameGenerator());
+    }
 
-  public void bindNaturalIdentifier(Mapping mapping, PersistentClass persistentClass) {
-    Optional.ofNullable(mapping.getIdentity())
-        .map(HibernateIdentity::getNatural)
-        .flatMap(naturalId -> naturalId.createUniqueKey(persistentClass))
-        .ifPresent(
-            uk -> {
-              uniqueNameGenerator.setGeneratedUniqueName(uk);
-              persistentClass.getTable().addUniqueKey(uk);
-            });
-  }
+    public void bindNaturalIdentifier(Mapping mapping, PersistentClass persistentClass) {
+        Optional.ofNullable(mapping.getIdentity())
+                .map(HibernateIdentity::getNatural)
+                .flatMap(naturalId -> naturalId.createUniqueKey(persistentClass))
+                .ifPresent(uk -> {
+                    uniqueNameGenerator.setGeneratedUniqueName(uk);
+                    persistentClass.getTable().addUniqueKey(uk);
+                });
+    }
 }

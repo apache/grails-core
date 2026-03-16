@@ -161,7 +161,7 @@ class HibernateMappingBuilder implements MappingConfigurationBuilder<Mapping, Pr
     }
 
     void order(String direction) {
-        if ("desc".equalsIgnoreCase(direction) || "asc".equalsIgnoreCase(direction)) {
+        if ('desc'.equalsIgnoreCase(direction) || 'asc'.equalsIgnoreCase(direction)) {
             SortConfig sc = (SortConfig) mapping.getSort()
             sc.direction = direction
         }
@@ -269,7 +269,7 @@ class HibernateMappingBuilder implements MappingConfigurationBuilder<Mapping, Pr
             }
         }
         if (!args.composite && args) {
-            handlePropertyInternal("id", args, null)
+            handlePropertyInternal('id', args, null)
         }
     }
 
@@ -342,8 +342,8 @@ class HibernateMappingBuilder implements MappingConfigurationBuilder<Mapping, Pr
 
         if (namedArgs.fetch) {
             String fetchStr = namedArgs.fetch.toString()
-            if (fetchStr.equalsIgnoreCase("join")) property.fetch = FetchMode.JOIN
-            else if (fetchStr.equalsIgnoreCase("select")) property.fetch = FetchMode.SELECT
+            if (fetchStr.equalsIgnoreCase('join')) property.fetch = FetchMode.JOIN
+            else if (fetchStr.equalsIgnoreCase('select')) property.fetch = FetchMode.SELECT
             else property.fetch = FetchMode.DEFAULT
         }
 
@@ -355,27 +355,27 @@ class HibernateMappingBuilder implements MappingConfigurationBuilder<Mapping, Pr
             ColumnConfig cc = property.columns ? property.columns[0] : new ColumnConfig()
             if (!property.columns) property.columns << cc
 
-            Object colVal = namedArgs["column"]
+            Object colVal = namedArgs['column']
             if (colVal) cc.name = colVal.toString()
-            Object sqlTypeVal = namedArgs["sqlType"]
+            Object sqlTypeVal = namedArgs['sqlType']
             if (sqlTypeVal) cc.sqlType = sqlTypeVal.toString()
-            Object enumTypeVal = namedArgs["enumType"]
+            Object enumTypeVal = namedArgs['enumType']
             if (enumTypeVal) cc.enumType = enumTypeVal.toString()
-            Object indexVal = namedArgs["index"]
+            Object indexVal = namedArgs['index']
             if (indexVal) cc.index = indexVal.toString()
-            Object ccUniqueVal = namedArgs["unique"]
+            Object ccUniqueVal = namedArgs['unique']
             if (ccUniqueVal) cc.unique = ccUniqueVal instanceof Boolean ? (Boolean) ccUniqueVal : ccUniqueVal
-            Object readVal = namedArgs["read"]
+            Object readVal = namedArgs['read']
             if (readVal) cc.read = readVal.toString()
-            Object writeVal = namedArgs["write"]
+            Object writeVal = namedArgs['write']
             if (writeVal) cc.write = writeVal.toString()
             Object defaultVal = namedArgs.defaultValue
             if (defaultVal) cc.defaultValue = defaultVal.toString()
             Object commentVal = namedArgs.comment
             if (commentVal) cc.comment = commentVal.toString()
-            if (namedArgs["length"] instanceof Integer) cc.length = (int) (Integer) namedArgs["length"]
-            if (namedArgs["precision"] instanceof Integer) cc.precision = (int) (Integer) namedArgs["precision"]
-            if (namedArgs["scale"] instanceof Integer) cc.scale = (int) (Integer) namedArgs["scale"]
+            if (namedArgs['length'] instanceof Integer) cc.length = (int) (Integer) namedArgs['length']
+            if (namedArgs['precision'] instanceof Integer) cc.precision = (int) (Integer) namedArgs['precision']
+            if (namedArgs['scale'] instanceof Integer) cc.scale = (int) (Integer) namedArgs['scale']
 
             Object joinTableVal = namedArgs.joinTable
             if (joinTableVal instanceof String) {

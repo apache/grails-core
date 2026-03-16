@@ -18,8 +18,18 @@
  */
 package org.grails.orm.hibernate.support;
 
-import org.hibernate.event.spi.*;
+import org.hibernate.event.spi.MergeEventListener;
+import org.hibernate.event.spi.PersistEventListener;
+import org.hibernate.event.spi.PostDeleteEventListener;
+import org.hibernate.event.spi.PostInsertEventListener;
+import org.hibernate.event.spi.PostLoadEventListener;
+import org.hibernate.event.spi.PostUpdateEventListener;
+import org.hibernate.event.spi.PreDeleteEventListener;
+import org.hibernate.event.spi.PreInsertEventListener;
+import org.hibernate.event.spi.PreLoadEventListener;
+import org.hibernate.event.spi.PreUpdateEventListener;
 import org.hibernate.jpa.event.spi.CallbackRegistryConsumer;
+
 import org.springframework.context.ApplicationContextAware;
 
 /**
@@ -29,15 +39,15 @@ import org.springframework.context.ApplicationContextAware;
  * @since 6.0
  */
 public abstract class AbstractClosureEventTriggeringInterceptor
-    implements ApplicationContextAware,
-        PreLoadEventListener,
-        PostLoadEventListener,
-        PostInsertEventListener,
-        PostUpdateEventListener,
-        PostDeleteEventListener,
-        PreDeleteEventListener,
-        PreUpdateEventListener,
-        PreInsertEventListener,
-        MergeEventListener,
-        PersistEventListener,
-        CallbackRegistryConsumer {}
+        implements ApplicationContextAware,
+                PreLoadEventListener,
+                PostLoadEventListener,
+                PostInsertEventListener,
+                PostUpdateEventListener,
+                PostDeleteEventListener,
+                PreDeleteEventListener,
+                PreUpdateEventListener,
+                PreInsertEventListener,
+                MergeEventListener,
+                PersistEventListener,
+                CallbackRegistryConsumer {}

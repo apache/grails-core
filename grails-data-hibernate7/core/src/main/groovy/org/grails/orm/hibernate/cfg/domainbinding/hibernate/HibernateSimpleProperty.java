@@ -19,16 +19,15 @@
 package org.grails.orm.hibernate.cfg.domainbinding.hibernate;
 
 import java.beans.PropertyDescriptor;
+
 import org.grails.datastore.mapping.model.MappingContext;
 import org.grails.datastore.mapping.model.PersistentEntity;
 import org.grails.datastore.mapping.model.types.mapping.SimpleWithMapping;
 import org.grails.orm.hibernate.cfg.PropertyConfig;
 
 /** Hibernate implementation of {@link org.grails.datastore.mapping.model.types.Simple} */
-public class HibernateSimpleProperty extends SimpleWithMapping<PropertyConfig>
-    implements HibernatePersistentProperty {
-  public HibernateSimpleProperty(
-      PersistentEntity entity, MappingContext context, PropertyDescriptor property) {
-    super(entity, context, property);
-  }
+public class HibernateSimpleProperty extends SimpleWithMapping<PropertyConfig> implements HibernatePersistentProperty {
+    public HibernateSimpleProperty(PersistentEntity entity, MappingContext context, PropertyDescriptor property) {
+        super(entity, context, property);
+    }
 }

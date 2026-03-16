@@ -19,6 +19,7 @@
 package org.grails.orm.hibernate.query;
 
 import java.util.List;
+
 import org.grails.datastore.mapping.model.PersistentEntity;
 import org.grails.datastore.mapping.model.types.Association;
 import org.grails.datastore.mapping.query.AssociationQuery;
@@ -41,48 +42,48 @@ import org.grails.orm.hibernate.AbstractHibernateSession;
  * @see HibernateQuery#createQuery(String)
  */
 public class HibernateAssociationQuery extends AssociationQuery {
-  final String alias;
+    final String alias;
 
-  /** Dotted property path used for the JPA join (e.g. {@code "pets"} or {@code "owner.address"}) */
-  final String associationPath;
+    /** Dotted property path used for the JPA join (e.g. {@code "pets"} or {@code "owner.address"}) */
+    final String associationPath;
 
-  /** Criteria collector — a real HibernateQuery scoped to the associated entity */
-  private final HibernateQuery innerQuery;
+    /** Criteria collector — a real HibernateQuery scoped to the associated entity */
+    private final HibernateQuery innerQuery;
 
-  public HibernateAssociationQuery(
-      AbstractHibernateSession session,
-      PersistentEntity associatedEntity,
-      Association association,
-      String associationPath,
-      String alias) {
-    super(session, associatedEntity, association);
-    this.alias = alias;
-    this.associationPath = associationPath;
-    this.innerQuery = new HibernateQuery(session, associatedEntity);
-  }
+    public HibernateAssociationQuery(
+            AbstractHibernateSession session,
+            PersistentEntity associatedEntity,
+            Association association,
+            String associationPath,
+            String alias) {
+        super(session, associatedEntity, association);
+        this.alias = alias;
+        this.associationPath = associationPath;
+        this.innerQuery = new HibernateQuery(session, associatedEntity);
+    }
 
-  /** Returns the criteria collected inside the association closure. */
-  public List<Query.Criterion> getAssociationCriteria() {
-    return innerQuery.getAllCriteria();
-  }
+    /** Returns the criteria collected inside the association closure. */
+    public List<Query.Criterion> getAssociationCriteria() {
+        return innerQuery.getAllCriteria();
+    }
 
-  @Override
-  public void add(Query.Criterion criterion) {
-    innerQuery.add(criterion);
-  }
+    @Override
+    public void add(Query.Criterion criterion) {
+        innerQuery.add(criterion);
+    }
 
-  @Override
-  public void add(Query.Junction currentJunction, Query.Criterion criterion) {
-    innerQuery.add(currentJunction, criterion);
-  }
+    @Override
+    public void add(Query.Junction currentJunction, Query.Criterion criterion) {
+        innerQuery.add(currentJunction, criterion);
+    }
 
-  @Override
-  public Query.Junction disjunction() {
-    return innerQuery.disjunction();
-  }
+    @Override
+    public Query.Junction disjunction() {
+        return innerQuery.disjunction();
+    }
 
-  @Override
-  public Query.Junction negation() {
-    return innerQuery.negation();
-  }
+    @Override
+    public Query.Junction negation() {
+        return innerQuery.negation();
+    }
 }

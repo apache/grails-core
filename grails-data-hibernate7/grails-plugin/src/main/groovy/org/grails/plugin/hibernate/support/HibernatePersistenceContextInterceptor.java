@@ -46,7 +46,8 @@ import org.grails.orm.hibernate.support.HibernateRuntimeUtils;
  * @author Graeme Rocher
  * @since 0.4
  */
-public class HibernatePersistenceContextInterceptor implements PersistenceContextInterceptor, SessionFactoryAwarePersistenceContextInterceptor {
+public class HibernatePersistenceContextInterceptor
+        implements PersistenceContextInterceptor, SessionFactoryAwarePersistenceContextInterceptor {
 
     private static final Logger LOG = LoggerFactory.getLogger(HibernatePersistenceContextInterceptor.class);
     private AbstractHibernateDatastore hibernateDatastore;
@@ -97,8 +98,7 @@ public class HibernatePersistenceContextInterceptor implements PersistenceContex
         try {
             disconnected.clear();
             SessionFactoryUtils.closeSession(holder.getSession());
-        }
-        catch (RuntimeException ex) {
+        } catch (RuntimeException ex) {
             LOG.error("Unexpected exception on closing Hibernate Session", ex);
         }
     }
@@ -116,8 +116,7 @@ public class HibernatePersistenceContextInterceptor implements PersistenceContex
         if (!getParticipate()) {
             if (!transactionRequired) {
                 getSession().flush();
-            }
-            else if (TransactionSynchronizationManager.isSynchronizationActive()) {
+            } else if (TransactionSynchronizationManager.isSynchronizationActive()) {
                 getSession().flush();
             }
         }
@@ -142,8 +141,7 @@ public class HibernatePersistenceContextInterceptor implements PersistenceContex
         if (getSessionFactory() == null) return false;
         try {
             return getSession(false).isOpen();
-        }
-        catch (Exception e) {
+        } catch (Exception e) {
             return false;
         }
     }
@@ -162,8 +160,7 @@ public class HibernatePersistenceContextInterceptor implements PersistenceContex
         if (TransactionSynchronizationManager.hasResource(sf)) {
             // Do not modify the Session: just set the participate flag.
             setParticipate(true);
-        }
-        else {
+        } else {
             setParticipate(false);
             LOG.debug("Opening single Hibernate session in HibernatePersistenceContextInterceptor");
             Session session = getSession();
@@ -192,7 +189,8 @@ public class HibernatePersistenceContextInterceptor implements PersistenceContex
             return hibernateDatastore.openSession();
         }
 
-        throw new IllegalStateException("No Hibernate Session bound to thread, and configuration does not allow creation of non-transactional one here");
+        throw new IllegalStateException(
+                "No Hibernate Session bound to thread, and configuration does not allow creation of non-transactional one here");
     }
 
     /**

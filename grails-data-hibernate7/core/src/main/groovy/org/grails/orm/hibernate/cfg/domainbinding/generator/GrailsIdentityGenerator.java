@@ -20,18 +20,20 @@ package org.grails.orm.hibernate.cfg.domainbinding.generator;
 
 import java.util.Optional;
 import java.util.Properties;
-import org.grails.orm.hibernate.cfg.Identity;
+
 import org.hibernate.generator.GeneratorCreationContext;
 import org.hibernate.id.IdentityGenerator;
 
+import org.grails.orm.hibernate.cfg.Identity;
+
 public class GrailsIdentityGenerator extends IdentityGenerator {
 
-  private static final long serialVersionUID = 1L;
+    private static final long serialVersionUID = 1L;
 
-  public GrailsIdentityGenerator(GeneratorCreationContext context, Identity mappedId) {
-    var generatorProps =
-        Optional.ofNullable(mappedId).map(Identity::getProperties).orElse(new Properties());
-    super.configure(context, generatorProps);
-    context.getProperty().getValue().getColumns().get(0).setIdentity(true);
-  }
+    public GrailsIdentityGenerator(GeneratorCreationContext context, Identity mappedId) {
+        var generatorProps =
+                Optional.ofNullable(mappedId).map(Identity::getProperties).orElse(new Properties());
+        super.configure(context, generatorProps);
+        context.getProperty().getValue().getColumns().get(0).setIdentity(true);
+    }
 }

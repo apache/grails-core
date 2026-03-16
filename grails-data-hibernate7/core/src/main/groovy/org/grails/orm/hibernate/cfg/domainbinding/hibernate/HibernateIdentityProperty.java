@@ -19,6 +19,7 @@
 package org.grails.orm.hibernate.cfg.domainbinding.hibernate;
 
 import java.beans.PropertyDescriptor;
+
 import org.grails.datastore.mapping.model.MappingContext;
 import org.grails.datastore.mapping.model.PersistentEntity;
 import org.grails.datastore.mapping.model.types.mapping.IdentityWithMapping;
@@ -26,9 +27,8 @@ import org.grails.orm.hibernate.cfg.PropertyConfig;
 
 /** Hibernate implementation of {@link org.grails.datastore.mapping.model.types.Identity} */
 public class HibernateIdentityProperty extends IdentityWithMapping<PropertyConfig>
-    implements HibernatePersistentProperty {
-  public HibernateIdentityProperty(
-      PersistentEntity entity, MappingContext context, PropertyDescriptor property) {
-    super(entity, context, property);
-  }
+        implements HibernatePersistentProperty {
+    public HibernateIdentityProperty(PersistentEntity entity, MappingContext context, PropertyDescriptor property) {
+        super(entity, context, property);
+    }
 }

@@ -18,9 +18,11 @@
  */
 package org.grails.orm.hibernate.cfg.domainbinding.util;
 
-import jakarta.annotation.Nonnull;
 import java.util.Optional;
 import java.util.function.Function;
+
+import jakarta.annotation.Nonnull;
+
 import org.hibernate.boot.model.naming.Identifier;
 import org.hibernate.boot.model.relational.Database;
 import org.hibernate.boot.model.relational.Namespace;
@@ -28,21 +30,21 @@ import org.hibernate.boot.spi.InFlightMetadataCollector;
 
 public class NamespaceNameExtractor {
 
-  public static String getCatalogName(@Nonnull InFlightMetadataCollector mappings) {
-    return getNamespaceName(mappings, Namespace.Name::getCatalog);
-  }
+    public static String getCatalogName(@Nonnull InFlightMetadataCollector mappings) {
+        return getNamespaceName(mappings, Namespace.Name::getCatalog);
+    }
 
-  public static String getSchemaName(@Nonnull InFlightMetadataCollector mappings) {
-    return getNamespaceName(mappings, Namespace.Name::getSchema);
-  }
+    public static String getSchemaName(@Nonnull InFlightMetadataCollector mappings) {
+        return getNamespaceName(mappings, Namespace.Name::getSchema);
+    }
 
-  private static String getNamespaceName(
-      @Nonnull InFlightMetadataCollector mappings, Function<Namespace.Name, Identifier> function) {
-    return Optional.ofNullable(mappings.getDatabase())
-        .map(Database::getDefaultNamespace)
-        .map(Namespace::getName)
-        .map(function)
-        .map(Identifier::getCanonicalName)
-        .orElse(null);
-  }
+    private static String getNamespaceName(
+            @Nonnull InFlightMetadataCollector mappings, Function<Namespace.Name, Identifier> function) {
+        return Optional.ofNullable(mappings.getDatabase())
+                .map(Database::getDefaultNamespace)
+                .map(Namespace::getName)
+                .map(function)
+                .map(Identifier::getCanonicalName)
+                .orElse(null);
+    }
 }

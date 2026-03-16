@@ -32,13 +32,13 @@ class CircularOneToManySpec extends GrailsDataTckSpec {
 
     void "Test circular one-to-many"() {
         given:
-        def parent = new Task(name: "Root").save()
-        def child = new Task(task: parent, name: "Finish Job").save(flush: true)
+        def parent = new Task(name: 'Root').save()
+        def child = new Task(task: parent, name: 'Finish Job').save(flush: true)
         manager.session.clear()
 
         when:
-        parent = Task.findByName("Root")
-        child = Task.findByName("Finish Job")
+        parent = Task.findByName('Root')
+        child = Task.findByName('Finish Job')
 
         then:
         parent.task == null

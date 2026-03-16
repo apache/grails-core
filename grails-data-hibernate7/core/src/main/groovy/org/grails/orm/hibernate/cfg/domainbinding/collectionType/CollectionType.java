@@ -18,11 +18,12 @@
  */
 package org.grails.orm.hibernate.cfg.domainbinding.collectionType;
 
-import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernateToManyProperty;
 import org.hibernate.MappingException;
 import org.hibernate.boot.spi.MetadataBuildingContext;
 import org.hibernate.mapping.Collection;
 import org.hibernate.mapping.PersistentClass;
+
+import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernateToManyProperty;
 
 /**
  * A Collection type, for the moment only Set is supported
@@ -31,37 +32,36 @@ import org.hibernate.mapping.PersistentClass;
  */
 public abstract class CollectionType {
 
-  /** The clazz. */
-  protected final Class<?> clazz;
+    /** The clazz. */
+    protected final Class<?> clazz;
 
-  /** The building context. */
-  protected final MetadataBuildingContext buildingContext;
+    /** The building context. */
+    protected final MetadataBuildingContext buildingContext;
 
-  /** Create collection. */
-  public abstract Collection createCollection(PersistentClass owner);
+    /** Create collection. */
+    public abstract Collection createCollection(PersistentClass owner);
 
-  /** Create. */
-  public Collection create(HibernateToManyProperty property, PersistentClass owner)
-      throws MappingException {
-    Collection coll = createCollection(owner);
-    coll.setCollectionTable(owner.getTable());
-    coll.setTypeName(getTypeName(property));
-    return coll;
-  }
+    /** Create. */
+    public Collection create(HibernateToManyProperty property, PersistentClass owner) throws MappingException {
+        Collection coll = createCollection(owner);
+        coll.setCollectionTable(owner.getTable());
+        coll.setTypeName(getTypeName(property));
+        return coll;
+    }
 
-  /** Creates a new {@link CollectionType} instance. */
-  protected CollectionType(Class<?> clazz, MetadataBuildingContext buildingContext) {
-    this.clazz = clazz;
-    this.buildingContext = buildingContext;
-  }
+    /** Creates a new {@link CollectionType} instance. */
+    protected CollectionType(Class<?> clazz, MetadataBuildingContext buildingContext) {
+        this.clazz = clazz;
+        this.buildingContext = buildingContext;
+    }
 
-  @Override
-  public String toString() {
-    return clazz.getName();
-  }
+    @Override
+    public String toString() {
+        return clazz.getName();
+    }
 
-  /** Gets the type name. */
-  public String getTypeName(HibernateToManyProperty property) {
-    return property.getTypeName();
-  }
+    /** Gets the type name. */
+    public String getTypeName(HibernateToManyProperty property) {
+        return property.getTypeName();
+    }
 }

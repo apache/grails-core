@@ -18,7 +18,6 @@ package org.grails.orm.hibernate.cfg
 import groovy.transform.CompileStatic
 import groovy.transform.builder.Builder
 import groovy.transform.builder.SimpleStrategy
-import org.grails.orm.hibernate.cfg.domainbinding.util.UniqueNameGenerator
 import org.hibernate.mapping.PersistentClass
 import org.hibernate.mapping.UniqueKey
 
@@ -29,6 +28,7 @@ import org.hibernate.mapping.UniqueKey
 @CompileStatic
 @Builder(builderStrategy = SimpleStrategy, prefix = '')
 class NaturalId {
+
     /**
      * The property names that make up the natural id
      */

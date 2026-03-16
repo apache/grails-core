@@ -18,13 +18,16 @@
  */
 package org.grails.orm.hibernate.cfg.domainbinding.secondpass;
 
-import jakarta.annotation.Nonnull;
 import java.io.Serial;
 import java.util.Map;
-import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernateToManyProperty;
+
+import jakarta.annotation.Nonnull;
+
 import org.hibernate.MappingException;
 import org.hibernate.boot.spi.InFlightMetadataCollector;
 import org.hibernate.mapping.Collection;
+
+import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernateToManyProperty;
 
 /**
  * Second pass class for grails relationships. This is required as all persistent classes need to be
@@ -33,31 +36,30 @@ import org.hibernate.mapping.Collection;
  * @author Graeme
  */
 @SuppressWarnings("PMD.NonSerializableClass")
-public class SetSecondPass
-    implements org.hibernate.boot.spi.SecondPass, GrailsSecondPass, java.io.Serializable {
+public class SetSecondPass implements org.hibernate.boot.spi.SecondPass, GrailsSecondPass, java.io.Serializable {
 
-  @Serial private static final long serialVersionUID = -5540526942092611348L;
+    @Serial
+    private static final long serialVersionUID = -5540526942092611348L;
 
-  private final CollectionSecondPassBinder collectionSecondPassBinder;
-  protected final HibernateToManyProperty property;
-  protected final @Nonnull InFlightMetadataCollector mappings;
-  protected final Collection collection;
+    private final CollectionSecondPassBinder collectionSecondPassBinder;
+    protected final HibernateToManyProperty property;
+    protected final @Nonnull InFlightMetadataCollector mappings;
+    protected final Collection collection;
 
-  public SetSecondPass(
-      CollectionSecondPassBinder collectionSecondPassBinder,
-      HibernateToManyProperty property,
-      @Nonnull InFlightMetadataCollector mappings,
-      Collection coll) {
-    this.collectionSecondPassBinder = collectionSecondPassBinder;
-    this.property = property;
-    this.mappings = mappings;
-    this.collection = coll;
-  }
+    public SetSecondPass(
+            CollectionSecondPassBinder collectionSecondPassBinder,
+            HibernateToManyProperty property,
+            @Nonnull InFlightMetadataCollector mappings,
+            Collection coll) {
+        this.collectionSecondPassBinder = collectionSecondPassBinder;
+        this.property = property;
+        this.mappings = mappings;
+        this.collection = coll;
+    }
 
-  @SuppressWarnings("rawtypes")
-  public void doSecondPass(Map persistentClasses) throws MappingException {
-    collectionSecondPassBinder.bindCollectionSecondPass(
-        property, mappings, persistentClasses, collection);
-    createCollectionKeys(collection);
-  }
+    @SuppressWarnings("rawtypes")
+    public void doSecondPass(Map persistentClasses) throws MappingException {
+        collectionSecondPassBinder.bindCollectionSecondPass(property, mappings, persistentClasses, collection);
+        createCollectionKeys(collection);
+    }
 }

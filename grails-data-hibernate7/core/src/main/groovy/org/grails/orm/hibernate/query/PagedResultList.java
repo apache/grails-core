@@ -18,69 +18,68 @@
  */
 package org.grails.orm.hibernate.query;
 
+import java.sql.SQLException;
+
 import jakarta.persistence.criteria.CriteriaBuilder;
 import jakarta.persistence.criteria.CriteriaQuery;
 import jakarta.persistence.criteria.Root;
-import java.sql.SQLException;
-import org.grails.datastore.mapping.model.PersistentEntity;
-import org.grails.orm.hibernate.GrailsHibernateTemplate;
+
 import org.hibernate.HibernateException;
 import org.hibernate.Session;
 import org.hibernate.query.Query;
 
+import org.grails.datastore.mapping.model.PersistentEntity;
+import org.grails.orm.hibernate.GrailsHibernateTemplate;
+
 public class PagedResultList extends grails.gorm.PagedResultList {
 
-  private static final long serialVersionUID = 1L;
+    private static final long serialVersionUID = 1L;
 
-  private final CriteriaQuery criteriaQuery;
-  private final Root queryRoot;
-  private final CriteriaBuilder criteriaBuilder;
-  private final PersistentEntity entity;
-  private transient GrailsHibernateTemplate hibernateTemplate;
+    private final CriteriaQuery criteriaQuery;
+    private final Root queryRoot;
+    private final CriteriaBuilder criteriaBuilder;
+    private final PersistentEntity entity;
+    private transient GrailsHibernateTemplate hibernateTemplate;
 
-  public PagedResultList(
-      GrailsHibernateTemplate template,
-      PersistentEntity entity,
-      HibernateHqlQuery hibernateHqlQuery,
-      CriteriaQuery criteriaQuery,
-      Root queryRoot,
-      CriteriaBuilder criteriaBuilder) {
-    super(hibernateHqlQuery);
-    hibernateTemplate = template;
-    this.criteriaQuery = criteriaQuery;
-    this.queryRoot = queryRoot;
-    this.criteriaBuilder = criteriaBuilder;
-    this.entity = entity;
-  }
-
-  @Override
-  protected void initialize() {
-    // no-op, already initialized
-  }
-
-  @Override
-  public int getTotalCount() {
-    if (totalCount == Integer.MIN_VALUE) {
-      totalCount =
-          hibernateTemplate.execute(
-              new GrailsHibernateTemplate.HibernateCallback<Integer>() {
-                public Integer doInHibernate(Session session)
-                    throws HibernateException, SQLException {
-                  final CriteriaQuery finalQuery =
-                      criteriaQuery
-                          .select(criteriaBuilder.count(queryRoot))
-                          .distinct(true)
-                          .orderBy();
-                  final Query query = session.createQuery(finalQuery);
-                  hibernateTemplate.applySettings(query);
-                  return ((Number) query.uniqueResult()).intValue();
-                }
-              });
+    public PagedResultList(
+            GrailsHibernateTemplate template,
+            PersistentEntity entity,
+            HibernateHqlQuery hibernateHqlQuery,
+            CriteriaQuery criteriaQuery,
+            Root queryRoot,
+            CriteriaBuilder criteriaBuilder) {
+        super(hibernateHqlQuery);
+        hibernateTemplate = template;
+        this.criteriaQuery = criteriaQuery;
+        this.queryRoot = queryRoot;
+        this.criteriaBuilder = criteriaBuilder;
+        this.entity = entity;
     }
-    return totalCount;
-  }
 
-  public void setTotalCount(int totalCount) {
-    this.totalCount = totalCount;
-  }
+    @Override
+    protected void initialize() {
+        // no-op, already initialized
+    }
+
+    @Override
+    public int getTotalCount() {
+        if (totalCount == Integer.MIN_VALUE) {
+            totalCount = hibernateTemplate.execute(new GrailsHibernateTemplate.HibernateCallback<Integer>() {
+                public Integer doInHibernate(Session session) throws HibernateException, SQLException {
+                    final CriteriaQuery finalQuery = criteriaQuery
+                            .select(criteriaBuilder.count(queryRoot))
+                            .distinct(true)
+                            .orderBy();
+                    final Query query = session.createQuery(finalQuery);
+                    hibernateTemplate.applySettings(query);
+                    return ((Number) query.uniqueResult()).intValue();
+                }
+            });
+        }
+        return totalCount;
+    }
+
+    public void setTotalCount(int totalCount) {
+        this.totalCount = totalCount;
+    }
 }

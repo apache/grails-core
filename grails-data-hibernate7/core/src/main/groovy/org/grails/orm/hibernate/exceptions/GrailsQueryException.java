@@ -27,13 +27,13 @@ import org.grails.datastore.mapping.core.DatastoreException;
  */
 public class GrailsQueryException extends DatastoreException {
 
-  private static final long serialVersionUID = 775603608315415077L;
+    private static final long serialVersionUID = 775603608315415077L;
 
-  public GrailsQueryException(String message, Throwable cause) {
-    super(message, cause);
-  }
+    public GrailsQueryException(String message, Throwable cause) {
+        super(message, cause);
+    }
 
-  public GrailsQueryException(String message) {
-    super(message);
-  }
+    public GrailsQueryException(String message) {
+        super(message);
+    }
 }

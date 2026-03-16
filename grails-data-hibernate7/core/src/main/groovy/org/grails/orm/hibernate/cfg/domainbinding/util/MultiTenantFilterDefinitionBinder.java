@@ -18,9 +18,11 @@
  */
 package org.grails.orm.hibernate.cfg.domainbinding.util;
 
-import jakarta.annotation.Nonnull;
 import java.util.Collections;
 import java.util.Optional;
+
+import jakarta.annotation.Nonnull;
+
 import org.hibernate.engine.spi.FilterDefinition;
 import org.hibernate.mapping.BasicValue;
 import org.hibernate.mapping.Property;
@@ -33,23 +35,22 @@ import org.hibernate.metamodel.mapping.JdbcMapping;
  */
 public class MultiTenantFilterDefinitionBinder {
 
-  /**
-   * Creates a global filter definition for the given filter name.
-   *
-   * @param filterName The name of the filter
-   * @param property The property to get the type from
-   * @return The FilterDefinition Optional
-   */
-  @Nonnull
-  public Optional<FilterDefinition> create(@Nonnull String filterName, @Nonnull Property property) {
-    if (property.getValue() instanceof BasicValue basicValue) {
-      JdbcMapping jdbcMapping = basicValue.resolve().getJdbcMapping();
-      return Optional.of(
-          new FilterDefinition(
-              filterName,
-              null, // No default condition; let classes specify their own
-              Collections.singletonMap(filterName, jdbcMapping)));
+    /**
+     * Creates a global filter definition for the given filter name.
+     *
+     * @param filterName The name of the filter
+     * @param property The property to get the type from
+     * @return The FilterDefinition Optional
+     */
+    @Nonnull
+    public Optional<FilterDefinition> create(@Nonnull String filterName, @Nonnull Property property) {
+        if (property.getValue() instanceof BasicValue basicValue) {
+            JdbcMapping jdbcMapping = basicValue.resolve().getJdbcMapping();
+            return Optional.of(new FilterDefinition(
+                    filterName,
+                    null, // No default condition; let classes specify their own
+                    Collections.singletonMap(filterName, jdbcMapping)));
+        }
+        return Optional.empty();
     }
-    return Optional.empty();
-  }
 }

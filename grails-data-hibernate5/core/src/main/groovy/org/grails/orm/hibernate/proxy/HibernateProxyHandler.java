@@ -18,17 +18,18 @@
  */
 package org.grails.orm.hibernate.proxy;
 
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 import java.io.Serializable;
 
 import groovy.lang.GroovyObject;
 import groovy.lang.MetaClass;
 import org.codehaus.groovy.runtime.HandleMetaClass;
+
 import org.hibernate.Hibernate;
 import org.hibernate.collection.spi.PersistentCollection;
 import org.hibernate.proxy.HibernateProxy;
 import org.hibernate.proxy.HibernateProxyHelper;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import org.grails.datastore.gorm.proxy.ProxyInstanceMetaClass;
 import org.grails.datastore.mapping.core.Session;
@@ -115,7 +116,7 @@ public class HibernateProxyHandler implements ProxyHandler, ProxyFactory {
     @Override
     public Object unwrap(Object object) {
         if (object instanceof EntityProxy) {
-            return ((EntityProxy)object).getTarget();
+            return ((EntityProxy) object).getTarget();
         }
         ProxyInstanceMetaClass proxyMc = getProxyInstanceMetaClass(object);
         if (proxyMc != null) {
@@ -135,14 +136,14 @@ public class HibernateProxyHandler implements ProxyHandler, ProxyFactory {
     @Override
     public Serializable getIdentifier(Object o) {
         if (o instanceof EntityProxy) {
-            return ((EntityProxy)o).getProxyKey();
+            return ((EntityProxy) o).getProxyKey();
         }
         ProxyInstanceMetaClass proxyMc = getProxyInstanceMetaClass(o);
         if (proxyMc != null) {
             return proxyMc.getKey();
         }
         if (o instanceof HibernateProxy) {
-            return (Serializable) ((HibernateProxy)o).getHibernateLazyInitializer().getIdentifier();
+            return (Serializable) ((HibernateProxy) o).getHibernateLazyInitializer().getIdentifier();
         }
         else {
             return null;
@@ -176,7 +177,7 @@ public class HibernateProxyHandler implements ProxyHandler, ProxyFactory {
         if (getProxyInstanceMetaClass(o) != null) {
             return true;
         }
-        return (o instanceof EntityProxy) || (o instanceof HibernateProxy)  || (o instanceof PersistentCollection);
+        return (o instanceof EntityProxy) || (o instanceof HibernateProxy) || (o instanceof PersistentCollection);
     }
 
     /**
@@ -186,7 +187,7 @@ public class HibernateProxyHandler implements ProxyHandler, ProxyFactory {
     @Override
     public void initialize(Object o) {
         if (o instanceof EntityProxy) {
-            ((EntityProxy)o).initialize();
+            ((EntityProxy) o).initialize();
         }
         else {
             ProxyInstanceMetaClass proxyMc = getProxyInstanceMetaClass(o);

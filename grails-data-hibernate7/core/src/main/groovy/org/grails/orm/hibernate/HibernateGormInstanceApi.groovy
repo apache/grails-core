@@ -57,12 +57,12 @@ import org.springframework.validation.Validator
 @CompileStatic
 class HibernateGormInstanceApi<D> extends GormInstanceApi<D> {
 
-    private static final String ARGUMENT_VALIDATE = "validate"
-    private static final String ARGUMENT_DEEP_VALIDATE = "deepValidate"
-    private static final String ARGUMENT_FLUSH = "flush"
-    private static final String ARGUMENT_INSERT = "insert"
-    private static final String ARGUMENT_MERGE = "merge"
-    private static final String ARGUMENT_FAIL_ON_ERROR = "failOnError"
+    private static final String ARGUMENT_VALIDATE = 'validate'
+    private static final String ARGUMENT_DEEP_VALIDATE = 'deepValidate'
+    private static final String ARGUMENT_FLUSH = 'flush'
+    private static final String ARGUMENT_INSERT = 'insert'
+    private static final String ARGUMENT_MERGE = 'merge'
+    private static final String ARGUMENT_FAIL_ON_ERROR = 'failOnError'
     private static final Class DEFERRED_BINDING
 
     static {
@@ -126,9 +126,9 @@ class HibernateGormInstanceApi<D> extends GormInstanceApi<D> {
                 }
 
                 if (errors.hasErrors()) {
-                    handleValidationError(domainClass,target,errors)
+                    handleValidationError(domainClass, target, errors)
                     if (shouldFail(arguments)) {
-                        throw validationException.newInstance("Validation Error(s) occurred during save()", errors)
+                        throw validationException.newInstance('Validation Error(s) occurred during save()', errors)
                     }
                     return null
                 }
@@ -143,7 +143,7 @@ class HibernateGormInstanceApi<D> extends GormInstanceApi<D> {
         validateable.skipValidation(true)
 
         try {
-            String idPropertyName = domainClass.identity?.name ?: "id"
+            String idPropertyName = domainClass.identity?.name ?: 'id'
             Object idVal = InvokerHelper.getProperty(target, idPropertyName)
             if (idVal == null) {
                 return performPersist(target, shouldFlush)
@@ -154,10 +154,6 @@ class HibernateGormInstanceApi<D> extends GormInstanceApi<D> {
             validateable.skipValidation(false)
         }
     }
-
-
-
-
 
     private void runDeferredBinding() {
         if (DEFERRED_BINDING != null) {
@@ -192,7 +188,7 @@ class HibernateGormInstanceApi<D> extends GormInstanceApi<D> {
         try {
             hibernateTemplate.execute { Session session ->
                 session.remove instance
-                if(flush) {
+                if (flush) {
                     session.flush()
                 }
             }
@@ -233,7 +229,6 @@ class HibernateGormInstanceApi<D> extends GormInstanceApi<D> {
         return instance
     }
 
-
     protected D performMerge(final D target, final boolean flush) {
         hibernateTemplate.execute { Session session ->
             Object merged = session.merge(target)
@@ -270,12 +265,12 @@ class HibernateGormInstanceApi<D> extends GormInstanceApi<D> {
         }
     }
 
-    @SuppressWarnings("unchecked")
+    @SuppressWarnings('unchecked')
     private void autoRetrieveAssociations(Datastore datastore, PersistentEntity entity, Object target) {
         EntityReflector reflector = datastore.mappingContext.getEntityReflector(entity)
         IHibernateTemplate t = this.hibernateTemplate
         for (PersistentProperty prop in entity.associations) {
-            if(prop instanceof ToOne && !(prop instanceof Embedded)) {
+            if (prop instanceof ToOne && !(prop instanceof Embedded)) {
                 ToOne toOne = (ToOne)prop
 
                 def propertyName = prop.name
@@ -290,13 +285,13 @@ class HibernateGormInstanceApi<D> extends GormInstanceApi<D> {
                 }
 
                 def identity = otherSide.identity
-                if(identity == null) {
+                if (identity == null) {
                     continue
                 }
 
                 def otherSideReflector = datastore.mappingContext.getEntityReflector(otherSide)
                 try {
-                    def id = (Serializable)otherSideReflector.getProperty(propValue, identity.name);
+                    def id = (Serializable)otherSideReflector.getProperty(propValue, identity.name)
                     if (id) {
                         final Object associatedInstance = t.get(prop.type, id)
                         if (associatedInstance) {
@@ -341,11 +336,11 @@ class HibernateGormInstanceApi<D> extends GormInstanceApi<D> {
         if (entity) {
             for (Association association in entity.associations) {
                 if (association instanceof ToOne && !association instanceof Embedded) {
-                        def bean = new BeanWrapperImpl(target)
-                        def propertyValue = bean.getPropertyValue(association.name)
-                        if (propertyValue != null) {
-                            setObjectToReadOnly propertyValue
-                        }
+                    def bean = new BeanWrapperImpl(target)
+                    def propertyValue = bean.getPropertyValue(association.name)
+                    if (propertyValue != null) {
+                        setObjectToReadOnly propertyValue
+                    }
                 }
             }
         }
@@ -362,11 +357,11 @@ class HibernateGormInstanceApi<D> extends GormInstanceApi<D> {
     }
 
     static void markInsertActive() {
-        insertActiveThreadLocal.set(Boolean.TRUE);
+        insertActiveThreadLocal.set(Boolean.TRUE)
     }
 
     static void resetInsertActive() {
-        insertActiveThreadLocal.remove();
+        insertActiveThreadLocal.remove()
     }
 
     /**
@@ -466,7 +461,6 @@ class HibernateGormInstanceApi<D> extends GormInstanceApi<D> {
         }
         return fieldIndex == -1 ? null : entry.loadedState[fieldIndex]
     }
-
 
     protected EntityEntry findEntityEntry(D instance, SessionImplementor session, boolean forDirtyCheck = true) {
         def entry = session.persistenceContext.getEntry(instance)

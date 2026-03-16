@@ -20,7 +20,6 @@
 package org.grails.datastore.gorm.finders;
 
 import java.util.regex.Pattern;
-import java.util.stream.Collectors;
 
 import org.grails.datastore.mapping.core.Datastore;
 import org.grails.datastore.mapping.core.Session;
@@ -59,7 +58,6 @@ public abstract class AbstractFindByFinder extends DynamicFinder {
     public boolean firstExpressionIsRequiredBoolean() {
         return super.firstExpressionIsRequiredBoolean();
     }
-
 
     protected void adjustQuery(Query query) {
     }

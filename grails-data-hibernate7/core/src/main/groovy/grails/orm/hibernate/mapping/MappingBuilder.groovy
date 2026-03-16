@@ -50,7 +50,7 @@ class MappingBuilder {
 
         @Override
         Mapping build() {
-            if(mapping == null) {
+            if (mapping == null) {
                 mapping = Mapping.configureNew(definition)
             }
             return mapping

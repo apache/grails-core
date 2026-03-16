@@ -9,6 +9,7 @@ import org.springframework.beans.factory.FactoryBean
 import org.springframework.context.ApplicationContext
 import org.springframework.context.ApplicationContextAware
 import org.springframework.core.env.PropertyResolver
+
 /**
  * Helper for constructing the datastore
  *
@@ -16,14 +17,14 @@ import org.springframework.core.env.PropertyResolver
  * @since 5.0
  */
 @CompileStatic
-public class HibernateDatastoreFactoryBean<T extends AbstractHibernateDatastore> implements FactoryBean<T>, ApplicationContextAware {
+class HibernateDatastoreFactoryBean<T extends AbstractHibernateDatastore> implements FactoryBean<T>, ApplicationContextAware {
 
-    private final Class<T> objectType;
-    private final MappingContext mappingContext;
-    private final SessionFactory sessionFactory;
-    private final PropertyResolver configuration;
-    private final String dataSourceName;
-    ApplicationContext applicationContext;
+    private final Class<T> objectType
+    private final MappingContext mappingContext
+    private final SessionFactory sessionFactory
+    private final PropertyResolver configuration
+    private final String dataSourceName
+    ApplicationContext applicationContext
 
     HibernateDatastoreFactoryBean(Class<T> objectType, MappingContext mappingContext, SessionFactory sessionFactory, PropertyResolver configuration, String dataSourceName) {
         this.objectType = objectType
@@ -34,29 +35,28 @@ public class HibernateDatastoreFactoryBean<T extends AbstractHibernateDatastore>
     }
 
     @Override
-    public void setApplicationContext(ApplicationContext applicationContext) throws BeansException {
-        this.applicationContext = applicationContext;
+    void setApplicationContext(ApplicationContext applicationContext) throws BeansException {
+        this.applicationContext = applicationContext
     }
 
     @Override
-    public T getObject() throws Exception {
+    T getObject() throws Exception {
         AbstractHibernateDatastore datastore = objectType.newInstance(mappingContext, sessionFactory, configuration, dataSourceName)
 
-
-        if(applicationContext != null) {
+        if (applicationContext != null) {
             datastore.setApplicationContext(applicationContext)
         }
 
-        return datastore;
+        return datastore
     }
 
     @Override
-    public Class<?> getObjectType() {
-        return objectType;
+    Class<?> getObjectType() {
+        return objectType
     }
 
     @Override
-    public boolean isSingleton() {
-        return true;
+    boolean isSingleton() {
+        return true
     }
 }

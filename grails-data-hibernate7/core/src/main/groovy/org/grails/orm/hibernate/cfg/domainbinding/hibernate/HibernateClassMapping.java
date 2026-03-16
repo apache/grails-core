@@ -32,20 +32,20 @@ import org.grails.orm.hibernate.cfg.domainbinding.util.CascadeBehavior;
  * @since 5.0
  */
 public class HibernateClassMapping extends AbstractClassMapping<Mapping> {
-  private final Mapping mappedForm;
+    private final Mapping mappedForm;
 
-  public HibernateClassMapping(PersistentEntity entity, MappingContext context) {
-    super(entity, context);
-    this.mappedForm = (Mapping) context.getMappingFactory().createMappedForm(entity);
-    for (PropertyConfig propConf : mappedForm.getPropertyConfigs().values()) {
-      if (propConf != null && propConf.getCascade() != null) {
-        propConf.setExplicitSaveUpdateCascade(CascadeBehavior.isSaveUpdate(propConf.getCascade()));
-      }
+    public HibernateClassMapping(PersistentEntity entity, MappingContext context) {
+        super(entity, context);
+        this.mappedForm = (Mapping) context.getMappingFactory().createMappedForm(entity);
+        for (PropertyConfig propConf : mappedForm.getPropertyConfigs().values()) {
+            if (propConf != null && propConf.getCascade() != null) {
+                propConf.setExplicitSaveUpdateCascade(CascadeBehavior.isSaveUpdate(propConf.getCascade()));
+            }
+        }
     }
-  }
 
-  @Override
-  public Mapping getMappedForm() {
-    return mappedForm;
-  }
+    @Override
+    public Mapping getMappedForm() {
+        return mappedForm;
+    }
 }

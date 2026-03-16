@@ -19,11 +19,13 @@
 package org.grails.orm.hibernate.cfg.domainbinding.hibernate;
 
 import java.util.List;
-import org.grails.orm.hibernate.cfg.Mapping;
-import org.grails.orm.hibernate.cfg.PropertyConfig;
+
 import org.hibernate.MappingException;
 import org.hibernate.mapping.ManyToOne;
 import org.hibernate.mapping.Property;
+
+import org.grails.orm.hibernate.cfg.Mapping;
+import org.grails.orm.hibernate.cfg.PropertyConfig;
 
 /**
  * Common interface for all Hibernate association properties (both ToOne and ToMany). Extends {@link
@@ -37,63 +39,59 @@ import org.hibernate.mapping.Property;
  */
 public interface HibernateAssociation extends HibernatePersistentProperty {
 
-  // --- Association contract (satisfied by the class hierarchy of all implementors) ---
+    // --- Association contract (satisfied by the class hierarchy of all implementors) ---
 
-  org.grails.datastore.mapping.model.PersistentProperty<?> getInverseSide();
+    org.grails.datastore.mapping.model.PersistentProperty<?> getInverseSide();
 
-  org.grails.datastore.mapping.model.PersistentEntity getAssociatedEntity();
+    org.grails.datastore.mapping.model.PersistentEntity getAssociatedEntity();
 
-  boolean isBidirectional();
+    boolean isBidirectional();
 
-  boolean isOwningSide();
+    boolean isOwningSide();
 
-  boolean isCircular();
+    boolean isCircular();
 
-  boolean isBidirectionalOneToManyMap();
+    boolean isBidirectionalOneToManyMap();
 
-  // --- Hibernate-typed overrides, removing instanceof guards ---
+    // --- Hibernate-typed overrides, removing instanceof guards ---
 
-  /** Returns the inverse side as a {@link HibernateAssociation}, eliminating cast at call sites. */
-  @Override
-  default HibernateAssociation getHibernateInverseSide() {
-    return (HibernateAssociation) getInverseSide();
-  }
-
-  @Override
-  default GrailsHibernatePersistentEntity getHibernateAssociatedEntity() {
-    return (GrailsHibernatePersistentEntity) getAssociatedEntity();
-  }
-
-  @Override
-  default void validateAssociation() {
-    if (getUserType() != null) {
-      throw new MappingException(
-          "Cannot bind association property ["
-              + getName()
-              + "] of type ["
-              + getType()
-              + "] to a user type");
+    /** Returns the inverse side as a {@link HibernateAssociation}, eliminating cast at call sites. */
+    @Override
+    default HibernateAssociation getHibernateInverseSide() {
+        return (HibernateAssociation) getInverseSide();
     }
-  }
 
-  default boolean isBidirectionalManyToOneWithListMapping(Property prop) {
-    return isBidirectional()
-        && getInverseSide() != null
-        && List.class.isAssignableFrom(getType())
-        && prop != null
-        && prop.getValue() instanceof ManyToOne;
-  }
-
-  /**
-   * @param propertyType The property type
-   * @param config The property config
-   * @param mapping The mapping
-   * @return The type name
-   */
-  default String getTypeName(Class<?> propertyType, PropertyConfig config, Mapping mapping) {
-    if (propertyType == getType() && getHibernateAssociatedEntity() != null) {
-      return null;
+    @Override
+    default GrailsHibernatePersistentEntity getHibernateAssociatedEntity() {
+        return (GrailsHibernatePersistentEntity) getAssociatedEntity();
     }
-    return HibernatePersistentProperty.super.getTypeName(propertyType, config, mapping);
-  }
+
+    @Override
+    default void validateAssociation() {
+        if (getUserType() != null) {
+            throw new MappingException(
+                    "Cannot bind association property [" + getName() + "] of type [" + getType() + "] to a user type");
+        }
+    }
+
+    default boolean isBidirectionalManyToOneWithListMapping(Property prop) {
+        return isBidirectional() &&
+                getInverseSide() != null &&
+                List.class.isAssignableFrom(getType()) &&
+                prop != null &&
+                prop.getValue() instanceof ManyToOne;
+    }
+
+    /**
+     * @param propertyType The property type
+     * @param config The property config
+     * @param mapping The mapping
+     * @return The type name
+     */
+    default String getTypeName(Class<?> propertyType, PropertyConfig config, Mapping mapping) {
+        if (propertyType == getType() && getHibernateAssociatedEntity() != null) {
+            return null;
+        }
+        return HibernatePersistentProperty.super.getTypeName(propertyType, config, mapping);
+    }
 }

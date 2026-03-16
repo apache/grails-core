@@ -19,6 +19,9 @@
 
 package org.grails.datastore.mapping.model;
 
+import java.util.Optional;
+import java.util.SortedSet;
+
 import org.grails.datastore.mapping.config.Property;
 import org.grails.datastore.mapping.model.types.Association;
 import org.grails.datastore.mapping.model.types.Basic;
@@ -28,9 +31,6 @@ import org.grails.datastore.mapping.model.types.ManyToOne;
 import org.grails.datastore.mapping.model.types.OneToMany;
 import org.grails.datastore.mapping.model.types.ToOne;
 import org.grails.datastore.mapping.reflect.EntityReflector;
-
-import java.util.Optional;
-import java.util.SortedSet;
 
 import static java.util.Optional.ofNullable;
 
@@ -59,14 +59,14 @@ public interface PersistentProperty<T extends Property> {
     Class<?> getType();
 
     /**
-    * Specifies the mapping between this property and an external form
-    * such as a column, key/value pair etc.
-    *
-    * @return The PropertyMapping instance
-    */
+     * Specifies the mapping between this property and an external form
+     * such as a column, key/value pair, etc.
+     *
+     * @return The PropertyMapping instance
+     */
     PropertyMapping<T> getMapping();
 
-    default T  getMappedForm() {
+    default T getMappedForm() {
         return Optional.of(getMapping())
                 .map(PropertyMapping::getMappedForm)
                 .orElse(null);
@@ -102,7 +102,7 @@ public interface PersistentProperty<T extends Property> {
     EntityReflector.PropertyWriter getWriter();
 
     default boolean isUnidirectionalOneToMany() {
-        return ((this instanceof OneToMany) && !((Association<?>)this).isBidirectional());
+        return ((this instanceof OneToMany) && !((Association<?>) this).isBidirectional());
     }
 
     default boolean isLazyAble() {
@@ -118,13 +118,12 @@ public interface PersistentProperty<T extends Property> {
     }
 
     default boolean supportsJoinColumnMapping() {
-        return this instanceof ManyToMany || isUnidirectionalOneToMany()|| this instanceof Basic;
+        return this instanceof ManyToMany || isUnidirectionalOneToMany() || this instanceof Basic;
     }
 
     /**
      * Establish whether a collection property is sorted
      *
-     * @param property The property
      * @return true if sorted
      */
     default boolean isSorted() {

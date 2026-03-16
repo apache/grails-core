@@ -19,6 +19,7 @@
 package org.grails.orm.hibernate.cfg.domainbinding.generator;
 
 import jakarta.persistence.GenerationType;
+
 import org.hibernate.engine.spi.SharedSessionContractImplementor;
 import org.hibernate.generator.EventType;
 import org.hibernate.generator.GeneratorCreationContext;
@@ -26,37 +27,34 @@ import org.hibernate.id.NativeGenerator;
 
 public class GrailsNativeGenerator extends NativeGenerator {
 
-  private static final long serialVersionUID = 1L;
+    private static final long serialVersionUID = 1L;
 
-  public GrailsNativeGenerator(GeneratorCreationContext context) {
-    // This triggers the internal switch logic you provided earlier,
-    // which calls setIdentity(true) on the column for H2.
-    try {
-      this.initialize(null, null, context);
-    } catch (Exception ignored) {
-      // ignore for now, helps with testing robustness where context might be incomplete
-    }
-  }
-
-  @Override
-  public Object generate(
-      SharedSessionContractImplementor session,
-      Object entity,
-      Object currentValue,
-      EventType eventType) {
-    // 1. Support Grails assigned identifiers
-    if (currentValue != null) {
-      return currentValue;
+    public GrailsNativeGenerator(GeneratorCreationContext context) {
+        // This triggers the internal switch logic you provided earlier,
+        // which calls setIdentity(true) on the column for H2.
+        try {
+            this.initialize(null, null, context);
+        } catch (Exception ignored) {
+            // ignore for now, helps with testing robustness where context might be incomplete
+        }
     }
 
-    // 2. Fix the Hibernate 7 ClassCastException
-    // NativeGenerator.generate() tries to cast the delegate to BeforeExecutionGenerator.
-    // If the dialect chose IDENTITY, that cast fails. We bypass it by returning null.
-    if (this.getGenerationType() == GenerationType.IDENTITY) {
-      return null;
-    }
+    @Override
+    public Object generate(
+            SharedSessionContractImplementor session, Object entity, Object currentValue, EventType eventType) {
+        // 1. Support Grails assigned identifiers
+        if (currentValue != null) {
+            return currentValue;
+        }
 
-    // 3. For Sequences/UUIDs, delegate to the standard logic
-    return super.generate(session, entity, currentValue, eventType);
-  }
+        // 2. Fix the Hibernate 7 ClassCastException
+        // NativeGenerator.generate() tries to cast the delegate to BeforeExecutionGenerator.
+        // If the dialect chose IDENTITY, that cast fails. We bypass it by returning null.
+        if (this.getGenerationType() == GenerationType.IDENTITY) {
+            return null;
+        }
+
+        // 3. For Sequences/UUIDs, delegate to the standard logic
+        return super.generate(session, entity, currentValue, eventType);
+    }
 }

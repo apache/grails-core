@@ -18,8 +18,6 @@
  */
 package org.apache.grails.data.testing.tck.tests
 
-import spock.lang.IgnoreIf
-
 import org.springframework.context.ApplicationEvent
 import org.springframework.context.event.SmartApplicationListener
 

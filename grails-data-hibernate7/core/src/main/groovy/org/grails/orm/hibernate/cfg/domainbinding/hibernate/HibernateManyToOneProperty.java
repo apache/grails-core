@@ -19,21 +19,20 @@
 package org.grails.orm.hibernate.cfg.domainbinding.hibernate;
 
 import java.beans.PropertyDescriptor;
+
 import org.grails.datastore.mapping.model.MappingContext;
 import org.grails.datastore.mapping.model.PersistentEntity;
 import org.grails.datastore.mapping.model.types.mapping.ManyToOneWithMapping;
 import org.grails.orm.hibernate.cfg.PropertyConfig;
 
 /** Hibernate implementation of {@link org.grails.datastore.mapping.model.types.ManyToOne} */
-public class HibernateManyToOneProperty extends ManyToOneWithMapping<PropertyConfig>
-    implements HibernateToOneProperty {
-  public HibernateManyToOneProperty(
-      PersistentEntity entity, MappingContext context, PropertyDescriptor property) {
-    super(entity, context, property);
-  }
+public class HibernateManyToOneProperty extends ManyToOneWithMapping<PropertyConfig> implements HibernateToOneProperty {
+    public HibernateManyToOneProperty(PersistentEntity entity, MappingContext context, PropertyDescriptor property) {
+        super(entity, context, property);
+    }
 
-  @Override
-  public GrailsHibernatePersistentEntity getHibernateAssociatedEntity() {
-    return (GrailsHibernatePersistentEntity) super.getAssociatedEntity();
-  }
+    @Override
+    public GrailsHibernatePersistentEntity getHibernateAssociatedEntity() {
+        return (GrailsHibernatePersistentEntity) super.getAssociatedEntity();
+    }
 }

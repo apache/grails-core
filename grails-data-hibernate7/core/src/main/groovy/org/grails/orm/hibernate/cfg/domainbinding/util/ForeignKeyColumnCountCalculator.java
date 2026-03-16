@@ -26,22 +26,22 @@ import org.grails.datastore.mapping.model.types.ToOne;
 // number of columns required for a column key we have to perform the calculation here
 @SuppressWarnings("PMD.DataflowAnomalyAnalysis")
 public class ForeignKeyColumnCountCalculator {
-  public int calculateForeignKeyColumnCount(
-      PersistentEntity refDomainClass, String[] propertyNames) {
-    int expectedForeignKeyColumnLength = 0;
-    for (String propertyName : propertyNames) {
-      PersistentProperty referencedProperty = refDomainClass.getPropertyByName(propertyName);
-      if (referencedProperty instanceof ToOne toOne) {
-        PersistentProperty[] compositeIdentity = toOne.getAssociatedEntity().getCompositeIdentity();
-        if (compositeIdentity != null) {
-          expectedForeignKeyColumnLength += compositeIdentity.length;
-        } else {
-          expectedForeignKeyColumnLength++;
+    public int calculateForeignKeyColumnCount(PersistentEntity refDomainClass, String[] propertyNames) {
+        int expectedForeignKeyColumnLength = 0;
+        for (String propertyName : propertyNames) {
+            PersistentProperty referencedProperty = refDomainClass.getPropertyByName(propertyName);
+            if (referencedProperty instanceof ToOne toOne) {
+                PersistentProperty[] compositeIdentity =
+                        toOne.getAssociatedEntity().getCompositeIdentity();
+                if (compositeIdentity != null) {
+                    expectedForeignKeyColumnLength += compositeIdentity.length;
+                } else {
+                    expectedForeignKeyColumnLength++;
+                }
+            } else {
+                expectedForeignKeyColumnLength++;
+            }
         }
-      } else {
-        expectedForeignKeyColumnLength++;
-      }
+        return expectedForeignKeyColumnLength;
     }
-    return expectedForeignKeyColumnLength;
-  }
 }

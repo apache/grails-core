@@ -55,7 +55,8 @@ public class GrailsOpenSessionInViewInterceptor extends OpenSessionInViewInterce
 
     @Override
     public void postHandle(WebRequest request, ModelMap model) throws DataAccessException {
-        SessionHolder sessionHolder = (SessionHolder) TransactionSynchronizationManager.getResource(getSessionFactory());
+        SessionHolder sessionHolder =
+                (SessionHolder) TransactionSynchronizationManager.getResource(getSessionFactory());
         Session session = sessionHolder != null ? sessionHolder.getSession() : null;
         try {
             super.postHandle(request, model);
@@ -67,8 +68,7 @@ public class GrailsOpenSessionInViewInterceptor extends OpenSessionInViewInterce
                 }
                 session.flush();
             }
-        }
-        finally {
+        } finally {
             if (session != null) {
                 session.setHibernateFlushMode(FlushMode.MANUAL);
             }
@@ -79,8 +79,7 @@ public class GrailsOpenSessionInViewInterceptor extends OpenSessionInViewInterce
         String defaultFlushModeName = hibernateDatastore.getDefaultFlushModeName();
         if (hibernateDatastore.isOsivReadOnly()) {
             this.hibernateFlushMode = FlushMode.MANUAL;
-        }
-        else {
+        } else {
             this.hibernateFlushMode = FlushMode.valueOf(defaultFlushModeName);
         }
         setSessionFactory(hibernateDatastore.getSessionFactory());

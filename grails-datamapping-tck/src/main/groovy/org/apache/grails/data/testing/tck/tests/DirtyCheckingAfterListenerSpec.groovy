@@ -53,10 +53,10 @@ class DirtyCheckingAfterListenerSpec extends GrailsDataTckSpec {
     }
 
     @PendingFeatureIf({ !Boolean.getBoolean('hibernate5.gorm.suite') && !Boolean.getBoolean('hibernate6.gorm.suite') && !Boolean.getBoolean('mongodb.gorm.suite') })
-    void "test state change from listener update the object"() {
+    void 'test state change from listener update the object'() {
 
         when:
-        TestAuthor john = new TestAuthor(name: "John").save(flush: true)
+        TestAuthor john = new TestAuthor(name: 'John').save(flush: true)
 
         then:
         new PollingConditions().eventually { listener.isExecuted && TestAuthor.count() }
@@ -67,7 +67,7 @@ class DirtyCheckingAfterListenerSpec extends GrailsDataTckSpec {
         john = TestAuthor.get(john.id)
 
         then:
-        john.name == "Foo"
+        john.name == 'Foo'
 
     }
 }
@@ -83,7 +83,7 @@ class TestSaveOrUpdateEventListener extends AbstractPersistenceEventListener {
     @Override
     protected void onPersistenceEvent(AbstractPersistenceEvent event) {
         TestAuthor player = (TestAuthor) event.entityObject
-        player.name = "Foo"
+        player.name = 'Foo'
         isExecuted = true
     }
 

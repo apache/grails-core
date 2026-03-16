@@ -30,6 +30,7 @@ import org.springframework.validation.DataBinder
 @Builder(builderStrategy = SimpleStrategy, prefix = '')
 @CompileStatic
 class Table {
+
     /**
      * The table name
      */

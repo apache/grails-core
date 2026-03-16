@@ -26,13 +26,13 @@ package org.grails.orm.hibernate.exceptions;
  */
 public class GrailsHibernateConfigurationException extends GrailsHibernateException {
 
-  private static final long serialVersionUID = 5212907914995954558L;
+    private static final long serialVersionUID = 5212907914995954558L;
 
-  public GrailsHibernateConfigurationException(String message) {
-    super(message);
-  }
+    public GrailsHibernateConfigurationException(String message) {
+        super(message);
+    }
 
-  public GrailsHibernateConfigurationException(String message, Throwable cause) {
-    super(message, cause);
-  }
+    public GrailsHibernateConfigurationException(String message, Throwable cause) {
+        super(message, cause);
+    }
 }
