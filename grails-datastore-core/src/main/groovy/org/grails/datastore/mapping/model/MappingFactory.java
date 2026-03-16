@@ -446,7 +446,7 @@ public abstract class MappingFactory<R extends Entity, T extends Property> {
     }
 
     public IdentityMapping createDefaultIdentityMapping(final ClassMapping classMapping) {
-        return new DefaultIdentityMapping(classMapping, classMapping.getEntity().getIdentity().getMapping().getMappedForm());
+        return new DefaultIdentityMapping(classMapping);
     }
 
     protected IdentityMapping createDefaultIdentityMapping(final ClassMapping classMapping, final T property) {

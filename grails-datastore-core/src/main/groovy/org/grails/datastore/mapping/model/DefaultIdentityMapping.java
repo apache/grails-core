@@ -32,32 +32,54 @@ public class DefaultIdentityMapping<T extends Property> extends DefaultPropertyM
 
     private final String[] identifierNames;
     private final ValueGenerator generator;
+    private final boolean lazy;
 
-    public DefaultIdentityMapping(ClassMapping classMapping, T mappedForm) {
-        this(classMapping, mappedForm, ValueGenerator.AUTO);
-    }
-
-    public DefaultIdentityMapping(ClassMapping classMapping, T mappedForm, ValueGenerator generator) {
-        super(classMapping, mappedForm);
-        this.generator = generator;
-        PersistentProperty identity = classMapping.getEntity().getIdentity();
-        String propertyName = identity != null ? identity.getMapping().getMappedForm().getName() : null;
-        if (propertyName != null) {
-            this.identifierNames = new String[] { propertyName };
-        }
-        else {
-            this.identifierNames = new String[] { IDENTITY_PROPERTY };
-        }
+    /**
+     * Creates a lazy identity mapping that defers resolution of the mapped form and identifier names
+     * until they are actually needed. This is necessary because during entity construction, the
+     * identity property has not yet been initialized.
+     *
+     * @param classMapping the class mapping
+     */
+    public DefaultIdentityMapping(ClassMapping classMapping) {
+        super(classMapping, null);
+        this.generator = ValueGenerator.AUTO;
+        this.identifierNames = null;
+        this.lazy = true;
     }
 
     public DefaultIdentityMapping(ClassMapping classMapping, T mappedForm, String[] identifierNames, ValueGenerator generator) {
         super(classMapping, mappedForm);
         this.identifierNames = identifierNames;
         this.generator = generator;
+        this.lazy = false;
+    }
+
+    @Override
+    @SuppressWarnings("unchecked")
+    public T getMappedForm() {
+        if (lazy) {
+            PersistentProperty identity = getClassMapping().getEntity().getIdentity();
+            if (identity != null) {
+                return (T) identity.getMapping().getMappedForm();
+            }
+            return null;
+        }
+        return super.getMappedForm();
     }
 
     @Override
     public String[] getIdentifierName() {
+        if (lazy) {
+            PersistentProperty identity = getClassMapping().getEntity().getIdentity();
+            if (identity != null) {
+                String propertyName = identity.getMapping().getMappedForm().getName();
+                if (propertyName != null) {
+                    return new String[] { propertyName };
+                }
+            }
+            return new String[] { IDENTITY_PROPERTY };
+        }
         return identifierNames;
     }
 
