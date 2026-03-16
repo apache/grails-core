@@ -85,7 +85,7 @@ public class GrailsPropertyBinder {
             value = manyToOneBinder.bindManyToOne(manyToOne, table, path);
         } else if (currentGrailsProp instanceof HibernateToManyProperty toMany
                 && !currentGrailsProp.isSerializableType()) {
-            value = collectionBinder.bindCollection(toMany, persistentClass, path);
+            value = collectionBinder.bindCollection(toMany, path);
         } else if (currentGrailsProp instanceof HibernateEmbeddedProperty embedded) {
             value = componentBinder.bindComponent(persistentClass, embedded, path);
         } else {

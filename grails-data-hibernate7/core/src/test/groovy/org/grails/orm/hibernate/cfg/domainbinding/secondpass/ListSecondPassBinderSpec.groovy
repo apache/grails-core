@@ -20,12 +20,9 @@
 package org.grails.orm.hibernate.cfg.domainbinding.secondpass
 
 import grails.gorm.specs.HibernateGormDatastoreSpec
-import org.grails.orm.hibernate.cfg.PersistentEntityNamingStrategy
-import org.grails.orm.hibernate.cfg.domainbinding.binder.SimpleValueColumnBinder
 import org.grails.orm.hibernate.cfg.domainbinding.hibernate.GrailsHibernatePersistentEntity
 import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernateToManyProperty
-import org.hibernate.boot.spi.InFlightMetadataCollector
-import org.hibernate.boot.spi.MetadataBuildingContext
+
 import org.hibernate.mapping.OneToMany
 import org.hibernate.mapping.RootClass
 import org.hibernate.boot.spi.MetadataBuildingContext
@@ -198,7 +195,7 @@ class ListSecondPassBinderSpec extends HibernateGormDatastoreSpec {
         def petsProp = personEntity.getPropertyByName("pets") as HibernateToManyProperty
 
         when:
-        def collection = collectionBinder.bindCollection(petsProp, rootClass, "")
+        def collection = collectionBinder.bindCollection(petsProp, "")
 
         then:
         collection.role == "${personEntity.name}.pets".toString()

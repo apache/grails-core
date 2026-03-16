@@ -32,7 +32,6 @@ import org.grails.orm.hibernate.cfg.PersistentEntityNamingStrategy;
 import org.grails.orm.hibernate.cfg.PropertyConfig;
 import org.grails.orm.hibernate.cfg.domainbinding.collectionType.CollectionHolder;
 import org.grails.orm.hibernate.cfg.domainbinding.collectionType.CollectionType;
-import org.grails.orm.hibernate.cfg.domainbinding.hibernate.GrailsHibernatePersistentEntity;
 import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernateOneToManyProperty;
 import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernatePersistentProperty;
 import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernateToManyProperty;
@@ -135,20 +134,18 @@ public class CollectionBinder {
      * First pass to bind collection to Hibernate metamodel, sets up second pass
      *
      * @param property The GrailsDomainClassProperty instance
-     * @param persistentClass The owning persistent class
-     * @param path The property path
+     * @param path     The property path
      * @return the result
      */
-    public Collection bindCollection(HibernateToManyProperty property, PersistentClass persistentClass, String path) {
-        GrailsHibernatePersistentEntity owner = property.getHibernateOwner();
-        PersistentClass _persistentClass = owner.getPersistentClass();
+    public Collection bindCollection(HibernateToManyProperty property, String path) {
+        PersistentClass _persistentClass = property.getHibernateOwner().getPersistentClass();
         CollectionType collectionType = collectionHolder.get(property.getType());
         Collection collection = collectionType.create(property, _persistentClass);
         property.setCollection(collection);
 
         // set role
         String propertyName = getNameForPropertyAndPath(property, path);
-        collection.setRole(GrailsHibernateUtil.qualify(owner.getName(), propertyName));
+        collection.setRole(GrailsHibernateUtil.qualify(property.getHibernateOwner().getName(), propertyName));
 
         PropertyConfig pc = property.getMappedForm();
         // configure eager fetching

@@ -195,7 +195,7 @@ class CollectionBinderSpec extends HibernateGormDatastoreSpec {
         def petsProp = personEntity.getPropertyByName("pets") as HibernateToManyProperty
 
         when:
-        def collection = collectionBinder.bindCollection(petsProp, rootClass, "")
+        def collection = collectionBinder.bindCollection(petsProp, "")
 
         then:
         collection.role == "${personEntity.name}.pets".toString()
