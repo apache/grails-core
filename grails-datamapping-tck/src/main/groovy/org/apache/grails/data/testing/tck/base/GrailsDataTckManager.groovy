@@ -31,31 +31,6 @@ abstract class GrailsDataTckManager {
     abstract Session createSession()
 
     private List<Class> domainClasses = [
-//            Book,
-//            ChildEntity,
-//            City,
-//            ClassWithListArgBeforeValidate,
-//            ClassWithNoArgBeforeValidate,
-//            ClassWithOverloadedBeforeValidate,
-//            CommonTypes,
-//            Country,
-//            EnumThing,
-//            Face,
-//            Highway,
-//            Location,
-//            ModifyPerson,
-//            Nose,
-//            OptLockNotVersioned,
-//            OptLockVersioned,
-//            Person,
-//            PersonEvent,
-//            Pet,
-//            PetType,
-//            Plant,
-//            PlantCategory,
-//            Publication,
-//            Task,
-//            TestEntity
     ]
 
     /**

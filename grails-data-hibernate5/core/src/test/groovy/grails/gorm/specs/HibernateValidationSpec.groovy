@@ -22,6 +22,9 @@ import org.apache.grails.data.testing.tck.domains.ChildEntity
 import org.apache.grails.data.testing.tck.domains.ClassWithListArgBeforeValidate
 import org.apache.grails.data.testing.tck.domains.ClassWithNoArgBeforeValidate
 import org.apache.grails.data.testing.tck.domains.ClassWithOverloadedBeforeValidate
+import org.apache.grails.data.testing.tck.domains.Location
+import org.apache.grails.data.testing.tck.domains.Person
+import org.apache.grails.data.testing.tck.domains.Pet
 import org.apache.grails.data.testing.tck.domains.TestEntity
 import org.apache.grails.data.hibernate5.core.GrailsDataHibernate5TckManager
 import org.apache.grails.data.testing.tck.base.GrailsDataTckSpec
@@ -32,8 +35,10 @@ import org.springframework.transaction.support.TransactionSynchronizationManager
  */
 class HibernateValidationSpec extends GrailsDataTckSpec<GrailsDataHibernate5TckManager> {
     void setupSpec() {
-        manager.domainClasses += [ClassWithListArgBeforeValidate, ClassWithNoArgBeforeValidate,
-                                 ClassWithOverloadedBeforeValidate]
+
+        manager.addAllDomainClasses([ClassWithListArgBeforeValidate, ClassWithNoArgBeforeValidate,
+                                     ClassWithOverloadedBeforeValidate, TestEntity])
+
     }
 
     void "Test that validate works without a bound Session"() {
