@@ -53,7 +53,7 @@ public class ForeignKeyOneToOneBinder {
     public ManyToOne bind(HibernateOneToOneProperty property, String path) {
         Table table = property.getTable();
         GrailsHibernatePersistentEntity refDomainClass = property.getHibernateAssociatedEntity();
-        ManyToOne manyToOne = manyToOneBinder.doBind(property, refDomainClass, table, path);
+        ManyToOne manyToOne = manyToOneBinder.bindManyToOne(property, path);
         if (refDomainClass.getHibernateCompositeIdentity().isEmpty()) {
             bindUniqueKey(property, manyToOne);
         }

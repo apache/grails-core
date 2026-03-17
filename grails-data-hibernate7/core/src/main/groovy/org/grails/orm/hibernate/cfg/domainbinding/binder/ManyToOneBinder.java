@@ -33,6 +33,7 @@ import org.grails.orm.hibernate.cfg.domainbinding.hibernate.GrailsHibernatePersi
 import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernateAssociation;
 import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernateManyToManyProperty;
 import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernateManyToOneProperty;
+import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernateOneToOneProperty;
 
 import static org.grails.orm.hibernate.cfg.domainbinding.binder.GrailsDomainBinder.FOREIGN_KEY_SUFFIX;
 
@@ -85,6 +86,11 @@ public class ManyToOneBinder {
             prepareCircularManyToMany(property);
         }
         return doBind(property, refDomainClass, table, path);
+    }
+
+    public ManyToOne bindManyToOne(
+            HibernateOneToOneProperty property, String path) {
+        return doBind(property, property.getHibernateAssociatedEntity(), property.getTable(), path);
     }
 
     ManyToOne doBind(
