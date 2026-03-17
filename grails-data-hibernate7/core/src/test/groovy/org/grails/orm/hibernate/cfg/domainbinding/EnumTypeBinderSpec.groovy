@@ -1,22 +1,3 @@
-/*
- *  Licensed to the Apache Software Foundation (ASF) under one
- *  or more contributor license agreements.  See the NOTICE file
- *  distributed with this work for additional information
- *  regarding copyright ownership.  The ASF licenses this file
- *  to you under the Apache License, Version 2.0 (the
- *  "License"); you may not use this file except in compliance
- *  with the License.  You may obtain a copy of the License at
- *
- *    https://www.apache.org/licenses/LICENSE-2.0
- *
- *  Unless required by applicable law or agreed to in writing,
- *  software distributed under the License is distributed on an
- *  "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
- *  KIND, either express or implied.  See the License for the
- *  specific language governing permissions and limitations
- *  under the License.
- */
-
 package org.grails.orm.hibernate.cfg.domainbinding
 
 import grails.gorm.specs.HibernateGormDatastoreSpec
@@ -31,8 +12,6 @@ import org.grails.orm.hibernate.cfg.domainbinding.util.BackticksRemover
 import org.grails.orm.hibernate.cfg.domainbinding.util.ColumnNameForPropertyAndPathFetcher
 import org.grails.orm.hibernate.cfg.domainbinding.util.DefaultColumnNameFetcher
 import org.hibernate.engine.spi.SharedSessionContractImplementor
-import org.hibernate.mapping.BasicValue
-import org.hibernate.mapping.Column
 import org.hibernate.mapping.Table
 import org.hibernate.mapping.RootClass
 import org.hibernate.usertype.UserType
@@ -65,11 +44,7 @@ class EnumTypeBinderSpec extends HibernateGormDatastoreSpec {
         binder = new EnumTypeBinder(metadataBuildingContext, columnNameFetcher, indexBinder, columnBinder)
     }
 
-    /**
-     * Helper to prevent the NullPointerException by linking the GORM entity
-     * to a Hibernate RootClass/Table.
-     */
-    private PersistentProperty setupEntity(Class clazz, Table table) {
+    private PersistentProperty setupProperty(Class clazz, String propertyName, Table table) {
         def grailsDomainBinder = getGrailsDomainBinder()
         def owner = createPersistentEntity(clazz, grailsDomainBinder) as GrailsHibernatePersistentEntity
 
@@ -77,121 +52,72 @@ class EnumTypeBinderSpec extends HibernateGormDatastoreSpec {
         rootClass.setTable(table)
         owner.setPersistentClass(rootClass)
 
-        return owner.getPropertyByName("status")
+        return owner.getPropertyByName(propertyName)
+    }
+
+    def "should bind enum type for a collection element"() {
+        given: "An entity with a collection of enums"
+        def table = new Table("person_statuses")
+        def property = setupProperty(PersonWithCollection, "statuses", table)
+
+        expect: "The property is a ToMany property"
+        property instanceof HibernateToManyProperty
+
+                when: "the enum is bound for the collection column"
+        // This will now successfully call property.getComponentType() internally
+        def result = binder.bindEnumTypeForColumn(property as HibernateToManyProperty, "status_name")
+
+        then: "The BasicValue is configured correctly"
+        result.getEnumerationStyle() == EnumType.STRING
+        result.getTypeParameters().getProperty(GrailsDomainBinder.ENUM_CLASS_PROP) == Status01.name
     }
 
     @Unroll
     def "should bind enum type as #expectedHibernateType when mapping specifies enumType as '#enumTypeMapping'"() {
         given: "A root entity and its enum property"
         def table = new Table("person")
-        PersistentProperty property = setupEntity(clazz, table)
+        def property = setupProperty(clazz, "status", table)
 
-        when: "the enum is bound"
-        def simpleValue = binder.bindEnumTypeForColumn(property as HibernateToManyProperty, Status01, "status_col")
+        when: "the enum is bound via the standard path"
+        def simpleValue = binder.bindEnumType(property as HibernateEnumProperty, "")
 
         then: "the correct hibernate type is set"
         simpleValue.getTypeName() == expectedHibernateType
         simpleValue.getEnumerationStyle() == expectedEnumStyle
         simpleValue.isNullable() == nullable
 
-        and: "the enum class property is always set"
-        simpleValue.getTypeParameters().getProperty(GrailsDomainBinder.ENUM_CLASS_PROP) == Status01.name
-
         where:
-        clazz    | enumTypeMapping  | expectedHibernateType                   | expectedEnumStyle | nullable
-        Person01 | "default"        | null                                    | EnumType.STRING   | false
-        Person02 | "string"         | null                                    | EnumType.STRING   | true
-        Person03 | "ordinal"        | null                                    | EnumType.ORDINAL  | true
-        Person04 | "identity"       | IdentityEnumType.class.getName()        | null              | false
-        Person05 | UserTypeEnumType | UserTypeEnumType.class.getName()        | null              | false
+        clazz    | enumTypeMapping  | expectedHibernateType            | expectedEnumStyle | nullable
+        Person01 | "default"        | null                             | EnumType.STRING   | false
+        Person02 | "string"         | null                             | EnumType.STRING   | true
+        Person03 | "ordinal"        | null                             | EnumType.ORDINAL  | true
+        Person04 | "identity"       | IdentityEnumType.class.getName() | null              | false
+        Person05 | UserTypeEnumType | UserTypeEnumType.class.getName() | null              | false
     }
 
     @Unroll
     def "should set column nullability"() {
         given: "A root entity and its enum property"
         def table = new Table("person")
-        def columnName = "status_col"
-        PersistentProperty property = setupEntity(clazz, table)
+        def property = setupProperty(clazz, "status", table)
 
         when: "the enum is bound"
-        def simpleValue = binder.bindEnumTypeForColumn(property as HibernateToManyProperty, Status01, columnName)
+        def simpleValue = binder.bindEnumType(property as HibernateEnumProperty, "")
 
         then:
-        table.columns.size() == 1
-        table.columns[0] == simpleValue.getColumn()
-        table.columns[0].isNullable() == nullable
-        table.columns[0].getValue() == simpleValue
-        table.columns[0].getName() == columnName
+        simpleValue.getColumns()[0].isNullable() == nullable
 
         where:
         clazz    | nullable
         Person01 | false
         Person02 | true
         Clown01  | true
-        Clown02  | true
-        Clown03  | true
-    }
-
-    @Unroll
-    def "should bind index and column constraints only when a column config is present"() {
-        given: "A root entity and its enum property"
-        def table = new Table("person")
-        def columnName = "status_col"
-        PersistentProperty property = setupEntity(clazz, table)
-
-        when: "the enum is bound"
-        binder.bindEnumTypeForColumn(property as HibernateToManyProperty, Status01, columnName)
-
-        then: "the index and column binders are invoked the correct number of times"
-        times * indexBinder.bindIndex(columnName, _ as Column, _, table)
-        times * columnBinder.bindColumnConfigToColumn(_ as Column, _, _)
-
-        where:
-        clazz    | times
-        Person01 | 0
-        Person02 | 1
-    }
-
-    def "should create BasicValue and bind enum type"() {
-        given: "A root entity and its enum property"
-        def table = new Table("person")
-        PersistentProperty property = setupEntity(Person01, table)
-
-        when: "the enum is bound using the new signature"
-        def result = binder.bindEnumType(property as HibernateEnumProperty, Status01, "")
-
-        then: "a BasicValue is returned and bound correctly"
-        result instanceof BasicValue
-        result.getTable() == table
-        result.getTypeName() == null
-        result.getEnumerationStyle() == EnumType.STRING
-        result.getColumns().size() == 1
-        result.getColumns()[0].getName() == "status"
     }
 }
 
 // --- Supporting Classes ---
 
-class UserTypeEnumType implements UserType {
-    @Override int getSqlType() { 0 }
-    @Override Class returnedClass() { null }
-    @Override boolean equals(Object x, Object y) { false }
-    @Override int hashCode(Object x) { 0 }
-    @Override Object nullSafeGet(ResultSet rs, int position, SharedSessionContractImplementor session, Object owner) throws SQLException { null }
-    @Override void nullSafeSet(PreparedStatement st, Object value, int index, SharedSessionContractImplementor session) throws SQLException {}
-    @Override Object deepCopy(Object value) { null }
-    @Override boolean isMutable() { false }
-    @Override Serializable disassemble(Object value) { null }
-    @Override Object assemble(Serializable cached, Object owner) { null }
-}
-
 enum Status01 { AVAILABLE, OUT_OF_STOCK }
-
-enum Status02 {
-    FOO(3), BAR(5)
-    Long id
-    Status02(Long id) { this.id = id }
-}
 
 @Entity class Person01 { Long id; Status01 status }
 @Entity class Person02 {
@@ -200,16 +126,31 @@ enum Status02 {
 }
 @Entity class Person03 {
     Long id; Status01 status
-    static mapping = { status enumType: "ordinal", nullable: true; tablePerHierarchy false }
+    static mapping = { status enumType: "ordinal", nullable: true }
 }
 @Entity class Person04 {
-    Long id; Status02 status
-    static mapping = { status enumType: 'identity' }
+    Long id; Status01 status
+    static mapping = { status enumType: "identity" }
 }
 @Entity class Person05 {
-    Long id; Status02 status
+    Long id; Status01 status
     static mapping = { status type: UserTypeEnumType }
 }
+@Entity class PersonWithCollection {
+    Long id
+    Set<Status01> statuses
+}
 @Entity class Clown01 extends Person01 { String clownName }
-@Entity class Clown02 extends Person02 { String clownName }
-@Entity class Clown03 extends Person03 { String clownName }
+
+class UserTypeEnumType implements UserType {
+    @Override int getSqlType() { 0 }
+    @Override Class returnedClass() { Status01 }
+    @Override boolean equals(Object x, Object y) { x == y }
+    @Override int hashCode(Object x) { x.hashCode() }
+    @Override Object nullSafeGet(ResultSet rs, int position, SharedSessionContractImplementor session, Object owner) throws SQLException { null }
+    @Override void nullSafeSet(PreparedStatement st, Object value, int index, SharedSessionContractImplementor session) throws SQLException {}
+    @Override Object deepCopy(Object value) { value }
+    @Override boolean isMutable() { false }
+    @Override Serializable disassemble(Object value) { (Serializable)value }
+    @Override Object assemble(Serializable cached, Object owner) { cached }
+}

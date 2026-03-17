@@ -78,7 +78,7 @@ class BasicCollectionElementBinderSpec extends HibernateGormDatastoreSpec {
         then:
         element != null
         // Corrected: Match the 3-argument signature (Property, Class, String)
-        1 * enumTypeBinder.bindEnumTypeForColumn(property, BCEBStatus, _ as String) >> mockValue
+        1 * enumTypeBinder.bindEnumTypeForColumn(property, _ as String) >> mockValue
     }
 }
 

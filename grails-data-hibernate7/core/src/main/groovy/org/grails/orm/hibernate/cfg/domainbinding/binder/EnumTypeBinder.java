@@ -71,18 +71,16 @@ public class EnumTypeBinder {
 
     private static final Logger LOG = LoggerFactory.getLogger(EnumTypeBinder.class);
 
-    public BasicValue bindEnumType(
-            @Nonnull HibernateEnumProperty property, Class<?> propertyType, String path) {
+    public BasicValue bindEnumType(@Nonnull HibernateEnumProperty property, String path) {
         String columnName = columnNameForPropertyAndPathFetcher.getColumnNameForPropertyAndPath(property, path, null);
         BasicValue simpleValue = new BasicValue(metadataBuildingContext, property.getTable());
-        bindEnumType(property, propertyType, simpleValue, columnName);
+        bindEnumType(property, property.getType(), simpleValue, columnName);
         return simpleValue;
     }
 
-    public BasicValue bindEnumTypeForColumn(
-            @Nonnull HibernateToManyProperty property, Class<?> propertyType, @Nonnull String columnName) {
+    public BasicValue bindEnumTypeForColumn(@Nonnull HibernateToManyProperty property, @Nonnull String columnName) {
         BasicValue simpleValue = new BasicValue(metadataBuildingContext, property.getTable());
-        bindEnumType(property, propertyType, simpleValue, columnName);
+        bindEnumType(property,  property.getComponentType(), simpleValue, columnName);
         return simpleValue;
     }
 

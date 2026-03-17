@@ -153,12 +153,7 @@ public abstract class MappingFactory<R extends Entity, T extends Property> {
     private Map<Class, Collection<CustomTypeMarshaller>> typeConverterMap = new ConcurrentHashMap<>();
 
     public void registerCustomType(CustomTypeMarshaller marshallerCustom) {
-        Collection<CustomTypeMarshaller> marshallers = typeConverterMap.get(marshallerCustom.getTargetType());
-        if (marshallers == null) {
-            marshallers = new ConcurrentLinkedQueue<>();
-            typeConverterMap.put(marshallerCustom.getTargetType(), marshallers);
-        }
-        marshallers.add(marshallerCustom);
+        typeConverterMap.computeIfAbsent(marshallerCustom.getTargetType(), k -> new ConcurrentLinkedQueue<>()).add(marshallerCustom);
     }
 
     public boolean isSimpleType(Class propType) {

@@ -75,7 +75,7 @@ public class GrailsPropertyBinder {
 
         // 1. Create Value and apply binders (consolidated block)
         if (currentGrailsProp instanceof HibernateEnumProperty hibernateEnumProperty) {
-            value = enumTypeBinder.bindEnumType(hibernateEnumProperty, currentGrailsProp.getType(), path);
+            value = enumTypeBinder.bindEnumType(hibernateEnumProperty, path);
         } else if (currentGrailsProp instanceof HibernateOneToOneProperty oneToOne
                 && oneToOne.isValidHibernateOneToOne()) {
             value = oneToOneBinder.bindOneToOne(oneToOne, path);
