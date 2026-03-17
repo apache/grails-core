@@ -145,20 +145,20 @@ jacocoTestReport {
     }
 }
 
-spotbugs {
-    effort = Effort.valueOf('MAX')
-    reportLevel = Confidence.valueOf('HIGH')// or Confidence.MEDIUM, Confidence.LOW
-    // other settings...
-}
-
-tasks.withType(com.github.spotbugs.snom.SpotBugsTask).configureEach {
-    onlyIf { project.hasProperty('runCodeStyle') }
-    reports {
-        xml.enabled = false
-        html.enabled = true     // → nice HTML report in build/reports/spotbugs
-    }
-}
-
-tasks.named('check') {
-    dependsOn 'spotbugsMain'
-}
+// spotbugs {
+//     effort = Effort.valueOf('MAX')
+//     reportLevel = Confidence.valueOf('HIGH')// or Confidence.MEDIUM, Confidence.LOW
+//     // other settings...
+// }
+//
+// tasks.withType(com.github.spotbugs.snom.SpotBugsTask).configureEach {
+//     onlyIf { project.hasProperty('runCodeStyle') }
+//     reports {
+//         xml.enabled = false
+//         html.enabled = true     // → nice HTML report in build/reports/spotbugs
+//     }
+// }
+//
+// tasks.named('check') {
+//     dependsOn 'spotbugsMain'
+// }

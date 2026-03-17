@@ -465,7 +465,11 @@ public class PredicateGenerator {
             try {
                 return conversionService.convert(value, Number.class);
             } catch (org.springframework.core.convert.ConversionException ignored) {
-                // fall through to ConfigurationException
+                throw new ConfigurationException(String.format(
+                        "Operation '%s' on property '%s' only accepts a numeric value, but received a %s",
+                        criterion.getClass().getSimpleName(),
+                        criterion.getProperty(),
+                        value.getClass().getName()));
             }
         }
         throw new ConfigurationException(String.format(
