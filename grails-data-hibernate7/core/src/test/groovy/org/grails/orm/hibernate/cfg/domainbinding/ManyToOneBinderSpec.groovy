@@ -7,9 +7,11 @@ import org.grails.orm.hibernate.cfg.Mapping
 import org.grails.orm.hibernate.cfg.PersistentEntityNamingStrategy
 import org.grails.orm.hibernate.cfg.PropertyConfig
 import org.grails.orm.hibernate.cfg.domainbinding.binder.*
-import org.hibernate.mapping.Column
 import org.hibernate.mapping.ManyToOne
 import org.hibernate.mapping.Table
+import org.hibernate.mapping.PersistentClass
+import org.hibernate.mapping.RootClass
+import org.hibernate.mapping.Map as HibernateMap // Use non-sealed Map instead of abstract Collection
 import org.hibernate.boot.spi.MetadataBuildingContext
 import spock.lang.Unroll
 
@@ -24,7 +26,6 @@ class ManyToOneBinderSpec extends HibernateGormDatastoreSpec {
 
     def setup() {
         metadataBuildingContext = getGrailsDomainBinder().getMetadataBuildingContext()
-        // Using the 5-arg constructor from your provided Java source
         binder = new ManyToOneBinder(
                 metadataBuildingContext,
                 namingStrategy,
@@ -35,9 +36,10 @@ class ManyToOneBinderSpec extends HibernateGormDatastoreSpec {
     }
 
     @Unroll
-    def "Test bindManyToOne orchestration for #scenario"() {
+    def "Test bindManyToOne (ManyToOneProperty) orchestration for #scenario"() {
         given:
         def association = Mock(HibernateManyToOneProperty)
+        def table = Mock(Table)
         def path = "/test"
         def (mapping, refDomainClass) = mockEntity(hasCompositeId)
 
@@ -45,7 +47,7 @@ class ManyToOneBinderSpec extends HibernateGormDatastoreSpec {
         association.getMappedForm() >> Mock(PropertyConfig)
 
         when:
-        def result = binder.bindManyToOne(association, null, path)
+        def result = binder.bindManyToOne(association, table, path)
 
         then:
         result instanceof ManyToOne
@@ -59,74 +61,70 @@ class ManyToOneBinderSpec extends HibernateGormDatastoreSpec {
         "a simple identifier"    | false          | 0                    | 1
     }
 
-    def "Test circular many-to-many binding"() {
+    def "Test bindManyToOne (ManyToManyProperty) with circular logic"() {
         given:
         def property = Mock(HibernateManyToManyProperty)
+        def otherSide = Mock(HibernateManyToManyProperty)
+        def table = Mock(Table)
+        def collectionTable = new Table("coll_table")
+
+        // FIX: Provide real objects for the Map constructor
+        PersistentClass ownerClass = new RootClass(metadataBuildingContext)
+        def realCollection = new HibernateMap(metadataBuildingContext, ownerClass)
+        realCollection.setCollectionTable(collectionTable)
+
+        property.getCollection() >> realCollection
+        property.getHibernateInverseSide() >> otherSide
+
         def (mapping, ownerEntity) = mockEntity(false)
         mapping.setColumns([:])
 
         def propertyConfig = Mock(PropertyConfig)
-        property.isCircular() >> true
-        property.getOwner() >> ownerEntity
-        property.getHibernateOwner() >> ownerEntity
-        property.getName() >> "myCircularProp"
-        property.getMappedForm() >> propertyConfig
-        namingStrategy.resolveColumnName("myCircularProp") >> "my_circular_prop"
+        propertyConfig.hasJoinKeyMapping() >> false
+
+        otherSide.getHibernateOwner() >> ownerEntity
+        otherSide.getOwner() >> ownerEntity
+        ownerEntity.getName() >> "OwnerEntity"
+
+        otherSide.isCircular() >> true
+        otherSide.getName() >> "circularProp"
+        otherSide.getMappedForm() >> propertyConfig
+
+        namingStrategy.resolveColumnName("circularProp") >> "circular_prop"
 
         when:
-        def result = binder.bindManyToOne(property, null, "/test")
+        def result = binder.bindManyToOne(property, "/test")
 
         then:
         result instanceof ManyToOne
-        1 * manyToOneValuesBinder.bindManyToOneValues(property, _ as ManyToOne)
-        1 * simpleValueBinder.bindSimpleValue(property as HibernatePersistentProperty, null, _ as ManyToOne, "/test")
+        result.getReferencedEntityName() == "OwnerEntity"
+        result.getTable() == collectionTable
+        1 * manyToOneValuesBinder.bindManyToOneValues(otherSide, _ as ManyToOne)
+        1 * simpleValueBinder.bindSimpleValue(otherSide, null, _ as ManyToOne, "/test")
 
-        mapping.getColumns().containsKey("myCircularProp")
-        mapping.getColumns().get("myCircularProp") == propertyConfig
+        mapping.getColumns().get("circularProp") == propertyConfig
+        1 * propertyConfig.setJoinTable({ it.key.name == "circular_prop_id" })
     }
 
-    @Unroll
-    def "Test bindManyToOne with unique key constraints for #scenario"() {
+    def "Test bindManyToOne (OneToOneProperty)"() {
         given:
         def property = Mock(HibernateOneToOneProperty)
         def table = Mock(Table)
-        def (mapping, refDomainClass) = mockEntity(hasCompositeId)
-
-        // Mocking PropertyConfig avoids ReadOnlyPropertyException
-        def propertyConfig = Mock(PropertyConfig)
-        propertyConfig.isUnique() >> isUnique
-        propertyConfig.isUniqueWithinGroup() >> isUniqueWithinGroup
+        def (mapping, refDomainClass) = mockEntity(false)
 
         property.getTable() >> table
         property.getHibernateAssociatedEntity() >> refDomainClass
-        property.getMappedForm() >> propertyConfig
-        property.getName() >> "myUniqueProp"
-        property.isBidirectional() >> isBidirectional
-
-        if (isBidirectional) {
-            property.getInverseSide() >> Mock(HibernateOneToOneProperty) { isValidHibernateOneToOne() >> true }
-        }
+        property.getMappedForm() >> Mock(PropertyConfig)
 
         when:
-        // In the Java source provided, there is no bindManyToOneWithUniqueKey.
-        // Assuming you are testing bindManyToOne(HibernateOneToOneProperty, path)
         def result = binder.bindManyToOne(property, "/test/path")
 
         then:
         result instanceof ManyToOne
-                // Note: Logic for setting unique on Column usually happens inside manyToOneValuesBinder or simpleValueBinder
-                // verify interactions based on your specific implementation requirements
-
-       where:
-        scenario            | hasCompositeId | isBidirectional | isUnique | isUniqueWithinGroup
-        "Simple ID"         | false          | false           | true     | false
-        "Composite ID"      | true           | false           | true     | false
-        "Bidirectional OTO" | false          | true            | true     | true
+        1 * manyToOneValuesBinder.bindManyToOneValues(property, _ as ManyToOne)
+        1 * simpleValueBinder.bindSimpleValue(property, null, _ as ManyToOne, "/test/path")
     }
 
-    /**
-     * Helper to reduce repetitive Mocking of entities and mappings
-     */
     private List mockEntity(boolean composite) {
         def mapping = new Mapping()
         def compositeId = composite ? new CompositeIdentity() : null

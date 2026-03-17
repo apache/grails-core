@@ -21,7 +21,6 @@ package org.grails.orm.hibernate.cfg.domainbinding.binder;
 import org.hibernate.MappingException;
 import org.hibernate.mapping.Column;
 import org.hibernate.mapping.ManyToOne;
-import org.hibernate.mapping.Table;
 
 import org.grails.orm.hibernate.cfg.PropertyConfig;
 import org.grails.orm.hibernate.cfg.domainbinding.hibernate.GrailsHibernatePersistentEntity;
@@ -51,7 +50,6 @@ public class ForeignKeyOneToOneBinder {
      * Binds the one-to-one property as a {@link ManyToOne} value and applies unique-key constraints.
      */
     public ManyToOne bind(HibernateOneToOneProperty property, String path) {
-        Table table = property.getTable();
         GrailsHibernatePersistentEntity refDomainClass = property.getHibernateAssociatedEntity();
         ManyToOne manyToOne = manyToOneBinder.bindManyToOne(property, path);
         if (refDomainClass.getHibernateCompositeIdentity().isEmpty()) {

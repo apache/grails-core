@@ -22,7 +22,9 @@ import java.util.Optional;
 
 import org.hibernate.boot.spi.MetadataBuildingContext;
 import org.hibernate.engine.jdbc.env.spi.JdbcEnvironment;
+import org.hibernate.mapping.Collection;
 import org.hibernate.mapping.ManyToOne;
+import org.hibernate.mapping.Table;
 
 import org.grails.orm.hibernate.cfg.ColumnConfig;
 import org.grails.orm.hibernate.cfg.CompositeIdentity;
@@ -72,28 +74,30 @@ public class ManyToOneBinder {
     }
 
     /** Binds a many-to-one association. */
-    public ManyToOne bindManyToOne(
-            HibernateManyToOneProperty property, org.hibernate.mapping.Table table, String path) {
+    public ManyToOne bindManyToOne(HibernateManyToOneProperty property, Table table, String path) {
         return doBind(property, property.getHibernateAssociatedEntity(), table, path);
     }
 
     /** Binds the inverse side of a many-to-many association as a collection element. */
-    public ManyToOne bindManyToOne(
-            HibernateManyToManyProperty property, org.hibernate.mapping.Table table, String path) {
-        GrailsHibernatePersistentEntity refDomainClass = property.getHibernateOwner();
+    public ManyToOne bindManyToOne(HibernateManyToManyProperty property, String path) {
+        Collection collection = property.getCollection();
+        HibernateManyToManyProperty otherSide = property.getHibernateInverseSide();
+        Table collectionTable = collection.getCollectionTable();
+        GrailsHibernatePersistentEntity refDomainClass = otherSide.getHibernateOwner();
         Optional<CompositeIdentity> compositeId = refDomainClass.getHibernateCompositeIdentity();
-        if (compositeId.isEmpty() && property.isCircular()) {
-            prepareCircularManyToMany(property);
+        if (compositeId.isEmpty() && otherSide.isCircular()) {
+            prepareCircularManyToMany(otherSide);
         }
-        return doBind(property, refDomainClass, table, path);
+        ManyToOne manyToOne = doBind(otherSide, refDomainClass, collectionTable, path);
+        manyToOne.setReferencedEntityName(otherSide.getOwner().getName());
+        return manyToOne;
     }
 
-    public ManyToOne bindManyToOne(
-            HibernateOneToOneProperty property, String path) {
+    public ManyToOne bindManyToOne(HibernateOneToOneProperty property, String path) {
         return doBind(property, property.getHibernateAssociatedEntity(), property.getTable(), path);
     }
 
-    ManyToOne doBind(
+    private ManyToOne doBind(
             HibernateAssociation property,
             GrailsHibernatePersistentEntity refDomainClass,
             org.hibernate.mapping.Table table,
