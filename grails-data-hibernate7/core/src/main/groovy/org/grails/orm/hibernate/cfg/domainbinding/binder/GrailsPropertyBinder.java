@@ -87,7 +87,7 @@ public class GrailsPropertyBinder {
                 && !currentGrailsProp.isSerializableType()) {
             value = collectionBinder.bindCollection(toMany, path);
         } else if (currentGrailsProp instanceof HibernateEmbeddedProperty embedded) {
-            value = componentBinder.bindComponent(persistentClass, embedded, path);
+            value = componentBinder.bindComponent(embedded, path);
         } else {
             // HibernateSimpleProperty
             value = simpleValueBinder.bindSimpleValue(currentGrailsProp, parentProperty, table, path);

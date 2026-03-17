@@ -52,8 +52,8 @@ public class ComponentBinder {
         this.grailsPropertyBinder = grailsPropertyBinder;
     }
 
-    public Component bindComponent(
-            PersistentClass owner, @Nonnull HibernateEmbeddedProperty embeddedProperty, String path) {
+    public Component bindComponent(@Nonnull HibernateEmbeddedProperty embeddedProperty, String path) {
+        var owner = embeddedProperty.getPersistentClass();
         Component component = new Component(metadataBuildingContext, owner);
         Class<?> type = embeddedProperty.getType();
         String role = GrailsHibernateUtil.qualify(type.getName(), embeddedProperty.getName());
