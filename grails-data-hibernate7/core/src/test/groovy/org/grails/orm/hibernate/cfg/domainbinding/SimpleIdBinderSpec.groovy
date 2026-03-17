@@ -22,6 +22,7 @@ package org.grails.orm.hibernate.cfg.domainbinding
 import grails.gorm.specs.HibernateGormDatastoreSpec
 import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernatePersistentProperty
 import org.grails.orm.hibernate.cfg.domainbinding.hibernate.GrailsHibernatePersistentEntity
+import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernatePersistentEntity
 import org.grails.orm.hibernate.cfg.Identity
 import org.hibernate.boot.spi.MetadataBuildingContext
 import org.hibernate.engine.jdbc.env.spi.JdbcEnvironment
@@ -29,12 +30,14 @@ import org.hibernate.mapping.BasicValue
 import org.hibernate.mapping.PrimaryKey
 import org.hibernate.mapping.RootClass
 import org.hibernate.mapping.Table
+import org.hibernate.mapping.Value
 
 import org.grails.orm.hibernate.cfg.domainbinding.binder.PropertyBinder
 import org.grails.orm.hibernate.cfg.domainbinding.binder.SimpleIdBinder
 import org.grails.orm.hibernate.cfg.domainbinding.binder.SimpleValueBinder
 import org.grails.orm.hibernate.cfg.domainbinding.generator.GrailsSequenceGeneratorEnum
 import org.grails.orm.hibernate.cfg.domainbinding.util.BasicValueIdCreator
+import org.grails.datastore.mapping.reflect.EntityReflector
 
 class SimpleIdBinderSpec extends HibernateGormDatastoreSpec {
 
@@ -61,7 +64,7 @@ class SimpleIdBinderSpec extends HibernateGormDatastoreSpec {
 
         // Use a Mock for BasicValueIdCreator and return a BasicValue based on the currentTable
         basicValueIdCreator = Mock(BasicValueIdCreator)
-        basicValueIdCreator.getBasicValueId(_, _, _, _, _) >> { MetadataBuildingContext ctx, Table table, Identity id, GrailsHibernatePersistentEntity domainClass, boolean useSeq ->
+        basicValueIdCreator.getBasicValueId(_, _, _, _, _) >> { MetadataBuildingContext ctx, Table table, Identity id, HibernatePersistentEntity domainClass, boolean useSeq ->
             return new BasicValue(ctx, table)
         }
 
@@ -80,7 +83,7 @@ class SimpleIdBinderSpec extends HibernateGormDatastoreSpec {
         def testProperty = Mock(HibernatePersistentProperty) {
             getName() >> "id"
         }
-        def domainClass = Mock(GrailsHibernatePersistentEntity) {
+        def domainClass = Mock(HibernatePersistentEntity) {
             getMappedForm() >> mapping
             getIdentity() >> testProperty
             getName() >> "TestEntity"
@@ -110,7 +113,7 @@ class SimpleIdBinderSpec extends HibernateGormDatastoreSpec {
         def testProperty = Mock(HibernatePersistentProperty) {
             getName() >> "id"
         }
-        def domainClass = Mock(GrailsHibernatePersistentEntity) {
+        def domainClass = Mock(HibernatePersistentEntity) {
             getMappedForm() >> mapping
             getIdentity() >> testProperty
             getName() >> "TestEntity"
@@ -134,9 +137,9 @@ class SimpleIdBinderSpec extends HibernateGormDatastoreSpec {
 
     def "bindSimpleId with non-existent identifier property"() {
         given:
-        def domainClass = Mock(GrailsHibernatePersistentEntity) {
+        def domainClass = Mock(HibernatePersistentEntity) {
             getName() >> "TestEntity"
-            getPropertyByName("nonExistent") >> null
+            getHibernatePropertyByName("nonExistent") >> null
             getIdentity() >> Mock(HibernatePersistentProperty)
         }
         def rootClass = new RootClass(metadataBuildingContext)
@@ -147,5 +150,36 @@ class SimpleIdBinderSpec extends HibernateGormDatastoreSpec {
 
         then:
         thrown(org.hibernate.MappingException)
+    }
+
+    def "bindSimpleId with synthetic identifier property"() {
+        given:
+        def mapping = Mock(org.grails.orm.hibernate.cfg.Mapping) {
+            isTablePerConcreteClass() >> false
+        }
+        def reflector = Mock(EntityReflector)
+        def domainClass = Mock(HibernatePersistentEntity) {
+            getMappedForm() >> mapping
+            getIdentity() >> null
+            getName() >> "TestEntity"
+            getMappingContext() >> getGrailsDomainBinder().hibernateMappingContext
+            getMapping() >> Mock(org.grails.datastore.mapping.model.ClassMapping)
+            getReflector() >> reflector
+        }
+        def rootClass = new RootClass(metadataBuildingContext)
+        currentTable = new Table("TEST_TABLE")
+        rootClass.setTable(currentTable)
+
+        when:
+        simpleIdBinder.bindSimpleId(domainClass, rootClass, new Identity(), rootClass.getTable())
+
+        then:
+        1 * simpleValueBinder.bindSimpleValue(_, null, _, "")
+        1 * propertyBinder.bindProperty(_, _)
+
+        rootClass.identifier instanceof BasicValue
+        rootClass.declaredIdentifierProperty != null
+        rootClass.identifierProperty != null
+        rootClass.table.primaryKey instanceof PrimaryKey
     }
 }

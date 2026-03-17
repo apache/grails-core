@@ -37,9 +37,9 @@ class ClassBinderSpec extends HibernateGormDatastoreSpec {
         def persistentName = "foo.Book"
         def persistentEntity = createPersistentEntity(grailsDomainBinder,simpleName, [:], [:])
         def root = new RootClass(grailsDomainBinder.metadataBuildingContext);
-        def binder = new ClassBinder()
+        def binder = new ClassBinder(collector)
 
-        binder.bindClass(persistentEntity,root, collector)
+        binder.bindClass(persistentEntity,root)
         then:
         root.getEntityName() == persistentName
         root.getJpaEntityName() == simpleName
@@ -49,6 +49,7 @@ class ClassBinderSpec extends HibernateGormDatastoreSpec {
         !root.useDynamicInsert()
         !root.useDynamicUpdate()
         !root.hasSelectBeforeUpdate()
+        root.getBatchSize() == 0
         collector.getImports()[simpleName] == persistentName
     }
 
@@ -62,9 +63,9 @@ class ClassBinderSpec extends HibernateGormDatastoreSpec {
         def persistentName = "foo.Book"
         def persistentEntity = createPersistentEntity(grailsDomainBinder,simpleName, [:], [autoImport: "true"])
         def root = new RootClass(grailsDomainBinder.metadataBuildingContext);
-        def binder = new ClassBinder()
+        def binder = new ClassBinder(collector)
 
-        binder.bindClass(persistentEntity,root, collector)
+        binder.bindClass(persistentEntity,root)
         then:
         root.getEntityName() == persistentName
         root.getJpaEntityName() == simpleName
@@ -74,6 +75,7 @@ class ClassBinderSpec extends HibernateGormDatastoreSpec {
         !root.useDynamicInsert()
         !root.useDynamicUpdate()
         !root.hasSelectBeforeUpdate()
+        root.getBatchSize() == 0
         collector.getImports()[simpleName] == persistentName
     }
 
@@ -87,9 +89,9 @@ class ClassBinderSpec extends HibernateGormDatastoreSpec {
         def persistentName = "foo.Book"
         def persistentEntity = createPersistentEntity(grailsDomainBinder, simpleName, [:], [autoImport: "false"])
         def root = new RootClass(grailsDomainBinder.metadataBuildingContext);
-        def binder = new ClassBinder()
+        def binder = new ClassBinder(collector)
 
-        binder.bindClass(persistentEntity,root, collector)
+        binder.bindClass(persistentEntity,root)
         then:
         root.getEntityName() == persistentName
         root.getJpaEntityName() == persistentName
@@ -99,7 +101,34 @@ class ClassBinderSpec extends HibernateGormDatastoreSpec {
         !root.useDynamicInsert()
         !root.useDynamicUpdate()
         !root.hasSelectBeforeUpdate()
+        root.getBatchSize() == 0
         !collector.getImports()[simpleName]
+    }
+
+    void "Test dynamic update and insert true"() {
+        when:
+
+        def collector = getCollector()
+        def grailsDomainBinder = getGrailsDomainBinder()
+
+        def simpleName = "Book"
+        def persistentName = "foo.Book"
+        def persistentEntity = createPersistentEntity(grailsDomainBinder,simpleName, [:], [dynamicUpdate: "true", dynamicInsert: "true", batchSize: "10"])
+        def root = new RootClass(grailsDomainBinder.metadataBuildingContext);
+        def binder = new ClassBinder(collector)
+
+        binder.bindClass(persistentEntity,root)
+        then:
+        root.getEntityName() == persistentName
+        root.getJpaEntityName() == simpleName
+        root.getProxyInterfaceName() == persistentName
+        root.getClassName() == persistentName
+        root.isLazy()
+        root.useDynamicInsert()
+        root.useDynamicUpdate()
+        !root.hasSelectBeforeUpdate()
+        root.getBatchSize() == 10
+        collector.getImports()[simpleName] == persistentName
     }
 
 

@@ -23,14 +23,11 @@ import org.hibernate.mapping.Table;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import org.grails.datastore.mapping.model.types.Association;
-import org.grails.datastore.mapping.model.types.ToOne;
 import org.grails.orm.hibernate.cfg.ColumnConfig;
 import org.grails.orm.hibernate.cfg.Mapping;
 import org.grails.orm.hibernate.cfg.PersistentEntityNamingStrategy;
 import org.grails.orm.hibernate.cfg.PropertyConfig;
-import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernateManyToManyProperty;
-import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernateOneToOneProperty;
+import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernateAssociation;
 import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernatePersistentProperty;
 import org.grails.orm.hibernate.cfg.domainbinding.util.BackticksRemover;
 import org.grails.orm.hibernate.cfg.domainbinding.util.ColumnNameForPropertyAndPathFetcher;
@@ -78,9 +75,9 @@ public class ColumnBinder {
      * Binds a Column instance to the Hibernate meta model
      *
      * @param property The Grails domain class property
-     * @param parentProperty
+     * @param parentProperty parent property
      * @param column The column to bind
-     * @param path
+     * @param path the path
      * @param table The table name
      */
     public void bindColumn(
@@ -100,26 +97,12 @@ public class ColumnBinder {
 
         Class<?> userType = property.getUserType();
         String columnName = columnNameForPropertyAndPathFetcher.getColumnNameForPropertyAndPath(property, path, cc);
-        if ((property instanceof Association association) && userType == null) {
+        if ((property instanceof HibernateAssociation assoc) && userType == null) {
             // Only use conventional naming when the column has not been explicitly mapped.
             if (column.getName() == null) {
                 column.setName(columnName);
             }
-            if (property instanceof HibernateManyToManyProperty) {
-                column.setNullable(false);
-            } else if (property instanceof HibernateOneToOneProperty &&
-                    association.isBidirectional() &&
-                    !association.isOwningSide()) {
-                if (association.getInverseSide().isHasOne()) {
-                    column.setNullable(false);
-                } else {
-                    column.setNullable(true);
-                }
-            } else if ((property instanceof ToOne) && association.isCircular()) {
-                column.setNullable(true);
-            } else {
-                column.setNullable(true);
-            }
+            column.setNullable(assoc.isAssociationColumnNullable());
         } else {
             column.setName(columnName);
             column.setNullable(property.isNullable() || (parentProperty != null && parentProperty.isNullable()));
@@ -143,10 +126,11 @@ public class ColumnBinder {
             Mapping mapping = owner.getMappedForm();
             if (mapping != null && mapping.getTablePerHierarchy()) {
                 if (LOG.isDebugEnabled())
-                    LOG.debug("[GrailsDomainBinder] Sub class property [" + property.getName() +
-                            "] for column name [" +
-                            column.getName() +
-                            "] set to nullable");
+                    LOG.debug("[GrailsDomainBinder] Sub class property ["
+                            + property.getName()
+                            + "] for column name ["
+                            + column.getName()
+                            + "] set to nullable");
                 column.setNullable(true);
             } else {
                 column.setNullable(property.isNullable());
@@ -158,11 +142,12 @@ public class ColumnBinder {
         column.setUnique(mappedFormFinal.isUnique() && !mappedFormFinal.isUniqueWithinGroup());
 
         if (LOG.isDebugEnabled())
-            LOG.debug("[GrailsDomainBinder] bound property [" + property.getName() +
-                    "] to column name [" +
-                    column.getName() +
-                    "] in table [" +
-                    table.getName() +
-                    "]");
+            LOG.debug("[GrailsDomainBinder] bound property ["
+                    + property.getName()
+                    + "] to column name ["
+                    + column.getName()
+                    + "] in table ["
+                    + table.getName()
+                    + "]");
     }
 }

@@ -20,7 +20,6 @@ package org.grails.orm.hibernate.cfg.domainbinding.binder;
 
 import jakarta.annotation.Nonnull;
 
-import org.hibernate.boot.spi.InFlightMetadataCollector;
 import org.hibernate.mapping.PersistentClass;
 import org.hibernate.mapping.Table;
 import org.hibernate.mapping.Value;
@@ -28,11 +27,11 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernateEmbeddedProperty;
+import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernateEnumProperty;
 import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernateManyToOneProperty;
 import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernateOneToOneProperty;
 import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernatePersistentProperty;
 import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernateToManyProperty;
-import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernateToOneProperty;
 
 @SuppressWarnings("PMD.DataflowAnomalyAnalysis")
 public class GrailsPropertyBinder {
@@ -45,6 +44,7 @@ public class GrailsPropertyBinder {
     private final SimpleValueBinder simpleValueBinder;
     private final OneToOneBinder oneToOneBinder;
     private final ManyToOneBinder manyToOneBinder;
+    private final ForeignKeyOneToOneBinder foreignKeyOneToOneBinder;
 
     public GrailsPropertyBinder(
             EnumTypeBinder enumTypeBinder,
@@ -52,51 +52,43 @@ public class GrailsPropertyBinder {
             CollectionBinder collectionBinder,
             SimpleValueBinder simpleValueBinder,
             OneToOneBinder oneToOneBinder,
-            ManyToOneBinder manyToOneBinder) {
+            ManyToOneBinder manyToOneBinder,
+            ForeignKeyOneToOneBinder foreignKeyOneToOneBinder) {
         this.enumTypeBinder = enumTypeBinder;
         this.componentBinder = componentBinder;
         this.collectionBinder = collectionBinder;
         this.simpleValueBinder = simpleValueBinder;
         this.oneToOneBinder = oneToOneBinder;
         this.manyToOneBinder = manyToOneBinder;
+        this.foreignKeyOneToOneBinder = foreignKeyOneToOneBinder;
     }
 
     public Value bindProperty(
-            PersistentClass persistentClass,
-            Table table,
-            String path,
-            HibernatePersistentProperty parentProperty,
-            @Nonnull HibernatePersistentProperty currentGrailsProp,
-            @Nonnull InFlightMetadataCollector mappings) {
+            @Nonnull HibernatePersistentProperty currentGrailsProp, HibernatePersistentProperty parentProperty, String path) {
+        Table table = currentGrailsProp.getTable();
+        PersistentClass persistentClass = currentGrailsProp.getHibernateOwner().getPersistentClass();
         if (LOG.isDebugEnabled()) {
             LOG.debug("[GrailsPropertyBinder] Binding persistent property [" + currentGrailsProp.getName() + "]");
         }
 
-        Value value = null;
+        Value value;
 
         // 1. Create Value and apply binders (consolidated block)
-        if (currentGrailsProp.isEnumType()) {
-            // HibernateEnumTypeProperty
+        if (currentGrailsProp instanceof HibernateEnumProperty) {
             value = enumTypeBinder.bindEnumType(currentGrailsProp, currentGrailsProp.getType(), table, path);
+        } else if (currentGrailsProp instanceof HibernateOneToOneProperty oneToOne
+                && oneToOne.isValidHibernateOneToOne()) {
+            value = oneToOneBinder.bindOneToOne(oneToOne, path);
         } else if (currentGrailsProp instanceof HibernateOneToOneProperty oneToOne) {
-            // HibernateOneToOneProperty
-            if (oneToOne.isHibernateOneToOne()) {
-                value = oneToOneBinder.bindOneToOne(
-                        (org.grails.datastore.mapping.model.types.OneToOne) currentGrailsProp,
-                        persistentClass,
-                        table,
-                        path);
-            } else {
-                value = manyToOneBinder.bindManyToOne((HibernateToOneProperty) currentGrailsProp, table, path);
-            }
+            value = foreignKeyOneToOneBinder.bind(oneToOne, table, path);
         } else if (currentGrailsProp instanceof HibernateManyToOneProperty manyToOne) {
             value = manyToOneBinder.bindManyToOne(manyToOne, table, path);
-        } else if (currentGrailsProp instanceof HibernateToManyProperty toMany &&
-                !currentGrailsProp.isSerializableType()) {
+        } else if (currentGrailsProp instanceof HibernateToManyProperty toMany
+                && !currentGrailsProp.isSerializableType()) {
             // HibernateToManyProperty
-            value = collectionBinder.bindCollection(toMany, persistentClass, mappings, path);
+            value = collectionBinder.bindCollection(toMany, persistentClass, path);
         } else if (currentGrailsProp instanceof HibernateEmbeddedProperty embedded) {
-            value = componentBinder.bindComponent(persistentClass, embedded, mappings, path);
+            value = componentBinder.bindComponent(persistentClass, embedded, path);
         } else {
             // HibernateSimpleProperty
             value = simpleValueBinder.bindSimpleValue(currentGrailsProp, parentProperty, table, path);

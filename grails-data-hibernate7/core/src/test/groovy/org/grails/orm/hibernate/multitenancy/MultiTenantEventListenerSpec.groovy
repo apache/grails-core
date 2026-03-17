@@ -26,7 +26,7 @@ import org.grails.datastore.mapping.model.types.TenantId
 import org.grails.datastore.mapping.multitenancy.MultiTenantCapableDatastore
 import org.grails.datastore.mapping.query.Query
 import org.grails.datastore.mapping.query.event.PreQueryEvent
-import org.grails.orm.hibernate.AbstractHibernateDatastore
+import org.grails.orm.hibernate.HibernateDatastore
 import org.springframework.context.ApplicationEvent
 import spock.lang.Specification
 import spock.lang.Unroll
@@ -58,18 +58,18 @@ class MultiTenantEventListenerSpec extends Specification {
 
     // ─── supportsSourceType ───────────────────────────────────────────────────
 
-    void "supportsSourceType returns true for AbstractHibernateDatastore itself"() {
+    void "supportsSourceType returns true for HibernateDatastore itself"() {
         expect:
-        listener.supportsSourceType(AbstractHibernateDatastore)
+        listener.supportsSourceType(HibernateDatastore)
     }
 
-    void "supportsSourceType returns true for a subclass of AbstractHibernateDatastore"() {
+    void "supportsSourceType returns true for a subclass of HibernateDatastore"() {
         given:
         // anonymous subclass simulates a concrete HibernateDatastore
-        def subclass = Mock(AbstractHibernateDatastore).class
+        def subclass = Mock(HibernateDatastore).class
 
         expect:
-        listener.supportsSourceType(AbstractHibernateDatastore)
+        listener.supportsSourceType(HibernateDatastore)
     }
 
     void "supportsSourceType returns false for plain Datastore"() {
@@ -106,7 +106,7 @@ class MultiTenantEventListenerSpec extends Specification {
 
     void "onApplicationEvent PreQueryEvent on non-multi-tenant entity does not call enableMultiTenancyFilter"() {
         given:
-        def datastore = Mock(AbstractHibernateDatastore)
+        def datastore = Mock(HibernateDatastore)
         def entity    = Mock(PersistentEntity) { isMultiTenant() >> false }
         def query     = Mock(Query) { getEntity() >> entity }
         def event     = new PreQueryEvent(datastore, query)
@@ -122,7 +122,7 @@ class MultiTenantEventListenerSpec extends Specification {
 
     void "onApplicationEvent PreQueryEvent on multi-tenant entity calls enableMultiTenancyFilter"() {
         given:
-        def datastore = Mock(AbstractHibernateDatastore)
+        def datastore = Mock(HibernateDatastore)
         def entity    = Mock(PersistentEntity) { isMultiTenant() >> true }
         def query     = Mock(Query) { getEntity() >> entity }
         def event     = new PreQueryEvent(datastore, query)
@@ -135,7 +135,7 @@ class MultiTenantEventListenerSpec extends Specification {
     }
 
     void "onApplicationEvent PreQueryEvent with non-Hibernate source does not call enableMultiTenancyFilter"() {
-        given: "source is not an AbstractHibernateDatastore"
+        given: "source is not an HibernateDatastore"
         def nonHibernateDatastore = Mock(org.grails.datastore.mapping.core.Datastore)
         def entity = Mock(PersistentEntity) { isMultiTenant() >> true }
         def query  = Mock(Query) { getEntity() >> entity }
@@ -152,7 +152,7 @@ class MultiTenantEventListenerSpec extends Specification {
 
     void "onApplicationEvent PreInsertEvent on non-multi-tenant entity sets no tenant"() {
         given:
-        def datastore    = Mock(AbstractHibernateDatastore)
+        def datastore    = Mock(HibernateDatastore)
         def entity       = Mock(PersistentEntity) { isMultiTenant() >> false }
         def entityAccess = Mock(org.grails.datastore.mapping.engine.EntityAccess)
         def event        = new PreInsertEvent(datastore, entity, entityAccess)
@@ -175,7 +175,7 @@ class MultiTenantEventListenerSpec extends Specification {
             getTenantId()   >> tenantId
         }
         def entityAccess = Mock(org.grails.datastore.mapping.engine.EntityAccess)
-        def datastore    = Mock(AbstractHibernateDatastore) { getTenantResolver() >> resolver }
+        def datastore    = Mock(HibernateDatastore) { getTenantResolver() >> resolver }
         def event        = new PreInsertEvent(datastore, entity, entityAccess)
 
         when:
@@ -196,7 +196,7 @@ class MultiTenantEventListenerSpec extends Specification {
             getTenantId()   >> tenantId
         }
         def entityAccess = Mock(org.grails.datastore.mapping.engine.EntityAccess)
-        def datastore    = Mock(AbstractHibernateDatastore) { getTenantResolver() >> resolver }
+        def datastore    = Mock(HibernateDatastore) { getTenantResolver() >> resolver }
         def event        = new PreUpdateEvent(datastore, entity, entityAccess)
 
         when:
@@ -217,7 +217,7 @@ class MultiTenantEventListenerSpec extends Specification {
             getTenantId()   >> tenantId
         }
         def entityAccess = Mock(org.grails.datastore.mapping.engine.EntityAccess)
-        def datastore    = Mock(AbstractHibernateDatastore) { getTenantResolver() >> resolver }
+        def datastore    = Mock(HibernateDatastore) { getTenantResolver() >> resolver }
         def event        = new ValidationEvent(datastore, entity, entityAccess)
 
         when:

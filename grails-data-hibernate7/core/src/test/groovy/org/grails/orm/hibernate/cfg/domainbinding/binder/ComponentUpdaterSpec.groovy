@@ -19,8 +19,10 @@
 
 package org.grails.orm.hibernate.cfg.domainbinding.binder
 
+import grails.gorm.annotation.Entity
+import grails.gorm.hibernate.HibernateEntity
 import grails.gorm.specs.HibernateGormDatastoreSpec
-import org.grails.orm.hibernate.cfg.domainbinding.hibernate.GrailsHibernatePersistentEntity
+import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernateEmbeddedProperty
 import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernatePersistentProperty
 import org.grails.orm.hibernate.cfg.domainbinding.util.PropertyFromValueCreator
 import org.hibernate.mapping.BasicValue
@@ -37,6 +39,10 @@ class ComponentUpdaterSpec extends HibernateGormDatastoreSpec {
     @Subject
     ComponentUpdater updater
 
+    def setupSpec() {
+        manager.addAllDomainClasses([CUPerson, CUAddress])
+    }
+
     def setup() {
         updater = new ComponentUpdater(propertyFromValueCreator)
     }
@@ -46,27 +52,24 @@ class ComponentUpdaterSpec extends HibernateGormDatastoreSpec {
         def metadataBuildingContext = getGrailsDomainBinder().getMetadataBuildingContext()
         def root = new RootClass(metadataBuildingContext)
         def component = new Component(metadataBuildingContext, root)
-        
-        def componentProperty = Mock(HibernatePersistentProperty)
-        def currentGrailsProp = Mock(HibernatePersistentProperty)
+
+        def personEntity = mappingContext.getPersistentEntity(CUPerson.name)
+        HibernateEmbeddedProperty componentProperty = personEntity.persistentProperties.find { it.name == 'address' } as HibernateEmbeddedProperty
+        HibernatePersistentProperty streetProp = componentProperty.associatedEntity.persistentProperties.find { it.name == 'street' } as HibernatePersistentProperty
+
         def value = new BasicValue(metadataBuildingContext, root.getTable())
-        def column = new Column("test_col")
+        def column = new Column("street")
         value.addColumn(column)
-        
         def hibernateProperty = new Property()
-        hibernateProperty.setName("testProp")
-        
-        def ownerEntity = Mock(GrailsHibernatePersistentEntity)
-        componentProperty.getOwner() >> ownerEntity
-        ownerEntity.isComponentPropertyNullable(componentProperty) >> true
+        hibernateProperty.setName("street")
 
         when:
-        updater.updateComponent(component, componentProperty, currentGrailsProp, value)
+        updater.updateComponent(component, componentProperty, streetProp, value)
 
         then:
-        1 * propertyFromValueCreator.createProperty(value, currentGrailsProp) >> hibernateProperty
-        component.getProperty("testProp") == hibernateProperty
-        column.isNullable()
+        1 * propertyFromValueCreator.createProperty(value, streetProp) >> hibernateProperty
+        component.getProperty("street") == hibernateProperty
+        column.isNullable() // address is nullable on CUPerson
     }
 
     def "should not set columns nullable if component property is not nullable"() {
@@ -74,26 +77,39 @@ class ComponentUpdaterSpec extends HibernateGormDatastoreSpec {
         def metadataBuildingContext = getGrailsDomainBinder().getMetadataBuildingContext()
         def root = new RootClass(metadataBuildingContext)
         def component = new Component(metadataBuildingContext, root)
-        
-        def componentProperty = Mock(HibernatePersistentProperty)
-        def currentGrailsProp = Mock(HibernatePersistentProperty)
+
+        def personEntity = mappingContext.getPersistentEntity(CUPerson.name)
+        HibernateEmbeddedProperty componentProperty = personEntity.persistentProperties.find { it.name == 'requiredAddress' } as HibernateEmbeddedProperty
+        HibernatePersistentProperty streetProp = componentProperty.associatedEntity.persistentProperties.find { it.name == 'street' } as HibernatePersistentProperty
+
         def value = new BasicValue(metadataBuildingContext, root.getTable())
-        def column = new Column("test_col")
+        def column = new Column("street")
         column.setNullable(false)
         value.addColumn(column)
-        
         def hibernateProperty = new Property()
-        hibernateProperty.setName("testProp")
-        
-        def ownerEntity = Mock(GrailsHibernatePersistentEntity)
-        componentProperty.getOwner() >> ownerEntity
-        ownerEntity.isComponentPropertyNullable(componentProperty) >> false
+        hibernateProperty.setName("street")
 
         when:
-        updater.updateComponent(component, componentProperty, currentGrailsProp, value)
+        updater.updateComponent(component, componentProperty, streetProp, value)
 
         then:
-        1 * propertyFromValueCreator.createProperty(value, currentGrailsProp) >> hibernateProperty
+        1 * propertyFromValueCreator.createProperty(value, streetProp) >> hibernateProperty
         !column.isNullable()
+    }
+}
+
+class CUAddress {
+    String street
+    String city
+}
+
+@Entity
+class CUPerson implements HibernateEntity<CUPerson> {
+    CUAddress address
+    CUAddress requiredAddress
+    static embedded = ['address', 'requiredAddress']
+    static constraints = {
+        address nullable: true
+        requiredAddress nullable: false
     }
 }

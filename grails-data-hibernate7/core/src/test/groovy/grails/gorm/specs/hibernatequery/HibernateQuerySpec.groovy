@@ -29,7 +29,7 @@ import jakarta.persistence.criteria.Subquery
 import org.apache.grails.data.testing.tck.domains.*
 import org.grails.datastore.mapping.engine.event.PersistEvent
 import org.grails.datastore.mapping.query.Query
-import org.grails.orm.hibernate.AbstractHibernateSession
+import org.grails.orm.hibernate.HibernateSession
 import org.grails.orm.hibernate.HibernateDatastore
 import org.grails.orm.hibernate.query.HibernateQuery
 import org.hibernate.query.criteria.JpaPredicate
@@ -50,7 +50,7 @@ class HibernateQuerySpec extends HibernateGormDatastoreSpec {
         def persister = sessionFactory.getMappingMetamodel().getEntityDescriptor(Person)
         println "Person ID generator: ${persister.getGenerator().class.name}"
         HibernateDatastore hibernateDatastore = manager.hibernateDatastore
-        AbstractHibernateSession session = hibernateDatastore.connect() as AbstractHibernateSession
+        HibernateSession session = hibernateDatastore.connect() as HibernateSession
         hibernateQuery = new HibernateQuery(session, hibernateDatastore.getMappingContext().getPersistentEntity(Person.typeName))
         petHibernateQuery = new HibernateQuery(session, hibernateDatastore.getMappingContext().getPersistentEntity(Pet.typeName))
         eagerHibernateQuery = new HibernateQuery(session, hibernateDatastore.getMappingContext().getPersistentEntity(EagerOwner.typeName))
@@ -546,7 +546,7 @@ class HibernateQuerySpec extends HibernateGormDatastoreSpec {
     def betweenBigDecimal() {
         given:
         HibernateDatastore hibernateDatastore = manager.hibernateDatastore
-        AbstractHibernateSession session = hibernateDatastore.connect() as AbstractHibernateSession
+        HibernateSession session = hibernateDatastore.connect() as HibernateSession
         HibernateQuery query = new HibernateQuery(session, hibernateDatastore.getMappingContext().getPersistentEntity(BigDecimalEntity.typeName))
         new BigDecimalEntity(amount: 10.5G).save(flush: true, failOnError: true)
         new BigDecimalEntity(amount: 20.5G).save(flush: true, failOnError: true)
@@ -719,7 +719,7 @@ class HibernateQuerySpec extends HibernateGormDatastoreSpec {
     def sumBigDecimal() {
         given:
         HibernateDatastore hibernateDatastore = manager.hibernateDatastore
-        AbstractHibernateSession session = hibernateDatastore.connect() as AbstractHibernateSession
+        HibernateSession session = hibernateDatastore.connect() as HibernateSession
         HibernateQuery query = new HibernateQuery(session, hibernateDatastore.getMappingContext().getPersistentEntity(BigDecimalEntity.typeName))
         new BigDecimalEntity(amount: 100.0G).save(flush: true, failOnError: true)
         new BigDecimalEntity(amount: 200.0G).save(flush: true, failOnError: true)
@@ -736,7 +736,7 @@ class HibernateQuerySpec extends HibernateGormDatastoreSpec {
     def avgBigDecimal() {
         given:
         HibernateDatastore hibernateDatastore = manager.hibernateDatastore
-        AbstractHibernateSession session = hibernateDatastore.connect() as AbstractHibernateSession
+        HibernateSession session = hibernateDatastore.connect() as HibernateSession
         HibernateQuery query = new HibernateQuery(session, hibernateDatastore.getMappingContext().getPersistentEntity(BigDecimalEntity.typeName))
         new BigDecimalEntity(amount: 100.0G).save(flush: true, failOnError: true)
         new BigDecimalEntity(amount: 200.0G).save(flush: true, failOnError: true)
@@ -1058,6 +1058,17 @@ class HibernateQuerySpec extends HibernateGormDatastoreSpec {
         hibernateQuery.eq("firstName", "Bob")
         when:
         def scroll = hibernateQuery.scroll()
+        then:
+        scroll != null
+    }
+
+    def scrollWithSession() {
+        given:
+        hibernateQuery.eq("firstName", "Bob")
+        when:
+        def session = sessionFactory.openSession()
+        def scroll = hibernateQuery.scroll(session)
+        session.close()
         then:
         scroll != null
     }

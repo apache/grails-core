@@ -42,6 +42,10 @@ public class IdentityWithMapping<T extends Property> extends Identity<T> impleme
         super(entity, context, property);
     }
 
+    public IdentityWithMapping(PersistentEntity entity, MappingContext context, String name, Class type) {
+        super(entity, context, name, type);
+    }
+
     public IdentityWithMapping(PersistentEntity entity, MappingContext context, PropertyDescriptor property, PropertyMapping<T> propertyMapping) {
         super(entity, context, property);
         this.propertyMapping = propertyMapping;

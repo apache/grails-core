@@ -29,7 +29,7 @@ import org.springframework.transaction.support.TransactionSynchronizationManager
 import org.springframework.ui.ModelMap;
 import org.springframework.web.context.request.WebRequest;
 
-import org.grails.orm.hibernate.AbstractHibernateDatastore;
+import org.grails.orm.hibernate.HibernateDatastore;
 
 /**
  * Extends the default spring OSIV and doesn't flush the session if it has been set
@@ -75,7 +75,7 @@ public class GrailsOpenSessionInViewInterceptor extends OpenSessionInViewInterce
         }
     }
 
-    public void setHibernateDatastore(AbstractHibernateDatastore hibernateDatastore) {
+    public void setHibernateDatastore(HibernateDatastore hibernateDatastore) {
         String defaultFlushModeName = hibernateDatastore.getDefaultFlushModeName();
         if (hibernateDatastore.isOsivReadOnly()) {
             this.hibernateFlushMode = FlushMode.MANUAL;

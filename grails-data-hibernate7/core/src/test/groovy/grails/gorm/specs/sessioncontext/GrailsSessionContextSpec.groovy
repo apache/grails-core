@@ -16,7 +16,6 @@
  *  specific language governing permissions and limitations
  *  under the License.
  */
-
 package grails.gorm.specs.sessioncontext
 
 import grails.gorm.specs.HibernateGormDatastoreSpec
@@ -29,6 +28,20 @@ import org.springframework.orm.hibernate5.SessionHolder
 import org.springframework.transaction.support.TransactionSynchronizationManager
 
 class GrailsSessionContextSpec extends HibernateGormDatastoreSpec {
+
+    def setup() {
+        TransactionSynchronizationManager.unbindResourceIfPossible(manager.hibernateDatastore.sessionFactory)
+        if (TransactionSynchronizationManager.isSynchronizationActive()) {
+            TransactionSynchronizationManager.clearSynchronization()
+        }
+    }
+
+    def cleanup() {
+        TransactionSynchronizationManager.unbindResourceIfPossible(manager.hibernateDatastore.sessionFactory)
+        if (TransactionSynchronizationManager.isSynchronizationActive()) {
+            TransactionSynchronizationManager.clearSynchronization()
+        }
+    }
 
     void "test GrailsSessionContext can be created with a SessionFactory"() {
         given:
@@ -44,12 +57,9 @@ class GrailsSessionContextSpec extends HibernateGormDatastoreSpec {
 
     void "test currentSession() returns session bound via TransactionSynchronizationManager"() {
         given:
-        HibernateDatastore hibernateDatastore = manager.hibernateDatastore
-        SessionFactoryImplementor sessionFactory = hibernateDatastore.sessionFactory as SessionFactoryImplementor
+        SessionFactoryImplementor sessionFactory = manager.hibernateDatastore.sessionFactory as SessionFactoryImplementor
         GrailsSessionContext sessionContext = new GrailsSessionContext(sessionFactory)
         Session session = sessionFactory.openSession()
-        // unbind whatever the test framework bound, then bind our own session
-        TransactionSynchronizationManager.unbindResourceIfPossible(sessionFactory)
         TransactionSynchronizationManager.bindResource(sessionFactory, new SessionHolder(session))
 
         when:
@@ -60,36 +70,26 @@ class GrailsSessionContextSpec extends HibernateGormDatastoreSpec {
         current == session
 
         cleanup:
-        TransactionSynchronizationManager.unbindResourceIfPossible(sessionFactory)
         if (session.isOpen()) session.close()
     }
 
     void "test currentSession() throws when no session is bound and allowCreate is false"() {
         given:
-        HibernateDatastore hibernateDatastore = manager.hibernateDatastore
-        SessionFactoryImplementor sessionFactory = hibernateDatastore.sessionFactory as SessionFactoryImplementor
+        SessionFactoryImplementor sessionFactory = manager.hibernateDatastore.sessionFactory as SessionFactoryImplementor
         GrailsSessionContext sessionContext = new GrailsSessionContext(sessionFactory)
-        // unbind whatever the test framework bound
-        def saved = TransactionSynchronizationManager.unbindResourceIfPossible(sessionFactory)
 
         when:
         sessionContext.currentSession()
 
         then:
         thrown(org.hibernate.HibernateException)
-
-        cleanup:
-        // restore the original binding so the framework is not broken for subsequent tests
-        if (saved) TransactionSynchronizationManager.bindResource(sessionFactory, saved)
     }
 
     void "test currentSession() returns session when bound as plain Session resource"() {
         given:
-        HibernateDatastore hibernateDatastore = manager.hibernateDatastore
-        SessionFactoryImplementor sessionFactory = hibernateDatastore.sessionFactory as SessionFactoryImplementor
+        SessionFactoryImplementor sessionFactory = manager.hibernateDatastore.sessionFactory as SessionFactoryImplementor
         GrailsSessionContext sessionContext = new GrailsSessionContext(sessionFactory)
         Session session = sessionFactory.openSession()
-        TransactionSynchronizationManager.unbindResourceIfPossible(sessionFactory)
         TransactionSynchronizationManager.bindResource(sessionFactory, session)
 
         when:
@@ -99,8 +99,79 @@ class GrailsSessionContextSpec extends HibernateGormDatastoreSpec {
         current == session
 
         cleanup:
-        TransactionSynchronizationManager.unbindResourceIfPossible(sessionFactory)
         if (session.isOpen()) session.close()
     }
-}
 
+    void "test initJta handles missing JtaPlatform"() {
+        given:
+        SessionFactoryImplementor sessionFactory = Mock(SessionFactoryImplementor)
+        org.hibernate.service.spi.ServiceRegistryImplementor registry = Mock(org.hibernate.service.spi.ServiceRegistryImplementor)
+        sessionFactory.getServiceRegistry() >> registry
+        registry.getService(org.hibernate.engine.transaction.jta.platform.spi.JtaPlatform) >> null
+        GrailsSessionContext sessionContext = new GrailsSessionContext(sessionFactory)
+
+        when:
+        sessionContext.initJta()
+
+        then:
+        noExceptionThrown()
+        sessionContext.jtaSessionContext == null
+    }
+
+    void "test currentSession() switches to AUTO flush mode when sync is active"() {
+        given:
+        SessionFactoryImplementor sessionFactory = manager.hibernateDatastore.sessionFactory as SessionFactoryImplementor
+        GrailsSessionContext sessionContext = new GrailsSessionContext(sessionFactory)
+        Session session = sessionFactory.openSession()
+        session.setHibernateFlushMode(FlushMode.MANUAL)
+        
+        TransactionSynchronizationManager.initSynchronization()
+        TransactionSynchronizationManager.bindResource(sessionFactory, new SessionHolder(session))
+
+        when:
+        Session current = sessionContext.currentSession()
+
+        then:
+        current.getHibernateFlushMode() == FlushMode.AUTO
+        
+        cleanup:
+        if (session.isOpen()) session.close()
+    }
+
+    void "test currentSession() creates a new session when allowCreate is true"() {
+        given:
+        SessionFactoryImplementor sessionFactory = manager.hibernateDatastore.sessionFactory as SessionFactoryImplementor
+        GrailsSessionContext sessionContext = new GrailsSessionContext(sessionFactory)
+        sessionContext.allowCreate = true
+
+        when:
+        Session session = sessionContext.currentSession()
+
+        then:
+        session != null
+        session.isOpen()
+
+        cleanup:
+        if (session?.isOpen()) session.close()
+    }
+
+    void "test currentSession() with active transaction and allowCreate"() {
+        given:
+        SessionFactoryImplementor sessionFactory = manager.hibernateDatastore.sessionFactory as SessionFactoryImplementor
+        GrailsSessionContext sessionContext = new GrailsSessionContext(sessionFactory)
+        sessionContext.allowCreate = true
+        
+        TransactionSynchronizationManager.initSynchronization()
+
+        when:
+        Session session = sessionContext.currentSession()
+
+        then:
+        session != null
+        TransactionSynchronizationManager.hasResource(sessionFactory)
+        ((SessionHolder)TransactionSynchronizationManager.getResource(sessionFactory)).isSynchronizedWithTransaction()
+
+        cleanup:
+        if (session?.isOpen()) session.close()
+    }
+}

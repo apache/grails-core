@@ -35,7 +35,7 @@ public class HibernateEmbeddedClassMapping extends HibernateClassMapping {
     }
 
     @Override
-    public IdentityMapping getIdentifier() {
+    public IdentityMapping<?> getIdentifier() {
         return null;
     }
 }

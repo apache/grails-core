@@ -214,21 +214,21 @@ public interface Criteria {
      *
      * @return This criteria
      */
-    Criteria and(@DelegatesTo(Criteria.class) Closure callable);
+    Criteria and(@DelegatesTo(Criteria.class) Closure<?> callable);
 
     /**
      * Creates a logical disjunction
      * @param callable The closure
      * @return This criteria
      */
-    Criteria or(@DelegatesTo(Criteria.class) Closure callable);
+    Criteria or(@DelegatesTo(Criteria.class) Closure<?> callable);
 
     /**
      * Creates a logical negation
      * @param callable The closure
      * @return This criteria
      */
-    Criteria not(@DelegatesTo(Criteria.class) Closure callable);
+    Criteria not(@DelegatesTo(Criteria.class) Closure<?> callable);
 
     /**
      * Creates an "in" Criterion based on the specified property name and list of values
@@ -536,7 +536,7 @@ public interface Criteria {
      *
      * @return This Criteria instance
      */
-    Criteria eqAll(String propertyName, QueryableCriteria propertyValue);
+    Criteria eqAll(String propertyName, QueryableCriteria<?> propertyValue);
 
     /**
      * Creates a subquery criterion that ensures the given property is greater than all the given returned values
@@ -546,7 +546,7 @@ public interface Criteria {
      *
      * @return This Criteria instance
      */
-    Criteria gtAll(String propertyName, QueryableCriteria propertyValue);
+    Criteria gtAll(String propertyName, QueryableCriteria<?> propertyValue);
 
     /**
      * Creates a subquery criterion that ensures the given property is less than all the given returned values
@@ -556,7 +556,7 @@ public interface Criteria {
      *
      * @return This Criteria instance
      */
-    Criteria ltAll(String propertyName, QueryableCriteria propertyValue);
+    Criteria ltAll(String propertyName, QueryableCriteria<?> propertyValue);
 
     /**
      * Creates a subquery criterion that ensures the given property is greater than all the given returned values
@@ -566,7 +566,7 @@ public interface Criteria {
      *
      * @return This Criteria instance
      */
-    Criteria geAll(String propertyName, QueryableCriteria propertyValue);
+    Criteria geAll(String propertyName, QueryableCriteria<?> propertyValue);
 
     /**
      * Creates a subquery criterion that ensures the given property is less than all the given returned values
@@ -576,7 +576,7 @@ public interface Criteria {
      *
      * @return This Criteria instance
      */
-    Criteria leAll(String propertyName, QueryableCriteria propertyValue);
+    Criteria leAll(String propertyName, QueryableCriteria<?> propertyValue);
 
     /**
      * Creates a subquery criterion that ensures the given property is greater than some of the given values
@@ -586,7 +586,7 @@ public interface Criteria {
      *
      * @return This Criteria instance
      */
-    Criteria gtSome(String propertyName, QueryableCriteria propertyValue);
+    Criteria gtSome(String propertyName, QueryableCriteria<?> propertyValue);
 
     /**
      * Creates a subquery criterion that ensures the given property is greater than some of the given values
@@ -606,7 +606,7 @@ public interface Criteria {
      *
      * @return This Criteria instance
      */
-    Criteria geSome(String propertyName, QueryableCriteria propertyValue);
+    Criteria geSome(String propertyName, QueryableCriteria<?> propertyValue);
 
     /**
      * Creates a subquery criterion that ensures the given property is greater than or equal to some of the given values
@@ -626,7 +626,7 @@ public interface Criteria {
      *
      * @return This Criteria instance
      */
-    Criteria ltSome(String propertyName, QueryableCriteria propertyValue);
+    Criteria ltSome(String propertyName, QueryableCriteria<?> propertyValue);
 
     /**
      * Creates a subquery criterion that ensures the given property is less than some of the given values
@@ -646,7 +646,7 @@ public interface Criteria {
      *
      * @return This Criteria instance
      */
-    Criteria leSome(String propertyName, QueryableCriteria propertyValue);
+    Criteria leSome(String propertyName, QueryableCriteria<?> propertyValue);
 
     /**
      * Creates a subquery criterion that ensures the given property is less than or equal to some of the given values

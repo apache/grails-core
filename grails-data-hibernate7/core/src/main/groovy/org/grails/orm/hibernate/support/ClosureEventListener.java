@@ -30,30 +30,7 @@ import org.hibernate.FlushMode;
 import org.hibernate.HibernateException;
 import org.hibernate.Session;
 import org.hibernate.engine.spi.SharedSessionContractImplementor;
-import org.hibernate.event.spi.AbstractEvent;
-import org.hibernate.event.spi.AbstractPreDatabaseOperationEvent;
-import org.hibernate.event.spi.MergeContext;
-import org.hibernate.event.spi.MergeEvent;
-import org.hibernate.event.spi.MergeEventListener;
-import org.hibernate.event.spi.PersistContext;
-import org.hibernate.event.spi.PersistEvent;
-import org.hibernate.event.spi.PersistEventListener;
-import org.hibernate.event.spi.PostDeleteEvent;
-import org.hibernate.event.spi.PostDeleteEventListener;
-import org.hibernate.event.spi.PostInsertEvent;
-import org.hibernate.event.spi.PostInsertEventListener;
-import org.hibernate.event.spi.PostLoadEvent;
-import org.hibernate.event.spi.PostLoadEventListener;
-import org.hibernate.event.spi.PostUpdateEvent;
-import org.hibernate.event.spi.PostUpdateEventListener;
-import org.hibernate.event.spi.PreDeleteEvent;
-import org.hibernate.event.spi.PreDeleteEventListener;
-import org.hibernate.event.spi.PreInsertEvent;
-import org.hibernate.event.spi.PreInsertEventListener;
-import org.hibernate.event.spi.PreLoadEvent;
-import org.hibernate.event.spi.PreLoadEventListener;
-import org.hibernate.event.spi.PreUpdateEvent;
-import org.hibernate.event.spi.PreUpdateEventListener;
+import org.hibernate.event.spi.*;
 import org.hibernate.jpa.event.spi.CallbackRegistry;
 import org.hibernate.jpa.event.spi.CallbackRegistryConsumer;
 import org.hibernate.metamodel.mapping.AttributeMapping;
@@ -67,13 +44,13 @@ import org.grails.datastore.gorm.support.BeforeValidateHelper.BeforeValidateEven
 import org.grails.datastore.gorm.support.EventTriggerCaller;
 import org.grails.datastore.mapping.engine.event.AbstractPersistenceEvent;
 import org.grails.datastore.mapping.engine.event.ValidationEvent;
-import org.grails.datastore.mapping.model.PersistentEntity;
 import org.grails.datastore.mapping.model.PersistentProperty;
 import org.grails.datastore.mapping.model.config.GormProperties;
 import org.grails.datastore.mapping.reflect.ClassUtils;
 import org.grails.datastore.mapping.reflect.EntityReflector;
 import org.grails.datastore.mapping.validation.ValidationException;
-import org.grails.orm.hibernate.AbstractHibernateGormValidationApi;
+import org.grails.orm.hibernate.HibernateGormValidationApi;
+import org.grails.orm.hibernate.cfg.domainbinding.hibernate.GrailsHibernatePersistentEntity;
 
 @SuppressWarnings({"rawtypes", "unchecked", "serial"})
 public class ClosureEventListener
@@ -101,21 +78,22 @@ public class ClosureEventListener
     private final EventTriggerCaller preDeleteEventListener;
     private final EventTriggerCaller preUpdateEventListener;
     private final BeforeValidateEventTriggerCaller beforeValidateEventListener;
-    private final PersistentEntity persistentEntity;
+    private final GrailsHibernatePersistentEntity persistentEntity;
     private final MetaClass domainMetaClass;
     private final boolean failOnErrorEnabled;
     private final Map validateParams;
 
-    public ClosureEventListener(PersistentEntity persistentEntity, boolean failOnError, List failOnErrorPackages) {
+    public ClosureEventListener(
+            GrailsHibernatePersistentEntity persistentEntity, boolean failOnError, List failOnErrorPackages) {
         this.persistentEntity = persistentEntity;
         Class domainClazz = persistentEntity.getJavaClass();
         this.domainMetaClass = GroovySystem.getMetaClassRegistry().getMetaClass(domainClazz);
 
         beforeInsertCaller = buildCaller(AbstractPersistenceEvent.BEFORE_INSERT_EVENT, domainClazz);
         EventTriggerCaller preLoadCaller = buildCaller(AbstractPersistenceEvent.ONLOAD_EVENT, domainClazz);
-        this.preLoadEventCaller = (preLoadCaller != null) ?
-                preLoadCaller :
-                buildCaller(AbstractPersistenceEvent.BEFORE_LOAD_EVENT, domainClazz);
+        this.preLoadEventCaller = (preLoadCaller != null)
+                ? preLoadCaller
+                : buildCaller(AbstractPersistenceEvent.BEFORE_LOAD_EVENT, domainClazz);
 
         postLoadEventListener = buildCaller(AbstractPersistenceEvent.AFTER_LOAD_EVENT, domainClazz);
         postInsertEventListener = buildCaller(AbstractPersistenceEvent.AFTER_INSERT_EVENT, domainClazz);
@@ -125,12 +103,12 @@ public class ClosureEventListener
         preUpdateEventListener = buildCaller(AbstractPersistenceEvent.BEFORE_UPDATE_EVENT, domainClazz);
 
         beforeValidateEventListener = new BeforeValidateEventTriggerCaller(domainClazz, domainMetaClass);
-        failOnErrorEnabled = !failOnErrorPackages.isEmpty() ?
-                ClassUtils.isClassBelowPackage(domainClazz, failOnErrorPackages) :
-                failOnError;
+        failOnErrorEnabled = !failOnErrorPackages.isEmpty()
+                ? ClassUtils.isClassBelowPackage(domainClazz, failOnErrorPackages)
+                : failOnError;
 
         validateParams = new HashMap();
-        validateParams.put(AbstractHibernateGormValidationApi.ARGUMENT_DEEP_VALIDATE, Boolean.FALSE);
+        validateParams.put(HibernateGormValidationApi.ARGUMENT_DEEP_VALIDATE, Boolean.FALSE);
     }
 
     @Override
@@ -244,8 +222,8 @@ public class ClosureEventListener
         if (!validateable.shouldSkipValidation() && !validateable.validate(validateParams)) {
             if (failOnErrorEnabled) {
                 throw ValidationException.newInstance(
-                        "Validation error whilst flushing entity [" +
-                                entity.getClass().getName() + "]",
+                        "Validation error whilst flushing entity ["
+                                + entity.getClass().getName() + "]",
                         validateable.getErrors());
             }
             return true;
@@ -269,7 +247,7 @@ public class ClosureEventListener
             if (attributeMapping == null) continue;
 
             int index = attributeMapping.getStateArrayPosition();
-            PersistentProperty property = persistentEntity.getPropertyByName(p);
+            PersistentProperty property = persistentEntity.getHibernatePropertyByName(p);
 
             if (property != null && !GormProperties.VERSION.equals(property.getName())) {
                 state[index] = reflector.getProperty(entity, property.getName());

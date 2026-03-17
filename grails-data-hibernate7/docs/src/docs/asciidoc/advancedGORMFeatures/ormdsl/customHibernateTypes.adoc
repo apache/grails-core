@@ -1,19 +1,67 @@
-////
-Licensed to the Apache Software Foundation (ASF) under one
-or more contributor license agreements.  See the NOTICE file
-distributed with this work for additional information
-regarding copyright ownership.  The ASF licenses this file
-to you under the Apache License, Version 2.0 (the
-"License"); you may not use this file except in compliance
-with the License.  You may obtain a copy of the License at
+[[ormdsl-customHibernateTypes]]
+== Custom Hibernate Types
 
-https://www.apache.org/licenses/LICENSE-2.0
+GORM allows you to map properties to custom Hibernate `UserType` implementations. This is useful for persisting non-standard Java/Groovy types — for example, storing a `List` as a comma-separated string, or encrypting values at the persistence layer.
 
-Unless required by applicable law or agreed to in writing,
-software distributed under the License is distributed on an
-"AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
-KIND, either express or implied.  See the License for the
-specific language governing permissions and limitations
-under the License.
-////
+=== Per-Property Type
 
+Use the `type` option in the `mapping` block to assign a custom Hibernate type to a specific property:
+
+[source,groovy]
+----
+class Setting {
+    String name
+    Serializable value
+
+    static mapping = {
+        value type: 'serializable'      // <1>
+    }
+}
+----
+<1> The type name can be a Hibernate built-in type alias, a fully qualified class name, or a `Class` object.
+
+With a custom `UserType` class:
+
+[source,groovy]
+----
+class Product {
+    String name
+    List<String> tags
+
+    static mapping = {
+        tags type: CsvStringListType     // <1>
+    }
+}
+----
+<1> `CsvStringListType` implements `org.hibernate.usertype.UserType` and handles conversion between a comma-separated column value and a `List<String>`.
+
+=== Type Parameters
+
+If your custom type implements `org.hibernate.usertype.ParameterizedType`, pass parameters using `typeParams`:
+
+[source,groovy]
+----
+class Measurement {
+    BigDecimal value
+
+    static mapping = {
+        value type: FixedScaleDecimalType, typeParams: [scale: '4']
+    }
+}
+----
+
+=== Global User Type Mapping
+
+Register a user type for a given Java class globally so it applies to all properties of that type without explicit per-property configuration:
+
+[source,groovy]
+----
+class MyDomainClass {
+    static mapping = {
+        userTypes Money: MoneyUserType      // <1>
+    }
+}
+----
+<1> Any property of type `Money` in this class will use `MoneyUserType`.
+
+TIP: Implementing `org.hibernate.usertype.UserType` requires handling `sqlTypes()`, `nullSafeGet()`, `nullSafeSet()`, `deepCopy()`, and `equals()`. Prefer Hibernate's `CompositeUserType` for multi-column mappings.

@@ -34,17 +34,18 @@ class JoinedSubClassBinderSpec extends HibernateGormDatastoreSpec {
 
     JoinedSubClassBinder binder
     ColumnNameForPropertyAndPathFetcher fetcher
-    ClassBinder classBinder = new ClassBinder()
+    ClassBinder classBinder
     SimpleValueColumnBinder simpleValueColumnBinder = new SimpleValueColumnBinder()
 
     void setup() {
         def buildingContext = getGrailsDomainBinder().getMetadataBuildingContext()
+        classBinder = new ClassBinder(buildingContext.getMetadataCollector())
         def namingStrategy = getGrailsDomainBinder().getNamingStrategy()
         def backticksRemover = new org.grails.orm.hibernate.cfg.domainbinding.util.BackticksRemover()
         def defaultColumnNameFetcher = new org.grails.orm.hibernate.cfg.domainbinding.util.DefaultColumnNameFetcher(namingStrategy, backticksRemover)
         
         fetcher = new org.grails.orm.hibernate.cfg.domainbinding.util.ColumnNameForPropertyAndPathFetcher(namingStrategy, defaultColumnNameFetcher, backticksRemover)
-        binder = new JoinedSubClassBinder(buildingContext, namingStrategy, simpleValueColumnBinder, fetcher, classBinder)
+        binder = new JoinedSubClassBinder(buildingContext, namingStrategy, simpleValueColumnBinder, fetcher, classBinder, buildingContext.getMetadataCollector())
     }
 
     void "test bind joined subclass with real entities"() {
@@ -73,13 +74,15 @@ class JoinedSubClassBinderSpec extends HibernateGormDatastoreSpec {
         rootClass.createPrimaryKey()
         
         // The JoinedSubclass needs the parent PersistentClass
-        def joinedSubclass = new JoinedSubclass(rootClass, buildingContext)
-        joinedSubclass.setEntityName(JoinedSubClassSub.name)
+        // def joinedSubclass = new JoinedSubclass(rootClass, buildingContext)
+        // joinedSubclass.setEntityName(JoinedSubClassSub.name)
 
         when:
-        binder.bindJoinedSubClass(subEntity, joinedSubclass, mappings)
+        def joinedSubclass = binder.bindJoinedSubClass(subEntity, rootClass)
 
         then:
+        joinedSubclass != null
+        joinedSubclass.getEntityName() == JoinedSubClassSub.name
         joinedSubclass.getTable() != null
         joinedSubclass.getTable().getName() != "JS_ROOT_TABLE"
         joinedSubclass.getKey() != null

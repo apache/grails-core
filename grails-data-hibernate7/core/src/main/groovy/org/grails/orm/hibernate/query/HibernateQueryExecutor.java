@@ -23,10 +23,10 @@ import java.util.Optional;
 
 import jakarta.persistence.LockModeType;
 
-import org.hibernate.FlushMode;
 import org.hibernate.NonUniqueResultException;
 import org.hibernate.Session;
 import org.hibernate.query.Query;
+import org.hibernate.query.QueryFlushMode;
 import org.hibernate.query.criteria.JpaCriteriaQuery;
 
 import org.grails.datastore.mapping.proxy.ProxyHandler;
@@ -38,7 +38,7 @@ public record HibernateQueryExecutor(
         Boolean queryCache,
         Integer fetchSize,
         Integer timeout,
-        FlushMode flushMode,
+        QueryFlushMode flushMode,
         Boolean readOnly,
         ProxyHandler proxyHandler) {
 
@@ -74,7 +74,7 @@ public record HibernateQueryExecutor(
         Optional.ofNullable(lockResult).ifPresent(query::setLockMode);
         Optional.ofNullable(fetchSize).filter(v -> v > 0).ifPresent(query::setFetchSize);
         Optional.ofNullable(timeout).filter(v -> v > 0).ifPresent(query::setTimeout);
-        Optional.ofNullable(flushMode).map(mode -> mode.toJpaFlushMode()).ifPresent(query::setFlushMode);
+        Optional.ofNullable(flushMode).ifPresent(query::setQueryFlushMode);
         Optional.ofNullable(readOnly).ifPresent(query::setReadOnly);
         return query;
     }

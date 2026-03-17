@@ -49,7 +49,7 @@ class Mapping extends Entity<PropertyConfig> {
             return null
         }
 
-        return type instanceof Class ? ((Class)type).name : type.toString()
+        return type instanceof Class ? ((Class) type).name : type.toString()
     }
 
     /**
@@ -159,6 +159,7 @@ class Mapping extends Entity<PropertyConfig> {
     Map<String, PropertyConfig> getPropertyConfigs() {
         return columns
     }
+
     /**
      * Define the table name
      * @param name The table name
@@ -190,6 +191,7 @@ class Mapping extends Entity<PropertyConfig> {
         Table.configureExisting(table, tableConfig)
         return this
     }
+
     /**
      * Define the identity config
      * @param identityConfig The id config
@@ -198,10 +200,11 @@ class Mapping extends Entity<PropertyConfig> {
     @Override
     Mapping id(Map identityConfig) {
         if (identity instanceof Identity) {
-            Identity.configureExisting((Identity)identity, identityConfig)
+            Identity.configureExisting((Identity) identity, identityConfig)
         }
         return this
     }
+
     /**
      * Define the identity config
      * @param identityConfig The id config
@@ -210,7 +213,7 @@ class Mapping extends Entity<PropertyConfig> {
     @Override
     Mapping id(@DelegatesTo(Identity) Closure identityConfig) {
         if (identity instanceof Identity) {
-            Identity.configureExisting((Identity)identity, identityConfig)
+            Identity.configureExisting((Identity) identity, identityConfig)
         }
         return this
     }
@@ -220,7 +223,6 @@ class Mapping extends Entity<PropertyConfig> {
      * @param identityConfig The id config
      * @return This mapping
      */
-
     Mapping id(CompositeIdentity compositeIdentity) {
         this.identity = compositeIdentity
         return this
@@ -261,7 +263,7 @@ class Mapping extends Entity<PropertyConfig> {
         if (this.cache == null) {
             this.cache = new CacheConfig()
         }
-        this.cache.usage = usage
+        this.cache.usage = CacheConfig.Usage.of(usage)
         this.cache.enabled = true
         return this
     }
@@ -340,7 +342,7 @@ class Mapping extends Entity<PropertyConfig> {
             else if (args.column instanceof Map) {
                 ColumnConfig config = new ColumnConfig()
                 DataBinder dataBinder = new DataBinder(config)
-                dataBinder.bind(new MutablePropertyValues((Map)args.column))
+                dataBinder.bind(new MutablePropertyValues((Map) args.column))
                 discriminator.column = config
             }
             discriminator.type(args.remove('type'))
@@ -360,9 +362,9 @@ class Mapping extends Entity<PropertyConfig> {
      * @param propertyNames
      * @return
      */
-    CompositeIdentity composite(String...propertyNames) {
+    CompositeIdentity composite(String... propertyNames) {
         identity = new CompositeIdentity(propertyNames: propertyNames)
-        return (CompositeIdentity)identity
+        return (CompositeIdentity) identity
     }
 
     /**
@@ -457,6 +459,7 @@ class Mapping extends Entity<PropertyConfig> {
     Entity version(@DelegatesTo(PropertyConfig) Closure versionConfig) {
         return super.version(versionConfig)
     }
+
     /**
      * Configure a new property
      * @param name The name of the property
@@ -515,10 +518,10 @@ class Mapping extends Entity<PropertyConfig> {
     @Override
     def propertyMissing(String name, Object val) {
         if (val instanceof Closure) {
-            property(name, (Closure)val)
+            property(name, (Closure) val)
         }
         else if (val instanceof PropertyConfig) {
-            columns[name] = ((PropertyConfig)val)
+            columns[name] = ((PropertyConfig) val)
         }
         else {
             throw new MissingPropertyException(name, Mapping)
@@ -530,10 +533,10 @@ class Mapping extends Entity<PropertyConfig> {
         if (args && args.getClass().isArray()) {
             Object[] argsArray = (Object[]) args
             if (argsArray[0] instanceof Closure) {
-                property(name, (Closure)argsArray[0])
+                property(name, (Closure) argsArray[0])
             }
             else if (argsArray[0] instanceof PropertyConfig) {
-                columns[name] = (PropertyConfig)argsArray[0]
+                columns[name] = (PropertyConfig) argsArray[0]
             }
             else if (argsArray[0] instanceof Map) {
                 PropertyConfig property = getOrInitializePropertyConfig(name)
@@ -541,7 +544,7 @@ class Mapping extends Entity<PropertyConfig> {
                 if (argsArray[argsArray.length - 1] instanceof Closure) {
                     PropertyConfig.configureExisting(
                             property,
-                            ((Closure)argsArray[argsArray.length - 1])
+                            ((Closure) argsArray[argsArray.length - 1])
                     )
                 }
                 PropertyConfig.configureExisting(property, namedArgs)
@@ -562,7 +565,7 @@ class Mapping extends Entity<PropertyConfig> {
             // apply global constraints constraints
             PropertyConfig globalConstraints = columns.get('*')
             if (globalConstraints != null) {
-                pc = (PropertyConfig)globalConstraints.clone()
+                pc = (PropertyConfig) globalConstraints.clone()
                 if (pc.columns.size() == 1) {
                     pc.firstColumnIsColumnCopy = true
                 }

@@ -1,19 +1,74 @@
-////
-Licensed to the Apache Software Foundation (ASF) under one
-or more contributor license agreements.  See the NOTICE file
-distributed with this work for additional information
-regarding copyright ownership.  The ASF licenses this file
-to you under the Apache License, Version 2.0 (the
-"License"); you may not use this file except in compliance
-with the License.  You may obtain a copy of the License at
+[[ormdsl-fetchingDSL]]
+== Fetching Strategies
 
-https://www.apache.org/licenses/LICENSE-2.0
+GORM supports both lazy (default) and eager fetching for associations. You can control this per-property via the ORM DSL `mapping` block.
 
-Unless required by applicable law or agreed to in writing,
-software distributed under the License is distributed on an
-"AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
-KIND, either express or implied.  See the License for the
-specific language governing permissions and limitations
-under the License.
-////
+=== Lazy Fetching (Default)
 
+By default, associations are loaded lazily — Hibernate issues a secondary query only when you first access the association:
+
+[source,groovy]
+----
+class Author {
+    String name
+    static hasMany = [books: Book]
+    // books are loaded lazily by default
+}
+----
+
+=== Eager Fetching
+
+To eagerly load an association in the same query as the owning entity, use `fetch: 'join'`:
+
+[source,groovy]
+----
+class Author {
+    String name
+    static hasMany = [books: Book]
+    static mapping = {
+        books fetch: 'join'     // <1>
+    }
+}
+----
+<1> Hibernate uses a SQL `JOIN` to load `books` alongside the `Author`.
+
+You can also use `fetch: 'select'` to trigger a secondary `SELECT` eagerly (as opposed to lazy, which defers the select until access):
+
+[source,groovy]
+----
+static mapping = {
+    books fetch: 'select'   // loads eagerly via a secondary SELECT
+}
+----
+
+=== Batch Fetching
+
+Batch fetching is a performance optimisation that allows Hibernate to initialise multiple lazy proxies or collections in a single `SELECT`. Configure it with `batchSize`:
+
+[source,groovy]
+----
+class Author {
+    String name
+    static hasMany = [books: Book]
+    static mapping = {
+        books batchSize: 10     // <1>
+    }
+}
+----
+<1> When accessing `books` on an uninitialized proxy, Hibernate will fetch up to 10 collections in one query.
+
+Batch size can also be set at the class level, which affects all lazy-loaded instances of that class:
+
+[source,groovy]
+----
+class Book {
+    String title
+    static mapping = {
+        batchSize 10
+    }
+}
+----
+
+=== Lazy vs. Eager — Recommendations
+
+TIP: Eager fetching avoids N+1 query problems but can return large result sets. Prefer lazy loading with explicit eager overrides (via named queries or `where` clauses with `.join()`) for fine-grained control.

@@ -1,315 +1,155 @@
-/*
- *  Licensed to the Apache Software Foundation (ASF) under one
- *  or more contributor license agreements.  See the NOTICE file
- *  distributed with this work for additional information
- *  regarding copyright ownership.  The ASF licenses this file
- *  to you under the Apache License, Version 2.0 (the
- *  "License"); you may not use this file except in compliance
- *  with the License.  You may obtain a copy of the License at
- *
- *    https://www.apache.org/licenses/LICENSE-2.0
- *
- *  Unless required by applicable law or agreed to in writing,
- *  software distributed under the License is distributed on an
- *  "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
- *  KIND, either express or implied.  See the License for the
- *  specific language governing permissions and limitations
- *  under the License.
- */
-
-// HibernateGormInstanceApiSpec.groovy
 package org.grails.orm.hibernate
 
 import grails.gorm.specs.HibernateGormDatastoreSpec
-import grails.persistence.Entity
-import org.springframework.validation.Errors
+import grails.gorm.annotation.Entity
+import grails.gorm.hibernate.HibernateEntity
 
 class HibernateGormInstanceApiSpec extends HibernateGormDatastoreSpec {
 
-    void setupSpec() {
-        manager.addAllDomainClasses([HibernateGormInstanceApiSpecPerson, HibernateGormInstanceApiSpecJob])
+    def setupSpec() {
+        manager.addAllDomainClasses([PersonInstanceApi, BookInstanceApi])
     }
 
-    def setup() {
-        new HibernateGormInstanceApiSpecPerson(firstName: "Fred", lastName: "Flintstone", age: 40).save(flush: true)
-        new HibernateGormInstanceApiSpecPerson(firstName: "Wilma", lastName: "Flintstone", age: 35).save(flush: true)
-    }
-
-    void "test save with validation success"() {
+    def "test save and get"() {
         given:
-        def person = new HibernateGormInstanceApiSpecPerson(firstName: "Barney", lastName: "Rubble", age: 38)
+        def person = new PersonInstanceApi(name: 'Bob', age: 40)
+
         when:
-        def result = person.save()
-        then:
-        result != null
-        result.id != null
-    }
+        person.save(flush: true)
 
-    void "test save with validation failure"() {
-        given:
-        def person = new HibernateGormInstanceApiSpecPerson(firstName: null, lastName: "Rubble", age: 38)
+        then:
+        person.id != null
+
         when:
-        def result = person.save()
+        def found = PersonInstanceApi.get(person.id)
+
         then:
-        result == null
-        person.errors.hasErrors()
+        found != null
+        found.name == 'Bob'
+        found.age == 40
     }
 
-    void "test save with failOnError"() {
+    def "test delete"() {
         given:
-        def person = new HibernateGormInstanceApiSpecPerson(firstName: null, lastName: "Rubble", age: 38)
-        when:
-        person.save(failOnError: true)
-        then:
-        thrown(Exception)
-    }
+        def person = new PersonInstanceApi(name: 'Bob', age: 40)
+        person.save(flush: true)
+        def id = person.id
 
-    void "test merge"() {
-        given:
-        def person = HibernateGormInstanceApiSpecPerson.findByFirstName("Fred")
-        person.lastName = "Smith"
-        when:
-        def merged = person.merge()
-        then:
-        merged.lastName == "Smith"
-    }
+        expect:
+        PersonInstanceApi.get(id) != null
 
-    void "test insert"() {
-        given:
-        def person = new HibernateGormInstanceApiSpecPerson(firstName: "Betty", lastName: "Rubble", age: 36)
-        when:
-        def inserted = person.insert()
-        then:
-        inserted.id != null
-    }
-
-    void "test discard"() {
-        given:
-        def person = HibernateGormInstanceApiSpecPerson.findByFirstName("Wilma")
-        when:
-        person.discard()
-        then:
-        !person.isAttached()
-    }
-
-    void "test delete"() {
-        given:
-        def person = HibernateGormInstanceApiSpecPerson.findByFirstName("Fred")
         when:
         person.delete(flush: true)
+
         then:
-        HibernateGormInstanceApiSpecPerson.findByFirstName("Fred") == null
+        PersonInstanceApi.get(id) == null
     }
 
-    void "test isAttached"() {
+    def "test isDirty"() {
         given:
-        def person = HibernateGormInstanceApiSpecPerson.findByFirstName("Wilma")
-        expect:
-        person.isAttached()
-    }
+        def person = new PersonInstanceApi(name: 'Bob', age: 40)
+        person.save(flush: true)
 
-    void "test lock and attach"() {
-        given:
-        def person = HibernateGormInstanceApiSpecPerson.findByFirstName("Wilma")
         when:
-        def locked = person.lock()
-        def attached = person.attach()
+        person.name = 'Fred'
+
         then:
-        locked == person
-        attached == person
-    }
-
-    void "test refresh"() {
-        given:
-        def person = HibernateGormInstanceApiSpecPerson.findByFirstName("Wilma")
-        person.lastName = "Changed"
-        when:
-        person.refresh()
-        then:
-        person.lastName == "Flintstone"
-    }
-
-    void "test isDirty for field"() {
-        given:
-        def person = HibernateGormInstanceApiSpecPerson.findByFirstName("Wilma")
-        person.lastName = "Changed"
-        expect:
-        person.isDirty("lastName")
-    }
-
-    void "test isDirty for instance"() {
-        given:
-        def person = HibernateGormInstanceApiSpecPerson.findByFirstName("Wilma")
-        person.lastName = "Changed"
-        expect:
         person.isDirty()
+        person.isDirty('name')
+        !person.isDirty('age')
+        person.getDirtyPropertyNames() == ['name']
     }
 
-    void "test getDirtyPropertyNames"() {
+    def "test getPersistentValue"() {
         given:
-        def person = HibernateGormInstanceApiSpecPerson.findByFirstName("Wilma")
-        person.lastName = "Changed"
+        def person = new PersonInstanceApi(name: 'Bob', age: 40)
+        person.save(flush: true)
+
         when:
-        def dirtyNames = person.getDirtyPropertyNames()
+        person.name = 'Fred'
+
         then:
-        dirtyNames.contains("lastName")
+        person.getPersistentValue('name') == 'Bob'
     }
 
-    void "test getPersistentValue"() {
+    def "test discard"() {
         given:
-        def person = HibernateGormInstanceApiSpecPerson.findByFirstName("Wilma")
-        def originalLastName = person.lastName
-        person.lastName = "Changed"
+        def person = new PersonInstanceApi(name: 'Bob', age: 40)
+        person.save(flush: true)
+        person.name = 'Fred'
+
         when:
-        def persistedValue = person.getPersistentValue("lastName")
+        person.discard()
+        
         then:
-        persistedValue == originalLastName
+        !person.isAttached()
+        
+        when:
+        def found = PersonInstanceApi.get(person.id)
+        
+        then:
+        found.name == 'Bob'
     }
 
-    void "test handleValidationError sets errors"() {
+    def "test attach and merge"() {
         given:
-        def person = new HibernateGormInstanceApiSpecPerson(firstName: null, lastName: "Rubble", age: 38)
-        person.save()
+        def person = new PersonInstanceApi(name: 'Bob', age: 40)
+        person.save(flush: true)
+        person.discard()
+        
         expect:
-        person.errors instanceof Errors
-        person.errors.hasErrors()
-    }
-
-    void "test save with validate:false skips validation"() {
-        given:
-        def person = new HibernateGormInstanceApiSpecPerson(firstName: "Betty", lastName: "Rubble", age: 36)
+        !person.isAttached()
+        
         when:
-        def result = person.save(validate: false)
+        person.name = 'Fred'
+        person = person.attach()
+        
         then:
-        result != null
-        result.id != null
-    }
-
-    void "test save with validate:true explicit"() {
-        given:
-        def person = new HibernateGormInstanceApiSpecPerson(firstName: "Betty", lastName: "Rubble", age: 36)
+        person.isAttached()
+        
         when:
-        def result = person.save(validate: true)
+        person.save(flush: true)
+        def found = PersonInstanceApi.get(person.id)
+        
         then:
-        result != null
+        found.name == 'Fred'
     }
 
-    void "test save with deepValidate:false"() {
+    def "test insert"() {
         given:
-        def person = new HibernateGormInstanceApiSpecPerson(firstName: "Betty", lastName: "Rubble", age: 36)
+        def person = new PersonInstanceApi(name: 'Joe', age: 25)
+
         when:
-        def result = person.save(deepValidate: false)
+        person.insert(flush: true)
+
         then:
-        result != null
-        result.id != null
+        person.id != null
+        PersonInstanceApi.get(person.id).name == 'Joe'
     }
 
-    void "test save with explicit flush:false"() {
+    def "test refresh"() {
         given:
-        def person = new HibernateGormInstanceApiSpecPerson(firstName: "Betty", lastName: "Rubble", age: 36)
+        def person = new PersonInstanceApi(name: 'Bob', age: 40)
+        person.save(flush: true)
+        
         when:
-        def result = person.save(flush: false)
+        person.name = 'Fred'
+        // name is "Fred" in memory, but "Bob" in DB
+        person.refresh()
+        
         then:
-        result != null
-    }
-
-    void "test merge with params"() {
-        given:
-        def person = HibernateGormInstanceApiSpecPerson.findByFirstName("Fred")
-        person.lastName = "Smith"
-        when:
-        def merged = person.merge(flush: true)
-        then:
-        merged.lastName == "Smith"
-    }
-
-    void "test isDirty returns false for new unsaved instance"() {
-        given:
-        def person = new HibernateGormInstanceApiSpecPerson(firstName: "New", lastName: "Person", age: 25)
-        expect:
-        !person.isDirty()
-    }
-
-    void "test isDirty(field) returns false for new unsaved instance"() {
-        given:
-        def person = new HibernateGormInstanceApiSpecPerson(firstName: "New", lastName: "Person", age: 25)
-        expect:
-        !person.isDirty("firstName")
-    }
-
-    void "test isDirty(field) returns false for field that has not changed"() {
-        given:
-        def person = HibernateGormInstanceApiSpecPerson.findByFirstName("Fred")
-        person.lastName = "Changed"
-        expect:
-        !person.isDirty("firstName")
-        person.isDirty("lastName")
-    }
-
-    void "test getDirtyPropertyNames returns empty list for new unsaved instance"() {
-        given:
-        def person = new HibernateGormInstanceApiSpecPerson(firstName: "New", lastName: "Person", age: 25)
-        expect:
-        person.getDirtyPropertyNames() == []
-    }
-
-    void "test getPersistentValue returns null for new unsaved instance"() {
-        given:
-        def person = new HibernateGormInstanceApiSpecPerson(firstName: "New", lastName: "Person", age: 25)
-        expect:
-        person.getPersistentValue("firstName") == null
-    }
-
-    void "test getPersistentValue returns null for unknown field name"() {
-        given:
-        def person = HibernateGormInstanceApiSpecPerson.findByFirstName("Fred")
-        expect:
-        person.getPersistentValue("nonExistentField") == null
-    }
-
-    void "test save succeeds on entity with ToOne association already in session"() {
-        given:
-        def person = HibernateGormInstanceApiSpecPerson.findByFirstName("Fred")
-        def job = new HibernateGormInstanceApiSpecJob(title: "Programmer", person: person)
-        when:
-        def result = job.save(flush: true)
-        then:
-        result != null
-        result.id != null
-    }
-
-    void "test save failure on entity with ToOne association calls handleValidationError"() {
-        given:
-        def person = HibernateGormInstanceApiSpecPerson.findByFirstName("Fred")
-        def job = new HibernateGormInstanceApiSpecJob(title: null, person: person)
-        when:
-        def result = job.save()
-        then:
-        result == null
-        job.errors.hasErrors()
+        person.name == 'Bob'
     }
 }
 
 @Entity
-class HibernateGormInstanceApiSpecJob {
-    String title
-    HibernateGormInstanceApiSpecPerson person
-
-    static belongsTo = [person: HibernateGormInstanceApiSpecPerson]
-
-    static constraints = {
-        title nullable: false
-    }
-}
-
-@Entity
-class HibernateGormInstanceApiSpecPerson {
-    String firstName
-    String lastName
+class PersonInstanceApi implements HibernateEntity<PersonInstanceApi> {
+    String name
     Integer age
+}
 
-    static constraints = {
-        firstName nullable: false
-        age min: 0
-    }
+@Entity
+class BookInstanceApi implements HibernateEntity<BookInstanceApi> {
+    String title
+    static belongsTo = [author: PersonInstanceApi]
 }

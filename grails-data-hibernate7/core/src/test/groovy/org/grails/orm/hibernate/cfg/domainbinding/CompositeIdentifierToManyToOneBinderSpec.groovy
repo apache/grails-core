@@ -20,8 +20,7 @@
 package org.grails.orm.hibernate.cfg.domainbinding
 
 
-import org.grails.datastore.mapping.model.PersistentProperty
-import org.grails.datastore.mapping.model.types.ToOne
+import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernateToOneProperty
 import org.grails.orm.hibernate.cfg.ColumnConfig
 import org.grails.orm.hibernate.cfg.CompositeIdentity
 import org.grails.orm.hibernate.cfg.domainbinding.hibernate.GrailsHibernatePersistentEntity
@@ -53,8 +52,7 @@ class CompositeIdentifierToManyToOneBinderSpec extends Specification {
         def binder = new CompositeIdentifierToManyToOneBinder(calculator, namingStrategy, columnNameFetcher, backticksRemover, simpleValueBinder)
 
         // 2. Set up stubs for the method arguments
-        def association = Mock(ToOne)
-        association.asType(HibernatePersistentProperty) >> association
+        def association = Mock(HibernatePersistentProperty)
         def value = Mock(SimpleValue)
         def refDomainClass = Mock(GrailsHibernatePersistentEntity)
         def path = "/test"
@@ -70,17 +68,16 @@ class CompositeIdentifierToManyToOneBinderSpec extends Specification {
 
         calculator.calculateForeignKeyColumnCount(refDomainClass, propertyNames) >> 2
 
-        def nestedEntityProp = Mock(ToOne)
-        nestedEntityProp.asType(HibernatePersistentProperty) >> nestedEntityProp
-        refDomainClass.getPropertyByName("nestedEntity") >> nestedEntityProp
+        def nestedEntityProp = Mock(HibernateToOneProperty)
+        refDomainClass.getHibernatePropertyByName("nestedEntity") >> nestedEntityProp
         nestedEntityProp.name >> "nestedEntity"
 
         def nestedAssociatedEntity = Mock(GrailsHibernatePersistentEntity)
-        nestedEntityProp.getAssociatedEntity() >> nestedAssociatedEntity
+        nestedEntityProp.getHibernateAssociatedEntity() >> nestedAssociatedEntity
 
         def nestedPartA = Mock(HibernatePersistentProperty)
         def nestedPartB = Mock(HibernatePersistentProperty)
-        def perArray = [nestedPartA, nestedPartB] as PersistentProperty[]
+        def perArray = [nestedPartA, nestedPartB] as HibernatePersistentProperty[]
         nestedAssociatedEntity.getCompositeIdentity() >> perArray
 
         // 4. Mock the behavior of the dependency methods
@@ -119,8 +116,7 @@ class CompositeIdentifierToManyToOneBinderSpec extends Specification {
         def binder = new CompositeIdentifierToManyToOneBinder(calculator, namingStrategy, columnNameFetcher, backticksRemover, simpleValueBinder)
 
         // 2. Set up arguments
-        def association = Mock(ToOne)
-        association.asType(HibernatePersistentProperty) >> association
+        def association = Mock(HibernatePersistentProperty)
         def value = Mock(SimpleValue)
         def compositeId = new CompositeIdentity()
         compositeId.setPropertyNames(["prop1", "prop2"] as String[])

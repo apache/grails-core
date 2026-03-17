@@ -74,7 +74,7 @@ public class GrailsSessionContext implements CurrentSessionContext {
 
     public void initJta() {
         JtaPlatform jtaPlatform = sessionFactory.getServiceRegistry().getService(JtaPlatform.class);
-        TransactionManager transactionManager = jtaPlatform.retrieveTransactionManager();
+        TransactionManager transactionManager = jtaPlatform != null ? jtaPlatform.retrieveTransactionManager() : null;
         jtaSessionContext = transactionManager == null ? null : new SpringJtaSessionContext(sessionFactory);
     }
 
@@ -85,19 +85,18 @@ public class GrailsSessionContext implements CurrentSessionContext {
             return (Session) value;
         }
 
-        if (value instanceof SessionHolder) {
-            SessionHolder sessionHolder = (SessionHolder) value;
+        if (value instanceof SessionHolder sessionHolder) {
             Session session = sessionHolder.getSession();
-            if (TransactionSynchronizationManager.isSynchronizationActive() &&
-                    !sessionHolder.isSynchronizedWithTransaction()) {
+            if (TransactionSynchronizationManager.isSynchronizationActive()
+                    && !sessionHolder.isSynchronizedWithTransaction()) {
                 TransactionSynchronizationManager.registerSynchronization(
                         createSpringSessionSynchronization(sessionHolder));
                 sessionHolder.setSynchronizedWithTransaction(true);
                 // Switch to FlushMode.AUTO, as we have to assume a thread-bound Session
                 // with FlushMode.MANUAL, which needs to allow flushing within the transaction.
                 FlushMode flushMode = session.getHibernateFlushMode();
-                if (flushMode.equals(FlushMode.MANUAL) &&
-                        !TransactionSynchronizationManager.isCurrentTransactionReadOnly()) {
+                if (flushMode.equals(FlushMode.MANUAL)
+                        && !TransactionSynchronizationManager.isCurrentTransactionReadOnly()) {
                     session.setHibernateFlushMode(FlushMode.AUTO);
                     sessionHolder.setPreviousFlushMode(flushMode);
                 }
@@ -222,7 +221,7 @@ public class GrailsSessionContext implements CurrentSessionContext {
 
         ServiceBinding<JtaPlatform> sb =
                 sessionFactoryImpl.getServiceRegistry().locateServiceBinding(JtaPlatform.class);
-        if (sb == null) {
+        if (sb == null || sb.getService() == null) {
             return null;
         }
 

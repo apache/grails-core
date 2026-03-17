@@ -35,4 +35,14 @@ public class HibernateManyToOneProperty extends ManyToOneWithMapping<PropertyCon
     public GrailsHibernatePersistentEntity getHibernateAssociatedEntity() {
         return (GrailsHibernatePersistentEntity) super.getAssociatedEntity();
     }
+
+    public String getReferencedEntityName() {
+        return getHibernateAssociatedEntity().getName();
+    }
+
+    public boolean isValidHibernateManyToOne() {
+
+        validateAssociation();
+        return true;
+    }
 }

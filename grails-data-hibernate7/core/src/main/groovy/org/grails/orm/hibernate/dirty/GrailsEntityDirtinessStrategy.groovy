@@ -88,65 +88,36 @@ class GrailsEntityDirtinessStrategy implements CustomEntityDirtinessStrategy {
     }
 
     @Override
-    void findDirty(Object entity, EntityPersister persister, Session session, CustomEntityDirtinessStrategy.DirtyCheckContext dirtyCheckContext) {
+    void findDirty(Object entity, EntityPersister persister, Session session, DirtyCheckContext dirtyCheckContext) {
+        if (!(entity instanceof DirtyCheckable)) return
         Status status = getStatus(session, entity)
-        if (entity instanceof DirtyCheckable) {
-            dirtyCheckContext.doDirtyChecking(
-                    new CustomEntityDirtinessStrategy.AttributeChecker() {
-                        @Override
-                        boolean isDirty(CustomEntityDirtinessStrategy.AttributeInformation attributeInformation) {
-                            String propertyName = attributeInformation.name
-                            if (status != null) {
-                                if (status == Status.MANAGED) {
-                                    // perform dirty check
-                                    DirtyCheckable dirtyCheckable = cast(entity)
-                                    if (GormProperties.LAST_UPDATED == propertyName) {
-                                        return dirtyCheckable.hasChanged()
-                                    }
-                                    else {
-                                        if (dirtyCheckable.hasChanged(propertyName)) {
-                                            return true
-                                        }
-                                        else {
-                                            PersistentEntity gormEntity = GormEnhancer.findEntity(Hibernate.getClass(entity))
-                                            PersistentProperty prop = gormEntity.getPropertyByName(attributeInformation.name)
-                                            if (prop instanceof Embedded) {
-                                                def val = prop.reader.read(entity)
-                                                if (val instanceof DirtyCheckable) {
-                                                    return ((DirtyCheckable)val).hasChanged()
-                                                }
-                                                else {
-                                                    return false
-                                                }
-                                            }
-                                            else {
-                                                return false
-                                            }
-                                        }
-                                    }
-                                }
-                                else {
-                                    // either deleted or in a state that cannot be regarded as dirty
-                                    return false
-                                }
-                            }
-                            else {
-                                // a new object not within the session
-                                return true
-                            }
-                        }
-                    }
-            )
-        }
+        DirtyCheckable dirtyCheckable = cast(entity)
+        dirtyCheckContext.doDirtyChecking({ AttributeInformation info ->
+            // new object not yet in session — always dirty
+            if (status == null) return true
+            // deleted/gone/loading — not dirty
+            if (status != Status.MANAGED) return false
+            // lastUpdated is refreshed whenever anything changes
+            if (GormProperties.LAST_UPDATED == info.name) return dirtyCheckable.hasChanged()
+            // property-level check
+            if (dirtyCheckable.hasChanged(info.name)) return true
+            // embedded component — delegate to the embedded object's dirty tracking
+            PersistentProperty prop = GormEnhancer.findEntity(Hibernate.getClass(entity))?.getPropertyByName(info.name)
+            if (prop instanceof Embedded) {
+                def val = prop.reader.read(entity)
+                return val instanceof DirtyCheckable && val.hasChanged()
+            }
+            return false
+        } as AttributeChecker)
     }
 
-    Status getStatus(Session session, Object entity) {
+    static Status getStatus(Session session, Object entity) {
         SessionImplementor si = (SessionImplementor) session
         EntityEntry entry = si.getPersistenceContext().getEntry(entity)
         return entry != null ? entry.getStatus() : null
     }
 
-    private DirtyCheckable cast(Object entity) {
+    private static DirtyCheckable cast(Object entity) {
         return DirtyCheckable.cast(entity)
     }
 }

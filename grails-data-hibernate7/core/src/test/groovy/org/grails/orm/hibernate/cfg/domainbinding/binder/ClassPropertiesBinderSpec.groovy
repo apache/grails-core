@@ -19,8 +19,10 @@
 
 package org.grails.orm.hibernate.cfg.domainbinding.binder
 
+import org.hibernate.mapping.Table
+
 import grails.gorm.specs.HibernateGormDatastoreSpec
-import org.grails.orm.hibernate.cfg.domainbinding.hibernate.GrailsHibernatePersistentEntity
+import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernatePersistentEntity
 import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernatePersistentProperty
 import org.grails.orm.hibernate.cfg.Mapping
 import org.grails.orm.hibernate.cfg.domainbinding.util.PropertyFromValueCreator
@@ -38,9 +40,10 @@ class ClassPropertiesBinderSpec extends HibernateGormDatastoreSpec {
         def naturalIdentifierBinder = Mock(NaturalIdentifierBinder)
         def binder = new ClassPropertiesBinder(grailsPropertyBinder, propertyFromValueCreator, naturalIdentifierBinder)
 
-        def domainClass = Mock(GrailsHibernatePersistentEntity)
+        def domainClass = Mock(HibernatePersistentEntity)
         def persistentClass = new RootClass(getGrailsDomainBinder().getMetadataBuildingContext())
-        persistentClass.setTable(new org.hibernate.mapping.Table("test"))
+        persistentClass.setTable(new Table("test"))
+        domainClass.getPersistentClass() >> persistentClass
         def mappings = Mock(InFlightMetadataCollector)
         def sessionFactoryBeanName = "sessionFactory"
 
@@ -62,18 +65,18 @@ class ClassPropertiesBinderSpec extends HibernateGormDatastoreSpec {
         domainClass.getMappedForm() >> mapping
 
         when:
-        binder.bindClassProperties(domainClass, persistentClass, mappings)
+        binder.bindClassProperties(domainClass)
 
         then:
-        1 * grailsPropertyBinder.bindProperty(persistentClass, persistentClass.table, GrailsDomainBinder.EMPTY_PATH, null, prop1, mappings) >> value1
+        1 * grailsPropertyBinder.bindProperty(prop1, null, GrailsDomainBinder.EMPTY_PATH) >> value1
         1 * propertyFromValueCreator.createProperty(value1, prop1) >> hibernateProp1
 
-        1 * grailsPropertyBinder.bindProperty(persistentClass, persistentClass.table, GrailsDomainBinder.EMPTY_PATH, null, prop2, mappings) >> value2
+        1 * grailsPropertyBinder.bindProperty(prop2, null, GrailsDomainBinder.EMPTY_PATH) >> value2
         1 * propertyFromValueCreator.createProperty(value2, prop2) >> hibernateProp2
 
         persistentClass.getProperty("hibernateProp1") == hibernateProp1
         persistentClass.getProperty("hibernateProp2") == hibernateProp2
 
-        1 * naturalIdentifierBinder.bindNaturalIdentifier(mapping, persistentClass)
+        1 * naturalIdentifierBinder.bindNaturalIdentifier(domainClass, persistentClass)
     }
 }

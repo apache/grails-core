@@ -21,7 +21,11 @@ package org.grails.orm.hibernate.cfg.domainbinding.secondpass
 
 import grails.gorm.annotation.Entity
 import grails.gorm.specs.HibernateGormDatastoreSpec
+import org.grails.orm.hibernate.cfg.domainbinding.binder.CompositeIdentifierToManyToOneBinder
+import org.grails.orm.hibernate.cfg.domainbinding.binder.SimpleValueBinder
+import org.grails.orm.hibernate.cfg.domainbinding.binder.SimpleValueColumnBinder
 import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernateToManyProperty
+import org.grails.orm.hibernate.cfg.domainbinding.util.GrailsPropertyResolver
 import org.hibernate.mapping.Column
 import org.hibernate.mapping.DependantValue
 import spock.lang.Subject
@@ -29,7 +33,21 @@ import spock.lang.Subject
 class CollectionKeyColumnUpdaterSpec extends HibernateGormDatastoreSpec {
 
     @Subject
-    CollectionKeyColumnUpdater updater = new CollectionKeyColumnUpdater()
+    CollectionKeyColumnUpdater updater
+
+    void setup() {
+        def gdb = getGrailsDomainBinder()
+        def mbc = gdb.getMetadataBuildingContext()
+        def ns = gdb.getNamingStrategy()
+        def je = gdb.getJdbcEnvironment()
+        def svb = new SimpleValueBinder(mbc, ns, je)
+        def citmto = new CompositeIdentifierToManyToOneBinder(mbc, ns, je)
+        def botml = new BidirectionalOneToManyLinker(new GrailsPropertyResolver())
+        def dkvb = new DependentKeyValueBinder(svb, citmto)
+        def svcb = new SimpleValueColumnBinder()
+        def pkvc = new PrimaryKeyValueCreator(mbc)
+        updater = new CollectionKeyColumnUpdater(new CollectionKeyBinder(botml, dkvb, svcb, pkvc))
+    }
 
     void "test forceNullableAndCheckUpdateable with single unidirectional association"() {
         given:

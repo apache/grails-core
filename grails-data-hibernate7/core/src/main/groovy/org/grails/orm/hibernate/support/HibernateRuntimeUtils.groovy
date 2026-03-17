@@ -1,37 +1,22 @@
-/*
- *  Licensed to the Apache Software Foundation (ASF) under one
- *  or more contributor license agreements.  See the NOTICE file
- *  distributed with this work for additional information
- *  regarding copyright ownership.  The ASF licenses this file
- *  to you under the Apache License, Version 2.0 (the
- *  "License"); you may not use this file except in compliance
- *  with the License.  You may obtain a copy of the License at
- *
- *    https://www.apache.org/licenses/LICENSE-2.0
- *
- *  Unless required by applicable law or agreed to in writing,
- *  software distributed under the License is distributed on an
- *  "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
- *  KIND, either express or implied.  See the License for the
- *  specific language governing permissions and limitations
- *  under the License.
- */
-
 package org.grails.orm.hibernate.support
 
 import groovy.transform.CompileStatic
-import org.grails.datastore.gorm.GormValidateable
-import org.grails.datastore.mapping.model.config.GormProperties
-import org.grails.datastore.mapping.validation.ValidationErrors
 import org.codehaus.groovy.runtime.StringGroovyMethods
-import org.grails.datastore.mapping.model.PersistentEntity
-import org.grails.datastore.mapping.model.types.Association
-import org.grails.datastore.mapping.model.types.OneToOne
+
 import org.hibernate.Session
 import org.hibernate.SessionFactory
+
 import org.springframework.core.convert.ConversionService
 import org.springframework.validation.Errors
 import org.springframework.validation.FieldError
+import org.springframework.validation.ObjectError
+
+import org.grails.datastore.gorm.GormValidateable
+import org.grails.datastore.mapping.model.PersistentEntity
+import org.grails.datastore.mapping.model.config.GormProperties
+import org.grails.datastore.mapping.model.types.Association
+import org.grails.datastore.mapping.model.types.OneToOne
+import org.grails.datastore.mapping.validation.ValidationErrors
 
 /**
  * Utility methods used at runtime by the GORM for Hibernate implementation
@@ -48,8 +33,9 @@ class HibernateRuntimeUtils {
     static void enableDynamicFilterEnablerIfPresent(SessionFactory sessionFactory, Session session) {
         if (sessionFactory != null && session != null) {
             final Set definedFilterNames = sessionFactory.getDefinedFilterNames()
-            if (definedFilterNames != null && definedFilterNames.contains(DYNAMIC_FILTER_ENABLER))
+            if (definedFilterNames != null && definedFilterNames.contains(DYNAMIC_FILTER_ENABLER)) {
                 session.enableFilter(DYNAMIC_FILTER_ENABLER) // work around for HHH-2624
+            }
         }
     }
 
@@ -63,16 +49,16 @@ class HibernateRuntimeUtils {
      */
     static Errors setupErrorsProperty(Object target) {
 
+        MetaClass metaClass = GroovySystem.metaClassRegistry.getMetaClass(target.getClass())
         boolean isGormValidateable = target instanceof GormValidateable
 
-        MetaClass mc = isGormValidateable ? null : GroovySystem.metaClassRegistry.getMetaClass(target.getClass())
         def errors = new ValidationErrors(target)
 
-        Errors originalErrors = isGormValidateable ? ((GormValidateable)target).getErrors() : (Errors) mc.getProperty(target, GormProperties.ERRORS)
+        Errors originalErrors = isGormValidateable ? ((GormValidateable) target).getErrors() : (Errors) metaClass.getProperty(target, GormProperties.ERRORS)
         // Copy binding failures and any existing object-level errors
         for (Object o in originalErrors.allErrors) {
             if (o instanceof FieldError) {
-                FieldError fe = (FieldError)o
+                FieldError fe = (FieldError) o
                 if (fe.isBindingFailure()) {
                     errors.addError(new FieldError(fe.getObjectName(),
                             fe.field,
@@ -82,16 +68,17 @@ class HibernateRuntimeUtils {
                             fe.arguments,
                             fe.defaultMessage))
                 }
-            } else {
-                errors.addError((org.springframework.validation.ObjectError) o)
+            }
+            else {
+                errors.addError((ObjectError) o)
             }
         }
 
         if (isGormValidateable) {
-            ((GormValidateable)target).setErrors(errors)
+            ((GormValidateable) target).setErrors(errors)
         }
         else {
-            mc.setProperty(target, GormProperties.ERRORS, errors)
+            metaClass.setProperty(target, GormProperties.ERRORS, errors)
         }
         return errors
     }
@@ -127,36 +114,40 @@ class HibernateRuntimeUtils {
         }
     }
 
-    static Object convertValueToType(Object passedValue, Class targetType, ConversionService conversionService) {
-        // workaround for GROOVY-6127, do not assign directly in parameters before it's fixed
-        Object value = passedValue
-        if (targetType != null && value != null && !(value in targetType)) {
+    static Object convertValueToType(Object value, Class targetType, ConversionService conversionService) {
+        if (targetType != null && value != null && !targetType.isInstance(value)) {
             if (value instanceof CharSequence) {
                 value = value.toString()
-                if (value in targetType) {
+                if (targetType.isInstance(value)) {
                     return value
                 }
             }
             try {
                 if (value instanceof Number && (targetType == Long || targetType == Integer)) {
                     if (targetType == Long) {
-                        value = ((Number)value).toLong()
-                    } else {
-                        value = ((Number)value).toInteger()
+                        value = ((Number) value).toLong()
                     }
-                } else if (value instanceof String && targetType in Number) {
+                    else {
+                        value = ((Number) value).toInteger()
+                    }
+                }
+                else if (value instanceof String && Number.isAssignableFrom(targetType)) {
                     String strValue = value.trim()
                     if (targetType == Long) {
                         value = Long.parseLong(strValue)
-                    } else if (targetType == Integer) {
-                        value = Integer.parseInt(strValue)
-                    } else {
-                        value = StringGroovyMethods.asType(strValue, targetType)
                     }
-                } else {
+                    else if (targetType == Integer) {
+                        value = Integer.parseInt(strValue)
+                    }
+                    else {
+                        value = StringGroovyMethods.asType(strValue, targetType as Class<Object>)
+                    }
+                }
+                else {
                     value = conversionService.convert(value, targetType)
                 }
-            } catch (e) {
+            }
+            catch (ignored) {
                 // ignore
             }
         }

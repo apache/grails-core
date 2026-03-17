@@ -127,7 +127,7 @@ public interface PersistentEntity extends Initializable {
     /**
      * @return The underlying Java class for this entity
      */
-    Class getJavaClass();
+    Class<?> getJavaClass();
 
     /**
      * Tests whether the given instance is an instance of this persistent entity

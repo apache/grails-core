@@ -254,6 +254,84 @@ class GrailsHibernatePersistentEntitySpec extends HibernateGormDatastoreSpec {
         result2 == ["'VEHICLE'", "'TRUCK'"] as Set
     }
 
+    def "test getHibernateIdentity returns mapping identity if available"() {
+        given:
+        def context = getMappingContext()
+        GrailsHibernatePersistentEntity entity = Spy(HibernatePersistentEntity, constructorArgs: [Person, context])
+        def mapping = Mock(Mapping)
+        def mappedIdentity = new Identity(name: "customId")
+
+        entity.getMappedForm() >> mapping
+        mapping.getIdentity() >> mappedIdentity
+
+        when:
+        def result = entity.getHibernateIdentity()
+
+        then:
+        result == mappedIdentity
+        ((Identity)result).name == "customId"
+    }
+
+    def "test getHibernateIdentity returns CompositeIdentity if entity has multiple ID properties"() {
+        given:
+        def context = getMappingContext()
+        GrailsHibernatePersistentEntity entity = Spy(HibernatePersistentEntity, constructorArgs: [Person, context])
+        def id1 = Mock(HibernatePersistentProperty)
+        def id2 = Mock(HibernatePersistentProperty)
+        id1.getName() >> "id1"
+        id2.getName() >> "id2"
+
+        entity.getMappedForm() >> null
+        entity.getCompositeIdentity() >> ([id1, id2] as HibernatePersistentProperty[])
+
+        when:
+        def result = entity.getHibernateIdentity()
+
+        then:
+        result instanceof CompositeIdentity
+        ((CompositeIdentity)result).propertyNames == ["id1", "id2"] as String[]
+    }
+
+    def "test getHibernateIdentity returns synthetic Identity if no mapping or composite ID"() {
+        given:
+        def context = getMappingContext()
+        GrailsHibernatePersistentEntity entity = Spy(HibernatePersistentEntity, constructorArgs: [Person, context])
+        def idProp = Mock(HibernatePersistentProperty)
+        idProp.getName() >> "myId"
+
+        entity.getMappedForm() >> null
+        entity.getCompositeIdentity() >> null
+        entity.getIdentity() >> idProp
+        entity.getName() >> "Person"
+
+        when:
+        def result = entity.getHibernateIdentity()
+
+        then:
+        result instanceof Identity
+        ((Identity)result).name == "myId"
+    }
+
+    def "test getHibernateIdentity defaults to entity name if identity name is null"() {
+        given:
+        def context = getMappingContext()
+        GrailsHibernatePersistentEntity entity = Spy(HibernatePersistentEntity, constructorArgs: [Person, context])
+        def idProp = Mock(HibernatePersistentProperty)
+        idProp.getName() >> null
+
+        entity.getMappedForm() >> null
+        entity.getCompositeIdentity() >> null
+        entity.getIdentity() >> idProp
+        entity.getName() >> "Person"
+
+        when:
+        def result = entity.getHibernateIdentity()
+
+        then:
+        result instanceof Identity
+        ((Identity)result).name == "Person"
+    }
+
     def "test getHibernateCompositeIdentity returns CompositeIdentity when conditions met"() {
         given:
         def context = getMappingContext()

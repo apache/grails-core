@@ -64,8 +64,8 @@ class HibernateMappingBuilderSpec extends Specification {
         Mapping m = evaluate { cache 'read-write', [include: 'all'] }
 
         then:
-        m.cache.usage == 'read-write'
-        m.cache.include == 'all'
+        m.cache.usage.toString() == 'read-write'
+        m.cache.include.toString() == 'all'
     }
 
     def "cache(String) with invalid usage still creates a CacheConfig with the default usage"() {
@@ -74,7 +74,7 @@ class HibernateMappingBuilderSpec extends Specification {
 
         then:
         m.cache != null
-        m.cache.usage == 'read-write'  // default preserved; INVALID_USAGE rejected
+        m.cache.usage.toString() == 'read-write'  // default preserved; INVALID_USAGE rejected
     }
 
     def "cache(Map) with invalid include still creates a CacheConfig with the default include"() {
@@ -83,8 +83,8 @@ class HibernateMappingBuilderSpec extends Specification {
 
         then:
         m.cache != null
-        m.cache.usage == 'read-only'
-        m.cache.include == 'all'  // default preserved; INVALID_INCLUDE rejected
+        m.cache.usage.toString() == 'read-only'
+        m.cache.include.toString() == 'all'  // default preserved; INVALID_INCLUDE rejected
     }
 
     // -------------------------------------------------------------------------
@@ -197,9 +197,9 @@ class HibernateMappingBuilderSpec extends Specification {
         m.getPropertyConfig('myProp').accessType == AccessType.FIELD
     }
 
-    def "property updateable alias is honoured"() {
+    def "property updatable is honoured"() {
         when:
-        Mapping m = evaluate { myProp updateable: false }
+        Mapping m = evaluate { myProp updatable: false }
 
         then:
         !m.getPropertyConfig('myProp').updatable
@@ -319,8 +319,8 @@ class HibernateMappingBuilderSpec extends Specification {
         Mapping m = evaluate { myProp cache: [usage: 'read-only', include: 'all'] }
 
         then:
-        m.getPropertyConfig('myProp').cache.usage == 'read-only'
-        m.getPropertyConfig('myProp').cache.include == 'all'
+        m.getPropertyConfig('myProp').cache.usage.toString() == 'read-only'
+        m.getPropertyConfig('myProp').cache.include.toString() == 'all'
     }
 
     def "property column sqlType is set"() {

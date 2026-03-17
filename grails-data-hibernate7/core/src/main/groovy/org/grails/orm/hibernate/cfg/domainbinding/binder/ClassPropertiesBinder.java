@@ -20,12 +20,12 @@ package org.grails.orm.hibernate.cfg.domainbinding.binder;
 
 import jakarta.annotation.Nonnull;
 
-import org.hibernate.boot.spi.InFlightMetadataCollector;
+import org.hibernate.MappingException;
 import org.hibernate.mapping.PersistentClass;
 import org.hibernate.mapping.Table;
 import org.hibernate.mapping.Value;
 
-import org.grails.orm.hibernate.cfg.domainbinding.hibernate.GrailsHibernatePersistentEntity;
+import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernatePersistentEntity;
 import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernatePersistentProperty;
 import org.grails.orm.hibernate.cfg.domainbinding.util.PropertyFromValueCreator;
 
@@ -58,27 +58,26 @@ public class ClassPropertiesBinder {
         this(grailsPropertyBinder, propertyFromValueCreator, new NaturalIdentifierBinder());
     }
 
-    /**
-     * Binds the properties of the specified Grails domain class to the Hibernate meta-model.
-     *
-     * @param domainClass The Grails domain class
-     * @param persistentClass The Hibernate PersistentClass instance
-     * @param mappings The Hibernate InFlightMetadataCollector instance
-     */
-    public void bindClassProperties(
-            @Nonnull GrailsHibernatePersistentEntity domainClass,
-            PersistentClass persistentClass,
-            @Nonnull InFlightMetadataCollector mappings) {
-
-        persistentClass.getTable().setComment(domainClass.getMappedForm().getComment());
-        Table table = persistentClass.getTable();
-
-        for (HibernatePersistentProperty currentGrailsProp : domainClass.getPersistentPropertiesToBind()) {
+    public void bindClassProperties(HibernatePersistentEntity hibernatePersistentEntity) {
+        PersistentClass persistentClass = hibernatePersistentEntity.getPersistentClass();
+        getTable(persistentClass).setComment(hibernatePersistentEntity.getComment());
+        Table table = hibernatePersistentEntity.getPersistentClass().getTable();
+        for (HibernatePersistentProperty currentGrailsProp : hibernatePersistentEntity.getPersistentPropertiesToBind()) {
             Value value = grailsPropertyBinder.bindProperty(
-                    persistentClass, table, GrailsDomainBinder.EMPTY_PATH, null, currentGrailsProp, mappings);
+                    currentGrailsProp, null, GrailsDomainBinder.EMPTY_PATH);
             persistentClass.addProperty(propertyFromValueCreator.createProperty(value, currentGrailsProp));
         }
 
-        naturalIdentifierBinder.bindNaturalIdentifier(domainClass.getMappedForm(), persistentClass);
+        naturalIdentifierBinder.bindNaturalIdentifier(hibernatePersistentEntity, persistentClass);
+    }
+
+    @Nonnull
+    private Table getTable(PersistentClass persistentClass) {
+        if (persistentClass.getTable() == null) {
+            throw new MappingException("Persistent class ["
+                    + persistentClass.getEntityName()
+                    + "] does not have a table associated with it");
+        }
+        return persistentClass.getTable();
     }
 }

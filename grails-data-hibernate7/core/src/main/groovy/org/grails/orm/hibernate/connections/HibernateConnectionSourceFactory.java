@@ -23,8 +23,9 @@ import java.io.IOException;
 import java.io.Serializable;
 import java.util.Collections;
 import java.util.Map;
-
 import javax.sql.DataSource;
+
+import jakarta.annotation.Nullable;
 
 import org.hibernate.Interceptor;
 import org.hibernate.SessionFactory;
@@ -56,7 +57,6 @@ import org.grails.orm.hibernate.cfg.HibernateMappingContext;
 import org.grails.orm.hibernate.cfg.HibernateMappingContextConfiguration;
 import org.grails.orm.hibernate.cfg.Settings;
 import org.grails.orm.hibernate.cfg.domainbinding.binder.GrailsDomainBinder;
-import org.grails.orm.hibernate.support.AbstractClosureEventTriggeringInterceptor;
 import org.grails.orm.hibernate.support.ClosureEventTriggeringInterceptor;
 
 /**
@@ -79,17 +79,17 @@ public class HibernateConnectionSourceFactory
             new CachedDataSourceConnectionSourceFactory();
 
     protected HibernateMappingContext mappingContext;
-    protected Class[] persistentClasses = new Class[0];
+    protected Class<?>[] persistentClasses;
     private ApplicationContext applicationContext;
     protected HibernateEventListeners hibernateEventListeners;
     protected Interceptor interceptor;
     protected MessageSource messageSource = new StaticMessageSource();
 
-    public HibernateConnectionSourceFactory(Class... classes) {
+    public HibernateConnectionSourceFactory(Class<?>... classes) {
         this.persistentClasses = classes;
     }
 
-    public Class[] getPersistentClasses() {
+    public Class<?>[] getPersistentClasses() {
         return persistentClasses;
     }
 
@@ -140,15 +140,15 @@ public class HibernateConnectionSourceFactory
 
         configureNamingStrategy(name, hibernateSettings);
 
-        AbstractClosureEventTriggeringInterceptor eventTriggeringInterceptor =
+        ClosureEventTriggeringInterceptor eventTriggeringInterceptor =
                 resolveEventTriggeringInterceptor(hibernateSettings.getClosureEventTriggeringInterceptorClass());
         hibernateSettings.setEventTriggeringInterceptor(eventTriggeringInterceptor);
 
         configuration.setEventListeners(hibernateSettings.toHibernateEventListeners(eventTriggeringInterceptor));
         configuration.setHibernateEventListeners(
-                this.hibernateEventListeners != null ?
-                        this.hibernateEventListeners :
-                        hibernateSettings.getHibernateEventListeners());
+                this.hibernateEventListeners != null
+                        ? this.hibernateEventListeners
+                        : hibernateSettings.getHibernateEventListeners());
         configuration.setHibernateMappingContext(mappingContext);
         configuration.setDataSourceName(name);
         configuration.setSessionFactoryBeanName(
@@ -233,8 +233,8 @@ public class HibernateConnectionSourceFactory
         }
     }
 
-    private static AbstractClosureEventTriggeringInterceptor resolveEventTriggeringInterceptor(
-            Class<? extends AbstractClosureEventTriggeringInterceptor> clazz) {
+    private static ClosureEventTriggeringInterceptor resolveEventTriggeringInterceptor(
+            Class<? extends ClosureEventTriggeringInterceptor> clazz) {
         return clazz != null ? BeanUtils.instantiateClass(clazz) : new ClosureEventTriggeringInterceptor();
     }
 
@@ -268,7 +268,7 @@ public class HibernateConnectionSourceFactory
             String qualified = Settings.SETTING_DATASOURCES + '.' + Settings.SETTING_DATASOURCE;
             HibernateConnectionSourceSettings settings =
                     new HibernateConnectionSourceSettingsBuilder(configuration, "", fallbackSettings).build();
-            Map config = configuration.getProperty(qualified, Map.class, Collections.emptyMap());
+            var config = configuration.getProperty(qualified, Map.class, Collections.emptyMap());
             if (!config.isEmpty()) {
                 DataSourceSettings dsFallback = extractDataSourceFallback(fallbackSettings);
                 settings.setDataSource(new DataSourceSettingsBuilder(configuration, qualified, dsFallback).build());
@@ -283,8 +283,8 @@ public class HibernateConnectionSourceFactory
         DataSourceSettings dsFallback = extractDataSourceFallback(fallbackSettings);
         HibernateConnectionSourceSettings settings =
                 new HibernateConnectionSourceSettingsBuilder(configuration, prefix, fallbackSettings).build();
-        if (prefix.isEmpty() ||
-                configuration
+        if (prefix.isEmpty()
+                || configuration
                         .getProperty(prefix + ".dataSource", Map.class, Collections.emptyMap())
                         .isEmpty()) {
             settings.setDataSource(new DataSourceSettingsBuilder(configuration, prefix, dsFallback).build());
@@ -304,13 +304,13 @@ public class HibernateConnectionSourceFactory
     }
 
     @Override
-    public void setApplicationContext(ApplicationContext applicationContext) throws BeansException {
+    public void setApplicationContext(@Nullable ApplicationContext applicationContext) throws BeansException {
         this.applicationContext = applicationContext;
         this.messageSource = applicationContext;
     }
 
     @Override
-    public void setMessageSource(MessageSource messageSource) {
+    public void setMessageSource(@Nullable MessageSource messageSource) {
         this.messageSource = messageSource;
     }
 }

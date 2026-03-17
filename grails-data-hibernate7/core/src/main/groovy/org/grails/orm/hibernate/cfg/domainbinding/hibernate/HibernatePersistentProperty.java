@@ -24,6 +24,7 @@ import org.checkerframework.checker.nullness.qual.Nullable;
 import org.hibernate.mapping.DependantValue;
 import org.hibernate.mapping.Property;
 import org.hibernate.mapping.SimpleValue;
+import org.hibernate.mapping.Table;
 import org.hibernate.usertype.UserCollectionType;
 
 import org.grails.datastore.mapping.model.PersistentProperty;
@@ -47,9 +48,9 @@ public interface HibernatePersistentProperty extends PersistentProperty<Property
     }
 
     default GrailsHibernatePersistentEntity getHibernateAssociatedEntity() {
-        return this instanceof Association<?> association ?
-                (GrailsHibernatePersistentEntity) association.getAssociatedEntity() :
-                null;
+        return this instanceof Association<?> association
+                ? (GrailsHibernatePersistentEntity) association.getAssociatedEntity()
+                : null;
     }
 
     /**
@@ -132,11 +133,11 @@ public interface HibernatePersistentProperty extends PersistentProperty<Property
         return Optional.ofNullable(getType()).map(Class::isEnum).orElse(false);
     }
 
-    default boolean isHibernateOneToOne() {
+    default boolean isValidHibernateOneToOne() {
         return false;
     }
 
-    default boolean isHibernateManyToOne() {
+    default boolean isValidHibernateManyToOne() {
         return false;
     }
 
@@ -202,5 +203,9 @@ public interface HibernatePersistentProperty extends PersistentProperty<Property
             return Optional.ofNullable(getHibernateOwner().getIdentity()).orElse(this);
         }
         return this;
+    }
+
+    default Table getTable() {
+      return getHibernateOwner().getPersistentClass().getTable();
     }
 }

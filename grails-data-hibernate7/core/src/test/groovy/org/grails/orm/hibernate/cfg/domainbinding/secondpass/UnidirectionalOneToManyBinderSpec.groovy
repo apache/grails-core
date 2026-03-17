@@ -58,24 +58,27 @@ class UnidirectionalOneToManyBinderSpec extends HibernateGormDatastoreSpec {
         def backticksRemover = new BackticksRemover()
         def columnNameForPropertyAndPathFetcher = new ColumnNameForPropertyAndPathFetcher(namingStrategy, defaultColumnNameFetcher, backticksRemover)
 
-        def unidirectionalOneToManyInverseValuesBinder = new UnidirectionalOneToManyInverseValuesBinder()
+        def unidirectionalOneToManyInverseValuesBinder = new UnidirectionalOneToManyInverseValuesBinder(metadataBuildingContext)
         def enumTypeBinder = new EnumTypeBinder(metadataBuildingContext, columnNameForPropertyAndPathFetcher)
         def compositeIdentifierToManyToOneBinder = new CompositeIdentifierToManyToOneBinder(metadataBuildingContext, namingStrategy, jdbcEnvironment)
         def simpleValueColumnFetcher = new SimpleValueColumnFetcher()
         def collectionForPropertyConfigBinder = new CollectionForPropertyConfigBinder()
 
         def collectionWithJoinTableBinder = new CollectionWithJoinTableBinder(
-                metadataBuildingContext,
                 namingStrategy,
                 unidirectionalOneToManyInverseValuesBinder,
-                enumTypeBinder,
                 compositeIdentifierToManyToOneBinder,
-                simpleValueColumnFetcher,
                 collectionForPropertyConfigBinder,
                 new SimpleValueColumnBinder(),
-                new ColumnConfigToColumnBinder()
+                new BasicCollectionElementBinder(
+                        metadataBuildingContext,
+                        namingStrategy,
+                        enumTypeBinder,
+                        new SimpleValueColumnBinder(),
+                        simpleValueColumnFetcher,
+                        new ColumnConfigToColumnBinder())
         )
-        binder = new UnidirectionalOneToManyBinder(collectionWithJoinTableBinder)
+        binder = new UnidirectionalOneToManyBinder(collectionWithJoinTableBinder, grailsDomainBinder.metadataBuildingContext.metadataCollector)
     }
 
     def "test bindUnidirectionalOneToMany with join table"() {
@@ -98,7 +101,7 @@ class UnidirectionalOneToManyBinderSpec extends HibernateGormDatastoreSpec {
         collection.setKey(new BasicValue(grailsDomainBinder.metadataBuildingContext, ownerPersistentClass.getTable()))
 
         when:
-        binder.bind(ownerToPetsProperty, mappings, collection)
+        binder.bind(ownerToPetsProperty, collection)
 
         then:
         collection.isInverse() == false
@@ -132,7 +135,7 @@ class UnidirectionalOneToManyBinderSpec extends HibernateGormDatastoreSpec {
         collection.setKey(new BasicValue(grailsDomainBinder.metadataBuildingContext, ownerPersistentClass.getTable()))
 
         when:
-        binder.bind(ownerToPetsProperty, mappings, collection)
+        binder.bind(ownerToPetsProperty, collection)
 
         then:
         collection.isInverse() == false

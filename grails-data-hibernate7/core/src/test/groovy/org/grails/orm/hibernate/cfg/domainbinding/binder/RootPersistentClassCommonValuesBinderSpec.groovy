@@ -24,6 +24,7 @@ import grails.gorm.specs.HibernateGormDatastoreSpec
 import org.hibernate.mapping.RootClass
 import org.hibernate.boot.spi.MetadataBuildingContext
 import org.grails.orm.hibernate.cfg.PersistentEntityNamingStrategy
+import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernatePersistentEntity
 import org.grails.orm.hibernate.cfg.domainbinding.util.BasicValueIdCreator
 
 import org.hibernate.mapping.BasicValue
@@ -52,7 +53,7 @@ class RootPersistentClassCommonValuesBinderSpec extends HibernateGormDatastoreSp
         def compositeIdBinder = new CompositeIdBinder(metadataBuildingContext, null, null)
         identityBinder = new IdentityBinder(simpleIdBinder, compositeIdBinder)
         versionBinder = new VersionBinder(metadataBuildingContext, simpleValueBinder, propertyBinder, BasicValue::new)
-        classBinder = new ClassBinder()
+        classBinder = new ClassBinder(getCollector())
         classPropertiesBinder = Mock(ClassPropertiesBinder)
 
         binder = new RootPersistentClassCommonValuesBinder(
@@ -61,20 +62,21 @@ class RootPersistentClassCommonValuesBinderSpec extends HibernateGormDatastoreSp
                 identityBinder,
                 versionBinder,
                 classBinder,
-                classPropertiesBinder
+                classPropertiesBinder,
+                getCollector()
         )
     }
 
     void "test bindRootPersistentClassCommonValues binds properties correctly"() {
         given:
-        def entity = createPersistentEntity(TestEntity)
+        def entity = createPersistentEntity(TestEntity) as HibernatePersistentEntity
         def mappings = getCollector()
 
         when:
-        RootClass rootClass = binder.bindRootPersistentClassCommonValues(entity, [], mappings)
+        RootClass rootClass = binder.bindRoot(entity)
 
         then:
-        1 * classPropertiesBinder.bindClassProperties(entity, _, mappings)
+        1 * classPropertiesBinder.bindClassProperties(entity)
         rootClass != null
         rootClass.getEntityName() == TestEntity.name
         rootClass.isAbstract() == false
@@ -87,7 +89,7 @@ class RootPersistentClassCommonValuesBinderSpec extends HibernateGormDatastoreSp
         def mappings = getCollector()
 
         when:
-        RootClass rootClass = binder.bindRootPersistentClassCommonValues(entity, [], mappings)
+        RootClass rootClass = binder.bindRoot(entity)
 
         then:
         rootClass != null

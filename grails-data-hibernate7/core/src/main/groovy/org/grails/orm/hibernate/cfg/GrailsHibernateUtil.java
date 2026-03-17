@@ -45,6 +45,7 @@ import org.grails.datastore.mapping.model.PersistentEntity;
 import org.grails.datastore.mapping.model.config.GormProperties;
 import org.grails.orm.hibernate.cfg.domainbinding.hibernate.GrailsHibernatePersistentEntity;
 import org.grails.orm.hibernate.proxy.HibernateProxyHandler;
+import org.grails.orm.hibernate.query.HibernateQueryArgument;
 import org.grails.orm.hibernate.support.HibernateRuntimeUtils;
 
 /**
@@ -56,23 +57,50 @@ import org.grails.orm.hibernate.support.HibernateRuntimeUtils;
 public class GrailsHibernateUtil extends HibernateRuntimeUtils {
     protected static final Logger LOG = LoggerFactory.getLogger(GrailsHibernateUtil.class);
 
-    public static final String ARGUMENT_FETCH_SIZE = "fetchSize";
-    public static final String ARGUMENT_TIMEOUT = "timeout";
-    public static final String ARGUMENT_READ_ONLY = "readOnly";
-    public static final String ARGUMENT_FLUSH_MODE = "flushMode";
-    public static final String ARGUMENT_MAX = "max";
-    public static final String ARGUMENT_OFFSET = "offset";
-    public static final String ARGUMENT_ORDER = "order";
-    public static final String ARGUMENT_SORT = "sort";
-    public static final String ORDER_DESC = "desc";
-    public static final String ORDER_ASC = "asc";
-    public static final String ARGUMENT_FETCH = "fetch";
-    public static final String ARGUMENT_IGNORE_CASE = "ignoreCase";
-    public static final String ARGUMENT_CACHE = "cache";
-    public static final String ARGUMENT_LOCK = "lock";
-    public static final Class<?>[] EMPTY_CLASS_ARRAY = {};
+    /** @deprecated Use {@link org.grails.orm.hibernate.query.HibernateQueryArgument#FETCH_SIZE} */
+    @Deprecated(since = "8.0", forRemoval = true)
+    public static final String ARGUMENT_FETCH_SIZE = HibernateQueryArgument.FETCH_SIZE.value();
+    /** @deprecated Use {@link org.grails.orm.hibernate.query.HibernateQueryArgument#TIMEOUT} */
+    @Deprecated(since = "8.0", forRemoval = true)
+    public static final String ARGUMENT_TIMEOUT = HibernateQueryArgument.TIMEOUT.value();
+    /** @deprecated Use {@link org.grails.orm.hibernate.query.HibernateQueryArgument#READ_ONLY} */
+    @Deprecated(since = "8.0", forRemoval = true)
+    public static final String ARGUMENT_READ_ONLY = HibernateQueryArgument.READ_ONLY.value();
+    /** @deprecated Use {@link org.grails.orm.hibernate.query.HibernateQueryArgument#FLUSH_MODE} */
+    @Deprecated(since = "8.0", forRemoval = true)
+    public static final String ARGUMENT_FLUSH_MODE = HibernateQueryArgument.FLUSH_MODE.value();
+    /** @deprecated Use {@link org.grails.orm.hibernate.query.HibernateQueryArgument#MAX} */
+    @Deprecated(since = "8.0", forRemoval = true)
+    public static final String ARGUMENT_MAX = HibernateQueryArgument.MAX.value();
+    /** @deprecated Use {@link org.grails.orm.hibernate.query.HibernateQueryArgument#OFFSET} */
+    @Deprecated(since = "8.0", forRemoval = true)
+    public static final String ARGUMENT_OFFSET = HibernateQueryArgument.OFFSET.value();
+    /** @deprecated Use {@link org.grails.orm.hibernate.query.HibernateQueryArgument#ORDER} */
+    @Deprecated(since = "8.0", forRemoval = true)
+    public static final String ARGUMENT_ORDER = HibernateQueryArgument.ORDER.value();
+    /** @deprecated Use {@link org.grails.orm.hibernate.query.HibernateQueryArgument#SORT} */
+    @Deprecated(since = "8.0", forRemoval = true)
+    public static final String ARGUMENT_SORT = HibernateQueryArgument.SORT.value();
+    /** @deprecated Use {@link org.grails.orm.hibernate.query.HibernateQueryArgument#ORDER_DESC} */
+    @Deprecated(since = "8.0", forRemoval = true)
+    public static final String ORDER_DESC = HibernateQueryArgument.ORDER_DESC.value();
+    /** @deprecated Use {@link org.grails.orm.hibernate.query.HibernateQueryArgument#ORDER_ASC} */
+    @Deprecated(since = "8.0", forRemoval = true)
+    public static final String ORDER_ASC = HibernateQueryArgument.ORDER_ASC.value();
+    /** @deprecated Use {@link org.grails.orm.hibernate.query.HibernateQueryArgument#FETCH} */
+    @Deprecated(since = "8.0", forRemoval = true)
+    public static final String ARGUMENT_FETCH = HibernateQueryArgument.FETCH.value();
+    /** @deprecated Use {@link org.grails.orm.hibernate.query.HibernateQueryArgument#IGNORE_CASE} */
+    @Deprecated(since = "8.0", forRemoval = true)
+    public static final String ARGUMENT_IGNORE_CASE = HibernateQueryArgument.IGNORE_CASE.value();
+    /** @deprecated Use {@link org.grails.orm.hibernate.query.HibernateQueryArgument#CACHE} */
+    @Deprecated(since = "8.0", forRemoval = true)
+    public static final String ARGUMENT_CACHE = HibernateQueryArgument.CACHE.value();
+    /** @deprecated Use {@link org.grails.orm.hibernate.query.HibernateQueryArgument#LOCK} */
+    @Deprecated(since = "8.0", forRemoval = true)
+    public static final String ARGUMENT_LOCK = HibernateQueryArgument.LOCK.value();
 
-    private static HibernateProxyHandler proxyHandler = new HibernateProxyHandler();
+    private static final HibernateProxyHandler proxyHandler = new HibernateProxyHandler();
 
     /**
      * Sets the target object to read-only using the given SessionFactory instance. This avoids
@@ -160,8 +188,7 @@ public class GrailsHibernateUtil extends HibernateRuntimeUtils {
      */
     @Deprecated
     public static void ensureCorrectGroovyMetaClass(Object target, Class<?> persistentClass) {
-        if (target instanceof GroovyObject) {
-            GroovyObject go = ((GroovyObject) target);
+        if (target instanceof GroovyObject go) {
             if (!go.getMetaClass().getTheClass().equals(persistentClass)) {
                 go.setMetaClass(GroovySystem.getMetaClassRegistry().getMetaClass(persistentClass));
             }
@@ -225,7 +252,7 @@ public class GrailsHibernateUtil extends HibernateRuntimeUtils {
         return StringHelper.unqualify(qualifiedName);
     }
 
-    public static boolean isDomainClass(Class clazz) {
+    public static boolean isDomainClass(Class<?> clazz) {
         if (GormEntity.class.isAssignableFrom(clazz)) {
             return true;
         }
@@ -235,9 +262,9 @@ public class GrailsHibernateUtil extends HibernateRuntimeUtils {
             return false;
         }
 
-        if (((Class<?>) clazz).isEnum()) return false;
+        if (clazz.isEnum()) return false;
 
-        Annotation[] allAnnotations = ((Class<?>) clazz).getAnnotations();
+        Annotation[] allAnnotations = clazz.getAnnotations();
         for (Annotation annotation : allAnnotations) {
             Class<? extends Annotation> type = annotation.annotationType();
             String annName = type.getName();
@@ -249,7 +276,7 @@ public class GrailsHibernateUtil extends HibernateRuntimeUtils {
             }
         }
 
-        Class<?> testClass = (Class<?>) clazz;
+        Class<?> testClass = clazz;
         while (testClass != null && !testClass.equals(GroovyObject.class) && !testClass.equals(Object.class)) {
             try {
                 // make sure the identify and version field exist

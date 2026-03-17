@@ -28,23 +28,35 @@ import org.hibernate.event.internal.DefaultMergeEventListener;
 import org.hibernate.event.internal.DefaultPersistEventListener;
 import org.hibernate.event.spi.MergeContext;
 import org.hibernate.event.spi.MergeEvent;
+import org.hibernate.event.spi.MergeEventListener;
 import org.hibernate.event.spi.PersistContext;
 import org.hibernate.event.spi.PersistEvent;
+import org.hibernate.event.spi.PersistEventListener;
 import org.hibernate.event.spi.PostDeleteEvent;
+import org.hibernate.event.spi.PostDeleteEventListener;
 import org.hibernate.event.spi.PostInsertEvent;
+import org.hibernate.event.spi.PostInsertEventListener;
 import org.hibernate.event.spi.PostLoadEvent;
+import org.hibernate.event.spi.PostLoadEventListener;
 import org.hibernate.event.spi.PostUpdateEvent;
+import org.hibernate.event.spi.PostUpdateEventListener;
 import org.hibernate.event.spi.PreDeleteEvent;
+import org.hibernate.event.spi.PreDeleteEventListener;
 import org.hibernate.event.spi.PreInsertEvent;
+import org.hibernate.event.spi.PreInsertEventListener;
 import org.hibernate.event.spi.PreLoadEvent;
+import org.hibernate.event.spi.PreLoadEventListener;
 import org.hibernate.event.spi.PreUpdateEvent;
+import org.hibernate.event.spi.PreUpdateEventListener;
 import org.hibernate.jpa.event.spi.CallbackRegistry;
+import org.hibernate.jpa.event.spi.CallbackRegistryConsumer;
 import org.hibernate.metamodel.mapping.AttributeMapping;
 import org.hibernate.metamodel.mapping.EntityMappingType;
 import org.hibernate.persister.entity.EntityPersister;
 
 import org.springframework.beans.BeansException;
 import org.springframework.context.ApplicationContext;
+import org.springframework.context.ApplicationContextAware;
 import org.springframework.context.ConfigurableApplicationContext;
 
 import org.grails.datastore.gorm.events.AutoTimestampEventListener;
@@ -57,7 +69,7 @@ import org.grails.datastore.mapping.model.MappingContext;
 import org.grails.datastore.mapping.model.PersistentEntity;
 import org.grails.datastore.mapping.model.types.Embedded;
 import org.grails.datastore.mapping.proxy.ProxyHandler;
-import org.grails.orm.hibernate.AbstractHibernateDatastore;
+import org.grails.orm.hibernate.HibernateDatastore;
 
 /**
  * Listens for Hibernate events and publishes corresponding Datastore events.
@@ -68,8 +80,20 @@ import org.grails.orm.hibernate.AbstractHibernateDatastore;
  * @since 1.0
  */
 @SuppressWarnings({"PMD.DataflowAnomalyAnalysis", "PMD.NonSerializableClass"})
-public class ClosureEventTriggeringInterceptor extends AbstractClosureEventTriggeringInterceptor
-        implements Serializable {
+public class ClosureEventTriggeringInterceptor
+        implements Serializable,
+                ApplicationContextAware,
+                PreLoadEventListener,
+                PostLoadEventListener,
+                PostInsertEventListener,
+                PostUpdateEventListener,
+                PostDeleteEventListener,
+                PreDeleteEventListener,
+                PreUpdateEventListener,
+                PreInsertEventListener,
+                MergeEventListener,
+                PersistEventListener,
+                CallbackRegistryConsumer {
 
     //    private final Logger log = LoggerFactory.getLogger(getClass());
     private static final long serialVersionUID = 1;
@@ -138,7 +162,7 @@ public class ClosureEventTriggeringInterceptor extends AbstractClosureEventTrigg
     public static final String AFTER_LOAD_EVENT = AbstractPersistenceEvent.AFTER_LOAD_EVENT;
 
     /** The datastore. */
-    protected AbstractHibernateDatastore datastore;
+    protected HibernateDatastore datastore;
 
     /** The event publisher. */
     protected ConfigurableApplicationEventPublisher eventPublisher;
@@ -147,7 +171,7 @@ public class ClosureEventTriggeringInterceptor extends AbstractClosureEventTrigg
     private ProxyHandler proxyHandler;
 
     /** Sets the datastore. */
-    public void setDatastore(AbstractHibernateDatastore datastore) {
+    public void setDatastore(HibernateDatastore datastore) {
         this.datastore = datastore;
         this.mappingContext = datastore.getMappingContext();
         this.proxyHandler = mappingContext.getProxyHandler();
@@ -291,9 +315,9 @@ public class ClosureEventTriggeringInterceptor extends AbstractClosureEventTrigg
         // Only for "dateCreated" property, "lastUpdated" is handled correctly
         if (dateCreatedMapping != null) {
             int dateCreatedIdx = dateCreatedMapping.getStateArrayPosition();
-            if (oldState != null &&
-                    oldState[dateCreatedIdx] != null &&
-                    !oldState[dateCreatedIdx].equals(state[dateCreatedIdx])) {
+            if (oldState != null
+                    && oldState[dateCreatedIdx] != null
+                    && !oldState[dateCreatedIdx].equals(state[dateCreatedIdx])) {
                 modifiedProperties.put(AutoTimestampEventListener.DATE_CREATED_PROPERTY, oldState[dateCreatedIdx]);
             }
         }

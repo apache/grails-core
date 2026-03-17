@@ -18,124 +18,55 @@
  */
 package org.grails.orm.hibernate.cfg.domainbinding.secondpass;
 
-import java.util.Optional;
-
 import jakarta.annotation.Nonnull;
 
-import org.hibernate.boot.spi.InFlightMetadataCollector;
-import org.hibernate.boot.spi.MetadataBuildingContext;
-import org.hibernate.mapping.BasicValue;
-import org.hibernate.mapping.Collection;
-import org.hibernate.mapping.Column;
-import org.hibernate.mapping.ManyToOne;
-import org.hibernate.mapping.SimpleValue;
+import org.hibernate.mapping.*;
 
-import org.grails.datastore.mapping.model.types.Basic;
-import org.grails.orm.hibernate.cfg.ColumnConfig;
-import org.grails.orm.hibernate.cfg.CompositeIdentity;
-import org.grails.orm.hibernate.cfg.PersistentEntityNamingStrategy;
-import org.grails.orm.hibernate.cfg.PropertyConfig;
+import org.grails.orm.hibernate.cfg.*;
 import org.grails.orm.hibernate.cfg.domainbinding.binder.CollectionForPropertyConfigBinder;
-import org.grails.orm.hibernate.cfg.domainbinding.binder.ColumnConfigToColumnBinder;
 import org.grails.orm.hibernate.cfg.domainbinding.binder.CompositeIdentifierToManyToOneBinder;
-import org.grails.orm.hibernate.cfg.domainbinding.binder.EnumTypeBinder;
 import org.grails.orm.hibernate.cfg.domainbinding.binder.SimpleValueColumnBinder;
 import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernateToManyProperty;
-import org.grails.orm.hibernate.cfg.domainbinding.util.BackticksRemover;
-import org.grails.orm.hibernate.cfg.domainbinding.util.SimpleValueColumnFetcher;
 
-import static org.grails.orm.hibernate.cfg.domainbinding.binder.GrailsDomainBinder.EMPTY_PATH;
-import static org.grails.orm.hibernate.cfg.domainbinding.binder.GrailsDomainBinder.FOREIGN_KEY_SUFFIX;
-import static org.grails.orm.hibernate.cfg.domainbinding.binder.GrailsDomainBinder.UNDERSCORE;
+import static org.grails.orm.hibernate.cfg.domainbinding.binder.GrailsDomainBinder.*;
 
 /** Binds a collection with a join table. */
 @SuppressWarnings("PMD.DataflowAnomalyAnalysis")
 public class CollectionWithJoinTableBinder {
 
-    private final MetadataBuildingContext metadataBuildingContext;
     private final PersistentEntityNamingStrategy namingStrategy;
     private final UnidirectionalOneToManyInverseValuesBinder unidirectionalOneToManyInverseValuesBinder;
-    private final EnumTypeBinder enumTypeBinder;
     private final CompositeIdentifierToManyToOneBinder compositeIdentifierToManyToOneBinder;
-    private final SimpleValueColumnFetcher simpleValueColumnFetcher;
     private final CollectionForPropertyConfigBinder collectionForPropertyConfigBinder;
     private final SimpleValueColumnBinder simpleValueColumnBinder;
-    private final ColumnConfigToColumnBinder columnConfigToColumnBinder;
+    private final BasicCollectionElementBinder basicCollectionElementBinder;
 
     /** Creates a new {@link CollectionWithJoinTableBinder} instance. */
     public CollectionWithJoinTableBinder(
-            MetadataBuildingContext metadataBuildingContext,
             PersistentEntityNamingStrategy namingStrategy,
             UnidirectionalOneToManyInverseValuesBinder unidirectionalOneToManyInverseValuesBinder,
-            EnumTypeBinder enumTypeBinder,
             CompositeIdentifierToManyToOneBinder compositeIdentifierToManyToOneBinder,
-            SimpleValueColumnFetcher simpleValueColumnFetcher,
             CollectionForPropertyConfigBinder collectionForPropertyConfigBinder,
             SimpleValueColumnBinder simpleValueColumnBinder,
-            ColumnConfigToColumnBinder columnConfigToColumnBinder) {
-        this.metadataBuildingContext = metadataBuildingContext;
+            BasicCollectionElementBinder basicCollectionElementBinder) {
         this.namingStrategy = namingStrategy;
         this.unidirectionalOneToManyInverseValuesBinder = unidirectionalOneToManyInverseValuesBinder;
-        this.enumTypeBinder = enumTypeBinder;
         this.compositeIdentifierToManyToOneBinder = compositeIdentifierToManyToOneBinder;
-        this.simpleValueColumnFetcher = simpleValueColumnFetcher;
         this.collectionForPropertyConfigBinder = collectionForPropertyConfigBinder;
         this.simpleValueColumnBinder = simpleValueColumnBinder;
-        this.columnConfigToColumnBinder = columnConfigToColumnBinder;
+        this.basicCollectionElementBinder = basicCollectionElementBinder;
     }
 
     /** Bind collection with join table. */
-    public void bindCollectionWithJoinTable(
-            @Nonnull HibernateToManyProperty property,
-            @Nonnull InFlightMetadataCollector mappings,
-            @Nonnull Collection collection) {
+    public void bindCollectionWithJoinTable(@Nonnull HibernateToManyProperty property, @Nonnull Collection collection) {
 
         collection.setInverse(false);
         SimpleValue element;
-        final boolean isBasicCollectionType = property instanceof Basic;
-        if (isBasicCollectionType) {
-            element = new BasicValue(metadataBuildingContext, collection.getCollectionTable());
+        if (property.isBasic()) {
+            element = basicCollectionElementBinder.bind(property, collection);
         } else {
-            // for a normal unidirectional one-to-many we use a join column
-            element = new ManyToOne(metadataBuildingContext, collection.getCollectionTable());
-            unidirectionalOneToManyInverseValuesBinder.bindUnidirectionalOneToManyInverseValues(
-                    property, (ManyToOne) element);
-        }
-
-        String columnName;
-
-        var joinColumnMappingOptional =
-                Optional.ofNullable(property.getMappedForm()).map(PropertyConfig::getJoinTableColumnConfig);
-        if (isBasicCollectionType) {
-            final Class<?> referencedType = ((Basic) property).getComponentType();
-            final boolean isEnum = referencedType.isEnum();
-            if (joinColumnMappingOptional.isPresent()) {
-                columnName = joinColumnMappingOptional.get().getName();
-            } else {
-                var clazz = namingStrategy.resolveColumnName(referencedType.getName());
-                var prop = namingStrategy.resolveTableName(property.getName());
-                columnName = isEnum ?
-                        clazz :
-                        new BackticksRemover().apply(prop) + UNDERSCORE + new BackticksRemover().apply(clazz);
-            }
-
-            if (isEnum) {
-                enumTypeBinder.bindEnumType(property, referencedType, (BasicValue) element, columnName);
-            } else {
-
-                String typeName = property.getTypeName(referencedType);
-
-                simpleValueColumnBinder.bindSimpleValue(element, typeName, columnName, true);
-                if (joinColumnMappingOptional.isPresent()) {
-                    Column column = simpleValueColumnFetcher.getColumnForSimpleValue(element);
-                    ColumnConfig columnConfig = joinColumnMappingOptional.get();
-                    final PropertyConfig mappedForm = property.getMappedForm();
-                    columnConfigToColumnBinder.bindColumnConfigToColumn(column, columnConfig, mappedForm);
-                }
-            }
-        } else {
+            element = unidirectionalOneToManyInverseValuesBinder.bind(property, collection);
             final var domainClass = property.getHibernateAssociatedEntity();
-
             if (domainClass != null) {
                 if (domainClass.getHibernateCompositeIdentity().isPresent()) {
                     CompositeIdentity ci =
@@ -143,23 +74,13 @@ public class CollectionWithJoinTableBinder {
                     compositeIdentifierToManyToOneBinder.bindCompositeIdentifierToManyToOne(
                             property, element, ci, domainClass, EMPTY_PATH);
                 } else {
-                    if (joinColumnMappingOptional.isPresent()) {
-                        columnName = joinColumnMappingOptional.get().getName();
-                    } else {
-                        var decapitalize = domainClass
-                                .getHibernateRootEntity()
-                                .getJavaClass()
-                                .getSimpleName();
-                        columnName = namingStrategy.resolveColumnName(decapitalize) + FOREIGN_KEY_SUFFIX;
-                    }
-
-                    simpleValueColumnBinder.bindSimpleValue(element, "long", columnName, true);
+                    simpleValueColumnBinder.bindSimpleValue(
+                            element, "long", property.resolveJoinTableForeignKeyColumnName(namingStrategy), true);
                 }
             }
         }
 
         collection.setElement(element);
-
         collectionForPropertyConfigBinder.bindCollectionForPropertyConfig(collection, property);
     }
 }

@@ -61,4 +61,10 @@ class IdentitySpec extends Specification {
         false           | null          | false       | 'native'
         false           | null          | true        | 'sequence-identity'
     }
+
+    def "test getPropertyNames"() {
+        expect:
+        new Identity(name: "id").getPropertyNames() == ["id"] as String[]
+        new Identity(name: null).getPropertyNames() == [] as String[]
+    }
 }

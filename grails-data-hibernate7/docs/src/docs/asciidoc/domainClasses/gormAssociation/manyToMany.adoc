@@ -1,19 +1,68 @@
-////
-Licensed to the Apache Software Foundation (ASF) under one
-or more contributor license agreements.  See the NOTICE file
-distributed with this work for additional information
-regarding copyright ownership.  The ASF licenses this file
-to you under the Apache License, Version 2.0 (the
-"License"); you may not use this file except in compliance
-with the License.  You may obtain a copy of the License at
+[[gormAssociation-manyToMany]]
+== Many-to-Many Associations
 
-https://www.apache.org/licenses/LICENSE-2.0
+A many-to-many association is created when both domain classes declare `hasMany` pointing at each other, and one side also declares `belongsTo`.
 
-Unless required by applicable law or agreed to in writing,
-software distributed under the License is distributed on an
-"AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
-KIND, either express or implied.  See the License for the
-specific language governing permissions and limitations
-under the License.
-////
+=== Declaring the Relationship
 
+[source,groovy]
+----
+class Book {
+    String title
+    static hasMany  = [authors: Author]
+    static belongsTo = Author               // <1>
+}
+
+class Author {
+    String name
+    static hasMany = [books: Book]
+}
+----
+<1> `belongsTo` without a property name makes `Book` the owned side. The owning side (`Author`) controls cascade save/delete.
+
+GORM creates a join table `author_books` with foreign-key columns for both sides.
+
+=== Saving a Many-to-Many
+
+Always save from the owning side (the side that does **not** have `belongsTo`):
+
+[source,groovy]
+----
+def author = new Author(name: 'Graeme Rocher')
+def book   = new Book(title:  'Grails in Action')
+
+author.addToBooks(book)
+author.save()           // <1>
+----
+<1> `book` is cascade-saved because `Author` is the owning side.
+
+=== Join Table Customisation
+
+Override the join table name and columns in the `mapping` block:
+
+[source,groovy]
+----
+class Author {
+    static hasMany = [books: Book]
+    static mapping = {
+        books joinTable: [
+            name:   'author_to_book',
+            key:    'auth_id',
+            column: 'book_id'
+        ]
+    }
+}
+----
+
+=== Bidirectional Access
+
+Both sides of the relationship can be navigated:
+
+[source,groovy]
+----
+Author author = Author.get(1)
+author.books.each { println it.title }
+
+Book book = Book.get(1)
+book.authors.each { println it.name }
+----

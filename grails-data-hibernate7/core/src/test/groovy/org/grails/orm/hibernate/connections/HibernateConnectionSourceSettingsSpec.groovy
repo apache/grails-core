@@ -79,7 +79,7 @@ class HibernateConnectionSourceSettingsSpec extends Specification {
         hibernateProperties['hibernate.hbm2ddl.auto'] == 'create'
         hibernateProperties['hibernate.cache.queries'] == 'true'
         hibernateProperties['hibernate.flush.mode'] == 'commit'
-        hibernateProperties['hibernate.naming_strategy'] == 'org.hibernate.boot.model.naming.CamelCaseToUnderscoresNamingStrategy'
+        hibernateProperties['hibernate.naming_strategy'] == 'org.hibernate.boot.model.naming.PhysicalNamingStrategySnakeCaseImpl'
         hibernateProperties['hibernate.entity_dirtiness_strategy'] == 'org.grails.orm.hibernate.dirty.GrailsEntityDirtinessStrategy'
         hibernateProperties['hibernate.configLocations'] == 'file:hibernate.cfg.xml'
         hibernateProperties['hibernate.use_query_cache'] == 'true'

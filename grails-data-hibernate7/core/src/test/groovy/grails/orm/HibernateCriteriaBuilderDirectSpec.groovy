@@ -23,6 +23,9 @@ import grails.gorm.annotation.Entity
 import grails.gorm.specs.HibernateGormDatastoreSpec
 import jakarta.persistence.criteria.JoinType
 import org.grails.datastore.mapping.query.Query
+import org.hibernate.Session
+import org.springframework.orm.hibernate5.SessionHolder
+import org.springframework.transaction.support.TransactionSynchronizationManager
 import spock.lang.Shared
 import java.math.RoundingMode
 
@@ -591,6 +594,53 @@ class HibernateCriteriaBuilderDirectSpec extends HibernateGormDatastoreSpec {
     def "setTargetClass updates the target class"() {
         when: builder.targetClass = DirectTransaction
         then: builder.targetClass == DirectTransaction
+    }
+
+    void "test closeSession unbinds and closes session when not participating"() {
+        given:
+        def sf = manager.hibernateDatastore.sessionFactory
+        // Unbind anything before starting
+        TransactionSynchronizationManager.unbindResourceIfPossible(sf)
+        
+        Session nativeSession = sf.openSession()
+        // Builder created without bound resource -> participate = false
+        HibernateCriteriaBuilder b = new HibernateCriteriaBuilder(DirectAccount, sf, manager.hibernateDatastore)
+        // Now bind it so closeSession has something to unbind
+        TransactionSynchronizationManager.unbindResourceIfPossible(sf)
+        TransactionSynchronizationManager.bindResource(sf, new SessionHolder(nativeSession))
+
+        when:
+        b.closeSession()
+
+        then:
+        !TransactionSynchronizationManager.hasResource(sf)
+        !nativeSession.isOpen()
+    }
+
+    void "test closeSession does not unbind or close session when participating"() {
+        given:
+        def sf = manager.hibernateDatastore.sessionFactory
+        // Unbind anything before starting
+        TransactionSynchronizationManager.unbindResourceIfPossible(sf)
+
+        Session nativeSession = sf.openSession()
+        TransactionSynchronizationManager.unbindResourceIfPossible(sf)
+        TransactionSynchronizationManager.bindResource(sf, new SessionHolder(nativeSession))
+        // Builder created with bound resource -> participate = true
+        HibernateCriteriaBuilder b = new HibernateCriteriaBuilder(DirectAccount, sf, manager.hibernateDatastore)
+
+        when:
+        b.closeSession()
+
+        then:
+        TransactionSynchronizationManager.hasResource(sf)
+        nativeSession.isOpen()
+
+        cleanup:
+        TransactionSynchronizationManager.unbindResourceIfPossible(sf)
+        if (nativeSession?.isOpen()) {
+            nativeSession.close()
+        }
     }
 }
 

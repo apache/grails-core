@@ -74,10 +74,9 @@ class EnumTypeBinderSpec extends HibernateGormDatastoreSpec {
         def owner = createPersistentEntity(clazz, grailsDomainBinder)
         PersistentProperty property = owner.getPropertyByName("status")
         def table = new Table("person")
-        def simpleValue = new BasicValue(grailsDomainBinder.metadataBuildingContext, table)
 
         when: "the enum is bound"
-        binder.bindEnumType(property, Status01, simpleValue, "status_col")
+        def simpleValue = binder.bindEnumTypeForColumn(property as HibernatePersistentProperty, Status01, table, "status_col")
 
         then: "the correct hibernate type is set"
         simpleValue.getTypeName() == expectedHibernateType
@@ -106,10 +105,9 @@ class EnumTypeBinderSpec extends HibernateGormDatastoreSpec {
         def owner = createPersistentEntity( clazz, grailsDomainBinder)
         PersistentProperty property = owner.getPropertyByName("status")
         def table = new Table("person")
-        def simpleValue = new BasicValue(grailsDomainBinder.metadataBuildingContext, table)
         def columnName = "status_col"
         when: "the enum is bound"
-        binder.bindEnumType(property, Status01, simpleValue, columnName)
+        def simpleValue = binder.bindEnumTypeForColumn(property as HibernatePersistentProperty, Status01, table, columnName)
 
         then:
         table.columns.size() == 1
@@ -137,11 +135,10 @@ class EnumTypeBinderSpec extends HibernateGormDatastoreSpec {
         def owner = createPersistentEntity(clazz, grailsDomainBinder)
         PersistentProperty property = owner.getPropertyByName("status")
         def table = new Table("person")
-        def simpleValue = new BasicValue(grailsDomainBinder.metadataBuildingContext, table)
         def columnName = "status_col"
 
         when: "the enum is bound"
-        binder.bindEnumType(property, Status01, simpleValue, columnName)
+        binder.bindEnumTypeForColumn(property as HibernatePersistentProperty, Status01, table, columnName)
 
         then: "the index and column binders are invoked the correct number of times"
         times * indexBinder.bindIndex(columnName, _ as Column, _, table)
@@ -156,9 +153,12 @@ class EnumTypeBinderSpec extends HibernateGormDatastoreSpec {
     def "should create BasicValue and bind enum type"() {
         given: "A root entity and its enum property"
         def grailsDomainBinder = getGrailsDomainBinder()
-        def owner = createPersistentEntity(Person01, grailsDomainBinder)
+        def owner = createPersistentEntity(Person01, grailsDomainBinder) as org.grails.orm.hibernate.cfg.domainbinding.hibernate.GrailsHibernatePersistentEntity
         PersistentProperty property = owner.getPropertyByName("status")
         def table = new Table("person")
+        def rootClass = new org.hibernate.mapping.RootClass(grailsDomainBinder.getMetadataBuildingContext())
+        rootClass.setTable(table)
+        owner.setPersistentClass(rootClass)
 
         when: "the enum is bound using the new signature"
         def result = binder.bindEnumType(property as HibernatePersistentProperty, Status01, table, "")

@@ -92,19 +92,20 @@ class PropertyConfig extends Property {
     /**
      * Whether or not this column is updatable by hibernate
      *
-     * @deprecated Use updatable instead
+     * @deprecated Use {@link #getUpdatable()} instead
      */
-    @Deprecated
+    @Deprecated(since = '7.0', forRemoval = true)
     boolean getUpdateable() {
         return updatable
     }
 
     /**
      * Whether or not this column is updatable by hibernate
-     * @deprecated Use updatable instead
+     *
+     * @deprecated Use {@code updatable} instead
      */
-    @Deprecated
-    void setUpdatable(boolean updateable) {
+    @Deprecated(since = '7.0', forRemoval = true)
+    void setUpdateable(boolean updateable) {
         this.updatable = updateable
     }
 
@@ -318,7 +319,7 @@ class PropertyConfig extends Property {
         }
         else {
             cc = new ColumnConfig()
-            property.columns.add cc
+            property.columns.add(cc)
         }
         if (config.column) {
             config.name = config.column
@@ -449,7 +450,7 @@ class PropertyConfig extends Property {
     }
 
     String toString() {
-        "property[type:$type, lazy:$lazy, columns:$columns, insertable:${insertable}, updateable:${updatable}]"
+        "property[type:$type, lazy:$lazy, columns:$columns, insertable:${insertable}, updatable:${updatable}]"
     }
 
     protected void checkHasSingleColumn() {
@@ -460,10 +461,10 @@ class PropertyConfig extends Property {
 
     @Override
     PropertyConfig clone() throws CloneNotSupportedException {
-        PropertyConfig pc = (PropertyConfig)super.clone()
+        PropertyConfig pc = (PropertyConfig) super.clone()
 
         pc.fetch = fetchMode
-        pc.indexColumn = indexColumn != null ? (PropertyConfig)indexColumn.clone() : null
+        pc.indexColumn = indexColumn != null ? (PropertyConfig) indexColumn.clone() : null
         pc.cache = cache != null ? cache.clone() : cache
         pc.joinTable = joinTable.clone()
         if (typeParams != null) {
@@ -479,7 +480,7 @@ class PropertyConfig extends Property {
     }
 
     boolean hasJoinKeyMapping() {
-        return Optional.ofNullable(getJoinTable()).map(JoinTable::getKey).isPresent()
+        joinTable?.key != null
     }
 
 }

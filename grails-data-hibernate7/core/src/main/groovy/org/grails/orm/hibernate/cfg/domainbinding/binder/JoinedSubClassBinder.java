@@ -48,30 +48,33 @@ public class JoinedSubClassBinder {
     private final SimpleValueColumnBinder simpleValueColumnBinder;
     private final ColumnNameForPropertyAndPathFetcher columnNameForPropertyAndPathFetcher;
     private final ClassBinder classBinder;
+    private final InFlightMetadataCollector mappings;
 
     public JoinedSubClassBinder(
             MetadataBuildingContext metadataBuildingContext,
             PersistentEntityNamingStrategy namingStrategy,
             SimpleValueColumnBinder simpleValueColumnBinder,
             ColumnNameForPropertyAndPathFetcher columnNameForPropertyAndPathFetcher,
-            ClassBinder classBinder) {
+            ClassBinder classBinder,
+            InFlightMetadataCollector mappings) {
         this.metadataBuildingContext = metadataBuildingContext;
         this.namingStrategy = namingStrategy;
         this.simpleValueColumnBinder = simpleValueColumnBinder;
         this.columnNameForPropertyAndPathFetcher = columnNameForPropertyAndPathFetcher;
         this.classBinder = classBinder;
+        this.mappings = mappings;
     }
 
     /**
      * Binds a joined sub-class mapping using table-per-subclass
      *
      * @param sub The Grails sub class
-     * @param joinedSubclass The Hibernate Subclass object
-     * @param mappings The mappings Object
+     * @param parent The Hibernate Parent PersistentClass object
+     * @return The created JoinedSubclass
      */
-    public void bindJoinedSubClass(
-            GrailsHibernatePersistentEntity sub, JoinedSubclass joinedSubclass, InFlightMetadataCollector mappings) {
-        classBinder.bindClass(sub, joinedSubclass, mappings);
+    public JoinedSubclass bindJoinedSubClass(GrailsHibernatePersistentEntity sub, PersistentClass parent) {
+        JoinedSubclass joinedSubclass = new JoinedSubclass(parent, metadataBuildingContext);
+        classBinder.bindClass(sub, joinedSubclass);
 
         String schemaName = sub.getSchema(mappings);
         String catalogName = sub.getCatalog(mappings);
@@ -79,16 +82,17 @@ public class JoinedSubClassBinder {
         Table mytable = mappings.addTable(
                 schemaName,
                 catalogName,
-                getJoinedSubClassTableName(sub, joinedSubclass, null, mappings),
+                getJoinedSubClassTableName(sub, joinedSubclass),
                 null,
                 false,
                 metadataBuildingContext);
 
         joinedSubclass.setTable(mytable);
         if (LOG.isInfoEnabled()) {
-            LOG.info("Mapping joined-subclass: " + joinedSubclass.getEntityName() +
-                    " -> " +
-                    joinedSubclass.getTable().getName());
+            LOG.info("Mapping joined-subclass: "
+                    + joinedSubclass.getEntityName()
+                    + " -> "
+                    + joinedSubclass.getTable().getName());
         }
 
         SimpleValue key = new DependantValue(metadataBuildingContext, mytable, joinedSubclass.getIdentifier());
@@ -100,13 +104,11 @@ public class JoinedSubClassBinder {
 
         joinedSubclass.createPrimaryKey();
         joinedSubclass.createForeignKey();
+
+        return joinedSubclass;
     }
 
-    private String getJoinedSubClassTableName(
-            GrailsHibernatePersistentEntity sub,
-            PersistentClass model,
-            Table denormalizedSuperTable,
-            InFlightMetadataCollector mappings) {
+    private String getJoinedSubClassTableName(GrailsHibernatePersistentEntity sub, PersistentClass model) {
 
         String logicalTableName = GrailsHibernateUtil.unqualify(model.getEntityName());
         String physicalTableName = sub.getTableName(namingStrategy);
@@ -114,8 +116,7 @@ public class JoinedSubClassBinder {
         String schemaName = sub.getSchema(mappings);
         String catalogName = sub.getCatalog(mappings);
 
-        mappings.addTableNameBinding(
-                schemaName, catalogName, logicalTableName, physicalTableName, denormalizedSuperTable);
+        mappings.addTableNameBinding(schemaName, catalogName, logicalTableName, physicalTableName, null);
         return physicalTableName;
     }
 }

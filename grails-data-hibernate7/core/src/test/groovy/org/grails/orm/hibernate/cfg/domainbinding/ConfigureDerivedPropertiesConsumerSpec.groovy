@@ -20,31 +20,37 @@
 package org.grails.orm.hibernate.cfg.domainbinding
 
 import grails.gorm.specs.HibernateGormDatastoreSpec
-import org.grails.datastore.mapping.model.PersistentProperty
-import org.grails.orm.hibernate.cfg.Mapping
-import org.grails.orm.hibernate.cfg.PropertyConfig
+import grails.gorm.hibernate.HibernateEntity
+import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernatePersistentProperty
 import spock.lang.Subject
 
 import org.grails.orm.hibernate.cfg.domainbinding.util.ConfigureDerivedPropertiesConsumer
 
 class ConfigureDerivedPropertiesConsumerSpec extends HibernateGormDatastoreSpec {
 
+    HibernatePersistentProperty titleProperty
+
+    def setupSpec() {
+        manager.addAllDomainClasses([CDPCBook])
+    }
+
+    def setup() {
+        titleProperty = mappingContext.getPersistentEntity(CDPCBook.name)
+            .persistentProperties.find { it.name == 'title' } as HibernatePersistentProperty
+    }
+
     def "should set derived to true if formula is present"() {
         given:
-        def mapping = Mock(Mapping)
-        def propConfig = new PropertyConfig()
-        propConfig.setFormula("some SQL formula")
-        
-        def persistentProperty = Mock(PersistentProperty)
-        persistentProperty.getName() >> "derivedProp"
-        
-        mapping.getPropertyConfig("derivedProp") >> propConfig
-        
+        def mapping = mappingContext.getPersistentEntity(CDPCBook.name).mappedForm
+        def propConfig = new org.grails.orm.hibernate.cfg.PropertyConfig()
+        propConfig.formula = "upper(title)"
+        mapping.columns['title'] = propConfig
+
         @Subject
         def consumer = new ConfigureDerivedPropertiesConsumer(mapping)
 
         when:
-        consumer.accept(persistentProperty)
+        consumer.accept(titleProperty)
 
         then:
         propConfig.isDerived() == true
@@ -52,20 +58,16 @@ class ConfigureDerivedPropertiesConsumerSpec extends HibernateGormDatastoreSpec 
 
     def "should set derived to false if formula is null"() {
         given:
-        def mapping = Mock(Mapping)
-        def propConfig = new PropertyConfig()
-        propConfig.setFormula(null)
-        
-        def persistentProperty = Mock(PersistentProperty)
-        persistentProperty.getName() >> "nonDerivedProp"
-        
-        mapping.getPropertyConfig("nonDerivedProp") >> propConfig
-        
+        def mapping = mappingContext.getPersistentEntity(CDPCBook.name).mappedForm
+        def propConfig = new org.grails.orm.hibernate.cfg.PropertyConfig()
+        propConfig.formula = null
+        mapping.columns['title'] = propConfig
+
         @Subject
         def consumer = new ConfigureDerivedPropertiesConsumer(mapping)
 
         when:
-        consumer.accept(persistentProperty)
+        consumer.accept(titleProperty)
 
         then:
         propConfig.isDerived() == false
@@ -73,19 +75,25 @@ class ConfigureDerivedPropertiesConsumerSpec extends HibernateGormDatastoreSpec 
 
     def "should do nothing if property configuration is missing"() {
         given:
-        def mapping = Mock(Mapping)
-        def persistentProperty = Mock(PersistentProperty)
-        persistentProperty.getName() >> "missingProp"
-        
-        mapping.getPropertyConfig("missingProp") >> null
-        
+        def mapping = mappingContext.getPersistentEntity(CDPCBook.name).mappedForm
+
         @Subject
         def consumer = new ConfigureDerivedPropertiesConsumer(mapping)
 
+        // use a property name with no PropertyConfig entry
+        HibernatePersistentProperty idProp = mappingContext
+            .getPersistentEntity(CDPCBook.name).identity as HibernatePersistentProperty
+
         when:
-        consumer.accept(persistentProperty)
+        consumer.accept(idProp)
 
         then:
         noExceptionThrown()
     }
+}
+
+class CDPCBook implements HibernateEntity<CDPCBook> {
+    Long id
+    Long version
+    String title
 }

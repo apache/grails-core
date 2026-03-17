@@ -1,19 +1,66 @@
-////
-Licensed to the Apache Software Foundation (ASF) under one
-or more contributor license agreements.  See the NOTICE file
-distributed with this work for additional information
-regarding copyright ownership.  The ASF licenses this file
-to you under the Apache License, Version 2.0 (the
-"License"); you may not use this file except in compliance
-with the License.  You may obtain a copy of the License at
+[[domainClasses]]
+== Domain Classes
 
-https://www.apache.org/licenses/LICENSE-2.0
+Domain classes are the heart of a GORM application. They represent the data model and are mapped to database tables automatically by convention.
 
-Unless required by applicable law or agreed to in writing,
-software distributed under the License is distributed on an
-"AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
-KIND, either express or implied.  See the License for the
-specific language governing permissions and limitations
-under the License.
-////
+=== Anatomy of a Domain Class
 
+[source,groovy]
+----
+class Book {
+    String title
+    String author
+    Integer pages
+    Date dateCreated         // <1>
+    Date lastUpdated         // <1>
+
+    static constraints = {   // <2>
+        title  blank: false, maxSize: 255
+        author blank: false
+        pages  min: 1, nullable: true
+    }
+
+    static mapping = {       // <3>
+        table 'books'
+        title index: true
+    }
+}
+----
+<1> `dateCreated` and `lastUpdated` are automatically timestamped by GORM.
+<2> The `constraints` block defines validation rules and column constraints.
+<3> The `mapping` block customises the Hibernate ORM mapping.
+
+=== Automatic Properties
+
+Every domain class automatically gets:
+
+[cols="1,2"]
+|===
+|Property | Description
+
+|`id`
+|Auto-generated primary key (`Long` by default)
+
+|`version`
+|Optimistic locking version column (`Long`)
+|===
+
+And auto-timestamped properties if declared:
+
+[cols="1,2"]
+|===
+|Property | Description
+
+|`dateCreated`
+|Set to the current timestamp on first save
+
+|`lastUpdated`
+|Updated to the current timestamp on every save
+|===
+
+Refer to the following sections for details on domain class features:
+
+* xref:domainClasses-setsListsAndMaps[Sets, Lists and Maps]
+* xref:domainClasses-gormAssociation[GORM Associations]
+* xref:domainClasses-gormComposition[GORM Composition]
+* xref:domainClasses-inheritanceInGORM[Inheritance in GORM]

@@ -18,20 +18,23 @@
  */
 package org.grails.orm.hibernate.cfg.domainbinding.binder;
 
+import java.util.Arrays;
 import java.util.List;
+import java.util.Optional;
+import java.util.stream.Collectors;
+import java.util.stream.IntStream;
+import java.util.stream.Stream;
 
 import org.hibernate.boot.spi.MetadataBuildingContext;
 import org.hibernate.engine.jdbc.env.spi.JdbcEnvironment;
 import org.hibernate.mapping.SimpleValue;
 
-import org.grails.datastore.mapping.model.PersistentEntity;
-import org.grails.datastore.mapping.model.PersistentProperty;
-import org.grails.datastore.mapping.model.types.ToOne;
 import org.grails.orm.hibernate.cfg.ColumnConfig;
 import org.grails.orm.hibernate.cfg.CompositeIdentity;
 import org.grails.orm.hibernate.cfg.PersistentEntityNamingStrategy;
 import org.grails.orm.hibernate.cfg.domainbinding.hibernate.GrailsHibernatePersistentEntity;
 import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernatePersistentProperty;
+import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernateToOneProperty;
 import org.grails.orm.hibernate.cfg.domainbinding.util.BackticksRemover;
 import org.grails.orm.hibernate.cfg.domainbinding.util.DefaultColumnNameFetcher;
 import org.grails.orm.hibernate.cfg.domainbinding.util.ForeignKeyColumnCountCalculator;
@@ -40,6 +43,7 @@ import static org.grails.orm.hibernate.cfg.domainbinding.binder.GrailsDomainBind
 
 @SuppressWarnings("PMD.DataflowAnomalyAnalysis")
 public class CompositeIdentifierToManyToOneBinder {
+
     private final ForeignKeyColumnCountCalculator foreignKeyColumnCountCalculator;
     private final PersistentEntityNamingStrategy namingStrategy;
     private final DefaultColumnNameFetcher defaultColumnNameFetcher;
@@ -75,72 +79,66 @@ public class CompositeIdentifierToManyToOneBinder {
             HibernatePersistentProperty property,
             SimpleValue value,
             CompositeIdentity compositeId,
-            PersistentEntity refDomainClass,
+            GrailsHibernatePersistentEntity refDomainClass,
             String path) {
         String[] propertyNames = compositeId.getPropertyNames();
-
         List<ColumnConfig> columns = property.getMappedForm().getColumns();
-        int i = columns.size();
-        int expectedForeignKeyColumnLength =
-                foreignKeyColumnCountCalculator.calculateForeignKeyColumnCount(refDomainClass, propertyNames);
-        if (i != expectedForeignKeyColumnLength) {
-            int j = 0;
-            for (String propertyName : propertyNames) {
-                final ColumnConfig cc;
-                // if a column configuration exists in the mapping use it
-                if (j < i) {
-                    cc = columns.get(j++);
-                }
-                // otherwise create a new one to represent the composite column
-                else {
-                    cc = new ColumnConfig();
-                }
-                // if the name is null then configure the name by convention
-                if (cc.getName() == null) {
-                    // use the referenced table name as a prefix
-                    String prefix = refDomainClass instanceof GrailsHibernatePersistentEntity ghpe ?
-                            ghpe.getTableName(namingStrategy) :
-                            refDomainClass.getName();
-                    PersistentProperty referencedProperty = refDomainClass.getPropertyByName(propertyName);
-
-                    // if the referenced property is a ToOne and it has a composite id
-                    // then a column is needed for each property that forms the composite id
-                    if (referencedProperty instanceof ToOne toOne) {
-                        PersistentProperty[] compositeIdentity =
-                                toOne.getAssociatedEntity().getCompositeIdentity();
-                        if (compositeIdentity != null) {
-                            for (PersistentProperty cip : compositeIdentity) {
-                                // for each property of a composite id by default we use the table name and the
-                                // property name as a prefix
-                                String string = namingStrategy.resolveColumnName(referencedProperty.getName());
-                                String compositeIdPrefix =
-                                        backticksRemover.apply(prefix) + UNDERSCORE + backticksRemover.apply(string);
-
-                                String suffix = cip instanceof HibernatePersistentProperty ghpp ?
-                                        defaultColumnNameFetcher.getDefaultColumnName(ghpp) :
-                                        cip.getName();
-                                String finalColumnName = backticksRemover.apply(compositeIdPrefix) +
-                                        UNDERSCORE +
-                                        backticksRemover.apply(suffix);
-                                ColumnConfig newCc = new ColumnConfig();
-                                newCc.setName(finalColumnName);
-                                columns.add(newCc);
-                            }
-                            continue;
+        int existingCount = columns.size();
+        if (existingCount
+                != foreignKeyColumnCountCalculator.calculateForeignKeyColumnCount(refDomainClass, propertyNames)) {
+            String prefix = refDomainClass.getTableName(namingStrategy);
+            IntStream.range(0, propertyNames.length)
+                    .boxed()
+                    .flatMap(idx -> {
+                        ColumnConfig cc = idx < existingCount ? columns.get(idx) : new ColumnConfig();
+                        if (cc.getName() != null) {
+                            return Stream.empty();
                         }
-                    }
-
-                    String suffix = referencedProperty instanceof HibernatePersistentProperty ghpp ?
-                            defaultColumnNameFetcher.getDefaultColumnName(ghpp) :
-                            referencedProperty.getName();
-                    String finalColumnName =
-                            backticksRemover.apply(prefix) + UNDERSCORE + backticksRemover.apply(suffix);
-                    cc.setName(finalColumnName);
-                    columns.add(cc);
-                }
-            }
+                        String propertyName = propertyNames[idx];
+                        HibernatePersistentProperty ref = refDomainClass.getHibernatePropertyByName(propertyName);
+                        return tryExpandNestedComposite(prefix, propertyName, ref)
+                                .orElseGet(() -> singleColumn(prefix, propertyName, ref, cc));
+                    })
+                    .forEach(columns::add);
         }
-        // set type
         simpleValueBinder.bindSimpleValue(property, null, value, path);
+    }
+
+    /**
+     * If {@code ref} is a to-one whose associated entity has a composite identity, returns a stream
+     * of one named {@link ColumnConfig} per composite-identity property. Returns empty otherwise.
+     */
+    private Optional<Stream<ColumnConfig>> tryExpandNestedComposite(
+            String prefix, String propertyName, HibernatePersistentProperty ref) {
+        if (!(ref instanceof HibernateToOneProperty toOne)) {
+            return Optional.empty();
+        }
+        HibernatePersistentProperty[] nestedComposite =
+                toOne.getHibernateAssociatedEntity().getCompositeIdentity();
+        if (nestedComposite == null) {
+            return Optional.empty();
+        }
+        return Optional.of(Arrays.stream(nestedComposite)
+                .map(cip -> namedColumn(join(
+                        prefix,
+                        namingStrategy.resolveColumnName(propertyName),
+                        defaultColumnNameFetcher.getDefaultColumnName(cip)))));
+    }
+
+    private Stream<ColumnConfig> singleColumn(
+            String prefix, String propertyName, HibernatePersistentProperty ref, ColumnConfig cc) {
+        String suffix = ref != null ? defaultColumnNameFetcher.getDefaultColumnName(ref) : propertyName;
+        cc.setName(join(prefix, suffix));
+        return Stream.of(cc);
+    }
+
+    private ColumnConfig namedColumn(String name) {
+        ColumnConfig cc = new ColumnConfig();
+        cc.setName(name);
+        return cc;
+    }
+
+    private String join(String... parts) {
+        return Arrays.stream(parts).map(backticksRemover).collect(Collectors.joining(String.valueOf(UNDERSCORE)));
     }
 }

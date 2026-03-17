@@ -1,19 +1,53 @@
-////
-Licensed to the Apache Software Foundation (ASF) under one
-or more contributor license agreements.  See the NOTICE file
-distributed with this work for additional information
-regarding copyright ownership.  The ASF licenses this file
-to you under the Apache License, Version 2.0 (the
-"License"); you may not use this file except in compliance
-with the License.  You may obtain a copy of the License at
+[[persistenceBasics-deletingObjects]]
+== Deleting Objects
 
-https://www.apache.org/licenses/LICENSE-2.0
+Call `delete()` on a loaded instance to remove it from the database:
 
-Unless required by applicable law or agreed to in writing,
-software distributed under the License is distributed on an
-"AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
-KIND, either express or implied.  See the License for the
-specific language governing permissions and limitations
-under the License.
-////
+[source,groovy]
+----
+def book = Book.get(1)
+book.delete()
+----
 
+=== Flush on Delete
+
+[source,groovy]
+----
+book.delete(flush: true)    // issues DELETE immediately
+----
+
+=== Cascade Delete
+
+When a domain class declares `belongsTo`, deleting the parent also deletes its children:
+
+[source,groovy]
+----
+class Author {
+    static hasMany = [books: Book]
+}
+
+class Book {
+    static belongsTo = [author: Author]
+}
+
+// Deletes the author AND all associated books
+Author.get(1).delete()
+----
+
+To delete without cascading, remove the `belongsTo` and configure cascade behaviour explicitly — see xref:ormdsl-customCascadeBehaviour[Custom Cascade Behaviour].
+
+=== Bulk Delete
+
+Use `deleteAll()` to delete all instances matching a criteria:
+
+[source,groovy]
+----
+Book.where { genre == 'Horror' }.deleteAll()
+----
+
+Or with HQL:
+
+[source,groovy]
+----
+Book.executeUpdate("delete Book where genre = :genre", [genre: 'Horror'])
+----

@@ -31,6 +31,7 @@ import org.grails.datastore.mapping.query.Query
 import org.grails.orm.hibernate.query.JpaFromProvider
 import org.grails.orm.hibernate.query.PredicateGenerator
 import org.hibernate.query.criteria.HibernateCriteriaBuilder
+import org.springframework.core.convert.support.DefaultConversionService
 
 class PredicateGeneratorSpec extends HibernateGormDatastoreSpec {
 
@@ -42,7 +43,7 @@ class PredicateGeneratorSpec extends HibernateGormDatastoreSpec {
     PersistentEntity personEntity
 
     def setup() {
-        predicateGenerator = new PredicateGenerator()
+        predicateGenerator = new PredicateGenerator(new DefaultConversionService())
         cb = sessionFactory.getCriteriaBuilder()
         query = cb.createQuery(Person)
         root = query.from(Person)
@@ -477,6 +478,47 @@ class PredicateGeneratorSpec extends HibernateGormDatastoreSpec {
         when:
         def predicates = predicateGenerator.getPredicates(cb, query, root, criteria, fromProvider, personEntity)
         then:
+        predicates.length == 1
+    }
+
+    def "test getPredicates with Exists and no back-reference does not throw"() {
+        given: "Face has no association back to Person"
+        List criteria = [new Query.Exists(new DetachedCriteria(Face).eq("id", 1L))]
+        when:
+        def predicates = predicateGenerator.getPredicates(cb, query, root, criteria, fromProvider, personEntity)
+        then:
+        predicates.length == 1
+    }
+
+    def "test getPredicates with EqualsProperty for correlated alias path"() {
+        given: "outer query on Person with alias 'p'; compare Pet.person (FK id) == p.id"
+        def outerCriteria = new DetachedCriteria(Person)
+        outerCriteria.setAlias("p")
+        def aliasedProvider = new JpaFromProvider(outerCriteria, query, root)
+        List criteria = [new Query.EqualsProperty("firstName", "lastName")]
+        when:
+        def predicates = predicateGenerator.getPredicates(cb, query, root, criteria, aliasedProvider, personEntity)
+        then:
+        predicates.length == 1
+    }
+
+    def "test gt with String value is coerced to Number"() {
+        given:
+        List criteria = [new Query.GreaterThan("age", "20")]
+        when:
+        def predicates = predicateGenerator.getPredicates(cb, query, root, criteria, fromProvider, personEntity)
+        then:
+        noExceptionThrown()
+        predicates.length == 1
+    }
+
+    def "test lt with String value is coerced to Number"() {
+        given:
+        List criteria = [new Query.LessThan("age", "30")]
+        when:
+        def predicates = predicateGenerator.getPredicates(cb, query, root, criteria, fromProvider, personEntity)
+        then:
+        noExceptionThrown()
         predicates.length == 1
     }
 }

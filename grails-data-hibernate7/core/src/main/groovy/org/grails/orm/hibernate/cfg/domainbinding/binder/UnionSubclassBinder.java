@@ -23,6 +23,7 @@ import jakarta.annotation.Nonnull;
 import org.hibernate.MappingException;
 import org.hibernate.boot.spi.InFlightMetadataCollector;
 import org.hibernate.boot.spi.MetadataBuildingContext;
+import org.hibernate.mapping.PersistentClass;
 import org.hibernate.mapping.Table;
 import org.hibernate.mapping.UnionSubclass;
 import org.slf4j.Logger;
@@ -43,29 +44,30 @@ public class UnionSubclassBinder {
     private final MetadataBuildingContext metadataBuildingContext;
     private final PersistentEntityNamingStrategy namingStrategy;
     private final ClassBinder classBinder;
+    private final InFlightMetadataCollector mappings;
 
     public UnionSubclassBinder(
             MetadataBuildingContext metadataBuildingContext,
             PersistentEntityNamingStrategy namingStrategy,
-            ClassBinder classBinder) {
+            ClassBinder classBinder,
+            InFlightMetadataCollector mappings) {
         this.metadataBuildingContext = metadataBuildingContext;
         this.namingStrategy = namingStrategy;
         this.classBinder = classBinder;
+        this.mappings = mappings;
     }
 
     /**
      * Binds a union sub-class mapping using table-per-concrete-class
      *
      * @param subClass The Grails sub class
-     * @param unionSubclass The Hibernate UnionSubclass object
-     * @param mappings The mappings Object
+     * @param parent The Hibernate Parent PersistentClass object
+     * @return The created UnionSubclass
      */
-    public void bindUnionSubclass(
-            @Nonnull GrailsHibernatePersistentEntity subClass,
-            UnionSubclass unionSubclass,
-            @Nonnull InFlightMetadataCollector mappings)
+    public UnionSubclass bindUnionSubclass(@Nonnull GrailsHibernatePersistentEntity subClass, PersistentClass parent)
             throws MappingException {
-        classBinder.bindClass(subClass, unionSubclass, mappings);
+        UnionSubclass unionSubclass = new UnionSubclass(parent, metadataBuildingContext);
+        classBinder.bindClass(subClass, unionSubclass);
 
         String schema = subClass.getSchema(mappings);
         String catalog = subClass.getCatalog(mappings);
@@ -83,9 +85,11 @@ public class UnionSubclassBinder {
         unionSubclass.setClassName(subClass.getName());
 
         if (LOG.isInfoEnabled()) {
-            LOG.info("Mapping union-subclass: " + unionSubclass.getEntityName() +
-                    " -> " +
-                    unionSubclass.getTable().getName());
+            LOG.info("Mapping union-subclass: "
+                    + unionSubclass.getEntityName()
+                    + " -> "
+                    + unionSubclass.getTable().getName());
         }
+        return unionSubclass;
     }
 }

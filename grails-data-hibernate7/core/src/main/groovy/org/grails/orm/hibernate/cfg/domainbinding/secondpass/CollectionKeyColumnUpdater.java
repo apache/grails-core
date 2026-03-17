@@ -19,20 +19,32 @@
 package org.grails.orm.hibernate.cfg.domainbinding.secondpass;
 
 import java.util.Objects;
-import java.util.stream.StreamSupport;
 
+import org.hibernate.mapping.Collection;
 import org.hibernate.mapping.DependantValue;
+import org.hibernate.mapping.PersistentClass;
 
 import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernateToManyProperty;
 
-/** Forces columns to be nullable and checks if the key is updateable. */
+/** Forces columns to be nullable and checks if the key is updatable. */
 public class CollectionKeyColumnUpdater {
+
+    private final CollectionKeyBinder collectionKeyBinder;
+
+    /** Creates a new {@link CollectionKeyColumnUpdater} instance. */
+    public CollectionKeyColumnUpdater(CollectionKeyBinder collectionKeyBinder) {
+        this.collectionKeyBinder = collectionKeyBinder;
+    }
+
+    /** Creates the key, sets it on the collection, and updates its columns. */
+    public void bind(HibernateToManyProperty property, PersistentClass associatedClass, Collection collection) {
+        DependantValue key = collectionKeyBinder.bind(property, associatedClass, collection);
+        forceNullableAndCheckUpdatable(key, property);
+    }
 
     /** Force nullable and check updatable. */
     public void forceNullableAndCheckUpdatable(DependantValue key, HibernateToManyProperty property) {
-        StreamSupport.stream(key.getColumns().spliterator(), false)
-                .filter(Objects::nonNull)
-                .forEach(column -> column.setNullable(true));
+        key.getColumns().stream().filter(Objects::nonNull).forEach(column -> column.setNullable(true));
 
         long unidirectionalCount = property.getHibernateOwner().getPersistentPropertiesToBind().stream()
                 .filter(p -> p instanceof HibernateToManyProperty association && !association.isBidirectional())

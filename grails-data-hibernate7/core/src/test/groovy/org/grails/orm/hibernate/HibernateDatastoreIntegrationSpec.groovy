@@ -23,6 +23,7 @@ import grails.gorm.hibernate.HibernateEntity
 import grails.gorm.specs.HibernateGormDatastoreSpec
 import org.grails.orm.hibernate.cfg.HibernateMappingContext
 import org.grails.orm.hibernate.event.listener.HibernateEventListener
+import org.hibernate.FlushMode
 import org.springframework.transaction.support.TransactionSynchronizationManager
 import org.testcontainers.containers.PostgreSQLContainer
 import org.testcontainers.spock.Testcontainers
@@ -103,7 +104,7 @@ class HibernateDatastoreIntegrationSpec extends HibernateGormDatastoreSpec {
     }
 
     // -------------------------------------------------------------------------
-    // Configuration flags (AbstractHibernateDatastore)
+    // Configuration flags (HibernateDatastore)
     // -------------------------------------------------------------------------
 
     void "dataSourceName defaults to DEFAULT"() {
@@ -116,10 +117,9 @@ class HibernateDatastoreIntegrationSpec extends HibernateGormDatastoreSpec {
         !datastore.autoFlush
     }
 
-    void "defaultFlushMode is COMMIT level by default"() {
+    void "defaultFlushMode is COMMIT by default"() {
         expect:
-        // AbstractHibernateDatastore.FlushMode.COMMIT.level == 5
-        datastore.defaultFlushMode == AbstractHibernateDatastore.FlushMode.COMMIT.level
+        datastore.defaultFlushMode == FlushMode.COMMIT
     }
 
     void "defaultFlushModeName is COMMIT by default"() {
@@ -148,24 +148,16 @@ class HibernateDatastoreIntegrationSpec extends HibernateGormDatastoreSpec {
     }
 
     // -------------------------------------------------------------------------
-    // FlushMode enum (AbstractHibernateDatastore.FlushMode)
+    // FlushMode (org.hibernate.FlushMode)
     // -------------------------------------------------------------------------
-
-    void "FlushMode enum levels are correctly ordered"() {
-        expect:
-        AbstractHibernateDatastore.FlushMode.MANUAL.level  == 0
-        AbstractHibernateDatastore.FlushMode.COMMIT.level  == 5
-        AbstractHibernateDatastore.FlushMode.AUTO.level    == 10
-        AbstractHibernateDatastore.FlushMode.ALWAYS.level  == 20
-    }
 
     void "FlushMode enum values are all present"() {
         expect:
-        AbstractHibernateDatastore.FlushMode.values().size() == 4
-        AbstractHibernateDatastore.FlushMode.valueOf('MANUAL')  != null
-        AbstractHibernateDatastore.FlushMode.valueOf('COMMIT')  != null
-        AbstractHibernateDatastore.FlushMode.valueOf('AUTO')    != null
-        AbstractHibernateDatastore.FlushMode.valueOf('ALWAYS')  != null
+        FlushMode.values().size() == 4
+        FlushMode.valueOf('MANUAL')  != null
+        FlushMode.valueOf('COMMIT')  != null
+        FlushMode.valueOf('AUTO')    != null
+        FlushMode.valueOf('ALWAYS')  != null
     }
 
     // -------------------------------------------------------------------------
@@ -239,7 +231,7 @@ class HibernateDatastoreIntegrationSpec extends HibernateGormDatastoreSpec {
 
         when:
         DatastoreBook.withTransaction {
-            datastore.withFlushMode(AbstractHibernateDatastore.FlushMode.AUTO) {
+            datastore.withFlushMode(FlushMode.AUTO) {
                 executed = true
                 true
             }
@@ -258,7 +250,7 @@ class HibernateDatastoreIntegrationSpec extends HibernateGormDatastoreSpec {
             def sess = sessionFactory.currentSession
             org.hibernate.FlushMode modeBefore = sess.hibernateFlushMode
 
-            datastore.withFlushMode(AbstractHibernateDatastore.FlushMode.ALWAYS) { true }
+            datastore.withFlushMode(FlushMode.ALWAYS) { true }
 
             modeAfter = sess.hibernateFlushMode
         }
@@ -304,7 +296,7 @@ class HibernateDatastoreIntegrationSpec extends HibernateGormDatastoreSpec {
     }
 
     // -------------------------------------------------------------------------
-    // Event listeners (AbstractHibernateDatastore)
+    // Event listeners (HibernateDatastore)
     // -------------------------------------------------------------------------
 
     void "eventTriggeringInterceptor is a HibernateEventListener"() {

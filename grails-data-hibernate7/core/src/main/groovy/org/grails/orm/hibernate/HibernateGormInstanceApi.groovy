@@ -1,11 +1,11 @@
 /*
- * Copyright 2013 the original author or authors.
+ * Copyright 2013-2026 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
  *
- *      http://www.apache.org/licenses/LICENSE-2.0
+ * http://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
@@ -15,9 +15,12 @@
  */
 package org.grails.orm.hibernate
 
+import org.hibernate.LockMode
+
 import grails.gorm.validation.CascadingValidator
 import groovy.transform.CompileStatic
 import jakarta.persistence.FlushModeType
+import jakarta.persistence.LockModeType
 import org.codehaus.groovy.runtime.InvokerHelper
 import org.grails.datastore.gorm.GormInstanceApi
 import org.grails.datastore.gorm.GormValidateable
@@ -35,13 +38,11 @@ import org.grails.orm.hibernate.cfg.GrailsHibernateUtil
 import org.grails.orm.hibernate.support.HibernateRuntimeUtils
 
 import org.hibernate.HibernateException
-import org.hibernate.LockMode
 import org.hibernate.Session
 import org.hibernate.SessionFactory
 import org.hibernate.engine.spi.EntityEntry
 import org.hibernate.engine.spi.SessionImplementor
 import org.hibernate.persister.entity.EntityPersister
-import org.hibernate.tuple.NonIdentifierAttribute
 import org.springframework.beans.BeanWrapperImpl
 import org.springframework.beans.InvalidPropertyException
 import org.springframework.dao.DataAccessException
@@ -49,10 +50,7 @@ import org.springframework.validation.Errors
 import org.springframework.validation.Validator
 
 /**
- * The implementation of the GORM instance API contract for Hibernate.
- *
- * @author Graeme Rocher
- * @since 1.0
+ * The implementation of the GORM instance API contract for Hibernate 7.
  */
 @CompileStatic
 class HibernateGormInstanceApi<D> extends GormInstanceApi<D> {
@@ -68,20 +66,17 @@ class HibernateGormInstanceApi<D> extends GormInstanceApi<D> {
     static {
         try {
             DEFERRED_BINDING = Class.forName('grails.validation.DeferredBindingActions')
-        } catch (Throwable e) {
+        } catch (Throwable ignored) {
             DEFERRED_BINDING = null
         }
     }
 
-    protected static final Object[] EMPTY_ARRAY = []
     static final ThreadLocal<Boolean> insertActiveThreadLocal = new ThreadLocal<Boolean>()
 
     protected SessionFactory sessionFactory
     protected ClassLoader classLoader
     protected IHibernateTemplate hibernateTemplate
-
     boolean autoFlush
-
     protected InstanceApiHelper instanceApiHelper
 
     HibernateGormInstanceApi(Class<D> persistentClass, HibernateDatastore datastore, ClassLoader classLoader) {
@@ -111,14 +106,13 @@ class HibernateGormInstanceApi<D> extends GormInstanceApi<D> {
 
         if (shouldValidate) {
             Validator validator = datastore.mappingContext.getEntityValidator(domainClass)
-
             Errors errors = HibernateRuntimeUtils.setupErrorsProperty(target)
 
             if (validator) {
                 datastore.applicationEventPublisher?.publishEvent new ValidationEvent(datastore, target)
 
                 if (validator instanceof CascadingValidator) {
-                    ((CascadingValidator)validator).validate target, errors, deepValidate
+                    ((CascadingValidator) validator).validate target, errors, deepValidate
                 } else if (validator instanceof org.grails.datastore.gorm.validation.CascadingValidator) {
                     ((org.grails.datastore.gorm.validation.CascadingValidator) validator).validate target, errors, deepValidate
                 } else {
@@ -132,7 +126,6 @@ class HibernateGormInstanceApi<D> extends GormInstanceApi<D> {
                     }
                     return null
                 }
-
                 setObjectToReadWrite(target)
             }
         }
@@ -155,10 +148,8 @@ class HibernateGormInstanceApi<D> extends GormInstanceApi<D> {
         }
     }
 
-    private void runDeferredBinding() {
+    private static void runDeferredBinding() {
         if (DEFERRED_BINDING != null) {
-            // DeferredBindingActions is from grails-data-binding (optional dep); invoked via reflection
-            // because it belongs to the migration plugin, which runs once per deployment and need not be on the compile classpath
             DEFERRED_BINDING.getMethod('runActions').invoke(null)
         }
     }
@@ -196,7 +187,7 @@ class HibernateGormInstanceApi<D> extends GormInstanceApi<D> {
         catch (DataAccessException e) {
             try {
                 hibernateTemplate.execute { Session session ->
-                    session.flushMode = FlushModeType.COMMIT
+                    session.setFlushMode(FlushModeType.COMMIT)
                 }
             }
             finally {
@@ -232,11 +223,11 @@ class HibernateGormInstanceApi<D> extends GormInstanceApi<D> {
     protected D performMerge(final D target, final boolean flush) {
         hibernateTemplate.execute { Session session ->
             Object merged = session.merge(target)
-            session.lock(merged, LockMode.NONE)
+            session.lock(merged, LockModeType.NONE)
             if (flush) {
                 flushSession session
             }
-            return (D)merged
+            return (D) merged
         }
     }
 
@@ -252,15 +243,14 @@ class HibernateGormInstanceApi<D> extends GormInstanceApi<D> {
             } finally {
                 resetInsertActive()
             }
-
         }
     }
 
-    protected void flushSession(Session session) throws HibernateException {
+    protected static void flushSession(Session session) throws HibernateException {
         try {
             session.flush()
         } catch (HibernateException e) {
-            session.setFlushMode FlushModeType.COMMIT
+            session.setFlushMode(FlushModeType.COMMIT)
             throw e
         }
     }
@@ -271,8 +261,7 @@ class HibernateGormInstanceApi<D> extends GormInstanceApi<D> {
         IHibernateTemplate t = this.hibernateTemplate
         for (PersistentProperty prop in entity.associations) {
             if (prop instanceof ToOne && !(prop instanceof Embedded)) {
-                ToOne toOne = (ToOne)prop
-
+                ToOne toOne = (ToOne) prop
                 def propertyName = prop.name
                 def propValue = reflector.getProperty(target, propertyName)
                 if (propValue == null || t.contains(propValue)) {
@@ -280,18 +269,14 @@ class HibernateGormInstanceApi<D> extends GormInstanceApi<D> {
                 }
 
                 PersistentEntity otherSide = toOne.associatedEntity
-                if (otherSide == null) {
-                    continue
-                }
+                if (otherSide == null) continue
 
                 def identity = otherSide.identity
-                if (identity == null) {
-                    continue
-                }
+                if (identity == null) continue
 
                 def otherSideReflector = datastore.mappingContext.getEntityReflector(otherSide)
                 try {
-                    def id = (Serializable)otherSideReflector.getProperty(propValue, identity.name)
+                    def id = (Serializable) otherSideReflector.getProperty(propValue, identity.name)
                     if (id) {
                         final Object associatedInstance = t.get(prop.type, id)
                         if (associatedInstance) {
@@ -299,18 +284,13 @@ class HibernateGormInstanceApi<D> extends GormInstanceApi<D> {
                         }
                     }
                 }
-                catch (InvalidPropertyException ipe) {
-                    // property is not accessable
-                }
+                catch (InvalidPropertyException ignored) {}
             }
-
         }
     }
 
-    private boolean shouldValidate(Map arguments, PersistentEntity entity) {
-        if (!entity) {
-            return false
-        }
+    private static boolean shouldValidate(Map arguments, PersistentEntity entity) {
+        if (!entity) return false
         if (arguments?.containsKey(ARGUMENT_VALIDATE)) {
             return ClassUtils.getBooleanFromMap(ARGUMENT_VALIDATE, arguments)
         }
@@ -348,7 +328,7 @@ class HibernateGormInstanceApi<D> extends GormInstanceApi<D> {
         return null
     }
 
-    protected void setErrorsOnInstance(Object target, Errors errors) {
+    protected static void setErrorsOnInstance(Object target, Errors errors) {
         if (target instanceof GormValidateable) {
             ((GormValidateable) target).setErrors(errors)
         } else {
@@ -364,114 +344,77 @@ class HibernateGormInstanceApi<D> extends GormInstanceApi<D> {
         insertActiveThreadLocal.remove()
     }
 
-    /**
-     * Checks whether a field is dirty
-     *
-     * @param instance The instance
-     * @param fieldName The name of the field
-     *
-     * @return true if the field is dirty
-     */
+    // --- Dirty Checking Logic ---
 
     boolean isDirty(D instance, String fieldName) {
-        SessionImplementor session = (SessionImplementor)sessionFactory.currentSession
+        SessionImplementor session = (SessionImplementor) sessionFactory.currentSession
         EntityEntry entry = findEntityEntry(instance, session)
-        if (!entry || !entry.loadedState) {
-            return false
-        }
+        if (!entry || !entry.loadedState) return false
 
         EntityPersister persister = entry.persister
-        Object[] values = persister.getPropertyValues(instance)
+        Object[] values = persister.getValues(instance)
         int[] dirtyProperties = findDirty(persister, values, entry, instance, session)
-        if (dirtyProperties == null) {
-            return false
-        }
-        NonIdentifierAttribute[] props = persister.getEntityMetamodel().getProperties()
+        if (dirtyProperties == null) return false
+
+        String[] propertyNames = persister.getPropertyNames()
         int fieldIndex = -1
-        for (int i = 0; i < props.length; i++) {
-            if (props[i].name == fieldName) { fieldIndex = i; break }
+        for (int i = 0; i < propertyNames.length; i++) {
+            if (propertyNames[i] == fieldName) { fieldIndex = i; break }
         }
         return fieldIndex in dirtyProperties
     }
 
-    private int[] findDirty(EntityPersister persister, Object[] values, EntityEntry entry, D instance, SessionImplementor session) {
-        persister.findDirty(values, entry.loadedState, instance, session)
-    }
-
-    /**
-     * Checks whether an entity is dirty
-     *
-     * @param instance The instance
-     * @return true if it is dirty
-     */
     boolean isDirty(D instance) {
-        SessionImplementor session = (SessionImplementor)sessionFactory.currentSession
+        SessionImplementor session = (SessionImplementor) sessionFactory.currentSession
         EntityEntry entry = findEntityEntry(instance, session)
-        if (!entry || !entry.loadedState) {
-            return false
-        }
+        if (!entry || !entry.loadedState) return false
+
         EntityPersister persister = entry.persister
-        Object[] currentState = persister.getPropertyValues(instance)
+        Object[] currentState = persister.getValues(instance)
         int[] dirtyPropertyIndexes = findDirty(persister, currentState, entry, instance, session)
         return dirtyPropertyIndexes != null
     }
 
-    /**
-     * Obtains a list of property names that are dirty
-     *
-     * @param instance The instance
-     * @return A list of property names that are dirty
-     */
     List<String> getDirtyPropertyNames(D instance) {
-        SessionImplementor session = (SessionImplementor)sessionFactory.currentSession
+        SessionImplementor session = (SessionImplementor) sessionFactory.currentSession
         EntityEntry entry = findEntityEntry(instance, session)
-        if (!entry || !entry.loadedState) {
-            return []
-        }
+        if (!entry || !entry.loadedState) return []
 
         EntityPersister persister = entry.persister
-        Object[] currentState = persister.getPropertyValues(instance)
+        Object[] currentState = persister.getValues(instance)
         int[] dirtyPropertyIndexes = findDirty(persister, currentState, entry, instance, session)
+
         List<String> names = []
-        NonIdentifierAttribute[] entityProperties = persister.getEntityMetamodel().getProperties()
+        String[] propertyNames = persister.getPropertyNames()
         if (dirtyPropertyIndexes != null) {
             for (int index : dirtyPropertyIndexes) {
-                names.add(entityProperties[index].name)
+                names.add(propertyNames[index])
             }
         }
         return names
     }
 
-    /**
-     * Gets the original persisted value of a field.
-     *
-     * @param fieldName The field name
-     * @return The original persisted value
-     */
     Object getPersistentValue(D instance, String fieldName) {
-        SessionImplementor session = (SessionImplementor)sessionFactory.currentSession
+        SessionImplementor session = (SessionImplementor) sessionFactory.currentSession
         def entry = findEntityEntry(instance, session, false)
-        if (!entry || !entry.loadedState) {
-            return null
-        }
+        if (!entry || !entry.loadedState) return null
 
         EntityPersister persister = entry.persister
-        int fieldIndex = persister.getEntityMetamodel().getProperties().findIndexOf {
-            NonIdentifierAttribute attribute -> fieldName == attribute.name
-        }
+        String[] propertyNames = persister.getPropertyNames()
+        int fieldIndex = propertyNames.findIndexOf { it == fieldName }
         return fieldIndex == -1 ? null : entry.loadedState[fieldIndex]
     }
 
-    protected EntityEntry findEntityEntry(D instance, SessionImplementor session, boolean forDirtyCheck = true) {
+    // --- Helper Methods using proper Generic definitions to satisfy stubs ---
+
+    private static <T> int[] findDirty(EntityPersister persister, Object[] values, EntityEntry entry, T instance, SessionImplementor session) {
+        persister.findDirty(values, entry.loadedState, instance, session)
+    }
+
+    protected static <T> EntityEntry findEntityEntry(T instance, SessionImplementor session, boolean forDirtyCheck = true) {
         def entry = session.persistenceContext.getEntry(instance)
-        if (!entry) {
-            return null
-        }
-
-        if (forDirtyCheck && !entry.requiresDirtyCheck(instance) && entry.loadedState) {
-            return null
-        }
-
+        if (!entry) return null
+        if (forDirtyCheck && !entry.requiresDirtyCheck(instance) && entry.loadedState) return null
         return entry
     }
 

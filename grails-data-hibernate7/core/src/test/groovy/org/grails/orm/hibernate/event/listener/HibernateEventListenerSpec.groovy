@@ -34,7 +34,7 @@ class HibernateEventListenerSpec extends HibernateGormDatastoreSpec {
         HibernateMergeEvent lastMergeEvent
         HibernatePersistEvent lastPersistEvent
 
-        RecordingHibernateEventListener(org.grails.orm.hibernate.AbstractHibernateDatastore datastore) {
+        RecordingHibernateEventListener(org.grails.orm.hibernate.HibernateDatastore datastore) {
             super(datastore)
         }
 

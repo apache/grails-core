@@ -18,16 +18,17 @@
  */
 package org.grails.orm.hibernate.cfg.domainbinding.hibernate;
 
+import org.hibernate.mapping.PersistentClass;
+
 import org.grails.datastore.mapping.core.connections.ConnectionSourcesSupport;
-import org.grails.datastore.mapping.model.ClassMapping;
-import org.grails.datastore.mapping.model.EmbeddedPersistentEntity;
-import org.grails.datastore.mapping.model.MappingContext;
+import org.grails.datastore.mapping.model.*;
 import org.grails.orm.hibernate.cfg.Mapping;
 
 public class HibernateEmbeddedPersistentEntity extends EmbeddedPersistentEntity<Mapping>
         implements GrailsHibernatePersistentEntity {
     private final ClassMapping<Mapping> classMapping;
     private String dataSourceName;
+    private PersistentClass persistentClass;
 
     public Mapping getMappedForm() {
         return classMapping.getMappedForm();
@@ -73,13 +74,23 @@ public class HibernateEmbeddedPersistentEntity extends EmbeddedPersistentEntity<
         return false;
     }
 
-    public HibernateEmbeddedPersistentEntity(Class type, MappingContext ctx) {
+    public HibernateEmbeddedPersistentEntity(Class<?> type, MappingContext ctx) {
         super(type, ctx);
         this.classMapping = new HibernateEmbeddedClassMapping(this, ctx);
     }
 
     @Override
-    public ClassMapping getMapping() {
+    public ClassMapping<Mapping> getMapping() {
         return classMapping;
+    }
+
+    @Override
+    public void setPersistentClass(PersistentClass persistentClass) {
+        this.persistentClass = persistentClass;
+    }
+
+    @Override
+    public PersistentClass getPersistentClass() {
+        return persistentClass;
     }
 }

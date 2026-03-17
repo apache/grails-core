@@ -19,15 +19,14 @@
 package org.grails.orm.hibernate.cfg.domainbinding.util;
 
 import java.util.ArrayList;
-import java.util.Iterator;
 import java.util.List;
 
 import org.hibernate.MappingException;
 import org.hibernate.mapping.Column;
 import org.hibernate.mapping.Table;
 
-import org.grails.datastore.mapping.model.PersistentEntity;
 import org.grails.orm.hibernate.cfg.PropertyConfig;
+import org.grails.orm.hibernate.cfg.domainbinding.hibernate.GrailsHibernatePersistentEntity;
 import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernatePersistentProperty;
 
 @SuppressWarnings("PMD.DataflowAnomalyAnalysis")
@@ -56,11 +55,9 @@ public class CreateKeyForProps {
             List<Column> keyList = new ArrayList<>();
             keyList.add(new Column(columnName));
             List<String> propertyNames = mappedForm.getUniquenessGroup();
-            PersistentEntity owner = grailsProp.getOwner();
-            for (Iterator<?> i = propertyNames.iterator(); i.hasNext(); ) {
-                String propertyName = (String) i.next();
-                HibernatePersistentProperty otherProp =
-                        (HibernatePersistentProperty) owner.getPropertyByName(propertyName);
+            GrailsHibernatePersistentEntity owner = grailsProp.getHibernateOwner();
+            for (String propertyName : propertyNames) {
+                HibernatePersistentProperty otherProp = owner.getHibernatePropertyByName(propertyName);
                 if (otherProp == null) {
                     throw new MappingException(
                             owner.getJavaClass().getName() + " references an unknown property " + propertyName);

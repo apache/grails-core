@@ -184,5 +184,7 @@ class MyEntity {
         cls.getMethod('$$_hibernate_getNextManagedEntity').isAnnotationPresent(Generated)
         cls.getMethod('$$_hibernate_setPreviousManagedEntity', ManagedEntity).isAnnotationPresent(Generated)
         cls.getMethod('$$_hibernate_setNextManagedEntity', ManagedEntity).isAnnotationPresent(Generated)
+        cls.getMethod('$$_hibernate_getInstanceId').isAnnotationPresent(Generated)
+        cls.getMethod('$$_hibernate_setInstanceId', int).isAnnotationPresent(Generated)
     }
 }

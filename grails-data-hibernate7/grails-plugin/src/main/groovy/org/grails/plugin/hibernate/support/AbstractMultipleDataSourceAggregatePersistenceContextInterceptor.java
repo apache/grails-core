@@ -26,7 +26,7 @@ import org.hibernate.SessionFactory;
 import grails.persistence.support.PersistenceContextInterceptor;
 import org.grails.datastore.mapping.core.connections.ConnectionSource;
 import org.grails.datastore.mapping.core.connections.ConnectionSources;
-import org.grails.orm.hibernate.AbstractHibernateDatastore;
+import org.grails.orm.hibernate.HibernateDatastore;
 import org.grails.orm.hibernate.connections.HibernateConnectionSourceSettings;
 
 /**
@@ -39,10 +39,9 @@ public abstract class AbstractMultipleDataSourceAggregatePersistenceContextInter
         implements PersistenceContextInterceptor {
 
     protected final List<PersistenceContextInterceptor> interceptors = new ArrayList<>();
-    protected final AbstractHibernateDatastore hibernateDatastore;
+    protected final HibernateDatastore hibernateDatastore;
 
-    public AbstractMultipleDataSourceAggregatePersistenceContextInterceptor(
-            AbstractHibernateDatastore hibernateDatastore) {
+    public AbstractMultipleDataSourceAggregatePersistenceContextInterceptor(HibernateDatastore hibernateDatastore) {
         this.hibernateDatastore = hibernateDatastore;
         ConnectionSources<SessionFactory, HibernateConnectionSourceSettings> connectionSources =
                 hibernateDatastore.getConnectionSources();

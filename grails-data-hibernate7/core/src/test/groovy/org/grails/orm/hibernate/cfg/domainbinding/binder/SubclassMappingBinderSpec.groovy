@@ -21,16 +21,15 @@ package org.grails.orm.hibernate.cfg.domainbinding.binder
 
 import grails.gorm.annotation.Entity
 import grails.gorm.specs.HibernateGormDatastoreSpec
-import org.grails.orm.hibernate.cfg.Mapping
+
 import org.hibernate.boot.spi.MetadataBuildingContext
 import org.hibernate.mapping.JoinedSubclass
-import org.hibernate.mapping.PersistentClass
 import org.hibernate.mapping.RootClass
 import org.hibernate.mapping.SingleTableSubclass
 import org.hibernate.mapping.Subclass
 import org.hibernate.mapping.UnionSubclass
-import org.grails.orm.hibernate.cfg.domainbinding.hibernate.GrailsHibernatePersistentEntity
-import spock.lang.Shared
+
+import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernatePersistentEntity
 
 class SubclassMappingBinderSpec extends HibernateGormDatastoreSpec {
 
@@ -50,7 +49,6 @@ class SubclassMappingBinderSpec extends HibernateGormDatastoreSpec {
         classPropertiesBinder = Mock(ClassPropertiesBinder)
         
         binder = new SubclassMappingBinder(
-                metadataBuildingContext,
                 joinedSubClassBinder,
                 unionSubclassBinder,
                 singleTableSubclassBinder,
@@ -61,19 +59,24 @@ class SubclassMappingBinderSpec extends HibernateGormDatastoreSpec {
     def "test createSubclassMapping for single table inheritance"() {
         given:
         createPersistentEntity(SMBSSingleSuper)
-        def subEntity = createPersistentEntity(SMBSSingleSub)
+        // Cast the created persistent entity to HibernatePersistentEntity
+        def subEntity = createPersistentEntity(SMBSSingleSub) as HibernatePersistentEntity
         def rootClass = new RootClass(metadataBuildingContext)
         rootClass.setEntityName(SMBSSingleSuper.name)
         rootClass.setJpaEntityName(SMBSSingleSuper.name)
         def mappings = getCollector()
 
         when:
-        Subclass subClass = binder.createSubclassMapping(subEntity, rootClass, mappings)
+        Subclass subClass = binder.createSubclassMapping(subEntity, rootClass)
 
         then:
         subEntity != null
-        1 * singleTableSubclassBinder.bindSubClass(subEntity, _ as SingleTableSubclass, mappings)
-        1 * classPropertiesBinder.bindClassProperties(subEntity, _ as Subclass, mappings)
+        1 * singleTableSubclassBinder.bindSubClass(subEntity, rootClass) >> {
+            def s = new SingleTableSubclass(rootClass, metadataBuildingContext)
+            s.setEntityName(subEntity.getName())
+            s
+        }
+        1 * classPropertiesBinder.bindClassProperties(subEntity)
         subClass instanceof SingleTableSubclass
         subClass.getEntityName() == SMBSSingleSub.name
     }
@@ -81,19 +84,24 @@ class SubclassMappingBinderSpec extends HibernateGormDatastoreSpec {
     def "test createSubclassMapping for joined table inheritance"() {
         given:
         createPersistentEntity(SMBSJoinedSuper)
-        def subEntity = createPersistentEntity(SMBSJoinedSub)
+        // Cast the created persistent entity to HibernatePersistentEntity
+        def subEntity = createPersistentEntity(SMBSJoinedSub) as HibernatePersistentEntity
         def rootClass = new RootClass(metadataBuildingContext)
         rootClass.setEntityName(SMBSJoinedSuper.name)
         rootClass.setJpaEntityName(SMBSJoinedSuper.name)
         def mappings = getCollector()
 
         when:
-        Subclass subClass = binder.createSubclassMapping(subEntity, rootClass, mappings)
+        Subclass subClass = binder.createSubclassMapping(subEntity, rootClass)
 
         then:
         subEntity != null
-        1 * joinedSubClassBinder.bindJoinedSubClass(subEntity, _ as JoinedSubclass, mappings)
-        1 * classPropertiesBinder.bindClassProperties(subEntity, _ as Subclass, mappings)
+        1 * joinedSubClassBinder.bindJoinedSubClass(subEntity, rootClass) >> {
+            def s = new JoinedSubclass(rootClass, metadataBuildingContext)
+            s.setEntityName(subEntity.getName())
+            s
+        }
+        1 * classPropertiesBinder.bindClassProperties(subEntity)
         subClass instanceof JoinedSubclass
         subClass.getEntityName() == SMBSJoinedSub.name
     }
@@ -101,19 +109,24 @@ class SubclassMappingBinderSpec extends HibernateGormDatastoreSpec {
     def "test createSubclassMapping for table per concrete class inheritance"() {
         given:
         createPersistentEntity(SMBSUnionSuper)
-        def subEntity = createPersistentEntity(SMBSUnionSub)
+        // Cast the created persistent entity to HibernatePersistentEntity
+        def subEntity = createPersistentEntity(SMBSUnionSub) as HibernatePersistentEntity
         def rootClass = new RootClass(metadataBuildingContext)
         rootClass.setEntityName(SMBSUnionSuper.name)
         rootClass.setJpaEntityName(SMBSUnionSuper.name)
         def mappings = getCollector()
 
         when:
-        Subclass subClass = binder.createSubclassMapping(subEntity, rootClass, mappings)
+        Subclass subClass = binder.createSubclassMapping(subEntity, rootClass)
 
         then:
         subEntity != null
-        1 * unionSubclassBinder.bindUnionSubclass(subEntity, _ as UnionSubclass, mappings)
-        1 * classPropertiesBinder.bindClassProperties(subEntity, _ as Subclass, mappings)
+        1 * unionSubclassBinder.bindUnionSubclass(subEntity, rootClass) >> {
+            def s = new UnionSubclass(rootClass, metadataBuildingContext)
+            s.setEntityName(subEntity.getName())
+            s
+        }
+        1 * classPropertiesBinder.bindClassProperties(subEntity)
         subClass instanceof UnionSubclass
         subClass.getEntityName() == SMBSUnionSub.name
     }

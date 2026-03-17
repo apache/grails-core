@@ -31,10 +31,12 @@ import org.hibernate.mapping.SingleTableSubclass
 class SingleTableSubclassBinderSpec extends HibernateGormDatastoreSpec {
 
     SingleTableSubclassBinder binder
-    ClassBinder classBinder = new ClassBinder()
+    ClassBinder classBinder
 
     void setup() {
-        binder = new SingleTableSubclassBinder(classBinder)
+        def buildingContext = getGrailsDomainBinder().getMetadataBuildingContext()
+        classBinder = new ClassBinder(buildingContext.getMetadataCollector())
+        binder = new SingleTableSubclassBinder(classBinder, buildingContext)
     }
 
     void "test bind single table subclass with real entities"() {
@@ -54,13 +56,14 @@ class SingleTableSubclassBinderSpec extends HibernateGormDatastoreSpec {
         rootClass.setTable(rootTable)
         
         // Setup SingleTableSubclass
-        def singleTableSubclass = new SingleTableSubclass(rootClass, buildingContext)
-        singleTableSubclass.setEntityName(SingleTableSubClassSub.name)
+        // def singleTableSubclass = new SingleTableSubclass(rootClass, buildingContext)
+        // singleTableSubclass.setEntityName(SingleTableSubClassSub.name)
 
         when:
-        binder.bindSubClass(subEntity, singleTableSubclass, mappings)
+        def singleTableSubclass = binder.bindSubClass(subEntity, rootClass)
 
         then:
+        singleTableSubclass != null
         singleTableSubclass.getTable() == rootTable
         singleTableSubclass.getDiscriminatorValue() == "SUB_CLASS"
     }

@@ -22,7 +22,7 @@ package grails.gorm.specs
 import org.apache.grails.data.hibernate7.core.GrailsDataHibernate7TckManager
 import org.apache.grails.data.testing.tck.base.GrailsDataTckSpec
 import org.grails.datastore.mapping.model.PersistentEntity
-import org.grails.orm.hibernate.AbstractHibernateSession
+import org.grails.orm.hibernate.HibernateSession
 import org.grails.orm.hibernate.HibernateDatastore
 import org.grails.orm.hibernate.cfg.domainbinding.binder.GrailsDomainBinder
 import org.grails.orm.hibernate.cfg.domainbinding.hibernate.GrailsHibernatePersistentEntity
@@ -154,8 +154,8 @@ class HibernateGormDatastoreSpec extends GrailsDataTckSpec<GrailsDataHibernate7T
     }
 
 
-    protected AbstractHibernateSession getSession() {
-        datastore.connect() as AbstractHibernateSession
+    protected HibernateSession getSession() {
+        datastore.connect() as HibernateSession
     }
 
     protected PersistentEntity getPersistentEntity(Class clazz) {

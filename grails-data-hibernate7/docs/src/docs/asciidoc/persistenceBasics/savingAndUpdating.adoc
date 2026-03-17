@@ -1,19 +1,76 @@
-////
-Licensed to the Apache Software Foundation (ASF) under one
-or more contributor license agreements.  See the NOTICE file
-distributed with this work for additional information
-regarding copyright ownership.  The ASF licenses this file
-to you under the Apache License, Version 2.0 (the
-"License"); you may not use this file except in compliance
-with the License.  You may obtain a copy of the License at
+[[persistenceBasics-savingAndUpdating]]
+== Saving and Updating
 
-https://www.apache.org/licenses/LICENSE-2.0
+=== Saving
 
-Unless required by applicable law or agreed to in writing,
-software distributed under the License is distributed on an
-"AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
-KIND, either express or implied.  See the License for the
-specific language governing permissions and limitations
-under the License.
-////
+Call `save()` on a domain instance to persist it. GORM delegates to Hibernate's `Session.saveOrUpdate()`:
 
+[source,groovy]
+----
+def book = new Book(title: 'Groovy in Action', author: 'Dierk König')
+book.save()
+----
+
+If validation fails, `save()` returns `null` and the errors are available on the instance:
+
+[source,groovy]
+----
+def book = new Book(title: '')   // violates blank constraint
+if (!book.save()) {
+    book.errors.allErrors.each { println it }
+}
+----
+
+=== Fail on Error
+
+Use `failOnError: true` to throw a `ValidationException` instead of returning `null`:
+
+[source,groovy]
+----
+book.save(failOnError: true)    // throws ValidationException on constraint violation
+----
+
+=== Flush
+
+By default Hibernate delays SQL writes until the session is flushed. Force an immediate flush:
+
+[source,groovy]
+----
+book.save(flush: true)      // <1>
+----
+<1> Issues the `INSERT` or `UPDATE` immediately.
+
+=== Updating
+
+Modify properties on a loaded instance and call `save()`:
+
+[source,groovy]
+----
+def book = Book.get(1)
+book.title = 'Updated Title'
+book.save()
+----
+
+=== Dynamic Update
+
+To generate `UPDATE` statements that only include changed columns (useful for wide tables), enable `dynamicUpdate`:
+
+[source,groovy]
+----
+class Book {
+    static mapping = {
+        dynamicUpdate true
+    }
+}
+----
+
+=== Dynamic Insert
+
+Similarly, `dynamicInsert` generates `INSERT` statements that omit null properties:
+
+[source,groovy]
+----
+static mapping = {
+    dynamicInsert true
+}
+----

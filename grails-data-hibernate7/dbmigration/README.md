@@ -16,6 +16,8 @@ limitations under the License.
 
 # Grails Database Migration Plugin
 
+This module includes code from the [Liquibase Hibernate extension](https://github.com/liquibase/liquibase-hibernate), specifically branched and modified from the original OSS version to support Hibernate 7 in Grails.
+
 ## Branches
 
 **9.0.x** Version of the plugin compatible with Grails 7 and Liquibase 4.27

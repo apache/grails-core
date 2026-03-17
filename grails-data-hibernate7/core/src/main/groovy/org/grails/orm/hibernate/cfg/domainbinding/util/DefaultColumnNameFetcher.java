@@ -18,12 +18,12 @@
  */
 package org.grails.orm.hibernate.cfg.domainbinding.util;
 
-import org.grails.datastore.mapping.model.types.Association;
-import org.grails.datastore.mapping.model.types.Basic;
 import org.grails.orm.hibernate.cfg.PersistentEntityNamingStrategy;
+import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernateAssociation;
 import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernateManyToManyProperty;
 import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernateOneToManyProperty;
 import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernatePersistentProperty;
+import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernateToManyProperty;
 
 @SuppressWarnings("PMD.DataflowAnomalyAnalysis")
 public class DefaultColumnNameFetcher {
@@ -48,9 +48,8 @@ public class DefaultColumnNameFetcher {
     public String getDefaultColumnName(HibernatePersistentProperty property) {
 
         String columnName = namingStrategyWrapper.resolveColumnName(property.getName());
-        if (property instanceof Association) {
-            Association association = (Association) property;
-            boolean isBasic = property instanceof Basic;
+        if (property instanceof HibernateAssociation association) {
+            boolean isBasic = property instanceof HibernateToManyProperty toMany && toMany.isBasic();
             if (isBasic && (property.getMappedForm()).getType() != null) {
                 return columnName;
             }
@@ -66,20 +65,20 @@ public class DefaultColumnNameFetcher {
             if (!association.isBidirectional() && association instanceof HibernateOneToManyProperty) {
                 String prefix = namingStrategyWrapper.resolveTableName(
                         property.getOwner().getRootEntity().getJavaClass().getSimpleName());
-                return backticksRemover.apply(prefix) +
-                        UNDERSCORE +
-                        backticksRemover.apply(columnName) +
-                        FOREIGN_KEY_SUFFIX;
+                return backticksRemover.apply(prefix)
+                        + UNDERSCORE
+                        + backticksRemover.apply(columnName)
+                        + FOREIGN_KEY_SUFFIX;
             }
 
             if (property.isInherited() && property.isBidirectionalManyToOne()) {
                 return namingStrategyWrapper.resolveColumnName(property.getOwner()
                                 .getRootEntity()
                                 .getJavaClass()
-                                .getSimpleName()) +
-                        '_' +
-                        columnName +
-                        FOREIGN_KEY_SUFFIX;
+                                .getSimpleName())
+                        + '_'
+                        + columnName
+                        + FOREIGN_KEY_SUFFIX;
             }
 
             return columnName + FOREIGN_KEY_SUFFIX;

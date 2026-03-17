@@ -18,12 +18,11 @@
  */
 
 plugins {
+    id 'java-library'
     id 'org.apache.grails.buildsrc.properties'
     id 'org.apache.grails.gradle.grails-plugin'
-    id 'org.apache.grails.buildsrc.compile'
-    id 'org.apache.grails.buildsrc.publish'
-    id 'org.apache.grails.buildsrc.sbom'
-    id 'org.apache.grails.gradle.grails-code-style'
+
+
 }
 
 version = projectVersion
@@ -33,23 +32,28 @@ ext {
     gormApiDocs = true
     pomTitle = 'Grails Database Migration Plugin for Hibernate 7'
     pomDescription = 'The Database Migration plugin helps you manage database changes, via Liquibase, while developing Grails applications for Hibernate 7'
+    pomDevelopers = [
+            'kazukiyamamoto': 'Kazuki YAMAMOTO',
+            'jamesfredley'  : 'James Fredley',
+    ]
 }
 
 dependencies {
     // TODO: Clarify and clean up dependencies
-    implementation platform(project(':grails-hibernate7-bom')) {
+    implementation platform(project(':grails-bom')) {
         exclude group: 'org.liquibase', module: 'liquibase-core'
     }
 
-    implementation("org.liquibase:liquibase-core:$liquibaseHibernate7CoreVersion")
-    implementation("org.liquibase.ext:liquibase-hibernate7:$liquibaseHibernate7Version") {
-        exclude group: 'org.hibernate', module: 'hibernate-core'
-        exclude group: 'org.hibernate', module: 'hibernate-entitymanager'
-        exclude group: 'org.hibernate', module: 'hibernate-envers'
-        exclude group: 'org.hibernate.orm', module: 'hibernate-envers'
-        exclude group: 'com.h2database', module: 'h2'
-        exclude group: 'org.liquibase', module: 'liquibase-commercial'
-    }
+    implementation("org.liquibase:liquibase-core:4.33.0")
+    implementation("org.hibernate.models:hibernate-models:1.0.1")
+    implementation project(':grails-data-hibernate7')
+    compileOnly("org.hibernate.orm:hibernate-envers:$hibernate7Version")
+    testCompileOnly("org.hibernate.orm:hibernate-envers:$hibernate7Version")
+
+    compileOnly "org.projectlombok:lombok:1.18.42"
+    annotationProcessor "org.projectlombok:lombok:1.18.42"
+    testCompileOnly "org.projectlombok:lombok:1.18.42"
+    testAnnotationProcessor "org.projectlombok:lombok:1.18.42"
 
     implementation(project(':grails-shell-cli')) {
         exclude group: 'org.slf4j', module: 'slf4j-simple'
@@ -67,12 +71,35 @@ dependencies {
     compileOnly 'org.apache.groovy:groovy-sql'
     compileOnly 'org.apache.groovy:groovy-xml'
 
+    compileOnly 'org.springframework:spring-test'
+    compileOnly 'org.springframework:spring-jdbc'
+    compileOnly 'org.springframework:spring-beans'
+    compileOnly 'org.springframework:spring-context'
+    compileOnly 'org.springframework:spring-orm'
+
     testImplementation 'org.springframework.boot:spring-boot-starter-tomcat'
+    testImplementation project(':grails-data-hibernate7-core')
     testImplementation project(':grails-data-hibernate7')
     testImplementation project(':grails-core')
     testImplementation project(':grails-testing-support-datamapping')
     testImplementation project(':grails-testing-support-web')
+    testImplementation platform('org.testcontainers:testcontainers-bom:2.0.3')
+    testImplementation 'org.testcontainers:testcontainers'
+    testImplementation 'org.testcontainers:postgresql'
+    testImplementation 'org.testcontainers:spock'
     testImplementation 'com.h2database:h2'
+    testImplementation 'org.hsqldb:hsqldb'
+    testImplementation 'org.postgresql:postgresql'
+    testImplementation 'org.liquibase:liquibase-test-harness:1.0.11'
+    testImplementation("org.hibernate.orm:hibernate-envers:$hibernate7Version")
+
+    constraints {
+        implementation("org.liquibase:liquibase-core") {
+            version {
+                strictly "4.33.0"
+            }
+        }
+    }
 }
 
 tasks.named('jar', Jar) {
@@ -91,9 +118,11 @@ tasks.withType(Test).configureEach {
         }
     }
 }
-
 apply {
+    from rootProject.layout.projectDirectory.file('gradle/java-config.gradle')
+    from rootProject.layout.projectDirectory.file('gradle/code-style-config.gradle')
     from rootProject.layout.projectDirectory.file('gradle/hibernate7-test-config.gradle')
     from rootProject.layout.projectDirectory.file('gradle/docs-config.gradle')
     from rootProject.layout.projectDirectory.file('gradle/grails-extension-gradle-config.gradle')
 }
+

@@ -1,19 +1,89 @@
-////
-Licensed to the Apache Software Foundation (ASF) under one
-or more contributor license agreements.  See the NOTICE file
-distributed with this work for additional information
-regarding copyright ownership.  The ASF licenses this file
-to you under the Apache License, Version 2.0 (the
-"License"); you may not use this file except in compliance
-with the License.  You may obtain a copy of the License at
+[[quickStartGuide-basicCRUD]]
+== Basic CRUD
 
-https://www.apache.org/licenses/LICENSE-2.0
+Every GORM domain class automatically gets Create, Read, Update, and Delete (CRUD) operations.
 
-Unless required by applicable law or agreed to in writing,
-software distributed under the License is distributed on an
-"AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
-KIND, either express or implied.  See the License for the
-specific language governing permissions and limitations
-under the License.
-////
+=== Create
 
+[source,groovy]
+----
+// Constructor with named parameters
+def book = new Book(title: 'Groovy in Action', author: 'Dierk König')
+book.save()
+
+// Or using the create() factory method
+def book = Book.create(title: 'Grails in Action', author: 'Glen Smith')
+----
+
+=== Read
+
+[source,groovy]
+----
+// By primary key
+def book = Book.get(1)
+
+// Returns null if not found
+def book = Book.get(999)    // null
+
+// Get multiple by IDs
+def books = Book.getAll(1, 2, 3)
+
+// Load a proxy (no immediate SELECT)
+def book = Book.load(1)
+
+// List all
+def books = Book.list()
+
+// With pagination
+def books = Book.list(max: 10, offset: 0, sort: 'title', order: 'asc')
+
+// Dynamic finders
+def book  = Book.findByTitle('Groovy in Action')
+def books = Book.findAllByAuthor('Dierk König')
+def count = Book.countByAuthor('Dierk König')
+----
+
+=== Update
+
+[source,groovy]
+----
+def book = Book.get(1)
+book.title = 'Updated Title'
+book.save()
+----
+
+=== Delete
+
+[source,groovy]
+----
+def book = Book.get(1)
+book.delete()
+----
+
+=== Validation
+
+`save()` runs constraints before persisting and returns `null` if validation fails:
+
+[source,groovy]
+----
+def book = new Book(title: '')          // blank title violates constraint
+if (!book.save()) {
+    println book.errors.allErrors       // print validation errors
+}
+
+// Throw on failure instead
+book.save(failOnError: true)            // throws ValidationException
+----
+
+=== Transactions
+
+GORM operations run inside Hibernate sessions. Use `withTransaction` for explicit transaction control:
+
+[source,groovy]
+----
+Book.withTransaction {
+    def book = new Book(title: 'Tx Book', author: 'Author')
+    book.save()
+    // any exception here rolls back the transaction
+}
+----

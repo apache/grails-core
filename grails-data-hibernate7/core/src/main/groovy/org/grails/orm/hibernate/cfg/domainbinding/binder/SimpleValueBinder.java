@@ -36,7 +36,6 @@ import org.grails.orm.hibernate.cfg.ColumnConfig;
 import org.grails.orm.hibernate.cfg.PersistentEntityNamingStrategy;
 import org.grails.orm.hibernate.cfg.PropertyConfig;
 import org.grails.orm.hibernate.cfg.domainbinding.generator.GrailsSequenceWrapper;
-import org.grails.orm.hibernate.cfg.domainbinding.hibernate.GrailsHibernatePersistentEntity;
 import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernatePersistentProperty;
 
 @SuppressWarnings("PMD.NullAssignment")
@@ -78,27 +77,17 @@ public class SimpleValueBinder {
                 new GrailsSequenceWrapper());
     }
 
-    /** Protected constructor for testing purposes. */
-    protected SimpleValueBinder() {
-        this.metadataBuildingContext = null;
-        this.namingStrategy = null;
-        this.columnConfigToColumnBinder = null;
-        this.columnBinder = null;
-        this.jdbcEnvironment = null;
-        this.grailsSequenceWrapper = null;
-    }
-
     public BasicValue bindSimpleValue(
             @jakarta.annotation.Nonnull HibernatePersistentProperty property,
             HibernatePersistentProperty parentProperty,
             Table table,
             String path) {
         BasicValue basicValue = new BasicValue(metadataBuildingContext, table);
-        bindSimpleValue(property, parentProperty, (SimpleValue) basicValue, path);
+        bindSimpleValue(property, parentProperty, basicValue, path);
         return basicValue;
     }
 
-    public void bindSimpleValue(
+    public SimpleValue bindSimpleValue(
             @jakarta.annotation.Nonnull HibernatePersistentProperty property,
             HibernatePersistentProperty parentProperty,
             SimpleValue simpleValue,
@@ -112,10 +101,10 @@ public class SimpleValueBinder {
         if (generator != null && simpleValue instanceof BasicValue basicValue) {
             basicValue.setCustomIdGeneratorCreator(context -> createGenerator(
                     property,
-                    context.getValue() == null ?
-                            new org.grails.orm.hibernate.cfg.domainbinding.util.GeneratorCreationContextWrapper(
-                                    context, basicValue) :
-                            context,
+                    context.getValue() == null
+                            ? new org.grails.orm.hibernate.cfg.domainbinding.util.GeneratorCreationContextWrapper(
+                                    context, basicValue)
+                            : context,
                     generator));
         }
 
@@ -142,16 +131,12 @@ public class SimpleValueBinder {
                         simpleValue.addColumn(column);
                     });
         }
+        return simpleValue;
     }
 
     private Generator createGenerator(
             HibernatePersistentProperty property, GeneratorCreationContext context, String generatorName) {
         return grailsSequenceWrapper.getGenerator(
-                generatorName,
-                context,
-                null,
-                (GrailsHibernatePersistentEntity) property.getHibernateOwner(),
-                jdbcEnvironment,
-                namingStrategy);
+                generatorName, context, null, property.getHibernateOwner(), jdbcEnvironment, namingStrategy);
     }
 }

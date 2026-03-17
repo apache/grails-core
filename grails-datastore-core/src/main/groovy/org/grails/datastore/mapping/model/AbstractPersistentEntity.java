@@ -381,7 +381,7 @@ public abstract class AbstractPersistentEntity<T extends Entity> implements Pers
         return (this.versionCompatibleType || !propertiesInitialized) && versioned;
     }
 
-    public Class getJavaClass() {
+    public Class<?> getJavaClass() {
         return javaClass;
     }
 

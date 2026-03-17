@@ -18,6 +18,8 @@
  */
 package org.grails.orm.hibernate.cfg.domainbinding.generator;
 
+import java.io.Serial;
+
 import jakarta.persistence.GenerationType;
 
 import org.hibernate.engine.spi.SharedSessionContractImplementor;
@@ -27,6 +29,7 @@ import org.hibernate.id.NativeGenerator;
 
 public class GrailsNativeGenerator extends NativeGenerator {
 
+    @Serial
     private static final long serialVersionUID = 1L;
 
     public GrailsNativeGenerator(GeneratorCreationContext context) {
@@ -55,6 +58,6 @@ public class GrailsNativeGenerator extends NativeGenerator {
         }
 
         // 3. For Sequences/UUIDs, delegate to the standard logic
-        return super.generate(session, entity, currentValue, eventType);
+        return super.generate(session, entity, null, eventType);
     }
 }

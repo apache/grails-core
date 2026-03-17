@@ -45,18 +45,35 @@ import org.hibernate.query.sqm.tree.predicate.SqmInListPredicate;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import org.springframework.core.convert.ConversionService;
+
 import org.grails.datastore.gorm.GormEntity;
 import org.grails.datastore.gorm.query.criteria.DetachedAssociationCriteria;
 import org.grails.datastore.mapping.core.exceptions.ConfigurationException;
 import org.grails.datastore.mapping.model.PersistentEntity;
-import org.grails.datastore.mapping.model.types.Association;
 import org.grails.datastore.mapping.query.Query;
 import org.grails.datastore.mapping.query.api.QueryableCriteria;
 
 @Slf4j
-@SuppressWarnings({"PMD.DataflowAnomalyAnalysis", "PMD.AvoidLiteralsInIfCondition", "PMD.AvoidDuplicateLiterals"})
+@SuppressWarnings({
+    "PMD.DataflowAnomalyAnalysis",
+    "PMD.AvoidLiteralsInIfCondition",
+    "PMD.AvoidDuplicateLiterals",
+    // GORM stores criterion values as Object; JPA expects types resolved at compile time.
+    // The unchecked casts here are deliberate — type safety is enforced at runtime by
+    // MappingContext, not at compile time. This is the inherent cost of bridging a
+    // runtime-typed DSL (GORM) to a compile-time-typed API (JPA Criteria).
+    "unchecked",
+    "rawtypes"
+})
 public class PredicateGenerator {
     private static final Logger log = LoggerFactory.getLogger(PredicateGenerator.class);
+
+    private final ConversionService conversionService;
+
+    public PredicateGenerator(ConversionService conversionService) {
+        this.conversionService = conversionService;
+    }
 
     public Predicate[] getPredicates(
             HibernateCriteriaBuilder cb,
@@ -91,11 +108,11 @@ public class PredicateGenerator {
         } else if (criterion instanceof DetachedAssociationCriteria<?> c) {
             return handleAssociationCriteria(cb, criteriaQuery, root, fromsByProvider, entity, c);
         } else if (criterion instanceof HibernateAssociationQuery haq) {
-            return handleHibernateAssociationQuery(cb, criteriaQuery, root, fromsByProvider, entity, haq);
+            return handleHibernateAssociationQuery(cb, criteriaQuery, root, fromsByProvider, haq);
         } else if (criterion instanceof Query.PropertyCriterion pc) {
             return handlePropertyCriterion(cb, criteriaQuery, root, fromsByProvider, entity, pc);
         } else if (criterion instanceof Query.PropertyComparisonCriterion c) {
-            return handlePropertyComparisonCriterion(cb, fromsByProvider, root, c);
+            return handlePropertyComparisonCriterion(cb, fromsByProvider, c);
         } else if (criterion instanceof Query.PropertyNameCriterion c) {
             return handlePropertyNameCriterion(cb, fromsByProvider, c);
         } else if (criterion instanceof Query.Exists c) {
@@ -147,7 +164,6 @@ public class PredicateGenerator {
             CriteriaQuery<?> criteriaQuery,
             From<?, ?> root,
             JpaFromProvider fromsByProvider,
-            PersistentEntity entity,
             HibernateAssociationQuery haq) {
         var child = root.join(haq.associationPath, JoinType.LEFT);
         JpaFromProvider childFroms = (JpaFromProvider) fromsByProvider.clone();
@@ -220,8 +236,8 @@ public class PredicateGenerator {
         var queryableCriteria = getQueryableCriteriaFromInCriteria(c);
         if (Objects.nonNull(queryableCriteria)) {
             return cb.not(getQueryableCriteriaValue(cb, criteriaQuery, fromsByProvider, entity, c, queryableCriteria));
-        } else if (Objects.nonNull(c.getSubquery()) &&
-                !c.getSubquery().getProjections().isEmpty()) {
+        } else if (Objects.nonNull(c.getSubquery())
+                && !c.getSubquery().getProjections().isEmpty()) {
             Subquery subquery2 = criteriaQuery.subquery(Number.class);
             Root from2 = subquery2.from(c.getValue().getPersistentEntity().getJavaClass());
             JpaFromProvider newMap2 = (JpaFromProvider) fromsByProvider.clone();
@@ -256,10 +272,9 @@ public class PredicateGenerator {
         if (Objects.nonNull(queryableCriteria)) {
             return getQueryableCriteriaValue(cb, criteriaQuery, fromsByProvider, entity, c, queryableCriteria);
         } else if (!c.getValues().isEmpty()) {
-            boolean areGormEntities = c.getValues().stream().allMatch(GormEntity.class::isInstance);
-            if (areGormEntities) {
+            if (c.getValues().iterator().next() instanceof GormEntity firstEntity) {
                 List<GormEntity> gormEntities = new ArrayList<>(c.getValues());
-                Path id = criteriaQuery.from(gormEntities.get(0).getClass()).get("id");
+                Path id = criteriaQuery.from(firstEntity.getClass()).get("id");
                 Collection newValues =
                         gormEntities.stream().map(GormEntity::ident).toList();
                 return cb.in(id, newValues);
@@ -323,12 +338,22 @@ public class PredicateGenerator {
     }
 
     private Predicate handlePropertyComparisonCriterion(
-            HibernateCriteriaBuilder cb,
-            JpaFromProvider fromsByProvider,
-            From<?, ?> root_,
-            Query.PropertyComparisonCriterion c) {
+            HibernateCriteriaBuilder cb, JpaFromProvider fromsByProvider, Query.PropertyComparisonCriterion c) {
         Path path = fromsByProvider.getFullyQualifiedPath(c.getProperty());
-        Path otherPath = root_.get(c.getOtherProperty());
+        Path otherPath = fromsByProvider.getFullyQualifiedPath(c.getOtherProperty());
+        // Resolve entity/scalar type mismatch for correlated subquery comparisons (e.g. Club.id == t.club):
+        // walk back to the parent entity so we can use entity equality instead of scalar equality.
+        if (!path.getJavaType().equals(otherPath.getJavaType())) {
+            jakarta.persistence.criteria.Path parentOfPath = path.getParentPath();
+            if (parentOfPath != null && parentOfPath.getJavaType().equals(otherPath.getJavaType())) {
+                path = parentOfPath;
+            } else {
+                jakarta.persistence.criteria.Path parentOfOther = otherPath.getParentPath();
+                if (parentOfOther != null && parentOfOther.getJavaType().equals(path.getJavaType())) {
+                    otherPath = parentOfOther;
+                }
+            }
+        }
         if (c instanceof Query.EqualsProperty) return cb.equal(path, otherPath);
         if (c instanceof Query.NotEqualsProperty) return cb.notEqual(path, otherPath);
         if (c instanceof Query.LessThanEqualsProperty) return cb.le(path, otherPath);
@@ -363,8 +388,10 @@ public class PredicateGenerator {
         var predicates =
                 getPredicates(cb, criteriaQuery, subRoot, c.getSubquery().getCriteria(), newMap, entity);
         var existsPredicate = getExistsPredicate(cb, root_, childPersistentEntity, subRoot);
-        Predicate[] allPredicates = Stream.concat(Arrays.stream(predicates), Stream.of(existsPredicate))
-                .toArray(Predicate[]::new);
+        Predicate[] allPredicates = existsPredicate != null
+                ? Stream.concat(Arrays.stream(predicates), Stream.of(existsPredicate))
+                        .toArray(Predicate[]::new)
+                : predicates;
         subquery.select(cb.literal(1)).where(cb.and(allPredicates));
         return cb.exists(subquery);
     }
@@ -394,26 +421,24 @@ public class PredicateGenerator {
 
     private Predicate getExistsPredicate(
             HibernateCriteriaBuilder cb, From<?, ?> root_, PersistentEntity childPersistentEntity, Root subRoot) {
-        Association owner = childPersistentEntity.getAssociations().stream()
+        return childPersistentEntity.getAssociations().stream()
                 .filter(assoc -> assoc.getAssociatedEntity().getJavaClass().equals(root_.getJavaType()))
                 .findFirst()
-                .orElseThrow();
-        return cb.equal(subRoot.get(owner.getName()), root_);
+                .map(owner -> (Predicate) cb.equal(subRoot.get(owner.getName()), root_))
+                .orElse(null);
     }
 
-    @SuppressWarnings("rawtypes")
     private JpaInPredicate findInPredicate(
             HibernateCriteriaBuilder cb, Object projection, Path path, String subProperty) {
         return projection instanceof Query.PropertyProjection ? cb.in(path) : cb.in(((SqmPath) path).get(subProperty));
     }
 
     private String findSubproperty(Object projection) {
-        return projection instanceof Query.PropertyProjection ?
-                ((Query.PropertyProjection) projection).getPropertyName() :
-                "id";
+        return projection instanceof Query.PropertyProjection
+                ? ((Query.PropertyProjection) projection).getPropertyName()
+                : "id";
     }
 
-    @SuppressWarnings("unchecked")
     private Query.Projection findPropertyOrIdProjection(QueryableCriteria queryableCriteria) {
         return (Query.Projection) queryableCriteria.getProjections().stream()
                 .filter(p -> p instanceof Query.PropertyProjection || p instanceof Query.IdProjection)
@@ -421,14 +446,12 @@ public class PredicateGenerator {
                 .orElse(new Query.IdProjection());
     }
 
-    @SuppressWarnings("rawtypes")
     private QueryableCriteria getQueryableCriteriaFromInCriteria(Query.Criterion criterion) {
-        return criterion instanceof Query.In ?
-                ((Query.In) criterion).getSubquery() :
-                ((Query.NotIn) criterion).getSubquery();
+        return criterion instanceof Query.In
+                ? ((Query.In) criterion).getSubquery()
+                : ((Query.NotIn) criterion).getSubquery();
     }
 
-    @SuppressWarnings("rawtypes")
     private Class getJavaTypeOfInClause(SqmInListPredicate predicate) {
         return Optional.ofNullable(predicate.getTestExpression().getExpressible())
                 .map(expressible -> expressible.getExpressibleJavaType().getJavaTypeClass())
@@ -438,6 +461,13 @@ public class PredicateGenerator {
     private Number getNumericValue(Query.PropertyCriterion criterion) {
         Object value = criterion.getValue();
         if (value instanceof Number num) return num;
+        if (value != null && conversionService.canConvert(value.getClass(), Number.class)) {
+            try {
+                return conversionService.convert(value, Number.class);
+            } catch (org.springframework.core.convert.ConversionException ignored) {
+                // fall through to ConfigurationException
+            }
+        }
         throw new ConfigurationException(String.format(
                 "Operation '%s' on property '%s' only accepts a numeric value, but received a %s",
                 criterion.getClass().getSimpleName(),

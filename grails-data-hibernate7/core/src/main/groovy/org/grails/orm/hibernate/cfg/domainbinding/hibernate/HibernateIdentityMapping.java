@@ -35,7 +35,7 @@ public class HibernateIdentityMapping implements IdentityMapping<Property> {
 
     private final Object identity;
     private final ValueGenerator generator;
-    private final ClassMapping classMapping;
+    private final ClassMapping<?> classMapping;
 
     /**
      * Constructs a HibernateIdentityMapping.
@@ -44,7 +44,7 @@ public class HibernateIdentityMapping implements IdentityMapping<Property> {
      * @param generator the resolved {@link ValueGenerator}
      * @param classMapping the owning {@link ClassMapping}
      */
-    public HibernateIdentityMapping(Object identity, ValueGenerator generator, ClassMapping classMapping) {
+    public HibernateIdentityMapping(Object identity, ValueGenerator generator, ClassMapping<?> classMapping) {
         this.identity = identity;
         this.generator = generator;
         this.classMapping = classMapping;
@@ -71,7 +71,7 @@ public class HibernateIdentityMapping implements IdentityMapping<Property> {
     }
 
     @Override
-    public ClassMapping getClassMapping() {
+    public ClassMapping<?> getClassMapping() {
         return classMapping;
     }
 

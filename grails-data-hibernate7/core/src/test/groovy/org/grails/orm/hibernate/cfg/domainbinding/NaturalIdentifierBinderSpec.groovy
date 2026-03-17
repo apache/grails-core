@@ -24,6 +24,7 @@ import org.grails.orm.hibernate.cfg.CompositeIdentity
 import org.grails.orm.hibernate.cfg.Mapping
 import org.grails.orm.hibernate.cfg.NaturalId
 import org.grails.orm.hibernate.cfg.domainbinding.binder.NaturalIdentifierBinder
+import org.grails.orm.hibernate.cfg.domainbinding.hibernate.GrailsHibernatePersistentEntity
 import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernateIdentity
 import org.grails.orm.hibernate.cfg.domainbinding.util.UniqueNameGenerator
 import org.hibernate.mapping.RootClass
@@ -34,6 +35,7 @@ class NaturalIdentifierBinderSpec extends HibernateGormDatastoreSpec {
 
     void "test bindNaturalIdentifier calls NaturalId.createUniqueKey and handles result"() {
         given:
+        def persistentEntity = Mock(GrailsHibernatePersistentEntity)
         def mapping = Mock(Mapping)
         def identity = Mock(HibernateIdentity)
         def naturalId = Mock(NaturalId)
@@ -44,12 +46,13 @@ class NaturalIdentifierBinderSpec extends HibernateGormDatastoreSpec {
         def uniqueNameGenerator = Mock(UniqueNameGenerator)
         def binder = new NaturalIdentifierBinder(uniqueNameGenerator)
 
+        persistentEntity.getMappedForm() >> mapping
         mapping.getIdentity() >> identity
         identity.getNatural() >> naturalId
         naturalId.createUniqueKey(rootClass) >> Optional.of(uk)
 
         when:
-        binder.bindNaturalIdentifier(mapping, rootClass)
+        binder.bindNaturalIdentifier(persistentEntity, rootClass)
 
         then:
         1 * uniqueNameGenerator.setGeneratedUniqueName(uk)
@@ -58,6 +61,7 @@ class NaturalIdentifierBinderSpec extends HibernateGormDatastoreSpec {
 
     void "test bindNaturalIdentifier when NaturalId returns empty result"() {
         given:
+        def persistentEntity = Mock(GrailsHibernatePersistentEntity)
         def mapping = Mock(Mapping)
         def identity = Mock(HibernateIdentity)
         def naturalId = Mock(NaturalId)
@@ -65,12 +69,13 @@ class NaturalIdentifierBinderSpec extends HibernateGormDatastoreSpec {
         def uniqueNameGenerator = Mock(UniqueNameGenerator)
         def binder = new NaturalIdentifierBinder(uniqueNameGenerator)
 
+        persistentEntity.getMappedForm() >> mapping
         mapping.getIdentity() >> identity
         identity.getNatural() >> naturalId
         naturalId.createUniqueKey(rootClass) >> Optional.empty()
 
         when:
-        binder.bindNaturalIdentifier(mapping, rootClass)
+        binder.bindNaturalIdentifier(persistentEntity, rootClass)
 
         then:
         0 * uniqueNameGenerator._
@@ -78,15 +83,17 @@ class NaturalIdentifierBinderSpec extends HibernateGormDatastoreSpec {
 
     void "test bindNaturalIdentifier when no identity is defined"() {
         given:
+        def persistentEntity = Mock(GrailsHibernatePersistentEntity)
         def mapping = Mock(Mapping)
         def rootClass = new RootClass(getGrailsDomainBinder().getMetadataBuildingContext())
         def uniqueNameGenerator = Mock(UniqueNameGenerator)
         def binder = new NaturalIdentifierBinder(uniqueNameGenerator)
 
+        persistentEntity.getMappedForm() >> mapping
         mapping.getIdentity() >> null
 
         when:
-        binder.bindNaturalIdentifier(mapping, rootClass)
+        binder.bindNaturalIdentifier(persistentEntity, rootClass)
 
         then:
         0 * uniqueNameGenerator._

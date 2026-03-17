@@ -241,7 +241,7 @@ class PropertyConfigSpec extends Specification {
 
         then:
         pc.cache != null
-        pc.cache.usage == 'read-only'
+        pc.cache.usage.toString() == 'read-only'
     }
 
     void "cache(Map) creates and configures a CacheConfig"() {
@@ -253,7 +253,7 @@ class PropertyConfigSpec extends Specification {
 
         then:
         pc.cache != null
-        pc.cache.usage == 'read-write'
+        pc.cache.usage.toString() == 'read-write'
     }
 
     // ─── joinTable ───────────────────────────────────────────────────────────
@@ -401,7 +401,7 @@ class PropertyConfigSpec extends Specification {
         cloned.cache.usage = 'read-write'
 
         then:
-        pc.cache.usage == 'read-only'
+        pc.cache.usage.toString() == 'read-only'
     }
 
     void "clone copies indexColumn independently"() {
@@ -463,7 +463,7 @@ class PropertyConfigSpec extends Specification {
 
     // ─── deprecated updateable ───────────────────────────────────────────────
 
-    void "setUpdatable and getUpdateable are symmetric"() {
+    void "getUpdateable delegates to updatable"() {
         given:
         PropertyConfig pc = new PropertyConfig()
 
@@ -473,4 +473,16 @@ class PropertyConfigSpec extends Specification {
         then:
         !pc.updateable
     }
+
+    void "setUpdateable delegates to updatable"() {
+        given:
+        PropertyConfig pc = new PropertyConfig()
+
+        when:
+        pc.updateable = false
+
+        then:
+        !pc.updatable
+    }
+
 }

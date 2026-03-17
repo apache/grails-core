@@ -1,19 +1,53 @@
-////
-Licensed to the Apache Software Foundation (ASF) under one
-or more contributor license agreements.  See the NOTICE file
-distributed with this work for additional information
-regarding copyright ownership.  The ASF licenses this file
-to you under the Apache License, Version 2.0 (the
-"License"); you may not use this file except in compliance
-with the License.  You may obtain a copy of the License at
+[[introduction]]
+== Introduction
 
-https://www.apache.org/licenses/LICENSE-2.0
+GORM for Hibernate 7 (grails-data-hibernate7) is the Hibernate 7 persistence layer for GORM, the GRAILS Object Relational Mapping framework. It provides a high-level, convention-over-configuration API for mapping Groovy domain classes to a relational database via Hibernate ORM 7 and Jakarta EE 10.
 
-Unless required by applicable law or agreed to in writing,
-software distributed under the License is distributed on an
-"AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
-KIND, either express or implied.  See the License for the
-specific language governing permissions and limitations
-under the License.
-////
+=== Features
 
+* Convention-based ORM mapping — minimal configuration for common patterns
+* Full Hibernate 7 support with Jakarta EE 10 (`jakarta.*` packages)
+* Spring Boot 3.5 integration
+* Dynamic finders, named queries, `where` query DSL, HQL, and native SQL
+* Optimistic locking, second-level caching, and batch fetching
+* Comprehensive association mapping: one-to-one, one-to-many, many-to-many, basic collections
+* Multiple inheritance strategies: table-per-hierarchy, table-per-subclass, table-per-concrete-class
+* Multi-tenancy support
+* Groovy `static mapping {}` DSL for full control over table/column names, types, and strategies
+
+=== Requirements
+
+[format="csv", options="header"]
+|===
+Component,Version
+JDK,17+
+Groovy,4.0.x
+Spring Boot,3.5.x
+Hibernate ORM,7.x
+Jakarta EE,10
+|===
+
+=== Quick Start
+
+Add the dependency to your Grails application and define a domain class:
+
+[source,groovy]
+----
+class Book {
+    String title
+    String author
+    Date dateCreated
+    Date lastUpdated
+
+    static constraints = {
+        title blank: false
+        author blank: false
+    }
+}
+----
+
+GORM automatically:
+
+* Creates a `book` table with `id`, `version`, `title`, `author`, `date_created`, and `last_updated` columns
+* Adds dynamic finders like `Book.findByTitle('...')`, `Book.findAllByAuthor('...')`
+* Injects `save()`, `delete()`, `get()`, `list()`, and other persistence methods

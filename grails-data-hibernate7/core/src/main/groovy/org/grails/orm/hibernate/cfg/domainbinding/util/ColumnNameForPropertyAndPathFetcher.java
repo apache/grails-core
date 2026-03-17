@@ -48,9 +48,9 @@ public class ColumnNameForPropertyAndPathFetcher {
             String suffix = defaultColumnNameFetcher.getDefaultColumnName(grailsProp);
             return Optional.ofNullable(path)
                     .filter(GrailsHibernateUtil::isNotEmpty)
-                    .map(p -> backticksRemover.apply(namingStrategy.resolveColumnName(p)) +
-                            UNDERSCORE +
-                            backticksRemover.apply(suffix))
+                    .map(p -> backticksRemover.apply(namingStrategy.resolveColumnName(p))
+                            + UNDERSCORE
+                            + backticksRemover.apply(suffix))
                     .orElse(suffix);
         });
     }

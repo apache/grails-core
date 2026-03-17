@@ -22,13 +22,11 @@ import java.util.function.BiFunction;
 
 import org.hibernate.boot.spi.MetadataBuildingContext;
 import org.hibernate.engine.OptimisticLockStyle;
-import org.hibernate.engine.jdbc.env.spi.JdbcEnvironment;
 import org.hibernate.mapping.BasicValue;
 import org.hibernate.mapping.Property;
 import org.hibernate.mapping.RootClass;
 import org.hibernate.mapping.Table;
 
-import org.grails.orm.hibernate.cfg.PersistentEntityNamingStrategy;
 import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernatePersistentProperty;
 
 import static org.grails.orm.hibernate.cfg.domainbinding.binder.GrailsDomainBinder.EMPTY_PATH;
@@ -49,17 +47,6 @@ public class VersionBinder {
         this.simpleValueBinder = simpleValueBinder;
         this.propertyBinder = propertyBinder;
         this.basicValueFactory = basicValueFactory;
-    }
-
-    public VersionBinder(
-            MetadataBuildingContext metadataBuildingContext,
-            PersistentEntityNamingStrategy namingStrategy,
-            JdbcEnvironment jdbcEnvironment) {
-        this(
-                metadataBuildingContext,
-                new SimpleValueBinder(metadataBuildingContext, namingStrategy, jdbcEnvironment),
-                new PropertyBinder(),
-                BasicValue::new);
     }
 
     public void bindVersion(HibernatePersistentProperty version, RootClass entity) {

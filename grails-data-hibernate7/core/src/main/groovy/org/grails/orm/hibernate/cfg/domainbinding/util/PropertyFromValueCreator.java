@@ -22,6 +22,7 @@ import org.hibernate.mapping.Property;
 import org.hibernate.mapping.Value;
 
 import org.grails.orm.hibernate.cfg.domainbinding.binder.PropertyBinder;
+import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernateEnumProperty;
 import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernatePersistentProperty;
 
 public class PropertyFromValueCreator {
@@ -38,7 +39,7 @@ public class PropertyFromValueCreator {
 
     public Property createProperty(Value value, HibernatePersistentProperty grailsProperty) {
         // set type
-        if (!grailsProperty.isEnumType()) {
+        if (!(grailsProperty instanceof HibernateEnumProperty)) {
             value.setTypeUsingReflection(grailsProperty.getOwnerClassName(), grailsProperty.getName());
         }
 

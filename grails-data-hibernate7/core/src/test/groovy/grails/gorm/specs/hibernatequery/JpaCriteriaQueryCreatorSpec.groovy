@@ -24,9 +24,9 @@ import grails.gorm.specs.HibernateGormDatastoreSpec
 import org.apache.grails.data.testing.tck.domains.Person
 import org.grails.datastore.mapping.query.Query
 import org.grails.orm.hibernate.query.JpaCriteriaQueryCreator
-import org.grails.orm.hibernate.query.PredicateGenerator
 import org.hibernate.query.criteria.HibernateCriteriaBuilder
 import org.hibernate.query.criteria.JpaCriteriaQuery
+import org.springframework.core.convert.support.DefaultConversionService
 
 class JpaCriteriaQueryCreatorSpec extends HibernateGormDatastoreSpec {
 
@@ -43,7 +43,7 @@ class JpaCriteriaQueryCreatorSpec extends HibernateGormDatastoreSpec {
         projections.property("firstName")
 
         
-        var creator = new JpaCriteriaQueryCreator(projections, criteriaBuilder, entity, detachedCriteria)
+        var creator = new JpaCriteriaQueryCreator(projections, criteriaBuilder, entity, detachedCriteria, new DefaultConversionService())
 
         when:
         JpaCriteriaQuery<?> query = creator.createQuery()
@@ -63,7 +63,7 @@ class JpaCriteriaQueryCreatorSpec extends HibernateGormDatastoreSpec {
         projections.property("lastName")
 
 
-        var creator = new JpaCriteriaQueryCreator(projections, criteriaBuilder, entity, detachedCriteria)
+        var creator = new JpaCriteriaQueryCreator(projections, criteriaBuilder, entity, detachedCriteria, new DefaultConversionService())
 
         when:
         JpaCriteriaQuery<?> query = creator.createQuery()
@@ -82,7 +82,7 @@ class JpaCriteriaQueryCreatorSpec extends HibernateGormDatastoreSpec {
         projections.count()
 
 
-        var creator = new JpaCriteriaQueryCreator(projections, criteriaBuilder, entity, detachedCriteria)
+        var creator = new JpaCriteriaQueryCreator(projections, criteriaBuilder, entity, detachedCriteria, new DefaultConversionService())
 
         when:
         JpaCriteriaQuery<?> query = creator.createQuery()
@@ -100,7 +100,7 @@ class JpaCriteriaQueryCreatorSpec extends HibernateGormDatastoreSpec {
         projections.countDistinct("firstName")
 
 
-        var creator = new JpaCriteriaQueryCreator(projections, criteriaBuilder, entity, detachedCriteria)
+        var creator = new JpaCriteriaQueryCreator(projections, criteriaBuilder, entity, detachedCriteria, new DefaultConversionService())
 
         when:
         JpaCriteriaQuery<?> query = creator.createQuery()
@@ -118,7 +118,7 @@ class JpaCriteriaQueryCreatorSpec extends HibernateGormDatastoreSpec {
         projections.id()
 
 
-        var creator = new JpaCriteriaQueryCreator(projections, criteriaBuilder, entity, detachedCriteria)
+        var creator = new JpaCriteriaQueryCreator(projections, criteriaBuilder, entity, detachedCriteria, new DefaultConversionService())
 
         when:
         JpaCriteriaQuery<?> query = creator.createQuery()
@@ -139,7 +139,7 @@ class JpaCriteriaQueryCreatorSpec extends HibernateGormDatastoreSpec {
         projections.sum("age")
 
 
-        var creator = new JpaCriteriaQueryCreator(projections, criteriaBuilder, entity, detachedCriteria)
+        var creator = new JpaCriteriaQueryCreator(projections, criteriaBuilder, entity, detachedCriteria, new DefaultConversionService())
 
         when:
         JpaCriteriaQuery<?> query = creator.createQuery()
@@ -161,7 +161,7 @@ class JpaCriteriaQueryCreatorSpec extends HibernateGormDatastoreSpec {
         projections.count()
 
 
-        var creator = new JpaCriteriaQueryCreator(projections, criteriaBuilder, entity, detachedCriteria)
+        var creator = new JpaCriteriaQueryCreator(projections, criteriaBuilder, entity, detachedCriteria, new DefaultConversionService())
 
         when:
         JpaCriteriaQuery<?> query = creator.createQuery()
@@ -180,7 +180,7 @@ class JpaCriteriaQueryCreatorSpec extends HibernateGormDatastoreSpec {
         var projections = new Query.ProjectionList()
 
 
-        var creator = new JpaCriteriaQueryCreator(projections, criteriaBuilder, entity, detachedCriteria)
+        var creator = new JpaCriteriaQueryCreator(projections, criteriaBuilder, entity, detachedCriteria, new DefaultConversionService())
 
         when:
         JpaCriteriaQuery<?> query = creator.createQuery()
@@ -200,7 +200,7 @@ class JpaCriteriaQueryCreatorSpec extends HibernateGormDatastoreSpec {
         projections.property("firstName")
 
 
-        var creator = new JpaCriteriaQueryCreator(projections, criteriaBuilder, entity, detachedCriteria)
+        var creator = new JpaCriteriaQueryCreator(projections, criteriaBuilder, entity, detachedCriteria, new DefaultConversionService())
 
         when:
         JpaCriteriaQuery<?> query = creator.createQuery()

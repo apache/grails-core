@@ -120,7 +120,7 @@ public class ClassPropertyFetcher {
     /**
      * @return The Java that this ClassPropertyFetcher was constructor for
      */
-    public Class getJavaClass() {
+    public Class<?> getJavaClass() {
         return clazz;
     }
 

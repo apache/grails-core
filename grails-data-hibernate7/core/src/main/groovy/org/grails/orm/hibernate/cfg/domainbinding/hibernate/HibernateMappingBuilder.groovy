@@ -188,7 +188,7 @@ class HibernateMappingBuilder implements MappingConfigurationBuilder<Mapping, Pr
         if (args.usage) {
             String usage = args.usage.toString()
             if (CacheConfig.USAGE_OPTIONS.contains(usage)) {
-                mapping.cache.usage = usage
+                mapping.cache.usage = CacheConfig.Usage.of(usage)
             } else {
                 LOG.warn("ORM Mapping Invalid: Specified [usage] with value [$usage] of [cache] in class [$className] is not valid")
             }
@@ -196,7 +196,7 @@ class HibernateMappingBuilder implements MappingConfigurationBuilder<Mapping, Pr
         if (args.include) {
             String include = args.include.toString()
             if (CacheConfig.INCLUDE_OPTIONS.contains(include)) {
-                mapping.cache.include = include
+                mapping.cache.include = CacheConfig.Include.of(include)
             } else {
                 LOG.warn("ORM Mapping Invalid: Specified [include] with value [$include] of [cache] in class [$className] is not valid")
             }
@@ -309,8 +309,11 @@ class HibernateMappingBuilder implements MappingConfigurationBuilder<Mapping, Pr
         if (typeVal != null) property.type = typeVal
         if (namedArgs.lazy instanceof Boolean) property.setLazy((Boolean) namedArgs.lazy)
         if (namedArgs.insertable instanceof Boolean) property.insertable = (Boolean) namedArgs.insertable
-        Object updateableVal = namedArgs.updateable != null ? namedArgs.updateable : namedArgs.updatable
-        if (updateableVal instanceof Boolean) property.updatable = (Boolean) updateableVal
+        if (namedArgs.updatable instanceof Boolean) property.updatable = (Boolean) namedArgs.updatable
+        if (namedArgs.updateable instanceof Boolean) {
+            LOG.warn("'updateable' is deprecated in domain class mapping; use 'updatable' instead")
+            property.updatable = (Boolean) namedArgs.updateable
+        }
         Object cascadeVal = namedArgs.cascade
         if (cascadeVal != null) property.cascade = cascadeVal.toString()
         if (namedArgs.cascadeValidate instanceof Boolean) property.cascadeValidate = (Boolean) namedArgs.cascadeValidate
@@ -318,6 +321,7 @@ class HibernateMappingBuilder implements MappingConfigurationBuilder<Mapping, Pr
         if (sortVal != null) property.sort = sortVal.toString()
         Object orderVal = namedArgs.order
         if (orderVal != null) property.order = orderVal.toString()
+        if (namedArgs.batchSize instanceof Integer) property.batchSize = (Integer) namedArgs.batchSize
         if (namedArgs.batchSize instanceof Integer) property.batchSize = (Integer) namedArgs.batchSize
         if (namedArgs.ignoreNotFound instanceof Boolean) property.ignoreNotFound = (Boolean) namedArgs.ignoreNotFound
         if (namedArgs.params instanceof Map) {
@@ -404,16 +408,16 @@ class HibernateMappingBuilder implements MappingConfigurationBuilder<Mapping, Pr
             CacheConfig cc = new CacheConfig()
             Object cacheVal = namedArgs.cache
             if (cacheVal instanceof String && CacheConfig.USAGE_OPTIONS.contains(cacheVal)) {
-                cc.usage = (String) cacheVal
+                cc.usage = CacheConfig.Usage.of(cacheVal)
                 property.cache = cc
             } else if (cacheVal == true) {
                 property.cache = cc
             } else if (cacheVal instanceof Map) {
                 Map<String, Object> cacheArgs = (Map<String, Object>) cacheVal
                 Object cacheUsage = cacheArgs.usage
-                if (cacheUsage != null) cc.usage = cacheUsage.toString()
+                if (cacheUsage != null) cc.usage = CacheConfig.Usage.of(cacheUsage)
                 Object cacheInclude = cacheArgs.include
-                if (cacheInclude != null) cc.include = cacheInclude.toString()
+                if (cacheInclude != null) cc.include = CacheConfig.Include.of(cacheInclude)
                 property.cache = cc
             }
         }
@@ -458,9 +462,10 @@ class HibernateMappingBuilder implements MappingConfigurationBuilder<Mapping, Pr
         Object firstArg = hasArgs ? argsArray[0] : null
         Object lastArg = argc > 0 ? argsArray[argc - 1] : null
 
-        if (name == 'user-type' && hasArgs && firstArg instanceof Map) {
+        HibernateMappingKeyword keyword = HibernateMappingKeyword.fromString(name)
+        if (keyword == HibernateMappingKeyword.USER_TYPE && hasArgs && firstArg instanceof Map) {
             hibernateCustomUserType((Map<String, Object>) firstArg)
-        } else if (name == 'importFrom' && hasArgs && firstArg instanceof Class) {
+        } else if (keyword == HibernateMappingKeyword.IMPORT_FROM && hasArgs && firstArg instanceof Class) {
             List<Closure> constraintsToImport = ClassPropertyFetcher.getStaticPropertyValuesFromInheritanceHierarchy(
                 (Class) firstArg, GormProperties.CONSTRAINTS, Closure)
             if (constraintsToImport) {

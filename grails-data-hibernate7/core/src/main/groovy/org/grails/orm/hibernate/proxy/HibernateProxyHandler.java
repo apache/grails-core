@@ -55,7 +55,7 @@ public class HibernateProxyHandler implements ProxyHandler, ProxyFactory {
         if (o instanceof HibernateProxy hp) {
             return !hp.getHibernateLazyInitializer().isUninitialized();
         }
-        if (o instanceof EntityProxy ep) {
+        if (o instanceof EntityProxy<?> ep) {
             return ep.isInitialized();
         }
         if (o instanceof LazyInitializable li) {
@@ -77,7 +77,7 @@ public class HibernateProxyHandler implements ProxyHandler, ProxyFactory {
 
     @Override
     public Object unwrap(Object object) {
-        if (object instanceof EntityProxy ep) {
+        if (object instanceof EntityProxy<?> ep) {
             return ep.getTarget();
         }
 
@@ -96,7 +96,7 @@ public class HibernateProxyHandler implements ProxyHandler, ProxyFactory {
 
     @Override
     public Serializable getIdentifier(Object o) {
-        if (o instanceof EntityProxy ep) {
+        if (o instanceof EntityProxy<?> ep) {
             return ep.getProxyKey();
         }
 
@@ -119,15 +119,15 @@ public class HibernateProxyHandler implements ProxyHandler, ProxyFactory {
 
     @Override
     public boolean isProxy(Object o) {
-        return getProxyInstanceMetaClass(o) != null ||
-                o instanceof EntityProxy ||
-                o instanceof HibernateProxy ||
-                o instanceof PersistentCollection;
+        return getProxyInstanceMetaClass(o) != null
+                || o instanceof EntityProxy
+                || o instanceof HibernateProxy
+                || o instanceof PersistentCollection;
     }
 
     @Override
     public void initialize(Object o) {
-        if (o instanceof EntityProxy ep) {
+        if (o instanceof EntityProxy<?> ep) {
             ep.initialize();
             return;
         }

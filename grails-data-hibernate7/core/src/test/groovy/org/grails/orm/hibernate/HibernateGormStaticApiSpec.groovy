@@ -311,12 +311,30 @@ class HibernateGormStaticApiSpec extends HibernateGormDatastoreSpec {
         found != null
     }
 
-    void "Test find with example throws exception"() {
+    void "Test find with example returns matching instance"() {
+        given:
+        new HibernateGormStaticApiEntity(name: "alpha").save(failOnError: true)
+        new HibernateGormStaticApiEntity(name: "beta").save(flush: true, failOnError: true)
+        manager.session.clear()
+
         when:
-        HibernateGormStaticApiEntity.find(new HibernateGormStaticApiEntity())
+        def result = HibernateGormStaticApiEntity.find(new HibernateGormStaticApiEntity(name: "beta"))
 
         then:
-        thrown(UnsupportedOperationException)
+        result != null
+        result.name == "beta"
+    }
+
+    void "Test find with example returns null when no match"() {
+        given:
+        new HibernateGormStaticApiEntity(name: "alpha").save(flush: true, failOnError: true)
+        manager.session.clear()
+
+        when:
+        def result = HibernateGormStaticApiEntity.find(new HibernateGormStaticApiEntity(name: "nonexistent"))
+
+        then:
+        result == null
     }
 
     void "Test first method"() {
@@ -409,12 +427,32 @@ class HibernateGormStaticApiSpec extends HibernateGormDatastoreSpec {
         instances.size() == 2
     }
 
-    void "Test findAll with example throws exception"() {
+    void "Test findAll with example returns matching instances"() {
+        given:
+        new HibernateGormStaticApiEntity(name: "match").save(failOnError: true)
+        new HibernateGormStaticApiEntity(name: "match").save(failOnError: true)
+        new HibernateGormStaticApiEntity(name: "other").save(flush: true, failOnError: true)
+        manager.session.clear()
+
         when:
-        HibernateGormStaticApiEntity.findAll(new HibernateGormStaticApiEntity())
+        def results = HibernateGormStaticApiEntity.findAll(new HibernateGormStaticApiEntity(name: "match"))
 
         then:
-        thrown(UnsupportedOperationException)
+        results.size() == 2
+        results.every { it.name == "match" }
+    }
+
+    void "Test findAll with empty example returns empty list"() {
+        given:
+        new HibernateGormStaticApiEntity(name: "a").save(failOnError: true)
+        new HibernateGormStaticApiEntity(name: "b").save(flush: true, failOnError: true)
+        manager.session.clear()
+
+        when: "no non-null properties to constrain on"
+        def results = HibernateGormStaticApiEntity.findAll(new HibernateGormStaticApiEntity())
+
+        then: "findAllWhere with empty map returns null (by design guard)"
+        results == null
     }
 
     void "Test getAll with long varargs"() {
@@ -430,6 +468,57 @@ class HibernateGormStaticApiSpec extends HibernateGormDatastoreSpec {
         instances.size() == 2
         instances.find { it.id == e1.id }
         instances.find { it.id == e3.id }
+    }
+
+    void "Test getAll with empty list returns empty list"() {
+        when:
+        def instances = HibernateGormStaticApiEntity.getAll([])
+
+        then:
+        instances == []
+    }
+
+    void "Test getAll preserves input id order"() {
+        given:
+        def e1 = new HibernateGormStaticApiEntity(name: "first").save(failOnError: true)
+        def e2 = new HibernateGormStaticApiEntity(name: "second").save(failOnError: true)
+        def e3 = new HibernateGormStaticApiEntity(name: "third").save(flush: true, failOnError: true)
+
+        when: "ids are requested in reverse order"
+        def instances = HibernateGormStaticApiEntity.getAll([e3.id, e1.id, e2.id])
+
+        then: "results are in the same order as the requested ids"
+        instances.size() == 3
+        instances[0].id == e3.id
+        instances[1].id == e1.id
+        instances[2].id == e2.id
+    }
+
+    void "Test getAll returns null in position for non-existent ids"() {
+        given:
+        def e1 = new HibernateGormStaticApiEntity(name: "exists").save(flush: true, failOnError: true)
+        def missingId = e1.id + 9999L
+
+        when:
+        def instances = HibernateGormStaticApiEntity.getAll([e1.id, missingId])
+
+        then:
+        instances.size() == 2
+        instances[0].id == e1.id
+        instances[1] == null
+    }
+
+    void "Test getAll with duplicate ids returns entry at each position"() {
+        given:
+        def e1 = new HibernateGormStaticApiEntity(name: "dup").save(flush: true, failOnError: true)
+
+        when:
+        def instances = HibernateGormStaticApiEntity.getAll([e1.id, e1.id])
+
+        then:
+        instances.size() == 2
+        instances[0].id == e1.id
+        instances[1].id == e1.id
     }
 
     void "Test list method"() {

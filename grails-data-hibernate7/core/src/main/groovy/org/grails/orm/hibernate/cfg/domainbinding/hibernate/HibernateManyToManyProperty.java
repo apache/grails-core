@@ -20,6 +20,8 @@ package org.grails.orm.hibernate.cfg.domainbinding.hibernate;
 
 import java.beans.PropertyDescriptor;
 
+import org.hibernate.mapping.Collection;
+
 import org.grails.datastore.mapping.model.MappingContext;
 import org.grails.datastore.mapping.model.PersistentEntity;
 import org.grails.datastore.mapping.model.types.mapping.ManyToManyWithMapping;
@@ -28,6 +30,7 @@ import org.grails.orm.hibernate.cfg.PropertyConfig;
 /** Hibernate implementation of {@link org.grails.datastore.mapping.model.types.ManyToMany} */
 public class HibernateManyToManyProperty extends ManyToManyWithMapping<PropertyConfig>
         implements HibernateToManyProperty {
+    private Collection collection;
     public HibernateManyToManyProperty(PersistentEntity entity, MappingContext context, PropertyDescriptor property) {
         super(entity, context, property);
     }
@@ -35,5 +38,22 @@ public class HibernateManyToManyProperty extends ManyToManyWithMapping<PropertyC
     @Override
     public GrailsHibernatePersistentEntity getHibernateAssociatedEntity() {
         return (GrailsHibernatePersistentEntity) super.getAssociatedEntity();
+    }
+
+    @Override
+    public HibernateManyToManyProperty getHibernateInverseSide() {
+        return (HibernateManyToManyProperty) getInverseSide();
+    }
+
+    @Override
+    public boolean isAssociationColumnNullable() {
+        return false;
+    }
+
+    public Collection getCollection() {
+        return collection;
+    }
+    public void setCollection(Collection collection) {
+        this.collection = collection;
     }
 }

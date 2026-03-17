@@ -78,14 +78,14 @@ public class JpaFromProvider implements Cloneable {
                 .distinct()
                 .map(joinColumn -> {
                     // Determine owner class for this join path from detached criteria
-                    Class<?> ownerClass = Optional.ofNullable(aliasMap.get(joinColumn))
-                            .map(dac -> dac.getAssociation().getOwner().getJavaClass())
-                            .orElse(root.getJavaType());
+                    var dac = aliasMap.get(joinColumn);
+                    Class<?> ownerClass =
+                            dac != null ? dac.getAssociation().getOwner().getJavaClass() : root.getJavaType();
                     // Choose base From: use outer root only if join belongs to the outer root type;
                     // otherwise create a detached root for the owner
-                    From<?, ?> base = ownerClass.equals(root.getJavaType()) ?
-                            root :
-                            detachedFroms.computeIfAbsent(joinColumn, s -> cq.from(ownerClass));
+                    From<?, ?> base = ownerClass.equals(root.getJavaType())
+                            ? root
+                            : detachedFroms.computeIfAbsent(joinColumn, s -> cq.from(ownerClass));
 
                     var table = base.join(
                             joinColumn,
@@ -108,6 +108,10 @@ public class JpaFromProvider implements Cloneable {
                         (existing, replacement) -> existing,
                         java.util.LinkedHashMap::new));
         fromsByName.put("root", root);
+        String rootAlias = detachedCriteria.getAlias();
+        if (rootAlias != null && !rootAlias.isEmpty()) {
+            fromsByName.put(rootAlias, root);
+        }
         return fromsByName;
     }
 

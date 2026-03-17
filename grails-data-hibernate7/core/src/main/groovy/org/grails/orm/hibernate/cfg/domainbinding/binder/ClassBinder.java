@@ -31,36 +31,45 @@ import static org.grails.orm.hibernate.cfg.GrailsHibernateUtil.unqualify;
 /** The class binder class. */
 public class ClassBinder {
 
+    private final InFlightMetadataCollector collector;
+
+    public ClassBinder(@Nonnull InFlightMetadataCollector collector) {
+        this.collector = collector;
+    }
+
     /**
      * Binds the specified persistant class to the runtime model based on the properties defined in
      * the domain class
      *
      * @param persistentEntity The Grails domain class
      * @param persistentClass The persistant class
-     * @param collector Existing collector
      */
-    public void bindClass(
-            @Nonnull GrailsHibernatePersistentEntity persistentEntity,
-            PersistentClass persistentClass,
-            @Nonnull InFlightMetadataCollector collector) {
+    public void bindClass(@Nonnull GrailsHibernatePersistentEntity persistentEntity, PersistentClass persistentClass) {
         persistentClass.setLazy(true);
         var entityName = persistentEntity.getName();
         persistentClass.setEntityName(entityName);
         persistentClass.setJpaEntityName(entityName);
         persistentClass.setProxyInterfaceName(entityName);
         persistentClass.setClassName(entityName);
-        persistentClass.setDynamicInsert(false);
-        persistentClass.setDynamicUpdate(false);
-        persistentClass.setSelectBeforeUpdate(false);
+        persistentClass.setAbstract(persistentEntity.isAbstract());
 
-        boolean autoImport;
         Mapping mappedForm = persistentEntity.getMappedForm();
+        boolean autoImport;
         if (mappedForm != null) {
             autoImport = mappedForm.isAutoImport();
+            persistentClass.setDynamicInsert(mappedForm.isDynamicInsert());
+            persistentClass.setDynamicUpdate(mappedForm.isDynamicUpdate());
+            persistentClass.setBatchSize(mappedForm.getBatchSize() != null ? mappedForm.getBatchSize() : 0);
         } else {
             autoImport =
                     collector.getMetadataBuildingOptions().getMappingDefaults().isAutoImportEnabled();
+            persistentClass.setDynamicInsert(false);
+            persistentClass.setDynamicUpdate(false);
+            persistentClass.setBatchSize(0);
         }
+        persistentClass.setSelectBeforeUpdate(false);
+        persistentEntity.setPersistentClass(persistentClass);
+
         if (autoImport) {
             String unqualified = unqualify(entityName);
             persistentClass.setJpaEntityName(unqualified);

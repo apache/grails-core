@@ -1,22 +1,3 @@
-/*
- *  Licensed to the Apache Software Foundation (ASF) under one
- *  or more contributor license agreements.  See the NOTICE file
- *  distributed with this work for additional information
- *  regarding copyright ownership.  The ASF licenses this file
- *  to you under the Apache License, Version 2.0 (the
- *  "License"); you may not use this file except in compliance
- *  with the License.  You may obtain a copy of the License at
- *
- *    https://www.apache.org/licenses/LICENSE-2.0
- *
- *  Unless required by applicable law or agreed to in writing,
- *  software distributed under the License is distributed on an
- *  "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
- *  KIND, either express or implied.  See the License for the
- *  specific language governing permissions and limitations
- *  under the License.
- */
-
 package org.grails.orm.hibernate.connections
 
 import groovy.transform.AutoClone
@@ -27,11 +8,10 @@ import org.grails.datastore.mapping.core.connections.ConnectionSourceSettings
 import org.grails.orm.hibernate.HibernateEventListeners
 import org.grails.datastore.gorm.jdbc.connections.DataSourceSettings
 import org.grails.orm.hibernate.dirty.GrailsEntityDirtinessStrategy
-import org.grails.orm.hibernate.support.AbstractClosureEventTriggeringInterceptor
+import org.grails.orm.hibernate.support.ClosureEventTriggeringInterceptor
 import org.hibernate.CustomEntityDirtinessStrategy
-import org.hibernate.boot.model.naming.CamelCaseToUnderscoresNamingStrategy
+import org.hibernate.boot.model.naming.PhysicalNamingStrategySnakeCaseImpl
 import org.hibernate.boot.model.naming.PhysicalNamingStrategy
-import org.hibernate.cfg.AvailableSettings
 import org.hibernate.cfg.Configuration
 import org.springframework.core.io.Resource
 
@@ -106,7 +86,7 @@ class HibernateConnectionSourceSettings extends ConnectionSourceSettings {
         /**
          * The naming strategy
          */
-        Class<? extends PhysicalNamingStrategy> naming_strategy = CamelCaseToUnderscoresNamingStrategy
+        Class<? extends PhysicalNamingStrategy> naming_strategy = PhysicalNamingStrategySnakeCaseImpl
 
         /**
          *
@@ -114,14 +94,14 @@ class HibernateConnectionSourceSettings extends ConnectionSourceSettings {
         Class<? extends CustomEntityDirtinessStrategy> entity_dirtiness_strategy = GrailsEntityDirtinessStrategy
 
         /**
-         * A subclass of AbstractClosureEventTriggeringInterceptor
+         * A subclass of ClosureEventTriggeringInterceptor
          */
-        Class<? extends AbstractClosureEventTriggeringInterceptor> closureEventTriggeringInterceptorClass
+        Class<? extends ClosureEventTriggeringInterceptor> closureEventTriggeringInterceptorClass
 
         /**
          * The event triggering interceptor
          */
-        AbstractClosureEventTriggeringInterceptor eventTriggeringInterceptor
+        ClosureEventTriggeringInterceptor eventTriggeringInterceptor
         /**
          * The default hibernate event listeners
          */
@@ -134,6 +114,7 @@ class HibernateConnectionSourceSettings extends ConnectionSourceSettings {
          * resources are specified locally via this bean.
          * @see org.hibernate.cfg.Configuration#configure(java.net.URL)
          */
+
         Resource[] configLocations
 
         /**
@@ -207,7 +188,7 @@ class HibernateConnectionSourceSettings extends ConnectionSourceSettings {
         Properties additionalProperties = new Properties()
 
         @CompileStatic
-        Map<String, Object> toHibernateEventListeners(AbstractClosureEventTriggeringInterceptor eventTriggeringInterceptor) {
+        static Map<String, Object> toHibernateEventListeners(ClosureEventTriggeringInterceptor eventTriggeringInterceptor) {
             if (eventTriggeringInterceptor != null) {
                 return [
 //                    'save': eventTriggeringInterceptor,
@@ -248,22 +229,7 @@ class HibernateConnectionSourceSettings extends ConnectionSourceSettings {
                 props.put('hibernate.entity_dirtiness_strategy', entity_dirtiness_strategy.name)
             }
 
-            // Hibernate 5.1/5.2: manually enforce connection release mode ON_CLOSE (the former default)
-            try {
-                // Try Hibernate 5.2
-                AvailableSettings.getField('CONNECTION_HANDLING')
-                props.put('hibernate.connection.handling_mode', 'DELAYED_ACQUISITION_AND_HOLD')
-            }
-            catch (NoSuchFieldException ex) {
-                // Try Hibernate 5.1
-                try {
-                    AvailableSettings.getField('ACQUIRE_CONNECTIONS')
-                    props.put('hibernate.connection.release_mode', 'ON_CLOSE')
-                }
-                catch (NoSuchFieldException ex2) {
-                    // on Hibernate 5.0.x or lower - no need to change the default there
-                }
-            }
+            props.put('hibernate.connection.handling_mode', 'DELAYED_ACQUISITION_AND_HOLD')
 
             String prefix = 'hibernate'
             props.putAll(additionalProperties)
@@ -276,7 +242,7 @@ class HibernateConnectionSourceSettings extends ConnectionSourceSettings {
             for (key in current.keySet()) {
                 def value = current.get(key)
                 if (value instanceof Map) {
-                    populateProperties(props, (Map)value, "${prefix}.$key")
+                    populateProperties(props, (Map) value, "${prefix}.$key")
                 }
                 else {
                     props.put("$prefix.$key".toString(), value)
@@ -351,6 +317,5 @@ class HibernateConnectionSourceSettings extends ConnectionSourceSettings {
         static class JpaComplianceSettings {
             boolean cascade = true
         }
-
     }
 }

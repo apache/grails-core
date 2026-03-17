@@ -30,18 +30,24 @@ import spock.lang.Subject
 class UnidirectionalOneToManyInverseValuesBinderSpec extends HibernateGormDatastoreSpec {
 
     @Subject
-    UnidirectionalOneToManyInverseValuesBinder binder = new UnidirectionalOneToManyInverseValuesBinder()
+    UnidirectionalOneToManyInverseValuesBinder binder
+
+    void setup() {
+        binder = new UnidirectionalOneToManyInverseValuesBinder(getGrailsDomainBinder().metadataBuildingContext)
+    }
 
     void "test bindUnidirectionalOneToManyInverseValues"() {
         given:
         createPersistentEntity(UOTMBook)
         PersistentEntity authorEntity = createPersistentEntity(UOTMAuthor)
         HibernateToManyProperty property = (HibernateToManyProperty) authorEntity.getPropertyByName("books")
-        
-        ManyToOne manyToOne = new ManyToOne(getGrailsDomainBinder().getMetadataBuildingContext(), null)
+
+        def owner = new org.hibernate.mapping.RootClass(getGrailsDomainBinder().metadataBuildingContext)
+        org.hibernate.mapping.Collection collection = new org.hibernate.mapping.Set(getGrailsDomainBinder().metadataBuildingContext, owner)
+        collection.setCollectionTable(new org.hibernate.mapping.Table("UOTM_BOOKS"))
 
         when:
-        binder.bindUnidirectionalOneToManyInverseValues(property, manyToOne)
+        ManyToOne manyToOne = binder.bind(property, collection)
 
         then:
         manyToOne.isIgnoreNotFound() == false
@@ -55,10 +61,12 @@ class UnidirectionalOneToManyInverseValuesBinderSpec extends HibernateGormDatast
         PersistentEntity authorEntity = createPersistentEntity(UOTMAuthorCustom)
         HibernateToManyProperty property = (HibernateToManyProperty) authorEntity.getPropertyByName("books")
 
-        ManyToOne manyToOne = new ManyToOne(getGrailsDomainBinder().getMetadataBuildingContext(), null)
+        def owner = new org.hibernate.mapping.RootClass(getGrailsDomainBinder().metadataBuildingContext)
+        org.hibernate.mapping.Collection collection = new org.hibernate.mapping.Set(getGrailsDomainBinder().metadataBuildingContext, owner)
+        collection.setCollectionTable(new org.hibernate.mapping.Table("UOTM_BOOKS_CUSTOM"))
 
         when:
-        binder.bindUnidirectionalOneToManyInverseValues(property, manyToOne)
+        ManyToOne manyToOne = binder.bind(property, collection)
 
         then:
         manyToOne.isIgnoreNotFound() == true

@@ -18,6 +18,8 @@
  */
 package org.grails.orm.hibernate.query;
 
+import java.util.ArrayList;
+import java.util.Collection;
 import java.util.HashMap;
 import java.util.Locale;
 import java.util.Map;
@@ -44,7 +46,13 @@ import org.grails.datastore.mapping.model.PersistentEntity;
     "PMD.UseLocaleWithCaseConversions"
 })
 public record HqlQueryContext(
-        String hql, Class<?> targetClass, Map<String, Object> namedParams, boolean isUpdate, boolean isNative) {
+        String hql,
+        Class<?> targetClass,
+        Map<String, Object> namedParams,
+        Collection positionalParams,
+        Map<String, Object> querySettings,
+        boolean isUpdate,
+        boolean isNative) {
 
     // ─── Factory ─────────────────────────────────────────────────────────────
 
@@ -54,24 +62,49 @@ public record HqlQueryContext(
      */
     @SuppressWarnings("unchecked")
     public static HqlQueryContext prepare(
+            PersistentEntity entity,
             CharSequence queryCharseq,
-            boolean isNative,
-            boolean isUpdate,
             Map<?, ?> namedParams,
-            PersistentEntity entity) {
-        Map<String, Object> params =
+            Collection positionalParams,
+            Map querySettings,
+            boolean isNative,
+            boolean isUpdate) {
+        Map<String, Object> _namedParams =
                 namedParams != null ? new HashMap<>((Map<String, Object>) namedParams) : new HashMap<>();
-        String hql = resolveHql(queryCharseq, isNative, params);
-        return new HqlQueryContext(hql, getTarget(hql, entity.getJavaClass()), params, isUpdate, isNative);
+        Collection positionalParamsCopy = positionalParams != null ? new ArrayList<>(positionalParams) : null;
+        Map<String, Object> querySettingsCopy = querySettings != null ? new HashMap<>(querySettings) : null;
+
+        String hql;
+        // Prefer positional resolution only if positional parameters are explicitly provided (not null)
+        // and named parameters are empty. This preserves legacy GString->named parameter behavior
+        // while allowing opt-in to positional parameters via methods that pass them.
+        if (positionalParamsCopy != null && _namedParams.isEmpty()) {
+            hql = resolveHql(queryCharseq, isNative, positionalParamsCopy);
+        } else {
+            hql = resolveHql(queryCharseq, isNative, _namedParams);
+        }
+
+        Class<?> target = getTarget(hql, entity.getJavaClass());
+        return new HqlQueryContext(
+                hql, target, _namedParams, positionalParamsCopy, querySettingsCopy, isUpdate, isNative);
     }
 
     // ─── HQL resolution ──────────────────────────────────────────────────────
 
     public static @Nullable String resolveHql(
             CharSequence queryCharseq, boolean isNative, Map<String, Object> namedParams) {
-        String raw = queryCharseq instanceof GString gstr ?
-                buildNamedParameterQueryFromGString(gstr, namedParams) :
-                queryCharseq != null ? queryCharseq.toString() : "";
+        String raw = queryCharseq instanceof GString gstr
+                ? buildNamedParameterQueryFromGString(gstr, namedParams)
+                : queryCharseq != null ? queryCharseq.toString() : "";
+        String normalized = normalizeMultiLineQueryString(raw);
+        return isNative ? normalized : normalizeNonAliasedSelect(normalized);
+    }
+
+    public static @Nullable String resolveHql(
+            CharSequence queryCharseq, boolean isNative, Collection positionalParams) {
+        String raw = queryCharseq instanceof GString gstr
+                ? buildPositionalParameterQueryFromGString(gstr, positionalParams, isNative)
+                : queryCharseq != null ? queryCharseq.toString() : "";
         String normalized = normalizeMultiLineQueryString(raw);
         return isNative ? normalized : normalizeNonAliasedSelect(normalized);
     }
@@ -184,8 +217,8 @@ public record HqlQueryContext(
         int tokenEnd = cur;
         while (tokenEnd < s.length() && !Character.isWhitespace(s.charAt(tokenEnd))) tokenEnd++;
         String token = s.substring(cur, tokenEnd).toLowerCase(Locale.ROOT);
-        boolean hasAlias = !token.isEmpty() &&
-                !Set.of("where", "join", "left", "right", "inner", "outer", "group", "order", "having")
+        boolean hasAlias = !token.isEmpty()
+                && !Set.of("where", "join", "left", "right", "inner", "outer", "group", "order", "having")
                         .contains(token);
         if (hasAlias) return s;
 
@@ -247,6 +280,26 @@ public record HqlQueryContext(
                 String name = "p" + i;
                 sql.append(':').append(name);
                 params.put(name, values[i]);
+            }
+        }
+        return sql.toString();
+    }
+
+    @SuppressWarnings("unchecked")
+    private static String buildPositionalParameterQueryFromGString(
+            GString query, Collection positionalParams, boolean isNative) {
+        StringBuilder sql = new StringBuilder();
+        Object[] values = query.getValues();
+        String[] strings = query.getStrings();
+        for (int i = 0; i < strings.length; i++) {
+            sql.append(strings[i]);
+            if (i < values.length) {
+                if (isNative) {
+                    sql.append('?');
+                } else {
+                    sql.append('?').append(positionalParams.size() + 1);
+                }
+                positionalParams.add(values[i]);
             }
         }
         return sql.toString();

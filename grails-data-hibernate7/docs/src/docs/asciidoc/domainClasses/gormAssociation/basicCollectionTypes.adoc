@@ -1,19 +1,88 @@
-////
-Licensed to the Apache Software Foundation (ASF) under one
-or more contributor license agreements.  See the NOTICE file
-distributed with this work for additional information
-regarding copyright ownership.  The ASF licenses this file
-to you under the Apache License, Version 2.0 (the
-"License"); you may not use this file except in compliance
-with the License.  You may obtain a copy of the License at
+[[gormAssociation-basicCollectionTypes]]
+== Basic Collection Types
 
-https://www.apache.org/licenses/LICENSE-2.0
+In addition to collections of domain objects, GORM supports collections of basic types — strings, numbers, enums, and other persistable values. These are stored in a separate join table.
 
-Unless required by applicable law or agreed to in writing,
-software distributed under the License is distributed on an
-"AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
-KIND, either express or implied.  See the License for the
-specific language governing permissions and limitations
-under the License.
-////
+=== String Collections
 
+[source,groovy]
+----
+class Author {
+    String name
+    static hasMany = [nicknames: String]    // <1>
+}
+----
+<1> A join table `author_nicknames` is created with a `nicknames` column holding the string values.
+
+=== Numeric Collections
+
+[source,groovy]
+----
+class Survey {
+    String question
+    static hasMany = [scores: Integer]
+}
+----
+
+=== Enum Collections
+
+Collections of `enum` types are supported:
+
+[source,groovy]
+----
+enum Status { ACTIVE, INACTIVE, SUSPENDED }
+
+class Account {
+    String name
+    static hasMany = [allowedStatuses: Status]  // <1>
+}
+----
+<1> A join table `account_allowed_statuses` is created. Enum values are stored using their ordinal position by default.
+
+To store enum values as their string names instead of ordinals, configure the `enumType` on the column:
+
+[source,groovy]
+----
+class Account {
+    static hasMany = [allowedStatuses: Status]
+    static mapping = {
+        allowedStatuses {
+            column enumType: 'string'   // <1>
+        }
+    }
+}
+----
+<1> Stores `'ACTIVE'`, `'INACTIVE'`, etc. instead of `0`, `1`, `2`.
+
+=== Customising the Join Table
+
+You can override the join table name and the value column name:
+
+[source,groovy]
+----
+class Author {
+    static hasMany = [nicknames: String]
+    static mapping = {
+        nicknames joinTable: [
+            name:   'author_alias',     // <1>
+            column: 'alias_value'       // <2>
+        ]
+    }
+}
+----
+<1> The join table name.
+<2> The column that holds the basic value.
+
+=== Accessing and Modifying
+
+Basic collections behave like any other GORM `hasMany` — use `addTo*` and `removeFrom*`:
+
+[source,groovy]
+----
+def author = Author.get(1)
+author.addToNicknames('Graeme')
+author.save()
+
+author.removeFromNicknames('Graeme')
+author.save()
+----

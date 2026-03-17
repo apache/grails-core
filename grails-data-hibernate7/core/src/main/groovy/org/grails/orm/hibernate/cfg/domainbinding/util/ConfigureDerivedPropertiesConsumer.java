@@ -21,12 +21,12 @@ package org.grails.orm.hibernate.cfg.domainbinding.util;
 import java.util.Objects;
 import java.util.function.Consumer;
 
-import org.grails.datastore.mapping.model.PersistentProperty;
 import org.grails.orm.hibernate.cfg.Mapping;
+import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernatePersistentProperty;
 
 import static java.util.Optional.ofNullable;
 
-public class ConfigureDerivedPropertiesConsumer implements Consumer<PersistentProperty> {
+public class ConfigureDerivedPropertiesConsumer implements Consumer<HibernatePersistentProperty> {
 
     private final Mapping m;
 
@@ -35,7 +35,7 @@ public class ConfigureDerivedPropertiesConsumer implements Consumer<PersistentPr
     }
 
     @Override
-    public void accept(PersistentProperty persistentProperty) {
+    public void accept(HibernatePersistentProperty persistentProperty) {
         ofNullable(m.getPropertyConfig(persistentProperty.getName()))
                 .ifPresent(propertyConfig -> propertyConfig.setDerived(Objects.nonNull(propertyConfig.getFormula())));
     }

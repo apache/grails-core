@@ -1,19 +1,73 @@
-////
-Licensed to the Apache Software Foundation (ASF) under one
-or more contributor license agreements.  See the NOTICE file
-distributed with this work for additional information
-regarding copyright ownership.  The ASF licenses this file
-to you under the Apache License, Version 2.0 (the
-"License"); you may not use this file except in compliance
-with the License.  You may obtain a copy of the License at
+[[programmaticTransactions]]
+== Programmatic Transactions
 
-https://www.apache.org/licenses/LICENSE-2.0
+GORM integrates with Spring's transaction management. All persistence operations should run within a transaction.
 
-Unless required by applicable law or agreed to in writing,
-software distributed under the License is distributed on an
-"AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
-KIND, either express or implied.  See the License for the
-specific language governing permissions and limitations
-under the License.
-////
+=== `withTransaction`
 
+Use `withTransaction` on any domain class to run a block within a transaction:
+
+[source,groovy]
+----
+Book.withTransaction {
+    new Book(title: 'Grails in Action', author: 'Glen Smith').save()
+    new Book(title: 'Groovy in Action', author: 'Dierk König').save()
+    // both are committed together; any exception rolls back both
+}
+----
+
+The closure receives a `TransactionStatus` parameter if needed:
+
+[source,groovy]
+----
+Book.withTransaction { TransactionStatus status ->
+    def book = new Book(title: 'Test')
+    book.save()
+    if (someCondition) {
+        status.setRollbackOnly()    // <1>
+    }
+}
+----
+<1> Marks the transaction for rollback without throwing an exception.
+
+=== `withNewTransaction`
+
+Start a new, independent transaction (suspending the current one if any):
+
+[source,groovy]
+----
+Book.withNewTransaction {
+    // runs in a brand-new transaction regardless of any outer transaction
+}
+----
+
+=== `withSession`
+
+Access the underlying Hibernate `Session` directly:
+
+[source,groovy]
+----
+Book.withSession { session ->
+    session.flush()
+    session.clear()     // <1>
+}
+----
+<1> Evicts all entities from the first-level cache.
+
+=== Service-Layer Transactions
+
+In a Grails application, services are transactional by default. Annotate individual methods or the entire service class with Spring's `@Transactional` for fine-grained control:
+
+[source,groovy]
+----
+import org.springframework.transaction.annotation.Transactional
+
+@Transactional
+class BookService {
+    def transferOwnership(Long bookId, Long newAuthorId) {
+        def book = Book.get(bookId)
+        book.author = Author.get(newAuthorId)
+        book.save(failOnError: true)
+    }
+}
+----

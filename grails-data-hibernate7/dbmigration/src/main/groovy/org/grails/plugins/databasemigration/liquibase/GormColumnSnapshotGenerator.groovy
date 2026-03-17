@@ -45,10 +45,10 @@ class GormColumnSnapshotGenerator implements SnapshotGenerator {
 
     @Override
     int getPriority(Class<? extends DatabaseObject> objectType, Database database) {
-        if (database instanceof GormDatabase && Column.class.isAssignableFrom(objectType)) {
+        if (database instanceof GormDatabase && Column.isAssignableFrom(objectType)) {
             return 10 + 100 // VERY HIGH PRIORITY
         }
-        return -1 
+        return -1
     }
 
     @Override
@@ -62,7 +62,7 @@ class GormColumnSnapshotGenerator implements SnapshotGenerator {
     }
 
     @Override
-    public <T extends DatabaseObject> T snapshot(T example, DatabaseSnapshot snapshot, SnapshotGeneratorChain chain) {
+    <T extends DatabaseObject> T snapshot(T example, DatabaseSnapshot snapshot, SnapshotGeneratorChain chain) {
         T snapshotObject = chain.snapshot(example, snapshot)
 
         if (!(snapshotObject instanceof Column) || !(snapshot.database instanceof GormDatabase)) {
@@ -98,7 +98,7 @@ class GormColumnSnapshotGenerator implements SnapshotGenerator {
         return snapshotObject
     }
 
-    protected PersistentClass findPersistentClass(Metadata metadata, String tableName) {
+    protected static PersistentClass findPersistentClass(Metadata metadata, String tableName) {
         for (PersistentClass pc : metadata.entityBindings) {
             if (tableName.equalsIgnoreCase(pc.table?.name)) {
                 return pc
@@ -107,7 +107,7 @@ class GormColumnSnapshotGenerator implements SnapshotGenerator {
         return null
     }
 
-    protected boolean isIdentifier(PersistentClass pc, String columnName) {
+    protected static boolean isIdentifier(PersistentClass pc, String columnName) {
         if (!(pc instanceof RootClass)) return false
         RootClass root = (RootClass) pc
         if (!(root.identifier instanceof SimpleValue)) return false
@@ -117,7 +117,7 @@ class GormColumnSnapshotGenerator implements SnapshotGenerator {
         }
     }
 
-    protected PersistentProperty resolveGormProperty(GrailsHibernatePersistentEntity gpe, String columnName) {
+    protected static PersistentProperty resolveGormProperty(GrailsHibernatePersistentEntity gpe, String columnName) {
         for (PersistentProperty prop : gpe.hibernatePersistentProperties) {
             String propColumnName = null
             if (prop instanceof HibernatePersistentProperty) {
@@ -126,7 +126,7 @@ class GormColumnSnapshotGenerator implements SnapshotGenerator {
             if (propColumnName == null) {
                 propColumnName = prop.name
                 if (prop instanceof Association) {
-                    propColumnName += "_id"
+                    propColumnName += '_id'
                 }
             }
             if (columnName.equalsIgnoreCase(propColumnName)) {
@@ -136,7 +136,7 @@ class GormColumnSnapshotGenerator implements SnapshotGenerator {
         return null
     }
 
-    protected void applyGormIdentitySettings(Column column, GrailsHibernatePersistentEntity gpe) {
+    protected static void applyGormIdentitySettings(Column column, GrailsHibernatePersistentEntity gpe) {
         // Always set identifiers as non-nullable
         column.setNullable(false)
         
@@ -146,13 +146,13 @@ class GormColumnSnapshotGenerator implements SnapshotGenerator {
             Identity identity = (Identity) idMapping
             boolean useSequence = m.isTablePerConcreteClass()
             String strategy = identity.determineGeneratorName(useSequence)
-            if (strategy == "identity" || strategy == "native" || strategy == "sequence-identity") {
+            if (strategy == 'identity' || strategy == 'native' || strategy == 'sequence-identity') {
                 column.setAutoIncrementInformation(new Column.AutoIncrementInformation())
             }
         }
     }
 
-    protected void applyGormPropertySettings(Column column, PersistentProperty prop) {
+    protected static void applyGormPropertySettings(Column column, PersistentProperty prop) {
         if (column.isNullable() == null || column.isNullable()) {
             if (!prop.isNullable()) {
                 column.setNullable(false)

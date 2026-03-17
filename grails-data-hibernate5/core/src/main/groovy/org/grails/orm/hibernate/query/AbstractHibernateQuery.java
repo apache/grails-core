@@ -608,7 +608,7 @@ public abstract class AbstractHibernateQuery extends Query {
 
     @Override
     public Query order(Order order) {
-        if(order == null) {
+        if (order == null) {
             return this;
         }
         super.order(order);

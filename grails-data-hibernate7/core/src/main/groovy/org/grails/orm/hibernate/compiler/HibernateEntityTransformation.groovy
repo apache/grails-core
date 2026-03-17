@@ -1,22 +1,3 @@
-/*
- *  Licensed to the Apache Software Foundation (ASF) under one
- *  or more contributor license agreements.  See the NOTICE file
- *  distributed with this work for additional information
- *  regarding copyright ownership.  The ASF licenses this file
- *  to you under the Apache License, Version 2.0 (the
- *  "License"); you may not use this file except in compliance
- *  with the License.  You may obtain a copy of the License at
- *
- *    https://www.apache.org/licenses/LICENSE-2.0
- *
- *  Unless required by applicable law or agreed to in writing,
- *  software distributed under the License is distributed on an
- *  "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
- *  KIND, either express or implied.  See the License for the
- *  specific language governing permissions and limitations
- *  under the License.
- */
-
 package org.grails.orm.hibernate.compiler
 
 import grails.gorm.dirty.checking.DirtyCheckedProperty
@@ -26,13 +7,13 @@ import org.apache.groovy.ast.tools.AnnotatedNodeUtils
 import org.codehaus.groovy.ast.ASTNode
 import org.codehaus.groovy.ast.AnnotatedNode
 import org.codehaus.groovy.ast.AnnotationNode
-import org.codehaus.groovy.ast.ClassCodeVisitorSupport
 import org.codehaus.groovy.ast.ClassHelper
 import org.codehaus.groovy.ast.ClassNode
 import org.codehaus.groovy.ast.FieldNode
 import org.codehaus.groovy.ast.InnerClassNode
 import org.codehaus.groovy.ast.MethodNode
 import org.codehaus.groovy.ast.Parameter
+import org.codehaus.groovy.ast.ClassCodeVisitorSupport
 import org.codehaus.groovy.ast.stmt.BlockStatement
 import org.codehaus.groovy.ast.stmt.IfStatement
 import org.codehaus.groovy.ast.stmt.ReturnStatement
@@ -123,7 +104,7 @@ class HibernateEntityTransformation implements ASTTransformation, CompilationUni
         }
 
         new GormEntityTransformation(compilationUnit: compilationUnit).visit(classNode, sourceUnit)
-        
+
         ClassNode managedEntityClassNode = ClassHelper.make(ManagedEntity)
         ClassNode attributeInterceptableClassNode = ClassHelper.make(PersistentAttributeInterceptable)
         ClassNode entityEntryClassNode = ClassHelper.make(EntityEntry)
@@ -353,7 +334,7 @@ class HibernateEntityTransformation implements ASTTransformation, CompilationUni
 
                         @Override
                         void visitReturnStatement(ReturnStatement statement) {
-                            ReturnStatement rs = (ReturnStatement)statement
+                            ReturnStatement rs = (ReturnStatement) statement
                             def i = varX(interceptorField)
                             def propertyName = NameUtils.getPropertyNameForGetterOrSetter(methodNode.getName())
 
@@ -376,7 +357,7 @@ class HibernateEntityTransformation implements ASTTransformation, CompilationUni
                 else {
                     Statement code = methodNode.code
                     if (code instanceof BlockStatement) {
-                        BlockStatement bs = (BlockStatement)code
+                        BlockStatement bs = (BlockStatement) code
                         Parameter parameter = methodNode.getParameters()[0]
                         ClassNode parameterType = parameter.type
                         final boolean isPrimitive = ClassHelper.isPrimitiveType(parameterType)
@@ -389,7 +370,7 @@ class HibernateEntityTransformation implements ASTTransformation, CompilationUni
                                 callX(interceptorFieldExpr, writeMethodName, args(varX('this'), constX(propertyName), propX(varX('this'), propertyName), varX(parameter)))
                             )
                         )
-                        staticCompilationVisitor.visitIfElse((IfStatement)ifStatement)
+                        staticCompilationVisitor.visitIfElse((IfStatement) ifStatement)
                         bs.getStatements().add(0, ifStatement)
                     }
                 }

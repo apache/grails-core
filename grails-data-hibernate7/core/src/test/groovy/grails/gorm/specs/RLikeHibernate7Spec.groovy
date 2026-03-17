@@ -29,13 +29,13 @@ import spock.lang.Shared
 import spock.lang.Unroll
 
 @Testcontainers
-@Requires({ HibernateGormDatastoreSpec.isDockerAvailable() })
+@Requires({ isDockerAvailable() })
 class RLikeHibernate7Spec extends HibernateGormDatastoreSpec {
 
     @Shared postgres = new PostgreSQLContainer("postgres:16")
     @Shared mysql = new MySQLContainer("mysql:8.0")
     @Shared mariadb = new MariaDBContainer("mariadb:10.11")
-    @Shared oracle = new OracleContainer("gvenzl/oracle-free:23-slim")
+    @Shared oracle = new OracleContainer("gvenzl/oracle-free:slim-faststart")
 
     void setupSpec() {
         manager.addAllDomainClasses([RlikeFoo])

@@ -24,14 +24,11 @@ import java.util.Map;
 import jakarta.annotation.Nonnull;
 
 import org.hibernate.MappingException;
-import org.hibernate.boot.spi.InFlightMetadataCollector;
 import org.hibernate.boot.spi.MetadataBuildingContext;
 import org.hibernate.mapping.BasicValue;
 import org.hibernate.mapping.Column;
-import org.hibernate.mapping.SimpleValue;
 import org.hibernate.type.StandardBasicTypes;
 
-import org.grails.datastore.mapping.model.types.Basic;
 import org.grails.orm.hibernate.cfg.ColumnConfig;
 import org.grails.orm.hibernate.cfg.PersistentEntityNamingStrategy;
 import org.grails.orm.hibernate.cfg.PropertyConfig;
@@ -69,15 +66,14 @@ public class MapSecondPassBinder {
 
     public void bindMapSecondPass(
             @Nonnull HibernateToManyProperty property,
-            @Nonnull InFlightMetadataCollector mappings,
             Map<?, ?> persistentClasses,
             @Nonnull org.hibernate.mapping.Map map) {
-        collectionSecondPassBinder.bindCollectionSecondPass(property, mappings, persistentClasses, map);
-        SimpleValue value = new BasicValue(metadataBuildingContext, map.getCollectionTable());
+        collectionSecondPassBinder.bindCollectionSecondPass(property, persistentClasses, map);
 
         String type = property.getIndexColumnType("string");
         String columnName1 = property.getIndexColumnName(namingStrategy);
-        simpleValueColumnBinder.bindSimpleValue(value, type, columnName1, true);
+        BasicValue value = simpleValueColumnBinder.bindSimpleValue(
+                metadataBuildingContext, map.getCollectionTable(), type, columnName1, true);
         PropertyConfig mappedForm = property.getMappedForm();
         if (mappedForm.getIndexColumn() != null) {
             Column column = simpleValueColumnFetcher.getColumnForSimpleValue(value);
@@ -92,12 +88,10 @@ public class MapSecondPassBinder {
 
         if (!(property instanceof HibernateOneToManyProperty) && !(property instanceof HibernateManyToManyProperty)) {
 
-            SimpleValue elt = new BasicValue(metadataBuildingContext, map.getCollectionTable());
-            map.setElement(elt);
-
             String typeName = null;
-            if (property instanceof Basic basic) {
-                typeName = property.getTypeName(basic.getComponentType());
+            Class<?> componentType = property.getComponentType();
+            if (componentType != null) {
+                typeName = property.getTypeName(componentType);
             }
 
             if (typeName == null) {
@@ -107,9 +101,9 @@ public class MapSecondPassBinder {
                 typeName = StandardBasicTypes.STRING.getName();
             }
             String columnName = property.getMapElementName(namingStrategy);
-            simpleValueColumnBinder.bindSimpleValue(elt, typeName, columnName, false);
-
-            elt.setTypeName(typeName);
+            BasicValue elt = simpleValueColumnBinder.bindSimpleValue(
+                    metadataBuildingContext, map.getCollectionTable(), typeName, columnName, false);
+            map.setElement(elt);
         }
 
         map.setInverse(false);

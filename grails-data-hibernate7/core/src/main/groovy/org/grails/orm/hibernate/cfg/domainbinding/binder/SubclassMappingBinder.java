@@ -21,60 +21,42 @@ package org.grails.orm.hibernate.cfg.domainbinding.binder;
 import java.util.Optional;
 
 import org.checkerframework.checker.nullness.qual.NonNull;
-import org.hibernate.boot.spi.InFlightMetadataCollector;
-import org.hibernate.boot.spi.MetadataBuildingContext;
-import org.hibernate.mapping.JoinedSubclass;
 import org.hibernate.mapping.PersistentClass;
-import org.hibernate.mapping.SingleTableSubclass;
 import org.hibernate.mapping.Subclass;
-import org.hibernate.mapping.UnionSubclass;
 
 import org.grails.orm.hibernate.cfg.GrailsHibernateUtil;
 import org.grails.orm.hibernate.cfg.Mapping;
 import org.grails.orm.hibernate.cfg.domainbinding.hibernate.GrailsHibernatePersistentEntity;
+import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernatePersistentEntity;
 
 public class SubclassMappingBinder {
 
-    private final MetadataBuildingContext metadataBuildingContext;
     private final JoinedSubClassBinder joinedSubClassBinder;
     private final UnionSubclassBinder unionSubclassBinder;
     private final SingleTableSubclassBinder singleTableSubclassBinder;
     private final ClassPropertiesBinder classPropertiesBinder;
 
     public SubclassMappingBinder(
-            MetadataBuildingContext metadataBuildingContext,
             JoinedSubClassBinder joinedSubClassBinder,
             UnionSubclassBinder unionSubclassBinder,
             SingleTableSubclassBinder singleTableSubclassBinder,
             ClassPropertiesBinder classPropertiesBinder) {
-        this.metadataBuildingContext = metadataBuildingContext;
         this.joinedSubClassBinder = joinedSubClassBinder;
         this.unionSubclassBinder = unionSubclassBinder;
         this.singleTableSubclassBinder = singleTableSubclassBinder;
         this.classPropertiesBinder = classPropertiesBinder;
     }
 
-    public @NonNull Subclass createSubclassMapping(
-            @NonNull GrailsHibernatePersistentEntity subEntity,
-            PersistentClass parent,
-            @NonNull InFlightMetadataCollector mappings) {
+    public @NonNull Subclass createSubclassMapping(HibernatePersistentEntity subEntity, PersistentClass parent) {
         Subclass subClass;
         subEntity.configureDerivedProperties();
         Mapping m = subEntity.getMappedForm();
         if (subEntity.isJoinedSubclass()) {
-            var joined = new JoinedSubclass(parent, this.metadataBuildingContext);
-            joinedSubClassBinder.bindJoinedSubClass(subEntity, joined, mappings);
-            subClass = joined;
+            subClass = joinedSubClassBinder.bindJoinedSubClass(subEntity, parent);
         } else if (subEntity.isUnionSubclass()) {
-            var union = new UnionSubclass(parent, this.metadataBuildingContext);
-            unionSubclassBinder.bindUnionSubclass(subEntity, union, mappings);
-            subClass = union;
+            subClass = unionSubclassBinder.bindUnionSubclass(subEntity, parent);
         } else {
-
-            var singleTableSubclass = new SingleTableSubclass(parent, this.metadataBuildingContext);
-
-            singleTableSubclassBinder.bindSubClass(subEntity, singleTableSubclass, mappings);
-            subClass = singleTableSubclass;
+            subClass = singleTableSubclassBinder.bindSubClass(subEntity, parent);
         }
 
         subClass.setBatchSize(Optional.ofNullable(m.getBatchSize()).orElse(-1));
@@ -84,7 +66,7 @@ public class SubclassMappingBinder {
         subClass.setAbstract(subEntity.isAbstract());
         subClass.setEntityName(subEntity.getName());
         subClass.setJpaEntityName(GrailsHibernateUtil.unqualify(subEntity.getName()));
-        classPropertiesBinder.bindClassProperties(subEntity, subClass, mappings);
+        classPropertiesBinder.bindClassProperties(subEntity);
         return subClass;
     }
 }

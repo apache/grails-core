@@ -19,55 +19,40 @@
 package org.grails.plugins.databasemigration.liquibase
 
 import groovy.transform.CompileStatic
-
 import liquibase.database.DatabaseConnection
-import liquibase.database.OfflineConnection
 import liquibase.exception.DatabaseException
 import liquibase.ext.hibernate.database.HibernateDatabase
-import liquibase.snapshot.DatabaseSnapshot
-import liquibase.snapshot.JdbcDatabaseSnapshot
-import liquibase.snapshot.SnapshotControl
-import liquibase.structure.DatabaseObject
+import liquibase.database.jvm.JdbcConnection
+import liquibase.ext.hibernate.database.connection.HibernateConnection
+import org.grails.orm.hibernate.HibernateDatastore
 import org.hibernate.boot.Metadata
 import org.hibernate.boot.MetadataSources
 import org.hibernate.dialect.Dialect
-import org.hibernate.service.ServiceRegistry
 
-import org.grails.orm.hibernate.HibernateDatastore
-
+/**
+ * A Liquibase database implementation that uses GORM's metadata.
+ *
+ * @author Graeme Rocher
+ * @since 2.0
+ */
 @CompileStatic
 class GormDatabase extends HibernateDatabase {
 
     final String shortName = 'GORM'
     final String DefaultDatabaseProductName = 'getDefaultDatabaseProductName'
 
-    private Dialect dialect
-    private Metadata metadata
-    private HibernateDatastore gormDatastore
-    DatabaseConnection connection
+    private final HibernateDatastore gormDatastore
 
-
-
-    GormDatabase() {
-    }
-
-    GormDatabase(Dialect dialect, ServiceRegistry serviceRegistry, HibernateDatastore hibernateDatastore) {
+    GormDatabase(Dialect dialect, HibernateDatastore hibernateDatastore) {
+        super()
         this.dialect = dialect
-        this.metadata = hibernateDatastore.getMetadata()
         this.gormDatastore = hibernateDatastore
-        SnapshotControl snapshotControl = new SnapshotControl(this, null, null)
-        GormDatabase database = this
-        OfflineConnection connection = new OfflineConnection('offline:gorm', null) {
-            DatabaseSnapshot getSnapshot(DatabaseObject[] examples) {
-                new JdbcDatabaseSnapshot(examples, database, snapshotControl)
-            }
-        }
-        this.connection = connection
+        setConnection(new JdbcConnection(new HibernateConnection('hibernate:gorm', null)))
     }
 
     @Override
-    Dialect getDialect() {
-        dialect
+    protected String findDialectName() {
+        dialect?.getClass()?.getName()
     }
 
     /**
@@ -75,11 +60,20 @@ class GormDatabase extends HibernateDatabase {
      */
     @Override
     Metadata getMetadata() {
-        metadata
+        gormDatastore.getMetadata()
+    }
+
+    DatabaseConnection getDatabaseConnection() {
+        return super.getConnection()
     }
 
     HibernateDatastore getGormDatastore() {
         gormDatastore
+    }
+
+    @Override
+    boolean supportsAutoIncrement() {
+        return true
     }
 
     @Override
@@ -91,5 +85,4 @@ class GormDatabase extends HibernateDatabase {
     boolean isCorrectDatabaseImplementation(DatabaseConnection conn) throws DatabaseException {
         return false
     }
-
 }

@@ -1,19 +1,123 @@
-////
-Licensed to the Apache Software Foundation (ASF) under one
-or more contributor license agreements.  See the NOTICE file
-distributed with this work for additional information
-regarding copyright ownership.  The ASF licenses this file
-to you under the Apache License, Version 2.0 (the
-"License"); you may not use this file except in compliance
-with the License.  You may obtain a copy of the License at
+[[ormdsl-tableAndColumnNames]]
+== Table and Column Names
 
-https://www.apache.org/licenses/LICENSE-2.0
+By default GORM derives table and column names from your domain class and property names using an underscore-based naming strategy. You can override these defaults with the ORM DSL `mapping` block.
 
-Unless required by applicable law or agreed to in writing,
-software distributed under the License is distributed on an
-"AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
-KIND, either express or implied.  See the License for the
-specific language governing permissions and limitations
-under the License.
-////
+=== Changing the Table Name
 
+[source,groovy]
+----
+class Book {
+    String title
+    static mapping = {
+        table 'books'           // <1>
+    }
+}
+----
+<1> Maps the `Book` domain class to a table named `books`.
+
+You can also specify a catalog and/or schema:
+
+[source,groovy]
+----
+class Book {
+    String title
+    static mapping = {
+        table name: 'books', catalog: 'inventory', schema: 'dbo'
+    }
+}
+----
+
+=== Changing Column Names
+
+Use the property name followed by `column` to override the column name for any property:
+
+[source,groovy]
+----
+class Book {
+    String title
+    static mapping = {
+        title column: 'book_title'
+    }
+}
+----
+
+For multi-column user types, call `column` multiple times:
+
+[source,groovy]
+----
+class Payment {
+    Money amount
+    static mapping = {
+        amount {
+            column name: 'amount_value'
+            column name: 'amount_currency'
+        }
+    }
+}
+----
+
+=== Column Properties
+
+The `column` block supports the following attributes:
+
+[format="csv", options="header"]
+|===
+attribute,description,default
+`name`,The column name,derived from property name
+`sqlType`,The SQL type override,derived from Hibernate type
+`unique`,Whether the column has a unique constraint,`false`
+`index`,Index name (or `true` for an auto-named index),none
+`defaultValue`,The DDL default value for the column,none
+`comment`,A DDL comment for the column,none
+`read`,A SQL expression to use when reading the value,none
+`write`,A SQL expression to use when writing the value,none
+|===
+
+=== Join Table Configuration for Collections
+
+When a domain class has a `hasMany` relationship without a `belongsTo` on the other side (unidirectional), or for `hasMany` of basic/enum types, GORM uses a join table. You can customise the join table name and its columns:
+
+[source,groovy]
+----
+class Author {
+    static hasMany = [books: Book]
+    static mapping = {
+        books joinTable: 'author_books'     // <1>
+    }
+}
+----
+<1> Override the join table name only.
+
+[source,groovy]
+----
+class Author {
+    static hasMany = [books: Book]
+    static mapping = {
+        books joinTable: [
+            name: 'author_books',       // <1>
+            key: 'author_fk',           // <2>
+            column: 'book_fk'           // <3>
+        ]
+    }
+}
+----
+<1> The join table name.
+<2> The foreign-key column that points back to `Author`.
+<3> The foreign-key column that points to `Book` (or holds the element value for basic types).
+
+You can also use the closure form:
+
+[source,groovy]
+----
+class Author {
+    static hasMany = [books: Book]
+    static mapping = {
+        books joinTable {
+            name 'author_books'
+            key  'author_fk'
+            column 'book_fk'
+        }
+    }
+}
+----

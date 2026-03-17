@@ -39,12 +39,12 @@ class HibernateHqlQuerySpec extends HibernateGormDatastoreSpec {
 
     private HibernateHqlQuery buildHqlQuery(String hql, Map namedParams = [:], List positionalParams = null, Map args = [:], boolean isUpdate = false) {
         def entity = mappingContext.getPersistentEntity(HibernateHqlQuerySpecBook.name)
-        def ctx = HqlQueryContext.prepare(hql, false, isUpdate, namedParams, entity)
+        def ctx = HqlQueryContext.prepare(entity, hql, namedParams, positionalParams, args, false, isUpdate)
         def session = sessionFactory.currentSession
         def hqlQuery = HibernateHqlQuery.buildQuery(session, datastore, sessionFactory, entity, ctx)
-        if (args) hqlQuery.populateQuerySettings(new HashMap(args))
+        if (args) hqlQuery.populateQuerySettings(new HashMap(args), mappingContext.conversionService)
         if (ctx.namedParams()) hqlQuery.populateQueryWithNamedArguments(new HashMap(ctx.namedParams()))
-        else if (positionalParams) hqlQuery.populateQueryWithIndexedArguments(positionalParams)
+        else if (ctx.positionalParams()) hqlQuery.populateQueryWithIndexedArguments(List.copyOf(ctx.positionalParams()))
         hqlQuery
     }
 
@@ -164,11 +164,33 @@ class HibernateHqlQuerySpec extends HibernateGormDatastoreSpec {
         GString gq = "from HibernateHqlQuerySpecBook b where b.title = ${titleVal}"
         when:
         def entity = mappingContext.getPersistentEntity(HibernateHqlQuerySpecBook.name)
-        def ctx = HqlQueryContext.prepare(gq, false, false, [:], entity)
+        def ctx = HqlQueryContext.prepare(entity, gq, [:], null, [:], false, false)
         def hqlQuery = HibernateHqlQuery.buildQuery(sessionFactory.currentSession, datastore, sessionFactory, entity, ctx)
         if (ctx.namedParams()) hqlQuery.populateQueryWithNamedArguments(new HashMap(ctx.namedParams()))
+        else if (ctx.positionalParams()) hqlQuery.populateQueryWithIndexedArguments(List.copyOf(ctx.positionalParams()))
         def results = hqlQuery.list()
         then:
+        results.size() == 1
+        results[0].title == "The Two Towers"
+    }
+
+    void "createHqlQuery with GString can build positional parameters if explicitly requested"() {
+        given:
+        String titleVal = "The Two Towers"
+        GString gq = "from HibernateHqlQuerySpecBook b where b.title = ${titleVal}"
+        when: "positionalParams is provided as non-null (triggering positional branch in prepare)"
+        def entity = mappingContext.getPersistentEntity(HibernateHqlQuerySpecBook.name)
+        // We pass an empty but non-null list to trigger the positional branch
+        def positionalParams = []
+        def ctx = HqlQueryContext.prepare(entity, gq, [:], positionalParams, [:], false, false)
+        // The GString should have appended the value as ?1
+        def hqlQuery = HibernateHqlQuery.buildQuery(sessionFactory.currentSession, datastore, sessionFactory, entity, ctx)
+
+        if (ctx.positionalParams()) hqlQuery.populateQueryWithIndexedArguments(List.copyOf(ctx.positionalParams()))
+        def results = hqlQuery.list()
+
+        then:
+        ctx.hql().contains("?1")
         results.size() == 1
         results[0].title == "The Two Towers"
     }
@@ -215,6 +237,42 @@ class HibernateHqlQuerySpec extends HibernateGormDatastoreSpec {
                 .populateQueryWithNamedArguments([(42): "value"])
         then:
         thrown(Exception)
+    }
+
+    // ─── delegate behaviour ─────────────────────────────────────────────────
+
+    void "selectQuery is non-null for SELECT queries"() {
+        expect:
+        buildHqlQuery("from HibernateHqlQuerySpecBook").selectQuery() != null
+    }
+
+    void "selectQuery is null for UPDATE/DELETE queries"() {
+        expect:
+        buildHqlQuery("update HibernateHqlQuerySpecBook set pages = 1 where title = :t",
+                [t: "The Hobbit"], null, [:], true).selectQuery() == null
+    }
+
+    void "populateQuerySettings silently ignores select-only args for mutation queries"() {
+        when: "max/offset/cache args passed to an UPDATE query — should not throw"
+        buildHqlQuery("update HibernateHqlQuerySpecBook set pages = 1 where title = :t",
+                [t: "The Hobbit"], null, [max: 2, offset: 1, cache: true, fetchSize: 10, readOnly: true], true)
+        then:
+        noExceptionThrown()
+    }
+
+    void "executeUpdate throws UnsupportedOperationException for SELECT query"() {
+        when:
+        buildHqlQuery("from HibernateHqlQuerySpecBook").executeUpdate()
+        then:
+        thrown(UnsupportedOperationException)
+    }
+
+    void "list throws UnsupportedOperationException for UPDATE query"() {
+        when:
+        buildHqlQuery("update HibernateHqlQuerySpecBook set pages = 1 where title = :t",
+                [t: "The Hobbit"], null, [:], true).list()
+        then:
+        thrown(UnsupportedOperationException)
     }
 }
 

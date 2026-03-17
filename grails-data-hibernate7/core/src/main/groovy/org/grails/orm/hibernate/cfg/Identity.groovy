@@ -61,6 +61,11 @@ class Identity extends Property implements HibernateIdentity {
      */
     Map params = [:]
 
+    @Override
+    String[] getPropertyNames() {
+        name ? [name] as String[] : [] as String[]
+    }
+
     String determineGeneratorName(boolean useSequence) {
         if (generator != null && !(GrailsSequenceGeneratorEnum.NATIVE.toString() == generator && useSequence)) {
             return generator

@@ -68,7 +68,7 @@ class CompositeIdentity extends Property implements HibernateIdentity {
      */
     HibernatePersistentProperty[] getHibernateProperties(GrailsHibernatePersistentEntity domainClass) {
         HibernatePersistentProperty[] composite = propertyNames ?
-                propertyNames.collect { domainClass.getPropertyByName(it) as HibernatePersistentProperty } as HibernatePersistentProperty[] :
+                propertyNames.collect { domainClass.getHibernatePropertyByName(it) as HibernatePersistentProperty } as HibernatePersistentProperty[] :
                 domainClass.compositeIdentity
 
         if (!composite) {
@@ -77,6 +77,10 @@ class CompositeIdentity extends Property implements HibernateIdentity {
 
         if (composite.any { it == null }) {
             throw new MappingException("Property referenced in composite-id mapping of class [${domainClass.name}] is not a valid property!")
+        }
+
+        if (composite.length == 0) {
+            throw new MappingException("No composite identifier properties found for class [" + domainClass.getName() + "]");
         }
 
         composite

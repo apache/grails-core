@@ -438,7 +438,7 @@ public class MongoQuery extends BsonQuery implements QueryArgumentsAware {
         final List<Projection> projectionList = projections().getProjectionList();
         if (uniqueResult && projectionList.isEmpty()) {
             if (isCodecPersister) {
-                collection = collection
+                collection = (com.mongodb.client.MongoCollection<Document>) (com.mongodb.client.MongoCollection) collection
                         .withDocumentClass(entity.getJavaClass());
             }
             final Object dbObject;
@@ -475,7 +475,7 @@ public class MongoQuery extends BsonQuery implements QueryArgumentsAware {
 
         if (projectionList.isEmpty()) {
             if (isCodecPersister) {
-                collection = collection
+                collection = (com.mongodb.client.MongoCollection<Document>) (com.mongodb.client.MongoCollection) collection
                         .withDocumentClass(entity.getJavaClass())
                         .withCodecRegistry(mongoSession.getDatastore().getCodecRegistry());
             }

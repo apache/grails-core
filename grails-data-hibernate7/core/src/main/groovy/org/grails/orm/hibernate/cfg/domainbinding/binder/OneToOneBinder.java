@@ -18,17 +18,12 @@
  */
 package org.grails.orm.hibernate.cfg.domainbinding.binder;
 
-import org.hibernate.FetchMode;
 import org.hibernate.boot.spi.MetadataBuildingContext;
-import org.hibernate.engine.jdbc.env.spi.JdbcEnvironment;
 import org.hibernate.mapping.OneToOne;
 import org.hibernate.mapping.PersistentClass;
-import org.hibernate.type.ForeignKeyDirection;
+import org.hibernate.mapping.Table;
 
-import org.grails.datastore.mapping.model.types.Association;
-import org.grails.orm.hibernate.cfg.PersistentEntityNamingStrategy;
-import org.grails.orm.hibernate.cfg.PropertyConfig;
-import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernatePersistentProperty;
+import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernateOneToOneProperty;
 
 public class OneToOneBinder {
 
@@ -40,45 +35,25 @@ public class OneToOneBinder {
         this.simpleValueBinder = simpleValueBinder;
     }
 
-    public OneToOneBinder(
-            MetadataBuildingContext metadataBuildingContext,
-            PersistentEntityNamingStrategy namingStrategy,
-            JdbcEnvironment jdbcEnvironment) {
-        this(metadataBuildingContext, new SimpleValueBinder(metadataBuildingContext, namingStrategy, jdbcEnvironment));
-    }
-
     public OneToOne bindOneToOne(
-            final org.grails.datastore.mapping.model.types.OneToOne property,
-            PersistentClass owner,
-            org.hibernate.mapping.Table table,
+            final HibernateOneToOneProperty property,
             String path) {
+        Table table = property.getTable();
+        PersistentClass owner = property.getHibernateOwner().getPersistentClass();
         OneToOne oneToOne = new OneToOne(metadataBuildingContext, table, owner);
-        PropertyConfig config = ((HibernatePersistentProperty) property).getMappedForm();
-        final Association otherSide = property.getInverseSide();
 
-        final boolean hasOne = otherSide != null && otherSide.isHasOne();
-        oneToOne.setConstrained(hasOne);
-        oneToOne.setForeignKeyType(
-                oneToOne.isConstrained() ? ForeignKeyDirection.FROM_PARENT : ForeignKeyDirection.TO_PARENT);
+        oneToOne.setConstrained(property.isHibernateConstrained());
+        oneToOne.setForeignKeyType(property.getHibernateForeignKeyDirection());
         oneToOne.setAlternateUniqueKey(true);
-
-        if (config != null && config.getFetchMode() != null) {
-            oneToOne.setFetchMode(config.getFetchMode());
-        } else {
-            oneToOne.setFetchMode(FetchMode.DEFAULT);
-        }
-
-        oneToOne.setReferencedEntityName(
-                otherSide != null ?
-                        otherSide.getOwner().getName() :
-                        property.getAssociatedEntity().getName());
+        oneToOne.setFetchMode(property.getHibernateFetchMode());
+        oneToOne.setReferencedEntityName(property.getHibernateReferencedEntityName());
         oneToOne.setPropertyName(property.getName());
         oneToOne.setReferenceToPrimaryKey(false);
 
-        if (hasOne || otherSide == null) {
-            simpleValueBinder.bindSimpleValue((HibernatePersistentProperty) property, null, oneToOne, path);
+        if (property.needsSimpleValueBinding()) {
+            simpleValueBinder.bindSimpleValue(property, null, oneToOne, path);
         } else {
-            oneToOne.setReferencedPropertyName(otherSide.getName());
+            oneToOne.setReferencedPropertyName(property.getHibernateReferencedPropertyName());
         }
         return oneToOne;
     }

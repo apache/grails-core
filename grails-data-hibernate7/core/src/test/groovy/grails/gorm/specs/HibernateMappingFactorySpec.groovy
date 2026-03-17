@@ -39,7 +39,7 @@ class HibernateMappingFactorySpec extends HibernateGormDatastoreSpec {
 
     def setupSpec() {
         manager.addAllDomainClasses([MappingFactoryBook, MappingFactoryAuthor, MappingFactoryTag,
-                                     MappingFactoryArticle])
+                                     MappingFactoryArticle, MappingFactoryEnumBook])
     }
 
     // --- unit-style tests (standalone factory) ---
@@ -167,6 +167,29 @@ class HibernateMappingFactorySpec extends HibernateGormDatastoreSpec {
         addrProp instanceof HibernateEmbeddedProperty
     }
 
+    void "createSimple creates HibernateSimpleEnumProperty for a plain enum field"() {
+        when:
+        PersistentEntity entity = mappingContext.getPersistentEntity(MappingFactoryEnumBook.name)
+        def statusProp = entity.persistentProperties.find { it.name == 'status' }
+
+        then:
+        statusProp instanceof HibernateSimpleEnumProperty
+    }
+
+    void "createCustom creates HibernateCustomEnumProperty for an enum field with a registered marshaller"() {
+        given:
+        HibernateConnectionSourceSettings settings = new HibernateConnectionSourceSettings()
+        settings.custom.types = [new MappingFactoryEnumMarshaller()]
+        def ctx = new HibernateMappingContext(settings)
+        PersistentEntity entity = ctx.addPersistentEntity(MappingFactoryCustomEnumBook)
+
+        when:
+        def statusProp = entity.persistentProperties.find { it.name == 'status' }
+
+        then:
+        statusProp instanceof HibernateCustomEnumProperty
+    }
+
     @Rollback
     void "factory-created entities can be persisted and retrieved"() {
         when:
@@ -233,4 +256,30 @@ class FactoryTypeMarshaller extends AbstractMappingAwareCustomTypeMarshaller {
 
     @Override
     protected Object readInternal(PersistentProperty property, String key, Object nativeSource) { nativeSource }
+}
+
+enum MappingFactoryBookStatus { AVAILABLE, CHECKED_OUT }
+
+@Entity
+class MappingFactoryEnumBook implements HibernateEntity<MappingFactoryEnumBook> {
+    String title
+    MappingFactoryBookStatus status
+}
+
+@Entity
+class MappingFactoryCustomEnumBook implements HibernateEntity<MappingFactoryCustomEnumBook> {
+    String title
+    MappingFactoryBookStatus status
+}
+
+class MappingFactoryEnumMarshaller extends AbstractMappingAwareCustomTypeMarshaller {
+    MappingFactoryEnumMarshaller() { super(MappingFactoryBookStatus) }
+
+    @Override
+    protected Object writeInternal(PersistentProperty property, String key, Object value, Object nativeTarget) { value?.name() }
+
+    @Override
+    protected Object readInternal(PersistentProperty property, String key, Object nativeSource) {
+        nativeSource ? MappingFactoryBookStatus.valueOf(nativeSource.toString()) : null
+    }
 }

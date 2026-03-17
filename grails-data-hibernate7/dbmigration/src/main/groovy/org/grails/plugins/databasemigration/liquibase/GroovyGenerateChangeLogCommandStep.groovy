@@ -61,13 +61,13 @@ class GroovyGenerateChangeLogCommandStep extends GenerateChangelogCommandStep {
 
         InternalSnapshotCommandStep.logUnsupportedDatabase(referenceDatabase, this.getClass())
 
-        DiffCommandStep diffCommandStep = new DiffCommandStep()
+        DiffCommandStep diffCommandStep = createDiffCommandStep()
 
         DiffResult diffResult = diffCommandStep.createDiffResult(resultsBuilder)
 
         DiffOutputControl diffOutputControl = (DiffOutputControl) resultsBuilder.getResult(DiffOutputControlCommandStep.DIFF_OUTPUT_CONTROL.getName())
 
-        DiffToChangeLog changeLogWriter = new DiffToChangeLog(diffResult, diffOutputControl)
+        DiffToChangeLog changeLogWriter = createDiffToChangeLogObject(diffResult, diffOutputControl)
 
         changeLogWriter.setChangeSetAuthor(commandScope.getArgumentValue(AUTHOR_ARG))
         changeLogWriter.setChangeSetContext(commandScope.getArgumentValue(CONTEXT_ARG))
@@ -98,5 +98,13 @@ class GroovyGenerateChangeLogCommandStep extends GenerateChangelogCommandStep {
     @Override
     String[][] defineCommandNames() {
         return new String[][] { COMMAND_NAME }
+    }
+
+    protected DiffCommandStep createDiffCommandStep() {
+        return new DiffCommandStep()
+    }
+
+    protected DiffToChangeLog createDiffToChangeLogObject(DiffResult diffResult, DiffOutputControl diffOutputControl) {
+        return new DiffToChangeLog(diffResult, diffOutputControl)
     }
 }

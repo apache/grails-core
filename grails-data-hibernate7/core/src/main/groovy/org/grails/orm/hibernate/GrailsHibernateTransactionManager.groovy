@@ -37,15 +37,6 @@ class GrailsHibernateTransactionManager extends HibernateTransactionManager {
 
     final FlushMode defaultFlushMode
 
-    GrailsHibernateTransactionManager(FlushMode defaultFlushMode = FlushMode.AUTO) {
-        this.defaultFlushMode = defaultFlushMode
-    }
-
-    GrailsHibernateTransactionManager(SessionFactory sessionFactory, FlushMode defaultFlushMode = FlushMode.AUTO) {
-        super(sessionFactory)
-        this.defaultFlushMode = defaultFlushMode
-    }
-
     GrailsHibernateTransactionManager(SessionFactory sessionFactory, DataSource dataSource, FlushMode defaultFlushMode = FlushMode.AUTO) {
         super(sessionFactory)
         setDataSource(dataSource)
@@ -60,13 +51,12 @@ class GrailsHibernateTransactionManager extends HibernateTransactionManager {
             // transaction is HibernateTransactionManager.HibernateTransactionObject private class instance
             // always set to manual; the base class doesn't because the OSIV has already registered a session
 
-            SessionHolder holder = (SessionHolder)TransactionSynchronizationManager.getResource(sessionFactory)
+            SessionHolder holder = (SessionHolder) TransactionSynchronizationManager.getResource(sessionFactory)
             holder.session.setHibernateFlushMode(FlushMode.MANUAL)
         }
         else if (defaultFlushMode != FlushMode.AUTO) {
-            SessionHolder holder = (SessionHolder)TransactionSynchronizationManager.getResource(sessionFactory)
+            SessionHolder holder = (SessionHolder) TransactionSynchronizationManager.getResource(sessionFactory)
             holder.session.setHibernateFlushMode(defaultFlushMode)
         }
     }
-
 }

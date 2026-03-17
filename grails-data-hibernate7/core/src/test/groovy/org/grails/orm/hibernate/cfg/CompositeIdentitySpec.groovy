@@ -37,8 +37,8 @@ class CompositeIdentitySpec extends Specification {
         def properties = compositeIdentity.getHibernateProperties(domainClass)
 
         then:
-        1 * domainClass.getPropertyByName("prop1") >> prop1
-        1 * domainClass.getPropertyByName("prop2") >> prop2
+        1 * domainClass.getHibernatePropertyByName("prop1") >> prop1
+        1 * domainClass.getHibernatePropertyByName("prop2") >> prop2
         properties.length == 2
         properties[0] == prop1
         properties[1] == prop2
@@ -55,7 +55,7 @@ class CompositeIdentitySpec extends Specification {
 
         then:
         1 * domainClass.getCompositeIdentity() >> ([prop1] as HibernatePersistentProperty[])
-        0 * domainClass.getPropertyByName(_)
+        0 * domainClass.getHibernatePropertyByName(_)
         properties.length == 1
         properties[0] == prop1
     }
@@ -82,7 +82,16 @@ class CompositeIdentitySpec extends Specification {
         compositeIdentity.getHibernateProperties(domainClass)
 
         then:
-        1 * domainClass.getPropertyByName("invalid") >> null
+        1 * domainClass.getHibernatePropertyByName("invalid") >> null
         thrown(MappingException)
+    }
+
+    def "test getPropertyNames"() {
+        given:
+        def propertyNames = ['prop1', 'prop2'] as String[]
+        def compositeIdentity = new CompositeIdentity(propertyNames: propertyNames)
+
+        expect:
+        compositeIdentity.getPropertyNames() == propertyNames
     }
 }

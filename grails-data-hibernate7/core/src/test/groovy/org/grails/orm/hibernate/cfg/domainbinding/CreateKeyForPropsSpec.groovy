@@ -19,7 +19,7 @@
 
 package org.grails.orm.hibernate.cfg.domainbinding
 
-import org.grails.datastore.mapping.model.PersistentEntity
+import org.grails.orm.hibernate.cfg.domainbinding.hibernate.GrailsHibernatePersistentEntity
 import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernatePersistentProperty
 import org.hibernate.MappingException
 import org.hibernate.mapping.Table
@@ -37,9 +37,9 @@ class CreateKeyForPropsSpec extends Specification {
         def uniqueKeyCreator = Mock(UniqueKeyForColumnsCreator)
         def subject = new CreateKeyForProps(columnNameFetcher, uniqueKeyCreator)
 
-        def owner = Mock(PersistentEntity)
+        def owner = Mock(GrailsHibernatePersistentEntity)
         def grailsProp = Mock(HibernatePersistentProperty) {
-            getOwner() >> owner
+            getHibernateOwner() >> owner
         }
 
         def mappedForm = Mock(org.grails.orm.hibernate.cfg.PropertyConfig) {
@@ -51,8 +51,8 @@ class CreateKeyForPropsSpec extends Specification {
 
         def otherProp1 = Mock(HibernatePersistentProperty)
         def otherProp2 = Mock(HibernatePersistentProperty)
-        owner.getPropertyByName("p1") >> otherProp1
-        owner.getPropertyByName("p2") >> otherProp2
+        owner.getHibernatePropertyByName("p1") >> otherProp1
+        owner.getHibernatePropertyByName("p2") >> otherProp2
 
         String path = "some_path"
         def table = new Table("t")
@@ -66,12 +66,12 @@ class CreateKeyForPropsSpec extends Specification {
 
         then:
         1 * grailsProp.getMappedForm() >> mappedForm
-        1 * grailsProp.getOwner() >> owner
+        1 * grailsProp.getHibernateOwner() >> owner
         1 * mappedForm.isUnique() >> true
         1 * mappedForm.isUniqueWithinGroup() >> true
         1 * mappedForm.getUniquenessGroup() >> ["p1", "p2"]
-        1 * owner.getPropertyByName("p1") >> otherProp1
-        1 * owner.getPropertyByName("p2") >> otherProp2
+        1 * owner.getHibernatePropertyByName("p1") >> otherProp1
+        1 * owner.getHibernatePropertyByName("p2") >> otherProp2
         1 * columnNameFetcher.getColumnNameForPropertyAndPath(otherProp1, path, null)
         1 * columnNameFetcher.getColumnNameForPropertyAndPath(otherProp2, path, null)
         1 * uniqueKeyCreator.createUniqueKeyForColumns(table, _ as List)
@@ -83,8 +83,8 @@ class CreateKeyForPropsSpec extends Specification {
         def uniqueKeyCreator = Mock(UniqueKeyForColumnsCreator)
         def subject = new CreateKeyForProps(columnNameFetcher, uniqueKeyCreator)
 
-        def owner = Mock(PersistentEntity)
-        def grailsProp = Mock(HibernatePersistentProperty) { getOwner() >> owner }
+        def owner = Mock(GrailsHibernatePersistentEntity)
+        def grailsProp = Mock(HibernatePersistentProperty) { getHibernateOwner() >> owner }
 
         def mappedForm = Mock(org.grails.orm.hibernate.cfg.PropertyConfig) {
             isUnique() >> false
@@ -98,7 +98,7 @@ class CreateKeyForPropsSpec extends Specification {
 
         then:
         1 * grailsProp.getMappedForm() >> mappedForm
-        0 * grailsProp.getOwner() >> owner
+        0 * grailsProp.getHibernateOwner() >> owner
         1 * mappedForm.isUnique() >> false
         0 * uniqueKeyCreator._
         0 * columnNameFetcher._
@@ -110,8 +110,8 @@ class CreateKeyForPropsSpec extends Specification {
         def uniqueKeyCreator = Mock(UniqueKeyForColumnsCreator)
         def subject = new CreateKeyForProps(columnNameFetcher, uniqueKeyCreator)
 
-        def owner = Mock(PersistentEntity)
-        def grailsProp = Mock(HibernatePersistentProperty) { getOwner() >> owner }
+        def owner = Mock(GrailsHibernatePersistentEntity)
+        def grailsProp = Mock(HibernatePersistentProperty) { getHibernateOwner() >> owner }
         owner.getJavaClass() >> CreateKeyForPropsSpec
 
         def mappedForm = Mock(org.grails.orm.hibernate.cfg.PropertyConfig) {
@@ -121,7 +121,7 @@ class CreateKeyForPropsSpec extends Specification {
         }
         grailsProp.getMappedForm() >> mappedForm
 
-        owner.getPropertyByName("missingProp") >> null
+        owner.getHibernatePropertyByName("missingProp") >> null
 
         when:
         subject.createKeyForProps(grailsProp, null, new Table("t"), "base")
@@ -129,12 +129,12 @@ class CreateKeyForPropsSpec extends Specification {
         then:
         thrown(MappingException)
         1 * grailsProp.getMappedForm() >> mappedForm
-        1 * grailsProp.getOwner() >> owner
+        1 * grailsProp.getHibernateOwner() >> owner
         1 * mappedForm.isUnique() >> true
         1 * mappedForm.isUniqueWithinGroup() >> true
         1 * mappedForm.getUniquenessGroup() >> ["missingProp"]
         1 * owner.getJavaClass() >> CreateKeyForPropsSpec
-        1 * owner.getPropertyByName("missingProp")
+        1 * owner.getHibernatePropertyByName("missingProp")
         0 * uniqueKeyCreator._
         0 * columnNameFetcher._
     }

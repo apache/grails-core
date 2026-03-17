@@ -57,7 +57,11 @@ public enum CriteriaMethods {
     COUNT_CALL("count"),
     GET_CALL("get"),
     SCROLL_CALL("scroll"),
-    PROJECTIONS("projections");
+    PROJECTIONS("projections"),
+    CACHE("cache"),
+    READ_ONLY("readOnly"),
+    FETCH_MODE("fetchMode"),
+    SINGLE_RESULT("singleResult");
 
     private final String name;
 

@@ -99,8 +99,8 @@ class MappingBuilderSpec extends Specification {
 
         expect:
         mapping.cache.enabled
-        mapping.cache.usage == 'read'
-        mapping.cache.include == 'some'
+        mapping.cache.usage.toString() == 'read'
+        mapping.cache.include.toString() == 'some'
     }
 
     void "test sort mapping"() {

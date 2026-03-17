@@ -23,11 +23,8 @@ import grails.gorm.annotation.Entity
 import grails.gorm.specs.HibernateGormDatastoreSpec
 import org.grails.datastore.mapping.model.PersistentEntity
 import org.grails.orm.hibernate.cfg.domainbinding.binder.CollectionForPropertyConfigBinder
-import org.grails.orm.hibernate.cfg.domainbinding.binder.ColumnConfigToColumnBinder
 import org.grails.orm.hibernate.cfg.domainbinding.binder.CompositeIdentifierToManyToOneBinder
-import org.grails.orm.hibernate.cfg.domainbinding.binder.EnumTypeBinder
 import org.grails.orm.hibernate.cfg.domainbinding.binder.SimpleValueColumnBinder
-import org.grails.orm.hibernate.cfg.domainbinding.util.SimpleValueColumnFetcher
 import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernateToManyProperty
 import org.hibernate.boot.spi.InFlightMetadataCollector
 import org.hibernate.mapping.Collection
@@ -35,7 +32,6 @@ import org.hibernate.mapping.ManyToOne
 import org.hibernate.mapping.RootClass
 import org.hibernate.mapping.Set
 import org.hibernate.mapping.Table
-import org.hibernate.type.spi.TypeConfiguration
 import spock.lang.Subject
 
 class CollectionWithJoinTableBinderSpec extends HibernateGormDatastoreSpec {
@@ -44,50 +40,48 @@ class CollectionWithJoinTableBinderSpec extends HibernateGormDatastoreSpec {
     CollectionWithJoinTableBinder binder
 
     UnidirectionalOneToManyInverseValuesBinder unidirectionalOneToManyInverseValuesBinder = Mock(UnidirectionalOneToManyInverseValuesBinder)
-    EnumTypeBinder enumTypeBinder = Mock(EnumTypeBinder)
     CompositeIdentifierToManyToOneBinder compositeIdentifierToManyToOneBinder = Mock(CompositeIdentifierToManyToOneBinder)
-    SimpleValueColumnFetcher simpleValueColumnFetcher = Mock(SimpleValueColumnFetcher)
     CollectionForPropertyConfigBinder collectionForPropertyConfigBinder = Mock(CollectionForPropertyConfigBinder)
+    BasicCollectionElementBinder basicCollectionElementBinder = Mock(BasicCollectionElementBinder)
     SimpleValueColumnBinder simpleValueColumnBinder = new SimpleValueColumnBinder()
-    ColumnConfigToColumnBinder columnConfigToColumnBinder = new ColumnConfigToColumnBinder()
 
     void setup() {
         def domainBinder = getGrailsDomainBinder()
         binder = new CollectionWithJoinTableBinder(
-                domainBinder.metadataBuildingContext,
                 domainBinder.namingStrategy,
                 unidirectionalOneToManyInverseValuesBinder,
-                enumTypeBinder,
                 compositeIdentifierToManyToOneBinder,
-                simpleValueColumnFetcher,
                 collectionForPropertyConfigBinder,
                 simpleValueColumnBinder,
-                columnConfigToColumnBinder
+                basicCollectionElementBinder
         )
     }
 
-    void "test bindCollectionWithJoinTable for basic type"() {
+    void "test bindCollectionWithJoinTable delegates to BasicCollectionElementBinder for basic type"() {
         given:
         PersistentEntity authorEntity = createPersistentEntity(CWJTBAuthor)
         HibernateToManyProperty property = (HibernateToManyProperty) authorEntity.getPropertyByName("tags")
         def domainBinder = getGrailsDomainBinder()
 
         InFlightMetadataCollector mappings = Mock(InFlightMetadataCollector)
-        mappings.getTypeConfiguration() >> new TypeConfiguration()
 
         def owner = new RootClass(domainBinder.metadataBuildingContext)
         Collection collection = new Set(domainBinder.metadataBuildingContext, owner)
         collection.setCollectionTable(new Table("CWJTB_TAGS"))
 
+        def basicValue = new org.hibernate.mapping.BasicValue(domainBinder.metadataBuildingContext, collection.getCollectionTable())
+        basicCollectionElementBinder.bind(property, collection) >> basicValue
+
         when:
-        binder.bindCollectionWithJoinTable(property, mappings, collection)
+        binder.bindCollectionWithJoinTable(property, collection)
 
         then:
-        collection.getElement() != null
+        1 * basicCollectionElementBinder.bind(property, collection) >> basicValue
+        collection.getElement() == basicValue
         1 * collectionForPropertyConfigBinder.bindCollectionForPropertyConfig(collection, property)
     }
 
-    void "test bindCollectionWithJoinTable for entity association"() {
+    void "test bindCollectionWithJoinTable creates ManyToOne element for entity association"() {
         given:
         createPersistentEntity(CWJTBBook)
         PersistentEntity authorEntity = createPersistentEntity(CWJTBAuthor)
@@ -100,8 +94,11 @@ class CollectionWithJoinTableBinderSpec extends HibernateGormDatastoreSpec {
         Collection collection = new Set(domainBinder.metadataBuildingContext, owner)
         collection.setCollectionTable(new Table("CWJTB_BOOKS"))
 
+        def manyToOne = new ManyToOne(domainBinder.metadataBuildingContext, collection.getCollectionTable())
+        unidirectionalOneToManyInverseValuesBinder.bind(property, collection) >> manyToOne
+
         when:
-        binder.bindCollectionWithJoinTable(property, mappings, collection)
+        binder.bindCollectionWithJoinTable(property, collection)
 
         then:
         collection.getElement() instanceof ManyToOne

@@ -21,7 +21,7 @@ package org.grails.orm.hibernate.cfg.domainbinding.util
 
 import grails.gorm.specs.HibernateGormDatastoreSpec
 import org.grails.datastore.mapping.model.config.GormProperties
-import org.grails.orm.hibernate.cfg.domainbinding.hibernate.GrailsHibernatePersistentEntity
+import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernatePersistentEntity
 import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernatePersistentProperty
 import org.hibernate.boot.spi.InFlightMetadataCollector
 import org.hibernate.mapping.BasicValue
@@ -51,7 +51,7 @@ class MultiTenantFilterBinderSpec extends HibernateGormDatastoreSpec {
 
     void "test add multi tenant filter to root class"() {
         given:
-        def entity = Mock(GrailsHibernatePersistentEntity)
+        def entity = Mock(HibernatePersistentEntity)
         def buildingContext = getGrailsDomainBinder().getMetadataBuildingContext()
         def persistentClass = new RootClass(buildingContext)
         
@@ -88,7 +88,7 @@ class MultiTenantFilterBinderSpec extends HibernateGormDatastoreSpec {
 
     void "test skip filter for single table subclass (redundant)"() {
         given:
-        def entity = Mock(GrailsHibernatePersistentEntity)
+        def entity = Mock(HibernatePersistentEntity)
         def buildingContext = getGrailsDomainBinder().getMetadataBuildingContext()
         def rootClass = new RootClass(buildingContext)
         def table = new Table("ROOT_TABLE")
@@ -122,7 +122,7 @@ class MultiTenantFilterBinderSpec extends HibernateGormDatastoreSpec {
 
     void "test skip filter for joined subclass if inherited (alias safety)"() {
         given:
-        def entity = Mock(GrailsHibernatePersistentEntity)
+        def entity = Mock(HibernatePersistentEntity)
         def buildingContext = getGrailsDomainBinder().getMetadataBuildingContext()
         def rootClass = new RootClass(buildingContext)
         def rootTable = new Table("ROOT_TABLE")
@@ -160,7 +160,7 @@ class MultiTenantFilterBinderSpec extends HibernateGormDatastoreSpec {
 
     void "test add filter for union subclass (own table)"() {
         given:
-        def entity = Mock(GrailsHibernatePersistentEntity)
+        def entity = Mock(HibernatePersistentEntity)
         def buildingContext = getGrailsDomainBinder().getMetadataBuildingContext()
         def rootClass = new RootClass(buildingContext)
         def subTable = new Table("SUB_TABLE")

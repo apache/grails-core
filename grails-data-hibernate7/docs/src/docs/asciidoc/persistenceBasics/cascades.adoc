@@ -1,19 +1,44 @@
-////
-Licensed to the Apache Software Foundation (ASF) under one
-or more contributor license agreements.  See the NOTICE file
-distributed with this work for additional information
-regarding copyright ownership.  The ASF licenses this file
-to you under the Apache License, Version 2.0 (the
-"License"); you may not use this file except in compliance
-with the License.  You may obtain a copy of the License at
+[[persistenceBasics-cascades]]
+== Cascades
 
-https://www.apache.org/licenses/LICENSE-2.0
+Hibernate cascades propagate persistence operations from a parent entity to its associated children automatically.
 
-Unless required by applicable law or agreed to in writing,
-software distributed under the License is distributed on an
-"AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
-KIND, either express or implied.  See the License for the
-specific language governing permissions and limitations
-under the License.
-////
+See xref:ormdsl-customCascadeBehaviour[Custom Cascade Behaviour] for the full reference on configuring cascade behaviour via the `mapping` block.
 
+=== Default Cascade Behaviour
+
+GORM applies `save-update` cascading by default on associations managed by `hasMany`. This means:
+
+- Saving an `Author` also saves any new or modified `Book` objects in its `books` collection.
+- **Deleting an `Author` does NOT automatically delete its `books`** unless `belongsTo` is declared or `cascade: 'all'` is configured.
+
+=== Cascade with `belongsTo`
+
+Declaring `belongsTo` on the owned side automatically adds cascade-delete from the owning side:
+
+[source,groovy]
+----
+class Book {
+    static belongsTo = [author: Author]     // <1>
+}
+----
+<1> Deleting an `Author` cascade-deletes all associated `Book` rows.
+
+=== Cascade with `all-delete-orphan`
+
+Use `all-delete-orphan` to delete child rows that are removed from the collection:
+
+[source,groovy]
+----
+class Author {
+    static hasMany = [books: Book]
+    static mapping = {
+        books cascade: 'all-delete-orphan'
+    }
+}
+
+def author = Author.get(1)
+author.books.remove(author.books.first())   // <1>
+author.save()
+----
+<1> The removed `Book` will be deleted from the database.

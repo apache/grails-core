@@ -28,18 +28,14 @@ import org.slf4j.LoggerFactory;
 import org.grails.datastore.mapping.model.types.Association;
 import org.grails.datastore.mapping.model.types.Basic;
 import org.grails.datastore.mapping.model.types.Embedded;
-import org.grails.orm.hibernate.cfg.Mapping;
 import org.grails.orm.hibernate.cfg.PropertyConfig;
-import org.grails.orm.hibernate.cfg.domainbinding.hibernate.GrailsHibernatePersistentEntity;
 import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernateManyToManyProperty;
 import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernateManyToOneProperty;
 import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernateOneToManyProperty;
 import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernateOneToOneProperty;
 import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernatePersistentProperty;
 
-import static org.grails.orm.hibernate.cfg.domainbinding.util.CascadeBehavior.ALL;
-import static org.grails.orm.hibernate.cfg.domainbinding.util.CascadeBehavior.NONE;
-import static org.grails.orm.hibernate.cfg.domainbinding.util.CascadeBehavior.SAVE_UPDATE;
+import static org.grails.orm.hibernate.cfg.domainbinding.util.CascadeBehavior.*;
 
 /** The cascade behavior fetcher class. */
 public class CascadeBehaviorFetcher {
@@ -103,12 +99,5 @@ public class CascadeBehaviorFetcher {
         } else {
             throw new MappingException("Unrecognized association type " + association.getType());
         }
-    }
-
-    private Mapping getOwnersWrappedForm(Association<?> association) {
-        if (association.getOwner() instanceof GrailsHibernatePersistentEntity persistentEntity) {
-            return persistentEntity.getMappedForm();
-        }
-        return null;
     }
 }

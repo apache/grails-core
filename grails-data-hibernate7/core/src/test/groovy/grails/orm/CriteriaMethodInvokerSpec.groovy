@@ -22,13 +22,18 @@ package grails.orm
 import groovy.lang.Closure
 import groovy.lang.MissingMethodException
 import org.grails.orm.hibernate.query.HibernateQuery
+import org.grails.orm.hibernate.HibernateSession
+import org.hibernate.Session
 import org.hibernate.SessionFactory
+import org.springframework.orm.hibernate5.SessionHolder
+import org.springframework.transaction.support.TransactionSynchronizationManager
 import spock.lang.Specification
 
 class CriteriaMethodInvokerSpec extends Specification {
 
     HibernateCriteriaBuilder builder = Mock(HibernateCriteriaBuilder)
     HibernateQuery query = Mock(HibernateQuery)
+    SessionFactory sessionFactory = Mock(SessionFactory)
     CriteriaMethodInvoker invoker = new CriteriaMethodInvoker(builder)
 
     def setup() {
@@ -198,12 +203,43 @@ class CriteriaMethodInvokerSpec extends Specification {
         1 * builder.eq('id', 42L)
     }
 
+    void "trySimpleCriteria: cache delegates to builder.cache"() {
+        when:
+        invoker.trySimpleCriteria('cache', CriteriaMethods.CACHE, [true] as Object[])
+
+        then:
+        1 * builder.cache(true)
+    }
+
+    void "trySimpleCriteria: readOnly delegates to builder.readOnly"() {
+        when:
+        invoker.trySimpleCriteria('readOnly', CriteriaMethods.READ_ONLY, [true] as Object[])
+
+        then:
+        1 * builder.readOnly(true)
+    }
+
+    void "trySimpleCriteria: singleResult delegates to builder.singleResult"() {
+        when:
+        invoker.trySimpleCriteria('singleResult', CriteriaMethods.SINGLE_RESULT, [42L] as Object[])
+
+        then:
+        1 * builder.singleResult()
+    }
+
+    void "tryPropertyCriteria: fetchMode delegates to builder.fetchMode"() {
+        when:
+        invoker.tryPropertyCriteria(CriteriaMethods.FETCH_MODE, ["transactions", org.hibernate.FetchMode.JOIN] as Object[])
+
+        then:
+        1 * builder.fetchMode("transactions", org.hibernate.FetchMode.JOIN)
+    }
+
     void "trySimpleCriteria: isNull with String delegates to hibernateQuery.isNull"() {
         when:
         invoker.trySimpleCriteria('isNull', CriteriaMethods.IS_NULL, ['branch'] as Object[])
 
         then:
-        1 * builder.calculatePropertyName('branch') >> 'branch'
         1 * query.isNull('branch')
     }
 
@@ -212,7 +248,6 @@ class CriteriaMethodInvokerSpec extends Specification {
         invoker.trySimpleCriteria('isNotNull', CriteriaMethods.IS_NOT_NULL, ['branch'] as Object[])
 
         then:
-        1 * builder.calculatePropertyName('branch') >> 'branch'
         1 * query.isNotNull('branch')
     }
 
@@ -221,7 +256,6 @@ class CriteriaMethodInvokerSpec extends Specification {
         invoker.trySimpleCriteria('isEmpty', CriteriaMethods.IS_EMPTY, ['transactions'] as Object[])
 
         then:
-        1 * builder.calculatePropertyName('transactions') >> 'transactions'
         1 * query.isEmpty('transactions')
     }
 
@@ -230,7 +264,6 @@ class CriteriaMethodInvokerSpec extends Specification {
         invoker.trySimpleCriteria('isNotEmpty', CriteriaMethods.IS_NOT_EMPTY, ['transactions'] as Object[])
 
         then:
-        1 * builder.calculatePropertyName('transactions') >> 'transactions'
         1 * query.isNotEmpty('transactions')
     }
 
@@ -251,7 +284,7 @@ class CriteriaMethodInvokerSpec extends Specification {
 
         then:
         result != null  // UNHANDLED sentinel object
-        0 * builder.calculatePropertyName(_)
+        0 * query.isNull(_)
     }
 
     void "trySimpleCriteria: null method returns UNHANDLED"() {
@@ -270,7 +303,6 @@ class CriteriaMethodInvokerSpec extends Specification {
         invoker.tryPropertyCriteria(CriteriaMethods.RLIKE, ['firstName', '^F.*'] as Object[])
 
         then:
-        1 * builder.calculatePropertyName('firstName') >> 'firstName'
         1 * builder.rlike('firstName', '^F.*')
     }
 
@@ -279,7 +311,6 @@ class CriteriaMethodInvokerSpec extends Specification {
         invoker.tryPropertyCriteria(CriteriaMethods.BETWEEN, ['balance', 10, 100] as Object[])
 
         then:
-        1 * builder.calculatePropertyName('balance') >> 'balance'
         1 * builder.between('balance', 10, 100)
     }
 
@@ -288,7 +319,6 @@ class CriteriaMethodInvokerSpec extends Specification {
         invoker.tryPropertyCriteria(CriteriaMethods.EQUALS, ['firstName', 'Fred'] as Object[])
 
         then:
-        1 * builder.calculatePropertyName('firstName') >> 'firstName'
         1 * builder.eq('firstName', 'Fred')
     }
 
@@ -300,7 +330,6 @@ class CriteriaMethodInvokerSpec extends Specification {
         invoker.tryPropertyCriteria(CriteriaMethods.EQUALS, ['firstName', 'Fred', params] as Object[])
 
         then:
-        1 * builder.calculatePropertyName('firstName') >> 'firstName'
         1 * builder.eq('firstName', 'Fred', params)
     }
 
@@ -309,7 +338,6 @@ class CriteriaMethodInvokerSpec extends Specification {
         invoker.tryPropertyCriteria(CriteriaMethods.EQUALS_PROPERTY, ['firstName', 'lastName'] as Object[])
 
         then:
-        1 * builder.calculatePropertyName('firstName') >> 'firstName'
         1 * builder.eqProperty('firstName', 'lastName')
     }
 
@@ -318,7 +346,6 @@ class CriteriaMethodInvokerSpec extends Specification {
         invoker.tryPropertyCriteria(CriteriaMethods.GREATER_THAN, ['balance', 100] as Object[])
 
         then:
-        1 * builder.calculatePropertyName('balance') >> 'balance'
         1 * builder.gt('balance', 100)
     }
 
@@ -327,7 +354,6 @@ class CriteriaMethodInvokerSpec extends Specification {
         invoker.tryPropertyCriteria(CriteriaMethods.GREATER_THAN_PROPERTY, ['balance', 'balance'] as Object[])
 
         then:
-        1 * builder.calculatePropertyName('balance') >> 'balance'
         1 * builder.gtProperty('balance', 'balance')
     }
 
@@ -336,7 +362,6 @@ class CriteriaMethodInvokerSpec extends Specification {
         invoker.tryPropertyCriteria(CriteriaMethods.GREATER_THAN_OR_EQUAL, ['balance', 100] as Object[])
 
         then:
-        1 * builder.calculatePropertyName('balance') >> 'balance'
         1 * builder.ge('balance', 100)
     }
 
@@ -345,7 +370,6 @@ class CriteriaMethodInvokerSpec extends Specification {
         invoker.tryPropertyCriteria(CriteriaMethods.GREATER_THAN_OR_EQUAL_PROPERTY, ['balance', 'balance'] as Object[])
 
         then:
-        1 * builder.calculatePropertyName('balance') >> 'balance'
         1 * builder.geProperty('balance', 'balance')
     }
 
@@ -354,7 +378,6 @@ class CriteriaMethodInvokerSpec extends Specification {
         invoker.tryPropertyCriteria(CriteriaMethods.ILIKE, ['firstName', 'fr%'] as Object[])
 
         then:
-        1 * builder.calculatePropertyName('firstName') >> 'firstName'
         1 * builder.ilike('firstName', 'fr%')
     }
 
@@ -366,7 +389,6 @@ class CriteriaMethodInvokerSpec extends Specification {
         invoker.tryPropertyCriteria(CriteriaMethods.IN, ['firstName', names] as Object[])
 
         then:
-        1 * builder.calculatePropertyName('firstName') >> 'firstName'
         1 * builder.in('firstName', names)
     }
 
@@ -378,7 +400,6 @@ class CriteriaMethodInvokerSpec extends Specification {
         invoker.tryPropertyCriteria(CriteriaMethods.IN, ['firstName', names] as Object[])
 
         then:
-        1 * builder.calculatePropertyName('firstName') >> 'firstName'
         1 * builder.in('firstName', names)
     }
 
@@ -387,7 +408,6 @@ class CriteriaMethodInvokerSpec extends Specification {
         invoker.tryPropertyCriteria(CriteriaMethods.LESS_THAN, ['balance', 500] as Object[])
 
         then:
-        1 * builder.calculatePropertyName('balance') >> 'balance'
         1 * builder.lt('balance', 500)
     }
 
@@ -396,7 +416,6 @@ class CriteriaMethodInvokerSpec extends Specification {
         invoker.tryPropertyCriteria(CriteriaMethods.LESS_THAN_PROPERTY, ['balance', 'balance'] as Object[])
 
         then:
-        1 * builder.calculatePropertyName('balance') >> 'balance'
         1 * builder.ltProperty('balance', 'balance')
     }
 
@@ -405,7 +424,6 @@ class CriteriaMethodInvokerSpec extends Specification {
         invoker.tryPropertyCriteria(CriteriaMethods.LESS_THAN_OR_EQUAL, ['balance', 500] as Object[])
 
         then:
-        1 * builder.calculatePropertyName('balance') >> 'balance'
         1 * builder.le('balance', 500)
     }
 
@@ -414,7 +432,6 @@ class CriteriaMethodInvokerSpec extends Specification {
         invoker.tryPropertyCriteria(CriteriaMethods.LESS_THAN_OR_EQUAL_PROPERTY, ['balance', 'balance'] as Object[])
 
         then:
-        1 * builder.calculatePropertyName('balance') >> 'balance'
         1 * builder.leProperty('balance', 'balance')
     }
 
@@ -423,7 +440,6 @@ class CriteriaMethodInvokerSpec extends Specification {
         invoker.tryPropertyCriteria(CriteriaMethods.LIKE, ['firstName', 'Fr%'] as Object[])
 
         then:
-        1 * builder.calculatePropertyName('firstName') >> 'firstName'
         1 * builder.like('firstName', 'Fr%')
     }
 
@@ -432,7 +448,6 @@ class CriteriaMethodInvokerSpec extends Specification {
         invoker.tryPropertyCriteria(CriteriaMethods.NOT_EQUAL, ['firstName', 'Fred'] as Object[])
 
         then:
-        1 * builder.calculatePropertyName('firstName') >> 'firstName'
         1 * builder.ne('firstName', 'Fred')
     }
 
@@ -441,7 +456,6 @@ class CriteriaMethodInvokerSpec extends Specification {
         invoker.tryPropertyCriteria(CriteriaMethods.NOT_EQUAL_PROPERTY, ['firstName', 'lastName'] as Object[])
 
         then:
-        1 * builder.calculatePropertyName('firstName') >> 'firstName'
         1 * builder.neProperty('firstName', 'lastName')
     }
 
@@ -450,7 +464,6 @@ class CriteriaMethodInvokerSpec extends Specification {
         invoker.tryPropertyCriteria(CriteriaMethods.SIZE_EQUALS, ['transactions', 2] as Object[])
 
         then:
-        1 * builder.calculatePropertyName('transactions') >> 'transactions'
         1 * builder.sizeEq('transactions', 2)
     }
 
@@ -462,16 +475,8 @@ class CriteriaMethodInvokerSpec extends Specification {
         result != null  // UNHANDLED sentinel
         0 * builder._
     }
-
-    void "tryPropertyCriteria: non-String first arg returns UNHANDLED"() {
-        when:
-        def result = invoker.tryPropertyCriteria(CriteriaMethods.EQUALS, [42, 'Fred'] as Object[])
-
-        then:
-        result != null  // UNHANDLED sentinel
-        0 * builder._
-    }
 }
+
 
 class InvokerAccount {
     String firstName

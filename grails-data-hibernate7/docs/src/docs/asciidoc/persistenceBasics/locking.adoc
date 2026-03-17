@@ -1,19 +1,40 @@
-////
-Licensed to the Apache Software Foundation (ASF) under one
-or more contributor license agreements.  See the NOTICE file
-distributed with this work for additional information
-regarding copyright ownership.  The ASF licenses this file
-to you under the Apache License, Version 2.0 (the
-"License"); you may not use this file except in compliance
-with the License.  You may obtain a copy of the License at
+[[persistenceBasics-locking]]
+== Locking
 
-https://www.apache.org/licenses/LICENSE-2.0
+=== Optimistic Locking
 
-Unless required by applicable law or agreed to in writing,
-software distributed under the License is distributed on an
-"AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
-KIND, either express or implied.  See the License for the
-specific language governing permissions and limitations
-under the License.
-////
+GORM enables optimistic locking by default via a `version` column. See xref:ormdsl-optimisticLockingAndVersioning[Optimistic Locking and Versioning] for full details.
 
+=== Pessimistic Locking
+
+To acquire a database-level lock on a row, use `lock()`:
+
+[source,groovy]
+----
+Book.withTransaction {
+    def book = Book.lock(1)         // <1>
+    book.title = 'Updated Safely'
+    book.save()
+}                                   // <2>
+----
+<1> Issues `SELECT ... FOR UPDATE`, preventing concurrent reads/writes to this row.
+<2> Lock is released when the transaction commits.
+
+You can also lock an already-loaded instance:
+
+[source,groovy]
+----
+def book = Book.get(1)
+book.lock()                         // upgrades to a pessimistic lock
+----
+
+=== Refresh
+
+To reload the current state from the database (discarding in-memory changes):
+
+[source,groovy]
+----
+def book = Book.get(1)
+// ... another thread modifies the book ...
+book.refresh()                      // re-reads from the database
+----

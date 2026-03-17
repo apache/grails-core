@@ -29,7 +29,7 @@ class HqlQueryContextSpec extends Specification {
     void "record accessors return constructor values"() {
         given:
         def params = [name: "Alice"]
-        def ctx = new HqlQueryContext("from Person", String, params, false, false)
+        def ctx = new HqlQueryContext("from Person", String, params, null, [:], false, false)
 
         expect:
         ctx.hql()         == "from Person"
@@ -41,7 +41,7 @@ class HqlQueryContextSpec extends Specification {
 
     void "record isUpdate and isNative flags are set correctly"() {
         given:
-        def ctx = new HqlQueryContext("update Foo set x=1", Object, [:], true, true)
+        def ctx = new HqlQueryContext("update Foo set x=1", Object, [:], null, [:], true, true)
 
         expect:
         ctx.isUpdate()
@@ -55,7 +55,7 @@ class HqlQueryContextSpec extends Specification {
         def entity = Mock(PersistentEntity) { getJavaClass() >> String }
 
         when:
-        def ctx = HqlQueryContext.prepare("from Foo", false, false, null, entity)
+        def ctx = HqlQueryContext.prepare(entity, "from Foo", null, null, [:], false, false)
 
         then:
         ctx.hql()              == "from Foo"
@@ -65,18 +65,47 @@ class HqlQueryContextSpec extends Specification {
         !ctx.isNative()
     }
 
-    void "prepare with GString expands interpolations into named parameters"() {
+    void "prepare with GString and positionalParams expands interpolations into positional parameters"() {
         given:
         def entity = Mock(PersistentEntity) { getJavaClass() >> String }
         String val = "bar"
         GString gq = "from Foo where name = ${val}"
 
         when:
-        def ctx = HqlQueryContext.prepare(gq, false, false, null, entity)
+        def ctx = HqlQueryContext.prepare(entity, gq, [:], [], [:], false, false)
 
         then:
-        ctx.hql()         == "from Foo where name = :p0"
-        ctx.namedParams() == [p0: "bar"]
+        ctx.hql()              == "from Foo where name = ?1"
+        ctx.positionalParams() == ["bar"]
+        ctx.namedParams().isEmpty()
+    }
+
+    void "reproduce HibernateHqlQuerySpec failure"() {
+        given:
+        def entity = Mock(PersistentEntity) { getJavaClass() >> String; getName() >> "Book" }
+        String titleVal = "The Two Towers"
+        GString gq = "from HibernateHqlQuerySpecBook b where b.title = ${titleVal}"
+
+        when:
+        def ctx = HqlQueryContext.prepare(entity, gq, [:], [], [:], false, false)
+
+        then:
+        ctx.hql() == "from HibernateHqlQuerySpecBook b where b.title = ?1"
+        ctx.positionalParams() == ["The Two Towers"]
+    }
+
+    void "prepare with GString and non-empty positionalParams appends to existing parameters"() {
+        given:
+        def entity = Mock(PersistentEntity) { getJavaClass() >> String }
+        String val = "bar"
+        GString gq = "from Foo where name = ${val}"
+
+        when:
+        def ctx = HqlQueryContext.prepare(entity, gq, [:], ["first"], [:], false, false)
+
+        then:
+        ctx.hql()              == "from Foo where name = ?2"
+        ctx.positionalParams() == ["first", "bar"]
     }
 
     void "prepare merges caller-supplied namedParams with GString params"() {
@@ -86,7 +115,7 @@ class HqlQueryContextSpec extends Specification {
         GString gq = "from Foo where name = ${val} and status = :status"
 
         when:
-        def ctx = HqlQueryContext.prepare(gq, false, false, [status: "active"], entity)
+        def ctx = HqlQueryContext.prepare(entity, gq, [status: "active"], null, [:], false, false)
 
         then:
         ctx.namedParams().p0     == "bar"
@@ -98,7 +127,7 @@ class HqlQueryContextSpec extends Specification {
         def entity = Mock(PersistentEntity) { getJavaClass() >> String }
 
         when:
-        def ctx = HqlQueryContext.prepare("select name from foo", true, false, null, entity)
+        def ctx = HqlQueryContext.prepare(entity, "select name from foo", null, null, [:], true, false)
 
         then:
         ctx.hql()      == "select name from foo"  // alias injection skipped for native SQL
@@ -110,7 +139,7 @@ class HqlQueryContextSpec extends Specification {
         def entity = Mock(PersistentEntity) { getJavaClass() >> String }
 
         when:
-        def ctx = HqlQueryContext.prepare("update Foo set x=1", false, true, null, entity)
+        def ctx = HqlQueryContext.prepare(entity, "update Foo set x=1", null, null, [:], false, true)
 
         then:
         ctx.isUpdate()
@@ -121,7 +150,7 @@ class HqlQueryContextSpec extends Specification {
         def entity = Mock(PersistentEntity) { getJavaClass() >> String }
 
         when:
-        def ctx = HqlQueryContext.prepare("from Foo", false, false, null, entity)
+        def ctx = HqlQueryContext.prepare(entity, "from Foo", null, null, [:], false, false)
 
         then:
         noExceptionThrown()

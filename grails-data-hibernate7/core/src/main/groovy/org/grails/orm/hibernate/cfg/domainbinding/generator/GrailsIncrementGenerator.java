@@ -18,6 +18,7 @@
  */
 package org.grails.orm.hibernate.cfg.domainbinding.generator;
 
+import java.io.Serial;
 import java.util.Properties;
 
 import org.hibernate.boot.model.relational.SqlStringGenerationContext;
@@ -30,8 +31,6 @@ import org.grails.orm.hibernate.cfg.Identity;
 import org.grails.orm.hibernate.cfg.PersistentEntityNamingStrategy;
 import org.grails.orm.hibernate.cfg.domainbinding.hibernate.GrailsHibernatePersistentEntity;
 
-import static org.hibernate.id.IncrementGenerator.COLUMN;
-import static org.hibernate.id.IncrementGenerator.TABLES;
 import static org.hibernate.id.PersistentIdentifierGenerator.CATALOG;
 import static org.hibernate.id.PersistentIdentifierGenerator.SCHEMA;
 
@@ -41,6 +40,7 @@ import static org.hibernate.id.PersistentIdentifierGenerator.SCHEMA;
  */
 public class GrailsIncrementGenerator extends IncrementGenerator {
 
+    @Serial
     private static final long serialVersionUID = 1L;
 
     public GrailsIncrementGenerator(
@@ -69,11 +69,11 @@ public class GrailsIncrementGenerator extends IncrementGenerator {
         // Resolve column name — fall back to "id" if the property path is dotted (composite)
         String columnName = context.getProperty().getName();
         if (columnName == null || columnName.contains(".")) {
-            columnName = (mappedId != null &&
-                            mappedId.getName() != null &&
-                            !mappedId.getName().contains(".")) ?
-                    mappedId.getName() :
-                    "id";
+            columnName = (mappedId != null
+                            && mappedId.getName() != null
+                            && !mappedId.getName().contains("."))
+                    ? mappedId.getName()
+                    : "id";
         }
         params.put(COLUMN, columnName);
 

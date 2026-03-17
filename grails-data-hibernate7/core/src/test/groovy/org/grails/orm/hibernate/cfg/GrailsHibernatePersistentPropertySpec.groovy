@@ -126,10 +126,10 @@ class GrailsHibernatePersistentPropertySpec extends HibernateGormDatastoreSpec {
         HibernatePersistentProperty manyToOneProp = (HibernatePersistentProperty) entity.getPropertyByName("manyToOne")
 
         expect:
-        oneToOneProp.isHibernateOneToOne()
-        !oneToOneProp.isHibernateManyToOne()
-        !manyToOneProp.isHibernateOneToOne()
-        manyToOneProp.isHibernateManyToOne()
+        oneToOneProp.isValidHibernateOneToOne()
+        !oneToOneProp.isValidHibernateManyToOne()
+        !manyToOneProp.isValidHibernateOneToOne()
+        manyToOneProp.isValidHibernateManyToOne()
     }
 
 

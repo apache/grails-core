@@ -1,19 +1,57 @@
-////
-Licensed to the Apache Software Foundation (ASF) under one
-or more contributor license agreements.  See the NOTICE file
-distributed with this work for additional information
-regarding copyright ownership.  The ASF licenses this file
-to you under the Apache License, Version 2.0 (the
-"License"); you may not use this file except in compliance
-with the License.  You may obtain a copy of the License at
+[[ormdsl-derivedProperties]]
+== Derived Properties
 
-https://www.apache.org/licenses/LICENSE-2.0
+A derived property is a read-only property whose value is computed by a SQL formula rather than stored in a dedicated column.
 
-Unless required by applicable law or agreed to in writing,
-software distributed under the License is distributed on an
-"AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
-KIND, either express or implied.  See the License for the
-specific language governing permissions and limitations
-under the License.
-////
+=== Defining a Derived Property
 
+Use the `formula` option in the `mapping` block:
+
+[source,groovy]
+----
+class Order {
+    BigDecimal subtotal
+    BigDecimal taxRate
+
+    BigDecimal tax                  // <1>
+    BigDecimal total                // <1>
+
+    static mapping = {
+        tax   formula: 'subtotal * tax_rate'            // <2>
+        total formula: 'subtotal + (subtotal * tax_rate)'
+    }
+}
+----
+<1> `tax` and `total` have no corresponding columns in the table.
+<2> The formula is a raw SQL expression evaluated by the database.
+
+=== Reading Derived Values
+
+Derived properties are populated when an entity is loaded:
+
+[source,groovy]
+----
+def order = Order.get(1)
+println order.tax   // value computed by the database formula
+----
+
+WARNING: Derived properties are read-only. Setting them in Groovy code does not affect the database value — the formula always takes precedence when reloading.
+
+=== Column-Level Formulas (Read/Write Expressions)
+
+For finer control over individual column values, use `read` and `write` expressions on a regular property:
+
+[source,groovy]
+----
+class CreditCard {
+    String cardNumber
+    static mapping = {
+        cardNumber {
+            read  "decrypt(card_number)"    // <1>
+            write "encrypt(?)"              // <2>
+        }
+    }
+}
+----
+<1> SQL expression used when reading the column value.
+<2> SQL expression wrapping the bound parameter when writing.

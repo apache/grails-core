@@ -19,11 +19,10 @@
 
 package org.grails.orm.hibernate.cfg.domainbinding
 
-import org.grails.datastore.mapping.model.PersistentEntity
-import org.grails.datastore.mapping.model.PersistentProperty
-import org.grails.datastore.mapping.model.types.ToOne
-import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernatePersistentProperty
+import org.grails.orm.hibernate.cfg.domainbinding.hibernate.GrailsHibernatePersistentEntity
 import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernatePersistentEntity
+import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernatePersistentProperty
+import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernateToOneProperty
 import spock.lang.Specification
 import spock.lang.Unroll
 
@@ -35,24 +34,24 @@ class ForeignKeyColumnCountCalculatorSpec extends Specification {
     def "Test calculateForeignKeyColumnCount with #scenario"() {
         given:
         def calculator = new ForeignKeyColumnCountCalculator()
-        def refDomainClass = Mock(HibernatePersistentEntity) as PersistentEntity
+        def refDomainClass = Mock(GrailsHibernatePersistentEntity)
 
         // Mock for a simple property
-        def simpleProp = Mock(PersistentProperty)
-        refDomainClass.getPropertyByName("simple") >> simpleProp
+        def simpleProp = Mock(HibernatePersistentProperty)
+        refDomainClass.getHibernatePropertyByName("simple") >> simpleProp
 
         // Mocks for a ToOne association with a simple ID
-        def toOneSimpleIdProp = Mock(ToOne)
+        def toOneSimpleIdProp = Mock(HibernateToOneProperty)
         def associatedEntitySimpleId = Mock(HibernatePersistentEntity)
-        refDomainClass.getPropertyByName("toOneSimple") >> toOneSimpleIdProp
+        refDomainClass.getHibernatePropertyByName("toOneSimple") >> toOneSimpleIdProp
         toOneSimpleIdProp.getAssociatedEntity() >> associatedEntitySimpleId
         associatedEntitySimpleId.getCompositeIdentity() >> null
 
         // Mocks for a ToOne association with a composite ID of length 2
-        def toOneCompositeIdProp = Mock(ToOne)
+        def toOneCompositeIdProp = Mock(HibernateToOneProperty)
         def associatedEntityCompositeId = Mock(HibernatePersistentEntity)
         def compositeId = [Mock(HibernatePersistentProperty), Mock(HibernatePersistentProperty)] as HibernatePersistentProperty[]
-        refDomainClass.getPropertyByName("toOneComposite") >> toOneCompositeIdProp
+        refDomainClass.getHibernatePropertyByName("toOneComposite") >> toOneCompositeIdProp
         toOneCompositeIdProp.getAssociatedEntity() >> associatedEntityCompositeId
         associatedEntityCompositeId.getCompositeIdentity() >> compositeId
 

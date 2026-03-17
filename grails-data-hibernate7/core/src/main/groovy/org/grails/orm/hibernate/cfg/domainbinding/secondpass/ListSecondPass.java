@@ -25,7 +25,6 @@ import jakarta.annotation.Nonnull;
 
 import org.hibernate.MappingException;
 import org.hibernate.boot.spi.InFlightMetadataCollector;
-import org.hibernate.mapping.Collection;
 
 import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernateToManyProperty;
 
@@ -36,25 +35,17 @@ public class ListSecondPass implements org.hibernate.boot.spi.SecondPass, Grails
 
     private final ListSecondPassBinder listSecondPassBinder;
     protected final HibernateToManyProperty property;
-    protected final @Nonnull InFlightMetadataCollector mappings;
-    protected final Collection collection;
 
     public ListSecondPass(
             ListSecondPassBinder listSecondPassBinder,
-            HibernateToManyProperty property,
-            @Nonnull InFlightMetadataCollector mappings,
-            Collection coll) {
+            HibernateToManyProperty property) {
         this.listSecondPassBinder = listSecondPassBinder;
         this.property = property;
-        this.mappings = mappings;
-        this.collection = coll;
     }
 
-    @SuppressWarnings("rawtypes")
     @Override
     public void doSecondPass(Map persistentClasses) throws MappingException {
-        listSecondPassBinder.bindListSecondPass(
-                property, mappings, persistentClasses, (org.hibernate.mapping.List) collection);
-        createCollectionKeys(collection);
+        listSecondPassBinder.bindListSecondPass(property, persistentClasses, (org.hibernate.mapping.List) property.getCollection());
+        createCollectionKeys(property.getCollection());
     }
 }

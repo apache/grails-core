@@ -1,19 +1,65 @@
-////
-Licensed to the Apache Software Foundation (ASF) under one
-or more contributor license agreements.  See the NOTICE file
-distributed with this work for additional information
-regarding copyright ownership.  The ASF licenses this file
-to you under the Apache License, Version 2.0 (the
-"License"); you may not use this file except in compliance
-with the License.  You may obtain a copy of the License at
+[[ormdsl-optimisticLockingAndVersioning]]
+== Optimistic Locking and Versioning
 
-https://www.apache.org/licenses/LICENSE-2.0
+GORM enables optimistic locking by default via a `version` column added to every domain class table.
 
-Unless required by applicable law or agreed to in writing,
-software distributed under the License is distributed on an
-"AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
-KIND, either express or implied.  See the License for the
-specific language governing permissions and limitations
-under the License.
-////
+=== How Optimistic Locking Works
 
+When you call `save()`, Hibernate checks that the `version` in the database matches the version loaded by the current session. If another transaction modified the row in between, the versions will differ and Hibernate throws `StaleObjectStateException`:
+
+[source,groovy]
+----
+def book = Book.get(1)
+// ... another thread or transaction updates the same book row ...
+book.title = "New Title"
+book.save()  // throws StaleObjectStateException if version was incremented elsewhere
+----
+
+Handle this with a try/catch in your service or controller:
+
+[source,groovy]
+----
+try {
+    book.save(failOnError: true)
+} catch (org.hibernate.StaleObjectStateException e) {
+    // handle conflict: reload and retry, or inform the user
+}
+----
+
+=== Disabling Optimistic Locking
+
+[source,groovy]
+----
+class Book {
+    String title
+    static mapping = {
+        version false   // <1>
+    }
+}
+----
+<1> No `version` column is created; concurrent modifications are not detected.
+
+WARNING: Disabling versioning removes all optimistic locking protection. Concurrent updates to the same row will silently overwrite each other.
+
+=== Customising the Version Column
+
+[source,groovy]
+----
+static mapping = {
+    version column: 'revision'
+}
+----
+
+=== Locking Pessimistically
+
+For cases where you need a database-level lock, use GORM's `lock()` method:
+
+[source,groovy]
+----
+Book.withTransaction {
+    def book = Book.lock(1)   // <1>
+    book.title = "Locked Update"
+    book.save()
+}
+----
+<1> Issues a `SELECT ... FOR UPDATE`, preventing other transactions from reading or modifying the row until the transaction commits.

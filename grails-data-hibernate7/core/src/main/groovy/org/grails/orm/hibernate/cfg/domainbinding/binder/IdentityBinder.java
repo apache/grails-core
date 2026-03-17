@@ -20,7 +20,6 @@ package org.grails.orm.hibernate.cfg.domainbinding.binder;
 
 import jakarta.annotation.Nonnull;
 
-import org.hibernate.boot.spi.InFlightMetadataCollector;
 import org.hibernate.mapping.RootClass;
 
 import org.grails.orm.hibernate.cfg.CompositeIdentity;
@@ -28,6 +27,7 @@ import org.grails.orm.hibernate.cfg.Identity;
 import org.grails.orm.hibernate.cfg.Mapping;
 import org.grails.orm.hibernate.cfg.domainbinding.hibernate.GrailsHibernatePersistentEntity;
 import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernateIdentity;
+import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernatePersistentEntity;
 
 public class IdentityBinder {
 
@@ -39,21 +39,12 @@ public class IdentityBinder {
         this.compositeIdBinder = compositeIdBinder;
     }
 
-    public void bindIdentity(
-            @Nonnull GrailsHibernatePersistentEntity domainClass,
-            RootClass root,
-            @Nonnull InFlightMetadataCollector mappings,
-            Mapping gormMapping) {
-
-        HibernateIdentity id = gormMapping != null ? gormMapping.getIdentity() : null;
-        if (id instanceof CompositeIdentity || (id == null && domainClass.getCompositeIdentity() != null)) {
-            compositeIdBinder.bindCompositeId(domainClass, root, (CompositeIdentity) id, mappings);
+    public void bindIdentity(@Nonnull HibernatePersistentEntity domainClass, RootClass root) {
+        var id = domainClass.getHibernateIdentity();
+        if (id instanceof CompositeIdentity) {
+            compositeIdBinder.bindCompositeId(domainClass, root, (CompositeIdentity) id);
         } else {
-            Identity identity = id instanceof Identity ? (Identity) id : null;
-            if (identity != null && identity.getName() == null) {
-                identity.setName(root.getEntityName());
-            }
-            simpleIdBinder.bindSimpleId(domainClass, root, identity, root.getTable());
+            simpleIdBinder.bindSimpleId(domainClass, root, (Identity) id, root.getTable());
         }
     }
 }

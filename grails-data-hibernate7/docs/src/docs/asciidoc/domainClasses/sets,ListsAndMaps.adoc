@@ -1,19 +1,69 @@
-////
-Licensed to the Apache Software Foundation (ASF) under one
-or more contributor license agreements.  See the NOTICE file
-distributed with this work for additional information
-regarding copyright ownership.  The ASF licenses this file
-to you under the Apache License, Version 2.0 (the
-"License"); you may not use this file except in compliance
-with the License.  You may obtain a copy of the License at
+[[domainClasses-setsListsAndMaps]]
+== Sets, Lists and Maps
 
-https://www.apache.org/licenses/LICENSE-2.0
+By default `hasMany` creates a `java.util.Set` collection (unordered, no duplicates). GORM also supports `List` and `Map` collection types.
 
-Unless required by applicable law or agreed to in writing,
-software distributed under the License is distributed on an
-"AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
-KIND, either express or implied.  See the License for the
-specific language governing permissions and limitations
-under the License.
-////
+=== Sets (Default)
 
+[source,groovy]
+----
+class Author {
+    static hasMany = [books: Book]  // Set<Book> by default
+}
+----
+
+=== Lists (Ordered)
+
+Declare the collection property as a `List` to use a positional, ordered collection. GORM adds an `index` column to the join table:
+
+[source,groovy]
+----
+class Author {
+    List books                      // <1>
+    static hasMany = [books: Book]
+}
+----
+<1> Declaring the field type as `List` tells GORM to use a list mapping with a position index.
+
+[source,groovy]
+----
+def author = Author.get(1)
+author.books[0]     // <1>
+----
+<1> Access by position — Hibernate maintains the order using an `idx` column in the join table.
+
+=== Maps (Key-Value)
+
+Declare the collection property as a `Map` to store key-value pairs. The key is typically a `String`:
+
+[source,groovy]
+----
+class Author {
+    Map books                       // <1>
+    static hasMany = [books: Book]
+}
+----
+<1> Keys and values are stored in the join table.
+
+[source,groovy]
+----
+def author = Author.get(1)
+author.books['grailsInAction']      // <1>
+----
+<1> Access by key.
+
+=== Sorting Sets
+
+For `Set`-based collections, define a default sort order in the `mapping` block:
+
+[source,groovy]
+----
+class Author {
+    static hasMany = [books: Book]
+    static mapping = {
+        books sort: 'title', order: 'asc'
+    }
+}
+----
+
+TIP: `List` mappings incur the cost of maintaining a positional index column on every insert/reorder. Use them only when ordering matters. For most associations, the default `Set` is the better choice.

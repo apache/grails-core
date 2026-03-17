@@ -22,7 +22,7 @@ import java.util.Optional;
 
 import org.hibernate.mapping.PersistentClass;
 
-import org.grails.orm.hibernate.cfg.Mapping;
+import org.grails.orm.hibernate.cfg.domainbinding.hibernate.GrailsHibernatePersistentEntity;
 import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernateIdentity;
 import org.grails.orm.hibernate.cfg.domainbinding.util.UniqueNameGenerator;
 
@@ -38,8 +38,9 @@ public class NaturalIdentifierBinder {
         this(new UniqueNameGenerator());
     }
 
-    public void bindNaturalIdentifier(Mapping mapping, PersistentClass persistentClass) {
-        Optional.ofNullable(mapping.getIdentity())
+    public void bindNaturalIdentifier(
+            GrailsHibernatePersistentEntity persistentEntity, PersistentClass persistentClass) {
+        Optional.ofNullable(persistentEntity.getMappedForm().getIdentity())
                 .map(HibernateIdentity::getNatural)
                 .flatMap(naturalId -> naturalId.createUniqueKey(persistentClass))
                 .ifPresent(uk -> {

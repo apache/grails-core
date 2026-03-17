@@ -21,8 +21,11 @@ package org.grails.orm.hibernate.cfg.domainbinding.binder;
 import java.util.Optional;
 
 import org.hibernate.MappingException;
+import org.hibernate.boot.spi.MetadataBuildingContext;
+import org.hibernate.mapping.BasicValue;
 import org.hibernate.mapping.Column;
 import org.hibernate.mapping.SimpleValue;
+import org.hibernate.mapping.Table;
 
 public class SimpleValueColumnBinder {
 
@@ -31,6 +34,26 @@ public class SimpleValueColumnBinder {
 
     /** Protected constructor for testing purposes. */
     protected SimpleValueColumnBinder(Object... ignore) {}
+
+    /**
+     * Creates a {@link BasicValue}, binds it, and returns it.
+     *
+     * @param metadataBuildingContext The metadata building context
+     * @param table The table the value belongs to
+     * @param type The type of the property
+     * @param columnName The column name
+     * @param nullable Whether it is nullable
+     */
+    public BasicValue bindSimpleValue(
+            MetadataBuildingContext metadataBuildingContext,
+            Table table,
+            String type,
+            String columnName,
+            boolean nullable) {
+        BasicValue basicValue = new BasicValue(metadataBuildingContext, table);
+        bindSimpleValue(basicValue, type, columnName, nullable);
+        return basicValue;
+    }
 
     /**
      * Binds a value for the specified parameters to the meta model.

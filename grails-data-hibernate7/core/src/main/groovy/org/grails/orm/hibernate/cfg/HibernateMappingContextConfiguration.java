@@ -19,17 +19,12 @@
 package org.grails.orm.hibernate.cfg;
 
 import java.io.IOException;
-import java.util.ArrayList;
-import java.util.Collection;
-import java.util.Collections;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Map;
-import java.util.Properties;
-import java.util.Set;
-
+import java.io.Serial;
+import java.io.Serializable;
+import java.util.*;
 import javax.sql.DataSource;
 
+import jakarta.annotation.Nullable;
 import jakarta.persistence.Embeddable;
 import jakarta.persistence.Entity;
 import jakarta.persistence.MappedSuperclass;
@@ -84,7 +79,9 @@ import org.grails.orm.hibernate.cfg.domainbinding.binder.GrailsDomainBinder;
  * @since 5.0
  */
 @SuppressWarnings({"rawtypes", "PMD.UseProperClassLoader", "PMD.DataflowAnomalyAnalysis", "PMD.CloseResource"})
-public class HibernateMappingContextConfiguration extends Configuration implements ApplicationContextAware {
+public class HibernateMappingContextConfiguration extends Configuration
+        implements ApplicationContextAware, Serializable {
+    @Serial
     private static final long serialVersionUID = -7115087342689305517L;
 
     private static final String RESOURCE_PATTERN = "/**/*.class";
@@ -98,29 +95,34 @@ public class HibernateMappingContextConfiguration extends Configuration implemen
     protected String sessionFactoryBeanName = "sessionFactory";
     protected String dataSourceName = ConnectionSource.DEFAULT;
     protected HibernateMappingContext hibernateMappingContext;
-    private Class<? extends CurrentSessionContext> currentSessionContext = GrailsSessionContext.class;
+    private final Class<? extends CurrentSessionContext> currentSessionContext = GrailsSessionContext.class;
     private HibernateEventListeners hibernateEventListeners;
     private Map<String, Object> eventListeners;
     private ServiceRegistry serviceRegistry;
     private ResourcePatternResolver resourcePatternResolver = new PathMatchingResourcePatternResolver();
     //    private MetadataContributor metadataContributor;
-    private Set<Class> additionalClasses = new HashSet<>();
+    private final Set<Class> additionalClasses = new HashSet<>();
 
     public void setHibernateMappingContext(HibernateMappingContext hibernateMappingContext) {
         this.hibernateMappingContext = hibernateMappingContext;
     }
 
     @Override
-    public void setApplicationContext(ApplicationContext applicationContext) throws BeansException {
+    public void setApplicationContext(@Nullable ApplicationContext applicationContext) throws BeansException {
         resourcePatternResolver = ResourcePatternUtils.getResourcePatternResolver(applicationContext);
         String dsName = ConnectionSource.DEFAULT.equals(dataSourceName) ? "dataSource" : "dataSource_" + dataSourceName;
         Properties properties = getProperties();
 
-        if (applicationContext.containsBean(dsName)) {
-            properties.put(JdbcSettings.JAKARTA_NON_JTA_DATASOURCE, applicationContext.getBean(dsName));
+        if (applicationContext != null) {
+            if (applicationContext.containsBean(dsName)) {
+                properties.put(JdbcSettings.JAKARTA_NON_JTA_DATASOURCE, applicationContext.getBean(dsName));
+            }
+            properties.put(Environment.CURRENT_SESSION_CONTEXT_CLASS, currentSessionContext.getName());
+            ClassLoader classLoader = applicationContext.getClassLoader();
+            if (classLoader != null) {
+                properties.put(AvailableSettings.CLASSLOADERS, classLoader);
+            }
         }
-        properties.put(Environment.CURRENT_SESSION_CONTEXT_CLASS, currentSessionContext.getName());
-        properties.put(AvailableSettings.CLASSLOADERS, applicationContext.getClassLoader());
     }
 
     /**
@@ -134,8 +136,8 @@ public class HibernateMappingContextConfiguration extends Configuration implemen
         getProperties().put(JdbcSettings.JAKARTA_NON_JTA_DATASOURCE, source);
         getProperties().put(Environment.CURRENT_SESSION_CONTEXT_CLASS, GrailsSessionContext.class.getName());
         final ClassLoader contextClassLoader = Thread.currentThread().getContextClassLoader();
-        if (contextClassLoader != null &&
-                contextClassLoader.getClass().getSimpleName().equalsIgnoreCase("RestartClassLoader")) {
+        if (contextClassLoader != null
+                && contextClassLoader.getClass().getSimpleName().equalsIgnoreCase("RestartClassLoader")) {
             getProperties().put(AvailableSettings.CLASSLOADERS, contextClassLoader);
         } else {
             getProperties()
@@ -190,17 +192,19 @@ public class HibernateMappingContextConfiguration extends Configuration implemen
         try {
             MetadataReaderFactory readerFactory = new CachingMetadataReaderFactory(resourcePatternResolver);
             for (String pkg : packagesToScan) {
-                String pattern = ResourcePatternResolver.CLASSPATH_ALL_URL_PREFIX +
-                        ClassUtils.convertClassNameToResourcePath(pkg) +
-                        RESOURCE_PATTERN;
+                String pattern = ResourcePatternResolver.CLASSPATH_ALL_URL_PREFIX
+                        + ClassUtils.convertClassNameToResourcePath(pkg)
+                        + RESOURCE_PATTERN;
                 Resource[] resources = resourcePatternResolver.getResources(pattern);
                 for (Resource resource : resources) {
                     if (resource.isReadable()) {
                         MetadataReader reader = readerFactory.getMetadataReader(resource);
                         String className = reader.getClassMetadata().getClassName();
                         if (matchesFilter(reader, readerFactory)) {
-                            Class<?> loadedClass =
-                                    resourcePatternResolver.getClassLoader().loadClass(className);
+                            ClassLoader classLoader = resourcePatternResolver.getClassLoader();
+                            Class<?> loadedClass = classLoader != null
+                                    ? classLoader.loadClass(className)
+                                    : ClassUtils.forName(className, null);
                             addAnnotatedClasses(loadedClass);
                         }
                     }
@@ -275,7 +279,7 @@ public class HibernateMappingContextConfiguration extends Configuration implemen
             }
         }
 
-        addAnnotatedClasses(annotatedClasses.toArray(new Class[annotatedClasses.size()]));
+        addAnnotatedClasses(annotatedClasses.toArray(new Class[0]));
 
         ClassLoaderService classLoaderService = new ClassLoaderServiceImpl(appClassLoader) {
             @Override
@@ -298,9 +302,8 @@ public class HibernateMappingContextConfiguration extends Configuration implemen
                 .build();
 
         SessionFactoryObserver sessionFactoryObserver = new SessionFactoryObserver() {
+            @Serial
             private static final long serialVersionUID = 1;
-
-            public void sessionFactoryCreated(SessionFactory factory) {}
 
             public void sessionFactoryClosed(SessionFactory factory) {
                 if (serviceRegistry != null) {

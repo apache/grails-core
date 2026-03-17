@@ -481,6 +481,57 @@ class HibernateCriteriaBuilderSpec extends HibernateGormDatastoreSpec {
         results.size() == 1
         results[0].firstName == "Fred"
     }
+
+    void "scroll returns a ScrollableResults cursor over matching rows"() {
+        when:
+        def results = c.scroll {
+            eq("lastName", "Flintstone")
+            order("firstName", "asc")
+        }
+
+        then:
+        results instanceof org.hibernate.ScrollableResults
+        results.next()
+        results.get().firstName == "Fred"
+        results.next()
+        results.get().firstName == "Pebbles"
+        results.next()
+        results.get().firstName == "Wilma"
+        !results.next()
+
+        cleanup:
+        results?.close()
+    }
+
+    void "fetchMode applies joining or selection strategy"() {
+        when:
+        def results = c.list {
+            fetchMode("transactions", org.hibernate.FetchMode.JOIN)
+            eq("firstName", "Fred")
+        }
+        then:
+        results.size() == 1
+        results[0].firstName == "Fred"
+
+        when:
+        results = c.list {
+            fetchMode("transactions", org.hibernate.FetchMode.SELECT)
+            eq("firstName", "Fred")
+        }
+        then:
+        results.size() == 1
+        results[0].firstName == "Fred"
+    }
+
+    void "singleResult returns exactly one row"() {
+        when:
+        c.eq("firstName", "Fred")
+        def result = c.singleResult()
+
+        then:
+        result != null
+        result.firstName == "Fred"
+    }
 }
 
 @Entity

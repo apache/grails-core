@@ -23,7 +23,7 @@ import org.apache.grails.data.testing.tck.domains.Person
 import org.apache.grails.data.testing.tck.domains.Pet
 import org.grails.datastore.mapping.query.AssociationQuery
 import org.grails.datastore.mapping.query.Query
-import org.grails.orm.hibernate.AbstractHibernateSession
+import org.grails.orm.hibernate.HibernateSession
 import org.grails.orm.hibernate.HibernateDatastore
 import org.grails.orm.hibernate.query.HibernateAssociationQuery
 import org.grails.orm.hibernate.query.HibernateQuery
@@ -39,7 +39,7 @@ class HibernateAssociationQuerySpec extends HibernateGormDatastoreSpec {
 
     def setup() {
         HibernateDatastore hibernateDatastore = manager.hibernateDatastore
-        AbstractHibernateSession session = hibernateDatastore.connect() as AbstractHibernateSession
+        HibernateSession session = hibernateDatastore.connect() as HibernateSession
         personQuery = new HibernateQuery(session, hibernateDatastore.getMappingContext().getPersistentEntity(Person.typeName))
         bob = new Person(firstName: "Bob", lastName: "Builder", age: 50).save(flush: true)
         new Pet(name: "Lucky", age: 3, owner: bob).save(flush: true)

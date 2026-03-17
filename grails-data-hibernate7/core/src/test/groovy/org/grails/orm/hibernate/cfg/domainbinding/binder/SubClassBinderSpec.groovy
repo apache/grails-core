@@ -19,17 +19,15 @@
 
 package org.grails.orm.hibernate.cfg.domainbinding.binder
 
-import grails.gorm.annotation.Entity
+import org.hibernate.mapping.SingleTableSubclass
+
 import grails.gorm.specs.HibernateGormDatastoreSpec
 import org.grails.orm.hibernate.cfg.Mapping
 import org.grails.orm.hibernate.cfg.MappingCacheHolder
-import org.grails.orm.hibernate.cfg.domainbinding.hibernate.GrailsHibernatePersistentEntity
+import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernatePersistentEntity
 import org.grails.orm.hibernate.cfg.domainbinding.util.MultiTenantFilterBinder
 import org.hibernate.boot.spi.MetadataBuildingContext
-import org.hibernate.mapping.PersistentClass
 import org.hibernate.mapping.RootClass
-import org.hibernate.mapping.Subclass
-import spock.lang.Shared
 
 class SubClassBinderSpec extends HibernateGormDatastoreSpec {
 
@@ -48,7 +46,6 @@ class SubClassBinderSpec extends HibernateGormDatastoreSpec {
         multiTenantFilterBinder = Mock(MultiTenantFilterBinder)
         
         binder = new SubClassBinder(
-                mappingCacheHolder,
                 subclassMappingBinder,
                 multiTenantFilterBinder,
                 "default"
@@ -57,32 +54,29 @@ class SubClassBinderSpec extends HibernateGormDatastoreSpec {
 
     def "test bindSubClass with no children"() {
         given:
-        def subEntity = Mock(GrailsHibernatePersistentEntity)
+        def subEntity = Mock(HibernatePersistentEntity)
         subEntity.getName() >> "Child"
         subEntity.getChildEntities("default") >> []
         def rootClass = new RootClass(metadataBuildingContext)
         rootClass.setEntityName("Parent")
         rootClass.setJpaEntityName("Parent")
-        def mappings = getCollector()
-        def mapping = new Mapping()
-        def subClass = new org.hibernate.mapping.SingleTableSubclass(rootClass, metadataBuildingContext)
+        def subClass = new SingleTableSubclass(rootClass, metadataBuildingContext)
         subClass.setEntityName("Child")
         subClass.setJpaEntityName("Child")
 
         when:
-        binder.bindSubClass(subEntity, rootClass, mappings)
+        def results = binder.bindSubClass(subEntity, rootClass)
 
         then:
-        1 * subclassMappingBinder.createSubclassMapping(subEntity, rootClass, mappings) >> subClass
+        1 * subclassMappingBinder.createSubclassMapping(subEntity, rootClass) >> subClass
         1 * multiTenantFilterBinder.bind(subEntity, subClass)
-        rootClass.getSubclasses().contains(subClass)
-        mappings.getEntityBinding(subClass.getEntityName()) == subClass
+        results == [subClass]
     }
 
     def "test bindSubClass with children"() {
         given:
-        def subEntity = Mock(GrailsHibernatePersistentEntity)
-        def grandChildEntity = Mock(GrailsHibernatePersistentEntity)
+        def subEntity = Mock(HibernatePersistentEntity)
+        def grandChildEntity = Mock(HibernatePersistentEntity)
         subEntity.getName() >> "Child"
         grandChildEntity.getName() >> "GrandChild"
         subEntity.getChildEntities("default") >> [grandChildEntity]
@@ -91,9 +85,7 @@ class SubClassBinderSpec extends HibernateGormDatastoreSpec {
         def rootClass = new RootClass(metadataBuildingContext)
         rootClass.setEntityName("Parent")
         rootClass.setJpaEntityName("Parent")
-        def mappings = getCollector()
-        def mapping = new Mapping()
-        
+
         def subClass = new org.hibernate.mapping.SingleTableSubclass(rootClass, metadataBuildingContext)
         subClass.setEntityName("Child")
         subClass.setJpaEntityName("Child")
@@ -102,13 +94,12 @@ class SubClassBinderSpec extends HibernateGormDatastoreSpec {
         grandChildSubClass.setJpaEntityName("GrandChild")
 
         when:
-        binder.bindSubClass(subEntity, rootClass, mappings)
+        def results = binder.bindSubClass(subEntity, rootClass)
 
         then:
-        1 * subclassMappingBinder.createSubclassMapping(subEntity, rootClass, mappings) >> subClass
-        1 * subclassMappingBinder.createSubclassMapping(grandChildEntity, subClass, mappings) >> grandChildSubClass
+        1 * subclassMappingBinder.createSubclassMapping(subEntity, rootClass) >> subClass
+        1 * subclassMappingBinder.createSubclassMapping(grandChildEntity, subClass) >> grandChildSubClass
         2 * multiTenantFilterBinder.bind(_, _)
-        rootClass.getSubclasses().contains(subClass)
-        subClass.getSubclasses().contains(grandChildSubClass)
+        results == [subClass, grandChildSubClass]
     }
 }

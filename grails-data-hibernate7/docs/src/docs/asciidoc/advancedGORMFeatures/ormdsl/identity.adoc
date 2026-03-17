@@ -1,19 +1,65 @@
-////
-Licensed to the Apache Software Foundation (ASF) under one
-or more contributor license agreements.  See the NOTICE file
-distributed with this work for additional information
-regarding copyright ownership.  The ASF licenses this file
-to you under the Apache License, Version 2.0 (the
-"License"); you may not use this file except in compliance
-with the License.  You may obtain a copy of the License at
+[[ormdsl-identity]]
+== Identity
 
-https://www.apache.org/licenses/LICENSE-2.0
+GORM automatically adds an `id` property and a `version` property to every domain class. The `mapping` block lets you customise both.
 
-Unless required by applicable law or agreed to in writing,
-software distributed under the License is distributed on an
-"AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
-KIND, either express or implied.  See the License for the
-specific language governing permissions and limitations
-under the License.
-////
+=== Generator Strategy
 
+The default generator is `native`, which delegates to the database for id generation (auto-increment, sequences, etc.). You can change this globally or per-class:
+
+[source,groovy]
+----
+class Book {
+    String title
+    static mapping = {
+        id generator: 'sequence', params: [sequence_name: 'book_seq']   // <1>
+    }
+}
+----
+<1> Uses a named database sequence for the `id` column.
+
+Common generator values:
+
+[format="csv", options="header"]
+|===
+value,description
+`native`,Delegates to the database (auto-increment / sequence) — default
+`assigned`,Application assigns the id before saving
+`uuid`,Generates a UUID string id
+`sequence`,Uses a named database sequence (configure via `params`)
+`increment`,GORM-managed incrementing long — not suitable for clusters
+`identity`,Database `IDENTITY` / auto-increment column
+|===
+
+=== Column Name
+
+[source,groovy]
+----
+static mapping = {
+    id column: 'book_id'
+}
+----
+
+=== Composite Identifiers
+
+See xref:ormdsl-compositePrimaryKeys[Composite Primary Keys].
+
+=== Disabling Auto-generated Version
+
+The `version` column enables optimistic locking. To disable it:
+
+[source,groovy]
+----
+static mapping = {
+    version false
+}
+----
+
+You can also map it to a different column:
+
+[source,groovy]
+----
+static mapping = {
+    version column: 'revision'
+}
+----

@@ -31,6 +31,7 @@ import org.grails.datastore.mapping.reflect.EntityReflector;
 import org.grails.orm.hibernate.access.TraitPropertyAccessStrategy;
 import org.grails.orm.hibernate.cfg.PropertyConfig;
 import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernateAssociation;
+import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernateEnumProperty;
 import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernatePersistentProperty;
 import org.grails.orm.hibernate.cfg.domainbinding.util.CascadeBehaviorFetcher;
 
@@ -64,8 +65,8 @@ public class PropertyBinder {
             config = new PropertyConfig();
         }
 
-        if (persistentProperty instanceof HibernateAssociation assoc &&
-                assoc.isBidirectionalManyToOneWithListMapping(prop)) {
+        if (persistentProperty instanceof HibernateAssociation assoc
+                && assoc.isBidirectionalManyToOneWithListMapping(prop)) {
             prop.setInsertable(false);
             prop.setUpdatable(false);
         } else {
@@ -75,17 +76,18 @@ public class PropertyBinder {
 
         var accessType = AccessType.getAccessStrategy(config.getAccessType());
 
-        var accessorName = accessType == AccessType.FIELD ?
-                Optional.ofNullable(persistentProperty.getReader())
+        var accessorName = accessType == AccessType.FIELD
+                ? Optional.ofNullable(persistentProperty.getReader())
                         .map(EntityReflector.PropertyReader::getter)
                         .map(getter -> getter.getAnnotation(Traits.Implemented.class))
                         .map(annotation -> TraitPropertyAccessStrategy.class.getName())
-                        .orElse(accessType.getType()) :
-                accessType.getType();
+                        .orElse(accessType.getType())
+                : accessType.getType();
         prop.setPropertyAccessorName(accessorName);
 
         prop.setOptional(persistentProperty.isNullable());
-        if (persistentProperty instanceof Association<?> association && !persistentProperty.isEnumType()) {
+        if (persistentProperty instanceof Association<?> association
+                && !(persistentProperty instanceof HibernateEnumProperty)) {
             prop.setCascade(cascadeBehaviorFetcher.getCascadeBehaviour(association));
         }
 

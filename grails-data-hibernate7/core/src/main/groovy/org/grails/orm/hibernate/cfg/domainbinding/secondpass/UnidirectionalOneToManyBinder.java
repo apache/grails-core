@@ -41,32 +41,30 @@ public class UnidirectionalOneToManyBinder {
     private static final Logger LOG = LoggerFactory.getLogger(UnidirectionalOneToManyBinder.class);
     private final CollectionWithJoinTableBinder collectionWithJoinTableBinder;
     private final BackticksRemover backticksRemover = new BackticksRemover();
+    private final InFlightMetadataCollector mappings;
 
-    public UnidirectionalOneToManyBinder(CollectionWithJoinTableBinder collectionWithJoinTableBinder) {
+    public UnidirectionalOneToManyBinder(
+            CollectionWithJoinTableBinder collectionWithJoinTableBinder, InFlightMetadataCollector mappings) {
         this.collectionWithJoinTableBinder = collectionWithJoinTableBinder;
+        this.mappings = mappings;
     }
 
-    public void bind(
-            @Nonnull HibernateOneToManyProperty property,
-            @Nonnull InFlightMetadataCollector mappings,
-            @Nonnull Collection collection) {
+    public void bind(@Nonnull HibernateOneToManyProperty property, @Nonnull Collection collection) {
         if (!property.shouldBindWithForeignKey()) {
-            collectionWithJoinTableBinder.bindCollectionWithJoinTable(property, mappings, collection);
+            collectionWithJoinTableBinder.bindCollectionWithJoinTable(property, collection);
         } else {
-            bindUnidirectionalOneToMany(property, mappings, collection);
+            bindUnidirectionalOneToMany(property, collection);
         }
     }
 
     private void bindUnidirectionalOneToMany(
-            @Nonnull HibernateOneToManyProperty property,
-            @Nonnull InFlightMetadataCollector mappings,
-            @Nonnull Collection collection) {
+            @Nonnull HibernateOneToManyProperty property, @Nonnull Collection collection) {
         Value element = collection.getElement();
         element.createForeignKey();
 
-        String entityName = (element instanceof ManyToOne manyToOne) ?
-                manyToOne.getReferencedEntityName() :
-                ((OneToMany) element).getReferencedEntityName();
+        String entityName = (element instanceof ManyToOne manyToOne)
+                ? manyToOne.getReferencedEntityName()
+                : ((OneToMany) element).getReferencedEntityName();
 
         collection.setInverse(false);
 
@@ -77,10 +75,11 @@ public class UnidirectionalOneToManyBinder {
         GrailsHibernatePersistentEntity owner = (GrailsHibernatePersistentEntity) property.getOwner();
         Backref backref = new Backref();
         backref.setEntityName(owner.getName());
-        backref.setName(UNDERSCORE + backticksRemover.apply(owner.getJavaClass().getSimpleName()) +
-                UNDERSCORE +
-                backticksRemover.apply(property.getName()) +
-                "Backref");
+        backref.setName(UNDERSCORE
+                + backticksRemover.apply(owner.getJavaClass().getSimpleName())
+                + UNDERSCORE
+                + backticksRemover.apply(property.getName())
+                + "Backref");
         backref.setUpdatable(false);
         backref.setInsertable(true);
         backref.setCollectionRole(collection.getRole());

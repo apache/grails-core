@@ -1,19 +1,28 @@
-////
-Licensed to the Apache Software Foundation (ASF) under one
-or more contributor license agreements.  See the NOTICE file
-distributed with this work for additional information
-regarding copyright ownership.  The ASF licenses this file
-to you under the Apache License, Version 2.0 (the
-"License"); you may not use this file except in compliance
-with the License.  You may obtain a copy of the License at
+[[domainClasses-gormAssociation]]
+== GORM Associations
 
-https://www.apache.org/licenses/LICENSE-2.0
+GORM supports all standard relationship types between domain classes. Each association type maps to a specific Hibernate/database pattern.
 
-Unless required by applicable law or agreed to in writing,
-software distributed under the License is distributed on an
-"AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
-KIND, either express or implied.  See the License for the
-specific language governing permissions and limitations
-under the License.
-////
+[cols="1,2"]
+|===
+|Association type | Declared with
 
+|Many-to-one / One-to-one
+|A property of the target type
+
+|One-to-many (bidirectional)
+|`hasMany` + `belongsTo`
+
+|One-to-many (unidirectional)
+|`hasMany` only (join table)
+
+|Many-to-many
+|`hasMany` on both sides + `belongsTo` on one
+|===
+
+Refer to the following subsections for details on each association type:
+
+* xref:gormAssociation-manyToOneAndOneToOne[Many-to-One and One-to-One]
+* xref:gormAssociation-oneToMany[One-to-Many]
+* xref:gormAssociation-manyToMany[Many-to-Many]
+* xref:gormAssociation-basicCollectionTypes[Basic Collection Types]

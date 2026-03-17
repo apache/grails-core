@@ -1,19 +1,54 @@
-////
-Licensed to the Apache Software Foundation (ASF) under one
-or more contributor license agreements.  See the NOTICE file
-distributed with this work for additional information
-regarding copyright ownership.  The ASF licenses this file
-to you under the Apache License, Version 2.0 (the
-"License"); you may not use this file except in compliance
-with the License.  You may obtain a copy of the License at
+[[domainClasses-inheritanceInGORM]]
+== Inheritance in GORM
 
-https://www.apache.org/licenses/LICENSE-2.0
+GORM supports standard Groovy/Java class inheritance. Domain classes in a hierarchy all benefit from GORM persistence.
 
-Unless required by applicable law or agreed to in writing,
-software distributed under the License is distributed on an
-"AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
-KIND, either express or implied.  See the License for the
-specific language governing permissions and limitations
-under the License.
-////
+See xref:ormdsl-inheritanceStrategies[Inheritance Strategies] for the available mapping strategies (table-per-hierarchy, table-per-subclass, table-per-concrete-class) and how to configure them.
 
+=== Basic Inheritance
+
+[source,groovy]
+----
+class Content {
+    String title
+    Date dateCreated
+}
+
+class BlogPost extends Content {
+    String body
+    String author
+}
+
+class Page extends Content {
+    String html
+    String slug
+}
+----
+
+By default all three classes are stored in a single `content` table (table-per-hierarchy). GORM uses a `class` discriminator column to distinguish rows.
+
+=== Querying the Hierarchy
+
+GORM queries are polymorphic by default — querying the parent class returns instances of all subclasses:
+
+[source,groovy]
+----
+List<Content> all = Content.list()      // returns BlogPost and Page instances
+
+List<BlogPost> posts = BlogPost.list()  // returns only BlogPost instances
+----
+
+=== Abstract Base Classes
+
+You can use abstract domain classes as the root of a hierarchy. Abstract classes have no corresponding rows and cannot be instantiated directly:
+
+[source,groovy]
+----
+abstract class Content {
+    String title
+}
+
+class BlogPost extends Content { ... }
+----
+
+TIP: Prefer table-per-hierarchy (the default) for most use cases. It requires no `JOIN` for polymorphic queries and is the most performant strategy.

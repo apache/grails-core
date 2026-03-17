@@ -18,16 +18,19 @@
  */
 package org.grails.orm.hibernate.cfg.domainbinding.binder;
 
-import java.util.Collection;
+import java.util.stream.Stream;
 
 import jakarta.annotation.Nonnull;
 
+import org.checkerframework.checker.nullness.qual.NonNull;
 import org.hibernate.boot.spi.InFlightMetadataCollector;
 import org.hibernate.mapping.RootClass;
+import org.hibernate.mapping.Subclass;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import org.grails.orm.hibernate.cfg.domainbinding.hibernate.GrailsHibernatePersistentEntity;
+import org.grails.orm.hibernate.cfg.MappingCacheHolder;
+import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernatePersistentEntity;
 import org.grails.orm.hibernate.cfg.domainbinding.util.MultiTenantFilterBinder;
 
 /** Binder for root classes. */
@@ -41,18 +44,23 @@ public class RootBinder {
     private final SubClassBinder subClassBinder;
     private final RootPersistentClassCommonValuesBinder rootPersistentClassCommonValuesBinder;
     private final DiscriminatorPropertyBinder discriminatorPropertyBinder;
+    private final InFlightMetadataCollector mappings;
+    private final MappingCacheHolder mappingCacheHolder;
 
     public RootBinder(
             String dataSourceName,
             MultiTenantFilterBinder multiTenantFilterBinder,
             SubClassBinder subClassBinder,
             RootPersistentClassCommonValuesBinder rootPersistentClassCommonValuesBinder,
-            DiscriminatorPropertyBinder discriminatorPropertyBinder) {
+            DiscriminatorPropertyBinder discriminatorPropertyBinder,
+            InFlightMetadataCollector mappings, MappingCacheHolder mappingCacheHolder) {
         this.dataSourceName = dataSourceName;
         this.multiTenantFilterBinder = multiTenantFilterBinder;
         this.subClassBinder = subClassBinder;
         this.rootPersistentClassCommonValuesBinder = rootPersistentClassCommonValuesBinder;
         this.discriminatorPropertyBinder = discriminatorPropertyBinder;
+        this.mappings = mappings;
+        this.mappingCacheHolder = mappingCacheHolder;
     }
 
     /**
@@ -60,27 +68,37 @@ public class RootBinder {
      * Grails domain class
      *
      * @param entity The Grails domain class
-     * @param mappings The Hibernate Mappings object
      */
-    public void bindRoot(@Nonnull GrailsHibernatePersistentEntity entity, @Nonnull InFlightMetadataCollector mappings) {
+    public void bindRoot(@Nonnull HibernatePersistentEntity entity) {
         if (mappings.getEntityBinding(entity.getName()) != null) {
             LOG.warn("[RootBinder] Class [" + entity.getName() + "] is already mapped, skipping.. ");
             return;
         }
 
-        Collection<GrailsHibernatePersistentEntity> children = entity.getChildEntities(dataSourceName);
-        RootClass root =
-                rootPersistentClassCommonValuesBinder.bindRootPersistentClassCommonValues(entity, children, mappings);
+        var children = entity.getChildEntities(dataSourceName);
+        RootClass root = rootPersistentClassCommonValuesBinder.bindRoot(entity);
 
         if (!children.isEmpty() && entity.isTablePerHierarchy()) {
             discriminatorPropertyBinder.bindDiscriminatorProperty(root);
         }
 
         // bind the sub classes
-        children.forEach(sub -> subClassBinder.bindSubClass(sub, root, mappings));
+        children.stream()
+                .flatMap(sub -> getSubclassStream(sub, root))
+                .forEach(subClass -> addSubclass(subClass, root));
 
         multiTenantFilterBinder.bind(entity, root);
 
         mappings.addEntityBinding(root);
+    }
+
+    private void addSubclass(Subclass subClass, RootClass root) {
+        root.addSubclass(subClass);
+        mappings.addEntityBinding(subClass);
+    }
+
+    private @NonNull Stream<Subclass> getSubclassStream(HibernatePersistentEntity entity, RootClass root) {
+        mappingCacheHolder.cacheMapping(entity);
+        return subClassBinder.bindSubClass(entity, root).stream();
     }
 }

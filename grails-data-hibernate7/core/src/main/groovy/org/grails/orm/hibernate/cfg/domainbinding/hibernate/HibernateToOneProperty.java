@@ -18,26 +18,8 @@
  */
 package org.grails.orm.hibernate.cfg.domainbinding.hibernate;
 
-import org.grails.datastore.mapping.model.types.OneToOne;
-
 /**
  * Marker interface for Hibernate to-one associations ({@link HibernateManyToOneProperty} and {@link
  * HibernateOneToOneProperty}). Parallel to {@link HibernateToManyProperty}.
  */
-public interface HibernateToOneProperty extends HibernateAssociation {
-
-    default boolean isHibernateOneToOne() {
-        validateAssociation();
-        return this instanceof OneToOne association &&
-                (association.canBindOneToOneWithSingleColumnAndForeignKey() ||
-                        (association.isHasOne() &&
-                                association.isBidirectional() &&
-                                association.getInverseSide() != null));
-    }
-
-    default boolean isHibernateManyToOne() {
-        validateAssociation();
-        return this instanceof org.grails.datastore.mapping.model.types.ManyToOne ||
-                (this instanceof OneToOne && !isHibernateOneToOne());
-    }
-}
+public interface HibernateToOneProperty extends HibernateAssociation {}

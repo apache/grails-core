@@ -26,15 +26,8 @@ import groovy.lang.Closure;
 
 import grails.gorm.hibernate.HibernateEntity;
 import org.grails.datastore.gorm.GormEntity;
-import org.grails.datastore.mapping.model.AbstractMappingContext;
-import org.grails.datastore.mapping.model.MappingConfigurationStrategy;
-import org.grails.datastore.mapping.model.MappingFactory;
-import org.grails.datastore.mapping.model.PersistentEntity;
-import org.grails.orm.hibernate.cfg.domainbinding.hibernate.GrailsHibernatePersistentEntity;
-import org.grails.orm.hibernate.cfg.domainbinding.hibernate.GrailsJpaMappingConfigurationStrategy;
-import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernateEmbeddedPersistentEntity;
-import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernateMappingFactory;
-import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernatePersistentEntity;
+import org.grails.datastore.mapping.model.*;
+import org.grails.orm.hibernate.cfg.domainbinding.hibernate.*;
 import org.grails.orm.hibernate.connections.HibernateConnectionSourceSettings;
 import org.grails.orm.hibernate.proxy.HibernateProxyHandler;
 
@@ -98,8 +91,8 @@ public class HibernateMappingContext extends AbstractMappingContext {
 
     @Override
     protected boolean isValidMappingStrategy(Class javaClass, Object mappingStrategy) {
-        return HibernateEntity.class.isAssignableFrom(javaClass) ||
-                super.isValidMappingStrategy(javaClass, mappingStrategy);
+        return HibernateEntity.class.isAssignableFrom(javaClass)
+                || super.isValidMappingStrategy(javaClass, mappingStrategy);
     }
 
     @Override
@@ -123,16 +116,11 @@ public class HibernateMappingContext extends AbstractMappingContext {
         return super.getPersistentEntity(name);
     }
 
-    public Collection<GrailsHibernatePersistentEntity> getHibernatePersistentEntities(String dataSourceName) {
-        List<GrailsHibernatePersistentEntity> result = new ArrayList<>();
-        if (persistentEntities != null) {
-            for (PersistentEntity entity : persistentEntities) {
-                if (entity instanceof GrailsHibernatePersistentEntity hibernateEntity) {
-                    hibernateEntity.setDataSourceName(dataSourceName);
-                    result.add(hibernateEntity);
-                }
-            }
-        }
-        return result;
+    public List<HibernatePersistentEntity> getHibernatePersistentEntities(String dataSourceName) {
+        return persistentEntities.stream()
+                .filter(HibernatePersistentEntity.class::isInstance)
+                .map(HibernatePersistentEntity.class::cast)
+                .peek(hibernateEntity -> hibernateEntity.setDataSourceName(dataSourceName))
+                .toList();
     }
 }

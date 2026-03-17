@@ -1,19 +1,49 @@
-////
-Licensed to the Apache Software Foundation (ASF) under one
-or more contributor license agreements.  See the NOTICE file
-distributed with this work for additional information
-regarding copyright ownership.  The ASF licenses this file
-to you under the Apache License, Version 2.0 (the
-"License"); you may not use this file except in compliance
-with the License.  You may obtain a copy of the License at
+[[ormdsl-compositePrimaryKeys]]
+== Composite Primary Keys
 
-https://www.apache.org/licenses/LICENSE-2.0
+GORM allows you to map domain classes to tables that use a composite primary key (a key composed of two or more columns). This is commonly needed when mapping to legacy database schemas.
 
-Unless required by applicable law or agreed to in writing,
-software distributed under the License is distributed on an
-"AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
-KIND, either express or implied.  See the License for the
-specific language governing permissions and limitations
-under the License.
-////
+=== Defining a Composite Identity
 
+Use `id composite: [...]` in the `mapping` block, listing the property names that together form the primary key:
+
+[source,groovy]
+----
+class OrderItem {
+    Long orderId
+    Long productId
+    Integer quantity
+
+    static mapping = {
+        id composite: ['orderId', 'productId']  // <1>
+    }
+}
+----
+<1> The composite key is made up of `orderId` and `productId`.
+
+NOTE: Domain classes with composite keys do **not** have the auto-generated `id` and `version` properties. You are responsible for setting the key properties before calling `save()`.
+
+=== Using Composite Keys
+
+[source,groovy]
+----
+def item = new OrderItem(orderId: 1L, productId: 42L, quantity: 3)
+item.save()
+
+// Load by composite key — pass a map
+def found = OrderItem.get(orderId: 1L, productId: 42L)
+----
+
+=== Associations with Composite Keys
+
+When another domain class references a domain class with a composite key, GORM creates multiple foreign-key columns automatically:
+
+[source,groovy]
+----
+class OrderLine {
+    Integer lineNumber
+    OrderItem item     // foreign key will use both orderId and productId columns
+}
+----
+
+TIP: Composite primary keys add complexity to all queries and associations. Prefer surrogate (auto-generated) single-column keys wherever possible and use composite unique constraints instead of composite keys for business-key uniqueness requirements.

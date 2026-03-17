@@ -1,19 +1,95 @@
-////
-Licensed to the Apache Software Foundation (ASF) under one
-or more contributor license agreements.  See the NOTICE file
-distributed with this work for additional information
-regarding copyright ownership.  The ASF licenses this file
-to you under the Apache License, Version 2.0 (the
-"License"); you may not use this file except in compliance
-with the License.  You may obtain a copy of the License at
+[[ormdsl-caching]]
+== Caching
 
-https://www.apache.org/licenses/LICENSE-2.0
+GORM supports Hibernate's second-level cache and query cache. Caching is configured per domain class and optionally per association.
 
-Unless required by applicable law or agreed to in writing,
-software distributed under the License is distributed on an
-"AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
-KIND, either express or implied.  See the License for the
-specific language governing permissions and limitations
-under the License.
-////
+=== Enabling Second-Level Cache
 
+Second-level cache is enabled globally via configuration:
+
+[source,yaml]
+----
+hibernate:
+    use_second_level_cache: true
+    cache:
+        region:
+            factory_class: 'org.hibernate.cache.jcache.internal.JCacheRegionFactory'
+----
+
+Then enable caching for individual domain classes using the `cache` directive in the `mapping` block:
+
+[source,groovy]
+----
+class Book {
+    String title
+    static mapping = {
+        cache true          // <1>
+    }
+}
+----
+<1> Enables the second-level cache for `Book` with the default `read-write` usage.
+
+=== Cache Usage
+
+You can control the cache usage strategy:
+
+[source,groovy]
+----
+static mapping = {
+    cache usage: 'read-only'    // <1>
+}
+----
+
+[format="csv", options="header"]
+|===
+usage,description
+`read-write`,Cached data can be read and written — default
+`read-only`,Cached data is never modified (best performance for immutable data)
+`nonstrict-read-write`,No strict locking; possible stale reads between updates
+`transactional`,Full transaction support (requires a JTA transaction manager)
+|===
+
+=== Cache Include
+
+The `include` option controls what data to cache:
+
+[source,groovy]
+----
+static mapping = {
+    cache usage: 'read-write', include: 'non-lazy'  // <1>
+}
+----
+<1> Only non-lazy properties are cached. Use `all` (default) to include lazy properties too.
+
+=== Caching Associations
+
+You can cache collection associations independently:
+
+[source,groovy]
+----
+class Author {
+    String name
+    static hasMany = [books: Book]
+    static mapping = {
+        books cache: true
+    }
+}
+----
+
+=== Query Cache
+
+To cache the results of individual queries, pass `cache: true` in the query options and enable the query cache globally:
+
+[source,yaml]
+----
+hibernate:
+    cache:
+        use_query_cache: true
+----
+
+[source,groovy]
+----
+List<Book> books = Book.findAllByGenre('Fiction', [cache: true])
+----
+
+TIP: Only use the query cache for queries whose results change infrequently. Cached queries are invalidated whenever any entity in the queried table is updated.

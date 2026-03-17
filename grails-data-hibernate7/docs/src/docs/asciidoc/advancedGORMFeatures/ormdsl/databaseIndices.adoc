@@ -1,19 +1,55 @@
-////
-Licensed to the Apache Software Foundation (ASF) under one
-or more contributor license agreements.  See the NOTICE file
-distributed with this work for additional information
-regarding copyright ownership.  The ASF licenses this file
-to you under the Apache License, Version 2.0 (the
-"License"); you may not use this file except in compliance
-with the License.  You may obtain a copy of the License at
+[[ormdsl-databaseIndices]]
+== Database Indices
 
-https://www.apache.org/licenses/LICENSE-2.0
+GORM lets you define database indices on domain class columns directly in the `mapping` block, so they are created automatically when `hbm2ddl` generates the schema.
 
-Unless required by applicable law or agreed to in writing,
-software distributed under the License is distributed on an
-"AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
-KIND, either express or implied.  See the License for the
-specific language governing permissions and limitations
-under the License.
-////
+=== Single-Column Index
 
+Set `index: true` on a column to create an auto-named index, or provide a string name to name it explicitly:
+
+[source,groovy]
+----
+class Book {
+    String title
+    String isbn
+    static mapping = {
+        title  index: true          // <1>
+        isbn   index: 'isbn_idx'    // <2>
+    }
+}
+----
+<1> Creates an unnamed (auto-named) index on `title`.
+<2> Creates a named index `isbn_idx` on `isbn`.
+
+=== Composite Index
+
+To create a composite index across multiple columns, use the same index name on each column:
+
+[source,groovy]
+----
+class OrderItem {
+    Long orderId
+    Long productId
+    static mapping = {
+        orderId   index: 'order_product_idx'    // <1>
+        productId index: 'order_product_idx'    // <1>
+    }
+}
+----
+<1> Both columns share the same index name, so Hibernate creates a single composite index.
+
+=== Unique Index
+
+You can combine `index` with `unique` to create a unique index:
+
+[source,groovy]
+----
+class Book {
+    String isbn
+    static mapping = {
+        isbn unique: true, index: 'isbn_unique_idx'
+    }
+}
+----
+
+NOTE: Indices are only created automatically when `hibernate.hbm2ddl.auto` is set to `create`, `create-drop`, or `update`. For production schemas, prefer explicit DDL migration scripts.

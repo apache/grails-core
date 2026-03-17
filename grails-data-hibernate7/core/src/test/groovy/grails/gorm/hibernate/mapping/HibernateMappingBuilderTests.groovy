@@ -18,6 +18,8 @@
  */
 package grails.gorm.hibernate.mapping
 
+import java.sql.Clob
+
 import org.grails.orm.hibernate.cfg.CompositeIdentity
 import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernateMappingBuilder
 import org.grails.orm.hibernate.cfg.PropertyConfig
@@ -431,6 +433,17 @@ class HibernateMappingBuilderTests {
     }
 
     @Test
+    void testTablePerConcreteClass() {
+        def builder = new HibernateMappingBuilder("Foo")
+        def mapping = builder.evaluate {
+            tablePerConcreteClass true
+        }
+
+        assertTrue mapping.tablePerConcreteClass
+        assertFalse mapping.tablePerHierarchy
+    }
+
+    @Test
     void testAutoTimeStamp() {
         def builder = new HibernateMappingBuilder("Foo")
         def mapping = builder.evaluate {
@@ -452,8 +465,8 @@ class HibernateMappingBuilderTests {
         }
 
         def cc = mapping.getPropertyConfig('firstName')
-        assertEquals 'read-only', cc.cache.usage
-        assertEquals 'non-lazy', cc.cache.include
+        assertEquals 'read-only', cc.cache.usage.toString()
+        assertEquals 'non-lazy', cc.cache.include.toString()
     }
 
     @Test
@@ -465,8 +478,8 @@ class HibernateMappingBuilderTests {
         }
 
         def cc = mapping.getPropertyConfig('firstName')
-        assertEquals 'read-only', cc.cache.usage
-        assertEquals 'non-lazy', cc.cache.include
+        assertEquals 'read-only', cc.cache.usage.toString()
+        assertEquals 'non-lazy', cc.cache.include.toString()
     }
 
     @Test
@@ -481,7 +494,7 @@ class HibernateMappingBuilderTests {
         }
 
         def cc = mapping.getPropertyConfig('firstName')
-        assertEquals 'read-only', cc.cache.usage
+        assertEquals 'read-only', cc.cache.usage.toString()
     }
 
     @Test
@@ -493,7 +506,7 @@ class HibernateMappingBuilderTests {
         }
 
         def cc = mapping.getPropertyConfig('firstName')
-        assertEquals 'read-only', cc.cache.usage
+        assertEquals 'read-only', cc.cache.usage.toString()
     }
 
     @Test
@@ -508,8 +521,8 @@ class HibernateMappingBuilderTests {
         }
 
         def cc = mapping.getPropertyConfig('firstName')
-        assertEquals 'read-write', cc.cache.usage
-        assertEquals 'all', cc.cache.include
+        assertEquals 'read-write', cc.cache.usage.toString()
+        assertEquals 'all', cc.cache.include.toString()
     }
 
     @Test
@@ -521,8 +534,8 @@ class HibernateMappingBuilderTests {
         }
 
         def cc = mapping.getPropertyConfig('firstName')
-        assertEquals 'read-write', cc.cache.usage
-        assertEquals 'all', cc.cache.include
+        assertEquals 'read-write', cc.cache.usage.toString()
+        assertEquals 'all', cc.cache.include.toString()
     }
 
     @Test
@@ -543,8 +556,8 @@ class HibernateMappingBuilderTests {
             cache true
         }
 
-        assertEquals 'read-write', mapping.cache.usage
-        assertEquals 'all', mapping.cache.include
+        assertEquals 'read-write', mapping.cache.usage.toString()
+        assertEquals 'all', mapping.cache.include.toString()
     }
 
     @Test
@@ -555,8 +568,8 @@ class HibernateMappingBuilderTests {
             cache usage:'read-only', include:'non-lazy'
         }
 
-        assertEquals 'read-only', mapping.cache.usage
-        assertEquals 'non-lazy', mapping.cache.include
+        assertEquals 'read-only', mapping.cache.usage.toString()
+        assertEquals 'non-lazy', mapping.cache.include.toString()
     }
 
     @Test
@@ -567,8 +580,8 @@ class HibernateMappingBuilderTests {
             cache 'read-only'
         }
 
-        assertEquals 'read-only', mapping.cache.usage
-        assertEquals 'all', mapping.cache.include
+        assertEquals 'read-only', mapping.cache.usage.toString()
+        assertEquals 'all', mapping.cache.include.toString()
     }
 
     @Test
@@ -580,8 +593,8 @@ class HibernateMappingBuilderTests {
         }
 
         // should be ignored and logged to console
-        assertEquals 'read-write', mapping.cache.usage
-        assertEquals 'all', mapping.cache.include
+        assertEquals 'read-write', mapping.cache.usage.toString()
+        assertEquals 'all', mapping.cache.include.toString()
     }
 
     @Test
@@ -647,11 +660,13 @@ class HibernateMappingBuilderTests {
             version false
             id composite:['one','two'], compositeClass:HibernateMappingBuilder
         }
+        def compositeId = mapping.identity
 
-        assert mapping.identity instanceof CompositeIdentity
-        assertEquals "one", mapping.identity.propertyNames[0]
-        assertEquals "two", mapping.identity.propertyNames[1]
-        assertEquals HibernateMappingBuilder, mapping.identity.compositeClass
+        assert compositeId instanceof CompositeIdentity
+
+        assertEquals( "one",  compositeId.propertyNames[0])
+        assertEquals "two", compositeId.propertyNames[1]
+        assertEquals HibernateMappingBuilder, compositeId.compositeClass
     }
 
     @Test
@@ -694,7 +709,7 @@ class HibernateMappingBuilderTests {
                 firstName  column:'First_Name',
                         lazy:true,
                         unique:true,
-                        type: java.sql.Clob,
+                        type: Clob,
                         length:255,
                         index:'foo',
                         sqlType: 'text'
@@ -706,7 +721,7 @@ class HibernateMappingBuilderTests {
         assertEquals "First_Name",mapping.columns.firstName.column
         assertTrue mapping.columns.firstName.lazy
         assertTrue mapping.columns.firstName.unique
-        assertEquals java.sql.Clob,mapping.columns.firstName.type
+        assertEquals Clob,mapping.columns.firstName.type
         assertEquals 255,mapping.columns.firstName.length
         assertEquals 'foo',mapping.columns.firstName.getIndexName()
         assertEquals "text",mapping.columns.firstName.sqlType
@@ -722,7 +737,7 @@ class HibernateMappingBuilderTests {
             firstName  column:'First_Name',
                     lazy:true,
                     unique:true,
-                    type: java.sql.Clob,
+                    type: Clob,
                     length:255,
                     index:'foo',
                     sqlType: 'text'
@@ -733,7 +748,7 @@ class HibernateMappingBuilderTests {
         assertEquals "First_Name",mapping.columns.firstName.column
         assertTrue mapping.columns.firstName.lazy
         assertTrue mapping.columns.firstName.unique
-        assertEquals java.sql.Clob,mapping.columns.firstName.type
+        assertEquals Clob,mapping.columns.firstName.type
         assertEquals 255,mapping.columns.firstName.length
         assertEquals 'foo',mapping.columns.firstName.getIndexName()
         assertEquals "text",mapping.columns.firstName.sqlType
@@ -841,11 +856,11 @@ class HibernateMappingBuilderTests {
     void testUpdatablePropertyConfig() {
         def builder = new HibernateMappingBuilder("Foo")
         def mapping = builder.evaluate {
-            firstName updateable:true
-            lastName updateable:false
+            firstName updatable:true
+            lastName updatable:false
         }
-        assertTrue mapping.getPropertyConfig('firstName').updateable
-        assertFalse mapping.getPropertyConfig('lastName').updateable
+        assertTrue mapping.getPropertyConfig('firstName').updatable
+        assertFalse mapping.getPropertyConfig('lastName').updatable
     }
 
     @Test

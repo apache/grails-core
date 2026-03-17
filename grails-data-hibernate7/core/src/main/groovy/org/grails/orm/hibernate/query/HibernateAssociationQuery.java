@@ -24,7 +24,7 @@ import org.grails.datastore.mapping.model.PersistentEntity;
 import org.grails.datastore.mapping.model.types.Association;
 import org.grails.datastore.mapping.query.AssociationQuery;
 import org.grails.datastore.mapping.query.Query;
-import org.grails.orm.hibernate.AbstractHibernateSession;
+import org.grails.orm.hibernate.HibernateSession;
 
 /**
  * A thin wrapper over {@link HibernateQuery} that collects criteria for a single association scope.
@@ -51,7 +51,7 @@ public class HibernateAssociationQuery extends AssociationQuery {
     private final HibernateQuery innerQuery;
 
     public HibernateAssociationQuery(
-            AbstractHibernateSession session,
+            HibernateSession session,
             PersistentEntity associatedEntity,
             Association association,
             String associationPath,

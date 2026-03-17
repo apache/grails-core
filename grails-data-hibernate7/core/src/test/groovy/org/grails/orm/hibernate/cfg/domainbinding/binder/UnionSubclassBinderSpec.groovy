@@ -32,12 +32,13 @@ import org.hibernate.mapping.UnionSubclass
 class UnionSubclassBinderSpec extends HibernateGormDatastoreSpec {
 
     UnionSubclassBinder binder
-    ClassBinder classBinder = new ClassBinder()
+    ClassBinder classBinder
 
     void setup() {
         def buildingContext = getGrailsDomainBinder().getMetadataBuildingContext()
         def namingStrategy = getGrailsDomainBinder().getNamingStrategy()
-        binder = new UnionSubclassBinder(buildingContext, namingStrategy, classBinder)
+        classBinder = new ClassBinder(buildingContext.getMetadataCollector())
+        binder = new UnionSubclassBinder(buildingContext, namingStrategy, classBinder, buildingContext.getMetadataCollector())
     }
 
     void "test bind union subclass with real entities"() {
@@ -57,13 +58,15 @@ class UnionSubclassBinderSpec extends HibernateGormDatastoreSpec {
         rootClass.setTable(rootTable)
         
         // Setup UnionSubclass
-        def unionSubclass = new UnionSubclass(rootClass, buildingContext)
-        unionSubclass.setEntityName(UnionSubClassSub.name)
+        // def unionSubclass = new UnionSubclass(rootClass, buildingContext)
+        // unionSubclass.setEntityName(UnionSubClassSub.name)
 
         when:
-        binder.bindUnionSubclass(subEntity, unionSubclass, mappings)
+        def unionSubclass = binder.bindUnionSubclass(subEntity, rootClass)
 
         then:
+        unionSubclass != null
+        unionSubclass.getEntityName() == UnionSubClassSub.name
         unionSubclass.getTable() != null
         unionSubclass.getTable().getName() != "US_ROOT_TABLE"
         unionSubclass.getClassName() == UnionSubClassSub.name

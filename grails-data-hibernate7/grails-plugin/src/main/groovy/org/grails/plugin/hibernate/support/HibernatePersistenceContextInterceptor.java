@@ -39,7 +39,7 @@ import grails.persistence.support.PersistenceContextInterceptor;
 import grails.validation.DeferredBindingActions;
 import org.grails.core.lifecycle.ShutdownOperations;
 import org.grails.datastore.mapping.core.connections.ConnectionSource;
-import org.grails.orm.hibernate.AbstractHibernateDatastore;
+import org.grails.orm.hibernate.HibernateDatastore;
 import org.grails.orm.hibernate.support.HibernateRuntimeUtils;
 
 /**
@@ -50,7 +50,7 @@ public class HibernatePersistenceContextInterceptor
         implements PersistenceContextInterceptor, SessionFactoryAwarePersistenceContextInterceptor {
 
     private static final Logger LOG = LoggerFactory.getLogger(HibernatePersistenceContextInterceptor.class);
-    private AbstractHibernateDatastore hibernateDatastore;
+    private HibernateDatastore hibernateDatastore;
 
     private static ThreadLocal<Map<String, Boolean>> participate = ThreadLocal.withInitial(HashMap::new);
 
@@ -200,7 +200,7 @@ public class HibernatePersistenceContextInterceptor
         return hibernateDatastore.getSessionFactory();
     }
 
-    public void setHibernateDatastore(AbstractHibernateDatastore hibernateDatastore) {
+    public void setHibernateDatastore(HibernateDatastore hibernateDatastore) {
         this.hibernateDatastore = hibernateDatastore;
     }
 

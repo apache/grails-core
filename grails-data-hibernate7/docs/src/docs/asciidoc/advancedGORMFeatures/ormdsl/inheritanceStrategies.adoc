@@ -1,19 +1,95 @@
-////
-Licensed to the Apache Software Foundation (ASF) under one
-or more contributor license agreements.  See the NOTICE file
-distributed with this work for additional information
-regarding copyright ownership.  The ASF licenses this file
-to you under the Apache License, Version 2.0 (the
-"License"); you may not use this file except in compliance
-with the License.  You may obtain a copy of the License at
+[[ormdsl-inheritanceStrategies]]
+== Inheritance Strategies
 
-https://www.apache.org/licenses/LICENSE-2.0
+GORM supports three Hibernate inheritance mapping strategies.
 
-Unless required by applicable law or agreed to in writing,
-software distributed under the License is distributed on an
-"AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
-KIND, either express or implied.  See the License for the
-specific language governing permissions and limitations
-under the License.
-////
+=== Table-per-Hierarchy (Default)
 
+All classes in the hierarchy are stored in a single table. A discriminator column distinguishes rows for each subclass. This is the default:
+
+[source,groovy]
+----
+class Content {
+    String title
+    // tablePerHierarchy is true by default
+}
+
+class BlogPost extends Content {
+    String body
+}
+
+class Page extends Content {
+    String html
+}
+----
+
+The single table will contain columns for all properties of all subclasses, with nullable columns for subclass-specific fields.
+
+==== Customising the Discriminator
+
+[source,groovy]
+----
+class Content {
+    String title
+    static mapping = {
+        discriminator column: 'content_type', value: 'content'
+    }
+}
+
+class BlogPost extends Content {
+    static mapping = {
+        discriminator 'blog'    // <1>
+    }
+}
+----
+<1> The discriminator value stored for `BlogPost` rows.
+
+You can also configure the discriminator column type and whether it is insertable:
+
+[source,groovy]
+----
+static mapping = {
+    discriminator {
+        column name: 'dtype', sqlType: 'varchar(30)'
+        value  'blog'
+        insert false
+    }
+}
+----
+
+=== Table-per-Subclass
+
+Each subclass has its own table containing only the subclass-specific columns, joined to the parent table via a foreign key:
+
+[source,groovy]
+----
+class Content {
+    String title
+    static mapping = {
+        tablePerHierarchy false     // <1>
+    }
+}
+
+class BlogPost extends Content {
+    String body
+    // implicitly uses joined-subclass mapping
+}
+----
+<1> Disables single-table strategy; Hibernate will use joined subclass tables.
+
+=== Table-per-Concrete-Class
+
+Each concrete class has its own standalone table with all columns (inherited + its own). There is no shared parent table:
+
+[source,groovy]
+----
+class Content {
+    String title
+    static mapping = {
+        tablePerConcreteClass true  // <1>
+    }
+}
+----
+<1> Each concrete subclass gets its own fully self-contained table.
+
+TIP: Table-per-hierarchy is the most performant strategy because it requires no joins. Table-per-subclass is useful when you need to query on a subclass without nulls in the parent table. Table-per-concrete-class is least commonly used and makes polymorphic queries expensive.

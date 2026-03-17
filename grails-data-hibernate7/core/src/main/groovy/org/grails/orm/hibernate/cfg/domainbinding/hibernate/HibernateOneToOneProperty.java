@@ -20,7 +20,9 @@ package org.grails.orm.hibernate.cfg.domainbinding.hibernate;
 
 import java.beans.PropertyDescriptor;
 
+import org.hibernate.FetchMode;
 import org.hibernate.MappingException;
+import org.hibernate.type.ForeignKeyDirection;
 
 import org.grails.datastore.mapping.model.MappingContext;
 import org.grails.datastore.mapping.model.PersistentEntity;
@@ -37,13 +39,84 @@ public class HibernateOneToOneProperty extends OneToOneWithMapping<PropertyConfi
     public void validateAssociation() {
         HibernateToOneProperty.super.validateAssociation();
         if (isHasOne() && !isBidirectional()) {
-            throw new MappingException("hasOne property [" + getName() +
-                    "] is not bidirectional. Specify the other side of the relationship!");
+            throw new MappingException("hasOne property ["
+                    + getName()
+                    + "] is not bidirectional. Specify the other side of the relationship!");
         }
     }
 
     @Override
     public GrailsHibernatePersistentEntity getHibernateAssociatedEntity() {
         return (GrailsHibernatePersistentEntity) super.getAssociatedEntity();
+    }
+
+    @Override
+    public HibernateOneToOneProperty getHibernateInverseSide() {
+        return (HibernateOneToOneProperty) getInverseSide();
+    }
+
+    /** True when the FK is on this side (hasOne on the other side). Maps to Hibernate constrained. */
+    public boolean isHibernateConstrained() {
+        HibernateOneToOneProperty otherSide = getHibernateInverseSide();
+        return otherSide != null && otherSide.isHasOne();
+    }
+
+    /**
+     * The entity name that Hibernate should reference. When the other side exists, it is the other
+     * side's owner; otherwise the directly associated entity.
+     */
+    public String getHibernateReferencedEntityName() {
+        HibernateOneToOneProperty otherSide = getHibernateInverseSide();
+        return otherSide != null
+                ? otherSide.getOwner().getName()
+                : getAssociatedEntity().getName();
+    }
+
+    /**
+     * The property name on the referenced entity that back-references this association. Only
+     * meaningful when {@link #isHibernateConstrained()} is false and the other side exists.
+     */
+    public String getHibernateReferencedPropertyName() {
+        HibernateOneToOneProperty otherSide = getHibernateInverseSide();
+        return otherSide != null ? otherSide.getName() : null;
+    }
+
+    /** FK direction: FROM_PARENT when constrained (hasOne on other side), TO_PARENT otherwise. */
+    public ForeignKeyDirection getHibernateForeignKeyDirection() {
+        return isHibernateConstrained() ? ForeignKeyDirection.FROM_PARENT : ForeignKeyDirection.TO_PARENT;
+    }
+
+    /** Resolved fetch mode: uses the configured value or falls back to {@link FetchMode#DEFAULT}. */
+    public FetchMode getHibernateFetchMode() {
+        PropertyConfig config = getMappedForm();
+        return (config != null && config.getFetchMode() != null) ? config.getFetchMode() : FetchMode.DEFAULT;
+    }
+
+    /**
+     * True when Hibernate should bind a simple column value rather than a referenced property name.
+     * This is the case when the FK is on this side (constrained) or no inverse side exists.
+     */
+    public boolean needsSimpleValueBinding() {
+        return isHibernateConstrained() || getHibernateReferencedPropertyName() == null;
+    }
+
+    public boolean isValidHibernateOneToOne() {
+        validateAssociation();
+        return canBindOneToOneWithSingleColumnAndForeignKey()
+                || isHasOne() && isBidirectional() && getInverseSide() != null;
+    }
+
+    public boolean isValidHibernateManyToOne() {
+        validateAssociation();
+        return !isValidHibernateOneToOne();
+    }
+
+    @Override
+    public boolean isAssociationColumnNullable() {
+        if (isBidirectional() && !isOwningSide()) {
+            HibernateOneToOneProperty inverseSide = getHibernateInverseSide();
+            return inverseSide == null || !inverseSide.isHasOne();
+        }
+        return true;
     }
 }

@@ -80,7 +80,9 @@ class HibernateMappingFactory extends AbstractGormMappingFactory<Mapping, Proper
         if (customTypeMarshaller == null && propertyType.isEnum()) {
             customTypeMarshaller = findCustomType(context, Enum)
         }
-        HibernateCustomProperty custom = new HibernateCustomProperty(owner, context, pd, customTypeMarshaller)
+        HibernateCustomProperty custom = propertyType.isEnum()
+                ? new HibernateCustomEnumProperty(owner, context, pd, customTypeMarshaller)
+                : new HibernateCustomProperty(owner, context, pd, customTypeMarshaller)
         custom.setMapping(createPropertyMapping(custom, owner))
         custom
     }
@@ -88,7 +90,9 @@ class HibernateMappingFactory extends AbstractGormMappingFactory<Mapping, Proper
     @Override
     Simple<PropertyConfig> createSimple(
             PersistentEntity owner, MappingContext context, PropertyDescriptor pd) {
-        HibernateSimpleProperty simple = new HibernateSimpleProperty(owner, context, pd)
+        HibernateSimpleProperty simple = pd.propertyType.isEnum()
+                ? new HibernateSimpleEnumProperty(owner, context, pd)
+                : new HibernateSimpleProperty(owner, context, pd)
         simple.setMapping(createPropertyMapping(simple, owner))
         simple
     }

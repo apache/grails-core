@@ -18,6 +18,7 @@
  */
 package org.grails.orm.hibernate.cfg.domainbinding.generator;
 
+import java.io.Serial;
 import java.util.Optional;
 import java.util.Properties;
 
@@ -31,6 +32,7 @@ import org.grails.orm.hibernate.cfg.Identity;
 
 public class GrailsTableGenerator extends TableGenerator {
 
+    @Serial
     private static final long serialVersionUID = 1L;
 
     public GrailsTableGenerator(GeneratorCreationContext context, Identity mappedId, JdbcEnvironment jdbcEnvironment) {

@@ -18,6 +18,7 @@
  */
 package org.grails.orm.hibernate.access
 
+import org.hibernate.MappingException
 import org.hibernate.property.access.spi.GetterFieldImpl
 import org.hibernate.property.access.spi.GetterMethodImpl
 import org.hibernate.property.access.spi.SetterFieldImpl
@@ -39,6 +40,10 @@ trait HasFlag {
     Boolean flag
 }
 
+trait HasComputed {
+    String getComputed() { "foo" }
+}
+
 /** Plain Groovy class — no trait involvement. */
 class PlainPerson {
     String plain
@@ -52,6 +57,9 @@ class ActiveEntity implements HasActive {}
 
 /** Groovy class implementing a boxed-Boolean trait. */
 class FlaggedEntity implements HasFlag {}
+
+/** Groovy class implementing a computed-property trait. */
+class ComputedEntity implements HasComputed {}
 
 // ─── Spec ─────────────────────────────────────────────────────────────────────
 
@@ -257,6 +265,26 @@ class TraitPropertyAccessStrategySpec extends Specification {
         expect:
         nameAccess.getter.returnTypeClass   == String
         activeAccess.getter.returnTypeClass == boolean
+    }
+
+    // ─── Read-only property (no field, no setter) ───────────────────────────
+
+    void "buildPropertyAccess for computed property returns method-based getter and no setter if not required"() {
+        when:
+        def access = strategy.buildPropertyAccess(ComputedEntity, 'computed', false)
+
+        then:
+        access != null
+        access.getter instanceof GetterMethodImpl
+        access.setter == null
+    }
+
+    void "buildPropertyAccess for computed property throws MappingException if setter is required"() {
+        when:
+        strategy.buildPropertyAccess(ComputedEntity, 'computed', true)
+
+        then:
+        thrown(MappingException)
     }
 }
 
