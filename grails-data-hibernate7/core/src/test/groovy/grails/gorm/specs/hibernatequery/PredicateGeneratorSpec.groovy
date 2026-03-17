@@ -522,4 +522,22 @@ class PredicateGeneratorSpec extends HibernateGormDatastoreSpec {
         noExceptionThrown()
         predicates.length == 1
     }
+
+    def "test gt with String value that cant be coerced to Number"() {
+        given:
+        List criteria = [new Query.GreaterThan("age", "Bobby")]
+        when:
+        def predicates = predicateGenerator.getPredicates(cb, query, root, criteria, fromProvider, personEntity)
+        then:
+        thrown(ConfigurationException)
+    }
+
+    def "test lt with String value that cant be coerced to Number"() {
+        given:
+        List criteria = [new Query.LessThan("age", "Bobby")]
+        when:
+        def predicates = predicateGenerator.getPredicates(cb, query, root, criteria, fromProvider, personEntity)
+        then:
+        thrown(ConfigurationException)
+    }
 }
