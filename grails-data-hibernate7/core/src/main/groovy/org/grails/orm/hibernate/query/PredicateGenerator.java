@@ -463,9 +463,14 @@ public class PredicateGenerator {
         if (value instanceof Number num) return num;
         if (value != null && conversionService.canConvert(value.getClass(), Number.class)) {
             try {
-                return conversionService.convert(value, Number.class);
+                Number convert = conversionService.convert(value, Number.class);
+                return convert;
             } catch (org.springframework.core.convert.ConversionException ignored) {
-                // fall through to ConfigurationException
+                throw new ConfigurationException(String.format(
+                        "Operation '%s' on property '%s' only accepts a numeric value, but received a %s",
+                        criterion.getClass().getSimpleName(),
+                        criterion.getProperty(),
+                        value.getClass().getName()));
             }
         }
         throw new ConfigurationException(String.format(

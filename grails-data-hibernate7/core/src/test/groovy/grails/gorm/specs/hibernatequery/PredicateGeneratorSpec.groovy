@@ -26,6 +26,7 @@ import jakarta.persistence.criteria.Root
 import org.apache.grails.data.testing.tck.domains.Person
 import org.apache.grails.data.testing.tck.domains.Pet
 import org.apache.grails.data.testing.tck.domains.Face
+import org.grails.datastore.mapping.core.exceptions.ConfigurationException
 import org.grails.datastore.mapping.model.PersistentEntity
 import org.grails.datastore.mapping.query.Query
 import org.grails.orm.hibernate.query.JpaFromProvider
@@ -520,5 +521,23 @@ class PredicateGeneratorSpec extends HibernateGormDatastoreSpec {
         then:
         noExceptionThrown()
         predicates.length == 1
+    }
+
+    def "test gt with String value that cant be coerced to Number"() {
+        given:
+        List criteria = [new Query.GreaterThan("age", "Bobby")]
+        when:
+        def predicates = predicateGenerator.getPredicates(cb, query, root, criteria, fromProvider, personEntity)
+        then:
+        thrown(ConfigurationException)
+    }
+
+    def "test lt with String value that cant be coerced to Number"() {
+        given:
+        List criteria = [new Query.LessThan("age", "Bobby")]
+        when:
+        def predicates = predicateGenerator.getPredicates(cb, query, root, criteria, fromProvider, personEntity)
+        then:
+        thrown(ConfigurationException)
     }
 }
