@@ -21,7 +21,7 @@ under the License.
 
 === Mono-Repository
 
-All Grails Spring Security plugins -- Core, ACL, CAS, LDAP, OAuth2, REST, and UI -- are now developed and released from a single repository.
+All Grails Spring Security plugins - Core, ACL, CAS, LDAP, OAuth2, REST, and UI - are now developed and released from a single repository.
 This means all plugins share the same version number and are guaranteed to be compatible with each other within a release.
 
 === Apache Software Foundation
@@ -33,7 +33,7 @@ See the <<upgrading,Upgrading>> section for a full mapping of old to new coordin
 === Unified Versioning
 
 All plugins now share a single version (`{projectVersion}`), aligned with the Grails BOM.
-You no longer need to manage individual plugin versions -- the Grails BOM handles version resolution automatically when using a Grails Gradle plugin.
+You no longer need to manage individual plugin versions - the Grails BOM handles version resolution automatically when using a Grails Gradle plugin.
 
 === Spring Security 6.x
 
