@@ -26,6 +26,7 @@ import org.grails.orm.hibernate.cfg.*;
 import org.grails.orm.hibernate.cfg.domainbinding.binder.CollectionForPropertyConfigBinder;
 import org.grails.orm.hibernate.cfg.domainbinding.binder.CompositeIdentifierToManyToOneBinder;
 import org.grails.orm.hibernate.cfg.domainbinding.binder.SimpleValueColumnBinder;
+import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernateBasicProperty;
 import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernateToManyProperty;
 
 import static org.grails.orm.hibernate.cfg.domainbinding.binder.GrailsDomainBinder.*;
@@ -62,8 +63,8 @@ public class CollectionWithJoinTableBinder {
         Collection collection = property.getCollection();
         collection.setInverse(false);
         SimpleValue element;
-        if (property.isBasic()) {
-            element = basicCollectionElementBinder.bind(property);
+        if (property instanceof HibernateBasicProperty basic) {
+            element = basicCollectionElementBinder.bind(basic);
         } else {
             element = unidirectionalOneToManyInverseValuesBinder.bind(property);
             final var domainClass = property.getHibernateAssociatedEntity();

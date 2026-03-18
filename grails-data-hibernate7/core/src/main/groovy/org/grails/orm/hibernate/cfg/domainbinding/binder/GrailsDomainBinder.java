@@ -136,7 +136,7 @@ public class GrailsDomainBinder implements AdditionalMappingContributor, TypeCon
         SimpleValueBinder simpleValueBinder =
                 new SimpleValueBinder(metadataBuildingContext, namingStrategy, jdbcEnvironment);
         EnumTypeBinder enumTypeBinder =
-                new EnumTypeBinder(metadataBuildingContext, columnNameForPropertyAndPathFetcher);
+                new EnumTypeBinder(metadataBuildingContext, columnNameForPropertyAndPathFetcher, namingStrategy);
         PropertyFromValueCreator propertyFromValueCreator = new PropertyFromValueCreator();
         ClassBinder classBinder = new ClassBinder(metadataCollector);
         SimpleValueColumnFetcher simpleValueColumnFetcher = new SimpleValueColumnFetcher();

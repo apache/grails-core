@@ -41,7 +41,7 @@ class EnumTypeBinderSpec extends HibernateGormDatastoreSpec {
         def namingStrategy = grailsDomainBinder.getNamingStrategy()
         def defaultColumnNameFetcher = new DefaultColumnNameFetcher(namingStrategy, new BackticksRemover())
         def columnNameFetcher = new ColumnNameForPropertyAndPathFetcher(namingStrategy, defaultColumnNameFetcher, new BackticksRemover())
-        binder = new EnumTypeBinder(metadataBuildingContext, columnNameFetcher, indexBinder, columnBinder)
+        binder = new EnumTypeBinder(metadataBuildingContext, columnNameFetcher, indexBinder, columnBinder, namingStrategy)
     }
 
     private PersistentProperty setupProperty(Class clazz, String propertyName, Table table) {

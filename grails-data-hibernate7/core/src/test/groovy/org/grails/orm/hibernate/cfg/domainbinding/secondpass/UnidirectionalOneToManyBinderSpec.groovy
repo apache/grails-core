@@ -59,7 +59,7 @@ class UnidirectionalOneToManyBinderSpec extends HibernateGormDatastoreSpec {
         def columnNameForPropertyAndPathFetcher = new ColumnNameForPropertyAndPathFetcher(namingStrategy, defaultColumnNameFetcher, backticksRemover)
 
         def unidirectionalOneToManyInverseValuesBinder = new UnidirectionalOneToManyInverseValuesBinder(metadataBuildingContext)
-        def enumTypeBinder = new EnumTypeBinder(metadataBuildingContext, columnNameForPropertyAndPathFetcher)
+        def enumTypeBinder = new EnumTypeBinder(metadataBuildingContext, columnNameForPropertyAndPathFetcher,namingStrategy)
         def compositeIdentifierToManyToOneBinder = new CompositeIdentifierToManyToOneBinder(metadataBuildingContext, namingStrategy, jdbcEnvironment)
         def simpleValueColumnFetcher = new SimpleValueColumnFetcher()
         def collectionForPropertyConfigBinder = new CollectionForPropertyConfigBinder()

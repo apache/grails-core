@@ -18,8 +18,9 @@
  */
 package org.grails.orm.hibernate.cfg.domainbinding.secondpass;
 
-import java.util.Optional;
+import jakarta.annotation.Nonnull;
 
+import org.checkerframework.checker.nullness.qual.MonotonicNonNull;
 import org.hibernate.boot.spi.MetadataBuildingContext;
 import org.hibernate.mapping.BasicValue;
 import org.hibernate.mapping.Collection;
@@ -30,10 +31,8 @@ import org.grails.orm.hibernate.cfg.PropertyConfig;
 import org.grails.orm.hibernate.cfg.domainbinding.binder.ColumnConfigToColumnBinder;
 import org.grails.orm.hibernate.cfg.domainbinding.binder.EnumTypeBinder;
 import org.grails.orm.hibernate.cfg.domainbinding.binder.SimpleValueColumnBinder;
-import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernateToManyProperty;
+import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernateBasicProperty;
 import org.grails.orm.hibernate.cfg.domainbinding.util.SimpleValueColumnFetcher;
-
-import static org.grails.orm.hibernate.cfg.domainbinding.binder.GrailsDomainBinder.UNDERSCORE;
 
 /** Binds the element value for a basic (scalar or enum) collection. */
 public class BasicCollectionElementBinder {
@@ -62,7 +61,7 @@ public class BasicCollectionElementBinder {
     }
 
     /** Creates and binds a {@link BasicValue} element for the given basic collection property. */
-    public BasicValue bind(HibernateToManyProperty property) {
+    public BasicValue bind(@Nonnull HibernateBasicProperty property) {
         String columnName = property.joinTableColumName(namingStrategy);
         if (property.isEnum()) {
             return enumTypeBinder.bindEnumTypeForColumn(property, columnName);
