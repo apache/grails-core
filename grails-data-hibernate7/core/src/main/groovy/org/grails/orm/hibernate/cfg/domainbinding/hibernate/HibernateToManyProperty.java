@@ -21,6 +21,7 @@ package org.grails.orm.hibernate.cfg.domainbinding.hibernate;
 import java.util.Map;
 import java.util.Optional;
 
+import org.checkerframework.checker.nullness.qual.NonNull;
 import org.hibernate.FetchMode;
 import org.hibernate.mapping.Collection;
 import org.hibernate.mapping.IndexedCollection;
@@ -35,6 +36,9 @@ import org.grails.orm.hibernate.cfg.JoinTable;
 import org.grails.orm.hibernate.cfg.PersistentEntityNamingStrategy;
 import org.grails.orm.hibernate.cfg.PropertyConfig;
 import org.grails.orm.hibernate.cfg.domainbinding.binder.GrailsDomainBinder;
+import org.grails.orm.hibernate.cfg.domainbinding.util.BackticksRemover;
+
+import static org.grails.orm.hibernate.cfg.domainbinding.binder.GrailsDomainBinder.UNDERSCORE;
 
 /** Marker interface for Hibernate to-many associations */
 public interface HibernateToManyProperty extends PropertyWithMapping<PropertyConfig>, HibernateAssociation {
@@ -128,6 +132,32 @@ public interface HibernateToManyProperty extends PropertyWithMapping<PropertyCon
                                 .getJavaClass()
                                 .getSimpleName())
                         + GrailsDomainBinder.FOREIGN_KEY_SUFFIX);
+    }
+
+    default String joinTableColumName(PersistentEntityNamingStrategy namingStrategy) {
+        final Class<?> referencedType =getComponentType();
+        var joinColumnMappingOptional = getColumnConfigOptional();
+        boolean present = joinColumnMappingOptional.isPresent();
+        String columnName;
+        if (present) {
+            columnName = joinColumnMappingOptional.get().getName();
+        } else {
+            var clazz = namingStrategy.resolveColumnName(referencedType.getName());
+            var prop = namingStrategy.resolveTableName(getName());
+            columnName = referencedType.isEnum()
+                    ? clazz
+                    : new BackticksRemover().apply(prop) + UNDERSCORE + new BackticksRemover().apply(clazz);
+        }
+        return columnName;
+    }
+
+    @NonNull
+    default Optional<ColumnConfig> getColumnConfigOptional() {
+        return Optional.ofNullable(getMappedForm()).map(PropertyConfig::getJoinTableColumnConfig);
+    }
+
+    default boolean isEnum() {
+        return getComponentType().isEnum();
     }
 
     void setCollection(Collection collection);

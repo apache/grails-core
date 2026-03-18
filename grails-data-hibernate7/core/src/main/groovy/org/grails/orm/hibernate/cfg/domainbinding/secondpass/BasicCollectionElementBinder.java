@@ -25,14 +25,12 @@ import org.hibernate.mapping.BasicValue;
 import org.hibernate.mapping.Collection;
 import org.hibernate.mapping.Column;
 
-import org.grails.orm.hibernate.cfg.ColumnConfig;
 import org.grails.orm.hibernate.cfg.PersistentEntityNamingStrategy;
 import org.grails.orm.hibernate.cfg.PropertyConfig;
 import org.grails.orm.hibernate.cfg.domainbinding.binder.ColumnConfigToColumnBinder;
 import org.grails.orm.hibernate.cfg.domainbinding.binder.EnumTypeBinder;
 import org.grails.orm.hibernate.cfg.domainbinding.binder.SimpleValueColumnBinder;
 import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernateToManyProperty;
-import org.grails.orm.hibernate.cfg.domainbinding.util.BackticksRemover;
 import org.grails.orm.hibernate.cfg.domainbinding.util.SimpleValueColumnFetcher;
 
 import static org.grails.orm.hibernate.cfg.domainbinding.binder.GrailsDomainBinder.UNDERSCORE;
@@ -65,33 +63,20 @@ public class BasicCollectionElementBinder {
 
     /** Creates and binds a {@link BasicValue} element for the given basic collection property. */
     public BasicValue bind(HibernateToManyProperty property) {
-        final Class<?> referencedType = property.getComponentType();
-        var joinColumnMappingOptional =
-                Optional.ofNullable(property.getMappedForm()).map(PropertyConfig::getJoinTableColumnConfig);
-        boolean present = joinColumnMappingOptional.isPresent();
-        String columnName;
-        if (present) {
-            columnName = joinColumnMappingOptional.get().getName();
-        } else {
-            var clazz = namingStrategy.resolveColumnName(referencedType.getName());
-            var prop = namingStrategy.resolveTableName(property.getName());
-            columnName = referencedType.isEnum()
-                    ? clazz
-                    : new BackticksRemover().apply(prop) + UNDERSCORE + new BackticksRemover().apply(clazz);
-        }
-        if (referencedType.isEnum()) {
+        String columnName = property.joinTableColumName(namingStrategy);
+        if (property.isEnum()) {
             return enumTypeBinder.bindEnumTypeForColumn(property, columnName);
         } else {
+            final Class<?> referencedType = property.getComponentType();
             String typeName = property.getTypeName(referencedType);
             Collection collection = property.getCollection();
             BasicValue element = simpleValueColumnBinder.bindSimpleValue(
                     metadataBuildingContext, collection.getCollectionTable(), typeName, columnName, true);
-            if (present) {
+            property.getColumnConfigOptional().ifPresent(columnConfig -> {
                 Column column = simpleValueColumnFetcher.getColumnForSimpleValue(element);
-                ColumnConfig columnConfig = joinColumnMappingOptional.get();
                 final PropertyConfig mappedForm = property.getMappedForm();
                 columnConfigToColumnBinder.bindColumnConfigToColumn(column, columnConfig, mappedForm);
-            }
+            });
             return element;
         }
     }
