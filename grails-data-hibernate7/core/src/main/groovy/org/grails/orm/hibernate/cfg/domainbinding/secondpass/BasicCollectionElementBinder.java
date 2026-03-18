@@ -65,28 +65,28 @@ public class BasicCollectionElementBinder {
 
     /** Creates and binds a {@link BasicValue} element for the given basic collection property. */
     public BasicValue bind(HibernateToManyProperty property) {
-        Collection collection = property.getCollection();
         final Class<?> referencedType = property.getComponentType();
-        final boolean isEnum = referencedType.isEnum();
         var joinColumnMappingOptional =
                 Optional.ofNullable(property.getMappedForm()).map(PropertyConfig::getJoinTableColumnConfig);
+        boolean present = joinColumnMappingOptional.isPresent();
         String columnName;
-        if (joinColumnMappingOptional.isPresent()) {
+        if (present) {
             columnName = joinColumnMappingOptional.get().getName();
         } else {
             var clazz = namingStrategy.resolveColumnName(referencedType.getName());
             var prop = namingStrategy.resolveTableName(property.getName());
-            columnName = isEnum
+            columnName = referencedType.isEnum()
                     ? clazz
                     : new BackticksRemover().apply(prop) + UNDERSCORE + new BackticksRemover().apply(clazz);
         }
-        if (isEnum) {
+        if (referencedType.isEnum()) {
             return enumTypeBinder.bindEnumTypeForColumn(property, columnName);
         } else {
             String typeName = property.getTypeName(referencedType);
+            Collection collection = property.getCollection();
             BasicValue element = simpleValueColumnBinder.bindSimpleValue(
                     metadataBuildingContext, collection.getCollectionTable(), typeName, columnName, true);
-            if (joinColumnMappingOptional.isPresent()) {
+            if (present) {
                 Column column = simpleValueColumnFetcher.getColumnForSimpleValue(element);
                 ColumnConfig columnConfig = joinColumnMappingOptional.get();
                 final PropertyConfig mappedForm = property.getMappedForm();
