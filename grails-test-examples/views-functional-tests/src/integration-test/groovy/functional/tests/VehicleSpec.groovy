@@ -16,53 +16,52 @@
  *  specific language governing permissions and limitations
  *  under the License.
  */
-
 package functional.tests
 
+import spock.lang.Specification
+
 import grails.testing.mixin.integration.Integration
-import grails.testing.spock.RunOnce
-import io.micronaut.http.HttpRequest
-import io.micronaut.http.HttpResponse
-import io.micronaut.http.HttpStatus
-import org.junit.jupiter.api.BeforeEach
-import spock.lang.PendingFeature
+import org.apache.grails.testing.http.client.HttpClientSupport
 
-@Integration(applicationClass = Application)
-class VehicleSpec extends HttpClientSpec {
-
-    @RunOnce
-    @BeforeEach
-    void init() {
-        super.init()
-    }
+@Integration
+class VehicleSpec extends Specification implements HttpClientSupport {
 
     void "Test that domain subclasses render their properties"() {
         when:
-        HttpRequest request = HttpRequest.GET('/vehicle/list')
-        HttpResponse<String> resp = client.toBlocking().exchange(request, String)
+        def response = http('/vehicle/list')
 
-        then:"The correct response is returned"
-        resp.status == HttpStatus.OK
-        resp.body() == '[{"id":1,"route":"around town","maxPassengers":30},{"id":2,"make":"Subaru","model":"WRX","year":2016,"maxPassengers":4}]'
-
+        then: "The correct response is returned"
+        response.assertJson(200, '''
+            [
+                {
+                    "id": 1,
+                    "route": "around town",
+                    "maxPassengers": 30
+                },
+                {
+                    "id": 2,
+                    "make": "Subaru",
+                    "model": "WRX",
+                    "year": 2016,
+                    "maxPassengers": 4
+                }
+            ]
+        ''')
     }
 
     void "Test that domain association subclasses render their properties"() {
         when:
-        HttpRequest request = HttpRequest.GET('/vehicle/garage')
-        HttpResponse<Map> resp = client.toBlocking().exchange(request, Map)
-        def json = resp.body()
+        def response = http('/vehicle/garage')
 
-        then:"The correct response is returned"
-        resp.status == HttpStatus.OK
-
+        then: "The correct response is returned"
+        def json = response.assertStatus(200).json()
         json.id == 1
-        json.owner == "Jay Leno"
+        json.owner == 'Jay Leno'
         json.vehicles.find { it.id == 1 }.maxPassengers == 30
-        json.vehicles.find { it.id == 1 }.route == "around town"
+        json.vehicles.find { it.id == 1 }.route == 'around town'
         json.vehicles.find { it.id == 2 }.maxPassengers == 4
-        json.vehicles.find { it.id == 2 }.make == "Subaru"
-        json.vehicles.find { it.id == 2 }.model == "WRX"
+        json.vehicles.find { it.id == 2 }.make == 'Subaru'
+        json.vehicles.find { it.id == 2 }.model == 'WRX'
         json.vehicles.find { it.id == 2 }.year == 2016
     }
 }
