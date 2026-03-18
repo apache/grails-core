@@ -44,6 +44,9 @@ String getGrailsDocumentationVersion(String version) {
     return version
 }
 
+// NOTE: This resolves dependencies at configuration time, which means any Gradle command
+// at the root level will trigger resolution for this project. Ideally this would be deferred
+// to task execution time, but the Asciidoctor plugin requires attributes at configuration time.
 ext {
     resolvedSpringSecurityVersion = configurations.compileClasspath
             .resolvedConfiguration
@@ -118,6 +121,9 @@ ext {
             'grailsSpringSecurityCoreLink'    : "https://apache.github.io/grails-spring-security/${getGrailsDocumentationVersion(projectVersion)}/guide/index.html",
             'springSecurityLdapLink'          : "https://docs.spring.io/spring-security/reference/${resolvedSpringSecurityVersion}/servlet/authentication/passwords/ldap.html",
             'springSecurityLdapApiLink'        : "https://docs.spring.io/spring-security/site/docs/${resolvedSpringSecurityVersion}/api",
+            // Used by index.adoc header links
+            'springSecurityVersion'           : resolvedSpringSecurityVersion,
+            'springFrameworkVersion'          : '6.2.x',
     ]
 }
 

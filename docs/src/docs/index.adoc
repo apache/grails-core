@@ -17,10 +17,10 @@ specific language governing permissions and limitations
 under the License.
 ////
 
-:apidocs: https://docs.spring.io/spring-security/site/docs/4.0.x/apidocs/
-:apidocs_spring: https://docs.spring.io/spring/docs/4.1.x/javadoc-api/
-:htmlsingle: docs.spring.io/spring-security/site/docs/4.0.x/reference/htmlsingle/
-:spring_framework_reference: https://docs.spring.io/spring/docs/4.1.x/spring-framework-reference/html/
+:apidocs: https://docs.spring.io/spring-security/site/docs/{springSecurityVersion}/apidocs/
+:apidocs_spring: https://docs.spring.io/spring-framework/docs/{springFrameworkVersion}/javadoc-api/
+:htmlsingle: https://docs.spring.io/spring-security/reference/{springSecurityVersion}/
+:spring_framework_reference: https://docs.spring.io/spring-framework/reference/{springFrameworkVersion}/
 
 = Grails Spring Security Plugins - Combined Reference Documentation
 :revnumber: {projectVersion}
