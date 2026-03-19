@@ -751,7 +751,7 @@ public class HibernateDatastore extends AbstractDatastore
                     LOG.error("There was an error shutting down GORM for an entity: {}", e.getMessage(), e);
                 }
             } finally {
-                MappingCacheHolder.getInstance().clear();
+                getMappingContext().getMappingCacheHolder().clear();
                 try {
                     if (this.gormEnhancer != null) {
                         this.gormEnhancer.close();

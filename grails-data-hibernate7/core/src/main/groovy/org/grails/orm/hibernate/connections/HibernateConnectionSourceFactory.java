@@ -139,7 +139,7 @@ public class HibernateConnectionSourceFactory
         if (hibernateSettings.getPackagesToScan() != null)
             configuration.scanPackages(hibernateSettings.getPackagesToScan());
 
-        configureNamingStrategy(name, hibernateSettings);
+        configureNamingStrategy(name, configuration, hibernateSettings);
 
         ClosureEventTriggeringInterceptor eventTriggeringInterceptor =
                 resolveEventTriggeringInterceptor(hibernateSettings.getClosureEventTriggeringInterceptorClass());
@@ -225,10 +225,14 @@ public class HibernateConnectionSourceFactory
     }
 
     private static void configureNamingStrategy(
-            String name, HibernateConnectionSourceSettings.HibernateSettings hibernateSettings) {
+            String name,
+            HibernateMappingContextConfiguration configuration,
+            HibernateConnectionSourceSettings.HibernateSettings hibernateSettings) {
         try {
             Class<? extends PhysicalNamingStrategy> namingStrategy = hibernateSettings.getNaming_strategy();
-            if (namingStrategy != null) GrailsDomainBinder.configureNamingStrategy(name, namingStrategy);
+            if (namingStrategy != null) {
+                configuration.getNamingStrategyProvider().configureNamingStrategy(name, namingStrategy);
+            }
         } catch (Throwable e) {
             throw new ConfigurationException("Error configuring naming strategy: " + e.getMessage(), e);
         }

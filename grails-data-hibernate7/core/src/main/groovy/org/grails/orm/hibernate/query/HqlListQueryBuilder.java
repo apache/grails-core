@@ -27,6 +27,7 @@ import org.grails.datastore.mapping.model.PersistentEntity;
 import org.grails.datastore.mapping.model.PersistentProperty;
 import org.grails.datastore.mapping.model.types.Association;
 import org.grails.datastore.mapping.model.types.Embedded;
+import org.grails.orm.hibernate.cfg.HibernateMappingContext;
 import org.grails.orm.hibernate.cfg.Mapping;
 import org.grails.orm.hibernate.cfg.MappingCacheHolder;
 
@@ -101,7 +102,8 @@ public class HqlListQueryBuilder {
             clauses.add(orderClause(alias, sort, dir, ignoreCase && isStringProp(sort)));
         } else {
             // fall back to default mapping sort
-            Mapping m = MappingCacheHolder.getInstance().getMapping(entity.getJavaClass());
+            MappingCacheHolder cacheHolder = ((HibernateMappingContext) entity.getMappingContext()).getMappingCacheHolder();
+            Mapping m = cacheHolder.getMapping(entity.getJavaClass());
             if (m != null) {
                 m.getSort()
                         .getNamesAndDirections()

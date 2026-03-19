@@ -80,6 +80,7 @@ import org.grails.orm.hibernate.GrailsSessionContext;
 import org.grails.orm.hibernate.HibernateEventListeners;
 import org.grails.orm.hibernate.MetadataIntegrator;
 import org.grails.orm.hibernate.cfg.domainbinding.binder.GrailsDomainBinder;
+import org.grails.orm.hibernate.cfg.domainbinding.util.NamingStrategyProvider;
 
 /**
  * A Configuration that uses a MappingContext to configure Hibernate
@@ -110,6 +111,19 @@ public class HibernateMappingContextConfiguration extends Configuration
     private ResourcePatternResolver resourcePatternResolver = new PathMatchingResourcePatternResolver();
     //    private MetadataContributor metadataContributor;
     private final Set<Class> additionalClasses = new HashSet<>();
+    private NamingStrategyProvider namingStrategyProvider = new NamingStrategyProvider();
+
+    public NamingStrategyProvider getNamingStrategyProvider() {
+        return namingStrategyProvider;
+    }
+
+    public void setNamingStrategyProvider(NamingStrategyProvider namingStrategyProvider) {
+        this.namingStrategyProvider = namingStrategyProvider;
+    }
+
+    public MappingCacheHolder getMappingCacheHolder() {
+        return hibernateMappingContext != null ? hibernateMappingContext.getMappingCacheHolder() : null;
+    }
 
     public void setHibernateMappingContext(HibernateMappingContext hibernateMappingContext) {
         this.hibernateMappingContext = hibernateMappingContext;
@@ -269,7 +283,12 @@ public class HibernateMappingContextConfiguration extends Configuration
         ConfigurationHelper.resolvePlaceHolders(getProperties());
 
         final GrailsDomainBinder domainBinder =
-                new GrailsDomainBinder(dataSourceName, sessionFactoryBeanName, hibernateMappingContext);
+                new GrailsDomainBinder(
+                        dataSourceName,
+                        sessionFactoryBeanName,
+                        hibernateMappingContext,
+                        namingStrategyProvider,
+                        hibernateMappingContext.getMappingCacheHolder());
 
         List<Class> annotatedClasses = new ArrayList<>();
         for (PersistentEntity persistentEntity : hibernateMappingContext.getPersistentEntities()) {

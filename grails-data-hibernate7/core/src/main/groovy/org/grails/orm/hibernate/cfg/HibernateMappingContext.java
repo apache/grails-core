@@ -45,6 +45,11 @@ public class HibernateMappingContext extends AbstractMappingContext {
 
     private final HibernateMappingFactory mappingFactory;
     private final MappingConfigurationStrategy syntaxStrategy;
+    private final MappingCacheHolder mappingCacheHolder = new MappingCacheHolder();
+
+    public MappingCacheHolder getMappingCacheHolder() {
+        return mappingCacheHolder;
+    }
 
     public HibernateMappingContext(
             HibernateConnectionSourceSettings settings, Object contextObject, Class... persistentClasses) {

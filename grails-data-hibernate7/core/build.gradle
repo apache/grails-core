@@ -126,6 +126,11 @@ dependencies {
 
 }
 
+sourceSets {
+    test {
+        groovy.srcDirs = ['src/test/groovy']
+    }
+}
 
 apply {
     from rootProject.layout.projectDirectory.file('gradle/hibernate7-test-config.gradle')

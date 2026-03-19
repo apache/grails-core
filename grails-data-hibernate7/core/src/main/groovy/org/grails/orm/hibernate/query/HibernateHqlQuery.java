@@ -209,7 +209,8 @@ public class HibernateHqlQuery extends Query {
             delegate.setCacheable(false);
         } else {
             if (!args.containsKey(HibernateQueryArgument.CACHE.value())) {
-                org.grails.orm.hibernate.cfg.Mapping m = org.grails.orm.hibernate.cfg.MappingCacheHolder.getInstance()
+                org.grails.orm.hibernate.cfg.Mapping m = ((org.grails.orm.hibernate.cfg.HibernateMappingContext) getEntity().getMappingContext())
+                        .getMappingCacheHolder()
                         .getMapping(getEntity().getJavaClass());
                 if (m != null && m.getCache() != null && m.getCache().getEnabled()) {
                     delegate.setCacheable(true);
