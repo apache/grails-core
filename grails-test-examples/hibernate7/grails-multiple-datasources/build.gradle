@@ -50,6 +50,9 @@ dependencies {
 
     testImplementation 'org.apache.grails.testing:grails-testing-support-core'
 
+    integrationTestImplementation "io.micronaut:micronaut-http-client:$micronautHttpClientVersion"
+    integrationTestRuntimeOnly "io.micronaut.serde:micronaut-serde-jackson:$micronautSerdeJacksonVersion"
+
     testRuntimeOnly 'org.apache.grails:grails-testing-support-web'
 }
 
