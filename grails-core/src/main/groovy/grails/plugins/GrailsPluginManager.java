@@ -35,7 +35,8 @@ import org.grails.spring.RuntimeSpringConfiguration;
  * Handles the loading and management of plugins in the Grails framework.
  * <p>
  * A plugin is just like a normal Grails application, except it contains
- * a Groovy "plugin descriptor class" which has a name ending with {@code GrailsPlugin}.
+ * a Groovy "plugin descriptor class" which extends {@link Plugin} and has a name
+ * ending with {@code GrailsPlugin}.
  * <p>
  * This plugin descriptor class has a {@link GrailsPluginInfo#getVersion() version}
  * property and optionally Closure properties that are event handlers used to react to
