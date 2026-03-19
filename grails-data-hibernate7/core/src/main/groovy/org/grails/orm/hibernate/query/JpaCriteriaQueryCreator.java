@@ -31,10 +31,12 @@ import jakarta.persistence.criteria.Path;
 import jakarta.persistence.criteria.Predicate;
 import jakarta.persistence.criteria.Root;
 import jakarta.persistence.criteria.Selection;
+import jakarta.persistence.criteria.Subquery;
 
 import org.hibernate.query.criteria.HibernateCriteriaBuilder;
 import org.hibernate.query.criteria.JpaCriteriaQuery;
 import org.hibernate.query.criteria.JpaExpression;
+import org.hibernate.query.criteria.JpaSubQuery;
 
 import org.springframework.core.convert.ConversionService;
 
@@ -77,6 +79,44 @@ public class JpaCriteriaQueryCreator {
         assignOrderBy(cq, tablesByName);
         assignCriteria(cq, root, tablesByName, entity);
         return cq;
+    }
+
+    @SuppressWarnings("unchecked")
+    public <T> void populateSubquery(JpaSubQuery<T> subquery) {
+        var projectionList = collectProjections();
+        Class<?> javaClass = entity.getJavaClass();
+        Root<?> root = subquery.from(javaClass);
+        var tablesByName = new JpaFromProvider(detachedCriteria, null, root);
+
+        var aliasedProjections = new java.util.concurrent.atomic.AtomicInteger(0);
+        var projectionExpressions = projectionList.stream()
+                .map(projectionToJpaExpression(tablesByName))
+                .filter(Objects::nonNull)
+                .map(expr -> expr.alias("col_" + aliasedProjections.getAndIncrement()))
+                .toList();
+        if (!projectionExpressions.isEmpty()) {
+            subquery.multiselect(projectionExpressions.toArray(new Selection<?>[0]));
+        }
+
+        Expression<?>[] groupByPaths = collectGroupProjections().stream()
+                .map(gp -> (Expression<?>) tablesByName.getFullyQualifiedPath(gp.getPropertyName()))
+                .filter(Objects::nonNull)
+                .toArray(Expression<?>[]::new);
+        if (groupByPaths.length > 0) {
+            subquery.groupBy(groupByPaths);
+        }
+
+        List<Query.Criterion> criteriaList = detachedCriteria.getCriteria();
+        if (!criteriaList.isEmpty()) {
+            // Build predicates using a temporary CriteriaQuery since PredicateGenerator
+            // requires CriteriaQuery<?> for subquery creation in nested exists/in clauses.
+            // The predicates themselves are independent of the query type.
+            var tempCq = criteriaBuilder.createTupleQuery();
+            tempCq.from(javaClass);
+            Predicate[] predicates = new PredicateGenerator(conversionService)
+                    .getPredicates(criteriaBuilder, tempCq, root, criteriaList, tablesByName, entity);
+            subquery.where(criteriaBuilder.and(predicates));
+        }
     }
 
     private List<Query.Projection> collectProjections() {

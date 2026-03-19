@@ -46,6 +46,9 @@ import org.hibernate.persister.entity.PropertyMapping;
 import org.hibernate.type.BasicType;
 import org.hibernate.type.TypeResolver;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.core.convert.ConversionService;
 import org.springframework.core.convert.support.DefaultConversionService;
@@ -81,6 +84,8 @@ import org.grails.orm.hibernate.proxy.HibernateProxyHandler;
  */
 @SuppressWarnings("rawtypes")
 public abstract class AbstractHibernateQuery extends Query {
+
+    private static final Logger LOG = LoggerFactory.getLogger(AbstractHibernateQuery.class);
 
     public static final String SIZE_CONSTRAINT_PREFIX = "Size";
 
@@ -568,6 +573,9 @@ public abstract class AbstractHibernateQuery extends Query {
     @Override
     public Number countResults() {
         if (hibernateProjectionList != null && !hibernateProjectionList.isEmpty()) {
+            LOG.warn("DetachedCriteria.count() with user-defined projections cannot use a SQL count query "
+                    + "due to a Hibernate 5 limitation. All grouped result rows will be loaded into memory to "
+                    + "determine the count. This may impact performance on large result sets.");
             return list().size();
         }
         projections().count();

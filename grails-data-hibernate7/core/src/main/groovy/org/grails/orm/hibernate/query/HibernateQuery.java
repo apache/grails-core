@@ -26,6 +26,7 @@ import java.util.Map;
 
 import groovy.lang.Closure;
 
+import jakarta.persistence.Tuple;
 import jakarta.persistence.criteria.CriteriaQuery;
 import jakarta.persistence.criteria.JoinType;
 
@@ -35,6 +36,7 @@ import org.hibernate.SessionFactory;
 import org.hibernate.query.QueryFlushMode;
 import org.hibernate.query.criteria.HibernateCriteriaBuilder;
 import org.hibernate.query.criteria.JpaCriteriaQuery;
+import org.hibernate.query.criteria.JpaSubQuery;
 
 import org.springframework.core.convert.ConversionService;
 import org.springframework.dao.InvalidDataAccessApiUsageException;
@@ -435,6 +437,26 @@ public class HibernateQuery extends Query {
 
     public Object singleResult(Session session) {
         return getHibernateQueryExecutor().singleResult(session, getJpaCriteriaQuery());
+    }
+
+    @Override
+    public Number countResults() {
+        if (projections.getProjectionList().isEmpty()) {
+            projections().count();
+            return (Number) singleResult();
+        }
+        HibernateCriteriaBuilder cb = getCriteriaBuilder();
+
+        JpaCriteriaQuery<Long> countQuery = cb.createQuery(Long.class);
+        JpaSubQuery<Tuple> innerSubquery = countQuery.subquery(Tuple.class);
+
+        ConversionService cs = getSession().getMappingContext().getConversionService();
+        new JpaCriteriaQueryCreator(projections, cb, entity, detachedCriteria, cs)
+                .populateSubquery(innerSubquery);
+
+        var derivedRoot = countQuery.from(innerSubquery);
+        countQuery.select(cb.count(derivedRoot.get("col_0")));
+        return (Number) getHibernateQueryExecutor().singleResult(getCurrentSession(), countQuery);
     }
 
     public Object scroll() {
