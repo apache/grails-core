@@ -20,19 +20,18 @@ package org.grails.orm.hibernate.cfg.domainbinding.hibernate
 
 import grails.gorm.annotation.Entity
 import grails.gorm.specs.HibernateGormDatastoreSpec
-import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernateToManyProperty
 
 class HibernateToManyPropertySpec extends HibernateGormDatastoreSpec {
 
-    def setupSpec() {
-        manager.addAllDomainClasses([HTMPBook, HTMPAuthor, HTMPAuthorCustom, HTMPStudent, HTMPCourse])
-    }
+    // Removed setupSpec to prevent loading all entities at once
 
     void "resolveJoinTableForeignKeyColumnName derives name from associated entity when no explicit config"() {
-        given:
-        def authorEntity = mappingContext.getPersistentEntity(HTMPAuthor.name)
-        HibernateToManyProperty property = (HibernateToManyProperty) authorEntity.getPropertyByName("books")
+        given: "Register only entities for this specific test"
+        def property = createTestHibernateToManyProperty(HTMPAuthor, "books")
         def namingStrategy = getGrailsDomainBinder().namingStrategy
+
+        and: "Trigger Hibernate First Pass"
+        hibernateFirstPass()
 
         when:
         String columnName = property.resolveJoinTableForeignKeyColumnName(namingStrategy)
@@ -42,10 +41,12 @@ class HibernateToManyPropertySpec extends HibernateGormDatastoreSpec {
     }
 
     void "resolveJoinTableForeignKeyColumnName uses explicit join table column name when configured"() {
-        given:
-        def authorEntity = mappingContext.getPersistentEntity(HTMPAuthorCustom.name)
-        HibernateToManyProperty property = (HibernateToManyProperty) authorEntity.getPropertyByName("books")
+        given: "Register only entities for this specific test"
+        def property = createTestHibernateToManyProperty(HTMPAuthorCustom, "books")
         def namingStrategy = getGrailsDomainBinder().namingStrategy
+
+        and: "Trigger Hibernate First Pass"
+        hibernateFirstPass()
 
         when:
         String columnName = property.resolveJoinTableForeignKeyColumnName(namingStrategy)
@@ -55,14 +56,72 @@ class HibernateToManyPropertySpec extends HibernateGormDatastoreSpec {
     }
 
     void "isAssociationColumnNullable returns false for ManyToMany"() {
+        given: "Register only entities for this specific test"
+        createPersistentEntity(HTMPCourse) // Course is needed because Student refers to it
+        def studentProp = createTestHibernateToManyProperty(HTMPStudent, "courses")
+
         when:
-        def studentEntity = mappingContext.getPersistentEntity(HTMPStudent.name)
-        def coursesProp = studentEntity.getPropertyByName("courses")
+        hibernateFirstPass()
 
         then:
-        !coursesProp.isAssociationColumnNullable()
+        !studentProp.isAssociationColumnNullable()
+    }
+
+    void "test index column configuration"() {
+        given: "Register the HTMPOrder entity using the helper"
+        def property = createTestHibernateToManyProperty(HTMPOrder, "items")
+        def namingStrategy = getGrailsDomainBinder().namingStrategy
+
+        and: "Trigger Hibernate First Pass"
+        hibernateFirstPass()
+
+        expect: "The index column name and type are resolved from the column list"
+        verifyAll(property) {
+            getIndexColumnName(namingStrategy) == "item_idx"
+            getIndexColumnType("integer") == "integer"
+        }
+    }
+
+    void "test index column configuration with map"() {
+        given:
+        def property = createTestHibernateToManyProperty(HTMPOrderMap, "items")
+        def namingStrategy = getGrailsDomainBinder().namingStrategy
+
+        and: "Trigger Hibernate First Pass"
+        hibernateFirstPass()
+
+        expect:
+        verifyAll(property) {
+            getIndexColumnName(namingStrategy) == "map_idx"
+            getIndexColumnType("integer") == "string"
+        }
+    }
+
+    void "test index column configuration with closure"() {
+        given:
+        def property = createTestHibernateToManyProperty(HTMPOrderClosure, "items")
+        def namingStrategy = getGrailsDomainBinder().namingStrategy
+
+        and: "Trigger Hibernate First Pass"
+        hibernateFirstPass()
+
+        expect:
+        verifyAll(property) {
+            getIndexColumnName(namingStrategy) == "closure_idx"
+            getIndexColumnType("integer") == "long"
+        }
+    }
+
+    /**
+     * Helper to register entity and return the property
+     */
+    protected HibernateToManyProperty createTestHibernateToManyProperty(Class<?> domainClass, String propertyName) {
+        def entity = createPersistentEntity(domainClass)
+        return (HibernateToManyProperty) entity.getPropertyByName(propertyName)
     }
 }
+
+// --- Supporting Entities ---
 
 @Entity
 class HTMPBook {
@@ -74,7 +133,6 @@ class HTMPBook {
 class HTMPAuthor {
     Long id
     String name
-    Set<HTMPBook> books
     static hasMany = [books: HTMPBook]
 }
 
@@ -82,7 +140,6 @@ class HTMPAuthor {
 class HTMPAuthorCustom {
     Long id
     String name
-    Set<HTMPBook> books
     static hasMany = [books: HTMPBook]
     static mapping = {
         books joinTable: [column: 'custom_book_fk']
@@ -93,7 +150,6 @@ class HTMPAuthorCustom {
 class HTMPStudent {
     Long id
     String name
-    Set<HTMPCourse> courses
     static hasMany = [courses: HTMPCourse]
 }
 
@@ -101,6 +157,47 @@ class HTMPStudent {
 class HTMPCourse {
     Long id
     String title
-    Set<HTMPStudent> students
     static hasMany = [students: HTMPStudent]
+}
+
+import grails.persistence.Entity
+
+@Entity // Only if outside grails-app/domain
+class HTMPOrder {
+    Long id
+
+    List<String> items // Remove the = []
+
+    static hasMany = [items: String]
+
+    static mapping = {
+        items joinTable: [
+                name: "htmp_order_items",
+                key: "order_id",
+                column: "item_value"
+        ], index: "item_idx" // Defines the column for the List index
+    }
+}
+
+@Entity
+class HTMPOrderMap {
+    Long id
+    List<String> items
+    static hasMany = [items: String]
+    static mapping = {
+        items index: [column: 'map_idx', type: 'string']
+    }
+}
+
+@Entity
+class HTMPOrderClosure {
+    Long id
+    List<String> items
+    static hasMany = [items: String]
+    static mapping = {
+        items index: {
+            column name: 'closure_idx'
+            type 'long'
+        }
+    }
 }

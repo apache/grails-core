@@ -41,6 +41,462 @@ class HibernateMappingBuilderSpec extends Specification {
     }
 
     // -------------------------------------------------------------------------
+    // table / catalog / schema / comment
+    // -------------------------------------------------------------------------
+
+    def "table with name only"() {
+        when:
+        Mapping m = evaluate { table 'myTable' }
+
+        then:
+        m.tableName == 'myTable'
+    }
+
+    def "table with catalog and schema"() {
+        when:
+        Mapping m = evaluate { table name: 'table', catalog: 'CRM', schema: 'dbo' }
+
+        then:
+        m.table.name == 'table'
+        m.table.schema == 'dbo'
+        m.table.catalog == 'CRM'
+    }
+
+    def "table comment is stored"() {
+        when:
+        Mapping m = evaluate { comment 'wahoo' }
+
+        then:
+        m.comment == 'wahoo'
+    }
+
+    // -------------------------------------------------------------------------
+    // version / autoTimestamp
+    // -------------------------------------------------------------------------
+
+    def "version column can be changed"() {
+        when:
+        Mapping m = evaluate { version 'v_number' }
+
+        then:
+        m.getPropertyConfig("version").column == 'v_number'
+    }
+
+    def "versioning can be disabled"() {
+        when:
+        Mapping m = evaluate { version false }
+
+        then:
+        !m.versioned
+    }
+
+    def "autoTimestamp can be disabled"() {
+        when:
+        Mapping m = evaluate { autoTimestamp false }
+
+        then:
+        !m.autoTimestamp
+    }
+
+    // -------------------------------------------------------------------------
+    // discriminator
+    // -------------------------------------------------------------------------
+
+    def "discriminator value only"() {
+        when:
+        Mapping m = evaluate { discriminator 'one' }
+
+        then:
+        m.discriminator.value == 'one'
+        m.discriminator.column == null
+    }
+
+    def "discriminator with column name"() {
+        when:
+        Mapping m = evaluate { discriminator value: 'one', column: 'type' }
+
+        then:
+        m.discriminator.value == 'one'
+        m.discriminator.column.name == 'type'
+    }
+
+    def "discriminator with column map"() {
+        when:
+        Mapping m = evaluate { discriminator value: 'one', column: [name: 'type', sqlType: 'integer'] }
+
+        then:
+        m.discriminator.value == 'one'
+        m.discriminator.column.name == 'type'
+        m.discriminator.column.sqlType == 'integer'
+    }
+
+    def "discriminator with formula and other settings"() {
+        when:
+        Mapping m = evaluate {
+            discriminator value: '1', formula: "case when CLASS_TYPE in ('a', 'b', 'c') then 0 else 1 end", type: 'integer', insert: false
+        }
+
+        then:
+        m.discriminator.value == '1'
+        m.discriminator.formula == "case when CLASS_TYPE in ('a', 'b', 'c') then 0 else 1 end"
+        m.discriminator.type == 'integer'
+        !m.discriminator.insertable
+    }
+
+    // -------------------------------------------------------------------------
+    // inheritance
+    // -------------------------------------------------------------------------
+
+    def "tablePerHierarchy false disables it"() {
+        when:
+        Mapping m = evaluate { tablePerHierarchy false }
+
+        then:
+        !m.tablePerHierarchy
+    }
+
+    def "tablePerSubclass true disables tablePerHierarchy"() {
+        when:
+        Mapping m = evaluate { tablePerSubclass true }
+
+        then:
+        !m.tablePerHierarchy
+    }
+
+    def "tablePerConcreteClass true enables it and disables tablePerHierarchy"() {
+        when:
+        Mapping m = evaluate { tablePerConcreteClass true }
+
+        then:
+        m.tablePerConcreteClass
+        !m.tablePerHierarchy
+    }
+
+    // -------------------------------------------------------------------------
+    // cache settings
+    // -------------------------------------------------------------------------
+
+    def "default cache strategy"() {
+        when:
+        Mapping m = evaluate { cache true }
+
+        then:
+        m.cache.usage.toString() == 'read-write'
+        m.cache.include.toString() == 'all'
+    }
+
+    def "custom cache strategy"() {
+        when:
+        Mapping m = evaluate { cache usage: 'read-only', include: 'non-lazy' }
+
+        then:
+        m.cache.usage.toString() == 'read-only'
+        m.cache.include.toString() == 'non-lazy'
+    }
+
+    def "custom cache strategy with usage string only"() {
+        when:
+        Mapping m = evaluate { cache 'read-only' }
+
+        then:
+        m.cache.usage.toString() == 'read-only'
+        m.cache.include.toString() == 'all'
+    }
+
+    def "invalid cache values are ignored and defaults used"() {
+        when:
+        Mapping m = evaluate { cache usage: 'rubbish', include: 'more-rubbish' }
+
+        then:
+        m.cache.usage.toString() == 'read-write'
+        m.cache.include.toString() == 'all'
+    }
+
+    // -------------------------------------------------------------------------
+    // identity / id
+    // -------------------------------------------------------------------------
+
+    def "identity column mapping"() {
+        when:
+        Mapping m = evaluate { id column: 'foo_id', type: Integer }
+
+        then:
+        m.identity.type == Long // Default remains Long? No, wait.
+        // In HibernateMappingBuilderTests:
+        // assertEquals Long, mapping.identity.type
+        // assertEquals 'foo_id', mapping.getPropertyConfig("id").column
+        // assertEquals Integer, mapping.getPropertyConfig("id").type
+        m.getPropertyConfig("id").column == 'foo_id'
+        m.getPropertyConfig("id").type == Integer
+        m.identity.generator == 'native'
+    }
+
+    def "default id strategy"() {
+        when:
+        Mapping m = evaluate { }
+
+        then:
+        m.identity.type == Long
+        m.identity.column == 'id'
+        m.identity.generator == 'native'
+    }
+
+    def "hilo id strategy"() {
+        when:
+        Mapping m = evaluate { id generator: 'hilo', params: [table: 'hi_value', column: 'next_value', max_lo: 100] }
+
+        then:
+        m.identity.column == 'id'
+        m.identity.generator == 'hilo'
+        m.identity.params.table == 'hi_value'
+    }
+
+    def "composite id strategy"() {
+        when:
+        Mapping m = evaluate { id composite: ['one', 'two'], compositeClass: HibernateMappingBuilder }
+
+        then:
+        m.identity instanceof org.grails.orm.hibernate.cfg.CompositeIdentity
+        m.identity.propertyNames == ['one', 'two']
+        m.identity.compositeClass == HibernateMappingBuilder
+    }
+
+    def "natural id mapping"() {
+        expect:
+        evaluate { id natural: 'one' }.identity.natural.propertyNames == ['one']
+        evaluate { id natural: ['one', 'two'] }.identity.natural.propertyNames == ['one', 'two']
+        evaluate { id natural: [properties: ['one', 'two'], mutable: true] }.identity.natural.mutable
+    }
+
+    // -------------------------------------------------------------------------
+    // other root settings
+    // -------------------------------------------------------------------------
+
+    def "autoImport defaults to true and can be disabled"() {
+        expect:
+        evaluate { }.autoImport
+        !evaluate { autoImport false }.autoImport
+    }
+
+    def "dynamicUpdate and dynamicInsert"() {
+        when:
+        Mapping m = evaluate {
+            dynamicUpdate true
+            dynamicInsert true
+        }
+
+        then:
+        m.dynamicUpdate
+        m.dynamicInsert
+
+        when:
+        m = evaluate { }
+
+        then:
+        !m.dynamicUpdate
+        !m.dynamicInsert
+    }
+
+    def "batchSize config"() {
+        when:
+        Mapping m = evaluate {
+            batchSize 10
+            things batchSize: 15
+        }
+
+        then:
+        m.batchSize == 10
+        m.getPropertyConfig('things').batchSize == 15
+    }
+
+    def "class sort order"() {
+        when:
+        Mapping m = evaluate {
+            sort "name"
+            order "desc"
+        }
+
+        then:
+        m.sort.name == "name"
+        m.sort.direction == "desc"
+    }
+
+    def "class sort order via map"() {
+        when:
+        Mapping m = evaluate {
+            sort name: 'desc'
+        }
+
+        then:
+        m.sort.namesAndDirections == [name: 'desc']
+    }
+
+    def "property ignoreNotFound is stored"() {
+        expect:
+        evaluate { foos ignoreNotFound: true }.getPropertyConfig("foos").ignoreNotFound
+        !evaluate { foos ignoreNotFound: false }.getPropertyConfig("foos").ignoreNotFound
+    }
+
+    def "property association sort order"() {
+        when:
+        Mapping m = evaluate {
+            columns {
+                things sort: 'name'
+            }
+        }
+
+        then:
+        m.getPropertyConfig('things').sort == 'name'
+    }
+
+    def "property lazy settings"() {
+        expect:
+        evaluate { things column: 'foo' }.getPropertyConfig('things').getLazy() == null
+        !evaluate { things lazy: false }.getPropertyConfig('things').lazy
+    }
+
+    def "property cascades"() {
+        expect:
+        evaluate { things cascade: 'persist,merge' }.getPropertyConfig('things').cascade == 'persist,merge'
+        evaluate { columns { things cascade: 'all' } }.getPropertyConfig('things').cascade == 'all'
+    }
+
+    def "property fetch modes"() {
+        expect:
+        evaluate { things fetch: 'join' }.getPropertyConfig('things').fetchMode == FetchMode.JOIN
+        evaluate { things fetch: 'select' }.getPropertyConfig('things').fetchMode == FetchMode.SELECT
+        evaluate { things column: 'foo' }.getPropertyConfig('things').fetchMode == FetchMode.DEFAULT
+    }
+
+    def "property enumType"() {
+        expect:
+        evaluate { things column: 'foo' }.getPropertyConfig('things').enumType == 'default'
+        evaluate { things enumType: 'ordinal' }.getPropertyConfig('things').enumType == 'ordinal'
+    }
+
+    def "property joinTable mapping"() {
+        when:
+        Mapping m1 = evaluate { things joinTable: true }
+        Mapping m2 = evaluate { things joinTable: 'foo' }
+        Mapping m3 = evaluate { things joinTable: [name: 'foo', key: 'foo_id', column: 'bar_id'] }
+
+        then:
+        m1.getPropertyConfig('things').joinTable != null
+        m2.getPropertyConfig('things').joinTable.name == 'foo'
+        m3.getPropertyConfig('things').joinTable.name == 'foo'
+        m3.getPropertyConfig('things').joinTable.key.name == 'foo_id'
+        m3.getPropertyConfig('things').joinTable.column.name == 'bar_id'
+    }
+
+    def "property custom association caching"() {
+        when:
+        Mapping m1 = evaluate { firstName cache: [usage: 'read-only', include: 'non-lazy'] }
+        Mapping m2 = evaluate { firstName cache: 'read-only' }
+        Mapping m3 = evaluate { firstName cache: true }
+
+        then:
+        m1.getPropertyConfig('firstName').cache.usage.toString() == 'read-only'
+        m1.getPropertyConfig('firstName').cache.include.toString() == 'non-lazy'
+        m2.getPropertyConfig('firstName').cache.usage.toString() == 'read-only'
+        m3.getPropertyConfig('firstName').cache.usage.toString() == 'read-write'
+        m3.getPropertyConfig('firstName').cache.include.toString() == 'all'
+    }
+
+    def "simple column mappings"() {
+        when:
+        Mapping m = evaluate {
+            firstName column: 'First_Name'
+            lastName column: 'Last_Name'
+        }
+
+        then:
+        m.getPropertyConfig('firstName').column == 'First_Name'
+        m.getPropertyConfig('lastName').column == 'Last_Name'
+    }
+
+    def "complex column mappings"() {
+        when:
+        Mapping m = evaluate {
+            firstName column: 'First_Name',
+                    lazy: true,
+                    unique: true,
+                    type: java.sql.Clob,
+                    length: 255,
+                    index: 'foo',
+                    sqlType: 'text'
+        }
+
+        then:
+        m.columns.firstName.column == 'First_Name'
+        m.columns.firstName.lazy
+        m.columns.firstName.isUnique()
+        m.columns.firstName.type == java.sql.Clob
+        m.columns.firstName.length == 255
+        m.columns.firstName.getIndexName() == 'foo'
+        m.columns.firstName.sqlType == 'text'
+    }
+
+    def "property with multiple columns"() {
+        when:
+        Mapping m = evaluate {
+            amount type: MyUserType, {
+                column name: "value"
+                column name: "currency", sqlType: "char", length: 3
+            }
+        }
+
+        then:
+        m.columns.amount.columns.size() == 2
+        m.columns.amount.columns[0].name == "value"
+        m.columns.amount.columns[1].name == "currency"
+        m.columns.amount.columns[1].sqlType == "char"
+        m.columns.amount.columns[1].length == 3
+    }
+
+    def "disallowed multi-column property access"() {
+        given:
+        def b = builder()
+        b.evaluate {
+            amount type: MyUserType, {
+                column name: "value"
+                column name: "currency"
+            }
+        }
+
+        when:
+        b.evaluate { amount scale: 2 }
+
+        then:
+        thrown(Throwable)
+    }
+
+    def "property with user type and params"() {
+        when:
+        Mapping m = evaluate {
+            amount type: MyUserType, params: [param1: "amountParam1", param2: 65]
+        }
+
+        then:
+        m.getPropertyConfig('amount').type == MyUserType
+        m.getPropertyConfig('amount').typeParams.param1 == "amountParam1"
+        m.getPropertyConfig('amount').typeParams.param2 == 65
+    }
+
+    def "property insertable and updatable"() {
+        when:
+        Mapping m = evaluate {
+            firstName insertable: true, updatable: true
+            lastName insertable: false, updatable: false
+        }
+
+        then:
+        m.getPropertyConfig('firstName').insertable
+        m.getPropertyConfig('firstName').updatable
+        !m.getPropertyConfig('lastName').insertable
+        !m.getPropertyConfig('lastName').updatable
+    }
+
+    // -------------------------------------------------------------------------
     // autowire / tenantId
     // -------------------------------------------------------------------------
 
@@ -399,4 +855,6 @@ class HibernateMappingBuilderSpec extends Specification {
         noExceptionThrown()
         m.getPropertyConfig('myProp') == null
     }
+
+    static class MyUserType {}
 }

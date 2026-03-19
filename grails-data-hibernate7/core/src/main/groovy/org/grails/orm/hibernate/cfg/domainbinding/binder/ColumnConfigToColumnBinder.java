@@ -41,7 +41,7 @@ public class ColumnConfigToColumnBinder {
 
             Optional.ofNullable(mappedForm)
                     .filter(mf -> !mf.isUniqueWithinGroup())
-                    .ifPresent(mf -> column.setUnique(config.getUnique()));
+                    .ifPresent(mf -> column.setUnique(config.isUnique()));
         });
     }
 }

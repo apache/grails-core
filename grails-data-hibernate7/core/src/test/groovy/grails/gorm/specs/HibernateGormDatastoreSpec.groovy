@@ -101,7 +101,7 @@ class HibernateGormDatastoreSpec extends GrailsDataTckSpec<GrailsDataHibernate7T
     GrailsHibernatePersistentEntity createPersistentEntity(Class clazz, GrailsDomainBinder binder) {
         def entity = getMappingContext().addPersistentEntity(clazz) as GrailsHibernatePersistentEntity
         if (entity != null) {
-            MappingCacheHolder.getInstance().cacheMapping(entity)
+            getMappingContext().getMappingCacheHolder().cacheMapping(entity)
         }
         entity
     }
@@ -164,6 +164,17 @@ class HibernateGormDatastoreSpec extends GrailsDataTckSpec<GrailsDataHibernate7T
 
     protected HibernateQuery getQuery(Class clazz) {
         return  new HibernateQuery(session, getPersistentEntity(clazz))
+    }
+
+    /**
+     * Triggers the first-pass Hibernate mapping for all registered entities.
+     * This initializes the Hibernate Collection, Table, and Column objects
+     * required for SecondPass binder tests.
+     */
+    protected void hibernateFirstPass() {
+        def gdb = getGrailsDomainBinder()
+        def collector = gdb.getMetadataBuildingContext().getMetadataCollector()
+        gdb.contribute(collector, getMappingContext())
     }
 
     /**

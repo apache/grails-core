@@ -97,20 +97,86 @@ public interface HibernateToManyProperty extends PropertyWithMapping<PropertyCon
                 && !(this instanceof Basic);
     }
 
-    default String getIndexColumnType(String defaultType) {
-        return java.util.Optional.ofNullable(getMappedForm())
-                .map(PropertyConfig::getIndexColumn)
-                .map(ic -> getTypeName(ic, getHibernateOwner().getMappedForm()))
-                .orElse(defaultType);
+    default String getIndexColumnName(PersistentEntityNamingStrategy namingStrategy) {
+        PropertyConfig mapped = getMappedForm();
+
+        if (mapped != null && mapped.getIndexColumn() != null) {
+            PropertyConfig indexColConfig = mapped.getIndexColumn();
+            if (!indexColConfig.getColumns().isEmpty()) {
+                String name = indexColConfig.getColumns().get(0).getName();
+                if (StringUtils.hasText(name)) {
+                    return name;
+                }
+            }
+        }
+
+        if (mapped == null || mapped.getColumns().isEmpty()) {
+            return namingStrategy.resolveColumnName(getName()) + UNDERSCORE + IndexedCollection.DEFAULT_INDEX_COLUMN_NAME;
+        }
+
+        ColumnConfig primaryCol = mapped.getColumns().get(0);
+        Object rawIndex = primaryCol.getIndex();
+        if (rawIndex instanceof groovy.lang.Closure) {
+            PropertyConfig indexColConfig = PropertyConfig.configureNew((groovy.lang.Closure<?>) rawIndex);
+            if (!indexColConfig.getColumns().isEmpty()) {
+                String name = indexColConfig.getColumns().get(0).getName();
+                if (StringUtils.hasText(name)) {
+                    return name;
+                }
+            }
+        }
+
+        try {
+            Map<String, String> indexMap = primaryCol.getIndexAsMap();
+            String colName = indexMap.get("column");
+
+            if (StringUtils.hasText(colName)) {
+                return colName;
+            }
+        }
+        catch (Exception e) {
+            // ignore
+        }
+
+        return namingStrategy.resolveColumnName(getName()) + UNDERSCORE + IndexedCollection.DEFAULT_INDEX_COLUMN_NAME;
     }
 
-    default String getIndexColumnName(PersistentEntityNamingStrategy namingStrategy) {
-        return java.util.Optional.ofNullable(getMappedForm())
-                .map(PropertyConfig::getIndexColumn)
-                .map(PropertyConfig::getColumn)
-                .orElseGet(() -> namingStrategy.resolveColumnName(getName())
-                        + GrailsDomainBinder.UNDERSCORE
-                        + IndexedCollection.DEFAULT_INDEX_COLUMN_NAME);
+    default String getIndexColumnType(String defaultType) {
+        PropertyConfig mapped = getMappedForm();
+
+        if (mapped != null && mapped.getIndexColumn() != null) {
+            PropertyConfig indexColConfig = mapped.getIndexColumn();
+            if (StringUtils.hasText(indexColConfig.getTypeName())) {
+                return indexColConfig.getTypeName();
+            }
+        }
+
+        if (mapped == null || mapped.getColumns().isEmpty()) {
+            return defaultType;
+        }
+
+        ColumnConfig primaryCol = mapped.getColumns().get(0);
+        Object rawIndex = primaryCol.getIndex();
+        if (rawIndex instanceof groovy.lang.Closure) {
+            PropertyConfig indexColConfig = PropertyConfig.configureNew((groovy.lang.Closure<?>) rawIndex);
+            if (StringUtils.hasText(indexColConfig.getTypeName())) {
+                return indexColConfig.getTypeName();
+            }
+        }
+
+        try {
+            Map<String, String> indexMap = primaryCol.getIndexAsMap();
+            String typeName = indexMap.get("type");
+
+            if (StringUtils.hasText(typeName)) {
+                return typeName;
+            }
+        }
+        catch (Exception e) {
+            // ignore
+        }
+
+        return defaultType;
     }
 
     default String getMapElementName(PersistentEntityNamingStrategy namingStrategy) {
@@ -128,9 +194,9 @@ public interface HibernateToManyProperty extends PropertyWithMapping<PropertyCon
                 .map(PropertyConfig::getJoinTableColumnConfig)
                 .map(ColumnConfig::getName)
                 .orElseGet(() -> namingStrategy.resolveColumnName(getHibernateAssociatedEntity()
-                                .getHibernateRootEntity()
-                                .getJavaClass()
-                                .getSimpleName())
+                        .getHibernateRootEntity()
+                        .getJavaClass()
+                        .getSimpleName())
                         + GrailsDomainBinder.FOREIGN_KEY_SUFFIX);
     }
 

@@ -54,7 +54,7 @@ class PropertyDefinitionDelegate {
         ColumnConfig column
         if (index < config.columns.size()) {
             // configure existing
-            column = config.columns[0]
+            column = config.columns[index]
         }
         else {
             column = new ColumnConfig()
@@ -65,7 +65,7 @@ class PropertyDefinitionDelegate {
         column.sqlType = args['sqlType']
         column.enumType = args['enumType'] ?: column.enumType
         column.index = args['index']
-        column.unique = args['unique'] ?: false
+        column.unique = args['unique'] != null ? args['unique'] : false
         column.length = args['length'] ? args['length'] as Integer : -1
         column.precision = args['precision'] ? args['precision'] as Integer  : -1
         column.scale = args['scale'] ? args['scale'] as Integer : -1

@@ -19,6 +19,7 @@
 
 package org.grails.orm.hibernate.cfg.domainbinding.secondpass
 
+
 import grails.gorm.annotation.Entity
 import grails.gorm.specs.HibernateGormDatastoreSpec
 import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernatePersistentProperty
@@ -69,16 +70,43 @@ class CollectionSecondPassBinderSpec extends HibernateGormDatastoreSpec {
         return property
     }
 
-    def "resolveAssociatedClass throws MappingException when property has no associated entity"() {
-        given:
-        def property = createTestHibernateToManyProperty(CSPBTestEntityWithMany, "items") as HibernateToManyProperty
-        def spiedProperty = Spy(property)
-        spiedProperty.getHibernateAssociatedEntity() >> null
+    def "bindCollectionSecondPass succeeds for Basic String collection"() {
+        given: "An entity with a basic String collection"
+        def property = createTestHibernateToManyProperty(HTMPOrder, "items") as HibernateToManyProperty
 
-        when:
-        binder.resolveAssociatedClass(spiedProperty, [:])
+        and: "We trigger the first pass mapping"
+        hibernateFirstPass()
+
+        expect: "The Hibernate collection object is now initialized"
+        property.getCollection() != null
+
+        when: "Binding second pass"
+        binder.bindCollectionSecondPass(property, [:])
 
         then:
+        noExceptionThrown()
+    }
+
+    def "resolveAssociatedClass throws MappingException when entity association is missing from persistentClasses"() {
+        given: "A standard entity association (not a Basic collection)"
+        def property = createTestHibernateToManyProperty(CSPBTestEntityWithMany, "items") as HibernateToManyProperty
+
+        when: "Attempting to resolve associated class with an empty map"
+        binder.resolveAssociatedClass(property, [:])
+
+        then: "A MappingException is thrown because this is a real entity relationship"
+        def ex = thrown(org.hibernate.MappingException)
+        ex.message.contains("items")
+    }
+
+    def "resolveAssociatedClass throws MappingException when entity association has no class in persistentClasses"() {
+        given: "An entity association (not a Basic collection)"
+        def property = createTestHibernateToManyProperty(CSPBTestEntityWithMany, "items") as HibernateToManyProperty
+
+        when: "Attempting to resolve associated class with an empty map"
+        binder.resolveAssociatedClass(property, [:])
+
+        then: "A MappingException is thrown because this is a real entity association"
         def ex = thrown(org.hibernate.MappingException)
         ex.message.contains("items")
     }
@@ -123,4 +151,10 @@ class CSPBAssociatedItem {
     String value
     CSPBTestEntityWithMany parent
     static belongsTo = [parent: CSPBTestEntityWithMany]
+}
+@Entity
+class HTMPOrder {
+    Long id
+    List<String> items = []
+    static hasMany = [items: String]
 }

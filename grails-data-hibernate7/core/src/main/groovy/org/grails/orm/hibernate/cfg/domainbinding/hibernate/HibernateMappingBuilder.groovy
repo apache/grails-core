@@ -366,9 +366,9 @@ class HibernateMappingBuilder implements MappingConfigurationBuilder<Mapping, Pr
             Object enumTypeVal = namedArgs['enumType']
             if (enumTypeVal) cc.enumType = enumTypeVal.toString()
             Object indexVal = namedArgs['index']
-            if (indexVal) cc.index = indexVal.toString()
+            if (indexVal) cc.index = indexVal
             Object ccUniqueVal = namedArgs['unique']
-            if (ccUniqueVal) cc.unique = ccUniqueVal instanceof Boolean ? (Boolean) ccUniqueVal : ccUniqueVal
+            if (ccUniqueVal != null) cc.unique = ccUniqueVal
             Object readVal = namedArgs['read']
             if (readVal) cc.read = readVal.toString()
             Object writeVal = namedArgs['write']

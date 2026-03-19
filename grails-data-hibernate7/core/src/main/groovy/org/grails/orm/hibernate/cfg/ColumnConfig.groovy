@@ -49,10 +49,90 @@ class ColumnConfig {
      * The index, can be either a boolean or a string for the name of the index
      */
     def index
+
+    /**
+     * Parses the index field when stored as a Groovy-style string literal.
+     * Expected format: [column:item_idx, type:integer] or column:item_idx, type:integer
+     * Returns an empty map if parsing fails or the value is invalid.
+     * Throws IllegalArgumentException only if the format is clearly broken (fail-fast for bad developer input).
+     */
+    Map<String, String> getIndexAsMap() {
+        Object raw = this.index
+        if (raw == null) return [:]
+
+        if (raw instanceof Map) {
+            // Already a map → return as-is (though unlikely)
+            return raw.collectEntries { k, v -> [k.toString(), v.toString()] } as Map<String, String>
+        }
+
+        if (!(raw instanceof String)) {
+            // If it's a closure or something else, we can't parse it as a string map.
+            // Let the caller handle other types (like closures).
+            return [:]
+        }
+        String rawStr = raw.toString()
+
+        String content = rawStr.trim()
+
+        // Remove surrounding [ ] if present
+        if (content.startsWith('[') && content.endsWith(']')) {
+            content = content.substring(1, content.length() - 1).trim()
+        }
+
+        if (!content) return [:]
+
+        Map<String, String> result = [:]
+
+        // Split on top-level commas (simple heuristic: assume no commas inside values)
+        content.split(',').each { pair ->
+            def trimmed = pair.trim()
+            if (!trimmed) return
+
+            def kv = trimmed.split(':', 2)
+            if (kv.length != 2) {
+                // If it's the only pair and doesn't have a colon, treat it as the column name
+                if (content == trimmed && !content.contains(',')) {
+                    result['column'] = content
+                    return
+                }
+                // Invalid pair → fail fast (developer mistake)
+                throw new IllegalArgumentException(
+                        "Invalid index pair format '$trimmed' in string: '$raw'"
+                )
+            }
+
+            String key = kv[0].trim()
+            String value = kv[1].trim()
+
+            // Strip surrounding quotes from value if present
+            if ((value.startsWith("'") && value.endsWith("'")) ||
+                    (value.startsWith('"') && value.endsWith('"'))) {
+                value = value.substring(1, value.length() - 1)
+            }
+
+            result[key] = value
+        }
+
+        if (result.isEmpty()) {
+            throw new IllegalArgumentException("No valid key:value pairs found in index string: '$raw'")
+        }
+
+        return result
+    }
     /**
      * Whether the column is unique
      */
-    boolean unique = false
+    def unique = false
+
+    /**
+     * @return Whether the column is unique
+     */
+    boolean isUnique() {
+        if (unique instanceof Boolean) {
+            return (Boolean) unique
+        }
+        return unique != null && unique != false
+    }
     /**
      * The length of the column
      */

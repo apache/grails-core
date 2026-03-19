@@ -90,6 +90,54 @@ class ColumnConfigToColumnBinderSpec extends Specification {
         !column.unique
     }
 
+    def "column config honors uniqueness property when set to a string (named group)"() {
+        given:
+        def columnConfig = new ColumnConfig(unique: "group1")
+        PropertyConfig mappedForm = new PropertyConfig(unique: "group1")
+
+        when:
+        binder.bindColumnConfigToColumn(column, columnConfig, mappedForm)
+
+        then:
+        !column.unique // Should be false because it's handled via unique groups in Hibernate
+    }
+
+    def "column config honors uniqueness property when set to a list (composite groups)"() {
+        given:
+        def columnConfig = new ColumnConfig(unique: ["group1", "group2"])
+        PropertyConfig mappedForm = new PropertyConfig(unique: ["group1", "group2"])
+
+        when:
+        binder.bindColumnConfigToColumn(column, columnConfig, mappedForm)
+
+        then:
+        !column.unique
+    }
+
+    def "column config honors uniqueness property when set to boolean true"() {
+        given:
+        def columnConfig = new ColumnConfig(unique: true)
+        PropertyConfig mappedForm = new PropertyConfig(unique: true)
+
+        when:
+        binder.bindColumnConfigToColumn(column, columnConfig, mappedForm)
+
+        then:
+        column.unique
+    }
+
+    def "column config honors uniqueness property when set to boolean false"() {
+        given:
+        def columnConfig = new ColumnConfig(unique: false)
+        PropertyConfig mappedForm = new PropertyConfig(unique: false)
+
+        when:
+        binder.bindColumnConfigToColumn(column, columnConfig, mappedForm)
+
+        then:
+        !column.unique
+    }
+
     def "column config honors uniqueness property when mappedForm is empty"() {
         given:
         def columnConfig = new ColumnConfig()
