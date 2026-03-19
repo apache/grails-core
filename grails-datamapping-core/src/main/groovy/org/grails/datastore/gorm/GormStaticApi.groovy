@@ -47,7 +47,6 @@ import org.grails.datastore.mapping.model.PersistentProperty
 import org.grails.datastore.mapping.model.types.Association
 import org.grails.datastore.mapping.multitenancy.MultiTenancySettings.MultiTenancyMode
 import org.grails.datastore.mapping.query.Query
-import org.grails.datastore.gorm.query.GormQueryOperations
 import org.grails.datastore.gorm.query.NamedCriteriaProxy
 import org.grails.datastore.mapping.query.api.BuildableCriteria
 import org.grails.datastore.mapping.query.api.Criteria
