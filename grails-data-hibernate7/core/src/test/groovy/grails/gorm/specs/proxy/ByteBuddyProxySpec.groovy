@@ -20,11 +20,15 @@
 package grails.gorm.specs.proxy
 
 import grails.gorm.specs.HibernateGormDatastoreSpec
+import grails.gorm.specs.entities.Club
+import grails.gorm.specs.entities.Team
 import grails.persistence.Entity
 import groovy.transform.CompileStatic
 import org.grails.datastore.mapping.proxy.ProxyHandler
 import org.grails.orm.hibernate.HibernateDatastore
+import org.grails.orm.hibernate.proxy.HibernateProxyHandler
 import org.hibernate.proxy.HibernateProxy
+import spock.lang.PendingFeature
 import spock.lang.Shared
 import spock.lang.Specification
 
@@ -33,8 +37,17 @@ import spock.lang.Specification
  */
 class ByteBuddyProxySpec extends HibernateGormDatastoreSpec {
 
+    @Shared
+    HibernateProxyHandler proxyHandler = new HibernateProxyHandler()
+
     void setupSpec() {
-       manager.addAllDomainClasses([ByteBuddyClub, ByteBuddyTeam, ByteBuddyPlayer])
+       manager.addAllDomainClasses([ByteBuddyClub, ByteBuddyTeam, ByteBuddyPlayer, Club, Team])
+    }
+
+    Team createATeam() {
+        Club c = new Club(name: "DOOM Club").save(failOnError: true)
+        Team team = new Team(name: "The A-Team", club: c).save(failOnError: true, flush: true)
+        return team
     }
 
     void "Test that accessing id on a proxy does not initialize it"() {
@@ -75,6 +88,103 @@ class ByteBuddyProxySpec extends HibernateGormDatastoreSpec {
         !proxyHandler.isInitialized(clubProxy)
 
 
+    }
+
+    @PendingFeature(reason = 'Hibernate 7 ByteBuddyInterceptor initializes proxy on getId() - needs a Groovy-aware interceptor like yakworks hibernate-groovy-proxy for H7')
+    void "getId and id property checks dont initialize proxy if in a CompileStatic method"() {
+        when:
+        Team team = createATeam()
+        manager.session.clear()
+        team = Team.load(team.id)
+
+        then:
+        StaticTestUtil.team_id_asserts(team)
+        !proxyHandler.isInitialized(team)
+
+        StaticTestUtil.club_id_asserts(team)
+        !proxyHandler.isInitialized(team.club)
+    }
+
+    @PendingFeature(reason = 'Hibernate 7 ByteBuddyInterceptor initializes proxy on getId() - needs a Groovy-aware interceptor like yakworks hibernate-groovy-proxy for H7')
+    void "getId and id dont initialize proxy"() {
+        when:
+        Team team = createATeam()
+        manager.session.clear()
+        team = Team.load(team.id)
+
+        then:
+        proxyHandler.isProxy(team)
+        team.getId()
+        !proxyHandler.isInitialized(team)
+
+        team.id
+        !proxyHandler.isInitialized(team)
+
+        and:
+        team['id']
+        !proxyHandler.isInitialized(team)
+    }
+
+    @PendingFeature(reason = 'Hibernate 7 ByteBuddyInterceptor initializes proxy on getId() - needs a Groovy-aware interceptor like yakworks hibernate-groovy-proxy for H7')
+    void "truthy check on instance should not initialize proxy"() {
+        when:
+        Team team = createATeam()
+        manager.session.clear()
+        team = Team.load(team.id)
+
+        then:
+        team
+        !proxyHandler.isInitialized(team)
+
+        and:
+        team.club
+        !proxyHandler.isInitialized(team.club)
+    }
+
+    @PendingFeature(reason = 'Hibernate 7 ByteBuddyInterceptor initializes proxy on getId() - needs a Groovy-aware interceptor like yakworks hibernate-groovy-proxy for H7')
+    void "id checks on association should not initialize its proxy"() {
+        when:
+        Team team = createATeam()
+        manager.session.clear()
+        team = Team.load(team.id)
+
+        then:
+        !proxyHandler.isInitialized(team.club)
+
+        team.club.getId()
+        !proxyHandler.isInitialized(team.club)
+
+        team.club.id
+        !proxyHandler.isInitialized(team.club)
+
+        team.clubId
+        !proxyHandler.isInitialized(team.club)
+
+        and:
+        team.club['id']
+        !proxyHandler.isInitialized(team.club)
+    }
+
+    @PendingFeature(reason = 'Hibernate 7 ByteBuddyInterceptor initializes proxy on getId() - needs a Groovy-aware interceptor like yakworks hibernate-groovy-proxy for H7')
+    void "isDirty should not intialize the association proxy"() {
+        when:
+        Team team = createATeam()
+        manager.session.clear()
+        team = Team.load(team.id)
+
+        then:
+        !proxyHandler.isInitialized(team)
+
+        !team.isDirty()
+        proxyHandler.isInitialized(team)
+        !proxyHandler.isInitialized(team.club)
+
+        when:
+        team.name = "B-Team"
+
+        then:
+        team.isDirty()
+        !proxyHandler.isInitialized(team.club)
     }
 
     private void assert_id_without_init(ProxyHandler handler, Object proxy) {
