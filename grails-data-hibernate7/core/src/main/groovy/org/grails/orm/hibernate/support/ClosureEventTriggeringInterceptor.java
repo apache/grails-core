@@ -315,9 +315,9 @@ public class ClosureEventTriggeringInterceptor
         // Only for "dateCreated" property, "lastUpdated" is handled correctly
         if (dateCreatedMapping != null) {
             int dateCreatedIdx = dateCreatedMapping.getStateArrayPosition();
-            if (oldState != null
-                    && oldState[dateCreatedIdx] != null
-                    && !oldState[dateCreatedIdx].equals(state[dateCreatedIdx])) {
+            if (oldState != null &&
+                    oldState[dateCreatedIdx] != null &&
+                    !oldState[dateCreatedIdx].equals(state[dateCreatedIdx])) {
                 modifiedProperties.put(AutoTimestampEventListener.DATE_CREATED_PROPERTY, oldState[dateCreatedIdx]);
             }
         }

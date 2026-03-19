@@ -33,7 +33,6 @@ import org.grails.datastore.mapping.model.config.GormProperties;
 import org.grails.orm.hibernate.cfg.Identity;
 import org.grails.orm.hibernate.cfg.Mapping;
 import org.grails.orm.hibernate.cfg.PropertyConfig;
-import org.grails.orm.hibernate.cfg.domainbinding.hibernate.GrailsHibernatePersistentEntity;
 import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernateIdentityProperty;
 import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernatePersistentEntity;
 import org.grails.orm.hibernate.cfg.domainbinding.util.BasicValueIdCreator;

@@ -93,18 +93,18 @@ public record HqlQueryContext(
 
     public static @Nullable String resolveHql(
             CharSequence queryCharseq, boolean isNative, Map<String, Object> namedParams) {
-        String raw = queryCharseq instanceof GString gstr
-                ? buildNamedParameterQueryFromGString(gstr, namedParams)
-                : queryCharseq != null ? queryCharseq.toString() : "";
+        String raw = queryCharseq instanceof GString gstr ?
+                buildNamedParameterQueryFromGString(gstr, namedParams) :
+                queryCharseq != null ? queryCharseq.toString() : "";
         String normalized = normalizeMultiLineQueryString(raw);
         return isNative ? normalized : normalizeNonAliasedSelect(normalized);
     }
 
     public static @Nullable String resolveHql(
             CharSequence queryCharseq, boolean isNative, Collection positionalParams) {
-        String raw = queryCharseq instanceof GString gstr
-                ? buildPositionalParameterQueryFromGString(gstr, positionalParams, isNative)
-                : queryCharseq != null ? queryCharseq.toString() : "";
+        String raw = queryCharseq instanceof GString gstr ?
+                buildPositionalParameterQueryFromGString(gstr, positionalParams, isNative) :
+                queryCharseq != null ? queryCharseq.toString() : "";
         String normalized = normalizeMultiLineQueryString(raw);
         return isNative ? normalized : normalizeNonAliasedSelect(normalized);
     }
@@ -217,8 +217,8 @@ public record HqlQueryContext(
         int tokenEnd = cur;
         while (tokenEnd < s.length() && !Character.isWhitespace(s.charAt(tokenEnd))) tokenEnd++;
         String token = s.substring(cur, tokenEnd).toLowerCase(Locale.ROOT);
-        boolean hasAlias = !token.isEmpty()
-                && !Set.of("where", "join", "left", "right", "inner", "outer", "group", "order", "having")
+        boolean hasAlias = !token.isEmpty() &&
+                !Set.of("where", "join", "left", "right", "inner", "outer", "group", "order", "having")
                         .contains(token);
         if (hasAlias) return s;
 

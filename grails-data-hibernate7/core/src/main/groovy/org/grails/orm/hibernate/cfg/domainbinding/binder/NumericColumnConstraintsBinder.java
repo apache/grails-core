@@ -43,9 +43,9 @@ public class NumericColumnConstraintsBinder {
         } else {
             int minConstraintValueLength = getConstraintValueLength(constrainedProperty.getMin(), scale);
             int maxConstraintValueLength = getConstraintValueLength(constrainedProperty.getMax(), scale);
-            int precision = minConstraintValueLength > 0 && maxConstraintValueLength > 0
-                    ? Math.max(minConstraintValueLength, maxConstraintValueLength)
-                    : DefaultGroovyMethods.max(new Integer[] {
+            int precision = minConstraintValueLength > 0 && maxConstraintValueLength > 0 ?
+                    Math.max(minConstraintValueLength, maxConstraintValueLength) :
+                    DefaultGroovyMethods.max(new Integer[] {
                         org.hibernate.engine.jdbc.Size.DEFAULT_PRECISION,
                         minConstraintValueLength,
                         maxConstraintValueLength
@@ -55,9 +55,9 @@ public class NumericColumnConstraintsBinder {
     }
 
     private int getConstraintValueLength(Comparable min, int scale) {
-        return min instanceof Number number
-                ? Math.max(countDigits(number), countDigits((number).longValue()) + scale)
-                : 0;
+        return min instanceof Number number ?
+                Math.max(countDigits(number), countDigits((number).longValue()) + scale) :
+                0;
     }
 
     private int countDigits(Number number) {

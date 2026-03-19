@@ -21,10 +21,7 @@ package org.grails.orm.hibernate.cfg.domainbinding.secondpass;
 import java.io.Serial;
 import java.util.Map;
 
-import jakarta.annotation.Nonnull;
-
 import org.hibernate.MappingException;
-import org.hibernate.boot.spi.InFlightMetadataCollector;
 
 import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernateToManyProperty;
 

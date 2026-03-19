@@ -28,7 +28,11 @@ import grails.gorm.multitenancy.Tenants;
 import org.grails.datastore.gorm.GormEnhancer;
 import org.grails.datastore.mapping.core.Datastore;
 import org.grails.datastore.mapping.core.connections.ConnectionSource;
-import org.grails.datastore.mapping.engine.event.*;
+import org.grails.datastore.mapping.engine.event.AbstractPersistenceEvent;
+import org.grails.datastore.mapping.engine.event.PersistenceEventListener;
+import org.grails.datastore.mapping.engine.event.PreInsertEvent;
+import org.grails.datastore.mapping.engine.event.PreUpdateEvent;
+import org.grails.datastore.mapping.engine.event.ValidationEvent;
 import org.grails.datastore.mapping.model.PersistentEntity;
 import org.grails.datastore.mapping.model.types.TenantId;
 import org.grails.datastore.mapping.multitenancy.exceptions.TenantException;
@@ -70,10 +74,10 @@ public class MultiTenantEventListener implements PersistenceEventListener {
                         hibernateDatastore.enableMultiTenancyFilter();
                     }
                 }
-            } else if (event instanceof AbstractPersistenceEvent persistenceEvent
-                    && (persistenceEvent instanceof ValidationEvent
-                            || persistenceEvent instanceof PreInsertEvent
-                            || persistenceEvent instanceof PreUpdateEvent)) {
+            } else if (event instanceof AbstractPersistenceEvent persistenceEvent &&
+                    (persistenceEvent instanceof ValidationEvent ||
+                            persistenceEvent instanceof PreInsertEvent ||
+                            persistenceEvent instanceof PreUpdateEvent)) {
                 PersistentEntity entity = persistenceEvent.getEntity();
                 if (entity.isMultiTenant()) {
                     TenantId<?> tenantId = entity.getTenantId();
@@ -91,12 +95,12 @@ public class MultiTenantEventListener implements PersistenceEventListener {
                                 persistenceEvent.getEntityAccess().setProperty(tenantId.getName(), currentId);
                             } catch (Exception e) {
                                 throw new TenantException(
-                                        "Could not assigned tenant id ["
-                                                + currentId
-                                                + "] to property ["
-                                                + tenantId
-                                                + "], probably due to a type mismatch. You should return a type from the tenant resolver that matches the property type of the tenant id!: "
-                                                + e.getMessage(),
+                                        "Could not assigned tenant id [" +
+                                                currentId +
+                                                "] to property [" +
+                                                tenantId +
+                                                "], probably due to a type mismatch. You should return a type from the tenant resolver that matches the property type of the tenant id!: " +
+                                                e.getMessage(),
                                         e);
                             }
                         }

@@ -67,8 +67,8 @@ public class ForeignKeyOneToOneBinder {
         }
         if (!config.isUniqueWithinGroup()) {
             c.setUnique(config.isUnique());
-        } else if (property.isBidirectional()
-                && property.getHibernateInverseSide().isValidHibernateOneToOne()) {
+        } else if (property.isBidirectional() &&
+                property.getHibernateInverseSide().isValidHibernateOneToOne()) {
             c.setUnique(true);
         }
     }

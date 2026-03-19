@@ -35,8 +35,8 @@ import org.grails.datastore.mapping.model.PersistentEntity;
 import org.grails.datastore.mapping.model.PersistentProperty;
 import org.grails.datastore.mapping.model.config.GormProperties;
 import org.grails.orm.hibernate.cfg.CompositeIdentity;
-import org.grails.orm.hibernate.cfg.Identity;
 import org.grails.orm.hibernate.cfg.DiscriminatorConfig;
+import org.grails.orm.hibernate.cfg.Identity;
 import org.grails.orm.hibernate.cfg.Mapping;
 import org.grails.orm.hibernate.cfg.PersistentEntityNamingStrategy;
 import org.grails.orm.hibernate.cfg.domainbinding.util.ConfigureDerivedPropertiesConsumer;
@@ -301,9 +301,9 @@ public interface GrailsHibernatePersistentEntity extends PersistentEntity {
     }
 
     private static String resolveDiscriminatorValue(DiscriminatorConfig discriminatorConfig) {
-        return discriminatorConfig.getColumn() != null
-                ? discriminatorConfig.getColumn().getName()
-                : discriminatorConfig.getFormula();
+        return discriminatorConfig.getColumn() != null ?
+                discriminatorConfig.getColumn().getName() :
+                discriminatorConfig.getFormula();
     }
 
     default List<HibernatePersistentProperty> getHibernatePersistentProperties() {
@@ -312,13 +312,12 @@ public interface GrailsHibernatePersistentEntity extends PersistentEntity {
                 .map(HibernatePersistentProperty.class::cast)
                 .toList());
         properties.sort((p1, p2) -> {
-            if (p1 instanceof org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernateEmbeddedProperty
-                    && !(p2
-                            instanceof
-                            org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernateEmbeddedProperty)) {
+            if (p1 instanceof org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernateEmbeddedProperty &&
+                    !(p2 instanceof
+                                                        org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernateEmbeddedProperty)) {
                 return -1;
-            } else if (!(p1 instanceof org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernateEmbeddedProperty)
-                    && p2 instanceof org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernateEmbeddedProperty) {
+            } else if (!(p1 instanceof org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernateEmbeddedProperty) &&
+                    p2 instanceof org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernateEmbeddedProperty) {
                 return 1;
             }
             return p1.getName().compareTo(p2.getName());

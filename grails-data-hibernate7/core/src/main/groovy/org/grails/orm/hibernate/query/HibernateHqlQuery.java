@@ -118,11 +118,11 @@ public class HibernateHqlQuery extends Query {
             result.setFlushMode(session.getHibernateFlushMode());
             return result;
         } else {
-            var q = ctx.isNative()
-                    ? session.createNativeQuery(ctx.hql(), ctx.targetClass())
-                    : isScalarSelect(ctx.hql())
-                            ? session.createQuery(ctx.hql())
-                            : session.createQuery(ctx.hql(), ctx.targetClass());
+            var q = ctx.isNative() ?
+                    session.createNativeQuery(ctx.hql(), ctx.targetClass()) :
+                    isScalarSelect(ctx.hql()) ?
+                            session.createQuery(ctx.hql()) :
+                            session.createQuery(ctx.hql(), ctx.targetClass());
             var result = new HibernateHqlQuery(hibernateSession, entity, q);
             result.setFlushMode(session.getHibernateFlushMode());
             return result;
@@ -184,9 +184,9 @@ public class HibernateHqlQuery extends Query {
 
     protected void setFlushMode(FlushMode flushMode) {
         session.setFlushMode(
-                flushMode == FlushMode.AUTO || flushMode == FlushMode.ALWAYS
-                        ? FlushModeType.AUTO
-                        : FlushModeType.COMMIT);
+                flushMode == FlushMode.AUTO || flushMode == FlushMode.ALWAYS ?
+                        FlushModeType.AUTO :
+                        FlushModeType.COMMIT);
     }
 
     protected void populateQuerySettings(Map<?, ?> args, ConversionService conversionService) {

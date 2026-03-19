@@ -25,7 +25,17 @@ import java.util.concurrent.ConcurrentMap;
 
 import org.hibernate.Hibernate;
 import org.hibernate.engine.spi.SessionFactoryImplementor;
-import org.hibernate.event.spi.*;
+import org.hibernate.event.spi.EventSource;
+import org.hibernate.event.spi.MergeEvent;
+import org.hibernate.event.spi.PersistEvent;
+import org.hibernate.event.spi.PostDeleteEvent;
+import org.hibernate.event.spi.PostInsertEvent;
+import org.hibernate.event.spi.PostLoadEvent;
+import org.hibernate.event.spi.PostUpdateEvent;
+import org.hibernate.event.spi.PreDeleteEvent;
+import org.hibernate.event.spi.PreInsertEvent;
+import org.hibernate.event.spi.PreLoadEvent;
+import org.hibernate.event.spi.PreUpdateEvent;
 
 import org.springframework.context.ApplicationEvent;
 
@@ -233,9 +243,9 @@ public class HibernateEventListener extends AbstractPersistenceEventListener {
                 eventListener = eventListeners.get(key);
                 if (eventListener == null) {
                     HibernateDatastore datastore = getDatastore();
-                    boolean isValidSessionFactory = MultiTenant.class.isAssignableFrom(clazz)
-                            || factory == null
-                            || datastore.getSessionFactory().equals(factory);
+                    boolean isValidSessionFactory = MultiTenant.class.isAssignableFrom(clazz) ||
+                            factory == null ||
+                            datastore.getSessionFactory().equals(factory);
                     HibernatePersistentEntity persistentEntity = (HibernatePersistentEntity)
                             datastore.getMappingContext().getPersistentEntity(clazz.getName());
                     shouldTrigger = (persistentEntity != null && isValidSessionFactory);

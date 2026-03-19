@@ -76,15 +76,15 @@ public class GrailsPropertyBinder {
         // 1. Create Value and apply binders (consolidated block)
         if (currentGrailsProp instanceof HibernateEnumProperty) {
             value = enumTypeBinder.bindEnumType(currentGrailsProp, currentGrailsProp.getType(), table, path);
-        } else if (currentGrailsProp instanceof HibernateOneToOneProperty oneToOne
-                && oneToOne.isValidHibernateOneToOne()) {
+        } else if (currentGrailsProp instanceof HibernateOneToOneProperty oneToOne &&
+                oneToOne.isValidHibernateOneToOne()) {
             value = oneToOneBinder.bindOneToOne(oneToOne, path);
         } else if (currentGrailsProp instanceof HibernateOneToOneProperty oneToOne) {
             value = foreignKeyOneToOneBinder.bind(oneToOne, table, path);
         } else if (currentGrailsProp instanceof HibernateManyToOneProperty manyToOne) {
             value = manyToOneBinder.bindManyToOne(manyToOne, table, path);
-        } else if (currentGrailsProp instanceof HibernateToManyProperty toMany
-                && !currentGrailsProp.isSerializableType()) {
+        } else if (currentGrailsProp instanceof HibernateToManyProperty toMany &&
+                !currentGrailsProp.isSerializableType()) {
             // HibernateToManyProperty
             value = collectionBinder.bindCollection(toMany, persistentClass, path);
         } else if (currentGrailsProp instanceof HibernateEmbeddedProperty embedded) {

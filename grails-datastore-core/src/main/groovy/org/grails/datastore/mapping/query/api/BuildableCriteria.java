@@ -95,7 +95,7 @@ public interface BuildableCriteria extends Criteria {
      *
      * @return The result
      */
-    Object list(Map<String,?> params, @DelegatesTo(Criteria.class) Closure<?> closure);
+    Object list(Map<String, ?> params, @DelegatesTo(Criteria.class) Closure<?> closure);
 
     /**
      * Defines and executes a list distinct query in a single call. Example: Foo.createCriteria().listDistinct { }

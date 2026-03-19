@@ -75,9 +75,9 @@ public class BasicCollectionElementBinder {
         } else {
             var clazz = namingStrategy.resolveColumnName(referencedType.getName());
             var prop = namingStrategy.resolveTableName(property.getName());
-            columnName = isEnum
-                    ? clazz
-                    : new BackticksRemover().apply(prop) + UNDERSCORE + new BackticksRemover().apply(clazz);
+            columnName = isEnum ?
+                    clazz :
+                    new BackticksRemover().apply(prop) + UNDERSCORE + new BackticksRemover().apply(clazz);
         }
         if (isEnum) {
             return enumTypeBinder.bindEnumTypeForColumn(property, referencedType, collection.getCollectionTable(), columnName);

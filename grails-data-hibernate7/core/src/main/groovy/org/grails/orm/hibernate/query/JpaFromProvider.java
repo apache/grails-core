@@ -29,11 +29,10 @@ import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
 import jakarta.persistence.FetchType;
+import jakarta.persistence.criteria.AbstractQuery;
 import jakarta.persistence.criteria.From;
 import jakarta.persistence.criteria.JoinType;
 import jakarta.persistence.criteria.Path;
-
-import jakarta.persistence.criteria.AbstractQuery;
 
 import grails.gorm.DetachedCriteria;
 import org.grails.datastore.gorm.query.criteria.DetachedAssociationCriteria;
@@ -83,9 +82,9 @@ public class JpaFromProvider implements Cloneable {
                             dac != null ? dac.getAssociation().getOwner().getJavaClass() : root.getJavaType();
                     // Choose base From: use outer root only if join belongs to the outer root type;
                     // otherwise create a detached root for the owner
-                    From<?, ?> base = ownerClass.equals(root.getJavaType())
-                            ? root
-                            : detachedFroms.computeIfAbsent(joinColumn, s -> cq.from(ownerClass));
+                    From<?, ?> base = ownerClass.equals(root.getJavaType()) ?
+                            root :
+                            detachedFroms.computeIfAbsent(joinColumn, s -> cq.from(ownerClass));
 
                     var table = base.join(
                             joinColumn,

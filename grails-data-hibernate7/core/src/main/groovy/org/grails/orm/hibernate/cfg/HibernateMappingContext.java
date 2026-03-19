@@ -18,16 +18,20 @@
  */
 package org.grails.orm.hibernate.cfg;
 
-import java.util.ArrayList;
-import java.util.Collection;
 import java.util.List;
 
 import groovy.lang.Closure;
 
 import grails.gorm.hibernate.HibernateEntity;
 import org.grails.datastore.gorm.GormEntity;
-import org.grails.datastore.mapping.model.*;
-import org.grails.orm.hibernate.cfg.domainbinding.hibernate.*;
+import org.grails.datastore.mapping.model.AbstractMappingContext;
+import org.grails.datastore.mapping.model.MappingConfigurationStrategy;
+import org.grails.datastore.mapping.model.MappingFactory;
+import org.grails.datastore.mapping.model.PersistentEntity;
+import org.grails.orm.hibernate.cfg.domainbinding.hibernate.GrailsJpaMappingConfigurationStrategy;
+import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernateEmbeddedPersistentEntity;
+import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernateMappingFactory;
+import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernatePersistentEntity;
 import org.grails.orm.hibernate.connections.HibernateConnectionSourceSettings;
 import org.grails.orm.hibernate.proxy.HibernateProxyHandler;
 
@@ -91,8 +95,8 @@ public class HibernateMappingContext extends AbstractMappingContext {
 
     @Override
     protected boolean isValidMappingStrategy(Class javaClass, Object mappingStrategy) {
-        return HibernateEntity.class.isAssignableFrom(javaClass)
-                || super.isValidMappingStrategy(javaClass, mappingStrategy);
+        return HibernateEntity.class.isAssignableFrom(javaClass) ||
+                super.isValidMappingStrategy(javaClass, mappingStrategy);
     }
 
     @Override

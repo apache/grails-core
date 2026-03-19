@@ -35,7 +35,9 @@ import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernateOneToManyPr
 import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernateOneToOneProperty;
 import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernatePersistentProperty;
 
-import static org.grails.orm.hibernate.cfg.domainbinding.util.CascadeBehavior.*;
+import static org.grails.orm.hibernate.cfg.domainbinding.util.CascadeBehavior.ALL;
+import static org.grails.orm.hibernate.cfg.domainbinding.util.CascadeBehavior.NONE;
+import static org.grails.orm.hibernate.cfg.domainbinding.util.CascadeBehavior.SAVE_UPDATE;
 
 /** The cascade behavior fetcher class. */
 public class CascadeBehaviorFetcher {

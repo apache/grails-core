@@ -38,11 +38,11 @@ import org.grails.datastore.mapping.query.api.QueryableCriteria;
 
 @Slf4j
 @SuppressWarnings({
-        "PMD.DataflowAnomalyAnalysis",
-        "PMD.AvoidLiteralsInIfCondition",
-        "PMD.AvoidDuplicateLiterals",
-        "unchecked",
-        "rawtypes"
+    "PMD.DataflowAnomalyAnalysis",
+    "PMD.AvoidLiteralsInIfCondition",
+    "PMD.AvoidDuplicateLiterals",
+    "unchecked",
+    "rawtypes"
 })
 public class PredicateGenerator {
     private static final Logger log = LoggerFactory.getLogger(PredicateGenerator.class);
@@ -378,9 +378,9 @@ public class PredicateGenerator {
         // Pass 'entity' (which is child) to recursion
         var predicates = getPredicates(cb, criteriaQuery, subRoot, c.getSubquery().getCriteria(), newMap, entity);
         var existsPredicate = getExistsPredicate(cb, root_, entity, subRoot);
-        Predicate[] allPredicates = existsPredicate != null
-                ? Stream.concat(Arrays.stream(predicates), Stream.of(existsPredicate)).toArray(Predicate[]::new)
-                : predicates;
+        Predicate[] allPredicates = existsPredicate != null ?
+                Stream.concat(Arrays.stream(predicates), Stream.of(existsPredicate)).toArray(Predicate[]::new) :
+                predicates;
         subquery.select(cb.literal(1)).where(cb.and(allPredicates));
         return cb.exists(subquery);
     }
@@ -422,9 +422,9 @@ public class PredicateGenerator {
     }
 
     private String findSubproperty(Object projection) {
-        return projection instanceof Query.PropertyProjection
-                ? ((Query.PropertyProjection) projection).getPropertyName()
-                : "id";
+        return projection instanceof Query.PropertyProjection ?
+                ((Query.PropertyProjection) projection).getPropertyName() :
+                "id";
     }
 
     private Query.Projection findPropertyOrIdProjection(QueryableCriteria queryableCriteria) {
@@ -435,9 +435,9 @@ public class PredicateGenerator {
     }
 
     private QueryableCriteria getQueryableCriteriaFromInCriteria(Query.Criterion criterion) {
-        return criterion instanceof Query.In
-                ? ((Query.In) criterion).getSubquery()
-                : ((Query.NotIn) criterion).getSubquery();
+        return criterion instanceof Query.In ?
+                ((Query.In) criterion).getSubquery() :
+                ((Query.NotIn) criterion).getSubquery();
     }
 
     private Class getJavaTypeOfInClause(SqmInListPredicate predicate) {

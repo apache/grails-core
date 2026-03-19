@@ -330,11 +330,11 @@ public class HibernateQuery extends Query {
                     subCriteria.associationPath,
                     alias);
         }
-        throw new InvalidDataAccessApiUsageException("Cannot query association ["
-                + calculatePropertyName(associationName)
-                + "] of entity ["
-                + entity
-                + "]. Property is not an association!");
+        throw new InvalidDataAccessApiUsageException("Cannot query association [" +
+                calculatePropertyName(associationName) +
+                "] of entity [" +
+                entity +
+                "]. Property is not an association!");
     }
 
     @SuppressWarnings("PMD.DataflowAnomalyAnalysis")

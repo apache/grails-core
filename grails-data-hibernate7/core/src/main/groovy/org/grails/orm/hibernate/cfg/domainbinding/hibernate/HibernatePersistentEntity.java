@@ -26,7 +26,11 @@ import jakarta.persistence.Entity;
 import org.hibernate.mapping.PersistentClass;
 
 import org.grails.datastore.mapping.core.connections.ConnectionSourcesSupport;
-import org.grails.datastore.mapping.model.*;
+import org.grails.datastore.mapping.model.AbstractClassMapping;
+import org.grails.datastore.mapping.model.AbstractPersistentEntity;
+import org.grails.datastore.mapping.model.ClassMapping;
+import org.grails.datastore.mapping.model.MappingContext;
+import org.grails.datastore.mapping.model.PersistentProperty;
 import org.grails.orm.hibernate.cfg.Mapping;
 
 /**

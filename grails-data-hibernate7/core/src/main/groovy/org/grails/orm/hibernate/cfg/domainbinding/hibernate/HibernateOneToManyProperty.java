@@ -31,6 +31,7 @@ import org.grails.orm.hibernate.cfg.PropertyConfig;
 public class HibernateOneToManyProperty extends OneToManyWithMapping<PropertyConfig>
         implements HibernateToManyProperty {
     private Collection collection;
+
     public HibernateOneToManyProperty(PersistentEntity entity, MappingContext context, PropertyDescriptor property) {
         super(entity, context, property);
     }
@@ -47,6 +48,7 @@ public class HibernateOneToManyProperty extends OneToManyWithMapping<PropertyCon
     public Collection getCollection() {
         return collection;
     }
+
     public void setCollection(Collection collection) {
         this.collection = collection;
     }

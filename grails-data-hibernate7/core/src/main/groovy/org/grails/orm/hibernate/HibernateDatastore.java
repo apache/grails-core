@@ -23,8 +23,15 @@ import java.io.IOException;
 import java.io.Serializable;
 import java.sql.Connection;
 import java.sql.SQLException;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.Collection;
+import java.util.Collections;
+import java.util.LinkedHashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.Objects;
 import java.util.concurrent.Callable;
+
 import javax.sql.DataSource;
 
 import groovy.lang.Closure;
@@ -46,7 +53,12 @@ import org.slf4j.LoggerFactory;
 
 import org.springframework.beans.BeanUtils;
 import org.springframework.beans.BeansException;
-import org.springframework.context.*;
+import org.springframework.context.ApplicationContext;
+import org.springframework.context.ApplicationContextAware;
+import org.springframework.context.ApplicationEventPublisher;
+import org.springframework.context.ConfigurableApplicationContext;
+import org.springframework.context.MessageSource;
+import org.springframework.context.MessageSourceAware;
 import org.springframework.context.support.StaticMessageSource;
 import org.springframework.core.env.PropertyResolver;
 import org.springframework.jdbc.datasource.ConnectionHolder;
@@ -76,8 +88,12 @@ import org.grails.datastore.mapping.core.Datastore;
 import org.grails.datastore.mapping.core.DatastoreAware;
 import org.grails.datastore.mapping.core.DatastoreUtils;
 import org.grails.datastore.mapping.core.Session;
-import org.grails.datastore.mapping.core.connections.*;
+import org.grails.datastore.mapping.core.connections.ConnectionSource;
+import org.grails.datastore.mapping.core.connections.ConnectionSources;
+import org.grails.datastore.mapping.core.connections.ConnectionSourcesInitializer;
+import org.grails.datastore.mapping.core.connections.DefaultConnectionSource;
 import org.grails.datastore.mapping.core.connections.MultipleConnectionSourceCapableDatastore;
+import org.grails.datastore.mapping.core.connections.SingletonConnectionSources;
 import org.grails.datastore.mapping.core.exceptions.ConfigurationException;
 import org.grails.datastore.mapping.engine.event.DatastoreInitializedEvent;
 import org.grails.datastore.mapping.model.DatastoreConfigurationException;
@@ -314,16 +330,16 @@ public class HibernateDatastore extends AbstractDatastore
 
             @Override
             public HibernateDatastore getDatastoreForConnection(String connectionName) {
-                if (connectionName.equals(Settings.SETTING_DATASOURCE)
-                        || connectionName.equals(ConnectionSource.DEFAULT)) {
+                if (connectionName.equals(Settings.SETTING_DATASOURCE) ||
+                        connectionName.equals(ConnectionSource.DEFAULT)) {
                     return parent;
                 } else {
                     HibernateDatastore hibernateDatastore = parent.datastoresByConnectionSource.get(connectionName);
                     if (hibernateDatastore == null) {
                         throw new ConfigurationException(
-                                "DataSource not found for name ["
-                                        + connectionName
-                                        + "] in configuration. Please check your multiple data sources configuration and try again.");
+                                "DataSource not found for name [" +
+                                        connectionName +
+                                        "] in configuration. Please check your multiple data sources configuration and try again.");
                     }
                     return hibernateDatastore;
                 }
@@ -577,9 +593,9 @@ public class HibernateDatastore extends AbstractDatastore
         } else {
             HibernateDatastore hibernateDatastore = this.datastoresByConnectionSource.get(connectionName);
             if (hibernateDatastore == null) {
-                throw new ConfigurationException("DataSource not found for name ["
-                        + connectionName
-                        + "] in configuration. Please check your multiple data sources configuration and try again.");
+                throw new ConfigurationException("DataSource not found for name [" +
+                        connectionName +
+                        "] in configuration. Please check your multiple data sources configuration and try again.");
             }
             return hibernateDatastore;
         }
@@ -801,8 +817,8 @@ public class HibernateDatastore extends AbstractDatastore
     private void addTenantForSchemaInternal(final String schemaName) {
         if (multiTenantMode != MultiTenancySettings.MultiTenancyMode.SCHEMA) {
             throw new ConfigurationException(
-                    "The method [addTenantForSchema] can only be called with multi-tenancy mode SCHEMA. Current mode is: "
-                            + multiTenantMode);
+                    "The method [addTenantForSchema] can only be called with multi-tenancy mode SCHEMA. Current mode is: " +
+                            multiTenantMode);
         }
         HibernateConnectionSourceFactory factory = (HibernateConnectionSourceFactory) connectionSources.getFactory();
         HibernateConnectionSource defaultConnectionSource =
@@ -905,9 +921,9 @@ public class HibernateDatastore extends AbstractDatastore
 
     @Override
     public MultiTenancySettings.MultiTenancyMode getMultiTenancyMode() {
-        return this.multiTenantMode == MultiTenancySettings.MultiTenancyMode.SCHEMA
-                ? MultiTenancySettings.MultiTenancyMode.DATABASE
-                : this.multiTenantMode;
+        return this.multiTenantMode == MultiTenancySettings.MultiTenancyMode.SCHEMA ?
+                MultiTenancySettings.MultiTenancyMode.DATABASE :
+                this.multiTenantMode;
     }
 
     @Override
@@ -1073,19 +1089,20 @@ public class HibernateDatastore extends AbstractDatastore
     /** Prepare multi tenant closure. */
     protected <T> Closure<T> prepareMultiTenantClosure(final Closure<T> callable) {
         final boolean isMultiTenant = getMultiTenancyMode() == MultiTenancySettings.MultiTenancyMode.DISCRIMINATOR;
-        return isMultiTenant
-                ? new Closure<>(this) {
-                    @Override
-                    public T call(Object... args) {
-                        enableMultiTenancyFilter();
-                        try {
-                            return callable.call(args);
-                        } finally {
-                            disableMultiTenancyFilter();
-                        }
+        if (isMultiTenant) {
+            return new Closure<>(this) {
+                @Override
+                public T call(Object... args) {
+                    enableMultiTenancyFilter();
+                    try {
+                        return callable.call(args);
+                    } finally {
+                        disableMultiTenancyFilter();
                     }
                 }
-                : callable;
+            };
+        }
+        return callable;
     }
 
     @Override

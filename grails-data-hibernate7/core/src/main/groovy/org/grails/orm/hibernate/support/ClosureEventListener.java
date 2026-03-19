@@ -30,7 +30,30 @@ import org.hibernate.FlushMode;
 import org.hibernate.HibernateException;
 import org.hibernate.Session;
 import org.hibernate.engine.spi.SharedSessionContractImplementor;
-import org.hibernate.event.spi.*;
+import org.hibernate.event.spi.AbstractEvent;
+import org.hibernate.event.spi.AbstractPreDatabaseOperationEvent;
+import org.hibernate.event.spi.MergeContext;
+import org.hibernate.event.spi.MergeEvent;
+import org.hibernate.event.spi.MergeEventListener;
+import org.hibernate.event.spi.PersistContext;
+import org.hibernate.event.spi.PersistEvent;
+import org.hibernate.event.spi.PersistEventListener;
+import org.hibernate.event.spi.PostDeleteEvent;
+import org.hibernate.event.spi.PostDeleteEventListener;
+import org.hibernate.event.spi.PostInsertEvent;
+import org.hibernate.event.spi.PostInsertEventListener;
+import org.hibernate.event.spi.PostLoadEvent;
+import org.hibernate.event.spi.PostLoadEventListener;
+import org.hibernate.event.spi.PostUpdateEvent;
+import org.hibernate.event.spi.PostUpdateEventListener;
+import org.hibernate.event.spi.PreDeleteEvent;
+import org.hibernate.event.spi.PreDeleteEventListener;
+import org.hibernate.event.spi.PreInsertEvent;
+import org.hibernate.event.spi.PreInsertEventListener;
+import org.hibernate.event.spi.PreLoadEvent;
+import org.hibernate.event.spi.PreLoadEventListener;
+import org.hibernate.event.spi.PreUpdateEvent;
+import org.hibernate.event.spi.PreUpdateEventListener;
 import org.hibernate.jpa.event.spi.CallbackRegistry;
 import org.hibernate.jpa.event.spi.CallbackRegistryConsumer;
 import org.hibernate.metamodel.mapping.AttributeMapping;
@@ -91,9 +114,9 @@ public class ClosureEventListener
 
         beforeInsertCaller = buildCaller(AbstractPersistenceEvent.BEFORE_INSERT_EVENT, domainClazz);
         EventTriggerCaller preLoadCaller = buildCaller(AbstractPersistenceEvent.ONLOAD_EVENT, domainClazz);
-        this.preLoadEventCaller = (preLoadCaller != null)
-                ? preLoadCaller
-                : buildCaller(AbstractPersistenceEvent.BEFORE_LOAD_EVENT, domainClazz);
+        this.preLoadEventCaller = (preLoadCaller != null) ?
+                preLoadCaller :
+                buildCaller(AbstractPersistenceEvent.BEFORE_LOAD_EVENT, domainClazz);
 
         postLoadEventListener = buildCaller(AbstractPersistenceEvent.AFTER_LOAD_EVENT, domainClazz);
         postInsertEventListener = buildCaller(AbstractPersistenceEvent.AFTER_INSERT_EVENT, domainClazz);
@@ -103,9 +126,9 @@ public class ClosureEventListener
         preUpdateEventListener = buildCaller(AbstractPersistenceEvent.BEFORE_UPDATE_EVENT, domainClazz);
 
         beforeValidateEventListener = new BeforeValidateEventTriggerCaller(domainClazz, domainMetaClass);
-        failOnErrorEnabled = !failOnErrorPackages.isEmpty()
-                ? ClassUtils.isClassBelowPackage(domainClazz, failOnErrorPackages)
-                : failOnError;
+        failOnErrorEnabled = !failOnErrorPackages.isEmpty() ?
+                ClassUtils.isClassBelowPackage(domainClazz, failOnErrorPackages) :
+                failOnError;
 
         validateParams = new HashMap();
         validateParams.put(HibernateGormValidationApi.ARGUMENT_DEEP_VALIDATE, Boolean.FALSE);
@@ -222,8 +245,8 @@ public class ClosureEventListener
         if (!validateable.shouldSkipValidation() && !validateable.validate(validateParams)) {
             if (failOnErrorEnabled) {
                 throw ValidationException.newInstance(
-                        "Validation error whilst flushing entity ["
-                                + entity.getClass().getName() + "]",
+                        "Validation error whilst flushing entity [" +
+                                entity.getClass().getName() + "]",
                         validateable.getErrors());
             }
             return true;
@@ -291,17 +314,17 @@ public class ClosureEventListener
     }
 
     @Override
-    public void onMerge(MergeEvent event) {}
+    public void onMerge(MergeEvent event) { }
 
     @Override
-    public void onMerge(MergeEvent event, MergeContext copiedAlready) {}
+    public void onMerge(MergeEvent event, MergeContext copiedAlready) { }
 
     @Override
-    public void onPersist(PersistEvent event) {}
+    public void onPersist(PersistEvent event) { }
 
     @Override
-    public void onPersist(PersistEvent event, PersistContext createdAlready) {}
+    public void onPersist(PersistEvent event, PersistContext createdAlready) { }
 
     @Override
-    public void injectCallbackRegistry(CallbackRegistry callbackRegistry) {}
+    public void injectCallbackRegistry(CallbackRegistry callbackRegistry) { }
 }

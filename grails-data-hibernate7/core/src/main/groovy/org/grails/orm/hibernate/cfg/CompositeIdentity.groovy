@@ -80,7 +80,7 @@ class CompositeIdentity extends Property implements HibernateIdentity {
         }
 
         if (composite.length == 0) {
-            throw new MappingException("No composite identifier properties found for class [" + domainClass.getName() + "]");
+            throw new MappingException("No composite identifier properties found for class [${domainClass.name}]")
         }
 
         composite

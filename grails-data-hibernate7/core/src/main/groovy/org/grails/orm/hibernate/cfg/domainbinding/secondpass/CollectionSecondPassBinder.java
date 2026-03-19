@@ -18,14 +18,15 @@
  */
 package org.grails.orm.hibernate.cfg.domainbinding.secondpass;
 
-import java.util.*;
 import java.util.Map;
+import java.util.Optional;
 
 import jakarta.annotation.Nonnull;
 
 import org.hibernate.MappingException;
-import org.hibernate.mapping.*;
 import org.hibernate.mapping.Collection;
+import org.hibernate.mapping.OneToMany;
+import org.hibernate.mapping.PersistentClass;
 
 import org.grails.orm.hibernate.cfg.domainbinding.binder.CollectionForPropertyConfigBinder;
 import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernateManyToManyProperty;
@@ -102,8 +103,8 @@ public class CollectionSecondPassBinder {
             manyToManyElementBinder.bind(manyToMany, collection);
         } else if (property.isBidirectionalOneToManyMap() && property.isBidirectional()) {
             bidirectionalMapElementBinder.bind(property, collection);
-        } else if (property instanceof HibernateOneToManyProperty oneToManyProperty
-                && oneToManyProperty.isUnidirectionalOneToMany()) {
+        } else if (property instanceof HibernateOneToManyProperty oneToManyProperty &&
+                oneToManyProperty.isUnidirectionalOneToMany()) {
             unidirectionalOneToManyBinder.bind(oneToManyProperty, collection);
         } else if (property.supportsJoinColumnMapping()) {
             collectionWithJoinTableBinder.bindCollectionWithJoinTable(property, collection);

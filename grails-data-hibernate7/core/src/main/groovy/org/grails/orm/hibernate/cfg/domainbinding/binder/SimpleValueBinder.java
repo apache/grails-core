@@ -101,10 +101,10 @@ public class SimpleValueBinder {
         if (generator != null && simpleValue instanceof BasicValue basicValue) {
             basicValue.setCustomIdGeneratorCreator(context -> createGenerator(
                     property,
-                    context.getValue() == null
-                            ? new org.grails.orm.hibernate.cfg.domainbinding.util.GeneratorCreationContextWrapper(
-                                    context, basicValue)
-                            : context,
+                    context.getValue() == null ?
+                            new org.grails.orm.hibernate.cfg.domainbinding.util.GeneratorCreationContextWrapper(
+                                    context, basicValue) :
+                            context,
                     generator));
         }
 

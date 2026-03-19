@@ -27,7 +27,14 @@ import org.checkerframework.checker.initialization.qual.Initialized;
 import org.checkerframework.checker.nullness.qual.NonNull;
 import org.checkerframework.checker.nullness.qual.UnknownKeyFor;
 import org.hibernate.MappingException;
-import org.hibernate.property.access.spi.*;
+import org.hibernate.property.access.spi.Getter;
+import org.hibernate.property.access.spi.GetterFieldImpl;
+import org.hibernate.property.access.spi.GetterMethodImpl;
+import org.hibernate.property.access.spi.PropertyAccess;
+import org.hibernate.property.access.spi.PropertyAccessStrategy;
+import org.hibernate.property.access.spi.Setter;
+import org.hibernate.property.access.spi.SetterFieldImpl;
+import org.hibernate.property.access.spi.SetterMethodImpl;
 
 import org.springframework.util.ReflectionUtils;
 
@@ -61,19 +68,19 @@ public class TraitPropertyAccessStrategy implements PropertyAccessStrategy {
             // See https://issues.apache.org/jira/browse/GROOVY-11512
             Method booleanReadMethod =
                     ReflectionUtils.findMethod(containerJavaType, NameUtils.getGetterName(propertyName, true));
-            if (booleanReadMethod != null
-                    && (booleanReadMethod.getReturnType() == Boolean.class
-                            || booleanReadMethod.getReturnType() == boolean.class)) {
+            if (booleanReadMethod != null &&
+                    (booleanReadMethod.getReturnType() == Boolean.class ||
+                            booleanReadMethod.getReturnType() == boolean.class)) {
                 readMethod = booleanReadMethod;
             }
         }
 
         if (readMethod == null) {
-            throw new IllegalStateException("TraitPropertyAccessStrategy used on property ["
-                    + propertyName
-                    + "] of class ["
-                    + containerJavaType.getName()
-                    + "] that is not provided by a trait!");
+            throw new IllegalStateException("TraitPropertyAccessStrategy used on property [" +
+                    propertyName +
+                    "] of class [" +
+                    containerJavaType.getName() +
+                    "] that is not provided by a trait!");
         }
 
         Traits.Implemented traitImplemented = readMethod.getAnnotation(Traits.Implemented.class);
@@ -83,11 +90,11 @@ public class TraitPropertyAccessStrategy implements PropertyAccessStrategy {
             if (traitBridge != null) {
                 traitFieldName = getTraitFieldName(traitBridge.traitClass(), propertyName);
             } else {
-                throw new IllegalStateException("TraitPropertyAccessStrategy used on property ["
-                        + propertyName
-                        + "] of class ["
-                        + containerJavaType.getName()
-                        + "] that is not provided by a trait!");
+                throw new IllegalStateException("TraitPropertyAccessStrategy used on property [" +
+                        propertyName +
+                        "] of class [" +
+                        containerJavaType.getName() +
+                        "] that is not provided by a trait!");
             }
         } else {
             traitFieldName = getTraitFieldName(readMethod.getDeclaringClass(), propertyName);
@@ -102,11 +109,11 @@ public class TraitPropertyAccessStrategy implements PropertyAccessStrategy {
                     containerJavaType, NameUtils.getSetterName(propertyName), readMethod.getReturnType());
             if (writeMethod == null) {
                 if (setterRequired) {
-                    throw new MappingException("TraitPropertyAccessStrategy used on property ["
-                            + propertyName
-                            + "] of class ["
-                            + containerJavaType.getName()
-                            + "] that has no setter!");
+                    throw new MappingException("TraitPropertyAccessStrategy used on property [" +
+                            propertyName +
+                            "] of class [" +
+                            containerJavaType.getName() +
+                            "] that has no setter!");
                 }
                 setter = null;
             } else {

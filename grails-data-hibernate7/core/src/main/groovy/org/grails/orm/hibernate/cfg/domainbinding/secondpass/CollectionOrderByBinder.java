@@ -54,11 +54,11 @@ public class CollectionOrderByBinder {
 
         if (property.hasSort()) {
             if (!property.isBidirectional() && property instanceof HibernateOneToManyProperty) {
-                throw new DatastoreConfigurationException("Default sort for associations ["
-                        + property.getHibernateOwner().getName()
-                        + "->"
-                        + property.getName()
-                        + "] are not supported with unidirectional one to many relationships.");
+                throw new DatastoreConfigurationException("Default sort for associations [" +
+                        property.getHibernateOwner().getName() +
+                        "->" +
+                        property.getName() +
+                        "] are not supported with unidirectional one to many relationships.");
             }
             HibernatePersistentProperty sortBy = referenced.getHibernatePropertyByName(property.getSort());
             String order = Optional.ofNullable(property.getOrder()).orElse("asc");

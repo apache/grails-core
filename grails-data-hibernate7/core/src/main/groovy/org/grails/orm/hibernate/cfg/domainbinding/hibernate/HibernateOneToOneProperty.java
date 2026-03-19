@@ -39,9 +39,9 @@ public class HibernateOneToOneProperty extends OneToOneWithMapping<PropertyConfi
     public void validateAssociation() {
         HibernateToOneProperty.super.validateAssociation();
         if (isHasOne() && !isBidirectional()) {
-            throw new MappingException("hasOne property ["
-                    + getName()
-                    + "] is not bidirectional. Specify the other side of the relationship!");
+            throw new MappingException("hasOne property [" +
+                    getName() +
+                    "] is not bidirectional. Specify the other side of the relationship!");
         }
     }
 
@@ -67,9 +67,9 @@ public class HibernateOneToOneProperty extends OneToOneWithMapping<PropertyConfi
      */
     public String getHibernateReferencedEntityName() {
         HibernateOneToOneProperty otherSide = getHibernateInverseSide();
-        return otherSide != null
-                ? otherSide.getOwner().getName()
-                : getAssociatedEntity().getName();
+        return otherSide != null ?
+                otherSide.getOwner().getName() :
+                getAssociatedEntity().getName();
     }
 
     /**
@@ -102,8 +102,8 @@ public class HibernateOneToOneProperty extends OneToOneWithMapping<PropertyConfi
 
     public boolean isValidHibernateOneToOne() {
         validateAssociation();
-        return canBindOneToOneWithSingleColumnAndForeignKey()
-                || isHasOne() && isBidirectional() && getInverseSide() != null;
+        return canBindOneToOneWithSingleColumnAndForeignKey() ||
+                isHasOne() && isBidirectional() && getInverseSide() != null;
     }
 
     public boolean isValidHibernateManyToOne() {

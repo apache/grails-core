@@ -20,15 +20,17 @@ package org.grails.orm.hibernate.cfg.domainbinding.secondpass;
 
 import jakarta.annotation.Nonnull;
 
-import org.hibernate.mapping.*;
+import org.hibernate.mapping.Collection;
+import org.hibernate.mapping.SimpleValue;
 
-import org.grails.orm.hibernate.cfg.*;
+import org.grails.orm.hibernate.cfg.CompositeIdentity;
+import org.grails.orm.hibernate.cfg.PersistentEntityNamingStrategy;
 import org.grails.orm.hibernate.cfg.domainbinding.binder.CollectionForPropertyConfigBinder;
 import org.grails.orm.hibernate.cfg.domainbinding.binder.CompositeIdentifierToManyToOneBinder;
 import org.grails.orm.hibernate.cfg.domainbinding.binder.SimpleValueColumnBinder;
 import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernateToManyProperty;
 
-import static org.grails.orm.hibernate.cfg.domainbinding.binder.GrailsDomainBinder.*;
+import static org.grails.orm.hibernate.cfg.domainbinding.binder.GrailsDomainBinder.EMPTY_PATH;
 
 /** Binds a collection with a join table. */
 @SuppressWarnings("PMD.DataflowAnomalyAnalysis")

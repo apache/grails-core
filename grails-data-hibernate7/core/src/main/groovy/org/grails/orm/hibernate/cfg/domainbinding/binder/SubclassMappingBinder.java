@@ -26,7 +26,6 @@ import org.hibernate.mapping.Subclass;
 
 import org.grails.orm.hibernate.cfg.GrailsHibernateUtil;
 import org.grails.orm.hibernate.cfg.Mapping;
-import org.grails.orm.hibernate.cfg.domainbinding.hibernate.GrailsHibernatePersistentEntity;
 import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernatePersistentEntity;
 
 public class SubclassMappingBinder {

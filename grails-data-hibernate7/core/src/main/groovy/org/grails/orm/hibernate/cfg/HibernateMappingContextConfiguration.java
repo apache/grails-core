@@ -21,7 +21,15 @@ package org.grails.orm.hibernate.cfg;
 import java.io.IOException;
 import java.io.Serial;
 import java.io.Serializable;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.Collection;
+import java.util.Collections;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Map;
+import java.util.Properties;
+import java.util.Set;
+
 import javax.sql.DataSource;
 
 import jakarta.annotation.Nullable;
@@ -136,8 +144,8 @@ public class HibernateMappingContextConfiguration extends Configuration
         getProperties().put(JdbcSettings.JAKARTA_NON_JTA_DATASOURCE, source);
         getProperties().put(Environment.CURRENT_SESSION_CONTEXT_CLASS, GrailsSessionContext.class.getName());
         final ClassLoader contextClassLoader = Thread.currentThread().getContextClassLoader();
-        if (contextClassLoader != null
-                && contextClassLoader.getClass().getSimpleName().equalsIgnoreCase("RestartClassLoader")) {
+        if (contextClassLoader != null &&
+                contextClassLoader.getClass().getSimpleName().equalsIgnoreCase("RestartClassLoader")) {
             getProperties().put(AvailableSettings.CLASSLOADERS, contextClassLoader);
         } else {
             getProperties()
@@ -192,9 +200,9 @@ public class HibernateMappingContextConfiguration extends Configuration
         try {
             MetadataReaderFactory readerFactory = new CachingMetadataReaderFactory(resourcePatternResolver);
             for (String pkg : packagesToScan) {
-                String pattern = ResourcePatternResolver.CLASSPATH_ALL_URL_PREFIX
-                        + ClassUtils.convertClassNameToResourcePath(pkg)
-                        + RESOURCE_PATTERN;
+                String pattern = ResourcePatternResolver.CLASSPATH_ALL_URL_PREFIX +
+                        ClassUtils.convertClassNameToResourcePath(pkg) +
+                        RESOURCE_PATTERN;
                 Resource[] resources = resourcePatternResolver.getResources(pattern);
                 for (Resource resource : resources) {
                     if (resource.isReadable()) {
@@ -202,9 +210,9 @@ public class HibernateMappingContextConfiguration extends Configuration
                         String className = reader.getClassMetadata().getClassName();
                         if (matchesFilter(reader, readerFactory)) {
                             ClassLoader classLoader = resourcePatternResolver.getClassLoader();
-                            Class<?> loadedClass = classLoader != null
-                                    ? classLoader.loadClass(className)
-                                    : ClassUtils.forName(className, null);
+                            Class<?> loadedClass = classLoader != null ?
+                                    classLoader.loadClass(className) :
+                                    ClassUtils.forName(className, null);
                             addAnnotatedClasses(loadedClass);
                         }
                     }

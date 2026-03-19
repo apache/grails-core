@@ -64,7 +64,6 @@ public class ComponentBinder {
                 (GrailsHibernatePersistentEntity) embeddedProperty.getAssociatedEntity();
         mappingCacheHolder.cacheMapping(associatedEntity);
 
-
         PersistentClass persistentClass = component.getOwner();
         associatedEntity.setPersistentClass(persistentClass);
         Table table = associatedEntity.getPersistentClass().getTable();

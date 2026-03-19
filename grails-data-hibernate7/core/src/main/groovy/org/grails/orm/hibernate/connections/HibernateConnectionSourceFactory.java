@@ -23,6 +23,7 @@ import java.io.IOException;
 import java.io.Serializable;
 import java.util.Collections;
 import java.util.Map;
+
 import javax.sql.DataSource;
 
 import jakarta.annotation.Nullable;
@@ -146,9 +147,9 @@ public class HibernateConnectionSourceFactory
 
         configuration.setEventListeners(hibernateSettings.toHibernateEventListeners(eventTriggeringInterceptor));
         configuration.setHibernateEventListeners(
-                this.hibernateEventListeners != null
-                        ? this.hibernateEventListeners
-                        : hibernateSettings.getHibernateEventListeners());
+                this.hibernateEventListeners != null ?
+                        this.hibernateEventListeners :
+                        hibernateSettings.getHibernateEventListeners());
         configuration.setHibernateMappingContext(mappingContext);
         configuration.setDataSourceName(name);
         configuration.setSessionFactoryBeanName(
@@ -283,8 +284,8 @@ public class HibernateConnectionSourceFactory
         DataSourceSettings dsFallback = extractDataSourceFallback(fallbackSettings);
         HibernateConnectionSourceSettings settings =
                 new HibernateConnectionSourceSettingsBuilder(configuration, prefix, fallbackSettings).build();
-        if (prefix.isEmpty()
-                || configuration
+        if (prefix.isEmpty() ||
+                configuration
                         .getProperty(prefix + ".dataSource", Map.class, Collections.emptyMap())
                         .isEmpty()) {
             settings.setDataSource(new DataSourceSettingsBuilder(configuration, prefix, dsFallback).build());

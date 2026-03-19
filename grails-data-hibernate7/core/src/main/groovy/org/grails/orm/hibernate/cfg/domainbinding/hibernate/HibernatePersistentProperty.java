@@ -48,9 +48,9 @@ public interface HibernatePersistentProperty extends PersistentProperty<Property
     }
 
     default GrailsHibernatePersistentEntity getHibernateAssociatedEntity() {
-        return this instanceof Association<?> association
-                ? (GrailsHibernatePersistentEntity) association.getAssociatedEntity()
-                : null;
+        return this instanceof Association<?> association ?
+                (GrailsHibernatePersistentEntity) association.getAssociatedEntity() :
+                null;
     }
 
     /**
@@ -206,6 +206,6 @@ public interface HibernatePersistentProperty extends PersistentProperty<Property
     }
 
     default Table getTable() {
-      return getHibernateOwner().getPersistentClass().getTable();
+        return getHibernateOwner().getPersistentClass().getTable();
     }
 }

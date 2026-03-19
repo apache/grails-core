@@ -88,8 +88,8 @@ public class NamingStrategyProvider {
         if (Objects.isNull(sessionFactoryBeanName) || sessionFactoryBeanName.isBlank()) {
             return ConnectionSource.DEFAULT;
         }
-        return "sessionFactory".equals(sessionFactoryBeanName)
-                ? ConnectionSource.DEFAULT
-                : sessionFactoryBeanName.substring("sessionFactory_".length());
+        return "sessionFactory".equals(sessionFactoryBeanName) ?
+                ConnectionSource.DEFAULT :
+                sessionFactoryBeanName.substring("sessionFactory_".length());
     }
 }

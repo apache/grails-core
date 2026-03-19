@@ -69,11 +69,11 @@ public class GrailsIncrementGenerator extends IncrementGenerator {
         // Resolve column name — fall back to "id" if the property path is dotted (composite)
         String columnName = context.getProperty().getName();
         if (columnName == null || columnName.contains(".")) {
-            columnName = (mappedId != null
-                            && mappedId.getName() != null
-                            && !mappedId.getName().contains("."))
-                    ? mappedId.getName()
-                    : "id";
+            columnName = (mappedId != null &&
+                            mappedId.getName() != null &&
+                            !mappedId.getName().contains(".")) ?
+                    mappedId.getName() :
+                    "id";
         }
         params.put(COLUMN, columnName);
 

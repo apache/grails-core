@@ -162,8 +162,8 @@ public class HibernateCriteriaBuilder extends GroovyObjectSupport implements Bui
     }
 
     public final void setDatastore(HibernateDatastore datastore) {
-        if (MultiTenant.class.isAssignableFrom(targetClass)
-                && datastore.getMultiTenancyMode() == MultiTenancySettings.MultiTenancyMode.DISCRIMINATOR) {
+        if (MultiTenant.class.isAssignableFrom(targetClass) &&
+                datastore.getMultiTenancyMode() == MultiTenancySettings.MultiTenancyMode.DISCRIMINATOR) {
             datastore.enableMultiTenancyFilter();
         }
     }
@@ -996,9 +996,9 @@ public class HibernateCriteriaBuilder extends GroovyObjectSupport implements Bui
      */
     @Override
     public Criteria order(String propertyName, String directionString) {
-        Query.Order.Direction direction = Query.Order.Direction.DESC.name().equalsIgnoreCase(directionString)
-                ? Query.Order.Direction.DESC
-                : Query.Order.Direction.ASC;
+        Query.Order.Direction direction = Query.Order.Direction.DESC.name().equalsIgnoreCase(directionString) ?
+                Query.Order.Direction.DESC :
+                Query.Order.Direction.ASC;
         hibernateQuery.order(new Query.Order(propertyName, direction));
         return this;
     }
@@ -1175,9 +1175,9 @@ public class HibernateCriteriaBuilder extends GroovyObjectSupport implements Bui
     @SuppressWarnings("rawtypes")
     @Override
     public Object invokeMethod(String name, Object obj) {
-        Object[] args = obj.getClass().isArray()
-                ? (Object[]) obj
-                : (obj instanceof Collection ? ((Collection) obj).toArray() : new Object[] {obj});
+        Object[] args = obj.getClass().isArray() ?
+                (Object[]) obj :
+                (obj instanceof Collection ? ((Collection) obj).toArray() : new Object[] {obj});
         return new CriteriaMethodInvoker(this).invokeMethod(name, args);
     }
 

@@ -26,7 +26,9 @@ import org.hibernate.mapping.Table;
 import org.grails.orm.hibernate.cfg.ColumnConfig;
 
 import static java.lang.String.format;
-import static java.util.Optional.*;
+import static java.util.Optional.empty;
+import static java.util.Optional.of;
+import static java.util.Optional.ofNullable;
 
 public class IndexBinder {
     public void bindIndex(@Nonnull String columnName, @Nonnull Column column, ColumnConfig cc, @Nonnull Table table) {

@@ -41,8 +41,8 @@ public class ComponentUpdater {
             Value value) {
         Property persistentProperty = propertyFromValueCreator.createProperty(value, currentGrailsProp);
         component.addProperty(persistentProperty);
-        if (componentProperty != null
-                && componentProperty.getHibernateOwner().isComponentPropertyNullable(componentProperty)) {
+        if (componentProperty != null &&
+                componentProperty.getHibernateOwner().isComponentPropertyNullable(componentProperty)) {
             for (Column c : value.getColumns()) {
                 c.setNullable(true);
             }

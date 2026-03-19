@@ -121,9 +121,9 @@ public class HqlListQueryBuilder {
     }
 
     private static String direction(String raw) {
-        return HibernateQueryArgument.ORDER_DESC.value().equalsIgnoreCase(raw)
-                ? HibernateQueryArgument.ORDER_DESC.value()
-                : HibernateQueryArgument.ORDER_ASC.value();
+        return HibernateQueryArgument.ORDER_DESC.value().equalsIgnoreCase(raw) ?
+                HibernateQueryArgument.ORDER_DESC.value() :
+                HibernateQueryArgument.ORDER_ASC.value();
     }
 
     private boolean isIgnoreCase() {

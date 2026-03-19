@@ -34,6 +34,7 @@ public class HibernateEmbeddedCollectionProperty extends EmbeddedCollectionWithM
         implements HibernateToManyProperty {
 
     private Collection collection;
+
     public HibernateEmbeddedCollectionProperty(
             PersistentEntity entity, MappingContext context, PropertyDescriptor property) {
         super(entity, context, property);
@@ -42,6 +43,7 @@ public class HibernateEmbeddedCollectionProperty extends EmbeddedCollectionWithM
     public Collection getCollection() {
         return collection;
     }
+
     public void setCollection(Collection collection) {
         this.collection = collection;
     }
