@@ -53,7 +53,6 @@ These tests live in `grails-datamapping-tck` and are deliberately excluded for H
 | `RLikeSpec` | 1 | `@IgnoreIf(hibernate7.gorm.suite == true)` | `rlike` not supported in HQL / H2 in Hibernate 7 mode                                          |
 | `DirtyCheckingAfterListenerSpec` | 1 | `@PendingFeatureIf(!hibernate5/6/mongodb)` | `test state change from listener update the object` — pending for Hibernate 7                  |
 | `DomainEventsSpec` | 1 | `@PendingFeature(reason='Was previously @Ignore')` | `Test bean autowiring` — pending across all suites                                             |
-| `WhereQueryConnectionRoutingSpec` | 5 | `@Requires(manager.supportsMultipleDataSources())` | Multiple datasource routing not supported in the TCK test manager                              |
 
 
 
