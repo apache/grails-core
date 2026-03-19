@@ -21,7 +21,13 @@ package grails.gorm.specs.hasmany
 import grails.gorm.annotation.Entity
 import grails.gorm.specs.HibernateGormDatastoreSpec
 import grails.gorm.transactions.Rollback
+import jakarta.persistence.CascadeType
+import jakarta.persistence.Entity as JpaEntity
+import jakarta.persistence.GeneratedValue
+import jakarta.persistence.Id
+import jakarta.persistence.OneToMany
 import spock.lang.Issue
+import spock.lang.PendingFeature
 
 /**
  * @author Graeme Rocher
@@ -30,7 +36,7 @@ import spock.lang.Issue
 class TwoUnidirectionalHasManySpec extends HibernateGormDatastoreSpec {
 
     def setupSpec() {
-        manager.addAllDomainClasses([EcmMask, EcmUser])
+        manager.addAllDomainClasses([EcmMask, EcmUser, EcmMaskJpa, JpaUser])
     }
 
     @Rollback
@@ -49,6 +55,25 @@ class TwoUnidirectionalHasManySpec extends HibernateGormDatastoreSpec {
         mask != null
         mask.createUsers.size() == 1
         mask.updateUsers.size() == 1
+    }
+
+    @Rollback
+    @Issue('https://github.com/apache/grails-core/issues/10811')
+    @PendingFeature(reason = 'JPA @OneToMany unidirectional mapping generates non-nullable join column in Hibernate 7')
+    void "test two JPA unidirectional one to many references"() {
+        when:
+        def jpa = new EcmMaskJpa(name: "test")
+        jpa.createdUsers.add(new JpaUser(name: "Fred"))
+        jpa.updatedUsers.add(new JpaUser(name: "Bob"))
+        jpa.save(flush: true, failOnError: true)
+        session.clear()
+
+        EcmMaskJpa mask = EcmMaskJpa.first()
+
+        then:
+        mask != null
+        mask.createdUsers.size() == 1
+        mask.updatedUsers.size() == 1
     }
 
 }
@@ -110,4 +135,26 @@ class EcmUser {
         maskForUpdated column: 'mask_updated_id'
     }
 
+}
+
+@JpaEntity
+class EcmMaskJpa {
+    @Id
+    @GeneratedValue
+    Long id
+    String name
+
+    @OneToMany(cascade = CascadeType.ALL)
+    Set<JpaUser> createdUsers = []
+
+    @OneToMany(cascade = CascadeType.ALL)
+    Set<JpaUser> updatedUsers = []
+}
+
+@JpaEntity
+class JpaUser {
+    @Id
+    @GeneratedValue
+    Long id
+    String name
 }
