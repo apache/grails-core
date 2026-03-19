@@ -589,6 +589,22 @@ public abstract class Query implements Cloneable {
         return results.isEmpty() ? null : results.get(0);
     }
 
+    /**
+     * Counts the rows this query would return, respecting any existing projections or grouping.
+     * Subclasses may override to provide an optimized implementation (e.g., derived-table count).
+     * The default implementation falls back to loading all rows when user-defined projections
+     * exist, since appending a count projection would produce incorrect results.
+     *
+     * @return The row count
+     */
+    public Number countResults() {
+        if (!projections.getProjectionList().isEmpty()) {
+            return list().size();
+        }
+        projections().count();
+        return (Number) singleResult();
+    }
+
     private List doList() {
         flushBeforeQuery();
 

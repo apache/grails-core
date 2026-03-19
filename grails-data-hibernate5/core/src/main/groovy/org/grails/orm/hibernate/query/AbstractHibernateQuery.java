@@ -566,6 +566,15 @@ public abstract class AbstractHibernateQuery extends Query {
     }
 
     @Override
+    public Number countResults() {
+        if (hibernateProjectionList != null && !hibernateProjectionList.isEmpty()) {
+            return list().size();
+        }
+        projections().count();
+        return (Number) singleResult();
+    }
+
+    @Override
     public Query max(int max) {
         if (criteria != null)
             criteria.setMaxResults(max);
