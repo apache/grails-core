@@ -32,32 +32,37 @@ import grails.plugins.exceptions.PluginException;
 import org.grails.spring.RuntimeSpringConfiguration;
 
 /**
- * Handles the loading and management of plug-ins in the Grails framework.
- * A plugin is just like a normal Grails application except that it contains
- * a class with a name ending with *GrailsPlugin.
+ * Handles the loading and management of plugins in the Grails framework.
  * <p>
- * This plugin descriptor class is a Groovy class that has a version and optionally
- * closures called doWithSpring and doWithApplicationContext.
+ * A plugin is just like a normal Grails application, except it contains
+ * a Groovy "plugin descriptor class" which has a name ending with {@code GrailsPlugin}.
  * <p>
- * The doWithSpring closure uses the BeanBuilder syntax (@see grails.spring.BeanBuilder) to
- * provide runtime configuration of Grails via Spring
+ * This plugin descriptor class has a {@link GrailsPluginInfo#getVersion() version}
+ * property and optionally Closure properties that are event handlers used to react to
+ * {@link grails.core.GrailsApplicationLifeCycle Grails lifecycle} events,
+ * like {@link grails.core.GrailsApplicationLifeCycle#doWithSpring doWithSpring} and
+ * {@link grails.core.GrailsApplicationLifeCycle#doWithApplicationContext doWithApplicationContext}.
  * <p>
- * The doWithApplicationContext closure is called after the Spring ApplicationContext is built
- * and accepts a single argument (the ApplicationContext)
+ * The {@link grails.core.GrailsApplicationLifeCycle#doWithSpring doWithSpring} Closure uses the
+ * {@link grails.spring.BeanBuilder} DSL to provide runtime configuration of Grails via Spring.
+ * <p>
+ * The {@link grails.core.GrailsApplicationLifeCycle#doWithApplicationContext doWithApplicationContext}
+ * Closure is called after the Spring {@link ApplicationContext} is built and accepts a single argument -
+ * the application context.
  *
  * <p>
  * Example:
  * <pre>
  * class ClassEditorGrailsPlugin {
- *      def version = 1.1
+ *      def version = '1.1'
  *      def doWithSpring = { application ->
  *          classEditor(org.springframework.beans.propertyeditors.ClassEditor, application.classLoader)
  *      }
  * }
  * </pre>
  * <p>
- * The plugin descriptor class can also define "dependsOn" and "evict" properties that specify
- * what plugins the plugin depends on and which ones it is incompatible with and should evict
+ * The plugin descriptor class can also optionally define {@code dependsOn} and {@code evict} properties that
+ * specify any other plugins that the plugin depends on and any plugins it is incompatible with and should evict.
  *
  * @author Graeme Rocher
  * @since 0.4
@@ -67,42 +72,45 @@ public interface GrailsPluginManager extends ApplicationContextAware {
     String BEAN_NAME = "pluginManager";
 
     /**
-     * Returns an array of all the loaded plug-ins
-     * @return An array of plug-ins
+     * Returns all loaded plugins.
+     *
+     * @return All loaded plugins
      */
     GrailsPlugin[] getAllPlugins();
 
     /**
-     * Gets plugin installed by the user and not provided by the framework
-     * @return A list of user plugins
+     * Returns plugins installed by the user (e.g., not provided by the core framework).
+     *
+     * @return All user plugins
      */
     GrailsPlugin[] getUserPlugins();
 
     /**
-     * @return An array of plugins that failed to load due to dependency resolution errors
+     * Returns any plugins that failed to load due to dependency resolution errors.
+     *
+     * @return All plugins that failed to load
      */
     GrailsPlugin[] getFailedLoadPlugins();
 
     /**
-     * Performs the initial load of plug-ins throwing an exception if any dependencies
-     * don't resolve
+     * Performs the initial load of plugins.
      *
-     * @throws PluginException Thrown when an error occurs loading the plugins
+     * @throws PluginException if any error occurs when loading the plugins
      */
     void loadPlugins() throws PluginException;
 
     /**
-     * Executes the runtime configuration phase of plug-ins
+     * Executes the runtime configuration phase of the loaded plugins (e.g., {@code doWithSpring}).
      *
-     * @param springConfig The RuntimeSpringConfiguration instance
+     * @param springConfig The {@link RuntimeSpringConfiguration} instance
      */
     void doRuntimeConfiguration(RuntimeSpringConfiguration springConfig);
 
     /**
-     * Performs post-initialization configuration for each plug-in, passing
-     * the built application context
+     * Performs post-initialization configuration for each plugin,
+     * passing the built application context (e.g., {@code doWithApplicationContext}).
      *
-     * @param applicationContext The ApplicationContext instance
+     * @param applicationContext The {@link ApplicationContext Spring application context}
      */
     void doPostProcessing(ApplicationContext applicationContext);
 
@@ -112,28 +120,30 @@ public interface GrailsPluginManager extends ApplicationContextAware {
     void doDynamicMethods();
 
     /**
-     * Executes the {@link Plugin#onStartup(Map)} hook for all plugins
+     * Executes the {@link Plugin#onStartup(Map)} hook for all plugins.
      *
      * @param event the Event
      */
     void onStartup(Map<String, Object> event);
 
     /**
-     * Retrieves a name Grails plugin instance
+     * Retrieves the Grails plugin instance with the given name.
      *
      * @param name The name of the plugin
-     * @return The GrailsPlugin instance or null if it doesn't exist
+     * @return The {@link GrailsPlugin} instance, or null if it doesn't exist
      */
     GrailsPlugin getGrailsPlugin(String name);
 
     /**
-     * Obtains a GrailsPlugin for the given classname
-     * @param name The name of the plugin
-     * @return The instance
+     * Retrieves the Grails plugin for the given class name.
+     *
+     * @param name The class name of the plugin
+     * @return A {@link GrailsPlugin} instance, or null if it doesn't exist
      */
     GrailsPlugin getGrailsPluginForClassName(String name);
 
     /**
+     * Checks whether the manager has a loaded plugin with the given name
      *
      * @param name The name of the plugin
      * @return true if the manager has a loaded plugin with the given name
@@ -141,24 +151,24 @@ public interface GrailsPluginManager extends ApplicationContextAware {
     boolean hasGrailsPlugin(String name);
 
     /**
-     * Retrieves a plug-in that failed to load, or null if it doesn't exist
+     * Retrieves a plugin that failed to load, or null if it doesn't exist.
      *
      * @param name The name of the plugin
-     * @return A GrailsPlugin or null
+     * @return A {@link GrailsPlugin} instance, or null if it doesn't exist
      */
     GrailsPlugin getFailedPlugin(String name);
 
     /**
-     * Retrieves a plug-in for its name and version
+     * Retrieves a plugin with the given name and version.
      *
      * @param name The name of the plugin
      * @param version The version of the plugin
-     * @return The GrailsPlugin instance or null if it doesn't exist
+     * @return A {@link GrailsPlugin} instance, or null if it doesn't exist
      */
     GrailsPlugin getGrailsPlugin(String name, Object version);
 
     /**
-     * Executes the runtime configuration for a specific plugin AND all its dependencies
+     * Executes the runtime configuration for a specific plugin AND all its dependencies.
      *
      * @param pluginName The name of the plugin
      * @param springConfig The runtime spring config instance
@@ -166,35 +176,40 @@ public interface GrailsPluginManager extends ApplicationContextAware {
     void doRuntimeConfiguration(String pluginName, RuntimeSpringConfiguration springConfig);
 
     /**
-     * Sets the GrailsApplication used by this plugin manager
-     * @param application The GrailsApplication instance
+     * Assigns the {@link GrailsApplication} instance to be used by this plugin manager.
+     * @param application The {@link GrailsApplication} instance to use
      */
     void setApplication(GrailsApplication application);
 
     /**
-     * @return the initialised
+     * Returns whether the manager has been initialised or not.
+     *
+     * @return the initialisation status of the manager
      */
     boolean isInitialised();
 
     /**
-     * Refreshes the specified plugin. A refresh will force the plugin to "touch" each of its watched resources
-     * and fire modified events for each
+     * Refreshes the plugin with the given name.
+     * <p>
+     * A refresh will force the plugin to "touch" each of its watched resources
+     * and fire modified events for each of them.
      *
      * @param name The name of the plugin to refresh
      */
     void refreshPlugin(String name);
 
     /**
-     * Retrieves a collection of plugins that are observing the specified plugin
+     * Retrieves a collection of plugins that are observing the specified {@link GrailsPlugin plugin}.
      *
-     * @param plugin The plugin to retrieve observers for
+     * @param plugin The {@link GrailsPlugin plugin} to retrieve observers for
      * @return A collection of observers
      */
     @SuppressWarnings("rawtypes")
     Collection getPluginObservers(GrailsPlugin plugin);
 
     /**
-     * Notify observers of the specified plugin of the event described by the given Map
+     * Notify observers of the {@link GrailsPlugin plugin} with the given name
+     * of the event described by the given {@link Map}.
      *
      * @param pluginName The name of the plugin
      * @param event The event
@@ -203,45 +218,49 @@ public interface GrailsPluginManager extends ApplicationContextAware {
     void informObservers(String pluginName, Map event);
 
     /**
-     * Called prior to the initialisation of the GrailsApplication object to allow registration of additional ArtefactHandler objects
+     * Called prior to the initialisation of the {@link GrailsApplication} object
+     * to allow registration of additional {@link grails.core.ArtefactHandler} objects.
      *
      * @see grails.core.ArtefactHandler
      */
     void doArtefactConfiguration();
 
     /**
-     * Registers pre-compiled artefacts with the GrailsApplication instance, only overriding if the
-     * application doesn't already provide an artefact of the same name.
+     * Registers pre-compiled artefacts with the {@link GrailsApplication} instance,
+     * only overriding if the application doesn't already provide an artefact of the same name.
      *
-     * @param application The GrailsApplication object
+     * @param application The {@link GrailsApplication} instance
      */
     void registerProvidedArtefacts(GrailsApplication application);
 
     /**
-     * Shuts down the PluginManager
+     * Shuts down this plugin manager.
      */
     void shutdown();
 
     /**
-     * Set whether the core plugins should be loaded
-     * @param shouldLoadCorePlugins True if they should
+     * Set whether the core plugins should be loaded.
+     *
+     * @param shouldLoadCorePlugins True if they should be loaded
      */
     void setLoadCorePlugins(boolean shouldLoadCorePlugins);
 
     /**
-     * Method for handling changes to a class and triggering on change events etc.
-     * @param aClass The class
+     * Method for handling changes to a class and triggering {@link Plugin#onChange onChange} events etc.
+     *
+     * @param aClass The class that has changed
      */
     void informOfClassChange(Class<?> aClass);
 
     /**
-     * Get all the TypeFilter definitions defined by the plugins
-     * @return A list of TypeFilter definitions
+     * Get all the {@link TypeFilter} definitions defined by the plugins.
+     *
+     * @return A list of {@link TypeFilter} definitions
      */
     List<TypeFilter> getTypeFilters();
 
     /**
-     * Returns the pluginContextPath for the given plugin
+     * Returns the plugin path for the {@link GrailsPlugin plugin} with the given name.
      *
      * @param name The plugin name
      * @return the context path
@@ -249,86 +268,106 @@ public interface GrailsPluginManager extends ApplicationContextAware {
     String getPluginPath(String name);
 
     /**
-     * Returns the pluginContextPath for the given plugin and will force the name to camel case instead of '-' lower case
+     * Returns the plugin path for the {@link GrailsPlugin plugin} with the given name.
      * <p>
-     * my-plug-web would resolve to myPlugWeb if forceCamelCase is true.
+     * Will optionally convert the plugin name in the returned path to {@code camelCase} instead
+     * of {@code kebab-case}. For example, {@code my-plug-web} would resolve to {@code myPlugWeb}
+     * if {@code forceCamelCase} is {@code true}.
      *
      * @param name The plugin name
-     * @param forceCamelCase Force camel case for name
-     * @return the context path
+     * @param forceCamelCase Convert the name in the retured path to {@code camelCase}
+     * @return the plugin path
      */
     String getPluginPath(String name, boolean forceCamelCase);
 
     /**
-     * Looks up the plugin that defined the given instance.
-     * If no plugin is defined the instance, then null is returned.
+     * Looks up the {@link GrailsPlugin plugin} that defined the given instance.
+     * If the passed in instance is not an instance of a class annotated with
+     * {@link grails.plugins.metadata.GrailsPlugin}, null is returned.
      *
      * @param instance The instance
-     * @return The plugin that defined the instance or null
+     * @return The {@link GrailsPlugin plugin} that defined the instance or null
      */
     GrailsPlugin getPluginForInstance(Object instance);
 
     /**
-     * Returns the pluginContextPath for the given instance
-     * @param instance The instance
-     * @return The pluginContextPath
+     * Returns the plugin path for the given {@link GrailsPlugin plugin} instance.
+     * @param instance The {@link GrailsPlugin plugin} instance
+     * @return The plugin path or {@code null} if the instance is not an instance of a class
+     *         annotated with {@link grails.plugins.metadata.GrailsPlugin}
      */
     String getPluginPathForInstance(Object instance);
 
     /**
-     * Returns the plugin path for the given class
-     * @param theClass The class
-     * @return The pluginContextPath
+     * Returns the plugin path for the given {@link GrailsPlugin plugin} class.
+     *
+     * @param theClass The {@link GrailsPlugin plugin} class
+     * @return The plugin path or {@code null} if the class is not annotated with
+     *         {@link grails.plugins.metadata.GrailsPlugin}
      */
-    String getPluginPathForClass(Class<? extends Object> theClass);
+    String getPluginPathForClass(Class<?> theClass);
 
     /**
-     * Returns the plugin views directory for the given instance
-     * @param instance The instance
-     * @return The pluginContextPath
+     * Returns the views directory path for the given {@link GrailsPlugin plugin} instance.
+     *
+     * @param instance The {@link GrailsPlugin plugin}  instance
+     * @return The plugin views directory path or {@code null} if the instance is not
+     *         an instance of a class annotated with {@link grails.plugins.metadata.GrailsPlugin}
      */
     String getPluginViewsPathForInstance(Object instance);
 
     /**
-     * Returns the plugin views directory path for the given class
-     * @param theClass The class
-     * @return The pluginContextPath
+     * Returns the views directory path for the given {@link GrailsPlugin plugin} class.
+     *
+     * @param theClass The {@link GrailsPlugin plugin} class
+     * @return The plugin views directory path or {@code null} if the class is not annotated with
+     *         {@link grails.plugins.metadata.GrailsPlugin}
      */
     String getPluginViewsPathForClass(Class<? extends Object> theClass);
 
     /**
-     * Obtains the GrailsPlugin for the given class
+     * Returns the {@link GrailsPlugin plugin} for the given class.
      *
-     * @param theClass The class
-     * @return The GrailsPlugin for the given class or null if not related to any plugin
+     * @param theClass The class to find the {@link GrailsPlugin plugin} for
+     * @return The {@link GrailsPlugin plugin} or null if the class is not an instance of a class annotated with
+     *         {@link grails.plugins.metadata.GrailsPlugin}
      */
     GrailsPlugin getPluginForClass(Class<?> theClass);
 
     /**
-     * Inform of a change in configuration
+     * Informs the plugins of a configuration change event.
      */
     void informPluginsOfConfigChange();
 
     /**
-     * Fire to inform the PluginManager that a particular file changes
+     * Inform the plugins that a particular {@link File file} has changed.
      *
-     * @param file The file that changed
+     * @param file The {@link File file} that changed
      * @since 2.0
      */
     void informOfFileChange(File file);
 
+    /**
+     * Inform the plugins that a particular {@link File file} and it's resulting
+     * compiled class has changed.
+     *
+     * @param file The {@link File file} that changed
+     * @param cls The class that changed
+     */
     void informOfClassChange(File file, @SuppressWarnings("rawtypes") Class cls);
 
     /**
-     * Indicates whether the manager has been shutdown or not
-     * @return True if it was shutdown
+     * Indicates whether this plugin manager has been shutdown or not.
+     *
+     * @return True if it has been shutdown
      */
     boolean isShutdown();
 
     /**
-     * Sets the filter to use to filter for plugins
+     * Sets a {@link PluginFilter filter} to filter which plugins should be loaded
+     * and which should be ignored.
      *
-     * @param pluginFilter The plugin filter
+     * @param pluginFilter The {@link PluginFilter filter} filter
      */
-    public void setPluginFilter(PluginFilter pluginFilter);
+    void setPluginFilter(PluginFilter pluginFilter);
 }
