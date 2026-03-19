@@ -341,6 +341,12 @@ project(':grails-test-examples-hibernate7-spring-boot-hibernate').projectDir = n
 include 'grails-test-examples-hibernate7-grails-data-service'
 project(':grails-test-examples-hibernate7-grails-data-service').projectDir = new File(settingsDir, 'grails-test-examples/hibernate7/grails-data-service')
 
+include 'grails-test-examples-hibernate7-grails-data-service-multi-datasource'
+project(':grails-test-examples-hibernate7-grails-data-service-multi-datasource').projectDir = new File(settingsDir, 'grails-test-examples/hibernate7/grails-data-service-multi-datasource')
+
+include 'grails-test-examples-hibernate7-grails-multitenant-multi-datasource'
+project(':grails-test-examples-hibernate7-grails-multitenant-multi-datasource').projectDir = new File(settingsDir, 'grails-test-examples/hibernate7/grails-multitenant-multi-datasource')
+
 include 'grails-test-examples-hibernate7-grails-hibernate-groovy-proxy'
 project(':grails-test-examples-hibernate7-grails-hibernate-groovy-proxy').projectDir = new File(settingsDir, 'grails-test-examples/hibernate7/grails-hibernate-groovy-proxy')
 

@@ -16,27 +16,19 @@
  *  specific language governing permissions and limitations
  *  under the License.
  */
-package functional.tests
 
-import functional.tests.pages.BookCreatePage
-import functional.tests.pages.BookListPage
-import functional.tests.pages.BookShowPage
-import grails.plugin.geb.ContainerGebSpec
-import grails.testing.mixin.integration.Integration
+package datasources
 
-@Integration(applicationClass = Application)
-class BookControllerSpec extends ContainerGebSpec {
+class UrlMappings {
 
-    void "Test list books"() {
-        expect: 'The book list page can be visited'
-        to(BookListPage)
-    }
+    static mappings = {
+        "/$controller/$action?/$id?(.$format)?" {
+            constraints {
+            }
+        }
 
-    void "Test save book"() {
-        when: 'The create book page is visited and a book is created'
-        to(BookCreatePage).createBook('The Stand')
-
-        then: 'The book is saved and the show page is rendered'
-        at(BookShowPage).bookTitle == 'The Stand'
+        "/"(view: '/index')
+        "500"(view: '/error')
+        "404"(view: '/notFound')
     }
 }
