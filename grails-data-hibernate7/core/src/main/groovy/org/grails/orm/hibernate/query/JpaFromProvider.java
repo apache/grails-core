@@ -33,7 +33,7 @@ import jakarta.persistence.criteria.From;
 import jakarta.persistence.criteria.JoinType;
 import jakarta.persistence.criteria.Path;
 
-import org.hibernate.query.criteria.JpaCriteriaQuery;
+import jakarta.persistence.criteria.AbstractQuery;
 
 import grails.gorm.DetachedCriteria;
 import org.grails.datastore.gorm.query.criteria.DetachedAssociationCriteria;
@@ -54,12 +54,12 @@ public class JpaFromProvider implements Cloneable {
         this.fromMap = new HashMap<>(fromMap);
     }
 
-    public JpaFromProvider(DetachedCriteria<?> detachedCriteria, JpaCriteriaQuery<?> cq, From<?, ?> root) {
+    public JpaFromProvider(DetachedCriteria<?> detachedCriteria, AbstractQuery<?> cq, From<?, ?> root) {
         fromMap = getFromsByName(detachedCriteria, cq, root);
     }
 
     private Map<String, From<?, ?>> getFromsByName(
-            DetachedCriteria<?> detachedCriteria, JpaCriteriaQuery<?> cq, From<?, ?> root) {
+            DetachedCriteria<?> detachedCriteria, AbstractQuery<?> cq, From<?, ?> root) {
         var detachedAssociationCriteriaList = detachedCriteria.getCriteria().stream()
                 .map(new DetachedAssociationFunction())
                 .flatMap(List::stream)
@@ -116,7 +116,7 @@ public class JpaFromProvider implements Cloneable {
     }
 
     private Map<String, From<?, ?>> createDetachedFroms(
-            JpaCriteriaQuery<?> cq, List<DetachedAssociationCriteria<?>> detachedAssociationCriteriaList) {
+            AbstractQuery<?> cq, List<DetachedAssociationCriteria<?>> detachedAssociationCriteriaList) {
         Function<DetachedAssociationCriteria<?>, String> getAssociationPath =
                 DetachedAssociationCriteria::getAssociationPath;
         return detachedAssociationCriteriaList.stream()

@@ -454,8 +454,8 @@ public class HibernateQuery extends Query {
         new JpaCriteriaQueryCreator(projections, cb, entity, detachedCriteria, cs)
                 .populateSubquery(innerSubquery);
 
-        var derivedRoot = countQuery.from(innerSubquery);
-        countQuery.select(cb.count(derivedRoot.get("col_0")));
+        countQuery.from(innerSubquery);
+        countQuery.select(cb.count(cb.literal(1)));
         return (Number) getHibernateQueryExecutor().singleResult(getCurrentSession(), countQuery);
     }
 
