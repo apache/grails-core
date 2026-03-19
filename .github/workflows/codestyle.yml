@@ -45,6 +45,7 @@ jobs:
           develocity-access-key: ${{ secrets.GRAILS_DEVELOCITY_ACCESS_KEY }}
       - name: "🔎 Check Core Projects"
         run: |
+          mkdir -p build/reports/codestyle
           ./gradlew codeStyle --continue 2>&1 | tee build/codestyle-output.log || true
           # Extract Spotless violations into a separate report
           sed -n '/The following files had format violations:/,/Run.*spotlessApply.*to fix all violations\./p' build/codestyle-output.log > build/reports/codestyle/spotless-violations.txt || true
