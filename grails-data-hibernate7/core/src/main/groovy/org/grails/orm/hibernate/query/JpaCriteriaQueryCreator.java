@@ -71,7 +71,7 @@ public class JpaCriteriaQueryCreator {
         var cq = createCriteriaQuery(projectionList);
         Class<?> javaClass = entity.getJavaClass();
         Root<?> root = cq.from(javaClass);
-        var tablesByName = new JpaFromProvider(detachedCriteria, cq, root);
+        var tablesByName = new JpaFromProvider(detachedCriteria, projectionList, cq, root);
         assignProjections(projectionList, cq, tablesByName);
         assignGroupBy(cq, tablesByName);
 
@@ -85,7 +85,7 @@ public class JpaCriteriaQueryCreator {
         var projectionList = collectProjections();
         Class<?> javaClass = entity.getJavaClass();
         Root<?> root = subquery.from(javaClass);
-        var tablesByName = new JpaFromProvider(detachedCriteria, subquery, root);
+        var tablesByName = new JpaFromProvider(detachedCriteria, projectionList, subquery, root);
 
         var aliasedProjections = new java.util.concurrent.atomic.AtomicInteger(0);
         var projectionExpressions = projectionList.stream()

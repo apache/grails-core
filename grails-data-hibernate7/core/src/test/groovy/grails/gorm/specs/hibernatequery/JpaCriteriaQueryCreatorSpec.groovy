@@ -209,4 +209,23 @@ class JpaCriteriaQueryCreatorSpec extends HibernateGormDatastoreSpec {
         query != null
         query.isDistinct()
     }
+
+    def "test createQuery with association projection triggers auto-join"() {
+        given:
+        HibernateCriteriaBuilder criteriaBuilder = sessionFactory.getCriteriaBuilder()
+        var entity = manager.hibernateDatastore.getMappingContext().getPersistentEntity(org.apache.grails.data.testing.tck.domains.Pet.typeName)
+        var detachedCriteria = new DetachedCriteria(org.apache.grails.data.testing.tck.domains.Pet)
+        
+        var projections = new Query.ProjectionList()
+        projections.property("owner.firstName")
+
+        var creator = new JpaCriteriaQueryCreator(projections, criteriaBuilder, entity, detachedCriteria, new DefaultConversionService())
+
+        when:
+        JpaCriteriaQuery<?> query = creator.createQuery()
+
+        then:
+        noExceptionThrown()
+        query != null
+    }
 }

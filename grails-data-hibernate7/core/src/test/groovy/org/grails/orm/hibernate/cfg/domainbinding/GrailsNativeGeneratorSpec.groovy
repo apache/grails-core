@@ -73,4 +73,29 @@ class GrailsNativeGeneratorSpec extends HibernateGormDatastoreSpec {
         then:
         result == null
     }
+
+    def "should throw HibernateException if SequenceStyleGenerator is not initialized"() {
+        given:
+        def context = Mock(GeneratorCreationContext)
+        def database = Mock(org.hibernate.boot.model.relational.Database)
+        context.getDatabase() >> database
+        database.getDialect() >> getGrailsDomainBinder().getJdbcEnvironment().getDialect()
+        
+        def session = Mock(SharedSessionContractImplementor)
+        def entity = new Object()
+        def eventType = EventType.INSERT
+        
+        @Subject
+        def generator = Spy(GrailsNativeGenerator, constructorArgs: [context])
+        def ssg = Mock(org.hibernate.id.enhanced.SequenceStyleGenerator)
+        generator.getDelegate() >> ssg
+        ssg.getDatabaseStructure() >> null
+
+        when:
+        generator.generate(session, entity, null, eventType)
+
+        then:
+        def e = thrown(org.hibernate.HibernateException)
+        e.message.contains("was not properly initialized")
+    }
 }

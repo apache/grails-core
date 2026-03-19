@@ -154,4 +154,17 @@ class PredicateGeneratorSpec extends HibernateGormDatastoreSpec {
         then:
         predicates.length == 1
     }
+
+    def "test getPredicates with subquery isolated provider"() {
+        given: "a subquery with association reference"
+        def subCriteria = new DetachedCriteria(Pet).eq("face.name", "Funny")
+        List criteria = [new Query.In("id", subCriteria)]
+
+        when:
+        def predicates = predicateGenerator.getPredicates(cb, query, root, criteria, fromProvider, personEntity)
+
+        then: "no exception thrown during subquery join creation"
+        noExceptionThrown()
+        predicates.length == 1
+    }
 }

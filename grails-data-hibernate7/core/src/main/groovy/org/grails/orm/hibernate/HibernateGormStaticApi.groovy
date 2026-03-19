@@ -275,17 +275,22 @@ class HibernateGormStaticApi<D> extends GormStaticApi<D> {
 
     @Override
     D find(CharSequence query, Map params) {
-        doSingleInternal(query, params, [], [:], false)
+        doSingleInternal(query, params, [], params, false)
     }
 
     @Override
     List<D> findAll(CharSequence query, Map params) {
-        doListInternal(query, params, [], [:], false)
+        doListInternal(query, params, [], params, false)
     }
 
     @Override
     List executeQuery(CharSequence query, Map args) {
-        doListInternal(query, [:], [], args, false)
+        doListInternal(query, args, [], args, false)
+    }
+
+    @Override
+    Integer executeUpdate(CharSequence query, Map args) {
+        doInternalExecuteUpdate(query, args, [], args)
     }
 
     @Override

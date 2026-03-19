@@ -188,40 +188,56 @@ class HibernateGormStaticApiSpec extends HibernateGormDatastoreSpec {
         instances.size() == 2
     }
 
-    void "Test findAll with plain String throws UnsupportedOperationException"() {
+    void "Test findAll with plain String"() {
+        given:
+        new HibernateGormStaticApiEntity(name: "test1").save(failOnError: true)
+        new HibernateGormStaticApiEntity(name: "test2").save(flush: true, failOnError: true)
+
         when:
-        String hql = "from HibernateGormStaticApiEntity"
-        HibernateGormStaticApiEntity.findAll(hql)
+        String hql = "from HibernateGormStaticApiEntity where name = ?1"
+        def results = HibernateGormStaticApiEntity.findAll(hql, ['test1'])
 
         then:
-        thrown(UnsupportedOperationException)
+        results.size() == 1
+        results[0].name == 'test1'
     }
 
-    void "Test find with plain String throws UnsupportedOperationException"() {
+    void "Test find with plain String"() {
+        given:
+        new HibernateGormStaticApiEntity(name: "test1").save(failOnError: true)
+        new HibernateGormStaticApiEntity(name: "test2").save(flush: true, failOnError: true)
+
         when:
-        String hql = "from HibernateGormStaticApiEntity"
-        HibernateGormStaticApiEntity.find(hql)
+        String hql = "from HibernateGormStaticApiEntity where name = :name"
+        def result = HibernateGormStaticApiEntity.find(hql, [name: 'test2'])
 
         then:
-        thrown(UnsupportedOperationException)
+        result.name == 'test2'
     }
 
-    void "Test executeQuery with plain String throws UnsupportedOperationException"() {
+    void "Test executeQuery with plain String"() {
+        given:
+        new HibernateGormStaticApiEntity(name: "test1").save(failOnError: true)
+        new HibernateGormStaticApiEntity(name: "test2").save(flush: true, failOnError: true)
+
         when:
-        String hql = "from HibernateGormStaticApiEntity"
-        HibernateGormStaticApiEntity.executeQuery(hql)
+        String hql = "select name from HibernateGormStaticApiEntity"
+        def results = HibernateGormStaticApiEntity.executeQuery(hql)
 
         then:
-        thrown(UnsupportedOperationException)
+        results.size() == 2
     }
 
-    void "Test executeUpdate with plain String throws UnsupportedOperationException"() {
+    void "Test executeUpdate with plain String"() {
+        given:
+        new HibernateGormStaticApiEntity(name: "test").save(flush: true, failOnError: true)
+
         when:
-        String hql = "update HibernateGormStaticApiEntity set name = 'x'"
-        HibernateGormStaticApiEntity.executeUpdate(hql)
+        String hql = "update HibernateGormStaticApiEntity set name = 'updated'"
+        int updated = HibernateGormStaticApiEntity.executeUpdate(hql)
 
         then:
-        thrown(UnsupportedOperationException)
+        updated == 1
     }
 
 

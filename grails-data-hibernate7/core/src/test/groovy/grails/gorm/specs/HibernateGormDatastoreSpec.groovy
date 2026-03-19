@@ -62,6 +62,7 @@ class HibernateGormDatastoreSpec extends GrailsDataTckSpec<GrailsDataHibernate7T
                 'hibernate.cache.queries'      : 'true',
                 'hibernate.hbm2ddl.auto'       : 'create',
                 'hibernate.jpa.compliance.cascade': 'true',
+                'hibernate.proxy_factory_class' : 'org.grails.orm.hibernate.proxy.ByteBuddyGroovyProxyFactory'
         ]
     }
 

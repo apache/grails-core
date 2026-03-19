@@ -179,4 +179,56 @@ class JpaFromProviderSpec extends Specification {
         then:
         result == idPath
     }
+
+    def "getFromsByName creates hierarchical joins for projection paths"() {
+        given:
+        def dc = new DetachedCriteria(String)
+        def cq = Mock(org.hibernate.query.criteria.JpaCriteriaQuery)
+        From root = Mock(From) {
+            getJavaType() >> String
+        }
+        From clubJoin = Mock(From) {
+            getJavaType() >> String
+        }
+        From teamJoin = Mock(From) {
+            getJavaType() >> String
+        }
+
+        and: "projections with nested paths"
+        def projections = [
+                new org.grails.datastore.mapping.query.Query.PropertyProjection("team.club.name")
+        ]
+
+        when:
+        JpaFromProvider provider = new JpaFromProvider(dc, projections, cq, root)
+
+        then: "joins are created hierarchically"
+        1 * root.join("team", jakarta.persistence.criteria.JoinType.LEFT) >> teamJoin
+        1 * teamJoin.join("club", jakarta.persistence.criteria.JoinType.LEFT) >> clubJoin
+        0 * clubJoin.join(_, _)
+
+        and: "paths are registered in provider"
+        provider.getFullyQualifiedPath("team") == teamJoin
+        provider.getFullyQualifiedPath("team.club") == clubJoin
+    }
+
+    def "constructor with parent provider inherits froms and supports correlation"() {
+        given:
+        From outerRoot = Mock(From) { getJavaType() >> String }
+        JpaFromProvider parent = bare(String, outerRoot)
+
+        and: "subquery detached criteria"
+        def subDc = new DetachedCriteria(Integer)
+        def subCq = Mock(org.hibernate.query.criteria.JpaCriteriaQuery)
+        From subRoot = Mock(From) { getJavaType() >> Integer }
+
+        when:
+        JpaFromProvider subProvider = new JpaFromProvider(parent, subDc, [], subCq, subRoot)
+
+        then: "subquery provider has its own root"
+        subProvider.getFullyQualifiedPath("root") == subRoot
+
+        and: "subquery provider inherits outer paths"
+        subProvider.getFullyQualifiedPath("root") != outerRoot // subquery root shadows outer root
+    }
 }

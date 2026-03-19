@@ -29,6 +29,8 @@ import jakarta.persistence.criteria.Subquery
 import org.apache.grails.data.testing.tck.domains.*
 import org.grails.datastore.mapping.engine.event.PersistEvent
 import org.grails.datastore.mapping.query.Query
+import org.grails.datastore.mapping.query.event.PostQueryEvent
+import org.grails.datastore.mapping.query.event.PreQueryEvent
 import org.grails.orm.hibernate.HibernateSession
 import org.grails.orm.hibernate.HibernateDatastore
 import org.grails.orm.hibernate.query.HibernateQuery
@@ -1089,6 +1091,29 @@ class HibernateQuerySpec extends HibernateGormDatastoreSpec {
         then:
         associationQuery != null
         associationQuery.getEntity() != null
+    }
+
+    def "test query publishes PreQueryEvent and PostQueryEvent"() {
+        given:
+        int preEvents = 0
+        int postEvents = 0
+        manager.hibernateDatastore.getApplicationEventPublisher().addApplicationListener(new org.springframework.context.ApplicationListener<org.grails.datastore.mapping.engine.event.AbstractPersistenceEvent>() {
+            @Override
+            void onApplicationEvent(org.grails.datastore.mapping.engine.event.AbstractPersistenceEvent event) {
+                if (event instanceof PreQueryEvent) {
+                    preEvents++
+                } else if (event instanceof PostQueryEvent) {
+                    postEvents++
+                }
+            }
+        })
+
+        when:
+        hibernateQuery.eq("firstName", "Bob").list()
+
+        then:
+        preEvents > 0
+        postEvents > 0
     }
 }
 

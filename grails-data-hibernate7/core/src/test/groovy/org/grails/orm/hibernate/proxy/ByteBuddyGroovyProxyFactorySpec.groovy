@@ -16,21 +16,15 @@
  *  specific language governing permissions and limitations
  *  under the License.
  */
-package org.grails.orm.hibernate.query;
+package org.grails.orm.hibernate.proxy
 
-import java.util.List;
-import java.util.function.Function;
+import org.hibernate.proxy.pojo.bytebuddy.ByteBuddyProxyHelper
+import spock.lang.Specification
 
-import org.grails.datastore.gorm.query.criteria.DetachedAssociationCriteria;
-import org.grails.datastore.mapping.query.Query;
+class ByteBuddyGroovyProxyFactorySpec extends Specification {
 
-@SuppressWarnings({"unchecked", "rawtypes"})
-public class DetachedAssociationFunction implements Function<Query.Criterion, List<DetachedAssociationCriteria<?>>> {
-    @Override
-    public List<DetachedAssociationCriteria<?>> apply(Query.Criterion o) {
-        if (o instanceof DetachedAssociationCriteria) {
-            return List.of((DetachedAssociationCriteria<?>) o);
-        }
-        return List.of();
+    def "factory can be instantiated"() {
+        expect:
+        new ByteBuddyGroovyProxyFactory(Mock(ByteBuddyProxyHelper)) != null
     }
 }

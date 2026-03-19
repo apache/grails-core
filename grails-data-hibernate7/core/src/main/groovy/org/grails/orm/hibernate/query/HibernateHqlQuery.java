@@ -246,6 +246,16 @@ public class HibernateHqlQuery extends Query {
                 throw new GrailsQueryException("Named parameter's name must be a String: " + namedArgs);
             }
             String name = key.toString();
+            if (HibernateQueryArgument.MAX.value().equals(name) ||
+                HibernateQueryArgument.OFFSET.value().equals(name) ||
+                HibernateQueryArgument.CACHE.value().equals(name) ||
+                HibernateQueryArgument.FETCH_SIZE.value().equals(name) ||
+                HibernateQueryArgument.TIMEOUT.value().equals(name) ||
+                HibernateQueryArgument.READ_ONLY.value().equals(name) ||
+                HibernateQueryArgument.FLUSH_MODE.value().equals(name) ||
+                HibernateQueryArgument.LOCK.value().equals(name)) {
+                return;
+            }
             if (value == null) {
                 delegate.setParameter(name, null);
             } else if (value instanceof Collection<?> col) {

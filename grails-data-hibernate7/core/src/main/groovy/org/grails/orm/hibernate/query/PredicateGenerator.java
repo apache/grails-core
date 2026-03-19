@@ -29,6 +29,7 @@ import org.slf4j.LoggerFactory;
 
 import org.springframework.core.convert.ConversionService;
 
+import grails.gorm.DetachedCriteria;
 import org.grails.datastore.gorm.GormEntity;
 import org.grails.datastore.gorm.query.criteria.DetachedAssociationCriteria;
 import org.grails.datastore.mapping.core.exceptions.ConfigurationException;
@@ -293,7 +294,7 @@ public class PredicateGenerator {
         Subquery subquery = criteriaQuery.subquery(Number.class);
         PersistentEntity subEntity = c.getValue().getPersistentEntity();
         Root from = subquery.from(subEntity.getJavaClass());
-        JpaFromProvider newMap = (JpaFromProvider) fromsByProvider.clone();
+        JpaFromProvider newMap = new JpaFromProvider(fromsByProvider, (DetachedCriteria) c.getValue(), List.of(), criteriaQuery, from);
         newMap.put("root", from);
         // FIX: Pass subEntity to subquery recursion
         Predicate[] predicates = getPredicates(cb, criteriaQuery, from, c.getValue().getCriteria(), newMap, subEntity);
@@ -373,7 +374,7 @@ public class PredicateGenerator {
             Query.Exists c) {
         Subquery subquery = criteriaQuery.subquery(Integer.class);
         Root subRoot = subquery.from(entity.getJavaClass());
-        JpaFromProvider newMap = (JpaFromProvider) fromsByProvider.clone();
+        JpaFromProvider newMap = new JpaFromProvider(fromsByProvider, (DetachedCriteria) c.getSubquery(), List.of(), criteriaQuery, subRoot);
         newMap.put("root", subRoot);
         // Pass 'entity' (which is child) to recursion
         var predicates = getPredicates(cb, criteriaQuery, subRoot, c.getSubquery().getCriteria(), newMap, entity);
@@ -399,7 +400,7 @@ public class PredicateGenerator {
         var subquery = criteriaQuery.subquery(getJavaTypeOfInClause((SqmInListPredicate) in));
         PersistentEntity subEntity = queryableCriteria.getPersistentEntity();
         var from = subquery.from(subEntity.getJavaClass());
-        var clonedProviderByName = (JpaFromProvider) fromsByProvider.clone();
+        var clonedProviderByName = new JpaFromProvider(fromsByProvider, (DetachedCriteria) queryableCriteria, List.of(), criteriaQuery, from);
         clonedProviderByName.put("root", from);
         // FIX: Pass subEntity
         var predicates = getPredicates(cb, criteriaQuery, from, queryableCriteria.getCriteria(), clonedProviderByName, subEntity);

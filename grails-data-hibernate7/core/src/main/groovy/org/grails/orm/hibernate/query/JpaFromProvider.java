@@ -24,19 +24,20 @@ import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
+import java.util.Set;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
 import jakarta.persistence.FetchType;
+import jakarta.persistence.criteria.AbstractQuery;
 import jakarta.persistence.criteria.From;
 import jakarta.persistence.criteria.JoinType;
 import jakarta.persistence.criteria.Path;
 
-import org.hibernate.query.criteria.JpaCriteriaQuery;
-
 import grails.gorm.DetachedCriteria;
 import org.grails.datastore.gorm.query.criteria.DetachedAssociationCriteria;
+import org.grails.datastore.mapping.query.Query;
 
 @SuppressWarnings({
     "PMD.DataflowAnomalyAnalysis",
@@ -54,69 +55,121 @@ public class JpaFromProvider implements Cloneable {
         this.fromMap = new HashMap<>(fromMap);
     }
 
-    public JpaFromProvider(DetachedCriteria<?> detachedCriteria, JpaCriteriaQuery<?> cq, From<?, ?> root) {
-        fromMap = getFromsByName(detachedCriteria, cq, root);
+    public JpaFromProvider(DetachedCriteria<?> detachedCriteria, AbstractQuery<?> cq, From<?, ?> root) {
+        this(detachedCriteria, List.of(), cq, root);
+    }
+
+    public JpaFromProvider(
+            DetachedCriteria<?> detachedCriteria,
+            List<Query.Projection> projections,
+            AbstractQuery<?> cq,
+            From<?, ?> root) {
+        fromMap = getFromsByName(detachedCriteria, projections, cq, root);
+    }
+
+    public JpaFromProvider(
+            JpaFromProvider parent,
+            DetachedCriteria<?> detachedCriteria,
+            List<Query.Projection> projections,
+            AbstractQuery<?> cq,
+            From<?, ?> root) {
+        fromMap = new HashMap<>(parent.fromMap);
+        fromMap.putAll(getFromsByName(detachedCriteria, projections, cq, root));
     }
 
     private Map<String, From<?, ?>> getFromsByName(
-            DetachedCriteria<?> detachedCriteria, JpaCriteriaQuery<?> cq, From<?, ?> root) {
+            DetachedCriteria<?> detachedCriteria,
+            List<Query.Projection> projections,
+            AbstractQuery<?> cq,
+            From<?, ?> root) {
         var detachedAssociationCriteriaList = detachedCriteria.getCriteria().stream()
                 .map(new DetachedAssociationFunction())
                 .flatMap(List::stream)
                 .toList();
 
         var aliasMap = createAliasMap(detachedAssociationCriteriaList);
-        // The join column is column for joining from the root entity
-        var detachedFroms = createDetachedFroms(cq, detachedAssociationCriteriaList);
-        Map<String, From<?, ?>> fromsByName = Stream.concat(
-                        aliasMap.keySet().stream(),
-                        detachedCriteria.getFetchStrategies().entrySet().stream()
-                                .filter(entry -> entry.getValue().equals(FetchType.EAGER))
-                                .map(Map.Entry::getKey)
-                                .toList()
-                                .stream())
-                .distinct()
-                .map(joinColumn -> {
-                    // Determine owner class for this join path from detached criteria
-                    var dac = aliasMap.get(joinColumn);
-                    Class<?> ownerClass =
-                            dac != null ? dac.getAssociation().getOwner().getJavaClass() : root.getJavaType();
-                    // Choose base From: use outer root only if join belongs to the outer root type;
-                    // otherwise create a detached root for the owner
-                    From<?, ?> base = ownerClass.equals(root.getJavaType())
-                            ? root
-                            : detachedFroms.computeIfAbsent(joinColumn, s -> cq.from(ownerClass));
+        var definedAliases = detachedAssociationCriteriaList.stream()
+                .map(DetachedAssociationCriteria::getAlias)
+                .filter(Objects::nonNull)
+                .collect(Collectors.toSet());
 
-                    var table = base.join(
-                            joinColumn,
-                            detachedCriteria.getJoinTypes().entrySet().stream()
-                                    .filter(entry -> entry.getKey().equals(joinColumn))
-                                    .map(Map.Entry::getValue)
-                                    .findFirst()
-                                    .orElse(JoinType.INNER));
-                    // Attempt to find specific criteria configuration for this association path
-                    var column = Optional.ofNullable(aliasMap.get(joinColumn))
-                            .map(detachedAssociationCriteria ->
-                                    Objects.requireNonNullElse(detachedAssociationCriteria.getAlias(), joinColumn))
-                            .orElse(joinColumn);
-                    table.alias(column);
-                    return new AbstractMap.SimpleEntry<>(column, table);
-                })
-                .collect(Collectors.toMap(
-                        Map.Entry::getKey,
-                        Map.Entry::getValue,
-                        (existing, replacement) -> existing,
-                        java.util.LinkedHashMap::new));
-        fromsByName.put("root", root);
+        var projectedPaths = projections.stream()
+                .filter(Query.PropertyProjection.class::isInstance)
+                .map(p -> ((Query.PropertyProjection) p).getPropertyName())
+                .filter(name -> name.contains("."))
+                .map(name -> name.substring(0, name.lastIndexOf('.')))
+                .collect(Collectors.toSet());
+
+        var eagerPaths = detachedCriteria.getFetchStrategies().entrySet().stream()
+                .filter(entry -> entry.getValue().equals(FetchType.EAGER))
+                .map(Map.Entry::getKey)
+                .collect(Collectors.toSet());
+
+        java.util.Set<String> allPaths = new java.util.HashSet<>();
+        allPaths.addAll(aliasMap.keySet());
+        allPaths.addAll(projectedPaths.stream()
+                .filter(p -> !definedAliases.contains(p))
+                .toList());
+        allPaths.addAll(eagerPaths);
+
+        // Expand paths to include all parents (e.g., "a.b.c" -> "a", "a.b", "a.b.c")
+        java.util.Set<String> expandedPaths = new java.util.HashSet<>();
+        for (String path : allPaths) {
+            String[] segments = path.split("\\.");
+            StringBuilder current = new StringBuilder();
+            for (String segment : segments) {
+                if (current.length() > 0) {
+                    current.append(".");
+                }
+                current.append(segment);
+                expandedPaths.add(current.toString());
+            }
+        }
+
+        Map<String, From<?, ?>> fromsByPath = new HashMap<>();
+        fromsByPath.put("root", root);
+
+        List<String> sortedPaths = expandedPaths.stream()
+                .sorted(java.util.Comparator.comparingInt(p -> p.split("\\.").length))
+                .toList();
+
+        for (String path : sortedPaths) {
+            if (fromsByPath.containsKey(path)) {
+                continue;
+            }
+            String parentPath = path.contains(".") ? path.substring(0, path.lastIndexOf('.')) : "root";
+            String leaf = path.contains(".") ? path.substring(path.lastIndexOf('.') + 1) : path;
+
+            From<?, ?> base = fromsByPath.get(parentPath);
+
+            JoinType joinType = JoinType.INNER;
+            if (detachedCriteria.getJoinTypes().containsKey(path)) {
+                joinType = detachedCriteria.getJoinTypes().get(path);
+            } else if (projectedPaths.contains(path) || eagerPaths.contains(path)) {
+                joinType = JoinType.LEFT;
+            }
+
+            var table = base.join(leaf, joinType);
+
+            // If there's an alias for this path, map it to the alias too
+            var dac = aliasMap.get(path);
+            if (dac != null && dac.getAlias() != null) {
+                fromsByPath.put(dac.getAlias(), table);
+            }
+
+            table.alias(path);
+            fromsByPath.put(path, table);
+        }
+
         String rootAlias = detachedCriteria.getAlias();
         if (rootAlias != null && !rootAlias.isEmpty()) {
-            fromsByName.put(rootAlias, root);
+            fromsByPath.put(rootAlias, root);
         }
-        return fromsByName;
+        return fromsByPath;
     }
 
     private Map<String, From<?, ?>> createDetachedFroms(
-            JpaCriteriaQuery<?> cq, List<DetachedAssociationCriteria<?>> detachedAssociationCriteriaList) {
+            AbstractQuery<?> cq, List<DetachedAssociationCriteria<?>> detachedAssociationCriteriaList) {
         Function<DetachedAssociationCriteria<?>, String> getAssociationPath =
                 DetachedAssociationCriteria::getAssociationPath;
         return detachedAssociationCriteriaList.stream()
@@ -148,17 +201,34 @@ public class JpaFromProvider implements Cloneable {
         if (Objects.isNull(propertyName) || propertyName.trim().isEmpty()) {
             throw new IllegalArgumentException("propertyName cannot be null");
         }
+
+        if (fromMap.containsKey(propertyName)) {
+            return fromMap.get(propertyName);
+        }
+
         String[] parsed = propertyName.split("\\.");
         if (parsed.length == SINGLE_PROPERTY) {
-            if (fromMap.containsKey(propertyName)) {
-                return fromMap.get(propertyName);
-            } else {
-                return fromMap.get("root").get(propertyName);
+            return fromMap.get("root").get(propertyName);
+        }
+
+        // Try to find the longest matching prefix in fromMap
+        for (int i = parsed.length - 1; i >= 1; i--) {
+            String prefix = java.util.Arrays.stream(parsed, 0, i).collect(Collectors.joining("."));
+            if (fromMap.containsKey(prefix)) {
+                Path<?> path = fromMap.get(prefix);
+                for (int j = i; j < parsed.length; j++) {
+                    path = path.get(parsed[j]);
+                }
+                return path;
             }
         }
-        String tableName = parsed[0];
-        String columnName = parsed[1];
-        return fromMap.get(tableName).get(columnName);
+
+        // Fallback to root
+        Path<?> path = fromMap.get("root");
+        for (String segment : parsed) {
+            path = path.get(segment);
+        }
+        return path;
     }
 
     public Object clone() {

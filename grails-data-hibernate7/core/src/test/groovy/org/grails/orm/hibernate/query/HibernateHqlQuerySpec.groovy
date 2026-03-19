@@ -274,6 +274,18 @@ class HibernateHqlQuerySpec extends HibernateGormDatastoreSpec {
         then:
         thrown(UnsupportedOperationException)
     }
+
+    void "populateQueryWithNamedArguments filters GORM internal settings"() {
+        given:
+        def query = buildHqlQuery("from HibernateHqlQuerySpecBook b where b.title = :t", [t: "The Hobbit"])
+
+        when: "passing internal GORM settings as named parameters"
+        query.populateQueryWithNamedArguments([t: "The Hobbit", flushMode: FlushMode.COMMIT, cache: true])
+
+        then: "no exception is thrown because they are filtered out"
+        noExceptionThrown()
+        query.list().size() == 1
+    }
 }
 
 @Entity

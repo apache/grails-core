@@ -19,21 +19,30 @@
 package org.grails.orm.hibernate.cfg.domainbinding.generator;
 
 import java.io.Serial;
+import java.lang.reflect.Field;
 
 import jakarta.persistence.GenerationType;
 
+import org.hibernate.HibernateException;
 import org.hibernate.engine.spi.SharedSessionContractImplementor;
 import org.hibernate.generator.EventType;
 import org.hibernate.generator.GeneratorCreationContext;
 import org.hibernate.id.NativeGenerator;
+import org.hibernate.id.enhanced.SequenceStyleGenerator;
 
+/**
+ * A native generator that supports Grails assigned identifiers and fixes Hibernate 7 ClassCastException.
+ *
+ * @author Graeme Rocher
+ * @since 7.0
+ */
 public class GrailsNativeGenerator extends NativeGenerator {
 
     @Serial
     private static final long serialVersionUID = 1L;
 
     public GrailsNativeGenerator(GeneratorCreationContext context) {
-        // This triggers the internal switch logic you provided earlier,
+        // This triggers the internal switch logic in NativeGenerator,
         // which calls setIdentity(true) on the column for H2.
         try {
             this.initialize(null, null, context);
@@ -57,7 +66,24 @@ public class GrailsNativeGenerator extends NativeGenerator {
             return null;
         }
 
-        // 3. For Sequences/UUIDs, delegate to the standard logic
+        // 3. Prevent NPE if configuration failed (e.g. DDL error)
+        // Access private field dialectNativeGenerator in NativeGenerator
+        try {
+            Field field = NativeGenerator.class.getDeclaredField("dialectNativeGenerator");
+            field.setAccessible(true);
+            Object delegate = field.get(this);
+            if (delegate instanceof SequenceStyleGenerator ssg) {
+                if (ssg.getDatabaseStructure() == null) {
+                    throw new HibernateException("Identifier generator (SequenceStyleGenerator) was not properly initialized. This usually happens if table creation failed (check previous logs for DDL errors).");
+                }
+            }
+        } catch (HibernateException e) {
+            throw e;
+        } catch (Exception ignored) {
+            // ignore reflection errors
+        }
+
+        // 4. For Sequences/UUIDs, delegate to the standard logic
         return super.generate(session, entity, null, eventType);
     }
 }
