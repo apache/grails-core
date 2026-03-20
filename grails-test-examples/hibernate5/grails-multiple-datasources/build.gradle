@@ -51,12 +51,10 @@ dependencies {
 
     testImplementation 'org.apache.grails.testing:grails-testing-support-core'
 
-    integrationTestImplementation "io.micronaut:micronaut-http-client:$micronautHttpClientVersion"
-    integrationTestImplementation 'org.spockframework:spock-core'
-
-    integrationTestRuntimeOnly "io.micronaut.serde:micronaut-serde-jackson:$micronautSerdeJacksonVersion"
-
     testRuntimeOnly 'org.apache.grails:grails-testing-support-web'
+
+    integrationTestImplementation project(':grails-testing-support-http-client')
+    integrationTestImplementation 'org.spockframework:spock-core'
 }
 
 sourceSets {

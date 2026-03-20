@@ -59,7 +59,7 @@ dependencies {
     implementation 'org.springframework.boot:spring-boot-autoconfigure'
     implementation 'org.springframework.boot:spring-boot-starter-logging'
     implementation 'org.springframework.boot:spring-boot-starter-tomcat'
-    
+
     testAndDevelopmentOnly platform(project(':grails-bom'))
     testAndDevelopmentOnly 'org.webjars.npm:jquery'
 
@@ -73,8 +73,7 @@ dependencies {
     testImplementation 'org.apache.grails.testing:grails-testing-support-core'
 
     integrationTestImplementation 'com.fasterxml.jackson.core:jackson-databind'
-    integrationTestImplementation "io.micronaut:micronaut-http-client:$micronautHttpClientVersion"
-    integrationTestImplementation "io.micronaut:micronaut-jackson-databind:$micronautHttpClientVersion"
+    integrationTestImplementation project(':grails-testing-support-http-client')
 }
 
 apply {
