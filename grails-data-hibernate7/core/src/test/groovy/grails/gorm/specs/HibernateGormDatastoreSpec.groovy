@@ -19,9 +19,11 @@
 
 package grails.gorm.specs
 
+import grails.orm.HibernateCriteriaBuilder
 import org.apache.grails.data.hibernate7.core.GrailsDataHibernate7TckManager
 import org.apache.grails.data.testing.tck.base.GrailsDataTckSpec
 import org.grails.datastore.mapping.model.PersistentEntity
+import org.grails.datastore.mapping.query.api.BuildableCriteria
 import org.grails.orm.hibernate.HibernateSession
 import org.grails.orm.hibernate.HibernateDatastore
 import org.grails.orm.hibernate.cfg.domainbinding.binder.GrailsDomainBinder
@@ -152,6 +154,10 @@ class HibernateGormDatastoreSpec extends GrailsDataTckSpec<GrailsDataHibernate7T
 
     protected HibernateDatastore getDatastore() {
         manager.hibernateDatastore
+    }
+
+    protected org.hibernate.query.criteria.HibernateCriteriaBuilder getCriteriaBuilder() {
+        return getSessionFactory().getCriteriaBuilder();
     }
 
 
