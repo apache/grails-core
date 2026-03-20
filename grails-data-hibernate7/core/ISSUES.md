@@ -1,7 +1,17 @@
 # Known Issues in Hibernate 7 Migration
 
 
-
+## Failing Tests
+BasicCollectionInQuerySpec
+ByteBuddyGroovyInterceptorSpec
+DetachedAssociationFunctionSpec
+HibernateMappingFactorySpec
+HibernateProxyHandler7Spec
+JpaCriteriaQueryCreatorSpec
+JpaFromProviderSpec
+PredicateGeneratorSpec
+WhereQueryBugFixSpec
+WhereQueryOldIssueVerificationSpec
 
 
 ### 3. ByteBuddy Proxy Initialization & Interception

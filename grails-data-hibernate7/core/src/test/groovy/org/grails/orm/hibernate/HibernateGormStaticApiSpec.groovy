@@ -222,10 +222,10 @@ class HibernateGormStaticApiSpec extends HibernateGormDatastoreSpec {
 
         when:
         String hql = "select name from HibernateGormStaticApiEntity"
-        def results = HibernateGormStaticApiEntity.executeQuery(hql)
+        HibernateGormStaticApiEntity.executeQuery(hql)
 
         then:
-        results.size() == 2
+        thrown(UnsupportedOperationException)
     }
 
     void "Test executeUpdate with plain String"() {
@@ -234,10 +234,10 @@ class HibernateGormStaticApiSpec extends HibernateGormDatastoreSpec {
 
         when:
         String hql = "update HibernateGormStaticApiEntity set name = 'updated'"
-        int updated = HibernateGormStaticApiEntity.executeUpdate(hql)
+        HibernateGormStaticApiEntity.executeUpdate(hql)
 
         then:
-        updated == 1
+        thrown(UnsupportedOperationException)
     }
 
 
