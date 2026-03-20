@@ -6,7 +6,6 @@ BasicCollectionInQuerySpec
 ByteBuddyGroovyInterceptorSpec
 DetachedAssociationFunctionSpec
 DetachedCriteriaProjectionAliasSpec
-HibernateMappingFactorySpec
 HibernateProxyHandler7Spec
 WhereQueryOldIssueVerificationSpec
 
