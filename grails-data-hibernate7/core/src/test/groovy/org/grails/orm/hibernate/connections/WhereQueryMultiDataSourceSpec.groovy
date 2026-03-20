@@ -156,7 +156,6 @@ class Item implements GormEntity<Item> {
 
     static mapping = {
         datasource 'ALL'
-        amount precision: 10
     }
 
     static constraints = {

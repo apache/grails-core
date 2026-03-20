@@ -26,7 +26,6 @@ import spock.lang.Specification
 
 import org.grails.orm.hibernate.cfg.domainbinding.binder.ColumnConfigToColumnBinder
 
-//TODO Check logic
 class ColumnConfigToColumnBinderSpec extends Specification {
 
     def binder = new ColumnConfigToColumnBinder()
@@ -64,10 +63,46 @@ class ColumnConfigToColumnBinderSpec extends Specification {
 
         then:
         column.length == null
-        column.precision == null
+        column.precision == 15 // Default for non-Oracle
         column.scale == null
         column.sqlType == null
         !column.unique
+    }
+
+    def "should use default precision 15 for H2 when no precision set"() {
+        given:
+        def h2Binder = new ColumnConfigToColumnBinder(new org.hibernate.dialect.H2Dialect())
+        def columnConfig = new ColumnConfig(precision: -1)
+
+        when:
+        h2Binder.bindColumnConfigToColumn(column, columnConfig, null)
+
+        then:
+        column.precision == 15
+    }
+
+    def "should use Oracle-specific default precision 126 when no precision set"() {
+        given:
+        def oracleBinder = new ColumnConfigToColumnBinder(new org.hibernate.dialect.OracleDialect())
+        def columnConfig = new ColumnConfig(precision: -1)
+
+        when:
+        oracleBinder.bindColumnConfigToColumn(column, columnConfig, null)
+
+        then:
+        column.precision == 126
+    }
+
+    def "should use default precision 15 for other dialects when no precision set"() {
+        given:
+        def pgBinder = new ColumnConfigToColumnBinder(new org.hibernate.dialect.PostgreSQLDialect())
+        def columnConfig = new ColumnConfig(precision: -1)
+
+        when:
+        pgBinder.bindColumnConfigToColumn(column, columnConfig, null)
+
+        then:
+        column.precision == 15
     }
 
     def "column config honors uniqueness property"() {
@@ -84,7 +119,7 @@ class ColumnConfigToColumnBinderSpec extends Specification {
 
         then:
         column.length == null
-        column.precision == null
+        column.precision == 15 // Default for non-Oracle
         column.scale == null
         column.sqlType == null
         !column.unique
@@ -151,7 +186,7 @@ class ColumnConfigToColumnBinderSpec extends Specification {
 
         then:
         column.length == null
-        column.precision == null
+        column.precision == 15 // Default for non-Oracle
         column.scale == null
         column.sqlType == null
         !column.unique

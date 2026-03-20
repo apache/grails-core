@@ -61,7 +61,7 @@ class HibernateQuerySpec extends HibernateGormDatastoreSpec {
     }
 
     def setupSpec() {
-        manager.addAllDomainClasses([Person, Pet, Face, EagerOwner, CommonTypes, BigDecimalEntity])
+        manager.addAllDomainClasses([Person, Pet, Face, EagerOwner, CommonTypes, HibernateQuerySpecBigDecimalEntity])
     }
 
     def equals() {
@@ -549,10 +549,10 @@ class HibernateQuerySpec extends HibernateGormDatastoreSpec {
         given:
         HibernateDatastore hibernateDatastore = manager.hibernateDatastore
         HibernateSession session = hibernateDatastore.connect() as HibernateSession
-        HibernateQuery query = new HibernateQuery(session, hibernateDatastore.getMappingContext().getPersistentEntity(BigDecimalEntity.typeName))
-        new BigDecimalEntity(amount: 10.5G).save(flush: true, failOnError: true)
-        new BigDecimalEntity(amount: 20.5G).save(flush: true, failOnError: true)
-        new BigDecimalEntity(amount: 30.5G).save(flush: true, failOnError: true)
+        HibernateQuery query = new HibernateQuery(session, hibernateDatastore.getMappingContext().getPersistentEntity(HibernateQuerySpecBigDecimalEntity.typeName))
+        new HibernateQuerySpecBigDecimalEntity(amount: 10.5G).save(flush: true, failOnError: true)
+        new HibernateQuerySpecBigDecimalEntity(amount: 20.5G).save(flush: true, failOnError: true)
+        new HibernateQuerySpecBigDecimalEntity(amount: 30.5G).save(flush: true, failOnError: true)
 
         query.between("amount", 15.0G, 25.0G)
 
@@ -722,9 +722,9 @@ class HibernateQuerySpec extends HibernateGormDatastoreSpec {
         given:
         HibernateDatastore hibernateDatastore = manager.hibernateDatastore
         HibernateSession session = hibernateDatastore.connect() as HibernateSession
-        HibernateQuery query = new HibernateQuery(session, hibernateDatastore.getMappingContext().getPersistentEntity(BigDecimalEntity.typeName))
-        new BigDecimalEntity(amount: 100.0G).save(flush: true, failOnError: true)
-        new BigDecimalEntity(amount: 200.0G).save(flush: true, failOnError: true)
+        HibernateQuery query = new HibernateQuery(session, hibernateDatastore.getMappingContext().getPersistentEntity(HibernateQuerySpecBigDecimalEntity.typeName))
+        new HibernateQuerySpecBigDecimalEntity(amount: 100.0G).save(flush: true, failOnError: true)
+        new HibernateQuerySpecBigDecimalEntity(amount: 200.0G).save(flush: true, failOnError: true)
 
         query.projections().sum("amount")
 
@@ -739,9 +739,9 @@ class HibernateQuerySpec extends HibernateGormDatastoreSpec {
         given:
         HibernateDatastore hibernateDatastore = manager.hibernateDatastore
         HibernateSession session = hibernateDatastore.connect() as HibernateSession
-        HibernateQuery query = new HibernateQuery(session, hibernateDatastore.getMappingContext().getPersistentEntity(BigDecimalEntity.typeName))
-        new BigDecimalEntity(amount: 100.0G).save(flush: true, failOnError: true)
-        new BigDecimalEntity(amount: 200.0G).save(flush: true, failOnError: true)
+        HibernateQuery query = new HibernateQuery(session, hibernateDatastore.getMappingContext().getPersistentEntity(HibernateQuerySpecBigDecimalEntity.typeName))
+        new HibernateQuerySpecBigDecimalEntity(amount: 100.0G).save(flush: true, failOnError: true)
+        new HibernateQuerySpecBigDecimalEntity(amount: 200.0G).save(flush: true, failOnError: true)
 
         query.projections().avg("amount")
 
@@ -1097,12 +1097,12 @@ class HibernateQuerySpec extends HibernateGormDatastoreSpec {
         given:
         int preEvents = 0
         int postEvents = 0
-        manager.hibernateDatastore.getApplicationEventPublisher().addApplicationListener(new org.springframework.context.ApplicationListener<org.grails.datastore.mapping.engine.event.AbstractPersistenceEvent>() {
+        manager.hibernateDatastore.getApplicationEventPublisher().addApplicationListener(new org.springframework.context.ApplicationListener<org.grails.datastore.mapping.query.event.AbstractQueryEvent>() {
             @Override
-            void onApplicationEvent(org.grails.datastore.mapping.engine.event.AbstractPersistenceEvent event) {
-                if (event instanceof PreQueryEvent) {
+            void onApplicationEvent(org.grails.datastore.mapping.query.event.AbstractQueryEvent event) {
+                if (event instanceof org.grails.datastore.mapping.query.event.PreQueryEvent) {
                     preEvents++
-                } else if (event instanceof PostQueryEvent) {
+                } else if (event instanceof org.grails.datastore.mapping.query.event.PostQueryEvent) {
                     postEvents++
                 }
             }
@@ -1120,7 +1120,7 @@ class HibernateQuerySpec extends HibernateGormDatastoreSpec {
 
 
 @grails.persistence.Entity
-class BigDecimalEntity implements Serializable {
+class HibernateQuerySpecBigDecimalEntity implements Serializable {
     Long id
     Long version
     BigDecimal amount

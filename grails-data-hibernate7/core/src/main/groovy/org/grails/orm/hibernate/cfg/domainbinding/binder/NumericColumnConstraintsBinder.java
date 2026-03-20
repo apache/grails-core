@@ -22,7 +22,9 @@ import java.math.BigDecimal;
 import java.util.Optional;
 
 import org.codehaus.groovy.runtime.DefaultGroovyMethods;
-
+import org.hibernate.dialect.Dialect;
+import org.hibernate.dialect.H2Dialect;
+import org.hibernate.dialect.OracleDialect;
 import org.hibernate.mapping.Column;
 
 import org.grails.orm.hibernate.cfg.ColumnConfig;
@@ -30,6 +32,16 @@ import org.grails.orm.hibernate.cfg.PropertyConfig;
 
 @SuppressWarnings("PMD.DataflowAnomalyAnalysis")
 public class NumericColumnConstraintsBinder {
+
+    private final Dialect dialect;
+
+    public NumericColumnConstraintsBinder() {
+        this(new H2Dialect());
+    }
+
+    public NumericColumnConstraintsBinder(Dialect dialect) {
+        this.dialect = dialect;
+    }
 
     public void bindNumericColumnConstraints(Column column, ColumnConfig cc, PropertyConfig constrainedProperty) {
         int scale = determineScale(cc, constrainedProperty);
@@ -43,10 +55,20 @@ public class NumericColumnConstraintsBinder {
         } else {
             int minConstraintValueLength = getConstraintValueLength(constrainedProperty.getMin(), scale);
             int maxConstraintValueLength = getConstraintValueLength(constrainedProperty.getMax(), scale);
+
+            int defaultPrecision;
+            if (dialect instanceof OracleDialect) {
+                defaultPrecision = 126;
+            } else {
+                // Default to 15 decimal digits which maps to ~50-53 bits in Hibernate 7
+                // This avoids float(64) DDL errors in H2 and PostgreSQL
+                defaultPrecision = 15;
+            }
+
             int precision = minConstraintValueLength > 0 && maxConstraintValueLength > 0 ?
                     Math.max(minConstraintValueLength, maxConstraintValueLength) :
                     DefaultGroovyMethods.max(new Integer[] {
-                        org.hibernate.engine.jdbc.Size.DEFAULT_PRECISION,
+                        defaultPrecision,
                         minConstraintValueLength,
                         maxConstraintValueLength
                     });
@@ -67,13 +89,6 @@ public class NumericColumnConstraintsBinder {
     }
 
     private int determineScale(ColumnConfig cc, PropertyConfig constrainedProperty) {
-        Optional.ofNullable(cc)
-                .map(ColumnConfig::getScale)
-                .filter(scale -> scale > -1)
-                .orElseGet(() -> Optional.ofNullable(constrainedProperty)
-                        .map(PropertyConfig::getScale)
-                        .filter(scale -> scale > -1)
-                        .orElse(-1));
         if (cc != null && cc.getScale() > -1) {
             return cc.getScale();
         }
