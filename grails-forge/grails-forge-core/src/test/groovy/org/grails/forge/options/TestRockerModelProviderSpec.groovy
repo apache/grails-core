@@ -26,8 +26,7 @@ import spock.lang.Unroll
 class TestRockerModelProviderSpec extends Specification {
 
     @Unroll
-    void "a delegate method is defined for language: #language and test framework: #testFramework "(Language language,
-                                                                                                    TestFramework testFramework) {
+    void "a delegate method is defined for test framework: #testFramework "(TestFramework testFramework) {
         given:
         TestRockerModelProvider provider = new TestRockerModelProvider() {
 
@@ -35,21 +34,16 @@ class TestRockerModelProviderSpec extends Specification {
             RockerModel spock() {
                 return null
             }
-
-            @Override
-            RockerModel groovyJunit() {
-                return null
-            }
         }
 
         when:
-        provider.findModel(language, testFramework)
+        provider.findModel(testFramework)
 
         then:
         noExceptionThrown()
 
         where:
-        [language, testFramework] << [Language.values(), TestFramework.values()].combinations()
+        testFramework << TestFramework.values()
     }
 }
 

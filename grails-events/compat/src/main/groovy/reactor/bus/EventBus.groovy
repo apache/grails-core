@@ -26,7 +26,7 @@ import reactor.fn.Consumer
 /**
  * @deprecated Here for compatibility only. Do not use directly
  */
-@Deprecated
+@Deprecated(since = '3.3', forRemoval = true)
 class EventBus  implements Bus {
 
     @Delegate(interfaces = false) grails.events.bus.EventBus eventBus

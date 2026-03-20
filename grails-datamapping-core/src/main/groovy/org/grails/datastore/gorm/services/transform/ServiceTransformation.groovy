@@ -31,12 +31,16 @@ import org.codehaus.groovy.ast.FieldNode
 import org.codehaus.groovy.ast.MethodNode
 import org.codehaus.groovy.ast.Parameter
 import org.codehaus.groovy.ast.PropertyNode
+import org.codehaus.groovy.ast.expr.ArgumentListExpression
 import org.codehaus.groovy.ast.expr.ClassExpression
+import org.codehaus.groovy.ast.expr.ClosureExpression
 import org.codehaus.groovy.ast.expr.ConstantExpression
 import org.codehaus.groovy.ast.expr.Expression
 import org.codehaus.groovy.ast.expr.ListExpression
+import org.codehaus.groovy.ast.expr.MethodCallExpression
 import org.codehaus.groovy.ast.expr.VariableExpression
 import org.codehaus.groovy.ast.stmt.BlockStatement
+import org.codehaus.groovy.ast.stmt.ExpressionStatement
 import org.codehaus.groovy.ast.tools.GenericsUtils
 import org.codehaus.groovy.control.CompilePhase
 import org.codehaus.groovy.control.SourceUnit
@@ -49,9 +53,13 @@ import org.codehaus.groovy.transform.trait.TraitComposer
 
 import groovyjarjarasm.asm.Opcodes
 
+import org.springframework.transaction.PlatformTransactionManager
+
 import grails.gorm.services.Service
 import grails.gorm.transactions.NotTransactional
+import grails.gorm.transactions.Transactional
 import org.apache.grails.common.compiler.GroovyTransformOrder
+import org.grails.datastore.gorm.GormEnhancer
 import org.grails.datastore.gorm.services.Implemented
 import org.grails.datastore.gorm.services.ServiceEnhancer
 import org.grails.datastore.gorm.services.ServiceImplementer
@@ -86,17 +94,26 @@ import org.grails.datastore.gorm.transactions.transform.TransactionalTransform
 import org.grails.datastore.gorm.transform.AbstractTraitApplyingGormASTTransformation
 import org.grails.datastore.gorm.validation.jakarta.services.implementers.MethodValidationImplementer
 import org.grails.datastore.mapping.core.Datastore
+import org.grails.datastore.mapping.core.connections.ConnectionSource
+import org.grails.datastore.mapping.core.connections.MultipleConnectionSourceCapableDatastore
 import org.grails.datastore.mapping.core.order.OrderedComparator
+import org.grails.datastore.mapping.transactions.TransactionCapableDatastore
 
 import static org.apache.groovy.ast.tools.AnnotatedNodeUtils.markAsGenerated
+import static org.codehaus.groovy.ast.tools.GeneralUtils.args
 import static org.codehaus.groovy.ast.tools.GeneralUtils.assignS
 import static org.codehaus.groovy.ast.tools.GeneralUtils.block
 import static org.codehaus.groovy.ast.tools.GeneralUtils.callX
+import static org.codehaus.groovy.ast.tools.GeneralUtils.castX
 import static org.codehaus.groovy.ast.tools.GeneralUtils.classX
+import static org.codehaus.groovy.ast.tools.GeneralUtils.ifElseS
+import static org.codehaus.groovy.ast.tools.GeneralUtils.notNullX
 import static org.codehaus.groovy.ast.tools.GeneralUtils.param
 import static org.codehaus.groovy.ast.tools.GeneralUtils.params
+import static org.codehaus.groovy.ast.tools.GeneralUtils.propX
 import static org.codehaus.groovy.ast.tools.GeneralUtils.returnS
 import static org.codehaus.groovy.ast.tools.GeneralUtils.varX
+import static org.grails.datastore.gorm.transform.AstMethodDispatchUtils.callD
 import static org.grails.datastore.mapping.reflect.AstUtils.COMPILE_STATIC_TYPE
 import static org.grails.datastore.mapping.reflect.AstUtils.ZERO_PARAMETERS
 import static org.grails.datastore.mapping.reflect.AstUtils.addAnnotationIfNecessary
@@ -262,6 +279,19 @@ class ServiceTransformation extends AbstractTraitApplyingGormASTTransformation i
             ClassNode targetDomainClass = ce != null ? ce.type : ClassHelper.OBJECT_TYPE
             // weave with generic argument
             weaveTraitWithGenerics(impl, getTraitClass(), targetDomainClass)
+
+            // Auto-inherit datasource from domain class's mapping if the service
+            // does not already have an explicit @Transactional(connection=...)
+            if (targetDomainClass != ClassHelper.OBJECT_TYPE) {
+                def domainConnection = resolveDomainDatasource(targetDomainClass)
+                if (domainConnection != null
+                        && ConnectionSource.DEFAULT != domainConnection
+                        && ConnectionSource.ALL != domainConnection) {
+                    if (!hasExplicitConnectionAnnotation(classNode)) {
+                        applyDomainConnectionToService(classNode, impl, domainConnection)
+                    }
+                }
+            }
 
             List<MethodNode> abstractMethods = findAllUnimplementedAbstractMethods(classNode)
             abstractMethods.sort(true) { it.name } // ensure a consistent order of processing methods
@@ -450,6 +480,140 @@ class ServiceTransformation extends AbstractTraitApplyingGormASTTransformation i
                 warning(sourceUnit, classNode, "Error generating service loader descriptor for class [${className}]: $e.message")
             }
         }
+    }
+
+    private static String resolveDomainDatasource(ClassNode domainClass) {
+        def mappingField = domainClass.getDeclaredField('mapping')
+        if (mappingField == null) {
+            def mappingProp = domainClass.getProperty('mapping')
+            if (mappingProp != null) {
+                mappingField = mappingProp.field
+            }
+        }
+        if (mappingField != null) {
+            return extractDatasourceFromExpression(mappingField.initialValueExpression)
+        }
+        return null
+    }
+
+    private static String extractDatasourceFromExpression(Expression expr) {
+        if (!(expr instanceof ClosureExpression)) {
+            return null
+        }
+        def code = ((ClosureExpression) expr).getCode()
+        if (!(code instanceof BlockStatement)) {
+            return null
+        }
+        for (def stmt : ((BlockStatement) code).statements) {
+            if (!(stmt instanceof ExpressionStatement)) {
+                continue
+            }
+            def stmtExpr = ((ExpressionStatement) stmt).expression
+            if (!(stmtExpr instanceof MethodCallExpression)) {
+                continue
+            }
+            def call = (MethodCallExpression) stmtExpr
+            def methodName = call.methodAsString
+            if ('datasource' == methodName || 'connection' == methodName || 'connections' == methodName) {
+                def args = call.arguments
+                if (args instanceof ArgumentListExpression) {
+                    def argExprs = ((ArgumentListExpression) args).expressions
+                    if (!argExprs.isEmpty() && argExprs[0] instanceof ConstantExpression) {
+                        return ((ConstantExpression) argExprs[0]).value?.toString()
+                    }
+                }
+            }
+        }
+        return null
+    }
+
+    private static boolean hasExplicitConnectionAnnotation(ClassNode classNode) {
+        def ann = findAnnotation(classNode, Transactional)
+        if (ann != null) {
+            def connection = ann.getMember('connection')
+            if (connection instanceof ConstantExpression) {
+                def value = ((ConstantExpression) connection).value?.toString()
+                return value != null && !value.isEmpty()
+            }
+        }
+        return false
+    }
+
+    private static void applyDomainConnectionToService(ClassNode classNode, ClassNode implClass, String connectionName) {
+        def connectionExpr = new ConstantExpression(connectionName)
+        applyDomainConnection(classNode, connectionExpr)
+        applyDomainConnection(implClass, connectionExpr)
+
+        // TransactionalTransform runs before ServiceTransformation creates the impl class, so it never
+        // gets a chance to weave getTransactionManager() with the correct connection-aware logic.
+        // We generate it here directly to ensure the right transaction manager is used at runtime.
+        generateConnectionAwareTransactionManager(implClass, connectionExpr)
+    }
+
+    private static void applyDomainConnection(ClassNode node, ConstantExpression connectionExpr) {
+        def ann = findAnnotation(node, Transactional)
+        if (ann) {
+            ann.setMember('connection', connectionExpr)
+        }
+        else {
+            def newAnn = new AnnotationNode(ClassHelper.make(Transactional))
+            newAnn.setMember('connection', connectionExpr)
+            node.addAnnotation(newAnn)
+        }
+    }
+
+    /**
+     * Generates a {@code getTransactionManager()} method on the impl class that resolves the
+     * transaction manager for the inherited connection source. This mirrors the logic in
+     * {@link org.grails.datastore.gorm.transactions.transform.TransactionalTransform#weaveTransactionManagerAware}
+     * for classes implementing the {@link org.grails.datastore.mapping.services.Service} trait.
+     */
+    private static void generateConnectionAwareTransactionManager(ClassNode implClass, ConstantExpression connectionExpr) {
+        // Remove any existing getTransactionManager() that was added without connection awareness
+        implClass.getMethods('getTransactionManager').each {
+            implClass.removeMethod(it)
+        }
+
+        def transactionManagerClassNode = ClassHelper.make(PlatformTransactionManager)
+        def transactionCapableDatastore = ClassHelper.make(TransactionCapableDatastore)
+        def multipleConnectionDatastore = ClassHelper.make(MultipleConnectionSourceCapableDatastore)
+        def gormEnhancerExpr = classX(GormEnhancer)
+
+        // datastore variable (field from Service trait)
+        def datastoreVar = varX('datastore')
+        // ((MultipleConnectionSourceCapableDatastore) datastore).getDatastoreForConnection(connectionName)
+        def datastoreForConnection = callD(
+                castX(multipleConnectionDatastore, datastoreVar),
+                'getDatastoreForConnection',
+                connectionExpr
+        )
+        // .getTransactionManager()
+        def datastoreTxManager = propX(
+                castX(transactionCapableDatastore, datastoreForConnection),
+                'transactionManager'
+        )
+        // GormEnhancer.findSingleTransactionManager(connectionName)
+        def fallbackTxManager = callX(
+                gormEnhancerExpr,
+                'findSingleTransactionManager',
+                args(connectionExpr)
+        )
+
+        // if (datastore != null) { return <datastoreTxManager> } else { return <fallbackTxManager> }
+        def body = ifElseS(
+                notNullX(datastoreVar),
+                returnS(datastoreTxManager),
+                returnS(fallbackTxManager)
+        )
+
+        def methodNode = implClass.addMethod(
+                'getTransactionManager',
+                Modifier.PUBLIC,
+                transactionManagerClassNode,
+                ZERO_PARAMETERS, null,
+                body
+        )
+        markAsGenerated(implClass, methodNode)
     }
 
     @Override

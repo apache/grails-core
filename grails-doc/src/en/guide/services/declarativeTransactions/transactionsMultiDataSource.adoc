@@ -62,6 +62,8 @@ class BookService {
 }
 ----
 
+TIP: GORM Data Services offer a simpler approach. Annotate the `@Service` abstract class with `@Transactional(connection = 'books')` and all auto-implemented methods - `get()`, `save()`, `delete()`, `findBy*()`, `countBy*()` - route to the correct datasource automatically. See the <<multipleDatasources,Data Services and Multiple Datasources>> section for the full pattern.
+
 [source, groovy]
 ----
 @CompileStatic
@@ -73,3 +75,5 @@ class MovieService {
     }
 }
 ----
+
+NOTE: If you are using GORM Data Services (the `@Service` annotation), the datasource is automatically inherited from the domain class's `mapping` block, so you do not need to repeat `@Transactional(connection = '...')` on the service. An explicit annotation on the service still takes precedence. See the "GORM Data Service Datasource Inheritance" section under "Multiple Datasources" in the Data Sources configuration guide for details.

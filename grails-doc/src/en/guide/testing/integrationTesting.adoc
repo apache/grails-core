@@ -143,6 +143,185 @@ This has the downside that you cannot implement it differently for different cas
 If you do have a series of tests that will share state you can remove the `Rollback` and the last test in the suite should feature the {springapi}org/springframework/test/annotation/DirtiesContext.html[DirtiesContext] annotation which will shutdown the environment and restart it fresh (note that this will have an impact on test run times).
 
 
+==== DatabaseCleanup
+
+
+As an alternative to `@Rollback`, the `@DatabaseCleanup` annotation truncates all database tables after each test method, rather than rolling back the transaction. This is useful when your tests need data to actually be committed to the database (for example, to test behavior that depends on committed data or to verify transactional boundaries).
+
+===== Supported Databases
+
+Database cleanup is automatically discovered and applied based on your datasource configuration. The following database implementations are available:
+
+====== H2 Database
+
+To use `@DatabaseCleanup` with H2 databases, add the `grails-testing-support-dbcleanup-h2` dependency:
+
+[source,groovy]
+----
+dependencies {
+    integrationTestImplementation 'org.apache.grails:grails-testing-support-dbcleanup-h2'
+}
+----
+
+This module will clean up schema the specified schema by default, otherwise it will purge from all schemas.
+
+====== PostgreSQL
+
+To use `@DatabaseCleanup` with PostgreSQL databases, add the `grails-testing-support-dbcleanup-postgresql` dependency:
+
+[source,groovy]
+----
+dependencies {
+    integrationTestImplementation 'org.apache.grails:grails-testing-support-dbcleanup-postgresql'
+}
+----
+
+This module will clean up the schema specified by `currentSchema` in the jdbc url, or it will clean up all non-system schemas.
+
+===== Using DatabaseCleanup
+
+To use `@DatabaseCleanup`, add the appropriate cleanup module for your database to your integration test configuration. The annotation can be applied at the class level to clean up after every test:
+
+[source,groovy]
+----
+import grails.gorm.transactions.Transactional
+import grails.testing.mixin.integration.Integration
+import org.apache.grails.testing.cleanup.core.DatabaseCleanup
+import spock.lang.Specification
+import spock.lang.Stepwise
+
+@Integration
+@DatabaseCleanup
+@Stepwise
+class BookCleanupSpec extends Specification {
+
+    @Transactional
+    void "test 1 - create data"() {
+        when:
+        new Book(title: 'Grails in Action').save(flush: true, failOnError: true)
+
+        then:
+        Book.count() == 1
+    }
+
+    @Transactional
+    void "test 2 - data was cleaned up"() {
+        expect: 'no data from the previous test'
+        Book.count() == 0
+    }
+}
+----
+
+It can also be applied at the method level, so only annotated test methods trigger cleanup:
+
+[source,groovy]
+----
+@Integration
+class SelectiveCleanupSpec extends Specification {
+
+    @DatabaseCleanup
+    @Transactional
+    void "this test triggers cleanup"() {
+        // data will be truncated after this test
+    }
+
+    @Transactional
+    void "this test does not trigger cleanup"() {
+        // data persists for the next test
+    }
+}
+----
+
+You can optionally specify which datasource beans to clean by passing their names:
+
+[source,groovy]
+----
+@DatabaseCleanup(['dataSource', 'dataSource_secondary'])
+----
+
+You can also explicitly map each datasource to a database type, ensuring the correct `DatabaseCleaner` implementation is used without relying on auto-discovery:
+
+[source,groovy]
+----
+@DatabaseCleanup(['dataSource:h2', 'dataSource_pg:postgresql'])
+----
+
+These formats can be mixed. Entries without a `:` separator will auto-discover the appropriate cleaner:
+
+[source,groovy]
+----
+@DatabaseCleanup(['dataSource:h2', 'dataSource_other'])
+----
+
+If no names are specified, all datasources in the application context are cleaned.
+
+===== Deferred Cleanup (cleanupAfterSpec)
+
+By default, `@DatabaseCleanup` truncates tables after each individual test method. If you prefer to defer cleanup until after the entire spec finishes, set `cleanupAfterSpec = true`:
+
+[source,groovy]
+----
+@Integration
+@DatabaseCleanup(cleanupAfterSpec = true)
+@Stepwise
+class SharedDataSpec extends Specification {
+
+    @Transactional
+    void "test 1 - create data"() {
+        when:
+        new Book(title: 'Grails in Action').save(flush: true, failOnError: true)
+
+        then:
+        Book.count() == 1
+    }
+
+    @Transactional
+    void "test 2 - data from test 1 is still available"() {
+        expect: 'data persists across tests'
+        Book.count() == 1
+    }
+
+    // Database is cleaned once after both tests complete
+}
+----
+
+This is useful when test methods build on each other's data, or when per-test cleanup is too expensive and a single cleanup at the end of the spec is sufficient.
+
+NOTE: `cleanupAfterSpec` is only valid on class-level `@DatabaseCleanup` annotations. Using it on a method-level annotation will throw an `IllegalStateException`.
+
+NOTE: If individual methods within a `cleanupAfterSpec = true` spec also have their own `@DatabaseCleanup` annotation, those methods will still be cleaned up immediately after execution.
+
+WARNING: `@DatabaseCleanup` truncates *all* tables, including any data inserted by `BootStrap`. Tests using this annotation should create their own test data and not rely on bootstrap seed data.
+
+IMPORTANT: `@DatabaseCleanup` requires `@Integration`. Using `@DatabaseCleanup` on a spec without `@Integration` will throw an `IllegalStateException`, since the database cleanup framework depends on the Spring application context provided by the integration test infrastructure.
+
+NOTE: `@DatabaseCleanup` should not be placed on non-feature methods such as `setup()`, `cleanup()`, `setupSpec()`, or `cleanupSpec()`. To catch misplaced annotations, enable the validation property described below.
+
+===== System Properties
+
+The `@DatabaseCleanup` process supports two system properties that can be passed via `-D` flags:
+
+[cols="2,3,1"]
+|===
+| Property | Description | Default
+
+| `grails.testing.cleanup.debug`
+| When set to `true`, prints a formatted report of cleanup statistics to stdout after each cleanup operation, showing datasource name, table names, and row counts before truncation.
+| `false`
+
+| `grails.testing.cleanup.validate`
+| When set to `true`, validates that `@DatabaseCleanup` is not placed on non-feature methods (`setup()`, `cleanup()`, `setupSpec()`, `cleanupSpec()`). This validation uses reflection to iterate over all declared methods and is disabled by default for performance.
+| `false`
+|===
+
+Example usage:
+
+[source,bash]
+----
+./gradlew integrationTest -Dgrails.testing.cleanup.debug=true -Dgrails.testing.cleanup.validate=true
+----
+
+
 ==== Autowiring
 
 

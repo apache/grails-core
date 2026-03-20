@@ -204,11 +204,11 @@ public class GeneratorContext implements DependencyContext {
     }
 
     /**
-     * @return The test framework
+     * @return The development reloading
      */
     @NonNull
-    public TestFramework getTestFramework() {
-        return options.getTestFramework();
+    public DevelopmentReloading getDevelopmentReloading() {
+        return options.getDevelopmentReloading();
     }
 
     /**
@@ -286,20 +286,19 @@ public class GeneratorContext implements DependencyContext {
     }
 
     public String getTestSourcePath(String path) {
-        return getTestFramework().getSourcePath(path, Language.DEFAULT_OPTION);
+        return TestFramework.SPOCK.getSourcePath(path);
     }
 
     public String getIntegrationTestSourcePath(String path) {
-        return getTestFramework().getIntegrationSourcePath(path, Language.DEFAULT_OPTION);
+        return TestFramework.SPOCK.getIntegrationSourcePath(path);
     }
 
-    RockerModel parseModel(RockerModel javaTemplate,
-                           RockerModel groovyTemplate) {
+    RockerModel parseModel(RockerModel javaTemplate, RockerModel groovyTemplate) {
        return groovyTemplate;
     }
 
     public void addTemplate(String name, String path, TestRockerModelProvider testRockerModelProvider) {
-        RockerModel rockerModel = testRockerModelProvider.findModel(Language.DEFAULT_OPTION, getTestFramework());
+        RockerModel rockerModel = testRockerModelProvider.findModel(TestFramework.SPOCK);
         if (rockerModel != null) {
             addTemplate(name, new RockerTemplate(path, rockerModel));
         }

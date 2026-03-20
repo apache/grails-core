@@ -16,7 +16,6 @@
  *  specific language governing permissions and limitations
  *  under the License.
  */
-
 package org.grails.datastore.mapping.config
 
 import groovy.transform.CompileStatic
@@ -29,10 +28,16 @@ import org.springframework.beans.factory.config.MethodInvokingFactoryBean
 import org.springframework.lang.Nullable
 
 import org.grails.datastore.mapping.core.Datastore
+import org.grails.datastore.mapping.core.connections.ConnectionSource
+import org.grails.datastore.mapping.core.connections.ConnectionSourcesSupport
+import org.grails.datastore.mapping.core.connections.MultipleConnectionSourceCapableDatastore
+import org.grails.datastore.mapping.core.exceptions.ConfigurationException
 import org.grails.datastore.mapping.services.Service
 
 /**
- * Variant of {#link MethodInvokingFactoryBean} which returns the correct data service type instead of {@code java.lang.Object} so the Autowire with type works correctly.
+ * Variant of {@link MethodInvokingFactoryBean} which returns the correct
+ * data service type instead of {@code java.lang.Object} so the Autowire
+ * with type works correctly.
  */
 @Internal
 @CompileStatic
@@ -54,14 +59,101 @@ class DatastoreServiceMethodInvokingFactoryBean extends MethodInvokingFactoryBea
 
     @Override
     protected Object invokeWithTargetException() throws Exception {
-        Object object = super.invokeWithTargetException()
+        def object = super.invokeWithTargetException()
         if (object) {
-            ((Service) object).setDatastore((Datastore) targetObject)
+            def effectiveDatastore = resolveEffectiveDatastore((Datastore) targetObject)
+            ((Service) object).datastore = effectiveDatastore
             if (beanFactory instanceof AutowireCapableBeanFactory) {
-                ((AutowireCapableBeanFactory) beanFactory).autowireBeanProperties(object, AutowireCapableBeanFactory.AUTOWIRE_BY_TYPE, false)
+                ((AutowireCapableBeanFactory) beanFactory).autowireBeanProperties(
+                        object,
+                        AutowireCapableBeanFactory.AUTOWIRE_BY_TYPE,
+                        false
+                )
             }
         }
         object
+    }
+
+    private Datastore resolveEffectiveDatastore(Datastore defaultDatastore) {
+        if (!(defaultDatastore instanceof MultipleConnectionSourceCapableDatastore)) {
+            return defaultDatastore
+        }
+
+        // Check for explicit @Transactional(connection=...) on the service first - it takes precedence
+        String serviceConnection = getServiceTransactionalConnection()
+        if (serviceConnection != null
+                && ConnectionSource.DEFAULT != serviceConnection
+                && ConnectionSource.ALL != serviceConnection) {
+            Datastore resolved = ((MultipleConnectionSourceCapableDatastore) defaultDatastore)
+                    .getDatastoreForConnection(serviceConnection)
+            if (resolved == null) {
+                throw new ConfigurationException(
+                        "DataSource not found for connection name [${serviceConnection}] " +
+                        "specified via @Transactional on service [${serviceClass.name}]. " +
+                        'Please check your multiple data sources configuration and try again.'
+                )
+            }
+            return resolved
+        }
+
+        // Fall back to domain class mapping datasource
+        def domainClass = serviceDomainClass
+        if (domainClass == null || domainClass == Object) {
+            return defaultDatastore
+        }
+
+        def entity = defaultDatastore.mappingContext?.getPersistentEntity(domainClass.name)
+        if (entity == null) {
+            return defaultDatastore
+        }
+
+        def domainConnection = ConnectionSourcesSupport.getDefaultConnectionSourceName(entity)
+        if (domainConnection != null
+                && ConnectionSource.DEFAULT != domainConnection
+                && ConnectionSource.ALL != domainConnection) {
+            Datastore resolved = ((MultipleConnectionSourceCapableDatastore) defaultDatastore)
+                    .getDatastoreForConnection(domainConnection)
+            if (resolved == null) {
+                throw new ConfigurationException(
+                        "DataSource not found for connection name [${domainConnection}] " +
+                        "mapped on domain class [${domainClass.name}] " +
+                        "used by service [${serviceClass.name}]. " +
+                        'Please check your multiple data sources configuration and try again.'
+                )
+            }
+            return resolved
+        }
+
+        return defaultDatastore
+    }
+
+    private String getServiceTransactionalConnection() {
+        try {
+            for (def ann : serviceClass.annotations) {
+                if ('grails.gorm.transactions.Transactional' == ann.annotationType().name) {
+                    def connection = ann.annotationType().getMethod('connection').invoke(ann) as String
+                    if (connection != null && !connection.isEmpty()) {
+                        return connection
+                    }
+                }
+            }
+        }
+        catch (Exception ignored) {
+        }
+        return null
+    }
+
+    private Class<?> getServiceDomainClass() {
+        try {
+            for (def ann : serviceClass.annotations) {
+                if ('grails.gorm.services.Service' == ann.annotationType().name) {
+                    return (Class<?>) ann.annotationType().getMethod('value').invoke(ann)
+                }
+            }
+        }
+        catch (Exception ignored) {
+        }
+        return null
     }
 
     @Override

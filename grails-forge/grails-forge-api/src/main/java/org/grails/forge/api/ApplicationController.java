@@ -231,7 +231,7 @@ public class ApplicationController implements ApplicationTypeOperations {
             return new Options(null, GormImpl.DEFAULT_OPTION, ServletImpl.DEFAULT_OPTION, JdkVersion.DEFAULT_OPTION, getOperatingSystem(requestInfo.getUserAgent()));
         }
 
-        return new Options(filter.getTest() != null ? filter.getTest().toTestFramework() : null,
+        return new Options(filter.getReloading() != null ? filter.getReloading().toDevelopmentReloading() : null,
                 filter.getGorm() == null ? GormImpl.DEFAULT_OPTION : filter.getGorm(),
                 filter.getServlet() == null ? ServletImpl.DEFAULT_OPTION : filter.getServlet(),
                 filter.getJavaVersion() == null ? JdkVersion.DEFAULT_OPTION : filter.getJavaVersion(),

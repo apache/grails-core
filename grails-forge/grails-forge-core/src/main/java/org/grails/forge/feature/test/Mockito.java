@@ -64,7 +64,7 @@ public class Mockito implements DefaultFeature {
 
     @Override
     public boolean shouldApply(ApplicationType applicationType, Options options, Set<Feature> selectedFeatures) {
-        return selectedFeatures.stream().anyMatch(f -> f instanceof TestFeature);
+        return selectedFeatures.stream().anyMatch(f -> f instanceof Spock);
     }
 
     @Override

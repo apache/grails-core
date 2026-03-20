@@ -241,12 +241,12 @@ class Metadata {
         return this.propertyResolver.containsProperty((String) key)
     }
 
-    @Deprecated
+    @Deprecated(since = '7.0', forRemoval = true)
     Object get(Object key) {
         getProperty(key.toString(), Object, null)
     }
 
-    @Deprecated
+    @Deprecated(since = '7.0', forRemoval = true)
     Object getProperty(String propertyName) {
         get(propertyName)
     }

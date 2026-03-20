@@ -63,7 +63,7 @@ public class ContextFactory {
         }
 
         Options newOptions = options
-                .withTestFramework(determineTestFramework(options.getTestFramework()))
+                .withDevelopmentReloading(determineDevelopmentReloading(options.getDevelopmentReloading()))
                 .withGormImpl(determineGormImpl(options.getGormImpl()))
                 .withServletImpl(determineServletImpl(options.getServletImpl()));
 
@@ -89,11 +89,11 @@ public class ContextFactory {
         return new GeneratorContext(project, featureContext.getApplicationType(), featureContext.getOptions(), featureContext.getOperatingSystem(), featureList, coordinateResolver);
     }
 
-    TestFramework determineTestFramework(TestFramework testFramework) {
-        if (testFramework == null) {
-            testFramework = TestFramework.DEFAULT_OPTION;
+    DevelopmentReloading determineDevelopmentReloading(DevelopmentReloading reloading) {
+        if (reloading == null) {
+            reloading = DevelopmentReloading.DEFAULT_OPTION;
         }
-        return testFramework;
+        return reloading;
     }
 
     Language determineLanguage(Language language, Set<Feature> features) {

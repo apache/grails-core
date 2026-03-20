@@ -23,6 +23,7 @@ import org.grails.forge.BeanContextSpec
 import org.grails.forge.BuildBuilder
 import org.grails.forge.application.ApplicationType
 import org.grails.forge.fixture.CommandOutputFixture
+import org.grails.forge.options.DevelopmentReloading
 import org.grails.forge.options.JdkVersion
 import org.grails.forge.options.Options
 import org.grails.forge.options.ServletImpl
@@ -36,7 +37,7 @@ class SpringBootSpec extends BeanContextSpec implements CommandOutputFixture {
         when:
         def output = generate(
                 applicationType,
-                new Options(TestFramework.SPOCK)
+                new Options(DevelopmentReloading.DEVTOOLS)
         )
         final String build = output['build.gradle']
 
@@ -55,7 +56,7 @@ class SpringBootSpec extends BeanContextSpec implements CommandOutputFixture {
         when:
         def output = generate(
                 ApplicationType.PLUGIN,
-                new Options(TestFramework.SPOCK)
+                new Options(DevelopmentReloading.DEVTOOLS)
         )
         final String build = output['build.gradle']
 

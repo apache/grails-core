@@ -29,9 +29,7 @@ import grails.gorm.MultiTenant
 import grails.gorm.annotation.Entity
 import grails.gorm.services.Service
 import grails.gorm.transactions.Transactional
-import org.grails.datastore.gorm.GormEnhancer
 import org.grails.datastore.gorm.GormEntity
-import org.grails.datastore.gorm.GormStaticApi
 import org.grails.datastore.mapping.core.DatastoreUtils
 import org.grails.datastore.mapping.multitenancy.MultiTenancySettings
 import org.grails.datastore.mapping.multitenancy.resolvers.SystemPropertyTenantResolver
@@ -49,7 +47,7 @@ import org.grails.orm.hibernate.HibernateDatastore
  * - Schema creation on the correct (analytics) datasource for MultiTenant domains
  * - save(), get(), delete(), count() with tenant isolation on secondary datasource
  * - findBy* dynamic finders with tenant isolation on secondary datasource
- * - GormEnhancer escape-hatch for aggregate HQL on secondary datasource
+ * - Data Service aggregate HQL on secondary datasource
  * - Tenant isolation: same-named data under different tenants stays separate
  *
  * @see PartitionedMultiTenancySpec for basic DISCRIMINATOR multi-tenancy
@@ -194,27 +192,23 @@ class DataServiceMultiTenantMultiDataSourceSpec extends Specification {
         found2.amount == 200
     }
 
-    void "GormEnhancer resolves analytics qualifier for MultiTenant entity with explicit datasource"() {
-        when: 'Looking up the static API without specifying a connection'
-        def api = GormEnhancer.findStaticApi(Metric)
+    void "analytics datasource is registered and functional for MultiTenant entity"() {
+        when: 'A metric is saved via the data service (routes to analytics datasource)'
+        def saved = metricService.save(new Metric(name: 'registration-check', amount: 1))
 
-        then: 'The API is registered and functional (schema exists on correct datasource)'
-        api != null
-
-        when: 'Using the explicit analytics qualifier'
-        def analyticsApi = GormEnhancer.findStaticApi(Metric, 'analytics')
-
-        then: 'The analytics API is also registered'
-        analyticsApi != null
+        then: 'Metric is persisted - analytics datasource is properly registered'
+        saved != null
+        saved.id != null
+        metricService.count() == 1
     }
 
-    void "GormEnhancer aggregate HQL routes to analytics datasource"() {
+    void "aggregate HQL routes to analytics datasource via data service"() {
         given: 'Multiple metrics saved under tenant1'
         metricService.save(new Metric(name: 'alpha', amount: 10))
         metricService.save(new Metric(name: 'beta', amount: 20))
         metricService.save(new Metric(name: 'gamma', amount: 30))
 
-        when: 'Using GormEnhancer for an aggregate query'
+        when: 'Running an aggregate query through the data service'
         def results = metricService.getTotalAmountAbove(15)
 
         then: 'The HQL executes against the analytics datasource'
@@ -272,24 +266,20 @@ interface MetricDataService {
 abstract class MetricService implements MetricDataService {
 
     /**
-     * Statically compiled access to the analytics datasource via GormEnhancer.
-     */
-    private GormStaticApi<Metric> getAnalyticsApi() {
-        GormEnhancer.findStaticApi(Metric, 'analytics')
-    }
-
-    /**
      * Delete all metrics for the current tenant from the analytics datasource.
+     * The @Transactional(connection = 'analytics') on this class ensures the
+     * executeUpdate routes to the analytics datasource.
      */
     void deleteAll() {
-        analyticsApi.executeUpdate('delete from Metric')
+        Metric.executeUpdate('delete from Metric where 1=1')
     }
 
     /**
-     * Aggregate query - calculates total amount of metrics above a threshold.
+     * Aggregate query via domain class static API.
+     * Executes against analytics datasource via the active transaction.
      */
     List getTotalAmountAbove(Integer minAmount) {
-        analyticsApi.executeQuery(
+        Metric.executeQuery(
             'select sum(m.amount) from Metric m where m.amount > :minAmount',
             [minAmount: minAmount]
         )
