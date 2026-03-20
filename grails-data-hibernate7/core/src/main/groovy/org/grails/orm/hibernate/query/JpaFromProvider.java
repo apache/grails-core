@@ -18,16 +18,12 @@
  */
 package org.grails.orm.hibernate.query;
 
-import java.util.AbstractMap;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
-import java.util.Optional;
-import java.util.Set;
 import java.util.function.Function;
 import java.util.stream.Collectors;
-import java.util.stream.Stream;
 
 import jakarta.persistence.FetchType;
 import jakarta.persistence.criteria.AbstractQuery;
@@ -55,32 +51,29 @@ public class JpaFromProvider implements Cloneable {
         this.fromMap = new HashMap<>(fromMap);
     }
 
-    public JpaFromProvider(DetachedCriteria<?> detachedCriteria, AbstractQuery<?> cq, From<?, ?> root) {
-        this(detachedCriteria, List.of(), cq, root);
-    }
-
     public JpaFromProvider(
             DetachedCriteria<?> detachedCriteria,
             List<Query.Projection> projections,
-            AbstractQuery<?> cq,
             From<?, ?> root) {
-        fromMap = getFromsByName(detachedCriteria, projections, cq, root);
+        fromMap = getFromsByName(detachedCriteria, projections, root);
     }
 
     public JpaFromProvider(
             JpaFromProvider parent,
             DetachedCriteria<?> detachedCriteria,
             List<Query.Projection> projections,
-            AbstractQuery<?> cq,
             From<?, ?> root) {
         fromMap = new HashMap<>(parent.fromMap);
-        fromMap.putAll(getFromsByName(detachedCriteria, projections, cq, root));
+        fromMap.putAll(getFromsByName(detachedCriteria, projections, root));
     }
 
-    private Map<String, From<?, ?>> getFromsByName(
+    public Map<String, From<?, ?>> getFromsByName() {
+        return fromMap;
+    }
+
+    protected Map<String, From<?, ?>> getFromsByName(
             DetachedCriteria<?> detachedCriteria,
             List<Query.Projection> projections,
-            AbstractQuery<?> cq,
             From<?, ?> root) {
         var detachedAssociationCriteriaList = detachedCriteria.getCriteria().stream()
                 .map(new DetachedAssociationFunction())
@@ -93,7 +86,7 @@ public class JpaFromProvider implements Cloneable {
                 .filter(Objects::nonNull)
                 .collect(Collectors.toSet());
 
-        var projectedPaths = projections.stream()
+        var directProjectedPaths = projections.stream()
                 .filter(Query.PropertyProjection.class::isInstance)
                 .map(p -> ((Query.PropertyProjection) p).getPropertyName())
                 .filter(name -> name.contains("."))
@@ -107,7 +100,7 @@ public class JpaFromProvider implements Cloneable {
 
         java.util.Set<String> allPaths = new java.util.HashSet<>();
         allPaths.addAll(aliasMap.keySet());
-        allPaths.addAll(projectedPaths.stream()
+        allPaths.addAll(directProjectedPaths.stream()
                 .filter(p -> !definedAliases.contains(p))
                 .toList());
         allPaths.addAll(eagerPaths);
@@ -125,6 +118,11 @@ public class JpaFromProvider implements Cloneable {
                 expandedPaths.add(current.toString());
             }
         }
+
+        // Re-calculate projected paths to include expanded segments for LEFT join logic
+        var finalProjectedPaths = expandedPaths.stream()
+                .filter(p -> directProjectedPaths.stream().anyMatch(dp -> dp.equals(p) || dp.startsWith(p + ".")))
+                .collect(Collectors.toSet());
 
         Map<String, From<?, ?>> fromsByPath = new HashMap<>();
         fromsByPath.put("root", root);
@@ -145,7 +143,7 @@ public class JpaFromProvider implements Cloneable {
             JoinType joinType = JoinType.INNER;
             if (detachedCriteria.getJoinTypes().containsKey(path)) {
                 joinType = detachedCriteria.getJoinTypes().get(path);
-            } else if (projectedPaths.contains(path) || eagerPaths.contains(path)) {
+            } else if (finalProjectedPaths.contains(path) || eagerPaths.contains(path)) {
                 joinType = JoinType.LEFT;
             }
 
@@ -208,7 +206,11 @@ public class JpaFromProvider implements Cloneable {
 
         String[] parsed = propertyName.split("\\.");
         if (parsed.length == SINGLE_PROPERTY) {
-            return fromMap.get("root").get(propertyName);
+            From<?, ?> root = fromMap.get("root");
+            if (propertyName.equals(root.getJavaType().getSimpleName()) || propertyName.equals(root.getJavaType().getName())) {
+                return root;
+            }
+            return root.get(propertyName);
         }
 
         // Try to find the longest matching prefix in fromMap

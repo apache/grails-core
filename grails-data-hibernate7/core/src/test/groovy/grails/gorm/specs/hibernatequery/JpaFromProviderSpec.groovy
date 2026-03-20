@@ -1,11 +1,13 @@
 package grails.gorm.specs.hibernatequery
 
+import org.hibernate.query.criteria.JpaCriteriaQuery
+
 import grails.gorm.DetachedCriteria
 import grails.gorm.specs.HibernateGormDatastoreSpec
 import jakarta.persistence.criteria.From
+import jakarta.persistence.criteria.Join
 import jakarta.persistence.criteria.Path
 import org.grails.orm.hibernate.query.JpaFromProvider
-import grails.orm.HibernateCriteriaBuilder
 import grails.gorm.annotation.Entity
 import org.grails.datastore.gorm.GormEntity
 
@@ -17,10 +19,10 @@ class JpaFromProviderSpec extends HibernateGormDatastoreSpec {
 
     private JpaFromProvider bare(Class clazz, From root) {
         def dc = new DetachedCriteria(clazz)
-        def cq = Mock(org.hibernate.query.criteria.JpaCriteriaQuery) {
+        def cq = Mock(JpaCriteriaQuery) {
             from(clazz) >> root
         }
-        return new JpaFromProvider(dc, cq, root)
+        return new JpaFromProvider(dc, [], root)
     }
 
     def "getFromsByName returns root for 'root' key"() {
@@ -114,7 +116,7 @@ class JpaFromProviderSpec extends HibernateGormDatastoreSpec {
         def cq = Mock(org.hibernate.query.criteria.JpaCriteriaQuery) {
             from(_) >> root
         }
-        JpaFromProvider provider = new JpaFromProvider(dc, cq, root)
+        JpaFromProvider provider = new JpaFromProvider(dc, [], root)
 
         when:
         Path result = provider.getFullyQualifiedPath("myAlias.id")
@@ -130,11 +132,11 @@ class JpaFromProviderSpec extends HibernateGormDatastoreSpec {
         From root = Mock(From) {
             getJavaType() >> String
         }
-        From teamJoin = Mock(From) {
+        Join teamJoin = Mock(Join) {
             getJavaType() >> String
             alias(_) >> it
         }
-        From clubJoin = Mock(From) {
+        Join clubJoin = Mock(Join) {
             getJavaType() >> String
             alias(_) >> it
         }
@@ -145,7 +147,7 @@ class JpaFromProviderSpec extends HibernateGormDatastoreSpec {
         ]
 
         when:
-        JpaFromProvider provider = new JpaFromProvider(dc, projections, cq, root)
+        JpaFromProvider provider = new JpaFromProvider(dc, projections, root)
 
         then: "joins are created hierarchically"
         1 * root.join("team", jakarta.persistence.criteria.JoinType.LEFT) >> teamJoin
@@ -168,7 +170,7 @@ class JpaFromProviderSpec extends HibernateGormDatastoreSpec {
         From subRoot = Mock(From) { getJavaType() >> Integer }
 
         when:
-        JpaFromProvider subProvider = new JpaFromProvider(parent, subDc, [], subCq, subRoot)
+        JpaFromProvider subProvider = new JpaFromProvider(parent, subDc, [], subRoot)
 
         then: "subquery provider has its own root"
         subProvider.getFullyQualifiedPath("root") == subRoot
