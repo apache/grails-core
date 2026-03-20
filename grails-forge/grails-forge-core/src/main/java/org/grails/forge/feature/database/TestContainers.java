@@ -28,7 +28,7 @@ import org.grails.forge.feature.Category;
 import org.grails.forge.feature.Feature;
 import org.grails.forge.feature.config.ApplicationConfiguration;
 import org.grails.forge.feature.config.Configuration;
-import org.grails.forge.options.TestFramework;
+import org.grails.forge.feature.test.Spock;
 import org.grails.forge.template.StringTemplate;
 
 import java.util.Optional;
@@ -74,12 +74,13 @@ public class TestContainers implements Feature {
                     testConfig.put(driverConfiguration.getDriverKey(), driver);
                 });
                 artifactIdForDriverFeature(driverFeature).ifPresent(dependencyArtifactId ->
-                        generatorContext.addDependency(testContainerTestDependency(dependencyArtifactId)));
+                    generatorContext.addDependency(testContainerTestDependency(dependencyArtifactId)));
             });
         });
-        testContainerArtifactIdByTestFramework(generatorContext.getTestFramework()).ifPresent(testArtifactId -> {
-            generatorContext.addDependency(testContainerTestDependency(testArtifactId));
-        });
+
+        if (generatorContext.isFeaturePresent(Spock.class)) {
+            generatorContext.addDependency(testContainerTestDependency("spock"));
+        }
 
         if (generatorContext.isFeaturePresent(MongoFeature.class) || generatorContext.isFeaturePresent(MongoGorm.class)) {
             generatorContext.addDependency(testContainerTestDependency("mongodb"));
@@ -89,19 +90,9 @@ public class TestContainers implements Feature {
     @NonNull
     private static Dependency.Builder testContainerTestDependency(@NonNull String artifactId) {
         return Dependency.builder()
-                .groupId(TESTCONTAINERS_GROUP_ID)
-                .artifactId(artifactId)
-                .testImplementation();
-    }
-
-    @NonNull
-    private static Optional<String> testContainerArtifactIdByTestFramework(TestFramework testFramework) {
-        if (testFramework == TestFramework.SPOCK) {
-            return Optional.of("spock");
-        } else if (testFramework == TestFramework.JUNIT) {
-            return Optional.of("junit-jupiter");
-        }
-        return Optional.empty();
+            .groupId(TESTCONTAINERS_GROUP_ID)
+            .artifactId(artifactId)
+            .testImplementation();
     }
 
     @NonNull

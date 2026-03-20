@@ -27,6 +27,7 @@ import org.grails.forge.io.ConsoleOutput
 import org.grails.forge.io.FileSystemOutputHandler
 import org.grails.forge.io.OutputHandler
 import org.grails.forge.options.BuildTool
+import org.grails.forge.options.DevelopmentReloading
 import org.grails.forge.options.Language
 import org.grails.forge.options.Options
 import org.grails.forge.options.TestFramework
@@ -87,10 +88,10 @@ abstract class CommandSpec extends Specification {
     void generateProject(OperatingSystem operatingSystem = OperatingSystem.LINUX,
                          List<String> features = [],
                          ApplicationType applicationType = ApplicationType.WEB,
-                         TestFramework testFramework = TestFramework.DEFAULT_OPTION) {
+                         DevelopmentReloading reloading = DevelopmentReloading.DEFAULT_OPTION) {
         applicationContext.getBean(ProjectGenerator).generate(applicationType,
                 NameUtils.parse("example.grails.foo"),
-                new Options(testFramework),
+                new Options(reloading),
                 operatingSystem,
                 features,
                 new FileSystemOutputHandler(dir, ConsoleOutput.NOOP),
@@ -102,7 +103,7 @@ abstract class CommandSpec extends Specification {
             List<String> features = []) {
         applicationContext.getBean(ProjectGenerator).generate(applicationType,
                 NameUtils.parse("example.grails.foo"),
-                new Options(TestFramework.DEFAULT_OPTION),
+                new Options(DevelopmentReloading.DEFAULT_OPTION),
                 OperatingSystem.DEFAULT_OPTION,
                 features,
                 new FileSystemOutputHandler(dir, ConsoleOutput.NOOP),

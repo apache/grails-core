@@ -35,8 +35,8 @@ import reactor.fn.Consumer
  * Bridges the OLD API to the new
  * @deprecated Here for compatibility only. Do not use directly
  */
-@Deprecated
 @CompileStatic
+@Deprecated(since = '3.3', forRemoval = true)
 trait Events {
 
     EventBus eventBus

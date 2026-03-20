@@ -62,13 +62,13 @@ dependencies {
     runtimeOnly 'org.apache.tomcat:tomcat-jdbc'
     runtimeOnly 'org.fusesource.jansi:jansi'
 
-    integrationTestImplementation testFixtures('org.apache.grails:grails-geb')
-    integrationTestImplementation "io.micronaut:micronaut-http-client:$micronautHttpClientVersion"
-    integrationTestImplementation "io.micronaut.serde:micronaut-serde-jackson:$micronautSerdeJacksonVersion"
-
     testImplementation 'org.apache.grails:grails-testing-support-datamapping'
     testImplementation 'org.apache.grails:grails-testing-support-web'
     testImplementation 'org.spockframework:spock-core'
+
+    integrationTestImplementation testFixtures('org.apache.grails:grails-geb')
+    integrationTestImplementation project(':grails-testing-support-http-client')
+
 }
 
 apply {

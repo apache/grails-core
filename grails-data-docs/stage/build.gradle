@@ -25,23 +25,6 @@ apply from: rootProject.layout.projectDirectory.file('gradle/docs-dependencies.g
 combinedGroovydoc.configure { Groovydoc task ->
     task.windowTitle = "Grails Data Mapping API - ${projectVersion}"
     task.docTitle = "Grails Data Mapping API - ${projectVersion}"
-    task.footer = '''<!-- Matomo -->
-<script>
-    var _paq = window._paq = window._paq || [];
-    /* tracker methods like "setCustomDimension" should be called before "trackPageView" */
-    _paq.push(["setDoNotTrack", true]);
-    _paq.push(["disableCookies"]);
-    _paq.push(['trackPageView']);
-    _paq.push(['enableLinkTracking']);
-    (function() {
-        var u="https://analytics.apache.org/";
-        _paq.push(['setTrackerUrl', u+'matomo.php']);
-        _paq.push(['setSiteId', '79']);
-        var d=document, g=d.createElement('script'), s=d.getElementsByTagName('script')[0];
-        g.async=true; g.src=u+'matomo.js'; s.parentNode.insertBefore(g,s);
-    })();
-</script>
-<!-- End Matomo Code -->'''
 
     Set<Project> docProjects = rootProject.subprojects.findAll {
         it.name in [
@@ -77,14 +60,16 @@ combinedGroovydoc.configure { Groovydoc task ->
             }
             .flatten()
 
-    task.source(sources.collect{ SourceSet it -> [it.allSource.srcDirs, it.allSource.srcDirs] }.flatten().findAll { File srcDir ->
-        if(!(srcDir.name in ['java', 'groovy'])) {
+    def allSourceDirs = sources.collect { SourceSet it -> [it.allSource.srcDirs, it.allSource.srcDirs] }.flatten().findAll { File srcDir ->
+        if (!(srcDir.name in ['java', 'groovy'])) {
             return false
         }
 
         srcDir.exists()
-    }.unique())
-    task.classpath = files(sources.collect{ SourceSet it -> it.compileClasspath.filter(File.&isDirectory) }.flatten().unique())
+    }.unique()
+    task.source(allSourceDirs)
+    task.ext.groovydocSourceDirs = allSourceDirs
+    task.classpath = files(sources.collect { SourceSet it -> it.compileClasspath.filter(File.&isDirectory) }.flatten().unique())
     task.destinationDir = project.layout.buildDirectory.dir('data-api/api').get().asFile
 
     task.inputs.files(task.source).withPropertyName("groovyDocSrc").withPathSensitivity(PathSensitivity.RELATIVE)

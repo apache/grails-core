@@ -21,8 +21,6 @@ package org.apache.grails.data.testing.tck.tests
 import spock.lang.Issue
 import spock.lang.Requires
 
-import org.grails.datastore.gorm.GormEnhancer
-
 import org.apache.grails.data.testing.tck.base.GrailsDataTckSpec
 import org.apache.grails.data.testing.tck.domains.WhereRoutingItem
 import org.apache.grails.data.testing.tck.domains.WhereRoutingItemService
@@ -112,29 +110,27 @@ class WhereQueryConnectionRoutingSpec extends GrailsDataTckSpec {
     }
 
     private void saveToConnection(String connectionName, String name, Double amount) {
-        def api = connectionName
-                ? GormEnhancer.findStaticApi(WhereRoutingItem, connectionName)
-                : GormEnhancer.findStaticApi(WhereRoutingItem)
-        api.withNewTransaction {
-            def instanceApi = connectionName
-                    ? GormEnhancer.findInstanceApi(WhereRoutingItem, connectionName)
-                    : GormEnhancer.findInstanceApi(WhereRoutingItem)
-            def item = new WhereRoutingItem(name: name, amount: amount)
-            instanceApi.save(item, [flush: true])
+        if (connectionName) {
+            WhereRoutingItem."${connectionName}".withNewTransaction {
+                new WhereRoutingItem(name: name, amount: amount)."${connectionName}".save(flush: true)
+            }
+        } else {
+            WhereRoutingItem.withNewTransaction {
+                new WhereRoutingItem(name: name, amount: amount).save(flush: true)
+            }
         }
     }
 
     private void deleteAllFromConnection(String connectionName) {
-        def api = connectionName
-                ? GormEnhancer.findStaticApi(WhereRoutingItem, connectionName)
-                : GormEnhancer.findStaticApi(WhereRoutingItem)
-        def instanceApi = connectionName
-                ? GormEnhancer.findInstanceApi(WhereRoutingItem, connectionName)
-                : GormEnhancer.findInstanceApi(WhereRoutingItem)
-        api.withNewTransaction {
-            for (item in api.list()) {
-                instanceApi.delete(item, [flush: true])
+        if (connectionName) {
+            WhereRoutingItem."${connectionName}".withNewTransaction {
+                WhereRoutingItem."${connectionName}".list().each { it."${connectionName}".delete(flush: true) }
+            }
+        } else {
+            WhereRoutingItem.withNewTransaction {
+                WhereRoutingItem.list().each { it.delete(flush: true) }
             }
         }
     }
+
 }

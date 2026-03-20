@@ -20,9 +20,11 @@ package grails.orm;
 
 import java.util.List;
 import java.util.Map;
+import java.util.Map.Entry;
 
 import groovy.lang.GroovySystem;
 
+import jakarta.persistence.FetchType;
 import jakarta.persistence.metamodel.Attribute;
 import jakarta.persistence.metamodel.PluralAttribute;
 
@@ -39,6 +41,7 @@ import org.hibernate.type.Type;
 import org.springframework.orm.hibernate5.SessionHolder;
 import org.springframework.transaction.support.TransactionSynchronizationManager;
 
+import org.grails.datastore.gorm.query.criteria.AbstractDetachedCriteria;
 import org.grails.datastore.mapping.model.PersistentEntity;
 import org.grails.datastore.mapping.query.api.QueryableCriteria;
 import org.grails.orm.hibernate.GrailsHibernateTemplate;
@@ -145,6 +148,7 @@ public class HibernateCriteriaBuilder extends AbstractHibernateCriteriaBuilder {
      * @see #createAlias(String, String)
      */
     public Criteria createAlias(String associationPath, String alias, int joinType) {
+        aliasMap.put(associationPath, alias);
         return criteria.createAlias(associationPath, alias, JoinType.parse(joinType));
     }
 
@@ -234,6 +238,28 @@ public class HibernateCriteriaBuilder extends AbstractHibernateCriteriaBuilder {
     }
 
     private static void populateHibernateDetachedCriteria(AbstractHibernateQuery query, org.hibernate.criterion.DetachedCriteria detachedCriteria, QueryableCriteria<?> queryableCriteria) {
+        if (queryableCriteria instanceof AbstractDetachedCriteria) {
+            AbstractDetachedCriteria<?> abstractDetachedCriteria = (AbstractDetachedCriteria<?>) queryableCriteria;
+            Map<String, FetchType> fetchStrategies = abstractDetachedCriteria.getFetchStrategies();
+            for (Entry<String, FetchType> entry : fetchStrategies.entrySet()) {
+                String property = entry.getKey();
+                switch (entry.getValue()) {
+                    case EAGER:
+                        jakarta.persistence.criteria.JoinType gormJoinType = abstractDetachedCriteria.getJoinTypes().get(property);
+                        if (gormJoinType != null) {
+                            query.join(property, gormJoinType);
+                        }
+                        else {
+                            query.join(property);
+                        }
+                        break;
+                    case LAZY:
+                        query.select(property);
+                        break;
+                }
+            }
+        }
+
         List<org.grails.datastore.mapping.query.Query.Criterion> criteriaList = queryableCriteria.getCriteria();
         for (org.grails.datastore.mapping.query.Query.Criterion criterion : criteriaList) {
             Criterion hibernateCriterion = HibernateQuery.HIBERNATE_CRITERION_ADAPTER.toHibernateCriterion(query, criterion, null);
@@ -252,6 +278,7 @@ public class HibernateCriteriaBuilder extends AbstractHibernateCriteriaBuilder {
         }
         detachedCriteria.setProjection(projectionList);
     }
+
 
     /**
      * Closes the session if it is copen

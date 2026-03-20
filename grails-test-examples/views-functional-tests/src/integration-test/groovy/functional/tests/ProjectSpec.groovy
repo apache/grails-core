@@ -16,44 +16,32 @@
  *  specific language governing permissions and limitations
  *  under the License.
  */
-
 package functional.tests
 
+import spock.lang.Specification
+
 import grails.testing.mixin.integration.Integration
-import grails.testing.spock.RunOnce
-import io.micronaut.http.HttpRequest
-import io.micronaut.http.HttpResponse
-import io.micronaut.http.HttpStatus
-import org.junit.jupiter.api.BeforeEach
+import org.apache.grails.testing.http.client.HttpClientSupport
 
-@Integration(applicationClass = Application)
-class ProjectSpec extends HttpClientSpec {
-
-    @RunOnce
-    @BeforeEach
-    void init() {
-        super.init()
-    }
+@Integration
+class ProjectSpec extends Specification implements HttpClientSupport {
 
     void "Test that circular references are correctly rendered for many to many relationship"() {
-        given:"A rest client"
-
-        when:"A POST is issued"
-        HttpRequest request = HttpRequest.GET('/project')
-        HttpResponse<Map> rsp = client.toBlocking().exchange(request, Map)
+        when: "A GET is issued"
+        def response = http('/project')
 
         then:
-        rsp.status() == HttpStatus.OK
+        response.assertStatus(200)
 
         when:
-        Map project = rsp.body()
+        def project = response.json()
 
-        then:"The correct response is returned"
+        then: "The correct response is returned"
         project.id == 1
-        project.name == "Grails Views"
-        project.employees.find { it.id == 1 }.name == "James Kleeh"
+        project.name == 'Grails Views'
+        project.employees.find { it.id == 1 }.name == 'James Kleeh'
         project.employees.find { it.id == 1 }.project == null
-        project.employees.find { it.id == 2 }.name == "Iván López"
+        project.employees.find { it.id == 2 }.name == 'Iván López'
         project.employees.find { it.id == 2 }.project == null
     }
 }
