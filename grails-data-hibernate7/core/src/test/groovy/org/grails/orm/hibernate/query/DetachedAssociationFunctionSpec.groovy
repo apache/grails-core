@@ -29,7 +29,10 @@ class DetachedAssociationFunctionSpec extends Specification {
 
     def "apply returns list with criteria if it is DetachedAssociationCriteria"() {
         given:
-        def criteria = new DetachedAssociationCriteria(Object, "test")
+        def association = Mock(org.grails.datastore.mapping.model.types.Association) {
+            getName() >> "test"
+        }
+        def criteria = new DetachedAssociationCriteria(Object, association)
 
         when:
         def result = function.apply(criteria)

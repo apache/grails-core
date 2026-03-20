@@ -81,10 +81,20 @@ public class JpaFromProvider implements Cloneable {
                 .toList();
 
         var aliasMap = createAliasMap(detachedAssociationCriteriaList);
+        
+        // Also scan for HibernateAlias (basic collections)
+        Map<String, String> basicAliasMap = new HashMap<>();
+        for (Query.Criterion c : detachedCriteria.getCriteria()) {
+            if (c instanceof HibernateAlias ha) {
+                basicAliasMap.put(ha.getPath(), ha.getAlias());
+            }
+        }
+
         var definedAliases = detachedAssociationCriteriaList.stream()
                 .map(DetachedAssociationCriteria::getAlias)
                 .filter(Objects::nonNull)
                 .collect(Collectors.toSet());
+        definedAliases.addAll(basicAliasMap.values());
 
         var directProjectedPaths = projections.stream()
                 .filter(Query.PropertyProjection.class::isInstance)
@@ -98,12 +108,19 @@ public class JpaFromProvider implements Cloneable {
                 .map(Map.Entry::getKey)
                 .collect(Collectors.toSet());
 
+        var collectionPaths = detachedCriteria.getPersistentEntity().getPersistentProperties().stream()
+                .filter(p -> p instanceof org.grails.datastore.mapping.model.types.Basic)
+                .map(org.grails.datastore.mapping.model.PersistentProperty::getName)
+                .collect(Collectors.toSet());
+
         java.util.Set<String> allPaths = new java.util.HashSet<>();
         allPaths.addAll(aliasMap.keySet());
+        allPaths.addAll(basicAliasMap.keySet());
         allPaths.addAll(directProjectedPaths.stream()
                 .filter(p -> !definedAliases.contains(p))
                 .toList());
         allPaths.addAll(eagerPaths);
+        allPaths.addAll(collectionPaths);
 
         // Expand paths to include all parents (e.g., "a.b.c" -> "a", "a.b", "a.b.c")
         java.util.Set<String> expandedPaths = new java.util.HashSet<>();
@@ -143,7 +160,7 @@ public class JpaFromProvider implements Cloneable {
             JoinType joinType = JoinType.INNER;
             if (detachedCriteria.getJoinTypes().containsKey(path)) {
                 joinType = detachedCriteria.getJoinTypes().get(path);
-            } else if (finalProjectedPaths.contains(path) || eagerPaths.contains(path)) {
+            } else if (finalProjectedPaths.contains(path) || eagerPaths.contains(path) || collectionPaths.contains(path)) {
                 joinType = JoinType.LEFT;
             }
 
@@ -153,6 +170,11 @@ public class JpaFromProvider implements Cloneable {
             var dac = aliasMap.get(path);
             if (dac != null && dac.getAlias() != null) {
                 fromsByPath.put(dac.getAlias(), table);
+            }
+            
+            String basicAlias = basicAliasMap.get(path);
+            if (basicAlias != null) {
+                fromsByPath.put(basicAlias, table);
             }
 
             table.alias(path);

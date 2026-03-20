@@ -19,8 +19,9 @@ class JpaFromProviderSpec extends HibernateGormDatastoreSpec {
 
     private JpaFromProvider bare(Class clazz, From root) {
         def dc = new DetachedCriteria(clazz)
-        def cq = Mock(JpaCriteriaQuery) {
-            from(clazz) >> root
+        root.join(_ as String, _ as jakarta.persistence.criteria.JoinType) >> Mock(Join) {
+            getJavaType() >> String
+            alias(_) >> it
         }
         return new JpaFromProvider(dc, [], root)
     }
@@ -28,9 +29,11 @@ class JpaFromProviderSpec extends HibernateGormDatastoreSpec {
     def "getFromsByName returns root for 'root' key"() {
         given:
         From root = Mock(From) {
-            getJavaType() >> String
+            getJavaType() >> JpaFromProviderSpecPerson
         }
-        JpaFromProvider provider = bare(String, root)
+        root.join(_ as String, _ as jakarta.persistence.criteria.JoinType) >> Mock(Join) { alias(_) >> it }
+        
+        JpaFromProvider provider = bare(JpaFromProviderSpecPerson, root)
 
         expect:
         provider.getFromsByName().get("root") == root
@@ -39,22 +42,26 @@ class JpaFromProviderSpec extends HibernateGormDatastoreSpec {
     def "getFullyQualifiedPath returns root for entity name if it matches root"() {
         given:
         From root = Mock(From) {
-            getJavaType() >> String
+            getJavaType() >> JpaFromProviderSpecPerson
         }
-        JpaFromProvider provider = bare(String, root)
+        root.join(_ as String, _ as jakarta.persistence.criteria.JoinType) >> Mock(Join) { alias(_) >> it }
+
+        JpaFromProvider provider = bare(JpaFromProviderSpecPerson, root)
 
         expect:
-        provider.getFullyQualifiedPath("String") == root
+        provider.getFullyQualifiedPath("JpaFromProviderSpecPerson") == root
     }
 
     def "getFullyQualifiedPath returns root for 'root' prefix"() {
         given:
         Path idPath = Mock(Path)
         From root = Mock(From) {
-            getJavaType() >> String
+            getJavaType() >> JpaFromProviderSpecPerson
             get("id") >> idPath
         }
-        JpaFromProvider provider = bare(String, root)
+        root.join(_ as String, _ as jakarta.persistence.criteria.JoinType) >> Mock(Join) { alias(_) >> it }
+
+        JpaFromProvider provider = bare(JpaFromProviderSpecPerson, root)
 
         expect:
         provider.getFullyQualifiedPath("root.id") == idPath
@@ -63,7 +70,9 @@ class JpaFromProviderSpec extends HibernateGormDatastoreSpec {
     def "getFullyQualifiedPath throws for null property name"() {
         given:
         From root = Mock(From)
-        JpaFromProvider provider = bare(String, root)
+        root.join(_ as String, _ as jakarta.persistence.criteria.JoinType) >> Mock(Join) { alias(_) >> it }
+
+        JpaFromProvider provider = bare(JpaFromProviderSpecPerson, root)
 
         when:
         provider.getFullyQualifiedPath(null)
@@ -75,9 +84,11 @@ class JpaFromProviderSpec extends HibernateGormDatastoreSpec {
     def "clone produces an independent copy that does not affect original"() {
         given:
         From root = Mock(From) {
-            getJavaType() >> String
+            getJavaType() >> JpaFromProviderSpecPerson
         }
-        JpaFromProvider provider = bare(String, root)
+        root.join(_ as String, _ as jakarta.persistence.criteria.JoinType) >> Mock(Join) { alias(_) >> it }
+
+        JpaFromProvider provider = bare(JpaFromProviderSpecPerson, root)
         From extra = Mock(From)
 
         when:
@@ -92,9 +103,11 @@ class JpaFromProviderSpec extends HibernateGormDatastoreSpec {
     def "put overwrites an existing key"() {
         given:
         From root = Mock(From) {
-            getJavaType() >> String
+            getJavaType() >> JpaFromProviderSpecPerson
         }
-        JpaFromProvider provider = bare(String, root)
+        root.join(_ as String, _ as jakarta.persistence.criteria.JoinType) >> Mock(Join) { alias(_) >> it }
+
+        JpaFromProvider provider = bare(JpaFromProviderSpecPerson, root)
         From newRoot = Mock(From)
 
         when:
@@ -108,14 +121,13 @@ class JpaFromProviderSpec extends HibernateGormDatastoreSpec {
         given:
         Path idPath = Mock(Path)
         From root = Mock(From) {
-            getJavaType() >> String
+            getJavaType() >> JpaFromProviderSpecPerson
             get("id") >> idPath
         }
-        def dc = new DetachedCriteria(String)
+        root.join(_ as String, _ as jakarta.persistence.criteria.JoinType) >> Mock(Join) { alias(_) >> it }
+
+        def dc = new DetachedCriteria(JpaFromProviderSpecPerson)
         dc.setAlias("myAlias")
-        def cq = Mock(org.hibernate.query.criteria.JpaCriteriaQuery) {
-            from(_) >> root
-        }
         JpaFromProvider provider = new JpaFromProvider(dc, [], root)
 
         when:
@@ -127,11 +139,13 @@ class JpaFromProviderSpec extends HibernateGormDatastoreSpec {
 
     def "getFromsByName creates hierarchical joins for projection paths"() {
         given:
-        def dc = new DetachedCriteria(String)
-        def cq = Mock(org.hibernate.query.criteria.JpaCriteriaQuery)
+        def dc = new DetachedCriteria(JpaFromProviderSpecPerson)
         From root = Mock(From) {
-            getJavaType() >> String
+            getJavaType() >> JpaFromProviderSpecPerson
         }
+        // Stub for auto-joined basic collections
+        root.join("nicknames", _) >> Mock(Join) { alias(_) >> it }
+
         Join teamJoin = Mock(Join) {
             getJavaType() >> String
             alias(_) >> it
@@ -161,13 +175,13 @@ class JpaFromProviderSpec extends HibernateGormDatastoreSpec {
 
     def "constructor with parent provider inherits froms and supports correlation"() {
         given:
-        From outerRoot = Mock(From) { getJavaType() >> String }
-        JpaFromProvider parent = bare(String, outerRoot)
+        From outerRoot = Mock(From) { getJavaType() >> JpaFromProviderSpecPerson }
+        JpaFromProvider parent = bare(JpaFromProviderSpecPerson, outerRoot)
 
         and: "subquery detached criteria"
-        def subDc = new DetachedCriteria(Integer)
-        def subCq = Mock(org.hibernate.query.criteria.JpaCriteriaQuery)
-        From subRoot = Mock(From) { getJavaType() >> Integer }
+        def subDc = new DetachedCriteria(JpaFromProviderSpecPet)
+        From subRoot = Mock(From) { getJavaType() >> JpaFromProviderSpecPet }
+        subRoot.join(_ as String, _ as jakarta.persistence.criteria.JoinType) >> Mock(Join) { alias(_) >> it }
 
         when:
         JpaFromProvider subProvider = new JpaFromProvider(parent, subDc, [], subRoot)
@@ -178,12 +192,35 @@ class JpaFromProviderSpec extends HibernateGormDatastoreSpec {
         and: "subquery provider inherits outer paths"
         subProvider.getFullyQualifiedPath("root") != outerRoot // subquery root shadows outer root
     }
+
+    def "getFromsByName automatically joins basic collections"() {
+        given:
+        def dc = new DetachedCriteria(JpaFromProviderSpecPerson)
+        From root = Mock(From) {
+            getJavaType() >> JpaFromProviderSpecPerson
+        }
+        Join nicknamesJoin = Mock(Join) {
+            getJavaType() >> String
+            alias(_) >> it
+        }
+
+        when:
+        JpaFromProvider provider = new JpaFromProvider(dc, [], root)
+
+        then: "basic collection is joined automatically"
+        1 * root.join("nicknames", jakarta.persistence.criteria.JoinType.LEFT) >> nicknamesJoin
+
+        and: "path is registered"
+        provider.getFullyQualifiedPath("nicknames") == nicknamesJoin
+    }
 }
 
 @Entity
 class JpaFromProviderSpecPerson implements GormEntity<JpaFromProviderSpecPerson> {
     Long id
     String firstName
+    Set<String> nicknames
+    static hasMany = [nicknames: String]
 }
 
 @Entity

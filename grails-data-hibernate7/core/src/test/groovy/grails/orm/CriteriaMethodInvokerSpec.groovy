@@ -227,6 +227,16 @@ class CriteriaMethodInvokerSpec extends Specification {
         1 * builder.singleResult()
     }
 
+    void "trySimpleCriteria: createAlias delegates to builder.createAlias"() {
+        when:
+        invoker.trySimpleCriteria('createAlias', CriteriaMethods.CREATE_ALIAS, ['transactions', 't'] as Object[])
+        invoker.trySimpleCriteria('createAlias', CriteriaMethods.CREATE_ALIAS, ['transactions', 't', 0] as Object[])
+
+        then:
+        1 * builder.createAlias('transactions', 't')
+        1 * builder.createAlias('transactions', 't', 0)
+    }
+
     void "tryPropertyCriteria: fetchMode delegates to builder.fetchMode"() {
         when:
         invoker.tryPropertyCriteria(CriteriaMethods.FETCH_MODE, ["transactions", org.hibernate.FetchMode.JOIN] as Object[])

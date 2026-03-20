@@ -45,7 +45,10 @@ public abstract class CollectionType {
     public Collection create(HibernateToManyProperty property, PersistentClass owner) throws MappingException {
         Collection coll = createCollection(owner);
         coll.setCollectionTable(owner.getTable());
-        coll.setTypeName(getTypeName(property));
+        String typeName = getTypeName(property);
+        if (typeName != null && !clazz.getName().equals(typeName)) {
+            coll.setTypeName(typeName);
+        }
         return coll;
     }
 

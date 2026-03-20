@@ -164,6 +164,21 @@ class PredicateGeneratorSpec extends HibernateGormDatastoreSpec {
         then:
         predicates.length == 1
     }
+
+    def "test getPredicates with In on basic collection"() {
+        given:
+        List criteria = [new Query.In("nicknames", ["Bob", "Alice"])]
+        
+        // Ensure nicknames is joined in fromProvider
+        fromProvider = new JpaFromProvider(new DetachedCriteria(PredicateGeneratorSpecPerson), [], root)
+
+        when:
+        def predicates = predicateGenerator.getPredicates(cb, query, root, criteria, fromProvider, personEntity)
+
+        then:
+        predicates.length == 1
+        predicates[0] instanceof org.hibernate.query.sqm.tree.predicate.SqmInListPredicate
+    }
 }
 
 @Entity
@@ -173,7 +188,8 @@ class PredicateGeneratorSpecPerson implements GormEntity<PredicateGeneratorSpecP
     String lastName
     Integer age
     PredicateGeneratorSpecFace face
-    static hasMany = [pets: PredicateGeneratorSpecPet]
+    Set<String> nicknames
+    static hasMany = [pets: PredicateGeneratorSpecPet, nicknames: String]
 }
 
 @Entity

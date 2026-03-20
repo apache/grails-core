@@ -268,6 +268,19 @@ public class PredicateGenerator {
                 Collection newValues = gormEntities.stream().map(GormEntity::ident).toList();
                 return cb.in(id, newValues);
             }
+            
+            // Hibernate 7: If the path is a collection, we must ensure it's correctly handled
+            if (fullyQualifiedPath instanceof SqmPath sqmPath && sqmPath.getReferencedPathSource() instanceof jakarta.persistence.metamodel.PluralAttribute) {
+                // For basic collections, GORM's 'in' traditionally implies joining.
+                // We'll check if the path is already a join (From)
+                if (fullyQualifiedPath instanceof From) {
+                    return cb.in(fullyQualifiedPath, c.getValues());
+                }
+                // If not joined yet, we may need to use 'elements' or MEMBER OF
+                // but usually JpaFromProvider should have joined it if it was a property path
+                // that refers to a collection.
+            }
+            
             return cb.in(fullyQualifiedPath, c.getValues());
         }
         return null;

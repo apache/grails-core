@@ -61,7 +61,8 @@ public enum CriteriaMethods {
     CACHE("cache"),
     READ_ONLY("readOnly"),
     FETCH_MODE("fetchMode"),
-    SINGLE_RESULT("singleResult");
+    SINGLE_RESULT("singleResult"),
+    CREATE_ALIAS("createAlias");
 
     private final String name;
 

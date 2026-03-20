@@ -482,6 +482,14 @@ class HibernateCriteriaBuilderDirectSpec extends HibernateGormDatastoreSpec {
         expect: builder.select("balance").is(builder)
     }
 
+    def "createAlias(String, String) delegates and returns this"() {
+        expect: builder.createAlias("transactions", "t").is(builder)
+    }
+
+    def "createAlias(String, String, int) delegates and returns this"() {
+        expect: builder.createAlias("transactions", "t", 0).is(builder)
+    }
+
     // ─── Cache / readOnly / lock ───────────────────────────────────────────
 
     def "cache(boolean) sets flag and returns this"() {
