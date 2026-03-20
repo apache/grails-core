@@ -1,15 +1,16 @@
 package grails.gorm.specs.hibernatequery
 
+import org.hibernate.query.criteria.HibernateCriteriaBuilder
+
 import grails.gorm.DetachedCriteria
 import grails.gorm.specs.HibernateGormDatastoreSpec
 import jakarta.persistence.criteria.CriteriaQuery
 import jakarta.persistence.criteria.Root
 import org.grails.datastore.mapping.model.PersistentEntity
 import org.grails.datastore.mapping.query.Query
-import grails.orm.HibernateCriteriaBuilder
+
 import org.grails.orm.hibernate.query.JpaFromProvider
 import org.grails.orm.hibernate.query.PredicateGenerator
-import spock.lang.Shared
 import grails.gorm.annotation.Entity
 import org.grails.datastore.gorm.GormEntity
 
@@ -31,7 +32,7 @@ class PredicateGeneratorSpec extends HibernateGormDatastoreSpec {
         query = cb.createQuery(PredicateGeneratorSpecPerson)
         root = query.from(PredicateGeneratorSpecPerson)
         personEntity = session.datastore.mappingContext.getPersistentEntity(PredicateGeneratorSpecPerson.name)
-        fromProvider = new JpaFromProvider(new DetachedCriteria(PredicateGeneratorSpecPerson), query, root)
+        fromProvider = new JpaFromProvider(new DetachedCriteria(PredicateGeneratorSpecPerson),[], root)
     }
 
     def "test getPredicates with Equals criterion"() {
@@ -103,6 +104,66 @@ class PredicateGeneratorSpec extends HibernateGormDatastoreSpec {
         noExceptionThrown()
         predicates.length == 1
     }
+
+    def "test getPredicates with Disjunction"() {
+        given:
+        List criteria = [new Query.Disjunction()
+                                 .add(new Query.Equals("firstName", "Bob"))
+                                 .add(new Query.Equals("firstName", "Alice"))]
+
+        when:
+        def predicates = predicateGenerator.getPredicates(cb, query, root, criteria, fromProvider, personEntity)
+
+        then:
+        predicates.length == 1
+    }
+
+    def "test getPredicates with Negation"() {
+        given:
+        List criteria = [new Query.Negation().add(new Query.Equals("firstName", "Bob"))]
+
+        when:
+        def predicates = predicateGenerator.getPredicates(cb, query, root, criteria, fromProvider, personEntity)
+
+        then:
+        predicates.length == 1
+    }
+
+    def "test getPredicates with Property Comparison"() {
+        given:
+        List criteria = [new Query.EqualsProperty("firstName", "lastName")]
+
+        when:
+        def predicates = predicateGenerator.getPredicates(cb, query, root, criteria, fromProvider, personEntity)
+
+        then:
+        predicates.length == 1
+    }
+
+    def "test getPredicates with Like and ILike"() {
+        given:
+        List criteria = [
+            new Query.Like("firstName", "B%"),
+            new Query.ILike("firstName", "b%")
+        ]
+
+        when:
+        def predicates = predicateGenerator.getPredicates(cb, query, root, criteria, fromProvider, personEntity)
+
+        then:
+        predicates.length == 2
+    }
+
+    def "test getPredicates with Size Comparison"() {
+        given:
+        List criteria = [new Query.SizeEquals("pets", 2)]
+
+        when:
+        def predicates = predicateGenerator.getPredicates(cb, query, root, criteria, fromProvider, personEntity)
+
+        then:
+        predicates.length == 1
+    }
 }
 
 @Entity
@@ -112,6 +173,7 @@ class PredicateGeneratorSpecPerson implements GormEntity<PredicateGeneratorSpecP
     String lastName
     Integer age
     PredicateGeneratorSpecFace face
+    static hasMany = [pets: PredicateGeneratorSpecPet]
 }
 
 @Entity
