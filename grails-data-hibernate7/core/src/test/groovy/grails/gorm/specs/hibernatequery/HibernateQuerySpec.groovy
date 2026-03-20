@@ -1099,6 +1099,18 @@ class HibernateQuerySpec extends HibernateGormDatastoreSpec {
         preEvents > 0
         postEvents > 0
     }
+
+    def "test add and get aliases"() {
+        given:
+        def alias = new org.grails.orm.hibernate.query.HibernateAlias("nicknames", "n")
+
+        when:
+        hibernateQuery.addAlias(alias)
+
+        then:
+        hibernateQuery.getAliases().size() == 1
+        hibernateQuery.getAliases()[0] == alias
+    }
 }
 
 

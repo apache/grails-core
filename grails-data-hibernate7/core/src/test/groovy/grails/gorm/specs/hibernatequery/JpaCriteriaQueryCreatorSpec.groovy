@@ -139,6 +139,27 @@ class JpaCriteriaQueryCreatorSpec extends HibernateGormDatastoreSpec {
         then:
         noExceptionThrown()
     }
+
+    def "test createQuery with HibernateAlias triggers join"() {
+        given:
+        var entity = getPersistentEntity(JpaCriteriaQueryCreatorSpecPerson)
+        var detachedCriteria = new DetachedCriteria(JpaCriteriaQueryCreatorSpecPerson)
+        
+        // Mock HibernateQuery to provide an alias for a basic collection
+        def hibernateQuery = Mock(org.grails.orm.hibernate.query.HibernateQuery) {
+            getAliases() >> [new org.grails.orm.hibernate.query.HibernateAlias("nicknames", "n")]
+            getEntity() >> entity
+        }
+
+        var creator = new JpaCriteriaQueryCreator(new Query.ProjectionList(), criteriaBuilder, entity, detachedCriteria, new DefaultConversionService(), hibernateQuery)
+
+        when:
+        JpaCriteriaQuery<?> query = creator.createQuery()
+
+        then:
+        noExceptionThrown()
+        query != null
+    }
 }
 
 @Entity
@@ -146,6 +167,8 @@ class JpaCriteriaQueryCreatorSpecPerson implements GormEntity<JpaCriteriaQueryCr
     Long id
     String firstName
     String lastName
+    Set<String> nicknames
+    static hasMany = [nicknames: String]
 }
 
 @Entity

@@ -100,6 +100,8 @@ public class PredicateGenerator {
         } else if (criterion instanceof Query.NotExists c) {
             PersistentEntity childEntity = c.getSubquery().getPersistentEntity();
             return cb.not(handleExists(cb, criteriaQuery, root, fromsByProvider, childEntity, new Query.Exists(c.getSubquery())));
+        } else if (criterion instanceof HibernateAlias) {
+            return null; // Metadata only, handled by JpaFromProvider
         }
         throw new IllegalArgumentException("Unsupported criterion: " + criterion);
     }
@@ -170,7 +172,8 @@ public class PredicateGenerator {
             Query.PropertyCriterion pc) {
 
         String propertyName = pc.getProperty();
-        if (!"id".equals(propertyName) && !propertyName.contains(".") && entity.getPropertyByName(propertyName) == null) {
+        if (!"id".equals(propertyName) && !propertyName.contains(".") && 
+                entity.getPropertyByName(propertyName) == null && !fromsByProvider.hasAlias(propertyName)) {
             throw new ConfigurationException("Property [" + propertyName +
                     "] is not a valid property of class [" + entity.getName() + "]");
         }

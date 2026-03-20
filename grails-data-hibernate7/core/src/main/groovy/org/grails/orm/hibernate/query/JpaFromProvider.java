@@ -51,11 +51,16 @@ public class JpaFromProvider implements Cloneable {
         this.fromMap = new HashMap<>(fromMap);
     }
 
+    public JpaFromProvider(DetachedCriteria<?> detachedCriteria, List<Query.Projection> projections, From<?, ?> root) {
+        this(detachedCriteria, projections, List.of(), root);
+    }
+
     public JpaFromProvider(
             DetachedCriteria<?> detachedCriteria,
             List<Query.Projection> projections,
+            List<HibernateAlias> aliases,
             From<?, ?> root) {
-        fromMap = getFromsByName(detachedCriteria, projections, root);
+        fromMap = getFromsByName(detachedCriteria, projections, aliases, root);
     }
 
     public JpaFromProvider(
@@ -64,16 +69,21 @@ public class JpaFromProvider implements Cloneable {
             List<Query.Projection> projections,
             From<?, ?> root) {
         fromMap = new HashMap<>(parent.fromMap);
-        fromMap.putAll(getFromsByName(detachedCriteria, projections, root));
+        fromMap.putAll(getFromsByName(detachedCriteria, projections, List.of(), root));
     }
 
     public Map<String, From<?, ?>> getFromsByName() {
         return fromMap;
     }
 
+    public boolean hasAlias(String name) {
+        return fromMap.containsKey(name);
+    }
+
     protected Map<String, From<?, ?>> getFromsByName(
             DetachedCriteria<?> detachedCriteria,
             List<Query.Projection> projections,
+            List<HibernateAlias> aliases,
             From<?, ?> root) {
         var detachedAssociationCriteriaList = detachedCriteria.getCriteria().stream()
                 .map(new DetachedAssociationFunction())
@@ -84,10 +94,8 @@ public class JpaFromProvider implements Cloneable {
         
         // Also scan for HibernateAlias (basic collections)
         Map<String, String> basicAliasMap = new HashMap<>();
-        for (Query.Criterion c : detachedCriteria.getCriteria()) {
-            if (c instanceof HibernateAlias ha) {
-                basicAliasMap.put(ha.getPath(), ha.getAlias());
-            }
+        for (HibernateAlias ha : aliases) {
+            basicAliasMap.put(ha.getPath(), ha.getAlias());
         }
 
         var definedAliases = detachedAssociationCriteriaList.stream()

@@ -82,6 +82,15 @@ public class HibernateQuery extends Query {
     protected Deque<Association> associationStack = new LinkedList<>();
     protected DetachedCriteria<?> detachedCriteria;
     protected ProxyHandler proxyHandler = new HibernateProxyHandler();
+    private final List<HibernateAlias> aliases = new java.util.ArrayList<>();
+
+    public List<HibernateAlias> getAliases() {
+        return Collections.unmodifiableList(aliases);
+    }
+
+    public void addAlias(HibernateAlias alias) {
+        this.aliases.add(alias);
+    }
 
     private Integer fetchSize;
     private Integer timeout;
@@ -428,7 +437,7 @@ public class HibernateQuery extends Query {
     public JpaCriteriaQuery<?> getJpaCriteriaQuery() {
         ConversionService conversionService = getSession().getMappingContext().getConversionService();
         return new JpaCriteriaQueryCreator(
-                        projections, getCriteriaBuilder(), entity, detachedCriteria, conversionService)
+                        projections, getCriteriaBuilder(), entity, detachedCriteria, conversionService, this)
                 .createQuery();
     }
 
