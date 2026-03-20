@@ -865,3 +865,7 @@ grails:
 * **8.0**: `SimpleEnumMarshaller` will become the default
 
 The legacy `org.grails.web.converters.marshaller.json.EnumMarshaller` and `org.grails.web.converters.marshaller.xml.EnumMarshaller` classes are marked as `@Deprecated(forRemoval = true, since = "7.0.2")` and will be removed in Grails 8.0.
+
+==== 13. Upgrading the Spring Security Plugin
+
+If your application uses the Grails Spring Security plugin, please consult the https://apache.github.io/grails-spring-security/snapshot/guide/index.html#upgrading-from-previous-versions[Upgrading from Previous Versions] section of the Spring Security plugin documentation for specific upgrade instructions related to Grails 7.
