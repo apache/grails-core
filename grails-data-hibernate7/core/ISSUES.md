@@ -1,31 +1,8 @@
 # Known Issues in Hibernate 7 Migration
 
-### 1. Float Precision Mismatch (H2 and PostgreSQL)
-**Symptoms:**
-- `org.hibernate.tool.schema.spi.CommandAcceptanceException: Error executing DDL`
-- H2 Error: `Precision ("64") must be between "1" and "53" inclusive`
-- PostgreSQL Error: `ERROR: precision for type float must be less than 54 bits`
 
-**Description:**
-Hibernate 7's default mapping for `java.lang.Double` properties on H2 (2.x) and PostgreSQL (16+) generates DDL with `float(64)`. Both databases reject this, as the maximum precision for the `float`/`double precision` type is 53 bits.
 
-**Workaround:**
-The framework now defaults to precision `15` decimal digits for non-Oracle dialects, which maps to ~53 bits.
 
----
-
-### 2. Generator Initialization Failure (NPE)
-**Symptoms:**
-- `java.lang.NullPointerException` at `org.hibernate.id.enhanced.SequenceStyleGenerator.generate`
-- Message: `Cannot invoke "org.hibernate.id.enhanced.DatabaseStructure.buildCallback(...)" because "this.databaseStructure" is null`
-
-**Description:**
-When a table creation fails (e.g., due to the Float Precision Mismatch issue), the `SequenceStyleGenerator` is not properly initialized. Subsequent attempts to persist an entity trigger an NPE instead of a descriptive error.
-
-**Action Taken:**
-Updated `GrailsNativeGenerator` to check the state of the delegate generator and throw a descriptive `HibernateException`.
-
----
 
 ### 3. ByteBuddy Proxy Initialization & Interception
 **Symptoms:**
@@ -47,12 +24,6 @@ Referencing an association in a projection (e.g., `projections { property('owner
 
 ---
 
-### 5. HibernateQuery Event ClassCastException
-**Symptoms:**
-- `java.lang.ClassCastException: class org.grails.datastore.mapping.query.event.PreQueryEvent cannot be cast to class org.grails.datastore.mapping.engine.event.AbstractPersistenceEvent`
-
-**Description:**
-The event listener in `HibernateQuerySpec` incorrectly expects `AbstractPersistenceEvent` while `PreQueryEvent` and `PostQueryEvent` now extend `AbstractQueryEvent`.
 
 ---
 
