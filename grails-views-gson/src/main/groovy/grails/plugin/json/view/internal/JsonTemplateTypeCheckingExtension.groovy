@@ -29,7 +29,6 @@ import org.codehaus.groovy.ast.expr.PropertyExpression
 import org.codehaus.groovy.ast.expr.VariableExpression
 import org.codehaus.groovy.control.SourceUnit
 
-import grails.plugin.json.builder.StreamingJsonBuilder
 import grails.plugin.json.view.api.internal.TemplateRenderer
 import grails.views.api.http.Parameters
 import grails.views.compiler.BuilderTypeCheckingExtension
@@ -42,9 +41,9 @@ import grails.views.compiler.BuilderTypeCheckingExtension
 @CompileStatic
 class JsonTemplateTypeCheckingExtension extends BuilderTypeCheckingExtension {
 
-    private static final ClassNode BUILDER_CLASS_NODE = ClassHelper.make(StreamingJsonBuilder)
-    private static final MethodNode JSON_BUILDER_INVOKE_METHOD = ClassHelper.make(StreamingJsonBuilder).getMethods('invokeMethod')[0]
-    private static final MethodNode JSON_DELEGATE_INVOKE_METHOD = ClassHelper.make(StreamingJsonBuilder.StreamingJsonDelegate).getMethods('invokeMethod')[0]
+    private static final ClassNode BUILDER_CLASS_NODE = ClassHelper.make(groovy.json.StreamingJsonBuilder)
+    private static final MethodNode JSON_BUILDER_INVOKE_METHOD = ClassHelper.make(groovy.json.StreamingJsonBuilder).getMethods('invokeMethod')[0]
+    private static final MethodNode JSON_DELEGATE_INVOKE_METHOD = ClassHelper.make(groovy.json.StreamingJsonBuilder.StreamingJsonDelegate).getMethods('invokeMethod')[0]
     private static final ClassNode TEMPLATE_NAMESPACE = ClassHelper.make(TemplateRenderer)
     private static final ClassNode PARAMETERS = ClassHelper.make(Parameters)
     private static final MethodNode TEMPLATE_NAMESPACE_INVOKE_METHOD = ClassHelper.make(TemplateRenderer).getMethods('invokeMethod')[0]
@@ -88,7 +87,7 @@ class JsonTemplateTypeCheckingExtension extends BuilderTypeCheckingExtension {
 
     @Override
     void transformDynamicMethods(SourceUnit source, MethodNode mn, Set dynamicCalls) {
-        new BuilderTypeCheckingExtension.BuilderMethodReplacer(TEMPLATE_NAMESPACE_INVOKE_METHOD, TEMPLATE_NAMESPACE_INVOKE_METHOD, ':IGNORE', source, dynamicCalls)
+        new BuilderMethodReplacer(TEMPLATE_NAMESPACE_INVOKE_METHOD, TEMPLATE_NAMESPACE_INVOKE_METHOD, ':IGNORE', source, dynamicCalls)
                 .visitMethod(mn)
     }
 
