@@ -29,7 +29,7 @@ jobs:
           distribution: 'liberica'
           java-version: '17'
       - name: "🐘 Setup Gradle"
-        uses: gradle/actions/setup-gradle@v4
+        uses: gradle/actions/setup-gradle@4d9f0ba0025fe599b4ebab900eb7f3a1d93ef4c2 # v5.0.0
         with:
           develocity-access-key: ${{ secrets.GRAILS_DEVELOCITY_ACCESS_KEY  }}
       - name: "🔍 Setup TestLens"
@@ -54,18 +54,18 @@ jobs:
           distribution: 'liberica'
           java-version: '17'
       - name: "🐘 Setup Gradle"
-        uses: gradle/actions/setup-gradle@v4
+        uses: gradle/actions/setup-gradle@4d9f0ba0025fe599b4ebab900eb7f3a1d93ef4c2 # v5.0.0
         with:
           develocity-access-key: ${{ secrets.GRAILS_DEVELOCITY_ACCESS_KEY  }}
       - name: "🔍 Setup TestLens"
         uses: testlens-app/setup-testlens@v1
       - name: "🔑 Login to Google Cloud"
-        uses: google-github-actions/auth@140bb5113ffb6b65a7e9b937a81fa96cf5064462
+        uses: google-github-actions/auth@7c6bc770dae815cd3e89ee6cdf493a5fab2cc093 # v3.0.0
         with:
           credentials_json: ${{ secrets.GCP_CREDENTIALS }}
           create_credentials_file: 'true'
       - name: Set up Cloud SDK
-        uses: google-github-actions/setup-gcloud@6a7c903a70c8625ed6700fa299f5ddb4ca6022e9
+        uses: google-github-actions/setup-gcloud@aa5489c8933f4cc7a4f7d45035b3b1440c9c10db # v3.0.1
         with:
           project_id: ${{ secrets.GCP_PROJECT_ID }}
       - name: "🐋 Configure Docker for Artifact Registry"
@@ -115,18 +115,18 @@ jobs:
           distribution: 'liberica'
           java-version: '17'
       - name: "🐘 Setup Gradle"
-        uses: gradle/actions/setup-gradle@v4
+        uses: gradle/actions/setup-gradle@4d9f0ba0025fe599b4ebab900eb7f3a1d93ef4c2 # v5.0.0
         with:
           develocity-access-key: ${{ secrets.GRAILS_DEVELOCITY_ACCESS_KEY  }}
       - name: "🔍 Setup TestLens"
         uses: testlens-app/setup-testlens@v1
       - name: "🔑 Login to Google Cloud"
-        uses: google-github-actions/auth@140bb5113ffb6b65a7e9b937a81fa96cf5064462
+        uses: google-github-actions/auth@7c6bc770dae815cd3e89ee6cdf493a5fab2cc093 # v3.0.0
         with:
           credentials_json: ${{ secrets.GCP_CREDENTIALS }}
           create_credentials_file: 'true'
       - name: Set up Cloud SDK
-        uses: google-github-actions/setup-gcloud@6a7c903a70c8625ed6700fa299f5ddb4ca6022e9
+        uses: google-github-actions/setup-gcloud@aa5489c8933f4cc7a4f7d45035b3b1440c9c10db # v3.0.1
         with:
           project_id: ${{ secrets.GCP_PROJECT_ID }}
       - name: "🐋 Configure Docker for Artifact Registry"
