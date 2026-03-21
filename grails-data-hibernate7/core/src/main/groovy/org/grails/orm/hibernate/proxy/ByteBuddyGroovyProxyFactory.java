@@ -73,8 +73,13 @@ public class ByteBuddyGroovyProxyFactory extends ByteBuddyProxyFactory {
         this.setIdentifierMethod = setIdentifierMethod;
         this.componentIdType = componentIdType;
         this.overridesEquals = ReflectHelper.overridesEquals(persistentClass);
+
+        // Build the proxy class using the helper
         this.proxyClass = byteBuddyProxyHelper.buildProxy(persistentClass, this.interfaces);
-        super.postInstantiate(entityName, persistentClass, interfaces, getIdentifierMethod, setIdentifierMethod, componentIdType);
+
+        // DO NOT call super.postInstantiate(entityName, ...)
+        // because it will try to initialize the standard Hibernate ProxyFactory fields
+        // which might conflict with your custom getProxy() logic.
     }
 
     @Override
@@ -92,12 +97,18 @@ public class ByteBuddyGroovyProxyFactory extends ByteBuddyProxyFactory {
                     overridesEquals
             );
 
-            final PrimeAmongSecondarySupertypes instance = (PrimeAmongSecondarySupertypes) proxyClass.getConstructor().newInstance();
-            final HibernateProxy hibernateProxy = instance.asHibernateProxy();
-            hibernateProxy.asProxyConfiguration().$$_hibernate_set_interceptor(interceptor);
-            return hibernateProxy;
+            // 1. Create the instance
+            final Object instance = proxyClass.getDeclaredConstructor().newInstance();
+
+            // 2. Cast to ProxyConfiguration to set the custom interceptor
+            // Hibernate 7 proxies implement ProxyConfiguration
+            if (instance instanceof org.hibernate.proxy.ProxyConfiguration) {
+                ((org.hibernate.proxy.ProxyConfiguration) instance).$$_hibernate_set_interceptor(interceptor);
+            }
+
+            return (HibernateProxy) instance;
         } catch (Throwable t) {
-            throw new HibernateException("Unable to generate proxy", t);
+            throw new HibernateException("Unable to generate proxy for " + entityName, t);
         }
     }
 }

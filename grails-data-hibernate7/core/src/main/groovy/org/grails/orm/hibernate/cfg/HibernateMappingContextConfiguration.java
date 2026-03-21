@@ -49,6 +49,7 @@ import org.hibernate.boot.registry.classloading.internal.ClassLoaderServiceImpl;
 import org.hibernate.boot.registry.classloading.spi.ClassLoaderService;
 import org.hibernate.boot.spi.AdditionalMappingContributor;
 import org.hibernate.cfg.AvailableSettings;
+import org.hibernate.cfg.BytecodeSettings;
 import org.hibernate.cfg.Configuration;
 import org.hibernate.cfg.Environment;
 import org.hibernate.cfg.JdbcSettings;
@@ -265,6 +266,12 @@ public class HibernateMappingContextConfiguration extends Configuration
      */
     @Override
     public SessionFactory buildSessionFactory() throws HibernateException {
+        // 1. FORCE the custom bytecode provider instance right before bootstrap
+        // This bypasses the ServiceLoader and ensures your GrailsBytecodeProvider is used.
+        getProperties().put(
+                BytecodeSettings.BYTECODE_PROVIDER_INSTANCE,
+                new org.grails.orm.hibernate.proxy.GrailsBytecodeProvider()
+        );
 
         // set the class loader to load Groovy classes
 

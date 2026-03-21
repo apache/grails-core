@@ -46,6 +46,7 @@ dependencies {
     api 'org.apache.groovy:groovy'
     api project(':grails-datamapping-core')
     api 'org.springframework:spring-orm'
+    implementation "net.bytebuddy:byte-buddy:1.18.7"
     api "org.hibernate.orm:hibernate-core:$hibernate7Version", {
         exclude group:'commons-logging', module:'commons-logging'
         exclude group:'com.h2database', module:'h2'
