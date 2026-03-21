@@ -28,7 +28,7 @@ import java.util.Locale;
 import java.util.Set;
 
 public enum Language implements IncludesDefaults<LanguageDefaults> {
-    GROOVY("groovy", new LanguageDefaults(TestFramework.SPOCK, BuildTool.GRADLE));
+    GROOVY("groovy", new LanguageDefaults(DevelopmentReloading.DEVTOOLS, BuildTool.GRADLE));
 
     public static final Language DEFAULT_OPTION = GROOVY;
 

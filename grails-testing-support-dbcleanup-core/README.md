@@ -18,6 +18,64 @@ limitations under the License.
 
 Provides the core database cleanup testing support for Grails integration tests, including the `@DatabaseCleanup` annotation and the `DatabaseCleaner` SPI.
 
+### Usage
+
+#### Basic Usage
+
+Apply `@DatabaseCleanup` at the class level to clean all datasources after every test method:
+
+```groovy
+@DatabaseCleanup
+class MyIntegrationSpec extends Specification { ... }
+```
+
+Apply at the method level to clean only after specific test methods:
+
+```groovy
+class MyIntegrationSpec extends Specification {
+    @DatabaseCleanup
+    void "test that modifies the database"() { ... }
+}
+```
+
+#### Specifying Datasources
+
+Clean only specific datasources (auto-discover cleaners):
+
+```groovy
+@DatabaseCleanup(['dataSource', 'dataSource_secondary'])
+class MySpec extends Specification { ... }
+```
+
+Clean specific datasources with explicit cleaner types:
+
+```groovy
+@DatabaseCleanup(['dataSource:h2', 'dataSource_pg:postgresql'])
+class MySpec extends Specification { ... }
+```
+
+#### Deferred Cleanup (cleanupAfterSpec)
+
+By default, database cleanup runs after each test method. Use `cleanupAfterSpec = true` to defer cleanup until after the entire spec finishes. This is useful when test methods build on shared data or when per-test cleanup is too expensive:
+
+```groovy
+@DatabaseCleanup(cleanupAfterSpec = true)
+class MySpec extends Specification {
+    void "first test creates data"() { ... }
+    void "second test uses data from first test"() { ... }
+    // Database is cleaned once after both tests complete
+}
+```
+
+**Note:** `cleanupAfterSpec` is only valid on class-level annotations. Using it on a method-level annotation will throw an `IllegalStateException`.
+
+#### Custom ApplicationContext Resolver
+
+```groovy
+@DatabaseCleanup(resolver = MyCustomResolver)
+class MySpec extends Specification { ... }
+```
+
 ### Supported Database Implementations
 
 Database cleanup is automatically discovered and applied based on your datasource configuration. The following database implementations are available:

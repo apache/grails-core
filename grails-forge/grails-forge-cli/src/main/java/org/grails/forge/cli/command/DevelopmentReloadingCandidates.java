@@ -16,30 +16,17 @@
  *  specific language governing permissions and limitations
  *  under the License.
  */
-package org.grails.forge.options;
+package org.grails.forge.cli.command;
 
-import com.fizzed.rocker.RockerModel;
+import org.grails.forge.options.DevelopmentReloading;
 
-public interface JunitRockerModelProvider {
-    /**
-     *
-     * @param language Selected language
-     * @return A {@link RockerModel}
-     * @throws IllegalArgumentException if the test combination is not handled
-     */
-    default RockerModel findJunitModel(Language language) {
-        switch (language) {
-            case GROOVY:
-                return groovyJunit();
-            default:
-                throw new IllegalArgumentException("unable to find a junit RockerModel for lang: " + language.getName());
-        }
+import java.util.ArrayList;
+import java.util.stream.Collectors;
+import java.util.stream.Stream;
+
+public class DevelopmentReloadingCandidates extends ArrayList<String> {
+
+    public DevelopmentReloadingCandidates() {
+        super(Stream.of(DevelopmentReloading.values()).map(reloading -> reloading.toString().toLowerCase()).collect(Collectors.toList()));
     }
-
-    /**
-     *
-     * @return {@link RockerModel} for {@link TestFramework#JUNIT} and {@link Language#GROOVY}
-     */
-    RockerModel groovyJunit();
-
 }

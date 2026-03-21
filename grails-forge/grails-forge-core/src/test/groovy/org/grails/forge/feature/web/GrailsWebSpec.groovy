@@ -23,6 +23,7 @@ import groovy.yaml.YamlSlurper
 import org.grails.forge.ApplicationContextSpec
 import org.grails.forge.application.ApplicationType
 import org.grails.forge.fixture.CommandOutputFixture
+import org.grails.forge.options.DevelopmentReloading
 import org.grails.forge.options.JdkVersion
 import org.grails.forge.options.Options
 import org.grails.forge.options.TestFramework
@@ -31,7 +32,7 @@ class GrailsWebSpec extends ApplicationContextSpec implements CommandOutputFixtu
 
     void "test grails-web feature"() {
         given:
-        final def output = generate(ApplicationType.WEB, new Options(TestFramework.SPOCK))
+        final def output = generate(ApplicationType.WEB, new Options(DevelopmentReloading.DEVTOOLS))
         final def buildGradle = output["build.gradle"]
 
         expect:
@@ -40,7 +41,7 @@ class GrailsWebSpec extends ApplicationContextSpec implements CommandOutputFixtu
 
     void "test grails-web configuration"() {
         when:
-        final def output = generate(ApplicationType.WEB, new Options(TestFramework.SPOCK))
+        final def output = generate(ApplicationType.WEB, new Options(DevelopmentReloading.DEVTOOLS))
         final String applicationYaml = output["grails-app/conf/application.yml"]
         def config = new YamlSlurper().parseText(applicationYaml)
 

@@ -41,6 +41,12 @@ class GrailsCodeStyleExtension {
      */
     final DirectoryProperty codenarcDirectory
 
+    /**
+     * Defaults to rootProject.buildDir/reports/codestyle.
+     * All Checkstyle and Codenarc reports will be written here.
+     */
+    final DirectoryProperty reportsDirectory
+
     @Inject
     GrailsCodeStyleExtension(ObjectFactory objects, Project project) {
         checkstyleDirectory = objects.directoryProperty().convention(
@@ -48,6 +54,9 @@ class GrailsCodeStyleExtension {
         )
         codenarcDirectory = objects.directoryProperty().convention(
                 project.rootProject.layout.buildDirectory.dir('codenarc')
+        )
+        reportsDirectory = objects.directoryProperty().convention(
+                project.rootProject.layout.buildDirectory.dir('reports/codestyle')
         )
     }
 }

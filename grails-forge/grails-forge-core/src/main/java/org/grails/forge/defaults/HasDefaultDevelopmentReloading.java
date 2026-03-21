@@ -16,27 +16,10 @@
  *  specific language governing permissions and limitations
  *  under the License.
  */
-package org.grails.forge.api.options;
+package org.grails.forge.defaults;
 
-import org.grails.forge.api.SelectOptionDTO;
-import org.grails.forge.api.TestFrameworkDTO;
-import io.swagger.v3.oas.annotations.media.Schema;
+import org.grails.forge.options.DevelopmentReloading;
 
-import java.util.List;
-
-@Schema(name = "TestFrameworkSelectOptions")
-public class TestFrameworkSelectOptions extends SelectOptionDTO<TestFrameworkDTO> {
-    public TestFrameworkSelectOptions(List<TestFrameworkDTO> options, TestFrameworkDTO defaultOption) {
-        super(options, defaultOption);
-    }
-
-    @Override
-    public List<TestFrameworkDTO> getOptions() {
-        return super.getOptions();
-    }
-
-    @Override
-    public TestFrameworkDTO getDefaultOption() {
-        return super.getDefaultOption();
-    }
+public interface HasDefaultDevelopmentReloading {
+    DevelopmentReloading getReloading();
 }

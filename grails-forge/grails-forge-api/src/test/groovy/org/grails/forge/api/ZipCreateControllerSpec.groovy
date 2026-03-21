@@ -106,9 +106,9 @@ class ZipCreateControllerSpec extends Specification {
 
     void "test create app with spock"() {
         when:
-        def bytes = client.createApp("test", ['gorm-mongodb'], BuildTool.GRADLE, TestFramework.SPOCK, Language.GROOVY)
+        def bytes = client.createApp("test", ['gorm-mongodb'], BuildTool.GRADLE, DevelopmentReloading.DEVTOOLS, Language.GROOVY)
 
         then:
-        ZipUtil.containsFileWithContents(bytes, "test/build.gradle", "spock")
+        ZipUtil.containsFileWithContents(bytes, "test/build.gradle", "spring-boot-devtools")
     }
 }

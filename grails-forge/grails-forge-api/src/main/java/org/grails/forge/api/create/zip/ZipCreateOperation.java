@@ -23,7 +23,7 @@ import io.micronaut.core.io.Writable;
 import io.micronaut.http.HttpHeaders;
 import io.micronaut.http.HttpResponse;
 import io.micronaut.http.annotation.Header;
-import org.grails.forge.api.TestFramework;
+import org.grails.forge.api.DevelopmentReloading;
 import org.grails.forge.application.ApplicationType;
 import org.grails.forge.options.BuildTool;
 import org.grails.forge.options.GormImpl;
@@ -48,7 +48,7 @@ public interface ZipCreateOperation {
      * @param name        The name of the application
      * @param features    The features
      * @param build       The build tool
-     * @param test        The test framework
+     * @param reloading   The development reloading
      * @param gorm        The GORM
      * @param servlet     The Servlet
      * @param javaVersion The java version
@@ -60,7 +60,7 @@ public interface ZipCreateOperation {
             @Pattern(regexp = "[\\w\\d-_\\.]+") String name,
             @Nullable List<String> features,
             @Nullable BuildTool build,
-            @Nullable TestFramework test,
+            @Nullable DevelopmentReloading reloading,
             @Nullable GormImpl gorm,
             @Nullable ServletImpl servlet,
             @Nullable JdkVersion javaVersion,

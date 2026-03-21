@@ -16,30 +16,25 @@
  *  specific language governing permissions and limitations
  *  under the License.
  */
+package org.grails.forge.cli.command;
 
-package issue11102
+import org.grails.forge.options.DevelopmentReloading;
+import picocli.CommandLine;
 
-import io.micronaut.http.client.HttpClient
-import spock.lang.AutoCleanup
-import spock.lang.Shared
-import spock.lang.Specification
+public class DevelopmentReloadingConverter implements CommandLine.ITypeConverter<DevelopmentReloading> {
 
-class HttpClientCommonSpec extends Specification {
+    public static final DevelopmentReloading DEFAULT_RELOADING = DevelopmentReloading.DEVTOOLS;
 
-    @Shared
-    @AutoCleanup
-    HttpClient client
-
-    @Shared
-    String baseUrl
-
-    /**
-     * Move this to the subclass as after Spock 2.0-M3-groovy-3.0, {code}OnceBefore{/code} does not
-     * run when present in the super class.
-     */
-    /*@OnceBefore
-    void init() {
-        this.baseUrl = "http://localhost:$serverPort"
-        this.client = HttpClient.create(new URL(baseUrl))
-    }*/
+    @Override
+    public DevelopmentReloading convert(String value) throws Exception {
+        if (value == null) {
+            return DEFAULT_RELOADING;
+        }
+        for (DevelopmentReloading bt : DevelopmentReloading.values()) {
+            if (value.equalsIgnoreCase(bt.toString())) {
+                return bt;
+            }
+        }
+        return DEFAULT_RELOADING;
+    }
 }

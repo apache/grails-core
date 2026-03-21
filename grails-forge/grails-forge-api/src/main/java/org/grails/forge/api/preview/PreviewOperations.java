@@ -22,7 +22,7 @@ import io.micronaut.core.annotation.NonNull;
 import io.micronaut.core.annotation.Nullable;
 import io.swagger.v3.oas.annotations.Parameter;
 import org.grails.forge.api.RequestInfo;
-import org.grails.forge.api.TestFramework;
+import org.grails.forge.api.DevelopmentReloading;
 import org.grails.forge.application.ApplicationType;
 import org.grails.forge.options.BuildTool;
 import org.grails.forge.options.GormImpl;
@@ -40,7 +40,7 @@ public interface PreviewOperations {
      * @param name        The name of the application
      * @param features    The features
      * @param build       The build tool
-     * @param test        The test framework
+     * @param reloading   The development reloading
      * @param gorm        The GORM
      * @param servlet     The Servlet
      * @param javaVersion The java version
@@ -53,7 +53,7 @@ public interface PreviewOperations {
             String name,
             @Nullable List<String> features,
             @Nullable BuildTool build,
-            @Nullable TestFramework test,
+            @Nullable DevelopmentReloading reloading,
             @Nullable GormImpl gorm,
             @Nullable ServletImpl servlet,
             @Nullable JdkVersion javaVersion,

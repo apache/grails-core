@@ -16,29 +16,35 @@
  *  specific language governing permissions and limitations
  *  under the License.
  */
-package org.grails.forge.feature.test;
+package org.grails.forge.options;
 
-import jakarta.inject.Singleton;
-import org.grails.forge.application.ApplicationType;
-import org.grails.forge.feature.Feature;
-import org.grails.forge.feature.validation.FeatureValidator;
-import org.grails.forge.options.Options;
+import io.micronaut.core.annotation.NonNull;
 
-import java.util.Set;
+import java.util.Locale;
 
-@Singleton
-public class AssertJValidator implements FeatureValidator {
+public enum DevelopmentReloading {
+
+    DEVTOOLS,
+    JREBEL,
+    NONE;
+
+    public static final DevelopmentReloading DEFAULT_OPTION = DEVTOOLS;
+
     @Override
-    public void validatePreProcessing(Options options, ApplicationType applicationType, Set<Feature> features) {
-        if (features.stream().anyMatch(f -> f instanceof AssertJ)) {
-            if (features.stream().noneMatch(f -> (f instanceof Junit))) {
-                throw new IllegalArgumentException("AssertJ requires JUnit.");
-            }
-        }
+    public String toString() {
+        return this.name().toLowerCase();
     }
 
-    @Override
-    public void validatePostProcessing(Options options, ApplicationType applicationType, Set<Feature> features) {
+    @NonNull
+    public String getName() {
+        return name().toLowerCase(Locale.ENGLISH);
+    }
 
+    public DevelopmentReloading toDevelopmentReloading() {
+        return switch (this) {
+            case DEVTOOLS -> DevelopmentReloading.DEVTOOLS;
+            case JREBEL -> DevelopmentReloading.JREBEL;
+            default -> DevelopmentReloading.NONE;
+        };
     }
 }

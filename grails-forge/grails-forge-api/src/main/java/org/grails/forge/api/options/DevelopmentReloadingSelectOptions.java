@@ -16,31 +16,27 @@
  *  specific language governing permissions and limitations
  *  under the License.
  */
+package org.grails.forge.api.options;
 
-package views182
+import io.swagger.v3.oas.annotations.media.Schema;
+import org.grails.forge.api.SelectOptionDTO;
+import org.grails.forge.api.DevelopmentReloadingDTO;
 
-import grails.testing.spock.OnceBefore
-import io.micronaut.http.client.HttpClient
-import spock.lang.AutoCleanup
-import spock.lang.Shared
-import spock.lang.Specification
+import java.util.List;
 
-class HttpClientCommonSpec extends Specification {
+@Schema(name = "DevelopmentReloadingSelectOptions")
+public class DevelopmentReloadingSelectOptions extends SelectOptionDTO<DevelopmentReloadingDTO> {
+    public DevelopmentReloadingSelectOptions(List<DevelopmentReloadingDTO> options, DevelopmentReloadingDTO defaultOption) {
+        super(options, defaultOption);
+    }
 
-    @Shared
-    @AutoCleanup
-    HttpClient client
+    @Override
+    public List<DevelopmentReloadingDTO> getOptions() {
+        return super.getOptions();
+    }
 
-    @Shared
-    String baseUrl
-
-    /**
-     * Move this to the subclass as after Spock 2.0-M3-groovy-3.0, {code}OnceBefore{/code} does not
-     * run when present in the super class.
-     */
-    /*@OnceBefore
-    void init() {
-        this.baseUrl = "http://localhost:$serverPort"
-        this.client = HttpClient.create(new URL(baseUrl))
-    }*/
+    @Override
+    public DevelopmentReloadingDTO getDefaultOption() {
+        return super.getDefaultOption();
+    }
 }

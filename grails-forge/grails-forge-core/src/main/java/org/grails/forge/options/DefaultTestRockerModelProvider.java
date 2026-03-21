@@ -22,22 +22,14 @@ import com.fizzed.rocker.RockerModel;
 
 public class DefaultTestRockerModelProvider implements TestRockerModelProvider {
     private final RockerModel spock;
-    private final RockerModel groovyJunit;
 
-    public DefaultTestRockerModelProvider(RockerModel spock,
-                                          RockerModel groovyJunit) {
+    public DefaultTestRockerModelProvider(RockerModel spock) {
         this.spock = spock;
-        this.groovyJunit = groovyJunit;
     }
 
     @Override
     public RockerModel spock() {
         return spock;
-    }
-
-    @Override
-    public RockerModel groovyJunit() {
-        return groovyJunit;
     }
 
 }

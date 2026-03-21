@@ -25,7 +25,6 @@ import org.grails.forge.application.generator.GeneratorContext;
 import org.grails.forge.build.dependencies.Coordinate;
 import org.grails.forge.build.dependencies.Dependency;
 import org.grails.forge.build.dependencies.DependencyCoordinate;
-import org.grails.forge.options.Language;
 import org.grails.forge.template.Writable;
 
 import java.util.Comparator;
@@ -62,11 +61,10 @@ public class GradleDependency extends DependencyCoordinate {
                             @Nullable Writable extension) {
         super(dependency);
         gradleConfiguration = GradleConfiguration.of(
-                dependency.getScope(),
-                Language.DEFAULT_OPTION,
-                generatorContext.getTestFramework()
+            dependency.getScope(),
+            generatorContext.getDevelopmentReloading()
         ).orElseThrow(() ->
-                new IllegalArgumentException(String.format("Cannot map the dependency scope: [%s] to a Gradle specific scope", dependency.getScope())));
+            new IllegalArgumentException(String.format("Cannot map the dependency scope: [%s] to a Gradle specific scope", dependency.getScope())));
         this.extension = extension;
     }
 
@@ -112,7 +110,7 @@ public class GradleDependency extends DependencyCoordinate {
             snippet += "(";
         }
         snippet += "\"" + getGroupId() + ':' + getArtifactId() +
-                (getVersion() != null ? (':' + getVersion()) : "") + "\"";
+            (getVersion() != null ? (':' + getVersion()) : "") + "\"";
         if (isPom() || gradleConfiguration == INTEGRATION_TEST_IMPLEMENTATION_TEST_FIXTURES) {
             snippet += ")";
         }

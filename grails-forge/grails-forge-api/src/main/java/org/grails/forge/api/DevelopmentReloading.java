@@ -16,23 +16,35 @@
  *  specific language governing permissions and limitations
  *  under the License.
  */
-package org.grails.forge.options;
+package org.grails.forge.api;
 
-import org.grails.forge.application.Project;
+import io.micronaut.core.annotation.NonNull;
 
-/**
- * Abstract implementation for {@link JunitRockerModelProvider} which supplies a {@link Project} in the constructor. You can use it to provide rocker models for each language supported by {@link TestFramework#JUNIT}.
- * @author Sergio del Amo
- */
-public abstract class AbstractJunitRockerModelProvider implements JunitRockerModelProvider {
+import java.util.Locale;
 
-    private final Project project;
+public enum DevelopmentReloading {
+    DEVTOOLS,
+    JREBEL,
+    NONE;
 
-    public AbstractJunitRockerModelProvider(Project project) {
-        this.project = project;
+    static final DevelopmentReloading DEFAULT_OPTION = DEVTOOLS;
+
+    @Override
+    public String toString() {
+        return this.name().toLowerCase();
     }
 
-    public Project getProject() {
-        return this.project;
+    @NonNull
+    public String getName() {
+        return name().toLowerCase(Locale.ENGLISH);
     }
+
+    public org.grails.forge.options.DevelopmentReloading toDevelopmentReloading() {
+        return switch (this) {
+            case DEVTOOLS -> org.grails.forge.options.DevelopmentReloading.DEVTOOLS;
+            case JREBEL -> org.grails.forge.options.DevelopmentReloading.JREBEL;
+            default -> org.grails.forge.options.DevelopmentReloading.NONE;
+        };
+    }
+
 }

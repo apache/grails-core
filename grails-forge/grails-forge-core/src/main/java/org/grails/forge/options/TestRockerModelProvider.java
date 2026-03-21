@@ -20,23 +20,20 @@ package org.grails.forge.options;
 
 import com.fizzed.rocker.RockerModel;
 
-public interface TestRockerModelProvider extends JunitRockerModelProvider {
+public interface TestRockerModelProvider {
 
     /**
      *
-     * @param language Selected language
      * @param testFramework selected test framework
      * @return A {@link RockerModel}
      * @throws IllegalArgumentException if the test framework / language combination is not handled
      */
-    default RockerModel findModel(Language language, TestFramework testFramework) throws IllegalArgumentException {
+    default RockerModel findModel(TestFramework testFramework) throws IllegalArgumentException {
         switch (testFramework) {
-            case JUNIT:
-                return findJunitModel(language);
             case SPOCK:
                 return spock();
             default:
-                throw new IllegalArgumentException("unable to find a RockerModel for lang: " + language.getName() + "testFramework: " + testFramework.getName());
+                throw new IllegalArgumentException("unable to find a RockerModel for testFramework: " + testFramework.getName());
         }
     }
 
