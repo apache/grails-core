@@ -141,6 +141,12 @@ public class HibernateMappingContextConfiguration extends Configuration
                 properties.put(JdbcSettings.JAKARTA_NON_JTA_DATASOURCE, applicationContext.getBean(dsName));
             }
             properties.put(Environment.CURRENT_SESSION_CONTEXT_CLASS, currentSessionContext.getName());
+            properties.put("hibernate.enhancer.bytecodeprovider.instance", new org.grails.orm.hibernate.proxy.GrailsBytecodeProvider());
+            properties.put("hibernate.bytecode.allow_enhancement_as_proxy", "false");
+            properties.put("hibernate.bytecode.enhancement_metadata_cache", "false");
+            properties.put("hibernate.enhancer.enableLazyInitialization", "false");
+            properties.put("hibernate.enhancer.enableDirtyTracking", "false");
+            properties.put("hibernate.enhancer.enableAssociationManagement", "false");
             ClassLoader classLoader = applicationContext.getClassLoader();
             if (classLoader != null) {
                 properties.put(AvailableSettings.CLASSLOADERS, classLoader);
@@ -349,6 +355,9 @@ public class HibernateMappingContextConfiguration extends Configuration
 
         StandardServiceRegistryBuilder standardServiceRegistryBuilder =
                 createStandardServiceRegistryBuilder(bootstrapServiceRegistry).applySettings(getProperties());
+
+        org.grails.orm.hibernate.proxy.GrailsBytecodeProvider bytecodeProvider = new org.grails.orm.hibernate.proxy.GrailsBytecodeProvider();
+        standardServiceRegistryBuilder.addService(org.hibernate.bytecode.spi.BytecodeProvider.class, bytecodeProvider);
 
         StandardServiceRegistry ssr = standardServiceRegistryBuilder.build();
         try {
