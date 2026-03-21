@@ -63,7 +63,7 @@ jobs:
       - name: "📥 Checkout Groovy 4_0_X (Grails 7 and later)"
         run: git clone --depth 1 https://github.com/apache/groovy.git -b GROOVY_4_0_X --single-branch
       - name: "🐘 Setup Gradle"
-        uses: gradle/actions/setup-gradle@v4
+        uses: gradle/actions/setup-gradle@4d9f0ba0025fe599b4ebab900eb7f3a1d93ef4c2 # v5.0.0
         with:
           develocity-access-key: ${{ secrets.GRAILS_DEVELOCITY_ACCESS_KEY  }}
       - name: "🔍 Setup TestLens"
@@ -146,7 +146,7 @@ jobs:
           java-version: 17
           distribution: liberica
       - name: "🐘 Setup Gradle"
-        uses: gradle/actions/setup-gradle@v4
+        uses: gradle/actions/setup-gradle@4d9f0ba0025fe599b4ebab900eb7f3a1d93ef4c2 # v5.0.0
         with:
           develocity-access-key: ${{ secrets.GRAILS_DEVELOCITY_ACCESS_KEY  }}
       - name: "🔍 Setup TestLens"
