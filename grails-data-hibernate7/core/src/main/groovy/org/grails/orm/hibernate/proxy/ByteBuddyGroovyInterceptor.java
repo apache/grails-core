@@ -35,6 +35,8 @@ import static org.hibernate.internal.util.ReflectHelper.isPublic;
  */
 public class ByteBuddyGroovyInterceptor extends ByteBuddyInterceptor {
 
+    protected final Method getIdentifierMethod;
+
     public ByteBuddyGroovyInterceptor(
             String entityName,
             Class<?> persistentClass,
@@ -46,33 +48,52 @@ public class ByteBuddyGroovyInterceptor extends ByteBuddyInterceptor {
             SharedSessionContractImplementor session,
             boolean overridesEquals) {
         super(entityName, persistentClass, interfaces, id, getIdentifierMethod, setIdentifierMethod, componentIdType, session, overridesEquals);
+        this.getIdentifierMethod = getIdentifierMethod;
     }
 
     @Override
     public Object intercept(Object proxy, Method method, Object[] args) throws Throwable {
         String methodName = method.getName();
-        if (methodName.equals("getMetaClass") || methodName.equals("setMetaClass") || methodName.equals("getProperty") || methodName.equals("setProperty") || methodName.equals("invokeMethod")) {
-            // Logic adapted from ByteBuddyInterceptor.intercept to handle Groovy methods without initialization
-            final Object result = this.invoke( method, args, proxy );
-            if ( result == INVOKE_IMPLEMENTATION ) {
-                final Object target = getImplementation();
-                try {
-                    if ( isPublic( persistentClass, method ) ) {
-                        return method.invoke( target, args );
-                    }
-                    else {
-                        method.setAccessible( true );
-                        return method.invoke( target, args );
-                    }
-                }
-                catch (InvocationTargetException ite) {
-                    throw ite.getTargetException();
-                }
+        System.out.println("Intercepting method: " + methodName + " on proxy: " + getEntityName() + ":" + getIdentifier() + " (Uninitialized: " + isUninitialized() + ")");
+
+        // Check these BEFORE calling this.invoke() to avoid premature initialization in Hibernate 7
+        if ((getIdentifierMethod != null && methodName.equals(getIdentifierMethod.getName())) || methodName.equals("getId") || methodName.equals("getIdentifier")) {
+            System.out.println("Handling ID access for: " + methodName);
+            return getIdentifier();
+        }
+
+        if (isUninitialized()) {
+            GroovyProxyInterceptorLogic.InterceptorState state = new GroovyProxyInterceptorLogic.InterceptorState(
+                    getEntityName(),
+                    getPersistentClass(),
+                    getIdentifier()
+            );
+            Object result = GroovyProxyInterceptorLogic.handleUninitialized(state, methodName, args);
+            if (result != GroovyProxyInterceptorLogic.INVOKE_IMPLEMENTATION) {
+                System.out.println("Handled uninitialized access for: " + methodName);
+                return result;
             }
+        }
+
+        System.out.println("Delegating to Hibernate invoke for: " + methodName);
+        final Object result = this.invoke(method, args, proxy);
+        if (result != INVOKE_IMPLEMENTATION) {
             return result;
         }
-        if (methodName.equals("toString") && args.length == 0) {
-            return getEntityName() + ":" + getIdentifier();
+
+        if (GroovyProxyInterceptorLogic.isGroovyMethod(methodName)) {
+            System.out.println("Handling Groovy method: " + methodName);
+            final Object target = getImplementation();
+            try {
+                if (isPublic(getPersistentClass(), method)) {
+                    return method.invoke(target, args);
+                } else {
+                    method.setAccessible(true);
+                    return method.invoke(target, args);
+                }
+            } catch (InvocationTargetException ite) {
+                throw ite.getTargetException();
+            }
         }
         return super.intercept(proxy, method, args);
     }

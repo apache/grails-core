@@ -90,7 +90,6 @@ class ByteBuddyProxySpec extends HibernateGormDatastoreSpec {
 
     }
 
-    @PendingFeature(reason = 'Hibernate 7 ByteBuddyInterceptor initializes proxy on getId() - needs a Groovy-aware interceptor like yakworks hibernate-groovy-proxy for H7')
     void "getId and id property checks dont initialize proxy if in a CompileStatic method"() {
         when:
         Team team = createATeam()
@@ -105,7 +104,6 @@ class ByteBuddyProxySpec extends HibernateGormDatastoreSpec {
         !proxyHandler.isInitialized(team.club)
     }
 
-    @PendingFeature(reason = 'Hibernate 7 ByteBuddyInterceptor initializes proxy on getId() - needs a Groovy-aware interceptor like yakworks hibernate-groovy-proxy for H7')
     void "getId and id dont initialize proxy"() {
         when:
         Team team = createATeam()
@@ -125,7 +123,6 @@ class ByteBuddyProxySpec extends HibernateGormDatastoreSpec {
         !proxyHandler.isInitialized(team)
     }
 
-    @PendingFeature(reason = 'Hibernate 7 ByteBuddyInterceptor initializes proxy on getId() - needs a Groovy-aware interceptor like yakworks hibernate-groovy-proxy for H7')
     void "truthy check on instance should not initialize proxy"() {
         when:
         Team team = createATeam()
@@ -141,7 +138,6 @@ class ByteBuddyProxySpec extends HibernateGormDatastoreSpec {
         !proxyHandler.isInitialized(team.club)
     }
 
-    @PendingFeature(reason = 'Hibernate 7 ByteBuddyInterceptor initializes proxy on getId() - needs a Groovy-aware interceptor like yakworks hibernate-groovy-proxy for H7')
     void "id checks on association should not initialize its proxy"() {
         when:
         Team team = createATeam()
@@ -165,7 +161,6 @@ class ByteBuddyProxySpec extends HibernateGormDatastoreSpec {
         !proxyHandler.isInitialized(team.club)
     }
 
-    @PendingFeature(reason = 'Hibernate 7 ByteBuddyInterceptor initializes proxy on getId() - needs a Groovy-aware interceptor like yakworks hibernate-groovy-proxy for H7')
     void "isDirty should not intialize the association proxy"() {
         when:
         Team team = createATeam()
