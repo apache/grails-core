@@ -35,6 +35,8 @@ public class GrailsTableGenerator extends TableGenerator {
     @Serial
     private static final long serialVersionUID = 1L;
 
+    private static final String DEFAULT_ENTITY_NAME = "default";
+
     public GrailsTableGenerator(GeneratorCreationContext context, Identity mappedId, JdbcEnvironment jdbcEnvironment) {
         Properties generatorProps =
                 Optional.ofNullable(mappedId).map(Identity::getProperties).orElse(new Properties());
@@ -43,7 +45,7 @@ public class GrailsTableGenerator extends TableGenerator {
             String propertyName = context.getProperty().getName();
 
             // Use the name we just ensured exists in BasicValueIdCreator
-            String entityName = (mappedId != null && mappedId.getName() != null) ? mappedId.getName() : "default";
+            String entityName = (mappedId != null && mappedId.getName() != null) ? mappedId.getName() : DEFAULT_ENTITY_NAME;
 
             generatorProps.put(SEGMENT_VALUE_PARAM, entityName + "." + propertyName);
         }

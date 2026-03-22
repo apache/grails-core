@@ -98,6 +98,7 @@ public class RootPersistentClassCommonValuesBinder {
                     + root.getTable().getName());
         }
 
+
         identityBinder.bindIdentity(hibernatePersistentEntity, root);
         versionBinder.bindVersion(hibernatePersistentEntity.getVersion(), root);
         root.createPrimaryKey();

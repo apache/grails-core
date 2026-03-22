@@ -67,7 +67,7 @@ enum GrailsSequenceGeneratorEnum {
         return Optional.ofNullable(values().find { it.name == name })
     }
 
-    static Generator getGenerator(
+    protected static Generator getGenerator(
             String name,
             GeneratorCreationContext context,
             Identity mappedId,

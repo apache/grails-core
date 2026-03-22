@@ -142,7 +142,7 @@ public class HibernateCriteriaBuilder extends GroovyObjectSupport implements Bui
     @SuppressWarnings("PMD.AvoidFieldNameMatchingMethodName")
     private boolean distinct = false;
 
-    @SuppressWarnings("rawtypes")
+    @SuppressWarnings({"rawtypes", "PMD.CloseResource"})
     public HibernateCriteriaBuilder(Class targetClass, SessionFactory sessionFactory, HibernateDatastore datastore) {
         this.targetClass = targetClass;
         setDatastore(datastore);
@@ -168,17 +168,7 @@ public class HibernateCriteriaBuilder extends GroovyObjectSupport implements Bui
         }
     }
 
-    public org.grails.datastore.mapping.query.api.Criteria createAlias(String associationPath, String alias) {
-        var prop = hibernateQuery.getEntity().getPropertyByName(associationPath);
-        if (prop instanceof org.grails.datastore.mapping.model.types.Basic) {
-            hibernateQuery.addAlias(new org.grails.orm.hibernate.query.HibernateAlias(associationPath, alias));
-            return this;
-        }
-        hibernateQuery.getDetachedCriteria().createAlias(associationPath, alias);
-        return this;
-    }
-
-    public org.grails.datastore.mapping.query.api.Criteria createAlias(String associationPath, String alias, int joinType) {
+    public Criteria createAlias(String associationPath, String alias) {
         var prop = hibernateQuery.getEntity().getPropertyByName(associationPath);
         if (prop instanceof org.grails.datastore.mapping.model.types.Basic) {
             hibernateQuery.addAlias(new org.grails.orm.hibernate.query.HibernateAlias(associationPath, alias));
