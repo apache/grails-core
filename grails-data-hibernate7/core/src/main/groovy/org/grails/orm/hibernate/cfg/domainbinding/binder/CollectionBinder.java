@@ -147,7 +147,7 @@ public class CollectionBinder {
         String propertyName = getNameForPropertyAndPath(property, path);
         collection.setRole(GrailsHibernateUtil.qualify(property.getHibernateOwner().getName(), propertyName));
 
-        PropertyConfig pc = property.getMappedForm();
+        PropertyConfig pc = property.getHibernateMappedForm();
         // configure eager fetching
         final FetchMode fetchMode = pc.getFetchMode();
         if (fetchMode == FetchMode.JOIN) {
@@ -210,7 +210,7 @@ public class CollectionBinder {
     private void bindCollectionTable(HibernateToManyProperty property, Table ownerTable) {
         Collection collection = property.getCollection();
         String owningTableSchema = ownerTable.getSchema();
-        PropertyConfig config = property.getMappedForm();
+        PropertyConfig config = property.getHibernateMappedForm();
         JoinTable jt = config.getJoinTable();
 
         String s = new TableForManyCalculator(namingStrategy).calculateTableForMany(property);

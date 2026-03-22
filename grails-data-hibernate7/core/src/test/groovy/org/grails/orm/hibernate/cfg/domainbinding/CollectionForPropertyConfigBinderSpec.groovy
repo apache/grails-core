@@ -52,6 +52,7 @@ class CollectionForPropertyConfigBinderSpec extends HibernateGormDatastoreSpec {
         property.getFetchMode() >> fetchMode
         property.getLazy() >> lazySetting
         property.getCollection() >> collection
+        property.isLazy() >> expectedIsLazy
 
         when: "the binder is applied"
         binder.bindCollectionForPropertyConfig(property)

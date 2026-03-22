@@ -73,7 +73,7 @@ public class BasicCollectionElementBinder {
                     metadataBuildingContext, collection.getCollectionTable(), typeName, columnName, true);
             property.getColumnConfigOptional().ifPresent(columnConfig -> {
                 Column column = simpleValueColumnFetcher.getColumnForSimpleValue(element);
-                final PropertyConfig mappedForm = property.getMappedForm();
+                final PropertyConfig mappedForm = property.getHibernateMappedForm();
                 columnConfigToColumnBinder.bindColumnConfigToColumn(column, columnConfig, mappedForm);
             });
             return element;

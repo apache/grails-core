@@ -65,6 +65,7 @@ class CompositeIdentifierToManyToOneBinderSpec extends Specification {
         // 3. Define the nested composite key scenario
         def propertyConfig = new PropertyConfig()
         association.getMappedForm() >> propertyConfig
+        association.getHibernateMappedForm() >> propertyConfig
 
         calculator.calculateForeignKeyColumnCount(refDomainClass, propertyNames) >> 2
 
@@ -128,6 +129,7 @@ class CompositeIdentifierToManyToOneBinderSpec extends Specification {
         propertyConfig.getColumns().add(new ColumnConfig())
         propertyConfig.getColumns().add(new ColumnConfig())
         association.getMappedForm() >> propertyConfig
+        association.getHibernateMappedForm() >> propertyConfig
 
         // The calculated length is the same as the number of columns already in the config
         calculator.calculateForeignKeyColumnCount(refDomainClass, _ as String[]) >> 2

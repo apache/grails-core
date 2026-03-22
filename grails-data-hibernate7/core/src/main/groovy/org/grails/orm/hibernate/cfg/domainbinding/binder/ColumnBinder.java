@@ -110,10 +110,10 @@ public class ColumnBinder {
             // the column's length, precision, and scale
             Class<?> type = property.getType();
             if (type != null && (String.class.isAssignableFrom(type) || byte[].class.isAssignableFrom(type))) {
-                PropertyConfig mappedForm = property.getMappedForm();
+                PropertyConfig mappedForm = property.getHibernateMappedForm();
                 stringColumnConstraintsBinder.bindStringColumnConstraints(column, mappedForm);
             } else if (type != null && Number.class.isAssignableFrom(type)) {
-                PropertyConfig mappedForm = property.getMappedForm();
+                PropertyConfig mappedForm = property.getHibernateMappedForm();
                 numericColumnConstraintsBinder.bindNumericColumnConstraints(column, cc, mappedForm);
             }
         }
@@ -123,7 +123,7 @@ public class ColumnBinder {
 
         var owner = property.getHibernateOwner();
         if (!owner.isRoot()) {
-            Mapping mapping = owner.getMappedForm();
+            Mapping mapping = owner.getHibernateMappedForm();
             if (mapping != null && mapping.getTablePerHierarchy()) {
                 if (LOG.isDebugEnabled())
                     LOG.debug("[GrailsDomainBinder] Sub class property [" +
@@ -138,7 +138,7 @@ public class ColumnBinder {
         }
 
         // Apply uniqueness last to ensure it isn't overridden by downstream binders
-        PropertyConfig mappedFormFinal = property.getMappedForm();
+        PropertyConfig mappedFormFinal = property.getHibernateMappedForm();
         column.setUnique(mappedFormFinal.isUnique() && !mappedFormFinal.isUniqueWithinGroup());
 
         if (LOG.isDebugEnabled())

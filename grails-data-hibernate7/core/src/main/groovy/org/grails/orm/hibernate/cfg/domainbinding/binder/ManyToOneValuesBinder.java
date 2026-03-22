@@ -31,13 +31,12 @@ public class ManyToOneValuesBinder {
     public ManyToOneValuesBinder() {}
 
     public void bindManyToOneValues(HibernateAssociation property, ManyToOne manyToOne) {
-        PropertyConfig config = property.getMappedForm();
+        PropertyConfig config = property.getHibernateMappedForm();
 
         var fetchMode = Optional.ofNullable(config.getFetchMode()).orElse(FetchMode.DEFAULT);
         manyToOne.setFetchMode(fetchMode);
 
-        var lazy = Optional.ofNullable(config.getLazy()).orElse(true);
-        manyToOne.setLazy(lazy);
+        manyToOne.setLazy(property.isLazy());
 
         manyToOne.setIgnoreNotFound(config.getIgnoreNotFound());
 

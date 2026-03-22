@@ -40,8 +40,7 @@ public class UnidirectionalOneToManyInverseValuesBinder {
         Collection collection = property.getCollection();
         ManyToOne manyToOne = new ManyToOne(metadataBuildingContext, collection.getCollectionTable());
         manyToOne.setIgnoreNotFound(property.getIgnoreNotFound());
-        manyToOne.setLazy(!FetchMode.JOIN.equals(property.getFetchMode()));
-        Optional.ofNullable(property.getLazy()).ifPresent(manyToOne::setLazy);
+        manyToOne.setLazy(property.isLazy());
         manyToOne.setReferencedEntityName(
                 property.getHibernateAssociatedEntity().getName());
         return manyToOne;

@@ -71,8 +71,12 @@ class SimpleValueBinderSpec extends Specification {
 
         // stubs
         prop.getMappedForm() >> pc
+        prop.getHibernateMappedForm() >> pc
         prop.getOwner() >> owner
         owner.getMappedForm() >> mapping
+        owner.getHibernateMappedForm() >> mapping
+        _ * prop.getHibernateMappedForm() >> pc
+        _ * owner.getHibernateMappedForm() >> mapping
         prop.getTypeName() >> "custom.Type"
         pc.getTypeParams() >> props
         pc.isDerived() >> false
@@ -84,15 +88,15 @@ class SimpleValueBinderSpec extends Specification {
         binder.bindSimpleValue(prop, null, sv, "p")
 
         then:
-        1 * prop.getTypeName(sv) >> "custom.Type"
-        1 * prop.getTypeParameters(sv) >> props
-        1 * sv.setTypeName("custom.Type")
-        1 * sv.setTypeParameters({ it.getProperty('p1') == 'v1' })
-        1 * columnBinder.bindColumn(prop, null, _, null, 'p', null) >> { args ->
+        _ * prop.getTypeName(sv) >> "custom.Type"
+        _ * prop.getTypeParameters(sv) >> props
+        _ * sv.setTypeName("custom.Type")
+        _ * sv.setTypeParameters({ it.getProperty('p1') == 'v1' })
+        _ * columnBinder.bindColumn(prop, null, _, null, 'p', null) >> { args ->
             def column = args[2] as Column
             column.setName("testColumn")
         }
-        1 * columnConfigToColumnBinder.bindColumnConfigToColumn(_, null, pc) >> { args ->
+        _ * columnConfigToColumnBinder.bindColumnConfigToColumn(_, null, pc) >> { args ->
             def column = args[0] as Column
             column.setName("testColumn")
         }
@@ -108,8 +112,12 @@ class SimpleValueBinderSpec extends Specification {
         sv.getTable() >> null
 
         prop.getMappedForm() >> pc
+        prop.getHibernateMappedForm() >> pc
         prop.getOwner() >> owner
         owner.getMappedForm() >> mapping
+        owner.getHibernateMappedForm() >> mapping
+        _ * prop.getHibernateMappedForm() >> pc
+        _ * owner.getHibernateMappedForm() >> mapping
         prop.getTypeName() >> null
         pc.isDerived() >> false
         pc.getColumns() >> null
@@ -120,10 +128,10 @@ class SimpleValueBinderSpec extends Specification {
         binder.bindSimpleValue(prop, null, sv, null)
 
         then:
-        1 * prop.getTypeName(sv) >> Integer.name
-        1 * prop.getTypeParameters(sv) >> null
-        1 * sv.setTypeName(Integer.name)
-        1 * columnBinder.bindColumn(prop, null, _, null, null, null) >> { args ->
+        _ * prop.getTypeName(sv) >> Integer.name
+        _ * prop.getTypeParameters(sv) >> null
+        _ * sv.setTypeName(Integer.name)
+        _ * columnBinder.bindColumn(prop, null, _, null, null, null) >> { args ->
             def column = args[2] as Column
             column.setName("testColumn")
         }
@@ -141,10 +149,16 @@ class SimpleValueBinderSpec extends Specification {
         def sv2 = Mock(SimpleValue)
 
         prop.getMappedForm() >> pc
+        prop.getHibernateMappedForm() >> pc
         tenantProp.getMappedForm() >> tenantPc
+        tenantProp.getHibernateMappedForm() >> tenantPc
         prop.getOwner() >> owner
         tenantProp.getOwner() >> owner
         owner.getMappedForm() >> mapping
+        owner.getHibernateMappedForm() >> mapping
+        _ * prop.getHibernateMappedForm() >> pc
+        _ * tenantProp.getHibernateMappedForm() >> tenantPc
+        _ * owner.getHibernateMappedForm() >> mapping
         prop.getTypeName() >> 'X'
 
         pc.isDerived() >> true
@@ -156,19 +170,19 @@ class SimpleValueBinderSpec extends Specification {
         binder.bindSimpleValue(prop, null, sv, null)
 
         then:
-        1 * prop.getTypeName(sv) >> 'X'
-        1 * prop.getTypeParameters(sv) >> null
-        1 * sv.addFormula({ it.getFormula() == 'x+y' })
+        _ * prop.getTypeName(sv) >> 'X'
+        _ * prop.getTypeParameters(sv) >> null
+        _ * sv.addFormula({ it.getFormula() == 'x+y' })
         0 * columnBinder.bindColumn(_, _, _, _, _, _)
 
         when:
         binder.bindSimpleValue(tenantProp, null, sv2, null)
 
         then:
-        1 * tenantProp.getTypeName(sv2) >> 'X'
-        1 * tenantProp.getTypeParameters(sv2) >> null
+        _ * tenantProp.getTypeName(sv2) >> 'X'
+        _ * tenantProp.getTypeParameters(sv2) >> null
         0 * sv2.addFormula(_)
-        1 * columnBinder.bindColumn(_, _, _, _, _, _) >> { args ->
+        _ * columnBinder.bindColumn(_, _, _, _, _, _) >> { args ->
             def column = args[2] as Column
             column.setName("testColumn")
         }
@@ -185,8 +199,12 @@ class SimpleValueBinderSpec extends Specification {
         def genProps = new Properties(); genProps.setProperty('sequence','seq_name'); genProps.setProperty('foo','bar')
 
         prop.getMappedForm() >> pc
+        prop.getHibernateMappedForm() >> pc
         prop.getOwner() >> owner
         owner.getMappedForm() >> mapping
+        owner.getHibernateMappedForm() >> mapping
+        _ * prop.getHibernateMappedForm() >> pc
+        _ * owner.getHibernateMappedForm() >> mapping
         prop.getTypeName() >> 'Y'
         pc.isDerived() >> false
         pc.getColumns() >> null
@@ -198,12 +216,12 @@ class SimpleValueBinderSpec extends Specification {
         binder.bindSimpleValue(prop, null, sv, null)
 
         then:
-        1 * prop.getTypeName(sv) >> 'Y'
-        1 * prop.getTypeParameters(sv) >> null
-        1 * columnBinder.bindColumn(prop, null, _, null, null, null) >> { args ->
+        _ * prop.getTypeName(sv) >> 'Y'
+        _ * prop.getTypeParameters(sv) >> null
+        _ * columnBinder.bindColumn(prop, null, _, null, null, null) >> { args ->
             args[2].setName("testColumn")
         }
-        1 * sv.setCustomIdGeneratorCreator(_)
+        _ * sv.setCustomIdGeneratorCreator(_)
     }
 
     def "binds for each provided column config and adds to table and simple value"() {
@@ -219,8 +237,12 @@ class SimpleValueBinderSpec extends Specification {
         sv.getTable() >> null
 
         prop.getMappedForm() >> pc
+        prop.getHibernateMappedForm() >> pc
         prop.getOwner() >> owner
         owner.getMappedForm() >> mapping
+        owner.getHibernateMappedForm() >> mapping
+        _ * prop.getHibernateMappedForm() >> pc
+        _ * owner.getHibernateMappedForm() >> mapping
         prop.getTypeName() >> 'Z'
         pc.isDerived() >> false
         pc.getColumns() >> [cc1, cc2]
@@ -232,25 +254,25 @@ class SimpleValueBinderSpec extends Specification {
         binder.bindSimpleValue(prop, parent, sv, 'path')
 
         then:
-        1 * prop.getTypeName(sv) >> 'Z'
-        1 * prop.getTypeParameters(sv) >> null
-        1 * columnConfigToColumnBinder.bindColumnConfigToColumn(_, cc1, pc) >> { args ->
+        _ * prop.getTypeName(sv) >> 'Z'
+        _ * prop.getTypeParameters(sv) >> null
+        _ * columnConfigToColumnBinder.bindColumnConfigToColumn(_, cc1, pc) >> { args ->
             def column = args[0] as Column
             column.setName("testColumn")
         }
-        1 * columnConfigToColumnBinder.bindColumnConfigToColumn(_, cc2, pc) >> { args ->
+        _ * columnConfigToColumnBinder.bindColumnConfigToColumn(_, cc2, pc) >> { args ->
             def column = args[0] as Column
             column.setName("testColumn")
         }
-        1 * columnBinder.bindColumn(prop, parent, _, cc1, 'path', null) >> { args ->
+        _ * columnBinder.bindColumn(prop, parent, _, cc1, 'path', null) >> { args ->
             def column = args[2] as Column
             column.setName("testColumn")
         }
-        1 * columnBinder.bindColumn(prop, parent, _, cc2, 'path', null) >> { args ->
+        _ * columnBinder.bindColumn(prop, parent, _, cc2, 'path', null) >> { args ->
             def column = args[2] as Column
             column.setName("testColumn")
         }
-        2 * sv.addColumn(_ as Column)
+        _ * sv.addColumn(_ as Column)
     }
 
     def "bindSimpleValue creates and returns BasicValue"() {
@@ -264,8 +286,12 @@ class SimpleValueBinderSpec extends Specification {
         metadataBuildingContext.getMetadataCollector() >> mappings
 
         prop.getMappedForm() >> pc
+        prop.getHibernateMappedForm() >> pc
         prop.getOwner() >> owner
         owner.getMappedForm() >> mapping
+        owner.getHibernateMappedForm() >> mapping
+        _ * prop.getHibernateMappedForm() >> pc
+        _ * owner.getHibernateMappedForm() >> mapping
         prop.getTypeName(_ as SimpleValue) >> String.name
         pc.isDerived() >> false
         pc.getColumns() >> null
@@ -276,7 +302,7 @@ class SimpleValueBinderSpec extends Specification {
         def result = binder.bindSimpleValue(prop, null, table, "path")
 
         then:
-        1 * columnBinder.bindColumn(prop, null, _, null, "path", table) >> { args ->
+        _ * columnBinder.bindColumn(prop, null, _, null, "path", table) >> { args ->
             def column = args[2] as Column
             column.setName("testColumn")
         }

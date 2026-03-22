@@ -44,31 +44,31 @@ import static org.grails.orm.hibernate.cfg.domainbinding.binder.GrailsDomainBind
 public interface HibernateToManyProperty extends PropertyWithMapping<PropertyConfig>, HibernateAssociation {
 
     default boolean hasSort() {
-        return StringUtils.hasText(getMappedForm().getSort());
+        return StringUtils.hasText(getHibernateMappedForm().getSort());
     }
 
     default String getSort() {
-        return getMappedForm().getSort();
+        return getHibernateMappedForm().getSort();
     }
 
     default String getOrder() {
-        return getMappedForm().getOrder();
+        return getHibernateMappedForm().getOrder();
     }
 
     default boolean getIgnoreNotFound() {
-        return getMappedForm().getIgnoreNotFound();
+        return getHibernateMappedForm().getIgnoreNotFound();
     }
 
     default FetchMode getFetchMode() {
-        return getMappedForm().getFetchMode();
+        return getHibernateMappedForm().getFetchMode();
     }
 
     default Boolean getLazy() {
-        return getMappedForm().getLazy();
+        return getHibernateMappedForm().getLazy();
     }
 
     default String getCacheUsage() {
-        return Optional.ofNullable(getMappedForm())
+        return Optional.ofNullable(getHibernateMappedForm())
                 .map(PropertyConfig::getCache)
                 .map(CacheConfig::getUsage)
                 .map(Object::toString)
@@ -98,7 +98,7 @@ public interface HibernateToManyProperty extends PropertyWithMapping<PropertyCon
     }
 
     default String getIndexColumnName(PersistentEntityNamingStrategy namingStrategy) {
-        PropertyConfig mapped = getMappedForm();
+        PropertyConfig mapped = getHibernateMappedForm();
 
         if (mapped != null && mapped.getIndexColumn() != null) {
             PropertyConfig indexColConfig = mapped.getIndexColumn();
@@ -142,7 +142,7 @@ public interface HibernateToManyProperty extends PropertyWithMapping<PropertyCon
     }
 
     default String getIndexColumnType(String defaultType) {
-        PropertyConfig mapped = getMappedForm();
+        PropertyConfig mapped = getHibernateMappedForm();
 
         if (mapped != null && mapped.getIndexColumn() != null) {
             PropertyConfig indexColConfig = mapped.getIndexColumn();
@@ -180,7 +180,7 @@ public interface HibernateToManyProperty extends PropertyWithMapping<PropertyCon
     }
 
     default String getMapElementName(PersistentEntityNamingStrategy namingStrategy) {
-        return java.util.Optional.ofNullable(getMappedForm())
+        return java.util.Optional.ofNullable(getHibernateMappedForm())
                 .map(PropertyConfig::getJoinTable)
                 .map(JoinTable::getColumn)
                 .map(ColumnConfig::getName)
@@ -190,7 +190,7 @@ public interface HibernateToManyProperty extends PropertyWithMapping<PropertyCon
     }
 
     default String resolveJoinTableForeignKeyColumnName(PersistentEntityNamingStrategy namingStrategy) {
-        return java.util.Optional.ofNullable(getMappedForm())
+        return java.util.Optional.ofNullable(getHibernateMappedForm())
                 .map(PropertyConfig::getJoinTableColumnConfig)
                 .map(ColumnConfig::getName)
                 .orElseGet(() -> namingStrategy.resolveColumnName(getHibernateAssociatedEntity()
@@ -219,11 +219,21 @@ public interface HibernateToManyProperty extends PropertyWithMapping<PropertyCon
 
     @NonNull
     default Optional<ColumnConfig> getColumnConfigOptional() {
-        return Optional.ofNullable(getMappedForm()).map(PropertyConfig::getJoinTableColumnConfig);
+        return Optional.ofNullable(getHibernateMappedForm()).map(PropertyConfig::getJoinTableColumnConfig);
     }
 
     default boolean isEnum() {
         return getComponentType().isEnum();
+    }
+
+    /**
+     * @return Whether the association column is nullable. ManyToMany is never nullable.
+     */
+    default boolean isAssociationColumnNullable() {
+        if (this instanceof HibernateManyToManyProperty) {
+            return false;
+        }
+        return isNullable();
     }
 
     void setCollection(Collection collection);

@@ -50,4 +50,9 @@ public class HibernateOneToManyProperty extends OneToManyWithMapping<PropertyCon
     public void setCollection(Collection collection) {
         this.collection = collection;
     }
+
+    @Override
+    public boolean isLazy() {
+        return getHibernateOwner().isLazy(this);
+    }
 }

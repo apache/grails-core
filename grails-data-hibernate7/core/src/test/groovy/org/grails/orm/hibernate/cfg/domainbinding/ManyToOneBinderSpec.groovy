@@ -44,7 +44,9 @@ class ManyToOneBinderSpec extends HibernateGormDatastoreSpec {
         def (mapping, refDomainClass) = mockEntity(hasCompositeId)
 
         association.getHibernateAssociatedEntity() >> refDomainClass
-        association.getMappedForm() >> Mock(PropertyConfig)
+        def propertyConfig = Mock(PropertyConfig)
+        association.getMappedForm() >> propertyConfig
+        association.getHibernateMappedForm() >> propertyConfig
 
         when:
         def result = binder.bindManyToOne(association, table, path)
@@ -89,6 +91,8 @@ class ManyToOneBinderSpec extends HibernateGormDatastoreSpec {
         otherSide.isCircular() >> true
         otherSide.getName() >> "circularProp"
         otherSide.getMappedForm() >> propertyConfig
+        otherSide.getHibernateMappedForm() >> propertyConfig
+        mapping.getColumns().put("circularProp", propertyConfig)
 
         namingStrategy.resolveColumnName("circularProp") >> "circular_prop"
 
@@ -114,7 +118,9 @@ class ManyToOneBinderSpec extends HibernateGormDatastoreSpec {
 
         property.getTable() >> table
         property.getHibernateAssociatedEntity() >> refDomainClass
-        property.getMappedForm() >> Mock(PropertyConfig)
+        def propertyConfig = Mock(PropertyConfig)
+        property.getMappedForm() >> propertyConfig
+        property.getHibernateMappedForm() >> propertyConfig
 
         when:
         def result = binder.bindManyToOne(property, "/test/path")

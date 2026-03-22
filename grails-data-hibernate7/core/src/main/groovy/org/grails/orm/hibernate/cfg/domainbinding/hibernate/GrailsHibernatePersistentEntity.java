@@ -329,7 +329,42 @@ public interface GrailsHibernatePersistentEntity extends PersistentEntity {
         return Optional.ofNullable(getMappedForm()).map(Mapping::getComment).orElse(null);
     }
 
+    default Mapping getHibernateMappedForm() {
+        return getMappedForm();
+    }
+
     void setPersistentClass(PersistentClass persistentClass);
 
     PersistentClass getPersistentClass();
+
+    /**
+     * Determines if the given property should be lazy.
+     *
+     * @param property The property
+     * @return True if it should be lazy
+     */
+    default boolean isLazy(HibernatePersistentProperty property) {
+        if (GormProperties.VERSION.equals(property.getName())) {
+            return false;
+        }
+
+        org.grails.orm.hibernate.cfg.PropertyConfig config = property.getMappedForm();
+
+        if (property instanceof HibernateAssociation) {
+            // Explicit fetch: 'join' implies eager (not lazy) and takes precedence in Hibernate
+            if (config != null && org.hibernate.FetchMode.JOIN.equals(config.getFetchMode())) {
+                return false;
+            }
+            if (config != null && config.getLazy() != null) {
+                return config.getLazy();
+            }
+            return true;
+        }
+
+        if (config != null && config.getLazy() != null) {
+            return config.getLazy();
+        }
+
+        return false;
+    }
 }

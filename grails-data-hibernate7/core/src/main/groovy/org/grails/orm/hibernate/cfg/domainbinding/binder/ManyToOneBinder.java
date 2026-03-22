@@ -81,7 +81,7 @@ public class ManyToOneBinder {
     /** Binds the inverse side of a many-to-many association as a collection element. */
     public ManyToOne bindManyToOne(HibernateManyToManyProperty property, String path) {
         Collection collection = property.getCollection();
-        HibernateManyToManyProperty otherSide = property.getHibernateInverseSide();
+        HibernateManyToManyProperty otherSide = (HibernateManyToManyProperty) property.getHibernateInverseSide();
         Table collectionTable = collection.getCollectionTable();
         GrailsHibernatePersistentEntity refDomainClass = otherSide.getHibernateOwner();
         Optional<CompositeIdentity> compositeId = refDomainClass.getHibernateCompositeIdentity();
@@ -115,16 +115,16 @@ public class ManyToOneBinder {
     }
 
     private void prepareCircularManyToMany(HibernateManyToManyProperty property) {
-        Mapping ownerMapping = property.getHibernateOwner().getMappedForm();
+        Mapping ownerMapping = property.getHibernateOwner().getHibernateMappedForm();
         if (ownerMapping != null && !ownerMapping.getColumns().containsKey(property.getName())) {
-            ownerMapping.getColumns().put(property.getName(), property.getMappedForm());
+            ownerMapping.getColumns().put(property.getName(), property.getHibernateMappedForm());
         }
-        if (!property.getMappedForm().hasJoinKeyMapping()) {
+        if (!property.getHibernateMappedForm().hasJoinKeyMapping()) {
             JoinTable jt = new JoinTable();
             ColumnConfig columnConfig = new ColumnConfig();
             columnConfig.setName(namingStrategy.resolveColumnName(property.getName()) + FOREIGN_KEY_SUFFIX);
             jt.setKey(columnConfig);
-            property.getMappedForm().setJoinTable(jt);
+            property.getHibernateMappedForm().setJoinTable(jt);
         }
     }
 }

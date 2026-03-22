@@ -82,7 +82,7 @@ public class CompositeIdentifierToManyToOneBinder {
             GrailsHibernatePersistentEntity refDomainClass,
             String path) {
         String[] propertyNames = compositeId.getPropertyNames();
-        List<ColumnConfig> columns = property.getMappedForm().getColumns();
+        List<ColumnConfig> columns = property.getHibernateMappedForm().getColumns();
         int existingCount = columns.size();
         if (existingCount
                 != foreignKeyColumnCountCalculator.calculateForeignKeyColumnCount(refDomainClass, propertyNames)) {

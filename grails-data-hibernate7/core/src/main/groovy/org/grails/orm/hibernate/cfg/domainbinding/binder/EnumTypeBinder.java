@@ -95,7 +95,7 @@ public class EnumTypeBinder {
 
     protected void bindEnumType(
             HibernatePersistentProperty property, Class<?> propertyType, BasicValue simpleValue, String columnName) {
-        PropertyConfig pc = property.getMappedForm();
+        PropertyConfig pc = property.getHibernateMappedForm();
         Properties enumProperties = new Properties();
         enumProperties.put(ENUM_CLASS_PROP, propertyType.getName());
         String typeName = property.getTypeName(propertyType);

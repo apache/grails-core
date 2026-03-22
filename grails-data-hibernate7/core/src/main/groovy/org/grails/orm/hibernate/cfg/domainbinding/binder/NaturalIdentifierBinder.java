@@ -40,7 +40,7 @@ public class NaturalIdentifierBinder {
 
     public void bindNaturalIdentifier(
             GrailsHibernatePersistentEntity persistentEntity, PersistentClass persistentClass) {
-        Optional.ofNullable(persistentEntity.getMappedForm().getIdentity())
+        Optional.ofNullable(persistentEntity.getHibernateMappedForm().getIdentity())
                 .map(HibernateIdentity::getNatural)
                 .flatMap(naturalId -> naturalId.createUniqueKey(persistentClass))
                 .ifPresent(uk -> {

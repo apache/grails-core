@@ -53,7 +53,7 @@ public class ClassBinder {
         persistentClass.setClassName(entityName);
         persistentClass.setAbstract(persistentEntity.isAbstract());
 
-        Mapping mappedForm = persistentEntity.getMappedForm();
+        Mapping mappedForm = persistentEntity.getHibernateMappedForm();
         boolean autoImport;
         if (mappedForm != null) {
             autoImport = mappedForm.isAutoImport();

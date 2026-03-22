@@ -66,7 +66,7 @@ public class SimpleIdBinder {
     public void bindSimpleId(
             @Nonnull HibernatePersistentEntity domainClass, RootClass entity, Identity mappedId, Table table) {
 
-        Mapping result = domainClass.getMappedForm();
+        Mapping result = domainClass.getHibernateMappedForm();
         boolean useSequence = result != null && result.isTablePerConcreteClass();
         // create the id value
 

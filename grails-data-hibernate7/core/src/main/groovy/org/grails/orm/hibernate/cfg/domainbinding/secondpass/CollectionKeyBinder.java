@@ -64,11 +64,11 @@ public class CollectionKeyBinder {
                 dependentKeyValueBinder.bind(property, key);
             }
         } else {
-            if (property.getMappedForm().hasJoinKeyMapping()) {
+            if (property.getHibernateMappedForm().hasJoinKeyMapping()) {
                 simpleValueColumnBinder.bindSimpleValue(
                         key,
                         "long",
-                        property.getMappedForm().getJoinTable().getKey().getName(),
+                        property.getHibernateMappedForm().getJoinTable().getKey().getName(),
                         true);
             } else {
                 dependentKeyValueBinder.bind(property, key);

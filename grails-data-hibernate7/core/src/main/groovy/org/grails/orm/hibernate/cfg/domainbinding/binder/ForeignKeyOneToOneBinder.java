@@ -59,7 +59,7 @@ public class ForeignKeyOneToOneBinder {
     }
 
     private void bindUniqueKey(HibernateOneToOneProperty property, ManyToOne manyToOne) {
-        PropertyConfig config = property.getMappedForm();
+        PropertyConfig config = property.getHibernateMappedForm();
         manyToOne.setAlternateUniqueKey(true);
         Column c = simpleValueColumnFetcher.getColumnForSimpleValue(manyToOne);
         if (c == null) {

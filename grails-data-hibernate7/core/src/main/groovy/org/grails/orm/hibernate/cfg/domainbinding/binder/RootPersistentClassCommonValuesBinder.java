@@ -66,7 +66,7 @@ public class RootPersistentClassCommonValuesBinder {
         classBinder.bindClass(hibernatePersistentEntity, root);
 
         // get the schema and catalog names from the configuration
-        Mapping gormMapping = hibernatePersistentEntity.getMappedForm();
+        Mapping gormMapping = hibernatePersistentEntity.getHibernateMappedForm();
 
         hibernatePersistentEntity.configureDerivedProperties();
         CacheConfig cc = gormMapping.getCache();

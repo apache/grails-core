@@ -58,7 +58,7 @@ public class GrailsIncrementGenerator extends IncrementGenerator {
         // handles explicit mapping, table-per-hierarchy root, and PhysicalNamingStrategy fallback.
         params.put(TABLES, domainClass.getTableName(namingStrategy));
 
-        org.grails.orm.hibernate.cfg.Mapping mapping = domainClass.getMappedForm();
+        org.grails.orm.hibernate.cfg.Mapping mapping = domainClass.getHibernateMappedForm();
         if (mapping != null && mapping.getTable() != null) {
             if (mapping.getTable().getCatalog() != null)
                 params.put(CATALOG, mapping.getTable().getCatalog());

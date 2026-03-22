@@ -121,6 +121,8 @@ class HibernateGormDatastoreSpec extends GrailsDataTckSpec<GrailsDataHibernate7T
                 .applySetting("hibernate.dialect", H2Dialect.class.getName())
                 .applySetting("jakarta.persistence.jdbc.url", "jdbc:h2:mem:test;DB_CLOSE_DELAY=-1")
                 .applySetting("jakarta.persistence.jdbc.driver", "org.h2.Driver")
+                .addService(org.hibernate.bytecode.spi.BytecodeProvider.class, new org.grails.orm.hibernate.proxy.GrailsBytecodeProvider())
+                .applySetting("hibernate.bytecode.allow_enhancement_as_proxy", "false")
                 .build()
         def options = new MetadataBuilderImpl(
                 new MetadataSources(serviceRegistry)

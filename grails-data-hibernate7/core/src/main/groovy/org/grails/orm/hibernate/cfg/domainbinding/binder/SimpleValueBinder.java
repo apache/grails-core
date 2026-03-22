@@ -93,7 +93,7 @@ public class SimpleValueBinder {
             SimpleValue simpleValue,
             String path) {
 
-        PropertyConfig propertyConfig = property.getMappedForm();
+        PropertyConfig propertyConfig = property.getHibernateMappedForm();
         simpleValue.setTypeName(property.getTypeName(simpleValue));
         simpleValue.setTypeParameters(property.getTypeParameters(simpleValue));
 

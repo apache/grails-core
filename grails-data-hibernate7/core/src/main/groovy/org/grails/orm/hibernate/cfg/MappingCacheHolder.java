@@ -48,7 +48,7 @@ public class MappingCacheHolder {
      */
     public void cacheMapping(GrailsHibernatePersistentEntity entity) {
         if (entity != null) {
-            MAPPING_CACHE.put(entity.getJavaClass(), entity.getMappedForm());
+            MAPPING_CACHE.put(entity.getJavaClass(), entity.getHibernateMappedForm());
         }
     }
 

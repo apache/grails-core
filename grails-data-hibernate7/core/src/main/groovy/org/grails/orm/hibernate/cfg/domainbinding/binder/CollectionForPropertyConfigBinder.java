@@ -33,7 +33,7 @@ public class CollectionForPropertyConfigBinder {
     /** Bind collection for property config. */
     public void bindCollectionForPropertyConfig(@Nonnull HibernateToManyProperty property) {
         Collection collection = property.getCollection();
-        collection.setLazy(!FetchMode.JOIN.equals(property.getFetchMode()));
+        collection.setLazy(property.isLazy());
         Optional.ofNullable(property.getLazy()).ifPresent(collection::setExtraLazy);
     }
 }

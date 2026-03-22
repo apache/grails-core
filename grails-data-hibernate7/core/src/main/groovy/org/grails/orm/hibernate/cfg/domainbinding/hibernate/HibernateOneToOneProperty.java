@@ -88,7 +88,7 @@ public class HibernateOneToOneProperty extends OneToOneWithMapping<PropertyConfi
 
     /** Resolved fetch mode: uses the configured value or falls back to {@link FetchMode#DEFAULT}. */
     public FetchMode getHibernateFetchMode() {
-        PropertyConfig config = getMappedForm();
+        PropertyConfig config = getHibernateMappedForm();
         return (config != null && config.getFetchMode() != null) ? config.getFetchMode() : FetchMode.DEFAULT;
     }
 

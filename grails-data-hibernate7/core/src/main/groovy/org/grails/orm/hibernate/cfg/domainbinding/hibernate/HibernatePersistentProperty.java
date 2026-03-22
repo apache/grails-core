@@ -152,6 +152,27 @@ public interface HibernatePersistentProperty extends PersistentProperty<Property
         return "serializable".equals(getTypeName());
     }
 
+    @Override
+    default boolean isLazyAble() {
+        return this instanceof HibernateAssociation ||
+                !(this instanceof Embedded) && !this.equals(this.getOwner().getIdentity());
+    }
+
+    /**
+     * @return The mapped form
+     */
+    default PropertyConfig getHibernateMappedForm() {
+        return (PropertyConfig) getMappedForm();
+    }
+
+    /**
+     * Determines if the property should be lazy.
+     * @return True if it should be lazy
+     */
+    default boolean isLazy() {
+        return getHibernateOwner().isLazy(this);
+    }
+
     /**
      * @return true if the property has a join key mapping
      */

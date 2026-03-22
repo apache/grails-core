@@ -67,6 +67,7 @@ class ForeignKeyOneToOneBinderSpec extends HibernateGormDatastoreSpec {
         property.getHibernateAssociatedEntity() >> refDomainClass
         mapping.setIdentity(null)
         property.getMappedForm() >> propertyConfig
+        property.getHibernateMappedForm() >> propertyConfig
         columnFetcher.getColumnForSimpleValue(_ as ManyToOne) >> column
 
         propertyConfig.isUnique() >> isUnique
@@ -119,6 +120,7 @@ class ForeignKeyOneToOneBinderSpec extends HibernateGormDatastoreSpec {
         property.getHibernateAssociatedEntity() >> refDomainClass
         mapping.setIdentity(null)
         property.getMappedForm() >> propertyConfig
+        property.getHibernateMappedForm() >> propertyConfig
         columnFetcher.getColumnForSimpleValue(_ as ManyToOne) >> null
 
         when:

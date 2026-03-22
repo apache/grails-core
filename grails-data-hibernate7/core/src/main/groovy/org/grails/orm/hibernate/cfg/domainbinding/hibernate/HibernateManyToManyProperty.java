@@ -40,14 +40,8 @@ public class HibernateManyToManyProperty extends ManyToManyWithMapping<PropertyC
         return (GrailsHibernatePersistentEntity) super.getAssociatedEntity();
     }
 
-    @Override
-    public HibernateManyToManyProperty getHibernateInverseSide() {
-        return (HibernateManyToManyProperty) getInverseSide();
-    }
-
-    @Override
-    public boolean isAssociationColumnNullable() {
-        return false;
+    public String getReferencedEntityName() {
+        return getHibernateAssociatedEntity().getName();
     }
 
     public Collection getCollection() {
@@ -55,5 +49,10 @@ public class HibernateManyToManyProperty extends ManyToManyWithMapping<PropertyC
     }
     public void setCollection(Collection collection) {
         this.collection = collection;
+    }
+
+    @Override
+    public boolean isLazy() {
+        return getHibernateOwner().isLazy(this);
     }
 }

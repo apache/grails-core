@@ -47,6 +47,7 @@ class NaturalIdentifierBinderSpec extends HibernateGormDatastoreSpec {
         def binder = new NaturalIdentifierBinder(uniqueNameGenerator)
 
         persistentEntity.getMappedForm() >> mapping
+        persistentEntity.getHibernateMappedForm() >> mapping
         mapping.getIdentity() >> identity
         identity.getNatural() >> naturalId
         naturalId.createUniqueKey(rootClass) >> Optional.of(uk)
@@ -70,6 +71,7 @@ class NaturalIdentifierBinderSpec extends HibernateGormDatastoreSpec {
         def binder = new NaturalIdentifierBinder(uniqueNameGenerator)
 
         persistentEntity.getMappedForm() >> mapping
+        persistentEntity.getHibernateMappedForm() >> mapping
         mapping.getIdentity() >> identity
         identity.getNatural() >> naturalId
         naturalId.createUniqueKey(rootClass) >> Optional.empty()
@@ -90,6 +92,7 @@ class NaturalIdentifierBinderSpec extends HibernateGormDatastoreSpec {
         def binder = new NaturalIdentifierBinder(uniqueNameGenerator)
 
         persistentEntity.getMappedForm() >> mapping
+        persistentEntity.getHibernateMappedForm() >> mapping
         mapping.getIdentity() >> null
 
         when:

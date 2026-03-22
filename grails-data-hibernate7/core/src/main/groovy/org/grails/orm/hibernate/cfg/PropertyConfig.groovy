@@ -19,6 +19,9 @@ import groovy.transform.CompileStatic
 import groovy.transform.PackageScope
 import groovy.transform.builder.Builder
 import groovy.transform.builder.SimpleStrategy
+
+import jakarta.persistence.AccessType
+
 import org.grails.datastore.mapping.config.Property
 import org.hibernate.FetchMode
 import org.springframework.beans.MutablePropertyValues
@@ -39,6 +42,7 @@ class PropertyConfig extends Property {
 
     PropertyConfig() {
         setFetchStrategy(null)
+        setAccessType(AccessType.PROPERTY)
     }
 
     @PackageScope

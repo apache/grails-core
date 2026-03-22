@@ -74,7 +74,7 @@ public class MapSecondPassBinder {
         String columnName1 = property.getIndexColumnName(namingStrategy);
         BasicValue value = simpleValueColumnBinder.bindSimpleValue(
                 metadataBuildingContext, map.getCollectionTable(), type, columnName1, true);
-        PropertyConfig mappedForm = property.getMappedForm();
+        PropertyConfig mappedForm = property.getHibernateMappedForm();
         if (mappedForm.getIndexColumn() != null) {
             Column column = simpleValueColumnFetcher.getColumnForSimpleValue(value);
             ColumnConfig columnConfig = getSingleColumnConfig(mappedForm.getIndexColumn());
