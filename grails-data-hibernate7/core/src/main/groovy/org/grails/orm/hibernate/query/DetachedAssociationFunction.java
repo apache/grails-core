@@ -30,6 +30,12 @@ public class DetachedAssociationFunction implements Function<Query.Criterion, Li
     public List<DetachedAssociationCriteria<?>> apply(Query.Criterion o) {
         if (o instanceof DetachedAssociationCriteria) {
             return List.of((DetachedAssociationCriteria<?>) o);
+        } else if (o instanceof Query.Junction junction) {
+            java.util.List<DetachedAssociationCriteria<?>> result = new java.util.ArrayList<>();
+            for (Query.Criterion criterion : junction.getCriteria()) {
+                result.addAll(apply(criterion));
+            }
+            return result;
         }
         return List.of();
     }

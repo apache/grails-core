@@ -34,7 +34,12 @@ import org.springframework.beans.BeanUtils;
 
 import grails.gorm.DetachedCriteria;
 import grails.gorm.PagedResultList;
+import org.grails.datastore.gorm.query.criteria.DetachedAssociationCriteria;
+import org.grails.datastore.mapping.model.PersistentEntity;
+import org.grails.datastore.mapping.model.PersistentProperty;
+import org.grails.datastore.mapping.model.types.Association;
 import org.grails.datastore.mapping.query.Query;
+import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernatePersistentEntity;
 import org.grails.orm.hibernate.query.HibernateQuery;
 import org.grails.orm.hibernate.query.HibernateQueryArgument;
 
@@ -188,18 +193,38 @@ public class CriteriaMethodInvoker {
 
             if (attribute.isAssociation()) {
                 Class<?> oldTargetClass = builder.getTargetClass();
-                builder.setTargetClass(builder.getClassForAssociationType(attribute));
+                Class<?> associationClass = builder.getClassForAssociationType(attribute);
+                builder.setTargetClass(associationClass);
                 JoinType joinType;
                 if (hasMoreThanOneArg) {
                     joinType = builder.convertFromInt((Integer) args[0]);
-                } else if (builder.getTargetClass().equals(oldTargetClass)) {
+                } else if (associationClass.equals(oldTargetClass)) {
                     joinType = JoinType.LEFT; // default to left join if joining on the same table
                 } else {
                     joinType = builder.convertFromInt(0);
                 }
 
                 hibernateQuery.join(name, joinType);
-                hibernateQuery.in(name, new DetachedCriteria<>(builder.getTargetClass()).build(callable));
+
+                PersistentEntity parentEntity =
+                        hibernateQuery.getSession().getMappingContext().getPersistentEntity(oldTargetClass.getName());
+                PersistentProperty property = parentEntity.getPropertyByName(name);
+                if (property instanceof Association association) {
+                    DetachedAssociationCriteria associationCriteria =
+                            new DetachedAssociationCriteria(associationClass, association);
+                    DetachedCriteria oldDetachedCriteria = hibernateQuery.getDetachedCriteria();
+                    hibernateQuery.setDetachedCriteria(associationCriteria);
+                    try {
+                        invokeClosureNode(callable);
+                    } finally {
+                        hibernateQuery.setDetachedCriteria(oldDetachedCriteria);
+                    }
+                    hibernateQuery.add((Query.Criterion) associationCriteria);
+                } else {
+                    // Fallback for non-GORM associations if any
+                    hibernateQuery.in(name, new DetachedCriteria<>(associationClass).build(callable));
+                }
+
                 builder.setTargetClass(oldTargetClass);
 
                 return name;
@@ -238,7 +263,8 @@ public class CriteriaMethodInvoker {
                             && args[0] instanceof String s
                             && args[1] instanceof String a
                             && args[2] instanceof Number jt) {
-                        return builder.createAlias(s, a, jt.intValue());
+                        builder.createAlias(s, a, jt.intValue());
+                        return builder;
                     }
                     return name;
                 case IS_NULL, IS_NOT_NULL, IS_EMPTY, IS_NOT_EMPTY:

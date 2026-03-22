@@ -15,6 +15,11 @@ In Grails 7:
 - `HibernateDatastore.getDatastoreForConnection` supports `"dataSource"`, `ConnectionSource.DEFAULT` ("default"), and `ConnectionSource.OLD_DEFAULT` ("DEFAULT").
 - Raw `"default"` and `"DEFAULT"` strings in H7 production code and key tests have been replaced with `ConnectionSource.DEFAULT`.
 - `HibernateMappingContextConfiguration` and `HibernateDatastore` correctly use `ConnectionSource.DEFAULT` for the primary datasource name.
+- **Fixed Issues in GORM Querying (Hibernate 7):**
+    - Refactored `JpaFromProvider` to correctly handle root aliases and hierarchical joins for dot-notated projection/criteria paths.
+    - Fixed `ClassCastException` in `PredicateGenerator` by ensuring all association paths are properly pre-joined in the JPA metamodel.
+    - Enhanced `PredicateGenerator.handleExists` to properly support correlated subqueries with their own join providers.
+    - Ensured basic collection joins (e.g., `nicknames`) are automatically handled during query construction.
 
 **Risk & Potential Propagation:**
 - This change might affect other GORM modules (Neo4j, MongoDB, etc.) if they rely on the uppercase `"DEFAULT"` string literal and don't yet support the lowercase `"default"`.

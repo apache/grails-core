@@ -136,11 +136,17 @@ public class PredicateGenerator {
             JpaFromProvider fromsByProvider,
             DetachedAssociationCriteria<?> c) {
 
-        var child = root.join(c.getAssociationPath(), JoinType.LEFT);
-        JpaFromProvider childTablesByName = (JpaFromProvider) fromsByProvider.clone();
-        childTablesByName.put("root", child);
-
+        From<?, ?> child = (From<?, ?>) fromsByProvider.getFullyQualifiedPath(c.getAssociationPath());
         PersistentEntity associatedEntity = c.getAssociation().getAssociatedEntity();
+
+        JpaFromProvider childTablesByName = new JpaFromProvider(
+                fromsByProvider,
+                associatedEntity,
+                c.getCriteria(),
+                java.util.Collections.<Query.Projection>emptyList(),
+                c.getFetchStrategies(),
+                c.getJoinTypes(),
+                child);
 
         return cb.and(getPredicates(cb, criteriaQuery, child, c.getCriteria(), childTablesByName, associatedEntity));
     }
@@ -151,9 +157,15 @@ public class PredicateGenerator {
             From<?, ?> root,
             JpaFromProvider fromsByProvider,
             HibernateAssociationQuery haq) {
-        var child = root.join(haq.associationPath, JoinType.LEFT);
-        JpaFromProvider childFroms = (JpaFromProvider) fromsByProvider.clone();
-        childFroms.put("root", child);
+        From<?, ?> child = (From<?, ?>) fromsByProvider.getFullyQualifiedPath(haq.associationPath);
+        JpaFromProvider childFroms = new JpaFromProvider(
+                fromsByProvider,
+                haq.getEntity(),
+                haq.getAssociationCriteria(),
+                java.util.Collections.<Query.Projection>emptyList(),
+                java.util.Collections.<String, jakarta.persistence.FetchType>emptyMap(),
+                java.util.Collections.<String, jakarta.persistence.criteria.JoinType>emptyMap(),
+                child);
         return cb.and(
                 getPredicates(cb, criteriaQuery, child, haq.getAssociationCriteria(), childFroms, haq.getEntity()));
     }
@@ -389,12 +401,27 @@ public class PredicateGenerator {
             JpaFromProvider fromsByProvider,
             PersistentEntity entity,
             Query.Exists c) {
-        Subquery subquery = criteriaQuery.subquery(Integer.class);
-        Root subRoot = subquery.from(entity.getJavaClass());
-        JpaFromProvider newMap = (JpaFromProvider) fromsByProvider.clone();
-        newMap.put("root", subRoot);
-        var predicates =
-                getPredicates(cb, criteriaQuery, subRoot, c.getSubquery().getCriteria(), newMap, entity);
+        QueryableCriteria<?> subqueryable = c.getSubquery();
+        PersistentEntity subEntity = subqueryable.getPersistentEntity();
+        Subquery<Integer> subquery = criteriaQuery.subquery(Integer.class);
+        Root<?> subRoot = subquery.from(subEntity.getJavaClass());
+
+        JpaFromProvider subFromsProvider = new JpaFromProvider(
+                fromsByProvider,
+                subEntity,
+                subqueryable.getCriteria(),
+                java.util.Collections.<Query.Projection>emptyList(),
+                java.util.Collections.<String, jakarta.persistence.FetchType>emptyMap(),
+                java.util.Collections.<String, jakarta.persistence.criteria.JoinType>emptyMap(),
+                subRoot);
+
+        var predicates = getPredicates(
+                cb,
+                criteriaQuery,
+                subRoot,
+                subqueryable.getCriteria(),
+                subFromsProvider,
+                subEntity);
         var existsPredicate = getExistsPredicate(cb, root_, entity, subRoot);
         Predicate[] allPredicates = existsPredicate != null
                 ? Stream.concat(Arrays.stream(predicates), Stream.of(existsPredicate))

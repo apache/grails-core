@@ -18,6 +18,8 @@
  */
 package org.grails.orm.hibernate.query;
 
+import jakarta.persistence.criteria.JoinType;
+
 import org.grails.datastore.mapping.query.Query;
 
 /**
@@ -25,6 +27,10 @@ import org.grails.datastore.mapping.query.Query;
  *
  * @author walterduquedeestrada
  */
-public record HibernateAlias(String path, String alias) implements Query.Criterion, Query.QueryElement {
+public record HibernateAlias(String path, String alias, JoinType joinType) implements Query.Criterion, Query.QueryElement {
+
+    public HibernateAlias(String path, String alias) {
+        this(path, alias, JoinType.INNER);
+    }
 
 }

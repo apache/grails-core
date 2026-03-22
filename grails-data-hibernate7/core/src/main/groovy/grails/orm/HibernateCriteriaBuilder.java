@@ -168,13 +168,26 @@ public class HibernateCriteriaBuilder extends GroovyObjectSupport implements Bui
         }
     }
 
-    public Criteria createAlias(String associationPath, String alias) {
+    public org.grails.datastore.mapping.query.api.Criteria createAlias(String associationPath, String alias) {
         var prop = hibernateQuery.getEntity().getPropertyByName(associationPath);
         if (prop instanceof org.grails.datastore.mapping.model.types.Basic) {
-            hibernateQuery.addAlias(new org.grails.orm.hibernate.query.HibernateAlias(associationPath, alias));
+            hibernateQuery.addAlias(new org.grails.orm.hibernate.query.HibernateAlias(associationPath, alias, JoinType.INNER));
             return this;
         }
         hibernateQuery.getDetachedCriteria().createAlias(associationPath, alias);
+        hibernateQuery.getDetachedCriteria().join(associationPath, JoinType.INNER);
+        return this;
+    }
+
+    public org.grails.datastore.mapping.query.api.Criteria createAlias(String associationPath, String alias, int joinType) {
+        var prop = hibernateQuery.getEntity().getPropertyByName(associationPath);
+        JoinType convertedJoinType = convertFromInt(joinType);
+        if (prop instanceof org.grails.datastore.mapping.model.types.Basic) {
+            hibernateQuery.addAlias(new org.grails.orm.hibernate.query.HibernateAlias(associationPath, alias, convertedJoinType));
+            return this;
+        }
+        hibernateQuery.getDetachedCriteria().createAlias(associationPath, alias);
+        hibernateQuery.getDetachedCriteria().join(associationPath, convertedJoinType);
         return this;
     }
 

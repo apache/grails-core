@@ -19,8 +19,10 @@
 package org.grails.orm.hibernate.cfg.domainbinding.generator;
 
 import java.io.Serial;
+import java.util.Optional;
 import java.util.Properties;
 
+import org.hibernate.boot.model.naming.Identifier;
 import org.hibernate.boot.model.relational.SqlStringGenerationContext;
 import org.hibernate.boot.model.relational.internal.SqlStringGenerationContextImpl;
 import org.hibernate.engine.jdbc.env.spi.JdbcEnvironment;
@@ -49,44 +51,52 @@ public class GrailsIncrementGenerator extends IncrementGenerator {
             GrailsHibernatePersistentEntity domainClass,
             PersistentEntityNamingStrategy namingStrategy) {
 
+        configure(context, buildParams(context, mappedId, domainClass, namingStrategy));
+        initialize(buildSqlContext(context));
+    }
+
+    private Properties buildParams(
+            GeneratorCreationContext context,
+            Identity mappedId,
+            GrailsHibernatePersistentEntity domainClass,
+            PersistentEntityNamingStrategy namingStrategy) {
+
         Properties params = new Properties();
-        if (mappedId != null && mappedId.getProperties() != null) {
-            params.putAll(mappedId.getProperties());
-        }
+        Optional.ofNullable(mappedId).map(Identity::getProperties).ifPresent(params::putAll);
 
-        // Use the entity's naming-strategy-aware table resolution:
-        // handles explicit mapping, table-per-hierarchy root, and PhysicalNamingStrategy fallback.
         params.put(TABLES, domainClass.getTableName(namingStrategy));
+        params.put(COLUMN, resolveColumnName(context, mappedId));
 
-        org.grails.orm.hibernate.cfg.Mapping mapping = domainClass.getHibernateMappedForm();
-        if (mapping != null && mapping.getTable() != null) {
-            if (mapping.getTable().getCatalog() != null)
-                params.put(CATALOG, mapping.getTable().getCatalog());
-            if (mapping.getTable().getSchema() != null)
-                params.put(SCHEMA, mapping.getTable().getSchema());
+        Optional.ofNullable(domainClass.getHibernateMappedForm())
+                .map(org.grails.orm.hibernate.cfg.Mapping::getTable)
+                .ifPresent(table -> {
+                    if (table.getCatalog() != null) params.put(CATALOG, table.getCatalog());
+                    if (table.getSchema() != null) params.put(SCHEMA, table.getSchema());
+                });
+
+        return params;
+    }
+
+    private String resolveColumnName(GeneratorCreationContext context, Identity mappedId) {
+        String propertyName = context.getProperty().getName();
+        if (propertyName != null && !propertyName.contains(".")) {
+            return propertyName;
         }
+        return Optional.ofNullable(mappedId)
+                .map(Identity::getName)
+                .filter(name -> !name.contains("."))
+                .orElse("id");
+    }
 
-        // Resolve column name — fall back to "id" if the property path is dotted (composite)
-        String columnName = context.getProperty().getName();
-        if (columnName == null || columnName.contains(".")) {
-            columnName = (mappedId != null &&
-                            mappedId.getName() != null &&
-                            !mappedId.getName().contains(".")) ?
-                    mappedId.getName() :
-                    "id";
-        }
-        params.put(COLUMN, columnName);
+    private SqlStringGenerationContext buildSqlContext(GeneratorCreationContext context) {
+        var database = context.getDatabase();
+        var physicalName = database.getDefaultNamespace().getPhysicalName();
 
-        // Delegate to the standard configure() — sets returnClass, column, physicalTableNames
-        configure(context, params);
-
-        // Build SqlStringGenerationContext and initialize the SQL query
-        JdbcEnvironment jdbcEnvironment = context.getDatabase().getJdbcEnvironment();
-        var physicalName = context.getDatabase().getDefaultNamespace().getPhysicalName();
-        String catalog = physicalName.catalog() != null ? physicalName.catalog().getCanonicalName() : null;
-        String schema = physicalName.schema() != null ? physicalName.schema().getCanonicalName() : null;
-        SqlStringGenerationContext sqlContext =
-                SqlStringGenerationContextImpl.fromExplicit(jdbcEnvironment, context.getDatabase(), catalog, schema);
-        initialize(sqlContext);
+        return SqlStringGenerationContextImpl.fromExplicit(
+                database.getJdbcEnvironment(),
+                database,
+                Optional.ofNullable(physicalName.catalog()).map(Identifier::getCanonicalName).orElse(null),
+                Optional.ofNullable(physicalName.schema()).map(Identifier::getCanonicalName).orElse(null)
+        );
     }
 }
