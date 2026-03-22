@@ -20,13 +20,13 @@ package org.grails.orm.hibernate.proxy;
 
 import java.util.Map;
 
-import org.hibernate.bytecode.enhance.spi.Enhancer;
 import org.hibernate.bytecode.enhance.spi.EnhancementContext;
+import org.hibernate.bytecode.enhance.spi.Enhancer;
 import org.hibernate.bytecode.spi.BytecodeProvider;
 import org.hibernate.bytecode.spi.ProxyFactoryFactory;
 import org.hibernate.bytecode.spi.ReflectionOptimizer;
-import org.hibernate.proxy.pojo.bytebuddy.ByteBuddyProxyHelper;
 import org.hibernate.property.access.spi.PropertyAccess;
+import org.hibernate.proxy.pojo.bytebuddy.ByteBuddyProxyHelper;
 
 /**
  * A {@link BytecodeProvider} implementation for Hibernate 7 that provides Groovy-aware proxies.
@@ -53,17 +53,12 @@ public class GrailsBytecodeProvider implements BytecodeProvider {
 
     @Override
     public ReflectionOptimizer getReflectionOptimizer(
-            Class clazz,
-            String[] getterNames,
-            String[] setterNames,
-            Class[] types) {
+            Class clazz, String[] getterNames, String[] setterNames, Class[] types) {
         return null;
     }
 
     @Override
-    public ReflectionOptimizer getReflectionOptimizer(
-            Class<?> clazz,
-            Map<String, PropertyAccess> propertyAccessMap) {
+    public ReflectionOptimizer getReflectionOptimizer(Class<?> clazz, Map<String, PropertyAccess> propertyAccessMap) {
         return null;
     }
 

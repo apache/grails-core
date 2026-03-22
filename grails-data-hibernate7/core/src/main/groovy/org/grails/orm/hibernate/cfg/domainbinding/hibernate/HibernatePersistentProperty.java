@@ -104,7 +104,7 @@ public interface HibernatePersistentProperty extends PersistentProperty<Property
     }
 
     default GrailsHibernatePersistentEntity getHibernateOwner() {
-        return (GrailsHibernatePersistentEntity )getOwner() ;
+        return (GrailsHibernatePersistentEntity) getOwner();
     }
 
     @SuppressWarnings("PMD.DataflowAnomalyAnalysis")
@@ -154,15 +154,15 @@ public interface HibernatePersistentProperty extends PersistentProperty<Property
 
     @Override
     default boolean isLazyAble() {
-        return this instanceof HibernateAssociation ||
-                !(this instanceof Embedded) && !this.equals(this.getOwner().getIdentity());
+        return this instanceof HibernateAssociation
+                || !(this instanceof Embedded) && !this.equals(this.getOwner().getIdentity());
     }
 
     /**
      * @return The mapped form
      */
     default PropertyConfig getHibernateMappedForm() {
-        return (PropertyConfig) getMappedForm();
+        return getMappedForm();
     }
 
     /**
@@ -181,10 +181,7 @@ public interface HibernatePersistentProperty extends PersistentProperty<Property
     }
 
     default String getMappedColumnName() {
-        if (getMappedForm() != null) {
-            return getMappedForm().getColumn();
-        }
-        return null;
+        return Optional.ofNullable(getMappedForm()).map(PropertyConfig::getColumn).orElse(null);
     }
 
     default String getColumnName(ColumnConfig cc) {
@@ -228,10 +225,10 @@ public interface HibernatePersistentProperty extends PersistentProperty<Property
     }
 
     default Table getTable() {
-      return getPersistentClass().getTable();
+        return getPersistentClass().getTable();
     }
 
-    default PersistentClass getPersistentClass(){
+    default PersistentClass getPersistentClass() {
         return getHibernateOwner().getPersistentClass();
     }
 }

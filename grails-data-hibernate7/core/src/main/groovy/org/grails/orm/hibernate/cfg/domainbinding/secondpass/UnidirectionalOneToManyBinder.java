@@ -26,8 +26,7 @@ import org.hibernate.mapping.Collection;
 import org.hibernate.mapping.ManyToOne;
 import org.hibernate.mapping.OneToMany;
 import org.hibernate.mapping.Value;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+
 
 import org.grails.orm.hibernate.cfg.domainbinding.hibernate.GrailsHibernatePersistentEntity;
 import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernateOneToManyProperty;
@@ -38,7 +37,6 @@ import static org.grails.orm.hibernate.cfg.domainbinding.binder.GrailsDomainBind
 /** Binds unidirectional one-to-many associations. */
 public class UnidirectionalOneToManyBinder {
 
-    private static final Logger LOG = LoggerFactory.getLogger(UnidirectionalOneToManyBinder.class);
     private final CollectionWithJoinTableBinder collectionWithJoinTableBinder;
     private final BackticksRemover backticksRemover = new BackticksRemover();
     private final InFlightMetadataCollector mappings;
@@ -63,9 +61,9 @@ public class UnidirectionalOneToManyBinder {
         Value element = collection.getElement();
         element.createForeignKey();
 
-        String entityName = (element instanceof ManyToOne manyToOne) ?
-                manyToOne.getReferencedEntityName() :
-                ((OneToMany) element).getReferencedEntityName();
+        String entityName = (element instanceof ManyToOne manyToOne)
+                ? manyToOne.getReferencedEntityName()
+                : ((OneToMany) element).getReferencedEntityName();
 
         collection.setInverse(false);
 
@@ -76,11 +74,10 @@ public class UnidirectionalOneToManyBinder {
         GrailsHibernatePersistentEntity owner = (GrailsHibernatePersistentEntity) property.getOwner();
         Backref backref = new Backref();
         backref.setEntityName(owner.getName());
-        backref.setName(UNDERSCORE +
-                backticksRemover.apply(owner.getJavaClass().getSimpleName()) +
-                UNDERSCORE +
-                backticksRemover.apply(property.getName()) +
-                "Backref");
+        backref.setName(UNDERSCORE + backticksRemover.apply(owner.getJavaClass().getSimpleName())
+                + UNDERSCORE
+                + backticksRemover.apply(property.getName())
+                + "Backref");
         backref.setUpdatable(false);
         backref.setInsertable(true);
         backref.setCollectionRole(collection.getRole());

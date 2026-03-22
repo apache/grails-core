@@ -65,20 +65,20 @@ public class DefaultColumnNameFetcher {
             if (!association.isBidirectional() && association instanceof HibernateOneToManyProperty) {
                 String prefix = namingStrategyWrapper.resolveTableName(
                         property.getOwner().getRootEntity().getJavaClass().getSimpleName());
-                return backticksRemover.apply(prefix) +
-                        UNDERSCORE +
-                        backticksRemover.apply(columnName) +
-                        FOREIGN_KEY_SUFFIX;
+                return backticksRemover.apply(prefix)
+                        + UNDERSCORE
+                        + backticksRemover.apply(columnName)
+                        + FOREIGN_KEY_SUFFIX;
             }
 
             if (property.isInherited() && property.isBidirectionalManyToOne()) {
                 return namingStrategyWrapper.resolveColumnName(property.getOwner()
                                 .getRootEntity()
                                 .getJavaClass()
-                                .getSimpleName()) +
-                        '_' +
-                        columnName +
-                        FOREIGN_KEY_SUFFIX;
+                                .getSimpleName())
+                        + '_'
+                        + columnName
+                        + FOREIGN_KEY_SUFFIX;
             }
 
             return columnName + FOREIGN_KEY_SUFFIX;
