@@ -49,7 +49,7 @@ public record HqlQueryContext(
         String hql,
         Class<?> targetClass,
         Map<String, Object> namedParams,
-        Collection positionalParams,
+        Collection<?> positionalParams,
         Map<String, Object> querySettings,
         boolean isUpdate,
         boolean isNative) {
@@ -65,13 +65,13 @@ public record HqlQueryContext(
             PersistentEntity entity,
             CharSequence queryCharseq,
             Map<?, ?> namedParams,
-            Collection positionalParams,
-            Map querySettings,
+            Collection<?> positionalParams,
+            Map<String, Object> querySettings,
             boolean isNative,
             boolean isUpdate) {
         Map<String, Object> _namedParams =
                 namedParams != null ? new HashMap<>((Map<String, Object>) namedParams) : new HashMap<>();
-        Collection positionalParamsCopy = positionalParams != null ? new ArrayList<>(positionalParams) : null;
+        Collection<Object> positionalParamsCopy = positionalParams != null ? new ArrayList<>(positionalParams) : null;
         Map<String, Object> querySettingsCopy = querySettings != null ? new HashMap<>(querySettings) : null;
 
         String hql;
@@ -93,18 +93,18 @@ public record HqlQueryContext(
 
     public static @Nullable String resolveHql(
             CharSequence queryCharseq, boolean isNative, Map<String, Object> namedParams) {
-        String raw = queryCharseq instanceof GString gstr ?
-                buildNamedParameterQueryFromGString(gstr, namedParams) :
-                queryCharseq != null ? queryCharseq.toString() : "";
+        String raw = queryCharseq instanceof GString gstr
+                ? buildNamedParameterQueryFromGString(gstr, namedParams)
+                : queryCharseq != null ? queryCharseq.toString() : "";
         String normalized = normalizeMultiLineQueryString(raw);
         return isNative ? normalized : normalizeNonAliasedSelect(normalized);
     }
 
     public static @Nullable String resolveHql(
-            CharSequence queryCharseq, boolean isNative, Collection positionalParams) {
-        String raw = queryCharseq instanceof GString gstr ?
-                buildPositionalParameterQueryFromGString(gstr, positionalParams, isNative) :
-                queryCharseq != null ? queryCharseq.toString() : "";
+            CharSequence queryCharseq, boolean isNative, Collection<Object> positionalParams) {
+        String raw = queryCharseq instanceof GString gstr
+                ? buildPositionalParameterQueryFromGString(gstr, positionalParams, isNative)
+                : queryCharseq != null ? queryCharseq.toString() : "";
         String normalized = normalizeMultiLineQueryString(raw);
         return isNative ? normalized : normalizeNonAliasedSelect(normalized);
     }
@@ -133,7 +133,7 @@ public record HqlQueryContext(
      * <p>Commas inside parentheses or string literals are ignored.
      */
     static int countHqlProjections(CharSequence hql) {
-        if (hql == null || hql.length() == 0) return 0;
+        if (hql == null || hql.isEmpty()) return 0;
         String s = hql.toString().trim();
         String lower = s.toLowerCase(Locale.ROOT);
         int selectIdx = lower.indexOf("select ");
@@ -152,6 +152,11 @@ public record HqlQueryContext(
             sel = sel.substring("all ".length()).trim();
 
         // Count top-level commas, ignoring those inside parens or string literals
+        int commas = getCommas(sel);
+        return commas == 0 ? 1 : 2;
+    }
+
+    private static int getCommas(String sel) {
         int depth = 0, commas = 0;
         boolean inSingle = false, inDouble = false;
         for (int i = 0; i < sel.length(); i++) {
@@ -170,7 +175,7 @@ public record HqlQueryContext(
                 else if (c == ',' && depth == 0) commas++;
             }
         }
-        return commas == 0 ? 1 : 2;
+        return commas;
     }
 
     // ─── HQL normalization ────────────────────────────────────────────────────
@@ -217,8 +222,8 @@ public record HqlQueryContext(
         int tokenEnd = cur;
         while (tokenEnd < s.length() && !Character.isWhitespace(s.charAt(tokenEnd))) tokenEnd++;
         String token = s.substring(cur, tokenEnd).toLowerCase(Locale.ROOT);
-        boolean hasAlias = !token.isEmpty() &&
-                !Set.of("where", "join", "left", "right", "inner", "outer", "group", "order", "having")
+        boolean hasAlias = !token.isEmpty()
+                && !Set.of("where", "join", "left", "right", "inner", "outer", "group", "order", "having")
                         .contains(token);
         if (hasAlias) return s;
 
@@ -269,7 +274,6 @@ public record HqlQueryContext(
         return query.trim().replace("\n", " ");
     }
 
-    @SuppressWarnings("unchecked")
     private static String buildNamedParameterQueryFromGString(GString query, Map<String, Object> params) {
         StringBuilder sql = new StringBuilder();
         Object[] values = query.getValues();
@@ -285,9 +289,8 @@ public record HqlQueryContext(
         return sql.toString();
     }
 
-    @SuppressWarnings("unchecked")
     private static String buildPositionalParameterQueryFromGString(
-            GString query, Collection positionalParams, boolean isNative) {
+            GString query, Collection<Object> positionalParams, boolean isNative) {
         StringBuilder sql = new StringBuilder();
         Object[] values = query.getValues();
         String[] strings = query.getStrings();
@@ -299,7 +302,8 @@ public record HqlQueryContext(
                 } else {
                     sql.append('?').append(positionalParams.size() + 1);
                 }
-                positionalParams.add(values[i]);
+                Object value = values[i];
+                positionalParams.add(value);
             }
         }
         return sql.toString();

@@ -18,22 +18,79 @@
  */
 package org.grails.orm.hibernate
 
+import grails.gorm.annotation.Entity
+import grails.gorm.specs.HibernateGormDatastoreSpec
 import org.grails.orm.hibernate.cfg.Settings
-import spock.lang.Specification
+import org.hibernate.FlushMode
+import org.springframework.context.support.GenericApplicationContext
 
-/**
- * Created by graemerocher on 22/09/2016.
- */
-class HibernateDatastoreSpec extends Specification {
+class HibernateDatastoreSpec extends HibernateGormDatastoreSpec {
 
-    void "test configure via map"() {
+    void "test basic properties"() {
+        expect:
+        datastore.sessionFactory != null
+        datastore.dataSource != null
+        datastore.transactionManager != null
+        datastore.mappingContext != null
+        datastore.applicationEventPublisher != null
+        datastore.dataSourceName == 'default'
+    }
+
+    void "test configuration settings"() {
+        expect:
+        !datastore.autoFlush // COMMIT mode in setupSpec
+        datastore.defaultFlushMode == FlushMode.COMMIT
+        !datastore.failOnError
+        datastore.cacheQueries
+    }
+
+    void "test getDatastoreForConnection"() {
+        expect:
+        datastore.getDatastoreForConnection('dataSource') == datastore
+        datastore.getDatastoreForConnection('default') == datastore
+        datastore.getDatastoreForConnection('DEFAULT') == datastore
+    }
+
+    void "test withFlushMode"() {
+        when:
+        boolean result = false
+        datastore.withFlushMode(FlushMode.ALWAYS) {
+            result = datastore.sessionFactory.currentSession.hibernateFlushMode == FlushMode.ALWAYS
+            return true
+        }
+
+        then:
+        result
+        datastore.sessionFactory.currentSession.hibernateFlushMode == FlushMode.COMMIT
+    }
+
+    void "test application context integration"() {
+        given:
+        def ctx = new GenericApplicationContext()
+        ctx.refresh()
+
+        when:
+        datastore.setApplicationContext(ctx)
+
+        then:
+        datastore.applicationContext == ctx
+    }
+
+    void "test configure via map (Legacy/Test constructor)"() {
         when:"The map constructor is used"
         def config = Collections.singletonMap(Settings.SETTING_DB_CREATE,  "create-drop")
-        HibernateDatastore datastore = new HibernateDatastore(config, Book)
+        HibernateDatastore testDatastore = new HibernateDatastore(config, GHUBook)
 
         then:"GORM is configured correctly"
-        Book.withNewSession {
-            Book.count()
-        } == 0
+        testDatastore.getMappingContext().getPersistentEntity(GHUBook.name) != null
+        
+        cleanup:
+        testDatastore.close()
     }
+}
+
+@Entity
+class GHUBook {
+    Long id
+    String title
 }

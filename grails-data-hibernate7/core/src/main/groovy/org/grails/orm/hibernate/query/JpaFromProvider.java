@@ -95,7 +95,7 @@ public class JpaFromProvider implements Cloneable {
         // Also scan for HibernateAlias (basic collections)
         Map<String, String> basicAliasMap = new HashMap<>();
         for (HibernateAlias ha : aliases) {
-            basicAliasMap.put(ha.getPath(), ha.getAlias());
+            basicAliasMap.put(ha.path(), ha.alias());
         }
 
         var definedAliases = detachedAssociationCriteriaList.stream()

@@ -28,6 +28,7 @@ import java.util.stream.Stream;
 
 import jakarta.annotation.Nonnull;
 
+import org.hibernate.FetchMode;
 import org.hibernate.boot.spi.InFlightMetadataCollector;
 import org.hibernate.mapping.PersistentClass;
 
@@ -233,9 +234,7 @@ public interface GrailsHibernatePersistentEntity extends PersistentEntity {
     }
 
     default List<HibernatePersistentEntity> getChildEntities(String dataSourceName) {
-        return getMappingContext()
-                .getDirectChildEntities(this)
-                .stream()
+        return getMappingContext().getDirectChildEntities(this).stream()
                 .filter(HibernatePersistentEntity.class::isInstance)
                 .map(HibernatePersistentEntity.class::cast)
                 .filter(persistentEntity -> persistentEntity.usesConnectionSource(dataSourceName))
@@ -301,9 +300,9 @@ public interface GrailsHibernatePersistentEntity extends PersistentEntity {
     }
 
     private static String resolveDiscriminatorValue(DiscriminatorConfig discriminatorConfig) {
-        return discriminatorConfig.getColumn() != null ?
-                discriminatorConfig.getColumn().getName() :
-                discriminatorConfig.getFormula();
+        return discriminatorConfig.getColumn() != null
+                ? discriminatorConfig.getColumn().getName()
+                : discriminatorConfig.getFormula();
     }
 
     default List<HibernatePersistentProperty> getHibernatePersistentProperties() {
@@ -312,12 +311,13 @@ public interface GrailsHibernatePersistentEntity extends PersistentEntity {
                 .map(HibernatePersistentProperty.class::cast)
                 .toList());
         properties.sort((p1, p2) -> {
-            if (p1 instanceof org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernateEmbeddedProperty &&
-                    !(p2 instanceof
-                                                        org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernateEmbeddedProperty)) {
+            if (p1 instanceof org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernateEmbeddedProperty
+                    && !(p2
+                            instanceof
+                            org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernateEmbeddedProperty)) {
                 return -1;
-            } else if (!(p1 instanceof org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernateEmbeddedProperty) &&
-                    p2 instanceof org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernateEmbeddedProperty) {
+            } else if (!(p1 instanceof org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernateEmbeddedProperty)
+                    && p2 instanceof org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernateEmbeddedProperty) {
                 return 1;
             }
             return p1.getName().compareTo(p2.getName());
@@ -348,23 +348,14 @@ public interface GrailsHibernatePersistentEntity extends PersistentEntity {
             return false;
         }
 
-        org.grails.orm.hibernate.cfg.PropertyConfig config = property.getMappedForm();
-
-        if (property instanceof HibernateAssociation) {
-            // Explicit fetch: 'join' implies eager (not lazy) and takes precedence in Hibernate
-            if (config != null && org.hibernate.FetchMode.JOIN.equals(config.getFetchMode())) {
-                return false;
-            }
-            if (config != null && config.getLazy() != null) {
-                return config.getLazy();
-            }
-            return true;
-        }
-
-        if (config != null && config.getLazy() != null) {
-            return config.getLazy();
-        }
-
-        return false;
+        return Optional.ofNullable(property.getMappedForm())
+                .map(config -> {
+                    if (property instanceof HibernateAssociation &&
+                            FetchMode.JOIN.equals(config.getFetchMode())) {
+                        return false;
+                    }
+                    return config.getLazy();
+                })
+                .orElseGet(() -> property instanceof HibernateAssociation);
     }
 }

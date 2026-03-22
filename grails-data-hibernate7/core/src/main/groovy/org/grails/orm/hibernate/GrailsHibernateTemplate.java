@@ -147,7 +147,8 @@ public class GrailsHibernateTemplate implements IHibernateTemplate {
 
     @Override
     public <T> T execute(Closure<T> callable) {
-        HibernateCallback<T> hibernateCallback = DefaultGroovyMethods.asType(callable, HibernateCallback.class);
+        @SuppressWarnings("unchecked")
+        HibernateCallback<T> hibernateCallback = (HibernateCallback<T>) DefaultGroovyMethods.asType(callable, HibernateCallback.class);
         return execute(hibernateCallback);
     }
 
@@ -206,8 +207,8 @@ public class GrailsHibernateTemplate implements IHibernateTemplate {
                         (ConnectionHolder) TransactionSynchronizationManager.unbindResourceIfPossible(dataSource);
                 // if there is a connection holder and it holds an open connection close it
                 try {
-                    if (connectionHolder != null &&
-                            !connectionHolder.getConnection().isClosed()) {
+                    if (connectionHolder != null
+                            && !connectionHolder.getConnection().isClosed()) {
                         Connection conn = connectionHolder.getConnection();
                         DataSourceUtils.releaseConnection(conn, dataSource);
                     }
@@ -215,8 +216,8 @@ public class GrailsHibernateTemplate implements IHibernateTemplate {
                     // ignore, connection closed already?
                     if (LOG.isDebugEnabled()) {
                         LOG.debug(
-                                "Could not close opened JDBC connection. Did the application close the connection manually?: " +
-                                        e.getMessage());
+                                "Could not close opened JDBC connection. Did the application close the connection manually?: "
+                                        + e.getMessage());
                     }
                 }
             } finally {
@@ -283,8 +284,8 @@ public class GrailsHibernateTemplate implements IHibernateTemplate {
     }
 
     protected boolean shouldPassReadOnlyToHibernate() {
-        if ((passReadOnlyToHibernate || osivReadOnly) &&
-                TransactionSynchronizationManager.hasResource(getSessionFactory())) {
+        if ((passReadOnlyToHibernate || osivReadOnly)
+                && TransactionSynchronizationManager.hasResource(getSessionFactory())) {
             if (TransactionSynchronizationManager.isActualTransactionActive()) {
                 return passReadOnlyToHibernate && TransactionSynchronizationManager.isCurrentTransactionReadOnly();
             } else {
@@ -337,6 +338,7 @@ public class GrailsHibernateTemplate implements IHibernateTemplate {
             throw convertHibernateAccessException(ex);
         } catch (PersistenceException ex) {
             if (ex.getCause() instanceof HibernateException) {
+                // @SuppressWarnings("PMD.PreserveStackTrace")
                 throw SessionFactoryUtils.convertHibernateAccessException((HibernateException) ex.getCause());
             }
             throw ex;

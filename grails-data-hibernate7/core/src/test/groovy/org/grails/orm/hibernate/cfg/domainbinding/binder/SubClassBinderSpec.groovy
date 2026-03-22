@@ -22,12 +22,12 @@ package org.grails.orm.hibernate.cfg.domainbinding.binder
 import org.hibernate.mapping.SingleTableSubclass
 
 import grails.gorm.specs.HibernateGormDatastoreSpec
-import org.grails.orm.hibernate.cfg.Mapping
 import org.grails.orm.hibernate.cfg.MappingCacheHolder
 import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernatePersistentEntity
 import org.grails.orm.hibernate.cfg.domainbinding.util.MultiTenantFilterBinder
 import org.hibernate.boot.spi.MetadataBuildingContext
 import org.hibernate.mapping.RootClass
+import org.grails.datastore.mapping.core.connections.ConnectionSource
 
 class SubClassBinderSpec extends HibernateGormDatastoreSpec {
 
@@ -48,7 +48,7 @@ class SubClassBinderSpec extends HibernateGormDatastoreSpec {
         binder = new SubClassBinder(
                 subclassMappingBinder,
                 multiTenantFilterBinder,
-                "default"
+                ConnectionSource.DEFAULT,
         )
     }
 
@@ -56,7 +56,7 @@ class SubClassBinderSpec extends HibernateGormDatastoreSpec {
         given:
         def subEntity = Mock(HibernatePersistentEntity)
         subEntity.getName() >> "Child"
-        subEntity.getChildEntities("default") >> []
+        subEntity.getChildEntities(ConnectionSource.DEFAULT) >> []
         def rootClass = new RootClass(metadataBuildingContext)
         rootClass.setEntityName("Parent")
         rootClass.setJpaEntityName("Parent")
@@ -79,8 +79,8 @@ class SubClassBinderSpec extends HibernateGormDatastoreSpec {
         def grandChildEntity = Mock(HibernatePersistentEntity)
         subEntity.getName() >> "Child"
         grandChildEntity.getName() >> "GrandChild"
-        subEntity.getChildEntities("default") >> [grandChildEntity]
-        grandChildEntity.getChildEntities("default") >> []
+        subEntity.getChildEntities(ConnectionSource.DEFAULT) >> [grandChildEntity]
+        grandChildEntity.getChildEntities(ConnectionSource.DEFAULT) >> []
 
         def rootClass = new RootClass(metadataBuildingContext)
         rootClass.setEntityName("Parent")

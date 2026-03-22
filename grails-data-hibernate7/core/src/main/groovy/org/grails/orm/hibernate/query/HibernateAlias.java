@@ -22,23 +22,9 @@ import org.grails.datastore.mapping.query.Query;
 
 /**
  * A internal criterion used to represent an alias for a basic collection join.
- * 
+ *
  * @author walterduquedeestrada
  */
-public class HibernateAlias implements Query.Criterion, Query.QueryElement {
-    private final String path;
-    private final String alias;
+public record HibernateAlias(String path, String alias) implements Query.Criterion, Query.QueryElement {
 
-    public HibernateAlias(String path, String alias) {
-        this.path = path;
-        this.alias = alias;
-    }
-
-    public String getPath() {
-        return path;
-    }
-
-    public String getAlias() {
-        return alias;
-    }
 }

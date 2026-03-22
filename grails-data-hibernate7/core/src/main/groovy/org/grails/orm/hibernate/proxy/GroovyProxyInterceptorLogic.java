@@ -24,6 +24,7 @@ import groovy.lang.GroovyObject;
 import groovy.lang.MetaClass;
 import org.codehaus.groovy.runtime.HandleMetaClass;
 import org.codehaus.groovy.runtime.InvokerHelper;
+
 import org.grails.datastore.gorm.proxy.ProxyInstanceMetaClass;
 
 /**
@@ -36,35 +37,34 @@ public class GroovyProxyInterceptorLogic {
 
     public static final Object INVOKE_IMPLEMENTATION = new Object();
 
-    public record InterceptorState(
-            String entityName,
-            Class<?> persistentClass,
-            Object identifier
-    ) {}
+    public record InterceptorState(String entityName, Class<?> persistentClass, Object identifier) {}
 
     public static Object handleUninitialized(InterceptorState state, String methodName, Object[] args) {
-        if ((methodName.equals("getMetaClass") || methodName.endsWith("getStaticMetaClass")) && (args == null || args.length == 0)) {
+        if (("getMetaClass".equals(methodName) || methodName.endsWith("getStaticMetaClass"))
+                && (args == null || args.length == 0)) {
             return InvokerHelper.getMetaClass(state.persistentClass());
         }
-        if (methodName.equals("getProperty") && args.length == 1 && args[0].equals("id")) {
+        if ("getProperty".equals(methodName) && args.length == 1 && "id".equals(args[0])) {
             return state.identifier();
         }
-        if (methodName.equals("ident") && (args == null || args.length == 0)) {
+        if ("ident".equals(methodName) && (args == null || args.length == 0)) {
             return state.identifier();
         }
-        if ((methodName.equals("isDirty") || methodName.equals("hasChanged")) && (args == null || args.length == 0)) {
+        if (("isDirty".equals(methodName) || "hasChanged".equals(methodName)) && (args == null || args.length == 0)) {
             return false;
         }
-        if (methodName.equals("toString") && (args == null || args.length == 0)) {
+        if ("toString".equals(methodName) && (args == null || args.length == 0)) {
             return state.entityName() + ":" + state.identifier();
         }
         return INVOKE_IMPLEMENTATION;
     }
 
     public static boolean isGroovyMethod(String methodName) {
-        return methodName.equals("getMetaClass") || methodName.equals("setMetaClass") ||
-               methodName.equals("getProperty") || methodName.equals("setProperty") ||
-               methodName.equals("invokeMethod");
+        return "getMetaClass".equals(methodName)
+                || "setMetaClass".equals(methodName)
+                || "getProperty".equals(methodName)
+                || "setProperty".equals(methodName)
+                || "invokeMethod".equals(methodName);
     }
 
     public static ProxyInstanceMetaClass getProxyInstanceMetaClass(Object o) {

@@ -81,8 +81,7 @@ public class MultiTenantFilterBinder {
      * @return null as it's redundant for single table subclasses
      */
     @Nullable
-    public FilterDefinition bind(
-            @Nonnull HibernatePersistentEntity entity, @Nonnull SingleTableSubclass subclass) {
+    public FilterDefinition bind(@Nonnull HibernatePersistentEntity entity, @Nonnull SingleTableSubclass subclass) {
         return null; // Redundant for SingleTableSubclass
     }
 

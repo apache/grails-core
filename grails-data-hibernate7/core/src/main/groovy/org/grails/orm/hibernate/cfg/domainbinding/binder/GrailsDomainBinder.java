@@ -18,6 +18,7 @@
  */
 package org.grails.orm.hibernate.cfg.domainbinding.binder;
 
+import org.grails.datastore.mapping.core.connections.ConnectionSource;
 import org.hibernate.boot.ResourceStreamLocator;
 import org.hibernate.boot.internal.MetadataBuildingContextRootImpl;
 import org.hibernate.boot.model.TypeContributions;
@@ -116,7 +117,7 @@ public class GrailsDomainBinder implements AdditionalMappingContributor, TypeCon
             ResourceStreamLocator resourceStreamLocator,
             MetadataBuildingContext buildingContext) {
         this.metadataBuildingContext = new MetadataBuildingContextRootImpl(
-                "default",
+                ConnectionSource.DEFAULT,
                 metadataCollector.getBootstrapContext(),
                 metadataCollector.getMetadataBuildingOptions(),
                 metadataCollector,

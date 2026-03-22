@@ -26,6 +26,7 @@ import org.grails.orm.hibernate.cfg.domainbinding.hibernate.GrailsHibernatePersi
 import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernatePersistentProperty
 import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernatePersistentEntity
 import org.grails.orm.hibernate.cfg.domainbinding.util.DefaultColumnNameFetcher
+import org.grails.datastore.mapping.core.connections.ConnectionSource
 
 class GrailsHibernatePersistentEntitySpec extends HibernateGormDatastoreSpec {
 
@@ -155,7 +156,7 @@ class GrailsHibernatePersistentEntitySpec extends HibernateGormDatastoreSpec {
         GrailsHibernatePersistentEntity vehicle = getPersistentEntity(Vehicle) as GrailsHibernatePersistentEntity
 
         when:
-        def children = vehicle.getChildEntities("DEFAULT")
+        def children = vehicle.getChildEntities(ConnectionSource.DEFAULT)
 
         then:
         children.size() == 2
