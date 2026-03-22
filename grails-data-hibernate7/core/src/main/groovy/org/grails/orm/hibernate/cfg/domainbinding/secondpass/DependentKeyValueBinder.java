@@ -46,9 +46,9 @@ public class DependentKeyValueBinder {
     public void bind(HibernateToManyProperty property, DependantValue key) {
         GrailsHibernatePersistentEntity refDomainClass = property.getHibernateOwner();
 
-        Optional<CompositeIdentity> compositeIdentity = property.supportsJoinColumnMapping() ?
-                refDomainClass.getHibernateCompositeIdentity() :
-                Optional.empty();
+        Optional<CompositeIdentity> compositeIdentity = property.supportsJoinColumnMapping()
+                ? refDomainClass.getHibernateCompositeIdentity()
+                : Optional.empty();
 
         compositeIdentity.ifPresentOrElse(
                 ci -> {

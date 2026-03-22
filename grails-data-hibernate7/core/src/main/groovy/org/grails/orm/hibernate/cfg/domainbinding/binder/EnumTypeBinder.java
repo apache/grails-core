@@ -37,7 +37,6 @@ import org.grails.orm.hibernate.cfg.PropertyConfig;
 import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernateBasicProperty;
 import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernateEnumProperty;
 import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernatePersistentProperty;
-import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernateToManyProperty;
 import org.grails.orm.hibernate.cfg.domainbinding.util.ColumnNameForPropertyAndPathFetcher;
 import org.grails.orm.hibernate.cfg.domainbinding.util.GrailsEnumType;
 
@@ -53,19 +52,22 @@ public class EnumTypeBinder {
 
     public EnumTypeBinder(
             MetadataBuildingContext metadataBuildingContext,
-            ColumnNameForPropertyAndPathFetcher columnNameForPropertyAndPathFetcher, PersistentEntityNamingStrategy namingStrategy) {
+            ColumnNameForPropertyAndPathFetcher columnNameForPropertyAndPathFetcher,
+            PersistentEntityNamingStrategy namingStrategy) {
         this(
                 metadataBuildingContext,
                 columnNameForPropertyAndPathFetcher,
                 new IndexBinder(),
-                new ColumnConfigToColumnBinder(), namingStrategy);
+                new ColumnConfigToColumnBinder(),
+                namingStrategy);
     }
 
     protected EnumTypeBinder(
             MetadataBuildingContext metadataBuildingContext,
             ColumnNameForPropertyAndPathFetcher columnNameForPropertyAndPathFetcher,
             IndexBinder indexBinder,
-            ColumnConfigToColumnBinder columnConfigToColumnBinder, PersistentEntityNamingStrategy namingStrategy) {
+            ColumnConfigToColumnBinder columnConfigToColumnBinder,
+            PersistentEntityNamingStrategy namingStrategy) {
         this.metadataBuildingContext = metadataBuildingContext;
         this.columnNameForPropertyAndPathFetcher = columnNameForPropertyAndPathFetcher;
         this.indexBinder = indexBinder;
@@ -86,10 +88,10 @@ public class EnumTypeBinder {
         return simpleValue;
     }
 
-    public BasicValue bindEnumTypeForColumn(@Nonnull HibernateBasicProperty property, @Nonnull String _columnName) {
+    public BasicValue bindEnumTypeForColumn(@Nonnull HibernateBasicProperty property) {
         String columnName = property.joinTableColumName(namingStrategy);
         BasicValue simpleValue = new BasicValue(metadataBuildingContext, property.getTable());
-        bindEnumType(property,  property.getComponentType(), simpleValue, columnName);
+        bindEnumType(property, property.getComponentType(), simpleValue, columnName);
         return simpleValue;
     }
 

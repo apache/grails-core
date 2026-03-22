@@ -81,7 +81,12 @@ public class GrailsDomainBinder implements AdditionalMappingContributor, TypeCon
 
     public GrailsDomainBinder(
             String dataSourceName, String sessionFactoryName, HibernateMappingContext hibernateMappingContext) {
-        this(dataSourceName, sessionFactoryName, hibernateMappingContext, new NamingStrategyProvider(), new MappingCacheHolder());
+        this(
+                dataSourceName,
+                sessionFactoryName,
+                hibernateMappingContext,
+                new NamingStrategyProvider(),
+                new MappingCacheHolder());
     }
 
     public GrailsDomainBinder(
@@ -229,8 +234,7 @@ public class GrailsDomainBinder implements AdditionalMappingContributor, TypeCon
                 metadataCollector,
                 mappingCacheHolder);
 
-        hibernateMappingContext.getHibernatePersistentEntities(dataSourceName)
-                .stream()
+        hibernateMappingContext.getHibernatePersistentEntities(dataSourceName).stream()
                 .filter(persistentEntity -> persistentEntity.forGrailsDomainMapping(dataSourceName))
                 .forEach(rootBinder::bindRoot);
     }

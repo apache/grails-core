@@ -74,7 +74,8 @@ public class GrailsNativeGenerator extends NativeGenerator {
             Object delegate = field.get(this);
             if (delegate instanceof SequenceStyleGenerator ssg) {
                 if (ssg.getDatabaseStructure() == null) {
-                    throw new HibernateException("Identifier generator (SequenceStyleGenerator) was not properly initialized. This usually happens if table creation failed (check previous logs for DDL errors).");
+                    throw new HibernateException(
+                            "Identifier generator (SequenceStyleGenerator) was not properly initialized. This usually happens if table creation failed (check previous logs for DDL errors).");
                 }
             }
         } catch (HibernateException e) {

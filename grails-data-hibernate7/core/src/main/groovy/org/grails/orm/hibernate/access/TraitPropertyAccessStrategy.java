@@ -27,7 +27,14 @@ import org.checkerframework.checker.initialization.qual.Initialized;
 import org.checkerframework.checker.nullness.qual.NonNull;
 import org.checkerframework.checker.nullness.qual.UnknownKeyFor;
 import org.hibernate.MappingException;
-import org.hibernate.property.access.spi.*;
+import org.hibernate.property.access.spi.Getter;
+import org.hibernate.property.access.spi.GetterFieldImpl;
+import org.hibernate.property.access.spi.GetterMethodImpl;
+import org.hibernate.property.access.spi.PropertyAccess;
+import org.hibernate.property.access.spi.PropertyAccessStrategy;
+import org.hibernate.property.access.spi.Setter;
+import org.hibernate.property.access.spi.SetterFieldImpl;
+import org.hibernate.property.access.spi.SetterMethodImpl;
 
 import org.springframework.util.ReflectionUtils;
 
@@ -69,8 +76,7 @@ public class TraitPropertyAccessStrategy implements PropertyAccessStrategy {
         }
 
         if (readMethod == null) {
-            throw new IllegalStateException("TraitPropertyAccessStrategy used on property ["
-                    + propertyName
+            throw new IllegalStateException("TraitPropertyAccessStrategy used on property [" + propertyName
                     + "] of class ["
                     + containerJavaType.getName()
                     + "] that is not provided by a trait!");
@@ -83,8 +89,7 @@ public class TraitPropertyAccessStrategy implements PropertyAccessStrategy {
             if (traitBridge != null) {
                 traitFieldName = getTraitFieldName(traitBridge.traitClass(), propertyName);
             } else {
-                throw new IllegalStateException("TraitPropertyAccessStrategy used on property ["
-                        + propertyName
+                throw new IllegalStateException("TraitPropertyAccessStrategy used on property [" + propertyName
                         + "] of class ["
                         + containerJavaType.getName()
                         + "] that is not provided by a trait!");
@@ -102,8 +107,7 @@ public class TraitPropertyAccessStrategy implements PropertyAccessStrategy {
                     containerJavaType, NameUtils.getSetterName(propertyName), readMethod.getReturnType());
             if (writeMethod == null) {
                 if (setterRequired) {
-                    throw new MappingException("TraitPropertyAccessStrategy used on property ["
-                            + propertyName
+                    throw new MappingException("TraitPropertyAccessStrategy used on property [" + propertyName
                             + "] of class ["
                             + containerJavaType.getName()
                             + "] that has no setter!");

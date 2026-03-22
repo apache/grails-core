@@ -18,6 +18,8 @@
  */
 package org.grails.orm.hibernate.support;
 
+import java.io.Serial;
+import java.io.Serializable;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -32,6 +34,7 @@ import org.hibernate.Session;
 import org.hibernate.engine.spi.SharedSessionContractImplementor;
 import org.hibernate.event.spi.AbstractEvent;
 import org.hibernate.event.spi.AbstractPreDatabaseOperationEvent;
+import org.hibernate.event.spi.EventSource;
 import org.hibernate.event.spi.MergeContext;
 import org.hibernate.event.spi.MergeEvent;
 import org.hibernate.event.spi.MergeEventListener;
@@ -75,7 +78,7 @@ import org.grails.datastore.mapping.validation.ValidationException;
 import org.grails.orm.hibernate.HibernateGormValidationApi;
 import org.grails.orm.hibernate.cfg.domainbinding.hibernate.GrailsHibernatePersistentEntity;
 
-@SuppressWarnings({"rawtypes", "unchecked", "serial"})
+@SuppressWarnings({"rawtypes", "unchecked", "PMD.CloseResource"})
 public class ClosureEventListener
         implements PreLoadEventListener,
                 PostLoadEventListener,
@@ -87,9 +90,12 @@ public class ClosureEventListener
                 PreUpdateEventListener,
                 MergeEventListener,
                 PersistEventListener,
-                CallbackRegistryConsumer {
+                CallbackRegistryConsumer,
+                Serializable {
 
+    @Serial
     private static final long serialVersionUID = 1;
+
     protected static final Logger LOG = LoggerFactory.getLogger(ClosureEventListener.class);
 
     private final EventTriggerCaller beforeInsertCaller;
@@ -114,9 +120,9 @@ public class ClosureEventListener
 
         beforeInsertCaller = buildCaller(AbstractPersistenceEvent.BEFORE_INSERT_EVENT, domainClazz);
         EventTriggerCaller preLoadCaller = buildCaller(AbstractPersistenceEvent.ONLOAD_EVENT, domainClazz);
-        this.preLoadEventCaller = (preLoadCaller != null) ?
-                preLoadCaller :
-                buildCaller(AbstractPersistenceEvent.BEFORE_LOAD_EVENT, domainClazz);
+        this.preLoadEventCaller = (preLoadCaller != null)
+                ? preLoadCaller
+                : buildCaller(AbstractPersistenceEvent.BEFORE_LOAD_EVENT, domainClazz);
 
         postLoadEventListener = buildCaller(AbstractPersistenceEvent.AFTER_LOAD_EVENT, domainClazz);
         postInsertEventListener = buildCaller(AbstractPersistenceEvent.AFTER_INSERT_EVENT, domainClazz);
@@ -126,9 +132,9 @@ public class ClosureEventListener
         preUpdateEventListener = buildCaller(AbstractPersistenceEvent.BEFORE_UPDATE_EVENT, domainClazz);
 
         beforeValidateEventListener = new BeforeValidateEventTriggerCaller(domainClazz, domainMetaClass);
-        failOnErrorEnabled = !failOnErrorPackages.isEmpty() ?
-                ClassUtils.isClassBelowPackage(domainClazz, failOnErrorPackages) :
-                failOnError;
+        failOnErrorEnabled = !failOnErrorPackages.isEmpty()
+                ? ClassUtils.isClassBelowPackage(domainClazz, failOnErrorPackages)
+                : failOnError;
 
         validateParams = new HashMap();
         validateParams.put(HibernateGormValidationApi.ARGUMENT_DEEP_VALIDATE, Boolean.FALSE);
@@ -163,8 +169,11 @@ public class ClosureEventListener
     // --- Specific manual session versions for PreLoad and PostLoad ---
 
     private void doPreLoadWithManualSession(PreLoadEvent event, Runnable action) {
-        SharedSessionContractImplementor sessionImpl = event.getSession();
-        if (sessionImpl instanceof Session session) {
+        flushOrRun(event.getSession(), action);
+    }
+
+    private void flushOrRun(EventSource event, Runnable action) {
+        if ((SharedSessionContractImplementor) event instanceof Session session) {
             FlushMode current = session.getHibernateFlushMode();
             try {
                 session.setHibernateFlushMode(FlushMode.MANUAL);
@@ -178,18 +187,7 @@ public class ClosureEventListener
     }
 
     private void doPostLoadWithManualSession(PostLoadEvent event, Runnable action) {
-        SharedSessionContractImplementor sessionImpl = event.getSession();
-        if (sessionImpl instanceof Session session) {
-            FlushMode current = session.getHibernateFlushMode();
-            try {
-                session.setHibernateFlushMode(FlushMode.MANUAL);
-                action.run();
-            } finally {
-                session.setHibernateFlushMode(current);
-            }
-        } else {
-            action.run();
-        }
+        flushOrRun(event.getSession(), action);
     }
 
     // --- Standard Overrides ---
@@ -245,8 +243,8 @@ public class ClosureEventListener
         if (!validateable.shouldSkipValidation() && !validateable.validate(validateParams)) {
             if (failOnErrorEnabled) {
                 throw ValidationException.newInstance(
-                        "Validation error whilst flushing entity [" +
-                                entity.getClass().getName() + "]",
+                        "Validation error whilst flushing entity ["
+                                + entity.getClass().getName() + "]",
                         validateable.getErrors());
             }
             return true;
@@ -314,17 +312,17 @@ public class ClosureEventListener
     }
 
     @Override
-    public void onMerge(MergeEvent event) { }
+    public void onMerge(MergeEvent event) {}
 
     @Override
-    public void onMerge(MergeEvent event, MergeContext copiedAlready) { }
+    public void onMerge(MergeEvent event, MergeContext copiedAlready) {}
 
     @Override
-    public void onPersist(PersistEvent event) { }
+    public void onPersist(PersistEvent event) {}
 
     @Override
-    public void onPersist(PersistEvent event, PersistContext createdAlready) { }
+    public void onPersist(PersistEvent event, PersistContext createdAlready) {}
 
     @Override
-    public void injectCallbackRegistry(CallbackRegistry callbackRegistry) { }
+    public void injectCallbackRegistry(CallbackRegistry callbackRegistry) {}
 }

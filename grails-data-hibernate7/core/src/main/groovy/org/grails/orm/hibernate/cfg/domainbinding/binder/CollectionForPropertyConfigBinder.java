@@ -22,7 +22,6 @@ import java.util.Optional;
 
 import jakarta.annotation.Nonnull;
 
-import org.hibernate.FetchMode;
 import org.hibernate.mapping.Collection;
 
 import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernateToManyProperty;

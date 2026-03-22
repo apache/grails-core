@@ -33,9 +33,7 @@ public class MapSecondPass implements org.hibernate.boot.spi.SecondPass, GrailsS
     private final MapSecondPassBinder mapSecondPassBinder;
     protected final HibernateToManyProperty property;
 
-    public MapSecondPass(
-            MapSecondPassBinder mapSecondPassBinder,
-            HibernateToManyProperty property) {
+    public MapSecondPass(MapSecondPassBinder mapSecondPassBinder, HibernateToManyProperty property) {
         this.mapSecondPassBinder = mapSecondPassBinder;
         this.property = property;
     }

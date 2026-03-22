@@ -25,13 +25,13 @@ import org.hibernate.mapping.Value;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernateCustomProperty;
 import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernateEmbeddedProperty;
 import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernateEnumProperty;
 import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernateManyToOneProperty;
 import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernateOneToOneProperty;
 import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernatePersistentProperty;
 import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernateSimpleProperty;
-import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernateCustomProperty;
 import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernateTenantIdProperty;
 import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernateToManyProperty;
 
@@ -65,7 +65,9 @@ public class GrailsPropertyBinder {
     }
 
     public Value bindProperty(
-            @Nonnull HibernatePersistentProperty currentGrailsProp, HibernatePersistentProperty parentProperty, String path) {
+            @Nonnull HibernatePersistentProperty currentGrailsProp,
+            HibernatePersistentProperty parentProperty,
+            String path) {
         Table table = currentGrailsProp.getTable();
         if (LOG.isDebugEnabled()) {
             LOG.debug("[GrailsPropertyBinder] Binding persistent property [" + currentGrailsProp.getName() + "]");
@@ -95,10 +97,12 @@ public class GrailsPropertyBinder {
             value = simpleValueBinder.bindSimpleValue(custom, parentProperty, table, path);
         } else if (currentGrailsProp instanceof HibernateTenantIdProperty tenantId) {
             value = simpleValueBinder.bindSimpleValue(tenantId, parentProperty, table, path);
-        } else if (currentGrailsProp instanceof HibernateToManyProperty toMany && currentGrailsProp.isSerializableType()) {
+        } else if (currentGrailsProp instanceof HibernateToManyProperty toMany
+                && currentGrailsProp.isSerializableType()) {
             value = simpleValueBinder.bindSimpleValue(toMany, parentProperty, table, path);
         } else {
-            throw new RuntimeException("Unsupported property type: " + currentGrailsProp.getClass().getName());
+            throw new RuntimeException(
+                    "Unsupported property type: " + currentGrailsProp.getClass().getName());
         }
 
         return value;

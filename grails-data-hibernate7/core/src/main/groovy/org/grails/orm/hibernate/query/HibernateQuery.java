@@ -344,11 +344,11 @@ public class HibernateQuery extends Query {
                     subCriteria.associationPath,
                     alias);
         }
-        throw new InvalidDataAccessApiUsageException("Cannot query association [" +
-                calculatePropertyName(associationName) +
-                "] of entity [" +
-                entity +
-                "]. Property is not an association!");
+        throw new InvalidDataAccessApiUsageException(
+                "Cannot query association [" + calculatePropertyName(associationName)
+                        + "] of entity ["
+                        + entity
+                        + "]. Property is not an association!");
     }
 
     @SuppressWarnings("PMD.DataflowAnomalyAnalysis")
@@ -480,8 +480,7 @@ public class HibernateQuery extends Query {
             JpaSubQuery<Tuple> innerSubquery = countQuery.subquery(Tuple.class);
 
             ConversionService cs = getSession().getMappingContext().getConversionService();
-            new JpaCriteriaQueryCreator(projections, cb, entity, detachedCriteria, cs)
-                    .populateSubquery(innerSubquery);
+            new JpaCriteriaQueryCreator(projections, cb, entity, detachedCriteria, cs).populateSubquery(innerSubquery);
 
             countQuery.from(innerSubquery);
             countQuery.select(cb.count(cb.literal(1)));

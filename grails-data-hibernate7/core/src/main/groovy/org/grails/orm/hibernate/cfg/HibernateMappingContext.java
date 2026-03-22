@@ -52,20 +52,18 @@ public class HibernateMappingContext extends AbstractMappingContext {
     }
 
     public HibernateMappingContext(
-            HibernateConnectionSourceSettings settings, Object contextObject, Class... persistentClasses) {
+            HibernateConnectionSourceSettings settings, Object contextObject, Class<?>... persistentClasses) {
         this.mappingFactory = new HibernateMappingFactory();
         initialize(settings);
-        if (settings != null) {
-            this.mappingFactory.setDefaultMapping(settings.getDefault().getMapping());
-            this.mappingFactory.setDefaultConstraints(settings.getDefault().getConstraints());
-        }
+        this.mappingFactory.setDefaultMapping(settings.getDefault().getMapping());
+        this.mappingFactory.setDefaultConstraints(settings.getDefault().getConstraints());
         this.mappingFactory.setContextObject(contextObject);
         this.syntaxStrategy = new GrailsJpaMappingConfigurationStrategy(mappingFactory);
         this.proxyFactory = new HibernateProxyHandler();
         addPersistentEntities(persistentClasses);
     }
 
-    public HibernateMappingContext(HibernateConnectionSourceSettings settings, Class... persistentClasses) {
+    public HibernateMappingContext(HibernateConnectionSourceSettings settings, Class<?>... persistentClasses) {
         this(settings, null, persistentClasses);
     }
 
@@ -73,7 +71,7 @@ public class HibernateMappingContext extends AbstractMappingContext {
         this(new HibernateConnectionSourceSettings());
     }
 
-    public void setDefaultConstraints(Closure defaultConstraints) {
+    public void setDefaultConstraints(Closure<?> defaultConstraints) {
         this.mappingFactory.setDefaultConstraints(defaultConstraints);
     }
 
@@ -83,12 +81,12 @@ public class HibernateMappingContext extends AbstractMappingContext {
     }
 
     @Override
-    public MappingFactory getMappingFactory() {
+    public MappingFactory<?,?> getMappingFactory() {
         return mappingFactory;
     }
 
     @Override
-    protected PersistentEntity createPersistentEntity(Class javaClass) {
+    protected PersistentEntity createPersistentEntity(Class<?> javaClass) {
         if (GormEntity.class.isAssignableFrom(javaClass)) {
             Object mappingStrategy = resolveMappingStrategy(javaClass);
             if (isValidMappingStrategy(javaClass, mappingStrategy)) {
@@ -99,18 +97,18 @@ public class HibernateMappingContext extends AbstractMappingContext {
     }
 
     @Override
-    protected boolean isValidMappingStrategy(Class javaClass, Object mappingStrategy) {
-        return HibernateEntity.class.isAssignableFrom(javaClass) ||
-                super.isValidMappingStrategy(javaClass, mappingStrategy);
+    protected boolean isValidMappingStrategy(Class<?> javaClass, Object mappingStrategy) {
+        return HibernateEntity.class.isAssignableFrom(javaClass)
+                || super.isValidMappingStrategy(javaClass, mappingStrategy);
     }
 
     @Override
-    protected PersistentEntity createPersistentEntity(Class javaClass, boolean external) {
+    protected PersistentEntity createPersistentEntity(Class<?> javaClass, boolean external) {
         return createPersistentEntity(javaClass);
     }
 
     @Override
-    public PersistentEntity createEmbeddedEntity(Class type) {
+    public PersistentEntity createEmbeddedEntity(Class<?> type) {
         HibernateEmbeddedPersistentEntity embedded = new HibernateEmbeddedPersistentEntity(type, this);
         embedded.initialize();
         return embedded;

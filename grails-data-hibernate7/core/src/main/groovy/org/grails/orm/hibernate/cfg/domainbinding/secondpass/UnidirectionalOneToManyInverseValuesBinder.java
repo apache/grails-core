@@ -18,9 +18,6 @@
  */
 package org.grails.orm.hibernate.cfg.domainbinding.secondpass;
 
-import java.util.Optional;
-
-import org.hibernate.FetchMode;
 import org.hibernate.boot.spi.MetadataBuildingContext;
 import org.hibernate.mapping.Collection;
 import org.hibernate.mapping.ManyToOne;

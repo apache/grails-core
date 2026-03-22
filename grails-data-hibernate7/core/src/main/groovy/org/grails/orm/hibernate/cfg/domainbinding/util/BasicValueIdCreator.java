@@ -69,10 +69,7 @@ public class BasicValueIdCreator {
         id.setCustomIdGeneratorCreator(context -> createGenerator(
                 mappedId,
                 domainClass,
-                context.getValue() == null ?
-                        new org.grails.orm.hibernate.cfg.domainbinding.util.GeneratorCreationContextWrapper(
-                                context, id) :
-                        context,
+                context.getValue() == null ? new GeneratorCreationContextWrapper(context, id) : context,
                 generatorName));
         return id;
     }

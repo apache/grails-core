@@ -47,27 +47,36 @@ public class ByteBuddyGroovyInterceptor extends ByteBuddyInterceptor {
             CompositeType componentIdType,
             SharedSessionContractImplementor session,
             boolean overridesEquals) {
-        super(entityName, persistentClass, interfaces, id, getIdentifierMethod, setIdentifierMethod, componentIdType, session, overridesEquals);
+        super(
+                entityName,
+                persistentClass,
+                interfaces,
+                id,
+                getIdentifierMethod,
+                setIdentifierMethod,
+                componentIdType,
+                session,
+                overridesEquals);
         this.getIdentifierMethod = getIdentifierMethod;
     }
 
     @Override
     public Object intercept(Object proxy, Method method, Object[] args) throws Throwable {
         String methodName = method.getName();
-        System.out.println("Intercepting method: " + methodName + " on proxy: " + getEntityName() + ":" + getIdentifier() + " (Uninitialized: " + isUninitialized() + ")");
+        System.out.println("Intercepting method: " + methodName + " on proxy: " + getEntityName() + ":"
+                + getIdentifier() + " (Uninitialized: " + isUninitialized() + ")");
 
         // Check these BEFORE calling this.invoke() to avoid premature initialization in Hibernate 7
-        if ((getIdentifierMethod != null && methodName.equals(getIdentifierMethod.getName())) || methodName.equals("getId") || methodName.equals("getIdentifier")) {
+        if ((getIdentifierMethod != null && methodName.equals(getIdentifierMethod.getName()))
+                || methodName.equals("getId")
+                || methodName.equals("getIdentifier")) {
             System.out.println("Handling ID access for: " + methodName);
             return getIdentifier();
         }
 
         if (isUninitialized()) {
             GroovyProxyInterceptorLogic.InterceptorState state = new GroovyProxyInterceptorLogic.InterceptorState(
-                    getEntityName(),
-                    getPersistentClass(),
-                    getIdentifier()
-            );
+                    getEntityName(), getPersistentClass(), getIdentifier());
             Object result = GroovyProxyInterceptorLogic.handleUninitialized(state, methodName, args);
             if (result != GroovyProxyInterceptorLogic.INVOKE_IMPLEMENTATION) {
                 System.out.println("Handled uninitialized access for: " + methodName);

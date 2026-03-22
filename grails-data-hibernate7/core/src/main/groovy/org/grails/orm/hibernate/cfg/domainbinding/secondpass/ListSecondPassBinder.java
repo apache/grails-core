@@ -27,7 +27,6 @@ import org.hibernate.boot.spi.InFlightMetadataCollector;
 import org.hibernate.boot.spi.MetadataBuildingContext;
 import org.hibernate.mapping.Backref;
 import org.hibernate.mapping.BasicValue;
-import org.hibernate.mapping.Collection;
 import org.hibernate.mapping.DependantValue;
 import org.hibernate.mapping.IndexBackref;
 import org.hibernate.mapping.List;
@@ -69,8 +68,7 @@ public class ListSecondPassBinder {
         this.mappings = mappings;
     }
 
-    public void bindListSecondPass(
-            @Nonnull HibernateToManyProperty property, Map<?, ?> persistentClasses) {
+    public void bindListSecondPass(@Nonnull HibernateToManyProperty property, Map<?, ?> persistentClasses) {
 
         List list = (List) property.getCollection();
         collectionSecondPassBinder.bindCollectionSecondPass(property, persistentClasses);
@@ -78,8 +76,7 @@ public class ListSecondPassBinder {
         final boolean isManyToMany = property instanceof HibernateManyToManyProperty;
 
         if (isManyToMany && !property.isOwningSide()) {
-            throw new MappingException("Invalid association ["
-                    + property
+            throw new MappingException("Invalid association [" + property
                     + "]. List collection types only supported on the owning side of a many-to-many relationship.");
         }
 

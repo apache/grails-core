@@ -22,12 +22,10 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;
 import java.util.stream.Collectors;
-import java.util.stream.StreamSupport;
 
 import org.hibernate.boot.model.internal.BinderHelper;
 import org.hibernate.mapping.PersistentClass;
 import org.hibernate.mapping.Property;
-import org.hibernate.mapping.Selectable;
 import org.hibernate.mapping.SingleTableSubclass;
 
 import org.grails.datastore.mapping.model.DatastoreConfigurationException;
@@ -43,9 +41,8 @@ public class OrderByClauseBuilder {
         }
 
         if (hqlOrderBy.isEmpty()) {
-            return StreamSupport.stream(
-                            associatedClass.getIdentifier().getSelectables().spliterator(), false)
-                    .map(selectable -> ((Selectable) selectable).getText() + " asc")
+            return associatedClass.getIdentifier().getSelectables().stream()
+                    .map(selectable -> selectable.getText() + " asc")
                     .collect(Collectors.joining(", "));
         }
 
@@ -96,17 +93,17 @@ public class OrderByClauseBuilder {
         String tablePrefix = getTablePrefix(p, associatedClass);
         String direction = entry.direction;
 
-        return StreamSupport.stream(p.getSelectables().spliterator(), false)
-                .map(selectable -> tablePrefix + ((Selectable) selectable).getText() + " " + direction)
+        return p.getSelectables().stream()
+                .map(selectable -> tablePrefix + selectable.getText() + " " + direction)
                 .collect(Collectors.joining(", "));
     }
 
     private String getTablePrefix(Property p, PersistentClass associatedClass) {
         PersistentClass pc = p.getPersistentClass();
-        if (pc == null ||
-                pc.equals(associatedClass) ||
-                (associatedClass instanceof SingleTableSubclass &&
-                        pc.getMappedClass().isAssignableFrom(associatedClass.getMappedClass()))) {
+        if (pc == null
+                || pc.equals(associatedClass)
+                || (associatedClass instanceof SingleTableSubclass
+                        && pc.getMappedClass().isAssignableFrom(associatedClass.getMappedClass()))) {
             return "";
         }
         return pc.getTable().getQuotedName() + ".";

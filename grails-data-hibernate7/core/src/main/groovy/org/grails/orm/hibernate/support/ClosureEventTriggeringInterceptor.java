@@ -18,9 +18,12 @@
  */
 package org.grails.orm.hibernate.support;
 
+import java.io.Serial;
 import java.io.Serializable;
 import java.util.Map;
 import java.util.Optional;
+
+import jakarta.annotation.Nullable;
 
 import org.hibernate.Hibernate;
 import org.hibernate.HibernateException;
@@ -96,6 +99,7 @@ public class ClosureEventTriggeringInterceptor
                 CallbackRegistryConsumer {
 
     //    private final Logger log = LoggerFactory.getLogger(getClass());
+    @Serial
     private static final long serialVersionUID = 1;
 
     private final DefaultPersistEventListener persistEventListener = new DefaultPersistEventListener();
@@ -239,12 +243,14 @@ public class ClosureEventTriggeringInterceptor
         persistEventListener.injectCallbackRegistry(callbackRegistry);
     }
 
+    @Override
     public void onPreLoad(PreLoadEvent hibernateEvent) {
         org.grails.datastore.mapping.engine.event.PreLoadEvent grailsEvent =
                 new org.grails.datastore.mapping.engine.event.PreLoadEvent(this.datastore, hibernateEvent.getEntity());
         publishEvent(hibernateEvent, grailsEvent);
     }
 
+    @Override
     public void onPostLoad(PostLoadEvent hibernateEvent) {
         Object entity = hibernateEvent.getEntity();
         activateDirtyChecking(entity);
@@ -252,9 +258,10 @@ public class ClosureEventTriggeringInterceptor
                 hibernateEvent, new org.grails.datastore.mapping.engine.event.PostLoadEvent(this.datastore, entity));
     }
 
+    @Override
     public boolean onPreInsert(PreInsertEvent hibernateEvent) {
         Object entity = hibernateEvent.getEntity();
-        Class type = Hibernate.getClass(entity);
+        Class<?> type = Hibernate.getClass(entity);
         PersistentEntity persistentEntity = mappingContext.getPersistentEntity(type.getName());
         AbstractPersistenceEvent grailsEvent;
         ModificationTrackingEntityAccess entityAccess = null;
@@ -315,9 +322,9 @@ public class ClosureEventTriggeringInterceptor
         // Only for "dateCreated" property, "lastUpdated" is handled correctly
         if (dateCreatedMapping != null) {
             int dateCreatedIdx = dateCreatedMapping.getStateArrayPosition();
-            if (oldState != null &&
-                    oldState[dateCreatedIdx] != null &&
-                    !oldState[dateCreatedIdx].equals(state[dateCreatedIdx])) {
+            if (oldState != null
+                    && oldState[dateCreatedIdx] != null
+                    && !oldState[dateCreatedIdx].equals(state[dateCreatedIdx])) {
                 modifiedProperties.put(AutoTimestampEventListener.DATE_CREATED_PROPERTY, oldState[dateCreatedIdx]);
             }
         }
@@ -334,6 +341,7 @@ public class ClosureEventTriggeringInterceptor
         }
     }
 
+    @Override
     public void onPostInsert(PostInsertEvent hibernateEvent) {
         Object entity = hibernateEvent.getEntity();
         org.grails.datastore.mapping.engine.event.PostInsertEvent grailsEvent =
@@ -342,9 +350,10 @@ public class ClosureEventTriggeringInterceptor
         publishEvent(hibernateEvent, grailsEvent);
     }
 
+    @Override
     public boolean onPreUpdate(PreUpdateEvent hibernateEvent) {
         Object entity = hibernateEvent.getEntity();
-        Class type = Hibernate.getClass(entity);
+        Class<?> type = Hibernate.getClass(entity);
         MappingContext mappingContext = datastore.getMappingContext();
         PersistentEntity persistentEntity = mappingContext.getPersistentEntity(type.getName());
         AbstractPersistenceEvent grailsEvent;
@@ -368,6 +377,7 @@ public class ClosureEventTriggeringInterceptor
         return cancelled;
     }
 
+    @Override
     public void onPostUpdate(PostUpdateEvent hibernateEvent) {
         Object entity = hibernateEvent.getEntity();
         activateDirtyChecking(entity);
@@ -375,6 +385,7 @@ public class ClosureEventTriggeringInterceptor
                 hibernateEvent, new org.grails.datastore.mapping.engine.event.PostUpdateEvent(this.datastore, entity));
     }
 
+    @Override
     public boolean onPreDelete(PreDeleteEvent hibernateEvent) {
         AbstractPersistenceEvent event = new org.grails.datastore.mapping.engine.event.PreDeleteEvent(
                 this.datastore, hibernateEvent.getEntity());
@@ -382,6 +393,7 @@ public class ClosureEventTriggeringInterceptor
         return event.isCancelled();
     }
 
+    @Override
     public void onPostDelete(PostDeleteEvent hibernateEvent) {
         org.grails.datastore.mapping.engine.event.PostDeleteEvent grailsEvent =
                 new org.grails.datastore.mapping.engine.event.PostDeleteEvent(
@@ -399,7 +411,7 @@ public class ClosureEventTriggeringInterceptor
     }
 
     @Override
-    public void setApplicationContext(ApplicationContext applicationContext) throws BeansException {
+    public void setApplicationContext(@Nullable ApplicationContext applicationContext) throws BeansException {
         if (applicationContext instanceof ConfigurableApplicationContext) {
 
             this.eventPublisher = new ConfigurableApplicationContextEventPublisher(
@@ -417,7 +429,7 @@ public class ClosureEventTriggeringInterceptor
                     persistentEntity.getReflector().getDirtyCheckingState(entity);
             if (dirtyCheckingState == null) {
                 dirtyCheckable.trackChanges();
-                for (Embedded association : persistentEntity.getEmbedded()) {
+                for (Embedded<?> association : persistentEntity.getEmbedded()) {
                     if (DirtyCheckable.class.isAssignableFrom(association.getType())) {
                         Object embedded = association.getReader().read(entity);
                         if (embedded != null) {
@@ -430,10 +442,5 @@ public class ClosureEventTriggeringInterceptor
                 }
             }
         }
-    }
-
-    @Override
-    public boolean requiresPostCommitHandling(EntityPersister persister) {
-        return false;
     }
 }

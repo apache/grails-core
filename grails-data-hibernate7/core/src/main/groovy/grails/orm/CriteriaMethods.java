@@ -83,7 +83,7 @@ public enum CriteriaMethods {
      * @return The corresponding CriteriaMethods enum
      * @throws MissingMethodException if the method name is not recognized
      */
-    public static CriteriaMethods fromName(String name, Class<?> targetClass, Object[] args) {
+    public static CriteriaMethods fromName(String name, Class<?> targetClass, Object... args) {
         for (CriteriaMethods m : values()) {
             if (m.name.equals(name)) {
                 return m;

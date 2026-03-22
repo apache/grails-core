@@ -33,9 +33,7 @@ public class ListSecondPass implements org.hibernate.boot.spi.SecondPass, Grails
     private final ListSecondPassBinder listSecondPassBinder;
     protected final HibernateToManyProperty property;
 
-    public ListSecondPass(
-            ListSecondPassBinder listSecondPassBinder,
-            HibernateToManyProperty property) {
+    public ListSecondPass(ListSecondPassBinder listSecondPassBinder, HibernateToManyProperty property) {
         this.listSecondPassBinder = listSecondPassBinder;
         this.property = property;
     }

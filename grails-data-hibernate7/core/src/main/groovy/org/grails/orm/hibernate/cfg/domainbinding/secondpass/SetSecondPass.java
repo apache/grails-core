@@ -40,9 +40,7 @@ public class SetSecondPass implements org.hibernate.boot.spi.SecondPass, GrailsS
     private final CollectionSecondPassBinder collectionSecondPassBinder;
     protected final HibernateToManyProperty property;
 
-    public SetSecondPass(
-            CollectionSecondPassBinder collectionSecondPassBinder,
-            HibernateToManyProperty property) {
+    public SetSecondPass(CollectionSecondPassBinder collectionSecondPassBinder, HibernateToManyProperty property) {
         this.collectionSecondPassBinder = collectionSecondPassBinder;
         this.property = property;
     }

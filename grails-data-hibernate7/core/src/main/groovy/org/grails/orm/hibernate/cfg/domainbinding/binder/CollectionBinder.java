@@ -145,7 +145,8 @@ public class CollectionBinder {
 
         // set role
         String propertyName = getNameForPropertyAndPath(property, path);
-        collection.setRole(GrailsHibernateUtil.qualify(property.getHibernateOwner().getName(), propertyName));
+        collection.setRole(
+                GrailsHibernateUtil.qualify(property.getHibernateOwner().getName(), propertyName));
 
         PropertyConfig pc = property.getHibernateMappedForm();
         // configure eager fetching

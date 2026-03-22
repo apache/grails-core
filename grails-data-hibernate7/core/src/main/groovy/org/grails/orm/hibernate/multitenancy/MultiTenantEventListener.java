@@ -74,10 +74,10 @@ public class MultiTenantEventListener implements PersistenceEventListener {
                         hibernateDatastore.enableMultiTenancyFilter();
                     }
                 }
-            } else if (event instanceof AbstractPersistenceEvent persistenceEvent &&
-                    (persistenceEvent instanceof ValidationEvent ||
-                            persistenceEvent instanceof PreInsertEvent ||
-                            persistenceEvent instanceof PreUpdateEvent)) {
+            } else if (event instanceof AbstractPersistenceEvent persistenceEvent
+                    && (persistenceEvent instanceof ValidationEvent
+                            || persistenceEvent instanceof PreInsertEvent
+                            || persistenceEvent instanceof PreUpdateEvent)) {
                 PersistentEntity entity = persistenceEvent.getEntity();
                 if (entity.isMultiTenant()) {
                     TenantId<?> tenantId = entity.getTenantId();
@@ -95,12 +95,11 @@ public class MultiTenantEventListener implements PersistenceEventListener {
                                 persistenceEvent.getEntityAccess().setProperty(tenantId.getName(), currentId);
                             } catch (Exception e) {
                                 throw new TenantException(
-                                        "Could not assigned tenant id [" +
-                                                currentId +
-                                                "] to property [" +
-                                                tenantId +
-                                                "], probably due to a type mismatch. You should return a type from the tenant resolver that matches the property type of the tenant id!: " +
-                                                e.getMessage(),
+                                        "Could not assigned tenant id [" + currentId
+                                                + "] to property ["
+                                                + tenantId
+                                                + "], probably due to a type mismatch. You should return a type from the tenant resolver that matches the property type of the tenant id!: "
+                                                + e.getMessage(),
                                         e);
                             }
                         }

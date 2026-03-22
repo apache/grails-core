@@ -64,9 +64,7 @@ public class MapSecondPassBinder {
         this.simpleValueColumnFetcher = simpleValueColumnFetcher;
     }
 
-    public void bindMapSecondPass(
-            @Nonnull HibernateToManyProperty property,
-            Map<?, ?> persistentClasses) {
+    public void bindMapSecondPass(@Nonnull HibernateToManyProperty property, Map<?, ?> persistentClasses) {
         org.hibernate.mapping.Map map = (org.hibernate.mapping.Map) property.getCollection();
         collectionSecondPassBinder.bindCollectionSecondPass(property, persistentClasses);
 

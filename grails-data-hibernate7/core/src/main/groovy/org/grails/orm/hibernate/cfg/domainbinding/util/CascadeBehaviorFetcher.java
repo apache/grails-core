@@ -66,8 +66,8 @@ public class CascadeBehaviorFetcher {
      * Gets the cascade behaviour.
      */
     public String getCascadeBehaviour(Association<?> association) {
-        var cascadeStrategy = getDefinedBehavior((HibernatePersistentProperty) association)
-                .orElse(getImpliedBehavior(association));
+        var cascadeStrategy =
+                getDefinedBehavior((HibernatePersistentProperty) association).orElse(getImpliedBehavior(association));
 
         logCascadeMapping.logCascadeMapping(association, cascadeStrategy);
 
@@ -101,30 +101,22 @@ public class CascadeBehaviorFetcher {
 
         if (association.isHasOne()) {
             return ALL;
-        }
-        else if (association instanceof HibernateOneToOneProperty) {
+        } else if (association instanceof HibernateOneToOneProperty) {
             return association.isOwningSide() ? ALL : SAVE_UPDATE;
-        }
-        else if (association instanceof HibernateOneToManyProperty) {
+        } else if (association instanceof HibernateOneToManyProperty) {
             return association.isCorrectlyOwned() ? ALL : SAVE_UPDATE;
-        }
-        else if (association instanceof HibernateManyToManyProperty) {
+        } else if (association instanceof HibernateManyToManyProperty) {
             return association.isCorrectlyOwned() || association.isCircular() ? SAVE_UPDATE : NONE;
-        }
-        else if (association instanceof HibernateManyToOneProperty) {
+        } else if (association instanceof HibernateManyToOneProperty) {
             if (association.isCorrectlyOwned() && !association.isCircular()) {
                 return ALL;
-            }
-            else if (association.isCompositeIdProperty()) {
+            } else if (association.isCompositeIdProperty()) {
                 return ALL;
-            }
-            else {
+            } else {
                 return NONE;
             }
-        }
-        else {
+        } else {
             throw new MappingException("Unrecognized association type " + association.getType());
         }
     }
-
 }

@@ -53,7 +53,8 @@ public class RootBinder {
             SubClassBinder subClassBinder,
             RootPersistentClassCommonValuesBinder rootPersistentClassCommonValuesBinder,
             DiscriminatorPropertyBinder discriminatorPropertyBinder,
-            InFlightMetadataCollector mappings, MappingCacheHolder mappingCacheHolder) {
+            InFlightMetadataCollector mappings,
+            MappingCacheHolder mappingCacheHolder) {
         this.dataSourceName = dataSourceName;
         this.multiTenantFilterBinder = multiTenantFilterBinder;
         this.subClassBinder = subClassBinder;
@@ -83,9 +84,7 @@ public class RootBinder {
         }
 
         // bind the sub classes
-        children.stream()
-                .flatMap(sub -> getSubclassStream(sub, root))
-                .forEach(subClass -> addSubclass(subClass, root));
+        children.stream().flatMap(sub -> getSubclassStream(sub, root)).forEach(subClass -> addSubclass(subClass, root));
 
         multiTenantFilterBinder.bind(entity, root);
 

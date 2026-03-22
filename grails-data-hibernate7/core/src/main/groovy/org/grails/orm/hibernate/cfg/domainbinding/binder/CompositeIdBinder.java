@@ -49,7 +49,9 @@ public class CompositeIdBinder {
     }
 
     public void bindCompositeId(
-            @Nonnull HibernatePersistentEntity hibernatePersistentEntity, RootClass root, CompositeIdentity compositeIdentity) {
+            @Nonnull HibernatePersistentEntity hibernatePersistentEntity,
+            RootClass root,
+            CompositeIdentity compositeIdentity) {
         hibernatePersistentEntity.setPersistentClass(root);
         Component id = new Component(metadataBuildingContext, root);
         id.setNullValue("undefined");
@@ -69,7 +71,8 @@ public class CompositeIdBinder {
                 : hibernatePersistentEntity.getCompositeIdentity();
 
         if (composite == null || composite.length == 0) {
-            throw new MappingException("No composite identifier properties found for class [" + hibernatePersistentEntity.getName() + "]");
+            throw new MappingException(
+                    "No composite identifier properties found for class [" + hibernatePersistentEntity.getName() + "]");
         }
         PersistentClass persistentClass = hibernatePersistentEntity.getPersistentClass();
         Table table = persistentClass.getTable();

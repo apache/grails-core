@@ -39,8 +39,7 @@ public class HibernateOneToOneProperty extends OneToOneWithMapping<PropertyConfi
     public void validateAssociation() {
         HibernateToOneProperty.super.validateAssociation();
         if (isHasOne() && !isBidirectional()) {
-            throw new MappingException("hasOne property ["
-                    + getName()
+            throw new MappingException("hasOne property [" + getName()
                     + "] is not bidirectional. Specify the other side of the relationship!");
         }
     }

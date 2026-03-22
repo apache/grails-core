@@ -22,6 +22,7 @@ import java.math.BigDecimal;
 import java.util.Optional;
 
 import org.codehaus.groovy.runtime.DefaultGroovyMethods;
+
 import org.hibernate.dialect.Dialect;
 import org.hibernate.dialect.H2Dialect;
 import org.hibernate.dialect.OracleDialect;
@@ -65,21 +66,18 @@ public class NumericColumnConstraintsBinder {
                 defaultPrecision = 15;
             }
 
-            int precision = minConstraintValueLength > 0 && maxConstraintValueLength > 0 ?
-                    Math.max(minConstraintValueLength, maxConstraintValueLength) :
-                    DefaultGroovyMethods.max(new Integer[] {
-                        defaultPrecision,
-                        minConstraintValueLength,
-                        maxConstraintValueLength
-                    });
+            int precision = minConstraintValueLength > 0 && maxConstraintValueLength > 0
+                    ? Math.max(minConstraintValueLength, maxConstraintValueLength)
+                    : DefaultGroovyMethods.max(
+                            new Integer[] {defaultPrecision, minConstraintValueLength, maxConstraintValueLength});
             column.setPrecision(precision);
         }
     }
 
-    private int getConstraintValueLength(Comparable min, int scale) {
-        return min instanceof Number number ?
-                Math.max(countDigits(number), countDigits((number).longValue()) + scale) :
-                0;
+    private int getConstraintValueLength(Comparable<?> min, int scale) {
+        return min instanceof Number number
+                ? Math.max(countDigits(number), countDigits((number).longValue()) + scale)
+                : 0;
     }
 
     private int countDigits(Number number) {

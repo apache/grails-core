@@ -19,7 +19,6 @@
 package org.grails.orm.hibernate.connections;
 
 import java.io.IOException;
-
 import javax.sql.DataSource;
 
 import org.hibernate.SessionFactory;

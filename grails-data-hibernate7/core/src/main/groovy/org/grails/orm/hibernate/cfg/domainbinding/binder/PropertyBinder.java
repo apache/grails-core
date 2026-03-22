@@ -95,7 +95,7 @@ public class PropertyBinder {
         prop.setLazy(persistentProperty.isLazy());
 
         prop.setInsertable(value.hasAnyInsertableColumns());
-        prop.setUpdateable(value.hasAnyUpdatableColumns());
+        prop.setUpdatable(value.hasAnyUpdatableColumns());
 
         return prop;
     }

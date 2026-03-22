@@ -83,8 +83,11 @@ public class JpaCriteriaQueryCreator {
         var cq = createCriteriaQuery(projectionList);
         Class<?> javaClass = entity.getJavaClass();
         Root<?> root = cq.from(javaClass);
-        var tablesByName = new JpaFromProvider(detachedCriteria, projectionList, 
-                hibernateQuery != null ? hibernateQuery.getAliases() : List.of(), root);
+        var tablesByName = new JpaFromProvider(
+                detachedCriteria,
+                projectionList,
+                hibernateQuery != null ? hibernateQuery.getAliases() : List.of(),
+                root);
         assignProjections(projectionList, cq, tablesByName);
         assignGroupBy(cq, tablesByName);
 
@@ -93,13 +96,15 @@ public class JpaCriteriaQueryCreator {
         return cq;
     }
 
-    @SuppressWarnings("unchecked")
     public <T> void populateSubquery(JpaSubQuery<T> subquery) {
         var projectionList = collectProjections();
         Class<?> javaClass = entity.getJavaClass();
         Root<?> root = subquery.from(javaClass);
-        var tablesByName = new JpaFromProvider(detachedCriteria, projectionList, 
-                hibernateQuery != null ? hibernateQuery.getAliases() : List.of(), root);
+        var tablesByName = new JpaFromProvider(
+                detachedCriteria,
+                projectionList,
+                hibernateQuery != null ? hibernateQuery.getAliases() : List.of(),
+                root);
 
         var aliasedProjections = new java.util.concurrent.atomic.AtomicInteger(0);
         var projectionExpressions = projectionList.stream()
@@ -140,13 +145,13 @@ public class JpaCriteriaQueryCreator {
 
     private JpaCriteriaQuery<?> createCriteriaQuery(List<Query.Projection> projections) {
         var cq = projections.stream()
-                                .filter(it -> !(it instanceof Query.DistinctProjection ||
-                                        it instanceof Query.DistinctPropertyProjection))
+                                .filter(it -> !(it instanceof Query.DistinctProjection
+                                        || it instanceof Query.DistinctPropertyProjection))
                                 .toList()
-                                .size() >
-                        1 ?
-                criteriaBuilder.createTupleQuery() :
-                criteriaBuilder.createQuery(Object.class);
+                                .size()
+                        > 1
+                ? criteriaBuilder.createTupleQuery()
+                : criteriaBuilder.createQuery(Object.class);
         projections.stream()
                 .filter(it -> it instanceof Query.DistinctProjection || it instanceof Query.DistinctPropertyProjection)
                 .findFirst()
@@ -186,13 +191,13 @@ public class JpaCriteriaQueryCreator {
                     .map(order -> {
                         Path<?> expression = tablesByName.getFullyQualifiedPath(order.getProperty());
                         if (order.isIgnoreCase() && expression.getJavaType().equals(String.class)) {
-                            return order.getDirection().equals(Query.Order.Direction.ASC) ?
-                                    criteriaBuilder.asc(criteriaBuilder.lower((Expression<String>) expression)) :
-                                    criteriaBuilder.desc(criteriaBuilder.lower((Expression<String>) expression));
+                            return order.getDirection().equals(Query.Order.Direction.ASC)
+                                    ? criteriaBuilder.asc(criteriaBuilder.lower((Expression<String>) expression))
+                                    : criteriaBuilder.desc(criteriaBuilder.lower((Expression<String>) expression));
                         } else {
-                            return order.getDirection().equals(Query.Order.Direction.ASC) ?
-                                    criteriaBuilder.asc(expression) :
-                                    criteriaBuilder.desc(expression);
+                            return order.getDirection().equals(Query.Order.Direction.ASC)
+                                    ? criteriaBuilder.asc(expression)
+                                    : criteriaBuilder.desc(expression);
                         }
                     })
                     .toArray(Order[]::new);

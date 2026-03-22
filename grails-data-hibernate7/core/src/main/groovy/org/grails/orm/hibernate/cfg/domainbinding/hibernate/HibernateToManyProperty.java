@@ -111,7 +111,9 @@ public interface HibernateToManyProperty extends PropertyWithMapping<PropertyCon
         }
 
         if (mapped == null || mapped.getColumns().isEmpty()) {
-            return namingStrategy.resolveColumnName(getName()) + UNDERSCORE + IndexedCollection.DEFAULT_INDEX_COLUMN_NAME;
+            return namingStrategy.resolveColumnName(getName())
+                    + UNDERSCORE
+                    + IndexedCollection.DEFAULT_INDEX_COLUMN_NAME;
         }
 
         ColumnConfig primaryCol = mapped.getColumns().get(0);
@@ -133,8 +135,7 @@ public interface HibernateToManyProperty extends PropertyWithMapping<PropertyCon
             if (StringUtils.hasText(colName)) {
                 return colName;
             }
-        }
-        catch (Exception e) {
+        } catch (Exception e) {
             // ignore
         }
 
@@ -171,8 +172,7 @@ public interface HibernateToManyProperty extends PropertyWithMapping<PropertyCon
             if (StringUtils.hasText(typeName)) {
                 return typeName;
             }
-        }
-        catch (Exception e) {
+        } catch (Exception e) {
             // ignore
         }
 
@@ -194,14 +194,14 @@ public interface HibernateToManyProperty extends PropertyWithMapping<PropertyCon
                 .map(PropertyConfig::getJoinTableColumnConfig)
                 .map(ColumnConfig::getName)
                 .orElseGet(() -> namingStrategy.resolveColumnName(getHibernateAssociatedEntity()
-                        .getHibernateRootEntity()
-                        .getJavaClass()
-                        .getSimpleName())
+                                .getHibernateRootEntity()
+                                .getJavaClass()
+                                .getSimpleName())
                         + GrailsDomainBinder.FOREIGN_KEY_SUFFIX);
     }
 
     default String joinTableColumName(PersistentEntityNamingStrategy namingStrategy) {
-        final Class<?> referencedType =getComponentType();
+        final Class<?> referencedType = getComponentType();
         var joinColumnMappingOptional = getColumnConfigOptional();
         boolean present = joinColumnMappingOptional.isPresent();
         String columnName;
@@ -237,5 +237,6 @@ public interface HibernateToManyProperty extends PropertyWithMapping<PropertyCon
     }
 
     void setCollection(Collection collection);
+
     Collection getCollection();
 }

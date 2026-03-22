@@ -23,6 +23,8 @@ import java.util.Optional;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 
+import jakarta.annotation.Nonnull;
+
 import org.hibernate.Hibernate;
 import org.hibernate.engine.spi.SessionFactoryImplementor;
 import org.hibernate.event.spi.EventSource;
@@ -51,18 +53,6 @@ import org.grails.orm.hibernate.connections.HibernateConnectionSourceSettings;
 import org.grails.orm.hibernate.support.ClosureEventListener;
 import org.grails.orm.hibernate.support.SoftKey;
 
-import grails.gorm.MultiTenant;
-import org.grails.datastore.gorm.timestamp.DefaultTimestampProvider;
-import org.grails.datastore.gorm.timestamp.TimestampProvider;
-import org.grails.datastore.mapping.engine.event.AbstractPersistenceEvent;
-import org.grails.datastore.mapping.engine.event.AbstractPersistenceEventListener;
-import org.grails.datastore.mapping.engine.event.ValidationEvent;
-import org.grails.orm.hibernate.HibernateDatastore;
-import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernatePersistentEntity;
-import org.grails.orm.hibernate.connections.HibernateConnectionSourceSettings;
-import org.grails.orm.hibernate.support.ClosureEventListener;
-import org.grails.orm.hibernate.support.SoftKey;
-
 /**
  * Invokes closure events on domain entities such as beforeInsert, beforeUpdate and beforeDelete.
  *
@@ -75,8 +65,7 @@ import org.grails.orm.hibernate.support.SoftKey;
 public class HibernateEventListener extends AbstractPersistenceEventListener {
 
     /** The cached should trigger. */
-    protected final transient ConcurrentMap<SoftKey<Class<?>>, Boolean> cachedShouldTrigger =
-            new ConcurrentHashMap<SoftKey<Class<?>>, Boolean>();
+    protected final transient ConcurrentMap<SoftKey<Class<?>>, Boolean> cachedShouldTrigger = new ConcurrentHashMap<>();
 
     /** The fail on error. */
     protected final boolean failOnError;
@@ -154,7 +143,7 @@ public class HibernateEventListener extends AbstractPersistenceEventListener {
         if (entity != null) {
             ClosureEventListener eventListener;
             EventSource session = event.getSession();
-            eventListener = findEventListener(entity, (SessionFactoryImplementor) session.getSessionFactory());
+            eventListener = findEventListener(entity, session.getSessionFactory());
             if (eventListener != null) {
                 eventListener.onPersist(event);
             }
@@ -166,7 +155,7 @@ public class HibernateEventListener extends AbstractPersistenceEventListener {
         if (entity != null) {
             ClosureEventListener eventListener;
             EventSource session = event.getSession();
-            eventListener = findEventListener(entity, (SessionFactoryImplementor) session.getSessionFactory());
+            eventListener = findEventListener(entity, session.getSessionFactory());
             if (eventListener != null) {
                 eventListener.onMerge(event);
             }
@@ -243,7 +232,7 @@ public class HibernateEventListener extends AbstractPersistenceEventListener {
         if (entity == null) return null;
         Class<?> clazz = Hibernate.getClass(entity);
 
-        SoftKey<Class<?>> key = new SoftKey<Class<?>>(clazz);
+        SoftKey<Class<?>> key = new SoftKey<>(clazz);
         ClosureEventListener eventListener = eventListeners.get(key);
         if (eventListener != null) {
             return eventListener;
@@ -255,9 +244,9 @@ public class HibernateEventListener extends AbstractPersistenceEventListener {
                 eventListener = eventListeners.get(key);
                 if (eventListener == null) {
                     HibernateDatastore datastore = getDatastore();
-                    boolean isValidSessionFactory = MultiTenant.class.isAssignableFrom(clazz) ||
-                            factory == null ||
-                            datastore.getSessionFactory().equals(factory);
+                    boolean isValidSessionFactory = MultiTenant.class.isAssignableFrom(clazz)
+                            || factory == null
+                            || datastore.getSessionFactory().equals(factory);
                     HibernatePersistentEntity persistentEntity = (HibernatePersistentEntity)
                             datastore.getMappingContext().getPersistentEntity(clazz.getName());
                     shouldTrigger = (persistentEntity != null && isValidSessionFactory);
@@ -281,7 +270,8 @@ public class HibernateEventListener extends AbstractPersistenceEventListener {
      * @see
      *     org.springframework.context.event.SmartApplicationListener#supportsEventType(java.lang.Class)
      */
-    public boolean supportsEventType(Class<? extends ApplicationEvent> eventType) {
+    @Override
+    public boolean supportsEventType(@Nonnull Class<? extends ApplicationEvent> eventType) {
         return AbstractPersistenceEvent.class.isAssignableFrom(eventType);
     }
 

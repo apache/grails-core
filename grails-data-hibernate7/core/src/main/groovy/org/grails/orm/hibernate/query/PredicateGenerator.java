@@ -5,7 +5,6 @@ import java.util.Arrays;
 import java.util.Collection;
 import java.util.List;
 import java.util.Objects;
-import java.util.Optional;
 import java.util.stream.Stream;
 
 import groovy.util.logging.Slf4j;
@@ -40,11 +39,11 @@ import org.grails.datastore.mapping.query.api.QueryableCriteria;
 
 @Slf4j
 @SuppressWarnings({
-        "PMD.DataflowAnomalyAnalysis",
-        "PMD.AvoidLiteralsInIfCondition",
-        "PMD.AvoidDuplicateLiterals",
-        "unchecked",
-        "rawtypes"
+    "PMD.DataflowAnomalyAnalysis",
+    "PMD.AvoidLiteralsInIfCondition",
+    "PMD.AvoidDuplicateLiterals",
+    "unchecked",
+    "rawtypes"
 })
 public class PredicateGenerator {
     private static final Logger log = LoggerFactory.getLogger(PredicateGenerator.class);
@@ -96,10 +95,12 @@ public class PredicateGenerator {
         } else if (criterion instanceof Query.PropertyNameCriterion c) {
             return handlePropertyNameCriterion(cb, fromsByProvider, c);
         } else if (criterion instanceof Query.Exists c) {
-            return handleExists(cb, criteriaQuery, root, fromsByProvider, c.getSubquery().getPersistentEntity(), c);
+            return handleExists(
+                    cb, criteriaQuery, root, fromsByProvider, c.getSubquery().getPersistentEntity(), c);
         } else if (criterion instanceof Query.NotExists c) {
             PersistentEntity childEntity = c.getSubquery().getPersistentEntity();
-            return cb.not(handleExists(cb, criteriaQuery, root, fromsByProvider, childEntity, new Query.Exists(c.getSubquery())));
+            return cb.not(handleExists(
+                    cb, criteriaQuery, root, fromsByProvider, childEntity, new Query.Exists(c.getSubquery())));
         } else if (criterion instanceof HibernateAlias) {
             return null; // Metadata only, handled by JpaFromProvider
         }
@@ -141,14 +142,7 @@ public class PredicateGenerator {
 
         PersistentEntity associatedEntity = c.getAssociation().getAssociatedEntity();
 
-        return cb.and(getPredicates(
-                cb,
-                criteriaQuery,
-                child,
-                c.getCriteria(),
-                childTablesByName,
-                associatedEntity
-        ));
+        return cb.and(getPredicates(cb, criteriaQuery, child, c.getCriteria(), childTablesByName, associatedEntity));
     }
 
     private Predicate handleHibernateAssociationQuery(
@@ -160,7 +154,8 @@ public class PredicateGenerator {
         var child = root.join(haq.associationPath, JoinType.LEFT);
         JpaFromProvider childFroms = (JpaFromProvider) fromsByProvider.clone();
         childFroms.put("root", child);
-        return cb.and(getPredicates(cb, criteriaQuery, child, haq.getAssociationCriteria(), childFroms, haq.getEntity()));
+        return cb.and(
+                getPredicates(cb, criteriaQuery, child, haq.getAssociationCriteria(), childFroms, haq.getEntity()));
     }
 
     private Predicate handlePropertyCriterion(
@@ -172,10 +167,12 @@ public class PredicateGenerator {
             Query.PropertyCriterion pc) {
 
         String propertyName = pc.getProperty();
-        if (!"id".equals(propertyName) && !propertyName.contains(".") && 
-                entity.getPropertyByName(propertyName) == null && !fromsByProvider.hasAlias(propertyName)) {
-            throw new ConfigurationException("Property [" + propertyName +
-                    "] is not a valid property of class [" + entity.getName() + "]");
+        if (!"id".equals(propertyName)
+                && !propertyName.contains(".")
+                && entity.getPropertyByName(propertyName) == null
+                && !fromsByProvider.hasAlias(propertyName)) {
+            throw new ConfigurationException(
+                    "Property [" + propertyName + "] is not a valid property of class [" + entity.getName() + "]");
         }
 
         var fullyQualifiedPath = fromsByProvider.getFullyQualifiedPath(pc.getProperty());
@@ -187,7 +184,8 @@ public class PredicateGenerator {
         } else if (pc instanceof Query.In c) {
             return handleIn(cb, criteriaQuery, fromsByProvider, entity, c, fullyQualifiedPath);
         } else if (pc instanceof Query.ILike c) {
-            return cb.ilike((Expression<String>) fullyQualifiedPath, c.getValue().toString());
+            return cb.ilike(
+                    (Expression<String>) fullyQualifiedPath, c.getValue().toString());
         } else if (pc instanceof Query.RLike c) {
             return handleRLike(cb, fullyQualifiedPath, c);
         } else if (pc instanceof Query.Like c) {
@@ -234,7 +232,8 @@ public class PredicateGenerator {
         var queryableCriteria = getQueryableCriteriaFromInCriteria(c);
         if (Objects.nonNull(queryableCriteria)) {
             return cb.not(getQueryableCriteriaValue(cb, criteriaQuery, fromsByProvider, entity, c, queryableCriteria));
-        } else if (Objects.nonNull(c.getSubquery()) && !c.getSubquery().getProjections().isEmpty()) {
+        } else if (Objects.nonNull(c.getSubquery())
+                && !c.getSubquery().getProjections().isEmpty()) {
             Subquery subquery2 = criteriaQuery.subquery(Number.class);
             PersistentEntity subEntity = c.getValue().getPersistentEntity();
             Root from2 = subquery2.from(subEntity.getJavaClass());
@@ -242,11 +241,16 @@ public class PredicateGenerator {
             var projection = c.getSubquery().getProjections().get(0);
             if (projection instanceof Query.PropertyProjection pp) {
                 boolean distinct = projection instanceof Query.DistinctPropertyProjection;
-                Predicate[] predicates2 = getPredicates(cb, criteriaQuery, from2, c.getValue().getCriteria(), newMap2, subEntity);
-                subquery2.select(from2.get(pp.getPropertyName())).distinct(distinct).where(cb.and(predicates2));
+                Predicate[] predicates2 =
+                        getPredicates(cb, criteriaQuery, from2, c.getValue().getCriteria(), newMap2, subEntity);
+                subquery2
+                        .select(from2.get(pp.getPropertyName()))
+                        .distinct(distinct)
+                        .where(cb.and(predicates2));
                 return cb.not(cb.in(fullyQualifiedPath).value(subquery2));
             } else if (projection instanceof Query.IdProjection) {
-                Predicate[] predicates2 = getPredicates(cb, criteriaQuery, from2, c.getValue().getCriteria(), newMap2, subEntity);
+                Predicate[] predicates2 =
+                        getPredicates(cb, criteriaQuery, from2, c.getValue().getCriteria(), newMap2, subEntity);
                 subquery2.select(from2).where(cb.and(predicates2));
                 return cb.not(cb.in(fullyQualifiedPath).value(subquery2));
             }
@@ -268,12 +272,14 @@ public class PredicateGenerator {
             if (c.getValues().iterator().next() instanceof GormEntity firstEntity) {
                 List<GormEntity> gormEntities = new ArrayList<>(c.getValues());
                 Path id = criteriaQuery.from(firstEntity.getClass()).get("id");
-                Collection newValues = gormEntities.stream().map(GormEntity::ident).toList();
+                Collection newValues =
+                        gormEntities.stream().map(GormEntity::ident).toList();
                 return cb.in(id, newValues);
             }
-            
+
             // Hibernate 7: If the path is a collection, we must ensure it's correctly handled
-            if (fullyQualifiedPath instanceof SqmPath sqmPath && sqmPath.getReferencedPathSource() instanceof jakarta.persistence.metamodel.PluralAttribute) {
+            if (fullyQualifiedPath instanceof SqmPath sqmPath
+                    && sqmPath.getReferencedPathSource() instanceof jakarta.persistence.metamodel.PluralAttribute) {
                 // For basic collections, GORM's 'in' traditionally implies joining.
                 // We'll check if the path is already a join (From)
                 if (fullyQualifiedPath instanceof From) {
@@ -283,7 +289,7 @@ public class PredicateGenerator {
                 // but usually JpaFromProvider should have joined it if it was a property path
                 // that refers to a collection.
             }
-            
+
             return cb.in(fullyQualifiedPath, c.getValues());
         }
         return null;
@@ -291,7 +297,10 @@ public class PredicateGenerator {
 
     private Predicate handleRLike(HibernateCriteriaBuilder cb, Path fullyQualifiedPath, Query.RLike c) {
         String pattern = c.getPattern().replaceAll("^/|/$", "");
-        return cb.equal(cb.function(GrailsRLikeFunctionContributor.RLIKE, Boolean.class, fullyQualifiedPath, cb.literal(pattern)), true);
+        return cb.equal(
+                cb.function(
+                        GrailsRLikeFunctionContributor.RLIKE, Boolean.class, fullyQualifiedPath, cb.literal(pattern)),
+                true);
     }
 
     private Predicate handleSubqueryCriterion(
@@ -304,7 +313,8 @@ public class PredicateGenerator {
         Root from = subquery.from(subEntity.getJavaClass());
         JpaFromProvider newMap = (JpaFromProvider) fromsByProvider.clone();
         newMap.put("root", from);
-        Predicate[] predicates = getPredicates(cb, criteriaQuery, from, c.getValue().getCriteria(), newMap, subEntity);
+        Predicate[] predicates =
+                getPredicates(cb, criteriaQuery, from, c.getValue().getCriteria(), newMap, subEntity);
         Path path = fromsByProvider.getFullyQualifiedPath(c.getProperty());
 
         if (c instanceof Query.GreaterThanEqualsAll) {
@@ -383,10 +393,12 @@ public class PredicateGenerator {
         Root subRoot = subquery.from(entity.getJavaClass());
         JpaFromProvider newMap = (JpaFromProvider) fromsByProvider.clone();
         newMap.put("root", subRoot);
-        var predicates = getPredicates(cb, criteriaQuery, subRoot, c.getSubquery().getCriteria(), newMap, entity);
+        var predicates =
+                getPredicates(cb, criteriaQuery, subRoot, c.getSubquery().getCriteria(), newMap, entity);
         var existsPredicate = getExistsPredicate(cb, root_, entity, subRoot);
         Predicate[] allPredicates = existsPredicate != null
-                ? Stream.concat(Arrays.stream(predicates), Stream.of(existsPredicate)).toArray(Predicate[]::new)
+                ? Stream.concat(Arrays.stream(predicates), Stream.of(existsPredicate))
+                        .toArray(Predicate[]::new)
                 : predicates;
         subquery.select(cb.literal(1)).where(cb.and(allPredicates));
         return cb.exists(subquery);
@@ -418,26 +430,36 @@ public class PredicateGenerator {
                 PersistentProperty simpleProp = subEntity.getPropertyByName(simplePropName);
                 if (simpleProp != null) {
                     subqueryType = simpleProp.getType();
-                } else if (simplePropName.equals("id")) {
-                    subqueryType = subEntity.getIdentity() != null ? subEntity.getIdentity().getType() : Long.class;
+                } else if ("id".equals(simplePropName)) {
+                    subqueryType = subEntity.getIdentity() != null
+                            ? subEntity.getIdentity().getType()
+                            : Long.class;
                 }
             }
         } else if (projection instanceof Query.IdProjection) {
-            subqueryType = subEntity.getIdentity() != null ? subEntity.getIdentity().getType() : Long.class;
+            subqueryType =
+                    subEntity.getIdentity() != null ? subEntity.getIdentity().getType() : Long.class;
         } else if (isAssociation) {
-            subqueryType = subEntity.getIdentity() != null ? subEntity.getIdentity().getType() : Long.class;
+            subqueryType =
+                    subEntity.getIdentity() != null ? subEntity.getIdentity().getType() : Long.class;
         }
 
         var subquery = criteriaQuery.subquery(subqueryType);
         var from = subquery.from(subEntity.getJavaClass());
-        var clonedProviderByName = new JpaFromProvider(fromsByProvider, (DetachedCriteria<?>) queryableCriteria, java.util.Collections.emptyList(), from);
-        var predicates = getPredicates(cb, criteriaQuery, from, queryableCriteria.getCriteria(), clonedProviderByName, subEntity);
-        subquery.select((Expression) clonedProviderByName.getFullyQualifiedPath(subProperty)).distinct(true).where(cb.and(predicates));
+        var clonedProviderByName = new JpaFromProvider(
+                fromsByProvider, (DetachedCriteria<?>) queryableCriteria, java.util.Collections.emptyList(), from);
+        var predicates = getPredicates(
+                cb, criteriaQuery, from, queryableCriteria.getCriteria(), clonedProviderByName, subEntity);
+        subquery.select((Expression) clonedProviderByName.getFullyQualifiedPath(subProperty))
+                .distinct(true)
+                .where(cb.and(predicates));
         return in.value(subquery);
     }
 
     private boolean isAssociation(PersistentEntity entity, String propertyName) {
-        if (propertyName.equals("id") || (entity.getIdentity() != null && propertyName.equals(entity.getIdentity().getName()))) {
+        if ("id".equals(propertyName)
+                || (entity.getIdentity() != null
+                        && propertyName.equals(entity.getIdentity().getName()))) {
             return false;
         }
         PersistentProperty prop = entity.getPropertyByName(propertyName);
@@ -486,18 +508,18 @@ public class PredicateGenerator {
         if (value != null) {
             try {
                 return conversionService.convert(value, Number.class);
-            } catch (org.springframework.core.convert.ConversionException ignored) {
-                throw new ConfigurationException(String.format(
-                        "Operation '%s' on property '%s' only accepts a numeric value, but received a %s",
-                        criterion.getClass().getSimpleName(),
-                        criterion.getProperty(),
-                        value.getClass().getName()));
+            } catch (org.springframework.core.convert.ConversionException e) {
+                throw new ConfigurationException(
+                        String.format(
+                                "Operation '%s' on property '%s' only accepts a numeric value, but received a %s",
+                                criterion.getClass().getSimpleName(),
+                                criterion.getProperty(),
+                                value.getClass().getName()),
+                        e);
             }
         }
         throw new ConfigurationException(String.format(
                 "Operation '%s' on property '%s' only accepts a numeric value, but received a %s",
-                criterion.getClass().getSimpleName(),
-                criterion.getProperty(),
-                "null"));
+                criterion.getClass().getSimpleName(), criterion.getProperty(), "null"));
     }
 }

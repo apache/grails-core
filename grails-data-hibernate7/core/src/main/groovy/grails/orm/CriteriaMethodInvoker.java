@@ -80,7 +80,7 @@ public class CriteriaMethodInvoker {
             case SCROLL_CALL -> builder.setScroll(true);
             case COUNT_CALL -> builder.setCount(true);
             case LIST_DISTINCT_CALL -> builder.setDistinct(true);
-            default -> { }
+            default -> {}
         }
 
         // Check for pagination params
@@ -115,9 +115,9 @@ public class CriteriaMethodInvoker {
                             !(argMap.get(HibernateQueryArgument.IGNORE_CASE.value()) instanceof Boolean b) || b;
                     final String orderParam = (String) argMap.get(HibernateQueryArgument.ORDER.value());
                     final Query.Order.Direction direction =
-                            Query.Order.Direction.DESC.name().equalsIgnoreCase(orderParam) ?
-                                    Query.Order.Direction.DESC :
-                                    Query.Order.Direction.ASC;
+                            Query.Order.Direction.DESC.name().equalsIgnoreCase(orderParam)
+                                    ? Query.Order.Direction.DESC
+                                    : Query.Order.Direction.ASC;
                     Query.Order order;
                     order = new Query.Order(sortField, direction);
                     if (ignoreCase) {
@@ -234,7 +234,10 @@ public class CriteriaMethodInvoker {
                 case CREATE_ALIAS:
                     if (args.length == 2 && args[0] instanceof String s && args[1] instanceof String a) {
                         return builder.createAlias(s, a);
-                    } else if (args.length == 3 && args[0] instanceof String s && args[1] instanceof String a && args[2] instanceof Number jt) {
+                    } else if (args.length == 3
+                            && args[0] instanceof String s
+                            && args[1] instanceof String a
+                            && args[2] instanceof Number jt) {
                         return builder.createAlias(s, a, jt.intValue());
                     }
                     return name;
@@ -245,7 +248,7 @@ public class CriteriaMethodInvoker {
                             case IS_NOT_NULL -> builder.getHibernateQuery().isNotNull(value);
                             case IS_EMPTY -> builder.getHibernateQuery().isEmpty(value);
                             case IS_NOT_EMPTY -> builder.getHibernateQuery().isNotEmpty(value);
-                            default -> { }
+                            default -> {}
                         }
                         return name;
                     } else if (args.length == 1 && args[0] != null) {
@@ -339,17 +342,17 @@ public class CriteriaMethodInvoker {
     }
 
     private boolean isCriteriaConstructionMethod(CriteriaMethods method, Object... args) {
-        return (method == CriteriaMethods.LIST_CALL &&
-                        args.length == 2 &&
-                        args[0] instanceof Map<?, ?> &&
-                        args[1] instanceof Closure) ||
-                (method == CriteriaMethods.ROOT_CALL ||
-                        method == CriteriaMethods.ROOT_DO_CALL ||
-                        method == CriteriaMethods.LIST_CALL ||
-                        method == CriteriaMethods.LIST_DISTINCT_CALL ||
-                        method == CriteriaMethods.GET_CALL ||
-                        method == CriteriaMethods.COUNT_CALL ||
-                        (method == CriteriaMethods.SCROLL_CALL && args.length == 1 && args[0] instanceof Closure));
+        return (method == CriteriaMethods.LIST_CALL
+                        && args.length == 2
+                        && args[0] instanceof Map<?, ?>
+                        && args[1] instanceof Closure)
+                || (method == CriteriaMethods.ROOT_CALL
+                        || method == CriteriaMethods.ROOT_DO_CALL
+                        || method == CriteriaMethods.LIST_CALL
+                        || method == CriteriaMethods.LIST_DISTINCT_CALL
+                        || method == CriteriaMethods.GET_CALL
+                        || method == CriteriaMethods.COUNT_CALL
+                        || (method == CriteriaMethods.SCROLL_CALL && args.length == 1 && args[0] instanceof Closure));
     }
 
     private void invokeClosureNode(Object args) {

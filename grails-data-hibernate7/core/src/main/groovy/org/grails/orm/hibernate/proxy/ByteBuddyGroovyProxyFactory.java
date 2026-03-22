@@ -18,16 +18,13 @@
  */
 package org.grails.orm.hibernate.proxy;
 
-import java.io.Serializable;
 import java.lang.reflect.Method;
 import java.util.Set;
 
 import org.hibernate.HibernateException;
-import org.hibernate.engine.spi.PrimeAmongSecondarySupertypes;
 import org.hibernate.engine.spi.SharedSessionContractImplementor;
 import org.hibernate.internal.util.ReflectHelper;
 import org.hibernate.proxy.HibernateProxy;
-import org.hibernate.proxy.ProxyFactory;
 import org.hibernate.proxy.pojo.bytebuddy.ByteBuddyProxyFactory;
 import org.hibernate.proxy.pojo.bytebuddy.ByteBuddyProxyHelper;
 import org.hibernate.type.CompositeType;
@@ -65,7 +62,8 @@ public class ByteBuddyGroovyProxyFactory extends ByteBuddyProxyFactory {
             Set<Class<?>> interfaces,
             Method getIdentifierMethod,
             Method setIdentifierMethod,
-            CompositeType componentIdType) throws HibernateException {
+            CompositeType componentIdType)
+            throws HibernateException {
         this.entityName = entityName;
         this.persistentClass = persistentClass;
         this.interfaces = interfaces == null ? EMPTY_CLASS_ARRAY : interfaces.toArray(EMPTY_CLASS_ARRAY);
@@ -94,19 +92,19 @@ public class ByteBuddyGroovyProxyFactory extends ByteBuddyProxyFactory {
                     setIdentifierMethod,
                     componentIdType,
                     session,
-                    overridesEquals
-            );
+                    overridesEquals);
 
             // 1. Create the instance
-            final Object instance = proxyClass.getDeclaredConstructor().newInstance();
+            final HibernateProxy hibernateProxy = (HibernateProxy) proxyClass.getDeclaredConstructor().newInstance();
 
             // 2. Cast to ProxyConfiguration to set the custom interceptor
             // Hibernate 7 proxies implement ProxyConfiguration
-            if (instance instanceof org.hibernate.proxy.ProxyConfiguration) {
-                ((org.hibernate.proxy.ProxyConfiguration) instance).$$_hibernate_set_interceptor(interceptor);
+            if (hibernateProxy instanceof org.hibernate.proxy.ProxyConfiguration instance
+            ) {
+                instance.$$_hibernate_set_interceptor(interceptor);
             }
 
-            return (HibernateProxy) instance;
+            return  hibernateProxy;
         } catch (Throwable t) {
             throw new HibernateException("Unable to generate proxy for " + entityName, t);
         }

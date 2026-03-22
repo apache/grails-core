@@ -20,7 +20,6 @@ package org.grails.orm.hibernate.cfg.domainbinding.secondpass;
 
 import jakarta.annotation.Nonnull;
 
-import org.checkerframework.checker.nullness.qual.MonotonicNonNull;
 import org.hibernate.boot.spi.MetadataBuildingContext;
 import org.hibernate.mapping.BasicValue;
 import org.hibernate.mapping.Collection;
@@ -64,7 +63,7 @@ public class BasicCollectionElementBinder {
     public BasicValue bind(@Nonnull HibernateBasicProperty property) {
         String columnName = property.joinTableColumName(namingStrategy);
         if (property.isEnum()) {
-            return enumTypeBinder.bindEnumTypeForColumn(property, columnName);
+            return enumTypeBinder.bindEnumTypeForColumn(property);
         } else {
             final Class<?> referencedType = property.getComponentType();
             String typeName = property.getTypeName(referencedType);

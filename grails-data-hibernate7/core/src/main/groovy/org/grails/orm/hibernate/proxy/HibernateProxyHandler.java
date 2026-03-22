@@ -115,10 +115,10 @@ public class HibernateProxyHandler implements ProxyHandler, ProxyFactory {
 
     @Override
     public boolean isProxy(Object o) {
-        return GroovyProxyInterceptorLogic.getProxyInstanceMetaClass(o) != null ||
-                o instanceof EntityProxy ||
-                o instanceof HibernateProxy ||
-                o instanceof PersistentCollection;
+        return GroovyProxyInterceptorLogic.getProxyInstanceMetaClass(o) != null
+                || o instanceof EntityProxy
+                || o instanceof HibernateProxy
+                || o instanceof PersistentCollection;
     }
 
     @Override
@@ -144,7 +144,8 @@ public class HibernateProxyHandler implements ProxyHandler, ProxyFactory {
                 return org.hibernate.Hibernate.createDetachedProxy(sessionFactory, type, key);
             }
         }
-        throw new IllegalStateException("Could not obtain native Hibernate SessionFactory from Session#getNativeInterface()");
+        throw new IllegalStateException(
+                "Could not obtain native Hibernate SessionFactory from Session#getNativeInterface()");
     }
 
     @Override

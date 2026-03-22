@@ -1,8 +1,11 @@
 package org.grails.orm.hibernate.cfg.domainbinding
 
+import org.hibernate.type.descriptor.WrapperOptions
+
 import grails.gorm.specs.HibernateGormDatastoreSpec
 import grails.persistence.Entity
 import org.grails.datastore.mapping.model.PersistentProperty
+import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernateBasicProperty
 import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernateEnumProperty
 import org.grails.orm.hibernate.cfg.IdentityEnumType
 import jakarta.persistence.EnumType
@@ -61,11 +64,11 @@ class EnumTypeBinderSpec extends HibernateGormDatastoreSpec {
         def property = setupProperty(PersonWithCollection, "statuses", table)
 
         expect: "The property is a ToMany property"
-        property instanceof HibernateToManyProperty
+        property instanceof HibernateBasicProperty == true
 
-                when: "the enum is bound for the collection column"
+        when: "the enum is bound for the collection column"
         // This will now successfully call property.getComponentType() internally
-        def result = binder.bindEnumTypeForColumn(property as HibernateToManyProperty, "status_name")
+        def result = binder.bindEnumTypeForColumn(property as HibernateBasicProperty)
 
         then: "The BasicValue is configured correctly"
         result.getEnumerationStyle() == EnumType.STRING
@@ -159,8 +162,8 @@ class UserTypeEnumType implements UserType {
     @Override Class returnedClass() { Status01 }
     @Override boolean equals(Object x, Object y) { x == y }
     @Override int hashCode(Object x) { x.hashCode() }
-    @Override Object nullSafeGet(ResultSet rs, int position, SharedSessionContractImplementor session, Object owner) throws SQLException { null }
-    @Override void nullSafeSet(PreparedStatement st, Object value, int index, SharedSessionContractImplementor session) throws SQLException {}
+    @Override Object nullSafeGet(ResultSet rs, int position, WrapperOptions options) throws SQLException { null }
+    @Override void nullSafeSet(PreparedStatement st, Object value, int index, WrapperOptions options) throws SQLException {}
     @Override Object deepCopy(Object value) { value }
     @Override boolean isMutable() { false }
     @Override Serializable disassemble(Object value) { (Serializable)value }

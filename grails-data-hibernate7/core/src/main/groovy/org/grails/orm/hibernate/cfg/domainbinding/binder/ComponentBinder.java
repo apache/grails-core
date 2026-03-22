@@ -71,11 +71,13 @@ public class ComponentBinder {
         String currentPath = path.isEmpty() ? embeddedProperty.getName() : path + "." + embeddedProperty.getName();
         Class<?> propertyType = embeddedProperty.getOwner().getJavaClass();
 
-        associatedEntity.getHibernateParentProperty(propertyType).ifPresent(p -> component.setParentProperty(p.getName()));
+        associatedEntity
+                .getHibernateParentProperty(propertyType)
+                .ifPresent(p -> component.setParentProperty(p.getName()));
 
-        for (HibernatePersistentProperty peerProperty : associatedEntity.getHibernatePersistentProperties(propertyType)) {
-            var value = grailsPropertyBinder.bindProperty(
-                    peerProperty, embeddedProperty, currentPath);
+        for (HibernatePersistentProperty peerProperty :
+                associatedEntity.getHibernatePersistentProperties(propertyType)) {
+            var value = grailsPropertyBinder.bindProperty(peerProperty, embeddedProperty, currentPath);
             componentUpdater.updateComponent(component, embeddedProperty, peerProperty, value);
         }
         return component;

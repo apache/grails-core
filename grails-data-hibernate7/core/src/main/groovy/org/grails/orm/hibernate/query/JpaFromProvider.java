@@ -22,11 +22,9 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
-import java.util.function.Function;
 import java.util.stream.Collectors;
 
 import jakarta.persistence.FetchType;
-import jakarta.persistence.criteria.AbstractQuery;
 import jakarta.persistence.criteria.From;
 import jakarta.persistence.criteria.JoinType;
 import jakarta.persistence.criteria.Path;
@@ -55,6 +53,7 @@ public class JpaFromProvider implements Cloneable {
         this(detachedCriteria, projections, List.of(), root);
     }
 
+    @SuppressWarnings("PMD.ConstructorCallsOverridableMethod")
     public JpaFromProvider(
             DetachedCriteria<?> detachedCriteria,
             List<Query.Projection> projections,
@@ -63,6 +62,7 @@ public class JpaFromProvider implements Cloneable {
         fromMap = getFromsByName(detachedCriteria, projections, aliases, root);
     }
 
+    @SuppressWarnings("PMD.ConstructorCallsOverridableMethod")
     public JpaFromProvider(
             JpaFromProvider parent,
             DetachedCriteria<?> detachedCriteria,
@@ -91,7 +91,7 @@ public class JpaFromProvider implements Cloneable {
                 .toList();
 
         var aliasMap = createAliasMap(detachedAssociationCriteriaList);
-        
+
         // Also scan for HibernateAlias (basic collections)
         Map<String, String> basicAliasMap = new HashMap<>();
         for (HibernateAlias ha : aliases) {
@@ -136,7 +136,7 @@ public class JpaFromProvider implements Cloneable {
             String[] segments = path.split("\\.");
             StringBuilder current = new StringBuilder();
             for (String segment : segments) {
-                if (current.length() > 0) {
+                if (!current.isEmpty()) {
                     current.append(".");
                 }
                 current.append(segment);
@@ -168,7 +168,9 @@ public class JpaFromProvider implements Cloneable {
             JoinType joinType = JoinType.INNER;
             if (detachedCriteria.getJoinTypes().containsKey(path)) {
                 joinType = detachedCriteria.getJoinTypes().get(path);
-            } else if (finalProjectedPaths.contains(path) || eagerPaths.contains(path) || collectionPaths.contains(path)) {
+            } else if (finalProjectedPaths.contains(path)
+                    || eagerPaths.contains(path)
+                    || collectionPaths.contains(path)) {
                 joinType = JoinType.LEFT;
             }
 
@@ -179,7 +181,7 @@ public class JpaFromProvider implements Cloneable {
             if (dac != null && dac.getAlias() != null) {
                 fromsByPath.put(dac.getAlias(), table);
             }
-            
+
             String basicAlias = basicAliasMap.get(path);
             if (basicAlias != null) {
                 fromsByPath.put(basicAlias, table);
@@ -194,21 +196,6 @@ public class JpaFromProvider implements Cloneable {
             fromsByPath.put(rootAlias, root);
         }
         return fromsByPath;
-    }
-
-    private Map<String, From<?, ?>> createDetachedFroms(
-            AbstractQuery<?> cq, List<DetachedAssociationCriteria<?>> detachedAssociationCriteriaList) {
-        Function<DetachedAssociationCriteria<?>, String> getAssociationPath =
-                DetachedAssociationCriteria::getAssociationPath;
-        return detachedAssociationCriteriaList.stream()
-                .collect(Collectors.toMap(
-                        getAssociationPath,
-                        criteria -> {
-                            Class<?> javaClass =
-                                    criteria.getAssociation().getOwner().getJavaClass();
-                            return cq.from(javaClass);
-                        },
-                        (oldValue, newValue) -> newValue));
     }
 
     private Map<String, DetachedAssociationCriteria<?>> createAliasMap(
@@ -237,7 +224,8 @@ public class JpaFromProvider implements Cloneable {
         String[] parsed = propertyName.split("\\.");
         if (parsed.length == SINGLE_PROPERTY) {
             From<?, ?> root = fromMap.get("root");
-            if (propertyName.equals(root.getJavaType().getSimpleName()) || propertyName.equals(root.getJavaType().getName())) {
+            if (propertyName.equals(root.getJavaType().getSimpleName())
+                    || propertyName.equals(root.getJavaType().getName())) {
                 return root;
             }
             return root.get(propertyName);
@@ -263,6 +251,7 @@ public class JpaFromProvider implements Cloneable {
         return path;
     }
 
+    @Override
     public Object clone() {
         return new JpaFromProvider(fromMap);
     }
