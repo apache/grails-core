@@ -20,12 +20,23 @@ package org.grails.orm.hibernate.cfg
 
 import grails.gorm.annotation.Entity
 import grails.gorm.specs.HibernateGormDatastoreSpec
-import org.grails.datastore.mapping.model.config.GormProperties
+import org.grails.orm.hibernate.proxy.HibernateProxyHandler
 import org.hibernate.proxy.HibernateProxy
-import org.hibernate.proxy.LazyInitializer
+import spock.lang.Shared
 import spock.lang.Unroll
 
 class GrailsHibernateUtilSpec extends HibernateGormDatastoreSpec {
+
+    @Shared HibernateProxyHandler originalProxyHandler = GrailsHibernateUtil.proxyHandler
+    HibernateProxyHandler proxyHandlerMock = Mock(HibernateProxyHandler)
+
+    def setup() {
+        GrailsHibernateUtil.setProxyHandler(proxyHandlerMock)
+    }
+
+    def cleanup() {
+        GrailsHibernateUtil.setProxyHandler(originalProxyHandler)
+    }
 
     @Unroll
     def "test isDomainClass for #clazz.simpleName"() {
@@ -75,25 +86,72 @@ class GrailsHibernateUtilSpec extends HibernateGormDatastoreSpec {
         !GrailsHibernateUtil.isNotEmpty(null)
     }
 
-    def "test unwrapIfProxy with non-proxy"() {
+    def "test unwrapIfProxy"() {
         given:
         def obj = new Object()
+        def unwrapped = new Object()
 
-        expect:
-        GrailsHibernateUtil.unwrapIfProxy(obj).is(obj)
-        GrailsHibernateUtil.unwrapIfProxy(null) == null
+        when:
+        def result = GrailsHibernateUtil.unwrapIfProxy(obj)
+
+        then:
+        1 * proxyHandlerMock.unwrap(obj) >> unwrapped
+        result == unwrapped
     }
 
-    def "test unwrapIfProxy with EntityProxy"() {
+    def "test unwrapProxy"() {
         given:
-        def implementation = new Object()
-        def proxy = [
-            getTarget: { implementation },
-            isInitialized: { true }
-        ] as org.grails.datastore.mapping.proxy.EntityProxy
+        def proxy = Mock(HibernateProxy)
+        def unwrapped = new Object()
+
+        when:
+        def result = GrailsHibernateUtil.unwrapProxy(proxy)
+
+        then:
+        1 * proxyHandlerMock.unwrap(proxy) >> unwrapped
+        result == unwrapped
+    }
+
+    def "test getAssociationProxy and isInitialized"() {
+        given:
+        def book = new GHUBook(title: "Carrie")
+        def proxy = Mock(HibernateProxy)
+
+        when:
+        def result = GrailsHibernateUtil.getAssociationProxy(book, "title")
+        def initialized = GrailsHibernateUtil.isInitialized(book, "title")
+
+        then:
+        1 * proxyHandlerMock.getAssociationProxy(book, "title") >> proxy
+        1 * proxyHandlerMock.isInitialized(book, "title") >> true
+        result == proxy
+        initialized
+    }
+
+    def "test isMappedWithHibernate"() {
+        given:
+        def hibernateEntity = Mock(org.grails.orm.hibernate.cfg.domainbinding.hibernate.GrailsHibernatePersistentEntity)
+        def otherEntity = Mock(org.grails.datastore.mapping.model.PersistentEntity)
 
         expect:
-        GrailsHibernateUtil.unwrapIfProxy(proxy).is(implementation)
+        GrailsHibernateUtil.isMappedWithHibernate(hibernateEntity)
+        !GrailsHibernateUtil.isMappedWithHibernate(otherEntity)
+    }
+
+    def "test ensureCorrectGroovyMetaClass"() {
+        given:
+        def book = new GHUBook()
+        def originalMc = book.getMetaClass()
+        def newMc = GroovySystem.getMetaClassRegistry().getMetaClass(GHUNonDomain)
+
+        when:
+        GrailsHibernateUtil.ensureCorrectGroovyMetaClass(book, GHUNonDomain)
+
+        then:
+        book.getMetaClass().getTheClass() == GHUNonDomain
+
+        cleanup:
+        book.setMetaClass(originalMc)
     }
 }
 
@@ -102,6 +160,13 @@ class GHUBook {
     Long id
     Long version
     String title
+}
+
+@Entity
+class GHUAuthor {
+    Long id
+    String name
+    static hasMany = [books: GHUBook]
 }
 
 class GHUNonDomain {
