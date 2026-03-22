@@ -23,12 +23,12 @@ import jakarta.persistence.criteria.Subquery;
 import org.hibernate.query.criteria.HibernateCriteriaBuilder;
 import org.hibernate.query.criteria.JpaInPredicate;
 import org.hibernate.query.sqm.tree.domain.SqmPath;
-import org.hibernate.query.sqm.tree.predicate.SqmInListPredicate;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import org.springframework.core.convert.ConversionService;
 
+import grails.gorm.DetachedCriteria;
 import org.grails.datastore.gorm.GormEntity;
 import org.grails.datastore.gorm.query.criteria.DetachedAssociationCriteria;
 import org.grails.datastore.mapping.core.exceptions.ConfigurationException;
@@ -404,13 +404,35 @@ public class PredicateGenerator {
         var path = fromsByProvider.getFullyQualifiedPath(criterion.getProperty());
         boolean isAssociation = isAssociation(entity, criterion.getProperty());
         var in = findInPredicate(cb, projection, path, subProperty, isAssociation);
-        var subquery = criteriaQuery.subquery(getJavaTypeOfInClause((SqmInListPredicate) in));
+
         PersistentEntity subEntity = queryableCriteria.getPersistentEntity();
+        Class<?> subqueryType = subEntity.getJavaClass();
+        if (projection instanceof Query.PropertyProjection propertyProjection) {
+            PersistentProperty prop = subEntity.getPropertyByName(propertyProjection.getPropertyName());
+            if (prop != null) {
+                subqueryType = prop.getType();
+            } else if (propertyProjection.getPropertyName().contains(".")) {
+                // Handle aliased or nested properties in projections (e.g., "e1.id")
+                String propName = propertyProjection.getPropertyName();
+                String simplePropName = propName.substring(propName.lastIndexOf('.') + 1);
+                PersistentProperty simpleProp = subEntity.getPropertyByName(simplePropName);
+                if (simpleProp != null) {
+                    subqueryType = simpleProp.getType();
+                } else if (simplePropName.equals("id")) {
+                    subqueryType = subEntity.getIdentity() != null ? subEntity.getIdentity().getType() : Long.class;
+                }
+            }
+        } else if (projection instanceof Query.IdProjection) {
+            subqueryType = subEntity.getIdentity() != null ? subEntity.getIdentity().getType() : Long.class;
+        } else if (isAssociation) {
+            subqueryType = subEntity.getIdentity() != null ? subEntity.getIdentity().getType() : Long.class;
+        }
+
+        var subquery = criteriaQuery.subquery(subqueryType);
         var from = subquery.from(subEntity.getJavaClass());
-        var clonedProviderByName = (JpaFromProvider) fromsByProvider.clone();
-        clonedProviderByName.put("root", from);
+        var clonedProviderByName = new JpaFromProvider(fromsByProvider, (DetachedCriteria<?>) queryableCriteria, java.util.Collections.emptyList(), from);
         var predicates = getPredicates(cb, criteriaQuery, from, queryableCriteria.getCriteria(), clonedProviderByName, subEntity);
-        subquery.select(clonedProviderByName.getFullyQualifiedPath(subProperty)).distinct(true).where(cb.and(predicates));
+        subquery.select((Expression) clonedProviderByName.getFullyQualifiedPath(subProperty)).distinct(true).where(cb.and(predicates));
         return in.value(subquery);
     }
 
@@ -457,12 +479,6 @@ public class PredicateGenerator {
         return criterion instanceof Query.In
                 ? ((Query.In) criterion).getSubquery()
                 : ((Query.NotIn) criterion).getSubquery();
-    }
-
-    private Class getJavaTypeOfInClause(SqmInListPredicate predicate) {
-        return Optional.ofNullable(predicate.getTestExpression().getExpressible())
-                .map(expressible -> expressible.getExpressibleJavaType().getJavaTypeClass())
-                .orElse(null);
     }
 
     private Number getNumericValue(Query.PropertyCriterion criterion) {

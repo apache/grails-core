@@ -105,6 +105,22 @@ class PredicateGeneratorSpec extends HibernateGormDatastoreSpec {
         predicates.length == 1
     }
 
+    def "test getPredicates with subquery aliases"() {
+        given: "a subquery with an alias"
+        def subCriteria = new DetachedCriteria(PredicateGeneratorSpecPet).build {
+            createAlias('face', 'f')
+            eq('f.name', 'Funny')
+        }
+        List criteria = [new Query.In("id", subCriteria)]
+
+        when:
+        def predicates = predicateGenerator.getPredicates(cb, query, root, criteria, fromProvider, personEntity)
+
+        then: "the alias 'f' is correctly resolved"
+        noExceptionThrown()
+        predicates.length == 1
+    }
+
     def "test getPredicates with Disjunction"() {
         given:
         List criteria = [new Query.Disjunction()

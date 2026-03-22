@@ -46,6 +46,5 @@ public class ManyToManyElementBinder {
         Collection collection = property.getCollection();
         collection.setElement(element);
         collectionForPropertyConfigBinder.bindCollectionForPropertyConfig(property);
-        collection.setInverse(!property.isCircular());
     }
 }

@@ -59,23 +59,6 @@ class ManyToManyElementBinderSpec extends HibernateGormDatastoreSpec {
         collection.getElement() instanceof ManyToOne
         (collection.getElement() as ManyToOne).getReferencedEntityName() == MTMEItem.name
     }
-
-    def "bind sets collection inverse false for a circular many-to-many"() {
-        given:
-        def property = propertyFor(MTMESubtype, "related")
-        def mbc = getGrailsDomainBinder().getMetadataBuildingContext()
-        def collection = new Bag(mbc, null)
-        collection.setCollectionTable(new Table("test", "mtme_subtype_mtme_base"))
-
-        property.setCollection(collection)
-
-        when:
-        binder.bind(property)
-
-        then:
-        property.isCircular()
-        !collection.isInverse()
-    }
 }
 
 @Entity

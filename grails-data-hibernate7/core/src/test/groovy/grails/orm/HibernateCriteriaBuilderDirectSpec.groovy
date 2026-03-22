@@ -42,7 +42,7 @@ class HibernateCriteriaBuilderDirectSpec extends HibernateGormDatastoreSpec {
     @Shared HibernateCriteriaBuilder builder
 
     def setupSpec() {
-        manager.addAllDomainClasses([DirectAccount, DirectTransaction])
+        manager.addAllDomainClasses([DirectAccount, DirectTransaction, DirectBiBook, DirectBiAuthor])
     }
 
     def setup() {
@@ -50,6 +50,28 @@ class HibernateCriteriaBuilderDirectSpec extends HibernateGormDatastoreSpec {
                 DirectAccount,
                 manager.hibernateDatastore.sessionFactory,
                 manager.hibernateDatastore)
+    }
+
+    void "test bidirectional many-to-many with subquery alias resolution"() {
+        given: "authors with books in a bidirectional hasMany"
+        def author1 = new DirectBiAuthor(name: "Stephen King")
+        def book1 = new DirectBiBook(title: "IT")
+        def book2 = new DirectBiBook(title: "The Shining")
+        author1.addToBooks(book1)
+        author1.addToBooks(book2)
+        author1.save(flush: true)
+
+        def b = new HibernateCriteriaBuilder(DirectBiBook, manager.hibernateDatastore.sessionFactory, manager.hibernateDatastore)
+
+        when: "using withCriteria to find books by author"
+        def books = b.list {
+            authors {
+                'in'('id', [author1.id])
+            }
+        }
+
+        then: "books are found without error"
+        books.size() == 2
     }
 
     // ─── DSL integration: data-driven scenarios ────────────────────────────
@@ -668,4 +690,17 @@ class DirectAccount {
 class DirectTransaction {
     BigDecimal amount
     static belongsTo = [account: DirectAccount]
+}
+
+@Entity
+class DirectBiBook {
+    String title
+    static hasMany = [authors: DirectBiAuthor]
+    static belongsTo = [DirectBiAuthor]
+}
+
+@Entity
+class DirectBiAuthor {
+    String name
+    static hasMany = [books: DirectBiBook]
 }
