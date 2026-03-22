@@ -103,8 +103,8 @@ public enum CascadeBehavior {
     /** From string. */
     public static CascadeBehavior fromString(String value) {
         return Arrays.stream(CascadeBehavior.values())
-                .filter(behavior -> behavior.value.equalsIgnoreCase(value) ||
-                        ("save-update".equalsIgnoreCase(value) && behavior == SAVE_UPDATE))
+                .filter(behavior -> behavior.value.equalsIgnoreCase(value)
+                        || ("save-update".equalsIgnoreCase(value) && behavior == SAVE_UPDATE))
                 .findFirst()
                 .orElseThrow(() -> new MappingException("Invalid Cascade value: " + value + "."));
     }
