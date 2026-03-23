@@ -31,7 +31,7 @@ import org.hibernate.query.Query;
 import org.grails.datastore.mapping.model.PersistentEntity;
 import org.grails.orm.hibernate.GrailsHibernateTemplate;
 
-public class PagedResultList extends grails.gorm.PagedResultList {
+public class PagedResultList<E> extends grails.gorm.PagedResultList<E> {
 
     private static final long serialVersionUID = 1L;
 

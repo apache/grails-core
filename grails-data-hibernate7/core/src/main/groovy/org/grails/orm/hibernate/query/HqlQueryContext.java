@@ -21,6 +21,7 @@ package org.grails.orm.hibernate.query;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 import java.util.Set;
@@ -54,7 +55,7 @@ public record HqlQueryContext(
         String hql,
         Class<?> targetClass,
         Map<String, Object> namedParams,
-        Collection<?> positionalParams,
+        List<Object> positionalParams,
         Map<String, Object> querySettings,
         boolean isUpdate,
         boolean isNative) {
@@ -65,33 +66,35 @@ public record HqlQueryContext(
      * Resolves the final HQL string, the result target class, and expands any {@link GString} into
      * named parameters. No {@code Session} is required.
      */
-    @SuppressWarnings("unchecked")
     public static HqlQueryContext prepare(
             PersistentEntity entity,
             CharSequence queryCharseq,
-            Map<?, ?> namedParams,
-            Collection<?> positionalParams,
-            Map<String, Object> querySettings,
+            Map<String,Object> namedParams,
+            Collection<Object> positionalParams,
+            Map<String,Object> querySettings,
             boolean isNative,
             boolean isUpdate) {
         Map<String, Object> _namedParams =
-                namedParams != null ? new HashMap<>((Map<String, Object>) namedParams) : new HashMap<>();
-        Collection<Object> positionalParamsCopy = positionalParams != null ? new ArrayList<>(positionalParams) : null;
-        Map<String, Object> querySettingsCopy = querySettings != null ? new HashMap<>(querySettings) : null;
+                namedParams != null ? new HashMap<>(namedParams) : new HashMap<>();
+        List<Object> positionalParamsCopy = positionalParams != null ? new ArrayList<>(positionalParams) : new ArrayList<>();
+        Map<String, Object> querySettingsCopy = querySettings != null ? new HashMap<>(querySettings) : new HashMap<>();
+
+        boolean _isNative = toBool(isNative);
+        boolean _isUpdate = toBool(isUpdate);
 
         String hql;
         // Prefer positional resolution only if positional parameters are explicitly provided (not null)
         // and named parameters are empty. This preserves legacy GString->named parameter behavior
         // while allowing opt-in to positional parameters via methods that pass them.
-        if (positionalParamsCopy != null && _namedParams.isEmpty()) {
-            hql = resolveHql(queryCharseq, isNative, positionalParamsCopy);
+        if (_namedParams.isEmpty()) {
+            hql = resolveHql(queryCharseq, _isNative, positionalParamsCopy);
         } else {
-            hql = resolveHql(queryCharseq, isNative, _namedParams);
+            hql = resolveHql(queryCharseq, _isNative, _namedParams);
         }
 
         Class<?> target = getTarget(hql, entity.getJavaClass());
         return new HqlQueryContext(
-                hql, target, _namedParams, positionalParamsCopy, querySettingsCopy, isUpdate, isNative);
+                hql, target, _namedParams, positionalParamsCopy, querySettingsCopy, _isUpdate, _isNative);
     }
 
     // ─── HQL resolution ──────────────────────────────────────────────────────
@@ -338,5 +341,9 @@ public record HqlQueryContext(
             }
         }
         return sql.toString();
+    }
+
+    private static boolean toBool(Object v) {
+        return v instanceof Boolean b ? b : v != null && Boolean.parseBoolean(v.toString());
     }
 }

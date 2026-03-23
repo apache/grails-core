@@ -391,7 +391,7 @@ class HibernateGormStaticApi<D> extends GormStaticApi<D> {
 
     @SuppressWarnings('GroovyAssignabilityCheck')
     private HibernateHqlQuery prepareHqlQuery(CharSequence hql, boolean isNative, boolean isUpdate,
-                                              Map namedParams, Collection positionalParams, Map querySettings) {
+                                              Map<String,Object> namedParams, Collection<Object> positionalParams, Map<String,Object> querySettings) {
         def ctx = HqlQueryContext.prepare(persistentEntity, hql, namedParams, positionalParams, querySettings, isNative, isUpdate)
         return HibernateHqlQuery.createHqlQuery(
                 (HibernateDatastore) datastore,
@@ -441,7 +441,7 @@ class HibernateGormStaticApi<D> extends GormStaticApi<D> {
                 sessionFactory,
                 persistentEntity,
                 ctx,
-                getHibernateTemplate(),
+                getHibernateTemplate(),Ï
                 datastore.mappingContext.conversionService
         )
         if (params.containsKey('max')) {

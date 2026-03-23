@@ -58,6 +58,24 @@ public class PagedResultList<E> implements Serializable, List<E> {
         return totalCount;
     }
 
+    /**
+     * @return The maximum number of results to return or null if not specified
+     */
+    public Integer getMax() {
+        return query != null ? query.getMax() : null;
+    }
+
+    /**
+     * @return The offset of the first result or 0 if not specified
+     */
+    public int getOffset() {
+        if (query != null) {
+            Integer offset = query.getOffset();
+            return offset != null ? offset : 0;
+        }
+        return 0;
+    }
+
     @Override
     public E get(int i) {
         return resultList.get(i);

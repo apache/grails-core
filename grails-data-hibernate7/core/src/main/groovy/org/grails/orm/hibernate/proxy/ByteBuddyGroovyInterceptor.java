@@ -63,8 +63,7 @@ public class ByteBuddyGroovyInterceptor extends ByteBuddyInterceptor {
     @Override
     public Object intercept(Object proxy, Method method, Object[] args) throws Throwable {
         String methodName = method.getName();
-        System.out.println("Intercepting method: " + methodName + " on proxy: " + getEntityName() + ":"
-                + getIdentifier() + " (Uninitialized: " + isUninitialized() + ")");
+
 
         // Check these BEFORE calling this.invoke() to avoid premature initialization in Hibernate 7
         if ((getIdentifierMethod != null && methodName.equals(getIdentifierMethod.getName()))
@@ -79,27 +78,22 @@ public class ByteBuddyGroovyInterceptor extends ByteBuddyInterceptor {
                     getEntityName(), getPersistentClass(), getIdentifier());
             Object result = GroovyProxyInterceptorLogic.handleUninitialized(state, methodName, args);
             if (result != GroovyProxyInterceptorLogic.INVOKE_IMPLEMENTATION) {
-                System.out.println("Handled uninitialized access for: " + methodName);
                 return result;
             }
         }
 
-        System.out.println("Delegating to Hibernate invoke for: " + methodName);
         final Object result = this.invoke(method, args, proxy);
         if (result != INVOKE_IMPLEMENTATION) {
             return result;
         }
 
         if (GroovyProxyInterceptorLogic.isGroovyMethod(methodName)) {
-            System.out.println("Handling Groovy method: " + methodName);
             final Object target = getImplementation();
             try {
-                if (isPublic(getPersistentClass(), method)) {
-                    return method.invoke(target, args);
-                } else {
+                if (!isPublic(getPersistentClass(), method)) {
                     method.setAccessible(true);
-                    return method.invoke(target, args);
                 }
+                return method.invoke(target, args);
             } catch (InvocationTargetException ite) {
                 throw ite.getTargetException();
             }

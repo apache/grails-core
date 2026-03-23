@@ -88,6 +88,20 @@ public abstract class Query implements Cloneable {
     }
 
     /**
+     * @return The maximum number of results to return
+     */
+    public Integer getMax() {
+        return max;
+    }
+
+    /**
+     * @return The offset of the first result
+     */
+    public Integer getOffset() {
+        return offset;
+    }
+
+    /**
      * @return The criteria defined by this query
      */
     public Junction getCriteria() {

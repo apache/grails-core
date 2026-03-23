@@ -186,9 +186,16 @@ public class HibernateHqlQuery extends Query {
     }
 
     protected void populateQuerySettings(Map<?, ?> args, ConversionService conversionService) {
-        ifPresent(args, HibernateQueryArgument.MAX.value(), v -> delegate.setMaxResults(toInt(v, conversionService)));
-        ifPresent(
-                args, HibernateQueryArgument.OFFSET.value(), v -> delegate.setFirstResult(toInt(v, conversionService)));
+        ifPresent(args, HibernateQueryArgument.MAX.value(), v -> {
+            int max = toInt(v, conversionService);
+            delegate.setMaxResults(max);
+            max(max);
+        });
+        ifPresent(args, HibernateQueryArgument.OFFSET.value(), v -> {
+            int offset = toInt(v, conversionService);
+            delegate.setFirstResult(offset);
+            offset(offset);
+        });
         ifPresent(args, HibernateQueryArgument.CACHE.value(), v -> delegate.setCacheable(toBool(v)));
         ifPresent(
                 args,
@@ -243,14 +250,7 @@ public class HibernateHqlQuery extends Query {
                 throw new GrailsQueryException("Named parameter's name must be a String: " + namedArgs);
             }
             String name = key.toString();
-            if (HibernateQueryArgument.MAX.value().equals(name)
-                    || HibernateQueryArgument.OFFSET.value().equals(name)
-                    || HibernateQueryArgument.CACHE.value().equals(name)
-                    || HibernateQueryArgument.FETCH_SIZE.value().equals(name)
-                    || HibernateQueryArgument.TIMEOUT.value().equals(name)
-                    || HibernateQueryArgument.READ_ONLY.value().equals(name)
-                    || HibernateQueryArgument.FLUSH_MODE.value().equals(name)
-                    || HibernateQueryArgument.LOCK.value().equals(name)) {
+            if (isGormArgument(name)) {
                 return;
             }
             if (value == null) {
@@ -265,6 +265,15 @@ public class HibernateHqlQuery extends Query {
                 delegate.setParameter(name, value);
             }
         });
+    }
+
+    private static boolean isGormArgument(String name) {
+        for (HibernateQueryArgument arg : HibernateQueryArgument.values()) {
+            if (arg.value().equals(name)) {
+                return true;
+            }
+        }
+        return false;
     }
 
     protected void populateQueryWithIndexedArguments(List<?> params) {
