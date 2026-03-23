@@ -18,7 +18,6 @@
  */
 package grails.artefact
 
-import groovy.transform.CompileDynamic
 import groovy.transform.CompileStatic
 import org.codehaus.groovy.runtime.InvokerHelper
 
@@ -67,14 +66,12 @@ trait TagLibrary implements WebAttributes, ServletAttributes, TagLibraryInvoker 
         }
     }
 
-    @CompileDynamic
-    def raw(Object value) {
-        if (rawEncoder == null) {
-            rawEncoder = WithCodecHelper.lookupEncoder(grailsApplication, 'Raw')
-            if (rawEncoder == null)
-                return InvokerHelper.invokeMethod(value, 'encodeAsRaw', null)
+    Object raw(Object value) {
+        Encoder encoder = WithCodecHelper.lookupEncoder(getGrailsApplication(), 'Raw')
+        if (encoder == null) {
+            return InvokerHelper.invokeMethod(value, 'encodeAsRaw', null)
         }
-        return rawEncoder.encode(value)
+        return encoder.encode(value)
     }
 
     /**
