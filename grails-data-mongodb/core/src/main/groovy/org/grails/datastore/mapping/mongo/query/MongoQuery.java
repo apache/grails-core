@@ -574,10 +574,10 @@ public class MongoQuery extends BsonQuery implements QueryArgumentsAware {
         }
 
         final FindIterable<Document> iterable = collection.find(query);
-        if (offset > 0) {
+        if (offset != null && offset > 0) {
             iterable.skip(offset);
         }
-        if (max > -1) {
+        if (max != null && max > -1) {
             iterable.limit(max);
         }
         if (uniqueResult) {
@@ -1473,11 +1473,11 @@ public class MongoQuery extends BsonQuery implements QueryArgumentsAware {
                 aggregationPipeline.add(sort);
             }
 
-            int max = mongoQuery.max;
+            int max = mongoQuery.max != null ? mongoQuery.max : -1;
             if (max > 0) {
                 aggregationPipeline.add(new Document("$limit", max));
             }
-            int offset = mongoQuery.offset;
+            int offset = mongoQuery.offset != null ? mongoQuery.offset : 0;
             if (offset > 0) {
                 aggregationPipeline.add(new Document("$skip", offset));
             }
