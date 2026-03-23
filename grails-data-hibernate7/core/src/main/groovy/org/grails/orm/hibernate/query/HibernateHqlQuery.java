@@ -101,6 +101,7 @@ public class HibernateHqlQuery extends Query {
     /**
      * Session-bound step — creates the appropriate Hibernate query from an open {@link
      * org.hibernate.Session} and wraps it in a {@link HibernateHqlQuery}.
+     * Note: The HqlQueryContext has a sanitized sql string
      */
     protected static HibernateHqlQuery buildQuery(
             org.hibernate.Session session,
@@ -109,31 +110,26 @@ public class HibernateHqlQuery extends Query {
             PersistentEntity entity,
             HqlQueryContext ctx) {
         HibernateSession hibernateSession = new HibernateSession(dataStore, sessionFactory);
-        if (StringUtils.isEmpty(ctx.hql())) {
+        String hql = ctx.hql();
+        if (StringUtils.isEmpty(hql)) {
             var q = session.createQuery("from " + ctx.targetClass().getName(), ctx.targetClass());
             return new HibernateHqlQuery(hibernateSession, entity, q);
         } else if (ctx.isUpdate()) {
-            var mq = session.createMutationQuery(ctx.hql());
+            var mq = session.createMutationQuery(hql);
             var result = new HibernateHqlQuery(hibernateSession, entity, mq);
             result.setFlushMode(session.getHibernateFlushMode());
             return result;
         } else {
             var q = ctx.isNative()
-                    ? session.createNativeQuery(ctx.hql(), ctx.targetClass())
-                    : isScalarSelect(ctx.hql())
-                            ? session.createQuery(ctx.hql())
-                            : session.createQuery(ctx.hql(), ctx.targetClass());
+                    ? session.createNativeQuery(hql, ctx.targetClass())
+                    : session.createQuery(hql, ctx.targetClass());
             var result = new HibernateHqlQuery(hibernateSession, entity, q);
             result.setFlushMode(session.getHibernateFlushMode());
             return result;
         }
     }
 
-    /** Returns true if the HQL starts with a {@code select} clause that doesn't project the entity. */
-    private static boolean isScalarSelect(String hql) {
-        String trimmed = hql.stripLeading().toLowerCase();
-        return trimmed.startsWith("select") && !trimmed.startsWith("select e ") && !trimmed.startsWith("select e,");
-    }
+
 
     /**
      * Full factory — opens a session via the {@link GrailsHibernateTemplate}, builds the query from
@@ -209,7 +205,8 @@ public class HibernateHqlQuery extends Query {
             delegate.setCacheable(false);
         } else {
             if (!args.containsKey(HibernateQueryArgument.CACHE.value())) {
-                org.grails.orm.hibernate.cfg.Mapping m = ((org.grails.orm.hibernate.cfg.HibernateMappingContext) getEntity().getMappingContext())
+                org.grails.orm.hibernate.cfg.Mapping m = ((org.grails.orm.hibernate.cfg.HibernateMappingContext)
+                                getEntity().getMappingContext())
                         .getMappingCacheHolder()
                         .getMapping(getEntity().getJavaClass());
                 if (m != null && m.getCache() != null && m.getCache().getEnabled()) {
@@ -246,14 +243,14 @@ public class HibernateHqlQuery extends Query {
                 throw new GrailsQueryException("Named parameter's name must be a String: " + namedArgs);
             }
             String name = key.toString();
-            if (HibernateQueryArgument.MAX.value().equals(name) ||
-                HibernateQueryArgument.OFFSET.value().equals(name) ||
-                HibernateQueryArgument.CACHE.value().equals(name) ||
-                HibernateQueryArgument.FETCH_SIZE.value().equals(name) ||
-                HibernateQueryArgument.TIMEOUT.value().equals(name) ||
-                HibernateQueryArgument.READ_ONLY.value().equals(name) ||
-                HibernateQueryArgument.FLUSH_MODE.value().equals(name) ||
-                HibernateQueryArgument.LOCK.value().equals(name)) {
+            if (HibernateQueryArgument.MAX.value().equals(name)
+                    || HibernateQueryArgument.OFFSET.value().equals(name)
+                    || HibernateQueryArgument.CACHE.value().equals(name)
+                    || HibernateQueryArgument.FETCH_SIZE.value().equals(name)
+                    || HibernateQueryArgument.TIMEOUT.value().equals(name)
+                    || HibernateQueryArgument.READ_ONLY.value().equals(name)
+                    || HibernateQueryArgument.FLUSH_MODE.value().equals(name)
+                    || HibernateQueryArgument.LOCK.value().equals(name)) {
                 return;
             }
             if (value == null) {
@@ -302,8 +299,11 @@ public class HibernateHqlQuery extends Query {
     // ─── Private utilities ────────────────────────────────────────────────────
 
     private static int toInt(Object v, ConversionService cs) {
-        if (v instanceof Integer i) return i;
-        return cs.convert(v, Integer.class);
+        if (v instanceof Integer i) {
+            return i;
+        }
+        Integer i = cs.convert(v, Integer.class);
+        return i != null ? i : 0;
     }
 
     private static boolean toBool(Object v) {

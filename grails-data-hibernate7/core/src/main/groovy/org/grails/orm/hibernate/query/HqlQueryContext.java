@@ -27,6 +27,7 @@ import java.util.Set;
 
 import groovy.lang.GString;
 
+import org.checkerframework.checker.nullness.qual.NonNull;
 import org.checkerframework.checker.nullness.qual.Nullable;
 
 import org.grails.datastore.mapping.model.PersistentEntity;
@@ -36,6 +37,10 @@ import org.grails.datastore.mapping.model.PersistentEntity;
  * Hibernate {@code Session}: the final HQL string, the result target class, any named parameters
  * (including those expanded from a {@link GString}), and flags for whether the query is an update
  * or native SQL.
+ *
+ * <p><strong>Security Note:</strong> The {@code hql} string must be trust-verified or
+ * properly parameterized (e.g. via {@link GString} expansion in {@link #prepare}) before
+ * being passed to execution engines to prevent injection vulnerabilities.
  *
  * <p>Use {@link #prepare} to build an instance from raw inputs.
  */
@@ -120,9 +125,36 @@ public record HqlQueryContext(
         String normalized = normalizeNonAliasedSelect(hql == null ? null : hql.toString());
         return switch (countHqlProjections(normalized)) {
             case 0 -> clazz;
-            case 1 -> isPropertyProjection(normalized) ? Object.class : clazz;
+            case 1 -> isAggregateProjection(normalized) ? Long.class : (isPropertyProjection(normalized) ? Object.class : clazz);
             default -> Object[].class;
         };
+    }
+
+    private static boolean isAggregateProjection(CharSequence hql) {
+        String clause = getSingleProjectionClause(hql);
+        if (clause == null) return false;
+
+        return clause.startsWith("count(") || clause.startsWith("sum(") || clause.startsWith("avg(") || clause.startsWith("min(") || clause.startsWith("max(");
+    }
+
+    private static @Nullable String getSingleProjectionClause(CharSequence hql) {
+        if (hql == null) return null;
+        String s = hql.toString().toLowerCase(Locale.ROOT).trim();
+        int selectIdx = s.indexOf(HibernateQueryArgument.HQL_SELECT.value() + " ");
+        if (selectIdx < 0) return null;
+        int fromIdx = s.indexOf(" " + HibernateQueryArgument.HQL_FROM.value() + " ", selectIdx);
+        return extractSelectClause(s, selectIdx, fromIdx);
+    }
+
+    private static @NonNull String extractSelectClause(String s, int selectIdx, int fromIdx) {
+        String clause = s.substring(selectIdx + HibernateQueryArgument.HQL_SELECT.value().length(), fromIdx < 0 ? s.length() : fromIdx)
+                .trim();
+        if (clause.startsWith(HibernateQueryArgument.HQL_DISTINCT.value() + " ")) {
+            clause = clause.substring(HibernateQueryArgument.HQL_DISTINCT.value().length() + 1).trim();
+        } else if (clause.startsWith(HibernateQueryArgument.HQL_ALL.value() + " ")) {
+            clause = clause.substring(HibernateQueryArgument.HQL_ALL.value().length() + 1).trim();
+        }
+        return clause;
     }
 
     /**
@@ -136,20 +168,20 @@ public record HqlQueryContext(
         if (hql == null || hql.isEmpty()) return 0;
         String s = hql.toString().trim();
         String lower = s.toLowerCase(Locale.ROOT);
-        int selectIdx = lower.indexOf("select ");
+        int selectIdx = lower.indexOf(HibernateQueryArgument.HQL_SELECT.value() + " ");
         if (selectIdx < 0) return 0;
 
-        int fromIdx = lower.indexOf(" from ", selectIdx);
-        String sel = s.substring(selectIdx + "select".length(), fromIdx < 0 ? s.length() : fromIdx)
+        int fromIdx = lower.indexOf(" " + HibernateQueryArgument.HQL_FROM.value() + " ", selectIdx);
+        String sel = s.substring(selectIdx + HibernateQueryArgument.HQL_SELECT.value().length(), fromIdx < 0 ? s.length() : fromIdx)
                 .trim();
         if (sel.isEmpty()) return 0;
 
         // Strip leading DISTINCT/ALL
         String selLower = sel.toLowerCase(Locale.ROOT);
-        if (selLower.startsWith("distinct "))
-            sel = sel.substring("distinct ".length()).trim();
-        else if (selLower.startsWith("all "))
-            sel = sel.substring("all ".length()).trim();
+        if (selLower.startsWith(HibernateQueryArgument.HQL_DISTINCT.value() + " "))
+            sel = sel.substring(HibernateQueryArgument.HQL_DISTINCT.value().length() + 1).trim();
+        else if (selLower.startsWith(HibernateQueryArgument.HQL_ALL.value() + " "))
+            sel = sel.substring(HibernateQueryArgument.HQL_ALL.value().length() + 1).trim();
 
         // Count top-level commas, ignoring those inside parens or string literals
         int commas = getCommas(sel);
@@ -193,18 +225,18 @@ public record HqlQueryContext(
         if (s.isEmpty()) return s;
 
         String lower = s.toLowerCase();
-        int selectIdx = lower.indexOf("select ");
+        int selectIdx = lower.indexOf(HibernateQueryArgument.HQL_SELECT.value() + " ");
         if (selectIdx < 0) return s; // no SELECT clause — nothing to normalize
 
-        int fromIdx = lower.indexOf(" from ", selectIdx);
+        int fromIdx = lower.indexOf(" " + HibernateQueryArgument.HQL_FROM.value() + " ", selectIdx);
         if (fromIdx < 0) return s; // malformed — leave as-is
 
-        int selectStart = selectIdx + "select ".length();
+        int selectStart = selectIdx + HibernateQueryArgument.HQL_SELECT.value().length() + 1;
         String selectClauseOrig = s.substring(selectStart, fromIdx).trim();
         String selectClauseLower = lower.substring(selectStart, fromIdx).trim();
 
         // Parse entity name from the FROM head
-        int afterFrom = fromIdx + " from ".length();
+        int afterFrom = fromIdx + HibernateQueryArgument.HQL_FROM.value().length() + 2;
         int entityEnd = afterFrom;
         while (entityEnd < s.length() && !Character.isWhitespace(s.charAt(entityEnd))) entityEnd++;
         String entityName = s.substring(afterFrom, entityEnd);
@@ -213,8 +245,8 @@ public record HqlQueryContext(
         // Skip whitespace, then optional "as" keyword
         int cur = entityEnd;
         while (cur < s.length() && Character.isWhitespace(s.charAt(cur))) cur++;
-        if (cur + 2 <= s.length() && s.substring(cur, cur + 2).equalsIgnoreCase("as")) {
-            cur += 2;
+        if (cur + 2 <= s.length() && s.substring(cur, cur + 2).equalsIgnoreCase(HibernateQueryArgument.HQL_AS.value())) {
+            cur += HibernateQueryArgument.HQL_AS.value().length();
             while (cur < s.length() && Character.isWhitespace(s.charAt(cur))) cur++;
         }
 
@@ -223,50 +255,49 @@ public record HqlQueryContext(
         while (tokenEnd < s.length() && !Character.isWhitespace(s.charAt(tokenEnd))) tokenEnd++;
         String token = s.substring(cur, tokenEnd).toLowerCase(Locale.ROOT);
         boolean hasAlias = !token.isEmpty()
-                && !Set.of("where", "join", "left", "right", "inner", "outer", "group", "order", "having")
+                && !Set.of(
+                        HibernateQueryArgument.HQL_WHERE.value(),
+                        HibernateQueryArgument.HQL_JOIN.value(),
+                        HibernateQueryArgument.HQL_LEFT.value(),
+                        HibernateQueryArgument.HQL_RIGHT.value(),
+                        HibernateQueryArgument.HQL_INNER.value(),
+                        HibernateQueryArgument.HQL_OUTER.value(),
+                        HibernateQueryArgument.HQL_GROUP.value(),
+                        HibernateQueryArgument.HQL_ORDER.value(),
+                        HibernateQueryArgument.HQL_HAVING.value())
                         .contains(token);
         if (hasAlias) return s;
 
         // Strip DISTINCT/ALL prefix before adjusting the projection
         String prefix = "", projOrig = selectClauseOrig, projLower = selectClauseLower;
-        if (projLower.startsWith("distinct ")) {
-            prefix = "distinct ";
-            projOrig = selectClauseOrig.substring("distinct ".length()).trim();
-            projLower = projLower.substring("distinct ".length()).trim();
-        } else if (projLower.startsWith("all ")) {
-            prefix = "all ";
-            projOrig = selectClauseOrig.substring("all ".length()).trim();
-            projLower = projLower.substring("all ".length()).trim();
+        if (projLower.startsWith(HibernateQueryArgument.HQL_DISTINCT.value() + " ")) {
+            prefix = HibernateQueryArgument.HQL_DISTINCT.value() + " ";
+            projOrig = selectClauseOrig.substring(HibernateQueryArgument.HQL_DISTINCT.value().length() + 1).trim();
+            projLower = projLower.substring(HibernateQueryArgument.HQL_DISTINCT.value().length() + 1).trim();
+        } else if (projLower.startsWith(HibernateQueryArgument.HQL_ALL.value() + " ")) {
+            prefix = HibernateQueryArgument.HQL_ALL.value() + " ";
+            projOrig = selectClauseOrig.substring(HibernateQueryArgument.HQL_ALL.value().length() + 1).trim();
+            projLower = projLower.substring(HibernateQueryArgument.HQL_ALL.value().length() + 1).trim();
         }
 
         // Qualify the projection with the synthetic alias
         String adjusted;
         if (projLower.equalsIgnoreCase(entityName)) {
             adjusted = "e"; // "select Person from Person" → "select e"
-        } else if (!projLower.contains("(") && !projLower.contains(".") && !projLower.startsWith("new ")) {
+        } else if (!projLower.contains("(") && !projLower.contains(".") && !projLower.startsWith(HibernateQueryArgument.HQL_NEW.value() + " ")) {
             adjusted = "e." + projOrig; // "select name from Person"   → "select e.name"
         } else {
             adjusted = projOrig; // functions / constructor expr / already qualified
         }
 
-        return "select " + prefix + adjusted + " from " + entityName + " e" + s.substring(entityEnd);
+        return HibernateQueryArgument.HQL_SELECT.value() + " " + prefix + adjusted + " " + HibernateQueryArgument.HQL_FROM.value() + " " + entityName + " e" + s.substring(entityEnd);
     }
 
     // ─── Private helpers ─────────────────────────────────────────────────────
 
     private static boolean isPropertyProjection(CharSequence hql) {
-        if (hql == null) return false;
-        String s = hql.toString().toLowerCase().trim();
-        int selectIdx = s.indexOf("select ");
-        if (selectIdx < 0) return false;
-        int fromIdx = s.indexOf(" from ", selectIdx);
-        String clause = s.substring(selectIdx + "select ".length(), fromIdx < 0 ? s.length() : fromIdx)
-                .trim();
-        if (clause.startsWith("distinct "))
-            clause = clause.substring("distinct ".length()).trim();
-        else if (clause.startsWith("all "))
-            clause = clause.substring("all ".length()).trim();
-        return clause.contains(".");
+        String clause = getSingleProjectionClause(hql);
+        return clause != null && clause.contains(".");
     }
 
     private static String normalizeMultiLineQueryString(String query) {

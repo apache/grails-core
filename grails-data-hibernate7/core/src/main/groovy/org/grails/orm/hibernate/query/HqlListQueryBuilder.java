@@ -22,7 +22,6 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 
-import org.grails.datastore.gorm.finders.DynamicFinder;
 import org.grails.datastore.mapping.model.PersistentEntity;
 import org.grails.datastore.mapping.model.PersistentProperty;
 import org.grails.datastore.mapping.model.types.Association;
@@ -81,7 +80,8 @@ public class HqlListQueryBuilder {
     private static boolean isJoinFetch(Object mode) {
         if (mode == null) return false;
         String s = mode.toString();
-        return s.equalsIgnoreCase("join") || s.equalsIgnoreCase("eager");
+        return s.equalsIgnoreCase(HibernateQueryArgument.JOIN.value())
+                || s.equalsIgnoreCase(HibernateQueryArgument.EAGER.value());
     }
 
     // ─── ORDER BY ────────────────────────────────────────────────────────────
@@ -102,13 +102,13 @@ public class HqlListQueryBuilder {
             clauses.add(orderClause(alias, sort, dir, ignoreCase && isStringProp(sort)));
         } else {
             // fall back to default mapping sort
-            MappingCacheHolder cacheHolder = ((HibernateMappingContext) entity.getMappingContext()).getMappingCacheHolder();
-            Mapping m = cacheHolder.getMapping(entity.getJavaClass());
-            if (m != null) {
-                m.getSort()
-                        .getNamesAndDirections()
-                        .forEach((prop, dir) -> clauses.add(orderClause(
-                                alias, (String) prop, direction((String) dir), isStringProp((String) prop))));
+            if (entity.getMappingContext() instanceof HibernateMappingContext hmc) {
+                Mapping m = hmc.getMappingCacheHolder().getMapping(entity.getJavaClass());
+                if (m != null) {
+                    ((Map<?, ?>) m.getSort().getNamesAndDirections())
+                            .forEach((prop, dir) -> clauses.add(orderClause(
+                                    alias, (String) prop, direction((String) dir), isStringProp((String) prop))));
+                }
             }
         }
 
@@ -155,6 +155,6 @@ public class HqlListQueryBuilder {
     /** Returns true when the params indicate a paged query (i.e. {@code max} is set). */
     @SuppressWarnings("rawtypes")
     static boolean isPaged(Map params) {
-        return params.containsKey(DynamicFinder.ARGUMENT_MAX);
+        return params.containsKey(HibernateQueryArgument.MAX.value());
     }
 }
