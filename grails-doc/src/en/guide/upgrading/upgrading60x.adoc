@@ -1505,6 +1505,33 @@ These commands support options like `--extends` to specify a custom class to ext
 
 For full details, see the link:{guidePath}scaffolding.html[Scaffolding] documentation.
 
-==== 13. Upgrading the Spring Security Plugin
+==== 13. URL Mapping Wildcard Validation
+
+Grails now validates wildcard-captured URL mapping variables (`$controller`, `$action`, `$namespace`) against registered controller artefacts at request time. When a captured value does not match a registered artefact, the mapping is skipped and the next mapping is tried.
+
+This is a new behavior that is **enabled by default**. It allows patterns like:
+
+[source,groovy]
+----
+group "/topics", {
+    "/$action"(controller: 'topic')    // tried first — only matches real actions
+    "/$id"(controller: 'topic', action: 'show')  // fallback for non-action values
+}
+----
+
+Hardcoded controller/action values in mappings are not affected — only wildcard-captured values are validated.
+
+If this causes issues with existing URL mappings, you can disable it in `application.yml`:
+
+[source,yaml]
+----
+grails:
+    web:
+        url:
+            mapping:
+                validateWildcards: false
+----
+
+==== 14. Upgrading the Spring Security Plugin
 
 If your application uses the Grails Spring Security plugin, please consult the https://apache.github.io/grails-spring-security/snapshot/guide/index.html#upgrading-from-previous-versions[Upgrading from Previous Versions] section of the Spring Security plugin documentation for specific upgrade instructions related to Grails 7.

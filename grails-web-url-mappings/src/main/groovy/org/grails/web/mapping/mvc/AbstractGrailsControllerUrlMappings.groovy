@@ -22,9 +22,11 @@ import java.util.concurrent.ConcurrentHashMap
 
 import groovy.transform.Canonical
 import groovy.transform.CompileStatic
+import groovy.util.logging.Slf4j
 
 import org.springframework.http.HttpMethod
 
+import grails.config.Settings
 import grails.core.GrailsApplication
 import grails.core.GrailsClass
 import grails.core.GrailsControllerClass
@@ -45,16 +47,20 @@ import org.grails.web.servlet.mvc.GrailsWebRequest
  * @since 3.0
  */
 @CompileStatic
+@Slf4j
 abstract class AbstractGrailsControllerUrlMappings implements UrlMappings {
 
     UrlMappings urlMappingsHolderDelegate
     UrlConverter urlConverter
+    boolean validateWildcardMappings
     ConcurrentHashMap<ControllerKey, GrailsControllerClass> mappingsToGrailsControllerMap = new ConcurrentHashMap<>()
     ConcurrentHashMap<ControllerKey, GrailsControllerClass> deferredMappings = new ConcurrentHashMap<>()
 
     AbstractGrailsControllerUrlMappings(GrailsApplication grailsApplication, UrlMappings urlMappingsHolderDelegate, UrlConverter urlConverter = null) {
         this.urlMappingsHolderDelegate = urlMappingsHolderDelegate
         this.urlConverter = urlConverter
+        this.validateWildcardMappings = grailsApplication?.config?.getProperty(
+                Settings.WEB_URL_MAPPING_VALIDATE_WILDCARDS, Boolean, true) ?: true
         def controllerArtefacts = grailsApplication.getArtefacts(ControllerArtefactHandler.TYPE)
         for (GrailsClass gc in controllerArtefacts) {
             registerController((GrailsControllerClass) gc)
@@ -130,8 +136,8 @@ abstract class AbstractGrailsControllerUrlMappings implements UrlMappings {
 
     @Override
     UrlMappingInfo match(String uri) {
-        def info = urlMappingsHolderDelegate.match(uri)
-        return collectControllerMapping(info)
+        def infos = matchAll(uri)
+        return infos?.length > 0 ? infos[0] : null
     }
 
     @Override
@@ -177,6 +183,7 @@ abstract class AbstractGrailsControllerUrlMappings implements UrlMappings {
             mapToUse.put(noPluginDefaultActionKey, controller)
         }
 
+        log.debug('Registering controller: namespace={}, name={}, plugin={}, actions={}', namespace, controllerName, pluginNameToRegister, controller.actions)
         for (action in controller.actions) {
             action = hasUrlConverter ? urlConverter.toUrlElement(action) : action
             def withPluginKey = new ControllerKey(namespace, controllerName, action, pluginNameToRegister)
@@ -201,9 +208,12 @@ abstract class AbstractGrailsControllerUrlMappings implements UrlMappings {
 
     protected UrlMappingInfo[] collectControllerMappings(UrlMappingInfo[] infos) {
         def webRequest = GrailsWebRequest.lookup()
-        infos.collect({ UrlMappingInfo info ->
+        List<UrlMappingInfo> wildcardActionMatches = []
+        List<UrlMappingInfo> otherMatches = []
+        for (UrlMappingInfo info : infos) {
             if (info.redirectInfo) {
-                return info
+                otherMatches.add(info)
+                continue
             }
             if (webRequest != null) {
                 webRequest.resetParams()
@@ -212,11 +222,19 @@ abstract class AbstractGrailsControllerUrlMappings implements UrlMappings {
             ControllerKey controllerKey = new ControllerKey(info.namespace, info.controllerName, info.actionName, info.pluginName)
             GrailsControllerClass controllerClass = info ? mappingsToGrailsControllerMap.get(controllerKey) : null
             if (controllerClass) {
-                return new GrailsControllerUrlMappingInfo(controllerClass, info)
-            } else {
-                return info
+                def wrapped = new GrailsControllerUrlMappingInfo(controllerClass, info)
+                if (validateWildcardMappings && info.hasWildcardCaptures()) {
+                    wildcardActionMatches.add(wrapped)
+                } else {
+                    otherMatches.add(wrapped)
+                }
+            } else if (!validateWildcardMappings || !info.hasWildcardCaptures()) {
+                otherMatches.add(info)
             }
-        }) as UrlMappingInfo[]
+            // else: wildcard-captured values didn't match a registered controller/action — skip
+        }
+        // Wildcard-captured matches that resolved to real actions take priority
+        (wildcardActionMatches + otherMatches) as UrlMappingInfo[]
     }
 
     protected UrlMappingInfo collectControllerMapping(UrlMappingInfo info) {

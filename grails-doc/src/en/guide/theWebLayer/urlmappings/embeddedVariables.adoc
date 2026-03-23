@@ -72,6 +72,40 @@ static mappings = {
 
 Here the name of the controller, action and id are implicitly obtained from the variables `controller`, `action` and `id` embedded within the URL.
 
+===== Wildcard Artefact Validation
+
+By default, when URL mappings use wildcard variables like `$controller`, `$action`, or `$namespace`, Grails validates the captured values against registered controller artefacts. If a captured value does not correspond to a real controller, action, or namespace, the mapping is skipped and the next mapping is tried.
+
+This enables patterns where a `$action` wildcard is followed by a fallback mapping:
+
+[source,groovy]
+----
+group "/topics", {
+    "/$action"(controller: 'topic')
+    "/$id"(controller: 'topic', action: 'show')
+}
+----
+
+With this configuration:
+
+* `/topics/gallery` — "gallery" is validated as a real action on `TopicController`, so the `$action` mapping is used.
+* `/topics/42` — "42" is not a valid action, so the `$action` mapping is skipped and the `$id` mapping handles the request, routing to the `show` action.
+
+This validation applies to `$controller`, `$action`, and `$namespace` wildcards. Hardcoded values in mappings (e.g., `controller: 'topic'`) are never filtered — only wildcard-captured values are validated.
+
+When a wildcard-captured action matches a real action on the controller, it takes priority over other mappings where the action is hardcoded. This means `$action` mappings that resolve to valid actions will always be preferred over `$id` mappings with a hardcoded action, regardless of URL mapping sort order.
+
+To disable this behavior, set in `application.yml`:
+
+[source,yaml]
+----
+grails:
+    web:
+        url:
+            mapping:
+                validateWildcards: false
+----
+
 You can also resolve the controller name and action name to execute dynamically using a closure:
 
 [source,groovy]
