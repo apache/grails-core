@@ -33,7 +33,7 @@ import io.micronaut.scheduling.TaskExecutors;
 import io.micronaut.scheduling.annotation.ExecuteOn;
 import io.swagger.v3.oas.annotations.media.Content;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
-import org.grails.forge.api.TestFramework;
+import org.grails.forge.api.DevelopmentReloading;
 import org.grails.forge.api.create.AbstractCreateController;
 import org.grails.forge.application.ApplicationType;
 import org.grails.forge.application.Project;
@@ -86,14 +86,14 @@ public class ZipCreateController extends AbstractCreateController implements Zip
      * @param name        The name of the application The name of the application
      * @param features    The features The chosen features
      * @param build       The build tool
-     * @param test        The test framework
+     * @param reloading   The development reloading option
      * @param gorm        The GORM
      * @param servlet     The Servlet
      * @param javaVersion The java version
      * @return A ZIP file containing the generated application.
      */
     @Override
-    @Get(uri = "/create/{type}/{name}{?features,gorm,build,test,javaVersion}", produces = MEDIA_TYPE_APPLICATION_ZIP)
+    @Get(uri = "/create/{type}/{name}{?features,gorm,build,reloading,javaVersion}", produces = MEDIA_TYPE_APPLICATION_ZIP)
     @ApiResponse(
             description = "A ZIP file containing the generated application.",
             content = @Content(
@@ -105,12 +105,12 @@ public class ZipCreateController extends AbstractCreateController implements Zip
             @Pattern(regexp = "[\\w\\d-_\\.]+") String name,
             @Nullable List<String> features,
             @Nullable BuildTool build,
-            @Nullable TestFramework test,
+            @Nullable DevelopmentReloading reloading,
             @Nullable GormImpl gorm,
             @Nullable ServletImpl servlet,
             @Nullable JdkVersion javaVersion,
             @Nullable @Header(HttpHeaders.USER_AGENT) String userAgent) {
-        return generateAppIntoZipFile(type, name, features, build, test, gorm, servlet, javaVersion, userAgent);
+        return generateAppIntoZipFile(type, name, features, build, reloading, gorm, servlet, javaVersion, userAgent);
     }
 
     /**
@@ -120,14 +120,14 @@ public class ZipCreateController extends AbstractCreateController implements Zip
      * @param name        The ZIP name
      * @param features    The features
      * @param build       The build tool
-     * @param test        The test framework
+     * @param reloading   The development reloading option
      * @param gorm        The GORM
      * @param servlet     The Servlet
      * @param javaVersion The java version
      * @param userAgent   The browser user-agent
      * @return A Zip file containing the application
      */
-    @Get(uri = "/{name}.zip{?type,features,gorm,servlet,build,test}", produces = MEDIA_TYPE_APPLICATION_ZIP)
+    @Get(uri = "/{name}.zip{?type,features,gorm,servlet,build,reloading}", produces = MEDIA_TYPE_APPLICATION_ZIP)
     @ApiResponse(
             description = "A ZIP file containing the generated application.",
             content = @Content(
@@ -139,12 +139,12 @@ public class ZipCreateController extends AbstractCreateController implements Zip
             @Pattern(regexp = "[\\w\\d-_]+") @NotBlank String name,
             @Nullable List<String> features,
             @Nullable BuildTool build,
-            @Nullable TestFramework test,
+            @Nullable DevelopmentReloading reloading,
             @Nullable GormImpl gorm,
             @Nullable ServletImpl servlet,
             @Nullable JdkVersion javaVersion,
             @Nullable @Header("User-Agent") String userAgent) {
-        return generateAppIntoZipFile(type, name, features, build, test, gorm, servlet, javaVersion, userAgent);
+        return generateAppIntoZipFile(type, name, features, build, reloading, gorm, servlet, javaVersion, userAgent);
     }
 
     public HttpResponse<Writable> generateAppIntoZipFile(
@@ -152,13 +152,13 @@ public class ZipCreateController extends AbstractCreateController implements Zip
             @NotNull String name,
             @Nullable List<String> features,
             @Nullable BuildTool buildTool,
-            @Nullable TestFramework testFramework,
+            @Nullable DevelopmentReloading reloading,
             @Nullable GormImpl gorm,
             @Nullable ServletImpl servlet,
             @Nullable JdkVersion javaVersion,
             @Nullable String userAgent) {
 
-        GeneratorContext generatorContext = createProjectGeneratorContext(type, name, features, buildTool, testFramework, gorm, servlet, javaVersion, userAgent);
+        GeneratorContext generatorContext = createProjectGeneratorContext(type, name, features, buildTool, reloading, gorm, servlet, javaVersion, userAgent);
         MutableHttpResponse<Writable> response = HttpResponse.created(new Writable() {
             @Override
             public void writeTo(OutputStream outputStream, @Nullable Charset charset) throws IOException {

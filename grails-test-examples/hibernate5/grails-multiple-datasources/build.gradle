@@ -44,6 +44,7 @@ dependencies {
     runtimeOnly 'com.zaxxer:HikariCP'
     runtimeOnly 'org.apache.grails:grails-databinding'
     runtimeOnly 'org.apache.grails:grails-controllers'
+    runtimeOnly 'org.apache.grails:grails-url-mappings'
     runtimeOnly 'org.springframework.boot:spring-boot-autoconfigure'
     runtimeOnly 'org.springframework.boot:spring-boot-starter-logging'
     runtimeOnly 'org.springframework.boot:spring-boot-starter-tomcat'
@@ -51,6 +52,9 @@ dependencies {
     testImplementation 'org.apache.grails.testing:grails-testing-support-core'
 
     testRuntimeOnly 'org.apache.grails:grails-testing-support-web'
+
+    integrationTestImplementation project(':grails-testing-support-http-client')
+    integrationTestImplementation 'org.spockframework:spock-core'
 }
 
 sourceSets {

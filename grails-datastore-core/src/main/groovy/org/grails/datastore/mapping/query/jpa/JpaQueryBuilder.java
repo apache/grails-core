@@ -734,6 +734,42 @@ public class JpaQueryBuilder {
             }
         });
 
+        queryHandlers.put(Query.SizeEquals.class, new QueryHandler() {
+            public int handle(PersistentEntity entity, Query.Criterion criterion, StringBuilder q, StringBuilder whereClause, String logicalName, int position, List parameters, ConversionService conversionService, boolean allowJoins, boolean hibernateCompatible) {
+                return handleSizeComparison(entity, (Query.PropertyCriterion) criterion, whereClause, logicalName, position, parameters, conversionService, "=", hibernateCompatible);
+            }
+        });
+
+        queryHandlers.put(Query.SizeNotEquals.class, new QueryHandler() {
+            public int handle(PersistentEntity entity, Query.Criterion criterion, StringBuilder q, StringBuilder whereClause, String logicalName, int position, List parameters, ConversionService conversionService, boolean allowJoins, boolean hibernateCompatible) {
+                return handleSizeComparison(entity, (Query.PropertyCriterion) criterion, whereClause, logicalName, position, parameters, conversionService, "!=", hibernateCompatible);
+            }
+        });
+
+        queryHandlers.put(Query.SizeGreaterThan.class, new QueryHandler() {
+            public int handle(PersistentEntity entity, Query.Criterion criterion, StringBuilder q, StringBuilder whereClause, String logicalName, int position, List parameters, ConversionService conversionService, boolean allowJoins, boolean hibernateCompatible) {
+                return handleSizeComparison(entity, (Query.PropertyCriterion) criterion, whereClause, logicalName, position, parameters, conversionService, ">", hibernateCompatible);
+            }
+        });
+
+        queryHandlers.put(Query.SizeGreaterThanEquals.class, new QueryHandler() {
+            public int handle(PersistentEntity entity, Query.Criterion criterion, StringBuilder q, StringBuilder whereClause, String logicalName, int position, List parameters, ConversionService conversionService, boolean allowJoins, boolean hibernateCompatible) {
+                return handleSizeComparison(entity, (Query.PropertyCriterion) criterion, whereClause, logicalName, position, parameters, conversionService, ">=", hibernateCompatible);
+            }
+        });
+
+        queryHandlers.put(Query.SizeLessThan.class, new QueryHandler() {
+            public int handle(PersistentEntity entity, Query.Criterion criterion, StringBuilder q, StringBuilder whereClause, String logicalName, int position, List parameters, ConversionService conversionService, boolean allowJoins, boolean hibernateCompatible) {
+                return handleSizeComparison(entity, (Query.PropertyCriterion) criterion, whereClause, logicalName, position, parameters, conversionService, "<", hibernateCompatible);
+            }
+        });
+
+        queryHandlers.put(Query.SizeLessThanEquals.class, new QueryHandler() {
+            public int handle(PersistentEntity entity, Query.Criterion criterion, StringBuilder q, StringBuilder whereClause, String logicalName, int position, List parameters, ConversionService conversionService, boolean allowJoins, boolean hibernateCompatible) {
+                return handleSizeComparison(entity, (Query.PropertyCriterion) criterion, whereClause, logicalName, position, parameters, conversionService, "<=", hibernateCompatible);
+            }
+        });
+
     }
 
     protected static int handleSubQuery(PersistentEntity entity, StringBuilder q, StringBuilder whereClause, String logicalName, int position, List parameters, ConversionService conversionService, boolean allowJoins, boolean hibernateCompatible, Query.SubqueryCriterion equalsAll, String comparisonExpression) {
@@ -746,6 +782,23 @@ public class JpaQueryBuilder {
                 .append(comparisonExpression);
         buildSubQuery(q, whereClause, position, parameters, conversionService, allowJoins, hibernateCompatible, subquery);
         whereClause.append(CLOSE_BRACKET);
+        return position;
+    }
+
+    protected static int handleSizeComparison(PersistentEntity entity, Query.PropertyCriterion criterion, StringBuilder whereClause, String logicalName, int position, List parameters, ConversionService conversionService, String operator, boolean hibernateCompatible) {
+        final String name = criterion.getProperty();
+        validateProperty(entity, name, criterion.getClass());
+        Object value = criterion.getValue();
+        int size = value instanceof Number ? ((Number) value).intValue() : Integer.parseInt(value.toString());
+        whereClause.append("SIZE(")
+                   .append(logicalName)
+                   .append(DOT)
+                   .append(name)
+                   .append(") ")
+                   .append(operator)
+                   .append(PARAMETER_PREFIX)
+                   .append(++position);
+        parameters.add(size);
         return position;
     }
 

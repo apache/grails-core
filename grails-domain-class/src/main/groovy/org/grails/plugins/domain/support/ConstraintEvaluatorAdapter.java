@@ -29,6 +29,7 @@ import grails.validation.Constrained;
 import grails.validation.ConstrainedDelegate;
 import grails.validation.ConstraintsEvaluator;
 
+@Deprecated(since = "7.1", forRemoval = true)
 public class ConstraintEvaluatorAdapter implements ConstraintsEvaluator {
 
     private final org.grails.datastore.gorm.validation.constraints.eval.ConstraintsEvaluator constraintsEvaluator;

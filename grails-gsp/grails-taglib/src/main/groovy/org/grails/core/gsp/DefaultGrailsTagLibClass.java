@@ -18,6 +18,7 @@
  */
 package org.grails.core.gsp;
 
+import java.lang.reflect.Field;
 import java.lang.reflect.Modifier;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -71,6 +72,22 @@ public class DefaultGrailsTagLibClass extends AbstractInjectableGrailsClass impl
             }
         }
         tags.addAll(TagMethodInvoker.getInvokableTagMethodNames(clazz));
+
+        // Also scan declared fields via Java reflection to find Closure-typed tags
+        // that may not be reported by the metaclass (e.g., when @CompileStatic is applied
+        // at the class level, Groovy 4 may compile Closure properties differently so that
+        // MetaProperty.getType() no longer reports Closure).
+        for (Class<?> current = clazz; current != null && current != Object.class; current = current.getSuperclass()) {
+            for (Field field : current.getDeclaredFields()) {
+                int modifiers = field.getModifiers();
+                if (Modifier.isStatic(modifiers)) {
+                    continue;
+                }
+                if (Closure.class.isAssignableFrom(field.getType())) {
+                    tags.add(field.getName());
+                }
+            }
+        }
 
         String ns = getStaticPropertyValue(NAMESPACE_FIELD_NAME, String.class);
         if (ns != null && !"".equals(ns.trim())) {

@@ -1504,3 +1504,7 @@ grails generate-scaffold-all Book
 These commands support options like `--extends` to specify a custom class to extend, `--namespace` for controller namespacing, and `--service` to use `RestfulServiceController`.
 
 For full details, see the link:{guidePath}scaffolding.html[Scaffolding] documentation.
+
+==== 13. Upgrading the Spring Security Plugin
+
+If your application uses the Grails Spring Security plugin, please consult the https://apache.github.io/grails-spring-security/snapshot/guide/index.html#upgrading-from-previous-versions[Upgrading from Previous Versions] section of the Spring Security plugin documentation for specific upgrade instructions related to Grails 7.

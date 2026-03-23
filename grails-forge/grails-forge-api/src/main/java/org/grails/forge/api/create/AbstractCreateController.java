@@ -24,7 +24,7 @@ import io.micronaut.http.HttpHeaders;
 import io.micronaut.http.HttpStatus;
 import io.micronaut.http.annotation.Header;
 import io.micronaut.http.exceptions.HttpStatusException;
-import org.grails.forge.api.TestFramework;
+import org.grails.forge.api.DevelopmentReloading;
 import org.grails.forge.api.UserAgentParser;
 import org.grails.forge.api.event.ApplicationGeneratingEvent;
 import org.grails.forge.application.ApplicationType;
@@ -70,7 +70,7 @@ public abstract class AbstractCreateController {
             @Pattern(regexp = "[\\w\\d-_\\.]+") String name,
             @Nullable List<String> features,
             @Nullable BuildTool buildTool,
-            @Nullable TestFramework testFramework,
+            @Nullable DevelopmentReloading reloading,
             @Nullable GormImpl gorm,
             @Nullable ServletImpl servlet,
             @Nullable JdkVersion javaVersion,
@@ -89,7 +89,7 @@ public abstract class AbstractCreateController {
             generatorContext = projectGenerator.createGeneratorContext(
                     type,
                     project,
-                    new Options(testFramework != null ? testFramework.toTestFramework() : org.grails.forge.options.TestFramework.DEFAULT_OPTION,
+                    new Options(reloading != null ? reloading.toDevelopmentReloading() : org.grails.forge.options.DevelopmentReloading.DEFAULT_OPTION,
                             gormImpl == null ? GormImpl.DEFAULT_OPTION : gormImpl,
                             servletImpl == null ? ServletImpl.DEFAULT_OPTION : servletImpl,
                             javaVersion == null ? JdkVersion.DEFAULT_OPTION : javaVersion,

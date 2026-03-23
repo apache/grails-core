@@ -63,23 +63,6 @@ apply from: rootProject.layout.projectDirectory.file('gradle/docs-dependencies.g
 combinedGroovydoc.configure { Groovydoc gdoc ->
     gdoc.windowTitle = "Grails $projectVersion"
     gdoc.docTitle = "Grails $projectVersion"
-    gdoc.footer = '''<!-- Matomo -->
-<script>
-    var _paq = window._paq = window._paq || [];
-    /* tracker methods like "setCustomDimension" should be called before "trackPageView" */
-    _paq.push(["setDoNotTrack", true]);
-    _paq.push(["disableCookies"]);
-    _paq.push(['trackPageView']);
-    _paq.push(['enableLinkTracking']);
-    (function() {
-        var u="https://analytics.apache.org/";
-        _paq.push(['setTrackerUrl', u+'matomo.php']);
-        _paq.push(['setSiteId', '79']);
-        var d=document, g=d.createElement('script'), s=d.getElementsByTagName('script')[0];
-        g.async=true; g.src=u+'matomo.js'; s.parentNode.insertBefore(g,s);
-    })();
-</script>
-<!-- End Matomo Code -->'''
 
     def docProjects = rootProject.subprojects
             .findAll { it.findProperty('includeInApiDocs') }
@@ -127,7 +110,9 @@ combinedGroovydoc.configure { Groovydoc gdoc ->
                 sourceDirs
             }
 
-    gdoc.source(project.files((baseSourceDirs + includedBuildSourceDirs).unique()))
+    def allSourceDirs = (baseSourceDirs + includedBuildSourceDirs).unique()
+    gdoc.source(project.files(allSourceDirs))
+    gdoc.ext.groovydocSourceDirs = allSourceDirs
 
     gdoc.classpath = files(sources.collect { SourceSet it -> it.compileClasspath.filter(File.&isDirectory) }.flatten().unique())
     gdoc.destinationDir = project.layout.buildDirectory.dir('combined-api/api').get().asFile
@@ -309,7 +294,13 @@ docsTask.configure { Sync it ->
 
     it.outputs.dir mergedDocsDir
 
-    it.from manualDocsDir, apiDocsDir, dataDocsDir
+    // Exclude page fragments - they have broken links/CSS/JS and are already
+    // included in the assembled guide pages (see #14986)
+    it.from(manualDocsDir) {
+        exclude "guide/pages/**"
+    }
+
+    it.from apiDocsDir, dataDocsDir
     it.into mergedDocsDir
 }
 

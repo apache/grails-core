@@ -29,6 +29,7 @@ import grails.testing.mixin.integration.Integration
 class UserCommunityControllerSpec extends ContainerGebSpec {
 
     void setup() {
+        clearCookiesQuietly()
         to(LoginPage).login()
     }
 

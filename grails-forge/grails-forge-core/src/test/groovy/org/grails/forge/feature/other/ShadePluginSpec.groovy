@@ -23,6 +23,7 @@ import org.grails.forge.ApplicationContextSpec
 import org.grails.forge.application.ApplicationType
 import org.grails.forge.feature.Features
 import org.grails.forge.fixture.CommandOutputFixture
+import org.grails.forge.options.DevelopmentReloading
 import org.grails.forge.options.Options
 import org.grails.forge.options.TestFramework
 
@@ -38,7 +39,7 @@ class ShadePluginSpec extends ApplicationContextSpec implements CommandOutputFix
 
     void "test shadow jar gradle configurations"() {
         given:
-        final def output = generate(ApplicationType.WEB, new Options(TestFramework.SPOCK), ["shade"])
+        final def output = generate(ApplicationType.WEB, new Options(DevelopmentReloading.DEVTOOLS), ["shade"])
         final def buildGradle = output["build.gradle"]
 
         expect:

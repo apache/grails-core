@@ -549,7 +549,7 @@ class FormTagLib implements ApplicationContextAware, InitializingBean, TagLibrar
      * @deprecated As of 7.0.0, use {@link #formActionSubmit} instead
      *
      */
-    @Deprecated(since = '7.0.0')
+    @Deprecated(since = '7.0.0', forRemoval = true)
     def actionSubmit(Map attrs) {
         if (!attrs.value) {
             throwTagError('Tag [actionSubmit] is missing required attribute [value]')

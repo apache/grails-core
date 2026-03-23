@@ -1620,6 +1620,90 @@ class Project {
         results.every { it.age > 5 && it.age < 42 && it.lastName == 'Simpson' }
     }
 
+
+    @Issue('https://github.com/apache/grails-core/issues/11464')
+    def "Test where query with overlapping variable names compiles in @Transactional context"() {
+        when: "A @Transactional class with where queries using variable names that match domain properties is compiled"
+        def gcl = new GroovyClassLoader(getClass().classLoader)
+        def clazz = gcl.parseClass('''
+import org.apache.grails.data.testing.tck.domains.*
+import grails.gorm.annotation.*
+import grails.gorm.transactions.Transactional
+import org.grails.datastore.gorm.query.transform.ApplyDetachedCriteriaTransform
+
+@ApplyDetachedCriteriaTransform
+@Entity
+@Transactional
+class TransactionalQueryService {
+
+    def findPeopleByAge(int age) {
+        Person.where {
+            age > age
+        }.list()
+    }
+
+    def findPetsOlderThan(int age) {
+        Person.where {
+            pets { age > age }
+        }.list()
+    }
+
+    def findByFirstName(String firstName) {
+        Person.where {
+            firstName == firstName
+        }.list()
+    }
+
+    def findByLastNameWithAssociation(String lastName) {
+        def pets = []
+        Person.where {
+            lastName == lastName && pets { age > 5 }
+        }.list()
+    }
+}
+''')
+
+        then: "The class compiles and can be instantiated without error"
+        clazz != null
+        clazz.newInstance() != null
+    }
+
+    @Issue('https://github.com/apache/grails-core/issues/11464')
+    def "Test where query with overlapping association variable name compiles in @Transactional context"() {
+        when: "A @Transactional class uses a where query with an association name matching a local variable"
+        def gcl = new GroovyClassLoader(getClass().classLoader)
+        def clazz = gcl.parseClass('''
+import org.apache.grails.data.testing.tck.domains.*
+import grails.gorm.annotation.*
+import grails.gorm.transactions.Transactional
+import org.grails.datastore.gorm.query.transform.ApplyDetachedCriteriaTransform
+
+@ApplyDetachedCriteriaTransform
+@Entity
+class TransactionalAssocQueryService {
+
+    @Transactional
+    def findPeopleByPetAge(int age) {
+        def pets = []
+        Person.where {
+            pets.age == age
+        }.list()
+    }
+
+    @Transactional
+    def findPetsWithOwnerName(String firstName) {
+        Pet.where {
+            owner.firstName == firstName
+        }.list()
+    }
+}
+''')
+
+        then: "The class compiles and can be instantiated without error"
+        clazz != null
+        clazz.newInstance() != null
+    }
+
     protected createContinentWithCountries() {
         final continent = new Continent(name: "Africa")
         continent.countries << new Country(name: "SA", population: 304830) << new Country(name: "Zim", population: 304830)

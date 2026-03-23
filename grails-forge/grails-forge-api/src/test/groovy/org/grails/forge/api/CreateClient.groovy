@@ -28,30 +28,30 @@ import org.grails.forge.options.Language
 
 @Client('/')
 interface CreateClient {
-    @Get(uri = "/create/web/{name}{?features,build,test,lang}", consumes = "application/zip")
+    @Get(uri = "/create/web/{name}{?features,build,reloading,lang}", consumes = "application/zip")
     byte[] createApp(
             String name,
             @Nullable List<String> features,
             @Nullable BuildTool build,
-            @Nullable TestFramework test,
+            @Nullable DevelopmentReloading reloading,
             @Nullable Language lang
     );
 
-    @Get(uri = "/create/web/{name}{?features,build,test,lang}", consumes = "application/zip")
+    @Get(uri = "/create/web/{name}{?features,build,reloading,lang}", consumes = "application/zip")
     HttpResponse<byte[]> createResponse(
             String name,
             @Nullable List<String> features,
             @Nullable BuildTool build,
-            @Nullable TestFramework test,
+            @Nullable DevelopmentReloading reloading,
             @Nullable Language lang
     );
 
-    @Get(uri = "/{name}.zip{?features,build,test,lang}", consumes = "application/zip")
+    @Get(uri = "/{name}.zip{?features,build,reloading,lang}", consumes = "application/zip")
     HttpResponse<byte[]> getZip(
             String name,
             @Nullable List<String> features,
             @Nullable BuildTool build,
-            @Nullable TestFramework test,
+            @Nullable DevelopmentReloading reloading,
             @Nullable Language lang
     );
 }

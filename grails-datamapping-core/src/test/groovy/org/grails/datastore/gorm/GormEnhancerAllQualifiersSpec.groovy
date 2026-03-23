@@ -102,6 +102,28 @@ class GormEnhancerAllQualifiersSpec extends Specification {
         qualifiers == ['secondary']
     }
 
+    void "registerEntity adds static api under default and secondary for non-default datasource"() {
+        given: "a non-MultiTenant entity with datasource 'secondary'"
+        def enhancer = createEnhancer()
+        def entity = mockEntity(NonMultiTenantSecondaryEntity, ['secondary'])
+        when: "registering the entity"
+        enhancer.registerEntity(entity)
+        then: "static api is available under DEFAULT and secondary qualifiers"
+        GormEnhancer.@STATIC_APIS.get(ConnectionSource.DEFAULT).containsKey(entity.name)
+        GormEnhancer.@STATIC_APIS.get('secondary').containsKey(entity.name)
+    }
+
+    void "registerEntity adds static api under default and secondary for MultiTenant entity"() {
+        given: "a MultiTenant entity with datasource 'secondary'"
+        def enhancer = createEnhancer()
+        def entity = mockEntity(MultiTenantSecondaryEntity, ['secondary'])
+        when: "registering the entity"
+        enhancer.registerEntity(entity)
+        then: "static api is available under DEFAULT and secondary qualifiers"
+        GormEnhancer.@STATIC_APIS.get(ConnectionSource.DEFAULT).containsKey(entity.name)
+        GormEnhancer.@STATIC_APIS.get('secondary').containsKey(entity.name)
+    }
+
     void "MultiTenant entity with default datasource expands to all qualifiers"() {
         given: "a MultiTenant entity on the default datasource"
         def enhancer = createEnhancer()
@@ -157,6 +179,16 @@ class GormEnhancerAllQualifiersSpec extends Specification {
 
         then: "only DEFAULT qualifier is returned"
         qualifiers == [ConnectionSource.DEFAULT]
+    }
+
+    void "registerEntity adds static api under default for default datasource"() {
+        given: "a non-MultiTenant entity on the default datasource"
+        def enhancer = createEnhancer()
+        def entity = mockEntity(NonMultiTenantDefaultEntity, [ConnectionSource.DEFAULT])
+        when: "registering the entity"
+        enhancer.registerEntity(entity)
+        then: "static api is available under DEFAULT qualifier"
+        GormEnhancer.@STATIC_APIS.get(ConnectionSource.DEFAULT).containsKey(entity.name)
     }
 
     void "non-MultiTenant entity with ALL datasource expands to all qualifiers"() {

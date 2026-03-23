@@ -31,6 +31,10 @@ include::mappingDomainsToDataSources.adoc[]
 
 include::dataSourceNamespaces.adoc[]
 
+=== Using Data Services with Multiple Datasources
+
+GORM Data Services support multi-datasource routing via `@Transactional(connection = 'connectionName')` on the abstract class. All auto-implemented methods - `get()`, `save()`, `delete()`, `findBy*()`, `countBy*()` - route to the specified datasource automatically. For complex queries, domain static methods like `Book.executeQuery()` and `Book.createCriteria()` also route to the correct datasource. This works with `@CompileStatic`, injected `@Service` properties, and `MultiTenant` domain classes. See the <<dataServicesMultipleDataSources,Data Services and Multiple Datasources>> section for the full pattern.
+
 [[connectionSources]]
 === The ConnectionSources API
 

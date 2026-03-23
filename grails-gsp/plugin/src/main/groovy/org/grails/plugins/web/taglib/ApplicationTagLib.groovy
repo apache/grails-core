@@ -142,6 +142,7 @@ class ApplicationTagLib implements ApplicationContextAware, InitializingBean, Gr
      *
      * @emptyTag
      */
+    @Deprecated(forRemoval = true)
     def createLinkTo(Map attrs) {
         GrailsUtil.deprecated('Tag [createLinkTo] is deprecated please use [resource] instead')
         return resource(attrs)
@@ -452,7 +453,7 @@ class ApplicationTagLib implements ApplicationContextAware, InitializingBean, Gr
         if (!attrs.name) {
             throwTagError('Tag ["meta"] missing required attribute ["name"]')
         }
-        return Metadata.current[attrs.name]
+        return Metadata.current.getOrDefault(attrs.name, null)
     }
 
     /**

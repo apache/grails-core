@@ -20,7 +20,7 @@ package org.grails.forge.feature;
 
 import org.grails.forge.application.generator.GeneratorContext;
 import org.grails.forge.feature.lang.LanguageFeature;
-import org.grails.forge.feature.test.TestFeature;
+import org.grails.forge.feature.reloading.ReloadingFeature;
 import org.grails.forge.options.BuildTool;
 import org.grails.forge.options.GormImpl;
 import org.grails.forge.options.JdkVersion;
@@ -42,7 +42,7 @@ public class Features extends ArrayList<String> {
     private final GeneratorContext context;
     private ApplicationFeature applicationFeature;
     private LanguageFeature languageFeature;
-    private TestFeature testFeature;
+    private ReloadingFeature reloadingFeature;
     private final JdkVersion javaVersion;
 
     public Features(GeneratorContext context, Set<Feature> featureList, Options options) {
@@ -56,8 +56,8 @@ public class Features extends ArrayList<String> {
             if (languageFeature == null && feature instanceof LanguageFeature) {
                 languageFeature = (LanguageFeature) feature;
             }
-            if (testFeature == null && feature instanceof TestFeature) {
-                testFeature = (TestFeature) feature;
+            if (reloadingFeature == null && feature instanceof ReloadingFeature) {
+                reloadingFeature = (ReloadingFeature) feature;
             }
         }
         this.javaVersion = options.getJavaVersion();
@@ -77,8 +77,8 @@ public class Features extends ArrayList<String> {
         return languageFeature;
     }
 
-    public TestFeature testFramework() {
-        return testFeature;
+    public ReloadingFeature reloading() {
+        return reloadingFeature;
     }
 
     public Set<Feature> getFeatures() {

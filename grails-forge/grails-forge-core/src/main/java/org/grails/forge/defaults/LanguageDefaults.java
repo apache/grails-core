@@ -21,26 +21,26 @@ package org.grails.forge.defaults;
 import io.micronaut.core.annotation.Creator;
 import io.micronaut.core.annotation.Introspected;
 import org.grails.forge.options.BuildTool;
-import org.grails.forge.options.TestFramework;
+import org.grails.forge.options.DevelopmentReloading;
 
 /**
  * Default values to be applied when a given
  * {@link org.grails.forge.options.Language} is selected
  */
 @Introspected
-public class LanguageDefaults implements HasDefaultTest, HasDefaultBuild {
+public class LanguageDefaults implements HasDefaultDevelopmentReloading, HasDefaultBuild {
 
-    TestFramework test;
+    DevelopmentReloading reloading;
     BuildTool build;
 
     @Creator
-    public LanguageDefaults(TestFramework test, BuildTool build) {
-        this.test = test;
+    public LanguageDefaults(DevelopmentReloading reloading, BuildTool build) {
+        this.reloading = reloading;
         this.build = build;
     }
 
-    public TestFramework getTest() {
-        return test;
+    public DevelopmentReloading getReloading() {
+        return reloading;
     }
 
     public BuildTool getBuild() {

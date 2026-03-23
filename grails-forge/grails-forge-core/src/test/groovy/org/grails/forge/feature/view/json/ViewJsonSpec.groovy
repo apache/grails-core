@@ -25,6 +25,7 @@ import org.grails.forge.application.ApplicationType
 import org.grails.forge.application.generator.GeneratorContext
 import org.grails.forge.feature.Features
 import org.grails.forge.fixture.CommandOutputFixture
+import org.grails.forge.options.DevelopmentReloading
 import org.grails.forge.options.JdkVersion
 import org.grails.forge.options.Options
 import org.grails.forge.options.TestFramework
@@ -57,7 +58,7 @@ class ViewJsonSpec extends ApplicationContextSpec implements CommandOutputFixtur
 
     void "test default gson views are present"() {
         when:
-        final def output = generate(ApplicationType.REST_API, new Options(TestFramework.SPOCK))
+        final def output = generate(ApplicationType.REST_API, new Options(DevelopmentReloading.DEVTOOLS))
 
         then:
         output.containsKey("grails-app/views/application/index.gson")
@@ -70,7 +71,7 @@ class ViewJsonSpec extends ApplicationContextSpec implements CommandOutputFixtur
     @Unroll
     void "test views-json gradle plugins and dependencies are present for #applicationType application"() {
         when:
-        final def output = generate(applicationType, new Options(TestFramework.SPOCK))
+        final def output = generate(applicationType, new Options(DevelopmentReloading.DEVTOOLS))
         final String build = output['build.gradle']
 
         then:
@@ -87,7 +88,7 @@ class ViewJsonSpec extends ApplicationContextSpec implements CommandOutputFixtur
     @Unroll
     void "test views-json gradle plugins and dependencies are NOT present for #applicationType application"() {
         when:
-        final def output = generate(applicationType, new Options(TestFramework.SPOCK))
+        final def output = generate(applicationType, new Options(DevelopmentReloading.DEVTOOLS))
         final String build = output['build.gradle']
 
         then:
