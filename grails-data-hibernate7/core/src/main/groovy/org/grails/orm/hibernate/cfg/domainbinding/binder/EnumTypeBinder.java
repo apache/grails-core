@@ -116,6 +116,7 @@ public class EnumTypeBinder {
                     simpleValue.setEnumerationStyle(EnumType.ORDINAL);
                 }
                 case IDENTITY -> simpleValue.setTypeName(IdentityEnumType.class.getName());
+                default -> throw new IllegalArgumentException("Unknown enum type: " + pc.getEnumType());
             }
         }
         simpleValue.setTypeParameters(enumProperties);

@@ -32,6 +32,7 @@ public class HibernateEmbeddedPersistentEntity extends EmbeddedPersistentEntity<
     private String dataSourceName;
     private PersistentClass persistentClass;
 
+    @Override
     public Mapping getMappedForm() {
         return classMapping.getMappedForm();
     }

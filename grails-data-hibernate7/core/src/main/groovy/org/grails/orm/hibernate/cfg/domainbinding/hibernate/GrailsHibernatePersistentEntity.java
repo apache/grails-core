@@ -48,6 +48,7 @@ import static org.grails.orm.hibernate.cfg.domainbinding.binder.GrailsDomainBind
 
 /** Common interface for Hibernate persistent entities */
 public interface GrailsHibernatePersistentEntity extends PersistentEntity {
+    @Override
     Mapping getMappedForm();
 
     @Nonnull
@@ -350,8 +351,7 @@ public interface GrailsHibernatePersistentEntity extends PersistentEntity {
 
         return Optional.ofNullable(property.getMappedForm())
                 .map(config -> {
-                    if (property instanceof HibernateAssociation &&
-                            FetchMode.JOIN.equals(config.getFetchMode())) {
+                    if (property instanceof HibernateAssociation && FetchMode.JOIN.equals(config.getFetchMode())) {
                         return false;
                     }
                     return config.getLazy();

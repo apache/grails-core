@@ -36,7 +36,7 @@ import org.grails.orm.hibernate.query.HibernateHqlQuery
 import org.grails.orm.hibernate.query.HibernateQuery
 import org.grails.orm.hibernate.query.HqlListQueryBuilder
 import org.grails.orm.hibernate.query.HqlQueryContext
-import org.grails.orm.hibernate.query.PagedResultList
+import org.grails.orm.hibernate.query.HibernatePagedResultList
 import org.grails.orm.hibernate.support.HibernateRuntimeUtils
 
 import org.hibernate.Session
@@ -441,11 +441,11 @@ class HibernateGormStaticApi<D> extends GormStaticApi<D> {
                 sessionFactory,
                 persistentEntity,
                 ctx,
-                getHibernateTemplate(),Ï
+                getHibernateTemplate(),
                 datastore.mappingContext.conversionService
         )
         if (params.containsKey('max')) {
-            return new PagedResultList(getHibernateTemplate(), persistentEntity, hqlQuery)
+            return new HibernatePagedResultList(getHibernateTemplate(), persistentEntity, hqlQuery)
         }
         List<D> result = (List<D>) hqlQuery.list()
         firePostQueryEvent(result)

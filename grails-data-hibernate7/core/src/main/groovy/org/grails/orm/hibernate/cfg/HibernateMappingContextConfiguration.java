@@ -103,15 +103,17 @@ public class HibernateMappingContextConfiguration extends Configuration
 
     protected String sessionFactoryBeanName = "sessionFactory";
     protected String dataSourceName = ConnectionSource.DEFAULT;
-    protected HibernateMappingContext hibernateMappingContext;
+    protected transient HibernateMappingContext hibernateMappingContext;
     private final Class<? extends CurrentSessionContext> currentSessionContext = GrailsSessionContext.class;
-    private HibernateEventListeners hibernateEventListeners;
+    private transient HibernateEventListeners hibernateEventListeners;
     private Map<String, Object> eventListeners;
-    private ServiceRegistry serviceRegistry;
-    private ResourcePatternResolver resourcePatternResolver = new PathMatchingResourcePatternResolver();
+    private transient ServiceRegistry serviceRegistry;
+    private transient ResourcePatternResolver resourcePatternResolver = new PathMatchingResourcePatternResolver();
     //    private MetadataContributor metadataContributor;
     private final Set<Class> additionalClasses = new HashSet<>();
-    private NamingStrategyProvider namingStrategyProvider = new NamingStrategyProvider();
+    private transient NamingStrategyProvider namingStrategyProvider = new NamingStrategyProvider();
+
+    private static final String FALSE_LITERAL = "false";
 
     public NamingStrategyProvider getNamingStrategyProvider() {
         return namingStrategyProvider;
@@ -143,11 +145,11 @@ public class HibernateMappingContextConfiguration extends Configuration
             properties.put(
                     "hibernate.enhancer.bytecodeprovider.instance",
                     new org.grails.orm.hibernate.proxy.GrailsBytecodeProvider());
-            properties.put("hibernate.bytecode.allow_enhancement_as_proxy", "false");
-            properties.put("hibernate.bytecode.enhancement_metadata_cache", "false");
-            properties.put("hibernate.enhancer.enableLazyInitialization", "false");
-            properties.put("hibernate.enhancer.enableDirtyTracking", "false");
-            properties.put("hibernate.enhancer.enableAssociationManagement", "false");
+            properties.put("hibernate.bytecode.allow_enhancement_as_proxy", FALSE_LITERAL);
+            properties.put("hibernate.bytecode.enhancement_metadata_cache", FALSE_LITERAL);
+            properties.put("hibernate.enhancer.enableLazyInitialization", FALSE_LITERAL);
+            properties.put("hibernate.enhancer.enableDirtyTracking", FALSE_LITERAL);
+            properties.put("hibernate.enhancer.enableAssociationManagement", FALSE_LITERAL);
             ClassLoader classLoader = applicationContext.getClassLoader();
             if (classLoader != null) {
                 properties.put(AvailableSettings.CLASSLOADERS, classLoader);
@@ -184,6 +186,7 @@ public class HibernateMappingContextConfiguration extends Configuration
      * @see #addAnnotatedClass
      * @see #scanPackages
      */
+    @Override
     public Configuration addAnnotatedClasses(Class... annotatedClasses) {
         for (Class<?> annotatedClass : annotatedClasses) {
             addAnnotatedClass(annotatedClass);
@@ -197,13 +200,7 @@ public class HibernateMappingContextConfiguration extends Configuration
         return super.addAnnotatedClass(annotatedClass);
     }
 
-    /**
-     * Add the given annotated packages in a batch.
-     *
-     * @return
-     * @see #addPackage
-     * @see #scanPackages
-     */
+    @Override
     public HibernateMappingContextConfiguration addPackages(String... annotatedPackages) {
         for (String annotatedPackage : annotatedPackages) {
             addPackage(annotatedPackage);
@@ -345,6 +342,7 @@ public class HibernateMappingContextConfiguration extends Configuration
             @Serial
             private static final long serialVersionUID = 1;
 
+            @Override
             public void sessionFactoryClosed(SessionFactory factory) {
                 if (serviceRegistry != null) {
                     ((ServiceRegistryImplementor) serviceRegistry).destroy();

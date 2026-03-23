@@ -23,9 +23,7 @@ import jakarta.annotation.Nonnull;
 import org.hibernate.MappingException;
 import org.hibernate.boot.spi.MetadataBuildingContext;
 import org.hibernate.mapping.Component;
-import org.hibernate.mapping.PersistentClass;
 import org.hibernate.mapping.RootClass;
-import org.hibernate.mapping.Table;
 
 import org.grails.orm.hibernate.cfg.CompositeIdentity;
 import org.grails.orm.hibernate.cfg.GrailsHibernateUtil;
@@ -74,8 +72,6 @@ public class CompositeIdBinder {
             throw new MappingException(
                     "No composite identifier properties found for class [" + hibernatePersistentEntity.getName() + "]");
         }
-        PersistentClass persistentClass = hibernatePersistentEntity.getPersistentClass();
-        Table table = persistentClass.getTable();
         HibernatePersistentProperty identifierProp = hibernatePersistentEntity.getIdentity();
         for (HibernatePersistentProperty property : composite) {
             var value = grailsPropertyBinder.bindProperty(property, identifierProp, "");

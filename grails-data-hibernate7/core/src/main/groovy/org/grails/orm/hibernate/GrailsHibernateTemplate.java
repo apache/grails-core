@@ -148,7 +148,8 @@ public class GrailsHibernateTemplate implements IHibernateTemplate {
     @Override
     public <T> T execute(Closure<T> callable) {
         @SuppressWarnings("unchecked")
-        HibernateCallback<T> hibernateCallback = (HibernateCallback<T>) DefaultGroovyMethods.asType(callable, HibernateCallback.class);
+        HibernateCallback<T> hibernateCallback =
+                (HibernateCallback<T>) DefaultGroovyMethods.asType(callable, HibernateCallback.class);
         return execute(hibernateCallback);
     }
 
@@ -270,6 +271,7 @@ public class GrailsHibernateTemplate implements IHibernateTemplate {
         return cacheQueries;
     }
 
+    @SuppressWarnings("PMD.PreserveStackTrace")
     public <T> T execute(HibernateCallback<T> action) throws DataAccessException {
         return doExecute(action, false);
     }
@@ -313,6 +315,7 @@ public class GrailsHibernateTemplate implements IHibernateTemplate {
      * @return a result object returned by the action, or <code>null</code>
      * @throws org.springframework.dao.DataAccessException in case of Hibernate errors
      */
+    @SuppressWarnings("PMD.PreserveStackTrace")
     protected <T> T doExecute(HibernateCallback<T> action, boolean enforceNativeSession) throws DataAccessException {
 
         Assert.notNull(action, "Callback object must not be null");
@@ -337,9 +340,8 @@ public class GrailsHibernateTemplate implements IHibernateTemplate {
         } catch (HibernateException ex) {
             throw convertHibernateAccessException(ex);
         } catch (PersistenceException ex) {
-            if (ex.getCause() instanceof HibernateException) {
-                // @SuppressWarnings("PMD.PreserveStackTrace")
-                throw SessionFactoryUtils.convertHibernateAccessException((HibernateException) ex.getCause());
+            if (ex.getCause() instanceof HibernateException hibernateException) {
+                throw SessionFactoryUtils.convertHibernateAccessException(hibernateException);
             }
             throw ex;
         } catch (SQLException ex) {

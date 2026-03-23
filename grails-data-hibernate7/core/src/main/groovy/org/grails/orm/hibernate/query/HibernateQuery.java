@@ -69,6 +69,11 @@ import org.grails.orm.hibernate.proxy.HibernateProxyHandler;
  */
 @SuppressWarnings("rawtypes")
 public class HibernateQuery extends Query {
+
+    public GrailsHibernateTemplate getHibernateTemplate() {
+        return ((HibernateSession) getSession()).getHibernateTemplate();
+    }
+
     protected static final String ALIAS = "_alias";
     protected String alias;
     protected int aliasCount;

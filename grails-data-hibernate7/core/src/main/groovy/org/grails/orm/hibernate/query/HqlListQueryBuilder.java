@@ -28,7 +28,6 @@ import org.grails.datastore.mapping.model.types.Association;
 import org.grails.datastore.mapping.model.types.Embedded;
 import org.grails.orm.hibernate.cfg.HibernateMappingContext;
 import org.grails.orm.hibernate.cfg.Mapping;
-import org.grails.orm.hibernate.cfg.MappingCacheHolder;
 
 /**
  * Translates a GORM query-argument map into an HQL string for {@code list()}.
@@ -58,7 +57,7 @@ public class HqlListQueryBuilder {
         return hql.toString();
     }
 
-    /** Builds the scalar count HQL for {@link PagedResultList}. */
+    /** Builds the scalar count HQL for {@link HibernatePagedResultList}. */
     String buildCountHql() {
         return "select count(distinct e) from " + entity.getName() + " e";
     }

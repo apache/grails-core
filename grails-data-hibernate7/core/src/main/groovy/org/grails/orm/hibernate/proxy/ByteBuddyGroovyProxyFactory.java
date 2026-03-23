@@ -18,6 +18,7 @@
  */
 package org.grails.orm.hibernate.proxy;
 
+import java.io.Serial;
 import java.lang.reflect.Method;
 import java.util.Set;
 
@@ -38,6 +39,10 @@ import static org.hibernate.internal.util.collections.ArrayHelper.EMPTY_CLASS_AR
  * @since 7.0
  */
 public class ByteBuddyGroovyProxyFactory extends ByteBuddyProxyFactory {
+
+
+    @Serial
+    private static final long serialVersionUID = 1L;
 
     private Class<?> persistentClass;
     private String entityName;
@@ -95,16 +100,16 @@ public class ByteBuddyGroovyProxyFactory extends ByteBuddyProxyFactory {
                     overridesEquals);
 
             // 1. Create the instance
-            final HibernateProxy hibernateProxy = (HibernateProxy) proxyClass.getDeclaredConstructor().newInstance();
+            final HibernateProxy hibernateProxy =
+                    (HibernateProxy) proxyClass.getDeclaredConstructor().newInstance();
 
             // 2. Cast to ProxyConfiguration to set the custom interceptor
             // Hibernate 7 proxies implement ProxyConfiguration
-            if (hibernateProxy instanceof org.hibernate.proxy.ProxyConfiguration instance
-            ) {
+            if (hibernateProxy instanceof org.hibernate.proxy.ProxyConfiguration instance) {
                 instance.$$_hibernate_set_interceptor(interceptor);
             }
 
-            return  hibernateProxy;
+            return hibernateProxy;
         } catch (Throwable t) {
             throw new HibernateException("Unable to generate proxy for " + entityName, t);
         }

@@ -181,7 +181,9 @@ public interface HibernatePersistentProperty extends PersistentProperty<Property
     }
 
     default String getMappedColumnName() {
-        return Optional.ofNullable(getMappedForm()).map(PropertyConfig::getColumn).orElse(null);
+        return Optional.ofNullable(getMappedForm())
+                .map(PropertyConfig::getColumn)
+                .orElse(null);
     }
 
     default String getColumnName(ColumnConfig cc) {

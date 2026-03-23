@@ -81,7 +81,7 @@ public class HibernateMappingContext extends AbstractMappingContext {
     }
 
     @Override
-    public MappingFactory<?,?> getMappingFactory() {
+    public MappingFactory<?, ?> getMappingFactory() {
         return mappingFactory;
     }
 
@@ -117,10 +117,8 @@ public class HibernateMappingContext extends AbstractMappingContext {
     @Override
     public PersistentEntity getPersistentEntity(String name) {
         final int proxyIndicator = name.indexOf("$HibernateProxy$");
-        if (proxyIndicator > -1) {
-            name = name.substring(0, proxyIndicator);
-        }
-        return super.getPersistentEntity(name);
+        String entityName = proxyIndicator > -1 ? name.substring(0, proxyIndicator) : name;
+        return super.getPersistentEntity(entityName);
     }
 
     public List<HibernatePersistentEntity> getHibernatePersistentEntities(String dataSourceName) {

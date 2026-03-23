@@ -121,9 +121,8 @@ public class JpaFromProvider implements Cloneable {
             Map<String, FetchType> fetchStrategies,
             Map<String, JoinType> joinTypes,
             From<?, ?> root) {
-        var allCriteriaPaths = criteria.stream()
-                .flatMap(c -> findPaths(c).stream())
-                .toList();
+        var allCriteriaPaths =
+                criteria.stream().flatMap(c -> findPaths(c).stream()).toList();
 
         var detachedAssociationCriteriaList = criteria.stream()
                 .map(new DetachedAssociationFunction())
@@ -163,10 +162,12 @@ public class JpaFromProvider implements Cloneable {
                 .map(Map.Entry::getKey)
                 .collect(Collectors.toSet());
 
-        var collectionPaths = entity != null ? entity.getPersistentProperties().stream()
-                .filter(p -> p instanceof org.grails.datastore.mapping.model.types.Basic)
-                .map(org.grails.datastore.mapping.model.PersistentProperty::getName)
-                .collect(Collectors.toSet()) : java.util.Collections.<String>emptySet();
+        var collectionPaths = entity != null
+                ? entity.getPersistentProperties().stream()
+                        .filter(p -> p instanceof org.grails.datastore.mapping.model.types.Basic)
+                        .map(org.grails.datastore.mapping.model.PersistentProperty::getName)
+                        .collect(Collectors.toSet())
+                : java.util.Collections.<String>emptySet();
 
         java.util.Set<String> allPaths = new java.util.HashSet<>();
         allPaths.addAll(aliasMap.keySet());

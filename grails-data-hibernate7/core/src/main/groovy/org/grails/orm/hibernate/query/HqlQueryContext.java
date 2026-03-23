@@ -69,15 +69,20 @@ public record HqlQueryContext(
     public static HqlQueryContext prepare(
             PersistentEntity entity,
             CharSequence queryCharseq,
-            Map<String,Object> namedParams,
+            Map<String, Object> namedParams,
             Collection<Object> positionalParams,
-            Map<String,Object> querySettings,
+            Map<String, Object> querySettings,
             boolean isNative,
             boolean isUpdate) {
-        Map<String, Object> _namedParams =
-                namedParams != null ? new HashMap<>(namedParams) : new HashMap<>();
-        List<Object> positionalParamsCopy = positionalParams != null ? new ArrayList<>(positionalParams) : new ArrayList<>();
-        Map<String, Object> querySettingsCopy = querySettings != null ? new HashMap<>(querySettings) : new HashMap<>();
+        Map<String, Object> _namedParams = namedParams != null ?
+                new HashMap<>(namedParams) :
+                new HashMap<>();
+        List<Object> positionalParamsCopy = positionalParams != null ?
+                new ArrayList<>(positionalParams) :
+                new ArrayList<>();
+        Map<String, Object> querySettingsCopy = querySettings != null ?
+                new HashMap<>(querySettings) :
+                new HashMap<>();
 
         boolean _isNative = toBool(isNative);
         boolean _isUpdate = toBool(isUpdate);
@@ -128,7 +133,10 @@ public record HqlQueryContext(
         String normalized = normalizeNonAliasedSelect(hql == null ? null : hql.toString());
         return switch (countHqlProjections(normalized)) {
             case 0 -> clazz;
-            case 1 -> isAggregateProjection(normalized) ? Long.class : (isPropertyProjection(normalized) ? Object.class : clazz);
+            case 1 ->
+                isAggregateProjection(normalized)
+                        ? Long.class
+                        : (isPropertyProjection(normalized) ? Object.class : clazz);
             default -> Object[].class;
         };
     }
@@ -137,7 +145,11 @@ public record HqlQueryContext(
         String clause = getSingleProjectionClause(hql);
         if (clause == null) return false;
 
-        return clause.startsWith("count(") || clause.startsWith("sum(") || clause.startsWith("avg(") || clause.startsWith("min(") || clause.startsWith("max(");
+        return clause.startsWith("count(")
+                || clause.startsWith("sum(")
+                || clause.startsWith("avg(")
+                || clause.startsWith("min(")
+                || clause.startsWith("max(");
     }
 
     private static @Nullable String getSingleProjectionClause(CharSequence hql) {
@@ -150,12 +162,17 @@ public record HqlQueryContext(
     }
 
     private static @NonNull String extractSelectClause(String s, int selectIdx, int fromIdx) {
-        String clause = s.substring(selectIdx + HibernateQueryArgument.HQL_SELECT.value().length(), fromIdx < 0 ? s.length() : fromIdx)
+        String clause = s.substring(
+                        selectIdx + HibernateQueryArgument.HQL_SELECT.value().length(),
+                        fromIdx < 0 ? s.length() : fromIdx)
                 .trim();
         if (clause.startsWith(HibernateQueryArgument.HQL_DISTINCT.value() + " ")) {
-            clause = clause.substring(HibernateQueryArgument.HQL_DISTINCT.value().length() + 1).trim();
+            clause = clause.substring(
+                            HibernateQueryArgument.HQL_DISTINCT.value().length() + 1)
+                    .trim();
         } else if (clause.startsWith(HibernateQueryArgument.HQL_ALL.value() + " ")) {
-            clause = clause.substring(HibernateQueryArgument.HQL_ALL.value().length() + 1).trim();
+            clause = clause.substring(HibernateQueryArgument.HQL_ALL.value().length() + 1)
+                    .trim();
         }
         return clause;
     }
@@ -175,16 +192,20 @@ public record HqlQueryContext(
         if (selectIdx < 0) return 0;
 
         int fromIdx = lower.indexOf(" " + HibernateQueryArgument.HQL_FROM.value() + " ", selectIdx);
-        String sel = s.substring(selectIdx + HibernateQueryArgument.HQL_SELECT.value().length(), fromIdx < 0 ? s.length() : fromIdx)
+        String sel = s.substring(
+                        selectIdx + HibernateQueryArgument.HQL_SELECT.value().length(),
+                        fromIdx < 0 ? s.length() : fromIdx)
                 .trim();
         if (sel.isEmpty()) return 0;
 
         // Strip leading DISTINCT/ALL
         String selLower = sel.toLowerCase(Locale.ROOT);
         if (selLower.startsWith(HibernateQueryArgument.HQL_DISTINCT.value() + " "))
-            sel = sel.substring(HibernateQueryArgument.HQL_DISTINCT.value().length() + 1).trim();
+            sel = sel.substring(HibernateQueryArgument.HQL_DISTINCT.value().length() + 1)
+                    .trim();
         else if (selLower.startsWith(HibernateQueryArgument.HQL_ALL.value() + " "))
-            sel = sel.substring(HibernateQueryArgument.HQL_ALL.value().length() + 1).trim();
+            sel = sel.substring(HibernateQueryArgument.HQL_ALL.value().length() + 1)
+                    .trim();
 
         // Count top-level commas, ignoring those inside parens or string literals
         int commas = getCommas(sel);
@@ -248,7 +269,8 @@ public record HqlQueryContext(
         // Skip whitespace, then optional "as" keyword
         int cur = entityEnd;
         while (cur < s.length() && Character.isWhitespace(s.charAt(cur))) cur++;
-        if (cur + 2 <= s.length() && s.substring(cur, cur + 2).equalsIgnoreCase(HibernateQueryArgument.HQL_AS.value())) {
+        if (cur + 2 <= s.length()
+                && s.substring(cur, cur + 2).equalsIgnoreCase(HibernateQueryArgument.HQL_AS.value())) {
             cur += HibernateQueryArgument.HQL_AS.value().length();
             while (cur < s.length() && Character.isWhitespace(s.charAt(cur))) cur++;
         }
@@ -259,15 +281,15 @@ public record HqlQueryContext(
         String token = s.substring(cur, tokenEnd).toLowerCase(Locale.ROOT);
         boolean hasAlias = !token.isEmpty()
                 && !Set.of(
-                        HibernateQueryArgument.HQL_WHERE.value(),
-                        HibernateQueryArgument.HQL_JOIN.value(),
-                        HibernateQueryArgument.HQL_LEFT.value(),
-                        HibernateQueryArgument.HQL_RIGHT.value(),
-                        HibernateQueryArgument.HQL_INNER.value(),
-                        HibernateQueryArgument.HQL_OUTER.value(),
-                        HibernateQueryArgument.HQL_GROUP.value(),
-                        HibernateQueryArgument.HQL_ORDER.value(),
-                        HibernateQueryArgument.HQL_HAVING.value())
+                                HibernateQueryArgument.HQL_WHERE.value(),
+                                HibernateQueryArgument.HQL_JOIN.value(),
+                                HibernateQueryArgument.HQL_LEFT.value(),
+                                HibernateQueryArgument.HQL_RIGHT.value(),
+                                HibernateQueryArgument.HQL_INNER.value(),
+                                HibernateQueryArgument.HQL_OUTER.value(),
+                                HibernateQueryArgument.HQL_GROUP.value(),
+                                HibernateQueryArgument.HQL_ORDER.value(),
+                                HibernateQueryArgument.HQL_HAVING.value())
                         .contains(token);
         if (hasAlias) return s;
 
@@ -275,25 +297,36 @@ public record HqlQueryContext(
         String prefix = "", projOrig = selectClauseOrig, projLower = selectClauseLower;
         if (projLower.startsWith(HibernateQueryArgument.HQL_DISTINCT.value() + " ")) {
             prefix = HibernateQueryArgument.HQL_DISTINCT.value() + " ";
-            projOrig = selectClauseOrig.substring(HibernateQueryArgument.HQL_DISTINCT.value().length() + 1).trim();
-            projLower = projLower.substring(HibernateQueryArgument.HQL_DISTINCT.value().length() + 1).trim();
+            projOrig = selectClauseOrig
+                    .substring(HibernateQueryArgument.HQL_DISTINCT.value().length() + 1)
+                    .trim();
+            projLower = projLower
+                    .substring(HibernateQueryArgument.HQL_DISTINCT.value().length() + 1)
+                    .trim();
         } else if (projLower.startsWith(HibernateQueryArgument.HQL_ALL.value() + " ")) {
             prefix = HibernateQueryArgument.HQL_ALL.value() + " ";
-            projOrig = selectClauseOrig.substring(HibernateQueryArgument.HQL_ALL.value().length() + 1).trim();
-            projLower = projLower.substring(HibernateQueryArgument.HQL_ALL.value().length() + 1).trim();
+            projOrig = selectClauseOrig
+                    .substring(HibernateQueryArgument.HQL_ALL.value().length() + 1)
+                    .trim();
+            projLower = projLower
+                    .substring(HibernateQueryArgument.HQL_ALL.value().length() + 1)
+                    .trim();
         }
 
         // Qualify the projection with the synthetic alias
         String adjusted;
         if (projLower.equalsIgnoreCase(entityName)) {
             adjusted = "e"; // "select Person from Person" → "select e"
-        } else if (!projLower.contains("(") && !projLower.contains(".") && !projLower.startsWith(HibernateQueryArgument.HQL_NEW.value() + " ")) {
+        } else if (!projLower.contains("(")
+                && !projLower.contains(".")
+                && !projLower.startsWith(HibernateQueryArgument.HQL_NEW.value() + " ")) {
             adjusted = "e." + projOrig; // "select name from Person"   → "select e.name"
         } else {
             adjusted = projOrig; // functions / constructor expr / already qualified
         }
 
-        return HibernateQueryArgument.HQL_SELECT.value() + " " + prefix + adjusted + " " + HibernateQueryArgument.HQL_FROM.value() + " " + entityName + " e" + s.substring(entityEnd);
+        return HibernateQueryArgument.HQL_SELECT.value() + " " + prefix + adjusted + " "
+                + HibernateQueryArgument.HQL_FROM.value() + " " + entityName + " e" + s.substring(entityEnd);
     }
 
     // ─── Private helpers ─────────────────────────────────────────────────────

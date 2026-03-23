@@ -23,7 +23,6 @@ import jakarta.annotation.Nonnull;
 import org.hibernate.boot.spi.MetadataBuildingContext;
 import org.hibernate.mapping.Component;
 import org.hibernate.mapping.PersistentClass;
-import org.hibernate.mapping.Table;
 
 import org.grails.orm.hibernate.cfg.GrailsHibernateUtil;
 import org.grails.orm.hibernate.cfg.MappingCacheHolder;
@@ -67,7 +66,6 @@ public class ComponentBinder {
 
         PersistentClass persistentClass = component.getOwner();
         associatedEntity.setPersistentClass(persistentClass);
-        Table table = associatedEntity.getPersistentClass().getTable();
         String currentPath = path.isEmpty() ? embeddedProperty.getName() : path + "." + embeddedProperty.getName();
         Class<?> propertyType = embeddedProperty.getOwner().getJavaClass();
 

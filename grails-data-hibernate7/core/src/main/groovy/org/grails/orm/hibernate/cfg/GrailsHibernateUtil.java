@@ -275,16 +275,16 @@ public class GrailsHibernateUtil extends HibernateRuntimeUtils {
         for (Annotation annotation : allAnnotations) {
             Class<? extends Annotation> type = annotation.annotationType();
             String annName = type.getName();
-            if (annName.equals("grails.persistence.Entity")) {
+            if ("grails.persistence.Entity".equals(annName)) {
                 return true;
             }
-            if (type.equals(Entity.class)) {
+            if (Entity.class.equals(type)) {
                 return true;
             }
         }
 
         Class<?> testClass = clazz;
-        while (testClass != null && !testClass.equals(GroovyObject.class) && !testClass.equals(Object.class)) {
+        while (testClass != null && !GroovyObject.class.equals(testClass) && !Object.class.equals(testClass)) {
             try {
                 // make sure the identify and version field exist
                 testClass.getDeclaredField(GormProperties.IDENTITY);
@@ -293,9 +293,13 @@ public class GrailsHibernateUtil extends HibernateRuntimeUtils {
                 // passes all conditions return true
                 return true;
             } catch (SecurityException e) {
-                LOG.trace("Security exception checking for GORM fields: {}", e.getMessage());
+                if (LOG.isTraceEnabled()) {
+                    LOG.trace("Security exception checking for GORM fields: {}", e.getMessage());
+                }
             } catch (NoSuchFieldException e) {
-                LOG.trace("Field not found checking for GORM fields: {}", e.getMessage());
+                if (LOG.isTraceEnabled()) {
+                    LOG.trace("Field not found checking for GORM fields: {}", e.getMessage());
+                }
             }
             testClass = testClass.getSuperclass();
         }

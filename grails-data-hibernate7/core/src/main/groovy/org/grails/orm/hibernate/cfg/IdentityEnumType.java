@@ -200,7 +200,9 @@ public class IdentityEnumType implements UserType, ParameterizedType, Serializab
                 Object id = idAccessor.invoke(value);
                 enumToKey.put((Enum) value, id);
                 if (keytoEnum.containsKey(id)) {
-                    LOG.warn("Duplicate Enum ID '{}' detected for Enum {}!", id, enumClass.getName());
+                    if (LOG.isWarnEnabled()) {
+                        LOG.warn("Duplicate Enum ID '{}' detected for Enum {}!", id, enumClass.getName());
+                    }
                 }
                 keytoEnum.put(id, value);
             }

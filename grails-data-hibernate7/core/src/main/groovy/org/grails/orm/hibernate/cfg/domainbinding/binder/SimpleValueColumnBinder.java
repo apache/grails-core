@@ -32,9 +32,6 @@ public class SimpleValueColumnBinder {
     /** Public constructor. */
     public SimpleValueColumnBinder() {}
 
-    /** Protected constructor for testing purposes. */
-    protected SimpleValueColumnBinder(Object... ignore) {}
-
     /**
      * Creates a {@link BasicValue}, binds it, and returns it.
      *

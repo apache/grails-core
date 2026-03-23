@@ -153,6 +153,10 @@ public class HibernateDatastore extends AbstractDatastore
             HibernateQueryArgument.CONFIG_PASS_READONLY.value();
 
     /** The session factory. */
+    private static final String INFORMATION_SCHEMA = "INFORMATION_SCHEMA";
+
+    private static final String PUBLIC_SCHEMA = "PUBLIC";
+
     protected final SessionFactory sessionFactory;
 
     /** The connection sources. */
@@ -660,7 +664,7 @@ public class HibernateDatastore extends AbstractDatastore
                                     schemaHandler.resolveSchemaNames(defaultConnectionSource.getDataSource());
                             for (String schemaName : schemaNames) {
                                 // skip common internal schemas
-                                if ("INFORMATION_SCHEMA".equals(schemaName) || "PUBLIC".equals(schemaName)) continue;
+                                if (INFORMATION_SCHEMA.equals(schemaName) || PUBLIC_SCHEMA.equals(schemaName)) continue;
                                 for (String connectionName : datastoresByConnectionSource.keySet()) {
                                     if (schemaName.equalsIgnoreCase(connectionName)) {
                                         allQualifiers.add(connectionName);
@@ -829,7 +833,8 @@ public class HibernateDatastore extends AbstractDatastore
                 (HibernateConnectionSource) connectionSources.getDefaultConnectionSource();
         HibernateConnectionSourceSettings tenantSettings;
         try {
-            tenantSettings = (HibernateConnectionSourceSettings) connectionSources.getDefaultConnectionSource().getSettings().clone();
+            tenantSettings = (HibernateConnectionSourceSettings)
+                    connectionSources.getDefaultConnectionSource().getSettings().clone();
         } catch (CloneNotSupportedException e) {
             throw new ConfigurationException("Couldn't clone default Hibernate settings! " + e.getMessage(), e);
         }

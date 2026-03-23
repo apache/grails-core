@@ -63,6 +63,10 @@ import org.grails.orm.hibernate.exceptions.GrailsQueryException;
 @SuppressWarnings("PMD.AvoidDuplicateLiterals")
 public class HibernateHqlQuery extends Query {
 
+    public GrailsHibernateTemplate getHibernateTemplate() {
+        return ((HibernateSession) getSession()).getHibernateTemplate();
+    }
+
     /** Handles all query operations; the concrete type encodes whether this is SELECT or UPDATE/DELETE. */
     private final HqlQueryDelegate delegate;
 

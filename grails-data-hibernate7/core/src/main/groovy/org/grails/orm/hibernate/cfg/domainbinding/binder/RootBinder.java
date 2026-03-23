@@ -72,7 +72,9 @@ public class RootBinder {
      */
     public void bindRoot(@Nonnull HibernatePersistentEntity entity) {
         if (mappings.getEntityBinding(entity.getName()) != null) {
-            LOG.warn("[RootBinder] Class [" + entity.getName() + "] is already mapped, skipping.. ");
+            if (LOG.isWarnEnabled()) {
+                LOG.warn("[RootBinder] Class [{}] is already mapped, skipping.. ", entity.getName());
+            }
             return;
         }
 

@@ -52,6 +52,7 @@ public class GrailsNativeGenerator extends NativeGenerator {
     }
 
     @Override
+    @SuppressWarnings("PMD.AvoidAccessibilityAlteration")
     public Object generate(
             SharedSessionContractImplementor session, Object entity, Object currentValue, EventType eventType) {
         // 1. Support Grails assigned identifiers

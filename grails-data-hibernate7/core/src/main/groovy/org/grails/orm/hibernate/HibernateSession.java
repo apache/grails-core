@@ -409,7 +409,7 @@ public class HibernateSession extends AbstractAttributeStoringSession implements
         return query;
     }
 
-    protected GrailsHibernateTemplate getHibernateTemplate() {
+    public GrailsHibernateTemplate getHibernateTemplate() {
         return (GrailsHibernateTemplate) getNativeInterface();
     }
 

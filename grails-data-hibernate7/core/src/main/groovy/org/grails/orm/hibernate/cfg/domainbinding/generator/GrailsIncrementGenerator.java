@@ -25,7 +25,6 @@ import java.util.Properties;
 import org.hibernate.boot.model.naming.Identifier;
 import org.hibernate.boot.model.relational.SqlStringGenerationContext;
 import org.hibernate.boot.model.relational.internal.SqlStringGenerationContextImpl;
-import org.hibernate.engine.jdbc.env.spi.JdbcEnvironment;
 import org.hibernate.generator.GeneratorCreationContext;
 import org.hibernate.id.IncrementGenerator;
 
@@ -95,8 +94,11 @@ public class GrailsIncrementGenerator extends IncrementGenerator {
         return SqlStringGenerationContextImpl.fromExplicit(
                 database.getJdbcEnvironment(),
                 database,
-                Optional.ofNullable(physicalName.catalog()).map(Identifier::getCanonicalName).orElse(null),
-                Optional.ofNullable(physicalName.schema()).map(Identifier::getCanonicalName).orElse(null)
-        );
+                Optional.ofNullable(physicalName.catalog())
+                        .map(Identifier::getCanonicalName)
+                        .orElse(null),
+                Optional.ofNullable(physicalName.schema())
+                        .map(Identifier::getCanonicalName)
+                        .orElse(null));
     }
 }

@@ -86,6 +86,7 @@ public interface HibernateAssociation extends HibernatePersistentProperty {
         }
     }
 
+    @Override
     default boolean isBidirectionalManyToOneWithListMapping(Property prop) {
         return isBidirectional()
                 && getInverseSide() != null
@@ -100,6 +101,7 @@ public interface HibernateAssociation extends HibernatePersistentProperty {
      * @param mapping The mapping
      * @return The type name
      */
+    @Override
     default String getTypeName(Class<?> propertyType, PropertyConfig config, Mapping mapping) {
         if (propertyType == getType() && getHibernateAssociatedEntity() != null) {
             return null;

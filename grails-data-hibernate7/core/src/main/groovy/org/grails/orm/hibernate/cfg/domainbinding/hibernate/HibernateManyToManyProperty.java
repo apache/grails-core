@@ -31,6 +31,7 @@ import org.grails.orm.hibernate.cfg.PropertyConfig;
 public class HibernateManyToManyProperty extends ManyToManyWithMapping<PropertyConfig>
         implements HibernateToManyProperty {
     private Collection collection;
+
     public HibernateManyToManyProperty(PersistentEntity entity, MappingContext context, PropertyDescriptor property) {
         super(entity, context, property);
     }
@@ -40,13 +41,17 @@ public class HibernateManyToManyProperty extends ManyToManyWithMapping<PropertyC
         return (GrailsHibernatePersistentEntity) super.getAssociatedEntity();
     }
 
+    @Override
     public String getReferencedEntityName() {
         return getHibernateAssociatedEntity().getName();
     }
 
+    @Override
     public Collection getCollection() {
         return collection;
     }
+
+    @Override
     public void setCollection(Collection collection) {
         this.collection = collection;
     }

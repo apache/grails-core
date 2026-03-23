@@ -57,12 +57,12 @@ public class HibernateIdentityMapping implements IdentityMapping<Property> {
             if (name != null) {
                 return new String[] {name};
             } else {
-                return DEFAULT_IDENTITY_MAPPING;
+                return DEFAULT_IDENTITY_MAPPING.clone();
             }
         } else if (identity instanceof CompositeIdentity) {
             return ((CompositeIdentity) identity).getPropertyNames();
         }
-        return DEFAULT_IDENTITY_MAPPING;
+        return DEFAULT_IDENTITY_MAPPING.clone();
     }
 
     @Override

@@ -13,7 +13,6 @@ import jakarta.persistence.criteria.CriteriaBuilder;
 import jakarta.persistence.criteria.CriteriaQuery;
 import jakarta.persistence.criteria.Expression;
 import jakarta.persistence.criteria.From;
-import jakarta.persistence.criteria.JoinType;
 import jakarta.persistence.criteria.Path;
 import jakarta.persistence.criteria.Predicate;
 import jakarta.persistence.criteria.Root;
@@ -415,13 +414,8 @@ public class PredicateGenerator {
                 java.util.Collections.<String, jakarta.persistence.criteria.JoinType>emptyMap(),
                 subRoot);
 
-        var predicates = getPredicates(
-                cb,
-                criteriaQuery,
-                subRoot,
-                subqueryable.getCriteria(),
-                subFromsProvider,
-                subEntity);
+        var predicates =
+                getPredicates(cb, criteriaQuery, subRoot, subqueryable.getCriteria(), subFromsProvider, subEntity);
         var existsPredicate = getExistsPredicate(cb, root_, entity, subRoot);
         Predicate[] allPredicates = existsPredicate != null
                 ? Stream.concat(Arrays.stream(predicates), Stream.of(existsPredicate))
