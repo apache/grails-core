@@ -89,8 +89,19 @@ With the removal of Micronaut, and the fixes to the asset pipeline plugin, Grail
 
 The `g:form` tag now automatically provides csrf protection when Spring Security CSRF is enabled.
 
-==== Grails Banner versions and customization (Grails 7.1+)
+==== Banner versions and customization (Grails 7.1+)
 
-A Grails banner was introduced in Grails 7 that is displayed on application startup.
+A Grails banner was introduced in Grails 7 that is displayed in the console on application startup.
 From Grails 7.1 onwards, this banner now shows versions of foundational dependencies
 and can be xref:conf.adoc#customizing-the-banner[customized].
+
+==== HTTP Client Testing Support (Grails 7.1+)
+
+Grails 7.1 introduces a new `grails-testing-support-http-client` module that simplifies HTTP-based
+integration and functional tests.
+
+The module provides an `HttpClientSupport` trait with request helpers for common use cases,
+and fluent response assertions via returning a TestHttpResponse wrapper of the actual HttpResponse.
+
+See the xref:testing.adoc#httpClientTestingSupport[HTTP Client Testing Support] section in the Testing chapter
+for setup and examples.
