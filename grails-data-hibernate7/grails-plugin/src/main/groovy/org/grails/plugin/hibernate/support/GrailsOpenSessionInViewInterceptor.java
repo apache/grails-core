@@ -18,22 +18,33 @@
  */
 package org.grails.plugin.hibernate.support;
 
+import java.util.ArrayList;
+import java.util.List;
+
 import org.hibernate.FlushMode;
 import org.hibernate.Session;
+import org.hibernate.SessionFactory;
 
 import org.springframework.dao.DataAccessException;
 import org.springframework.dao.DataAccessResourceFailureException;
+import org.springframework.orm.hibernate5.SessionFactoryUtils;
 import org.springframework.orm.hibernate5.SessionHolder;
 import org.springframework.orm.hibernate5.support.OpenSessionInViewInterceptor;
 import org.springframework.transaction.support.TransactionSynchronizationManager;
 import org.springframework.ui.ModelMap;
 import org.springframework.web.context.request.WebRequest;
 
+import org.grails.datastore.mapping.core.connections.ConnectionSource;
 import org.grails.orm.hibernate.HibernateDatastore;
+import org.grails.orm.hibernate.connections.HibernateConnectionSourceSettings;
 
 /**
- * Extends the default spring OSIV and doesn't flush the session if it has been set
- * to MANUAL on the session itself.
+ * Extends the default Spring OSIV to support multiple datasources.
+ * <p>
+ * The default datasource's SessionFactory is managed by the parent class.
+ * Additional (non-default) datasource SessionFactories are managed by this
+ * subclass, which opens and closes sessions for each one alongside the
+ * default session.
  *
  * @author Graeme Rocher
  * @since 0.5
@@ -41,6 +52,21 @@ import org.grails.orm.hibernate.HibernateDatastore;
 public class GrailsOpenSessionInViewInterceptor extends OpenSessionInViewInterceptor {
 
     protected FlushMode hibernateFlushMode = FlushMode.MANUAL;
+
+    private final List<AdditionalSessionFactoryConfig> additionalSessionFactories = new ArrayList<>();
+
+    private static class AdditionalSessionFactoryConfig {
+
+        final String connectionName;
+        final SessionFactory sessionFactory;
+        final FlushMode flushMode;
+
+        AdditionalSessionFactoryConfig(String connectionName, SessionFactory sessionFactory, FlushMode flushMode) {
+            this.connectionName = connectionName;
+            this.sessionFactory = sessionFactory;
+            this.flushMode = flushMode;
+        }
+    }
 
     @Override
     protected Session openSession() throws DataAccessResourceFailureException {
@@ -51,6 +77,25 @@ public class GrailsOpenSessionInViewInterceptor extends OpenSessionInViewInterce
 
     protected void applyFlushMode(Session session) {
         session.setHibernateFlushMode(hibernateFlushMode);
+    }
+
+    @Override
+    public void preHandle(WebRequest request) throws DataAccessException {
+        super.preHandle(request);
+
+        for (AdditionalSessionFactoryConfig config : additionalSessionFactories) {
+            SessionFactory sf = config.sessionFactory;
+            if (TransactionSynchronizationManager.hasResource(sf)) {
+                continue;
+            }
+            if (logger.isDebugEnabled()) {
+                logger.debug("Opening additional Hibernate Session for datasource '" + config.connectionName + "' in OpenSessionInViewInterceptor");
+            }
+            Session session = sf.openSession();
+            session.setHibernateFlushMode(config.flushMode);
+            SessionHolder sessionHolder = new SessionHolder(session);
+            TransactionSynchronizationManager.bindResource(sf, sessionHolder);
+        }
     }
 
     @Override
@@ -73,6 +118,66 @@ public class GrailsOpenSessionInViewInterceptor extends OpenSessionInViewInterce
                 session.setHibernateFlushMode(FlushMode.MANUAL);
             }
         }
+
+        RuntimeException firstFlushException = null;
+        for (AdditionalSessionFactoryConfig config : additionalSessionFactories) {
+            SessionFactory sf = config.sessionFactory;
+            SessionHolder additionalHolder = (SessionHolder) TransactionSynchronizationManager.getResource(sf);
+            if (additionalHolder != null) {
+                Session additionalSession = additionalHolder.getSession();
+                try {
+                    try {
+                        FlushMode additionalFlushMode = additionalSession.getHibernateFlushMode();
+                        boolean additionalIsNotManual = additionalFlushMode != FlushMode.MANUAL && additionalFlushMode != FlushMode.COMMIT;
+                        if (additionalIsNotManual) {
+                            if (logger.isDebugEnabled()) {
+                                logger.debug("Eagerly flushing additional Hibernate session for datasource '" + config.connectionName + "'");
+                            }
+                            additionalSession.flush();
+                        }
+                    } catch (RuntimeException ex) {
+                        if (firstFlushException == null) {
+                            firstFlushException = ex;
+                        } else {
+                            if (logger.isDebugEnabled()) {
+                                logger.debug("Additional flush exception for datasource '" + config.connectionName + "'", ex);
+                            }
+                            firstFlushException.addSuppressed(ex);
+                        }
+                    }
+                } finally {
+                    additionalSession.setHibernateFlushMode(FlushMode.MANUAL);
+                }
+            }
+        }
+        if (firstFlushException != null) {
+            throw firstFlushException;
+        }
+    }
+
+    @Override
+    public void afterCompletion(WebRequest request, Exception ex) throws DataAccessException {
+        try {
+            for (int i = additionalSessionFactories.size() - 1; i >= 0; i--) {
+                AdditionalSessionFactoryConfig config = additionalSessionFactories.get(i);
+                SessionFactory sf = config.sessionFactory;
+                SessionHolder sessionHolder = (SessionHolder) TransactionSynchronizationManager.getResource(sf);
+                if (sessionHolder != null) {
+                    Session session = sessionHolder.getSession();
+                    TransactionSynchronizationManager.unbindResource(sf);
+                    if (logger.isDebugEnabled()) {
+                        logger.debug("Closing additional Hibernate Session for datasource '" + config.connectionName + "' in OpenSessionInViewInterceptor");
+                    }
+                    try {
+                        SessionFactoryUtils.closeSession(session);
+                    } catch (RuntimeException closeEx) {
+                        logger.error("Unexpected exception on closing additional Hibernate Session for datasource '" + config.connectionName + "'", closeEx);
+                    }
+                }
+            }
+        } finally {
+            super.afterCompletion(request, ex);
+        }
     }
 
     public void setHibernateDatastore(HibernateDatastore hibernateDatastore) {
@@ -83,5 +188,24 @@ public class GrailsOpenSessionInViewInterceptor extends OpenSessionInViewInterce
             this.hibernateFlushMode = FlushMode.valueOf(defaultFlushModeName);
         }
         setSessionFactory(hibernateDatastore.getSessionFactory());
+
+        if (hibernateDatastore instanceof HibernateDatastore) {
+            HibernateDatastore hibernateDs = (HibernateDatastore) hibernateDatastore;
+            for (ConnectionSource<SessionFactory, HibernateConnectionSourceSettings> connectionSource : hibernateDs.getConnectionSources().getAllConnectionSources()) {
+                String connectionName = connectionSource.getName();
+                if (!ConnectionSource.DEFAULT.equals(connectionName)) {
+                    HibernateDatastore childDatastore = hibernateDs.getDatastoreForConnection(connectionName);
+                    FlushMode childFlushMode;
+                    if (childDatastore.isOsivReadOnly()) {
+                        childFlushMode = FlushMode.MANUAL;
+                    } else {
+                        childFlushMode = FlushMode.valueOf(childDatastore.getDefaultFlushModeName());
+                    }
+                    additionalSessionFactories.add(
+                            new AdditionalSessionFactoryConfig(connectionName, childDatastore.getSessionFactory(), childFlushMode)
+                    );
+                }
+            }
+        }
     }
 }
