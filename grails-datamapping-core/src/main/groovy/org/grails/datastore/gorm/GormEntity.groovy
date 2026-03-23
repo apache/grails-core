@@ -27,8 +27,8 @@ import jakarta.persistence.Transient
 import org.springframework.transaction.TransactionDefinition
 
 import grails.gorm.DetachedCriteria
-import org.grails.datastore.gorm.query.GormQueryOperations
 import org.grails.datastore.gorm.finders.FinderMethod
+import org.grails.datastore.gorm.query.GormQueryOperations
 import org.grails.datastore.mapping.dirty.checking.DirtyCheckable
 import org.grails.datastore.mapping.model.MappingContext
 import org.grails.datastore.mapping.model.PersistentEntity
@@ -489,32 +489,6 @@ trait GormEntity<D> implements GormValidateable, DirtyCheckable, GormEntityApi<D
     @Generated
     static DetachedCriteria<D> whereAny(Closure callable) {
         currentGormStaticApi().whereAny(callable)
-    }
-
-    /**
-     * Looks up a named query
-     *
-     * @param queryName The name of the query
-     * @return The query or null
-     *
-     * @deprecated Named queries are deprecated, use where queries instead
-     */
-    @Deprecated
-    static GormQueryOperations<D> getNamedQuery(String queryName) {
-        GormEnhancer.createNamedQuery(this, queryName)
-    }
-
-    /**
-     * Looks up a named query
-     *
-     * @param queryName The name of the query
-     * @return The query or null
-     *
-     * @deprecated Named queries are deprecated, use where queries instead
-     */
-    @Deprecated
-    static GormQueryOperations<D> getNamedQuery(String queryName, Object... args) {
-        GormEnhancer.createNamedQuery(this, queryName, args)
     }
 
     /**

@@ -18,17 +18,10 @@
  */
 package functionaltests.cors
 
-import groovy.json.JsonSlurper
-
-import io.micronaut.http.HttpRequest
-import io.micronaut.http.HttpStatus
-import io.micronaut.http.MediaType
-import io.micronaut.http.client.HttpClient
-import spock.lang.Shared
 import spock.lang.Specification
 
-import grails.gorm.transactions.Rollback
 import grails.testing.mixin.integration.Integration
+import org.apache.grails.testing.http.client.HttpClientSupport
 
 /**
  * Integration tests for CORS (Cross-Origin Resource Sharing) functionality.
@@ -36,266 +29,225 @@ import grails.testing.mixin.integration.Integration
  * 
  * Note: CORS is enabled for /api/** in application.yml
  */
-@Rollback
 @Integration
-class CorsAdvancedSpec extends Specification {
-
-    @Shared
-    HttpClient client
-
-    def setup() {
-        client = client ?: HttpClient.create(new URL("http://localhost:${serverPort}"))
-    }
-
-    def cleanupSpec() {
-        client.close()
-    }
+class CorsAdvancedSpec extends Specification implements HttpClientSupport {
 
     // ========== Basic CORS Header Tests ==========
 
     def "GET request to CORS-enabled endpoint includes CORS headers"() {
         when:
-        def response = client.toBlocking().exchange(
-            HttpRequest.GET('/api/cors')
-                .header('Origin', 'http://example.com'),
-            String
-        )
+        def response = http('/api/cors', 'Origin': 'http://example.com')
 
-        then:
-        response.status == HttpStatus.OK
-        // CORS headers should be present
-        response.header('Access-Control-Allow-Origin') != null
+        then: 'CORS headers should be present'
+        response.assertHeaders(200, 'Access-Control-Allow-Origin': '*')
     }
 
     def "OPTIONS preflight request returns appropriate headers"() {
         when:
-        def response = client.toBlocking().exchange(
-            HttpRequest.OPTIONS('/api/cors/data')
-                .header('Origin', 'http://example.com')
-                .header('Access-Control-Request-Method', 'GET'),
-            String
+        def response = httpOptions(
+                '/api/cors/data',
+                'Origin': 'http://example.com',
+                'Access-Control-Request-Method': 'GET'
         )
 
         then:
-        response.status == HttpStatus.OK
-        response.header('Access-Control-Allow-Origin') != null
-        response.header('Access-Control-Allow-Methods') != null
+        response.assertHeaders(200,
+                'Access-Control-Allow-Methods': 'GET',
+                'Access-Control-Allow-Origin': '*'
+        )
     }
 
     def "preflight request for POST method succeeds"() {
         when:
-        def response = client.toBlocking().exchange(
-            HttpRequest.OPTIONS('/api/cors/items')
-                .header('Origin', 'http://example.com')
-                .header('Access-Control-Request-Method', 'POST')
-                .header('Access-Control-Request-Headers', 'Content-Type'),
-            String
+        def response = httpOptions(
+                '/api/cors/items',
+                'Origin': 'http://example.com',
+                'Access-Control-Request-Method': 'POST',
+                'Access-Control-Request-Headers': 'Content-Type'
         )
 
         then:
-        response.status == HttpStatus.OK
-        response.header('Access-Control-Allow-Methods')?.contains('POST') ||
-            response.header('Access-Control-Allow-Origin') != null
+        response.assertHeaders(200,
+                'Access-Control-Allow-Methods': 'POST',
+                'Access-Control-Allow-Origin': '*'
+        )
     }
 
     def "preflight request for PUT method succeeds"() {
         when:
-        def response = client.toBlocking().exchange(
-            HttpRequest.OPTIONS('/api/cors/items/1')
-                .header('Origin', 'http://example.com')
-                .header('Access-Control-Request-Method', 'PUT')
-                .header('Access-Control-Request-Headers', 'Content-Type'),
-            String
+        def response = httpOptions(
+                '/api/cors/items/1',
+                'Origin': 'http://example.com',
+                'Access-Control-Request-Method': 'PUT',
+                'Access-Control-Request-Headers': 'Content-Type'
         )
 
         then:
-        response.status == HttpStatus.OK
+        response.assertStatus(200)
     }
 
     def "preflight request for DELETE method succeeds"() {
         when:
-        def response = client.toBlocking().exchange(
-            HttpRequest.OPTIONS('/api/cors/items/1')
-                .header('Origin', 'http://example.com')
-                .header('Access-Control-Request-Method', 'DELETE'),
-            String
+        def response = httpOptions(
+                '/api/cors/items/1',
+                'Origin': 'http://example.com',
+                'Access-Control-Request-Method': 'DELETE'
         )
 
         then:
-        response.status == HttpStatus.OK
+        response.assertStatus(200)
     }
 
     // ========== Actual Request Tests ==========
 
     def "GET request to CORS endpoint returns data"() {
         when:
-        def response = client.toBlocking().exchange(
-            HttpRequest.GET('/api/cors/data')
-                .header('Origin', 'http://example.com'),
-            String
+        def response = http(
+                '/api/cors/data',
+                'Origin': 'http://example.com'
         )
-        def json = new JsonSlurper().parseText(response.body())
 
         then:
-        response.status == HttpStatus.OK
-        json.data.size() == 3
-        json.total == 3
+        response.assertStatus(200).json()
+        with(response.json()) {
+            data.size() == 3
+            total == 3
+        }
     }
 
     def "POST request with CORS headers succeeds"() {
         when:
-        def response = client.toBlocking().exchange(
-            HttpRequest.POST('/api/cors/items', '{"name":"New Item"}')
-                .header('Origin', 'http://example.com')
-                .contentType(MediaType.APPLICATION_JSON),
-            String
+        def response = httpPostJson(
+                '/api/cors/items',
+                '{"name":"New Item"}',
+                'Origin': 'http://example.com'
         )
-        def json = new JsonSlurper().parseText(response.body())
+
 
         then:
-        response.status == HttpStatus.OK
-        json.created == true
-        json.method == 'POST'
+        response.assertJsonContains(200, [
+                created: true,
+                method : 'POST'
+        ])
     }
 
     def "PUT request with CORS headers succeeds"() {
         when:
-        def response = client.toBlocking().exchange(
-            HttpRequest.PUT('/api/cors/items/42', '{"name":"Updated Item"}')
-                .header('Origin', 'http://example.com')
-                .contentType(MediaType.APPLICATION_JSON),
-            String
+        def response = httpPutJson(
+                '/api/cors/items/42',
+                '{"name":"Updated Item"}',
+                'Origin': 'http://example.com'
         )
-        def json = new JsonSlurper().parseText(response.body())
 
         then:
-        response.status == HttpStatus.OK
-        json.updated == true
-        json.id == '42'
-        json.method == 'PUT'
+        response.assertJsonContains(200, [
+                updated: true,
+                id     : '42',
+                method : 'PUT'
+        ])
     }
 
     def "DELETE request with CORS headers succeeds"() {
         when:
-        def response = client.toBlocking().exchange(
-            HttpRequest.DELETE('/api/cors/items/99')
-                .header('Origin', 'http://example.com'),
-            String
+        def response = httpDelete(
+                '/api/cors/items/99',
+                'Origin': 'http://example.com'
         )
-        def json = new JsonSlurper().parseText(response.body())
 
         then:
-        response.status == HttpStatus.OK
-        json.deleted == true
-        json.id == '99'
-        json.method == 'DELETE'
+        response.assertJson(200, [
+                deleted: true,
+                id     : '99',
+                method : 'DELETE'
+        ])
     }
 
     // ========== Custom Headers Tests ==========
 
     def "response with custom headers includes CORS headers"() {
         when:
-        def response = client.toBlocking().exchange(
-            HttpRequest.GET('/api/cors/custom-headers')
-                .header('Origin', 'http://example.com'),
-            String
-        )
-        def json = new JsonSlurper().parseText(response.body())
+        def response = http('/api/cors/custom-headers', 'Origin': 'http://example.com')
 
         then:
-        response.status == HttpStatus.OK
-        json.customHeadersSet == true
-        response.header('X-Custom-Response') == 'custom-value'
+        response.assertJson(200, 'X-Custom-Response': 'custom-value', [
+                customHeadersSet: true,
+                message         : 'Response with custom headers'
+        ])
     }
 
     def "echo origin endpoint returns received origin"() {
         when:
-        def response = client.toBlocking().exchange(
-            HttpRequest.GET('/api/cors/echo-origin')
-                .header('Origin', 'http://my-app.example.com'),
-            String
-        )
-        def json = new JsonSlurper().parseText(response.body())
+        def response = http('/api/cors/echo-origin', 'Origin': 'http://my-app.example.com')
 
         then:
-        response.status == HttpStatus.OK
-        json.receivedOrigin == 'http://my-app.example.com'
+        response.assertJson(200, [
+                message       : 'Origin header received',
+                receivedOrigin: 'http://my-app.example.com'
+        ])
     }
 
     // ========== Credentials Tests ==========
 
     def "authenticated endpoint receives authorization header"() {
         when:
-        def response = client.toBlocking().exchange(
-            HttpRequest.GET('/api/cors/authenticated')
-                .header('Origin', 'http://example.com')
-                .header('Authorization', 'Bearer test-token-123'),
-            String
+        def response = http(
+                '/api/cors/authenticated',
+                'Origin': 'http://example.com',
+                'Authorization': 'Bearer test-token-123'
         )
-        def json = new JsonSlurper().parseText(response.body())
 
         then:
-        response.status == HttpStatus.OK
-        json.authenticated == true
-        json.authType == 'Bearer'
+        response.assertJson(200, [
+                authenticated: true,
+                authType     : 'Bearer',
+                message      : 'Credentials received'
+        ])
     }
 
     def "authenticated endpoint without credentials returns unauthenticated"() {
         when:
-        def response = client.toBlocking().exchange(
-            HttpRequest.GET('/api/cors/authenticated')
-                .header('Origin', 'http://example.com'),
-            String
-        )
-        def json = new JsonSlurper().parseText(response.body())
+        def response = http('/api/cors/authenticated', 'Origin': 'http://example.com')
 
         then:
-        response.status == HttpStatus.OK
-        json.authenticated == false
-        json.message == 'No credentials'
+        response.assertJson(200, [
+                authType     : null,
+                authenticated: false,
+                message      : 'No credentials'
+        ])
     }
 
     // ========== Various Origin Tests ==========
 
     def "request from localhost origin succeeds"() {
         when:
-        def response = client.toBlocking().exchange(
-            HttpRequest.GET('/api/cors')
-                .header('Origin', 'http://localhost:3000'),
-            String
-        )
-        def json = new JsonSlurper().parseText(response.body())
+        def response = http('/api/cors', 'Origin': 'http://localhost:3000')
 
         then:
-        response.status == HttpStatus.OK
-        json.message == 'CORS test endpoint'
+        response.assertJson(200, [
+                message: 'CORS test endpoint',
+                path   : '/api/corsTest'
+        ])
     }
 
     def "request from HTTPS origin succeeds"() {
         when:
-        def response = client.toBlocking().exchange(
-            HttpRequest.GET('/api/cors')
-                .header('Origin', 'https://secure.example.com'),
-            String
-        )
-        def json = new JsonSlurper().parseText(response.body())
+        def response = http('/api/cors', 'Origin': 'https://secure.example.com')
 
         then:
-        response.status == HttpStatus.OK
-        json.message == 'CORS test endpoint'
+        response.assertJson(200, [
+                message: 'CORS test endpoint',
+                path   : '/api/corsTest'
+        ])
     }
 
     def "request with port in origin succeeds"() {
         when:
-        def response = client.toBlocking().exchange(
-            HttpRequest.GET('/api/cors')
-                .header('Origin', 'http://example.com:8080'),
-            String
-        )
-        def json = new JsonSlurper().parseText(response.body())
+        def response = http('/api/cors', 'Origin': 'http://example.com:8080')
 
         then:
-        response.status == HttpStatus.OK
-        json.message == 'CORS test endpoint'
+        response.assertJson(200, [
+                message: 'CORS test endpoint',
+                path   : '/api/corsTest'
+        ])
     }
 }

@@ -56,17 +56,17 @@ public interface GrailsApplication extends ApplicationContextAware {
     /**
      * The name of the class that provides configuration
      */
-    @Deprecated
+    @Deprecated(forRemoval = true)
     String CONFIG_CLASS = "Config";
     /**
      * The name of the DataSource class
      */
-    @Deprecated
+    @Deprecated(forRemoval = true)
     String DATA_SOURCE_CLASS = "DataSource";
     /**
      * The name of the project metadata file
      */
-    @Deprecated
+    @Deprecated(forRemoval = true)
     String PROJECT_META_FILE = "application.properties";
     /**
      * The name of the transaction manager bean

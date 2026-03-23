@@ -155,7 +155,7 @@ class ConstrainedDelegate implements Constrained, ConstrainedProperty {
         return property.isUrl()
     }
 
-    @Deprecated
+    @Deprecated(since = '7.1')
     @Override
     boolean isDisplay() {
         return property.isDisplay()

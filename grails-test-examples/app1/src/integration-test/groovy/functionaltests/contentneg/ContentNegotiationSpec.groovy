@@ -18,18 +18,11 @@
  */
 package functionaltests.contentneg
 
-import groovy.json.JsonSlurper
-
-import io.micronaut.http.HttpRequest
-import io.micronaut.http.HttpStatus
-import io.micronaut.http.MediaType
-import io.micronaut.http.client.HttpClient
-import io.micronaut.http.client.exceptions.HttpClientResponseException
 import spock.lang.Narrative
-import spock.lang.Shared
 import spock.lang.Specification
 
 import grails.testing.mixin.integration.Integration
+import org.apache.grails.testing.http.client.HttpClientSupport
 
 /**
  * Integration tests for Grails content negotiation features.
@@ -44,368 +37,274 @@ Grails provides content negotiation that allows the same controller action
 to return different response formats (JSON, XML, HTML) based on the client's
 Accept header or URL extension.
 ''')
-class ContentNegotiationSpec extends Specification {
-
-    @Shared
-    HttpClient client
-
-    def setup() {
-        client = client ?: HttpClient.create(new URL("http://localhost:$serverPort"))
-    }
-
-    def cleanupSpec() {
-        client.close()
-    }
+class ContentNegotiationSpec extends Specification implements HttpClientSupport {
 
     // ========== Accept Header-Based Negotiation ==========
 
     def "JSON response via Accept header application/json"() {
         when: "requesting with Accept: application/json"
-        def response = client.toBlocking().exchange(
-            HttpRequest.GET('/contentNegotiation/index')
-                .accept(MediaType.APPLICATION_JSON),
-            String
-        )
+        def response = http('/contentNegotiation/index', 'Accept': 'application/json')
 
         then: "response is JSON"
-        response.status == HttpStatus.OK
-        response.contentType.get().toString().contains('application/json')
-        
+        response.assertStatus(200).contentType.contains('application/json')
+
         and: "content is valid JSON"
-        def json = new JsonSlurper().parseText(response.body())
-        json.message == 'Hello World'
-        json.items.size() == 3
+        with(response.json()) {
+            message == 'Hello World'
+            items.size() == 3
+        }
     }
 
     def "XML response via Accept header application/xml"() {
         when: "requesting with Accept: application/xml"
-        def response = client.toBlocking().exchange(
-            HttpRequest.GET('/contentNegotiation/index')
-                .accept(MediaType.APPLICATION_XML),
-            String
-        )
+        def response = http('/contentNegotiation/index', 'Accept': 'application/xml')
 
         then: "response is XML"
-        response.status == HttpStatus.OK
-        response.contentType.get().toString().contains('xml')
-        
+        response.assertStatus(200).contentType.contains('xml')
+
         and: "content contains expected XML elements (Grails XML converter uses entry key format for maps)"
-        response.body().contains('<entry key="message">Hello World</entry>')
+        response.assertContains('<entry key="message">Hello World</entry>')
     }
 
     def "HTML response via Accept header text/html"() {
         when: "requesting with Accept: text/html"
-        def response = client.toBlocking().exchange(
-            HttpRequest.GET('/contentNegotiation/index')
-                .accept(MediaType.TEXT_HTML),
-            String
-        )
+        def response = http('/contentNegotiation/index', 'Accept': 'text/html')
 
         then: "response is HTML"
-        response.status == HttpStatus.OK
-        response.contentType.get().toString().contains('text/html')
+        response.assertStatus(200).contentType.contains('text/html')
         
         and: "content is HTML page"
-        response.body().contains('<h1>Content Negotiation</h1>')
-        response.body().contains('Hello World')
+        response.assertContains('<h1>Content Negotiation</h1>')
+                .assertContains('Hello World')
     }
 
     // ========== URL Extension-Based Negotiation ==========
 
     def "JSON response via .json extension"() {
         when: "requesting URL with .json extension"
-        def response = client.toBlocking().exchange(
-            HttpRequest.GET('/contentNegotiation/index.json'),
-            String
-        )
+        def response = http('/contentNegotiation/index.json')
 
         then: "response is JSON"
-        response.status == HttpStatus.OK
+        response.assertStatus(200).contentType.contains('json')
         
         and: "content is valid JSON with expected data"
-        def json = new JsonSlurper().parseText(response.body())
-        json.message == 'Hello World'
+        response.assertJsonContains([message: 'Hello World'])
     }
 
     def "XML response via .xml extension"() {
         when: "requesting URL with .xml extension"
-        def response = client.toBlocking().exchange(
-            HttpRequest.GET('/contentNegotiation/index.xml'),
-            String
-        )
+        def response = http('/contentNegotiation/index.xml')
 
         then: "response is XML"
-        response.status == HttpStatus.OK
+        response.assertStatus(200).contentType.contains('xml')
         
         and: "content is XML (Grails converter uses map/entry format)"
-        response.body().contains('<entry key="message">')
+        response.assertContains('<entry key="message">')
     }
 
     // ========== Respond Method Tests ==========
 
     def "respond method returns JSON for Accept application/json"() {
         when: "calling respond action with Accept: application/json"
-        def response = client.toBlocking().exchange(
-            HttpRequest.GET('/contentNegotiation/respond')
-                .accept(MediaType.APPLICATION_JSON),
-            String
-        )
+        def response = http('/contentNegotiation/respond', 'Accept': 'application/json')
 
         then: "response is JSON"
-        response.status == HttpStatus.OK
+        response.assertStatus(200).contentType.contains('json')
         
         and: "content is valid JSON"
-        def json = new JsonSlurper().parseText(response.body())
-        json.status == 'success'
-        json.data.id == 1
-        json.data.name == 'Test Item'
+        response.assertJsonContains([
+                status: 'success',
+                data  : [id: 1, name: 'Test Item']
+        ])
     }
 
     def "respond method returns XML for Accept application/xml"() {
         when: "calling respond action with Accept: application/xml"
-        def response = client.toBlocking().exchange(
-            HttpRequest.GET('/contentNegotiation/respond')
-                .accept(MediaType.APPLICATION_XML),
-            String
-        )
+        def response = http('/contentNegotiation/respond', 'Accept': 'application/xml')
 
         then: "response is XML"
-        response.status == HttpStatus.OK
-        response.contentType.get().toString().contains('xml')
+        response.assertStatus(200).contentType.contains('xml')
     }
 
     // ========== List/Collection Content Negotiation ==========
 
     def "list action returns JSON array"() {
         when: "requesting list with Accept: application/json"
-        def response = client.toBlocking().exchange(
-            HttpRequest.GET('/contentNegotiation/list')
-                .accept(MediaType.APPLICATION_JSON),
-            String
-        )
+        def response = http('/contentNegotiation/list', 'Accept': 'application/json')
 
         then: "response is JSON array"
-        response.status == HttpStatus.OK
+        response.assertStatus(200).contentType.contains('json')
         
         and: "content is array with 3 items"
-        def json = new JsonSlurper().parseText(response.body())
-        json instanceof List
-        json.size() == 3
-        json[0].id == 1
-        json[0].name == 'Item 1'
+        with(response.jsonList()) {
+            size() == 3
+            first().id == 1
+            first().name == 'Item 1'
+        }
     }
 
     def "list action returns XML for XML accept"() {
         when: "requesting list with Accept: application/xml"
-        def response = client.toBlocking().exchange(
-            HttpRequest.GET('/contentNegotiation/list')
-                .accept(MediaType.APPLICATION_XML),
-            String
-        )
+        def response = http('/contentNegotiation/list', 'Accept': 'application/xml')
 
         then: "response is XML"
-        response.status == HttpStatus.OK
-        response.contentType.get().toString().contains('xml')
+        response.assertStatus(200).contentType.contains('xml')
     }
 
     // ========== Explicit Content Type ==========
 
     def "explicit content type overrides negotiation"() {
         when: "calling action with explicit content type"
-        def response = client.toBlocking().exchange(
-            HttpRequest.GET('/contentNegotiation/explicitContentType'),
-            String
-        )
+        def response = http('/contentNegotiation/explicitContentType')
 
         then: "response has explicit content type"
-        response.status == HttpStatus.OK
-        response.contentType.get().toString().contains('application/json')
+        response.assertStatus(200).contentType.contains('application/json')
         
         and: "content is as specified"
-        def json = new JsonSlurper().parseText(response.body())
-        json.explicit == true
+        response.assertJson([explicit: true])
     }
 
     // ========== Error Response Formatting ==========
 
     def "error response in JSON format"() {
         when: "requesting error action with Accept: application/json"
-        client.toBlocking().exchange(
-            HttpRequest.GET('/contentNegotiation/error')
-                .accept(MediaType.APPLICATION_JSON),
-            String
-        )
+        def response = http('/contentNegotiation/error', 'Accept': 'application/json')
 
         then: "error response is returned"
-        def e = thrown(HttpClientResponseException)
-        e.status == HttpStatus.BAD_REQUEST
+        response.assertStatus(400)
         
         and: "error body is JSON"
-        def json = new JsonSlurper().parseText(e.response.body().toString())
-        json.error == true
-        json.message == 'Something went wrong'
-        json.code == 'ERR_001'
+        response.assertJson([
+                error  : true,
+                message: 'Something went wrong',
+                code   : 'ERR_001'
+        ])
     }
 
     def "error response in XML format"() {
         when: "requesting error action with Accept: application/xml"
-        client.toBlocking().exchange(
-            HttpRequest.GET('/contentNegotiation/error')
-                .accept(MediaType.APPLICATION_XML),
-            String
-        )
+        def response = http('/contentNegotiation/error', 'Accept': 'application/xml')
 
         then: "error response is returned"
-        def e = thrown(HttpClientResponseException)
-        e.status == HttpStatus.BAD_REQUEST
+        response.assertStatus(400)
         
         and: "error body contains XML elements (Grails converter uses entry key format)"
-        e.response.body().toString().contains('<entry key="error">true</entry>')
+        response.assertContains('<entry key="error">true</entry>')
     }
 
     // ========== Format Parameter Override ==========
 
     def "format parameter can specify JSON"() {
         when: "requesting with format=json parameter"
-        def response = client.toBlocking().exchange(
-            HttpRequest.GET('/contentNegotiation/formatParam?format=json'),
-            String
-        )
+        def response = http('/contentNegotiation/formatParam?format=json')
 
         then: "response is JSON"
-        response.status == HttpStatus.OK
+        response.assertStatus(200)
         
         and: "format is recorded in response"
-        def json = new JsonSlurper().parseText(response.body())
-        json.format == 'json'
-        json.value == 42
+        response.assertJson([
+                format: 'json',
+                value : 42
+        ])
     }
 
     def "format parameter can specify XML"() {
         when: "requesting with format=xml parameter"
-        def response = client.toBlocking().exchange(
-            HttpRequest.GET('/contentNegotiation/formatParam?format=xml'),
-            String
-        )
+        def response = http('/contentNegotiation/formatParam?format=xml')
 
         then: "response is XML"
-        response.status == HttpStatus.OK
-        response.body().contains('<entry key="format">xml</entry>')
+        response.assertContains(200, '<entry key="format">xml</entry>')
     }
 
     // ========== Status Code Tests ==========
 
     def "status by format returns correct status for JSON"() {
         when: "requesting statusByFormat with Accept: application/json"
-        def response = client.toBlocking().exchange(
-            HttpRequest.GET('/contentNegotiation/statusByFormat')
-                .accept(MediaType.APPLICATION_JSON),
-            String
-        )
+        def response = http('/contentNegotiation/statusByFormat', 'Accept': 'application/json')
 
         then: "response status is OK"
-        response.status == HttpStatus.OK
+        response.assertStatus(200)
         
         and: "body is JSON"
-        def json = new JsonSlurper().parseText(response.body())
-        json.status == 'ok'
+        response.assertJson([status: 'ok'])
     }
 
     // ========== Accept Header Quality Values ==========
 
     def "multiAccept action handles Accept header"() {
         when: "requesting with complex Accept header"
-        def response = client.toBlocking().exchange(
-            HttpRequest.GET('/contentNegotiation/multiAccept')
-                .accept(MediaType.APPLICATION_JSON),
-            String
-        )
+        def response = http('/contentNegotiation/multiAccept', 'Accept': 'application/json')
 
         then: "response is successful"
-        response.status == HttpStatus.OK
+        response.assertStatus(200)
         
         and: "response contains accept header info"
-        def json = new JsonSlurper().parseText(response.body())
-        json.acceptHeader != null
+        response.assertJson([
+                acceptHeader: 'application/json',
+                negotiated  : 'json'
+        ])
     }
 
     // ========== Wildcard/Default Format ==========
 
     def "formatParam falls back to default for unknown format"() {
         when: "requesting with unknown format"
-        def response = client.toBlocking().exchange(
-            HttpRequest.GET('/contentNegotiation/formatParam?format=unknown'),
-            String
-        )
+        def response = http('/contentNegotiation/formatParam?format=unknown')
 
         then: "response uses default format (JSON)"
-        response.status == HttpStatus.OK
+        response.assertStatus(200)
         
         and: "response is valid JSON"
-        def json = new JsonSlurper().parseText(response.body())
-        json.format == 'unknown'
-        json.value == 42
+        response.assertJson([
+                format: 'unknown',
+                value : 42
+        ])
     }
 
     // ========== Content-Type Header Variations ==========
 
     def "JSON with charset in Accept header"() {
         when: "requesting with Accept including charset"
-        def response = client.toBlocking().exchange(
-            HttpRequest.GET('/contentNegotiation/respond')
-                .header('Accept', 'application/json; charset=utf-8'),
-            String
+        def response = http(
+                '/contentNegotiation/respond',
+                'Accept': 'application/json; charset=utf-8'
         )
 
         then: "response is JSON"
-        response.status == HttpStatus.OK
-        response.contentType.get().toString().contains('json')
+        response.assertStatus(200).contentType.contains('json')
     }
 
     // ========== Multiple Format Extensions ==========
 
     def "respond action with .json extension"() {
         when: "requesting respond with .json extension"
-        def response = client.toBlocking().exchange(
-            HttpRequest.GET('/contentNegotiation/respond.json'),
-            String
-        )
+        def response = http('/contentNegotiation/respond.json')
 
         then: "response is JSON"
-        response.status == HttpStatus.OK
+        response.assertStatus(200).contentType.contains('json')
         
         and: "content is valid"
-        def json = new JsonSlurper().parseText(response.body())
-        json.status == 'success'
+        response.assertJsonContains([status: 'success'])
     }
 
     def "list action with .json extension"() {
         when: "requesting list with .json extension"
-        def response = client.toBlocking().exchange(
-            HttpRequest.GET('/contentNegotiation/list.json'),
-            String
-        )
+        def response = http('/contentNegotiation/list.json')
 
         then: "response is JSON array"
-        response.status == HttpStatus.OK
+        response.assertStatus(200).contentType.contains('json')
         
         and: "content is array"
-        def json = new JsonSlurper().parseText(response.body())
-        json instanceof List
-        json.size() == 3
+        response.jsonList().size() == 3
     }
 
     // ========== Custom JSON Rendering ==========
 
     def "custom JSON rendering produces valid output"() {
         when: "requesting custom JSON action"
-        def response = client.toBlocking().exchange(
-            HttpRequest.GET('/contentNegotiation/customJson'),
-            String
-        )
+        def response = http('/contentNegotiation/customJson')
 
         then: "response is JSON"
-        response.status == HttpStatus.OK
-        response.contentType.get().toString().contains('application/json')
+        response.assertStatus(200).contentType.contains('application/json')
     }
 }

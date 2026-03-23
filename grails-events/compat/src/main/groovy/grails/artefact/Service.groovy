@@ -27,5 +27,5 @@ import grails.events.Events
  * @since 3.0
  * @deprecated Here for compatibility, do not use directly
  */
-@Deprecated
+@Deprecated(since = '3.3', forRemoval = true)
 trait Service extends Events {}

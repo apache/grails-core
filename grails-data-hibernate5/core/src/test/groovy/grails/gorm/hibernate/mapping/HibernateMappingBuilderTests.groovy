@@ -838,7 +838,7 @@ class HibernateMappingBuilderTests {
     }
 
     @Test
-    void testUpdatablePropertyConfig() {
+    void testUpdateablePropertyConfig() {
         def builder = new HibernateMappingBuilder("Foo")
         def mapping = builder.evaluate {
             firstName updateable:true
@@ -846,6 +846,17 @@ class HibernateMappingBuilderTests {
         }
         assertTrue mapping.getPropertyConfig('firstName').updateable
         assertFalse mapping.getPropertyConfig('lastName').updateable
+    }
+
+    @Test
+    void testUpdatablePropertyConfig() {
+        def builder = new HibernateMappingBuilder("Foo")
+        def mapping = builder.evaluate {
+            firstName updatable: true
+            lastName updatable: false
+        }
+        assertTrue mapping.getPropertyConfig('firstName').updatable
+        assertFalse mapping.getPropertyConfig('lastName').updatable
     }
 
     @Test
