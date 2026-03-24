@@ -29,7 +29,9 @@ import org.hibernate.proxy.ProxyFactory;
  * @author Graeme Rocher
  * @since 7.0
  */
-public class GrailsProxyFactoryFactory implements ProxyFactoryFactory {
+public class GrailsProxyFactoryFactory implements ProxyFactoryFactory, java.io.Serializable {
+
+    private static final long serialVersionUID = 1L;
 
     private final GrailsBytecodeProvider grailsBytecodeProvider;
 

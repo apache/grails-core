@@ -35,6 +35,9 @@ import static org.hibernate.internal.util.ReflectHelper.isPublic;
  */
 public class ByteBuddyGroovyInterceptor extends ByteBuddyInterceptor {
 
+    private static final String GET_ID_METHOD = "getId";
+    private static final String GET_IDENTIFIER_METHOD = "getIdentifier";
+
     protected final Method getIdentifierMethod;
 
     public ByteBuddyGroovyInterceptor(
@@ -68,9 +71,9 @@ public class ByteBuddyGroovyInterceptor extends ByteBuddyInterceptor {
         String methodName = method.getName();
 
         // Check these BEFORE calling this.invoke() to avoid premature initialization in Hibernate 7
-        if ((getIdentifierMethod != null && methodName.equals(getIdentifierMethod.getName()))
-                || "getId".equals(methodName)
-                || "getIdentifier".equals(methodName)) {
+        if ((getIdentifierMethod != null && methodName.equals(getIdentifierMethod.getName())) ||
+                GET_ID_METHOD.equals(methodName) ||
+                GET_IDENTIFIER_METHOD.equals(methodName)) {
             return getIdentifier();
         }
 
@@ -78,13 +81,13 @@ public class ByteBuddyGroovyInterceptor extends ByteBuddyInterceptor {
             GroovyProxyInterceptorLogic.InterceptorState state = new GroovyProxyInterceptorLogic.InterceptorState(
                     getEntityName(), getPersistentClass(), getIdentifier());
             Object result = GroovyProxyInterceptorLogic.handleUninitialized(state, methodName, args);
-            if (result != GroovyProxyInterceptorLogic.INVOKE_IMPLEMENTATION) {
+            if (result != GroovyProxyInterceptorLogic.INVOKE_IMPLEMENTATION) { // NOPMD: sentinel comparison
                 return result;
             }
         }
 
         final Object result = this.invoke(method, args, proxy);
-        if (result != INVOKE_IMPLEMENTATION) {
+        if (result != INVOKE_IMPLEMENTATION) { // NOPMD: sentinel comparison
             return result;
         }
 
@@ -92,7 +95,7 @@ public class ByteBuddyGroovyInterceptor extends ByteBuddyInterceptor {
             final Object target = getImplementation();
             try {
                 if (!isPublic(getPersistentClass(), method)) {
-                    method.setAccessible(true);
+                    method.setAccessible(true); // NOPMD: accessibility alteration
                 }
                 return method.invoke(target, args);
             } catch (InvocationTargetException ite) {

@@ -20,6 +20,7 @@
 package org.grails.orm.hibernate.cfg
 
 import groovy.transform.CompileStatic
+
 import org.grails.datastore.mapping.model.DatastoreConfigurationException
 
 /**
@@ -55,8 +56,7 @@ class PropertyDefinitionDelegate {
         if (index < config.columns.size()) {
             // configure existing
             column = config.columns[index]
-        }
-        else {
+        } else {
             column = new ColumnConfig()
             // Append the new column configuration to the property config.
             config.columns << column
@@ -67,7 +67,7 @@ class PropertyDefinitionDelegate {
         column.index = args['index']
         column.unique = args['unique'] != null ? args['unique'] : false
         column.length = args['length'] ? args['length'] as Integer : -1
-        column.precision = args['precision'] ? args['precision'] as Integer  : -1
+        column.precision = args['precision'] ? args['precision'] as Integer : -1
         column.scale = args['scale'] ? args['scale'] as Integer : -1
 
         index++

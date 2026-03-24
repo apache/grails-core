@@ -98,73 +98,62 @@ public class ClosureEventTriggeringInterceptor
                 PersistEventListener,
                 CallbackRegistryConsumer {
 
+    /**
+     * @deprecated Use {@link AbstractPersistenceEvent#ONLOAD_EVENT} instead
+     */
+    @Deprecated
+    public static final String ONLOAD_EVENT = AbstractPersistenceEvent.ONLOAD_EVENT;
+    /**
+     * @deprecated Use {@link AbstractPersistenceEvent#ONLOAD_SAVE} instead
+     */
+    @Deprecated
+    public static final String ONLOAD_SAVE = AbstractPersistenceEvent.ONLOAD_SAVE;
+    /**
+     * @deprecated Use {@link AbstractPersistenceEvent#BEFORE_LOAD_EVENT} instead
+     */
+    @Deprecated
+    public static final String BEFORE_LOAD_EVENT = AbstractPersistenceEvent.BEFORE_LOAD_EVENT;
+    /**
+     * @deprecated Use {@link AbstractPersistenceEvent#BEFORE_INSERT_EVENT} instead
+     */
+    @Deprecated
+    public static final String BEFORE_INSERT_EVENT = AbstractPersistenceEvent.BEFORE_INSERT_EVENT;
+    /**
+     * @deprecated Use {@link AbstractPersistenceEvent#AFTER_INSERT_EVENT} instead
+     */
+    @Deprecated
+    public static final String AFTER_INSERT_EVENT = AbstractPersistenceEvent.AFTER_INSERT_EVENT;
+    /**
+     * @deprecated Use {@link AbstractPersistenceEvent#BEFORE_UPDATE_EVENT} instead
+     */
+    @Deprecated
+    public static final String BEFORE_UPDATE_EVENT = AbstractPersistenceEvent.BEFORE_UPDATE_EVENT;
+    /**
+     * @deprecated Use {@link AbstractPersistenceEvent#AFTER_UPDATE_EVENT} instead
+     */
+    @Deprecated
+    public static final String AFTER_UPDATE_EVENT = AbstractPersistenceEvent.AFTER_UPDATE_EVENT;
+    /**
+     * @deprecated Use {@link AbstractPersistenceEvent#BEFORE_DELETE_EVENT} instead
+     */
+    @Deprecated
+    public static final String BEFORE_DELETE_EVENT = AbstractPersistenceEvent.BEFORE_DELETE_EVENT;
+    /**
+     * @deprecated Use {@link AbstractPersistenceEvent#AFTER_DELETE_EVENT} instead
+     */
+    @Deprecated
+    public static final String AFTER_DELETE_EVENT = AbstractPersistenceEvent.AFTER_DELETE_EVENT;
+    /**
+     * @deprecated Use {@link AbstractPersistenceEvent#AFTER_LOAD_EVENT} instead
+     */
+    @Deprecated
+    public static final String AFTER_LOAD_EVENT = AbstractPersistenceEvent.AFTER_LOAD_EVENT;
     //    private final Logger log = LoggerFactory.getLogger(getClass());
     @Serial
     private static final long serialVersionUID = 1;
 
     private final DefaultPersistEventListener persistEventListener = new DefaultPersistEventListener();
     private final DefaultMergeEventListener mergeEventListener = new DefaultMergeEventListener();
-
-    /**
-     * @deprecated Use {@link AbstractPersistenceEvent#ONLOAD_EVENT} instead
-     */
-    @Deprecated
-    public static final String ONLOAD_EVENT = AbstractPersistenceEvent.ONLOAD_EVENT;
-
-    /**
-     * @deprecated Use {@link AbstractPersistenceEvent#ONLOAD_SAVE} instead
-     */
-    @Deprecated
-    public static final String ONLOAD_SAVE = AbstractPersistenceEvent.ONLOAD_SAVE;
-
-    /**
-     * @deprecated Use {@link AbstractPersistenceEvent#BEFORE_LOAD_EVENT} instead
-     */
-    @Deprecated
-    public static final String BEFORE_LOAD_EVENT = AbstractPersistenceEvent.BEFORE_LOAD_EVENT;
-
-    /**
-     * @deprecated Use {@link AbstractPersistenceEvent#BEFORE_INSERT_EVENT} instead
-     */
-    @Deprecated
-    public static final String BEFORE_INSERT_EVENT = AbstractPersistenceEvent.BEFORE_INSERT_EVENT;
-
-    /**
-     * @deprecated Use {@link AbstractPersistenceEvent#AFTER_INSERT_EVENT} instead
-     */
-    @Deprecated
-    public static final String AFTER_INSERT_EVENT = AbstractPersistenceEvent.AFTER_INSERT_EVENT;
-
-    /**
-     * @deprecated Use {@link AbstractPersistenceEvent#BEFORE_UPDATE_EVENT} instead
-     */
-    @Deprecated
-    public static final String BEFORE_UPDATE_EVENT = AbstractPersistenceEvent.BEFORE_UPDATE_EVENT;
-
-    /**
-     * @deprecated Use {@link AbstractPersistenceEvent#AFTER_UPDATE_EVENT} instead
-     */
-    @Deprecated
-    public static final String AFTER_UPDATE_EVENT = AbstractPersistenceEvent.AFTER_UPDATE_EVENT;
-
-    /**
-     * @deprecated Use {@link AbstractPersistenceEvent#BEFORE_DELETE_EVENT} instead
-     */
-    @Deprecated
-    public static final String BEFORE_DELETE_EVENT = AbstractPersistenceEvent.BEFORE_DELETE_EVENT;
-
-    /**
-     * @deprecated Use {@link AbstractPersistenceEvent#AFTER_DELETE_EVENT} instead
-     */
-    @Deprecated
-    public static final String AFTER_DELETE_EVENT = AbstractPersistenceEvent.AFTER_DELETE_EVENT;
-
-    /**
-     * @deprecated Use {@link AbstractPersistenceEvent#AFTER_LOAD_EVENT} instead
-     */
-    @Deprecated
-    public static final String AFTER_LOAD_EVENT = AbstractPersistenceEvent.AFTER_LOAD_EVENT;
-
     /** The datastore. */
     protected HibernateDatastore datastore;
 
@@ -322,9 +311,9 @@ public class ClosureEventTriggeringInterceptor
         // Only for "dateCreated" property, "lastUpdated" is handled correctly
         if (dateCreatedMapping != null) {
             int dateCreatedIdx = dateCreatedMapping.getStateArrayPosition();
-            if (oldState != null
-                    && oldState[dateCreatedIdx] != null
-                    && !oldState[dateCreatedIdx].equals(state[dateCreatedIdx])) {
+            if (oldState != null &&
+                    oldState[dateCreatedIdx] != null &&
+                    !oldState[dateCreatedIdx].equals(state[dateCreatedIdx])) {
                 modifiedProperties.put(AutoTimestampEventListener.DATE_CREATED_PROPERTY, oldState[dateCreatedIdx]);
             }
         }
@@ -423,15 +412,15 @@ public class ClosureEventTriggeringInterceptor
         if (entity instanceof DirtyCheckable && proxyHandler.isInitialized(entity)) {
             PersistentEntity persistentEntity = mappingContext.getPersistentEntity(
                     Hibernate.getClass(entity).getName());
-            entity = proxyHandler.unwrap(entity);
-            DirtyCheckable dirtyCheckable = (DirtyCheckable) entity;
+            Object unwrapped = proxyHandler.unwrap(entity);
+            DirtyCheckable dirtyCheckable = (DirtyCheckable) unwrapped;
             Map<String, Object> dirtyCheckingState =
-                    persistentEntity.getReflector().getDirtyCheckingState(entity);
+                    persistentEntity.getReflector().getDirtyCheckingState(unwrapped);
             if (dirtyCheckingState == null) {
                 dirtyCheckable.trackChanges();
                 for (Embedded<?> association : persistentEntity.getEmbedded()) {
                     if (DirtyCheckable.class.isAssignableFrom(association.getType())) {
-                        Object embedded = association.getReader().read(entity);
+                        Object embedded = association.getReader().read(unwrapped);
                         if (embedded != null) {
                             DirtyCheckable embeddedCheck = (DirtyCheckable) embedded;
                             if (embeddedCheck.listDirtyPropertyNames().isEmpty()) {

@@ -64,9 +64,9 @@ public class CompositeIdBinder {
 
         id.setRoleName(path);
 
-        HibernatePersistentProperty[] composite = compositeIdentity != null
-                ? compositeIdentity.getHibernateProperties(hibernatePersistentEntity)
-                : hibernatePersistentEntity.getCompositeIdentity();
+        HibernatePersistentProperty[] composite = compositeIdentity != null ?
+                compositeIdentity.getHibernateProperties(hibernatePersistentEntity) :
+                hibernatePersistentEntity.getCompositeIdentity();
 
         if (composite == null || composite.length == 0) {
             throw new MappingException(

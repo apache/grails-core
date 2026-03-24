@@ -145,13 +145,12 @@ public class JpaCriteriaQueryCreator {
 
     private JpaCriteriaQuery<?> createCriteriaQuery(List<Query.Projection> projections) {
         var cq = projections.stream()
-                                .filter(it -> !(it instanceof Query.DistinctProjection
-                                        || it instanceof Query.DistinctPropertyProjection))
+                                .filter(it -> !(it instanceof Query.DistinctProjection ||
+                                        it instanceof Query.DistinctPropertyProjection))
                                 .toList()
-                                .size()
-                        > 1
-                ? criteriaBuilder.createTupleQuery()
-                : criteriaBuilder.createQuery(Object.class);
+                                .size() > 1 ?
+                criteriaBuilder.createTupleQuery() :
+                criteriaBuilder.createQuery(Object.class);
         projections.stream()
                 .filter(it -> it instanceof Query.DistinctProjection || it instanceof Query.DistinctPropertyProjection)
                 .findFirst()
@@ -191,13 +190,13 @@ public class JpaCriteriaQueryCreator {
                     .map(order -> {
                         Path<?> expression = tablesByName.getFullyQualifiedPath(order.getProperty());
                         if (order.isIgnoreCase() && expression.getJavaType().equals(String.class)) {
-                            return order.getDirection().equals(Query.Order.Direction.ASC)
-                                    ? criteriaBuilder.asc(criteriaBuilder.lower((Expression<String>) expression))
-                                    : criteriaBuilder.desc(criteriaBuilder.lower((Expression<String>) expression));
+                            return order.getDirection().equals(Query.Order.Direction.ASC) ?
+                                    criteriaBuilder.asc(criteriaBuilder.lower((Expression<String>) expression)) :
+                                    criteriaBuilder.desc(criteriaBuilder.lower((Expression<String>) expression));
                         } else {
-                            return order.getDirection().equals(Query.Order.Direction.ASC)
-                                    ? criteriaBuilder.asc(expression)
-                                    : criteriaBuilder.desc(expression);
+                            return order.getDirection().equals(Query.Order.Direction.ASC) ?
+                                    criteriaBuilder.asc(expression) :
+                                    criteriaBuilder.desc(expression);
                         }
                     })
                     .toArray(Order[]::new);

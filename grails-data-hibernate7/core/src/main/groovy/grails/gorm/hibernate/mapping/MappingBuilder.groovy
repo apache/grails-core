@@ -20,6 +20,7 @@
 package grails.gorm.hibernate.mapping
 
 import groovy.transform.CompileStatic
+
 import org.grails.datastore.mapping.config.MappingDefinition
 import org.grails.orm.hibernate.cfg.Mapping
 import org.grails.orm.hibernate.cfg.PropertyConfig
@@ -55,6 +56,7 @@ class MappingBuilder {
 
     @CompileStatic
     private static class ClosureMappingDefinition implements MappingDefinition<Mapping, PropertyConfig> {
+
         final Closure definition
         private Mapping mapping
 

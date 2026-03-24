@@ -37,34 +37,40 @@ public class GroovyProxyInterceptorLogic {
 
     public static final Object INVOKE_IMPLEMENTATION = new Object();
 
-    public record InterceptorState(String entityName, Class<?> persistentClass, Object identifier) {}
+    private static final String GET_META_CLASS = "getMetaClass";
+    private static final String GET_PROPERTY = "getProperty";
+    private static final String ID_PROPERTY = "id";
+    private static final String IDENT_METHOD = "ident";
+    private static final String IS_DIRTY = "isDirty";
+    private static final String HAS_CHANGED = "hasChanged";
+    private static final String TO_STRING = "toString";
 
-    public static Object handleUninitialized(InterceptorState state, String methodName, Object[] args) {
-        if (("getMetaClass".equals(methodName) || methodName.endsWith("getStaticMetaClass"))
-                && (args == null || args.length == 0)) {
+    public static Object handleUninitialized(InterceptorState state, String methodName, Object... args) {
+        if ((GET_META_CLASS.equals(methodName) || methodName.endsWith("getStaticMetaClass")) &&
+                (args == null || args.length == 0)) {
             return InvokerHelper.getMetaClass(state.persistentClass());
         }
-        if ("getProperty".equals(methodName) && args.length == 1 && "id".equals(args[0])) {
+        if (GET_PROPERTY.equals(methodName) && args.length == 1 && ID_PROPERTY.equals(args[0])) {
             return state.identifier();
         }
-        if ("ident".equals(methodName) && (args == null || args.length == 0)) {
+        if (IDENT_METHOD.equals(methodName) && (args == null || args.length == 0)) {
             return state.identifier();
         }
-        if (("isDirty".equals(methodName) || "hasChanged".equals(methodName)) && (args == null || args.length == 0)) {
+        if ((IS_DIRTY.equals(methodName) || HAS_CHANGED.equals(methodName)) && (args == null || args.length == 0)) {
             return false;
         }
-        if ("toString".equals(methodName) && (args == null || args.length == 0)) {
+        if (TO_STRING.equals(methodName) && (args == null || args.length == 0)) {
             return state.entityName() + ":" + state.identifier();
         }
         return INVOKE_IMPLEMENTATION;
     }
 
     public static boolean isGroovyMethod(String methodName) {
-        return "getMetaClass".equals(methodName)
-                || "setMetaClass".equals(methodName)
-                || "getProperty".equals(methodName)
-                || "setProperty".equals(methodName)
-                || "invokeMethod".equals(methodName);
+        return "getMetaClass".equals(methodName) ||
+                "setMetaClass".equals(methodName) ||
+                "getProperty".equals(methodName) ||
+                "setProperty".equals(methodName) ||
+                "invokeMethod".equals(methodName);
     }
 
     public static ProxyInstanceMetaClass getProxyInstanceMetaClass(Object o) {
@@ -95,4 +101,6 @@ public class GroovyProxyInterceptorLogic {
         }
         return null;
     }
+
+    public record InterceptorState(String entityName, Class<?> persistentClass, Object identifier) {}
 }

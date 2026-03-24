@@ -79,15 +79,15 @@ public class GrailsPropertyBinder {
             value = enumTypeBinder.bindEnumType(hibernateEnumProperty, table, path);
         } else if (currentGrailsProp.isUserButNotCollectionType()) {
             value = simpleValueBinder.bindSimpleValue(currentGrailsProp, parentProperty, table, path);
-        } else if (currentGrailsProp instanceof HibernateOneToOneProperty oneToOne
-                && oneToOne.isValidHibernateOneToOne()) {
+        } else if (currentGrailsProp instanceof HibernateOneToOneProperty oneToOne &&
+                oneToOne.isValidHibernateOneToOne()) {
             value = oneToOneBinder.bindOneToOne(oneToOne, path);
         } else if (currentGrailsProp instanceof HibernateOneToOneProperty oneToOne) {
             value = foreignKeyOneToOneBinder.bind(oneToOne, path);
         } else if (currentGrailsProp instanceof HibernateManyToOneProperty manyToOne) {
             value = manyToOneBinder.bindManyToOne(manyToOne, table, path);
-        } else if (currentGrailsProp instanceof HibernateToManyProperty toMany
-                && !currentGrailsProp.isSerializableType()) {
+        } else if (currentGrailsProp instanceof HibernateToManyProperty toMany &&
+                !currentGrailsProp.isSerializableType()) {
             value = collectionBinder.bindCollection(toMany, path);
         } else if (currentGrailsProp instanceof HibernateEmbeddedProperty embedded) {
             value = componentBinder.bindComponent(embedded, path);
@@ -97,8 +97,8 @@ public class GrailsPropertyBinder {
             value = simpleValueBinder.bindSimpleValue(custom, parentProperty, table, path);
         } else if (currentGrailsProp instanceof HibernateTenantIdProperty tenantId) {
             value = simpleValueBinder.bindSimpleValue(tenantId, parentProperty, table, path);
-        } else if (currentGrailsProp instanceof HibernateToManyProperty toMany
-                && currentGrailsProp.isSerializableType()) {
+        } else if (currentGrailsProp instanceof HibernateToManyProperty toMany &&
+                currentGrailsProp.isSerializableType()) {
             value = simpleValueBinder.bindSimpleValue(toMany, parentProperty, table, path);
         } else {
             throw new RuntimeException(

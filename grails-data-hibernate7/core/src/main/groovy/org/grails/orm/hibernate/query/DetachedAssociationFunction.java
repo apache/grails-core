@@ -26,6 +26,7 @@ import org.grails.datastore.mapping.query.Query;
 
 @SuppressWarnings({"unchecked", "rawtypes"})
 public class DetachedAssociationFunction implements Function<Query.Criterion, List<DetachedAssociationCriteria<?>>> {
+
     @Override
     public List<DetachedAssociationCriteria<?>> apply(Query.Criterion o) {
         if (o instanceof DetachedAssociationCriteria) {

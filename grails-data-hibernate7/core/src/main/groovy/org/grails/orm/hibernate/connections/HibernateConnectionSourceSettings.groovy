@@ -22,16 +22,19 @@ import groovy.transform.AutoClone
 import groovy.transform.CompileStatic
 import groovy.transform.builder.Builder
 import groovy.transform.builder.SimpleStrategy
+
+import org.hibernate.CustomEntityDirtinessStrategy
+import org.hibernate.boot.model.naming.PhysicalNamingStrategy
+import org.hibernate.boot.model.naming.PhysicalNamingStrategySnakeCaseImpl
+import org.hibernate.cfg.Configuration
+
+import org.springframework.core.io.Resource
+
+import org.grails.datastore.gorm.jdbc.connections.DataSourceSettings
 import org.grails.datastore.mapping.core.connections.ConnectionSourceSettings
 import org.grails.orm.hibernate.HibernateEventListeners
-import org.grails.datastore.gorm.jdbc.connections.DataSourceSettings
 import org.grails.orm.hibernate.dirty.GrailsEntityDirtinessStrategy
 import org.grails.orm.hibernate.support.ClosureEventTriggeringInterceptor
-import org.hibernate.CustomEntityDirtinessStrategy
-import org.hibernate.boot.model.naming.PhysicalNamingStrategySnakeCaseImpl
-import org.hibernate.boot.model.naming.PhysicalNamingStrategy
-import org.hibernate.cfg.Configuration
-import org.springframework.core.io.Resource
 
 /**
  * Settings for Hibernate
@@ -261,8 +264,7 @@ class HibernateConnectionSourceSettings extends ConnectionSourceSettings {
                 def value = current.get(key)
                 if (value instanceof Map) {
                     populateProperties(props, (Map) value, "${prefix}.$key")
-                }
-                else {
+                } else {
                     props.put("$prefix.$key".toString(), value)
                 }
             }
@@ -291,6 +293,7 @@ class HibernateConnectionSourceSettings extends ConnectionSourceSettings {
              * @see org.hibernate.FlushMode
              */
             static enum FlushMode {
+
                 MANUAL(0),
                 COMMIT(5),
                 AUTO(10),
@@ -328,11 +331,13 @@ class HibernateConnectionSourceSettings extends ConnectionSourceSettings {
         @Builder(builderStrategy = SimpleStrategy, prefix = '')
         @AutoClone
         static class JpaSettings {
+
             JpaComplianceSettings compliance = new JpaComplianceSettings()
         }
 
         @Builder(builderStrategy = SimpleStrategy, prefix = '')
         static class JpaComplianceSettings {
+
             boolean cascade = true
         }
     }

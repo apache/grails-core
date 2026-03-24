@@ -89,9 +89,9 @@ public class JoinedSubClassBinder {
 
         joinedSubclass.setTable(mytable);
         if (LOG.isInfoEnabled()) {
-            LOG.info("Mapping joined-subclass: " + joinedSubclass.getEntityName()
-                    + " -> "
-                    + joinedSubclass.getTable().getName());
+            LOG.info("Mapping joined-subclass: " + joinedSubclass.getEntityName() +
+                    " -> " +
+                    joinedSubclass.getTable().getName());
         }
 
         SimpleValue key = new DependantValue(metadataBuildingContext, mytable, joinedSubclass.getIdentifier());

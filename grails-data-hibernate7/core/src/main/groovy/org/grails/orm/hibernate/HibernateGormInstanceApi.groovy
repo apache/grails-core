@@ -33,39 +33,41 @@
  */
 package org.grails.orm.hibernate
 
-import org.hibernate.LockMode
-
-import grails.gorm.validation.CascadingValidator
 import groovy.transform.CompileStatic
+import org.codehaus.groovy.runtime.InvokerHelper
+
 import jakarta.persistence.FlushModeType
 import jakarta.persistence.LockModeType
-import org.codehaus.groovy.runtime.InvokerHelper
-import org.grails.datastore.gorm.GormInstanceApi
-import org.grails.datastore.gorm.GormValidateable
-import org.grails.datastore.mapping.core.Datastore
-import org.grails.datastore.mapping.engine.event.ValidationEvent
-import org.grails.datastore.mapping.model.config.GormProperties
-import org.grails.datastore.mapping.model.types.Embedded
-import org.grails.datastore.mapping.model.PersistentEntity
-import org.grails.datastore.mapping.model.PersistentProperty
-import org.grails.datastore.mapping.model.types.Association
-import org.grails.datastore.mapping.model.types.ToOne
-import org.grails.datastore.mapping.reflect.ClassUtils
-import org.grails.datastore.mapping.reflect.EntityReflector
-import org.grails.orm.hibernate.cfg.GrailsHibernateUtil
-import org.grails.orm.hibernate.support.HibernateRuntimeUtils
 
 import org.hibernate.HibernateException
+import org.hibernate.LockMode
 import org.hibernate.Session
 import org.hibernate.SessionFactory
 import org.hibernate.engine.spi.EntityEntry
 import org.hibernate.engine.spi.SessionImplementor
 import org.hibernate.persister.entity.EntityPersister
+
 import org.springframework.beans.BeanWrapperImpl
 import org.springframework.beans.InvalidPropertyException
 import org.springframework.dao.DataAccessException
 import org.springframework.validation.Errors
 import org.springframework.validation.Validator
+
+import grails.gorm.validation.CascadingValidator
+import org.grails.datastore.gorm.GormInstanceApi
+import org.grails.datastore.gorm.GormValidateable
+import org.grails.datastore.mapping.core.Datastore
+import org.grails.datastore.mapping.engine.event.ValidationEvent
+import org.grails.datastore.mapping.model.PersistentEntity
+import org.grails.datastore.mapping.model.PersistentProperty
+import org.grails.datastore.mapping.model.config.GormProperties
+import org.grails.datastore.mapping.model.types.Association
+import org.grails.datastore.mapping.model.types.Embedded
+import org.grails.datastore.mapping.model.types.ToOne
+import org.grails.datastore.mapping.reflect.ClassUtils
+import org.grails.datastore.mapping.reflect.EntityReflector
+import org.grails.orm.hibernate.cfg.GrailsHibernateUtil
+import org.grails.orm.hibernate.support.HibernateRuntimeUtils
 
 /**
  * The implementation of the GORM instance API contract for Hibernate 7.
@@ -302,7 +304,8 @@ class HibernateGormInstanceApi<D> extends GormInstanceApi<D> {
                         }
                     }
                 }
-                catch (InvalidPropertyException ignored) {}
+                catch (InvalidPropertyException ignored) {
+                }
             }
         }
     }
@@ -377,7 +380,9 @@ class HibernateGormInstanceApi<D> extends GormInstanceApi<D> {
         String[] propertyNames = persister.getPropertyNames()
         int fieldIndex = -1
         for (int i = 0; i < propertyNames.length; i++) {
-            if (propertyNames[i] == fieldName) { fieldIndex = i; break }
+            if (propertyNames[i] == fieldName) {
+                fieldIndex = i; break
+            }
         }
         return fieldIndex in dirtyProperties
     }

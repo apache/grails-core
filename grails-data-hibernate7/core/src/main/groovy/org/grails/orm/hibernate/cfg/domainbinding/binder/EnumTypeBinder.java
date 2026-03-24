@@ -44,6 +44,7 @@ import static org.grails.orm.hibernate.cfg.domainbinding.binder.GrailsDomainBind
 
 public class EnumTypeBinder {
 
+    private static final Logger LOG = LoggerFactory.getLogger(EnumTypeBinder.class);
     private final MetadataBuildingContext metadataBuildingContext;
     private final ColumnNameForPropertyAndPathFetcher columnNameForPropertyAndPathFetcher;
     private final IndexBinder indexBinder;
@@ -74,8 +75,6 @@ public class EnumTypeBinder {
         this.columnConfigToColumnBinder = columnConfigToColumnBinder;
         this.namingStrategy = namingStrategy;
     }
-
-    private static final Logger LOG = LoggerFactory.getLogger(EnumTypeBinder.class);
 
     public BasicValue bindEnumType(@Nonnull HibernateEnumProperty property, String path) {
         return bindEnumType(property, property.getTable(), path);

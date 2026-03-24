@@ -34,7 +34,9 @@ import org.hibernate.proxy.pojo.bytebuddy.ByteBuddyProxyHelper;
  * @author Graeme Rocher
  * @since 7.0
  */
-public class GrailsBytecodeProvider implements BytecodeProvider {
+public class GrailsBytecodeProvider implements BytecodeProvider, java.io.Serializable {
+
+    private static final long serialVersionUID = 1L;
 
     private final ByteBuddyProxyHelper proxyHelper;
 

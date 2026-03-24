@@ -33,16 +33,18 @@
  */
 package org.grails.orm.hibernate
 
+import javax.sql.DataSource
+
 import groovy.transform.CompileStatic
 import groovy.util.logging.Slf4j
+
 import org.hibernate.FlushMode
 import org.hibernate.SessionFactory
+
 import org.springframework.orm.hibernate5.HibernateTransactionManager
 import org.springframework.orm.hibernate5.SessionHolder
 import org.springframework.transaction.TransactionDefinition
 import org.springframework.transaction.support.TransactionSynchronizationManager
-
-import javax.sql.DataSource
 
 /**
  * Extends the standard class to always set the flush mode to manual when in a read-only transaction.
@@ -71,8 +73,7 @@ class GrailsHibernateTransactionManager extends HibernateTransactionManager {
 
             SessionHolder holder = (SessionHolder) TransactionSynchronizationManager.getResource(sessionFactory)
             holder.session.setHibernateFlushMode(FlushMode.MANUAL)
-        }
-        else if (defaultFlushMode != FlushMode.AUTO) {
+        } else if (defaultFlushMode != FlushMode.AUTO) {
             SessionHolder holder = (SessionHolder) TransactionSynchronizationManager.getResource(sessionFactory)
             holder.session.setHibernateFlushMode(defaultFlushMode)
         }

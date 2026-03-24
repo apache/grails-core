@@ -88,16 +88,16 @@ public class GrailsSessionContext implements CurrentSessionContext {
 
         if (value instanceof SessionHolder sessionHolder) {
             Session session = sessionHolder.getSession();
-            if (TransactionSynchronizationManager.isSynchronizationActive()
-                    && !sessionHolder.isSynchronizedWithTransaction()) {
+            if (TransactionSynchronizationManager.isSynchronizationActive() &&
+                    !sessionHolder.isSynchronizedWithTransaction()) {
                 TransactionSynchronizationManager.registerSynchronization(
                         createSpringSessionSynchronization(sessionHolder));
                 sessionHolder.setSynchronizedWithTransaction(true);
                 // Switch to FlushMode.AUTO, as we have to assume a thread-bound Session
                 // with FlushMode.MANUAL, which needs to allow flushing within the transaction.
                 FlushMode flushMode = session.getHibernateFlushMode();
-                if (flushMode.equals(FlushMode.MANUAL)
-                        && !TransactionSynchronizationManager.isCurrentTransactionReadOnly()) {
+                if (flushMode.equals(FlushMode.MANUAL) &&
+                        !TransactionSynchronizationManager.isCurrentTransactionReadOnly()) {
                     session.setHibernateFlushMode(FlushMode.AUTO);
                     sessionHolder.setPreviousFlushMode(flushMode);
                 }

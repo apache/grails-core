@@ -40,20 +40,18 @@ import static org.hibernate.internal.util.collections.ArrayHelper.EMPTY_CLASS_AR
  */
 public class ByteBuddyGroovyProxyFactory extends ByteBuddyProxyFactory {
 
-
     @Serial
     private static final long serialVersionUID = 1L;
 
+    private final transient ByteBuddyProxyHelper byteBuddyProxyHelper;
     private Class<?> persistentClass;
     private String entityName;
     private Class<?>[] interfaces;
-    private Method getIdentifierMethod;
-    private Method setIdentifierMethod;
-    private CompositeType componentIdType;
+    private transient Method getIdentifierMethod;
+    private transient Method setIdentifierMethod;
+    private transient CompositeType componentIdType;
     private boolean overridesEquals;
-
     private Class<?> proxyClass;
-    private final ByteBuddyProxyHelper byteBuddyProxyHelper;
 
     public ByteBuddyGroovyProxyFactory(ByteBuddyProxyHelper byteBuddyProxyHelper) {
         super(byteBuddyProxyHelper);
@@ -110,8 +108,8 @@ public class ByteBuddyGroovyProxyFactory extends ByteBuddyProxyFactory {
             }
 
             return hibernateProxy;
-        } catch (Throwable t) {
-            throw new HibernateException("Unable to generate proxy for " + entityName, t);
+        } catch (Exception e) {
+            throw new HibernateException("Unable to generate proxy for " + entityName, e);
         }
     }
 }

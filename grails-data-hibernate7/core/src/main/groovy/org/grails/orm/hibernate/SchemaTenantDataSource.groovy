@@ -20,8 +20,10 @@ package org.grails.orm.hibernate
 
 import java.sql.Connection
 
-import groovy.transform.CompileStatic
 import javax.sql.DataSource
+
+import groovy.transform.CompileStatic
+
 import org.grails.datastore.gorm.jdbc.MultiTenantConnection
 import org.grails.datastore.gorm.jdbc.MultiTenantDataSource
 import org.grails.datastore.gorm.jdbc.schema.SchemaHandler

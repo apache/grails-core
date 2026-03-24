@@ -70,7 +70,7 @@ interface HqlQueryDelegate {
     default void setParameterList(String name, Collection<?> values) {}
 
     /** Sets a named array parameter. For mutation queries, falls back to {@link #setParameter}. */
-    default void setParameterList(String name, Object[] values) {}
+    default void setParameterList(String name, Object... values) {}
 
     // ── execution ─────────────────────────────────────────────────────────────
 

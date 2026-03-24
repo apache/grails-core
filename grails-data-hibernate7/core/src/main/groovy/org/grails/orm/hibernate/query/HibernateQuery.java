@@ -70,33 +70,15 @@ import org.grails.orm.hibernate.proxy.HibernateProxyHandler;
 @SuppressWarnings("rawtypes")
 public class HibernateQuery extends Query {
 
-    public GrailsHibernateTemplate getHibernateTemplate() {
-        return ((HibernateSession) getSession()).getHibernateTemplate();
-    }
-
     protected static final String ALIAS = "_alias";
+    private final Map<String, CriteriaAndAlias> createdAssociationPaths = new HashMap<>();
+    private final List<HibernateAlias> aliases = new java.util.ArrayList<>();
     protected String alias;
     protected int aliasCount;
-
-    public DetachedCriteria<?> getDetachedCriteria() {
-        return detachedCriteria;
-    }
-
-    private final Map<String, CriteriaAndAlias> createdAssociationPaths = new HashMap<>();
     protected Deque<PersistentEntity> entityStack = new LinkedList<>();
     protected Deque<Association> associationStack = new LinkedList<>();
     protected DetachedCriteria<?> detachedCriteria;
     protected ProxyHandler proxyHandler = new HibernateProxyHandler();
-    private final List<HibernateAlias> aliases = new java.util.ArrayList<>();
-
-    public List<HibernateAlias> getAliases() {
-        return Collections.unmodifiableList(aliases);
-    }
-
-    public void addAlias(HibernateAlias alias) {
-        this.aliases.add(alias);
-    }
-
     private Integer fetchSize;
     private Integer timeout;
     private QueryFlushMode flushMode;
@@ -107,8 +89,24 @@ public class HibernateQuery extends Query {
         this.detachedCriteria = new DetachedCriteria<>(entity.getJavaClass());
     }
 
+    public GrailsHibernateTemplate getHibernateTemplate() {
+        return ((HibernateSession) getSession()).getHibernateTemplate();
+    }
+
+    public DetachedCriteria<?> getDetachedCriteria() {
+        return detachedCriteria;
+    }
+
     public void setDetachedCriteria(DetachedCriteria<?> detachedCriteria) {
         this.detachedCriteria = detachedCriteria;
+    }
+
+    public List<HibernateAlias> getAliases() {
+        return Collections.unmodifiableList(aliases);
+    }
+
+    public void addAlias(HibernateAlias alias) {
+        this.aliases.add(alias);
     }
 
     @Override
@@ -350,10 +348,10 @@ public class HibernateQuery extends Query {
                     alias);
         }
         throw new InvalidDataAccessApiUsageException(
-                "Cannot query association [" + calculatePropertyName(associationName)
-                        + "] of entity ["
-                        + entity
-                        + "]. Property is not an association!");
+                "Cannot query association [" + calculatePropertyName(associationName) +
+                        "] of entity [" +
+                        entity +
+                        "]. Property is not an association!");
     }
 
     @SuppressWarnings("PMD.DataflowAnomalyAnalysis")

@@ -63,7 +63,6 @@ public class ComponentBinder {
                 (GrailsHibernatePersistentEntity) embeddedProperty.getAssociatedEntity();
         mappingCacheHolder.cacheMapping(associatedEntity);
 
-
         PersistentClass persistentClass = component.getOwner();
         associatedEntity.setPersistentClass(persistentClass);
         String currentPath = path.isEmpty() ? embeddedProperty.getName() : path + "." + embeddedProperty.getName();

@@ -74,15 +74,10 @@ public record HqlQueryContext(
             Map<String, Object> querySettings,
             boolean isNative,
             boolean isUpdate) {
-        Map<String, Object> _namedParams = namedParams != null ?
-                new HashMap<>(namedParams) :
-                new HashMap<>();
-        List<Object> positionalParamsCopy = positionalParams != null ?
-                new ArrayList<>(positionalParams) :
-                new ArrayList<>();
-        Map<String, Object> querySettingsCopy = querySettings != null ?
-                new HashMap<>(querySettings) :
-                new HashMap<>();
+        Map<String, Object> _namedParams = namedParams != null ? new HashMap<>(namedParams) : new HashMap<>();
+        List<Object> positionalParamsCopy =
+                positionalParams != null ? new ArrayList<>(positionalParams) : new ArrayList<>();
+        Map<String, Object> querySettingsCopy = querySettings != null ? new HashMap<>(querySettings) : new HashMap<>();
 
         boolean _isNative = toBool(isNative);
         boolean _isUpdate = toBool(isUpdate);
@@ -106,18 +101,18 @@ public record HqlQueryContext(
 
     public static @Nullable String resolveHql(
             CharSequence queryCharseq, boolean isNative, Map<String, Object> namedParams) {
-        String raw = queryCharseq instanceof GString gstr
-                ? buildNamedParameterQueryFromGString(gstr, namedParams)
-                : queryCharseq != null ? queryCharseq.toString() : "";
+        String raw = queryCharseq instanceof GString gstr ?
+                buildNamedParameterQueryFromGString(gstr, namedParams) :
+                queryCharseq != null ? queryCharseq.toString() : "";
         String normalized = normalizeMultiLineQueryString(raw);
         return isNative ? normalized : normalizeNonAliasedSelect(normalized);
     }
 
     public static @Nullable String resolveHql(
             CharSequence queryCharseq, boolean isNative, Collection<Object> positionalParams) {
-        String raw = queryCharseq instanceof GString gstr
-                ? buildPositionalParameterQueryFromGString(gstr, positionalParams, isNative)
-                : queryCharseq != null ? queryCharseq.toString() : "";
+        String raw = queryCharseq instanceof GString gstr ?
+                buildPositionalParameterQueryFromGString(gstr, positionalParams, isNative) :
+                queryCharseq != null ? queryCharseq.toString() : "";
         String normalized = normalizeMultiLineQueryString(raw);
         return isNative ? normalized : normalizeNonAliasedSelect(normalized);
     }
@@ -134,9 +129,9 @@ public record HqlQueryContext(
         return switch (countHqlProjections(normalized)) {
             case 0 -> clazz;
             case 1 ->
-                isAggregateProjection(normalized)
-                        ? Long.class
-                        : (isPropertyProjection(normalized) ? Object.class : clazz);
+                isAggregateProjection(normalized) ?
+                        Long.class :
+                        (isPropertyProjection(normalized) ? Object.class : clazz);
             default -> Object[].class;
         };
     }
@@ -145,11 +140,11 @@ public record HqlQueryContext(
         String clause = getSingleProjectionClause(hql);
         if (clause == null) return false;
 
-        return clause.startsWith("count(")
-                || clause.startsWith("sum(")
-                || clause.startsWith("avg(")
-                || clause.startsWith("min(")
-                || clause.startsWith("max(");
+        return clause.startsWith("count(") ||
+                clause.startsWith("sum(") ||
+                clause.startsWith("avg(") ||
+                clause.startsWith("min(") ||
+                clause.startsWith("max(");
     }
 
     private static @Nullable String getSingleProjectionClause(CharSequence hql) {
@@ -213,23 +208,32 @@ public record HqlQueryContext(
     }
 
     private static int getCommas(String sel) {
-        int depth = 0, commas = 0;
-        boolean inSingle = false, inDouble = false;
-        for (int i = 0; i < sel.length(); i++) {
+        int depth = 0;
+        int commas = 0;
+        boolean inSingle = false;
+        boolean inDouble = false;
+        int i = 0;
+        while (i < sel.length()) {
             char c = sel.charAt(i);
             if (!inDouble && c == '\'') {
                 if (inSingle && i + 1 < sel.length() && sel.charAt(i + 1) == '\'') {
+                    // escaped '' — skip next
                     i++;
-                    continue;
-                } // escaped ''
-                inSingle = !inSingle;
+                } else {
+                    inSingle = !inSingle;
+                }
             } else if (!inSingle && c == '"') {
                 inDouble = !inDouble;
             } else if (!inSingle && !inDouble) {
-                if (c == '(') depth++;
-                else if (c == ')' && depth > 0) depth--;
-                else if (c == ',' && depth == 0) commas++;
+                if (c == '(') {
+                    depth++;
+                } else if (c == ')' && depth > 0) {
+                    depth--;
+                } else if (c == ',' && depth == 0) {
+                    commas++;
+                }
             }
+            i++;
         }
         return commas;
     }
@@ -269,8 +273,8 @@ public record HqlQueryContext(
         // Skip whitespace, then optional "as" keyword
         int cur = entityEnd;
         while (cur < s.length() && Character.isWhitespace(s.charAt(cur))) cur++;
-        if (cur + 2 <= s.length()
-                && s.substring(cur, cur + 2).equalsIgnoreCase(HibernateQueryArgument.HQL_AS.value())) {
+        if (cur + 2 <= s.length() &&
+                s.substring(cur, cur + 2).equalsIgnoreCase(HibernateQueryArgument.HQL_AS.value())) {
             cur += HibernateQueryArgument.HQL_AS.value().length();
             while (cur < s.length() && Character.isWhitespace(s.charAt(cur))) cur++;
         }
@@ -279,8 +283,8 @@ public record HqlQueryContext(
         int tokenEnd = cur;
         while (tokenEnd < s.length() && !Character.isWhitespace(s.charAt(tokenEnd))) tokenEnd++;
         String token = s.substring(cur, tokenEnd).toLowerCase(Locale.ROOT);
-        boolean hasAlias = !token.isEmpty()
-                && !Set.of(
+        boolean hasAlias = !token.isEmpty() &&
+                !Set.of(
                                 HibernateQueryArgument.HQL_WHERE.value(),
                                 HibernateQueryArgument.HQL_JOIN.value(),
                                 HibernateQueryArgument.HQL_LEFT.value(),
@@ -294,7 +298,9 @@ public record HqlQueryContext(
         if (hasAlias) return s;
 
         // Strip DISTINCT/ALL prefix before adjusting the projection
-        String prefix = "", projOrig = selectClauseOrig, projLower = selectClauseLower;
+        String prefix = "";
+        String projOrig = selectClauseOrig;
+        String projLower = selectClauseLower;
         if (projLower.startsWith(HibernateQueryArgument.HQL_DISTINCT.value() + " ")) {
             prefix = HibernateQueryArgument.HQL_DISTINCT.value() + " ";
             projOrig = selectClauseOrig
@@ -317,16 +323,16 @@ public record HqlQueryContext(
         String adjusted;
         if (projLower.equalsIgnoreCase(entityName)) {
             adjusted = "e"; // "select Person from Person" → "select e"
-        } else if (!projLower.contains("(")
-                && !projLower.contains(".")
-                && !projLower.startsWith(HibernateQueryArgument.HQL_NEW.value() + " ")) {
+        } else if (!projLower.contains("(") &&
+                !projLower.contains(".") &&
+                !projLower.startsWith(HibernateQueryArgument.HQL_NEW.value() + " ")) {
             adjusted = "e." + projOrig; // "select name from Person"   → "select e.name"
         } else {
             adjusted = projOrig; // functions / constructor expr / already qualified
         }
 
-        return HibernateQueryArgument.HQL_SELECT.value() + " " + prefix + adjusted + " "
-                + HibernateQueryArgument.HQL_FROM.value() + " " + entityName + " e" + s.substring(entityEnd);
+        return HibernateQueryArgument.HQL_SELECT.value() + " " + prefix + adjusted + " " +
+                HibernateQueryArgument.HQL_FROM.value() + " " + entityName + " e" + s.substring(entityEnd);
     }
 
     // ─── Private helpers ─────────────────────────────────────────────────────

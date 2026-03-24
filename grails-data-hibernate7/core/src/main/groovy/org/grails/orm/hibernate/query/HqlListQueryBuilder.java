@@ -47,6 +47,27 @@ public class HqlListQueryBuilder {
         this.params = params;
     }
 
+    private static boolean isJoinFetch(Object mode) {
+        if (mode == null) return false;
+        String s = mode.toString();
+        return s.equalsIgnoreCase(HibernateQueryArgument.JOIN.value()) ||
+                s.equalsIgnoreCase(HibernateQueryArgument.EAGER.value());
+    }
+
+    private static String direction(String raw) {
+        return HibernateQueryArgument.ORDER_DESC.value().equalsIgnoreCase(raw) ?
+                HibernateQueryArgument.ORDER_DESC.value() :
+                HibernateQueryArgument.ORDER_ASC.value();
+    }
+
+    // ─── JOIN FETCH ──────────────────────────────────────────────────────────
+
+    /** Returns true when the params indicate a paged query (i.e. {@code max} is set). */
+    @SuppressWarnings("rawtypes")
+    static boolean isPaged(Map params) {
+        return params.containsKey(HibernateQueryArgument.MAX.value());
+    }
+
     /** Builds the SELECT HQL for the list query (no count). */
     public String buildListHql() {
         String alias = "e";
@@ -57,12 +78,12 @@ public class HqlListQueryBuilder {
         return hql.toString();
     }
 
+    // ─── ORDER BY ────────────────────────────────────────────────────────────
+
     /** Builds the scalar count HQL for {@link HibernatePagedResultList}. */
     String buildCountHql() {
         return "select count(distinct e) from " + entity.getName() + " e";
     }
-
-    // ─── JOIN FETCH ──────────────────────────────────────────────────────────
 
     private void appendJoinFetch(StringBuilder hql, String alias) {
         Object fetchObj = params.get(HibernateQueryArgument.FETCH.value());
@@ -75,15 +96,6 @@ public class HqlListQueryBuilder {
             }
         }
     }
-
-    private static boolean isJoinFetch(Object mode) {
-        if (mode == null) return false;
-        String s = mode.toString();
-        return s.equalsIgnoreCase(HibernateQueryArgument.JOIN.value())
-                || s.equalsIgnoreCase(HibernateQueryArgument.EAGER.value());
-    }
-
-    // ─── ORDER BY ────────────────────────────────────────────────────────────
 
     private void appendOrderBy(StringBuilder hql, String alias) {
         List<String> clauses = new ArrayList<>();
@@ -121,12 +133,6 @@ public class HqlListQueryBuilder {
         return upper ? "upper(" + path + ") " + dir : path + " " + dir;
     }
 
-    private static String direction(String raw) {
-        return HibernateQueryArgument.ORDER_DESC.value().equalsIgnoreCase(raw)
-                ? HibernateQueryArgument.ORDER_DESC.value()
-                : HibernateQueryArgument.ORDER_ASC.value();
-    }
-
     private boolean isIgnoreCase() {
         Object ic = params.get(HibernateQueryArgument.IGNORE_CASE.value());
         return !(ic instanceof Boolean b) || b;
@@ -149,11 +155,5 @@ public class HqlListQueryBuilder {
         if (prop instanceof Embedded<?> emb) return emb.getAssociatedEntity();
         if (prop instanceof Association<?> assoc) return assoc.getAssociatedEntity();
         return null;
-    }
-
-    /** Returns true when the params indicate a paged query (i.e. {@code max} is set). */
-    @SuppressWarnings("rawtypes")
-    static boolean isPaged(Map params) {
-        return params.containsKey(HibernateQueryArgument.MAX.value());
     }
 }

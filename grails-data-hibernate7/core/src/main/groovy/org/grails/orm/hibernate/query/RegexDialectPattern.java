@@ -44,10 +44,6 @@ public enum RegexDialectPattern {
         this.sqlPattern = sqlPattern;
     }
 
-    public String getSqlPattern() {
-        return sqlPattern;
-    }
-
     /**
      * Resolves the pattern by checking if the runtime dialect is an instance of the supported dialect
      * class.
@@ -58,5 +54,9 @@ public enum RegexDialectPattern {
                 .findFirst()
                 .map(RegexDialectPattern::getSqlPattern)
                 .orElse(DEFAULT.sqlPattern);
+    }
+
+    public String getSqlPattern() {
+        return sqlPattern;
     }
 }

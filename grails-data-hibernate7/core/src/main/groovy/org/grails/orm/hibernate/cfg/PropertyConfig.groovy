@@ -39,13 +39,14 @@ import groovy.transform.builder.Builder
 import groovy.transform.builder.SimpleStrategy
 
 import jakarta.persistence.AccessType
+import jakarta.persistence.FetchType
 
-import org.grails.datastore.mapping.config.Property
 import org.hibernate.FetchMode
+
 import org.springframework.beans.MutablePropertyValues
 import org.springframework.validation.DataBinder
 
-import jakarta.persistence.FetchType
+import org.grails.datastore.mapping.config.Property
 
 /**
  * Custom mapping for a single domain property. Note that a property
@@ -102,12 +103,12 @@ class PropertyConfig extends Property {
     boolean ignoreNotFound = false
 
     /**
-    * Whether or not this is column is insertable by hibernate
+     * Whether or not this is column is insertable by hibernate
      */
     boolean insertable = true
 
     /**
-    * Whether or not this column is updatable by hibernate
+     * Whether or not this column is updatable by hibernate
      */
     boolean updatable = true
 
@@ -145,8 +146,7 @@ class PropertyConfig extends Property {
         if (columns.size() == 1 && firstColumnIsColumnCopy) {
             firstColumnIsColumnCopy = false
             ColumnConfig.configureExisting(columns[0], columnDef)
-        }
-        else {
+        } else {
             columns.add(ColumnConfig.configureNew(columnDef))
         }
         return this
@@ -161,8 +161,7 @@ class PropertyConfig extends Property {
         if (columns.size() == 1 && firstColumnIsColumnCopy) {
             firstColumnIsColumnCopy = false
             ColumnConfig.configureExisting(columns[0], columnDef)
-        }
-        else {
+        } else {
             columns.add(ColumnConfig.configureNew(columnDef))
         }
         return this
@@ -177,8 +176,7 @@ class PropertyConfig extends Property {
         if (columns.size() == 1 && firstColumnIsColumnCopy) {
             firstColumnIsColumnCopy = false
             columns[0].name = columnDef
-        }
-        else {
+        } else {
             columns.add(ColumnConfig.configureNew(name: columnDef))
         }
         return this
@@ -267,8 +265,7 @@ class PropertyConfig extends Property {
     void setFetch(FetchMode fetch) {
         if (FetchMode.JOIN.equals(fetch)) {
             super.setFetchStrategy(FetchType.EAGER)
-        }
-        else {
+        } else {
             super.setFetchStrategy(FetchType.LAZY)
         }
     }
@@ -338,8 +335,7 @@ class PropertyConfig extends Property {
         ColumnConfig cc
         if (property.columns) {
             cc = property.columns[0]
-        }
-        else {
+        } else {
             cc = new ColumnConfig()
             property.columns.add(cc)
         }
@@ -411,8 +407,7 @@ class PropertyConfig extends Property {
     boolean isUnique() {
         if (columns.size() > 1) {
             return super.isUnique()
-        }
-        else {
+        } else {
             if (columns.isEmpty()) return super.isUnique()
             return columns[0].unique
         }
@@ -463,10 +458,9 @@ class PropertyConfig extends Property {
     @Override
     void setScale(int scale) {
         checkHasSingleColumn()
-        if (!columns.isEmpty())  {
+        if (!columns.isEmpty()) {
             columns[0].scale = scale
-        }
-        else {
+        } else {
             super.setScale(scale)
         }
     }

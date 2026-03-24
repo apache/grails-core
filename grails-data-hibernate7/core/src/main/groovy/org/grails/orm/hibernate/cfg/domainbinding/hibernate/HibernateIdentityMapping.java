@@ -60,7 +60,7 @@ public class HibernateIdentityMapping implements IdentityMapping<Property> {
                 return DEFAULT_IDENTITY_MAPPING.clone();
             }
         } else if (identity instanceof CompositeIdentity) {
-            return ((CompositeIdentity) identity).getPropertyNames();
+            return ((CompositeIdentity) identity).getPropertyNames(); // NOPMD
         }
         return DEFAULT_IDENTITY_MAPPING.clone();
     }
@@ -77,6 +77,6 @@ public class HibernateIdentityMapping implements IdentityMapping<Property> {
 
     @Override
     public Property getMappedForm() {
-        return (Property) identity;
+        return (Property) identity; // NOPMD
     }
 }

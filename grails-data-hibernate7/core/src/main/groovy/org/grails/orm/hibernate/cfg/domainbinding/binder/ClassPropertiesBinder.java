@@ -73,8 +73,8 @@ public class ClassPropertiesBinder {
     @Nonnull
     private Table getTable(PersistentClass persistentClass) {
         if (persistentClass.getTable() == null) {
-            throw new MappingException("Persistent class [" + persistentClass.getEntityName()
-                    + "] does not have a table associated with it");
+            throw new MappingException("Persistent class [" + persistentClass.getEntityName() +
+                    "] does not have a table associated with it");
         }
         return persistentClass.getTable();
     }

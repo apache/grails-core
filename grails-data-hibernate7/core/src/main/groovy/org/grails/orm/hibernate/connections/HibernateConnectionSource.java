@@ -19,6 +19,7 @@
 package org.grails.orm.hibernate.connections;
 
 import java.io.IOException;
+
 import javax.sql.DataSource;
 
 import org.hibernate.SessionFactory;
@@ -49,16 +50,11 @@ public class HibernateConnectionSource
     }
 
     @Override
-    @SuppressWarnings("PMD.CloseResource")
     public void close() throws IOException {
         super.close();
-        try {
-            SessionFactory sessionFactory = getSource();
-            sessionFactory.close();
-        } finally {
-            if (dataSource != null) {
-                dataSource.close();
-            }
+        try (SessionFactory sf = getSource();
+                ConnectionSource<DataSource, DataSourceSettings> ds = this.dataSource) {
+            // closed by try-with-resources
         }
     }
 

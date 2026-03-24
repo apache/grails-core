@@ -55,10 +55,8 @@ import org.grails.orm.hibernate.support.HibernateRuntimeUtils;
  * @since 0.4
  */
 public class GrailsHibernateUtil extends HibernateRuntimeUtils {
-    protected static final Logger LOG = LoggerFactory.getLogger(GrailsHibernateUtil.class);
 
     private static final String VERSION_8_0 = "8.0";
-
     /** @deprecated Use {@link org.grails.orm.hibernate.query.HibernateQueryArgument#FETCH_SIZE} */
     @Deprecated(since = VERSION_8_0, forRemoval = true)
     public static final String ARGUMENT_FETCH_SIZE = HibernateQueryArgument.FETCH_SIZE.value();
@@ -101,6 +99,8 @@ public class GrailsHibernateUtil extends HibernateRuntimeUtils {
     /** @deprecated Use {@link org.grails.orm.hibernate.query.HibernateQueryArgument#LOCK} */
     @Deprecated(since = VERSION_8_0, forRemoval = true)
     public static final String ARGUMENT_LOCK = HibernateQueryArgument.LOCK.value();
+
+    protected static final Logger LOG = LoggerFactory.getLogger(GrailsHibernateUtil.class);
 
     private static HibernateProxyHandler proxyHandler = new HibernateProxyHandler();
 

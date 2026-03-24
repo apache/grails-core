@@ -27,6 +27,7 @@ import org.grails.orm.hibernate.cfg.PropertyConfig;
 
 /** Hibernate implementation of {@link org.grails.datastore.mapping.model.types.Simple} */
 public class HibernateSimpleProperty extends SimpleWithMapping<PropertyConfig> implements HibernatePersistentProperty {
+
     public HibernateSimpleProperty(PersistentEntity entity, MappingContext context, PropertyDescriptor property) {
         super(entity, context, property);
     }

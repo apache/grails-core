@@ -35,15 +35,6 @@ import org.hibernate.service.spi.SessionFactoryServiceRegistry;
 
 public class EventListenerIntegrator implements Integrator {
 
-    protected HibernateEventListeners hibernateEventListeners;
-    protected Map<String, Object> eventListeners;
-
-    public EventListenerIntegrator(
-            HibernateEventListeners hibernateEventListeners, Map<String, Object> eventListeners) {
-        this.hibernateEventListeners = hibernateEventListeners;
-        this.eventListeners = eventListeners;
-    }
-
     protected static final List<EventType<?>> TYPES = Arrays.asList(
             EventType.AUTO_FLUSH,
             EventType.MERGE,
@@ -76,6 +67,14 @@ public class EventListenerIntegrator implements Integrator {
             EventType.POST_COLLECTION_RECREATE,
             EventType.POST_COLLECTION_REMOVE,
             EventType.POST_COLLECTION_UPDATE);
+    protected HibernateEventListeners hibernateEventListeners;
+    protected Map<String, Object> eventListeners;
+
+    public EventListenerIntegrator(
+            HibernateEventListeners hibernateEventListeners, Map<String, Object> eventListeners) {
+        this.hibernateEventListeners = hibernateEventListeners;
+        this.eventListeners = eventListeners;
+    }
 
     @SuppressWarnings({"unchecked", "rawtypes", "PMD.DataflowAnomalyAnalysis"})
     @Override

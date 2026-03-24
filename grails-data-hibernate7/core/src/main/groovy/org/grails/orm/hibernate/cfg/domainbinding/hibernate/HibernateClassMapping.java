@@ -32,6 +32,7 @@ import org.grails.orm.hibernate.cfg.domainbinding.util.CascadeBehavior;
  * @since 5.0
  */
 public class HibernateClassMapping extends AbstractClassMapping<Mapping> {
+
     private final Mapping mappedForm;
 
     public HibernateClassMapping(PersistentEntity entity, MappingContext context) {

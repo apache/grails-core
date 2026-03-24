@@ -84,8 +84,8 @@ public class CompositeIdentifierToManyToOneBinder {
         String[] propertyNames = compositeId.getPropertyNames();
         List<ColumnConfig> columns = property.getHibernateMappedForm().getColumns();
         int existingCount = columns.size();
-        if (existingCount
-                != foreignKeyColumnCountCalculator.calculateForeignKeyColumnCount(refDomainClass, propertyNames)) {
+        if (existingCount !=
+                foreignKeyColumnCountCalculator.calculateForeignKeyColumnCount(refDomainClass, propertyNames)) {
             String prefix = refDomainClass.getTableName(namingStrategy);
             IntStream.range(0, propertyNames.length)
                     .boxed()

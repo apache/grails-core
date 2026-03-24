@@ -29,6 +29,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Properties;
 import java.util.Set;
+
 import javax.sql.DataSource;
 
 import jakarta.annotation.Nullable;
@@ -90,6 +91,7 @@ import org.grails.orm.hibernate.cfg.domainbinding.util.NamingStrategyProvider;
 @SuppressWarnings({"rawtypes", "PMD.UseProperClassLoader", "PMD.DataflowAnomalyAnalysis", "PMD.CloseResource"})
 public class HibernateMappingContextConfiguration extends Configuration
         implements ApplicationContextAware, Serializable {
+
     @Serial
     private static final long serialVersionUID = -7115087342689305517L;
 
@@ -100,20 +102,18 @@ public class HibernateMappingContextConfiguration extends Configuration
         new AnnotationTypeFilter(Embeddable.class, false),
         new AnnotationTypeFilter(MappedSuperclass.class, false)
     };
-
+    private static final String FALSE_LITERAL = "false";
+    private final Class<? extends CurrentSessionContext> currentSessionContext = GrailsSessionContext.class;
+    //    private MetadataContributor metadataContributor;
+    private final Set<Class> additionalClasses = new HashSet<>();
     protected String sessionFactoryBeanName = "sessionFactory";
     protected String dataSourceName = ConnectionSource.DEFAULT;
     protected transient HibernateMappingContext hibernateMappingContext;
-    private final Class<? extends CurrentSessionContext> currentSessionContext = GrailsSessionContext.class;
     private transient HibernateEventListeners hibernateEventListeners;
     private Map<String, Object> eventListeners;
     private transient ServiceRegistry serviceRegistry;
     private transient ResourcePatternResolver resourcePatternResolver = new PathMatchingResourcePatternResolver();
-    //    private MetadataContributor metadataContributor;
-    private final Set<Class> additionalClasses = new HashSet<>();
     private transient NamingStrategyProvider namingStrategyProvider = new NamingStrategyProvider();
-
-    private static final String FALSE_LITERAL = "false";
 
     public NamingStrategyProvider getNamingStrategyProvider() {
         return namingStrategyProvider;
@@ -168,8 +168,8 @@ public class HibernateMappingContextConfiguration extends Configuration
         getProperties().put(JdbcSettings.JAKARTA_NON_JTA_DATASOURCE, source);
         getProperties().put(Environment.CURRENT_SESSION_CONTEXT_CLASS, GrailsSessionContext.class.getName());
         final ClassLoader contextClassLoader = Thread.currentThread().getContextClassLoader();
-        if (contextClassLoader != null
-                && contextClassLoader.getClass().getSimpleName().equalsIgnoreCase("RestartClassLoader")) {
+        if (contextClassLoader != null &&
+                contextClassLoader.getClass().getSimpleName().equalsIgnoreCase("RestartClassLoader")) {
             getProperties().put(AvailableSettings.CLASSLOADERS, contextClassLoader);
         } else {
             getProperties()
@@ -219,9 +219,9 @@ public class HibernateMappingContextConfiguration extends Configuration
         try {
             MetadataReaderFactory readerFactory = new CachingMetadataReaderFactory(resourcePatternResolver);
             for (String pkg : packagesToScan) {
-                String pattern = ResourcePatternResolver.CLASSPATH_ALL_URL_PREFIX
-                        + ClassUtils.convertClassNameToResourcePath(pkg)
-                        + RESOURCE_PATTERN;
+                String pattern = ResourcePatternResolver.CLASSPATH_ALL_URL_PREFIX +
+                        ClassUtils.convertClassNameToResourcePath(pkg) +
+                        RESOURCE_PATTERN;
                 Resource[] resources = resourcePatternResolver.getResources(pattern);
                 for (Resource resource : resources) {
                     if (resource.isReadable()) {
@@ -229,9 +229,9 @@ public class HibernateMappingContextConfiguration extends Configuration
                         String className = reader.getClassMetadata().getClassName();
                         if (matchesFilter(reader, readerFactory)) {
                             ClassLoader classLoader = resourcePatternResolver.getClassLoader();
-                            Class<?> loadedClass = classLoader != null
-                                    ? classLoader.loadClass(className)
-                                    : ClassUtils.forName(className, null);
+                            Class<?> loadedClass = classLoader != null ?
+                                    classLoader.loadClass(className) :
+                                    ClassUtils.forName(className, null);
                             addAnnotatedClasses(loadedClass);
                         }
                     }

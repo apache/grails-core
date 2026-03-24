@@ -88,11 +88,11 @@ public interface HibernateAssociation extends HibernatePersistentProperty {
 
     @Override
     default boolean isBidirectionalManyToOneWithListMapping(Property prop) {
-        return isBidirectional()
-                && getInverseSide() != null
-                && List.class.isAssignableFrom(getType())
-                && prop != null
-                && prop.getValue() instanceof ManyToOne;
+        return isBidirectional() &&
+                getInverseSide() != null &&
+                List.class.isAssignableFrom(getType()) &&
+                prop != null &&
+                prop.getValue() instanceof ManyToOne;
     }
 
     /**

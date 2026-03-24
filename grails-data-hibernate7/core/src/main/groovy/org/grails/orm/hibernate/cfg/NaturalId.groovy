@@ -36,6 +36,7 @@ package org.grails.orm.hibernate.cfg
 import groovy.transform.CompileStatic
 import groovy.transform.builder.Builder
 import groovy.transform.builder.SimpleStrategy
+
 import org.hibernate.mapping.PersistentClass
 import org.hibernate.mapping.UniqueKey
 

@@ -106,8 +106,8 @@ public class CollectionSecondPassBinder {
             manyToManyElementBinder.bind(manyToMany);
         } else if (property.isBidirectionalOneToManyMap() && property.isBidirectional()) {
             bidirectionalMapElementBinder.bind(property);
-        } else if (property instanceof HibernateOneToManyProperty oneToManyProperty
-                && oneToManyProperty.isUnidirectionalOneToMany()) {
+        } else if (property instanceof HibernateOneToManyProperty oneToManyProperty &&
+                oneToManyProperty.isUnidirectionalOneToMany()) {
             unidirectionalOneToManyBinder.bind(oneToManyProperty);
         } else if (property.supportsJoinColumnMapping()) {
             collectionWithJoinTableBinder.bindCollectionWithJoinTable(property);

@@ -72,13 +72,9 @@ public class GrailsDomainBinder implements AdditionalMappingContributor, TypeCon
     private final String dataSourceName;
     private final HibernateMappingContext hibernateMappingContext;
     private final NamingStrategyProvider namingStrategyProvider;
+    private final MappingCacheHolder mappingCacheHolder;
     private PersistentEntityNamingStrategy namingStrategy;
     private MetadataBuildingContext metadataBuildingContext;
-    private final MappingCacheHolder mappingCacheHolder;
-
-    public JdbcEnvironment getJdbcEnvironment() {
-        return metadataBuildingContext.getMetadataCollector().getDatabase().getJdbcEnvironment();
-    }
 
     public GrailsDomainBinder(
             String dataSourceName, String sessionFactoryName, HibernateMappingContext hibernateMappingContext) {
@@ -107,6 +103,10 @@ public class GrailsDomainBinder implements AdditionalMappingContributor, TypeCon
                 hibernateMappingContext.getHibernatePersistentEntities(dataSourceName)) {
             mappingCacheHolder.cacheMapping(persistentEntity);
         }
+    }
+
+    public JdbcEnvironment getJdbcEnvironment() {
+        return metadataBuildingContext.getMetadataCollector().getDatabase().getJdbcEnvironment();
     }
 
     @Override
@@ -211,7 +211,7 @@ public class GrailsDomainBinder implements AdditionalMappingContributor, TypeCon
         SubclassMappingBinder subclassMappingBinder = new SubclassMappingBinder(
                 joinedSubClassBinder, unionSubclassBinder, singleTableSubclassBinder, classPropertiesBinder);
         SubClassBinder subClassBinder =
-                new SubClassBinder( subclassMappingBinder, multiTenantFilterBinder, dataSourceName);
+                new SubClassBinder(subclassMappingBinder, multiTenantFilterBinder, dataSourceName);
         RootPersistentClassCommonValuesBinder rootPersistentClassCommonValuesBinder =
                 new RootPersistentClassCommonValuesBinder(
                         metadataBuildingContext,

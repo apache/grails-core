@@ -28,6 +28,7 @@ import org.grails.datastore.mapping.model.PersistentEntity;
  * {@link HibernateMappingFactory#createSimple} when {@code pd.propertyType.isEnum()} is true.
  */
 public class HibernateSimpleEnumProperty extends HibernateSimpleProperty implements HibernateEnumProperty {
+
     public HibernateSimpleEnumProperty(PersistentEntity entity, MappingContext context, PropertyDescriptor property) {
         super(entity, context, property);
     }

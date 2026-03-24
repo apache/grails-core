@@ -28,6 +28,7 @@ import org.grails.orm.hibernate.cfg.PropertyConfig;
 
 /** Hibernate implementation of {@link org.grails.datastore.mapping.model.types.Custom} */
 public class HibernateCustomProperty extends CustomWithMapping<PropertyConfig> implements HibernatePersistentProperty {
+
     public HibernateCustomProperty(
             PersistentEntity entity,
             MappingContext context,

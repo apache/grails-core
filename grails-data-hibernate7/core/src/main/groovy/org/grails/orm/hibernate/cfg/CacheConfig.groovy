@@ -37,6 +37,7 @@ import groovy.transform.AutoClone
 import groovy.transform.CompileStatic
 import groovy.transform.builder.Builder
 import groovy.transform.builder.SimpleStrategy
+
 import org.springframework.beans.MutablePropertyValues
 import org.springframework.validation.DataBinder
 
@@ -54,6 +55,7 @@ class CacheConfig implements Cloneable {
     @AutoClone
     @CompileStatic
     static class Usage implements Cloneable {
+
         public static final Usage READ_ONLY = new Usage('read-only')
         public static final Usage READ_WRITE = new Usage('read-write')
         public static final Usage NONSTRICT_READ_WRITE = new Usage('nonstrict-read-write')
@@ -100,6 +102,7 @@ class CacheConfig implements Cloneable {
     @AutoClone
     @CompileStatic
     static class Include implements Cloneable {
+
         public static final Include ALL = new Include('all')
         public static final Include NON_LAZY = new Include('non-lazy')
 

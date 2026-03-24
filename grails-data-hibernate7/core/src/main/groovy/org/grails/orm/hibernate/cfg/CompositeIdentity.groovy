@@ -37,11 +37,13 @@ import groovy.transform.AutoClone
 import groovy.transform.CompileStatic
 import groovy.transform.builder.Builder
 import groovy.transform.builder.SimpleStrategy
+
+import org.hibernate.MappingException
+
 import org.grails.datastore.mapping.config.Property
 import org.grails.orm.hibernate.cfg.domainbinding.hibernate.GrailsHibernatePersistentEntity
-import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernatePersistentProperty
 import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernateIdentity
-import org.hibernate.MappingException
+import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernatePersistentProperty
 
 /**
  * Represents a composite identity, equivalent to Hibernate <composite-id> mapping.

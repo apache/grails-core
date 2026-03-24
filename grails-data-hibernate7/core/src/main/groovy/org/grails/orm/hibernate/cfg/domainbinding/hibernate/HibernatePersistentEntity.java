@@ -41,6 +41,7 @@ import org.grails.orm.hibernate.cfg.Mapping;
  */
 public class HibernatePersistentEntity extends AbstractPersistentEntity<Mapping>
         implements GrailsHibernatePersistentEntity {
+
     private final AbstractClassMapping<Mapping> classMapping;
     private String dataSourceName;
     private PersistentClass persistentClass;
@@ -52,13 +53,13 @@ public class HibernatePersistentEntity extends AbstractPersistentEntity<Mapping>
     }
 
     @Override
-    public void setDataSourceName(String dataSourceName) {
-        this.dataSourceName = dataSourceName;
+    public String getDataSourceName() {
+        return dataSourceName;
     }
 
     @Override
-    public String getDataSourceName() {
-        return dataSourceName;
+    public void setDataSourceName(String dataSourceName) {
+        this.dataSourceName = dataSourceName;
     }
 
     @Override
@@ -66,6 +67,7 @@ public class HibernatePersistentEntity extends AbstractPersistentEntity<Mapping>
         return this.classMapping;
     }
 
+    @Override
     public Mapping getMappedForm() {
         return Optional.ofNullable(getMapping())
                 .map(ClassMapping::getMappedForm)
@@ -93,10 +95,12 @@ public class HibernatePersistentEntity extends AbstractPersistentEntity<Mapping>
         return getJavaClass().isAnnotationPresent(Entity.class);
     }
 
+    @Override
     public boolean usesConnectionSource(String dataSourceName) {
         return ConnectionSourcesSupport.usesConnectionSource(this, dataSourceName);
     }
 
+    @Override
     public boolean forGrailsDomainMapping(String dataSourceName) {
         return !isAnnotatedEntity() && usesConnectionSource(dataSourceName) && isRoot();
     }
@@ -107,12 +111,12 @@ public class HibernatePersistentEntity extends AbstractPersistentEntity<Mapping>
     }
 
     @Override
-    public void setPersistentClass(PersistentClass persistentClass) {
-        this.persistentClass = persistentClass;
+    public PersistentClass getPersistentClass() {
+        return persistentClass;
     }
 
     @Override
-    public PersistentClass getPersistentClass() {
-        return persistentClass;
+    public void setPersistentClass(PersistentClass persistentClass) {
+        this.persistentClass = persistentClass;
     }
 }

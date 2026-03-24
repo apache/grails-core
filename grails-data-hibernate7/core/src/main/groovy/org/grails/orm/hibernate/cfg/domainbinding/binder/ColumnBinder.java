@@ -125,11 +125,12 @@ public class ColumnBinder {
         if (!owner.isRoot()) {
             Mapping mapping = owner.getHibernateMappedForm();
             if (mapping != null && mapping.getTablePerHierarchy()) {
-                if (LOG.isDebugEnabled())
-                    LOG.debug("[GrailsDomainBinder] Sub class property [" + property.getName()
-                            + "] for column name ["
-                            + column.getName()
-                            + "] set to nullable");
+                if (LOG.isDebugEnabled()) {
+                    LOG.debug("[GrailsDomainBinder] Sub class property [" + property.getName() +
+                            "] for column name [" +
+                            column.getName() +
+                            "] set to nullable");
+                }
                 column.setNullable(true);
             } else {
                 column.setNullable(property.isNullable());
@@ -140,12 +141,13 @@ public class ColumnBinder {
         PropertyConfig mappedFormFinal = property.getHibernateMappedForm();
         column.setUnique(mappedFormFinal.isUnique() && !mappedFormFinal.isUniqueWithinGroup());
 
-        if (LOG.isDebugEnabled())
-            LOG.debug("[GrailsDomainBinder] bound property [" + property.getName()
-                    + "] to column name ["
-                    + column.getName()
-                    + "] in table ["
-                    + table.getName()
-                    + "]");
+        if (LOG.isDebugEnabled()) {
+            LOG.debug("[GrailsDomainBinder] bound property [" + property.getName() +
+                    "] to column name [" +
+                    column.getName() +
+                    "] in table [" +
+                    table.getName() +
+                    "]");
+        }
     }
 }

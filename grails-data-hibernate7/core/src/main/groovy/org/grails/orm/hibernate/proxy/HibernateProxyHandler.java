@@ -115,10 +115,10 @@ public class HibernateProxyHandler implements ProxyHandler, ProxyFactory {
 
     @Override
     public boolean isProxy(Object o) {
-        return GroovyProxyInterceptorLogic.getProxyInstanceMetaClass(o) != null
-                || o instanceof EntityProxy
-                || o instanceof HibernateProxy
-                || o instanceof PersistentCollection;
+        return GroovyProxyInterceptorLogic.getProxyInstanceMetaClass(o) != null ||
+                o instanceof EntityProxy ||
+                o instanceof HibernateProxy ||
+                o instanceof PersistentCollection;
     }
 
     @Override

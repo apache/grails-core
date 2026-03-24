@@ -36,26 +36,22 @@ public class HibernatePagedResultList<E> extends grails.gorm.PagedResultList<E> 
 
     @Serial
     private static final long serialVersionUID = 1L;
-
-    private transient GrailsHibernateTemplate hibernateTemplate;
-    private transient PersistentEntity entity;
-
-    private Integer max;
-    private int offset = 0;
-
     // HQL-based count (new path)
     private final String countHql;
+    private final transient GrailsHibernateTemplate hibernateTemplate;
+    private final transient PersistentEntity entity;
+    private final Integer max;
+    private int offset;
 
-    @SuppressWarnings("unchecked")
+    @SuppressWarnings({"unchecked", "PMD.NullAssignment"})
     public HibernatePagedResultList(org.grails.datastore.mapping.query.Query query) {
         super(null);
         this.entity = query.getEntity();
-        this.hibernateTemplate =
-                query instanceof HibernateQuery hibernateQuery
-                        ? hibernateQuery.getHibernateTemplate()
-                        : (query instanceof HibernateHqlQuery hibernateHqlQuery
-                                ? hibernateHqlQuery.getHibernateTemplate()
-                                : null);
+        this.hibernateTemplate = query instanceof HibernateQuery hibernateQuery ?
+                hibernateQuery.getHibernateTemplate() :
+                (query instanceof HibernateHqlQuery hibernateHqlQuery ?
+                        hibernateHqlQuery.getHibernateTemplate() :
+                        null);
         this.max = query.getMax();
         Integer offsetParam = query.getOffset();
         this.offset = offsetParam != null ? offsetParam : 0;
@@ -64,7 +60,7 @@ public class HibernatePagedResultList<E> extends grails.gorm.PagedResultList<E> 
     }
 
     /** HQL constructor — count via scalar HQL. */
-    @SuppressWarnings("unchecked")
+    @SuppressWarnings({"unchecked", "PMD.NullAssignment"})
     public HibernatePagedResultList(
             GrailsHibernateTemplate template, PersistentEntity entity, HibernateHqlQuery hibernateHqlQuery) {
         super(null);

@@ -40,6 +40,19 @@ import static java.util.Optional.ofNullable;
 /** Interface for Hibernate persistent properties */
 public interface HibernatePersistentProperty extends PersistentProperty<PropertyConfig> {
 
+    private static @Nullable String getMappingName(Class<?> propertyClass, Mapping mapping) {
+        return ofNullable(mapping)
+                .map(__ -> __.getTypeName(propertyClass))
+                .orElseGet(() -> getClassName(propertyClass));
+    }
+
+    private static @Nullable String getClassName(Class<?> propertyClass) {
+        return ofNullable(propertyClass)
+                .filter(__ -> !__.isEnum())
+                .map(Class::getName)
+                .orElse(null);
+    }
+
     default boolean isBidirectionalManyToOneWithListMapping(Property prop) {
         return false;
     }
@@ -49,9 +62,9 @@ public interface HibernatePersistentProperty extends PersistentProperty<Property
     }
 
     default GrailsHibernatePersistentEntity getHibernateAssociatedEntity() {
-        return this instanceof Association<?> association
-                ? (GrailsHibernatePersistentEntity) association.getAssociatedEntity()
-                : null;
+        return this instanceof Association<?> association ?
+                (GrailsHibernatePersistentEntity) association.getAssociatedEntity() :
+                null;
     }
 
     /**
@@ -88,19 +101,6 @@ public interface HibernatePersistentProperty extends PersistentProperty<Property
         return ofNullable(config)
                 .map(PropertyConfig::getTypeName)
                 .orElseGet(() -> getMappingName(propertyType, mapping));
-    }
-
-    private static @Nullable String getMappingName(Class<?> propertyClass, Mapping mapping) {
-        return ofNullable(mapping)
-                .map(__ -> __.getTypeName(propertyClass))
-                .orElseGet(() -> getClassName(propertyClass));
-    }
-
-    private static @Nullable String getClassName(Class<?> propertyClass) {
-        return ofNullable(propertyClass)
-                .filter(__ -> !__.isEnum())
-                .map(Class::getName)
-                .orElse(null);
     }
 
     default GrailsHibernatePersistentEntity getHibernateOwner() {
@@ -154,8 +154,8 @@ public interface HibernatePersistentProperty extends PersistentProperty<Property
 
     @Override
     default boolean isLazyAble() {
-        return this instanceof HibernateAssociation
-                || !(this instanceof Embedded) && !this.equals(this.getOwner().getIdentity());
+        return this instanceof HibernateAssociation ||
+                !(this instanceof Embedded) && !this.equals(this.getOwner().getIdentity());
     }
 
     /**

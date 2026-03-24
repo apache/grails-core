@@ -27,6 +27,7 @@ import org.grails.datastore.gorm.query.criteria.DetachedAssociationCriteria;
 @SuppressWarnings({"unchecked", "rawtypes"})
 public class AliasMapEntryFunction
         implements Function<DetachedAssociationCriteria<?>, Map.Entry<String, DetachedAssociationCriteria<?>>> {
+
     @Override
     public Map.Entry<String, DetachedAssociationCriteria<?>> apply(
             DetachedAssociationCriteria<?> detachedAssociationCriteria) {

@@ -93,22 +93,22 @@ public class ClosureEventListener
                 CallbackRegistryConsumer,
                 Serializable {
 
+    protected static final Logger LOG = LoggerFactory.getLogger(ClosureEventListener.class);
+
     @Serial
     private static final long serialVersionUID = 1;
 
-    protected static final Logger LOG = LoggerFactory.getLogger(ClosureEventListener.class);
-
-    private final EventTriggerCaller beforeInsertCaller;
-    private final EventTriggerCaller preLoadEventCaller;
-    private final EventTriggerCaller postLoadEventListener;
-    private final EventTriggerCaller postInsertEventListener;
-    private final EventTriggerCaller postUpdateEventListener;
-    private final EventTriggerCaller postDeleteEventListener;
-    private final EventTriggerCaller preDeleteEventListener;
-    private final EventTriggerCaller preUpdateEventListener;
-    private final BeforeValidateEventTriggerCaller beforeValidateEventListener;
-    private final GrailsHibernatePersistentEntity persistentEntity;
-    private final MetaClass domainMetaClass;
+    private final transient EventTriggerCaller beforeInsertCaller;
+    private final transient EventTriggerCaller preLoadEventCaller;
+    private final transient EventTriggerCaller postLoadEventListener;
+    private final transient EventTriggerCaller postInsertEventListener;
+    private final transient EventTriggerCaller postUpdateEventListener;
+    private final transient EventTriggerCaller postDeleteEventListener;
+    private final transient EventTriggerCaller preDeleteEventListener;
+    private final transient EventTriggerCaller preUpdateEventListener;
+    private final transient BeforeValidateEventTriggerCaller beforeValidateEventListener;
+    private final transient GrailsHibernatePersistentEntity persistentEntity;
+    private final transient MetaClass domainMetaClass;
     private final boolean failOnErrorEnabled;
     private final Map validateParams;
 
@@ -120,9 +120,9 @@ public class ClosureEventListener
 
         beforeInsertCaller = buildCaller(AbstractPersistenceEvent.BEFORE_INSERT_EVENT, domainClazz);
         EventTriggerCaller preLoadCaller = buildCaller(AbstractPersistenceEvent.ONLOAD_EVENT, domainClazz);
-        this.preLoadEventCaller = (preLoadCaller != null)
-                ? preLoadCaller
-                : buildCaller(AbstractPersistenceEvent.BEFORE_LOAD_EVENT, domainClazz);
+        this.preLoadEventCaller = (preLoadCaller != null) ?
+                preLoadCaller :
+                buildCaller(AbstractPersistenceEvent.BEFORE_LOAD_EVENT, domainClazz);
 
         postLoadEventListener = buildCaller(AbstractPersistenceEvent.AFTER_LOAD_EVENT, domainClazz);
         postInsertEventListener = buildCaller(AbstractPersistenceEvent.AFTER_INSERT_EVENT, domainClazz);
@@ -132,9 +132,9 @@ public class ClosureEventListener
         preUpdateEventListener = buildCaller(AbstractPersistenceEvent.BEFORE_UPDATE_EVENT, domainClazz);
 
         beforeValidateEventListener = new BeforeValidateEventTriggerCaller(domainClazz, domainMetaClass);
-        failOnErrorEnabled = !failOnErrorPackages.isEmpty()
-                ? ClassUtils.isClassBelowPackage(domainClazz, failOnErrorPackages)
-                : failOnError;
+        failOnErrorEnabled = !failOnErrorPackages.isEmpty() ?
+                ClassUtils.isClassBelowPackage(domainClazz, failOnErrorPackages) :
+                failOnError;
 
         validateParams = new HashMap();
         validateParams.put(HibernateGormValidationApi.ARGUMENT_DEEP_VALIDATE, Boolean.FALSE);
@@ -243,8 +243,8 @@ public class ClosureEventListener
         if (!validateable.shouldSkipValidation() && !validateable.validate(validateParams)) {
             if (failOnErrorEnabled) {
                 throw ValidationException.newInstance(
-                        "Validation error whilst flushing entity ["
-                                + entity.getClass().getName() + "]",
+                        "Validation error whilst flushing entity [" +
+                                entity.getClass().getName() + "]",
                         validateable.getErrors());
             }
             return true;
@@ -256,7 +256,7 @@ public class ClosureEventListener
         return EventTriggerCaller.buildCaller(eventName, domainClazz, domainMetaClass, null);
     }
 
-    private void synchronizePersisterState(AbstractPreDatabaseOperationEvent event, Object[] state) {
+    private void synchronizePersisterState(AbstractPreDatabaseOperationEvent event, Object... state) {
         EntityPersister persister = event.getPersister();
         Object entity = event.getEntity();
         EntityReflector reflector = persistentEntity.getReflector();

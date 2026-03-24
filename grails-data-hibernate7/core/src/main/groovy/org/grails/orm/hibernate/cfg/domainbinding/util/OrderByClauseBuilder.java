@@ -100,20 +100,21 @@ public class OrderByClauseBuilder {
 
     private String getTablePrefix(Property p, PersistentClass associatedClass) {
         PersistentClass pc = p.getPersistentClass();
-        if (pc == null
-                || pc.equals(associatedClass)
-                || (associatedClass instanceof SingleTableSubclass
-                        && pc.getMappedClass().isAssignableFrom(associatedClass.getMappedClass()))) {
+        if (pc == null ||
+                pc.equals(associatedClass) ||
+                (associatedClass instanceof SingleTableSubclass &&
+                        pc.getMappedClass().isAssignableFrom(associatedClass.getMappedClass()))) {
             return "";
         }
         return pc.getTable().getQuotedName() + ".";
     }
 
     private boolean isDirectionToken(String token) {
-        return token.equalsIgnoreCase("asc") || token.equalsIgnoreCase("desc");
+        return "asc".equalsIgnoreCase(token) || "desc".equalsIgnoreCase(token);
     }
 
     private static class SortEntry {
+
         final String property;
         String direction;
 

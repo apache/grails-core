@@ -63,10 +63,6 @@ import org.grails.orm.hibernate.exceptions.GrailsQueryException;
 @SuppressWarnings("PMD.AvoidDuplicateLiterals")
 public class HibernateHqlQuery extends Query {
 
-    public GrailsHibernateTemplate getHibernateTemplate() {
-        return ((HibernateSession) getSession()).getHibernateTemplate();
-    }
-
     /** Handles all query operations; the concrete type encodes whether this is SELECT or UPDATE/DELETE. */
     private final HqlQueryDelegate delegate;
 
@@ -82,25 +78,6 @@ public class HibernateHqlQuery extends Query {
         super(session, entity);
         this.delegate = new MutationQueryDelegate(mutationQuery);
     }
-
-    @Override
-    protected void flushBeforeQuery() {
-        // Hibernate handles flushing internally
-    }
-
-    @Override
-    @SuppressWarnings("rawtypes")
-    protected List executeQuery(PersistentEntity entity, Junction criteria) {
-        Datastore datastore = getSession().getDatastore();
-        ApplicationEventPublisher publisher = datastore.getApplicationEventPublisher();
-        publisher.publishEvent(new PreQueryEvent(datastore, this));
-        if (uniqueResult) delegate.setMaxResults(1);
-        List results = delegate.list();
-        publisher.publishEvent(new PostQueryEvent(datastore, this, results));
-        return results;
-    }
-
-    // ─── Static factory API ──────────────────────────────────────────────────
 
     /**
      * Session-bound step — creates the appropriate Hibernate query from an open {@link
@@ -124,16 +101,14 @@ public class HibernateHqlQuery extends Query {
             result.setFlushMode(session.getHibernateFlushMode());
             return result;
         } else {
-            var q = ctx.isNative()
-                    ? session.createNativeQuery(hql, ctx.targetClass())
-                    : session.createQuery(hql, ctx.targetClass());
+            var q = ctx.isNative() ?
+                    session.createNativeQuery(hql, ctx.targetClass()) :
+                    session.createQuery(hql, ctx.targetClass());
             var result = new HibernateHqlQuery(hibernateSession, entity, q);
             result.setFlushMode(session.getHibernateFlushMode());
             return result;
         }
     }
-
-
 
     /**
      * Full factory — opens a session via the {@link GrailsHibernateTemplate}, builds the query from
@@ -173,6 +148,8 @@ public class HibernateHqlQuery extends Query {
         return create(dataStore, sessionFactory, entity, ctx, template, conversionService);
     }
 
+    // ─── Static factory API ──────────────────────────────────────────────────
+
     /**
      * Builds the count HQL string used by {@link PagedResultList} when paging is requested.
      */
@@ -180,13 +157,85 @@ public class HibernateHqlQuery extends Query {
         return new HqlListQueryBuilder(entity, Collections.emptyMap()).buildCountHql();
     }
 
+    public static QueryFlushMode convertQueryFlushMode(Object object) {
+        FlushMode fm = convertFlushMode(object);
+        if (fm == null) return QueryFlushMode.DEFAULT;
+        return switch (fm) {
+            case ALWAYS -> QueryFlushMode.FLUSH;
+            case MANUAL, COMMIT -> QueryFlushMode.NO_FLUSH;
+            default -> QueryFlushMode.DEFAULT;
+        };
+    }
+
+    public static FlushMode convertFlushMode(Object object) {
+        if (object == null) return null;
+        if (object instanceof FlushMode flushMode) return flushMode;
+        try {
+            return FlushMode.valueOf(object.toString());
+        } catch (IllegalArgumentException e) {
+            return FlushMode.COMMIT;
+        }
+    }
+
+    private static boolean isGormArgument(String name) {
+        for (HibernateQueryArgument arg : HibernateQueryArgument.values()) {
+            if (arg.value().equals(name)) {
+                return true;
+            }
+        }
+        return false;
+    }
+
     // ─── Query configuration ─────────────────────────────────────────────────
+
+    private static int toInt(Object v, ConversionService cs) {
+        if (v instanceof Integer i) {
+            return i;
+        }
+        Integer i = cs.convert(v, Integer.class);
+        return i != null ? i : 0;
+    }
+
+    private static boolean toBool(Object v) {
+        return Boolean.parseBoolean(v.toString());
+    }
+
+    private static boolean toBoolFromMap(Map<?, ?> map, String key) {
+        Object v = map.get(key);
+        return v instanceof Boolean b ? b : v != null && Boolean.parseBoolean(v.toString());
+    }
+
+    private static void ifPresent(Map<?, ?> map, String key, java.util.function.Consumer<Object> action) {
+        Object v = map.get(key);
+        if (v != null) action.accept(v);
+    }
+
+    public GrailsHibernateTemplate getHibernateTemplate() {
+        return ((HibernateSession) getSession()).getHibernateTemplate();
+    }
+
+    @Override
+    protected void flushBeforeQuery() {
+        // Hibernate handles flushing internally
+    }
+
+    @Override
+    @SuppressWarnings("rawtypes")
+    protected List executeQuery(PersistentEntity entity, Junction criteria) {
+        Datastore datastore = getSession().getDatastore();
+        ApplicationEventPublisher publisher = datastore.getApplicationEventPublisher();
+        publisher.publishEvent(new PreQueryEvent(datastore, this));
+        if (uniqueResult) delegate.setMaxResults(1);
+        List results = delegate.list();
+        publisher.publishEvent(new PostQueryEvent(datastore, this, results));
+        return results;
+    }
 
     protected void setFlushMode(FlushMode flushMode) {
         session.setFlushMode(
-                flushMode == FlushMode.AUTO || flushMode == FlushMode.ALWAYS
-                        ? FlushModeType.AUTO
-                        : FlushModeType.COMMIT);
+                flushMode == FlushMode.AUTO || flushMode == FlushMode.ALWAYS ?
+                        FlushModeType.AUTO :
+                        FlushModeType.COMMIT);
     }
 
     protected void populateQuerySettings(Map<?, ?> args, ConversionService conversionService) {
@@ -227,26 +276,6 @@ public class HibernateHqlQuery extends Query {
         }
     }
 
-    public static QueryFlushMode convertQueryFlushMode(Object object) {
-        FlushMode fm = convertFlushMode(object);
-        if (fm == null) return QueryFlushMode.DEFAULT;
-        return switch (fm) {
-            case ALWAYS -> QueryFlushMode.FLUSH;
-            case MANUAL, COMMIT -> QueryFlushMode.NO_FLUSH;
-            default -> QueryFlushMode.DEFAULT;
-        };
-    }
-
-    public static FlushMode convertFlushMode(Object object) {
-        if (object == null) return null;
-        if (object instanceof FlushMode flushMode) return flushMode;
-        try {
-            return FlushMode.valueOf(object.toString());
-        } catch (IllegalArgumentException e) {
-            return FlushMode.COMMIT;
-        }
-    }
-
     protected void populateQueryWithNamedArguments(Map<?, ?> namedArgs) {
         if (namedArgs == null) return;
         namedArgs.forEach((key, value) -> {
@@ -271,14 +300,7 @@ public class HibernateHqlQuery extends Query {
         });
     }
 
-    private static boolean isGormArgument(String name) {
-        for (HibernateQueryArgument arg : HibernateQueryArgument.values()) {
-            if (arg.value().equals(name)) {
-                return true;
-            }
-        }
-        return false;
-    }
+    // ─── Private utilities ────────────────────────────────────────────────────
 
     protected void populateQueryWithIndexedArguments(List<?> params) {
         if (params == null) return;
@@ -307,29 +329,5 @@ public class HibernateHqlQuery extends Query {
 
     public int executeUpdate() {
         return delegate.executeUpdate();
-    }
-
-    // ─── Private utilities ────────────────────────────────────────────────────
-
-    private static int toInt(Object v, ConversionService cs) {
-        if (v instanceof Integer i) {
-            return i;
-        }
-        Integer i = cs.convert(v, Integer.class);
-        return i != null ? i : 0;
-    }
-
-    private static boolean toBool(Object v) {
-        return Boolean.parseBoolean(v.toString());
-    }
-
-    private static boolean toBoolFromMap(Map<?, ?> map, String key) {
-        Object v = map.get(key);
-        return v instanceof Boolean b ? b : v != null && Boolean.parseBoolean(v.toString());
-    }
-
-    private static void ifPresent(Map<?, ?> map, String key, java.util.function.Consumer<Object> action) {
-        Object v = map.get(key);
-        if (v != null) action.accept(v);
     }
 }

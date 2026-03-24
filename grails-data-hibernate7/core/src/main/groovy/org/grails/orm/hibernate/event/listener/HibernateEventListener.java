@@ -244,9 +244,9 @@ public class HibernateEventListener extends AbstractPersistenceEventListener {
                 eventListener = eventListeners.get(key);
                 if (eventListener == null) {
                     HibernateDatastore datastore = getDatastore();
-                    boolean isValidSessionFactory = MultiTenant.class.isAssignableFrom(clazz)
-                            || factory == null
-                            || datastore.getSessionFactory().equals(factory);
+                    boolean isValidSessionFactory = MultiTenant.class.isAssignableFrom(clazz) ||
+                            factory == null ||
+                            datastore.getSessionFactory().equals(factory);
                     HibernatePersistentEntity persistentEntity = (HibernatePersistentEntity)
                             datastore.getMappingContext().getPersistentEntity(clazz.getName());
                     shouldTrigger = (persistentEntity != null && isValidSessionFactory);

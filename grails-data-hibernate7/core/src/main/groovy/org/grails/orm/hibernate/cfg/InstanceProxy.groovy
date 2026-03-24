@@ -63,8 +63,7 @@ class InstanceProxy {
     def invokeMethod(String name, args) {
         if (validateMethods.contains(name)) {
             validateApi.invokeMethod(name, prependToArray(instance, (Object[]) args))
-        }
-        else {
+        } else {
             instanceApi.invokeMethod(name, prependToArray(instance, (Object[]) args))
         }
     }

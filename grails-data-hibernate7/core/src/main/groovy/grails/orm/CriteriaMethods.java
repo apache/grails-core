@@ -70,10 +70,6 @@ public enum CriteriaMethods {
         this.name = name;
     }
 
-    public String getName() {
-        return name;
-    }
-
     /**
      * Factory method to convert a string method name to a CriteriaMethods enum.
      *
@@ -107,5 +103,9 @@ public enum CriteriaMethods {
             }
         }
         return null;
+    }
+
+    public String getName() {
+        return name;
     }
 }

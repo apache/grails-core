@@ -43,6 +43,7 @@ import org.grails.datastore.mapping.query.Query;
 public class JpaFromProvider implements Cloneable {
 
     private static final int SINGLE_PROPERTY = 1;
+    private static final String ROOT_ALIAS = "root";
 
     private final Map<String, From<?, ?>> fromMap;
 
@@ -162,12 +163,12 @@ public class JpaFromProvider implements Cloneable {
                 .map(Map.Entry::getKey)
                 .collect(Collectors.toSet());
 
-        var collectionPaths = entity != null
-                ? entity.getPersistentProperties().stream()
+        var collectionPaths = entity != null ?
+                entity.getPersistentProperties().stream()
                         .filter(p -> p instanceof org.grails.datastore.mapping.model.types.Basic)
                         .map(org.grails.datastore.mapping.model.PersistentProperty::getName)
-                        .collect(Collectors.toSet())
-                : java.util.Collections.<String>emptySet();
+                        .collect(Collectors.toSet()) :
+                java.util.Collections.<String>emptySet();
 
         java.util.Set<String> allPaths = new java.util.HashSet<>();
         allPaths.addAll(aliasMap.keySet());
@@ -200,7 +201,7 @@ public class JpaFromProvider implements Cloneable {
                 .collect(Collectors.toSet());
 
         Map<String, From<?, ?>> fromsByPath = new HashMap<>();
-        fromsByPath.put("root", root);
+        fromsByPath.put(ROOT_ALIAS, root);
 
         List<String> sortedPaths = expandedPaths.stream()
                 .sorted(java.util.Comparator.comparingInt(p -> p.split("\\.").length))
@@ -210,7 +211,7 @@ public class JpaFromProvider implements Cloneable {
             if (fromsByPath.containsKey(path)) {
                 continue;
             }
-            String parentPath = path.contains(".") ? path.substring(0, path.lastIndexOf('.')) : "root";
+            String parentPath = path.contains(".") ? path.substring(0, path.lastIndexOf('.')) : ROOT_ALIAS;
             String leaf = path.contains(".") ? path.substring(path.lastIndexOf('.') + 1) : path;
 
             From<?, ?> base = fromsByPath.get(parentPath);
@@ -223,9 +224,9 @@ public class JpaFromProvider implements Cloneable {
                 joinType = joinTypes.get(path);
             } else if (basicJoinTypeMap.containsKey(path)) {
                 joinType = basicJoinTypeMap.get(path);
-            } else if (finalProjectedPaths.contains(path)
-                    || eagerPaths.contains(path)
-                    || collectionPaths.contains(path)) {
+            } else if (finalProjectedPaths.contains(path) ||
+                    eagerPaths.contains(path) ||
+                    collectionPaths.contains(path)) {
                 joinType = JoinType.LEFT;
             }
 
@@ -293,10 +294,10 @@ public class JpaFromProvider implements Cloneable {
 
         String[] parsed = propertyName.split("\\.");
         if (parsed.length == SINGLE_PROPERTY) {
-            From<?, ?> root = fromMap.get("root");
+            From<?, ?> root = fromMap.get(ROOT_ALIAS);
             if (root != null) {
-                if (propertyName.equals(root.getJavaType().getSimpleName())
-                        || propertyName.equals(root.getJavaType().getName())) {
+                if (propertyName.equals(root.getJavaType().getSimpleName()) ||
+                        propertyName.equals(root.getJavaType().getName())) {
                     return root;
                 }
                 return root.get(propertyName);
@@ -323,7 +324,7 @@ public class JpaFromProvider implements Cloneable {
         }
 
         // Fallback to root
-        Path<?> path = fromMap.get("root");
+        Path<?> path = fromMap.get(ROOT_ALIAS);
         if (path != null) {
             for (String segment : parsed) {
                 path = path.get(segment);

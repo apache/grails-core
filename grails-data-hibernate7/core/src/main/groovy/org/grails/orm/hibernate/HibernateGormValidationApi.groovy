@@ -34,18 +34,21 @@
 package org.grails.orm.hibernate
 
 import groovy.transform.CompileStatic
-import org.grails.datastore.gorm.GormValidationApi
-import org.grails.datastore.gorm.validation.CascadingValidator
-import org.grails.datastore.mapping.reflect.ClassUtils
-import org.grails.datastore.mapping.validation.ValidationErrors
-import org.grails.datastore.mapping.engine.event.ValidationEvent
-import org.grails.orm.hibernate.support.HibernateRuntimeUtils
+
 import org.hibernate.FlushMode
 import org.hibernate.Session
+
 import org.springframework.validation.Errors
 import org.springframework.validation.FieldError
 import org.springframework.validation.ObjectError
 import org.springframework.validation.Validator
+
+import org.grails.datastore.gorm.GormValidationApi
+import org.grails.datastore.gorm.validation.CascadingValidator
+import org.grails.datastore.mapping.engine.event.ValidationEvent
+import org.grails.datastore.mapping.reflect.ClassUtils
+import org.grails.datastore.mapping.validation.ValidationErrors
+import org.grails.orm.hibernate.support.HibernateRuntimeUtils
 
 @CompileStatic
 class HibernateGormValidationApi<D> extends GormValidationApi<D> {

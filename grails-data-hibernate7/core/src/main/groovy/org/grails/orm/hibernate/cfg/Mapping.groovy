@@ -36,11 +36,12 @@ package org.grails.orm.hibernate.cfg
 import groovy.transform.CompileStatic
 import groovy.transform.builder.Builder
 import groovy.transform.builder.SimpleStrategy
-import org.grails.datastore.mapping.config.Entity
-import org.grails.datastore.mapping.model.config.GormProperties
+
 import org.springframework.beans.MutablePropertyValues
 import org.springframework.validation.DataBinder
 
+import org.grails.datastore.mapping.config.Entity
+import org.grails.datastore.mapping.model.config.GormProperties
 import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernateIdentity
 
 /**
@@ -356,8 +357,7 @@ class Mapping extends Entity<PropertyConfig> {
             discriminator.value = value
             if (args.column instanceof String) {
                 discriminator.column = new ColumnConfig(name: args.column.toString())
-            }
-            else if (args.column instanceof Map) {
+            } else if (args.column instanceof Map) {
                 ColumnConfig config = new ColumnConfig()
                 DataBinder dataBinder = new DataBinder(config)
                 dataBinder.bind(new MutablePropertyValues((Map) args.column))
@@ -461,8 +461,7 @@ class Mapping extends Entity<PropertyConfig> {
         if (columns.containsKey('*')) {
             PropertyConfig cloned = cloneGlobalConstraint()
             return PropertyConfig.configureExisting(cloned, propertyConfig)
-        }
-        else {
+        } else {
             return PropertyConfig.configureNew(propertyConfig)
         }
     }
@@ -490,8 +489,7 @@ class Mapping extends Entity<PropertyConfig> {
             // apply global constraints constraints
             PropertyConfig cloned = cloneGlobalConstraint()
             return PropertyConfig.configureExisting(cloned, propertyConfig)
-        }
-        else {
+        } else {
             return PropertyConfig.configureNew(propertyConfig)
         }
     }
@@ -537,11 +535,9 @@ class Mapping extends Entity<PropertyConfig> {
     def propertyMissing(String name, Object val) {
         if (val instanceof Closure) {
             property(name, (Closure) val)
-        }
-        else if (val instanceof PropertyConfig) {
+        } else if (val instanceof PropertyConfig) {
             columns[name] = ((PropertyConfig) val)
-        }
-        else {
+        } else {
             throw new MissingPropertyException(name, Mapping)
         }
     }
@@ -552,11 +548,9 @@ class Mapping extends Entity<PropertyConfig> {
             Object[] argsArray = (Object[]) args
             if (argsArray[0] instanceof Closure) {
                 property(name, (Closure) argsArray[0])
-            }
-            else if (argsArray[0] instanceof PropertyConfig) {
+            } else if (argsArray[0] instanceof PropertyConfig) {
                 columns[name] = (PropertyConfig) argsArray[0]
-            }
-            else if (argsArray[0] instanceof Map) {
+            } else if (argsArray[0] instanceof Map) {
                 PropertyConfig property = getOrInitializePropertyConfig(name)
                 Map namedArgs = (Map) argsArray[0]
                 if (argsArray[argsArray.length - 1] instanceof Closure) {
@@ -566,12 +560,10 @@ class Mapping extends Entity<PropertyConfig> {
                     )
                 }
                 PropertyConfig.configureExisting(property, namedArgs)
-            }
-            else {
+            } else {
                 throw new MissingMethodException(name, getClass(), argsArray)
             }
-        }
-        else {
+        } else {
             throw new MissingMethodException(name, getClass(), (Object[]) args)
         }
     }
@@ -588,8 +580,7 @@ class Mapping extends Entity<PropertyConfig> {
                     pc.firstColumnIsColumnCopy = true
                 }
             }
-        }
-        else {
+        } else {
             pc = columns[name]
         }
         if (pc == null) {

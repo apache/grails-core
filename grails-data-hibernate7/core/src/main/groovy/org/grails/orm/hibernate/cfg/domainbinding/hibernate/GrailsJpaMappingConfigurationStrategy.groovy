@@ -19,9 +19,11 @@
 package org.grails.orm.hibernate.cfg.domainbinding.hibernate
 
 import groovy.transform.CompileStatic
+
+import org.springframework.validation.Errors
+
 import org.grails.datastore.mapping.model.MappingFactory
 import org.grails.datastore.mapping.model.config.JpaMappingConfigurationStrategy
-import org.springframework.validation.Errors
 
 /**
  * A {@link JpaMappingConfigurationStrategy} for Grails/Hibernate that excludes

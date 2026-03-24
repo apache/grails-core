@@ -47,10 +47,6 @@ public class HibernateMappingContext extends AbstractMappingContext {
     private final MappingConfigurationStrategy syntaxStrategy;
     private final MappingCacheHolder mappingCacheHolder = new MappingCacheHolder();
 
-    public MappingCacheHolder getMappingCacheHolder() {
-        return mappingCacheHolder;
-    }
-
     public HibernateMappingContext(
             HibernateConnectionSourceSettings settings, Object contextObject, Class<?>... persistentClasses) {
         this.mappingFactory = new HibernateMappingFactory();
@@ -69,6 +65,10 @@ public class HibernateMappingContext extends AbstractMappingContext {
 
     public HibernateMappingContext() {
         this(new HibernateConnectionSourceSettings());
+    }
+
+    public MappingCacheHolder getMappingCacheHolder() {
+        return mappingCacheHolder;
     }
 
     public void setDefaultConstraints(Closure<?> defaultConstraints) {
@@ -98,8 +98,8 @@ public class HibernateMappingContext extends AbstractMappingContext {
 
     @Override
     protected boolean isValidMappingStrategy(Class<?> javaClass, Object mappingStrategy) {
-        return HibernateEntity.class.isAssignableFrom(javaClass)
-                || super.isValidMappingStrategy(javaClass, mappingStrategy);
+        return HibernateEntity.class.isAssignableFrom(javaClass) ||
+                super.isValidMappingStrategy(javaClass, mappingStrategy);
     }
 
     @Override

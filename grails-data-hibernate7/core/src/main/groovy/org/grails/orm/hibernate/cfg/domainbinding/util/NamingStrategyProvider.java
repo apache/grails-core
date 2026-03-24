@@ -27,11 +27,21 @@ import org.hibernate.boot.model.naming.PhysicalNamingStrategySnakeCaseImpl;
 import org.grails.datastore.mapping.core.connections.ConnectionSource;
 
 public class NamingStrategyProvider {
+
     private final ConcurrentHashMap<String, PhysicalNamingStrategy> physicalProviderMap;
 
     public NamingStrategyProvider() {
         physicalProviderMap = new ConcurrentHashMap<>();
         physicalProviderMap.put(ConnectionSource.DEFAULT, new PhysicalNamingStrategySnakeCaseImpl());
+    }
+
+    private static String getKey(String sessionFactoryBeanName) {
+        if (Objects.isNull(sessionFactoryBeanName) || sessionFactoryBeanName.isBlank()) {
+            return ConnectionSource.DEFAULT;
+        }
+        return "sessionFactory".equals(sessionFactoryBeanName) ?
+                ConnectionSource.DEFAULT :
+                sessionFactoryBeanName.substring("sessionFactory_".length());
     }
 
     /**
@@ -82,14 +92,5 @@ public class NamingStrategyProvider {
         String key = getKey(sessionFactoryBeanName);
         physicalProviderMap.putIfAbsent(key, new PhysicalNamingStrategySnakeCaseImpl());
         return physicalProviderMap.get(key);
-    }
-
-    private static String getKey(String sessionFactoryBeanName) {
-        if (Objects.isNull(sessionFactoryBeanName) || sessionFactoryBeanName.isBlank()) {
-            return ConnectionSource.DEFAULT;
-        }
-        return "sessionFactory".equals(sessionFactoryBeanName)
-                ? ConnectionSource.DEFAULT
-                : sessionFactoryBeanName.substring("sessionFactory_".length());
     }
 }

@@ -31,6 +31,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.concurrent.Callable;
+
 import javax.sql.DataSource;
 
 import groovy.lang.Closure;
@@ -332,15 +333,15 @@ public class HibernateDatastore extends AbstractDatastore
 
             @Override
             public HibernateDatastore getDatastoreForConnection(String connectionName) {
-                if (Settings.SETTING_DATASOURCE.equals(connectionName)
-                        || ConnectionSource.DEFAULT.equals(connectionName)) {
+                if (Settings.SETTING_DATASOURCE.equals(connectionName) ||
+                        ConnectionSource.DEFAULT.equals(connectionName)) {
                     return parent;
                 } else {
                     HibernateDatastore hibernateDatastore = parent.datastoresByConnectionSource.get(connectionName);
                     if (hibernateDatastore == null) {
                         throw new ConfigurationException(
-                                "DataSource not found for name [" + connectionName
-                                        + "] in configuration. Please check your multiple data sources configuration and try again.");
+                                "DataSource not found for name [" + connectionName +
+                                        "] in configuration. Please check your multiple data sources configuration and try again.");
                     }
                     return hibernateDatastore;
                 }
@@ -590,15 +591,15 @@ public class HibernateDatastore extends AbstractDatastore
      */
     @Override
     public HibernateDatastore getDatastoreForConnection(String connectionName) {
-        if (Settings.SETTING_DATASOURCE.equals(connectionName)
-                || ConnectionSource.DEFAULT.equals(connectionName)
-                || ConnectionSource.OLD_DEFAULT.equals(connectionName)) {
+        if (Settings.SETTING_DATASOURCE.equals(connectionName) ||
+                ConnectionSource.DEFAULT.equals(connectionName) ||
+                ConnectionSource.OLD_DEFAULT.equals(connectionName)) {
             return this;
         } else {
             HibernateDatastore hibernateDatastore = this.datastoresByConnectionSource.get(connectionName);
             if (hibernateDatastore == null) {
-                throw new ConfigurationException("DataSource not found for name [" + connectionName
-                        + "] in configuration. Please check your multiple data sources configuration and try again.");
+                throw new ConfigurationException("DataSource not found for name [" + connectionName +
+                        "] in configuration. Please check your multiple data sources configuration and try again.");
             }
             return hibernateDatastore;
         }
@@ -825,16 +826,15 @@ public class HibernateDatastore extends AbstractDatastore
     private void addTenantForSchemaInternal(final String schemaName) {
         if (multiTenantMode != MultiTenancySettings.MultiTenancyMode.SCHEMA) {
             throw new ConfigurationException(
-                    "The method [addTenantForSchema] can only be called with multi-tenancy mode SCHEMA. Current mode is: "
-                            + multiTenantMode);
+                    "The method [addTenantForSchema] can only be called with multi-tenancy mode SCHEMA. Current mode is: " +
+                            multiTenantMode);
         }
-        HibernateConnectionSourceFactory factory = (HibernateConnectionSourceFactory) connectionSources.getFactory();
-        HibernateConnectionSource defaultConnectionSource =
-                (HibernateConnectionSource) connectionSources.getDefaultConnectionSource();
+        var factory = (HibernateConnectionSourceFactory) connectionSources.getFactory();
+        var defaultConnectionSource = (HibernateConnectionSource) connectionSources.getDefaultConnectionSource();
+        var settings = connectionSources.getDefaultConnectionSource().getSettings();
         HibernateConnectionSourceSettings tenantSettings;
         try {
-            tenantSettings = (HibernateConnectionSourceSettings)
-                    connectionSources.getDefaultConnectionSource().getSettings().clone();
+            tenantSettings = (HibernateConnectionSourceSettings) settings.clone();
         } catch (CloneNotSupportedException e) {
             throw new ConfigurationException("Couldn't clone default Hibernate settings! " + e.getMessage(), e);
         }
@@ -929,9 +929,9 @@ public class HibernateDatastore extends AbstractDatastore
 
     @Override
     public MultiTenancySettings.MultiTenancyMode getMultiTenancyMode() {
-        return this.multiTenantMode == MultiTenancySettings.MultiTenancyMode.SCHEMA
-                ? MultiTenancySettings.MultiTenancyMode.DATABASE
-                : this.multiTenantMode;
+        return this.multiTenantMode == MultiTenancySettings.MultiTenancyMode.SCHEMA ?
+                MultiTenancySettings.MultiTenancyMode.DATABASE :
+                this.multiTenantMode;
     }
 
     @Override

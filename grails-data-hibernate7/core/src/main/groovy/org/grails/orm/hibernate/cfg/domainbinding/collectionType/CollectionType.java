@@ -38,6 +38,12 @@ public abstract class CollectionType {
     /** The building context. */
     protected final MetadataBuildingContext buildingContext;
 
+    /** Creates a new {@link CollectionType} instance. */
+    protected CollectionType(Class<?> clazz, MetadataBuildingContext buildingContext) {
+        this.clazz = clazz;
+        this.buildingContext = buildingContext;
+    }
+
     /** Create collection. */
     public abstract Collection createCollection(PersistentClass owner);
 
@@ -50,12 +56,6 @@ public abstract class CollectionType {
             coll.setTypeName(typeName);
         }
         return coll;
-    }
-
-    /** Creates a new {@link CollectionType} instance. */
-    protected CollectionType(Class<?> clazz, MetadataBuildingContext buildingContext) {
-        this.clazz = clazz;
-        this.buildingContext = buildingContext;
     }
 
     @Override

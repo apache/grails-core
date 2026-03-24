@@ -123,10 +123,12 @@ public class HibernateCriteriaBuilder extends GroovyObjectSupport implements Bui
      */
 
     private final SessionFactory sessionFactory;
+    private final boolean participate;
+    private final org.hibernate.query.criteria.HibernateCriteriaBuilder cb;
+    private final HibernateQuery hibernateQuery;
     private Class<?> targetClass;
     private CriteriaQuery<?> criteriaQuery;
     private boolean uniqueResult = false;
-    private final boolean participate;
 
     @SuppressWarnings("PMD.AvoidFieldNameMatchingMethodName")
     private boolean scroll;
@@ -136,8 +138,6 @@ public class HibernateCriteriaBuilder extends GroovyObjectSupport implements Bui
 
     private boolean paginationEnabledList = false;
     private int defaultFlushMode;
-    private final org.hibernate.query.criteria.HibernateCriteriaBuilder cb;
-    private final HibernateQuery hibernateQuery;
 
     @SuppressWarnings("PMD.AvoidFieldNameMatchingMethodName")
     private boolean distinct = false;
@@ -161,9 +161,13 @@ public class HibernateCriteriaBuilder extends GroovyObjectSupport implements Bui
         setDefaultFlushMode(GrailsHibernateTemplate.FLUSH_AUTO);
     }
 
+    private static String getFullyQualifiedColumn(String propertyName, String alias) {
+        return (Objects.nonNull(alias) ? alias + "." : "") + propertyName;
+    }
+
     public final void setDatastore(HibernateDatastore datastore) {
-        if (MultiTenant.class.isAssignableFrom(targetClass)
-                && datastore.getMultiTenancyMode() == MultiTenancySettings.MultiTenancyMode.DISCRIMINATOR) {
+        if (MultiTenant.class.isAssignableFrom(targetClass) &&
+                datastore.getMultiTenancyMode() == MultiTenancySettings.MultiTenancyMode.DISCRIMINATOR) {
             datastore.enableMultiTenancyFilter();
         }
     }
@@ -300,6 +304,10 @@ public class HibernateCriteriaBuilder extends GroovyObjectSupport implements Bui
         return targetClass;
     }
 
+    public void setTargetClass(Class<?> targetClass) {
+        this.targetClass = targetClass;
+    }
+
     /**
      * Adds a projection that allows the criteria to return the property count
      *
@@ -317,10 +325,6 @@ public class HibernateCriteriaBuilder extends GroovyObjectSupport implements Bui
      */
     public void count(String propertyName, String alias) {
         hibernateQuery.projections().countDistinct(getFullyQualifiedColumn(propertyName, alias));
-    }
-
-    private static String getFullyQualifiedColumn(String propertyName, String alias) {
-        return (Objects.nonNull(alias) ? alias + "." : "") + propertyName;
     }
 
     @Override
@@ -1022,9 +1026,9 @@ public class HibernateCriteriaBuilder extends GroovyObjectSupport implements Bui
      */
     @Override
     public Criteria order(String propertyName, String directionString) {
-        Query.Order.Direction direction = Query.Order.Direction.DESC.name().equalsIgnoreCase(directionString)
-                ? Query.Order.Direction.DESC
-                : Query.Order.Direction.ASC;
+        Query.Order.Direction direction = Query.Order.Direction.DESC.name().equalsIgnoreCase(directionString) ?
+                Query.Order.Direction.DESC :
+                Query.Order.Direction.ASC;
         hibernateQuery.order(new Query.Order(propertyName, direction));
         return this;
     }
@@ -1201,9 +1205,9 @@ public class HibernateCriteriaBuilder extends GroovyObjectSupport implements Bui
     @SuppressWarnings("rawtypes")
     @Override
     public Object invokeMethod(String name, Object obj) {
-        Object[] args = obj.getClass().isArray()
-                ? (Object[]) obj
-                : (obj instanceof Collection ? ((Collection) obj).toArray() : new Object[] {obj});
+        Object[] args = obj.getClass().isArray() ?
+                (Object[]) obj :
+                (obj instanceof Collection ? ((Collection) obj).toArray() : new Object[] {obj});
         return new CriteriaMethodInvoker(this).invokeMethod(name, args);
     }
 
@@ -1231,16 +1235,24 @@ public class HibernateCriteriaBuilder extends GroovyObjectSupport implements Bui
         return uniqueResult;
     }
 
+    public void setUniqueResult(boolean uniqueResult) {
+        this.uniqueResult = uniqueResult;
+    }
+
     public boolean isDistinct() {
         return distinct;
+    }
+
+    public void setDistinct(boolean distinct) {
+        this.distinct = distinct;
     }
 
     public boolean isCount() {
         return count;
     }
 
-    public void setUniqueResult(boolean uniqueResult) {
-        this.uniqueResult = uniqueResult;
+    public void setCount(boolean count) {
+        this.count = count;
     }
 
     public boolean isPaginationEnabledList() {
@@ -1251,20 +1263,12 @@ public class HibernateCriteriaBuilder extends GroovyObjectSupport implements Bui
         this.paginationEnabledList = paginationEnabledList;
     }
 
-    public void setScroll(boolean scroll) {
-        this.scroll = scroll;
-    }
-
     public boolean isScroll() {
         return scroll;
     }
 
-    public void setCount(boolean count) {
-        this.count = count;
-    }
-
-    public void setDistinct(boolean distinct) {
-        this.distinct = distinct;
+    public void setScroll(boolean scroll) {
+        this.scroll = scroll;
     }
 
     public HibernateQuery getHibernateQuery() {
@@ -1273,10 +1277,6 @@ public class HibernateCriteriaBuilder extends GroovyObjectSupport implements Bui
 
     public boolean isParticipate() {
         return participate;
-    }
-
-    public void setTargetClass(Class<?> targetClass) {
-        this.targetClass = targetClass;
     }
 
     public SessionFactory getSessionFactory() {

@@ -40,6 +40,7 @@ import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernatePersistentP
 
 @SuppressWarnings("PMD.NullAssignment")
 public class SimpleValueBinder {
+
     private final MetadataBuildingContext metadataBuildingContext;
     private final PersistentEntityNamingStrategy namingStrategy;
     private final ColumnConfigToColumnBinder columnConfigToColumnBinder;
@@ -101,10 +102,10 @@ public class SimpleValueBinder {
         if (generator != null && simpleValue instanceof BasicValue basicValue) {
             basicValue.setCustomIdGeneratorCreator(context -> createGenerator(
                     property,
-                    context.getValue() == null
-                            ? new org.grails.orm.hibernate.cfg.domainbinding.util.GeneratorCreationContextWrapper(
-                                    context, basicValue)
-                            : context,
+                    context.getValue() == null ?
+                            new org.grails.orm.hibernate.cfg.domainbinding.util.GeneratorCreationContextWrapper(
+                                    context, basicValue) :
+                            context,
                     generator));
         }
 

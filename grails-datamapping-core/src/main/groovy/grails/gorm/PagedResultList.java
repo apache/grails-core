@@ -36,7 +36,7 @@ import org.grails.datastore.mapping.query.Query;
  * @author Graeme Rocher
  * @since 1.0
  */
-@SuppressWarnings({"rawtypes", "unchecked"})
+@SuppressWarnings({"unchecked"})
 public class PagedResultList<E> implements Serializable, List<E> {
 
     private static final long serialVersionUID = -5820655628956173929L;

@@ -18,7 +18,10 @@
  */
 package org.grails.orm.hibernate.cfg.domainbinding.hibernate
 
+import java.beans.PropertyDescriptor
+
 import groovy.transform.CompileStatic
+
 import org.grails.datastore.mapping.config.AbstractGormMappingFactory
 import org.grails.datastore.mapping.config.groovy.MappingConfigurationBuilder
 import org.grails.datastore.mapping.engine.types.CustomTypeMarshaller
@@ -41,8 +44,6 @@ import org.grails.datastore.mapping.reflect.ClassUtils
 import org.grails.orm.hibernate.cfg.Identity
 import org.grails.orm.hibernate.cfg.Mapping
 import org.grails.orm.hibernate.cfg.PropertyConfig
-
-import java.beans.PropertyDescriptor
 
 /**
  * The {@link AbstractGormMappingFactory} implementation for Hibernate, responsible for

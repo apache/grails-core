@@ -31,6 +31,7 @@ import org.grails.orm.hibernate.cfg.PropertyConfig;
 
 /** Hibernate implementation of {@link org.grails.datastore.mapping.model.types.OneToOne} */
 public class HibernateOneToOneProperty extends OneToOneWithMapping<PropertyConfig> implements HibernateToOneProperty {
+
     public HibernateOneToOneProperty(PersistentEntity entity, MappingContext context, PropertyDescriptor property) {
         super(entity, context, property);
     }
@@ -39,8 +40,8 @@ public class HibernateOneToOneProperty extends OneToOneWithMapping<PropertyConfi
     public void validateAssociation() {
         HibernateToOneProperty.super.validateAssociation();
         if (isHasOne() && !isBidirectional()) {
-            throw new MappingException("hasOne property [" + getName()
-                    + "] is not bidirectional. Specify the other side of the relationship!");
+            throw new MappingException("hasOne property [" + getName() +
+                    "] is not bidirectional. Specify the other side of the relationship!");
         }
     }
 
@@ -66,9 +67,9 @@ public class HibernateOneToOneProperty extends OneToOneWithMapping<PropertyConfi
      */
     public String getHibernateReferencedEntityName() {
         HibernateOneToOneProperty otherSide = getHibernateInverseSide();
-        return otherSide != null
-                ? otherSide.getOwner().getName()
-                : getAssociatedEntity().getName();
+        return otherSide != null ?
+                otherSide.getOwner().getName() :
+                getAssociatedEntity().getName();
     }
 
     /**
@@ -99,12 +100,14 @@ public class HibernateOneToOneProperty extends OneToOneWithMapping<PropertyConfi
         return isHibernateConstrained() || getHibernateReferencedPropertyName() == null;
     }
 
+    @Override
     public boolean isValidHibernateOneToOne() {
         validateAssociation();
-        return canBindOneToOneWithSingleColumnAndForeignKey()
-                || isHasOne() && isBidirectional() && getInverseSide() != null;
+        return canBindOneToOneWithSingleColumnAndForeignKey() ||
+                isHasOne() && isBidirectional() && getInverseSide() != null;
     }
 
+    @Override
     public boolean isValidHibernateManyToOne() {
         validateAssociation();
         return !isValidHibernateOneToOne();

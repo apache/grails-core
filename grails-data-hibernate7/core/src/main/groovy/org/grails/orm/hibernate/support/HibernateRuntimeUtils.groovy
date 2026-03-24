@@ -86,16 +86,14 @@ class HibernateRuntimeUtils {
                             fe.arguments,
                             fe.defaultMessage))
                 }
-            }
-            else {
+            } else {
                 errors.addError((ObjectError) o)
             }
         }
 
         if (isGormValidateable) {
             ((GormValidateable) target).setErrors(errors)
-        }
-        else {
+        } else {
             metaClass.setProperty(target, GormProperties.ERRORS, errors)
         }
         return errors
@@ -144,24 +142,19 @@ class HibernateRuntimeUtils {
                 if (value instanceof Number && (targetType == Long || targetType == Integer)) {
                     if (targetType == Long) {
                         value = ((Number) value).toLong()
-                    }
-                    else {
+                    } else {
                         value = ((Number) value).toInteger()
                     }
-                }
-                else if (value instanceof String && Number.isAssignableFrom(targetType)) {
+                } else if (value instanceof String && Number.isAssignableFrom(targetType)) {
                     String strValue = value.trim()
                     if (targetType == Long) {
                         value = Long.parseLong(strValue)
-                    }
-                    else if (targetType == Integer) {
+                    } else if (targetType == Integer) {
                         value = Integer.parseInt(strValue)
-                    }
-                    else {
+                    } else {
                         value = StringGroovyMethods.asType(strValue, targetType as Class<Object>)
                     }
-                }
-                else {
+                } else {
                     value = conversionService.convert(value, targetType)
                 }
             }

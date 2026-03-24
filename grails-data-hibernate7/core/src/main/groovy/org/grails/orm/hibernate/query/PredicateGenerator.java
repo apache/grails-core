@@ -63,6 +63,7 @@ import org.grails.datastore.mapping.query.api.QueryableCriteria;
     "rawtypes"
 })
 public class PredicateGenerator {
+
     private static final Logger log = LoggerFactory.getLogger(PredicateGenerator.class);
 
     private final ConversionService conversionService;
@@ -102,9 +103,9 @@ public class PredicateGenerator {
         } else if (criterion instanceof Query.DistinctProjection) {
             return cb.conjunction();
         } else if (criterion instanceof DetachedAssociationCriteria<?> c) {
-            return handleAssociationCriteria(cb, criteriaQuery, root, fromsByProvider, c);
+            return handleAssociationCriteria(cb, criteriaQuery, fromsByProvider, c);
         } else if (criterion instanceof HibernateAssociationQuery haq) {
-            return handleHibernateAssociationQuery(cb, criteriaQuery, root, fromsByProvider, haq);
+            return handleHibernateAssociationQuery(cb, criteriaQuery, fromsByProvider, haq);
         } else if (criterion instanceof Query.PropertyCriterion pc) {
             return handlePropertyCriterion(cb, criteriaQuery, root, fromsByProvider, entity, pc);
         } else if (criterion instanceof Query.PropertyComparisonCriterion c) {
@@ -149,7 +150,6 @@ public class PredicateGenerator {
     private Predicate handleAssociationCriteria(
             HibernateCriteriaBuilder cb,
             CriteriaQuery<?> criteriaQuery,
-            From<?, ?> root,
             JpaFromProvider fromsByProvider,
             DetachedAssociationCriteria<?> c) {
 
@@ -160,7 +160,7 @@ public class PredicateGenerator {
                 fromsByProvider,
                 associatedEntity,
                 c.getCriteria(),
-                java.util.Collections.<Query.Projection>emptyList(),
+                java.util.Collections.emptyList(),
                 c.getFetchStrategies(),
                 c.getJoinTypes(),
                 child);
@@ -171,7 +171,6 @@ public class PredicateGenerator {
     private Predicate handleHibernateAssociationQuery(
             HibernateCriteriaBuilder cb,
             CriteriaQuery<?> criteriaQuery,
-            From<?, ?> root,
             JpaFromProvider fromsByProvider,
             HibernateAssociationQuery haq) {
         From<?, ?> child = (From<?, ?>) fromsByProvider.getFullyQualifiedPath(haq.associationPath);
@@ -179,9 +178,9 @@ public class PredicateGenerator {
                 fromsByProvider,
                 haq.getEntity(),
                 haq.getAssociationCriteria(),
-                java.util.Collections.<Query.Projection>emptyList(),
-                java.util.Collections.<String, jakarta.persistence.FetchType>emptyMap(),
-                java.util.Collections.<String, jakarta.persistence.criteria.JoinType>emptyMap(),
+                java.util.Collections.emptyList(),
+                java.util.Collections.emptyMap(),
+                java.util.Collections.emptyMap(),
                 child);
         return cb.and(
                 getPredicates(cb, criteriaQuery, child, haq.getAssociationCriteria(), childFroms, haq.getEntity()));
@@ -196,10 +195,10 @@ public class PredicateGenerator {
             Query.PropertyCriterion pc) {
 
         String propertyName = pc.getProperty();
-        if (!"id".equals(propertyName)
-                && !propertyName.contains(".")
-                && entity.getPropertyByName(propertyName) == null
-                && !fromsByProvider.hasAlias(propertyName)) {
+        if (!"id".equals(propertyName) &&
+                !propertyName.contains(".") &&
+                entity.getPropertyByName(propertyName) == null &&
+                !fromsByProvider.hasAlias(propertyName)) {
             throw new ConfigurationException(
                     "Property [" + propertyName + "] is not a valid property of class [" + entity.getName() + "]");
         }
@@ -261,8 +260,8 @@ public class PredicateGenerator {
         var queryableCriteria = getQueryableCriteriaFromInCriteria(c);
         if (Objects.nonNull(queryableCriteria)) {
             return cb.not(getQueryableCriteriaValue(cb, criteriaQuery, fromsByProvider, entity, c, queryableCriteria));
-        } else if (Objects.nonNull(c.getSubquery())
-                && !c.getSubquery().getProjections().isEmpty()) {
+        } else if (Objects.nonNull(c.getSubquery()) &&
+                !c.getSubquery().getProjections().isEmpty()) {
             Subquery subquery2 = criteriaQuery.subquery(Number.class);
             PersistentEntity subEntity = c.getValue().getPersistentEntity();
             Root from2 = subquery2.from(subEntity.getJavaClass());
@@ -307,8 +306,8 @@ public class PredicateGenerator {
             }
 
             // Hibernate 7: If the path is a collection, we must ensure it's correctly handled
-            if (fullyQualifiedPath instanceof SqmPath sqmPath
-                    && sqmPath.getReferencedPathSource() instanceof jakarta.persistence.metamodel.PluralAttribute) {
+            if (fullyQualifiedPath instanceof SqmPath sqmPath &&
+                    sqmPath.getReferencedPathSource() instanceof jakarta.persistence.metamodel.PluralAttribute) {
                 // For basic collections, GORM's 'in' traditionally implies joining.
                 // We'll check if the path is already a join (From)
                 if (fullyQualifiedPath instanceof From) {
@@ -427,18 +426,18 @@ public class PredicateGenerator {
                 fromsByProvider,
                 subEntity,
                 subqueryable.getCriteria(),
-                java.util.Collections.<Query.Projection>emptyList(),
-                java.util.Collections.<String, jakarta.persistence.FetchType>emptyMap(),
-                java.util.Collections.<String, jakarta.persistence.criteria.JoinType>emptyMap(),
+                java.util.Collections.emptyList(),
+                java.util.Collections.emptyMap(),
+                java.util.Collections.emptyMap(),
                 subRoot);
 
         var predicates =
                 getPredicates(cb, criteriaQuery, subRoot, subqueryable.getCriteria(), subFromsProvider, subEntity);
         var existsPredicate = getExistsPredicate(cb, root_, entity, subRoot);
-        Predicate[] allPredicates = existsPredicate != null
-                ? Stream.concat(Arrays.stream(predicates), Stream.of(existsPredicate))
-                        .toArray(Predicate[]::new)
-                : predicates;
+        Predicate[] allPredicates = existsPredicate != null ?
+                Stream.concat(Arrays.stream(predicates), Stream.of(existsPredicate))
+                        .toArray(Predicate[]::new) :
+                predicates;
         subquery.select(cb.literal(1)).where(cb.and(allPredicates));
         return cb.exists(subquery);
     }
@@ -470,9 +469,9 @@ public class PredicateGenerator {
                 if (simpleProp != null) {
                     subqueryType = simpleProp.getType();
                 } else if ("id".equals(simplePropName)) {
-                    subqueryType = subEntity.getIdentity() != null
-                            ? subEntity.getIdentity().getType()
-                            : Long.class;
+                    subqueryType = subEntity.getIdentity() != null ?
+                            subEntity.getIdentity().getType() :
+                            Long.class;
                 }
             }
         } else if (projection instanceof Query.IdProjection) {
@@ -496,9 +495,9 @@ public class PredicateGenerator {
     }
 
     private boolean isAssociation(PersistentEntity entity, String propertyName) {
-        if ("id".equals(propertyName)
-                || (entity.getIdentity() != null
-                        && propertyName.equals(entity.getIdentity().getName()))) {
+        if ("id".equals(propertyName) ||
+                (entity.getIdentity() != null &&
+                        propertyName.equals(entity.getIdentity().getName()))) {
             return false;
         }
         PersistentProperty prop = entity.getPropertyByName(propertyName);
@@ -524,9 +523,9 @@ public class PredicateGenerator {
     }
 
     private String findSubproperty(Object projection) {
-        return projection instanceof Query.PropertyProjection
-                ? ((Query.PropertyProjection) projection).getPropertyName()
-                : "id";
+        return projection instanceof Query.PropertyProjection ?
+                ((Query.PropertyProjection) projection).getPropertyName() :
+                "id";
     }
 
     private Query.Projection findPropertyOrIdProjection(QueryableCriteria queryableCriteria) {
@@ -537,9 +536,9 @@ public class PredicateGenerator {
     }
 
     private QueryableCriteria getQueryableCriteriaFromInCriteria(Query.Criterion criterion) {
-        return criterion instanceof Query.In
-                ? ((Query.In) criterion).getSubquery()
-                : ((Query.NotIn) criterion).getSubquery();
+        return criterion instanceof Query.In ?
+                ((Query.In) criterion).getSubquery() :
+                ((Query.NotIn) criterion).getSubquery();
     }
 
     private Number getNumericValue(Query.PropertyCriterion criterion) {

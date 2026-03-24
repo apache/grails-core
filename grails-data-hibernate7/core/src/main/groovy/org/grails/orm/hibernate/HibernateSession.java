@@ -414,19 +414,19 @@ public class HibernateSession extends AbstractAttributeStoringSession implements
     }
 
     @Override
+    public FlushModeType getFlushMode() {
+        if (hibernateTemplate.getFlushMode() == GrailsHibernateTemplate.FLUSH_COMMIT) {
+            return FlushModeType.COMMIT;
+        }
+        return FlushModeType.AUTO;
+    }
+
+    @Override
     public void setFlushMode(FlushModeType flushMode) {
         if (flushMode == FlushModeType.AUTO) {
             hibernateTemplate.setFlushMode(GrailsHibernateTemplate.FLUSH_AUTO);
         } else if (flushMode == FlushModeType.COMMIT) {
             hibernateTemplate.setFlushMode(GrailsHibernateTemplate.FLUSH_COMMIT);
         }
-    }
-
-    @Override
-    public FlushModeType getFlushMode() {
-        if (hibernateTemplate.getFlushMode() == GrailsHibernateTemplate.FLUSH_COMMIT) {
-            return FlushModeType.COMMIT;
-        }
-        return FlushModeType.AUTO;
     }
 }

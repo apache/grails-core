@@ -32,6 +32,7 @@ import org.grails.orm.hibernate.cfg.PersistentEntityNamingStrategy;
 import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernatePersistentEntity;
 
 public class RootPersistentClassCommonValuesBinder {
+
     public static final Logger LOG = LoggerFactory.getLogger(RootPersistentClassCommonValuesBinder.class);
 
     private final MetadataBuildingContext metadataBuildingContext;
@@ -93,9 +94,9 @@ public class RootPersistentClassCommonValuesBinder {
                 metadataBuildingContext);
         root.setTable(table);
         if (LOG.isDebugEnabled()) {
-            LOG.debug("[GrailsDomainBinder] Mapping Grails domain class: " + hibernatePersistentEntity.getName()
-                    + " -> "
-                    + root.getTable().getName());
+            LOG.debug("[GrailsDomainBinder] Mapping Grails domain class: " + hibernatePersistentEntity.getName() +
+                    " -> " +
+                    root.getTable().getName());
         }
 
         identityBinder.bindIdentity(hibernatePersistentEntity, root);

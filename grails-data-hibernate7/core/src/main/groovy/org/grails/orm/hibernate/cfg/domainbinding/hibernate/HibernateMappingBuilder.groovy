@@ -33,15 +33,17 @@
 package org.grails.orm.hibernate.cfg.domainbinding.hibernate
 
 import groovy.transform.CompileStatic
-import org.grails.datastore.mapping.config.groovy.MappingConfigurationBuilder
-import org.grails.datastore.mapping.model.config.GormProperties
-import org.grails.datastore.mapping.reflect.ClassPropertyFetcher
+
+import jakarta.persistence.AccessType
+
 import org.hibernate.FetchMode
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
-import jakarta.persistence.AccessType
+
+import org.grails.datastore.mapping.config.groovy.MappingConfigurationBuilder
+import org.grails.datastore.mapping.model.config.GormProperties
+import org.grails.datastore.mapping.reflect.ClassPropertyFetcher
 import org.grails.orm.hibernate.cfg.CacheConfig
-import org.grails.orm.hibernate.cfg.SortConfig
 import org.grails.orm.hibernate.cfg.ColumnConfig
 import org.grails.orm.hibernate.cfg.CompositeIdentity
 import org.grails.orm.hibernate.cfg.Identity
@@ -49,6 +51,7 @@ import org.grails.orm.hibernate.cfg.Mapping
 import org.grails.orm.hibernate.cfg.NaturalId
 import org.grails.orm.hibernate.cfg.PropertyConfig
 import org.grails.orm.hibernate.cfg.PropertyDefinitionDelegate
+import org.grails.orm.hibernate.cfg.SortConfig
 
 /**
  * Implements the ORM mapping DSL constructing a model that can be evaluated by the
@@ -120,7 +123,7 @@ class HibernateMappingBuilder implements MappingConfigurationBuilder<Mapping, Pr
 
     void hibernateCustomUserType(Map<String, Object> args) {
         if (args.type && (args['class'] instanceof Class)) {
-            mapping.userTypes[(Class)args['class']] = args.type.toString()
+            mapping.userTypes[(Class) args['class']] = args.type.toString()
         }
     }
 
@@ -168,7 +171,7 @@ class HibernateMappingBuilder implements MappingConfigurationBuilder<Mapping, Pr
     void sort(Map namesAndDirections) {
         if (namesAndDirections) {
             SortConfig sc = (SortConfig) mapping.getSort()
-            sc.namesAndDirections = (Map<String, String>)namesAndDirections
+            sc.namesAndDirections = (Map<String, String>) namesAndDirections
         }
     }
 
@@ -349,7 +352,7 @@ class HibernateMappingBuilder implements MappingConfigurationBuilder<Mapping, Pr
         }
 
         Object uniqueVal = namedArgs.unique
-        if (uniqueVal instanceof Boolean) property.setUnique((boolean)(Boolean) uniqueVal)
+        if (uniqueVal instanceof Boolean) property.setUnique((boolean) (Boolean) uniqueVal)
         else if (uniqueVal instanceof String) property.setUnique((String) uniqueVal)
         else if (uniqueVal instanceof List) property.setUnique((List<String>) uniqueVal)
         if (namedArgs.nullable instanceof Boolean) property.nullable = (Boolean) namedArgs.nullable
@@ -446,6 +449,7 @@ class HibernateMappingBuilder implements MappingConfigurationBuilder<Mapping, Pr
     void columns(@DelegatesTo(value = Object, strategy = Closure.DELEGATE_ONLY) Closure callable) {
         callable.resolveStrategy = Closure.DELEGATE_ONLY
         callable.delegate = new Object() {
+
             Object invokeMethod(String methodName, Object args) {
                 Object[] argsArray = (Object[]) args
                 int argc = argsArray.length
@@ -485,7 +489,7 @@ class HibernateMappingBuilder implements MappingConfigurationBuilder<Mapping, Pr
             hibernateCustomUserType((Map<String, Object>) firstArg)
         } else if (keyword == HibernateMappingKeyword.IMPORT_FROM && hasArgs && firstArg instanceof Class) {
             List<Closure> constraintsToImport = ClassPropertyFetcher.getStaticPropertyValuesFromInheritanceHierarchy(
-                (Class) firstArg, GormProperties.CONSTRAINTS, Closure)
+                    (Class) firstArg, GormProperties.CONSTRAINTS, Closure)
             if (constraintsToImport) {
                 List<String> originalIncludes = methodMissingIncludes
                 List<String> originalExcludes = methodMissingExcludes

@@ -27,9 +27,9 @@ import org.grails.orm.hibernate.cfg.domainbinding.hibernate.GrailsHibernatePersi
 /** Holder for the GORM mapping cache. */
 public class MappingCacheHolder {
 
-    public MappingCacheHolder() {}
-
     private final Map<Class<?>, Mapping> MAPPING_CACHE = new HashMap<>();
+
+    public MappingCacheHolder() {}
 
     /**
      * Obtains a mapping object for the given domain class nam

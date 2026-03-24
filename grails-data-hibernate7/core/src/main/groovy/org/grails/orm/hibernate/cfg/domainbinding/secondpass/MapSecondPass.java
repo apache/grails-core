@@ -27,11 +27,12 @@ import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernateToManyPrope
 
 @SuppressWarnings("PMD.NonSerializableClass")
 public class MapSecondPass implements org.hibernate.boot.spi.SecondPass, GrailsSecondPass, java.io.Serializable {
+
     @Serial
     private static final long serialVersionUID = -3244991685626409031L;
 
-    private final MapSecondPassBinder mapSecondPassBinder;
     protected final HibernateToManyProperty property;
+    private final MapSecondPassBinder mapSecondPassBinder;
 
     public MapSecondPass(MapSecondPassBinder mapSecondPassBinder, HibernateToManyProperty property) {
         this.mapSecondPassBinder = mapSecondPassBinder;

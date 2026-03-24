@@ -91,10 +91,10 @@ public interface HibernateToManyProperty extends PropertyWithMapping<PropertyCon
      * @return Whether the collection should be bound with a foreign key
      */
     default boolean shouldBindWithForeignKey() {
-        return ((this instanceof HibernateOneToManyProperty) && isBidirectional() || !isUnidirectionalOneToMany())
-                && !Map.class.isAssignableFrom(getType())
-                && !(this instanceof HibernateManyToManyProperty)
-                && !(this instanceof Basic);
+        return ((this instanceof HibernateOneToManyProperty) && isBidirectional() || !isUnidirectionalOneToMany()) &&
+                !Map.class.isAssignableFrom(getType()) &&
+                !(this instanceof HibernateManyToManyProperty) &&
+                !(this instanceof Basic);
     }
 
     default String getIndexColumnName(PersistentEntityNamingStrategy namingStrategy) {
@@ -111,9 +111,9 @@ public interface HibernateToManyProperty extends PropertyWithMapping<PropertyCon
         }
 
         if (mapped == null || mapped.getColumns().isEmpty()) {
-            return namingStrategy.resolveColumnName(getName())
-                    + UNDERSCORE
-                    + IndexedCollection.DEFAULT_INDEX_COLUMN_NAME;
+            return namingStrategy.resolveColumnName(getName()) +
+                    UNDERSCORE +
+                    IndexedCollection.DEFAULT_INDEX_COLUMN_NAME;
         }
 
         ColumnConfig primaryCol = mapped.getColumns().get(0);
@@ -135,8 +135,8 @@ public interface HibernateToManyProperty extends PropertyWithMapping<PropertyCon
             if (StringUtils.hasText(colName)) {
                 return colName;
             }
-        } catch (Exception e) {
-            // ignore
+        } catch (Exception ignored) {
+            // ignored
         }
 
         return namingStrategy.resolveColumnName(getName()) + UNDERSCORE + IndexedCollection.DEFAULT_INDEX_COLUMN_NAME;
@@ -172,8 +172,8 @@ public interface HibernateToManyProperty extends PropertyWithMapping<PropertyCon
             if (StringUtils.hasText(typeName)) {
                 return typeName;
             }
-        } catch (Exception e) {
-            // ignore
+        } catch (Exception ignored) {
+            // ignored
         }
 
         return defaultType;
@@ -184,9 +184,9 @@ public interface HibernateToManyProperty extends PropertyWithMapping<PropertyCon
                 .map(PropertyConfig::getJoinTable)
                 .map(JoinTable::getColumn)
                 .map(ColumnConfig::getName)
-                .orElseGet(() -> namingStrategy.resolveColumnName(getName())
-                        + GrailsDomainBinder.UNDERSCORE
-                        + IndexedCollection.DEFAULT_ELEMENT_COLUMN_NAME);
+                .orElseGet(() -> namingStrategy.resolveColumnName(getName()) +
+                        GrailsDomainBinder.UNDERSCORE +
+                        IndexedCollection.DEFAULT_ELEMENT_COLUMN_NAME);
     }
 
     default String resolveJoinTableForeignKeyColumnName(PersistentEntityNamingStrategy namingStrategy) {
@@ -196,8 +196,8 @@ public interface HibernateToManyProperty extends PropertyWithMapping<PropertyCon
                 .orElseGet(() -> namingStrategy.resolveColumnName(getHibernateAssociatedEntity()
                                 .getHibernateRootEntity()
                                 .getJavaClass()
-                                .getSimpleName())
-                        + GrailsDomainBinder.FOREIGN_KEY_SUFFIX);
+                                .getSimpleName()) +
+                        GrailsDomainBinder.FOREIGN_KEY_SUFFIX);
     }
 
     default String joinTableColumName(PersistentEntityNamingStrategy namingStrategy) {
@@ -210,9 +210,9 @@ public interface HibernateToManyProperty extends PropertyWithMapping<PropertyCon
         } else {
             var clazz = namingStrategy.resolveColumnName(referencedType.getName());
             var prop = namingStrategy.resolveTableName(getName());
-            columnName = referencedType.isEnum()
-                    ? clazz
-                    : new BackticksRemover().apply(prop) + UNDERSCORE + new BackticksRemover().apply(clazz);
+            columnName = referencedType.isEnum() ?
+                    clazz :
+                    new BackticksRemover().apply(prop) + UNDERSCORE + new BackticksRemover().apply(clazz);
         }
         return columnName;
     }
@@ -229,6 +229,7 @@ public interface HibernateToManyProperty extends PropertyWithMapping<PropertyCon
     /**
      * @return Whether the association column is nullable. ManyToMany is never nullable.
      */
+    @Override
     default boolean isAssociationColumnNullable() {
         if (this instanceof HibernateManyToManyProperty) {
             return false;
@@ -236,7 +237,7 @@ public interface HibernateToManyProperty extends PropertyWithMapping<PropertyCon
         return isNullable();
     }
 
-    void setCollection(Collection collection);
-
     Collection getCollection();
+
+    void setCollection(Collection collection);
 }

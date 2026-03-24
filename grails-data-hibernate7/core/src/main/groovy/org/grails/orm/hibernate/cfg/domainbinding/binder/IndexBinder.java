@@ -31,6 +31,7 @@ import static java.util.Optional.of;
 import static java.util.Optional.ofNullable;
 
 public class IndexBinder {
+
     public void bindIndex(@Nonnull String columnName, @Nonnull Column column, ColumnConfig cc, @Nonnull Table table) {
         ofNullable(cc)
                 .map(ColumnConfig::getIndex)

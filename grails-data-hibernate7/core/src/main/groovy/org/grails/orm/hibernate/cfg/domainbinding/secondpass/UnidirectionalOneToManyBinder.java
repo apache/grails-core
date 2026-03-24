@@ -60,9 +60,9 @@ public class UnidirectionalOneToManyBinder {
         Value element = collection.getElement();
         element.createForeignKey();
 
-        String entityName = (element instanceof ManyToOne manyToOne)
-                ? manyToOne.getReferencedEntityName()
-                : ((OneToMany) element).getReferencedEntityName();
+        String entityName = (element instanceof ManyToOne manyToOne) ?
+                manyToOne.getReferencedEntityName() :
+                ((OneToMany) element).getReferencedEntityName();
 
         collection.setInverse(false);
 
@@ -73,10 +73,10 @@ public class UnidirectionalOneToManyBinder {
         GrailsHibernatePersistentEntity owner = (GrailsHibernatePersistentEntity) property.getOwner();
         Backref backref = new Backref();
         backref.setEntityName(owner.getName());
-        backref.setName(UNDERSCORE + backticksRemover.apply(owner.getJavaClass().getSimpleName())
-                + UNDERSCORE
-                + backticksRemover.apply(property.getName())
-                + "Backref");
+        backref.setName(UNDERSCORE + backticksRemover.apply(owner.getJavaClass().getSimpleName()) +
+                UNDERSCORE +
+                backticksRemover.apply(property.getName()) +
+                "Backref");
         backref.setUpdatable(false);
         backref.setInsertable(true);
         backref.setCollectionRole(collection.getRole());

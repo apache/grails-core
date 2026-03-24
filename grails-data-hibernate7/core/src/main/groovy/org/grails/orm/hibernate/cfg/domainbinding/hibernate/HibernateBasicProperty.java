@@ -28,6 +28,7 @@ import org.grails.orm.hibernate.cfg.PropertyConfig;
 
 /** Hibernate implementation of {@link org.grails.datastore.mapping.model.types.Basic} */
 public class HibernateBasicProperty extends BasicWithMapping<PropertyConfig> implements HibernateToManyProperty {
+
     private Collection collection;
 
     public HibernateBasicProperty(
