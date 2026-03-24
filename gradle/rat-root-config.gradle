@@ -84,6 +84,10 @@ tasks.named('rat') {
             'build/**', // build directories
             'buildSrc/build/**', // build directories
             '**/build/**', // all build directories
+            'node_modules/**', // node modules
+            'local.properties', // local properties
+            'test_output.log', // test output log
+            'fix_codenarc.py', // fix codenarc script
     ] + rootProject.subprojects.collect{"${rootProject.projectDir.relativePath(it.layout.buildDirectory.get().asFile).toString()}/**/*" }
     // logger.lifecycle("Excludes for RAT task: ${allExcludes.join(', \n')}")
     excludes = allExcludes
