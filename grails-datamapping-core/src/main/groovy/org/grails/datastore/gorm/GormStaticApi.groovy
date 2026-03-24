@@ -56,7 +56,6 @@ import org.springframework.transaction.PlatformTransactionManager
 import org.springframework.transaction.TransactionDefinition
 import org.springframework.transaction.support.DefaultTransactionDefinition
 import org.springframework.util.Assert
-import org.grails.datastore.gorm.query.NamedCriteriaProxy
 
 /**
  * Static methods of the GORM API.

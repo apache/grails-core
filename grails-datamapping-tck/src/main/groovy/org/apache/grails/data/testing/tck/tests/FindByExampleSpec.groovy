@@ -20,8 +20,6 @@ package org.apache.grails.data.testing.tck.tests
 
 import org.apache.grails.data.testing.tck.domains.Plant
 import org.apache.grails.data.testing.tck.base.GrailsDataTckSpec
-import spock.lang.IgnoreIf
-
 
 class FindByExampleSpec extends GrailsDataTckSpec {
 

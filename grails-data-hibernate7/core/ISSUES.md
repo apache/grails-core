@@ -22,12 +22,6 @@
 
 
 
-## Static Analysis Violations (hibernate7-core)
-
-### Checkstyle
+## Summary
 
 
-### PMD
-
-
-### SpotBugs
