@@ -72,6 +72,7 @@ public class DelegateAsyncTransformation implements ASTTransformation, Transform
     public static final ClassNode GROOVY_OBJECT_CLASS_NODE = new ClassNode(GroovyObjectSupport.class);
     public static final ClassNode OBJECT_CLASS_NODE = new ClassNode(Object.class);
 
+    @Override
     public void visit(ASTNode[] nodes, SourceUnit source) {
         if (nodes.length != 2 || !(nodes[0] instanceof AnnotationNode) || !(nodes[1] instanceof AnnotatedNode)) {
             throw new GroovyBugError("Internal error: expecting [AnnotationNode, AnnotatedNode] but got: " + Arrays.asList(nodes));
@@ -118,7 +119,7 @@ public class DelegateAsyncTransformation implements ASTTransformation, Transform
                 if (existingMethod == null) {
                     ClassNode promiseNode = ClassHelper.make(Promise.class).getPlainNodeReference();
                     ClassNode originalReturnType = m.getReturnType();
-                    if (!originalReturnType.getNameWithoutPackage().equals(VOID)) {
+                    if (!VOID.equals(originalReturnType.getNameWithoutPackage())) {
                         ClassNode returnType;
                         if (ClassHelper.isPrimitiveType(originalReturnType.redirect())) {
                             returnType = ClassHelper.getWrapper(originalReturnType.redirect());
@@ -198,9 +199,9 @@ public class DelegateAsyncTransformation implements ASTTransformation, Transform
 
     protected DelegateAsyncTransactionalMethodTransformer lookupAsyncTransactionalMethodTransformer() {
         try {
-            Class<?> transformerClass = getClass().getClassLoader().loadClass("org.grails.async.transform.internal.DefaultDelegateAsyncTransactionalMethodTransformer");
+            Class<?> transformerClass = Thread.currentThread().getContextClassLoader().loadClass("org.grails.async.transform.internal.DefaultDelegateAsyncTransactionalMethodTransformer");
             return (DelegateAsyncTransactionalMethodTransformer) transformerClass.getDeclaredConstructor().newInstance();
-        } catch (Throwable e) {
+        } catch (Exception ignored) {
             // ignore
         }
         return new NoopDelegateAsyncTransactionalMethodTransformer();
@@ -214,7 +215,7 @@ public class DelegateAsyncTransformation implements ASTTransformation, Transform
             !GROOVY_OBJECT_CLASS_NODE.hasMethod(declaredMethod.getName(), declaredMethod.getParameters());
     }
 
-    private static Parameter[] copyParameters(Parameter[] parameterTypes) {
+    private static Parameter[] copyParameters(Parameter... parameterTypes) {
         Parameter[] newParameterTypes = new Parameter[parameterTypes.length];
         for (int i = 0; i < parameterTypes.length; i++) {
             Parameter parameterType = parameterTypes[i];
@@ -236,6 +237,7 @@ public class DelegateAsyncTransformation implements ASTTransformation, Transform
     }
 
     private static class NoopDelegateAsyncTransactionalMethodTransformer implements DelegateAsyncTransactionalMethodTransformer {
+        @Override
         public void transformTransactionalMethod(ClassNode classNode, ClassNode delegateClassNode, MethodNode methodNode, ListExpression promiseDecoratorLookupArguments) {
             // noop
         }
