@@ -33,6 +33,9 @@ import spock.lang.Issue
  */
 class BeforeUpdatePropertyPersistenceSpec extends MongoDatastoreSpec {
 
+    void setupSpec() {
+        manager.addAllDomainClasses([UserWithBeforeUpdate, UserWithBeforeUpdateAndAutoTimestamp])
+    }
 
     @Issue('GRAILS-15139')
     void "Test that properties set in beforeUpdate are persisted"() {

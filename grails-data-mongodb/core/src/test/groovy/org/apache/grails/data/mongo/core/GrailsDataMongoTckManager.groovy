@@ -54,7 +54,7 @@ import org.testcontainers.containers.output.Slf4jLogConsumer
 @Slf4j
 class GrailsDataMongoTckManager extends GrailsDataTckManager {
 
-    MongoDBContainer mongoDBContainer
+    static MongoDBContainer mongoDBContainer
 
     MongoDatastore mongoDatastore
     MongoClient mongoClient
@@ -64,6 +64,29 @@ class GrailsDataMongoTckManager extends GrailsDataTckManager {
     Map<String, Object> configuration
     MongoDatastore multiDataSourceDatastore
     MongoDatastore multiTenantMultiDataSourceDatastore
+
+    @Override
+    void setupSpec() {
+        super.setupSpec()
+        if (isDockerAvailable()) {
+            if (mongoDBContainer == null) {
+                mongoDBContainer = new MongoDBContainer(AbstractMongoGrailsExtension.desiredMongoDockerName)
+                mongoDBContainer.start()
+                // mongoDBContainer.followOutput(new Slf4jLogConsumer(LoggerFactory.getLogger("testcontainers")))
+            }
+
+            configuration = [
+                    (MongoSettings.SETTING_DATABASE_NAME): 'test',
+                    (MongoSettings.SETTING_HOST)         : mongoDBContainer.host,
+                    (MongoSettings.SETTING_PORT)         : mongoDBContainer.getMappedPort(AbstractMongoGrailsExtension.DEFAULT_MONGO_PORT) as String,
+            ]
+        }
+    }
+
+    @Override
+    void cleanupSpec() {
+        super.cleanupSpec()
+    }
 
     @Override
     Session createSession() {
@@ -228,6 +251,7 @@ class GrailsDataMongoTckManager extends GrailsDataTckManager {
             }
         }
     }
+
     static boolean isDockerAvailable() {
         def candidates = [
                 System.getProperty('user.home') + '/.docker/run/docker.sock',
