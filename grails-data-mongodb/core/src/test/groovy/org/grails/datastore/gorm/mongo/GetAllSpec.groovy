@@ -18,19 +18,20 @@
  */
 package org.grails.datastore.gorm.mongo
 
+import org.apache.grails.data.mongo.core.MongoDatastoreSpec
+
 import grails.gorm.tests.Pet
 import grails.gorm.tests.Person
 import org.apache.grails.data.testing.tck.domains.PetType
 import org.apache.grails.data.mongo.core.GrailsDataMongoTckManager
-import org.apache.grails.data.testing.tck.base.GrailsDataTckSpec
 
 /**
  * @author Graeme Rocher
  */
-class GetAllSpec extends GrailsDataTckSpec<GrailsDataMongoTckManager> {
+class GetAllSpec extends MongoDatastoreSpec {
 
     void setupSpec() {
-        manager.domainClasses += [Pet, Person, PetType]
+        manager.addAllDomainClasses([Pet, Person, PetType])
     }
 
     void "test that 'null' returns null"() {

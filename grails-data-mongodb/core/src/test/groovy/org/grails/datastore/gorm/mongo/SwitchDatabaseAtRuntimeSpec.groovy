@@ -18,14 +18,15 @@
  */
 package org.grails.datastore.gorm.mongo
 
+import org.apache.grails.data.mongo.core.MongoDatastoreSpec
+
 import grails.gorm.tests.Person
 import org.apache.grails.data.mongo.core.GrailsDataMongoTckManager
-import org.apache.grails.data.testing.tck.base.GrailsDataTckSpec
 
 /**
  * @author Graeme Rocher
  */
-class SwitchDatabaseAtRuntimeSpec extends GrailsDataTckSpec<GrailsDataMongoTckManager> {
+class SwitchDatabaseAtRuntimeSpec extends MongoDatastoreSpec {
 
     void setupSpec() {
         manager.addAllDomainClasses([Person])

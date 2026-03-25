@@ -18,18 +18,19 @@
  */
 package org.grails.datastore.gorm.mongo
 
+import org.apache.grails.data.mongo.core.MongoDatastoreSpec
+
 import grails.gorm.tests.Plant
 import org.apache.grails.data.mongo.core.GrailsDataMongoTckManager
-import org.apache.grails.data.testing.tck.base.GrailsDataTckSpec
 import spock.lang.Issue
 
 /**
  * Created by graemerocher on 16/04/14.
  */
-class ResultsWithGroovyCollectionMethodsSpec extends GrailsDataTckSpec<GrailsDataMongoTckManager> {
+class ResultsWithGroovyCollectionMethodsSpec extends MongoDatastoreSpec {
 
     void setupSpec() {
-        manager.domainClasses += [Plant]
+        manager.addAllDomainClasses([Plant])
     }
 
     @Issue('GPMONGODB-316')

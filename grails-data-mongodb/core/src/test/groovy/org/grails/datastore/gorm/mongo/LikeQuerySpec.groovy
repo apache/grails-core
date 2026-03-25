@@ -18,14 +18,15 @@
  */
 package org.grails.datastore.gorm.mongo
 
+import org.apache.grails.data.mongo.core.MongoDatastoreSpec
+
 import grails.gorm.tests.Pet
 import org.apache.grails.data.mongo.core.GrailsDataMongoTckManager
-import org.apache.grails.data.testing.tck.base.GrailsDataTckSpec
 
-class LikeQuerySpec extends GrailsDataTckSpec<GrailsDataMongoTckManager> {
+class LikeQuerySpec extends MongoDatastoreSpec {
 
     void setupSpec() {
-        manager.domainClasses += [Pet]
+        manager.addAllDomainClasses([Pet])
     }
 
     void "Test for like query"() {

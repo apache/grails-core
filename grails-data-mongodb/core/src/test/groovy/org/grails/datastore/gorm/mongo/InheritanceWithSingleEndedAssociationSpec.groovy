@@ -18,9 +18,10 @@
  */
 package org.grails.datastore.gorm.mongo
 
+import org.apache.grails.data.mongo.core.MongoDatastoreSpec
+
 import grails.persistence.Entity
 import org.apache.grails.data.mongo.core.GrailsDataMongoTckManager
-import org.apache.grails.data.testing.tck.base.GrailsDataTckSpec
 import org.bson.types.ObjectId
 import org.grails.datastore.mapping.proxy.EntityProxy
 import spock.lang.Issue
@@ -28,7 +29,7 @@ import spock.lang.Issue
 /**
  * @author Graeme Rocher
  */
-class InheritanceWithSingleEndedAssociationSpec extends GrailsDataTckSpec<GrailsDataMongoTckManager> {
+class InheritanceWithSingleEndedAssociationSpec extends MongoDatastoreSpec {
 
     void setupSpec() {
         manager.addAllDomainClasses([Node, NodeA, NodeB, NodeC])

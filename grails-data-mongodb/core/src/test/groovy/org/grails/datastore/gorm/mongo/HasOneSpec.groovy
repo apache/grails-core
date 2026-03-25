@@ -18,14 +18,15 @@
  */
 package org.grails.datastore.gorm.mongo
 
+import org.apache.grails.data.mongo.core.MongoDatastoreSpec
+
 import grails.persistence.Entity
 import org.apache.grails.data.mongo.core.GrailsDataMongoTckManager
-import org.apache.grails.data.testing.tck.base.GrailsDataTckSpec
 
 /**
  * Tests hasOne functionality with MongoDB.
  */
-class HasOneSpec extends GrailsDataTckSpec<GrailsDataMongoTckManager> {
+class HasOneSpec extends MongoDatastoreSpec {
 
     void setupSpec() {
         manager.addAllDomainClasses([Face, Nose])

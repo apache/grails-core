@@ -18,11 +18,12 @@
  */
 package org.grails.datastore.gorm.mongo
 
+import org.apache.grails.data.mongo.core.MongoDatastoreSpec
+
 import grails.gorm.annotation.Entity
 import grails.mongodb.MongoEntity
 import grails.mongodb.geo.Point
 import org.apache.grails.data.mongo.core.GrailsDataMongoTckManager
-import org.apache.grails.data.testing.tck.base.GrailsDataTckSpec
 import org.bson.Document
 
 import static grails.mongodb.mapping.MappingBuilder.document
@@ -30,7 +31,7 @@ import static grails.mongodb.mapping.MappingBuilder.document
 /**
  * Created by graemerocher on 02/02/2017.
  */
-class DocumentMappingSpec extends GrailsDataTckSpec<GrailsDataMongoTckManager> {
+class DocumentMappingSpec extends MongoDatastoreSpec {
     void setupSpec() {
         manager.addAllDomainClasses([CustomMapping])
     }
