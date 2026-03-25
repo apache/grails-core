@@ -21,7 +21,9 @@ package org.grails.orm.hibernate.query;
 import java.io.IOException;
 import java.io.ObjectOutputStream;
 import java.io.Serial;
+import java.util.List;
 
+import grails.gorm.PagedList;
 import org.hibernate.query.Query;
 
 import org.grails.datastore.mapping.model.PersistentEntity;
@@ -32,7 +34,7 @@ import org.grails.orm.hibernate.GrailsHibernateTemplate;
  *
  * @param <E> The element type
  */
-public class HibernatePagedResultList<E> extends grails.gorm.PagedResultList<E> {
+public class HibernatePagedResultList<E> implements PagedList<E> {
 
     @Serial
     private static final long serialVersionUID = 1L;
@@ -42,10 +44,11 @@ public class HibernatePagedResultList<E> extends grails.gorm.PagedResultList<E> 
     private final transient PersistentEntity entity;
     private final Integer max;
     private int offset;
+    protected List<E> resultList;
+    protected int totalCount = Integer.MIN_VALUE;
 
     @SuppressWarnings({"unchecked", "PMD.NullAssignment"})
     public HibernatePagedResultList(org.grails.datastore.mapping.query.Query query) {
-        super(null);
         this.entity = query.getEntity();
         this.hibernateTemplate = query instanceof HibernateQuery hibernateQuery ?
                 hibernateQuery.getHibernateTemplate() :
@@ -63,7 +66,6 @@ public class HibernatePagedResultList<E> extends grails.gorm.PagedResultList<E> 
     @SuppressWarnings({"unchecked", "PMD.NullAssignment"})
     public HibernatePagedResultList(
             GrailsHibernateTemplate template, PersistentEntity entity, HibernateHqlQuery hibernateHqlQuery) {
-        super(null);
         this.hibernateTemplate = template;
         this.entity = entity;
         this.max = hibernateHqlQuery.getMax();
@@ -74,6 +76,10 @@ public class HibernatePagedResultList<E> extends grails.gorm.PagedResultList<E> 
     }
 
     @Override
+    public List<E> getResultList() {
+        return resultList;
+    }
+
     protected void initialize() {
         // no-op, already initialized
     }
@@ -86,12 +92,10 @@ public class HibernatePagedResultList<E> extends grails.gorm.PagedResultList<E> 
         return totalCount;
     }
 
-    @Override
     public Integer getMax() {
         return max;
     }
 
-    @Override
     public int getOffset() {
         return offset;
     }

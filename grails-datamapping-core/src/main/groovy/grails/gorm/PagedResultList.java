@@ -36,8 +36,8 @@ import org.grails.datastore.mapping.query.Query;
  * @author Graeme Rocher
  * @since 1.0
  */
-@SuppressWarnings({"unchecked"})
-public class PagedResultList<E> implements Serializable, List<E> {
+ @SuppressWarnings({"rawtypes", "unchecked"})
+public class PagedResultList<E> implements PagedList<E> {
 
     private static final long serialVersionUID = -5820655628956173929L;
 
@@ -50,6 +50,11 @@ public class PagedResultList<E> implements Serializable, List<E> {
         this.resultList = query == null ? Collections.<E>emptyList() : query.list();
     }
 
+    @Override
+    public List<E> getResultList() {
+        return resultList;
+    }
+
     /**
      * @return The total number of records for this query
      */
@@ -58,65 +63,38 @@ public class PagedResultList<E> implements Serializable, List<E> {
         return totalCount;
     }
 
-    /**
-     * @return The maximum number of results to return or null if not specified
-     */
-    public Integer getMax() {
-        return query != null ? query.getMax() : null;
-    }
-
-    /**
-     * @return The offset of the first result or 0 if not specified
-     */
-    public int getOffset() {
-        if (query != null) {
-            Integer offset = query.getOffset();
-            return offset != null ? offset : 0;
-        }
-        return 0;
-    }
-
-    @Override
     public E get(int i) {
         return resultList.get(i);
     }
 
-    @Override
     public E set(int i, E o) {
         return resultList.set(i, o);
     }
 
-    @Override
     public E remove(int i) {
         return resultList.remove(i);
     }
 
-    @Override
     public int indexOf(Object o) {
         return resultList.indexOf(o);
     }
 
-    @Override
     public int lastIndexOf(Object o) {
         return resultList.lastIndexOf(o);
     }
 
-    @Override
     public ListIterator<E> listIterator() {
         return resultList.listIterator();
     }
 
-    @Override
     public ListIterator<E> listIterator(int index) {
         return resultList.listIterator(index);
     }
 
-    @Override
     public List<E> subList(int fromIndex, int toIndex) {
         return resultList.subList(fromIndex, toIndex);
     }
 
-    @Override
     public void add(int i, E o) {
         resultList.add(i, o);
     }
@@ -127,10 +105,6 @@ public class PagedResultList<E> implements Serializable, List<E> {
                 totalCount = 0;
             } else {
                 Query newQuery = (Query) query.clone();
-                newQuery.offset(0);
-                //TODO HACK!!
-                newQuery.order(null);
-                newQuery.max(1);
                 newQuery.projections().count();
                 Number result = (Number) newQuery.singleResult();
                 totalCount = result == null ? 0 : result.intValue();
@@ -138,82 +112,66 @@ public class PagedResultList<E> implements Serializable, List<E> {
         }
     }
 
-    @Override
     public int size() {
         return resultList.size();
     }
 
-    @Override
     public boolean isEmpty() {
         return size() == 0;
     }
 
-    @Override
     public boolean contains(Object o) {
         return resultList.contains(o);
     }
 
-    @Override
     public Iterator<E> iterator() {
         return resultList.iterator();
     }
 
-    @Override
     public Object[] toArray() {
         return resultList.toArray();
     }
 
-    @Override
     public <T> T[] toArray(T[] a) {
         return resultList.toArray(a);
     }
 
-    @Override
     public boolean add(E e) {
         return resultList.add(e);
     }
 
-    @Override
     public boolean remove(Object o) {
         return resultList.remove(o);
     }
 
-    @Override
     public boolean containsAll(Collection<?> c) {
         return resultList.containsAll(c);
     }
 
-    @Override
     public boolean addAll(Collection<? extends E> c) {
         return resultList.addAll(c);
     }
 
-    @Override
     public boolean addAll(int index, Collection<? extends E> c) {
         return resultList.addAll(index, c);
     }
 
-    @Override
     public boolean removeAll(Collection<?> c) {
         return resultList.removeAll(c);
     }
 
-    @Override
     public boolean retainAll(Collection<?> c) {
         return resultList.retainAll(c);
     }
 
-    @Override
     public void clear() {
         resultList.clear();
     }
 
-    @Override
     public boolean equals(Object o) {
         return resultList.equals(o);
     }
 
-    @Override
     public int hashCode() {
         return resultList.hashCode();
     }

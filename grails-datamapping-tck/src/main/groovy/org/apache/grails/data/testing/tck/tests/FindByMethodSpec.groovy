@@ -63,7 +63,7 @@ class FindByMethodSpec extends GrailsDataTckSpec {
     // --- Parameterized Logic ---
 
     @Unroll
-    @IgnoreIf({ System.getProperty('hibernate7.gorm.suite') == 'true' })
+    @IgnoreIf({ System.getProperty('hibernate7.gorm.suite') == 'true' || System.getProperty('mongodb.gorm.suite') == 'true'  })
     void "Test Hib5 pattern [#index] #methodName should throw MissingMethodException"() {
         when:
         action.call()
@@ -95,7 +95,7 @@ class FindByMethodSpec extends GrailsDataTckSpec {
     }
 
     @Unroll
-    @IgnoreIf({ System.getProperty('hibernate5.gorm.suite') == 'true' })
+    @IgnoreIf({ System.getProperty('hibernate5.gorm.suite') == 'true' || System.getProperty('mongodb.gorm.suite') == 'true' })
     void "Test Hib7 pattern [#index] #methodName should throw #exception.simpleName"() {
         when:
         action.call()

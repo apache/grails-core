@@ -448,7 +448,7 @@ public abstract class MappingFactory<R extends Entity, T extends Property> {
         String targetName = property != null ? property.getName() : null;
         String[] identifierNames = targetName != null ? new String[]{targetName} : new String[]{IDENTITY_PROPERTY};
         String generatorName = property != null ? property.getGenerator() : null;
-        ValueGenerator generator = generatorName != null ? ValueGenerator.valueOf(generatorName) : ValueGenerator.AUTO;
+        ValueGenerator generator = generatorName != null ? ValueGenerator.valueOf(generatorName.toUpperCase(java.util.Locale.ENGLISH)) : ValueGenerator.AUTO;
         return new DefaultIdentityMapping<>(classMapping, property, identifierNames, generator);
     }
 
