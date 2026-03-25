@@ -294,6 +294,7 @@ public class DefaultPluginDiscovery implements PluginDiscovery {
 
         if (filteredPlugins.isEmpty()) {
             LOG.debug("All plugins were excluded by plugin filtering");
+            initialized = true;
             return;
         }
 
