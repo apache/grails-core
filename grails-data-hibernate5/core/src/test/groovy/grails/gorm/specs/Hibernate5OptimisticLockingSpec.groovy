@@ -22,7 +22,7 @@ import org.apache.grails.data.testing.tck.domains.OptLockNotVersioned
 import org.apache.grails.data.testing.tck.domains.OptLockVersioned
 import org.apache.grails.data.hibernate5.core.GrailsDataHibernate5TckManager
 import org.apache.grails.data.testing.tck.base.GrailsDataTckSpec
-import org.springframework.orm.hibernate5.HibernateOptimisticLockingFailureException
+import org.springframework.dao.OptimisticLockingFailureException
 
 /**
  * @author Burt Beckwith
@@ -66,7 +66,7 @@ class Hibernate5OptimisticLockingSpec extends GrailsDataTckSpec<GrailsDataHibern
             o = OptLockVersioned.get(o.id)
         }
         then:
-        thrown HibernateOptimisticLockingFailureException
+        thrown OptimisticLockingFailureException
     }
 
     void "Test optimistic locking disabled with 'version false'"() {

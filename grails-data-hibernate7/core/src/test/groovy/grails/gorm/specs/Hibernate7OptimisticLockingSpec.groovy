@@ -20,8 +20,7 @@ package grails.gorm.specs
 
 import org.apache.grails.data.testing.tck.domains.OptLockNotVersioned
 import org.apache.grails.data.testing.tck.domains.OptLockVersioned
-
-import org.springframework.orm.hibernate5.HibernateOptimisticLockingFailureException
+import org.springframework.dao.OptimisticLockingFailureException
 
 /**
  * @author Burt Beckwith
@@ -92,7 +91,7 @@ class Hibernate7OptimisticLockingSpec extends HibernateGormDatastoreSpec {
             o = OptLockVersioned.get(o.id)
         }
         then:
-        thrown HibernateOptimisticLockingFailureException
+        thrown OptimisticLockingFailureException
     }
 
     void "Test optimistic locking disabled with 'version false'"() {

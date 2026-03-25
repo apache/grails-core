@@ -23,6 +23,7 @@ import spock.lang.IgnoreIf
 import org.apache.grails.data.testing.tck.base.GrailsDataTckSpec
 import org.apache.grails.data.testing.tck.domains.OptLockNotVersioned
 import org.apache.grails.data.testing.tck.domains.OptLockVersioned
+import org.springframework.dao.OptimisticLockingFailureException
 import org.grails.datastore.mapping.core.OptimisticLockingException
 
 /**
@@ -102,7 +103,7 @@ class OptimisticLockingSpec extends GrailsDataTckSpec {
             }
         }
         then:
-        thrown OptimisticLockingException
+        thrown OptimisticLockingFailureException
     }
 
     void "Test optimistic locking disabled with 'version false'"() {
