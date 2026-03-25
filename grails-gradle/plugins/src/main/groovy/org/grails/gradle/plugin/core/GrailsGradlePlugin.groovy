@@ -188,9 +188,10 @@ class GrailsGradlePlugin extends GroovyPlugin {
     }
 
     private void configureGroovyCompiler(Project project) {
-        Provider<RegularFile> groovyCompilerConfigFile = project.layout.buildDirectory.file('grailsGroovyCompilerConfig.groovy')
-
         project.tasks.withType(GroovyCompile).configureEach { GroovyCompile c ->
+            // Use a task-specific config file to avoid overlapping outputs when multiple
+            // GroovyCompile tasks exist in the same project (e.g. compileGroovy, compileTestGroovy).
+            Provider<RegularFile> groovyCompilerConfigFile = project.layout.buildDirectory.file("grailsGroovyCompilerConfig-${c.name}.groovy")
             c.outputs.file(groovyCompilerConfigFile)
 
             Closure<String> userScriptGenerator = getGroovyCompilerScript(c, project)
