@@ -208,7 +208,7 @@ public class DefaultGrailsPluginManager extends AbstractGrailsPluginManager {
         }
 
         // Note: the environment is null here since the plugins should have always been populated in the bootstrap phase
-        pluginDiscovery.getLoadOrderedPlugins().forEach(pluginInfo -> {
+        pluginDiscovery.getPluginsInLoadOrder().forEach(pluginInfo -> {
             GrailsPlugin plugin;
             if (pluginInfo.isDynamic()) {
                 plugin = createGrailsPlugin(pluginInfo.getPluginClass(), pluginInfo.getPluginDescriptor().getResource());

@@ -84,7 +84,7 @@ public class GrailsEnvironmentPostProcessor implements EnvironmentPostProcessor,
 
             pluginDiscovery.init(environment);
 
-            Collection<PluginInfo> plugins = pluginDiscovery.getLoadOrderedPlugins();
+            Collection<PluginInfo> plugins = pluginDiscovery.getPluginsInLoadOrder();
             loadPluginConfigurations(plugins, environment);
         } catch (Exception e) {
             LOG.error("Error loading Grails plugin configurations early: ", e);

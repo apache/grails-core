@@ -49,7 +49,7 @@ class GrailsEnvironmentPostProcessorSpec extends Specification {
         def bootstrapContext = Mock(ConfigurableBootstrapContext)
         def discovery = Mock(PluginDiscovery)
         bootstrapContext.get(PluginDiscovery.class) >> discovery
-        discovery.getLoadOrderedPlugins() >> []
+        discovery.getPluginsInLoadOrder() >> []
         
         def processor = new GrailsEnvironmentPostProcessor(bootstrapContext)
         def environment = new StandardEnvironment()
@@ -101,7 +101,7 @@ class GrailsEnvironmentPostProcessorSpec extends Specification {
         def bootstrapContext = Mock(ConfigurableBootstrapContext)
         def discovery = Mock(PluginDiscovery)
         bootstrapContext.get(PluginDiscovery.class) >> discovery
-        discovery.getLoadOrderedPlugins() >> [ymlPlugin]
+        discovery.getPluginsInLoadOrder() >> [ymlPlugin]
 
         def processor = new GrailsEnvironmentPostProcessor(bootstrapContext)
         def environment = new StandardEnvironment()
@@ -129,7 +129,7 @@ class GrailsEnvironmentPostProcessorSpec extends Specification {
         def bootstrapContext = Mock(ConfigurableBootstrapContext)
         def discovery = Mock(PluginDiscovery)
         bootstrapContext.get(PluginDiscovery.class) >> discovery
-        discovery.getLoadOrderedPlugins() >> [groovyPlugin]
+        discovery.getPluginsInLoadOrder() >> [groovyPlugin]
 
         def processor = new GrailsEnvironmentPostProcessor(bootstrapContext)
         def environment = new StandardEnvironment()
@@ -167,7 +167,7 @@ class GrailsEnvironmentPostProcessorSpec extends Specification {
         def bootstrapContext = Mock(ConfigurableBootstrapContext)
         def discovery = Mock(PluginDiscovery)
         bootstrapContext.get(PluginDiscovery.class) >> discovery
-        discovery.getLoadOrderedPlugins() >> [groovyPlugin, ymlPlugin]
+        discovery.getPluginsInLoadOrder() >> [groovyPlugin, ymlPlugin]
 
         def processor = new GrailsEnvironmentPostProcessor(bootstrapContext)
         def environment = new StandardEnvironment()
@@ -202,7 +202,7 @@ class GrailsEnvironmentPostProcessorSpec extends Specification {
         def discovery = Mock(PluginDiscovery)
         bootstrapContext.get(PluginDiscovery.class) >> discovery
         // [groovyPlugin, ymlPlugin] reversed = [ymlPlugin, groovyPlugin]
-        discovery.getLoadOrderedPlugins() >> [groovyPlugin, ymlPlugin]
+        discovery.getPluginsInLoadOrder() >> [groovyPlugin, ymlPlugin]
 
         def processor = new GrailsEnvironmentPostProcessor(bootstrapContext)
         def environment = new StandardEnvironment()
@@ -241,7 +241,7 @@ class GrailsEnvironmentPostProcessorSpec extends Specification {
         bootstrapContext.get(PluginDiscovery.class) >> discovery
         // [ymlPlugin, groovyPlugin] reversed = [groovyPlugin, ymlPlugin]
         // groovy is processed first, fails with RuntimeException, yml is never reached
-        discovery.getLoadOrderedPlugins() >> [ymlPlugin, groovyPlugin]
+        discovery.getPluginsInLoadOrder() >> [ymlPlugin, groovyPlugin]
 
         def processor = new GrailsEnvironmentPostProcessor(bootstrapContext)
         def environment = new StandardEnvironment()

@@ -222,7 +222,7 @@ public class DefaultPluginDiscovery implements PluginDiscovery {
     }
 
     @Override
-    public Collection<PluginInfo> getLoadOrderedPlugins() {
+    public Collection<PluginInfo> getPluginsInLoadOrder() {
         validateInitialized();
         return Collections.unmodifiableList(loadOrderedPlugins);
     }

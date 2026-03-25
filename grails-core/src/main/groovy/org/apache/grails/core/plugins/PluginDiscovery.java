@@ -90,7 +90,7 @@ public interface PluginDiscovery {
     /**
      * @return the order the plugins were loaded in.
      */
-    Collection<PluginInfo> getLoadOrderedPlugins();
+    Collection<PluginInfo> getPluginsInLoadOrder();
 
     /**
      * @param name the name of the plugin - it may not be normalized
