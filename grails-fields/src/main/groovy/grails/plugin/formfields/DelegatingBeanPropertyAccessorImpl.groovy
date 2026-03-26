@@ -75,7 +75,7 @@ class DelegatingBeanPropertyAccessorImpl implements BeanPropertyAccessor {
     }
 
     @Override
-    @Deprecated
+    @Deprecated(forRemoval = true)
     GrailsDomainClass getBeanClass() {
         throw new UnsupportedOperationException()
     }

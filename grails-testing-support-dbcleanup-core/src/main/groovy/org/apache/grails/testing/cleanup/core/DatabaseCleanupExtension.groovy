@@ -109,10 +109,17 @@ class DatabaseCleanupExtension implements IGlobalExtension {
             def annotation = spec.getAnnotation(DatabaseCleanup)
             def mapping = DatasourceCleanupMapping.parse(annotation.value())
             def resolver = createResolver(annotation.resolver())
-            def interceptor = new DatabaseCleanupInterceptor(context, true, mapping, resolver)
+            boolean afterSpec = annotation.cleanupAfterSpec()
+            def interceptor = new DatabaseCleanupInterceptor(context, true, afterSpec, mapping, resolver)
             spec.addSetupInterceptor(interceptor)
             spec.addCleanupInterceptor(interceptor)
-            log.debug('Registered DatabaseCleanupInterceptor for spec: {} (class-level)', spec.name)
+            if (afterSpec) {
+                spec.addCleanupSpecInterceptor(interceptor)
+                log.debug('Registered DatabaseCleanupInterceptor for spec: {} (class-level, cleanupAfterSpec)', spec.name)
+            }
+            else {
+                log.debug('Registered DatabaseCleanupInterceptor for spec: {} (class-level)', spec.name)
+            }
             return
         }
 
@@ -128,12 +135,15 @@ class DatabaseCleanupExtension implements IGlobalExtension {
         }
 
         if (hasMethodAnnotation) {
+            // Validate that no method-level annotation uses cleanupAfterSpec = true
+            validateNoMethodLevelCleanupAfterSpec(spec)
+
             // For method-level, pass a clean-all mapping as default; the interceptor reads
             // each method's own annotation at runtime.
             // Use the default resolver; the interceptor will read the method-level resolver at runtime.
             def defaultMapping = DatasourceCleanupMapping.parse(new String[0])
             def defaultResolver = new DefaultApplicationContextResolver()
-            def interceptor = new DatabaseCleanupInterceptor(context, false, defaultMapping, defaultResolver)
+            def interceptor = new DatabaseCleanupInterceptor(context, false, false, defaultMapping, defaultResolver)
             spec.addSetupInterceptor(interceptor)
             spec.addCleanupInterceptor(interceptor)
             log.debug('Registered DatabaseCleanupInterceptor for spec: {} (method-level)', spec.name)
@@ -188,6 +198,28 @@ class DatabaseCleanupExtension implements IGlobalExtension {
                     'can only be applied to Spock feature methods (test methods) ' +
                     'or at the class level. It cannot be applied to setup(), ' +
                     'cleanup(), setupSpec(), or cleanupSpec() methods.'
+            )
+        }
+    }
+
+    /**
+     * Validates that no method-level {@link DatabaseCleanup} annotation has
+     * {@code cleanupAfterSpec = true}. This attribute is only valid at the class level.
+     *
+     * @param spec the spec to validate
+     * @throws IllegalStateException if a method-level annotation has cleanupAfterSpec = true
+     */
+    private static void validateNoMethodLevelCleanupAfterSpec(SpecInfo spec) {
+        def invalid = spec.features.find {
+            def method = it.featureMethod
+            method.isAnnotationPresent(DatabaseCleanup) &&
+                    method.getAnnotation(DatabaseCleanup).cleanupAfterSpec()
+        }
+        if (invalid) {
+            throw new IllegalStateException(
+                    "@DatabaseCleanup(cleanupAfterSpec = true) on method '${invalid.featureMethod.name}' " +
+                    "in ${spec.name} is not valid. The cleanupAfterSpec attribute " +
+                    'can only be used on class-level @DatabaseCleanup annotations.'
             )
         }
     }

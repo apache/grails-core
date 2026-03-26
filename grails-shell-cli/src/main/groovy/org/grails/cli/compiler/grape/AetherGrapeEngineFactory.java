@@ -44,7 +44,7 @@ import org.eclipse.aether.transport.http.HttpTransporterFactory;
  * @deprecated since 2.5.9 for removal in 3.0.0 in favor of
  * {@link MavenResolverGrapeEngineFactory}
  */
-@Deprecated
+@Deprecated(forRemoval = true)
 public abstract class AetherGrapeEngineFactory {
 
     public static AetherGrapeEngine create(GroovyClassLoader classLoader,

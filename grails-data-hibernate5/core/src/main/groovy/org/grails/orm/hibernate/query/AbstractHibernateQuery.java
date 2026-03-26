@@ -708,7 +708,13 @@ public abstract class AbstractHibernateQuery extends Query {
             }
             associationPath.append(token);
 
-            CriteriaAndAlias criteriaAndAlias = getOrCreateAlias(associationPath.toString(), generateAlias(token));
+            // Use LEFT JOIN for auto-created projection aliases so that rows
+            // with null associations are preserved in the result set.
+            String path = associationPath.toString();
+            if (!joinTypes.containsKey(path)) {
+                joinTypes.put(path, JoinType.LEFT);
+            }
+            CriteriaAndAlias criteriaAndAlias = getOrCreateAlias(path, generateAlias(token));
             if (criteriaAndAlias == null) {
                 return calculatePropertyName(propertyName);
             }

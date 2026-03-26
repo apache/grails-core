@@ -16,35 +16,23 @@
  *  specific language governing permissions and limitations
  *  under the License.
  */
-
 package functional.tests
 
+import spock.lang.Specification
+
 import grails.testing.mixin.integration.Integration
-import grails.testing.spock.RunOnce
-import groovy.xml.XmlSlurper
-import groovy.xml.slurpersupport.GPathResult
-import io.micronaut.http.HttpRequest
-import io.micronaut.http.HttpResponse
-import org.junit.jupiter.api.BeforeEach
+import org.apache.grails.testing.http.client.HttpClientSupport
 
-@Integration(applicationClass = Application)
-class TestGmlControllerSpec extends HttpClientSpec {
-
-    @RunOnce
-    @BeforeEach
-    void init() {
-        super.init()
-    }
+@Integration
+class TestGmlControllerSpec extends Specification implements HttpClientSupport {
 
     void "Test GML response from action that returns a model"() {
-        when:"When an action that renders a GML view is requested"
-        String uri = '/testGml/testView'
-        HttpRequest request = HttpRequest.GET(uri)
-        HttpResponse<String> rsp = client.toBlocking().exchange(request, String)
-        GPathResult content = new XmlSlurper().parseText(rsp.body())
+        when: "When an action that renders a GML view is requested"
+        def response = http('/testGml/testView')
 
-        then:"The XML view is rendered"
+        then: "The XML view is rendered"
+        def content = response.xml()
         content.car.size() == 1
-        content.car[0].@make.text() == "Audi"
+        content.car[0].@make.text() == 'Audi'
     }
 }

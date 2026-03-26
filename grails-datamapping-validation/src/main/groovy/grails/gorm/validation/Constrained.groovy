@@ -91,7 +91,7 @@ interface Constrained {
      * @return Whether the value should be displayed (for backwards compatibility)
      * @deprecated Use {@link #getDisplayType()} instead for more granular control
      */
-    @Deprecated
+    @Deprecated(since = '7.1')
     boolean isDisplay()
 
     /**

@@ -18,200 +18,149 @@
  */
 package functionaltests.errorhandling
 
-import groovy.json.JsonSlurper
-
-import io.micronaut.http.HttpRequest
-import io.micronaut.http.HttpResponse
-import io.micronaut.http.HttpStatus
-import io.micronaut.http.client.HttpClient
-import io.micronaut.http.client.exceptions.HttpClientResponseException
-import spock.lang.Shared
 import spock.lang.Specification
 import spock.lang.Unroll
 
-import grails.gorm.transactions.Rollback
 import grails.testing.mixin.integration.Integration
+import org.apache.grails.testing.http.client.HttpClientSupport
 
 /**
  * Integration tests for error handling patterns in Grails controllers.
  * Tests various HTTP status codes, JSON error responses, exception handling,
  * and error response headers.
  */
-@Rollback
 @Integration
-class ErrorHandlingSpec extends Specification {
-
-    @Shared
-    HttpClient client
-
-    def setup() {
-        client = client ?: HttpClient.create(new URL("http://localhost:${serverPort}"))
-    }
-
-    def cleanupSpec() {
-        client.close()
-    }
+class ErrorHandlingSpec extends Specification implements HttpClientSupport {
 
     // ========== HTTP Status Code Tests ==========
 
     @Unroll
-    def "render #statusMsg status"(String action, HttpStatus status, String statusMsg) {
+    def "render #statusMsg status"(String action, int statusCode, String statusMsg) {
         when:
-        client.toBlocking().exchange(
-            HttpRequest.GET("/errorHandlingTest/$action"),
-            String
-        )
+        def response = http("/errorHandlingTest/$action")
 
         then:
-        def e = thrown(HttpClientResponseException)
-        e.status == status
+        response.assertStatus(statusCode)
 
         where:
-        action                      | status                           | statusMsg
-        'renderNotFound'            | HttpStatus.NOT_FOUND             | '404 Not Found'
-        'renderBadRequest'          | HttpStatus.BAD_REQUEST           | '400 Bad Request'
-        'renderUnauthorized'        | HttpStatus.UNAUTHORIZED          | '401 Unauthorized'
-        'renderForbidden'           | HttpStatus.FORBIDDEN             | '403 Forbidden'
-        'renderMethodNotAllowed'    | HttpStatus.METHOD_NOT_ALLOWED    | '405 Method Not Allowed'
-        'renderConflict'            | HttpStatus.CONFLICT              | '409 Conflict'
-        'renderGone'                | HttpStatus.GONE                  | '410 Gone'
-        'renderUnprocessableEntity' | HttpStatus.UNPROCESSABLE_ENTITY  | '422 Unprocessable Entity'
-        'renderTooManyRequests'     | HttpStatus.TOO_MANY_REQUESTS     | '429 Too Many Requests'
-        'renderInternalServerError' | HttpStatus.INTERNAL_SERVER_ERROR | '500 Internal Server Error'
-        'renderServiceUnavailable'  | HttpStatus.SERVICE_UNAVAILABLE   | '503 Service Unavailable'
+        action                      | statusCode | statusMsg
+        'renderNotFound'            | 404        | '404 Not Found'
+        'renderBadRequest'          | 400        | '400 Bad Request'
+        'renderUnauthorized'        | 401        | '401 Unauthorized'
+        'renderForbidden'           | 403        | '403 Forbidden'
+        'renderMethodNotAllowed'    | 405        | '405 Method Not Allowed'
+        'renderConflict'            | 409        | '409 Conflict'
+        'renderGone'                | 410        | '410 Gone'
+        'renderUnprocessableEntity' | 422        | '422 Unprocessable Entity'
+        'renderTooManyRequests'     | 429        | '429 Too Many Requests'
+        'renderInternalServerError' | 500        | '500 Internal Server Error'
+        'renderServiceUnavailable'  | 503        | '503 Service Unavailable'
     }
 
     // ========== JSON Error Response Tests ==========
 
     @Unroll
-    def "JSON #statusCode.code error response #assertion"(String action, HttpStatus statusCode, String assertion) {
+    def "JSON #statusCode error response #assertion"(String action, int statusCode, String assertion) {
         when:
-        client.toBlocking().exchange(
-            HttpRequest.GET("/errorHandlingTest/$action")
-                    .accept('application/json'),
-            String
-        )
+        def response = http("/errorHandlingTest/$action", 'Accept': 'application/json')
 
         then:
-        def e = thrown(HttpClientResponseException)
-        e.status == statusCode
+        response.assertStatus(statusCode)
 
         where:
-        action                | statusCode                       | assertion
-        'jsonNotFound'        | HttpStatus.NOT_FOUND             | 'contains proper structure'
-        'jsonBadRequest'      | HttpStatus.BAD_REQUEST           | 'with validation details'
-        'jsonValidationError' | HttpStatus.UNPROCESSABLE_ENTITY  | 'with multiple field errors'
-        'jsonServerError'     | HttpStatus.INTERNAL_SERVER_ERROR | 'includes request ID'
+        action                | statusCode | assertion
+        'jsonNotFound'        | 404        | 'contains proper structure'
+        'jsonBadRequest'      | 400        | 'with validation details'
+        'jsonValidationError' | 422        | 'with multiple field errors'
+        'jsonServerError'     | 500        | 'includes request ID'
     }
 
     // ========== Conditional Error Handling Tests ==========
 
     @Unroll
-    def "conditional error returns #status.code when condition is #condition"(String condition, HttpStatus status) {
+    def "conditional error returns #statusCode when condition is #condition"(String condition, int statusCode) {
         when:
-        client.toBlocking().exchange(
-            HttpRequest.GET("/errorHandlingTest/conditionalError?condition=$condition")
-                    .accept('application/json'),
-            String
+        def response = http(
+                "/errorHandlingTest/conditionalError?condition=$condition",
+                'Accept': 'application/json'
         )
 
         then:
-        def e = thrown(HttpClientResponseException)
-        e.status == status
+        response.assertStatus(statusCode)
 
         where:
-        condition     | status
-        'notfound'    | HttpStatus.NOT_FOUND
-        'badrequest'  | HttpStatus.BAD_REQUEST
-        'forbidden'   | HttpStatus.FORBIDDEN
+        condition     | statusCode
+        'notfound'    | 404
+        'badrequest'  | 400
+        'forbidden'   | 403
     }
 
     def "conditional error returns success for unknown condition"() {
         when:
-        def response = client.toBlocking().exchange(
-            HttpRequest.GET('/errorHandlingTest/conditionalError?condition=normal')
-                    .accept('application/json'),
-            String
+        def response = http(
+                '/errorHandlingTest/conditionalError?condition=normal',
+                'Accept': 'application/json'
         )
 
         then:
-        response.status == HttpStatus.OK
-
-        and:
-        def json = new JsonSlurper().parseText(response.body())
-        json.status == 'ok'
-        json.condition == 'normal'
+        response.assertJson(200, [
+                status: 'ok',
+                condition: 'normal'
+        ])
     }
 
     // ========== Error Response Headers Tests ==========
 
     def "rate limit error includes appropriate headers"() {
         when:
-        client.toBlocking().exchange(
-            HttpRequest.GET('/errorHandlingTest/errorWithHeaders').accept('application/json'),
-            String
-        )
+        def response = http('/errorHandlingTest/errorWithHeaders', 'Accept': 'application/json')
 
         then:
-        def e = thrown(HttpClientResponseException)
-        e.status == HttpStatus.TOO_MANY_REQUESTS
+        response.assertHeaders(429,
+                'Retry-After': '60',
+                'X-RateLimit-Limit': '100',
+                'X-RateLimit-Remaining': '0'
+        )
 
         and:
-        def response = e.response
-        response.header('Retry-After') == '60'
-        response.header('X-RateLimit-Limit') == '100'
-        response.header('X-RateLimit-Remaining') == '0'
-        response.header('X-RateLimit-Reset') != null
+        response.hasHeader('X-RateLimit-Reset')
     }
 
     def "not found error includes suggestion header"() {
         when:
-        client.toBlocking().exchange(
-            HttpRequest.GET('/errorHandlingTest/notFoundWithHints').accept('application/json'),
-            String
-        )
+        def response = http('/errorHandlingTest/notFoundWithHints', 'Accept': 'application/json')
 
-        then:
-        def e = thrown(HttpClientResponseException)
-        e.status == HttpStatus.NOT_FOUND
-
-        and: "suggestion header is present"
-        e.response.header('X-Suggested-Resource') == '/api/items'
+        then: "suggestion header is present"
+        response.assertHeaders(404, 'X-Suggested-Resource': '/api/items')
     }
 
     // ========== Success Comparison Tests ==========
 
     def "success endpoint returns 200 OK"() {
         when:
-        HttpResponse<String> response = client.toBlocking().exchange(
-            HttpRequest.GET('/errorHandlingTest/success').accept('application/json'),
-            String
-        )
+        def response = http('/errorHandlingTest/success', 'Accept': 'application/json')
 
         then:
-        response.status == HttpStatus.OK
-
-        and:
-        def json = new JsonSlurper().parseText(response.body())
-        json.status == 'ok'
-        json.message == 'Operation successful'
+        response.assertJson(200, [
+                status: 'ok',
+                message: 'Operation successful'
+        ])
     }
 
     def "success with data returns structured response"() {
         when:
-        HttpResponse<String> response = client.toBlocking().exchange(
-            HttpRequest.GET('/errorHandlingTest/successWithData').accept('application/json'),
-            String
-        )
+        def response = http('/errorHandlingTest/successWithData', 'Accept': 'application/json')
 
         then:
-        response.status == HttpStatus.OK
+        response.assertJsonContains(200, [
+                status: 'ok',
+                data: [
+                        id: 1,
+                        name: 'Test Item'
+                ]
+        ])
 
         and:
-        def json = new JsonSlurper().parseText(response.body())
-        json.status == 'ok'
-        json.data.id == 1
-        json.data.name == 'Test Item'
-        json.data.createdAt != null
+        response.json().data['createdAt'] != null
     }
 }

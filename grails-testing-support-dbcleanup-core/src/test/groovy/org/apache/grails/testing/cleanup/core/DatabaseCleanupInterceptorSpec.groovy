@@ -48,7 +48,7 @@ class DatabaseCleanupInterceptorSpec extends Specification {
 
         def mapping = DatasourceCleanupMapping.parse(new String[0])
         def resolver = new DefaultApplicationContextResolver()
-        def interceptor = new DatabaseCleanupInterceptor(context, true, mapping, resolver)
+        def interceptor = new DatabaseCleanupInterceptor(context, true, false, mapping, resolver)
 
         def invocation = Mock(IMethodInvocation) {
             getInstance() >> new InstanceWithAppCtx(applicationContext: appCtx)
@@ -74,7 +74,7 @@ class DatabaseCleanupInterceptorSpec extends Specification {
 
         def mapping = DatasourceCleanupMapping.parse(new String[0])
         def resolver = new DefaultApplicationContextResolver()
-        def interceptor = new DatabaseCleanupInterceptor(context, false, mapping, resolver)
+        def interceptor = new DatabaseCleanupInterceptor(context, false, false, mapping, resolver)
 
         def unannotatedMethod = NonAnnotatedTestClass.getDeclaredMethod('someTest')
         def methodInfo = Mock(MethodInfo) {
@@ -113,7 +113,7 @@ class DatabaseCleanupInterceptorSpec extends Specification {
 
         def mapping = DatasourceCleanupMapping.parse(new String[0])
         def resolver = new DefaultApplicationContextResolver()
-        def interceptor = new DatabaseCleanupInterceptor(context, false, mapping, resolver)
+        def interceptor = new DatabaseCleanupInterceptor(context, false, false, mapping, resolver)
 
         def annotatedMethod = AnnotatedMethodTestClass.getDeclaredMethod('annotatedTest')
         def annotation = annotatedMethod.getAnnotation(DatabaseCleanup)
@@ -156,7 +156,7 @@ class DatabaseCleanupInterceptorSpec extends Specification {
 
         def mapping = DatasourceCleanupMapping.parse(new String[0])
         def resolver = new DefaultApplicationContextResolver()
-        def interceptor = new DatabaseCleanupInterceptor(context, false, mapping, resolver)
+        def interceptor = new DatabaseCleanupInterceptor(context, false, false, mapping, resolver)
 
         def annotatedMethod = AnnotatedMethodWithDatasource.getDeclaredMethod('annotatedTest')
         def annotation = annotatedMethod.getAnnotation(DatabaseCleanup)
@@ -200,7 +200,7 @@ class DatabaseCleanupInterceptorSpec extends Specification {
 
         def mapping = DatasourceCleanupMapping.parse(new String[0])
         def resolver = new DefaultApplicationContextResolver()
-        def interceptor = new DatabaseCleanupInterceptor(context, false, mapping, resolver)
+        def interceptor = new DatabaseCleanupInterceptor(context, false, false, mapping, resolver)
 
         def annotatedMethod = AnnotatedMethodWithExplicitType.getDeclaredMethod('annotatedTest')
         def annotation = annotatedMethod.getAnnotation(DatabaseCleanup)
@@ -248,7 +248,7 @@ class DatabaseCleanupInterceptorSpec extends Specification {
 
         def mapping = DatasourceCleanupMapping.parse(new String[0])
         def resolver = new DefaultApplicationContextResolver()
-        def interceptor = new DatabaseCleanupInterceptor(context, true, mapping, resolver)
+        def interceptor = new DatabaseCleanupInterceptor(context, true, false, mapping, resolver)
 
         def invocation = Mock(IMethodInvocation) {
             getFeature() >> Mock(FeatureInfo) {
@@ -281,7 +281,7 @@ class DatabaseCleanupInterceptorSpec extends Specification {
         def resolver = Mock(ApplicationContextResolver) {
             resolve(_) >> null
         }
-        def interceptor = new DatabaseCleanupInterceptor(context, true, mapping, resolver)
+        def interceptor = new DatabaseCleanupInterceptor(context, true, false, mapping, resolver)
 
         def invocation = Mock(IMethodInvocation) {
             getInstance() >> new InstanceWithNoContext()
@@ -322,7 +322,7 @@ class DatabaseCleanupInterceptorSpec extends Specification {
 
         def mapping = DatasourceCleanupMapping.parse(new String[0])
         def resolver = new DefaultApplicationContextResolver()
-        def interceptor = new DatabaseCleanupInterceptor(context, true, mapping, resolver)
+        def interceptor = new DatabaseCleanupInterceptor(context, true, false, mapping, resolver)
 
         def invocation = Mock(IMethodInvocation) {
             getFeature() >> Mock(FeatureInfo) {
@@ -361,7 +361,7 @@ class DatabaseCleanupInterceptorSpec extends Specification {
 
         def mapping = DatasourceCleanupMapping.parse(new String[0])
         def resolver = new DefaultApplicationContextResolver()
-        def interceptor = new DatabaseCleanupInterceptor(context, true, mapping, resolver)
+        def interceptor = new DatabaseCleanupInterceptor(context, true, false, mapping, resolver)
 
         def invocation = Mock(IMethodInvocation) {
             getInstance() >> new InstanceWithAppCtx(applicationContext: appCtx)
@@ -419,7 +419,7 @@ class DatabaseCleanupInterceptorSpec extends Specification {
 
         def mapping = DatasourceCleanupMapping.parse(new String[0])
         def resolver = new DefaultApplicationContextResolver()
-        def interceptor = new DatabaseCleanupInterceptor(context, true, mapping, resolver)
+        def interceptor = new DatabaseCleanupInterceptor(context, true, false, mapping, resolver)
 
         def invocation = Mock(IMethodInvocation) {
             getInstance() >> new InstanceWithAppCtx(applicationContext: appCtx)
@@ -463,7 +463,7 @@ class DatabaseCleanupInterceptorSpec extends Specification {
 
         def mapping = DatasourceCleanupMapping.parse(new String[0])
         def resolver = new DefaultApplicationContextResolver()
-        def interceptor = new DatabaseCleanupInterceptor(context, true, mapping, resolver)
+        def interceptor = new DatabaseCleanupInterceptor(context, true, false, mapping, resolver)
 
         def testFailure = new RuntimeException('Test failed')
         def invocation = Mock(IMethodInvocation) {
@@ -483,6 +483,168 @@ class DatabaseCleanupInterceptorSpec extends Specification {
         and: 'the original test exception is re-thrown'
         RuntimeException ex = thrown(RuntimeException)
         ex.is(testFailure)
+    }
+
+    def "interceptCleanupMethod skips cleanup when cleanupAfterSpec is true"() {
+        given:
+        def dataSource = Mock(DataSource)
+        def appCtx = Mock(ApplicationContext) {
+            getBeansOfType(DataSource) >> ['dataSource': dataSource]
+        }
+        def cleaner = Mock(DatabaseCleaner) {
+            databaseType() >> 'h2'
+            supports(dataSource) >> true
+        }
+        def context = new DatabaseCleanupContext([cleaner])
+        context.applicationContext = appCtx
+
+        def mapping = DatasourceCleanupMapping.parse(new String[0])
+        def resolver = new DefaultApplicationContextResolver()
+        def interceptor = new DatabaseCleanupInterceptor(context, true, true, mapping, resolver)
+
+        def unannotatedMethod = NonAnnotatedTestClass.getDeclaredMethod('someTest')
+        def methodInfo = Mock(MethodInfo) {
+            isAnnotationPresent(DatabaseCleanup) >> false
+        }
+        def feature = Mock(FeatureInfo) {
+            getFeatureMethod() >> methodInfo
+            getName() >> 'test feature'
+        }
+        def invocation = Mock(IMethodInvocation) {
+            getInstance() >> new InstanceWithAppCtx(applicationContext: appCtx)
+            getFeature() >> feature
+        }
+
+        when:
+        interceptor.interceptCleanupMethod(invocation)
+
+        then: 'invocation is proceeded'
+        1 * invocation.proceed()
+
+        and: 'no cleanup is performed (deferred to cleanupSpec)'
+        0 * cleaner.cleanup(_, _)
+    }
+
+    def "interceptCleanupMethod still runs cleanup for method-level annotation even when cleanupAfterSpec is true"() {
+        given:
+        def dataSource = Mock(DataSource)
+        def appCtx = Mock(ApplicationContext) {
+            getBeansOfType(DataSource) >> ['dataSource': dataSource]
+        }
+        def cleaner = Mock(DatabaseCleaner) {
+            databaseType() >> 'h2'
+            supports(dataSource) >> true
+            cleanup(appCtx, dataSource) >> new DatabaseCleanupStats()
+        }
+        def context = new DatabaseCleanupContext([cleaner])
+        context.applicationContext = appCtx
+
+        def mapping = DatasourceCleanupMapping.parse(new String[0])
+        def resolver = new DefaultApplicationContextResolver()
+        def interceptor = new DatabaseCleanupInterceptor(context, true, true, mapping, resolver)
+
+        def annotatedMethod = AnnotatedMethodTestClass.getDeclaredMethod('annotatedTest')
+        def annotation = annotatedMethod.getAnnotation(DatabaseCleanup)
+        def methodInfo = Mock(MethodInfo) {
+            isAnnotationPresent(DatabaseCleanup) >> true
+            getAnnotation(DatabaseCleanup) >> annotation
+            getReflection() >> annotatedMethod
+        }
+        def feature = Mock(FeatureInfo) {
+            getFeatureMethod() >> methodInfo
+            getName() >> 'annotatedTest'
+        }
+        def invocation = Mock(IMethodInvocation) {
+            getInstance() >> new InstanceWithAppCtx(applicationContext: appCtx)
+            getFeature() >> feature
+        }
+
+        when:
+        interceptor.interceptCleanupMethod(invocation)
+
+        then: 'invocation is proceeded'
+        1 * invocation.proceed()
+
+        and: 'cleanup IS performed because the method has its own @DatabaseCleanup'
+        1 * cleaner.cleanup(appCtx, dataSource) >> new DatabaseCleanupStats()
+    }
+
+    def "interceptCleanupSpecMethod performs cleanup when cleanupAfterSpec is true"() {
+        given:
+        def dataSource = Mock(DataSource)
+        def appCtx = Mock(ApplicationContext) {
+            getBeansOfType(DataSource) >> ['dataSource': dataSource]
+        }
+        def cleaner = Mock(DatabaseCleaner) {
+            databaseType() >> 'h2'
+            supports(dataSource) >> true
+            cleanup(appCtx, dataSource) >> new DatabaseCleanupStats()
+        }
+        def context = new DatabaseCleanupContext([cleaner])
+        context.applicationContext = appCtx
+
+        def mapping = DatasourceCleanupMapping.parse(new String[0])
+        def resolver = new DefaultApplicationContextResolver()
+        def interceptor = new DatabaseCleanupInterceptor(context, true, true, mapping, resolver)
+
+        def specInfo = Mock(org.spockframework.runtime.model.SpecInfo) {
+            getName() >> 'MySpec'
+        }
+        def invocation = Mock(IMethodInvocation) {
+            getSpec() >> specInfo
+        }
+
+        when:
+        interceptor.interceptCleanupSpecMethod(invocation)
+
+        then: 'invocation is proceeded'
+        1 * invocation.proceed()
+
+        and: 'cleanup is performed'
+        1 * cleaner.cleanup(appCtx, dataSource) >> new DatabaseCleanupStats()
+    }
+
+    def "interceptCleanupSpecMethod clears ThreadLocal after cleanup"() {
+        given:
+        def dataSource = Mock(DataSource)
+        def appCtx = Mock(ApplicationContext) {
+            getBeansOfType(DataSource) >> ['dataSource': dataSource]
+        }
+        def testContext = Mock(TestContext) {
+            getApplicationContext() >> appCtx
+        }
+        TestContextHolderListener.CURRENT.set(testContext)
+
+        def cleaner = Mock(DatabaseCleaner) {
+            databaseType() >> 'h2'
+            supports(dataSource) >> true
+            cleanup(appCtx, dataSource) >> new DatabaseCleanupStats()
+        }
+        def context = new DatabaseCleanupContext([cleaner])
+        context.applicationContext = appCtx
+
+        def mapping = DatasourceCleanupMapping.parse(new String[0])
+        def resolver = new DefaultApplicationContextResolver()
+        def interceptor = new DatabaseCleanupInterceptor(context, true, true, mapping, resolver)
+
+        def specInfo = Mock(org.spockframework.runtime.model.SpecInfo) {
+            getName() >> 'MySpec'
+        }
+        def invocation = Mock(IMethodInvocation) {
+            getSpec() >> specInfo
+        }
+
+        when:
+        interceptor.interceptCleanupSpecMethod(invocation)
+
+        then:
+        1 * invocation.proceed()
+
+        and: 'ThreadLocal is cleared after cleanup'
+        TestContextHolderListener.CURRENT.get() == null
+
+        cleanup:
+        TestContextHolderListener.CURRENT.remove()
     }
 
     // --- Helper classes ---

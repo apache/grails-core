@@ -22,5 +22,5 @@ package reactor.bus.registry
 /**
  * @deprecated Here for compatibility only. Do not use directly
  */
-@Deprecated
+@Deprecated(since = '3.3', forRemoval = true)
 interface Subscription<K, V> extends Registration<K,V> {}

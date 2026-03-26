@@ -16,45 +16,31 @@
  *  specific language governing permissions and limitations
  *  under the License.
  */
-
 package functional.tests
 
-import grails.testing.mixin.integration.Integration
-import grails.testing.spock.RunOnce
-import io.micronaut.http.HttpRequest
-import io.micronaut.http.HttpResponse
-import io.micronaut.http.HttpStatus
-import org.junit.jupiter.api.BeforeEach
 import spock.lang.Issue
+import spock.lang.Specification
 
-@Integration(applicationClass = Application)
-class PersonInheritanceSpec extends HttpClientSpec {
+import grails.testing.mixin.integration.Integration
+import org.apache.grails.testing.http.client.HttpClientSupport
 
-    @RunOnce
-    @BeforeEach
-    void init() {
-        super.init()
-    }
+@Integration
+class PersonInheritanceSpec extends Specification implements HttpClientSupport {
 
     void 'test template inheritance produces correct json'() {
         when:
-        HttpRequest request = HttpRequest.GET('/person-inheritance')
-        HttpResponse<String> rsp = client.toBlocking().exchange(request, String)
+        def response = http('/person-inheritance')
 
         then: 'the response is correct'
-        rsp.status() == HttpStatus.OK
-        rsp.body() == '{"dob":"01/01/1970","lastName":"Doe","firstName":"John"}'
+        response.assertEquals(200, '{"dob":"01/01/1970","lastName":"Doe","firstName":"John"}')
     }
 
     @Issue("https://github.com/apache/grails-views/issues/234")
     void 'test template inheritance does not produce NPE when model variable is null'() {
         when:
-        HttpRequest request = HttpRequest.GET('/person-inheritance/npe')
-        HttpResponse<String> rsp = client.toBlocking().exchange(request, String)
+        def response = http('/person-inheritance/npe')
 
         then: 'the response is correct'
-        noExceptionThrown()
-        rsp.status() == HttpStatus.OK
-
+        response.assertStatus(200)
     }
 }

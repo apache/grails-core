@@ -31,10 +31,11 @@ import org.grails.datastore.mapping.core.Datastore
 import org.grails.datastore.mapping.core.connections.ConnectionSource
 import org.grails.datastore.mapping.core.connections.ConnectionSourcesSupport
 import org.grails.datastore.mapping.core.connections.MultipleConnectionSourceCapableDatastore
+import org.grails.datastore.mapping.core.exceptions.ConfigurationException
 import org.grails.datastore.mapping.services.Service
 
 /**
- * Variant of {#link MethodInvokingFactoryBean} which returns the correct
+ * Variant of {@link MethodInvokingFactoryBean} which returns the correct
  * data service type instead of {@code java.lang.Object} so the Autowire
  * with type works correctly.
  */
@@ -83,8 +84,16 @@ class DatastoreServiceMethodInvokingFactoryBean extends MethodInvokingFactoryBea
         if (serviceConnection != null
                 && ConnectionSource.DEFAULT != serviceConnection
                 && ConnectionSource.ALL != serviceConnection) {
-            return ((MultipleConnectionSourceCapableDatastore) defaultDatastore)
+            Datastore resolved = ((MultipleConnectionSourceCapableDatastore) defaultDatastore)
                     .getDatastoreForConnection(serviceConnection)
+            if (resolved == null) {
+                throw new ConfigurationException(
+                        "DataSource not found for connection name [${serviceConnection}] " +
+                        "specified via @Transactional on service [${serviceClass.name}]. " +
+                        'Please check your multiple data sources configuration and try again.'
+                )
+            }
+            return resolved
         }
 
         // Fall back to domain class mapping datasource
@@ -102,8 +111,17 @@ class DatastoreServiceMethodInvokingFactoryBean extends MethodInvokingFactoryBea
         if (domainConnection != null
                 && ConnectionSource.DEFAULT != domainConnection
                 && ConnectionSource.ALL != domainConnection) {
-            return ((MultipleConnectionSourceCapableDatastore) defaultDatastore)
+            Datastore resolved = ((MultipleConnectionSourceCapableDatastore) defaultDatastore)
                     .getDatastoreForConnection(domainConnection)
+            if (resolved == null) {
+                throw new ConfigurationException(
+                        "DataSource not found for connection name [${domainConnection}] " +
+                        "mapped on domain class [${domainClass.name}] " +
+                        "used by service [${serviceClass.name}]. " +
+                        'Please check your multiple data sources configuration and try again.'
+                )
+            }
+            return resolved
         }
 
         return defaultDatastore
