@@ -125,11 +125,7 @@ class GrailsPluginManagerTests extends Specification {
     }
 
     def 'discovers plugin resources from the configured path'() {
-        given: 'a Groovy class loader and a resource-based plugin discovery'
-        def originalClassLoader = Thread.currentThread().contextClassLoader
-        Thread.currentThread().contextClassLoader = new GroovyClassLoader()
-
-        and: 'the discovery is configured with the plugin resource path'
+        given: 'the discovery is configured with the plugin resource path'
         def pluginDiscovery = new DefaultPluginDiscovery(TEST_PLUGIN_RESOURCE_PATH)
 
         when: 'plugin discovery is initialized'
@@ -137,17 +133,10 @@ class GrailsPluginManagerTests extends Specification {
 
         then: 'the configured plugin resource is discovered'
         pluginDiscovery.pluginResources.length == 1
-
-        cleanup:
-        Thread.currentThread().contextClassLoader = originalClassLoader
     }
 
     def 'loads discovered plugins and resolves them by name and version'() {
-        given: 'a Groovy class loader and a resource-based plugin manager'
-        def originalClassLoader = Thread.currentThread().contextClassLoader
-        Thread.currentThread().contextClassLoader = new GroovyClassLoader()
-
-        and: 'the plugin discovery has been initialized from the resource path'
+        given: 'the plugin discovery has been initialized from the resource path'
         def pluginDiscovery = new DefaultPluginDiscovery(TEST_PLUGIN_RESOURCE_PATH).tap {
             init(new StandardEnvironment())
         }
@@ -175,9 +164,6 @@ class GrailsPluginManagerTests extends Specification {
 
         then: 'no plugin is returned'
         !plugin
-
-        cleanup:
-        Thread.currentThread().contextClassLoader = originalClassLoader
     }
 
     def 'loads plugins successfully when a plugin declares loadAfter dependencies'() {

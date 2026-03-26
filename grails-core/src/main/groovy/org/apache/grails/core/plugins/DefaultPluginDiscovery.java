@@ -50,7 +50,6 @@ import grails.util.Metadata;
 import org.apache.grails.core.plugins.filters.PluginFilter;
 import org.apache.grails.core.plugins.filters.PluginFilterRetriever;
 import org.grails.core.io.CachingPathMatchingResourcePatternResolver;
-import org.grails.io.support.GrailsResourceUtils;
 
 public class DefaultPluginDiscovery implements PluginDiscovery {
 
@@ -265,7 +264,7 @@ public class DefaultPluginDiscovery implements PluginDiscovery {
     }
 
     void populatePlugins(Environment environment) {
-        ClassLoader classLoader = Thread.currentThread().getContextClassLoader();
+        ClassLoader classLoader = resolveClassLoader();
         List<PluginInfo> classpathPlugins;
         if (loadClasspathPlugins) {
             ClasspathPluginFinder finder = new ClasspathPluginFinder();
@@ -480,9 +479,10 @@ public class DefaultPluginDiscovery implements PluginDiscovery {
 
     private List<PluginInfo> findDynamicPlugins(ClassLoader classLoader) {
         List<PluginInfo> discoveredPlugins = new ArrayList<>();
+        var pluginResourceClassLoader = resolvePluginResourceClassLoader(classLoader);
         LOG.info("Attempting to load [{}] dynamically defined plugins", pluginResources.length);
         for (Resource r : pluginResources) {
-            Class<?> pluginClass = loadPluginClass(classLoader, r);
+            Class<?> pluginClass = loadPluginClass(pluginResourceClassLoader, r);
             if (PluginUtils.isGrailsPluginClassNamedCorrectly(pluginClass)) {
                 try {
                     PluginInfo pluginInfo = PluginUtils.createPluginInfo(pluginClass, r, true);
@@ -518,33 +518,35 @@ public class DefaultPluginDiscovery implements PluginDiscovery {
         return discoveredPlugins;
     }
 
-    private Class<?> loadPluginClass(ClassLoader cl, Resource r) {
-        Class<?> pluginClass;
-        if (cl instanceof GroovyClassLoader) {
-            try {
-                if (LOG.isInfoEnabled()) {
-                    LOG.info("Parsing & compiling {}", r.getFilename());
-                }
-                pluginClass = ((GroovyClassLoader) cl).parseClass(IOGroovyMethods.getText(r.getInputStream(), "UTF-8"));
-            } catch (CompilationFailedException e) {
-                throw new PluginException("Error compiling plugin [" + r.getFilename() + "] " + e.getMessage(), e);
-            } catch (IOException e) {
-                throw new PluginException("Error reading plugin [" + r.getFilename() + "] " + e.getMessage(), e);
-            }
-        } else {
-            String className = null;
-            try {
-                className = GrailsResourceUtils.getClassName(r.getFile().getAbsolutePath());
-            } catch (IOException e) {
-                throw new PluginException("Cannot find plugin class [" + className + "] resource: [" + r.getFilename() + "]", e);
-            }
-            try {
-                pluginClass = Class.forName(className, true, cl);
-            } catch (ClassNotFoundException e) {
-                throw new PluginException("Cannot find plugin class [" + className + "] resource: [" + r.getFilename() + "]", e);
-            }
+    private ClassLoader resolveClassLoader() {
+        var classLoader = Thread.currentThread().getContextClassLoader();
+        if (classLoader == null) {
+            classLoader = DefaultPluginDiscovery.class.getClassLoader();
         }
-        return pluginClass;
+        return classLoader;
+    }
+
+    private GroovyClassLoader resolvePluginResourceClassLoader(ClassLoader classLoader) {
+        if (classLoader instanceof GroovyClassLoader) {
+            return (GroovyClassLoader) classLoader;
+        }
+        if (LOG.isDebugEnabled()) {
+            LOG.debug("Wrapping class loader [{}] in GroovyClassLoader for dynamic plugin resource compilation", classLoader);
+        }
+        return new GroovyClassLoader(classLoader);
+    }
+
+    private Class<?> loadPluginClass(GroovyClassLoader cl, Resource r) {
+        try {
+            if (LOG.isInfoEnabled()) {
+                LOG.info("Parsing & compiling {}", r.getFilename());
+            }
+            return cl.parseClass(IOGroovyMethods.getText(r.getInputStream(), "UTF-8"));
+        } catch (CompilationFailedException e) {
+            throw new PluginException("Error compiling plugin [" + r.getFilename() + "] " + e.getMessage(), e);
+        } catch (IOException e) {
+            throw new PluginException("Error reading plugin [" + r.getFilename() + "] " + e.getMessage(), e);
+        }
     }
 
     @Override
