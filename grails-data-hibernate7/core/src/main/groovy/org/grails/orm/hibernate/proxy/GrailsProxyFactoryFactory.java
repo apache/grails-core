@@ -18,6 +18,8 @@
  */
 package org.grails.orm.hibernate.proxy;
 
+import java.io.Serial;
+
 import org.hibernate.bytecode.spi.BasicProxyFactory;
 import org.hibernate.bytecode.spi.ProxyFactoryFactory;
 import org.hibernate.engine.spi.SessionFactoryImplementor;
@@ -31,6 +33,7 @@ import org.hibernate.proxy.ProxyFactory;
  */
 public class GrailsProxyFactoryFactory implements ProxyFactoryFactory, java.io.Serializable {
 
+    @Serial
     private static final long serialVersionUID = 1L;
 
     private final GrailsBytecodeProvider grailsBytecodeProvider;

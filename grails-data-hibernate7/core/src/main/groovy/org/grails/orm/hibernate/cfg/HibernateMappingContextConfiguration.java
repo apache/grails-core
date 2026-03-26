@@ -182,7 +182,7 @@ public class HibernateMappingContextConfiguration extends Configuration
     /**
      * Add the given annotated classes in a batch.
      *
-     * @return
+     * @return Configuration
      * @see #addAnnotatedClass
      * @see #scanPackages
      */

@@ -58,7 +58,7 @@ public class IdentityEnumType implements UserType, ParameterizedType, Serializab
     private static final Map<Class<? extends Enum<?>>, BidiEnumMap> ENUM_MAPPINGS = new HashMap<>();
     private static final TypeConfiguration typeConfiguration = new TypeConfiguration();
     protected Class<? extends Enum<?>> enumClass;
-    protected BidiEnumMap bidiMap;
+    private BidiEnumMap bidiMap;
     protected AbstractStandardBasicType<?> type;
     protected int[] sqlTypes;
 
@@ -164,7 +164,7 @@ public class IdentityEnumType implements UserType, ParameterizedType, Serializab
     }
 
     @Override
-    public AttributeConverter getValueConverter() {
+    public AttributeConverter<?, ?> getValueConverter() {
         return UserType.super.getValueConverter();
     }
 

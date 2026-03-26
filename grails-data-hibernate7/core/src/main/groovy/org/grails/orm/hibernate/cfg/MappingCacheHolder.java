@@ -19,7 +19,6 @@
 package org.grails.orm.hibernate.cfg;
 
 import java.util.HashMap;
-import java.util.Iterator;
 import java.util.Map;
 
 import org.grails.orm.hibernate.cfg.domainbinding.hibernate.GrailsHibernatePersistentEntity;
@@ -71,13 +70,6 @@ public class MappingCacheHolder {
     @SuppressWarnings("PMD.DataflowAnomalyAnalysis")
     public void clear(Class<?> theClass) {
         String className = theClass.getName();
-        for (Iterator<Map.Entry<Class<?>, Mapping>> it =
-                        MAPPING_CACHE.entrySet().iterator();
-                it.hasNext(); ) {
-            Map.Entry<Class<?>, Mapping> entry = it.next();
-            if (className.equals(entry.getKey().getName())) {
-                it.remove();
-            }
-        }
+        MAPPING_CACHE.entrySet().removeIf(entry -> className.equals(entry.getKey().getName()));
     }
 }

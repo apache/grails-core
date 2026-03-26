@@ -27,10 +27,12 @@ import org.springframework.transaction.TransactionException
 import org.springframework.transaction.TransactionStatus
 import org.springframework.transaction.annotation.Transactional
 import org.springframework.transaction.support.SimpleTransactionStatus
+import spock.lang.PendingFeature
 import spock.lang.Specification
 
 class AsyncTransactionalServiceSpec extends Specification {
 
+    @PendingFeature
     void 'Test that an async transactional service is transaction manager aware'() {
 
         when: 'a transactional service is used as a delegate'

@@ -40,8 +40,14 @@ import groovy.transform.builder.SimpleStrategy
 
 import jakarta.persistence.AccessType
 import jakarta.persistence.FetchType
+import static jakarta.persistence.FetchType.EAGER
+import static jakarta.persistence.FetchType.LAZY
 
 import org.hibernate.FetchMode
+import static org.hibernate.FetchMode.DEFAULT
+import static org.hibernate.FetchMode.JOIN
+import static org.hibernate.FetchMode.SELECT
+
 
 import org.springframework.beans.MutablePropertyValues
 import org.springframework.validation.DataBinder
@@ -263,11 +269,7 @@ class PropertyConfig extends Property {
      * @param fetch The Hibernate {@link FetchMode}
      */
     void setFetch(FetchMode fetch) {
-        if (FetchMode.JOIN.equals(fetch)) {
-            super.setFetchStrategy(FetchType.EAGER)
-        } else {
-            super.setFetchStrategy(FetchType.LAZY)
-        }
+        super.setFetchStrategy(JOIN == fetch ? EAGER: LAZY)
     }
 
     /**
@@ -276,15 +278,15 @@ class PropertyConfig extends Property {
     FetchMode getFetchMode() {
         FetchType strategy = super.getFetchStrategy()
         if (strategy == null) {
-            return FetchMode.DEFAULT
+            return DEFAULT
         }
         switch (strategy) {
-            case FetchType.EAGER:
-                return FetchMode.JOIN
-            case FetchType.LAZY:
-                return FetchMode.SELECT
+            case EAGER:
+                return JOIN
+            case LAZY:
+                return SELECT
             default:
-                return FetchMode.DEFAULT
+                return DEFAULT
         }
     }
     /**

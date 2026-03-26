@@ -74,7 +74,6 @@ class HibernateMappingBuilder implements MappingConfigurationBuilder<Mapping, Pr
     private List<String> methodMissingExcludes = []
     private List<String> methodMissingIncludes
 
-
     HibernateMappingBuilder(Mapping mapping, String className, Closure defaultConstraints = null) {
         this.mapping = mapping
         this.className = className
