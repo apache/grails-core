@@ -28,7 +28,7 @@ import spock.lang.Unroll
 /**
  * Tests for querying the size of collections etc.
  */
-@IgnoreIf({System.getProperty('mongodb.gorm.suite') == 'true' })
+@IgnoreIf({ System.getProperty('mongodb.gorm.suite') == 'true' })
 class SizeQuerySpecHibernate extends GrailsDataTckSpec {
 
     void setupSpec() {

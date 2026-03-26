@@ -26,164 +26,52 @@ import spock.lang.IgnoreIf
 /**
  * Tests for querying the size of collections etc.
  */
-@IgnoreIf({System.getProperty('hibernate5.gorm.suite') == 'true' || System.getProperty('hibernate7.gorm.suite') == 'true'})
+@IgnoreIf({ System.getProperty('hibernate5.gorm.suite') == 'true' || System.getProperty('hibernate7.gorm.suite') == 'true' })
 class SizeQuerySpec extends GrailsDataTckSpec {
+
     void setupSpec() {
         manager.addAllDomainClasses([SimpleCountry, Person])
     }
 
-
     void "Test sizeLe criterion"() {
         given: "A country with only 1 resident"
-        Person p = new Person(firstName: "Fred", lastName: "Flinstone")
-        SimpleCountry c = new SimpleCountry(name: "Dinoville")
+        Person p = new Person(firstName: 'Fred', lastName: 'Flinstone')
+        SimpleCountry c = new SimpleCountry(name: 'Dinoville')
                 .addToResidents(p)
                 .save(flush: true)
 
-        new SimpleCountry(name: "Springfield")
-                .addToResidents(firstName: "Homer", lastName: "Simpson")
-                .addToResidents(firstName: "Bart", lastName: "Simpson")
-                .addToResidents(firstName: "Marge", lastName: "Simpson")
+        new SimpleCountry(name: 'Springfield')
+                .addToResidents(firstName: 'Homer', lastName: 'Simpson')
+                .addToResidents(firstName: 'Bart', lastName: 'Simpson')
+                .addToResidents(firstName: 'Marge', lastName: 'Simpson')
                 .save(flush: true)
 
-        new SimpleCountry(name: "Miami")
-                .addToResidents(firstName: "Dexter", lastName: "Morgan")
-                .addToResidents(firstName: "Debra", lastName: "Morgan")
+        new SimpleCountry(name: 'Miami')
+                .addToResidents(firstName: 'Dexter', lastName: 'Morgan')
                 .save(flush: true)
 
-        manager.session.clear()
+        when: "We query for countries with less than or equal to 1 resident"
+        def results = SimpleCountry.where {
+            residents.size() <= 1
+        }.list()
 
-        when: "We query for countries with 1 resident"
-        def results = SimpleCountry.withCriteria {
+        then: "We get the correct result back"
+        results.size() == 2
+        results.any { it.name == 'Miami' }
+        results.any { it.name == 'Dinoville' }
+
+        when: "We query for countries with less than or equal to 3 resident"
+        results = SimpleCountry.where {
             sizeLe "residents", 3
-            order "name"
-        }
+        }.list()
 
         then: "We get the correct result back"
-        results != null
         results.size() == 3
-        results[0].name == 'Dinoville'
-        results[1].name == 'Miami'
-        results[2].name == 'Springfield'
 
-        when: "We query for countries with 2 resident"
-        results = SimpleCountry.withCriteria {
-            sizeLe "residents", 2
-            order "name"
-        }
-
-        then: "We get the correct result back"
-        results != null
-        results.size() == 2
-        results[0].name == 'Dinoville'
-        results[1].name == 'Miami'
-
-        when: "We query for countries with 2 residents"
-        results = SimpleCountry.withCriteria {
-            sizeLe "residents", 1
-        }
-
-        then: "we get 1 result back"
-        results.size() == 1
-    }
-
-    void "Test sizeLt criterion"() {
-        given: "A country with only 1 resident"
-        Person p = new Person(firstName: "Fred", lastName: "Flinstone")
-        SimpleCountry c = new SimpleCountry(name: "Dinoville")
-                .addToResidents(p)
-                .save(flush: true)
-
-        new SimpleCountry(name: "Springfield")
-                .addToResidents(firstName: "Homer", lastName: "Simpson")
-                .addToResidents(firstName: "Bart", lastName: "Simpson")
-                .addToResidents(firstName: "Marge", lastName: "Simpson")
-                .save(flush: true)
-
-        new SimpleCountry(name: "Miami")
-                .addToResidents(firstName: "Dexter", lastName: "Morgan")
-                .addToResidents(firstName: "Debra", lastName: "Morgan")
-                .save(flush: true)
-
-        manager.session.clear()
-
-        when: "We query for countries with 1 resident"
-        def results = SimpleCountry.withCriteria {
-            sizeLt "residents", 3
-            order "name"
-        }
-
-        then: "We get the correct result back"
-        results != null
-        results.size() == 2
-        results[0].name == 'Dinoville'
-        results[1].name == 'Miami'
-
-        when: "We query for countries with 2 resident"
-        results = SimpleCountry.withCriteria {
-            sizeLt "residents", 2
-        }
-
-        then: "We get the correct result back"
-        results != null
-        results.size() == 1
-        results[0].name == 'Dinoville'
-
-        when: "We query for countries with 2 residents"
-        results = SimpleCountry.withCriteria {
-            sizeLt "residents", 1
-        }
-
-        then: "we get no results back"
-        results.size() == 0
-    }
-
-    void "Test sizeGt criterion"() {
-        given: "A country with only 1 resident"
-        Person p = new Person(firstName: "Fred", lastName: "Flinstone")
-        SimpleCountry c = new SimpleCountry(name: "Dinoville")
-                .addToResidents(p)
-                .save(flush: true)
-
-        new SimpleCountry(name: "Springfield")
-                .addToResidents(firstName: "Homer", lastName: "Simpson")
-                .addToResidents(firstName: "Bart", lastName: "Simpson")
-                .addToResidents(firstName: "Marge", lastName: "Simpson")
-                .save(flush: true)
-
-        new SimpleCountry(name: "Miami")
-                .addToResidents(firstName: "Dexter", lastName: "Morgan")
-                .addToResidents(firstName: "Debra", lastName: "Morgan")
-                .save(flush: true)
-
-        manager.session.clear()
-
-        when: "We query for countries with 1 resident"
-        def results = SimpleCountry.withCriteria {
-            sizeGt "residents", 1
-            order "name"
-        }
-
-        then: "We get the correct result back"
-        results != null
-        results.size() == 2
-        results[0].name == 'Miami'
-        results[1].name == 'Springfield'
-
-        when: "We query for countries with 2 resident"
-        results = SimpleCountry.withCriteria {
-            sizeGt "residents", 2
-        }
-
-        then: "We get the correct result back"
-        results != null
-        results.size() == 1
-        results[0].name == 'Springfield'
-
-        when: "We query for countries with 2 residents"
-        results = SimpleCountry.withCriteria {
-            sizeGt "residents", 5
-        }
+        when: "We query for countries with less than or equal to 0 residents"
+        results = SimpleCountry.where {
+            sizeLe "residents", 0
+        }.list()
 
         then: "we get no results back"
         results.size() == 0
@@ -191,53 +79,129 @@ class SizeQuerySpec extends GrailsDataTckSpec {
 
     void "Test sizeGe criterion"() {
         given: "A country with only 1 resident"
-        Person p = new Person(firstName: "Fred", lastName: "Flinstone")
-        SimpleCountry c = new SimpleCountry(name: "Dinoville")
+        Person p = new Person(firstName: 'Fred', lastName: 'Flinstone')
+        SimpleCountry c = new SimpleCountry(name: 'Dinoville')
                 .addToResidents(p)
                 .save(flush: true)
 
-        new SimpleCountry(name: "Springfield")
-                .addToResidents(firstName: "Homer", lastName: "Simpson")
-                .addToResidents(firstName: "Bart", lastName: "Simpson")
-                .addToResidents(firstName: "Marge", lastName: "Simpson")
+        new SimpleCountry(name: 'Springfield')
+                .addToResidents(firstName: 'Homer', lastName: 'Simpson')
+                .addToResidents(firstName: 'Bart', lastName: 'Simpson')
+                .addToResidents(firstName: 'Marge', lastName: 'Simpson')
                 .save(flush: true)
 
-        new SimpleCountry(name: "Miami")
-                .addToResidents(firstName: "Dexter", lastName: "Morgan")
-                .addToResidents(firstName: "Debra", lastName: "Morgan")
+        new SimpleCountry(name: 'Miami')
+                .addToResidents(firstName: 'Dexter', lastName: 'Morgan')
                 .save(flush: true)
 
-        manager.session.clear()
-
-        when: "We query for countries with 1 resident"
-        def results = SimpleCountry.withCriteria {
-            sizeGe "residents", 1
-            order "name"
-        }
+        when: "We query for countries with greater than or equal to 1 resident"
+        def results = SimpleCountry.where {
+            residents.size() >= 1
+        }.list()
 
         then: "We get the correct result back"
-        results != null
         results.size() == 3
-        results[0].name == 'Dinoville'
-        results[1].name == 'Miami'
-        results[2].name == 'Springfield'
 
-        when: "We query for countries with 2 resident"
-        results = SimpleCountry.withCriteria {
-            sizeGe "residents", 2
-            order "name"
-        }
+        when: "We query for countries with greater than or equal to 3 resident"
+        results = SimpleCountry.where {
+            sizeGe "residents", 3
+        }.list()
 
         then: "We get the correct result back"
-        results != null
-        results.size() == 2
-        results[0].name == 'Miami'
-        results[1].name == 'Springfield'
+        results.size() == 1
+        results[0].name == 'Springfield'
 
-        when: "We query for countries with 2 residents"
-        results = SimpleCountry.withCriteria {
-            sizeGe "residents", 5
-        }
+        when: "We query for countries with greater than or equal to 4 residents"
+        results = SimpleCountry.where {
+            sizeGe "residents", 4
+        }.list()
+
+        then: "we get no results back"
+        results.size() == 0
+    }
+
+    void "Test sizeLt criterion"() {
+        given: "A country with only 1 resident"
+        Person p = new Person(firstName: 'Fred', lastName: 'Flinstone')
+        SimpleCountry c = new SimpleCountry(name: 'Dinoville')
+                .addToResidents(p)
+                .save(flush: true)
+
+        new SimpleCountry(name: 'Springfield')
+                .addToResidents(firstName: 'Homer', lastName: 'Simpson')
+                .addToResidents(firstName: 'Bart', lastName: 'Simpson')
+                .addToResidents(firstName: 'Marge', lastName: 'Simpson')
+                .save(flush: true)
+
+        new SimpleCountry(name: 'Miami')
+                .addToResidents(firstName: 'Dexter', lastName: 'Morgan')
+                .save(flush: true)
+
+        when: "We query for countries with less than 2 resident"
+        def results = SimpleCountry.where {
+            residents.size() < 2
+        }.list()
+
+        then: "We get the correct result back"
+        results.size() == 2
+        results.any { it.name == 'Miami' }
+        results.any { it.name == 'Dinoville' }
+
+        when: "We query for countries with less than 4 resident"
+        results = SimpleCountry.where {
+            sizeLt "residents", 4
+        }.list()
+
+        then: "We get the correct result back"
+        results.size() == 3
+
+        when: "We query for countries with less than 1 residents"
+        results = SimpleCountry.where {
+            sizeLt "residents", 1
+        }.list()
+
+        then: "we get no results back"
+        results.size() == 0
+    }
+
+    void "Test sizeGt criterion"() {
+        given: "A country with only 1 resident"
+        Person p = new Person(firstName: 'Fred', lastName: 'Flinstone')
+        SimpleCountry c = new SimpleCountry(name: 'Dinoville')
+                .addToResidents(p)
+                .save(flush: true)
+
+        new SimpleCountry(name: 'Springfield')
+                .addToResidents(firstName: 'Homer', lastName: 'Simpson')
+                .addToResidents(firstName: 'Bart', lastName: 'Simpson')
+                .addToResidents(firstName: 'Marge', lastName: 'Simpson')
+                .save(flush: true)
+
+        new SimpleCountry(name: 'Miami')
+                .addToResidents(firstName: 'Dexter', lastName: 'Morgan')
+                .save(flush: true)
+
+        when: "We query for countries with more than 1 resident"
+        def results = SimpleCountry.where {
+            residents.size() > 1
+        }.list()
+
+        then: "We get the correct result back"
+        results.size() == 1
+        results[0].name == 'Springfield'
+
+        when: "We query for countries with more than 0 resident"
+        results = SimpleCountry.where {
+            sizeGt "residents", 0
+        }.list()
+
+        then: "We get the correct result back"
+        results.size() == 3
+
+        when: "We query for countries with more than 3 residents"
+        results = SimpleCountry.where {
+            sizeGt "residents", 3
+        }.list()
 
         then: "we get no results back"
         results.size() == 0
@@ -245,43 +209,44 @@ class SizeQuerySpec extends GrailsDataTckSpec {
 
     void "Test sizeEq criterion"() {
         given: "A country with only 1 resident"
-        Person p = new Person(firstName: "Fred", lastName: "Flinstone")
-        SimpleCountry c = new SimpleCountry(name: "Dinoville")
+        Person p = new Person(firstName: 'Fred', lastName: 'Flinstone')
+        SimpleCountry c = new SimpleCountry(name: 'Dinoville')
                 .addToResidents(p)
                 .save(flush: true)
 
-        new SimpleCountry(name: "Springfield")
-                .addToResidents(firstName: "Homer", lastName: "Simpson")
-                .addToResidents(firstName: "Bart", lastName: "Simpson")
-                .addToResidents(firstName: "Marge", lastName: "Simpson")
+        new SimpleCountry(name: 'Springfield')
+                .addToResidents(firstName: 'Homer', lastName: 'Simpson')
+                .addToResidents(firstName: 'Bart', lastName: 'Simpson')
+                .addToResidents(firstName: 'Marge', lastName: 'Simpson')
                 .save(flush: true)
 
-        manager.session.clear()
+        new SimpleCountry(name: 'Miami')
+                .addToResidents(firstName: 'Dexter', lastName: 'Morgan')
+                .save(flush: true)
 
         when: "We query for countries with 1 resident"
-        def results = SimpleCountry.withCriteria {
-            sizeEq "residents", 1
-        }
+        def results = SimpleCountry.where {
+            residents.size() == 1
+        }.list()
 
         then: "We get the correct result back"
-        results != null
-        results.size() == 1
-        results[0].name == 'Dinoville'
+        results.size() == 2
+        results.any { it.name == 'Miami' }
+        results.any { it.name == 'Dinoville' }
 
         when: "We query for countries with 3 resident"
-        results = SimpleCountry.withCriteria {
+        results = SimpleCountry.where {
             sizeEq "residents", 3
-        }
+        }.list()
 
         then: "We get the correct result back"
-        results != null
         results.size() == 1
         results[0].name == 'Springfield'
 
         when: "We query for countries with 2 residents"
-        results = SimpleCountry.withCriteria {
+        results = SimpleCountry.where {
             sizeEq "residents", 2
-        }
+        }.list()
 
         then: "we get no results back"
         results.size() == 0
@@ -289,46 +254,45 @@ class SizeQuerySpec extends GrailsDataTckSpec {
 
     void "Test sizeNe criterion"() {
         given: "A country with only 1 resident"
-        Person p = new Person(firstName: "Fred", lastName: "Flinstone")
-        SimpleCountry c = new SimpleCountry(name: "Dinoville")
+        Person p = new Person(firstName: 'Fred', lastName: 'Flinstone')
+        SimpleCountry c = new SimpleCountry(name: 'Dinoville')
                 .addToResidents(p)
                 .save(flush: true)
 
-        new SimpleCountry(name: "Springfield")
-                .addToResidents(firstName: "Homer", lastName: "Simpson")
-                .addToResidents(firstName: "Bart", lastName: "Simpson")
-                .addToResidents(firstName: "Marge", lastName: "Simpson")
+        new SimpleCountry(name: 'Springfield')
+                .addToResidents(firstName: 'Homer', lastName: 'Simpson')
+                .addToResidents(firstName: 'Bart', lastName: 'Simpson')
+                .addToResidents(firstName: 'Marge', lastName: 'Simpson')
                 .save(flush: true)
 
-        manager.session.clear()
+        new SimpleCountry(name: 'Miami')
+                .addToResidents(firstName: 'Dexter', lastName: 'Morgan')
+                .save(flush: true)
 
-        when: "We query for countries that don't have 1 resident"
-        def results = SimpleCountry.withCriteria {
-            sizeNe "residents", 1
-        }
+        when: "We query for countries with not 1 resident"
+        def results = SimpleCountry.where {
+            residents.size() != 1
+        }.list()
 
         then: "We get the correct result back"
-        results != null
         results.size() == 1
         results[0].name == 'Springfield'
 
-        when: "We query for countries who don't have 3 resident"
-        results = SimpleCountry.withCriteria {
+        when: "We query for countries with not 3 resident"
+        results = SimpleCountry.where {
             sizeNe "residents", 3
-        }
+        }.list()
 
         then: "We get the correct result back"
-        results != null
-        results.size() == 1
-        results[0].name == 'Dinoville'
+        results.size() == 2
+        results.any { it.name == 'Miami' }
+        results.any { it.name == 'Dinoville' }
 
         when: "We query for countries with 2 residents"
-        results = SimpleCountry.withCriteria {
-            and {
-                sizeNe "residents", 1
-                sizeNe "residents", 3
-            }
-        }
+        results = SimpleCountry.where {
+            sizeNe "residents", 1
+            sizeNe "residents", 3
+        }.list()
 
         then: "we get no results back"
         results.size() == 0

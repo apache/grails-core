@@ -20,7 +20,6 @@ package grails.gorm;
 
 import java.io.IOException;
 import java.io.ObjectOutputStream;
-import java.io.Serializable;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.Iterator;
@@ -36,7 +35,7 @@ import org.grails.datastore.mapping.query.Query;
  * @author Graeme Rocher
  * @since 1.0
  */
- @SuppressWarnings({"rawtypes", "unchecked"})
+@SuppressWarnings({"rawtypes", "unchecked"})
 public class PagedResultList<E> implements PagedList<E> {
 
     private static final long serialVersionUID = -5820655628956173929L;

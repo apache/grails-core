@@ -24,12 +24,11 @@ import org.apache.grails.data.testing.tck.base.GrailsDataTckSpec
 import org.apache.grails.data.testing.tck.domains.OptLockNotVersioned
 import org.apache.grails.data.testing.tck.domains.OptLockVersioned
 import org.springframework.dao.OptimisticLockingFailureException
-import org.grails.datastore.mapping.core.OptimisticLockingException
 
 /**
  * @author Burt Beckwith
  */
-@IgnoreIf({System.getProperty('mongodb.gorm.suite') == 'true' || System.getProperty('hibernate7.gorm.suite') == 'true'})
+@IgnoreIf({ System.getProperty('mongodb.gorm.suite') == 'true' || System.getProperty('hibernate7.gorm.suite') == 'true' })
 class OptimisticLockingSpec extends GrailsDataTckSpec {
 
     def setupSpec() {

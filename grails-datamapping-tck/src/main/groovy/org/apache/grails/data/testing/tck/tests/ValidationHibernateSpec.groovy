@@ -38,7 +38,7 @@ import org.grails.datastore.mapping.model.PersistentEntity
 /**
  * Tests validation semantics.
  */
-@IgnoreIf({System.getProperty('mongodb.gorm.suite') == 'true' || System.getProperty('hibernate5.gorm.suite') == 'true'})
+@IgnoreIf({ System.getProperty('mongodb.gorm.suite') == 'true' || System.getProperty('hibernate5.gorm.suite') == 'true' })
 class ValidationHibernateSpec extends GrailsDataTckSpec {
 
     void setupSpec() {
