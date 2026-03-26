@@ -538,7 +538,9 @@ class GrailsGradlePlugin extends GroovyPlugin {
             task.systemProperty(Metadata.APPLICATION_NAME, project.name)
             task.systemProperty(Metadata.APPLICATION_VERSION, (project.version instanceof Serializable ? project.version : project.version.toString()))
             task.systemProperty(Metadata.APPLICATION_GRAILS_VERSION, grailsVersion)
-            task.systemProperty(BuildSettings.APP_BASE_DIR, project.projectDir.absolutePath)
+            // Use a CommandLineArgumentProvider so that the absolute project directory path
+            // is normalized for build cache relocatability (PathSensitivity.RELATIVE).
+            task.jvmArgumentProviders.add(new GrailsAppBaseDirProvider(project.projectDir))
             task.systemProperty(BuildSettings.PROJECT_TARGET_DIR, project.layout.buildDirectory.get().asFile.name)
             task.systemProperty(Environment.KEY, defaultGrailsEnv)
             task.systemProperty(Environment.FULL_STACKTRACE, System.getProperty(Environment.FULL_STACKTRACE) ?: '')
