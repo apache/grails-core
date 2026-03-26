@@ -51,12 +51,8 @@ public class DependentKeyValueBinder {
                 Optional.empty();
 
         compositeIdentity.ifPresentOrElse(
-                ci -> {
-                    compositeIdentifierToManyToOneBinder.bindCompositeIdentifierToManyToOne(
-                            property, key, ci, refDomainClass, EMPTY_PATH);
-                },
-                () -> {
-                    simpleValueBinder.bindSimpleValue(property, null, key, EMPTY_PATH);
-                });
+                ci -> compositeIdentifierToManyToOneBinder.bindCompositeIdentifierToManyToOne(
+                        property, key, ci, refDomainClass, EMPTY_PATH),
+                () -> simpleValueBinder.bindSimpleValue(property, null, key, EMPTY_PATH));
     }
 }

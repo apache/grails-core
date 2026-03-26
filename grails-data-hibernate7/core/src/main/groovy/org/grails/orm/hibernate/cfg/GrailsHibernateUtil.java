@@ -193,7 +193,6 @@ public class GrailsHibernateUtil extends HibernateRuntimeUtils {
      * @param target The GroovyObject
      * @param persistentClass The persistent class
      */
-    @Deprecated
     public static void ensureCorrectGroovyMetaClass(Object target, Class<?> persistentClass) {
         if (target instanceof GroovyObject go) {
             if (!go.getMetaClass().getTheClass().equals(persistentClass)) {

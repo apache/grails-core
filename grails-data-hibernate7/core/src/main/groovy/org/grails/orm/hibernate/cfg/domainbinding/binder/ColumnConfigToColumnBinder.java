@@ -46,23 +46,9 @@ public class ColumnConfigToColumnBinder {
         Optional.ofNullable(columnConfig).ifPresent(config -> {
             Optional.of(config.getLength()).filter(l -> l != -1).ifPresent(column::setLength);
 
-            int precision = config.getPrecision();
-            if (precision == -1) {
-                // Apply dialect-specific defaults for Double/Float types if precision is not set
-                if (dialect instanceof OracleDialect) {
-                    // Oracle defaults to 126 bits or 64 depending on version/type
-                    precision = 126;
-                } else {
-                    // Most other databases (H2, PostgreSQL, MySQL) use 53 bits for Double
-                    // Hibernate 7 interprets this precision as decimal digits for some dialects
-                    // and converts to bits. 15 decimal digits maps to ~50-53 bits.
-                    precision = 15;
-                }
-            }
+            int precision = getPrecision(config);
 
-            if (precision != -1) {
-                column.setPrecision(precision);
-            }
+            column.setPrecision(precision);
 
             Optional.of(config.getScale()).filter(s -> s != -1).ifPresent(column::setScale);
 
@@ -72,5 +58,22 @@ public class ColumnConfigToColumnBinder {
                     .filter(mf -> !mf.isUniqueWithinGroup())
                     .ifPresent(mf -> column.setUnique(config.isUnique()));
         });
+    }
+
+    private int getPrecision(ColumnConfig config) {
+        int precision = config.getPrecision();
+        if (precision == -1) {
+            // Apply dialect-specific defaults for Double/Float types if precision is not set
+            if (dialect instanceof OracleDialect) {
+                // Oracle defaults to 126 bits or 64 depending on version/type
+                precision = 126;
+            } else {
+                // Most other databases (H2, PostgreSQL, MySQL) use 53 bits for Double
+                // Hibernate 7 interprets this precision as decimal digits for some dialects
+                // and converts to bits. 15 decimal digits maps to ~50-53 bits.
+                precision = 15;
+            }
+        }
+        return precision;
     }
 }

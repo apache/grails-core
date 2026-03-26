@@ -23,9 +23,9 @@ import java.io.ObjectOutputStream;
 import java.io.Serial;
 import java.util.List;
 
-import grails.gorm.PagedList;
-
 import org.hibernate.query.Query;
+
+import grails.gorm.PagedList;
 import org.grails.datastore.mapping.model.PersistentEntity;
 import org.grails.orm.hibernate.GrailsHibernateTemplate;
 

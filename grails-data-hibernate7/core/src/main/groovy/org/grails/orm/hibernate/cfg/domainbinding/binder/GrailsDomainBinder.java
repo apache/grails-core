@@ -283,7 +283,7 @@ public class GrailsDomainBinder implements AdditionalMappingContributor, TypeCon
      * Manually triggers the contribution process. Useful for unit testing
      * where the full Hibernate bootstrap is not invoked.
      */
-    public void contribute(InFlightMetadataCollector metadataCollector, HibernateMappingContext mappingContext) {
+    public void contribute(InFlightMetadataCollector metadataCollector) {
         contribute(null, metadataCollector, null, getMetadataBuildingContext());
     }
 }

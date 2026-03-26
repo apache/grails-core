@@ -177,7 +177,7 @@ class HibernateMappingFactory extends AbstractGormMappingFactory<Mapping, Proper
                 ValueGenerator resolvedGenerator
                 try {
                     resolvedGenerator = ValueGenerator.valueOf(generatorName.toUpperCase(Locale.ENGLISH))
-                } catch (IllegalArgumentException e) {
+                } catch (IllegalArgumentException ignored) {
                     if (generatorName.equalsIgnoreCase('table') || ClassUtils.isPresent(generatorName)) {
                         resolvedGenerator = ValueGenerator.CUSTOM
                     } else {

@@ -70,7 +70,7 @@ public class GrailsPropertyBinder {
             String path) {
         Table table = currentGrailsProp.getTable();
         if (LOG.isDebugEnabled()) {
-            LOG.debug("[GrailsPropertyBinder] Binding persistent property [" + currentGrailsProp.getName() + "]");
+            LOG.debug("[GrailsPropertyBinder] Binding persistent property [{}]", currentGrailsProp.getName());
         }
 
         Value value;

@@ -57,8 +57,7 @@ public class SingleTableSubclassBinder {
         classBinder.bindClass(sub, subClass);
         subClass.setDiscriminatorValue(sub.getDiscriminatorValue());
         if (LOG.isDebugEnabled()) {
-            LOG.debug("Mapping subclass: " + subClass.getEntityName() + " -> " +
-                    subClass.getTable().getName());
+            LOG.debug("Mapping subclass: {} -> {}", subClass.getEntityName(), subClass.getTable().getName());
         }
         return subClass;
     }

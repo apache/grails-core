@@ -33,7 +33,7 @@ public class ForeignKeyColumnCountCalculator {
         for (String propertyName : propertyNames) {
             HibernatePersistentProperty referencedProperty = refDomainClass.getHibernatePropertyByName(propertyName);
             if (referencedProperty instanceof HibernateToOneProperty toOne) {
-                PersistentProperty[] compositeIdentity =
+                PersistentProperty<?>[] compositeIdentity =
                         toOne.getAssociatedEntity().getCompositeIdentity();
                 if (compositeIdentity != null) {
                     expectedForeignKeyColumnLength += compositeIdentity.length;

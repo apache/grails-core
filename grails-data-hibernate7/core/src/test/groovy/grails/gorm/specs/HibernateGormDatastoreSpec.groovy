@@ -19,17 +19,15 @@
 
 package grails.gorm.specs
 
-import grails.orm.HibernateCriteriaBuilder
+
 import org.apache.grails.data.hibernate7.core.GrailsDataHibernate7TckManager
 import org.apache.grails.data.testing.tck.base.GrailsDataTckSpec
 import org.grails.datastore.mapping.model.PersistentEntity
-import org.grails.datastore.mapping.query.api.BuildableCriteria
 import org.grails.orm.hibernate.HibernateSession
 import org.grails.orm.hibernate.HibernateDatastore
 import org.grails.orm.hibernate.cfg.domainbinding.binder.GrailsDomainBinder
 import org.grails.orm.hibernate.cfg.domainbinding.hibernate.GrailsHibernatePersistentEntity
 import org.grails.orm.hibernate.cfg.HibernateMappingContext
-import org.grails.orm.hibernate.cfg.MappingCacheHolder
 import org.grails.orm.hibernate.query.HibernateQuery
 
 import org.hibernate.boot.MetadataSources
@@ -183,7 +181,7 @@ class HibernateGormDatastoreSpec extends GrailsDataTckSpec<GrailsDataHibernate7T
     protected void hibernateFirstPass() {
         def gdb = getGrailsDomainBinder()
         def collector = gdb.getMetadataBuildingContext().getMetadataCollector()
-        gdb.contribute(collector, getMappingContext())
+        gdb.contribute(collector)
     }
 
     /**

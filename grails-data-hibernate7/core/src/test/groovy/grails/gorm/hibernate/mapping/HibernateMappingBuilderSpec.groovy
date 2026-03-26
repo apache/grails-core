@@ -28,7 +28,6 @@ import spock.lang.Specification
 
 /**
  * Covers branches of {@link HibernateMappingBuilder} not exercised by
- * {@link HibernateMappingBuilderTests}.
  */
 class HibernateMappingBuilderSpec extends Specification {
 
