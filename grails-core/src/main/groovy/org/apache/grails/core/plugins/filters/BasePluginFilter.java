@@ -30,64 +30,81 @@ import java.util.Set;
 import org.apache.grails.core.plugins.PluginMetadata;
 
 /**
- * Base functionality shared by <code>IncludingPluginFilter</code> and
- * <code>ExcludingPluginFilter</code>.
+ * Abstract base implementation for plugin filters that start from a supplied set of plugin names,
+ * resolve related plugins through dependency traversal, and then delegate the final list assembly
+ * to subclasses.
+ *
+ * <p>The shared algorithm is:</p>
+ * <ol>
+ *     <li>Index the original plugin list by name.</li>
+ *     <li>Collect plugins whose names were explicitly supplied.</li>
+ *     <li>Discover additional plugins through subclass-defined dependency traversal.</li>
+ *     <li>Let the subclass decide how the explicit and derived plugins should influence the final result.</li>
+ * </ol>
+ *
+ * @see IncludingPluginFilter
+ * @see ExcludingPluginFilter
  */
 public abstract class BasePluginFilter implements PluginFilter {
 
     /**
-     * The supplied included plugin names (a String).
+     * The plugin names supplied to the filter.
      */
     private final Set<String> suppliedNames;
 
     /**
-     * Plugins corresponding with the supplied names.
+     * Plugins whose names match {@link #suppliedNames}.
      */
     private final List<PluginMetadata> explicitlyNamedPlugins = new ArrayList<>();
 
     /**
-     * Plugins derivied through a dependency relationship.
+     * Plugins discovered indirectly through dependency traversal.
      */
     private final List<PluginMetadata> derivedPlugins = new ArrayList<>();
 
     /**
-     * Holds a name to GrailsPluginClassMetadata map (String, Plugin).
+     * Lookup of plugin name to plugin metadata for the original plugin list.
      */
     protected Map<String, PluginMetadata> nameMap;
 
     /**
-     * Temporary field holding list of plugin names added to the filtered List
-     * to return (String).
+     * Tracks plugin names that have already been added while building the filtered result.
      */
     private Set<String> addedNames;
 
     private List<PluginMetadata> originalPlugins;
 
+    /**
+     * Creates a filter using the supplied plugin names.
+     *
+     * @param suppliedNames the plugin names that drive the filter result
+     */
     public BasePluginFilter(Set<String> suppliedNames) {
         this.suppliedNames = suppliedNames;
     }
 
+    /**
+     * Creates a filter using the supplied plugin names.
+     *
+     * @param included the plugin names that drive the filter result; each value is trimmed before use
+     */
     public BasePluginFilter(String[] included) {
         suppliedNames = new HashSet<>();
-        for (String s : included) {
+        for (var s : included) {
             suppliedNames.add(s.trim());
         }
     }
 
     /**
-     * Defines operation for adding dependencies for a plugin to the list
+     * Applies this filter to the supplied plugin metadata.
+     *
+     * <p>This method performs the shared filtering workflow and then delegates the final list assembly to
+     * {@link #getPluginList(List, List)}.</p>
+     *
+     * @param original the original plugin metadata to filter
+     * @return the filtered plugin list
      */
-    protected abstract void addPluginDependencies(List<PluginMetadata> additionalList, PluginMetadata plugin);
-
-    /**
-     * Defines an operation getting the final list to return from the original
-     * and derived lists
-     */
-    protected abstract List<PluginMetadata> getPluginList(List<PluginMetadata> original, List<PluginMetadata> pluginList);
-
-    /**
-     * Template method shared by subclasses of <code>BasePluginFilter</code>.
-     */
+    @Override
     public List<PluginMetadata> filterPluginList(List<PluginMetadata> original) {
 
         originalPlugins = Collections.unmodifiableList(original);
@@ -97,7 +114,7 @@ public abstract class BasePluginFilter implements PluginFilter {
         buildExplicitlyNamedList();
         buildDerivedPluginList();
 
-        List<PluginMetadata> pluginList = new ArrayList<>();
+        var pluginList = new ArrayList<PluginMetadata>();
         pluginList.addAll(explicitlyNamedPlugins);
         pluginList.addAll(derivedPlugins);
 
@@ -105,24 +122,30 @@ public abstract class BasePluginFilter implements PluginFilter {
     }
 
     /**
-     * Builds list of <code>GrailsPlugins</code> which are derived from the
-     * <code>explicitlyNamedPlugins</code> through a dependency relationship
+     * Adds any plugins related to the supplied plugin through the dependency rules defined by the subclass.
+     * Implementations are expected to call {@link #registerDependency(List, PluginMetadata)} to avoid duplicates
+     * and to continue recursive traversal.
+     *
+     * @param additionalList the list collecting plugins discovered indirectly
+     * @param plugin the plugin whose related plugins should be considered
      */
-    private void buildDerivedPluginList() {
-        // find their dependencies
-        for (PluginMetadata plugin : explicitlyNamedPlugins) {
-            // recursively add in plugin dependencies
-            addPluginDependencies(derivedPlugins, plugin);
-        }
-    }
+    protected abstract void addPluginDependencies(List<PluginMetadata> additionalList, PluginMetadata plugin);
 
     /**
-     * Checks whether a plugin is dependent on another plugin with the specified
-     * name
+     * Builds the final filtered list from the original plugins and the plugins collected by the shared algorithm.
+     *
+     * @param original the full original plugin list supplied to {@link #filterPluginList(List)}
+     * @param pluginList the explicit and dependency-derived plugins collected so far
+     * @return the filtered plugin list to expose to callers
+     */
+    protected abstract List<PluginMetadata> getPluginList(List<PluginMetadata> original, List<PluginMetadata> pluginList);
+
+    /**
+     * Determines whether the supplied plugin declares a dependency on the named plugin.
      *
      * @param plugin the plugin to compare
      * @param pluginName the name to compare against
-     * @return true if <code>plugin</code> depends on <code>pluginName</code>
+     * @return {@code true} if {@code plugin} depends on {@code pluginName}
      */
     protected boolean isDependentOn(PluginMetadata plugin, String pluginName) {
         for (var dependencyName : plugin.getDependsOnNames()) {
@@ -134,7 +157,61 @@ public abstract class BasePluginFilter implements PluginFilter {
     }
 
     /**
-     * Given the supplied list of plugin names, add the associated plugin to explicitedNamed requirements
+     * Registers a derived plugin if it has not already been added and continues dependency traversal for it.
+     *
+     * @param additionalList the list collecting derived plugins
+     * @param plugin the plugin to register
+     */
+    protected void registerDependency(List<PluginMetadata> additionalList, PluginMetadata plugin) {
+        if (!addedNames.contains(plugin.getName())) {
+            addedNames.add(plugin.getName());
+            additionalList.add(plugin);
+            addPluginDependencies(additionalList, plugin);
+        }
+    }
+
+    /**
+     * Returns all plugins from the original input as an unmodifiable collection.
+     *
+     * @return all original plugins keyed in {@link #nameMap}
+     */
+    protected Collection<PluginMetadata> getAllPlugins() {
+        return Collections.unmodifiableCollection(nameMap.values());
+    }
+
+    /**
+     * Looks up a plugin from the original input by name.
+     *
+     * @param name the plugin name
+     * @return the matching plugin metadata, or {@code null} if none exists
+     */
+    protected PluginMetadata getNamedPlugin(String name) {
+        return nameMap.get(name);
+    }
+
+    /**
+     * Returns the plugin names supplied to this filter.
+     *
+     * @return the supplied plugin names
+     */
+    protected Set<String> getSuppliedNames() {
+        return suppliedNames;
+    }
+
+    /**
+     * Populates {@link #derivedPlugins} with plugins discovered from the explicitly named plugins through
+     * subclass-defined dependency traversal.
+     */
+    private void buildDerivedPluginList() {
+        // find their dependencies
+        for (var plugin : explicitlyNamedPlugins) {
+            // recursively add in plugin dependencies
+            addPluginDependencies(derivedPlugins, plugin);
+        }
+    }
+
+    /**
+     * Populates {@link #explicitlyNamedPlugins} with any original plugins whose names were explicitly supplied.
      */
     private void buildExplicitlyNamedList() {
         originalPlugins.stream()
@@ -146,35 +223,12 @@ public abstract class BasePluginFilter implements PluginFilter {
     }
 
     /**
-     * Builds a name to plugin map from the original list of plugins supplied
+     * Builds the {@link #nameMap} lookup from the original plugin list.
      */
     private void buildNameMap() {
         nameMap = new HashMap<>();
-        for (PluginMetadata plugin : originalPlugins) {
+        for (var plugin : originalPlugins) {
             nameMap.put(plugin.getName(), plugin);
         }
-    }
-
-    /**
-     * Adds a plugin to the additional if this hasn't happened already
-     */
-    protected void registerDependency(List<PluginMetadata> additionalList, PluginMetadata plugin) {
-        if (!addedNames.contains(plugin.getName())) {
-            addedNames.add(plugin.getName());
-            additionalList.add(plugin);
-            addPluginDependencies(additionalList, plugin);
-        }
-    }
-
-    protected Collection<PluginMetadata> getAllPlugins() {
-        return Collections.unmodifiableCollection(nameMap.values());
-    }
-
-    protected PluginMetadata getNamedPlugin(String name) {
-        return nameMap.get(name);
-    }
-
-    protected Set<String> getSuppliedNames() {
-        return suppliedNames;
     }
 }
