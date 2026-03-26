@@ -430,7 +430,7 @@ public class DefaultUrlMappingEvaluator implements UrlMappingEvaluator, ClassLoa
          * }
          * </pre>
          *
-         * @param defaults Map of default parameters (controller, action, namespace, plugin, view)
+         * @param defaults Map of default parameters (controller, action, namespace, plugin, view, method/HTTP_METHOD)
          * @param uri The URI prefix for the group
          * @param mappingsClosure The mappings in the group
          * @since 7.1
