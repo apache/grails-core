@@ -418,6 +418,69 @@ public class DefaultUrlMappingEvaluator implements UrlMappingEvaluator, ClassLoa
             }
         }
 
+        /**
+         * Define a group with default mapping parameters that are inherited by child mappings.
+         * Child mappings can override any default by specifying the parameter explicitly.
+         *
+         * <p>Example usage:
+         * <pre>
+         * group "/api", namespace: 'api', controller: 'resource', {
+         *     "/list"(action: 'list')    // inherits namespace and controller
+         *     "/show"(action: 'show')    // inherits namespace and controller
+         * }
+         * </pre>
+         *
+         * @param defaults Map of default parameters (controller, action, namespace, plugin, view, method/HTTP_METHOD)
+         * @param uri The URI prefix for the group
+         * @param mappingsClosure The mappings in the group
+         * @since 7.1
+         */
+        public void group(Map<String, Object> defaults, String uri, Closure<?> mappingsClosure) {
+            try {
+                var parentResource = new ParentResource(null, uri, true, true);
+                parentResources.push(parentResource);
+                var mappingInfo = pushNewMetaMappingInfo();
+                applyGroupDefaults(mappingInfo, defaults);
+                var builder = new UrlGroupMappingRecursionBuilder(this, parentResource);
+                mappingsClosure.setDelegate(builder);
+                mappingsClosure.setResolveStrategy(Closure.DELEGATE_FIRST);
+                mappingsClosure.call();
+            } finally {
+                mappingInfoDeque.pop();
+                parentResources.pop();
+            }
+        }
+
+        private void applyGroupDefaults(MetaMappingInfo mappingInfo, Map<String, Object> defaults) {
+            if (defaults == null || defaults.isEmpty()) {
+                return;
+            }
+            // Merge defaults with any inherited group defaults
+            if (mappingInfo.getGroupDefaults() == null) {
+                mappingInfo.setGroupDefaults(new HashMap<>(defaults));
+            } else {
+                mappingInfo.getGroupDefaults().putAll(defaults);
+            }
+            if (defaults.containsKey(CONTROLLER)) {
+                mappingInfo.setController(defaults.get(CONTROLLER));
+            }
+            if (defaults.containsKey(ACTION)) {
+                mappingInfo.setAction(defaults.get(ACTION));
+            }
+            if (defaults.containsKey(NAMESPACE)) {
+                mappingInfo.setNamespace(defaults.get(NAMESPACE));
+            }
+            if (defaults.containsKey(PLUGIN)) {
+                mappingInfo.setPlugin(defaults.get(PLUGIN));
+            }
+            if (defaults.containsKey(VIEW)) {
+                mappingInfo.setView(defaults.get(VIEW));
+            }
+            if (defaults.containsKey(HTTP_METHOD)) {
+                mappingInfo.setHttpMethod(defaults.get(HTTP_METHOD).toString());
+            }
+        }
+
         @Override
         public Object invokeMethod(String methodName, Object arg) {
             if (binding == null) {
@@ -1231,6 +1294,12 @@ public class DefaultUrlMappingEvaluator implements UrlMappingEvaluator, ClassLoa
                         mappingInfo.getConstraints().add(new DefaultConstrainedProperty(UrlMapping.class, parentResource.controllerName + "Id", String.class, constraintRegistry));
                     }
                 }
+                // Inherit group defaults (only explicitly set via group defaults, not from normal mapping processing)
+                var parentGroupDefaults = parentMappingInfo.getGroupDefaults();
+                if (parentGroupDefaults != null && !parentGroupDefaults.isEmpty()) {
+                    mappingInfo.setGroupDefaults(new HashMap<>(parentGroupDefaults));
+                    applyGroupDefaults(mappingInfo, parentGroupDefaults);
+                }
             }
             if (!previousConstraints.isEmpty()) {
                 mappingInfo.getConstraints().addAll(previousConstraints);
@@ -1281,6 +1350,14 @@ public class DefaultUrlMappingEvaluator implements UrlMappingEvaluator, ClassLoa
                 uri = parentResource.uri.concat(uri);
             }
             super.group(uri, mappings);
+        }
+
+        @Override
+        public void group(Map<String, Object> defaults, String uri, Closure<?> mappings) {
+            if (parentResource != null) {
+                uri = parentResource.uri.concat(uri);
+            }
+            super.group(defaults, uri, mappings);
         }
     }
 }

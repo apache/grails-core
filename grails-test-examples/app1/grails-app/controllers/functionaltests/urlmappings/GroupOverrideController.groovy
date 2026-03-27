@@ -16,29 +16,20 @@
  *  specific language governing permissions and limitations
  *  under the License.
  */
-package org.grails.web.mapping
+package functionaltests.urlmappings
 
-import groovy.transform.PackageScope
+import grails.converters.JSON
 
-import grails.gorm.validation.ConstrainedProperty
+class GroupOverrideController {
 
-/**
- * Meta data describing a url mapping
- *
- * @since 2.3.5
- *
- */
-@PackageScope
-class MetaMappingInfo {
+    static namespace = 'api'
+    static responseFormats = ['json']
 
-    def namespace
-    def controller
-    def action
-    def plugin
-    def view
-    def uri
-    def redirectInfo
-    String httpMethod
-    List<ConstrainedProperty> constraints = []
-    Map<String, Object> groupDefaults
+    def handle() {
+        render([
+            controller: 'groupOverride',
+            action: 'handle',
+            namespace: 'api'
+        ] as JSON)
+    }
 }
