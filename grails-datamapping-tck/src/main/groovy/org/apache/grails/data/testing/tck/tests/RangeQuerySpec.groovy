@@ -34,6 +34,7 @@ class RangeQuerySpec extends GrailsDataTckSpec {
         manager.addAllDomainClasses([Publication, TestEntity, Person, ChildEntity])
     }
 
+    @spock.lang.Requires({ System.getProperty('hibernate5.gorm.suite') == 'true' || System.getProperty('hibernate7.gorm.suite') == 'true' || System.getProperty('mongodb.gorm.suite') == 'true' })
     void "Test between query with dates"() {
         given:
         def now = new Date()
@@ -53,6 +54,7 @@ class RangeQuerySpec extends GrailsDataTckSpec {
         results.size() == 2
     }
 
+    @spock.lang.Requires({ System.getProperty('hibernate5.gorm.suite') == 'true' || System.getProperty('hibernate7.gorm.suite') == 'true' || System.getProperty('mongodb.gorm.suite') == 'true' })
     void "Test between query"() {
         given:
         int age = 40
@@ -81,6 +83,7 @@ class RangeQuerySpec extends GrailsDataTckSpec {
         4 == results.size()
     }
 
+    @spock.lang.Requires({ System.getProperty('hibernate5.gorm.suite') == 'true' || System.getProperty('hibernate7.gorm.suite') == 'true' || System.getProperty('mongodb.gorm.suite') == 'true' })
     void "Test greater than or equal to and less than or equal to queries"() {
         given:
 

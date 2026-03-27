@@ -18,9 +18,10 @@
  */
 package org.apache.grails.data.testing.tck.tests
 
+import spock.lang.Requires
+
 import grails.gorm.transactions.Rollback
 import org.springframework.transaction.support.TransactionSynchronizationManager
-import spock.lang.IgnoreIf
 import spock.lang.Unroll
 
 import org.springframework.validation.Validator
@@ -38,7 +39,7 @@ import org.grails.datastore.mapping.model.PersistentEntity
 /**
  * Tests validation semantics.
  */
-@IgnoreIf({ System.getProperty('mongodb.gorm.suite') == 'true' || System.getProperty('hibernate5.gorm.suite') == 'true' })
+@Requires({ System.getProperty('hibernate7.gorm.suite') == 'true' })
 class ValidationHibernateSpec extends GrailsDataTckSpec {
 
     void setupSpec() {

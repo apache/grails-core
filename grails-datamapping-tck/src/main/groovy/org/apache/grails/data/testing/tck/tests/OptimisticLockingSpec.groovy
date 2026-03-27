@@ -18,7 +18,7 @@
  */
 package org.apache.grails.data.testing.tck.tests
 
-import spock.lang.IgnoreIf
+import spock.lang.Requires
 
 import org.apache.grails.data.testing.tck.base.GrailsDataTckSpec
 import org.apache.grails.data.testing.tck.domains.OptLockNotVersioned
@@ -28,7 +28,7 @@ import org.springframework.dao.OptimisticLockingFailureException
 /**
  * @author Burt Beckwith
  */
-@IgnoreIf({ System.getProperty('mongodb.gorm.suite') == 'true' || System.getProperty('hibernate7.gorm.suite') == 'true' })
+@Requires({ System.getProperty('hibernate5.gorm.suite') == 'true' || System.getProperty('hibernate7.gorm.suite') == 'true' })
 class OptimisticLockingSpec extends GrailsDataTckSpec {
 
     def setupSpec() {

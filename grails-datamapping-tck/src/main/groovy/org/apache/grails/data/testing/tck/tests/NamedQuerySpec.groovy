@@ -95,6 +95,7 @@ class NamedQuerySpec extends GrailsDataTckSpec {
         1 == results?.size()
     }
 
+    @spock.lang.Requires({ System.getProperty('hibernate5.gorm.suite') == 'true' || System.getProperty('hibernate7.gorm.suite') == 'true' || System.getProperty('mongodb.gorm.suite') == 'true' })
     void "Test chaining named queries"() {
 
         given:
@@ -426,6 +427,7 @@ class NamedQuerySpec extends GrailsDataTckSpec {
         recentBookId == publication.id
     }
 
+    @spock.lang.Requires({ System.getProperty('hibernate5.gorm.suite') == 'true' || System.getProperty('hibernate7.gorm.suite') == 'true' || System.getProperty('mongodb.gorm.suite') == 'true' })
     void "Test named query with findAllBy*() dyamic finder"() {
         given:
         def now = new Date()
@@ -760,6 +762,7 @@ class NamedQuerySpec extends GrailsDataTckSpec {
         3 == numberOfNewBooksNamedSomeBook
     }
 
+    @spock.lang.Requires({ System.getProperty('hibernate5.gorm.suite') == 'true' || System.getProperty('hibernate7.gorm.suite') == 'true' || System.getProperty('mongodb.gorm.suite') == 'true' })
     void "Test named query with listOrderBy*() dynamic finder"() {
 
         given:
@@ -1019,6 +1022,7 @@ class NamedQuerySpec extends GrailsDataTckSpec {
         3 == pubs?.size()
     }
 
+    @spock.lang.Requires({ System.getProperty('hibernate5.gorm.suite') == 'true' || System.getProperty('hibernate7.gorm.suite') == 'true' || System.getProperty('mongodb.gorm.suite') == 'true' })
     void "Test named query with multiple parameters and dynamic finder"() {
         given:
         def now = new Date()

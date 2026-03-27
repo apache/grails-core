@@ -52,6 +52,7 @@ class EnumSpec extends GrailsDataTckSpec {
     }
 
     @Issue('GPMONGODB-248')
+    @spock.lang.Requires({ System.getProperty('hibernate5.gorm.suite') == 'true' || System.getProperty('hibernate7.gorm.suite') == 'true' || System.getProperty('mongodb.gorm.suite') == 'true' })
     void "Test findByInList()"() {
         given:
 
@@ -92,6 +93,7 @@ class EnumSpec extends GrailsDataTckSpec {
         instance3.isEmpty()
     }
 
+    @spock.lang.Requires({ System.getProperty('hibernate5.gorm.suite') == 'true' || System.getProperty('hibernate7.gorm.suite') == 'true' || System.getProperty('mongodb.gorm.suite') == 'true' })
     void "Test findAllBy()"() {
         given:
 
@@ -119,6 +121,7 @@ class EnumSpec extends GrailsDataTckSpec {
 
     }
 
+    @spock.lang.Requires({ System.getProperty('hibernate5.gorm.suite') == 'true' || System.getProperty('hibernate7.gorm.suite') == 'true' || System.getProperty('mongodb.gorm.suite') == 'true' })
     void "Test findAllBy() with clearing the session"() {
         given:
 
@@ -146,6 +149,7 @@ class EnumSpec extends GrailsDataTckSpec {
         instance3.isEmpty()
     }
 
+    @spock.lang.Requires({ System.getProperty('hibernate5.gorm.suite') == 'true' || System.getProperty('hibernate7.gorm.suite') == 'true' || System.getProperty('mongodb.gorm.suite') == 'true' })
     void "Test findAllBy()"() {
         given:
 

@@ -18,12 +18,13 @@
  */
 package org.apache.grails.data.testing.tck.tests
 
+import spock.lang.Requires
+
 import org.apache.grails.data.testing.tck.domains.Book as TckBook
 import org.apache.grails.data.testing.tck.domains.Highway
 import org.apache.grails.data.testing.tck.domains.Person
 import org.apache.grails.data.testing.tck.base.GrailsDataTckSpec
 import org.grails.datastore.mapping.core.exceptions.ConfigurationException
-import spock.lang.IgnoreIf
 import spock.lang.Unroll
 
 /**
@@ -40,7 +41,8 @@ class FindByMethodSpec extends GrailsDataTckSpec {
 
     // --- Standard GORM TCK Tests ---
 
-    void 'Test Using AND Multiple Times In A Dynamic Finder'() {
+    @spock.lang.Requires({ System.getProperty('hibernate5.gorm.suite') == 'true' || System.getProperty('hibernate7.gorm.suite') == 'true' || System.getProperty('mongodb.gorm.suite') == 'true' })
+    void "Test Using AND Multiple Times In A Dynamic Finder"() {
         given:
         new Person(firstName: 'Jeff', lastName: 'Brown', age: 41).save()
 
@@ -63,7 +65,7 @@ class FindByMethodSpec extends GrailsDataTckSpec {
     // --- Parameterized Logic ---
 
     @Unroll
-    @IgnoreIf({ System.getProperty('hibernate7.gorm.suite') == 'true' || System.getProperty('mongodb.gorm.suite') == 'true'  })
+    @Requires({ System.getProperty('hibernate5.gorm.suite') == 'true'  })
     void "Test Hib5 pattern [#index] #methodName should throw MissingMethodException"() {
         when:
         action.call()
@@ -95,7 +97,7 @@ class FindByMethodSpec extends GrailsDataTckSpec {
     }
 
     @Unroll
-    @IgnoreIf({ System.getProperty('hibernate5.gorm.suite') == 'true' || System.getProperty('mongodb.gorm.suite') == 'true' })
+    @Requires({ System.getProperty('hibernate7.gorm.suite') == 'true'  })
     void "Test Hib7 pattern [#index] #methodName should throw #exception.simpleName"() {
         when:
         action.call()

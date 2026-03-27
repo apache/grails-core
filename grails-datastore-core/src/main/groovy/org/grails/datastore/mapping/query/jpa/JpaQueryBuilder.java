@@ -40,6 +40,7 @@ import org.grails.datastore.mapping.query.AssociationQuery;
 import org.grails.datastore.mapping.query.Query;
 import org.grails.datastore.mapping.query.api.AssociationCriteria;
 import org.grails.datastore.mapping.query.api.QueryableCriteria;
+import org.grails.datastore.mapping.core.exceptions.ConfigurationException;
 
 /**
  * Builds JPA 1.0 String-based queries from the Query model
@@ -95,6 +96,9 @@ public class JpaQueryBuilder {
     }
 
     public JpaQueryBuilder(PersistentEntity entity, Query.Junction criteria) {
+        if (entity == null) {
+            throw new ConfigurationException("No persistent entity specified for JPA query builder");
+        }
         this.entity = entity;
         this.criteria = criteria;
         this.logicalName = entity.getDecapitalizedName();
@@ -464,21 +468,7 @@ public class JpaQueryBuilder {
                 whereClause.append(logicalName)
                            .append(DOT)
                            .append(name)
-                           .append(" IS EMPTY ");
-
-                return position;
-            }
-        });
-
-        queryHandlers.put(Query.IsNotNull.class, new QueryHandler() {
-            public int handle(PersistentEntity entity, Query.Criterion criterion, StringBuilder q, StringBuilder whereClause, String logicalName, int position, List parameters, ConversionService conversionService, boolean allowJoins, boolean hibernateCompatible) {
-                Query.IsNotNull isNotNull = (Query.IsNotNull) criterion;
-                final String name = isNotNull.getProperty();
-                validateProperty(entity, name, Query.IsNotNull.class);
-                whereClause.append(logicalName)
-                           .append(DOT)
-                           .append(name)
-                           .append(" IS NOT NULL ");
+                           .append(" IS NOT EMPTY ");
 
                 return position;
             }

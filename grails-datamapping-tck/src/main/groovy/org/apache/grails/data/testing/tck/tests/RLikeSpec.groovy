@@ -29,6 +29,7 @@ class RLikeSpec extends GrailsDataTckSpec {
         manager.addAllDomainClasses([RlikeFoo])
     }
 
+    @spock.lang.Requires({ System.getProperty('hibernate5.gorm.suite') == 'true' || System.getProperty('hibernate7.gorm.suite') == 'true' || System.getProperty('mongodb.gorm.suite') == 'true' })
     void "test rlike works"() {
         given:
         new RlikeFoo(name: 'ABC').save(flush: true)

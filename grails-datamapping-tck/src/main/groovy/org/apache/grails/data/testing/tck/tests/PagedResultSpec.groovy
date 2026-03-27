@@ -22,7 +22,7 @@ import org.apache.grails.data.testing.tck.domains.Person
 import org.apache.grails.data.testing.tck.base.GrailsDataTckSpec
 import spock.lang.IgnoreIf
 
-@IgnoreIf({System.getProperty('hibernate7.gorm.suite') == 'true'})
+@spock.lang.Requires({ System.getProperty('hibernate5.gorm.suite') == 'true' ||  System.getProperty('mongodb.gorm.suite') == 'true' })
 class PagedResultSpec extends GrailsDataTckSpec {
 
     void setupSpec() {

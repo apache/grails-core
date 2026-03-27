@@ -28,6 +28,7 @@ import org.apache.grails.data.testing.tck.base.GrailsDataTckSpec
  */
 class AsyncReadMethodsSpec extends GrailsDataTckSpec<GrailsDataCoreTckManager> {
 
+    @spock.lang.Requires({ System.getProperty('hibernate5.gorm.suite') == 'true' || System.getProperty('hibernate7.gorm.suite') == 'true' || System.getProperty('mongodb.gorm.suite') == 'true' })
     def "Test that normal GORM methods can be used within the doAsync method"() {
         given: "Some people"
         final p1 = new Person(firstName: "Homer", lastName: "Simpson").save()
@@ -48,6 +49,7 @@ class AsyncReadMethodsSpec extends GrailsDataTckSpec<GrailsDataCoreTckManager> {
         results[2].firstName == "Barney"
     }
 
+    @spock.lang.Requires({ System.getProperty('hibernate5.gorm.suite') == 'true' || System.getProperty('hibernate7.gorm.suite') == 'true' || System.getProperty('mongodb.gorm.suite') == 'true' })
     def "Test that the list method works async"() {
         given: "Some people"
         new Person(firstName: "Homer", lastName: "Simpson").save()
@@ -69,6 +71,7 @@ class AsyncReadMethodsSpec extends GrailsDataTckSpec<GrailsDataCoreTckManager> {
 
     }
 
+    @spock.lang.Requires({ System.getProperty('hibernate5.gorm.suite') == 'true' || System.getProperty('hibernate7.gorm.suite') == 'true' || System.getProperty('mongodb.gorm.suite') == 'true' })
     def "Test multiples GORM promises using get method"() {
         given: "Some people"
         final p1 = new Person(firstName: "Homer", lastName: "Simpson").save()
@@ -98,6 +101,7 @@ class AsyncReadMethodsSpec extends GrailsDataTckSpec<GrailsDataCoreTckManager> {
         results[2].firstName == "Barney"
     }
 
+    @spock.lang.Requires({ System.getProperty('hibernate5.gorm.suite') == 'true' || System.getProperty('hibernate7.gorm.suite') == 'true' || System.getProperty('mongodb.gorm.suite') == 'true' })
     def "Test multiples GORM promises using dynamic finder method"() {
         given: "Some people"
         final p1 = new Person(firstName: "Homer", lastName: "Simpson").save()

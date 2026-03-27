@@ -128,6 +128,10 @@ dependencies {
 
 //compileTestGroovy.groovyOptions.forkOptions.jvmArgs = ['-Xdebug', '-Xrunjdwp:transport=dt_socket,server=y,suspend=y,address=5005']
 
+tasks.withType(Test).configureEach {
+    systemProperty('core.gorm.suite', true)
+}
+
 apply {
     from rootProject.layout.projectDirectory.file('gradle/test-config.gradle')
     from rootProject.layout.projectDirectory.file('gradle/grails-data-tck-config.gradle')

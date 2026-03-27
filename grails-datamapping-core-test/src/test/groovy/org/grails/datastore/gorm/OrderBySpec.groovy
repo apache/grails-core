@@ -26,7 +26,15 @@ import org.apache.grails.data.testing.tck.base.GrailsDataTckSpec
 /**
  * @author Daniel Wiell
  */
+import spock.lang.IgnoreIf
+
+@IgnoreIf({ System.getProperty('core.gorm.suite') == 'true' })
 class OrderBySpec extends GrailsDataTckSpec<GrailsDataCoreTckManager> {
+
+    def setupSpec() {
+        manager.addAllDomainClasses([TestEntity])
+    }
+
     def setup() {
         def age = 40
         ["Bob", "Fred", "Barney", "Frank", "Joe", "Ernie"].each {

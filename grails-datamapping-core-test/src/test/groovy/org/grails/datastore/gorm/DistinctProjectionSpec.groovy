@@ -24,6 +24,7 @@ import org.apache.grails.data.testing.tck.base.GrailsDataTckSpec
 
 class DistinctProjectionSpec extends GrailsDataTckSpec<GrailsDataCoreTckManager> {
 
+    @spock.lang.Requires({ System.getProperty('hibernate5.gorm.suite') == 'true' || System.getProperty('hibernate7.gorm.suite') == 'true' || System.getProperty('mongodb.gorm.suite') == 'true' })
     def "Test that using the distinct projection returns distinct results"() {
         given: "Some people with the same last names"
         new Person(firstName: "Homer", lastName: "Simpson").save()

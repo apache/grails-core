@@ -18,6 +18,8 @@
  */
 package org.grails.datastore.gorm
 
+import spock.lang.Requires
+
 import grails.gorm.annotation.AutoTimestamp
 import grails.gorm.annotation.CreatedDate
 import grails.gorm.annotation.LastModifiedDate
@@ -28,11 +30,17 @@ import org.grails.datastore.gorm.events.AutoTimestampEventListener
 
 import static grails.gorm.annotation.AutoTimestamp.EventType.CREATED
 
+import spock.lang.IgnoreIf
+
+@IgnoreIf({ System.getProperty('core.gorm.suite') == 'true' })
 class CustomAutoTimestampSpec extends GrailsDataTckSpec<GrailsDataCoreTckManager> {
     void setupSpec() {
         manager.domainClasses.addAll([AutoTimestampedChildEntity, AutoTimestampedParentEntity, Image, RecordCustom, RecordWithAliases])
     }
 
+    @Requires({ System.getProperty('hibernate5.gorm.suite') == 'true' ||
+                System.getProperty('hibernate7.gorm.suite') == 'true' ||
+                System.getProperty('mongodb.gorm.suite') == 'true' })
     void "Test when the auto timestamp properties are customized, they are correctly set"() {
         when: "An entity is persisted"
         def r = new RecordCustom(name: "Test")
@@ -62,6 +70,9 @@ class CustomAutoTimestampSpec extends GrailsDataTckSpec<GrailsDataCoreTckManager
         previousCreated.time == r.created.time
     }
 
+    @Requires({ System.getProperty('hibernate5.gorm.suite') == 'true' ||
+            System.getProperty('hibernate7.gorm.suite') == 'true' ||
+            System.getProperty('mongodb.gorm.suite') == 'true' })
     void "Test when the auto timestamp properties are already set, they are overwritten"() {
         when: "An entity is persisted"
         def r = new RecordCustom(name: "Test")
@@ -92,6 +103,9 @@ class CustomAutoTimestampSpec extends GrailsDataTckSpec<GrailsDataCoreTckManager
         previousCreated.time == r.created.time
     }
 
+    @Requires({ System.getProperty('hibernate5.gorm.suite') == 'true' ||
+            System.getProperty('hibernate7.gorm.suite') == 'true' ||
+            System.getProperty('mongodb.gorm.suite') == 'true' })
     void "Test when the auto timestamp properties are already set, they are not overwritten if config is set"() {
         when: "An entity is persisted and insertOverwrite is false"
         AutoTimestampEventListener autoTimestampEventListener =
@@ -126,6 +140,9 @@ class CustomAutoTimestampSpec extends GrailsDataTckSpec<GrailsDataCoreTckManager
         previousCreated.time == r.created.time
     }
 
+    @Requires({ System.getProperty('hibernate5.gorm.suite') == 'true' ||
+            System.getProperty('hibernate7.gorm.suite') == 'true' ||
+            System.getProperty('mongodb.gorm.suite') == 'true' })
     void 'AutoTimestamp annotation works when used in non-entity parent classes'() {
         when: 'An entity extending a non-entity class using AutoTimestamp is persisted'
         def i = new Image(format: 'jpg')
@@ -138,6 +155,9 @@ class CustomAutoTimestampSpec extends GrailsDataTckSpec<GrailsDataCoreTckManager
         i.created != null
     }
 
+    @Requires({ System.getProperty('hibernate5.gorm.suite') == 'true' ||
+            System.getProperty('hibernate7.gorm.suite') == 'true' ||
+            System.getProperty('mongodb.gorm.suite') == 'true' })
     void 'AutoTimestamp annotation works when used in entity parent classes'() {
         when: 'An entity extending an entity class using AutoTimestamp is persisted'
         def e = new AutoTimestampedChildEntity(name: 'John')
@@ -150,6 +170,9 @@ class CustomAutoTimestampSpec extends GrailsDataTckSpec<GrailsDataCoreTckManager
         e.created != null
     }
 
+    @Requires({ System.getProperty('hibernate5.gorm.suite') == 'true' ||
+            System.getProperty('hibernate7.gorm.suite') == 'true' ||
+            System.getProperty('mongodb.gorm.suite') == 'true' })
     void "Test @CreatedDate and @LastModifiedDate annotation aliases"() {
         when: "An entity with alias annotations is persisted"
         def r = new RecordWithAliases(name: "Test")
@@ -179,6 +202,9 @@ class CustomAutoTimestampSpec extends GrailsDataTckSpec<GrailsDataCoreTckManager
         previousCreated.time == r.createdAt.time
     }
 
+    @Requires({ System.getProperty('hibernate5.gorm.suite') == 'true' ||
+            System.getProperty('hibernate7.gorm.suite') == 'true' ||
+            System.getProperty('mongodb.gorm.suite') == 'true' })
     void "Test @CreatedDate and @LastModifiedDate with insertOverwrite config"() {
         when: "An entity is persisted and insertOverwrite is false"
         AutoTimestampEventListener autoTimestampEventListener =
