@@ -751,13 +751,16 @@ public class DefaultUrlMappingEvaluator implements UrlMappingEvaluator, ClassLoa
                             String version = null;
 
                             if (namedArguments.containsKey(UrlMapping.VERSION)) {
-                                version = namedArguments.get(UrlMapping.VERSION).toString();
+                                Object versionValue = namedArguments.get(UrlMapping.VERSION);
+                                version = versionValue != null ? versionValue.toString() : null;
                             }
                             if (namedArguments.containsKey(NAMESPACE)) {
-                                mappingInfo.setNamespace(namedArguments.get(NAMESPACE).toString());
+                                Object nsValue = namedArguments.get(NAMESPACE);
+                                mappingInfo.setNamespace(nsValue != null ? nsValue.toString() : null);
                             }
                             if (namedArguments.containsKey(PLUGIN)) {
-                                mappingInfo.setPlugin(namedArguments.get(PLUGIN).toString());
+                                Object pluginValue = namedArguments.get(PLUGIN);
+                                mappingInfo.setPlugin(pluginValue != null ? pluginValue.toString() : null);
                             }
 
                             var urlData = createUrlMappingData(mappedURI, isResponseCode);
