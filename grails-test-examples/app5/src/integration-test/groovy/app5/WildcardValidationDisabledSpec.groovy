@@ -18,30 +18,33 @@
  */
 package app5
 
-import spock.lang.Specification
-
 import grails.testing.mixin.integration.Integration
 import org.apache.grails.testing.http.client.HttpClientSupport
+import spock.lang.Specification
 
 @Integration
 class WildcardValidationDisabledSpec extends Specification implements HttpClientSupport {
 
-    def 'disabled wildcard validation preserves the first wildcard match for non-action segments'() {
-        when: 'requesting a numeric segment that would otherwise fall through to the wildcard id mapping'
-        def response = http('/wildcard-disabled/42')
+    def 'grails.web.url.mapping.validateWildcards false keeps the fallback mapping selected ahead of a valid wildcard controller match'() {
+        when: 'requesting a path that matches both the fallback mapping and a registered controller'
+        def response = http('/wildcard-disabled/target')
 
-        then: 'the first wildcard action mapping remains selected and the request is rejected'
-        response.assertStatus(404)
-    }
-
-    def 'disabled wildcard validation does not make the target controller action unavailable'() {
-        when: 'requesting the same action through an explicit literal route'
-        def response = http('/wildcard-disabled/show-action')
-
-        then: 'the controller action itself still responds successfully'
+        then: 'the fallback action still wins'
         response.assertJson(200, [
             controller: 'wildcardValidation',
-            action: 'show'
+            action: 'fallback',
+            path: 'target'
+        ])
+    }
+
+    def 'the target controller itself remains available through the standard controller route'() {
+        when: 'requesting the target controller directly'
+        def response = http('/target')
+
+        then: 'the target controller still responds successfully'
+        response.assertJson(200, [
+            controller: 'target',
+            action: 'index'
         ])
     }
 }

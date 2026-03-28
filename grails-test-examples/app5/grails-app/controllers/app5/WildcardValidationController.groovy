@@ -27,16 +27,17 @@ class WildcardValidationController {
     static responseFormats = ['json']
 
     def show() {
-        def payload = [
+        render([
             controller: 'wildcardValidation',
             action: 'show'
-        ]
-        if (params.id) {
-            payload.id = params.id
-        }
-        render(payload as JSON)
+        ] as JSON)
+    }
+
+    def fallback() {
+        render([
+            controller: 'wildcardValidation',
+            action: 'fallback',
+            path: params.path
+        ] as JSON)
     }
 }
-
-
-

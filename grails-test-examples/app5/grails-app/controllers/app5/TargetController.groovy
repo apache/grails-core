@@ -18,17 +18,18 @@
  */
 package app5
 
-class UrlMappings {
+import grails.compiler.GrailsCompileStatic
+import grails.converters.JSON
 
-    static mappings = {
+@GrailsCompileStatic
+class TargetController {
 
-        "/wildcard-disabled/$path"(controller: 'wildcardValidation', action: 'fallback')
-        "/wildcard-disabled/$controller/$action?"()
-        "/$controller/$action?/$id?(.$format)?" {
-            constraints {
-                // apply constraints here
-            }
-        }
+    static responseFormats = ['json']
 
+    def index() {
+        render([
+            controller: 'target',
+            action: 'index'
+        ] as JSON)
     }
 }

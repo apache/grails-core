@@ -14,19 +14,19 @@
 # limitations under the License.
 
 ---
-grails:
-    profile: web
-    codegen:
-        defaultPackage: app4
-    web:
-        url:
-            mapping:
-                validateWildcards: false
 info:
     app:
         name: '@info.app.name@'
         version: '@info.app.version@'
         grailsVersion: '@info.app.grailsVersion@'
+grails:
+    profile: web
+    codegen:
+        defaultPackage: app5
+    web:
+        url:
+            mapping:
+                validateWildcards: false
 spring:
     groovy:
         template:
@@ -68,8 +68,6 @@ grails:
     urlmapping:
         cache:
             maxsize: 1000
-    controllers:
-        defaultScope: singleton
     converters:
         encoding: UTF-8
     hibernate:
@@ -86,44 +84,4 @@ grails:
                 scriptlets: html
                 taglib: none
                 staticparts: none
-
----
-dataSource:
-    pooled: true
-    jmxExport: true
-    driverClassName: org.h2.Driver
-    username: sa
-    password:
-
-environments:
-    development:
-        dataSource:
-            dbCreate: create-drop
-            url: jdbc:h2:mem:devDb;LOCK_TIMEOUT=10000;DB_CLOSE_ON_EXIT=FALSE
-    test:
-        dataSource:
-            dbCreate: create-drop
-            url: jdbc:h2:mem:testDb;LOCK_TIMEOUT=10000;DB_CLOSE_ON_EXIT=FALSE
-    production:
-        dataSource:
-            dbCreate: create-drop
-            url: jdbc:h2:./prodDb;LOCK_TIMEOUT=10000;DB_CLOSE_ON_EXIT=FALSE
-            properties:
-                jmxEnabled: true
-                initialSize: 5
-                maxActive: 50
-                minIdle: 5
-                maxIdle: 25
-                maxWait: 10000
-                maxAge: 600000
-                timeBetweenEvictionRunsMillis: 5000
-                minEvictableIdleTimeMillis: 60000
-                validationQuery: SELECT 1
-                validationQueryTimeout: 3
-                validationInterval: 15000
-                testOnBorrow: true
-                testWhileIdle: true
-                testOnReturn: false
-                jdbcInterceptors: ConnectionState
-                defaultTransactionIsolation: 2
 
