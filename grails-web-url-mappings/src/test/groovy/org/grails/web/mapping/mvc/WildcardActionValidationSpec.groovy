@@ -185,8 +185,49 @@ class WildcardActionValidationSpec extends AbstractUrlMappingsSpec {
         info.actionName == 'show'
     }
 
+    void "explicit method-specific mapping beats wildcard optional action match"() {
+        given:
+        def grailsApplication = new DefaultGrailsApplication(InviteController)
+        grailsApplication.initialise()
+        def holder = getUrlMappingsHolder {
+            post "/invites"(controller: 'invite', action: 'create')
+            "/invites/$action?"(controller: 'invite')
+        }
+        holder = new GrailsControllerUrlMappings(grailsApplication, holder)
+
+        when: "posting to /invites"
+        def webRequest = GrailsWebMockUtil.bindMockWebRequest()
+        webRequest.renderView = true
+        def request = webRequest.request
+        request.setMethod("POST")
+        request.setRequestURI("/invites")
+        def handler = new UrlMappingsHandlerMapping(holder)
+        def handlerChain = handler.getHandler(request)
+
+        then: "the explicit POST mapping wins over the wildcard optional action"
+        handlerChain != null
+        handlerChain.handler instanceof GrailsControllerUrlMappingInfo
+        (handlerChain.handler as GrailsControllerUrlMappingInfo).info.actionName == 'create'
+    }
+
     void cleanup() {
         RequestContextHolder.resetRequestAttributes()
+    }
+}
+
+@Artefact('Controller')
+class InviteController {
+
+    static allowedMethods = [create: 'POST']
+
+    @Action
+    def manage() {
+        [invites: [], stats: [:]]
+    }
+
+    @Action
+    def create() {
+        [success: true]
     }
 }
 

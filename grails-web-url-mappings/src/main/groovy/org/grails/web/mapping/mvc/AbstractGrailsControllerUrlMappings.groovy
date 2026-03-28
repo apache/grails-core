@@ -210,6 +210,7 @@ abstract class AbstractGrailsControllerUrlMappings implements UrlMappings {
         def webRequest = GrailsWebRequest.lookup()
         List<UrlMappingInfo> wildcardActionMatches = []
         List<UrlMappingInfo> otherMatches = []
+        Set<String> explicitControllers = new HashSet<>()
         for (UrlMappingInfo info : infos) {
             if (info.redirectInfo) {
                 otherMatches.add(info)
@@ -227,14 +228,18 @@ abstract class AbstractGrailsControllerUrlMappings implements UrlMappings {
                     wildcardActionMatches.add(wrapped)
                 } else {
                     otherMatches.add(wrapped)
+                    explicitControllers.add(info.controllerName)
                 }
             } else if (!validateWildcardMappings || !info.hasWildcardCaptures()) {
                 otherMatches.add(info)
             }
             // else: wildcard-captured values didn't match a registered controller/action — skip
         }
-        // Wildcard-captured matches that resolved to real actions take priority
-        (wildcardActionMatches + otherMatches) as UrlMappingInfo[]
+        // Wildcard-resolved matches take priority over non-controller matches,
+        // but not over explicit mappings that already target the same controller
+        List<UrlMappingInfo> promoted = wildcardActionMatches.findAll { !(it.controllerName in explicitControllers) }
+        List<UrlMappingInfo> demoted = wildcardActionMatches.findAll { it.controllerName in explicitControllers }
+        (promoted + otherMatches + demoted) as UrlMappingInfo[]
     }
 
     protected UrlMappingInfo collectControllerMapping(UrlMappingInfo info) {
