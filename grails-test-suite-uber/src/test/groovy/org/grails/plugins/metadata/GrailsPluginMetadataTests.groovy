@@ -18,11 +18,15 @@
  */
 package org.grails.plugins.metadata
 
+import org.springframework.core.env.StandardEnvironment
+
 import grails.core.DefaultGrailsApplication
 import grails.plugins.DefaultGrailsPluginManager
 import grails.plugins.metadata.GrailsPlugin
 import grails.util.GrailsUtil
 import org.junit.Test
+
+import org.apache.grails.core.plugins.DefaultPluginDiscovery
 
 import static org.junit.jupiter.api.Assertions.assertEquals
 import static org.junit.jupiter.api.Assertions.assertNull
@@ -36,7 +40,10 @@ class GrailsPluginMetadataTests {
     @Test
     void testAnnotatedMetadata() {
         def app = new DefaultGrailsApplication([Test1, Test2, Test3] as Class[], getClass().classLoader)
-        def pluginManager = new DefaultGrailsPluginManager([] as Class[], app)
+
+        def discovery = new DefaultPluginDiscovery()
+        discovery.init(new StandardEnvironment())
+        def pluginManager = new DefaultGrailsPluginManager(app, discovery)
         pluginManager.loadPlugins()
 
         assertEquals "/plugins/controllers-${GrailsUtil.grailsVersion}", pluginManager.getPluginPathForClass(Test1)
