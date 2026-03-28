@@ -42,17 +42,17 @@ class GrailsDataTckSpec<T extends GrailsDataTckManager> extends Specification {
 
     private Class<T> findManagerClass() {
         Class<?> clazz = getClass()
-        while (clazz != Object.class) {
+        while (clazz != Object) {
             Type superclass = clazz.getGenericSuperclass()
             if (superclass instanceof ParameterizedType) {
                 ParameterizedType pt = (ParameterizedType) superclass
-                if (pt.getRawType() == GrailsDataTckSpec.class) {
+                if (pt.getRawType() == GrailsDataTckSpec) {
                     return (Class<T>) pt.getActualTypeArguments()[0]
                 }
             }
             clazz = clazz.getSuperclass()
         }
-        return (Class<T>) GrailsDataTckManager.class
+        return (Class<T>) GrailsDataTckManager
     }
 
     void cleanupSpec() {

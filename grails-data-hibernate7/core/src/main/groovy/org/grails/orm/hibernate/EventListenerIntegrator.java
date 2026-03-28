@@ -78,7 +78,10 @@ public class EventListenerIntegrator implements Integrator {
 
     @SuppressWarnings({"unchecked", "rawtypes", "PMD.DataflowAnomalyAnalysis"})
     @Override
-    public void integrate(Metadata metadata, BootstrapContext bootstrapContext, SessionFactoryImplementor sfi) {
+    public void integrate(
+            Metadata metadata,
+            org.hibernate.boot.spi.BootstrapContext bootstrapContext,
+            SessionFactoryImplementor sfi) {
 
         EventListenerRegistry listenerRegistry = sfi.getServiceRegistry().getService(EventListenerRegistry.class);
         if (listenerRegistry == null) {

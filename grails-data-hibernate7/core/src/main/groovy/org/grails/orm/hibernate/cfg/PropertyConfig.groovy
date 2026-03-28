@@ -40,19 +40,16 @@ import groovy.transform.builder.SimpleStrategy
 
 import jakarta.persistence.AccessType
 import jakarta.persistence.FetchType
+import org.hibernate.FetchMode
+import org.springframework.beans.MutablePropertyValues
+import org.springframework.validation.DataBinder
+import org.grails.datastore.mapping.config.Property
+
 import static jakarta.persistence.FetchType.EAGER
 import static jakarta.persistence.FetchType.LAZY
-
-import org.hibernate.FetchMode
 import static org.hibernate.FetchMode.DEFAULT
 import static org.hibernate.FetchMode.JOIN
 import static org.hibernate.FetchMode.SELECT
-
-
-import org.springframework.beans.MutablePropertyValues
-import org.springframework.validation.DataBinder
-
-import org.grails.datastore.mapping.config.Property
 
 /**
  * Custom mapping for a single domain property. Note that a property
@@ -269,7 +266,7 @@ class PropertyConfig extends Property {
      * @param fetch The Hibernate {@link FetchMode}
      */
     void setFetch(FetchMode fetch) {
-        super.setFetchStrategy(JOIN == fetch ? EAGER: LAZY)
+        super.setFetchStrategy(JOIN == fetch ? EAGER : LAZY)
     }
 
     /**

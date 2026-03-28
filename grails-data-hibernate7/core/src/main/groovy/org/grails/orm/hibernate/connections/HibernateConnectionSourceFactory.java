@@ -48,6 +48,7 @@ import org.grails.datastore.gorm.jdbc.connections.DataSourceConnectionSourceFact
 import org.grails.datastore.gorm.jdbc.connections.DataSourceSettings;
 import org.grails.datastore.gorm.jdbc.connections.DataSourceSettingsBuilder;
 import org.grails.datastore.gorm.validation.jakarta.JakartaValidatorRegistry;
+import org.checkerframework.checker.nullness.qual.NonNull;
 import org.grails.datastore.mapping.core.connections.AbstractConnectionSourceFactory;
 import org.grails.datastore.mapping.core.connections.ConnectionSource;
 import org.grails.datastore.mapping.core.connections.ConnectionSourceSettings;
@@ -79,14 +80,24 @@ public class HibernateConnectionSourceFactory
             new CachedDataSourceConnectionSourceFactory();
 
     protected HibernateMappingContext mappingContext;
-    protected Class<?>[] persistentClasses;
+    protected final Class<?>[] persistentClasses;
+    protected final org.grails.orm.hibernate.proxy.GrailsBytecodeProvider bytecodeProvider;
     protected HibernateEventListeners hibernateEventListeners;
     protected Interceptor interceptor;
     protected MessageSource messageSource = new StaticMessageSource();
     private ApplicationContext applicationContext;
 
-    public HibernateConnectionSourceFactory(Class<?>... classes) {
+    public org.grails.orm.hibernate.proxy.GrailsBytecodeProvider getBytecodeProvider() {
+        return bytecodeProvider;
+    }
+
+    public HibernateConnectionSourceFactory(org.grails.orm.hibernate.proxy.GrailsBytecodeProvider bytecodeProvider, Class<?>... classes) {
+        this.bytecodeProvider = bytecodeProvider;
         this.persistentClasses = classes != null ? classes.clone() : new Class[0];
+    }
+
+    public HibernateConnectionSourceFactory(Class<?>... classes) {
+        this(new org.grails.orm.hibernate.proxy.GrailsBytecodeProvider(), classes);
     }
 
     private static void applyResources(Resource[] resources, ResourceConfigurer configurer) {
@@ -167,6 +178,11 @@ public class HibernateConnectionSourceFactory
 
         HibernateConnectionSourceSettings.HibernateSettings hibernateSettings = settings.getHibernate();
         HibernateMappingContextConfiguration configuration = resolveConfiguration(hibernateSettings.getConfigClass());
+        configuration.setBytecodeProvider(this.bytecodeProvider);
+        configuration.getProperties().put("jakarta.persistence.nonJtaDataSource", dataSourceConnectionSource.getSource());
+        if (applicationContext != null) {
+            configuration.setApplicationContext(applicationContext);
+        }
 
         configureValidator(configuration, dataSourceConnectionSource.getSettings());
         configureDataSource(configuration, dataSourceConnectionSource);
@@ -220,7 +236,9 @@ public class HibernateConnectionSourceFactory
     private void configureDataSource(
             HibernateMappingContextConfiguration configuration,
             ConnectionSource<DataSource, DataSourceSettings> dataSourceConnectionSource) {
-        if (applicationContext != null && applicationContext.containsBean(dataSourceConnectionSource.getName())) {
+        String dsName = dataSourceConnectionSource.getName();
+        String beanName = ConnectionSource.DEFAULT.equals(dsName) ? "dataSource" : "dataSource_" + dsName;
+        if (applicationContext != null && applicationContext.containsBean(beanName)) {
             configuration.setApplicationContext(applicationContext);
         } else {
             configuration.setDataSourceConnectionSource(dataSourceConnectionSource);

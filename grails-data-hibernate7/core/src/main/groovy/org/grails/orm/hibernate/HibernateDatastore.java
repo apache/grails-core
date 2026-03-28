@@ -200,12 +200,14 @@ public class HibernateDatastore extends AbstractDatastore
     protected final TenantResolver tenantResolver;
 
     private boolean destroyed;
+    private final boolean isChild;
 
     protected final GrailsHibernateTransactionManager transactionManager;
     protected ConfigurableApplicationEventPublisher eventPublisher;
     protected final HibernateGormEnhancer gormEnhancer;
     protected final Map<String, HibernateDatastore> datastoresByConnectionSource = new LinkedHashMap<>();
     protected final Metadata metadata;
+    protected final org.grails.orm.hibernate.proxy.GrailsBytecodeProvider bytecodeProvider;
 
     /**
      * Create a new HibernateDatastore for the given connection sources and mapping context
@@ -218,10 +220,26 @@ public class HibernateDatastore extends AbstractDatastore
             final ConnectionSources<SessionFactory, HibernateConnectionSourceSettings> connectionSources,
             final HibernateMappingContext mappingContext,
             final ConfigurableApplicationEventPublisher eventPublisher) {
+        this(connectionSources, mappingContext, eventPublisher, false);
+    }
+
+    private HibernateDatastore(
+            final ConnectionSources<SessionFactory, HibernateConnectionSourceSettings> connectionSources,
+            final HibernateMappingContext mappingContext,
+            final ConfigurableApplicationEventPublisher eventPublisher,
+            boolean isChild) {
         super(mappingContext, connectionSources.getBaseConfiguration(), null);
+        this.isChild = isChild;
         this.connectionSources = connectionSources;
         final HibernateConnectionSource defaultConnectionSource =
                 (HibernateConnectionSource) connectionSources.getDefaultConnectionSource();
+        org.grails.datastore.mapping.core.connections.ConnectionSourceFactory<SessionFactory, HibernateConnectionSourceSettings> factory = connectionSources.getFactory();
+        if (factory instanceof HibernateConnectionSourceFactory hibernateConnectionSourceFactory) {
+            this.bytecodeProvider = hibernateConnectionSourceFactory.getBytecodeProvider();
+        } else {
+            // Fallback for SingletonConnectionSources or NullConnectionFactory
+            this.bytecodeProvider = new org.grails.orm.hibernate.proxy.GrailsBytecodeProvider();
+        }
         this.dataSourceName = ConnectionSource.DEFAULT;
         this.sessionFactory = defaultConnectionSource.getSource();
         HibernateConnectionSourceSettings settings = defaultConnectionSource.getSettings();
@@ -266,7 +284,7 @@ public class HibernateDatastore extends AbstractDatastore
         });
         initializeConverters(this.mappingContext);
 
-        if (!(connectionSources instanceof SingletonConnectionSources)) {
+        if (!isChild && !(connectionSources instanceof SingletonConnectionSources)) {
 
             final HibernateDatastore parent = this;
             Iterable<ConnectionSource<SessionFactory, HibernateConnectionSourceSettings>> allConnectionSources =
@@ -528,10 +546,12 @@ public class HibernateDatastore extends AbstractDatastore
             ApplicationContext applicationContext,
             String dataSourceName) {
         super(mappingContext, config, (ConfigurableApplicationContext) applicationContext);
+        this.isChild = false;
         this.connectionSources = new SingletonConnectionSources<>(
                 new HibernateConnectionSource(dataSourceName, sessionFactory, null, null), config);
         this.sessionFactory = sessionFactory;
         this.dataSourceName = dataSourceName;
+        this.bytecodeProvider = new org.grails.orm.hibernate.proxy.GrailsBytecodeProvider();
         initializeConverters(mappingContext);
         if (applicationContext != null) {
             setApplicationContext(applicationContext);
@@ -876,7 +896,8 @@ public class HibernateDatastore extends AbstractDatastore
         return new HibernateDatastore(
                 singletonConnectionSources,
                 (HibernateMappingContext) HibernateDatastore.this.mappingContext,
-                HibernateDatastore.this.eventPublisher) {
+                HibernateDatastore.this.eventPublisher,
+                true) {
             @Override
             protected HibernateGormEnhancer initialize() {
                 return null;

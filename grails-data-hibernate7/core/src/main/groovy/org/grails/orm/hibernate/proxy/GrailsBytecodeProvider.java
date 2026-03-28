@@ -41,7 +41,11 @@ public class GrailsBytecodeProvider implements BytecodeProvider, java.io.Seriali
     private final ByteBuddyProxyHelper proxyHelper;
 
     public GrailsBytecodeProvider() {
-        this.proxyHelper = new ByteBuddyProxyHelper(new org.hibernate.bytecode.internal.bytebuddy.ByteBuddyState());
+        this.proxyHelper = createProxyHelper();
+    }
+
+    protected ByteBuddyProxyHelper createProxyHelper() {
+        return new ByteBuddyProxyHelper(new org.hibernate.bytecode.internal.bytebuddy.ByteBuddyState());
     }
 
     public ByteBuddyProxyHelper getProxyHelper() {

@@ -27,7 +27,7 @@ import org.apache.grails.data.testing.tck.base.GrailsDataTckSpec
 /**
  * Abstract base test for order by queries. Subclasses should do the necessary setup to configure GORM
  */
-@IgnoreIf({System.getProperty('core.gorm.suite') == 'true'})
+@IgnoreIf({ System.getProperty('core.gorm.suite') == 'true' })
 class OrderBySpec extends GrailsDataTckSpec {
 
     void setupSpec() {

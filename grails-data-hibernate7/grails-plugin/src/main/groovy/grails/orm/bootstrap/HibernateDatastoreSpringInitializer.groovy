@@ -37,6 +37,9 @@ import javax.sql.DataSource
 import groovy.transform.CompileStatic
 
 import org.springframework.beans.factory.support.BeanDefinitionRegistry
+import org.grails.spring.RuntimeSpringConfiguration
+import org.grails.spring.DefaultRuntimeSpringConfiguration
+import grails.spring.BeanBuilder
 import org.springframework.context.ApplicationContext
 import org.springframework.context.ApplicationEventPublisher
 import org.springframework.context.support.GenericApplicationContext
@@ -75,6 +78,8 @@ class HibernateDatastoreSpringInitializer extends AbstractDatastoreInitializer {
     Set<String> dataSources = [defaultDataSourceBeanName] as Set<String>
     boolean enableReload = false
     boolean grailsPlugin = false
+    Closure beanDefinitions
+    protected ApplicationContext applicationContext
 
     HibernateDatastoreSpringInitializer(PropertyResolver configuration, Collection<Class> persistentClasses) {
         super(configuration, persistentClasses)
@@ -134,9 +139,20 @@ class HibernateDatastoreSpringInitializer extends AbstractDatastoreInitializer {
     @Override
     ApplicationContext configure() {
         GenericApplicationContext applicationContext = createApplicationContext()
+        this.applicationContext = applicationContext
         configureForBeanDefinitionRegistry(applicationContext)
         applicationContext.refresh()
         return applicationContext
+    }
+
+    void configureForBeanDefinitionRegistry(BeanDefinitionRegistry beanDefinitionRegistry) {
+        def definitions = getBeanDefinitions(beanDefinitionRegistry)
+        BeanBuilder beanBuilder = new BeanBuilder()
+        beanBuilder.beans(definitions)
+        if (this.beanDefinitions != null) {
+            beanBuilder.beans(this.beanDefinitions)
+        }
+        beanBuilder.registerBeans(beanDefinitionRegistry)
     }
 
     protected String getTestDbUrl() {
@@ -154,7 +170,7 @@ class HibernateDatastoreSpringInitializer extends AbstractDatastoreInitializer {
 
     Closure getBeanDefinitions(BeanDefinitionRegistry beanDefinitionRegistry) {
         ApplicationEventPublisher eventPublisher = super.findEventPublisher(beanDefinitionRegistry)
-        Closure beanDefinitions = {
+        return { ->
             def common = getCommonConfiguration(beanDefinitionRegistry, 'hibernate')
             common.delegate = delegate
             common.call()
@@ -162,12 +178,18 @@ class HibernateDatastoreSpringInitializer extends AbstractDatastoreInitializer {
             // for unwrapping / inspecting proxies
             hibernateProxyHandler(HibernateProxyHandler)
 
+            hibernateBytecodeProvider(org.grails.orm.hibernate.proxy.GrailsBytecodeProvider)
+
             def config = this.configuration
             final boolean isGrailsPresent = isGrailsPresent()
+            def appContext = this.applicationContext
             dataSourceConnectionSourceFactory(CachedDataSourceConnectionSourceFactory)
-            hibernateConnectionSourceFactory(HibernateConnectionSourceFactory, persistentClasses as Class[]) { bean ->
+            hibernateConnectionSourceFactory(HibernateConnectionSourceFactory, ref('hibernateBytecodeProvider'), persistentClasses as Class[]) { bean ->
                 bean.autowire = true
                 dataSourceConnectionSourceFactory = ref('dataSourceConnectionSourceFactory')
+                if (appContext != null) {
+                    applicationContext = appContext
+                }
             }
             hibernateDatastore(HibernateDatastore, config, hibernateConnectionSourceFactory, eventPublisher) { bean ->
                 bean.primary = true

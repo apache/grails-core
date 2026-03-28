@@ -33,8 +33,7 @@ class MetadataIntegrator implements Integrator {
     Metadata metadata
 
     @Override
-    void integrate(Metadata metadata, BootstrapContext bootstrapContext,
-                   SessionFactoryImplementor sessionFactory) {
+    void integrate(Metadata metadata, BootstrapContext bootstrapContext, SessionFactoryImplementor sessionFactory) {
         this.metadata = metadata
     }
 
