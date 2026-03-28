@@ -93,7 +93,9 @@ With this configuration:
 
 This validation applies to `$controller`, `$action`, and `$namespace` wildcards. Hardcoded values in mappings (e.g., `controller: 'topic'`) are never filtered — only wildcard-captured values are validated.
 
-When a wildcard-captured action matches a real action on the controller, it takes priority over other mappings where the action is hardcoded. This means `$action` mappings that resolve to valid actions will always be preferred over `$id` mappings with a hardcoded action, regardless of URL mapping sort order.
+When a wildcard-captured action matches a real action on the controller, it takes priority over less-specific fallback mappings where the action is hardcoded. This means a `$action` mapping that resolves to a valid action will be preferred over a catch-all mapping such as `$id` with a hardcoded action, even if the fallback mapping sorts ahead of it.
+
+More-specific mappings still win. Literal paths such as `/community` and explicit method-specific mappings such as `post "/invites"` are not displaced by wildcard controller/action matches.
 
 To disable this behavior, set in `application.yml`:
 
