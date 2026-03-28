@@ -17,7 +17,7 @@ limitations under the License.
 # Apache Grails
 
 [![Documentation](https://img.shields.io/badge/Documentation-595959)](https://grails.apache.org/docs/)
-[![Develocity](https://img.shields.io/badge/Develocity-06A0CE?logo=Gradle&labelColor=06A0CE)](https://ge.grails.org/scans)
+[![Develocity](https://img.shields.io/badge/Develocity-06A0CE?logo=Gradle&labelColor=06A0CE)](https://develocity.apache.org/scans)
 [![CI](https://github.com/apache/grails-core/actions/workflows/gradle.yml/badge.svg?event=push)](https://github.com/apache/grails-core/actions/workflows/gradle.yml)
 [![Groovy Joint Validation Build](https://github.com/apache/grails-core/actions/workflows/groovy-joint-workflow.yml/badge.svg?event=push)](https://github.com/apache/grails-core/actions/workflows/groovy-joint-workflow.yml)
 [![Users Mailing List](https://img.shields.io/badge/Users_Mailing_List-feb571)](https://lists.apache.org/list.html?users@grails.apache.org)

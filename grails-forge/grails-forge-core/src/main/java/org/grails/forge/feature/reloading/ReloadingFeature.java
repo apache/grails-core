@@ -20,9 +20,11 @@ package org.grails.forge.feature.reloading;
 
 import org.grails.forge.application.ApplicationType;
 import org.grails.forge.feature.Category;
+import org.grails.forge.feature.DefaultFeature;
 import org.grails.forge.feature.OneOfFeature;
+import org.grails.forge.options.DevelopmentReloading;
 
-public interface ReloadingFeature extends OneOfFeature {
+public interface ReloadingFeature extends OneOfFeature, DefaultFeature {
 
     @Override
     default Class<?> getFeatureClass() {
@@ -37,5 +39,12 @@ public interface ReloadingFeature extends OneOfFeature {
     @Override
     default String getCategory() {
         return Category.DEV_TOOLS;
+    }
+
+    DevelopmentReloading getReloading();
+
+    @Override
+    default boolean isVisible() {
+        return false;
     }
 }

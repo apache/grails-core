@@ -80,99 +80,78 @@ dependencies {
     testRuntimeOnly 'org.junit.jupiter:junit-jupiter-engine'
     testRuntimeOnly 'org.springframework:spring-aspects'
 
-
     // Testing
     testImplementation('org.spockframework:spock-core') { transitive = false }
+
     // Required by Spock's Mocking
     testRuntimeOnly 'net.bytebuddy:byte-buddy'
 }
 
 def isolatedTestPatterns = [
-        isolatedTestsOne              : [
+        isolatedTestsOne: [
                 'org.grails.core.DefaultGrailsControllerClassSpec',
                 'org.grails.web.util.WebUtilsTests'
         ],
-        isolatedTestsTwo              : [
+        isolatedTestsTwo: [
                 'grails.test.mixin.UrlMappingsTestMixinTests',
                 'grails.test.mixin.SetupTeardownInvokeTests',
                 'grails.test.mixin.TestMixinSetupTeardownInvokeTests'
         ],
-        isolatedRestRendererTests     : [
+        isolatedRestRendererTests: [
                 '*.rest.render.*Spec'
         ],
-        isolatedPersonTests           : [
+        isolatedPersonTests: [
                 'org.grails.validation.TestingValidationSpec',
                 'org.grails.validation.CascadingErrorCountSpec'
         ],
         isolatedRestfulControllerTests: [
                 'grails.test.mixin.RestfulControllerSpec',
                 'grails.test.mixin.ResourceAnnotationRestfulControllerSpec'
-        ]
+        ],
+]
+
+def testSkippingProperties = [
+        'onlyFunctionalTests',
+        'onlyHibernate5Tests',
+        'onlyMongodbTests',
+        'skipCoreTests',
+        'skipTests',
 ]
 
 isolatedTestPatterns.keySet().each { taskName ->
-    tasks.register(taskName, Test).configure { Test tTask ->
-        tTask.onlyIf {
-            ![
-                    'onlyFunctionalTests',
-                    'onlyHibernate5Tests',
-                    'onlyMongodbTests',
-                    'skipCoreTests',
-                    'skipTests'
-            ].find {
-                project.hasProperty(it)
-            }
-        }
-        tTask.group = 'verification'
-        tTask.filter.includePatterns = isolatedTestPatterns[taskName]
+    tasks.register(taskName, Test) {
+        group = 'verification'
+        filter.includePatterns = isolatedTestPatterns[taskName]
     }
 }
 
-tasks.named('isolatedTestsTwo', Test).configure {
+tasks.named('isolatedTestsTwo', Test) {
     maxParallelForks = 1
     forkEvery = 100
 }
 
 tasks.withType(Test).configureEach {
-    onlyIf {
-        ![
-                'onlyHibernate5Tests',
-                'onlyMongodbTests',
-                'skipCoreTests'
-        ].find {
-            project.hasProperty(it)
-        }
-    }
-
-    onlyIf {
-        !project.hasProperty('onlyFunctionalTests')
-    }
+    onlyIf { !testSkippingProperties.any {project.hasProperty(it) } }
     useJUnitPlatform()
     maxParallelForks = configuredTestParallel
-    forkEvery = isCiBuild ? 25 : 100
+    forkEvery = isCiBuild ? 50 : 100
     maxHeapSize = isCiBuild ? '768m' : '1024m'
     jvmArgs('--add-opens=java.base/java.lang=ALL-UNNAMED', '--add-opens=java.base/java.util=ALL-UNNAMED')
 }
 
-tasks.named('test', Test).configure {
-    onlyIf {
-        ![
-                'onlyFunctionalTests',
-                'onlyHibernate5Tests',
-                'onlyMongodbTests',
-                'skipCoreTests',
-                'skipTests'
-        ].find {
-            project.hasProperty(it)
-        }
-    }
-
+tasks.named('test', Test) {
+    // Exclude the isolated tests from the main test task
     filter.excludePatterns = isolatedTestPatterns.values().flatten()
-    dependsOn(provider {
-        tasks.findAll({
-            isolatedTestPatterns.containsKey(it.name)
-        })
-    })
+}
+
+tasks.register('testAll') {
+    group = 'verification'
+    description = 'Runs all tests, including isolated ones.'
+    dependsOn(tasks.withType(Test))
+}
+
+tasks.named('check') {
+    dependsOn('testAll')
 }
 
 tasks.withType(Groovydoc).configureEach {

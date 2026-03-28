@@ -20,6 +20,7 @@
 package org.grails.forge.build.dependencies
 
 import org.grails.forge.build.gradle.GradleConfiguration
+import org.grails.forge.options.DevelopmentReloading
 import org.grails.forge.options.Language
 import org.grails.forge.options.TestFramework
 import spock.lang.Specification
@@ -35,7 +36,7 @@ class GradleConfigurationSpec extends Specification {
     void "it is possible to adapt from source and phases to Gradle configuration"(Source source,
                                                                                   List<Phase> phases, GradleConfiguration configuration,
                                                                                   String description) {
-        configuration == GradleConfiguration.of(new Scope(source, phases), Language.GROOVY, TestFramework.JUNIT).get()
+        configuration == GradleConfiguration.of(new Scope(source, phases), DevelopmentReloading.DEVTOOLS).get()
 
         where:
         source           | phases                                       || configuration

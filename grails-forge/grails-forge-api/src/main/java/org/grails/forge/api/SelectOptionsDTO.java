@@ -24,7 +24,7 @@ import io.micronaut.core.annotation.Introspected;
 import io.swagger.v3.oas.annotations.media.Schema;
 import org.grails.forge.api.options.*;
 import org.grails.forge.application.ApplicationType;
-import org.grails.forge.options.TestFramework;
+import org.grails.forge.options.DevelopmentReloading;
 import org.grails.forge.options.*;
 
 import java.util.Arrays;
@@ -45,8 +45,8 @@ public class SelectOptionsDTO {
     private JdkVersionSelectOptions jdkVersion;
 
     private LanguageSelectOptions lang;
-
-    private TestFrameworkSelectOptions test;
+    
+    private DevelopmentReloadingSelectOptions reloading;
 
     private GormImplSelectOptions gorm;
 
@@ -59,13 +59,13 @@ public class SelectOptionsDTO {
     public SelectOptionsDTO(ApplicationTypeSelectOptions type,
                             JdkVersionSelectOptions jdkVersion,
                             LanguageSelectOptions lang,
-                            TestFrameworkSelectOptions test,
+                            DevelopmentReloadingSelectOptions reloading,
                             GormImplSelectOptions gorm,
                             ServletImplSelectOptions servlet) {
         this.type = type;
         this.jdkVersion = jdkVersion;
         this.lang = lang;
-        this.test = test;
+        this.reloading = reloading;
         this.gorm = gorm;
         this.servlet = servlet;
     }
@@ -85,9 +85,9 @@ public class SelectOptionsDTO {
         return lang;
     }
 
-    @Schema(description = "supported options for test frameworks")
-    public TestFrameworkSelectOptions getTest() {
-        return test;
+    @Schema(description = "supported options for development reloading")
+    public DevelopmentReloadingSelectOptions getReloading() {
+        return reloading;
     }
 
     @Schema(description = "supported options for GORM Implementation")
@@ -136,13 +136,13 @@ public class SelectOptionsDTO {
                 new LanguageDTO(Language.DEFAULT_OPTION, messageSource, messageContext)
         );
 
-        List<TestFrameworkDTO> testFrameworks = Arrays.stream(TestFramework.values())
-                .map(it -> new TestFrameworkDTO(it, messageSource, messageContext))
+        List<DevelopmentReloadingDTO> developmentReloading = Arrays.stream(DevelopmentReloading.values())
+                .map(it -> new DevelopmentReloadingDTO(it, messageSource, messageContext))
                 .collect(Collectors.toList());
 
-        TestFrameworkSelectOptions testFrameworkOpts = new TestFrameworkSelectOptions(
-                testFrameworks,
-                new TestFrameworkDTO(TestFramework.DEFAULT_OPTION, messageSource, messageContext)
+        DevelopmentReloadingSelectOptions developmentReloadingOpts = new DevelopmentReloadingSelectOptions(
+            developmentReloading,
+                new DevelopmentReloadingDTO(DevelopmentReloading.DEFAULT_OPTION, messageSource, messageContext)
         );
 
         List<GormImplDTO> gormImpls = Arrays.stream(GormImpl.values())
@@ -164,7 +164,7 @@ public class SelectOptionsDTO {
         );
 
 
-        return new SelectOptionsDTO(applicationOpts, jdkVersionOpts, languageOpts, testFrameworkOpts, gormImplOpts, servletImplOpts);
+        return new SelectOptionsDTO(applicationOpts, jdkVersionOpts, languageOpts, developmentReloadingOpts, gormImplOpts, servletImplOpts);
 
     }
 }

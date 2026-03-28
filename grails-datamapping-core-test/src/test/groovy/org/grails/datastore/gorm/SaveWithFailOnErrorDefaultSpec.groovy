@@ -46,40 +46,42 @@ class SaveWithFailOnErrorDefaultSpec extends GrailsDataTckSpec<GrailsDataCoreTck
         context.addEntityValidator(entity, validator)
     }
 
-    void "test save with fail on error default"() {
-        when: "A product is saved with fail on error default true"
-        GormEnhancer.findInstanceApi(TestProduct).failOnError = true
-        def p = new TestProduct()
-        p.save()
+    void "save(failOnError: true) throws ValidationException on invalid entity"() {
+        when: "An invalid product is saved with failOnError: true"
+        new TestProduct().save(failOnError: true)
 
-        then: "Validation exception thrown"
+        then: "ValidationException is thrown"
         thrown(ValidationException)
-
-        when: "A product is saved with fail on error default false"
-        GormEnhancer.findInstanceApi(TestProduct).failOnError = false
-        p = new TestProduct()
-        def result = p.save()
-
-        then: "The save returns false"
-        !result
     }
 
-    void "test override fail on error default"() {
-        when: "A product is saved with fail on error override to false"
-        GormEnhancer.findInstanceApi(TestProduct).failOnError = true
-        def p = new TestProduct()
-        def result = p.save(failOnError: false, flush: true)
+    void "save(failOnError: false) returns null on invalid entity"() {
+        when: "An invalid product is saved with failOnError: false"
+        def result = new TestProduct().save(failOnError: false)
 
-        then: "The save returns false"
-        !result
+        then: "null is returned instead of throwing"
+        result == null
+    }
 
-        when: "A product is saved with fail on error override to true"
-        GormEnhancer.findInstanceApi(TestProduct).failOnError = false
-        p = new TestProduct()
-        p.save(failOnError: true)
+    void "save() default behaviour returns null on invalid entity"() {
+        when: "An invalid product is saved with no explicit failOnError arg"
+        def result = new TestProduct().save()
 
-        then: "Validation exception thrown"
+        then: "null is returned (default is false)"
+        result == null
+    }
+
+    void "per-call failOnError: true overrides when entity is invalid"() {
+        when: "save with explicit failOnError: true on an invalid entity"
+        new TestProduct().save(failOnError: true)
+
+        then:
         thrown(ValidationException)
+
+        when: "save with explicit failOnError: false on an invalid entity"
+        def result = new TestProduct().save(failOnError: false, flush: true)
+
+        then:
+        result == null
     }
 }
 

@@ -19,12 +19,8 @@ on:
     types: [closed,reopened]
   push:
     branches:
-      - master
-      - '[4-9]+.[0-9]+.x'
-      - '[3-9]+.[3-9]+.x'
+      - '[0-9]+.[0-9]+.x'
   pull_request:
-    types: [opened, reopened, synchronize, labeled]
-  pull_request_target:
     types: [opened, reopened, synchronize, labeled]
   workflow_dispatch:
 # queue jobs and only allow 1 run per branch due to the likelihood of hitting GitHub resource limits
@@ -40,7 +36,18 @@ jobs:
       pull-requests: write
     runs-on: ubuntu-latest
     steps:
+      - name: "🔢 Derive semver range from branch"
+        id: version
+        run: |
+          BRANCH="${{ github.event.pull_request.base.ref || github.ref_name }}"
+          if [[ "$BRANCH" =~ ^[0-9]+\.[0-9]+\.x$ ]]; then
+            echo "range=~${BRANCH%.x}.0" >> "$GITHUB_OUTPUT"
+          fi
       - name: "📝 Update Release Draft"
-        uses: release-drafter/release-drafter@v6
+        uses: release-drafter/release-drafter@v7
+        continue-on-error: true
+        with:
+          commitish: ${{ github.event.pull_request.base.ref || github.ref_name }}
+          filter-by-range: ${{ steps.version.outputs.range }}
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

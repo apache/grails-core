@@ -26,6 +26,7 @@ version = '0.1'
 group = 'gorm'
 
 apply plugin: 'org.apache.grails.gradle.grails-web'
+apply plugin: 'org.apache.grails.gradle.grails-gsp'
 
 dependencies {
     implementation platform(project(':grails-bom'))
@@ -49,8 +50,8 @@ dependencies {
     }
     implementation 'org.apache.grails:grails-cache'
 
-    runtimeOnly 'org.apache.grails:grails-scaffolding'
-    runtimeOnly 'org.apache.grails:grails-fields'
+    implementation 'org.apache.grails:grails-scaffolding'
+    implementation 'org.apache.grails:grails-fields'
     runtimeOnly 'org.apache.tomcat:tomcat-jdbc'
 
     testImplementation 'org.apache.grails:grails-testing-support-web'

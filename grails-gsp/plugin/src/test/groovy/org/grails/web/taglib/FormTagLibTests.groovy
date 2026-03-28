@@ -52,12 +52,40 @@ class FormTagLibTests extends Specification implements TagLibUnitTest<FormTagLib
     def setup() {
         tagLib.requestDataValueProcessor = new MockRequestDataValueProcessor()
 
+        // Clear any existing URL mappings artefacts to prevent test environment pollution
+        clearUrlMappingsArtefacts()
         grailsApplication.addArtefact(UrlMappingsArtefactHandler.TYPE, FormTagLibUrlMappings)
 
         defineBeans {
             grailsUrlMappingsHolder(UrlMappingsHolderFactoryBean) {
                 delegate.grailsApplication = grailsApplication
             }
+        }
+
+        // Update the linkGenerator's urlMappingsHolder reference to point to the new holder bean.
+        // This is necessary because linkGenerator was @Autowired with the previous holder instance
+        // and won't automatically update when we redefine the grailsUrlMappingsHolder bean.
+        refreshLinkGeneratorUrlMappingsHolder()
+    }
+
+    private void refreshLinkGeneratorUrlMappingsHolder() {
+        if (applicationContext.containsBean('grailsLinkGenerator') && applicationContext.containsBean('grailsUrlMappingsHolder')) {
+            def linkGenerator = applicationContext.getBean('grailsLinkGenerator')
+            if (linkGenerator.hasProperty('urlMappingsHolder')) {
+                linkGenerator.urlMappingsHolder = applicationContext.getBean('grailsUrlMappingsHolder')
+            }
+        }
+    }
+
+    def cleanup() {
+        // Clear URL mappings artefacts added by this test to prevent pollution of other tests
+        clearUrlMappingsArtefacts()
+    }
+
+    private void clearUrlMappingsArtefacts() {
+        // Access the protected artefactInfo map and remove URL mappings to prevent test environment pollution
+        if (grailsApplication instanceof grails.core.DefaultGrailsApplication) {
+            grailsApplication.@artefactInfo.remove(UrlMappingsArtefactHandler.TYPE)
         }
     }
 

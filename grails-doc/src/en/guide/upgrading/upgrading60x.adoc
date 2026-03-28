@@ -371,6 +371,24 @@ Here's an example `gradle.properties` file:
 micronautPlatformVersion=4.9.2
 ----
 
+Please note that, due to https://github.com/micronaut-projects/micronaut-spring/issues/769[this issue], Spring Boot DevTools does not work with the Micronaut integration.
+
+The Grails Gradle Plugin automatically configures Groovy-based Micronaut bean registration via AST transforms (`micronaut-inject-groovy` on `compileOnlyApi`). Groovy classes annotated with `@Singleton`, `@Factory`, `@ConfigurationProperties`, etc. are processed automatically.
+
+IMPORTANT: If your project contains **Java source files** with Micronaut annotations (e.g. `@Singleton`, `@Factory`), you must manually add the Micronaut annotation processor to your `build.gradle`. The annotation processor is not configured automatically because it is incompatible with Groovy incremental compilation (see https://github.com/apache/grails-core/issues/15211[#15211]). For projects that mix Java and Groovy Micronaut beans, consider splitting them into separate source sets or modules to avoid incremental compilation issues.
+
+[source,groovy]
+.build.gradle - Adding annotation processor for Java Micronaut beans
+----
+dependencies {
+    annotationProcessor platform("io.micronaut.platform:micronaut-platform:$micronautPlatformVersion")
+    annotationProcessor 'io.micronaut:micronaut-inject-java'
+    annotationProcessor 'jakarta.annotation:jakarta.annotation-api'
+}
+----
+
+NOTE: The Grails Gradle Plugin automatically configures the Spring Boot `bootJar` and `bootWar` tasks to use the `CLASSIC` loader implementation when `grails-micronaut` is detected. This is required for `java -jar` execution to work correctly with the Micronaut-Spring integration (see https://github.com/apache/grails-core/issues/15207[#15207]). If you have explicitly set `loaderImplementation` in your `build.gradle`, you can remove it as the plugin now handles this automatically.
+
 ===== 12.5 hibernate-ehcache
 
 The `org.hibernate:hibernate-ehcache` library is no longer provided by the `org.apache.grails:grails-hibernate5` plugin. If
@@ -847,3 +865,7 @@ grails:
 * **8.0**: `SimpleEnumMarshaller` will become the default
 
 The legacy `org.grails.web.converters.marshaller.json.EnumMarshaller` and `org.grails.web.converters.marshaller.xml.EnumMarshaller` classes are marked as `@Deprecated(forRemoval = true, since = "7.0.2")` and will be removed in Grails 8.0.
+
+==== 13. Upgrading the Spring Security Plugin
+
+If your application uses the Grails Spring Security plugin, please consult the https://apache.github.io/grails-spring-security/snapshot/guide/index.html#upgrading-from-previous-versions[Upgrading from Previous Versions] section of the Spring Security plugin documentation for specific upgrade instructions related to Grails 7.

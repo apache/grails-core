@@ -15,7 +15,7 @@
 
 applicationType: web_plugin
 defaultPackage: org.example.grails.layout
-testFramework: spock
+reloading: devtools
 sourceLanguage: groovy
 buildTool: gradle
 gormImpl: gorm-hibernate5

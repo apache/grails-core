@@ -27,7 +27,9 @@ import org.grails.datastore.mapping.config.Settings
  */
 import org.grails.datastore.mapping.multitenancy.exceptions.TenantNotFoundException
 import org.grails.datastore.mapping.multitenancy.resolvers.SystemPropertyTenantResolver
+import spock.util.environment.RestoreSystemProperties
 
+@RestoreSystemProperties
 class DatabasePerTenantSpec extends HibernateSpec {
 
     BookService bookDataService = hibernateDatastore.getService(BookService)
@@ -38,10 +40,6 @@ class DatabasePerTenantSpec extends HibernateSpec {
                 (Settings.SETTING_MULTI_TENANT_RESOLVER): new SystemPropertyTenantResolver(),
                 (Settings.SETTING_DB_CREATE): "create-drop"
         )
-    }
-
-    def cleanup() {
-        System.setProperty(SystemPropertyTenantResolver.PROPERTY_NAME, "")
     }
 
     @Rollback("moreBooks")

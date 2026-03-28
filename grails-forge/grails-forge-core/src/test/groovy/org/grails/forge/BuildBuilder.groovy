@@ -43,7 +43,7 @@ import java.util.function.Function
 class BuildBuilder implements ProjectFixture, ContextFixture {
 
     private List<String> features
-    private TestFramework testFramework
+    private DevelopmentReloading reloading
     private ApplicationType applicationType
     private JdkVersion jdkVersion
     private GormImpl gormImpl
@@ -73,8 +73,8 @@ class BuildBuilder implements ProjectFixture, ContextFixture {
         this
     }
 
-    BuildBuilder testFramework(TestFramework testFramework) {
-        this.testFramework = testFramework
+    BuildBuilder reloading(DevelopmentReloading reloading) {
+        this.reloading = reloading
         this
     }
 
@@ -105,12 +105,12 @@ class BuildBuilder implements ProjectFixture, ContextFixture {
 
     String render() {
         List<String> featureNames = this.features ?: []
-        TestFramework testFramework = this.testFramework ?: TestFramework.SPOCK
+        DevelopmentReloading reloading = this.reloading ?: DevelopmentReloading.DEVTOOLS
         ApplicationType type = this.applicationType ?: ApplicationType.WEB
         Project project = this.project ?: buildProject()
         JdkVersion jdkVersion = this.jdkVersion ?: JdkVersion.DEFAULT_OPTION
 
-        final Options options = new Options(testFramework, gormImpl, servletImpl, jdkVersion, operatingSystem)
+        final Options options = new Options(reloading, gormImpl, servletImpl, jdkVersion, operatingSystem)
         Features features = getFeatures(featureNames, options, type)
 
         GradleBuild build = gradleBuild(options, features, project, type)
@@ -123,12 +123,12 @@ class BuildBuilder implements ProjectFixture, ContextFixture {
     String renderBuildSrc() {
         List<String> featureNames = this.features ?: []
         featureNames.add("gradle-build-src")
-        TestFramework testFramework = this.testFramework ?: TestFramework.SPOCK
+        DevelopmentReloading reloading = this.reloading ?: DevelopmentReloading.DEVTOOLS
         ApplicationType type = this.applicationType ?: ApplicationType.WEB
         Project project = this.project ?: buildProject()
         JdkVersion jdkVersion = this.jdkVersion ?: JdkVersion.DEFAULT_OPTION
 
-        Options options = new Options(testFramework, jdkVersion)
+        Options options = new Options(reloading, jdkVersion)
         Features features = getFeatures(featureNames, options, type)
         String grailsVersion = VersionInfo.grailsVersion
         GradleBuild build = gradleBuild(options, features, project, type)

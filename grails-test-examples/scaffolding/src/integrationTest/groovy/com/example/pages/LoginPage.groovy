@@ -16,21 +16,26 @@
  *  specific language governing permissions and limitations
  *  under the License.
  */
-
 package com.example.pages
 
 import geb.Page
 
 class LoginPage extends Page {
 
+    static String pageTitle = 'Please sign in'
+
     static url = 'login'
-
-    static at = { title == 'Please sign in' }
-
+    static at = { title == pageTitle }
     static content = {
-        loginForm { $('form.login-form') }
         username { $('input', name: 'username') }
         password { $('input', name: 'password') }
-        loginButton { $('button.primary', type: 'submit') }
+        loginButton { $('button.primary') }
+    }
+
+    void login(String username = 'test@grails.org', String password = 'letmein') {
+        this.username = username
+        this.password = password
+        loginButton.click()
+        waitFor { title != pageTitle }
     }
 }

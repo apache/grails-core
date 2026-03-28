@@ -30,6 +30,7 @@ import org.grails.encoder.impl.JavaScriptCodec
 import org.grails.encoder.impl.RawCodec
 import org.grails.plugins.codecs.HTMLCodec
 import org.grails.web.servlet.mvc.GrailsWebRequest
+import org.springframework.web.context.request.RequestContextHolder
 
 import spock.lang.Specification
 import spock.lang.Unroll
@@ -56,6 +57,10 @@ public class HTMLJSCodecIntegrationSpec extends Specification {
         codecClasses*.configureCodecMethods()
         GrailsWebMockUtil.bindMockWebRequest()
         registry = GrailsWebRequest.lookup().getEncodingStateRegistry()
+    }
+
+    def cleanup() {
+        RequestContextHolder.resetRequestAttributes()
     }
     
     @Unroll

@@ -28,6 +28,7 @@ import org.grails.web.mapping.DefaultLinkGenerator
 import org.grails.web.mapping.DefaultUrlMappingEvaluator
 import org.grails.web.mapping.DefaultUrlMappingsHolder
 import org.grails.web.util.WebUtils
+import org.springframework.web.context.request.RequestContextHolder
 import spock.lang.Issue
 import spock.lang.Specification
 
@@ -35,6 +36,11 @@ class RestfulUrlMappingSpec extends Specification {
 
     def setup() {
         WebUtils.clearGrailsWebRequest()
+    }
+
+    def cleanup() {
+        // Reset request context for test isolation
+        RequestContextHolder.resetRequestAttributes()
     }
 
     def mappings = {

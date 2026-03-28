@@ -29,10 +29,12 @@ import org.springframework.context.annotation.Bean
 import org.springframework.context.annotation.Configuration
 import spock.lang.Specification
 import spock.util.concurrent.PollingConditions
+import spock.util.environment.RestoreSystemProperties
 
 /**
  * @author Anders Aaberg
  */
+@RestoreSystemProperties
 class DevelopmentModeWatchSpec extends Specification {
 
     void "test root watchPattern"() {
@@ -54,8 +56,6 @@ class DevelopmentModeWatchSpec extends Specification {
         }
 
         cleanup:
-        System.clearProperty("base.dir")
-        System.setProperty(Environment.KEY, Environment.TEST.getName())
         if(watchedFile != null) {
             watchedFile.delete()
         }

@@ -31,8 +31,6 @@ version = projectVersion
 group = 'org.apache.grails'
 
 ext {
-    // TODO: RestfulReverseUrlRenderingTests seems to fail under the CI Build when using parallel
-    configuredTestParallel = isCiBuild ? 1 : rootProject.findProperty('configuredTestParallel')
     testForkEvery = isCiBuild ? 10 : 20
     testJvmArgs = ['-Xmx1536M']
 

@@ -32,6 +32,7 @@ import org.grails.forge.feature.FeatureContext
 import org.grails.forge.feature.Features
 import org.grails.forge.feature.validation.FeatureValidator
 import org.grails.forge.io.ConsoleOutput
+import org.grails.forge.options.DevelopmentReloading
 import org.grails.forge.options.Language
 import org.grails.forge.options.Options
 import org.grails.forge.options.TestFramework
@@ -54,7 +55,7 @@ trait ContextFixture {
 
     Features getFeatures(List<String> features,
                          ApplicationType applicationType = ApplicationType.WEB) {
-        Options options = new Options(TestFramework.DEFAULT_OPTION)
+        Options options = new Options(DevelopmentReloading.DEFAULT_OPTION)
         return getFeatures(features, options, applicationType)
     }
 

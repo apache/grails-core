@@ -17,8 +17,6 @@
  *  under the License.
  */
 
-// apply plugin: 'org.gradle.test-retry'
-
 tasks.withType(Test).configureEach {
     onlyIf {
         ![
@@ -42,12 +40,4 @@ tasks.withType(Test).configureEach {
     maxHeapSize = '2G'
 
     useJUnitPlatform()
-    //TODO: retry
-//    if (isCiBuild) {
-//        retry {
-//            maxRetries.set(2)
-//            maxFailures.set(20)
-//            failOnPassedAfterRetry.set(false)
-//        }
-//    }
 }

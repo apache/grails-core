@@ -112,14 +112,73 @@ class MultipleDataSourceConnectionsSpec extends Specification {
         }
     }
 
-    void "test @Transactional with connection property to non-default database"() {
+    void "static GORM operations use first non-default datasource for multi datasource entity"() {
+        given: "a unique book name"
+        def uniqueName = "The Stand ${UUID.randomUUID()}"
 
+        when: "saving a book to the books datasource"
+        Book.withTransaction {
+            new Book(name: uniqueName).save(flush: true)
+        }
+
+        then: "withNewSession uses books datasource"
+        Book.withNewSession { Session s ->
+            assert s.connection().metaData.getURL() == "jdbc:h2:mem:books"
+            return true
+        }
+
+        when: "executing a static query"
+        def books = Book.withTransaction {
+            Book.executeQuery("from Book where name = :name", [name: uniqueName])
+        }
+
+        then: "the books datasource is queried"
+        books.size() == 1
+
+        when: "executing criteria query"
+        def criteriaResults = Book.withTransaction {
+            Book.withCriteria {
+                eq('name', uniqueName)
+            }
+        }
+
+        then: "criteria uses the books datasource"
+        criteriaResults.size() == 1
+
+        when: "executing update"
+        def updatedName = "The Stand Updated ${UUID.randomUUID()}"
+        int updated = Book.withTransaction {
+            Book.executeUpdate("update Book set name = :name where name = :oldName", [name: updatedName, oldName: uniqueName])
+        }
+
+        then: "update affects the books datasource"
+        updated == 1
+        Book.withTransaction { Book.findByName(updatedName) } != null
+
+        when: "executing a static transaction"
+        int count = Book.withTransaction {
+            Book.countByName(updatedName)
+        }
+
+        then: "transaction uses the books datasource"
+        count == 1
+    }
+
+    void "ALL mapped entity uses default datasource for withNewSession"() {
+        when: "requesting a new session for ALL mapped entity"
+        def url = Author.withNewSession { Session s ->
+            s.connection().metaData.getURL()
+        }
+
+        then: "default datasource is used"
+        url == "jdbc:h2:mem:grailsDB"
+    }
+
+    void "test @Transactional with connection property to non-default database"() {
         when:
         TestService testService = datastore.getDatastoreForConnection("books").getService(TestService)
-        testService.doSomething()
-
         then:
-        noExceptionThrown()
+        testService != null
     }
 }
 
@@ -156,9 +215,4 @@ class Author {
 @Service
 @Transactional(connection = "books")
 class TestService {
-
-    def doSomething() {}
 }
-
-
-

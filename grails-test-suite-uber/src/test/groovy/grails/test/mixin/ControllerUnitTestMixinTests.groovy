@@ -27,6 +27,7 @@ import grails.validation.Validateable
 import grails.web.Controller
 import grails.web.mime.MimeUtility
 import org.grails.plugins.testing.GrailsMockMultipartFile
+import org.grails.validation.ConstraintEvalUtils
 import org.grails.web.servlet.mvc.SynchronizerTokensHolder
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.context.MessageSource
@@ -41,6 +42,31 @@ import jakarta.servlet.http.HttpServletResponse
  * @author Graeme Rocher
  */
 class ControllerUnitTestMixinTests extends Specification implements ControllerUnitTest<TestController> {
+
+    // Cache the static field helper interface for performance
+    private static final Class<?> STATIC_FIELD_HELPER = Class.forName('grails.validation.Validateable$Trait$StaticFieldHelper')
+
+    def setup() {
+        ConstraintEvalUtils.clearDefaultConstraints()
+        clearConstraintsMapCache(TestCommand)
+        clearConstraintsMapCache(SomeValidateableThing)
+    }
+
+    def cleanup() {
+        ConstraintEvalUtils.clearDefaultConstraints()
+        clearConstraintsMapCache(TestCommand)
+        clearConstraintsMapCache(SomeValidateableThing)
+    }
+
+    /**
+     * Clears the private static constraintsMapInternal field in the Validateable trait.
+     */
+    private static void clearConstraintsMapCache(Class<?> clazz) {
+        if (STATIC_FIELD_HELPER.isAssignableFrom(clazz)) {
+            def setterMethod = clazz.getMethod('grails_validation_Validateable__constraintsMapInternal$set', Map)
+            setterMethod.invoke(null, (Map) null)
+        }
+    }
 
     void testRenderText() {
         when:

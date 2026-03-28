@@ -37,7 +37,6 @@ dependencies {
     implementation "com.diffplug.spotless:spotless-plugin-gradle:$spotlessVersion"
     implementation "io.spring.nohttp:nohttp-gradle:$nohttpGradleVersion"
     implementation "com.gradleup.shadow:shadow-gradle-plugin:$shadowVersion"
-    implementation "org.gradle.test-retry:org.gradle.test-retry.gradle.plugin:$testRetryVersion"
     implementation "org.nosphere.apache.rat:org.nosphere.apache.rat.gradle.plugin:$apacheRatVersion"
     implementation "org.apache.grails:grails-gradle-plugins:$projectVersion", {
         exclude group: 'org.yaml'

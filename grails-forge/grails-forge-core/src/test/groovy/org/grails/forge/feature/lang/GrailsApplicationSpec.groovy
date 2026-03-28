@@ -22,6 +22,7 @@ package org.grails.forge.feature.lang
 import org.grails.forge.BeanContextSpec
 import org.grails.forge.application.ApplicationType
 import org.grails.forge.fixture.CommandOutputFixture
+import org.grails.forge.options.DevelopmentReloading
 import org.grails.forge.options.JdkVersion
 import org.grails.forge.options.Language
 import org.grails.forge.options.Options
@@ -34,7 +35,7 @@ class GrailsApplicationSpec extends BeanContextSpec implements CommandOutputFixt
     void 'Application file is generated for a #applicationType application for language: groovy'() {
         when:
         def output = generate(applicationType,
-                new Options(TestFramework.SPOCK),
+                new Options(DevelopmentReloading.DEVTOOLS),
                 [])
 
         then:
@@ -50,7 +51,7 @@ class GrailsApplicationSpec extends BeanContextSpec implements CommandOutputFixt
     void 'Application file is generated with annotation @PluginSource for #applicationType application type'() {
         when:
         def output = generate(applicationType,
-                new Options(TestFramework.SPOCK),
+                new Options(DevelopmentReloading.DEVTOOLS),
                 [])
 
         then:
@@ -106,7 +107,7 @@ class GrailsApplicationSpec extends BeanContextSpec implements CommandOutputFixt
 
     void "test build plugins"() {
         given:
-        final def output = generate(ApplicationType.WEB, new Options(TestFramework.SPOCK))
+        final def output = generate(ApplicationType.WEB, new Options(DevelopmentReloading.DEVTOOLS))
         def buildGradle = output['build.gradle']
 
         expect:

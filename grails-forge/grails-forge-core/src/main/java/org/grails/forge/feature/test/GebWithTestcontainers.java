@@ -29,7 +29,6 @@ import org.grails.forge.feature.DefaultFeature;
 import org.grails.forge.feature.Feature;
 import org.grails.forge.feature.FeatureContext;
 import org.grails.forge.feature.FeaturePhase;
-import org.grails.forge.feature.test.template.groovyJunit;
 import org.grails.forge.options.*;
 import org.grails.forge.template.RockerTemplate;
 
@@ -46,7 +45,7 @@ public class GebWithTestcontainers implements DefaultFeature {
 
     @Override
     public boolean shouldApply(ApplicationType applicationType, Options options, Set<Feature> selectedFeatures) {
-        return applicationType == ApplicationType.WEB && options.getTestFramework() != TestFramework.JUNIT;
+        return applicationType == ApplicationType.WEB;
     }
 
     @NonNull
@@ -107,13 +106,12 @@ public class GebWithTestcontainers implements DefaultFeature {
 
         Project project = generatorContext.getProject();
         TestRockerModelProvider provider = new DefaultTestRockerModelProvider(
-                org.grails.forge.feature.test.template.spock.template(project),
-                groovyJunit.template(project)
+                org.grails.forge.feature.test.template.spock.template(project)
         );
         generatorContext.addTemplate("applicationTest",
                 new RockerTemplate(
                         generatorContext.getIntegrationTestSourcePath("/{packagePath}/{className}"),
-                        provider.findModel(Language.DEFAULT_OPTION, generatorContext.getTestFramework())
+                        provider.findModel(TestFramework.SPOCK)
                 )
         );
     }

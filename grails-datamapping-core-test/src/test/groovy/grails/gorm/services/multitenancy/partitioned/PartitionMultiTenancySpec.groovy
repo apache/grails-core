@@ -31,9 +31,11 @@ import org.grails.datastore.mapping.multitenancy.exceptions.TenantNotFoundExcept
 import org.grails.datastore.mapping.multitenancy.resolvers.SystemPropertyTenantResolver
 import org.grails.datastore.mapping.simple.SimpleMapDatastore
 import spock.lang.AutoCleanup
+import spock.util.environment.RestoreSystemProperties
 import spock.lang.Shared
 import spock.lang.Specification
 
+@RestoreSystemProperties
 class PartitionMultiTenancySpec extends Specification {
 
     @Shared @AutoCleanup SimpleMapDatastore datastore = new SimpleMapDatastore(
@@ -47,7 +49,6 @@ class PartitionMultiTenancySpec extends Specification {
     void 'Test partitioned multi-tenancy with GORM services'() {
         setup:
         BookService bookService = new BookService()
-        System.setProperty(SystemPropertyTenantResolver.PROPERTY_NAME, "")
 
         when: "When there is no tenant"
         Book.count()
