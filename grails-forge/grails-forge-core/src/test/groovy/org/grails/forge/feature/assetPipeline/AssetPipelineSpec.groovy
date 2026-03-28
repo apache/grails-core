@@ -25,6 +25,7 @@ import org.grails.forge.application.ApplicationType
 import org.grails.forge.application.OperatingSystem
 import org.grails.forge.feature.Features
 import org.grails.forge.fixture.CommandOutputFixture
+import org.grails.forge.options.DevelopmentReloading
 import org.grails.forge.options.JdkVersion
 import org.grails.forge.options.Options
 import org.grails.forge.options.TestFramework
@@ -98,7 +99,7 @@ assets {
         given:
         def output = generate(
                 ApplicationType.WEB,
-                new Options(TestFramework.SPOCK)
+                new Options(DevelopmentReloading.DEVTOOLS)
         )
 
         expect:
@@ -129,7 +130,7 @@ assets {
     @Unroll
     void "test feature asset-pipeline-grails is not supported for #applicationType application"(ApplicationType applicationType) {
         when:
-        generate(applicationType, new Options(TestFramework.SPOCK), ["asset-pipeline-grails"])
+        generate(applicationType, new Options(DevelopmentReloading.DEVTOOLS), ["asset-pipeline-grails"])
 
         then:
         def e = thrown(IllegalArgumentException)

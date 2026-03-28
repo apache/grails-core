@@ -405,7 +405,7 @@ In the event that artifacts differ, simply copy them to your project directory a
 
 ```bash
     cd ~/project
-    rsync -av grails-verify/grails/etc/bin/results/ etc/bin/results/
+    rsync -av ../grails-verify/grails/etc/bin/results/ etc/bin/results/
 ```
 
 # Appendix: Versioning

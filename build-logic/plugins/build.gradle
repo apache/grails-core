@@ -62,5 +62,17 @@ gradlePlugin {
             id = 'org.apache.grails.gradle.grails-code-style'
             implementationClass = 'org.apache.grails.buildsrc.GrailsCodeStylePlugin'
         }
+        register('groovydocEnhancer') {
+            id = 'org.apache.grails.buildsrc.groovydoc-enhancer'
+            implementationClass = 'org.apache.grails.buildsrc.GroovydocEnhancerPlugin'
+        }
+        register('grailsGroovydoc') {
+            id = 'org.apache.grails.buildsrc.groovydoc'
+            implementationClass = 'org.apache.grails.buildsrc.GrailsGroovydocPlugin'
+        }
+        register('grailsRepoSettings') {
+            id = 'org.apache.grails.buildsrc.repo'
+            implementationClass = 'org.apache.grails.buildsrc.GrailsRepoSettingsPlugin'
+        }
     }
 }

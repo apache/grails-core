@@ -33,12 +33,14 @@ import org.grails.datastore.mapping.multitenancy.resolvers.SystemPropertyTenantR
 import org.grails.datastore.mapping.simple.SimpleMapDatastore
 import org.springframework.transaction.TransactionStatus
 import spock.lang.AutoCleanup
+import spock.util.environment.RestoreSystemProperties
 import spock.lang.Shared
 import spock.lang.Specification
 
 /**
  * Created by graemerocher on 16/01/2017.
  */
+@RestoreSystemProperties
 class CurrentTenantTransformSpec  extends Specification {
 
     @Shared @AutoCleanup SimpleMapDatastore datastore = new SimpleMapDatastore(
@@ -50,10 +52,6 @@ class CurrentTenantTransformSpec  extends Specification {
             Team,
             Player
     )
-
-    void setup() {
-        System.setProperty(SystemPropertyTenantResolver.PROPERTY_NAME, "")
-    }
 
     void "Test parsing of @WithoutTenant"() {
         Class testServiceClass = new GroovyShell().evaluate('''

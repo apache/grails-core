@@ -64,8 +64,15 @@ abstract class AbstractDetachedCriteriaServiceImplementor extends AbstractReadOp
         int parameterCount = parameters.length
         AnnotationNode joinAnnotation = AstUtils.findAnnotation(abstractMethodNode, Join)
         if (lookupById() && joinAnnotation == null && parameterCount == 1 && parameters[0].name == GormProperties.IDENTITY) {
-            // optimize query by id
-            Expression byId = callX(classX(domainClassNode), 'get', varX(parameters[0]))
+            // optimize query by id — route through static API when connection is specified
+            Expression connectionId = findConnectionId(abstractMethodNode)
+            Expression byId
+            if (connectionId != null) {
+                byId = callX(buildStaticApiLookup(domainClassNode, connectionId), 'get', varX(parameters[0]))
+            }
+            else {
+                byId = callX(classX(domainClassNode), 'get', varX(parameters[0]))
+            }
             implementById(domainClassNode, abstractMethodNode, newMethodNode, targetClassNode, body, byId)
         }
         else {
@@ -75,7 +82,7 @@ abstract class AbstractDetachedCriteriaServiceImplementor extends AbstractReadOp
             body.addStatement(
                 declS(queryVar, ctorX(getDetachedCriteriaType(domainClassNode), args(classX(domainClassNode.plainNodeReference))))
             )
-            Expression connectionId = findConnectionId(newMethodNode)
+            Expression connectionId = findConnectionId(abstractMethodNode)
 
             if (connectionId != null) {
                 body.addStatement(

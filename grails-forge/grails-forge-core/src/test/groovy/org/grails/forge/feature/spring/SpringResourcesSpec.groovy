@@ -22,6 +22,7 @@ package org.grails.forge.feature.spring
 import org.grails.forge.ApplicationContextSpec
 import org.grails.forge.application.ApplicationType
 import org.grails.forge.fixture.CommandOutputFixture
+import org.grails.forge.options.DevelopmentReloading
 import org.grails.forge.options.JdkVersion
 import org.grails.forge.options.Options
 import org.grails.forge.options.TestFramework
@@ -32,7 +33,7 @@ class SpringResourcesSpec extends ApplicationContextSpec implements CommandOutpu
     @Unroll
     void "test /conf/spring/resources.groovy config file is present for #applicationType application"() {
         when:
-        def output = generate(applicationType, new Options(TestFramework.SPOCK))
+        def output = generate(applicationType, new Options(DevelopmentReloading.DEVTOOLS))
 
         then:
         output.containsKey("grails-app/conf/spring/resources.groovy")

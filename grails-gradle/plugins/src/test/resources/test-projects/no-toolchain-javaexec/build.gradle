@@ -1,0 +1,19 @@
+plugins {
+    id 'org.apache.grails.gradle.grails-app'
+}
+
+tasks.register('printLauncher', JavaExec) {
+    classpath = files()
+    mainClass = 'does.not.Matter'
+}
+
+tasks.register('checkToolchain') {
+    doLast {
+        def launcher = tasks.named('printLauncher', JavaExec).get().javaLauncher
+        if (launcher.isPresent()) {
+            println 'HAS_LAUNCHER=true'
+        } else {
+            println 'HAS_LAUNCHER=false'
+        }
+    }
+}

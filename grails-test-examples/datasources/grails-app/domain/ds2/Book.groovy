@@ -25,6 +25,8 @@ class Book {
 
     String title
 
+    static hasMany = [chapters: Chapter]
+
     static constraints = {
     }
 

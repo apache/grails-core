@@ -21,6 +21,7 @@ package org.grails.forge.build.gradle;
 import io.micronaut.core.annotation.NonNull;
 import io.micronaut.core.order.Ordered;
 
+import java.util.Arrays;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
@@ -34,30 +35,50 @@ public interface GradleRepository extends Ordered {
 
         String overrideRepo = System.getenv("GRAILS_REPO_URL");
         if (overrideRepo != null && !overrideRepo.isEmpty()) {
-            repositories.add(new DefaultGradleRepository(0, overrideRepo));
+            List<String> overrides = Arrays.stream(overrideRepo.split(";"))
+                .map(String::trim)
+                .filter(s -> !s.isEmpty())
+                .toList();
+
+            for (String overrideUrl : overrides) {
+                repositories.add(
+                    new DefaultGradleRepository(
+                        repositories.size(),
+                        overrideUrl
+                    )
+                );
+            }
         }
         repositories.add(new MavenCentralRepository(repositories.size()));
         repositories.add(new DefaultGradleRepository(repositories.size(), "https://repo.grails.org/grails/restricted"));
         if (grailsVersion.endsWith("SNAPSHOT")) {
             repositories.add(new DefaultGradleRepository(
-                    repositories.size(),
-                    "https://repository.apache.org/content/groups/snapshots",
-                    null,
-                    List.of(
-                            new VersionRegexRepoFilter(
-                                    "org[.]apache[.](grails|groovy).*", ".*", ".*-SNAPSHOT"
-                            )
+                repositories.size(),
+                "https://repository.apache.org/content/groups/snapshots",
+                null,
+                List.of(
+                    new VersionRegexRepoFilter(
+                        "org[.]apache[.]grails.*", ".*", ".*-SNAPSHOT"
+                    ),
+                    new VersionRegexRepoFilter(
+                        "org[.]apache[.]groovy.*", "groovy.*", ".*-SNAPSHOT"
                     )
+                ),
+                List.of(VersionType.SNAPSHOT)
             ));
             repositories.add(new DefaultGradleRepository(
-                    repositories.size(),
-                    "https://repository.apache.org/content/groups/staging",
-                    null,
-                    List.of(
-                            new VersionRegexRepoFilter(
-                                    "org[.]apache[.]grails[.]gradle", "grails-publish", ".*"
-                            )
+                repositories.size(),
+                "https://repository.apache.org/content/groups/staging",
+                null,
+                List.of(
+                    new VersionRegexRepoFilter(
+                        "org[.]apache[.]grails[.]gradle", "grails-publish", ".*"
+                    ),
+                    new VersionRegexRepoFilter(
+                        "org[.]apache[.]groovy.*", "groovy.*", ".*"
                     )
+                ),
+                List.of(VersionType.RELEASE)
             ));
         }
 

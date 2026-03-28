@@ -22,12 +22,17 @@ package org.grails.web.servlet
 import grails.persistence.Entity
 import grails.testing.gorm.DomainUnitTest
 import grails.util.GrailsWebMockUtil
+import org.springframework.web.context.request.RequestContextHolder
 import spock.lang.Specification
 
 /**
 *  @author Graeme Rocher
 */
 class FlashScopeWithErrorsTests extends Specification implements DomainUnitTest<Book>  {
+
+    void cleanup() {
+        RequestContextHolder.resetRequestAttributes()
+    }
 
     void testFlashScopeWithErrors() {
         GrailsWebMockUtil.bindMockWebRequest()

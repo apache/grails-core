@@ -26,10 +26,12 @@ import org.grails.datastore.mapping.mongo.connections.MongoConnectionSources
 import org.grails.datastore.mapping.multitenancy.resolvers.SystemPropertyTenantResolver
 import spock.lang.AutoCleanup
 import spock.lang.Shared
+import spock.util.environment.RestoreSystemProperties
 
 /**
  * Created by graemerocher on 15/07/2016.
  */
+@RestoreSystemProperties
 class MongoConnectionSourcesSpec extends AutoStartedMongoSpec {
 
     @Shared @AutoCleanup MongoDatastore datastore
@@ -55,6 +57,11 @@ class MongoConnectionSourcesSpec extends AutoStartedMongoSpec {
                 ]
         ]
         this.datastore = new MongoDatastore(config, CompanyB)
+    }
+
+    void setup() {
+        // Ensure tenant property is cleared before each test for test isolation
+        System.clearProperty(SystemPropertyTenantResolver.PROPERTY_NAME)
     }
 
     void "Test persist and retrieve entities with multi tenancy"() {

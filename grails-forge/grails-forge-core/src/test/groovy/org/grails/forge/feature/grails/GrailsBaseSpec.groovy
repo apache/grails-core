@@ -22,6 +22,7 @@ package org.grails.forge.feature.grails
 import org.grails.forge.BeanContextSpec
 import org.grails.forge.application.ApplicationType
 import org.grails.forge.fixture.CommandOutputFixture
+import org.grails.forge.options.DevelopmentReloading
 import org.grails.forge.options.JdkVersion
 import org.grails.forge.options.Options
 import org.grails.forge.options.TestFramework
@@ -32,7 +33,7 @@ class GrailsBaseSpec extends BeanContextSpec implements CommandOutputFixture {
     void "test grails base dependencies"() {
 
         when:
-        def output = generate(ApplicationType.WEB, new Options(TestFramework.SPOCK))
+        def output = generate(ApplicationType.WEB, new Options(DevelopmentReloading.DEVTOOLS))
         def buildGradle = output['build.gradle']
 
         then:
@@ -43,7 +44,7 @@ class GrailsBaseSpec extends BeanContextSpec implements CommandOutputFixture {
 
     void "test src/main directories are present"() {
         given:
-        final def output = generate(ApplicationType.WEB, new Options(TestFramework.SPOCK))
+        final def output = generate(ApplicationType.WEB, new Options(DevelopmentReloading.DEVTOOLS))
 
         expect:
         output.containsKey("src/main/groovy/.gitkeep")
@@ -54,7 +55,7 @@ class GrailsBaseSpec extends BeanContextSpec implements CommandOutputFixture {
     @Unroll
     void "test domain, services and taglib directories are present for ApplicationTypes other than REST_API"() {
         when:
-        final def output = generate(applicationType, new Options(TestFramework.SPOCK))
+        final def output = generate(applicationType, new Options(DevelopmentReloading.DEVTOOLS))
 
         then:
 
@@ -69,7 +70,7 @@ class GrailsBaseSpec extends BeanContextSpec implements CommandOutputFixture {
     @Unroll
     void "test domain and services directories are present for ApplicationType.REST_API"() {
         when:
-        final def output = generate(applicationType, new Options(TestFramework.SPOCK))
+        final def output = generate(applicationType, new Options(DevelopmentReloading.DEVTOOLS))
 
         then:
 

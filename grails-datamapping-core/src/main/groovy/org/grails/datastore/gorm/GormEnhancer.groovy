@@ -180,7 +180,23 @@ class GormEnhancer implements Closeable {
     List<String> allQualifiers(Datastore datastore, PersistentEntity entity) {
         List<String> qualifiers = new ArrayList<>()
         qualifiers.addAll(ConnectionSourcesSupport.getConnectionSourceNames(entity))
-        if ((MultiTenant.isAssignableFrom(entity.javaClass) || qualifiers.contains(ConnectionSource.ALL)) && (datastore instanceof ConnectionSourcesProvider)) {
+
+        // For MultiTenant entities OR entities declared with ConnectionSource.ALL,
+        // expand qualifiers to include all available connection sources — BUT only
+        // if the entity does not have an explicit non-DEFAULT datasource declaration.
+        //
+        // When a MultiTenant entity declares `datasource 'secondary'`, that explicit
+        // mapping must be preserved. Expanding to all connections causes silent
+        // data routing to the wrong database (the DEFAULT datasource) for
+        // DISCRIMINATOR multi-tenancy mode.
+        boolean isMultiTenant = MultiTenant.isAssignableFrom(entity.javaClass)
+        boolean hasExplicitAll = qualifiers.contains(ConnectionSource.ALL)
+        boolean hasExplicitNonDefaultDatasource = isMultiTenant &&
+                !hasExplicitAll &&
+                qualifiers.size() > 0 &&
+                !qualifiers.equals(ConnectionSourcesSupport.DEFAULT_CONNECTION_SOURCE_NAMES)
+
+        if ((isMultiTenant || hasExplicitAll) && !hasExplicitNonDefaultDatasource && (datastore instanceof ConnectionSourcesProvider)) {
             qualifiers.clear()
             qualifiers.add(ConnectionSource.DEFAULT)
 

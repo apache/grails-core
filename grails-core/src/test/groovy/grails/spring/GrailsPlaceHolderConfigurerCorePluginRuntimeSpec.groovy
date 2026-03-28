@@ -23,10 +23,12 @@ import org.grails.plugins.CoreGrailsPlugin
 import org.grails.spring.context.support.GrailsPlaceholderConfigurer
 import spock.lang.Issue
 import spock.lang.Specification
+import spock.util.environment.RestoreSystemProperties
 
 /**
  * @author Graeme Rocher
  */
+@RestoreSystemProperties
 class GrailsPlaceHolderConfigurerCorePluginRuntimeSpec extends Specification{
 
     @Issue('GRAILS-10130')

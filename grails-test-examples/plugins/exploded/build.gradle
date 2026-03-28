@@ -43,6 +43,9 @@ dependencies {
     implementation "org.apache.grails:grails-spring-security:$grailsSpringSecurityVersion"
 
     console 'org.apache.grails:grails-console'
+
+    testImplementation 'org.apache.grails:grails-testing-support-web'
+    integrationTestImplementation testFixtures('org.apache.grails:grails-geb')
 }
 
 apply {

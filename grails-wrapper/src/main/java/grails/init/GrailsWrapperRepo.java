@@ -17,6 +17,9 @@
 package grails.init;
 
 import java.io.File;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.List;
 
 /**
  * Helper class to locate the remote or local repository for the `grails-cli`
@@ -75,18 +78,30 @@ public class GrailsWrapperRepo {
     /**
      * @return the repo the wrapper should look for the `grails-cli` jar
      */
-    static GrailsWrapperRepo getSelectedRepo() {
+    static List<GrailsWrapperRepo> getSelectedRepos() {
+        List<GrailsWrapperRepo> repos = new ArrayList<>();
+
+        // Prefer the override repo first
+        for (String overRepoUrl : getOverriddenMavenRepos()) {
+            if (overRepoUrl != null) {
+                System.out.println("...Update Repository is overridden to prefer [" + overRepoUrl + "].");
+                repos.add(createGrailsWrapperRepo(overRepoUrl));
+            }
+        }
+
+        // prefer maven central second
+        repos.add(createGrailsWrapperRepo("https://repo1.maven.org/maven2"));
+
+        // finally fallback to ASF repo (only valid for snapshot/stage testing)
+        repos.add(createGrailsWrapperRepo("https://repository.apache.org/content/groups/public"));
+
+        return repos;
+    }
+
+    private static GrailsWrapperRepo createGrailsWrapperRepo(String urlOrFile) {
         GrailsWrapperRepo repo = new GrailsWrapperRepo();
         repo.repoPath = "org/apache/grails/" + GrailsWrapperHome.CLI_COMBINED_PROJECT_NAME;
-
-        String configured = getConfiguredMavenUrl();
-        if (configured != null) {
-            System.out.println("...Update Repository is overridden to: " + configured);
-            repo.baseUrl = configured;
-        } else {
-            // default to upstream snapshots or groups
-            repo.baseUrl = "https://repository.apache.org/content/groups/public";
-        }
+        repo.baseUrl = urlOrFile;
         repo.isFile = !repo.baseUrl.startsWith("http");
 
         if ((repo.isFile && repo.baseUrl.endsWith(File.separator)) || (!repo.isFile && repo.baseUrl.endsWith("/"))) {
@@ -99,14 +114,25 @@ public class GrailsWrapperRepo {
     }
 
     /**
-     * @return the override maven repository if configured via the property `grails.repo.url` or environment variable `GRAILS_REPO_URL`
+     * @return the overridden maven repositories if configured via the property `grails.repo.url` or environment variable `GRAILS_REPO_URL`
      */
-    static String getConfiguredMavenUrl() {
+    static List<String> getOverriddenMavenRepos() {
         String baseUrl = System.getProperty("grails.repo.url");
         if (baseUrl != null) {
-            return baseUrl;
+            return Arrays.stream(baseUrl.split(";"))
+                .map(String::trim)
+                .filter(s -> !s.isEmpty())
+                .toList();
         }
 
-        return System.getenv("GRAILS_REPO_URL");
+        String envBasedUrl = System.getenv("GRAILS_REPO_URL");
+        if (envBasedUrl != null) {
+            return Arrays.stream(envBasedUrl.split(";"))
+                .map(String::trim)
+                .filter(s -> !s.isEmpty())
+                .toList();
+        }
+
+        return new ArrayList<>();
     }
 }

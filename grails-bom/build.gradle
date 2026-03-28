@@ -43,10 +43,10 @@ ext {
     isPublishedExternal = System.getenv().containsKey('NEXUS_PUBLISH_STAGING_PROFILE_ID')
     // TODO: It should be possible to pull these build names using includedBuild, but I haven't found a way to do so
     gradleBuildProjects = [
-            'grails-gradle-plugins',
-            'grails-gradle-model',
-            'grails-gradle-common',
-            'grails-gradle-tasks',
+            'grails-gradle-plugins':'org.apache.grails',
+            'grails-gradle-model':'org.apache.grails.gradle',
+            'grails-gradle-common':'org.apache.grails.gradle',
+            'grails-gradle-tasks':'org.apache.grails',
     ]
 }
 
@@ -83,8 +83,8 @@ dependencies {
         }
 
         // since we're duplicating the bom instead of inheriting we have to add the grails-gradle projects
-        for (String dependency : project.ext.gradleBuildProjects) {
-            api "org.apache.grails.gradle:${dependency}:${projectVersion}"
+        for (Map.Entry<String, String> dependency : project.ext.gradleBuildProjects.entrySet()) {
+            api "${dependency.value}:${dependency.key}:${projectVersion}"
         }
 
         // because we are not yet publishing hibernate6, just force the hibernate5 version for now
@@ -125,8 +125,8 @@ tasks.register('extractConstraints', ExtractDependenciesTask).configure { Extrac
             artifactIdMappings[p.name] = p.findProperty('pomArtifactId') ?: p.name
         }
 
-        for (String artifactId : project.ext.gradleBuildProjects) {
-            artifactIdMappings[artifactId] = artifactId
+        for (Map.Entry<String, String> dependency : project.ext.gradleBuildProjects.entrySet()) {
+            artifactIdMappings[dependency.key] = dependency.key
         }
 
         artifactIdMappings
@@ -141,8 +141,8 @@ tasks.register('extractConstraints', ExtractDependenciesTask).configure { Extrac
             projectCoordinates["${p.group}:${ artifactId}:${p.version}" as String] = baseVersionName
         }
 
-        for (String artifactId : project.ext.gradleBuildProjects) {
-            projectCoordinates["org.apache.grails.gradle:${artifactId}:${project.version}" as String] = artifactId
+        for (Map.Entry<String, String> dependency : project.ext.gradleBuildProjects.entrySet()) {
+            projectCoordinates["${dependency.value}:${dependency.key}:${project.version}" as String] = dependency.key
         }
 
         projectCoordinates

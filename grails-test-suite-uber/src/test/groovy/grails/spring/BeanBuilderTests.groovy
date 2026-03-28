@@ -19,6 +19,7 @@
 package grails.spring
 
 import grails.util.Holders
+import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 import org.springframework.aop.SpringProxy
@@ -42,6 +43,14 @@ class BeanBuilderTests {
 
     @BeforeEach
     protected void setUp() {
+        Holders.setPluginManager null
+    }
+
+    @AfterEach
+    protected void tearDown() {
+        // Only reset what we set in setUp() - don't call Holders.clear() as it
+        // clears ALL Holders state (including grailsApplication) which can cause
+        // flaky failures when other tests depend on Holders
         Holders.setPluginManager null
     }
 

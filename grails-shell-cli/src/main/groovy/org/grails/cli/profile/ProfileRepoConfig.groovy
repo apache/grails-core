@@ -16,11 +16,11 @@
  */
 package org.grails.cli.profile
 
-import java.nio.file.Paths
-
 import grails.util.BuildSettings
 import grails.util.Environment
 import org.grails.cli.GrailsCli
+
+import java.nio.file.Paths
 
 class ProfileRepoConfig {
 
@@ -55,8 +55,14 @@ class ProfileRepoConfig {
         // If the repo url from the wrapper is set, then the wrapper has been configured for a local install, so honor it as a valid source
         String repoUrl = System.getProperty('grails.repo.url') ?: System.getenv('GRAILS_REPO_URL')
         if (repoUrl) {
-            System.out.println("Grails repo url override detected, including repo: ${repoUrl}")
-            repos << new ProfileRepoConfig(name: 'grails-override-repo', url: fixRepoUrl(repoUrl), snapshots: Environment.grailsVersion.endsWith('SNAPSHOT'))
+            List<String> overrideRepos = Arrays.stream(repoUrl.split(';'))
+                    .map(String::trim)
+                    .filter(s -> !s.isEmpty())
+                    .toList()
+            for (String overrideUrl : overrideRepos) {
+                System.out.println("Grails repo url override detected, including repo: ${overrideUrl}")
+                repos << new ProfileRepoConfig(name: 'grails-override-repo', url: fixRepoUrl(overrideUrl), snapshots: Environment.grailsVersion.endsWith('SNAPSHOT'))
+            }
         }
 
         return repos

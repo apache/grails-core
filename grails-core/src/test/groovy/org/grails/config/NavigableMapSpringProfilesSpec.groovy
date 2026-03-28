@@ -22,7 +22,9 @@ import org.grails.config.yaml.YamlPropertySourceLoader
 import org.springframework.core.io.FileSystemResource
 import org.springframework.core.io.Resource
 import spock.lang.Specification
+import spock.util.environment.RestoreSystemProperties
 
+@RestoreSystemProperties
 class NavigableMapSpringProfilesSpec extends Specification {
 
     void 'test spring profiles configuration for default config'() {

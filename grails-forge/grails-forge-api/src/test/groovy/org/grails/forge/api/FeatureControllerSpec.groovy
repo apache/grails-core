@@ -19,19 +19,17 @@
 
 package org.grails.forge.api
 
-import com.fasterxml.jackson.core.JsonParser
 import com.fasterxml.jackson.databind.ObjectMapper
 import io.micronaut.http.HttpRequest
 import io.micronaut.http.client.HttpClient
 import io.micronaut.http.client.annotation.Client
-import io.micronaut.json.tree.JsonNode
 import io.micronaut.test.extensions.spock.annotation.MicronautTest
 import jakarta.inject.Inject
 import org.grails.forge.application.ApplicationType
 import org.grails.forge.options.FeatureFilter
 import org.grails.forge.options.GormImpl
 import org.grails.forge.options.JdkVersion
-import org.grails.forge.options.TestFramework
+import org.grails.forge.options.DevelopmentReloading
 import org.grails.forge.options.ServletImpl
 import spock.lang.Specification
 
@@ -50,7 +48,7 @@ class FeatureControllerSpec extends Specification {
         List<FeatureDTO> features = applicationTypeClient
                 .features(ApplicationType.DEFAULT_OPTION,
                         RequestInfo.LOCAL,
-                        new FeatureFilter(test: TestFramework.DEFAULT_OPTION,
+                        new FeatureFilter(reloading: DevelopmentReloading.DEFAULT_OPTION,
                         gorm: GormImpl.DEFAULT_OPTION,
                         servlet: ServletImpl.DEFAULT_OPTION,
                         javaVersion: JdkVersion.DEFAULT_OPTION)).features
@@ -64,7 +62,7 @@ class FeatureControllerSpec extends Specification {
         List<FeatureDTO> communityFeatures = applicationTypeClient
                 .features(ApplicationType.DEFAULT_OPTION,
                         RequestInfo.LOCAL,
-                        new FeatureFilter(test: TestFramework.DEFAULT_OPTION,
+                        new FeatureFilter(reloading: DevelopmentReloading.DEFAULT_OPTION,
                                 gorm: GormImpl.DEFAULT_OPTION,
                                 servlet: ServletImpl.DEFAULT_OPTION,
                                 javaVersion: JdkVersion.DEFAULT_OPTION)).features
@@ -78,7 +76,7 @@ class FeatureControllerSpec extends Specification {
         when:
         List<FeatureDTO> features = applicationTypeClient
                 .spanishFeatures(ApplicationType.DEFAULT_OPTION,
-                        new FeatureFilter(test: TestFramework.DEFAULT_OPTION,
+                        new FeatureFilter(reloading: DevelopmentReloading.DEFAULT_OPTION,
                                 gorm: GormImpl.DEFAULT_OPTION,
                                 servlet: ServletImpl.DEFAULT_OPTION,
                                 javaVersion: JdkVersion.DEFAULT_OPTION)).features
@@ -94,7 +92,7 @@ class FeatureControllerSpec extends Specification {
         when:
         List<FeatureDTO> features = applicationTypeClient
                 .spanishDefaultFeatures(ApplicationType.DEFAULT_OPTION,
-                        new FeatureFilter(test: TestFramework.DEFAULT_OPTION,
+                        new FeatureFilter(reloading: DevelopmentReloading.DEFAULT_OPTION,
                                 gorm: GormImpl.DEFAULT_OPTION,
                                 servlet: ServletImpl.DEFAULT_OPTION,
                                 javaVersion: JdkVersion.DEFAULT_OPTION)).features
@@ -111,7 +109,7 @@ class FeatureControllerSpec extends Specification {
         def features = applicationTypeClient
                 .defaultFeatures(ApplicationType.PLUGIN,
                         RequestInfo.LOCAL,
-                        new FeatureFilter(test: TestFramework.DEFAULT_OPTION,
+                        new FeatureFilter(reloading: DevelopmentReloading.DEFAULT_OPTION,
                                 gorm: GormImpl.DEFAULT_OPTION,
                                 servlet: ServletImpl.DEFAULT_OPTION,
                                 javaVersion: JdkVersion.DEFAULT_OPTION)).features
@@ -124,7 +122,7 @@ class FeatureControllerSpec extends Specification {
         features = applicationTypeClient
                 .defaultFeatures(ApplicationType.DEFAULT_OPTION,
                         RequestInfo.LOCAL,
-                        new FeatureFilter(test: TestFramework.DEFAULT_OPTION,
+                        new FeatureFilter(reloading: DevelopmentReloading.DEFAULT_OPTION,
                                 gorm: GormImpl.DEFAULT_OPTION,
                                 servlet: ServletImpl.DEFAULT_OPTION,
                                 javaVersion: JdkVersion.DEFAULT_OPTION)).features
@@ -138,7 +136,7 @@ class FeatureControllerSpec extends Specification {
         def features = applicationTypeClient
                 .features(ApplicationType.PLUGIN,
                         RequestInfo.LOCAL,
-                        new FeatureFilter(test: TestFramework.DEFAULT_OPTION,
+                        new FeatureFilter(reloading: DevelopmentReloading.DEFAULT_OPTION,
                                 gorm: GormImpl.DEFAULT_OPTION,
                                 servlet: ServletImpl.DEFAULT_OPTION,
                                 javaVersion: JdkVersion.DEFAULT_OPTION)).features
@@ -150,7 +148,7 @@ class FeatureControllerSpec extends Specification {
         features = applicationTypeClient
                 .features(ApplicationType.DEFAULT_OPTION,
                         RequestInfo.LOCAL,
-                        new FeatureFilter(test: TestFramework.DEFAULT_OPTION,
+                        new FeatureFilter(reloading: DevelopmentReloading.DEFAULT_OPTION,
                                 gorm: GormImpl.DEFAULT_OPTION,
                                 servlet: ServletImpl.DEFAULT_OPTION,
                                 javaVersion: JdkVersion.DEFAULT_OPTION)).features
@@ -164,7 +162,7 @@ class FeatureControllerSpec extends Specification {
         def features = applicationTypeClient
                 .features(ApplicationType.WEB,
                         RequestInfo.LOCAL,
-                        new FeatureFilter(test: TestFramework.DEFAULT_OPTION,
+                        new FeatureFilter(reloading: DevelopmentReloading.DEFAULT_OPTION,
                                 gorm: GormImpl.DEFAULT_OPTION,
                                 servlet: ServletImpl.DEFAULT_OPTION,
                                 javaVersion: JdkVersion.DEFAULT_OPTION)).features

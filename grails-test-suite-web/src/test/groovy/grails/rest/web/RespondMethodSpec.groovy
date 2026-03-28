@@ -24,12 +24,28 @@ import grails.persistence.Entity
 import grails.testing.gorm.DomainUnitTest
 import grails.testing.web.controllers.ControllerUnitTest
 import grails.web.mime.MimeType
+import org.grails.web.mime.HttpServletResponseExtension
 import org.grails.web.util.GrailsApplicationAttributes
 import org.springframework.web.servlet.ModelAndView
 import spock.lang.Issue
 import spock.lang.Specification
 
 class RespondMethodSpec extends Specification implements ControllerUnitTest<BookController>, DomainUnitTest<Book> {
+
+    def setup() {
+        // Access config to ensure grailsApplication is initialized and Holders is populated.
+        // This triggers doWithConfig() which registers the custom MIME types.
+        assert config != null
+        
+        // Clear the static mimeTypes cache to prevent test environment pollution.
+        // This must be done AFTER accessing config to ensure the new config is applied.
+        HttpServletResponseExtension.@mimeTypes = null
+    }
+
+    def cleanup() {
+        // Clear the static mimeTypes cache to prevent test environment pollution
+        HttpServletResponseExtension.@mimeTypes = null
+    }
 
     Closure doWithConfig() {{ config ->
         // unit tests in real applications will not need to do
@@ -156,6 +172,7 @@ class RespondMethodSpec extends Specification implements ControllerUnitTest<Book
         def book = new Book(title: "The Stand").save(flush:true)
 
         when:"The respond method is used to render a response"
+        response.format = 'html'
         webRequest.actionName = 'showWithModel'
         controller.showWithModel(book)
         def modelAndView = webRequest.request.getAttribute(GrailsApplicationAttributes.MODEL_AND_VIEW)
@@ -173,6 +190,7 @@ class RespondMethodSpec extends Specification implements ControllerUnitTest<Book
         book.validate()
 
         when:"The respond method is used to render a response"
+        response.format = 'html'
         webRequest.actionName = 'showWithModel'
         controller.showWithModel(book)
         def modelAndView = webRequest.request.getAttribute(GrailsApplicationAttributes.MODEL_AND_VIEW)
@@ -190,6 +208,7 @@ class RespondMethodSpec extends Specification implements ControllerUnitTest<Book
         book.validate()
         controller.proxyHandler = new TestProxyHandler()
         when:"The respond method is used to render a response"
+        response.format = 'html'
         webRequest.actionName = 'showWithModel'
         controller.respond(new BookProxy(book: book), model: [extra: true])
         def modelAndView = webRequest.request.getAttribute(GrailsApplicationAttributes.MODEL_AND_VIEW)
@@ -210,6 +229,7 @@ class RespondMethodSpec extends Specification implements ControllerUnitTest<Book
         renderer.proxyHandler = new TestProxyHandler()
         
         when:"The respond method is used to render a response"
+        response.format = 'html'
         webRequest.actionName = 'showWithModel'
         controller.respond([new BookProxy(book: book)], model: [extra: true])
         def modelAndView = webRequest.request.getAttribute(GrailsApplicationAttributes.MODEL_AND_VIEW)

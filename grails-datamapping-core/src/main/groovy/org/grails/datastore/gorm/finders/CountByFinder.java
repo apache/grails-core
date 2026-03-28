@@ -67,6 +67,7 @@ public class CountByFinder extends DynamicFinder implements QueryBuildingFinder 
 
     protected Query buildQuery(DynamicFinderInvocation invocation, Class<?> clazz, Query q) {
         applyAdditionalCriteria(q, invocation.getCriteria());
+        applyDetachedCriteria(q, invocation.getDetachedCriteria());
         configureQueryWithArguments(clazz, q, invocation.getArguments());
 
         String operatorInUse = invocation.getOperator();

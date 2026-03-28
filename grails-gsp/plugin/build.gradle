@@ -31,8 +31,6 @@ version = projectVersion
 group = 'org.apache.grails'
 
 ext {
-    // TODO: RestfulReverseUrlRenderingTests seems to fail under the CI Build when using parallel
-    configuredTestParallel = isCiBuild ? 1 : rootProject.findProperty('configuredTestParallel')
     testForkEvery = isCiBuild ? 10 : 20
     testJvmArgs = ['-Xmx1536M']
 
@@ -64,7 +62,7 @@ dependencies {
     api project(':grails-encoder'), { // CodecLookup, Encoder
         // API dependencies in grails-encoder
         exclude group: 'org.apache.groovy', module: 'groovy'
-        exclude group: 'org.apache.groovy', module: 'groovy-json'
+        //exclude group: 'org.apache.groovy', module: 'groovy-json' // Hack: exclusion removed, library dependency forwarded even though not used in api, should be able to exclude this here
         exclude group: 'org.apache.grails', module: 'grails-core'
         exclude group: 'org.slf4j', module: 'jcl-over-slf4j'
         exclude group: 'org.slf4j', module: 'slf4j-api'
@@ -125,7 +123,7 @@ dependencies {
         exclude group: 'org.apache.grails', module: 'grails-core'
         exclude group: 'org.apache.grails', module: 'grails-databinding'
         exclude group: 'org.apache.grails', module: 'grails-encoder'
-        exclude group: 'org.springframework', module: 'spring-webmvc'
+        //exclude group: 'org.springframework', module: 'spring-webmvc' // Hack: exclusion removed as library is needed by applications, should be able to exclude this here
         exclude group: 'org.springframework', module: 'spring-context-support'
     }
     implementation project(':grails-web-mvc'), { // SynchronizerTokensHolder

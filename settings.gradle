@@ -26,45 +26,12 @@ pluginManagement {
     includeBuild('./build-logic') {
         name = 'build-logic-root'
     }
-    repositories {
-        if (System.getenv('GRAILS_INCLUDE_MAVEN_LOCAL')) {
-            mavenLocal()
-        }
-        mavenCentral()
-        gradlePluginPortal()
-        maven {
-            url = 'https://repository.apache.org/content/groups/snapshots'
-            content {
-                includeVersionByRegex('org[.]apache[.]grails[.]gradle.*', '.*', '.*-SNAPSHOT')
-            }
-            mavenContent {
-                snapshotsOnly()
-            }
-        }
-        maven {
-            url = 'https://central.sonatype.com/repository/maven-snapshots'
-            content {
-                includeVersionByRegex('cloud[.]wondrify.*', '.*', '.*-SNAPSHOT')
-            }
-            mavenContent {
-                snapshotsOnly()
-            }
-        }
-        maven {
-            url = 'https://repository.apache.org/content/groups/staging'
-            content {
-                includeModuleByRegex('org[.]apache[.]grails[.]gradle', 'grails-publish')
-            }
-            mavenContent {
-                releasesOnly()
-            }
-        }
-    }
 }
 
 plugins {
-    id 'com.gradle.develocity' version '4.1.1'
+    id 'com.gradle.develocity' version '4.2.2'
     id 'com.gradle.common-custom-user-data-gradle-plugin' version '2.3'
+    id 'org.apache.grails.buildsrc.repo'
 }
 
 def isCI = System.getenv().containsKey('CI')
@@ -78,7 +45,7 @@ if (isReproducibleBuild) {
 }
 
 develocity {
-    server = 'https://ge.grails.org'
+    server = 'https://develocity.apache.org'
     buildScan {
         tag('grails')
         tag('grails-core')
@@ -124,10 +91,6 @@ include(
         'grails-shell-cli',
         'grails-spring',
         'grails-test-core',
-        'grails-testing-support-core',
-        'grails-testing-support-mongodb',
-        'grails-testing-support-views-gson',
-        'grails-testing-support-web',
         'grails-url-mappings',
         'grails-validation',
         'grails-views-core',
@@ -203,7 +166,15 @@ include(
         //'grails-datamapping-rx',
 
         // Testing Support
+        'grails-testing-support-core',
         'grails-testing-support-datamapping',
+        'grails-testing-support-dbcleanup-core',
+        'grails-testing-support-dbcleanup-h2',
+        'grails-testing-support-dbcleanup-postgresql',
+        'grails-testing-support-http-client',
+        'grails-testing-support-mongodb',
+        'grails-testing-support-views-gson',
+        'grails-testing-support-web',
 
         // Test Report
         'grails-data-test-report',
@@ -298,6 +269,8 @@ project(':grails-test-examples-hibernate5-grails-schema-per-tenant').projectDir 
 
 include 'grails-test-examples-hibernate5-grails-partitioned-multi-tenancy'
 project(':grails-test-examples-hibernate5-grails-partitioned-multi-tenancy').projectDir = new File(settingsDir, 'grails-test-examples/hibernate5/grails-partitioned-multi-tenancy')
+include 'grails-test-examples-hibernate5-grails-multitenant-multi-datasource'
+project(':grails-test-examples-hibernate5-grails-multitenant-multi-datasource').projectDir = new File(settingsDir, 'grails-test-examples/hibernate5/grails-multitenant-multi-datasource')
 
 include 'grails-test-examples-hibernate5-standalone-hibernate'
 project(':grails-test-examples-hibernate5-standalone-hibernate').projectDir = new File(settingsDir, 'grails-test-examples/hibernate5/standalone-hibernate')
@@ -308,11 +281,17 @@ project(':grails-test-examples-hibernate5-spring-boot-hibernate').projectDir = n
 include 'grails-test-examples-hibernate5-grails-data-service'
 project(':grails-test-examples-hibernate5-grails-data-service').projectDir = new File(settingsDir, 'grails-test-examples/hibernate5/grails-data-service')
 
+include 'grails-test-examples-hibernate5-grails-data-service-multi-datasource'
+project(':grails-test-examples-hibernate5-grails-data-service-multi-datasource').projectDir = new File(settingsDir, 'grails-test-examples/hibernate5/grails-data-service-multi-datasource')
+
 include 'grails-test-examples-hibernate5-grails-hibernate-groovy-proxy'
 project(':grails-test-examples-hibernate5-grails-hibernate-groovy-proxy').projectDir = new File(settingsDir, 'grails-test-examples/hibernate5/grails-hibernate-groovy-proxy')
 
 include 'grails-test-examples-hibernate5-issue450'
 project(':grails-test-examples-hibernate5-issue450').projectDir = new File(settingsDir, 'grails-test-examples/hibernate5/issue450')
+
+include 'grails-test-examples-hibernate5-grails-multitenant-multi-datasource'
+project(':grails-test-examples-hibernate5-grails-multitenant-multi-datasource').projectDir = new File(settingsDir, 'grails-test-examples/hibernate5/grails-multitenant-multi-datasource')
 
 // Mongodb
 // core
@@ -389,6 +368,7 @@ include(
         'grails-test-examples-external-configuration',
         'grails-test-examples-exploded',
         'grails-test-examples-datasources',
+        'grails-test-examples-database-cleanup',
         'grails-test-examples-namespaces',
         'grails-test-examples-geb',
         'grails-test-examples-geb-gebconfig',
@@ -402,6 +382,7 @@ include(
         'grails-test-examples-issue-11102',
         'grails-test-examples-demo33',
         'grails-test-examples-micronaut',
+        'grails-test-examples-micronaut-groovy-only',
         'grails-test-examples-plugins-loadfirst',
         'grails-test-examples-plugins-loadsecond',
         'grails-test-examples-plugins-loadafter',
@@ -410,8 +391,10 @@ include(
         'grails-test-examples-issue-15228',
         'grails-test-examples-plugins-exploded',
         'grails-test-examples-plugins-issue-11767',
+        'grails-test-examples-plugins-micronaut-singleton',
         'grails-test-examples-cache',
         'grails-test-examples-scaffolding',
+        'grails-test-examples-scaffolding-fields',
         'grails-test-examples-views-functional-tests',
         'grails-test-examples-views-functional-tests-plugin'
 )
@@ -422,6 +405,7 @@ project(':grails-test-examples-app3').projectDir = file('grails-test-examples/ap
 project(':grails-test-examples-external-configuration').projectDir = file('grails-test-examples/external-configuration')
 project(':grails-test-examples-exploded').projectDir = file('grails-test-examples/exploded')
 project(':grails-test-examples-datasources').projectDir = file('grails-test-examples/datasources')
+project(':grails-test-examples-database-cleanup').projectDir = file('grails-test-examples/database-cleanup')
 project(':grails-test-examples-geb').projectDir = file('grails-test-examples/geb')
 project(':grails-test-examples-geb-gebconfig').projectDir = file('grails-test-examples/geb-gebconfig')
 project(':grails-test-examples-namespaces').projectDir = file('grails-test-examples/namespaces')
@@ -435,6 +419,7 @@ project(':grails-test-examples-issue-views-182').projectDir = file('grails-test-
 project(':grails-test-examples-issue-11102').projectDir = file('grails-test-examples/issue-11102')
 project(':grails-test-examples-demo33').projectDir = file('grails-test-examples/demo33')
 project(':grails-test-examples-micronaut').projectDir = file('grails-test-examples/micronaut')
+project(':grails-test-examples-micronaut-groovy-only').projectDir = file('grails-test-examples/micronaut-groovy-only')
 project(':grails-test-examples-plugins-loadfirst').projectDir = file('grails-test-examples/plugins/loadfirst')
 project(':grails-test-examples-plugins-loadsecond').projectDir = file('grails-test-examples/plugins/loadsecond')
 project(':grails-test-examples-plugins-loadafter').projectDir = file('grails-test-examples/plugins/loadafter')
@@ -443,8 +428,10 @@ project(':grails-test-examples-issue-11767').projectDir = file('grails-test-exam
 project(':grails-test-examples-issue-15228').projectDir = file('grails-test-examples/issue-15228')
 project(':grails-test-examples-plugins-exploded').projectDir = file('grails-test-examples/plugins/exploded')
 project(':grails-test-examples-plugins-issue-11767').projectDir = file('grails-test-examples/plugins/issue-11767')
+project(':grails-test-examples-plugins-micronaut-singleton').projectDir = file('grails-test-examples/plugins/micronaut-singleton')
 project(':grails-test-examples-cache').projectDir = file('grails-test-examples/cache')
 project(':grails-test-examples-scaffolding').projectDir = file('grails-test-examples/scaffolding')
+project(':grails-test-examples-scaffolding-fields').projectDir = file('grails-test-examples/scaffolding-fields')
 project(':grails-test-examples-views-functional-tests').projectDir = file('grails-test-examples/views-functional-tests')
 project(':grails-test-examples-views-functional-tests-plugin').projectDir = file('grails-test-examples/views-functional-tests-plugin')
 
@@ -459,41 +446,5 @@ includeBuild('./build-logic') {
 for (String pattern in DirectoryScanner.defaultExcludes) {
     if (pattern.contains('gitignore') || pattern.contains('gitattributes')) {
         DirectoryScanner.removeDefaultExclude(pattern)
-    }
-}
-
-dependencyResolutionManagement {
-    repositoriesMode = RepositoriesMode.FAIL_ON_PROJECT_REPOS
-    repositories {
-        if (System.getenv('GRAILS_INCLUDE_MAVEN_LOCAL')) {
-            mavenLocal()
-        }
-        maven { url = 'https://repo.grails.org/grails/restricted' }
-        maven {
-            url = 'https://repository.apache.org/content/groups/snapshots'
-            content {
-                includeVersionByRegex('org[.]apache[.]grails.*', '.*', '.*-SNAPSHOT')
-                includeVersionByRegex('org[.]apache[.]groovy.*', '.*', '.*-SNAPSHOT')
-            }
-        }
-        maven {
-            url = 'https://central.sonatype.com/repository/maven-snapshots'
-            content {
-                includeVersionByRegex('cloud[.]wondrify.*', '.*', '.*-SNAPSHOT')
-            }
-            mavenContent {
-                snapshotsOnly()
-            }
-        }
-        maven {
-            url = 'https://repository.apache.org/content/groups/staging'
-            content {
-                includeModuleByRegex('org[.]apache[.]grails[.]gradle', 'grails-publish')
-                includeModuleByRegex('org[.]apache[.]groovy[.]geb', 'geb-.*')
-            }
-            mavenContent {
-                releasesOnly()
-            }
-        }
     }
 }
