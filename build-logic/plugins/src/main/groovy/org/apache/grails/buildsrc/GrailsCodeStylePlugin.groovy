@@ -135,6 +135,10 @@ class GrailsCodeStylePlugin implements Plugin<Project> {
             fileName.toLowerCase().contains('test') || fileName.toLowerCase().contains('integrationtest')
         }
 
+        def shouldSkipClass = { String className ->
+            !checkTests && (className.endsWith('Spec') || className.endsWith('Test') || className.endsWith('Tests'))
+        }
+
         // 1. CodeNarc
         def codenarcDir = reportsDir.dir('codenarc').asFile
         if (codenarcDir.exists()) {
@@ -150,6 +154,9 @@ class GrailsCodeStylePlugin implements Plugin<Project> {
                         def fileName = f.@name.text()
                         def className = pkgName ? "${pkgName}.${fileName}" : fileName
                         className = className.replace('.groovy', '').replace('.java', '')
+                        if (shouldSkipClass(className)) {
+                            return
+                        }
                         f.Violation.each { v ->
                             violations << [
                                     module: module,
@@ -176,9 +183,13 @@ class GrailsCodeStylePlugin implements Plugin<Project> {
                 def xml = slurper.parse(file)
                 xml.file.each { f ->
                     f.violation.each { v ->
+                        def className = "${v.@package}.${v.@class}"
+                        if (shouldSkipClass(className)) {
+                            return
+                        }
                         violations << [
                                 module: module,
-                                className: "${v.@package}.${v.@class}",
+                                className: className,
                                 tool: 'PMD',
                                 type: v.@rule.text(),
                                 line: v.@beginline.text(),
@@ -199,9 +210,13 @@ class GrailsCodeStylePlugin implements Plugin<Project> {
                 def module = getModule(file.name)
                 def xml = slurper.parse(file)
                 xml.BugInstance.each { b ->
+                    def className = b.Class.@classname.text()
+                    if (shouldSkipClass(className)) {
+                        return
+                    }
                     violations << [
                             module: module,
-                            className: b.Class.@classname.text(),
+                            className: className,
                             tool: 'SpotBugs',
                             type: b.@type.text(),
                             line: b.SourceLine.@start.text(),
@@ -229,6 +244,10 @@ class GrailsCodeStylePlugin implements Plugin<Project> {
                                     filePath.contains('src/test/java/') ? filePath.split('src/test/java/')[1] :
                                     filePath.split('/').last()
                     className = className.replace('.groovy', '').replace('.java', '').replace('/', '.')
+
+                    if (shouldSkipClass(className)) {
+                        return
+                    }
 
                     f.error.each { e ->
                         violations << [
