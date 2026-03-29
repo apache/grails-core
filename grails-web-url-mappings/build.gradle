@@ -40,6 +40,8 @@ dependencies {
         exclude module: 'grails-encoder'
         exclude module: 'grails-core'
     }
+    compileOnly 'org.springframework.boot:spring-boot-servlet'
+    compileOnly 'org.springframework.boot:spring-boot-web-server'
 
     api 'org.apache.groovy:groovy'
     api project(':grails-datamapping-validation')
@@ -62,7 +64,7 @@ dependencies {
 
     testImplementation 'org.apache.groovy:groovy-test-junit5'
     testImplementation 'org.junit.jupiter:junit-jupiter-api'
-    testImplementation 'org.junit.platform:junit-platform-runner'
+    testImplementation 'org.junit.platform:junit-platform-suite'
 
     testRuntimeOnly 'org.junit.jupiter:junit-jupiter-engine'
 

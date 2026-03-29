@@ -64,6 +64,7 @@ import org.springframework.core.env.PropertyResolver;
 import org.springframework.jdbc.datasource.ConnectionHolder;
 import org.springframework.jdbc.datasource.TransactionAwareDataSourceProxy;
 import org.springframework.lang.Nullable;
+import org.springframework.transaction.PlatformTransactionManager;
 import org.springframework.transaction.support.TransactionSynchronizationManager;
 
 import grails.gorm.MultiTenant;
@@ -343,7 +344,7 @@ public class HibernateDatastore extends AbstractDatastore
             ConfigurableApplicationEventPublisher eventPublisher,
             HibernateDatastore parent,
             SingletonConnectionSources<SessionFactory, HibernateConnectionSourceSettings> singletonConnectionSources) {
-        return new HibernateDatastore(singletonConnectionSources, mappingContext, eventPublisher) {
+        return new HibernateDatastore(singletonConnectionSources, mappingContext, eventPublisher, true) {
             @Override
             protected HibernateGormEnhancer initialize() {
                 return null;
@@ -599,7 +600,7 @@ public class HibernateDatastore extends AbstractDatastore
      * @return The {@link org.springframework.transaction.PlatformTransactionManager} instance
      */
     @Override
-    public GrailsHibernateTransactionManager getTransactionManager() {
+    public PlatformTransactionManager getTransactionManager() {
         return transactionManager;
     }
 
@@ -670,7 +671,7 @@ public class HibernateDatastore extends AbstractDatastore
         final HibernateConnectionSource defaultConnectionSource =
                 (HibernateConnectionSource) getConnectionSources().getDefaultConnectionSource();
         if (multiTenantMode == MultiTenancySettings.MultiTenancyMode.SCHEMA) {
-            return new HibernateGormEnhancer(this, transactionManager, defaultConnectionSource.getSettings()) {
+            return new HibernateGormEnhancer(this, (PlatformTransactionManager) transactionManager, defaultConnectionSource.getSettings()) {
                 @Override
                 public List<String> allQualifiers(Datastore datastore, PersistentEntity entity) {
                     List<String> allQualifiers = super.allQualifiers(datastore, entity);
@@ -699,7 +700,7 @@ public class HibernateDatastore extends AbstractDatastore
                 }
             };
         } else {
-            return new HibernateGormEnhancer(this, transactionManager, defaultConnectionSource.getSettings());
+            return new HibernateGormEnhancer(this, (PlatformTransactionManager) transactionManager, defaultConnectionSource.getSettings());
         }
     }
 

@@ -80,7 +80,7 @@ public class EventListenerIntegrator implements Integrator {
     @Override
     public void integrate(
             Metadata metadata,
-            org.hibernate.boot.spi.BootstrapContext bootstrapContext,
+            BootstrapContext bootstrapContext,
             SessionFactoryImplementor sfi) {
 
         EventListenerRegistry listenerRegistry = sfi.getServiceRegistry().getService(EventListenerRegistry.class);

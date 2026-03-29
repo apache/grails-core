@@ -77,9 +77,10 @@ public class ByteBuddyGroovyInterceptor extends ByteBuddyInterceptor {
             return getIdentifier();
         }
 
+        GroovyProxyInterceptorLogic.InterceptorState state = new GroovyProxyInterceptorLogic.InterceptorState(
+                getEntityName(), getPersistentClass(), getIdentifier());
+
         if (isUninitialized()) {
-            GroovyProxyInterceptorLogic.InterceptorState state = new GroovyProxyInterceptorLogic.InterceptorState(
-                    getEntityName(), getPersistentClass(), getIdentifier());
             Object result = GroovyProxyInterceptorLogic.handleUninitialized(state, methodName, args);
             if (result != GroovyProxyInterceptorLogic.INVOKE_IMPLEMENTATION) { // NOPMD: sentinel comparison
                 return result;
@@ -92,6 +93,15 @@ public class ByteBuddyGroovyInterceptor extends ByteBuddyInterceptor {
         }
 
         if (GroovyProxyInterceptorLogic.isGroovyMethod(methodName)) {
+            if (isUninitialized()) {
+                // If we reach here, it's a Groovy method but handleUninitialized didn't catch it.
+                // We should still avoid getImplementation() if uninitialized.
+                Object uninitializedResult = GroovyProxyInterceptorLogic.handleUninitialized(state, methodName, args);
+                if (uninitializedResult != GroovyProxyInterceptorLogic.INVOKE_IMPLEMENTATION) {
+                    return uninitializedResult;
+                }
+            }
+
             final Object target = getImplementation();
             try {
                 if (!isPublic(getPersistentClass(), method)) {

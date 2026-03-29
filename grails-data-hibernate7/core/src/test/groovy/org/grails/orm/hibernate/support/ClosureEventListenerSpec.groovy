@@ -23,7 +23,7 @@ import grails.gorm.hibernate.HibernateEntity
 import grails.gorm.specs.HibernateGormDatastoreSpec
 import grails.gorm.transactions.Rollback
 import grails.validation.ValidationException
-import org.springframework.orm.hibernate5.HibernateSystemException
+import org.grails.orm.hibernate.support.hibernate7.HibernateSystemException
 
 class ClosureEventListenerSpec extends HibernateGormDatastoreSpec {
 

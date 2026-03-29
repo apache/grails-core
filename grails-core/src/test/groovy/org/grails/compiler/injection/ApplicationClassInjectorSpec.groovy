@@ -34,7 +34,7 @@ class ApplicationClassInjectorSpec extends Specification {
         className << [
             'org.springframework.boot.autoconfigure.jdbc.DataSourceAutoConfiguration',
             'org.springframework.boot.autoconfigure.reactor.ReactorAutoConfiguration',
-            'org.springframework.boot.autoconfigure.orm.jpa.HibernateJpaAutoConfiguration'
+            'org.springframework.boot.hibernate.autoconfigure.HibernateJpaAutoConfiguration'
         ]
     }
 

@@ -38,6 +38,8 @@ public class GroovyProxyInterceptorLogic {
     public static final Object INVOKE_IMPLEMENTATION = new Object();
 
     private static final String GET_META_CLASS = "getMetaClass";
+    private static final String SET_META_CLASS = "setMetaClass";
+    private static final String META_CLASS_PROPERTY = "metaClass";
     private static final String GET_PROPERTY = "getProperty";
     private static final String ID_PROPERTY = "id";
     private static final String IDENT_METHOD = "ident";
@@ -50,8 +52,13 @@ public class GroovyProxyInterceptorLogic {
                 (args == null || args.length == 0)) {
             return InvokerHelper.getMetaClass(state.persistentClass());
         }
-        if (GET_PROPERTY.equals(methodName) && args.length == 1 && ID_PROPERTY.equals(args[0])) {
-            return state.identifier();
+        if (GET_PROPERTY.equals(methodName) && args.length == 1) {
+            if (ID_PROPERTY.equals(args[0])) {
+                return state.identifier();
+            }
+            if (META_CLASS_PROPERTY.equals(args[0])) {
+                return InvokerHelper.getMetaClass(state.persistentClass());
+            }
         }
         if (IDENT_METHOD.equals(methodName) && (args == null || args.length == 0)) {
             return state.identifier();

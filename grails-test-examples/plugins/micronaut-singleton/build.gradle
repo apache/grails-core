@@ -43,3 +43,8 @@ dependencies {
 apply {
     from rootProject.layout.projectDirectory.file('gradle/grails-extension-gradle-config.gradle')
 }
+
+// Groovydoc not needed for test example plugins
+tasks.named('groovydoc') {
+    enabled = false
+}

@@ -4,14 +4,14 @@
  *  distributed with this work for additional information
  *  regarding copyright ownership.  The ASF licenses this file
  *  to you under the Apache License, Version 2.0 (the
- *  "License"); you may not use this file except in compliance
+ *  'License'); you may not use this file except in compliance
  *  with the License.  You may obtain a copy of the License at
  *
  *    https://www.apache.org/licenses/LICENSE-2.0
  *
  *  Unless required by applicable law or agreed to in writing,
  *  software distributed under the License is distributed on an
- *  "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ *  'AS IS' BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
  *  KIND, either express or implied.  See the License for the
  *  specific language governing permissions and limitations
  *  under the License.
@@ -77,6 +77,7 @@ abstract class HibernateSpec extends Specification {
     @Shared @AutoCleanup('close') ApplicationContext applicationContext
 
     static class TestGrailsBytecodeProvider extends GrailsBytecodeProvider {
+
         @Override
         @CompileStatic(TypeCheckingMode.SKIP)
         protected ByteBuddyProxyHelper createProxyHelper() {
@@ -87,7 +88,7 @@ abstract class HibernateSpec extends Specification {
                 def byteBuddyState = byteBuddyStateConstructor.newInstance()
                 return new ByteBuddyProxyHelper(byteBuddyState as org.hibernate.bytecode.internal.bytebuddy.ByteBuddyState)
             } catch (e) {
-                throw new RuntimeException("Failed to instantiate ByteBuddyState using reflection", e)
+                throw new RuntimeException('Failed to instantiate ByteBuddyState using reflection', e)
             }
         }
     }
@@ -124,10 +125,10 @@ abstract class HibernateSpec extends Specification {
 
         initializer.beanDefinitions = { ->
             dataSource(org.springframework.jdbc.datasource.DriverManagerDataSource) {
-                driverClassName = "org.h2.Driver"
-                url = "jdbc:h2:mem:test;DB_CLOSE_DELAY=-1"
-                username = "sa"
-                password = ""
+                driverClassName = 'org.h2.Driver'
+                url = 'jdbc:h2:mem:test;DB_CLOSE_DELAY=-1'
+                username = 'sa'
+                password = ''
             }
             hibernateBytecodeProvider(TestGrailsBytecodeProvider)
         }
@@ -176,19 +177,19 @@ abstract class HibernateSpec extends Specification {
         def dataSource = applicationContext.getBean('dataSource')
 
         def serviceRegistry = new StandardServiceRegistryBuilder(bootstrapServiceRegistry)
-                .applySetting("hibernate.dialect", H2Dialect.class.getName())
-                .applySetting("jakarta.persistence.jdbc.url", "jdbc:h2:mem:test;DB_CLOSE_DELAY=-1")
-                .applySetting("jakarta.persistence.jdbc.driver", "org.h2.Driver")
-                .applySetting("jakarta.persistence.nonJtaDataSource", dataSource)
+                .applySetting('hibernate.dialect', H2Dialect.class.getName())
+                .applySetting('jakarta.persistence.jdbc.url', 'jdbc:h2:mem:test;DB_CLOSE_DELAY=-1')
+                .applySetting('jakarta.persistence.jdbc.driver', 'org.h2.Driver')
+                .applySetting('jakarta.persistence.nonJtaDataSource', dataSource)
                 .addService(org.hibernate.bytecode.spi.BytecodeProvider.class, (org.hibernate.bytecode.spi.BytecodeProvider) bytecodeProvider)
-                .applySetting("hibernate.bytecode.allow_enhancement_as_proxy", "false")
+                .applySetting('hibernate.bytecode.allow_enhancement_as_proxy', 'false')
                 .build()
         def options = new MetadataBuilderImpl(
                 new MetadataSources(serviceRegistry)
         ).getMetadataBuildingOptions()
         new InFlightMetadataCollectorImpl(
                 new BootstrapContextImpl( serviceRegistry, options)
-                , options);
+                , options)
     }
 
     protected ServiceRegistryImplementor getServiceRegistry() {

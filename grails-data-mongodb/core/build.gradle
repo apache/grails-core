@@ -130,7 +130,6 @@ dependencies {
     testImplementation 'org.spockframework:spock-core'
     testImplementation project(':grails-testing-support-mongodb')
 
-    testImplementation platform('org.testcontainers:testcontainers-bom:2.0.3')
     testImplementation 'org.testcontainers:testcontainers'
     testImplementation 'org.testcontainers:mongodb'
     testImplementation 'org.testcontainers:spock'

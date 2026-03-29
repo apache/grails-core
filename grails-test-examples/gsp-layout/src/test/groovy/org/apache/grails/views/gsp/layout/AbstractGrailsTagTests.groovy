@@ -19,7 +19,39 @@
 
 package org.apache.grails.views.gsp.layout
 
+import javax.xml.parsers.DocumentBuilder
+import javax.xml.parsers.DocumentBuilderFactory
+import javax.xml.xpath.XPath
+import javax.xml.xpath.XPathConstants
+import javax.xml.xpath.XPathFactory
+
+import jakarta.servlet.ServletContext
+import jakarta.servlet.http.HttpServletRequest
+import jakarta.servlet.http.HttpServletResponse
+
 import com.opensymphony.module.sitemesh.RequestConstants
+
+import org.junit.jupiter.api.AfterEach
+import org.junit.jupiter.api.BeforeEach
+import org.w3c.dom.Document
+
+import org.springframework.beans.factory.config.AutowireCapableBeanFactory
+import org.springframework.beans.factory.support.RootBeanDefinition
+import org.springframework.context.ApplicationContext
+import org.springframework.context.MessageSource
+import org.springframework.context.support.StaticMessageSource
+import org.springframework.core.convert.support.DefaultConversionService
+import org.springframework.core.io.Resource
+import org.springframework.core.io.support.PathMatchingResourcePatternResolver
+import org.springframework.mock.web.MockHttpServletResponse
+import org.springframework.mock.web.MockServletContext
+import org.springframework.web.context.WebApplicationContext
+import org.springframework.web.context.request.RequestContextHolder
+import org.springframework.web.context.support.GenericWebApplicationContext
+import org.springframework.web.servlet.DispatcherServlet
+import org.springframework.web.servlet.i18n.AcceptHeaderLocaleResolver
+import org.springframework.web.servlet.support.JstlUtils
+
 import grails.build.support.MetaClassRegistryCleaner
 import grails.core.DefaultGrailsApplication
 import grails.core.GrailsApplication
@@ -29,9 +61,9 @@ import grails.util.GrailsWebMockUtil
 import grails.util.Holders
 import grails.util.Metadata
 import grails.web.pages.GroovyPagesUriService
-import jakarta.servlet.ServletContext
-import jakarta.servlet.http.HttpServletRequest
-import jakarta.servlet.http.HttpServletResponse
+import org.apache.grails.web.layout.EmbeddedGrailsLayoutView
+import org.apache.grails.web.layout.GrailsHTMLPageParser
+import org.apache.grails.web.layout.GSPGrailsLayoutPage
 import org.grails.buffer.FastStringWriter
 import org.grails.config.PropertySourcesConfig
 import org.grails.core.artefact.ControllerArtefactHandler
@@ -55,39 +87,7 @@ import org.grails.web.pages.DefaultGroovyPagesUriService
 import org.grails.web.pages.GSPResponseWriter
 import org.grails.web.servlet.context.support.WebRuntimeSpringConfiguration
 import org.grails.web.servlet.mvc.GrailsWebRequest
-import org.apache.grails.web.layout.GSPGrailsLayoutPage
-import org.apache.grails.web.layout.GrailsHTMLPageParser
-import org.apache.grails.web.layout.EmbeddedGrailsLayoutView
 import org.grails.web.util.GrailsApplicationAttributes
-import org.junit.jupiter.api.AfterEach
-import org.junit.jupiter.api.BeforeEach
-import org.springframework.beans.factory.config.AutowireCapableBeanFactory
-import org.springframework.beans.factory.support.RootBeanDefinition
-import org.springframework.boot.web.servlet.context.AnnotationConfigServletWebServerApplicationContext
-import org.springframework.context.ApplicationContext
-import org.springframework.context.MessageSource
-import org.springframework.context.support.StaticMessageSource
-import org.springframework.core.convert.support.DefaultConversionService
-import org.springframework.core.io.Resource
-import org.springframework.core.io.support.PathMatchingResourcePatternResolver
-import org.springframework.mock.web.MockHttpServletResponse
-import org.springframework.mock.web.MockServletContext
-import org.springframework.ui.context.Theme
-import org.springframework.ui.context.ThemeSource
-import org.springframework.ui.context.support.SimpleTheme
-import org.springframework.web.context.WebApplicationContext
-import org.springframework.web.context.request.RequestContextHolder
-import org.springframework.web.servlet.DispatcherServlet
-import org.springframework.web.servlet.i18n.AcceptHeaderLocaleResolver
-import org.springframework.web.servlet.support.JstlUtils
-import org.springframework.web.servlet.theme.SessionThemeResolver
-import org.w3c.dom.Document
-
-import javax.xml.parsers.DocumentBuilder
-import javax.xml.parsers.DocumentBuilderFactory
-import javax.xml.xpath.XPath
-import javax.xml.xpath.XPathConstants
-import javax.xml.xpath.XPathFactory
 
 import static org.junit.jupiter.api.Assertions.assertEquals
 import static org.junit.jupiter.api.Assertions.assertFalse
@@ -95,6 +95,10 @@ import static org.junit.jupiter.api.Assertions.assertTrue
 import static org.junit.jupiter.api.Assertions.fail
 
 abstract class AbstractGrailsTagTests {
+
+    // Theme support was removed in Spring Framework 7.0 - define the attribute names directly
+    private static final String THEME_SOURCE_ATTRIBUTE = DispatcherServlet.class.getName() + ".THEME_SOURCE"
+    private static final String THEME_RESOLVER_ATTRIBUTE = DispatcherServlet.class.getName() + ".THEME_RESOLVER"
 
     ServletContext servletContext
     GrailsWebRequest webRequest
@@ -282,7 +286,7 @@ abstract class AbstractGrailsTagTests {
         mockManager.registerProvidedArtefacts(grailsApplication)
 
         def mockControllerClass = gcl.parseClass('class MockController {  def index = {} } ')
-        ctx = new AnnotationConfigServletWebServerApplicationContext()
+        ctx = new GenericWebApplicationContext()
         ctx.setServletContext(new MockServletContext())
         ctx.registerBeanDefinition('messageSource', new RootBeanDefinition(StaticMessageSource))
         ctx.refresh()
@@ -365,8 +369,7 @@ abstract class AbstractGrailsTagTests {
     }
 
     private void initThemeSource(request, MessageSource messageSource) {
-        request.setAttribute(DispatcherServlet.THEME_SOURCE_ATTRIBUTE, new MockThemeSource(messageSource))
-        request.setAttribute(DispatcherServlet.THEME_RESOLVER_ATTRIBUTE, new SessionThemeResolver())
+        // Theme support was removed in Spring Framework 7.0 - no-op
     }
 
     @AfterEach
@@ -568,15 +571,4 @@ abstract class AbstractGrailsTagTests {
     protected final void assertXPathNotExists(Document doc, String expr) {
         assertFalse xpath.evaluate(expr, doc, XPathConstants.BOOLEAN)
     }
-}
-
-class MockThemeSource implements ThemeSource {
-
-    private messageSource
-
-    MockThemeSource(MessageSource messageSource) {
-        this.messageSource = messageSource
-    }
-
-    Theme getTheme(String themeName) { new SimpleTheme(themeName, messageSource) }
 }

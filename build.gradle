@@ -74,6 +74,14 @@ subprojects {
             def cacheHours = isCiBuild || isReproducibleBuild ? 0 : 24
             cacheDynamicVersionsFor(cacheHours, 'hours')
             cacheChangingModulesFor(cacheHours, 'hours')
+            
+            // Force Groovy 4.0.29 to override Spring Boot 4.0.1's default of Groovy 5.0.3
+            // This ensures all grails-core modules are compiled with the correct Groovy version
+            force 'org.apache.groovy:groovy:4.0.29'
+            force 'org.apache.groovy:groovy-templates:4.0.29'
+            force 'org.apache.groovy:groovy-xml:4.0.29'
+            force 'org.apache.groovy:groovy-json:4.0.29'
+            force 'org.apache.groovy:groovy-sql:4.0.29'
         }
     }
     pluginManager.withPlugin('jacoco') {

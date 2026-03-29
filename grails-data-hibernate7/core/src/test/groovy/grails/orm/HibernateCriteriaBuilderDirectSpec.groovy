@@ -24,7 +24,7 @@ import grails.gorm.specs.HibernateGormDatastoreSpec
 import jakarta.persistence.criteria.JoinType
 import org.grails.datastore.mapping.query.Query
 import org.hibernate.Session
-import org.springframework.orm.hibernate5.SessionHolder
+import org.grails.orm.hibernate.support.hibernate7.SessionHolder
 import org.springframework.transaction.support.TransactionSynchronizationManager
 import spock.lang.Shared
 import java.math.RoundingMode

@@ -24,8 +24,8 @@ import javax.sql.DataSource
 import org.hibernate.FlushMode
 import org.hibernate.SessionFactory
 
-import org.springframework.orm.hibernate5.HibernateTransactionManager
-import org.springframework.orm.hibernate5.SessionHolder
+import org.grails.orm.hibernate.support.hibernate7.HibernateTransactionManager
+import org.grails.orm.hibernate.support.hibernate7.SessionHolder
 import org.springframework.transaction.TransactionDefinition
 import org.springframework.transaction.support.TransactionSynchronizationManager
 

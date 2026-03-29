@@ -50,7 +50,7 @@ dependencies {
 
     testImplementation 'org.apache.groovy:groovy-test-junit5'
     testImplementation 'org.junit.jupiter:junit-jupiter-api'
-    testImplementation 'org.junit.platform:junit-platform-runner'
+    testImplementation 'org.junit.platform:junit-platform-suite'
     testImplementation 'org.slf4j:slf4j-simple'
     testImplementation 'org.spockframework:spock-core', {
         transitive = false

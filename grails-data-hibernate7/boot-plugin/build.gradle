@@ -45,6 +45,8 @@ dependencies {
     }
     api "org.apache.groovy:groovy"
     api "org.springframework.boot:spring-boot-autoconfigure"
+    api "org.springframework.boot:spring-boot-jdbc"
+    api "org.springframework.boot:spring-boot-hibernate"
     api project(":grails-data-hibernate7-core")
 
     testImplementation project(':grails-shell-cli'), {

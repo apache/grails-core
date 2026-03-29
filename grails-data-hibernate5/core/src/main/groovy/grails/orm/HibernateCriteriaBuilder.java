@@ -38,7 +38,6 @@ import org.hibernate.sql.JoinType;
 import org.hibernate.type.StandardBasicTypes;
 import org.hibernate.type.Type;
 
-import org.springframework.orm.hibernate5.SessionHolder;
 import org.springframework.transaction.support.TransactionSynchronizationManager;
 
 import org.grails.datastore.gorm.query.criteria.AbstractDetachedCriteria;
@@ -51,6 +50,7 @@ import org.grails.orm.hibernate.query.AbstractHibernateCriteriaBuilder;
 import org.grails.orm.hibernate.query.AbstractHibernateQuery;
 import org.grails.orm.hibernate.query.HibernateProjectionAdapter;
 import org.grails.orm.hibernate.query.HibernateQuery;
+import org.grails.orm.hibernate.support.hibernate5.SessionHolder;
 
 /**
  * <p>Wraps the Hibernate Criteria API in a builder. The builder can be retrieved through the "createCriteria()" dynamic static

@@ -238,6 +238,15 @@ ext {
             for (Map.Entry<String, String> property : pomProperties.entrySet()) {
                 propertiesNode.appendNode(property.key, property.value)
             }
+            
+            // Override Spring Boot's groovy.version property with Grails' version
+            // Spring Boot 4.0.1 defaults to Groovy 5.0.3, but Grails 8.0.x uses Groovy 4.0.29
+            def groovyVersionNode = propertiesNode.'groovy.version'
+            if (groovyVersionNode) {
+                groovyVersionNode[0].value = bomDependencyVersions['groovy.version']
+            } else {
+                propertiesNode.appendNode('groovy.version', bomDependencyVersions['groovy.version'])
+            }
         }
     }
 }

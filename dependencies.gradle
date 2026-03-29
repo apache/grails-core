@@ -37,7 +37,7 @@ ext {
             'jna.version'                   : '5.17.0',
             'jquery.version'                : '3.7.1',
             'objenesis.version'             : '3.4',
-            'spring-boot.version'           : '3.5.11',
+            'spring-boot.version'           : '4.0.1',
     ]
 
     // Note: the name of the dependency must be the prefix of the property name so properties in the pom are resolved correctly
@@ -48,22 +48,23 @@ ext {
 
     // Note: the name of the dependency must be the prefix of the property name so properties in the pom are resolved correctly
     gradleBomDependencies = [
-            'ant'                   : "org.apache.ant:ant:${gradleBomDependencyVersions['ant.version']}",
-            'ant-junit'             : "org.apache.ant:ant-junit:${gradleBomDependencyVersions['ant.version']}",
-            'asciidoctor-gradle-jvm': "org.asciidoctor:asciidoctor-gradle-jvm:${gradleBomDependencyVersions['asciidoctor-gradle-jvm.version']}",
-            'asciidoctorj'          : "org.asciidoctor:asciidoctorj:${gradleBomDependencyVersions['asciidoctorj.version']}",
-            'asset-pipeline-gradle' : "cloud.wondrify:asset-pipeline-gradle:${gradleBomDependencyVersions['asset-pipeline-gradle.version']}",
-            'byte-buddy'            : "net.bytebuddy:byte-buddy:${gradleBomDependencyVersions['byte-buddy.version']}",
-            'commons-text'          : "org.apache.commons:commons-text:${gradleBomDependencyVersions['commons-text.version']}",
-            'directory-watcher'     : "io.methvin:directory-watcher:${gradleBomDependencyVersions['directory-watcher.version']}",
-            'grails-publish-plugin' : "org.apache.grails.gradle:grails-publish:${gradleBomDependencyVersions['grails-publish-plugin.version']}",
-            'jansi'                 : "org.fusesource.jansi:jansi:${gradleBomDependencyVersions['jansi.version']}",
-            'javaparser-core'       : "com.github.javaparser:javaparser-core:${gradleBomDependencyVersions['javaparser-core.version']}",
-            'jline'                 : "jline:jline:${gradleBomDependencyVersions['jline.version']}",
-            'jna'                   : "net.java.dev.jna:jna:${gradleBomDependencyVersions['jna.version']}",
-            'objenesis'             : "org.objenesis:objenesis:${gradleBomDependencyVersions['objenesis.version']}",
-            'spring-boot-cli'       : "org.springframework.boot:spring-boot-cli:${gradleBomDependencyVersions['spring-boot.version']}",
-            'spring-boot-gradle'    : "org.springframework.boot:spring-boot-gradle-plugin:${gradleBomDependencyVersions['spring-boot.version']}",
+            'ant'                    : "org.apache.ant:ant:${gradleBomDependencyVersions['ant.version']}",
+            'ant-junit'              : "org.apache.ant:ant-junit:${gradleBomDependencyVersions['ant.version']}",
+            'asciidoctorj-gradle-jvm': "org.asciidoctor:asciidoctor-gradle-jvm:${gradleBomDependencyVersions['asciidoctor-gradle-jvm.version']}",
+            'asciidoctorj'           : "org.asciidoctor:asciidoctorj:${gradleBomDependencyVersions['asciidoctorj.version']}",
+            'asset-pipeline-gradle'  : "cloud.wondrify:asset-pipeline-gradle:${gradleBomDependencyVersions['asset-pipeline-gradle.version']}",
+            'byte-buddy'             : "net.bytebuddy:byte-buddy:${gradleBomDependencyVersions['byte-buddy.version']}",
+            'commons-text'           : "org.apache.commons:commons-text:${gradleBomDependencyVersions['commons-text.version']}",
+            'directory-watcher'      : "io.methvin:directory-watcher:${gradleBomDependencyVersions['directory-watcher.version']}",
+            'grails-publish-plugin'  : "org.apache.grails.gradle:grails-publish:${gradleBomDependencyVersions['grails-publish-plugin.version']}",
+            'jansi'                  : "org.fusesource.jansi:jansi:${gradleBomDependencyVersions['jansi.version']}",
+            'javaparser-core'        : "com.github.javaparser:javaparser-core:${gradleBomDependencyVersions['javaparser-core.version']}",
+            'jline'                  : "jline:jline:${gradleBomDependencyVersions['jline.version']}",
+            'jna'                    : "net.java.dev.jna:jna:${gradleBomDependencyVersions['jna.version']}",
+            'objenesis'              : "org.objenesis:objenesis:${gradleBomDependencyVersions['objenesis.version']}",
+            'spring-boot-cli'        : "org.springframework.boot:spring-boot-cli:${gradleBomDependencyVersions['spring-boot.version']}",
+            'spring-boot-gradle'     : "org.springframework.boot:spring-boot-gradle-plugin:${gradleBomDependencyVersions['spring-boot.version']}",
+            'spring-boot-loader-tools': "org.springframework.boot:spring-boot-loader-tools:${gradleBomDependencyVersions['spring-boot.version']}",
     ]
 
     bomDependencyVersions = [
@@ -84,6 +85,8 @@ ext {
             'spock.version'                    : '2.3-groovy-4.0',
             'sitemesh.version'                 : '2.6.0',
             'starter-sitemesh.version'         : '3.2.2',
+            'testcontainers.version'           : '2.0.4',
+            'testcontainers-db.version'        : '1.21.4',
     ]
 
     // Note: the name of the dependency must be the prefix of the property name so properties in the pom are resolved correctly
@@ -144,6 +147,13 @@ ext {
             'rxjava3'                  : "io.reactivex.rxjava3:rxjava:${bomDependencyVersions['rxjava3.version']}",
             'sitemesh'                 : "opensymphony:sitemesh:${bomDependencyVersions['sitemesh.version']}",
             'starter-sitemesh'         : "org.sitemesh:spring-boot-starter-sitemesh:${bomDependencyVersions['starter-sitemesh.version']}",
+            'testcontainers'           : "org.testcontainers:testcontainers:${bomDependencyVersions['testcontainers.version']}",
+            'testcontainers-postgresql': "org.testcontainers:postgresql:${bomDependencyVersions['testcontainers-db.version']}",
+            'testcontainers-mysql'     : "org.testcontainers:mysql:${bomDependencyVersions['testcontainers-db.version']}",
+            'testcontainers-mariadb'   : "org.testcontainers:mariadb:${bomDependencyVersions['testcontainers-db.version']}",
+            'testcontainers-oracle'    : "org.testcontainers:oracle-free:${bomDependencyVersions['testcontainers-db.version']}",
+            'testcontainers-mongodb'   : "org.testcontainers:mongodb:${bomDependencyVersions['testcontainers-db.version']}",
+            'testcontainers-spock'     : "org.testcontainers:spock:${bomDependencyVersions['testcontainers-db.version']}",
     ]
 
     // Because pom exclusions aren't properly supported by gradle, we can't inherit the grails-gradle-bom

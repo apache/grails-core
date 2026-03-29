@@ -46,6 +46,8 @@ dependencies {
     api 'org.apache.groovy:groovy'
     api project(':grails-datamapping-core')
     api 'org.springframework:spring-orm'
+    compileOnly 'org.springframework:spring-webmvc'
+    compileOnly 'jakarta.servlet:jakarta.servlet-api'
     implementation "net.bytebuddy:byte-buddy:1.18.7"
     api "org.hibernate.orm:hibernate-core:$hibernate7Version", {
         exclude group:'commons-logging', module:'commons-logging'
@@ -84,7 +86,6 @@ dependencies {
         exclude group:'xml-apis', module:'xml-apis'
     }
 
-    testImplementation platform('org.testcontainers:testcontainers-bom:2.0.3')
     testImplementation 'org.testcontainers:testcontainers'
     testImplementation 'org.postgresql:postgresql:42.7.5'
     testImplementation 'org.testcontainers:postgresql'

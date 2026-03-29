@@ -28,7 +28,6 @@ import org.springframework.context.ApplicationContext;
 import org.springframework.core.env.ConfigurableEnvironment;
 import org.springframework.core.io.Resource;
 import org.springframework.core.io.support.ResourcePatternResolver;
-import org.springframework.ui.context.ThemeSource;
 import org.springframework.util.Assert;
 import org.springframework.web.context.ConfigurableWebApplicationContext;
 import org.springframework.web.context.ConfigurableWebEnvironment;
@@ -48,15 +47,11 @@ import org.grails.spring.GrailsApplicationContext;
  * A WebApplicationContext that extends StaticApplicationContext to allow for programmatic
  * configuration at runtime. The code is adapted from StaticWebApplicationContext.
  *
- * <p>Note: The {@link ThemeSource} interface implementation is deprecated since Grails 7.1 and
- * will be removed in Grails 8.0.0. Spring's theme support is deprecated in Spring Boot 3 and
- * removed in Spring Boot 4.
- *
  * @author Graeme
  * @since 0.3
  */
 public class GrailsWebApplicationContext extends GrailsApplicationContext
-        implements ConfigurableWebApplicationContext, ThemeSource {
+        implements ConfigurableWebApplicationContext {
 
     private ServletContext servletContext;
     private String namespace;

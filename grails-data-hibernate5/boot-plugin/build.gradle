@@ -45,12 +45,16 @@ dependencies {
     }
     api "org.apache.groovy:groovy"
     api "org.springframework.boot:spring-boot-autoconfigure"
+    compileOnly "org.springframework.boot:spring-boot-jdbc"
+    compileOnly "org.springframework.boot:spring-boot-hibernate"
     api project(":grails-data-hibernate5-core")
 
     testImplementation project(':grails-shell-cli'), {
         exclude group:'org.apache.groovy', module:'groovy'
     }
     testImplementation "org.spockframework:spock-core"
+    testImplementation "org.springframework.boot:spring-boot-jdbc"
+    testImplementation "org.springframework.boot:spring-boot-hibernate"
 
     testRuntimeOnly "org.apache.tomcat:tomcat-jdbc"
     testRuntimeOnly "com.h2database:h2"

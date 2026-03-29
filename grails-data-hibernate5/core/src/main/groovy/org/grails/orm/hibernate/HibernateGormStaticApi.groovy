@@ -34,7 +34,7 @@ import org.hibernate.SessionFactory
 import org.hibernate.query.Query
 
 import org.springframework.core.convert.ConversionService
-import org.springframework.orm.hibernate5.SessionHolder
+import org.grails.orm.hibernate.support.hibernate5.SessionHolder
 import org.springframework.transaction.PlatformTransactionManager
 import org.springframework.transaction.support.TransactionSynchronizationManager
 

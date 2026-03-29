@@ -84,8 +84,10 @@ dependencies {
         // impl: ConfigurableEnvironment
     }
     implementation 'org.springframework.boot:spring-boot-autoconfigure', {
-        // impl: AutoConfigurationPackages, @AutoConfigureAfter(runtime), @ConditionalOnMissingBean(runtime),
-        //       MongoAutoConfiguration, MongoProperties
+        // impl: AutoConfigurationPackages, @AutoConfigureAfter(runtime), @ConditionalOnMissingBean(runtime)
+    }
+    implementation 'org.springframework.boot:spring-boot-mongodb', {
+        // impl: MongoAutoConfiguration, MongoProperties
     }
 
     compileOnlyApi 'jakarta.persistence:jakarta.persistence-api', {

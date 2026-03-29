@@ -41,7 +41,7 @@ dependencies {
     implementation 'org.apache.groovy:groovy'
     implementation 'org.spockframework:spock-core'
 
-    api 'org.testcontainers:mongodb'
+    api 'org.testcontainers:testcontainers-mongodb'
 }
 
 apply {

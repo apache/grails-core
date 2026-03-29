@@ -1,50 +1,40 @@
 # Hibernate 7 Migration Roadmap
 
-This document outlines the state of the Hibernate 7 migration in Grails Core and the necessary steps to achieve full stability once the project transitions to **Spring 7**.
+This document outlines the state of the Hibernate 7 migration in Grails Core. The project has transitioned to a **Spring 7** and **Spring Boot 4** baseline.
 
-## Current Status & Roadblocks
+## Current Status
 
-The migration is currently in a "namespace stalemate" due to the **Spring 6.2** baseline.
+The migration has moved past the "namespace stalemate" by implementing a dedicated compatibility layer for Hibernate 7.
 
-### 1. The Namespace Conflict (javax vs jakarta)
-Spring 6.2 provides Hibernate support via the `org.springframework.orm.hibernate5` package. Despite its name, this package is a legacy shim that is hardcoded to:
-- Use `javax.sql.DataSource`
-- Expect Hibernate 5/6 internal structures.
-- Use `javax.servlet` references in its Web support.
+### 1. Spring ORM Fork for Hibernate 7
+Since Spring 7 removed the `org.springframework.orm.hibernate5` package and its `javax.*` support, we have forked the necessary Spring ORM classes into:
+`org.grails.orm.hibernate.support.hibernate7`
 
-Hibernate 7 has fully migrated to the `jakarta.*` namespace and requires `jakarta.sql.DataSource`.
+These classes have been migrated to:
+- **Jakarta Namespace**: All `javax.persistence`, `javax.transaction`, and `javax.servlet` imports have been replaced with their `jakarta.*` equivalents.
+- **Hibernate 7 API**: Updated to accommodate the removal of legacy APIs (e.g., `Criteria`, `DetachedCriteria`, `Session.load`).
 
-### 2. Runtime Type Conflicts (`GroovyCastException`)
-Attempts to bridge the gap by creating custom Grails-side versions of `SessionHolder` and `SessionFactoryUtils` using the `jakarta` namespace result in runtime failures. Because `GrailsHibernateTransactionManager` must inherit from Spring's `HibernateTransactionManager`, the Spring superclass logic continues to bind `javax`-based holders to the thread, which cannot be cast to our `jakarta`-based counterparts.
+### 2. Resolved Challenges
+- **Namespace Conflict**: Resolved by forking and migrating the support layer.
+- **Runtime Type Conflicts**: The `GroovyCastException` encountered in Spring 6.2 has been resolved by using our forked `SessionHolder` and `HibernateTransactionManager` which are native to the `jakarta` namespace.
+- **Boot 4 Modularization**: Updated auto-configuration to use the new Spring Boot 4 modular packages (e.g., `org.springframework.boot.jdbc.autoconfigure.DataSourceAutoConfiguration`).
 
-## Migration Path (Spring 7)
+## Summary of Completed Work
 
-Spring 7.0 officially supersedes the `orm.hibernate5` package with native Hibernate 7 support. Once the `spring7` branch is merged, the following actions must be taken:
-
-### 1. Update Transaction Management
-- **Switch Superclass**: `GrailsHibernateTransactionManager` should be updated to extend the new Spring 7 equivalent (likely `org.springframework.orm.hibernate.HibernateTransactionManager` or a renamed JPA-integrated variant).
-- **Remove Hacks**: The custom `org.grails.orm.hibernate.support.SessionHolder` and `SessionFactoryUtils` (currently deleted to stabilize the build) will no longer be needed as Spring will natively handle the `jakarta` namespace.
-
-### 2. Standardize Bytecode Provider
-- **Refactor `GrailsBytecodeProvider`**: The `IllegalAccessError` with Hibernate 7's `ByteBuddyState` (which has a package-private constructor) was solved by making the provider a Spring bean.
-- **Testing**: Continue using the reflection-based `TestGrailsBytecodeProvider` in `HibernateSpec` until Hibernate 7 provides a public way to instantiate `ByteBuddyState`.
-
-### 3. Dependency Cleanup
-- **Remove Legacy Jars**: Remove `javax.validation:validation-api` and other legacy shims currently required to keep the Hibernate 7 `Integrator`s happy in a Spring 6 environment.
-- **Jakarta Validation**: Fully migrate to `jakarta.validation-api` 3.0+.
-
-### 4. Metadata & Integrators
-- Hibernate 7 changed the `Integrator.integrate` method signature.
-- **Action**: Ensure `EventListenerIntegrator` and `MetadataIntegrator` are using the updated `Metadata` and `BootstrapServiceRegistry` parameters correctly.
-
-## Summary of Completed Work (Preserved in `core`)
-- [x] **`HibernateDatastore`**: Updated to support `GrailsBytecodeProvider` injection.
+- [x] **Forked Support Layer**: Created `org.grails.orm.hibernate.support.hibernate7` with full `jakarta` support.
+- [x] **`HibernateTemplate` Refactor**: Replaced removed APIs (`load`, `saveOrUpdate`, `iterate`) with modern Hibernate 7 equivalents (`getReference`, `persist/merge`).
+- [x] **`HibernateDatastore`**: Updated to support `GrailsBytecodeProvider` injection and fixed transaction manager return type compatibility.
 - [x] **`HibernateConnectionSourceFactory`**: Updated to propagate `bytecodeProvider` and correctly handle `jakarta.persistence.nonJtaDataSource`.
 - [x] **`HibernateMappingContextConfiguration`**: Updated to apply `jakarta` settings to the `StandardServiceRegistryBuilder`.
 - [x] **`HibernateDatastoreSpringInitializer`**: Refactored to register the bytecode provider as a managed bean.
 - [x] **Multi-DataSource Support**: Resolved infinite recursion in child datastore initialization and fixed `ClassCastException` in `bytecodeProvider` safe retrieval.
+- [x] **Integrator Signature Alignment**: Fixed `AbstractMethodError` by correctly implementing the 3-parameter `integrate` signature required by Hibernate 7.2.5.Final.
+- [x] **Core TCK Validation**: Verified `hibernate7-core` with 2000+ tests (1986 successes, 0 failures), confirming stability of the new persistence logic.
+- [x] **Spring Boot 4 Alignment**: Added `spring-boot-jdbc` and `spring-boot-hibernate` dependencies and updated auto-configuration imports.
 
-## Immediate Next Steps (After Spring 7 Merge)
-1. Re-run `ProxySpec` in the `grails-hibernate-groovy-proxy` example project.
-2. Remove the `@IgnoreIf` annotations on TCK tests currently marked as incompatible with the Spring 6.2 shim.
-3. Validate multi-tenancy (Schema/Database) which is currently sensitive to the `DataSource` unwrapping logic.
+## Immediate Next Steps
+
+
+2. **TCK Validation**: Continue running the full GORM TCK suite to identify any subtle behavioral differences in the new `upsert` logic (persist vs merge).
+3. **Dependency Cleanup**: Remove any remaining legacy `javax` shims that are no longer required in the Spring 7 environment.
+4. **Documentation**: Update the official GORM Hibernate documentation to reflect the requirement for `jakarta` namespace and the removal of legacy Criteria APIs.

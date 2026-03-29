@@ -75,7 +75,7 @@ dependencies {
             exclude group: 'org.spockframework', module: 'spock-core'
             exclude group: 'org.apache.groovy', module: 'groovy-test-junit5'
             exclude group: 'org.junit.jupiter', module: 'junit-jupiter-api'
-            exclude group: 'org.junit.platform', module: 'junit-platform-runner'
+            exclude group: 'org.junit.platform', module: 'junit-platform-suite'
         }
     }
     api 'org.springframework:spring-context', {

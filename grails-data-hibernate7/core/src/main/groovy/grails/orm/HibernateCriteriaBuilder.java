@@ -36,7 +36,7 @@ import jakarta.persistence.metamodel.PluralAttribute;
 import org.hibernate.FetchMode;
 import org.hibernate.SessionFactory;
 
-import org.springframework.orm.hibernate5.SessionHolder;
+import org.grails.orm.hibernate.support.hibernate7.SessionHolder;
 import org.springframework.transaction.support.TransactionSynchronizationManager;
 
 import grails.gorm.DetachedCriteria;

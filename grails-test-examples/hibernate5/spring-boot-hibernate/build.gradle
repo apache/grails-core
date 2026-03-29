@@ -34,6 +34,9 @@ dependencies {
     implementation 'org.apache.grails:grails-data-hibernate5-spring-boot'
     implementation 'org.springframework.boot:spring-boot-starter-web'
 
+    compileOnly 'org.springframework.boot:spring-boot-autoconfigure'
+    compileOnly 'org.springframework.boot:spring-boot-hibernate'
+
     runtimeOnly 'com.h2database:h2'
     runtimeOnly 'com.zaxxer:HikariCP'
     runtimeOnly 'org.springframework.boot:spring-boot-autoconfigure'

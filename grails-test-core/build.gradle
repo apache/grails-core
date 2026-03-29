@@ -42,7 +42,7 @@ dependencies {
     api 'org.apache.groovy:groovy-test-junit5'
     api('org.apache.groovy:groovy-test')
     api('org.spockframework:spock-core') { transitive = false }
-    api 'org.junit.platform:junit-platform-runner'
+    api 'org.junit.platform:junit-platform-suite'
 
 
     api project(':grails-mimetypes')
@@ -71,7 +71,7 @@ dependencies {
 
     testImplementation 'org.apache.groovy:groovy-test-junit5'
     testImplementation 'org.junit.jupiter:junit-jupiter-api'
-    testImplementation 'org.junit.platform:junit-platform-runner'
+    testImplementation 'org.junit.platform:junit-platform-suite'
 
     testRuntimeOnly 'org.junit.jupiter:junit-jupiter-engine'
 

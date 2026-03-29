@@ -83,7 +83,7 @@ dependencies {
     testImplementation project(':grails-core')
     testImplementation project(':grails-testing-support-datamapping')
     testImplementation project(':grails-testing-support-web')
-    testImplementation platform('org.testcontainers:testcontainers-bom:2.0.3')
+
     testImplementation 'org.testcontainers:testcontainers'
     testImplementation 'org.testcontainers:postgresql'
     testImplementation 'org.testcontainers:spock'
