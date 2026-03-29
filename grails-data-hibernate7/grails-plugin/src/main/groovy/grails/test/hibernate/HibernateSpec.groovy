@@ -32,7 +32,6 @@ import spock.lang.Specification
 import org.springframework.boot.env.PropertySourceLoader
 import org.springframework.core.env.MapPropertySource
 import org.springframework.core.env.MutablePropertySources
-import org.springframework.core.env.PropertyResolver
 import org.springframework.core.env.PropertySource
 import org.springframework.core.io.DefaultResourceLoader
 import org.springframework.core.io.Resource
@@ -56,11 +55,9 @@ import org.hibernate.boot.registry.StandardServiceRegistryBuilder
 import org.hibernate.dialect.H2Dialect
 import org.grails.orm.hibernate.proxy.GrailsBytecodeProvider
 import org.hibernate.proxy.pojo.bytebuddy.ByteBuddyProxyHelper
-import org.grails.orm.hibernate.cfg.HibernateMappingContextConfiguration
 import org.hibernate.internal.SessionFactoryImpl
 import org.hibernate.service.spi.ServiceRegistryImplementor
 import org.springframework.context.ApplicationContext
-import org.springframework.beans.factory.support.BeanDefinitionRegistry
 
 /**
  * Specification for Hibernate tests
@@ -160,10 +157,10 @@ abstract class HibernateSpec extends Specification {
      */
     Map<String,Object> getConfiguration() {
         [
-            (Settings.SETTING_DB_CREATE)             : 'create-drop',
-            'hibernate.proxy_factory_class'          : 'org.grails.orm.hibernate.proxy.ByteBuddyGroovyProxyFactory',
-            'hibernate.dialect'                      : 'org.hibernate.dialect.H2Dialect',
-            'jakarta.persistence.validation.mode'    : 'none'
+            (Settings.SETTING_DB_CREATE): 'create-drop',
+            'hibernate.proxy_factory_class': 'org.grails.orm.hibernate.proxy.ByteBuddyGroovyProxyFactory',
+            'hibernate.dialect': 'org.hibernate.dialect.H2Dialect',
+            'jakarta.persistence.validation.mode': 'none'
         ] as Map<String, Object>
     }
 
@@ -177,18 +174,18 @@ abstract class HibernateSpec extends Specification {
         def dataSource = applicationContext.getBean('dataSource')
 
         def serviceRegistry = new StandardServiceRegistryBuilder(bootstrapServiceRegistry)
-                .applySetting('hibernate.dialect', H2Dialect.class.getName())
+                .applySetting('hibernate.dialect', H2Dialect.name)
                 .applySetting('jakarta.persistence.jdbc.url', 'jdbc:h2:mem:test;DB_CLOSE_DELAY=-1')
                 .applySetting('jakarta.persistence.jdbc.driver', 'org.h2.Driver')
                 .applySetting('jakarta.persistence.nonJtaDataSource', dataSource)
-                .addService(org.hibernate.bytecode.spi.BytecodeProvider.class, (org.hibernate.bytecode.spi.BytecodeProvider) bytecodeProvider)
+                .addService(org.hibernate.bytecode.spi.BytecodeProvider, (org.hibernate.bytecode.spi.BytecodeProvider) bytecodeProvider)
                 .applySetting('hibernate.bytecode.allow_enhancement_as_proxy', 'false')
                 .build()
         def options = new MetadataBuilderImpl(
                 new MetadataSources(serviceRegistry)
         ).getMetadataBuildingOptions()
         new InFlightMetadataCollectorImpl(
-                new BootstrapContextImpl( serviceRegistry, options)
+                new BootstrapContextImpl(serviceRegistry, options)
                 , options)
     }
 

@@ -50,7 +50,6 @@ import org.springframework.core.convert.ConversionService
 import org.springframework.transaction.PlatformTransactionManager
 
 import grails.orm.HibernateCriteriaBuilder
-import org.grails.datastore.gorm.GormEnhancer
 import org.grails.datastore.gorm.GormStaticApi
 import org.grails.datastore.gorm.finders.FinderMethod
 import org.grails.datastore.mapping.core.connections.ConnectionSource

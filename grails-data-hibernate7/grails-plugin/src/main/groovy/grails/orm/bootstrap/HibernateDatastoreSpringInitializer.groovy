@@ -37,8 +37,6 @@ import javax.sql.DataSource
 import groovy.transform.CompileStatic
 
 import org.springframework.beans.factory.support.BeanDefinitionRegistry
-import org.grails.spring.RuntimeSpringConfiguration
-import org.grails.spring.DefaultRuntimeSpringConfiguration
 import grails.spring.BeanBuilder
 import org.springframework.context.ApplicationContext
 import org.springframework.context.ApplicationEventPublisher
@@ -57,6 +55,7 @@ import org.grails.datastore.mapping.reflect.ClassUtils
 import org.grails.orm.hibernate.HibernateDatastore
 import org.grails.orm.hibernate.cfg.Settings
 import org.grails.orm.hibernate.connections.HibernateConnectionSourceFactory
+import org.grails.orm.hibernate.proxy.GrailsBytecodeProvider
 import org.grails.orm.hibernate.proxy.HibernateProxyHandler
 import org.grails.orm.hibernate.support.HibernateDatastoreConnectionSourcesRegistrar
 
@@ -130,7 +129,7 @@ class HibernateDatastoreSpringInitializer extends AbstractDatastoreInitializer {
 
     @Override
     protected Class<AbstractDatastorePersistenceContextInterceptor> getPersistenceInterceptorClass() {
-        getClass().classLoader.loadClass('org.grails.plugin.hibernate.support.HibernatePersistenceContextInterceptor')
+        getClass().classLoader.loadClass('org.grails.plugin.hibernate.support.HibernatePersistenceContextInterceptor') as Class<AbstractDatastorePersistenceContextInterceptor>
     }
 
     /**
@@ -178,7 +177,7 @@ class HibernateDatastoreSpringInitializer extends AbstractDatastoreInitializer {
             // for unwrapping / inspecting proxies
             hibernateProxyHandler(HibernateProxyHandler)
 
-            hibernateBytecodeProvider(org.grails.orm.hibernate.proxy.GrailsBytecodeProvider)
+            hibernateBytecodeProvider(GrailsBytecodeProvider)
 
             def config = this.configuration
             final boolean isGrailsPresent = isGrailsPresent()
