@@ -83,7 +83,6 @@ public final class SpringBeanContainer implements BeanContainer {
 
     private final Map<Object, SpringContainedBean<?>> beanCache = new ConcurrentReferenceHashMap<>();
 
-
     /**
      * Instantiate a new SpringBeanContainer for the given bean factory.
      * @param beanFactory the Spring bean factory to delegate to
@@ -92,7 +91,6 @@ public final class SpringBeanContainer implements BeanContainer {
         Assert.notNull(beanFactory, "ConfigurableListableBeanFactory is required");
         this.beanFactory = beanFactory;
     }
-
 
     @Override
     @SuppressWarnings("unchecked")
@@ -137,7 +135,6 @@ public final class SpringBeanContainer implements BeanContainer {
         this.beanCache.values().forEach(SpringContainedBean::destroyIfNecessary);
         this.beanCache.clear();
     }
-
 
     private SpringContainedBean<?> createBean(
             Class<?> beanType, LifecycleOptions lifecycleOptions, BeanInstanceProducer fallbackProducer) {
@@ -237,7 +234,6 @@ public final class SpringBeanContainer implements BeanContainer {
             }
         }
     }
-
 
     private static final class SpringContainedBean<B> implements ContainedBean<B> {
 

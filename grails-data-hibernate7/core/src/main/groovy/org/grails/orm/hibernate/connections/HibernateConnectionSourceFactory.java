@@ -48,7 +48,6 @@ import org.grails.datastore.gorm.jdbc.connections.DataSourceConnectionSourceFact
 import org.grails.datastore.gorm.jdbc.connections.DataSourceSettings;
 import org.grails.datastore.gorm.jdbc.connections.DataSourceSettingsBuilder;
 import org.grails.datastore.gorm.validation.jakarta.JakartaValidatorRegistry;
-import org.checkerframework.checker.nullness.qual.NonNull;
 import org.grails.datastore.mapping.core.connections.AbstractConnectionSourceFactory;
 import org.grails.datastore.mapping.core.connections.ConnectionSource;
 import org.grails.datastore.mapping.core.connections.ConnectionSourceSettings;

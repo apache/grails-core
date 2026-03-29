@@ -26,8 +26,6 @@ import org.hibernate.SessionFactory;
 import org.springframework.dao.DataAccessException;
 import org.springframework.dao.DataAccessResourceFailureException;
 import org.springframework.lang.Nullable;
-import org.grails.orm.hibernate.support.hibernate7.SessionFactoryUtils;
-import org.grails.orm.hibernate.support.hibernate7.SessionHolder;
 import org.springframework.transaction.support.TransactionSynchronizationManager;
 import org.springframework.ui.ModelMap;
 import org.springframework.util.Assert;
@@ -36,6 +34,9 @@ import org.springframework.web.context.request.WebRequest;
 import org.springframework.web.context.request.async.CallableProcessingInterceptor;
 import org.springframework.web.context.request.async.WebAsyncManager;
 import org.springframework.web.context.request.async.WebAsyncUtils;
+
+import org.grails.orm.hibernate.support.hibernate7.SessionFactoryUtils;
+import org.grails.orm.hibernate.support.hibernate7.SessionHolder;
 
 /**
  * Spring web request interceptor that binds a Hibernate {@code Session} to the
@@ -83,7 +84,6 @@ public class OpenSessionInViewInterceptor implements AsyncWebRequestInterceptor 
     @Nullable
     private SessionFactory sessionFactory;
 
-
     /**
      * Set the Hibernate SessionFactory that should be used to create Hibernate Sessions.
      */
@@ -104,7 +104,6 @@ public class OpenSessionInViewInterceptor implements AsyncWebRequestInterceptor 
         Assert.state(sf != null, "No SessionFactory set");
         return sf;
     }
-
 
     /**
      * Open a new Hibernate {@code Session} according and bind it to the thread via the

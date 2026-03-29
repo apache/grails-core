@@ -23,6 +23,7 @@ import java.util.function.Consumer;
 import javax.sql.DataSource;
 
 import jakarta.persistence.PersistenceException;
+
 import org.hibernate.ConnectionReleaseMode;
 import org.hibernate.FlushMode;
 import org.hibernate.HibernateException;
@@ -137,7 +138,6 @@ public class HibernateTransactionManager extends AbstractPlatformTransactionMana
     @Nullable
     private BeanFactory beanFactory;
 
-
     /**
      * Create a new HibernateTransactionManager instance.
      * A SessionFactory has to be set to be able to use it.
@@ -154,7 +154,6 @@ public class HibernateTransactionManager extends AbstractPlatformTransactionMana
         this.sessionFactory = sessionFactory;
         afterPropertiesSet();
     }
-
 
     /**
      * Set the SessionFactory that this instance should manage transactions for.
@@ -406,7 +405,6 @@ public class HibernateTransactionManager extends AbstractPlatformTransactionMana
             }
         }
     }
-
 
     @Override
     public Object getResourceFactory() {
@@ -765,7 +763,6 @@ public class HibernateTransactionManager extends AbstractPlatformTransactionMana
 
     /**
      * Disconnect a pre-existing Hibernate Session on transaction completion,
-     * returning its database connection but preserving its entity state.
      * <p>The default implementation calls the equivalent of {@link Session#disconnect()}.
      * Subclasses may override this with a no-op or with fine-tuned disconnection logic.
      * @param session the Hibernate Session to disconnect
@@ -787,7 +784,6 @@ public class HibernateTransactionManager extends AbstractPlatformTransactionMana
     protected DataAccessException convertHibernateAccessException(HibernateException ex) {
         return SessionFactoryUtils.convertHibernateAccessException(ex);
     }
-
 
     /**
      * Hibernate transaction object, representing a SessionHolder.
@@ -897,7 +893,6 @@ public class HibernateTransactionManager extends AbstractPlatformTransactionMana
             }
         }
     }
-
 
     /**
      * Holder for suspended resources.

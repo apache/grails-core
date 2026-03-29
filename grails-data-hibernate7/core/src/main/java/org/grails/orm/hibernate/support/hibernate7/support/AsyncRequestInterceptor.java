@@ -23,13 +23,14 @@ import org.apache.commons.logging.LogFactory;
 import org.hibernate.SessionFactory;
 
 import org.springframework.lang.Nullable;
-import org.grails.orm.hibernate.support.hibernate7.SessionFactoryUtils;
-import org.grails.orm.hibernate.support.hibernate7.SessionHolder;
 import org.springframework.transaction.support.TransactionSynchronizationManager;
 import org.springframework.web.context.request.NativeWebRequest;
 import org.springframework.web.context.request.async.CallableProcessingInterceptor;
 import org.springframework.web.context.request.async.DeferredResult;
 import org.springframework.web.context.request.async.DeferredResultProcessingInterceptor;
+
+import org.grails.orm.hibernate.support.hibernate7.SessionFactoryUtils;
+import org.grails.orm.hibernate.support.hibernate7.SessionHolder;
 
 /**
  * An interceptor with asynchronous web requests used in OpenSessionInViewFilter and
@@ -54,12 +55,10 @@ class AsyncRequestInterceptor implements CallableProcessingInterceptor, Deferred
 
     private volatile boolean errorInProgress;
 
-
     public AsyncRequestInterceptor(SessionFactory sessionFactory, SessionHolder sessionHolder) {
         this.sessionFactory = sessionFactory;
         this.sessionHolder = sessionHolder;
     }
-
 
     @Override
     public <T> void preProcess(NativeWebRequest request, Callable<T> task) {

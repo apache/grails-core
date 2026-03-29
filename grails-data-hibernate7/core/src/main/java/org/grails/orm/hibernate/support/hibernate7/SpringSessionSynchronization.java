@@ -43,7 +43,6 @@ public class SpringSessionSynchronization implements TransactionSynchronization,
 
     private boolean holderActive = true;
 
-
     public SpringSessionSynchronization(SessionHolder sessionHolder, SessionFactory sessionFactory) {
         this(sessionHolder, sessionFactory, false);
     }
@@ -54,11 +53,9 @@ public class SpringSessionSynchronization implements TransactionSynchronization,
         this.newSession = newSession;
     }
 
-
     private Session getCurrentSession() {
         return this.sessionHolder.getSession();
     }
-
 
     @Override
     public int getOrder() {

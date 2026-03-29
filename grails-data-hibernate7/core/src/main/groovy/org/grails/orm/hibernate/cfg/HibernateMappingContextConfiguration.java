@@ -37,12 +37,9 @@ import jakarta.persistence.Embeddable;
 import jakarta.persistence.Entity;
 import jakarta.persistence.MappedSuperclass;
 
-import org.checkerframework.checker.nullness.qual.NonNull;
 import org.hibernate.HibernateException;
 import org.hibernate.MappingException;
 import org.hibernate.SessionFactory;
-import org.hibernate.SessionFactoryObserver;
-import org.hibernate.boot.MetadataSources;
 import org.hibernate.boot.registry.BootstrapServiceRegistry;
 import org.hibernate.boot.registry.BootstrapServiceRegistryBuilder;
 import org.hibernate.boot.registry.StandardServiceRegistry;
@@ -58,7 +55,6 @@ import org.hibernate.cfg.JdbcSettings;
 import org.hibernate.context.spi.CurrentSessionContext;
 import org.hibernate.internal.util.config.ConfigurationHelper;
 import org.hibernate.service.ServiceRegistry;
-import org.hibernate.service.spi.ServiceRegistryImplementor;
 
 import org.springframework.beans.BeansException;
 import org.springframework.context.ApplicationContext;

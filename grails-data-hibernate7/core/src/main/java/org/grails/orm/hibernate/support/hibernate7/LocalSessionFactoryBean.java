@@ -33,7 +33,6 @@ import org.hibernate.cfg.Configuration;
 import org.hibernate.context.spi.CurrentTenantIdentifierResolver;
 import org.hibernate.engine.jdbc.connections.spi.MultiTenantConnectionProvider;
 import org.hibernate.integrator.spi.Integrator;
-import org.hibernate.service.ServiceRegistry;
 
 import org.springframework.beans.factory.BeanFactory;
 import org.springframework.beans.factory.BeanFactoryAware;
@@ -159,7 +158,6 @@ public class LocalSessionFactoryBean extends HibernateExceptionTranslator
 
     @Nullable
     private SessionFactory sessionFactory;
-
 
     /**
      * Set the DataSource to be used by the SessionFactory.
@@ -485,7 +483,6 @@ public class LocalSessionFactoryBean extends HibernateExceptionTranslator
         }
     }
 
-
     @Override
     public void afterPropertiesSet() throws IOException {
         if (this.metadataSources != null && !this.metadataSourcesAccessed) {
@@ -637,7 +634,6 @@ public class LocalSessionFactoryBean extends HibernateExceptionTranslator
         return this.configuration;
     }
 
-
     @Override
     @Nullable
     public SessionFactory getObject() {
@@ -653,7 +649,6 @@ public class LocalSessionFactoryBean extends HibernateExceptionTranslator
     public boolean isSingleton() {
         return true;
     }
-
 
     @Override
     public void destroy() {

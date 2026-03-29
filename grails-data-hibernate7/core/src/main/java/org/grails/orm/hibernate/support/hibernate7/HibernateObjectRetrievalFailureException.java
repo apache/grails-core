@@ -43,7 +43,6 @@ public class HibernateObjectRetrievalFailureException extends ObjectRetrievalFai
         super(ex.getEntityName(), getIdentifier(ex), ex.getMessage(), ex);
     }
 
-
     @Nullable
     static Object getIdentifier(HibernateException hibEx) {
         try {

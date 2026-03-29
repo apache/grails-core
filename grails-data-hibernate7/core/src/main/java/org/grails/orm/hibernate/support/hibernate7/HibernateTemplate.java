@@ -22,10 +22,10 @@ import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.lang.reflect.Proxy;
 import java.util.Collection;
-import java.util.Iterator;
 import java.util.List;
 
 import jakarta.persistence.PersistenceException;
+
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.hibernate.Filter;
@@ -107,7 +107,6 @@ public class HibernateTemplate implements HibernateOperations, InitializingBean 
 
     private int maxResults = 0;
 
-
     /**
      * Create a new HibernateTemplate instance.
      */
@@ -122,7 +121,6 @@ public class HibernateTemplate implements HibernateOperations, InitializingBean 
         setSessionFactory(sessionFactory);
         afterPropertiesSet();
     }
-
 
     /**
      * Set the Hibernate SessionFactory that should be used to create
@@ -308,7 +306,6 @@ public class HibernateTemplate implements HibernateOperations, InitializingBean 
             throw new IllegalArgumentException("Property 'sessionFactory' is required");
         }
     }
-
 
     @Override
     @Nullable
@@ -950,7 +947,6 @@ public class HibernateTemplate implements HibernateOperations, InitializingBean 
         return result;
     }
 
-
     //-------------------------------------------------------------------------
     // Helper methods used by the operations above
     //-------------------------------------------------------------------------
@@ -968,7 +964,7 @@ public class HibernateTemplate implements HibernateOperations, InitializingBean 
     protected void checkWriteOperationAllowed(Session session) throws InvalidDataAccessApiUsageException {
         if (isCheckWriteOperations() && session.getHibernateFlushMode().lessThan(FlushMode.COMMIT)) {
             throw new InvalidDataAccessApiUsageException(
-                    "Write operations are not allowed in read-only mode (FlushMode.MANUAL): "+
+                    "Write operations are not allowed in read-only mode (FlushMode.MANUAL): " +
                     "Turn your Session into FlushMode.COMMIT/AUTO or remove 'readOnly' marker from transaction definition.");
         }
     }
@@ -1026,7 +1022,6 @@ public class HibernateTemplate implements HibernateOperations, InitializingBean 
         Assert.state(result != null, "No result");
         return result;
     }
-
 
     /**
      * Invocation handler that suppresses close calls on Hibernate Sessions.

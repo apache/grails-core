@@ -19,6 +19,7 @@ package org.grails.orm.hibernate.support.hibernate7;
 import jakarta.transaction.Status;
 import jakarta.transaction.SystemException;
 import jakarta.transaction.TransactionManager;
+
 import org.apache.commons.logging.LogFactory;
 import org.hibernate.FlushMode;
 import org.hibernate.HibernateException;
@@ -53,7 +54,6 @@ public class SpringSessionContext implements CurrentSessionContext {
 
     @Nullable
     private CurrentSessionContext jtaSessionContext;
-
 
     /**
      * Create a new SpringSessionContext for the given Hibernate SessionFactory.

@@ -22,6 +22,7 @@ import java.util.Map;
 import javax.sql.DataSource;
 
 import jakarta.persistence.PersistenceException;
+
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.hibernate.HibernateException;
@@ -91,7 +92,6 @@ public abstract class SessionFactoryUtils {
             DataSourceUtils.CONNECTION_SYNCHRONIZATION_ORDER - 100;
 
     static final Log logger = LogFactory.getLog(SessionFactoryUtils.class);
-
 
     /**
      * Trigger a flush on the given Hibernate Session, converting regular

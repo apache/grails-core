@@ -37,6 +37,7 @@ import jakarta.persistence.Embeddable;
 import jakarta.persistence.Entity;
 import jakarta.persistence.MappedSuperclass;
 import jakarta.transaction.TransactionManager;
+
 import org.hibernate.HibernateException;
 import org.hibernate.MappingException;
 import org.hibernate.SessionFactory;
@@ -106,9 +107,9 @@ public class LocalSessionFactoryBuilder extends Configuration {
     private static final String PACKAGE_INFO_SUFFIX = ".package-info";
 
     private static final TypeFilter[] DEFAULT_ENTITY_TYPE_FILTERS = new TypeFilter[] {
-            new AnnotationTypeFilter(Entity.class, false),
-            new AnnotationTypeFilter(Embeddable.class, false),
-            new AnnotationTypeFilter(MappedSuperclass.class, false)};
+        new AnnotationTypeFilter(Entity.class, false),
+        new AnnotationTypeFilter(Embeddable.class, false),
+        new AnnotationTypeFilter(MappedSuperclass.class, false)};
 
     private static final TypeFilter CONVERTER_TYPE_FILTER = new AnnotationTypeFilter(Converter.class, false);
 
@@ -117,11 +118,9 @@ public class LocalSessionFactoryBuilder extends Configuration {
     private static final boolean shouldIgnoreClassFormatException =
             SpringProperties.getFlag(IGNORE_CLASSFORMAT_PROPERTY_NAME);
 
-
     private final ResourcePatternResolver resourcePatternResolver;
 
     private TypeFilter[] entityTypeFilters = DEFAULT_ENTITY_TYPE_FILTERS;
-
 
     /**
      * Create a new LocalSessionFactoryBuilder for the given DataSource.
@@ -176,7 +175,6 @@ public class LocalSessionFactoryBuilder extends Configuration {
         getProperties().put(AvailableSettings.CLASSLOADERS, Collections.singleton(resourceLoader.getClassLoader()));
         this.resourcePatternResolver = ResourcePatternUtils.getResourcePatternResolver(resourceLoader);
     }
-
 
     /**
      * Set the Spring {@link JtaTransactionManager} or the JTA {@link TransactionManager}
@@ -407,7 +405,6 @@ public class LocalSessionFactoryBuilder extends Configuration {
                 new Class<?>[] {SessionFactoryImplementor.class, InfrastructureProxy.class},
                 new BootstrapSessionFactoryInvocationHandler(bootstrapExecutor));
     }
-
 
     /**
      * Proxy invocation handler for background bootstrapping, only enforcing

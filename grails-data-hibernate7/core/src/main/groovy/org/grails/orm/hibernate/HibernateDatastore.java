@@ -41,7 +41,6 @@ import groovy.lang.Closure;
 
 import jakarta.annotation.PreDestroy;
 
-import org.checkerframework.checker.nullness.qual.NonNull;
 import org.hibernate.FlushMode;
 import org.hibernate.SessionFactory;
 import org.hibernate.boot.Metadata;
@@ -96,7 +95,6 @@ import org.grails.datastore.mapping.core.connections.ConnectionSource;
 import org.grails.datastore.mapping.core.connections.ConnectionSourceFactory;
 import org.grails.datastore.mapping.core.connections.ConnectionSources;
 import org.grails.datastore.mapping.core.connections.ConnectionSourcesInitializer;
-import org.grails.datastore.mapping.core.connections.ConnectionSourcesProvider;
 import org.grails.datastore.mapping.core.connections.DefaultConnectionSource;
 import org.grails.datastore.mapping.core.connections.MultipleConnectionSourceCapableDatastore;
 import org.grails.datastore.mapping.core.connections.SingletonConnectionSources;

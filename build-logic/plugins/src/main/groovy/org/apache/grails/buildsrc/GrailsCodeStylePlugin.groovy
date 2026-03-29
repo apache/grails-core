@@ -94,14 +94,30 @@ class GrailsCodeStylePlugin implements Plugin<Project> {
 
         root.tasks.register('aggregateStyleViolations') { task ->
             task.group = 'verification'
-            task.description = 'Aggregates all code style violations into a single report'
+            task.description = 'Aggregates all code style violations into separate reports'
 
             boolean checkTests = GradleUtils.lookupProperty(project, TEST_STYLING_PROPERTY, false)
 
             // Dependencies: all check tasks in all subprojects
             root.subprojects.each { subproject ->
-                [CodeNarc, Checkstyle, Pmd, SpotBugsTask].each { taskType ->
-                    task.dependsOn(subproject.tasks.withType(taskType).matching { t ->
+                // CodeNarc (prod only unless test styling is enabled)
+                task.dependsOn(subproject.tasks.withType(CodeNarc).matching { t ->
+                    checkTests || (!t.name.toLowerCase().contains('test') && !t.name.toLowerCase().contains('integrationtest'))
+                })
+
+                // Checkstyle (prod only unless test styling is enabled)
+                task.dependsOn(subproject.tasks.withType(Checkstyle).matching { t ->
+                    checkTests || (!t.name.toLowerCase().contains('test') && !t.name.toLowerCase().contains('integrationtest'))
+                })
+
+                if (GradleUtils.lookupProperty(project, PMD_ENABLED_PROPERTY, false)) {
+                    task.dependsOn(subproject.tasks.withType(Pmd).matching { t ->
+                        checkTests || (!t.name.toLowerCase().contains('test') && !t.name.toLowerCase().contains('integrationtest'))
+                    })
+                }
+
+                if (GradleUtils.lookupProperty(project, SPOTBUGS_ENABLED_PROPERTY, false)) {
+                    task.dependsOn(subproject.tasks.withType(SpotBugsTask).matching { t ->
                         checkTests || (!t.name.toLowerCase().contains('test') && !t.name.toLowerCase().contains('integrationtest'))
                     })
                 }
@@ -109,7 +125,9 @@ class GrailsCodeStylePlugin implements Plugin<Project> {
 
             def reportsDir = project.extensions.getByType(GrailsCodeStyleExtension).reportsDirectory
             task.inputs.dir(reportsDir).optional(true)
-            task.outputs.file(root.layout.projectDirectory.file('STYLE_VIOLATIONS.md'))
+            task.outputs.file(root.layout.projectDirectory.file('CODENARC_VIOLATIONS.md'))
+            task.outputs.file(root.layout.projectDirectory.file('CHECKSTYLE_VIOLATIONS.md'))
+            task.outputs.file(root.layout.projectDirectory.file('PMD_VIOLATIONS.md'))
 
             task.doLast {
                 parseViolations(root, reportsDir.get())
@@ -119,7 +137,6 @@ class GrailsCodeStylePlugin implements Plugin<Project> {
 
     @CompileDynamic
     private static void parseViolations(Project project, Directory reportsDir) {
-        def violations = []
         def slurper = new XmlSlurper()
         slurper.setFeature("http://apache.org/xml/features/nonvalidating/load-external-dtd", false)
         slurper.setFeature("http://xml.org/sax/features/namespaces", false)
@@ -135,15 +152,45 @@ class GrailsCodeStylePlugin implements Plugin<Project> {
             fileName.toLowerCase().contains('test') || fileName.toLowerCase().contains('integrationtest')
         }
 
-        def shouldSkipClass = { String className ->
-            !checkTests && (className.endsWith('Spec') || className.endsWith('Test') || className.endsWith('Tests'))
+        def shouldSkipClass = { String className, String filePath = null ->
+            if (checkTests) return false
+            if (className.contains('Spec') || className.contains('Test') || className.contains('Tests')) return true
+            if (filePath && (filePath.contains('src/test/') || filePath.contains('src/integrationTest/'))) return true
+            return false
+        }
+
+        def writeReport = { String fileName, List violations, String title ->
+            def reportFile = project.layout.projectDirectory.file(fileName).asFile
+            def out = new StringBuilder()
+            out.append("# ${title}\n")
+            out.append("Generated on: ${LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss"))}\n\n")
+
+            if (violations.isEmpty()) {
+                out.append("No violations found! 🎉\n")
+            } else {
+                def uniqueViolations = violations.unique().sort { v -> "${v.module}:${v.className}:${v.line}" }
+                def groupedByModule = uniqueViolations.groupBy { it.module }.sort()
+                groupedByModule.each { module, modViolations ->
+                    out.append("## Module: ${module}\n")
+                    out.append("| Class | Tool | Violation | Line | Message |\n")
+                    out.append("| :--- | :--- | :--- | :--- | :--- |\n")
+                    modViolations.each { v ->
+                        out.append("| ${v.className} | ${v.tool} | ${v.type} | ${v.line} | ${v.message.replaceAll(/\|/, '\\|')} |\n")
+                    }
+                    out.append("\n")
+                }
+            }
+            reportFile.text = out.toString()
+            project.logger.lifecycle("Aggregated report generated: ${reportFile.absolutePath}")
         }
 
         // 1. CodeNarc
+        def codenarcViolations = []
         def codenarcDir = reportsDir.dir('codenarc').asFile
         if (codenarcDir.exists()) {
             codenarcDir.eachFileMatch(~/.*\.xml/) { file ->
-                if (!checkTests && isTestFile(file.name)) {
+                // Respect checkTests property for CodeNarc
+                if (file.size() == 0 || (!checkTests && isTestFile(file.name))) {
                     return
                 }
                 def module = getModule(file.name)
@@ -154,11 +201,12 @@ class GrailsCodeStylePlugin implements Plugin<Project> {
                         def fileName = f.@name.text()
                         def className = pkgName ? "${pkgName}.${fileName}" : fileName
                         className = className.replace('.groovy', '').replace('.java', '')
-                        if (shouldSkipClass(className)) {
+                        // Also skip if it is a test file path (backup check)
+                        if (shouldSkipClass(className, f.@name.text())) {
                             return
                         }
                         f.Violation.each { v ->
-                            violations << [
+                            codenarcViolations << [
                                     module: module,
                                     className: className,
                                     tool: 'CodeNarc',
@@ -171,12 +219,14 @@ class GrailsCodeStylePlugin implements Plugin<Project> {
                 }
             }
         }
+        writeReport('CODENARC_VIOLATIONS.md', codenarcViolations, 'CodeNarc Violations Summary')
 
         // 2. PMD
+        def pmdViolations = []
         def pmdDir = reportsDir.dir('pmd').asFile
-        if (pmdDir.exists()) {
+        if (pmdDir.exists() && GradleUtils.lookupProperty(project, PMD_ENABLED_PROPERTY, false)) {
             pmdDir.eachFileMatch(~/.*\.xml/) { file ->
-                if (!checkTests && isTestFile(file.name)) {
+                if (file.size() == 0 || (!checkTests && isTestFile(file.name))) {
                     return
                 }
                 def module = getModule(file.name)
@@ -187,7 +237,7 @@ class GrailsCodeStylePlugin implements Plugin<Project> {
                         if (shouldSkipClass(className)) {
                             return
                         }
-                        violations << [
+                        pmdViolations << [
                                 module: module,
                                 className: className,
                                 tool: 'PMD',
@@ -199,45 +249,20 @@ class GrailsCodeStylePlugin implements Plugin<Project> {
                 }
             }
         }
+        writeReport('PMD_VIOLATIONS.md', pmdViolations, 'PMD Violations Summary')
 
-        // 3. SpotBugs
-        def spotbugsDir = reportsDir.dir('spotbugs').asFile
-        if (spotbugsDir.exists()) {
-            spotbugsDir.eachFileMatch(~/.*\.xml/) { file ->
-                if (!checkTests && isTestFile(file.name)) {
-                    return
-                }
-                def module = getModule(file.name)
-                def xml = slurper.parse(file)
-                xml.BugInstance.each { b ->
-                    def className = b.Class.@classname.text()
-                    if (shouldSkipClass(className)) {
-                        return
-                    }
-                    violations << [
-                            module: module,
-                            className: className,
-                            tool: 'SpotBugs',
-                            type: b.@type.text(),
-                            line: b.SourceLine.@start.text(),
-                            message: b.LongMessage.text().trim() ?: b.ShortMessage.text().trim()
-                    ]
-                }
-            }
-        }
-
-        // 4. Checkstyle
+        // 3. Checkstyle
+        def checkstyleViolations = []
         def checkstyleDir = reportsDir.dir('checkstyle').asFile
         if (checkstyleDir.exists()) {
             checkstyleDir.eachFileMatch(~/.*\.xml/) { file ->
-                if (!checkTests && isTestFile(file.name)) {
+                if (file.size() == 0 || (!checkTests && isTestFile(file.name))) {
                     return
                 }
                 def module = getModule(file.name)
                 def xml = slurper.parse(file)
                 xml.file.each { f ->
                     def filePath = f.@name.text()
-                    // Try to derive class name from file path
                     def className = filePath.contains('src/main/groovy/') ? filePath.split('src/main/groovy/')[1] :
                                     filePath.contains('src/main/java/') ? filePath.split('src/main/java/')[1] :
                                     filePath.contains('src/test/groovy/') ? filePath.split('src/test/groovy/')[1] :
@@ -250,7 +275,7 @@ class GrailsCodeStylePlugin implements Plugin<Project> {
                     }
 
                     f.error.each { e ->
-                        violations << [
+                        checkstyleViolations << [
                                 module: module,
                                 className: className,
                                 tool: 'Checkstyle',
@@ -262,31 +287,7 @@ class GrailsCodeStylePlugin implements Plugin<Project> {
                 }
             }
         }
-
-        def reportFile = project.layout.projectDirectory.file('STYLE_VIOLATIONS.md').asFile
-        def out = new StringBuilder()
-        out.append("# Style Violations Summary\n")
-        out.append("Generated on: ${LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss"))}\n\n")
-
-        if (violations.isEmpty()) {
-            out.append("No violations found! 🎉\n")
-        } else {
-            // Deduplicate violations
-            def uniqueViolations = violations.unique()
-            def groupedByModule = uniqueViolations.groupBy { it.module }.sort()
-            groupedByModule.each { module, modViolations ->
-                out.append("## Module: ${module}\n")
-                out.append("| Class | Tool | Violation | Line | Message |\n")
-                out.append("| :--- | :--- | :--- | :--- | :--- |\n")
-                modViolations.sort { it.className }.each { v ->
-                    out.append("| ${v.className} | ${v.tool} | ${v.type} | ${v.line} | ${v.message.replaceAll(/\|/, '\\|')} |\n")
-                }
-                out.append("\n")
-            }
-        }
-
-        reportFile.text = out.toString()
-        project.logger.lifecycle("Aggregated style violations report generated: ${reportFile.absolutePath}")
+        writeReport('CHECKSTYLE_VIOLATIONS.md', checkstyleViolations, 'Checkstyle Violations Summary')
     }
 
     private static void initExtension(Project project) {
@@ -584,9 +585,9 @@ class GrailsCodeStylePlugin implements Plugin<Project> {
             it.ignoreFailures.set(GradleUtils.lookupProperty(project, IGNORE_FAILURES_PROPERTY, false))
         }
 
-        project.tasks.withType(SpotBugsTask).configureEach {
-            it.group = 'verification'
-            it.reports {
+        project.tasks.withType(SpotBugsTask).configureEach { task ->
+            task.group = 'verification'
+            task.reports {
                 it.create('html') { it.required = true }
                 it.create('xml') {
                     it.required = true
@@ -594,11 +595,11 @@ class GrailsCodeStylePlugin implements Plugin<Project> {
                         project.extensions.getByType(GrailsCodeStyleExtension)
                                 .reportsDirectory.get()
                                 .dir('spotbugs')
-                                .file("${project.name}-${it.name}.xml")
+                                .file("${project.name}-${task.name}.xml")
                     )
                 }
             }
-            it.onlyIf { !project.hasProperty('skipCodeStyle') }
+            task.onlyIf { !project.hasProperty('skipCodeStyle') }
         }
 
         if (!GradleUtils.lookupProperty(project, TEST_STYLING_PROPERTY, false)) {
