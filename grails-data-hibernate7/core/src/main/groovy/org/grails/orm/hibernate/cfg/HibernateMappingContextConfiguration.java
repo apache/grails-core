@@ -146,7 +146,7 @@ public class HibernateMappingContextConfiguration extends Configuration
         Properties properties = getProperties();
 
         if (applicationContext != null) {
-            if (applicationContext.containsBean(dsName)) {
+            if (!properties.containsKey(JdbcSettings.JAKARTA_NON_JTA_DATASOURCE) && applicationContext.containsBean(dsName)) {
                 properties.put(JdbcSettings.JAKARTA_NON_JTA_DATASOURCE, applicationContext.getBean(dsName));
             }
             properties.put(Environment.CURRENT_SESSION_CONTEXT_CLASS, currentSessionContext.getName());

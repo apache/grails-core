@@ -202,6 +202,15 @@ class HibernateDatastoreSpringInitializer extends AbstractDatastoreInitializer {
             }
             autoTimestampEventListener(hibernateDatastore: 'getAutoTimestampEventListener')
             getBeanDefinition('transactionManager').beanClass = PlatformTransactionManager
+
+            for (String dataSourceName in dataSources) {
+                if (dataSourceName == ConnectionSource.DEFAULT) continue
+
+                "dataSource_$dataSourceName"(hibernateDatastore: 'getDataSource', dataSourceName)
+                "sessionFactory_$dataSourceName"(hibernateDatastore: 'getSessionFactory', dataSourceName)
+                "transactionManager_$dataSourceName"(hibernateDatastore: 'getTransactionManager', dataSourceName)
+            }
+
             hibernateDatastoreConnectionSourcesRegistrar(HibernateDatastoreConnectionSourcesRegistrar, dataSources)
             // domain model mapping context, used for configuration
             grailsDomainClassMappingContext(hibernateDatastore: 'getMappingContext')

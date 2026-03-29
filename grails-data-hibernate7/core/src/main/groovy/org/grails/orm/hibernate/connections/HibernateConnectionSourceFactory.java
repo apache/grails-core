@@ -179,6 +179,7 @@ public class HibernateConnectionSourceFactory
         HibernateConnectionSourceSettings.HibernateSettings hibernateSettings = settings.getHibernate();
         HibernateMappingContextConfiguration configuration = resolveConfiguration(hibernateSettings.getConfigClass());
         configuration.setBytecodeProvider(this.bytecodeProvider);
+        configuration.setDataSourceName(name);
         configuration.getProperties().put("jakarta.persistence.nonJtaDataSource", dataSourceConnectionSource.getSource());
         if (applicationContext != null) {
             configuration.setApplicationContext(applicationContext);

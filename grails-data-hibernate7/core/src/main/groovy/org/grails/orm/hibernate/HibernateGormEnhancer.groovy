@@ -71,7 +71,8 @@ class HibernateGormEnhancer extends GormEnhancer {
                 datastoreForConnection,
                 createDynamicFinders(datastoreForConnection),
                 Thread.currentThread().contextClassLoader,
-                datastoreForConnection.getTransactionManager()
+                datastoreForConnection.getTransactionManager(),
+                qualifier
         )
     }
 
@@ -90,5 +91,9 @@ class HibernateGormEnhancer extends GormEnhancer {
     @Override
     protected void registerConstraints(Datastore datastore) {
         // no-op
+    }
+
+    public static <D> GormStaticApi<D> findStaticApi(Class<D> cls, String qualifier) {
+        GormEnhancer.findStaticApi(cls, qualifier)
     }
 }

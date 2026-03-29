@@ -22,8 +22,8 @@ import grails.gorm.annotation.Entity
 import org.springframework.beans.factory.support.DefaultListableBeanFactory
 import org.springframework.boot.autoconfigure.AutoConfigurationPackages
 import org.springframework.boot.autoconfigure.context.PropertyPlaceholderAutoConfiguration
-import org.springframework.boot.autoconfigure.jdbc.DataSourceProperties
-import org.springframework.boot.autoconfigure.jdbc.EmbeddedDataSourceConfiguration
+import org.springframework.boot.jdbc.autoconfigure.DataSourceProperties
+import org.springframework.boot.jdbc.autoconfigure.EmbeddedDataSourceConfiguration
 import org.springframework.context.annotation.AnnotationConfigApplicationContext
 import org.springframework.context.annotation.Configuration
 import org.springframework.context.annotation.Import

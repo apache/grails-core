@@ -53,6 +53,7 @@ import grails.orm.HibernateCriteriaBuilder
 import org.grails.datastore.gorm.GormEnhancer
 import org.grails.datastore.gorm.GormStaticApi
 import org.grails.datastore.gorm.finders.FinderMethod
+import org.grails.datastore.mapping.core.connections.ConnectionSource
 import org.grails.datastore.mapping.core.connections.ConnectionSourcesProvider
 import org.grails.datastore.mapping.proxy.ProxyHandler
 import org.grails.datastore.mapping.query.api.BuildableCriteria as GrailsCriteria
@@ -82,11 +83,13 @@ class HibernateGormStaticApi<D> extends GormStaticApi<D> {
     protected SessionFactory sessionFactory
     protected Class identityType
     protected ClassLoader classLoader
+    protected String qualifier
     private HibernateGormInstanceApi<D> instanceApi
 
     HibernateGormStaticApi(Class<D> persistentClass, HibernateDatastore datastore, List<FinderMethod> finders,
-                           ClassLoader classLoader, PlatformTransactionManager transactionManager) {
+                           ClassLoader classLoader, PlatformTransactionManager transactionManager, String qualifier = null) {
         super(persistentClass, datastore, finders, transactionManager)
+        this.datastore = datastore
         this.hibernateTemplate = new GrailsHibernateTemplate(datastore.getSessionFactory(), datastore)
         this.conversionService = datastore.mappingContext.conversionService
         this.proxyHandler = datastore.mappingContext.proxyHandler
@@ -98,22 +101,51 @@ class HibernateGormStaticApi<D> extends GormStaticApi<D> {
         this.sessionFactory = datastore.getSessionFactory()
         this.identityType = persistentEntity.identity?.type
         this.instanceApi = new HibernateGormInstanceApi<>(persistentClass, datastore, classLoader)
+        this.qualifier = qualifier
     }
 
     GrailsHibernateTemplate getHibernateTemplate() {
         return hibernateTemplate as GrailsHibernateTemplate
     }
 
+    String getQualifier() {
+        if (qualifier != null) return qualifier
+        def dsNames = persistentEntity.mapping.mappedForm.datasources
+        if (dsNames) {
+            String first = dsNames[0]
+            if (first != ConnectionSource.DEFAULT && first != 'ALL') {
+                return first
+            }
+        }
+        null
+    }
+
+    GormStaticApi<D> getApi(String qualifier) {
+        (GormStaticApi<D>) HibernateGormEnhancer.findStaticApi(persistentClass, qualifier)
+    }
+
     @Override
     <T> T withNewSession(Closure<T> callable) {
-        HibernateDatastore hibernateDatastore = (HibernateDatastore) datastore
-        hibernateDatastore.withNewSession(callable)
+        if (persistentEntity.isMultiTenant()) {
+            return ((HibernateDatastore) datastore).withNewSession(callable)
+        }
+        String q = getQualifier()
+        if (q != null && q != ConnectionSource.DEFAULT) {
+            return ((HibernateDatastore) datastore).withNewSession(q, callable)
+        }
+        ((HibernateDatastore) datastore).withNewSession(callable)
     }
 
     @Override
     <T> T withSession(Closure<T> callable) {
-        HibernateDatastore hibernateDatastore = (HibernateDatastore) datastore
-        hibernateDatastore.withSession(callable)
+        if (persistentEntity.isMultiTenant()) {
+            return ((HibernateDatastore) datastore).withSession(callable)
+        }
+        String q = getQualifier()
+        if (q != null && q != ConnectionSource.DEFAULT) {
+            return ((HibernateDatastore) datastore).withSession(q, callable)
+        }
+        ((HibernateDatastore) datastore).withSession(callable)
     }
 
     D get(Serializable id) {
@@ -469,7 +501,7 @@ class HibernateGormStaticApi<D> extends GormStaticApi<D> {
     @Override
     def propertyMissing(String name) {
         if (datastore instanceof ConnectionSourcesProvider) {
-            return GormEnhancer.findStaticApi(persistentClass, name)
+            return HibernateGormEnhancer.findStaticApi(persistentClass, name)
         } else {
             throw new MissingPropertyException(name, persistentClass)
         }
