@@ -148,9 +148,20 @@ class GrailsCodeStylePlugin implements Plugin<Project> {
             it.toolVersion = project.findProperty('checkstyleVersion')
         }
 
-        project.tasks.withType(Checkstyle).configureEach {
-            it.group = 'verification'
-            it.onlyIf { !project.hasProperty('skipCodeStyle') }
+        project.tasks.withType(Checkstyle).configureEach { Checkstyle task ->
+            task.group = 'verification'
+            task.onlyIf { !project.hasProperty('skipCodeStyle') }
+
+            // Redirect XML report output to a single directory to consolidate
+            // reports across all subprojects into one known location.
+            // Include the task name to avoid overlapping outputs when a project has
+            // multiple source sets (e.g. grails-cache has ast + main).
+            task.reports.xml.outputLocation.set(
+                    project.extensions.getByType(GrailsCodeStyleExtension)
+                            .reportsDirectory.get()
+                            .dir('checkstyle')
+                            .file("${project.name}-${task.name}.xml")
+            )
         }
     }
 
@@ -163,9 +174,21 @@ class GrailsCodeStylePlugin implements Plugin<Project> {
             it.toolVersion = project.findProperty('codenarcVersion')
         }
 
-        project.tasks.withType(CodeNarc).configureEach {
-            it.group = 'verification'
-            it.onlyIf { !project.hasProperty('skipCodeStyle') }
+        project.tasks.withType(CodeNarc).configureEach { CodeNarc task ->
+            task.group = 'verification'
+            task.onlyIf { !project.hasProperty('skipCodeStyle') }
+
+            // Redirect XML report output to a single directory to consolidate
+            // reports across all subprojects into one known location.
+            // Include the task name to avoid overlapping outputs when a project has
+            // multiple source sets.
+            task.reports.xml.required.set(true)
+            task.reports.xml.outputLocation.set(
+                    project.extensions.getByType(GrailsCodeStyleExtension)
+                            .reportsDirectory.get()
+                            .dir('codenarc')
+                            .file("${project.name}-${task.name}.xml")
+            )
         }
     }
 }

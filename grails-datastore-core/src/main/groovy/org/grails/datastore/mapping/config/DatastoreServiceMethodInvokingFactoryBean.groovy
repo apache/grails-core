@@ -35,7 +35,7 @@ import org.grails.datastore.mapping.core.exceptions.ConfigurationException
 import org.grails.datastore.mapping.services.Service
 
 /**
- * Variant of {#link MethodInvokingFactoryBean} which returns the correct
+ * Variant of {@link MethodInvokingFactoryBean} which returns the correct
  * data service type instead of {@code java.lang.Object} so the Autowire
  * with type works correctly.
  */
