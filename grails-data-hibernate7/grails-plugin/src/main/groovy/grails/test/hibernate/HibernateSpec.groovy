@@ -25,6 +25,7 @@ import groovy.transform.TypeCheckingMode
 
 import org.hibernate.Session
 import org.hibernate.SessionFactory
+import org.springframework.beans.factory.support.BeanDefinitionRegistry
 import spock.lang.AutoCleanup
 import spock.lang.Shared
 import spock.lang.Specification
@@ -32,8 +33,10 @@ import spock.lang.Specification
 import org.springframework.boot.env.PropertySourceLoader
 import org.springframework.core.env.MapPropertySource
 import org.springframework.core.env.MutablePropertySources
+import org.springframework.core.env.PropertyResolver
 import org.springframework.core.env.PropertySource
 import org.springframework.core.io.DefaultResourceLoader
+
 import org.springframework.core.io.Resource
 import org.springframework.core.io.ResourceLoader
 import org.springframework.core.io.support.SpringFactoriesLoader
@@ -43,6 +46,8 @@ import org.springframework.transaction.interceptor.DefaultTransactionAttribute
 
 import grails.config.Config
 import org.grails.config.PropertySourcesConfig
+import org.grails.datastore.mapping.core.DatastoreUtils
+import org.grails.datastore.mapping.multitenancy.MultiTenancySettings
 import org.grails.orm.hibernate.HibernateDatastore
 import org.grails.orm.hibernate.cfg.Settings
 import org.grails.orm.hibernate.proxy.HibernateProxyHandler
@@ -92,47 +97,102 @@ abstract class HibernateSpec extends Specification {
 
     @CompileStatic(TypeCheckingMode.SKIP)
     void setupSpec() {
-
-        List<PropertySourceLoader> propertySourceLoaders = SpringFactoriesLoader.loadFactories(PropertySourceLoader, getClass().getClassLoader())
-        ResourceLoader resourceLoader = new DefaultResourceLoader()
-        MutablePropertySources propertySources = new MutablePropertySources()
-        PropertySourceLoader ymlLoader = propertySourceLoaders.find { it.getFileExtensions().toList().contains('yml') }
-        if (ymlLoader) {
-            load(resourceLoader, ymlLoader, 'application.yml').each {
-                propertySources.addLast(it)
-            }
-        }
-        PropertySourceLoader groovyLoader = propertySourceLoaders.find { it.getFileExtensions().toList().contains('groovy') }
-        if (groovyLoader) {
-            load(resourceLoader, groovyLoader, 'application.groovy').each {
-                propertySources.addLast(it)
-            }
-        }
-        propertySources.addFirst(new MapPropertySource('defaults', getConfiguration()))
-        Config config = new PropertySourcesConfig(propertySources)
+        Config config
         List<Class> domainClasses = getDomainClasses()
-
         HibernateDatastoreSpringInitializer initializer
-        if (!domainClasses) {
-            String packageName = getPackageToScan(config)
-            initializer = new HibernateDatastoreSpringInitializer(config, packageName)
-        } else {
-            initializer = new HibernateDatastoreSpringInitializer(config, domainClasses)
-        }
 
-        initializer.beanDefinitions = { ->
-            dataSource(org.springframework.jdbc.datasource.DriverManagerDataSource) {
-                driverClassName = 'org.h2.Driver'
-                url = 'jdbc:h2:mem:test;DB_CLOSE_DELAY=-1'
-                username = 'sa'
-                password = ''
+        if (applicationContext == null) {
+            System.out.println("HibernateSpec: applicationContext is null, creating new one.")
+            List<PropertySourceLoader> propertySourceLoaders = SpringFactoriesLoader.loadFactories(PropertySourceLoader, getClass().getClassLoader())
+            ResourceLoader resourceLoader = new DefaultResourceLoader()
+            MutablePropertySources propertySources = new MutablePropertySources()
+            PropertySourceLoader ymlLoader = propertySourceLoaders.find { it.getFileExtensions().toList().contains('yml') }
+            if (ymlLoader) {
+                load(resourceLoader, ymlLoader, 'application.yml').each {
+                    propertySources.addLast(it)
+                }
             }
-            hibernateBytecodeProvider(TestGrailsBytecodeProvider)
+            PropertySourceLoader groovyLoader = propertySourceLoaders.find { it.getFileExtensions().toList().contains('groovy') }
+            if (groovyLoader) {
+                load(resourceLoader, groovyLoader, 'application.groovy').each {
+                    propertySources.addLast(it)
+                }
+            }
+            propertySources.addFirst(new MapPropertySource('defaults', getConfiguration()))
+            config = new PropertySourcesConfig(propertySources)
+            PropertyResolver propertyResolver = DatastoreUtils.preparePropertyResolver(config)
+
+            if (!domainClasses) {
+                String packageName = getPackageToScan(config)
+                initializer = new HibernateDatastoreSpringInitializer(propertyResolver, packageName)
+            } else {
+                initializer = new HibernateDatastoreSpringInitializer(propertyResolver, domainClasses)
+            }
+
+            initializer.beanDefinitions = { ->
+                dataSource(org.springframework.jdbc.datasource.DriverManagerDataSource) {
+                    driverClassName = 'org.h2.Driver'
+                    url = 'jdbc:h2:mem:test;DB_CLOSE_DELAY=-1'
+                    username = 'sa'
+                    password = ''
+                }
+                hibernateBytecodeProvider(TestGrailsBytecodeProvider)
+            }
+
+            applicationContext = initializer.configure()
+        } else {
+            System.out.println("HibernateSpec: applicationContext already exists (${applicationContext.class.name}), registering beans.")
+            // Context already exists (e.g. from ControllerUnitTest), register our beans into it
+            try {
+                config = applicationContext.getBean('grailsConfig', Config)
+            } catch (e) {
+                // Fallback: create a new config if grailsConfig bean is missing
+                System.out.println("HibernateSpec: grailsConfig bean not found, creating fallback.")
+                List<PropertySourceLoader> propertySourceLoaders = SpringFactoriesLoader.loadFactories(PropertySourceLoader, getClass().getClassLoader())
+                ResourceLoader resourceLoader = new DefaultResourceLoader()
+                MutablePropertySources propertySources = new MutablePropertySources()
+                PropertySourceLoader ymlLoader = propertySourceLoaders.find { it.getFileExtensions().toList().contains('yml') }
+                if (ymlLoader) {
+                    load(resourceLoader, ymlLoader, 'application.yml').each {
+                        propertySources.addLast(it)
+                    }
+                }
+                PropertySourceLoader groovyLoader = propertySourceLoaders.find { it.getFileExtensions().toList().contains('groovy') }
+                if (groovyLoader) {
+                    load(resourceLoader, groovyLoader, 'application.groovy').each {
+                        propertySources.addLast(it)
+                    }
+                }
+                propertySources.addFirst(new MapPropertySource('defaults', getConfiguration()))
+                config = new PropertySourcesConfig(propertySources)
+            }
+            PropertyResolver propertyResolver = DatastoreUtils.preparePropertyResolver(config)
+
+            if (!domainClasses) {
+                String packageName = getPackageToScan(config)
+                initializer = new HibernateDatastoreSpringInitializer(propertyResolver, packageName)
+            } else {
+                initializer = new HibernateDatastoreSpringInitializer(propertyResolver, domainClasses)
+            }
+            initializer.configureForBeanDefinitionRegistry((BeanDefinitionRegistry) applicationContext)
         }
 
-        applicationContext = initializer.configure()
-        hibernateDatastore = applicationContext.getBean(HibernateDatastore)
-        transactionManager = hibernateDatastore.getTransactionManager()
+        try {
+            hibernateDatastore = applicationContext.getBean(HibernateDatastore)
+        } catch (e) {
+            try {
+                hibernateDatastore = applicationContext.getBean('hibernateDatastore', HibernateDatastore)
+            } catch (e2) {
+                System.err.println("Available beans: " + applicationContext.getBeanDefinitionNames().join(", "))
+                throw e2
+            }
+        }
+        System.out.println("HibernateDatastore initialized with multi-tenancy mode: ${hibernateDatastore.multiTenancyMode}")
+        try {
+            transactionManager = hibernateDatastore.getTransactionManager()
+        } catch (e) {
+            transactionManager = applicationContext.getBean(PlatformTransactionManager)
+        }
     }
 
     /**

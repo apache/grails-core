@@ -232,7 +232,6 @@ class LinkRenderingTagLibTests extends Specification implements UrlMappingsUnitT
         output == '<a href="/foo/list">bar</a>'
     }
 
-    @PendingFeature
     def testRenderForm() {
         when:
         def template = '<g:form controller="foo" action="list">${name}</g:form>'

@@ -194,7 +194,6 @@ class HibernateDatastoreSpringInitializer extends AbstractDatastoreInitializer {
                 }
             }
         }
-        return beanDefinitions
     }
 
     protected GenericApplicationContext createApplicationContext() {

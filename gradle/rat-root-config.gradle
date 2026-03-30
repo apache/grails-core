@@ -87,6 +87,7 @@ tasks.named('rat') {
             'node_modules/**', // node modules
             'local.properties', // local properties
             'test_output.log', // test output log
+            '0_build_grails.txt', // large build log
             'fix_codenarc.py', // fix codenarc script
             '*_VIOLATIONS.md', // generated violation reports
             'plans/*.md', // development plans

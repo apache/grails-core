@@ -152,6 +152,9 @@ class HibernateDatastoreSpringInitializer extends AbstractDatastoreInitializer {
             beanBuilder.beans(this.beanDefinitions)
         }
         beanBuilder.registerBeans(beanDefinitionRegistry)
+        if (!beanDefinitionRegistry.containsBeanDefinition('hibernateDatastore')) {
+            throw new IllegalStateException("Failed to register hibernateDatastore bean!")
+        }
     }
 
     protected String getTestDbUrl() {
@@ -242,7 +245,6 @@ class HibernateDatastoreSpringInitializer extends AbstractDatastoreInitializer {
                 }
             }
         }
-        return beanDefinitions
     }
 
     protected GenericApplicationContext createApplicationContext() {

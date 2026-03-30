@@ -30,6 +30,9 @@ import org.grails.testing.GrailsUnitTest
  */
 class SchemaPerTenantSpec extends HibernateSpec implements GrailsUnitTest {
 
+    @Override
+    List<Class> getDomainClasses() { [Book] }
+
     BookService bookDataService = hibernateDatastore.getService(BookService)
 
     @Override
