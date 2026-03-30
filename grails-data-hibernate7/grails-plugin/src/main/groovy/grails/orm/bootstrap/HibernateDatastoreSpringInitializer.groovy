@@ -153,7 +153,7 @@ class HibernateDatastoreSpringInitializer extends AbstractDatastoreInitializer {
         }
         beanBuilder.registerBeans(beanDefinitionRegistry)
         if (!beanDefinitionRegistry.containsBeanDefinition('hibernateDatastore')) {
-            throw new IllegalStateException("Failed to register hibernateDatastore bean!")
+            throw new IllegalStateException('Failed to register hibernateDatastore bean!')
         }
     }
 

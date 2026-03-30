@@ -47,7 +47,6 @@ import org.springframework.transaction.interceptor.DefaultTransactionAttribute
 import grails.config.Config
 import org.grails.config.PropertySourcesConfig
 import org.grails.datastore.mapping.core.DatastoreUtils
-import org.grails.datastore.mapping.multitenancy.MultiTenancySettings
 import org.grails.orm.hibernate.HibernateDatastore
 import org.grails.orm.hibernate.cfg.Settings
 import org.grails.orm.hibernate.proxy.HibernateProxyHandler
@@ -102,7 +101,7 @@ abstract class HibernateSpec extends Specification {
         HibernateDatastoreSpringInitializer initializer
 
         if (applicationContext == null) {
-            System.out.println("HibernateSpec: applicationContext is null, creating new one.")
+            System.out.println('HibernateSpec: applicationContext is null, creating new one.')
             List<PropertySourceLoader> propertySourceLoaders = SpringFactoriesLoader.loadFactories(PropertySourceLoader, getClass().getClassLoader())
             ResourceLoader resourceLoader = new DefaultResourceLoader()
             MutablePropertySources propertySources = new MutablePropertySources()
@@ -147,7 +146,7 @@ abstract class HibernateSpec extends Specification {
                 config = applicationContext.getBean('grailsConfig', Config)
             } catch (e) {
                 // Fallback: create a new config if grailsConfig bean is missing
-                System.out.println("HibernateSpec: grailsConfig bean not found, creating fallback.")
+                System.out.println('HibernateSpec: grailsConfig bean not found, creating fallback.')
                 List<PropertySourceLoader> propertySourceLoaders = SpringFactoriesLoader.loadFactories(PropertySourceLoader, getClass().getClassLoader())
                 ResourceLoader resourceLoader = new DefaultResourceLoader()
                 MutablePropertySources propertySources = new MutablePropertySources()
@@ -183,7 +182,7 @@ abstract class HibernateSpec extends Specification {
             try {
                 hibernateDatastore = applicationContext.getBean('hibernateDatastore', HibernateDatastore)
             } catch (e2) {
-                System.err.println("Available beans: " + applicationContext.getBeanDefinitionNames().join(", "))
+                System.err.println('Available beans: ' + applicationContext.getBeanDefinitionNames().join(', '))
                 throw e2
             }
         }
