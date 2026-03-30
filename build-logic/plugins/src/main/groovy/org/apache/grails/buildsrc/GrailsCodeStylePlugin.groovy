@@ -57,6 +57,7 @@ import com.github.spotbugs.snom.SpotBugsTask
 class GrailsCodeStylePlugin implements Plugin<Project> {
 
     static String CHECKSTYLE_DIR_PROPERTY = 'grails.codestyle.dir.checkstyle'
+    static String CHECKSTYLE_ENABLED_PROPERTY = 'grails.codestyle.enabled.checkstyle'
     static String CHECKSTYLE_CONFIG_FILE_NAME = 'checkstyle.xml'
     static String CHECKSTYLE_SUPPRESSION_CONFIG_FILE_NAME = 'checkstyle-suppressions.xml'
 
@@ -69,6 +70,7 @@ class GrailsCodeStylePlugin implements Plugin<Project> {
     static String PMD_CONFIG_FILE_NAME = 'pmd.xml'
 
     static String CODENARC_DIR_PROPERTY = 'grails.codestyle.dir.codenarc'
+    static String CODENARC_ENABLED_PROPERTY = 'grails.codestyle.enabled.codenarc'
     static String CODENARC_CONFIG_FILE_NAME = 'codenarc.groovy'
 
     static String SPOTBUGS_ENABLED_PROPERTY = 'grails.codestyle.enabled.spotbugs'
@@ -154,8 +156,10 @@ class GrailsCodeStylePlugin implements Plugin<Project> {
 
         def shouldSkipClass = { String className, String filePath = null ->
             if (checkTests) return false
-            if (className.contains('Spec') || className.contains('Test') || className.contains('Tests')) return true
+            // Only skip if it's explicitly in a test source directory
             if (filePath && (filePath.contains('src/test/') || filePath.contains('src/integrationTest/'))) return true
+            // If we don't have a path, be conservative
+            if (!filePath && (className.contains('Spec') || className.contains('Test') || className.contains('Tests'))) return true
             return false
         }
 
@@ -187,7 +191,7 @@ class GrailsCodeStylePlugin implements Plugin<Project> {
         // 1. CodeNarc
         def codenarcViolations = []
         def codenarcDir = reportsDir.dir('codenarc').asFile
-        if (codenarcDir.exists()) {
+        if (codenarcDir.exists() && GradleUtils.lookupProperty(project, CODENARC_ENABLED_PROPERTY, true)) {
             codenarcDir.eachFileMatch(~/.*\.xml/) { file ->
                 // Respect checkTests property for CodeNarc
                 if (file.size() == 0 || (!checkTests && isTestFile(file.name))) {
@@ -254,7 +258,7 @@ class GrailsCodeStylePlugin implements Plugin<Project> {
         // 3. Checkstyle
         def checkstyleViolations = []
         def checkstyleDir = reportsDir.dir('checkstyle').asFile
-        if (checkstyleDir.exists()) {
+        if (checkstyleDir.exists() && GradleUtils.lookupProperty(project, CHECKSTYLE_ENABLED_PROPERTY, true)) {
             checkstyleDir.eachFileMatch(~/.*\.xml/) { file ->
                 if (file.size() == 0 || (!checkTests && isTestFile(file.name))) {
                     return
