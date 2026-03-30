@@ -88,6 +88,9 @@ tasks.named('rat') {
             'local.properties', // local properties
             'test_output.log', // test output log
             'fix_codenarc.py', // fix codenarc script
+            '*_VIOLATIONS.md', // generated violation reports
+            'plans/*.md', // development plans
+            'grails-data-hibernate7/*.md', // hibernate 7 migration docs
     ] + rootProject.subprojects.collect{"${rootProject.projectDir.relativePath(it.layout.buildDirectory.get().asFile).toString()}/**/*" }
     // logger.lifecycle("Excludes for RAT task: ${allExcludes.join(', \n')}")
     excludes = allExcludes
