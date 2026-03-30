@@ -32,6 +32,8 @@ import org.gradle.api.tasks.SourceSetOutput
 import org.gradle.api.tasks.TaskContainer
 import org.gradle.api.tasks.bundling.Jar
 
+import org.gradle.api.NamedDomainObjectContainer
+
 import grails.util.GrailsNameUtils
 import org.grails.gradle.plugin.core.TestPhase
 import org.grails.gradle.plugin.core.TestPhasesGradlePlugin
@@ -94,8 +96,9 @@ class AbstractGroovyTemplatePlugin implements Plugin<Project> {
                 task.dependsOn(templateCompileTask)
             }
         }
-        project.plugins.withType(TestPhasesGradlePlugin).configureEach { TestPhasesGradlePlugin phasesPlugin ->
-            phasesPlugin.testPhases.all { TestPhase phase ->
+        project.plugins.withType(TestPhasesGradlePlugin).configureEach {
+            NamedDomainObjectContainer<TestPhase> testPhases = (NamedDomainObjectContainer<TestPhase>) project.extensions.getByName(TestPhasesGradlePlugin.EXTENSION_NAME)
+            testPhases.all { TestPhase phase ->
                 String compileTaskName = "compile${phase.name.capitalize()}Groovy"
                 if (tasks.names.contains(compileTaskName)) {
                     tasks.named(compileTaskName).configure { Task task ->

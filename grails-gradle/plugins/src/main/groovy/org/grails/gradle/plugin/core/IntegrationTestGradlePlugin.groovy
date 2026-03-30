@@ -20,6 +20,7 @@ package org.grails.gradle.plugin.core
 
 import groovy.transform.CompileStatic
 
+import org.gradle.api.NamedDomainObjectContainer
 import org.gradle.api.Plugin
 import org.gradle.api.Project
 
@@ -58,7 +59,7 @@ class IntegrationTestGradlePlugin implements Plugin<Project> {
     void apply(Project project) {
         project.pluginManager.apply(TestPhasesGradlePlugin)
 
-        TestPhasesGradlePlugin phasesPlugin = project.plugins.getPlugin(TestPhasesGradlePlugin)
-        phasesPlugin.testPhases.create(INTEGRATION_TEST_SOURCE_SET_NAME)
+        NamedDomainObjectContainer<TestPhase> testPhases = (NamedDomainObjectContainer<TestPhase>) project.extensions.getByName(TestPhasesGradlePlugin.EXTENSION_NAME)
+        testPhases.create(INTEGRATION_TEST_SOURCE_SET_NAME)
     }
 }

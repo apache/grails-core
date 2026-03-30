@@ -60,7 +60,7 @@ class TestPhasesGradlePlugin implements Plugin<Project> {
     static final String EXTENSION_NAME = 'testPhases'
     static final String MERGE_TEST_REPORTS_TASK_NAME = 'mergeTestReports'
 
-    NamedDomainObjectContainer<TestPhase> testPhases
+    private NamedDomainObjectContainer<TestPhase> testPhases
 
     @Override
     void apply(Project project) {
