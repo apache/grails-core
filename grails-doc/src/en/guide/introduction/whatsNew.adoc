@@ -105,3 +105,18 @@ and fluent response assertions via returning a TestHttpResponse wrapper of the a
 
 See the xref:testing.adoc#httpClientTestingSupport[HTTP Client Testing Support] section in the Testing chapter
 for setup and examples.
+
+==== Custom Test Phases (Grails 7.1+)
+
+Grails now supports defining custom test phases beyond the built-in `unit` and `integration` phases. Using the `testPhases` extension in your `build.gradle`, you can add phases such as `functionalTest`, `smokeTest`, or `performanceTest` - each with its own source set, dependency configurations, and Gradle task.
+
+[source,groovy]
+----
+testPhases {
+    functionalTest { }
+}
+----
+
+Each phase automatically sets a system property (e.g. `is.grails.functional.test`) that your code can use to detect which test phase is running. The existing `integrationTest` phase is now implemented on top of this same mechanism.
+
+See the xref:testing.adoc#testPhases[Custom Test Phases] section in the Testing chapter for full details.
