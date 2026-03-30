@@ -398,7 +398,8 @@ include(
         'grails-test-examples-scaffolding',
         'grails-test-examples-scaffolding-fields',
         'grails-test-examples-views-functional-tests',
-        'grails-test-examples-views-functional-tests-plugin'
+        'grails-test-examples-views-functional-tests-plugin',
+        'grails-test-examples-test-phases'
 )
 project(':grails-test-examples-async-events-pubsub-demo').projectDir = file('grails-test-examples/async-events-pubsub-demo')
 project(':grails-test-examples-app1').projectDir = file('grails-test-examples/app1')
@@ -438,6 +439,7 @@ project(':grails-test-examples-scaffolding').projectDir = file('grails-test-exam
 project(':grails-test-examples-scaffolding-fields').projectDir = file('grails-test-examples/scaffolding-fields')
 project(':grails-test-examples-views-functional-tests').projectDir = file('grails-test-examples/views-functional-tests')
 project(':grails-test-examples-views-functional-tests-plugin').projectDir = file('grails-test-examples/views-functional-tests-plugin')
+project(':grails-test-examples-test-phases').projectDir = file('grails-test-examples/test-phases')
 
 includeBuild('./grails-gradle') {
     name = 'grails-gradle'

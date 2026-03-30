@@ -20,30 +20,32 @@ package org.grails.gradle.plugin.core
 
 import groovy.transform.CompileStatic
 
-import org.gradle.api.Plugin
-import org.gradle.api.Project
+import grails.util.GrailsNameUtils
 
 /**
- * Gradle plugin for adding separate src/integration-test folder to hold integration tests.
+ * Represents a configurable test phase (e.g. integrationTest, functionalTest).
  *
- * <p>This plugin applies {@link TestPhasesGradlePlugin} and registers the default
- * {@code integrationTest} phase. Additional test phases can be added via the
- * {@code testPhases} extension.</p>
+ * <p>Default values for {@code sourceFolderName} and {@code systemPropertyName}
+ * are derived from the phase {@code name} so that users only need to declare the
+ * phase by name in most cases.</p>
  *
- * <p>Adds integrationTestImplementation and integrationTestRuntimeOnly configurations
- * that extend from testCompileClasspath and testRuntimeClasspath.</p>
- *
+ * @since 2025.0
  */
 @CompileStatic
-class IntegrationTestGradlePlugin implements Plugin<Project> {
+class TestPhase {
 
-    static final String INTEGRATION_TEST_SOURCE_SET_NAME = 'integrationTest'
+    final String name
 
-    @Override
-    void apply(Project project) {
-        project.pluginManager.apply(TestPhasesGradlePlugin)
+    String sourceFolderName
 
-        TestPhasesGradlePlugin phasesPlugin = project.plugins.getPlugin(TestPhasesGradlePlugin)
-        phasesPlugin.testPhases.create(INTEGRATION_TEST_SOURCE_SET_NAME)
+    String systemPropertyName
+
+    boolean ideaIntegration = true
+
+    TestPhase(String name) {
+        this.name = name
+        this.sourceFolderName = "src/${GrailsNameUtils.getScriptName(name)}"
+        String naturalPart = name.replaceAll(/Test$/, '')
+        this.systemPropertyName = "is.grails.${GrailsNameUtils.getScriptName(naturalPart)}.test"
     }
 }
