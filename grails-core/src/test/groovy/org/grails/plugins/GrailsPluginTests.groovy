@@ -21,7 +21,11 @@ package org.grails.plugins
 import grails.core.DefaultGrailsApplication
 import grails.plugins.DefaultGrailsPluginManager
 import grails.util.Environment
+import org.apache.grails.core.plugins.DefaultPluginDiscovery
+import org.apache.grails.core.plugins.PluginDiscovery
 import org.junit.jupiter.api.Test
+import org.springframework.context.support.GenericApplicationContext
+import org.springframework.core.env.StandardEnvironment
 
 import static org.junit.jupiter.api.Assertions.*
 
@@ -162,16 +166,37 @@ class TestGrailsPlugin {
 ''')
 
         DefaultGrailsApplication application = new DefaultGrailsApplication()
-        def pluginManager = new DefaultGrailsPluginManager([test1] as Class[], application)
+        
+        // Create and set up application context
+        def appCtx = new GenericApplicationContext()
+        application.mainContext = appCtx
 
-pluginManager.loadPlugins()
+        // Create discovery bean configured for unit tests
+        PluginDiscovery discovery = new DefaultPluginDiscovery(new Class<?>[]{test1})
+
+        // simulate the call in GrailsEnvironmentPostProcessor to populate the metadata
+        discovery.init(new StandardEnvironment())
+        
+        def pluginManager = new DefaultGrailsPluginManager(application, discovery)
+        pluginManager.loadPlugins()
         assertNotNull pluginManager.getGrailsPlugin("test")
 
         String originalEnv = System.getProperty(Environment.KEY)
         try {
-            System.setProperty(Environment.KEY, Environment.PRODUCTION.getName())
+            System.setProperty(Environment.KEY, Environment.PRODUCTION.name)
 
-            pluginManager = new DefaultGrailsPluginManager([test1] as Class[], application)
+            // Create new application and context for production environment test
+            application = new DefaultGrailsApplication()
+            appCtx = new GenericApplicationContext()
+            application.mainContext = appCtx
+
+            // Create new discovery bean for production environment test
+            discovery = new DefaultPluginDiscovery(new Class<?>[]{test1})
+            discovery.loadPluginsFromClasspath = false
+            // simulate the call in GrailsEnvironmentPostProcessor to populate the metadata
+            discovery.init(new StandardEnvironment())
+            
+            pluginManager = new DefaultGrailsPluginManager(application, discovery)
             pluginManager.loadPlugins()
             assertNull pluginManager.getGrailsPlugin("test")
         } finally {

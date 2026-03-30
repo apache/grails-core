@@ -72,7 +72,7 @@ dependencies {
     testImplementation 'org.apache.grails.testing:grails-testing-support-core'
 
     integrationTestImplementation 'com.fasterxml.jackson.core:jackson-databind'
-    integrationTestImplementation project(':grails-testing-support-http-client')
+    integrationTestImplementation 'org.apache.grails:grails-testing-support-http-client'
 }
 
 apply {

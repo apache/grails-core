@@ -247,14 +247,14 @@ public class RegexUrlMapping extends AbstractUrlMapping {
                 pattern += "/([^/]+)\\.([^/.]+)?";
             } else if (urlData.hasGreedyExtensionParam() && urlData.hasOptionalExtension() &&
                        shouldApplyGreedyForUrl(url, urlData.getGreedyTokenIndex())) {
-                // Handle greedy extension param (+ marker): match everything up to the last dot
+                // Handle greedy extension param (+ marker): match within a single path segment up to the last dot
                 // The key is to make the entire dot+extension group optional using (?: )?
-                // For /(*)+(\.(*))?  we want regex: /(.+?)(?:\.([^/.]+))?  (required, greedy)
-                // For /(*)?+(\.(*))?  we want regex: /(.+?)?(?:\.([^/.]+))? (optional, greedy)
+                // For /(*)+(\.(*))?  we want regex: /([^/]+?)(?:\.([^/.]+))?  (required, greedy)
+                // For /(*)?+(\.(*))?  we want regex: /([^/]+?)?(?:\.([^/.]+))? (optional, greedy)
                 // Only apply greedy regex if this logical URL actually includes the greedy token
                 String processed = urlEnd
-                        .replace("/(*)?(\\.(*))?", "/(.+?)?(?:\\.([^/.]+))?")   // Optional greedy: (*)?+
-                        .replace("/(*)(\\.(*))?", "/(.+?)(?:\\.([^/.]+))?");    // Required greedy: (*)+
+                        .replace("/(*)?(\\.(*))?", "/([^/]+?)?(?:\\.([^/.]+))?")   // Optional greedy: (*)?+
+                        .replace("/(*)(\\.(*))?", "/([^/]+?)(?:\\.([^/.]+))?");    // Required greedy: (*)+
                 pattern += processed;
             } else {
                 pattern += urlEnd
