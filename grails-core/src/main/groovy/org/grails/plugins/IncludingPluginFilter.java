@@ -25,12 +25,10 @@ import java.util.Set;
 import grails.plugins.GrailsPlugin;
 
 /**
- * Implementation of <code>PluginFilter</code> which ensures that only the supplied
- * plugins (identified by name) as well as their dependencies are included in the filtered plugin list.
- *
- * @author Phil Zoio
+ * @deprecated Use {@link org.apache.grails.core.plugins.filters.IncludingPluginFilter} instead.
+ * This compatibility stub will be removed in Grails 8.0.0.
  */
-@SuppressWarnings({ "unchecked", "rawtypes" })
+@Deprecated(forRemoval = true, since = "7.1")
 public class IncludingPluginFilter extends BasePluginFilter {
 
     public IncludingPluginFilter(Set included) {

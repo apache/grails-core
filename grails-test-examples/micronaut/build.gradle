@@ -61,7 +61,7 @@ dependencies {
     integrationTestImplementation testFixtures('org.apache.grails:grails-geb')
     integrationTestImplementation "io.github.cjstehno.ersatz:ersatz:$ersatzVersion"
     integrationTestImplementation "io.github.cjstehno.ersatz:ersatz-groovy:$ersatzVersion"
-    integrationTestImplementation project(':grails-testing-support-http-client')
+    integrationTestImplementation 'org.apache.grails:grails-testing-support-http-client'
 }
 
 apply {

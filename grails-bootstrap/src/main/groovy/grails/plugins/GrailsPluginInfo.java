@@ -60,8 +60,7 @@ public interface GrailsPluginInfo {
     String getFullName();
 
     /**
-     * Returns the location of the Resource that represents the plugin descriptor (the *GrailsPlugin.groovy file)
-     * @return The resource
+     * @return the Resource that represents the plugin descriptor (the *GrailsPlugin.groovy or grails-plugin.yml file)
      */
     Resource getDescriptor();
 
