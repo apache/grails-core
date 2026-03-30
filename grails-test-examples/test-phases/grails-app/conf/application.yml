@@ -1,0 +1,23 @@
+grails:
+    profile: web
+    codegen:
+        defaultPackage: testphases
+    mime:
+        types:
+            json:
+              - application/json
+            html:
+              - text/html
+            xml:
+              - text/xml
+              - application/xml
+            all: '*/*'
+
+environments:
+    test:
+        dataSource:
+            dbCreate: create-drop
+            url: jdbc:h2:mem:testDb;DB_CLOSE_DELAY=-1;LOCK_TIMEOUT=10000
+            driverClassName: org.h2.Driver
+            username: sa
+            password: ''
