@@ -27,13 +27,11 @@ import java.util.Set;
 import grails.plugins.GrailsPlugin;
 
 /**
- * Implementation of <code>PluginFilter</code> which removes that all of the supplied
- * plugins (identified by name) as well as their dependencies are omitted from the
- * filtered plugin list.
- *
- * @author Phil Zoio
+ * @deprecated Use {@link org.apache.grails.core.plugins.filters.ExcludingPluginFilter} instead.
+ * This compatibility stub will be removed in Grails 8.0.0.
  */
-@SuppressWarnings({ "unchecked", "rawtypes" })
+@Deprecated(forRemoval = true, since = "7.1")
+@SuppressWarnings({"unchecked", "rawtypes"})
 public class ExcludingPluginFilter extends BasePluginFilter {
 
     public ExcludingPluginFilter(Set excluded) {
@@ -49,7 +47,7 @@ public class ExcludingPluginFilter extends BasePluginFilter {
 
         // go through and remove ones that don't apply
         List<GrailsPlugin> newList = new ArrayList<GrailsPlugin>(original);
-        for (Iterator<GrailsPlugin> iter = newList.iterator(); iter.hasNext();) {
+        for (Iterator<GrailsPlugin> iter = newList.iterator(); iter.hasNext(); ) {
             GrailsPlugin element = iter.next();
             // remove the excluded dependencies
             if (pluginList.contains(element)) {

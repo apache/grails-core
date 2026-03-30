@@ -36,14 +36,17 @@ import org.grails.plugins.support.WatchPattern;
 import org.grails.spring.RuntimeSpringConfiguration;
 
 /**
- * <p>Plugin interface that adds Spring {@link org.springframework.beans.factory.config.BeanDefinition}s
- * to a registry based on a {@link GrailsApplication} object. After all <code>GrailsPlugin</code> classes
- * have been processed the {@link org.springframework.beans.factory.config.BeanDefinition}s in the registry are
- * loaded in a Spring {@link org.springframework.context.ApplicationContext} that's the singular
- * configuration unit of Grails applications.</p>
- *
- * <p>It's up to implementation classes to determine where <code>GrailsPlugin</code> instances are loaded
- * from.</p>
+ * Plugin interface that adds Spring
+ * {@link org.springframework.beans.factory.config.BeanDefinition}s to a registry
+ * based on a {@link GrailsApplication} object.
+ * <p>
+ * After all <code>GrailsPlugin</code> classes have been processed, the
+ * {@link org.springframework.beans.factory.config.BeanDefinition}s in the registry are
+ * loaded in a Spring {@link org.springframework.context.ApplicationContext}
+ * that's the singular configuration unit of Grails applications.
+ * <p>
+ * It's up to implementation classes to determine where <code>GrailsPlugin</code>
+ * instances are loaded from.
  *
  * @author Steven Devijver
  * @author Graeme Rocher
@@ -76,8 +79,8 @@ public interface GrailsPlugin extends ApplicationContextAware, Comparable, Grail
     String PLUGINS_PATH = "/plugins";
 
     /**
-     * Defines the name of the property that specifies resources which this plugin monitors for changes
-     * in the format a Ant-style path
+     * Defines the name of the property that specifies resources which
+     * this plugin monitors for changes in the format of an Ant-style path
      */
     String WATCHED_RESOURCES = "watchedResources";
 
@@ -115,15 +118,9 @@ public interface GrailsPlugin extends ApplicationContextAware, Comparable, Grail
 
     /**
      * Defines the name of the property that defines the closure that will be invoked
-     * when a the Grails configuration object changes
+     * when a Grails configuration object changes
      */
     String ON_CONFIG_CHANGE = "onConfigChange";
-
-    /**
-     * Defines the name of the property that defines the closure that will be invoked
-     * when the web.xml is being generated
-     */
-    String DO_WITH_WEB_DESCRIPTOR = "doWithWebDescriptor";
 
     /**
      * Defines the name of the property that defines the closure that will be invoked during runtime spring configuration
@@ -131,7 +128,7 @@ public interface GrailsPlugin extends ApplicationContextAware, Comparable, Grail
     String DO_WITH_SPRING = "doWithSpring";
 
     /**
-     * Defines the name of the property that defines a closure that will be invoked after intialisation
+     * Defines the name of the property that defines a closure that will be invoked after initialisation
      * and when the application context has been built
      */
     String DO_WITH_APPLICATION_CONTEXT = "doWithApplicationContext";
@@ -229,7 +226,7 @@ public interface GrailsPlugin extends ApplicationContextAware, Comparable, Grail
     String getPluginPathCamelCase();
 
     /**
-     * @return The names of the plugins this plugin is dependant on
+     * @return The names of the plugins this plugin depends on
      */
     String[] getDependencyNames();
 
@@ -240,7 +237,7 @@ public interface GrailsPlugin extends ApplicationContextAware, Comparable, Grail
 
     /**
      * Retrieves the names of plugins that this plugin should be loaded after. This differs
-     * from dependencies in that if that plugin doesn't exist this plugin will still be loaded.
+     * from dependencies in that if that plugin doesn't exist, this plugin will still be loaded.
      * It is a way of enforcing plugins are loaded before, but not necessarily needed
      *
      * @return The names of the plugins that this plugin should be loaded after
@@ -248,8 +245,9 @@ public interface GrailsPlugin extends ApplicationContextAware, Comparable, Grail
     String[] getLoadAfterNames();
 
     /**
-     * Retrieves the names of plugins that this plugin should be loaded before. As with getLoadAfterNames() it
-     * is not a requirement that the specified plugins exist
+     * Retrieves the names of plugins that this plugin should be loaded before.
+     * As with getLoadAfterNames(), it is not a requirement that the specified
+     * plugins exist
      *
      * @return The names of the plugins that this plugin should load before
      */
@@ -263,6 +261,18 @@ public interface GrailsPlugin extends ApplicationContextAware, Comparable, Grail
      */
     String getDependentVersion(String name);
 
+    /**
+     * Returns the plugin's configuration as a {@link PropertySource}, looked up from the
+     * Spring {@link org.springframework.core.env.Environment} by naming convention.
+     *
+     * <p>Plugin configuration is loaded early in the Spring Boot lifecycle by
+     * {@code grails.boot.config.GrailsEnvironmentPostProcessor} and registered as a
+     * property source named {@code <pluginName>-plugin.yml} or {@code <pluginName>-plugin.groovy}.
+     * This method retrieves that property source from the application context's environment.</p>
+     *
+     * @return the plugin's property source from the environment, or {@code null} if the
+     *         GrailsApplication main context is not yet available or no matching property source exists
+     */
     PropertySource<?> getPropertySource();
 
     /**
@@ -333,8 +343,8 @@ public interface GrailsPlugin extends ApplicationContextAware, Comparable, Grail
     Map notifyOfEvent(int eventKind, Object source);
 
     /**
-     * Called prior to the initialisation of the GrailsApplication instance to allow the registration
-     * of additonal ArtefactHandlers
+     * Called prior to the initialisation of the GrailsApplication instance to
+     * allow the registration of additional ArtefactHandlers
      *
      * @see grails.core.ArtefactHandler
      *
@@ -350,32 +360,40 @@ public interface GrailsPlugin extends ApplicationContextAware, Comparable, Grail
     Class<?>[] getProvidedArtefacts();
 
     /**
-     * Returns the name of the plugin as represented in the file system including the version. For example TagLibGrailsPlugin would result in "tag-lib-0.1"
+     * Returns the name of the plugin as represented in the file system, including the version.
+     * For example, TagLibGrailsPlugin would result in "tag-lib-0.1"
+     *
      * @return The file system representation of the plugin name
      */
     String getFileSystemName();
 
     /**
-     * Returns the name of the plugin as represented on the file system without the version. For example TagLibGrailsPlugin would result in "tag-lib"
+     * Returns the name of the plugin as represented on the file system without the version.
+     * For example, TagLibGrailsPlugin would result in "tag-lib"
+     *
      * @return The file system name
      */
     String getFileSystemShortName();
 
     /**
      * Returns the underlying class that represents this plugin
+     *
      * @return The plugin class
      */
     Class<?> getPluginClass();
 
     /**
      * A list of resources that the plugin should exclude from the packaged distribution
+     *
      * @return a List of resources
      */
     List<String> getPluginExcludes();
 
     /**
-     * Returns whether this plugin is loaded from the current plugin. In other words when you execute grails run-app from a plugin project
-     * the plugin project's *GrailsPlugin.groovy file represents the base plugin and this method will return true for this plugin
+     * Returns whether this plugin is loaded from the current plugin.
+     * In other words, when you execute grails run-app from a plugin project,
+     * the plugin project's *GrailsPlugin.groovy file represents the base plugin
+     * and this method will return true for this plugin
      *
      * @return true if it is the base plugin
      */
