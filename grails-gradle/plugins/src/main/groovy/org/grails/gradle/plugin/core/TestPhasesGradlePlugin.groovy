@@ -141,8 +141,8 @@ class TestPhasesGradlePlugin implements Plugin<Project> {
         if (tasks.names.contains(MERGE_TEST_REPORTS_TASK_NAME)) {
             tasks.named(MERGE_TEST_REPORTS_TASK_NAME, TestReport).configure {
                 it.testResults.from(
-                        project.files("${project.buildDir}/test-results/binary/${phaseName}"),
-                        project.files("${project.buildDir}/test-results/${phaseName}/binary")
+                        project.files(project.layout.buildDirectory.dir("test-results/binary/${phaseName}")),
+                        project.files(project.layout.buildDirectory.dir("test-results/test-results/${phaseName}/binary")),
                 )
             }
         } else {
