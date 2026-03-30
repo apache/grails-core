@@ -18,7 +18,6 @@
  */
 package org.grails.databinding.converters
 
-import org.grails.plugins.databinding.AbstractDataBindingGrailsPlugin
 import spock.lang.Shared
 import spock.lang.Specification
 
@@ -26,8 +25,25 @@ import java.time.*
 
 class Jsr310ConvertersConfigurationSpec extends Specification {
 
+    private static final String DEFAULT_JSR310_OFFSET_ZONED_DATE_TIME_FORMAT = "yyyy-MM-dd'T'HH:mm:ssZ"
+    private static final String DEFAULT_JSR310_OFFSET_TIME_FORMAT = 'HH:mm:ssZ'
+    private static final String DEFAULT_JSR310_LOCAL_DATE_TIME_FORMAT = "yyyy-MM-dd'T'HH:mm:ss"
+    private static final String DEFAULT_JSR310_LOCAL_DATE_FORMAT = 'yyyy-MM-dd'
+    private static final String DEFAULT_JSR310_LOCAL_TIME_FORMAT = 'HH:mm:ss'
+    private static final List<String> DEFAULT_DATE_FORMATS = [
+            'yyyy-MM-dd HH:mm:ss.S',
+            "yyyy-MM-dd'T'HH:mm:ss'Z'",
+            'yyyy-MM-dd HH:mm:ss.S z',
+            "yyyy-MM-dd'T'HH:mm:ss.SSSX",
+            DEFAULT_JSR310_OFFSET_ZONED_DATE_TIME_FORMAT,
+            DEFAULT_JSR310_OFFSET_TIME_FORMAT,
+            DEFAULT_JSR310_LOCAL_DATE_TIME_FORMAT,
+            DEFAULT_JSR310_LOCAL_DATE_FORMAT,
+            DEFAULT_JSR310_LOCAL_TIME_FORMAT
+    ]
+
     @Shared
-    Jsr310ConvertersConfiguration config = new Jsr310ConvertersConfiguration(formatStrings: AbstractDataBindingGrailsPlugin.DEFAULT_DATE_FORMATS)
+    Jsr310ConvertersConfiguration config = new Jsr310ConvertersConfiguration(formatStrings: DEFAULT_DATE_FORMATS)
 
     @Shared
     Calendar calendar = Calendar.getInstance(TimeZone.getTimeZone("UTC"))
@@ -42,7 +58,7 @@ class Jsr310ConvertersConfigurationSpec extends Specification {
 
         expect:
         converter.targetType == LocalDateTime
-        converter.convert("1941-01-05T08:00:00", AbstractDataBindingGrailsPlugin.DEFAULT_JSR310_LOCAL_DATE_TIME_FORMAT) instanceof LocalDateTime
+        converter.convert("1941-01-05T08:00:00", DEFAULT_JSR310_LOCAL_DATE_TIME_FORMAT) instanceof LocalDateTime
     }
 
     void "localDateTimeValueConverter"() {
@@ -75,7 +91,7 @@ class Jsr310ConvertersConfigurationSpec extends Specification {
 
         expect:
         converter.targetType == LocalDate
-        converter.convert("1941-01-05", AbstractDataBindingGrailsPlugin.DEFAULT_JSR310_LOCAL_DATE_FORMAT) instanceof LocalDate
+        converter.convert("1941-01-05", DEFAULT_JSR310_LOCAL_DATE_FORMAT) instanceof LocalDate
     }
 
     void "localDateValueConverter"() {
@@ -105,7 +121,7 @@ class Jsr310ConvertersConfigurationSpec extends Specification {
 
         expect:
         converter.targetType == LocalTime
-        converter.convert("08:00:00", AbstractDataBindingGrailsPlugin.DEFAULT_JSR310_LOCAL_TIME_FORMAT) instanceof LocalTime
+        converter.convert("08:00:00", DEFAULT_JSR310_LOCAL_TIME_FORMAT) instanceof LocalTime
     }
 
     void "localTimeValueConverter"() {
@@ -135,7 +151,7 @@ class Jsr310ConvertersConfigurationSpec extends Specification {
 
         expect:
         converter.targetType == OffsetTime
-        converter.convert("08:00:00+0000", AbstractDataBindingGrailsPlugin.DEFAULT_JSR310_OFFSET_TIME_FORMAT) instanceof OffsetTime
+        converter.convert("08:00:00+0000", DEFAULT_JSR310_OFFSET_TIME_FORMAT) instanceof OffsetTime
     }
 
     void "offsetTimeValueConverter"() {
@@ -165,7 +181,7 @@ class Jsr310ConvertersConfigurationSpec extends Specification {
 
         expect:
         converter.targetType == OffsetDateTime
-        converter.convert("1941-01-05T08:00:00+0000", AbstractDataBindingGrailsPlugin.DEFAULT_JSR310_OFFSET_ZONED_DATE_TIME_FORMAT) instanceof OffsetDateTime
+        converter.convert("1941-01-05T08:00:00+0000", DEFAULT_JSR310_OFFSET_ZONED_DATE_TIME_FORMAT) instanceof OffsetDateTime
     }
 
     void "offsetDateTimeValueConverter"() {
@@ -198,7 +214,7 @@ class Jsr310ConvertersConfigurationSpec extends Specification {
 
         expect:
         converter.targetType == ZonedDateTime
-        converter.convert("1941-01-05T08:00:00+0000", AbstractDataBindingGrailsPlugin.DEFAULT_JSR310_OFFSET_ZONED_DATE_TIME_FORMAT) instanceof ZonedDateTime
+        converter.convert("1941-01-05T08:00:00+0000", DEFAULT_JSR310_OFFSET_ZONED_DATE_TIME_FORMAT) instanceof ZonedDateTime
     }
 
     void "zonedDateTimeValueConverter"() {

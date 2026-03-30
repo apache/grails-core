@@ -22,6 +22,8 @@ import java.util.Collections;
 import java.util.Enumeration;
 import java.util.Map;
 
+import groovy.lang.Closure;
+
 import jakarta.servlet.http.HttpServletRequest;
 
 import org.apache.commons.logging.Log;
@@ -207,6 +209,13 @@ public class DefaultUrlMappingInfo extends AbstractUrlMappingInfo {
             name = evaluateNameForValue(actionName, webRequest);
         }
         return urlConverter.toUrlElement(name);
+    }
+
+    @Override
+    public boolean hasWildcardCaptures() {
+        return controllerName instanceof Closure ||
+                actionName instanceof Closure ||
+                namespace instanceof Closure;
     }
 
     public String getViewName() {

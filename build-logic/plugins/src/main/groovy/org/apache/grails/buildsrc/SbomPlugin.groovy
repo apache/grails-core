@@ -43,6 +43,8 @@ import org.gradle.api.provider.Provider
 import org.gradle.api.tasks.bundling.Jar
 
 import java.nio.charset.StandardCharsets
+import java.time.Instant
+import java.time.ZoneOffset
 import java.time.ZonedDateTime
 import java.time.format.DateTimeFormatter
 import java.time.temporal.ChronoUnit
@@ -211,6 +213,7 @@ class SbomPlugin implements Plugin<Project> {
                 // See: https://docs.gradle.org/current/userguide/configuration_cache.html#config_cache:requirements:use_project_during_execution
                 def projectName = project.name
                 def projectPath = project.path
+                boolean isReproducibleBuild = lookupProperty(project, 'isReproducibleBuild')
                 ZonedDateTime buildDate = lookupProperty(project, 'buildDate')
                 doLast {
                     // json schema is documented here: https://cyclonedx.org/docs/1.6/json/
@@ -218,7 +221,13 @@ class SbomPlugin implements Plugin<Project> {
                         def bom = new JsonSlurper().parse(f)
 
                         // timestamp is not reproducible: https://github.com/CycloneDX/cyclonedx-gradle-plugin/issues/292
-                        bom['metadata']['timestamp'] = DateTimeFormatter.ISO_INSTANT.format(buildDate.truncatedTo(ChronoUnit.SECONDS))
+                        // Use a fixed epoch when SOURCE_DATE_EPOCH is not set so the SBOM is identical between
+                        // builds. This prevents the non-reproducible timestamp from changing the jar checksum
+                        // and cascading cache misses through the compile classpath of downstream projects.
+                        ZonedDateTime sbomTimestamp = isReproducibleBuild ?
+                                buildDate :
+                                Instant.EPOCH.atZone(ZoneOffset.UTC)
+                        bom['metadata']['timestamp'] = DateTimeFormatter.ISO_INSTANT.format(sbomTimestamp.truncatedTo(ChronoUnit.SECONDS))
 
                         // components[*]
                         def comps = (bom instanceof Map && bom.components instanceof List) ? bom.components : []

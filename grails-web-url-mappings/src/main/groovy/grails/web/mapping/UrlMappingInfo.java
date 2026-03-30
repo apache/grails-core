@@ -131,4 +131,20 @@ public interface UrlMappingInfo {
      * @return The UrlMappingData instance
      */
     UrlMappingData getUrlData();
+
+    /**
+     * Returns true if any of the controller name, action name, or namespace
+     * were dynamically captured from URL wildcard tokens (e.g. $controller, $action, $namespace)
+     * rather than being hardcoded in the mapping definition.
+     *
+     * <p>This is used during URL resolution to skip mappings where a wildcard-captured
+     * value does not correspond to a registered controller artefact, allowing the next
+     * mapping to be tried.</p>
+     *
+     * @return true if this mapping info contains wildcard-captured controller, action, or namespace values
+     * @since 7.1
+     */
+    default boolean hasWildcardCaptures() {
+        return false;
+    }
 }
