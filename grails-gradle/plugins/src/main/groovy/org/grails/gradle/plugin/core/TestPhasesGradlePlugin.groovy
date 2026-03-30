@@ -67,6 +67,8 @@ class TestPhasesGradlePlugin implements Plugin<Project> {
         testPhases = project.container(TestPhase)
         project.extensions.add(EXTENSION_NAME, testPhases)
 
+        registerMergeTestReports(project)
+
         testPhases.configureEach { TestPhase phase ->
             configureTestPhase(project, phase)
         }
@@ -128,7 +130,7 @@ class TestPhasesGradlePlugin implements Plugin<Project> {
             it.dependsOn(testTask)
         }
 
-        configureMergeTestReports(project, phaseName)
+        addPhaseToMergeTestReports(project, phaseName)
 
         if (phase.ideaIntegration) {
             final File[] files = acceptedSourceDirs.toArray(new File[acceptedSourceDirs.size()])
@@ -136,24 +138,21 @@ class TestPhasesGradlePlugin implements Plugin<Project> {
         }
     }
 
-    private void configureMergeTestReports(Project project, String phaseName) {
-        final TaskContainer tasks = project.tasks
-        if (tasks.names.contains(MERGE_TEST_REPORTS_TASK_NAME)) {
-            tasks.named(MERGE_TEST_REPORTS_TASK_NAME, TestReport).configure {
-                it.testResults.from(
-                        project.files(project.layout.buildDirectory.dir("test-results/binary/${phaseName}")),
-                        project.files(project.layout.buildDirectory.dir("test-results/test-results/${phaseName}/binary")),
-                )
-            }
-        } else {
-            tasks.register(MERGE_TEST_REPORTS_TASK_NAME, TestReport) {
-                it.mustRunAfter(tasks.withType(Test).toArray())
-                it.destinationDirectory.set(project.layout.buildDirectory.dir('reports/tests'))
-                it.testResults.from(
-                        project.files("${project.buildDir}/test-results/binary/test", "${project.buildDir}/test-results/binary/${phaseName}"),
-                        project.files("${project.buildDir}/test-results/test/binary", "${project.buildDir}/test-results/${phaseName}/binary")
-                )
-            }
+    private void registerMergeTestReports(Project project) {
+        project.tasks.register(MERGE_TEST_REPORTS_TASK_NAME, TestReport) {
+            it.mustRunAfter(project.tasks.withType(Test).toArray())
+            it.destinationDirectory.set(project.layout.buildDirectory.dir('reports/tests'))
+            it.testResults.from(
+                    project.files(project.layout.buildDirectory.dir('test-results/test/binary'))
+            )
+        }
+    }
+
+    private void addPhaseToMergeTestReports(Project project, String phaseName) {
+        project.tasks.named(MERGE_TEST_REPORTS_TASK_NAME, TestReport).configure {
+            it.testResults.from(
+                    project.files(project.layout.buildDirectory.dir("test-results/${phaseName}/binary"))
+            )
         }
     }
 
