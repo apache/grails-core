@@ -31,11 +31,27 @@ import org.springframework.boot.context.properties.ConfigurationProperties;
 @ConfigurationProperties("grails.databinding")
 public class DataBindingConfigurationProperties {
 
+    private static final String DEFAULT_JSR310_OFFSET_ZONED_DATE_TIME_FORMAT = "yyyy-MM-dd'T'HH:mm:ssZ";
+    private static final String DEFAULT_JSR310_OFFSET_TIME_FORMAT = "HH:mm:ssZ";
+    private static final String DEFAULT_JSR310_LOCAL_DATE_TIME_FORMAT = "yyyy-MM-dd'T'HH:mm:ss";
+    private static final String DEFAULT_JSR310_LOCAL_DATE_FORMAT = "yyyy-MM-dd";
+    private static final String DEFAULT_JSR310_LOCAL_TIME_FORMAT = "HH:mm:ss";
+
     private boolean trimStrings = true;
     private boolean convertEmptyStringsToNull = true;
     private int autoGrowCollectionLimit = 256;
     private boolean dateParsingLenient = false;
-    private List<String> dateFormats = AbstractDataBindingGrailsPlugin.DEFAULT_DATE_FORMATS;
+    private List<String> dateFormats = List.of(
+            "yyyy-MM-dd HH:mm:ss.S",
+            "yyyy-MM-dd'T'HH:mm:ss'Z'",
+            "yyyy-MM-dd HH:mm:ss.S z",
+            "yyyy-MM-dd'T'HH:mm:ss.SSSX",
+            DEFAULT_JSR310_OFFSET_ZONED_DATE_TIME_FORMAT,
+            DEFAULT_JSR310_OFFSET_TIME_FORMAT,
+            DEFAULT_JSR310_LOCAL_DATE_TIME_FORMAT,
+            DEFAULT_JSR310_LOCAL_DATE_FORMAT,
+            DEFAULT_JSR310_LOCAL_TIME_FORMAT
+    );
 
     public boolean isTrimStrings() {
         return trimStrings;
