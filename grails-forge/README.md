@@ -22,7 +22,7 @@ Generates Grails applications.
 
 ## Installation
 
-The CLI application comes in various flavours from a universal Java applications to native applications for Windows, Linux and OS X. These are available for direct download on the [releases page](https://github.com/apache/grails-core/releases). For installation see the [Grails documentation](https://docs.grails.org/latest/guide/index.html#buildCLI).
+The CLI application comes in various flavours from a universal Java applications to native applications for Windows, Linux and OS X. These are available for direct download on the [releases page](https://github.com/apache/grails-core/releases). For installation see the [Grails documentation](https://grails.apache.org/docs/latest/guide/index.html#buildCLI).
 
 If you prefer not to install an application to create Grails applications you can do so with `curl` directly from the API:
 

@@ -36,6 +36,7 @@ import spock.lang.AutoCleanup
 import spock.lang.Ignore
 import spock.lang.Shared
 import spock.lang.Specification
+import spock.util.environment.RestoreSystemProperties
 
 /**
  * Created by graemerocher on 08/07/2016.
@@ -43,6 +44,7 @@ import spock.lang.Specification
 @Ignore
 // as if Neo4j bolt driver 1.4 it is no longer possible to create the driver
 // when the Neo4j server is down so this test is no longer possible
+@RestoreSystemProperties
 class SingleTenancySpec extends Specification {
     @Shared @AutoCleanup Neo4jDatastore datastore
     @Shared @AutoCleanup ServerControls serverControls

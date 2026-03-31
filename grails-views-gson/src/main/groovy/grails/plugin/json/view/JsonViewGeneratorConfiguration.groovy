@@ -29,7 +29,7 @@ class JsonViewGeneratorConfiguration {
 
     Boolean escapeUnicode = false
 
-    String dateFormat = /yyyy-MM-dd'T'HH:mm:ss'Z'/
+    String dateFormat = /yyyy-MM-dd'T'HH:mm:ss.SSSX/
 
     String timeZone = 'GMT'
 

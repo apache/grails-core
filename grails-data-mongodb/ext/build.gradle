@@ -20,6 +20,11 @@
 plugins {
     id 'groovy'
     id 'java-library'
+    id 'org.apache.grails.buildsrc.properties'
+    id 'org.apache.grails.buildsrc.compile'
+    id 'org.apache.grails.buildsrc.publish'
+    id 'org.apache.grails.buildsrc.sbom'
+    id 'org.apache.grails.gradle.grails-code-style'
 }
 
 version = projectVersion
@@ -29,11 +34,6 @@ ext {
     gormApiDocs = true
     pomTitle = 'GORM for MongoDB'
     pomDescription = 'Provides a GORM Object Mapping implementations for the MongoDB Document Database'
-    pomDevelopers =  [
-            'graemerocher': 'Graeme Rocher',
-            'jeffscottbrown': 'Jeff Brown',
-            'burtbeckwith': 'Burt Beckwith'
-    ]
 }
 
 dependencies {
@@ -86,9 +86,6 @@ dependencies {
 }
 
 apply {
-    from rootProject.layout.projectDirectory.file('gradle/java-config.gradle')
-    from rootProject.layout.projectDirectory.file('gradle/code-style-config.gradle')
     from rootProject.layout.projectDirectory.file('gradle/mongodb-test-config.gradle')
-    from rootProject.layout.projectDirectory.file('gradle/publish-config.gradle')
     from rootProject.layout.projectDirectory.file('gradle/docs-config.gradle')
 }

@@ -16,10 +16,18 @@
  *  specific language governing permissions and limitations
  *  under the License.
  */
+import org.gradle.api.initialization.resolve.RepositoriesMode
+
+pluginManagement {
+    includeBuild('../build-logic') {
+        name = 'build-logic-root'
+    }
+}
 
 plugins {
 	id 'com.gradle.develocity' version '4.1.1'
 	id 'com.gradle.common-custom-user-data-gradle-plugin' version '2.3'
+    id 'org.apache.grails.buildsrc.repo'
 }
 
 def isCI = System.getenv().containsKey('CI')
@@ -33,7 +41,7 @@ if (isReproducibleBuild) {
 }
 
 develocity {
-	server = 'https://ge.grails.org'
+	server = 'https://develocity.apache.org'
 	buildScan {
 		tag('grails')
 		tag('grails-gradle-plugins')
@@ -63,9 +71,6 @@ project(':grails-gradle-bom').projectDir = file('bom')
 
 include 'grails-gradle-model'
 project(':grails-gradle-model').projectDir = file('model')
-
-include 'grails-docs-core'
-project(':grails-docs-core').projectDir = file('docs-core')
 
 include 'grails-gradle-tasks'
 project(':grails-gradle-tasks').projectDir = file('tasks')

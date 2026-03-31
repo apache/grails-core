@@ -17,29 +17,21 @@
  *  under the License.
  */
 
-configurations.register('documentation') {
-    canBeConsumed = false
-    canBeResolved = true
-    attributes {
-        attribute(Category.CATEGORY_ATTRIBUTE, objects.named(Category, Category.LIBRARY))
-        attribute(Bundling.BUNDLING_ATTRIBUTE, objects.named(Bundling, Bundling.EXTERNAL))
-        attribute(Usage.USAGE_ATTRIBUTE, objects.named(Usage, Usage.JAVA_RUNTIME))
-    }
+apply plugin: 'org.apache.grails.buildsrc.groovydoc'
+
+groovydocEnhancer {
+    javaVersionEnabled = false
 }
 
 dependencies {
     documentation "org.codehaus.groovy:groovy-templates:$groovyVersion"
     documentation "org.codehaus.groovy:groovy-dateutil:$groovyVersion"
+    documentation "org.codehaus.groovy:groovy-ant:$groovyVersion"
+    documentation "org.codehaus.groovy:groovy-groovydoc:$groovyVersion"
 }
 
-tasks.withType(Groovydoc).configureEach {
-    classpath += project.configurations.documentation
-    windowTitle = "${project.findProperty('pomArtifactId') ?: project.name} - $projectVersion"
-    docTitle = "${project.findProperty('pomArtifactId') ?: project.name} - $projectVersion"
-    access = GroovydocAccess.PROTECTED
-    includeAuthor = false
-    includeMainForScripts = false
-    processScripts = false
-    noTimestamp = true
-    noVersionStamp = false
+tasks.withType(Groovydoc).configureEach { Groovydoc gdoc ->
+    gdoc.classpath += project.configurations.documentation
+    gdoc.windowTitle = "${project.findProperty('pomArtifactId') ?: project.name} - $projectVersion"
+    gdoc.docTitle = "${project.findProperty('pomArtifactId') ?: project.name} - $projectVersion"
 }

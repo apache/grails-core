@@ -60,14 +60,16 @@ combinedGroovydoc.configure { Groovydoc task ->
             }
             .flatten()
 
-    task.source(sources.collect{ SourceSet it -> [it.allSource.srcDirs, it.allSource.srcDirs] }.flatten().findAll { File srcDir ->
-        if(!(srcDir.name in ['java', 'groovy'])) {
+    def allSourceDirs = sources.collect { SourceSet it -> [it.allSource.srcDirs, it.allSource.srcDirs] }.flatten().findAll { File srcDir ->
+        if (!(srcDir.name in ['java', 'groovy'])) {
             return false
         }
 
         srcDir.exists()
-    }.unique())
-    task.classpath = files(sources.collect{ SourceSet it -> it.compileClasspath.filter(File.&isDirectory) }.flatten().unique())
+    }.unique()
+    task.source(allSourceDirs)
+    task.ext.groovydocSourceDirs = allSourceDirs
+    task.classpath = files(sources.collect { SourceSet it -> it.compileClasspath.filter(File.&isDirectory) }.flatten().unique())
     task.destinationDir = project.layout.buildDirectory.dir('data-api/api').get().asFile
 
     task.inputs.files(task.source).withPropertyName("groovyDocSrc").withPathSensitivity(PathSensitivity.RELATIVE)

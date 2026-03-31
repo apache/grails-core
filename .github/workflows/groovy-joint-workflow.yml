@@ -25,7 +25,7 @@ on:
 # queue jobs and only allow 1 run per branch due to the likelihood of hitting GitHub resource limits
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
-  cancel-in-progress: false
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 permissions:
   contents: read
 jobs:
@@ -46,7 +46,7 @@ jobs:
           path: ~/.m2/repository
           key: cache-local-maven-${{ github.sha }}
       - name: "📥 Checkout Grails Core to fetch Gradle Plugin versions it uses"
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
         with:
           sparse-checkout-cone-mode: false
           sparse-checkout: settings.gradle
@@ -63,9 +63,11 @@ jobs:
       - name: "📥 Checkout Groovy 4_0_X (Grails 7 and later)"
         run: git clone --depth 1 https://github.com/apache/groovy.git -b GROOVY_4_0_X --single-branch
       - name: "🐘 Setup Gradle"
-        uses: gradle/actions/setup-gradle@v4
+        uses: gradle/actions/setup-gradle@4d9f0ba0025fe599b4ebab900eb7f3a1d93ef4c2 # v5.0.0
         with:
           develocity-access-key: ${{ secrets.GRAILS_DEVELOCITY_ACCESS_KEY  }}
+      - name: "🔍 Setup TestLens"
+        uses: testlens-app/setup-testlens@v1
       - name: "📝 Store Groovy version to use when building Grails"
         id: groovy-version
         run: |
@@ -89,7 +91,7 @@ jobs:
           echo "VALUE<<EOF" >> $GITHUB_OUTPUT
           echo "def isAuthenticated = System.getenv('GRAILS_DEVELOCITY_ACCESS_KEY ') != null" >> $GITHUB_OUTPUT
           echo "develocity {" >> $GITHUB_OUTPUT
-          echo "    server = 'https://ge.grails.org'" >> $GITHUB_OUTPUT
+          echo "    server = 'https://develocity.apache.org'" >> $GITHUB_OUTPUT
           echo "    buildScan {" >> $GITHUB_OUTPUT
           echo "        tag('groovy')" >> $GITHUB_OUTPUT
           echo "        tag('grails-core')" >> $GITHUB_OUTPUT
@@ -137,28 +139,34 @@ jobs:
           --health-retries 5
     steps:
       - name: "📥 Checkout project"
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
       - name: "☕️ Setup JDK"
         uses: actions/setup-java@v4
         with:
           java-version: 17
           distribution: liberica
       - name: "🐘 Setup Gradle"
-        uses: gradle/actions/setup-gradle@v4
+        uses: gradle/actions/setup-gradle@4d9f0ba0025fe599b4ebab900eb7f3a1d93ef4c2 # v5.0.0
         with:
           develocity-access-key: ${{ secrets.GRAILS_DEVELOCITY_ACCESS_KEY  }}
+      - name: "🔍 Setup TestLens"
+        uses: testlens-app/setup-testlens@v1
       - name: "🗄️ Restore local Maven repository from cache"
         uses: actions/cache@v4
         with:
           path: ~/.m2/repository
           key: cache-local-maven-${{ github.sha }}
-      - name: "🪶 Add mavenLocal repository to build"
-        run: sed -i 's|// mavenLocal() // Keep|mavenLocal() // Keep|' build.gradle
       - name: 'Swap Groovy Version'
         run: |
           sed -i "/['\"]groovy\.version['\"][[:space:]]*:/c\'groovy.version':'${{ needs.build_groovy.outputs.groovyVersion }}'," dependencies.gradle
       - name: "🔨 Build and test Grails using the locally built Groovy snapshot"
         run: >
           ./gradlew build
+          --continue
+          --stacktrace
           -x groovydoc
+          -PgebAtCheckWaiting
           -PskipCodeStyle
+          -PmaxTestParallel=3
+        env:
+          GRAILS_INCLUDE_MAVEN_LOCAL: true

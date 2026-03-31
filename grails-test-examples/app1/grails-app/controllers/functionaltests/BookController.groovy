@@ -28,6 +28,12 @@ class BookController {
 
     static allowedMethods = [save: "POST", update: "PUT", delete: "DELETE"]
 
+    /**
+     * List of fields allowed for data binding.
+     * Explicitly defines which request parameters can be bound to the Book domain.
+     */
+    def bindParams = ['title']
+
     def index(Integer max) {
         params.max = Math.min(max ?: 10, 100)
         respond Book.list(params), model:[bookCount: Book.count()]
@@ -38,7 +44,8 @@ class BookController {
     }
 
     def create() {
-        respond new Book(params)
+        def book = new Book(params.subMap(bindParams))
+        respond book
     }
 
     @Transactional
@@ -124,7 +131,7 @@ class BookController {
     }
 
     def validateBook() {
-        def b = new Book(params)
+        def b = new Book(params.subMap(bindParams))
         render "<html><body>The validate method returned ${b.validate()}</body></html>"
     }
 

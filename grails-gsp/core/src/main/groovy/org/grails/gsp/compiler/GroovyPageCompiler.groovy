@@ -30,21 +30,22 @@ import groovy.transform.CompileStatic
 import org.codehaus.groovy.control.CompilationUnit
 import org.codehaus.groovy.control.CompilerConfiguration
 import org.codehaus.groovy.control.Phases
-
-import org.apache.commons.logging.Log
-import org.apache.commons.logging.LogFactory
-
+import org.slf4j.LoggerFactory
+import org.slf4j.Logger
 import org.springframework.core.CollectionFactory
-
 import grails.config.ConfigMap
 import org.apache.grails.gradle.common.PropertyFileUtils
 import org.grails.config.CodeGenConfig
 import org.grails.gsp.GroovyPageMetaInfo
 import org.grails.gsp.compiler.transform.GroovyPageInjectionOperation
 import org.grails.taglib.encoder.OutputEncodingSettings
+import org.grails.gsp.GroovyPage
 
 /**
- * Used to compile GSP files into a specified target directory.
+ * Used to compile GSP files into a specified target directory. The compiler creates 3 files per page.
+ * Firstly, it generates a {@link GroovyPage} derived class which is then compiled to a .class file.
+ * It also will generate a "_html.data" and a "_linenumbers.data" file which contain the static HTML parts of the page.
+ * These are read at runtime by the {@link org.grails.gsp.GroovyPagesTemplateEngine} class.
  *
  * @author Graeme Rocher
  * @since 1.2
@@ -52,7 +53,7 @@ import org.grails.taglib.encoder.OutputEncodingSettings
 @CompileStatic
 class GroovyPageCompiler {
 
-    private static final Log LOG = LogFactory.getLog(GroovyPageCompiler)
+    private static final Logger LOG = LoggerFactory.getLogger(GroovyPageCompiler)
 
     private Map compileGSPRegistry = [:]
     private Object mutexObject = new Object()
@@ -83,8 +84,8 @@ class GroovyPageCompiler {
     }
 
     /**
-    * Compiles the given GSP pages and returns a Map of URI to classname mappings
-    */
+     * Compiles the given GSP pages and returns a Map of URI to classname mappings
+     */
     Map compile() {
         if (srcFiles && targetDir && viewsDir) {
             if (!generatedGroovyPagesDirectory) {
@@ -100,8 +101,7 @@ class GroovyPageCompiler {
                     if (f.exists()) {
                         if (f.name.endsWith('.yml')) {
                             codeGenConfig.loadYml(f)
-                        }
-                        else if (f.name.endsWith('.groovy')) {
+                        } else if (f.name.endsWith('.groovy')) {
                             codeGenConfig.loadGroovy(f)
                         }
                     }
@@ -206,8 +206,7 @@ class GroovyPageCompiler {
         String fullClassName
         if (packageName) {
             fullClassName = packageName + '.' + className
-        }
-        else {
+        } else {
             fullClassName = className
         }
 
@@ -225,11 +224,11 @@ class GroovyPageCompiler {
                 gpp.generateGsp(gsptarget)
                 gsptarget.flush()
                 // write static html parts to data file (read from classpath at runtime)
-                File htmlDataFile = new File(new File(targetDir, packageDir),  className + GroovyPageMetaInfo.HTML_DATA_POSTFIX)
+                File htmlDataFile = new File(new File(targetDir, packageDir), className + GroovyPageMetaInfo.HTML_DATA_POSTFIX)
                 htmlDataFile.parentFile.mkdirs()
                 gpp.writeHtmlParts(htmlDataFile)
                 // write linenumber mapping info to data file
-                File lineNumbersDataFile = new File(new File(targetDir, packageDir),  className + GroovyPageMetaInfo.LINENUMBERS_DATA_POSTFIX)
+                File lineNumbersDataFile = new File(new File(targetDir, packageDir), className + GroovyPageMetaInfo.LINENUMBERS_DATA_POSTFIX)
                 gpp.writeLineNumbers(lineNumbersDataFile)
 
                 // register viewuri -> classname mapping
@@ -238,11 +237,9 @@ class GroovyPageCompiler {
                 CompilationUnit unit = new CompilationUnit(compilerConfig, null, classLoader)
                 unit.addPhaseOperation(operation, Phases.CANONICALIZATION)
                 unit.addSource(gspgroovyfile.name, gsptarget.toString())
-                // unit.addSource(gspgroovyfile)
                 unit.compile()
             }
-        }
-        else {
+        } else {
             compileGSPResults[viewuri] = fullClassName
         }
 
@@ -271,8 +268,7 @@ class GroovyPageCompiler {
             if (ch == '/') {
                 nextMustBeStartChar = true
                 sb.append(ch)
-            }
-            else {
+            } else {
                 // package or class name cannot start with a number
                 if (nextMustBeStartChar && !Character.isJavaIdentifierStart(ch)) {
                     sb.append('_')

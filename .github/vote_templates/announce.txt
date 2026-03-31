@@ -1,23 +1,21 @@
-The Apache Grails (incubating) community is pleased to announce the release of Apache Grails (incubating) ${VERSION}.
+The Apache Grails community is pleased to announce the release of ${PROJECT_NAME} ${VERSION}.
 
-Grails is a powerful Groovy-based web application framework for the JVM built on top of Spring Boot that has many plugins to further extend its functionality.
-
-This release another milestone on our journey to a final 7.0 release. Users are encouraged to try the milestone to provide early feedback. Detailed upgrade instructions are available here: https://docs.grails.org/${VERSION}/guide/upgrading.html
+${PROJECT_DESC}
 
 The release notes are available here:
-<blog post link>
+https://github.com/${REPO_SLUG}/releases/tag/${TAG}
 
 For the complete list of changes:
-https://github.com/apache/grails-core/compare/v${PREVIOUS_VERSION}...v${VERSION}
+https://github.com/${REPO_SLUG}/compare/v<PREVIOUS_VERSION>...${TAG}
 
 Apache Grails website: https://grails.apache.org/
 
 Download Links: https://grails.apache.org/download.html
 
 Grails Resources:
-- Grails GitHub repo: https://github.com/apache/grails-core
-- Issues: https://github.com/apache/grails-core/issues
+- Grails GitHub repo: https://github.com/${REPO_SLUG}
+- Issues: https://github.com/${REPO_SLUG}/issues
 - Mailing lists: https://grails.apache.org/community.html
 
 Happy Coding,
-The Apache Grails (incubating) Team
+The Apache Grails Team

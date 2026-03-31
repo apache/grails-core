@@ -22,9 +22,8 @@ import java.time.LocalDate
 import java.time.ZoneOffset
 import java.time.format.DateTimeFormatter
 
-Properties props = new Properties()
-file('../gradle.properties').withInputStream {
-    props.load(it)
+plugins {
+    id 'org.apache.grails.buildsrc.properties'
 }
 
 ext {
@@ -41,48 +40,6 @@ ext {
 }
 
 allprojects {
-    props.forEach { k, v ->
-        if (!project.hasProperty(k as String)) {
-            project.ext.set(k as String, v)
-        }
-    }
-
-    repositories {
-        // mavenLocal() // Keep, this will be uncommented and used by CI (groovy-joint-workflow)
-        mavenCentral()
-        maven { url = 'https://repo.grails.org/grails/restricted' }
-        maven {
-            url = 'https://repository.apache.org/content/groups/snapshots'
-            content {
-                includeVersionByRegex('org[.]apache[.](grails|groovy).*', '.*', '.*SNAPSHOT')
-            }
-        }
-        maven {
-            url = 'https://repository.apache.org/content/groups/staging'
-            content {
-                includeGroupByRegex('org[.]apache[.]grails.*')
-            }
-        }
-        maven {
-            url = 'https://central.sonatype.com/repository/maven-snapshots'
-            content {
-                includeVersionByRegex('cloud[.]wondrify.*', '.*', '.*-SNAPSHOT')
-            }
-            mavenContent {
-                snapshotsOnly()
-            }
-        }
-        maven {
-            url = 'https://repository.apache.org/content/groups/staging'
-            content {
-                includeModuleByRegex('org[.]apache[.]grails[.]gradle', 'grails-publish')
-            }
-            mavenContent {
-                releasesOnly()
-            }
-        }
-    }
-
     tasks.withType(Test).configureEach { Task testTask ->
         testTask.dependsOn(
                 gradle.includedBuild('grails-core').task(':publishAllPublicationsToTestCaseMavenRepoRepository'),
@@ -99,8 +56,6 @@ subprojects {
             cacheChangingModulesFor(cacheHours, 'hours')
         }
     }
-
-    apply from: rootProject.layout.projectDirectory.file('gradle/dependency-licenses.gradle')
 }
 
 apply {

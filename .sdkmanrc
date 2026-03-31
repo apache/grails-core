@@ -1,3 +1,6 @@
-java=17.0.14-librca
-gradle=8.14.3
+# Keep java version synced with .github/workflows/release.yml and etc/bin/Dockerfile
+java=17.0.18-librca
+# Keep gradle version synced with gradle.properties (gradleToolingApiVersion), all gradle-wrapper.properties files,
+# and grails-forge/grails-forge-core/src/main/java/org/grails/forge/feature/build/gradle/templates/gradleWrapperProperties.rocker.raw
+gradle=8.14.4
 

@@ -17,15 +17,8 @@
  *  under the License.
  */
 
-configurations.register('documentation') {
-    canBeConsumed = false
-    canBeResolved = true
-    attributes {
-        attribute(Category.CATEGORY_ATTRIBUTE, objects.named(Category, Category.LIBRARY))
-        attribute(Bundling.BUNDLING_ATTRIBUTE, objects.named(Bundling, Bundling.EXTERNAL))
-        attribute(Usage.USAGE_ATTRIBUTE, objects.named(Usage, Usage.JAVA_RUNTIME))
-    }
-}
+apply plugin: 'org.apache.grails.buildsrc.groovydoc'
+
 dependencies {
     add('documentation', platform(project(':grails-gradle-bom')))
     add('documentation', 'org.fusesource.jansi:jansi')
@@ -45,13 +38,6 @@ ext {
 TaskProvider<Groovydoc> groovydocTask = tasks.named('groovydoc', Groovydoc)
 groovydocTask.configure { Groovydoc it ->
     it.classpath = configurations.documentation
-    it.groovyClasspath = configurations.documentation
-    it.access = GroovydocAccess.PROTECTED
-    it.includeAuthor = false
-    it.includeMainForScripts = false
-    it.processScripts = false
-    it.noTimestamp = true
-    it.noVersionStamp = false
     it.destinationDir = project.file('build/docs/api')
 }
 

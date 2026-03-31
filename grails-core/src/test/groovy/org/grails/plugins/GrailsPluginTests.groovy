@@ -164,9 +164,10 @@ class TestGrailsPlugin {
         DefaultGrailsApplication application = new DefaultGrailsApplication()
         def pluginManager = new DefaultGrailsPluginManager([test1] as Class[], application)
 
-        pluginManager.loadPlugins()
+pluginManager.loadPlugins()
         assertNotNull pluginManager.getGrailsPlugin("test")
 
+        String originalEnv = System.getProperty(Environment.KEY)
         try {
             System.setProperty(Environment.KEY, Environment.PRODUCTION.getName())
 
@@ -174,7 +175,11 @@ class TestGrailsPlugin {
             pluginManager.loadPlugins()
             assertNull pluginManager.getGrailsPlugin("test")
         } finally {
-            System.setProperty(Environment.KEY, Environment.TEST.getName())
+            if (originalEnv != null) {
+                System.setProperty(Environment.KEY, originalEnv)
+            } else {
+                System.clearProperty(Environment.KEY)
+            }
         }
     }
 }

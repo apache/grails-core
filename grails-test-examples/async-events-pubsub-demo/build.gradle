@@ -17,6 +17,11 @@
  *  under the License.
  */
 
+plugins {
+    id 'org.apache.grails.buildsrc.properties'
+    id 'org.apache.grails.buildsrc.compile'
+}
+
 version = rootProject.version
 group = 'pubsub.demo'
 
@@ -60,9 +65,9 @@ dependencies {
     runtimeOnly 'org.fusesource.jansi:jansi'
     runtimeOnly 'com.zaxxer:HikariCP'
 
-    testImplementation "io.micronaut.serde:micronaut-serde-jackson:$micronautSerdeJacksonVersion"
-    testImplementation "io.micronaut:micronaut-http-client:$micronautHttpClientVersion"
     testImplementation 'org.apache.grails:grails-testing-support-web'
+
+    integrationTestImplementation project(':grails-testing-support-http-client')
 }
 
 bootRun {
@@ -71,6 +76,5 @@ bootRun {
 
 apply {
     from rootProject.layout.projectDirectory.file('gradle/functional-test-config.gradle')
-    from rootProject.layout.projectDirectory.file('gradle/java-config.gradle')
     from rootProject.layout.projectDirectory.file('gradle/grails-extension-gradle-config.gradle')
 }

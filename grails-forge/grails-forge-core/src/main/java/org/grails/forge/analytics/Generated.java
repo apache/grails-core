@@ -34,7 +34,7 @@ public class Generated {
     private final ApplicationType type;
     private final GormImpl gorm;
     private final ServletImpl servlet;
-    private final TestFramework testFramework;
+    private final DevelopmentReloading reloading;
     private final JdkVersion jdkVersion;
     private Collection<? extends SelectedFeature> features = new ArrayList<>();
     private final String grailsVersion;
@@ -44,12 +44,12 @@ public class Generated {
             @NonNull ApplicationType type,
             @NonNull GormImpl gorm,
             @NonNull ServletImpl servlet,
-            @NonNull TestFramework testFramework,
+            @NonNull DevelopmentReloading reloading,
             @NonNull JdkVersion jdkVersion) {
         this.type = Objects.requireNonNull(type, "Type cannot be null");
         this.gorm = Objects.requireNonNull(gorm, "GORM cannot be null");
         this.servlet = Objects.requireNonNull(servlet, "Embedded Servlet cannot be null");
-        this.testFramework = Objects.requireNonNull(testFramework, "Test framework cannot be null");
+        this.reloading = Objects.requireNonNull(reloading, "Development reloading cannot be null");
         this.jdkVersion = Objects.requireNonNull(jdkVersion, "JDK version cannot be null");
         this.grailsVersion = VersionInfo.getGrailsVersion();
     }
@@ -91,8 +91,8 @@ public class Generated {
     /**
      * @return The test framework
      */
-    public @NonNull TestFramework getTestFramework() {
-        return testFramework;
+    public @NonNull DevelopmentReloading getReloading() {
+        return reloading;
     }
 
     /**

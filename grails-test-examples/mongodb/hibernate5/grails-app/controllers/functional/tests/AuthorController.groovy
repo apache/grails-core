@@ -30,6 +30,11 @@ class AuthorController {
 
     static allowedMethods = [save: "POST", update: "PUT", delete: "DELETE"]
 
+    /**
+     * Fields to bind for explicit data binding
+     */
+    def bindParams = ['name']
+
     def index(Integer max) {
         params.max = Math.min(max ?: 10, 100)
         respond Author.list(params), model:[authorCount: Author.count()]
@@ -43,7 +48,8 @@ class AuthorController {
     }
 
     def create() {
-        respond new Author(params)
+        def author = new Author(params.subMap(bindParams))
+        respond author
     }
 
     @Transactional

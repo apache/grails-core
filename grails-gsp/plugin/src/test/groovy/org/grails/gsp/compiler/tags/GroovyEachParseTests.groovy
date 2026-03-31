@@ -42,11 +42,11 @@ public Object run() {
 Writer out = getOut()
 Writer expressionOut = getExpressionOut()
 
-printHtmlPart(0)
+h(0)
 for( t in evaluate('"blah"', 2, it) { return "blah" } ) {
-printHtmlPart(0)
+h(0)
 }
-printHtmlPart(0)
+h(0)
 }""" + GSP_FOOTER
         ), trimAndRemoveCR(output.toString()))
         assertEquals("\n", output.htmlParts[0])
@@ -64,7 +64,7 @@ public Object run() {
 Writer out = getOut()
 Writer expressionOut = getExpressionOut()
 
-printHtmlPart(0)
+h(0)
 for( t in evaluate('"blah"', 1, it) { return "blah" } ) {
 }
 }""" + GSP_FOOTER
@@ -86,15 +86,15 @@ public Object run() {
 Writer out = getOut()
 Writer expressionOut = getExpressionOut()
 
-printHtmlPart(0)
+h(0)
 loop:{
 int i = 0
 for( t in evaluate('"blah"', 2, it) { return "blah" } ) {
-printHtmlPart(0)
+h(0)
 i++
 }
 }
-printHtmlPart(0)
+h(0)
 }""" + GSP_FOOTER
         ), trimAndRemoveCR(output.toString()))
         assertEquals("\n", output.htmlParts[0])

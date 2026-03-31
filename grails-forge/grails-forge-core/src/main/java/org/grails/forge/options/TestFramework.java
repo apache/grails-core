@@ -20,13 +20,11 @@ package org.grails.forge.options;
 
 import io.micronaut.core.annotation.NonNull;
 
-import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
 import java.util.Locale;
 
 public enum TestFramework {
-    JUNIT,
     SPOCK;
 
     public static final TestFramework DEFAULT_OPTION = SPOCK;
@@ -41,42 +39,16 @@ public enum TestFramework {
         return name().toLowerCase(Locale.ENGLISH);
     }
 
-    public String getSourcePath(String path, Language language) {
-        switch (this) {
-            case SPOCK:
-                return Language.GROOVY.getTestSrcDir() + path + getTestFrameworkSuffix() + Language.GROOVY.getExtension();
-            case JUNIT:
-            default:
-                if (language != null) {
-                    return language.getTestSrcDir() + path + getTestFrameworkSuffix()  + language.getExtension();
-                } else {
-                    return Language.GROOVY.getTestSrcDir() + path + getTestFrameworkSuffix() + Language.GROOVY.getExtension();
-                }
-        }
+    public String getSourcePath(String path) {
+        return Language.GROOVY.getTestSrcDir() + path + getTestFrameworkSuffix() + Language.GROOVY.getExtension();
     }
 
-    public String getIntegrationSourcePath(String path, Language language) {
-        switch (this) {
-            case SPOCK:
-                return Language.GROOVY.getIntegrationSrcDir() + path + getTestFrameworkSuffix() + Language.GROOVY.getExtension();
-            case JUNIT:
-            default:
-                if (language != null) {
-                    return language.getIntegrationSrcDir() + path + getTestFrameworkSuffix()  + language.getExtension();
-                } else {
-                    return Language.GROOVY.getIntegrationSrcDir() + path + getTestFrameworkSuffix() + Language.GROOVY.getExtension();
-                }
-        }
+    public String getIntegrationSourcePath(String path) {
+        return Language.GROOVY.getIntegrationSrcDir() + path + getTestFrameworkSuffix() + Language.GROOVY.getExtension();
     }
 
     public String getTestFrameworkSuffix() {
-        switch (this) {
-            case SPOCK:
-                return "Spec.";
-            case JUNIT:
-            default:
-                return "Test.";
-        }
+        return "Spec.";
     }
 
     /**
@@ -87,8 +59,6 @@ public enum TestFramework {
         switch (this) {
             case SPOCK:
                 return Collections.singletonList(Language.GROOVY);
-            case JUNIT:
-                return Arrays.asList(Language.GROOVY);
             default:
                 throw new RuntimeException("No list of supported languages have been defined for " + this.getName());
         }
@@ -101,7 +71,6 @@ public enum TestFramework {
     public Language getDefaultLanguage() {
         switch (this) {
             case SPOCK:
-            case JUNIT:
                 return Language.GROOVY;
             default:
                 throw new RuntimeException("No default language have been defined for " + this.getName());
@@ -109,9 +78,6 @@ public enum TestFramework {
     }
 
     public org.grails.forge.options.TestFramework toTestFramework() {
-        return switch (this) {
-            case SPOCK -> TestFramework.SPOCK;
-            default -> TestFramework.JUNIT;
-        };
+        return TestFramework.SPOCK;
     }
 }

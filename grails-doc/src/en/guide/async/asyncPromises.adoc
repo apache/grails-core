@@ -24,7 +24,7 @@ To use the Grails Promise abstraction you should add a dependency on the `async`
 [source,groovy,subs="attributes"]
 .build.gradle
 ----
-implementation "org.apache.grails:grails-async:{version}"
+implementation "org.apache.grails:grails-async"
 ----
 
 === Promise Basics
@@ -98,7 +98,7 @@ However, the design of the Grails promises framework is such that you can swap o
 [source,groovy,subs="attributes"]
 .build.gradle
 ----
-runtimeOnly "org.grails:grails-async-rxjava:{GrailsVersion}"
+runtimeOnly 'org.apache.grails.async:grails-async-rxjava3'
 ----
 
 With the above in place RxJava 1.x will be used to create `Promise` instances.
@@ -120,6 +120,10 @@ The following table summarizes the available implementation and the dependency t
 |RxJava 2.x
 |`grails-async-rxjava2`
 |`org.grails.async.factory.rxjava2.RxPromiseFactory`
+
+|RxJava 3.x
+|`grails-async-rxjava3`
+|`org.grails.async.factory.rxjava3.RxPromiseFactory`
 
 |===
 

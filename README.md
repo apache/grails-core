@@ -14,10 +14,10 @@ See the License for the specific language governing permissions and
 limitations under the License.
 -->
 
-# Apache Grails (Incubating)
+# Apache Grails
 
-[![Documentation](https://img.shields.io/badge/Documentation-595959)](https://docs.grails.org)
-[![Develocity](https://img.shields.io/badge/Develocity-06A0CE?logo=Gradle&labelColor=06A0CE)](https://ge.grails.org/scans)
+[![Documentation](https://img.shields.io/badge/Documentation-595959)](https://grails.apache.org/docs/)
+[![Develocity](https://img.shields.io/badge/Develocity-06A0CE?logo=Gradle&labelColor=06A0CE)](https://develocity.apache.org/scans)
 [![CI](https://github.com/apache/grails-core/actions/workflows/gradle.yml/badge.svg?event=push)](https://github.com/apache/grails-core/actions/workflows/gradle.yml)
 [![Groovy Joint Validation Build](https://github.com/apache/grails-core/actions/workflows/groovy-joint-workflow.yml/badge.svg?event=push)](https://github.com/apache/grails-core/actions/workflows/groovy-joint-workflow.yml)
 [![Users Mailing List](https://img.shields.io/badge/Users_Mailing_List-feb571)](https://lists.apache.org/list.html?users@grails.apache.org)
@@ -38,7 +38,7 @@ Please see the [INSTALL](INSTALL) document for instructions on how to build, use
 
 ## Getting help
 
-- Check the [Documentation](https://docs.grails.org/) for your preferred Apache Grails version.
+- Check the [Documentation](https://grails.apache.org/docs/) for your preferred Apache Grails version.
 - Check for a [Grails Guide](https://github.com/grails-guides/).
 - Ask questions on the [Grails User Mailing List](https://lists.apache.org/list.html?users@grails.apache.org)
 - Submit an issue: [Grails Issues](https://github.com/apache/grails-core/issues)
@@ -73,13 +73,13 @@ To create an Apache Grails Application with the wrapper follow these steps:
 3. Run the wrapper command `grailsw -t forge create-app` to create a new Apache Grails Application.
 
 Please note, that the wrapper supports either the legacy `Apache Grails Shell` or the newer `Apache Grails Forge` CLI.
-For more detailed information about it, see the [documentation](https://docs.grails.org/snapshot/index.html).
+For more detailed information about it, see the [documentation](https://grails.apache.org/docs/snapshot/index.html).
 
 #### Wrapper - Running Commands inside a Apache Grails Project
 
 For running commands, the Grails Wrapper will always pull the Apache Grails version from `gradle.properties` and ignore
 any environment variables. Type `grailsw -t shell help` to see the available commands. For more detailed information
-about it, see the [documentation](https://docs.grails.org/snapshot/index.html).
+about it, see the [documentation](https://grails.apache.org/docs/snapshot/index.html).
 
 ### grails-shell-cli
 
@@ -110,7 +110,7 @@ Once your Apache Grails Application is created, you can start it with the comman
 
     ./gradlew bootRun
 
-For further information, please consult the [documentation](https://docs.grails.org).
+For further information, please consult the [documentation](https://grails.apache.org/docs/).
 
 ## Licensing
 

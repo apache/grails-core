@@ -16,7 +16,7 @@ limitations under the License.
 
 # Grails Geb Plugin
 
-[![Maven Central](https://img.shields.io/maven-central/v/org.grails.plugins/geb.svg?label=Maven%20Central)](https://central.sonatype.com/artifact/org.grails.plugins/geb)
+[![Maven Central](https://img.shields.io/maven-central/v/org.apache.grails/grails-geb.svg?label=Maven%20Central)](https://central.sonatype.com/artifact/org.apache.grails/grails-geb)
 
 ## Geb Functional Testing for the Grails® framework
 
@@ -135,18 +135,34 @@ the `container` from within your `ContainerGebSpec` to, for example, call `.copy
 An Example of this can be seen in [ContainerSupport#createFileInputSource utility method](./src/testFixtures/groovy/grails/plugin/geb/support/ContainerSupport.groovy).
 
 #### Timeouts
-
+The following system properties exist to configure timeouts:
+ 
+* `grails.geb.atCheckWaiting.enabled`
+  * purpose: if `at` checks should wait for the page to be in the expected state (uses configured waiting timeout values)
+  * type: boolean
+  * defaults to `false`
+* `grails.geb.timeouts.retryInterval`
+  * purpose: how often to retry waiting operations
+  * type: Number
+  * defaults to `0.1` seconds
+* `grails.geb.timeouts.timeout`
+  * purpose: amount of time to wait for waiting operations
+  * type: Number
+  * defaults to `5.0` seconds
 * `grails.geb.timeouts.implicitlyWait`
   * purpose: amount of time the driver should wait when searching for an element if it is not immediately present.
+  * type: int
   * defaults to `0` seconds, which means that if an element is not found, it will immediately return an error.
   * Warning: Do not mix implicit and explicit waits. Doing so can cause unpredictable wait times.
     Consult the [Geb](https://groovy.apache.org/geb/manual/current/#implicit-assertions-waiting) 
     and/or [Selenium](https://www.selenium.dev/documentation/webdriver/waits/) documentation for details.
 * `grails.geb.timeouts.pageLoad`
   * purpose: amount of time to wait for a page load to complete before throwing an error.
+  * type: int
   * defaults to `300` seconds
 * `grails.geb.timeouts.script`
   * purpose: amount of time to wait for an asynchronous script to finish execution before throwing an error.
+  * type: int
   * defaults to `30` seconds
 
 #### Observability and Tracing
@@ -160,6 +176,31 @@ To enable tracing, set the following system property:
   * defaults to `false`
   
 This allows you to opt in to tracing when an OpenTelemetry collector is available.
+
+#### GebConfig.groovy and using non-default browser settings
+Provide a `GebConfig.groovy` on the test runtime classpath (commonly `src/integration-test/resources`, but any location on the test classpath works) to customize the browser.
+
+To make this work, ensure:
+1. The `driver` property in your `GebConfig` is a `Closure` that returns a `RemoteWebDriver` instance.
+2. You set a custom `containerBrowser` property so that `ContainerGebSpec` can start a matching container (e.g. "chrome", "edge", "firefox"). For a list of supported browsers, see the [Testcontainers documentation](https://java.testcontainers.org/modules/webdriver_containers/#other-browsers).
+3. Your `build.gradle` includes the driver dependency for the chosen browser.
+
+Example `GebConfig.groovy`:
+```groovy
+import org.openqa.selenium.firefox.FirefoxOptions
+import org.openqa.selenium.remote.RemoteWebDriver
+
+driver = {
+  new RemoteWebDriver(new FirefoxOptions())
+}
+containerBrowser = 'firefox'
+```
+Example `build.gradle`:
+```groovy
+dependencies {
+  integrationTestImplementation 'org.seleniumhq.selenium:selenium-firefox-driver'
+}
+```
 
 ### GebSpec
 

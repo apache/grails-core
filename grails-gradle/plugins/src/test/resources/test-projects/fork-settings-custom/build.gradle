@@ -1,0 +1,18 @@
+plugins {
+    id 'org.apache.grails.gradle.grails-app'
+}
+
+tasks.register('customHeap', JavaExec) {
+    classpath = files()
+    mainClass = 'does.not.Matter'
+    minHeapSize = '512m'
+    maxHeapSize = '2g'
+}
+
+tasks.register('inspectHeap') {
+    doLast {
+        def task = tasks.named('customHeap', JavaExec).get()
+        println "MIN_HEAP=${task.minHeapSize}"
+        println "MAX_HEAP=${task.maxHeapSize}"
+    }
+}

@@ -38,7 +38,7 @@ class InstantBsonConverterSpec extends Specification implements InstantBsonConve
     void "test read"() {
         given:
         BsonReader bsonReader = Mock(BsonReader) {
-            1 * readInt64() >> 100L
+            1 * readDateTime() >> 100L
         }
 
         when:
@@ -56,11 +56,11 @@ class InstantBsonConverterSpec extends Specification implements InstantBsonConve
         write(bsonWriter, instant)
 
         then:
-        1 * bsonWriter.writeInt64(100L)
+        1 * bsonWriter.writeDateTime(100L)
     }
 
     void "test bson type"() {
         expect:
-        bsonType() == BsonType.INT64
+        bsonType() == BsonType.DATE_TIME
     }
 }

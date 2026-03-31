@@ -27,7 +27,7 @@ applied in conjunction with a fixture annnotation like `@Before` as shown below.
 [source,groovy]
 .src/test/groovy/grails/testing/spock/RunOnceSpec.groovy
 ----
-include::{sourcedir}/grails-testing-support/src/test/groovy/grails/testing/spock/RunOnceSpec.groovy[indent=0]
+include::{sourcedir}/grails-testing-support-core/src/test/groovy/grails/testing/spock/RunOnceSpec.groovy[tags=basic_declaration,indent=0]
 ----
 
 Applying both the `@RunOnce` and `@Before` annotations to a method will yield
@@ -49,7 +49,7 @@ accomplishing the same behavior that would be accomplished by applying both the
 [source,groovy]
 .src/test/groovy/grails/testing/spock/OnceBeforeSpec.groovy
 ----
-include::{sourcedir}/grails-testing-support/src/test/groovy/grails/testing/spock/OnceBeforeSpec.groovy[indent=0]
+include::{sourcedir}/grails-testing-support-core/src/test/groovy/grails/testing/spock/OnceBeforeSpec.groovy[tags=basic_declaration,indent=0]
 ----
 
 This is useful in the context of an integration test which wants to reference
@@ -58,5 +58,5 @@ dependency injected values during setup as shown below.
 [source,groovy]
 .src/integration-test/groovy/demo/DependencyInjectionSpec.groovy
 ----
-include::{functionalSourceDir}/demo33/src/integration-test/groovy/demo/DependencyInjectionSpec.groovy[indent=0]
+include::{functionalSourceDir}/demo33/src/integration-test/groovy/demo/DependencyInjectionSpec.groovy[tags=basic_declaration,indent=0]
 ----

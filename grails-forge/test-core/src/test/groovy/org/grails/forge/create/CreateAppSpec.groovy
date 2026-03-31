@@ -68,9 +68,10 @@ class CreateAppSpec extends CommandSpec {
         applicationClassSourceFile.text == '''\
         package example.grails
         
+        import groovy.transform.CompileStatic
+
         import grails.boot.GrailsApp
         import grails.boot.config.GrailsAutoConfiguration
-        import groovy.transform.CompileStatic
         
         @CompileStatic
         class Application extends GrailsAutoConfiguration {
@@ -90,7 +91,7 @@ class CreateAppSpec extends CommandSpec {
 
         expect:
         gradleProperties.exists()
-        gradleProperties.text.contains('micronautPlatformVersion=4.9.2')
+        gradleProperties.text.contains('micronautPlatformVersion=4.10.1')
         gradleBuildFile.exists()
         gradleBuildFile.text.contains('implementation "org.apache.grails:grails-micronaut"')
     }
@@ -106,10 +107,11 @@ class CreateAppSpec extends CommandSpec {
         applicationClassSourceFile.text == '''\
         package example.grails
         
+        import groovy.transform.CompileStatic
+
         import grails.boot.GrailsApp
         import grails.boot.config.GrailsAutoConfiguration
         import grails.plugins.metadata.PluginSource
-        import groovy.transform.CompileStatic
         
         @PluginSource
         @CompileStatic

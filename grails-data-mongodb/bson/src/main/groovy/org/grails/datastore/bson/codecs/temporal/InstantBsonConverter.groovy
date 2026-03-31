@@ -39,17 +39,17 @@ trait InstantBsonConverter implements TemporalBsonConverter<Instant>, InstantCon
 
     @Override
     void write(BsonWriter writer, Instant value) {
-        writer.writeInt64(convert(value))
+        writer.writeDateTime(convert(value))
     }
 
     @Override
     Instant read(BsonReader reader) {
-        convert(reader.readInt64())
+        convert(reader.readDateTime())
     }
 
     @Override
     BsonType bsonType() {
-        BsonType.INT64
+        BsonType.DATE_TIME
     }
 
 }

@@ -61,11 +61,11 @@ During the staging step, we must create a source distribution & stage any binary
 5. (no approval required) The `upload` job will:
      * Download the source distribution
      * Download the binary distributions (wrapper & grails clis)
-     * upload the source distribution to https://dist.apache.org/repos/dist/dev/incubator/grails/core/VERSION/sources
-     * upload the grails-wrapper binary distribution to https://dist.apache.org/repos/dist/incubator/dev/grails/core/VERSION/distribution
-     * upload the grails binary distribution to https://dist.apache.org/repos/dist/incubator/dev/grails/core/VERSION/distribution (note: this is the sdkman artifact)
+     * upload the source distribution to https://dist.apache.org/repos/dist/dev/grails/core/VERSION/sources
+     * upload the grails-wrapper binary distribution to https://dist.apache.org/repos/dist/dev/grails/core/VERSION/distribution
+     * upload the grails binary distribution to https://dist.apache.org/repos/dist/dev/grails/core/VERSION/distribution (note: this is the sdkman artifact)
    * upload a file containing the SVN revision for the uploaded artifacts
-   * generate vote email templates for both the Grails PPMC and Groovy PMC
+   * generate vote email template for the Grails PMC
 
 ## 2. Verifying Artifacts are Authentic
 
@@ -83,7 +83,7 @@ For Example:
 Please note that this script will perform steps that will require rebuilding the project & comparing the built artifacts
 to the staged artifacts. Due to OS differences, this can result in reproducibility issues. For this reason, it's advised
 to run these scripts from an environment similar to the GitHub actions environment. See the section
-`Appendix: Verification from a Container` for how to launch a container that closely resembles the GitHub actions
+[Appendix: Verification from a Container](RELEASE.md#appendix-verification-from-a-container) for how to launch a container that closely resembles the GitHub actions
 environment.
 
 If manual verification is desired, the steps below can be followed.
@@ -97,25 +97,25 @@ verify the one inside of the source distribution.
 
 ### Manual Verification: Download the Staged Artifacts
 
-Use `etc/bin/download-release-artifacts.sh` to download the staged artifacts. This script will download the source distribution, wrapper binary distribution, and sdkman binary distribution. The distribution should come from [https://dist.apache.org/repos/dist/dev/incubator/grails/core/version](https://dist.apache.org/repos/dist/dev/incubator/grails/core).
+Use `etc/bin/download-release-artifacts.sh` to download the staged artifacts. This script will download the source distribution, wrapper binary distribution, and sdkman binary distribution. The distribution should come from [https://dist.apache.org/repos/dist/dev/grails/core/version](https://dist.apache.org/repos/dist/dev/grails/core).
 
 ### Manual Verification: Source Distribution Verification
 
 The following are the source distribution artifacts:
-   * `apache-grails-<version>-incubating-src.zip` - the source distribution
-   * `apache-grails-<version>-incubating-src.zip.asc` - the generated signature of the source distribution
-   * `apache-grails-<version>-incubating-src.zip.sha512` - the checksum to verify the source distribution
+   * `apache-grails-<version>-src.zip` - the source distribution
+   * `apache-grails-<version>-src.zip.asc` - the generated signature of the source distribution
+   * `apache-grails-<version>-src.zip.sha512` - the checksum to verify the source distribution
 
 Use `etc/bin/verify-source-distribution.sh` to verify the source distribution. This script performs the following:
 
 Verifies the source distribution checksum via the command:
    ```bash
-   shasum -a 512 -c apache-grails-<version>-incubating-src.zip.sha512
+   shasum -a 512 -c apache-grails-<version>-src.zip.sha512
    ```
 
 Verifies the source distribution signature via the command:
    ```bash
-    gpg --verify apache-grails-<version>-incubating-src.zip.asc apache-grails-<version>-incubating-src.zip
+    gpg --verify apache-grails-<version>-src.zip.asc apache-grails-<version>-src.zip
    ```
 
 Extracts the zip file and verifies the contents:
@@ -138,7 +138,7 @@ Example:
 ### Manual Verification: Reproducible Jar Files
 After all jar files are verified to be signed by a valid Grails key, we need to build a local copy to ensure the file was built with the right code base. The `very-reproducible.sh` script handles this check, but if the bootstrap needs to be manually bootstrapped, perform the following step: 
 
-    gradle -p gradle bootstrap
+    gradle -p gradle-bootstrap
 
 Further details on the building can be found in the [INSTALL](INSTALL) document.  Otherwise, run the `verify-reproducible.sh` shell script to compare the published jar files to a locally built version of them. 
 
@@ -165,20 +165,20 @@ Grails has 2 binary distributions:
 #### Manual Verification: Verify Grails Wrapper Binary Distribution
 
 The following are the Grails Wrapper distribution artifacts:
-* `apache-grails-wrapper-<version>-incubating-bin.zip` - the wrapper distribution
-* `apache-grails-wrapper-<version>-incubating-bin.zip.asc` - the generated signature of the wrapper distribution
-* `apache-grails-wrapper-<version>-incubating-bin.zip.sha512` - the checksum to verify the wrapper distribution
+* `apache-grails-wrapper-<version>-bin.zip` - the wrapper distribution
+* `apache-grails-wrapper-<version>-bin.zip.asc` - the generated signature of the wrapper distribution
+* `apache-grails-wrapper-<version>-bin.zip.sha512` - the checksum to verify the wrapper distribution
 
 Use `etc/bin/verify-wrapper-distribution.sh` to verify the wrapper distribution. This script performs the following:
 
 Verifies the wrapper distribution checksum via the command:
    ```bash
-   shasum -a 512 -c apache-grails-wrapper-<version>-incubating-bin.zip.sha512
+   shasum -a 512 -c apache-grails-wrapper-<version>-bin.zip.sha512
    ```
 
 Verifies the wrapper distribution signature via the command:
    ```bash
-    gpg --verify apache-grails-wrapper-<version>-incubating-bin.zip.asc apache-grails-wrapper-<version>-incubating-bin.zip
+    gpg --verify apache-grails-wrapper-<version>-bin.zip.asc apache-grails-wrapper-<version>-bin.zip
    ```
 
 Extracts the zip file and verifies the contents:
@@ -187,20 +187,20 @@ Extracts the zip file and verifies the contents:
 #### Manual Verification: Verify Grails Delegating CLI Binary Distribution
 
 The following are the Grails distribution artifacts:
-* `apache-grails-<version>-incubating-bin.zip` - the cli distribution that will be uploaded to sdkman
-* `apache-grails-<version>-incubating-bin.zip.asc` - the generated signature of the cli distribution
-* `apache-grails-<version>-incubating-bin.zip.sha512` - the checksum to verify the cli distribution
+* `apache-grails-<version>-bin.zip` - the cli distribution that will be uploaded to sdkman
+* `apache-grails-<version>-bin.zip.asc` - the generated signature of the cli distribution
+* `apache-grails-<version>-bin.zip.sha512` - the checksum to verify the cli distribution
 
 Use `etc/bin/verify-cli-distribution.sh` to verify the cli distribution. This script performs the following:
 
 Verifies the cli distribution checksum via the command:
    ```bash
-   shasum -a 512 -c apache-grails-<version>-incubating-bin.zip.sha512
+   shasum -a 512 -c apache-grails-<version>-bin.zip.sha512
    ```
 
 Verifies the cli distribution signature via the command:
    ```bash
-    gpg --verify apache-grails-<version>-incubating-bin.zip.asc apache-grails-<version>-incubating-bin.zip
+    gpg --verify apache-grails-<version>-bin.zip.asc apache-grails-<version>-bin.zip
    ```
 
 Extracts the zip file and verifies the contents:
@@ -241,21 +241,15 @@ example commands to perform this verification. However, it if manually verifying
 
 ## 4. Voting
 
-After all artifacts are uploaded, verified, and tested, we can vote on the release.  As an ASF project, we follow the voting guidelines set forth by the [Apache Voting Process](https://www.apache.org/foundation/voting.html). We are also an incubating ASF software project, so there are 2 votes.  Details for each follow: 
+After all artifacts are uploaded, verified, and tested, we can vote on the release.  As an ASF project, we follow the voting guidelines set forth by the [Apache Voting Process](https://www.apache.org/foundation/voting.html).  
 
-### Apache Grails Incubating PPMC
+### Apache Grails PMC
 
-The first vote is conducted on the [Grails dev mailing list](https://lists.apache.org/list.html?dev@grails.apache.org).
-The only valid votes are those on the Apache Grails Incubating PPMC, but the community is welcome to participate to
-express their support. The vote template is generated as part of the release process. See the `upload` job in the
-`Release` workflow for the generated email.
+The release vote is conducted on the [Grails dev mailing list](https://lists.apache.org/list.html?dev@grails.apache.org). Only votes from members of the Apache Grails PMC are binding, but the community is welcome to participate to express their support.
 
-### Apache Groovy PMC
-
-As an incubating project under Apache Groovy, after a minimum of 72 hours and a successful Grails PPMC vote, the Groovy
-PMC must vote to approve the Apache Grails (incubating) release. This vote is held on
-the [Groovy dev mailing list](https://lists.apache.org/list.html?dev@groovy.apache.org). See the `upload` job in the
-`Release` workflow for the generated email.
+The vote runs for a minimum of 72 hours.  
+The vote email is automatically generated as part of the release process — see the `upload` job in the `Release`
+workflow for details.
 
 ## 5. Releasing
 
@@ -265,7 +259,7 @@ way, the `release` job should be approved & reviewed before proceeding.
 
 ### Confirm Vote Passed
 
-Confirm the Grails PPMC & Groovy PMC votes passed with a +1 from at least 3 PPMC members. The `release` job in the
+Confirm the Grails PMC votes passed with a +1 from at least 3 PMC members. The `release` job in the
 `Release` workflow will remind you of these steps.
 
 ### Release the Staged Jar files
@@ -273,7 +267,7 @@ Confirm the Grails PPMC & Groovy PMC votes passed with a +1 from at least 3 PPMC
 The `release` job in the `Release` workflow has a step entitled `🚀 Release JAR files - MANUAL`. You can release the jar
 files by one of 2 ways:
 
-1. In repository.apache.org, the staged artifacts must be released by opening the `grails-core` staging repository and
+1. On https://repository.apache.org/#stagingRepositories, the staged artifacts must be released by opening the `grails-core` staging repository and
    clicking the `Release` button. It took almost 2 hours for the initial ASF release to publish these jars to Maven
    Central.
 2. Alternatively, the `release` job in the `Release` workflow will output an example command line to release the staging
@@ -282,7 +276,7 @@ files by one of 2 ways:
 
 ### Move the distributions from `dev` to `release`
 
-On dist.apache.org, the staged source distribution & binary distributions must be moved from `dev` to `release`. Per ASF
+On dist.apache.org, the staged source distribution & binary distributions must be moved from `https://dist.apache.org/repos/dist/dev/grails/` to `https://dist.apache.org/repos/dist/release/grails/`. Per ASF
 infrastructure, this must be performed manually, and we are not allowed to automate it via a gated approval workflow.
 Either move them via your SVN client or use the checked in script to perform these actions as your user.
 
@@ -292,36 +286,32 @@ an example call to the checked in script to move the distributions.
 ### Update ASF Reporter
 
 After moving the distributions, you will receive an email from the ASF reporter. Click the link in the email to mark the
-release as published. The `release` job in the `Release` workflow has a step to remind you of this.
+release as published or go to https://reporter.apache.org/addrelease.html?grails. The `release` job in the `Release` workflow has a step to remind you of this.
 
 For example, if the release is out of core with version `7.0.0-M4`, then the release name with be `CORE-7.0.0-M4`. Enter
 the date you moved the distribution artifacts and report the release.
 
-NOTE: Grails as a podling, cannot currently do this.
+### Deploy the release to Grails Forge
 
-### Deploy grails-forge so the release is accessible on start.grails.org
+Publish the released version to [Grails Forge](https://start.grails.org) using one of the [GCP Deploy Actions](https://github.com/apache/grails-core/actions) available in the `grails-core` repository.
 
-On the `grails-core` repository, using the release tag, deploy the grails-forge-web-netty docker container to Google Cloud Run using one of the GCP Deploy actions.
+Grails Forge organizes deployments into version slots as follows:
 
-On https://start.grails.org, versions are listed in the following order:  RELEASE, NEXT, SNAPSHOT, PREV and PREV-SNAPSHOT.  Use the corresponding action to deploy to each location.
+- **RELEASE** - Full Final Releases - https://github.com/apache/grails-core/actions/workflows/forge-deploy-release.yml
+- **NEXT** - Milestones and Release Candidate for Next Release (also Next version snapshot prior to Milestone) - https://github.com/apache/grails-core/actions/workflows/forge-deploy-next.yml
+- **SNAPSHOT** - current or next version snapshot - https://github.com/apache/grails-core/actions/workflows/forge-deploy-snapshot.yml
+- **PREV** - previous release version - https://github.com/apache/grails-core/actions/workflows/forge-deploy-prev.yml
+- **PREV-SNAPSHOT** - previous version snapshot - https://github.com/apache/grails-core/actions/workflows/forge-deploy-prev-snapshot.yml
 
-RELEASE - GA releases only
+Use the action whose name matches the slot you want to deploy to.\
+In the **“Run workflow/Use workflow from”** dropdown, choose the release tag you just created.
 
-NEXT - Milestones and Release Candidate
-
-SNAPSHOT - current or next version snapshot
-
-PREV - previous release version
-
-PREV-SNAPSHOT - previous version snapshot
-
-The `release` job in the `Release` workflow has a step entitled `🚀 Deploy grails-forge - MANUAL` that will remind you of
-this step.
+(The `release` job in the `Release` workflow includes a step titled `🚀 MANUAL - Deploy Grails Forge` that serves as a reminder to perform the deployment described above.)
 
 ### Publish `grails-core` documentation
 
 Open the release workflow in `grails-core` and approve the `Publish Documentation` step. Wait until finished, and a
-workflow should eventually kick off in `grails-doc` to publish the gh-pages branch that was updated.
+workflow should eventually kick off in `grails-doc` to publish to https://github.com/apache/grails-website/tree/asf-site-production/docs and https://grails.apache.org/docs/.
 
 ### Advertise the release via SDKMAN
 
@@ -330,15 +320,19 @@ version from Maven Central.
 
 ### Close out the `grails-core` release
 
-The last step in the `grails-core` release workflow is to run the `Close Release` step.  This will create a merge branch for the original tag with version number and then open a PR to merge back into the next branch.  You will need to merge it into the branch after correcting any merge conflict.
+The last step in the `grails-core` release workflow is to run the `Close Release` step.  This will create a merge branch for the original tag with version number and then open a PR to merge back into the next branch.  You will need to merge this PR into the branch after correcting any merge conflict.
+
+After this PR is merged, deploy the new SNAPSHOT to Forge via: https://github.com/apache/grails-core/actions/workflows/forge-deploy-snapshot.yml
 
 ### Update the `grails-static-website`
 
 On the `grails-static-website` repository:
 
-Run the release action (https://github.com/apache/grails-static-website/actions/workflows/release.yml) with the new version to update https://github.com/apache/grails-static-website/blob/HEAD/conf/releases.yml and then run the publish action (https://github.com/apache/grails-static-website/actions/workflows/publish.yml) to update the `asf-site-production` branch and https://grails.apache.org
+Run the release action (https://github.com/apache/grails-static-website/actions/workflows/release.yml) with the new version to update https://github.com/apache/grails-static-website/blob/HEAD/conf/releases.yml
 
-Create a new `.md` file in the `/posts` directory announcing the release.  The PR will stage this change on https://grails.staged.apache.org/ and when the PR is merged it will deploy to https://grails.apache.org
+Then run the publish action (https://github.com/apache/grails-static-website/actions/workflows/publish.yml) to update https://github.com/apache/grails-website/tree/asf-site-production/ and publish to https://grails.apache.org
+
+Create a new `.md` file in the `/posts` directory announcing the release.  When the PR is merged it will deploy to https://grails.apache.org
 
 ### Flag release in `grails-core` as latest
 
@@ -347,7 +341,7 @@ Update the release in `grails-core` to be flagged as 'latest'
 ### Announce the release
 
 Announcements should come from your apache email address (see https://infra.apache.org/committer-email.html) and have an
-expected format. The announcement should be sent to `dev@grails.apache.org`, `dev@groovy.apache.org`, &
+expected format. The announcement should be sent to `dev@grails.apache.org`, `dev@groovy.apache.org`, `users@grails.apache.org`, &
 `announce@apache.org`. See the `close` job for a generated email.
 
 # Rollback
@@ -359,7 +353,7 @@ This rollback will perform the following:
 1. Drop the configured staging repository based on the release tag. (See `Appendix: Rollback a Nexus Artifacts (Jars)`
    for how to do this separately from the abort workflow)
 2. Remove the staged artifacts
-   from [https://dist.apache.org/repos/dist/dev/incubator/grails/core](https://dist.apache.org/repos/dist/incubator/dev/grails/core)
+   from [https://dist.apache.org/repos/dist/dev/grails/core](https://dist.apache.org/repos/dist/dev/grails/core)
 3. Cancel the GitHub Action `Release` (this may need to be manually cancelled depending on the workflow state)
 4. Remove the GitHub Release from GitHub
 5. Remove the Git tag
@@ -391,8 +385,16 @@ Setup the key for validity:
 The Grails image is officially built on linux in a GitHub action using an Ubuntu container. To run a linux container
 locally, you can use the following command (substitute `<git-tag-of-release` with the tag name):
 
+**macOS/Linux**
 ```bash
     docker build -t grails:testing -f etc/bin/Dockerfile . && docker run -it --rm -v $(pwd):/home/groovy/project -p 8080:8080 grails:testing bash
+    cd grails-verify
+    verify.sh <git-tag-of-release> .
+```
+
+**Windows**
+```bash
+    docker build -t grails:testing -f etc/bin/Dockerfile . && docker run -it --rm -v "%CD%:/home/groovy/project" -p 8080:8080 grails:testing bash
     cd grails-verify
     verify.sh <git-tag-of-release> .
 ```
@@ -403,7 +405,7 @@ In the event that artifacts differ, simply copy them to your project directory a
 
 ```bash
     cd ~/project
-    rsync -av grails-verify/grails/etc/bin/results/ etc/bin/results/
+    rsync -av ../grails-verify/grails/etc/bin/results/ etc/bin/results/
 ```
 
 # Appendix: Versioning
@@ -487,12 +489,12 @@ Some common gotchas with Java build reproducibility problems:
    not ship property files with dynamic timestamps.
 4. Gradle builds are not reproducible by default because Gradle does not guarantee file ordering. Grails configures all
    tasks that create archive files to ensure file ordering is reproducible. This configuration can be found in
-   `gradle/java-config.gradle`
+   the `CompilePlugin` in the `build-logic` project.
 5. Grails makes heavy use of Groovy AST transforms. These transforms often lookup methods on a class, and the methods
    returned by Java will vary by operating system. Any code using reflection to lookup methods or fields must sort the
    results to ensure reproducibility.
 6. Javadoc / Groovydoc will by default write out dates in it's documentation headers. Grails configures these settings
-   in `gradle/java-config.gradle`.
+   in the `CompilePlugin` in the `build-logic` project.
 
 After a build is made reproducible on the same machine, the next step is to ensure it's reproducible in GitHub actions.
 OS differences will exist and even exist between different Docker Runtimes. To help test reproducible builds, we found

@@ -108,7 +108,7 @@ class HalJsonRenderer<T> extends AbstractLinkingRenderer<T> {
     }
 
     @Override
-    void renderInternal(T object, RenderContext context) {
+    void renderInternal(Object object, RenderContext context) {
         final mimeType = context.acceptMimeType ?: mimeTypes[0]
         final responseWriter = context.writer
         Writer targetWriter = prettyPrint ? new StringWriter() : responseWriter

@@ -25,12 +25,11 @@ import org.grails.forge.build.dependencies.Dependency;
 import org.grails.forge.feature.DefaultFeature;
 import org.grails.forge.feature.Feature;
 import org.grails.forge.options.Options;
-import org.grails.forge.options.TestFramework;
 
 import java.util.Set;
 
 @Singleton
-public class Spock implements TestFeature, DefaultFeature {
+public class Spock implements Feature, DefaultFeature {
 
     @Override
     public String getName() {
@@ -38,7 +37,12 @@ public class Spock implements TestFeature, DefaultFeature {
     }
 
     @Override
-    public void doApply(GeneratorContext generatorContext) {
+    public boolean supports(ApplicationType applicationType) {
+        return true;
+    }
+
+    @Override
+    public void apply(GeneratorContext generatorContext) {
         generatorContext.addDependency(Dependency.builder()
                         .groupId("org.spockframework")
                         .artifactId("spock-core")
@@ -47,12 +51,7 @@ public class Spock implements TestFeature, DefaultFeature {
     }
 
     @Override
-    public TestFramework getTestFramework() {
-        return TestFramework.SPOCK;
-    }
-
-    @Override
     public boolean shouldApply(ApplicationType applicationType, Options options, Set<Feature> selectedFeatures) {
-        return options.getTestFramework() == null || options.getTestFramework() == TestFramework.SPOCK;
+        return true;
     }
 }

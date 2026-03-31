@@ -17,7 +17,7 @@ limitations under the License.
 Grails Gradle Plugins
 ========
 
-Latest API Docs: https://docs.grails.org/latest/api/
+Latest API Docs: https://grails.apache.org/docs/latest/api/
 
 Below are the plugins that are provided by the grails-gradle-plugin dependency.
 

@@ -245,7 +245,7 @@ abstract class AbstractHibernateGormStaticApi<D> extends GormStaticApi<D> {
                     //TODO: Remove explicit type cast once GROOVY-9460
                     criteriaBuilder.equal((Expression<?>) idProp, id)
             )
-            criteriaQuery.select(criteriaBuilder.count(criteriaQuery.from(persistentEntity.javaClass)))
+            criteriaQuery.select(criteriaBuilder.count(queryRoot))
             Query criteria = session.createQuery(criteriaQuery)
             HibernateHqlQuery hibernateHqlQuery = new HibernateHqlQuery(
                     hibernateSession, persistentEntity, criteria)

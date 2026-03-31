@@ -67,6 +67,9 @@ import org.springframework.beans.BeanUtils;
 import org.springframework.core.convert.ConversionService;
 
 import grails.gorm.MultiTenant;
+import org.grails.datastore.mapping.model.PersistentEntity;
+import org.grails.datastore.mapping.model.PersistentProperty;
+import org.grails.datastore.mapping.model.types.Basic;
 import org.grails.datastore.mapping.multitenancy.MultiTenancySettings;
 import org.grails.datastore.mapping.query.Query;
 import org.grails.datastore.mapping.query.api.BuildableCriteria;
@@ -618,6 +621,7 @@ public abstract class AbstractHibernateCriteriaBuilder extends GroovyObjectSuppo
      * @throws org.hibernate.HibernateException Indicates a problem creating the sub criteria
      */
     public Criteria createAlias(String associationPath, String alias) {
+        aliasMap.put(associationPath, alias);
         return criteria.createAlias(associationPath, alias);
     }
 
@@ -1281,12 +1285,31 @@ public abstract class AbstractHibernateCriteriaBuilder extends GroovyObjectSuppo
                     propertyName + "] and values [" + values + "] not allowed here."));
         }
 
+        // Preserve the original property name before alias prefix is applied,
+        // since isBasicCollectionProperty needs the raw property name for entity lookup.
+        String originalPropertyName = propertyName;
         propertyName = calculatePropertyName(propertyName);
 
         if (values instanceof List) {
             values = convertArgumentList((List) values);
         }
-        addToCriteria(Restrictions.in(propertyName, values == null ? Collections.EMPTY_LIST : values));
+
+        // Handle basic collection types (hasMany to String/Integer/etc.)
+        // These are stored in a separate join table and cannot use simple Restrictions.in().
+        // Instead, create an alias to the collection table and restrict on 'elements'.
+        if (isBasicCollectionProperty(originalPropertyName)) {
+            String alias;
+            if (aliasMap.containsKey(propertyName)) {
+                alias = aliasMap.get(propertyName);
+            } else {
+                alias = propertyName + ALIAS;
+                createAlias(propertyName, alias);
+                aliasMap.put(propertyName, alias);
+            }
+            addToCriteria(Restrictions.in(alias + ".elements", values == null ? Collections.EMPTY_LIST : values));
+        } else {
+            addToCriteria(Restrictions.in(propertyName, values == null ? Collections.EMPTY_LIST : values));
+        }
         return this;
     }
 
@@ -1330,8 +1353,25 @@ public abstract class AbstractHibernateCriteriaBuilder extends GroovyObjectSuppo
                     propertyName + "] and values [" + values + "] not allowed here."));
         }
 
+        // Preserve the original property name before alias prefix is applied,
+        // since isBasicCollectionProperty needs the raw property name for entity lookup.
+        String originalPropertyName = propertyName;
         propertyName = calculatePropertyName(propertyName);
-        addToCriteria(Restrictions.in(propertyName, values));
+
+        // Handle basic collection types (hasMany to String/Integer/etc.)
+        if (isBasicCollectionProperty(originalPropertyName)) {
+            String alias;
+            if (aliasMap.containsKey(propertyName)) {
+                alias = aliasMap.get(propertyName);
+            } else {
+                alias = propertyName + ALIAS;
+                createAlias(propertyName, alias);
+                aliasMap.put(propertyName, alias);
+            }
+            addToCriteria(Restrictions.in(alias + ".elements", values));
+        } else {
+            addToCriteria(Restrictions.in(propertyName, values));
+        }
         return this;
     }
 
@@ -1806,7 +1846,46 @@ public abstract class AbstractHibernateCriteriaBuilder extends GroovyObjectSuppo
             if (pd != null && pd.getReadMethod() != null) {
                 final Metamodel metamodel = sessionFactory.getMetamodel();
                 final EntityType<?> entityType = metamodel.entity(targetClass);
-                final Attribute<?, ?> attribute = entityType.getAttribute(name);
+
+                Attribute<?, ?> attribute = null;
+                try {
+                    attribute = entityType.getAttribute(name);
+                } catch (IllegalArgumentException e) {
+                    // Composite ID components may not be registered as JPA Metamodel
+                    // attributes. Fall back to checking if the property type is a managed
+                    // entity so the criteria builder can navigate associations that form
+                    // part of a composite key (e.g. UserRole with composite: ['user', 'role']).
+                    Class<?> propertyType = pd.getPropertyType();
+                    try {
+                        metamodel.entity(propertyType);
+                        // Property type is a managed entity - treat as association
+                        Class oldTargetClass = targetClass;
+                        targetClass = propertyType;
+                        if (targetClass.equals(oldTargetClass) && !hasMoreThanOneArg) {
+                            joinType = org.hibernate.sql.JoinType.LEFT_OUTER_JOIN.getJoinTypeValue();
+                        }
+                        associationStack.add(name);
+                        final String associationPath = getAssociationPath();
+                        createAliasIfNeccessary(name, associationPath, joinType);
+                        logicalExpressionStack.add(new LogicalExpression(AND));
+                        invokeClosureNode(callable);
+                        aliasStack.remove(aliasStack.size() - 1);
+                        if (!aliasInstanceStack.isEmpty()) {
+                            aliasInstanceStack.remove(aliasInstanceStack.size() - 1);
+                        }
+                        LogicalExpression logicalExpression = logicalExpressionStack.remove(logicalExpressionStack.size() - 1);
+                        if (!logicalExpression.args.isEmpty()) {
+                            addToCriteria(logicalExpression.toCriterion());
+                        }
+                        associationStack.remove(associationStack.size() - 1);
+                        targetClass = oldTargetClass;
+                        return name;
+                    } catch (IllegalArgumentException ignored) {
+                        // Not a managed entity type - wrap the original exception to preserve stack trace
+                        throw new IllegalArgumentException(
+                                "Unable to locate attribute [" + name + "] on entity [" + entityType.getName() + "]", e);
+                    }
+                }
 
                 if (attribute.isAssociation()) {
                     Class oldTargetClass = targetClass;
@@ -1981,6 +2060,23 @@ public abstract class AbstractHibernateCriteriaBuilder extends GroovyObjectSuppo
         else {
             c.addOrder(ignoreCase ? Order.asc(sort).ignoreCase() : Order.asc(sort));
         }
+    }
+
+    /**
+     * Checks if the given property name refers to a Basic collection type
+     * (e.g. hasMany: [schools: String]). Basic collections are stored in
+     * a separate join table and require special handling for 'in' queries.
+     */
+    private boolean isBasicCollectionProperty(String propertyName) {
+        if (datastore == null) {
+            return false;
+        }
+        PersistentEntity entity = datastore.getMappingContext().getPersistentEntity(targetClass.getName());
+        if (entity == null) {
+            return false;
+        }
+        PersistentProperty property = entity.getPropertyByName(propertyName);
+        return property instanceof Basic;
     }
 
     /**

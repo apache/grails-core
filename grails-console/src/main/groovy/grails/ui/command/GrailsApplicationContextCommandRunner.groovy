@@ -52,15 +52,27 @@ class GrailsApplicationContextCommandRunner extends DevelopmentGrailsApplication
                 System.setProperty(Settings.SETTING_SKIP_BOOTSTRAP, skipBootstrap.toString())
             }
 
+            // Filter out command-specific options (--key=value, --flag) before passing to
+            // Spring Boot. These args are intended for the Grails command (parsed by
+            // CommandLineParser below), NOT for Spring Boot's property override mechanism.
+            //
+            // Without this filtering, Spring Boot's SpringApplication.run() interprets
+            // --dataSource=analytics as a property override, setting dataSource="analytics"
+            // (a String) which corrupts GORM's datasource configuration (expects a Map).
+            // This breaks Gradle dbm* tasks with --dataSource parameter:
+            //   ./gradlew dbmStatus -Pargs="--dataSource=analytics"
+            String[] springBootArgs = filterCommandOptions(args)
+
             ConfigurableApplicationContext ctx = null
             try {
-                ctx = super.run(args)
+                ctx = super.run(springBootArgs)
             } catch (Throwable e) {
                 System.err.println("Context failed to load: $e.message")
                 System.exit(1)
             }
 
             try {
+                // Parse the FULL args (including --options) for the command
                 CommandLine commandLine = new CommandLineParser().parse(args)
                 ctx.autowireCapableBeanFactory.autowireBeanProperties(command, AutowireCapableBeanFactory.AUTOWIRE_BY_TYPE, false)
                 command.applicationContext = ctx
@@ -83,6 +95,26 @@ class GrailsApplicationContextCommandRunner extends DevelopmentGrailsApplication
             System.exit(1)
         }
         return null
+    }
+
+    /**
+     * Filters out command-specific options (arguments starting with '--') from the
+     * args array before they are passed to Spring Boot's {@code SpringApplication.run()}.
+     *
+     * <p>Spring Boot interprets {@code --key=value} arguments as property overrides via
+     * {@code CommandLinePropertySource}. When Grails command options like
+     * {@code --dataSource=analytics} are passed through, Spring Boot sets
+     * {@code dataSource=analytics} as a top-level property, corrupting GORM's datasource
+     * configuration which expects {@code dataSource} to be a Map containing url, username, etc.</p>
+     *
+     * <p>Command options are still available to the Grails command via
+     * {@code CommandLineParser.parse(args)} which receives the unfiltered args.</p>
+     *
+     * @param args the full argument array including command options
+     * @return a filtered array with command options removed, safe for Spring Boot
+     */
+    static String[] filterCommandOptions(String[] args) {
+        args.findAll { it != null && !it.startsWith('--') } as String[]
     }
 
     /**

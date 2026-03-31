@@ -25,6 +25,7 @@ plugins {
     id 'base'
     id 'org.asciidoctor.jvm.convert'
     id 'groovy'
+    id 'org.apache.grails.buildsrc.properties'
 }
 
 compileJava.options.release = javaVersion.toInteger()
@@ -53,7 +54,7 @@ dependencies {
     implementation 'org.testcontainers:testcontainers'
     implementation 'org.springframework:spring-core'
     implementation 'org.springframework.boot:spring-boot'
-    implementation 'org.gebish:geb-spock'
+    implementation 'org.apache.groovy.geb:geb-spock'
 }
 
 // this task needs to be here instead of the root since bom resolution only occurs when the java / groovy plugins are applied
@@ -109,7 +110,9 @@ combinedGroovydoc.configure { Groovydoc gdoc ->
                 sourceDirs
             }
 
-    gdoc.source(project.files((baseSourceDirs + includedBuildSourceDirs).unique()))
+    def allSourceDirs = (baseSourceDirs + includedBuildSourceDirs).unique()
+    gdoc.source(project.files(allSourceDirs))
+    gdoc.ext.groovydocSourceDirs = allSourceDirs
 
     gdoc.classpath = files(sources.collect { SourceSet it -> it.compileClasspath.filter(File.&isDirectory) }.flatten().unique())
     gdoc.destinationDir = project.layout.buildDirectory.dir('combined-api/api').get().asFile
@@ -254,7 +257,7 @@ publishGuideTask.configure { PublishGuideTask publish ->
         [
                 'cacheExampleSourceDir': rootProject.layout.projectDirectory.dir('grails-test-examples/cache').asFile,
                 'sourcedir'            : rootProject.layout.projectDirectory.asFile,
-                'functionalSourceDir'  : rootProject.layout.projectDirectory.asFile
+                'functionalSourceDir'  : rootProject.layout.projectDirectory.dir('grails-test-examples').asFile
         ] as Map<String, String>
     }
 }
@@ -291,7 +294,13 @@ docsTask.configure { Sync it ->
 
     it.outputs.dir mergedDocsDir
 
-    it.from manualDocsDir, apiDocsDir, dataDocsDir
+    // Exclude page fragments - they have broken links/CSS/JS and are already
+    // included in the assembled guide pages (see #14986)
+    it.from(manualDocsDir) {
+        exclude "guide/pages/**"
+    }
+
+    it.from apiDocsDir, dataDocsDir
     it.into mergedDocsDir
 }
 

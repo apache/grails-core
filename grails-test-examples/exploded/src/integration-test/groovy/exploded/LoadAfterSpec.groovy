@@ -16,9 +16,9 @@
  *  specific language governing permissions and limitations
  *  under the License.
  */
-
 package exploded
 
+import exploded.pages.LoginAuthPage
 import grails.plugin.geb.ContainerGebSpec
 import grails.testing.mixin.integration.Integration
 
@@ -26,10 +26,7 @@ import grails.testing.mixin.integration.Integration
 class LoadAfterSpec extends ContainerGebSpec {
 
     void "Basic test to prove reloading worked"() {
-        when:
-        go('/login/auth')
-
-        then:
-        title == "My Plugin Login Auth"
+        expect:
+        to(LoginAuthPage)
     }
 }

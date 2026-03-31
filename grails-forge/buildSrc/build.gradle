@@ -20,55 +20,7 @@
 plugins {
     id 'java-gradle-plugin'
     id 'groovy-gradle-plugin'
-}
-
-Properties forgeProperties = new Properties()
-file('../gradle.properties').withInputStream { input ->
-    forgeProperties.load(input)
-}
-
-Properties rootProperties = new Properties()
-file('../../gradle.properties').withInputStream { input ->
-    rootProperties.load(input)
-}
-
-for (String key : forgeProperties.stringPropertyNames()) {
-    ext.set(key, forgeProperties.getProperty(key))
-}
-
-for (String key : rootProperties.stringPropertyNames()) {
-    if(!ext.has(key)) {
-        ext.set(key, rootProperties.getProperty(key))
-    }
-}
-
-repositories {
-    mavenCentral()
-    maven { url = 'https://repo.grails.org/grails/restricted' }
-    maven {
-        url = 'https://repository.apache.org/content/groups/snapshots'
-        content {
-            includeVersionByRegex('org[.]apache[.](grails|groovy).*', '.*', '.*SNAPSHOT')
-        }
-    }
-    maven {
-        url = 'https://repository.apache.org/content/groups/staging'
-        content {
-            includeGroupByRegex('org[.]apache[.]grails.*')
-        }
-        mavenContent {
-            releasesOnly()
-        }
-    }
-    maven {
-        url = 'https://central.sonatype.com/repository/maven-snapshots'
-        content {
-            includeVersionByRegex('cloud[.]wondrify.*', '.*', '.*-SNAPSHOT')
-        }
-        mavenContent {
-            snapshotsOnly()
-        }
-    }
+    id 'org.apache.grails.buildsrc.properties'
 }
 
 configurations.configureEach {
@@ -77,10 +29,6 @@ configurations.configureEach {
 
 dependencies {
     implementation "org.apache.grails.gradle:grails-publish:$grailsPublishGradleVersion"
-    implementation "gradle.plugin.com.hierynomus.gradle.plugins:license-gradle-plugin:${rootProperties.gradleLicensePluginVersion}", {
-        // Due to https://github.com/hierynomus/license-gradle-plugin/issues/161, spring must be excluded
-        exclude group: 'org.springframework', module: 'spring-core'
-    }
     implementation "io.micronaut.build.internal:micronaut-gradle-plugins:$micronautGradlePlugins"
     implementation "com.fizzed:rocker-compiler:$rockerVersion"
     implementation "com.fasterxml.jackson.core:jackson-databind:$jacksonDatabindVersion"
@@ -89,16 +37,15 @@ dependencies {
     implementation "com.diffplug.spotless:spotless-plugin-gradle:$spotlessVersion"
     implementation "io.spring.nohttp:nohttp-gradle:$nohttpGradleVersion"
     implementation "com.gradleup.shadow:shadow-gradle-plugin:$shadowVersion"
-    implementation "org.gradle.test-retry:org.gradle.test-retry.gradle.plugin:$testRetryVersion"
     implementation "org.nosphere.apache.rat:org.nosphere.apache.rat.gradle.plugin:$apacheRatVersion"
     implementation "org.apache.grails:grails-gradle-plugins:$projectVersion", {
         exclude group: 'org.yaml'
         exclude group: 'org.asciidoctor'
     }
     implementation "org.antlr:antlr4-runtime:$antlr4Version"
-    implementation "org.gradle.crypto.checksum:org.gradle.crypto.checksum.gradle.plugin:$gradleChecksumPluginVersion"
     implementation "org.apache.ant:ant:$antVersion"
     implementation "org.apache.grails.gradle:grails-gradle-common:$projectVersion"
+    implementation "org.cyclonedx.bom:org.cyclonedx.bom.gradle.plugin:$gradleCycloneDxPluginVersion"
 }
 
 gradlePlugin {

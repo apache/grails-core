@@ -25,7 +25,7 @@ SCRIPT_DIR=$( cd -- "$( dirname -- "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )
 mkdir -p "${DOWNLOAD_LOCATION}"
 
 echo "Downloading KEYS file ..."
-curl -f -L -o "${DOWNLOAD_LOCATION}/SVN_KEYS" "https://dist.apache.org/repos/dist/release/incubator/grails/KEYS"
+curl -f -L -o "${DOWNLOAD_LOCATION}/SVN_KEYS" "https://dist.apache.org/repos/dist/release/grails/KEYS"
 echo "✅ KEYS Downloaded"
 
 echo "Comparing checked in KEYS file with SVN KEYS file"

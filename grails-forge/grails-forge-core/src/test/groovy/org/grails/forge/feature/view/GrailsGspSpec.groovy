@@ -26,6 +26,7 @@ import org.grails.forge.application.ApplicationType
 import org.grails.forge.application.generator.GeneratorContext
 import org.grails.forge.feature.Features
 import org.grails.forge.fixture.CommandOutputFixture
+import org.grails.forge.options.DevelopmentReloading
 import org.grails.forge.options.JdkVersion
 import org.grails.forge.options.Options
 import org.grails.forge.options.TestFramework
@@ -91,7 +92,7 @@ class GrailsGspSpec extends ApplicationContextSpec implements CommandOutputFixtu
 
     void "test default views are present"() {
         when:
-        final def output = generate(ApplicationType.WEB, new Options(TestFramework.SPOCK))
+        final def output = generate(ApplicationType.WEB, new Options(DevelopmentReloading.DEVTOOLS))
         
         then:
         output.containsKey("grails-app/views/index.gsp")
@@ -102,7 +103,7 @@ class GrailsGspSpec extends ApplicationContextSpec implements CommandOutputFixtu
     @Unroll
     void "test grails-gsp gradle plugins and dependencies are present for #applicationType application"() {
         when:
-        final def output = generate(applicationType, new Options(TestFramework.SPOCK))
+        final def output = generate(applicationType, new Options(DevelopmentReloading.DEVTOOLS))
         final String build = output['build.gradle']
 
         then:
@@ -111,13 +112,28 @@ class GrailsGspSpec extends ApplicationContextSpec implements CommandOutputFixtu
         build.contains("implementation \"org.apache.grails:grails-gsp\"")
 
         where:
-        applicationType << [ApplicationType.WEB, ApplicationType.WEB_PLUGIN]
+        applicationType << [ApplicationType.WEB]
+    }
+
+    @Unroll
+    void "test grails-plugin gradle plugins and dependencies are present for #applicationType application"() {
+        when:
+        final def output = generate(applicationType, new Options(DevelopmentReloading.DEVTOOLS))
+        final String build = output['build.gradle']
+
+        then:
+        build.contains('apply plugin: "org.apache.grails.gradle.grails-plugin"')
+        build.contains('apply plugin: "org.apache.grails.gradle.grails-gsp"')
+        build.contains("implementation \"org.apache.grails:grails-gsp\"")
+
+        where:
+        applicationType << [ApplicationType.WEB_PLUGIN]
     }
 
     @Unroll
     void "test grails-gsp gradle plugins and dependencies are NOT present for #applicationType application"() {
         when:
-        final def output = generate(applicationType, new Options(TestFramework.SPOCK))
+        final def output = generate(applicationType, new Options(DevelopmentReloading.DEVTOOLS))
         final String build = output['build.gradle']
 
         then:

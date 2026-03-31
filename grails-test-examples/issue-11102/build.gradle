@@ -16,6 +16,10 @@
  *  specific language governing permissions and limitations
  *  under the License.
  */
+plugins {
+    id 'org.apache.grails.buildsrc.properties'
+    id 'org.apache.grails.buildsrc.compile'
+}
 
 version = '0.1'
 group = 'issue11102'
@@ -68,10 +72,8 @@ dependencies {
     testImplementation 'org.apache.grails:grails-testing-support-web'
     testImplementation 'org.apache.grails:grails-testing-support-datamapping'
 
-    testImplementation "io.micronaut:micronaut-http-client:$micronautHttpClientVersion"
-    testImplementation "io.micronaut.serde:micronaut-serde-jackson:$micronautSerdeJacksonVersion"
-
-    integrationTestImplementation testFixtures("org.apache.grails:grails-geb")
+    integrationTestImplementation testFixtures('org.apache.grails:grails-geb')
+    integrationTestImplementation project(':grails-testing-support-http-client')
 }
 
 tasks.named('assetCompile').configure {
@@ -87,7 +89,6 @@ bootRun {
 
 apply {
     from rootProject.layout.projectDirectory.file('gradle/functional-test-config.gradle')
-    from rootProject.layout.projectDirectory.file('gradle/java-config.gradle')
     from rootProject.layout.projectDirectory.file('gradle/test-webjar-asset-config.gradle')
     from rootProject.layout.projectDirectory.file('gradle/grails-extension-gradle-config.gradle')
 }

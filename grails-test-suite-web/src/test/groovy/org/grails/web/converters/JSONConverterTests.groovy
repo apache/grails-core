@@ -103,6 +103,26 @@ class JSONConverterTests extends Specification implements ControllerUnitTest<JSO
         json.size() == 2
     }
 
+    void testJSONEnumConvertingWithSimpleMarshaller() {
+        given:
+        JSON.createNamedConfig('simple') {
+            it.registerObjectMarshaller(new org.grails.web.converters.marshaller.json.SimpleEnumMarshaller())
+        }
+        JSON.use('simple')
+
+        when:
+        def enumInstance = Role.HEAD
+        params.e = enumInstance
+        controller.testEnumInMap()
+        def jsonString = response.contentAsString
+        def json = response.json
+
+        then:
+        json.size() == 1
+        jsonString == '{"value":"HEAD"}'
+        json.value == "HEAD"
+    }
+
     // GRAILS-11513
     void testStringsWithQuotes() {
         when:
@@ -194,6 +214,10 @@ class JSONConverterController {
 
    def testEnum = {
        render params.e as JSON
+   }
+
+   def testEnumInMap = {
+       render([value: params.e] as JSON)
    }
 
     def testNullValues = {

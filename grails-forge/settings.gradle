@@ -16,14 +16,21 @@
  *  specific language governing permissions and limitations
  *  under the License.
  */
+import org.gradle.api.initialization.resolve.RepositoriesMode
+
 pluginManagement {
     includeBuild('../grails-gradle') {
         name = 'grails-gradle'
     }
+    includeBuild('../build-logic') {
+        name = 'build-logic-root'
+    }
 }
+
 plugins {
-    id 'com.gradle.develocity' version '4.1.1'
+    id 'com.gradle.develocity' version '4.2.2'
     id 'com.gradle.common-custom-user-data-gradle-plugin' version '2.3'
+    id 'org.apache.grails.buildsrc.repo'
 }
 
 def isCI = System.getenv().containsKey('CI')
@@ -31,7 +38,7 @@ def isLocal = !isCI
 def isReproducibleBuild = System.getenv('SOURCE_DATE_EPOCH') != null
 
 develocity {
-    server = 'https://ge.grails.org'
+    server = 'https://develocity.apache.org'
     buildScan {
         tag('grails')
         tag('grails-forge')

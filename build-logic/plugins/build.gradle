@@ -1,0 +1,78 @@
+/*
+ *  Licensed to the Apache Software Foundation (ASF) under one
+ *  or more contributor license agreements.  See the NOTICE file
+ *  distributed with this work for additional information
+ *  regarding copyright ownership.  The ASF licenses this file
+ *  to you under the Apache License, Version 2.0 (the
+ *  "License"); you may not use this file except in compliance
+ *  with the License.  You may obtain a copy of the License at
+ *
+ *    https://www.apache.org/licenses/LICENSE-2.0
+ *
+ *  Unless required by applicable law or agreed to in writing,
+ *  software distributed under the License is distributed on an
+ *  "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ *  KIND, either express or implied.  See the License for the
+ *  specific language governing permissions and limitations
+ *  under the License.
+ */
+
+plugins {
+    id 'groovy-gradle-plugin'
+}
+
+version = '0.0.1'
+group = 'org.apache.grails.buildsrc'
+
+apply {
+    from project.layout.projectDirectory.file('../../dependencies.gradle')
+}
+
+project.layout.projectDirectory.file('../../gradle.properties').asFile.withInputStream {
+    Properties props = new Properties()
+    props.load(it)
+    project.ext.gradleProperties = props
+}
+
+dependencies {
+    implementation "${gradleBomDependencies['grails-publish-plugin']}"
+    implementation "org.gradle.crypto.checksum:org.gradle.crypto.checksum.gradle.plugin:${gradleProperties.gradleChecksumPluginVersion}"
+    implementation "org.cyclonedx.bom:org.cyclonedx.bom.gradle.plugin:${gradleProperties.gradleCycloneDxPluginVersion}"
+}
+
+gradlePlugin {
+    plugins {
+        register('compilePlugin') {
+            id = 'org.apache.grails.buildsrc.compile'
+            implementationClass = 'org.apache.grails.buildsrc.CompilePlugin'
+        }
+        register('publishPlugin') {
+            id = 'org.apache.grails.buildsrc.publish'
+            implementationClass = 'org.apache.grails.buildsrc.PublishPlugin'
+        }
+        register('sbomPlugin') {
+            id = 'org.apache.grails.buildsrc.sbom'
+            implementationClass = 'org.apache.grails.buildsrc.SbomPlugin'
+        }
+        register('sharedPropertyPlugin') {
+            id = 'org.apache.grails.buildsrc.properties'
+            implementationClass = 'org.apache.grails.buildsrc.SharedPropertyPlugin'
+        }
+        register('grailsCodeStyle') {
+            id = 'org.apache.grails.gradle.grails-code-style'
+            implementationClass = 'org.apache.grails.buildsrc.GrailsCodeStylePlugin'
+        }
+        register('groovydocEnhancer') {
+            id = 'org.apache.grails.buildsrc.groovydoc-enhancer'
+            implementationClass = 'org.apache.grails.buildsrc.GroovydocEnhancerPlugin'
+        }
+        register('grailsGroovydoc') {
+            id = 'org.apache.grails.buildsrc.groovydoc'
+            implementationClass = 'org.apache.grails.buildsrc.GrailsGroovydocPlugin'
+        }
+        register('grailsRepoSettings') {
+            id = 'org.apache.grails.buildsrc.repo'
+            implementationClass = 'org.apache.grails.buildsrc.GrailsRepoSettingsPlugin'
+        }
+    }
+}

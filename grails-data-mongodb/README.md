@@ -15,15 +15,15 @@ limitations under the License.
 -->
 
 # GORM for MongoDB
-This project implements [GORM](https://docs.grails.org/latest/grails-data/) for the MongoDB Document Database.
+This project implements [GORM](https://grails.apache.org/docs/latest/grails-data/) for the MongoDB Document Database.
 
 For more information see the following links:
 
-* [Documentation](https://docs.grails.org/latest/grails-data/mongodb/manual/)
-* [API](https://docs.grails.org/latest/api)
+* [Documentation](https://grails.apache.org/docs/latest/grails-data/mongodb/manual/)
+* [API](https://grails.apache.org/docs/latest/api)
 
 For the current development version see the following links:
 
-* [Snapshot Documentation](https://docs.grails.org/snapshot/grails-data/mongodb/manual/)
-* [Snapshot API](https://docs.grails.org/snapshot/api)
+* [Snapshot Documentation](https://grails.apache.org/docs/snapshot/grails-data/mongodb/manual/)
+* [Snapshot API](https://grails.apache.org/docs/snapshot/api)
 

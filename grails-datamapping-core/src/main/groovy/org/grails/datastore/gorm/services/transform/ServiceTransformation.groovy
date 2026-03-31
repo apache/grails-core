@@ -88,13 +88,11 @@ import org.grails.datastore.gorm.validation.jakarta.services.implementers.Method
 import org.grails.datastore.mapping.core.Datastore
 import org.grails.datastore.mapping.core.order.OrderedComparator
 
+import static org.apache.groovy.ast.tools.AnnotatedNodeUtils.markAsGenerated
 import static org.codehaus.groovy.ast.tools.GeneralUtils.assignS
-import static org.codehaus.groovy.ast.tools.GeneralUtils.assignX
 import static org.codehaus.groovy.ast.tools.GeneralUtils.block
 import static org.codehaus.groovy.ast.tools.GeneralUtils.callX
 import static org.codehaus.groovy.ast.tools.GeneralUtils.classX
-import static org.codehaus.groovy.ast.tools.GeneralUtils.equalsNullX
-import static org.codehaus.groovy.ast.tools.GeneralUtils.ifS
 import static org.codehaus.groovy.ast.tools.GeneralUtils.param
 import static org.codehaus.groovy.ast.tools.GeneralUtils.params
 import static org.codehaus.groovy.ast.tools.GeneralUtils.returnS
@@ -185,21 +183,23 @@ class ServiceTransformation extends AbstractTraitApplyingGormASTTransformation i
 
         List<FieldNode> propertiesFields = []
         if (isAbstractClass) {
-            List<PropertyNode> properties = classNode.getProperties()
+            List<PropertyNode> properties = classNode.getProperties().sort { it.name }
             for (PropertyNode pn in properties) {
                 ClassNode propertyType = pn.type
                 if (hasAnnotation(propertyType, Service) && propertyType != classNode && Modifier.isPublic(pn.modifiers) && pn.getterBlock == null && pn.setterBlock == null) {
                     FieldNode field = pn.field
-                    VariableExpression fieldVar = varX(field)
                     propertiesFields.add(field)
-                    pn.setGetterBlock(
-                        block(
-                            ifS(equalsNullX(fieldVar),
-                                assignX(fieldVar, callX(varX('datastore'), 'getService', classX(propertyType.plainNodeReference)))
-                            ),
-                            returnS(fieldVar)
-                        )
-                    )
+                    // NOTE:
+                    // We intentionally do NOT set a getter block on the abstract class's
+                    // PropertyNode here. The previous approach of setting a lazy getter that
+                    // referenced varX('datastore') caused two problems under @CompileStatic:
+                    //
+                    // 1. The 'datastore' field only exists on the generated impl class
+                    // 2. StaticTypeCheckingVisitor.visitProperty() throws "Unexpected return
+                    //    statement" when encountering ReturnStatement in a property getter block
+                    //
+                    // Instead, service properties are eagerly populated in the generated
+                    // setDatastore() method on the impl class (below).
                 }
             }
 
@@ -209,6 +209,8 @@ class ServiceTransformation extends AbstractTraitApplyingGormASTTransformation i
             }
 
         }
+
+        propertiesFields.sort(true) { it.name } // ensure a consistent order of processing fields
 
         if (isInterface || isAbstractClass) {
             // create a new class to represent the implementation
@@ -229,15 +231,17 @@ class ServiceTransformation extends AbstractTraitApplyingGormASTTransformation i
 
                 BlockStatement body = block()
                 Parameter datastoreParam = param(datastoreType, 'd')
-                impl.addMethod('setDatastore', Modifier.PUBLIC, ClassHelper.VOID_TYPE, params(
+                MethodNode datastoreSetterNode = impl.addMethod('setDatastore', Modifier.PUBLIC, ClassHelper.VOID_TYPE, params(
                         datastoreParam
                 ), null, body)
+                markAsGenerated(impl, datastoreSetterNode)
                 body.addStatement(
                         assignS(datastoreFieldVar, varX(datastoreParam))
                 )
-                impl.addMethod('getDatastore', Modifier.PUBLIC, datastoreType.plainNodeReference, ZERO_PARAMETERS, null,
+                MethodNode datastoreGetterNode = impl.addMethod('getDatastore', Modifier.PUBLIC, datastoreType.plainNodeReference, ZERO_PARAMETERS, null,
                         returnS(datastoreFieldVar)
                 )
+                markAsGenerated(impl, datastoreGetterNode)
                 for (FieldNode fn in propertiesFields) {
                     body.addStatement(
                             assignS(varX(fn), callX(datastoreFieldVar, 'getService', classX(fn.type.plainNodeReference)))
@@ -260,11 +264,14 @@ class ServiceTransformation extends AbstractTraitApplyingGormASTTransformation i
             weaveTraitWithGenerics(impl, getTraitClass(), targetDomainClass)
 
             List<MethodNode> abstractMethods = findAllUnimplementedAbstractMethods(classNode)
+            abstractMethods.sort(true) { it.name } // ensure a consistent order of processing methods
+
             Iterable<ServiceImplementer> implementers = findServiceImplementors(annotationNode)
 
             // first go through the existing implemented methods and just enhance them
             if (!isInterface) {
-                for (MethodNode existing in classNode.methods) {
+                def sortedMethods = classNode.methods.sort(true) { it.name }
+                for (MethodNode existing in (sortedMethods)) {
                     int modifiers = existing.modifiers
                     if (!Modifier.isAbstract(modifiers) && Modifier.isPublic(modifiers) && !existing.isStatic()) {
                         for (ServiceImplementer implementer in implementers) {
@@ -281,7 +288,6 @@ class ServiceTransformation extends AbstractTraitApplyingGormASTTransformation i
 
             // go through the abstract methods and implement them
             for (MethodNode method in abstractMethods) {
-
                 // find an implementer that implements the method
                 MethodNode methodImpl = null
                 for (ServiceImplementer implementer in implementers) {
@@ -307,6 +313,7 @@ class ServiceTransformation extends AbstractTraitApplyingGormASTTransformation i
                         }
                         implementedAnn.setMember('by', classX(implementedClass))
                         methodImpl.addAnnotation(implementedAnn)
+                        markAsGenerated(impl, methodImpl)
                         impl.addMethod(methodImpl)
                         break
                     }
@@ -372,7 +379,7 @@ class ServiceTransformation extends AbstractTraitApplyingGormASTTransformation i
             loadAnnotationDefined(annotationNode, 'implementers', finalImplementers, ServiceImplementer)
 
             Iterable<ServiceImplementerAdapter> adapters = load(ServiceImplementerAdapter)
-            List<ServiceImplementerAdapter> finalAdapters = adapters.toList()
+            List<ServiceImplementerAdapter> finalAdapters = adapters.toList().sort { it.class.name }
             loadAnnotationDefined(annotationNode, 'adapters', finalAdapters, ServiceImplementerAdapter)
 
             if (!finalAdapters.isEmpty()) {

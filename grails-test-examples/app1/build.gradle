@@ -17,6 +17,11 @@
  *  under the License.
  */
 
+plugins {
+    id 'org.apache.grails.buildsrc.properties'
+    id 'org.apache.grails.buildsrc.compile'
+}
+
 version = '0.1'
 group = 'functionaltests'
 
@@ -44,6 +49,7 @@ dependencies {
     implementation 'org.apache.grails:grails-cache'
     implementation 'org.apache.grails:grails-scaffolding'
 
+
     testAndDevelopmentOnly platform(project(':grails-bom'))
     testAndDevelopmentOnly 'org.webjars.npm:jquery'
 
@@ -55,14 +61,13 @@ dependencies {
     testImplementation 'org.apache.grails:grails-testing-support-datamapping'
 
     console 'org.apache.grails:grails-console'
-    testImplementation "io.micronaut:micronaut-http-client:$micronautHttpClientVersion"
-    testImplementation "io.micronaut.serde:micronaut-serde-jackson:$micronautSerdeJacksonVersion"
 
     implementation project(':grails-test-examples-plugins-loadfirst')
     implementation project(':grails-test-examples-plugins-loadsecond')
     implementation project(':grails-test-examples-plugins-loadafter')
 
     integrationTestImplementation testFixtures('org.apache.grails:grails-geb')
+    integrationTestImplementation project(':grails-testing-support-http-client')
 }
 
 tasks.withType(JavaExec).configureEach {
@@ -85,7 +90,6 @@ test {
 
 apply {
     from rootProject.layout.projectDirectory.file('gradle/functional-test-config.gradle')
-    from rootProject.layout.projectDirectory.file('gradle/java-config.gradle')
     from rootProject.layout.projectDirectory.file('gradle/test-webjar-asset-config.gradle')
     from rootProject.layout.projectDirectory.file('gradle/grails-extension-gradle-config.gradle')
 }

@@ -14,12 +14,12 @@
 # limitations under the License.
 
 contact_links:
+  - name: Grails Mailing Lists
+    url: https://grails.apache.org/community.html
+    about: Ask questions on the Mailing Lists
   - name: Grails Core Discussions
     url: https://github.com/apache/grails-core/discussions
-    about: Ask questions about Grails® framework on Github
-  - name: Stack Overflow
-    url: https://stackoverflow.com/tags/grails
-    about: Ask questions on Stack Overflow
+    about: Discuss Grails® framework on GitHub
   - name: Grails Slack
     url: https://grails.slack.com/
     about: Chat with us on Grails Community Slack.

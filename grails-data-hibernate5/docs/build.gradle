@@ -31,20 +31,18 @@ ext {
     coreProjects = ['grails-datastore-core', 'grails-datamapping-core']
 }
 
-configurations {
-    documentation {
-        attributes {
-            attribute(Bundling.BUNDLING_ATTRIBUTE, (Bundling) (objects.named(Bundling, 'external')))
-        }
-    }
-}
+apply plugin: 'org.apache.grails.buildsrc.groovydoc'
 
 dependencies {
     documentation platform(project(':grails-bom'))
     documentation 'com.github.javaparser:javaparser-core'
     documentation "info.picocli:picocli:$picocliVersion"
     documentation 'org.apache.groovy:groovy-dateutil'
+    documentation 'org.apache.groovy:groovy-ant'
+    documentation 'org.apache.groovy:groovy-groovydoc'
+    documentation 'org.apache.groovy:groovy-templates'
     documentation 'org.fusesource.jansi:jansi'
+    documentation 'jline:jline'
     documentation project(':grails-bootstrap')
     documentation project(':grails-core')
     documentation project(':grails-spring')
@@ -107,13 +105,15 @@ tasks.withType(Groovydoc).configureEach {
 
     it.source = sourceFiles
     it.destinationDir = layout.buildDirectory.dir('combined-api/api').get().asFile
-    it.access = GroovydocAccess.PROTECTED
-    it.processScripts = false
-    it.includeMainForScripts = false
-    it.includeAuthor = false
     it.classpath = configurations.documentation
-    it.groovyClasspath += configurations.documentation
-    it.noVersionStamp = false
+
+    List<File> groovydocSrcDirs = coreProjects.collect {
+        rootProject.layout.projectDirectory.dir("$it/src/main/groovy").asFile
+    }
+    rootProject.subprojects
+            .findAll { sp -> sp.findProperty('gormApiDocs') }
+            .each { sp -> groovydocSrcDirs << new File(sp.projectDir, 'src/main/groovy') }
+    it.ext.groovydocSourceDirs = groovydocSrcDirs
 }
 
 tasks.register('docs', Sync).configure { Sync docTask ->

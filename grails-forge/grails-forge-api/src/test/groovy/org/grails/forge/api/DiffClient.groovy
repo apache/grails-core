@@ -34,23 +34,23 @@ import javax.validation.constraints.NotNull
 
 @Client('/diff')
 interface DiffClient {
-    @Get(uri = "/{type}/feature/{feature}{?lang,build,test,javaVersion,name}",
+    @Get(uri = "/{type}/feature/{feature}{?lang,build,reloading,javaVersion,name}",
             consumes = MediaType.TEXT_PLAIN)
     String diffFeature(
             @NotNull ApplicationType type,
             @Nullable String name,
             @NotBlank @NonNull String feature,
             @Nullable BuildTool build,
-            @Nullable TestFramework test,
+            @Nullable DevelopmentReloading reloading,
             @Nullable Language lang,
             @Nullable JdkVersion javaVersion);
 
-    @Get(uri = "/{type}/{name}{?features,lang,build,test,javaVersion}", consumes = MediaType.TEXT_PLAIN)
+    @Get(uri = "/{type}/{name}{?features,lang,build,reloading,javaVersion}", consumes = MediaType.TEXT_PLAIN)
     String diffApp(ApplicationType type,
                    String name,
                    @Nullable List<String> features,
                    @Nullable BuildTool build,
-                   @Nullable TestFramework test,
+                   @Nullable DevelopmentReloading reloading,
                    @Nullable Language lang,
                    @Nullable JdkVersion javaVersion);
 }

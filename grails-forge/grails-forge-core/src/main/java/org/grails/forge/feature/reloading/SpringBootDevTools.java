@@ -19,18 +19,21 @@
 package org.grails.forge.feature.reloading;
 
 import jakarta.inject.Singleton;
+
 import org.grails.forge.application.ApplicationType;
 import org.grails.forge.application.generator.GeneratorContext;
 import org.grails.forge.build.dependencies.Dependency;
 import org.grails.forge.build.dependencies.Scope;
-import org.grails.forge.feature.DefaultFeature;
 import org.grails.forge.feature.Feature;
+import org.grails.forge.feature.micronaut.GrailsMicronaut;
+import org.grails.forge.options.DevelopmentReloading;
 import org.grails.forge.options.Options;
 
 import java.util.Set;
 
 @Singleton
-public class SpringBootDevTools implements ReloadingFeature, DefaultFeature {
+public class SpringBootDevTools implements ReloadingFeature {
+
     @Override
     public String getName() {
         return "spring-boot-devtools";
@@ -43,7 +46,11 @@ public class SpringBootDevTools implements ReloadingFeature, DefaultFeature {
 
     @Override
     public String getDescription() {
-        return "Spring Boot Devtools is a powerful tool that enhances development productivity by providing features like automatic application restarts on code changes, live reloading of static resources, and remote debugging support. It enables developers to rapidly iterate and test changes during the development process, making it a valuable asset for Spring Boot projects.";
+        return "Spring Boot Devtools is a powerful tool that enhances development productivity " +
+                "by providing features like automatic application restarts on code changes, live " +
+                "reloading of static resources, and remote debugging support. It enables developers " +
+                "to rapidly iterate and test changes during the development process, making it a " +
+                "valuable asset for Spring Boot projects.";
     }
 
     @Override
@@ -55,22 +62,20 @@ public class SpringBootDevTools implements ReloadingFeature, DefaultFeature {
     }
 
     @Override
-    public boolean isVisible() {
-        return true;
-    }
-
-    @Override
     public boolean shouldApply(ApplicationType applicationType, Options options, Set<Feature> selectedFeatures) {
-        return selectedFeatures.stream().noneMatch(f -> f instanceof ReloadingFeature);
-    }
-
-    @Override
-    public boolean supports(ApplicationType applicationType) {
-        return true;
+        if (selectedFeatures.stream().anyMatch(f -> f instanceof GrailsMicronaut)) {
+            return false;
+        }
+        return options.getDevelopmentReloading() == DevelopmentReloading.DEVTOOLS;
     }
 
     @Override
     public String getDocumentation() {
         return "https://docs.spring.io/spring-boot/reference/using/devtools.html";
+    }
+
+    @Override
+    public DevelopmentReloading getReloading() {
+        return DevelopmentReloading.DEVTOOLS;
     }
 }

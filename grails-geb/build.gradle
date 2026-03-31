@@ -17,9 +17,13 @@
  *  under the License.
  */
 plugins {
-    id 'java-library'
     id 'java-test-fixtures'
+    id 'org.apache.grails.buildsrc.properties'
     id 'org.apache.grails.gradle.grails-plugin'
+    id 'org.apache.grails.buildsrc.compile'
+    id 'org.apache.grails.buildsrc.publish'
+    id 'org.apache.grails.buildsrc.sbom'
+    id 'org.apache.grails.gradle.grails-code-style'
 }
 
 version = projectVersion
@@ -28,13 +32,6 @@ group = 'org.apache.grails'
 ext {
     pomTitle = 'Grails Geb Plugin'
     pomDescription = 'Provides Integration with Geb for Functional Testing'
-    pomDevelopers = [
-            graemerocher: 'Graeme Rocher',
-            puneetbehl: 'Puneet Behl',
-            sbglasius: 'Søren Berg Glasius',
-            matrei: 'Mattias Reichel',
-            jdaugherty: 'James Daugherty'
-    ]
 }
 
 dependencies {
@@ -49,7 +46,7 @@ dependencies {
     testFixturesCompileOnly 'jakarta.servlet:jakarta.servlet-api'
     testFixturesCompileOnly 'org.slf4j:slf4j-simple' // Remove compilation warning about missing slf4j impl
 
-    testFixturesApi 'org.gebish:geb-spock'
+    testFixturesApi 'org.apache.groovy.geb:geb-spock'
     testFixturesApi project(':grails-testing-support-core')
     testFixturesApi project(':grails-datamapping-core')
     testFixturesApi "org.testcontainers:selenium"
@@ -59,15 +56,11 @@ dependencies {
     testFixturesImplementation "org.seleniumhq.selenium:selenium-support"
 
     // Added to be able to resolve the geb version from the BOM in the resolveVersions task
-    compileOnly 'org.gebish:geb-spock'
+    compileOnly 'org.apache.groovy.geb:geb-spock'
 }
 
 apply {
-    // java-configuration must be applied first since tasks are now lazy registered
-    from rootProject.layout.projectDirectory.file('gradle/java-config.gradle')
-    from rootProject.layout.projectDirectory.file('gradle/code-style-config.gradle')
     from rootProject.layout.projectDirectory.file('gradle/docs-config.gradle')
-    from rootProject.layout.projectDirectory.file('gradle/publish-config.gradle')
     from rootProject.layout.projectDirectory.file('gradle/test-config.gradle')
     from rootProject.layout.projectDirectory.file('gradle/grails-extension-gradle-config.gradle')
 }

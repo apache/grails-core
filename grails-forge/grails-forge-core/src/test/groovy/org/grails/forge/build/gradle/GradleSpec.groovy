@@ -25,6 +25,7 @@ import org.grails.forge.application.ApplicationType
 import org.grails.forge.fixture.CommandOutputFixture
 import org.grails.forge.fixture.ContextFixture
 import org.grails.forge.fixture.ProjectFixture
+import org.grails.forge.options.DevelopmentReloading
 import org.grails.forge.options.Options
 import org.grails.forge.options.TestFramework
 import spock.lang.Specification
@@ -45,7 +46,7 @@ class GradleSpec extends Specification implements ProjectFixture, ContextFixture
 
     void "test build properties"() {
         given:
-        final def output = generate(ApplicationType.WEB, new Options(TestFramework.SPOCK))
+        final def output = generate(ApplicationType.WEB, new Options(DevelopmentReloading.DEVTOOLS))
         final String gradleProps = output["gradle.properties"]
 
         expect:
@@ -57,7 +58,7 @@ class GradleSpec extends Specification implements ProjectFixture, ContextFixture
 
     void "test build gradle"() {
         given:
-        final def output = generate(ApplicationType.WEB, new Options(TestFramework.SPOCK))
+        final def output = generate(ApplicationType.WEB, new Options(DevelopmentReloading.DEVTOOLS))
         final String buildGradle = output["build.gradle"]
 
         expect:
@@ -68,7 +69,7 @@ class GradleSpec extends Specification implements ProjectFixture, ContextFixture
 
     void "test settings.gradle"() {
         given:
-        final def output = generate(ApplicationType.WEB, new Options(TestFramework.SPOCK), ["gradle-settings-file"])
+        final def output = generate(ApplicationType.WEB, new Options(DevelopmentReloading.DEVTOOLS), ["gradle-settings-file"])
         final String settingsGradle = output["settings.gradle"]
 
         expect:
@@ -77,7 +78,7 @@ class GradleSpec extends Specification implements ProjectFixture, ContextFixture
 
     void "test buildSrc/build.gradle"() {
         given:
-        def output = generate(ApplicationType.WEB, new Options(TestFramework.SPOCK), ["gradle-build-src"])
+        def output = generate(ApplicationType.WEB, new Options(DevelopmentReloading.DEVTOOLS), ["gradle-build-src"])
         String buildSrcGradle = output["buildSrc/build.gradle"]
 
         expect:
@@ -92,7 +93,7 @@ class GradleSpec extends Specification implements ProjectFixture, ContextFixture
 
     void "no settings.gradle file is created without the 'gradle-settings-file' feature"() {
         given:
-        def output = generate(ApplicationType.WEB, new Options(TestFramework.SPOCK))
+        def output = generate(ApplicationType.WEB, new Options(DevelopmentReloading.DEVTOOLS))
         String settingsGradle = output["settings.gradle"]
 
         expect:
@@ -101,7 +102,7 @@ class GradleSpec extends Specification implements ProjectFixture, ContextFixture
 
     void "no buildSrc/build.gradle file is created without the 'gradle-build-src' feature"() {
         given:
-        def output = generate(ApplicationType.WEB, new Options(TestFramework.SPOCK))
+        def output = generate(ApplicationType.WEB, new Options(DevelopmentReloading.DEVTOOLS))
         String buildSrcGradle = output["buildSrc/settings.gradle"]
 
         expect:

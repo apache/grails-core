@@ -22,7 +22,10 @@ import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.Writer;
+import java.lang.ref.SoftReference;
+import java.lang.reflect.Constructor;
 import java.lang.reflect.Field;
+import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Modifier;
 import java.net.URL;
 import java.net.URLConnection;
@@ -67,14 +70,17 @@ public class GroovyPageMetaInfo implements GrailsApplicationAware {
     private static final Log LOG = LogFactory.getLog(GroovyPageMetaInfo.class);
     private TagLibraryLookup tagLibraryLookup;
     private TagLibraryResolver jspTagLibraryResolver;
+    private ThreadLocal<SoftReference<GroovyPage>> pageInstance = new ThreadLocal<>();
 
     private boolean precompiledMode = false;
     private Class<?> pageClass;
+    private Constructor<?> pageClassConstructor;
     private long lastModified;
     private InputStream groovySource;
     private String contentType;
     private int[] lineNumbers;
     private String[] htmlParts;
+    private Set<Integer> htmlPartsSet;
     @SuppressWarnings("rawtypes")
     private Map jspTags = Collections.emptyMap();
     private GroovyPagesException compilationException;
@@ -115,6 +121,11 @@ public class GroovyPageMetaInfo implements GrailsApplicationAware {
         this();
         precompiledMode = true;
         this.pageClass = pageClass;
+        try {
+            this.pageClassConstructor = pageClass.getConstructor();
+        } catch (NoSuchMethodException e) {
+            throw new RuntimeException(e);
+        }
         contentType = (String) ReflectionUtils.getField(ReflectionUtils.findField(pageClass, GroovyPageParser.CONSTANT_NAME_CONTENT_TYPE), null);
         jspTags = (Map) ReflectionUtils.getField(ReflectionUtils.findField(pageClass, GroovyPageParser.CONSTANT_NAME_JSP_TAGS), null);
         lastModified = (Long) ReflectionUtils.getField(ReflectionUtils.findField(pageClass, GroovyPageParser.CONSTANT_NAME_LAST_MODIFIED), null);
@@ -133,8 +144,7 @@ public class GroovyPageMetaInfo implements GrailsApplicationAware {
 
         try {
             readHtmlData();
-        }
-        catch (IOException e) {
+        } catch (IOException e) {
             throw new RuntimeException("Problem reading html data for page class " + pageClass, e);
         }
     }
@@ -217,8 +227,7 @@ public class GroovyPageMetaInfo implements GrailsApplicationAware {
                     htmlParts[i] = input.readUTF();
                 }
             }
-        }
-        finally {
+        } finally {
             IOUtils.closeQuietly(input);
         }
     }
@@ -239,8 +248,7 @@ public class GroovyPageMetaInfo implements GrailsApplicationAware {
             for (int i = 0; i < arrayLen; i++) {
                 lineNumbers[i] = input.readInt();
             }
-        }
-        finally {
+        } finally {
             IOUtils.closeQuietly(input);
         }
     }
@@ -282,8 +290,28 @@ public class GroovyPageMetaInfo implements GrailsApplicationAware {
         return pageClass;
     }
 
+    public GroovyPage getPageClassInstance() throws InstantiationException, IllegalAccessException, NoSuchMethodException, InvocationTargetException {
+        SoftReference<GroovyPage> pageSoftRef = pageInstance.get();
+        GroovyPage pageCacheEntry = pageSoftRef != null ? pageSoftRef.get() : null;
+        if (pageCacheEntry == null) {
+            pageCacheEntry = (GroovyPage) pageClassConstructor.newInstance();
+            pageCacheEntry.initCommonRun(this);
+            if (!isModelFieldsMode()) {
+                pageInstance.set(new SoftReference<>(pageCacheEntry));
+            }
+        }
+        return pageCacheEntry;
+    }
+
     public void setPageClass(Class<?> pageClass) {
         this.pageClass = pageClass;
+
+        try {
+            this.pageClassConstructor = pageClass.getConstructor();
+        } catch (NoSuchMethodException e) {
+            throw new RuntimeException(e);
+        }
+        pageInstance.set(null);
         initializePluginPath();
     }
 
@@ -323,8 +351,7 @@ public class GroovyPageMetaInfo implements GrailsApplicationAware {
         if (lineNumbers == null) {
             try {
                 readLineNumbers();
-            }
-            catch (IOException e) {
+            } catch (IOException e) {
                 LOG.warn("Problem reading precompiled linenumbers", e);
             }
         }
@@ -359,6 +386,18 @@ public class GroovyPageMetaInfo implements GrailsApplicationAware {
 
     public void setHtmlParts(String[] htmlParts) {
         this.htmlParts = htmlParts;
+        this.htmlPartsSet = new HashSet<>();
+        if (htmlParts != null) {
+            for (String htmlPart : htmlParts) {
+                if (htmlPart != null) {
+                    htmlPartsSet.add(System.identityHashCode(htmlPart));
+                }
+            }
+        }
+    }
+
+    Set<Integer> getHtmlPartsSet() {
+        return this.htmlPartsSet;
     }
 
     public void applyLastModifiedFromResource(Resource resource) {
@@ -394,22 +433,18 @@ public class GroovyPageMetaInfo implements GrailsApplicationAware {
             urlc.setDoInput(false);
             urlc.setDoOutput(false);
             last = urlc.getLastModified();
-        }
-        catch (FileNotFoundException fnfe) {
+        } catch (FileNotFoundException fnfe) {
             last = -1;
-        }
-        catch (IOException e) {
+        } catch (IOException e) {
             last = -1;
-        }
-        finally {
+        } finally {
             if (urlc != null) {
                 try {
                     InputStream is = urlc.getInputStream();
                     if (is != null) {
                         is.close();
                     }
-                }
-                catch (IOException e) {
+                } catch (IOException e) {
                     // ignore
                 }
             }

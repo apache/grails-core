@@ -39,7 +39,7 @@ public class SpringBootVirtualThreads implements SpringThreadingFeature {
 
     @Override
     public String getDescription() {
-        return "Enables Virtual Threads in Spring Boot for JDK 24+.";
+        return "Enables Virtual Threads in Spring Boot for JDK 25+.";
     }
 
     @Override
@@ -51,8 +51,8 @@ public class SpringBootVirtualThreads implements SpringThreadingFeature {
     public void apply(GeneratorContext generatorContext) {
         Map<String, Object> config = generatorContext.getConfiguration();
 
-        // Enable by default only for JDK 24+
-        config.put("spring.threads.virtual.enabled", generatorContext.getJdkVersion().majorVersion() >= 24);
+        // Enable by default only for JDK 25+
+        config.put("spring.threads.virtual.enabled", generatorContext.getJdkVersion().majorVersion() >= 25);
     }
 
     @Override

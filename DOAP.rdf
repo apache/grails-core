@@ -26,7 +26,7 @@
     <license rdf:resource="https://spdx.org/licenses/Apache-2.0" />
     <name>Apache Grails</name>
     <homepage rdf:resource="https://grails.apache.org" />
-    <asfext:pmc rdf:resource="https://groovy.apache.org" />
+    <asfext:pmc rdf:resource="https://grails.apache.org" />
     <shortdesc>Grails - the Groovy Web Application Framework</shortdesc>
     <description>Grails is a powerful Groovy-based web application framework for the JVM built on top of Spring Boot that has many plugins to further extend its functionality.</description>
     <bug-database rdf:resource="https://github.com/apache/grails-core/issues" />

@@ -29,12 +29,14 @@ import org.grails.datastore.mapping.multitenancy.exceptions.TenantNotFoundExcept
 import org.grails.datastore.mapping.multitenancy.resolvers.SystemPropertyTenantResolver
 import org.grails.datastore.mapping.simple.SimpleMapDatastore
 import spock.lang.AutoCleanup
+import spock.util.environment.RestoreSystemProperties
 import spock.lang.Shared
 import spock.lang.Specification
 
 /**
  * Created by graemerocher on 11/01/2017.
  */
+@RestoreSystemProperties
 class TenantServiceSpec extends Specification {
 
     @Shared @AutoCleanup SimpleMapDatastore datastore = new SimpleMapDatastore(
@@ -45,10 +47,7 @@ class TenantServiceSpec extends Specification {
             [ConnectionSource.DEFAULT, 'two'],
             Team
     )
-    def setup() {
-        System.setProperty(SystemPropertyTenantResolver.PROPERTY_NAME, "")
-    }
-    
+
     void "test multi tenancy with in-memory datastore"() {
         when:
         Team.count()

@@ -35,6 +35,22 @@ class WithFormatContentTypeSpec extends Specification implements ControllerUnitT
                                     (MimeType.JSON.extension): MimeType.JSON.name]
     }}
 
+    def setup() {
+        // Access config to ensure grailsApplication is initialized and Holders is populated.
+        // This triggers doWithConfig() which registers the custom MIME types.
+        assert config != null
+        
+        // Clear the static mimeTypes cache to prevent test environment pollution.
+        // HttpServletResponseExtension caches mime types in a static field.
+        // This must be done AFTER accessing config to ensure the new config is applied.
+        HttpServletResponseExtension.@mimeTypes = null
+    }
+
+    def cleanup() {
+        // Clear the static mimeTypes cache after each test
+        HttpServletResponseExtension.@mimeTypes = null
+    }
+
     @Issue('GRAILS-11093')
     void 'Test specifying form contentType'() {
         when: 'content type is specified'

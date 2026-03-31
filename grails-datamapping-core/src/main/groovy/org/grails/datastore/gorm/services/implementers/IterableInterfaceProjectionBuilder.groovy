@@ -20,6 +20,7 @@
 package org.grails.datastore.gorm.services.implementers
 
 import groovy.transform.CompileStatic
+import groovy.transform.Generated
 import org.codehaus.groovy.ast.ClassHelper
 import org.codehaus.groovy.ast.ClassNode
 import org.codehaus.groovy.ast.MethodNode
@@ -65,6 +66,7 @@ trait IterableInterfaceProjectionBuilder extends InterfaceProjectionBuilder {
      * @return True if it is
      */
     @Override
+    @Generated
     boolean isInterfaceProjection(ClassNode domainClass, MethodNode methodNode, ClassNode returnType) {
         if (AstUtils.isSubclassOfOrImplementsInterface(returnType, Iterable.name) || returnType.isArray()) {
             ClassNode genericType = AstGenericsUtils.resolveSingleGenericType(returnType)
@@ -88,6 +90,7 @@ trait IterableInterfaceProjectionBuilder extends InterfaceProjectionBuilder {
         return false
     }
 
+    @Generated
     Statement buildInterfaceProjection(ClassNode targetDomainClass, MethodNode abstractMethodNode, Expression queryMethodCall, Expression args, MethodNode newMethodNode) {
         ClassNode declaringClass = newMethodNode.declaringClass
         ClassNode returnType = (ClassNode) newMethodNode.getNodeMetaData(ServiceImplementer.RETURN_TYPE) ?: abstractMethodNode.returnType

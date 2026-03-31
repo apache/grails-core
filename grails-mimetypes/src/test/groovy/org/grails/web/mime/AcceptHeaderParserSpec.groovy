@@ -24,6 +24,7 @@ import grails.spring.BeanBuilder
 import grails.util.Holders
 import org.grails.config.PropertySourcesConfig
 import org.grails.plugins.web.mime.MimeTypesConfiguration
+import org.grails.web.mime.HttpServletResponseExtension
 import org.springframework.context.ApplicationContext
 import org.springframework.context.support.GenericApplicationContext
 import org.springframework.core.env.MapPropertySource
@@ -41,6 +42,8 @@ class AcceptHeaderParserSpec extends Specification {
     def config
 
     void setup() {
+        // Clear the static mimeTypes cache to prevent test environment pollution
+        HttpServletResponseExtension.@mimeTypes = null
         def configObject = new ConfigSlurper()
                 .parse("""
 grails.mime.types = [ xml: ['text/xml', 'application/xml'],
@@ -65,6 +68,8 @@ grails.mime.types = [ xml: ['text/xml', 'application/xml'],
     void cleanup() {
         config = null
         Holders.setConfig null
+        // Clear the static mimeTypes cache after each test for test isolation
+        HttpServletResponseExtension.@mimeTypes = null
     }
 
     void testXmlContentTypeWithCharset() {

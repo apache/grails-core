@@ -16,17 +16,10 @@
   ~  specific language governing permissions and limitations
   ~  under the License.
   --%>
-<%--
-  Created by IntelliJ IDEA.
-  User: sbglasius
-  Date: 25/11/2024
-  Time: 08.09
---%>
-
 <%@ page contentType="text/html;charset=UTF-8" %>
 <html>
 <head>
-    <title></title>
+    <title>Server name test</title>
 </head>
 
 <body>

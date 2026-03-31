@@ -33,14 +33,20 @@
     </repositories>
     <dependencies>
         <dependency>
+            <groupId>io.micronaut.platform</groupId>
+            <artifactId>micronaut-platform</artifactId>
+            <type>pom</type>
+            <version>4.10.1</version>
+        </dependency>
+        <dependency>
             <groupId>org.grails.plugins</groupId>
             <artifactId>grails-web-console</artifactId>
-            <version>7.0.0-M3</version>
+            <version>7.0.0</version>
         </dependency>
         <dependency>
             <groupId>org.apache.grails</groupId>
             <artifactId>grails-quartz</artifactId>
-            <version>4.0.0-M3</version>
+            <version>4.0.0</version>
         </dependency>
         <dependency>
             <!-- Last released Feb 24, 2021 -->
@@ -56,12 +62,12 @@
         <dependency>
             <groupId>com.gradleup.shadow</groupId>
             <artifactId>shadow-gradle-plugin</artifactId>
-            <version>9.0.2</version>
+            <version>9.2.2</version>
         </dependency>
         <dependency>
-            <groupId>com.github.erdi</groupId>
-            <artifactId>webdriver-binaries-gradle-plugin</artifactId>
-            <version>3.2</version>
+            <groupId>org.ysb33r</groupId>
+            <artifactId>webdriver-binaries</artifactId>
+            <version>4.0.0</version>
         </dependency>
         <dependency>
             <groupId>org.zeroturnaround</groupId>
@@ -69,16 +75,10 @@
             <version>1.2.1</version>
         </dependency>
         <dependency>
-            <!-- use version from https://github.com/apache/grails-core/blob/7.0.x/gradle.properties -->
-            <groupId>io.micronaut</groupId>
-            <artifactId>micronaut-http-client</artifactId>
-            <version>4.9.10</version>
-        </dependency>
-        <dependency>
-            <!-- use version from https://github.com/apache/grails-core/blob/7.0.x/gradle.properties -->
-            <groupId>io.micronaut.serde</groupId>
-            <artifactId>micronaut-serde-jackson</artifactId>
-            <version>2.15.1</version>
+            <!-- Force newer version to fix sun.misc.Unsafe::objectFieldOffset warning on Java 25 -->
+            <groupId>org.jboss.threads</groupId>
+            <artifactId>jboss-threads</artifactId>
+            <version>3.9.2</version>
         </dependency>
     </dependencies>
 </project>

@@ -27,7 +27,8 @@ buildscript {
 
 plugins {
     id 'java-platform'
-    id 'maven-publish'
+    id 'org.apache.grails.buildsrc.publish'
+    id 'org.apache.grails.buildsrc.sbom'
 }
 
 version = projectVersion
@@ -40,6 +41,13 @@ javaPlatform {
 ext {
     isReleaseBuild = System.getenv('GRAILS_PUBLISH_RELEASE') == 'true'
     isPublishedExternal = System.getenv().containsKey('NEXUS_PUBLISH_STAGING_PROFILE_ID')
+    // TODO: It should be possible to pull these build names using includedBuild, but I haven't found a way to do so
+    gradleBuildProjects = [
+            'grails-gradle-plugins':'org.apache.grails',
+            'grails-gradle-model':'org.apache.grails.gradle',
+            'grails-gradle-common':'org.apache.grails.gradle',
+            'grails-gradle-tasks':'org.apache.grails',
+    ]
 }
 
 dependencies {
@@ -66,16 +74,18 @@ dependencies {
                 continue // ignore self & test projects
             }
 
+            boolean publishedProject = subproject.pluginManager.hasPlugin('org.apache.grails.gradle.grails-publish-profile') || subproject.pluginManager.hasPlugin('org.apache.grails.gradle.grails-publish')
+            if (!publishedProject) {
+                continue
+            }
+
             api project(":${subproject.path}")
         }
 
         // since we're duplicating the bom instead of inheriting we have to add the grails-gradle projects
-        // TODO: It should be possible to pull these build names using includedBuild, but I haven't found a way to do so
-        api "org.apache.grails:grails-gradle-plugins:${projectVersion}"
-        api "org.apache.grails.gradle:grails-gradle-model:${projectVersion}"
-        api "org.apache.grails:grails-docs-core:${projectVersion}"
-        api "org.apache.grails.gradle:grails-gradle-common:${projectVersion}"
-        api "org.apache.grails:grails-gradle-tasks:${projectVersion}"
+        for (Map.Entry<String, String> dependency : project.ext.gradleBuildProjects.entrySet()) {
+            api "${dependency.value}:${dependency.key}:${projectVersion}"
+        }
 
         // because we are not yet publishing hibernate6, just force the hibernate5 version for now
         api("org.liquibase:liquibase-core") {
@@ -108,14 +118,34 @@ tasks.register('extractConstraints', ExtractDependenciesTask).configure { Extrac
     rootProject.subprojects.each { p ->
         evaluationDependsOn(p.path)
     }
-    it.projectArtifactIds.set(project.provider{
+    it.projectArtifactIds.set(project.provider {
         Map<String, String> artifactIdMappings = [:]
 
         rootProject.subprojects.each { p ->
             artifactIdMappings[p.name] = p.findProperty('pomArtifactId') ?: p.name
         }
 
+        for (Map.Entry<String, String> dependency : project.ext.gradleBuildProjects.entrySet()) {
+            artifactIdMappings[dependency.key] = dependency.key
+        }
+
         artifactIdMappings
+    })
+    it.forcedGroupPrefixes.set(['org.apache.grails.profiles': 'grails-profile'])
+    it.projectCoordinateProperties.set(project.provider {
+        Map<String, String> projectCoordinates = [:]
+
+        rootProject.subprojects.each { p ->
+            String artifactId = p.findProperty('pomArtifactId') as String ?: p.name
+            String baseVersionName = artifactId.replaceAll('[.]', '-')
+            projectCoordinates["${p.group}:${ artifactId}:${p.version}" as String] = baseVersionName
+        }
+
+        for (Map.Entry<String, String> dependency : project.ext.gradleBuildProjects.entrySet()) {
+            projectCoordinates["${dependency.value}:${dependency.key}:${project.version}" as String] = dependency.key
+        }
+
+        projectCoordinates
     })
 
     it.dependsOn(project.tasks.named('generateMetadataFileForMavenPublication'), project.tasks.named('generatePomFileForMavenPublication'))
@@ -158,6 +188,13 @@ ext {
         def depMgmt = root.dependencyManagement?.getAt(0)
         def deps = depMgmt?.dependencies?.getAt(0)
         if (deps) {
+            PropertyNameCalculator propertyNameCalculator = new PropertyNameCalculator(combinedPlatforms, combinedDependencies, combinedVersions)
+            propertyNameCalculator.addForcedGroupPrefix('org.apache.grails.profiles', 'grails-profile')
+            propertyNameCalculator.addProjects(rootProject.subprojects)
+            for (String gradleArtifactId : project.ext.gradleBuildProjects) {
+                propertyNameCalculator.addProject('org.apache.grails.gradle', gradleArtifactId, project.version as String, gradleArtifactId)
+            }
+
             Map<String, String> pomProperties = [:]
             deps.dependency.each { dep ->
                 String groupId = dep.groupId.text().trim()
@@ -170,8 +207,6 @@ ext {
                 }
 
                 if (inlineVersion) {
-                    PropertyNameCalculator propertyNameCalculator = new PropertyNameCalculator(combinedPlatforms, combinedDependencies, combinedVersions)
-                    propertyNameCalculator.addProjects(rootProject.subprojects)
                     ExtractedDependencyConstraint extractedConstraint = propertyNameCalculator.calculate(groupId, artifactId, inlineVersion, isBom)
                     if (extractedConstraint?.versionPropertyReference) {
                         // use the property reference instead of the hard coded version so that it can be
@@ -180,13 +215,6 @@ ext {
 
                         // Add an entry in the <properties> node with the actual version number
                         pomProperties.put(extractedConstraint.versionPropertyName, inlineVersion)
-                    }
-
-                    if (gradle.includedBuilds*.any { it.name == artifactId && groupId.startsWith('org.apache.grails') }) {
-                        String baseVersionName = artifactId.replaceAll('-', '.')
-                        String versionName = "${baseVersionName}.version" as String
-                        dep.version[0].value = "\${${versionName}}" as String
-                        pomProperties.put(versionName, inlineVersion)
                     }
                 } else if (!inlineVersion) {
                     throw new GradleException("Dependency $groupId:$artifactId does not have a version.")
@@ -198,8 +226,4 @@ ext {
             }
         }
     }
-}
-
-apply {
-    from rootProject.layout.projectDirectory.file('gradle/publish-config.gradle')
 }

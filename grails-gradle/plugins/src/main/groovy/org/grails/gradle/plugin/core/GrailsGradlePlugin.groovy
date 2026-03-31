@@ -18,18 +18,20 @@
  */
 package org.grails.gradle.plugin.core
 
-import javax.inject.Inject
-
+import grails.util.BuildSettings
+import grails.util.Environment
+import grails.util.GrailsNameUtils
+import grails.util.Metadata
 import groovy.transform.CompileDynamic
 import groovy.transform.CompileStatic
-
-import org.gradle.api.attributes.AttributeMatchingStrategy
-
 import io.spring.gradle.dependencymanagement.DependencyManagementPlugin
 import io.spring.gradle.dependencymanagement.dsl.DependencyManagementExtension
+import org.apache.grails.gradle.common.PropertyFileUtils
 import org.apache.tools.ant.filters.EscapeUnicode
 import org.apache.tools.ant.filters.ReplaceTokens
+import org.gradle.api.DefaultTask
 import org.gradle.api.GradleException
+import org.gradle.api.JavaVersion
 import org.gradle.api.NamedDomainObjectProvider
 import org.gradle.api.Plugin
 import org.gradle.api.Project
@@ -38,11 +40,13 @@ import org.gradle.api.artifacts.Configuration
 import org.gradle.api.artifacts.Dependency
 import org.gradle.api.artifacts.DependencyResolveDetails
 import org.gradle.api.artifacts.DependencySet
+import org.gradle.api.attributes.AttributeMatchingStrategy
 import org.gradle.api.file.DuplicatesStrategy
 import org.gradle.api.file.FileCollection
 import org.gradle.api.file.RegularFile
 import org.gradle.api.plugins.ExtraPropertiesExtension
 import org.gradle.api.plugins.GroovyPlugin
+import org.gradle.api.plugins.JavaPluginExtension
 import org.gradle.api.provider.Provider
 import org.gradle.api.tasks.AbstractCopyTask
 import org.gradle.api.tasks.JavaExec
@@ -52,23 +56,11 @@ import org.gradle.api.tasks.TaskContainer
 import org.gradle.api.tasks.TaskProvider
 import org.gradle.api.tasks.compile.GroovyCompile
 import org.gradle.api.tasks.testing.Test
+import org.gradle.jvm.toolchain.JavaToolchainService
 import org.gradle.language.jvm.tasks.ProcessResources
 import org.gradle.process.JavaForkOptions
 import org.gradle.tooling.provider.model.ToolingModelBuilderRegistry
-
-import org.springframework.boot.gradle.dsl.SpringBootExtension
-import org.springframework.boot.gradle.plugin.ResolveMainClassName
-import org.springframework.boot.gradle.plugin.SpringBootPlugin
-import org.springframework.boot.gradle.tasks.bundling.BootArchive
-import org.springframework.boot.gradle.tasks.run.BootRun
-
-import grails.util.BuildSettings
-import grails.util.Environment
-import grails.util.GrailsNameUtils
-import grails.util.Metadata
-import org.apache.grails.gradle.common.PropertyFileUtils
 import org.grails.build.parsing.CommandLineParser
-import org.grails.gradle.plugin.agent.AgentTasksEnhancer
 import org.grails.gradle.plugin.commands.ApplicationContextCommandTask
 import org.grails.gradle.plugin.commands.ApplicationContextScriptTask
 import org.grails.gradle.plugin.exploded.ExplodedCompatibilityRule
@@ -78,6 +70,14 @@ import org.grails.gradle.plugin.model.GrailsClasspathToolingModelBuilder
 import org.grails.gradle.plugin.run.FindMainClassTask
 import org.grails.gradle.plugin.util.SourceSets
 import org.grails.io.support.FactoriesLoaderSupport
+import org.springframework.boot.gradle.dsl.SpringBootExtension
+import org.springframework.boot.gradle.plugin.ResolveMainClassName
+import org.springframework.boot.gradle.plugin.SpringBootPlugin
+import org.springframework.boot.gradle.tasks.bundling.BootArchive
+import org.springframework.boot.gradle.tasks.run.BootRun
+import org.springframework.boot.loader.tools.LoaderImplementation
+
+import javax.inject.Inject
 
 /**
  * The main Grails gradle plugin implementation
@@ -133,10 +133,6 @@ class GrailsGradlePlugin extends GroovyPlugin {
 
         registerFindMainClassTask(project)
 
-        configureGrailsBuildSettings(project)
-
-        configureFileWatch(project)
-
         String grailsVersion = resolveGrailsVersion(project)
 
         enableNative2Ascii(project, grailsVersion)
@@ -146,6 +142,8 @@ class GrailsGradlePlugin extends GroovyPlugin {
         configureConsoleTask(project)
 
         configureForkSettings(project, grailsVersion)
+
+        configureJavaCompatibilityArgs(project)
 
         configureGrailsSourceDirs(project)
 
@@ -177,7 +175,7 @@ class GrailsGradlePlugin extends GroovyPlugin {
         }
     }
 
-    private static Provider<String> getMainClassProvider(Project project) {
+    protected static Provider<String> getMainClassProvider(Project project) {
         Provider<FindMainClassTask> findMainClassTask = project.tasks.named('findMainClass', FindMainClassTask)
         project.provider {
             File cacheFile = findMainClassTask.get().mainClassCacheFile.orNull?.asFile
@@ -190,9 +188,10 @@ class GrailsGradlePlugin extends GroovyPlugin {
     }
 
     private void configureGroovyCompiler(Project project) {
-        Provider<RegularFile> groovyCompilerConfigFile = project.layout.buildDirectory.file('grailsGroovyCompilerConfig.groovy')
-
         project.tasks.withType(GroovyCompile).configureEach { GroovyCompile c ->
+            // Use a task-specific config file to avoid overlapping outputs when multiple
+            // GroovyCompile tasks exist in the same project (e.g. compileGroovy, compileTestGroovy).
+            Provider<RegularFile> groovyCompilerConfigFile = project.layout.buildDirectory.file("grailsGroovyCompilerConfig-${c.name}.groovy")
             c.outputs.file(groovyCompilerConfigFile)
 
             Closure<String> userScriptGenerator = getGroovyCompilerScript(c, project)
@@ -314,7 +313,6 @@ class GrailsGradlePlugin extends GroovyPlugin {
         dme.imports({
             mavenBom("org.apache.grails:grails-bom:${project.properties['grailsVersion']}")
         })
-        dme.setApplyMavenExclusions(false)
     }
 
     protected String getDefaultProfile() {
@@ -378,17 +376,18 @@ class GrailsGradlePlugin extends GroovyPlugin {
                 configuration.resolutionStrategy.eachDependency { DependencyResolveDetails details ->
                     String dependencyName = details.requested.name
                     String group = details.requested.group
-                    if (group == 'io.micronaut' && dependencyName.startsWith('micronaut-platform')) {
+                    if (group == 'io.micronaut.platform' && dependencyName.startsWith('micronaut-platform')) {
                         project.logger.info('Forcing Micronaut Platform version to {}', micronautPlatformVersion)
                         details.useVersion(micronautPlatformVersion)
                     }
                 }
             }
 
-            project.logger.info('Adding Micronaut annotationProcessor dependencies to project {}', project.name)
-            project.getDependencies().add('annotationProcessor', project.dependencies.platform("io.micronaut.platform:micronaut-platform:$micronautPlatformVersion"))
-            project.getDependencies().add('annotationProcessor', 'io.micronaut:micronaut-inject-java')
-            project.getDependencies().add('annotationProcessor', 'jakarta.annotation:jakarta.annotation-api')
+            project.logger.info('Configuring CLASSIC boot loader for Micronaut compatibility in {}', project.name)
+            project.tasks.withType(BootArchive).configureEach {
+                it.loaderImplementation.convention(LoaderImplementation.CLASSIC)
+            }
+
         }
     }
 
@@ -424,17 +423,6 @@ class GrailsGradlePlugin extends GroovyPlugin {
         if (project.extensions.findByName('grails') == null) {
             project.extensions.add('grails', new GrailsExtension(project))
         }
-    }
-
-    @CompileStatic
-    protected void configureFileWatch(Project project) {
-        def environment = Environment.getCurrent()
-        enableFileWatch(environment, project)
-    }
-
-    @CompileStatic
-    protected String configureGrailsBuildSettings(Project project) {
-        System.setProperty(BuildSettings.APP_BASE_DIR, project.projectDir.absolutePath)
     }
 
     @CompileDynamic
@@ -534,9 +522,8 @@ class GrailsGradlePlugin extends GroovyPlugin {
         }
     }
 
-    protected void configureForkSettings(Project project, String grailsVersion) {
-
-        def systemPropertyConfigurer = { String defaultGrailsEnv, JavaForkOptions task ->
+    protected <T extends JavaForkOptions & DefaultTask> void configureForkSettings(Project project, String grailsVersion) {
+        def systemPropertyConfigurer = { String defaultGrailsEnv, T task ->
             def map = System.properties.findAll { entry ->
                 entry.key?.toString()?.startsWith('grails.')
             }
@@ -551,6 +538,10 @@ class GrailsGradlePlugin extends GroovyPlugin {
             task.systemProperty(Metadata.APPLICATION_NAME, project.name)
             task.systemProperty(Metadata.APPLICATION_VERSION, (project.version instanceof Serializable ? project.version : project.version.toString()))
             task.systemProperty(Metadata.APPLICATION_GRAILS_VERSION, grailsVersion)
+            // Use a CommandLineArgumentProvider so that the absolute project directory path
+            // is normalized for build cache relocatability (PathSensitivity.RELATIVE).
+            task.jvmArgumentProviders.add(new GrailsAppBaseDirProvider(project.projectDir))
+            task.systemProperty(BuildSettings.PROJECT_TARGET_DIR, project.layout.buildDirectory.get().asFile.name)
             task.systemProperty(Environment.KEY, defaultGrailsEnv)
             task.systemProperty(Environment.FULL_STACKTRACE, System.getProperty(Environment.FULL_STACKTRACE) ?: '')
             if (task.minHeapSize == null) {
@@ -559,7 +550,6 @@ class GrailsGradlePlugin extends GroovyPlugin {
             if (task.maxHeapSize == null) {
                 task.maxHeapSize = '768m'
             }
-            task.jvmArgs('-XX:+TieredCompilation', '-XX:TieredStopAtLevel=1', '-XX:CICompilerCount=3')
 
             // Copy GRAILS_FORK_OPTS into the fork. Or use GRAILS_OPTS if no fork options provided
             // This allows run-app etc. to run using appropriate settings and allows users to provided
@@ -574,8 +564,109 @@ class GrailsGradlePlugin extends GroovyPlugin {
         TaskContainer tasks = project.tasks
 
         String grailsEnvSystemProperty = System.getProperty(Environment.KEY)
-        tasks.withType(Test).each(systemPropertyConfigurer.curry(grailsEnvSystemProperty ?: Environment.TEST.getName()))
-        tasks.withType(JavaExec).each(systemPropertyConfigurer.curry(grailsEnvSystemProperty ?: Environment.DEVELOPMENT.getName()))
+        tasks.withType(Test).configureEach(systemPropertyConfigurer.curry(grailsEnvSystemProperty ?: Environment.TEST.getName()))
+        tasks.withType(JavaExec).configureEach(systemPropertyConfigurer.curry(grailsEnvSystemProperty ?: Environment.DEVELOPMENT.getName()))
+
+        configureToolchainForForkTasks(project)
+    }
+
+    /**
+     * Configures {@link JavaExec} tasks to inherit the project's Java toolchain.
+     *
+     * <p>Gradle's {@code JavaPlugin} already sets toolchain conventions on
+     * {@code JavaCompile}, {@code Javadoc}, and {@code Test} tasks, but does
+     * <strong>not</strong> set them on {@code JavaExec} tasks. This means forked
+     * JVM processes (dbm-* migration tasks, console, shell, and application
+     * context commands) use the JDK running Gradle instead of the project's
+     * configured toolchain. When the project targets a different JDK version
+     * than the one running Gradle, this causes {@code UnsupportedClassVersionError}
+     * or silent runtime failures.</p>
+     *
+     * <p>This method only acts when the user has explicitly configured a toolchain
+     * via {@code java.toolchain.languageVersion}. When no toolchain is configured,
+     * behavior is unchanged - tasks use the JDK running Gradle as before.</p>
+     *
+     * <p>Uses {@code convention()} so that individual tasks can still override
+     * the launcher via {@code javaLauncher.set(...)} if needed.</p>
+     *
+     * @param project the Gradle project
+     * @since 7.0.8
+     */
+    protected void configureToolchainForForkTasks(Project project) {
+        project.plugins.withId('java') {
+            project.tasks.withType(JavaExec).configureEach { JavaExec task ->
+                def javaExtension = project.extensions.findByType(JavaPluginExtension)
+                if (javaExtension?.toolchain?.languageVersion?.isPresent()) {
+                    def toolchainService = project.extensions.getByType(JavaToolchainService)
+                    def launcher = toolchainService.launcherFor(javaExtension.toolchain)
+                    task.javaLauncher.convention(launcher)
+                }
+            }
+        }
+    }
+
+    /**
+     * Configures JVM arguments required for compatibility with Java 23+.
+     *
+     * <p>Java 24 introduced restrictions on native access ({@code JEP 472}) that cause
+     * warnings from libraries such as hawtjni (used by JLine) and Netty that call
+     * {@code System.loadLibrary} or declare native methods. The
+     * {@code --enable-native-access=ALL-UNNAMED} flag suppresses these warnings and
+     * will become mandatory in a future JDK release when the default changes to deny.</p>
+     *
+     * <p>Java 23 began terminal deprecation of {@code sun.misc.Unsafe} memory-access
+     * methods ({@code JEP 471/498}). Netty 4.1.x uses {@code Unsafe.allocateMemory}
+     * for off-heap buffers. The {@code --sun-misc-unsafe-memory-access=allow} flag
+     * suppresses the resulting warnings until Netty migrates to {@code MemorySegment}
+     * APIs (Netty 4.2+).</p>
+     *
+     * <p>Both flags are only added when the target JVM version (from the configured
+     * toolchain, or the JVM running Gradle if no toolchain is set) is high enough to
+     * recognize them, avoiding {@code Unrecognized option} errors on older JDKs.</p>
+     *
+     * @param project the Gradle project
+     * @see <a href="https://github.com/apache/grails-core/issues/15216">#15216 - Java 25 native access warnings</a>
+     * @see <a href="https://github.com/apache/grails-core/issues/15343">#15343 - sun.misc.Unsafe deprecation warnings</a>
+     * @since 7.0.8
+     */
+    protected void configureJavaCompatibilityArgs(Project project) {
+        project.plugins.withId('java') {
+            project.tasks.withType(Test).configureEach { Test task ->
+                applyCompatArgs(project, task, task.name)
+            }
+            project.tasks.withType(JavaExec).configureEach { JavaExec task ->
+                applyCompatArgs(project, task, task.name)
+            }
+        }
+    }
+
+    private void applyCompatArgs(Project project, JavaForkOptions task, String taskName) {
+        int targetVersion = resolveTargetJavaVersion(project)
+
+        if (targetVersion >= 24) {
+            task.jvmArgs('--enable-native-access=ALL-UNNAMED')
+            project.logger.info("Grails: adding --enable-native-access=ALL-UNNAMED to ${taskName} for Java ${targetVersion} compatibility")
+        }
+
+        if (targetVersion >= 23) {
+            task.jvmArgs('--sun-misc-unsafe-memory-access=allow')
+            project.logger.info("Grails: adding --sun-misc-unsafe-memory-access=allow to ${taskName} for Java ${targetVersion} compatibility")
+        }
+    }
+
+    /**
+     * Resolves the Java version that forked tasks will use. Checks the project's
+     * toolchain configuration first, falling back to the JVM running Gradle.
+     *
+     * @param project the Gradle project
+     * @return the major Java version number (e.g. 17, 21, 24, 25)
+     */
+    private int resolveTargetJavaVersion(Project project) {
+        JavaPluginExtension javaExtension = project.extensions.findByType(JavaPluginExtension)
+        if (javaExtension?.toolchain?.languageVersion?.isPresent()) {
+            return javaExtension.toolchain.languageVersion.get().asInt()
+        }
+        return JavaVersion.current().majorVersion.toInteger()
     }
 
     protected void configureConsoleTask(Project project) {
@@ -632,16 +723,6 @@ class GrailsGradlePlugin extends GroovyPlugin {
     }
 
     @CompileDynamic
-    protected void enableFileWatch(Environment environment, Project project) {
-        if (environment.isReloadEnabled()) {
-            project.configurations {
-                agent
-            }
-            project.afterEvaluate(new AgentTasksEnhancer())
-        }
-    }
-
-    @CompileDynamic
     protected void registerFindMainClassTask(Project project) {
         TaskContainer taskContainer = project.tasks
 
@@ -653,9 +734,6 @@ class GrailsGradlePlugin extends GroovyPlugin {
                 it.dependsOn(project.tasks.named('compileGroovy', GroovyCompile), project.tasks.named('classes'))
                 it.mustRunAfter(project.tasks.named('classes'))
                 it.mainClassCacheFile.set(mainClassFileContainer)
-                it.outputs.upToDateWhen {
-                    mainClassFileContainer.orNull?.asFile?.exists()
-                }
             }
 
             project.afterEvaluate {
@@ -878,6 +956,15 @@ class GrailsGradlePlugin extends GroovyPlugin {
             fileCollection = fileCollection + it.filter({ File file -> !file.name.startsWith('spring-boot-devtools') })
         }
         fileCollection
+    }
+
+    protected FileCollection buildClasspath(Project project, String... configurationNames) {
+        buildClasspath(
+                project,
+                configurationNames.collect {
+                    project.configurations.named(it).getOrNull()
+                }.findAll(/* remove nulls */) as Configuration[]
+        )
     }
 
     @CompileStatic

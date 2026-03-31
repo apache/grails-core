@@ -25,7 +25,7 @@ import io.micronaut.core.annotation.Nullable;
 import io.micronaut.http.client.exceptions.HttpClientResponseException;
 import jakarta.inject.Singleton;
 import org.grails.forge.api.GrailsForgeConfiguration;
-import org.grails.forge.api.TestFramework;
+import org.grails.forge.api.DevelopmentReloading;
 import org.grails.forge.api.create.AbstractCreateController;
 import org.grails.forge.application.ApplicationType;
 import org.grails.forge.application.generator.GeneratorContext;
@@ -92,7 +92,7 @@ public class GitHubCreateService extends AbstractCreateController {
             @NonNull String name,
             @Nullable List<String> features,
             @Nullable BuildTool build,
-            @Nullable TestFramework test,
+            @Nullable DevelopmentReloading reloading,
             @Nullable GormImpl gorm,
             @Nullable ServletImpl servlet,
             @Nullable JdkVersion javaVersion,
@@ -105,7 +105,7 @@ public class GitHubCreateService extends AbstractCreateController {
         GitHubUser gitHubUser = getGitHubUser(authToken);
 
         GeneratorContext generatorContext = createProjectGeneratorContext(
-                type, name, features, build, test, gorm, servlet, javaVersion, userAgent);
+                type, name, features, build, reloading, gorm, servlet, javaVersion, userAgent);
 
         String repoName = generatorContext.getProject().getName();
         String repoDescription = String.format("Grails %s Application", generatorContext.getProject().getNaturalName());

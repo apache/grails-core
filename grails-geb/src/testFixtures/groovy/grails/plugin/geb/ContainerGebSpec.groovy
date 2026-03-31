@@ -20,6 +20,7 @@ package grails.plugin.geb
 
 import groovy.transform.CompileStatic
 
+import geb.Page
 import geb.test.GebTestManager
 import spock.lang.Shared
 import spock.lang.Specification
@@ -32,12 +33,14 @@ import grails.plugin.geb.support.delegate.DriverDelegate
 import grails.plugin.geb.support.delegate.PageDelegate
 
 /**
- * A {@link geb.spock.GebSpec GebSpec} that leverages Testcontainers to run the browser inside a container.
+ * A {@link geb.spock.GebSpec GebSpec} that leverages Testcontainers
+ * to run the browser inside a container.
  *
  * <p>Prerequisites:
  * <ul>
  *   <li>
- *       The test class must be annotated with {@link grails.testing.mixin.integration.Integration @Integration}.
+ *       The test class must be annotated with
+ *       {@link grails.testing.mixin.integration.Integration @Integration}.
  *   </li>
  *   <li>
  *       A <a href="https://java.testcontainers.org/supported_docker_environment/">compatible container runtime</a>
@@ -60,5 +63,11 @@ abstract class ContainerGebSpec extends Specification implements ContainerSuppor
 
     static void setTestManager(GebTestManager testManager) {
         this.testManager = testManager
+    }
+
+    @Override
+    Page getPage() {
+        // Be explicit which trait to use (PageDelegate vs BrowserDelegate)
+        PageDelegate.super.page
     }
 }

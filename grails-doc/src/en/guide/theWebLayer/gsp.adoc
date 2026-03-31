@@ -28,7 +28,7 @@ GSP was previously part of Grails core, but since version 3.3 it is an independe
 ----
 dependencies {
     //...
-    implementation "org.apache.grails:grails-gsp:{version}"
+    implementation "org.apache.grails:grails-gsp"
 }
 ----
 
@@ -37,7 +37,7 @@ In addition, for production compilation you should apply the `grails-gsp` Gradle
 [source,groovy]
 .build.gradle
 ----
-apply plugin: "org.apache.grails:grails-gsp"
+apply plugin: "org.apache.grails.gradle.grails-gsp"
 ----
 
 GSPs live in the `grails-app/views` directory and are typically rendered automatically (by convention) or with the link:{controllersRef}render.html[render] method such as:

@@ -37,7 +37,7 @@ class JsonViewGrailsPlugin extends Plugin {
     def profiles = ['web']
 
     // URL to the plugin's documentation
-    def documentation = 'https://docs.grails.org/snapshot/guide/theWebLayer.html#gson'
+    def documentation = 'https://grails.apache.org/docs/snapshot/guide/theWebLayer.html#gson'
 
     // Extra (optional) plugin metadata
 

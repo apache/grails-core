@@ -16,6 +16,7 @@
  *  specific language governing permissions and limitations
  *  under the License.
  */
+// tag::basic_declaration[]
 package grails.testing.spock
 
 import spock.lang.Shared
@@ -79,3 +80,4 @@ class OnceBeforeSpec extends Specification {
         anotherOnceBeforeCounter == 1
     }
 }
+// end::basic_declaration[]

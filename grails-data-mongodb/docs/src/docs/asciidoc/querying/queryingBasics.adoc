@@ -18,7 +18,7 @@ under the License.
 ////
 
 === Basic Querying
-GORM for MongoDB supports all of the https://docs.grails.org/latest/grails-data/hibernate5/manual/index.html#querying[regular methods] for executing GORM queries apart from HQL, which is a Hibernate specific query language more appropriate for SQL databases.
+GORM for MongoDB supports all of the https://grails.apache.org/docs/latest/grails-data/hibernate5/manual/index.html#querying[regular methods] for executing GORM queries apart from HQL, which is a Hibernate specific query language more appropriate for SQL databases.
 
 If you wish to execute a native MongoDB query you can use the `find` method that takes a https://api.mongodb.com/java/current/org/bson/conversions/Bson.html[Bson] argument. For example:
 

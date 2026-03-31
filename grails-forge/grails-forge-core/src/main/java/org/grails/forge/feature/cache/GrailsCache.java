@@ -70,7 +70,7 @@ public class GrailsCache implements Feature {
 
     @Override
     public String getDocumentation() {
-        return "https://docs.grails.org/" + VersionInfo.getDocumentationVersion() + "/guide/cache.html";
+        return "https://grails.apache.org/docs/" + VersionInfo.getDocumentationVersion() + "/guide/cache.html";
     }
 
 }

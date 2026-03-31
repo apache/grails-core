@@ -15,7 +15,7 @@
 
 applicationType: web
 defaultPackage: org.demo.spock
-testFramework: spock
+reloading: devtools
 sourceLanguage: groovy
 buildTool: gradle
 gormImpl: gorm-hibernate5

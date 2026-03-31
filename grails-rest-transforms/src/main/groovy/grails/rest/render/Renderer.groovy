@@ -39,5 +39,5 @@ interface Renderer<T> extends MimeTypeProvider {
      * @param object The object to render
      * @param context The {@link RenderContext}
      */
-    void render(T object, RenderContext context)
+    void render(Object object, RenderContext context)
 }

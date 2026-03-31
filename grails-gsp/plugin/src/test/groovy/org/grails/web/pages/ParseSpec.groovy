@@ -69,7 +69,7 @@ public static final String TAGLIB_CODEC = 'none'
                 'public Object run() {\n' +
                 'Writer out = getOut()\n' +
                 'Writer expressionOut = getExpressionOut()\n' +
-                'printHtmlPart(0)\n' +
+                'h(0)\n' +
                 '}\n' + GSP_FOOTER
 
         when:
@@ -122,7 +122,7 @@ public static final String TAGLIB_CODEC = 'none'
                 'public Object run() {\n' +
                 'Writer out = getOut()\n' +
                 'Writer expressionOut = getExpressionOut()\n' +
-                'printHtmlPart(0)\n' +
+                'h(0)\n' +
                 '}\n' + GSP_FOOTER
 
         // Sanity check the string loaded OK as unicode - it won't look right if you output it, default stdout is not UTF-8
@@ -157,7 +157,7 @@ public static final String TAGLIB_CODEC = 'none'
                 'public Object run() {\n' +
                 'Writer out = getOut()\n' +
                 'Writer expressionOut = getExpressionOut()\n' +
-                'printHtmlPart(0)\n' +
+                'h(0)\n' +
                 '}\n' + GSP_FOOTER
 
         when:
@@ -189,9 +189,9 @@ public static final String TAGLIB_CODEC = 'none'
                 'public Object run() {\n' +
                 'Writer out = getOut()\n' +
                 'Writer expressionOut = getExpressionOut()\n' +
-                'printHtmlPart(0)\n' +
+                'h(0)\n' +
                 GroovyPage.EXPRESSION_OUT_STATEMENT + ".print(evaluate('uri', 3, it) { return uri })\n" +
-                'printHtmlPart(1)\n' +
+                'h(1)\n' +
                 '}\n' + GSP_FOOTER;
 
         when:
@@ -239,7 +239,7 @@ public static final String TAGLIB_CODEC = 'none'
                 'public Object run() {\n' +
                 'Writer out = getOut()\n' +
                 'Writer expressionOut = getExpressionOut()\n' +
-                'printHtmlPart(0)\n' +
+                'h(0)\n' +
                 '}\n' + GSP_FOOTER
 
         when:
@@ -259,12 +259,12 @@ public static final String TAGLIB_CODEC = 'none'
                 'public Object run() {\n' +
                 'Writer out = getOut()\n' +
                 'Writer expressionOut = getExpressionOut()\n' +
-                'printHtmlPart(0)\n' +
+                'h(0)\n' +
                 'createTagBody(1, {->\n' +
                 "invokeTag('captureMeta','grailsLayout',1,['gsp_sm_xmlClosingForEmptyTag':evaluate('\"/\"', 1, it) { return \"/\" },'name':evaluate('\"SomeName\"', 1, it) { return \"SomeName\" },'content':evaluate('\"\${grailsApplication.config.myFirstConfig}/something/\${someVar}\"', 1, it) { return \"\${grailsApplication.config.myFirstConfig}/something/\${someVar}\" }],-1)\n" +
                 '})\n' +
                 "invokeTag('captureHead','grailsLayout',1,[:],1)\n" +
-                'printHtmlPart(1)\n' +
+                'h(1)\n' +
                 '}\n' + GSP_FOOTER
 
         when:
@@ -272,6 +272,37 @@ public static final String TAGLIB_CODEC = 'none'
 
         then:
         trimAndRemoveCR(expected) == trimAndRemoveCR(result.generatedGsp)
+    }
+
+    void 'parse with JSP declaration block throws error'() {
+        when:
+        parseCode('declTest1', '<%! int counter = 0; %>')
+
+        then:
+        def e = thrown(GrailsTagException)
+        e.message.contains('declaration blocks')
+        e.message.contains('<%! ... %>')
+        e.message.contains('not supported')
+    }
+
+    void 'parse with JSP declaration block containing method throws error'() {
+        when:
+        parseCode('declTest2', '<html><%! String hello() { return "hi"; } %></html>')
+
+        then:
+        def e = thrown(GrailsTagException)
+        e.message.contains('<%! ... %>')
+    }
+
+    void 'parse with Groovy declaration block throws error'() {
+        when:
+        parseCode('declTest3', '!{ int counter = 0; }!')
+
+        then:
+        def e = thrown(GrailsTagException)
+        e.message.contains('declaration blocks')
+        e.message.contains('!{ ... }!')
+        e.message.contains('not supported')
     }
 
     static ParsedResult parseCode(String uri, String gsp) throws IOException {

@@ -35,5 +35,6 @@ build:
         - plugin
     excludes:
         - war
+        - org.apache.grails.gradle.grails-web
 
 

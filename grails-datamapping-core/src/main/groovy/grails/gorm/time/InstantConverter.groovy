@@ -22,6 +22,7 @@ package grails.gorm.time
 import java.time.Instant
 
 import groovy.transform.CompileStatic
+import groovy.transform.Generated
 
 /**
  * A trait to convert a {@link java.time.Instant} to and from a long
@@ -31,10 +32,12 @@ import groovy.transform.CompileStatic
 @CompileStatic
 trait InstantConverter {
 
+    @Generated
     Long convert(Instant value) {
         value.toEpochMilli()
     }
 
+    @Generated
     Instant convert(Long value) {
         Instant.ofEpochMilli(value)
     }

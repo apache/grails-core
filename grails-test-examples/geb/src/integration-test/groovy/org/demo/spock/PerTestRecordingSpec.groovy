@@ -19,6 +19,8 @@
 
 package org.demo.spock
 
+import java.nio.file.Files
+
 import spock.lang.Stepwise
 
 import grails.plugin.geb.ContainerGebSpec
@@ -33,7 +35,7 @@ class PerTestRecordingSpec extends ContainerGebSpec {
 
     void '(setup) running a test to create a recording'() {
         when: 'visiting the home page'
-        to HomePage
+        to(HomePage)
 
         then: 'the page loads correctly'
         title == 'Welcome to Grails'
@@ -41,10 +43,10 @@ class PerTestRecordingSpec extends ContainerGebSpec {
 
     void '(setup) running a second test to create another recording'() {
         when: 'visiting another page than the previous test'
-        to UploadPage
-        
-        and: 'pausing to ensure the recorded file size is different'
-        Thread.sleep(1000)
+        to(UploadPage)
+
+        and: 'pausing so we can see the page change in the video'
+        Thread.sleep(500)
 
         then: 'the page loads correctly'
         title == 'Upload Test'
@@ -78,26 +80,46 @@ class PerTestRecordingSpec extends ContainerGebSpec {
         recordingDir != null
 
         when: 'getting all video recording files (mp4 or flv) from the recording directory'
-        def recordingFiles = recordingDir?.listFiles({ File file ->
-            isVideoFile(file) && file.name.contains(this.class.simpleName)
-        } as FileFilter)
+        def minFileCount = 2 // At least 2 files for the first two test methods
+        def recordingFiles = waitForRecordingFiles(recordingDir, this.class.simpleName, minFileCount)
+        def names = recordingFiles*.name.join('\n')
 
         then: 'recording files should exist for each test method'
-        recordingFiles != null
-        recordingFiles.length >= 2 // At least 2 files for the first two test methods
+        recordingFiles.length >= minFileCount
+        names.contains('setup_running_a_test_to_create_a_recording')
+        names.contains('setup_running_a_second_test_to_create_another')
 
-        and: 'the recording files should have different content (different sizes)'
+        and: 'the recording files should have different content'
         // Sort by last modified time to get the most recent files
         def sortedFiles = recordingFiles.sort { it.lastModified() }
         def secondLastFile = sortedFiles[sortedFiles.length - 2]
         def lastFile = sortedFiles[sortedFiles.length - 1]
-
-        // Files should have different sizes (allowing for small variations due to timing)
-        long sizeDifference = Math.abs(lastFile.length() - secondLastFile.length())
-        sizeDifference > 1000 // Expect at least 1KB difference
+        Files.mismatch(lastFile.toPath(), secondLastFile.toPath()) != -1
     }
 
     private static boolean isVideoFile(File file) {
-        return file.isFile() && (file.name.endsWith('.mp4') || file.name.endsWith('.flv'))
+        file.isFile() && (file.name.endsWith('.mp4') || file.name.endsWith('.flv'))
+    }
+
+    private static File[] waitForRecordingFiles(
+            File recordingDir,
+            String testClassName,
+            int minFileCount = 2,
+            long timeoutMillis = 10_000L,
+            long pollIntervalMillis = 500L
+    ) {
+        long deadline = System.currentTimeMillis() + timeoutMillis
+        File[] recordingFiles = []
+        while (System.currentTimeMillis() < deadline) {
+            recordingFiles = recordingDir.listFiles({ file ->
+                isVideoFile(file) && file.name.contains(testClassName)
+            } as FileFilter) ?: [] as File[]
+
+            if (recordingFiles.length >= minFileCount) {
+                break
+            }
+            sleep(pollIntervalMillis)
+        }
+        return recordingFiles
     }
 }

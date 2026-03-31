@@ -26,7 +26,6 @@ import org.grails.forge.application.generator.GeneratorContext;
 import org.grails.forge.build.dependencies.Dependency;
 import org.grails.forge.build.gradle.GradlePlugin;
 import org.grails.forge.feature.*;
-import org.grails.forge.feature.test.template.groovyJunit;
 import org.grails.forge.feature.test.template.webdriverBinariesPlugin;
 import org.grails.forge.options.*;
 import org.grails.forge.template.RockerTemplate;
@@ -52,13 +51,13 @@ public class GebWithWebDriverBinaries implements Feature {
 
     @Override
     public String getTitle() {
-        return "Geb Functional Testing for Grails with WebDriver binaries Gradle plugin - no longer maintained";
+        return "Geb Functional Testing using WebDriver binaries Gradle plugin";
     }
 
     @NonNull
     @Override
     public String getDescription() {
-        return "This plugins configure Geb for Grails framework to write automation tests with WebDriver binaries Gradle plugin.  No longer maintained and limited to Gradle 8.6 and JDK 21.  geb-with-testcontainers is the replacement and default starting with Grails 7.";
+        return "This plugin configures Geb to use the WebDriver binaries Gradle plugin for downloading and caching the WebDriver binary for your platform.";
     }
 
     @Override
@@ -96,8 +95,8 @@ public class GebWithWebDriverBinaries implements Feature {
     @Override
     public void apply(GeneratorContext generatorContext) {
         generatorContext.addBuildPlugin(GradlePlugin.builder()
-                .id("com.github.erdi.webdriver-binaries")
-                .lookupArtifactId("webdriver-binaries-gradle-plugin")
+                .id("org.ysb33r.webdriver-binaries")
+                .lookupArtifactId("webdriver-binaries")
                 .extension(
                         new RockerWritable(
                                 webdriverBinariesPlugin.template(
@@ -106,7 +105,6 @@ public class GebWithWebDriverBinaries implements Feature {
                                 )
                         )
                 )
-                .version("3.2")
                 .build());
 
         Stream.of("api", "support", "remote-driver")
@@ -132,13 +130,12 @@ public class GebWithWebDriverBinaries implements Feature {
 
         Project project = generatorContext.getProject();
         TestRockerModelProvider provider = new DefaultTestRockerModelProvider(
-                org.grails.forge.feature.test.template.spock.template(project),
-                groovyJunit.template(project)
+                org.grails.forge.feature.test.template.spock.template(project)
         );
         generatorContext.addTemplate("applicationTest",
                 new RockerTemplate(
                         generatorContext.getIntegrationTestSourcePath("/{packagePath}/{className}"),
-                        provider.findModel(Language.DEFAULT_OPTION, generatorContext.getTestFramework())
+                        provider.findModel(TestFramework.SPOCK)
                 )
         );
         generatorContext.addTemplate("gebConfig",

@@ -23,6 +23,7 @@ import org.grails.forge.ApplicationContextSpec
 import org.grails.forge.application.ApplicationType
 import org.grails.forge.application.OperatingSystem
 import org.grails.forge.fixture.CommandOutputFixture
+import org.grails.forge.options.DevelopmentReloading
 import org.grails.forge.options.Options
 import org.grails.forge.options.TestFramework
 import spock.lang.Unroll
@@ -31,7 +32,7 @@ class GebWithWebDriverBinariesSpec extends ApplicationContextSpec implements Com
 
     void 'test dependencies'() {
         given:
-        def output = generate(ApplicationType.WEB, new Options(TestFramework.SPOCK), ['geb-with-webdriver-binaries'])
+        def output = generate(ApplicationType.WEB, new Options(DevelopmentReloading.DEVTOOLS), ['geb-with-webdriver-binaries'])
         def buildGradle = output['build.gradle']
 
         expect:
@@ -44,7 +45,7 @@ class GebWithWebDriverBinariesSpec extends ApplicationContextSpec implements Com
 
     void 'test GebConfig.groovy file is present'() {
         given:
-        def output = generate(ApplicationType.WEB, new Options(TestFramework.SPOCK), ['geb-with-webdriver-binaries'])
+        def output = generate(ApplicationType.WEB, new Options(DevelopmentReloading.DEVTOOLS), ['geb-with-webdriver-binaries'])
 
         expect:
         output.containsKey('src/integration-test/resources/GebConfig.groovy')
@@ -53,7 +54,7 @@ class GebWithWebDriverBinariesSpec extends ApplicationContextSpec implements Com
     @Unroll
     void 'test feature geb is not supported for #applicationType application'(ApplicationType applicationType) {
         when:
-        generate(applicationType, new Options(TestFramework.SPOCK), ['geb-with-webdriver-binaries'])
+        generate(applicationType, new Options(DevelopmentReloading.DEVTOOLS), ['geb-with-webdriver-binaries'])
 
         then:
         def e = thrown(IllegalArgumentException)
@@ -65,11 +66,11 @@ class GebWithWebDriverBinariesSpec extends ApplicationContextSpec implements Com
 
     void 'test webdriver binaries gradle configurations'() {
         given:
-        def output = generate(ApplicationType.WEB, new Options(TestFramework.SPOCK), ['geb-with-webdriver-binaries'])
+        def output = generate(ApplicationType.WEB, new Options(DevelopmentReloading.DEVTOOLS), ['geb-with-webdriver-binaries'])
         def buildGradle = output['build.gradle']
 
         expect:
-        buildGradle.contains('id "com.github.erdi.webdriver-binaries"')
+        buildGradle.contains('id "org.ysb33r.webdriver-binaries"')
         buildGradle.contains('webdriverBinaries')
         buildGradle.contains("chromedriver '122.0.6260.0'")
         buildGradle.contains("geckodriver '0.33.0'")
@@ -78,11 +79,11 @@ class GebWithWebDriverBinariesSpec extends ApplicationContextSpec implements Com
 
     void 'test webdriver binaries gradle configurations for windows OS'() {
         given:
-        def output = generate(ApplicationType.WEB, new Options(TestFramework.SPOCK, OperatingSystem.WINDOWS), ['geb-with-webdriver-binaries'])
+        def output = generate(ApplicationType.WEB, new Options(DevelopmentReloading.DEVTOOLS, OperatingSystem.WINDOWS), ['geb-with-webdriver-binaries'])
         def buildGradle = output['build.gradle']
 
         expect:
-        buildGradle.contains('id "com.github.erdi.webdriver-binaries"')
+        buildGradle.contains('id "org.ysb33r.webdriver-binaries"')
         buildGradle.contains('webdriverBinaries')
         buildGradle.contains("chromedriver '122.0.6260.0'")
         buildGradle.contains("geckodriver '0.33.0'")

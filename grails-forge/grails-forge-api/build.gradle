@@ -20,6 +20,8 @@
 plugins {
     id 'groovy'
     id 'java-library'
+    id 'org.apache.grails.buildsrc.properties'
+    id 'org.apache.grails.buildsrc.compile'
 }
 
 version = projectVersion
@@ -74,7 +76,6 @@ dependencies {
 }
 
 apply {
-    from rootProject.layout.projectDirectory.file('gradle/java-config.gradle')
     from rootProject.layout.projectDirectory.file('gradle/code-style-config.gradle')
     from rootProject.layout.projectDirectory.file('gradle/micronaut-openapi-config.gradle')
     from rootProject.layout.projectDirectory.file('gradle/test-config.gradle')

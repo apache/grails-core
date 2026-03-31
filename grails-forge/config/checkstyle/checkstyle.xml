@@ -98,7 +98,7 @@
 
     <!-- See http://checkstyle.sourceforge.net/config_filters.html#SuppressionFilter -->
     <module name="SuppressionFilter">
-        <property name="file" value="${config_loc}/suppressions.xml"/>
+        <property name="file" value="${config_loc}/checkstyle-suppressions.xml"/>
         <property name="optional" value="false"/>
     </module>
 
