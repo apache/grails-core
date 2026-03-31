@@ -55,11 +55,18 @@ class IntegrationTestGradlePlugin implements Plugin<Project> {
     @Deprecated(forRemoval = true, since = '7.1')
     static final String GRAILS_INTEGRATION_TEST_INDICATOR = 'is.grails.integration.test'
 
+    boolean ideaIntegration = true
+
+    String sourceFolderName = 'src/integration-test'
+
     @Override
     void apply(Project project) {
         project.pluginManager.apply(TestPhasesGradlePlugin)
 
         NamedDomainObjectContainer<TestPhase> testPhases = (NamedDomainObjectContainer<TestPhase>) project.extensions.getByName(TestPhasesGradlePlugin.EXTENSION_NAME)
-        testPhases.create(INTEGRATION_TEST_SOURCE_SET_NAME)
+        testPhases.create(INTEGRATION_TEST_SOURCE_SET_NAME) { TestPhase phase ->
+            phase.sourceFolderName.set(sourceFolderName)
+            phase.ideaIntegration.set(ideaIntegration)
+        }
     }
 }
