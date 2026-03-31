@@ -18,7 +18,10 @@
  */
 package liquibase.ext.hibernate.database.connection;
 
-import java.sql.*;
+import java.sql.Connection;
+import java.sql.DatabaseMetaData;
+import java.sql.ResultSet;
+import java.sql.RowIdLifetime;
 
 import org.hibernate.Version;
 

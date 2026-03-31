@@ -18,7 +18,6 @@
  */
 package liquibase.ext.hibernate.snapshot;
 
-import java.util.List;
 import java.util.Locale;
 import java.util.Optional;
 import java.util.regex.Matcher;
@@ -191,8 +190,8 @@ public class ColumnSnapshotGenerator extends HibernateSnapshotGenerator {
 
                                 if (generator instanceof org.hibernate.id.IdentityGenerator) {
                                     isAutoIncrement = true;
-                                } else if (generator
-                                        instanceof org.hibernate.id.enhanced.SequenceStyleGenerator seqGen) {
+                                } else if (generator instanceof
+                                        org.hibernate.id.enhanced.SequenceStyleGenerator seqGen) {
                                     if (PostgreSQLDialect.class.isAssignableFrom(dialect.getClass())) {
                                         String sequenceName =
                                                 resolveSequenceName(seqGen, hibernateTable, hibernateColumn);
@@ -273,8 +272,8 @@ public class ColumnSnapshotGenerator extends HibernateSnapshotGenerator {
 
         Scope.getCurrentScope()
                 .getLog(getClass())
-                .info("Converted column data type - hibernate type: " + hibernateType + ", SQL type: " + sqlTypeCode
-                        + ", type name: " + dataType.getTypeName());
+                .info("Converted column data type - hibernate type: " + hibernateType + ", SQL type: " + sqlTypeCode +
+                        ", type name: " + dataType.getTypeName());
 
         dataType.setDataTypeId(sqlTypeCode);
         return dataType;

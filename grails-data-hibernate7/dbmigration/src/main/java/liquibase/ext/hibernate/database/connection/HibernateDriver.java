@@ -18,7 +18,10 @@
  */
 package liquibase.ext.hibernate.database.connection;
 
-import java.sql.*;
+import java.sql.Connection;
+import java.sql.Driver;
+import java.sql.DriverPropertyInfo;
+import java.sql.SQLFeatureNotSupportedException;
 import java.util.Properties;
 import java.util.logging.Logger;
 
@@ -34,17 +37,17 @@ public class HibernateDriver implements Driver, LiquibaseExtDriver {
     private ResourceAccessor resourceAccessor;
 
     @Override
-    public Connection connect(String url, Properties info)  {
+    public Connection connect(String url, Properties info) {
         return new HibernateConnection(url, resourceAccessor);
     }
 
     @Override
-    public boolean acceptsURL(String url)  {
+    public boolean acceptsURL(String url) {
         return url.startsWith("hibernate:");
     }
 
     @Override
-    public DriverPropertyInfo[] getPropertyInfo(String url, Properties info)  {
+    public DriverPropertyInfo[] getPropertyInfo(String url, Properties info) {
         return new DriverPropertyInfo[0];
     }
 

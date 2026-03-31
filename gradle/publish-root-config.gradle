@@ -121,7 +121,7 @@ def publishedProjects = [
         // hibernate7
         'grails-data-hibernate7',
         'grails-data-hibernate7-core',
-        //TODO: 'grails-data-hibernate7-dbmigration',
+        'grails-data-hibernate7-dbmigration',
         'grails-data-hibernate7-spring-boot',
 
         // mongodb

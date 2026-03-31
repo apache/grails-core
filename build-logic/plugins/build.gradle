@@ -40,6 +40,13 @@ dependencies {
     implementation "org.cyclonedx.bom:org.cyclonedx.bom.gradle.plugin:${gradleProperties.gradleCycloneDxPluginVersion}"
     implementation "com.diffplug.spotless:spotless-plugin-gradle:${gradleProperties.spotlessVersion}"
     implementation "com.github.spotbugs.snom:spotbugs-gradle-plugin:${gradleProperties.spotbugsPluginVersion}"
+
+    testImplementation "org.spockframework:spock-core:${gradleBomDependencyVersions['gradle-spock.version']}"
+    testImplementation gradleTestKit()
+}
+
+tasks.named('test') {
+    useJUnitPlatform()
 }
 
 gradlePlugin {

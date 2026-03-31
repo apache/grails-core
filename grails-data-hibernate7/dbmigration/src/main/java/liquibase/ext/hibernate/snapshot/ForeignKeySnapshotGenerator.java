@@ -19,14 +19,12 @@
 package liquibase.ext.hibernate.snapshot;
 
 import liquibase.exception.DatabaseException;
-import liquibase.ext.hibernate.database.HibernateDatabase;
 import liquibase.snapshot.DatabaseSnapshot;
 import liquibase.snapshot.InvalidExampleException;
 import liquibase.snapshot.SnapshotGenerator;
 import liquibase.structure.DatabaseObject;
 import liquibase.structure.core.ForeignKey;
 import liquibase.structure.core.Table;
-import org.hibernate.boot.spi.MetadataImplementor;
 import org.hibernate.mapping.Column;
 
 public class ForeignKeySnapshotGenerator extends HibernateSnapshotGenerator {
@@ -71,8 +69,8 @@ public class ForeignKeySnapshotGenerator extends HibernateSnapshotGenerator {
                     for (Column column : hibernateForeignKey.getReferencedColumns()) {
                         fk.addPrimaryKeyColumn(new liquibase.structure.core.Column(column.getName()));
                     }
-                    if (fk.getPrimaryKeyColumns() == null
-                            || fk.getPrimaryKeyColumns().isEmpty()) {
+                    if (fk.getPrimaryKeyColumns() == null ||
+                            fk.getPrimaryKeyColumns().isEmpty()) {
                         if (hibernateReferencedTable.getPrimaryKey() != null) {
                             for (Column column :
                                     hibernateReferencedTable.getPrimaryKey().getColumns()) {

@@ -39,6 +39,7 @@ import javax.sql.DataSource;
 
 import groovy.lang.Closure;
 
+import jakarta.annotation.Nullable;
 import jakarta.annotation.PreDestroy;
 
 import org.hibernate.FlushMode;
@@ -65,7 +66,6 @@ import org.springframework.context.support.StaticMessageSource;
 import org.springframework.core.env.PropertyResolver;
 import org.springframework.jdbc.datasource.ConnectionHolder;
 import org.springframework.jdbc.datasource.TransactionAwareDataSourceProxy;
-import org.springframework.lang.Nullable;
 import org.springframework.transaction.PlatformTransactionManager;
 import org.springframework.transaction.support.TransactionSynchronizationManager;
 
@@ -552,7 +552,7 @@ public class HibernateDatastore extends AbstractDatastore
         final HibernateConnectionSource defaultConnectionSource =
                 (HibernateConnectionSource) getConnectionSources().getDefaultConnectionSource();
         if (multiTenantMode == MultiTenancySettings.MultiTenancyMode.SCHEMA) {
-            return new HibernateGormEnhancer(this, (PlatformTransactionManager) transactionManager, defaultConnectionSource.getSettings()) {
+            return new HibernateGormEnhancer(this, transactionManager, defaultConnectionSource.getSettings()) {
                 @Override
                 public List<String> allQualifiers(Datastore datastore, PersistentEntity entity) {
                     List<String> allQualifiers = super.allQualifiers(datastore, entity);
@@ -580,7 +580,7 @@ public class HibernateDatastore extends AbstractDatastore
                 }
             };
         } else {
-            return new HibernateGormEnhancer(this, (PlatformTransactionManager) transactionManager, defaultConnectionSource.getSettings());
+            return new HibernateGormEnhancer(this, transactionManager, defaultConnectionSource.getSettings());
         }
     }
 
@@ -932,24 +932,26 @@ public class HibernateDatastore extends AbstractDatastore
     @Override
     public <T> T withSession(final Closure<T> callable) {
         Closure<T> multiTenantCallable = prepareMultiTenantClosure(callable);
-        return (T) getHibernateTemplate().execute(multiTenantCallable);
+        return getHibernateTemplate().execute(multiTenantCallable);
     }
 
     public <T> T withSession(String connectionName, final Closure<T> callable) {
         HibernateDatastore datastore = getDatastoreForConnection(connectionName);
-        Closure multiTenantCallable = datastore.prepareMultiTenantClosure(callable);
-        return (T) datastore.getHibernateTemplate().execute(multiTenantCallable);
+        Closure<?> multiTenantCallable = datastore.prepareMultiTenantClosure(callable);
+        IHibernateTemplate hibernateTemplate = datastore.getHibernateTemplate();
+        Object execute = hibernateTemplate.execute(multiTenantCallable);
+        return (T) execute;
     }
 
     public <T> T withNewSession(String connectionName, final Closure<T> callable) {
         HibernateDatastore datastore = getDatastoreForConnection(connectionName);
-        Closure multiTenantCallable = datastore.prepareMultiTenantClosure(callable);
+        Closure<?> multiTenantCallable = datastore.prepareMultiTenantClosure(callable);
         return (T) datastore.getHibernateTemplate().executeWithNewSession(multiTenantCallable);
     }
 
     public <T> T withNewSession(final Closure<T> callable) {
         Closure<T> multiTenantCallable = prepareMultiTenantClosure(callable);
-        return (T) getHibernateTemplate().executeWithNewSession(multiTenantCallable);
+        return getHibernateTemplate().executeWithNewSession(multiTenantCallable);
     }
 
     @Override
@@ -957,7 +959,7 @@ public class HibernateDatastore extends AbstractDatastore
         if (getMultiTenancyMode() == MultiTenancySettings.MultiTenancyMode.DATABASE) {
             HibernateDatastore datastore = getDatastoreForConnection(tenantId.toString());
             SessionFactory sf = datastore.getSessionFactory();
-            return (T1) datastore.getHibernateTemplate().executeWithExistingOrCreateNewSession(sf, callable);
+            return datastore.getHibernateTemplate().executeWithExistingOrCreateNewSession(sf, callable);
         } else {
             return withNewSession(callable);
         }
@@ -988,7 +990,7 @@ public class HibernateDatastore extends AbstractDatastore
                 public T call(Object... args) {
                     enableMultiTenancyFilter();
                     try {
-                        return (T) callable.call(args);
+                        return callable.call(args);
                     } finally {
                         disableMultiTenancyFilter();
                     }
@@ -1023,23 +1025,13 @@ public class HibernateDatastore extends AbstractDatastore
                 HibernateMappingContext mappingContext,
                 ConfigurableApplicationEventPublisher eventPublisher) {
             super(connectionSources, mappingContext, eventPublisher, true, 
-                  ((HibernateConnectionSource) connectionSources.getDefaultConnectionSource()).getSource());
+                  connectionSources.getDefaultConnectionSource().getSource());
             this.parent = parent;
         }
 
         @Override
         protected HibernateGormEnhancer initialize() {
             return null;
-        }
-
-        @Override
-        public IHibernateTemplate getHibernateTemplate() {
-            return new GrailsHibernateTemplate(getSessionFactory(), this);
-        }
-
-        @Override
-        public IHibernateTemplate getHibernateTemplate(int flushMode) {
-            return new GrailsHibernateTemplate(getSessionFactory(), this, flushMode);
         }
 
         @Override

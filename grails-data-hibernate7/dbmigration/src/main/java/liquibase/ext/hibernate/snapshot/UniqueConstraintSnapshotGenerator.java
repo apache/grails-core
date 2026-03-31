@@ -87,8 +87,8 @@ public class UniqueConstraintSnapshotGenerator extends HibernateSnapshotGenerato
                     UniqueConstraint uniqueConstraint = new UniqueConstraint();
                     uniqueConstraint.setRelation(table);
                     uniqueConstraint.setClustered(Boolean.FALSE); // No way to set true via Hibernate
-                    String name = "UC_" + table.getName().toUpperCase(Locale.ROOT)
-                            + column.getName().toUpperCase(Locale.ROOT) + "_COL";
+                    String name = "UC_" + table.getName().toUpperCase(Locale.ROOT) +
+                            column.getName().toUpperCase(Locale.ROOT) + "_COL";
                     if (name.length() > MAX_NAME_LENGTH) {
                         name = name.substring(START_INDEX, SHORTENED_NAME_LENGTH);
                     }

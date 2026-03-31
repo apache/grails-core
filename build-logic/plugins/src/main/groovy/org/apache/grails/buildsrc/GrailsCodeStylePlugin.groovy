@@ -73,6 +73,8 @@ class GrailsCodeStylePlugin implements Plugin<Project> {
     static String CODENARC_ENABLED_PROPERTY = 'grails.codestyle.enabled.codenarc'
     static String CODENARC_CONFIG_FILE_NAME = 'codenarc.groovy'
 
+    static String CODENARC_FIX_PROPERTY = 'grails.codestyle.codenarc.fix'
+
     static String SPOTBUGS_ENABLED_PROPERTY = 'grails.codestyle.enabled.spotbugs'
 
     static String IGNORE_FAILURES_PROPERTY = 'grails.codestyle.ignoreFailures'
@@ -618,6 +620,8 @@ class GrailsCodeStylePlugin implements Plugin<Project> {
     static void configureCodenarc(Project project) {
         project.pluginManager.apply(CodeNarcPlugin)
 
+        registerCodenarcFixTask(project)
+
         project.extensions.configure(CodeNarcExtension) {
             it.configFile = project.extensions.getByType(GrailsCodeStyleExtension)
                     .codenarcDirectory.file(CODENARC_CONFIG_FILE_NAME).get().asFile
@@ -629,6 +633,10 @@ class GrailsCodeStylePlugin implements Plugin<Project> {
             it.group = 'verification'
             it.onlyIf { !project.hasProperty('skipCodeStyle') }
             it.ignoreFailures = GradleUtils.lookupProperty(project, IGNORE_FAILURES_PROPERTY, false)
+
+            if (GradleUtils.lookupProperty(project, CODENARC_FIX_PROPERTY, false)) {
+                it.dependsOn('codenarcFix')
+            }
 
             // Redirect XML report output to a single directory to consolidate
             // reports across all subprojects into one known location
@@ -657,6 +665,55 @@ class GrailsCodeStylePlugin implements Plugin<Project> {
                         project.tasks.named(testTaskName) {
                             it.enabled = false
                         }
+                    }
+                }
+            }
+        }
+    }
+
+    private static void registerCodenarcFixTask(Project project) {
+        if (project.tasks.findByName('codenarcFix')) {
+            return
+        }
+
+        project.tasks.register('codenarcFix') {
+            it.group = 'verification'
+            it.description = 'Automatically fixes some CodeNarc violations'
+            it.doLast {
+                project.fileTree(project.projectDir) {
+                    it.include 'src/**/*.groovy'
+                    it.exclude '**/build/**'
+                }.each { file ->
+                    String content = file.text
+                    String original = content
+
+                    // 1. ClassStartsWithBlankLine
+                    content = content.replaceAll(/(class\s+[^{]+\{\n)([ \t]*[^ \s\n\/])/, '$1\n$2')
+
+                    // 2. SpaceAroundMapEntryColon
+                    content = content.replaceAll(/([\[,]\s*(?:[\w\-.]+|'[^']+'|"[^"]+")):([^\s\/])/, '$1: $2')
+                    content = content.replaceAll(/(\(\s*(?:[\w\-.]+|'[^']+'|"[^"]+")):([^\s\/])/, '$1: $2')
+
+                    // 3. UnnecessaryGString
+                    content = content.replaceAll(/"([^"$\n\\]*)"/) { all, inner ->
+                        if (!inner.contains("'")) {
+                            return "'$inner'"
+                        }
+                        return all
+                    }
+
+                    // 4. UnnecessarySemicolon
+                    content = content.replaceAll(/(?m);[ \t]*$/, '')
+
+                    // 5. SpaceBeforeOpeningBrace
+                    content = content.replaceAll(/([\)\]\}\w])\{/, '$1 {')
+
+                    // 6. ConsecutiveBlankLines
+                    content = content.replaceAll(/\n{3,}/, '\n\n')
+
+                    if (content != original) {
+                        file.text = content
+                        project.logger.lifecycle("Fixed CodeNarc violations in ${file.path}")
                     }
                 }
             }

@@ -132,8 +132,8 @@ public abstract class HibernateDatabase extends AbstractJdbcDatabase {
             if (underlyingConnection instanceof HibernateConnection) {
                 return (HibernateConnection) underlyingConnection;
             } else {
-                throw new UnexpectedLiquibaseException("Underlying connection is not a HibernateConnection: "
-                        + underlyingConnection.getClass().getName());
+                throw new UnexpectedLiquibaseException("Underlying connection is not a HibernateConnection: " +
+                        underlyingConnection.getClass().getName());
             }
         } else if (originalConnection instanceof HibernateConnection) {
             return (HibernateConnection) originalConnection;
@@ -161,10 +161,10 @@ public abstract class HibernateDatabase extends AbstractJdbcDatabase {
                         return ((CustomMetadataFactory)
                                 clazz.getDeclaredConstructor().newInstance())
                                 .getMetadata(this, getHibernateConnection());
-                    } catch (InstantiationException
-                             | IllegalAccessException
-                             | InvocationTargetException
-                             | NoSuchMethodException e) {
+                    } catch (InstantiationException |
+                             IllegalAccessException |
+                             InvocationTargetException |
+                             NoSuchMethodException e) {
                         throw new DatabaseException(e);
                     }
                 }
@@ -223,11 +223,11 @@ public abstract class HibernateDatabase extends AbstractJdbcDatabase {
                         .getDeclaredConstructor()
                         .newInstance();
                 Scope.getCurrentScope().getLog(getClass()).info("Using dialect " + dialectString);
-            } catch (InstantiationException
-                     | IllegalAccessException
-                     | InvocationTargetException
-                     | NoSuchMethodException
-                     | ClassNotFoundException e) {
+            } catch (InstantiationException |
+                     IllegalAccessException |
+                     InvocationTargetException |
+                     NoSuchMethodException |
+                     ClassNotFoundException e) {
                 throw new DatabaseException(e);
             }
         } else {
@@ -267,11 +267,11 @@ public abstract class HibernateDatabase extends AbstractJdbcDatabase {
                         .getDeclaredConstructor()
                         .newInstance());
             }
-        } catch (InstantiationException
-                 | IllegalAccessException
-                 | InvocationTargetException
-                 | NoSuchMethodException
-                 | ClassNotFoundException e) {
+        } catch (InstantiationException |
+                 IllegalAccessException |
+                 InvocationTargetException |
+                 NoSuchMethodException |
+                 ClassNotFoundException e) {
             throw new DatabaseException(e);
         }
     }
@@ -312,11 +312,11 @@ public abstract class HibernateDatabase extends AbstractJdbcDatabase {
                         break;
                 }
             }
-        } catch (InstantiationException
-                 | IllegalAccessException
-                 | InvocationTargetException
-                 | NoSuchMethodException
-                 | ClassNotFoundException e) {
+        } catch (InstantiationException |
+                 IllegalAccessException |
+                 InvocationTargetException |
+                 NoSuchMethodException |
+                 ClassNotFoundException e) {
             throw new DatabaseException(e);
         }
     }

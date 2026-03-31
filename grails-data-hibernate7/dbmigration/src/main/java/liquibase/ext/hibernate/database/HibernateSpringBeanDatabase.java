@@ -181,8 +181,8 @@ public class HibernateSpringBeanDatabase extends HibernateDatabase {
             if (Object.class.isAssignableFrom(newClass)) {
                 return newClass.asSubclass(Object.class);
             } else {
-                throw new IllegalStateException("The provided class '" + className + "' is not assignable from the '"
-                        + Object.class.getName() + "' superclass.");
+                throw new IllegalStateException("The provided class '" + className + "' is not assignable from the '" +
+                        Object.class.getName() + "' superclass.");
             }
         } catch (ClassNotFoundException e) {
             throw new IllegalStateException(

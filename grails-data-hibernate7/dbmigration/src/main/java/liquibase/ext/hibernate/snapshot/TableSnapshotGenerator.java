@@ -29,7 +29,7 @@ import liquibase.structure.core.Schema;
 import liquibase.structure.core.Table;
 import org.hibernate.boot.model.relational.Namespace;
 import org.hibernate.boot.spi.MetadataImplementor;
-import org.hibernate.mapping.*;
+import org.hibernate.mapping.ForeignKey;
 
 public class TableSnapshotGenerator extends HibernateSnapshotGenerator {
 

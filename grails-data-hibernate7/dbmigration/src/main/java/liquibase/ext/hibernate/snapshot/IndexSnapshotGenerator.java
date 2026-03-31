@@ -24,7 +24,12 @@ import liquibase.snapshot.DatabaseSnapshot;
 import liquibase.snapshot.InvalidExampleException;
 import liquibase.snapshot.SnapshotGenerator;
 import liquibase.structure.DatabaseObject;
-import liquibase.structure.core.*;
+import liquibase.structure.core.Column;
+import liquibase.structure.core.ForeignKey;
+import liquibase.structure.core.Index;
+import liquibase.structure.core.Relation;
+import liquibase.structure.core.Table;
+import liquibase.structure.core.UniqueConstraint;
 
 public class IndexSnapshotGenerator extends HibernateSnapshotGenerator {
 
@@ -85,9 +90,9 @@ public class IndexSnapshotGenerator extends HibernateSnapshotGenerator {
         for (var selectable : hibernateIndex.getSelectables()) {
             org.hibernate.mapping.Column hibernateColumn = (org.hibernate.mapping.Column) selectable;
             String hibernateOrder = hibernateIndex.getSelectableOrderMap().get(hibernateColumn);
-            Boolean descending = HIBERNATE_ORDER_ASC.equals(hibernateOrder)
-                    ? Boolean.FALSE
-                    : (HIBERNATE_ORDER_DESC.equals(hibernateOrder) ? Boolean.TRUE : null);
+            Boolean descending = HIBERNATE_ORDER_ASC.equals(hibernateOrder) ?
+                    Boolean.FALSE :
+                    (HIBERNATE_ORDER_DESC.equals(hibernateOrder) ? Boolean.TRUE : null);
             index.getColumns()
                     .add(new Column(hibernateColumn.getName())
                             .setRelation(table)
