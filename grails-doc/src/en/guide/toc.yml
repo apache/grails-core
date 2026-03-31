@@ -306,6 +306,7 @@ testing:
     usefulProperties: Useful Properties
   integrationTesting: Integration Testing
   functionalTesting: Functional Testing
+  testPhases: Custom Test Phases
 bestPractices:
   title: Building a Successful Application
   codeAnalysisGroovy: Code Analysis and Styling for Groovy

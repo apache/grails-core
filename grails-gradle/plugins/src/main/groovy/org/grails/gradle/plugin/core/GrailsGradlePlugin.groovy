@@ -803,9 +803,6 @@ ${importStatements}
                 it.dependsOn(project.tasks.named('compileGroovy', GroovyCompile), project.tasks.named('classes'))
                 it.mustRunAfter(project.tasks.named('classes'))
                 it.mainClassCacheFile.set(mainClassFileContainer)
-                it.outputs.upToDateWhen {
-                    mainClassFileContainer.orNull?.asFile?.exists()
-                }
             }
 
             project.afterEvaluate {
