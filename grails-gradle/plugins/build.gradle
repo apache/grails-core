@@ -123,6 +123,12 @@ gradlePlugin {
             id = 'org.apache.grails.gradle.grails-exploded'
             implementationClass = 'org.grails.gradle.plugin.exploded.GrailsExplodedPlugin'
         }
+        grailsTestPhases {
+            displayName = 'Grails Test Phases Plugin'
+            description = 'A plugin that provides a testPhases extension for defining additional test phases (e.g. integrationTest, functionalTest).'
+            id = 'org.apache.grails.gradle.grails-test-phases'
+            implementationClass = 'org.grails.gradle.plugin.core.TestPhasesGradlePlugin'
+        }
         grailsIntegrationTest {
             displayName = 'Grails Integration Test Plugin'
             description = 'A plugin that adds support for the Grails `integration` test phase.'
