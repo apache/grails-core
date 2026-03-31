@@ -91,7 +91,6 @@ class UrlMappingsHandlerMapping extends AbstractHandlerMapping {
     }
 
     @Override
-    @CompileDynamic
     protected HandlerExecutionChain getHandlerExecutionChain(Object handler, HttpServletRequest request) {
         HandlerExecutionChain chain = (handler instanceof HandlerExecutionChain ?
                 (HandlerExecutionChain) handler : new HandlerExecutionChain(handler))
@@ -101,7 +100,6 @@ class UrlMappingsHandlerMapping extends AbstractHandlerMapping {
             chain.addInterceptors(webRequestHandlerInterceptors)
         }
 
-        String lookupPath = this.urlPathHelper.getLookupPathForRequest(request)
         for (HandlerInterceptor interceptor in this.adaptedInterceptors) {
             if (interceptor instanceof MappedInterceptor) {
                 MappedInterceptor mappedInterceptor = mappedInterceptor(interceptor)

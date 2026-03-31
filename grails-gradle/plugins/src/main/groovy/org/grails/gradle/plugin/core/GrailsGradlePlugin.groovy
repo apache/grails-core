@@ -187,11 +187,10 @@ class GrailsGradlePlugin implements Plugin<Project> {
     }
 
     private void configureGroovyCompiler(Project project) {
-        Provider<RegularFile> groovyCompilerConfigFile = project.layout.buildDirectory.file('grailsGroovyCompilerConfig.groovy')
-
-        GrailsExtension grailsExtension = project.extensions.findByType(GrailsExtension)
-
         project.tasks.withType(GroovyCompile).configureEach { GroovyCompile c ->
+            // Use a task-specific config file to avoid overlapping outputs when multiple
+            // GroovyCompile tasks exist in the same project (e.g. compileGroovy, compileTestGroovy).
+            Provider<RegularFile> groovyCompilerConfigFile = project.layout.buildDirectory.file("grailsGroovyCompilerConfig-${c.name}.groovy")
             c.outputs.file(groovyCompilerConfigFile)
 
             Closure<String> userScriptGenerator = getGroovyCompilerScript(c, project)
@@ -225,6 +224,7 @@ class GrailsGradlePlugin implements Plugin<Project> {
         }
 
         // Configure indy and log status after evaluation so user's grails { } block has been applied
+        GrailsExtension grailsExtension = project.extensions.findByType(GrailsExtension)
         project.afterEvaluate {
             boolean indyEnabled = grailsExtension?.indy?.getOrElse(false) ?: false
             project.tasks.withType(GroovyCompile).configureEach { GroovyCompile c ->
@@ -600,7 +600,9 @@ ${importStatements}
             task.systemProperty(Metadata.APPLICATION_NAME, project.name)
             task.systemProperty(Metadata.APPLICATION_VERSION, (project.version instanceof Serializable ? project.version : project.version.toString()))
             task.systemProperty(Metadata.APPLICATION_GRAILS_VERSION, grailsVersion)
-            task.systemProperty(BuildSettings.APP_BASE_DIR, project.projectDir.absolutePath)
+            // Use a CommandLineArgumentProvider so that the absolute project directory path
+            // is normalized for build cache relocatability (PathSensitivity.RELATIVE).
+            task.jvmArgumentProviders.add(new GrailsAppBaseDirProvider(project.projectDir))
             task.systemProperty(BuildSettings.PROJECT_TARGET_DIR, project.layout.buildDirectory.get().asFile.name)
             task.systemProperty(Environment.KEY, defaultGrailsEnv)
             task.systemProperty(Environment.FULL_STACKTRACE, System.getProperty(Environment.FULL_STACKTRACE) ?: '')

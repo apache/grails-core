@@ -240,7 +240,7 @@ ext {
             }
             
             // Override Spring Boot's groovy.version property with Grails' version
-            // Spring Boot 4.0.1 defaults to Groovy 5.0.3, but Grails 8.0.x uses Groovy 4.0.29
+            // Spring Boot 4.0.5 defaults to Groovy 5.0.4, but Grails 8.0.x uses Groovy 4.0.31
             def groovyVersionNode = propertiesNode.'groovy.version'
             if (groovyVersionNode) {
                 groovyVersionNode[0].value = bomDependencyVersions['groovy.version']

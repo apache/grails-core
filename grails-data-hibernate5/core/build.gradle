@@ -94,7 +94,7 @@ apply {
     from rootProject.layout.projectDirectory.file('gradle/docs-config.gradle')
 }
 
-// Exclude copied Spring Framework classes from checkstyle (they follow Spring's code style)
-checkstyleMain {
-    exclude '**/org/grails/orm/hibernate/support/hibernate5/**'
+tasks.named('checkstyleMain', Checkstyle) {
+    // Exclude copied Spring Framework classes from checkstyle (they follow Spring's code style)
+    exclude('**/org/grails/orm/hibernate/support/hibernate5/**')
 }

@@ -62,8 +62,8 @@ class ApplicationClassInjector implements GrailsArtefactClassInjector {
 
     public static final String EXCLUDE_MEMBER = 'exclude'
     public static final List<String> EXCLUDED_AUTO_CONFIGURE_CLASSES = [
-            'org.springframework.boot.autoconfigure.jdbc.DataSourceAutoConfiguration',
-            'org.springframework.boot.autoconfigure.reactor.ReactorAutoConfiguration',
+            'org.springframework.boot.jdbc.autoconfigure.DataSourceAutoConfiguration',
+            'org.springframework.boot.reactor.autoconfigure.ReactorAutoConfiguration',
             'org.springframework.boot.hibernate.autoconfigure.HibernateJpaAutoConfiguration'
     ]
 

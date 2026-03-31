@@ -40,14 +40,15 @@ dependencies {
     // TODO: Clarify and clean up dependencies
     implementation platform(project(':grails-bom'))
 
+    api project(":grails-data-hibernate5-core")
+    api "org.apache.groovy:groovy"
+    api "org.springframework.boot:spring-boot-autoconfigure"
+
     compileOnly project(':grails-shell-cli'), {
         exclude group:'org.apache.groovy', module:'groovy'
     }
-    api "org.apache.groovy:groovy"
-    api "org.springframework.boot:spring-boot-autoconfigure"
     compileOnly "org.springframework.boot:spring-boot-jdbc"
     compileOnly "org.springframework.boot:spring-boot-hibernate"
-    api project(":grails-data-hibernate5-core")
 
     testImplementation project(':grails-shell-cli'), {
         exclude group:'org.apache.groovy', module:'groovy'

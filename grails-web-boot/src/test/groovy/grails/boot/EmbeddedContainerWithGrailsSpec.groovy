@@ -18,6 +18,9 @@
  */
 package grails.boot
 
+import org.springframework.core.env.ConfigurableEnvironment
+import org.springframework.web.context.support.StandardServletEnvironment
+
 import grails.artefact.Artefact
 import grails.boot.config.GrailsAutoConfiguration
 import grails.web.Controller
@@ -30,6 +33,9 @@ import org.springframework.boot.autoconfigure.EnableAutoConfiguration
 import org.springframework.context.annotation.Bean
 import spock.lang.Ignore
 import spock.lang.Specification
+
+import org.apache.grails.core.plugins.DefaultPluginDiscovery
+import org.apache.grails.core.plugins.PluginDiscovery
 
 /**
  * Created by graemerocher on 28/05/14.
@@ -68,9 +74,11 @@ class EmbeddedContainerWithGrailsSpec extends Specification {
 
 @Controller
 class FooController {
+
     def bar() {
         render "hello world"
     }
+
     def list() {
         render "all foos"
     }
@@ -80,9 +88,10 @@ class FooController {
 
 @Artefact('UrlMappings')
 class UrlMappings {
+
     static mappings = {
         "/$controller/$action?/$id?(.$format)?"()
-        "/foos"(controller:'foo', action:"list")
+        "/foos"(controller: 'foo', action: "list")
     }
 }
 

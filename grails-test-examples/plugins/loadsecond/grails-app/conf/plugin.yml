@@ -15,3 +15,7 @@
 
 grails11951:
     prop2: Prop Two Defined By LoadSecond Plugin
+
+loadsecond:
+    feature:
+        enabled: true

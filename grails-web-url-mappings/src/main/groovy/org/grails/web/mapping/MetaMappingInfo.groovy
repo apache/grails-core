@@ -40,4 +40,5 @@ class MetaMappingInfo {
     def redirectInfo
     String httpMethod
     List<ConstrainedProperty> constraints = []
+    Map<String, Object> groupDefaults
 }
