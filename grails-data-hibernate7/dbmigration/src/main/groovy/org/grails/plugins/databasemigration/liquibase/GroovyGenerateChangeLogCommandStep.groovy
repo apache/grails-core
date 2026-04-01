@@ -79,7 +79,7 @@ class GroovyGenerateChangeLogCommandStep extends GenerateChangelogCommandStep {
             if (GrailsStringUtils.trimToNull(changeLogFile) != null) {
                 changeLogWriter.print(changeLogFile, ChangeLogSerializerFactory.instance.getSerializer(changeLogFile))
             } else {
-                PrintStream outputStream = new PrintStream(resultsBuilder.getOutputStream(), false, "UTF-8")
+                PrintStream outputStream = new PrintStream(resultsBuilder.getOutputStream(), false, 'UTF-8')
                 try {
                     changeLogWriter.print(outputStream, ChangeLogSerializerFactory.instance.getSerializer('groovy'))
                 } finally {

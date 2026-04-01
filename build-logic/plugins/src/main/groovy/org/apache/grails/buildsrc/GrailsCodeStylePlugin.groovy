@@ -682,6 +682,8 @@ class GrailsCodeStylePlugin implements Plugin<Project> {
             it.doLast {
                 project.fileTree(project.projectDir) {
                     it.include 'src/**/*.groovy'
+                    it.include 'grails-app/**/*.groovy'
+                    it.include 'scripts/**/*.groovy'
                     it.exclude '**/build/**'
                 }.each { file ->
                     String content = file.text
@@ -695,7 +697,7 @@ class GrailsCodeStylePlugin implements Plugin<Project> {
                     content = content.replaceAll(/(\(\s*(?:[\w\-.]+|'[^']+'|"[^"]+")):([^\s\/])/, '$1: $2')
 
                     // 3. UnnecessaryGString
-                    content = content.replaceAll(/"([^"$\n\\]*)"/) { all, inner ->
+                    content = content.replaceAll(/(?<!")"([^"$\n\\]*)"(?!")/) { all, inner ->
                         if (!inner.contains("'")) {
                             return "'$inner'"
                         }
@@ -706,7 +708,7 @@ class GrailsCodeStylePlugin implements Plugin<Project> {
                     content = content.replaceAll(/(?m);[ \t]*$/, '')
 
                     // 5. SpaceBeforeOpeningBrace
-                    content = content.replaceAll(/([\)\]\}\w])\{/, '$1 {')
+                    content = content.replaceAll(/(?<!\\)([\)\]\}\w])\{/, '$1 {')
 
                     // 6. ConsecutiveBlankLines
                     content = content.replaceAll(/\n{3,}/, '\n\n')

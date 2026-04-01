@@ -35,7 +35,7 @@ class GroovyChangeLogSerializer implements ChangeLogSerializer {
     <T extends ChangeLogChild> void write(List<T> changesets, OutputStream out) throws IOException {
         def xmlOutputStrem = new ByteArrayOutputStream()
         xmlChangeLogSerializer.write(changesets, xmlOutputStrem)
-        out << ChangelogXml2Groovy.convert(xmlOutputStrem.toString("UTF-8"))
+        out << ChangelogXml2Groovy.convert(xmlOutputStrem.toString('UTF-8'))
     }
 
     @Override
