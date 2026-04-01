@@ -18,10 +18,8 @@ grails:
     profile: web
     codegen:
         defaultPackage: app4
-    web:
-        url:
-            mapping:
-                validateWildcards: true
+    urlmapping:
+        validateWildcards: true
 info:
     app:
         name: '@info.app.name@'

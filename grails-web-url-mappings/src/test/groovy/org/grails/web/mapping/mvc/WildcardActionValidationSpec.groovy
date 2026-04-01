@@ -179,6 +179,54 @@ class WildcardActionValidationSpec extends AbstractUrlMappingsSpec {
         }
     }
 
+    void 'prefers explicit method-specific mappings inside parameterized group prefix'() {
+        when: 'an explicit POST mapping and a wildcard optional action mapping are inside a group with a URL variable'
+        def mappingInfo = evaluateRequestFor(requestURI: '/users/john/invites', method: 'POST', {
+            group "/users/$username", {
+                post "/invites"(controller: 'invite', action: 'create')
+                "/invites/$action?"(controller: 'invite')
+            }
+        }, InviteController)
+
+        then: 'the explicit POST mapping is selected despite the group-level URL variable'
+        with(mappingInfo) {
+            controllerName == 'invite'
+            actionName == 'create'
+        }
+    }
+
+    void 'GET to parameterized group routes to wildcard action index, not POST-only create'() {
+        when: 'a GET request matches both a POST-only mapping and a wildcard optional action mapping inside a group'
+        def mappingInfo = evaluateRequestFor(requestURI: '/users/john/invites', method: 'GET', {
+            group "/users/$username", {
+                post "/invites"(controller: 'invite', action: 'create')
+                "/invites/$action?"(controller: 'invite')
+            }
+        }, InviteController)
+
+        then: 'the wildcard optional action mapping is selected (index), not the POST-only create'
+        with(mappingInfo) {
+            controllerName == 'invite'
+            actionName != 'create'
+        }
+    }
+
+    void 'wildcard controller match beats parameterized catch-all for different controllers'() {
+        when: 'a wildcard $controller match (feed) and a $username catch-all (topic.home) both match'
+        def mappingInfo = evaluateRequestFor('/users/feed', {
+            "/users"(controller: 'topic', action: 'home')
+            group "/users", {
+                "/$controller/$action?"()
+            }
+            "/users/$username"(controller: 'topic', action: 'home')
+        }, TopicController, FeedController)
+
+        then: 'the wildcard controller match wins because it resolved a real controller'
+        with(mappingInfo) {
+            controllerName == 'feed'
+        }
+    }
+
     private UrlMappingsHolder createUrlMappingsHolder(boolean validateWildcardMappings = true, Closure<?> mappings, Class<?>... controllerClasses) {
         def grailsApplication = new DefaultGrailsApplication(controllerClasses).tap {
             initialise()
@@ -215,6 +263,12 @@ class InviteController {
 
 @Controller
 class CommunityController {
+
+    def index() {}
+}
+
+@Controller
+class FeedController {
 
     def index() {}
 }
