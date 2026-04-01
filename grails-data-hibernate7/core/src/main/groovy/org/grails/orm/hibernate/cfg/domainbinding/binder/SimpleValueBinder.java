@@ -48,8 +48,8 @@ public class SimpleValueBinder {
     private final JdbcEnvironment jdbcEnvironment;
     private final GrailsSequenceWrapper grailsSequenceWrapper;
 
-    /** Public constructor that accepts all collaborators. */
-    public SimpleValueBinder(
+    /** Private constructor that accepts all collaborators. */
+    private SimpleValueBinder(
             MetadataBuildingContext metadataBuildingContext,
             PersistentEntityNamingStrategy namingStrategy,
             ColumnConfigToColumnBinder columnConfigToColumnBinder,
