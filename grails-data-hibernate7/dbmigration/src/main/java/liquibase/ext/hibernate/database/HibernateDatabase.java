@@ -24,6 +24,7 @@ import java.util.concurrent.atomic.AtomicReference;
 import liquibase.Scope;
 import liquibase.database.AbstractJdbcDatabase;
 import liquibase.database.DatabaseConnection;
+import liquibase.database.jvm.JdbcConnection;
 import liquibase.exception.DatabaseException;
 import liquibase.exception.UnexpectedLiquibaseException;
 import liquibase.ext.hibernate.customfactory.CustomMetadataFactory;
@@ -128,7 +129,7 @@ public abstract class HibernateDatabase extends AbstractJdbcDatabase {
         DatabaseConnection originalConnection = getConnection();
         if (originalConnection instanceof liquibase.database.jvm.JdbcConnection) {
             java.sql.Connection underlyingConnection =
-                    originalConnection.getUnderlyingConnection();
+                    ((JdbcConnection) originalConnection).getUnderlyingConnection();
             if (underlyingConnection instanceof HibernateConnection) {
                 return (HibernateConnection) underlyingConnection;
             } else {

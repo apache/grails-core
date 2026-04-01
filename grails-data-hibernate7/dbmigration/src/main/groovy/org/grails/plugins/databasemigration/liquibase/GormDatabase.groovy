@@ -41,7 +41,11 @@ class GormDatabase extends HibernateDatabase {
     final String shortName = 'GORM'
     final String DefaultDatabaseProductName = 'getDefaultDatabaseProductName'
 
-    private final HibernateDatastore gormDatastore
+    private HibernateDatastore gormDatastore
+
+    GormDatabase() {
+        super()
+    }
 
     GormDatabase(Dialect dialect, HibernateDatastore hibernateDatastore) {
         super()

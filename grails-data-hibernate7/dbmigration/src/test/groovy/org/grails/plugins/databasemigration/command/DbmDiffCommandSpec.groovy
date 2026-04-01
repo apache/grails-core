@@ -65,7 +65,7 @@ databaseChangeLog = \\{
 
     changeSet\\(author: ".+?", id: ".+?"\\) \\{
         createTable\\(tableName: "AUTHOR"\\) \\{
-            column\\(autoIncrement: "true", name: "ID", type: "INT"\\) \\{
+            column\\(autoIncrement: "true", name: "ID", type: "INT(EGER)?"\\) \\{
                 constraints\\(nullable:"false", primaryKey: "true", primaryKeyName: "PK_AUTHOR"\\)
             \\}
 
@@ -77,7 +77,7 @@ databaseChangeLog = \\{
 
     changeSet\\(author: ".+?", id: ".+?"\\) \\{
         addColumn\\(tableName: "BOOK"\\) \\{
-            column\\(name: "PRICE", type: "INT"\\) \\{
+            column\\(name: "PRICE", type: "INT(EGER)?"\\) \\{
                 constraints\\(nullable: "false"\\)
             \\}
         \\}
@@ -99,7 +99,7 @@ databaseChangeLog = \\{
 
     changeSet\\(author: ".+?", id: ".+?"\\) \\{
         createTable\\(tableName: "AUTHOR"\\) \\{
-            column\\(autoIncrement: "true", name: "ID", type: "INT"\\) \\{
+            column\\(autoIncrement: "true", name: "ID", type: "INT(EGER)?"\\) \\{
                 constraints\\(nullable:"false", primaryKey: "true", primaryKeyName: "PK_AUTHOR"\\)
             \\}
 
@@ -111,7 +111,7 @@ databaseChangeLog = \\{
 
     changeSet\\(author: ".+?", id: ".+?"\\) \\{
         addColumn\\(tableName: "BOOK"\\) \\{
-            column\\(name: "PRICE", type: "INT"\\) \\{
+            column\\(name: "PRICE", type: "INT(EGER)?"\\) \\{
                 constraints\\(nullable: "false"\\)
             \\}
         \\}

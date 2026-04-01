@@ -44,9 +44,9 @@ public class MissingSequenceChangeGenerator
             Database referenceDatabase,
             Database comparisonDatabase,
             ChangeGeneratorChain chain) {
-        if (referenceDatabase instanceof HibernateDatabase && !comparisonDatabase.supports(Sequence.class)) {
+        if (referenceDatabase instanceof HibernateDatabase && !comparisonDatabase.supportsSequences()) {
             return new Change[0];
-        } else if (comparisonDatabase instanceof HibernateDatabase && !referenceDatabase.supports(Sequence.class)) {
+        } else if (comparisonDatabase instanceof HibernateDatabase && !referenceDatabase.supportsSequences()) {
             return new Change[0];
         } else {
             return super.fixMissing(missingObject, control, referenceDatabase, comparisonDatabase, chain);

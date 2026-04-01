@@ -22,6 +22,7 @@ import java.math.BigInteger;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.util.Locale;
+import java.util.Random;
 
 import liquibase.Scope;
 import liquibase.exception.DatabaseException;
@@ -33,7 +34,6 @@ import liquibase.structure.core.Column;
 import liquibase.structure.core.Index;
 import liquibase.structure.core.Table;
 import liquibase.structure.core.UniqueConstraint;
-import liquibase.util.StringUtil;
 import org.hibernate.HibernateException;
 
 public class UniqueConstraintSnapshotGenerator extends HibernateSnapshotGenerator {
@@ -42,6 +42,8 @@ public class UniqueConstraintSnapshotGenerator extends HibernateSnapshotGenerato
     private static final int SHORTENED_NAME_LENGTH = 63;
     private static final int START_INDEX = 0;
     private static final int FIRST_COLUMN = 0;
+    private static final String SEARCH_CHARS = "ABCDEFGHIJKLMNOPQRSTUVWXYZ";
+    private static final Random RANDOM = new Random();
 
     public UniqueConstraintSnapshotGenerator() {
         super(UniqueConstraint.class, Table.class);
@@ -134,9 +136,17 @@ public class UniqueConstraintSnapshotGenerator extends HibernateSnapshotGenerato
         index.setRelation(uniqueConstraint.getRelation());
         index.setColumns(uniqueConstraint.getColumns());
         index.setUnique(true);
-        index.setName(String.format("%s_%s_IX", hibernateTable.getName(), StringUtil.randomIdentifier(4)));
+        index.setName(String.format("%s_%s_IX", hibernateTable.getName(), randomIdentifier(4)));
 
         return index;
+    }
+
+    private String randomIdentifier(int len) {
+        StringBuilder sb = new StringBuilder(len);
+        for (int i = 0; i < len; i++) {
+            sb.append(SEARCH_CHARS.charAt(RANDOM.nextInt(SEARCH_CHARS.length())));
+        }
+        return sb.toString();
     }
 
     @Override

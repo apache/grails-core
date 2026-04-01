@@ -107,7 +107,8 @@ class SbomPlugin implements Plugin<Project> {
             'pkg:maven/org.jboss/jandex@3.2.3?type=pom'                       : 'CC0-1.0', // upstream declares Public Domain with CC0 URL but no SPDX id
             'pkg:maven/org.hibernate.tool/hibernate-tools-orm@6.6.36.Final?type=jar' : 'LGPL-2.1-only', // upstream pom does not expose SPDX id
             'pkg:maven/org.hibernate.orm/hibernate-core@6.6.36.Final?type=jar': 'LGPL-2.1-only',
-            'pkg:maven/org.hibernate.tool/hibernate-tools-utils@6.6.36.Final?type=jar' : 'LGPL-2.1-only' // upstream pom does not expose SPDX id
+            'pkg:maven/org.hibernate.tool/hibernate-tools-utils@6.6.36.Final?type=jar' : 'LGPL-2.1-only', // upstream pom does not expose SPDX id
+            'pkg:maven/org.liquibase/liquibase-core@5.0.1?type=jar'          : 'Apache-2.0'
     ]
 
     // we don't distribute these so these licenses are considered acceptable, but we still prefer ASF licenses.
@@ -127,6 +128,9 @@ class SbomPlugin implements Plugin<Project> {
                     'pkg:maven/org.hibernate/hibernate-core-jakarta@5.6.15.Final?type=jar'             : 'LGPL-2.1-only', // hibernate 5 is LGPL, we are migrating to ASF license in hibernate 7
             ],
             'grails-data-hibernate5-dbmigration': [
+                    'pkg:maven/javax.xml.bind/jaxb-api@2.3.1?type=jar': 'CDDL-1.1', // api export
+            ],
+            'grails-data-hibernate7-dbmigration': [
                     'pkg:maven/javax.xml.bind/jaxb-api@2.3.1?type=jar': 'CDDL-1.1', // api export
             ],
     ]
