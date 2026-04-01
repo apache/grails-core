@@ -31,7 +31,7 @@ import liquibase.structure.core.ForeignKey;
  * Hibernate doesn't know about all the variations that occur with foreign keys but just whether the FK exists or not.
  * To prevent changing customized foreign keys, we suppress all foreign key changes from hibernate.
  */
-public class ChangedForeignKeyChangeGenerator
+public class HibernateChangedForeignKeyChangeGenerator
         extends liquibase.diff.output.changelog.core.ChangedForeignKeyChangeGenerator {
 
     @Override

@@ -30,13 +30,13 @@ import liquibase.structure.core.PrimaryKey;
 import liquibase.structure.core.Table;
 import org.hibernate.sql.Alias;
 
-public class PrimaryKeySnapshotGenerator extends HibernateSnapshotGenerator {
+public class HibernatePrimaryKeySnapshotGenerator extends HibernateSnapshotGenerator {
 
     private static final int PK_NAME_LENGTH = 63;
     private static final String PK_NAME_SUFFIX = "PK";
     private static final Alias PK_NAME_ALIAS = new Alias(PK_NAME_LENGTH, PK_NAME_SUFFIX);
 
-    public PrimaryKeySnapshotGenerator() {
+    public HibernatePrimaryKeySnapshotGenerator() {
         super(PrimaryKey.class, new Class[] {Table.class});
     }
 

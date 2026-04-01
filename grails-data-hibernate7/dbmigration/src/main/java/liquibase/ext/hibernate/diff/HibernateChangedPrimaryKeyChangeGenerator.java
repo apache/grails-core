@@ -25,19 +25,18 @@ import liquibase.diff.output.DiffOutputControl;
 import liquibase.diff.output.changelog.ChangeGeneratorChain;
 import liquibase.ext.hibernate.database.HibernateDatabase;
 import liquibase.structure.DatabaseObject;
-import liquibase.structure.core.UniqueConstraint;
+import liquibase.structure.core.PrimaryKey;
 
 /**
- * Unique attribute for unique constraints backing index can have different values dependending on the database implementation,
- * so we suppress all unique constraint changes based on unique constraints.
- *
+ * Hibernate doesn't know about all the variations that occur with primary keys, especially backing index stuff.
+ * To prevent changing customized primary keys, we suppress this kind of changes from hibernate side.
  */
-public class ChangedUniqueConstraintChangeGenerator
-        extends liquibase.diff.output.changelog.core.ChangedUniqueConstraintChangeGenerator {
+public class HibernateChangedPrimaryKeyChangeGenerator
+        extends liquibase.diff.output.changelog.core.ChangedPrimaryKeyChangeGenerator {
 
     @Override
     public int getPriority(Class<? extends DatabaseObject> objectType, Database database) {
-        if (UniqueConstraint.class.isAssignableFrom(objectType)) {
+        if (PrimaryKey.class.isAssignableFrom(objectType)) {
             return PRIORITY_ADDITIONAL;
         }
         return PRIORITY_NONE;
@@ -53,10 +52,12 @@ public class ChangedUniqueConstraintChangeGenerator
             ChangeGeneratorChain chain) {
         if (referenceDatabase instanceof HibernateDatabase || comparisonDatabase instanceof HibernateDatabase) {
             differences.removeDifference("unique");
+            differences.removeDifference("validate");
             if (!differences.hasDifferences()) {
                 return new Change[0];
             }
         }
+
         return super.fixChanged(changedObject, differences, control, referenceDatabase, comparisonDatabase, chain);
     }
 }

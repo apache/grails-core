@@ -18,28 +18,24 @@
  */
 package liquibase.ext.hibernate.snapshot
 
-import liquibase.structure.core.PrimaryKey
-import liquibase.structure.core.Table
+import com.example.ejb3.auction.AuctionItem
+import liquibase.structure.core.Catalog
 
-class PrimaryKeySnapshotGeneratorSpec extends HibernateSnapshotIntegrationSpec {
+class HibernateCatalogSnapshotGeneratorSpec extends HibernateSnapshotIntegrationSpec {
 
-    PrimaryKeySnapshotGenerator generator = new PrimaryKeySnapshotGenerator()
+    HibernateCatalogSnapshotGenerator generator = new HibernateCatalogSnapshotGenerator()
 
     @Override
     List<Class> getEntityClasses() {
-        return [AuctionItem, Bid, AuctionUser]
+        return [AuctionItem]
     }
 
-    def "addTo adds primary key to table"() {
-        given:
-        Table table = new Table(name: "auction_item")
-        snapshot.getSnapshotControl().shouldInclude(PrimaryKey) >> true
-
+    def "snapshotObject returns default catalog"() {
         when:
-        generator.addTo(table, snapshot)
+        def result = generator.snapshotObject(new Catalog(), snapshot)
 
         then:
-        table.primaryKey != null
-        table.primaryKey.columns*.name.contains("id")
+        result instanceof Catalog
+        result.isDefault()
     }
 }

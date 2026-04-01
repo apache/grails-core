@@ -18,37 +18,27 @@
  */
 package liquibase.ext.hibernate.snapshot
 
-import grails.gorm.annotation.Entity
+import liquibase.structure.core.ForeignKey
 import liquibase.structure.core.Table
-import liquibase.structure.core.UniqueConstraint
 
-class UniqueConstraintSnapshotGeneratorSpec extends HibernateSnapshotIntegrationSpec {
+class HibernateForeignKeySnapshotGeneratorSpec extends HibernateSnapshotIntegrationSpec {
 
-    UniqueConstraintSnapshotGenerator generator = new UniqueConstraintSnapshotGenerator()
+    HibernateForeignKeySnapshotGenerator generator = new HibernateForeignKeySnapshotGenerator()
 
     @Override
     List<Class> getEntityClasses() {
-        return [UniqueEntity]
+        return [AuctionItem, Bid, AuctionUser]
     }
 
-    def "addTo adds unique constraints to table"() {
+    def "addTo adds foreign keys to table"() {
         given:
-        Table table = new Table(name: "unique_entity")
-        snapshot.getSnapshotControl().shouldInclude(UniqueConstraint) >> true
+        Table table = new Table(name: "Bid")
+        snapshot.getSnapshotControl().shouldInclude(ForeignKey) >> true
 
         when:
         generator.addTo(table, snapshot)
 
         then:
-        table.getUniqueConstraints().any { it.columnNames.contains("code") }
-    }
-}
-
-@Entity
-class UniqueEntity {
-    String code
-
-    static constraints = {
-        code unique: true
+        table.getOutgoingForeignKeys().any { it.foreignKeyTable.name.equalsIgnoreCase("Bid") }
     }
 }

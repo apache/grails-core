@@ -18,39 +18,28 @@
  */
 package liquibase.ext.hibernate.snapshot
 
-import liquibase.structure.core.Schema
+import liquibase.structure.core.PrimaryKey
 import liquibase.structure.core.Table
 
-class TableSnapshotGeneratorSpec extends HibernateSnapshotIntegrationSpec {
+class HibernatePrimaryKeySnapshotGeneratorSpec extends HibernateSnapshotIntegrationSpec {
 
-    TableSnapshotGenerator generator = new TableSnapshotGenerator()
+    HibernatePrimaryKeySnapshotGenerator generator = new HibernatePrimaryKeySnapshotGenerator()
 
     @Override
     List<Class> getEntityClasses() {
         return [AuctionItem, Bid, AuctionUser]
     }
 
-    def "snapshotObject returns table with name"() {
+    def "addTo adds primary key to table"() {
         given:
-        Table example = new Table(name: "auction_item")
+        Table table = new Table(name: "auction_item")
+        snapshot.getSnapshotControl().shouldInclude(PrimaryKey) >> true
 
         when:
-        def result = generator.snapshotObject(example, snapshot)
+        generator.addTo(table, snapshot)
 
         then:
-        result instanceof Table
-        result.name == "auction_item"
-    }
-
-    def "addTo adds tables to schema"() {
-        given:
-        Schema schema = new Schema()
-        snapshot.getSnapshotControl().shouldInclude(Table) >> true
-
-        when:
-        generator.addTo(schema, snapshot)
-
-        then:
-        schema.getDatabaseObjects(Table).any { it.name == "auction_item" }
+        table.primaryKey != null
+        table.primaryKey.columns*.name.contains("id")
     }
 }

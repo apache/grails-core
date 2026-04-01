@@ -52,7 +52,7 @@ import org.hibernate.type.SqlTypes;
  * Columns are snapshotted along with Tables in {@link TableSnapshotGenerator} but this class needs to be here to keep the default ColumnSnapshotGenerator from running.
  * Ideally the column logic would be moved out of the TableSnapshotGenerator to better work in situations where the object types to snapshot are being controlled, but that is not the case yet.
  */
-public class ColumnSnapshotGenerator extends HibernateSnapshotGenerator {
+public class HibernateColumnSnapshotGenerator extends HibernateSnapshotGenerator {
 
     private static final String SQL_TIMEZONE_SUFFIX = "with time zone";
     private static final String LIQUIBASE_TIMEZONE_SUFFIX = "with timezone";
@@ -60,7 +60,7 @@ public class ColumnSnapshotGenerator extends HibernateSnapshotGenerator {
     private static final Pattern pattern =
             Pattern.compile("([^\\(]*)\\s*\\(?\\s*(\\d*)?\\s*,?\\s*(\\d*)?\\s*([^\\(]*?)\\)?");
 
-    public ColumnSnapshotGenerator() {
+    public HibernateColumnSnapshotGenerator() {
         super(Column.class, Table.class);
     }
 

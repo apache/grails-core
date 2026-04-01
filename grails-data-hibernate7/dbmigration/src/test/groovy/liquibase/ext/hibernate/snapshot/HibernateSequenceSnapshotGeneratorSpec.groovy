@@ -22,9 +22,9 @@ import grails.gorm.annotation.Entity
 import liquibase.structure.core.Schema
 import liquibase.structure.core.Sequence as LiquibaseSequence
 
-class SequenceSnapshotGeneratorSpec extends HibernateSnapshotIntegrationSpec {
+class HibernateSequenceSnapshotGeneratorSpec extends HibernateSnapshotIntegrationSpec {
 
-    SequenceSnapshotGenerator generator = new SequenceSnapshotGenerator()
+    HibernateSequenceSnapshotGenerator generator = new HibernateSequenceSnapshotGenerator()
 
     @Override
     List<Class> getEntityClasses() {

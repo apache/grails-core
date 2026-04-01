@@ -27,9 +27,9 @@ import liquibase.ext.hibernate.database.HibernateDatabase
 import liquibase.structure.core.Sequence
 import spock.lang.Specification
 
-class ChangedSequenceChangeGeneratorSpec extends Specification {
+class HibernateChangedSequenceChangeGeneratorSpec extends Specification {
 
-    ChangedSequenceChangeGenerator generator = new ChangedSequenceChangeGenerator()
+    HibernateChangedSequenceChangeGenerator generator = new HibernateChangedSequenceChangeGenerator()
 
     def "getPriority returns correct priority for Sequence and others"() {
         expect:

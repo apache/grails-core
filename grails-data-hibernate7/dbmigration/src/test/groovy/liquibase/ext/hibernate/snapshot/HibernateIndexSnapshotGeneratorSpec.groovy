@@ -18,24 +18,38 @@
  */
 package liquibase.ext.hibernate.snapshot
 
-import com.example.ejb3.auction.AuctionItem
-import liquibase.structure.core.Schema
+import grails.gorm.annotation.Entity
+import liquibase.structure.core.Index as LiquibaseIndex
+import liquibase.structure.core.Table as LiquibaseTable
 
-class SchemaSnapshotGeneratorSpec extends HibernateSnapshotIntegrationSpec {
+class HibernateIndexSnapshotGeneratorSpec extends HibernateSnapshotIntegrationSpec {
 
-    SchemaSnapshotGenerator generator = new SchemaSnapshotGenerator()
+    HibernateIndexSnapshotGenerator generator = new HibernateIndexSnapshotGenerator()
 
     @Override
     List<Class> getEntityClasses() {
-        return [AuctionItem]
+        return [IndexedEntity]
     }
 
-    def "snapshotObject returns default schema"() {
+    def "addTo adds indexes to table"() {
+        given:
+        LiquibaseTable table = new LiquibaseTable(name: "indexed_entity")
+        snapshot.getSnapshotControl().shouldInclude(LiquibaseIndex) >> true
+
         when:
-        def result = generator.snapshotObject(new Schema(), snapshot)
+        generator.addTo(table, snapshot)
 
         then:
-        result instanceof Schema
-        result.isDefault()
+        table.getIndexes().any { it.name.equalsIgnoreCase("idx_code") }
+    }
+}
+
+@Entity
+class IndexedEntity {
+    String code
+
+    static mapping = {
+        table 'indexed_entity'
+        code index: 'idx_code'
     }
 }

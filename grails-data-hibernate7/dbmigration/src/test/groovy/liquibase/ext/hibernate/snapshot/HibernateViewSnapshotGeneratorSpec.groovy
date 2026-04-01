@@ -18,27 +18,24 @@
  */
 package liquibase.ext.hibernate.snapshot
 
-import liquibase.structure.core.ForeignKey
-import liquibase.structure.core.Table
+import com.example.ejb3.auction.AuctionItem
+import liquibase.exception.DatabaseException
+import liquibase.structure.core.View
 
-class ForeignKeySnapshotGeneratorSpec extends HibernateSnapshotIntegrationSpec {
+class HibernateViewSnapshotGeneratorSpec extends HibernateSnapshotIntegrationSpec {
 
-    ForeignKeySnapshotGenerator generator = new ForeignKeySnapshotGenerator()
+    HibernateViewSnapshotGenerator generator = new HibernateViewSnapshotGenerator()
 
     @Override
     List<Class> getEntityClasses() {
-        return [AuctionItem, Bid, AuctionUser]
+        return [AuctionItem]
     }
 
-    def "addTo adds foreign keys to table"() {
-        given:
-        Table table = new Table(name: "Bid")
-        snapshot.getSnapshotControl().shouldInclude(ForeignKey) >> true
-
+    def "snapshotObject throws exception as views are not supported"() {
         when:
-        generator.addTo(table, snapshot)
+        generator.snapshotObject(new View(), snapshot)
 
         then:
-        table.getOutgoingForeignKeys().any { it.foreignKeyTable.name.equalsIgnoreCase("Bid") }
+        thrown(DatabaseException)
     }
 }

@@ -31,9 +31,9 @@ import org.hibernate.boot.model.relational.Namespace;
 import org.hibernate.boot.spi.MetadataImplementor;
 import org.hibernate.mapping.ForeignKey;
 
-public class TableSnapshotGenerator extends HibernateSnapshotGenerator {
+public class HibernateTableSnapshotGenerator extends HibernateSnapshotGenerator {
 
-    public TableSnapshotGenerator() {
+    public HibernateTableSnapshotGenerator() {
         super(Table.class, Schema.class);
     }
 

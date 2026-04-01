@@ -28,9 +28,9 @@ import liquibase.structure.core.Catalog;
 /**
  * Hibernate doesn't really support Catalogs, so just return the passed example back as if it had all the info it needed.
  */
-public class CatalogSnapshotGenerator extends HibernateSnapshotGenerator {
+public class HibernateCatalogSnapshotGenerator extends HibernateSnapshotGenerator {
 
-    public CatalogSnapshotGenerator() {
+    public HibernateCatalogSnapshotGenerator() {
         super(Catalog.class);
     }
 

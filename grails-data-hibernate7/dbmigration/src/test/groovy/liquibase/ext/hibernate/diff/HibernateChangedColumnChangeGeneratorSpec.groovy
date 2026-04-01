@@ -30,9 +30,9 @@ import liquibase.structure.core.DataType
 import liquibase.structure.core.Table
 import spock.lang.Specification
 
-class ChangedColumnChangeGeneratorSpec extends Specification {
+class HibernateChangedColumnChangeGeneratorSpec extends Specification {
 
-    ChangedColumnChangeGenerator generator = new ChangedColumnChangeGenerator()
+    HibernateChangedColumnChangeGenerator generator = new HibernateChangedColumnChangeGenerator()
 
     def "getPriority returns correct priority for Column and others"() {
         expect:

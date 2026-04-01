@@ -38,7 +38,7 @@ import liquibase.structure.core.DataType;
  * Hibernate and database types tend to look different even though they are not.
  * The only change that we are handling it size change, and even for this one there are exceptions.
  */
-public class ChangedColumnChangeGenerator extends liquibase.diff.output.changelog.core.ChangedColumnChangeGenerator {
+public class HibernateChangedColumnChangeGenerator extends liquibase.diff.output.changelog.core.ChangedColumnChangeGenerator {
 
     private static final List<String> TYPES_TO_IGNORE_SIZE = List.of("TIMESTAMP", "TIME");
 

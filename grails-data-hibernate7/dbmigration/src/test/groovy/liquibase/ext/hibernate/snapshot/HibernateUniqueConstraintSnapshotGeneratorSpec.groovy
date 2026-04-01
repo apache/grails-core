@@ -18,24 +18,37 @@
  */
 package liquibase.ext.hibernate.snapshot
 
-import com.example.ejb3.auction.AuctionItem
-import liquibase.exception.DatabaseException
-import liquibase.structure.core.View
+import grails.gorm.annotation.Entity
+import liquibase.structure.core.Table
+import liquibase.structure.core.UniqueConstraint
 
-class ViewSnapshotGeneratorSpec extends HibernateSnapshotIntegrationSpec {
+class HibernateUniqueConstraintSnapshotGeneratorSpec extends HibernateSnapshotIntegrationSpec {
 
-    ViewSnapshotGenerator generator = new ViewSnapshotGenerator()
+    HibernateUniqueConstraintSnapshotGenerator generator = new HibernateUniqueConstraintSnapshotGenerator()
 
     @Override
     List<Class> getEntityClasses() {
-        return [AuctionItem]
+        return [UniqueEntity]
     }
 
-    def "snapshotObject throws exception as views are not supported"() {
+    def "addTo adds unique constraints to table"() {
+        given:
+        Table table = new Table(name: "unique_entity")
+        snapshot.getSnapshotControl().shouldInclude(UniqueConstraint) >> true
+
         when:
-        generator.snapshotObject(new View(), snapshot)
+        generator.addTo(table, snapshot)
 
         then:
-        thrown(DatabaseException)
+        table.getUniqueConstraints().any { it.columnNames.contains("code") }
+    }
+}
+
+@Entity
+class UniqueEntity {
+    String code
+
+    static constraints = {
+        code unique: true
     }
 }

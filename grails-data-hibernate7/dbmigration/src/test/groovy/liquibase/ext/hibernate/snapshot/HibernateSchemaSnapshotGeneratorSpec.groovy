@@ -19,23 +19,23 @@
 package liquibase.ext.hibernate.snapshot
 
 import com.example.ejb3.auction.AuctionItem
-import liquibase.structure.core.Catalog
+import liquibase.structure.core.Schema
 
-class CatalogSnapshotGeneratorSpec extends HibernateSnapshotIntegrationSpec {
+class HibernateSchemaSnapshotGeneratorSpec extends HibernateSnapshotIntegrationSpec {
 
-    CatalogSnapshotGenerator generator = new CatalogSnapshotGenerator()
+    HibernateSchemaSnapshotGenerator generator = new HibernateSchemaSnapshotGenerator()
 
     @Override
     List<Class> getEntityClasses() {
         return [AuctionItem]
     }
 
-    def "snapshotObject returns default catalog"() {
+    def "snapshotObject returns default schema"() {
         when:
-        def result = generator.snapshotObject(new Catalog(), snapshot)
+        def result = generator.snapshotObject(new Schema(), snapshot)
 
         then:
-        result instanceof Catalog
+        result instanceof Schema
         result.isDefault()
     }
 }

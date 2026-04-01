@@ -19,6 +19,7 @@
 package liquibase.ext.hibernate.snapshot;
 
 import java.math.BigInteger;
+import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.util.Locale;
@@ -36,7 +37,7 @@ import liquibase.structure.core.Table;
 import liquibase.structure.core.UniqueConstraint;
 import org.hibernate.HibernateException;
 
-public class UniqueConstraintSnapshotGenerator extends HibernateSnapshotGenerator {
+public class HibernateUniqueConstraintSnapshotGenerator extends HibernateSnapshotGenerator {
 
     private static final int MAX_NAME_LENGTH = 64;
     private static final int SHORTENED_NAME_LENGTH = 63;
@@ -45,7 +46,7 @@ public class UniqueConstraintSnapshotGenerator extends HibernateSnapshotGenerato
     private static final String SEARCH_CHARS = "ABCDEFGHIJKLMNOPQRSTUVWXYZ";
     private static final Random RANDOM = new Random();
 
-    public UniqueConstraintSnapshotGenerator() {
+    public HibernateUniqueConstraintSnapshotGenerator() {
         super(UniqueConstraint.class, Table.class);
     }
 
@@ -118,7 +119,7 @@ public class UniqueConstraintSnapshotGenerator extends HibernateSnapshotGenerato
         try {
             MessageDigest md = MessageDigest.getInstance("MD5");
             md.reset();
-            md.update(s.getBytes());
+            md.update(s.getBytes(StandardCharsets.UTF_8));
             byte[] digest = md.digest();
             BigInteger bigInt = new BigInteger(1, digest);
             // By converting to base 35 (full alphanumeric), we guarantee

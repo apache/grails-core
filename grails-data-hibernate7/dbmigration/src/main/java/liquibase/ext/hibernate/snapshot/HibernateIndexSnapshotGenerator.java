@@ -31,13 +31,13 @@ import liquibase.structure.core.Relation;
 import liquibase.structure.core.Table;
 import liquibase.structure.core.UniqueConstraint;
 
-public class IndexSnapshotGenerator extends HibernateSnapshotGenerator {
+public class HibernateIndexSnapshotGenerator extends HibernateSnapshotGenerator {
 
     private static final String HIBERNATE_ORDER_ASC = "asc";
     private static final String HIBERNATE_ORDER_DESC = "desc";
     private static final int SINGLE_COLUMN = 1;
 
-    public IndexSnapshotGenerator() {
+    public HibernateIndexSnapshotGenerator() {
         super(Index.class, Table.class, ForeignKey.class, UniqueConstraint.class);
     }
 

@@ -35,7 +35,7 @@ import liquibase.structure.core.Sequence;
  * Hibernate manages sequences only by the name, startValue and incrementBy fields.
  * However, non-hibernate databases might return default values for other fields triggering false positives.
  */
-public class ChangedSequenceChangeGenerator
+public class HibernateChangedSequenceChangeGenerator
         extends liquibase.diff.output.changelog.core.ChangedSequenceChangeGenerator {
 
     private static final String FIELD_NAME = "name";

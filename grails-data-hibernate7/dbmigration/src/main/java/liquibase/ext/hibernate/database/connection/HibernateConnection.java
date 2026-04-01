@@ -30,6 +30,8 @@ import java.sql.Connection;
 import java.sql.DatabaseMetaData;
 import java.sql.NClob;
 import java.sql.PreparedStatement;
+import java.sql.SQLException;
+import java.sql.SQLFeatureNotSupportedException;
 import java.sql.SQLWarning;
 import java.sql.SQLXML;
 import java.sql.Savepoint;
@@ -133,23 +135,23 @@ public class HibernateConnection implements Connection {
     ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
     @Override
-    public Statement createStatement() {
-        return null;
+    public Statement createStatement() throws SQLException {
+        throw new SQLFeatureNotSupportedException();
     }
 
     @Override
-    public PreparedStatement prepareStatement(String sql) {
-        return null;
+    public PreparedStatement prepareStatement(String sql) throws SQLException {
+        throw new SQLFeatureNotSupportedException();
     }
 
     @Override
-    public CallableStatement prepareCall(String sql) {
-        return null;
+    public CallableStatement prepareCall(String sql) throws SQLException {
+        throw new SQLFeatureNotSupportedException();
     }
 
     @Override
-    public String nativeSQL(String sql) {
-        return null;
+    public String nativeSQL(String sql) throws SQLException {
+        throw new SQLFeatureNotSupportedException();
     }
 
     @Override

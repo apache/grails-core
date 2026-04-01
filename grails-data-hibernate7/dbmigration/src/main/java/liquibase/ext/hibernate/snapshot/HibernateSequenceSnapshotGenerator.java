@@ -32,9 +32,9 @@ import liquibase.structure.core.Sequence;
 /**
  * Sequence snapshots are not yet supported, but this class needs to be implemented in order to prevent the default SequenceSnapshotGenerator from running.
  */
-public class SequenceSnapshotGenerator extends HibernateSnapshotGenerator {
+public class HibernateSequenceSnapshotGenerator extends HibernateSnapshotGenerator {
 
-    public SequenceSnapshotGenerator() {
+    public HibernateSequenceSnapshotGenerator() {
         super(Sequence.class, Schema.class);
     }
 

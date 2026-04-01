@@ -27,9 +27,9 @@ import liquibase.structure.core.ForeignKey;
 import liquibase.structure.core.Table;
 import org.hibernate.mapping.Column;
 
-public class ForeignKeySnapshotGenerator extends HibernateSnapshotGenerator {
+public class HibernateForeignKeySnapshotGenerator extends HibernateSnapshotGenerator {
 
-    public ForeignKeySnapshotGenerator() {
+    public HibernateForeignKeySnapshotGenerator() {
         super(ForeignKey.class, new Class[] {Table.class});
     }
 

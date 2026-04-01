@@ -27,11 +27,11 @@ import java.sql.Types;
 
 import static org.junit.Assert.*;
 
-public class ColumnSnapshotGeneratorTest {
+public class HibernateColumnSnapshotGeneratorTest {
 
     @Test
     public void toDataType() throws DatabaseException {
-        ColumnSnapshotGenerator columnSnapshotGenerator = new ColumnSnapshotGenerator();
+        HibernateColumnSnapshotGenerator columnSnapshotGenerator = new HibernateColumnSnapshotGenerator();
         DataType varchar = columnSnapshotGenerator.toDataType("varchar(255)", Types.VARCHAR);
         assertEquals("varchar", varchar.getTypeName());
         assertEquals(255, varchar.getColumnSize().intValue());
