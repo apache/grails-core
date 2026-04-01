@@ -146,10 +146,6 @@ class PromiseSpec extends Specification {
             }
     }
 
-    @PendingFeatureIf({
-        // Cannot cast object '4' with class 'java.lang.Integer' to class 'java.lang.Throwable'
-        GroovySystem.version.startsWith('5')
-    })
     void 'Test promise chaining'() {
 
         when: 'a promise is chained'
