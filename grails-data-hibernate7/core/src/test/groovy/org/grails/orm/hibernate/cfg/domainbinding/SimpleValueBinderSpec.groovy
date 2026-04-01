@@ -33,8 +33,6 @@ import org.hibernate.mapping.Column
 import org.hibernate.mapping.SimpleValue
 import spock.lang.Specification
 
-import org.grails.orm.hibernate.cfg.domainbinding.binder.ColumnBinder
-import org.grails.orm.hibernate.cfg.domainbinding.binder.ColumnConfigToColumnBinder
 import org.grails.orm.hibernate.cfg.domainbinding.binder.SimpleValueBinder
 
 class SimpleValueBinderSpec extends Specification {
@@ -46,18 +44,10 @@ class SimpleValueBinderSpec extends Specification {
     }
 
     def namingStrategy = Mock(PersistentEntityNamingStrategy)
-    def columnConfigToColumnBinder = Mock(ColumnConfigToColumnBinder)
-    def columnBinder = Mock(ColumnBinder)
     def jdbcEnvironment = Mock(org.hibernate.engine.jdbc.env.spi.JdbcEnvironment)
-    def grailsSequenceWrapper = Mock(org.grails.orm.hibernate.cfg.domainbinding.generator.GrailsSequenceWrapper)
     def metadataBuildingContext = Mock(org.hibernate.boot.spi.MetadataBuildingContext)
 
-    def binder = new SimpleValueBinder(metadataBuildingContext,
-            namingStrategy,
-            columnConfigToColumnBinder,
-            columnBinder,
-            jdbcEnvironment,
-            grailsSequenceWrapper)
+    def binder = new SimpleValueBinder(metadataBuildingContext, namingStrategy, jdbcEnvironment)
 
     def "sets type from provider when present and applies type params"() {
         given:
@@ -73,6 +63,7 @@ class SimpleValueBinderSpec extends Specification {
         prop.getMappedForm() >> pc
         prop.getHibernateMappedForm() >> pc
         prop.getOwner() >> owner
+        prop.getHibernateOwner() >> owner
         owner.getMappedForm() >> mapping
         owner.getHibernateMappedForm() >> mapping
         _ * prop.getHibernateMappedForm() >> pc
@@ -92,14 +83,6 @@ class SimpleValueBinderSpec extends Specification {
         _ * prop.getTypeParameters(sv) >> props
         _ * sv.setTypeName("custom.Type")
         _ * sv.setTypeParameters({ it.getProperty('p1') == 'v1' })
-        _ * columnBinder.bindColumn(prop, null, _, null, 'p', null) >> { args ->
-            def column = args[2] as Column
-            column.setName("testColumn")
-        }
-        _ * columnConfigToColumnBinder.bindColumnConfigToColumn(_, null, pc) >> { args ->
-            def column = args[0] as Column
-            column.setName("testColumn")
-        }
     }
 
     def "falls back to property type when provider returns null"() {
@@ -114,6 +97,7 @@ class SimpleValueBinderSpec extends Specification {
         prop.getMappedForm() >> pc
         prop.getHibernateMappedForm() >> pc
         prop.getOwner() >> owner
+        prop.getHibernateOwner() >> owner
         owner.getMappedForm() >> mapping
         owner.getHibernateMappedForm() >> mapping
         _ * prop.getHibernateMappedForm() >> pc
@@ -131,10 +115,6 @@ class SimpleValueBinderSpec extends Specification {
         _ * prop.getTypeName(sv) >> Integer.name
         _ * prop.getTypeParameters(sv) >> null
         _ * sv.setTypeName(Integer.name)
-        _ * columnBinder.bindColumn(prop, null, _, null, null, null) >> { args ->
-            def column = args[2] as Column
-            column.setName("testColumn")
-        }
     }
 
     def "derived property adds no columns but adds formula, except TenantId"() {
@@ -153,7 +133,9 @@ class SimpleValueBinderSpec extends Specification {
         tenantProp.getMappedForm() >> tenantPc
         tenantProp.getHibernateMappedForm() >> tenantPc
         prop.getOwner() >> owner
+        prop.getHibernateOwner() >> owner
         tenantProp.getOwner() >> owner
+        tenantProp.getHibernateOwner() >> owner
         owner.getMappedForm() >> mapping
         owner.getHibernateMappedForm() >> mapping
         _ * prop.getHibernateMappedForm() >> pc
@@ -173,7 +155,7 @@ class SimpleValueBinderSpec extends Specification {
         _ * prop.getTypeName(sv) >> 'X'
         _ * prop.getTypeParameters(sv) >> null
         _ * sv.addFormula({ it.getFormula() == 'x+y' })
-        0 * columnBinder.bindColumn(_, _, _, _, _, _)
+        0 * sv.addColumn(_)
 
         when:
         binder.bindSimpleValue(tenantProp, null, sv2, null)
@@ -182,10 +164,6 @@ class SimpleValueBinderSpec extends Specification {
         _ * tenantProp.getTypeName(sv2) >> 'X'
         _ * tenantProp.getTypeParameters(sv2) >> null
         0 * sv2.addFormula(_)
-        _ * columnBinder.bindColumn(_, _, _, _, _, _) >> { args ->
-            def column = args[2] as Column
-            column.setName("testColumn")
-        }
     }
 
     def "applies generator and maps sequence param to SequenceStyleGenerator.SEQUENCE_PARAM"() {
@@ -202,6 +180,7 @@ class SimpleValueBinderSpec extends Specification {
         prop.getMappedForm() >> pc
         prop.getHibernateMappedForm() >> pc
         prop.getOwner() >> owner
+        prop.getHibernateOwner() >> owner
         owner.getMappedForm() >> mapping
         owner.getHibernateMappedForm() >> mapping
         _ * prop.getHibernateMappedForm() >> pc
@@ -212,14 +191,12 @@ class SimpleValueBinderSpec extends Specification {
         pc.getGenerator() >> 'sequence'
         pc.getTypeParams() >> genProps
         prop.getType() >> String
+        namingStrategy.resolveColumnName(_) >> 'test_column'
 
         when:
-        def result = binder.bindBasicValue(prop, null, table, null)
+        def result = binder.bindSimpleValue(prop, null, table, null)
 
         then:
-        _ * columnBinder.bindColumn(prop, null, _, null, null, table) >> { args ->
-            args[2].setName("testColumn")
-        }
         result instanceof org.hibernate.mapping.BasicValue
         result.getCustomIdGeneratorCreator() != null
     }
@@ -239,6 +216,7 @@ class SimpleValueBinderSpec extends Specification {
         prop.getMappedForm() >> pc
         prop.getHibernateMappedForm() >> pc
         prop.getOwner() >> owner
+        prop.getHibernateOwner() >> owner
         owner.getMappedForm() >> mapping
         owner.getHibernateMappedForm() >> mapping
         _ * prop.getHibernateMappedForm() >> pc
@@ -256,23 +234,7 @@ class SimpleValueBinderSpec extends Specification {
         then:
         _ * prop.getTypeName(sv) >> 'Z'
         _ * prop.getTypeParameters(sv) >> null
-        _ * columnConfigToColumnBinder.bindColumnConfigToColumn(_, cc1, pc) >> { args ->
-            def column = args[0] as Column
-            column.setName("testColumn")
-        }
-        _ * columnConfigToColumnBinder.bindColumnConfigToColumn(_, cc2, pc) >> { args ->
-            def column = args[0] as Column
-            column.setName("testColumn")
-        }
-        _ * columnBinder.bindColumn(prop, parent, _, cc1, 'path', null) >> { args ->
-            def column = args[2] as Column
-            column.setName("testColumn")
-        }
-        _ * columnBinder.bindColumn(prop, parent, _, cc2, 'path', null) >> { args ->
-            def column = args[2] as Column
-            column.setName("testColumn")
-        }
-        _ * sv.addColumn(_ as Column)
+        2 * sv.addColumn(_ as Column)
     }
 
     def "bindSimpleValue creates and returns BasicValue"() {
@@ -288,6 +250,7 @@ class SimpleValueBinderSpec extends Specification {
         prop.getMappedForm() >> pc
         prop.getHibernateMappedForm() >> pc
         prop.getOwner() >> owner
+        prop.getHibernateOwner() >> owner
         owner.getMappedForm() >> mapping
         owner.getHibernateMappedForm() >> mapping
         _ * prop.getHibernateMappedForm() >> pc
@@ -297,15 +260,12 @@ class SimpleValueBinderSpec extends Specification {
         pc.getColumns() >> null
         prop.getType() >> String
         prop.isNullable() >> true
+        namingStrategy.resolveColumnName(_) >> 'test_column'
 
         when:
-        def result = binder.bindBasicValue(prop, null, table, "path")
+        def result = binder.bindSimpleValue(prop, null, table, "path")
 
         then:
-        _ * columnBinder.bindColumn(prop, null, _, null, "path", table) >> { args ->
-            def column = args[2] as Column
-            column.setName("testColumn")
-        }
         result instanceof org.hibernate.mapping.BasicValue
         result.getTable() == table
         result.getTypeName() == String.name

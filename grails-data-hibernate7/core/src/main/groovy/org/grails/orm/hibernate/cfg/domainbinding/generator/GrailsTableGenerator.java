@@ -44,7 +44,7 @@ public class GrailsTableGenerator extends TableGenerator {
         if (!generatorProps.containsKey(SEGMENT_VALUE_PARAM)) {
             String propertyName = context.getProperty().getName();
 
-            // Use the name we just ensured exists in BasicValueIdCreator
+            // Use the name we just ensured exists in BasicValueCreator
             String entityName =
                     (mappedId != null && mappedId.getName() != null) ? mappedId.getName() : DEFAULT_ENTITY_NAME;
 

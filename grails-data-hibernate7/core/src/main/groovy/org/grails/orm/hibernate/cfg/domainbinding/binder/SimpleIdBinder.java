@@ -29,7 +29,7 @@ import org.hibernate.mapping.Table;
 
 import org.grails.orm.hibernate.cfg.Identity;
 import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernatePersistentEntity;
-import org.grails.orm.hibernate.cfg.domainbinding.util.BasicValueIdCreator;
+import org.grails.orm.hibernate.cfg.domainbinding.util.BasicValueCreator;
 
 import static org.grails.orm.hibernate.cfg.domainbinding.binder.GrailsDomainBinder.EMPTY_PATH;
 
@@ -38,17 +38,17 @@ import static org.grails.orm.hibernate.cfg.domainbinding.binder.GrailsDomainBind
 public class SimpleIdBinder {
 
     private final MetadataBuildingContext metadataBuildingContext;
-    private final BasicValueIdCreator basicValueIdCreator;
+    private final BasicValueCreator basicValueCreator;
     private final SimpleValueBinder simpleValueBinder;
     private final PropertyBinder propertyBinder;
 
     public SimpleIdBinder(
             MetadataBuildingContext metadataBuildingContext,
-            BasicValueIdCreator basicValueIdCreator,
+            BasicValueCreator basicValueCreator,
             SimpleValueBinder simpleValueBinder,
             PropertyBinder propertyBinder) {
         this.metadataBuildingContext = metadataBuildingContext;
-        this.basicValueIdCreator = basicValueIdCreator;
+        this.basicValueCreator = basicValueCreator;
         this.simpleValueBinder = simpleValueBinder;
         this.propertyBinder = propertyBinder;
     }
@@ -62,9 +62,9 @@ public class SimpleIdBinder {
 
         // create the id value
 
-        BasicValue id = basicValueIdCreator.bindBasicValue(table, mappedId, domainClass);
+        BasicValue id = basicValueCreator.bindBasicValue(table, mappedId, domainClass);
 
-        var identifier = basicValueIdCreator.resolveIdentifierProperty(domainClass, mappedId);
+        var identifier = basicValueCreator.resolveIdentifierProperty(domainClass, mappedId);
 
         Property idProperty = new Property();
         idProperty.setName(identifier.getName());

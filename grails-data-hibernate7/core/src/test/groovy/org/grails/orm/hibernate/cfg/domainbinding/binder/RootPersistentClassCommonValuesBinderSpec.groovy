@@ -25,7 +25,7 @@ import org.hibernate.mapping.RootClass
 import org.hibernate.boot.spi.MetadataBuildingContext
 import org.grails.orm.hibernate.cfg.PersistentEntityNamingStrategy
 import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernatePersistentEntity
-import org.grails.orm.hibernate.cfg.domainbinding.util.BasicValueIdCreator
+import org.grails.orm.hibernate.cfg.domainbinding.util.BasicValueCreator
 
 import org.hibernate.mapping.BasicValue
 
@@ -49,7 +49,7 @@ class RootPersistentClassCommonValuesBinderSpec extends HibernateGormDatastoreSp
         def jdbcEnvironment = gormDomainBinder.getJdbcEnvironment()
         def simpleValueBinder = new SimpleValueBinder(metadataBuildingContext, namingStrategy, jdbcEnvironment)
         def propertyBinder = new PropertyBinder()
-        def simpleIdBinder = new SimpleIdBinder(metadataBuildingContext, new BasicValueIdCreator(metadataBuildingContext, jdbcEnvironment, namingStrategy), simpleValueBinder, propertyBinder)
+        def simpleIdBinder = new SimpleIdBinder(metadataBuildingContext, new BasicValueCreator(metadataBuildingContext, jdbcEnvironment, namingStrategy), simpleValueBinder, propertyBinder)
         def compositeIdBinder = new CompositeIdBinder(metadataBuildingContext, null, null)
         identityBinder = new IdentityBinder(simpleIdBinder, compositeIdBinder)
         versionBinder = new VersionBinder(metadataBuildingContext, simpleValueBinder, propertyBinder, BasicValue::new)

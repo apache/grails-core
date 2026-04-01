@@ -61,7 +61,7 @@ import org.grails.orm.hibernate.cfg.domainbinding.collectionType.CollectionHolde
 import org.grails.orm.hibernate.cfg.domainbinding.util.PropertyFromValueCreator
 import org.grails.orm.hibernate.cfg.domainbinding.binder.ComponentBinder
 import org.grails.orm.hibernate.cfg.domainbinding.binder.ComponentUpdater
-import org.grails.orm.hibernate.cfg.domainbinding.util.BasicValueIdCreator
+import org.grails.orm.hibernate.cfg.domainbinding.util.BasicValueCreator
 
 import org.grails.orm.hibernate.cfg.domainbinding.binder.ClassPropertiesBinder
 import org.grails.orm.hibernate.cfg.domainbinding.util.MultiTenantFilterBinder
@@ -131,7 +131,7 @@ class CollectionBinderSpec extends HibernateGormDatastoreSpec {
         )
         CompositeIdBinder compositeIdBinder = new CompositeIdBinder(metadataBuildingContext, componentUpdater, propertyBinder)
         PropertyBinder propertyBinderHelper = new PropertyBinder()
-        SimpleIdBinder simpleIdBinder = new SimpleIdBinder(metadataBuildingContext, new BasicValueIdCreator(metadataBuildingContext, jdbcEnvironment, namingStrategy), simpleValueBinder, propertyBinderHelper)
+        SimpleIdBinder simpleIdBinder = new SimpleIdBinder(metadataBuildingContext, new BasicValueCreator(metadataBuildingContext, jdbcEnvironment, namingStrategy), simpleValueBinder, propertyBinderHelper)
         IdentityBinder identityBinder = new IdentityBinder(simpleIdBinder, compositeIdBinder)
         VersionBinder versionBinder = new VersionBinder(metadataBuildingContext, simpleValueBinder, propertyBinderHelper, BasicValue::new)
 

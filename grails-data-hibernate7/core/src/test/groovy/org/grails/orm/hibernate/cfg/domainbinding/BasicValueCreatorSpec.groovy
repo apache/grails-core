@@ -35,12 +35,12 @@ import spock.lang.Unroll
 
 import org.grails.orm.hibernate.cfg.domainbinding.generator.GrailsSequenceWrapper
 import org.grails.orm.hibernate.cfg.domainbinding.generator.GrailsSequenceGeneratorEnum
-import org.grails.orm.hibernate.cfg.domainbinding.util.BasicValueIdCreator
+import org.grails.orm.hibernate.cfg.domainbinding.util.BasicValueCreator
 
-class BasicValueIdCreatorSpec extends HibernateGormDatastoreSpec {
+class BasicValueCreatorSpec extends HibernateGormDatastoreSpec {
 
     MetadataBuildingContext metadataBuildingContext
-    BasicValueIdCreator creator
+    BasicValueCreator creator
     BasicValue basicValue
     RootClass entity
     Table table
@@ -58,7 +58,7 @@ class BasicValueIdCreatorSpec extends HibernateGormDatastoreSpec {
         entity.setTable(table)
         // Use a real BasicValue to test that the generator creator lambda is correctly set and executable
         basicValue = new BasicValue(metadataBuildingContext, table)
-        creator = new BasicValueIdCreator(metadataBuildingContext, jdbcEnvironment, namingStrategy, grailsSequenceWrapper)
+        creator = new BasicValueCreator(metadataBuildingContext, jdbcEnvironment, namingStrategy, grailsSequenceWrapper)
     }
 
     @Unroll

@@ -36,17 +36,17 @@ import org.grails.orm.hibernate.cfg.domainbinding.hibernate.GrailsHibernatePersi
 import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernateIdentityProperty;
 import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernatePersistentProperty;
 
-/** The basic value id creator class. */
+/** The basic value creator class. */
 @SuppressWarnings("PMD.DataflowAnomalyAnalysis")
-public class BasicValueIdCreator {
+public class BasicValueCreator {
 
     private final MetadataBuildingContext metadataBuildingContext;
     private final JdbcEnvironment jdbcEnvironment;
     private final PersistentEntityNamingStrategy namingStrategy;
     private final GrailsSequenceWrapper grailsSequenceWrapper;
 
-    /** Creates a new {@link BasicValueIdCreator} instance. */
-    public BasicValueIdCreator(
+    /** Creates a new {@link BasicValueCreator} instance. */
+    public BasicValueCreator(
             MetadataBuildingContext metadataBuildingContext,
             JdbcEnvironment jdbcEnvironment,
             PersistentEntityNamingStrategy namingStrategy) {
@@ -56,8 +56,8 @@ public class BasicValueIdCreator {
         this.grailsSequenceWrapper = new GrailsSequenceWrapper();
     }
 
-    /** Creates a new {@link BasicValueIdCreator} instance. */
-    protected BasicValueIdCreator(
+    /** Creates a new {@link BasicValueCreator} instance. */
+    protected BasicValueCreator(
             MetadataBuildingContext metadataBuildingContext,
             JdbcEnvironment jdbcEnvironment,
             PersistentEntityNamingStrategy namingStrategy,
@@ -82,6 +82,20 @@ public class BasicValueIdCreator {
                 domainClass,
                 context.getValue() == null ? new GeneratorCreationContextWrapper(context, basicValue) : context,
                 generatorName));
+        return basicValue;
+    }
+
+    /** Gets the basic value. */
+    public BasicValue bindBasicValue(Table table, HibernatePersistentProperty property) {
+        BasicValue basicValue = new BasicValue(metadataBuildingContext, table);
+        String generator = property.getHibernateMappedForm().getGenerator();
+        if (generator != null) {
+            basicValue.setCustomIdGeneratorCreator(context -> createGenerator(
+                    null,
+                    property.getHibernateOwner(),
+                    context.getValue() == null ? new GeneratorCreationContextWrapper(context, basicValue) : context,
+                    generator));
+        }
         return basicValue;
     }
 

@@ -78,7 +78,7 @@ public class GrailsPropertyBinder {
         if (currentGrailsProp instanceof HibernateEnumProperty hibernateEnumProperty) {
             value = enumTypeBinder.bindEnumType(hibernateEnumProperty, table, path);
         } else if (currentGrailsProp.isUserButNotCollectionType()) {
-            value = simpleValueBinder.bindBasicValue(currentGrailsProp, parentProperty, table, path);
+            value = simpleValueBinder.bindSimpleValue(currentGrailsProp, parentProperty, table, path);
         } else if (currentGrailsProp instanceof HibernateOneToOneProperty oneToOne &&
                 oneToOne.isValidHibernateOneToOne()) {
             value = oneToOneBinder.bindOneToOne(oneToOne, path);
@@ -92,14 +92,14 @@ public class GrailsPropertyBinder {
         } else if (currentGrailsProp instanceof HibernateEmbeddedProperty embedded) {
             value = componentBinder.bindComponent(embedded, path);
         } else if (currentGrailsProp instanceof HibernateSimpleProperty simple) {
-            value = simpleValueBinder.bindBasicValue(simple, parentProperty, table, path);
+            value = simpleValueBinder.bindSimpleValue(simple, parentProperty, table, path);
         } else if (currentGrailsProp instanceof HibernateCustomProperty custom) {
-            value = simpleValueBinder.bindBasicValue(custom, parentProperty, table, path);
+            value = simpleValueBinder.bindSimpleValue(custom, parentProperty, table, path);
         } else if (currentGrailsProp instanceof HibernateTenantIdProperty tenantId) {
-            value = simpleValueBinder.bindBasicValue(tenantId, parentProperty, table, path);
+            value = simpleValueBinder.bindSimpleValue(tenantId, parentProperty, table, path);
         } else if (currentGrailsProp instanceof HibernateToManyProperty toMany &&
                 currentGrailsProp.isSerializableType()) {
-            value = simpleValueBinder.bindBasicValue(toMany, parentProperty, table, path);
+            value = simpleValueBinder.bindSimpleValue(toMany, parentProperty, table, path);
         } else {
             throw new RuntimeException(
                     "Unsupported property type: " + currentGrailsProp.getClass().getName());

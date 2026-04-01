@@ -34,7 +34,7 @@ import org.grails.orm.hibernate.cfg.domainbinding.binder.PropertyBinder
 import org.grails.orm.hibernate.cfg.domainbinding.binder.SimpleIdBinder
 import org.grails.orm.hibernate.cfg.domainbinding.binder.SimpleValueBinder
 import org.grails.orm.hibernate.cfg.domainbinding.generator.GrailsSequenceGeneratorEnum
-import org.grails.orm.hibernate.cfg.domainbinding.util.BasicValueIdCreator
+import org.grails.orm.hibernate.cfg.domainbinding.util.BasicValueCreator
 import org.grails.datastore.mapping.reflect.EntityReflector
 
 class SimpleIdBinderSpec extends HibernateGormDatastoreSpec {
@@ -43,7 +43,7 @@ class SimpleIdBinderSpec extends HibernateGormDatastoreSpec {
     JdbcEnvironment jdbcEnvironment
     def simpleValueBinder
     def propertyBinder
-    def basicValueIdCreator
+    def basicValueCreator
     Table currentTable
 
     def simpleIdBinder
@@ -60,12 +60,12 @@ class SimpleIdBinderSpec extends HibernateGormDatastoreSpec {
         )
         jdbcEnvironment = domainBinder.getJdbcEnvironment()
 
-        // Use a Mock for BasicValueIdCreator and return a BasicValue based on the currentTable
-        basicValueIdCreator = Mock(BasicValueIdCreator)
-        basicValueIdCreator.bindBasicValue(_, _, _) >> { Table table, Identity id, HibernatePersistentEntity domainClass ->
+        // Use a Mock for BasicValueCreator and return a BasicValue based on the currentTable
+        basicValueCreator = Mock(BasicValueCreator)
+        basicValueCreator.bindBasicValue(_, _, _) >> { Table table, Identity id, HibernatePersistentEntity domainClass ->
             return new BasicValue(metadataBuildingContext, table)
         }
-        basicValueIdCreator.resolveIdentifierProperty(_, _) >> { HibernatePersistentEntity domainClass, Identity mappedId ->
+        basicValueCreator.resolveIdentifierProperty(_, _) >> { HibernatePersistentEntity domainClass, Identity mappedId ->
             return domainClass.getIdentity() ?: Mock(HibernatePersistentProperty) { getName() >> "id" }
         }
 
@@ -73,7 +73,7 @@ class SimpleIdBinderSpec extends HibernateGormDatastoreSpec {
         simpleValueBinder = Mock(SimpleValueBinder)
         propertyBinder = Spy(PropertyBinder)
 
-        simpleIdBinder = new SimpleIdBinder(metadataBuildingContext, basicValueIdCreator, simpleValueBinder, propertyBinder)
+        simpleIdBinder = new SimpleIdBinder(metadataBuildingContext, basicValueCreator, simpleValueBinder, propertyBinder)
     }
 
     def "bindSimpleId with identity generator"() {
@@ -150,7 +150,7 @@ class SimpleIdBinderSpec extends HibernateGormDatastoreSpec {
         simpleIdBinder.bindSimpleId(domainClass, rootClass, new Identity(name: "nonExistent"), table)
 
         then:
-        1 * basicValueIdCreator.resolveIdentifierProperty(domainClass, _) >> { throw new org.hibernate.MappingException("Mapping specifies an identifier property name that doesn't exist [nonExistent]") }
+        1 * basicValueCreator.resolveIdentifierProperty(domainClass, _) >> { throw new org.hibernate.MappingException("Mapping specifies an identifier property name that doesn't exist [nonExistent]") }
         thrown(org.hibernate.MappingException)
     }
 
