@@ -61,6 +61,7 @@ class GroovyPagePlugin implements Plugin<Project> {
         SourceSetOutput output = mainSourceSet?.output
         FileCollection classesDirs = resolveClassesDirs(output, project)
         Provider<Directory> destDir = project.layout.buildDirectory.dir('gsp-classes/main')
+        Provider<Directory> webappDestDir = project.layout.buildDirectory.dir('gsp-classes/webapp')
         output?.dir('gsp-classes')
 
         FileCollection allClasspath = project.getObjects().fileCollection().from(
@@ -81,7 +82,7 @@ class GroovyPagePlugin implements Plugin<Project> {
         }
 
         def compileWebappGroovyPages = tasks.register('compileWebappGroovyPages', GroovyPageForkCompileTask) {
-            it.destinationDirectory.set(destDir)
+            it.destinationDirectory.set(webappDestDir)
             it.source = project.layout.projectDirectory.dir('src/main/webapp')
             it.tmpDirPath = getTmpDirPath(project)
             it.serverpath.set('/')
@@ -102,14 +103,18 @@ class GroovyPagePlugin implements Plugin<Project> {
                 war.from(destDir) { CopySpec it ->
                     it.into('WEB-INF/classes')
                 }
+                war.from(webappDestDir) { CopySpec it ->
+                    it.into('WEB-INF/classes')
+                }
             } else if (war.name == 'war') {
                 war.from(destDir)
+                war.from(webappDestDir)
             }
 
             if (war.classpath) {
-                war.classpath = war.classpath + project.files(destDir)
+                war.classpath = war.classpath + project.files(destDir, webappDestDir)
             } else {
-                war.classpath = project.files(destDir)
+                war.classpath = project.files(destDir, webappDestDir)
             }
         }
 
@@ -121,8 +126,12 @@ class GroovyPagePlugin implements Plugin<Project> {
                     jar.from(destDir) { CopySpec it ->
                         it.into('BOOT-INF/classes')
                     }
+                    jar.from(webappDestDir) { CopySpec it ->
+                        it.into('BOOT-INF/classes')
+                    }
                 } else if (jar.name == 'jar') {
                     jar.from(destDir)
+                    jar.from(webappDestDir)
                 }
             }
         }

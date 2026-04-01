@@ -18,56 +18,33 @@
  */
 package grails.boot
 
-import org.springframework.core.env.ConfigurableEnvironment
-import org.springframework.web.context.support.StandardServletEnvironment
-
 import grails.artefact.Artefact
 import grails.boot.config.GrailsAutoConfiguration
 import grails.web.Controller
 import org.springframework.boot.autoconfigure.EnableAutoConfiguration
-// Note: Spring Boot 4.0 modularization - embedded server classes exist but tests need significant rework
-// See Spring Boot 4.0 Migration Guide for details on new module structure
-// import org.springframework.boot.web.server.servlet.context.ServletWebServerApplicationContextFactory
-// import org.springframework.boot.web.server.servlet.ConfigurableServletWebServerFactory
-// import org.springframework.boot.tomcat.web.server.TomcatServletWebServerFactory
-import org.springframework.context.annotation.Bean
 import spock.lang.Ignore
 import spock.lang.Specification
 
-import org.apache.grails.core.plugins.DefaultPluginDiscovery
-import org.apache.grails.core.plugins.PluginDiscovery
-
 /**
- * Created by graemerocher on 28/05/14.
+ * Tests loading Grails in an embedded server configuration.
+ *
+ * TODO: Rework for Spring Boot 4.0 modularized embedded server APIs.
+ * Embedded server classes moved to spring-boot-web-server and spring-boot-tomcat modules
+ * and require updated test patterns.
  */
 @Ignore("Spring Boot 4.0: Embedded server test infrastructure needs significant rework due to modularization. " +
         "Classes exist in new spring-boot-web-server and spring-boot-tomcat modules but require updated test patterns.")
 class EmbeddedContainerWithGrailsSpec extends Specification {
 
-    // AnnotationConfigServletWebServerApplicationContext context
-
-    void cleanup() {
-        // context.close()
-    }
-
     void "Test that you can load Grails in an embedded server config"() {
-        when:"An embedded server config is created"
-            // this.context = new AnnotationConfigServletWebServerApplicationContext(Application)
-            true // Placeholder
-
-        then:"The context is valid"
-            // context != null
-            // new URL("http://localhost:${context.webServer.port}/foo/bar").text == 'hello world'
-            // new URL("http://localhost:${context.webServer.port}/foos").text == 'all foos'
-            true // Placeholder
+        // TODO: Restore embedded server assertions after reworking for Spring Boot 4.0 modularized APIs
+        expect:
+        throw new UnsupportedOperationException(
+            'Test disabled pending Spring Boot 4.0 embedded server API rework')
     }
 
     @EnableAutoConfiguration
     static class Application extends GrailsAutoConfiguration {
-        // @Bean
-        // ConfigurableServletWebServerFactory webServerFactory() {
-        //     new TomcatServletWebServerFactory(0)
-        // }
     }
 
 }
@@ -94,4 +71,3 @@ class UrlMappings {
         "/foos"(controller: 'foo', action: "list")
     }
 }
-
