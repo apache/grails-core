@@ -38,7 +38,7 @@ dependencies {
     implementation("commons-codec:commons-codec:1.16.1")
 
     testImplementation "net.sf.expectit:expectit-core:0.9.0"
-    testImplementation "com.github.jnr:jnr-posix:3.1.20"
+    testImplementation "com.github.jnr:jnr-posix:3.1.22"
 
     runtimeOnly "org.slf4j:slf4j-simple:$slf4jVersion"
     runtimeOnly "org.codehaus.plexus:plexus-component-api:1.0-alpha-33"
