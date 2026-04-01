@@ -26,7 +26,9 @@ import groovy.transform.CompileStatic
  *
  * @author Graeme Rocher
  * @author Jeff Brown
+ * @deprecated Named queries are deprecated, use where queries instead
  */
+@Deprecated(since = '7.1', forRemoval = true)
 class NamedQueriesBuilder {
 
     private boolean initialized = false

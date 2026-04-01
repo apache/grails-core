@@ -72,9 +72,9 @@ public abstract class FeatureRepository implements CrudRepository<Feature, Long>
     }
 
     @ReadOnly
-    List<TotalDTO> topTestFrameworks() {
+    List<TotalDTO> topReloading() {
         return this.jdbcOperations
-                .prepareStatement(query("test_framework", "application"),
+                .prepareStatement(query("reloading", "application"),
                         statement -> {
                             try (ResultSet resultSet = statement.executeQuery()) {
                                 return resultSetToTotals(resultSet);

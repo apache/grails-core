@@ -23,8 +23,8 @@ import io.micronaut.core.annotation.Introspected;
 
 @Introspected
 public class FeatureFilter {
-    @JsonProperty("test")
-    private TestFramework test;
+    @JsonProperty("reloading")
+    private DevelopmentReloading reloading;
     @JsonProperty("gorm")
     private GormImpl gorm;
     @JsonProperty("servlet")
@@ -32,12 +32,12 @@ public class FeatureFilter {
     @JsonProperty("javaVersion")
     private JdkVersion javaVersion;
 
-    public TestFramework getTest() {
-        return test;
+    public DevelopmentReloading getReloading() {
+        return reloading;
     }
 
-    public void setTest(TestFramework test) {
-        this.test = test;
+    public void setReloading(DevelopmentReloading reloading) {
+        this.reloading = reloading;
     }
 
     public GormImpl getGorm() {

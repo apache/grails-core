@@ -98,12 +98,25 @@ public class GrailsApplicationContext extends GenericApplicationContext implemen
 
     /**
      * Initialize the theme capability.
+     *
+     * @deprecated since 7.1, for removal in 8.0. Spring's theme support ({@link ThemeSource},
+     * {@link UiApplicationContextUtils#initThemeSource}) is deprecated in Spring Boot 3 and
+     * removed in Spring Boot 4. This method will be removed in Grails 8.0.0.
      */
+    @Deprecated(since = "7.1", forRemoval = true)
     @Override
     protected void onRefresh() {
         themeSource = UiApplicationContextUtils.initThemeSource(this);
     }
 
+    /**
+     * Return the {@link Theme} instance for the given theme name.
+     *
+     * @deprecated since 7.1, for removal in 8.0. Spring's theme support ({@link ThemeSource},
+     * {@link Theme}) is deprecated in Spring Boot 3 and removed in Spring Boot 4.
+     * This method will be removed in Grails 8.0.0.
+     */
+    @Deprecated(since = "7.1", forRemoval = true)
     public Theme getTheme(String themeName) {
         return themeSource.getTheme(themeName);
     }

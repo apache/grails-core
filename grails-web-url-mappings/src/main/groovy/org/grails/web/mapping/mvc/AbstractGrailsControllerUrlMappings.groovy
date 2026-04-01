@@ -22,9 +22,11 @@ import java.util.concurrent.ConcurrentHashMap
 
 import groovy.transform.Canonical
 import groovy.transform.CompileStatic
+import groovy.util.logging.Slf4j
 
 import org.springframework.http.HttpMethod
 
+import grails.config.Settings
 import grails.core.GrailsApplication
 import grails.core.GrailsClass
 import grails.core.GrailsControllerClass
@@ -45,23 +47,37 @@ import org.grails.web.servlet.mvc.GrailsWebRequest
  * @since 3.0
  */
 @CompileStatic
+@Slf4j
 abstract class AbstractGrailsControllerUrlMappings implements UrlMappings {
 
     UrlMappings urlMappingsHolderDelegate
     UrlConverter urlConverter
+    boolean validateWildcardMappings
     ConcurrentHashMap<ControllerKey, GrailsControllerClass> mappingsToGrailsControllerMap = new ConcurrentHashMap<>()
     ConcurrentHashMap<ControllerKey, GrailsControllerClass> deferredMappings = new ConcurrentHashMap<>()
 
     AbstractGrailsControllerUrlMappings(GrailsApplication grailsApplication, UrlMappings urlMappingsHolderDelegate, UrlConverter urlConverter = null) {
         this.urlMappingsHolderDelegate = urlMappingsHolderDelegate
         this.urlConverter = urlConverter
+        this.validateWildcardMappings = grailsApplication.config.getProperty(
+                Settings.WEB_URL_MAPPING_VALIDATE_WILDCARDS, Boolean, true)
         def controllerArtefacts = grailsApplication.getArtefacts(ControllerArtefactHandler.TYPE)
         for (GrailsClass gc in controllerArtefacts) {
             registerController((GrailsControllerClass) gc)
         }
 
         for (Map.Entry<ControllerKey, GrailsControllerClass> entry: deferredMappings.entrySet()) {
-            mappingsToGrailsControllerMap.putIfAbsent(entry.key, entry.value)
+            ControllerKey key = entry.key
+            GrailsControllerClass deferredController = entry.value
+            GrailsControllerClass existingController = mappingsToGrailsControllerMap.get(key)
+
+            if (existingController == null) {
+                mappingsToGrailsControllerMap.put(key, deferredController)
+            } else if (key.namespace == null && deferredController.namespace == null && existingController.namespace != null) {
+                // A non-namespaced controller is a better match for a null-namespace key
+                // than a namespaced controller that registered here as a fallback
+                mappingsToGrailsControllerMap.put(key, deferredController)
+            }
         }
     }
 
@@ -167,6 +183,7 @@ abstract class AbstractGrailsControllerUrlMappings implements UrlMappings {
             mapToUse.put(noPluginDefaultActionKey, controller)
         }
 
+        log.debug('Registering controller: namespace={}, name={}, plugin={}, actions={}', namespace, controllerName, pluginNameToRegister, controller.actions)
         for (action in controller.actions) {
             action = hasUrlConverter ? urlConverter.toUrlElement(action) : action
             def withPluginKey = new ControllerKey(namespace, controllerName, action, pluginNameToRegister)
@@ -189,11 +206,17 @@ abstract class AbstractGrailsControllerUrlMappings implements UrlMappings {
         }
     }
 
+    private static final Set<String> ROUTING_PARAMS = ['controller', 'action', 'namespace', 'plugin', 'format', 'id', 'version'] as Set
+
     protected UrlMappingInfo[] collectControllerMappings(UrlMappingInfo[] infos) {
         def webRequest = GrailsWebRequest.lookup()
-        infos.collect({ UrlMappingInfo info ->
+        List<UrlMappingInfo> wildcardActionMatches = []
+        List<UrlMappingInfo> otherMatches = []
+        boolean hasLiteralControllerMatch = false
+        for (UrlMappingInfo info : infos) {
             if (info.redirectInfo) {
-                return info
+                otherMatches.add(info)
+                continue
             }
             if (webRequest != null) {
                 webRequest.resetParams()
@@ -202,11 +225,30 @@ abstract class AbstractGrailsControllerUrlMappings implements UrlMappings {
             ControllerKey controllerKey = new ControllerKey(info.namespace, info.controllerName, info.actionName, info.pluginName)
             GrailsControllerClass controllerClass = info ? mappingsToGrailsControllerMap.get(controllerKey) : null
             if (controllerClass) {
-                return new GrailsControllerUrlMappingInfo(controllerClass, info)
-            } else {
-                return info
+                def wrapped = new GrailsControllerUrlMappingInfo(controllerClass, info)
+                if (validateWildcardMappings && info.hasWildcardCaptures()) {
+                    wildcardActionMatches.add(wrapped)
+                } else {
+                    otherMatches.add(wrapped)
+                    if (!hasLiteralControllerMatch) {
+                        // A literal match has no URL-captured parameters beyond standard routing params
+                        def params = info.parameters
+                        hasLiteralControllerMatch = params == null || params.keySet().every { it in ROUTING_PARAMS }
+                    }
+                }
+            } else if (!validateWildcardMappings || !info.hasWildcardCaptures()) {
+                otherMatches.add(info)
             }
-        }) as UrlMappingInfo[]
+            // else: wildcard-captured values didn't match a registered controller/action — skip
+        }
+        // Wildcard-resolved matches take priority over parameterized catch-all matches
+        // (e.g., $controller=feed beats $communitySlug=feed), but NOT over literal path
+        // matches (e.g., /community or post /invites) which are always more specific
+        if (hasLiteralControllerMatch) {
+            (otherMatches + wildcardActionMatches) as UrlMappingInfo[]
+        } else {
+            (wildcardActionMatches + otherMatches) as UrlMappingInfo[]
+        }
     }
 
     protected UrlMappingInfo collectControllerMapping(UrlMappingInfo info) {

@@ -50,7 +50,7 @@ public class GenerationListener {
                 context.getApplicationType(),
                 context.getGorm(),
                 context.getServlet(),
-                context.getTestFramework(),
+                context.getDevelopmentReloading(),
                 context.getJdkVersion()
         );
         generated.setSelectedFeatures(features);

@@ -1553,6 +1553,157 @@ class Project {
         }
     }
 
+    def "Test where query composition with re-assigned variable in if/else blocks"() {
+        given: "A bunch of people"
+        createPeople()
+
+        when: "A where query variable is assigned inside an if/else block and then chained"
+        def condition = true
+        def query
+        if (condition) {
+            query = Person.where { lastName == 'Simpson' }
+        } else {
+            query = Person.where { lastName == 'Rubble' }
+        }
+        query = query.where { age > 10 }
+        def results = query.list()
+
+        then: "Both criteria from the if block and the chained where are applied"
+        results.size() == 2
+        results.every { it.lastName == 'Simpson' && it.age > 10 }
+
+        when: "The else branch is taken instead"
+        condition = false
+        if (condition) {
+            query = Person.where { lastName == 'Simpson' }
+        } else {
+            query = Person.where { lastName == 'Rubble' }
+        }
+        query = query.where { age > 10 }
+        results = query.list()
+
+        then: "Both criteria from the else block and the chained where are applied"
+        results.size() == 1
+        results[0].lastName == 'Rubble'
+        results[0].firstName == 'Barney'
+    }
+
+    def "Test where query composition with re-assigned variable without initializer"() {
+        given: "A bunch of people"
+        createPeople()
+
+        when: "A variable is declared without initializer and then assigned a where query"
+        def query
+        query = Person.where { lastName == 'Simpson' }
+        query = query.where { firstName == 'Bart' }
+        def results = query.list()
+
+        then: "Both criteria are applied"
+        results.size() == 1
+        results[0].firstName == 'Bart'
+        results[0].lastName == 'Simpson'
+    }
+
+    def "Test where query composition with chained where on re-assigned variable"() {
+        given: "A bunch of people"
+        createPeople()
+
+        when: "Multiple where queries are chained on a re-assigned variable"
+        def query
+        query = Person.where { age > 5 }
+        query = query.where { age < 42 }
+        query = query.where { lastName == 'Simpson' }
+        def results = query.list()
+
+        then: "All three criteria are applied"
+        results.size() == 3
+        results.every { it.age > 5 && it.age < 42 && it.lastName == 'Simpson' }
+    }
+
+
+    @Issue('https://github.com/apache/grails-core/issues/11464')
+    def "Test where query with overlapping variable names compiles in @Transactional context"() {
+        when: "A @Transactional class with where queries using variable names that match domain properties is compiled"
+        def gcl = new GroovyClassLoader(getClass().classLoader)
+        def clazz = gcl.parseClass('''
+import org.apache.grails.data.testing.tck.domains.*
+import grails.gorm.annotation.*
+import grails.gorm.transactions.Transactional
+import org.grails.datastore.gorm.query.transform.ApplyDetachedCriteriaTransform
+
+@ApplyDetachedCriteriaTransform
+@Entity
+@Transactional
+class TransactionalQueryService {
+
+    def findPeopleByAge(int age) {
+        Person.where {
+            age > age
+        }.list()
+    }
+
+    def findPetsOlderThan(int age) {
+        Person.where {
+            pets { age > age }
+        }.list()
+    }
+
+    def findByFirstName(String firstName) {
+        Person.where {
+            firstName == firstName
+        }.list()
+    }
+
+    def findByLastNameWithAssociation(String lastName) {
+        def pets = []
+        Person.where {
+            lastName == lastName && pets { age > 5 }
+        }.list()
+    }
+}
+''')
+
+        then: "The class compiles and can be instantiated without error"
+        clazz != null
+        clazz.newInstance() != null
+    }
+
+    @Issue('https://github.com/apache/grails-core/issues/11464')
+    def "Test where query with overlapping association variable name compiles in @Transactional context"() {
+        when: "A @Transactional class uses a where query with an association name matching a local variable"
+        def gcl = new GroovyClassLoader(getClass().classLoader)
+        def clazz = gcl.parseClass('''
+import org.apache.grails.data.testing.tck.domains.*
+import grails.gorm.annotation.*
+import grails.gorm.transactions.Transactional
+import org.grails.datastore.gorm.query.transform.ApplyDetachedCriteriaTransform
+
+@ApplyDetachedCriteriaTransform
+@Entity
+class TransactionalAssocQueryService {
+
+    @Transactional
+    def findPeopleByPetAge(int age) {
+        def pets = []
+        Person.where {
+            pets.age == age
+        }.list()
+    }
+
+    @Transactional
+    def findPetsWithOwnerName(String firstName) {
+        Pet.where {
+            owner.firstName == firstName
+        }.list()
+    }
+}
+''')
+
+        then: "The class compiles and can be instantiated without error"
+        clazz != null
+        clazz.newInstance() != null
+    }
+
     protected createContinentWithCountries() {
         final continent = new Continent(name: "Africa")
         continent.countries << new Country(name: "SA", population: 304830) << new Country(name: "Zim", population: 304830)

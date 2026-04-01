@@ -61,8 +61,8 @@ import java.util.function.BiFunction;
         ServletImplCandidates.class,
         ServletImplConverter.class,
         CommonOptionsMixin.class,
-        TestFrameworkCandidates.class,
-        TestFrameworkConverter.class
+        DevelopmentReloadingCandidates.class,
+        DevelopmentReloadingConverter.class
 })
 public class Application extends BaseCommand implements Callable<Integer> {
 

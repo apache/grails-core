@@ -19,6 +19,8 @@
 package grails.plugin.formfields
 
 import java.sql.Blob
+import java.text.DecimalFormat
+import java.text.DecimalFormatSymbols
 import java.text.NumberFormat
 import java.time.Instant
 import java.time.LocalDate
@@ -313,6 +315,7 @@ class FormFieldsTagLib {
      * @attr property REQUIRED The name of the property to display. This is resolved
      * against the specified bean or the bean in the current scope.
      */
+    @Deprecated(since = '1.5', forRemoval = true)
     def input = { attrs ->
         out << widget(attrs)
     }
@@ -846,7 +849,15 @@ class FormFieldsTagLib {
 
     @CompileStatic
     protected NumberFormat getNumberFormatter() {
-        NumberFormat.getInstance(getLocale())
+        NumberFormat numberFormat = NumberFormat.getInstance(getLocale())
+        // Normalize Unicode minus sign (U+2212) to ASCII hyphen-minus (U+002D)
+        // for HTML compatibility (fixes grails-core#15178)
+        if (numberFormat instanceof DecimalFormat) {
+            DecimalFormatSymbols symbols = ((DecimalFormat) numberFormat).decimalFormatSymbols
+            symbols.minusSign = '-' as char
+            ((DecimalFormat) numberFormat).decimalFormatSymbols = symbols
+        }
+        return numberFormat
     }
 
     @CompileStatic

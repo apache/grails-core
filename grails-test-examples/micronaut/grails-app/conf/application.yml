@@ -48,6 +48,8 @@ spring:
 management:
     endpoints:
         enabled-by-default: false
+app:
+    name: test-micronaut-app
 
 ---
 grails:
@@ -125,6 +127,11 @@ environments:
             dbCreate: create-drop
             url: jdbc:h2:mem:devDb;LOCK_TIMEOUT=10000;DB_CLOSE_ON_EXIT=FALSE
     test:
+        micronaut:
+            http:
+                services:
+                    grails-self:
+                        url: http://localhost:19876
         dataSource:
             dbCreate: update
             url: jdbc:h2:mem:testDb;LOCK_TIMEOUT=10000;DB_CLOSE_ON_EXIT=FALSE

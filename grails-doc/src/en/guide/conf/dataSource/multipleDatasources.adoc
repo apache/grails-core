@@ -38,15 +38,15 @@ environments:
     development:
         dataSource:
             dbCreate: create-drop
-            url: jdbc:h2:mem:devDb;MVCC=TRUE;LOCK_TIMEOUT=10000;DB_CLOSE_ON_EXIT=FALSE
+            url: jdbc:h2:mem:devDb;LOCK_TIMEOUT=10000;DB_CLOSE_ON_EXIT=FALSE
     test:
         dataSource:
             dbCreate: update
-            url: jdbc:h2:mem:testDb;MVCC=TRUE;LOCK_TIMEOUT=10000;DB_CLOSE_ON_EXIT=FALSE
+            url: jdbc:h2:mem:testDb;LOCK_TIMEOUT=10000;DB_CLOSE_ON_EXIT=FALSE
     production:
         dataSource:
             dbCreate: update
-            url: jdbc:h2:prodDb;MVCC=TRUE;LOCK_TIMEOUT=10000;DB_CLOSE_ON_EXIT=FALSE
+            url: jdbc:h2:prodDb;LOCK_TIMEOUT=10000;DB_CLOSE_ON_EXIT=FALSE
             properties:
                jmxEnabled: true
                initialSize: 5
@@ -76,15 +76,15 @@ environments:
     development:
         dataSource:
             dbCreate: create-drop
-            url: jdbc:h2:mem:devDb;MVCC=TRUE;LOCK_TIMEOUT=10000;DB_CLOSE_ON_EXIT=FALSE
+            url: jdbc:h2:mem:devDb;LOCK_TIMEOUT=10000;DB_CLOSE_ON_EXIT=FALSE
     test:
         dataSource:
             dbCreate: update
-            url: jdbc:h2:mem:testDb;MVCC=TRUE;LOCK_TIMEOUT=10000;DB_CLOSE_ON_EXIT=FALSE
+            url: jdbc:h2:mem:testDb;LOCK_TIMEOUT=10000;DB_CLOSE_ON_EXIT=FALSE
     production:
         dataSource:
             dbCreate: update
-            url: jdbc:h2:prodDb;MVCC=TRUE;LOCK_TIMEOUT=10000;DB_CLOSE_ON_EXIT=FALSE
+            url: jdbc:h2:prodDb;LOCK_TIMEOUT=10000;DB_CLOSE_ON_EXIT=FALSE
             properties:
                 jmxEnabled: true
                 initialSize: 5
@@ -259,6 +259,294 @@ A transactional service can only use a single `DataSource`, so be sure to only m
 Note that the datasource specified in a service has no bearing on which datasources are used for domain classes; that's determined by their declared datasources in the domain classes themselves. It's used to declare which transaction manager to use.
 
 If you have a `Foo` domain class in `dataSource1` and a `Bar` domain class in `dataSource2`, if `WahooService` uses `dataSource1`, a service method that saves a new `Foo` and a new `Bar` will only be transactional for `Foo` since they share the same datasource. The transaction won't affect the `Bar` instance. If you want both to be transactional you'd need to use two services and XA datasources for two-phase commit, e.g. with the Atomikos plugin.
+
+
+===== GORM Data Service Datasource Inheritance
+
+When using GORM Data Services (the `@Service` annotation), the service automatically inherits the datasource from its domain class's `mapping` block. This means you do not need to explicitly specify `@Transactional(connection = '...')` if the domain class already declares its datasource.
+
+For example, given a domain class mapped to the `'lookup'` datasource:
+
+[source,groovy]
+----
+class ZipCode {
+
+   String code
+
+   static mapping = {
+      datasource 'lookup'
+   }
+}
+----
+
+A GORM Data Service targeting this domain class will automatically route all auto-implemented operations (save, get, delete, find, count) to the `'lookup'` datasource:
+
+[source,groovy]
+----
+@Service(ZipCode)
+abstract class ZipCodeService {
+
+   abstract ZipCode get(Serializable id)
+   abstract ZipCode save(ZipCode zipCode)
+   abstract ZipCode delete(Serializable id)
+   abstract List<ZipCode> findAllByCode(String code)
+}
+----
+
+If you need to override the inherited datasource, you can still use an explicit `@Transactional(connection = '...')` annotation on the service, which takes precedence:
+
+[source,groovy]
+----
+@Service(ZipCode)
+@Transactional(connection = 'auditing')
+abstract class ZipCodeAuditService {
+
+   abstract ZipCode save(ZipCode zipCode)
+}
+----
+
+
+==== GORM Data Services and Multiple Datasources
+
+
+GORM Data Services provide a type-safe, statically compiled approach to multi-datasource access. When a `@Service` abstract class needs to route operations to a non-default datasource, declare the target connection with `@Transactional(connection = 'name')`.
+
+
+===== Basic Pattern
+
+
+Define an interface for your data access methods and an abstract class that declares the connection:
+
+[source,groovy]
+----
+import grails.gorm.services.Service
+
+interface BookDataService {
+
+    Book get(Serializable id)
+
+    Book save(Book book)
+
+    void delete(Serializable id)
+
+    List<Book> findAllByAuthor(String author)
+
+    Long count()
+}
+----
+
+[source,groovy]
+----
+import grails.gorm.services.Service
+import grails.gorm.transactions.Transactional
+import groovy.transform.CompileStatic
+
+@CompileStatic
+@Service(Book)
+@Transactional(connection = 'books')
+abstract class BookService implements BookDataService {
+    // All interface methods are auto-implemented by GORM
+    // and route to the 'books' datasource automatically.
+}
+----
+
+The `@Transactional(connection = 'books')` annotation on the abstract class ensures that all auto-implemented methods (`get`, `save`, `delete`, `findBy*`, `countBy*`, etc.) route to the `books` datasource. Without this annotation, queries route to the datasource inherited from the domain class's mapping block, or the default datasource if none is declared.
+
+NOTE: The `@Service(Book)` annotation identifies the domain class but does not determine which datasource to use. If `Book` declares `datasource 'books'` in its mapping block, the service inherits that datasource automatically. Use `@Transactional(connection = 'books')` on the abstract class to explicitly override the datasource routing.
+
+
+===== How Connection Routing Works
+
+
+When GORM compiles a `@Service` abstract class, the `ServiceTransformation` AST transform:
+
+1. Copies the `@Transactional(connection = 'books')` annotation from the abstract class to the generated implementation class
+2. For each auto-implemented method, resolves the connection identifier via `findConnectionId()`
+3. Generates method bodies that use the appropriate connection, routing CRUD operations and `DetachedCriteria`-based finder queries to the specified datasource
+
+This means auto-implemented methods like `get()`, `save()`, `delete()`, `findBy*()`, `countBy*()`, `@Where`-annotated methods, `@Query`-annotated methods, and `DetachedCriteria`-based queries all respect the connection parameter without requiring manual implementations.
+
+
+===== Complex Queries Using Domain Static Methods
+
+
+Auto-implemented Data Service methods cover most query patterns, including dynamic finders with comparators (`Between`, `Like`, `InList`, `IsNull`, etc.), pagination via a `Map` parameter, and property projections. For queries that require HQL, criteria builders, or aggregate functions, call domain static methods directly. When a domain class declares a non-default datasource in its mapping block, GORM registers its static API under that datasource. Methods like `Book.executeQuery()`, `Book.createCriteria()`, and `Book.withCriteria()` automatically route to the correct datasource:
+
+[source,groovy]
+----
+import groovy.transform.CompileStatic
+import grails.gorm.services.Service
+import grails.gorm.transactions.Transactional
+
+@CompileStatic
+@Service(Book)
+@Transactional(connection = 'books')
+abstract class BookService implements BookDataService {
+
+    // Auto-implemented methods from interface are inherited
+    // and route to 'books' datasource automatically.
+
+    List getTopAuthors(int limit) {
+        Book.executeQuery('''
+            SELECT b.author, COUNT(b) as bookCount
+            FROM Book b
+            GROUP BY b.author
+            ORDER BY bookCount DESC
+        ''', Collections.emptyMap(), [max: limit])
+    }
+
+    List<Book> searchWithCriteria(String titlePattern, String author) {
+        Book.createCriteria().list {
+            like('title', "%${titlePattern}%")
+            eq('author', author)
+            order('title', 'asc')
+        } as List<Book>
+    }
+}
+----
+
+These domain static methods all route to the datasource declared in the domain's mapping block:
+
+[cols="1,2"]
+|===
+| Method | Description
+
+| `Book.executeQuery(String hql, Map params)`
+| HQL/JPQL queries
+
+| `Book.executeUpdate(String hql, Map params)`
+| Bulk UPDATE/DELETE statements
+
+| `Book.withCriteria(Closure criteria)`
+| Criteria query
+
+| `Book.createCriteria()`
+| Criteria builder for complex queries
+
+| `Book.where(Closure query)`
+| Where query
+
+| `Book.withTransaction(Closure action)`
+| Manual transaction management
+
+| `Book.withNewSession(Closure action)`
+| Obtain a new session for the domain's datasource
+
+| `Book.count()`
+| Total record count
+
+| `Book.get(Serializable id)`
+| Find by primary key
+
+| `Book.list(Map params)`
+| Paginated list
+|===
+
+NOTE: Domain static methods work under `@CompileStatic` and route to the correct datasource automatically. The namespace syntax (e.g., `Book.books.get(42)`) is only needed when a domain is mapped to multiple datasources and you need to target a specific one.
+
+
+===== Consuming Multi-Datasource Data Services
+
+
+Other services inject the Data Service interface type. Spring resolves the abstract class bean automatically:
+
+[source,groovy]
+----
+import groovy.transform.CompileStatic
+
+@CompileStatic
+class LibraryService {
+
+    BookDataService bookDataService  // injected automatically
+
+    Map getLibraryStats() {
+        Long totalBooks = bookDataService.count()
+        List<Book> recentBooks = bookDataService.findAllByAuthor('Tolkien')
+        [total: totalBooks, tolkienBooks: recentBooks.size()]
+    }
+}
+----
+
+The consuming service does not need `@Transactional(connection = 'books')`. The Data Service handles datasource routing internally. If the consuming service coordinates writes across multiple Data Services, annotate the orchestrating method with `@Transactional` to ensure atomicity on the default datasource.
+
+Data Services can also inject other Data Services. `@CompileStatic` works on `@Service` abstract classes that declare `@Service`-typed properties:
+
+[source,groovy]
+----
+import grails.gorm.services.Service
+
+interface AuthorDataService {
+
+    Author get(Serializable id)
+
+    Author save(Author author)
+}
+----
+
+[source,groovy]
+----
+import groovy.transform.CompileStatic
+import grails.gorm.services.Service
+import grails.gorm.transactions.Transactional
+
+@CompileStatic
+@Service(Author)
+@Transactional(connection = 'books')
+abstract class AuthorService implements AuthorDataService {
+
+    BookDataService bookDataService  // injected @Service property
+
+    Map getAuthorWithBooks(Serializable authorId) {
+        Author author = get(authorId)
+        List<Book> books = bookDataService.findAllByAuthor(author.name)
+        [author: author, books: books]
+    }
+}
+----
+
+When the Spring context initializes the generated implementation class, it autowires all `@Service`-typed properties by type. By the time any user code runs, injected Data Services are fully available.
+
+
+===== Multi-Tenancy with Multiple Datasources
+
+
+Domain classes that use the `MultiTenant` trait and declare an explicit non-default datasource (e.g., `datasource 'analytics'`) route correctly through Data Services. GORM preserves explicit datasource qualifiers for multi-tenant entities, so Data Services using `@Transactional(connection = 'analytics')` work the same way as for non-tenant domain classes:
+
+[source,groovy]
+----
+import grails.gorm.MultiTenant
+
+class Metric implements MultiTenant<Metric> {
+
+    String name
+    BigDecimal value
+
+    static mapping = {
+        datasource 'analytics'
+    }
+}
+----
+
+[source,groovy]
+----
+import grails.gorm.services.Service
+import grails.gorm.transactions.Transactional
+import groovy.transform.CompileStatic
+
+@CompileStatic
+@Service(Metric)
+@Transactional(connection = 'analytics')
+abstract class MetricService {
+
+    abstract Metric get(Serializable id)
+
+    abstract Metric save(Metric metric)
+
+    abstract List<Metric> list()
+}
+----
+
+The `connection` parameter on the abstract class routes all auto-implemented operations - including `save()`, `get()`, and `delete()` - to the `analytics` datasource, regardless of multi-tenancy mode (DATABASE or DISCRIMINATOR).
 
 ==== Transactions across multiple data sources
 

@@ -180,7 +180,23 @@ class GormEnhancer implements Closeable {
     List<String> allQualifiers(Datastore datastore, PersistentEntity entity) {
         List<String> qualifiers = new ArrayList<>()
         qualifiers.addAll(ConnectionSourcesSupport.getConnectionSourceNames(entity))
-        if ((MultiTenant.isAssignableFrom(entity.javaClass) || qualifiers.contains(ConnectionSource.ALL)) && (datastore instanceof ConnectionSourcesProvider)) {
+
+        // For MultiTenant entities OR entities declared with ConnectionSource.ALL,
+        // expand qualifiers to include all available connection sources — BUT only
+        // if the entity does not have an explicit non-DEFAULT datasource declaration.
+        //
+        // When a MultiTenant entity declares `datasource 'secondary'`, that explicit
+        // mapping must be preserved. Expanding to all connections causes silent
+        // data routing to the wrong database (the DEFAULT datasource) for
+        // DISCRIMINATOR multi-tenancy mode.
+        boolean isMultiTenant = MultiTenant.isAssignableFrom(entity.javaClass)
+        boolean hasExplicitAll = qualifiers.contains(ConnectionSource.ALL)
+        boolean hasExplicitNonDefaultDatasource = isMultiTenant &&
+                !hasExplicitAll &&
+                qualifiers.size() > 0 &&
+                !qualifiers.equals(ConnectionSourcesSupport.DEFAULT_CONNECTION_SOURCE_NAMES)
+
+        if ((isMultiTenant || hasExplicitAll) && !hasExplicitNonDefaultDatasource && (datastore instanceof ConnectionSourcesProvider)) {
             qualifiers.clear()
             qualifiers.add(ConnectionSource.DEFAULT)
 
@@ -193,9 +209,9 @@ class GormEnhancer implements Closeable {
     }
 
     /**
-     * @deprecated Use #createNamedQuery(entity, queryName) instead
+     * @deprecated Named queries are deprecated, use where queries instead
      */
-    @Deprecated
+    @Deprecated(since = '3.2', forRemoval = true)
     static GormQueryOperations findNamedQuery(Class entity, String queryName) {
         return createNamedQuery(entity, queryName)
     }
@@ -205,9 +221,11 @@ class GormEnhancer implements Closeable {
      *
      * @param entity The entity name
      * @param queryName The query name
+     * @deprecated Named queries are deprecated, use where queries instead
      *
      * @return The named query or null if it doesn't exist
      */
+    @Deprecated(since = '7.1', forRemoval = true)
     static GormQueryOperations createNamedQuery(Class entity, String queryName) {
         createNamedQuery(entity, queryName, null)
     }
@@ -217,9 +235,11 @@ class GormEnhancer implements Closeable {
      *
      * @param entity The entity name
      * @param queryName The query name
+     * @deprecated Named queries are deprecated, use where queries instead
      *
      * @return The named query or null if it doesn't exist
      */
+    @Deprecated(since = '7.1', forRemoval = true)
     static GormQueryOperations createNamedQuery(Class entity, String queryName, Object... args) {
         def className = entity.getName()
         def namedQueries = NAMED_QUERIES.get(className)
@@ -246,6 +266,10 @@ class GormEnhancer implements Closeable {
         return buildNamedCriteriaProxy(entity, namedQueries, queryName, args)
     }
 
+    /**
+     * @deprecated Named queries are deprecated, use where queries instead
+     */
+    @Deprecated(since = '7.1', forRemoval = true)
     private static NamedCriteriaProxy buildNamedCriteriaProxy(Class entity, Map<String, Closure> namedQueries, String queryName, Object... args) {
         NamedCriteriaProxy namedCriteriaProxy = null
         GormStaticApi staticApi = findStaticApi(entity)

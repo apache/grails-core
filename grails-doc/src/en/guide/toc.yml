@@ -36,11 +36,12 @@ gettingStarted:
   developmentReloading: Development Reloading
 upgrading:
   title: Upgrading from the previous versions
-  upgrading70x: Upgrading from Grails 7 to Grails 8
-  upgrading60x: Upgrading from Grails 6 to Grails 7
-  upgrading50x: Upgrading from Grails 5 to Grails 6
-  upgrading40x: Upgrading from Grails 4 to Grails 5
-  upgrading33x: Upgrading from Grails 3.3.x to Grails 4
+  upgrading80x: Upgrading from Grails 7.x to Grails 8
+  upgrading71x: Upgrading from Grails 7.0 to Grails 7.1
+  upgrading70x: Upgrading from Grails 6 to Grails 7.0
+  upgrading60x: Upgrading from Grails 5 to Grails 6
+  upgrading50x: Upgrading from Grails 4 to Grails 5
+  upgrading40x: Upgrading from Grails 3.3.x to Grails 4
 conf:
   title: Configuration
   config:
@@ -305,6 +306,10 @@ testing:
     usefulProperties: Useful Properties
   integrationTesting: Integration Testing
   functionalTesting: Functional Testing
+  testPhases: Custom Test Phases
+bestPractices:
+  title: Building a Successful Application
+  codeAnalysisGroovy: Code Analysis and Styling for Groovy
 i18n:
   title: Internationalization
   understandingMessageBundles: Understanding Message Bundles

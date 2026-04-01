@@ -1,0 +1,726 @@
+////
+Licensed to the Apache Software Foundation (ASF) under one
+or more contributor license agreements.  See the NOTICE file
+distributed with this work for additional information
+regarding copyright ownership.  The ASF licenses this file
+to you under the Apache License, Version 2.0 (the
+"License"); you may not use this file except in compliance
+with the License.  You may obtain a copy of the License at
+
+https://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing,
+software distributed under the License is distributed on an
+"AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+KIND, either express or implied.  See the License for the
+specific language governing permissions and limitations
+under the License.
+////
+
+=== Upgrade Instructions for Grails and Related Dependencies
+
+To ensure compatibility with Grails 7.1.x, please review the following upgrade instructions carefully.
+This guide outlines the necessary steps & warnings to upgrade your Grails project.
+
+=== 1. Groovy Changes
+
+The Grails Gradle Plugins now automatically disables invokedynamic for all `GroovyCompile` tasks (see https://github.com/apache/grails-core/issues/15293[#15293]). If you have a manual `tasks.withType(GroovyCompile)` block in your `build.gradle` that sets `indy = false`, you can safely remove it:
+
+[source,groovy]
+.build.gradle - remove this block (no longer needed)
+----
+  // This is now handled by the Grails Gradle Plugin - remove it
+  tasks.withType(GroovyCompile).configureEach {
+        groovyOptions.optimizationOptions.indy = false
+  }
+----
+
+To re-enable invokedynamic, use the `grails` extension in your `build.gradle`:
+
+[source,groovy]
+.build.gradle
+----
+  grails {
+      indy = true
+  }
+----
+
+==== 2 Breaking changes
+
+===== 2.1 Plugin configuration and Spring Conditional Annotations
+
+Spring Boot's `@Configuration` related classes have support for conditional bean wiring. In prior versions of Grails, annotations such as `@ConditionalOnProperty` could not be used for configuration stored in a plugin's `plugin.groovy` or `plugin.yml` files. To support plugin configuration, plugin loading & configuration were split in Grails 7.1.x. Plugin loading related code was thus reworked and may break some applications if they relied on their own plugin loader.
+
+WARNING: As a result of these changes, if your application extends the `GrailsApplicationPostProcessor` or `DefaultGrailsPluginManager` there are breaking constructor changes.
+A new class, `PluginDiscovery`, was extracted from the Grails Plugin Manager logic and is now a dependency of these classes.
+
+===== 2.2 Greedy Extension Parameter Matching in URL Mappings
+
+Grails 7.1 introduces a new greedy extension parameter marker (`+`) for URL mappings that provides more intuitive handling of file extensions in URLs with multiple dots.
+
+====== The Problem with Default Behavior
+
+By default, Grails URL mappings with optional extensions split at the **first** dot in the path:
+
+[source,groovy]
+----
+"/$id(.$format)?"(controller: 'user', action: 'profile')
+----
+
+When matching the URL `/test.test.json`:
+- `id` = `test` (stops at first dot)
+- `format` = `test.json` (everything after first dot)
+
+This can be problematic when IDs legitimately contain dots, such as file names, qualified class names, or version numbers.
+
+====== New Greedy Matching Behavior
+
+The new `+` marker enables **greedy** matching, which splits at the **last** dot instead:
+
+[source,groovy]
+----
+"/$id+(.$format)?"(controller: 'user', action: 'profile')
+----
+
+Now the same URL `/test.test.json` matches as:
+- `id` = `test.test` (everything up to last dot)
+- `format` = `json` (extension after last dot)
+
+====== Syntax
+
+The `+` marker is added after the variable name and before the optional marker:
+
+**Required parameter with greedy extension:**
+[source,groovy]
+----
+"/$id+(.$format)?"(controller: 'file', action: 'download')
+----
+
+**Optional parameter with greedy extension:**
+[source,groovy]
+----
+"/$id+?(.$format)?"(controller: 'resource', action: 'show')
+----
+
+====== Use Cases
+
+Greedy extension matching is particularly useful for:
+
+1. **File downloads with complex names:**
++
+[source,groovy]
+----
+"/files/$filename+(.$format)?"(controller: 'file', action: 'download')
+----
++
+Matches `/files/document.final.v2.pdf` → `filename=document.final.v2`, `format=pdf`
+
+2. **Versioned resources:**
++
+[source,groovy]
+----
+"/api/$resource+(.$format)?"(controller: 'api', action: 'show')
+----
++
+Matches `/api/user.service.v1.json` → `resource=user.service.v1`, `format=json`
+
+3. **Qualified class names:**
++
+[source,groovy]
+----
+"/docs/$className+(.$format)?"(controller: 'documentation', action: 'show')
+----
++
+Matches `/docs/com.example.MyClass.html` → `className=com.example.MyClass`, `format=html`
+
+====== Behavior Details
+
+- **With dots:** The greedy marker splits at the **last** dot, treating everything before as the parameter value and everything after as the extension
+- **Without dots:** URLs without any dots match entirely as the parameter with no format
+- **Extension optional:** When the extension is marked optional `(.$format)?`, URLs work both with and without extensions
+
+**Examples:**
+
+[source,groovy]
+----
+"/$id+(.$format)?"(controller: 'resource', action: 'show')
+
+// URL Matches:
+/test.test.json    → id='test.test', format='json'
+/test.json         → id='test', format='json'
+/simpletest        → id='simpletest', format=null
+/foo.bar.baz.xml   → id='foo.bar.baz', format='xml'
+----
+
+====== Backward Compatibility
+
+The `+` marker is opt-in and fully backward compatible:
+
+- Existing URL mappings without the `+` marker continue to work as before (splitting at the first dot)
+- No changes are required to existing applications
+- The feature can be adopted incrementally on a per-mapping basis
+
+===== 2.3 GormService API Changes
+
+The `grails.plugin.scaffolding.GormService` class has been updated to fix a thread-safety issue and improve API clarity.
+
+====== Changes
+
+1. The `resource` field type changed from `GormAllOperations<T>` to `Class<T>`
+2. A new `gormStaticApi` field of type `GormAllOperations<T>` was added with thread-safe lazy initialization using `@Lazy`
+3. The constructor no longer instantiates the resource class - it now stores the Class reference directly
+
+====== Migration Impact
+
+If your code extends `GormService` or accesses its fields:
+
+**Accessing GORM operations**: Previously the `resource` field provided GORM operations. Now use the `gormStaticApi` field instead:
+
+[source,groovy]
+----
+// Before (7.1.x and earlier)
+class MyService extends GormService<MyDomain> {
+    void myMethod() {
+        def result = resource.list()  // resource was GormAllOperations<T>
+        // ...
+    }
+}
+
+// After (7.1.x with fix)
+class MyService extends GormService<MyDomain> {
+    void myMethod() {
+        def result = gormStaticApi.list()  // use gormStaticApi instead
+        // ...
+    }
+}
+----
+
+**Accessing the domain class**: If you need the Class reference, the `resource` field is now properly typed as `Class<T>`:
+
+[source,groovy]
+----
+// Before
+Class<MyDomain> clazz = resource.getClass()  // awkward, resource was an instance
+
+// After
+Class<MyDomain> clazz = resource  // resource is now the Class itself
+----
+
+===== 2.4 Enhanced Audit Metadata Support
+
+Grails 7.1 introduces comprehensive audit metadata support with new annotations for tracking both temporal information (when changes occurred) and auditor information (who made changes). This aligns with Spring Data's auditing model while maintaining GORM's flexibility.
+
+====== New Annotations
+
+Four new annotations have been added to simplify audit tracking:
+
+* `@CreatedDate` - Automatically populated with the creation timestamp on insert
+* `@LastModifiedDate` - Automatically populated with the modification timestamp on insert and update
+* `@CreatedBy` - Automatically populated with the current auditor on insert
+* `@LastModifiedBy` - Automatically populated with the current auditor on insert and update
+
+These annotations work with various temporal types including `Date`, `LocalDateTime`, `Instant`, `OffsetDateTime`, and `ZonedDateTime`.
+
+====== Example Domain Class
+
+[source,groovy]
+----
+import grails.gorm.annotation.CreatedBy
+import grails.gorm.annotation.CreatedDate
+import grails.gorm.annotation.LastModifiedBy
+import grails.gorm.annotation.LastModifiedDate
+import java.time.LocalDateTime
+
+class Book {
+    String title
+    String author
+
+    @CreatedDate
+    LocalDateTime created
+
+    @LastModifiedDate
+    LocalDateTime modified
+
+    @CreatedBy
+    String createdBy
+
+    @LastModifiedBy
+    String modifiedBy
+
+    static constraints = {
+        title blank: false
+        author blank: false
+        // Auditor fields should be nullable for anonymous operations
+        createdBy nullable: true
+        modifiedBy nullable: true
+    }
+}
+----
+
+====== Configuring AuditorAware
+
+To populate `@CreatedBy` and `@LastModifiedBy` fields, you need to provide an `AuditorAware` bean that returns the current auditor:
+
+[source,groovy]
+.src/main/groovy/com/example/SpringSecurityAuditorAware.groovy
+----
+package com.example
+
+import groovy.transform.CompileStatic
+import org.grails.datastore.gorm.timestamp.AuditorAware
+import org.springframework.security.core.Authentication
+import org.springframework.security.core.context.SecurityContextHolder
+
+@CompileStatic
+class SpringSecurityAuditorAware implements AuditorAware<String> {
+
+    @Override
+    Optional<String> getCurrentAuditor() {
+        Authentication authentication = SecurityContextHolder.getContext()
+                                                              .getAuthentication()
+
+        if (authentication == null || !authentication.isAuthenticated()) {
+            return Optional.empty()
+        }
+
+        String username = authentication.getName()
+
+        // Don't set auditor for anonymous users
+        if (username == 'anonymousUser') {
+            return Optional.empty()
+        }
+
+        return Optional.of(username)
+    }
+}
+----
+
+Register the bean in your `Application.groovy`:
+
+[source,groovy]
+.grails-app/init/com/example/Application.groovy
+----
+import org.grails.datastore.gorm.timestamp.AuditorAware
+import org.springframework.context.annotation.Bean
+
+class Application extends GrailsAutoConfiguration {
+    static void main(String[] args) {
+        GrailsApp.run(Application, args)
+    }
+
+    @Bean
+    AuditorAware<String> auditorAware() {
+        return new SpringSecurityAuditorAware()
+    }
+}
+----
+
+====== Auditor Field Types
+
+Auditor fields can be different types depending on your needs:
+
+* `String` - for username strings
+* `Long` - for user ID references
+* Custom types - for embedding user objects
+
+Example with different auditor types:
+
+[source,groovy]
+----
+class Document {
+    String title
+
+    @CreatedDate
+    LocalDateTime created
+
+    @CreatedBy
+    String createdByUsername  // Store username as String
+
+    @LastModifiedBy
+    Long lastModifiedById     // Store user ID as Long
+
+    static constraints = {
+        createdByUsername nullable: true
+        lastModifiedById nullable: true
+    }
+}
+----
+
+====== Constraints on Auditor Fields
+
+Unlike timestamp fields, auditor fields can have constraints applied to them. This is useful for:
+
+* Setting `maxSize` on String auditors to match database column definitions
+* Applying validation rules
+* Customizing database mapping
+
+[source,groovy]
+----
+class Task {
+    String name
+
+    @CreatedBy
+    String createdBy
+
+    @LastModifiedBy
+    String modifiedBy
+
+    static constraints = {
+        name blank: false
+        // Apply constraints to auditor fields
+        createdBy nullable: true, maxSize: 100
+        modifiedBy nullable: true, maxSize: 100
+    }
+}
+----
+
+====== Deprecation of @AutoTimestamp
+
+The `@AutoTimestamp` annotation is now deprecated in favor of the more explicit `@CreatedDate` and `@LastModifiedDate` annotations:
+
+[source,groovy]
+----
+// Old (deprecated)
+@AutoTimestamp(AutoTimestamp.EventType.CREATED)
+LocalDateTime created
+
+@AutoTimestamp
+LocalDateTime modified
+
+// New (recommended)
+@CreatedDate
+LocalDateTime created
+
+@LastModifiedDate
+LocalDateTime modified
+----
+
+The `@AutoTimestamp` annotation is marked with `@Deprecated(forRemoval = true)` and will be removed in Grails 8.0.
+
+====== Migration Guide
+
+To migrate from `@AutoTimestamp` to the new annotations:
+
+1. Replace `@AutoTimestamp(AutoTimestamp.EventType.CREATED)` with `@CreatedDate`
+2. Replace `@AutoTimestamp` (or `@AutoTimestamp(EventType.UPDATED)`) with `@LastModifiedDate`
+3. Optionally add `@CreatedBy` and `@LastModifiedBy` fields for auditor tracking
+4. Implement and register an `AuditorAware` bean if using auditor fields
+5. Remove `nullable: true` constraints from timestamp fields (no longer needed)
+6. Keep `nullable: true` on auditor fields (required for anonymous operations)
+
+====== Automatic Imports for Annotations
+
+To reduce boilerplate when using audit annotations, you can enable automatic imports for common Grails annotations in your `build.gradle`:
+
+[source,groovy]
+.build.gradle
+----
+grails {
+    importGrailsCommonAnnotations = true
+}
+----
+
+When enabled, this automatically imports:
+
+* `jakarta.validation.constraints.*` - Jakarta validation annotations
+* `grails.gorm.annotation.*` - All GORM annotations including `@CreatedDate`, `@LastModifiedDate`, `@CreatedBy`, `@LastModifiedBy`
+* `grails.plugin.scaffolding.annotation.*` - Scaffolding annotations (if grails-scaffolding is in classpath)
+
+With this setting, you can use the annotations without explicit imports:
+
+[source,groovy]
+----
+// No import statements needed!
+class Book {
+    String title
+
+    @CreatedDate      // Automatically imported
+    LocalDateTime created
+
+    @LastModifiedDate // Automatically imported
+    LocalDateTime modified
+
+    @CreatedBy        // Automatically imported
+    String createdBy
+
+    @NotBlank         // jakarta.validation.constraints.NotBlank imported
+    @Size(max = 255)  // jakarta.validation.constraints.Size imported
+    String author
+}
+----
+
+====== Custom Star Imports
+
+You can also configure custom star imports for your own packages independently:
+
+[source,groovy]
+.build.gradle
+----
+grails {
+    starImports = ['java.util.concurrent', 'groovy.transform', 'com.myapp.annotations']
+}
+----
+
+This allows you to use classes from these packages without explicit imports throughout your Groovy code. The `starImports` configuration works independently and will be combined with any imports from `importGrailsCommonAnnotations` or `importJavaTime` flags if those are also enabled.
+
+===== 2.5 Scaffolding Namespace View Defaults
+
+Grails 7.1 introduces an opt-in feature for scaffolding that allows namespace-specific scaffolded templates to take priority over non-namespaced view fallbacks.
+
+====== Background
+
+Previously, when a namespace controller requested a view, the scaffolding plugin would only generate a scaffolded view if no view existed at all. This meant that if you had:
+
+* A namespace controller (e.g., `namespace = 'admin'`)
+* A non-namespaced view in `grails-app/views/event/index.gsp`
+* A namespace-specific scaffolded template in `src/main/templates/scaffolding/admin/index.gsp`
+
+The non-namespaced view would always be used, and the namespace-specific scaffolded template would be ignored.
+
+====== New Behavior
+
+With the new `enableNamespaceViewDefaults` configuration, namespace-specific scaffolded templates can now override non-namespaced view fallbacks. This provides better support for namespace-specific customization of scaffolded views.
+
+====== Configuration
+
+To enable this feature, add the following to your `application.yml`:
+
+[source,yml]
+.application.yml
+----
+grails:
+    scaffolding:
+        enableNamespaceViewDefaults: true
+----
+
+====== View Resolution Priority
+
+When `enableNamespaceViewDefaults` is enabled, the view resolution priority for namespace controllers is:
+
+1. **Namespace-specific view** (e.g., `grails-app/views/admin/event/index.gsp`)
+- If exists → used (highest priority)
+
+2. **Namespace-specific scaffolded template** (e.g., `src/main/templates/scaffolding/admin/index.gsp`)
+- If exists and no namespace view → used (overrides fallback)
+
+3. **Non-namespaced view fallback** (e.g., `grails-app/views/event/index.gsp`)
+- Used if no namespace view or scaffolded template exists
+
+4. **Non-namespaced scaffolded template** (e.g., `src/main/templates/scaffolding/index.gsp`)
+- Used if no views exist at all
+
+====== Example Use Case
+
+This feature is useful when you want different scaffolded views for different namespaces:
+
+[source,groovy]
+----
+// Regular event controller
+@Scaffold(RestfulServiceController<Event>)
+class EventController {
+}
+
+// Admin event controller with namespace
+@Scaffold(RestfulServiceController<Event>)
+class EventController {
+    static namespace = 'admin'
+}
+----
+
+With `enableNamespaceViewDefaults: true`, you can provide:
+
+* `src/main/templates/scaffolding/index.gsp` - Default scaffolded template
+* `src/main/templates/scaffolding/admin/index.gsp` - Admin-specific scaffolded template
+
+The admin controller will use the admin-specific template even if a non-namespaced view exists.
+
+====== Backward Compatibility
+
+This feature is **disabled by default** (`false`), ensuring complete backward compatibility. Existing applications will continue to work without any changes. Enable the feature only when you need namespace-specific scaffolded template support.
+
+===== 2.6 Enhanced Display Constraint with DisplayType Enum
+
+Grails 7.1 enhances the `display` constraint with a new `DisplayType` enum that provides fine-grained control over where properties appear in scaffolded views.
+
+====== New DisplayType Values
+
+The `display` constraint now accepts a `DisplayType` enum value in addition to boolean values:
+
+|===
+|Value|Description
+
+|`ALL`|Display in all views. Overrides the default blacklist for properties like `dateCreated` and `lastUpdated`.
+|`NONE`|Never display in any view. Equivalent to `display: false`.
+|`INPUT_ONLY`|Display only in input views (create and edit forms).
+|`OUTPUT_ONLY`|Display only in output views (show and index/list views).
+|===
+
+====== Example Usage
+
+[source,groovy]
+----
+import static grails.gorm.validation.DisplayType.*
+
+class Book {
+    String title
+    String isbn
+    Date dateCreated
+    Date lastUpdated
+    String internalNotes
+
+    static constraints = {
+        dateCreated display: ALL         // Override blacklist, show in all views
+        lastUpdated display: OUTPUT_ONLY // Show only in show/index views
+        isbn display: INPUT_ONLY         // Show only in create/edit forms
+        internalNotes display: NONE      // Never show
+    }
+}
+----
+
+====== Backward Compatibility
+
+Boolean values continue to work as before:
+
+* `display: true` - Default behavior (property is displayed)
+* `display: false` - Equivalent to `DisplayType.NONE`
+
+No changes are required for existing applications using boolean values.
+
+===== 2.7 @Scaffold Annotation (Preferred Approach)
+
+Starting in Grails 7.1, the `@Scaffold` annotation is the preferred approach for enabling scaffolding on controllers and services. While the legacy `static scaffold = Domain` syntax is still supported, the annotation provides additional features and flexibility.
+
+====== Benefits of @Scaffold
+
+* **Supports both controllers and services** - The annotation works on both artefact types
+* **Custom class extension** - Specify a custom class to extend using the generic syntax
+* **Service-backed controllers** - Create controllers that delegate to a service layer for better separation of concerns
+* **Read-only mode** - Built-in support for read-only scaffolding
+
+====== Migration Examples
+
+**Basic controller scaffolding:**
+
+[source,groovy]
+----
+// Legacy syntax
+class BookController {
+    static scaffold = Book
+}
+
+// New preferred syntax
+import grails.plugin.scaffolding.annotation.Scaffold
+
+@Scaffold(Book)
+class BookController {
+}
+----
+
+**Scaffolded service:**
+
+[source,groovy]
+----
+import grails.plugin.scaffolding.annotation.Scaffold
+
+@Scaffold(Book)
+class BookService {
+}
+----
+
+**Service-backed controller (delegates to BookService):**
+
+[source,groovy]
+----
+import grails.plugin.scaffolding.annotation.Scaffold
+import grails.plugin.scaffolding.RestfulServiceController
+
+@Scaffold(RestfulServiceController<Book>)
+class BookController {
+}
+----
+
+**Custom class to extend:**
+
+[source,groovy]
+----
+import grails.plugin.scaffolding.annotation.Scaffold
+import com.example.MyCustomService
+
+@Scaffold(MyCustomService<Book>)
+class BookService {
+}
+----
+
+**Read-only scaffolding:**
+
+[source,groovy]
+----
+import grails.plugin.scaffolding.annotation.Scaffold
+
+@Scaffold(domain = Book, readOnly = true)
+class BookController {
+}
+----
+
+====== CLI Commands
+
+New CLI commands are available to generate scaffolded controllers and services:
+
+[source,bash]
+----
+# Generate a scaffolded controller
+grails create-scaffold-controller Book
+
+# Generate a scaffolded service
+grails create-scaffold-service Book
+
+# Generate both service and controller
+grails generate-scaffold-all Book
+----
+
+These commands support options like `--extends` to specify a custom class to extend, `--namespace` for controller namespacing, and `--service` to use `RestfulServiceController`.
+
+For full details, see the link:{guidePath}scaffolding.html[Scaffolding] documentation.
+
+===== 2.8 URL Mapping Group Defaults
+
+The `group` method in URL mappings now accepts default parameters that are inherited by all child mappings:
+
+[source,groovy]
+----
+group "/api", namespace: 'api', controller: 'resource', {
+    "/list"(action: 'list')    // inherits namespace and controller
+    "/show"(action: 'show')    // inherits namespace and controller
+}
+----
+
+Nested groups merge defaults — inner groups inherit and can extend or override outer group defaults. Child mappings can override any default explicitly. This is a new additive feature and does not affect existing URL mappings.
+
+For full details, see the link:{guidePath}theWebLayer/urlmappings/mappingToControllersAndActions.html#_group_defaults[Group Defaults] documentation.
+
+===== 2.9 URL Mapping Wildcard Validation
+
+Grails now validates wildcard-captured URL mapping variables (`$controller`, `$action`, `$namespace`) against registered controller artefacts at request time. When a captured value does not match a registered artefact, the mapping is skipped and the next mapping is tried.
+
+This is a new behavior that is **enabled by default**. It allows patterns like:
+
+[source,groovy]
+----
+group "/topics", {
+    "/$action"(controller: 'topic')    // tried first — only matches real actions
+    "/$id"(controller: 'topic', action: 'show')  // fallback for non-action values
+}
+----
+
+Hardcoded controller/action values in mappings are not affected — only wildcard-captured values are validated.
+
+If this causes issues with existing URL mappings, you can disable it in `application.yml`:
+
+[source,yaml]
+----
+grails:
+    web:
+        url:
+            mapping:
+                validateWildcards: false
+----

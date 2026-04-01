@@ -213,6 +213,19 @@ class UrlMappingsWithGreedyExtensionSpec extends AbstractUrlMappingsSpec {
             urlMappingsHolder.match('/file.name.csv').parameters.format == 'csv'
     }
 
+    void "Test that greedy parameter does not match across path segments"() {
+        given: "A URL mapping with required greedy parameter"
+            def urlMappingsHolder = getUrlMappingsHolder {
+                "/$id+(.$format)?"(controller: "user", action: "profile")
+            }
+
+        when: "Matching a URL with a path separator"
+            def info = urlMappingsHolder.match('/9002/show')
+
+        then: "The greedy parameter should not match across path segments"
+            info == null
+    }
+
     void "Test that UrlMappingData reports greedy extension correctly"() {
         given: "A URL mapping with greedy parameter"
             def urlMappingsHolder = getUrlMappingsHolder {

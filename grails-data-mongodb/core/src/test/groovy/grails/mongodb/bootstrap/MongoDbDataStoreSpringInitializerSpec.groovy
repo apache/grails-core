@@ -44,7 +44,7 @@ class MongoDbDataStoreSpringInitializerSpec extends AutoStartedMongoSpec {
 
     void "Test specify mongo database name settings"() {
         when: "the initializer used to setup GORM for MongoDB"
-        def initializer = new MongoDbDataStoreSpringInitializer([
+        def initializer = makeInitializer([
                 (MongoSettings.SETTING_DATABASE_NAME): 'foo',
                 (MongoSettings.SETTING_HOST): mongoHost,
                 (MongoSettings.SETTING_PORT): mongoPort,
@@ -61,7 +61,7 @@ class MongoDbDataStoreSpringInitializerSpec extends AutoStartedMongoSpec {
 
     void "Test that MongoDbDatastoreSpringInitializer can setup GORM for MongoDB from scratch"() {
         when: "the initializer used to setup GORM for MongoDB"
-        def initializer = new MongoDbDataStoreSpringInitializer([
+        def initializer = makeInitializer([
                 (MongoSettings.SETTING_HOST): mongoHost,
                 (MongoSettings.SETTING_PORT): mongoPort,
         ], Person)
@@ -75,7 +75,7 @@ class MongoDbDataStoreSpringInitializerSpec extends AutoStartedMongoSpec {
 
     void "Test the alias is created when it is the primary datastore"() {
         when: "the initializer used to setup GORM for MongoDB"
-        def initializer = new MongoDbDataStoreSpringInitializer([
+        def initializer = makeInitializer([
                 'grails.mongodb.databaseName': 'foo',
                 (MongoSettings.SETTING_HOST): mongoHost,
                 (MongoSettings.SETTING_PORT): mongoPort,
@@ -92,7 +92,7 @@ class MongoDbDataStoreSpringInitializerSpec extends AutoStartedMongoSpec {
 
     void "Test the alias is not created when it is the secondary datastore"() {
         when: "the initializer used to setup GORM for MongoDB"
-        def initializer = new MongoDbDataStoreSpringInitializer([
+        def initializer = makeInitializer([
                 'grails.mongodb.databaseName': 'foo',
                 (MongoSettings.SETTING_HOST): mongoHost,
                 (MongoSettings.SETTING_PORT): mongoPort,
@@ -134,7 +134,7 @@ class MongoDbDataStoreSpringInitializerSpec extends AutoStartedMongoSpec {
 
     void "Test that constraints and Geo types work"() {
         given: "the initializer used to setup GORM for MongoDB"
-        def initializer = new MongoDbDataStoreSpringInitializer([
+        def initializer = makeInitializer([
                 (MongoSettings.SETTING_HOST): mongoHost,
                 (MongoSettings.SETTING_PORT): mongoPort,
         ], Person)
@@ -162,7 +162,7 @@ class MongoDbDataStoreSpringInitializerSpec extends AutoStartedMongoSpec {
 
     void "Test custom codecs from Spring"() {
         given: "the initializer used to setup GORM for MongoDB"
-        def initializer = new MongoDbDataStoreSpringInitializer([
+        def initializer = makeInitializer([
                 (MongoSettings.SETTING_HOST): mongoHost,
                 (MongoSettings.SETTING_PORT): mongoPort,
         ], Person)
@@ -184,7 +184,7 @@ class MongoDbDataStoreSpringInitializerSpec extends AutoStartedMongoSpec {
 
     void "Test custom type marshallers from Spring"() {
         given: "the initializer used to setup GORM for MongoDB"
-        def initializer = new MongoDbDataStoreSpringInitializer([
+        def initializer = makeInitializer([
                 (MongoSettings.SETTING_HOST): mongoHost,
                 (MongoSettings.SETTING_PORT): mongoPort,
         ], Person)
@@ -203,6 +203,16 @@ class MongoDbDataStoreSpringInitializerSpec extends AutoStartedMongoSpec {
         Person.first().birthday == birthday
         Person.findByBirthday(birthday).birthday == birthday
         !Person.findByBirthday(new Birthday(new Date() - 7))
+
+    }
+
+    private MongoDbDataStoreSpringInitializer makeInitializer(Map config, Class... domainClasses) {
+        new MongoDbDataStoreSpringInitializer(config, domainClasses) {
+            @Override
+            protected Map<String, Class<?>> loadDataServices(String secondaryDatastore = null) {
+                [:]
+            }
+        }
     }
 }
 

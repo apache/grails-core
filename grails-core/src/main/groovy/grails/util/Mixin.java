@@ -35,7 +35,7 @@ import org.codehaus.groovy.transform.GroovyASTTransformationClass;
 @Retention(RetentionPolicy.SOURCE)
 @Target(ElementType.TYPE)
 @GroovyASTTransformationClass("org.grails.compiler.injection.MixinTransformation")
-@Deprecated
+@Deprecated(since = "7.0", forRemoval = true)
 public @interface Mixin {
     Class<?>[] value ();
 }

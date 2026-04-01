@@ -88,7 +88,7 @@ public class DefaultProjectGenerator implements ProjectGenerator {
         generatorContext.addTemplate("grailsCli",
                 new RockerTemplate("grails-forge-cli.yml",
                         cli.template(Language.DEFAULT_OPTION,
-                                generatorContext.getTestFramework(),
+                                generatorContext.getDevelopmentReloading(),
                                 BuildTool.DEFAULT_OPTION,
                                 generatorContext.getGorm(),
                                 generatorContext.getServlet(),

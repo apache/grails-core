@@ -21,6 +21,7 @@ package org.grails.forge.build.dependencies
 
 import org.grails.forge.application.generator.GeneratorContext
 import org.grails.forge.build.gradle.GradleDependency
+import org.grails.forge.options.DevelopmentReloading
 import org.grails.forge.options.TestFramework
 import spock.lang.Specification
 
@@ -29,7 +30,7 @@ class GradleDependencyComparatorSpec extends Specification {
     void "sort based on gradle configuration"() {
         given:
         def ctx = Stub(GeneratorContext) {
-            getTestFramework() >> TestFramework.JUNIT
+            getDevelopmentReloading() >> DevelopmentReloading.DEVTOOLS
         }
         List<GradleDependency> dependencies =
                 [dep(Dependency.builder().groupId("io.micronaut").artifactId("micronaut-validation").implementation(), ctx),

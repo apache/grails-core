@@ -56,6 +56,16 @@ dependencies {
     implementation 'org.springframework.boot:spring-boot-gradle-plugin'
     implementation 'org.springframework.boot:spring-boot-loader-tools'
     implementation 'io.spring.gradle:dependency-management-plugin'
+
+    // Testing - Gradle TestKit is auto-added by java-gradle-plugin
+    testImplementation('org.spockframework:spock-core') { transitive = false }
+    testImplementation 'org.codehaus.groovy:groovy-test-junit5'
+    testRuntimeOnly 'org.junit.jupiter:junit-jupiter-engine'
+}
+
+configurations {
+    testCompileClasspath.exclude group: 'org.apache.groovy', module: 'groovy'
+    testRuntimeClasspath.exclude group: 'org.apache.groovy', module: 'groovy'
 }
 
 gradlePlugin {
@@ -114,6 +124,12 @@ gradlePlugin {
             id = 'org.apache.grails.gradle.grails-exploded'
             implementationClass = 'org.grails.gradle.plugin.exploded.GrailsExplodedPlugin'
         }
+        grailsTestPhases {
+            displayName = 'Grails Test Phases Plugin'
+            description = 'A plugin that provides a testPhases extension for defining additional test phases (e.g. integrationTest, functionalTest).'
+            id = 'org.apache.grails.gradle.grails-test-phases'
+            implementationClass = 'org.grails.gradle.plugin.core.TestPhasesGradlePlugin'
+        }
         grailsIntegrationTest {
             displayName = 'Grails Integration Test Plugin'
             description = 'A plugin that adds support for the Grails `integration` test phase.'
@@ -131,4 +147,5 @@ tasks.withType(Copy) {
 
 apply {
     from rootProject.layout.projectDirectory.file('gradle/docs-config.gradle')
+    from rootProject.layout.projectDirectory.file('gradle/test-config.gradle')
 }

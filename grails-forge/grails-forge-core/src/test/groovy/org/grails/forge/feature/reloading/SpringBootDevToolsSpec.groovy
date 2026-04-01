@@ -16,34 +16,35 @@
  *  specific language governing permissions and limitations
  *  under the License.
  */
-
 package org.grails.forge.feature.reloading
+
+import spock.lang.Unroll
 
 import org.grails.forge.ApplicationContextSpec
 import org.grails.forge.application.ApplicationType
-import org.grails.forge.feature.Features
 import org.grails.forge.fixture.CommandOutputFixture
+import org.grails.forge.options.DevelopmentReloading
+import org.grails.forge.options.Options
 
 class SpringBootDevToolsSpec extends ApplicationContextSpec implements CommandOutputFixture {
 
     void "test spring-boot-devtools feature"() {
-
         when:
-        final Features features = getFeatures(["spring-boot-devtools"])
+        def output = generate(ApplicationType.WEB, new Options(DevelopmentReloading.DEVTOOLS), [])
+        def build = output['build.gradle']
 
         then:
-        features.contains("spring-boot-devtools")
-
+        build.contains('developmentOnly "org.springframework.boot:spring-boot-devtools"')
     }
 
-    void "test spring-boot-devtools dependency is present for #applicationType application type"() {
-
+    @Unroll
+    void "test spring-boot-devtools dependency is present for #applicationType application type"(ApplicationType applicationType) {
         when:
-        def output = generate(applicationType, ["spring-boot-devtools"])
-        def build = output["build.gradle"]
+        def output = generate(applicationType, new Options(DevelopmentReloading.DEVTOOLS), [])
+        def build = output['build.gradle']
 
         then:
-        build.contains("developmentOnly \"org.springframework.boot:spring-boot-devtools\"")
+        build.contains('developmentOnly "org.springframework.boot:spring-boot-devtools"')
 
         where:
         applicationType << [ApplicationType.WEB, ApplicationType.REST_API]
@@ -51,10 +52,19 @@ class SpringBootDevToolsSpec extends ApplicationContextSpec implements CommandOu
 
     void "test there can be only one of Reloading feature"() {
         when:
-        getFeatures(["spring-boot-devtools", "jrebel"])
+        def devtoolsOutput = generate(ApplicationType.WEB, new Options(DevelopmentReloading.DEVTOOLS), [])
+        def jrebelOutput = generate(ApplicationType.WEB, new Options(DevelopmentReloading.JREBEL), [])
 
         then:
-        def ex = thrown(IllegalArgumentException)
-        ex.message.contains("There can only be one of the following features selected")
+        devtoolsOutput['build.gradle'].contains('developmentOnly "org.springframework.boot:spring-boot-devtools"')
+        !devtoolsOutput['build.gradle'].contains('org.zeroturnaround.gradle.jrebel')
+
+        jrebelOutput['build.gradle'].contains('org.zeroturnaround.gradle.jrebel')
+        !jrebelOutput['build.gradle'].contains('developmentOnly "org.springframework.boot:spring-boot-devtools"')
+    }
+
+    void "test spring-boot-devtools is not applied when grails-micronaut is selected"() {
+        expect:
+        !('spring-boot-devtools' in getFeatures(['grails-micronaut'], new Options(DevelopmentReloading.DEVTOOLS)))
     }
 }

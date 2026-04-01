@@ -23,6 +23,7 @@ import org.grails.forge.ApplicationContextSpec
 import org.grails.forge.BuildBuilder
 import org.grails.forge.application.ApplicationType
 import org.grails.forge.fixture.CommandOutputFixture
+import org.grails.forge.options.DevelopmentReloading
 import org.grails.forge.options.Options
 import org.grails.forge.options.TestFramework
 import spock.lang.Unroll
@@ -52,7 +53,7 @@ class DatabaseMigrationPluginSpec extends ApplicationContextSpec implements Comm
 
     void "test dependencies are present for buildscript "() {
         given:
-        final def output = generate(ApplicationType.WEB, new Options(TestFramework.SPOCK), ['database-migration'])
+        final def output = generate(ApplicationType.WEB, new Options(DevelopmentReloading.DEVTOOLS), ['database-migration'])
         final def buildGradle = output["build.gradle"]
 
         expect:
@@ -63,7 +64,7 @@ class DatabaseMigrationPluginSpec extends ApplicationContextSpec implements Comm
     @Unroll
     void "test migrations directory is present"() {
         when:
-        final def output = generate(applicationType, new Options(TestFramework.SPOCK), ['database-migration'])
+        final def output = generate(applicationType, new Options(DevelopmentReloading.DEVTOOLS), ['database-migration'])
 
         then:
         output.containsKey("grails-app/migrations/.gitkeep")

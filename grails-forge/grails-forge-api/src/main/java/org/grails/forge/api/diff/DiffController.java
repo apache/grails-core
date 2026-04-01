@@ -80,7 +80,7 @@ public class DiffController implements DiffOperations {
      * @param type        The application type
      * @param feature     The feature
      * @param build       The build tool
-     * @param test        The test framework
+     * @param reloading   The development reloading
      * @param gorm        The GORM implementation
      * @param servlet     The Servlet implementation
      * @param javaVersion The java version
@@ -98,7 +98,7 @@ public class DiffController implements DiffOperations {
             @Nullable String name,
             @NonNull @NotBlank String feature,
             @Nullable BuildTool build,
-            @Nullable TestFramework test,
+            @Nullable DevelopmentReloading reloading,
             @Nullable GormImpl gorm,
             @Nullable ServletImpl servlet,
             @Nullable JdkVersion javaVersion,
@@ -109,7 +109,7 @@ public class DiffController implements DiffOperations {
         try {
             Project project = name != null ? NameUtils.parse(name) : this.project;
             Options options = new Options(
-                    test != null ? test : TestFramework.DEFAULT_OPTION,
+                    reloading != null ? reloading : DevelopmentReloading.DEFAULT_OPTION,
                     gorm != null ? gorm : GormImpl.DEFAULT_OPTION,
                     servlet != null ? servlet : ServletImpl.DEFAULT_OPTION,
                     javaVersion != null ? javaVersion : JdkVersion.DEFAULT_OPTION
@@ -137,7 +137,7 @@ public class DiffController implements DiffOperations {
      * @param name        The name of the application
      * @param features    The features
      * @param build       The build tool
-     * @param test        The test framework
+     * @param reloading   The development reloading
      * @param servlet     The Servlet implementation
      * @param requestInfo The request info
      * @return An HTTP response that emits a writable
@@ -152,7 +152,7 @@ public class DiffController implements DiffOperations {
             @Pattern(regexp = "[\\w\\d-_\\.]+") String name,
             @Nullable List<String> features,
             @Nullable BuildTool build,
-            @Nullable TestFramework test,
+            @Nullable DevelopmentReloading reloading,
             @Nullable GormImpl gorm,
             @Nullable ServletImpl servlet,
             @Nullable JdkVersion javaVersion,
@@ -162,7 +162,7 @@ public class DiffController implements DiffOperations {
         try {
             Project project = name != null ? NameUtils.parse(name) : this.project;
             Options options = new Options(
-                    test != null ? test : TestFramework.DEFAULT_OPTION,
+                    reloading != null ? reloading : DevelopmentReloading.DEFAULT_OPTION,
                     gorm != null ? gorm : GormImpl.DEFAULT_OPTION,
                     servlet != null ? servlet : ServletImpl.DEFAULT_OPTION,
                     javaVersion != null ? javaVersion : JdkVersion.DEFAULT_OPTION

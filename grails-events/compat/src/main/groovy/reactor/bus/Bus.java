@@ -31,7 +31,7 @@ import reactor.fn.Consumer;
  * @author Andy Wilkinson
  * @deprecated Here for compatibility only. Do not use directly
  */
-@Deprecated
+@Deprecated(since = "3.3", forRemoval = true)
 public interface Bus<T> {
 
     /**

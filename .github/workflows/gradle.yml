@@ -36,16 +36,18 @@ jobs:
       - name: "Output Agent IP" # in the event RAO blocks this agent, this can be used to debug it
         run: curl -s https://api.ipify.org
       - name: "📥 Checkout repository"
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
       - name: "☕️ Setup JDK"
         uses: actions/setup-java@v4
         with:
           distribution: liberica
           java-version: ${{ matrix.java }}
       - name: "🐘 Setup Gradle"
-        uses: gradle/actions/setup-gradle@v4
+        uses: gradle/actions/setup-gradle@4d9f0ba0025fe599b4ebab900eb7f3a1d93ef4c2 # v5.0.0
         with:
           develocity-access-key: ${{ secrets.GRAILS_DEVELOCITY_ACCESS_KEY  }}
+      - name: "🔍 Setup TestLens"
+        uses: testlens-app/setup-testlens@v1
       - name: "🔨 Build project without tests"
         if: ${{ contains(github.event.head_commit.message, '[skip tests]') }}
         working-directory: 'grails-gradle'
@@ -86,16 +88,18 @@ jobs:
       - name: "Output Agent IP" # in the event RAO blocks this agent, this can be used to debug it
         run: curl -s https://api.ipify.org
       - name: "📥 Checkout repository"
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
       - name: "☕️ Setup JDK"
         uses: actions/setup-java@v4
         with:
           distribution: liberica
           java-version: ${{ matrix.java }}
       - name: "🐘 Setup Gradle"
-        uses: gradle/actions/setup-gradle@v4
+        uses: gradle/actions/setup-gradle@4d9f0ba0025fe599b4ebab900eb7f3a1d93ef4c2 # v5.0.0
         with:
           develocity-access-key: ${{ secrets.GRAILS_DEVELOCITY_ACCESS_KEY  }}
+      - name: "🔍 Setup TestLens"
+        uses: testlens-app/setup-testlens@v1
       - name: "🔨 Build project"
         run: >
           ./gradlew build :grails-shell-cli:installDist groovydoc
@@ -117,16 +121,18 @@ jobs:
       - name: "Output Agent IP" # in the event RAO blocks this agent, this can be used to debug it
         run: curl -s https://api.ipify.org
       - name: "📥 Checkout repository"
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
       - name: "☕️ Setup JDK"
         uses: actions/setup-java@v4
         with:
           distribution: liberica
           java-version: ${{ matrix.java }}
       - name: "🐘 Setup Gradle"
-        uses: gradle/actions/setup-gradle@v4
+        uses: gradle/actions/setup-gradle@4d9f0ba0025fe599b4ebab900eb7f3a1d93ef4c2 # v5.0.0
         with:
           develocity-access-key: ${{ secrets.GRAILS_DEVELOCITY_ACCESS_KEY  }}
+      - name: "🔍 Setup TestLens"
+        uses: testlens-app/setup-testlens@v1
       - name: "🔨 Build project"
         run: >
           ./gradlew build :grails-shell-cli:installDist groovydoc
@@ -136,26 +142,32 @@ jobs:
           -PonlyCoreTests
           -PskipCodeStyle
   buildForge:
-    name: "Build Grails Forge"
+    name: "Build Grails Forge (Java ${{ matrix.java }}, indy=${{ matrix.indy }})"
     strategy:
       fail-fast: false
       matrix:
         java: [ 17, 21 ]
+        indy: [ false ]
+        include:
+          - java: 17
+            indy: true
     runs-on: ubuntu-24.04
     steps:
       - name: "Output Agent IP" # in the event RAO blocks this agent, this can be used to debug it
         run: curl -s https://api.ipify.org
       - name: "📥 Checkout repository"
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
       - name: "☕️ Setup JDK"
         uses: actions/setup-java@v4
         with:
           distribution: 'liberica'
           java-version: ${{ matrix.java }}
       - name: "🐘 Setup Gradle"
-        uses: gradle/actions/setup-gradle@v4
+        uses: gradle/actions/setup-gradle@4d9f0ba0025fe599b4ebab900eb7f3a1d93ef4c2 # v5.0.0
         with:
           develocity-access-key: ${{ secrets.GRAILS_DEVELOCITY_ACCESS_KEY  }}
+      - name: "🔍 Setup TestLens"
+        uses: testlens-app/setup-testlens@v1
       - name: "🔨 Build project without tests"
         if: ${{ contains(github.event.head_commit.message, '[skip tests]') }}
         working-directory: 'grails-forge'
@@ -163,6 +175,7 @@ jobs:
           ./gradlew build
           --continue
           --stacktrace
+          -PgrailsIndy=${{ matrix.indy }}
           -PskipCodeStyle
           -PskipTests
       - name: "🔨 Build project with tests"
@@ -173,6 +186,7 @@ jobs:
           --continue
           --rerun-tasks
           --stacktrace
+          -PgrailsIndy=${{ matrix.indy }}
           -PskipCodeStyle
       - name: "✅ Verify combined CLI"
         run: |
@@ -183,35 +197,41 @@ jobs:
           ./tmp1/cli/bin/grails --version
           ./tmp1/cli/bin/grails-forge-cli --version
       - name: "📤 Upload CLI Zip to Workflow Summary Page"
-        if: ${{ matrix.java == '17' }}
-        uses: actions/upload-artifact@v6
+        if: ${{ matrix.java == '17' && matrix.indy == false }}
+        uses: actions/upload-artifact@v7.0.0
         with:
           name: 'apache-grails-SNAPSHOT-bin.zip'
           include-hidden-files: true
           path: grails-forge/tmp1/cli/**/*
           if-no-files-found: 'error'
   functional:
-    name: "Functional Tests"
+    name: "Functional Tests (Java ${{ matrix.java }}, indy=${{ matrix.indy }})"
     if: ${{ !contains(github.event.head_commit.message, '[skip tests]') }}
     strategy:
       fail-fast: false
       matrix:
         java: [ 17, 21, 25 ]
+        indy: [ false ]
+        include:
+          - java: 17
+            indy: true
     runs-on: ubuntu-24.04
     steps:
       - name: "Output Agent IP" # in the event RAO blocks this agent, this can be used to debug it
         run: curl -s https://api.ipify.org
       - name: "📥 Checkout repository"
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
       - name: "☕️ Setup JDK"
         uses: actions/setup-java@v4
         with:
           distribution: liberica
           java-version: ${{ matrix.java }}
       - name: "🐘 Setup Gradle"
-        uses: gradle/actions/setup-gradle@v4
+        uses: gradle/actions/setup-gradle@4d9f0ba0025fe599b4ebab900eb7f3a1d93ef4c2 # v5.0.0
         with:
           develocity-access-key: ${{ secrets.GRAILS_DEVELOCITY_ACCESS_KEY  }}
+      - name: "🔍 Setup TestLens"
+        uses: testlens-app/setup-testlens@v1
       - name: "🏃 Run Functional Tests"
         run: >
           ./gradlew bootJar check
@@ -219,31 +239,37 @@ jobs:
           --rerun-tasks
           --stacktrace
           -PgebAtCheckWaiting
+          -PgrailsIndy=${{ matrix.indy }}
           -PonlyFunctionalTests
           -PskipCodeStyle
           -PskipHibernate5Tests
           -PskipMongodbTests
   mongodbFunctional:
     if: ${{ !contains(github.event.head_commit.message, '[skip tests]') }}
-    name: "Mongodb Functional Tests"
+    name: "Mongodb Functional Tests (Java ${{ matrix.java }}, MongoDB ${{ matrix.mongodb-version }}, indy=${{ matrix.indy }})"
     runs-on: ubuntu-24.04
     strategy:
       fail-fast: false
       matrix:
         java: [ 17, 25 ]
         mongodb-version: [ '7.0', '8.0' ] # test with supported versions https://www.mongodb.com/legal/support-policy/lifecycles
+        indy: [ false ]
+        include:
+          - java: 17
+            mongodb-version: '7.0'
+            indy: true
     steps:
       - name: "Output Agent IP" # in the event RAO blocks this agent, this can be used to debug it
         run: curl -s https://api.ipify.org
       - name: "📥 Checkout the repository"
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
       - name: "☕️ Setup JDK"
         uses: actions/setup-java@v4
         with:
           distribution: liberica
           java-version: ${{ matrix.java }}
       - name: "🐘 Setup Gradle"
-        uses: gradle/actions/setup-gradle@v4
+        uses: gradle/actions/setup-gradle@4d9f0ba0025fe599b4ebab900eb7f3a1d93ef4c2 # v5.0.0
         with:
           develocity-access-key: ${{ secrets.GRAILS_DEVELOCITY_ACCESS_KEY }}
       - name: "🏃 Run Functional Tests"
@@ -254,29 +280,34 @@ jobs:
           --continue
           --rerun-tasks
           --stacktrace
+          -PgrailsIndy=${{ matrix.indy }}
           -PonlyMongodbTests
           -PmongodbContainerVersion=${{ matrix.mongodb-version }}
           -PskipCodeStyle
   hibernate5Functional:
     if: ${{ !contains(github.event.head_commit.message, '[skip tests]') }}
-    name: "Hibernate5 Functional Tests"
+    name: "Hibernate5 Functional Tests (Java ${{ matrix.java }}, indy=${{ matrix.indy }})"
     runs-on: ubuntu-24.04
     strategy:
       fail-fast: false
       matrix:
         java: [ 17, 25 ]
+        indy: [ false ]
+        include:
+          - java: 17
+            indy: true
     steps:
       - name: "Output Agent IP" # in the event RAO blocks this agent, this can be used to debug it
         run: curl -s https://api.ipify.org
       - name: "📥 Checkout the repository"
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
       - name: "☕️ Setup JDK"
         uses: actions/setup-java@v4
         with:
           distribution: liberica
           java-version: ${{ matrix.java }}
       - name: "🐘 Setup Gradle"
-        uses: gradle/actions/setup-gradle@v4
+        uses: gradle/actions/setup-gradle@4d9f0ba0025fe599b4ebab900eb7f3a1d93ef4c2 # v5.0.0
         with:
           develocity-access-key: ${{ secrets.GRAILS_DEVELOCITY_ACCESS_KEY }}
       - name: "🏃 Run Functional Tests"
@@ -287,6 +318,7 @@ jobs:
           --continue
           --rerun-tasks
           --stacktrace
+          -PgrailsIndy=${{ matrix.indy }}
           -PonlyHibernate5Tests
           -PskipCodeStyle
   publishGradle:
@@ -297,16 +329,18 @@ jobs:
       - name: "Output Agent IP" # in the event RAO blocks this agent, this can be used to debug it
         run: curl -s https://api.ipify.org
       - name: "📥 Checkout repository"
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
       - name: "☕️ Setup JDK"
         uses: actions/setup-java@v4
         with:
           distribution: liberica
           java-version: 17
       - name: "🐘 Setup Gradle"
-        uses: gradle/actions/setup-gradle@v4
+        uses: gradle/actions/setup-gradle@4d9f0ba0025fe599b4ebab900eb7f3a1d93ef4c2 # v5.0.0
         with:
           develocity-access-key: ${{ secrets.GRAILS_DEVELOCITY_ACCESS_KEY  }}
+      - name: "🔍 Setup TestLens"
+        uses: testlens-app/setup-testlens@v1
       - name: "📤 Publish Gradle Snapshot Artifacts"
         env:
           GRAILS_PUBLISH_RELEASE: 'false'
@@ -319,12 +353,12 @@ jobs:
           --no-build-cache
           --rerun-tasks
       - name: "📤 Upload grails-gradle checksums"
-        uses: actions/upload-artifact@v6
+        uses: actions/upload-artifact@v7.0.0
         with:
           name: grails-gradle-checksums
           path: grails-gradle/build/grails-gradle-checksums.txt
       - name: "📤 Upload grails-gradle published artifacts"
-        uses: actions/upload-artifact@v6
+        uses: actions/upload-artifact@v7.0.0
         with:
           name: grails-gradle-artifacts.txt
           path: grails-gradle/build/grails-gradle-artifacts.txt
@@ -345,16 +379,18 @@ jobs:
       - name: "Output Agent IP" # in the event RAO blocks this agent, this can be used to debug it
         run: curl -s https://api.ipify.org
       - name: "📥 Checkout repository"
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
       - name: "☕️ Setup JDK"
         uses: actions/setup-java@v4
         with:
           distribution: liberica
           java-version: 17
       - name: "🐘 Setup Gradle"
-        uses: gradle/actions/setup-gradle@v4
+        uses: gradle/actions/setup-gradle@4d9f0ba0025fe599b4ebab900eb7f3a1d93ef4c2 # v5.0.0
         with:
           develocity-access-key: ${{ secrets.GRAILS_DEVELOCITY_ACCESS_KEY  }}
+      - name: "🔍 Setup TestLens"
+        uses: testlens-app/setup-testlens@v1
       - name: "📤 Publish Grails-Core Snapshot Artifacts"
         uses: nick-fields/retry@ce71cc2ab81d554ebbe88c79ab5975992d79ba08 #v3.0.2 
         env:
@@ -368,12 +404,12 @@ jobs:
           retry_wait_seconds: 180
           command: ./gradlew publish aggregateChecksums aggregatePublishedArtifacts --no-build-cache --rerun-tasks
       - name: "📤 Upload grails-core checksums"
-        uses: actions/upload-artifact@v6
+        uses: actions/upload-artifact@v7.0.0
         with:
           name: grails-core-checksums.txt
           path: build/grails-core-checksums.txt
       - name: "📤 Upload grails-core published artifacts"
-        uses: actions/upload-artifact@v6
+        uses: actions/upload-artifact@v7.0.0
         with:
           name: grails-core-artifacts.txt
           path: build/grails-core-artifacts.txt
@@ -390,7 +426,7 @@ jobs:
           mv tmp/apache-grails-wrapper-* tmp/wrapper
           ./tmp/wrapper/grailsw --version
       - name: "📤 Upload Wrapper Zip to Workflow Summary Page"
-        uses: actions/upload-artifact@v6
+        uses: actions/upload-artifact@v7.0.0
         with:
           name: apache-grails-wrapper-SNAPSHOT-bin
           path: tmp/wrapper
@@ -402,16 +438,18 @@ jobs:
       - name: "Output Agent IP" # in the event RAO blocks this agent, this can be used to debug it
         run: curl -s https://api.ipify.org
       - name: "📥 Checkout repository"
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
       - name: "☕️ Setup JDK"
         uses: actions/setup-java@v4
         with:
           distribution: liberica
           java-version: 17
       - name: "🐘 Setup Gradle"
-        uses: gradle/actions/setup-gradle@v4
+        uses: gradle/actions/setup-gradle@4d9f0ba0025fe599b4ebab900eb7f3a1d93ef4c2 # v5.0.0
         with:
           develocity-access-key: ${{ secrets.GRAILS_DEVELOCITY_ACCESS_KEY  }}
+      - name: "🔍 Setup TestLens"
+        uses: testlens-app/setup-testlens@v1
       - name: "📤 Publish Gradle Snapshot Artifacts"
         env:
           GRAILS_PUBLISH_RELEASE: 'false'
@@ -424,12 +462,12 @@ jobs:
           --no-build-cache
           --rerun-tasks
       - name: "📤 Upload grails-forge checksums"
-        uses: actions/upload-artifact@v6
+        uses: actions/upload-artifact@v7.0.0
         with:
           name: grails-forge-checksums
           path: grails-forge/build/grails-forge-checksums.txt
       - name: "📤 Upload grails-gradle published artifacts"
-        uses: actions/upload-artifact@v6
+        uses: actions/upload-artifact@v7.0.0
         with:
           name: grails-forge-artifacts.txt
           path: grails-forge/build/grails-forge-artifacts.txt
@@ -453,7 +491,7 @@ jobs:
       - name: "Output Agent IP" # in the event RAO blocks this agent, this can be used to debug it
         run: curl -s https://api.ipify.org
       - name: "📥 Checkout the repository"
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
         with:
           fetch-tags: true
       - name: "🔀 Store current branch name"
@@ -472,7 +510,7 @@ jobs:
           distribution: liberica
           java-version: 17
       - name: "🐘 Setup Gradle"
-        uses: gradle/actions/setup-gradle@v4
+        uses: gradle/actions/setup-gradle@4d9f0ba0025fe599b4ebab900eb7f3a1d93ef4c2 # v5.0.0
         with:
           develocity-access-key: ${{ secrets.GRAILS_DEVELOCITY_ACCESS_KEY }}
       - name: "🔨 Build Snapshot Documentation"
@@ -480,7 +518,7 @@ jobs:
           ./gradlew grails-doc:build
           -PgithubBranch=${{ env.TARGET_BRANCH }}
       - name: "📤 Upload Generated Docs to Workflow Result Page"
-        uses: actions/upload-artifact@v6
+        uses: actions/upload-artifact@v7.0.0
         with:
           name: grails-docs-${{ env.NOW }}.zip
           path: ./build/distributions/*.zip

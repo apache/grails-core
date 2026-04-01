@@ -385,7 +385,7 @@ public abstract class AbstractSession<N> extends AbstractAttributeStoringSession
         }
 
         if (instance instanceof DirtyCheckable) {
-            return ((DirtyCheckable) instance).hasChanged() || DirtyCheckingSupport.areAssociationsDirty(this, persister.getPersistentEntity(), instance);
+            return ((DirtyCheckable) instance).hasChanged() || DirtyCheckingSupport.areAssociationsDirty(persister.getPersistentEntity(), instance);
         }
 
         if (!(persister instanceof NativeEntryEntityPersister)) {

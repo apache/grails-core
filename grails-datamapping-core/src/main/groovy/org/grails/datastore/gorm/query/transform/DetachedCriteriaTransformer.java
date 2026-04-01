@@ -71,6 +71,7 @@ import org.codehaus.groovy.ast.stmt.WhileStatement;
 import org.codehaus.groovy.control.SourceUnit;
 import org.codehaus.groovy.control.messages.LocatedMessage;
 import org.codehaus.groovy.syntax.Token;
+import org.codehaus.groovy.syntax.Types;
 import org.codehaus.groovy.transform.trait.Traits;
 
 import grails.gorm.DetachedCriteria;
@@ -310,6 +311,88 @@ public class DetachedCriteriaTransformer extends ClassCodeVisitorSupport {
             }
         }
         super.visitDeclarationExpression(expression);
+    }
+
+    /**
+     * Handles re-assignment of variables to domain class where queries.
+     * For example: {@code zoneQuery = ComputeZone.where { field == value }}
+     * <p>
+     * This ensures that the variable is tracked in {@link #detachedCriteriaVariables}
+     * so that subsequent {@code zoneQuery.where { ... }} calls have their closures
+     * properly transformed.
+     * <p>
+     * Without this, only declarations ({@code def query = Domain.where { ... }}) are tracked,
+     * and re-assignments inside if/else blocks are silently ignored.
+     */
+    @Override
+    public void visitBinaryExpression(BinaryExpression expression) {
+        // Only handle assignment expressions (=), not comparisons (==) or other operators
+        if (expression.getOperation().getType() == Types.ASSIGN) {
+            Expression leftExpression = expression.getLeftExpression();
+            Expression rightExpression = expression.getRightExpression();
+
+            if (leftExpression instanceof VariableExpression && rightExpression instanceof MethodCallExpression) {
+                MethodCallExpression call = (MethodCallExpression) rightExpression;
+                Expression objectExpression = call.getObjectExpression();
+                Expression method = call.getMethod();
+                Expression arguments = call.getArguments();
+
+                if (isCandidateMethod(method.getText(), arguments, CANDIDATE_METHODS_WHERE_ONLY)) {
+                    ClassNode targetType = objectExpression.getType();
+                    if (AstUtils.isDomainClass(targetType)) {
+                        VariableExpression var = (VariableExpression) leftExpression;
+                        String variableName = var.getName();
+
+                        // Track this variable so subsequent .where{} calls are transformed
+                        detachedCriteriaVariables.put(variableName, targetType);
+
+                        // Update the variable's type to DetachedCriteria<DomainClass>
+                        ClassNode classNode = new ClassNode(DetachedCriteria.class);
+                        classNode.setGenericsTypes(new GenericsType[]{new GenericsType(targetType)});
+                        if (var.isClosureSharedVariable()) {
+                            Variable accessedVariable = var.getAccessedVariable();
+                            if (accessedVariable instanceof VariableExpression) {
+                                ((VariableExpression) accessedVariable).setType(classNode);
+                            }
+                        } else {
+                            var.setType(classNode);
+                        }
+                    }
+                }
+            } else if (leftExpression instanceof VariableExpression && rightExpression instanceof ConstructorCallExpression) {
+                // Handle: zoneQuery = new DetachedCriteria(ComputeZone)
+                VariableExpression var = (VariableExpression) leftExpression;
+                String variableName = var.getName();
+                ConstructorCallExpression cce = (ConstructorCallExpression) rightExpression;
+                if (DETACHED_CRITERIA_CLASS_NODE.getName().equals(cce.getType().getName())) {
+                    Expression arguments = cce.getArguments();
+                    if (arguments instanceof ArgumentListExpression) {
+                        ArgumentListExpression ale = (ArgumentListExpression) arguments;
+                        if (ale.getExpressions().size() == 1) {
+                            Expression exp = ale.getExpression(0);
+                            if (exp instanceof ClassExpression) {
+                                ClassExpression clse = (ClassExpression) exp;
+                                ClassNode domainType = clse.getType();
+                                detachedCriteriaVariables.put(variableName, domainType);
+
+                                // Update the variable's type to DetachedCriteria<DomainClass>
+                                ClassNode classNode = new ClassNode(DetachedCriteria.class);
+                                classNode.setGenericsTypes(new GenericsType[]{new GenericsType(domainType)});
+                                if (var.isClosureSharedVariable()) {
+                                    Variable accessedVariable = var.getAccessedVariable();
+                                    if (accessedVariable instanceof VariableExpression) {
+                                        ((VariableExpression) accessedVariable).setType(classNode);
+                                    }
+                                } else {
+                                    var.setType(classNode);
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        super.visitBinaryExpression(expression);
     }
 
     private void logTransformationError(ASTNode astNode, Exception e) {
@@ -704,7 +787,9 @@ public class DetachedCriteriaTransformer extends ClassCodeVisitorSupport {
             ClosureExpression associationQuery = (ClosureExpression) arguments.getExpression(0);
             BlockStatement currentBody = closureAndArguments.getCurrentBody();
             ArgumentListExpression argList = closureAndArguments.getArguments();
-            newCode.addStatement(new ExpressionStatement(new MethodCallExpression(new VariableExpression("delegate"), methodName, argList)));
+            MethodCallExpression delegateCall = new MethodCallExpression(new VariableExpression("delegate"), methodName, argList);
+            delegateCall.setImplicitThis(false);
+            newCode.addStatement(new ExpressionStatement(delegateCall));
             Statement associationCode = associationQuery.getCode();
             if (associationCode instanceof BlockStatement) {
 
@@ -976,7 +1061,9 @@ public class DetachedCriteriaTransformer extends ClassCodeVisitorSupport {
                     if (type == null) break;
 
                     currentType = type;
-                    currentBody.addStatement(new ExpressionStatement(new MethodCallExpression(delegateExpression, associationMethodCall, arguments)));
+                    MethodCallExpression assocDelegateCall = new MethodCallExpression(delegateExpression, associationMethodCall, arguments);
+                    assocDelegateCall.setImplicitThis(false);
+                    currentBody.addStatement(new ExpressionStatement(assocDelegateCall));
                     currentBody = closureAndArguments.getCurrentBody();
 
                     if (!iterator.hasNext()) {
@@ -1037,7 +1124,9 @@ public class DetachedCriteriaTransformer extends ClassCodeVisitorSupport {
                             this.currentClassNode = existing;
                         }
 
-                        newCode.addStatement(new ExpressionStatement(new MethodCallExpression(new VariableExpression("delegate"), actualPropertyName, arguments)));
+                        MethodCallExpression embeddedDelegateCall = new MethodCallExpression(new VariableExpression("delegate"), actualPropertyName, arguments);
+                        embeddedDelegateCall.setImplicitThis(false);
+                        newCode.addStatement(new ExpressionStatement(embeddedDelegateCall));
                     }
                     else {
                         addCriteriaCallMethodExpression(newCode, operator, pe, oppositeSide, associationProperty, Collections.<String>emptyList(), false, variableScope);
@@ -1069,7 +1158,9 @@ public class DetachedCriteriaTransformer extends ClassCodeVisitorSupport {
                     } finally {
                         this.currentClassNode = existing;
                     }
-                    newCode.addStatement(new ExpressionStatement(new MethodCallExpression(new VariableExpression("delegate"), actualPropertyName, arguments)));
+                    MethodCallExpression domainDelegateCall = new MethodCallExpression(new VariableExpression("delegate"), actualPropertyName, arguments);
+                    domainDelegateCall.setImplicitThis(false);
+                    newCode.addStatement(new ExpressionStatement(domainDelegateCall));
                 }
             } else if ((aliased instanceof ClassNode) && (oppositeSide instanceof PropertyExpression)) {
                 String rootReference = pe.getText();

@@ -61,7 +61,13 @@ dependencies {
     compileOnly 'org.springframework.boot:spring-boot-loader-tools'
     compileOnly 'org.springframework:spring-web'
     api 'org.springframework.boot:spring-boot-cli'
-    compileOnly 'jakarta.servlet:jakarta.servlet-api'
+    // Must be 'implementation' (not 'compileOnly') so the servlet API is included in the shadow JAR.
+    // grails-web-common registers HttpServletRequestExtension as a Groovy extension module, which is
+    // auto-discovered when GroovyScriptCommandFactory compiles custom scripts in src/main/scripts/.
+    // Without jakarta.servlet.ServletRequest on the runtime classpath, all grailsw commands fail with
+    // NoClassDefFoundError when custom scripts exist. The servlet API is also required by CLI commands
+    // such as create-controller, generate-all, and scaffolding that parse and generate web-layer code.
+    implementation 'jakarta.servlet:jakarta.servlet-api'
     compileOnly "net.sf.jopt-simple:jopt-simple:$joptSimpleVersion"
 
     // Maven Resolver API & friends

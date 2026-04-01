@@ -29,14 +29,17 @@ import grails.config.Settings;
 import grails.plugins.PluginFilter;
 
 /**
- * Implements mechanism for figuring out what <code>PluginFilter</code>
- * implementation to use based on a set of provided configuration properties.
- *
- * @author Phil Zoio
- * @author Graeme Rocher
+ * @deprecated Use {@link org.apache.grails.core.plugins.filters.PluginFilterRetriever} instead.
+ * This compatibility stub will be removed in Grails 8.0.0.
  */
+@Deprecated(forRemoval = true, since = "7.1")
 public class PluginFilterRetriever {
 
+    /**
+     * @deprecated Use {@link org.apache.grails.core.plugins.filters.PluginFilterRetriever} instead.
+     * This compatibility stub will be removed in Grails 8.0.0.
+     */
+    @Deprecated(forRemoval = true, since = "7.1")
     @SuppressWarnings("rawtypes")
     public PluginFilter getPluginFilter(Config config) {
 
@@ -47,29 +50,30 @@ public class PluginFilterRetriever {
         return getPluginFilter(includes, excludes);
     }
 
-    @SuppressWarnings({ "unchecked", "rawtypes" })
+    /**
+     * @deprecated Use {@link org.apache.grails.core.plugins.filters.PluginFilterRetriever} instead.
+     * This compatibility stub will be removed in Grails 8.0.0.
+     */
+    @Deprecated(forRemoval = true, since = "7.1")
+    @SuppressWarnings({"unchecked", "rawtypes"})
     PluginFilter getPluginFilter(Object includes, Object excludes) {
         PluginFilter pluginFilter = null;
 
         if (includes != null) {
             if (includes instanceof Collection) {
                 pluginFilter = new IncludingPluginFilter(new HashSet((Collection) includes));
-            }
-            else {
+            } else {
                 String[] includesArray = StringUtils.commaDelimitedListToStringArray(includes.toString());
                 pluginFilter = new IncludingPluginFilter(includesArray);
             }
-        }
-        else if (excludes != null) {
+        } else if (excludes != null) {
             if (excludes instanceof Collection) {
                 pluginFilter = new ExcludingPluginFilter(new HashSet((Collection) excludes));
-            }
-            else {
+            } else {
                 String[] excludesArray = StringUtils.commaDelimitedListToStringArray(excludes.toString());
                 pluginFilter = new ExcludingPluginFilter(excludesArray);
             }
-        }
-        else {
+        } else {
             pluginFilter = new IdentityPluginFilter();
         }
         return pluginFilter;
