@@ -68,3 +68,4 @@ settings6.gradle
 STATE_SNAPSHOT.xml
 0_build_grails.txt
 *_VIOLATIONS.md
+/TEST_FAILURES.md
