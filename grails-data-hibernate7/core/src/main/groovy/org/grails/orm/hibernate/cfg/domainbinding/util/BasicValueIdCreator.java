@@ -18,6 +18,7 @@
  */
 package org.grails.orm.hibernate.cfg.domainbinding.util;
 
+import org.hibernate.MappingException;
 import org.hibernate.boot.spi.MetadataBuildingContext;
 import org.hibernate.engine.jdbc.env.spi.JdbcEnvironment;
 import org.hibernate.generator.Generator;
@@ -25,10 +26,15 @@ import org.hibernate.generator.GeneratorCreationContext;
 import org.hibernate.mapping.BasicValue;
 import org.hibernate.mapping.Table;
 
+import org.grails.datastore.mapping.model.DefaultPropertyMapping;
+import org.grails.datastore.mapping.model.config.GormProperties;
 import org.grails.orm.hibernate.cfg.Identity;
 import org.grails.orm.hibernate.cfg.PersistentEntityNamingStrategy;
+import org.grails.orm.hibernate.cfg.PropertyConfig;
 import org.grails.orm.hibernate.cfg.domainbinding.generator.GrailsSequenceWrapper;
 import org.grails.orm.hibernate.cfg.domainbinding.hibernate.GrailsHibernatePersistentEntity;
+import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernateIdentityProperty;
+import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernatePersistentProperty;
 
 /** The basic value id creator class. */
 @SuppressWarnings("PMD.DataflowAnomalyAnalysis")
@@ -64,7 +70,9 @@ public class BasicValueIdCreator {
 
     /** Gets the basic value id. */
     public BasicValue bindBasicValue(
-            Table table, Identity mappedId, GrailsHibernatePersistentEntity domainClass, boolean useSequence) {
+            Table table, Identity mappedId, GrailsHibernatePersistentEntity domainClass) {
+        org.grails.orm.hibernate.cfg.Mapping result = domainClass.getHibernateMappedForm();
+        boolean useSequence = result != null && result.isTablePerConcreteClass();
         BasicValue basicValue = new BasicValue(metadataBuildingContext, table);
         // create a BasicValue for the specific entity table (do not reuse the prototype directly
         // because table differs)
@@ -75,6 +83,31 @@ public class BasicValueIdCreator {
                 context.getValue() == null ? new GeneratorCreationContextWrapper(context, basicValue) : context,
                 generatorName));
         return basicValue;
+    }
+
+    public HibernatePersistentProperty resolveIdentifierProperty(
+            GrailsHibernatePersistentEntity domainClass, Identity mappedId) {
+        var identifier = domainClass.getIdentity();
+        if (identifier == null) {
+            var syntheticId = new HibernateIdentityProperty(
+                    domainClass, domainClass.getMappingContext(), GormProperties.IDENTITY, Long.class);
+            syntheticId.setMapping(new DefaultPropertyMapping<>(domainClass.getMapping(), new PropertyConfig()));
+            identifier = syntheticId;
+        }
+        if (mappedId != null) {
+            String propertyName = mappedId.getName();
+            if (propertyName != null && !propertyName.equals(domainClass.getName())) {
+                var namedIdentityProp = domainClass.getHibernatePropertyByName(propertyName);
+                if (namedIdentityProp == null) {
+                    throw new MappingException(
+                            "Mapping specifies an identifier property name that doesn't exist [" + propertyName + "]");
+                }
+                if (!namedIdentityProp.equals(identifier)) {
+                    identifier = namedIdentityProp;
+                }
+            }
+        }
+        return identifier;
     }
 
     private Generator createGenerator(

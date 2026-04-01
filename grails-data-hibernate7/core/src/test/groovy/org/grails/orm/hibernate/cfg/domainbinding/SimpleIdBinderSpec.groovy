@@ -62,8 +62,11 @@ class SimpleIdBinderSpec extends HibernateGormDatastoreSpec {
 
         // Use a Mock for BasicValueIdCreator and return a BasicValue based on the currentTable
         basicValueIdCreator = Mock(BasicValueIdCreator)
-        basicValueIdCreator.bindBasicValue(_, _, _, _) >> { Table table, Identity id, HibernatePersistentEntity domainClass, boolean useSeq ->
+        basicValueIdCreator.bindBasicValue(_, _, _) >> { Table table, Identity id, HibernatePersistentEntity domainClass ->
             return new BasicValue(metadataBuildingContext, table)
+        }
+        basicValueIdCreator.resolveIdentifierProperty(_, _) >> { HibernatePersistentEntity domainClass, Identity mappedId ->
+            return domainClass.getIdentity() ?: Mock(HibernatePersistentProperty) { getName() >> "id" }
         }
 
         // Mock the collaborators that can be safely mocked
@@ -147,6 +150,7 @@ class SimpleIdBinderSpec extends HibernateGormDatastoreSpec {
         simpleIdBinder.bindSimpleId(domainClass, rootClass, new Identity(name: "nonExistent"), table)
 
         then:
+        1 * basicValueIdCreator.resolveIdentifierProperty(domainClass, _) >> { throw new org.hibernate.MappingException("Mapping specifies an identifier property name that doesn't exist [nonExistent]") }
         thrown(org.hibernate.MappingException)
     }
 
