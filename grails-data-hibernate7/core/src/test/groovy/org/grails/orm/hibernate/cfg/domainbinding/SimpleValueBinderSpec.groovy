@@ -194,8 +194,9 @@ class SimpleValueBinderSpec extends Specification {
         def owner = Mock(GrailsHibernatePersistentEntity)
         def mapping = Mock(Mapping)
         def pc = Mock(PropertyConfig)
-        def sv = Mock(org.hibernate.mapping.BasicValue)
-        sv.getTable() >> null
+        def table = new org.hibernate.mapping.Table("test_table")
+        def mappings = Mock(org.hibernate.boot.spi.InFlightMetadataCollector)
+        metadataBuildingContext.getMetadataCollector() >> mappings
         def genProps = new Properties(); genProps.setProperty('sequence','seq_name'); genProps.setProperty('foo','bar')
 
         prop.getMappedForm() >> pc
@@ -205,7 +206,7 @@ class SimpleValueBinderSpec extends Specification {
         owner.getHibernateMappedForm() >> mapping
         _ * prop.getHibernateMappedForm() >> pc
         _ * owner.getHibernateMappedForm() >> mapping
-        prop.getTypeName() >> 'Y'
+        prop.getTypeName(_ as SimpleValue) >> 'Y'
         pc.isDerived() >> false
         pc.getColumns() >> null
         pc.getGenerator() >> 'sequence'
@@ -213,15 +214,14 @@ class SimpleValueBinderSpec extends Specification {
         prop.getType() >> String
 
         when:
-        binder.bindSimpleValue(prop, null, sv, null)
+        def result = binder.bindBasicValue(prop, null, table, null)
 
         then:
-        _ * prop.getTypeName(sv) >> 'Y'
-        _ * prop.getTypeParameters(sv) >> null
-        _ * columnBinder.bindColumn(prop, null, _, null, null, null) >> { args ->
+        _ * columnBinder.bindColumn(prop, null, _, null, null, table) >> { args ->
             args[2].setName("testColumn")
         }
-        _ * sv.setCustomIdGeneratorCreator(_)
+        result instanceof org.hibernate.mapping.BasicValue
+        result.getCustomIdGeneratorCreator() != null
     }
 
     def "binds for each provided column config and adds to table and simple value"() {
@@ -299,7 +299,7 @@ class SimpleValueBinderSpec extends Specification {
         prop.isNullable() >> true
 
         when:
-        def result = binder.bindSimpleValue(prop, null, table, "path")
+        def result = binder.bindBasicValue(prop, null, table, "path")
 
         then:
         _ * columnBinder.bindColumn(prop, null, _, null, "path", table) >> { args ->

@@ -21,7 +21,6 @@ package org.grails.orm.hibernate.cfg.domainbinding
 
 import grails.gorm.specs.HibernateGormDatastoreSpec
 import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernatePersistentProperty
-import org.grails.orm.hibernate.cfg.domainbinding.hibernate.GrailsHibernatePersistentEntity
 import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernatePersistentEntity
 import org.grails.orm.hibernate.cfg.Identity
 import org.hibernate.boot.spi.MetadataBuildingContext
@@ -30,7 +29,6 @@ import org.hibernate.mapping.BasicValue
 import org.hibernate.mapping.PrimaryKey
 import org.hibernate.mapping.RootClass
 import org.hibernate.mapping.Table
-import org.hibernate.mapping.Value
 
 import org.grails.orm.hibernate.cfg.domainbinding.binder.PropertyBinder
 import org.grails.orm.hibernate.cfg.domainbinding.binder.SimpleIdBinder
@@ -64,8 +62,8 @@ class SimpleIdBinderSpec extends HibernateGormDatastoreSpec {
 
         // Use a Mock for BasicValueIdCreator and return a BasicValue based on the currentTable
         basicValueIdCreator = Mock(BasicValueIdCreator)
-        basicValueIdCreator.getBasicValueId(_, _, _, _, _) >> { MetadataBuildingContext ctx, Table table, Identity id, HibernatePersistentEntity domainClass, boolean useSeq ->
-            return new BasicValue(ctx, table)
+        basicValueIdCreator.bindBasicValue(_, _, _, _) >> { Table table, Identity id, HibernatePersistentEntity domainClass, boolean useSeq ->
+            return new BasicValue(metadataBuildingContext, table)
         }
 
         // Mock the collaborators that can be safely mocked

@@ -78,12 +78,22 @@ public class SimpleValueBinder {
                 new GrailsSequenceWrapper());
     }
 
-    public BasicValue bindSimpleValue(
+    public BasicValue bindBasicValue(
             @jakarta.annotation.Nonnull HibernatePersistentProperty property,
             HibernatePersistentProperty parentProperty,
             Table table,
             String path) {
         BasicValue basicValue = new BasicValue(metadataBuildingContext, table);
+        String generator = property.getHibernateMappedForm().getGenerator();
+        if (generator != null) {
+            basicValue.setCustomIdGeneratorCreator(context -> createGenerator(
+                property,
+                context.getValue() == null ?
+                    new org.grails.orm.hibernate.cfg.domainbinding.util.GeneratorCreationContextWrapper(
+                        context, basicValue) :
+                    context,
+                generator));
+        }
         bindSimpleValue(property, parentProperty, basicValue, path);
         return basicValue;
     }
@@ -97,17 +107,6 @@ public class SimpleValueBinder {
         PropertyConfig propertyConfig = property.getHibernateMappedForm();
         simpleValue.setTypeName(property.getTypeName(simpleValue));
         simpleValue.setTypeParameters(property.getTypeParameters(simpleValue));
-
-        String generator = propertyConfig.getGenerator();
-        if (generator != null && simpleValue instanceof BasicValue basicValue) {
-            basicValue.setCustomIdGeneratorCreator(context -> createGenerator(
-                    property,
-                    context.getValue() == null ?
-                            new org.grails.orm.hibernate.cfg.domainbinding.util.GeneratorCreationContextWrapper(
-                                    context, basicValue) :
-                            context,
-                    generator));
-        }
 
         if (propertyConfig.isDerived() && !(property instanceof TenantId)) {
             Formula formula = new Formula();

@@ -76,7 +76,7 @@ class DependentKeyValueBinderSpec extends HibernateGormDatastoreSpec {
 
         then:
         1 * compositeIdentifierToManyToOneBinder.bindCompositeIdentifierToManyToOne(spiedProperty, key, ci, owner, EMPTY_PATH)
-        0 * simpleValueBinder.bindSimpleValue(*_)
+        0 * simpleValueBinder.bindBasicValue(*_)
     }
 
     void "test bind with composite identifier but NO join column support"() {

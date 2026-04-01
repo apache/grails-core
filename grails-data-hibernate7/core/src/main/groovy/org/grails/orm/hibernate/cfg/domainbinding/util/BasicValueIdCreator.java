@@ -34,12 +34,17 @@ import org.grails.orm.hibernate.cfg.domainbinding.hibernate.GrailsHibernatePersi
 @SuppressWarnings("PMD.DataflowAnomalyAnalysis")
 public class BasicValueIdCreator {
 
+    private final MetadataBuildingContext metadataBuildingContext;
     private final JdbcEnvironment jdbcEnvironment;
     private final PersistentEntityNamingStrategy namingStrategy;
     private final GrailsSequenceWrapper grailsSequenceWrapper;
 
     /** Creates a new {@link BasicValueIdCreator} instance. */
-    public BasicValueIdCreator(JdbcEnvironment jdbcEnvironment, PersistentEntityNamingStrategy namingStrategy) {
+    public BasicValueIdCreator(
+            MetadataBuildingContext metadataBuildingContext,
+            JdbcEnvironment jdbcEnvironment,
+            PersistentEntityNamingStrategy namingStrategy) {
+        this.metadataBuildingContext = metadataBuildingContext;
         this.jdbcEnvironment = jdbcEnvironment;
         this.namingStrategy = namingStrategy;
         this.grailsSequenceWrapper = new GrailsSequenceWrapper();
@@ -47,31 +52,29 @@ public class BasicValueIdCreator {
 
     /** Creates a new {@link BasicValueIdCreator} instance. */
     protected BasicValueIdCreator(
+            MetadataBuildingContext metadataBuildingContext,
             JdbcEnvironment jdbcEnvironment,
             PersistentEntityNamingStrategy namingStrategy,
             GrailsSequenceWrapper grailsSequenceWrapper) {
+        this.metadataBuildingContext = metadataBuildingContext;
         this.jdbcEnvironment = jdbcEnvironment;
         this.namingStrategy = namingStrategy;
         this.grailsSequenceWrapper = grailsSequenceWrapper;
     }
 
     /** Gets the basic value id. */
-    public BasicValue getBasicValueId(
-            MetadataBuildingContext metadataBuildingContext,
-            Table table,
-            Identity mappedId,
-            GrailsHibernatePersistentEntity domainClass,
-            boolean useSequence) {
-        BasicValue id = new BasicValue(metadataBuildingContext, table);
+    public BasicValue bindBasicValue(
+            Table table, Identity mappedId, GrailsHibernatePersistentEntity domainClass, boolean useSequence) {
+        BasicValue basicValue = new BasicValue(metadataBuildingContext, table);
         // create a BasicValue for the specific entity table (do not reuse the prototype directly
         // because table differs)
         String generatorName = Identity.determineGeneratorName(mappedId, useSequence);
-        id.setCustomIdGeneratorCreator(context -> createGenerator(
+        basicValue.setCustomIdGeneratorCreator(context -> createGenerator(
                 mappedId,
                 domainClass,
-                context.getValue() == null ? new GeneratorCreationContextWrapper(context, id) : context,
+                context.getValue() == null ? new GeneratorCreationContextWrapper(context, basicValue) : context,
                 generatorName));
-        return id;
+        return basicValue;
     }
 
     private Generator createGenerator(

@@ -58,7 +58,7 @@ class BasicValueIdCreatorSpec extends HibernateGormDatastoreSpec {
         entity.setTable(table)
         // Use a real BasicValue to test that the generator creator lambda is correctly set and executable
         basicValue = new BasicValue(metadataBuildingContext, table)
-        creator = new BasicValueIdCreator(jdbcEnvironment, namingStrategy, grailsSequenceWrapper)
+        creator = new BasicValueIdCreator(metadataBuildingContext, jdbcEnvironment, namingStrategy, grailsSequenceWrapper)
     }
 
     @Unroll
@@ -71,7 +71,7 @@ class BasicValueIdCreatorSpec extends HibernateGormDatastoreSpec {
         def context = Mock(GeneratorCreationContext)
 
         when:
-        BasicValue id = creator.getBasicValueId(metadataBuildingContext, table, mappedId, domainClass, useSequence)
+        BasicValue id = creator.bindBasicValue(table, mappedId, domainClass, useSequence)
         def generatorCreator = id.getCustomIdGeneratorCreator()
         Generator generator = generatorCreator.createGenerator(context)
 
@@ -100,7 +100,7 @@ class BasicValueIdCreatorSpec extends HibernateGormDatastoreSpec {
         def context = Mock(GeneratorCreationContext)
 
         when:
-        BasicValue id = creator.getBasicValueId(metadataBuildingContext, table, null, domainClass, false)
+        BasicValue id = creator.bindBasicValue(table, null, domainClass, false)
         def generatorCreator = id.getCustomIdGeneratorCreator()
         Generator generator = generatorCreator.createGenerator(context)
 
@@ -116,7 +116,7 @@ class BasicValueIdCreatorSpec extends HibernateGormDatastoreSpec {
         def context = Mock(GeneratorCreationContext)
 
         when:
-        BasicValue id = creator.getBasicValueId(metadataBuildingContext, table, null, domainClass, true)
+        BasicValue id = creator.bindBasicValue(table, null, domainClass, true)
         def generatorCreator = id.getCustomIdGeneratorCreator()
         Generator generator = generatorCreator.createGenerator(context)
 
@@ -134,7 +134,7 @@ class BasicValueIdCreatorSpec extends HibernateGormDatastoreSpec {
         def context = Mock(GeneratorCreationContext)
 
         when:
-        BasicValue id = creator.getBasicValueId(metadataBuildingContext, table, mappedId, domainClass, true)
+        BasicValue id = creator.bindBasicValue(table, mappedId, domainClass, true)
         def generatorCreator = id.getCustomIdGeneratorCreator()
         Generator generator = generatorCreator.createGenerator(context)
 
@@ -151,7 +151,7 @@ class BasicValueIdCreatorSpec extends HibernateGormDatastoreSpec {
         def context = Mock(GeneratorCreationContext)
 
         when:
-        BasicValue id = creator.getBasicValueId(metadataBuildingContext, table, mappedId, domainClass, false)
+        BasicValue id = creator.bindBasicValue(table, mappedId, domainClass, false)
         def generatorCreator = id.getCustomIdGeneratorCreator()
         generatorCreator.createGenerator(context)
 

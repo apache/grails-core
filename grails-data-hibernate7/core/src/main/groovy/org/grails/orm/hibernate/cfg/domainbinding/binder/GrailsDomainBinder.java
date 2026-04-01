@@ -182,7 +182,7 @@ public class GrailsDomainBinder implements AdditionalMappingContributor, TypeCon
         PropertyBinder propertyBinder = new PropertyBinder();
         SimpleIdBinder simpleIdBinder = new SimpleIdBinder(
                 metadataBuildingContext,
-                new BasicValueIdCreator(jdbcEnvironment, namingStrategy),
+                new BasicValueIdCreator(metadataBuildingContext, jdbcEnvironment, namingStrategy),
                 simpleValueBinder,
                 propertyBinder);
         IdentityBinder identityBinder = new IdentityBinder(simpleIdBinder, compositeIdBinder);
