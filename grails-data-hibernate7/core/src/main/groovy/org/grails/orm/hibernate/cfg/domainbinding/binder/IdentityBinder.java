@@ -22,8 +22,8 @@ import jakarta.annotation.Nonnull;
 
 import org.hibernate.mapping.RootClass;
 
-import org.grails.orm.hibernate.cfg.CompositeIdentity;
-import org.grails.orm.hibernate.cfg.Identity;
+import org.grails.orm.hibernate.cfg.HibernateCompositeIdentity;
+import org.grails.orm.hibernate.cfg.HibernateSimpleIdentity;
 import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernatePersistentEntity;
 
 public class IdentityBinder {
@@ -38,10 +38,10 @@ public class IdentityBinder {
 
     public void bindIdentity(@Nonnull HibernatePersistentEntity domainClass, RootClass root) {
         var id = domainClass.getHibernateIdentity();
-        if (id instanceof CompositeIdentity) {
-            compositeIdBinder.bindCompositeId(domainClass, root, (CompositeIdentity) id);
+        if (id instanceof HibernateCompositeIdentity) {
+            compositeIdBinder.bindCompositeId(domainClass, root, (HibernateCompositeIdentity) id);
         } else {
-            simpleIdBinder.bindSimpleId(domainClass, root, (Identity) id, root.getTable());
+            simpleIdBinder.bindSimpleId(domainClass, root, (HibernateSimpleIdentity) id, root.getTable());
         }
     }
 }

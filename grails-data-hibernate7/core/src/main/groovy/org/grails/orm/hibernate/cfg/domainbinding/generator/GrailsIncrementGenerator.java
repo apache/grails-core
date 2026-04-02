@@ -28,7 +28,7 @@ import org.hibernate.boot.model.relational.internal.SqlStringGenerationContextIm
 import org.hibernate.generator.GeneratorCreationContext;
 import org.hibernate.id.IncrementGenerator;
 
-import org.grails.orm.hibernate.cfg.Identity;
+import org.grails.orm.hibernate.cfg.HibernateSimpleIdentity;
 import org.grails.orm.hibernate.cfg.PersistentEntityNamingStrategy;
 import org.grails.orm.hibernate.cfg.domainbinding.hibernate.GrailsHibernatePersistentEntity;
 
@@ -46,7 +46,7 @@ public class GrailsIncrementGenerator extends IncrementGenerator {
 
     public GrailsIncrementGenerator(
             GeneratorCreationContext context,
-            Identity mappedId,
+            HibernateSimpleIdentity mappedId,
             GrailsHibernatePersistentEntity domainClass,
             PersistentEntityNamingStrategy namingStrategy) {
 
@@ -56,12 +56,12 @@ public class GrailsIncrementGenerator extends IncrementGenerator {
 
     private Properties buildParams(
             GeneratorCreationContext context,
-            Identity mappedId,
+            HibernateSimpleIdentity mappedId,
             GrailsHibernatePersistentEntity domainClass,
             PersistentEntityNamingStrategy namingStrategy) {
 
         Properties params = new Properties();
-        Optional.ofNullable(mappedId).map(Identity::getProperties).ifPresent(params::putAll);
+        Optional.ofNullable(mappedId).map(HibernateSimpleIdentity::getProperties).ifPresent(params::putAll);
 
         params.put(TABLES, domainClass.getTableName(namingStrategy));
         params.put(COLUMN, resolveColumnName(context, mappedId));
@@ -76,13 +76,13 @@ public class GrailsIncrementGenerator extends IncrementGenerator {
         return params;
     }
 
-    private String resolveColumnName(GeneratorCreationContext context, Identity mappedId) {
+    private String resolveColumnName(GeneratorCreationContext context, HibernateSimpleIdentity mappedId) {
         String propertyName = context.getProperty().getName();
         if (propertyName != null && !propertyName.contains(".")) {
             return propertyName;
         }
         return Optional.ofNullable(mappedId)
-                .map(Identity::getName)
+                .map(HibernateSimpleIdentity::getName)
                 .filter(name -> !name.contains("."))
                 .orElse("id");
     }

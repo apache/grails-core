@@ -18,13 +18,12 @@
  */
 package org.grails.orm.hibernate.cfg.domainbinding
 
-import org.grails.datastore.mapping.model.PersistentProperty
+
 import org.grails.datastore.mapping.model.ClassMapping
 import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernatePersistentProperty
-import org.grails.orm.hibernate.cfg.CompositeIdentity
-import org.grails.orm.hibernate.cfg.domainbinding.hibernate.GrailsHibernatePersistentEntity
+import org.grails.orm.hibernate.cfg.HibernateCompositeIdentity
 import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernatePersistentEntity
-import org.grails.orm.hibernate.cfg.Identity
+import org.grails.orm.hibernate.cfg.HibernateSimpleIdentity
 import org.grails.orm.hibernate.cfg.Mapping
 import org.hibernate.boot.spi.InFlightMetadataCollector
 import org.hibernate.mapping.RootClass
@@ -53,7 +52,7 @@ class IdentityBinderSpec extends HibernateGormDatastoreSpec {
         def root = new RootClass(getGrailsDomainBinder().getMetadataBuildingContext())
         def mappings = Mock(InFlightMetadataCollector)
         def identifierProp = Mock(HibernatePersistentProperty)
-        def identity = new Identity()
+        def identity = new HibernateSimpleIdentity()
         domainClass.getHibernateIdentity() >> identity
         domainClass.getIdentity() >> identifierProp
         domainClass.getCompositeIdentity() >> null
@@ -72,7 +71,7 @@ class IdentityBinderSpec extends HibernateGormDatastoreSpec {
         def root = new RootClass(getGrailsDomainBinder().getMetadataBuildingContext())
         def mappings = Mock(InFlightMetadataCollector)
         def compositeProps = [Mock(HibernatePersistentProperty), Mock(HibernatePersistentProperty)] as HibernatePersistentProperty[]
-        def compositeIdentity = new CompositeIdentity()
+        def compositeIdentity = new HibernateCompositeIdentity()
         domainClass.getCompositeIdentity() >> compositeProps
         domainClass.getHibernateIdentity() >> compositeIdentity
 
@@ -90,7 +89,7 @@ class IdentityBinderSpec extends HibernateGormDatastoreSpec {
         def root = new RootClass(getGrailsDomainBinder().getMetadataBuildingContext())
         def mappings = Mock(InFlightMetadataCollector)
         def gormMapping = Mock(Mapping)
-        def compositeIdentity = Mock(CompositeIdentity)
+        def compositeIdentity = Mock(HibernateCompositeIdentity)
         domainClass.getHibernateIdentity() >> compositeIdentity
 
         when:
@@ -107,7 +106,7 @@ class IdentityBinderSpec extends HibernateGormDatastoreSpec {
         def root = new RootClass(getGrailsDomainBinder().getMetadataBuildingContext())
         def mappings = Mock(InFlightMetadataCollector)
         def gormMapping = Mock(Mapping)
-        def identity = new Identity(name: "foo")
+        def identity = new HibernateSimpleIdentity(name: "foo")
         domainClass.getHibernateIdentity() >> identity
         def identifierProp = Mock(HibernatePersistentProperty)
         domainClass.getHibernatePropertyByName("foo") >> identifierProp
@@ -128,7 +127,7 @@ class IdentityBinderSpec extends HibernateGormDatastoreSpec {
         def root = new RootClass(getGrailsDomainBinder().getMetadataBuildingContext())
         def mappings = Mock(InFlightMetadataCollector)
         def gormMapping = Mock(Mapping)
-        def identity = new Identity(name: "MyEntity")
+        def identity = new HibernateSimpleIdentity(name: "MyEntity")
         domainClass.getHibernateIdentity() >> identity
         def identifierProp = Mock(HibernatePersistentProperty)
         domainClass.getIdentity() >> identifierProp
@@ -148,7 +147,7 @@ class IdentityBinderSpec extends HibernateGormDatastoreSpec {
         def root = new RootClass(getGrailsDomainBinder().getMetadataBuildingContext())
         def mappings = Mock(InFlightMetadataCollector)
         def gormMapping = Mock(Mapping)
-        def identity = new Identity(name: "MyEntity")
+        def identity = new HibernateSimpleIdentity(name: "MyEntity")
         domainClass.getHibernateIdentity() >> identity
         def identifierProp = Mock(HibernatePersistentProperty)
         domainClass.getIdentity() >> identifierProp
@@ -167,7 +166,7 @@ class IdentityBinderSpec extends HibernateGormDatastoreSpec {
         def domainClass = Mock(HibernatePersistentEntity)
         def root = new RootClass(getGrailsDomainBinder().getMetadataBuildingContext())
         def mappings = Mock(InFlightMetadataCollector)
-        def identity = new Identity()
+        def identity = new HibernateSimpleIdentity()
         domainClass.getHibernateIdentity() >> identity
         domainClass.getIdentity() >> null
         domainClass.getName() >> "MyEntity"

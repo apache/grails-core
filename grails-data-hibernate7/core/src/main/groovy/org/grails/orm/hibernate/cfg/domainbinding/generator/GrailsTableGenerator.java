@@ -28,7 +28,7 @@ import org.hibernate.engine.jdbc.env.spi.JdbcEnvironment;
 import org.hibernate.generator.GeneratorCreationContext;
 import org.hibernate.id.enhanced.TableGenerator;
 
-import org.grails.orm.hibernate.cfg.Identity;
+import org.grails.orm.hibernate.cfg.HibernateSimpleIdentity;
 
 public class GrailsTableGenerator extends TableGenerator {
 
@@ -37,9 +37,9 @@ public class GrailsTableGenerator extends TableGenerator {
 
     private static final String DEFAULT_ENTITY_NAME = "default";
 
-    public GrailsTableGenerator(GeneratorCreationContext context, Identity mappedId, JdbcEnvironment jdbcEnvironment) {
+    public GrailsTableGenerator(GeneratorCreationContext context, HibernateSimpleIdentity mappedId, JdbcEnvironment jdbcEnvironment) {
         Properties generatorProps =
-                Optional.ofNullable(mappedId).map(Identity::getProperties).orElse(new Properties());
+                Optional.ofNullable(mappedId).map(HibernateSimpleIdentity::getProperties).orElse(new Properties());
 
         if (!generatorProps.containsKey(SEGMENT_VALUE_PARAM)) {
             String propertyName = context.getProperty().getName();

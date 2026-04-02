@@ -42,7 +42,7 @@ import org.hibernate.MappingException
 
 import org.grails.datastore.mapping.config.Property
 import org.grails.orm.hibernate.cfg.domainbinding.hibernate.GrailsHibernatePersistentEntity
-import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernateIdentity
+import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernatePropertyIdentity
 import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernatePersistentProperty
 
 /**
@@ -54,7 +54,7 @@ import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernatePersistentP
 @AutoClone
 @Builder(builderStrategy = SimpleStrategy, prefix = '')
 @CompileStatic
-class CompositeIdentity extends Property implements HibernateIdentity {
+class HibernateCompositeIdentity extends Property implements HibernatePropertyIdentity {
 
     /**
      * The property names that make up the custom identity
@@ -74,7 +74,7 @@ class CompositeIdentity extends Property implements HibernateIdentity {
      * @param naturalIdDef The callable
      * @return This id
      */
-    CompositeIdentity naturalId(@DelegatesTo(NaturalId) Closure naturalIdDef) {
+    HibernateCompositeIdentity naturalId(@DelegatesTo(NaturalId) Closure naturalIdDef) {
         this.natural = new NaturalId()
         naturalIdDef.setDelegate(this.natural)
         naturalIdDef.setResolveStrategy(Closure.DELEGATE_ONLY)

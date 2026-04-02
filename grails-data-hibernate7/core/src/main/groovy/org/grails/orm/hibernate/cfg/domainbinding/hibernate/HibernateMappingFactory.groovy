@@ -41,7 +41,7 @@ import org.grails.datastore.mapping.model.types.Simple
 import org.grails.datastore.mapping.model.types.TenantId
 import org.grails.datastore.mapping.model.types.ToOne
 import org.grails.datastore.mapping.reflect.ClassUtils
-import org.grails.orm.hibernate.cfg.Identity
+import org.grails.orm.hibernate.cfg.HibernateSimpleIdentity
 import org.grails.orm.hibernate.cfg.Mapping
 import org.grails.orm.hibernate.cfg.PropertyConfig
 
@@ -167,11 +167,11 @@ class HibernateMappingFactory extends AbstractGormMappingFactory<Mapping, Proper
     @Override
     IdentityMapping createIdentityMapping(ClassMapping classMapping) {
         Mapping mappedForm = (Mapping) createMappedForm(classMapping.entity)
-        HibernateIdentity identity = mappedForm.identity
+        HibernatePropertyIdentity identity = mappedForm.identity
         ValueGenerator generator
 
-        if (identity instanceof Identity) {
-            Identity id = (Identity) identity
+        if (identity instanceof HibernateSimpleIdentity) {
+            HibernateSimpleIdentity id = (HibernateSimpleIdentity) identity
             String generatorName = id.generator
             if (generatorName != null) {
                 ValueGenerator resolvedGenerator

@@ -27,7 +27,7 @@ import org.hibernate.generator.Generator
 import org.hibernate.generator.GeneratorCreationContext
 import org.hibernate.id.uuid.UuidGenerator
 
-import org.grails.orm.hibernate.cfg.Identity
+import org.grails.orm.hibernate.cfg.HibernateSimpleIdentity
 import org.grails.orm.hibernate.cfg.PersistentEntityNamingStrategy
 import org.grails.orm.hibernate.cfg.domainbinding.hibernate.GrailsHibernatePersistentEntity
 
@@ -71,7 +71,7 @@ enum GrailsSequenceGeneratorEnum {
     protected static Generator getGenerator(
             String name,
             GeneratorCreationContext context,
-            Identity mappedId,
+            HibernateSimpleIdentity mappedId,
             GrailsHibernatePersistentEntity domainClass,
             JdbcEnvironment jdbcEnvironment,
             PersistentEntityNamingStrategy namingStrategy) {
@@ -81,7 +81,7 @@ enum GrailsSequenceGeneratorEnum {
     static Generator getGenerator(
             GrailsSequenceGeneratorEnum sequenceGeneratorEnum,
             GeneratorCreationContext context,
-            Identity mappedId,
+            HibernateSimpleIdentity mappedId,
             GrailsHibernatePersistentEntity domainClass,
             JdbcEnvironment jdbcEnvironment,
             PersistentEntityNamingStrategy namingStrategy) {

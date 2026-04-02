@@ -21,7 +21,7 @@ package org.grails.orm.hibernate.cfg.domainbinding.hibernate;
 import org.grails.orm.hibernate.cfg.NaturalId;
 
 /** A marker interface for single and composite identity configurations in GORM for Hibernate. */
-public interface HibernateIdentity {
+public interface HibernatePropertyIdentity {
 
     /**
      * @return The natural id definition

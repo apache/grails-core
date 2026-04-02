@@ -23,7 +23,7 @@ import jakarta.annotation.Nonnull;
 import org.hibernate.mapping.Collection;
 import org.hibernate.mapping.SimpleValue;
 
-import org.grails.orm.hibernate.cfg.CompositeIdentity;
+import org.grails.orm.hibernate.cfg.HibernateCompositeIdentity;
 import org.grails.orm.hibernate.cfg.PersistentEntityNamingStrategy;
 import org.grails.orm.hibernate.cfg.domainbinding.binder.CollectionForPropertyConfigBinder;
 import org.grails.orm.hibernate.cfg.domainbinding.binder.CompositeIdentifierToManyToOneBinder;
@@ -72,7 +72,7 @@ public class CollectionWithJoinTableBinder {
             final var domainClass = property.getHibernateAssociatedEntity();
             if (domainClass != null) {
                 if (domainClass.getHibernateCompositeIdentity().isPresent()) {
-                    CompositeIdentity ci =
+                    HibernateCompositeIdentity ci =
                             domainClass.getHibernateCompositeIdentity().get();
                     compositeIdentifierToManyToOneBinder.bindCompositeIdentifierToManyToOne(
                             property, element, ci, domainClass, EMPTY_PATH);

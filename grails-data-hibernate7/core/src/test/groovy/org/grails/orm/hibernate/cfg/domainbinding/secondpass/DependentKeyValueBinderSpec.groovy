@@ -21,7 +21,7 @@ package org.grails.orm.hibernate.cfg.domainbinding.secondpass
 
 import grails.gorm.annotation.Entity
 import grails.gorm.specs.HibernateGormDatastoreSpec
-import org.grails.orm.hibernate.cfg.CompositeIdentity
+import org.grails.orm.hibernate.cfg.HibernateCompositeIdentity
 import org.grails.orm.hibernate.cfg.domainbinding.hibernate.GrailsHibernatePersistentEntity
 import org.grails.orm.hibernate.cfg.Mapping
 import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernateToManyProperty
@@ -66,7 +66,7 @@ class DependentKeyValueBinderSpec extends HibernateGormDatastoreSpec {
         def spiedProperty = Spy(property)
         GrailsHibernatePersistentEntity owner = (GrailsHibernatePersistentEntity) spiedProperty.getOwner()
         Mapping mapping = owner.getMappedForm()
-        CompositeIdentity ci = (CompositeIdentity) mapping.getIdentity()
+        HibernateCompositeIdentity ci = (HibernateCompositeIdentity) mapping.getIdentity()
         DependantValue key = Mock(DependantValue)
 
         spiedProperty.supportsJoinColumnMapping() >> true // Explicitly force to true for this scenario

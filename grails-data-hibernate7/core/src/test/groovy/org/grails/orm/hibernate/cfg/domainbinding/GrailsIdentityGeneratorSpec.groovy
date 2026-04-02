@@ -20,7 +20,7 @@
 package org.grails.orm.hibernate.cfg.domainbinding
 
 import grails.gorm.specs.HibernateGormDatastoreSpec
-import org.grails.orm.hibernate.cfg.Identity
+import org.grails.orm.hibernate.cfg.HibernateSimpleIdentity
 import org.hibernate.generator.GeneratorCreationContext
 import org.hibernate.mapping.BasicValue
 import org.hibernate.mapping.Column
@@ -35,7 +35,7 @@ class GrailsIdentityGeneratorSpec extends HibernateGormDatastoreSpec {
     def "should configure identity generator and set column as identity"() {
         given:
         def context = Mock(GeneratorCreationContext)
-        def mappedId = new Identity()
+        def mappedId = new HibernateSimpleIdentity()
         mappedId.setParams([foo: 'bar'])
         
         def table = new Table("test")

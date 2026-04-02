@@ -22,12 +22,12 @@ import org.grails.datastore.mapping.config.Property;
 import org.grails.datastore.mapping.model.ClassMapping;
 import org.grails.datastore.mapping.model.IdentityMapping;
 import org.grails.datastore.mapping.model.ValueGenerator;
-import org.grails.orm.hibernate.cfg.CompositeIdentity;
-import org.grails.orm.hibernate.cfg.Identity;
+import org.grails.orm.hibernate.cfg.HibernateCompositeIdentity;
+import org.grails.orm.hibernate.cfg.HibernateSimpleIdentity;
 
 /**
  * {@link IdentityMapping} implementation for Hibernate that resolves identifier names from {@link
- * Identity} and {@link CompositeIdentity} mapped forms.
+ * HibernateSimpleIdentity} and {@link HibernateCompositeIdentity} mapped forms.
  */
 public class HibernateIdentityMapping implements IdentityMapping<Property> {
 
@@ -40,7 +40,7 @@ public class HibernateIdentityMapping implements IdentityMapping<Property> {
     /**
      * Constructs a HibernateIdentityMapping.
      *
-     * @param identity the identity mapped form ({@link Identity} or {@link CompositeIdentity})
+     * @param identity the identity mapped form ({@link HibernateSimpleIdentity} or {@link HibernateCompositeIdentity})
      * @param generator the resolved {@link ValueGenerator}
      * @param classMapping the owning {@link ClassMapping}
      */
@@ -52,15 +52,15 @@ public class HibernateIdentityMapping implements IdentityMapping<Property> {
 
     @Override
     public String[] getIdentifierName() {
-        if (identity instanceof Identity) {
-            final String name = ((Identity) identity).getName();
+        if (identity instanceof HibernateSimpleIdentity) {
+            final String name = ((HibernateSimpleIdentity) identity).getName();
             if (name != null) {
                 return new String[] {name};
             } else {
                 return DEFAULT_IDENTITY_MAPPING.clone();
             }
-        } else if (identity instanceof CompositeIdentity) {
-            return ((CompositeIdentity) identity).getPropertyNames(); // NOPMD
+        } else if (identity instanceof HibernateCompositeIdentity) {
+            return ((HibernateCompositeIdentity) identity).getPropertyNames(); // NOPMD
         }
         return DEFAULT_IDENTITY_MAPPING.clone();
     }

@@ -42,7 +42,7 @@ import org.springframework.validation.DataBinder
 
 import org.grails.datastore.mapping.config.Entity
 import org.grails.datastore.mapping.model.config.GormProperties
-import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernateIdentity
+import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernatePropertyIdentity
 
 /**
  * Models the mapping from GORM classes to the db.
@@ -114,7 +114,7 @@ class Mapping extends Entity<PropertyConfig> {
     /**
      * The identity definition
      */
-    HibernateIdentity identity = new Identity()
+    HibernatePropertyIdentity identity = new HibernateSimpleIdentity()
 
     /**
      * Caching config
@@ -218,8 +218,8 @@ class Mapping extends Entity<PropertyConfig> {
      */
     @Override
     Mapping id(Map identityConfig) {
-        if (identity instanceof Identity) {
-            Identity.configureExisting((Identity) identity, identityConfig)
+        if (identity instanceof HibernateSimpleIdentity) {
+            HibernateSimpleIdentity.configureExisting((HibernateSimpleIdentity) identity, identityConfig)
         }
         return this
     }
@@ -230,9 +230,9 @@ class Mapping extends Entity<PropertyConfig> {
      * @return This mapping
      */
     @Override
-    Mapping id(@DelegatesTo(Identity) Closure identityConfig) {
-        if (identity instanceof Identity) {
-            Identity.configureExisting((Identity) identity, identityConfig)
+    Mapping id(@DelegatesTo(HibernateSimpleIdentity) Closure identityConfig) {
+        if (identity instanceof HibernateSimpleIdentity) {
+            HibernateSimpleIdentity.configureExisting((HibernateSimpleIdentity) identity, identityConfig)
         }
         return this
     }
@@ -242,7 +242,7 @@ class Mapping extends Entity<PropertyConfig> {
      * @param identityConfig The id config
      * @return This mapping
      */
-    Mapping id(CompositeIdentity compositeIdentity) {
+    Mapping id(HibernateCompositeIdentity compositeIdentity) {
         this.identity = compositeIdentity
         return this
     }
@@ -380,9 +380,9 @@ class Mapping extends Entity<PropertyConfig> {
      * @param propertyNames
      * @return
      */
-    CompositeIdentity composite(String... propertyNames) {
-        identity = new CompositeIdentity(propertyNames: propertyNames)
-        return (CompositeIdentity) identity
+    HibernateCompositeIdentity composite(String... propertyNames) {
+        identity = new HibernateCompositeIdentity(propertyNames: propertyNames)
+        return (HibernateCompositeIdentity) identity
     }
 
     /**
@@ -602,6 +602,6 @@ class Mapping extends Entity<PropertyConfig> {
     }
 
     boolean hasCompositeIdentifier() {
-        return identity instanceof CompositeIdentity
+        return identity instanceof HibernateCompositeIdentity
     }
 }

@@ -25,7 +25,7 @@ import org.hibernate.boot.spi.MetadataBuildingContext;
 import org.hibernate.mapping.Component;
 import org.hibernate.mapping.RootClass;
 
-import org.grails.orm.hibernate.cfg.CompositeIdentity;
+import org.grails.orm.hibernate.cfg.HibernateCompositeIdentity;
 import org.grails.orm.hibernate.cfg.GrailsHibernateUtil;
 import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernatePersistentEntity;
 import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernatePersistentProperty;
@@ -49,7 +49,7 @@ public class CompositeIdBinder {
     public void bindCompositeId(
             @Nonnull HibernatePersistentEntity hibernatePersistentEntity,
             RootClass root,
-            CompositeIdentity compositeIdentity) {
+            HibernateCompositeIdentity compositeIdentity) {
         hibernatePersistentEntity.setPersistentClass(root);
         Component id = new Component(metadataBuildingContext, root);
         id.setNullValue("undefined");

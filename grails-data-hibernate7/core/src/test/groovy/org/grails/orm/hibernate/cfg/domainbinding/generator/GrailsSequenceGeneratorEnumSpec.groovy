@@ -23,7 +23,7 @@ import grails.gorm.annotation.Entity
 import grails.gorm.hibernate.HibernateEntity
 import grails.gorm.specs.HibernateGormDatastoreSpec
 import org.grails.orm.hibernate.cfg.domainbinding.hibernate.GrailsHibernatePersistentEntity
-import org.grails.orm.hibernate.cfg.Identity
+import org.grails.orm.hibernate.cfg.HibernateSimpleIdentity
 import org.grails.orm.hibernate.cfg.PersistentEntityNamingStrategy
 
 import org.hibernate.engine.jdbc.env.spi.JdbcEnvironment
@@ -97,7 +97,7 @@ class GrailsSequenceGeneratorEnumSpec extends HibernateGormDatastoreSpec {
     def "should dispatch #strategyName to #expectedClass"() {
         given:
         def context = buildContext()
-        def mappedId = Mock(Identity) {
+        def mappedId = Mock(HibernateSimpleIdentity) {
             // Explicit sequence name avoids the implicit-name path that requires TABLE property
             getProperties() >> { def p = new Properties(); p.put(SequenceStyleGenerator.SEQUENCE_PARAM, "test_seq"); p }
         }

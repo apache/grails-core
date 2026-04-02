@@ -28,12 +28,13 @@ import org.hibernate.mapping.Table;
 
 import org.grails.datastore.mapping.model.DefaultPropertyMapping;
 import org.grails.datastore.mapping.model.config.GormProperties;
-import org.grails.orm.hibernate.cfg.Identity;
+import org.grails.orm.hibernate.cfg.HibernateSimpleIdentity;
 import org.grails.orm.hibernate.cfg.PersistentEntityNamingStrategy;
 import org.grails.orm.hibernate.cfg.PropertyConfig;
 import org.grails.orm.hibernate.cfg.domainbinding.generator.GrailsSequenceWrapper;
 import org.grails.orm.hibernate.cfg.domainbinding.hibernate.GrailsHibernatePersistentEntity;
 import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernateIdentityProperty;
+import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernatePersistentEntity;
 import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernatePersistentProperty;
 
 /** The basic value creator class. */
@@ -70,19 +71,19 @@ public class BasicValueCreator {
 
     /** Gets the basic value id. */
     public BasicValue bindBasicValue(
-            Table table, Identity mappedId, GrailsHibernatePersistentEntity domainClass) {
-        org.grails.orm.hibernate.cfg.Mapping result = domainClass.getHibernateMappedForm();
-        boolean useSequence = result != null && result.isTablePerConcreteClass();
-        BasicValue basicValue = new BasicValue(metadataBuildingContext, table);
-        // create a BasicValue for the specific entity table (do not reuse the prototype directly
-        // because table differs)
-        String generatorName = Identity.determineGeneratorName(mappedId, useSequence);
-        basicValue.setCustomIdGeneratorCreator(context -> createGenerator(
-                mappedId,
+        Table table, HibernateSimpleIdentity _identity, HibernatePersistentEntity domainClass) {
+        if (domainClass.getHibernateIdentity() instanceof HibernateSimpleIdentity identity) {
+            String _generatorName = domainClass.getIdentityGeneratorName();
+            BasicValue basicValue = new BasicValue(metadataBuildingContext, domainClass.getRootClass().getTable());
+            basicValue.setCustomIdGeneratorCreator(context -> createGenerator(
+                identity,
                 domainClass,
                 context.getValue() == null ? new GeneratorCreationContextWrapper(context, basicValue) : context,
-                generatorName));
-        return basicValue;
+                _generatorName));
+            return basicValue;
+
+        }
+        throw new MappingException("Simple Identity expected");
     }
 
     /** Gets the basic value. */
@@ -100,7 +101,7 @@ public class BasicValueCreator {
     }
 
     public HibernatePersistentProperty resolveIdentifierProperty(
-            GrailsHibernatePersistentEntity domainClass, Identity mappedId) {
+            GrailsHibernatePersistentEntity domainClass, HibernateSimpleIdentity mappedId) {
         var identifier = domainClass.getIdentity();
         if (identifier == null) {
             var syntheticId = new HibernateIdentityProperty(
@@ -125,7 +126,7 @@ public class BasicValueCreator {
     }
 
     private Generator createGenerator(
-            Identity mappedId,
+            HibernateSimpleIdentity mappedId,
             GrailsHibernatePersistentEntity domainClass,
             GeneratorCreationContext context,
             String generatorName) {

@@ -24,7 +24,7 @@ import org.hibernate.engine.jdbc.env.spi.JdbcEnvironment
 import grails.gorm.specs.HibernateGormDatastoreSpec
 import org.grails.orm.hibernate.cfg.PersistentEntityNamingStrategy
 import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernatePersistentEntity
-import org.grails.orm.hibernate.cfg.Identity
+import org.grails.orm.hibernate.cfg.HibernateSimpleIdentity
 import org.hibernate.boot.spi.MetadataBuildingContext
 import org.hibernate.generator.Generator
 import org.hibernate.generator.GeneratorCreationContext
@@ -64,12 +64,12 @@ class BasicValueCreatorSpec extends HibernateGormDatastoreSpec {
     @Unroll
     def "should create BasicValue using factory for #generatorName (useSequence: #useSequence)"() {
         given:
-        Identity mappedId = new Identity()
+        HibernateSimpleIdentity mappedId = new HibernateSimpleIdentity()
         mappedId.setGenerator(generatorName)
-        def mapping = Mock(org.grails.orm.hibernate.cfg.Mapping)
-        mapping.isTablePerConcreteClass() >> useSequence
         def domainClass = Mock(HibernatePersistentEntity)
-        domainClass.getHibernateMappedForm() >> mapping
+        domainClass.getHibernateIdentity() >> mappedId
+        domainClass.getIdentityGeneratorName() >> generatorName
+        domainClass.getRootClass() >> entity
         def mockGenerator = Mock(Generator)
         def context = Mock(GeneratorCreationContext)
 
@@ -98,9 +98,12 @@ class BasicValueCreatorSpec extends HibernateGormDatastoreSpec {
 
     def "should default to native generator when mappedId is null"() {
         given:
+        HibernateSimpleIdentity defaultIdentity = new HibernateSimpleIdentity()
         def mockGenerator = Mock(Generator)
         def domainClass = Mock(HibernatePersistentEntity)
-        domainClass.getHibernateMappedForm() >> null
+        domainClass.getHibernateIdentity() >> defaultIdentity
+        domainClass.getIdentityGeneratorName() >> GrailsSequenceGeneratorEnum.NATIVE.toString()
+        domainClass.getRootClass() >> entity
         def context = Mock(GeneratorCreationContext)
 
         when:
@@ -109,17 +112,18 @@ class BasicValueCreatorSpec extends HibernateGormDatastoreSpec {
         Generator generator = generatorCreator.createGenerator(context)
 
         then:
-        1 * grailsSequenceWrapper.getGenerator(GrailsSequenceGeneratorEnum.NATIVE.toString(), _, null, domainClass, jdbcEnvironment, namingStrategy) >> mockGenerator
+        1 * grailsSequenceWrapper.getGenerator(GrailsSequenceGeneratorEnum.NATIVE.toString(), _, defaultIdentity, domainClass, jdbcEnvironment, namingStrategy) >> mockGenerator
         generator == mockGenerator
     }
 
     def "should default to sequence-identity when mappedId is null and useSequence is true"() {
         given:
+        HibernateSimpleIdentity defaultIdentity = new HibernateSimpleIdentity()
         def mockGenerator = Mock(Generator)
-        def mapping = Mock(org.grails.orm.hibernate.cfg.Mapping)
-        mapping.isTablePerConcreteClass() >> true
         def domainClass = Mock(HibernatePersistentEntity)
-        domainClass.getHibernateMappedForm() >> mapping
+        domainClass.getHibernateIdentity() >> defaultIdentity
+        domainClass.getIdentityGeneratorName() >> GrailsSequenceGeneratorEnum.SEQUENCE_IDENTITY.toString()
+        domainClass.getRootClass() >> entity
         def context = Mock(GeneratorCreationContext)
 
         when:
@@ -128,19 +132,19 @@ class BasicValueCreatorSpec extends HibernateGormDatastoreSpec {
         Generator generator = generatorCreator.createGenerator(context)
 
         then:
-        1 * grailsSequenceWrapper.getGenerator(GrailsSequenceGeneratorEnum.SEQUENCE_IDENTITY.toString(), _, null, domainClass, jdbcEnvironment, namingStrategy) >> mockGenerator
+        1 * grailsSequenceWrapper.getGenerator(GrailsSequenceGeneratorEnum.SEQUENCE_IDENTITY.toString(), _, defaultIdentity, domainClass, jdbcEnvironment, namingStrategy) >> mockGenerator
         generator == mockGenerator
     }
 
     def "should use sequence-identity when generator is native and useSequence is true"() {
         given:
-        Identity mappedId = new Identity()
+        HibernateSimpleIdentity mappedId = new HibernateSimpleIdentity()
         mappedId.setGenerator(GrailsSequenceGeneratorEnum.NATIVE.toString())
         def mockGenerator = Mock(Generator)
-        def mapping = Mock(org.grails.orm.hibernate.cfg.Mapping)
-        mapping.isTablePerConcreteClass() >> true
         def domainClass = Mock(HibernatePersistentEntity)
-        domainClass.getHibernateMappedForm() >> mapping
+        domainClass.getHibernateIdentity() >> mappedId
+        domainClass.getIdentityGeneratorName() >> GrailsSequenceGeneratorEnum.SEQUENCE_IDENTITY.toString()
+        domainClass.getRootClass() >> entity
         def context = Mock(GeneratorCreationContext)
 
         when:
@@ -155,10 +159,12 @@ class BasicValueCreatorSpec extends HibernateGormDatastoreSpec {
 
     def "should pass mappedId to factory"() {
         given:
-        Identity mappedId = new Identity()
+        HibernateSimpleIdentity mappedId = new HibernateSimpleIdentity()
         mappedId.setGenerator("custom")
         def domainClass = Mock(HibernatePersistentEntity)
-        domainClass.getHibernateMappedForm() >> null
+        domainClass.getHibernateIdentity() >> mappedId
+        domainClass.getIdentityGeneratorName() >> "custom"
+        domainClass.getRootClass() >> entity
         def context = Mock(GeneratorCreationContext)
 
         when:

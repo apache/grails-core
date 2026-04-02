@@ -19,7 +19,7 @@
 package org.grails.orm.hibernate.cfg.domainbinding
 
 import grails.gorm.specs.HibernateGormDatastoreSpec
-import org.grails.orm.hibernate.cfg.CompositeIdentity
+import org.grails.orm.hibernate.cfg.HibernateCompositeIdentity
 import org.grails.orm.hibernate.cfg.domainbinding.hibernate.*
 import org.grails.orm.hibernate.cfg.Mapping
 import org.grails.orm.hibernate.cfg.PersistentEntityNamingStrategy
@@ -151,7 +151,7 @@ class ManyToOneBinderSpec extends HibernateGormDatastoreSpec {
 
     private List mockEntity(boolean composite) {
         def mapping = new Mapping()
-        def compositeId = composite ? new CompositeIdentity() : null
+        def compositeId = composite ? new HibernateCompositeIdentity() : null
         mapping.setIdentity(compositeId)
 
         def entity = Mock(GrailsHibernatePersistentEntity) {

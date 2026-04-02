@@ -35,9 +35,9 @@ import org.hibernate.mapping.PersistentClass;
 import org.grails.datastore.mapping.model.PersistentEntity;
 import org.grails.datastore.mapping.model.PersistentProperty;
 import org.grails.datastore.mapping.model.config.GormProperties;
-import org.grails.orm.hibernate.cfg.CompositeIdentity;
+import org.grails.orm.hibernate.cfg.HibernateCompositeIdentity;
 import org.grails.orm.hibernate.cfg.DiscriminatorConfig;
-import org.grails.orm.hibernate.cfg.Identity;
+import org.grails.orm.hibernate.cfg.HibernateSimpleIdentity;
 import org.grails.orm.hibernate.cfg.Mapping;
 import org.grails.orm.hibernate.cfg.PersistentEntityNamingStrategy;
 import org.grails.orm.hibernate.cfg.domainbinding.util.ConfigureDerivedPropertiesConsumer;
@@ -117,18 +117,18 @@ public interface GrailsHibernatePersistentEntity extends PersistentEntity {
                 .collect(Collectors.toSet());
     }
 
-    default HibernateIdentity getHibernateIdentity() {
+    default HibernatePropertyIdentity getHibernateIdentity() {
         return Optional.ofNullable(getMappedForm())
                 .map(Mapping::getIdentity)
                 .or(this::resolveCompositeIdentity)
                 .orElseGet(this::getDefaultIdentity);
     }
 
-    private Optional<HibernateIdentity> resolveCompositeIdentity() {
+    private Optional<HibernatePropertyIdentity> resolveCompositeIdentity() {
         return Optional.ofNullable(getCompositeIdentity())
                 .filter(compositeId -> compositeId.length > 1)
                 .map(compositeId -> {
-                    CompositeIdentity ci = new CompositeIdentity();
+                    HibernateCompositeIdentity ci = new HibernateCompositeIdentity();
                     ci.setPropertyNames(java.util.Arrays.stream(compositeId)
                             .map(PersistentProperty::getName)
                             .toArray(String[]::new));
@@ -136,8 +136,8 @@ public interface GrailsHibernatePersistentEntity extends PersistentEntity {
                 });
     }
 
-    private @Nonnull Identity getDefaultIdentity() {
-        Identity identity = new Identity();
+    private @Nonnull HibernateSimpleIdentity getDefaultIdentity() {
+        HibernateSimpleIdentity identity = new HibernateSimpleIdentity();
         identity.setName(Optional.ofNullable(getIdentity())
                 .map(PersistentProperty::getName)
                 .orElseGet(this::getName));
@@ -150,12 +150,12 @@ public interface GrailsHibernatePersistentEntity extends PersistentEntity {
     @Override
     HibernatePersistentProperty[] getCompositeIdentity();
 
-    default Optional<CompositeIdentity> getHibernateCompositeIdentity() {
+    default Optional<HibernateCompositeIdentity> getHibernateCompositeIdentity() {
         return Optional.ofNullable(getMappedForm())
                 .filter(Mapping::hasCompositeIdentifier)
                 .map(Mapping::getIdentity)
-                .filter(CompositeIdentity.class::isInstance)
-                .map(CompositeIdentity.class::cast);
+                .filter(HibernateCompositeIdentity.class::isInstance)
+                .map(HibernateCompositeIdentity.class::cast);
     }
 
     default String getDiscriminatorValue() {

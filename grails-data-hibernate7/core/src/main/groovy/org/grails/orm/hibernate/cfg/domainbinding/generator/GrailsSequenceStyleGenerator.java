@@ -28,7 +28,7 @@ import org.hibernate.engine.jdbc.env.spi.JdbcEnvironment;
 import org.hibernate.generator.GeneratorCreationContext;
 import org.hibernate.id.enhanced.SequenceStyleGenerator;
 
-import org.grails.orm.hibernate.cfg.Identity;
+import org.grails.orm.hibernate.cfg.HibernateSimpleIdentity;
 
 @SuppressWarnings("PMD.ConstructorCallsOverridableMethod")
 public class GrailsSequenceStyleGenerator extends SequenceStyleGenerator {
@@ -37,9 +37,9 @@ public class GrailsSequenceStyleGenerator extends SequenceStyleGenerator {
     private static final long serialVersionUID = 1L;
 
     public GrailsSequenceStyleGenerator(
-            GeneratorCreationContext context, Identity mappedId, JdbcEnvironment jdbcEnvironment) {
+        GeneratorCreationContext context, HibernateSimpleIdentity mappedId, JdbcEnvironment jdbcEnvironment) {
         Properties generatorProps =
-                Optional.ofNullable(mappedId).map(Identity::getProperties).orElse(new Properties());
+                Optional.ofNullable(mappedId).map(HibernateSimpleIdentity::getProperties).orElse(new Properties());
 
         generatorProps.putIfAbsent(INCREMENT_PARAM, "50");
         generatorProps.putIfAbsent(OPT_PARAM, "pooled-lo");
