@@ -60,7 +60,21 @@ class HibernateMappingFactory extends AbstractGormMappingFactory<Mapping, Proper
     @Override
     org.grails.datastore.mapping.model.types.Identity<PropertyConfig> createIdentity(
             PersistentEntity owner, MappingContext context, PropertyDescriptor pd) {
-        HibernateIdentityProperty identity = new HibernateIdentityProperty(owner, context, pd)
+        HibernateSimpleIdentityProperty identity = new HibernateSimpleIdentityProperty(owner, context, pd)
+        identity.setMapping(createPropertyMapping(identity, owner))
+        identity
+    }
+
+    HibernateSimpleIdentityProperty createSimpleIdentityProperty(
+            PersistentEntity owner, MappingContext context, PropertyDescriptor pd) {
+        HibernateSimpleIdentityProperty identity = new HibernateSimpleIdentityProperty(owner, context, pd)
+        identity.setMapping(createPropertyMapping(identity, owner))
+        identity
+    }
+
+    HibernateCompositeIdentityProperty createCompositeIdentityProperty(
+            PersistentEntity owner, MappingContext context, PropertyDescriptor pd) {
+        HibernateCompositeIdentityProperty identity = new HibernateCompositeIdentityProperty(owner, context, pd)
         identity.setMapping(createPropertyMapping(identity, owner))
         identity
     }

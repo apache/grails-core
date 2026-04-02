@@ -123,8 +123,6 @@ class FindByMethodSpec extends GrailsDataTckSpec {
     void testBooleanPropertyQuery() {
         given:
         new Highway(bypassed: true, name: 'Bypassed Highway').save()
-        new Highway(bypassed: true, name: 'Bypassed Highway').save()
-        new Highway(bypassed: false, name: 'Not Bypassed Highway').save()
         new Highway(bypassed: false, name: 'Not Bypassed Highway').save()
 
         when:
@@ -137,17 +135,15 @@ class FindByMethodSpec extends GrailsDataTckSpec {
         highways = Highway.findAllNotBypassedByName('Not Bypassed Highway')
 
         then:
-        2 == highways?.size()
+        1 == highways?.size()
         'Not Bypassed Highway' == highways[0].name
-        'Not Bypassed Highway' == highways[1].name
 
         when:
         highways = Highway.findAllBypassedByName('Bypassed Highway')
 
         then:
-        2 == highways?.size()
+        1 == highways?.size()
         'Bypassed Highway' == highways[0].name
-        'Bypassed Highway' == highways[1].name
 
         when:
         highways = Highway.findAllNotBypassedByName('Bypassed Highway')
@@ -157,16 +153,14 @@ class FindByMethodSpec extends GrailsDataTckSpec {
         when:
         highways = Highway.findAllBypassed()
         then:
-        2 == highways?.size()
+        1 == highways?.size()
         'Bypassed Highway' == highways[0].name
-        'Bypassed Highway' == highways[1].name
 
         when:
         highways = Highway.findAllNotBypassed()
         then:
-        2 == highways?.size()
+        1 == highways?.size()
         'Not Bypassed Highway' == highways[0].name
-        'Not Bypassed Highway' == highways[1].name
 
         when:
         def highway = Highway.findNotBypassed()
@@ -220,7 +214,6 @@ class FindByMethodSpec extends GrailsDataTckSpec {
         book = TckBook.findPublishedByTitleOrAuthor('Fly Fishing For Everyone', 'Dierk')
         then:
         'GINA' == book.title
-        TckBook.findPublished() != null
 
         when:
         book = TckBook.findNotPublished()

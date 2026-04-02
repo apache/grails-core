@@ -73,7 +73,7 @@ public class SimpleValueBinder {
             HibernatePersistentProperty parentProperty,
             Table table,
             String path) {
-        BasicValue basicValue = basicValueCreator.bindBasicValue(table, property);
+        BasicValue basicValue = basicValueCreator.bindBasicValue(property);
         bindSimpleValue(property, parentProperty, basicValue, path);
         return basicValue;
     }

@@ -249,6 +249,7 @@ class SimpleValueBinderSpec extends Specification {
 
         prop.getMappedForm() >> pc
         prop.getHibernateMappedForm() >> pc
+        prop.getTable() >> table
         prop.getOwner() >> owner
         prop.getHibernateOwner() >> owner
         owner.getMappedForm() >> mapping

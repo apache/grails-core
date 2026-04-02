@@ -22,7 +22,7 @@ package org.grails.orm.hibernate.cfg.domainbinding
 import grails.gorm.specs.HibernateGormDatastoreSpec
 import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernatePersistentProperty
 import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernatePersistentEntity
-import org.grails.orm.hibernate.cfg.HibernateSimpleIdentity
+import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernateSimpleIdentityProperty
 import org.hibernate.boot.spi.MetadataBuildingContext
 import org.hibernate.engine.jdbc.env.spi.JdbcEnvironment
 import org.hibernate.mapping.BasicValue
@@ -33,7 +33,6 @@ import org.hibernate.mapping.Table
 import org.grails.orm.hibernate.cfg.domainbinding.binder.PropertyBinder
 import org.grails.orm.hibernate.cfg.domainbinding.binder.SimpleIdBinder
 import org.grails.orm.hibernate.cfg.domainbinding.binder.SimpleValueBinder
-import org.grails.orm.hibernate.cfg.domainbinding.generator.GrailsSequenceGeneratorEnum
 import org.grails.orm.hibernate.cfg.domainbinding.util.BasicValueCreator
 import org.grails.datastore.mapping.reflect.EntityReflector
 
@@ -62,10 +61,10 @@ class SimpleIdBinderSpec extends HibernateGormDatastoreSpec {
 
         // Use a Mock for BasicValueCreator and return a BasicValue based on the currentTable
         basicValueCreator = Mock(BasicValueCreator)
-        basicValueCreator.bindBasicValue(_, _, _) >> { Table table, HibernateSimpleIdentity id, HibernatePersistentEntity domainClass ->
-            return new BasicValue(metadataBuildingContext, table)
+        basicValueCreator.bindBasicValue(_) >> { HibernateSimpleIdentityProperty id ->
+            return new BasicValue(metadataBuildingContext, currentTable)
         }
-        basicValueCreator.resolveIdentifierProperty(_, _) >> { HibernatePersistentEntity domainClass, HibernateSimpleIdentity mappedId ->
+        basicValueCreator.resolveIdentifierProperty(_, _) >> { HibernatePersistentEntity domainClass, HibernateSimpleIdentityProperty identityProperty ->
             return domainClass.getIdentity() ?: Mock(HibernatePersistentProperty) { getName() >> "id" }
         }
 
@@ -94,7 +93,7 @@ class SimpleIdBinderSpec extends HibernateGormDatastoreSpec {
         rootClass.setTable(currentTable)
 
         when:
-        simpleIdBinder.bindSimpleId(domainClass, rootClass, new HibernateSimpleIdentity(generator: GrailsSequenceGeneratorEnum.IDENTITY.toString()), rootClass.getTable())
+        simpleIdBinder.bindSimpleId(domainClass, rootClass, Mock(HibernateSimpleIdentityProperty))
 
         then:
         1 * simpleValueBinder.bindSimpleValue(testProperty as HibernatePersistentProperty, null, _, "")
@@ -124,7 +123,7 @@ class SimpleIdBinderSpec extends HibernateGormDatastoreSpec {
         rootClass.setTable(currentTable)
 
         when:
-        simpleIdBinder.bindSimpleId(domainClass, rootClass, new HibernateSimpleIdentity(generator: GrailsSequenceGeneratorEnum.SEQUENCE.toString(), params: [sequence: 'SEQ_TEST']), rootClass.getTable())
+        simpleIdBinder.bindSimpleId(domainClass, rootClass, Mock(HibernateSimpleIdentityProperty))
 
         then:
         1 * simpleValueBinder.bindSimpleValue(testProperty as HibernatePersistentProperty, null, _, "")
@@ -144,10 +143,9 @@ class SimpleIdBinderSpec extends HibernateGormDatastoreSpec {
             getIdentity() >> Mock(HibernatePersistentProperty)
         }
         def rootClass = new RootClass(metadataBuildingContext)
-        def table = Mock(Table)
 
         when:
-        simpleIdBinder.bindSimpleId(domainClass, rootClass, new HibernateSimpleIdentity(name: "nonExistent"), table)
+        simpleIdBinder.bindSimpleId(domainClass, rootClass, Mock(HibernateSimpleIdentityProperty) { getName() >> "nonExistent" })
 
         then:
         1 * basicValueCreator.resolveIdentifierProperty(domainClass, _) >> { throw new org.hibernate.MappingException("Mapping specifies an identifier property name that doesn't exist [nonExistent]") }
@@ -173,7 +171,7 @@ class SimpleIdBinderSpec extends HibernateGormDatastoreSpec {
         rootClass.setTable(currentTable)
 
         when:
-        simpleIdBinder.bindSimpleId(domainClass, rootClass, new HibernateSimpleIdentity(), rootClass.getTable())
+        simpleIdBinder.bindSimpleId(domainClass, rootClass, Mock(HibernateSimpleIdentityProperty))
 
         then:
         1 * simpleValueBinder.bindSimpleValue(_, null, _, "")

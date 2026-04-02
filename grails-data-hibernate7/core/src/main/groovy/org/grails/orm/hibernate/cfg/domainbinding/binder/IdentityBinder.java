@@ -20,11 +20,13 @@ package org.grails.orm.hibernate.cfg.domainbinding.binder;
 
 import jakarta.annotation.Nonnull;
 
+import org.hibernate.MappingException;
 import org.hibernate.mapping.RootClass;
 
 import org.grails.orm.hibernate.cfg.HibernateCompositeIdentity;
-import org.grails.orm.hibernate.cfg.HibernateSimpleIdentity;
+import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernateCompositeIdentityProperty;
 import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernatePersistentEntity;
+import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernateSimpleIdentityProperty;
 
 public class IdentityBinder {
 
@@ -37,11 +39,15 @@ public class IdentityBinder {
     }
 
     public void bindIdentity(@Nonnull HibernatePersistentEntity domainClass, RootClass root) {
-        var id = domainClass.getHibernateIdentity();
-        if (id instanceof HibernateCompositeIdentity) {
-            compositeIdBinder.bindCompositeId(domainClass, root, (HibernateCompositeIdentity) id);
+        var identityProperty = domainClass.getIdentityProperty();
+        if (identityProperty instanceof HibernateCompositeIdentityProperty) {
+            HibernateCompositeIdentity compositeId = domainClass.getHibernateCompositeIdentity()
+                    .orElseThrow(() -> new MappingException("Composite identity expected for " + domainClass.getName()));
+            compositeIdBinder.bindCompositeId(domainClass, root, compositeId);
+        } else if (identityProperty instanceof HibernateSimpleIdentityProperty simpleId) {
+            simpleIdBinder.bindSimpleId(domainClass, root, simpleId);
         } else {
-            simpleIdBinder.bindSimpleId(domainClass, root, (HibernateSimpleIdentity) id, root.getTable());
+            throw new MappingException("No identity found for " + domainClass.getName());
         }
     }
 }

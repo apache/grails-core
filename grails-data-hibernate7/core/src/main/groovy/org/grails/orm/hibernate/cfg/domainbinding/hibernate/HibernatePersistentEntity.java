@@ -94,6 +94,19 @@ public class HibernatePersistentEntity extends AbstractPersistentEntity<Mapping>
                 .toArray(HibernatePersistentProperty[]::new);
     }
 
+    public HibernateIdentityProperty getIdentityProperty() {
+        HibernatePersistentProperty[] compositeId = getCompositeIdentity();
+        if (compositeId != null && compositeId.length > 1) {
+            HibernateSimpleIdentityProperty[] parts = Arrays.stream(compositeId)
+                    .filter(HibernateSimpleIdentityProperty.class::isInstance)
+                    .map(HibernateSimpleIdentityProperty.class::cast)
+                    .toArray(HibernateSimpleIdentityProperty[]::new);
+            return new HibernateCompositeIdentityProperty(this, getMappingContext(), getName(), Object.class, parts);
+        }
+        HibernatePersistentProperty id = getIdentity();
+        return id instanceof HibernateSimpleIdentityProperty simpleId ? simpleId : null;
+    }
+
     private boolean isAnnotatedEntity() {
         return getJavaClass().isAnnotationPresent(Entity.class);
     }

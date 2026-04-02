@@ -27,8 +27,8 @@ import org.hibernate.mapping.Property;
 import org.hibernate.mapping.RootClass;
 import org.hibernate.mapping.Table;
 
-import org.grails.orm.hibernate.cfg.HibernateSimpleIdentity;
 import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernatePersistentEntity;
+import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernateSimpleIdentityProperty;
 import org.grails.orm.hibernate.cfg.domainbinding.util.BasicValueCreator;
 
 import static org.grails.orm.hibernate.cfg.domainbinding.binder.GrailsDomainBinder.EMPTY_PATH;
@@ -58,13 +58,11 @@ public class SimpleIdBinder {
     }
 
     public void bindSimpleId(
-        @Nonnull HibernatePersistentEntity domainClass, RootClass entity, HibernateSimpleIdentity mappedId, Table table) {
+        @Nonnull HibernatePersistentEntity domainClass, RootClass entity, HibernateSimpleIdentityProperty identityProperty) {
 
-        // create the id value
+        BasicValue id = basicValueCreator.bindBasicValue(identityProperty);
 
-        BasicValue id = basicValueCreator.bindBasicValue(table, mappedId, domainClass);
-
-        var identifier = basicValueCreator.resolveIdentifierProperty(domainClass, mappedId);
+        var identifier = basicValueCreator.resolveIdentifierProperty(domainClass, identityProperty);
 
         Property idProperty = new Property();
         idProperty.setName(identifier.getName());

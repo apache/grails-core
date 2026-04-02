@@ -24,6 +24,7 @@ import org.hibernate.engine.jdbc.env.spi.JdbcEnvironment
 import grails.gorm.specs.HibernateGormDatastoreSpec
 import org.grails.orm.hibernate.cfg.PersistentEntityNamingStrategy
 import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernatePersistentEntity
+import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernateSimpleIdentityProperty
 import org.grails.orm.hibernate.cfg.HibernateSimpleIdentity
 import org.hibernate.boot.spi.MetadataBuildingContext
 import org.hibernate.generator.Generator
@@ -66,15 +67,18 @@ class BasicValueCreatorSpec extends HibernateGormDatastoreSpec {
         given:
         HibernateSimpleIdentity mappedId = new HibernateSimpleIdentity()
         mappedId.setGenerator(generatorName)
+        def identityProperty = Mock(HibernateSimpleIdentityProperty)
         def domainClass = Mock(HibernatePersistentEntity)
         domainClass.getHibernateIdentity() >> mappedId
         domainClass.getIdentityGeneratorName() >> generatorName
         domainClass.getRootClass() >> entity
+        identityProperty.getHibernateOwner() >> domainClass
+        identityProperty.getTable() >> table
         def mockGenerator = Mock(Generator)
         def context = Mock(GeneratorCreationContext)
 
         when:
-        BasicValue id = creator.bindBasicValue(table, mappedId, domainClass)
+        BasicValue id = creator.bindBasicValue(identityProperty)
         def generatorCreator = id.getCustomIdGeneratorCreator()
         Generator generator = generatorCreator.createGenerator(context)
 
@@ -96,7 +100,7 @@ class BasicValueCreatorSpec extends HibernateGormDatastoreSpec {
         GrailsSequenceGeneratorEnum.HILO.toString()              | false
     }
 
-    def "should default to native generator when mappedId is null"() {
+    def "should default to native generator when identity has no custom generator"() {
         given:
         HibernateSimpleIdentity defaultIdentity = new HibernateSimpleIdentity()
         def mockGenerator = Mock(Generator)
@@ -104,10 +108,13 @@ class BasicValueCreatorSpec extends HibernateGormDatastoreSpec {
         domainClass.getHibernateIdentity() >> defaultIdentity
         domainClass.getIdentityGeneratorName() >> GrailsSequenceGeneratorEnum.NATIVE.toString()
         domainClass.getRootClass() >> entity
+        def identityProperty = Mock(HibernateSimpleIdentityProperty)
+        identityProperty.getHibernateOwner() >> domainClass
+        identityProperty.getTable() >> table
         def context = Mock(GeneratorCreationContext)
 
         when:
-        BasicValue id = creator.bindBasicValue(table, null, domainClass)
+        BasicValue id = creator.bindBasicValue(identityProperty)
         def generatorCreator = id.getCustomIdGeneratorCreator()
         Generator generator = generatorCreator.createGenerator(context)
 
@@ -116,7 +123,7 @@ class BasicValueCreatorSpec extends HibernateGormDatastoreSpec {
         generator == mockGenerator
     }
 
-    def "should default to sequence-identity when mappedId is null and useSequence is true"() {
+    def "should default to sequence-identity when identity has no custom generator and useSequence is true"() {
         given:
         HibernateSimpleIdentity defaultIdentity = new HibernateSimpleIdentity()
         def mockGenerator = Mock(Generator)
@@ -124,10 +131,13 @@ class BasicValueCreatorSpec extends HibernateGormDatastoreSpec {
         domainClass.getHibernateIdentity() >> defaultIdentity
         domainClass.getIdentityGeneratorName() >> GrailsSequenceGeneratorEnum.SEQUENCE_IDENTITY.toString()
         domainClass.getRootClass() >> entity
+        def identityProperty = Mock(HibernateSimpleIdentityProperty)
+        identityProperty.getHibernateOwner() >> domainClass
+        identityProperty.getTable() >> table
         def context = Mock(GeneratorCreationContext)
 
         when:
-        BasicValue id = creator.bindBasicValue(table, null, domainClass)
+        BasicValue id = creator.bindBasicValue(identityProperty)
         def generatorCreator = id.getCustomIdGeneratorCreator()
         Generator generator = generatorCreator.createGenerator(context)
 
@@ -140,15 +150,18 @@ class BasicValueCreatorSpec extends HibernateGormDatastoreSpec {
         given:
         HibernateSimpleIdentity mappedId = new HibernateSimpleIdentity()
         mappedId.setGenerator(GrailsSequenceGeneratorEnum.NATIVE.toString())
+        def identityProperty = Mock(HibernateSimpleIdentityProperty)
         def mockGenerator = Mock(Generator)
         def domainClass = Mock(HibernatePersistentEntity)
         domainClass.getHibernateIdentity() >> mappedId
         domainClass.getIdentityGeneratorName() >> GrailsSequenceGeneratorEnum.SEQUENCE_IDENTITY.toString()
         domainClass.getRootClass() >> entity
+        identityProperty.getHibernateOwner() >> domainClass
+        identityProperty.getTable() >> table
         def context = Mock(GeneratorCreationContext)
 
         when:
-        BasicValue id = creator.bindBasicValue(table, mappedId, domainClass)
+        BasicValue id = creator.bindBasicValue(identityProperty)
         def generatorCreator = id.getCustomIdGeneratorCreator()
         Generator generator = generatorCreator.createGenerator(context)
 
@@ -161,14 +174,17 @@ class BasicValueCreatorSpec extends HibernateGormDatastoreSpec {
         given:
         HibernateSimpleIdentity mappedId = new HibernateSimpleIdentity()
         mappedId.setGenerator("custom")
+        def identityProperty = Mock(HibernateSimpleIdentityProperty)
         def domainClass = Mock(HibernatePersistentEntity)
         domainClass.getHibernateIdentity() >> mappedId
         domainClass.getIdentityGeneratorName() >> "custom"
         domainClass.getRootClass() >> entity
+        identityProperty.getHibernateOwner() >> domainClass
+        identityProperty.getTable() >> table
         def context = Mock(GeneratorCreationContext)
 
         when:
-        BasicValue id = creator.bindBasicValue(table, mappedId, domainClass)
+        BasicValue id = creator.bindBasicValue(identityProperty)
         def generatorCreator = id.getCustomIdGeneratorCreator()
         generatorCreator.createGenerator(context)
 
