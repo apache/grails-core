@@ -199,7 +199,7 @@ public class DelegateAsyncTransformation implements ASTTransformation, Transform
 
     protected DelegateAsyncTransactionalMethodTransformer lookupAsyncTransactionalMethodTransformer() {
         try {
-            Class<?> transformerClass = Thread.currentThread().getContextClassLoader().loadClass("org.grails.async.transform.internal.DefaultDelegateAsyncTransactionalMethodTransformer");
+            Class<?> transformerClass = getClass().getClassLoader().loadClass("org.grails.async.transform.internal.DefaultDelegateAsyncTransactionalMethodTransformer");
             return (DelegateAsyncTransactionalMethodTransformer) transformerClass.getDeclaredConstructor().newInstance();
         } catch (Exception ignored) {
             // ignore
