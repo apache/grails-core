@@ -219,11 +219,11 @@ public class PredicateGenerator {
         } else if (pc instanceof Query.Like c) {
             return cb.like((Expression<String>) fullyQualifiedPath, c.getValue().toString());
         } else if (pc instanceof Query.Equals c) {
-            return cb.equal(fullyQualifiedPath, c.getValue());
+            return cb.equal(fullyQualifiedPath, normalizeValue(c.getValue()));
         } else if (pc instanceof Query.NotEquals c) {
-            return cb.or(cb.notEqual(fullyQualifiedPath, c.getValue()), cb.isNull(fullyQualifiedPath));
+            return cb.or(cb.notEqual(fullyQualifiedPath, normalizeValue(c.getValue())), cb.isNull(fullyQualifiedPath));
         } else if (pc instanceof Query.IdEquals c) {
-            return cb.equal(root.get("id"), c.getValue());
+            return cb.equal(root.get("id"), normalizeValue(c.getValue()));
         } else if (pc instanceof Query.GreaterThan c) {
             return cb.gt((Expression<? extends Number>) fullyQualifiedPath, getNumericValue(c));
         } else if (pc instanceof Query.GreaterThanEquals c) {
@@ -233,9 +233,9 @@ public class PredicateGenerator {
         } else if (pc instanceof Query.LessThanEquals c) {
             return cb.le((Expression<? extends Number>) fullyQualifiedPath, getNumericValue(c));
         } else if (pc instanceof Query.SizeEquals c) {
-            return cb.equal(cb.size((Expression) fullyQualifiedPath), c.getValue());
+            return cb.equal(cb.size((Expression) fullyQualifiedPath), normalizeValue(c.getValue()));
         } else if (pc instanceof Query.SizeNotEquals c) {
-            return cb.notEqual(cb.size((Expression) fullyQualifiedPath), c.getValue());
+            return cb.notEqual(cb.size((Expression) fullyQualifiedPath), normalizeValue(c.getValue()));
         } else if (pc instanceof Query.SizeGreaterThan c) {
             return cb.gt(cb.size((Expression) fullyQualifiedPath), getNumericValue(c));
         } else if (pc instanceof Query.SizeGreaterThanEquals c) {
@@ -245,7 +245,7 @@ public class PredicateGenerator {
         } else if (pc instanceof Query.SizeLessThanEquals c) {
             return cb.le(cb.size((Expression) fullyQualifiedPath), getNumericValue(c));
         } else if (pc instanceof Query.Between c) {
-            return cb.between((Expression) fullyQualifiedPath, (Comparable) c.getFrom(), (Comparable) c.getTo());
+            return cb.between((Expression) fullyQualifiedPath, (Comparable) normalizeValue(c.getFrom()), (Comparable) normalizeValue(c.getTo()));
         }
         return null;
     }
@@ -539,6 +539,19 @@ public class PredicateGenerator {
         return criterion instanceof Query.In ?
                 ((Query.In) criterion).getSubquery() :
                 ((Query.NotIn) criterion).getSubquery();
+    }
+
+    /**
+     * Normalizes a criterion value for use with JPA Criteria API.
+     * Hibernate 7's SqmCriteriaNodeBuilder requires strict Java types and cannot
+     * coerce Groovy types like GString. This method converts CharSequence (including
+     * GString) to String so Hibernate can process the value correctly.
+     */
+    private static Object normalizeValue(Object value) {
+        if (value instanceof CharSequence && !(value instanceof String)) {
+            return value.toString();
+        }
+        return value;
     }
 
     private Number getNumericValue(Query.PropertyCriterion criterion) {
