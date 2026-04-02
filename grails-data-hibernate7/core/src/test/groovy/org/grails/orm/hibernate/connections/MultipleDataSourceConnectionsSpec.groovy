@@ -26,7 +26,6 @@ import org.grails.orm.hibernate.HibernateDatastore
 import org.hibernate.Session
 import org.hibernate.dialect.H2Dialect
 import spock.lang.AutoCleanup
-import spock.lang.PendingFeature
 import spock.lang.Shared
 import spock.lang.Specification
 
@@ -119,7 +118,6 @@ class MultipleDataSourceConnectionsSpec extends Specification {
         }
     }
 
-    @PendingFeature(reason = 'executeQuery with named parameters fails on multi-datasource entity in Hibernate 7 - QueryParameterException')
     void "static GORM operations use first non-default datasource for multi datasource entity"() {
         given: "a unique book name"
         def uniqueName = "The Stand ${UUID.randomUUID()}"
