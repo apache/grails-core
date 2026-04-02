@@ -145,6 +145,23 @@ class HibernateProxyHandler7Spec extends HibernateGormDatastoreSpec {
         proxyHandler.isInitialized(location)
     }
 
+    void "test isInitialized for a Groovy proxy before initialization"() {
+        given:
+        def originalFactory = manager.session.mappingContext.proxyFactory
+        manager.session.mappingContext.proxyFactory = new GroovyProxyFactory()
+        Location location = new Location(name: "Test Location").save(flush: true)
+        manager.session.clear()
+        manager.hibernateSession.clear()
+
+        Location proxyLocation = Location.proxy(location.id)
+
+        expect:
+        !proxyHandler.isInitialized(proxyLocation)
+
+        cleanup:
+        manager.session.mappingContext.proxyFactory = originalFactory
+    }
+
     void "test unwrap for a Groovy proxy"() {
         given:
         def originalFactory = manager.session.mappingContext.proxyFactory
