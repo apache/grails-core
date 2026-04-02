@@ -33,4 +33,9 @@ public class HibernateSimpleIdentityProperty extends HibernateIdentityProperty {
     public HibernateSimpleIdentityProperty(PersistentEntity entity, MappingContext context, String name, Class<?> type) {
         super(entity, context, name, type);
     }
+
+    @Override
+    public String getGeneratorName() {
+        return ((HibernatePersistentEntity) getHibernateOwner()).getIdentityGeneratorName();
+    }
 }

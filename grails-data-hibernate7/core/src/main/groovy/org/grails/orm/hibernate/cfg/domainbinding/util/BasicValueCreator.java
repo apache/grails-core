@@ -25,6 +25,8 @@ import org.hibernate.generator.Generator;
 import org.hibernate.generator.GeneratorCreationContext;
 import org.hibernate.mapping.BasicValue;
 
+import java.util.Optional;
+
 import org.grails.datastore.mapping.model.DefaultPropertyMapping;
 import org.grails.datastore.mapping.model.config.GormProperties;
 import org.grails.orm.hibernate.cfg.HibernateSimpleIdentity;
@@ -33,7 +35,6 @@ import org.grails.orm.hibernate.cfg.PropertyConfig;
 import org.grails.orm.hibernate.cfg.domainbinding.generator.GrailsSequenceWrapper;
 import org.grails.orm.hibernate.cfg.domainbinding.hibernate.GrailsHibernatePersistentEntity;
 import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernateSimpleIdentityProperty;
-import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernatePersistentEntity;
 import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernatePersistentProperty;
 
 /** The basic value creator class. */
@@ -71,18 +72,11 @@ public class BasicValueCreator {
     /** Creates and configures a {@link BasicValue} for the given persistent property. */
     public BasicValue bindBasicValue(HibernatePersistentProperty property) {
         BasicValue basicValue = new BasicValue(metadataBuildingContext, property.getTable());
-        HibernateSimpleIdentityProperty identityProperty =
-                property instanceof HibernateSimpleIdentityProperty simpleId ? simpleId : null;
-        String generator = identityProperty != null
-                ? ((HibernatePersistentEntity) property.getHibernateOwner()).getIdentityGeneratorName()
-                : property.getHibernateMappedForm().getGenerator();
-        if (generator != null) {
-            basicValue.setCustomIdGeneratorCreator(context -> createGenerator(
-                    identityProperty,
-                    property.getHibernateOwner(),
-                    context.getValue() == null ? new GeneratorCreationContextWrapper(context, basicValue) : context,
-                    generator));
-        }
+        Optional.ofNullable(property.getGeneratorName()).ifPresent(generator ->
+                basicValue.setCustomIdGeneratorCreator(context -> createGenerator(
+                        property.getHibernateOwner(),
+                        context.getValue() == null ? new GeneratorCreationContextWrapper(context, basicValue) : context,
+                        generator)));
         return basicValue;
     }
 
@@ -112,7 +106,6 @@ public class BasicValueCreator {
     }
 
     private Generator createGenerator(
-            HibernateSimpleIdentityProperty identityProperty,
             GrailsHibernatePersistentEntity domainClass,
             GeneratorCreationContext context,
             String generatorName) {

@@ -30,7 +30,6 @@ import org.hibernate.boot.spi.MetadataBuildingContext
 import org.hibernate.generator.Generator
 import org.hibernate.generator.GeneratorCreationContext
 import org.hibernate.mapping.BasicValue
-import org.hibernate.mapping.RootClass
 import org.hibernate.mapping.Table
 import spock.lang.Unroll
 
@@ -43,7 +42,6 @@ class BasicValueCreatorSpec extends HibernateGormDatastoreSpec {
     MetadataBuildingContext metadataBuildingContext
     BasicValueCreator creator
     BasicValue basicValue
-    RootClass entity
     Table table
     GrailsSequenceWrapper grailsSequenceWrapper
     JdbcEnvironment jdbcEnvironment
@@ -54,10 +52,7 @@ class BasicValueCreatorSpec extends HibernateGormDatastoreSpec {
         jdbcEnvironment = Mock(JdbcEnvironment)
         namingStrategy = Mock(PersistentEntityNamingStrategy)
         grailsSequenceWrapper = Mock(GrailsSequenceWrapper)
-        entity = new RootClass(metadataBuildingContext)
         table = new Table("test_table")
-        entity.setTable(table)
-        // Use a real BasicValue to test that the generator creator lambda is correctly set and executable
         basicValue = new BasicValue(metadataBuildingContext, table)
         creator = new BasicValueCreator(metadataBuildingContext, jdbcEnvironment, namingStrategy, grailsSequenceWrapper)
     }
@@ -70,8 +65,7 @@ class BasicValueCreatorSpec extends HibernateGormDatastoreSpec {
         def identityProperty = Mock(HibernateSimpleIdentityProperty)
         def domainClass = Mock(HibernatePersistentEntity)
         domainClass.getHibernateIdentity() >> mappedId
-        domainClass.getIdentityGeneratorName() >> generatorName
-        domainClass.getRootClass() >> entity
+        identityProperty.getGeneratorName() >> generatorName
         identityProperty.getHibernateOwner() >> domainClass
         identityProperty.getTable() >> table
         def mockGenerator = Mock(Generator)
@@ -106,9 +100,8 @@ class BasicValueCreatorSpec extends HibernateGormDatastoreSpec {
         def mockGenerator = Mock(Generator)
         def domainClass = Mock(HibernatePersistentEntity)
         domainClass.getHibernateIdentity() >> defaultIdentity
-        domainClass.getIdentityGeneratorName() >> GrailsSequenceGeneratorEnum.NATIVE.toString()
-        domainClass.getRootClass() >> entity
         def identityProperty = Mock(HibernateSimpleIdentityProperty)
+        identityProperty.getGeneratorName() >> GrailsSequenceGeneratorEnum.NATIVE.toString()
         identityProperty.getHibernateOwner() >> domainClass
         identityProperty.getTable() >> table
         def context = Mock(GeneratorCreationContext)
@@ -129,9 +122,8 @@ class BasicValueCreatorSpec extends HibernateGormDatastoreSpec {
         def mockGenerator = Mock(Generator)
         def domainClass = Mock(HibernatePersistentEntity)
         domainClass.getHibernateIdentity() >> defaultIdentity
-        domainClass.getIdentityGeneratorName() >> GrailsSequenceGeneratorEnum.SEQUENCE_IDENTITY.toString()
-        domainClass.getRootClass() >> entity
         def identityProperty = Mock(HibernateSimpleIdentityProperty)
+        identityProperty.getGeneratorName() >> GrailsSequenceGeneratorEnum.SEQUENCE_IDENTITY.toString()
         identityProperty.getHibernateOwner() >> domainClass
         identityProperty.getTable() >> table
         def context = Mock(GeneratorCreationContext)
@@ -154,8 +146,7 @@ class BasicValueCreatorSpec extends HibernateGormDatastoreSpec {
         def mockGenerator = Mock(Generator)
         def domainClass = Mock(HibernatePersistentEntity)
         domainClass.getHibernateIdentity() >> mappedId
-        domainClass.getIdentityGeneratorName() >> GrailsSequenceGeneratorEnum.SEQUENCE_IDENTITY.toString()
-        domainClass.getRootClass() >> entity
+        identityProperty.getGeneratorName() >> GrailsSequenceGeneratorEnum.SEQUENCE_IDENTITY.toString()
         identityProperty.getHibernateOwner() >> domainClass
         identityProperty.getTable() >> table
         def context = Mock(GeneratorCreationContext)
@@ -177,8 +168,7 @@ class BasicValueCreatorSpec extends HibernateGormDatastoreSpec {
         def identityProperty = Mock(HibernateSimpleIdentityProperty)
         def domainClass = Mock(HibernatePersistentEntity)
         domainClass.getHibernateIdentity() >> mappedId
-        domainClass.getIdentityGeneratorName() >> "custom"
-        domainClass.getRootClass() >> entity
+        identityProperty.getGeneratorName() >> "custom"
         identityProperty.getHibernateOwner() >> domainClass
         identityProperty.getTable() >> table
         def context = Mock(GeneratorCreationContext)
