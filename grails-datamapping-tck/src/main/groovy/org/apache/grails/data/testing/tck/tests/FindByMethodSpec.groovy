@@ -40,9 +40,11 @@ class FindByMethodSpec extends GrailsDataTckSpec {
         manager.addAllDomainClasses([Person, TckBook, Highway])
     }
 
-    @Requires({ System.getProperty('hibernate5.gorm.suite') == 'true' ||
+    @Requires({
+        System.getProperty('hibernate5.gorm.suite') == 'true' ||
                 System.getProperty('hibernate7.gorm.suite') == 'true' ||
-                System.getProperty('mongodb.gorm.suite') == 'true' })
+                System.getProperty('mongodb.gorm.suite') == 'true'
+    })
     void 'Test Using AND Multiple Times In A Dynamic Finder'() {
         given:
         new Person(firstName: 'Jake', lastName: 'Brown', age: 11).save()
@@ -82,9 +84,11 @@ class FindByMethodSpec extends GrailsDataTckSpec {
         1 == cnt
     }
 
-    @Requires({ System.getProperty('hibernate5.gorm.suite') == 'true' ||
+    @Requires({
+        System.getProperty('hibernate5.gorm.suite') == 'true' ||
                 System.getProperty('hibernate7.gorm.suite') == 'true' ||
-                System.getProperty('mongodb.gorm.suite') == 'true' })
+                System.getProperty('mongodb.gorm.suite') == 'true'
+    })
     void 'Test Using OR Multiple Times In A Dynamic Finder'() {
         given:
         new Person(firstName: 'Jake', lastName: 'Brown', age: 11).save()
@@ -111,9 +115,11 @@ class FindByMethodSpec extends GrailsDataTckSpec {
         3 == cnt
     }
 
-    @Requires({ System.getProperty('hibernate5.gorm.suite') == 'true' ||
+    @Requires({
+        System.getProperty('hibernate5.gorm.suite') == 'true' ||
                 System.getProperty('hibernate7.gorm.suite') == 'true' ||
-                System.getProperty('mongodb.gorm.suite') == 'true' })
+                System.getProperty('mongodb.gorm.suite') == 'true'
+    })
     void testBooleanPropertyQuery() {
         given:
         new Highway(bypassed: true, name: 'Bypassed Highway').save()

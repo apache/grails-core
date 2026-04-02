@@ -26,7 +26,6 @@ import org.apache.grails.data.testing.tck.domains.OptLockNotVersioned
 import org.apache.grails.data.testing.tck.domains.OptLockVersioned
 import org.springframework.dao.OptimisticLockingFailureException
 
-import grails.gorm.transactions.GrailsTransactionTemplate
 import org.grails.datastore.mapping.core.OptimisticLockingException
 
 /**
