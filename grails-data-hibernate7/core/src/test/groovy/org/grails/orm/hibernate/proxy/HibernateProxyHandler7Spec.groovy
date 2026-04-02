@@ -25,6 +25,7 @@ import org.apache.grails.data.testing.tck.domains.Location
 import org.apache.grails.data.testing.tck.domains.Person
 import org.apache.grails.data.testing.tck.domains.Pet
 import org.grails.datastore.gorm.proxy.GroovyProxyFactory
+import org.grails.datastore.gorm.proxy.ProxyInstanceMetaClass
 import org.hibernate.Hibernate
 import spock.lang.Shared
 
@@ -156,6 +157,7 @@ class HibernateProxyHandler7Spec extends HibernateGormDatastoreSpec {
         Location proxyLocation = Location.proxy(location.id)
 
         expect:
+        proxyLocation.metaClass instanceof ProxyInstanceMetaClass
         !proxyHandler.isInitialized(proxyLocation)
 
         cleanup:
