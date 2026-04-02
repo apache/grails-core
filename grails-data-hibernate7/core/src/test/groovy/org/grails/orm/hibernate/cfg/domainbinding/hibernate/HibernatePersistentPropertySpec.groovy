@@ -20,13 +20,15 @@ package org.grails.orm.hibernate.cfg.domainbinding.hibernate
 
 import grails.gorm.specs.HibernateGormDatastoreSpec
 import grails.persistence.Entity
+import org.grails.orm.hibernate.cfg.domainbinding.generator.GrailsSequenceGeneratorEnum
 import spock.lang.Shared
 
 class HibernatePersistentPropertySpec extends HibernateGormDatastoreSpec {
 
     void setupSpec() {
         manager.addAllDomainClasses([
-            LazyBook, LazyAuthor, ExplicitNonLazy, JoinFetchEntity, EnumEntity
+            LazyBook, LazyAuthor, ExplicitNonLazy, JoinFetchEntity, EnumEntity,
+            GeneratorDefaultEntity, GeneratorUuid2Entity
         ])
     }
 
@@ -131,6 +133,34 @@ class HibernatePersistentPropertySpec extends HibernateGormDatastoreSpec {
         property.getPersistentClass() != null
         property.getPersistentClass().getEntityName() == LazyBook.name
     }
+
+    def "getGeneratorName returns null for regular property with no generator configured"() {
+        given:
+        def entity = (HibernatePersistentEntity) getMappingContext().getPersistentEntity(GeneratorDefaultEntity.name)
+        def property = (HibernatePersistentProperty) entity.getPropertyByName("name")
+
+        expect:
+        property.getGeneratorName() == null
+    }
+
+    def "getGeneratorName on identity with no explicit generator delegates to entity"() {
+        given:
+        def entity = (HibernatePersistentEntity) getMappingContext().getPersistentEntity(GeneratorDefaultEntity.name)
+        def identity = (HibernateSimpleIdentityProperty) entity.getIdentityProperty()
+
+        expect:
+        identity.getGeneratorName() == entity.getIdentityGeneratorName()
+        identity.getGeneratorName() != null
+    }
+
+    def "getGeneratorName on identity with explicit generator returns that generator"() {
+        given:
+        def entity = (HibernatePersistentEntity) getMappingContext().getPersistentEntity(GeneratorUuid2Entity.name)
+        def identity = (HibernateSimpleIdentityProperty) entity.getIdentityProperty()
+
+        expect:
+        identity.getGeneratorName() == GrailsSequenceGeneratorEnum.UUID2.toString()
+    }
 }
 
 @Entity
@@ -172,4 +202,19 @@ enum Status { ACTIVE, INACTIVE }
 class EnumEntity {
     Long id
     Status status
+}
+
+@Entity
+class GeneratorDefaultEntity {
+    Long id
+    String name
+}
+
+@Entity
+class GeneratorUuid2Entity {
+    String id
+    String name
+    static mapping = {
+        id generator: 'uuid2'
+    }
 }
