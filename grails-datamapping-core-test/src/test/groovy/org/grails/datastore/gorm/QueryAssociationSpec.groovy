@@ -19,18 +19,16 @@
 package org.grails.datastore.gorm
 
 import org.apache.grails.data.testing.tck.domains.ChildEntity
+import org.apache.grails.data.testing.tck.domains.Plant
 import org.apache.grails.data.testing.tck.domains.PlantCategory
 import org.apache.grails.data.testing.tck.domains.TestEntity
 import org.apache.grails.data.simple.core.GrailsDataCoreTckManager
 import org.apache.grails.data.testing.tck.base.GrailsDataTckSpec
 
-import spock.lang.IgnoreIf
-
-@IgnoreIf({ System.getProperty('core.gorm.suite') == 'true' })
 class QueryAssociationSpec extends GrailsDataTckSpec<GrailsDataCoreTckManager> {
 
     void setupSpec() {
-        manager.addAllDomainClasses([TestEntity,ChildEntity])
+        manager.addAllDomainClasses([TestEntity, ChildEntity, PlantCategory, Plant])
     }
 
     void "Test query one-to-one association with disjunction"() {

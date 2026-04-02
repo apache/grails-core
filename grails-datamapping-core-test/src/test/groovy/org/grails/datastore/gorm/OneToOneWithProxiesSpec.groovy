@@ -34,7 +34,6 @@ class OneToOneWithProxiesSpec extends GrailsDataTckSpec<GrailsDataCoreTckManager
         manager.addAllDomainClasses([ Face, Nose, Pet, org.apache.grails.data.testing.tck.domains.Person])
     }
 
-    @spock.lang.Requires({ System.getProperty('hibernate5.gorm.suite') == 'true' || System.getProperty('hibernate7.gorm.suite') == 'true' || System.getProperty('mongodb.gorm.suite') == 'true' })
     void "Test persist and retrieve unidirectional many-to-one"() {
         given: "A domain model with a many-to-one"
         def person = new org.apache.grails.data.testing.tck.domains.Person(firstName: "Fred", lastName: "Flintstone")

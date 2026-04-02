@@ -21,7 +21,7 @@ package org.apache.grails.data.testing.tck.tests
 import org.apache.grails.data.testing.tck.domains.Person
 import org.apache.grails.data.testing.tck.base.GrailsDataTckSpec
 
-@spock.lang.Requires({ System.getProperty('hibernate5.gorm.suite') == 'true' ||  System.getProperty('mongodb.gorm.suite') == 'true' })
+@spock.lang.Requires({ System.getProperty('hibernate5.gorm.suite') == 'true' || System.getProperty('mongodb.gorm.suite') == 'true' || System.getProperty('core.gorm.suite') == 'true' })
 class PagedResultSpec extends GrailsDataTckSpec {
 
     void setupSpec() {

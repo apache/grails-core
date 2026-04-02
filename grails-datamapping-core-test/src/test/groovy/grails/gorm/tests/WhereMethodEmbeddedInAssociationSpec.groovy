@@ -18,17 +18,13 @@
  */
 package grails.gorm.tests
 
-import spock.lang.Requires
-
 import org.apache.grails.data.simple.core.GrailsDataCoreTckManager
 import org.apache.grails.data.testing.tck.base.GrailsDataTckSpec
 import org.grails.datastore.gorm.query.transform.ApplyDetachedCriteriaTransform
 import org.grails.datastore.mapping.reflect.FieldEntityAccess
-import spock.lang.IgnoreIf
 import spock.lang.Shared
 
 @ApplyDetachedCriteriaTransform
-@IgnoreIf({ System.getProperty('core.gorm.suite') == 'true' })
 class WhereMethodEmbeddedInAssociationSpec extends GrailsDataTckSpec<GrailsDataCoreTckManager> {
     @Shared
     def gcl
@@ -73,9 +69,7 @@ class Partner {
         def Contact = this.gcl.loadClass("Contact")
         def Address = this.gcl.loadClass("Address")
 
-        manager.domainClasses << Partner
-        manager.domainClasses << Contact
-        manager.domainClasses << Address
+        manager.addAllDomainClasses([Partner, Contact, Address])
     }
 
     def setup() {

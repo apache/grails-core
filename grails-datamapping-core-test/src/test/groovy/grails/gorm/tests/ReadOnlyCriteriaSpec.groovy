@@ -20,10 +20,9 @@ package grails.gorm.tests
 
 import org.apache.grails.data.simple.core.GrailsDataCoreTckManager
 import org.apache.grails.data.testing.tck.base.GrailsDataTckSpec
+import org.apache.grails.data.testing.tck.domains.TestEntity
 import spock.lang.Issue
-import spock.lang.IgnoreIf
 
-@IgnoreIf({ System.getProperty('core.gorm.suite') == 'true' })
 class ReadOnlyCriteriaSpec extends GrailsDataTckSpec<GrailsDataCoreTckManager> {
 
     void setupSpec() {
