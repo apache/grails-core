@@ -30,12 +30,9 @@ import org.grails.datastore.gorm.events.AutoTimestampEventListener
 
 import static grails.gorm.annotation.AutoTimestamp.EventType.CREATED
 
-import spock.lang.IgnoreIf
-
-@IgnoreIf({ System.getProperty('core.gorm.suite') == 'true' })
 class CustomAutoTimestampSpec extends GrailsDataTckSpec<GrailsDataCoreTckManager> {
     void setupSpec() {
-        manager.domainClasses.addAll([AutoTimestampedChildEntity, AutoTimestampedParentEntity, Image, RecordCustom, RecordWithAliases])
+        manager.addAllDomainClasses([AutoTimestampedChildEntity, AutoTimestampedParentEntity, Image, RecordCustom, RecordWithAliases])
     }
 
     @Requires({ System.getProperty('hibernate5.gorm.suite') == 'true' ||
