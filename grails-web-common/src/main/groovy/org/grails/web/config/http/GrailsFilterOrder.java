@@ -38,10 +38,10 @@ public final class GrailsFilterOrder {
      * other filters registered with the container). There is no connection between this
      * and the {@code @Order} on a {@code SecurityFilterChain}.
      * <p>
-     * Value is {@code REQUEST_WRAPPER_FILTER_MAX_ORDER - 100 = -100}.
-     * <p>
-     * This value matches what was previously defined in Spring Boot's
-     * {@code SecurityProperties.DEFAULT_FILTER_ORDER} before it was removed in Spring Boot 4.0.
+     * The value {@code -100} matches what was previously defined in Spring Boot's
+     * {@code SecurityProperties.DEFAULT_FILTER_ORDER} (computed as
+     * {@code OrderedFilter.REQUEST_WRAPPER_FILTER_MAX_ORDER - 100}) before it was
+     * removed in Spring Boot 4.0.
      */
     public static final int DEFAULT_FILTER_ORDER = -100;
 

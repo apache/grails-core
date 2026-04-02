@@ -24,12 +24,9 @@ import grails.persistence.Entity
 import org.apache.grails.data.simple.core.GrailsDataCoreTckManager
 import org.apache.grails.data.testing.tck.base.GrailsDataTckSpec
 
-import spock.lang.IgnoreIf
-
-@IgnoreIf({ System.getProperty('core.gorm.suite') == 'true' })
 class EmbeddedPropertyQuerySpec extends GrailsDataTckSpec<GrailsDataCoreTckManager> {
     void setupSpec() {
-        manager.domainClasses += [Book2, Author2]
+        manager.addAllDomainClasses([Book2, Author2])
     }
 
     @Requires({ System.getProperty('hibernate5.gorm.suite') == 'true' ||

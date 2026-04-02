@@ -1005,6 +1005,11 @@ include::testing/integrationTesting.adoc[]
 
 include::testing/functionalTesting.adoc[]
 
+[[testPhases]]
+=== Custom Test Phases
+
+include::testing/testPhases.adoc[]
+
 [[i18n]]
 == Internationalization
 

@@ -47,7 +47,7 @@ import org.springframework.web.context.request.async.WebAsyncUtils;
  *
  * <p>This interceptor makes Hibernate Sessions available via the current thread,
  * which will be autodetected by transaction managers. It is suitable for service layer
- * transactions via {@link org.springframework.orm.hibernate5.HibernateTransactionManager}
+ * transactions via {@link org.grails.orm.hibernate.support.hibernate5.HibernateTransactionManager}
  * as well as for non-transactional execution (if configured appropriately).
  *
  * <p>In contrast to {@link OpenSessionInViewFilter}, this interceptor is configured
@@ -64,7 +64,7 @@ import org.springframework.web.context.request.async.WebAsyncUtils;
  * @since 4.2
  * @see OpenSessionInViewFilter
  * @see OpenSessionInterceptor
- * @see org.springframework.orm.hibernate5.HibernateTransactionManager
+ * @see org.grails.orm.hibernate.support.hibernate5.HibernateTransactionManager
  * @see TransactionSynchronizationManager
  * @see SessionFactory#getCurrentSession()
  */
