@@ -58,24 +58,24 @@ public class SimpleIdBinder {
     }
 
     public void bindSimpleId(
-        @Nonnull HibernatePersistentEntity domainClass, RootClass entity, HibernateSimpleIdentityProperty identityProperty) {
+        @Nonnull HibernatePersistentEntity _domainClass, RootClass _entity, HibernateSimpleIdentityProperty _identityProperty) {
 
-        BasicValue id = basicValueCreator.bindBasicValue(identityProperty);
+        BasicValue id = basicValueCreator.bindBasicValue(_identityProperty);
 
-        var identifier = basicValueCreator.resolveIdentifierProperty(domainClass, identityProperty);
+        var identifier = basicValueCreator.resolveIdentifierProperty(_domainClass, _identityProperty);
 
         Property idProperty = new Property();
         idProperty.setName(identifier.getName());
         idProperty.setValue(id);
-        entity.setDeclaredIdentifierProperty(idProperty);
-        entity.setIdentifier(id);
+        _entity.setDeclaredIdentifierProperty(idProperty);
+        _entity.setIdentifier(id);
         // set type
         simpleValueBinder.bindSimpleValue(identifier, null, id, EMPTY_PATH);
 
         // bind property
         Property prop = propertyBinder.bindProperty(identifier, id);
         // set identifier property
-        entity.setIdentifierProperty(prop);
+        _entity.setIdentifierProperty(prop);
 
         Table pkTable = id.getTable();
         pkTable.setPrimaryKey(new PrimaryKey(pkTable));

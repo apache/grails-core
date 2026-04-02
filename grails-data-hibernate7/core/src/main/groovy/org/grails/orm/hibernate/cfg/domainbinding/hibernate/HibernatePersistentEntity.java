@@ -104,7 +104,11 @@ public class HibernatePersistentEntity extends AbstractPersistentEntity<Mapping>
             return new HibernateCompositeIdentityProperty(this, getMappingContext(), getName(), Object.class, parts);
         }
         HibernatePersistentProperty id = getIdentity();
-        return id instanceof HibernateSimpleIdentityProperty simpleId ? simpleId : null;
+        if (id instanceof HibernateSimpleIdentityProperty simpleId) {
+            return simpleId;
+        }
+        throw new MappingException("Entity [" + getName() + "] has no identity property. " +
+                "Only embedded entities are allowed to have no identity.");
     }
 
     private boolean isAnnotatedEntity() {
