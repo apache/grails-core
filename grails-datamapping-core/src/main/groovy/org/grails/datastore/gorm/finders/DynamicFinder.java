@@ -781,17 +781,22 @@ public abstract class DynamicFinder extends AbstractFinder implements QueryBuild
         var criteria = invocation.getExpressions().stream().map(MethodExpression::createCriterion).collect(Collectors.toList());
         Query.Junction junction;
         if (FindAllByFinder.OPERATOR_OR.equals(invocation.getOperator())) {
-            junction = new Query.Disjunction();
             if (firstExpressionIsRequiredBoolean()) {
-                var conjunction = new Query.Conjunction();
-                conjunction.add(criteria.remove(0));
-                junction.add(conjunction);
+                junction = new Query.Conjunction();
+                junction.add(criteria.remove(0));
+                var disjunction = new Query.Disjunction();
+                criteria.forEach(disjunction::add);
+                junction.add(disjunction);
+            }
+            else {
+                junction = new Query.Disjunction();
+                criteria.forEach(junction::add);
             }
         }
         else {
             junction = new Query.Conjunction();
+            criteria.forEach(junction::add);
         }
-        criteria.forEach(junction::add);
         return junction;
     }
 
