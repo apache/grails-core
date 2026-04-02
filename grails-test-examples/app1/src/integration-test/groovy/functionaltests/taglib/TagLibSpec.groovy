@@ -19,6 +19,7 @@
 package functionaltests.taglib
 
 import spock.lang.Specification
+import spock.lang.Tag
 import spock.lang.Unroll
 
 import grails.testing.mixin.integration.Integration
@@ -29,6 +30,7 @@ import org.apache.grails.testing.http.client.HttpClientSupport
  * Tests both custom tag libraries and built-in Grails tags.
  */
 @Integration
+@Tag('http-client')
 class TagLibSpec extends Specification implements HttpClientSupport {
 
     // ========== Custom Tag: hello ==========

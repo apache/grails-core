@@ -27,6 +27,7 @@ import micronaut.client.MicronautReactiveClient
 import micronaut.client.MicronautRetryableClient
 import spock.lang.AutoCleanup
 import spock.lang.Specification
+import spock.lang.Tag
 
 import org.springframework.beans.factory.annotation.Autowired
 
@@ -34,6 +35,7 @@ import grails.testing.mixin.integration.Integration
 import org.apache.grails.testing.http.client.HttpClientSupport
 
 @Integration
+@Tag('http-client')
 class MicronautErsatzPatternSpec extends Specification implements HttpClientSupport {
 
     @Autowired ExternalApiService externalApiService

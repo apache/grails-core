@@ -24,6 +24,7 @@ import geb.Page
 import geb.test.GebTestManager
 import spock.lang.Shared
 import spock.lang.Specification
+import spock.lang.Tag
 
 import grails.plugin.geb.support.ContainerSupport
 import grails.plugin.geb.support.ReportingSupport
@@ -55,6 +56,8 @@ import grails.plugin.geb.support.delegate.PageDelegate
  * @author James Daugherty
  * @since 4.1
  */
+@Tag('geb')
+@Tag('container-geb')
 @CompileStatic
 abstract class ContainerGebSpec extends Specification implements ContainerSupport, ReportingSupport, BrowserDelegate, PageDelegate, DriverDelegate, DownloadSupportDelegate {
 

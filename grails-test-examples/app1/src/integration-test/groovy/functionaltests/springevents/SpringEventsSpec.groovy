@@ -20,6 +20,7 @@ package functionaltests.springevents
 
 import spock.lang.Narrative
 import spock.lang.Specification
+import spock.lang.Tag
 
 import org.springframework.beans.factory.annotation.Autowired
 
@@ -38,6 +39,7 @@ Spring's ApplicationEvent mechanism allows decoupled communication between
 components. Grails integrates with Spring events via @EventListener annotations
 and ApplicationEventPublisher.
 ''')
+@Tag('http-client')
 class SpringEventsSpec extends Specification implements HttpClientSupport {
 
     @Autowired EventListenerService eventListenerService
