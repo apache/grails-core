@@ -70,7 +70,7 @@ class VersionBinderSpec extends HibernateGormDatastoreSpec {
         
         def value = rootClass.getVersion().getValue()
         value instanceof BasicValue
-        value.getTypeName() == "integer"
+        value.getTypeName() == "java.lang.Long"
         
         def column = value.getColumns().first() as Column
         column.getName() == "my_version_col"
@@ -101,7 +101,7 @@ class VersionBinderSpec extends HibernateGormDatastoreSpec {
         
         then:
         rootClass.getVersion() != null
-        rootClass.getVersion().getValue().getTypeName() == "integer"
+        rootClass.getVersion().getValue().getTypeName() == "java.lang.Long"
         
         def column = rootClass.getVersion().getValue().getColumns().first() as Column
         column.getName() == "my_custom_ver_col"
