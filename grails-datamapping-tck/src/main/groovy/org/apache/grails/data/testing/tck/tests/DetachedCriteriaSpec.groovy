@@ -119,6 +119,23 @@ class DetachedCriteriaSpec extends GrailsDataTckSpec {
 
     }
 
+    void 'Test list method with sort and max applies sort exactly once'() {
+        given: 'A bunch of people'
+        createPeople()
+
+        when: 'list is called with sort and max'
+        def criteria = new DetachedCriteria(Person)
+        criteria.with {
+            eq 'lastName', 'Simpson'
+        }
+        def results = criteria.list(sort: 'firstName', order: 'asc', max: 4)
+
+        then: 'Results are a PagedResultList sorted correctly without duplicate order clauses'
+        results instanceof PagedResultList
+        results.size() == 4
+        results*.firstName == ['Bart', 'Homer', 'Lisa', 'Marge']
+    }
+
     void 'Test exists method'() {
         given: 'A bunch of people'
         createPeople()
