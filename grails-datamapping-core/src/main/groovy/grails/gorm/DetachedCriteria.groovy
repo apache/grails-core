@@ -135,7 +135,7 @@ class DetachedCriteria<T> extends AbstractDetachedCriteria<T> implements GormOpe
      */
     List<T> list(Map args = Collections.emptyMap(), @DelegatesTo(DetachedCriteria) Closure additionalCriteria = null) {
         (List)withPopulatedQuery(args, additionalCriteria) { Query query ->
-            if (args != null && !args.isEmpty()) {
+            if (args?.max) {
                 DynamicFinder.populateArgumentsForCriteria(targetClass, query, args)
                 return new PagedResultList(query)
             }

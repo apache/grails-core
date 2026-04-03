@@ -60,6 +60,35 @@ class DetachedCriteriaSpec extends GrailsDataTckSpec {
         results.every { it.lastName == 'Simpson' }
     }
 
+    void 'Test the list method returns a plain List without max argument'() {
+        given: 'A bunch of people'
+        createPeople()
+
+        when: 'A detached criteria instance is created and the list method used without max'
+        def criteria = new DetachedCriteria(Person)
+        criteria.with {
+            eq 'lastName', 'Simpson'
+        }
+        def results = criteria.list()
+
+        then: 'The results are a plain List, not a PagedResultList'
+        results instanceof List
+        !(results instanceof PagedResultList)
+        results.size() == 4
+        results.every { it.lastName == 'Simpson' }
+
+        when: 'The list method is called with only offset (no max)'
+        criteria = new DetachedCriteria(Person)
+        criteria.with {
+            eq 'lastName', 'Simpson'
+        }
+        results = criteria.list(offset: 1)
+
+        then: 'The results are still a plain List'
+        results instanceof List
+        !(results instanceof PagedResultList)
+    }
+
     void 'Test list method with property projection'() {
         given: 'A bunch of people'
         createPeople()
