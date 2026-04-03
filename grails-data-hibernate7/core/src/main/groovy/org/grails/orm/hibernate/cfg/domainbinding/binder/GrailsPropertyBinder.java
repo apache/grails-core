@@ -76,7 +76,7 @@ public class GrailsPropertyBinder {
         Value value;
 
         if (currentGrailsProp instanceof HibernateEnumProperty hibernateEnumProperty) {
-            value = enumTypeBinder.bindEnumType(hibernateEnumProperty, table, path);
+            value = enumTypeBinder.bindEnumType(hibernateEnumProperty, path);
         } else if (currentGrailsProp.isUserButNotCollectionType()) {
             value = simpleValueBinder.bindSimpleValue(currentGrailsProp, parentProperty, table, path);
         } else if (currentGrailsProp instanceof HibernateOneToOneProperty oneToOne &&
