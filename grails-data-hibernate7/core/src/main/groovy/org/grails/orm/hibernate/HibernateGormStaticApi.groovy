@@ -124,6 +124,11 @@ class HibernateGormStaticApi<D> extends GormStaticApi<D> {
     }
 
     @Override
+    D merge(D d) {
+        instanceApi.merge(d)
+    }
+
+    @Override
     <T> T withNewSession(Closure<T> callable) {
         if (persistentEntity.isMultiTenant()) {
             return ((HibernateDatastore) datastore).withNewSession(callable)

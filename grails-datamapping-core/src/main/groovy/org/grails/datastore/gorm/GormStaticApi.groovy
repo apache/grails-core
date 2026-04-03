@@ -496,8 +496,8 @@ class GormStaticApi<D> extends AbstractGormApi<D> implements GormAllOperations<D
 
     D merge(D d) {
         execute({ Session session ->
-            Object merged = session.merge(d)
-            return (D) merged
+            session.persist(d)
+            return d
         } as SessionCallback)
     }
 

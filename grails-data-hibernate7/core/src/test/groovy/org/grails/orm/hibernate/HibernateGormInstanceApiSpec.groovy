@@ -133,6 +133,37 @@ class HibernateGormInstanceApiSpec extends HibernateGormDatastoreSpec {
         found.name == 'Fred'
     }
 
+    def "merge on new instance assigns id and sets version to 0"() {
+        given:
+        def person = new PersonInstanceApi(name: 'Alice', age: 30)
+
+        when:
+        def merged = person.merge(flush: true)
+
+        then:
+        merged.id != null
+        person.id == merged.id
+        merged.version == 0
+    }
+
+    def "merge on detached instance keeps id and increments version"() {
+        given:
+        def person = new PersonInstanceApi(name: 'Alice', age: 30)
+        person.save(flush: true)
+        def originalId = person.id
+        person.discard()
+        person.name = 'Alice Updated'
+
+        when:
+        def merged = person.merge(flush: true)
+
+        then:
+        merged.id == originalId
+        person.id == originalId
+        merged.version == 1
+        PersonInstanceApi.get(originalId).name == 'Alice Updated'
+    }
+
     def "test insert"() {
         given:
         def person = new PersonInstanceApi(name: 'Joe', age: 25)
