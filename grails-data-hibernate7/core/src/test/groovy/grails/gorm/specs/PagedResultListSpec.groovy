@@ -90,6 +90,25 @@ class PagedResultListSpec extends HibernateGormDatastoreSpec {
         results[0].title == "The Shining"
         results[1].title == "The Stand"
     }
+    void "test PagedResultList totalCount via DetachedCriteria with sort does not leak ORDER BY into count"() {
+        given:
+        new PRLBook(title: "The Stand").save()
+        new PRLBook(title: "The Shining").save()
+        new PRLBook(title: "Carrie").save()
+        session.flush()
+        session.clear()
+
+        when:
+        def criteria = new grails.gorm.DetachedCriteria(PRLBook)
+        def results = criteria.list(sort: 'title', order: 'asc', max: 2)
+
+        then:
+        results instanceof PagedResultList
+        results.size() == 2
+        results.totalCount == 3
+        results[0].title == 'Carrie'
+        results[1].title == 'The Shining'
+    }
 }
 
 @Entity

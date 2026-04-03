@@ -297,6 +297,15 @@ public abstract class Query implements Cloneable {
     }
 
     /**
+     * Clears all order entries from this query.
+     * Subclasses that store orders in additional structures (e.g. JPA criteria) should override this.
+     */
+    public Query clearOrders() {
+        orderBy.clear();
+        return this;
+    }
+
+    /**
      * Gets the Order entries for this query
      * @return The order entries
      */

@@ -388,12 +388,14 @@ public class HibernateQuery extends Query {
 
     @Override
     public Query order(Order order) {
-        // TODO HACK
-        if (order == null) {
-            detachedCriteria.getOrders().clear();
-        } else {
-            detachedCriteria.order(order);
-        }
+        detachedCriteria.order(order);
+        return this;
+    }
+
+    @Override
+    public Query clearOrders() {
+        detachedCriteria.getOrders().clear();
+        super.clearOrders();
         return this;
     }
 

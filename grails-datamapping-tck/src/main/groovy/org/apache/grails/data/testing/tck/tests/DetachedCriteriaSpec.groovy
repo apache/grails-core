@@ -130,8 +130,9 @@ class DetachedCriteriaSpec extends GrailsDataTckSpec {
         }
         def results = criteria.list(sort: 'firstName', order: 'asc', max: 4)
 
-        then: 'Results are a PagedResultList sorted correctly without duplicate order clauses'
+        then: 'Results are a PagedResultList sorted correctly, totalCount does not include ORDER BY'
         results instanceof PagedResultList
+        results.totalCount == 4
         results.size() == 4
         results*.firstName == ['Bart', 'Homer', 'Lisa', 'Marge']
     }

@@ -1003,6 +1003,22 @@ class HibernateQuerySpec extends HibernateGormDatastoreSpec {
         cloned.hibernateCriteria != null
     }
 
+    def "cloneQuery with order then clearOrders produces no ORDER BY in count"() {
+        given:
+        new Person(firstName: "Fred", lastName: "Builder", age: 48).save(flush: true)
+        hibernateQuery.eq("lastName", "Builder")
+                      .order(new Query.Order("firstName", Query.Order.Direction.ASC))
+
+        when:
+        HibernateQuery cloned = (HibernateQuery) hibernateQuery.clone()
+        cloned.clearOrders()
+        cloned.projections().count()
+        Number count = (Number) cloned.singleResult()
+
+        then:
+        count == 2
+    }
+
     def queryArguments() {
         given:
         hibernateQuery.setFetchSize(100)
