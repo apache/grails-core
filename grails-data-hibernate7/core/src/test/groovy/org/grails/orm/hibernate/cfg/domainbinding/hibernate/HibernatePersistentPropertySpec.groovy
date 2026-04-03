@@ -28,7 +28,7 @@ class HibernatePersistentPropertySpec extends HibernateGormDatastoreSpec {
     void setupSpec() {
         manager.addAllDomainClasses([
             LazyBook, LazyAuthor, ExplicitNonLazy, JoinFetchEntity, EnumEntity,
-            GeneratorDefaultEntity, GeneratorUuid2Entity
+            GeneratorDefaultEntity, GeneratorUuid2Entity, CompositeKeyEntity
         ])
     }
 
@@ -134,6 +134,24 @@ class HibernatePersistentPropertySpec extends HibernateGormDatastoreSpec {
         property.getPersistentClass().getEntityName() == LazyBook.name
     }
 
+    def "getIdentityProperty returns HibernateCompositeIdentityProperty with all parts for composite key entity"() {
+        given:
+        def entity = (HibernatePersistentEntity) getMappingContext().getPersistentEntity(CompositeKeyEntity.name)
+
+        when:
+        def identityProperty = entity.getIdentityProperty()
+        def parts = identityProperty instanceof HibernateCompositeIdentityProperty ?
+                ((HibernateCompositeIdentityProperty) identityProperty).getParts() : null
+
+        then:
+        identityProperty instanceof HibernateCompositeIdentityProperty
+        parts != null
+        parts.length == 2
+        parts.every { it instanceof HibernatePersistentProperty }
+        parts*.name.toSet() == ['firstName', 'lastName'].toSet()
+    }
+
+
     def "getGeneratorName returns null for regular property with no generator configured"() {
         given:
         def entity = (HibernatePersistentEntity) getMappingContext().getPersistentEntity(GeneratorDefaultEntity.name)
@@ -202,6 +220,16 @@ enum Status { ACTIVE, INACTIVE }
 class EnumEntity {
     Long id
     Status status
+}
+
+@Entity
+class CompositeKeyEntity implements Serializable {
+    String firstName
+    String lastName
+    Long version
+    static mapping = {
+        id composite: ['firstName', 'lastName']
+    }
 }
 
 @Entity

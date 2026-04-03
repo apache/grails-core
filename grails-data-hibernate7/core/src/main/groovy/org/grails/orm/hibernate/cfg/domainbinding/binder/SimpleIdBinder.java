@@ -20,6 +20,7 @@ package org.grails.orm.hibernate.cfg.domainbinding.binder;
 
 import jakarta.annotation.Nonnull;
 
+import org.hibernate.MappingException;
 import org.hibernate.boot.spi.MetadataBuildingContext;
 import org.hibernate.mapping.BasicValue;
 import org.hibernate.mapping.PrimaryKey;
@@ -57,27 +58,30 @@ public class SimpleIdBinder {
         return metadataBuildingContext;
     }
 
-    public void bindSimpleId(
-        @Nonnull HibernatePersistentEntity _domainClass, RootClass _entity, HibernateSimpleIdentityProperty _identityProperty) {
+    public void bindSimpleId(@Nonnull HibernatePersistentEntity domainClass) {
+        if (domainClass.getIdentityProperty() instanceof HibernateSimpleIdentityProperty simpleIdentityProperty) {
+            RootClass rootClass = domainClass.getRootClass();
+            BasicValue id = basicValueCreator.bindBasicValue(simpleIdentityProperty);
 
-        BasicValue id = basicValueCreator.bindBasicValue(_identityProperty);
+            var identifier = basicValueCreator.resolveIdentifierProperty(domainClass, simpleIdentityProperty);
 
-        var identifier = basicValueCreator.resolveIdentifierProperty(_domainClass, _identityProperty);
+            Property idProperty = new Property();
+            idProperty.setName(identifier.getName());
+            idProperty.setValue(id);
+            rootClass.setDeclaredIdentifierProperty(idProperty);
+            rootClass.setIdentifier(id);
+            // set type
+            simpleValueBinder.bindSimpleValue(identifier, null, id, EMPTY_PATH);
 
-        Property idProperty = new Property();
-        idProperty.setName(identifier.getName());
-        idProperty.setValue(id);
-        _entity.setDeclaredIdentifierProperty(idProperty);
-        _entity.setIdentifier(id);
-        // set type
-        simpleValueBinder.bindSimpleValue(identifier, null, id, EMPTY_PATH);
+            // bind property
+            Property prop = propertyBinder.bindProperty(identifier, id);
+            // set identifier property
+            rootClass.setIdentifierProperty(prop);
 
-        // bind property
-        Property prop = propertyBinder.bindProperty(identifier, id);
-        // set identifier property
-        _entity.setIdentifierProperty(prop);
-
-        Table pkTable = id.getTable();
-        pkTable.setPrimaryKey(new PrimaryKey(pkTable));
+            Table pkTable = id.getTable();
+            pkTable.setPrimaryKey(new PrimaryKey(pkTable));
+            return;
+        }
+        throw new MappingException("Invalid composite id binding for entity [" + domainClass.getName() + "]");
     }
 }

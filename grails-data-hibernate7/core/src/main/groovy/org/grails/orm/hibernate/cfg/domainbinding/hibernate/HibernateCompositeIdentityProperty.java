@@ -26,25 +26,25 @@ import org.grails.datastore.mapping.model.PersistentEntity;
 /** Hibernate persistent property representing a composite (multi-field) identity */
 public class HibernateCompositeIdentityProperty extends HibernateIdentityProperty {
 
-    private final HibernateSimpleIdentityProperty[] parts;
+    private final HibernatePersistentProperty[] parts;
 
     public HibernateCompositeIdentityProperty(PersistentEntity entity, MappingContext context, PropertyDescriptor property) {
         super(entity, context, property);
-        this.parts = new HibernateSimpleIdentityProperty[0];
+        this.parts = new HibernatePersistentProperty[0];
     }
 
     public HibernateCompositeIdentityProperty(PersistentEntity entity, MappingContext context, String name, Class<?> type) {
         super(entity, context, name, type);
-        this.parts = new HibernateSimpleIdentityProperty[0];
+        this.parts = new HibernatePersistentProperty[0];
     }
 
     public HibernateCompositeIdentityProperty(PersistentEntity entity, MappingContext context, String name, Class<?> type,
-            HibernateSimpleIdentityProperty[] parts) {
+            HibernatePersistentProperty[] parts) {
         super(entity, context, name, type);
-        this.parts = parts != null ? parts : new HibernateSimpleIdentityProperty[0];
+        this.parts = parts != null ? parts : new HibernatePersistentProperty[0];
     }
 
-    public HibernateSimpleIdentityProperty[] getParts() {
+    public HibernatePersistentProperty[] getParts() {
         return parts;
     }
 }

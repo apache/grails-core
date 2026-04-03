@@ -97,11 +97,7 @@ public class HibernatePersistentEntity extends AbstractPersistentEntity<Mapping>
     public HibernateIdentityProperty getIdentityProperty() {
         HibernatePersistentProperty[] compositeId = getCompositeIdentity();
         if (compositeId != null && compositeId.length > 1) {
-            HibernateSimpleIdentityProperty[] parts = Arrays.stream(compositeId)
-                    .filter(HibernateSimpleIdentityProperty.class::isInstance)
-                    .map(HibernateSimpleIdentityProperty.class::cast)
-                    .toArray(HibernateSimpleIdentityProperty[]::new);
-            return new HibernateCompositeIdentityProperty(this, getMappingContext(), getName(), Object.class, parts);
+            return new HibernateCompositeIdentityProperty(this, getMappingContext(), getName(), Object.class, compositeId);
         }
         HibernatePersistentProperty id = getIdentity();
         if (id instanceof HibernateSimpleIdentityProperty simpleId) {

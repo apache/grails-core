@@ -59,7 +59,7 @@ class IdentityBinderSpec extends HibernateGormDatastoreSpec {
         binder.bindIdentity(domainClass, root)
 
         then:
-        1 * simpleIdBinder.bindSimpleId(domainClass, root, simpleIdentityProperty)
+        1 * simpleIdBinder.bindSimpleId(domainClass)
     }
 
     def "should delegate to compositeIdBinder when mapping is null and domainClass has composite identity"() {
@@ -75,7 +75,7 @@ class IdentityBinderSpec extends HibernateGormDatastoreSpec {
         binder.bindIdentity(domainClass, root)
 
         then:
-        1 * compositeIdBinder.bindCompositeId(domainClass, root, compositeIdentity)
+        1 * compositeIdBinder.bindCompositeId(domainClass)
     }
 
     def "should delegate to compositeIdBinder when mapping specifies composite identity"() {
@@ -91,7 +91,7 @@ class IdentityBinderSpec extends HibernateGormDatastoreSpec {
         binder.bindIdentity(domainClass, root)
 
         then:
-        1 * compositeIdBinder.bindCompositeId(domainClass, root, compositeIdentity)
+        1 * compositeIdBinder.bindCompositeId(domainClass)
     }
 
     def "should delegate to simpleIdBinder when mapping specifies simple identity"() {
@@ -106,7 +106,7 @@ class IdentityBinderSpec extends HibernateGormDatastoreSpec {
         binder.bindIdentity(domainClass, root)
 
         then:
-        1 * simpleIdBinder.bindSimpleId(domainClass, root, simpleIdentityProperty)
+        1 * simpleIdBinder.bindSimpleId(domainClass)
     }
 
     def "should not lookup property by name if identity name matches domain class name"() {
@@ -121,7 +121,7 @@ class IdentityBinderSpec extends HibernateGormDatastoreSpec {
         binder.bindIdentity(domainClass, root)
 
         then:
-        1 * simpleIdBinder.bindSimpleId(domainClass, root, simpleIdentityProperty)
+        1 * simpleIdBinder.bindSimpleId(domainClass)
     }
 
     def "should pass identity with name set to simpleIdBinder"() {
@@ -136,7 +136,7 @@ class IdentityBinderSpec extends HibernateGormDatastoreSpec {
         binder.bindIdentity(domainClass, root)
 
         then:
-        1 * simpleIdBinder.bindSimpleId(domainClass, root, simpleIdentityProperty)
+        1 * simpleIdBinder.bindSimpleId(domainClass)
     }
 
     def "should create synthetic identifier property if it doesn't exist"() {
@@ -150,6 +150,6 @@ class IdentityBinderSpec extends HibernateGormDatastoreSpec {
         binder.bindIdentity(domainClass, root)
 
         then:
-        1 * simpleIdBinder.bindSimpleId(domainClass, root, simpleIdentityProperty)
+        1 * simpleIdBinder.bindSimpleId(domainClass)
     }
 }
