@@ -21,7 +21,6 @@ package org.grails.orm.hibernate.cfg.domainbinding.binder;
 import jakarta.annotation.Nonnull;
 
 import org.hibernate.MappingException;
-import org.hibernate.mapping.RootClass;
 
 import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernateCompositeIdentityProperty;
 import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernatePersistentEntity;
@@ -37,8 +36,7 @@ public class IdentityBinder {
         this.compositeIdBinder = compositeIdBinder;
     }
 
-    public void bindIdentity(@Nonnull HibernatePersistentEntity domainClass, RootClass root) {
-        domainClass.setPersistentClass(root);
+    public void bindIdentity(@Nonnull HibernatePersistentEntity domainClass) {
         var identityProperty = domainClass.getIdentityProperty();
         if (identityProperty instanceof HibernateCompositeIdentityProperty) {
             compositeIdBinder.bindCompositeId(domainClass);

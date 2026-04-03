@@ -24,6 +24,7 @@ import org.hibernate.MappingException;
 import org.hibernate.boot.spi.MetadataBuildingContext;
 import org.hibernate.mapping.Component;
 import org.hibernate.mapping.RootClass;
+import org.jspecify.annotations.NonNull;
 
 import org.grails.orm.hibernate.cfg.GrailsHibernateUtil;
 import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernateCompositeIdentityProperty;
@@ -48,19 +49,7 @@ public class CompositeIdBinder {
 
     public void bindCompositeId(@Nonnull HibernatePersistentEntity domainClass) {
         if (domainClass.getIdentityProperty() instanceof HibernateCompositeIdentityProperty compositeIdentityProperty) {
-            RootClass rootClass = domainClass.getRootClass();
-            Component id = new Component(metadataBuildingContext, rootClass);
-            id.setNullValue("undefined");
-            rootClass.setIdentifier(id);
-            rootClass.setIdentifierMapper(id);
-            rootClass.setEmbeddedIdentifier(true);
-            id.setComponentClassName(domainClass.getName());
-            id.setKey(true);
-            id.setEmbedded(true);
-
-            String path = GrailsHibernateUtil.qualify(rootClass.getEntityName(), "id");
-
-            id.setRoleName(path);
+            Component id = getComponent(domainClass);
 
             for (HibernatePersistentProperty property : compositeIdentityProperty.getParts()) {
                 var value = grailsPropertyBinder.bindProperty(property, null, "");
@@ -69,5 +58,22 @@ public class CompositeIdBinder {
             return;
         }
         throw new MappingException("Invalid simple id binding for entity [" + domainClass.getName() + "]");
+    }
+
+    private @NonNull Component getComponent(@NonNull HibernatePersistentEntity domainClass) {
+        RootClass rootClass = domainClass.getRootClass();
+        Component id = new Component(metadataBuildingContext, rootClass);
+        id.setNullValue("undefined");
+        rootClass.setIdentifier(id);
+        rootClass.setIdentifierMapper(id);
+        rootClass.setEmbeddedIdentifier(true);
+        id.setComponentClassName(domainClass.getName());
+        id.setKey(true);
+        id.setEmbedded(true);
+
+        String path = GrailsHibernateUtil.qualify(rootClass.getEntityName(), "id");
+
+        id.setRoleName(path);
+        return id;
     }
 }
