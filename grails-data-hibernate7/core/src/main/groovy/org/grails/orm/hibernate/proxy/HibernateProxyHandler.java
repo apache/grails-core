@@ -58,6 +58,11 @@ public class HibernateProxyHandler implements ProxyHandler, ProxyFactory {
             return li.wasInitialized();
         }
 
+        Boolean groovyProxyInitialized = GroovyProxyInterceptorLogic.isInitialized(o);
+        if (groovyProxyInitialized != null) {
+            return groovyProxyInitialized;
+        }
+
         return Hibernate.isInitialized(o);
     }
 
