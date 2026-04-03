@@ -229,8 +229,14 @@ abstract class AbstractGrailsControllerUrlMappings implements UrlMappings {
             }
             // else: wildcard-captured values didn't match a registered controller/action — skip
         }
-        // Sort by URL pattern specificity: fewer non-routing URL captures = more specific
-        matches.sort(true) { a, b -> nonRoutingParamCount(a) <=> nonRoutingParamCount(b) }
+        // Sort by specificity only when wildcard status differs between matches.
+        // When both have the same hasWildcardCaptures() status, the URL matcher's
+        // original order is preserved (stable sort) — critical for patterns like
+        // /$sku=v$variant vs /$sku where more captures doesn't mean less specific.
+        matches.sort(true) { a, b ->
+            if (a.hasWildcardCaptures() == b.hasWildcardCaptures()) return 0
+            nonRoutingParamCount(a) <=> nonRoutingParamCount(b)
+        }
         matches as UrlMappingInfo[]
     }
 
