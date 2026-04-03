@@ -194,7 +194,7 @@ class SimpleValueBinderSpec extends Specification {
         namingStrategy.resolveColumnName(_) >> 'test_column'
 
         when:
-        def result = binder.bindSimpleValue(prop, null, table, null)
+        def result = binder.bindBasicValue(prop, null, null)
 
         then:
         result instanceof org.hibernate.mapping.BasicValue
@@ -264,7 +264,7 @@ class SimpleValueBinderSpec extends Specification {
         namingStrategy.resolveColumnName(_) >> 'test_column'
 
         when:
-        def result = binder.bindSimpleValue(prop, null, table, "path")
+        def result = binder.bindBasicValue(prop, null, "path")
 
         then:
         result instanceof org.hibernate.mapping.BasicValue
