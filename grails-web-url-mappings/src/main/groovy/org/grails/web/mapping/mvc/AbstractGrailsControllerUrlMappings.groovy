@@ -210,13 +210,10 @@ abstract class AbstractGrailsControllerUrlMappings implements UrlMappings {
 
     protected UrlMappingInfo[] collectControllerMappings(UrlMappingInfo[] infos) {
         def webRequest = GrailsWebRequest.lookup()
-        List<UrlMappingInfo> wildcardActionMatches = []
-        List<UrlMappingInfo> otherMatches = []
-        boolean hasPureLiteralMatch = false
-        Set<String> explicitControllers = new HashSet<>()
+        List<UrlMappingInfo> matches = []
         for (UrlMappingInfo info : infos) {
             if (info.redirectInfo) {
-                otherMatches.add(info)
+                matches.add(info)
                 continue
             }
             if (webRequest != null) {
@@ -226,36 +223,20 @@ abstract class AbstractGrailsControllerUrlMappings implements UrlMappings {
             ControllerKey controllerKey = new ControllerKey(info.namespace, info.controllerName, info.actionName, info.pluginName)
             GrailsControllerClass controllerClass = info ? mappingsToGrailsControllerMap.get(controllerKey) : null
             if (controllerClass) {
-                def wrapped = new GrailsControllerUrlMappingInfo(controllerClass, info)
-                if (validateWildcardMappings && info.hasWildcardCaptures()) {
-                    wildcardActionMatches.add(wrapped)
-                } else {
-                    otherMatches.add(wrapped)
-                    explicitControllers.add(info.controllerName)
-                    if (!hasPureLiteralMatch) {
-                        // A pure literal match has no URL-captured parameters beyond standard
-                        // routing params (e.g., "/users" but not "/users/$username")
-                        def params = info.parameters
-                        hasPureLiteralMatch = params == null || params.keySet().every { it in ROUTING_PARAMS }
-                    }
-                }
+                matches.add(new GrailsControllerUrlMappingInfo(controllerClass, info))
             } else if (!validateWildcardMappings || !info.hasWildcardCaptures()) {
-                otherMatches.add(info)
+                matches.add(info)
             }
             // else: wildcard-captured values didn't match a registered controller/action — skip
         }
-        if (hasPureLiteralMatch) {
-            // Pure literal path (e.g., /community) — demote all wildcard matches
-            (otherMatches + wildcardActionMatches) as UrlMappingInfo[]
-        } else {
-            // Parameterized path (e.g., /users/$username) — only demote wildcard
-            // matches that target the same controller as an explicit mapping
-            // (e.g., post /invites → create demotes /invites/$action? → index,
-            //  but $controller=feed is promoted over $username=feed)
-            List<UrlMappingInfo> promoted = wildcardActionMatches.findAll { !(it.controllerName in explicitControllers) }
-            List<UrlMappingInfo> demoted = wildcardActionMatches.findAll { it.controllerName in explicitControllers }
-            (promoted + otherMatches + demoted) as UrlMappingInfo[]
-        }
+        // Sort by URL pattern specificity: fewer non-routing URL captures = more specific
+        matches.sort(true) { a, b -> nonRoutingParamCount(a) <=> nonRoutingParamCount(b) }
+        matches as UrlMappingInfo[]
+    }
+
+    private static int nonRoutingParamCount(UrlMappingInfo info) {
+        def params = info.parameters
+        params == null ? 0 : (int) params.keySet().count { !(it in ROUTING_PARAMS) }
     }
 
     protected UrlMappingInfo collectControllerMapping(UrlMappingInfo info) {

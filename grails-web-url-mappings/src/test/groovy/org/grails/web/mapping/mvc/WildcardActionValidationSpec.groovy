@@ -23,6 +23,7 @@ import org.springframework.mock.web.MockHttpServletRequest
 import grails.core.DefaultGrailsApplication
 import grails.util.GrailsWebMockUtil
 import grails.web.Controller
+import grails.web.HyphenatedUrlConverter
 import grails.web.mapping.AbstractUrlMappingsSpec
 import grails.web.mapping.UrlMappingInfo
 import grails.web.mapping.UrlMappingsHolder
@@ -211,6 +212,52 @@ class WildcardActionValidationSpec extends AbstractUrlMappingsSpec {
         }
     }
 
+    void 'literal group path beats parameterized catch-all even with same controller'() {
+        when: 'a group with a literal sub-path and a $username catch-all both match, mapping to the same controller'
+        def mappingInfo = evaluateRequestFor('/users/gallery', {
+            group "/users", {
+                group "/gallery", controller: 'topic', {
+                    "/$action?"()
+                }
+            }
+            "/users/$username"(controller: 'topic', action: 'home')
+        }, TopicController)
+
+        then: 'the literal group path wins because it has a more specific URL pattern'
+        with(mappingInfo) {
+            controllerName == 'topic'
+            actionName != 'home'
+        }
+    }
+
+    void 'wildcard action match beats explicit memberId match for hyphenated action URL'() {
+        given:
+        def urlConverter = new HyphenatedUrlConverter()
+        def mappingsHolder = createUrlMappingsHolder(urlConverter, {
+            group "/users/$username", {
+                group "/members", controller: 'member', {
+                    "/$action?"()
+                    "/$memberId"(action: 'remove')
+                }
+            }
+        }, MemberController)
+
+        when: 'a hyphenated action URL matches both $action? and $memberId(remove) in a parameterized group'
+        def webRequest = GrailsWebMockUtil.bindMockWebRequest()
+        def request = (webRequest.request as MockHttpServletRequest).tap {
+            requestURI = '/users/john/members/opt-in-prompt'
+            method = 'GET'
+        }
+        def mappingInfo = new UrlMappingsHandlerMapping(mappingsHolder).getHandler(request)?.handler as UrlMappingInfo
+
+        then: 'the $action? mapping wins because it has a more specific URL pattern'
+        mappingInfo != null
+        with(mappingInfo) {
+            controllerName == 'member'
+            actionName == 'opt-in-prompt'
+        }
+    }
+
     void 'wildcard controller match beats parameterized catch-all for different controllers'() {
         when: 'a wildcard $controller match (feed) and a $username catch-all (topic.home) both match'
         def mappingInfo = evaluateRequestFor('/users/feed', {
@@ -228,10 +275,14 @@ class WildcardActionValidationSpec extends AbstractUrlMappingsSpec {
     }
 
     private UrlMappingsHolder createUrlMappingsHolder(boolean validateWildcardMappings = true, Closure<?> mappings, Class<?>... controllerClasses) {
+        createUrlMappingsHolder(null, validateWildcardMappings, mappings, controllerClasses)
+    }
+
+    private UrlMappingsHolder createUrlMappingsHolder(grails.web.UrlConverter urlConverter, boolean validateWildcardMappings = true, Closure<?> mappings, Class<?>... controllerClasses) {
         def grailsApplication = new DefaultGrailsApplication(controllerClasses).tap {
             initialise()
         }
-        new GrailsControllerUrlMappings(grailsApplication, getUrlMappingsHolder(mappings)).tap {
+        new GrailsControllerUrlMappings(grailsApplication, getUrlMappingsHolder(mappings), urlConverter).tap {
             it.validateWildcardMappings = validateWildcardMappings
         }
     }
@@ -265,6 +316,15 @@ class InviteController {
 class CommunityController {
 
     def index() {}
+}
+
+@Controller
+class MemberController {
+
+    def index() {}
+    def optInPrompt() {}
+    def optIn() {}
+    def remove() {}
 }
 
 @Controller
