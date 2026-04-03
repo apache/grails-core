@@ -34,7 +34,9 @@ ext {
 dependencies {
     implementation platform(project(':grails-bom'))
     api project(':grails-sitemesh3')
-    compileOnly 'org.springframework.boot:spring-boot-webmvc'
+    // Spring Boot 4 modularized spring-boot-autoconfigure into domain-specific modules.
+    // WebMvc auto-configuration classes (e.g., WebMvcAutoConfiguration) moved to spring-boot-webmvc.
+    api 'org.springframework.boot:spring-boot-webmvc'
 }
 
 apply {

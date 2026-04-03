@@ -44,8 +44,8 @@ dependencies {
 
     api 'org.apache.groovy:groovy'
     api project(':grails-datamapping-core')
+    api project(':grails-data-hibernate5-spring-orm')
     api 'org.springframework:spring-orm'
-    api 'org.springframework:spring-web'
     compileOnly 'jakarta.servlet:jakarta.servlet-api'
     api "org.hibernate:hibernate-core-jakarta:$hibernate5Version", {
         exclude group:'commons-logging', module:'commons-logging'
@@ -92,9 +92,4 @@ apply {
     from rootProject.layout.projectDirectory.file('gradle/hibernate5-test-config.gradle')
     from rootProject.layout.projectDirectory.file('gradle/grails-data-tck-config.gradle')
     from rootProject.layout.projectDirectory.file('gradle/docs-config.gradle')
-}
-
-tasks.named('checkstyleMain', Checkstyle) {
-    // Exclude copied Spring Framework classes from checkstyle (they follow Spring's code style)
-    exclude('**/org/grails/orm/hibernate/support/hibernate5/**')
 }

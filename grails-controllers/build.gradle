@@ -43,6 +43,8 @@ dependencies {
 
     api 'org.apache.groovy:groovy'
     api 'org.springframework.boot:spring-boot-autoconfigure'
+    // Spring Boot 4 modularized spring-boot-autoconfigure into domain-specific modules.
+    // WebMvc auto-configuration classes used by ControllersAutoConfiguration moved to spring-boot-webmvc.
     api 'org.springframework.boot:spring-boot-webmvc'
     api 'org.springframework.boot:spring-boot-servlet'
     compileOnlyApi 'jakarta.servlet:jakarta.servlet-api'

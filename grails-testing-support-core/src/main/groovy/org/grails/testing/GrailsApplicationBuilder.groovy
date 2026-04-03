@@ -21,7 +21,6 @@ package org.grails.testing
 
 import groovy.transform.CompileDynamic
 import groovy.transform.CompileStatic
-import org.codehaus.groovy.runtime.InvokerHelper
 
 import jakarta.servlet.ServletContext
 
@@ -44,6 +43,7 @@ import org.springframework.context.support.PropertySourcesPlaceholderConfigurer
 import org.springframework.context.support.StaticMessageSource
 import org.springframework.core.Ordered
 import org.springframework.util.ClassUtils
+import org.springframework.web.context.ConfigurableWebApplicationContext
 
 import grails.boot.config.GrailsApplicationPostProcessor
 import grails.core.GrailsApplication
@@ -108,15 +108,13 @@ class GrailsApplicationBuilder {
 
             try {
                 def gcu = Class.forName('org.grails.web.servlet.context.GrailsConfigUtils')
-                InvokerHelper.invokeStaticMethod(
-                        gcu,
-                        'configureServletContextAttributes',
-                        [
-                                servletContext,
-                                grailsApplication,
-                                mainContext.getBean(GrailsPluginManager.BEAN_NAME, GrailsPluginManager),
-                                mainContext
-                        ] as Object[]
+                def method = gcu.methods.find { it.name == 'configureServletContextAttributes' }
+                method?.invoke(
+                        null,
+                        servletContext,
+                        grailsApplication,
+                        mainContext.getBean(GrailsPluginManager.BEAN_NAME, GrailsPluginManager),
+                        mainContext
                 )
             }
             catch (Throwable ignored) {}
@@ -146,40 +144,26 @@ class GrailsApplicationBuilder {
     protected ConfigurableApplicationContext createMainContext(Object servletContext) {
         ConfigurableApplicationContext context
         if (isServletApiPresent && servletContext != null) {
-            // Spring Boot 4.0/Spring 7.0: Use GenericWebApplicationContext with manual annotation support
-            // instead of removed AnnotationConfigServletWebApplicationContext
+            // Spring Boot 4.0: AnnotationConfigServletWebApplicationContext relocated from
+            // org.springframework.boot.web.servlet.context to org.springframework.boot.web.context.servlet
             context = (ConfigurableApplicationContext) ClassUtils
-                    .forName('org.springframework.web.context.support.GenericWebApplicationContext')
-                    .getDeclaredConstructor(ServletContext)
-                    .newInstance((ServletContext) servletContext)
-
-            // Register annotation config processors manually
-            def beanFactory = context.beanFactory
-            AnnotationConfigUtils.registerAnnotationConfigProcessors((BeanDefinitionRegistry) beanFactory)
-            
-            // Register auto-configuration classes
-            def classLoader = this.class.classLoader
-            ImportCandidates.load(AutoConfiguration, classLoader).asList().findAll {
-                it.startsWith('org.grails')
-                && !it.contains('UrlMappingsAutoConfiguration') // this currently is causing an issue with tests
-            }.each {
-                def clazz = ClassUtils.forName(it, classLoader)
-                def beanDef = new RootBeanDefinition(clazz)
-                ((BeanDefinitionRegistry) beanFactory).registerBeanDefinition(it, beanDef)
-            }
+                    .forName('org.springframework.boot.web.context.servlet.AnnotationConfigServletWebApplicationContext')
+                    .getDeclaredConstructor()
+                    .newInstance()
+            ((ConfigurableWebApplicationContext) context).setServletContext((ServletContext) servletContext)
         } else {
             context = (ConfigurableApplicationContext) ClassUtils
                     .forName('org.springframework.context.annotation.AnnotationConfigApplicationContext')
                     .getDeclaredConstructor()
                     .newInstance()
-            
-            def classLoader = this.class.classLoader
-            ImportCandidates.load(AutoConfiguration, classLoader).asList().findAll {
-                it.startsWith('org.grails')
-                && !it.contains('UrlMappingsAutoConfiguration') // this currently is causing an issue with tests
-            }.each {
-                ((AnnotationConfigRegistry) context).register(ClassUtils.forName(it, classLoader))
-            }
+        }
+
+        def classLoader = this.class.classLoader
+        ImportCandidates.load(AutoConfiguration, classLoader).asList().findAll {
+            it.startsWith('org.grails')
+            && !it.contains('UrlMappingsAutoConfiguration') // this currently is causing an issue with tests
+        }.each {
+            ((AnnotationConfigRegistry) context).register(ClassUtils.forName(it, classLoader))
         }
 
         def beanFactory = (context.beanFactory as DefaultListableBeanFactory).tap {

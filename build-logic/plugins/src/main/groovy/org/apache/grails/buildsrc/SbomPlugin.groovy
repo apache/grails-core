@@ -127,6 +127,10 @@ class SbomPlugin implements Plugin<Project> {
                     'pkg:maven/org.hibernate.common/hibernate-commons-annotations@5.1.2.Final?type=jar': 'LGPL-2.1-only', // hibernate 5 is LGPL, we are migrating to ASF license in hibernate 7
                     'pkg:maven/org.hibernate/hibernate-core-jakarta@5.6.15.Final?type=jar'             : 'LGPL-2.1-only', // hibernate 5 is LGPL, we are migrating to ASF license in hibernate 7
             ],
+            'grails-data-hibernate5-spring-orm' : [
+                    'pkg:maven/org.hibernate.common/hibernate-commons-annotations@5.1.2.Final?type=jar': 'LGPL-2.1-only', // hibernate 5 is LGPL, we are migrating to ASF license in hibernate 7
+                    'pkg:maven/org.hibernate/hibernate-core-jakarta@5.6.15.Final?type=jar'             : 'LGPL-2.1-only', // hibernate 5 is LGPL, we are migrating to ASF license in hibernate 7
+            ],
             'grails-data-hibernate5-dbmigration': [
                     'pkg:maven/javax.xml.bind/jaxb-api@2.3.1?type=jar': 'CDDL-1.1', // api export
             ],

@@ -63,8 +63,3 @@ dependencies {
 apply {
     from rootProject.layout.projectDirectory.file('gradle/docs-config.gradle')
 }
-
-tasks.named('checkstyleMain', Checkstyle) {
-    // Exclude copied Spring Framework theme classes from checkstyle (deprecated legacy code from Spring 6.x)
-    exclude('**/org/springframework/ui/**')
-}

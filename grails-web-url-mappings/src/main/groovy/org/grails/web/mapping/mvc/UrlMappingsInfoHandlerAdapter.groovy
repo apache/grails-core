@@ -158,5 +158,4 @@ class UrlMappingsInfoHandlerAdapter implements HandlerAdapter, ApplicationContex
         return null
     }
 
-    long getLastModified(HttpServletRequest request, Object handler) { -1 }
 }

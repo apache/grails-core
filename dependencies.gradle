@@ -50,7 +50,7 @@ ext {
     gradleBomDependencies = [
             'ant'                    : "org.apache.ant:ant:${gradleBomDependencyVersions['ant.version']}",
             'ant-junit'              : "org.apache.ant:ant-junit:${gradleBomDependencyVersions['ant.version']}",
-            'asciidoctorj-gradle-jvm': "org.asciidoctor:asciidoctor-gradle-jvm:${gradleBomDependencyVersions['asciidoctor-gradle-jvm.version']}",
+            'asciidoctor-gradle-jvm' : "org.asciidoctor:asciidoctor-gradle-jvm:${gradleBomDependencyVersions['asciidoctor-gradle-jvm.version']}",
             'asciidoctorj'           : "org.asciidoctor:asciidoctorj:${gradleBomDependencyVersions['asciidoctorj.version']}",
             'asset-pipeline-gradle'  : "cloud.wondrify:asset-pipeline-gradle:${gradleBomDependencyVersions['asset-pipeline-gradle.version']}",
             'byte-buddy'             : "net.bytebuddy:byte-buddy:${gradleBomDependencyVersions['byte-buddy.version']}",
@@ -75,7 +75,7 @@ ext {
             'commons-lang3.version'       : '3.20.0',
             'geb-spock.version'           : '8.0.1',
             'groovy.version'              : '4.0.31',
-            'jackson.version'             : '2.19.1',
+            'jackson.version'             : '2.21.2',
             'jquery.version'              : '3.7.1',
             'liquibase-hibernate5.version': '4.27.0',
             'mongodb.version'             : '5.5.1',
