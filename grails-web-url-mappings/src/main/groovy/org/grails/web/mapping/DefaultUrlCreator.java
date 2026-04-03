@@ -103,6 +103,9 @@ public class DefaultUrlCreator implements UrlCreator {
             }
             appendUrlToken(actualUriBuf, actionName, encoding);
         }
+        else if (controllerName != null && id == null) {
+            appendUrlToken(actualUriBuf, controllerName, encoding);
+        }
         if (id != null) {
             appendUrlToken(actualUriBuf, id, encoding);
         }
