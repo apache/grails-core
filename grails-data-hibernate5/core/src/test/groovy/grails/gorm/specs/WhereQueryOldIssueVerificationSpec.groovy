@@ -18,9 +18,6 @@
  */
 package grails.gorm.tests
 
-import spock.lang.IgnoreIf
-import spock.lang.PendingFeatureIf
-
 import grails.gorm.annotation.Entity
 import grails.gorm.hibernate.HibernateEntity
 import grails.gorm.transactions.Rollback
@@ -160,7 +157,6 @@ class WhereQueryOldIssueVerificationSpec extends Specification {
 
     @Rollback
     @Issue('https://github.com/apache/grails-core/issues/14636')
-    @PendingFeatureIf({ System.getProperty('hibernate5.gorm.suite') })
     def "many-to-many queries with sorting do not throw exception"() {
         given: "users and roles in a many-to-many relationship"
         def role1 = new WqRole(name: "ADMIN").save(flush: true)
