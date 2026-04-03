@@ -29,8 +29,6 @@ import org.hibernate.mapping.Table;
 
 import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernatePersistentProperty;
 
-import org.grails.orm.hibernate.cfg.PropertyConfig;
-
 import static org.grails.orm.hibernate.cfg.domainbinding.binder.GrailsDomainBinder.EMPTY_PATH;
 
 public class VersionBinder {
@@ -60,11 +58,12 @@ public class VersionBinder {
             // set type
             simpleValueBinder.bindSimpleValue(version, null, val, EMPTY_PATH);
 
-            // Apply version type defaults when no explicit type was configured in the mapping DSL.
+            // Apply version type defaults when no explicit type was configured.
             // isTypeSpecified() is always true after bindSimpleValue (Java type gets resolved),
-            // so we check PropertyConfig directly.
-            PropertyConfig config = version.getMappedForm();
-            if (config == null || config.getTypeName() == null) {
+            // so check PropertyConfig directly.
+            boolean noExplicitType = version.getMappedForm() == null
+                    || version.getMappedForm().getTypeName() == null;
+            if (noExplicitType) {
                 val.setTypeName("version".equals(version.getName()) ? "integer" : "timestamp");
             }
             Property prop = propertyBinder.bindProperty(version, val);

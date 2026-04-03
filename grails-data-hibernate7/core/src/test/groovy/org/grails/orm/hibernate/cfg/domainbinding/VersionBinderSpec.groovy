@@ -25,6 +25,7 @@ import grails.gorm.specs.HibernateGormDatastoreSpec
 import org.grails.orm.hibernate.cfg.domainbinding.binder.PropertyBinder
 import org.grails.orm.hibernate.cfg.domainbinding.binder.SimpleValueBinder
 import org.grails.orm.hibernate.cfg.domainbinding.binder.VersionBinder
+import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernateVersionProperty
 import org.hibernate.boot.spi.MetadataBuildingContext
 import org.hibernate.engine.OptimisticLockStyle
 import org.hibernate.mapping.BasicValue
@@ -56,6 +57,9 @@ class VersionBinderSpec extends HibernateGormDatastoreSpec {
         entity.setPersistentClass(rootClass)
         def versionProperty = entity.getVersion()
         
+        expect:
+        versionProperty instanceof HibernateVersionProperty
+
         when:
         versionBinder.bindVersion(versionProperty, rootClass)
         

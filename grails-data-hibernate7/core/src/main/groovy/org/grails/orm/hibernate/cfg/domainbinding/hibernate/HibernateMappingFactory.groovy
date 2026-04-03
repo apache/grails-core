@@ -41,6 +41,7 @@ import org.grails.datastore.mapping.model.types.Simple
 import org.grails.datastore.mapping.model.types.TenantId
 import org.grails.datastore.mapping.model.types.ToOne
 import org.grails.datastore.mapping.reflect.ClassUtils
+import org.grails.datastore.mapping.model.config.GormProperties
 import org.grails.orm.hibernate.cfg.HibernateSimpleIdentity
 import org.grails.orm.hibernate.cfg.Mapping
 import org.grails.orm.hibernate.cfg.PropertyConfig
@@ -105,6 +106,11 @@ class HibernateMappingFactory extends AbstractGormMappingFactory<Mapping, Proper
     @Override
     Simple<PropertyConfig> createSimple(
             PersistentEntity owner, MappingContext context, PropertyDescriptor pd) {
+        if (pd.name == GormProperties.VERSION && owner.mappedForm.isVersioned()) {
+            HibernateVersionProperty version = new HibernateVersionProperty(owner, context, pd)
+            version.setMapping(createPropertyMapping(version, owner))
+            return version
+        }
         HibernateSimpleProperty simple = pd.propertyType.isEnum()
                 ? new HibernateSimpleEnumProperty(owner, context, pd)
                 : new HibernateSimpleProperty(owner, context, pd)
