@@ -23,7 +23,6 @@ import groovy.xml.slurpersupport.GPathResult
 import jakarta.servlet.http.HttpServletRequest
 
 import org.springframework.mock.web.MockHttpServletResponse
-import org.springframework.util.ReflectionUtils
 
 import grails.converters.JSON
 import org.grails.io.support.SpringIOUtils
@@ -109,11 +108,8 @@ abstract class AbstractGrailsMockHttpServletResponse extends MockHttpServletResp
         final webRequest = GrailsWebRequest.lookup()
         webRequest?.currentRequest?.removeAttribute(GrailsApplicationAttributes.REDIRECT_ISSUED)
         setCommitted(false)
-        def field = ReflectionUtils.findField(MockHttpServletResponse, 'outputStream')
-        ReflectionUtils.makeAccessible(field)
-        field.set(this, null)
-        webRequest.setOut(getWriter())
         super.reset()
+        webRequest?.setOut(getWriter())
     }
 
     String getRedirectUrl() {

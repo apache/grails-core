@@ -40,7 +40,7 @@ class GrailsLayoutSpec extends ContainerGebSpec {
         pageSource.contains('This is so cool.')
     }
 
-    @Ignore('JSP support removed in Spring Framework 7 - see #15457')
+    @Ignore('Theme support removed in Spring Framework 7 - JSP demo relies on theme infrastructure. See #15457')
     void "jsp demo"() {
         when:
         go('demo/jsp')

@@ -263,6 +263,9 @@ findProject(':grails-data-hibernate7-spring-boot').projectDir = new File(setting
 include 'grails-data-hibernate5-core'
 findProject(':grails-data-hibernate5-core').projectDir = file('grails-data-hibernate5/core')
 
+include 'grails-data-hibernate5-spring-orm'
+findProject(':grails-data-hibernate5-spring-orm').projectDir = new File(settingsDir, 'grails-data-hibernate5/spring-orm')
+
 // Documentation
 include 'grails-data-hibernate5-docs'
 findProject(':grails-data-hibernate5-docs').projectDir = new File(settingsDir, 'grails-data-hibernate5/docs')

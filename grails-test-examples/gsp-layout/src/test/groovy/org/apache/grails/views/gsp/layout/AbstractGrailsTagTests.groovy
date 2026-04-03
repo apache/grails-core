@@ -50,7 +50,6 @@ import org.springframework.web.context.request.RequestContextHolder
 import org.springframework.web.context.support.GenericWebApplicationContext
 import org.springframework.web.servlet.DispatcherServlet
 import org.springframework.web.servlet.i18n.AcceptHeaderLocaleResolver
-import org.springframework.web.servlet.support.JstlUtils
 
 import grails.build.support.MetaClassRegistryCleaner
 import grails.core.DefaultGrailsApplication
@@ -95,10 +94,6 @@ import static org.junit.jupiter.api.Assertions.assertTrue
 import static org.junit.jupiter.api.Assertions.fail
 
 abstract class AbstractGrailsTagTests {
-
-    // Theme support was removed in Spring Framework 7.0 - define the attribute names directly
-    private static final String THEME_SOURCE_ATTRIBUTE = DispatcherServlet.class.getName() + ".THEME_SOURCE"
-    private static final String THEME_RESOLVER_ATTRIBUTE = DispatcherServlet.class.getName() + ".THEME_RESOLVER"
 
     ServletContext servletContext
     GrailsWebRequest webRequest
@@ -330,11 +325,6 @@ abstract class AbstractGrailsTagTests {
 
         webRequest = GrailsWebMockUtil.bindMockWebRequest(ctx)
         onInit()
-        try {
-            JstlUtils.exposeLocalizationContext(webRequest.getRequest(), null)
-        } catch (Throwable ignore) {
-            // ignore
-        }
 
         servletContext = webRequest.servletContext
         Holders.servletContext = servletContext
@@ -363,13 +353,8 @@ abstract class AbstractGrailsTagTests {
 
     private initRequestAndResponse() {
         request = webRequest.currentRequest
-        initThemeSource(request, messageSource)
         request.characterEncoding = 'utf-8'
         response = webRequest.currentResponse
-    }
-
-    private void initThemeSource(request, MessageSource messageSource) {
-        // Theme support was removed in Spring Framework 7.0 - no-op
     }
 
     @AfterEach

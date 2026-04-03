@@ -20,7 +20,7 @@ package grails.boot
 
 import grails.boot.config.GrailsAutoConfiguration
 import org.springframework.boot.autoconfigure.EnableAutoConfiguration
-import spock.lang.Ignore
+import spock.lang.PendingFeature
 import spock.lang.Specification
 
 /**
@@ -30,15 +30,13 @@ import spock.lang.Specification
  * Embedded server classes moved to spring-boot-web-server and spring-boot-tomcat modules
  * and require updated test patterns.
  */
-@Ignore("Spring Boot 4.0: Embedded server test infrastructure needs significant rework due to modularization. " +
-        "Classes exist in new spring-boot-web-server and spring-boot-tomcat modules but require updated test patterns.")
 class GrailsSpringApplicationSpec extends Specification {
 
+    @PendingFeature(reason = "TODO: BOOT4 - Embedded server test infrastructure needs rework for Spring Boot 4.0 modularized APIs (spring-boot-web-server, spring-boot-tomcat)")
     void "Test run Grails via SpringApplication"() {
         // TODO: Restore embedded server assertions after reworking for Spring Boot 4.0 modularized APIs
         expect:
-        throw new UnsupportedOperationException(
-            'Test disabled pending Spring Boot 4.0 embedded server API rework')
+        false
     }
 
     @EnableAutoConfiguration
