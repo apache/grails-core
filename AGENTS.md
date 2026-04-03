@@ -230,8 +230,9 @@ class MyService { }
 1. **Fork & branch** from the target release branch (e.g., `7.0.x`)
 2. **Run tests** before submitting: `./gradlew build --rerun-tasks`
 3. **Run code style checks**: `./gradlew codeStyle`
-4. **Squash commits** into a single meaningful commit message
-5. **Reference issues** in PR description (e.g., "Fixes #1234")
+4. **Clean style violations**: Before committing, run `./gradlew clean aggregateStyleViolations` from the root and ensure that `CHECKSTYLE_VIOLATIONS.md`, `CODENARC_VIOLATIONS.md`, and `PMD_VIOLATIONS.md` have no issues.
+5. **Squash commits** into a single meaningful commit message
+6. **Reference issues** in PR description (e.g., "Fixes #1234")
 
 ### Review Process
 
