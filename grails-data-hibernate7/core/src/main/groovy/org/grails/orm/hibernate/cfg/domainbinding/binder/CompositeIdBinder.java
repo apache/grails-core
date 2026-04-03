@@ -57,7 +57,7 @@ public class CompositeIdBinder {
             }
             return;
         }
-        throw new MappingException("Invalid simple id binding for entity [" + domainClass.getName() + "]");
+        throw new MappingException("Invalid composite id binding for entity [" + domainClass.getName() + "]");
     }
 
     private @NonNull Component getComponent(@NonNull HibernatePersistentEntity domainClass) {

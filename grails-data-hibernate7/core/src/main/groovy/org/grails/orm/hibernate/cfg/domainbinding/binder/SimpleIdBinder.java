@@ -82,6 +82,6 @@ public class SimpleIdBinder {
             pkTable.setPrimaryKey(new PrimaryKey(pkTable));
             return;
         }
-        throw new MappingException("Invalid composite id binding for entity [" + domainClass.getName() + "]");
+        throw new MappingException("Invalid simple id binding for entity [" + domainClass.getName() + "]");
     }
 }
