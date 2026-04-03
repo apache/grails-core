@@ -80,31 +80,6 @@ public class BasicValueCreator {
         return basicValue;
     }
 
-    public HibernatePersistentProperty resolveIdentifierProperty(
-            GrailsHibernatePersistentEntity domainClass, HibernateSimpleIdentityProperty identityProperty) {
-        var identifier = domainClass.getIdentity();
-        if (identifier == null) {
-            var syntheticId = new HibernateSimpleIdentityProperty(
-                    domainClass, domainClass.getMappingContext(), GormProperties.IDENTITY, Long.class);
-            syntheticId.setMapping(new DefaultPropertyMapping<>(domainClass.getMapping(), new PropertyConfig()));
-            identifier = syntheticId;
-        }
-        if (identityProperty != null) {
-            String propertyName = identityProperty.getName();
-            if (propertyName != null && !propertyName.equals(domainClass.getName())) {
-                var namedIdentityProp = domainClass.getHibernatePropertyByName(propertyName);
-                if (namedIdentityProp == null) {
-                    throw new MappingException(
-                            "Mapping specifies an identifier property name that doesn't exist [" + propertyName + "]");
-                }
-                if (!namedIdentityProp.equals(identifier)) {
-                    identifier = namedIdentityProp;
-                }
-            }
-        }
-        return identifier;
-    }
-
     private Generator createGenerator(
             GrailsHibernatePersistentEntity domainClass,
             GeneratorCreationContext context,
