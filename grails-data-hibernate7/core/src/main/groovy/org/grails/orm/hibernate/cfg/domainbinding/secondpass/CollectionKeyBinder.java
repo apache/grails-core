@@ -50,14 +50,14 @@ public class CollectionKeyBinder {
     }
 
     /** Creates the {@link DependantValue} key, sets it on the collection, and binds it. */
-    public DependantValue bind(HibernateToManyProperty property, PersistentClass associatedClass) {
+    public DependantValue bind(HibernateToManyProperty property, PersistentClass ownerClass) {
         Collection collection = property.getCollection();
         DependantValue key = primaryKeyValueCreator.createPrimaryKeyValue(collection);
         collection.setKey(key);
         if (property.isBidirectional()) {
             var inverseSide = property.getHibernateInverseSide();
             if (inverseSide instanceof ToOne && property.shouldBindWithForeignKey()) {
-                bidirectionalOneToManyLinker.link(collection, associatedClass, key, inverseSide);
+                bidirectionalOneToManyLinker.link(collection, ownerClass, key, inverseSide);
             } else if (inverseSide instanceof HibernateManyToManyProperty ||
                     Map.class.isAssignableFrom(property.getType())) {
                 dependentKeyValueBinder.bind(property, key);

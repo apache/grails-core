@@ -39,11 +39,12 @@ public class BidirectionalOneToManyLinker {
     /** Link. */
     public void link(
             Collection collection,
-            PersistentClass associatedClass,
+            PersistentClass ownerClass,
             DependantValue key,
             HibernatePersistentProperty otherSide) {
         collection.setInverse(true);
 
+        PersistentClass associatedClass = otherSide.getHibernateOwner().getPersistentClass();
         for (Column column : grailsPropertyResolver
                 .getProperty(associatedClass, otherSide.getName())
                 .getValue()

@@ -30,6 +30,7 @@ import org.hibernate.mapping.PersistentClass;
 
 import org.grails.datastore.mapping.model.types.Basic;
 import org.grails.orm.hibernate.cfg.domainbinding.binder.CollectionForPropertyConfigBinder;
+import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernateBasicProperty;
 import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernateManyToManyProperty;
 import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernateOneToManyProperty;
 import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernateToManyProperty;
@@ -70,20 +71,22 @@ public class CollectionSecondPassBinder {
 
     public void bindCollectionSecondPass(@Nonnull HibernateToManyProperty property, Map<?, ?> persistentClasses) {
         Collection collection = property.getCollection();
+        PersistentClass ownerClass = property.getHibernateOwner().getPersistentClass();
 
-        if (property instanceof Basic) {
-            // Basic collections (scalars/enums) don't have an associated PersistentClass
-            collectionMultiTenantFilterBinder.bind(property);
-            collection.setSorted(property.isSorted());
-            collectionKeyColumnUpdater.bind(property, null);
-        } else {
-            PersistentClass associatedClass = resolveAssociatedClass(property, persistentClasses);
+        PersistentClass associatedClass = resolveAssociatedClass(property, persistentClasses);
+        if (property.isBidirectional() && associatedClass == null) {
+            throw new MappingException("Bidirectional association [" + property.getName() + "] has no associated class");
+        }
+
+        if (associatedClass != null) {
             collectionOrderByBinder.bind(property, associatedClass);
             bindOneToManyAssociation(property, associatedClass);
-            collectionMultiTenantFilterBinder.bind(property);
-            collection.setSorted(property.isSorted());
-            collectionKeyColumnUpdater.bind(property, associatedClass);
         }
+
+        collectionMultiTenantFilterBinder.bind(property);
+        collection.setSorted(property.isSorted());
+        collectionKeyColumnUpdater.bind(property, ownerClass);
+
         collection.setCacheConcurrencyStrategy(property.getCacheUsage());
         bindCollectionElement(property);
     }
@@ -115,6 +118,9 @@ public class CollectionSecondPassBinder {
     }
 
     protected PersistentClass resolveAssociatedClass(HibernateToManyProperty property, Map<?, ?> persistentClasses) {
+        if (property instanceof HibernateBasicProperty) {
+            return null;
+        }
         return Optional.ofNullable(property.getHibernateAssociatedEntity())
                 .map(referenced -> (PersistentClass) persistentClasses.get(referenced.getName()))
                 .orElseThrow(

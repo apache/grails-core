@@ -218,6 +218,12 @@ The `bindProperty` method in `GrailsPropertyBinder.java` has been successfully r
 
 - `GrailsIncrementGenerator`: Reflection hacks for Hibernate 7 (scheduled for removal in Hibernate 8).
 
+## Testing Guidelines
+
+*   **HibernateGormDatastoreSpec**: Use `HibernateGormDatastoreSpec` for all Hibernate 7 integration and domain binding specifications. It provides a more opinionated and fluent API for configuring the Hibernate environment and managing entities during tests.
+*   **Unique Class Names**: When defining domain classes within a spec, ensure they are uniquely named to avoid package-level conflicts.
+*   **Real Entities**: Prefer using real entities defined as top-level classes in the spec file over heavy mocking when testing binder logic.
+
 ## Resolved Issues
 
 - `CollectionSecondPassBinder`: Unidirectional many-to-many support implemented.
