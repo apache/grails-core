@@ -23,6 +23,7 @@ import groovy.transform.CompileStatic
 import groovy.transform.EqualsAndHashCode
 import groovy.util.logging.Slf4j
 import org.codehaus.groovy.runtime.DefaultGroovyMethods
+import groovy.util.ConfigObject
 
 /**
  * @deprecated This class is deprecated to reduce complexity, improve performance, and increase maintainability. Use {@code config.getProperty(String key, Class<T> targetType)} instead.
@@ -136,7 +137,37 @@ class NavigableMap implements Map<String, Object>, Cloneable {
     }
 
     void merge(Map sourceMap, boolean parseFlatKeys = false) {
-        mergeMaps(this, '', this, sourceMap, parseFlatKeys)
+        // Groovy 5 compatibility: Convert ConfigObject to regular Map before processing
+        // ConfigObject has dynamic property access that can cause infinite recursion
+        Map processableMap = sourceMap instanceof ConfigObject ? convertConfigObjectToMap(sourceMap) : sourceMap
+        mergeMaps(this, '', this, processableMap, parseFlatKeys)
+    }
+
+    /**
+     * Groovy 5 compatibility: Convert ConfigObject to a regular LinkedHashMap recursively.
+     * This is needed because ConfigObject has dynamic property access that can cause
+     * infinite recursion when merged into NavigableMap.
+     */
+    @CompileDynamic
+    private static Map<String, Object> convertConfigObjectToMap(Map config) {
+        Map<String, Object> result = new LinkedHashMap<>()
+        // Use keySet() to avoid triggering dynamic property creation in ConfigObject
+        Set keys = config.keySet()
+        for (Object key : keys) {
+            Object value = config.get(key)
+            if (value instanceof ConfigObject) {
+                // Skip empty ConfigObjects (they are auto-generated placeholders)
+                if (((ConfigObject) value).isEmpty()) {
+                    continue
+                }
+                result.put(String.valueOf(key), convertConfigObjectToMap((ConfigObject) value))
+            } else if (value instanceof Map) {
+                result.put(String.valueOf(key), convertConfigObjectToMap((Map) value))
+            } else {
+                result.put(String.valueOf(key), value)
+            }
+        }
+        return result
     }
 
     private void mergeMaps(NavigableMap rootMap,
@@ -156,16 +187,16 @@ class NavigableMap implements Map<String, Object>, Cloneable {
             if (parseFlatKeys) {
                 String[] keyParts = sourceKey.split(/\./)
                 if (keyParts.length > 1) {
-                    mergeMapEntry(rootMap, path, targetMap, sourceKey, sourceValue, parseFlatKeys)
+                    mergeMapEntry(rootMap, path, targetMap, sourceKey, sourceValue, parseFlatKeys, false)
                     def pathParts = keyParts[0..-2]
                     Map actualTarget = targetMap.navigateSubMap(pathParts as List, true)
                     sourceKey = keyParts[-1]
-                    mergeMapEntry(rootMap, pathParts.join('.'), actualTarget, sourceKey, sourceValue, parseFlatKeys)
+                    mergeMapEntry(rootMap, pathParts.join('.'), actualTarget, sourceKey, sourceValue, parseFlatKeys, false)
                 } else {
-                    mergeMapEntry(rootMap, path, targetMap, sourceKey, sourceValue, parseFlatKeys)
+                    mergeMapEntry(rootMap, path, targetMap, sourceKey, sourceValue, parseFlatKeys, false)
                 }
             } else {
-                mergeMapEntry(rootMap, path, targetMap, sourceKey, sourceValue, parseFlatKeys)
+                mergeMapEntry(rootMap, path, targetMap, sourceKey, sourceValue, parseFlatKeys, false)
             }
         }
     }
@@ -289,7 +320,9 @@ class NavigableMap implements Map<String, Object>, Cloneable {
                     }
                 }
                 String newPath = path ? "${path}.${sourceKey}" : sourceKey
-                mergeMaps(rootMap, newPath , subMap, (Map) sourceValue, parseFlatKeys)
+                // Groovy 5 compatibility: Convert nested ConfigObject to regular Map
+                Map mapToMerge = sourceValue instanceof ConfigObject ? convertConfigObjectToMap((Map) sourceValue) : (Map) sourceValue
+                mergeMaps(rootMap, newPath , subMap, mapToMerge, parseFlatKeys)
                 newValue = subMap
             } else {
                 newValue = sourceValue

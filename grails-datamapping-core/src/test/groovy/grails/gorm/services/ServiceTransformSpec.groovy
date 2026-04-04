@@ -555,9 +555,8 @@ class Foo {
 
         then:"A compilation error occurred"
         def e = thrown(MultipleCompilationErrorsException)
-        e.message.normalize().contains '''[Static type checking] - The variable [wrong] is undeclared.
- @ line 8, column 48.
-   $Foo as f where f.title like $wrong")'''
+        // Note: The exact format of the source context in error messages may vary between Groovy versions
+        e.message.contains('[Static type checking] - The variable [wrong] is undeclared.')
     }
 
     void "test @Query invalid domain"() {
@@ -987,10 +986,10 @@ interface MyService {
 
         then:"A compilation error occurred"
         def e = thrown(MultipleCompilationErrorsException)
-        e.message.normalize().contains '''No implementations possible for method 'void foo()'. Please use an abstract class instead and provide an implementation.
- @ line 6, column 5.
-       void foo()
-       ^'''
+        // Note: Groovy 5 changed the method signature format from 'void foo()' to 'foo():void'
+        e.message.contains('No implementations possible for method') &&
+        (e.message.contains("'void foo()'") || e.message.contains("'foo():void'")) &&
+        e.message.contains('Please use an abstract class instead and provide an implementation')
     }
 
     void "test service transform applied with a dynamic finder for a non-existent property"() {

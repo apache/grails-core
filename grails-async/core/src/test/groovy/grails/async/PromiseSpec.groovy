@@ -19,7 +19,6 @@
 package grails.async
 
 import grails.async.decorator.PromiseDecorator
-import spock.lang.PendingFeatureIf
 import spock.lang.Specification
 import spock.util.concurrent.PollingConditions
 

@@ -28,7 +28,6 @@ import grails.persistence.Entity
 import grails.testing.gorm.DataTest
 import grails.validation.DeferredBindingActions
 import grails.validation.Validateable
-import groovy.transform.Sortable
 import org.springframework.context.support.StaticMessageSource
 import spock.lang.Issue
 import spock.lang.Specification
@@ -1786,9 +1785,8 @@ class Author {
 }
 
 @Entity
-@Sortable(includes = ['isBindable', 'isNotBindable'])
 @SuppressWarnings('unused')
-class Widget {
+class Widget implements Comparable<Widget> {
 
     String isBindable
     String isNotBindable
@@ -1806,12 +1804,21 @@ class Widget {
         isNotBindable(bindable: false)
         timeZone(nullable: true)
     }
+
+    // Manual Comparable implementation (replaces @Sortable which conflicts with @Entity in Groovy 5)
+    @Override
+    int compareTo(Widget other) {
+        int result = this.isBindable <=> other.isBindable
+        if (result == 0) {
+            result = this.isNotBindable <=> other.isNotBindable
+        }
+        return result
+    }
 }
 
 @Entity
-@Sortable(includes = ['isBindable', 'isNotBindable'])
 @SuppressWarnings('unused')
-class ParentWidget implements Validateable {
+class ParentWidget implements Validateable, Comparable<ParentWidget> {
 
     String isBindable
     String isNotBindable
@@ -1829,6 +1836,16 @@ class ParentWidget implements Validateable {
     static constraints = {
         isNotBindable(bindable: false)
         timeZone(nullable: true)
+    }
+
+    // Manual Comparable implementation (replaces @Sortable which conflicts with @Entity in Groovy 5)
+    @Override
+    int compareTo(ParentWidget other) {
+        int result = this.isBindable <=> other.isBindable
+        if (result == 0) {
+            result = this.isNotBindable <=> other.isNotBindable
+        }
+        return result
     }
 }
 

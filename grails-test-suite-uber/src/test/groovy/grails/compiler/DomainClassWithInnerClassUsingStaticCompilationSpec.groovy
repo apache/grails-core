@@ -64,14 +64,14 @@ class SomeClass implements Validateable {
     static boolean namedQueriesClosureCalled = false
 
     static constraints = {
-        constraintsClosureCalled = true
+        SomeClass.constraintsClosureCalled = true
     }
 
     static mapping = {
-        mappingClosureCalled = true
+        SomeClass.mappingClosureCalled = true
     }
 
     static namedQueries = {
-        namedQueriesClosureCalled = true
+        SomeClass.namedQueriesClosureCalled = true
     }
 }

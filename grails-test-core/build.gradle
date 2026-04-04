@@ -41,7 +41,7 @@ dependencies {
     // Testing
     api 'org.apache.groovy:groovy-test-junit5'
     api('org.apache.groovy:groovy-test')
-    api('org.spockframework:spock-core') { transitive = false }
+    api 'org.spockframework:spock-core'
     api 'org.junit.platform:junit-platform-suite'
 
 
@@ -81,10 +81,7 @@ dependencies {
 
     // Testing
     testImplementation 'org.slf4j:slf4j-simple'
-    testImplementation('org.spockframework:spock-core') { transitive = false }
-    // Required by Spock's Mocking
-    testRuntimeOnly 'net.bytebuddy:byte-buddy'
-    testImplementation 'org.objenesis:objenesis'
+    testImplementation 'org.spockframework:spock-core'
 }
 
 apply {

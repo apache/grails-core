@@ -80,8 +80,10 @@ public class LoggingTransformer implements AllArtefactClassInjector {
             return;
         }
 
-        // Instead of adding @Slf4j annotation (which won't be processed if added during AST transformation),
-        // manually inject the log field. This mimics what @Slf4j does.
+        // Groovy 5 compatibility: Instead of adding @Slf4j annotation and running LogASTTransformation
+        // (which throws NPE in VariableScopeVisitor during canonicalization in Groovy 5),
+        // manually inject the log field. This mimics what @Slf4j does without triggering
+        // the VariableScopeVisitor codepath.
         // final Logger log = LoggerFactory.getLogger(ClassName.class)
         MethodCallExpression getLoggerCall = new MethodCallExpression(
                 new ClassExpression(LOGGER_FACTORY_CLASSNODE),

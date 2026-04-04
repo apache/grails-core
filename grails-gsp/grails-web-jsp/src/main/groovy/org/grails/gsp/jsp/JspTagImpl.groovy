@@ -18,6 +18,7 @@
  */
 package org.grails.gsp.jsp
 
+import groovy.transform.CompileDynamic
 import groovy.transform.CompileStatic
 
 import jakarta.servlet.jsp.JspContext
@@ -167,6 +168,8 @@ class JspTagImpl implements JspTag {
         }
     }
 
+    // Use @CompileDynamic to avoid Groovy 5 union type issues with instanceof checks in closures
+    @CompileDynamic
     private applyAttributes(jakarta.servlet.jsp.tagext.JspTag tag, Map<String,Object> attributes) {
         BeanWrapperImpl tagBean = new BeanWrapperImpl(tag)
 

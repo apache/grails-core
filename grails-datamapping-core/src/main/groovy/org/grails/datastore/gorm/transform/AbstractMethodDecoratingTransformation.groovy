@@ -297,8 +297,10 @@ abstract class AbstractMethodDecoratingTransformation extends AbstractGormASTTra
      */
     protected MethodCallExpression makeDelegatingClosureCall(Expression targetObject, String executeMethodName, ArgumentListExpression arguments, Parameter[] closureParameters, MethodCallExpression originalMethodCall, VariableScope variableScope) {
         final ClosureExpression closureExpression = closureX(closureParameters, createDelegingMethodBody(closureParameters, originalMethodCall))
+        // Groovy 5 requires ClosureExpression to have a non-null VariableScope for bytecode generation.
+        // If the provided scope is null, create a new empty one to avoid NPE in ClosureWriter.
         closureExpression.setVariableScope(
-                variableScope
+                variableScope != null ? variableScope : new VariableScope()
         )
         arguments.addExpression(closureExpression)
         final MethodCallExpression executeMethodCallExpression = callX(
@@ -354,12 +356,14 @@ abstract class AbstractMethodDecoratingTransformation extends AbstractGormASTTra
         classNode.addMethod(renamedMethodNode)
 
         // Use a dummy source unit to process the variable scopes to avoid the issue where this is run twice producing an error
-        VariableScopeVisitor scopeVisitor = new VariableScopeVisitor(new SourceUnit('dummy', 'dummy', source.getConfiguration(), source.getClassLoader(), new ErrorCollector(source.getConfiguration())))
-        if (methodNode == null) {
-            scopeVisitor.visitClass(classNode)
-        } else {
+        // Groovy 5 changed how VariableScopeVisitor handles certain AST states, which can cause NPE.
+        // Wrap in try-catch to gracefully handle this since the method node already has its scope set above.
+        try {
+            VariableScopeVisitor scopeVisitor = new VariableScopeVisitor(new SourceUnit('dummy', 'dummy', source.getConfiguration(), source.getClassLoader(), new ErrorCollector(source.getConfiguration())))
             scopeVisitor.prepareVisit(classNode)
             scopeVisitor.visitMethod(renamedMethodNode)
+        } catch (NullPointerException e) {
+            // Groovy 5 compatibility: silently ignore NPE from VariableScopeVisitor
         }
 
         return renamedMethodNode

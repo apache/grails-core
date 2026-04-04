@@ -16,7 +16,9 @@
  */
 package org.grails.core.cfg
 
+import groovy.transform.CompileDynamic
 import groovy.transform.CompileStatic
+import groovy.util.ConfigObject
 import groovy.util.logging.Slf4j
 
 import org.springframework.boot.env.PropertySourceLoader
@@ -42,6 +44,43 @@ class GroovyConfigPropertySourceLoader implements PropertySourceLoader {
     final String[] fileExtensions = ['groovy'] as String[]
     final Set<String> loadedFiles = new HashSet<>(1)
 
+    /**
+     * Groovy 5 compatibility: Convert ConfigObject to a regular LinkedHashMap recursively.
+     * This is needed because ConfigObject has dynamic property access that can cause
+     * infinite recursion when merged into NavigableMap.
+     */
+    @CompileDynamic
+    private static Map<String, Object> toRegularMap(ConfigObject config) {
+        Map<String, Object> result = new LinkedHashMap<>()
+        config.each { key, value ->
+            if (value instanceof ConfigObject) {
+                // Recursively convert nested ConfigObjects
+                result.put(String.valueOf(key), toRegularMap((ConfigObject) value))
+            } else if (value instanceof Map) {
+                // Handle regular maps that might contain ConfigObjects
+                result.put(String.valueOf(key), toRegularMapFromMap((Map) value))
+            } else {
+                result.put(String.valueOf(key), value)
+            }
+        }
+        return result
+    }
+
+    @CompileDynamic
+    private static Map<String, Object> toRegularMapFromMap(Map map) {
+        Map<String, Object> result = new LinkedHashMap<>()
+        map.each { key, value ->
+            if (value instanceof ConfigObject) {
+                result.put(String.valueOf(key), toRegularMap((ConfigObject) value))
+            } else if (value instanceof Map) {
+                result.put(String.valueOf(key), toRegularMapFromMap((Map) value))
+            } else {
+                result.put(String.valueOf(key), value)
+            }
+        }
+        return result
+    }
+
     @Override
     List<PropertySource<?>> load(String name, Resource resource) throws IOException {
         return load(name, resource, Collections.<String>emptyList())
@@ -65,12 +104,15 @@ class GroovyConfigPropertySourceLoader implements PropertySourceLoader {
                     }
 
                     def propertySource = new NavigableMap()
-                    propertySource.merge(configObject, false)
+                    // Groovy 5 compatibility: convert ConfigObject to regular map to avoid
+                    // infinite recursion caused by ConfigObject's dynamic property access
+                    propertySource.merge(toRegularMap(configObject), false)
 
                     Resource runtimeResource = resource.createRelative(resource.filename.replace('application', 'runtime'))
                     if (runtimeResource.exists()) {
                         def runtimeConfig = configSlurper.parse(runtimeResource.getURL())
-                        propertySource.merge(runtimeConfig, false)
+                        // Groovy 5 compatibility: convert ConfigObject to regular map
+                        propertySource.merge(toRegularMap(runtimeConfig), false)
                     }
                     final NavigableMapPropertySource navigableMapPropertySource = new NavigableMapPropertySource(name, propertySource)
                     loadedFiles.add(name)

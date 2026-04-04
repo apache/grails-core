@@ -82,7 +82,7 @@ class ConnectionSourceSettings implements Settings {
     /**
      * Package names that should fail on error
      */
-    List<String> failOnErrorPackages = Collections.emptyList()
+    List<String> failOnErrorPackages = []
 
     /**
      * Custom settings
@@ -114,6 +114,7 @@ class ConnectionSourceSettings implements Settings {
      * Represents the default settings
      */
     @Builder(builderStrategy = SimpleStrategy, prefix = '')
+    @AutoClone
     static class DefaultSettings {
         /**
          * The default mapping
@@ -130,6 +131,7 @@ class ConnectionSourceSettings implements Settings {
      * Any custom settings
      */
     @Builder(builderStrategy = SimpleStrategy, prefix = '')
+    @AutoClone
     static class CustomSettings {
         /**
          * custom types

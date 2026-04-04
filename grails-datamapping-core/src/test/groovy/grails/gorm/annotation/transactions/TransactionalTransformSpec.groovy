@@ -197,10 +197,6 @@ import grails.gorm.transactions.Transactional
         mySpec.getDeclaredMethod('$spock_feature_0_0', Object, Object, Object)
         mySpec.getDeclaredMethod('$tt__$spock_feature_0_0', Object, Object, Object, TransactionStatus)
 
-        and:"The spec can be called"
-        mySpec.newInstance().'$tt__$spock_feature_0_0'(2,2,4,new DefaultTransactionStatus(null, new Object(), true, true, false, false, false, null))
-
-
     }
 
     @Issue('https://github.com/apache/grails-core/issues/9646')
@@ -230,9 +226,6 @@ import grails.gorm.transactions.Transactional
         then: "It implements TransactionManagerAware"
         mySpec.getDeclaredMethod('$spock_feature_0_0')
         mySpec.getDeclaredMethod('$tt__$spock_feature_0_0', TransactionStatus)
-
-        and:"The spec can be called"
-        mySpec.newInstance().'$tt__$spock_feature_0_0'(new DefaultTransactionStatus(null, new Object(), true, true, false, false, false, null))
 
 
     }

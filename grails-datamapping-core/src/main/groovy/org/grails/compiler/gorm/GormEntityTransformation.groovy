@@ -31,7 +31,6 @@ import org.codehaus.groovy.ast.AnnotationNode
 import org.codehaus.groovy.ast.ClassHelper
 import org.codehaus.groovy.ast.ClassNode
 import org.codehaus.groovy.ast.GenericsType
-import org.codehaus.groovy.ast.InnerClassNode
 import org.codehaus.groovy.ast.MethodNode
 import org.codehaus.groovy.ast.Parameter
 import org.codehaus.groovy.ast.PropertyNode
@@ -161,8 +160,8 @@ class GormEntityTransformation extends AbstractASTTransformation implements Comp
             return
         }
 
-        if ((classNode instanceof InnerClassNode) || classNode.isEnum()) {
-            // do not apply transform to enums or inner classes
+        if (classNode.getOuterClass() != null || classNode.isEnum()) {
+            // do not apply transform to enums or inner/nested classes
             return
         }
 

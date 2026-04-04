@@ -317,7 +317,9 @@ class ValidationTagLib implements TagLibrary {
             }
             catch (NoSuchMessageException e) {
                 if (error instanceof MessageSourceResolvable) {
-                    text = ((MessageSourceResolvable) error).codes[0]
+                    MessageSourceResolvable resolvable = (MessageSourceResolvable) error
+                    // Prefer defaultMessage over raw code - the defaultMessage contains the actual error text
+                    text = resolvable.defaultMessage ?: resolvable.codes[0]
                 } else {
                     text = error?.toString()
                 }

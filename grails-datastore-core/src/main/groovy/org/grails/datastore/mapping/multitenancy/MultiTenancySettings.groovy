@@ -19,6 +19,7 @@
 
 package org.grails.datastore.mapping.multitenancy
 
+import groovy.transform.AutoClone
 import groovy.transform.builder.Builder
 import groovy.transform.builder.SimpleStrategy
 
@@ -31,6 +32,7 @@ import org.grails.datastore.mapping.multitenancy.resolvers.NoTenantResolver
  * Represents the multi tenancy settings
  */
 @Builder(builderStrategy = SimpleStrategy, prefix = '')
+@AutoClone
 class MultiTenancySettings {
 
     TenantResolver tenantResolver

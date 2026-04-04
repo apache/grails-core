@@ -20,6 +20,7 @@ package org.grails.async.factory
 
 import java.util.concurrent.TimeUnit
 
+import groovy.transform.CompileDynamic
 import groovy.transform.CompileStatic
 
 import grails.async.Promise
@@ -85,7 +86,8 @@ class BoundPromise<T> implements Promise<T> {
         return this
     }
 
-    Promise<T> then(Closure<T> callable) {
+    @CompileDynamic
+    Promise<T> then(Closure callable) {
         if (!(value instanceof Throwable)) {
             try {
                 return new BoundPromise(callable.call(value))
