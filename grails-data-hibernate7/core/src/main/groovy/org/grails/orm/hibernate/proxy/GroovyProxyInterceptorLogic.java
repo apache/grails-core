@@ -109,5 +109,17 @@ public class GroovyProxyInterceptorLogic {
         return null;
     }
 
+    /**
+     * Check if a Groovy proxy is initialized.
+     * @return {@code true} if initialized, {@code false} if not initialized, or {@code null} if the object is not a Groovy proxy
+     */
+    public static Boolean isInitialized(Object o) {
+        ProxyInstanceMetaClass proxyMc = getProxyInstanceMetaClass(o);
+        if (proxyMc != null) {
+            return proxyMc.isProxyInitiated();
+        }
+        return null;
+    }
+
     public record InterceptorState(String entityName, Class<?> persistentClass, Object identifier) {}
 }

@@ -25,6 +25,7 @@ import org.apache.grails.data.testing.tck.domains.Location
 import org.apache.grails.data.testing.tck.domains.Person
 import org.apache.grails.data.testing.tck.domains.Pet
 import org.grails.datastore.gorm.proxy.GroovyProxyFactory
+import org.grails.datastore.gorm.proxy.ProxyInstanceMetaClass
 import org.hibernate.Hibernate
 import spock.lang.Shared
 
@@ -143,6 +144,24 @@ class HibernateProxyHandler7Spec extends HibernateGormDatastoreSpec {
 
         expect:
         proxyHandler.isInitialized(location)
+    }
+
+    void "test isInitialized for a Groovy proxy before initialization"() {
+        given:
+        def originalFactory = manager.session.mappingContext.proxyFactory
+        manager.session.mappingContext.proxyFactory = new GroovyProxyFactory()
+        Location location = new Location(name: "Test Location").save(flush: true)
+        manager.session.clear()
+        manager.hibernateSession.clear()
+
+        Location proxyLocation = Location.proxy(location.id)
+
+        expect:
+        proxyLocation.metaClass instanceof ProxyInstanceMetaClass
+        !proxyHandler.isInitialized(proxyLocation)
+
+        cleanup:
+        manager.session.mappingContext.proxyFactory = originalFactory
     }
 
     void "test unwrap for a Groovy proxy"() {
