@@ -21,14 +21,13 @@ package org.grails.orm.hibernate.cfg
 
 import spock.lang.Specification
 import spock.lang.Unroll
-import org.grails.orm.hibernate.cfg.domainbinding.generator.GrailsSequenceGeneratorEnum
 
 class IdentitySpec extends Specification {
 
     @Unroll
     def "test determineGeneratorName with generator=#generatorName and useSequence=#useSequence"() {
         given:
-        Identity identity = new Identity(generator: generatorName)
+        HibernateSimpleIdentity identity = new HibernateSimpleIdentity(generator: generatorName)
 
         expect:
         identity.determineGeneratorName(useSequence) == expected
@@ -48,10 +47,10 @@ class IdentitySpec extends Specification {
     @Unroll
     def "test static determineGeneratorName with mappedId=#mappedIdPresent and useSequence=#useSequence"() {
         given:
-        Identity identity = mappedIdPresent ? new Identity(generator: generatorName) : null
+        HibernateSimpleIdentity identity = mappedIdPresent ? new HibernateSimpleIdentity(generator: generatorName) : null
 
         expect:
-        Identity.determineGeneratorName(identity, useSequence) == expected
+        HibernateSimpleIdentity.determineGeneratorName(identity, useSequence) == expected
 
         where:
         mappedIdPresent | generatorName | useSequence | expected
@@ -64,7 +63,7 @@ class IdentitySpec extends Specification {
 
     def "test getPropertyNames"() {
         expect:
-        new Identity(name: "id").getPropertyNames() == ["id"] as String[]
-        new Identity(name: null).getPropertyNames() == [] as String[]
+        new HibernateSimpleIdentity(name: "id").getPropertyNames() == ["id"] as String[]
+        new HibernateSimpleIdentity(name: null).getPropertyNames() == [] as String[]
     }
 }

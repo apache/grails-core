@@ -45,8 +45,8 @@ import org.grails.datastore.mapping.model.config.GormProperties
 import org.grails.datastore.mapping.reflect.ClassPropertyFetcher
 import org.grails.orm.hibernate.cfg.CacheConfig
 import org.grails.orm.hibernate.cfg.ColumnConfig
-import org.grails.orm.hibernate.cfg.CompositeIdentity
-import org.grails.orm.hibernate.cfg.Identity
+import org.grails.orm.hibernate.cfg.HibernateCompositeIdentity
+import org.grails.orm.hibernate.cfg.HibernateSimpleIdentity
 import org.grails.orm.hibernate.cfg.Mapping
 import org.grails.orm.hibernate.cfg.NaturalId
 import org.grails.orm.hibernate.cfg.PropertyConfig
@@ -251,24 +251,24 @@ class HibernateMappingBuilder implements MappingConfigurationBuilder<Mapping, Pr
 
     void id(Map<String, Object> args) {
         if (args.composite) {
-            mapping.identity = new CompositeIdentity(propertyNames: (String[]) args.composite)
+            mapping.identity = new HibernateCompositeIdentity(propertyNames: (String[]) args.composite)
             if (args.compositeClass) {
-                (mapping.identity as CompositeIdentity).compositeClass = (Class) args.compositeClass
+                (mapping.identity as HibernateCompositeIdentity).compositeClass = (Class) args.compositeClass
             }
         } else {
             Object generatorVal = args.remove('generator')
             if (generatorVal != null) {
-                ((Identity) mapping.identity).generator = generatorVal.toString()
+                ((HibernateSimpleIdentity) mapping.identity).generator = generatorVal.toString()
             }
             Object nameVal = args.remove('name')
             if (nameVal != null) {
-                ((Identity) mapping.identity).name = nameVal.toString()
+                ((HibernateSimpleIdentity) mapping.identity).name = nameVal.toString()
             }
             Object paramsVal = args.remove('params')
             if (paramsVal instanceof Map) {
                 Map<String, String> stringParams = [:]
                 ((Map<Object, Object>) paramsVal).each { k, v -> stringParams[k.toString()] = v?.toString() }
-                ((Identity) mapping.identity).params = stringParams
+                ((HibernateSimpleIdentity) mapping.identity).params = stringParams
             }
         }
         Object naturalVal = args.remove('natural')

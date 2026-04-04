@@ -22,7 +22,7 @@ package org.grails.orm.hibernate.cfg.domainbinding
 
 import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernateToOneProperty
 import org.grails.orm.hibernate.cfg.ColumnConfig
-import org.grails.orm.hibernate.cfg.CompositeIdentity
+import org.grails.orm.hibernate.cfg.HibernateCompositeIdentity
 import org.grails.orm.hibernate.cfg.domainbinding.hibernate.GrailsHibernatePersistentEntity
 import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernatePersistentProperty
 import org.grails.orm.hibernate.cfg.PersistentEntityNamingStrategy
@@ -59,7 +59,7 @@ class CompositeIdentifierToManyToOneBinderSpec extends Specification {
 
         // Use a real CompositeIdentity object to avoid final method mocking issues
         def propertyNames = ["nestedEntity"] as String[]
-        def compositeId = new CompositeIdentity()
+        def compositeId = new HibernateCompositeIdentity()
         compositeId.setPropertyNames(propertyNames)
 
         // 3. Define the nested composite key scenario
@@ -119,7 +119,7 @@ class CompositeIdentifierToManyToOneBinderSpec extends Specification {
         // 2. Set up arguments
         def association = Mock(HibernatePersistentProperty)
         def value = Mock(SimpleValue)
-        def compositeId = new CompositeIdentity()
+        def compositeId = new HibernateCompositeIdentity()
         compositeId.setPropertyNames(["prop1", "prop2"] as String[])
         def refDomainClass = Mock(GrailsHibernatePersistentEntity)
         def path = "/test"

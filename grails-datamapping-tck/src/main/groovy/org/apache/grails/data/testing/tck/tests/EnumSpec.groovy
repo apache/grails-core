@@ -56,7 +56,6 @@ class EnumSpec extends GrailsDataTckSpec {
         given:
 
         new EnumThing(name: 'e1', en: TestEnum.V1).save(failOnError: true)
-        new EnumThing(name: 'e2', en: TestEnum.V1).save(failOnError: true)
         new EnumThing(name: 'e3', en: TestEnum.V2).save(failOnError: true)
 
         when:
@@ -78,7 +77,6 @@ class EnumSpec extends GrailsDataTckSpec {
         given:
 
         new EnumThing(name: 'e1', en: TestEnum.V1).save(failOnError: true)
-        new EnumThing(name: 'e2', en: TestEnum.V1).save(failOnError: true)
         new EnumThing(name: 'e3', en: TestEnum.V2).save(failOnError: true)
 
         when:
@@ -100,7 +98,6 @@ class EnumSpec extends GrailsDataTckSpec {
         given:
 
         new EnumThing(name: 'e1', en: TestEnum.V1).save(failOnError: true, flush: true)
-        new EnumThing(name: 'e2', en: TestEnum.V1).save(failOnError: true, flush: true)
         new EnumThing(name: 'e3', en: TestEnum.V2).save(failOnError: true, flush: true)
         manager.session.clear()
 

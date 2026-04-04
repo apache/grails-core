@@ -28,85 +28,60 @@ import org.hibernate.mapping.Property;
 import org.hibernate.mapping.RootClass;
 import org.hibernate.mapping.Table;
 
-import org.grails.datastore.mapping.model.DefaultPropertyMapping;
-import org.grails.datastore.mapping.model.config.GormProperties;
-import org.grails.orm.hibernate.cfg.Identity;
-import org.grails.orm.hibernate.cfg.Mapping;
-import org.grails.orm.hibernate.cfg.PropertyConfig;
-import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernateIdentityProperty;
 import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernatePersistentEntity;
-import org.grails.orm.hibernate.cfg.domainbinding.util.BasicValueIdCreator;
+import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernateSimpleIdentityProperty;
+import org.grails.orm.hibernate.cfg.domainbinding.util.BasicValueCreator;
 
 import static org.grails.orm.hibernate.cfg.domainbinding.binder.GrailsDomainBinder.EMPTY_PATH;
 
+/** The simple id binder class. */
 @SuppressWarnings("PMD.DataflowAnomalyAnalysis")
 public class SimpleIdBinder {
 
     private final MetadataBuildingContext metadataBuildingContext;
+    private final BasicValueCreator basicValueCreator;
     private final SimpleValueBinder simpleValueBinder;
     private final PropertyBinder propertyBinder;
-    private final BasicValueIdCreator basicValueIdCreator;
 
     public SimpleIdBinder(
             MetadataBuildingContext metadataBuildingContext,
-            BasicValueIdCreator basicValueIdCreator,
+            BasicValueCreator basicValueCreator,
             SimpleValueBinder simpleValueBinder,
             PropertyBinder propertyBinder) {
         this.metadataBuildingContext = metadataBuildingContext;
+        this.basicValueCreator = basicValueCreator;
         this.simpleValueBinder = simpleValueBinder;
         this.propertyBinder = propertyBinder;
-        this.basicValueIdCreator = basicValueIdCreator;
     }
 
     public MetadataBuildingContext getMetadataBuildingContext() {
         return metadataBuildingContext;
     }
 
-    public void bindSimpleId(
-            @Nonnull HibernatePersistentEntity domainClass, RootClass entity, Identity mappedId, Table table) {
+    public void bindSimpleId(@Nonnull HibernatePersistentEntity domainClass) {
+        if (domainClass.getIdentityProperty() instanceof HibernateSimpleIdentityProperty simpleIdentityProperty) {
+            RootClass rootClass = domainClass.getRootClass();
+            BasicValue id = basicValueCreator.bindBasicValue(simpleIdentityProperty);
 
-        Mapping result = domainClass.getHibernateMappedForm();
-        boolean useSequence = result != null && result.isTablePerConcreteClass();
-        // create the id value
+            var identifier = basicValueCreator.resolveIdentifierProperty(domainClass, simpleIdentityProperty);
 
-        BasicValue id =
-                basicValueIdCreator.getBasicValueId(metadataBuildingContext, table, mappedId, domainClass, useSequence);
+            Property idProperty = new Property();
+            idProperty.setName(identifier.getName());
+            idProperty.setValue(id);
+            rootClass.setDeclaredIdentifierProperty(idProperty);
+            rootClass.setIdentifier(id);
+            // set type
+            simpleValueBinder.bindSimpleValue(identifier, null, id, EMPTY_PATH);
 
-        var identifier = domainClass.getIdentity();
-        if (identifier == null) {
-            var syntheticId = new HibernateIdentityProperty(
-                    domainClass, domainClass.getMappingContext(), GormProperties.IDENTITY, Long.class);
-            syntheticId.setMapping(new DefaultPropertyMapping<>(domainClass.getMapping(), new PropertyConfig()));
-            identifier = syntheticId;
+            // bind property
+            Property prop = propertyBinder.bindProperty(identifier, id);
+            // set identifier property
+            rootClass.setIdentifierProperty(prop);
+
+            Table pkTable = id.getTable();
+            pkTable.setPrimaryKey(new PrimaryKey(pkTable));
+            return;
         }
-        if (mappedId != null) {
-            String propertyName = mappedId.getName();
-            if (propertyName != null && !propertyName.equals(domainClass.getName())) {
-                var namedIdentityProp = domainClass.getHibernatePropertyByName(propertyName);
-                if (namedIdentityProp == null) {
-                    throw new MappingException(
-                            "Mapping specifies an identifier property name that doesn't exist [" + propertyName + "]");
-                }
-                if (!namedIdentityProp.equals(identifier)) {
-                    identifier = namedIdentityProp;
-                }
-            }
-        }
-
-        Property idProperty = new Property();
-        idProperty.setName(identifier.getName());
-        idProperty.setValue(id);
-        entity.setDeclaredIdentifierProperty(idProperty);
-        entity.setIdentifier(id);
-        // set type
-        simpleValueBinder.bindSimpleValue(identifier, null, id, EMPTY_PATH);
-
-        // bind property
-        Property prop = propertyBinder.bindProperty(identifier, id);
-        // set identifier property
-        entity.setIdentifierProperty(prop);
-
-        Table pkTable = id.getTable();
-        pkTable.setPrimaryKey(new PrimaryKey(pkTable));
+        throw new MappingException("Invalid simple id binding for entity [" + domainClass.getName() + "]");
     }
 }

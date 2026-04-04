@@ -82,7 +82,7 @@ The `bindProperty` method in `GrailsPropertyBinder.java` has been successfully r
 *   **IdentityBinder**: Main coordinator for binding entity identifiers (simple or composite).
 *   **SimpleIdBinder**: Binds simple primary keys.
 *   **CompositeIdBinder**: Binds composite primary keys.
-*   **BasicValueIdCreator**: Factory for creating identifier `Value` objects and their generators.
+*   **BasicValueCreator**: Factory for creating identifier `Value` objects and their generators.
 *   **VersionBinder**: Binds the version property used for optimistic locking.
 *   **NaturalIdentifierBinder**: Binds properties marked as `naturalId`.
 
@@ -163,7 +163,7 @@ The `bindProperty` method in `GrailsPropertyBinder.java` has been successfully r
 
 | Class | Status | Notes |
 | :--- | :--- | :--- |
-| `CollectionSecondPassBinder` | Migrated | Contains TODOs for unidirectional many-to-many. |
+| `CollectionSecondPassBinder` | Migrated | Unidirectional many-to-many support implemented. |
 | `GrailsSecondPass` | Migrated | |
 | `ListSecondPass` | Migrated | |
 | `ListSecondPassBinder` | Migrated | |
@@ -197,7 +197,7 @@ The `bindProperty` method in `GrailsPropertyBinder.java` has been successfully r
 | `TableForManyCalculator` | Migrated | |
 | `UniqueNameGenerator` | Migrated | |
 | `BackticksRemover` | Migrated | |
-| `BasicValueIdCreator` | Migrated | |
+| `BasicValueCreator` | Migrated | |
 
 ## Utility Class Refactoring & Mock Compatibility
 
@@ -216,6 +216,9 @@ The `bindProperty` method in `GrailsPropertyBinder.java` has been successfully r
 
 ## Remaining Known Issues / TODOs
 
-- `CollectionSecondPassBinder`: TODO support unidirectional many-to-many.
 - `GrailsIncrementGenerator`: Reflection hacks for Hibernate 7 (scheduled for removal in Hibernate 8).
-- **Multitenancy & CompositeId:** While many tests are passing, some complex scenarios in `MultiTenancyBidirectionalManyToManySpec` and `GlobalConstraintWithCompositeIdSpec` may still require attention or further validation in a full application context.
+
+## Resolved Issues
+
+- `CollectionSecondPassBinder`: Unidirectional many-to-many support implemented.
+- **Multitenancy & CompositeId:** `MultiTenancyBidirectionalManyToManySpec` and `GlobalConstraintWithCompositeIdSpec` have been fixed and validated.

@@ -25,16 +25,16 @@ import java.util.Properties;
 import org.hibernate.generator.GeneratorCreationContext;
 import org.hibernate.id.IdentityGenerator;
 
-import org.grails.orm.hibernate.cfg.Identity;
+import org.grails.orm.hibernate.cfg.HibernateSimpleIdentity;
 
 public class GrailsIdentityGenerator extends IdentityGenerator {
 
     @Serial
     private static final long serialVersionUID = 1L;
 
-    public GrailsIdentityGenerator(GeneratorCreationContext context, Identity mappedId) {
+    public GrailsIdentityGenerator(GeneratorCreationContext context, HibernateSimpleIdentity mappedId) {
         var generatorProps =
-                Optional.ofNullable(mappedId).map(Identity::getProperties).orElse(new Properties());
+                Optional.ofNullable(mappedId).map(HibernateSimpleIdentity::getProperties).orElse(new Properties());
         super.configure(context, generatorProps);
         context.getProperty().getValue().getColumns().get(0).setIdentity(true);
     }

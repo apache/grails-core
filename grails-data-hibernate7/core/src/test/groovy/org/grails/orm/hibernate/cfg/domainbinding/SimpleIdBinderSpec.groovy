@@ -21,22 +21,19 @@ package org.grails.orm.hibernate.cfg.domainbinding
 
 import grails.gorm.specs.HibernateGormDatastoreSpec
 import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernatePersistentProperty
-import org.grails.orm.hibernate.cfg.domainbinding.hibernate.GrailsHibernatePersistentEntity
 import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernatePersistentEntity
-import org.grails.orm.hibernate.cfg.Identity
+import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernateSimpleIdentityProperty
 import org.hibernate.boot.spi.MetadataBuildingContext
 import org.hibernate.engine.jdbc.env.spi.JdbcEnvironment
 import org.hibernate.mapping.BasicValue
 import org.hibernate.mapping.PrimaryKey
 import org.hibernate.mapping.RootClass
 import org.hibernate.mapping.Table
-import org.hibernate.mapping.Value
 
 import org.grails.orm.hibernate.cfg.domainbinding.binder.PropertyBinder
 import org.grails.orm.hibernate.cfg.domainbinding.binder.SimpleIdBinder
 import org.grails.orm.hibernate.cfg.domainbinding.binder.SimpleValueBinder
-import org.grails.orm.hibernate.cfg.domainbinding.generator.GrailsSequenceGeneratorEnum
-import org.grails.orm.hibernate.cfg.domainbinding.util.BasicValueIdCreator
+import org.grails.orm.hibernate.cfg.domainbinding.util.BasicValueCreator
 import org.grails.datastore.mapping.reflect.EntityReflector
 
 class SimpleIdBinderSpec extends HibernateGormDatastoreSpec {
@@ -45,7 +42,7 @@ class SimpleIdBinderSpec extends HibernateGormDatastoreSpec {
     JdbcEnvironment jdbcEnvironment
     def simpleValueBinder
     def propertyBinder
-    def basicValueIdCreator
+    def basicValueCreator
     Table currentTable
 
     def simpleIdBinder
@@ -62,17 +59,20 @@ class SimpleIdBinderSpec extends HibernateGormDatastoreSpec {
         )
         jdbcEnvironment = domainBinder.getJdbcEnvironment()
 
-        // Use a Mock for BasicValueIdCreator and return a BasicValue based on the currentTable
-        basicValueIdCreator = Mock(BasicValueIdCreator)
-        basicValueIdCreator.getBasicValueId(_, _, _, _, _) >> { MetadataBuildingContext ctx, Table table, Identity id, HibernatePersistentEntity domainClass, boolean useSeq ->
-            return new BasicValue(ctx, table)
+        // Use a Mock for BasicValueCreator and return a BasicValue based on the currentTable
+        basicValueCreator = Mock(BasicValueCreator)
+        basicValueCreator.bindBasicValue(_) >> { HibernateSimpleIdentityProperty id ->
+            return new BasicValue(metadataBuildingContext, currentTable)
+        }
+        basicValueCreator.resolveIdentifierProperty(_, _) >> { HibernatePersistentEntity domainClass, HibernateSimpleIdentityProperty identityProperty ->
+            return domainClass.getIdentity() ?: Mock(HibernatePersistentProperty) { getName() >> "id" }
         }
 
         // Mock the collaborators that can be safely mocked
         simpleValueBinder = Mock(SimpleValueBinder)
         propertyBinder = Spy(PropertyBinder)
 
-        simpleIdBinder = new SimpleIdBinder(metadataBuildingContext, basicValueIdCreator, simpleValueBinder, propertyBinder)
+        simpleIdBinder = new SimpleIdBinder(metadataBuildingContext, basicValueCreator, simpleValueBinder, propertyBinder)
     }
 
     def "bindSimpleId with identity generator"() {
@@ -83,17 +83,19 @@ class SimpleIdBinderSpec extends HibernateGormDatastoreSpec {
         def testProperty = Mock(HibernatePersistentProperty) {
             getName() >> "id"
         }
+        def rootClass = new RootClass(metadataBuildingContext)
+        currentTable = new Table("TEST_TABLE")
+        rootClass.setTable(currentTable)
         def domainClass = Mock(HibernatePersistentEntity) {
             getMappedForm() >> mapping
             getIdentity() >> testProperty
             getName() >> "TestEntity"
+            getIdentityProperty() >> Mock(HibernateSimpleIdentityProperty)
+            getRootClass() >> rootClass
         }
-        def rootClass = new RootClass(metadataBuildingContext)
-        currentTable = new Table("TEST_TABLE")
-        rootClass.setTable(currentTable)
 
         when:
-        simpleIdBinder.bindSimpleId(domainClass, rootClass, new Identity(generator: GrailsSequenceGeneratorEnum.IDENTITY.toString()), rootClass.getTable())
+        simpleIdBinder.bindSimpleId(domainClass)
 
         then:
         1 * simpleValueBinder.bindSimpleValue(testProperty as HibernatePersistentProperty, null, _, "")
@@ -113,17 +115,19 @@ class SimpleIdBinderSpec extends HibernateGormDatastoreSpec {
         def testProperty = Mock(HibernatePersistentProperty) {
             getName() >> "id"
         }
+        def rootClass = new RootClass(metadataBuildingContext)
+        currentTable = new Table("TEST_TABLE")
+        rootClass.setTable(currentTable)
         def domainClass = Mock(HibernatePersistentEntity) {
             getMappedForm() >> mapping
             getIdentity() >> testProperty
             getName() >> "TestEntity"
+            getIdentityProperty() >> Mock(HibernateSimpleIdentityProperty)
+            getRootClass() >> rootClass
         }
-        def rootClass = new RootClass(metadataBuildingContext)
-        currentTable = new Table("TEST_TABLE")
-        rootClass.setTable(currentTable)
 
         when:
-        simpleIdBinder.bindSimpleId(domainClass, rootClass, new Identity(generator: GrailsSequenceGeneratorEnum.SEQUENCE.toString(), params: [sequence: 'SEQ_TEST']), rootClass.getTable())
+        simpleIdBinder.bindSimpleId(domainClass)
 
         then:
         1 * simpleValueBinder.bindSimpleValue(testProperty as HibernatePersistentProperty, null, _, "")
@@ -137,18 +141,22 @@ class SimpleIdBinderSpec extends HibernateGormDatastoreSpec {
 
     def "bindSimpleId with non-existent identifier property"() {
         given:
+        def rootClass = new RootClass(metadataBuildingContext)
+        currentTable = new Table("TEST_TABLE")
+        rootClass.setTable(currentTable)
         def domainClass = Mock(HibernatePersistentEntity) {
             getName() >> "TestEntity"
             getHibernatePropertyByName("nonExistent") >> null
             getIdentity() >> Mock(HibernatePersistentProperty)
+            getIdentityProperty() >> Mock(HibernateSimpleIdentityProperty) { getName() >> "nonExistent" }
+            getRootClass() >> rootClass
         }
-        def rootClass = new RootClass(metadataBuildingContext)
-        def table = Mock(Table)
 
         when:
-        simpleIdBinder.bindSimpleId(domainClass, rootClass, new Identity(name: "nonExistent"), table)
+        simpleIdBinder.bindSimpleId(domainClass)
 
         then:
+        1 * basicValueCreator.resolveIdentifierProperty(domainClass, _) >> { throw new org.hibernate.MappingException("Mapping specifies an identifier property name that doesn't exist [nonExistent]") }
         thrown(org.hibernate.MappingException)
     }
 
@@ -158,6 +166,9 @@ class SimpleIdBinderSpec extends HibernateGormDatastoreSpec {
             isTablePerConcreteClass() >> false
         }
         def reflector = Mock(EntityReflector)
+        def rootClass = new RootClass(metadataBuildingContext)
+        currentTable = new Table("TEST_TABLE")
+        rootClass.setTable(currentTable)
         def domainClass = Mock(HibernatePersistentEntity) {
             getMappedForm() >> mapping
             getIdentity() >> null
@@ -165,13 +176,12 @@ class SimpleIdBinderSpec extends HibernateGormDatastoreSpec {
             getMappingContext() >> getGrailsDomainBinder().hibernateMappingContext
             getMapping() >> Mock(org.grails.datastore.mapping.model.ClassMapping)
             getReflector() >> reflector
+            getIdentityProperty() >> Mock(HibernateSimpleIdentityProperty)
+            getRootClass() >> rootClass
         }
-        def rootClass = new RootClass(metadataBuildingContext)
-        currentTable = new Table("TEST_TABLE")
-        rootClass.setTable(currentTable)
 
         when:
-        simpleIdBinder.bindSimpleId(domainClass, rootClass, new Identity(), rootClass.getTable())
+        simpleIdBinder.bindSimpleId(domainClass)
 
         then:
         1 * simpleValueBinder.bindSimpleValue(_, null, _, "")

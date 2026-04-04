@@ -28,7 +28,7 @@ import org.grails.orm.hibernate.HibernateDatastore
 import org.grails.orm.hibernate.cfg.HibernateMappingContext
 import org.grails.orm.hibernate.cfg.domainbinding.hibernate.GrailsHibernatePersistentEntity
 import org.grails.orm.hibernate.cfg.Mapping
-import org.grails.orm.hibernate.cfg.Identity
+import org.grails.orm.hibernate.cfg.HibernateSimpleIdentity
 import org.hibernate.boot.Metadata
 import org.hibernate.boot.MetadataSources
 import org.hibernate.boot.internal.BootstrapContextImpl
@@ -122,7 +122,7 @@ class GormColumnSnapshotGeneratorSpec extends Specification {
         Column column = new Column()
         GrailsHibernatePersistentEntity gpe = Mock()
         Mapping mapping = Mock()
-        Identity identity = Mock()
+        HibernateSimpleIdentity identity = Mock()
 
         when:
         generator.applyGormIdentitySettings(column, gpe)
@@ -199,7 +199,7 @@ class GormColumnSnapshotGeneratorSpec extends Specification {
         // GORM mocks
         GrailsHibernatePersistentEntity gpe = Mock()
         Mapping gormMapping = Mock()
-        Identity gormIdentity = Mock()
+        HibernateSimpleIdentity gormIdentity = Mock()
 
         when:
         Column result = generator.snapshot(example, snapshot, chain)

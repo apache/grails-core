@@ -27,7 +27,7 @@ import org.hibernate.mapping.ManyToOne;
 import org.hibernate.mapping.Table;
 
 import org.grails.orm.hibernate.cfg.ColumnConfig;
-import org.grails.orm.hibernate.cfg.CompositeIdentity;
+import org.grails.orm.hibernate.cfg.HibernateCompositeIdentity;
 import org.grails.orm.hibernate.cfg.JoinTable;
 import org.grails.orm.hibernate.cfg.Mapping;
 import org.grails.orm.hibernate.cfg.PersistentEntityNamingStrategy;
@@ -84,7 +84,7 @@ public class ManyToOneBinder {
         HibernateManyToManyProperty otherSide = (HibernateManyToManyProperty) property.getHibernateInverseSide();
         Table collectionTable = collection.getCollectionTable();
         GrailsHibernatePersistentEntity refDomainClass = otherSide.getHibernateOwner();
-        Optional<CompositeIdentity> compositeId = refDomainClass.getHibernateCompositeIdentity();
+        Optional<HibernateCompositeIdentity> compositeId = refDomainClass.getHibernateCompositeIdentity();
         if (compositeId.isEmpty() && otherSide.isCircular()) {
             prepareCircularManyToMany(otherSide);
         }
@@ -104,7 +104,7 @@ public class ManyToOneBinder {
             String path) {
         ManyToOne manyToOne = new ManyToOne(metadataBuildingContext, table);
         manyToOneValuesBinder.bindManyToOneValues(property, manyToOne);
-        Optional<CompositeIdentity> compositeId = refDomainClass.getHibernateCompositeIdentity();
+        Optional<HibernateCompositeIdentity> compositeId = refDomainClass.getHibernateCompositeIdentity();
         if (compositeId.isPresent()) {
             compositeIdentifierToManyToOneBinder.bindCompositeIdentifierToManyToOne(
                     property, manyToOne, compositeId.get(), refDomainClass, path);

@@ -31,7 +31,7 @@ class CompositeIdentitySpec extends Specification {
         def domainClass = Mock(GrailsHibernatePersistentEntity)
         def prop1 = Mock(HibernatePersistentProperty)
         def prop2 = Mock(HibernatePersistentProperty)
-        def compositeIdentity = new CompositeIdentity(propertyNames: ['prop1', 'prop2'] as String[])
+        def compositeIdentity = new HibernateCompositeIdentity(propertyNames: ['prop1', 'prop2'] as String[])
 
         when:
         def properties = compositeIdentity.getHibernateProperties(domainClass)
@@ -48,7 +48,7 @@ class CompositeIdentitySpec extends Specification {
         given:
         def domainClass = Mock(GrailsHibernatePersistentEntity)
         def prop1 = Mock(HibernatePersistentProperty)
-        def compositeIdentity = new CompositeIdentity()
+        def compositeIdentity = new HibernateCompositeIdentity()
 
         when:
         def properties = compositeIdentity.getHibernateProperties(domainClass)
@@ -63,7 +63,7 @@ class CompositeIdentitySpec extends Specification {
     def "test getHibernateProperties throws exception if no properties found"() {
         given:
         def domainClass = Mock(GrailsHibernatePersistentEntity)
-        def compositeIdentity = new CompositeIdentity()
+        def compositeIdentity = new HibernateCompositeIdentity()
 
         when:
         compositeIdentity.getHibernateProperties(domainClass)
@@ -76,7 +76,7 @@ class CompositeIdentitySpec extends Specification {
     def "test getHibernateProperties throws exception if a property is invalid"() {
         given:
         def domainClass = Mock(GrailsHibernatePersistentEntity)
-        def compositeIdentity = new CompositeIdentity(propertyNames: ['invalid'] as String[])
+        def compositeIdentity = new HibernateCompositeIdentity(propertyNames: ['invalid'] as String[])
 
         when:
         compositeIdentity.getHibernateProperties(domainClass)
@@ -89,7 +89,7 @@ class CompositeIdentitySpec extends Specification {
     def "test getPropertyNames"() {
         given:
         def propertyNames = ['prop1', 'prop2'] as String[]
-        def compositeIdentity = new CompositeIdentity(propertyNames: propertyNames)
+        def compositeIdentity = new HibernateCompositeIdentity(propertyNames: propertyNames)
 
         expect:
         compositeIdentity.getPropertyNames() == propertyNames

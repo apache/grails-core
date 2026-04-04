@@ -33,7 +33,7 @@ import org.grails.datastore.mapping.model.types.Association
 import org.grails.orm.hibernate.cfg.domainbinding.hibernate.GrailsHibernatePersistentEntity
 import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernatePersistentProperty
 import org.grails.orm.hibernate.cfg.Mapping
-import org.grails.orm.hibernate.cfg.Identity
+import org.grails.orm.hibernate.cfg.HibernateSimpleIdentity
 import org.hibernate.mapping.PersistentClass
 import org.hibernate.mapping.RootClass
 import org.hibernate.mapping.SimpleValue
@@ -142,8 +142,8 @@ class GormColumnSnapshotGenerator implements SnapshotGenerator {
         
         Mapping m = gpe.mappedForm
         Object idMapping = m.identity
-        if (idMapping instanceof Identity) {
-            Identity identity = (Identity) idMapping
+        if (idMapping instanceof HibernateSimpleIdentity) {
+            HibernateSimpleIdentity identity = (HibernateSimpleIdentity) idMapping
             boolean useSequence = m.isTablePerConcreteClass()
             String strategy = identity.determineGeneratorName(useSequence)
             if (strategy == 'identity' || strategy == 'native' || strategy == 'sequence-identity') {

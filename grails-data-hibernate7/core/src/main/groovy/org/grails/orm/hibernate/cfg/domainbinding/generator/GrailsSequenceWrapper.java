@@ -22,7 +22,7 @@ import org.hibernate.engine.jdbc.env.spi.JdbcEnvironment;
 import org.hibernate.generator.Generator;
 import org.hibernate.generator.GeneratorCreationContext;
 
-import org.grails.orm.hibernate.cfg.Identity;
+import org.grails.orm.hibernate.cfg.HibernateSimpleIdentity;
 import org.grails.orm.hibernate.cfg.PersistentEntityNamingStrategy;
 import org.grails.orm.hibernate.cfg.domainbinding.hibernate.GrailsHibernatePersistentEntity;
 
@@ -34,7 +34,7 @@ public class GrailsSequenceWrapper {
     public Generator getGenerator(
             String name,
             GeneratorCreationContext context,
-            Identity mappedId,
+            HibernateSimpleIdentity mappedId,
             GrailsHibernatePersistentEntity domainClass,
             JdbcEnvironment jdbcEnvironment,
             PersistentEntityNamingStrategy namingStrategy) {

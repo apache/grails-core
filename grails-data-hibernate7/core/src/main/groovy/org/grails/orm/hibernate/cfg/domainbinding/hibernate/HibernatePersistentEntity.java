@@ -23,7 +23,9 @@ import java.util.Optional;
 
 import jakarta.persistence.Entity;
 
+import org.hibernate.MappingException;
 import org.hibernate.mapping.PersistentClass;
+import org.hibernate.mapping.RootClass;
 
 import org.grails.datastore.mapping.core.connections.ConnectionSourcesSupport;
 import org.grails.datastore.mapping.model.AbstractClassMapping;
@@ -31,6 +33,7 @@ import org.grails.datastore.mapping.model.AbstractPersistentEntity;
 import org.grails.datastore.mapping.model.ClassMapping;
 import org.grails.datastore.mapping.model.MappingContext;
 import org.grails.datastore.mapping.model.PersistentProperty;
+import org.grails.orm.hibernate.cfg.HibernateSimpleIdentity;
 import org.grails.orm.hibernate.cfg.Mapping;
 
 /**
@@ -91,6 +94,19 @@ public class HibernatePersistentEntity extends AbstractPersistentEntity<Mapping>
                 .toArray(HibernatePersistentProperty[]::new);
     }
 
+    public HibernateIdentityProperty getIdentityProperty() {
+        HibernatePersistentProperty[] compositeId = getCompositeIdentity();
+        if (compositeId != null && compositeId.length > 1) {
+            return new HibernateCompositeIdentityProperty(this, getMappingContext(), getName(), Object.class, compositeId);
+        }
+        HibernatePersistentProperty id = getIdentity();
+        if (id instanceof HibernateSimpleIdentityProperty simpleId) {
+            return simpleId;
+        }
+        throw new MappingException("Entity [" + getName() + "] has no identity property. " +
+                "Only embedded entities are allowed to have no identity.");
+    }
+
     private boolean isAnnotatedEntity() {
         return getJavaClass().isAnnotationPresent(Entity.class);
     }
@@ -115,8 +131,21 @@ public class HibernatePersistentEntity extends AbstractPersistentEntity<Mapping>
         return persistentClass;
     }
 
+    public RootClass getRootClass() {
+        return persistentClass.getRootClass();
+    }
+
     @Override
     public void setPersistentClass(PersistentClass persistentClass) {
         this.persistentClass = persistentClass;
+    }
+
+    public String getIdentityGeneratorName() {
+        if (getHibernateIdentity() instanceof HibernateSimpleIdentity _identity) {
+            Mapping result = getHibernateMappedForm();
+            boolean useSequence = result != null && result.isTablePerConcreteClass();
+            return _identity.determineGeneratorName(useSequence);
+        }
+        throw new MappingException("Simple Identity expected");
     }
 }

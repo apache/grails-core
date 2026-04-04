@@ -39,7 +39,7 @@ import org.grails.orm.hibernate.cfg.PersistentEntityNamingStrategy;
 import org.grails.orm.hibernate.cfg.domainbinding.collectionType.CollectionHolder;
 import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernatePersistentEntity;
 import org.grails.orm.hibernate.cfg.domainbinding.util.BackticksRemover;
-import org.grails.orm.hibernate.cfg.domainbinding.util.BasicValueIdCreator;
+import org.grails.orm.hibernate.cfg.domainbinding.util.BasicValueCreator;
 import org.grails.orm.hibernate.cfg.domainbinding.util.ColumnNameForPropertyAndPathFetcher;
 import org.grails.orm.hibernate.cfg.domainbinding.util.DefaultColumnNameFetcher;
 import org.grails.orm.hibernate.cfg.domainbinding.util.GrailsPropertyResolver;
@@ -182,7 +182,7 @@ public class GrailsDomainBinder implements AdditionalMappingContributor, TypeCon
         PropertyBinder propertyBinder = new PropertyBinder();
         SimpleIdBinder simpleIdBinder = new SimpleIdBinder(
                 metadataBuildingContext,
-                new BasicValueIdCreator(jdbcEnvironment, namingStrategy),
+                new BasicValueCreator(metadataBuildingContext, jdbcEnvironment, namingStrategy),
                 simpleValueBinder,
                 propertyBinder);
         IdentityBinder identityBinder = new IdentityBinder(simpleIdBinder, compositeIdBinder);

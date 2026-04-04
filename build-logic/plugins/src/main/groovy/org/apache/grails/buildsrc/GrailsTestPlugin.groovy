@@ -50,9 +50,10 @@ class GrailsTestPlugin implements Plugin<Project> {
                 slurper.setFeature("http://apache.org/xml/features/nonvalidating/load-external-dtd", false)
                 slurper.setFeature("http://xml.org/sax/features/namespaces", false)
 
-                project.subprojects.each { subproject ->
-                    def testResultsDir = subproject.layout.buildDirectory.dir("test-results").get().asFile
-                    if (testResultsDir.exists()) {
+                def processedDirs = [] as Set
+
+                def processTestResults = { File testResultsDir, String moduleName ->
+                    if (testResultsDir.exists() && processedDirs.add(testResultsDir.absolutePath)) {
                         testResultsDir.eachFileRecurse { file ->
                             if (file.name.endsWith('.xml') && file.name.startsWith('TEST-')) {
                                 try {
@@ -61,7 +62,7 @@ class GrailsTestPlugin implements Plugin<Project> {
                                         if (testcase.failure.size() > 0 || testcase.error.size() > 0) {
                                             def failure = testcase.failure.size() > 0 ? testcase.failure[0] : testcase.error[0]
                                             failures << [
-                                                module: subproject.name,
+                                                module: moduleName,
                                                 className: testcase.@classname.text(),
                                                 testName: testcase.@name.text(),
                                                 message: failure.@message.text() ?: failure.text().take(200),
@@ -74,6 +75,24 @@ class GrailsTestPlugin implements Plugin<Project> {
                                 }
                             }
                         }
+                    }
+                }
+
+                // 1. All subprojects
+                project.subprojects.each { subproject ->
+                    def testResultsDir = subproject.layout.buildDirectory.dir("test-results").get().asFile
+                    processTestResults(testResultsDir, subproject.name)
+                }
+
+                // 2. Any other directory in root that might have test results (like grails-docs or build-logic)
+                project.layout.projectDirectory.asFile.eachDir { dir ->
+                    if (!dir.name.startsWith('.') && dir.name != 'build' && dir.name != 'node_modules') {
+                        def testResultsDir = new File(dir, "build/test-results")
+                        processTestResults(testResultsDir, dir.name)
+                        
+                        // Also check for results in the directory itself (if it's a build output)
+                        def directTestResultsDir = new File(dir, "test-results")
+                        processTestResults(directTestResultsDir, dir.name)
                     }
                 }
 

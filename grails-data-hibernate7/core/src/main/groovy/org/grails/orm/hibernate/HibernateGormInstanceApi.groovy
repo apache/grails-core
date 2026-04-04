@@ -156,13 +156,7 @@ class HibernateGormInstanceApi<D> extends GormInstanceApi<D> {
         validateable.skipValidation(true)
 
         try {
-            String idPropertyName = domainClass.identity?.name ?: 'id'
-            Object idVal = InvokerHelper.getProperty(target, idPropertyName)
-            if (idVal == null) {
-                return performPersist(target, shouldFlush)
-            } else {
-                return performMerge(target, shouldFlush)
-            }
+            return performUpsert(target, shouldFlush)
         } finally {
             validateable.skipValidation(false)
         }
@@ -240,14 +234,33 @@ class HibernateGormInstanceApi<D> extends GormInstanceApi<D> {
         return instance
     }
 
+    protected D performUpsert(D target, boolean shouldFlush) {
+        PersistentEntity entity = persistentEntity
+        String idPropertyName = entity.identity?.name ?: 'id'
+        Object idVal = InvokerHelper.getProperty(target, idPropertyName)
+        if (idVal == null) {
+            return performPersist(target, shouldFlush)
+        } else {
+            return performMerge(target, shouldFlush)
+        }
+    }
+
     protected D performMerge(final D target, final boolean flush) {
         hibernateTemplate.execute { Session session ->
-            Object merged = session.merge(target)
+            D merged = (D) session.merge(target)
             session.lock(merged, LockModeType.NONE)
+            // Sync id back immediately so target has an identity
+            String idProp = persistentEntity.identity?.name ?: 'id'
+            InvokerHelper.setProperty(target, idProp, InvokerHelper.getProperty(merged, idProp))
             if (flush) {
                 flushSession session
             }
-            return (D) merged
+            // Sync version after flush so the incremented value is captured
+            PersistentProperty versionProperty = persistentEntity.version
+            if (versionProperty != null) {
+                InvokerHelper.setProperty(target, versionProperty.name, InvokerHelper.getProperty(merged, versionProperty.name))
+            }
+            return target
         }
     }
 

@@ -20,6 +20,7 @@ package grails.gorm.hibernate.mapping
 
 import jakarta.persistence.AccessType
 import org.grails.orm.hibernate.cfg.CacheConfig
+import org.grails.orm.hibernate.cfg.HibernateCompositeIdentity
 import org.grails.orm.hibernate.cfg.Mapping
 import org.grails.orm.hibernate.cfg.PropertyConfig
 import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernateMappingBuilder
@@ -255,7 +256,7 @@ class HibernateMappingBuilderSpec extends Specification {
         Mapping m = evaluate { id composite: ['one', 'two'], compositeClass: HibernateMappingBuilder }
 
         then:
-        m.identity instanceof org.grails.orm.hibernate.cfg.CompositeIdentity
+        m.identity instanceof HibernateCompositeIdentity
         m.identity.propertyNames == ['one', 'two']
         m.identity.compositeClass == HibernateMappingBuilder
     }

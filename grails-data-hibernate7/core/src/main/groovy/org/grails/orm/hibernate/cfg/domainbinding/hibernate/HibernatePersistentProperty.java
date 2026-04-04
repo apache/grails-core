@@ -233,4 +233,14 @@ public interface HibernatePersistentProperty extends PersistentProperty<Property
     default PersistentClass getPersistentClass() {
         return getHibernateOwner().getPersistentClass();
     }
+
+    /**
+     * Returns the generator name for this property. For identity properties the generator
+     * is resolved from the owning entity; for regular properties it comes from the mapped form.
+     *
+     * @return The generator name, or {@code null} if none is configured
+     */
+    default @Nullable String getGeneratorName() {
+        return Optional.ofNullable(getHibernateMappedForm()).map(PropertyConfig::getGenerator).orElse(null);
+    }
 }

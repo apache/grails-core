@@ -97,7 +97,7 @@ public class RootPersistentClassCommonValuesBinder {
             LOG.debug("[GrailsDomainBinder] Mapping Grails domain class: {} -> {}", hibernatePersistentEntity.getName(), root.getTable().getName());
         }
 
-        identityBinder.bindIdentity(hibernatePersistentEntity, root);
+        identityBinder.bindIdentity(hibernatePersistentEntity);
         versionBinder.bindVersion(hibernatePersistentEntity.getVersion(), root);
         root.createPrimaryKey();
         classPropertiesBinder.bindClassProperties(hibernatePersistentEntity);

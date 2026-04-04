@@ -42,7 +42,7 @@ import org.springframework.validation.DataBinder
 
 import org.grails.datastore.mapping.config.Property
 import org.grails.orm.hibernate.cfg.domainbinding.generator.GrailsSequenceGeneratorEnum
-import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernateIdentity
+import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernatePropertyIdentity
 
 /**
  * Defines the identity generation strategy. In the case of a 'composite' identity the properties
@@ -53,7 +53,7 @@ import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernateIdentity
  */
 @CompileStatic
 @Builder(builderStrategy = SimpleStrategy, prefix = '')
-class Identity extends Property implements HibernateIdentity {
+class HibernateSimpleIdentity extends Property implements HibernatePropertyIdentity {
 
     /**
      * The generator to use
@@ -92,7 +92,7 @@ class Identity extends Property implements HibernateIdentity {
         return useSequence ? GrailsSequenceGeneratorEnum.SEQUENCE_IDENTITY.toString() : GrailsSequenceGeneratorEnum.NATIVE.toString()
     }
 
-    static String determineGeneratorName(Identity mappedId, boolean useSequence) {
+    static String determineGeneratorName(HibernateSimpleIdentity mappedId, boolean useSequence) {
         if (mappedId != null) {
             return mappedId.determineGeneratorName(useSequence)
         }
@@ -104,7 +104,7 @@ class Identity extends Property implements HibernateIdentity {
      * @param naturalIdDef The callable
      * @return This id
      */
-    Identity naturalId(@DelegatesTo(NaturalId) Closure naturalIdDef) {
+    HibernateSimpleIdentity naturalId(@DelegatesTo(NaturalId) Closure naturalIdDef) {
         this.natural = new NaturalId()
         naturalIdDef.setDelegate(this.natural)
         naturalIdDef.setResolveStrategy(Closure.DELEGATE_ONLY)
@@ -120,8 +120,8 @@ class Identity extends Property implements HibernateIdentity {
      * @param config The configuration
      * @return The new instance
      */
-    static Identity configureNew(@DelegatesTo(Identity) Closure config) {
-        Identity property = new Identity()
+    static HibernateSimpleIdentity configureNew(@DelegatesTo(HibernateSimpleIdentity) Closure config) {
+        HibernateSimpleIdentity property = new HibernateSimpleIdentity()
         return configureExisting(property, config)
     }
 
@@ -131,7 +131,7 @@ class Identity extends Property implements HibernateIdentity {
      * @param config The configuration
      * @return The new instance
      */
-    static Identity configureExisting(Identity property, Map config) {
+    static HibernateSimpleIdentity configureExisting(HibernateSimpleIdentity property, Map config) {
         DataBinder dataBinder = new DataBinder(property)
         dataBinder.bind(new MutablePropertyValues(config))
         return property
@@ -142,7 +142,7 @@ class Identity extends Property implements HibernateIdentity {
      * @param config The configuration
      * @return The new instance
      */
-    static Identity configureExisting(Identity property, @DelegatesTo(Identity) Closure config) {
+    static HibernateSimpleIdentity configureExisting(HibernateSimpleIdentity property, @DelegatesTo(HibernateSimpleIdentity) Closure config) {
         config.setDelegate(property)
         config.setResolveStrategy(Closure.DELEGATE_ONLY)
         config.call()

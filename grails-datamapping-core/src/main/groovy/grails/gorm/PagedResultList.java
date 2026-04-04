@@ -106,6 +106,7 @@ public class PagedResultList<E> implements PagedList<E> {
                 Query newQuery = (Query) query.clone();
                 newQuery.offset(0);
                 newQuery.max(-1);
+                newQuery.clearOrders();
                 newQuery.projections().count();
                 Number result = (Number) newQuery.singleResult();
                 totalCount = result == null ? 0 : result.intValue();

@@ -24,9 +24,10 @@ import org.hibernate.MappingException;
 import org.hibernate.boot.spi.MetadataBuildingContext;
 import org.hibernate.mapping.Component;
 import org.hibernate.mapping.RootClass;
+import org.jspecify.annotations.NonNull;
 
-import org.grails.orm.hibernate.cfg.CompositeIdentity;
 import org.grails.orm.hibernate.cfg.GrailsHibernateUtil;
+import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernateCompositeIdentityProperty;
 import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernatePersistentEntity;
 import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernatePersistentProperty;
 
@@ -46,36 +47,33 @@ public class CompositeIdBinder {
         this.grailsPropertyBinder = grailsPropertyBinder;
     }
 
-    public void bindCompositeId(
-            @Nonnull HibernatePersistentEntity hibernatePersistentEntity,
-            RootClass root,
-            CompositeIdentity compositeIdentity) {
-        hibernatePersistentEntity.setPersistentClass(root);
-        Component id = new Component(metadataBuildingContext, root);
+    public void bindCompositeId(@Nonnull HibernatePersistentEntity domainClass) {
+        if (domainClass.getIdentityProperty() instanceof HibernateCompositeIdentityProperty compositeIdentityProperty) {
+            Component id = getComponent(domainClass);
+
+            for (HibernatePersistentProperty property : compositeIdentityProperty.getParts()) {
+                var value = grailsPropertyBinder.bindProperty(property, null, "");
+                componentUpdater.updateComponent(id, null, property, value);
+            }
+            return;
+        }
+        throw new MappingException("Invalid composite id binding for entity [" + domainClass.getName() + "]");
+    }
+
+    private @NonNull Component getComponent(@NonNull HibernatePersistentEntity domainClass) {
+        RootClass rootClass = domainClass.getRootClass();
+        Component id = new Component(metadataBuildingContext, rootClass);
         id.setNullValue("undefined");
-        root.setIdentifier(id);
-        root.setIdentifierMapper(id);
-        root.setEmbeddedIdentifier(true);
-        id.setComponentClassName(hibernatePersistentEntity.getName());
+        rootClass.setIdentifier(id);
+        rootClass.setIdentifierMapper(id);
+        rootClass.setEmbeddedIdentifier(true);
+        id.setComponentClassName(domainClass.getName());
         id.setKey(true);
         id.setEmbedded(true);
 
-        String path = GrailsHibernateUtil.qualify(root.getEntityName(), "id");
+        String path = GrailsHibernateUtil.qualify(rootClass.getEntityName(), "id");
 
         id.setRoleName(path);
-
-        HibernatePersistentProperty[] composite = compositeIdentity != null ?
-                compositeIdentity.getHibernateProperties(hibernatePersistentEntity) :
-                hibernatePersistentEntity.getCompositeIdentity();
-
-        if (composite == null || composite.length == 0) {
-            throw new MappingException(
-                    "No composite identifier properties found for class [" + hibernatePersistentEntity.getName() + "]");
-        }
-        HibernatePersistentProperty identifierProp = hibernatePersistentEntity.getIdentity();
-        for (HibernatePersistentProperty property : composite) {
-            var value = grailsPropertyBinder.bindProperty(property, identifierProp, "");
-            componentUpdater.updateComponent(id, identifierProp, property, value);
-        }
+        return id;
     }
 }
