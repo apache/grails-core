@@ -40,7 +40,9 @@ import java.util.regex.Pattern
  * @author Tom Bujok
  * @since 2.3
  */
-@IgnoreIf({ !GrailsConsole.instance.isAnsiEnabled() })
+@IgnoreIf({
+    !GrailsConsole.instance.isAnsiEnabled()
+})
 class GrailsConsoleSpec extends Specification {
 
     static final String RESET = Pattern.quote(Ansi.ansi().reset().toString())

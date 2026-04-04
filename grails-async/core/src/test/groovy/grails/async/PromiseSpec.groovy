@@ -19,6 +19,7 @@
 package grails.async
 
 import grails.async.decorator.PromiseDecorator
+import spock.lang.PendingFeatureIf
 import spock.lang.Specification
 import spock.util.concurrent.PollingConditions
 
@@ -42,7 +43,7 @@ class PromiseSpec extends Specification {
             result == '*10*'
 
     }
-    
+
     void 'Test promise timeout handling'() {
         
         when: 'a promise that takes a while is created'

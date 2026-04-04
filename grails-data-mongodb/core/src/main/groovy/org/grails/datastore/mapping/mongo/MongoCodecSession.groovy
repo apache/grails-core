@@ -122,14 +122,14 @@ class MongoCodecSession extends AbstractMongoSession {
             for (PersistentEntity persistentEntity in pendingInserts.keySet()) {
                 final Collection<PendingInsert> inserts = pendingInserts[persistentEntity]
                 if (inserts) {
-                    List<WriteModel<?>> entityWrites = getWriteModelsForEntity(persistentEntity, writeModels)
+                    def entityWrites = getWriteModelsForEntity(persistentEntity, writeModels)
                     for (PendingInsert insert in inserts) {
                         insert.run()
 
                         if (insert.vetoed) continue
 
                         def object = insert.nativeEntry
-                        entityWrites << new InsertOneModel<?>(object)
+                        entityWrites << new InsertOneModel(object)
 
                         final List<PendingOperation> cascadeOperations = insert.cascadeOperations
                         addPostFlushOperations(cascadeOperations)
@@ -143,14 +143,14 @@ class MongoCodecSession extends AbstractMongoSession {
 
                 final Collection<PendingUpdate> updates = pendingUpdates[persistentEntity]
                 if (updates) {
-                    List<WriteModel<?>> entityWrites = getWriteModelsForEntity(persistentEntity, writeModels)
+                    def entityWrites = getWriteModelsForEntity(persistentEntity, writeModels)
                     for (PendingUpdate update in updates) {
                         update.run()
 
                         if (update.vetoed) continue
 
-                        DirtyCheckable changedObject = (DirtyCheckable) update.getNativeEntry()
-                        PersistentEntityCodec codec = (PersistentEntityCodec) datastore.codecRegistry.get(changedObject.getClass())
+                        def changedObject = (DirtyCheckable) update.nativeEntry
+                        def codec = (PersistentEntityCodec) datastore.codecRegistry.get((Class) changedObject.getClass())
 
                         final Object nativeKey = update.nativeKey
                         final Document id = new Document(MongoEntityPersister.MONGO_ID_FIELD, nativeKey)
@@ -173,10 +173,10 @@ class MongoCodecSession extends AbstractMongoSession {
                                     currentVersion = entityAccess.getProperty(persistentEntity.version.name)
                                 }
                                 id[GormProperties.VERSION] = currentVersion
-                                numberOfOptimisticUpdates[name]++
+                                numberOfOptimisticUpdates[name] = numberOfOptimisticUpdates[name] + 1
                             }
                             else {
-                                numberOfPessimisticUpdates[name]++
+                                numberOfPessimisticUpdates[name] = numberOfOptimisticUpdates[name] + 1
                             }
                             final options = new UpdateOptions()
 
@@ -193,7 +193,7 @@ class MongoCodecSession extends AbstractMongoSession {
             for (PersistentEntity persistentEntity in pendingDeletes.keySet()) {
                 final Collection<PendingDelete> deletes = pendingDeletes[persistentEntity]
                 if (deletes) {
-                    List<WriteModel<?>> entityWrites = getWriteModelsForEntity(persistentEntity, writeModels)
+                    def entityWrites = getWriteModelsForEntity(persistentEntity, writeModels)
                     List<Object> nativeKeys = []
                     for (PendingDelete delete in deletes) {
                         delete.run()
@@ -232,7 +232,7 @@ class MongoCodecSession extends AbstractMongoSession {
                 else {
                     wc = collection.writeConcern
                 }
-                final List<WriteModel<?>> writes = writeModels[persistentEntity]
+                def writes = writeModels[persistentEntity]
                 if (writes) {
 
                     final BulkWriteResult bulkWriteResult = collection
@@ -276,11 +276,15 @@ class MongoCodecSession extends AbstractMongoSession {
         return (DocumentMappingContext) getMappingContext()
     }
 
-    protected List<WriteModel<?>> getWriteModelsForEntity(PersistentEntity persistentEntity, Map<PersistentEntity, List<WriteModel<?>>> writeModels) {
-        PersistentEntity key = persistentEntity.root ? persistentEntity : persistentEntity.rootEntity
-        List<WriteModel<?>> entityWrites = writeModels[key]
+    protected List<WriteModel<Document>> getWriteModelsForEntity(
+            PersistentEntity persistentEntity,
+            Map<PersistentEntity,
+            List<WriteModel<Document>>> writeModels
+    ) {
+        def key = persistentEntity.root ? persistentEntity : persistentEntity.rootEntity
+        def entityWrites = writeModels[key]
         if (entityWrites == null) {
-            entityWrites = new ArrayList<WriteModel<?>>()
+            entityWrites = new ArrayList<WriteModel<Document>>()
             writeModels[key] = entityWrites
         }
         return entityWrites

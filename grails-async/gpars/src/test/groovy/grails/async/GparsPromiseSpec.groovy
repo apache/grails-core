@@ -47,7 +47,7 @@ class GparsPromiseSpec extends Specification {
         then: 'the result is decorated'
             result == '*10*'
     }
-    
+
     void 'Test promise timeout handling'() {
         
         when: 'a promise that takes longer than the timeout'

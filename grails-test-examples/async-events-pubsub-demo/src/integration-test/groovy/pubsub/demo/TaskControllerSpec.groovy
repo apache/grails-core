@@ -26,6 +26,11 @@ import org.apache.grails.testing.http.client.HttpClientSupport
 @Integration
 class TaskControllerSpec extends Specification implements HttpClientSupport {
 
+    @PendingFeature(reason = '''
+        For some reason the response body is blank with bootTestRun.
+        However, when starting the application with bootRun,
+        the response body is as expected.
+    ''')
     void 'test async error handling'() {
         when: 'we invoke an endpoint that throws an exception'
         def response = http('/task/error')

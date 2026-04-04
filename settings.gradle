@@ -26,6 +26,40 @@ pluginManagement {
     includeBuild('./build-logic') {
         name = 'build-logic-root'
     }
+    repositories {
+        // because our publish plugin uses other plugins, those dependencies have to be resolvable
+        // mavenLocal()
+        mavenCentral()
+        gradlePluginPortal()
+        maven {
+            url = 'https://repository.apache.org/content/groups/snapshots'
+            content {
+                includeVersionByRegex('org[.]apache[.]grails[.]gradle.*', '.*', '.*-SNAPSHOT')
+            }
+            mavenContent {
+                snapshotsOnly()
+            }
+        }
+        maven {
+            url = 'https://central.sonatype.com/repository/maven-snapshots'
+            content {
+                includeVersionByRegex('cloud[.]wondrify.*', '.*', '.*-SNAPSHOT')
+                includeGroup('org.spockframework')
+            }
+            mavenContent {
+                snapshotsOnly()
+            }
+        }
+        maven {
+            url = 'https://repository.apache.org/content/groups/staging'
+            content {
+                includeModuleByRegex('org[.]apache[.]grails[.]gradle', 'grails-publish')
+            }
+            mavenContent {
+                releasesOnly()
+            }
+        }
+    }
 }
 
 plugins {
@@ -455,5 +489,48 @@ includeBuild('./build-logic') {
 for (String pattern in DirectoryScanner.defaultExcludes) {
     if (pattern.contains('gitignore') || pattern.contains('gitattributes')) {
         DirectoryScanner.removeDefaultExclude(pattern)
+    }
+}
+
+dependencyResolutionManagement {
+    repositoriesMode = RepositoriesMode.FAIL_ON_PROJECT_REPOS
+    repositories {
+        // mavenLocal() // Keep, this will be uncommented and used by CI (groovy-joint-workflow)
+        maven { url = 'https://repo.grails.org/grails/restricted' }
+        maven {
+            url = 'https://repository.apache.org/content/groups/snapshots'
+            content {
+                includeVersionByRegex('org[.]apache[.]grails.*', '.*', '.*-SNAPSHOT')
+                includeVersionByRegex('org[.]apache[.]groovy.*', '.*', '.*-SNAPSHOT')
+            }
+        }
+        maven {
+            url = 'https://central.sonatype.com/repository/maven-snapshots'
+            content {
+                includeVersionByRegex('cloud[.]wondrify.*', '.*', '.*-SNAPSHOT')
+            }
+            mavenContent {
+                snapshotsOnly()
+            }
+        }
+        maven {
+            url = 'https://central.sonatype.com/repository/maven-snapshots/'
+            content {
+                includeGroup('org.spockframework')
+            }
+            mavenContent {
+                snapshotsOnly()
+            }
+        }
+        maven {
+            url = 'https://repository.apache.org/content/groups/staging'
+            content {
+                includeModuleByRegex('org[.]apache[.]grails[.]gradle', 'grails-publish')
+                includeModuleByRegex('org[.]apache[.]groovy[.]geb', 'geb-.*')
+            }
+            mavenContent {
+                releasesOnly()
+            }
+        }
     }
 }

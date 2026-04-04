@@ -118,7 +118,7 @@ abstract class DefaultViewRenderer<T> extends DefaultHtmlRenderer<T> {
         }
 
         if (view != null) {
-            Map<String, ?> model
+            Map<String, Object> model
             if (object instanceof Map) {
                 def map = (Map) object
                 model = map

@@ -388,7 +388,6 @@ class CommandLineParserSpec extends Specification {
         cl.optionValue('include-sources') == 'file with spaces.xml'
     }
 
-
     void "Test that parseString with unbalanced double quotes throws ParseException"() {
         when:
             def parser = new CommandLineParser()

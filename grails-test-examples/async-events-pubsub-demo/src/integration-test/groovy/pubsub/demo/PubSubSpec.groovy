@@ -103,7 +103,6 @@ class PubSubSpec extends Specification {
 
     }
 
-
     @Rollback
     void 'Test synchronous event listener'() {
 
