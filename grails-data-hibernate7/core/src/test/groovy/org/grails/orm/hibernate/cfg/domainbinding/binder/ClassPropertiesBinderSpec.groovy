@@ -65,7 +65,7 @@ class ClassPropertiesBinderSpec extends HibernateGormDatastoreSpec {
         domainClass.getMappedForm() >> mapping
 
         when:
-        binder.bindClassProperties(domainClass)
+        binder.bindClassProperties(domainClass as org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernatePersistentEntity)
 
         then:
         1 * grailsPropertyBinder.bindProperty(prop1, null, GrailsDomainBinder.EMPTY_PATH) >> value1

@@ -20,6 +20,7 @@ package org.grails.orm.hibernate.cfg.domainbinding.hibernate;
 
 import java.beans.PropertyDescriptor;
 
+import org.hibernate.MappingException;
 import org.hibernate.mapping.Collection;
 
 import org.grails.datastore.mapping.model.MappingContext;
@@ -60,5 +61,13 @@ public class HibernateOneToManyProperty extends OneToManyWithMapping<PropertyCon
     @Override
     public boolean isLazy() {
         return getHibernateOwner().isLazy(this);
+    }
+
+    @Override
+    public HibernatePersistentProperty validateProperty() {
+        if (hasSort() && !isBidirectional()) {
+            throw new MappingException("Default sort for associations [" + getHibernateOwner().getName() + "->" + getName() + "] are not supported with unidirectional one to many relationships.");
+        }
+        return this;
     }
 }

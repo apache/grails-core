@@ -85,7 +85,7 @@ class RootPersistentClassCommonValuesBinderSpec extends HibernateGormDatastoreSp
 
     void "test bindRootPersistentClassCommonValues for abstract entity"() {
         given:
-        def entity = createPersistentEntity(AbstractTestEntity)
+        def entity = createPersistentEntity(AbstractTestEntity) as HibernatePersistentEntity
         def mappings = getCollector()
 
         when:

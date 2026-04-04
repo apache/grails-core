@@ -19,18 +19,13 @@
 package org.grails.orm.hibernate.cfg.domainbinding.secondpass;
 
 import java.util.Map;
-import java.util.Optional;
 
 import jakarta.annotation.Nonnull;
 
-import org.hibernate.MappingException;
 import org.hibernate.mapping.Collection;
-import org.hibernate.mapping.OneToMany;
 import org.hibernate.mapping.PersistentClass;
 
-import org.grails.datastore.mapping.model.types.Basic;
 import org.grails.orm.hibernate.cfg.domainbinding.binder.CollectionForPropertyConfigBinder;
-import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernateBasicProperty;
 import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernateCollectionProperty;
 import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernateManyToManyProperty;
 import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernateOneToManyProperty;
@@ -71,35 +66,18 @@ public class CollectionSecondPassBinder {
     }
 
     public void bindCollectionSecondPass(@Nonnull HibernateToManyProperty property, Map<?, ?> persistentClasses) {
-        Collection collection = property.getCollection();
+
         PersistentClass ownerClass = property.getHibernateOwner().getPersistentClass();
 
         if (property instanceof HibernateCollectionProperty collectionProperty) {
-            PersistentClass associatedClass = collectionProperty.getAssociatedClass();
-            collectionOrderByBinder.bind(property, associatedClass);
-            bindOneToManyAssociation(property, associatedClass);
+            collectionOrderByBinder.bind(collectionProperty);
         }
-
         collectionMultiTenantFilterBinder.bind(property);
-        collection.setSorted(property.isSorted());
         collectionKeyColumnUpdater.bind(property, ownerClass);
-
+        Collection collection = property.getCollection();
+        collection.setSorted(property.isSorted());
         collection.setCacheConcurrencyStrategy(property.getCacheUsage());
         bindCollectionElement(property);
-    }
-
-
-    private void bindOneToManyAssociation(HibernateToManyProperty property, PersistentClass associatedClass) {
-        Collection collection = property.getCollection();
-        if (!collection.isOneToMany()) {
-            return;
-        }
-        OneToMany oneToMany = (OneToMany) collection.getElement();
-        oneToMany.setAssociatedClass(associatedClass);
-        if (property.shouldBindWithForeignKey()) {
-            collection.setCollectionTable(associatedClass.getTable());
-        }
-        collectionForPropertyConfigBinder.bindCollectionForPropertyConfig(property);
     }
 
     private void bindCollectionElement(HibernateToManyProperty property) {

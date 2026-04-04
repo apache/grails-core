@@ -39,7 +39,7 @@ class ClassBinderSpec extends HibernateGormDatastoreSpec {
         def root = new RootClass(grailsDomainBinder.metadataBuildingContext);
         def binder = new ClassBinder(collector)
 
-        binder.bindClass(persistentEntity,root)
+        binder.bindClass(persistentEntity as org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernatePersistentEntity, root)
         then:
         root.getEntityName() == persistentName
         root.getJpaEntityName() == simpleName
@@ -65,7 +65,7 @@ class ClassBinderSpec extends HibernateGormDatastoreSpec {
         def root = new RootClass(grailsDomainBinder.metadataBuildingContext);
         def binder = new ClassBinder(collector)
 
-        binder.bindClass(persistentEntity,root)
+        binder.bindClass(persistentEntity as org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernatePersistentEntity, root)
         then:
         root.getEntityName() == persistentName
         root.getJpaEntityName() == simpleName
@@ -91,7 +91,7 @@ class ClassBinderSpec extends HibernateGormDatastoreSpec {
         def root = new RootClass(grailsDomainBinder.metadataBuildingContext);
         def binder = new ClassBinder(collector)
 
-        binder.bindClass(persistentEntity,root)
+        binder.bindClass(persistentEntity as org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernatePersistentEntity, root)
         then:
         root.getEntityName() == persistentName
         root.getJpaEntityName() == persistentName
@@ -117,7 +117,7 @@ class ClassBinderSpec extends HibernateGormDatastoreSpec {
         def root = new RootClass(grailsDomainBinder.metadataBuildingContext);
         def binder = new ClassBinder(collector)
 
-        binder.bindClass(persistentEntity,root)
+        binder.bindClass(persistentEntity as org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernatePersistentEntity, root)
         then:
         root.getEntityName() == persistentName
         root.getJpaEntityName() == simpleName

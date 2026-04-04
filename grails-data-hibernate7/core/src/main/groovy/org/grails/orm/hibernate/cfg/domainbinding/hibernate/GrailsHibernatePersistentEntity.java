@@ -175,9 +175,6 @@ public interface GrailsHibernatePersistentEntity extends PersistentEntity {
 
     boolean isAbstract();
 
-    /**
-     * @return The properties that should be bound to the Hibernate meta model
-     */
     default List<HibernatePersistentProperty> getPersistentPropertiesToBind() {
         List<HibernatePersistentProperty> properties = getHibernatePersistentProperties();
         if (properties == null) {
@@ -187,7 +184,6 @@ public interface GrailsHibernatePersistentEntity extends PersistentEntity {
                 .filter(Objects::nonNull)
                 .filter(p -> p.getMappedForm() != null)
                 .filter(p -> !p.isIdentityProperty())
-                .filter(p -> !p.isCompositeIdProperty())
                 .filter(p -> !GormProperties.VERSION.equals(p.getName()))
                 .filter(p -> !p.isInherited())
                 .toList();
@@ -308,22 +304,11 @@ public interface GrailsHibernatePersistentEntity extends PersistentEntity {
     }
 
     default List<HibernatePersistentProperty> getHibernatePersistentProperties() {
-        var properties = new java.util.ArrayList<>(getPersistentProperties().stream()
+        return getPersistentProperties().stream()
                 .filter(HibernatePersistentProperty.class::isInstance)
                 .map(HibernatePersistentProperty.class::cast)
-                .toList());
-        properties.sort((p1, p2) -> {
-            if (p1 instanceof org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernateEmbeddedProperty &&
-                    !(p2 instanceof
-                            org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernateEmbeddedProperty)) {
-                return -1;
-            } else if (!(p1 instanceof org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernateEmbeddedProperty) &&
-                    p2 instanceof org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernateEmbeddedProperty) {
-                return 1;
-            }
-            return p1.getName().compareTo(p2.getName());
-        });
-        return properties;
+                .map(HibernatePersistentProperty::validateProperty)
+                .toList();
     }
 
     default String getComment() {

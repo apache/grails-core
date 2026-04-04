@@ -20,7 +20,12 @@ package org.grails.orm.hibernate.cfg.domainbinding.hibernate
 
 import grails.gorm.annotation.Entity
 import grails.gorm.specs.HibernateGormDatastoreSpec
-import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernateOneToManyProperty
+import org.hibernate.MappingException
+import org.grails.datastore.mapping.model.PersistentEntity
+import org.grails.datastore.mapping.model.MappingContext
+import org.grails.datastore.mapping.model.PropertyMapping
+import org.grails.orm.hibernate.cfg.PropertyConfig
+import java.beans.PropertyDescriptor
 
 class HibernateOneToManyPropertySpec extends HibernateGormDatastoreSpec {
 
@@ -38,6 +43,33 @@ class HibernateOneToManyPropertySpec extends HibernateGormDatastoreSpec {
 
         then:
         entityName == HOTMPBook.name
+    }
+
+    void "validateProperty throws MappingException for unidirectional one-to-many with sort"() {
+        given:
+        def entity = Mock(HibernatePersistentEntity) {
+            getName() >> "TestEntity"
+        }
+        def mapping = Mock(PropertyMapping) {
+            getMappedForm() >> new PropertyConfig(sort: "name")
+        }
+        def descriptor = Mock(PropertyDescriptor) {
+            getName() >> "items"
+        }
+        
+        def property = new HibernateOneToManyProperty(entity, Mock(MappingContext), descriptor) {
+            @Override
+            boolean isBidirectional() { false }
+            @Override
+            PropertyMapping getMapping() { mapping }
+        }
+
+        when:
+        property.validateProperty()
+
+        then:
+        def ex = thrown(MappingException)
+        ex.message.contains("are not supported with unidirectional one to many relationships")
     }
 }
 

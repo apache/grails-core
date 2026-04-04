@@ -57,7 +57,8 @@ public class CollectionKeyBinder {
         if (property.isBidirectional()) {
             var inverseSide = property.getHibernateInverseSide();
             if (inverseSide instanceof ToOne && property.shouldBindWithForeignKey()) {
-                bidirectionalOneToManyLinker.link(collection, ownerClass, key, inverseSide);
+                PersistentClass associatedClass = inverseSide.getHibernateOwner().getPersistentClass();
+                bidirectionalOneToManyLinker.link(collection, associatedClass, key, inverseSide);
             } else if (inverseSide instanceof HibernateManyToManyProperty ||
                     Map.class.isAssignableFrom(property.getType())) {
                 dependentKeyValueBinder.bind(property, key);

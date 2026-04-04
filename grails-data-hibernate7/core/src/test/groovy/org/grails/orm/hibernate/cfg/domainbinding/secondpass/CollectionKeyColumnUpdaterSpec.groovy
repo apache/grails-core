@@ -16,18 +16,15 @@
  *  specific language governing permissions and limitations
  *  under the License.
  */
-
 package org.grails.orm.hibernate.cfg.domainbinding.secondpass
 
 import grails.gorm.annotation.Entity
 import grails.gorm.specs.HibernateGormDatastoreSpec
-import org.grails.orm.hibernate.cfg.domainbinding.binder.CompositeIdentifierToManyToOneBinder
-import org.grails.orm.hibernate.cfg.domainbinding.binder.SimpleValueBinder
-import org.grails.orm.hibernate.cfg.domainbinding.binder.SimpleValueColumnBinder
+import org.grails.orm.hibernate.cfg.domainbinding.hibernate.GrailsHibernatePersistentEntity
 import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernateToManyProperty
-import org.grails.orm.hibernate.cfg.domainbinding.util.GrailsPropertyResolver
 import org.hibernate.mapping.Column
 import org.hibernate.mapping.DependantValue
+import org.hibernate.mapping.RootClass
 import spock.lang.Subject
 
 class CollectionKeyColumnUpdaterSpec extends HibernateGormDatastoreSpec {
@@ -35,101 +32,100 @@ class CollectionKeyColumnUpdaterSpec extends HibernateGormDatastoreSpec {
     @Subject
     CollectionKeyColumnUpdater updater
 
+    CollectionKeyBinder collectionKeyBinder = Mock(CollectionKeyBinder)
+
+    void setupSpec() {
+        manager.addAllDomainClasses([
+            CKCUOwnerOne,
+            CKCUItemOne,
+            CKCUOwnerMany,
+            CKCUItemMany1,
+            CKCUItemMany2
+        ])
+    }
+
     void setup() {
-        def gdb = getGrailsDomainBinder()
-        def mbc = gdb.getMetadataBuildingContext()
-        def ns = gdb.getNamingStrategy()
-        def je = gdb.getJdbcEnvironment()
-        def svb = new SimpleValueBinder(mbc, ns, je)
-        def citmto = new CompositeIdentifierToManyToOneBinder(mbc, ns, je)
-        def botml = new BidirectionalOneToManyLinker(new GrailsPropertyResolver())
-        def dkvb = new DependentKeyValueBinder(svb, citmto)
-        def svcb = new SimpleValueColumnBinder()
-        def pkvc = new PrimaryKeyValueCreator(mbc)
-        updater = new CollectionKeyColumnUpdater(new CollectionKeyBinder(botml, dkvb, svcb, pkvc))
+        updater = new CollectionKeyColumnUpdater(collectionKeyBinder)
     }
 
-    void "test forceNullableAndCheckUpdateable with single unidirectional association"() {
+    private HibernateToManyProperty propertyFor(Class ownerClass, String name = "items") {
+        (getPersistentEntity(ownerClass) as GrailsHibernatePersistentEntity).getPropertyByName(name) as HibernateToManyProperty
+    }
+
+    def "bind delegates to collectionKeyBinder and forces nullability"() {
         given:
-        def owner = createPersistentEntity(CollectionKeyColumnUpdaterSpecParent)
-        def property = (HibernateToManyProperty) owner.getPropertyByName("children")
-        
-        Column column = new Column("test")
+        def property = propertyFor(CKCUOwnerOne)
+        def ownerClass = new RootClass(getGrailsDomainBinder().getMetadataBuildingContext())
+        def column = new Column("test_col")
         column.setNullable(false)
-        
-        DependantValue key = Mock(DependantValue)
-        key.getColumns() >> [column]
+        def key = Mock(DependantValue) {
+            getColumns() >> [column]
+        }
 
         when:
-        updater.forceNullableAndCheckUpdatable(key, property)
+        updater.bind(property, ownerClass)
 
         then:
+        1 * collectionKeyBinder.bind(property, ownerClass) >> key
         column.isNullable()
-        1 * key.setUpdateable(true)
     }
 
-    void "test forceNullableAndCheckUpdateable with multiple unidirectional associations"() {
+    def "forceNullableAndCheckUpdatable sets updateable true when only one unidirectional"() {
         given:
-        def owner = createPersistentEntity(CollectionKeyColumnUpdaterSpecMultiParent)
-        def property = (HibernateToManyProperty) owner.getPropertyByName("children1")
-        
-        Column column = new Column("test")
-        
-        DependantValue key = Mock(DependantValue)
-        key.getColumns() >> [column]
+        def property = propertyFor(CKCUOwnerOne)
+        def column = new Column("test_col")
+        def key = new DependantValue(getGrailsDomainBinder().getMetadataBuildingContext(), null, null)
+        key.addColumn(column)
+        key.setUpdateable(false)
 
         when:
         updater.forceNullableAndCheckUpdatable(key, property)
 
         then:
-        1 * key.setUpdateable(false)
-    }
-
-    void "test configure with bidirectional association"() {
-        given:
-        def owner = createPersistentEntity(CollectionKeyColumnUpdaterSpecBiParent)
-        def property = (HibernateToManyProperty) owner.getPropertyByName("children")
-
-        Column column = new Column("keyCol")
-
-        DependantValue key = Mock(DependantValue)
-        key.getColumns() >> [column]
-
-        when:
-        updater.forceNullableAndCheckUpdatable(key, property)
-
-        then:
+        key.isUpdateable()
         column.isNullable()
-        1 * key.setUpdateable(true)
+    }
+
+    def "forceNullableAndCheckUpdatable sets updateable false when multiple unidirectional"() {
+        given:
+        def property = propertyFor(CKCUOwnerMany, "items1")
+        def column = new Column("test_col")
+        def key = new DependantValue(getGrailsDomainBinder().getMetadataBuildingContext(), null, null)
+        key.addColumn(column)
+        key.setUpdateable(true)
+
+        when:
+        updater.forceNullableAndCheckUpdatable(key, property)
+
+        then:
+        !key.isUpdateable()
+        column.isNullable()
     }
 }
 
 @Entity
-class CollectionKeyColumnUpdaterSpecParent {
+class CKCUOwnerOne {
     Long id
-    static hasMany = [children: CollectionKeyColumnUpdaterSpecChild]
+    static hasMany = [items: CKCUItemOne]
 }
 
 @Entity
-class CollectionKeyColumnUpdaterSpecChild {
+class CKCUItemOne {
     Long id
 }
 
 @Entity
-class CollectionKeyColumnUpdaterSpecMultiParent {
+class CKCUOwnerMany {
     Long id
-    static hasMany = [children1: CollectionKeyColumnUpdaterSpecChild, children2: CollectionKeyColumnUpdaterSpecChild]
+    static hasMany = [items1: CKCUItemMany1, items2: CKCUItemMany2]
 }
 
 @Entity
-class CollectionKeyColumnUpdaterSpecBiParent {
+class CKCUItemMany1 {
     Long id
-    static hasMany = [children: CollectionKeyColumnUpdaterSpecBiChild]
 }
 
 @Entity
-class CollectionKeyColumnUpdaterSpecBiChild {
+class CKCUItemMany2 {
     Long id
-    CollectionKeyColumnUpdaterSpecBiParent parent
-    static belongsTo = [parent: CollectionKeyColumnUpdaterSpecBiParent]
 }

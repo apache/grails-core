@@ -27,6 +27,7 @@ import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernatePersistentP
 import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernatePersistentEntity
 import org.grails.orm.hibernate.cfg.domainbinding.util.DefaultColumnNameFetcher
 import org.grails.datastore.mapping.core.connections.ConnectionSource
+import org.hibernate.MappingException
 
 class GrailsHibernatePersistentEntitySpec extends HibernateGormDatastoreSpec {
 
@@ -219,6 +220,24 @@ class GrailsHibernatePersistentEntitySpec extends HibernateGormDatastoreSpec {
 
         then:
         entities.every { it.dataSourceName == "customDS" }
+    }
+
+    void "test getHibernatePersistentProperties calls validateProperty"() {
+        given:
+        def context = getMappingContext()
+        GrailsHibernatePersistentEntity entity = Spy(HibernatePersistentEntity, constructorArgs: [Person, context])
+        def validProp = Mock(HibernatePersistentProperty)
+        def invalidProp = Mock(HibernatePersistentProperty)
+
+        entity.getPersistentProperties() >> [validProp, invalidProp]
+
+        when:
+        entity.getHibernatePersistentProperties()
+
+        then:
+        1 * validProp.validateProperty() >> validProp
+        1 * invalidProp.validateProperty() >> { throw new MappingException("Validation failed") }
+        thrown(MappingException)
     }
 
     void "test buildDiscriminatorSet with dataSourceName"() {

@@ -243,4 +243,8 @@ public interface HibernatePersistentProperty extends PersistentProperty<Property
     default @Nullable String getGeneratorName() {
         return Optional.ofNullable(getHibernateMappedForm()).map(PropertyConfig::getGenerator).orElse(null);
     }
+
+    default HibernatePersistentProperty validateProperty() {
+        return this;
+    }
 }

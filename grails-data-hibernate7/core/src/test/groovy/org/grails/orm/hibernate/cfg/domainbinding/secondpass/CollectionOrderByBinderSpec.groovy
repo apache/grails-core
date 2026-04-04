@@ -20,12 +20,13 @@ package org.grails.orm.hibernate.cfg.domainbinding.secondpass
 
 import grails.gorm.annotation.Entity
 import grails.gorm.specs.HibernateGormDatastoreSpec
-import org.grails.datastore.mapping.model.DatastoreConfigurationException
 import org.grails.orm.hibernate.cfg.domainbinding.hibernate.GrailsHibernatePersistentEntity
+import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernateCollectionProperty
 import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernateToManyProperty
 import org.hibernate.mapping.Bag
 import org.hibernate.mapping.BasicValue
 import org.hibernate.mapping.Column
+import org.hibernate.mapping.OneToMany
 import org.hibernate.mapping.Property
 import org.hibernate.mapping.RootClass
 import org.hibernate.mapping.Table
@@ -47,8 +48,8 @@ class CollectionOrderByBinderSpec extends HibernateGormDatastoreSpec {
         ])
     }
 
-    private HibernateToManyProperty propertyFor(Class ownerClass, String name = "items") {
-        (getPersistentEntity(ownerClass) as GrailsHibernatePersistentEntity).getPropertyByName(name) as HibernateToManyProperty
+    private HibernateCollectionProperty propertyFor(Class ownerClass, String name = "items") {
+        (getPersistentEntity(ownerClass) as GrailsHibernatePersistentEntity).getPropertyByName(name) as HibernateCollectionProperty
     }
 
     private RootClass rootClassWith(String entityName, String propertyName, String columnName) {
@@ -72,13 +73,16 @@ class CollectionOrderByBinderSpec extends HibernateGormDatastoreSpec {
         def collection = new Bag(getGrailsDomainBinder().getMetadataBuildingContext(), null)
         collection.setRole("${COBOwnerEntity.name}.items")
         def associatedClass = rootClassWith(COBAssociatedItem.name, "value", "VALUE")
+        associatedClass.setTable(new Table("COB_ASSOCIATED_ITEM"))
+        property.getHibernateAssociatedEntity().setPersistentClass(associatedClass)
+        
         property.getMappedForm().setSort("value")
         property.getMappedForm().setOrder("desc")
 
         property.setCollection(collection)
 
         when:
-        binder.bind(property, associatedClass)
+        binder.bind(property)
 
         then:
         collection.getOrderBy() != null
@@ -91,47 +95,41 @@ class CollectionOrderByBinderSpec extends HibernateGormDatastoreSpec {
         def collection = new Bag(getGrailsDomainBinder().getMetadataBuildingContext(), null)
         collection.setRole("${COBOwnerEntity.name}.items")
         def associatedClass = rootClassWith(COBAssociatedItem.name, "value", "VALUE")
+        associatedClass.setTable(new Table("COB_ASSOCIATED_ITEM"))
+        property.getHibernateAssociatedEntity().setPersistentClass(associatedClass)
+        
         property.getMappedForm().setSort("value")
 
         property.setCollection(collection)
 
         when:
-        binder.bind(property, associatedClass)
+        binder.bind(property)
 
         then:
         collection.getOrderBy() != null
         collection.getOrderBy().contains("asc")
     }
 
-    def "bind throws DatastoreConfigurationException for unidirectional one-to-many with sort"() {
-        given:
-        def property = propertyFor(COBUnidirectionalOwner)
-        def collection = new Bag(getGrailsDomainBinder().getMetadataBuildingContext(), null)
-        def associatedClass = new RootClass(getGrailsDomainBinder().getMetadataBuildingContext())
-        property.getMappedForm().setSort("value")
-
-        property.setCollection(collection)
-
-        when:
-        binder.bind(property, associatedClass)
-
-        then:
-        thrown(DatastoreConfigurationException)
-    }
-
-    def "bind does not set orderBy when no sort is configured"() {
+    def "bind does not set orderBy when no sort is configured but still binds association"() {
         given:
         def property = propertyFor(COBOwnerEntity)
-        def collection = new Bag(getGrailsDomainBinder().getMetadataBuildingContext(), null)
-        def associatedClass = new RootClass(getGrailsDomainBinder().getMetadataBuildingContext())
+        def metadataContext = getGrailsDomainBinder().getMetadataBuildingContext()
+        def collection = new Bag(metadataContext, null)
+        def element = new OneToMany(metadataContext, collection.getOwner())
+        collection.setElement(element)
+        
+        def associatedClass = new RootClass(metadataContext)
+        associatedClass.setTable(new Table("COB_ASSOCIATED_ITEM"))
+        property.getHibernateAssociatedEntity().setPersistentClass(associatedClass)
 
         property.setCollection(collection)
 
         when:
-        binder.bind(property, associatedClass)
+        binder.bind(property)
 
         then:
         collection.getOrderBy() == null
+        element.getAssociatedClass() == associatedClass
     }
 
     def "bind sets where clause for table-per-hierarchy subclass"() {
@@ -139,11 +137,13 @@ class CollectionOrderByBinderSpec extends HibernateGormDatastoreSpec {
         def property = propertyFor(COBHierarchyOwner)
         def collection = new Bag(getGrailsDomainBinder().getMetadataBuildingContext(), null)
         def associatedClass = new RootClass(getGrailsDomainBinder().getMetadataBuildingContext())
+        associatedClass.setTable(new Table("COB_BASE_ITEM"))
+        property.getHibernateAssociatedEntity().setPersistentClass(associatedClass)
 
         property.setCollection(collection)
 
         when:
-        binder.bind(property, associatedClass)
+        binder.bind(property)
 
         then:
         collection.getWhere() != null

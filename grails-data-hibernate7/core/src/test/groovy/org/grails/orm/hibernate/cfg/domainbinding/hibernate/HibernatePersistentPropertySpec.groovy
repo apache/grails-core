@@ -134,6 +134,18 @@ class HibernatePersistentPropertySpec extends HibernateGormDatastoreSpec {
         property.getPersistentClass().getEntityName() == LazyBook.name
     }
 
+    def "test validateProperty returns self by default"() {
+        given:
+        def entity = (HibernatePersistentEntity) getMappingContext().getPersistentEntity(LazyBook.name)
+        def property = (HibernatePersistentProperty) entity.getPropertyByName("title")
+
+        when:
+        def result = property.validateProperty()
+
+        then:
+        result == property
+    }
+
     def "getIdentityProperty returns HibernateCompositeIdentityProperty with all parts for composite key entity"() {
         given:
         def entity = (HibernatePersistentEntity) getMappingContext().getPersistentEntity(CompositeKeyEntity.name)

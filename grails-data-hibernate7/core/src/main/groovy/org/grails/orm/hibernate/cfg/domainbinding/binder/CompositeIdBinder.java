@@ -65,7 +65,6 @@ public class CompositeIdBinder {
         Component id = new Component(metadataBuildingContext, rootClass);
         id.setNullValue("undefined");
         rootClass.setIdentifier(id);
-        rootClass.setIdentifierMapper(id);
         rootClass.setEmbeddedIdentifier(true);
         id.setComponentClassName(domainClass.getName());
         id.setKey(true);
