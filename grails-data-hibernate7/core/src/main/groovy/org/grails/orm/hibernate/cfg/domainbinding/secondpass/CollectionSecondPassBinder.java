@@ -26,7 +26,8 @@ import org.hibernate.mapping.Collection;
 import org.hibernate.mapping.PersistentClass;
 
 import org.grails.orm.hibernate.cfg.domainbinding.binder.CollectionForPropertyConfigBinder;
-import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernateCollectionProperty;
+import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernateToManyCollectionProperty;
+import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernateToManyEntityProperty;
 import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernateManyToManyProperty;
 import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernateOneToManyProperty;
 import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernateToManyProperty;
@@ -37,7 +38,7 @@ import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernateToManyPrope
 @SuppressWarnings("PMD.DataflowAnomalyAnalysis")
 public class CollectionSecondPassBinder {
 
-    private final CollectionOrderByBinder collectionOrderByBinder;
+    private final CollectionEntityOrderByBinder collectionEntityOrderByBinder;
     private final CollectionMultiTenantFilterBinder collectionMultiTenantFilterBinder;
     private final CollectionKeyColumnUpdater collectionKeyColumnUpdater;
     private final BidirectionalMapElementBinder bidirectionalMapElementBinder;
@@ -53,7 +54,7 @@ public class CollectionSecondPassBinder {
             CollectionForPropertyConfigBinder collectionForPropertyConfigBinder,
             BidirectionalMapElementBinder bidirectionalMapElementBinder,
             ManyToManyElementBinder manyToManyElementBinder,
-            CollectionOrderByBinder collectionOrderByBinder,
+            CollectionEntityOrderByBinder collectionEntityOrderByBinder,
             CollectionMultiTenantFilterBinder collectionMultiTenantFilterBinder) {
         this.collectionKeyColumnUpdater = collectionKeyColumnUpdater;
         this.unidirectionalOneToManyBinder = unidirectionalOneToManyBinder;
@@ -61,7 +62,7 @@ public class CollectionSecondPassBinder {
         this.collectionForPropertyConfigBinder = collectionForPropertyConfigBinder;
         this.bidirectionalMapElementBinder = bidirectionalMapElementBinder;
         this.manyToManyElementBinder = manyToManyElementBinder;
-        this.collectionOrderByBinder = collectionOrderByBinder;
+        this.collectionEntityOrderByBinder = collectionEntityOrderByBinder;
         this.collectionMultiTenantFilterBinder = collectionMultiTenantFilterBinder;
     }
 
@@ -69,18 +70,18 @@ public class CollectionSecondPassBinder {
 
         PersistentClass ownerClass = property.getHibernateOwner().getPersistentClass();
 
-        if (property instanceof HibernateCollectionProperty collectionProperty) {
-            collectionOrderByBinder.bind(collectionProperty);
-        }
-        if (property instanceof HibernateManyToManyProperty manyToMany && manyToMany.isBidirectional()) {
-            manyToManyElementBinder.bind(manyToMany);
-        } else if (property.isBidirectionalToManyMap() && property.isBidirectional()) {
-            bidirectionalMapElementBinder.bind(property);
-        } else if (property instanceof HibernateOneToManyProperty oneToManyProperty &&
-            oneToManyProperty.isUnidirectionalOneToMany()) {
-            unidirectionalOneToManyBinder.bind(oneToManyProperty);
-        } else if (property.supportsJoinColumnMapping()) {
-            collectionWithJoinTableBinder.bindCollectionWithJoinTable(property);
+        if (property instanceof HibernateToManyEntityProperty entityProperty) {
+            collectionEntityOrderByBinder.bind(entityProperty);
+            if (entityProperty.isManyToMany() && entityProperty.isBidirectional()) {
+                manyToManyElementBinder.bind((HibernateManyToManyProperty) entityProperty);
+            } else if (entityProperty.isBidirectionalToManyMap() && entityProperty.isBidirectional()) {
+                bidirectionalMapElementBinder.bind(entityProperty);
+            } else if (entityProperty.isOneToMany() && entityProperty.isUnidirectionalOneToMany()) {
+                unidirectionalOneToManyBinder.bind((HibernateOneToManyProperty) entityProperty);
+            }
+        } else if (property instanceof HibernateToManyCollectionProperty collectionProperty &&
+                collectionProperty.supportsJoinColumnMapping()) {
+            collectionWithJoinTableBinder.bindCollectionWithJoinTable(collectionProperty);
         }
         collectionMultiTenantFilterBinder.bind(property);
         collectionKeyColumnUpdater.bind(property, ownerClass);

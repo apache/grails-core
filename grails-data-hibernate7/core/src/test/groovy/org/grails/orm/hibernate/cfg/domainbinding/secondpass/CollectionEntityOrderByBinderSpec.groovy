@@ -21,8 +21,8 @@ package org.grails.orm.hibernate.cfg.domainbinding.secondpass
 import grails.gorm.annotation.Entity
 import grails.gorm.specs.HibernateGormDatastoreSpec
 import org.grails.orm.hibernate.cfg.domainbinding.hibernate.GrailsHibernatePersistentEntity
-import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernateCollectionProperty
-import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernateToManyProperty
+import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernateToManyEntityProperty
+
 import org.hibernate.mapping.Bag
 import org.hibernate.mapping.BasicValue
 import org.hibernate.mapping.Column
@@ -32,10 +32,11 @@ import org.hibernate.mapping.RootClass
 import org.hibernate.mapping.Table
 import spock.lang.Subject
 
-class CollectionOrderByBinderSpec extends HibernateGormDatastoreSpec {
+class CollectionEntityOrderByBinderSpec extends HibernateGormDatastoreSpec {
 
     @Subject
-    CollectionOrderByBinder binder = new CollectionOrderByBinder()
+    CollectionEntityOrderByBinder binder = new CollectionEntityOrderByBinder()
+
 
     void setupSpec() {
         manager.addAllDomainClasses([
@@ -48,8 +49,8 @@ class CollectionOrderByBinderSpec extends HibernateGormDatastoreSpec {
         ])
     }
 
-    private HibernateCollectionProperty propertyFor(Class ownerClass, String name = "items") {
-        (getPersistentEntity(ownerClass) as GrailsHibernatePersistentEntity).getPropertyByName(name) as HibernateCollectionProperty
+    private HibernateToManyEntityProperty propertyFor(Class ownerClass, String name = "items") {
+        (getPersistentEntity(ownerClass) as GrailsHibernatePersistentEntity).getPropertyByName(name) as HibernateToManyEntityProperty
     }
 
     private RootClass rootClassWith(String entityName, String propertyName, String columnName) {

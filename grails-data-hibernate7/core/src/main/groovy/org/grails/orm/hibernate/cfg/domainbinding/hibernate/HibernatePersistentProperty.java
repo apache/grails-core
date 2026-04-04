@@ -134,6 +134,13 @@ public interface HibernatePersistentProperty extends PersistentProperty<Property
         return Optional.ofNullable(getType()).map(Class::isEnum).orElse(false);
     }
 
+    /**
+     * @return Whether this property is an enum property.
+     */
+    default boolean isEnum() {
+        return this instanceof HibernateEnumProperty;
+    }
+
     default boolean isValidHibernateOneToOne() {
         return false;
     }

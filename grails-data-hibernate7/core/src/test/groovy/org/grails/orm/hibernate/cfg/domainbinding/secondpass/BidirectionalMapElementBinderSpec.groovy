@@ -81,7 +81,7 @@ class BidirectionalMapElementBinderSpec extends HibernateGormDatastoreSpec {
         def property = propertyFor(BBMEOwner)
 
         expect:
-        property.isBidirectionalOneToManyMap()
+        property.isBidirectionalToManyMap()
         property.isBidirectional()
     }
 }

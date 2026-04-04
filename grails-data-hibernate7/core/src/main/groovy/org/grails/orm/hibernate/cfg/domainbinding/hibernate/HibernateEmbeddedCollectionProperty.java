@@ -31,7 +31,7 @@ import org.grails.orm.hibernate.cfg.PropertyConfig;
  * Hibernate implementation of {@link org.grails.datastore.mapping.model.types.EmbeddedCollection}
  */
 public class HibernateEmbeddedCollectionProperty extends EmbeddedCollectionWithMapping<PropertyConfig>
-        implements HibernateToManyProperty {
+        implements HibernateToManyCollectionProperty {
 
     private Collection collection;
 

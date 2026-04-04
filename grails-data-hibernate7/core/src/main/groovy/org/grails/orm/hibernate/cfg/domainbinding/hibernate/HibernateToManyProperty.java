@@ -79,6 +79,14 @@ public interface HibernateToManyProperty extends PropertyWithMapping<PropertyCon
         return this instanceof Basic;
     }
 
+    default boolean isManyToMany() {
+        return this instanceof HibernateManyToManyProperty;
+    }
+
+    default boolean isOneToMany() {
+        return this instanceof HibernateOneToManyProperty;
+    }
+
     /**
      * Returns the component type for basic (scalar/enum) collections, or {@code null} if this is not
      * a basic collection.
@@ -223,8 +231,10 @@ public interface HibernateToManyProperty extends PropertyWithMapping<PropertyCon
         return Optional.ofNullable(getHibernateMappedForm()).map(PropertyConfig::getJoinTableColumnConfig);
     }
 
+    @Override
     default boolean isEnum() {
-        return getComponentType().isEnum();
+        Class<?> componentType = getComponentType();
+        return componentType != null && componentType.isEnum();
     }
 
     /**

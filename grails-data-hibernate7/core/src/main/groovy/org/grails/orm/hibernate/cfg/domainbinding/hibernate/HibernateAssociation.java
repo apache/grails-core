@@ -53,7 +53,7 @@ public interface HibernateAssociation extends HibernatePersistentProperty {
 
     boolean isCircular();
 
-    boolean isBidirectionalOneToManyMap();
+    boolean isBidirectionalToManyMap();
 
     /**
      * Returns the nullable value for the FK column when this property is an association without a

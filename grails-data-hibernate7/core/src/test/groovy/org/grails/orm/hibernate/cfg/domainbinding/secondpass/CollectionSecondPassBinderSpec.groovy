@@ -27,7 +27,7 @@ import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernatePersistentP
 import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernateToManyProperty
 import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernateManyToManyProperty
 import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernateOneToManyProperty
-import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernateCollectionProperty
+import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernateToManyEntityProperty
 
 import org.hibernate.mapping.ManyToOne
 
@@ -66,7 +66,7 @@ class CollectionSecondPassBinderSpec extends HibernateGormDatastoreSpec {
         def svcb = new SimpleValueColumnBinder()
         def cku = new CollectionKeyColumnUpdater(new CollectionKeyBinder(botml, dkvb, svcb, pkvc))
 
-        binder = new CollectionSecondPassBinder(cku, uotmb, cwjtb, cfpcb, mockBidirectionalMapElementBinder, new ManyToManyElementBinder(mtob, cfpcb), new CollectionOrderByBinder(), new CollectionMultiTenantFilterBinder(dcnf))
+        binder = new CollectionSecondPassBinder(cku, uotmb, cwjtb, cfpcb, mockBidirectionalMapElementBinder, new ManyToManyElementBinder(mtob, cfpcb), new CollectionEntityOrderByBinder(), new CollectionMultiTenantFilterBinder(dcnf))
     }
 
     protected HibernatePersistentProperty createTestHibernateToManyProperty(Class<?> domainClass, String propertyName) {
@@ -90,7 +90,7 @@ class CollectionSecondPassBinderSpec extends HibernateGormDatastoreSpec {
 
         then:
         noExceptionThrown()
-        !(property instanceof HibernateCollectionProperty)
+        !(property instanceof HibernateToManyEntityProperty)
     }
 
     def "bindCollectionSecondPass succeeds for Unidirectional One-to-Many"() {
@@ -105,7 +105,7 @@ class CollectionSecondPassBinderSpec extends HibernateGormDatastoreSpec {
 
         then:
         noExceptionThrown()
-        property instanceof HibernateCollectionProperty
+        property instanceof HibernateToManyEntityProperty
         property.getCollection() != null
     }
 
@@ -122,7 +122,7 @@ class CollectionSecondPassBinderSpec extends HibernateGormDatastoreSpec {
 
         then:
         noExceptionThrown()
-        property instanceof HibernateCollectionProperty
+        property instanceof HibernateToManyEntityProperty
         property.isBidirectional()
         // In Hibernate 7 many-to-many element is mapped as ManyToOne to the join table
         property.getCollection().getElement() instanceof ManyToOne
@@ -140,7 +140,7 @@ class CollectionSecondPassBinderSpec extends HibernateGormDatastoreSpec {
 
         then:
         noExceptionThrown()
-        property instanceof HibernateCollectionProperty
+        property instanceof HibernateToManyEntityProperty
         property.getCollection().getOrderBy() != null
     }
 
@@ -156,7 +156,7 @@ class CollectionSecondPassBinderSpec extends HibernateGormDatastoreSpec {
 
         then:
         noExceptionThrown()
-        !(property instanceof HibernateCollectionProperty)
+        !(property instanceof HibernateToManyEntityProperty)
         property.getCollection() != null
     }
 
@@ -179,10 +179,10 @@ class CollectionSecondPassBinderSpec extends HibernateGormDatastoreSpec {
 
     def "HibernateCollectionProperty getAssociatedClass returns PersistentClass or throws MappingException"() {
         given: "A collection property that implements HibernateCollectionProperty"
-        def property = createTestHibernateToManyProperty(CSPBUniOwner, "items") as HibernateCollectionProperty
+        def property = createTestHibernateToManyProperty(CSPBUniOwner, "items") as HibernateToManyEntityProperty
         
         expect:
-        property instanceof HibernateCollectionProperty
+        property instanceof HibernateToManyEntityProperty
 
         when: "Persistent class is present (after first pass)"
         hibernateFirstPass()

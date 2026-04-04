@@ -27,24 +27,24 @@ import org.hibernate.mapping.PersistentClass;
 
 import org.grails.orm.hibernate.cfg.domainbinding.binder.CollectionForPropertyConfigBinder;
 import org.grails.orm.hibernate.cfg.domainbinding.hibernate.GrailsHibernatePersistentEntity;
-import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernateCollectionProperty;
+import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernateToManyEntityProperty;
 import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernatePersistentProperty;
 import org.grails.orm.hibernate.cfg.domainbinding.util.OrderByClauseBuilder;
 
 /** Binds the order-by clause and discriminator where condition to a collection. */
-public class CollectionOrderByBinder {
+public class CollectionEntityOrderByBinder {
 
     private final OrderByClauseBuilder orderByClauseBuilder;
     private final CollectionForPropertyConfigBinder collectionForPropertyConfigBinder;
 
-    /** Creates a new {@link CollectionOrderByBinder} instance. */
-    public CollectionOrderByBinder() {
+    /** Creates a new {@link CollectionEntityOrderByBinder} instance. */
+    public CollectionEntityOrderByBinder() {
         this.orderByClauseBuilder = new OrderByClauseBuilder();
         this.collectionForPropertyConfigBinder = new CollectionForPropertyConfigBinder();
     }
 
     /** Binds the order-by clause and discriminator where condition to the given collection. */
-    public void bind(HibernateCollectionProperty property) {
+    public void bind(HibernateToManyEntityProperty property) {
         Collection collection = property.getCollection();
         PersistentClass associatedClass = property.getAssociatedClass();
         GrailsHibernatePersistentEntity referenced = property.getHibernateAssociatedEntity();

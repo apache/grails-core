@@ -24,7 +24,9 @@ import java.util.Optional;
 import org.hibernate.mapping.Collection;
 
 import org.grails.datastore.mapping.model.config.GormProperties;
+import org.grails.orm.hibernate.cfg.domainbinding.hibernate.GrailsHibernatePersistentEntity;
 import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernateManyToManyProperty;
+import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernateToManyEntityProperty;
 import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernateToManyProperty;
 import org.grails.orm.hibernate.cfg.domainbinding.util.DefaultColumnNameFetcher;
 
@@ -40,12 +42,13 @@ public class CollectionMultiTenantFilterBinder {
 
     /** Applies the multi-tenant filter to the collection if the associated entity is multi-tenant. */
     public void bind(HibernateToManyProperty property) {
-        Collection collection = property.getCollection();
-        Optional.ofNullable(property.getHibernateAssociatedEntity())
-                .filter(referenced -> !(property instanceof HibernateManyToManyProperty) && referenced.isMultiTenant())
-                .map(referenced -> referenced.getMultiTenantFilterCondition(defaultColumnNameFetcher))
-                .ifPresent(filterCondition -> {
-                    if (property.isUnidirectionalOneToMany()) {
+        if (property instanceof HibernateToManyEntityProperty entityProperty) {
+            GrailsHibernatePersistentEntity referenced = entityProperty.getHibernateAssociatedEntity();
+            if (entityProperty.isOneToMany() && referenced.isMultiTenant()) {
+                String filterCondition = referenced.getMultiTenantFilterCondition(defaultColumnNameFetcher);
+                if (filterCondition != null) {
+                    Collection collection = property.getCollection();
+                    if (entityProperty.isUnidirectionalOneToMany()) {
                         collection.addManyToManyFilter(
                                 GormProperties.TENANT_IDENTITY,
                                 filterCondition,
@@ -60,6 +63,8 @@ public class CollectionMultiTenantFilterBinder {
                                 Collections.emptyMap(),
                                 Collections.emptyMap());
                     }
-                });
+                }
+            }
+        }
     }
 }

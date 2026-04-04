@@ -30,7 +30,7 @@ import org.grails.orm.hibernate.cfg.PropertyConfig;
 
 /** Hibernate implementation of {@link org.grails.datastore.mapping.model.types.OneToMany} */
 public class HibernateOneToManyProperty extends OneToManyWithMapping<PropertyConfig>
-        implements HibernateCollectionProperty {
+        implements HibernateToManyEntityProperty {
 
     private Collection collection;
 

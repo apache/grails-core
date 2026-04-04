@@ -24,7 +24,7 @@ import org.hibernate.mapping.PersistentClass;
 /**
  * Marker interface for Hibernate Collections
  */
-public interface HibernateCollectionProperty extends HibernateToManyProperty {
+public interface HibernateToManyEntityProperty extends HibernateToManyProperty {
 
     @Override
     HibernatePersistentEntity getHibernateAssociatedEntity();
