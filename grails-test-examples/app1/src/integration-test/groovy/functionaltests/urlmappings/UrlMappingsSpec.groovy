@@ -20,6 +20,7 @@ package functionaltests.urlmappings
 
 import spock.lang.Narrative
 import spock.lang.Specification
+import spock.lang.Tag
 
 import grails.testing.mixin.integration.Integration
 import org.apache.grails.testing.http.client.HttpClientSupport
@@ -35,6 +36,7 @@ import org.apache.grails.testing.http.client.HttpClientSupport
 Grails URL mappings provide flexible routing of HTTP requests to controller actions.
 This includes path variables, constraints, HTTP method-based routing, and redirects.
 ''')
+@Tag('http-client')
 class UrlMappingsSpec extends Specification implements HttpClientSupport {
 
     // ========== Static Path Mappings ==========

@@ -19,11 +19,13 @@
 package issue11767.app
 
 import spock.lang.Specification
+import spock.lang.Tag
 
 import grails.testing.mixin.integration.Integration
 import org.apache.grails.testing.http.client.HttpClientSupport
 
 @Integration
+@Tag('http-client')
 class GsonViewRespondSpec extends Specification implements HttpClientSupport {
 
     void 'respond with Error gson view'() {

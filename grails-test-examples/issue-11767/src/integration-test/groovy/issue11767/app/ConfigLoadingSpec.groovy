@@ -19,12 +19,14 @@
 package issue11767.app
 
 import spock.lang.Specification
+import spock.lang.Tag
 import spock.lang.Unroll
 
 import grails.testing.mixin.integration.Integration
 import org.apache.grails.testing.http.client.HttpClientSupport
 
 @Integration
+@Tag('http-client')
 class ConfigLoadingSpec extends Specification implements HttpClientSupport {
 
     @Unroll

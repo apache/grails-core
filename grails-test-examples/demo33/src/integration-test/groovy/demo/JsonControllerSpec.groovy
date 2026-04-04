@@ -19,11 +19,13 @@
 package demo
 
 import spock.lang.Specification
+import spock.lang.Tag
 
 import grails.testing.mixin.integration.Integration
 import org.apache.grails.testing.http.client.HttpClientSupport
 
 @Integration
+@Tag('http-client')
 class JsonControllerSpec extends Specification implements HttpClientSupport {
 
     void "test a json view is rendered"() {
