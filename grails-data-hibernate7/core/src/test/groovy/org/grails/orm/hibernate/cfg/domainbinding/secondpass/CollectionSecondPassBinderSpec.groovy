@@ -27,6 +27,8 @@ import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernatePersistentP
 import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernateToManyProperty
 import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernateManyToManyProperty
 import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernateOneToManyProperty
+import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernateCollectionProperty
+import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernateEmbeddedCollectionProperty
 
 import org.hibernate.mapping.RootClass
 import org.hibernate.mapping.OneToMany
@@ -91,6 +93,7 @@ class CollectionSecondPassBinderSpec extends HibernateGormDatastoreSpec {
 
         then:
         noExceptionThrown()
+        !(property instanceof HibernateCollectionProperty)
     }
 
     def "bindCollectionSecondPass succeeds for Unidirectional One-to-Many"() {
@@ -99,16 +102,13 @@ class CollectionSecondPassBinderSpec extends HibernateGormDatastoreSpec {
         
         and: "Hibernate RootClasses"
         hibernateFirstPass()
-        def ownerRoot = getGrailsDomainBinder().getMetadataBuildingContext().getMetadataCollector().getEntityBinding(CSPBUniOwner.name)
-        def itemRoot = getGrailsDomainBinder().getMetadataBuildingContext().getMetadataCollector().getEntityBinding(CSPBUniItem.name)
-        def persistentClasses = [(CSPBUniOwner.name): ownerRoot, (CSPBUniItem.name): itemRoot]
 
         when: "Binding second pass"
-        binder.bindCollectionSecondPass(property, persistentClasses)
+        binder.bindCollectionSecondPass(property, [:])
 
         then:
         noExceptionThrown()
-        // In GORM/Hibernate7, unidirectional one-to-many often defaults to join table, so it might not be OneToMany mapping object
+        property instanceof HibernateCollectionProperty
         property.getCollection() != null
     }
 
@@ -119,15 +119,13 @@ class CollectionSecondPassBinderSpec extends HibernateGormDatastoreSpec {
         
         and: "Hibernate RootClasses"
         hibernateFirstPass()
-        def aRoot = getGrailsDomainBinder().getMetadataBuildingContext().getMetadataCollector().getEntityBinding(CSPBManyToManyA.name)
-        def bRoot = getGrailsDomainBinder().getMetadataBuildingContext().getMetadataCollector().getEntityBinding(CSPBManyToManyB.name)
-        def persistentClasses = [(CSPBManyToManyA.name): aRoot, (CSPBManyToManyB.name): bRoot]
 
         when: "Binding second pass"
-        binder.bindCollectionSecondPass(property, persistentClasses)
+        binder.bindCollectionSecondPass(property, [:])
 
         then:
         noExceptionThrown()
+        property instanceof HibernateCollectionProperty
         property.isBidirectional()
         // In Hibernate 7 many-to-many element is mapped as ManyToOne to the join table
         property.getCollection().getElement() instanceof ManyToOne
@@ -139,57 +137,55 @@ class CollectionSecondPassBinderSpec extends HibernateGormDatastoreSpec {
         
         and: "Hibernate RootClasses"
         hibernateFirstPass()
-        def ownerRoot = getGrailsDomainBinder().getMetadataBuildingContext().getMetadataCollector().getEntityBinding(CSPBOrderOwner.name)
-        def itemRoot = getGrailsDomainBinder().getMetadataBuildingContext().getMetadataCollector().getEntityBinding(CSPBOrderItem.name)
-        def persistentClasses = [(CSPBOrderOwner.name): ownerRoot, (CSPBOrderItem.name): itemRoot]
 
         when: "Binding second pass"
-        binder.bindCollectionSecondPass(property, persistentClasses)
+        binder.bindCollectionSecondPass(property, [:])
 
         then:
         noExceptionThrown()
+        property instanceof HibernateCollectionProperty
         property.getCollection().getOrderBy() != null
     }
 
-    def "bindCollectionSecondPass throws MappingException for missing associated class"() {
-        given: "An association"
-        def property = createTestHibernateToManyProperty(CSPBBidiOwner, "items") as HibernateToManyProperty
+    def "bindCollectionSecondPass succeeds for Embedded Collection"() {
+        given: "An entity with a collection handled as an embedded collection (e.g. Basic collection)"
+        def property = createTestHibernateToManyProperty(CSPBHTMPOrder, "items") as HibernateToManyProperty
         
-        and: "Missing associated class in persistentClasses map"
+        and: "Hibernate RootClasses"
         hibernateFirstPass()
 
         when: "Binding second pass"
         binder.bindCollectionSecondPass(property, [:])
 
         then:
-        def ex = thrown(org.hibernate.MappingException)
-        ex.message.contains("Association [items] has no associated class")
+        noExceptionThrown()
+        !(property instanceof HibernateCollectionProperty)
+        property.getCollection() != null
     }
 
-    def "resolveAssociatedClass throws MappingException when entity association is missing from persistentClasses"() {
-        given: "A standard entity association (not a Basic collection)"
-        def property = createTestHibernateToManyProperty(CSPBTestEntityWithMany, "items") as HibernateToManyProperty
+    def "HibernateCollectionProperty getAssociatedClass returns PersistentClass or throws MappingException"() {
+        given: "A collection property that implements HibernateCollectionProperty"
+        def property = createTestHibernateToManyProperty(CSPBUniOwner, "items") as HibernateCollectionProperty
+        
+        expect:
+        property instanceof HibernateCollectionProperty
 
-        when: "Attempting to resolve associated class with an empty map"
-        binder.resolveAssociatedClass(property, [:])
-
-        then: "A MappingException is thrown because this is a real entity relationship"
-        def ex = thrown(org.hibernate.MappingException)
-        ex.message.contains("Association [items] has no associated class")
-    }
-
-    def "resolveAssociatedClass returns the matching PersistentClass"() {
-        given:
-        def property = createTestHibernateToManyProperty(CSPBTestEntityWithMany, "items") as HibernateToManyProperty
+        when: "Persistent class is present (after first pass)"
         hibernateFirstPass()
-        def associatedPersistentClass = getGrailsDomainBinder().getMetadataBuildingContext().getMetadataCollector().getEntityBinding(CSPBAssociatedItem.name)
-        def persistentClasses = [(CSPBAssociatedItem.name): associatedPersistentClass]
-
-        when:
-        def result = binder.resolveAssociatedClass(property, persistentClasses)
+        def associatedClass = property.getAssociatedClass()
 
         then:
-        result == associatedPersistentClass
+        associatedClass != null
+        associatedClass.entityName == CSPBUniItem.name
+
+        when: "Associated entity is present but PersistentClass is missing"
+        property.getHibernateAssociatedEntity().setPersistentClass(null)
+        property.getAssociatedClass()
+
+        then:
+        def ex = thrown(org.hibernate.MappingException)
+        ex.message.contains("items")
+        ex.message.contains("has no associated class")
     }
 }
 
@@ -262,10 +258,10 @@ class CSPBBidiOwner implements HibernateEntity<CSPBBidiOwner> {
     Long id
     static hasMany = [items: CSPBBidiItem]
 }
-
 @Entity
 class CSPBBidiItem implements HibernateEntity<CSPBBidiItem> {
     Long id
     CSPBBidiOwner owner
     static belongsTo = [owner: CSPBBidiOwner]
 }
+

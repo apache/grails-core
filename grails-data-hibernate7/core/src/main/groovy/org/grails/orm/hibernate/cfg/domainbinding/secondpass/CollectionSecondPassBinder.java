@@ -31,6 +31,7 @@ import org.hibernate.mapping.PersistentClass;
 import org.grails.datastore.mapping.model.types.Basic;
 import org.grails.orm.hibernate.cfg.domainbinding.binder.CollectionForPropertyConfigBinder;
 import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernateBasicProperty;
+import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernateCollectionProperty;
 import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernateManyToManyProperty;
 import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernateOneToManyProperty;
 import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernateToManyProperty;
@@ -73,12 +74,8 @@ public class CollectionSecondPassBinder {
         Collection collection = property.getCollection();
         PersistentClass ownerClass = property.getHibernateOwner().getPersistentClass();
 
-        PersistentClass associatedClass = resolveAssociatedClass(property, persistentClasses);
-        if (property.isBidirectional() && associatedClass == null) {
-            throw new MappingException("Bidirectional association [" + property.getName() + "] has no associated class");
-        }
-
-        if (associatedClass != null) {
+        if (property instanceof HibernateCollectionProperty collectionProperty) {
+            PersistentClass associatedClass = collectionProperty.getAssociatedClass();
             collectionOrderByBinder.bind(property, associatedClass);
             bindOneToManyAssociation(property, associatedClass);
         }
@@ -90,6 +87,7 @@ public class CollectionSecondPassBinder {
         collection.setCacheConcurrencyStrategy(property.getCacheUsage());
         bindCollectionElement(property);
     }
+
 
     private void bindOneToManyAssociation(HibernateToManyProperty property, PersistentClass associatedClass) {
         Collection collection = property.getCollection();
@@ -115,15 +113,5 @@ public class CollectionSecondPassBinder {
         } else if (property.supportsJoinColumnMapping()) {
             collectionWithJoinTableBinder.bindCollectionWithJoinTable(property);
         }
-    }
-
-    protected PersistentClass resolveAssociatedClass(HibernateToManyProperty property, Map<?, ?> persistentClasses) {
-        if (property instanceof HibernateBasicProperty) {
-            return null;
-        }
-        return Optional.ofNullable(property.getHibernateAssociatedEntity())
-                .map(referenced -> (PersistentClass) persistentClasses.get(referenced.getName()))
-                .orElseThrow(
-                        () -> new MappingException("Association [" + property.getName() + "] has no associated class"));
     }
 }

@@ -94,7 +94,8 @@ public interface HibernateToManyProperty extends PropertyWithMapping<PropertyCon
         return ((this instanceof HibernateOneToManyProperty) && isBidirectional() || !isUnidirectionalOneToMany()) &&
                 !Map.class.isAssignableFrom(getType()) &&
                 !(this instanceof HibernateManyToManyProperty) &&
-                !(this instanceof Basic);
+                !(this instanceof Basic) &&
+                !(this instanceof HibernateEmbeddedCollectionProperty);
     }
 
     default String getIndexColumnName(PersistentEntityNamingStrategy namingStrategy) {

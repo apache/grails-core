@@ -29,7 +29,7 @@ import org.grails.orm.hibernate.cfg.PropertyConfig;
 
 /** Hibernate implementation of {@link org.grails.datastore.mapping.model.types.OneToMany} */
 public class HibernateOneToManyProperty extends OneToManyWithMapping<PropertyConfig>
-        implements HibernateToManyProperty {
+        implements HibernateCollectionProperty {
 
     private Collection collection;
 
@@ -38,8 +38,8 @@ public class HibernateOneToManyProperty extends OneToManyWithMapping<PropertyCon
     }
 
     @Override
-    public GrailsHibernatePersistentEntity getHibernateAssociatedEntity() {
-        return (GrailsHibernatePersistentEntity) super.getAssociatedEntity();
+    public HibernatePersistentEntity getHibernateAssociatedEntity() {
+        return (HibernatePersistentEntity) super.getAssociatedEntity();
     }
 
     @Override

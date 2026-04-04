@@ -32,6 +32,7 @@ import org.grails.orm.hibernate.cfg.PersistentEntityNamingStrategy;
 import org.grails.orm.hibernate.cfg.PropertyConfig;
 import org.grails.orm.hibernate.cfg.domainbinding.collectionType.CollectionHolder;
 import org.grails.orm.hibernate.cfg.domainbinding.collectionType.CollectionType;
+import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernateCollectionProperty;
 import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernateOneToManyProperty;
 import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernatePersistentProperty;
 import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernateToManyProperty;
@@ -60,6 +61,8 @@ import org.grails.orm.hibernate.cfg.domainbinding.util.GrailsPropertyResolver;
 import org.grails.orm.hibernate.cfg.domainbinding.util.NamespaceNameExtractor;
 import org.grails.orm.hibernate.cfg.domainbinding.util.SimpleValueColumnFetcher;
 import org.grails.orm.hibernate.cfg.domainbinding.util.TableForManyCalculator;
+
+import static org.grails.orm.hibernate.cfg.GrailsHibernateUtil.qualify;
 
 /** Handles the binding of collections to the Hibernate runtime meta model. */
 @SuppressWarnings("PMD.DataflowAnomalyAnalysis")
@@ -145,8 +148,7 @@ public class CollectionBinder {
 
         // set role
         String propertyName = getNameForPropertyAndPath(property, path);
-        collection.setRole(
-                GrailsHibernateUtil.qualify(property.getHibernateOwner().getName(), propertyName));
+        collection.setRole(qualify(property.getHibernateOwner().getName(), propertyName));
 
         PropertyConfig pc = property.getHibernateMappedForm();
         // configure eager fetching
@@ -166,7 +168,7 @@ public class CollectionBinder {
         if (property.shouldBindWithForeignKey()) {
             OneToMany oneToMany = new OneToMany(metadataBuildingContext, collection.getOwner());
             collection.setElement(oneToMany);
-            bindOneToMany((HibernateOneToManyProperty) property, oneToMany);
+            bindOneToMany((HibernateCollectionProperty) property, oneToMany);
         } else {
             bindCollectionTable(property, _persistentClass.getTable());
 
@@ -197,12 +199,12 @@ public class CollectionBinder {
 
     private String getNameForPropertyAndPath(HibernatePersistentProperty property, String path) {
         if (GrailsHibernateUtil.isNotEmpty(path)) {
-            return GrailsHibernateUtil.qualify(path, property.getName());
+            return qualify(path, property.getName());
         }
         return property.getName();
     }
 
-    private void bindOneToMany(HibernateOneToManyProperty currentGrailsProp, OneToMany one) {
+    private void bindOneToMany(HibernateCollectionProperty currentGrailsProp, OneToMany one) {
         one.setReferencedEntityName(
                 currentGrailsProp.getHibernateAssociatedEntity().getName());
         one.setIgnoreNotFound(true);
