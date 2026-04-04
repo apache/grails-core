@@ -45,6 +45,7 @@ import org.grails.orm.hibernate.cfg.domainbinding.util.BackticksRemover
 class CollectionSecondPassBinderSpec extends HibernateGormDatastoreSpec {
 
     CollectionSecondPassBinder binder
+    BidirectionalMapElementBinder mockBidirectionalMapElementBinder = Mock(BidirectionalMapElementBinder)
 
     void setup() {
         def gdb = getGrailsDomainBinder()
@@ -65,7 +66,7 @@ class CollectionSecondPassBinderSpec extends HibernateGormDatastoreSpec {
         def svcb = new SimpleValueColumnBinder()
         def cku = new CollectionKeyColumnUpdater(new CollectionKeyBinder(botml, dkvb, svcb, pkvc))
 
-        binder = new CollectionSecondPassBinder(cku, uotmb, cwjtb, cfpcb, new BidirectionalMapElementBinder(mtob, cfpcb), new ManyToManyElementBinder(mtob, cfpcb), new CollectionOrderByBinder(), new CollectionMultiTenantFilterBinder(dcnf))
+        binder = new CollectionSecondPassBinder(cku, uotmb, cwjtb, cfpcb, mockBidirectionalMapElementBinder, new ManyToManyElementBinder(mtob, cfpcb), new CollectionOrderByBinder(), new CollectionMultiTenantFilterBinder(dcnf))
     }
 
     protected HibernatePersistentProperty createTestHibernateToManyProperty(Class<?> domainClass, String propertyName) {
@@ -157,6 +158,23 @@ class CollectionSecondPassBinderSpec extends HibernateGormDatastoreSpec {
         noExceptionThrown()
         !(property instanceof HibernateCollectionProperty)
         property.getCollection() != null
+    }
+
+    def "bindCollectionSecondPass succeeds for Bidirectional One-to-Many Map"() {
+        given: "An entity with a bidirectional one-to-many map"
+        def property = createTestHibernateToManyProperty(CSPBMapOwner, "items") as HibernateToManyProperty
+        
+        and: "Hibernate RootClasses"
+        hibernateFirstPass()
+
+        when: "Binding second pass"
+        binder.bindCollectionSecondPass(property, [:])
+
+        then:
+        noExceptionThrown()
+        property.isBidirectional()
+        property.isBidirectionalToManyMap()
+        1 * mockBidirectionalMapElementBinder.bind(property)
     }
 
     def "HibernateCollectionProperty getAssociatedClass returns PersistentClass or throws MappingException"() {
@@ -261,3 +279,16 @@ class CSPBBidiItem implements HibernateEntity<CSPBBidiItem> {
     static belongsTo = [owner: CSPBBidiOwner]
 }
 
+@Entity
+class CSPBMapOwner implements HibernateEntity<CSPBMapOwner> {
+    Long id
+    Map<String, CSPBMapItem> items
+    static hasMany = [items: CSPBMapItem]
+}
+
+@Entity
+class CSPBMapItem implements HibernateEntity<CSPBMapItem> {
+    Long id
+    CSPBMapOwner owner
+    static belongsTo = [owner: CSPBMapOwner]
+}

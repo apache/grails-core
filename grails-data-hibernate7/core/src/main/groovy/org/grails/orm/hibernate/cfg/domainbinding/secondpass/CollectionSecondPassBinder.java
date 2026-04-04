@@ -72,24 +72,20 @@ public class CollectionSecondPassBinder {
         if (property instanceof HibernateCollectionProperty collectionProperty) {
             collectionOrderByBinder.bind(collectionProperty);
         }
+        if (property instanceof HibernateManyToManyProperty manyToMany && manyToMany.isBidirectional()) {
+            manyToManyElementBinder.bind(manyToMany);
+        } else if (property.isBidirectionalToManyMap() && property.isBidirectional()) {
+            bidirectionalMapElementBinder.bind(property);
+        } else if (property instanceof HibernateOneToManyProperty oneToManyProperty &&
+            oneToManyProperty.isUnidirectionalOneToMany()) {
+            unidirectionalOneToManyBinder.bind(oneToManyProperty);
+        } else if (property.supportsJoinColumnMapping()) {
+            collectionWithJoinTableBinder.bindCollectionWithJoinTable(property);
+        }
         collectionMultiTenantFilterBinder.bind(property);
         collectionKeyColumnUpdater.bind(property, ownerClass);
         Collection collection = property.getCollection();
         collection.setSorted(property.isSorted());
         collection.setCacheConcurrencyStrategy(property.getCacheUsage());
-        bindCollectionElement(property);
-    }
-
-    private void bindCollectionElement(HibernateToManyProperty property) {
-        if (property instanceof HibernateManyToManyProperty manyToMany && manyToMany.isBidirectional()) {
-            manyToManyElementBinder.bind(manyToMany);
-        } else if (property.isBidirectionalOneToManyMap() && property.isBidirectional()) {
-            bidirectionalMapElementBinder.bind(property);
-        } else if (property instanceof HibernateOneToManyProperty oneToManyProperty &&
-                oneToManyProperty.isUnidirectionalOneToMany()) {
-            unidirectionalOneToManyBinder.bind(oneToManyProperty);
-        } else if (property.supportsJoinColumnMapping()) {
-            collectionWithJoinTableBinder.bindCollectionWithJoinTable(property);
-        }
     }
 }
