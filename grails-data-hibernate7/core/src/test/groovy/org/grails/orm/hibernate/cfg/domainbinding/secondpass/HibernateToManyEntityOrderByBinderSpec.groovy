@@ -32,10 +32,10 @@ import org.hibernate.mapping.RootClass
 import org.hibernate.mapping.Table
 import spock.lang.Subject
 
-class CollectionEntityOrderByBinderSpec extends HibernateGormDatastoreSpec {
+class HibernateToManyEntityOrderByBinderSpec extends HibernateGormDatastoreSpec {
 
     @Subject
-    CollectionEntityOrderByBinder binder = new CollectionEntityOrderByBinder()
+    HibernateToManyEntityOrderByBinder binder = new HibernateToManyEntityOrderByBinder()
 
 
     void setupSpec() {

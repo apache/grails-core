@@ -66,7 +66,15 @@ class CollectionSecondPassBinderSpec extends HibernateGormDatastoreSpec {
         def svcb = new SimpleValueColumnBinder()
         def cku = new CollectionKeyColumnUpdater(new CollectionKeyBinder(botml, dkvb, svcb, pkvc))
 
-        binder = new CollectionSecondPassBinder(cku, uotmb, cwjtb, cfpcb, mockBidirectionalMapElementBinder, new ManyToManyElementBinder(mtob, cfpcb), new CollectionEntityOrderByBinder(), new CollectionMultiTenantFilterBinder(dcnf))
+        binder = new CollectionSecondPassBinder(
+                cku,
+                uotmb,
+                cwjtb,
+                mockBidirectionalMapElementBinder,
+                new ManyToOneElementBinder(mtob, cfpcb),
+                new HibernateToManyEntityOrderByBinder(),
+                new ToManyEntityMultiTenantFilterBinder(dcnf)
+        )
     }
 
     protected HibernatePersistentProperty createTestHibernateToManyProperty(Class<?> domainClass, String propertyName) {
@@ -86,7 +94,7 @@ class CollectionSecondPassBinderSpec extends HibernateGormDatastoreSpec {
         property.getCollection() != null
 
         when: "Binding second pass"
-        binder.bindCollectionSecondPass(property, [:])
+        binder.bindCollectionSecondPass(property)
 
         then:
         noExceptionThrown()
@@ -101,7 +109,7 @@ class CollectionSecondPassBinderSpec extends HibernateGormDatastoreSpec {
         hibernateFirstPass()
 
         when: "Binding second pass"
-        binder.bindCollectionSecondPass(property, [:])
+        binder.bindCollectionSecondPass(property)
 
         then:
         noExceptionThrown()
@@ -118,7 +126,7 @@ class CollectionSecondPassBinderSpec extends HibernateGormDatastoreSpec {
         hibernateFirstPass()
 
         when: "Binding second pass"
-        binder.bindCollectionSecondPass(property, [:])
+        binder.bindCollectionSecondPass(property)
 
         then:
         noExceptionThrown()
@@ -136,7 +144,7 @@ class CollectionSecondPassBinderSpec extends HibernateGormDatastoreSpec {
         hibernateFirstPass()
 
         when: "Binding second pass"
-        binder.bindCollectionSecondPass(property, [:])
+        binder.bindCollectionSecondPass(property)
 
         then:
         noExceptionThrown()
@@ -152,7 +160,7 @@ class CollectionSecondPassBinderSpec extends HibernateGormDatastoreSpec {
         hibernateFirstPass()
 
         when: "Binding second pass"
-        binder.bindCollectionSecondPass(property, [:])
+        binder.bindCollectionSecondPass(property)
 
         then:
         noExceptionThrown()
@@ -168,7 +176,7 @@ class CollectionSecondPassBinderSpec extends HibernateGormDatastoreSpec {
         hibernateFirstPass()
 
         when: "Binding second pass"
-        binder.bindCollectionSecondPass(property, [:])
+        binder.bindCollectionSecondPass(property)
 
         then:
         noExceptionThrown()

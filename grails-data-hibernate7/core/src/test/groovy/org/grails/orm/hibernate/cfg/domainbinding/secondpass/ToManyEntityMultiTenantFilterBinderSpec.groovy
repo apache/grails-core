@@ -31,10 +31,10 @@ import org.grails.orm.hibernate.cfg.domainbinding.util.DefaultColumnNameFetcher
 import org.hibernate.mapping.Bag
 import spock.lang.Subject
 
-class CollectionMultiTenantFilterBinderSpec extends HibernateGormDatastoreSpec {
+class ToManyEntityMultiTenantFilterBinderSpec extends HibernateGormDatastoreSpec {
 
     @Subject
-    CollectionMultiTenantFilterBinder binder
+    ToManyEntityMultiTenantFilterBinder binder
 
     void setupSpec() {
         manager.addAllDomainClasses([
@@ -55,7 +55,7 @@ class CollectionMultiTenantFilterBinderSpec extends HibernateGormDatastoreSpec {
 
     void setup() {
         def ns = getGrailsDomainBinder().getNamingStrategy()
-        binder = new CollectionMultiTenantFilterBinder(new DefaultColumnNameFetcher(ns, new BackticksRemover()))
+        binder = new ToManyEntityMultiTenantFilterBinder(new DefaultColumnNameFetcher(ns, new BackticksRemover()))
     }
 
     private HibernateToManyProperty propertyFor(Class ownerClass, String name = "items") {

@@ -50,7 +50,7 @@ public class CollectionKeyBinder {
     }
 
     /** Creates the {@link DependantValue} key, sets it on the collection, and binds it. */
-    public DependantValue bind(HibernateToManyProperty property, PersistentClass ownerClass) {
+    public DependantValue bind(HibernateToManyProperty property) {
         Collection collection = property.getCollection();
         DependantValue key = primaryKeyValueCreator.createPrimaryKeyValue(collection);
         collection.setKey(key);

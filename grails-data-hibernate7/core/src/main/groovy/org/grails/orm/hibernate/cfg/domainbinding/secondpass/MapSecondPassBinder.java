@@ -67,7 +67,7 @@ public class MapSecondPassBinder {
 
     public void bindMapSecondPass(@Nonnull HibernateToManyProperty property, Map<?, ?> persistentClasses) {
         org.hibernate.mapping.Map map = (org.hibernate.mapping.Map) property.getCollection();
-        collectionSecondPassBinder.bindCollectionSecondPass(property, persistentClasses);
+        collectionSecondPassBinder.bindCollectionSecondPass(property);
 
         String type = property.getIndexColumnType("string");
         String columnName1 = property.getIndexColumnName(namingStrategy);

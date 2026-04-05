@@ -30,6 +30,7 @@ import org.grails.orm.hibernate.cfg.GrailsHibernateUtil;
 import org.grails.orm.hibernate.cfg.JoinTable;
 import org.grails.orm.hibernate.cfg.PersistentEntityNamingStrategy;
 import org.grails.orm.hibernate.cfg.PropertyConfig;
+import org.grails.orm.hibernate.cfg.domainbinding.util.DefaultColumnNameFetcher;
 import org.grails.orm.hibernate.cfg.domainbinding.collectionType.CollectionHolder;
 import org.grails.orm.hibernate.cfg.domainbinding.collectionType.CollectionType;
 import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernateToManyEntityProperty;
@@ -40,14 +41,14 @@ import org.grails.orm.hibernate.cfg.domainbinding.secondpass.BidirectionalMapEle
 import org.grails.orm.hibernate.cfg.domainbinding.secondpass.BidirectionalOneToManyLinker;
 import org.grails.orm.hibernate.cfg.domainbinding.secondpass.CollectionKeyBinder;
 import org.grails.orm.hibernate.cfg.domainbinding.secondpass.CollectionKeyColumnUpdater;
-import org.grails.orm.hibernate.cfg.domainbinding.secondpass.CollectionMultiTenantFilterBinder;
-import org.grails.orm.hibernate.cfg.domainbinding.secondpass.CollectionEntityOrderByBinder;
+import org.grails.orm.hibernate.cfg.domainbinding.secondpass.HibernateToManyEntityOrderByBinder;
 import org.grails.orm.hibernate.cfg.domainbinding.secondpass.CollectionSecondPassBinder;
 import org.grails.orm.hibernate.cfg.domainbinding.secondpass.CollectionWithJoinTableBinder;
+import org.grails.orm.hibernate.cfg.domainbinding.secondpass.ToManyEntityMultiTenantFilterBinder;
 import org.grails.orm.hibernate.cfg.domainbinding.secondpass.DependentKeyValueBinder;
 import org.grails.orm.hibernate.cfg.domainbinding.secondpass.ListSecondPass;
 import org.grails.orm.hibernate.cfg.domainbinding.secondpass.ListSecondPassBinder;
-import org.grails.orm.hibernate.cfg.domainbinding.secondpass.ManyToManyElementBinder;
+import org.grails.orm.hibernate.cfg.domainbinding.secondpass.ManyToOneElementBinder;
 import org.grails.orm.hibernate.cfg.domainbinding.secondpass.MapSecondPass;
 import org.grails.orm.hibernate.cfg.domainbinding.secondpass.MapSecondPassBinder;
 import org.grails.orm.hibernate.cfg.domainbinding.secondpass.PrimaryKeyValueCreator;
@@ -55,7 +56,6 @@ import org.grails.orm.hibernate.cfg.domainbinding.secondpass.SetSecondPass;
 import org.grails.orm.hibernate.cfg.domainbinding.secondpass.UnidirectionalOneToManyBinder;
 import org.grails.orm.hibernate.cfg.domainbinding.secondpass.UnidirectionalOneToManyInverseValuesBinder;
 import org.grails.orm.hibernate.cfg.domainbinding.util.CascadeBehavior;
-import org.grails.orm.hibernate.cfg.domainbinding.util.DefaultColumnNameFetcher;
 import org.grails.orm.hibernate.cfg.domainbinding.util.GrailsPropertyResolver;
 import org.grails.orm.hibernate.cfg.domainbinding.util.NamespaceNameExtractor;
 import org.grails.orm.hibernate.cfg.domainbinding.util.SimpleValueColumnFetcher;
@@ -116,11 +116,11 @@ public class CollectionBinder {
                         new PrimaryKeyValueCreator(metadataBuildingContext))),
                 new UnidirectionalOneToManyBinder(collectionWithJoinTableBinder, mappings),
                 collectionWithJoinTableBinder,
-                collectionForPropertyConfigBinder,
                 new BidirectionalMapElementBinder(manyToOneBinder, collectionForPropertyConfigBinder),
-                new ManyToManyElementBinder(manyToOneBinder, collectionForPropertyConfigBinder),
-                new CollectionEntityOrderByBinder(),
-                new CollectionMultiTenantFilterBinder(new DefaultColumnNameFetcher(namingStrategy)));
+                new ManyToOneElementBinder(manyToOneBinder, collectionForPropertyConfigBinder),
+                new HibernateToManyEntityOrderByBinder(),
+                new ToManyEntityMultiTenantFilterBinder(new DefaultColumnNameFetcher(namingStrategy))
+        );
         this.listSecondPassBinder = new ListSecondPassBinder(
                 metadataBuildingContext, namingStrategy, collectionSecondPassBinder, simpleValueColumnBinder, mappings);
         this.mapSecondPassBinder = new MapSecondPassBinder(

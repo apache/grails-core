@@ -24,7 +24,6 @@ import org.grails.orm.hibernate.cfg.domainbinding.hibernate.GrailsHibernatePersi
 import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernateToManyProperty
 import org.hibernate.mapping.Column
 import org.hibernate.mapping.DependantValue
-import org.hibernate.mapping.RootClass
 import spock.lang.Subject
 
 class CollectionKeyColumnUpdaterSpec extends HibernateGormDatastoreSpec {
@@ -52,41 +51,25 @@ class CollectionKeyColumnUpdaterSpec extends HibernateGormDatastoreSpec {
         (getPersistentEntity(ownerClass) as GrailsHibernatePersistentEntity).getPropertyByName(name) as HibernateToManyProperty
     }
 
-    def "bind delegates to collectionKeyBinder and forces nullability"() {
+    def "bind delegates to collectionKeyBinder and forces nullability and updateability"() {
         given:
         def property = propertyFor(CKCUOwnerOne)
-        def ownerClass = new RootClass(getGrailsDomainBinder().getMetadataBuildingContext())
         def column = new Column("test_col")
         column.setNullable(false)
-        def key = Mock(DependantValue) {
-            getColumns() >> [column]
-        }
-
-        when:
-        updater.bind(property, ownerClass)
-
-        then:
-        1 * collectionKeyBinder.bind(property, ownerClass) >> key
-        column.isNullable()
-    }
-
-    def "forceNullableAndCheckUpdatable sets updateable true when only one unidirectional"() {
-        given:
-        def property = propertyFor(CKCUOwnerOne)
-        def column = new Column("test_col")
         def key = new DependantValue(getGrailsDomainBinder().getMetadataBuildingContext(), null, null)
         key.addColumn(column)
         key.setUpdateable(false)
 
         when:
-        updater.forceNullableAndCheckUpdatable(key, property)
+        updater.bind(property)
 
         then:
-        key.isUpdateable()
+        1 * collectionKeyBinder.bind(property) >> key
         column.isNullable()
+        key.isUpdateable()
     }
 
-    def "forceNullableAndCheckUpdatable sets updateable false when multiple unidirectional"() {
+    def "bind sets updateable false when multiple unidirectional"() {
         given:
         def property = propertyFor(CKCUOwnerMany, "items1")
         def column = new Column("test_col")
@@ -95,9 +78,10 @@ class CollectionKeyColumnUpdaterSpec extends HibernateGormDatastoreSpec {
         key.setUpdateable(true)
 
         when:
-        updater.forceNullableAndCheckUpdatable(key, property)
+        updater.bind(property)
 
         then:
+        1 * collectionKeyBinder.bind(property) >> key
         !key.isUpdateable()
         column.isNullable()
     }

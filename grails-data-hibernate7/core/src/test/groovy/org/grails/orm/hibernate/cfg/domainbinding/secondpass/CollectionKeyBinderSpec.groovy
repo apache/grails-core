@@ -119,7 +119,7 @@ class CollectionKeyBinderSpec extends HibernateGormDatastoreSpec {
         property.getHibernateInverseSide().getHibernateOwner().setPersistentClass(associatedClass)
 
         when:
-        binder.bind(property, ownerClass)
+        binder.bind(property)
 
         then:
         collection.isInverse()
@@ -134,7 +134,7 @@ class CollectionKeyBinderSpec extends HibernateGormDatastoreSpec {
         property.setCollection(collection)
 
         when:
-        binder.bind(property, ownerClass)
+        binder.bind(property)
 
         then:
         collection.getKey().getColumnSpan() > 0
@@ -149,7 +149,7 @@ class CollectionKeyBinderSpec extends HibernateGormDatastoreSpec {
         property.setCollection(collection)
 
         when:
-        binder.bind(property, ownerClass)
+        binder.bind(property)
 
         then:
         collection.getKey().getTypeName() == "long"
@@ -165,7 +165,7 @@ class CollectionKeyBinderSpec extends HibernateGormDatastoreSpec {
         property.setCollection(collection)
 
         when:
-        binder.bind(property, ownerClass)
+        binder.bind(property)
 
         then:
         collection.getKey().getColumnSpan() > 0
@@ -187,7 +187,7 @@ class CollectionKeyBinderSpec extends HibernateGormDatastoreSpec {
         property.setCollection(collection)
 
         when:
-        def key = binder.bind(property, ownerClass)
+        def key = binder.bind(property)
 
         then:
         key.isSorted()

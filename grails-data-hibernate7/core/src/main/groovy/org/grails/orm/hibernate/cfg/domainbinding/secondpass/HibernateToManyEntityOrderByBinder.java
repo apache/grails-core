@@ -32,13 +32,13 @@ import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernatePersistentP
 import org.grails.orm.hibernate.cfg.domainbinding.util.OrderByClauseBuilder;
 
 /** Binds the order-by clause and discriminator where condition to a collection. */
-public class CollectionEntityOrderByBinder {
+public class HibernateToManyEntityOrderByBinder {
 
     private final OrderByClauseBuilder orderByClauseBuilder;
     private final CollectionForPropertyConfigBinder collectionForPropertyConfigBinder;
 
-    /** Creates a new {@link CollectionEntityOrderByBinder} instance. */
-    public CollectionEntityOrderByBinder() {
+    /** Creates a new {@link HibernateToManyEntityOrderByBinder} instance. */
+    public HibernateToManyEntityOrderByBinder() {
         this.orderByClauseBuilder = new OrderByClauseBuilder();
         this.collectionForPropertyConfigBinder = new CollectionForPropertyConfigBinder();
     }
