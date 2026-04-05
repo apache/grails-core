@@ -6,3 +6,15 @@
 # Files that must always have CRLF line endings on checkout
 *.bat text eol=crlf
 *.cmd text eol=crlf
+
+# Binary files (no line ending normalization)
+*.png binary
+*.jpg binary
+*.jpeg binary
+*.gif binary
+*.ico binary
+*.jar binary
+*.zip binary
+*.gz binary
+*.tgz binary
+*.pdf binary
