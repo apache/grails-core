@@ -19,6 +19,7 @@
 package org.grails.orm.hibernate.cfg.domainbinding.hibernate;
 
 import java.beans.PropertyDescriptor;
+import java.util.Map;
 
 import org.hibernate.MappingException;
 import org.hibernate.mapping.Collection;
@@ -69,5 +70,10 @@ public class HibernateOneToManyProperty extends OneToManyWithMapping<PropertyCon
             throw new MappingException("Default sort for associations [" + getHibernateOwner().getName() + "->" + getName() + "] are not supported with unidirectional one to many relationships.");
         }
         return this;
+    }
+
+    @Override
+    public boolean shouldBindWithForeignKey() {
+        return (isBidirectional() || !isUnidirectionalOneToMany()) && !Map.class.isAssignableFrom(getType());
     }
 }

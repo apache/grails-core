@@ -18,23 +18,17 @@
  */
 package org.grails.orm.hibernate.cfg.domainbinding.binder;
 
-import org.hibernate.FetchMode;
 import org.hibernate.boot.spi.InFlightMetadataCollector;
 import org.hibernate.boot.spi.MetadataBuildingContext;
 import org.hibernate.mapping.Collection;
 import org.hibernate.mapping.OneToMany;
-import org.hibernate.mapping.PersistentClass;
-import org.hibernate.mapping.Table;
 
-import org.grails.orm.hibernate.cfg.GrailsHibernateUtil;
 import org.grails.orm.hibernate.cfg.JoinTable;
 import org.grails.orm.hibernate.cfg.PersistentEntityNamingStrategy;
 import org.grails.orm.hibernate.cfg.PropertyConfig;
-import org.grails.orm.hibernate.cfg.domainbinding.util.DefaultColumnNameFetcher;
 import org.grails.orm.hibernate.cfg.domainbinding.collectionType.CollectionHolder;
-import org.grails.orm.hibernate.cfg.domainbinding.collectionType.CollectionType;
+import org.grails.orm.hibernate.cfg.domainbinding.util.DefaultColumnNameFetcher;
 import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernateToManyEntityProperty;
-import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernatePersistentProperty;
 import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernateToManyProperty;
 import org.grails.orm.hibernate.cfg.domainbinding.secondpass.BasicCollectionElementBinder;
 import org.grails.orm.hibernate.cfg.domainbinding.secondpass.BidirectionalMapElementBinder;
@@ -55,13 +49,12 @@ import org.grails.orm.hibernate.cfg.domainbinding.secondpass.PrimaryKeyValueCrea
 import org.grails.orm.hibernate.cfg.domainbinding.secondpass.SetSecondPass;
 import org.grails.orm.hibernate.cfg.domainbinding.secondpass.UnidirectionalOneToManyBinder;
 import org.grails.orm.hibernate.cfg.domainbinding.secondpass.UnidirectionalOneToManyInverseValuesBinder;
-import org.grails.orm.hibernate.cfg.domainbinding.util.CascadeBehavior;
 import org.grails.orm.hibernate.cfg.domainbinding.util.GrailsPropertyResolver;
 import org.grails.orm.hibernate.cfg.domainbinding.util.NamespaceNameExtractor;
 import org.grails.orm.hibernate.cfg.domainbinding.util.SimpleValueColumnFetcher;
 import org.grails.orm.hibernate.cfg.domainbinding.util.TableForManyCalculator;
 
-import static org.grails.orm.hibernate.cfg.GrailsHibernateUtil.qualify;
+import static org.grails.orm.hibernate.cfg.domainbinding.util.CascadeBehavior.ALL_DELETE_ORPHAN;
 
 /** Handles the binding of collections to the Hibernate runtime meta model. */
 @SuppressWarnings("PMD.DataflowAnomalyAnalysis")
@@ -140,100 +133,82 @@ public class CollectionBinder {
      * @return the result
      */
     public Collection bindCollection(HibernateToManyProperty property, String path) {
-        PersistentClass _persistentClass = property.getHibernateOwner().getPersistentClass();
-        CollectionType collectionType = collectionHolder.get(property.getType());
-        Collection collection = collectionType.create(property, _persistentClass);
-        property.setCollection(collection);
+        Collection collection = initializeCollection(property, path);
 
-        // set role
-        String propertyName = getNameForPropertyAndPath(property, path);
-        collection.setRole(qualify(property.getHibernateOwner().getName(), propertyName));
+        configureCollectionMetadata(property, collection);
 
-        PropertyConfig pc = property.getHibernateMappedForm();
-        // configure eager fetching
-        final FetchMode fetchMode = pc.getFetchMode();
-        if (fetchMode == FetchMode.JOIN) {
-            collection.setFetchMode(FetchMode.JOIN);
-        } else if (pc.getFetchMode() != null) {
-            collection.setFetchMode(pc.getFetchMode());
-        } else {
-            collection.setFetchMode(FetchMode.DEFAULT);
-        }
-
-        if (pc.getCascade() != null) {
-            collection.setOrphanDelete(pc.getCascade().equals(CascadeBehavior.ALL_DELETE_ORPHAN.getValue()));
-        }
-        // if it's a one-to-many mapping
         if (property.shouldBindWithForeignKey()) {
-            OneToMany oneToMany = new OneToMany(metadataBuildingContext, collection.getOwner());
-            collection.setElement(oneToMany);
-            bindOneToMany((HibernateToManyEntityProperty) property, oneToMany);
+            bindOneToManyElement((HibernateToManyEntityProperty) property, collection);
         } else {
-            bindCollectionTable(property, _persistentClass.getTable());
-
-            if (property.isBidirectional()) {
-                if (!property.isOwningSide()) {
-                    collection.setInverse(true);
-                }
-            } else {
-                collection.setInverse(false);
-            }
+            bindCollectionTable(property, collection);
         }
 
-        if (pc.getBatchSize() != null) {
-            collection.setBatchSize(pc.getBatchSize());
-        }
+        registerSecondPass(property, collection);
 
-        // set up second pass
+        mappings.addCollectionBinding(collection);
+
+        return collection;
+    }
+
+    private Collection initializeCollection(HibernateToManyProperty property, String path) {
+        Collection collection = collectionHolder.create(property);
+        property.setCollection(collection);
+        collection.setRole(property.getRole(path));
+        return collection;
+    }
+
+    private void configureCollectionMetadata(HibernateToManyProperty property, Collection collection) {
+        collection.setFetchMode(property.getFetchMode());
+        collection.setOrphanDelete(ALL_DELETE_ORPHAN.getValue().equals(property.getCascade()));
+        collection.setBatchSize(property.getBatchSize());
+    }
+
+    private void bindOneToManyElement(HibernateToManyEntityProperty property, Collection collection) {
+        OneToMany oneToMany = new OneToMany(metadataBuildingContext, collection.getOwner());
+        oneToMany.setReferencedEntityName(property.getHibernateAssociatedEntity().getName());
+        oneToMany.setIgnoreNotFound(true);
+        collection.setElement(oneToMany);
+    }
+
+    private void bindCollectionTable(HibernateToManyProperty property, Collection collection) {
+        String owningTableSchema = property.getTable().getSchema();
+        PropertyConfig config = property.getHibernateMappedForm();
+        JoinTable joinTable = config.getJoinTable();
+
+        String logicalName = new TableForManyCalculator(namingStrategy).calculateTableForMany(property);
+        String tableName = (joinTable != null && joinTable.getName() != null) ?
+                joinTable.getName() : namingStrategy.resolveTableName(logicalName);
+
+        String schemaName = getJoinTableSchema(joinTable, owningTableSchema);
+        String catalogName = getJoinTableCatalog(joinTable);
+
+        collection.setCollectionTable(
+                mappings.addTable(schemaName, catalogName, tableName, null, false, metadataBuildingContext));
+        collection.setInverse(property.isBidirectional() && !property.isOwningSide());
+    }
+
+    private String getJoinTableSchema(JoinTable joinTable, String owningTableSchema) {
+        if (joinTable != null && joinTable.getSchema() != null) {
+            return joinTable.getSchema();
+        }
+        String schemaName = NamespaceNameExtractor.getSchemaName(mappings);
+        return (schemaName == null) ? owningTableSchema : schemaName;
+    }
+
+    private String getJoinTableCatalog(JoinTable joinTable) {
+        if (joinTable != null && joinTable.getCatalog() != null) {
+            return joinTable.getCatalog();
+        }
+        return NamespaceNameExtractor.getCatalogName(mappings);
+    }
+
+    private void registerSecondPass(HibernateToManyProperty property, Collection collection) {
         if (collection instanceof org.hibernate.mapping.List) {
             mappings.addSecondPass(new ListSecondPass(listSecondPassBinder, property));
         } else if (collection instanceof org.hibernate.mapping.Map) {
             mappings.addSecondPass(new MapSecondPass(mapSecondPassBinder, property));
-        } else { // Collection -> Bag
+        } else {
             mappings.addSecondPass(new SetSecondPass(collectionSecondPassBinder, property));
         }
-        mappings.addCollectionBinding(collection);
-        return collection;
-    }
-
-    private String getNameForPropertyAndPath(HibernatePersistentProperty property, String path) {
-        if (GrailsHibernateUtil.isNotEmpty(path)) {
-            return qualify(path, property.getName());
-        }
-        return property.getName();
-    }
-
-    private void bindOneToMany(HibernateToManyEntityProperty currentGrailsProp, OneToMany one) {
-        one.setReferencedEntityName(
-                currentGrailsProp.getHibernateAssociatedEntity().getName());
-        one.setIgnoreNotFound(true);
-    }
-
-    private void bindCollectionTable(HibernateToManyProperty property, Table ownerTable) {
-        Collection collection = property.getCollection();
-        String owningTableSchema = ownerTable.getSchema();
-        PropertyConfig config = property.getHibernateMappedForm();
-        JoinTable jt = config.getJoinTable();
-
-        String s = new TableForManyCalculator(namingStrategy).calculateTableForMany(property);
-        String tableName = (jt != null && jt.getName() != null ? jt.getName() : namingStrategy.resolveTableName(s));
-
-        String schemaName = NamespaceNameExtractor.getSchemaName(mappings);
-        String catalogName = NamespaceNameExtractor.getCatalogName(mappings);
-        if (jt != null) {
-            if (jt.getSchema() != null) {
-                schemaName = jt.getSchema();
-            }
-            if (jt.getCatalog() != null) {
-                catalogName = jt.getCatalog();
-            }
-        }
-
-        if (schemaName == null && owningTableSchema != null) {
-            schemaName = owningTableSchema;
-        }
-
-        collection.setCollectionTable(
-                mappings.addTable(schemaName, catalogName, tableName, null, false, metadataBuildingContext));
     }
 }

@@ -38,6 +38,8 @@ import org.grails.orm.hibernate.cfg.PropertyConfig;
 import org.grails.orm.hibernate.cfg.domainbinding.binder.GrailsDomainBinder;
 import org.grails.orm.hibernate.cfg.domainbinding.util.BackticksRemover;
 
+import static java.util.Optional.ofNullable;
+import static org.grails.orm.hibernate.cfg.GrailsHibernateUtil.qualify;
 import static org.grails.orm.hibernate.cfg.domainbinding.binder.GrailsDomainBinder.UNDERSCORE;
 
 /** Marker interface for Hibernate to-many associations */
@@ -68,7 +70,7 @@ public interface HibernateToManyProperty extends PropertyWithMapping<PropertyCon
     }
 
     default String getCacheUsage() {
-        return Optional.ofNullable(getHibernateMappedForm())
+        return ofNullable(getHibernateMappedForm())
                 .map(PropertyConfig::getCache)
                 .map(CacheConfig::getUsage)
                 .map(Object::toString)
@@ -99,11 +101,7 @@ public interface HibernateToManyProperty extends PropertyWithMapping<PropertyCon
      * @return Whether the collection should be bound with a foreign key
      */
     default boolean shouldBindWithForeignKey() {
-        return ((this instanceof HibernateOneToManyProperty) && isBidirectional() || !isUnidirectionalOneToMany()) &&
-                !Map.class.isAssignableFrom(getType()) &&
-                !(this instanceof HibernateManyToManyProperty) &&
-                !(this instanceof Basic) &&
-                !(this instanceof HibernateEmbeddedCollectionProperty);
+        return false;
     }
 
     default String getIndexColumnName(PersistentEntityNamingStrategy namingStrategy) {
@@ -189,7 +187,7 @@ public interface HibernateToManyProperty extends PropertyWithMapping<PropertyCon
     }
 
     default String getMapElementName(PersistentEntityNamingStrategy namingStrategy) {
-        return java.util.Optional.ofNullable(getHibernateMappedForm())
+        return ofNullable(getHibernateMappedForm())
                 .map(PropertyConfig::getJoinTable)
                 .map(JoinTable::getColumn)
                 .map(ColumnConfig::getName)
@@ -199,7 +197,7 @@ public interface HibernateToManyProperty extends PropertyWithMapping<PropertyCon
     }
 
     default String resolveJoinTableForeignKeyColumnName(PersistentEntityNamingStrategy namingStrategy) {
-        return java.util.Optional.ofNullable(getHibernateMappedForm())
+        return ofNullable(getHibernateMappedForm())
                 .map(PropertyConfig::getJoinTableColumnConfig)
                 .map(ColumnConfig::getName)
                 .orElseGet(() -> namingStrategy.resolveColumnName(getHibernateAssociatedEntity()
@@ -228,7 +226,7 @@ public interface HibernateToManyProperty extends PropertyWithMapping<PropertyCon
 
     @NonNull
     default Optional<ColumnConfig> getColumnConfigOptional() {
-        return Optional.ofNullable(getHibernateMappedForm()).map(PropertyConfig::getJoinTableColumnConfig);
+        return ofNullable(getHibernateMappedForm()).map(PropertyConfig::getJoinTableColumnConfig);
     }
 
     @Override
@@ -251,4 +249,16 @@ public interface HibernateToManyProperty extends PropertyWithMapping<PropertyCon
     Collection getCollection();
 
     void setCollection(Collection collection);
+
+    default String getCascade() {
+        return getHibernateMappedForm().getCascade();
+    }
+
+    default Integer getBatchSize() {
+        return ofNullable(getHibernateMappedForm()).map(PropertyConfig::getBatchSize).orElse(-1);
+    }
+
+    default String getRole(String path) {
+        return qualify(getHibernateOwner().getName(), getNameForPropertyAndPath(path));
+    }
 }
