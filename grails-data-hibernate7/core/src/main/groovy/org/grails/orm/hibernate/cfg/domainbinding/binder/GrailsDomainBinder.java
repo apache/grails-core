@@ -48,6 +48,7 @@ import org.grails.orm.hibernate.cfg.domainbinding.util.MultiTenantFilterDefiniti
 import org.grails.orm.hibernate.cfg.domainbinding.util.NamingStrategyProvider;
 import org.grails.orm.hibernate.cfg.domainbinding.util.NamingStrategyWrapper;
 import org.grails.orm.hibernate.cfg.domainbinding.util.PropertyFromValueCreator;
+import org.grails.orm.hibernate.cfg.domainbinding.util.TableForManyCalculator;
 import org.grails.orm.hibernate.cfg.domainbinding.util.SimpleValueColumnFetcher;
 
 /**
@@ -154,6 +155,7 @@ public class GrailsDomainBinder implements AdditionalMappingContributor, TypeCon
         ForeignKeyOneToOneBinder foreignKeyOneToOneBinder =
                 new ForeignKeyOneToOneBinder(manyToOneBinder, simpleValueColumnFetcher);
 
+        TableForManyCalculator tableForManyCalculator = new TableForManyCalculator(namingStrategy, metadataCollector);
         CollectionBinder collectionBinder = new CollectionBinder(
                 metadataBuildingContext,
                 namingStrategy,
@@ -163,7 +165,8 @@ public class GrailsDomainBinder implements AdditionalMappingContributor, TypeCon
                 compositeIdentifierToManyToOneBinder,
                 simpleValueColumnFetcher,
                 collectionHolder,
-                metadataCollector);
+                metadataCollector,
+                tableForManyCalculator);
         ComponentUpdater componentUpdater = new ComponentUpdater(propertyFromValueCreator);
         ComponentBinder componentBinder =
                 new ComponentBinder(metadataBuildingContext, getMappingCacheHolder(), componentUpdater);

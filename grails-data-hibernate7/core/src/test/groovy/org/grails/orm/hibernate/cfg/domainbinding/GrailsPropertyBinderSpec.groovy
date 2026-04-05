@@ -43,6 +43,7 @@ import org.grails.orm.hibernate.cfg.domainbinding.util.PropertyFromValueCreator
 import org.grails.orm.hibernate.cfg.domainbinding.util.ColumnNameForPropertyAndPathFetcher
 import org.grails.orm.hibernate.cfg.domainbinding.util.DefaultColumnNameFetcher
 import org.grails.orm.hibernate.cfg.domainbinding.util.BackticksRemover
+import org.grails.orm.hibernate.cfg.domainbinding.util.TableForManyCalculator
 
 import static org.grails.orm.hibernate.cfg.domainbinding.binder.GrailsDomainBinder.EMPTY_PATH
 
@@ -70,6 +71,7 @@ class GrailsPropertyBinderSpec extends HibernateGormDatastoreSpec {
         ManyToOneBinder manyToOneBinder = new ManyToOneBinder(metadataBuildingContext, namingStrategy, simpleValueBinder, new ManyToOneValuesBinder(), compositeIdentifierToManyToOneBinder)
         ForeignKeyOneToOneBinder foreignKeyOneToOneBinder = new ForeignKeyOneToOneBinder(manyToOneBinder, simpleValueColumnFetcher)
 
+        TableForManyCalculator tableForManyCalculator = new TableForManyCalculator(namingStrategy, collector)
         CollectionBinder collectionBinder = new CollectionBinder(
                 metadataBuildingContext,
                 namingStrategy,
@@ -79,7 +81,8 @@ class GrailsPropertyBinderSpec extends HibernateGormDatastoreSpec {
                 compositeIdentifierToManyToOneBinder,
                 simpleValueColumnFetcher,
                 new org.grails.orm.hibernate.cfg.domainbinding.collectionType.CollectionHolder(metadataBuildingContext),
-                collector
+                collector,
+                tableForManyCalculator
         )
         PropertyFromValueCreator propertyFromValueCreator = new PropertyFromValueCreator()
         ComponentUpdater componentUpdater = new ComponentUpdater(propertyFromValueCreator)

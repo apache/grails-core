@@ -52,7 +52,8 @@ class ListSecondPassBinderSpec extends HibernateGormDatastoreSpec {
         ManyToOneBinder mtob = new ManyToOneBinder(mbc, ns, svb, new ManyToOneValuesBinder(), citmto)
         ForeignKeyOneToOneBinder fkotob = new ForeignKeyOneToOneBinder(mtob, svcf)
 
-        CollectionBinder cb = new CollectionBinder(mbc, ns, svb, etb, mtob, citmto, svcf, ch, collector)
+        TableForManyCalculator tfmc = new TableForManyCalculator(ns, collector)
+        CollectionBinder cb = new CollectionBinder(mbc, ns, svb, etb, mtob, citmto, svcf, ch, collector, tfmc)
         PropertyFromValueCreator pfvc = new PropertyFromValueCreator()
         ComponentUpdater cu = new ComponentUpdater(pfvc)
         ComponentBinder comb = new ComponentBinder(mbc, binder.getMappingCacheHolder(), cu)

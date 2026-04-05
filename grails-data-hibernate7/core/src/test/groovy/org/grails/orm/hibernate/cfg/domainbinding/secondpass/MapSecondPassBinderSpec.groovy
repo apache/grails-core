@@ -34,6 +34,7 @@ import org.grails.orm.hibernate.cfg.domainbinding.binder.ManyToOneBinder
 import org.grails.orm.hibernate.cfg.domainbinding.binder.ManyToOneValuesBinder
 import org.grails.orm.hibernate.cfg.domainbinding.binder.CompositeIdentifierToManyToOneBinder
 import org.grails.orm.hibernate.cfg.domainbinding.util.SimpleValueColumnFetcher
+import org.grails.orm.hibernate.cfg.domainbinding.util.TableForManyCalculator
 import org.grails.orm.hibernate.cfg.domainbinding.binder.CollectionBinder
 import org.grails.orm.hibernate.cfg.domainbinding.binder.OneToOneBinder
 import org.grails.orm.hibernate.cfg.domainbinding.binder.ClassBinder
@@ -93,18 +94,18 @@ class MapSecondPassBinderSpec extends HibernateGormDatastoreSpec {
         ManyToOneBinder manyToOneBinder = new ManyToOneBinder(metadataBuildingContext, namingStrategy, simpleValueBinder, new ManyToOneValuesBinder(), compositeIdentifierToManyToOneBinder)
         ForeignKeyOneToOneBinder foreignKeyOneToOneBinder = new ForeignKeyOneToOneBinder(manyToOneBinder, simpleValueColumnFetcher)
 
+        TableForManyCalculator tableForManyCalculator = new TableForManyCalculator(namingStrategy, getCollector())
         CollectionBinder collectionBinder = new CollectionBinder(
                 metadataBuildingContext,
-                namingStrategy
-                ,
+                namingStrategy,
                 simpleValueBinder,
                 enumTypeBinderToUse,
                 manyToOneBinder,
                 compositeIdentifierToManyToOneBinder,
-                simpleValueColumnFetcher
-                ,
+                simpleValueColumnFetcher,
                 collectionHolder,
-                getCollector()
+                getCollector(),
+                tableForManyCalculator
         )
         PropertyFromValueCreator propertyFromValueCreator = new PropertyFromValueCreator()
         ComponentUpdater componentUpdater = new ComponentUpdater(propertyFromValueCreator)

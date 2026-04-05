@@ -23,11 +23,8 @@ import org.hibernate.boot.spi.MetadataBuildingContext;
 import org.hibernate.mapping.Collection;
 import org.hibernate.mapping.OneToMany;
 
-import org.grails.orm.hibernate.cfg.JoinTable;
 import org.grails.orm.hibernate.cfg.PersistentEntityNamingStrategy;
-import org.grails.orm.hibernate.cfg.PropertyConfig;
 import org.grails.orm.hibernate.cfg.domainbinding.collectionType.CollectionHolder;
-import org.grails.orm.hibernate.cfg.domainbinding.util.DefaultColumnNameFetcher;
 import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernateToManyEntityProperty;
 import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernateToManyProperty;
 import org.grails.orm.hibernate.cfg.domainbinding.secondpass.BasicCollectionElementBinder;
@@ -35,11 +32,10 @@ import org.grails.orm.hibernate.cfg.domainbinding.secondpass.BidirectionalMapEle
 import org.grails.orm.hibernate.cfg.domainbinding.secondpass.BidirectionalOneToManyLinker;
 import org.grails.orm.hibernate.cfg.domainbinding.secondpass.CollectionKeyBinder;
 import org.grails.orm.hibernate.cfg.domainbinding.secondpass.CollectionKeyColumnUpdater;
-import org.grails.orm.hibernate.cfg.domainbinding.secondpass.HibernateToManyEntityOrderByBinder;
 import org.grails.orm.hibernate.cfg.domainbinding.secondpass.CollectionSecondPassBinder;
 import org.grails.orm.hibernate.cfg.domainbinding.secondpass.CollectionWithJoinTableBinder;
-import org.grails.orm.hibernate.cfg.domainbinding.secondpass.ToManyEntityMultiTenantFilterBinder;
 import org.grails.orm.hibernate.cfg.domainbinding.secondpass.DependentKeyValueBinder;
+import org.grails.orm.hibernate.cfg.domainbinding.secondpass.HibernateToManyEntityOrderByBinder;
 import org.grails.orm.hibernate.cfg.domainbinding.secondpass.ListSecondPass;
 import org.grails.orm.hibernate.cfg.domainbinding.secondpass.ListSecondPassBinder;
 import org.grails.orm.hibernate.cfg.domainbinding.secondpass.ManyToOneElementBinder;
@@ -47,10 +43,11 @@ import org.grails.orm.hibernate.cfg.domainbinding.secondpass.MapSecondPass;
 import org.grails.orm.hibernate.cfg.domainbinding.secondpass.MapSecondPassBinder;
 import org.grails.orm.hibernate.cfg.domainbinding.secondpass.PrimaryKeyValueCreator;
 import org.grails.orm.hibernate.cfg.domainbinding.secondpass.SetSecondPass;
+import org.grails.orm.hibernate.cfg.domainbinding.secondpass.ToManyEntityMultiTenantFilterBinder;
 import org.grails.orm.hibernate.cfg.domainbinding.secondpass.UnidirectionalOneToManyBinder;
 import org.grails.orm.hibernate.cfg.domainbinding.secondpass.UnidirectionalOneToManyInverseValuesBinder;
+import org.grails.orm.hibernate.cfg.domainbinding.util.DefaultColumnNameFetcher;
 import org.grails.orm.hibernate.cfg.domainbinding.util.GrailsPropertyResolver;
-import org.grails.orm.hibernate.cfg.domainbinding.util.NamespaceNameExtractor;
 import org.grails.orm.hibernate.cfg.domainbinding.util.SimpleValueColumnFetcher;
 import org.grails.orm.hibernate.cfg.domainbinding.util.TableForManyCalculator;
 
@@ -61,12 +58,12 @@ import static org.grails.orm.hibernate.cfg.domainbinding.util.CascadeBehavior.AL
 public class CollectionBinder {
 
     private final MetadataBuildingContext metadataBuildingContext;
-    private final PersistentEntityNamingStrategy namingStrategy;
     private final CollectionHolder collectionHolder;
     private final ListSecondPassBinder listSecondPassBinder;
     private final CollectionSecondPassBinder collectionSecondPassBinder;
     private final MapSecondPassBinder mapSecondPassBinder;
     private final InFlightMetadataCollector mappings;
+    private final TableForManyCalculator tableForManyCalculator;
 
     /** Creates a new {@link CollectionBinder} instance. */
     public CollectionBinder(
@@ -78,11 +75,12 @@ public class CollectionBinder {
             CompositeIdentifierToManyToOneBinder compositeIdentifierToManyToOneBinder,
             SimpleValueColumnFetcher simpleValueColumnFetcher,
             CollectionHolder collectionHolder,
-            InFlightMetadataCollector mappings) {
+            InFlightMetadataCollector mappings,
+            TableForManyCalculator tableForManyCalculator) {
         this.metadataBuildingContext = metadataBuildingContext;
-        this.namingStrategy = namingStrategy;
         this.collectionHolder = collectionHolder;
         this.mappings = mappings;
+        this.tableForManyCalculator = tableForManyCalculator;
         GrailsPropertyResolver grailsPropertyResolver = new GrailsPropertyResolver();
         CollectionForPropertyConfigBinder collectionForPropertyConfigBinder = new CollectionForPropertyConfigBinder();
         UnidirectionalOneToManyInverseValuesBinder unidirectionalOneToManyInverseValuesBinder =
@@ -171,35 +169,13 @@ public class CollectionBinder {
     }
 
     private void bindCollectionTable(HibernateToManyProperty property, Collection collection) {
-        String owningTableSchema = property.getTable().getSchema();
-        PropertyConfig config = property.getHibernateMappedForm();
-        JoinTable joinTable = config.getJoinTable();
-
-        String logicalName = new TableForManyCalculator(namingStrategy).calculateTableForMany(property);
-        String tableName = (joinTable != null && joinTable.getName() != null) ?
-                joinTable.getName() : namingStrategy.resolveTableName(logicalName);
-
-        String schemaName = getJoinTableSchema(joinTable, owningTableSchema);
-        String catalogName = getJoinTableCatalog(joinTable);
+        String tableName = tableForManyCalculator.getTableName(property);
+        String schemaName = tableForManyCalculator.getJoinTableSchema(property);
+        String catalogName = tableForManyCalculator.getJoinTableCatalog(property);
 
         collection.setCollectionTable(
                 mappings.addTable(schemaName, catalogName, tableName, null, false, metadataBuildingContext));
         collection.setInverse(property.isBidirectional() && !property.isOwningSide());
-    }
-
-    private String getJoinTableSchema(JoinTable joinTable, String owningTableSchema) {
-        if (joinTable != null && joinTable.getSchema() != null) {
-            return joinTable.getSchema();
-        }
-        String schemaName = NamespaceNameExtractor.getSchemaName(mappings);
-        return (schemaName == null) ? owningTableSchema : schemaName;
-    }
-
-    private String getJoinTableCatalog(JoinTable joinTable) {
-        if (joinTable != null && joinTable.getCatalog() != null) {
-            return joinTable.getCatalog();
-        }
-        return NamespaceNameExtractor.getCatalogName(mappings);
     }
 
     private void registerSecondPass(HibernateToManyProperty property, Collection collection) {

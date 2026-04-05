@@ -21,6 +21,7 @@ package org.grails.orm.hibernate.cfg.domainbinding.util;
 import java.util.Map;
 
 import org.hibernate.MappingException;
+import org.hibernate.boot.spi.InFlightMetadataCollector;
 
 import org.grails.datastore.mapping.model.types.Association;
 import org.grails.datastore.mapping.model.types.Basic;
@@ -30,6 +31,7 @@ import org.grails.orm.hibernate.cfg.PropertyConfig;
 import org.grails.orm.hibernate.cfg.domainbinding.hibernate.GrailsHibernatePersistentEntity;
 import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernateManyToManyProperty;
 import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernatePersistentProperty;
+import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernateToManyProperty;
 
 import static org.grails.orm.hibernate.cfg.domainbinding.binder.GrailsDomainBinder.UNDERSCORE;
 
@@ -37,16 +39,50 @@ import static org.grails.orm.hibernate.cfg.domainbinding.binder.GrailsDomainBind
 public class TableForManyCalculator {
 
     private final PersistentEntityNamingStrategy namingStrategy;
+    private final InFlightMetadataCollector mappings;
     private final BackticksRemover backticksRemover;
 
-    public TableForManyCalculator(PersistentEntityNamingStrategy namingStrategy) {
+    public TableForManyCalculator(PersistentEntityNamingStrategy namingStrategy, InFlightMetadataCollector mappings) {
         this.namingStrategy = namingStrategy;
-        backticksRemover = new BackticksRemover();
+        this.mappings = mappings;
+        this.backticksRemover = new BackticksRemover();
     }
 
-    protected TableForManyCalculator(PersistentEntityNamingStrategy namingStrategy, BackticksRemover backticksRemover) {
+    protected TableForManyCalculator(PersistentEntityNamingStrategy namingStrategy, InFlightMetadataCollector mappings, BackticksRemover backticksRemover) {
         this.namingStrategy = namingStrategy;
+        this.mappings = mappings;
         this.backticksRemover = backticksRemover;
+    }
+
+    public String getTableName(HibernateToManyProperty property) {
+        PropertyConfig config = property.getHibernateMappedForm();
+        JoinTable joinTable = config.getJoinTable();
+
+        String logicalName = calculateTableForMany(property);
+        return (joinTable != null && joinTable.getName() != null) ?
+                joinTable.getName() : namingStrategy.resolveTableName(logicalName);
+    }
+
+    public String getJoinTableSchema(HibernateToManyProperty property) {
+        PropertyConfig config = property.getHibernateMappedForm();
+        JoinTable joinTable = config.getJoinTable();
+        String owningTableSchema = property.getTable().getSchema();
+
+        if (joinTable != null && joinTable.getSchema() != null) {
+            return joinTable.getSchema();
+        }
+        String schemaName = NamespaceNameExtractor.getSchemaName(mappings);
+        return (schemaName == null) ? owningTableSchema : schemaName;
+    }
+
+    public String getJoinTableCatalog(HibernateToManyProperty property) {
+        PropertyConfig config = property.getHibernateMappedForm();
+        JoinTable joinTable = config.getJoinTable();
+
+        if (joinTable != null && joinTable.getCatalog() != null) {
+            return joinTable.getCatalog();
+        }
+        return NamespaceNameExtractor.getCatalogName(mappings);
     }
 
     /**
@@ -113,4 +149,5 @@ public class TableForManyCalculator {
         }
         return backticksRemover.apply(right) + UNDERSCORE + backticksRemover.apply(left);
     }
+
 }
