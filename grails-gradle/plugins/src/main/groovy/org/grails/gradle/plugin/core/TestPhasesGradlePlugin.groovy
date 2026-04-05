@@ -142,7 +142,7 @@ class TestPhasesGradlePlugin implements Plugin<Project> {
             it.mustRunAfter(project.tasks.withType(Test).toArray())
             it.destinationDirectory.set(project.layout.buildDirectory.dir('reports/tests'))
             it.testResults.from(
-                    project.files(project.layout.buildDirectory.dir('test-results/test/binary'))
+                    project.files(project.layout.buildDirectory.dir('test-results/test/binary')).filter { File f -> f.exists() }
             )
         }
     }
@@ -150,7 +150,7 @@ class TestPhasesGradlePlugin implements Plugin<Project> {
     private static void addPhaseToMergeTestReports(Project project, String phaseName) {
         project.tasks.named(MERGE_TEST_REPORTS_TASK_NAME, TestReport) {
             it.testResults.from(
-                    project.files(project.layout.buildDirectory.dir("test-results/${phaseName}/binary"))
+                    project.files(project.layout.buildDirectory.dir("test-results/${phaseName}/binary")).filter { File f -> f.exists() }
             )
         }
     }
