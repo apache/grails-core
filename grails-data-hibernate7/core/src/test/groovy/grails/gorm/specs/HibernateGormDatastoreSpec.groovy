@@ -165,8 +165,8 @@ class HibernateGormDatastoreSpec extends GrailsDataTckSpec<GrailsDataHibernate7T
         datastore.connect() as HibernateSession
     }
 
-    protected PersistentEntity getPersistentEntity(Class clazz) {
-        getMappingContext().getPersistentEntity(clazz.typeName)
+    protected GrailsHibernatePersistentEntity getPersistentEntity(Class clazz) {
+        getMappingContext().getPersistentEntity(clazz.typeName) as GrailsHibernatePersistentEntity
     }
 
     protected HibernateQuery getQuery(Class clazz) {

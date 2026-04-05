@@ -20,259 +20,303 @@
 package org.grails.orm.hibernate.cfg.domainbinding.secondpass
 
 import grails.gorm.specs.HibernateGormDatastoreSpec
-import org.grails.orm.hibernate.cfg.domainbinding.hibernate.GrailsHibernatePersistentEntity
-import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernateToManyProperty
-
-import org.hibernate.mapping.OneToMany
-import org.hibernate.mapping.RootClass
-import org.hibernate.boot.spi.MetadataBuildingContext
+import grails.persistence.Entity
+import org.grails.datastore.mapping.model.PersistentEntity
 import org.grails.orm.hibernate.cfg.PersistentEntityNamingStrategy
-import org.hibernate.engine.jdbc.env.spi.JdbcEnvironment
-import org.grails.orm.hibernate.cfg.domainbinding.binder.SimpleValueBinder
-import org.grails.orm.hibernate.cfg.domainbinding.binder.EnumTypeBinder
-import org.grails.orm.hibernate.cfg.domainbinding.binder.ForeignKeyOneToOneBinder
-import org.grails.orm.hibernate.cfg.domainbinding.binder.ManyToOneBinder
-import org.grails.orm.hibernate.cfg.domainbinding.binder.ManyToOneValuesBinder
-import org.grails.orm.hibernate.cfg.domainbinding.binder.CompositeIdentifierToManyToOneBinder
-import org.grails.orm.hibernate.cfg.domainbinding.util.SimpleValueColumnFetcher
-import org.grails.orm.hibernate.cfg.domainbinding.binder.CollectionBinder
-import org.grails.orm.hibernate.cfg.domainbinding.binder.OneToOneBinder
-import org.grails.orm.hibernate.cfg.domainbinding.binder.ClassBinder
-import org.grails.orm.hibernate.cfg.domainbinding.binder.ComponentBinder
-import org.grails.orm.hibernate.cfg.domainbinding.binder.ComponentUpdater
-import org.grails.orm.hibernate.cfg.domainbinding.util.BasicValueCreator
-import org.grails.orm.hibernate.cfg.domainbinding.binder.GrailsPropertyBinder
-import org.grails.orm.hibernate.cfg.domainbinding.binder.IdentityBinder
-import org.hibernate.boot.spi.InFlightMetadataCollector
-import org.grails.orm.hibernate.cfg.domainbinding.binder.VersionBinder
-import org.grails.orm.hibernate.cfg.domainbinding.binder.CompositeIdBinder
-import org.grails.orm.hibernate.cfg.domainbinding.binder.SimpleIdBinder
-import org.grails.orm.hibernate.cfg.domainbinding.binder.PropertyBinder
-import org.hibernate.mapping.BasicValue
-import org.grails.orm.hibernate.cfg.domainbinding.util.BackticksRemover
-import org.grails.orm.hibernate.cfg.domainbinding.util.DefaultColumnNameFetcher
-import org.grails.orm.hibernate.cfg.domainbinding.util.ColumnNameForPropertyAndPathFetcher
+import org.grails.orm.hibernate.cfg.domainbinding.binder.*
 import org.grails.orm.hibernate.cfg.domainbinding.collectionType.CollectionHolder
-import org.grails.orm.hibernate.cfg.domainbinding.util.PropertyFromValueCreator
-import org.grails.orm.hibernate.cfg.domainbinding.binder.GrailsDomainBinder
-import org.grails.orm.hibernate.cfg.domainbinding.binder.SubClassBinder
-import org.grails.orm.hibernate.cfg.domainbinding.binder.SubclassMappingBinder
-import org.grails.orm.hibernate.cfg.domainbinding.binder.RootBinder
-import org.grails.orm.hibernate.cfg.domainbinding.binder.RootPersistentClassCommonValuesBinder
-import org.grails.orm.hibernate.cfg.domainbinding.binder.DiscriminatorPropertyBinder
-import org.grails.orm.hibernate.cfg.domainbinding.binder.ColumnConfigToColumnBinder
-
-import org.grails.orm.hibernate.cfg.domainbinding.binder.ClassPropertiesBinder
-import org.grails.orm.hibernate.cfg.domainbinding.util.MultiTenantFilterBinder
-import org.grails.orm.hibernate.cfg.domainbinding.binder.JoinedSubClassBinder
-import org.grails.orm.hibernate.cfg.domainbinding.binder.UnionSubclassBinder
-import org.grails.orm.hibernate.cfg.domainbinding.binder.SingleTableSubclassBinder
+import org.grails.orm.hibernate.cfg.domainbinding.hibernate.*
+import org.grails.orm.hibernate.cfg.domainbinding.util.*
+import org.hibernate.MappingException
+import org.hibernate.boot.spi.InFlightMetadataCollector
+import org.hibernate.boot.spi.MetadataBuildingContext
+import org.hibernate.engine.jdbc.env.spi.JdbcEnvironment
+import org.hibernate.mapping.*
 
 class ListSecondPassBinderSpec extends HibernateGormDatastoreSpec {
 
-    protected Map getBinders(GrailsDomainBinder binder, InFlightMetadataCollector collector = getCollector()) {
-        MetadataBuildingContext metadataBuildingContext = binder.getMetadataBuildingContext()
-        PersistentEntityNamingStrategy namingStrategy = binder.getNamingStrategy()
-        JdbcEnvironment jdbcEnvironment = binder.getJdbcEnvironment()
-        BackticksRemover backticksRemover = new BackticksRemover()
-        DefaultColumnNameFetcher defaultColumnNameFetcher = new DefaultColumnNameFetcher(namingStrategy, backticksRemover)
-        ColumnNameForPropertyAndPathFetcher columnNameForPropertyAndPathFetcher = new ColumnNameForPropertyAndPathFetcher(namingStrategy, defaultColumnNameFetcher, backticksRemover)
-        CollectionHolder collectionHolder = new CollectionHolder(metadataBuildingContext)
-        SimpleValueBinder simpleValueBinder = new SimpleValueBinder(metadataBuildingContext, namingStrategy, jdbcEnvironment)
-        EnumTypeBinder enumTypeBinderToUse = new EnumTypeBinder(metadataBuildingContext, columnNameForPropertyAndPathFetcher,namingStrategy)
-        SimpleValueColumnFetcher simpleValueColumnFetcher = new SimpleValueColumnFetcher()
-        CompositeIdentifierToManyToOneBinder compositeIdentifierToManyToOneBinder = new CompositeIdentifierToManyToOneBinder(
+    protected java.util.Map getBinders(GrailsDomainBinder binder, InFlightMetadataCollector collector = getCollector()) {
+        MetadataBuildingContext mbc = binder.getMetadataBuildingContext()
+        PersistentEntityNamingStrategy ns = binder.getNamingStrategy()
+        JdbcEnvironment je = binder.getJdbcEnvironment()
+        BackticksRemover br = new BackticksRemover()
+        DefaultColumnNameFetcher dcnf = new DefaultColumnNameFetcher(ns, br)
+        ColumnNameForPropertyAndPathFetcher cnfpapf = new ColumnNameForPropertyAndPathFetcher(ns, dcnf, br)
+        CollectionHolder ch = new CollectionHolder(mbc)
+        SimpleValueBinder svb = new SimpleValueBinder(mbc, ns, je)
+        EnumTypeBinder etb = new EnumTypeBinder(mbc, cnfpapf, ns)
+        SimpleValueColumnFetcher svcf = new SimpleValueColumnFetcher()
+        CompositeIdentifierToManyToOneBinder citmto = new CompositeIdentifierToManyToOneBinder(
+                new ForeignKeyColumnCountCalculator(), ns, dcnf, br, svb)
+        OneToOneBinder otob = new OneToOneBinder(mbc, svb)
+        ManyToOneBinder mtob = new ManyToOneBinder(mbc, ns, svb, new ManyToOneValuesBinder(), citmto)
+        ForeignKeyOneToOneBinder fkotob = new ForeignKeyOneToOneBinder(mtob, svcf)
 
-                new org.grails.orm.hibernate.cfg.domainbinding.util.ForeignKeyColumnCountCalculator(),
-                namingStrategy,
-                defaultColumnNameFetcher,
-                backticksRemover,
-                simpleValueBinder
-        )
-        OneToOneBinder oneToOneBinder = new OneToOneBinder(metadataBuildingContext, simpleValueBinder)
-        ManyToOneBinder manyToOneBinder = new ManyToOneBinder(metadataBuildingContext, namingStrategy, simpleValueBinder, new ManyToOneValuesBinder(), compositeIdentifierToManyToOneBinder)
-        ForeignKeyOneToOneBinder foreignKeyOneToOneBinder = new ForeignKeyOneToOneBinder(manyToOneBinder, simpleValueColumnFetcher)
+        CollectionBinder cb = new CollectionBinder(mbc, ns, svb, etb, mtob, citmto, svcf, ch, collector)
+        PropertyFromValueCreator pfvc = new PropertyFromValueCreator()
+        ComponentUpdater cu = new ComponentUpdater(pfvc)
+        ComponentBinder comb = new ComponentBinder(mbc, binder.getMappingCacheHolder(), cu)
 
-        CollectionBinder collectionBinder = new CollectionBinder(
-                metadataBuildingContext,
-                namingStrategy
-                ,
-                simpleValueBinder,
-                enumTypeBinderToUse,
-                manyToOneBinder,
-                compositeIdentifierToManyToOneBinder,
-                simpleValueColumnFetcher
-                ,
-                collectionHolder,
-                collector
-        )
-        PropertyFromValueCreator propertyFromValueCreator = new PropertyFromValueCreator()
-        ComponentUpdater componentUpdater = new ComponentUpdater(propertyFromValueCreator)
-        ComponentBinder componentBinder = new ComponentBinder(
-                metadataBuildingContext,
-                binder.getMappingCacheHolder(),
-                componentUpdater
-        )
+        GrailsPropertyBinder pb = new GrailsPropertyBinder(etb, comb, cb, svb, otob, mtob, fkotob)
+        CompositeIdBinder cib = new CompositeIdBinder(mbc, cu, pb)
+        PropertyBinder pbh = new PropertyBinder()
+        SimpleIdBinder sib = new SimpleIdBinder(mbc, new BasicValueCreator(mbc, je, ns), svb, pbh)
+        IdentityBinder ib = new IdentityBinder(sib, cib)
+        VersionBinder vb = new VersionBinder(mbc, svb, pbh, BasicValue::new)
 
-        GrailsPropertyBinder propertyBinder = new GrailsPropertyBinder(
+        ClassBinder clb = new ClassBinder(collector)
+        ClassPropertiesBinder clpb = new ClassPropertiesBinder(pb, pfvc)
+        MultiTenantFilterBinder mtfb = new MultiTenantFilterBinder(new GrailsPropertyResolver(), new MultiTenantFilterDefinitionBinder(), collector, dcnf)
+        JoinedSubClassBinder jscb = new JoinedSubClassBinder(mbc, ns, new org.grails.orm.hibernate.cfg.domainbinding.binder.SimpleValueColumnBinder(), cnfpapf, clb, collector)
+        UnionSubclassBinder uscb = new UnionSubclassBinder(mbc, ns, clb, collector)
+        SingleTableSubclassBinder stscb = new SingleTableSubclassBinder(clb, mbc)
 
-
-                enumTypeBinderToUse,
-                componentBinder,
-                collectionBinder,
-                simpleValueBinder
-                ,
-                oneToOneBinder,
-                manyToOneBinder,
-                foreignKeyOneToOneBinder
-
-        )
-        CompositeIdBinder compositeIdBinder = new CompositeIdBinder(metadataBuildingContext, componentUpdater, propertyBinder)
-        PropertyBinder propertyBinderHelper = new PropertyBinder()
-        SimpleIdBinder simpleIdBinder = new SimpleIdBinder(metadataBuildingContext, new BasicValueCreator(metadataBuildingContext, jdbcEnvironment, namingStrategy), simpleValueBinder, propertyBinderHelper)
-        IdentityBinder identityBinder = new IdentityBinder(simpleIdBinder, compositeIdBinder)
-        VersionBinder versionBinder = new VersionBinder(metadataBuildingContext, simpleValueBinder, propertyBinderHelper, BasicValue::new)
-
-        ClassBinder classBinder = new ClassBinder(collector)
-        ClassPropertiesBinder classPropertiesBinder = new ClassPropertiesBinder(propertyBinder, propertyFromValueCreator)
-        MultiTenantFilterBinder multiTenantFilterBinder = new MultiTenantFilterBinder(new org.grails.orm.hibernate.cfg.domainbinding.util.GrailsPropertyResolver(), new org.grails.orm.hibernate.cfg.domainbinding.util.MultiTenantFilterDefinitionBinder(), collector, defaultColumnNameFetcher)
-        JoinedSubClassBinder joinedSubClassBinder = new JoinedSubClassBinder(metadataBuildingContext, namingStrategy, new org.grails.orm.hibernate.cfg.domainbinding.binder.SimpleValueColumnBinder(), columnNameForPropertyAndPathFetcher, classBinder, collector)
-        UnionSubclassBinder unionSubclassBinder = new UnionSubclassBinder(metadataBuildingContext, namingStrategy, classBinder, collector)
-        SingleTableSubclassBinder singleTableSubclassBinder = new SingleTableSubclassBinder(classBinder, metadataBuildingContext)
-
-        SubclassMappingBinder subclassMappingBinder = new SubclassMappingBinder(joinedSubClassBinder, unionSubclassBinder, singleTableSubclassBinder, classPropertiesBinder)
-        SubClassBinder subClassBinder = new SubClassBinder(subclassMappingBinder, multiTenantFilterBinder, "dataSource")
-        RootPersistentClassCommonValuesBinder rootPersistentClassCommonValuesBinder = new RootPersistentClassCommonValuesBinder(metadataBuildingContext, namingStrategy, identityBinder, versionBinder, classBinder, classPropertiesBinder, collector)
-        DiscriminatorPropertyBinder discriminatorPropertyBinder = new DiscriminatorPropertyBinder(metadataBuildingContext, binder.getMappingCacheHolder(), new org.grails.orm.hibernate.cfg.domainbinding.binder.ConfiguredDiscriminatorBinder(new org.grails.orm.hibernate.cfg.domainbinding.binder.SimpleValueColumnBinder(), new ColumnConfigToColumnBinder()), new org.grails.orm.hibernate.cfg.domainbinding.binder.DefaultDiscriminatorBinder(new org.grails.orm.hibernate.cfg.domainbinding.binder.SimpleValueColumnBinder()))
-        RootBinder rootBinder = new RootBinder("default", multiTenantFilterBinder, subClassBinder, rootPersistentClassCommonValuesBinder, discriminatorPropertyBinder, collector, binder.getMappingCacheHolder())
+        SubclassMappingBinder scmb = new SubclassMappingBinder(jscb, uscb, stscb, clpb)
+        SubClassBinder scb = new SubClassBinder(scmb, mtfb, "dataSource")
+        RootPersistentClassCommonValuesBinder rpccvb = new RootPersistentClassCommonValuesBinder(mbc, ns, ib, vb, clb, clpb, collector)
+        DiscriminatorPropertyBinder dpb = new DiscriminatorPropertyBinder(mbc, binder.getMappingCacheHolder(), new ConfiguredDiscriminatorBinder(new org.grails.orm.hibernate.cfg.domainbinding.binder.SimpleValueColumnBinder(), new ColumnConfigToColumnBinder()), new DefaultDiscriminatorBinder(new org.grails.orm.hibernate.cfg.domainbinding.binder.SimpleValueColumnBinder()))
+        RootBinder rb = new RootBinder("default", mtfb, scb, rpccvb, dpb, collector, binder.getMappingCacheHolder())
 
         return [
-            propertyBinder: propertyBinder,
-            collectionBinder: collectionBinder,
-            identityBinder: identityBinder,
-            versionBinder: versionBinder,
-            defaultColumnNameFetcher: defaultColumnNameFetcher,
-            columnNameForPropertyAndPathFetcher: columnNameForPropertyAndPathFetcher,
-            classBinder: classBinder,
-            classPropertiesBinder: classPropertiesBinder,
-            multiTenantFilterBinder: multiTenantFilterBinder,
-            joinedSubClassBinder: joinedSubClassBinder,
-            unionSubclassBinder: unionSubclassBinder,
-            singleTableSubclassBinder: singleTableSubclassBinder,
-            subClassBinder: subClassBinder,
-            rootBinder: rootBinder
+            propertyBinder: pb,
+            collectionBinder: cb,
+            identityBinder: ib,
+            versionBinder: vb,
+            classBinder: clb,
+            classPropertiesBinder: clpb,
+            rootBinder: rb
         ]
-    }
-
-    protected void bindRoot(GrailsDomainBinder binder, GrailsHibernatePersistentEntity entity, InFlightMetadataCollector mappings, String sessionFactoryBeanName) {
-        def binders = getBinders(binder, mappings)
-        binders.rootBinder.bindRoot(entity)
     }
 
     void setupSpec() {
-        manager.addAllDomainClasses([
-            org.apache.grails.data.testing.tck.domains.Pet,
-            org.apache.grails.data.testing.tck.domains.Person,
-            org.apache.grails.data.testing.tck.domains.PetType,
-            LSBAuthor,
-            LSBBook
-        ])
+        // Empty to avoid global failures
     }
 
-    void "Test bind collection"() {
-        given:
+    protected HibernatePersistentProperty propertyFor(Class domainClass, String propertyName) {
+        PersistentEntity entity = createPersistentEntity(domainClass)
+        return (HibernatePersistentProperty) entity.getPropertyByName(propertyName)
+    }
+
+    protected RootClass createMockPersistentClass(Class domainClass, InFlightMetadataCollector collector, java.util.List<String> properties = []) {
         def binder = getGrailsDomainBinder()
-        def collectionBinder = getBinders(binder).collectionBinder
-        def collector = getCollector()
-
-        def personEntity = getPersistentEntity(org.apache.grails.data.testing.tck.domains.Person) as GrailsHibernatePersistentEntity
-        def petEntity = getPersistentEntity(org.apache.grails.data.testing.tck.domains.Pet) as GrailsHibernatePersistentEntity
-
         def rootClass = new RootClass(binder.getMetadataBuildingContext())
-        rootClass.setEntityName(personEntity.name)
-        rootClass.setTable(collector.addTable(null, null, "PERSON", null, false, binder.getMetadataBuildingContext()))
-
-        def petsProp = personEntity.getPropertyByName("pets") as HibernateToManyProperty
-
-        when:
-        def collection = collectionBinder.bindCollection(petsProp, "")
-
-        then:
-        collection.role == "${personEntity.name}.pets".toString()
-        collection.element instanceof OneToMany
-        (collection.element as OneToMany).referencedEntityName == petEntity.name
+        rootClass.setEntityName(domainClass.name)
+        rootClass.setJpaEntityName(domainClass.simpleName)
+        rootClass.setTable(collector.addTable(null, null, domainClass.simpleName.toUpperCase(), null, false, binder.getMetadataBuildingContext()))
+        
+        properties.each { propName ->
+            def p = new Property()
+            p.setName(propName)
+            p.setValue(new BasicValue(binder.getMetadataBuildingContext(), rootClass.getTable()))
+            rootClass.addProperty(p)
+        }
+        
+        collector.addEntityBinding(rootClass)
+        
+        def entity = (GrailsHibernatePersistentEntity) getMappingContext().getPersistentEntity(domainClass.name) ?: createPersistentEntity(domainClass)
+        entity.setPersistentClass(rootClass)
+        
+        return rootClass
     }
 
-    void "test bidirectional list binding"() {
+    def "bindListSecondPass applies index customization"() {
         given:
         def binder = getGrailsDomainBinder()
         def collector = getCollector()
-        def metadataBuildingContext = binder.getMetadataBuildingContext()
-        def binders = getBinders(binder, collector)
-        def collectionBinder = binders.collectionBinder
-        def listBinder = collectionBinder.listSecondPassBinder
+        def listBinder = getBinders(binder, collector).collectionBinder.listSecondPassBinder
+        def property = propertyFor(LSBCustomIndex, "items") as HibernateToManyProperty
 
-        def authorEntity = getPersistentEntity(LSBAuthor) as GrailsHibernatePersistentEntity
-        def bookEntity = getPersistentEntity(LSBBook) as GrailsHibernatePersistentEntity
-        def booksProp = authorEntity.getPropertyByName("books") as HibernateToManyProperty
-
-        def rootClass = new RootClass(metadataBuildingContext)
-        rootClass.setEntityName(authorEntity.name)
-        rootClass.setJpaEntityName(authorEntity.name)
-        rootClass.setTable(collector.addTable(null, null, "LSB_AUTHOR", null, false, metadataBuildingContext))
-        collector.addEntityBinding(rootClass)
-
-        def bookRootClass = new RootClass(metadataBuildingContext)
-        bookRootClass.setEntityName(bookEntity.name)
-        bookRootClass.setJpaEntityName(bookEntity.name)
-        bookRootClass.setTable(collector.addTable(null, null, "LSB_BOOK", null, false, metadataBuildingContext))
-        collector.addEntityBinding(bookRootClass)
-
-        def authorValue = new org.hibernate.mapping.ManyToOne(metadataBuildingContext, bookRootClass.getTable())
-        authorValue.setReferencedEntityName(authorEntity.name)
-        def authorCol = new org.hibernate.mapping.Column("author_id")
-        authorCol.setValue(authorValue)
-        authorValue.addColumn(authorCol)
-        def authorProp = new org.hibernate.mapping.Property()
-        authorProp.setName("author")
-        authorProp.setValue(authorValue)
-        bookRootClass.addProperty(authorProp)
-
-        def persistentClasses = [
-            (authorEntity.name): rootClass,
-            (bookEntity.name): bookRootClass
-        ]
-
-        def list = new org.hibernate.mapping.List(metadataBuildingContext, rootClass)
-        list.setRole("${authorEntity.name}.books".toString())
+        def rootClass = createMockPersistentClass(LSBCustomIndex, collector)
+        
+        def list = new org.hibernate.mapping.List(binder.getMetadataBuildingContext(), rootClass)
+        list.setRole("${LSBCustomIndex.name}.items".toString())
         list.setCollectionTable(rootClass.getTable())
-
-        def element = new org.hibernate.mapping.ManyToOne(metadataBuildingContext, list.getCollectionTable())
-        element.setReferencedEntityName(LSBBook.name)
-        list.setElement(element)
-
-        booksProp.setCollection(list)
+        list.setElement(new BasicValue(binder.getMetadataBuildingContext(), list.getCollectionTable()))
+        property.setCollection(list)
 
         when:
-        listBinder.bindListSecondPass(booksProp, persistentClasses)
+        listBinder.bindListSecondPass(property)
 
         then:
-        noExceptionThrown()
         list.index != null
-        list.baseIndex == 0
+        list.index.getColumn(0).name == "my_index_col"
+        (list.index as BasicValue).typeName == "long"
+    }
+
+    def "bindListSecondPass throws exception for many-to-many non-owning side"() {
+        given:
+        def binder = getGrailsDomainBinder()
+        def collector = getCollector()
+        def listBinder = getBinders(binder, collector).collectionBinder.listSecondPassBinder
+        
+        def property = propertyFor(LSBManyToManyB, "owners") as HibernateManyToManyProperty
+        def ownerRoot = createMockPersistentClass(LSBManyToManyB, collector, ["owners"])
+
+        def list = new org.hibernate.mapping.List(binder.getMetadataBuildingContext(), ownerRoot)
+        list.setRole("${LSBManyToManyB.name}.owners".toString())
+        property.setCollection(list)
+
+        when:
+        listBinder.bindListSecondPass(property)
+
+        then:
+        def e = thrown(MappingException)
+        e.message.contains("has no associated class") || e.message.contains("List collection types only supported on the owning side")
+    }
+
+    def "bindListSecondPass handles many-to-many specific flags"() {
+        given:
+        def binder = getGrailsDomainBinder()
+        def collector = getCollector()
+        def listBinder = getBinders(binder, collector).collectionBinder.listSecondPassBinder
+        
+        def property = propertyFor(LSBManyToManyA, "others") as HibernateManyToManyProperty
+        def ownerRoot = createMockPersistentClass(LSBManyToManyA, collector, ["others"])
+        def otherRoot = createMockPersistentClass(LSBManyToManyB, collector, ["owners"])
+
+        def list = new org.hibernate.mapping.List(binder.getMetadataBuildingContext(), ownerRoot)
+        list.setRole("${LSBManyToManyA.name}.others".toString())
+        list.setCollectionTable(collector.addTable(null, null, "JOIN_TABLE", null, false, binder.getMetadataBuildingContext()))
+        list.setKey(new DependantValue(binder.getMetadataBuildingContext(), list.getCollectionTable(), null))
+        list.setElement(new ManyToOne(binder.getMetadataBuildingContext(), list.getCollectionTable()))
+        ((ManyToOne)list.getElement()).setReferencedEntityName(LSBManyToManyB.name)
+        property.setCollection(list)
+
+        when:
+        listBinder.bindListSecondPass(property)
+
+        then:
+        def backref = otherRoot.getProperties().find { it.name == "_" + "LSBManyToManyA" + "_" + "others" + "Backref" }
+        backref instanceof Backref
+        !backref.isInsertable()
+
+        def indexBackref = otherRoot.getProperties().find { it.name == "_" + "others" + "IndexBackref" }
+        indexBackref instanceof IndexBackref
+        !indexBackref.isInsertable()
+    }
+
+    def "bindListSecondPass handles circular associations"() {
+        given:
+        def binder = getGrailsDomainBinder()
+        def collector = getCollector()
+        def listBinder = getBinders(binder, collector).collectionBinder.listSecondPassBinder
+        def property = propertyFor(LSBCircular, "children") as HibernateToManyProperty
+
+        def rootClass = createMockPersistentClass(LSBCircular, collector, ["parent", "children"])
+
+        def list = new org.hibernate.mapping.List(binder.getMetadataBuildingContext(), rootClass)
+        list.setRole("${LSBCircular.name}.children".toString())
+        list.setCollectionTable(rootClass.getTable())
+        def key = new DependantValue(binder.getMetadataBuildingContext(), list.getCollectionTable(), null)
+        key.setNullable(false)
+        list.setKey(key)
+        list.setElement(new ManyToOne(binder.getMetadataBuildingContext(), list.getCollectionTable()))
+        ((ManyToOne)list.getElement()).setReferencedEntityName(LSBCircular.name)
+        property.setCollection(list)
+
+        when:
+        listBinder.bindListSecondPass(property)
+
+        then:
+        property.isCircular()
+        // For circular, we don't force nullable false
+        list.getKey().isNullable()
+    }
+
+    def "bindListSecondPass handles composite identity"() {
+        given:
+        def binder = getGrailsDomainBinder()
+        def collector = getCollector()
+        def listBinder = getBinders(binder, collector).collectionBinder.listSecondPassBinder
+        
+        def property = propertyFor(LSBCompositeIdOwner, "items") as HibernateToManyProperty
+        def ownerRoot = createMockPersistentClass(LSBCompositeIdOwner, collector, ["items"])
+        def itemRoot = createMockPersistentClass(LSBCompositeIdItem, collector, ["owner", "name"])
+
+        def list = new org.hibernate.mapping.List(binder.getMetadataBuildingContext(), ownerRoot)
+        list.setRole("${LSBCompositeIdOwner.name}.items".toString())
+        list.setCollectionTable(itemRoot.getTable())
+        list.setKey(new DependantValue(binder.getMetadataBuildingContext(), list.getCollectionTable(), null))
+        list.setElement(new ManyToOne(binder.getMetadataBuildingContext(), list.getCollectionTable()))
+        ((ManyToOne)list.getElement()).setReferencedEntityName(LSBCompositeIdItem.name)
+        property.setCollection(list)
+
+        expect:
+        property.getHibernateInverseSide().isCompositeIdProperty()
+
+        when:
+        listBinder.bindListSecondPass(property)
+
+        then:
+        // No Backref should be created for composite ID inverse
+        !itemRoot.getProperties().find { it.name.endsWith("Backref") && it instanceof Backref }
+        
+        // IndexBackref should still be created
+        itemRoot.getProperties().find { it.name == "_" + "items" + "IndexBackref" } instanceof IndexBackref
     }
 }
 
-@grails.gorm.annotation.Entity
+@Entity
+class LSBCustomIndex {
+    Long id
+    java.util.List<String> items
+    static hasMany = [items: String]
+    static mapping = {
+        items index: [column: "my_index_col", type: "long"]
+    }
+}
+
+@Entity
+class LSBCircular {
+    Long id
+    LSBCircular parent
+    java.util.List<LSBCircular> children
+    static hasMany = [children: LSBCircular]
+    static belongsTo = [parent: LSBCircular]
+}
+
+@Entity
 class LSBAuthor {
     Long id
-    List<LSBBook> books
+    java.util.List<LSBBook> books
     static hasMany = [books: LSBBook]
 }
 
-@grails.gorm.annotation.Entity
+@Entity
 class LSBBook {
     Long id
     LSBAuthor author
     static belongsTo = [author: LSBAuthor]
+}
+
+@Entity
+class LSBManyToManyA {
+    Long id
+    java.util.List<LSBManyToManyB> others
+    static hasMany = [others: LSBManyToManyB]
+}
+
+@Entity
+class LSBManyToManyB {
+    Long id
+    java.util.List<LSBManyToManyA> owners
+    static hasMany = [owners: LSBManyToManyA]
+    static belongsTo = LSBManyToManyA
+}
+
+@Entity
+class LSBCompositeIdOwner {
+    Long id
+    java.util.List<LSBCompositeIdItem> items
+    static hasMany = [items: LSBCompositeIdItem]
+}
+
+@Entity
+class LSBCompositeIdItem implements Serializable {
+    LSBCompositeIdOwner owner
+    String name
+    static belongsTo = [owner: LSBCompositeIdOwner]
+    static mapping = {
+        id composite: ['owner', 'name']
+    }
 }

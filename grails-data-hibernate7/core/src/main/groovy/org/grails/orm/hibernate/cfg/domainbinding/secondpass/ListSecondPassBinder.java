@@ -18,8 +18,6 @@
  */
 package org.grails.orm.hibernate.cfg.domainbinding.secondpass;
 
-import java.util.Map;
-
 import jakarta.annotation.Nonnull;
 
 import org.hibernate.MappingException;
@@ -39,7 +37,6 @@ import org.grails.orm.hibernate.cfg.PersistentEntityNamingStrategy;
 import org.grails.orm.hibernate.cfg.domainbinding.binder.SimpleValueColumnBinder;
 import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernateAssociation;
 import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernateManyToManyProperty;
-import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernateManyToOneProperty;
 import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernateToManyProperty;
 import org.grails.orm.hibernate.cfg.domainbinding.util.BackticksRemover;
 
@@ -68,7 +65,7 @@ public class ListSecondPassBinder {
         this.mappings = mappings;
     }
 
-    public void bindListSecondPass(@Nonnull HibernateToManyProperty property, Map<?, ?> persistentClasses) {
+    public void bindListSecondPass(@Nonnull HibernateToManyProperty property) {
 
         List list = (List) property.getCollection();
         collectionSecondPassBinder.bindCollectionSecondPass(property);
@@ -93,57 +90,54 @@ public class ListSecondPassBinder {
 
         if (property.isBidirectional()) {
 
-            String entityName;
             HibernateAssociation inverseSide = property.getHibernateInverseSide();
-            if (inverseSide instanceof HibernateManyToOneProperty manyToOne) {
-                entityName = manyToOne.getReferencedEntityName();
-            } else {
-                entityName = inverseSide.getReferencedEntityName();
-            }
+            String entityName = inverseSide.getHibernateOwner().getName();
 
             PersistentClass referenced = mappings.getEntityBinding(entityName);
 
-            boolean compositeIdProperty = property.getHibernateInverseSide().isCompositeIdProperty();
-            if (!compositeIdProperty) {
-                Backref prop = new Backref();
-                final PersistentEntity owner = property.getOwner();
-                prop.setEntityName(owner.getName());
-                String s2 = property.getName();
-                prop.setName(UNDERSCORE +
-                        new BackticksRemover().apply(owner.getJavaClass().getSimpleName()) +
-                        UNDERSCORE +
-                        new BackticksRemover().apply(s2) +
-                        "Backref");
-                prop.setSelectable(false);
-                prop.setUpdatable(false);
-                if (isManyToMany) {
-                    prop.setInsertable(false);
-                }
-                prop.setCollectionRole(list.getRole());
-                prop.setValue(list.getKey());
+            if (referenced != null) {
+                boolean compositeIdProperty = property.getHibernateInverseSide().isCompositeIdProperty();
+                if (!compositeIdProperty) {
+                    Backref prop = new Backref();
+                    final PersistentEntity owner = property.getOwner();
+                    prop.setEntityName(owner.getName());
+                    String s2 = property.getName();
+                    prop.setName(UNDERSCORE +
+                            new BackticksRemover().apply(owner.getJavaClass().getSimpleName()) +
+                            UNDERSCORE +
+                            new BackticksRemover().apply(s2) +
+                            "Backref");
+                    prop.setSelectable(false);
+                    prop.setUpdatable(false);
+                    if (isManyToMany) {
+                        prop.setInsertable(false);
+                    }
+                    prop.setCollectionRole(list.getRole());
+                    prop.setValue(list.getKey());
 
-                DependantValue value = (DependantValue) prop.getValue();
-                if (!property.isCircular()) {
-                    value.setNullable(false);
-                }
-                value.setUpdateable(true);
-                prop.setOptional(false);
+                    DependantValue value = (DependantValue) prop.getValue();
+                    if (!property.isCircular()) {
+                        value.setNullable(false);
+                    }
+                    value.setUpdateable(true);
+                    prop.setOptional(false);
 
-                referenced.addProperty(prop);
-            }
-
-            if ((!list.getKey().isNullable() && !list.isInverse()) || compositeIdProperty) {
-                IndexBackref ib = new IndexBackref();
-                ib.setName(UNDERSCORE + property.getName() + "IndexBackref");
-                ib.setUpdatable(false);
-                ib.setSelectable(false);
-                if (isManyToMany) {
-                    ib.setInsertable(false);
+                    referenced.addProperty(prop);
                 }
-                ib.setCollectionRole(list.getRole());
-                ib.setEntityName(list.getOwner().getEntityName());
-                ib.setValue(list.getIndex());
-                referenced.addProperty(ib);
+
+                if ((!list.getKey().isNullable() && !list.isInverse()) || compositeIdProperty) {
+                    IndexBackref ib = new IndexBackref();
+                    ib.setName(UNDERSCORE + property.getName() + "IndexBackref");
+                    ib.setUpdatable(false);
+                    ib.setSelectable(false);
+                    if (isManyToMany) {
+                        ib.setInsertable(false);
+                    }
+                    ib.setCollectionRole(list.getRole());
+                    ib.setEntityName(list.getOwner().getEntityName());
+                    ib.setValue(list.getIndex());
+                    referenced.addProperty(ib);
+                }
             }
         }
     }
