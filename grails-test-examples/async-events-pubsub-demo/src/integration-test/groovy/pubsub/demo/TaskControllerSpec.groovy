@@ -18,6 +18,7 @@
  */
 package pubsub.demo
 
+import spock.lang.PendingFeature
 import spock.lang.Specification
 
 import grails.testing.mixin.integration.Integration

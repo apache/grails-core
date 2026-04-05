@@ -33,10 +33,14 @@ import grails.async.Promise
 @CompileStatic
 class BoundPromise<T> implements Promise<T> {
 
-    T value
+    Object value
 
     BoundPromise(T value) {
         this.value = value
+    }
+
+    BoundPromise(Throwable error) {
+        this.value = error
     }
 
     @Override
@@ -54,11 +58,13 @@ class BoundPromise<T> implements Promise<T> {
         return true
     }
 
+    @SuppressWarnings('unchecked')
     T get() throws Throwable {
-        if (value instanceof Throwable) {
-            throw value
+        Object v = value
+        if (v instanceof Throwable) {
+            throw v
         }
-        return value
+        return (T) v
     }
 
     T get(long timeout, TimeUnit units) throws Throwable {
@@ -71,30 +77,35 @@ class BoundPromise<T> implements Promise<T> {
         return this
     }
 
+    @SuppressWarnings('unchecked')
     Promise<T> onComplete(Closure<T> callable) {
-        if (!(value instanceof Throwable)) {
-            return new BoundPromise(callable.call(value))
+        Object v = value
+        if (v instanceof Throwable) {
+            return this
         }
-        return this
+        return new BoundPromise<T>(callable.call((T) v))
     }
 
+    @SuppressWarnings('unchecked')
     Promise<T> onError(Closure<T> callable) {
-        if (value instanceof Throwable) {
-            return new BoundPromise(callable.call(value))
+        Object v = value
+        if (!(v instanceof Throwable)) {
+            return this
         }
-        return this
+        return new BoundPromise<T>(callable.call((T) v))
     }
 
     @SuppressWarnings('unchecked')
     Promise<T> then(Closure<T> callable) {
-        if (!(value instanceof Throwable)) {
-            try {
-                return new BoundPromise<T>(callable.call(value))
-            } catch (Throwable e) {
-                return (Promise<T>) new BoundPromise<T>((T) e)
-            }
+        Object v = value
+        if (v instanceof Throwable) {
+            return this
         }
-        return this
+        try {
+            return new BoundPromise<T>(callable.call((T) v))
+        } catch (Throwable e) {
+            return new BoundPromise<T>(e)
+        }
     }
 
     Promise<T> leftShift(Closure<T> callable) {

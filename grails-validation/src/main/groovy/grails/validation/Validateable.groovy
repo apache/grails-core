@@ -281,12 +281,34 @@ trait Validateable {
         false
     }
 
+    /**
+     * Resolves {@code defaultNullable()} via Java reflection to preserve
+     * override semantics under {@code @CompileStatic}. In Groovy 5 the
+     * {@code TraitReceiverTransformer} routes {@code this.defaultNullable()}
+     * from a static trait method to the trait's helper, losing the
+     * implementing-class override. Calling through {@link java.lang.reflect.Method#invoke}
+     * dispatches to the actual bytecode on the implementing class.
+     *
+     * Only the lookup path catches checked reflection failures; exceptions
+     * thrown from the real {@code defaultNullable()} implementation are
+     * propagated so a broken override is not silently masked.
+     */
     private static boolean resolveDefaultNullable(Class<?> clazz) {
+        java.lang.reflect.Method m
         try {
-            java.lang.reflect.Method m = clazz.getMethod('defaultNullable')
-            return m.invoke(null) as boolean
-        } catch (ReflectiveOperationException ignored) {
+            m = clazz.getMethod('defaultNullable')
+        } catch (NoSuchMethodException ignored) {
             return false
+        }
+        try {
+            return m.invoke(null) as boolean
+        } catch (IllegalAccessException ignored) {
+            return false
+        } catch (java.lang.reflect.InvocationTargetException e) {
+            Throwable cause = e.cause ?: e
+            if (cause instanceof RuntimeException) throw (RuntimeException) cause
+            if (cause instanceof Error) throw (Error) cause
+            throw new RuntimeException(cause)
         }
     }
 }

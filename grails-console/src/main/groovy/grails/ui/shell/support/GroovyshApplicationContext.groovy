@@ -18,8 +18,7 @@
  */
 package grails.ui.shell.support
 
-import org.apache.groovy.groovysh.Main
-
+import groovy.transform.CompileStatic
 import org.springframework.context.support.GenericApplicationContext
 
 import grails.core.GrailsApplication
@@ -28,6 +27,7 @@ import grails.core.GrailsApplication
  * @author Graeme Rocher
  * @since 3.0
  */
+@CompileStatic
 class GroovyshApplicationContext extends GenericApplicationContext {
 
     @Override
@@ -37,9 +37,9 @@ class GroovyshApplicationContext extends GenericApplicationContext {
     }
 
     protected void startConsole() {
-        Main.start(
+        GroovyshStarter.start([
                 ctx: this,
                 (GrailsApplication.APPLICATION_ID): getBean(GrailsApplication)
-        )
+        ])
     }
 }

@@ -20,7 +20,6 @@ package grails.ui.shell.support
 
 import groovy.transform.CompileStatic
 import groovy.transform.InheritConstructors
-import org.apache.groovy.groovysh.Main
 
 import grails.core.GrailsApplication
 import grails.ui.support.DevelopmentWebApplicationContext
@@ -40,9 +39,9 @@ class GroovyshWebApplicationContext extends DevelopmentWebApplicationContext {
     }
 
     protected void startConsole() {
-        Main.start(
+        GroovyshStarter.start([
                 ctx: this,
                 (GrailsApplication.APPLICATION_ID): getBean(GrailsApplication)
-        )
+        ])
     }
 }
