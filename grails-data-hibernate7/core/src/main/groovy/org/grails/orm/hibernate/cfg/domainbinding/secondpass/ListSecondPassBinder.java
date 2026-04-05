@@ -46,11 +46,14 @@ import static org.grails.orm.hibernate.cfg.domainbinding.binder.GrailsDomainBind
 @SuppressWarnings("PMD.DataflowAnomalyAnalysis")
 public class ListSecondPassBinder {
 
+    private static final String DEFAULT_INDEX_TYPE = "integer";
+
     private final MetadataBuildingContext metadataBuildingContext;
     private final CollectionSecondPassBinder collectionSecondPassBinder;
     private final PersistentEntityNamingStrategy namingStrategy;
     private final SimpleValueColumnBinder simpleValueColumnBinder;
     private final InFlightMetadataCollector mappings;
+    private final BackticksRemover backticksRemover = new BackticksRemover();
 
     public ListSecondPassBinder(
             MetadataBuildingContext metadataBuildingContext,
@@ -66,79 +69,108 @@ public class ListSecondPassBinder {
     }
 
     public void bindListSecondPass(@Nonnull HibernateToManyProperty property) {
-
         List list = (List) property.getCollection();
+
         collectionSecondPassBinder.bindCollectionSecondPass(property);
-        String columnName = property.getIndexColumnName(namingStrategy);
-        final boolean isManyToMany = property instanceof HibernateManyToManyProperty;
 
-        if (isManyToMany && !property.isOwningSide()) {
-            throw new MappingException("Invalid association [" + property +
-                    "]. List collection types only supported on the owning side of a many-to-many relationship.");
-        }
+        validateOwningSide(property);
 
-        Table collectionTable = list.getCollectionTable();
-        String type = property.getIndexColumnType("integer");
-        BasicValue iv = simpleValueColumnBinder.bindSimpleValue(
-                metadataBuildingContext, collectionTable, type, columnName, true);
-        list.setIndex(iv);
+        bindIndexColumn(property, list);
+
         list.setBaseIndex(0);
         list.setInverse(false);
 
-        Value v = list.getElement();
-        v.createForeignKey();
+        Value element = list.getElement();
+        element.createForeignKey();
 
-        if (property.isBidirectional()) {
+        bindBackReferences(property, list);
+    }
 
-            HibernateAssociation inverseSide = property.getHibernateInverseSide();
-            String entityName = inverseSide.getHibernateOwner().getName();
+    private void validateOwningSide(HibernateToManyProperty property) {
+        if (property instanceof HibernateManyToManyProperty && !property.isOwningSide()) {
+            throw new MappingException("Invalid association [" + property +
+                    "]. List collection types only supported on the owning side of a many-to-many relationship.");
+        }
+    }
 
-            PersistentClass referenced = mappings.getEntityBinding(entityName);
+    private void bindIndexColumn(HibernateToManyProperty property, List list) {
+        Table collectionTable = list.getCollectionTable();
+        String columnName = property.getIndexColumnName(namingStrategy);
+        String type = property.getIndexColumnType(DEFAULT_INDEX_TYPE);
 
-            if (referenced != null) {
-                boolean compositeIdProperty = property.getHibernateInverseSide().isCompositeIdProperty();
-                if (!compositeIdProperty) {
-                    Backref prop = new Backref();
-                    final PersistentEntity owner = property.getOwner();
-                    prop.setEntityName(owner.getName());
-                    String s2 = property.getName();
-                    prop.setName(UNDERSCORE +
-                            new BackticksRemover().apply(owner.getJavaClass().getSimpleName()) +
-                            UNDERSCORE +
-                            new BackticksRemover().apply(s2) +
-                            "Backref");
-                    prop.setSelectable(false);
-                    prop.setUpdatable(false);
-                    if (isManyToMany) {
-                        prop.setInsertable(false);
-                    }
-                    prop.setCollectionRole(list.getRole());
-                    prop.setValue(list.getKey());
+        BasicValue indexValue = simpleValueColumnBinder.bindSimpleValue(
+                metadataBuildingContext, collectionTable, type, columnName, true);
+        list.setIndex(indexValue);
+    }
 
-                    DependantValue value = (DependantValue) prop.getValue();
-                    if (!property.isCircular()) {
-                        value.setNullable(false);
-                    }
-                    value.setUpdateable(true);
-                    prop.setOptional(false);
+    private void bindBackReferences(HibernateToManyProperty property, List list) {
+        if (!property.isBidirectional()) {
+            return;
+        }
 
-                    referenced.addProperty(prop);
-                }
+        HibernateAssociation inverseSide = property.getHibernateInverseSide();
+        String entityName = inverseSide.getHibernateOwner().getName();
+        PersistentClass referenced = mappings.getEntityBinding(entityName);
 
-                if ((!list.getKey().isNullable() && !list.isInverse()) || compositeIdProperty) {
-                    IndexBackref ib = new IndexBackref();
-                    ib.setName(UNDERSCORE + property.getName() + "IndexBackref");
-                    ib.setUpdatable(false);
-                    ib.setSelectable(false);
-                    if (isManyToMany) {
-                        ib.setInsertable(false);
-                    }
-                    ib.setCollectionRole(list.getRole());
-                    ib.setEntityName(list.getOwner().getEntityName());
-                    ib.setValue(list.getIndex());
-                    referenced.addProperty(ib);
-                }
+        if (referenced != null) {
+            boolean isManyToMany = property instanceof HibernateManyToManyProperty;
+            boolean compositeIdProperty = inverseSide.isCompositeIdProperty();
+
+            if (!compositeIdProperty) {
+                addBackref(property, list, referenced, isManyToMany);
+            }
+
+            if (shouldAddIndexBackref(list, compositeIdProperty)) {
+                addIndexBackref(property, list, referenced, isManyToMany);
             }
         }
+    }
+
+    private void addBackref(HibernateToManyProperty property, List list, PersistentClass referenced, boolean isManyToMany) {
+        Backref prop = new Backref();
+        final PersistentEntity owner = property.getOwner();
+        prop.setEntityName(owner.getName());
+
+        String name = UNDERSCORE +
+                backticksRemover.apply(owner.getJavaClass().getSimpleName()) +
+                UNDERSCORE +
+                backticksRemover.apply(property.getName()) +
+                "Backref";
+
+        prop.setName(name);
+        prop.setSelectable(false);
+        prop.setUpdatable(false);
+        if (isManyToMany) {
+            prop.setInsertable(false);
+        }
+        prop.setCollectionRole(list.getRole());
+        prop.setValue(list.getKey());
+
+        DependantValue value = (DependantValue) prop.getValue();
+        if (!property.isCircular()) {
+            value.setNullable(false);
+        }
+        value.setUpdateable(true);
+        prop.setOptional(false);
+
+        referenced.addProperty(prop);
+    }
+
+    private boolean shouldAddIndexBackref(List list, boolean compositeIdProperty) {
+        return (!list.getKey().isNullable() && !list.isInverse()) || compositeIdProperty;
+    }
+
+    private void addIndexBackref(HibernateToManyProperty property, List list, PersistentClass referenced, boolean isManyToMany) {
+        IndexBackref ib = new IndexBackref();
+        ib.setName(UNDERSCORE + property.getName() + "IndexBackref");
+        ib.setUpdatable(false);
+        ib.setSelectable(false);
+        if (isManyToMany) {
+            ib.setInsertable(false);
+        }
+        ib.setCollectionRole(list.getRole());
+        ib.setEntityName(list.getOwner().getEntityName());
+        ib.setValue(list.getIndex());
+        referenced.addProperty(ib);
     }
 }
