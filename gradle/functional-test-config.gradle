@@ -106,7 +106,20 @@ tasks.withType(Test).configureEach { Test task ->
         task.outputs.dir rootProject.layout.buildDirectory.dir('mongo-test-serialize')
     }
 
-    task.useJUnitPlatform()
+    task.useJUnitPlatform {
+        if (project.hasProperty('includeTestTags')) {
+            // Will only run tests that are tagged with specific tags
+            // e.g. @spock.lang.Tag('geb')
+            // Run with: ./gradlew iT -PincludeTestTags=geb (comma-separated list)
+            includeTags((project.property('includeTestTags') as String).split(',')*.trim() as String[])
+        }
+        if (project.hasProperty('excludeTestTags')) {
+            // Will not run tests that are tagged with specific tags
+            // e.g. @spock.lang.Tag('geb')
+            // Run with: ./gradlew iT -PincludeTestTags=geb
+            excludeTags((project.property('excludeTestTags') as String).split(',')*.trim() as String[])
+        }
+    }
     task.testLogging {
         events('passed', 'skipped', 'failed', 'standardOut', 'standardError')
         showExceptions = true

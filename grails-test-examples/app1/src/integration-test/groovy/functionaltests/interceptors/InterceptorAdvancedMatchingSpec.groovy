@@ -19,6 +19,7 @@
 package functionaltests.interceptors
 
 import spock.lang.Specification
+import spock.lang.Tag
 
 import grails.testing.mixin.integration.Integration
 import org.apache.grails.testing.http.client.HttpClientSupport
@@ -34,6 +35,7 @@ import org.apache.grails.testing.http.client.HttpClientSupport
  * - Combined matching criteria
  */
 @Integration
+@Tag('http-client')
 class InterceptorAdvancedMatchingSpec extends Specification implements HttpClientSupport {
 
     def setup() {

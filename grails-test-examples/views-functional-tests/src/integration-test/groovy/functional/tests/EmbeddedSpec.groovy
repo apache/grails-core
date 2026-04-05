@@ -20,11 +20,13 @@ package functional.tests
 
 import spock.lang.Issue
 import spock.lang.Specification
+import spock.lang.Tag
 
 import grails.testing.mixin.integration.Integration
 import org.apache.grails.testing.http.client.HttpClientSupport
 
 @Integration
+@Tag('http-client')
 class EmbeddedSpec extends Specification implements HttpClientSupport {
 
     void 'Test render can handle a domain with an embedded src/groovy class'() {

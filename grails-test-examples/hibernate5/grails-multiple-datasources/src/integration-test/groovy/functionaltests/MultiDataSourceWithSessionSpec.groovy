@@ -21,12 +21,14 @@ package functionaltests
 import spock.lang.Issue
 import spock.lang.Specification
 import spock.lang.Stepwise
+import spock.lang.Tag
 
 import grails.testing.mixin.integration.Integration
 import org.apache.grails.testing.http.client.HttpClientSupport
 
 @Stepwise
 @Integration
+@Tag('http-client')
 class MultiDataSourceWithSessionSpec extends Specification implements HttpClientSupport {
 
     @Issue('https://github.com/apache/grails-core/issues/14333')

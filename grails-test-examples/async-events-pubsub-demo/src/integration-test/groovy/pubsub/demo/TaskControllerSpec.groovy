@@ -20,11 +20,13 @@ package pubsub.demo
 
 import spock.lang.PendingFeature
 import spock.lang.Specification
+import spock.lang.Tag
 
 import grails.testing.mixin.integration.Integration
 import org.apache.grails.testing.http.client.HttpClientSupport
 
 @Integration
+@Tag('http-client')
 class TaskControllerSpec extends Specification implements HttpClientSupport {
 
     @PendingFeature(reason = '''

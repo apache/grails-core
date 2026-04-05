@@ -19,11 +19,13 @@
 package functional.tests
 
 import spock.lang.Specification
+import spock.lang.Tag
 
 import grails.testing.mixin.integration.Integration
 import org.apache.grails.testing.http.client.HttpClientSupport
 
 @Integration
+@Tag('http-client')
 class CustomerSpec extends Specification implements HttpClientSupport {
 
     void "Test that circular references are correctly rendered for one to many relationship"() {
