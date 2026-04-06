@@ -486,7 +486,7 @@ class PersistentEntityCodec extends BsonPersistentEntityCodec {
         @Override
         void decode(BsonReader reader, Association property, EntityAccess entityAccess, DecoderContext decoderContext, CodecRegistry codecRegistry) {
             def session = AbstractDatastore.retrieveSession(MongoDatastore)
-            if (property.isBidirectional() && !(property instanceof ManyToMany)) {
+            if (property.isBidirectional() && !ManyToMany.isAssignableFrom(property.getClass())) {
 
                 initializePersistentCollection(session, entityAccess, property)
             }
@@ -559,7 +559,7 @@ class PersistentEntityCodec extends BsonPersistentEntityCodec {
 
         @Override
         void encode(BsonWriter writer, Association property, Object value, EntityAccess parentAccess, EncoderContext encoderContext, CodecRegistry codecRegistry) {
-            boolean shouldEncodeIds = !property.isBidirectional() || (property instanceof ManyToMany)
+            boolean shouldEncodeIds = !property.isBidirectional() || ManyToMany.isAssignableFrom(property.getClass())
             MongoCodecSession mongoSession = (MongoCodecSession) AbstractDatastore.retrieveSession(MongoDatastore)
             if (shouldEncodeIds) {
                 // if it is unidirectional we encode the values inside the current
