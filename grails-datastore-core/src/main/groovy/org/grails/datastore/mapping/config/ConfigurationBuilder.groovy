@@ -477,11 +477,11 @@ abstract class ConfigurationBuilder<B, C> {
                     }
                     return instance
                 } catch (Throwable e2) {
-                    log.debug("Failed to instantiate {} from Map: {}", argType, e2.message)
+                    log.debug('Failed to instantiate {} from Map: {}', argType, e2.message)
                 }
             }
         } catch (Throwable e3) {
-            log.debug("Failed to get Map value for {}: {}", propertyPathForArg, e3.message)
+            log.debug('Failed to get Map value for {}: {}', propertyPathForArg, e3.message)
         }
 
         // If we have a fallback value, return it
@@ -493,7 +493,7 @@ abstract class ConfigurationBuilder<B, C> {
         try {
             return argType.getDeclaredConstructor().newInstance()
         } catch (Throwable e4) {
-            log.debug("Failed to instantiate {} with default constructor: {}", argType, e4.message)
+            log.debug('Failed to instantiate {} with default constructor: {}', argType, e4.message)
         }
 
         throw new ConfigurationException("Invalid value for setting [$propertyPathForArg]: $e.message", e)
