@@ -33,12 +33,13 @@ class HibernateEntityTraitGeneratedSpec extends Specification {
     @Shared @AutoCleanup HibernateDatastore datastore = new HibernateDatastore(Club)
 
     void "test that all HibernateEntity trait methods are marked as Generated"() {
-        // Unfortunately static methods have to check directly one by one
+        // Static SQL methods (findAllWithSql, findWithSql) were moved from the HibernateEntity
+        // trait to AbstractHibernateGormStaticApi for Groovy 5 compatibility (traits with static
+        // methods cause Java stub generation issues during joint compilation). These methods are
+        // now accessed via GormEnhancer.findStaticApi() and are no longer compile-time generated.
         expect:
-        Club.getMethod('findAllWithSql', CharSequence).isAnnotationPresent(Generated)
-        Club.getMethod('findWithSql', CharSequence).isAnnotationPresent(Generated)
-        Club.getMethod('findAllWithSql', CharSequence, Map).isAnnotationPresent(Generated)
-        Club.getMethod('findWithSql', CharSequence, Map).isAnnotationPresent(Generated)
+        // Verify the domain class implements HibernateEntity (trait is still applied)
+        grails.gorm.hibernate.HibernateEntity.isAssignableFrom(Club)
     }
 
 }

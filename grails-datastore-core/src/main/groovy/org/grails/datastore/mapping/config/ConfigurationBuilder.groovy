@@ -535,8 +535,9 @@ abstract class ConfigurationBuilder<B, C> {
         if (Number.isAssignableFrom(type)) return false
         if (type == Boolean || type == Character) return false
         if (type.isEnum()) return false
+        if (type.isInterface()) return false
+        if (java.lang.reflect.Modifier.isAbstract(type.getModifiers())) return false
         if (Collection.isAssignableFrom(type)) return false
-        if (Map.isAssignableFrom(type)) return false
         if (Closure.isAssignableFrom(type)) return false
         if (type.isArray()) return false
         if (Class.isAssignableFrom(type)) return false
@@ -545,6 +546,10 @@ abstract class ConfigurationBuilder<B, C> {
         String packageName = type.getPackage()?.getName()
         if (packageName == null) return false
         if (!packageName.startsWith('org.grails') && !packageName.startsWith('grails.')) return false
+
+        // Note: Map subtypes in Grails packages (e.g., HibernateSettings extends LinkedHashMap)
+        // are intentionally NOT excluded here. They serve as configuration objects with typed
+        // properties (cache, flush, etc.) and need recursive builder processing.
 
         // Check if it has a public no-arg constructor
         try {
