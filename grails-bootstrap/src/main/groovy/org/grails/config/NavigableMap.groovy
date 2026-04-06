@@ -23,7 +23,6 @@ import groovy.transform.CompileStatic
 import groovy.transform.EqualsAndHashCode
 import groovy.util.logging.Slf4j
 import org.codehaus.groovy.runtime.DefaultGroovyMethods
-import groovy.util.ConfigObject
 
 /**
  * @deprecated This class is deprecated to reduce complexity, improve performance, and increase maintainability. Use {@code config.getProperty(String key, Class<T> targetType)} instead.
