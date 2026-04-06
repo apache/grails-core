@@ -66,33 +66,45 @@ Registered via `META-INF/services/org.grails.cli.compiler.CompilerAutoConfigurat
 
 ## Using GORM Without Grails
 
-### Groovy + Spring Boot (low effort)
+### Strategy: Write Domain Classes in Groovy
 
-`HibernateGormAutoConfiguration` already provides full Spring Boot autoconfiguration outside of Grails. A plain Spring Boot application can use GORM by adding `grails-data-hibernate7-boot-plugin` as a dependency and providing a `DataSource` bean. The `@jakarta.persistence.Entity` Groovy AST transform (`GlobalJpaEntityTransform`) bridges JPA-annotated Groovy classes into full GORM entities with dynamic finders, criteria, and all GORM traits at compile time.
+The recommended integration strategy for any JVM project (Java, Kotlin, Scala) is to write domain/entity classes in Groovy and use `HibernateCriteriaBuilder` for queries. This works because:
 
-### Java / Kotlin (medium–high effort)
+- **GORM AST transforms run at Groovy compile time.** `GormEntityTransformation` weaves all dynamic finders, `where {}`, `list()`, `get()`, `save()`, etc. into the compiled `.class` files as real JVM bytecode methods.
+- **The resulting `.class` files are standard JVM bytecode.** Java and Kotlin callers consume them like any other class — `Book.findByTitle("GORM")` is just a static method call.
+- **`HibernateCriteriaBuilder` provides a powerful query DSL** via Groovy closures. Kotlin callers can use SAM conversions; Java callers can use `DetachedCriteria` directly.
 
-`HibernateDatastore` CRUD and query API is usable directly from Java and Kotlin today. However, GORM's dynamic finders (`findBy*`, `where {}`) and trait-based API are injected via Groovy AST transforms at compile time — they are not available to Java or Kotlin classes without additional tooling:
+A typical mixed-language Gradle project layout:
 
-| Feature | Groovy | Kotlin | Java |
-|---|---|---|---|
-| Spring Boot autoconfiguration | ✅ | ✅ | ✅ |
-| `HibernateDatastore` CRUD API | ✅ | ✅ | ✅ |
-| Dynamic finders (`findBy*`) | ✅ (AST transform) | ❌ requires compiler plugin | ❌ requires annotation processor |
-| `where {}` criteria DSL | ✅ | ❌ | ❌ |
-| `@jakarta.persistence.Entity` auto-detection | ✅ (`GlobalJpaEntityTransform`) | ❌ | ❌ |
+```
+myapp/
+  domain/          ← Groovy subproject (compiled with grails-data-hibernate7-core on classpath)
+    src/main/groovy/
+      Book.groovy  ← @grails.gorm.annotation.Entity — AST injects all GORM methods at compile time
+  service/         ← Java or Kotlin subproject, depends on :domain
+    src/main/java/
+      BookService.java  ← calls Book.list(), Book.findByTitle(), new Book(title:"X").save()
+```
 
-Kotlin support would require a Kotlin compiler plugin (analogous to `kotlin-allopen`) to inject GORM traits. Java support would require an annotation processor for codegen.
+### Feature Availability by Language
+
+| Feature | Groovy | Kotlin / Java |
+|---|---|---|
+| Spring Boot autoconfiguration | ✅ | ✅ |
+| `HibernateDatastore` CRUD API | ✅ | ✅ |
+| Dynamic finders (`findBy*`) on Groovy entities | ✅ | ✅ (compiled-in bytecode) |
+| `where {}` criteria DSL | ✅ | via `DetachedCriteria` API |
+| `HibernateCriteriaBuilder` closures | ✅ | Kotlin SAM / Java `Closure` |
+| Defining new entities in Kotlin/Java | ❌ (no AST) | ❌ (no AST) |
+
+The only limitation is that entity *definitions* must be Groovy to benefit from the GORM trait injection. Code that *calls* GORM entities can be in any JVM language.
 
 ### Publishing as a Standalone Library
 
 The `grails-data-hibernate7-core` module has minimal coupling to the Grails framework. To publish it for use outside Grails, the main remaining tasks are:
 
-1. Populate the `AutoConfiguration.imports` file in `boot-plugin` with `HibernateGormAutoConfiguration`
-2. Populate the CLI service file in `boot-plugin` with `GormCompilerAutoConfiguration`
-3. Migrate `javax.sql.DataSource` → `jakarta.sql.DataSource` in `HibernateGormAutoConfiguration`
-4. Add BOM coordinates, Javadoc/sources JARs, and POM metadata for Maven Central publication
-5. Write integration tests validating end-to-end use from a plain Spring Boot app
+1. Add BOM coordinates, Javadoc/sources JARs, and POM metadata for Maven Central publication
+2. Write integration tests validating end-to-end use from a plain Spring Boot app
 
 
 
