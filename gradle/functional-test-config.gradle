@@ -54,11 +54,7 @@ configurations.configureEach {
     }
 }
 
-tasks.named('compileTestGroovy') {
-    options.forkOptions.jvmArgs += ['-Dspock.iKnowWhatImDoing.disableGroovyVersionCheck=true']
-}
-
-tasks.named('compileGroovy') {
+tasks.withType(GroovyCompile).configureEach {
     options.forkOptions.jvmArgs += ['-Dspock.iKnowWhatImDoing.disableGroovyVersionCheck=true']
 }
 

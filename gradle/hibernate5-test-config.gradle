@@ -26,6 +26,10 @@ dependencies {
     add('testRuntimeOnly', 'org.objenesis:objenesis')
 }
 
+tasks.withType(GroovyCompile).configureEach {
+    options.forkOptions.jvmArgs += ['-Dspock.iKnowWhatImDoing.disableGroovyVersionCheck=true']
+}
+
 tasks.withType(Test).configureEach {
     onlyIf {
         ![

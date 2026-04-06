@@ -94,6 +94,7 @@ class SbomPlugin implements Plugin<Project> {
             'pkg:maven/opensymphony/sitemesh@2.6.0?type=jar'                  : 'OpenSymphony', // custom license approved by legal LEGAL-707
             'pkg:maven/org.antlr/antlr4-runtime@4.7.2?type=jar'               : 'BSD-3-Clause', // maps incorrectly because of https://github.com/CycloneDX/cyclonedx-core-java/issues/205
             'pkg:maven/org.jline/jansi@3.30.6?type=jar'                       : 'BSD-3-Clause', // maps incorrectly because of https://github.com/CycloneDX/cyclonedx-core-java/issues/205
+            'pkg:maven/org.jline/jansi@4.0.7?type=jar'                        : 'BSD-3-Clause', // Groovy 6 pulls jansi 4.0.7; same mapping issue
             'pkg:maven/org.jline/jline@3.23.0?type=jar'                       : 'BSD-3-Clause', // maps incorrectly because of https://github.com/CycloneDX/cyclonedx-core-java/issues/205
             'pkg:maven/org.jline/jline-builtins@3.30.6?type=jar'              : 'BSD-3-Clause', // maps incorrectly because of https://github.com/CycloneDX/cyclonedx-core-java/issues/205
             'pkg:maven/org.jline/jline-console@3.30.6?type=jar'               : 'BSD-3-Clause', // maps incorrectly because of https://github.com/CycloneDX/cyclonedx-core-java/issues/205
