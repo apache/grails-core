@@ -51,7 +51,6 @@ import org.grails.orm.hibernate.cfg.domainbinding.util.GrailsPropertyResolver;
 import org.grails.orm.hibernate.cfg.domainbinding.util.SimpleValueColumnFetcher;
 import org.grails.orm.hibernate.cfg.domainbinding.util.TableForManyCalculator;
 
-import static org.grails.orm.hibernate.cfg.domainbinding.util.CascadeBehavior.ALL_DELETE_ORPHAN;
 
 /** Handles the binding of collections to the Hibernate runtime meta model. */
 @SuppressWarnings("PMD.DataflowAnomalyAnalysis")

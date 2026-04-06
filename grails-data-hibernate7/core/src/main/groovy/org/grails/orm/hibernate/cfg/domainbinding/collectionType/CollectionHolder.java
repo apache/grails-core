@@ -25,7 +25,6 @@ import java.util.Set;
 import java.util.SortedSet;
 
 import org.hibernate.boot.spi.MetadataBuildingContext;
-import org.hibernate.mapping.PersistentClass;
 
 import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernateToManyProperty;
 

@@ -112,6 +112,85 @@ class HibernateToManyPropertySpec extends HibernateGormDatastoreSpec {
         }
     }
 
+    void "getComponentType returns element type for basic collection"() {
+        given:
+        def property = createTestHibernateToManyProperty(HTMPOrder, "items")
+
+        and:
+        hibernateFirstPass()
+
+        expect:
+        property.getComponentType() == String
+    }
+
+    void "getComponentType returns associated entity class for one-to-many"() {
+        given:
+        createPersistentEntity(HTMPBook)
+        def property = createTestHibernateToManyProperty(HTMPAuthor, "books")
+
+        and:
+        hibernateFirstPass()
+
+        expect:
+        property.getComponentType() == HTMPBook
+    }
+
+    void "getComponentType returns associated entity class for many-to-many"() {
+        given:
+        createPersistentEntity(HTMPCourse)
+        def property = createTestHibernateToManyProperty(HTMPStudent, "courses")
+
+        and:
+        hibernateFirstPass()
+
+        expect:
+        property.getComponentType() == HTMPCourse
+    }
+
+    void "isEnum returns true for enum element collection"() {
+        given:
+        def property = createTestHibernateToManyProperty(HTMPEntityWithEnum, "statuses")
+
+        and:
+        hibernateFirstPass()
+
+        expect:
+        property.isEnum()
+    }
+
+    void "isEnum returns false for non-enum basic collection"() {
+        given:
+        def property = createTestHibernateToManyProperty(HTMPOrder, "items")
+
+        and:
+        hibernateFirstPass()
+
+        expect:
+        !property.isEnum()
+    }
+
+    void "getElementTypeName returns java.lang.String for String basic collection"() {
+        given:
+        def property = createTestHibernateToManyProperty(HTMPOrder, "items")
+
+        and:
+        hibernateFirstPass()
+
+        expect:
+        property.getElementTypeName() == "java.lang.String"
+    }
+
+    void "getElementTypeName defaults to string for embedded collection with no explicit type"() {
+        given:
+        def property = createTestHibernateToManyProperty(HTMPOrderMap, "items")
+
+        and:
+        hibernateFirstPass()
+
+        expect:
+        property.getElementTypeName() == "java.lang.String"
+    }
+
     /**
      * Helper to register entity and return the property
      */
@@ -200,4 +279,12 @@ class HTMPOrderClosure {
             type 'long'
         }
     }
+}
+
+enum HTMPStatus { ACTIVE, INACTIVE }
+
+@Entity
+class HTMPEntityWithEnum {
+    Long id
+    static hasMany = [statuses: HTMPStatus]
 }

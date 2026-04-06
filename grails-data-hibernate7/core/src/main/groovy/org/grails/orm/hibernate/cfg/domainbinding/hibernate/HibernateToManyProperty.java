@@ -29,6 +29,7 @@ import org.hibernate.mapping.IndexedCollection;
 
 import org.springframework.util.StringUtils;
 
+import org.grails.datastore.mapping.model.types.Association;
 import org.grails.datastore.mapping.model.types.Basic;
 import org.grails.datastore.mapping.model.types.mapping.PropertyWithMapping;
 import org.grails.orm.hibernate.cfg.CacheConfig;
@@ -92,11 +93,20 @@ public interface HibernateToManyProperty extends PropertyWithMapping<PropertyCon
     }
 
     /**
-     * Returns the component type for basic (scalar/enum) collections, or {@code null} if this is not
-     * a basic collection.
+     * Returns the component type for this to-many collection, or {@code null} if it cannot be
+     * determined.
      */
     default Class<?> getComponentType() {
-        return this instanceof Basic<?> basic ? basic.getComponentType() : null;
+        if (this instanceof Basic<?> basic) {
+            return basic.getComponentType();
+        }
+        if (this instanceof Association<?> association) {
+            var associatedEntity = association.getAssociatedEntity();
+            if (associatedEntity != null) {
+                return associatedEntity.getJavaClass();
+            }
+        }
+        return null;
     }
 
     /**

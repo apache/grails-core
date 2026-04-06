@@ -220,7 +220,7 @@ class MapSecondPassBinderSpec extends HibernateGormDatastoreSpec {
         booksProp.setCollection(map)
 
         when:
-        mapBinder.bindMapSecondPass(booksProp, persistentClasses)
+        mapBinder.bindMapSecondPass(booksProp)
 
         then:
         noExceptionThrown()
@@ -274,7 +274,7 @@ class MapSecondPassBinderSpec extends HibernateGormDatastoreSpec {
         booksProp.setCollection(map)
 
         when:
-        mapBinder.bindMapSecondPass(booksProp, persistentClasses)
+        mapBinder.bindMapSecondPass(booksProp)
 
         then:
         noExceptionThrown()

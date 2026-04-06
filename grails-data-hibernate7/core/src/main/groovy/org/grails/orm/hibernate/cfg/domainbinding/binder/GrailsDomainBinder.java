@@ -48,8 +48,8 @@ import org.grails.orm.hibernate.cfg.domainbinding.util.MultiTenantFilterDefiniti
 import org.grails.orm.hibernate.cfg.domainbinding.util.NamingStrategyProvider;
 import org.grails.orm.hibernate.cfg.domainbinding.util.NamingStrategyWrapper;
 import org.grails.orm.hibernate.cfg.domainbinding.util.PropertyFromValueCreator;
-import org.grails.orm.hibernate.cfg.domainbinding.util.TableForManyCalculator;
 import org.grails.orm.hibernate.cfg.domainbinding.util.SimpleValueColumnFetcher;
+import org.grails.orm.hibernate.cfg.domainbinding.util.TableForManyCalculator;
 
 /**
  * Handles the binding Grails domain classes and properties to the Hibernate runtime meta model.

@@ -29,7 +29,6 @@ import org.hibernate.mapping.IndexBackref;
 import org.hibernate.mapping.List;
 import org.hibernate.mapping.PersistentClass;
 import org.hibernate.mapping.Table;
-import org.hibernate.mapping.Value;
 
 import org.grails.datastore.mapping.model.PersistentEntity;
 import org.grails.orm.hibernate.cfg.PersistentEntityNamingStrategy;
