@@ -148,8 +148,15 @@ class TableForManyCalculatorSpec extends HibernateGormDatastoreSpec {
         namespace.getName() >> name
 
         def calculator = new TableForManyCalculator(namingStrategy, collector)
-        def ownerEntity = createPersistentEntity(OwningSide)
-        def property = ownerEntity.getPropertyByName("associated") as HibernateToManyProperty
+        
+        // Mock the property to avoid needing a fully bound PersistentClass
+        def table = new org.hibernate.mapping.Table("owner_table")
+        table.setSchema("owner_schema")
+        
+        def propertyConfig = new org.grails.orm.hibernate.cfg.PropertyConfig()
+        def property = Mock(HibernateToManyProperty)
+        property.getTable() >> table
+        property.getHibernateMappedForm() >> propertyConfig
 
         when: "No explicit mapping"
         def schema = calculator.getJoinTableSchema(property)
@@ -160,7 +167,7 @@ class TableForManyCalculatorSpec extends HibernateGormDatastoreSpec {
         catalog == "default_catalog"
 
         when: "Explicit mapping"
-        property.getHibernateMappedForm().setJoinTable(new JoinTable(schema: "explicit_schema", catalog: "explicit_catalog"))
+        propertyConfig.setJoinTable(new JoinTable(schema: "explicit_schema", catalog: "explicit_catalog"))
         def schema2 = calculator.getJoinTableSchema(property)
         def catalog2 = calculator.getJoinTableCatalog(property)
 

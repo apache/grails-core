@@ -21,7 +21,6 @@ package org.grails.orm.hibernate.cfg.domainbinding.hibernate
 import grails.gorm.annotation.Entity
 import grails.gorm.specs.HibernateGormDatastoreSpec
 import org.hibernate.MappingException
-import org.grails.datastore.mapping.model.PersistentEntity
 import org.grails.datastore.mapping.model.MappingContext
 import org.grails.datastore.mapping.model.PropertyMapping
 import org.grails.orm.hibernate.cfg.PropertyConfig
@@ -37,6 +36,11 @@ class HibernateOneToManyPropertySpec extends HibernateGormDatastoreSpec {
         given:
         def authorEntity = mappingContext.getPersistentEntity(HOTMPAuthor.name)
         HibernateOneToManyProperty property = (HibernateOneToManyProperty) authorEntity.getPropertyByName("books")
+        def mbc = getGrailsDomainBinder().metadataBuildingContext
+        def rootClass = new org.hibernate.mapping.RootClass(mbc)
+        rootClass.setEntityName(HOTMPAuthor.name)
+        def mockCollection = new org.hibernate.mapping.Set(mbc, rootClass)
+        property.setCollection(mockCollection, "")
 
         when:
         String entityName = property.getReferencedEntityName()
@@ -70,6 +74,40 @@ class HibernateOneToManyPropertySpec extends HibernateGormDatastoreSpec {
         then:
         def ex = thrown(MappingException)
         ex.message.contains("are not supported with unidirectional one to many relationships")
+    }
+
+    def "test getCollection throws exception if not initialized"() {
+        given:
+        def authorEntity = (HibernatePersistentEntity) getMappingContext().getPersistentEntity(HOTMPAuthor.name)
+        def property = (HibernateOneToManyProperty) authorEntity.getPropertyByName("books")
+        property.setHibernateCollection(null)
+
+        when:
+        property.getCollection()
+
+        then:
+        def e = thrown(org.hibernate.MappingException)
+        e.message.contains("Hibernate Collection has not been initialized")
+    }
+
+    def "test setCollection with path configures metadata"() {
+        given:
+        def authorEntity = (HibernatePersistentEntity) getMappingContext().getPersistentEntity(HOTMPAuthor.name)
+        def property = (HibernateOneToManyProperty) authorEntity.getPropertyByName("books")
+        def mbc = getGrailsDomainBinder().metadataBuildingContext
+        
+        def rootClass = new org.hibernate.mapping.RootClass(mbc)
+        rootClass.setEntityName(HOTMPAuthor.name)
+        def mockCollection = new org.hibernate.mapping.Set(mbc, rootClass)
+        
+        when:
+        property.setCollection(mockCollection, "foo.bar")
+
+        then:
+        property.getCollection() == mockCollection
+        mockCollection.getRole() == "${HOTMPAuthor.name}.foo.bar.books".toString()
+        mockCollection.getFetchMode() == property.getFetchMode()
+        mockCollection.getBatchSize() == property.getBatchSize()
     }
 }
 

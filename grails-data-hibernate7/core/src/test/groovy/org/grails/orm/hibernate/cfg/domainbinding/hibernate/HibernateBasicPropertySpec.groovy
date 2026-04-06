@@ -18,38 +18,19 @@
  */
 package org.grails.orm.hibernate.cfg.domainbinding.hibernate
 
+import grails.gorm.annotation.Entity
 import grails.gorm.specs.HibernateGormDatastoreSpec
-import grails.persistence.Entity
 
-class HibernateManyToManyPropertySpec extends HibernateGormDatastoreSpec {
+class HibernateBasicPropertySpec extends HibernateGormDatastoreSpec {
 
-    void setupSpec() {
-        manager.addAllDomainClasses([HMMPA, HMMPB])
-    }
-
-    def "test HibernateManyToManyProperty basic methods"() {
-        given:
-        def entityA = (HibernatePersistentEntity) getMappingContext().getPersistentEntity(HMMPA.name)
-        def property = (HibernateManyToManyProperty) entityA.getPropertyByName("others")
-        def mbc = getGrailsDomainBinder().metadataBuildingContext
-        def rootClass = new org.hibernate.mapping.RootClass(mbc)
-        rootClass.setEntityName(HMMPA.name)
-        def mockCollection = new org.hibernate.mapping.Set(mbc, rootClass)
-        property.setCollection(mockCollection, "")
-
-        expect:
-        property.getHibernateAssociatedEntity().name == HMMPB.name
-        property.getReferencedEntityName() == HMMPB.name
-        property.isManyToMany()
-        !property.isOneToMany()
-        property.isLazy()
-        !property.isAssociationColumnNullable()
+    def setupSpec() {
+        manager.addAllDomainClasses([HBPPerson])
     }
 
     def "test getCollection throws exception if not initialized"() {
         given:
-        def entityA = (HibernatePersistentEntity) getMappingContext().getPersistentEntity(HMMPA.name)
-        def property = (HibernateManyToManyProperty) entityA.getPropertyByName("others")
+        def personEntity = (HibernatePersistentEntity) getMappingContext().getPersistentEntity(HBPPerson.name)
+        def property = (HibernateBasicProperty) personEntity.getPropertyByName("tags")
         property.setHibernateCollection(null)
 
         when:
@@ -62,36 +43,29 @@ class HibernateManyToManyPropertySpec extends HibernateGormDatastoreSpec {
 
     def "test setCollection with path configures metadata"() {
         given:
-        def entityA = (HibernatePersistentEntity) getMappingContext().getPersistentEntity(HMMPA.name)
-        def property = (HibernateManyToManyProperty) entityA.getPropertyByName("others")
+        def personEntity = (HibernatePersistentEntity) getMappingContext().getPersistentEntity(HBPPerson.name)
+        def property = (HibernateBasicProperty) personEntity.getPropertyByName("tags")
         def mbc = getGrailsDomainBinder().metadataBuildingContext
+        
         def rootClass = new org.hibernate.mapping.RootClass(mbc)
-        rootClass.setEntityName(HMMPA.name)
+        rootClass.setEntityName(HBPPerson.name)
         def mockCollection = new org.hibernate.mapping.Set(mbc, rootClass)
-
+        
         when:
         property.setCollection(mockCollection, "foo.bar")
 
         then:
         property.getCollection() == mockCollection
-        mockCollection.getRole() == "${HMMPA.name}.foo.bar.others".toString()
+        mockCollection.getRole() == "${HBPPerson.name}.foo.bar.tags".toString()
         mockCollection.getFetchMode() == property.getFetchMode()
         mockCollection.getBatchSize() == property.getBatchSize()
     }
 }
 
 @Entity
-class HMMPA {
+class HBPPerson {
     Long id
-    static hasMany = [others: HMMPB]
-    static mapping = {
-        others joinTable: [name: "h_m_m_p_a_others"]
-    }
-}
-
-@Entity
-class HMMPB {
-    Long id
-    static hasMany = [owners: HMMPA]
-    static belongsTo = [owners: HMMPA]
+    String name
+    Set<String> tags
+    static hasMany = [tags: String]
 }
