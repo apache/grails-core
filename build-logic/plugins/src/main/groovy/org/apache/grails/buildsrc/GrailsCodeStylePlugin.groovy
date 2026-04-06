@@ -132,6 +132,7 @@ class GrailsCodeStylePlugin implements Plugin<Project> {
             task.outputs.file(root.layout.projectDirectory.file('CODENARC_VIOLATIONS.md'))
             task.outputs.file(root.layout.projectDirectory.file('CHECKSTYLE_VIOLATIONS.md'))
             task.outputs.file(root.layout.projectDirectory.file('PMD_VIOLATIONS.md'))
+            task.outputs.file(root.layout.projectDirectory.file('SPOTBUGS_VIOLATIONS.md'))
 
             task.doLast {
                 parseViolations(root, reportsDir.get())
@@ -294,6 +295,34 @@ class GrailsCodeStylePlugin implements Plugin<Project> {
             }
         }
         writeReport('CHECKSTYLE_VIOLATIONS.md', checkstyleViolations, 'Checkstyle Violations Summary')
+
+        // 4. SpotBugs
+        def spotbugsViolations = []
+        def spotbugsDir = reportsDir.dir('spotbugs').asFile
+        if (spotbugsDir.exists() && GradleUtils.lookupProperty(project, SPOTBUGS_ENABLED_PROPERTY, false)) {
+            spotbugsDir.eachFileMatch(~/.*\.xml/) { file ->
+                if (file.size() == 0 || (!checkTests && isTestFile(file.name))) {
+                    return
+                }
+                def module = getModule(file.name)
+                def xml = slurper.parse(file)
+                xml.BugInstance.each { b ->
+                    def className = b.Class.@classname.text()
+                    if (shouldSkipClass(className)) {
+                        return
+                    }
+                    spotbugsViolations << [
+                            module: module,
+                            className: className,
+                            tool: 'SpotBugs',
+                            type: b.@type.text(),
+                            line: b.SourceLine.@start.text(),
+                            message: b.LongMessage.text().trim()
+                    ]
+                }
+            }
+        }
+        writeReport('SPOTBUGS_VIOLATIONS.md', spotbugsViolations, 'SpotBugs Violations Summary')
     }
 
     private static void initExtension(Project project) {

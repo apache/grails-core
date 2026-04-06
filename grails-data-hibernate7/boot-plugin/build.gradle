@@ -53,6 +53,7 @@ dependencies {
         exclude group:'org.apache.groovy', module:'groovy'
     }
     testImplementation "org.spockframework:spock-core"
+    testImplementation "org.springframework.boot:spring-boot-starter-test"
 
     testRuntimeOnly "org.apache.tomcat:tomcat-jdbc"
     testRuntimeOnly "com.h2database:h2"
