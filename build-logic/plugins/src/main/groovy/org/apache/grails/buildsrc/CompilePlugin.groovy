@@ -112,7 +112,7 @@ class CompilePlugin implements Plugin<Project> {
                 it.options.fork = true
                 // always set an isolated build to ensure grails.factories aren't accidentally merged since every project
                 // in this mono repo should be an isolated projected
-                it.options.forkOptions.jvmArgs = ['-Xms128M', '-Xmx2G', '-Dgrails.isolated.build=true']
+                it.options.forkOptions.jvmArgs = ['-Xms128M', '-Xmx2G', '-Dgrails.isolated.build=true', '-Dspock.iKnowWhatImDoing.disableGroovyVersionCheck=true']
                 // Publish THIS project's base.dir to the forked Groovy compiler. Gradle reuses a forked
                 // compiler daemon for a task whose requested fork arguments the daemon already satisfies,
                 // so a compile that does NOT request base.dir can be handed a daemon started for another
