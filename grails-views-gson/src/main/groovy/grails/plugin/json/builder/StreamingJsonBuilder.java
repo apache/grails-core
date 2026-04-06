@@ -21,6 +21,8 @@ package grails.plugin.json.builder;
 import java.io.IOException;
 import java.io.Writer;
 
+import groovy.lang.Closure;
+
 /**
  * Temporary fork of {@link groovy.json.StreamingJsonBuilder} until Groovy 2.4.5 is out.
  *
@@ -34,60 +36,52 @@ import java.io.Writer;
 @Deprecated(since = "7.1", forRemoval = true)
 public class StreamingJsonBuilder extends groovy.json.StreamingJsonBuilder {
 
-    /**
-     * Instantiates a JSON builder.
-     *
-     * @param writer A writer to which Json will be written
-     */
+    private final Writer grailsWriter;
+    private final groovy.json.JsonGenerator grailsGenerator;
+
     public StreamingJsonBuilder(Writer writer) {
         super(writer);
+        this.grailsWriter = writer;
+        this.grailsGenerator = new groovy.json.JsonGenerator.Options().build();
     }
 
-    /**
-     * Instantiates a JSON builder with the given generator.
-     *
-     * @param writer A writer to which Json will be written
-     * @param generator used to generate the output
-     * @since 2.5
-     */
     @Deprecated(since = "7.1", forRemoval = true)
     public StreamingJsonBuilder(Writer writer, grails.plugin.json.builder.JsonGenerator generator) {
         super(writer, generator);
+        this.grailsWriter = writer;
+        this.grailsGenerator = generator;
     }
 
-    /**
-     * Instantiates a JSON builder, possibly with some existing data structure.
-     *
-     * @param writer  A writer to which Json will be written
-     * @param content a pre-existing data structure, default to null
-     * @throws IOException
-     *         If an I/O error occurs
-     */
     public StreamingJsonBuilder(Writer writer, Object content) throws IOException {
         super(writer, content);
+        this.grailsWriter = writer;
+        this.grailsGenerator = new groovy.json.JsonGenerator.Options().build();
     }
 
-    /**
-     * Instantiates a JSON builder, possibly with some existing data structure and
-     * the given generator.
-     *
-     * @param writer A writer to which Json will be written
-     * @param content a pre-existing data structure, default to null
-     * @param generator used to generate the output
-     * @throws IOException
-     *         If an I/O error occurs
-     * @since 2.5
-     */
     public StreamingJsonBuilder(Writer writer, Object content, grails.plugin.json.builder.JsonGenerator generator) throws IOException {
         super(writer, content, generator);
+        this.grailsWriter = writer;
+        this.grailsGenerator = generator;
     }
 
     public StreamingJsonBuilder(Writer writer, groovy.json.JsonGenerator generator) {
         super(writer, generator);
+        this.grailsWriter = writer;
+        this.grailsGenerator = generator;
     }
 
     public StreamingJsonBuilder(Writer writer, Object content, groovy.json.JsonGenerator generator) throws IOException {
         super(writer, content, generator);
+        this.grailsWriter = writer;
+        this.grailsGenerator = generator;
+    }
+
+    @Override
+    public Object call(@groovy.lang.DelegatesTo(value = StreamingJsonDelegate.class, strategy = Closure.DELEGATE_FIRST) Closure c) throws IOException {
+        grailsWriter.write(grails.plugin.json.builder.JsonOutput.OPEN_BRACE);
+        StreamingJsonDelegate.cloneDelegateAndGetContent(grailsWriter, c, true, grailsGenerator);
+        grailsWriter.write(grails.plugin.json.builder.JsonOutput.CLOSE_BRACE);
+        return null;
     }
 
     @Deprecated(since = "7.1", forRemoval = true)
@@ -104,6 +98,14 @@ public class StreamingJsonBuilder extends groovy.json.StreamingJsonBuilder {
 
         public StreamingJsonDelegate(Writer w, boolean first, groovy.json.JsonGenerator generator) {
             super(w, first, generator);
+        }
+
+        public static void cloneDelegateAndGetContent(Writer w, Closure c, boolean first, groovy.json.JsonGenerator generator) {
+            StreamingJsonDelegate delegate = new StreamingJsonDelegate(w, first, generator);
+            Closure cloned = (Closure) c.clone();
+            cloned.setDelegate(delegate);
+            cloned.setResolveStrategy(Closure.DELEGATE_FIRST);
+            cloned.call();
         }
     }
 }

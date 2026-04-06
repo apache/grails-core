@@ -229,7 +229,7 @@ abstract class AbstractGrailsTagTests {
         return result
     }
 
-    private void outputTagResult(Writer taglibWriter, boolean returnsObject, Object tagresult) {
+    protected void outputTagResult(Writer taglibWriter, boolean returnsObject, Object tagresult) {
         if (returnsObject && tagresult != null && !(tagresult instanceof Writer)) {
             taglibWriter.print(tagresult)
         }
