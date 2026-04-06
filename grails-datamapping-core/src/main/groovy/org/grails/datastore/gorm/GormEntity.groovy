@@ -612,9 +612,13 @@ trait GormEntity<D> implements GormValidateable, DirtyCheckable, GormEntityApi<D
             return mp.getProperty(this)
         }
         try {
-            currentGormStaticApi().get((Serializable) nameOrId)
-        } catch (IllegalStateException e) {
-            throw new MissingPropertyException(nameOrId, this)
+            return currentGormStaticApi().propertyMissing(nameOrId)
+        } catch (MissingPropertyException | IllegalStateException ignore) {
+            try {
+                return currentGormStaticApi().get((Serializable) nameOrId)
+            } catch (IllegalStateException e) {
+                throw new MissingPropertyException(nameOrId, this)
+            }
         }
     }
 
