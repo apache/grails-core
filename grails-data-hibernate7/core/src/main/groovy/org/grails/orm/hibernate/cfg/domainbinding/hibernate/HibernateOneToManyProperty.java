@@ -50,12 +50,12 @@ public class HibernateOneToManyProperty extends OneToManyWithMapping<PropertyCon
     }
 
     @Override
-    public Collection getCollection() {
+    public Collection getHibernateCollection() {
         return collection;
     }
 
     @Override
-    public void setCollection(Collection collection) {
+    public void setHibernateCollection(Collection collection) {
         this.collection = collection;
     }
 

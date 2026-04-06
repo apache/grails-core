@@ -23,6 +23,7 @@ import java.util.Optional;
 
 import org.checkerframework.checker.nullness.qual.NonNull;
 import org.hibernate.FetchMode;
+import org.hibernate.MappingException;
 import org.hibernate.mapping.Collection;
 import org.hibernate.mapping.IndexedCollection;
 
@@ -41,6 +42,7 @@ import org.grails.orm.hibernate.cfg.domainbinding.util.BackticksRemover;
 import static java.util.Optional.ofNullable;
 import static org.grails.orm.hibernate.cfg.GrailsHibernateUtil.qualify;
 import static org.grails.orm.hibernate.cfg.domainbinding.binder.GrailsDomainBinder.UNDERSCORE;
+import static org.grails.orm.hibernate.cfg.domainbinding.util.CascadeBehavior.ALL_DELETE_ORPHAN;
 
 /** Marker interface for Hibernate to-many associations */
 public interface HibernateToManyProperty extends PropertyWithMapping<PropertyConfig>, HibernateAssociation {
@@ -246,9 +248,31 @@ public interface HibernateToManyProperty extends PropertyWithMapping<PropertyCon
         return isNullable();
     }
 
-    Collection getCollection();
+    default Collection getCollection() {
+        Collection collection = getHibernateCollection();
+        if (collection == null) {
+            throw new MappingException("Hibernate Collection has not been initialized for property [" + getName() + "]. Call setCollection() first.");
+        }
+        return collection;
+    }
 
-    void setCollection(Collection collection);
+    default void setCollection(Collection collection) {
+        setCollection(collection, "");
+    }
+
+    default void setCollection(Collection collection, String path) {
+        if (collection != null) {
+            collection.setRole(getRole(path));
+            collection.setFetchMode(getFetchMode());
+            collection.setOrphanDelete(ALL_DELETE_ORPHAN.getValue().equals(getCascade()));
+            collection.setBatchSize(getBatchSize());
+        }
+        setHibernateCollection(collection);
+    }
+
+    Collection getHibernateCollection();
+
+    void setHibernateCollection(Collection collection);
 
     default String getCascade() {
         return getHibernateMappedForm().getCascade();

@@ -42,6 +42,9 @@ class TableForManyCalculatorSpec extends HibernateGormDatastoreSpec {
         def namingStrategy = getGrailsDomainBinder().getNamingStrategy()
         def backticksRemover = new BackticksRemover()
         def collector = Mock(InFlightMetadataCollector)
+        collector.addTable(_, _, _, _, _, _) >> { schema, catalog, name, sub, isAbstract, context ->
+            return new org.hibernate.mapping.Table("test", name)
+        }
 
         def calculator = new TableForManyCalculator(namingStrategy, collector, backticksRemover)
 

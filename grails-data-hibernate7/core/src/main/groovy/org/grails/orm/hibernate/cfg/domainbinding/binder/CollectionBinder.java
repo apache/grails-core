@@ -131,9 +131,8 @@ public class CollectionBinder {
      * @return the result
      */
     public Collection bindCollection(HibernateToManyProperty property, String path) {
-        Collection collection = initializeCollection(property, path);
-
-        configureCollectionMetadata(property, collection);
+        Collection collection = collectionHolder.create(property);
+        property.setCollection(collection, path);
 
         if (property.shouldBindWithForeignKey()) {
             bindOneToManyElement((HibernateToManyEntityProperty) property, collection);
@@ -146,19 +145,6 @@ public class CollectionBinder {
         mappings.addCollectionBinding(collection);
 
         return collection;
-    }
-
-    private Collection initializeCollection(HibernateToManyProperty property, String path) {
-        Collection collection = collectionHolder.create(property);
-        property.setCollection(collection);
-        collection.setRole(property.getRole(path));
-        return collection;
-    }
-
-    private void configureCollectionMetadata(HibernateToManyProperty property, Collection collection) {
-        collection.setFetchMode(property.getFetchMode());
-        collection.setOrphanDelete(ALL_DELETE_ORPHAN.getValue().equals(property.getCascade()));
-        collection.setBatchSize(property.getBatchSize());
     }
 
     private void bindOneToManyElement(HibernateToManyEntityProperty property, Collection collection) {

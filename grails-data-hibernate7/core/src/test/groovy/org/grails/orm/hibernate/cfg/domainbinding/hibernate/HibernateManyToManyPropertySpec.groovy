@@ -31,6 +31,11 @@ class HibernateManyToManyPropertySpec extends HibernateGormDatastoreSpec {
         given:
         def entityA = (HibernatePersistentEntity) getMappingContext().getPersistentEntity(HMMPA.name)
         def property = (HibernateManyToManyProperty) entityA.getPropertyByName("others")
+        def mbc = getGrailsDomainBinder().metadataBuildingContext
+        def rootClass = new org.hibernate.mapping.RootClass(mbc)
+        rootClass.setEntityName(HMMPA.name)
+        def mockCollection = new org.hibernate.mapping.Set(mbc, rootClass)
+        property.setCollection(mockCollection, "")
 
         expect:
         property.getHibernateAssociatedEntity().name == HMMPB.name
@@ -39,6 +44,38 @@ class HibernateManyToManyPropertySpec extends HibernateGormDatastoreSpec {
         !property.isOneToMany()
         property.isLazy()
         !property.isAssociationColumnNullable()
+    }
+
+    def "test getCollection throws exception if not initialized"() {
+        given:
+        def entityA = (HibernatePersistentEntity) getMappingContext().getPersistentEntity(HMMPA.name)
+        def property = (HibernateManyToManyProperty) entityA.getPropertyByName("others")
+
+        when:
+        property.getCollection()
+
+        then:
+        def e = thrown(org.hibernate.MappingException)
+        e.message.contains("Hibernate Collection has not been initialized")
+    }
+
+    def "test setCollection with path configures metadata"() {
+        given:
+        def entityA = (HibernatePersistentEntity) getMappingContext().getPersistentEntity(HMMPA.name)
+        def property = (HibernateManyToManyProperty) entityA.getPropertyByName("others")
+        def mbc = getGrailsDomainBinder().metadataBuildingContext
+        def rootClass = new org.hibernate.mapping.RootClass(mbc)
+        rootClass.setEntityName(HMMPA.name)
+        def mockCollection = new org.hibernate.mapping.Set(mbc, rootClass)
+
+        when:
+        property.setCollection(mockCollection, "foo.bar")
+
+        then:
+        property.getCollection() == mockCollection
+        mockCollection.getRole() == "${HMMPA.name}.foo.bar.others".toString()
+        mockCollection.getFetchMode() == property.getFetchMode()
+        mockCollection.getBatchSize() == property.getBatchSize()
     }
 }
 
