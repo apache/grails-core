@@ -450,6 +450,16 @@ abstract class ConfigurationBuilder<B, C> {
             }
         }
         else {
+            // Spring 7 may wrap ConverterNotFoundException in ConversionFailedException when
+            // converting Maps with non-standard value types. Try Map-based instantiation.
+            try {
+                def result = handleConverterNotFoundException(null, argType, propertyPathForArg, null)
+                if (result != null) {
+                    return result
+                }
+            } catch (Throwable ignored) {
+                // Fall through to original exception
+            }
             throw new ConfigurationException("Invalid value for setting [$propertyPathForArg]: $e.message", e)
         }
     }
@@ -464,24 +474,29 @@ abstract class ConfigurationBuilder<B, C> {
      */
     @CompileDynamic
     private Object handleConverterNotFoundException(ConverterNotFoundException e, Class argType, String propertyPathForArg, Object fallBackValue) {
-        // Try to get the raw Map value and populate the target type
+        // Try to get the raw value as Object to avoid Spring 7 deep conversion,
+        // then manually populate the target type from the Map
         try {
-            def mapValue = propertyResolver.getProperty(propertyPathForArg, Map)
-            if (mapValue != null && !mapValue.isEmpty()) {
-                try {
-                    def instance = argType.getDeclaredConstructor().newInstance()
-                    mapValue.each { key, val ->
-                        if (instance.hasProperty(key as String)) {
-                            instance[key as String] = val
+            // Use Object.class to prevent Spring's MapToMapConverter from deep-converting values
+            def rawValue = propertyResolver.getProperty(propertyPathForArg, Object)
+            if (rawValue instanceof Map) {
+                Map mapValue = (Map) rawValue
+                if (!mapValue.isEmpty()) {
+                    try {
+                        def instance = argType.getDeclaredConstructor().newInstance()
+                        mapValue.each { key, val ->
+                            if (instance.hasProperty(key as String)) {
+                                instance[key as String] = val
+                            }
                         }
+                        return instance
+                    } catch (Throwable e2) {
+                        log.debug('Failed to instantiate {} from Map: {}', argType, e2.message)
                     }
-                    return instance
-                } catch (Throwable e2) {
-                    log.debug('Failed to instantiate {} from Map: {}', argType, e2.message)
                 }
             }
         } catch (Throwable e3) {
-            log.debug('Failed to get Map value for {}: {}', propertyPathForArg, e3.message)
+            log.debug('Failed to get raw value for {}: {}', propertyPathForArg, e3.message)
         }
 
         // If we have a fallback value, return it
@@ -496,7 +511,10 @@ abstract class ConfigurationBuilder<B, C> {
             log.debug('Failed to instantiate {} with default constructor: {}', argType, e4.message)
         }
 
-        throw new ConfigurationException("Invalid value for setting [$propertyPathForArg]: $e.message", e)
+        if (e != null) {
+            throw new ConfigurationException("Invalid value for setting [$propertyPathForArg]: $e.message", e)
+        }
+        return null
     }
 
     /**
