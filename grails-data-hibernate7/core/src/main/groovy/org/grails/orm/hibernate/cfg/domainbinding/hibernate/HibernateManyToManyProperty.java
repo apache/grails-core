@@ -58,6 +58,15 @@ public class HibernateManyToManyProperty extends ManyToManyWithMapping<PropertyC
     }
 
     @Override
+    public void validateOwningSide() {
+        HibernateToManyEntityProperty.super.validateOwningSide();
+        if (!isOwningSide()) {
+            throw new org.hibernate.MappingException("Invalid association [" + this +
+                    "]. List collection types only supported on the owning side of a many-to-many relationship.");
+        }
+    }
+
+    @Override
     public boolean isLazy() {
         return getHibernateOwner().isLazy(this);
     }

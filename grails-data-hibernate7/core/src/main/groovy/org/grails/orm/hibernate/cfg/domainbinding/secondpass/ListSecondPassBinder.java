@@ -20,7 +20,6 @@ package org.grails.orm.hibernate.cfg.domainbinding.secondpass;
 
 import jakarta.annotation.Nonnull;
 
-import org.hibernate.MappingException;
 import org.hibernate.boot.spi.InFlightMetadataCollector;
 import org.hibernate.boot.spi.MetadataBuildingContext;
 import org.hibernate.mapping.Backref;
@@ -69,28 +68,18 @@ public class ListSecondPassBinder {
     }
 
     public void bindListSecondPass(@Nonnull HibernateToManyProperty property) {
-        validateOwningSide(property);
-        List list = (List) property.getCollection();
+        property.validateOwningSide();
         collectionSecondPassBinder.bindCollectionSecondPass(property);
-        bindIndexColumn(property, list);
+        List list = (List) property.getCollection();
+        bindIndexColumn(property);
         list.setBaseIndex(0);
         list.setInverse(false);
-        Value element = list.getElement();
-        element.createForeignKey();
+        list.getElement().createForeignKey();
         bindBackReferences(property, list);
     }
 
-    private void validateOwningSide(HibernateToManyProperty property) {
-        if (!(property.getCollection() instanceof List)) {
-            throw new MappingException("Collection must be of type List");
-        }
-        if (property instanceof HibernateManyToManyProperty && !property.isOwningSide()) {
-            throw new MappingException("Invalid association [" + property +
-                    "]. List collection types only supported on the owning side of a many-to-many relationship.");
-        }
-    }
-
-    private void bindIndexColumn(HibernateToManyProperty property, List list) {
+    private void bindIndexColumn(HibernateToManyProperty property) {
+        List list = (List) property.getCollection();
         Table collectionTable = list.getCollectionTable();
         String columnName = property.getIndexColumnName(namingStrategy);
         String type = property.getIndexColumnType(DEFAULT_INDEX_TYPE);

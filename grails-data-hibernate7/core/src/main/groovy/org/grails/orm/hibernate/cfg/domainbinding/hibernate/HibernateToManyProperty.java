@@ -248,6 +248,12 @@ public interface HibernateToManyProperty extends PropertyWithMapping<PropertyCon
         return isNullable();
     }
 
+    default void validateOwningSide() {
+        if (!(getHibernateCollection() instanceof org.hibernate.mapping.List)) {
+            throw new MappingException("Collection must be of type List for property [" + getName() + "]");
+        }
+    }
+
     default Collection getCollection() {
         Collection collection = getHibernateCollection();
         if (collection == null) {

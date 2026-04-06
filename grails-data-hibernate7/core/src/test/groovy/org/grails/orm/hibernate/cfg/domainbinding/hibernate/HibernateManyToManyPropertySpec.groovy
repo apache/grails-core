@@ -78,6 +78,33 @@ class HibernateManyToManyPropertySpec extends HibernateGormDatastoreSpec {
         mockCollection.getFetchMode() == property.getFetchMode()
         mockCollection.getBatchSize() == property.getBatchSize()
     }
+
+    def "test validateOwningSide"() {
+        given:
+        def entityA = (HibernatePersistentEntity) getMappingContext().getPersistentEntity(HMMPA.name)
+        def propertyA = (HibernateManyToManyProperty) entityA.getPropertyByName("others")
+        def mbc = getGrailsDomainBinder().metadataBuildingContext
+        
+        def rootClass = new org.hibernate.mapping.RootClass(mbc)
+        rootClass.setEntityName(HMMPA.name)
+        
+        def list = new org.hibernate.mapping.List(mbc, rootClass)
+        propertyA.setCollection(list, "")
+
+        expect: "Owning side passes"
+        propertyA.isOwningSide()
+        propertyA.validateOwningSide()
+
+        when: "Non-owning side fails"
+        def entityB = (HibernatePersistentEntity) getMappingContext().getPersistentEntity(HMMPB.name)
+        def propertyB = (HibernateManyToManyProperty) entityB.getPropertyByName("owners")
+        propertyB.setCollection(new org.hibernate.mapping.List(mbc, rootClass), "")
+        propertyB.validateOwningSide()
+
+        then:
+        def e = thrown(org.hibernate.MappingException)
+        e.message.contains("List collection types only supported on the owning side")
+    }
 }
 
 @Entity
