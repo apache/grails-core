@@ -20,6 +20,10 @@
 dependencies {
     // https://docs.gradle.org/8.3/userguide/upgrading_version_8.html#test_framework_implementation_dependencies
     add('testRuntimeOnly', 'org.junit.platform:junit-platform-launcher')
+    // Required by Spock 2.4 to mock concrete classes (byte-buddy/objenesis are
+    // not transitive from spock-core in this configuration).
+    add('testRuntimeOnly', 'net.bytebuddy:byte-buddy')
+    add('testRuntimeOnly', 'org.objenesis:objenesis')
 }
 
 tasks.withType(Test).configureEach {

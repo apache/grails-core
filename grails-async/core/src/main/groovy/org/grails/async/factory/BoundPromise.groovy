@@ -86,13 +86,12 @@ class BoundPromise<T> implements Promise<T> {
         return new BoundPromise<T>(callable.call((T) v))
     }
 
-    @SuppressWarnings('unchecked')
     Promise<T> onError(Closure<T> callable) {
         Object v = value
         if (!(v instanceof Throwable)) {
             return this
         }
-        return new BoundPromise<T>(callable.call((T) v))
+        return new BoundPromise<T>(callable.call((Throwable) v))
     }
 
     @SuppressWarnings('unchecked')
