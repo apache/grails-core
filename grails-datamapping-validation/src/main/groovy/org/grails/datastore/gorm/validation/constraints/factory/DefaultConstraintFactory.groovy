@@ -48,7 +48,7 @@ class DefaultConstraintFactory implements ConstraintFactory {
     protected final Constructor constraintConstructor
 
     DefaultConstraintFactory(Class<? extends Constraint> constraintClass, MessageSource messageSource) {
-        this(constraintClass, messageSource, [Object.class] as List<Class>)
+        this(constraintClass, messageSource, [Object] as List<Class>)
     }
 
     DefaultConstraintFactory(Class<? extends Constraint> constraintClass, MessageSource messageSource, List<Class> targetTypes) {
