@@ -471,4 +471,68 @@ class ApplicationTagLib implements ApplicationContextAware, InitializingBean, Gr
         // encoding is handled in GroovyPage.invokeTag and GroovyPage.captureTagOutput
         body()
     }
+
+    /**
+     * Renders flash.message, flash.error, and flash.warning as Bootstrap alert divs.
+     * Automatically skips rendering if already called during this request, preventing
+     * duplicate display when used in both pages and layouts.
+     *
+     * @emptyTag
+     *
+     * @attr messageClass CSS class for flash.message alerts (default: 'alert alert-success alert-dismissible fade show')
+     * @attr messageIcon Icon class for flash.message alerts (default: 'bi bi-check-circle me-2')
+     * @attr errorClass CSS class for flash.error alerts (default: 'alert alert-danger alert-dismissible fade show')
+     * @attr errorIcon Icon class for flash.error alerts (default: 'bi bi-exclamation-triangle me-2')
+     * @attr warningClass CSS class for flash.warning alerts (default: 'alert alert-warning alert-dismissible fade show')
+     * @attr warningIcon Icon class for flash.warning alerts (default: 'bi bi-exclamation-circle me-2')
+     * @attr role ARIA role for alert divs (default: 'alert')
+     * @attr dismissible Whether to show a close button (default: true)
+     */
+    Closure flashMessages = { attrs ->
+        if (request.getAttribute('_flashRendered')) {
+            return
+        }
+
+        boolean rendered = false
+        boolean dismissible = attrs.dismissible != null ? attrs.dismissible.toString().toBoolean() : true
+        String role = attrs.role ?: 'alert'
+
+        if (flash.message) {
+            renderFlashAlert(
+                    attrs.messageClass ?: 'alert alert-success alert-dismissible fade show',
+                    attrs.messageIcon ?: 'bi bi-check-circle me-2',
+                    flash.message, dismissible, role)
+            rendered = true
+        }
+
+        if (flash.error) {
+            renderFlashAlert(
+                    attrs.errorClass ?: 'alert alert-danger alert-dismissible fade show',
+                    attrs.errorIcon ?: 'bi bi-exclamation-triangle me-2',
+                    flash.error, dismissible, role)
+            rendered = true
+        }
+
+        if (flash.warning) {
+            renderFlashAlert(
+                    attrs.warningClass ?: 'alert alert-warning alert-dismissible fade show',
+                    attrs.warningIcon ?: 'bi bi-exclamation-circle me-2',
+                    flash.warning, dismissible, role)
+            rendered = true
+        }
+
+        if (rendered) {
+            request.setAttribute('_flashRendered', true)
+        }
+    }
+
+    private void renderFlashAlert(String cssClass, String icon, Object message, boolean dismissible, String role) {
+        out << "<div class=\"${cssClass}\" role=\"${role}\">"
+        out << "<i class=\"${icon}\"></i>"
+        out << message.toString().encodeAsHTML()
+        if (dismissible) {
+            out << '<button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>'
+        }
+        out << '</div>'
+    }
 }

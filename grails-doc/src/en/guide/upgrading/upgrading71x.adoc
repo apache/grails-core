@@ -724,3 +724,24 @@ grails:
             mapping:
                 validateWildcards: false
 ----
+
+===== 2.10 Flash Messages Tag (`g:flashMessages`)
+
+Grails 7.1 introduces a new `<g:flashMessages />` tag that renders `flash.message`, `flash.error`, and `flash.warning` as Bootstrap 5 dismissible alerts with appropriate styling (success, danger, and warning respectively).
+
+The tag automatically prevents duplicate rendering -- if called in both a page and its layout, only the first invocation produces output. All flash content is HTML-encoded to prevent XSS.
+
+The default layout (`main.gsp`) and all scaffolding templates now use this tag. If your application has custom views that render flash messages manually, you can replace the boilerplate:
+
+[source,xml]
+----
+<%-- Before --%>
+<g:if test="${flash.message}">
+    <div class="alert alert-primary" role="alert">${flash.message}</div>
+</g:if>
+
+<%-- After --%>
+<g:flashMessages />
+----
+
+The tag supports optional attributes for customizing CSS classes, icons, ARIA role, and dismissibility. See the {gspTagsRef}flashMessages.html[flashMessages] tag reference for full details.
