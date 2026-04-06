@@ -44,7 +44,7 @@ class GenerateViewsCommand implements GrailsApplicationCommand, CommandLineHelpe
     boolean handle() {
         if (!args) {
             error('No domain-class specified')
-            return FAILURE
+            return false
         }
         List<String> domainClassesNames
         if (args[0] == '*') {
@@ -72,7 +72,7 @@ class GenerateViewsCommand implements GrailsApplicationCommand, CommandLineHelpe
                 failureCount++
             }
         }
-        return failureCount ? FAILURE : SUCCESS
+        return failureCount ? false : true
     }
 
     private List<String> resolveViewNames() {

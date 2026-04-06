@@ -47,7 +47,7 @@ class GenerateAsyncControllerCommand implements GrailsApplicationCommand, Comman
     boolean handle() {
         if (!args) {
             error('No domain-class specified')
-            return FAILURE
+            return false
         }
 
         List<String> domainClassNames
@@ -80,6 +80,6 @@ class GenerateAsyncControllerCommand implements GrailsApplicationCommand, Comman
                 failureCount++
             }
         }
-        return failureCount ? FAILURE : SUCCESS
+        return failureCount ? false : true
     }
 }
