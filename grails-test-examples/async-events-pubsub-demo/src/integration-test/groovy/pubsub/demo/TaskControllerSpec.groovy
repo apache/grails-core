@@ -18,7 +18,6 @@
  */
 package pubsub.demo
 
-import spock.lang.PendingFeature
 import spock.lang.Specification
 import spock.lang.Tag
 
@@ -29,11 +28,6 @@ import org.apache.grails.testing.http.client.HttpClientSupport
 @Tag('http-client')
 class TaskControllerSpec extends Specification implements HttpClientSupport {
 
-    @PendingFeature(reason = '''
-        For some reason the response body is blank with bootTestRun.
-        However, when starting the application with bootRun,
-        the response body is as expected.
-    ''')
     void 'test async error handling'() {
         when: 'we invoke an endpoint that throws an exception'
         def response = http('/task/error')
