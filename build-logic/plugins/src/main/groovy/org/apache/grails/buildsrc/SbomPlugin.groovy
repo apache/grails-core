@@ -97,14 +97,23 @@ class SbomPlugin implements Plugin<Project> {
             'pkg:maven/org.jline/jansi@4.0.7?type=jar'                        : 'BSD-3-Clause', // maps incorrectly because of https://github.com/CycloneDX/cyclonedx-core-java/issues/205
             'pkg:maven/org.jline/jline@3.23.0?type=jar'                       : 'BSD-3-Clause', // maps incorrectly because of https://github.com/CycloneDX/cyclonedx-core-java/issues/205
             'pkg:maven/org.jline/jline-builtins@3.30.9?type=jar'              : 'BSD-3-Clause', // maps incorrectly because of https://github.com/CycloneDX/cyclonedx-core-java/issues/205
+            'pkg:maven/org.jline/jline-builtins@4.0.7?type=jar'               : 'BSD-3-Clause', // maps incorrectly because of https://github.com/CycloneDX/cyclonedx-core-java/issues/205
             'pkg:maven/org.jline/jline-console@3.30.9?type=jar'               : 'BSD-3-Clause', // maps incorrectly because of https://github.com/CycloneDX/cyclonedx-core-java/issues/205
+            'pkg:maven/org.jline/jline-console@4.0.7?type=jar'                : 'BSD-3-Clause', // maps incorrectly because of https://github.com/CycloneDX/cyclonedx-core-java/issues/205
+            'pkg:maven/org.jline/jline-console-ui@4.0.7?type=jar'             : 'BSD-3-Clause', // maps incorrectly because of https://github.com/CycloneDX/cyclonedx-core-java/issues/205
             'pkg:maven/org.jline/jline-native@3.30.9?type=jar'                : 'BSD-3-Clause', // maps incorrectly because of https://github.com/CycloneDX/cyclonedx-core-java/issues/205
+            'pkg:maven/org.jline/jline-native@4.0.7?type=jar'                 : 'BSD-3-Clause', // maps incorrectly because of https://github.com/CycloneDX/cyclonedx-core-java/issues/205
             'pkg:maven/org.jline/jline-reader@3.30.9?type=jar'                : 'BSD-3-Clause', // maps incorrectly because of https://github.com/CycloneDX/cyclonedx-core-java/issues/205
+            'pkg:maven/org.jline/jline-reader@4.0.7?type=jar'                 : 'BSD-3-Clause', // maps incorrectly because of https://github.com/CycloneDX/cyclonedx-core-java/issues/205
+            'pkg:maven/org.jline/jline-shell@4.0.7?type=jar'                  : 'BSD-3-Clause', // maps incorrectly because of https://github.com/CycloneDX/cyclonedx-core-java/issues/205
             'pkg:maven/org.jline/jline-style@3.30.9?type=jar'                 : 'BSD-3-Clause', // maps incorrectly because of https://github.com/CycloneDX/cyclonedx-core-java/issues/205
+            'pkg:maven/org.jline/jline-style@4.0.7?type=jar'                  : 'BSD-3-Clause', // maps incorrectly because of https://github.com/CycloneDX/cyclonedx-core-java/issues/205
             'pkg:maven/org.jline/jline-terminal@3.30.9?type=jar'              : 'BSD-3-Clause', // maps incorrectly because of https://github.com/CycloneDX/cyclonedx-core-java/issues/205
+            'pkg:maven/org.jline/jline-terminal@4.0.7?type=jar'               : 'BSD-3-Clause', // maps incorrectly because of https://github.com/CycloneDX/cyclonedx-core-java/issues/205
             'pkg:maven/org.jline/jline-terminal-jansi@3.30.9?type=jar'        : 'BSD-3-Clause', // maps incorrectly because of https://github.com/CycloneDX/cyclonedx-core-java/issues/205
             'pkg:maven/org.jline/jline-terminal-jna@3.30.9?type=jar'          : 'BSD-3-Clause', // maps incorrectly because of https://github.com/CycloneDX/cyclonedx-core-java/issues/205
             'pkg:maven/org.jline/jline-terminal-jni@3.30.9?type=jar'          : 'BSD-3-Clause', // maps incorrectly because of https://github.com/CycloneDX/cyclonedx-core-java/issues/205
+            'pkg:maven/org.jline/jline-terminal-jni@4.0.7?type=jar'           : 'BSD-3-Clause', // maps incorrectly because of https://github.com/CycloneDX/cyclonedx-core-java/issues/205
             'pkg:maven/org.jruby/jzlib@1.1.5?type=jar'                        : 'BSD-3-Clause', // https://web.archive.org/web/20240822213507/http://www.jcraft.com/jzlib/LICENSE.txt shows it's a 3 clause
             'pkg:maven/org.liquibase.ext/liquibase-hibernate5@4.27.0?type=jar': 'Apache-2.0', // maps incorrectly because of https://github.com/liquibase/liquibase/issues/2445 & the base pom does not define a license
     ]

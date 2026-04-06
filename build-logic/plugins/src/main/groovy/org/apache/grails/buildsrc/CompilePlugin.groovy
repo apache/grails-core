@@ -110,6 +110,7 @@ class CompilePlugin implements Plugin<Project> {
                 it.options.encoding = StandardCharsets.UTF_8.name()
                 it.options.fork = true
                 it.options.forkOptions.jvmArgs = ['-Xms128M', '-Xmx2G']
+                it.options.forkOptions.jvmArgs += ['-Dspock.iKnowWhatImDoing.disableGroovyVersionCheck=true']
                 if (System.getenv('SUPPRESS_DEPRECATION_WARNINGS') == 'true') {
                     it.options.compilerArgs += ['-Xlint:-removal']
                 }
