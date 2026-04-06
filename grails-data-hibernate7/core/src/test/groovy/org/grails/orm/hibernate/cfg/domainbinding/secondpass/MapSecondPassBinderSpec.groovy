@@ -176,7 +176,8 @@ class MapSecondPassBinderSpec extends HibernateGormDatastoreSpec {
             org.apache.grails.data.testing.tck.domains.Person,
             org.apache.grails.data.testing.tck.domains.PetType,
             MapSPBAuthor,
-            MapSPBBook
+            MapSPBBook,
+            MapSPBOwner
         ])
     }
 
@@ -282,6 +283,79 @@ class MapSecondPassBinderSpec extends HibernateGormDatastoreSpec {
         map.index.isTypeSpecified()
         map.index.getColumns()[0].name == "books_idx"
     }
+
+    void "Test bind map with basic collection element sets the element value"() {
+        given:
+        def binder = getGrailsDomainBinder()
+        def collector = getCollector()
+        def metadataBuildingContext = binder.getMetadataBuildingContext()
+        def binders = getBinders(binder)
+        def collectionBinder = binders.collectionBinder
+        def mapBinder = collectionBinder.mapSecondPassBinder
+
+        def ownerEntity = getPersistentEntity(MapSPBOwner) as GrailsHibernatePersistentEntity
+        def attrsProp = ownerEntity.getPropertyByName("attributes") as HibernateToManyProperty
+
+        def rootClass = new RootClass(metadataBuildingContext)
+        rootClass.setEntityName(ownerEntity.name)
+        rootClass.setClassName(ownerEntity.name)
+        rootClass.setJpaEntityName(ownerEntity.name)
+        rootClass.setTable(collector.addTable(null, null, "MAPSPB_OWNER", null, false, metadataBuildingContext))
+        collector.addEntityBinding(rootClass)
+
+        def map = new org.hibernate.mapping.Map(metadataBuildingContext, rootClass)
+        map.setRole("${ownerEntity.name}.attributes".toString())
+        map.setCollectionTable(rootClass.getTable())
+
+        attrsProp.setCollection(map)
+
+        when:
+        mapBinder.bindMapSecondPass(attrsProp)
+
+        then:
+        noExceptionThrown()
+        map.index != null
+        map.index.isTypeSpecified()
+        map.element != null
+        map.element instanceof org.hibernate.mapping.BasicValue
+        !map.inverse
+    }
+
+    void "Test bind map with basic collection element uses correct column names"() {
+        given:
+        def binder = getGrailsDomainBinder()
+        def collector = getCollector()
+        def metadataBuildingContext = binder.getMetadataBuildingContext()
+        def binders = getBinders(binder)
+        def collectionBinder = binders.collectionBinder
+        def mapBinder = collectionBinder.mapSecondPassBinder
+
+        def ownerEntity = getPersistentEntity(MapSPBOwner) as GrailsHibernatePersistentEntity
+        def attrsProp = ownerEntity.getPropertyByName("attributes") as HibernateToManyProperty
+
+        def rootClass = new RootClass(metadataBuildingContext)
+        rootClass.setEntityName(ownerEntity.name)
+        rootClass.setClassName(ownerEntity.name)
+        rootClass.setJpaEntityName(ownerEntity.name)
+        rootClass.setTable(collector.addTable(null, null, "MAPSPB_OWNER2", null, false, metadataBuildingContext))
+        collector.addEntityBinding(rootClass)
+
+        def map = new org.hibernate.mapping.Map(metadataBuildingContext, rootClass)
+        map.setRole("${ownerEntity.name}.attributes2".toString())
+        map.setCollectionTable(rootClass.getTable())
+
+        attrsProp.setCollection(map)
+
+        when:
+        mapBinder.bindMapSecondPass(attrsProp)
+
+        then:
+        noExceptionThrown()
+        def indexColumn = map.index.getColumns()[0]
+        def elementColumn = map.element.getColumns()[0]
+        indexColumn != null
+        elementColumn != null
+    }
 }
 
 @grails.gorm.annotation.Entity
@@ -300,4 +374,11 @@ class MapSPBAuthor {
 class MapSPBBook {
     Long id
     String title
+}
+
+@grails.gorm.annotation.Entity
+class MapSPBOwner {
+    Long id
+    Map<String, String> attributes
+    static hasMany = [attributes: String]
 }
