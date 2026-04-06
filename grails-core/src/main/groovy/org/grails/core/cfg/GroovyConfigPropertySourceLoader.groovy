@@ -18,7 +18,6 @@ package org.grails.core.cfg
 
 import groovy.transform.CompileDynamic
 import groovy.transform.CompileStatic
-import groovy.util.ConfigObject
 import groovy.util.logging.Slf4j
 
 import org.springframework.boot.env.PropertySourceLoader

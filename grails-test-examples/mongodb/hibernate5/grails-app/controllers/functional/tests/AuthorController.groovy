@@ -35,8 +35,8 @@ class AuthorController {
      */
     def bindParams = ['name']
 
-    def index(Integer max) {
-        params.max = Math.min(max ?: 10, 100)
+    def index() {
+        params.max = Math.min(params.int('max', 10), 100)
         respond Author.list(params), model:[authorCount: Author.count()]
     }
 
