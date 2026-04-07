@@ -356,6 +356,47 @@ class MapSecondPassBinderSpec extends HibernateGormDatastoreSpec {
         indexColumn != null
         elementColumn != null
     }
+
+    // -------------------------------------------------------------------------
+    // getSingleColumnConfig — null branches (package-protected for direct access)
+    // -------------------------------------------------------------------------
+
+    void "getSingleColumnConfig returns null when propertyConfig is null"() {
+        given:
+        def binder = getGrailsDomainBinder()
+        def binders = getBinders(binder)
+        def mapBinder = binders.collectionBinder.mapSecondPassBinder
+
+        expect:
+        mapBinder.getSingleColumnConfig(null) == null
+    }
+
+    void "getSingleColumnConfig returns null when columns list is empty"() {
+        given:
+        def binder = getGrailsDomainBinder()
+        def binders = getBinders(binder)
+        def mapBinder = binders.collectionBinder.mapSecondPassBinder
+
+        def propertyConfig = new org.grails.orm.hibernate.cfg.PropertyConfig()
+        // columns list is empty by default
+
+        expect:
+        mapBinder.getSingleColumnConfig(propertyConfig) == null
+    }
+
+    void "getSingleColumnConfig returns first ColumnConfig when present"() {
+        given:
+        def binder = getGrailsDomainBinder()
+        def binders = getBinders(binder)
+        def mapBinder = binders.collectionBinder.mapSecondPassBinder
+
+        def propertyConfig = new org.grails.orm.hibernate.cfg.PropertyConfig()
+        def column = new org.grails.orm.hibernate.cfg.ColumnConfig()
+        propertyConfig.columns << column
+
+        expect:
+        mapBinder.getSingleColumnConfig(propertyConfig) == column
+    }
 }
 
 @grails.gorm.annotation.Entity

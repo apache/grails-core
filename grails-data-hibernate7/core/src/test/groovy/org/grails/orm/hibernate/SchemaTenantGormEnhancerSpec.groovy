@@ -124,6 +124,39 @@ class SchemaTenantGormEnhancerSpec extends Specification {
     }
 
     // -------------------------------------------------------------------------
+    // else branch: tenantResolver is NOT an AllTenantsResolver
+    // schemaHandler.resolveSchemaNames() path — tested via a second datastore built
+    // with a plain TenantResolver (SystemPropertyTenantResolver alone).
+    // -------------------------------------------------------------------------
+
+    void "allQualifiers skips INFORMATION_SCHEMA and PUBLIC when resolving via schemaHandler"() {
+        given: "a datastore whose tenantResolver is NOT an AllTenantsResolver"
+        Map config = [
+            "grails.gorm.multiTenancy.mode"              : "SCHEMA",
+            "grails.gorm.multiTenancy.tenantResolverClass": SystemPropertyTenantResolver,
+            'dataSource.url'                              : "jdbc:h2:mem:schemaSchemaHandlerDB;LOCK_TIMEOUT=10000",
+            'dataSource.dbCreate'                        : 'update',
+            'dataSource.dialect'                         : org.hibernate.dialect.H2Dialect.name,
+            'hibernate.flush.mode'                       : 'COMMIT',
+            'hibernate.hbm2ddl.auto'                     : 'create',
+        ]
+        HibernateDatastore schemaDs = new HibernateDatastore(
+            DatastoreUtils.createPropertyResolver(config), SchemaTenantBook)
+        def schemaEnhancer = schemaDs.gormEnhancer as HibernateDatastore.SchemaTenantGormEnhancer
+        def entity = schemaDs.getMappingContext().getPersistentEntity(SchemaTenantBook.name)
+
+        when: "allQualifiers resolves via schemaHandler (H2 returns no custom schemas)"
+        List<String> qualifiers = schemaEnhancer.allQualifiers(schemaDs, entity)
+
+        then: "no exception is thrown; INFORMATION_SCHEMA and PUBLIC are excluded"
+        !qualifiers.contains("INFORMATION_SCHEMA")
+        !qualifiers.contains("PUBLIC")
+
+        cleanup:
+        schemaDs?.close()
+    }
+
+    // -------------------------------------------------------------------------
     // Inline domain classes
     // -------------------------------------------------------------------------
 

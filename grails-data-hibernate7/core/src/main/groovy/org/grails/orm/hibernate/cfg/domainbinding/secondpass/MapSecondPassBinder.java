@@ -93,7 +93,7 @@ public class MapSecondPassBinder {
         map.setInverse(false);
     }
 
-    private ColumnConfig getSingleColumnConfig(PropertyConfig propertyConfig) {
+    ColumnConfig getSingleColumnConfig(PropertyConfig propertyConfig) {
         if (propertyConfig != null) {
             List<ColumnConfig> columns = propertyConfig.getColumns();
             if (columns != null && !columns.isEmpty()) {

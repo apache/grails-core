@@ -60,7 +60,7 @@ public class CollectionBinder {
     private final CollectionHolder collectionHolder;
     private final ListSecondPassBinder listSecondPassBinder;
     private final CollectionSecondPassBinder collectionSecondPassBinder;
-    private final MapSecondPassBinder mapSecondPassBinder;
+    final MapSecondPassBinder mapSecondPassBinder;
     private final InFlightMetadataCollector mappings;
     private final TableForManyCalculator tableForManyCalculator;
 
