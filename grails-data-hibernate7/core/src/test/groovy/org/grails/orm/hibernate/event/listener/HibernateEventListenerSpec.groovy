@@ -20,6 +20,7 @@
 package org.grails.orm.hibernate.event.listener
 
 import grails.gorm.specs.HibernateGormDatastoreSpec
+import org.grails.datastore.gorm.timestamp.DefaultTimestampProvider
 import org.grails.datastore.mapping.engine.event.MergeEvent as GormMergeEvent
 import org.grails.datastore.mapping.engine.event.PersistEvent as GormPersistEvent
 import org.grails.datastore.mapping.engine.event.PreInsertEvent as GormPreInsertEvent
@@ -30,6 +31,7 @@ import org.grails.datastore.mapping.engine.event.PreDeleteEvent as GormPreDelete
 import org.grails.datastore.mapping.engine.event.PostDeleteEvent as GormPostDeleteEvent
 import org.grails.datastore.mapping.engine.event.PreLoadEvent as GormPreLoadEvent
 import org.grails.datastore.mapping.engine.event.PostLoadEvent as GormPostLoadEvent
+import org.grails.datastore.mapping.engine.event.ValidationEvent as GormValidationEvent
 import org.hibernate.event.spi.MergeEvent as HibernateMergeEvent
 import org.hibernate.event.spi.PersistEvent as HibernatePersistEvent
 import org.hibernate.event.spi.PreInsertEvent as HibernatePreInsertEvent
@@ -280,5 +282,122 @@ class HibernateEventListenerSpec extends HibernateGormDatastoreSpec {
 
         then:
         listener.onPostLoadCalled
+    }
+
+    void "test onPersistenceEvent calls event.cancel when PreInsert handler returns true"() {
+        given:
+        def datastore = getDatastore()
+        def listener = new CancellingHibernateEventListener(datastore)
+        def entity = new Object()
+        def mockNativeEvent = Mock(HibernatePreInsertEvent)
+
+        def gormEvent = new GormPreInsertEvent(datastore, entity)
+        gormEvent.setNativeEvent(mockNativeEvent)
+
+        when:
+        listener.onApplicationEvent(gormEvent)
+
+        then:
+        gormEvent.isCancelled()
+    }
+
+    void "test onPersistenceEvent calls event.cancel when PreUpdate handler returns true"() {
+        given:
+        def datastore = getDatastore()
+        def listener = new CancellingHibernateEventListener(datastore)
+        def entity = new Object()
+        def mockNativeEvent = Mock(HibernatePreUpdateEvent)
+
+        def gormEvent = new GormPreUpdateEvent(datastore, entity)
+        gormEvent.setNativeEvent(mockNativeEvent)
+
+        when:
+        listener.onApplicationEvent(gormEvent)
+
+        then:
+        gormEvent.isCancelled()
+    }
+
+    void "test onPersistenceEvent calls event.cancel when PreDelete handler returns true"() {
+        given:
+        def datastore = getDatastore()
+        def listener = new CancellingHibernateEventListener(datastore)
+        def entity = new Object()
+        def mockNativeEvent = Mock(HibernatePreDeleteEvent)
+
+        def gormEvent = new GormPreDeleteEvent(datastore, entity)
+        gormEvent.setNativeEvent(mockNativeEvent)
+
+        when:
+        listener.onApplicationEvent(gormEvent)
+
+        then:
+        gormEvent.isCancelled()
+    }
+
+    void "test onPersistenceEvent handles Validation event via onValidate"() {
+        given:
+        def datastore = getDatastore()
+        def listener = new CancellingHibernateEventListener(datastore)
+        def entity = new Object()
+
+        def gormEvent = new GormValidationEvent(datastore, entity)
+
+        when:
+        listener.onApplicationEvent(gormEvent)
+
+        then:
+        noExceptionThrown()
+    }
+
+    void "test onPersistenceEvent throws for unexpected EventType"() {
+        given:
+        def datastore = getDatastore()
+        def listener = new RecordingHibernateEventListener(datastore)
+
+        def gormEvent = new org.grails.datastore.mapping.engine.event.SaveOrUpdateEvent(datastore, new Object())
+
+        when:
+        listener.onApplicationEvent(gormEvent)
+
+        then:
+        thrown(IllegalStateException)
+    }
+
+    void "test getDatastore returns the HibernateDatastore"() {
+        given:
+        def datastore = getDatastore()
+        def listener = new CancellingHibernateEventListener(datastore)
+
+        expect:
+        listener.getDatastore().is(datastore)
+    }
+
+    void "test getTimestampProvider returns DefaultTimestampProvider"() {
+        given:
+        def listener = new CancellingHibernateEventListener(getDatastore())
+
+        expect:
+        listener.getTimestampProvider() instanceof DefaultTimestampProvider
+    }
+}
+class CancellingHibernateEventListener extends HibernateEventListener {
+
+    CancellingHibernateEventListener(org.grails.orm.hibernate.HibernateDatastore datastore) {
+        super(datastore)
+    }
+
+    @Override
+    boolean onPreInsert(HibernatePreInsertEvent event) { return true }
+
+    @Override
+    boolean onPreUpdate(HibernatePreUpdateEvent event) { return true }
+
+    @Override
+    boolean onPreDelete(HibernatePreDeleteEvent event) { return true }
+
+    @Override
+    protected boolean isValidSource(org.grails.datastore.mapping.engine.event.AbstractPersistenceEvent event) {
+        return true
     }
 }
