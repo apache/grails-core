@@ -19,6 +19,7 @@
 
 package org.grails.plugins.web.mapping;
 
+import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.autoconfigure.AutoConfiguration;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean;
@@ -33,6 +34,7 @@ import grails.web.CamelCaseUrlConverter;
 import grails.web.HyphenatedUrlConverter;
 import grails.web.UrlConverter;
 import grails.web.mapping.LinkGenerator;
+import grails.web.mapping.UrlMappings;
 import grails.web.mapping.cors.GrailsCorsConfiguration;
 import grails.web.mapping.cors.GrailsCorsFilter;
 import org.grails.web.mapping.CachingLinkGenerator;
@@ -80,9 +82,10 @@ public class UrlMappingsAutoConfiguration {
     }
 
     @Bean
-    @ConditionalOnMissingBean
-    public UrlMappingsErrorPageCustomizer urlMappingsErrorPageCustomizer() {
-        return new UrlMappingsErrorPageCustomizer();
+    public UrlMappingsErrorPageCustomizer urlMappingsErrorPageCustomizer(ObjectProvider<UrlMappings> urlMappingsProvider) {
+        UrlMappingsErrorPageCustomizer errorPageCustomizer = new UrlMappingsErrorPageCustomizer();
+        errorPageCustomizer.setUrlMappings(urlMappingsProvider.getIfAvailable());
+        return errorPageCustomizer;
     }
 
     @Bean
