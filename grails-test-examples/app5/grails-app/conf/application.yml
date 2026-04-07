@@ -23,10 +23,8 @@ grails:
     profile: web
     codegen:
         defaultPackage: app5
-    web:
-        url:
-            mapping:
-                validateWildcards: false
+    urlmapping:
+        validateWildcards: false
 spring:
     groovy:
         template:
