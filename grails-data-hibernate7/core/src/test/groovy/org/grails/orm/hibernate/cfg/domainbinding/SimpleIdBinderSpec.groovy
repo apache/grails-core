@@ -168,4 +168,24 @@ class SimpleIdBinderSpec extends HibernateGormDatastoreSpec {
         rootClass.identifierProperty != null
         rootClass.table.primaryKey instanceof PrimaryKey
     }
+
+    def "bindSimpleId throws MappingException when identity property is not a HibernateSimpleIdentityProperty"() {
+        given:
+        def domainClass = Mock(HibernatePersistentEntity) {
+            getIdentityProperty() >> null
+            getName() >> "InvalidEntity"
+        }
+
+        when:
+        simpleIdBinder.bindSimpleId(domainClass)
+
+        then:
+        def e = thrown(org.hibernate.MappingException)
+        e.message.contains("InvalidEntity")
+    }
+
+    def "getMetadataBuildingContext returns the context passed to constructor"() {
+        expect:
+        simpleIdBinder.getMetadataBuildingContext() == metadataBuildingContext
+    }
 }
