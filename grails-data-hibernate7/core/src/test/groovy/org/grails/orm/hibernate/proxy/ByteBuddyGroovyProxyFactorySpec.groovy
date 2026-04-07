@@ -18,6 +18,8 @@
  */
 package org.grails.orm.hibernate.proxy
 
+import org.hibernate.HibernateException
+import org.hibernate.engine.spi.SharedSessionContractImplementor
 import org.hibernate.proxy.pojo.bytebuddy.ByteBuddyProxyHelper
 import spock.lang.Specification
 
@@ -26,5 +28,36 @@ class ByteBuddyGroovyProxyFactorySpec extends Specification {
     def "factory can be instantiated"() {
         expect:
         new ByteBuddyGroovyProxyFactory(Mock(ByteBuddyProxyHelper)) != null
+    }
+
+    def "postInstantiate configures entity name, class, and interfaces"() {
+        given:
+        def helper = Mock(ByteBuddyProxyHelper) {
+            buildProxy(String, _ as Class[]) >> String
+        }
+        def factory = new ByteBuddyGroovyProxyFactory(helper)
+
+        when:
+        factory.postInstantiate("MyEntity", String, [] as Set, null, null, null)
+
+        then:
+        noExceptionThrown()
+    }
+
+    def "getProxy wraps instantiation failure in HibernateException"() {
+        given: "a factory where proxyClass cannot be cast to HibernateProxy"
+        def helper = Mock(ByteBuddyProxyHelper) {
+            buildProxy(String, _ as Class[]) >> String
+        }
+        def factory = new ByteBuddyGroovyProxyFactory(helper)
+        factory.postInstantiate("MyEntity", String, [] as Set, null, null, null)
+        def session = Mock(SharedSessionContractImplementor)
+
+        when: "getProxy is called — new String() cannot cast to HibernateProxy"
+        factory.getProxy(1L, session)
+
+        then:
+        def e = thrown(HibernateException)
+        e.message.contains("MyEntity")
     }
 }

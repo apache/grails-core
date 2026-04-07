@@ -55,20 +55,20 @@ Generated on: 2026-04-06 16:49:20
 | org.grails.orm.hibernate.HibernateGormStaticApi | 86.87% |
 | org.grails.orm.hibernate.cfg.domainbinding.util.CascadeBehaviorFetcher | 86.96% | X
 | X org.grails.orm.hibernate.cfg.PropertyDefinitionDelegate | 87.60% |
-| org.grails.orm.hibernate.cfg.IdentityEnumType.BidiEnumMap | 87.62% |
-| org.grails.orm.hibernate.cfg.domainbinding.binder.GrailsPropertyBinder | 88.24% |
+| X org.grails.orm.hibernate.cfg.IdentityEnumType.BidiEnumMap | 87.62% |
+| X org.grails.orm.hibernate.cfg.domainbinding.binder.GrailsPropertyBinder | 88.24% |
 | X org.grails.orm.hibernate.cfg.domainbinding.binder.SimpleIdBinder | 88.37% |
-| org.grails.orm.hibernate.proxy.ByteBuddyGroovyProxyFactory | 88.42% |
+| X org.grails.orm.hibernate.proxy.ByteBuddyGroovyProxyFactory | 88.42% |
 | X org.grails.orm.hibernate.cfg.domainbinding.util.NamespaceNameExtractor | 88.46% |
 | X org.grails.orm.hibernate.cfg.domainbinding.generator.GrailsTableGenerator | 88.66% |
 | X org.grails.orm.hibernate.cfg.domainbinding.binder.ColumnBinder | 88.89% |
 | X org.grails.orm.hibernate.cfg.domainbinding.binder.ManyToOneBinder | 88.95% |
 | X org.grails.orm.hibernate.cfg.domainbinding.util.TableForManyCalculator | 89.45% |
-| org.grails.orm.hibernate.cfg.domainbinding.generator.GrailsSequenceStyleGenerator | 89.47% |
-| org.grails.orm.hibernate.cfg.domainbinding.util.UniqueKeyForColumnsCreator | 89.47% |
-| org.grails.orm.hibernate.query.HibernateHqlQuery | 89.52% |
-| org.grails.orm.hibernate.cfg.PropertyConfig | 89.62% |
-| grails.orm.CriteriaMethodInvoker | 89.68% |
+| X org.grails.orm.hibernate.cfg.domainbinding.generator.GrailsSequenceStyleGenerator | 89.47% |
+| X org.grails.orm.hibernate.cfg.domainbinding.util.UniqueKeyForColumnsCreator | 89.47% |
+| X org.grails.orm.hibernate.query.HibernateHqlQuery | 89.52% |
+| X org.grails.orm.hibernate.cfg.PropertyConfig | 89.62% |
+| X grails.orm.CriteriaMethodInvoker | 89.68% |
 | org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernateOneToOneProperty | 90.14% |
 | org.grails.orm.hibernate.cfg.ColumnConfig | 90.43% |
 | org.grails.orm.hibernate.query.HibernateAssociationQuery | 90.48% |
