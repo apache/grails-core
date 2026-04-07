@@ -30,6 +30,10 @@ class GrailsHibernateUtilSpec extends HibernateGormDatastoreSpec {
     @Shared HibernateProxyHandler originalProxyHandler = GrailsHibernateUtil.proxyHandler
     HibernateProxyHandler proxyHandlerMock = Mock(HibernateProxyHandler)
 
+    void setupSpec() {
+        manager.addAllDomainClasses([GHUBook, GHUAuthor, GHUAnnotatedEntity])
+    }
+
     def setup() {
         GrailsHibernateUtil.setProxyHandler(proxyHandlerMock)
     }
@@ -152,6 +156,44 @@ class GrailsHibernateUtilSpec extends HibernateGormDatastoreSpec {
 
         cleanup:
         book.setMetaClass(originalMc)
+    }
+
+    def "setObjectToReadyOnly does nothing when no bound transaction resource"() {
+        given:
+        def book = new GHUBook(title: "NoTx")
+
+        when:
+        GrailsHibernateUtil.setObjectToReadyOnly(book, sessionFactory)
+
+        then:
+        noExceptionThrown()
+    }
+
+    def "setObjectToReadyOnly marks persistent entity read-only within transaction"() {
+        given:
+        GHUBook saved = GHUBook.withTransaction {
+            new GHUBook(title: "ReadOnlyBook", version: 0L).save(flush: true, failOnError: true)
+        }
+
+        when:
+        GHUBook.withTransaction {
+            def book = GHUBook.get(saved.id)
+            GrailsHibernateUtil.setObjectToReadyOnly(book, sessionFactory)
+        }
+
+        then:
+        noExceptionThrown()
+    }
+
+    def "setObjectToReadWrite does nothing when entity not in session"() {
+        when:
+        GHUBook.withTransaction {
+            def book = new GHUBook(title: "Detached")
+            GrailsHibernateUtil.setObjectToReadWrite(book, sessionFactory)
+        }
+
+        then:
+        noExceptionThrown()
     }
 }
 
