@@ -65,9 +65,6 @@ public class ByteBuddyGroovyInterceptor extends ByteBuddyInterceptor {
 
     @Override
     public Object intercept(Object proxy, Method method, Object[] args) throws Throwable {
-        if (method == null) {
-            return super.intercept(proxy, null, args);
-        }
         String methodName = method.getName();
 
         // Check these BEFORE calling this.invoke() to avoid premature initialization in Hibernate 7

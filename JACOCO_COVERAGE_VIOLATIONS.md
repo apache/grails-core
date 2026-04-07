@@ -44,7 +44,7 @@ Generated on: 2026-04-06 16:49:20
 | org.grails.orm.hibernate.proxy.HibernateProxyHandler | 84.36% | X
 | X org.grails.orm.hibernate.query.PredicateGenerator | 84.54% |
 | X org.grails.orm.hibernate.event.listener.HibernateEventListener | 84.71% |
-| org.grails.orm.hibernate.proxy.ByteBuddyGroovyInterceptor | 85.25% |
+| org.grails.orm.hibernate.proxy.ByteBuddyGroovyInterceptor | 85.25% | X |
 | X org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernatePersistentProperty | 85.28% |
 | X org.grails.orm.hibernate.access.TraitPropertyAccessStrategy | 85.35% |
 | X org.grails.orm.hibernate.proxy.GrailsBytecodeProvider | 85.71% |
