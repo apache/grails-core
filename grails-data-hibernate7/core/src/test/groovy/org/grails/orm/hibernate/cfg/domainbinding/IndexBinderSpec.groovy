@@ -101,4 +101,17 @@ class IndexBinderSpec extends Specification {
         0 * table.getOrCreateIndex(_)
         0 * index.addColumn(_)
     }
+
+    def "should not create index when index is the string 'false'"() {
+        given:
+        def cc = new ColumnConfig()
+        cc.index = "false"
+
+        when:
+        indexBinder.bindIndex("test_column", column, cc, table)
+
+        then:
+        0 * table.getOrCreateIndex(_)
+        0 * index.addColumn(_)
+    }
 }

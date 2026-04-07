@@ -209,6 +209,53 @@ class CollectionSecondPassBinderSpec extends HibernateGormDatastoreSpec {
         ex.message.contains("items")
         ex.message.contains("has no associated class")
     }
+
+    def "bindCollectionSecondPass skips element binding for embedded collection when componentBinder is null"() {
+        given: "An embedded collection property with componentBinder not set on the binder"
+        def mbc = getGrailsDomainBinder().getMetadataBuildingContext()
+        def ownerClass = new org.hibernate.mapping.RootClass(mbc)
+        ownerClass.setEntityName("EmbeddedOwner")
+        def ownerTable = new org.hibernate.mapping.Table("test", "embedded_owner")
+        ownerClass.setTable(ownerTable)
+        def idValue = new org.hibernate.mapping.BasicValue(mbc, ownerTable)
+        idValue.setTypeName("long")
+        idValue.addColumn(new org.hibernate.mapping.Column("id"))
+        ownerClass.setIdentifier(idValue)
+        def bag = new org.hibernate.mapping.Bag(mbc, ownerClass)
+        bag.setCollectionTable(new org.hibernate.mapping.Table("test", "embedded_owner_dims"))
+
+        def embeddedProperty = Mock(org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernateEmbeddedCollectionProperty)
+        embeddedProperty.getCollection() >> bag
+        embeddedProperty.isBidirectional() >> false
+        embeddedProperty.isSorted() >> false
+        embeddedProperty.getCacheUsage() >> null
+        embeddedProperty.getHibernateMappedForm() >> Mock(org.grails.orm.hibernate.cfg.PropertyConfig) {
+            hasJoinKeyMapping() >> false
+        }
+        def ownerEntity = Mock(org.grails.orm.hibernate.cfg.domainbinding.hibernate.GrailsHibernatePersistentEntity) {
+            getPersistentPropertiesToBind() >> []
+        }
+        embeddedProperty.getOwner() >> ownerEntity
+        embeddedProperty.getHibernateOwner() >> ownerEntity
+
+        when: "second pass is run without a componentBinder"
+        binder.bindCollectionSecondPass(embeddedProperty)
+
+        then: "no exception — the element binding is skipped gracefully"
+        noExceptionThrown()
+        bag.element == null
+    }
+
+    def "setComponentBinder wires ComponentBinder into the binder"() {
+        given:
+        def mockComponentBinder = Mock(org.grails.orm.hibernate.cfg.domainbinding.binder.ComponentBinder)
+
+        when:
+        binder.setComponentBinder(mockComponentBinder)
+
+        then: "no exception thrown — the setter is available"
+        noExceptionThrown()
+    }
 }
 
 @Entity

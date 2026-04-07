@@ -64,6 +64,10 @@ public class CollectionBinder {
     private final InFlightMetadataCollector mappings;
     private final TableForManyCalculator tableForManyCalculator;
 
+    public void setComponentBinder(ComponentBinder componentBinder) {
+        this.collectionSecondPassBinder.setComponentBinder(componentBinder);
+    }
+
     /** Creates a new {@link CollectionBinder} instance. */
     public CollectionBinder(
             MetadataBuildingContext metadataBuildingContext,

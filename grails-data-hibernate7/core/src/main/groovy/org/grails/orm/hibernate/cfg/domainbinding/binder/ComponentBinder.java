@@ -21,15 +21,21 @@ package org.grails.orm.hibernate.cfg.domainbinding.binder;
 import jakarta.annotation.Nonnull;
 
 import org.hibernate.boot.spi.MetadataBuildingContext;
+import org.hibernate.mapping.Collection;
 import org.hibernate.mapping.Component;
 import org.hibernate.mapping.PersistentClass;
 
 import org.grails.orm.hibernate.cfg.GrailsHibernateUtil;
 import org.grails.orm.hibernate.cfg.MappingCacheHolder;
 import org.grails.orm.hibernate.cfg.domainbinding.hibernate.GrailsHibernatePersistentEntity;
+import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernateEmbeddedCollectionProperty;
 import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernateEmbeddedProperty;
 import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernatePersistentProperty;
 
+// TODO (Hibernate 8 refactor): ComponentBinder holds a GrailsPropertyBinder reference set post-construction
+// via setGrailsPropertyBinder() to break a circular dependency (ComponentBinder ↔ GrailsPropertyBinder ↔
+// CollectionBinder ↔ ComponentBinder). This mutual dependency should be resolved by introducing a shared
+// binding context or factory object that all binders receive at construction time.
 @SuppressWarnings("PMD.DataflowAnomalyAnalysis")
 public class ComponentBinder {
 
@@ -77,6 +83,39 @@ public class ComponentBinder {
             var value = grailsPropertyBinder.bindProperty(peerProperty, embeddedProperty, currentPath);
             componentUpdater.updateComponent(component, embeddedProperty, peerProperty, value);
         }
+        return component;
+    }
+
+    /**
+     * Binds an embedded collection property as a Hibernate {@link Component} element.
+     * Used for {@code hasMany} associations whose element type is a non-entity value object
+     * (a GORM embedded type) rather than a scalar or persistent entity.
+     */
+    public Component bindEmbeddedCollectionComponent(@Nonnull HibernateEmbeddedCollectionProperty property) {
+        Collection collection = property.getCollection();
+        Component component = new Component(metadataBuildingContext, collection);
+
+        GrailsHibernatePersistentEntity associatedEntity =
+                (GrailsHibernatePersistentEntity) property.getAssociatedEntity();
+        mappingCacheHolder.cacheMapping(associatedEntity);
+
+        Class<?> elementType = property.getComponentType();
+        if (elementType == null) {
+            elementType = property.getType();
+        }
+        component.setComponentClassName(elementType.getName());
+
+        String role = GrailsHibernateUtil.qualify(property.getOwner().getJavaClass().getName(), property.getName());
+        component.setRoleName(role);
+
+        associatedEntity.setPersistentClass(collection.getOwner());
+
+        Class<?> ownerType = property.getOwner().getJavaClass();
+        for (HibernatePersistentProperty peer : associatedEntity.getHibernatePersistentProperties(ownerType)) {
+            var value = grailsPropertyBinder.bindProperty(peer, null, property.getName());
+            componentUpdater.updateComponent(component, property, peer, value);
+        }
+
         return component;
     }
 }

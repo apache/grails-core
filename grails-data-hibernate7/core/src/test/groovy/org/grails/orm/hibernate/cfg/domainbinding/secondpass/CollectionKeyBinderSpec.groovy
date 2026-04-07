@@ -192,6 +192,31 @@ class CollectionKeyBinderSpec extends HibernateGormDatastoreSpec {
         then:
         key.isSorted()
     }
+
+    def "bind sets null typeName on key for embedded value-type collection"() {
+        given: "a mock embedded collection property (unidirectional, no join-key mapping)"
+        def mbc = getGrailsDomainBinder().getMetadataBuildingContext()
+        def ownerClass = ownerRootClass("ckb_emb_owner")
+        def collection = bagWithOwner(ownerClass, "ckb_emb_owner_dimensions")
+
+        def property = Mock(org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernateEmbeddedCollectionProperty)
+        property.getCollection() >> collection
+        property.isBidirectional() >> false
+        property.getHibernateMappedForm() >> Mock(org.grails.orm.hibernate.cfg.PropertyConfig) {
+            hasJoinKeyMapping() >> false
+        }
+        property.getOwner() >> Mock(GrailsHibernatePersistentEntity) {
+            getPersistentPropertiesToBind() >> []
+        }
+        property.isSorted() >> false
+        property.getCacheUsage() >> null
+
+        when:
+        def key = binder.bind(property)
+
+        then: "the key typeName stays null — not overridden with the element class name"
+        key.getTypeName() == null
+    }
 }
 
 @Entity

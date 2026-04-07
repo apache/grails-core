@@ -22,6 +22,7 @@ import grails.gorm.specs.HibernateGormDatastoreSpec
 import org.grails.orm.hibernate.cfg.domainbinding.binder.GrailsPropertyBinder
 import org.grails.orm.hibernate.cfg.domainbinding.hibernate.GrailsHibernatePersistentEntity
 import org.grails.orm.hibernate.cfg.MappingCacheHolder
+import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernateEmbeddedCollectionProperty
 import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernateEmbeddedProperty
 import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernateSimpleProperty
 import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernateIdentityProperty
@@ -159,6 +160,58 @@ class ComponentBinderSpec extends HibernateGormDatastoreSpec {
         return embeddedProp
     }
 
+    private HibernateEmbeddedCollectionProperty mockEmbeddedCollectionProperty(
+            GrailsHibernatePersistentEntity associatedEntity,
+            String name,
+            Class type,
+            org.hibernate.mapping.Collection collection) {
+
+        def prop = Mock(HibernateEmbeddedCollectionProperty)
+        prop.getName() >> name
+        prop.getType() >> type
+        prop.getComponentType() >> type
+        prop.getAssociatedEntity() >> associatedEntity
+        prop.getCollection() >> collection
+        prop.getOwner() >> Mock(GrailsHibernatePersistentEntity) {
+            getJavaClass() >> MyEntity
+        }
+        return prop
+    }
+
+    def "bindEmbeddedCollectionComponent creates a Component element for the collection"() {
+        given:
+        def mbc = getGrailsDomainBinder().getMetadataBuildingContext()
+        def ownerClass = new RootClass(mbc)
+        ownerClass.setEntityName(MyEntity.name)
+        ownerClass.setTable(new Table("my_entity"))
+        def bag = new org.hibernate.mapping.Bag(mbc, ownerClass)
+        bag.setCollectionTable(new Table("my_entity_dim"))
+
+        def associatedEntity = GroovyMock(GrailsHibernatePersistentEntity)
+        associatedEntity.getPersistentClass() >> ownerClass
+
+        def widthProp = Mock(HibernateSimpleProperty)
+        widthProp.getName() >> "width"
+        widthProp.getType() >> int
+        widthProp.getMappedForm() >> Mock(org.grails.orm.hibernate.cfg.PropertyConfig)
+        widthProp.getType() >> int
+
+        associatedEntity.getHibernatePersistentProperties(MyEntity) >> [widthProp]
+
+        grailsPropertyBinder.bindProperty(widthProp, null, "dimensions") >> Mock(BasicValue)
+
+        def prop = mockEmbeddedCollectionProperty(associatedEntity, "dimensions", Dimension, bag)
+
+        when:
+        def component = binder.bindEmbeddedCollectionComponent(prop)
+
+        then:
+        component != null
+        component.componentClassName == Dimension.name
+        1 * mappingCacheHolder.cacheMapping(associatedEntity)
+    }
+
     static class MyEntity {}
     static class Address {}
+    static class Dimension { int width }
 }

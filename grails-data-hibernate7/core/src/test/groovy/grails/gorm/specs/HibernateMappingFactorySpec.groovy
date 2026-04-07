@@ -31,6 +31,8 @@ import org.grails.orm.hibernate.cfg.HibernateMappingContext
 import org.grails.orm.hibernate.cfg.domainbinding.hibernate.*
 import org.grails.orm.hibernate.connections.HibernateConnectionSourceSettings
 
+import java.beans.PropertyDescriptor
+
 /**
  * Spec for {@link HibernateMappingFactory}, verifying that it creates
  * the correct Hibernate-specific property and identity mapping instances.
@@ -39,7 +41,9 @@ class HibernateMappingFactorySpec extends HibernateGormDatastoreSpec {
 
     def setupSpec() {
         manager.addAllDomainClasses([MappingFactoryBook, MappingFactoryAuthor, MappingFactoryTag,
-                                     MappingFactoryArticle, MappingFactoryEnumBook])
+                                     MappingFactoryArticle, MappingFactoryEnumBook,
+                                     MappingFactoryPerson, MappingFactoryPassport,
+                                     MappingFactoryLibrary])
     }
 
     // --- unit-style tests (standalone factory) ---
@@ -200,6 +204,75 @@ class HibernateMappingFactorySpec extends HibernateGormDatastoreSpec {
         MappingFactoryBook.count() >= 1
         MappingFactoryBook.findByTitle('Test Book')?.author?.name == 'Test Author'
     }
+
+    void "createOneToOne produces HibernateOneToOneProperty for a one-to-one association"() {
+        when:
+        PersistentEntity entity = mappingContext.getPersistentEntity(MappingFactoryPerson.name)
+        def passportProp = entity.persistentProperties.find { it.name == 'passport' }
+
+        then:
+        passportProp instanceof HibernateOneToOneProperty
+    }
+
+    void "createBasicCollection produces HibernateBasicProperty for a basic element collection"() {
+        when:
+        PersistentEntity entity = mappingContext.getPersistentEntity(MappingFactoryLibrary.name)
+        def sectionsProp = entity.persistentProperties.find { it.name == 'sections' }
+
+        then:
+        sectionsProp instanceof HibernateBasicProperty
+    }
+
+    void "createEmbeddedCollection produces HibernateEmbeddedCollectionProperty for embedded value-object collection"() {
+        given: "factory method is called directly with mocked params"
+        def factory = mappingContext.mappingFactory as HibernateMappingFactory
+        def entity = mappingContext.getPersistentEntity(MappingFactoryBook.name)
+        def pd = new PropertyDescriptor('title', MappingFactoryBook)
+
+        when: "createEmbeddedCollection is called"
+        def prop = factory.createEmbeddedCollection(entity, mappingContext, pd)
+
+        then: "the result is HibernateEmbeddedCollectionProperty"
+        prop instanceof HibernateEmbeddedCollectionProperty
+
+        and: "getTypeName() returns null so Hibernate does not try to resolve the element class as a BasicType"
+        (prop as HibernateEmbeddedCollectionProperty).getTypeName() == null
+    }
+
+    void "createSimpleIdentityProperty produces HibernateSimpleIdentityProperty"() {
+        given:
+        def factory = mappingContext.mappingFactory as HibernateMappingFactory
+        PersistentEntity entity = mappingContext.getPersistentEntity(MappingFactoryBook.name)
+        def pd = new PropertyDescriptor('id', MappingFactoryBook)
+
+        when:
+        def result = factory.createSimpleIdentityProperty(entity, mappingContext, pd)
+
+        then:
+        result instanceof HibernateSimpleIdentityProperty
+    }
+
+    void "createCompositeIdentityProperty produces HibernateCompositeIdentityProperty"() {
+        given:
+        def factory = mappingContext.mappingFactory as HibernateMappingFactory
+        PersistentEntity entity = mappingContext.getPersistentEntity(MappingFactoryBook.name)
+        def pd = new PropertyDescriptor('id', MappingFactoryBook)
+
+        when:
+        def result = factory.createCompositeIdentityProperty(entity, mappingContext, pd)
+
+        then:
+        result instanceof HibernateCompositeIdentityProperty
+    }
+
+    void "createConfigurationBuilder returns HibernateMappingBuilder via mapped form"() {
+        when:
+        PersistentEntity entity = mappingContext.getPersistentEntity(MappingFactoryBook.name)
+        def mappedForm = entity.mappedForm
+
+        then:
+        mappedForm instanceof org.grails.orm.hibernate.cfg.Mapping
+    }
 }
 
 // --- domain classes ---
@@ -283,3 +356,37 @@ class MappingFactoryEnumMarshaller extends AbstractMappingAwareCustomTypeMarshal
         nativeSource ? MappingFactoryBookStatus.valueOf(nativeSource.toString()) : null
     }
 }
+
+@Entity
+class MappingFactoryPerson implements HibernateEntity<MappingFactoryPerson> {
+    String name
+    MappingFactoryPassport passport
+    static hasOne = [passport: MappingFactoryPassport]
+}
+
+@Entity
+class MappingFactoryPassport implements HibernateEntity<MappingFactoryPassport> {
+    String number
+    static belongsTo = [person: MappingFactoryPerson]
+}
+
+@Entity
+class MappingFactoryLibrary implements HibernateEntity<MappingFactoryLibrary> {
+    String name
+    static hasMany = [sections: String]
+}
+
+@Entity
+class MappingFactoryProduct implements HibernateEntity<MappingFactoryProduct> {
+    String name
+    static hasMany = [dimensions: MappingFactoryDimension]
+    static mapping = {
+        dimensions embedded: true
+    }
+}
+
+class MappingFactoryDimension {
+    int width
+    int height
+}
+

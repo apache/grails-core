@@ -180,6 +180,7 @@ public class GrailsDomainBinder implements AdditionalMappingContributor, TypeCon
                 manyToOneBinder,
                 foreignKeyOneToOneBinder);
         componentBinder.setGrailsPropertyBinder(grailsPropertyBinder);
+        collectionBinder.setComponentBinder(componentBinder);
         CompositeIdBinder compositeIdBinder =
                 new CompositeIdBinder(metadataBuildingContext, componentUpdater, grailsPropertyBinder);
         PropertyBinder propertyBinder = new PropertyBinder();
