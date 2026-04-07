@@ -65,6 +65,25 @@ class DefaultColumnNameFetcherSpec extends HibernateGormDatastoreSpec {
         "a basic collection"                 | DefaultColumnNameFetcherSpecEntity | "basicCollection"              | "default_column_name_fetcher_spec_entity_id"
         "a basic collection with type"       | DefaultColumnNameFetcherSpecEntity | "basicCollectionWithMapping"   | "basic_collection_with_mapping"
     }
+
+    void "single-arg constructor creates its own BackticksRemover"() {
+        given:
+        def namingStrategy = grailsDomainBinder.getNamingStrategy()
+        def fetcher = new DefaultColumnNameFetcher(namingStrategy)
+        createPersistentEntity(AssociatedEntity, grailsDomainBinder)
+        createPersistentEntity(SpecBaseEntity, grailsDomainBinder)
+        createPersistentEntity(AManyToManyEntity, grailsDomainBinder)
+        createPersistentEntity(BManyToManyEntity, grailsDomainBinder)
+        createPersistentEntity(DefaultColumnNameFetcherSpecEntity, grailsDomainBinder)
+        def persistentEntity = createPersistentEntity(DefaultColumnNameFetcherSpecEntity, grailsDomainBinder)
+        def property = persistentEntity.getPropertyByName('name')
+
+        when:
+        def columnName = fetcher.getDefaultColumnName(property)
+
+        then:
+        columnName == 'name'
+    }
 }
 
 // --- Test Domain Classes ---
