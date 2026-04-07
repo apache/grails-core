@@ -8,7 +8,7 @@ Generated on: 2026-04-06 16:49:20
 | org.grails.orm.hibernate.query.MutationQueryDelegate | 54.79% | X
 | org.grails.orm.hibernate.HibernateEventListeners | 60.00% | X
 | org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernateSimpleIdentityProperty | 61.11% | X
-| org.grails.orm.hibernate.GrailsSessionContext | 62.50% |
+| org.grails.orm.hibernate.GrailsSessionContext | 62.50% | X |
 | org.grails.orm.hibernate.query.HqlQueryDelegate | 62.50% | X
 | org.grails.orm.hibernate.HibernateSession | 64.77% |
 | org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernateEmbeddedPersistentEntity | 64.79% | X
