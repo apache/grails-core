@@ -64,25 +64,27 @@ class GenerateControllerCommand implements GrailsApplicationCommand, CommandLine
             final Resource sourceClass = source(domainClassName)
             if (sourceClass) {
                 final Model model = model(sourceClass)
-                render(template: 'scaffolding/Controller.groovy',
-                        destination: file("grails-app/controllers/${model.packagePath}/${model.convention('Controller')}.groovy"),
-                        model: model,
-                        overwrite: overwrite)
+                // Use explicit overload calls instead of named arguments to work around
+                // Groovy 5 @CompileStatic dispatch regression with @Delegate in traits
+                templateRenderer.render(
+                        templateRenderer.template('scaffolding/Controller.groovy'),
+                        file("grails-app/controllers/${model.packagePath}/${model.convention('Controller')}.groovy") as File,
+                        model, overwrite)
 
-                render(template: 'scaffolding/Service.groovy',
-                        destination: file("grails-app/services/${model.packagePath}/${model.convention('Service')}.groovy"),
-                        model: model,
-                        overwrite: overwrite)
+                templateRenderer.render(
+                        templateRenderer.template('scaffolding/Service.groovy'),
+                        file("grails-app/services/${model.packagePath}/${model.convention('Service')}.groovy") as File,
+                        model, overwrite)
 
-                render(template: 'scaffolding/Spec.groovy',
-                        destination: file("src/test/groovy/${model.packagePath}/${model.convention('ControllerSpec')}.groovy"),
-                        model: model,
-                        overwrite: overwrite)
+                templateRenderer.render(
+                        templateRenderer.template('scaffolding/Spec.groovy'),
+                        file("src/test/groovy/${model.packagePath}/${model.convention('ControllerSpec')}.groovy") as File,
+                        model, overwrite)
 
-                render(template: 'scaffolding/ServiceSpec.groovy',
-                        destination: file("src/test/groovy/${model.packagePath}/${model.convention('ServiceSpec')}.groovy"),
-                        model: model,
-                        overwrite: overwrite)
+                templateRenderer.render(
+                        templateRenderer.template('scaffolding/ServiceSpec.groovy'),
+                        file("src/test/groovy/${model.packagePath}/${model.convention('ServiceSpec')}.groovy") as File,
+                        model, overwrite)
 
                 addStatus("Scaffolding complete for ${projectPath(sourceClass)}")
             } else {
