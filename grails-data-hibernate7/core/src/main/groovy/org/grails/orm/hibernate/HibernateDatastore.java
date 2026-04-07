@@ -709,7 +709,7 @@ public class HibernateDatastore extends AbstractDatastore
         var settings = connectionSources.getDefaultConnectionSource().getSettings();
         HibernateConnectionSourceSettings tenantSettings;
         try {
-            tenantSettings = settings.clone();
+            tenantSettings = (HibernateConnectionSourceSettings) settings.clone();
         } catch (CloneNotSupportedException e) {
             throw new ConfigurationException("Couldn't clone default Hibernate settings! " + e.getMessage(), e);
         }
@@ -914,15 +914,13 @@ public class HibernateDatastore extends AbstractDatastore
 
     public <T> T withSession(String connectionName, final Closure<T> callable) {
         HibernateDatastore datastore = getDatastoreForConnection(connectionName);
-        @SuppressWarnings("unchecked")
-        Closure<T> multiTenantCallable = (Closure<T>) datastore.prepareMultiTenantClosure(callable);
+        Closure<T> multiTenantCallable = datastore.prepareMultiTenantClosure(callable);
         return datastore.getHibernateTemplate().execute(multiTenantCallable);
     }
 
     public <T> T withNewSession(String connectionName, final Closure<T> callable) {
         HibernateDatastore datastore = getDatastoreForConnection(connectionName);
-        @SuppressWarnings("unchecked")
-        Closure<T> multiTenantCallable = (Closure<T>) datastore.prepareMultiTenantClosure(callable);
+        Closure<T> multiTenantCallable = datastore.prepareMultiTenantClosure(callable);
         return datastore.getHibernateTemplate().executeWithNewSession(multiTenantCallable);
     }
 
