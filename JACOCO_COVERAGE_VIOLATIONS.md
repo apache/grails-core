@@ -2,27 +2,8 @@
 Generated on: 2026-04-06 16:49:20
 
 ## Module: grails-data-hibernate7-core
-| Class | % Instructions Covered | Done 
-| org.grails.orm.hibernate.cfg.HibernateMappingContextConfiguration | 52.30% | X
-| org.grails.orm.hibernate.cfg.HibernateSimpleIdentity | 52.31% | X
-| org.grails.orm.hibernate.query.MutationQueryDelegate | 54.79% | X
-| org.grails.orm.hibernate.HibernateEventListeners | 60.00% | X
-| org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernateSimpleIdentityProperty | 61.11% | X
-| org.grails.orm.hibernate.GrailsSessionContext | 62.50% | X |
-| org.grails.orm.hibernate.query.HqlQueryDelegate | 62.50% | X
-| org.grails.orm.hibernate.HibernateSession | 64.77% | X |
-| org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernateEmbeddedPersistentEntity | 64.79% | X
-| org.grails.orm.hibernate.cfg.CacheConfig.Include | 65.12% | X
-| org.grails.orm.hibernate.query.SelectQueryDelegate | 66.36% | X
-| org.grails.orm.hibernate.cfg.JoinTable | 67.65% | X
-| org.grails.orm.hibernate.cfg.MappingCacheHolder | 67.74% | X
-| org.grails.orm.hibernate.cfg.HibernateCompositeIdentity | 68.00% | X
-| org.grails.orm.hibernate.HibernateDatastore | 68.53% | X |
-| org.grails.orm.hibernate.cfg.CacheConfig.Usage | 69.70% | X
-| org.grails.orm.hibernate.connections.HibernateConnectionSourceFactory | 69.84% | X |
-| org.grails.orm.hibernate.cfg.GrailsHibernateUtil | 71.03% | X
-| org.grails.orm.hibernate.cfg.DiscriminatorConfig | 72.22% | X
-| org.grails.orm.hibernate.GrailsHibernateTemplate | 72.43% | R
+| Class | % Instructions Covered | Done
+| org.grails.orm.hibernate.GrailsHibernateTemplate | 72.43% | X
 | org.grails.orm.hibernate.connections.HibernateConnectionSourceSettingsBuilder | 72.81% | X
 | grails.orm.HibernateCriteriaBuilder | 74.43% | X |
 | org.grails.orm.hibernate.support.SoftKey | 74.55% | X
