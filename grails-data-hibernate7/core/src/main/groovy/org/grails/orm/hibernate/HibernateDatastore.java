@@ -642,7 +642,7 @@ public class HibernateDatastore extends AbstractDatastore
                 super.destroy();
                 HibernateGormInstanceApi.resetInsertActive();
                 try {
-                    connectionSources.close();
+                    closeConnectionSources();
                 } catch (IOException e) {
                     if (LOG.isErrorEnabled()) {
                         LOG.error("There was an error shutting down GORM for an entity: {}", e.getMessage(), e);
@@ -651,9 +651,7 @@ public class HibernateDatastore extends AbstractDatastore
             } finally {
                 getMappingContext().getMappingCacheHolder().clear();
                 try {
-                    if (this.gormEnhancer != null) {
-                        this.gormEnhancer.close();
-                    }
+                    closeGormEnhancer();
                 } catch (IOException e) {
                     if (LOG.isErrorEnabled()) {
                         LOG.error("There was an error shutting down GORM enhancer", e);
@@ -695,6 +693,16 @@ public class HibernateDatastore extends AbstractDatastore
     protected void registerAllEntitiesWithEnhancer() {
         for (PersistentEntity persistentEntity : mappingContext.getPersistentEntities()) {
             gormEnhancer.registerEntity(persistentEntity);
+        }
+    }
+
+    protected void closeConnectionSources() throws IOException {
+        connectionSources.close();
+    }
+
+    protected void closeGormEnhancer() throws IOException {
+        if (this.gormEnhancer != null) {
+            this.gormEnhancer.close();
         }
     }
 
