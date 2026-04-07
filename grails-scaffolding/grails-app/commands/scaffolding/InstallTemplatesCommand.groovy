@@ -36,7 +36,7 @@ import org.grails.io.support.SpringIOUtils
  * @since 5.0.0
  */
 @CompileStatic
-class InstallTemplatesCommand implements GrailsApplicationCommand, SkipBootstrap, CommandLineHelper {
+class InstallTemplatesCommand extends GrailsApplicationCommand implements SkipBootstrap, CommandLineHelper {
 
     @Delegate ConsoleLogger consoleLogger = GrailsConsole.getInstance()
 

@@ -36,7 +36,7 @@ import org.grails.io.support.Resource
  * @since 5.0.0
  */
 @CompileStatic
-class GenerateViewsCommand implements GrailsApplicationCommand, CommandLineHelper, SkipBootstrap {
+class GenerateViewsCommand extends GrailsApplicationCommand implements CommandLineHelper, SkipBootstrap {
 
     @Delegate ConsoleLogger consoleLogger = GrailsConsole.getInstance()
 

@@ -19,29 +19,22 @@
 
 package grails.dev.commands
 
-import groovy.transform.CompileDynamic
-
 import grails.codegen.model.ModelBuilder
 import grails.dev.commands.io.FileSystemInteraction
 import grails.dev.commands.io.FileSystemInteractionImpl
 import grails.dev.commands.template.TemplateRenderer
 import grails.dev.commands.template.TemplateRendererImpl
 
-trait GrailsApplicationCommand implements ApplicationCommand, ModelBuilder {
+// Converted from trait to abstract class for Groovy 5 compatibility.
+// Groovy 5's DelegateASTTransformation generates direct field access (varX) for
+// @Delegate fields, but trait fields require helper method access via the trait
+// bridge. This mismatch causes @Delegate fields in traits to silently return null.
+// As an abstract class, @Delegate works correctly with standard field access.
+abstract class GrailsApplicationCommand implements ApplicationCommand, ModelBuilder {
 
     @Delegate TemplateRenderer templateRenderer
     @Delegate FileSystemInteraction fileSystemInteraction
     ExecutionContext executionContext
-
-    /**
-     * Explicit render(Map) to work around Groovy 5 @CompileStatic dispatch regression
-     * where named-argument calls through @Delegate-generated methods in traits fail
-     * to bind to render(Map) and silently resolve to the wrong overload.
-     */
-    @CompileDynamic
-    void render(Map<String, Object> namedArguments) {
-        templateRenderer.render(namedArguments)
-    }
 
     boolean handle(ExecutionContext executionContext) {
         this.executionContext = executionContext
