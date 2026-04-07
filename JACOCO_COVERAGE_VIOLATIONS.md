@@ -70,65 +70,65 @@ Generated on: 2026-04-06 16:49:20
 | X org.grails.orm.hibernate.cfg.PropertyConfig | 89.62% |
 | X grails.orm.CriteriaMethodInvoker | 89.68% |
 | org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernateOneToOneProperty | 90.14% | X |
-| org.grails.orm.hibernate.cfg.ColumnConfig | 90.43% |
-| org.grails.orm.hibernate.query.HibernateAssociationQuery | 90.48% |
+| org.grails.orm.hibernate.cfg.ColumnConfig | 90.43% | X |
+| org.grails.orm.hibernate.query.HibernateAssociationQuery | 90.48% | X |
 | org.grails.orm.hibernate.cfg.domainbinding.util.DefaultColumnNameFetcher | 90.52% | X |
 | org.grails.orm.hibernate.cfg.domainbinding.binder.ClassPropertiesBinder | 90.54% | X |
-| org.grails.orm.hibernate.cfg.domainbinding.binder.RootPersistentClassCommonValuesBinder | 91.24% |
-| org.grails.orm.hibernate.query.HibernateQueryExecutor | 91.28% |
-| org.grails.orm.hibernate.cfg.domainbinding.util.NamingStrategyProvider | 91.38% |
-| org.grails.orm.hibernate.query.HibernatePagedResultList | 91.67% |
-| org.grails.orm.hibernate.cfg.CacheConfig | 91.71% |
-| org.grails.orm.hibernate.support.ClosureEventListener | 91.99% |
-| org.grails.orm.hibernate.cfg.domainbinding.binder.PropertyBinder | 92.00% |
-| org.grails.orm.hibernate.dirty.GrailsEntityDirtinessStrategy | 92.02% |
-| org.grails.orm.hibernate.cfg.domainbinding.util.GrailsEnumType | 92.50% |
-| org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernateMappingBuilder | 92.54% |
-| org.grails.orm.hibernate.cfg.domainbinding.util.UniqueNameGenerator | 92.68% |
-| org.grails.orm.hibernate.compiler.HibernateEntityTransformation | 92.71% |
-| org.grails.orm.hibernate.proxy.GroovyProxyInterceptorLogic | 92.78% |
-| org.grails.orm.hibernate.support.HibernateRuntimeUtils | 92.89% |
-| org.grails.orm.hibernate.cfg.domainbinding.binder.EnumTypeBinder | 92.89% |
-| org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernatePersistentEntity | 93.02% |
-| org.grails.orm.hibernate.HibernateGormEnhancer | 93.24% |
-| org.grails.orm.hibernate.HibernateGormInstanceApi._delete_closure1 | 93.33% |
-| org.grails.orm.hibernate.connections.HibernateConnectionSourceSettings.HibernateSettings | 93.53% |
-| org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernateAssociation | 93.65% |
-| org.grails.orm.hibernate.query.HibernateQuery | 93.76% |
-| org.grails.orm.hibernate.cfg.NaturalId | 94.00% |
-| org.grails.orm.hibernate.cfg.domainbinding.secondpass.UnidirectionalOneToManyBinder | 94.34% |
-| org.grails.orm.hibernate.cfg.domainbinding.generator.GrailsSequenceGeneratorEnum | 94.83% |
-| org.grails.orm.hibernate.cfg.domainbinding.hibernate.GrailsHibernatePersistentEntity | 94.88% |
-| org.grails.orm.hibernate.dirty.GrailsEntityDirtinessStrategy._findDirty_closure1 | 94.96% |
-| org.grails.orm.hibernate.HibernateGormInstanceApi._performPersist_closure5 | 95.24% |
-| org.grails.orm.hibernate.cfg.domainbinding.binder.CompositeIdentifierToManyToOneBinder | 95.30% |
-| org.grails.orm.hibernate.cfg.domainbinding.binder.GrailsDomainBinder | 95.60% |
-| org.grails.orm.hibernate.cfg.HibernateSimpleIdentity._getProperties_closure1 | 95.65% |
-| org.grails.orm.hibernate.HibernateGormInstanceApi._performMerge_closure4 | 95.76% |
-| org.grails.orm.hibernate.query.HqlQueryContext | 95.81% |
-| org.grails.orm.hibernate.compiler.HibernateEntityTransformation.new GroovyObject() {...} | 95.83% |
-| org.grails.orm.hibernate.HibernateGormValidationApi._validate_closure1 | 95.89% |
-| org.grails.orm.hibernate.cfg.ColumnConfig._getIndexAsMap_closure2 | 96.05% |
-| org.grails.orm.hibernate.HibernateGormValidationApi | 96.17% |
-| org.grails.orm.hibernate.cfg.domainbinding.util.NamingStrategyWrapper | 96.33% |
-| org.grails.orm.hibernate.cfg.HibernateMappingContext | 96.39% |
-| org.grails.orm.hibernate.cfg.domainbinding.binder.ComponentBinder | 96.40% |
-| org.grails.orm.hibernate.query.HqlListQueryBuilder | 96.55% |
-| org.grails.orm.hibernate.GrailsHibernateTransactionManager | 96.84% |
-| org.grails.orm.hibernate.connections.HibernateConnectionSourceSettings.HibernateSettings.FlushSettings.FlushMode | 97.25% |
-| org.grails.orm.hibernate.cfg.domainbinding.util.LogCascadeMapping | 97.30% |
-| org.grails.orm.hibernate.cfg.domainbinding.util.MultiTenantFilterBinder | 97.50% |
-| org.grails.orm.hibernate.support.HibernateDatastoreConnectionSourcesRegistrar | 97.71% |
-| org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernateMappingBuilder._id_closure1 | 97.73% |
-| grails.gorm.hibernate.mapping.MappingBuilder.ClosureMappingDefinition | 97.78% |
-| org.grails.orm.hibernate.query.ProjectionPredicate | 98.36% |
-| org.grails.orm.hibernate.query.HibernateQueryArgument | 98.82% |
-| org.grails.orm.hibernate.cfg.domainbinding.util.BasicValueCreator | 98.99% |
-| org.grails.orm.hibernate.cfg.domainbinding.binder.ColumnConfigToColumnBinder | 99.19% |
-| org.grails.orm.hibernate.query.JpaCriteriaQueryCreator | 99.26% |
-| org.grails.orm.hibernate.query.JpaFromProvider | 99.34% |
-| grails.orm.CriteriaMethods | 99.44% |
-| org.grails.orm.hibernate.cfg.domainbinding.util.OrderByClauseBuilder | 99.51% |
+| org.grails.orm.hibernate.cfg.domainbinding.binder.RootPersistentClassCommonValuesBinder | 91.24% | X |
+| org.grails.orm.hibernate.query.HibernateQueryExecutor | 91.28% | X |
+| org.grails.orm.hibernate.cfg.domainbinding.util.NamingStrategyProvider | 91.38% | X |
+| org.grails.orm.hibernate.query.HibernatePagedResultList | 91.67% | X |
+| org.grails.orm.hibernate.cfg.CacheConfig | 91.71% | X |
+| org.grails.orm.hibernate.support.ClosureEventListener | 91.99% | X |
+| org.grails.orm.hibernate.cfg.domainbinding.binder.PropertyBinder | 92.00% | X |
+| org.grails.orm.hibernate.dirty.GrailsEntityDirtinessStrategy | 92.02% | X |
+| org.grails.orm.hibernate.cfg.domainbinding.util.GrailsEnumType | 92.50% | X |
+| org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernateMappingBuilder | 92.54% | X |
+| org.grails.orm.hibernate.cfg.domainbinding.util.UniqueNameGenerator | 92.68% | X |
+| org.grails.orm.hibernate.compiler.HibernateEntityTransformation | 92.71% | X |
+| org.grails.orm.hibernate.proxy.GroovyProxyInterceptorLogic | 92.78% | X |
+| org.grails.orm.hibernate.support.HibernateRuntimeUtils | 92.89% | X |
+| org.grails.orm.hibernate.cfg.domainbinding.binder.EnumTypeBinder | 92.89% | X |
+| org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernatePersistentEntity | 93.02% | X |
+| org.grails.orm.hibernate.HibernateGormEnhancer | 93.24% | X |
+| org.grails.orm.hibernate.HibernateGormInstanceApi._delete_closure1 | 93.33% | X |
+| org.grails.orm.hibernate.connections.HibernateConnectionSourceSettings.HibernateSettings | 93.53% | X |
+| org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernateAssociation | 93.65% | X |
+| org.grails.orm.hibernate.query.HibernateQuery | 93.76% | X |
+| org.grails.orm.hibernate.cfg.NaturalId | 94.00% | X |
+| org.grails.orm.hibernate.cfg.domainbinding.secondpass.UnidirectionalOneToManyBinder | 94.34% | X |
+| org.grails.orm.hibernate.cfg.domainbinding.generator.GrailsSequenceGeneratorEnum | 94.83% | X |
+| org.grails.orm.hibernate.cfg.domainbinding.hibernate.GrailsHibernatePersistentEntity | 94.88% | X |
+| org.grails.orm.hibernate.dirty.GrailsEntityDirtinessStrategy._findDirty_closure1 | 94.96% | X |
+| org.grails.orm.hibernate.HibernateGormInstanceApi._performPersist_closure5 | 95.24% | X |
+| org.grails.orm.hibernate.cfg.domainbinding.binder.CompositeIdentifierToManyToOneBinder | 95.30% | X |
+| org.grails.orm.hibernate.cfg.domainbinding.binder.GrailsDomainBinder | 95.60% | X |
+| org.grails.orm.hibernate.cfg.HibernateSimpleIdentity._getProperties_closure1 | 95.65% | X |
+| org.grails.orm.hibernate.HibernateGormInstanceApi._performMerge_closure4 | 95.76% | X |
+| org.grails.orm.hibernate.query.HqlQueryContext | 95.81% | X |
+| org.grails.orm.hibernate.compiler.HibernateEntityTransformation.new GroovyObject() {...} | 95.83% | X |
+| org.grails.orm.hibernate.HibernateGormValidationApi._validate_closure1 | 95.89% | X |
+| org.grails.orm.hibernate.cfg.ColumnConfig._getIndexAsMap_closure2 | 96.05% | X |
+| org.grails.orm.hibernate.HibernateGormValidationApi | 96.17% | X |
+| org.grails.orm.hibernate.cfg.domainbinding.util.NamingStrategyWrapper | 96.33% | X |
+| org.grails.orm.hibernate.cfg.HibernateMappingContext | 96.39% | X |
+| org.grails.orm.hibernate.cfg.domainbinding.binder.ComponentBinder | 96.40% | X |
+| org.grails.orm.hibernate.query.HqlListQueryBuilder | 96.55% | X |
+| org.grails.orm.hibernate.GrailsHibernateTransactionManager | 96.84% | X |
+| org.grails.orm.hibernate.connections.HibernateConnectionSourceSettings.HibernateSettings.FlushSettings.FlushMode | 97.25% | X |
+| org.grails.orm.hibernate.cfg.domainbinding.util.LogCascadeMapping | 97.30% | X |
+| org.grails.orm.hibernate.cfg.domainbinding.util.MultiTenantFilterBinder | 97.50% | X |
+| org.grails.orm.hibernate.support.HibernateDatastoreConnectionSourcesRegistrar | 97.71% | X |
+| org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernateMappingBuilder._id_closure1 | 97.73% | X |
+| grails.gorm.hibernate.mapping.MappingBuilder.ClosureMappingDefinition | 97.78% | X |
+| org.grails.orm.hibernate.query.ProjectionPredicate | 98.36% | X |
+| org.grails.orm.hibernate.query.HibernateQueryArgument | 98.82% | X |
+| org.grails.orm.hibernate.cfg.domainbinding.util.BasicValueCreator | 98.99% | X |
+| org.grails.orm.hibernate.cfg.domainbinding.binder.ColumnConfigToColumnBinder | 99.19% | X |
+| org.grails.orm.hibernate.query.JpaCriteriaQueryCreator | 99.26% | X |
+| org.grails.orm.hibernate.query.JpaFromProvider | 99.34% | X |
+| grails.orm.CriteriaMethods | 99.44% | X |
+| org.grails.orm.hibernate.cfg.domainbinding.util.OrderByClauseBuilder | 99.51% | X |
 | org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernateMappingKeyword | 99.58% | X
 
 
