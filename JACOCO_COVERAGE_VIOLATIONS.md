@@ -33,7 +33,7 @@ Generated on: 2026-04-06 16:49:20
 | org.grails.orm.hibernate.HibernateDatastore.ChildHibernateDatastore | 86.36% | X |
 | X org.grails.orm.hibernate.proxy.GrailsProxyFactoryFactory | 86.67% |
 | X org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernateToManyProperty | 86.77% |
-| org.grails.orm.hibernate.HibernateGormStaticApi | 86.87% |
+| X org.grails.orm.hibernate.HibernateGormStaticApi | 86.87% |
 | org.grails.orm.hibernate.cfg.domainbinding.util.CascadeBehaviorFetcher | 86.96% | X
 | X org.grails.orm.hibernate.cfg.PropertyDefinitionDelegate | 87.60% |
 | X org.grails.orm.hibernate.cfg.IdentityEnumType.BidiEnumMap | 87.62% |

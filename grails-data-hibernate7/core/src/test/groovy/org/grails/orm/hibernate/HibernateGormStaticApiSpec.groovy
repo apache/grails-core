@@ -710,6 +710,107 @@ class HibernateGormStaticApiSpec extends HibernateGormDatastoreSpec {
         c.name == 'Manchester United'
     }
 
+    // -------------------------------------------------------------------------
+    // null-id guard branches
+    // -------------------------------------------------------------------------
+
+    void "get returns null for null id"() {
+        expect:
+        Club.get(null) == null
+    }
+
+    void "read returns null for null id"() {
+        expect:
+        Club.read(null) == null
+    }
+
+    void "load returns null for non-convertible id"() {
+        expect: "String that can't be converted to Long makes convertIdentifier return null"
+        Club.load("not-a-long") == null
+    }
+
+    void "proxy returns null for null id"() {
+        expect:
+        Club.proxy(null) == null
+    }
+
+    void "exists returns false for non-convertible id"() {
+        expect:
+        !Club.exists("not-a-long")
+    }
+
+    // -------------------------------------------------------------------------
+    // first / last on empty table
+    // -------------------------------------------------------------------------
+
+    void "first returns null when table is empty"() {
+        expect:
+        Club.first() == null
+    }
+
+    void "last returns null when table is empty"() {
+        expect:
+        Club.last() == null
+    }
+
+    // -------------------------------------------------------------------------
+    // findWhere / findAllWhere with empty map
+    // -------------------------------------------------------------------------
+
+    void "findWhere with empty queryMap returns null"() {
+        expect:
+        Club.findWhere([:]) == null
+    }
+
+    void "findAllWhere with empty queryMap returns null"() {
+        expect:
+        Club.findAllWhere([:]) == null
+    }
+
+    // -------------------------------------------------------------------------
+    // list with max — returns HibernatePagedResultList
+    // -------------------------------------------------------------------------
+
+    void "list with max parameter returns a HibernatePagedResultList"() {
+        given:
+        setupTestData()
+
+        when:
+        def result = Club.list(max: 2)
+
+        then:
+        result instanceof org.grails.orm.hibernate.query.HibernatePagedResultList
+        result.size() <= 2
+    }
+
+    // -------------------------------------------------------------------------
+    // convertIdentifier — convert throws (non-parseable String → Long)
+    // -------------------------------------------------------------------------
+
+    void "get with non-parseable String id returns null via convertIdentifier"() {
+        expect: "conversion from 'notALong' to Long throws internally, returns null"
+        Club.get("notALong") == null
+    }
+
+    // -------------------------------------------------------------------------
+    // getQualifier — field set explicitly
+    // -------------------------------------------------------------------------
+
+    void "getQualifier returns the explicit qualifier when set in constructor"() {
+        when:
+        def api = new HibernateGormStaticApi<Club>(
+                Club,
+                manager.hibernateDatastore,
+                [],
+                Thread.currentThread().contextClassLoader,
+                null,
+                "secondary"
+        )
+
+        then:
+        api.getQualifier() == "secondary"
+    }
+
     protected void setupTestData() {
         new Club(name: "Barcelona").save()
         new Club(name: "Arsenal").save()
