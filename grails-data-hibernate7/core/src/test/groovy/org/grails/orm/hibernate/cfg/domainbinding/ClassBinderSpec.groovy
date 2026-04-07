@@ -23,6 +23,7 @@ import grails.gorm.specs.HibernateGormDatastoreSpec
 import org.hibernate.mapping.RootClass
 
 import org.grails.orm.hibernate.cfg.domainbinding.binder.ClassBinder
+import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernatePersistentEntity
 
 class ClassBinderSpec extends HibernateGormDatastoreSpec {
 
@@ -131,5 +132,46 @@ class ClassBinderSpec extends HibernateGormDatastoreSpec {
         collector.getImports()[simpleName] == persistentName
     }
 
+    void "Test abstract entity sets abstract flag"() {
+        given:
+        def collector = getCollector()
+        def grailsDomainBinder = getGrailsDomainBinder()
+        def root = new RootClass(grailsDomainBinder.metadataBuildingContext)
+        def binder = new ClassBinder(collector)
 
+        def mockEntity = Mock(HibernatePersistentEntity)
+        mockEntity.getName() >> "foo.Animal"
+        mockEntity.isAbstract() >> true
+        mockEntity.getHibernateMappedForm() >> null
+
+        when:
+        binder.bindClass(mockEntity, root)
+
+        then:
+        root.isAbstract()
+    }
+
+    void "Test null mappedForm uses collector defaults"() {
+        when:
+        def collector = getCollector()
+        def grailsDomainBinder = getGrailsDomainBinder()
+
+        // Create entity with no mapping block so mappedForm returns defaults (no dynamicUpdate/Insert/batchSize)
+        def persistentEntity = createPersistentEntity(grailsDomainBinder, "Widget", [:], [:])
+        def root = new RootClass(grailsDomainBinder.metadataBuildingContext)
+        def binder = new ClassBinder(collector)
+
+        // Force mappedForm to null via mock to exercise the else branch
+        def mockEntity = Mock(org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernatePersistentEntity)
+        mockEntity.getName() >> "foo.Widget"
+        mockEntity.isAbstract() >> false
+        mockEntity.getHibernateMappedForm() >> null
+
+        binder.bindClass(mockEntity, root)
+
+        then:
+        !root.useDynamicInsert()
+        !root.useDynamicUpdate()
+        root.getBatchSize() == 0
+    }
 }
