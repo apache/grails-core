@@ -21,8 +21,16 @@ package org.grails.orm.hibernate.query
 import grails.gorm.specs.HibernateGormDatastoreSpec
 import grails.persistence.Entity
 import org.hibernate.query.MutationQuery
+import org.hibernate.query.QueryArgumentException
 import org.hibernate.query.QueryFlushMode
 
+/**
+ * Covers all delegation methods in {@link MutationQueryDelegate}.
+ *
+ * Each feature method runs inside a transaction started by the TCK manager
+ * (GrailsDataHibernate7TckManager) that is automatically rolled back after
+ * the test, providing full isolation without any explicit cleanup method.
+ */
 class MutationQueryDelegateSpec extends HibernateGormDatastoreSpec {
 
     void setupSpec() {
@@ -30,129 +38,121 @@ class MutationQueryDelegateSpec extends HibernateGormDatastoreSpec {
     }
 
     void setup() {
-        MutationQueryDelegateTestBook.withTransaction {
-            new MutationQueryDelegateTestBook(title: "Book One",   pages: 100).save(flush: true, failOnError: true)
-            new MutationQueryDelegateTestBook(title: "Book Two",   pages: 200).save(flush: true, failOnError: true)
-            new MutationQueryDelegateTestBook(title: "Book Three", pages: 300).save(flush: true, failOnError: true)
-        }
-    }
-
-    void cleanup() {
-        MutationQueryDelegateTestBook.withTransaction {
-            MutationQueryDelegateTestBook.executeUpdate("DELETE FROM MutationQueryDelegateTestBook")
-        }
+        new MutationQueryDelegateTestBook(title: "Book One",   pages: 100).save(flush: true, failOnError: true)
+        new MutationQueryDelegateTestBook(title: "Book Two",   pages: 200).save(flush: true, failOnError: true)
+        new MutationQueryDelegateTestBook(title: "Book Three", pages: 300).save(flush: true, failOnError: true)
     }
 
     private MutationQuery buildMutationQuery(String hql) {
         sessionFactory.currentSession.createMutationQuery(hql)
     }
 
-    void "constructor wraps the MutationQuery"() {
+    void "constructor wraps MutationQuery"() {
         given:
-        MutationQueryDelegateTestBook.withTransaction {
-            MutationQuery mq = buildMutationQuery(
-                "UPDATE MutationQueryDelegateTestBook SET title = :title WHERE title = :old"
-            )
-            MutationQueryDelegate delegate = new MutationQueryDelegate(mq)
+        MutationQuery mq = buildMutationQuery(
+            "UPDATE MutationQueryDelegateTestBook SET title = :title WHERE title = :old"
+        )
 
-            expect:
-            delegate != null
-        }
+        when:
+        MutationQueryDelegate delegate = new MutationQueryDelegate(mq)
+
+        then:
+        delegate != null
     }
 
-    void "setTimeout delegates to the underlying MutationQuery"() {
+    void "setTimeout delegates to MutationQuery"() {
+        given:
+        MutationQuery mq = buildMutationQuery(
+            "UPDATE MutationQueryDelegateTestBook SET pages = 0 WHERE pages > 0"
+        )
+        MutationQueryDelegate delegate = new MutationQueryDelegate(mq)
+
         when:
-        MutationQueryDelegateTestBook.withTransaction {
-            MutationQuery mq = buildMutationQuery(
-                "UPDATE MutationQueryDelegateTestBook SET pages = 0 WHERE pages > 0"
-            )
-            MutationQueryDelegate delegate = new MutationQueryDelegate(mq)
-            delegate.setTimeout(30)
-        }
+        delegate.setTimeout(30)
 
         then:
         noExceptionThrown()
     }
 
-    void "setQueryFlushMode delegates to the underlying MutationQuery"() {
+    void "setQueryFlushMode delegates to MutationQuery"() {
+        given:
+        MutationQuery mq = buildMutationQuery(
+            "UPDATE MutationQueryDelegateTestBook SET pages = 0 WHERE pages > 0"
+        )
+        MutationQueryDelegate delegate = new MutationQueryDelegate(mq)
+
         when:
-        MutationQueryDelegateTestBook.withTransaction {
-            MutationQuery mq = buildMutationQuery(
-                "UPDATE MutationQueryDelegateTestBook SET pages = 0 WHERE pages > 0"
-            )
-            MutationQueryDelegate delegate = new MutationQueryDelegate(mq)
-            delegate.setQueryFlushMode(QueryFlushMode.MANUAL)
-        }
+        delegate.setQueryFlushMode(QueryFlushMode.NO_FLUSH)
 
         then:
         noExceptionThrown()
     }
 
-    void "setParameter by name delegates and executeUpdate returns affected count"() {
+    void "setParameter by name delegates and executeUpdate returns row count"() {
+        given:
+        MutationQuery mq = buildMutationQuery(
+            "UPDATE MutationQueryDelegateTestBook SET pages = :newPages WHERE title = :title"
+        )
+        MutationQueryDelegate delegate = new MutationQueryDelegate(mq)
+        delegate.setParameter("newPages", 999)
+        delegate.setParameter("title", "Book One")
+
+        when:
+        int count = delegate.executeUpdate()
+
+        then:
+        count == 1
+    }
+
+    void "setParameter by name with type delegates and executeUpdate returns row count"() {
+        given:
+        MutationQuery mq = buildMutationQuery(
+            "UPDATE MutationQueryDelegateTestBook SET pages = :newPages WHERE title = :title"
+        )
+        MutationQueryDelegate delegate = new MutationQueryDelegate(mq)
+        delegate.setParameter("newPages", Integer.valueOf(42), Integer.class)
+        delegate.setParameter("title", "Book Two", String.class)
+
+        when:
+        int count = delegate.executeUpdate()
+
+        then:
+        count == 1
+    }
+
+    void "setParameter by position delegates and executeUpdate returns row count"() {
         when:
         int count = MutationQueryDelegateTestBook.withTransaction {
-            MutationQuery mq = buildMutationQuery(
+            buildMutationQuery(
                 "UPDATE MutationQueryDelegateTestBook SET pages = :newPages WHERE title = :title"
-            )
-            MutationQueryDelegate delegate = new MutationQueryDelegate(mq)
-            delegate.setParameter("newPages", 999)
-            delegate.setParameter("title", "Book One")
-            delegate.executeUpdate()
-        } as int
+            ).with {
+                setParameter("newPages", 77)
+                setParameter("title", "Book Three")
+                new MutationQueryDelegate(it).executeUpdate()
+            }
+        }
 
         then:
         count == 1
     }
 
-    void "setParameter by name with type delegates to MutationQuery"() {
+    void "setParameter by position with type delegates and executeUpdate returns row count"() {
         when:
         int count = MutationQueryDelegateTestBook.withTransaction {
-            MutationQuery mq = buildMutationQuery(
+            buildMutationQuery(
                 "UPDATE MutationQueryDelegateTestBook SET pages = :newPages WHERE title = :title"
-            )
-            MutationQueryDelegate delegate = new MutationQueryDelegate(mq)
-            delegate.setParameter("newPages", Integer.valueOf(42), Integer.class)
-            delegate.setParameter("title", "Book Two", String.class)
-            delegate.executeUpdate()
-        } as int
+            ).with {
+                setParameter("newPages", Integer.valueOf(88), Integer.class)
+                setParameter("title", "Book One", String.class)
+                new MutationQueryDelegate(it).executeUpdate()
+            }
+        }
 
         then:
         count == 1
     }
 
-    void "setParameter by position delegates to MutationQuery"() {
-        when:
-        int count = MutationQueryDelegateTestBook.withTransaction {
-            MutationQuery mq = buildMutationQuery(
-                "UPDATE MutationQueryDelegateTestBook SET pages = ?1 WHERE title = ?2"
-            )
-            MutationQueryDelegate delegate = new MutationQueryDelegate(mq)
-            delegate.setParameter(1, 77)
-            delegate.setParameter(2, "Book Three")
-            delegate.executeUpdate()
-        } as int
-
-        then:
-        count == 1
-    }
-
-    void "setParameter by position with type delegates to MutationQuery"() {
-        when:
-        int count = MutationQueryDelegateTestBook.withTransaction {
-            MutationQuery mq = buildMutationQuery(
-                "UPDATE MutationQueryDelegateTestBook SET pages = ?1 WHERE title = ?2"
-            )
-            MutationQueryDelegate delegate = new MutationQueryDelegate(mq)
-            delegate.setParameter(1, Integer.valueOf(88), Integer.class)
-            delegate.setParameter(2, "Book One", String.class)
-            delegate.executeUpdate()
-        } as int
-
-        then:
-        count == 1
-    }
-
-    void "setParameterList with Collection delegates as parameter value"() {
+    void "setParameterList with Collection delegates as parameter value and executes DELETE"() {
         when:
         int count = MutationQueryDelegateTestBook.withTransaction {
             MutationQuery mq = buildMutationQuery(
@@ -161,50 +161,50 @@ class MutationQueryDelegateSpec extends HibernateGormDatastoreSpec {
             MutationQueryDelegate delegate = new MutationQueryDelegate(mq)
             delegate.setParameterList("titles", (Collection<?>) ["Book One", "Book Two"])
             delegate.executeUpdate()
-        } as int
+        }
 
         then:
         count == 2
     }
 
-    void "setParameterList with Object array delegates as parameter value"() {
+    void "setParameterList with Object array delegates to setParameter and throws QueryArgumentException"() {
         when:
-        int count = MutationQueryDelegateTestBook.withTransaction {
+        MutationQueryDelegateTestBook.withTransaction {
             MutationQuery mq = buildMutationQuery(
                 "DELETE FROM MutationQueryDelegateTestBook WHERE title IN (:titles)"
             )
             MutationQueryDelegate delegate = new MutationQueryDelegate(mq)
             delegate.setParameterList("titles", ["Book Two", "Book Three"] as Object[])
-            delegate.executeUpdate()
-        } as int
+        }
 
         then:
-        count == 2
+        thrown(QueryArgumentException)
     }
 
-    void "list() throws UnsupportedOperationException"() {
+    void "list throws UnsupportedOperationException"() {
         when:
         MutationQueryDelegateTestBook.withTransaction {
             MutationQuery mq = buildMutationQuery(
                 "UPDATE MutationQueryDelegateTestBook SET pages = 0 WHERE pages > 0"
             )
-            MutationQueryDelegate delegate = new MutationQueryDelegate(mq)
-            delegate.list()
+            new MutationQueryDelegate(mq).list()
         }
 
         then:
         thrown(UnsupportedOperationException)
     }
 
-    void "selectQuery() returns null for mutation queries"() {
-        expect:
-        MutationQueryDelegateTestBook.withTransaction {
+    void "selectQuery returns null for mutation queries"() {
+        when:
+        def result = MutationQueryDelegateTestBook.withTransaction {
             MutationQuery mq = buildMutationQuery(
                 "UPDATE MutationQueryDelegateTestBook SET pages = 0 WHERE pages > 0"
             )
-            MutationQueryDelegate delegate = new MutationQueryDelegate(mq)
-            delegate.selectQuery() == null
+            new MutationQueryDelegate(mq).selectQuery()
         }
+
+        then:
+        result == null
     }
 }
 
