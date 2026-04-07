@@ -20,6 +20,7 @@ package com.demo
 
 import spock.lang.Narrative
 import spock.lang.Specification
+import spock.lang.Tag
 
 import org.springframework.beans.factory.annotation.Autowired
 
@@ -42,6 +43,7 @@ Advanced Grails caching scenarios tested via HTTP endpoints.
 These tests verify that complex caching behaviors work correctly
 in a full application context.
 ''')
+@Tag('http-client')
 class AdvancedCachingIntegrationSpec extends Specification implements HttpClientSupport {
 
     @Autowired AdvancedCachingService advancedCachingService

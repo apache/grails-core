@@ -24,6 +24,7 @@ import io.micronaut.http.client.exceptions.HttpClientException
 import spock.lang.AutoCleanup
 import spock.lang.Retry
 import spock.lang.Specification
+import spock.lang.Tag
 
 import org.springframework.beans.factory.annotation.Autowired
 
@@ -31,6 +32,7 @@ import grails.testing.mixin.integration.Integration
 import org.apache.grails.testing.http.client.HttpClientSupport
 
 @Integration
+@Tag('http-client')
 class MicronautErsatzRoundtripSpec extends Specification implements HttpClientSupport {
 
     @Autowired ExternalApiService externalApiService
