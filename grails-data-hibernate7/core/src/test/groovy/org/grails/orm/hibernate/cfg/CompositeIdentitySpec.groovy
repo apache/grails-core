@@ -118,4 +118,17 @@ class CompositeIdentitySpec extends Specification {
         then:
         compositeIdentity.natural.propertyNames == ['code']
     }
+
+    def "getHibernateProperties throws exception when domain class returns empty composite array"() {
+        given:
+        def domainClass = Mock(GrailsHibernatePersistentEntity)
+        def compositeIdentity = new HibernateCompositeIdentity()
+
+        when:
+        compositeIdentity.getHibernateProperties(domainClass)
+
+        then:
+        1 * domainClass.getCompositeIdentity() >> ([] as HibernatePersistentProperty[])
+        thrown(MappingException)
+    }
 }

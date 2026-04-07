@@ -279,6 +279,27 @@ class HibernateToManyPropertySpec extends HibernateGormDatastoreSpec {
         def entity = createPersistentEntity(domainClass)
         return (HibernateToManyProperty) entity.getPropertyByName(propertyName)
     }
+
+    // -------------------------------------------------------------------------
+    // HibernateToManyCollectionProperty.getElementTypeName — all 4 branches
+    // -------------------------------------------------------------------------
+
+    void "getElementTypeName returns component type name when componentType is non-null and has a mapped Hibernate type"() {
+        given: "a String-valued basic collection — componentType is String, typeName resolves to 'string'"
+        def prop = createTestHibernateToManyProperty(HTMPOwnerString, "tags") as HibernateToManyCollectionProperty
+
+        expect:
+        prop.getElementTypeName() != null
+        prop.getElementTypeName() != Object.class.name
+    }
+
+    void "getElementTypeName falls back to StandardBasicTypes.STRING for Object-typed collections"() {
+        given: "a collection whose element type resolves to Object"
+        def prop = createTestHibernateToManyProperty(HTMPOwnerObject, "items") as HibernateToManyCollectionProperty
+
+        expect:
+        prop.getElementTypeName() == org.hibernate.type.StandardBasicTypes.STRING.getName()
+    }
 }
 
 // --- Supporting Entities ---
@@ -398,4 +419,15 @@ class HTMPAuthorCached {
     static mapping = {
         books cache: true
     }
+}
+@Entity
+class HTMPOwnerString {
+    Long id
+    static hasMany = [tags: String]
+}
+
+@Entity
+class HTMPOwnerObject {
+    Long id
+    static hasMany = [items: Object]
 }
