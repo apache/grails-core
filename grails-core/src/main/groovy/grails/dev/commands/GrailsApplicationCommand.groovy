@@ -19,6 +19,8 @@
 
 package grails.dev.commands
 
+import groovy.transform.CompileDynamic
+
 import grails.codegen.model.ModelBuilder
 import grails.dev.commands.io.FileSystemInteraction
 import grails.dev.commands.io.FileSystemInteractionImpl
@@ -30,6 +32,16 @@ trait GrailsApplicationCommand implements ApplicationCommand, ModelBuilder {
     @Delegate TemplateRenderer templateRenderer
     @Delegate FileSystemInteraction fileSystemInteraction
     ExecutionContext executionContext
+
+    /**
+     * Explicit render(Map) to work around Groovy 5 @CompileStatic dispatch regression
+     * where named-argument calls through @Delegate-generated methods in traits fail
+     * to bind to render(Map) and silently resolve to the wrong overload.
+     */
+    @CompileDynamic
+    void render(Map<String, Object> namedArguments) {
+        templateRenderer.render(namedArguments)
+    }
 
     boolean handle(ExecutionContext executionContext) {
         this.executionContext = executionContext
