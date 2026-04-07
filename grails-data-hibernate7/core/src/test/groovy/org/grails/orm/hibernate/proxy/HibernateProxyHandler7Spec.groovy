@@ -382,4 +382,96 @@ class HibernateProxyHandler7Spec extends HibernateGormDatastoreSpec {
         expect:
         proxyHandler.getIdentifier(location) == null
     }
+
+    void "test isInitialized delegates to EntityProxy"() {
+        given:
+        def ep = Mock(org.grails.datastore.mapping.proxy.EntityProxy) {
+            isInitialized() >> true
+        }
+
+        expect:
+        proxyHandler.isInitialized(ep)
+    }
+
+    void "test unwrap delegates to EntityProxy.getTarget"() {
+        given:
+        Location target = new Location(name: "Target")
+        def ep = Mock(org.grails.datastore.mapping.proxy.EntityProxy) {
+            getTarget() >> target
+        }
+
+        expect:
+        proxyHandler.unwrap(ep).is(target)
+    }
+
+    void "test getIdentifier delegates to EntityProxy.getProxyKey"() {
+        given:
+        def ep = Mock(org.grails.datastore.mapping.proxy.EntityProxy) {
+            getProxyKey() >> 42L
+        }
+
+        expect:
+        proxyHandler.getIdentifier(ep) == 42L
+    }
+
+    void "test initialize delegates to EntityProxy.initialize"() {
+        given:
+        def ep = Mock(org.grails.datastore.mapping.proxy.EntityProxy)
+
+        when:
+        proxyHandler.initialize(ep)
+
+        then:
+        1 * ep.initialize()
+    }
+
+    void "test initialize on Groovy proxy calls proxyTarget"() {
+        given:
+        def originalFactory = manager.session.mappingContext.proxyFactory
+        manager.session.mappingContext.proxyFactory = new GroovyProxyFactory()
+        Location location = new Location(name: "Init Test").save(flush: true)
+        manager.session.clear()
+        manager.hibernateSession.clear()
+
+        Location proxyLocation = Location.proxy(location.id)
+
+        expect:
+        !proxyHandler.isInitialized(proxyLocation)
+
+        when:
+        proxyHandler.initialize(proxyLocation)
+
+        then:
+        proxyHandler.isInitialized(proxyLocation)
+
+        cleanup:
+        manager.session.mappingContext.proxyFactory = originalFactory
+    }
+
+    void "test getAssociationProxy returns null on RuntimeException"() {
+        expect:
+        proxyHandler.getAssociationProxy(new ProxyHandlerThrowingObj(), "anything") == null
+    }
+
+    void "test getIdentifier for Groovy proxy returns id via GroovyProxyInterceptorLogic"() {
+        given:
+        def originalFactory = manager.session.mappingContext.proxyFactory
+        manager.session.mappingContext.proxyFactory = new GroovyProxyFactory()
+        Location location = new Location(name: "Id Test").save(flush: true)
+        Long locationId = location.id
+        manager.session.clear()
+        manager.hibernateSession.clear()
+
+        Location proxyLocation = Location.proxy(locationId)
+
+        expect:
+        proxyHandler.getIdentifier(proxyLocation) == locationId
+
+        cleanup:
+        manager.session.mappingContext.proxyFactory = originalFactory
+    }
+}
+
+class ProxyHandlerThrowingObj {
+    def getAnything() { throw new RuntimeException("deliberate failure") }
 }
