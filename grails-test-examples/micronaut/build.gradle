@@ -26,7 +26,15 @@ plugins {
 version = '0.1'
 group = 'micronaut'
 
+ext.javaVersion = 21
+
 apply plugin: 'org.apache.grails.gradle.grails-web'
+
+java {
+    toolchain {
+        languageVersion = JavaLanguageVersion.of(21)
+    }
+}
 apply plugin: 'cloud.wondrify.asset-pipeline'
 
 // The grails-gsp Gradle plugin is not needed for running the functional tests.

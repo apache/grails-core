@@ -24,7 +24,19 @@ plugins {
 version = '0.1-SNAPSHOT'
 group = 'issue11767.plugin'
 
+ext.javaVersion = 21
+
 apply plugin: 'org.apache.grails.gradle.grails-plugin'
+
+java {
+    toolchain {
+        languageVersion = JavaLanguageVersion.of(21)
+    }
+}
+
+tasks.withType(Jar).configureEach {
+    duplicatesStrategy = DuplicatesStrategy.EXCLUDE
+}
 
 dependencies {
     implementation platform(project(':grails-bom'))

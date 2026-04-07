@@ -24,7 +24,15 @@ plugins {
 version = '0.1'
 group = 'micronautgroovyonly'
 
+ext.javaVersion = 21
+
 apply plugin: 'org.apache.grails.gradle.grails-web'
+
+java {
+    toolchain {
+        languageVersion = JavaLanguageVersion.of(21)
+    }
+}
 
 // This module intentionally has NO annotationProcessor dependencies.
 // It validates that a Groovy-only Grails application works with

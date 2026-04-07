@@ -30,6 +30,18 @@ plugins {
 version = projectVersion
 group = 'org.apache.grails'
 
+// Micronaut 5.x requires JDK 21+. Use a Gradle toolchain so this module compiles
+// with JDK 21 while the rest of the build stays on JDK 17. Gradle Module Metadata
+// automatically stamps org.gradle.jvm.version=21, giving consumers on JDK 17 a
+// clean dependency resolution failure instead of a runtime UnsupportedClassVersionError.
+ext.javaVersion = 21
+
+java {
+    toolchain {
+        languageVersion = JavaLanguageVersion.of(21)
+    }
+}
+
 dependencies {
     compileOnlyApi platform("io.micronaut.platform:micronaut-platform:$micronautPlatformVersion")
     compileOnlyApi 'io.micronaut:micronaut-inject-groovy'

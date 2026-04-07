@@ -24,7 +24,15 @@ plugins {
 version = '0.1-SNAPSHOT'
 group = 'com.example.grails.plugins'
 
+ext.javaVersion = 21
+
 apply plugin: 'org.apache.grails.gradle.grails-plugin'
+
+java {
+    toolchain {
+        languageVersion = JavaLanguageVersion.of(21)
+    }
+}
 
 dependencies {
     implementation platform(project(':grails-bom'))
