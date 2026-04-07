@@ -34,7 +34,7 @@ import org.grails.datastore.gorm.GormEntity
 
 class PredicateGeneratorSpec extends HibernateGormDatastoreSpec {
 
-    PredicateGenerator predicateGenerator = new PredicateGenerator()
+    PredicateGenerator predicateGenerator
     HibernateCriteriaBuilder cb
     CriteriaQuery query
     Root root
@@ -51,6 +51,7 @@ class PredicateGeneratorSpec extends HibernateGormDatastoreSpec {
         root = query.from(PredicateGeneratorSpecPerson)
         personEntity = session.datastore.mappingContext.getPersistentEntity(PredicateGeneratorSpecPerson.name)
         fromProvider = new JpaFromProvider(new DetachedCriteria(PredicateGeneratorSpecPerson),[], root)
+        predicateGenerator = new PredicateGenerator(session.datastore.mappingContext.conversionService)
     }
 
     def "test getPredicates with Equals criterion"() {
@@ -301,6 +302,127 @@ class PredicateGeneratorSpec extends HibernateGormDatastoreSpec {
 
         then:
         thrown(IllegalArgumentException)
+    }
+
+    def "test getPredicates with HibernateAlias returns null (metadata only)"() {
+        given:
+        def alias = new org.grails.orm.hibernate.query.HibernateAlias("pets", "p")
+        List criteria = [alias, new Query.Equals("firstName", "Bob")]
+
+        when:
+        def predicates = predicateGenerator.getPredicates(cb, query, root, criteria, fromProvider, personEntity)
+
+        then:
+        predicates.length == 1
+    }
+
+    def "test getPredicates with Negation throws when multiple predicates"() {
+        given:
+        def negation = new Query.Negation()
+        negation.add(new Query.Equals("firstName", "Alice"))
+        negation.add(new Query.Equals("lastName", "Smith"))
+        List criteria = [negation]
+
+        when:
+        predicateGenerator.getPredicates(cb, query, root, criteria, fromProvider, personEntity)
+
+        then:
+        thrown(RuntimeException)
+    }
+
+    def "test getPredicates with invalid property throws ConfigurationException"() {
+        given:
+        List criteria = [new Query.Equals("nonExistentProperty", "value")]
+
+        when:
+        predicateGenerator.getPredicates(cb, query, root, criteria, fromProvider, personEntity)
+
+        then:
+        thrown(Exception)
+    }
+
+    def "test getPredicates with NotEquals criterion"() {
+        given:
+        List criteria = [new Query.NotEquals("firstName", "Bob")]
+
+        when:
+        def predicates = predicateGenerator.getPredicates(cb, query, root, criteria, fromProvider, personEntity)
+
+        then:
+        predicates.length == 1
+    }
+
+    def "test getPredicates with IdEquals criterion"() {
+        given:
+        List criteria = [new Query.IdEquals(1L)]
+
+        when:
+        def predicates = predicateGenerator.getPredicates(cb, query, root, criteria, fromProvider, personEntity)
+
+        then:
+        predicates.length == 1
+    }
+
+    def "test getPredicates with GreaterThan and LessThan numeric criteria"() {
+        given:
+        List criteria = [
+            new Query.GreaterThan("age", 18),
+            new Query.GreaterThanEquals("age", 18),
+            new Query.LessThan("age", 65),
+            new Query.LessThanEquals("age", 65)
+        ]
+
+        when:
+        def predicates = predicateGenerator.getPredicates(cb, query, root, criteria, fromProvider, personEntity)
+
+        then:
+        predicates.length == 4
+    }
+
+    def "test getPredicates with GreaterThan and null value throws ConfigurationException"() {
+        given:
+        List criteria = [new Query.GreaterThan("age", null)]
+
+        when:
+        predicateGenerator.getPredicates(cb, query, root, criteria, fromProvider, personEntity)
+
+        then:
+        thrown(Exception)
+    }
+
+    def "test getPredicates with normalizeValue for CharSequence"() {
+        given:
+        def sb = new StringBuilder("Bob")
+        List criteria = [new Query.Equals("firstName", sb)]
+
+        when:
+        def predicates = predicateGenerator.getPredicates(cb, query, root, criteria, fromProvider, personEntity)
+
+        then:
+        predicates.length == 1
+    }
+
+    def "test getPredicates with RLike criterion"() {
+        given:
+        List criteria = [new Query.RLike("firstName", "^B.*")]
+
+        when:
+        def predicates = predicateGenerator.getPredicates(cb, query, root, criteria, fromProvider, personEntity)
+
+        then:
+        predicates.length == 1
+    }
+
+    def "test getPredicates with NotIn criterion"() {
+        given:
+        def subCriteria = new DetachedCriteria(PredicateGeneratorSpecPerson).eq("lastName", "Smith")
+        List criteria = [new Query.NotIn("id", subCriteria)]
+
+        when:
+        def predicates = predicateGenerator.getPredicates(cb, query, root, criteria, fromProvider, personEntity)
+
+        then:
+        predicates.length == 1
     }
 }
 
