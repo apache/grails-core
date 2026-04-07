@@ -206,15 +206,17 @@ jobs:
           path: grails-forge/tmp1/cli/**/*
           if-no-files-found: 'error'
   functional:
-    name: "Functional Tests (Java ${{ matrix.java }}, indy=${{ matrix.indy }})"
+    name: "Functional Tests (Java ${{ matrix.java }}, Hibernate ${{ matrix.hibernate-version }}, indy=${{ matrix.indy }})"
     if: ${{ !contains(github.event.head_commit.message, '[skip tests]') }}
     strategy:
       fail-fast: false
       matrix:
         java: [ 17, 21, 25 ]
+        hibernate-version: [ '5', '7' ]
         indy: [ false ]
         include:
           - java: 17
+            hibernate-version: '5'
             indy: true
     runs-on: ubuntu-24.04
     steps:
@@ -234,6 +236,8 @@ jobs:
       - name: "🔍 Setup TestLens"
         uses: testlens-app/setup-testlens@v1
       - name: "🏃 Run Functional Tests"
+        env:
+          GITHUB_MAVEN_PASSWORD: ${{ secrets.GITHUB_TOKEN }}
         run: >
           ./gradlew bootJar check
           --continue
@@ -243,8 +247,9 @@ jobs:
           -PgrailsIndy=${{ matrix.indy }}
           -PonlyFunctionalTests
           -PskipCodeStyle
-          -PskipHibernate5Tests
           -PskipMongodbTests
+          -PhibernateVersion=${{ matrix.hibernate-version }}
+          -PskipHibernate${{ matrix.hibernate-version == '5' && '7' || '5' }}Tests
   mongodbFunctional:
     if: ${{ !contains(github.event.head_commit.message, '[skip tests]') }}
     name: "Mongodb Functional Tests (Java ${{ matrix.java }}, MongoDB ${{ matrix.mongodb-version }}, indy=${{ matrix.indy }})"
@@ -284,43 +289,6 @@ jobs:
           -PgrailsIndy=${{ matrix.indy }}
           -PonlyMongodbTests
           -PmongodbContainerVersion=${{ matrix.mongodb-version }}
-          -PskipCodeStyle
-  hibernate5Functional:
-    if: ${{ !contains(github.event.head_commit.message, '[skip tests]') }}
-    name: "Hibernate5 Functional Tests (Java ${{ matrix.java }}, indy=${{ matrix.indy }})"
-    runs-on: ubuntu-24.04
-    strategy:
-      fail-fast: false
-      matrix:
-        java: [ 17, 25 ]
-        indy: [ false ]
-        include:
-          - java: 17
-            indy: true
-    steps:
-      - name: "Output Agent IP" # in the event RAO blocks this agent, this can be used to debug it
-        run: curl -s https://api.ipify.org
-      - name: "📥 Checkout the repository"
-        uses: actions/checkout@v6
-      - name: "☕️ Setup JDK"
-        uses: actions/setup-java@v4
-        with:
-          distribution: liberica
-          java-version: ${{ matrix.java }}
-      - name: "🐘 Setup Gradle"
-        uses: gradle/actions/setup-gradle@4d9f0ba0025fe599b4ebab900eb7f3a1d93ef4c2 # v5.0.0
-        with:
-          develocity-access-key: ${{ secrets.GRAILS_DEVELOCITY_ACCESS_KEY }}
-      - name: "🏃 Run Functional Tests"
-        env:
-          GITHUB_MAVEN_PASSWORD: ${{ secrets.GITHUB_TOKEN }}
-        run: >
-          ./gradlew bootJar check
-          --continue
-          --rerun-tasks
-          --stacktrace
-          -PgrailsIndy=${{ matrix.indy }}
-          -PonlyHibernate5Tests
           -PskipCodeStyle
   publishGradle:
     if: github.repository_owner == 'apache' && (github.event_name == 'push' || github.event_name == 'workflow_dispatch')
@@ -364,7 +332,7 @@ jobs:
           name: grails-gradle-artifacts.txt
           path: grails-gradle/build/grails-gradle-artifacts.txt
   publish:
-    needs: [ publishGradle, build, functional, hibernate5Functional, mongodbFunctional ]
+    needs: [ publishGradle, build, functional, mongodbFunctional ]
     if: >-
       ${{ always() && 
           github.repository_owner == 'apache' && 
@@ -372,7 +340,6 @@ jobs:
           needs.publishGradle.result == 'success' && 
           (needs.build.result == 'success' || needs.build.result == 'skipped') && 
           (needs.functional.result == 'success' || needs.functional.result == 'skipped') && 
-          (needs.hibernate5Functional.result == 'success' || needs.hibernate5Functional.result == 'skipped') && 
           (needs.mongodbFunctional.result == 'success' || needs.mongodbFunctional.result == 'skipped') 
       }}
     runs-on: ubuntu-24.04
