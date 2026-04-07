@@ -54,7 +54,7 @@ public class GrailsIncrementGenerator extends IncrementGenerator {
         initialize(buildSqlContext(context));
     }
 
-    private Properties buildParams(
+    protected Properties buildParams(
             GeneratorCreationContext context,
             HibernateSimpleIdentity mappedId,
             GrailsHibernatePersistentEntity domainClass,
@@ -76,7 +76,7 @@ public class GrailsIncrementGenerator extends IncrementGenerator {
         return params;
     }
 
-    private String resolveColumnName(GeneratorCreationContext context, HibernateSimpleIdentity mappedId) {
+    protected String resolveColumnName(GeneratorCreationContext context, HibernateSimpleIdentity mappedId) {
         String propertyName = context.getProperty().getName();
         if (propertyName != null && !propertyName.contains(".")) {
             return propertyName;
@@ -87,7 +87,7 @@ public class GrailsIncrementGenerator extends IncrementGenerator {
                 .orElse("id");
     }
 
-    private SqlStringGenerationContext buildSqlContext(GeneratorCreationContext context) {
+    protected SqlStringGenerationContext buildSqlContext(GeneratorCreationContext context) {
         var database = context.getDatabase();
         var physicalName = database.getDefaultNamespace().getPhysicalName();
 
