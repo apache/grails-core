@@ -213,6 +213,95 @@ class PredicateGeneratorSpec extends HibernateGormDatastoreSpec {
         predicates.length == 1
         predicates[0] instanceof org.hibernate.query.sqm.tree.predicate.SqmInListPredicate
     }
+
+    def "test getPredicates with DistinctProjection returns conjunction"() {
+        given:
+        List criteria = [new Query.DistinctProjection()]
+
+        when:
+        def predicates = predicateGenerator.getPredicates(cb, query, root, criteria, fromProvider, personEntity)
+
+        then:
+        predicates.length == 1
+    }
+
+    def "test getPredicates with NotExists criterion"() {
+        given:
+        List criteria = [new Query.NotExists(new DetachedCriteria(PredicateGeneratorSpecPet).eq("name", "Lucky"))]
+
+        when:
+        def predicates = predicateGenerator.getPredicates(cb, query, root, criteria, fromProvider, personEntity)
+
+        then:
+        predicates.length == 1
+    }
+
+    def "test getPredicates with IsNull and IsNotNull criteria"() {
+        given:
+        List criteria = [
+            new Query.IsNull("firstName"),
+            new Query.IsNotNull("lastName")
+        ]
+
+        when:
+        def predicates = predicateGenerator.getPredicates(cb, query, root, criteria, fromProvider, personEntity)
+
+        then:
+        predicates.length == 2
+    }
+
+    def "test getPredicates with IsEmpty and IsNotEmpty criteria"() {
+        given:
+        List criteria = [
+            new Query.IsEmpty("pets"),
+            new Query.IsNotEmpty("pets")
+        ]
+
+        when:
+        def predicates = predicateGenerator.getPredicates(cb, query, root, criteria, fromProvider, personEntity)
+
+        then:
+        predicates.length == 2
+    }
+
+    def "test getPredicates with NotEqualsProperty comparison"() {
+        given:
+        List criteria = [new Query.NotEqualsProperty("firstName", "lastName")]
+
+        when:
+        def predicates = predicateGenerator.getPredicates(cb, query, root, criteria, fromProvider, personEntity)
+
+        then:
+        predicates.length == 1
+    }
+
+    def "test getPredicates with LessThanProperty and GreaterThanProperty comparisons"() {
+        given:
+        List criteria = [
+            new Query.LessThanProperty("age", "age"),
+            new Query.GreaterThanProperty("age", "age"),
+            new Query.LessThanEqualsProperty("age", "age"),
+            new Query.GreaterThanEqualsProperty("age", "age")
+        ]
+
+        when:
+        def predicates = predicateGenerator.getPredicates(cb, query, root, criteria, fromProvider, personEntity)
+
+        then:
+        predicates.length == 4
+    }
+
+    def "test getPredicates throws for unsupported criterion"() {
+        given:
+        def unsupportedCriterion = new Query.Criterion() {} // anonymous implementation
+        List<Query.QueryElement> criteria = [unsupportedCriterion]
+
+        when:
+        predicateGenerator.getPredicates(cb, query, root, criteria, fromProvider, personEntity)
+
+        then:
+        thrown(IllegalArgumentException)
+    }
 }
 
 @Entity
