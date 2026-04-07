@@ -125,4 +125,65 @@ class TableSpec extends Specification {
         table.catalog == null
         table.schema == null
     }
+
+    // ── JoinTable ──────────────────────────────────────────────────────────────
+
+    def "JoinTable extends Table and inherits name/schema fields"() {
+        when:
+        JoinTable jt = new JoinTable(name: 'join_table', schema: 'public')
+
+        then:
+        jt.name == 'join_table'
+        jt.schema == 'public'
+        jt.key == null
+        jt.column == null
+    }
+
+    def "JoinTable key(String) sets key column name and returns this"() {
+        given:
+        JoinTable jt = new JoinTable()
+
+        when:
+        def result = jt.key('owner_id')
+
+        then:
+        result.is(jt)
+        jt.key.name == 'owner_id'
+    }
+
+    def "JoinTable column(String) sets column name and returns this"() {
+        given:
+        JoinTable jt = new JoinTable()
+
+        when:
+        def result = jt.column('item_id')
+
+        then:
+        result.is(jt)
+        jt.column.name == 'item_id'
+    }
+
+    def "JoinTable key(Closure) configures a ColumnConfig"() {
+        given:
+        JoinTable jt = new JoinTable()
+
+        when:
+        jt.key { name 'fk_id'; length 20 }
+
+        then:
+        jt.key.name == 'fk_id'
+        jt.key.length == 20
+    }
+
+    def "JoinTable column(Closure) configures a ColumnConfig"() {
+        given:
+        JoinTable jt = new JoinTable()
+
+        when:
+        jt.column { name 'child_id'; sqlType 'bigint' }
+
+        then:
+        jt.column.name == 'child_id'
+        jt.column.sqlType == 'bigint'
+    }
 }
