@@ -387,7 +387,7 @@ public class HibernateSession extends AbstractAttributeStoringSession implements
             CriteriaQuery<?> criteriaQuery = criteriaBuilder.createQuery(type);
             final Root<?> root = criteriaQuery.from(type);
             final String id = persistentEntity.getIdentity().getName();
-            criteriaQuery = criteriaQuery.where(criteriaBuilder.in(root.get(id).in(getIterableAsCollection(keys))));
+            criteriaQuery = criteriaQuery.where(root.get(id).in(getIterableAsCollection(keys)));
             final org.hibernate.query.Query<?> jpaQuery = session.createQuery(criteriaQuery);
             getHibernateTemplate().applySettings(jpaQuery);
 
