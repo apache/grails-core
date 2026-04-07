@@ -60,6 +60,14 @@ class HibernateBasicPropertySpec extends HibernateGormDatastoreSpec {
         mockCollection.getFetchMode() == property.getFetchMode()
         mockCollection.getBatchSize() == property.getBatchSize()
     }
+    def "getElementTypeName returns the Hibernate type name for the element type"() {
+        given:
+        def personEntity = (HibernatePersistentEntity) getMappingContext().getPersistentEntity(HBPPerson.name)
+        def property = (HibernateBasicProperty) personEntity.getPropertyByName("tags")
+
+        expect:
+        property.getElementTypeName() == 'java.lang.String'
+    }
 }
 
 @Entity

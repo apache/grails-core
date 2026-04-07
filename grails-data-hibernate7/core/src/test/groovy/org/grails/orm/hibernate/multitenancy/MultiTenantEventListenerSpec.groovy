@@ -26,6 +26,7 @@ import org.grails.datastore.mapping.model.types.TenantId
 import org.grails.datastore.mapping.multitenancy.MultiTenantCapableDatastore
 import org.grails.datastore.mapping.query.Query
 import org.grails.datastore.mapping.query.event.PreQueryEvent
+import org.grails.datastore.mapping.multitenancy.exceptions.TenantException
 import org.grails.orm.hibernate.HibernateDatastore
 import org.springframework.context.ApplicationEvent
 import spock.lang.Specification
@@ -206,11 +207,11 @@ class MultiTenantEventListenerSpec extends Specification {
         0 * entityAccess.setProperty(_, _)
     }
 
-    // ─── onApplicationEvent: ValidationEvent — multi-tenant, no resolver → no-op ─
+    // ─── onApplicationEvent: PreInsertEvent — multi-tenant, resolver returns non-null ─
 
-    void "onApplicationEvent ValidationEvent on multi-tenant entity does not set tenantId when resolver returns null"() {
-        given:
-        def resolver     = Mock(org.grails.datastore.mapping.multitenancy.TenantResolver) { resolveTenantIdentifier() >> null }
+    void "onApplicationEvent PreInsertEvent on multi-tenant entity sets tenantId when resolver returns non-null"() {
+        given: "resolver returns a valid tenant id"
+        def resolver     = Mock(org.grails.datastore.mapping.multitenancy.TenantResolver) { resolveTenantIdentifier() >> "tenant1" }
         def tenantId     = Mock(TenantId) { getName() >> "tenantId" }
         def entity       = Mock(PersistentEntity) {
             isMultiTenant() >> true
@@ -218,12 +219,34 @@ class MultiTenantEventListenerSpec extends Specification {
         }
         def entityAccess = Mock(org.grails.datastore.mapping.engine.EntityAccess)
         def datastore    = Mock(HibernateDatastore) { getTenantResolver() >> resolver }
-        def event        = new ValidationEvent(datastore, entity, entityAccess)
+        def event        = new PreInsertEvent(datastore, entity, entityAccess)
 
         when:
         listener.onApplicationEvent(event)
 
         then:
-        0 * entityAccess.setProperty(_, _)
+        1 * entityAccess.setProperty("tenantId", "tenant1")
+    }
+
+    void "onApplicationEvent PreInsertEvent throws TenantException when setProperty fails"() {
+        given: "resolver returns a valid tenant id but setProperty throws"
+        def resolver     = Mock(org.grails.datastore.mapping.multitenancy.TenantResolver) { resolveTenantIdentifier() >> "tenant1" }
+        def tenantId     = Mock(TenantId) { getName() >> "tenantId" }
+        def entity       = Mock(PersistentEntity) {
+            isMultiTenant() >> true
+            getTenantId()   >> tenantId
+        }
+        def entityAccess = Mock(org.grails.datastore.mapping.engine.EntityAccess) {
+            setProperty(_, _) >> { throw new IllegalArgumentException("type mismatch") }
+        }
+        def datastore    = Mock(HibernateDatastore) { getTenantResolver() >> resolver }
+        def event        = new PreInsertEvent(datastore, entity, entityAccess)
+
+        when:
+        listener.onApplicationEvent(event)
+
+        then:
+        thrown(TenantException)
     }
 }
+

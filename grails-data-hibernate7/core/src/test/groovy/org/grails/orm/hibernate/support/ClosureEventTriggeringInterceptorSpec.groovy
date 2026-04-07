@@ -37,6 +37,7 @@ import org.grails.datastore.mapping.engine.event.PreUpdateEvent
 import org.hibernate.engine.spi.SessionFactoryImplementor
 import org.hibernate.event.service.spi.EventListenerRegistry
 import org.hibernate.event.spi.EventType
+import org.hibernate.jpa.event.spi.CallbackRegistry
 import org.springframework.context.ApplicationEvent
 
 /**
@@ -303,11 +304,29 @@ class ClosureEventTriggeringInterceptorSpec extends HibernateGormDatastoreSpec {
         !captured.isEmpty()
         captured[0] instanceof InterceptorBook
     }
+
+    // -------------------------------------------------------------------------
+    // injectCallbackRegistry – delegates without throwing
+    // -------------------------------------------------------------------------
+
+    void "injectCallbackRegistry delegates to persistEventListener without throwing"() {
+        given:
+        def sfi = sessionFactory.unwrap(SessionFactoryImplementor)
+        def registry = sfi.serviceRegistry.getService(EventListenerRegistry)
+        def interceptor = registry.getEventListenerGroup(EventType.PRE_INSERT)
+                .listeners()
+                .find { it instanceof ClosureEventTriggeringInterceptor } as ClosureEventTriggeringInterceptor
+        def callbackRegistry = Mock(CallbackRegistry)
+
+        when:
+        interceptor.injectCallbackRegistry(callbackRegistry)
+
+        then:
+        noExceptionThrown()
+    }
+
 }
 
-// ---------------------------------------------------------------------------
-// Domain classes
-// ---------------------------------------------------------------------------
 
 @Entity
 class InterceptorBook implements HibernateEntity<InterceptorBook> {
