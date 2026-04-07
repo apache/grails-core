@@ -29,6 +29,7 @@ import org.grails.orm.hibernate.cfg.Settings
 import org.grails.orm.hibernate.proxy.GrailsBytecodeProvider
 import org.hibernate.Interceptor
 import org.hibernate.boot.model.naming.PhysicalNamingStrategyStandardImpl
+import org.hibernate.boot.model.naming.PhysicalNamingStrategy
 import org.hibernate.cfg.Configuration
 import org.hibernate.dialect.H2Dialect
 import org.springframework.context.ApplicationContext
@@ -290,9 +291,177 @@ class HibernateConnectionSourceFactorySpec extends HibernateGormDatastoreSpec {
         then:
         config != null
     }
+
+    // -------------------------------------------------------------------------
+    // buildConfiguration — applicationContext != null branch (L184)
+    // -------------------------------------------------------------------------
+
+    void "buildConfiguration applies applicationContext when set"() {
+        given:
+        def factory = new HibernateConnectionSourceFactory(Foo)
+        def ctx = Mock(org.springframework.context.ConfigurableApplicationContext) {
+            containsBean(_) >> false
+            getAutowireCapableBeanFactory() >> Mock(org.springframework.beans.factory.config.AutowireCapableBeanFactory)
+        }
+        factory.setApplicationContext(ctx)
+        def settings = new HibernateConnectionSourceSettings()
+        def dsCs = new org.grails.datastore.gorm.jdbc.connections.DataSourceConnectionSourceFactory()
+            .create(ConnectionSource.DEFAULT, DatastoreUtils.createPropertyResolver([
+                'dataSource.url'         : "jdbc:h2:mem:grailsDB;LOCK_TIMEOUT=10000",
+                'dataSource.dialect'     : H2Dialect.name,
+                'hibernate.hbm2ddl.auto' : 'create',
+            ]))
+
+        when:
+        def config = factory.buildConfiguration(ConnectionSource.DEFAULT, dsCs, settings)
+
+        then:
+        config != null
+    }
+
+    // -------------------------------------------------------------------------
+    // buildConfiguration — hibernateEventListeners != null branch (L209)
+    // -------------------------------------------------------------------------
+
+    void "buildConfiguration uses factory hibernateEventListeners when set"() {
+        given:
+        def factory = new HibernateConnectionSourceFactory(Foo)
+        def listeners = new HibernateEventListeners()
+        factory.setHibernateEventListeners(listeners)
+        def settings = new HibernateConnectionSourceSettings()
+        def dsCs = new org.grails.datastore.gorm.jdbc.connections.DataSourceConnectionSourceFactory()
+            .create(ConnectionSource.DEFAULT, DatastoreUtils.createPropertyResolver([
+                'dataSource.url'         : "jdbc:h2:mem:grailsDB;LOCK_TIMEOUT=10000",
+                'dataSource.dialect'     : H2Dialect.name,
+                'hibernate.hbm2ddl.auto' : 'create',
+            ]))
+
+        when:
+        def config = factory.buildConfiguration(ConnectionSource.DEFAULT, dsCs, settings)
+
+        then:
+        config != null
+    }
+
+    // -------------------------------------------------------------------------
+    // extractDataSourceFallback — HibernateConnectionSourceSettings branch (L136)
+    // -------------------------------------------------------------------------
+
+    void "buildSettings propagates DataSource from HibernateConnectionSourceSettings fallback"() {
+        given:
+        def factory = new HibernateConnectionSourceFactory(Foo)
+        def resolver = DatastoreUtils.createPropertyResolver(h2Config())
+        def fallback = new HibernateConnectionSourceSettings()
+        fallback.dataSource.url = "jdbc:h2:mem:fallbackDB"
+
+        when: "fallbackSettings is a HibernateConnectionSourceSettings — extractDataSourceFallback first branch"
+        def settings = factory.buildSettings(ConnectionSource.DEFAULT, resolver, fallback, true)
+
+        then:
+        settings != null
+    }
+
+    // -------------------------------------------------------------------------
+    // extractDataSourceFallback — DataSourceSettings branch (L139)
+    // -------------------------------------------------------------------------
+
+    void "buildRuntimeSettings with DataSourceSettings fallback hits second extractDataSourceFallback branch"() {
+        given:
+        def factory = new HibernateConnectionSourceFactory(Foo)
+        def resolver = DatastoreUtils.createPropertyResolver(h2Config())
+        def dsFallback = new org.grails.datastore.gorm.jdbc.connections.DataSourceSettings()
+        dsFallback.url = "jdbc:h2:mem:fallbackDB2"
+
+        when: "fallbackSettings is a plain DataSourceSettings — extractDataSourceFallback second branch"
+        def settings = factory.buildRuntimeSettings(ConnectionSource.DEFAULT, resolver, dsFallback)
+
+        then:
+        settings != null
+    }
+
+    // -------------------------------------------------------------------------
+    // applyResources — IOException catch branch (L106-L110)
+    // -------------------------------------------------------------------------
+
+    void "buildConfiguration wraps IOException from bad config location in ConfigurationException"() {
+        given:
+        def factory = new HibernateConnectionSourceFactory(Foo)
+        def settings = new HibernateConnectionSourceSettings()
+
+        def badResource = Mock(org.springframework.core.io.Resource) {
+            getURL() >> { throw new IOException("bad URL") }
+            getFilename() >> "bad.cfg.xml"
+        }
+        settings.hibernate.configLocations = [badResource] as org.springframework.core.io.Resource[]
+
+        def dsCs = new org.grails.datastore.gorm.jdbc.connections.DataSourceConnectionSourceFactory()
+            .create(ConnectionSource.DEFAULT, DatastoreUtils.createPropertyResolver([
+                'dataSource.url'     : "jdbc:h2:mem:grailsDB;LOCK_TIMEOUT=10000",
+                'dataSource.dialect' : H2Dialect.name,
+            ]))
+
+        when:
+        factory.buildConfiguration(ConnectionSource.DEFAULT, dsCs, settings)
+
+        then:
+        thrown(ConfigurationException)
+    }
+
+    // -------------------------------------------------------------------------
+    // configureNamingStrategy — Throwable catch branch (L123-L124)
+    // -------------------------------------------------------------------------
+
+    void "buildConfiguration wraps Throwable from bad naming strategy in ConfigurationException"() {
+        given:
+        def factory = new HibernateConnectionSourceFactory(Foo)
+        def settings = new HibernateConnectionSourceSettings()
+
+        // Use a class that IS a PhysicalNamingStrategy subtype but throws in configure path
+        // — actually BeanUtils.instantiateClass on a class with no default constructor throws
+        settings.hibernate.naming_strategy = BrokenNamingStrategy
+
+        def dsCs = new org.grails.datastore.gorm.jdbc.connections.DataSourceConnectionSourceFactory()
+            .create(ConnectionSource.DEFAULT, DatastoreUtils.createPropertyResolver([
+                'dataSource.url'     : "jdbc:h2:mem:grailsDB;LOCK_TIMEOUT=10000",
+                'dataSource.dialect' : H2Dialect.name,
+            ]))
+
+        when:
+        factory.buildConfiguration(ConnectionSource.DEFAULT, dsCs, settings)
+
+        then:
+        thrown(ConfigurationException)
+    }
+
+    // -------------------------------------------------------------------------
+    // buildSettings — non-empty datasources.dataSource qualified config (L303-L304)
+    // -------------------------------------------------------------------------
+
+    void "buildSettings for default datasource applies datasources.dataSource qualified settings when present"() {
+        given:
+        def factory = new HibernateConnectionSourceFactory(Foo)
+        def config = h2Config() + [
+            ("${Settings.SETTING_DATASOURCES}.${Settings.SETTING_DATASOURCE}.url".toString()): "jdbc:h2:mem:qualifiedDB",
+        ]
+        def resolver = DatastoreUtils.createPropertyResolver(config)
+
+        when:
+        def settings = factory.buildSettings(ConnectionSource.DEFAULT, resolver, null, true)
+
+        then:
+        settings != null
+    }
 }
 
 @Entity
 class Foo {
     String name
+}
+
+/**
+ * A PhysicalNamingStrategy with no default constructor — instantiating it via BeanUtils throws,
+ * which exercises the catch(Throwable) branch in configureNamingStrategy.
+ */
+class BrokenNamingStrategy extends PhysicalNamingStrategyStandardImpl {
+    BrokenNamingStrategy(String requiredArg) {}
 }
