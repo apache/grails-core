@@ -174,4 +174,47 @@ class GrailsSessionContextSpec extends HibernateGormDatastoreSpec {
         cleanup:
         if (session?.isOpen()) session.close()
     }
+
+    void "test createSession() sets FlushMode MANUAL when transaction is read-only"() {
+        given:
+        SessionFactoryImplementor sessionFactory = manager.hibernateDatastore.sessionFactory as SessionFactoryImplementor
+        GrailsSessionContext sessionContext = new GrailsSessionContext(sessionFactory)
+        sessionContext.allowCreate = true
+
+        TransactionSynchronizationManager.initSynchronization()
+        TransactionSynchronizationManager.setCurrentTransactionReadOnly(true)
+
+        when:
+        Session session = sessionContext.currentSession()
+
+        then:
+        session != null
+        session.getHibernateFlushMode() == FlushMode.MANUAL
+
+        cleanup:
+        if (session?.isOpen()) session.close()
+        TransactionSynchronizationManager.setCurrentTransactionReadOnly(false)
+    }
+
+    void "test currentSession() with already-synchronized SessionHolder skips re-registration"() {
+        given:
+        SessionFactoryImplementor sessionFactory = manager.hibernateDatastore.sessionFactory as SessionFactoryImplementor
+        GrailsSessionContext sessionContext = new GrailsSessionContext(sessionFactory)
+        Session session = sessionFactory.openSession()
+        SessionHolder holder = new SessionHolder(session)
+        holder.setSynchronizedWithTransaction(true)
+
+        TransactionSynchronizationManager.initSynchronization()
+        TransactionSynchronizationManager.bindResource(sessionFactory, holder)
+
+        when:
+        Session current = sessionContext.currentSession()
+
+        then:
+        current == session
+        holder.isSynchronizedWithTransaction()
+
+        cleanup:
+        if (session.isOpen()) session.close()
+    }
 }
