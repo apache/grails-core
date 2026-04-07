@@ -163,6 +163,73 @@ class HibernatePersistentPropertySpec extends HibernateGormDatastoreSpec {
         parts.every { it instanceof HibernatePersistentProperty }
         parts*.name.sort() == ["code", "name"]
     }
+
+    def "test isEnumType on enum and non-enum properties"() {
+        given:
+        def entity = (HibernatePersistentEntity) getMappingContext().getPersistentEntity(EnumEntity.name)
+        def enumProp = (HibernatePersistentProperty) entity.getPropertyByName("type")
+        def stringProp = (HibernatePersistentProperty) entity.getPropertyByName("name")
+
+        expect:
+        enumProp.isEnumType()
+        !stringProp.isEnumType()
+    }
+
+    def "test isEmbedded returns false for standard property"() {
+        given:
+        def entity = (HibernatePersistentEntity) getMappingContext().getPersistentEntity(LazyBook.name)
+        def property = (HibernatePersistentProperty) entity.getPropertyByName("title")
+
+        expect:
+        !property.isEmbedded()
+    }
+
+    def "test isSerializableType returns false for standard property"() {
+        given:
+        def entity = (HibernatePersistentEntity) getMappingContext().getPersistentEntity(LazyBook.name)
+        def property = (HibernatePersistentProperty) entity.getPropertyByName("title")
+
+        expect:
+        !property.isSerializableType()
+    }
+
+    def "test isValidHibernateOneToOne and isValidHibernateManyToOne return false"() {
+        given:
+        def entity = (HibernatePersistentEntity) getMappingContext().getPersistentEntity(LazyBook.name)
+        def property = (HibernatePersistentProperty) entity.getPropertyByName("title")
+
+        expect:
+        !property.isValidHibernateOneToOne()
+        !property.isValidHibernateManyToOne()
+    }
+
+    def "test getUserType returns null for property without custom type"() {
+        given:
+        def entity = (HibernatePersistentEntity) getMappingContext().getPersistentEntity(LazyBook.name)
+        def property = (HibernatePersistentProperty) entity.getPropertyByName("title")
+
+        expect:
+        property.getUserType() == null
+        !property.isUserButNotCollectionType()
+    }
+
+    def "test getMappedColumnName returns null for unmapped column"() {
+        given:
+        def entity = (HibernatePersistentEntity) getMappingContext().getPersistentEntity(LazyBook.name)
+        def property = (HibernatePersistentProperty) entity.getPropertyByName("title")
+
+        expect:
+        property.getMappedColumnName() == null
+    }
+
+    def "test isJoinKeyMapped returns false for standard property"() {
+        given:
+        def entity = (HibernatePersistentEntity) getMappingContext().getPersistentEntity(LazyBook.name)
+        def property = (HibernatePersistentProperty) entity.getPropertyByName("title")
+
+        expect:
+        !property.isJoinKeyMapped()
+    }
 }
 
 @Entity
