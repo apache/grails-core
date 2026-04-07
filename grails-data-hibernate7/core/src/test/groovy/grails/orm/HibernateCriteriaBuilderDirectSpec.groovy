@@ -19,10 +19,12 @@
 
 package grails.orm
 
+import grails.gorm.DetachedCriteria
 import grails.gorm.annotation.Entity
 import grails.gorm.specs.HibernateGormDatastoreSpec
 import jakarta.persistence.criteria.JoinType
 import org.grails.datastore.mapping.query.Query
+import org.grails.datastore.mapping.query.api.Criteria
 import org.hibernate.Session
 import org.grails.orm.hibernate.support.hibernate7.SessionHolder
 import org.springframework.transaction.support.TransactionSynchronizationManager
@@ -671,6 +673,231 @@ class HibernateCriteriaBuilderDirectSpec extends HibernateGormDatastoreSpec {
         if (nativeSession?.isOpen()) {
             nativeSession.close()
         }
+    }
+
+    // ── Subquery *All / *Some ─────────────────────────────────────────────────
+
+    def "eqAll(String, Closure) builds a DetachedCriteria and delegates"() {
+        given:
+        def subquery = new DetachedCriteria<>(DirectAccount).build { projections { property('balance') } }
+        expect: builder.eqAll('balance', subquery).is(builder)
+    }
+
+    def "eqAll(String, Closure) closure variant delegates via DetachedCriteria"() {
+        expect: builder.eqAll('balance', { projections { property('balance') } }).is(builder)
+    }
+
+    def "gtAll(String, QueryableCriteria) delegates and returns this"() {
+        given:
+        def subquery = new DetachedCriteria<>(DirectAccount).build { projections { property('balance') } }
+        expect: builder.gtAll('balance', subquery).is(builder)
+    }
+
+    def "gtAll(String, Closure) closure variant delegates via DetachedCriteria"() {
+        expect: builder.gtAll('balance', { projections { property('balance') } }).is(builder)
+    }
+
+    def "ltAll(String, QueryableCriteria) delegates and returns this"() {
+        given:
+        def subquery = new DetachedCriteria<>(DirectAccount).build { projections { property('balance') } }
+        expect: builder.ltAll('balance', subquery).is(builder)
+    }
+
+    def "ltAll(String, Closure) closure variant delegates via DetachedCriteria"() {
+        expect: builder.ltAll('balance', { projections { property('balance') } }).is(builder)
+    }
+
+    def "geAll(String, QueryableCriteria) delegates and returns this"() {
+        given:
+        def subquery = new DetachedCriteria<>(DirectAccount).build { projections { property('balance') } }
+        expect: builder.geAll('balance', subquery).is(builder)
+    }
+
+    def "geAll(String, Closure) closure variant delegates via DetachedCriteria"() {
+        expect: builder.geAll('balance', { projections { property('balance') } }).is(builder)
+    }
+
+    def "leAll(String, QueryableCriteria) delegates and returns this"() {
+        given:
+        def subquery = new DetachedCriteria<>(DirectAccount).build { projections { property('balance') } }
+        expect: builder.leAll('balance', subquery).is(builder)
+    }
+
+    def "leAll(String, Closure) closure variant delegates via DetachedCriteria"() {
+        expect: builder.leAll('balance', { projections { property('balance') } }).is(builder)
+    }
+
+    def "gtSome(String, QueryableCriteria) is a no-op and returns this"() {
+        given:
+        def subquery = new DetachedCriteria<>(DirectAccount).build { projections { property('balance') } }
+        expect: builder.gtSome('balance', subquery).is(builder)
+    }
+
+    def "gtSome(String, Closure) closure variant delegates via DetachedCriteria"() {
+        expect: builder.gtSome('balance', { projections { property('balance') } }).is(builder)
+    }
+
+    def "geSome(String, QueryableCriteria) delegates and returns this"() {
+        given:
+        def subquery = new DetachedCriteria<>(DirectAccount).build { projections { property('balance') } }
+        expect: builder.geSome('balance', subquery).is(builder)
+    }
+
+    def "geSome(String, Closure) closure variant delegates via DetachedCriteria"() {
+        expect: builder.geSome('balance', { projections { property('balance') } }).is(builder)
+    }
+
+    def "ltSome(String, QueryableCriteria) delegates and returns this"() {
+        given:
+        def subquery = new DetachedCriteria<>(DirectAccount).build { projections { property('balance') } }
+        expect: builder.ltSome('balance', subquery).is(builder)
+    }
+
+    def "ltSome(String, Closure) closure variant delegates via DetachedCriteria"() {
+        expect: builder.ltSome('balance', { projections { property('balance') } }).is(builder)
+    }
+
+    def "leSome(String, QueryableCriteria) delegates and returns this"() {
+        given:
+        def subquery = new DetachedCriteria<>(DirectAccount).build { projections { property('balance') } }
+        expect: builder.leSome('balance', subquery).is(builder)
+    }
+
+    def "leSome(String, Closure) closure variant delegates via DetachedCriteria"() {
+        expect: builder.leSome('balance', { projections { property('balance') } }).is(builder)
+    }
+
+    // ── Subquery in / notIn / exists ─────────────────────────────────────────
+
+    def "in(String, QueryableCriteria) delegates to inList and returns this"() {
+        given:
+        def subquery = new DetachedCriteria<>(DirectAccount).build { projections { property('id') } }
+        expect: builder.in('id', subquery).is(builder)
+    }
+
+    def "in(String, Closure) closure variant delegates and returns this"() {
+        expect: builder.in('id', { projections { property('id') } }).is(builder)
+    }
+
+    def "inList(String, QueryableCriteria) delegates and returns this"() {
+        given:
+        def subquery = new DetachedCriteria<>(DirectAccount).build { projections { property('id') } }
+        expect: builder.inList('id', subquery).is(builder)
+    }
+
+    def "inList(String, Closure) closure variant delegates and returns this"() {
+        expect: builder.inList('id', { projections { property('id') } }).is(builder)
+    }
+
+    def "notIn(String, QueryableCriteria) delegates and returns this"() {
+        given:
+        def subquery = new DetachedCriteria<>(DirectAccount).build { projections { property('id') } }
+        expect: builder.notIn('id', subquery).is(builder)
+    }
+
+    def "notIn(String, Closure) closure variant delegates and returns this"() {
+        expect: builder.notIn('id', { projections { property('id') } }).is(builder)
+    }
+
+    def "exists(QueryableCriteria) delegates and returns this"() {
+        given:
+        def subquery = new DetachedCriteria<>(DirectAccount).build { projections { property('id') } }
+        expect: builder.exists(subquery).is(builder)
+    }
+
+    def "notExists(QueryableCriteria) delegates and returns this"() {
+        given:
+        def subquery = new DetachedCriteria<>(DirectAccount).build { projections { property('id') } }
+        expect: builder.notExists(subquery).is(builder)
+    }
+
+    // ── Logical combinators ───────────────────────────────────────────────────
+
+    def "and(Closure) delegates and returns this"() {
+        expect: builder.and({ eq('firstName', 'Alice') }).is(builder)
+    }
+
+    def "not(Closure) delegates and returns this"() {
+        expect: builder.not({ eq('firstName', 'Alice') }).is(builder)
+    }
+
+    // ── Projection aliases ────────────────────────────────────────────────────
+
+    def "count(String) adds a count projection without throwing"() {
+        when: builder.count('balance')
+        then: noExceptionThrown()
+    }
+
+    def "count(String, String) adds a count projection with alias without throwing"() {
+        when: builder.count('balance', 'balanceCount')
+        then: noExceptionThrown()
+    }
+
+    def "countDistinct(String, String) adds projection with alias and returns this"() {
+        expect: builder.countDistinct('firstName', 'nameCount').is(builder)
+    }
+
+    def "groupProperty(String, String) adds projection with alias and returns this"() {
+        expect: builder.groupProperty('lastName', 'ln').is(builder)
+    }
+
+    def "max(String, String) adds projection with alias and returns this"() {
+        expect: builder.max('balance', 'maxBal').is(builder)
+    }
+
+    def "min(String, String) adds projection with alias and returns this"() {
+        expect: builder.min('balance', 'minBal').is(builder)
+    }
+
+    def "sum(String, String) adds projection with alias and returns this"() {
+        expect: builder.sum('balance', 'totalBal').is(builder)
+    }
+
+    // ── Utilities ────────────────────────────────────────────────────────────
+
+    def "convertFromInt 1 maps to LEFT join"() {
+        expect: builder.convertFromInt(1) == JoinType.LEFT
+    }
+
+    def "convertFromInt 2 maps to RIGHT join"() {
+        expect: builder.convertFromInt(2) == JoinType.RIGHT
+    }
+
+    def "convertFromInt 0 defaults to INNER join"() {
+        expect: builder.convertFromInt(0) == JoinType.INNER
+    }
+
+    def "isParticipate returns true when session was already bound at construction time"() {
+        expect: builder.isParticipate()
+    }
+
+    def "fetchMode(String, SELECT) applies select strategy without throwing"() {
+        when: builder.fetchMode('transactions', org.hibernate.FetchMode.SELECT)
+        then: noExceptionThrown()
+    }
+
+    def "getClassForAssociationType with PluralAttribute returns element java type"() {
+        given:
+        def attr = manager.hibernateDatastore.sessionFactory.metamodel.entity(DirectAccount).getAttribute('transactions')
+
+        expect:
+        builder.getClassForAssociationType(attr) == DirectTransaction
+    }
+
+    def "getClassForAssociationType with SingularAttribute returns attribute java type"() {
+        given:
+        def attr = manager.hibernateDatastore.sessionFactory.metamodel.entity(DirectAccount).getAttribute('firstName')
+
+        expect:
+        builder.getClassForAssociationType(attr) == String
+    }
+
+    void "throwRuntimeException disconnects session and re-throws"() {
+        when:
+        builder.throwRuntimeException(new RuntimeException("test error"))
+
+        then:
+        thrown(RuntimeException)
     }
 }
 

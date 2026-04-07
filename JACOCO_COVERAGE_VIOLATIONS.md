@@ -24,7 +24,7 @@ Generated on: 2026-04-06 16:49:20
 | org.grails.orm.hibernate.cfg.DiscriminatorConfig | 72.22% | X
 | org.grails.orm.hibernate.GrailsHibernateTemplate | 72.43% | R
 | org.grails.orm.hibernate.connections.HibernateConnectionSourceSettingsBuilder | 72.81% | X
-| grails.orm.HibernateCriteriaBuilder | 74.43% |
+| grails.orm.HibernateCriteriaBuilder | 74.43% | X |
 | org.grails.orm.hibernate.support.SoftKey | 74.55% | X
 | org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernateToManyCollectionProperty | 75.00% | X
 | org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernateMappingFactory | 75.14% | X
