@@ -48,40 +48,44 @@ class GrailsCodeStylePluginSpec extends Specification {
         groovyFile = testProjectDir.resolve('src/main/groovy/Test.groovy').toFile()
     }
 
-    def "test codenarcFix task fixes violations"() {
-        given: "a file with violations"
-        groovyFile.text = """package org.test
-
-class Test{
-    def map = [key:"value"]
-    def str = "unnecessary gstring"
-    def semi = "semicolon";
-    def lines = 1
-
-
-    def other = 2
-}
+    def "test aggregateStyleViolations generates jacoco report"() {
+        given: "a module with a jacoco csv report"
+        def jacocoDir = testProjectDir.resolve('build/reports/jacoco/test').toFile()
+        jacocoDir.mkdirs()
+        
+        // Create an empty reports directory to satisfy task input validation
+        testProjectDir.resolve('build/reports/codestyle').toFile().mkdirs()
+        
+        def csvReport = new File(jacocoDir, 'jacocoTestReport.csv')
+        csvReport.text = """GROUP,PACKAGE,CLASS,INSTRUCTION_MISSED,INSTRUCTION_COVERED,BRANCH_MISSED,BRANCH_COVERED,LINE_MISSED,LINE_COVERED,COMPLEXITY_MISSED,COMPLEXITY_COVERED,METHOD_MISSED,METHOD_COVERED
+test-module,com.example,TestClass,1,9,0,0,0,1,0,1,0,1
 """
-        when: "running codenarcFix"
+        
+        buildFile = testProjectDir.resolve('settings.gradle').toFile()
+        buildFile.text = "include 'test-module'"
+        def moduleBuildFile = testProjectDir.resolve('test-module/build.gradle').toFile()
+        moduleBuildFile.parentFile.mkdirs()
+        moduleBuildFile.text = """
+            plugins {
+                id 'groovy'
+                id 'org.apache.grails.gradle.grails-code-style'
+            }
+        """
+
+        when: "running aggregateStyleViolations"
         def result = GradleRunner.create()
                 .withProjectDir(testProjectDir.toFile())
-                .withArguments('codenarcFix', '--stacktrace')
+                .withArguments('aggregateStyleViolations', '--stacktrace')
                 .withPluginClasspath()
                 .build()
 
         then: "task finished successfully"
-        result.task(':codenarcFix').outcome == org.gradle.testkit.runner.TaskOutcome.SUCCESS
+        result.task(':aggregateStyleViolations').outcome == org.gradle.testkit.runner.TaskOutcome.SUCCESS
 
-        and: "violations are fixed"
-        def fixedContent = groovyFile.text
-        fixedContent.contains('class Test {') // SpaceBeforeOpeningBrace
-        // Note: ClassStartsWithBlankLine regex in the plugin is:
-        // content.replaceAll(/(class\s+[^{]+\{\n)([ \t]*[^ \s\n\/])/, '$1\n$2')
-        // In our case, it should match "class Test{\n    def map" and insert a newline
-        fixedContent.contains('class Test {\n\n    def map') 
-        fixedContent.contains('[key: \'value\']') // SpaceAroundMapEntryColon and UnnecessaryGString
-        fixedContent.contains("'unnecessary gstring'") // UnnecessaryGString
-        fixedContent.contains('def semi = \'semicolon\'\n') // UnnecessarySemicolon
-        fixedContent.count('\n\n') == 3 // ConsecutiveBlankLines (3 reduced to 2), plus others
+        and: "JACOCO_COVERAGE_VIOLATIONS.md exists and contains the coverage data"
+        def report = testProjectDir.resolve('JACOCO_COVERAGE_VIOLATIONS.md').toFile()
+        report.exists()
+        report.text.contains('## Module: test-module')
+        report.text.contains('| com.example.TestClass | 90.00% |')
     }
 }

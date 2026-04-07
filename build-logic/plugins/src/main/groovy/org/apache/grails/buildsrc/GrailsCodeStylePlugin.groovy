@@ -128,11 +128,12 @@ class GrailsCodeStylePlugin implements Plugin<Project> {
             }
 
             def reportsDir = project.extensions.getByType(GrailsCodeStyleExtension).reportsDirectory
-            task.inputs.dir(reportsDir).optional(true)
+            task.inputs.dir(reportsDir).optional()
             task.outputs.file(root.layout.projectDirectory.file('CODENARC_VIOLATIONS.md'))
             task.outputs.file(root.layout.projectDirectory.file('CHECKSTYLE_VIOLATIONS.md'))
             task.outputs.file(root.layout.projectDirectory.file('PMD_VIOLATIONS.md'))
             task.outputs.file(root.layout.projectDirectory.file('SPOTBUGS_VIOLATIONS.md'))
+            task.outputs.file(root.layout.projectDirectory.file('JACOCO_COVERAGE_VIOLATIONS.md'))
 
             task.doLast {
                 parseViolations(root, reportsDir.get())
@@ -323,6 +324,58 @@ class GrailsCodeStylePlugin implements Plugin<Project> {
             }
         }
         writeReport('SPOTBUGS_VIOLATIONS.md', spotbugsViolations, 'SpotBugs Violations Summary')
+
+        // 5. JaCoCo
+        def jacocoCoverage = []
+        project.rootProject.allprojects.each { p ->
+            // JaCoCo reports for test are usually in build/reports/jacoco/test/jacocoTestReport.csv
+            def csvReport = p.file("build/reports/jacoco/test/jacocoTestReport.csv")
+            if (csvReport.exists()) {
+                csvReport.splitEachLine(',') { fields ->
+                    if (fields[0] == 'GROUP') return // header
+                    def module = fields[0]
+                    def pkg = fields[1]
+                    def clazz = fields[2]
+                    def missed = fields[3]
+                    def covered = fields[4]
+                    
+                    // Skip if fields are not numeric (handle potential header/empty lines)
+                    if (missed.isNumber() && covered.isNumber()) {
+                        def m = missed.toInteger()
+                        def c = covered.toInteger()
+                        def total = m + c
+                        def percent = total > 0 ? (c * 100 / total).round(2) : 100.0
+                        
+                        jacocoCoverage << [
+                            module: module,
+                            className: "${pkg}.${clazz}",
+                            percent: percent
+                        ]
+                    }
+                }
+            }
+        }
+
+        // Filter out classes in the 'org.grails.orm.hibernate.support.hibernate7' package
+        jacocoCoverage.removeIf { it.className.startsWith('org.grails.orm.hibernate.support.hibernate7.') }
+
+        def jacocoReportFile = project.layout.projectDirectory.file('JACOCO_COVERAGE_VIOLATIONS.md').asFile
+        def out = new StringBuilder()
+        out.append("# JaCoCo Coverage Report\n")
+        out.append("Generated on: ${LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss"))}\n\n")
+        
+        def groupedByModule = jacocoCoverage.groupBy { it.module }.sort()
+        groupedByModule.each { module, coverageList ->
+            out.append("## Module: ${module}\n")
+            out.append("| Class | % Instructions Covered |\n")
+            out.append("| :--- | :--- |\n")
+            coverageList.sort { it.percent }.each { c ->
+                out.append("| ${c.className} | ${c.percent}% |\n")
+            }
+            out.append("\n")
+        }
+        jacocoReportFile.text = out.toString()
+        project.logger.lifecycle("Aggregated JaCoCo report generated: ${jacocoReportFile.absolutePath}")
     }
 
     private static void initExtension(Project project) {
