@@ -204,7 +204,6 @@ public class HibernateDatastore extends AbstractDatastore
     protected final TenantResolver tenantResolver;
 
     private boolean destroyed;
-    private final boolean isChild;
 
     protected final GrailsHibernateTransactionManager transactionManager;
     protected final ConfigurableApplicationEventPublisher eventPublisher;
@@ -224,17 +223,15 @@ public class HibernateDatastore extends AbstractDatastore
             final ConnectionSources<SessionFactory, HibernateConnectionSourceSettings> connectionSources,
             final HibernateMappingContext mappingContext,
             final ConfigurableApplicationEventPublisher eventPublisher) {
-        this(connectionSources, mappingContext, eventPublisher, false, null);
+        this(connectionSources, mappingContext, eventPublisher, null);
     }
 
     private HibernateDatastore(
             final ConnectionSources<SessionFactory, HibernateConnectionSourceSettings> connectionSources,
             final HibernateMappingContext mappingContext,
             final ConfigurableApplicationEventPublisher eventPublisher,
-            boolean isChild,
             SessionFactory sessionFactory) {
         super(mappingContext, connectionSources.getBaseConfiguration(), null);
-        this.isChild = isChild;
         this.connectionSources = connectionSources;
         final HibernateConnectionSource defaultConnectionSource =
                 (HibernateConnectionSource) connectionSources.getDefaultConnectionSource();
@@ -291,7 +288,7 @@ public class HibernateDatastore extends AbstractDatastore
         });
         initializeConverters(this.mappingContext);
 
-        if (!isChild && !(connectionSources instanceof SingletonConnectionSources)) {
+        if (!(connectionSources instanceof SingletonConnectionSources)) {
             final HibernateDatastore parent = this;
             Iterable<ConnectionSource<SessionFactory, HibernateConnectionSourceSettings>> allConnectionSources =
                     connectionSources.getAllConnectionSources();
@@ -434,7 +431,6 @@ public class HibernateDatastore extends AbstractDatastore
             ApplicationContext applicationContext,
             String dataSourceName) {
         super(mappingContext, config, (ConfigurableApplicationContext) applicationContext);
-        this.isChild = false;
         this.connectionSources = new SingletonConnectionSources<>(
                 new HibernateConnectionSource(dataSourceName, sessionFactory, null, null), config);
         this.sessionFactory = sessionFactory;
@@ -713,7 +709,7 @@ public class HibernateDatastore extends AbstractDatastore
         var settings = connectionSources.getDefaultConnectionSource().getSettings();
         HibernateConnectionSourceSettings tenantSettings;
         try {
-            tenantSettings = (HibernateConnectionSourceSettings) settings.clone();
+            tenantSettings = settings.clone();
         } catch (CloneNotSupportedException e) {
             throw new ConfigurationException("Couldn't clone default Hibernate settings! " + e.getMessage(), e);
         }
@@ -918,16 +914,16 @@ public class HibernateDatastore extends AbstractDatastore
 
     public <T> T withSession(String connectionName, final Closure<T> callable) {
         HibernateDatastore datastore = getDatastoreForConnection(connectionName);
-        Closure<?> multiTenantCallable = datastore.prepareMultiTenantClosure(callable);
-        IHibernateTemplate hibernateTemplate = datastore.getHibernateTemplate();
-        Object execute = hibernateTemplate.execute(multiTenantCallable);
-        return (T) execute;
+        @SuppressWarnings("unchecked")
+        Closure<T> multiTenantCallable = (Closure<T>) datastore.prepareMultiTenantClosure(callable);
+        return datastore.getHibernateTemplate().execute(multiTenantCallable);
     }
 
     public <T> T withNewSession(String connectionName, final Closure<T> callable) {
         HibernateDatastore datastore = getDatastoreForConnection(connectionName);
-        Closure<?> multiTenantCallable = datastore.prepareMultiTenantClosure(callable);
-        return (T) datastore.getHibernateTemplate().executeWithNewSession(multiTenantCallable);
+        @SuppressWarnings("unchecked")
+        Closure<T> multiTenantCallable = (Closure<T>) datastore.prepareMultiTenantClosure(callable);
+        return datastore.getHibernateTemplate().executeWithNewSession(multiTenantCallable);
     }
 
     public <T> T withNewSession(final Closure<T> callable) {
@@ -1065,8 +1061,8 @@ public class HibernateDatastore extends AbstractDatastore
                 ConnectionSources<SessionFactory, HibernateConnectionSourceSettings> connectionSources,
                 HibernateMappingContext mappingContext,
                 ConfigurableApplicationEventPublisher eventPublisher) {
-            super(connectionSources, mappingContext, eventPublisher, true, 
-                  connectionSources.getDefaultConnectionSource().getSource());
+            super(connectionSources, mappingContext, eventPublisher,
+                connectionSources.getDefaultConnectionSource().getSource());
             this.parent = parent;
         }
 
