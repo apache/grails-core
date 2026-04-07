@@ -22,6 +22,7 @@ import grails.gorm.annotation.Entity
 import grails.gorm.hibernate.HibernateEntity
 import grails.gorm.transactions.Rollback
 import org.grails.datastore.mapping.engine.types.AbstractMappingAwareCustomTypeMarshaller
+import org.grails.datastore.mapping.model.DatastoreConfigurationException
 import org.grails.datastore.mapping.model.MappingContext
 import org.grails.datastore.mapping.model.PersistentEntity
 import org.grails.datastore.mapping.model.PersistentProperty
@@ -273,6 +274,83 @@ class HibernateMappingFactorySpec extends HibernateGormDatastoreSpec {
         then:
         mappedForm instanceof org.grails.orm.hibernate.cfg.Mapping
     }
+
+    void "createTenantId produces HibernateTenantIdProperty when called directly"() {
+        given:
+        def factory = mappingContext.mappingFactory as HibernateMappingFactory
+        PersistentEntity entity = mappingContext.getPersistentEntity(MappingFactoryBook.name)
+        def pd = new PropertyDescriptor('title', MappingFactoryBook)
+
+        when:
+        def result = factory.createTenantId(entity, mappingContext, pd)
+
+        then:
+        result instanceof HibernateTenantIdProperty
+    }
+
+    void "createCustom falls back to Enum base marshaller when no specific marshaller found for enum type"() {
+        given:
+        HibernateConnectionSourceSettings settings = new HibernateConnectionSourceSettings()
+        settings.custom.types = [new MappingFactoryBaseEnumMarshaller()]
+        def ctx = new HibernateMappingContext(settings)
+        PersistentEntity entity = ctx.addPersistentEntity(MappingFactoryCustomEnumBook2)
+
+        when:
+        def statusProp = entity.persistentProperties.find { it.name == 'status' }
+
+        then:
+        statusProp instanceof HibernateCustomEnumProperty
+    }
+
+    void "createBasicCollection sets custom marshaller for enum hasMany"() {
+        given:
+        HibernateConnectionSourceSettings settings = new HibernateConnectionSourceSettings()
+        settings.custom.types = [new MappingFactoryEnumMarshaller()]
+        def ctx = new HibernateMappingContext(settings)
+        PersistentEntity entity = ctx.addPersistentEntity(MappingFactoryEnumCollection)
+
+        when:
+        def prop = entity.persistentProperties.find { it.name == 'statuses' }
+
+        then:
+        prop instanceof HibernateBasicProperty
+        (prop as HibernateBasicProperty).customTypeMarshaller != null
+    }
+
+    void "createBasicCollection uses Enum base marshaller when no specific marshaller for enum collection type"() {
+        given:
+        HibernateConnectionSourceSettings settings = new HibernateConnectionSourceSettings()
+        settings.custom.types = [new MappingFactoryBaseEnumMarshaller()]
+        def ctx = new HibernateMappingContext(settings)
+        PersistentEntity entity = ctx.addPersistentEntity(MappingFactoryOtherEnumCollection)
+
+        when:
+        def prop = entity.persistentProperties.find { it.name == 'statuses' }
+
+        then:
+        prop instanceof HibernateBasicProperty
+        (prop as HibernateBasicProperty).customTypeMarshaller != null
+    }
+
+    void "createIdentityMapping throws DatastoreConfigurationException for unresolvable generator name"() {
+        given:
+        def ctx = new HibernateMappingContext()
+
+        when:
+        ctx.addPersistentEntity(MappingFactoryBadGeneratorEntity)
+
+        then:
+        thrown(DatastoreConfigurationException)
+    }
+
+    void "createIdentityMapping returns AUTO for composite identity entity"() {
+        given:
+        def ctx = new HibernateMappingContext()
+        PersistentEntity entity = ctx.addPersistentEntity(MappingFactoryCompositeIdEntity)
+
+        expect:
+        entity.mapping.identifier.generator == ValueGenerator.AUTO
+    }
 }
 
 // --- domain classes ---
@@ -390,3 +468,51 @@ class MappingFactoryDimension {
     int height
 }
 
+enum MappingFactoryOtherStatus { X, Y }
+
+@Entity
+class MappingFactoryEnumCollection implements HibernateEntity<MappingFactoryEnumCollection> {
+    String name
+    Set<MappingFactoryBookStatus> statuses
+    static hasMany = [statuses: MappingFactoryBookStatus]
+}
+
+@Entity
+class MappingFactoryOtherEnumCollection implements HibernateEntity<MappingFactoryOtherEnumCollection> {
+    String name
+    Set<MappingFactoryOtherStatus> statuses
+    static hasMany = [statuses: MappingFactoryOtherStatus]
+}
+
+@Entity
+class MappingFactoryCustomEnumBook2 implements HibernateEntity<MappingFactoryCustomEnumBook2> {
+    String title
+    MappingFactoryBookStatus status
+}
+
+@Entity
+class MappingFactoryCompositeIdEntity implements HibernateEntity<MappingFactoryCompositeIdEntity> {
+    String firstName
+    String lastName
+    static mapping = {
+        id composite: ['firstName', 'lastName']
+    }
+}
+
+@Entity
+class MappingFactoryBadGeneratorEntity implements HibernateEntity<MappingFactoryBadGeneratorEntity> {
+    String name
+    static mapping = {
+        id generator: 'notAValidGeneratorOrClassName'
+    }
+}
+
+class MappingFactoryBaseEnumMarshaller extends AbstractMappingAwareCustomTypeMarshaller {
+    MappingFactoryBaseEnumMarshaller() { super(Enum) }
+
+    @Override
+    protected Object writeInternal(PersistentProperty property, String key, Object value, Object nativeTarget) { value?.name() }
+
+    @Override
+    protected Object readInternal(PersistentProperty property, String key, Object nativeSource) { nativeSource }
+}
