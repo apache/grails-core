@@ -41,6 +41,7 @@ dependencies {
     testImplementation project(':grails-controllers')
 
     testImplementation 'org.apache.tomcat.embed:tomcat-embed-core'
+    testImplementation 'org.springframework.boot:spring-boot-tomcat'
     testRuntimeOnly project(':grails-url-mappings')
 
     compileOnly 'jakarta.servlet:jakarta.servlet-api'

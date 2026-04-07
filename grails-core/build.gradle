@@ -44,15 +44,12 @@ dependencies {
     implementation 'com.github.ben-manes.caffeine:caffeine'
     api 'org.apache.groovy:groovy'
     api 'org.springframework.boot:spring-boot'
+    api 'org.springframework.boot:spring-boot-web-server'
     api 'org.springframework:spring-core'
     api 'org.springframework:spring-tx'
     api 'org.springframework:spring-beans'
     api 'org.springframework:spring-context'
     api 'org.springframework.boot:spring-boot-autoconfigure'
-
-    implementation 'org.springframework.boot:spring-boot-web-server', {
-        // impl: WebServerApplicationContext
-    }
 
     compileOnly 'org.springframework:spring-test'
     compileOnly 'org.apache.groovy:groovy-templates'

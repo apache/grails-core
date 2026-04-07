@@ -18,31 +18,63 @@
  */
 package grails.boot
 
+import org.springframework.boot.tomcat.servlet.TomcatServletWebServerFactory
+import org.springframework.boot.web.server.servlet.ConfigurableServletWebServerFactory
+import org.springframework.core.env.ConfigurableEnvironment
+import org.springframework.web.context.support.StandardServletEnvironment
+
 import grails.artefact.Artefact
 import grails.boot.config.GrailsAutoConfiguration
 import grails.web.Controller
 import org.springframework.boot.autoconfigure.EnableAutoConfiguration
-import spock.lang.PendingFeature
+import org.springframework.boot.web.server.servlet.context.AnnotationConfigServletWebServerApplicationContext
+import org.springframework.context.annotation.Bean
 import spock.lang.Specification
 
+import org.apache.grails.core.plugins.DefaultPluginDiscovery
+import org.apache.grails.core.plugins.PluginDiscovery
+
 /**
- * Tests loading Grails in an embedded server configuration.
- *
- * TODO: Rework for Spring Boot 4.0 modularized embedded server APIs.
- * Embedded server classes moved to spring-boot-web-server and spring-boot-tomcat modules
- * and require updated test patterns.
+ * Created by graemerocher on 28/05/14.
  */
 class EmbeddedContainerWithGrailsSpec extends Specification {
 
-    @PendingFeature(reason = "TODO: BOOT4 - Embedded server test infrastructure needs rework for Spring Boot 4.0 modularized APIs (spring-boot-web-server, spring-boot-tomcat)")
+    AnnotationConfigServletWebServerApplicationContext context
+
+    void cleanup() {
+        context.close()
+    }
+
     void "Test that you can load Grails in an embedded server config"() {
-        // TODO: Restore embedded server assertions after reworking for Spring Boot 4.0 modularized APIs
-        expect:
-        false
+        given: 'bootstrapped context'
+        ConfigurableEnvironment env = new StandardServletEnvironment()
+        PluginDiscovery pluginDiscovery = new DefaultPluginDiscovery()
+        pluginDiscovery.init(env)
+
+        when: "An embedded server config is created"
+        this.context = new AnnotationConfigServletWebServerApplicationContext()
+        // simulate spring's environment setup
+        this.context.setEnvironment(env)
+        // simulate what the bootstrap registry would do
+        this.context.registerBean(PluginDiscovery.BEAN_NAME, PluginDiscovery, () -> pluginDiscovery)
+        // mark the application for actual load
+        this.context.register(Application)
+        // load it
+        this.context.refresh()
+
+        then: "The context is valid"
+        context != null
+        new URL("http://localhost:${context.webServer.port}/foo/bar").text == 'hello world'
+        new URL("http://localhost:${context.webServer.port}/foos").text == 'all foos'
     }
 
     @EnableAutoConfiguration
     static class Application extends GrailsAutoConfiguration {
+
+        @Bean
+        ConfigurableServletWebServerFactory webServerFactory() {
+            new TomcatServletWebServerFactory(0)
+        }
     }
 
 }

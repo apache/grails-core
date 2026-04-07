@@ -45,7 +45,9 @@ public class SpringBootUndertowFeature extends SpringBootEmbeddedServlet {
 
     @Override
     public boolean supports(ApplicationType applicationType) {
-        return true;
+        // Undertow does not yet support Servlet 6.1, which Spring Boot 4 requires.
+        // Disabled until Undertow provides Servlet 6.1 compatibility.
+        return false;
     }
 
     @Override
