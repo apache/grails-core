@@ -29,6 +29,19 @@ boolean isHibernateSpecificProject = project.name.startsWith('grails-test-exampl
 boolean isMongoProject = project.name.startsWith('grails-test-examples-mongodb')
 boolean isGeneralFunctionalTest = !isHibernateSpecificProject && !isMongoProject
 
+// General functional test projects that use Hibernate 5-specific GORM APIs and cannot run
+// under Hibernate 7 via dependency substitution. These use executeUpdate(String) without
+// parameters (H7 requires a Map parameter), HibernateSpec unit tests (different domain class
+// detection in H7), or ChainedTransactionManager behavior that changed in H7.
+// Their H7-compatible equivalents live in grails-test-examples/hibernate7/.
+List<String> h7IncompatibleProjects = [
+        'grails-test-examples-app1',
+        'grails-test-examples-datasources',
+        'grails-test-examples-gorm',
+        'grails-test-examples-views-functional-tests',
+        'grails-test-examples-scaffolding-fields',
+]
+
 configurations.configureEach {
     resolutionStrategy.dependencySubstitution {
         // Test projects will often include dependencies from local projects. This will ensure any dependencies
@@ -63,7 +76,8 @@ configurations.configureEach {
         // For general (non-hibernate-labeled) functional test projects, redirect Hibernate 5 dependencies
         // to Hibernate 7 projects when -PhibernateVersion=7 is set. These rules are added after the loop
         // so they override the default substitutions for the h5 modules.
-        if (isGeneralFunctionalTest && targetHibernateVersion == '7') {
+        // Projects in h7IncompatibleProjects are excluded since they use H5-specific GORM APIs.
+        if (isGeneralFunctionalTest && targetHibernateVersion == '7' && !(project.name in h7IncompatibleProjects)) {
             substitute module('org.apache.grails:grails-data-hibernate5') using project(':grails-data-hibernate7')
             substitute module('org.apache.grails:grails-data-hibernate5-spring-boot') using project(':grails-data-hibernate7-spring-boot')
         }
@@ -71,7 +85,7 @@ configurations.configureEach {
 
     // Exclude Hibernate 5-specific runtime dependencies when testing general projects with Hibernate 7.
     // These libraries have no Hibernate 7 equivalent and would cause classpath conflicts.
-    if (isGeneralFunctionalTest && targetHibernateVersion == '7') {
+    if (isGeneralFunctionalTest && targetHibernateVersion == '7' && !(project.name in h7IncompatibleProjects)) {
         exclude group: 'org.hibernate', module: 'hibernate-ehcache'
         exclude group: 'org.jboss.spec.javax.transaction', module: 'jboss-transaction-api_1.3_spec'
     }
@@ -88,6 +102,11 @@ tasks.withType(Test).configureEach { Test task ->
 
     onlyIf {
         if (project.hasProperty('skipFunctionalTests')) {
+            return false
+        }
+
+        // Skip projects with known H7 API incompatibilities when running with hibernateVersion=7
+        if (targetHibernateVersion == '7' && project.name in h7IncompatibleProjects) {
             return false
         }
 
