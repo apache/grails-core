@@ -16,11 +16,242 @@ KIND, either express or implied.  See the License for the
 specific language governing permissions and limitations
 under the License.
 ////
+
 === Upgrade Instructions for Grails and Related Dependencies
 
 To ensure compatibility with Grails {version}, please review the following upgrade instructions carefully.
-This guide outlines the necessary steps & warnings to upgrade your Grails project.
+This guide outlines the necessary steps and warnings to upgrade your Grails project from Grails 7.x to Grails 8.
 
-==== 1. No Changes at this time
+==== 1. Spring Boot 4.0.x
 
-No new features at this time
+Grails 8 upgrades from Spring Boot 3.5.x to Spring Boot 4.0.x.
+This is a major upgrade that brings Spring Framework 7.0.x, new module structure, and several breaking changes.
+
+For full details, consult:
+
+1. https://github.com/spring-projects/spring-boot/wiki/Spring-Boot-4.0-Release-Notes[Spring Boot 4.0 Release Notes]
+2. https://github.com/spring-projects/spring-framework/wiki/Upgrading-to-Spring-Framework-7.x[Upgrading to Spring Framework 7]
+
+==== 2. Spring Boot Autoconfigure Modularization
+
+Spring Boot 4 split the monolithic `spring-boot-autoconfigure` module into domain-specific modules.
+Auto-configuration classes have moved to new packages.
+If your application imports or references auto-configuration classes directly, you will need to update those references.
+
+Notable module changes:
+
+* Web MVC auto-configuration classes moved to `org.springframework.boot:spring-boot-webmvc`
+* Servlet auto-configuration classes moved to `org.springframework.boot:spring-boot-servlet`
+* MongoDB auto-configuration classes moved to `org.springframework.boot:spring-boot-mongodb`
+
+For example, if your code imports `MongoAutoConfiguration`:
+
+[source,groovy]
+----
+// Before (Grails 7 / Spring Boot 3.x)
+import org.springframework.boot.autoconfigure.mongo.MongoAutoConfiguration
+
+// After (Grails 8 / Spring Boot 4.x)
+import org.springframework.boot.mongodb.autoconfigure.MongoAutoConfiguration
+----
+
+==== 3. MongoDB Configuration Property Changes
+
+Spring Boot 4 renamed the MongoDB configuration property namespace for Spring Boot's own auto-configuration.
+If your `application.yml` or `application.groovy` uses `spring.data.mongodb.*` properties for Spring Boot auto-configuration, you must rename them to `spring.mongodb.*`.
+Note that Grails GORM for MongoDB uses its own `mongodb.*` configuration namespace, which is unaffected by this change.
+
+[source,yaml]
+.application.yml - Before (Grails 7)
+----
+spring:
+    data:
+        mongodb:
+            host: localhost
+            port: 27017
+            database: mydb
+----
+
+[source,yaml]
+.application.yml - After (Grails 8)
+----
+spring:
+    mongodb:
+        host: localhost
+        port: 27017
+        database: mydb
+----
+
+==== 4. Hibernate ORM Package Relocations
+
+Spring Framework 7 removed the `org.springframework.orm.hibernate5` package entirely.
+Grails 8 vendors these classes from Spring Framework 6.2.x into a new module (`grails-data-hibernate5-spring-orm`) under the package `org.grails.orm.hibernate.support.hibernate5`.
+
+This change is transparent for most applications since Grails manages the Hibernate integration internally.
+However, if your application directly imports any of the following classes, you must update your import statements:
+
+[cols="1,1", options="header"]
+|===
+| Before (Spring Framework 6 / Grails 7)
+| After (Grails 8)
+
+| `org.springframework.orm.hibernate5.HibernateTemplate`
+| `org.grails.orm.hibernate.support.hibernate5.HibernateTemplate`
+
+| `org.springframework.orm.hibernate5.HibernateTransactionManager`
+| `org.grails.orm.hibernate.support.hibernate5.HibernateTransactionManager`
+
+| `org.springframework.orm.hibernate5.LocalSessionFactoryBean`
+| `org.grails.orm.hibernate.support.hibernate5.LocalSessionFactoryBean`
+
+| `org.springframework.orm.hibernate5.SessionFactoryUtils`
+| `org.grails.orm.hibernate.support.hibernate5.SessionFactoryUtils`
+
+| `org.springframework.orm.hibernate5.SessionHolder`
+| `org.grails.orm.hibernate.support.hibernate5.SessionHolder`
+
+| `org.springframework.orm.hibernate5.HibernateCallback`
+| `org.grails.orm.hibernate.support.hibernate5.HibernateCallback`
+
+| `org.springframework.orm.hibernate5.support.OpenSessionInViewInterceptor`
+| `org.grails.orm.hibernate.support.hibernate5.support.OpenSessionInViewInterceptor`
+|===
+
+All other classes from `org.springframework.orm.hibernate5` follow the same pattern - replace the `org.springframework.orm.hibernate5` prefix with `org.grails.orm.hibernate.support.hibernate5`.
+
+==== 5. HttpStatus.MOVED_TEMPORARILY Removed
+
+Spring Framework 7 removed the deprecated `HttpStatus.MOVED_TEMPORARILY` constant.
+Use `HttpStatus.FOUND` instead - both represent HTTP 302 with no behavioral change.
+
+If your application references `HttpStatus.MOVED_TEMPORARILY` directly (for example, in custom redirect logic or interceptors), update the reference:
+
+[source,groovy]
+----
+// Before
+import org.springframework.http.HttpStatus
+response.status = HttpStatus.MOVED_TEMPORARILY.value()
+
+// After
+import org.springframework.http.HttpStatus
+response.status = HttpStatus.FOUND.value()
+----
+
+==== 6. Micronaut Integration - CLASSIC Boot Loader Removed
+
+Spring Boot 4 removed the `CLASSIC` loader implementation (`LoaderImplementation.CLASSIC`).
+In Grails 7, the Grails Gradle Plugin automatically configured `bootJar` and `bootWar` tasks to use the `CLASSIC` loader when the `grails-micronaut` plugin was detected.
+This was required for `java -jar` execution to work correctly with the Micronaut-Spring integration.
+
+In Grails 8, this automatic configuration has been removed since the `CLASSIC` loader no longer exists in Spring Boot 4.
+
+**Action required:**
+
+* If you have explicitly set `loaderImplementation` in your `build.gradle`, remove it:
+
+[source,groovy]
+.build.gradle - remove this block
+----
+// This is no longer valid in Spring Boot 4 - remove it
+tasks.withType(BootArchive).configureEach {
+    loaderImplementation = org.springframework.boot.loader.tools.LoaderImplementation.CLASSIC
+}
+----
+
+* The `grails-micronaut` plugin continues to work with Spring Boot 4's default loader.
+If you experience issues running your Micronaut-enabled Grails application via `java -jar`, please report them to the https://github.com/apache/grails-core/issues[Grails issue tracker].
+
+==== 7. Enum Serialization Default Changed
+
+As announced in the Grails 7.0.2 deprecation notice, the `SimpleEnumMarshaller` is now the default for JSON and XML enum serialization in Grails 8.
+Enums are serialized as simple string values (e.g., `"SUBMIT"`) instead of the verbose legacy format with type metadata.
+
+If you previously opted in via configuration, you can now remove it:
+
+[source,yaml]
+.application.yml - this is now the default and can be removed
+----
+grails:
+    converters:
+        json:
+            enum:
+                format: simple
+        xml:
+            enum:
+                format: simple
+----
+
+If you need to restore the legacy behavior temporarily, the deprecated marshallers remain available but will be removed in a future release.
+
+==== 8. Theme Support Removed
+
+Spring Framework 7 removed the theme infrastructure entirely.
+The following theme-specific classes and interfaces no longer exist:
+
+* `org.springframework.ui.context.ThemeSource`
+* `org.springframework.ui.context.Theme`
+* `org.springframework.ui.context.support.SimpleTheme`
+* `org.springframework.web.servlet.theme.SessionThemeResolver`
+
+NOTE: `JstlUtils` itself still exists in Spring WebMVC 7.0, but its theme-related methods have been removed.
+
+If your application uses Spring theme resolution (for example, switching CSS stylesheets via `ThemeResolver`), you must replace this with your own implementation.
+This was deprecated in Spring Framework 6.0 and fully removed in 7.0.
+
+GSP layouts and views that relied on theme resolution will need to use alternative approaches such as configuration properties or session-based preferences managed in application code.
+
+==== 9. Embedded Server Module Relocations
+
+Spring Boot 4 reorganized embedded server classes into separate modules.
+If your application or tests reference these classes directly, update the imports:
+
+[cols="1,1", options="header"]
+|===
+| Before (Spring Boot 3.x / Grails 7)
+| After (Spring Boot 4.x / Grails 8)
+
+| `org.springframework.boot.web.embedded.tomcat.TomcatServletWebServerFactory`
+| `org.springframework.boot.tomcat.servlet.TomcatServletWebServerFactory`
+
+| `org.springframework.boot.web.servlet.server.ConfigurableServletWebServerFactory`
+| `org.springframework.boot.web.server.servlet.ConfigurableServletWebServerFactory`
+
+| `org.springframework.boot.web.servlet.context.AnnotationConfigServletWebServerApplicationContext`
+| `org.springframework.boot.web.server.servlet.context.AnnotationConfigServletWebServerApplicationContext`
+
+| `org.springframework.boot.web.context.WebServerApplicationContext`
+| `org.springframework.boot.web.server.context.WebServerApplicationContext`
+
+| `org.springframework.boot.web.servlet.context.AnnotationConfigServletWebApplicationContext`
+| `org.springframework.boot.web.context.servlet.AnnotationConfigServletWebApplicationContext`
+|===
+
+Applications using embedded Tomcat, Jetty, or Undertow should check for any direct class references and update accordingly.
+The `spring-boot-tomcat` module must now be an explicit dependency if you reference Tomcat classes directly.
+
+==== 10. HandlerAdapter.getLastModified Removed
+
+Spring Framework 7 removed the deprecated `getLastModified` method from the `HandlerAdapter` interface.
+If your application implements `HandlerAdapter` directly and overrides this method, remove the override.
+The framework no longer calls this method for Last-Modified header management.
+
+==== 11. Spring Security Filter Ordering
+
+Spring Boot 4 removed the `SecurityProperties.DEFAULT_FILTER_ORDER` constant.
+Spring Security is moving toward the fluent `HttpSecurity` configuration API for filter chain management, rather than explicit filter ordering via constants.
+
+If your application references `DEFAULT_FILTER_ORDER` for custom filter positioning, replace it with the concrete value `-100` (computed as `OrderedFilter.REQUEST_WRAPPER_FILTER_MAX_ORDER - 100`).
+Longer term, consider migrating to the fluent `HttpSecurity` API for filter chain configuration.
+
+==== 12. Known Plugin Incompatibilities
+
+Some third-party plugins have not yet been updated for Spring Boot 4 / Spring Framework 7 compatibility.
+The following are known blockers at this time:
+
+* **grails-spring-security** - Uses `ReflectionUtils.getApplication()` which was removed in Spring Boot 4.
+Integration tests for modules depending on Spring Security are disabled until the plugin is updated.
+
+* **SiteMesh 3** - The decorator/layout mechanism is not compatible with Spring Framework 7.
+Applications using `grails-sitemesh3` should remain on the `grails-layout` plugin (SiteMesh 2.6.x) until SiteMesh 3 is updated.
+
+Check the https://github.com/apache/grails-core/issues[Grails issue tracker] for the latest status of plugin compatibility.

@@ -45,7 +45,7 @@ import org.springframework.mock.web.MockHttpServletResponse
 import org.springframework.mock.web.MockServletContext
 import org.springframework.web.context.WebApplicationContext
 import org.springframework.web.context.request.RequestContextHolder
-import org.springframework.web.context.support.GenericWebApplicationContext
+import org.springframework.boot.web.server.servlet.context.AnnotationConfigServletWebServerApplicationContext
 import org.springframework.web.servlet.DispatcherServlet
 import org.springframework.web.servlet.i18n.AcceptHeaderLocaleResolver
 
@@ -277,7 +277,7 @@ abstract class AbstractGrailsTagTests {
         mockManager.registerProvidedArtefacts(grailsApplication)
 
         def mockControllerClass = gcl.parseClass('class MockController {  def index = {} } ')
-        ctx = new GenericWebApplicationContext()
+        ctx = new AnnotationConfigServletWebServerApplicationContext()
         ctx.setServletContext(new MockServletContext())
         ctx.registerBeanDefinition('messageSource', new RootBeanDefinition(StaticMessageSource))
         ctx.refresh()

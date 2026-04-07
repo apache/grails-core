@@ -75,7 +75,6 @@ ext {
             'commons-lang3.version'       : '3.20.0',
             'geb-spock.version'           : '8.0.1',
             'groovy.version'              : '5.0.5',
-            'jackson.version'             : '2.21.2',
             'jquery.version'              : '3.7.1',
             'liquibase-hibernate5.version': '4.27.0',
             'mongodb.version'             : '5.5.1',
@@ -92,7 +91,7 @@ ext {
     bomPlatformDependencies = [
             'asset-pipeline-bom': "cloud.wondrify:asset-pipeline-bom:${bomDependencyVersions['asset-pipeline-bom.version']}",
             'spock-bom'         : "org.spockframework:spock-bom:${bomDependencyVersions['spock.version']}",
-            'jackson-bom'       : "com.fasterxml.jackson:jackson-bom:${bomDependencyVersions['jackson.version']}",
+
             'groovy-bom'        : "org.apache.groovy:groovy-bom:${bomDependencyVersions['groovy.version']}",
             'selenium-bom'      : "org.seleniumhq.selenium:selenium-bom:${bomDependencyVersions['selenium.version']}",
     ]
