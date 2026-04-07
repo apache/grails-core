@@ -191,6 +191,87 @@ class HibernateToManyPropertySpec extends HibernateGormDatastoreSpec {
         property.getElementTypeName() == "java.lang.String"
     }
 
+    void "isBasic returns true for basic element collection"() {
+        given:
+        def property = createTestHibernateToManyProperty(HTMPOrder, "items")
+
+        expect:
+        property.isBasic()
+        !property.isOneToMany()
+        !property.isManyToMany()
+    }
+
+    void "isOneToMany returns true for one-to-many association"() {
+        given:
+        def property = createTestHibernateToManyProperty(HTMPAuthor, "books")
+
+        expect:
+        property.isOneToMany()
+        !property.isBasic()
+        !property.isManyToMany()
+    }
+
+    void "isManyToMany returns true for many-to-many association"() {
+        given:
+        createPersistentEntity(HTMPCourse)
+        def property = createTestHibernateToManyProperty(HTMPStudent, "courses")
+
+        expect:
+        property.isManyToMany()
+        !property.isBasic()
+        !property.isOneToMany()
+    }
+
+    void "hasSort returns true and getSort/getOrder return values when configured"() {
+        given:
+        def property = createTestHibernateToManyProperty(HTMPAuthorSorted, "books")
+
+        expect:
+        property.hasSort()
+        property.getSort() == "title"
+        property.getOrder() == "asc"
+    }
+
+    void "hasSort returns false when no sort is configured"() {
+        given:
+        def property = createTestHibernateToManyProperty(HTMPAuthor, "books")
+
+        expect:
+        !property.hasSort()
+    }
+
+    void "getLazy returns false when explicitly set to false"() {
+        given:
+        def property = createTestHibernateToManyProperty(HTMPAuthorLazy, "books")
+
+        expect:
+        property.getLazy() == false
+    }
+
+    void "getIgnoreNotFound returns false by default"() {
+        given:
+        def property = createTestHibernateToManyProperty(HTMPAuthor, "books")
+
+        expect:
+        !property.getIgnoreNotFound()
+    }
+
+    void "getCacheUsage returns cache usage string when cache is configured"() {
+        given:
+        def property = createTestHibernateToManyProperty(HTMPAuthorCached, "books")
+
+        expect:
+        property.getCacheUsage() != null
+    }
+
+    void "getCacheUsage returns null when no cache is configured"() {
+        given:
+        def property = createTestHibernateToManyProperty(HTMPAuthor, "books")
+
+        expect:
+        property.getCacheUsage() == null
+    }
+
     /**
      * Helper to register entity and return the property
      */
@@ -287,4 +368,34 @@ enum HTMPStatus { ACTIVE, INACTIVE }
 class HTMPEntityWithEnum {
     Long id
     static hasMany = [statuses: HTMPStatus]
+}
+
+@Entity
+class HTMPAuthorSorted {
+    Long id
+    String name
+    static hasMany = [books: HTMPBook]
+    static mapping = {
+        books sort: 'title', order: 'asc'
+    }
+}
+
+@Entity
+class HTMPAuthorLazy {
+    Long id
+    String name
+    static hasMany = [books: HTMPBook]
+    static mapping = {
+        books lazy: false
+    }
+}
+
+@Entity
+class HTMPAuthorCached {
+    Long id
+    String name
+    static hasMany = [books: HTMPBook]
+    static mapping = {
+        books cache: true
+    }
 }
