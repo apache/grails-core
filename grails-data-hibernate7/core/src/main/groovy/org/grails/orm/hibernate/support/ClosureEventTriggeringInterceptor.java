@@ -247,11 +247,19 @@ public class ClosureEventTriggeringInterceptor
                 hibernateEvent, new org.grails.datastore.mapping.engine.event.PostLoadEvent(this.datastore, entity));
     }
 
+    /**
+     * Resolves the {@link PersistentEntity} for the given type from the mapping context.
+     * Extracted as a protected hook to allow test subclasses to control the returned value.
+     */
+    protected PersistentEntity resolvePersistentEntity(Class<?> type) {
+        return mappingContext.getPersistentEntity(type.getName());
+    }
+
     @Override
     public boolean onPreInsert(PreInsertEvent hibernateEvent) {
         Object entity = hibernateEvent.getEntity();
         Class<?> type = Hibernate.getClass(entity);
-        PersistentEntity persistentEntity = mappingContext.getPersistentEntity(type.getName());
+        PersistentEntity persistentEntity = resolvePersistentEntity(type);
         AbstractPersistenceEvent grailsEvent;
         ModificationTrackingEntityAccess entityAccess = null;
         if (persistentEntity != null) {
@@ -319,7 +327,7 @@ public class ClosureEventTriggeringInterceptor
         }
     }
 
-    private void synchronizeHibernateState(
+    protected void synchronizeHibernateState(
             EntityPersister persister, Object[] state, Map<String, Object> modifiedProperties) {
         EntityMappingType entityMappingType = persister.getEntityMappingType();
         for (Map.Entry<String, Object> entry : modifiedProperties.entrySet()) {
@@ -344,7 +352,7 @@ public class ClosureEventTriggeringInterceptor
         Object entity = hibernateEvent.getEntity();
         Class<?> type = Hibernate.getClass(entity);
         MappingContext mappingContext = datastore.getMappingContext();
-        PersistentEntity persistentEntity = mappingContext.getPersistentEntity(type.getName());
+        PersistentEntity persistentEntity = resolvePersistentEntity(type);
         AbstractPersistenceEvent grailsEvent;
         ModificationTrackingEntityAccess entityAccess = null;
         if (persistentEntity != null) {
@@ -408,7 +416,7 @@ public class ClosureEventTriggeringInterceptor
         }
     }
 
-    private void activateDirtyChecking(Object entity) {
+    protected void activateDirtyChecking(Object entity) {
         if (entity instanceof DirtyCheckable && proxyHandler.isInitialized(entity)) {
             PersistentEntity persistentEntity = mappingContext.getPersistentEntity(
                     Hibernate.getClass(entity).getName());

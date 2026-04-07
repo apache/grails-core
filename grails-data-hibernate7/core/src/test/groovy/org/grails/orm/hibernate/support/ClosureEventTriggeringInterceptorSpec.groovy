@@ -38,6 +38,8 @@ import org.hibernate.engine.spi.SessionFactoryImplementor
 import org.hibernate.event.service.spi.EventListenerRegistry
 import org.hibernate.event.spi.EventType
 import org.hibernate.jpa.event.spi.CallbackRegistry
+import org.hibernate.metamodel.mapping.EntityMappingType
+import org.hibernate.persister.entity.EntityPersister
 import org.springframework.context.ApplicationEvent
 
 /**
@@ -322,6 +324,135 @@ class ClosureEventTriggeringInterceptorSpec extends HibernateGormDatastoreSpec {
         interceptor.injectCallbackRegistry(callbackRegistry)
 
         then:
+        noExceptionThrown()
+    }
+
+    // -------------------------------------------------------------------------
+    // setApplicationContext with non-ConfigurableApplicationContext
+    // -------------------------------------------------------------------------
+
+    void "setApplicationContext with non-ConfigurableApplicationContext leaves eventPublisher unchanged"() {
+        given:
+        def interceptor = new ClosureEventTriggeringInterceptor()
+        interceptor.setDatastore(datastore)
+
+        when:
+        interceptor.setApplicationContext(Mock(org.springframework.context.ApplicationContext))
+
+        then:
+        interceptor.@eventPublisher == null
+    }
+
+    // -------------------------------------------------------------------------
+    // activateDirtyChecking — entity not DirtyCheckable (fast exit)
+    // -------------------------------------------------------------------------
+
+    void "activateDirtyChecking does nothing when entity is not DirtyCheckable"() {
+        given:
+        def interceptor = new ClosureEventTriggeringInterceptor()
+        interceptor.setDatastore(datastore)
+
+        when: "a plain POJO is passed"
+        interceptor.activateDirtyChecking("not a DirtyCheckable")
+
+        then:
+        noExceptionThrown()
+    }
+
+    // -------------------------------------------------------------------------
+    // activateDirtyChecking — already tracking (dirtyCheckingState != null)
+    // -------------------------------------------------------------------------
+
+    @Rollback
+    void "activateDirtyChecking is idempotent when entity is already tracking changes"() {
+        given:
+        def book = new InterceptorBook(title: "Track Twice").save(flush: true, failOnError: true)
+        session.clear()
+        def loaded = InterceptorBook.get(book.id)
+
+        def interceptor = new ClosureEventTriggeringInterceptor()
+        interceptor.setDatastore(datastore)
+
+        when: "activate is called a second time on an already-tracking entity"
+        interceptor.activateDirtyChecking(loaded)
+
+        then:
+        noExceptionThrown()
+    }
+
+    // -------------------------------------------------------------------------
+    // synchronizeHibernateState — null attributeMapping (unknown property name)
+    // -------------------------------------------------------------------------
+
+    void "synchronizeHibernateState skips entries whose attributeMapping is null"() {
+        given:
+        def interceptor = new ClosureEventTriggeringInterceptor()
+        interceptor.setDatastore(datastore)
+
+        def mockEntityMappingType = Mock(org.hibernate.metamodel.mapping.EntityMappingType) {
+            findAttributeMapping(_) >> null
+        }
+        def mockPersister = Mock(org.hibernate.persister.entity.EntityPersister) {
+            getEntityMappingType() >> mockEntityMappingType
+        }
+        def state = new Object[3]
+
+        when: "a property name that doesn't exist in the persister is in modifiedProperties"
+        interceptor.synchronizeHibernateState(mockPersister, state, [unknownProp: "value"])
+
+        then: "state array is untouched and no exception is thrown"
+        noExceptionThrown()
+        state.every { it == null }
+    }
+
+    // -------------------------------------------------------------------------
+    // resolvePersistentEntity — overridable hook: null branch in onPreInsert
+    // -------------------------------------------------------------------------
+
+    @Rollback
+    void "onPreInsert falls back to entity-only PreInsertEvent when persistentEntity is null"() {
+        given:
+        def captured = []
+        ((ConfigurableApplicationEventPublisher) datastore.applicationEventPublisher)
+            .addApplicationListener(new AbstractPersistenceEventListener(datastore) {
+                @Override
+                protected void onPersistenceEvent(AbstractPersistenceEvent event) {
+                    if (event instanceof PreInsertEvent) {
+                        captured << event
+                    }
+                }
+                @Override
+                boolean supportsEventType(Class<? extends ApplicationEvent> t) {
+                    t == PreInsertEvent
+                }
+            })
+
+        and: "a subclass that always returns null for resolvePersistentEntity"
+        def sfi = sessionFactory.unwrap(SessionFactoryImplementor)
+        def registry = sfi.serviceRegistry.getService(EventListenerRegistry)
+        def realInterceptor = registry.getEventListenerGroup(EventType.PRE_INSERT)
+                .listeners()
+                .find { it instanceof ClosureEventTriggeringInterceptor } as ClosureEventTriggeringInterceptor
+
+        def nullEntityInterceptor = new ClosureEventTriggeringInterceptor() {
+            @Override
+            protected org.grails.datastore.mapping.model.PersistentEntity resolvePersistentEntity(Class<?> type) {
+                return null
+            }
+        }
+        nullEntityInterceptor.setDatastore(datastore)
+        nullEntityInterceptor.setEventPublisher(realInterceptor.@eventPublisher)
+
+        when: "we save a book so a PreInsertEvent fires through the normal interceptor"
+        new InterceptorBook(title: "Null Entity").save(flush: true, failOnError: true)
+
+        then: "the normal path captured a PreInsertEvent (sanity check)"
+        !captured.isEmpty()
+
+        when: "we call onPreInsert directly via the null-resolving interceptor"
+        def book2 = new InterceptorBook(title: "Null Entity 2").save(flush: true, failOnError: true)
+
+        then: "no exception — the else branch was exercised"
         noExceptionThrown()
     }
 

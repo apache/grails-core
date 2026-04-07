@@ -3,15 +3,7 @@ Generated on: 2026-04-06 16:49:20
 
 ## Module: grails-data-hibernate7-core
 | Class | % Instructions Covered | Done
-| org.grails.orm.hibernate.GrailsHibernateTemplate | 72.43% | X
-| org.grails.orm.hibernate.connections.HibernateConnectionSourceSettingsBuilder | 72.81% | X
-| grails.orm.HibernateCriteriaBuilder | 74.43% | X |
-| org.grails.orm.hibernate.support.SoftKey | 74.55% | X
-| org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernateToManyCollectionProperty | 75.00% | X
-| org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernateMappingFactory | 75.14% | X
-| org.grails.orm.hibernate.EventListenerIntegrator | 77.17% | X
-| org.grails.orm.hibernate.cfg.domainbinding.generator.GrailsIncrementGenerator | 77.44% | X
-| org.grails.orm.hibernate.support.ClosureEventTriggeringInterceptor | 78.12% | R
+| X org.grails.orm.hibernate.support.ClosureEventTriggeringInterceptor | 78.12% | R
 | org.grails.orm.hibernate.cfg.Mapping | 79.41% | X
 | org.grails.orm.hibernate.cfg.IdentityEnumType | 80.92% | X
 | X org.grails.orm.hibernate.cfg.domainbinding.binder.SingleTableSubclassBinder | 80.95% |
