@@ -29,7 +29,7 @@ Generated on: 2026-04-06 16:49:20
 | X org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernatePersistentProperty | 85.28% |
 | X org.grails.orm.hibernate.access.TraitPropertyAccessStrategy | 85.35% |
 | X org.grails.orm.hibernate.proxy.GrailsBytecodeProvider | 85.71% |
-| org.grails.orm.hibernate.HibernateGormInstanceApi | 85.82% |
+| org.grails.orm.hibernate.HibernateGormInstanceApi | 85.82% | X |
 | org.grails.orm.hibernate.HibernateDatastore.ChildHibernateDatastore | 86.36% |
 | X org.grails.orm.hibernate.proxy.GrailsProxyFactoryFactory | 86.67% |
 | X org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernateToManyProperty | 86.77% |
