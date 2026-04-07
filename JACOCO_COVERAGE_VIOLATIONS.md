@@ -19,7 +19,7 @@ Generated on: 2026-04-06 16:49:20
 | org.grails.orm.hibernate.cfg.HibernateCompositeIdentity | 68.00% | X
 | org.grails.orm.hibernate.HibernateDatastore | 68.53% | X |
 | org.grails.orm.hibernate.cfg.CacheConfig.Usage | 69.70% | X
-| org.grails.orm.hibernate.connections.HibernateConnectionSourceFactory | 69.84% |
+| org.grails.orm.hibernate.connections.HibernateConnectionSourceFactory | 69.84% | X |
 | org.grails.orm.hibernate.cfg.GrailsHibernateUtil | 71.03% | X
 | org.grails.orm.hibernate.cfg.DiscriminatorConfig | 72.22% | X
 | org.grails.orm.hibernate.GrailsHibernateTemplate | 72.43% | R
