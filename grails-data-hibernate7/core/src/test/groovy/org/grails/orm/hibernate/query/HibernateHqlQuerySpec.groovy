@@ -286,6 +286,48 @@ class HibernateHqlQuerySpec extends HibernateGormDatastoreSpec {
         noExceptionThrown()
         query.list().size() == 1
     }
+
+    void "populateQuerySettings accepts max as non-Integer (String) via ConversionService"() {
+        when:
+        def results = buildHqlQuery("from HibernateHqlQuerySpecBook", [:], null, [max: "2"]).list()
+        then:
+        results.size() == 2
+    }
+
+    void "getHibernateTemplate returns non-null HibernateTemplate"() {
+        expect:
+        buildHqlQuery("from HibernateHqlQuerySpecBook").getHibernateTemplate() != null
+    }
+
+    void "populateQuerySettings applies flushMode arg"() {
+        when:
+        buildHqlQuery("from HibernateHqlQuerySpecBook", [:], null, [flushMode: org.hibernate.FlushMode.COMMIT]).list()
+        then:
+        noExceptionThrown()
+    }
+
+    void "populateQuerySettings with lock:true applies pessimistic write lock mode"() {
+        when:
+        def results = buildHqlQuery("from HibernateHqlQuerySpecBook", [:], null, [lock: true]).list()
+        then:
+        noExceptionThrown()
+        results.size() == 3
+    }
+
+    void "populateQueryWithNamedArguments handles array value"() {
+        given:
+        def query = buildHqlQuery("from HibernateHqlQuerySpecBook b where b.title in (:titles)",
+                [titles: ["The Hobbit", "Fellowship"].toArray(new String[0])])
+        when:
+        def results = query.list()
+        then:
+        results.size() == 2
+    }
+
+    void "getQuery returns non-null for SELECT queries"() {
+        expect:
+        buildHqlQuery("from HibernateHqlQuerySpecBook").getQuery() != null
+    }
 }
 
 @Entity

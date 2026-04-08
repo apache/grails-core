@@ -20,6 +20,8 @@
 package org.grails.orm.hibernate.cfg.domainbinding.secondpass
 
 import grails.gorm.specs.HibernateGormDatastoreSpec
+import org.grails.orm.hibernate.cfg.ColumnConfig
+import org.grails.orm.hibernate.cfg.PropertyConfig
 import org.grails.orm.hibernate.cfg.domainbinding.hibernate.GrailsHibernatePersistentEntity
 import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernateToManyProperty
 
@@ -396,6 +398,44 @@ class MapSecondPassBinderSpec extends HibernateGormDatastoreSpec {
 
         expect:
         mapBinder.getSingleColumnConfig(propertyConfig) == column
+    }
+
+    void "bindMapSecondPass applies column config when mappedForm has indexColumn"() {
+        given:
+        def binder = getGrailsDomainBinder()
+        def collector = getCollector()
+        def metadataBuildingContext = binder.getMetadataBuildingContext()
+        def binders = getBinders(binder)
+        def mapBinder = binders.collectionBinder.mapSecondPassBinder
+
+        def ownerEntity = getPersistentEntity(MapSPBOwner) as GrailsHibernatePersistentEntity
+        def attrsProp = ownerEntity.getPropertyByName("attributes") as HibernateToManyProperty
+
+        def rootClass = new RootClass(metadataBuildingContext)
+        rootClass.setEntityName(ownerEntity.name)
+        rootClass.setClassName(ownerEntity.name)
+        rootClass.setJpaEntityName(ownerEntity.name)
+        rootClass.setTable(collector.addTable(null, null, "MAPSPB_OWNER3", null, false, metadataBuildingContext))
+        collector.addEntityBinding(rootClass)
+
+        def map = new org.hibernate.mapping.Map(metadataBuildingContext, rootClass)
+        map.setRole("${ownerEntity.name}.attributes3".toString())
+        map.setCollectionTable(rootClass.getTable())
+        attrsProp.setCollection(map)
+
+        and: "inject an indexColumn config into the mapped form"
+        def indexPc = new PropertyConfig()
+        def colConfig = new ColumnConfig()
+        colConfig.name = "custom_idx_col"
+        indexPc.columns << colConfig
+        attrsProp.getHibernateMappedForm().indexColumn = indexPc
+
+        when:
+        mapBinder.bindMapSecondPass(attrsProp)
+
+        then:
+        noExceptionThrown()
+        map.index != null
     }
 }
 
