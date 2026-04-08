@@ -256,6 +256,47 @@ class CollectionSecondPassBinderSpec extends HibernateGormDatastoreSpec {
         then: "no exception thrown — the setter is available"
         noExceptionThrown()
     }
+
+    def "bindCollectionSecondPass calls componentBinder when set for embedded collection"() {
+        given:
+        def mbc = getGrailsDomainBinder().getMetadataBuildingContext()
+        def ownerClass = new org.hibernate.mapping.RootClass(mbc)
+        ownerClass.setEntityName("EmbeddedOwner2")
+        def ownerTable = new org.hibernate.mapping.Table("test", "embedded_owner2")
+        ownerClass.setTable(ownerTable)
+        def idValue = new org.hibernate.mapping.BasicValue(mbc, ownerTable)
+        idValue.setTypeName("long")
+        idValue.addColumn(new org.hibernate.mapping.Column("id"))
+        ownerClass.setIdentifier(idValue)
+        def bag = new org.hibernate.mapping.Bag(mbc, ownerClass)
+        bag.setCollectionTable(new org.hibernate.mapping.Table("test", "embedded_owner2_dims"))
+
+        def mockComponent = Mock(org.hibernate.mapping.Component)
+        def mockComponentBinder = Mock(org.grails.orm.hibernate.cfg.domainbinding.binder.ComponentBinder)
+
+        def embeddedProperty = Mock(org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernateEmbeddedCollectionProperty)
+        embeddedProperty.getCollection() >> bag
+        embeddedProperty.isBidirectional() >> false
+        embeddedProperty.isSorted() >> false
+        embeddedProperty.getCacheUsage() >> null
+        embeddedProperty.getHibernateMappedForm() >> Mock(org.grails.orm.hibernate.cfg.PropertyConfig) {
+            hasJoinKeyMapping() >> false
+        }
+        def ownerEntity = Mock(org.grails.orm.hibernate.cfg.domainbinding.hibernate.GrailsHibernatePersistentEntity) {
+            getPersistentPropertiesToBind() >> []
+        }
+        embeddedProperty.getOwner() >> ownerEntity
+        embeddedProperty.getHibernateOwner() >> ownerEntity
+
+        binder.setComponentBinder(mockComponentBinder)
+
+        when:
+        binder.bindCollectionSecondPass(embeddedProperty)
+
+        then:
+        1 * mockComponentBinder.bindEmbeddedCollectionComponent(embeddedProperty) >> mockComponent
+        bag.element == mockComponent
+    }
 }
 
 @Entity
