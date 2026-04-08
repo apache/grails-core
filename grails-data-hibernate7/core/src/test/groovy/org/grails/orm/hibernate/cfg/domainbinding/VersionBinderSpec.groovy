@@ -106,6 +106,21 @@ class VersionBinderSpec extends HibernateGormDatastoreSpec {
         def column = rootClass.getVersion().getValue().getColumns().first() as Column
         column.getName() == "my_custom_ver_col"
     }
+
+    def "should set OptimisticLockStyle.NONE when entity has no version property"() {
+        given:
+        def entity = createPersistentEntity(VersionBinderNoVersionEntity)
+        def rootClass = new RootClass(metadataBuildingContext)
+        rootClass.setTable(new Table("version_binder_no_version_entity"))
+        entity.setPersistentClass(rootClass)
+
+        when:
+        versionBinder.bindVersion(null, rootClass)
+
+        then:
+        rootClass.getOptimisticLockStyle() == OptimisticLockStyle.NONE
+        rootClass.getVersion() == null
+    }
 }
 
 @Entity
@@ -123,5 +138,13 @@ class VersionBinderCustomUniqueEntity implements HibernateEntity<VersionBinderCu
     Long version
     static mapping = {
         version column: "my_custom_ver_col"
+    }
+}
+
+@Entity
+class VersionBinderNoVersionEntity implements HibernateEntity<VersionBinderNoVersionEntity> {
+    Long id
+    static mapping = {
+        version false
     }
 }
