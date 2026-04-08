@@ -81,7 +81,7 @@ public class DefaultStackTraceFilterer implements StackTraceFilterer {
         if (recursive) {
             Throwable current = source;
             while (current != null) {
-                current = filter(current);
+                doFilter(current);
                 current = current.getCause();
             }
         }
@@ -90,25 +90,36 @@ public class DefaultStackTraceFilterer implements StackTraceFilterer {
 
     public Throwable filter(Throwable source) {
         if (shouldFilter) {
-            StackTraceElement[] trace = source.getStackTrace();
-            List<StackTraceElement> newTrace = filterTraceWithCutOff(trace, cutOffPackage);
-
-            if (newTrace.isEmpty()) {
-                // filter with no cut-off so at least there is some trace
-                newTrace = filterTraceWithCutOff(trace, null);
-            }
-
-            // Only trim the trace if there was some application trace on the stack
-            // if not we will just skip sanitizing and leave it as is
-            if (!newTrace.isEmpty()) {
-                // We don't want to lose anything, so log it
+            boolean modified = doFilter(source);
+            if (modified) {
+                // Log the full stack trace once for the top-level exception (includes causes)
                 STACK_LOG.error(FULL_STACK_TRACE_MESSAGE, source);
-                StackTraceElement[] clean = new StackTraceElement[newTrace.size()];
-                newTrace.toArray(clean);
-                source.setStackTrace(clean);
             }
         }
         return source;
+    }
+
+    private boolean doFilter(Throwable source) {
+        if (!shouldFilter) {
+            return false;
+        }
+        StackTraceElement[] trace = source.getStackTrace();
+        List<StackTraceElement> newTrace = filterTraceWithCutOff(trace, cutOffPackage);
+
+        if (newTrace.isEmpty()) {
+            // filter with no cut-off so at least there is some trace
+            newTrace = filterTraceWithCutOff(trace, null);
+        }
+
+        // Only trim the trace if there was some application trace on the stack
+        // if not we will just skip sanitizing and leave it as is
+        if (!newTrace.isEmpty()) {
+            StackTraceElement[] clean = new StackTraceElement[newTrace.size()];
+            newTrace.toArray(clean);
+            source.setStackTrace(clean);
+            return true;
+        }
+        return false;
     }
 
     private List<StackTraceElement> filterTraceWithCutOff(StackTraceElement[] trace, String endPackage) {
