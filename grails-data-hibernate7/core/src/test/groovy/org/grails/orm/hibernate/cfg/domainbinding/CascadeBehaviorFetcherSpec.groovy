@@ -19,6 +19,11 @@
 package org.grails.orm.hibernate.cfg.domainbinding
 
 import jakarta.persistence.Embeddable
+import org.grails.datastore.mapping.model.types.Association
+import org.grails.datastore.mapping.model.PersistentEntity
+import org.grails.orm.hibernate.cfg.PropertyConfig
+import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernatePersistentProperty
+import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernateManyToOneProperty
 import org.hibernate.MappingException
 import spock.lang.Shared
 import spock.lang.Unroll
@@ -80,7 +85,13 @@ class CascadeBehaviorFetcherSpec extends HibernateGormDatastoreSpec {
             ["many-to-one in composite id", CompositeIdManyToOne, "parent", CompositeIdParent, ALL.getValue()],
 
             // --- Embedded Association Scenario ---
-            ["embedded association", EOwner, "address", EAddress, ALL.getValue()]
+            ["embedded association", EOwner, "address", EAddress, ALL.getValue()],
+
+            // --- EmbeddedCollection Scenario ---
+            ["embedded collection", EmbeddedCollOwner, "items", EmbeddedItem, ALL.getValue()],
+
+            // --- ManyToOne correctly owned (non-circular) → ALL ---
+            ["many-to-one (correctly owned, non-circular)", MtoAllA, "b", MtoAllB, ALL.getValue()]
     ]
 
     @Shared CascadeBehaviorFetcher fetcher = new CascadeBehaviorFetcher()
@@ -112,6 +123,36 @@ class CascadeBehaviorFetcherSpec extends HibernateGormDatastoreSpec {
 
         where:
         [description, ownerClass, associationName, childClass, expectation] << cascadeMetadataTestData
+    }
+
+    def "getCascadeBehaviour throws MappingException when associated entity is null for non-basic association"() {
+        given:
+        def association = Mock(HibernateManyToOneProperty)
+        association.getMappedForm() >> null
+        association.getType() >> Object
+        association.getAssociatedEntity() >> null
+
+        when:
+        fetcher.getCascadeBehaviour(association)
+
+        then:
+        thrown(MappingException)
+    }
+
+    def "getCascadeBehaviour throws MappingException for unrecognized association type"() {
+        given:
+        def association = Mock(UnrecognizedTestAssociation)
+        association.getMappedForm() >> null
+        association.getType() >> Object
+        def mockEntity = Mock(PersistentEntity)
+        association.getAssociatedEntity() >> mockEntity
+        association.isHasOne() >> false
+
+        when:
+        fetcher.getCascadeBehaviour(association)
+
+        then:
+        thrown(MappingException)
     }
 }
 
@@ -291,3 +332,41 @@ class EOwner {
 }
 
 @Embeddable class EAddress { String street }
+
+// --- EmbeddedCollection scenario (L99) ---
+@Embeddable class EmbeddedItem { String name }
+
+@Entity
+class EmbeddedCollOwner {
+    static hasMany = [items: EmbeddedItem]
+    static embedded = ['items']
+}
+
+// --- ManyToOne correctly owned, non-circular → ALL (L117) ---
+// Mutual belongsTo: both entities own each other.
+// MtoAllA.b → HibernateManyToOneProperty
+// isCorrectlyOwned() = MtoAllB.isOwningEntity(MtoAllA) = (MtoAllA in MtoAllB.owners) = true
+// isCircular() = MtoAllB.isAssignableFrom(MtoAllA) = false
+// → returns ALL at L117
+@Entity
+class MtoAllA {
+    MtoAllB b
+    static belongsTo = [b: MtoAllB]
+}
+
+@Entity
+class MtoAllB {
+    MtoAllA a
+    static belongsTo = [a: MtoAllA]
+}
+
+// --- Abstract helper for unrecognized association type mock (L124) ---
+abstract class UnrecognizedTestAssociation extends org.grails.datastore.mapping.model.types.Association<PropertyConfig>
+        implements HibernatePersistentProperty {
+    UnrecognizedTestAssociation(
+            org.grails.datastore.mapping.model.PersistentEntity owner,
+            org.grails.datastore.mapping.model.MappingContext context,
+            java.beans.PropertyDescriptor descriptor) {
+        super(owner, context, descriptor)
+    }
+}

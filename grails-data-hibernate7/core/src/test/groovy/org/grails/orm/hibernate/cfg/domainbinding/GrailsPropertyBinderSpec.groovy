@@ -121,7 +121,11 @@ class GrailsPropertyBinderSpec extends HibernateGormDatastoreSpec {
             PropertyBinderSpecEmployee,
             PropertyBinderSpecSerializableEntity,
             PropertyBinderSpecCustomEntity,
-            PropertyBinderSpecCustomUserTypeCollection
+            PropertyBinderSpecCustomUserTypeCollection,
+            PropertyBinderSpecHasOneOwner,
+            PropertyBinderSpecHasOneProfile,
+            PropertyBinderSpecFKOwner,
+            PropertyBinderSpecFKChild
         ])
     }
 
@@ -266,6 +270,40 @@ class GrailsPropertyBinderSpec extends HibernateGormDatastoreSpec {
         value instanceof BasicValue
         !(value instanceof org.hibernate.mapping.Collection)
     }
+
+    void "Test bind valid hasOne property (HibernateOneToOneProperty.isValidHibernateOneToOne = true)"() {
+        given:
+        def binder = getGrailsDomainBinder()
+        def propertyBinder = getBinders(binder).propertyBinder
+        def persistentEntity = getPersistentEntity(PropertyBinderSpecHasOneOwner) as GrailsHibernatePersistentEntity
+        def rootClass = new RootClass(binder.getMetadataBuildingContext())
+        rootClass.setTable(new Table("HAS_ONE_OWNER"))
+        persistentEntity.setPersistentClass(rootClass)
+
+        when:
+        def profileProp = persistentEntity.getPropertyByName("profile") as HibernatePersistentProperty
+        Value value = propertyBinder.bindProperty(profileProp, null, EMPTY_PATH)
+
+        then:
+        value instanceof OneToOne
+    }
+
+    void "Test bind FK one-to-one property (HibernateOneToOneProperty.isValidHibernateOneToOne = false)"() {
+        given:
+        def binder = getGrailsDomainBinder()
+        def propertyBinder = getBinders(binder).propertyBinder
+        def persistentEntity = getPersistentEntity(PropertyBinderSpecFKOwner) as GrailsHibernatePersistentEntity
+        def rootClass = new RootClass(binder.getMetadataBuildingContext())
+        rootClass.setTable(new Table("FK_OWNER"))
+        persistentEntity.setPersistentClass(rootClass)
+
+        when:
+        def childProp = persistentEntity.getPropertyByName("child") as HibernatePersistentProperty
+        Value value = propertyBinder.bindProperty(childProp, null, EMPTY_PATH)
+
+        then:
+        value instanceof ManyToOne
+    }
 }
 
 @Entity
@@ -329,4 +367,35 @@ class PropertyBinderSpecCustomUserTypeCollection {
         // Assume this class exists or is mocked
         categories type: 'org.hibernate.type.YesNoConverter' 
     }
+}
+
+// --- hasOne (valid Hibernate one-to-one) for L84 ---
+@Entity
+class PropertyBinderSpecHasOneProfile {
+    Long id
+    String bio
+    PropertyBinderSpecHasOneOwner owner
+    static belongsTo = [owner: PropertyBinderSpecHasOneOwner]
+}
+
+@Entity
+class PropertyBinderSpecHasOneOwner {
+    Long id
+    static hasOne = [profile: PropertyBinderSpecHasOneProfile]
+}
+
+// --- FK one-to-one (isValidHibernateOneToOne = false) for L86 ---
+// PropertyBinderSpecFKChild has belongsTo PropertyBinderSpecFKOwner,
+// making PropertyBinderSpecFKOwner.child the owning side with isValidHibernateOneToOne = false
+@Entity
+class PropertyBinderSpecFKChild {
+    Long id
+    PropertyBinderSpecFKOwner owner
+    static belongsTo = [owner: PropertyBinderSpecFKOwner]
+}
+
+@Entity
+class PropertyBinderSpecFKOwner {
+    Long id
+    PropertyBinderSpecFKChild child
 }
