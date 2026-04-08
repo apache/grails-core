@@ -719,10 +719,8 @@ If this causes issues with existing URL mappings, you can disable it in `applica
 [source,yaml]
 ----
 grails:
-    web:
-        url:
-            mapping:
-                validateWildcards: false
+    urlmapping:
+        validateWildcards: false
 ----
 
 ===== 2.10 ContainerGebSpec Context Path Support
