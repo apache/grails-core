@@ -19,14 +19,18 @@
 
 package org.grails.orm.hibernate.cfg.domainbinding.binder
 
-import spock.lang.Specification
+import grails.gorm.specs.HibernateGormDatastoreSpec
+import org.hibernate.mapping.BasicValue
+import org.hibernate.mapping.RootClass
+import org.hibernate.mapping.SimpleValue
+import org.hibernate.mapping.Table
 import spock.lang.Subject
 
 /**
  * Tests for DefaultDiscriminatorBinder focusing on logic rather than Hibernate integration
  * since many Hibernate 7 classes are sealed and cannot be mocked.
  */
-class DefaultDiscriminatorBinderSpec extends Specification {
+class DefaultDiscriminatorBinderSpec extends HibernateGormDatastoreSpec {
 
     @Subject
     DefaultDiscriminatorBinder binder
@@ -40,5 +44,22 @@ class DefaultDiscriminatorBinderSpec extends Specification {
     def "test constructor sets dependencies correctly"() {
         expect:
         binder.simpleValueColumnBinder == simpleValueColumnBinder
+    }
+
+    def "bindDefaultDiscriminator sets discriminator value and binds simple value"() {
+        given:
+        def metaBuildingCtx = getGrailsDomainBinder().getMetadataBuildingContext()
+        def rootClass = new RootClass(metaBuildingCtx)
+        rootClass.setEntityName("com.example.MyEntity")
+        rootClass.setClassName("com.example.MyEntity")
+        rootClass.setTable(new Table("my_entity"))
+        def discriminator = new BasicValue(metaBuildingCtx)
+
+        when:
+        binder.bindDefaultDiscriminator(rootClass, discriminator)
+
+        then:
+        rootClass.getDiscriminatorValue() == "com.example.MyEntity"
+        1 * simpleValueColumnBinder.bindSimpleValue(discriminator, _, _, false)
     }
 }

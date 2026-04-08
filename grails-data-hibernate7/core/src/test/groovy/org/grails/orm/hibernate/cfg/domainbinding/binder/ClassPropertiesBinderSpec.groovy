@@ -79,4 +79,16 @@ class ClassPropertiesBinderSpec extends HibernateGormDatastoreSpec {
 
         1 * naturalIdentifierBinder.bindNaturalIdentifier(domainClass, persistentClass)
     }
+
+    void "2-arg constructor uses a default NaturalIdentifierBinder"() {
+        given:
+        def grailsPropertyBinder = Mock(GrailsPropertyBinder)
+        def propertyFromValueCreator = Mock(PropertyFromValueCreator)
+
+        when:
+        def binder = new ClassPropertiesBinder(grailsPropertyBinder, propertyFromValueCreator)
+
+        then:
+        binder != null
+    }
 }
