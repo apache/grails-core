@@ -30,14 +30,10 @@ boolean isMongoProject = project.name.startsWith('grails-test-examples-mongodb')
 boolean isGeneralFunctionalTest = !isHibernateSpecificProject && !isMongoProject
 
 // General functional test projects that use Hibernate 5-specific GORM APIs and cannot run
-// under Hibernate 7 via dependency substitution. These use executeUpdate(String) without
-// parameters (H7 requires a Map parameter), HibernateSpec unit tests (different domain class
-// detection in H7), or ChainedTransactionManager behavior that changed in H7.
+// under Hibernate 7 via dependency substitution.
 // Their H7-compatible equivalents live in grails-test-examples/hibernate7/.
 List<String> h7IncompatibleProjects = [
-        'grails-test-examples-app1',
         'grails-test-examples-datasources',
-        'grails-test-examples-gorm',
         'grails-test-examples-views-functional-tests',
         'grails-test-examples-scaffolding-fields',
 ]

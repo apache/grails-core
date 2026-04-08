@@ -41,10 +41,10 @@ class GormCascadeOperationsSpec extends Specification {
 
     def setup() {
         // Clean up test data
-        Book.executeUpdate('delete from Book')
-        Author.executeUpdate('delete from Author')
-        User.executeUpdate('delete from User')
-        City.executeUpdate('delete from City')
+        Book.executeUpdate('delete from Book', [:])
+        Author.executeUpdate('delete from Author', [:])
+        User.executeUpdate('delete from User', [:])
+        City.executeUpdate('delete from City', [:])
     }
 
     // ============================================

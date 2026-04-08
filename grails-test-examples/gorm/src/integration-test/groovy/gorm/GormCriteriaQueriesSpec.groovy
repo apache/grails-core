@@ -37,8 +37,8 @@ class GormCriteriaQueriesSpec extends Specification {
 
     def setup() {
         // Clean up and create fresh test data
-        Book.executeUpdate('delete from Book')
-        Author.executeUpdate('delete from Author')
+        Book.executeUpdate('delete from Book', [:])
+        Author.executeUpdate('delete from Author', [:])
 
         def kingAuthor = new Author(name: 'Stephen King', email: 'stephen@king.com').save(flush: true)
         def clancyAuthor = new Author(name: 'Tom Clancy', email: 'tom@clancy.com').save(flush: true)
