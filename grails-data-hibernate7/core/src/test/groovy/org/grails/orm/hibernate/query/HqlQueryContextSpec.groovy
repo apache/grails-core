@@ -238,20 +238,31 @@ class HqlQueryContextSpec extends Specification {
         HqlQueryContext.getTarget("select p.name, p.age from Person p", String) == Object[].class
     }
 
-    @Unroll
-    void "getTarget returns Long for aggregate projection: #hql"() {
+    void "getTarget returns Long for count aggregate"() {
         expect:
-        HqlQueryContext.getTarget(hql, String) == Long
-        where:
-        hql << [
-            "select count(p) from Person p",
-            "select sum(p.age) from Person p",
-            "select avg(p.age) from Person p",
-            "select min(p.age) from Person p",
-            "select max(p.age) from Person p",
-            "select count(*) from Person",
-            "select distinct count(p.id) from Person p"
-        ]
+        HqlQueryContext.getTarget("select count(p) from Person p", String) == Long
+        HqlQueryContext.getTarget("select count(*) from Person", String) == Long
+        HqlQueryContext.getTarget("select distinct count(p.id) from Person p", String) == Long
+    }
+
+    void "getTarget returns Double for avg aggregate"() {
+        expect:
+        HqlQueryContext.getTarget("select avg(p.age) from Person p", String) == Double
+    }
+
+    void "getTarget returns Number for sum aggregate"() {
+        expect:
+        HqlQueryContext.getTarget("select sum(p.age) from Person p", String) == Number
+    }
+
+    void "getTarget returns Number for min aggregate"() {
+        expect:
+        HqlQueryContext.getTarget("select min(p.age) from Person p", String) == Number
+    }
+
+    void "getTarget returns Number for max aggregate"() {
+        expect:
+        HqlQueryContext.getTarget("select max(p.age) from Person p", String) == Number
     }
 
     // ─── countHqlProjections ─────────────────────────────────────────────────

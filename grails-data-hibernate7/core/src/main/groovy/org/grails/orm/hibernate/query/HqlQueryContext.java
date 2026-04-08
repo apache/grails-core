@@ -130,10 +130,18 @@ public record HqlQueryContext(
             case 0 -> clazz;
             case 1 ->
                 isAggregateProjection(normalized) ?
-                        Long.class :
+                        aggregateTargetClass(normalized) :
                         (isPropertyProjection(normalized) ? Object.class : clazz);
             default -> Object[].class;
         };
+    }
+
+    private static Class<?> aggregateTargetClass(CharSequence hql) {
+        String clause = getSingleProjectionClause(hql);
+        if (clause == null) return Long.class;
+        if (clause.startsWith("count(")) return Long.class;
+        if (clause.startsWith("avg(")) return Double.class;
+        return Number.class;
     }
 
     private static boolean isAggregateProjection(CharSequence hql) {
