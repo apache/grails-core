@@ -21,10 +21,16 @@ package org.grails.orm.hibernate.cfg.domainbinding
 
 import grails.gorm.specs.HibernateGormDatastoreSpec
 import grails.persistence.Entity
+import org.grails.datastore.mapping.model.types.Association
+import org.grails.orm.hibernate.cfg.PropertyConfig
 import org.grails.orm.hibernate.cfg.domainbinding.hibernate.GrailsHibernatePersistentEntity
+import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernateBasicProperty
+import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernateManyToManyProperty
+import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernateOneToManyProperty
 import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernatePersistentProperty
 import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernateToManyProperty
 import org.grails.orm.hibernate.cfg.JoinTable
+import org.hibernate.MappingException
 
 import spock.lang.Unroll
 import org.grails.orm.hibernate.cfg.domainbinding.util.BackticksRemover
@@ -174,6 +180,239 @@ class TableForManyCalculatorSpec extends HibernateGormDatastoreSpec {
         then:
         schema2 == "explicit_schema"
         catalog2 == "explicit_catalog"
+    }
+    def "calculateTableForMany Map property with explicit joinTable name returns joinTable name (L103)"() {
+        given:
+        def namingStrategy = getGrailsDomainBinder().getNamingStrategy()
+        def backticksRemover = new BackticksRemover()
+        def collector = Mock(InFlightMetadataCollector)
+        collector.addTable(_, _, _, _, _, _) >> { a, b, name, d, e, f -> new org.hibernate.mapping.Table("test", name) }
+        def calculator = new TableForManyCalculator(namingStrategy, collector, backticksRemover)
+
+        def ownerEntity = Mock(GrailsHibernatePersistentEntity)
+        ownerEntity.getTableName(namingStrategy) >> "map_owner"
+
+        def config = new PropertyConfig()
+        config.setJoinTable(new JoinTable(name: "explicit_map_table"))
+
+        def property = Mock(HibernatePersistentProperty)
+        property.getName() >> "attrs"
+        property.getType() >> Map.class
+        property.getMappedForm() >> config
+        property.getHibernateMappedForm() >> config
+        property.getHibernateOwner() >> ownerEntity
+
+        when:
+        def result = calculator.calculateTableForMany(property)
+
+        then:
+        result == "explicit_map_table"
+    }
+
+    def "calculateTableForMany Map property without joinTable returns left_propName (L105)"() {
+        given:
+        def namingStrategy = getGrailsDomainBinder().getNamingStrategy()
+        def backticksRemover = new BackticksRemover()
+        def collector = Mock(InFlightMetadataCollector)
+        collector.addTable(_, _, _, _, _, _) >> { a, b, name, d, e, f -> new org.hibernate.mapping.Table("test", name) }
+        def calculator = new TableForManyCalculator(namingStrategy, collector, backticksRemover)
+
+        def ownerEntity = Mock(GrailsHibernatePersistentEntity)
+        ownerEntity.getTableName(namingStrategy) >> "map_owner"
+
+        def config = new PropertyConfig()  // no joinTable
+
+        def property = Mock(HibernatePersistentProperty)
+        property.getName() >> "attrs"
+        property.getType() >> Map.class
+        property.getMappedForm() >> config
+        property.getHibernateMappedForm() >> config
+        property.getHibernateOwner() >> ownerEntity
+
+        when:
+        def result = calculator.calculateTableForMany(property)
+
+        then:
+        result == "map_owner_attrs"
+    }
+
+    def "calculateTableForMany Basic property with explicit joinTable name returns joinTable name (L108)"() {
+        given:
+        def namingStrategy = getGrailsDomainBinder().getNamingStrategy()
+        def backticksRemover = new BackticksRemover()
+        def collector = Mock(InFlightMetadataCollector)
+        collector.addTable(_, _, _, _, _, _) >> { a, b, name, d, e, f -> new org.hibernate.mapping.Table("test", name) }
+        def calculator = new TableForManyCalculator(namingStrategy, collector, backticksRemover)
+
+        def ownerEntity = Mock(GrailsHibernatePersistentEntity)
+        ownerEntity.getTableName(namingStrategy) >> "basic_owner"
+
+        def config = new PropertyConfig()
+        config.setJoinTable(new JoinTable(name: "explicit_basic_table"))
+
+        def property = Mock(HibernateBasicProperty)
+        property.getName() >> "items"
+        property.getType() >> String.class
+        property.getMappedForm() >> config
+        property.getHibernateMappedForm() >> config
+        property.getHibernateOwner() >> ownerEntity
+
+        when:
+        def result = calculator.calculateTableForMany(property)
+
+        then:
+        result == "explicit_basic_table"
+    }
+
+    def "calculateTableForMany with non-Association non-Basic property throws MappingException (L117)"() {
+        given:
+        def namingStrategy = getGrailsDomainBinder().getNamingStrategy()
+        def backticksRemover = new BackticksRemover()
+        def collector = Mock(InFlightMetadataCollector)
+        def calculator = new TableForManyCalculator(namingStrategy, collector, backticksRemover)
+
+        def ownerEntity = Mock(GrailsHibernatePersistentEntity)
+        ownerEntity.getTableName(namingStrategy) >> "some_owner"
+
+        def config = new PropertyConfig()  // no joinTable
+
+        // HibernateToManyProperty is an interface; this mock is not Basic, not Association
+        def property = Mock(HibernatePersistentProperty)
+        property.getName() >> "unknownProp"
+        property.getType() >> Object.class  // not Map
+        property.getMappedForm() >> config
+        property.getHibernateMappedForm() >> config
+        property.getHibernateOwner() >> ownerEntity
+
+        when:
+        calculator.calculateTableForMany(property)
+
+        then:
+        thrown(MappingException)
+    }
+
+    def "calculateTableForMany with Association having null associated entity throws MappingException (L124)"() {
+        given:
+        def namingStrategy = getGrailsDomainBinder().getNamingStrategy()
+        def backticksRemover = new BackticksRemover()
+        def collector = Mock(InFlightMetadataCollector)
+        def calculator = new TableForManyCalculator(namingStrategy, collector, backticksRemover)
+
+        def ownerEntity = Mock(GrailsHibernatePersistentEntity)
+        ownerEntity.getTableName(namingStrategy) >> "some_owner"
+
+        def config = new PropertyConfig()
+
+        // HibernateOneToManyProperty extends Association
+        def property = Mock(HibernateOneToManyProperty)
+        property.getName() >> "nullAssoc"
+        property.getType() >> List.class
+        property.getMappedForm() >> config
+        property.getHibernateMappedForm() >> config
+        property.getHibernateOwner() >> ownerEntity
+        property.getAssociatedEntity() >> null  // triggers L124 throw
+
+        when:
+        calculator.calculateTableForMany(property)
+
+        then:
+        thrown(MappingException)
+    }
+
+    def "calculateTableForMany owning ManyToMany without joinTable returns left_propName (L134)"() {
+        given:
+        def namingStrategy = getGrailsDomainBinder().getNamingStrategy()
+        def backticksRemover = new BackticksRemover()
+        def collector = Mock(InFlightMetadataCollector)
+        def calculator = new TableForManyCalculator(namingStrategy, collector, backticksRemover)
+
+        def ownerEntity = Mock(GrailsHibernatePersistentEntity)
+        ownerEntity.getTableName(namingStrategy) >> "left_entity"
+
+        def assocEntity = Mock(GrailsHibernatePersistentEntity)
+        assocEntity.getTableName(namingStrategy) >> "right_entity"
+
+        def config = new PropertyConfig()  // no joinTable → hasJoinTableMapping = false
+
+        def property = Mock(HibernateManyToManyProperty)
+        property.getName() >> "rightItems"
+        property.getType() >> List.class
+        property.getMappedForm() >> config
+        property.getHibernateMappedForm() >> config
+        property.getHibernateOwner() >> ownerEntity
+        property.getAssociatedEntity() >> assocEntity
+        property.isOwningSide() >> true  // triggers L134
+
+        when:
+        def result = calculator.calculateTableForMany(property)
+
+        then:
+        result == "left_entity_right_items"
+    }
+
+    def "calculateTableForMany supportsJoinColumnMapping with explicit joinTable returns joinTable name (L142)"() {
+        given:
+        def namingStrategy = getGrailsDomainBinder().getNamingStrategy()
+        def backticksRemover = new BackticksRemover()
+        def collector = Mock(InFlightMetadataCollector)
+        def calculator = new TableForManyCalculator(namingStrategy, collector, backticksRemover)
+
+        def ownerEntity = Mock(GrailsHibernatePersistentEntity)
+        ownerEntity.getTableName(namingStrategy) >> "left_entity"
+
+        def assocEntity = Mock(GrailsHibernatePersistentEntity)
+        assocEntity.getTableName(namingStrategy) >> "right_entity"
+
+        def config = new PropertyConfig()
+        config.setJoinTable(new JoinTable(name: "explicit_join_table"))
+
+        // HibernateOneToManyProperty supports join column mapping when unidirectional
+        def property = Mock(HibernateOneToManyProperty)
+        property.getName() >> "items"
+        property.getType() >> List.class
+        property.getMappedForm() >> config
+        property.getHibernateMappedForm() >> config
+        property.getHibernateOwner() >> ownerEntity
+        property.getAssociatedEntity() >> assocEntity
+        property.supportsJoinColumnMapping() >> true  // triggers L140-L142
+
+        when:
+        def result = calculator.calculateTableForMany(property)
+
+        then:
+        result == "explicit_join_table"
+    }
+
+    def "calculateTableForMany non-owning Association returns right_left (L150)"() {
+        given:
+        def namingStrategy = getGrailsDomainBinder().getNamingStrategy()
+        def backticksRemover = new BackticksRemover()
+        def collector = Mock(InFlightMetadataCollector)
+        def calculator = new TableForManyCalculator(namingStrategy, collector, backticksRemover)
+
+        def ownerEntity = Mock(GrailsHibernatePersistentEntity)
+        ownerEntity.getTableName(namingStrategy) >> "left_entity"
+
+        def assocEntity = Mock(GrailsHibernatePersistentEntity)
+        assocEntity.getTableName(namingStrategy) >> "right_entity"
+
+        def config = new PropertyConfig()  // no joinTable
+
+        def property = Mock(HibernateOneToManyProperty)
+        property.getName() >> "items"
+        property.getType() >> List.class
+        property.getMappedForm() >> config
+        property.getHibernateMappedForm() >> config
+        property.getHibernateOwner() >> ownerEntity
+        property.getAssociatedEntity() >> assocEntity
+        property.supportsJoinColumnMapping() >> false
+        property.isOwningSide() >> false  // triggers L150
+
+        when:
+        def result = calculator.calculateTableForMany(property)
+
+        then:
+        result == "right_entity_left_entity"
     }
 }
 
