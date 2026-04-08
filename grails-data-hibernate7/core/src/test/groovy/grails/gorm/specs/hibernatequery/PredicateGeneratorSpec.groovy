@@ -29,6 +29,7 @@ import org.grails.datastore.mapping.query.Query
 
 import org.grails.orm.hibernate.query.JpaFromProvider
 import org.grails.orm.hibernate.query.PredicateGenerator
+import org.grails.orm.hibernate.query.PropertyArithmetic
 import grails.gorm.annotation.Entity
 import org.grails.datastore.gorm.GormEntity
 
@@ -192,6 +193,17 @@ class PredicateGeneratorSpec extends HibernateGormDatastoreSpec {
     def "test getPredicates with Size Comparison"() {
         given:
         List criteria = [new Query.SizeEquals("pets", 2)]
+
+        when:
+        def predicates = predicateGenerator.getPredicates(cb, query, root, criteria, fromProvider, personEntity)
+
+        then:
+        predicates.length == 1
+    }
+
+    def "getPredicates supports PropertyArithmetic on RHS of GreaterThan (age > salary * 10)"() {
+        given:
+        List criteria = [new Query.GreaterThan("age", new PropertyArithmetic("salary", PropertyArithmetic.Operator.MULTIPLY, 10))]
 
         when:
         def predicates = predicateGenerator.getPredicates(cb, query, root, criteria, fromProvider, personEntity)
@@ -432,6 +444,7 @@ class PredicateGeneratorSpecPerson implements GormEntity<PredicateGeneratorSpecP
     String firstName
     String lastName
     Integer age
+    BigDecimal salary
     PredicateGeneratorSpecFace face
     Set<String> nicknames
     static hasMany = [pets: PredicateGeneratorSpecPet, nicknames: String]

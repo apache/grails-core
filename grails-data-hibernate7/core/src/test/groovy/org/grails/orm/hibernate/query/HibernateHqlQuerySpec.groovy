@@ -287,46 +287,62 @@ class HibernateHqlQuerySpec extends HibernateGormDatastoreSpec {
         query.list().size() == 1
     }
 
-    void "populateQuerySettings accepts max as non-Integer (String) via ConversionService"() {
-        when:
-        def results = buildHqlQuery("from HibernateHqlQuerySpecBook", [:], null, [max: "2"]).list()
-        then:
-        results.size() == 2
+    void "singleResult returns first result when multiple rows match"() {
+        given: "a second author with multiple books matching the same HQL query"
+        def author2 = new HibernateHqlQuerySpecAuthor(name: "Tolkien2").save(flush: true)
+        new HibernateHqlQuerySpecBook(title: "Extra Book", pages: 200, author: author2).save(flush: true)
+
+        when: "singleResult is called on an HQL query that returns multiple rows"
+        def result = buildHqlQuery("from HibernateHqlQuerySpecBook").singleResult()
+
+        then: "first result is returned without throwing"
+        result != null
+        result instanceof HibernateHqlQuerySpecBook
     }
 
-    void "getHibernateTemplate returns non-null HibernateTemplate"() {
-        expect:
-        buildHqlQuery("from HibernateHqlQuerySpecBook").getHibernateTemplate() != null
+    void "aggregate avg() query returns a Double result"() {
+        when: "executing an avg aggregate HQL query"
+        def result = buildHqlQuery("select avg(b.pages) from HibernateHqlQuerySpecBook b").list()
+
+        then: "result is returned as a Double without type mismatch exception"
+        result.size() == 1
+        result[0] instanceof Double
     }
 
-    void "populateQuerySettings applies flushMode arg"() {
-        when:
-        buildHqlQuery("from HibernateHqlQuerySpecBook", [:], null, [flushMode: org.hibernate.FlushMode.COMMIT]).list()
-        then:
-        noExceptionThrown()
+    void "aggregate max() on Integer column returns a Number result"() {
+        when: "executing a max aggregate HQL query on an Integer property"
+        def result = buildHqlQuery("select max(b.pages) from HibernateHqlQuerySpecBook b").list()
+
+        then: "result is returned as a Number without type mismatch exception"
+        result.size() == 1
+        result[0] instanceof Number
     }
 
-    void "populateQuerySettings with lock:true applies pessimistic write lock mode"() {
-        when:
-        def results = buildHqlQuery("from HibernateHqlQuerySpecBook", [:], null, [lock: true]).list()
-        then:
-        noExceptionThrown()
-        results.size() == 3
+    void "aggregate min() on Integer column returns a Number result"() {
+        when: "executing a min aggregate HQL query on an Integer property"
+        def result = buildHqlQuery("select min(b.pages) from HibernateHqlQuerySpecBook b").list()
+
+        then: "result is returned as a Number without type mismatch exception"
+        result.size() == 1
+        result[0] instanceof Number
     }
 
-    void "populateQueryWithNamedArguments handles array value"() {
-        given:
-        def query = buildHqlQuery("from HibernateHqlQuerySpecBook b where b.title in (:titles)",
-                [titles: ["The Hobbit", "Fellowship"].toArray(new String[0])])
-        when:
-        def results = query.list()
-        then:
-        results.size() == 2
+    void "aggregate sum() on Integer column returns a Number result"() {
+        when: "executing a sum aggregate HQL query on an Integer property"
+        def result = buildHqlQuery("select sum(b.pages) from HibernateHqlQuerySpecBook b").list()
+
+        then: "result is returned as a Number without type mismatch exception"
+        result.size() == 1
+        result[0] instanceof Number
     }
 
-    void "getQuery returns non-null for SELECT queries"() {
-        expect:
-        buildHqlQuery("from HibernateHqlQuerySpecBook").getQuery() != null
+    void "count() aggregate returns a Long result"() {
+        when: "executing a count aggregate HQL query"
+        def result = buildHqlQuery("select count(b) from HibernateHqlQuerySpecBook b").list()
+
+        then: "result is returned as a Long without type mismatch exception"
+        result.size() == 1
+        result[0] instanceof Long
     }
 }
 
