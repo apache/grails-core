@@ -84,6 +84,26 @@ class DefaultColumnNameFetcherSpec extends HibernateGormDatastoreSpec {
         then:
         columnName == 'name'
     }
+    void "getDefaultColumnName for inherited true ManyToOne uses owner root entity prefix (L75-L78)"() {
+        given:
+        def namingStrategy = grailsDomainBinder.getNamingStrategy()
+        def backticksRemover = new BackticksRemover()
+        def fetcher = new DefaultColumnNameFetcher(namingStrategy, backticksRemover)
+
+        createPersistentEntity(DCFNOwner, grailsDomainBinder)
+        createPersistentEntity(DCFNKid, grailsDomainBinder)
+        def entity = createPersistentEntity(DCFNSubKid, grailsDomainBinder)
+
+        def property = entity.getPropertyByName("parent")
+
+        when:
+        def columnName = fetcher.getDefaultColumnName(property)
+
+        then:
+        // The inherited bidirectional ManyToOne path (L75-L78) prepends the owner root entity name
+        columnName.endsWith("_id")
+        !columnName.startsWith("parent")  // must have entity prefix, not just "parent_id"
+    }
 }
 
 // --- Test Domain Classes ---
@@ -96,6 +116,22 @@ class AssociatedEntity {
 @Entity
 class SpecBaseEntity {
     AssociatedEntity bidirectionalManyToOne
+}
+
+@Entity
+class DCFNOwner {
+    static hasMany = [kids: DCFNKid]
+}
+
+@Entity
+class DCFNKid {
+    DCFNOwner parent
+    static belongsTo = [parent: DCFNOwner]
+}
+
+@Entity
+class DCFNSubKid extends DCFNKid {
+    String extra
 }
 
 @Entity
