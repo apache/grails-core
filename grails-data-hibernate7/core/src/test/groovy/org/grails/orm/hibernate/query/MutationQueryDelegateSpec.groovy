@@ -184,6 +184,20 @@ class MutationQueryDelegateSpec extends HibernateGormDatastoreSpec {
         ex.cause instanceof QueryArgumentException
     }
 
+    void "setParameterList with Object array directly delegates to mutationQuery setParameter"() {
+        given:
+        MutationQuery mq = buildMutationQuery(
+            "DELETE FROM MutationQueryDelegateTestBook WHERE title IN (:titles)"
+        )
+        MutationQueryDelegate delegate = new MutationQueryDelegate(mq)
+
+        when:
+        delegate.setParameterList("titles", ["Book One", "Book Two"] as Object[])
+
+        then:
+        thrown(org.hibernate.query.QueryArgumentException)
+    }
+
     void "list throws UnsupportedOperationException"() {
         given:
         MutationQuery mq = buildMutationQuery(

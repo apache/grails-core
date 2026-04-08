@@ -248,5 +248,28 @@ class MultiTenantEventListenerSpec extends Specification {
         then:
         thrown(TenantException)
     }
+
+    void "onApplicationEvent PreInsertEvent reads tenantId from entity property when currentId is DEFAULT"() {
+        given: "resolver returns DEFAULT connection source id"
+        def resolver     = Mock(org.grails.datastore.mapping.multitenancy.TenantResolver) {
+            resolveTenantIdentifier() >> org.grails.datastore.mapping.core.connections.ConnectionSource.DEFAULT
+        }
+        def tenantId     = Mock(TenantId) { getName() >> "tenantId" }
+        def entity       = Mock(PersistentEntity) {
+            isMultiTenant() >> true
+            getTenantId()   >> tenantId
+        }
+        def entityAccess = Mock(org.grails.datastore.mapping.engine.EntityAccess) {
+            getProperty("tenantId") >> "entity_tenant"
+        }
+        def datastore    = Mock(HibernateDatastore) { getTenantResolver() >> resolver }
+        def event        = new PreInsertEvent(datastore, entity, entityAccess)
+
+        when:
+        listener.onApplicationEvent(event)
+
+        then:
+        1 * entityAccess.setProperty("tenantId", "entity_tenant")
+    }
 }
 
