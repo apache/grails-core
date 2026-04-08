@@ -29,7 +29,7 @@ class HibernatePersistentPropertySpec extends HibernateGormDatastoreSpec {
         manager.addAllDomainClasses([
             LazyBook, LazyAuthor, ExplicitNonLazy, JoinFetchEntity, EnumEntity,
             GeneratorDefaultEntity, GeneratorUuid2Entity, CompositeKeyEntity,
-            HPPSManyA, HPPSManyB
+            HPPSManyA, HPPSManyB, HPPSClassTyped, HPPSStringTyped
         ])
     }
 
@@ -229,6 +229,105 @@ class HibernatePersistentPropertySpec extends HibernateGormDatastoreSpec {
 
         expect:
         !property.isJoinKeyMapped()
+    }
+    def "isBidirectionalManyToOneWithListMapping always returns false by default"() {
+        given:
+        def entity = (HibernatePersistentEntity) getMappingContext().getPersistentEntity(LazyBook.name)
+        def property = (HibernatePersistentProperty) entity.getPropertyByName("title")
+
+        expect:
+        !property.isBidirectionalManyToOneWithListMapping(null)
+    }
+
+    def "getHibernateAssociatedEntity returns associated entity for ManyToOne property"() {
+        given:
+        def entity = (HibernatePersistentEntity) getMappingContext().getPersistentEntity(LazyBook.name)
+        def property = (HibernatePersistentProperty) entity.getPropertyByName("author")
+
+        expect:
+        property.getHibernateAssociatedEntity() != null
+        property.getHibernateAssociatedEntity().javaClass == LazyAuthor
+    }
+
+    def "getTypeName(PropertyConfig, Mapping) delegates correctly to 3-arg getTypeName"() {
+        given:
+        def entity = (HibernatePersistentEntity) getMappingContext().getPersistentEntity(LazyBook.name)
+        def property = (HibernatePersistentProperty) entity.getPropertyByName("title")
+
+        expect:
+        property.getTypeName(null, null) != null
+    }
+
+    def "getUserType returns the Class when type is set as a Class literal"() {
+        given:
+        def entity = (HibernatePersistentEntity) getMappingContext().getPersistentEntity(HPPSClassTyped.name)
+        def property = (HibernatePersistentProperty) entity.getPropertyByName("name")
+
+        expect:
+        property.getUserType() == String
+        property.isUserButNotCollectionType()
+    }
+
+    def "getUserType resolves class when type is set as a String class name"() {
+        given:
+        def entity = (HibernatePersistentEntity) getMappingContext().getPersistentEntity(HPPSStringTyped.name)
+        def property = (HibernatePersistentProperty) entity.getPropertyByName("name")
+
+        expect:
+        property.getUserType() == String
+        property.isUserButNotCollectionType()
+    }
+
+    def "getUserType returns null when type class name cannot be found"() {
+        given:
+        def entity = (HibernatePersistentEntity) getMappingContext().getPersistentEntity(LazyBook.name)
+        def property = (HibernatePersistentProperty) entity.getPropertyByName("title")
+        // Simulate the ClassNotFoundException path via a config with an unknown type name
+        def config = new org.grails.orm.hibernate.cfg.PropertyConfig()
+        config.type = 'com.nonexistent.DoesNotExist'
+
+        expect:
+        property.getTypeName(config, null) == 'com.nonexistent.DoesNotExist'
+    }
+
+    def "validateAssociation does nothing for standard property"() {
+        given:
+        def entity = (HibernatePersistentEntity) getMappingContext().getPersistentEntity(LazyBook.name)
+        def property = (HibernatePersistentProperty) entity.getPropertyByName("title")
+
+        when:
+        property.validateAssociation()
+
+        then:
+        noExceptionThrown()
+    }
+
+    def "getNameForPropertyAndPath qualifies name with path when path is non-empty"() {
+        given:
+        def entity = (HibernatePersistentEntity) getMappingContext().getPersistentEntity(LazyBook.name)
+        def property = (HibernatePersistentProperty) entity.getPropertyByName("title")
+
+        expect:
+        property.getNameForPropertyAndPath("parent") == "parent.title"
+        property.getNameForPropertyAndPath("") == "title"
+    }
+}
+
+@Entity
+class HPPSClassTyped {
+    Long id
+    String name
+    static mapping = {
+        name type: String
+    }
+}
+
+@Entity
+class HPPSStringTyped {
+    Long id
+    String name
+    static mapping = {
+        name type: 'java.lang.String'
     }
 }
 

@@ -20,6 +20,7 @@ package org.grails.orm.hibernate.cfg.domainbinding.hibernate
 
 import grails.gorm.annotation.Entity
 import grails.gorm.specs.HibernateGormDatastoreSpec
+import org.hibernate.MappingException
 
 class HibernateToManyPropertySpec extends HibernateGormDatastoreSpec {
 
@@ -272,6 +273,148 @@ class HibernateToManyPropertySpec extends HibernateGormDatastoreSpec {
         property.getCacheUsage() == null
     }
 
+    void "getIndexColumnName returns default name when mapped form has no index column or columns"() {
+        given:
+        createPersistentEntity(HTMPBook)
+        def property = createTestHibernateToManyProperty(HTMPAuthorSorted, "books")
+        def namingStrategy = getGrailsDomainBinder().namingStrategy
+
+        expect:
+        property.getIndexColumnName(namingStrategy) != null
+    }
+
+    void "getIndexColumnType returns defaultType when mapped form has no index column or columns"() {
+        given:
+        createPersistentEntity(HTMPBook)
+        def property = createTestHibernateToManyProperty(HTMPAuthorSorted, "books")
+
+        expect:
+        property.getIndexColumnType("mydefault") == "mydefault"
+    }
+
+    void "getFetchMode returns a non-null fetch mode"() {
+        given:
+        def property = createTestHibernateToManyProperty(HTMPAuthor, "books")
+
+        expect:
+        property.getFetchMode() != null
+    }
+
+    void "getCascade returns cascade string (may be null if not configured)"() {
+        given:
+        def property = createTestHibernateToManyProperty(HTMPAuthor, "books")
+
+        expect:
+        property.getCascade() == null || property.getCascade() instanceof String
+    }
+
+    void "getBatchSize returns -1 when no batch size is configured"() {
+        given:
+        def property = createTestHibernateToManyProperty(HTMPAuthor, "books")
+
+        expect:
+        property.getBatchSize() == -1
+    }
+
+    void "getRole returns qualified entity and property name"() {
+        given:
+        def property = createTestHibernateToManyProperty(HTMPAuthor, "books")
+
+        expect:
+        property.getRole("") != null
+        property.getRole("parent.books") != null
+    }
+
+    void "getMapElementName returns default element column name when no join table column configured"() {
+        given:
+        def property = createTestHibernateToManyProperty(HTMPAuthor, "books")
+        def namingStrategy = getGrailsDomainBinder().namingStrategy
+
+        expect:
+        property.getMapElementName(namingStrategy) != null
+        property.getMapElementName(namingStrategy).endsWith("_elt")
+    }
+
+    void "joinTableColumName returns derived column name for basic String collection (no explicit column)"() {
+        given:
+        def property = createTestHibernateToManyProperty(HTMPOrder, "items")
+        def namingStrategy = getGrailsDomainBinder().namingStrategy
+
+        expect:
+        property.joinTableColumName(namingStrategy) != null
+    }
+
+    void "joinTableColumName returns derived column name for enum collection"() {
+        given:
+        def property = createTestHibernateToManyProperty(HTMPEntityWithEnum, "statuses")
+        def namingStrategy = getGrailsDomainBinder().namingStrategy
+
+        expect:
+        property.joinTableColumName(namingStrategy) != null
+    }
+
+    void "joinTableColumName uses explicit join table column name when present"() {
+        given:
+        def property = createTestHibernateToManyProperty(HTMPJoinColOwner, "tags")
+        def namingStrategy = getGrailsDomainBinder().namingStrategy
+
+        expect:
+        property.joinTableColumName(namingStrategy) == "tag_val"
+    }
+
+    void "getColumnConfigOptional returns empty when no join table column config"() {
+        given:
+        def property = createTestHibernateToManyProperty(HTMPAuthor, "books")
+
+        expect:
+        !property.getColumnConfigOptional().isPresent()
+    }
+
+    void "shouldBindWithForeignKey returns false by default"() {
+        given:
+        def property = createTestHibernateToManyProperty(HTMPAuthor, "books")
+
+        expect:
+        !property.shouldBindWithForeignKey()
+    }
+
+    void "validateOwningSide throws MappingException when Hibernate collection is not a List"() {
+        given:
+        createPersistentEntity(HTMPBook)
+        def property = createTestHibernateToManyProperty(HTMPAuthor, "books")
+
+        and:
+        hibernateFirstPass()
+
+        when:
+        property.validateOwningSide()
+
+        then:
+        thrown(MappingException)
+    }
+
+    void "getCollection throws MappingException when Hibernate collection is not initialized"() {
+        given:
+        def property = createTestHibernateToManyProperty(HTMPAuthor, "books")
+
+        when:
+        property.getCollection()
+
+        then:
+        thrown(MappingException)
+    }
+
+    void "setCollection with null does not throw"() {
+        given:
+        def property = createTestHibernateToManyProperty(HTMPAuthor, "books")
+
+        when:
+        property.setCollection(null)
+
+        then:
+        noExceptionThrown()
+    }
+
     /**
      * Helper to register entity and return the property
      */
@@ -430,4 +573,13 @@ class HTMPOwnerString {
 class HTMPOwnerObject {
     Long id
     static hasMany = [items: Object]
+}
+
+@Entity
+class HTMPJoinColOwner {
+    Long id
+    static hasMany = [tags: String]
+    static mapping = {
+        tags joinTable: [name: 'htmp_join_col_owner_tags', column: 'tag_val']
+    }
 }
