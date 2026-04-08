@@ -44,8 +44,8 @@ class TransactionPropagationSpec extends Specification {
     def setup() {
         // Clean up before each test - delete books first due to FK constraint
         Author.withNewTransaction {
-            Book.executeUpdate('delete from Book')
-            Author.executeUpdate('delete from Author')
+            Book.executeUpdate('delete from Book', [:])
+            Author.executeUpdate('delete from Author', [:])
         }
     }
 
