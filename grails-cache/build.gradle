@@ -37,6 +37,8 @@ ext {
 
 dependencies {
     implementation platform(project(':grails-bom'))
+    annotationProcessor platform(project(':grails-bom'))
+    annotationProcessor 'org.springframework.boot:spring-boot-configuration-processor'
 
     api project(':grails-core')
     api project(':grails-web-boot')
