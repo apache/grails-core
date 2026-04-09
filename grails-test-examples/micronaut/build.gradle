@@ -21,6 +21,7 @@ import org.springframework.boot.gradle.tasks.bundling.BootArchive
 plugins {
     id 'org.apache.grails.buildsrc.properties'
     id 'org.apache.grails.buildsrc.compile'
+    id 'org.apache.grails.buildsrc.dependency-validator'
 }
 
 version = '0.1'
