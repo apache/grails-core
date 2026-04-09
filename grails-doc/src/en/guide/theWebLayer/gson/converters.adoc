@@ -17,7 +17,7 @@ specific language governing permissions and limitations
 under the License.
 ////
 
-It is possible to register custom converters to change how a given class is rendered with json views. To do so, create a class that implements link:{api}groovy.json.JsonGenerator.Converter.html[Converter]. Then you must register the class in `src/main/resources/META-INF/services/groovy.json.JsonGenerator$Converter`.
+It is possible to register custom converters to change how a given class is rendered with json views. To do so, create a class that implements link:{groovyapi}groovy.json.JsonGenerator.Converter.html[Converter]. Then you must register the class in `src/main/resources/META-INF/services/groovy.json.JsonGenerator$Converter`.
 
 [source,groovy]
 ----

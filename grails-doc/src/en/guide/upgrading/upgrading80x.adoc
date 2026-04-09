@@ -18,9 +18,25 @@ under the License.
 ////
 === Upgrade Instructions for Grails and Related Dependencies
 
-To ensure compatibility with Grails {version}, please review the following upgrade instructions carefully.
-This guide outlines the necessary steps & warnings to upgrade your Grails project.
+To ensure compatibility with Grails 8, please review the following upgrade instructions carefully.
+This guide outlines the necessary steps and warnings when upgrading your Grails project.
 
-==== 1. No Changes at this time
+==== 1. Breaking Changes
 
-No new features at this time
+===== 1.1 Custom JSON View Converters
+
+JSON views now use Groovy's `groovy.json.JsonGenerator` implementation instead of the previous Grails-specific
+JSON generator infrastructure.
+If you previously customized JSON view rendering with Grails-specific generator classes, migrate that logic to a
+`groovy.json.JsonGenerator.Converter` implementation.
+
+This change applies to JSON views rendered by the `grails-views-gson` module.
+The `grails.converters.JSON.registerObjectMarshaller(...)` API is still used by the `grails-converters` module
+for `render ... as JSON` and related converter-based rendering.
+
+To migrate your custom converters:
+
+- Implement `groovy.json.JsonGenerator.Converter` (was previously `grails.plugin.json.builder.JsonGenerator.Converter`)
+- Change the file name of the converter registration service loader to
+ `src/main/resources/META-INF/services/groovy.json.JsonGenerator$Converter`
+  (was previously `src/main/resources/META-INF/services/grails.plugin.json.builder.JsonGenerator$Converter`)
