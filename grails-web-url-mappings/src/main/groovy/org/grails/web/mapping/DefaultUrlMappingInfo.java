@@ -37,7 +37,6 @@ import org.springframework.web.multipart.MultipartResolver;
 import org.springframework.web.servlet.DispatcherServlet;
 
 import grails.core.GrailsApplication;
-import grails.util.GrailsNameUtils;
 import grails.web.CamelCaseUrlConverter;
 import grails.web.UrlConverter;
 import grails.web.mapping.UrlMapping;
@@ -45,7 +44,6 @@ import grails.web.mapping.UrlMappingData;
 import grails.web.mapping.UrlMappingInfo;
 import grails.web.mapping.exceptions.UrlMappingException;
 import org.grails.web.servlet.mvc.GrailsWebRequest;
-import org.grails.web.util.WebUtils;
 
 /**
  * Holds information established from a matched URL.
