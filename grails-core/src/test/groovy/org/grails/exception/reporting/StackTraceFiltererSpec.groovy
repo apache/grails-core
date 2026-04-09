@@ -112,41 +112,41 @@ class StackTraceFiltererSpec extends Specification {
 
     def 'recursive filtering sanitizes the full cause chain while logging the full stack trace once'() {
         given: 'a cause chain with both application and internal stack frames'
-        def filterer = new CountingStackTraceFilterer()
-        def rootCause = new IllegalStateException('root cause')
-        rootCause.stackTrace = [
-            new StackTraceElement('test.FooService', 'doStuff', 'FooService.groovy', 3),
-            new StackTraceElement('org.codehaus.groovy.runtime.InvokerHelper', 'invokeMethod', 'InvokerHelper.java', 12)
-        ] as StackTraceElement[]
+            def filterer = new CountingStackTraceFilterer()
+            def rootCause = new IllegalStateException('root cause')
+            rootCause.stackTrace = [
+                new StackTraceElement('test.FooService', 'doStuff', 'FooService.groovy', 3),
+                new StackTraceElement('org.codehaus.groovy.runtime.InvokerHelper', 'invokeMethod', 'InvokerHelper.java', 12)
+            ] as StackTraceElement[]
 
-        def wrappedCause = new RuntimeException('wrapped cause', rootCause)
-        wrappedCause.stackTrace = [
-            new StackTraceElement('test.FooController', 'display', 'FooController.groovy', 11),
-            new StackTraceElement('org.codehaus.groovy.runtime.callsite.CallSiteArray', 'defaultCall', 'CallSiteArray.java', 15)
-        ] as StackTraceElement[]
+            def wrappedCause = new RuntimeException('wrapped cause', rootCause)
+            wrappedCause.stackTrace = [
+                new StackTraceElement('test.FooController', 'display', 'FooController.groovy', 11),
+                new StackTraceElement('org.codehaus.groovy.runtime.callsite.CallSiteArray', 'defaultCall', 'CallSiteArray.java', 15)
+            ] as StackTraceElement[]
 
-        def exception = new RuntimeException('top level', wrappedCause)
-        exception.stackTrace = [
-            new StackTraceElement('test.FooController', 'show', 'FooController.groovy', 7),
-            new StackTraceElement('org.codehaus.groovy.runtime.ScriptBytecodeAdapter', 'unwrap', 'ScriptBytecodeAdapter.java', 20)
-        ] as StackTraceElement[]
+            def exception = new RuntimeException('top level', wrappedCause)
+            exception.stackTrace = [
+                new StackTraceElement('test.FooController', 'show', 'FooController.groovy', 7),
+                new StackTraceElement('org.codehaus.groovy.runtime.ScriptBytecodeAdapter', 'unwrap', 'ScriptBytecodeAdapter.java', 20)
+            ] as StackTraceElement[]
 
         when: 'recursive filtering is applied to the top-level exception'
-        filterer.filter(exception, true)
+            filterer.filter(exception, true)
 
         then: 'the full stack trace logging path is invoked only for the top-level exception'
-        filterer.singleExceptionFilterInvocations == 1
-        filterer.filteredSources == [exception]
+            filterer.singleExceptionFilterInvocations == 1
+            filterer.filteredSources == [exception]
 
         and: 'application stack frames are retained across the full cause chain'
-        with(exception) {
-            stackTrace*.className == ['test.FooController']
-            stackTrace*.lineNumber == [7]
-            cause.stackTrace*.className == ['test.FooController']
-            cause.stackTrace*.lineNumber == [11]
-            cause.cause.stackTrace*.className == ['test.FooService']
-            cause.cause.stackTrace*.lineNumber == [3]
-        }
+            with(exception) {
+                stackTrace*.className == ['test.FooController']
+                stackTrace*.lineNumber == [7]
+                cause.stackTrace*.className == ['test.FooController']
+                cause.stackTrace*.lineNumber == [11]
+                cause.cause.stackTrace*.className == ['test.FooService']
+                cause.cause.stackTrace*.lineNumber == [3]
+            }
     }
 
     private static class CountingStackTraceFilterer extends DefaultStackTraceFilterer {
@@ -162,7 +162,7 @@ class StackTraceFiltererSpec extends Specification {
         Throwable filter(Throwable source) {
             singleExceptionFilterInvocations++
             filteredSources << source
-            source
+            super.filter(source)
         }
     }
 }
