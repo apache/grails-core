@@ -36,6 +36,8 @@ ext {
 
 dependencies {
     implementation platform(project(':grails-bom'))
+    annotationProcessor platform(project(':grails-bom'))
+    annotationProcessor 'org.springframework.boot:spring-boot-configuration-processor'
 
     api project(':grails-views-core') // Used in public API
     api project(':grails-rest-transforms') // Used in public API
