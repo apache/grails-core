@@ -45,6 +45,7 @@ dependencies {
 
     api 'org.apache.groovy:groovy'
     api project(':grails-datamapping-core')
+    api project(':grails-data-hibernate7-spring-orm')
     api 'org.springframework:spring-orm'
     compileOnly 'org.springframework:spring-webmvc'
     compileOnly 'jakarta.servlet:jakarta.servlet-api'
