@@ -588,9 +588,9 @@ public class PredicateGenerator {
         Expression<Number> propertyPath = root.get(pa.propertyName());
         return switch (pa.operator()) {
             case MULTIPLY -> cb.prod(propertyPath, pa.operand());
-            case ADD      -> cb.sum(propertyPath, pa.operand());
+            case ADD -> cb.sum(propertyPath, pa.operand());
             case SUBTRACT -> cb.diff(propertyPath, pa.operand());
-            case DIVIDE   -> cb.quot(propertyPath, pa.operand());
+            case DIVIDE -> cb.quot(propertyPath, pa.operand());
         };
     }
 }

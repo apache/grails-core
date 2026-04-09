@@ -70,10 +70,11 @@ public class CollectionSecondPassBinder {
     public void setComponentBinder(ComponentBinder componentBinder) {
         this.componentBinder = componentBinder;
     }
+
     public void bindCollectionSecondPass(@Nonnull HibernateToManyProperty property) {
 
-        if (property instanceof HibernateEmbeddedCollectionProperty embeddedCollectionProperty
-                && componentBinder != null) {
+        if (property instanceof HibernateEmbeddedCollectionProperty embeddedCollectionProperty &&
+                componentBinder != null) {
             Component component = componentBinder.bindEmbeddedCollectionComponent(embeddedCollectionProperty);
             embeddedCollectionProperty.getCollection().setElement(component);
         } else if (property instanceof HibernateToManyEntityProperty entityProperty) {
