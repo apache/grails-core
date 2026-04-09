@@ -34,6 +34,7 @@ public class DependencyCoordinate implements Coordinate, Ordered {
     private final String version;
     private final int order;
     private final boolean pom;
+    private final boolean enforced;
 
     public DependencyCoordinate(Dependency dependency) {
         this(dependency, false);
@@ -49,6 +50,7 @@ public class DependencyCoordinate implements Coordinate, Ordered {
         }
         order = dependency.getOrder();
         pom = dependency.isPom();
+        enforced = dependency.isEnforced();
     }
 
     public DependencyCoordinate(String groupId,
@@ -61,6 +63,7 @@ public class DependencyCoordinate implements Coordinate, Ordered {
         this.version = version;
         this.order = order;
         this.pom = pom;
+        this.enforced = false;
     }
 
     @Override
@@ -89,6 +92,11 @@ public class DependencyCoordinate implements Coordinate, Ordered {
     @Override
     public boolean isPom() {
         return pom;
+    }
+
+    @Override
+    public boolean isEnforced() {
+        return enforced;
     }
 
     @Override

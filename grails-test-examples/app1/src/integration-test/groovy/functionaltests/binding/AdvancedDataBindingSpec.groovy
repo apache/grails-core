@@ -19,6 +19,7 @@
 package functionaltests.binding
 
 import spock.lang.Specification
+import spock.lang.Tag
 
 import grails.testing.mixin.integration.Integration
 import org.apache.grails.testing.http.client.HttpClientSupport
@@ -42,6 +43,7 @@ import org.apache.grails.testing.http.client.HttpClientSupport
  * - String trimming
  */
 @Integration
+@Tag('http-client')
 class AdvancedDataBindingSpec extends Specification implements HttpClientSupport {
 
     // ========== Map-Based Binding Tests ==========

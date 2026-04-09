@@ -142,14 +142,14 @@ include(
         // gsp
         'grails-gsp-core',
         'grails-gsp',
-        'grails-sitemesh3',
+        // TODO: 'grails-sitemesh3', // sitemesh3 does not support boot 4 at this time
         'grails-layout',
         'grails-taglib',
         'grails-web-gsp',
         'grails-web-gsp-taglib',
         'grails-web-jsp',
         'grails-web-taglib',
-        'grails-gsp-spring-boot',
+        // TODO: 'grails-gsp-spring-boot', // sitemesh3 does not support boot4 at this time
 
         'grails-datastore-core',
         'grails-datastore-web',
@@ -213,14 +213,14 @@ project(':grails-dependencies-assets').projectDir = file('grails-dependencies/as
 
 project(':grails-gsp-core').projectDir = file('grails-gsp/core')
 project(':grails-gsp').projectDir = file('grails-gsp/plugin')
-project(':grails-sitemesh3').projectDir = file('grails-gsp/grails-sitemesh3')
+// TODO: project(':grails-sitemesh3').projectDir = file('grails-gsp/grails-sitemesh3')
 project(':grails-layout').projectDir = file('grails-gsp/grails-layout')
 project(':grails-taglib').projectDir = file('grails-gsp/grails-taglib')
 project(':grails-web-gsp').projectDir = file('grails-gsp/grails-web-gsp')
 project(':grails-web-gsp-taglib').projectDir = file('grails-gsp/grails-web-gsp-taglib')
 project(':grails-web-jsp').projectDir = file('grails-gsp/grails-web-jsp')
 project(':grails-web-taglib').projectDir = file('grails-gsp/grails-web-taglib')
-project(':grails-gsp-spring-boot').projectDir = file('grails-gsp/spring-boot')
+// TODO: project(':grails-gsp-spring-boot').projectDir = file('grails-gsp/spring-boot')
 
 // Data Mapping - Documentation
 include 'grails-data-docs-guide-developer'
@@ -262,6 +262,9 @@ findProject(':grails-data-hibernate7-spring-boot').projectDir = new File(setting
 // Core
 include 'grails-data-hibernate5-core'
 findProject(':grails-data-hibernate5-core').projectDir = file('grails-data-hibernate5/core')
+
+include 'grails-data-hibernate5-spring-orm'
+findProject(':grails-data-hibernate5-spring-orm').projectDir = new File(settingsDir, 'grails-data-hibernate5/spring-orm')
 
 // Documentation
 include 'grails-data-hibernate5-docs'
@@ -422,44 +425,45 @@ project(':grails-profiles-web-plugin').projectDir = file('grails-profiles/web-pl
 
 // Functional Tests
 include(
-        'grails-test-examples-async-events-pubsub-demo',
         'grails-test-examples-app1',
         'grails-test-examples-app2',
         'grails-test-examples-app3',
         'grails-test-examples-app4',
         'grails-test-examples-app5',
-        'grails-test-examples-external-configuration',
-        'grails-test-examples-exploded',
-        'grails-test-examples-datasources',
+        'grails-test-examples-async-events-pubsub-demo',
+        'grails-test-examples-cache',
         'grails-test-examples-database-cleanup',
-        'grails-test-examples-namespaces',
+        'grails-test-examples-datasources',
+        'grails-test-examples-demo33',
+        'grails-test-examples-exploded',
+        'grails-test-examples-external-configuration',
         'grails-test-examples-geb',
         'grails-test-examples-geb-gebconfig',
         'grails-test-examples-gorm',
         'grails-test-examples-gsp-layout',
-        'grails-test-examples-gsp-sitemesh3',
-        'grails-test-examples-gsp-spring-boot',
-        'grails-test-examples-issue-698-domain-save-npe',
+        // TODO: 'grails-test-examples-gsp-sitemesh3',
+        // TODO: 'grails-test-examples-gsp-spring-boot',
         'grails-test-examples-hyphenated',
-        'grails-test-examples-issue-views-182',
         'grails-test-examples-issue-11102',
-        'grails-test-examples-demo33',
-        'grails-test-examples-micronaut',
-        'grails-test-examples-micronaut-groovy-only',
-        'grails-test-examples-plugins-loadfirst',
-        'grails-test-examples-plugins-loadsecond',
-        'grails-test-examples-plugins-loadafter',
-        'grails-test-examples-plugins-issue11005',
         'grails-test-examples-issue-11767',
         'grails-test-examples-issue-15228',
+        'grails-test-examples-issue-698-domain-save-npe',
+        'grails-test-examples-issue-views-182',
+        'grails-test-examples-micronaut',
+        'grails-test-examples-micronaut-groovy-only',
+        'grails-test-examples-namespaces',
         'grails-test-examples-plugins-exploded',
         'grails-test-examples-plugins-issue-11767',
+        'grails-test-examples-plugins-issue11005',
+        'grails-test-examples-plugins-loadafter',
+        'grails-test-examples-plugins-loadfirst',
+        'grails-test-examples-plugins-loadsecond',
         'grails-test-examples-plugins-micronaut-singleton',
-        'grails-test-examples-cache',
         'grails-test-examples-scaffolding',
         'grails-test-examples-scaffolding-fields',
+        'grails-test-examples-test-phases',
         'grails-test-examples-views-functional-tests',
-        'grails-test-examples-views-functional-tests-plugin'
+        'grails-test-examples-views-functional-tests-plugin',
 )
 project(':grails-test-examples-async-events-pubsub-demo').projectDir = file('grails-test-examples/async-events-pubsub-demo')
 project(':grails-test-examples-app1').projectDir = file('grails-test-examples/app1')
@@ -476,8 +480,8 @@ project(':grails-test-examples-geb-gebconfig').projectDir = file('grails-test-ex
 project(':grails-test-examples-namespaces').projectDir = file('grails-test-examples/namespaces')
 project(':grails-test-examples-gorm').projectDir = file('grails-test-examples/gorm')
 project(':grails-test-examples-gsp-layout').projectDir = file('grails-test-examples/gsp-layout')
-project(':grails-test-examples-gsp-sitemesh3').projectDir = file('grails-test-examples/gsp-sitemesh3')
-project(':grails-test-examples-gsp-spring-boot').projectDir = file('grails-test-examples/gsp-spring-boot/app')
+//TODO: project(':grails-test-examples-gsp-sitemesh3').projectDir = file('grails-test-examples/gsp-sitemesh3')
+//TODO: project(':grails-test-examples-gsp-spring-boot').projectDir = file('grails-test-examples/gsp-spring-boot/app')
 project(':grails-test-examples-issue-698-domain-save-npe').projectDir = file('grails-test-examples/issue-698-domain-save-npe')
 project(':grails-test-examples-hyphenated').projectDir = file('grails-test-examples/hyphenated')
 project(':grails-test-examples-issue-views-182').projectDir = file('grails-test-examples/issue-views-182')
@@ -499,6 +503,7 @@ project(':grails-test-examples-scaffolding').projectDir = file('grails-test-exam
 project(':grails-test-examples-scaffolding-fields').projectDir = file('grails-test-examples/scaffolding-fields')
 project(':grails-test-examples-views-functional-tests').projectDir = file('grails-test-examples/views-functional-tests')
 project(':grails-test-examples-views-functional-tests-plugin').projectDir = file('grails-test-examples/views-functional-tests-plugin')
+project(':grails-test-examples-test-phases').projectDir = file('grails-test-examples/test-phases')
 
 includeBuild('./grails-gradle') {
     name = 'grails-gradle'

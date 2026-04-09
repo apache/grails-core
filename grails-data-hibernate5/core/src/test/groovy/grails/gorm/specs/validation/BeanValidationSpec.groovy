@@ -22,12 +22,12 @@ package grails.gorm.specs.validation
 import grails.gorm.annotation.Entity
 import grails.gorm.transactions.Rollback
 import org.grails.orm.hibernate.HibernateDatastore
-import org.hibernate.validator.constraints.NotBlank
 import spock.lang.AutoCleanup
 import spock.lang.Shared
 import spock.lang.Specification
 
 import jakarta.validation.constraints.Digits
+import jakarta.validation.constraints.NotBlank
 
 /**
  * Created by graemerocher on 07/04/2017.

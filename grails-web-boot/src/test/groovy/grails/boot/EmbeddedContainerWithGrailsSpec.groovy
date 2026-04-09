@@ -18,6 +18,8 @@
  */
 package grails.boot
 
+import org.springframework.boot.tomcat.servlet.TomcatServletWebServerFactory
+import org.springframework.boot.web.server.servlet.ConfigurableServletWebServerFactory
 import org.springframework.core.env.ConfigurableEnvironment
 import org.springframework.web.context.support.StandardServletEnvironment
 
@@ -25,9 +27,7 @@ import grails.artefact.Artefact
 import grails.boot.config.GrailsAutoConfiguration
 import grails.web.Controller
 import org.springframework.boot.autoconfigure.EnableAutoConfiguration
-import org.springframework.boot.web.embedded.tomcat.TomcatServletWebServerFactory
-import org.springframework.boot.web.servlet.context.AnnotationConfigServletWebServerApplicationContext
-import org.springframework.boot.web.servlet.server.ConfigurableServletWebServerFactory
+import org.springframework.boot.web.server.servlet.context.AnnotationConfigServletWebServerApplicationContext
 import org.springframework.context.annotation.Bean
 import spock.lang.Specification
 
@@ -101,4 +101,3 @@ class UrlMappings {
         "/foos"(controller: 'foo', action: "list")
     }
 }
-

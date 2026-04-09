@@ -19,11 +19,13 @@
 package issue11102
 
 import spock.lang.Specification
+import spock.lang.Tag
 
 import grails.testing.mixin.integration.Integration
 import org.apache.grails.testing.http.client.HttpClientSupport
 
 @Integration
+@Tag('http-client')
 class TestControllerSpec extends Specification implements HttpClientSupport {
 
     void 'can forward a request from a GET to another GET action'() {

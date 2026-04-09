@@ -22,6 +22,7 @@ plugins {
     id 'java-library'
     id 'project-report'
     id 'org.apache.grails.buildsrc.properties'
+    id 'org.apache.grails.buildsrc.dependency-validator'
     id 'org.apache.grails.buildsrc.compile'
     id 'org.apache.grails.buildsrc.publish'
     id 'org.apache.grails.buildsrc.sbom'
@@ -50,14 +51,15 @@ dependencies {
     api project(':grails-datamapping-core')
     api project(':grails-test-core')
     api 'org.springframework.boot:spring-boot-test'
+    api 'org.springframework:spring-webmvc'
     api('org.spockframework:spock-spring') { transitive = false }
     api 'org.junit.jupiter:junit-jupiter-api'
-    api 'org.junit.platform:junit-platform-runner'
+    api 'org.junit.platform:junit-platform-suite'
     runtimeOnly 'org.junit.jupiter:junit-jupiter-engine'
 
     testImplementation 'org.apache.groovy:groovy-test-junit5'
     testImplementation 'org.junit.jupiter:junit-jupiter-api'
-    testImplementation 'org.junit.platform:junit-platform-runner'
+    testImplementation 'org.junit.platform:junit-platform-suite'
 
     testRuntimeOnly 'org.junit.jupiter:junit-jupiter-engine'
 

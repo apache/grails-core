@@ -32,9 +32,6 @@ import org.springframework.beans.factory.support.DefaultListableBeanFactory;
 import org.springframework.beans.factory.support.GenericBeanDefinition;
 import org.springframework.context.ApplicationContext;
 import org.springframework.context.support.GenericApplicationContext;
-import org.springframework.ui.context.Theme;
-import org.springframework.ui.context.ThemeSource;
-import org.springframework.ui.context.support.UiApplicationContextUtils;
 
 /**
  * An ApplicationContext that extends StaticApplicationContext and implements GroovyObject such that
@@ -47,7 +44,6 @@ public class GrailsApplicationContext extends GenericApplicationContext implemen
 
     protected MetaClass metaClass;
     private BeanWrapper ctxBean = new BeanWrapperImpl(this);
-    private ThemeSource themeSource;
     private static final String GRAILS_ENVIRONMENT_BEAN_NAME = "springEnvironment";
 
     public GrailsApplicationContext(DefaultListableBeanFactory defaultListableBeanFactory) {
@@ -94,31 +90,6 @@ public class GrailsApplicationContext extends GenericApplicationContext implemen
 
     public void setMetaClass(MetaClass metaClass) {
         this.metaClass = metaClass;
-    }
-
-    /**
-     * Initialize the theme capability.
-     *
-     * @deprecated since 7.1, for removal in 8.0. Spring's theme support ({@link ThemeSource},
-     * {@link UiApplicationContextUtils#initThemeSource}) is deprecated in Spring Boot 3 and
-     * removed in Spring Boot 4. This method will be removed in Grails 8.0.0.
-     */
-    @Deprecated(since = "7.1", forRemoval = true)
-    @Override
-    protected void onRefresh() {
-        themeSource = UiApplicationContextUtils.initThemeSource(this);
-    }
-
-    /**
-     * Return the {@link Theme} instance for the given theme name.
-     *
-     * @deprecated since 7.1, for removal in 8.0. Spring's theme support ({@link ThemeSource},
-     * {@link Theme}) is deprecated in Spring Boot 3 and removed in Spring Boot 4.
-     * This method will be removed in Grails 8.0.0.
-     */
-    @Deprecated(since = "7.1", forRemoval = true)
-    public Theme getTheme(String themeName) {
-        return themeSource.getTheme(themeName);
     }
 
     public void setProperty(String property, Object newValue) {

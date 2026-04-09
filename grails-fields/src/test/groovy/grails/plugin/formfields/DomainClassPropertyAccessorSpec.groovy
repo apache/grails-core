@@ -18,6 +18,9 @@
  */
 package grails.plugin.formfields
 
+import java.lang.constant.Constable
+import java.lang.constant.ConstantDesc
+
 import grails.plugin.formfields.mock.Address
 import grails.plugin.formfields.mock.Author
 import grails.plugin.formfields.mock.Book
@@ -405,23 +408,6 @@ class DomainClassPropertyAccessorSpec extends BuildsAccessorFactory {
         Employee | 'name' | [Person]
     }
 
-    @IgnoreIf({ VersionNumber.parse(Jvm.current.javaVersion).major >= 17 })
-    void 'the superclasses of Person.#path are #expected'() {
-        given:
-        def propertyAccessor = factory.accessorFor(person, path)
-
-        expect:
-        propertyAccessor.propertyTypeSuperclasses == expected
-
-        where:
-        path          | expected
-        'name'        | [CharSequence]
-        'gender'      | [Enum]
-        'dateOfBirth' | []
-    }
-
-    // The accessorFor propertyTypeSuperclasses returns more types for Java 17 
-    @IgnoreIf({ VersionNumber.parse(Jvm.current.javaVersion).major < 17 })
     void 'the superclasses of Person.#path are #expected JDK17+'() {
         given:
         def propertyAccessor = factory.accessorFor(person, path)
@@ -431,8 +417,8 @@ class DomainClassPropertyAccessorSpec extends BuildsAccessorFactory {
 
         where:
         path          | expected
-        'name'        | [CharSequence, java.lang.constant.Constable, java.lang.constant.ConstantDesc]
-        'gender'      | [Enum, java.lang.constant.Constable]
+        'name'        | [CharSequence, Constable, ConstantDesc]
+        'gender'      | [Enum, Constable]
         'dateOfBirth' | []
     }
 

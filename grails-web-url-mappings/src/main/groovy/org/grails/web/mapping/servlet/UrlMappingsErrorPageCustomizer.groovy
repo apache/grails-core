@@ -21,10 +21,11 @@ package org.grails.web.mapping.servlet
 import groovy.transform.CompileStatic
 
 import org.springframework.beans.factory.annotation.Autowired
-import org.springframework.boot.web.server.ErrorPage
-import org.springframework.boot.web.server.WebServerFactoryCustomizer
-import org.springframework.boot.web.servlet.server.ConfigurableServletWebServerFactory
 import org.springframework.http.HttpStatus
+
+import org.springframework.boot.web.error.ErrorPage
+import org.springframework.boot.web.server.WebServerFactoryCustomizer
+import org.springframework.boot.web.server.servlet.ConfigurableServletWebServerFactory
 
 import grails.web.mapping.UrlMapping
 import grails.web.mapping.UrlMappings

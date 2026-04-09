@@ -41,6 +41,7 @@ import org.gradle.api.Task
 import org.gradle.api.artifacts.Configuration
 import org.gradle.api.artifacts.Dependency
 import org.gradle.api.artifacts.DependencyResolveDetails
+import org.gradle.api.artifacts.ModuleDependency
 import org.gradle.api.artifacts.DependencySet
 import org.gradle.api.attributes.AttributeMatchingStrategy
 import org.gradle.api.file.DuplicatesStrategy
@@ -77,8 +78,6 @@ import org.springframework.boot.gradle.plugin.ResolveMainClassName
 import org.springframework.boot.gradle.plugin.SpringBootPlugin
 import org.springframework.boot.gradle.tasks.bundling.BootArchive
 import org.springframework.boot.gradle.tasks.run.BootRun
-import org.springframework.boot.loader.tools.LoaderImplementation
-
 import javax.inject.Inject
 
 /**
@@ -279,7 +278,7 @@ class GrailsGradlePlugin implements Plugin<Project> {
 ${importStatements}
                     }
                 }
-            """
+            """ as String
         }
     }
 
@@ -396,10 +395,10 @@ ${importStatements}
 
             Task buildPropertiesTask = project.tasks.create('buildProperties')
             Map<String, Object> buildPropertiesContents = [
-                'grails.env': Environment.isSystemSet() ? Environment.getCurrent().getName() : Environment.PRODUCTION.getName(),
-                'info.app.name': project.name,
-                'info.app.version': project.version instanceof Serializable ? project.version : project.version.toString(),
-                'info.app.grailsVersion': project.properties.get('grailsVersion')
+                    'grails.env': Environment.isSystemSet() ? Environment.getCurrent().getName() : Environment.PRODUCTION.getName(),
+                    'info.app.name': project.name,
+                    'info.app.version': project.version instanceof Serializable ? project.version : project.version.toString(),
+                    'info.app.grailsVersion': project.properties.get('grailsVersion')
             ]
 
             buildPropertiesTask.inputs.properties(buildPropertiesContents)
@@ -423,7 +422,7 @@ ${importStatements}
     @CompileStatic
     protected void configureMicronaut(Project project) {
         project.afterEvaluate {
-            boolean micronautEnabled = project.getConfigurations().getByName('implementation').getDependencies().findAll { Dependency dep -> dep.group == 'org.apache.grails' && dep.name == 'grails-micronaut' } as boolean
+            boolean micronautEnabled = project.getConfigurations().getByName('runtimeClasspath').getAllDependencies().findAll { Dependency dep -> dep.group == 'org.apache.grails' && dep.name == 'grails-micronaut' } as boolean
             if (!micronautEnabled) {
                 return
             }
@@ -440,6 +439,12 @@ ${importStatements}
                 throw new GradleException('`micronautPlatformVersion` property must be set to use the Grails Micronaut plugin.')
             }
 
+            // Validate that grails-bom is applied as enforcedPlatform. Micronaut 5's platform
+            // declares Groovy 5, Kotlin 2.3, etc. which override the grails-bom via conflict
+            // resolution. enforcedPlatform makes all BOM constraints strictly versioned so they
+            // cannot be overridden by transitive dependencies.
+            validateEnforcedBom(project)
+
             // grails-micronaut exports the platform, but force the version to the user specified version
             project.configurations.configureEach { Configuration configuration ->
                 configuration.resolutionStrategy.eachDependency { DependencyResolveDetails details ->
@@ -452,11 +457,36 @@ ${importStatements}
                 }
             }
 
-            project.logger.info('Configuring CLASSIC boot loader for Micronaut compatibility in {}', project.name)
-            project.tasks.withType(BootArchive).configureEach {
-                it.loaderImplementation.convention(LoaderImplementation.CLASSIC)
-            }
+        }
+    }
 
+    /**
+     * Validates that grails-bom is applied as an enforcedPlatform when micronaut is used.
+     * Without enforcedPlatform, the Micronaut platform's version constraints (e.g. Groovy 5,
+     * Kotlin 2.3, Spock 2.4) will override the grails-bom versions via conflict resolution.
+     */
+    @CompileStatic
+    protected static void validateEnforcedBom(Project project) {
+        Configuration implConfig = project.configurations.findByName('implementation')
+        if (implConfig == null) {
+            return
+        }
+
+        for (Dependency dep : implConfig.dependencies) {
+            if (dep.name == 'grails-bom' && dep instanceof ModuleDependency) {
+                Object categoryAttr = ((ModuleDependency) dep).attributes.getAttribute(
+                        org.gradle.api.attributes.Category.CATEGORY_ATTRIBUTE
+                )
+                if (categoryAttr != null && categoryAttr.toString() == org.gradle.api.attributes.Category.ENFORCED_PLATFORM) {
+                    return // correctly configured
+                }
+                throw new GradleException(
+                        "Project '${project.name}' uses Micronaut but applies grails-bom as a regular platform. " +
+                                'Micronaut\'s platform declares higher versions of Groovy, Spock, and Kotlin that will ' +
+                                'override the grails-bom via conflict resolution. Change to:\n\n' +
+                                '    implementation enforcedPlatform(project(\':grails-bom\'))\n'
+                )
+            }
         }
     }
 
@@ -803,9 +833,6 @@ ${importStatements}
                 it.dependsOn(project.tasks.named('compileGroovy', GroovyCompile), project.tasks.named('classes'))
                 it.mustRunAfter(project.tasks.named('classes'))
                 it.mainClassCacheFile.set(mainClassFileContainer)
-                it.outputs.upToDateWhen {
-                    mainClassFileContainer.orNull?.asFile?.exists()
-                }
             }
 
             project.afterEvaluate {
@@ -900,9 +927,9 @@ ${importStatements}
             }
 
             Map<String, String> replaceTokens = [
-                'info.app.name': project.name,
-                'info.app.version': project.version?.toString(),
-                'info.app.grailsVersion': grailsVersion
+                    'info.app.name': project.name,
+                    'info.app.version': project.version?.toString(),
+                    'info.app.grailsVersion': grailsVersion
             ]
 
             task.from(project.relativePath('src/main/templates')) { spec ->
@@ -1041,6 +1068,7 @@ ${importStatements}
 
     @CompileStatic
     private static final class OnlyOneGrailsPlugin {
+
         String pluginClassname
     }
 }
