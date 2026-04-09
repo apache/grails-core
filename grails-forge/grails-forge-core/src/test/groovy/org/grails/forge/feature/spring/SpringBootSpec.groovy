@@ -71,12 +71,17 @@ class SpringBootSpec extends BeanContextSpec implements CommandOutputFixture {
 
     void "test undertow servlet is unavailable with Spring Boot 4"() {
         when:
-        String build = new BuildBuilder(beanContext)
+        // Undertow does not yet support Servlet 6.1, which Spring Boot 4 requires.
+        // ContextFactory.determineServletImpl rejects the selection with a clear
+        // IllegalArgumentException so users get a meaningful error rather than a
+        // silently dropped servlet implementation.
+        new BuildBuilder(beanContext)
                 .servletImpl(ServletImpl.UNDERTOW)
                 .render()
 
         then:
-        !build.contains('implementation "org.springframework.boot:spring-boot-starter-undertow"')
-        !build.contains('runtimeOnly "org.jboss.threads:jboss-threads')
+        IllegalArgumentException ex = thrown()
+        ex.message.contains('Undertow is not currently supported')
+        ex.message.contains('Servlet 6.1')
     }
 }

@@ -22,6 +22,22 @@ under the License.
 To ensure compatibility with Grails {version}, please review the following upgrade instructions carefully.
 This guide outlines the necessary steps and warnings to upgrade your Grails project from Grails 7.x to Grails 8.
 
+[TIP]
+====
+**Before you start: add the Spring Boot properties migrator.**
+It is the fastest way to find deprecated or relocated configuration properties in your `application.yml` / `application.groovy`.
+Add it as a `runtimeOnly` dependency for the duration of your migration:
+
+[source,groovy]
+.build.gradle
+----
+runtimeOnly 'org.springframework.boot:spring-boot-properties-migrator'
+----
+
+Boot the application once; the migrator logs warnings for every deprecated property it finds and, in many cases, applies the rename automatically at runtime so the app keeps starting.
+Remove the dependency once your configuration is clean.
+====
+
 ==== 1. Java 21 Minimum Requirement
 
 Grails 8 requires a minimum of Java 21 to both build and run Grails applications.
@@ -59,6 +75,35 @@ import org.springframework.boot.autoconfigure.mongo.MongoAutoConfiguration
 
 // After (Grails 8 / Spring Boot 4.x)
 import org.springframework.boot.mongodb.autoconfigure.MongoAutoConfiguration
+----
+
+In addition to the auto-configuration class moves, two foundational interfaces were relocated out of nested packages and into `org.springframework.boot` directly:
+
+[cols="1,1", options="header"]
+|===
+| Before (Spring Boot 3.x)
+| After (Spring Boot 4.x)
+
+| `org.springframework.boot.env.EnvironmentPostProcessor`
+| `org.springframework.boot.EnvironmentPostProcessor`
+
+| `org.springframework.boot.BootstrapRegistry` and related types in `org.springframework.boot`
+| `org.springframework.boot.bootstrap.BootstrapRegistry`, `org.springframework.boot.bootstrap.BootstrapRegistryInitializer`, `org.springframework.boot.bootstrap.ConfigurableBootstrapContext`
+|===
+
+The old locations are deprecated but retained for upgrade ease.
+If your application or plugin contributes an `EnvironmentPostProcessor` or `BootstrapRegistryInitializer`, update both the import and the corresponding `META-INF/spring.factories` key:
+
+[source,properties]
+.META-INF/spring.factories - Before
+----
+org.springframework.boot.env.EnvironmentPostProcessor=com.example.MyPostProcessor
+----
+
+[source,properties]
+.META-INF/spring.factories - After
+----
+org.springframework.boot.EnvironmentPostProcessor=com.example.MyPostProcessor
 ----
 
 ==== 4. MongoDB Configuration Property Changes
@@ -299,6 +344,61 @@ spring:
 
 This is intended as a migration aid only; new code should target Jackson 3.
 
+**Spring Boot Jackson helper class renames.**
+If your code uses Spring Boot's Jackson helpers, rename them to the Jackson 3 equivalents:
+
+[cols="1,1", options="header"]
+|===
+| Spring Boot 3.x (Jackson 2)
+| Spring Boot 4.x (Jackson 3)
+
+| `Jackson2ObjectMapperBuilderCustomizer`
+| `JsonMapperBuilderCustomizer`
+
+| `JsonObjectSerializer`
+| `ObjectValueSerializer`
+
+| `JsonValueDeserializer`
+| `ObjectValueDeserializer`
+
+| `@JsonComponent`
+| `@JacksonComponent`
+
+| `@JsonMixin`
+| `@JacksonMixin`
+|===
+
+**Configuration property renames.**
+The `spring.jackson.*` namespace was reorganized.
+The `spring-boot-properties-migrator` (see the tip at the top of this guide) will detect most of these and warn at boot time:
+
+[cols="1,1", options="header"]
+|===
+| Before
+| After
+
+| `spring.jackson.read.*`
+| `spring.jackson.json.read.*`
+
+| `spring.jackson.write.*`
+| `spring.jackson.json.write.*`
+
+| `spring.jackson.parser.*`
+| `spring.jackson.json.read.*` (where equivalents exist)
+|===
+
+**Module auto-detection.**
+Jackson 3 auto-detects all Jackson modules on the classpath by default.
+If you need to disable this — for example, to avoid an unwanted module being picked up — set:
+
+[source,yaml]
+.application.yml
+----
+spring:
+    jackson:
+        find-and-modules: false
+----
+
 ==== 10. Theme Support Removed
 
 Spring Framework 7 removed the theme infrastructure entirely.
@@ -342,8 +442,14 @@ If your application or tests reference these classes directly, update the import
 | `org.springframework.boot.web.context.servlet.AnnotationConfigServletWebApplicationContext`
 |===
 
-Applications using embedded Tomcat, Jetty, or Undertow should check for any direct class references and update accordingly.
+Applications using embedded Tomcat or Jetty should check for any direct class references and update accordingly.
 The `spring-boot-tomcat` module must now be an explicit dependency if you reference Tomcat classes directly.
+
+**Undertow is temporarily unsupported.**
+Undertow has not yet been updated for Servlet 6.1, which Spring Boot 4 requires.
+As a result, Undertow is **not** an available embedded servlet container in Grails 8.
+Applications that previously used `spring-boot-starter-undertow` must switch to Tomcat or Jetty until Undertow ships Servlet 6.1 compatibility.
+The Grails Forge generator no longer offers Undertow as a selectable servlet implementation, and explicitly selecting it (for example, `--servlet=undertow` on the API/CLI) fails fast with `IllegalArgumentException` and a clear error message.
 
 ==== 12. HandlerAdapter.getLastModified Removed
 
@@ -359,7 +465,193 @@ Spring Security is moving toward the fluent `HttpSecurity` configuration API for
 If your application references `DEFAULT_FILTER_ORDER` for custom filter positioning, replace it with the concrete value `-100` (computed as `OrderedFilter.REQUEST_WRAPPER_FILTER_MAX_ORDER - 100`).
 Longer term, consider migrating to the fluent `HttpSecurity` API for filter chain configuration.
 
-==== 14. Known Plugin Incompatibilities
+==== 14. Spring Boot Starter Renames
+
+Spring Boot 4 renamed several starters as part of its modularization effort.
+If your `build.gradle` references any of the following, update the artifact id:
+
+[cols="1,1", options="header"]
+|===
+| Before (Spring Boot 3.x)
+| After (Spring Boot 4.x)
+
+| `spring-boot-starter-web`
+| `spring-boot-starter-webmvc`
+
+| `spring-boot-starter-aop`
+| `spring-boot-starter-aspectj`
+
+| `spring-boot-starter-web-services`
+| `spring-boot-starter-webservices`
+
+| `spring-boot-starter-oauth2-authorization-server`
+| `spring-boot-starter-security-oauth2-authorization-server`
+
+| `spring-boot-starter-oauth2-client`
+| `spring-boot-starter-security-oauth2-client`
+
+| `spring-boot-starter-oauth2-resource-server`
+| `spring-boot-starter-security-oauth2-resource-server`
+|===
+
+[source,groovy]
+.build.gradle - Before
+----
+implementation 'org.springframework.boot:spring-boot-starter-web'
+implementation 'org.springframework.boot:spring-boot-starter-aop'
+----
+
+[source,groovy]
+.build.gradle - After
+----
+implementation 'org.springframework.boot:spring-boot-starter-webmvc'
+implementation 'org.springframework.boot:spring-boot-starter-aspectj'
+----
+
+NOTE: If you want a faster, lower-friction migration that pulls in *all* Spring Boot modules without picking starters individually, Spring Boot 4 ships `spring-boot-starter-classic` (and `spring-boot-starter-test-classic`) as a transitional fallback.
+This is intended as a stopgap; new code should target the modular starters.
+
+==== 15. WAR Deployment Uses spring-boot-starter-tomcat-runtime
+
+For WAR deployment to an external Servlet container, Spring Boot 4 introduced a dedicated `spring-boot-starter-tomcat-runtime` artifact that contributes only the integration classes needed to start under an external container, without bundling the embedded Tomcat distribution into the WAR.
+
+Replace the previous "change scope to `provided`/`testImplementation`" idiom with the new starter:
+
+[source,groovy]
+.build.gradle - Before
+----
+providedRuntime 'org.springframework.boot:spring-boot-starter-tomcat'
+----
+
+[source,groovy]
+.build.gradle - After
+----
+providedRuntime 'org.springframework.boot:spring-boot-starter-tomcat-runtime'
+----
+
+The Grails deployment guides have been updated to reflect this idiom.
+Embedded Tomcat usage (the default for `grails run-app` and bootable WARs) continues to use `spring-boot-starter-tomcat` unchanged.
+
+==== 16. Test Infrastructure Changes
+
+Spring Boot 4 made several breaking changes to its test infrastructure.
+Most Grails tests use `GrailsUnitTest`, `GrailsWebUnitTest`, and `Integration` and are unaffected, but if your application uses `@SpringBootTest` directly the following apply.
+
+**`@SpringBootTest` no longer auto-configures `MockMvc`, `WebClient`, or `TestRestTemplate`.**
+Add the corresponding `@AutoConfigureMockMvc` / `@AutoConfigureWebClient` / `@AutoConfigureTestRestTemplate` annotations to opt in.
+
+[source,groovy]
+----
+// Before
+@SpringBootTest
+class MyControllerSpec extends Specification {
+    @Autowired MockMvc mockMvc      // injected automatically
+    @Autowired TestRestTemplate rest // injected automatically
+}
+
+// After
+@SpringBootTest
+@AutoConfigureMockMvc
+@AutoConfigureTestRestTemplate
+class MyControllerSpec extends Specification {
+    @Autowired MockMvc mockMvc
+    @Autowired TestRestTemplate rest
+}
+----
+
+**`@MockBean` and `@SpyBean` were removed.**
+Replace them with `@MockitoBean` and `@MockitoSpyBean` from `org.springframework.test.context.bean.override.mockito`.
+The new annotations work as fields in test classes only — they cannot be declared in `@Configuration` classes.
+
+[source,groovy]
+----
+// Before
+import org.springframework.boot.test.mock.mockito.MockBean
+@SpringBootTest
+class MyServiceSpec extends Specification {
+    @MockBean BookRepository repo
+}
+
+// After
+import org.springframework.test.context.bean.override.mockito.MockitoBean
+@SpringBootTest
+class MyServiceSpec extends Specification {
+    @MockitoBean BookRepository repo
+}
+----
+
+**`MockitoTestExecutionListener` was removed.**
+If your test infrastructure registers it explicitly, remove the registration; Spring's bean override support handles `@MockitoBean` directly.
+
+**`TestRestTemplate` package change.**
+`TestRestTemplate` moved to `org.springframework.boot.resttestclient`.
+Update the import.
+A new `RestTestClient` and corresponding `@AutoConfigureRestTestClient` annotation are also available as a fluent alternative.
+
+==== 17. DevTools Live Reload Disabled by Default
+
+Spring Boot 4 changed the default of `spring.devtools.livereload.enabled` from `true` to `false`.
+If you rely on browser live reload during development, opt in explicitly under the development environment so non-development environments still honor the new Spring Boot 4 default:
+
+[source,yaml]
+.application-development.yml
+----
+spring:
+    devtools:
+        livereload:
+            enabled: true
+----
+
+NOTE: Apps generated by the Grails Forge with the `spring-boot-devtools` reloading option **do** set this property automatically in `application-development.yml`, restoring Grails 7 livereload behavior for the dev profile only.
+You can opt out by changing the value to `false` or by deleting the `application-development.yml` block after generation.
+Existing Grails 7 applications that opt in to devtools must add this configuration manually.
+
+==== 18. Spring Retry No Longer Managed
+
+Spring Boot 4 removed `spring-retry` from its managed dependencies.
+Spring for Apache Kafka and Spring AMQP have moved off Spring Retry to Spring Framework's new retry support; if you used Spring Retry transitively through those projects you may not need it any more.
+
+If your application *directly* uses `@Retryable`, `@EnableRetry`, or `@Recover`, declare the dependency explicitly in `build.gradle`:
+
+[source,groovy]
+.build.gradle
+----
+implementation 'org.springframework.retry:spring-retry'
+----
+
+NOTE: The `grails-bom` pins a known-good Spring Retry version (`2.0.x`), so you do not need to specify a version when using `enforcedPlatform("org.apache.grails:grails-bom:$grailsVersion")`.
+Override the BOM-managed version in your build if you need a newer release.
+
+==== 19. Other Default Behavior Changes
+
+Spring Boot 4 made several smaller default-behavior changes that you may notice but rarely require code changes:
+
+* **Logback default charset is now `UTF-8`** for log files (aligning with the existing Log4j2 default).
+Console output uses `Console#charset()` if available, otherwise `UTF-8`.
+If your log scraping tooling assumed a platform-default charset, switch it to UTF-8.
+
+* **Liveness and readiness probes are enabled by default** on the Health endpoint.
+The `liveness` and `readiness` health groups are exposed automatically.
+To disable, set:
++
+[source,yaml]
+.application.yml
+----
+management:
+    endpoint:
+        health:
+            probes:
+                enabled: false
+----
+
+* **`HttpMessageConverters` is deprecated.**
+If your application contributed `HttpMessageConverter` beans through this class, switch to the new `ClientHttpMessageConvertersCustomizer` and `ServerHttpMessageConvertersCustomizer` interfaces.
+
+* **JSpecify nullability annotations.**
+Spring Framework 7 deprecated `org.springframework.lang.Nullable` and `org.springframework.lang.NonNull` in favor of the JSpecify annotations (`org.jspecify.annotations.Nullable`, `org.jspecify.annotations.NonNull`).
+The Spring annotations still work, so this is non-blocking, but new code should prefer the JSpecify equivalents.
+
+==== 20. Known Plugin Incompatibilities
 
 Some third-party plugins have not yet been updated for Spring Boot 4 / Spring Framework 7 compatibility.
 The following are known blockers at this time:
