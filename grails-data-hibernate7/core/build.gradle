@@ -69,7 +69,7 @@ dependencies {
     api 'javax.validation:validation-api:2.0.1.Final'
     api ('org.checkerframework:checker-qual:3.48.4')
 
-   api( 'org.jboss:jandex:3.2.3')
+    api 'io.smallrye:jandex:3.2.3'
 
     compileOnly "org.hibernate.orm:hibernate-core:$hibernate7Version"
 

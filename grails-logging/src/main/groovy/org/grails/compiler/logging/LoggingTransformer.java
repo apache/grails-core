@@ -21,16 +21,17 @@ package org.grails.compiler.logging;
 import java.lang.reflect.Modifier;
 import java.net.URL;
 
+import groovy.lang.GroovyClassLoader;
 import groovy.util.logging.Slf4j;
+import org.codehaus.groovy.ast.ASTNode;
 import org.codehaus.groovy.ast.AnnotationNode;
 import org.codehaus.groovy.ast.ClassHelper;
 import org.codehaus.groovy.ast.ClassNode;
 import org.codehaus.groovy.ast.FieldNode;
-import org.codehaus.groovy.ast.Parameter;
-import org.codehaus.groovy.ast.expr.ClassExpression;
-import org.codehaus.groovy.ast.expr.MethodCallExpression;
 import org.codehaus.groovy.classgen.GeneratorContext;
+import org.codehaus.groovy.control.CompilationUnit;
 import org.codehaus.groovy.control.SourceUnit;
+import org.codehaus.groovy.transform.LogASTTransformation;
 
 import grails.compiler.ast.AllArtefactClassInjector;
 import grails.compiler.ast.AstTransformer;
@@ -43,9 +44,6 @@ import grails.compiler.ast.AstTransformer;
  */
 @AstTransformer
 public class LoggingTransformer implements AllArtefactClassInjector {
-
-    private static final ClassNode LOGGER_CLASSNODE = ClassHelper.make("org.slf4j.Logger");
-    private static final ClassNode LOGGER_FACTORY_CLASSNODE = ClassHelper.make("org.slf4j.LoggerFactory");
 
     @Override
     public void performInjection(SourceUnit source, GeneratorContext context, ClassNode classNode) {
@@ -80,26 +78,11 @@ public class LoggingTransformer implements AllArtefactClassInjector {
             return;
         }
 
-        // Instead of adding @Slf4j annotation (which won't be processed if added during AST transformation),
-        // manually inject the log field. This mimics what @Slf4j does.
-        // final Logger log = LoggerFactory.getLogger(ClassName.class)
-        MethodCallExpression getLoggerCall = new MethodCallExpression(
-                new ClassExpression(LOGGER_FACTORY_CLASSNODE),
-                "getLogger",
-                new ClassExpression(classNode)
-        );
-        getLoggerCall.setMethodTarget(LOGGER_FACTORY_CLASSNODE.getMethod("getLogger", new Parameter[]{new Parameter(ClassHelper.CLASS_Type, "clazz")}));
-
-        logField = new FieldNode(
-                "log",
-                Modifier.PRIVATE | Modifier.FINAL | Modifier.STATIC,
-                LOGGER_CLASSNODE.getPlainNodeReference(),
-                classNode,
-                getLoggerCall
-        );
-
-        classNode.addField(logField);
-        classNode.putNodeMetaData(Slf4j.class, logField);
+        AnnotationNode annotationNode = new AnnotationNode(ClassHelper.make(Slf4j.class));
+        LogASTTransformation logASTTransformation = new LogASTTransformation();
+        logASTTransformation.setCompilationUnit(new CompilationUnit(new GroovyClassLoader(getClass().getClassLoader())));
+        logASTTransformation.visit(new ASTNode[]{ annotationNode, classNode}, source);
+        classNode.putNodeMetaData(Slf4j.class, annotationNode);
     }
 
     public boolean shouldInject(URL url) {

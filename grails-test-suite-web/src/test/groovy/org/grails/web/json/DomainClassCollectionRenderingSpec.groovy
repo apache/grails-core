@@ -18,7 +18,7 @@
  */
 package org.grails.web.json
 
-import com.fasterxml.jackson.databind.ObjectMapper
+import tools.jackson.databind.json.JsonMapper
 import grails.persistence.Entity
 import grails.rest.render.json.JsonRenderer
 import grails.testing.gorm.DataTest
@@ -38,10 +38,10 @@ class DomainClassCollectionRenderingSpec extends Specification implements Grails
     }
 
     @Shared
-    ObjectMapper objectMapper
+    JsonMapper objectMapper
 
     void setupSpec() {
-        objectMapper = new ObjectMapper()
+        objectMapper = JsonMapper.builder().build()
     }
 
     void setup() {

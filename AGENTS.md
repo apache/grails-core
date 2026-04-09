@@ -74,7 +74,7 @@ export GRADLE_OPTS="-Xms2G -Xmx5G"
 
 | Component | Version |
 |-----------|---------|
-| JDK | 17+ (baseline 17) |
+| JDK | 21+ (baseline 21) |
 | Groovy | 4.0.x |
 | Spring Boot | 4.0.x |
 | Spring Framework | 7.0.x |

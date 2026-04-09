@@ -18,7 +18,7 @@
  */
 package grails.plugin.json.view
 
-import com.fasterxml.jackson.databind.ObjectMapper
+import tools.jackson.databind.json.JsonMapper
 import grails.plugin.json.view.test.JsonViewTest
 import grails.testing.gorm.DataTest
 import grails.validation.Validateable
@@ -31,7 +31,7 @@ import spock.lang.Specification
 class MapRenderSpec extends Specification implements JsonViewTest, DataTest {
 
     @Shared
-    ObjectMapper objectMapper = new ObjectMapper()
+    JsonMapper objectMapper = JsonMapper.builder().build()
 
     @Override
     Class[] getDomainClassesToMock() {

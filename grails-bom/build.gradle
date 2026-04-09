@@ -54,7 +54,6 @@ dependencies {
     api platform(gradleBomPlatformDependencies['spring-boot-bom']), {
         exclude group: 'org.apache.groovy'
         exclude group: 'org.spockframework'
-        exclude group: 'com.fasterxml.jackson'
     }
 
     for (def entry : bomPlatformDependencies.entrySet()) {
@@ -237,15 +236,6 @@ ext {
 
             for (Map.Entry<String, String> property : pomProperties.entrySet()) {
                 propertiesNode.appendNode(property.key, property.value)
-            }
-            
-            // Override Spring Boot's groovy.version property with Grails' version
-            // Spring Boot 4.0.5 defaults to Groovy 5.0.4, but Grails 8.0.x uses Groovy 4.0.31
-            def groovyVersionNode = propertiesNode.'groovy.version'
-            if (groovyVersionNode) {
-                groovyVersionNode[0].value = bomDependencyVersions['groovy.version']
-            } else {
-                propertiesNode.appendNode('groovy.version', bomDependencyVersions['groovy.version'])
             }
         }
     }

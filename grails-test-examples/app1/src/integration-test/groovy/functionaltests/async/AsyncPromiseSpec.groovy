@@ -22,6 +22,7 @@ import java.util.concurrent.TimeUnit
 
 import functionaltests.services.AsyncProcessingService
 import spock.lang.Specification
+import spock.lang.Tag
 import spock.lang.Unroll
 
 import org.springframework.beans.factory.annotation.Autowired
@@ -34,6 +35,7 @@ import org.apache.grails.testing.http.client.HttpClientSupport
  * Tests various async patterns including tasks, promises, chaining, and error handling.
  */
 @Integration
+@Tag('http-client')
 class AsyncPromiseSpec extends Specification implements HttpClientSupport {
 
     @Autowired

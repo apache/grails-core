@@ -31,6 +31,7 @@ apply plugin: 'groovy'
 apply plugin: 'idea'
 apply plugin: 'org.springframework.boot'
 apply plugin: 'io.spring.dependency-management'
+apply plugin: 'org.apache.grails.buildsrc.dependency-validator'
 
 dependencies {
 	implementation platform(project(':grails-bom'))

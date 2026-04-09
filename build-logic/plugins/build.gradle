@@ -83,6 +83,10 @@ gradlePlugin {
             id = 'org.apache.grails.buildsrc.repo'
             implementationClass = 'org.apache.grails.buildsrc.GrailsRepoSettingsPlugin'
         }
+        register('grailsDependencyValidator') {
+            id = 'org.apache.grails.buildsrc.dependency-validator'
+            implementationClass = 'org.apache.grails.buildsrc.GrailsDependencyValidatorPlugin'
+        }
         register('grailsTestAggregation') {
             id = 'org.apache.grails.gradle.test-aggregation'
             implementationClass = 'org.apache.grails.buildsrc.GrailsTestPlugin'

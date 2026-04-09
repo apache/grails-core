@@ -19,7 +19,6 @@
 
 import grails.plugin.geb.ContainerGebSpec
 import grails.testing.mixin.integration.Integration
-import spock.lang.Ignore
 
 @Integration
 class GrailsLayoutSpec extends ContainerGebSpec {
@@ -40,7 +39,6 @@ class GrailsLayoutSpec extends ContainerGebSpec {
         pageSource.contains('This is so cool.')
     }
 
-    @Ignore('Theme support removed in Spring Framework 7 - JSP demo relies on theme infrastructure. See #15457')
     void "jsp demo"() {
         when:
         go('demo/jsp')

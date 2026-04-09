@@ -1,93 +1,97 @@
 <component name="ProjectCodeStyleConfiguration">
-  <code_scheme name="Project" version="173">
-    <option name="AUTODETECT_INDENTS" value="false" />
-    <GroovyCodeStyleSettings>
-      <option name="ENABLE_GROOVYDOC_FORMATTING" value="false" />
-      <option name="CLASS_COUNT_TO_USE_IMPORT_ON_DEMAND" value="999" />
-      <option name="NAMES_COUNT_TO_USE_IMPORT_ON_DEMAND" value="999" />
-      <option name="PACKAGES_TO_USE_IMPORT_ON_DEMAND">
-        <value />
-      </option>
-      <option name="IMPORT_LAYOUT_TABLE">
-        <value>
-          <package name="java" withSubpackages="true" static="false" />
-          <emptyLine />
-          <package name="javax" withSubpackages="true" static="false" />
-          <emptyLine />
-          <package name="groovy" withSubpackages="true" static="false" />
-          <package name="org.apache.groovy" withSubpackages="true" static="false" />
-          <package name="org.codehaus.groovy" withSubpackages="true" static="false" />
-          <emptyLine />
-          <package name="jakarta" withSubpackages="true" static="false" />
-          <emptyLine />
-          <package name="" withSubpackages="true" static="false" />
-          <emptyLine />
-          <package name="io.spring" withSubpackages="true" static="false" />
-          <package name="org.springframework" withSubpackages="true" static="false" />
-          <emptyLine />
-          <package name="grails" withSubpackages="true" static="false" />
-          <package name="org.apache.grails" withSubpackages="true" static="false" />
-          <package name="org.grails" withSubpackages="true" static="false" />
-          <emptyLine />
-          <package name="" withSubpackages="true" static="true" />
-        </value>
-      </option>
-    </GroovyCodeStyleSettings>
-    <JavaCodeStyleSettings>
-      <option name="SPACE_INSIDE_ONE_LINE_ENUM_BRACES" value="true" />
-      <option name="CLASS_COUNT_TO_USE_IMPORT_ON_DEMAND" value="999" />
-      <option name="NAMES_COUNT_TO_USE_IMPORT_ON_DEMAND" value="999" />
-      <option name="PACKAGES_TO_USE_IMPORT_ON_DEMAND">
-        <value />
-      </option>
-      <option name="IMPORT_LAYOUT_TABLE">
-        <value>
-          <package name="java" withSubpackages="true" static="false" />
-          <emptyLine />
-          <package name="javax" withSubpackages="true" static="false" />
-          <emptyLine />
-          <package name="groovy" withSubpackages="true" static="false" />
-          <package name="org.apache.groovy" withSubpackages="true" static="false" />
-          <package name="org.codehaus.groovy" withSubpackages="true" static="false" />
-          <emptyLine />
-          <package name="jakarta" withSubpackages="true" static="false" />
-          <emptyLine />
-          <package name="" withSubpackages="true" static="false" />
-          <emptyLine />
-          <package name="io.spring" withSubpackages="true" static="false" />
-          <package name="org.springframework" withSubpackages="true" static="false" />
-          <emptyLine />
-          <package name="grails" withSubpackages="true" static="false" />
-          <package name="org.apache.grails" withSubpackages="true" static="false" />
-          <package name="org.grails" withSubpackages="true" static="false" />
-          <emptyLine />
-          <package name="" withSubpackages="true" static="true" />
-        </value>
-      </option>
-      <option name="ENABLE_JAVADOC_FORMATTING" value="false" />
-    </JavaCodeStyleSettings>
-    <editorconfig>
-      <option name="ENABLED" value="false" />
-    </editorconfig>
-    <codeStyleSettings language="Cookie">
-      <indentOptions>
-        <option name="USE_TAB_CHARACTER" value="false" />
-      </indentOptions>
-    </codeStyleSettings>
-    <codeStyleSettings language="Groovy">
-      <option name="BLANK_LINES_AFTER_CLASS_HEADER" value="1" />
-    </codeStyleSettings>
-    <codeStyleSettings language="JAVA">
-      <option name="BLANK_LINES_AFTER_CLASS_HEADER" value="1" />
-      <option name="SPACE_BEFORE_ARRAY_INITIALIZER_LBRACE" value="true" />
-      <indentOptions>
-        <option name="CONTINUATION_INDENT_SIZE" value="4" />
-      </indentOptions>
-    </codeStyleSettings>
-    <codeStyleSettings language="csv">
-      <indentOptions>
-        <option name="USE_TAB_CHARACTER" value="false" />
-      </indentOptions>
-    </codeStyleSettings>
-  </code_scheme>
+    <code_scheme name="Project" version="173">
+        <option name="AUTODETECT_INDENTS" value="false"/>
+        <GroovyCodeStyleSettings>
+            <option name="ENABLE_GROOVYDOC_FORMATTING" value="false"/>
+            <option name="CLASS_COUNT_TO_USE_IMPORT_ON_DEMAND" value="999"/>
+            <option name="NAMES_COUNT_TO_USE_IMPORT_ON_DEMAND" value="999"/>
+            <option name="PACKAGES_TO_USE_IMPORT_ON_DEMAND">
+                <value/>
+            </option>
+            <option name="IMPORT_LAYOUT_TABLE">
+                <value>
+                    <package name="java" withSubpackages="true" static="false"/>
+                    <emptyLine/>
+                    <package name="javax" withSubpackages="true" static="false"/>
+                    <emptyLine/>
+                    <package name="groovy" withSubpackages="true" static="false"/>
+                    <package name="org.apache.groovy" withSubpackages="true" static="false"/>
+                    <package name="org.codehaus.groovy" withSubpackages="true" static="false"/>
+                    <emptyLine/>
+                    <package name="jakarta" withSubpackages="true" static="false"/>
+                    <emptyLine/>
+                    <package name="" withSubpackages="true" static="false"/>
+                    <emptyLine/>
+                    <package name="io.spring" withSubpackages="true" static="false"/>
+                    <package name="org.springframework" withSubpackages="true" static="false"/>
+                    <emptyLine/>
+                    <package name="grails" withSubpackages="true" static="false"/>
+                    <package name="org.apache.grails" withSubpackages="true" static="false"/>
+                    <package name="org.grails" withSubpackages="true" static="false"/>
+                    <emptyLine/>
+                    <package name="" withSubpackages="true" static="true"/>
+                </value>
+            </option>
+        </GroovyCodeStyleSettings>
+        <JavaCodeStyleSettings>
+            <option name="SPACE_INSIDE_ONE_LINE_ENUM_BRACES" value="true"/>
+            <option name="CLASS_COUNT_TO_USE_IMPORT_ON_DEMAND" value="999"/>
+            <option name="NAMES_COUNT_TO_USE_IMPORT_ON_DEMAND" value="999"/>
+            <option name="PACKAGES_TO_USE_IMPORT_ON_DEMAND">
+                <value/>
+            </option>
+            <option name="IMPORT_LAYOUT_TABLE">
+                <value>
+                    <package name="java" withSubpackages="true" static="false"/>
+                    <emptyLine/>
+                    <package name="javax" withSubpackages="true" static="false"/>
+                    <emptyLine/>
+                    <package name="groovy" withSubpackages="true" static="false"/>
+                    <package name="org.apache.groovy" withSubpackages="true" static="false"/>
+                    <package name="org.codehaus.groovy" withSubpackages="true" static="false"/>
+                    <emptyLine/>
+                    <package name="jakarta" withSubpackages="true" static="false"/>
+                    <emptyLine/>
+                    <package name="" withSubpackages="true" static="false"/>
+                    <emptyLine/>
+                    <package name="io.spring" withSubpackages="true" static="false"/>
+                    <package name="org.springframework" withSubpackages="true" static="false"/>
+                    <emptyLine/>
+                    <package name="grails" withSubpackages="true" static="false"/>
+                    <package name="org.apache.grails" withSubpackages="true" static="false"/>
+                    <package name="org.grails" withSubpackages="true" static="false"/>
+                    <emptyLine/>
+                    <package name="" withSubpackages="true" static="true"/>
+                </value>
+            </option>
+            <option name="ENABLE_JAVADOC_FORMATTING" value="false"/>
+        </JavaCodeStyleSettings>
+        <editorconfig>
+            <option name="ENABLED" value="false"/>
+        </editorconfig>
+        <codeStyleSettings language="Cookie">
+            <indentOptions>
+                <option name="USE_TAB_CHARACTER" value="false"/>
+            </indentOptions>
+        </codeStyleSettings>
+        <codeStyleSettings language="Groovy">
+            <option name="BLANK_LINES_AFTER_CLASS_HEADER" value="1"/>
+        </codeStyleSettings>
+        <codeStyleSettings language="JAVA">
+            <option name="KEEP_BLANK_LINES_IN_DECLARATIONS" value="1"/>
+            <option name="KEEP_BLANK_LINES_IN_CODE" value="1"/>
+            <option name="BLANK_LINES_AFTER_CLASS_HEADER" value="1"/>
+            <option name="SPACE_BEFORE_ARRAY_INITIALIZER_LBRACE" value="true"/>
+            <option name="ARRAY_INITIALIZER_WRAP" value="1"/>
+            <option name="ARRAY_INITIALIZER_LBRACE_ON_NEXT_LINE" value="true"/>
+            <indentOptions>
+                <option name="CONTINUATION_INDENT_SIZE" value="4"/>
+            </indentOptions>
+        </codeStyleSettings>
+        <codeStyleSettings language="csv">
+            <indentOptions>
+                <option name="USE_TAB_CHARACTER" value="false"/>
+            </indentOptions>
+        </codeStyleSettings>
+    </code_scheme>
 </component>

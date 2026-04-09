@@ -95,9 +95,6 @@ class TestPhasesGradlePlugin implements Plugin<Project> {
             }
         }
 
-        def resources = new File(project.projectDir, 'grails-app/conf')
-        phaseSourceSet.resources.srcDir(resources)
-
         def dependencies = project.dependencies
         dependencies.add(implConfigName, mainSourceSetOutput)
         dependencies.add(implConfigName, testSourceSetOutput)

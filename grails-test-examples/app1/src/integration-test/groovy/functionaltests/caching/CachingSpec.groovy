@@ -20,6 +20,7 @@ package functionaltests.caching
 
 import spock.lang.Narrative
 import spock.lang.Specification
+import spock.lang.Tag
 
 import org.springframework.beans.factory.annotation.Autowired
 
@@ -42,6 +43,7 @@ Grails caching provides method-level caching via annotations @Cacheable,
 @CacheEvict, and @CachePut. This allows expensive operations to be cached
 and only recomputed when necessary.
 ''')
+@Tag('http-client')
 class CachingSpec extends Specification implements HttpClientSupport {
 
     @Autowired

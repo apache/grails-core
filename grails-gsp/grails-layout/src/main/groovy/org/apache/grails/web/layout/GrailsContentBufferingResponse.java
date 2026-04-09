@@ -70,6 +70,23 @@ public class GrailsContentBufferingResponse extends HttpServletResponseWrapper i
         return (HttpServletResponse) pageResponseWrapper.getResponse();
     }
 
+    /**
+     * Always report this buffering response as committed. This forces Spring's
+     * {@link org.springframework.web.servlet.view.InternalResourceView} to use
+     * {@code include()} instead of {@code forward()} for JSP views. Tomcat 11
+     * (Jakarta Servlet 6.1) calls {@code finish()} on the underlying response
+     * after a forward completes, which commits the real response and prevents the
+     * layout decorator from writing decorated output. Using include avoids this.
+     *
+     * This is safe because {@code GrailsContentBufferingResponse} is only used
+     * inside {@link EmbeddedGrailsLayoutView#obtainContent} to capture the inner
+     * view's output, and is discarded after content capture completes.
+     */
+    @Override
+    public boolean isCommitted() {
+        return true;
+    }
+
     public boolean isUsingStream() {
         return pageResponseWrapper.isUsingStream();
     }

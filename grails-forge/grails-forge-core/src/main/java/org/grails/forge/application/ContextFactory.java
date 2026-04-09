@@ -124,6 +124,15 @@ public class ContextFactory {
         if (servletImpl == null) {
             servletImpl = ServletImpl.DEFAULT_OPTION;
         }
+        if (servletImpl == ServletImpl.UNDERTOW) {
+            // Undertow has not been updated for Servlet 6.1, which Spring Boot 4 requires.
+            // Fail fast with a clear message rather than silently dropping the selection.
+            throw new IllegalArgumentException(
+                "Embedded Undertow is not currently supported in Grails 8. " +
+                "Undertow does not yet provide Servlet 6.1 compatibility, which Spring Boot 4 requires. " +
+                "Use TOMCAT or JETTY instead."
+            );
+        }
         return servletImpl;
     }
 }
