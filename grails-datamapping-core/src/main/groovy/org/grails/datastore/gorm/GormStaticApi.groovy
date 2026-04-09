@@ -141,13 +141,11 @@ class GormStaticApi<D> extends AbstractGormApi<D> implements GormAllOperations<D
     def methodMissing(String methodName, Object args) {
         FinderMethod method = gormDynamicFinders.find { FinderMethod f -> f.isMethodMatch(methodName) }
         if (!method) {
-            NamedCriteriaProxy namedQuery = GormEnhancer.createNamedQuery(persistentClass, methodName)
-            if (namedQuery != null) {
-                Object[] queryArgs = args instanceof Object[] ? (Object[]) args : (args != null ? [args] as Object[] : null)
-                if (queryArgs != null && queryArgs.length > 0) {
-                    return namedQuery.call(queryArgs)
+            if (args && args[-1] instanceof Closure) {
+                NamedCriteriaProxy proxy = GormEnhancer.createNamedQuery(persistentClass, methodName)
+                if (proxy != null) {
+                    return proxy.call(args)
                 }
-                return namedQuery
             }
             throw new MissingMethodException(methodName, persistentClass, args)
         }
@@ -498,8 +496,8 @@ class GormStaticApi<D> extends AbstractGormApi<D> implements GormAllOperations<D
 
     D merge(D d) {
         execute({ Session session ->
-            Object merged = session.merge(d)
-            return (D) merged
+            session.persist(d)
+            return d
         } as SessionCallback)
     }
 

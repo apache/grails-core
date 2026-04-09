@@ -20,6 +20,7 @@ package org.grails.orm.hibernate;
 
 import java.lang.reflect.InvocationHandler;
 import java.lang.reflect.Method;
+import java.util.Objects;
 
 import org.hibernate.Session;
 import org.hibernate.query.Query;
@@ -47,17 +48,18 @@ public class CloseSuppressingInvocationHandler implements InvocationHandler {
         switch (method.getName()) {
             case "equals" -> {
                 // Only consider equal when proxies are identical.
-                return (proxy == args[0]);
-                // Only consider equal when proxies are identical.
+                return Objects.equals(proxy, args[0]);
             }
             case "hashCode" -> {
                 // Use hashCode of Session proxy.
                 return System.identityHashCode(proxy);
-                // Use hashCode of Session proxy.
             }
             case "close" -> {
                 // Handle close method: suppress, not valid.
                 return null;
+            }
+            default -> {
+                // do nothing
             }
         }
 

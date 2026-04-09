@@ -31,11 +31,11 @@ import org.hibernate.boot.spi.InFlightMetadataCollector;
 public class NamespaceNameExtractor {
 
     public static String getCatalogName(@Nonnull InFlightMetadataCollector mappings) {
-        return getNamespaceName(mappings, Namespace.Name::getCatalog);
+        return getNamespaceName(mappings, Namespace.Name::catalog);
     }
 
     public static String getSchemaName(@Nonnull InFlightMetadataCollector mappings) {
-        return getNamespaceName(mappings, Namespace.Name::getSchema);
+        return getNamespaceName(mappings, Namespace.Name::schema);
     }
 
     private static String getNamespaceName(

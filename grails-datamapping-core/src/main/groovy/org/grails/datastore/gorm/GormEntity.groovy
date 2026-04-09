@@ -28,7 +28,6 @@ import org.springframework.transaction.TransactionDefinition
 
 import grails.gorm.DetachedCriteria
 import org.grails.datastore.gorm.finders.FinderMethod
-import org.grails.datastore.gorm.query.GormQueryOperations
 import org.grails.datastore.mapping.dirty.checking.DirtyCheckable
 import org.grails.datastore.mapping.model.MappingContext
 import org.grails.datastore.mapping.model.PersistentEntity

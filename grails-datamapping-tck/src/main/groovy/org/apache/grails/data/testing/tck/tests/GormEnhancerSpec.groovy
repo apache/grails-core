@@ -82,6 +82,7 @@ class GormEnhancerSpec extends GrailsDataTckSpec {
         'Bob' == bob.name
     }
 
+    @spock.lang.Requires({ System.getProperty('hibernate5.gorm.suite') == 'true' || System.getProperty('hibernate7.gorm.suite') == 'true' || System.getProperty('mongodb.gorm.suite') == 'true' })
     void "Test dynamic finder with disjunction"() {
         given:
         def age = 40
@@ -133,6 +134,7 @@ class GormEnhancerSpec extends GrailsDataTckSpec {
         t.id == t.ident()
     }
 
+    @spock.lang.Requires({ System.getProperty('hibernate5.gorm.suite') == 'true' || System.getProperty('hibernate7.gorm.suite') == 'true' || System.getProperty('mongodb.gorm.suite') == 'true' })
     void "Test dynamic finder with pagination parameters"() {
         given:
         def age = 40
@@ -150,6 +152,7 @@ class GormEnhancerSpec extends GrailsDataTckSpec {
         1 == TestEntity.findAllByNameOrAge('Barney', 40, [max: 1]).size()
     }
 
+    @spock.lang.Requires({ System.getProperty('hibernate5.gorm.suite') == 'true' || System.getProperty('hibernate7.gorm.suite') == 'true' || System.getProperty('mongodb.gorm.suite') == 'true' })
     void "Test in list query"() {
         given:
         def age = 40
@@ -168,6 +171,7 @@ class GormEnhancerSpec extends GrailsDataTckSpec {
         2 == TestEntity.findAllByNameInListOrName(['Joe', 'Frank'], 'Bob').size()
     }
 
+    @spock.lang.Requires({ System.getProperty('hibernate5.gorm.suite') == 'true' || System.getProperty('hibernate7.gorm.suite') == 'true' || System.getProperty('mongodb.gorm.suite') == 'true' })
     void "Test like query"() {
         given:
         def age = 40
@@ -184,6 +188,7 @@ class GormEnhancerSpec extends GrailsDataTckSpec {
         results.find { it.name == 'Frank' } != null
     }
 
+    @spock.lang.Requires({ System.getProperty('hibernate5.gorm.suite') == 'true' || System.getProperty('hibernate7.gorm.suite') == 'true' || System.getProperty('mongodb.gorm.suite') == 'true' })
     void "Test ilike query"() {
         given:
         def age = 40

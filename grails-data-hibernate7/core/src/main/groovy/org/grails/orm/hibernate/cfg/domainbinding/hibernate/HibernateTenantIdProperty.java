@@ -28,6 +28,7 @@ import org.grails.orm.hibernate.cfg.PropertyConfig;
 /** Hibernate implementation of {@link org.grails.datastore.mapping.model.types.TenantId} */
 public class HibernateTenantIdProperty extends TenantIdWithMapping<PropertyConfig>
         implements HibernatePersistentProperty {
+
     public HibernateTenantIdProperty(PersistentEntity entity, MappingContext context, PropertyDescriptor property) {
         super(entity, context, property);
     }

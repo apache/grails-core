@@ -61,16 +61,13 @@ public enum CriteriaMethods {
     CACHE("cache"),
     READ_ONLY("readOnly"),
     FETCH_MODE("fetchMode"),
-    SINGLE_RESULT("singleResult");
+    SINGLE_RESULT("singleResult"),
+    CREATE_ALIAS("createAlias");
 
     private final String name;
 
     CriteriaMethods(String name) {
         this.name = name;
-    }
-
-    public String getName() {
-        return name;
     }
 
     /**
@@ -82,7 +79,7 @@ public enum CriteriaMethods {
      * @return The corresponding CriteriaMethods enum
      * @throws MissingMethodException if the method name is not recognized
      */
-    public static CriteriaMethods fromName(String name, Class<?> targetClass, Object[] args) {
+    public static CriteriaMethods fromName(String name, Class<?> targetClass, Object... args) {
         for (CriteriaMethods m : values()) {
             if (m.name.equals(name)) {
                 return m;
@@ -106,5 +103,9 @@ public enum CriteriaMethods {
             }
         }
         return null;
+    }
+
+    public String getName() {
+        return name;
     }
 }

@@ -18,12 +18,13 @@
  */
 package grails.gorm.tests
 
+import org.apache.grails.data.mongo.core.MongoDatastoreSpec
+
 import grails.persistence.Entity
 import org.apache.grails.data.mongo.core.GrailsDataMongoTckManager
-import org.apache.grails.data.testing.tck.base.GrailsDataTckSpec
 import org.bson.types.ObjectId
 
-class DirtyCheckEmbeddedCollectionSpec extends GrailsDataTckSpec<GrailsDataMongoTckManager> {
+class DirtyCheckEmbeddedCollectionSpec extends MongoDatastoreSpec {
 
     void setupSpec() {
         manager.addAllDomainClasses([Foo, Bar])

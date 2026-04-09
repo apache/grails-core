@@ -30,6 +30,7 @@ import org.grails.datastore.mapping.model.PersistentEntity;
  * @since 5.0
  */
 public class HibernateEmbeddedClassMapping extends HibernateClassMapping {
+
     public HibernateEmbeddedClassMapping(PersistentEntity entity, MappingContext context) {
         super(entity, context);
     }

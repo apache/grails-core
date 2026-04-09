@@ -1,13 +1,31 @@
+/*
+ *  Licensed to the Apache Software Foundation (ASF) under one
+ *  or more contributor license agreements.  See the NOTICE file
+ *  distributed with this work for additional information
+ *  regarding copyright ownership.  The ASF licenses this file
+ *  to you under the Apache License, Version 2.0 (the
+ *  'License'); you may not use this file except in compliance
+ *  with the License.  You may obtain a copy of the License at
+ *
+ *    https://www.apache.org/licenses/LICENSE-2.0
+ *
+ *  Unless required by applicable law or agreed to in writing,
+ *  software distributed under the License is distributed on an
+ *  'AS IS' BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ *  KIND, either express or implied.  See the License for the
+ *  specific language governing permissions and limitations
+ *  under the License.
+ */
 /* Copyright (C) 2014 SpringSource
  *
- * Licensed under the Apache License, Version 2.0 (the "License");
+ * Licensed under the Apache License, Version 2.0 (the 'License')
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
  *
  *      https://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
+ * distributed under the License is distributed on an 'AS IS' BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  * See the License for the specific language governing permissions and
  * limitations under the License.
@@ -19,6 +37,7 @@ import javax.sql.DataSource
 import groovy.transform.CompileStatic
 
 import org.springframework.beans.factory.support.BeanDefinitionRegistry
+import grails.spring.BeanBuilder
 import org.springframework.context.ApplicationContext
 import org.springframework.context.ApplicationEventPublisher
 import org.springframework.context.support.GenericApplicationContext
@@ -36,6 +55,7 @@ import org.grails.datastore.mapping.reflect.ClassUtils
 import org.grails.orm.hibernate.HibernateDatastore
 import org.grails.orm.hibernate.cfg.Settings
 import org.grails.orm.hibernate.connections.HibernateConnectionSourceFactory
+import org.grails.orm.hibernate.proxy.GrailsBytecodeProvider
 import org.grails.orm.hibernate.proxy.HibernateProxyHandler
 import org.grails.orm.hibernate.support.HibernateDatastoreConnectionSourcesRegistrar
 
@@ -57,6 +77,8 @@ class HibernateDatastoreSpringInitializer extends AbstractDatastoreInitializer {
     Set<String> dataSources = [defaultDataSourceBeanName] as Set<String>
     boolean enableReload = false
     boolean grailsPlugin = false
+    Closure beanDefinitions
+    protected ApplicationContext applicationContext
 
     HibernateDatastoreSpringInitializer(PropertyResolver configuration, Collection<Class> persistentClasses) {
         super(configuration, persistentClasses)
@@ -107,7 +129,7 @@ class HibernateDatastoreSpringInitializer extends AbstractDatastoreInitializer {
 
     @Override
     protected Class<AbstractDatastorePersistenceContextInterceptor> getPersistenceInterceptorClass() {
-        getClass().classLoader.loadClass('org.grails.plugin.hibernate.support.HibernatePersistenceContextInterceptor')
+        getClass().classLoader.loadClass('org.grails.plugin.hibernate.support.HibernatePersistenceContextInterceptor') as Class<AbstractDatastorePersistenceContextInterceptor>
     }
 
     /**
@@ -116,9 +138,23 @@ class HibernateDatastoreSpringInitializer extends AbstractDatastoreInitializer {
     @Override
     ApplicationContext configure() {
         GenericApplicationContext applicationContext = createApplicationContext()
+        this.applicationContext = applicationContext
         configureForBeanDefinitionRegistry(applicationContext)
         applicationContext.refresh()
         return applicationContext
+    }
+
+    void configureForBeanDefinitionRegistry(BeanDefinitionRegistry beanDefinitionRegistry) {
+        def definitions = getBeanDefinitions(beanDefinitionRegistry)
+        BeanBuilder beanBuilder = new BeanBuilder()
+        beanBuilder.beans(definitions)
+        if (this.beanDefinitions != null) {
+            beanBuilder.beans(this.beanDefinitions)
+        }
+        beanBuilder.registerBeans(beanDefinitionRegistry)
+        if (!beanDefinitionRegistry.containsBeanDefinition('hibernateDatastore')) {
+            throw new IllegalStateException('Failed to register hibernateDatastore bean!')
+        }
     }
 
     protected String getTestDbUrl() {
@@ -136,7 +172,7 @@ class HibernateDatastoreSpringInitializer extends AbstractDatastoreInitializer {
 
     Closure getBeanDefinitions(BeanDefinitionRegistry beanDefinitionRegistry) {
         ApplicationEventPublisher eventPublisher = super.findEventPublisher(beanDefinitionRegistry)
-        Closure beanDefinitions = {
+        return { ->
             def common = getCommonConfiguration(beanDefinitionRegistry, 'hibernate')
             common.delegate = delegate
             common.call()
@@ -144,12 +180,18 @@ class HibernateDatastoreSpringInitializer extends AbstractDatastoreInitializer {
             // for unwrapping / inspecting proxies
             hibernateProxyHandler(HibernateProxyHandler)
 
+            hibernateBytecodeProvider(GrailsBytecodeProvider)
+
             def config = this.configuration
             final boolean isGrailsPresent = isGrailsPresent()
+            def appContext = this.applicationContext
             dataSourceConnectionSourceFactory(CachedDataSourceConnectionSourceFactory)
-            hibernateConnectionSourceFactory(HibernateConnectionSourceFactory, persistentClasses as Class[]) { bean ->
+            hibernateConnectionSourceFactory(HibernateConnectionSourceFactory, ref('hibernateBytecodeProvider'), persistentClasses as Class[]) { bean ->
                 bean.autowire = true
                 dataSourceConnectionSourceFactory = ref('dataSourceConnectionSourceFactory')
+                if (appContext != null) {
+                    applicationContext = appContext
+                }
             }
             hibernateDatastore(HibernateDatastore, config, hibernateConnectionSourceFactory, eventPublisher) { bean ->
                 bean.primary = true
@@ -162,6 +204,15 @@ class HibernateDatastoreSpringInitializer extends AbstractDatastoreInitializer {
             }
             autoTimestampEventListener(hibernateDatastore: 'getAutoTimestampEventListener')
             getBeanDefinition('transactionManager').beanClass = PlatformTransactionManager
+
+            for (String dataSourceName in dataSources) {
+                if (dataSourceName == ConnectionSource.DEFAULT) continue
+
+                "dataSource_$dataSourceName"(hibernateDatastore: 'getDataSource', dataSourceName)
+                "sessionFactory_$dataSourceName"(hibernateDatastore: 'getSessionFactory', dataSourceName)
+                "transactionManager_$dataSourceName"(hibernateDatastore: 'getTransactionManager', dataSourceName)
+            }
+
             hibernateDatastoreConnectionSourcesRegistrar(HibernateDatastoreConnectionSourcesRegistrar, dataSources)
             // domain model mapping context, used for configuration
             grailsDomainClassMappingContext(hibernateDatastore: 'getMappingContext')
@@ -194,7 +245,6 @@ class HibernateDatastoreSpringInitializer extends AbstractDatastoreInitializer {
                 }
             }
         }
-        return beanDefinitions
     }
 
     protected GenericApplicationContext createApplicationContext() {

@@ -176,7 +176,7 @@ class HqlQueryContextSpec extends Specification {
         def params = [:]
 
         when:
-        String result = HqlQueryContext.resolveHql(gq, false, params)
+        String result = HqlQueryContext.resolveHql(gq, false, params as Map<String, Object>)
 
         then:
         result     == "from Foo where x = :p0"
@@ -191,7 +191,7 @@ class HqlQueryContextSpec extends Specification {
         def params = [:]
 
         when:
-        String result = HqlQueryContext.resolveHql(gq, false, params)
+        String result = HqlQueryContext.resolveHql(gq, false, params as Map<String, Object>)
 
         then:
         result     == "from Foo where x = :p0 and y = :p1"
@@ -236,6 +236,22 @@ class HqlQueryContextSpec extends Specification {
     void "getTarget with multiple projections returns Object array"() {
         expect:
         HqlQueryContext.getTarget("select p.name, p.age from Person p", String) == Object[].class
+    }
+
+    @Unroll
+    void "getTarget returns Long for aggregate projection: #hql"() {
+        expect:
+        HqlQueryContext.getTarget(hql, String) == Long
+        where:
+        hql << [
+            "select count(p) from Person p",
+            "select sum(p.age) from Person p",
+            "select avg(p.age) from Person p",
+            "select min(p.age) from Person p",
+            "select max(p.age) from Person p",
+            "select count(*) from Person",
+            "select distinct count(p.id) from Person p"
+        ]
     }
 
     // ─── countHqlProjections ─────────────────────────────────────────────────

@@ -31,6 +31,7 @@ class ListOrderBySpec extends GrailsDataTckSpec {
         manager.addAllDomainClasses([TestEntity, ChildEntity])
     }
 
+    @spock.lang.Requires({ System.getProperty('hibernate5.gorm.suite') == 'true' || System.getProperty('hibernate7.gorm.suite') == 'true' || System.getProperty('mongodb.gorm.suite') == 'true' })
     void "Test listOrderBy property name method"() {
         given:
         def child = new ChildEntity(name: 'Child')

@@ -121,11 +121,14 @@ class VersionBinderSpec extends HibernateGormDatastoreSpec {
         @Override PersistentEntity getOwner() { null }
         @Override PropertyMapping getMapping() { null }
         @Override PropertyConfig getMappedForm() { new PropertyConfig() }
+        @Override PropertyConfig getHibernateMappedForm() { getMappedForm() }
         @Override boolean isInherited() { false }
         @Override EntityReflector.PropertyReader getReader() { null }
         @Override EntityReflector.PropertyWriter getWriter() { null }
         @Override String getOwnerClassName() { "Test" }
         @Override boolean isLazyAble() { false }
+        @Override boolean isLazy() { false }
+        @Override org.grails.orm.hibernate.cfg.domainbinding.hibernate.GrailsHibernatePersistentEntity getHibernateOwner() { null }
         boolean isBidirectionalManyToOneWithListMapping(Property prop) { false }
     }
 }

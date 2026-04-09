@@ -52,6 +52,72 @@ class EnumSpec extends GrailsDataTckSpec {
     }
 
     @Issue('GPMONGODB-248')
+    void "Test findByEnInList()"() {
+        given:
+
+        new EnumThing(name: 'e1', en: TestEnum.V1).save(failOnError: true)
+        new EnumThing(name: 'e3', en: TestEnum.V2).save(failOnError: true)
+
+        when:
+        def instance1 = EnumThing.findByEn(TestEnum.V1)
+        def instance2 = EnumThing.findByEn(TestEnum.V2)
+        def instance3 = EnumThing.findByEn(TestEnum.V3)
+
+        then:
+        instance1 != null
+        instance1.en == TestEnum.V1
+
+        instance2 != null
+        instance2.en == TestEnum.V2
+
+        instance3 == null
+    }
+
+    void "Test findBy()"() {
+        given:
+
+        new EnumThing(name: 'e1', en: TestEnum.V1).save(failOnError: true)
+        new EnumThing(name: 'e3', en: TestEnum.V2).save(failOnError: true)
+
+        when:
+        def instance1 = EnumThing.findByEn(TestEnum.V1)
+        def instance2 = EnumThing.findByEn(TestEnum.V2)
+        def instance3 = EnumThing.findByEn(TestEnum.V3)
+
+        then:
+        instance1 != null
+        instance1.en == TestEnum.V1
+
+        instance2 != null
+        instance2.en == TestEnum.V2
+
+        instance3 == null
+    }
+
+    void "Test findBy() with clearing the session"() {
+        given:
+
+        new EnumThing(name: 'e1', en: TestEnum.V1).save(failOnError: true, flush: true)
+        new EnumThing(name: 'e3', en: TestEnum.V2).save(failOnError: true, flush: true)
+        manager.session.clear()
+
+        when:
+        def instance1 = EnumThing.findByEn(TestEnum.V1)
+        def instance2 = EnumThing.findByEn(TestEnum.V2)
+        def instance3 = EnumThing.findByEn(TestEnum.V3)
+
+        then:
+        instance1 != null
+        instance1.en == TestEnum.V1
+
+        instance2 != null
+        instance2.en == TestEnum.V2
+
+        instance3 == null
+    }
+
+    @Issue('GPMONGODB-248')
+    @spock.lang.Requires({ System.getProperty('hibernate5.gorm.suite') == 'true' || System.getProperty('hibernate7.gorm.suite') == 'true' || System.getProperty('mongodb.gorm.suite') == 'true' })
     void "Test findByInList()"() {
         given:
 
@@ -92,6 +158,7 @@ class EnumSpec extends GrailsDataTckSpec {
         instance3.isEmpty()
     }
 
+    @spock.lang.Requires({ System.getProperty('hibernate5.gorm.suite') == 'true' || System.getProperty('hibernate7.gorm.suite') == 'true' || System.getProperty('mongodb.gorm.suite') == 'true' })
     void "Test findAllBy()"() {
         given:
 
@@ -119,6 +186,7 @@ class EnumSpec extends GrailsDataTckSpec {
 
     }
 
+    @spock.lang.Requires({ System.getProperty('hibernate5.gorm.suite') == 'true' || System.getProperty('hibernate7.gorm.suite') == 'true' || System.getProperty('mongodb.gorm.suite') == 'true' })
     void "Test findAllBy() with clearing the session"() {
         given:
 
@@ -146,6 +214,7 @@ class EnumSpec extends GrailsDataTckSpec {
         instance3.isEmpty()
     }
 
+    @spock.lang.Requires({ System.getProperty('hibernate5.gorm.suite') == 'true' || System.getProperty('hibernate7.gorm.suite') == 'true' || System.getProperty('mongodb.gorm.suite') == 'true' })
     void "Test findAllBy()"() {
         given:
 

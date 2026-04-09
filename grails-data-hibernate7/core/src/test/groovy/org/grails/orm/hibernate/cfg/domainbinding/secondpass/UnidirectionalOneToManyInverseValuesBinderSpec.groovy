@@ -46,8 +46,10 @@ class UnidirectionalOneToManyInverseValuesBinderSpec extends HibernateGormDatast
         org.hibernate.mapping.Collection collection = new org.hibernate.mapping.Set(getGrailsDomainBinder().metadataBuildingContext, owner)
         collection.setCollectionTable(new org.hibernate.mapping.Table("UOTM_BOOKS"))
 
+        property.setCollection(collection)
+
         when:
-        ManyToOne manyToOne = binder.bind(property, collection)
+        ManyToOne manyToOne = binder.bind(property)
 
         then:
         manyToOne.isIgnoreNotFound() == false
@@ -65,8 +67,10 @@ class UnidirectionalOneToManyInverseValuesBinderSpec extends HibernateGormDatast
         org.hibernate.mapping.Collection collection = new org.hibernate.mapping.Set(getGrailsDomainBinder().metadataBuildingContext, owner)
         collection.setCollectionTable(new org.hibernate.mapping.Table("UOTM_BOOKS_CUSTOM"))
 
+        property.setCollection(collection)
+
         when:
-        ManyToOne manyToOne = binder.bind(property, collection)
+        ManyToOne manyToOne = binder.bind(property)
 
         then:
         manyToOne.isIgnoreNotFound() == true

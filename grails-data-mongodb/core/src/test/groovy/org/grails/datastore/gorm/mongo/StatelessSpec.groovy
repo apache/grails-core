@@ -18,10 +18,11 @@
  */
 package org.grails.datastore.gorm.mongo
 
-import org.apache.grails.data.mongo.core.GrailsDataMongoTckManager
-import org.apache.grails.data.testing.tck.base.GrailsDataTckSpec
+import org.apache.grails.data.mongo.core.MongoDatastoreSpec
 
-class StatelessSpec extends GrailsDataTckSpec<GrailsDataMongoTckManager> {
+import org.apache.grails.data.mongo.core.GrailsDataMongoTckManager
+
+class StatelessSpec extends MongoDatastoreSpec {
 
     void setupSpec() {
         manager.addAllDomainClasses([Volcano])

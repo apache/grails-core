@@ -261,7 +261,7 @@ class GormEnhancer implements Closeable {
                         return null
                     }
                 }
-            }
+        }
         }
         return buildNamedCriteriaProxy(entity, namedQueries, queryName, args)
     }
@@ -282,6 +282,7 @@ class GormEnhancer implements Closeable {
         }
         return namedCriteriaProxy
     }
+
     /**
      * Find the tenant id for the given entity
      *
@@ -566,7 +567,7 @@ class GormEnhancer implements Closeable {
     protected void addStaticMethods(PersistentEntity e, boolean onlyExtendedMethods) {
         def cls = e.javaClass
         ExpandoMetaClass mc = MetaClassUtils.getExpandoMetaClass(cls)
-        def staticApiProvider = getStaticApi(cls as Class<Object>)
+        def staticApiProvider = getStaticApi(cls)
         for (Method m in (onlyExtendedMethods ? staticApiProvider.extendedMethods : staticApiProvider.methods)) {
             def method = m
             if (method != null) {
@@ -601,7 +602,7 @@ class GormEnhancer implements Closeable {
     protected void addInstanceMethods(PersistentEntity e, boolean onlyExtendedMethods) {
         Class cls = e.javaClass
         ExpandoMetaClass mc = MetaClassUtils.getExpandoMetaClass(cls)
-        for (AbstractGormApi apiProvider in getInstanceMethodApiProviders(cls as Class<Object>)) {
+        for (AbstractGormApi apiProvider in getInstanceMethodApiProviders(cls)) {
 
             for (Method method in (onlyExtendedMethods ? apiProvider.extendedMethods : apiProvider.methods)) {
                 def methodName = method.name

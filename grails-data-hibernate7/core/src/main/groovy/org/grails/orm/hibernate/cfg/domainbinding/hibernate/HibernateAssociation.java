@@ -24,6 +24,8 @@ import org.hibernate.MappingException;
 import org.hibernate.mapping.ManyToOne;
 import org.hibernate.mapping.Property;
 
+import org.grails.datastore.mapping.model.PersistentEntity;
+import org.grails.datastore.mapping.model.PersistentProperty;
 import org.grails.orm.hibernate.cfg.Mapping;
 import org.grails.orm.hibernate.cfg.PropertyConfig;
 
@@ -41,9 +43,9 @@ public interface HibernateAssociation extends HibernatePersistentProperty {
 
     // --- Association contract (satisfied by the class hierarchy of all implementors) ---
 
-    org.grails.datastore.mapping.model.PersistentProperty<?> getInverseSide();
+    PersistentProperty<?> getInverseSide();
 
-    org.grails.datastore.mapping.model.PersistentEntity getAssociatedEntity();
+    PersistentEntity getAssociatedEntity();
 
     boolean isBidirectional();
 
@@ -86,6 +88,7 @@ public interface HibernateAssociation extends HibernatePersistentProperty {
         }
     }
 
+    @Override
     default boolean isBidirectionalManyToOneWithListMapping(Property prop) {
         return isBidirectional() &&
                 getInverseSide() != null &&
@@ -100,6 +103,7 @@ public interface HibernateAssociation extends HibernatePersistentProperty {
      * @param mapping The mapping
      * @return The type name
      */
+    @Override
     default String getTypeName(Class<?> propertyType, PropertyConfig config, Mapping mapping) {
         if (propertyType == getType() && getHibernateAssociatedEntity() != null) {
             return null;

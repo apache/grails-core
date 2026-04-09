@@ -30,6 +30,7 @@ import org.grails.orm.hibernate.cfg.PropertyConfig;
 /** Hibernate implementation of {@link org.grails.datastore.mapping.model.types.ManyToMany} */
 public class HibernateManyToManyProperty extends ManyToManyWithMapping<PropertyConfig>
         implements HibernateToManyProperty {
+
     private Collection collection;
 
     public HibernateManyToManyProperty(PersistentEntity entity, MappingContext context, PropertyDescriptor property) {
@@ -42,20 +43,22 @@ public class HibernateManyToManyProperty extends ManyToManyWithMapping<PropertyC
     }
 
     @Override
-    public HibernateManyToManyProperty getHibernateInverseSide() {
-        return (HibernateManyToManyProperty) getInverseSide();
+    public String getReferencedEntityName() {
+        return getHibernateAssociatedEntity().getName();
     }
 
     @Override
-    public boolean isAssociationColumnNullable() {
-        return false;
-    }
-
     public Collection getCollection() {
         return collection;
     }
 
+    @Override
     public void setCollection(Collection collection) {
         this.collection = collection;
+    }
+
+    @Override
+    public boolean isLazy() {
+        return getHibernateOwner().isLazy(this);
     }
 }

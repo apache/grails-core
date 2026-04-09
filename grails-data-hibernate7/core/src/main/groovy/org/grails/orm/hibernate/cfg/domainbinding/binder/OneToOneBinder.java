@@ -35,9 +35,7 @@ public class OneToOneBinder {
         this.simpleValueBinder = simpleValueBinder;
     }
 
-    public OneToOne bindOneToOne(
-            final HibernateOneToOneProperty property,
-            String path) {
+    public OneToOne bindOneToOne(final HibernateOneToOneProperty property, String path) {
         Table table = property.getTable();
         PersistentClass owner = property.getHibernateOwner().getPersistentClass();
         OneToOne oneToOne = new OneToOne(metadataBuildingContext, table, owner);

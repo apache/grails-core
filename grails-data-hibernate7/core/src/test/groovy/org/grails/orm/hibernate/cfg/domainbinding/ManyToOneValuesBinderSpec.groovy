@@ -52,7 +52,9 @@ class ManyToOneValuesBinderSpec extends HibernateGormDatastoreSpec {
 
         // 4. Define mock behaviors
         association.getMappedForm() >> config
+        association.getHibernateMappedForm() >> config
         association.getAssociatedEntity() >> associatedEntity
+        association.isLazy() >> expectedLazy
         associatedEntity.getName() >> "AssociatedEntityName"
 
         when:

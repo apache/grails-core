@@ -27,6 +27,7 @@ import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernatePersistentE
 import org.grails.orm.hibernate.cfg.domainbinding.util.MultiTenantFilterBinder
 import org.hibernate.boot.spi.MetadataBuildingContext
 import org.hibernate.mapping.RootClass
+import org.grails.datastore.mapping.core.connections.ConnectionSource
 
 class RootBinderSpec extends HibernateGormDatastoreSpec {
 
@@ -53,7 +54,7 @@ class RootBinderSpec extends HibernateGormDatastoreSpec {
         discriminatorPropertyBinder = Mock(DiscriminatorPropertyBinder)
 
         binder = new RootBinder(
-                "default",
+                ConnectionSource.DEFAULT,
                 multiTenantFilterBinder,
                 subClassBinder,
                 rootPersistentClassCommonValuesBinder,
@@ -67,7 +68,7 @@ class RootBinderSpec extends HibernateGormDatastoreSpec {
         given:
         def entity = Mock(HibernatePersistentEntity)
         entity.getName() >> "Parent"
-        entity.getChildEntities("default") >> []
+        entity.getChildEntities(ConnectionSource.DEFAULT) >> []
         entity.getMappedForm() >> new Mapping()
         
         def mappings = sharedCollector
@@ -91,7 +92,7 @@ class RootBinderSpec extends HibernateGormDatastoreSpec {
         def entity = Mock(HibernatePersistentEntity)
         def childEntity = Mock(HibernatePersistentEntity)
         entity.getName() >> "Parent"
-        entity.getChildEntities("default") >> [childEntity]
+        entity.getChildEntities(ConnectionSource.DEFAULT) >> [childEntity]
         def mapping = new Mapping()
         mapping.setTablePerHierarchy(true)
         entity.getMappedForm() >> mapping

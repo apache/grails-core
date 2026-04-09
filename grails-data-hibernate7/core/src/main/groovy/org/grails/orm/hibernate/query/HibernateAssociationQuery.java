@@ -42,6 +42,7 @@ import org.grails.orm.hibernate.HibernateSession;
  * @see HibernateQuery#createQuery(String)
  */
 public class HibernateAssociationQuery extends AssociationQuery {
+
     final String alias;
 
     /** Dotted property path used for the JPA join (e.g. {@code "pets"} or {@code "owner.address"}) */

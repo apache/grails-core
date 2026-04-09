@@ -70,15 +70,16 @@ class CollectionWithJoinTableBinderSpec extends HibernateGormDatastoreSpec {
         collection.setCollectionTable(new Table("CWJTB_TAGS"))
 
         def basicValue = new org.hibernate.mapping.BasicValue(domainBinder.metadataBuildingContext, collection.getCollectionTable())
-        basicCollectionElementBinder.bind(property, collection) >> basicValue
+        property.setCollection(collection)
+        basicCollectionElementBinder.bind(property) >> basicValue
 
         when:
-        binder.bindCollectionWithJoinTable(property, collection)
+        binder.bindCollectionWithJoinTable(property)
 
         then:
-        1 * basicCollectionElementBinder.bind(property, collection) >> basicValue
+        1 * basicCollectionElementBinder.bind(property) >> basicValue
         collection.getElement() == basicValue
-        1 * collectionForPropertyConfigBinder.bindCollectionForPropertyConfig(collection, property)
+        1 * collectionForPropertyConfigBinder.bindCollectionForPropertyConfig(property)
     }
 
     void "test bindCollectionWithJoinTable creates ManyToOne element for entity association"() {
@@ -94,15 +95,16 @@ class CollectionWithJoinTableBinderSpec extends HibernateGormDatastoreSpec {
         Collection collection = new Set(domainBinder.metadataBuildingContext, owner)
         collection.setCollectionTable(new Table("CWJTB_BOOKS"))
 
+        property.setCollection(collection)
         def manyToOne = new ManyToOne(domainBinder.metadataBuildingContext, collection.getCollectionTable())
-        unidirectionalOneToManyInverseValuesBinder.bind(property, collection) >> manyToOne
+        unidirectionalOneToManyInverseValuesBinder.bind(property) >> manyToOne
 
         when:
-        binder.bindCollectionWithJoinTable(property, collection)
+        binder.bindCollectionWithJoinTable(property)
 
         then:
         collection.getElement() instanceof ManyToOne
-        1 * collectionForPropertyConfigBinder.bindCollectionForPropertyConfig(collection, property)
+        1 * collectionForPropertyConfigBinder.bindCollectionForPropertyConfig(property)
     }
 }
 

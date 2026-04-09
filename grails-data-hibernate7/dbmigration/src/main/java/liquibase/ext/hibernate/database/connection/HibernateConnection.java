@@ -1,10 +1,42 @@
+/*
+ *  Licensed to the Apache Software Foundation (ASF) under one
+ *  or more contributor license agreements.  See the NOTICE file
+ *  distributed with this work for additional information
+ *  regarding copyright ownership.  The ASF licenses this file
+ *  to you under the Apache License, Version 2.0 (the
+ *  "License"); you may not use this file except in compliance
+ *  with the License.  You may obtain a copy of the License at
+ *
+ *    https://www.apache.org/licenses/LICENSE-2.0
+ *
+ *  Unless required by applicable law or agreed to in writing,
+ *  software distributed under the License is distributed on an
+ *  "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ *  KIND, either express or implied.  See the License for the
+ *  specific language governing permissions and limitations
+ *  under the License.
+ */
 package liquibase.ext.hibernate.database.connection;
 
 import java.io.IOException;
 import java.io.StringReader;
 import java.net.URLDecoder;
 import java.nio.charset.StandardCharsets;
-import java.sql.*;
+import java.sql.Array;
+import java.sql.Blob;
+import java.sql.CallableStatement;
+import java.sql.Clob;
+import java.sql.Connection;
+import java.sql.DatabaseMetaData;
+import java.sql.NClob;
+import java.sql.PreparedStatement;
+import java.sql.SQLException;
+import java.sql.SQLFeatureNotSupportedException;
+import java.sql.SQLWarning;
+import java.sql.SQLXML;
+import java.sql.Savepoint;
+import java.sql.Statement;
+import java.sql.Struct;
 import java.util.Collections;
 import java.util.Map;
 import java.util.Properties;
@@ -103,23 +135,23 @@ public class HibernateConnection implements Connection {
     ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
     @Override
-    public Statement createStatement() {
-        return null;
+    public Statement createStatement() throws SQLException {
+        throw new SQLFeatureNotSupportedException();
     }
 
     @Override
-    public PreparedStatement prepareStatement(String sql) {
-        return null;
+    public PreparedStatement prepareStatement(String sql) throws SQLException {
+        throw new SQLFeatureNotSupportedException();
     }
 
     @Override
-    public CallableStatement prepareCall(String sql) {
-        return null;
+    public CallableStatement prepareCall(String sql) throws SQLException {
+        throw new SQLFeatureNotSupportedException();
     }
 
     @Override
-    public String nativeSQL(String sql) {
-        return null;
+    public String nativeSQL(String sql) throws SQLException {
+        throw new SQLFeatureNotSupportedException();
     }
 
     @Override

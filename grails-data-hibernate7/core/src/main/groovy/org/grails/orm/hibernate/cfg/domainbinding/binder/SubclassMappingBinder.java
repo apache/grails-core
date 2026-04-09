@@ -49,7 +49,7 @@ public class SubclassMappingBinder {
     public @NonNull Subclass createSubclassMapping(HibernatePersistentEntity subEntity, PersistentClass parent) {
         Subclass subClass;
         subEntity.configureDerivedProperties();
-        Mapping m = subEntity.getMappedForm();
+        Mapping m = subEntity.getHibernateMappedForm();
         if (subEntity.isJoinedSubclass()) {
             subClass = joinedSubClassBinder.bindJoinedSubClass(subEntity, parent);
         } else if (subEntity.isUnionSubclass()) {

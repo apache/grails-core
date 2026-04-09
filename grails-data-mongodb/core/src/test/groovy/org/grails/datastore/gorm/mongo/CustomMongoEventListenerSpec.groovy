@@ -18,9 +18,10 @@
  */
 package org.grails.datastore.gorm.mongo
 
+import org.apache.grails.data.mongo.core.MongoDatastoreSpec
+
 import grails.persistence.Entity
 import org.apache.grails.data.mongo.core.GrailsDataMongoTckManager
-import org.apache.grails.data.testing.tck.base.GrailsDataTckSpec
 import org.grails.datastore.mapping.core.Datastore
 import org.grails.datastore.mapping.engine.event.AbstractPersistenceEvent
 import org.grails.datastore.mapping.engine.event.AbstractPersistenceEventListener
@@ -35,7 +36,7 @@ import static org.grails.datastore.mapping.engine.event.EventType.PreInsert
 import static org.grails.datastore.mapping.engine.event.EventType.PreLoad
 import static org.grails.datastore.mapping.engine.event.EventType.PreUpdate
 
-class CustomMongoEventListenerSpec extends GrailsDataTckSpec<GrailsDataMongoTckManager> {
+class CustomMongoEventListenerSpec extends MongoDatastoreSpec {
     void setupSpec() {
         manager.addAllDomainClasses([Listener])
     }

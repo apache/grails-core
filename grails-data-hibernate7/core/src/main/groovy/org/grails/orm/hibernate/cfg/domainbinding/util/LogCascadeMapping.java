@@ -41,7 +41,7 @@ public class LogCascadeMapping {
      * @param association The association property.
      * @param cascadeStrategy The calculated cascade string.
      */
-    public void logCascadeMapping(Association association, CascadeBehavior cascadeStrategy) {
+    public void logCascadeMapping(Association<?> association, CascadeBehavior cascadeStrategy) {
         if (log.isDebugEnabled()) {
             String assType = getAssociationType(association);
             log.debug(
@@ -61,7 +61,7 @@ public class LogCascadeMapping {
      * @param association The association to inspect.
      * @return A string describing the association type (e.g., "one-to-many").
      */
-    private String getAssociationType(Association association) {
+    private String getAssociationType(Association<?> association) {
         // Use a standard if-else-if chain for compatibility with Java 17 and earlier.
         if (association instanceof HibernateManyToManyProperty) {
             return "many-to-many";

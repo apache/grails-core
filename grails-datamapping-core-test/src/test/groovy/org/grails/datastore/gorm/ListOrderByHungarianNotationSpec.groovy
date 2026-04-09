@@ -30,6 +30,7 @@ class ListOrderByHungarianNotationSpec extends GrailsDataTckSpec<GrailsDataCoreT
         manager.addAllDomainClasses([ClassWithHungarianNotation])
     }
 
+    @spock.lang.Requires({ System.getProperty('hibernate5.gorm.suite') == 'true' || System.getProperty('hibernate7.gorm.suite') == 'true' || System.getProperty('mongodb.gorm.suite') == 'true' })
     void "test dynamic finder of properties with hungarian notation"() {
         when:
         new ClassWithHungarianNotation(iSize: 2).save()

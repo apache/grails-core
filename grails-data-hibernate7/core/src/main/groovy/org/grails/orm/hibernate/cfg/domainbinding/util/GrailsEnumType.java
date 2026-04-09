@@ -32,10 +32,6 @@ public enum GrailsEnumType {
         this.type = type;
     }
 
-    public String getType() {
-        return type;
-    }
-
     public static GrailsEnumType fromString(String value) {
         if (value == null || DEFAULT.type.equalsIgnoreCase(value)) {
             return DEFAULT;
@@ -47,5 +43,9 @@ public enum GrailsEnumType {
         }
         throw new MappingException(
                 "Invalid enum type [" + value + "]. Valid values are: default, string, ordinal, identity.");
+    }
+
+    public String getType() {
+        return type;
     }
 }

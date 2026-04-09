@@ -18,6 +18,8 @@
  */
 package org.grails.orm.hibernate.support;
 
+import java.io.Serial;
+import java.io.Serializable;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -32,6 +34,7 @@ import org.hibernate.Session;
 import org.hibernate.engine.spi.SharedSessionContractImplementor;
 import org.hibernate.event.spi.AbstractEvent;
 import org.hibernate.event.spi.AbstractPreDatabaseOperationEvent;
+import org.hibernate.event.spi.EventSource;
 import org.hibernate.event.spi.MergeContext;
 import org.hibernate.event.spi.MergeEvent;
 import org.hibernate.event.spi.MergeEventListener;
@@ -75,7 +78,7 @@ import org.grails.datastore.mapping.validation.ValidationException;
 import org.grails.orm.hibernate.HibernateGormValidationApi;
 import org.grails.orm.hibernate.cfg.domainbinding.hibernate.GrailsHibernatePersistentEntity;
 
-@SuppressWarnings({"rawtypes", "unchecked", "serial"})
+@SuppressWarnings({"rawtypes", "unchecked", "PMD.CloseResource"})
 public class ClosureEventListener
         implements PreLoadEventListener,
                 PostLoadEventListener,
@@ -87,22 +90,25 @@ public class ClosureEventListener
                 PreUpdateEventListener,
                 MergeEventListener,
                 PersistEventListener,
-                CallbackRegistryConsumer {
+                CallbackRegistryConsumer,
+                Serializable {
 
-    private static final long serialVersionUID = 1;
     protected static final Logger LOG = LoggerFactory.getLogger(ClosureEventListener.class);
 
-    private final EventTriggerCaller beforeInsertCaller;
-    private final EventTriggerCaller preLoadEventCaller;
-    private final EventTriggerCaller postLoadEventListener;
-    private final EventTriggerCaller postInsertEventListener;
-    private final EventTriggerCaller postUpdateEventListener;
-    private final EventTriggerCaller postDeleteEventListener;
-    private final EventTriggerCaller preDeleteEventListener;
-    private final EventTriggerCaller preUpdateEventListener;
-    private final BeforeValidateEventTriggerCaller beforeValidateEventListener;
-    private final GrailsHibernatePersistentEntity persistentEntity;
-    private final MetaClass domainMetaClass;
+    @Serial
+    private static final long serialVersionUID = 1;
+
+    private final transient EventTriggerCaller beforeInsertCaller;
+    private final transient EventTriggerCaller preLoadEventCaller;
+    private final transient EventTriggerCaller postLoadEventListener;
+    private final transient EventTriggerCaller postInsertEventListener;
+    private final transient EventTriggerCaller postUpdateEventListener;
+    private final transient EventTriggerCaller postDeleteEventListener;
+    private final transient EventTriggerCaller preDeleteEventListener;
+    private final transient EventTriggerCaller preUpdateEventListener;
+    private final transient BeforeValidateEventTriggerCaller beforeValidateEventListener;
+    private final transient GrailsHibernatePersistentEntity persistentEntity;
+    private final transient MetaClass domainMetaClass;
     private final boolean failOnErrorEnabled;
     private final Map validateParams;
 
@@ -163,8 +169,11 @@ public class ClosureEventListener
     // --- Specific manual session versions for PreLoad and PostLoad ---
 
     private void doPreLoadWithManualSession(PreLoadEvent event, Runnable action) {
-        SharedSessionContractImplementor sessionImpl = event.getSession();
-        if (sessionImpl instanceof Session session) {
+        flushOrRun(event.getSession(), action);
+    }
+
+    private void flushOrRun(EventSource event, Runnable action) {
+        if ((SharedSessionContractImplementor) event instanceof Session session) {
             FlushMode current = session.getHibernateFlushMode();
             try {
                 session.setHibernateFlushMode(FlushMode.MANUAL);
@@ -178,18 +187,7 @@ public class ClosureEventListener
     }
 
     private void doPostLoadWithManualSession(PostLoadEvent event, Runnable action) {
-        SharedSessionContractImplementor sessionImpl = event.getSession();
-        if (sessionImpl instanceof Session session) {
-            FlushMode current = session.getHibernateFlushMode();
-            try {
-                session.setHibernateFlushMode(FlushMode.MANUAL);
-                action.run();
-            } finally {
-                session.setHibernateFlushMode(current);
-            }
-        } else {
-            action.run();
-        }
+        flushOrRun(event.getSession(), action);
     }
 
     // --- Standard Overrides ---
@@ -258,7 +256,7 @@ public class ClosureEventListener
         return EventTriggerCaller.buildCaller(eventName, domainClazz, domainMetaClass, null);
     }
 
-    private void synchronizePersisterState(AbstractPreDatabaseOperationEvent event, Object[] state) {
+    private void synchronizePersisterState(AbstractPreDatabaseOperationEvent event, Object... state) {
         EntityPersister persister = event.getPersister();
         Object entity = event.getEntity();
         EntityReflector reflector = persistentEntity.getReflector();
@@ -314,17 +312,17 @@ public class ClosureEventListener
     }
 
     @Override
-    public void onMerge(MergeEvent event) { }
+    public void onMerge(MergeEvent event) {}
 
     @Override
-    public void onMerge(MergeEvent event, MergeContext copiedAlready) { }
+    public void onMerge(MergeEvent event, MergeContext copiedAlready) {}
 
     @Override
-    public void onPersist(PersistEvent event) { }
+    public void onPersist(PersistEvent event) {}
 
     @Override
-    public void onPersist(PersistEvent event, PersistContext createdAlready) { }
+    public void onPersist(PersistEvent event, PersistContext createdAlready) {}
 
     @Override
-    public void injectCallbackRegistry(CallbackRegistry callbackRegistry) { }
+    public void injectCallbackRegistry(CallbackRegistry callbackRegistry) {}
 }

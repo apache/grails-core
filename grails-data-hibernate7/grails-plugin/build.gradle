@@ -56,9 +56,10 @@ dependencies {
         exclude group:'org.apache.grails', module:'grails-core'
         exclude group:'javax.transaction', module:'jta'
     }
+    api project(':grails-spring')
+    api project(':grails-core')
 
     compileOnly project(':grails-bootstrap')
-    compileOnly project(':grails-core')
 
     compileOnly 'org.spockframework:spock-core', {
         exclude group: 'junit', module: 'junit-dep'

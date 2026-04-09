@@ -16,34 +16,28 @@
  *  specific language governing permissions and limitations
  *  under the License.
  */
-
 package org.grails.orm.hibernate.cfg.domainbinding
 
-import grails.gorm.specs.HibernateGormDatastoreSpec
+import org.grails.orm.hibernate.cfg.domainbinding.generator.GrailsNativeGenerator
 import org.hibernate.engine.spi.SharedSessionContractImplementor
 import org.hibernate.generator.EventType
 import org.hibernate.generator.GeneratorCreationContext
-import jakarta.persistence.GenerationType
+import org.hibernate.id.enhanced.SequenceStyleGenerator
+import spock.lang.Specification
 import spock.lang.Subject
+import jakarta.persistence.GenerationType
 
-import org.grails.orm.hibernate.cfg.domainbinding.generator.GrailsNativeGenerator
-
-class GrailsNativeGeneratorSpec extends HibernateGormDatastoreSpec {
+class GrailsNativeGeneratorSpec extends Specification {
 
     def "should return currentValue if not null (assigned identifier)"() {
         given:
         def context = Mock(GeneratorCreationContext)
-        def database = Mock(org.hibernate.boot.model.relational.Database)
-        context.getDatabase() >> database
-        database.getDialect() >> getGrailsDomainBinder().getJdbcEnvironment().getDialect()
-        
         def session = Mock(SharedSessionContractImplementor)
         def entity = new Object()
-        def currentValue = 123L
+        def currentValue = "assigned-id"
         def eventType = EventType.INSERT
         
-        @Subject
-        def generator = Spy(GrailsNativeGenerator, constructorArgs: [context])
+        def generator = new GrailsNativeGenerator(context)
 
         when:
         def result = generator.generate(session, entity, currentValue, eventType)
@@ -57,7 +51,7 @@ class GrailsNativeGeneratorSpec extends HibernateGormDatastoreSpec {
         def context = Mock(GeneratorCreationContext)
         def database = Mock(org.hibernate.boot.model.relational.Database)
         context.getDatabase() >> database
-        database.getDialect() >> getGrailsDomainBinder().getJdbcEnvironment().getDialect()
+        database.getDialect() >> new org.hibernate.dialect.H2Dialect()
         
         def session = Mock(SharedSessionContractImplementor)
         def entity = new Object()
@@ -72,5 +66,39 @@ class GrailsNativeGeneratorSpec extends HibernateGormDatastoreSpec {
 
         then:
         result == null
+    }
+
+    def "should throw HibernateException if SequenceStyleGenerator is not initialized"() {
+        given:
+        def context = Mock(GeneratorCreationContext)
+        def database = Mock(org.hibernate.boot.model.relational.Database)
+        context.getDatabase() >> database
+        database.getDialect() >> new org.hibernate.dialect.H2Dialect()
+        
+        def session = Mock(SharedSessionContractImplementor)
+        def entity = new Object()
+        def eventType = EventType.INSERT
+        
+        @Subject
+        def generator = Spy(GrailsNativeGenerator, constructorArgs: [context])
+        def ssg = Mock(SequenceStyleGenerator)
+        
+        // We need to mock the private field access or ensure getDelegate() returns ssg
+        // Since we are using Spy and getDelegate is not easily overridable if private
+        // but our implementation uses reflection. In the test, we'll mock the field.
+        
+        java.lang.reflect.Field field = org.hibernate.id.NativeGenerator.class.getDeclaredField("dialectNativeGenerator")
+        field.setAccessible(true)
+        field.set(generator, ssg)
+
+        generator.getGenerationType() >> GenerationType.SEQUENCE
+        ssg.getDatabaseStructure() >> null
+
+        when:
+        generator.generate(session, entity, null, eventType)
+
+        then:
+        def e = thrown(org.hibernate.HibernateException)
+        e.message.contains("was not properly initialized")
     }
 }

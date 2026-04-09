@@ -76,8 +76,7 @@ public class TraitPropertyAccessStrategy implements PropertyAccessStrategy {
         }
 
         if (readMethod == null) {
-            throw new IllegalStateException("TraitPropertyAccessStrategy used on property [" +
-                    propertyName +
+            throw new IllegalStateException("TraitPropertyAccessStrategy used on property [" + propertyName +
                     "] of class [" +
                     containerJavaType.getName() +
                     "] that is not provided by a trait!");
@@ -90,8 +89,7 @@ public class TraitPropertyAccessStrategy implements PropertyAccessStrategy {
             if (traitBridge != null) {
                 traitFieldName = getTraitFieldName(traitBridge.traitClass(), propertyName);
             } else {
-                throw new IllegalStateException("TraitPropertyAccessStrategy used on property [" +
-                        propertyName +
+                throw new IllegalStateException("TraitPropertyAccessStrategy used on property [" + propertyName +
                         "] of class [" +
                         containerJavaType.getName() +
                         "] that is not provided by a trait!");
@@ -109,8 +107,7 @@ public class TraitPropertyAccessStrategy implements PropertyAccessStrategy {
                     containerJavaType, NameUtils.getSetterName(propertyName), readMethod.getReturnType());
             if (writeMethod == null) {
                 if (setterRequired) {
-                    throw new MappingException("TraitPropertyAccessStrategy used on property [" +
-                            propertyName +
+                    throw new MappingException("TraitPropertyAccessStrategy used on property [" + propertyName +
                             "] of class [" +
                             containerJavaType.getName() +
                             "] that has no setter!");

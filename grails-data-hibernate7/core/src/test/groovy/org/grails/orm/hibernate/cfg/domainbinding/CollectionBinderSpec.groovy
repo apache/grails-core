@@ -61,7 +61,7 @@ import org.grails.orm.hibernate.cfg.domainbinding.collectionType.CollectionHolde
 import org.grails.orm.hibernate.cfg.domainbinding.util.PropertyFromValueCreator
 import org.grails.orm.hibernate.cfg.domainbinding.binder.ComponentBinder
 import org.grails.orm.hibernate.cfg.domainbinding.binder.ComponentUpdater
-import org.grails.orm.hibernate.cfg.domainbinding.util.BasicValueIdCreator
+import org.grails.orm.hibernate.cfg.domainbinding.util.BasicValueCreator
 
 import org.grails.orm.hibernate.cfg.domainbinding.binder.ClassPropertiesBinder
 import org.grails.orm.hibernate.cfg.domainbinding.util.MultiTenantFilterBinder
@@ -81,7 +81,7 @@ class CollectionBinderSpec extends HibernateGormDatastoreSpec {
         ColumnNameForPropertyAndPathFetcher columnNameForPropertyAndPathFetcher = new ColumnNameForPropertyAndPathFetcher(namingStrategy, defaultColumnNameFetcher, backticksRemover)
         CollectionHolder collectionHolder = new CollectionHolder(metadataBuildingContext)
         SimpleValueBinder simpleValueBinder = new SimpleValueBinder(metadataBuildingContext, namingStrategy, jdbcEnvironment)
-        EnumTypeBinder enumTypeBinderToUse = new EnumTypeBinder(metadataBuildingContext, columnNameForPropertyAndPathFetcher)
+        EnumTypeBinder enumTypeBinderToUse = new EnumTypeBinder(metadataBuildingContext, columnNameForPropertyAndPathFetcher, namingStrategy)
         SimpleValueColumnFetcher simpleValueColumnFetcher = new SimpleValueColumnFetcher()
         CompositeIdentifierToManyToOneBinder compositeIdentifierToManyToOneBinder = new CompositeIdentifierToManyToOneBinder(
 
@@ -131,7 +131,7 @@ class CollectionBinderSpec extends HibernateGormDatastoreSpec {
         )
         CompositeIdBinder compositeIdBinder = new CompositeIdBinder(metadataBuildingContext, componentUpdater, propertyBinder)
         PropertyBinder propertyBinderHelper = new PropertyBinder()
-        SimpleIdBinder simpleIdBinder = new SimpleIdBinder(metadataBuildingContext, new BasicValueIdCreator(jdbcEnvironment, namingStrategy), simpleValueBinder, propertyBinderHelper)
+        SimpleIdBinder simpleIdBinder = new SimpleIdBinder(metadataBuildingContext, new BasicValueCreator(metadataBuildingContext, jdbcEnvironment, namingStrategy), simpleValueBinder, propertyBinderHelper)
         IdentityBinder identityBinder = new IdentityBinder(simpleIdBinder, compositeIdBinder)
         VersionBinder versionBinder = new VersionBinder(metadataBuildingContext, simpleValueBinder, propertyBinderHelper, BasicValue::new)
 
@@ -195,7 +195,7 @@ class CollectionBinderSpec extends HibernateGormDatastoreSpec {
         def petsProp = personEntity.getPropertyByName("pets") as HibernateToManyProperty
 
         when:
-        def collection = collectionBinder.bindCollection(petsProp, rootClass, "")
+        def collection = collectionBinder.bindCollection(petsProp, "")
 
         then:
         collection.role == "${personEntity.name}.pets".toString()

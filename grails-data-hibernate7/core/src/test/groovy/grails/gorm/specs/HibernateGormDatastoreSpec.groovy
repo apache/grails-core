@@ -19,6 +19,7 @@
 
 package grails.gorm.specs
 
+
 import org.apache.grails.data.hibernate7.core.GrailsDataHibernate7TckManager
 import org.apache.grails.data.testing.tck.base.GrailsDataTckSpec
 import org.grails.datastore.mapping.model.PersistentEntity
@@ -27,7 +28,6 @@ import org.grails.orm.hibernate.HibernateDatastore
 import org.grails.orm.hibernate.cfg.domainbinding.binder.GrailsDomainBinder
 import org.grails.orm.hibernate.cfg.domainbinding.hibernate.GrailsHibernatePersistentEntity
 import org.grails.orm.hibernate.cfg.HibernateMappingContext
-import org.grails.orm.hibernate.cfg.MappingCacheHolder
 import org.grails.orm.hibernate.query.HibernateQuery
 
 import org.hibernate.boot.MetadataSources
@@ -62,6 +62,7 @@ class HibernateGormDatastoreSpec extends GrailsDataTckSpec<GrailsDataHibernate7T
                 'hibernate.cache.queries'      : 'true',
                 'hibernate.hbm2ddl.auto'       : 'create',
                 'hibernate.jpa.compliance.cascade': 'true',
+                'hibernate.proxy_factory_class' : 'org.grails.orm.hibernate.proxy.ByteBuddyGroovyProxyFactory'
         ]
     }
 
@@ -101,7 +102,7 @@ class HibernateGormDatastoreSpec extends GrailsDataTckSpec<GrailsDataHibernate7T
     GrailsHibernatePersistentEntity createPersistentEntity(Class clazz, GrailsDomainBinder binder) {
         def entity = getMappingContext().addPersistentEntity(clazz) as GrailsHibernatePersistentEntity
         if (entity != null) {
-            MappingCacheHolder.getInstance().cacheMapping(entity)
+            getMappingContext().getMappingCacheHolder().cacheMapping(entity)
         }
         entity
     }
@@ -118,6 +119,8 @@ class HibernateGormDatastoreSpec extends GrailsDataTckSpec<GrailsDataHibernate7T
                 .applySetting("hibernate.dialect", H2Dialect.class.getName())
                 .applySetting("jakarta.persistence.jdbc.url", "jdbc:h2:mem:test;DB_CLOSE_DELAY=-1")
                 .applySetting("jakarta.persistence.jdbc.driver", "org.h2.Driver")
+                .addService(org.hibernate.bytecode.spi.BytecodeProvider.class, new org.grails.orm.hibernate.proxy.GrailsBytecodeProvider())
+                .applySetting("hibernate.bytecode.allow_enhancement_as_proxy", "false")
                 .build()
         def options = new MetadataBuilderImpl(
                 new MetadataSources(serviceRegistry)
@@ -153,6 +156,10 @@ class HibernateGormDatastoreSpec extends GrailsDataTckSpec<GrailsDataHibernate7T
         manager.hibernateDatastore
     }
 
+    protected org.hibernate.query.criteria.HibernateCriteriaBuilder getCriteriaBuilder() {
+        return getSessionFactory().getCriteriaBuilder();
+    }
+
 
     protected HibernateSession getSession() {
         datastore.connect() as HibernateSession
@@ -164,6 +171,17 @@ class HibernateGormDatastoreSpec extends GrailsDataTckSpec<GrailsDataHibernate7T
 
     protected HibernateQuery getQuery(Class clazz) {
         return  new HibernateQuery(session, getPersistentEntity(clazz))
+    }
+
+    /**
+     * Triggers the first-pass Hibernate mapping for all registered entities.
+     * This initializes the Hibernate Collection, Table, and Column objects
+     * required for SecondPass binder tests.
+     */
+    protected void hibernateFirstPass() {
+        def gdb = getGrailsDomainBinder()
+        def collector = gdb.getMetadataBuildingContext().getMetadataCollector()
+        gdb.contribute(collector)
     }
 
     /**

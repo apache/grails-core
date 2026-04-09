@@ -42,11 +42,12 @@ public class BidirectionalMapElementBinder {
     }
 
     /** Binds the ManyToOne element for a bidirectional Map collection. */
-    public void bind(HibernateToManyProperty property, Collection collection) {
+    public void bind(HibernateToManyProperty property) {
+        Collection collection = property.getCollection();
         HibernateManyToOneProperty otherSide = (HibernateManyToOneProperty) property.getHibernateInverseSide();
         ManyToOne element = manyToOneBinder.bindManyToOne(otherSide, collection.getCollectionTable(), EMPTY_PATH);
         element.setReferencedEntityName(otherSide.getOwner().getName());
         collection.setElement(element);
-        collectionForPropertyConfigBinder.bindCollectionForPropertyConfig(collection, property);
+        collectionForPropertyConfigBinder.bindCollectionForPropertyConfig(property);
     }
 }

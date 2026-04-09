@@ -1,3 +1,21 @@
+/*
+ *  Licensed to the Apache Software Foundation (ASF) under one
+ *  or more contributor license agreements.  See the NOTICE file
+ *  distributed with this work for additional information
+ *  regarding copyright ownership.  The ASF licenses this file
+ *  to you under the Apache License, Version 2.0 (the
+ *  "License"); you may not use this file except in compliance
+ *  with the License.  You may obtain a copy of the License at
+ *
+ *    https://www.apache.org/licenses/LICENSE-2.0
+ *
+ *  Unless required by applicable law or agreed to in writing,
+ *  software distributed under the License is distributed on an
+ *  "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ *  KIND, either express or implied.  See the License for the
+ *  specific language governing permissions and limitations
+ *  under the License.
+ */
 package org.grails.orm.hibernate.cfg.domainbinding.secondpass
 
 import grails.gorm.annotation.Entity
@@ -92,8 +110,10 @@ class CollectionKeyBinderSpec extends HibernateGormDatastoreSpec {
         def associatedClass = rootClassWith(CKBBidItem.name, "owner", "OWNER_ID")
         def collection = bagWithOwner(ownerRootClass("ckb_bid_owner"), "ckb_bid_item")
 
+        property.setCollection(collection)
+
         when:
-        binder.bind(property, associatedClass, collection)
+        binder.bind(property, associatedClass)
 
         then:
         collection.isInverse()
@@ -106,8 +126,10 @@ class CollectionKeyBinderSpec extends HibernateGormDatastoreSpec {
         def associatedClass = new RootClass(getGrailsDomainBinder().getMetadataBuildingContext())
         def collection = bagWithOwner(ownerRootClass("ckb_mtm_owner"), "ckb_mtm_join")
 
+        property.setCollection(collection)
+
         when:
-        binder.bind(property, associatedClass, collection)
+        binder.bind(property, associatedClass)
 
         then:
         collection.getKey().getColumnSpan() > 0
@@ -120,8 +142,10 @@ class CollectionKeyBinderSpec extends HibernateGormDatastoreSpec {
         def associatedClass = new RootClass(getGrailsDomainBinder().getMetadataBuildingContext())
         def collection = bagWithOwner(ownerRootClass("ckb_join_key_owner"), "ckb_join_key_owner_ckb_join_key_item")
 
+        property.setCollection(collection)
+
         when:
-        binder.bind(property, associatedClass, collection)
+        binder.bind(property, associatedClass)
 
         then:
         collection.getKey().getTypeName() == "long"
@@ -135,8 +159,10 @@ class CollectionKeyBinderSpec extends HibernateGormDatastoreSpec {
         def associatedClass = new RootClass(getGrailsDomainBinder().getMetadataBuildingContext())
         def collection = bagWithOwner(ownerRootClass("ckb_uni_owner"), "ckb_uni_owner_ckb_uni_item")
 
+        property.setCollection(collection)
+
         when:
-        binder.bind(property, associatedClass, collection)
+        binder.bind(property, associatedClass)
 
         then:
         collection.getKey().getColumnSpan() > 0

@@ -153,12 +153,7 @@ public abstract class MappingFactory<R extends Entity, T extends Property> {
     private Map<Class, Collection<CustomTypeMarshaller>> typeConverterMap = new ConcurrentHashMap<>();
 
     public void registerCustomType(CustomTypeMarshaller marshallerCustom) {
-        Collection<CustomTypeMarshaller> marshallers = typeConverterMap.get(marshallerCustom.getTargetType());
-        if (marshallers == null) {
-            marshallers = new ConcurrentLinkedQueue<>();
-            typeConverterMap.put(marshallerCustom.getTargetType(), marshallers);
-        }
-        marshallers.add(marshallerCustom);
+        typeConverterMap.computeIfAbsent(marshallerCustom.getTargetType(), k -> new ConcurrentLinkedQueue<>()).add(marshallerCustom);
     }
 
     public boolean isSimpleType(Class propType) {
@@ -453,7 +448,7 @@ public abstract class MappingFactory<R extends Entity, T extends Property> {
         String targetName = property != null ? property.getName() : null;
         String[] identifierNames = targetName != null ? new String[]{targetName} : new String[]{IDENTITY_PROPERTY};
         String generatorName = property != null ? property.getGenerator() : null;
-        ValueGenerator generator = generatorName != null ? ValueGenerator.valueOf(generatorName) : ValueGenerator.AUTO;
+        ValueGenerator generator = generatorName != null ? ValueGenerator.valueOf(generatorName.toUpperCase(java.util.Locale.ENGLISH)) : ValueGenerator.AUTO;
         return new DefaultIdentityMapping<>(classMapping, property, identifierNames, generator);
     }
 

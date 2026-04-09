@@ -1,4 +1,22 @@
 /*
+ *  Licensed to the Apache Software Foundation (ASF) under one
+ *  or more contributor license agreements.  See the NOTICE file
+ *  distributed with this work for additional information
+ *  regarding copyright ownership.  The ASF licenses this file
+ *  to you under the Apache License, Version 2.0 (the
+ *  "License"); you may not use this file except in compliance
+ *  with the License.  You may obtain a copy of the License at
+ *
+ *    https://www.apache.org/licenses/LICENSE-2.0
+ *
+ *  Unless required by applicable law or agreed to in writing,
+ *  software distributed under the License is distributed on an
+ *  "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ *  KIND, either express or implied.  See the License for the
+ *  specific language governing permissions and limitations
+ *  under the License.
+ */
+/*
  * Copyright 2013-2026 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -15,39 +33,41 @@
  */
 package org.grails.orm.hibernate
 
-import org.hibernate.LockMode
-
-import grails.gorm.validation.CascadingValidator
 import groovy.transform.CompileStatic
+import org.codehaus.groovy.runtime.InvokerHelper
+
 import jakarta.persistence.FlushModeType
 import jakarta.persistence.LockModeType
-import org.codehaus.groovy.runtime.InvokerHelper
-import org.grails.datastore.gorm.GormInstanceApi
-import org.grails.datastore.gorm.GormValidateable
-import org.grails.datastore.mapping.core.Datastore
-import org.grails.datastore.mapping.engine.event.ValidationEvent
-import org.grails.datastore.mapping.model.config.GormProperties
-import org.grails.datastore.mapping.model.types.Embedded
-import org.grails.datastore.mapping.model.PersistentEntity
-import org.grails.datastore.mapping.model.PersistentProperty
-import org.grails.datastore.mapping.model.types.Association
-import org.grails.datastore.mapping.model.types.ToOne
-import org.grails.datastore.mapping.reflect.ClassUtils
-import org.grails.datastore.mapping.reflect.EntityReflector
-import org.grails.orm.hibernate.cfg.GrailsHibernateUtil
-import org.grails.orm.hibernate.support.HibernateRuntimeUtils
 
 import org.hibernate.HibernateException
+import org.hibernate.LockMode
 import org.hibernate.Session
 import org.hibernate.SessionFactory
 import org.hibernate.engine.spi.EntityEntry
 import org.hibernate.engine.spi.SessionImplementor
 import org.hibernate.persister.entity.EntityPersister
+
 import org.springframework.beans.BeanWrapperImpl
 import org.springframework.beans.InvalidPropertyException
 import org.springframework.dao.DataAccessException
 import org.springframework.validation.Errors
 import org.springframework.validation.Validator
+
+import grails.gorm.validation.CascadingValidator
+import org.grails.datastore.gorm.GormInstanceApi
+import org.grails.datastore.gorm.GormValidateable
+import org.grails.datastore.mapping.core.Datastore
+import org.grails.datastore.mapping.engine.event.ValidationEvent
+import org.grails.datastore.mapping.model.PersistentEntity
+import org.grails.datastore.mapping.model.PersistentProperty
+import org.grails.datastore.mapping.model.config.GormProperties
+import org.grails.datastore.mapping.model.types.Association
+import org.grails.datastore.mapping.model.types.Embedded
+import org.grails.datastore.mapping.model.types.ToOne
+import org.grails.datastore.mapping.reflect.ClassUtils
+import org.grails.datastore.mapping.reflect.EntityReflector
+import org.grails.orm.hibernate.cfg.GrailsHibernateUtil
+import org.grails.orm.hibernate.support.HibernateRuntimeUtils
 
 /**
  * The implementation of the GORM instance API contract for Hibernate 7.
@@ -136,13 +156,7 @@ class HibernateGormInstanceApi<D> extends GormInstanceApi<D> {
         validateable.skipValidation(true)
 
         try {
-            String idPropertyName = domainClass.identity?.name ?: 'id'
-            Object idVal = InvokerHelper.getProperty(target, idPropertyName)
-            if (idVal == null) {
-                return performPersist(target, shouldFlush)
-            } else {
-                return performMerge(target, shouldFlush)
-            }
+            return performUpsert(target, shouldFlush)
         } finally {
             validateable.skipValidation(false)
         }
@@ -220,14 +234,33 @@ class HibernateGormInstanceApi<D> extends GormInstanceApi<D> {
         return instance
     }
 
+    protected D performUpsert(D target, boolean shouldFlush) {
+        PersistentEntity entity = persistentEntity
+        String idPropertyName = entity.identity?.name ?: 'id'
+        Object idVal = InvokerHelper.getProperty(target, idPropertyName)
+        if (idVal == null) {
+            return performPersist(target, shouldFlush)
+        } else {
+            return performMerge(target, shouldFlush)
+        }
+    }
+
     protected D performMerge(final D target, final boolean flush) {
         hibernateTemplate.execute { Session session ->
-            Object merged = session.merge(target)
+            D merged = (D) session.merge(target)
             session.lock(merged, LockModeType.NONE)
+            // Sync id back immediately so target has an identity
+            String idProp = persistentEntity.identity?.name ?: 'id'
+            InvokerHelper.setProperty(target, idProp, InvokerHelper.getProperty(merged, idProp))
             if (flush) {
                 flushSession session
             }
-            return (D) merged
+            // Sync version after flush so the incremented value is captured
+            PersistentProperty versionProperty = persistentEntity.version
+            if (versionProperty != null) {
+                InvokerHelper.setProperty(target, versionProperty.name, InvokerHelper.getProperty(merged, versionProperty.name))
+            }
+            return target
         }
     }
 
@@ -284,7 +317,8 @@ class HibernateGormInstanceApi<D> extends GormInstanceApi<D> {
                         }
                     }
                 }
-                catch (InvalidPropertyException ignored) {}
+                catch (InvalidPropertyException ignored) {
+                }
             }
         }
     }
@@ -359,7 +393,9 @@ class HibernateGormInstanceApi<D> extends GormInstanceApi<D> {
         String[] propertyNames = persister.getPropertyNames()
         int fieldIndex = -1
         for (int i = 0; i < propertyNames.length; i++) {
-            if (propertyNames[i] == fieldName) { fieldIndex = i; break }
+            if (propertyNames[i] == fieldName) {
+                fieldIndex = i; break
+            }
         }
         return fieldIndex in dirtyProperties
     }

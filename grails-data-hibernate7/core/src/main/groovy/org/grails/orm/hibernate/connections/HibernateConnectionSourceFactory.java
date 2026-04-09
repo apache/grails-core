@@ -57,7 +57,6 @@ import org.grails.orm.hibernate.HibernateEventListeners;
 import org.grails.orm.hibernate.cfg.HibernateMappingContext;
 import org.grails.orm.hibernate.cfg.HibernateMappingContextConfiguration;
 import org.grails.orm.hibernate.cfg.Settings;
-import org.grails.orm.hibernate.cfg.domainbinding.binder.GrailsDomainBinder;
 import org.grails.orm.hibernate.support.ClosureEventTriggeringInterceptor;
 
 /**
@@ -80,18 +79,70 @@ public class HibernateConnectionSourceFactory
             new CachedDataSourceConnectionSourceFactory();
 
     protected HibernateMappingContext mappingContext;
-    protected Class<?>[] persistentClasses;
-    private ApplicationContext applicationContext;
+    protected final Class<?>[] persistentClasses;
+    protected final org.grails.orm.hibernate.proxy.GrailsBytecodeProvider bytecodeProvider;
     protected HibernateEventListeners hibernateEventListeners;
     protected Interceptor interceptor;
     protected MessageSource messageSource = new StaticMessageSource();
+    private ApplicationContext applicationContext;
+
+    public org.grails.orm.hibernate.proxy.GrailsBytecodeProvider getBytecodeProvider() {
+        return bytecodeProvider;
+    }
+
+    public HibernateConnectionSourceFactory(org.grails.orm.hibernate.proxy.GrailsBytecodeProvider bytecodeProvider, Class<?>... classes) {
+        this.bytecodeProvider = bytecodeProvider;
+        this.persistentClasses = classes != null ? classes.clone() : new Class[0];
+    }
 
     public HibernateConnectionSourceFactory(Class<?>... classes) {
-        this.persistentClasses = classes;
+        this(new org.grails.orm.hibernate.proxy.GrailsBytecodeProvider(), classes);
+    }
+
+    private static void applyResources(Resource[] resources, ResourceConfigurer configurer) {
+        if (resources == null) return;
+        for (Resource resource : resources) {
+            try {
+                configurer.apply(resource);
+            } catch (IOException e) {
+                throw new ConfigurationException(
+                        "Cannot configure Hibernate config for location: " + resource.getFilename(), e);
+            }
+        }
+    }
+
+    private static void configureNamingStrategy(
+            String name,
+            HibernateMappingContextConfiguration configuration,
+            HibernateConnectionSourceSettings.HibernateSettings hibernateSettings) {
+        try {
+            Class<? extends PhysicalNamingStrategy> namingStrategy = hibernateSettings.getNaming_strategy();
+            if (namingStrategy != null) {
+                configuration.getNamingStrategyProvider().configureNamingStrategy(name, namingStrategy);
+            }
+        } catch (Throwable e) {
+            throw new ConfigurationException("Error configuring naming strategy: " + e.getMessage(), e);
+        }
+    }
+
+    private static ClosureEventTriggeringInterceptor resolveEventTriggeringInterceptor(
+            Class<? extends ClosureEventTriggeringInterceptor> clazz) {
+        return clazz != null ? BeanUtils.instantiateClass(clazz) : new ClosureEventTriggeringInterceptor();
+    }
+
+    private static <F extends ConnectionSourceSettings> DataSourceSettings extractDataSourceFallback(
+            F fallbackSettings) {
+        if (fallbackSettings instanceof HibernateConnectionSourceSettings hcs) {
+            return hcs.getDataSource();
+        }
+        if (fallbackSettings instanceof DataSourceSettings ds) {
+            return ds;
+        }
+        return null;
     }
 
     public Class<?>[] getPersistentClasses() {
-        return persistentClasses;
+        return persistentClasses != null ? persistentClasses.clone() : new Class[0];
     }
 
     public void setHibernateEventListeners(HibernateEventListeners hibernateEventListeners) {
@@ -126,6 +177,12 @@ public class HibernateConnectionSourceFactory
 
         HibernateConnectionSourceSettings.HibernateSettings hibernateSettings = settings.getHibernate();
         HibernateMappingContextConfiguration configuration = resolveConfiguration(hibernateSettings.getConfigClass());
+        configuration.setBytecodeProvider(this.bytecodeProvider);
+        configuration.setDataSourceName(name);
+        configuration.getProperties().put("jakarta.persistence.nonJtaDataSource", dataSourceConnectionSource.getSource());
+        if (applicationContext != null) {
+            configuration.setApplicationContext(applicationContext);
+        }
 
         configureValidator(configuration, dataSourceConnectionSource.getSettings());
         configureDataSource(configuration, dataSourceConnectionSource);
@@ -139,13 +196,14 @@ public class HibernateConnectionSourceFactory
         if (hibernateSettings.getPackagesToScan() != null)
             configuration.scanPackages(hibernateSettings.getPackagesToScan());
 
-        configureNamingStrategy(name, hibernateSettings);
+        configureNamingStrategy(name, configuration, hibernateSettings);
 
         ClosureEventTriggeringInterceptor eventTriggeringInterceptor =
                 resolveEventTriggeringInterceptor(hibernateSettings.getClosureEventTriggeringInterceptorClass());
         hibernateSettings.setEventTriggeringInterceptor(eventTriggeringInterceptor);
 
-        configuration.setEventListeners(hibernateSettings.toHibernateEventListeners(eventTriggeringInterceptor));
+        configuration.setEventListeners(HibernateConnectionSourceSettings.HibernateSettings.toHibernateEventListeners(
+                eventTriggeringInterceptor));
         configuration.setHibernateEventListeners(
                 this.hibernateEventListeners != null ?
                         this.hibernateEventListeners :
@@ -178,7 +236,9 @@ public class HibernateConnectionSourceFactory
     private void configureDataSource(
             HibernateMappingContextConfiguration configuration,
             ConnectionSource<DataSource, DataSourceSettings> dataSourceConnectionSource) {
-        if (applicationContext != null && applicationContext.containsBean(dataSourceConnectionSource.getName())) {
+        String dsName = dataSourceConnectionSource.getName();
+        String beanName = ConnectionSource.DEFAULT.equals(dsName) ? "dataSource" : "dataSource_" + dsName;
+        if (applicationContext != null && applicationContext.containsBean(beanName)) {
             configuration.setApplicationContext(applicationContext);
         } else {
             configuration.setDataSourceConnectionSource(dataSourceConnectionSource);
@@ -207,43 +267,12 @@ public class HibernateConnectionSourceFactory
         });
     }
 
-    @FunctionalInterface
-    private interface ResourceConfigurer {
-        void apply(Resource resource) throws IOException;
-    }
-
-    private static void applyResources(Resource[] resources, ResourceConfigurer configurer) {
-        if (resources == null) return;
-        for (Resource resource : resources) {
-            try {
-                configurer.apply(resource);
-            } catch (IOException e) {
-                throw new ConfigurationException(
-                        "Cannot configure Hibernate config for location: " + resource.getFilename(), e);
-            }
-        }
-    }
-
-    private static void configureNamingStrategy(
-            String name, HibernateConnectionSourceSettings.HibernateSettings hibernateSettings) {
-        try {
-            Class<? extends PhysicalNamingStrategy> namingStrategy = hibernateSettings.getNaming_strategy();
-            if (namingStrategy != null) GrailsDomainBinder.configureNamingStrategy(name, namingStrategy);
-        } catch (Throwable e) {
-            throw new ConfigurationException("Error configuring naming strategy: " + e.getMessage(), e);
-        }
-    }
-
-    private static ClosureEventTriggeringInterceptor resolveEventTriggeringInterceptor(
-            Class<? extends ClosureEventTriggeringInterceptor> clazz) {
-        return clazz != null ? BeanUtils.instantiateClass(clazz) : new ClosureEventTriggeringInterceptor();
-    }
-
     public void setDataSourceConnectionSourceFactory(
             DataSourceConnectionSourceFactory dataSourceConnectionSourceFactory) {
         this.dataSourceConnectionSourceFactory = dataSourceConnectionSourceFactory;
     }
 
+    @Override
     public ConnectionSource<SessionFactory, HibernateConnectionSourceSettings> create(
             String name, HibernateConnectionSourceSettings settings) {
         ConnectionSource<DataSource, DataSourceSettings> dataSourceConnectionSource =
@@ -293,17 +322,6 @@ public class HibernateConnectionSourceFactory
         return settings;
     }
 
-    private static <F extends ConnectionSourceSettings> DataSourceSettings extractDataSourceFallback(
-            F fallbackSettings) {
-        if (fallbackSettings instanceof HibernateConnectionSourceSettings hcs) {
-            return hcs.getDataSource();
-        }
-        if (fallbackSettings instanceof DataSourceSettings ds) {
-            return ds;
-        }
-        return null;
-    }
-
     @Override
     public void setApplicationContext(@Nullable ApplicationContext applicationContext) throws BeansException {
         this.applicationContext = applicationContext;
@@ -313,5 +331,11 @@ public class HibernateConnectionSourceFactory
     @Override
     public void setMessageSource(@Nullable MessageSource messageSource) {
         this.messageSource = messageSource;
+    }
+
+    @FunctionalInterface
+    private interface ResourceConfigurer {
+
+        void apply(Resource resource) throws IOException;
     }
 }

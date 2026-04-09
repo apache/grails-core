@@ -29,6 +29,9 @@ import grails.test.hibernate.HibernateSpec
 
 class ProxySpec extends HibernateSpec {
 
+    @Override
+    List<Class> getDomainClasses() { [Customer] }
+
     @Rollback
     void "Test Proxy"() {
         when:

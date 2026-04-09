@@ -18,6 +18,8 @@
  */
 package org.apache.grails.data.testing.tck.tests
 
+import spock.lang.IgnoreIf
+
 import org.apache.grails.data.testing.tck.domains.ChildEntity
 import org.apache.grails.data.testing.tck.domains.TestEntity
 import org.apache.grails.data.testing.tck.base.GrailsDataTckSpec
@@ -25,6 +27,7 @@ import org.apache.grails.data.testing.tck.base.GrailsDataTckSpec
 /**
  * Abstract base test for order by queries. Subclasses should do the necessary setup to configure GORM
  */
+@IgnoreIf({ System.getProperty('core.gorm.suite') == 'true' })
 class OrderBySpec extends GrailsDataTckSpec {
 
     void setupSpec() {

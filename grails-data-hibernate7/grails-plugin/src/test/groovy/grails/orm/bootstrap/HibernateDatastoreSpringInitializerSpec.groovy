@@ -19,6 +19,7 @@
 package grails.orm.bootstrap
 
 import grails.gorm.annotation.Entity
+import org.grails.orm.hibernate.HibernateDatastore
 import org.hibernate.Session
 import org.hibernate.SessionFactory
 import org.hibernate.dialect.H2Dialect
@@ -61,26 +62,25 @@ class HibernateDatastoreSpringInitializerSpec extends Specification{
         applicationContext.getBean("sessionFactory_moreBooks", SessionFactory).metamodel.entity(Author.name)
 
         and:"Each domain has the correct data source(s)"
+        HibernateDatastore hibernateDatastore = applicationContext.getBean(HibernateDatastore)
         Person.withNewSession { Person.count() == 0 }
-                Person.withNewSession { Session s ->
+                hibernateDatastore.withNewSession { Session s ->
                     assert s.doReturningWork { it.getMetaData().getURL() } == "jdbc:h2:mem:people"
                     return true
                 }
-                Book.withNewSession { Book.count() == 0 }
-                Book.withNewSession { Session s ->
+                hibernateDatastore.withNewSession("books") { Session s ->
                     assert s.doReturningWork { it.getMetaData().getURL() } == "jdbc:h2:mem:books"
                     return true
                 }
-                Book.moreBooks.withNewSession { Session s ->
+                hibernateDatastore.withNewSession("moreBooks") { Session s ->
                     assert s.doReturningWork { it.getMetaData().getURL() } == "jdbc:h2:mem:moreBooks"
                     return true
                 }
-                Author.withNewSession { Author.count() == 0 }
-                Author.withNewSession { Session s ->
+                hibernateDatastore.withNewSession { Session s ->
                     assert s.doReturningWork { it.getMetaData().getURL() } == "jdbc:h2:mem:people"
                     return true
                 }
-                Author.books.withNewSession { Session s ->
+                hibernateDatastore.withNewSession("books") { Session s ->
                     assert s.doReturningWork { it.getMetaData().getURL() } == "jdbc:h2:mem:books"
                     return true
                 }

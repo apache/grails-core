@@ -18,6 +18,7 @@
  */
 package org.grails.orm.hibernate.query;
 
+import java.util.Collections;
 import java.util.Deque;
 import java.util.HashMap;
 import java.util.LinkedList;
@@ -38,10 +39,12 @@ import org.hibernate.query.criteria.HibernateCriteriaBuilder;
 import org.hibernate.query.criteria.JpaCriteriaQuery;
 import org.hibernate.query.criteria.JpaSubQuery;
 
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.core.convert.ConversionService;
 import org.springframework.dao.InvalidDataAccessApiUsageException;
 
 import grails.gorm.DetachedCriteria;
+import org.grails.datastore.mapping.core.Datastore;
 import org.grails.datastore.mapping.model.PersistentEntity;
 import org.grails.datastore.mapping.model.PersistentProperty;
 import org.grails.datastore.mapping.model.types.Association;
@@ -50,6 +53,8 @@ import org.grails.datastore.mapping.query.AssociationQuery;
 import org.grails.datastore.mapping.query.Projections;
 import org.grails.datastore.mapping.query.Query;
 import org.grails.datastore.mapping.query.api.QueryableCriteria;
+import org.grails.datastore.mapping.query.event.PostQueryEvent;
+import org.grails.datastore.mapping.query.event.PreQueryEvent;
 import org.grails.orm.hibernate.GrailsHibernateTemplate;
 import org.grails.orm.hibernate.HibernateSession;
 import org.grails.orm.hibernate.IHibernateTemplate;
@@ -64,20 +69,16 @@ import org.grails.orm.hibernate.proxy.HibernateProxyHandler;
  */
 @SuppressWarnings("rawtypes")
 public class HibernateQuery extends Query {
+
     protected static final String ALIAS = "_alias";
+    private final Map<String, CriteriaAndAlias> createdAssociationPaths = new HashMap<>();
+    private final List<HibernateAlias> aliases = new java.util.ArrayList<>();
     protected String alias;
     protected int aliasCount;
-
-    public DetachedCriteria<?> getDetachedCriteria() {
-        return detachedCriteria;
-    }
-
-    private final Map<String, CriteriaAndAlias> createdAssociationPaths = new HashMap<>();
     protected Deque<PersistentEntity> entityStack = new LinkedList<>();
     protected Deque<Association> associationStack = new LinkedList<>();
     protected DetachedCriteria<?> detachedCriteria;
     protected ProxyHandler proxyHandler = new HibernateProxyHandler();
-
     private Integer fetchSize;
     private Integer timeout;
     private QueryFlushMode flushMode;
@@ -88,8 +89,24 @@ public class HibernateQuery extends Query {
         this.detachedCriteria = new DetachedCriteria<>(entity.getJavaClass());
     }
 
+    public GrailsHibernateTemplate getHibernateTemplate() {
+        return ((HibernateSession) getSession()).getHibernateTemplate();
+    }
+
+    public DetachedCriteria<?> getDetachedCriteria() {
+        return detachedCriteria;
+    }
+
     public void setDetachedCriteria(DetachedCriteria<?> detachedCriteria) {
         this.detachedCriteria = detachedCriteria;
+    }
+
+    public List<HibernateAlias> getAliases() {
+        return Collections.unmodifiableList(aliases);
+    }
+
+    public void addAlias(HibernateAlias alias) {
+        this.aliases.add(alias);
     }
 
     @Override
@@ -330,11 +347,11 @@ public class HibernateQuery extends Query {
                     subCriteria.associationPath,
                     alias);
         }
-        throw new InvalidDataAccessApiUsageException("Cannot query association [" +
-                calculatePropertyName(associationName) +
-                "] of entity [" +
-                entity +
-                "]. Property is not an association!");
+        throw new InvalidDataAccessApiUsageException(
+                "Cannot query association [" + calculatePropertyName(associationName) +
+                        "] of entity [" +
+                        entity +
+                        "]. Property is not an association!");
     }
 
     @SuppressWarnings("PMD.DataflowAnomalyAnalysis")
@@ -371,12 +388,14 @@ public class HibernateQuery extends Query {
 
     @Override
     public Query order(Order order) {
-        // TODO HACK
-        if (order == null) {
-            detachedCriteria.getOrders().clear();
-        } else {
-            detachedCriteria.order(order);
-        }
+        detachedCriteria.order(order);
+        return this;
+    }
+
+    @Override
+    public Query clearOrders() {
+        detachedCriteria.getOrders().clear();
+        super.clearOrders();
         return this;
     }
 
@@ -402,6 +421,12 @@ public class HibernateQuery extends Query {
 
     @Override
     public List list() {
+        firePreQueryEvent();
+        List results = executeList();
+        return firePostQueryEvent(results);
+    }
+
+    private List executeList() {
         return getHibernateQueryExecutor().list(getCurrentSession(), getJpaCriteriaQuery());
     }
 
@@ -417,7 +442,7 @@ public class HibernateQuery extends Query {
     public JpaCriteriaQuery<?> getJpaCriteriaQuery() {
         ConversionService conversionService = getSession().getMappingContext().getConversionService();
         return new JpaCriteriaQueryCreator(
-                        projections, getCriteriaBuilder(), entity, detachedCriteria, conversionService)
+                        projections, getCriteriaBuilder(), entity, detachedCriteria, conversionService, this)
                 .createQuery();
     }
 
@@ -432,6 +457,12 @@ public class HibernateQuery extends Query {
 
     @Override
     public Object singleResult() {
+        firePreQueryEvent();
+        Object result = executeSingleResult();
+        return firePostQueryEvent(result);
+    }
+
+    private Object executeSingleResult() {
         return getHibernateQueryExecutor().singleResult(getCurrentSession(), getJpaCriteriaQuery());
     }
 
@@ -441,25 +472,55 @@ public class HibernateQuery extends Query {
 
     @Override
     public Number countResults() {
+        firePreQueryEvent();
+
+        Number result;
         if (projections.getProjectionList().isEmpty()) {
             projections().count();
-            return (Number) singleResult();
+            result = (Number) executeSingleResult();
+        } else {
+            HibernateCriteriaBuilder cb = getCriteriaBuilder();
+
+            JpaCriteriaQuery<Long> countQuery = cb.createQuery(Long.class);
+            JpaSubQuery<Tuple> innerSubquery = countQuery.subquery(Tuple.class);
+
+            ConversionService cs = getSession().getMappingContext().getConversionService();
+            new JpaCriteriaQueryCreator(projections, cb, entity, detachedCriteria, cs).populateSubquery(innerSubquery);
+
+            countQuery.from(innerSubquery);
+            countQuery.select(cb.count(cb.literal(1)));
+            result = (Number) getHibernateQueryExecutor().singleResult(getCurrentSession(), countQuery);
         }
-        HibernateCriteriaBuilder cb = getCriteriaBuilder();
 
-        JpaCriteriaQuery<Long> countQuery = cb.createQuery(Long.class);
-        JpaSubQuery<Tuple> innerSubquery = countQuery.subquery(Tuple.class);
+        return (Number) firePostQueryEvent(result);
+    }
 
-        ConversionService cs = getSession().getMappingContext().getConversionService();
-        new JpaCriteriaQueryCreator(projections, cb, entity, detachedCriteria, cs)
-                .populateSubquery(innerSubquery);
+    private void firePreQueryEvent() {
+        Datastore datastore = session.getDatastore();
+        ApplicationEventPublisher publisher = datastore.getApplicationEventPublisher();
+        if (publisher != null) {
+            publisher.publishEvent(new PreQueryEvent(datastore, this));
+        }
+    }
 
-        countQuery.from(innerSubquery);
-        countQuery.select(cb.count(cb.literal(1)));
-        return (Number) getHibernateQueryExecutor().singleResult(getCurrentSession(), countQuery);
+    private List firePostQueryEvent(List results) {
+        Datastore datastore = session.getDatastore();
+        ApplicationEventPublisher publisher = datastore.getApplicationEventPublisher();
+        if (publisher != null) {
+            PostQueryEvent postQueryEvent = new PostQueryEvent(datastore, this, results);
+            publisher.publishEvent(postQueryEvent);
+            return postQueryEvent.getResults();
+        }
+        return results;
+    }
+
+    private Object firePostQueryEvent(Object result) {
+        List<?> results = firePostQueryEvent(Collections.singletonList(result));
+        return results.isEmpty() ? null : results.get(0);
     }
 
     public Object scroll() {
+        firePreQueryEvent();
         return getHibernateQueryExecutor().scroll(getCurrentSession(), getJpaCriteriaQuery());
     }
 

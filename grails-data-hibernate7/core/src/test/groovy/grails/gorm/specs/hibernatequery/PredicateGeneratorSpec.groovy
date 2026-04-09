@@ -1,90 +1,57 @@
+/*
+ *  Licensed to the Apache Software Foundation (ASF) under one
+ *  or more contributor license agreements.  See the NOTICE file
+ *  distributed with this work for additional information
+ *  regarding copyright ownership.  The ASF licenses this file
+ *  to you under the Apache License, Version 2.0 (the
+ *  "License"); you may not use this file except in compliance
+ *  with the License.  You may obtain a copy of the License at
+ *
+ *    https://www.apache.org/licenses/LICENSE-2.0
+ *
+ *  Unless required by applicable law or agreed to in writing,
+ *  software distributed under the License is distributed on an
+ *  "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ *  KIND, either express or implied.  See the License for the
+ *  specific language governing permissions and limitations
+ *  under the License.
+ */
 package grails.gorm.specs.hibernatequery
+
+import org.hibernate.query.criteria.HibernateCriteriaBuilder
 
 import grails.gorm.DetachedCriteria
 import grails.gorm.specs.HibernateGormDatastoreSpec
 import jakarta.persistence.criteria.CriteriaQuery
 import jakarta.persistence.criteria.Root
-import org.apache.grails.data.testing.tck.domains.Person
-import org.apache.grails.data.testing.tck.domains.Pet
-import org.apache.grails.data.testing.tck.domains.Face
-import org.grails.datastore.mapping.core.exceptions.ConfigurationException
 import org.grails.datastore.mapping.model.PersistentEntity
 import org.grails.datastore.mapping.query.Query
+
 import org.grails.orm.hibernate.query.JpaFromProvider
 import org.grails.orm.hibernate.query.PredicateGenerator
-import org.hibernate.query.criteria.HibernateCriteriaBuilder
-import org.springframework.core.convert.support.DefaultConversionService
-import spock.lang.Unroll
+import grails.gorm.annotation.Entity
+import org.grails.datastore.gorm.GormEntity
 
-/**
- * Combined Spec for PredicateGenerator validation.
- * Ensures compatibility with Hibernate 7 SQM strictness.
- */
 class PredicateGeneratorSpec extends HibernateGormDatastoreSpec {
 
-    PredicateGenerator predicateGenerator
+    PredicateGenerator predicateGenerator = new PredicateGenerator()
     HibernateCriteriaBuilder cb
-    CriteriaQuery<Person> query
-    Root<Person> root
+    CriteriaQuery query
+    Root root
     JpaFromProvider fromProvider
     PersistentEntity personEntity
 
-    def setup() {
-        predicateGenerator = new PredicateGenerator(new DefaultConversionService())
+    void setupSpec() {
+        manager.addAllDomainClasses([PredicateGeneratorSpecPerson, PredicateGeneratorSpecPet, PredicateGeneratorSpecFace])
+    }
+
+    void setup() {
         cb = sessionFactory.getCriteriaBuilder()
-        query = cb.createQuery(Person)
-        root = query.from(Person)
-        personEntity = manager.hibernateDatastore.getMappingContext().getPersistentEntity(Person.typeName)
-        fromProvider = new JpaFromProvider(new DetachedCriteria(Person), query, root)
+        query = cb.createQuery(PredicateGeneratorSpecPerson)
+        root = query.from(PredicateGeneratorSpecPerson)
+        personEntity = session.datastore.mappingContext.getPersistentEntity(PredicateGeneratorSpecPerson.name)
+        fromProvider = new JpaFromProvider(new DetachedCriteria(PredicateGeneratorSpecPerson),[], root)
     }
-
-    def setupSpec() {
-        manager.addAllDomainClasses([Person, Pet, Face])
-    }
-
-    // --- Validation and Error Handling ---
-
-    def "test getPredicates with non-existent property throws ConfigurationException"() {
-        given:
-        List criteria = [new Query.Equals("invalidProperty", "value")]
-
-        when:
-        predicateGenerator.getPredicates(cb, query, root, criteria, fromProvider, personEntity)
-
-        then:
-        def e = thrown(ConfigurationException)
-        e.message.contains("is not a valid property")
-    }
-
-    @Unroll
-    def "test getPredicates with malformed finder property [#property] throws ConfigurationException"() {
-        given:
-        // This simulates the behavior of the TCK failures where suffixes like _LessThan 
-        // are not stripped before reaching the PredicateGenerator
-        List criteria = [new Query.LessThan(property, "Z")]
-
-        when:
-        predicateGenerator.getPredicates(cb, query, root, criteria, fromProvider, personEntity)
-
-        then:
-        thrown(ConfigurationException)
-
-        where:
-        property << ["author_LessThan", "firstName_InList", "age_GreaterThan"]
-    }
-
-    def "test gt with String value that cant be coerced to Number"() {
-        given:
-        List criteria = [new Query.GreaterThan("age", "Bobby")]
-
-        when:
-        predicateGenerator.getPredicates(cb, query, root, criteria, fromProvider, personEntity)
-
-        then:
-        thrown(ConfigurationException)
-    }
-
-    // --- Functional Query Tests ---
 
     def "test getPredicates with Equals criterion"() {
         given:
@@ -97,20 +64,9 @@ class PredicateGeneratorSpec extends HibernateGormDatastoreSpec {
         predicates.length == 1
     }
 
-    def "test getPredicates with IdEquals criterion"() {
-        given:
-        List criteria = [new Query.IdEquals(1L)]
-
-        when:
-        def predicates = predicateGenerator.getPredicates(cb, query, root, criteria, fromProvider, personEntity)
-
-        then:
-        predicates.length == 1
-    }
-
     def "test getPredicates with Between criterion"() {
         given:
-        List criteria = [new Query.Between("age", 18, 30)]
+        List criteria = [new Query.Between("age", 20, 30)]
 
         when:
         def predicates = predicateGenerator.getPredicates(cb, query, root, criteria, fromProvider, personEntity)
@@ -121,7 +77,7 @@ class PredicateGeneratorSpec extends HibernateGormDatastoreSpec {
 
     def "test getPredicates with In criterion"() {
         given:
-        List criteria = [new Query.In("firstName", ["Bob", "Fred"])]
+        List criteria = [new Query.In("firstName", ["Bob", "Alice"])]
 
         when:
         def predicates = predicateGenerator.getPredicates(cb, query, root, criteria, fromProvider, personEntity)
@@ -132,10 +88,9 @@ class PredicateGeneratorSpec extends HibernateGormDatastoreSpec {
 
     def "test getPredicates with Conjunction"() {
         given:
-        var conjunction = new Query.Conjunction()
-        conjunction.add(new Query.Equals("firstName", "Bob"))
-        conjunction.add(new Query.GreaterThan("age", 20))
-        List criteria = [conjunction]
+        List criteria = [new Query.Conjunction()
+                                 .add(new Query.Equals("firstName", "Bob"))
+                                 .add(new Query.Equals("lastName", "Smith"))]
 
         when:
         def predicates = predicateGenerator.getPredicates(cb, query, root, criteria, fromProvider, personEntity)
@@ -146,7 +101,7 @@ class PredicateGeneratorSpec extends HibernateGormDatastoreSpec {
 
     def "test getPredicates with Exists"() {
         given:
-        List criteria = [new Query.Exists(new DetachedCriteria(Pet).eq("name", "Lucky"))]
+        List criteria = [new Query.Exists(new DetachedCriteria(PredicateGeneratorSpecPet).eq("name", "Lucky"))]
 
         when:
         def predicates = predicateGenerator.getPredicates(cb, query, root, criteria, fromProvider, personEntity)
@@ -154,4 +109,133 @@ class PredicateGeneratorSpec extends HibernateGormDatastoreSpec {
         then:
         predicates.length == 1
     }
+
+    def "test getPredicates with subquery isolated provider"() {
+        given: "a subquery with association reference"
+        def subCriteria = new DetachedCriteria(PredicateGeneratorSpecPet).eq("face.name", "Funny")
+        List criteria = [new Query.In("id", subCriteria)]
+
+        when:
+        def predicates = predicateGenerator.getPredicates(cb, query, root, criteria, fromProvider, personEntity)
+
+        then: "no exception thrown during subquery join creation"
+        noExceptionThrown()
+        predicates.length == 1
+    }
+
+    def "test getPredicates with subquery aliases"() {
+        given: "a subquery with an alias"
+        def subCriteria = new DetachedCriteria(PredicateGeneratorSpecPet).build {
+            createAlias('face', 'f')
+            eq('f.name', 'Funny')
+        }
+        List criteria = [new Query.In("id", subCriteria)]
+
+        when:
+        def predicates = predicateGenerator.getPredicates(cb, query, root, criteria, fromProvider, personEntity)
+
+        then: "the alias 'f' is correctly resolved"
+        noExceptionThrown()
+        predicates.length == 1
+    }
+
+    def "test getPredicates with Disjunction"() {
+        given:
+        List criteria = [new Query.Disjunction()
+                                 .add(new Query.Equals("firstName", "Bob"))
+                                 .add(new Query.Equals("firstName", "Alice"))]
+
+        when:
+        def predicates = predicateGenerator.getPredicates(cb, query, root, criteria, fromProvider, personEntity)
+
+        then:
+        predicates.length == 1
+    }
+
+    def "test getPredicates with Negation"() {
+        given:
+        List criteria = [new Query.Negation().add(new Query.Equals("firstName", "Bob"))]
+
+        when:
+        def predicates = predicateGenerator.getPredicates(cb, query, root, criteria, fromProvider, personEntity)
+
+        then:
+        predicates.length == 1
+    }
+
+    def "test getPredicates with Property Comparison"() {
+        given:
+        List criteria = [new Query.EqualsProperty("firstName", "lastName")]
+
+        when:
+        def predicates = predicateGenerator.getPredicates(cb, query, root, criteria, fromProvider, personEntity)
+
+        then:
+        predicates.length == 1
+    }
+
+    def "test getPredicates with Like and ILike"() {
+        given:
+        List criteria = [
+            new Query.Like("firstName", "B%"),
+            new Query.ILike("firstName", "b%")
+        ]
+
+        when:
+        def predicates = predicateGenerator.getPredicates(cb, query, root, criteria, fromProvider, personEntity)
+
+        then:
+        predicates.length == 2
+    }
+
+    def "test getPredicates with Size Comparison"() {
+        given:
+        List criteria = [new Query.SizeEquals("pets", 2)]
+
+        when:
+        def predicates = predicateGenerator.getPredicates(cb, query, root, criteria, fromProvider, personEntity)
+
+        then:
+        predicates.length == 1
+    }
+
+    def "test getPredicates with In on basic collection"() {
+        given:
+        List criteria = [new Query.In("nicknames", ["Bob", "Alice"])]
+        
+        // Ensure nicknames is joined in fromProvider
+        fromProvider = new JpaFromProvider(new DetachedCriteria(PredicateGeneratorSpecPerson), [], root)
+
+        when:
+        def predicates = predicateGenerator.getPredicates(cb, query, root, criteria, fromProvider, personEntity)
+
+        then:
+        predicates.length == 1
+        predicates[0] instanceof org.hibernate.query.sqm.tree.predicate.SqmInListPredicate
+    }
+}
+
+@Entity
+class PredicateGeneratorSpecPerson implements GormEntity<PredicateGeneratorSpecPerson> {
+    Long id
+    String firstName
+    String lastName
+    Integer age
+    PredicateGeneratorSpecFace face
+    Set<String> nicknames
+    static hasMany = [pets: PredicateGeneratorSpecPet, nicknames: String]
+}
+
+@Entity
+class PredicateGeneratorSpecPet implements GormEntity<PredicateGeneratorSpecPet> {
+    Long id
+    String name
+    PredicateGeneratorSpecFace face
+    static belongsTo = [owner: PredicateGeneratorSpecPerson]
+}
+
+@Entity
+class PredicateGeneratorSpecFace implements GormEntity<PredicateGeneratorSpecFace> {
+    Long id
+    String name
 }

@@ -134,20 +134,21 @@ public class CollectionBinder {
      * First pass to bind collection to Hibernate metamodel, sets up second pass
      *
      * @param property The GrailsDomainClassProperty instance
-     * @param owner The owning persistent class
-     * @param path The property path
+     * @param path     The property path
      * @return the result
      */
-    public Collection bindCollection(HibernateToManyProperty property, PersistentClass owner, String path) {
+    public Collection bindCollection(HibernateToManyProperty property, String path) {
+        PersistentClass _persistentClass = property.getHibernateOwner().getPersistentClass();
         CollectionType collectionType = collectionHolder.get(property.getType());
-        Collection collection = collectionType.create(property, owner);
+        Collection collection = collectionType.create(property, _persistentClass);
         property.setCollection(collection);
 
         // set role
         String propertyName = getNameForPropertyAndPath(property, path);
-        collection.setRole(GrailsHibernateUtil.qualify(property.getOwner().getName(), propertyName));
+        collection.setRole(
+                GrailsHibernateUtil.qualify(property.getHibernateOwner().getName(), propertyName));
 
-        PropertyConfig pc = property.getMappedForm();
+        PropertyConfig pc = property.getHibernateMappedForm();
         // configure eager fetching
         final FetchMode fetchMode = pc.getFetchMode();
         if (fetchMode == FetchMode.JOIN) {
@@ -167,7 +168,7 @@ public class CollectionBinder {
             collection.setElement(oneToMany);
             bindOneToMany((HibernateOneToManyProperty) property, oneToMany);
         } else {
-            bindCollectionTable(property, collection, owner.getTable());
+            bindCollectionTable(property, _persistentClass.getTable());
 
             if (property.isBidirectional()) {
                 if (!property.isOwningSide()) {
@@ -207,10 +208,10 @@ public class CollectionBinder {
         one.setIgnoreNotFound(true);
     }
 
-    private void bindCollectionTable(HibernateToManyProperty property, Collection collection, Table ownerTable) {
-
+    private void bindCollectionTable(HibernateToManyProperty property, Table ownerTable) {
+        Collection collection = property.getCollection();
         String owningTableSchema = ownerTable.getSchema();
-        PropertyConfig config = property.getMappedForm();
+        PropertyConfig config = property.getHibernateMappedForm();
         JoinTable jt = config.getJoinTable();
 
         String s = new TableForManyCalculator(namingStrategy).calculateTableForMany(property);

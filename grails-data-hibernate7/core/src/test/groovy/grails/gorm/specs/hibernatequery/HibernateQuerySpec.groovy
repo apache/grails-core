@@ -21,51 +21,38 @@ package grails.gorm.specs.hibernatequery
 
 import grails.gorm.DetachedCriteria
 import grails.gorm.specs.HibernateGormDatastoreSpec
-import jakarta.persistence.criteria.CriteriaQuery
-import jakarta.persistence.criteria.JoinType
-import jakarta.persistence.criteria.Path
-import jakarta.persistence.criteria.Root
-import jakarta.persistence.criteria.Subquery
-import org.apache.grails.data.testing.tck.domains.*
-import org.grails.datastore.mapping.engine.event.PersistEvent
+import org.apache.grails.data.testing.tck.domains.CommonTypes
+import org.apache.grails.data.testing.tck.domains.EagerOwner
+import org.apache.grails.data.testing.tck.domains.Face
+import org.apache.grails.data.testing.tck.domains.Person
+import org.apache.grails.data.testing.tck.domains.Pet
 import org.grails.datastore.mapping.query.Query
-import org.grails.orm.hibernate.HibernateSession
 import org.grails.orm.hibernate.HibernateDatastore
+import org.grails.orm.hibernate.HibernateSession
 import org.grails.orm.hibernate.query.HibernateQuery
-import org.hibernate.query.criteria.JpaPredicate
-import spock.lang.Ignore
-
+import jakarta.persistence.criteria.JoinType
+import java.io.Serializable
 
 class HibernateQuerySpec extends HibernateGormDatastoreSpec {
 
-
+    Person oldBob
     HibernateQuery hibernateQuery
-    HibernateQuery petHibernateQuery
     HibernateQuery eagerHibernateQuery
 
-    Person oldBob
-
     def setup() {
-
-        def persister = sessionFactory.getMappingMetamodel().getEntityDescriptor(Person)
-        println "Person ID generator: ${persister.getGenerator().class.name}"
-        HibernateDatastore hibernateDatastore = manager.hibernateDatastore
-        HibernateSession session = hibernateDatastore.connect() as HibernateSession
-        hibernateQuery = new HibernateQuery(session, hibernateDatastore.getMappingContext().getPersistentEntity(Person.typeName))
-        petHibernateQuery = new HibernateQuery(session, hibernateDatastore.getMappingContext().getPersistentEntity(Pet.typeName))
-        eagerHibernateQuery = new HibernateQuery(session, hibernateDatastore.getMappingContext().getPersistentEntity(EagerOwner.typeName))
         oldBob = new Person(firstName: "Bob", lastName: "Builder", age: 50).save(flush: true)
-
+        hibernateQuery = new HibernateQuery(session, getPersistentEntity(Person))
+        eagerHibernateQuery = new HibernateQuery(session, getPersistentEntity(EagerOwner))
     }
 
     def setupSpec() {
-        manager.addAllDomainClasses([Person, Pet, Face, EagerOwner, CommonTypes, BigDecimalEntity])
+        manager.addAllDomainClasses([Person, Pet, Face, EagerOwner, CommonTypes, HibernateQuerySpecBigDecimalEntity])
     }
 
     def equals() {
         given:
         new Person(firstName: "Fred", lastName: "Rogers", age: 51).save(flush: true)
-        hibernateQuery.eq("age", 50)
+        hibernateQuery.eq("firstName", "Bob")
         when:
         def newBob = hibernateQuery.singleResult()
         then:
@@ -74,8 +61,7 @@ class HibernateQuerySpec extends HibernateGormDatastoreSpec {
 
     def equalsJoins() {
         given:
-        new Person(firstName: "Fred", lastName: "Rogers", age: 51).save(flush: true)
-        new Pet(name: "Lucky", age: 1, owner: oldBob).save(flush: true)
+        oldBob.addToPets(new Pet(name: "Lucky")).save(flush: true)
         hibernateQuery.join("pets").eq("pets.name", "Lucky")
         when:
         def newBob = hibernateQuery.singleResult()
@@ -86,7 +72,7 @@ class HibernateQuerySpec extends HibernateGormDatastoreSpec {
     def ne() {
         given:
         new Person(firstName: "Fred", lastName: "Rogers", age: 51).save(flush: true)
-        hibernateQuery.ne("age", 51)
+        hibernateQuery.ne("firstName", "Fred")
         when:
         def newBob = hibernateQuery.singleResult()
         then:
@@ -95,7 +81,7 @@ class HibernateQuerySpec extends HibernateGormDatastoreSpec {
 
     def eqProperty() {
         given:
-        def oldMajor = new Person(firstName: "Major", lastName: "Major", age: 51).save(flush: true)
+        def oldMajor = new Person(firstName: "Major", lastName: "Major", age: 50).save(flush: true)
         hibernateQuery.eqProperty("firstName", "lastName")
         when:
         def newMajor = hibernateQuery.singleResult()
@@ -547,10 +533,10 @@ class HibernateQuerySpec extends HibernateGormDatastoreSpec {
         given:
         HibernateDatastore hibernateDatastore = manager.hibernateDatastore
         HibernateSession session = hibernateDatastore.connect() as HibernateSession
-        HibernateQuery query = new HibernateQuery(session, hibernateDatastore.getMappingContext().getPersistentEntity(BigDecimalEntity.typeName))
-        new BigDecimalEntity(amount: 10.5G).save(flush: true, failOnError: true)
-        new BigDecimalEntity(amount: 20.5G).save(flush: true, failOnError: true)
-        new BigDecimalEntity(amount: 30.5G).save(flush: true, failOnError: true)
+        HibernateQuery query = new HibernateQuery(session, hibernateDatastore.getMappingContext().getPersistentEntity(HibernateQuerySpecBigDecimalEntity.typeName))
+        new HibernateQuerySpecBigDecimalEntity(amount: 10.5G).save(flush: true, failOnError: true)
+        new HibernateQuerySpecBigDecimalEntity(amount: 20.5G).save(flush: true, failOnError: true)
+        new HibernateQuerySpecBigDecimalEntity(amount: 30.5G).save(flush: true, failOnError: true)
 
         query.between("amount", 15.0G, 25.0G)
 
@@ -607,8 +593,8 @@ class HibernateQuerySpec extends HibernateGormDatastoreSpec {
 
 //    def makeLazy() {
 //        given:
-//        def eagerOwner= new EagerOwner( pets :[new Pet(name:"Lucky")])
-//        hibernateQuery.join("pets", JoinType.LEFT)
+//        def eagerOwner= new EagerOwner( pets :[new Pet(name:\"Lucky\")])
+//        hibernateQuery.join(\"pets\", JoinType.LEFT)
 //        when:
 //        Person newBob = hibernateQuery.singleResult()
 //        then:
@@ -720,9 +706,9 @@ class HibernateQuerySpec extends HibernateGormDatastoreSpec {
         given:
         HibernateDatastore hibernateDatastore = manager.hibernateDatastore
         HibernateSession session = hibernateDatastore.connect() as HibernateSession
-        HibernateQuery query = new HibernateQuery(session, hibernateDatastore.getMappingContext().getPersistentEntity(BigDecimalEntity.typeName))
-        new BigDecimalEntity(amount: 100.0G).save(flush: true, failOnError: true)
-        new BigDecimalEntity(amount: 200.0G).save(flush: true, failOnError: true)
+        HibernateQuery query = new HibernateQuery(session, hibernateDatastore.getMappingContext().getPersistentEntity(HibernateQuerySpecBigDecimalEntity.typeName))
+        new HibernateQuerySpecBigDecimalEntity(amount: 100.0G).save(flush: true, failOnError: true)
+        new HibernateQuerySpecBigDecimalEntity(amount: 200.0G).save(flush: true, failOnError: true)
 
         query.projections().sum("amount")
 
@@ -737,9 +723,9 @@ class HibernateQuerySpec extends HibernateGormDatastoreSpec {
         given:
         HibernateDatastore hibernateDatastore = manager.hibernateDatastore
         HibernateSession session = hibernateDatastore.connect() as HibernateSession
-        HibernateQuery query = new HibernateQuery(session, hibernateDatastore.getMappingContext().getPersistentEntity(BigDecimalEntity.typeName))
-        new BigDecimalEntity(amount: 100.0G).save(flush: true, failOnError: true)
-        new BigDecimalEntity(amount: 200.0G).save(flush: true, failOnError: true)
+        HibernateQuery query = new HibernateQuery(session, hibernateDatastore.getMappingContext().getPersistentEntity(HibernateQuerySpecBigDecimalEntity.typeName))
+        new HibernateQuerySpecBigDecimalEntity(amount: 100.0G).save(flush: true, failOnError: true)
+        new HibernateQuerySpecBigDecimalEntity(amount: 200.0G).save(flush: true, failOnError: true)
 
         query.projections().avg("amount")
 
@@ -1017,6 +1003,22 @@ class HibernateQuerySpec extends HibernateGormDatastoreSpec {
         cloned.hibernateCriteria != null
     }
 
+    def "cloneQuery with order then clearOrders produces no ORDER BY in count"() {
+        given:
+        new Person(firstName: "Fred", lastName: "Builder", age: 48).save(flush: true)
+        hibernateQuery.eq("lastName", "Builder")
+                      .order(new Query.Order("firstName", Query.Order.Direction.ASC))
+
+        when:
+        HibernateQuery cloned = (HibernateQuery) hibernateQuery.clone()
+        cloned.clearOrders()
+        cloned.projections().count()
+        Number count = (Number) cloned.singleResult()
+
+        then:
+        count == 2
+    }
+
     def queryArguments() {
         given:
         hibernateQuery.setFetchSize(100)
@@ -1090,12 +1092,47 @@ class HibernateQuerySpec extends HibernateGormDatastoreSpec {
         associationQuery != null
         associationQuery.getEntity() != null
     }
+
+    def "test query publishes PreQueryEvent and PostQueryEvent"() {
+        given:
+        int preEvents = 0
+        int postEvents = 0
+        manager.hibernateDatastore.getApplicationEventPublisher().addApplicationListener(new org.springframework.context.ApplicationListener<org.grails.datastore.mapping.query.event.AbstractQueryEvent>() {
+            @Override
+            void onApplicationEvent(org.grails.datastore.mapping.query.event.AbstractQueryEvent event) {
+                if (event instanceof org.grails.datastore.mapping.query.event.PreQueryEvent) {
+                    preEvents++
+                } else if (event instanceof org.grails.datastore.mapping.query.event.PostQueryEvent) {
+                    postEvents++
+                }
+            }
+        })
+
+        when:
+        hibernateQuery.eq("firstName", "Bob").list()
+
+        then:
+        preEvents > 0
+        postEvents > 0
+    }
+
+    def "test add and get aliases"() {
+        given:
+        def alias = new org.grails.orm.hibernate.query.HibernateAlias("nicknames", "n")
+
+        when:
+        hibernateQuery.addAlias(alias)
+
+        then:
+        hibernateQuery.getAliases().size() == 1
+        hibernateQuery.getAliases()[0] == alias
+    }
 }
 
 
 
 @grails.persistence.Entity
-class BigDecimalEntity implements Serializable {
+class HibernateQuerySpecBigDecimalEntity implements Serializable {
     Long id
     Long version
     BigDecimal amount

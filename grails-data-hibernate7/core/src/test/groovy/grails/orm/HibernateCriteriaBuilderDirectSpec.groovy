@@ -24,7 +24,7 @@ import grails.gorm.specs.HibernateGormDatastoreSpec
 import jakarta.persistence.criteria.JoinType
 import org.grails.datastore.mapping.query.Query
 import org.hibernate.Session
-import org.springframework.orm.hibernate5.SessionHolder
+import org.grails.orm.hibernate.support.hibernate7.SessionHolder
 import org.springframework.transaction.support.TransactionSynchronizationManager
 import spock.lang.Shared
 import java.math.RoundingMode
@@ -42,7 +42,7 @@ class HibernateCriteriaBuilderDirectSpec extends HibernateGormDatastoreSpec {
     @Shared HibernateCriteriaBuilder builder
 
     def setupSpec() {
-        manager.addAllDomainClasses([DirectAccount, DirectTransaction])
+        manager.addAllDomainClasses([DirectAccount, DirectTransaction, DirectBiBook, DirectBiAuthor])
     }
 
     def setup() {
@@ -50,6 +50,28 @@ class HibernateCriteriaBuilderDirectSpec extends HibernateGormDatastoreSpec {
                 DirectAccount,
                 manager.hibernateDatastore.sessionFactory,
                 manager.hibernateDatastore)
+    }
+
+    void "test bidirectional many-to-many with subquery alias resolution"() {
+        given: "authors with books in a bidirectional hasMany"
+        def author1 = new DirectBiAuthor(name: "Stephen King")
+        def book1 = new DirectBiBook(title: "IT")
+        def book2 = new DirectBiBook(title: "The Shining")
+        author1.addToBooks(book1)
+        author1.addToBooks(book2)
+        author1.save(flush: true)
+
+        def b = new HibernateCriteriaBuilder(DirectBiBook, manager.hibernateDatastore.sessionFactory, manager.hibernateDatastore)
+
+        when: "using withCriteria to find books by author"
+        def books = b.list {
+            authors {
+                'in'('id', [author1.id])
+            }
+        }
+
+        then: "books are found without error"
+        books.size() == 2
     }
 
     // ─── DSL integration: data-driven scenarios ────────────────────────────
@@ -482,6 +504,14 @@ class HibernateCriteriaBuilderDirectSpec extends HibernateGormDatastoreSpec {
         expect: builder.select("balance").is(builder)
     }
 
+    def "createAlias(String, String) delegates and returns this"() {
+        expect: builder.createAlias("transactions", "t").is(builder)
+    }
+
+    def "createAlias(String, String, int) delegates and returns this"() {
+        expect: builder.createAlias("transactions", "t", 0).is(builder)
+    }
+
     // ─── Cache / readOnly / lock ───────────────────────────────────────────
 
     def "cache(boolean) sets flag and returns this"() {
@@ -660,4 +690,17 @@ class DirectAccount {
 class DirectTransaction {
     BigDecimal amount
     static belongsTo = [account: DirectAccount]
+}
+
+@Entity
+class DirectBiBook {
+    String title
+    static hasMany = [authors: DirectBiAuthor]
+    static belongsTo = [DirectBiAuthor]
+}
+
+@Entity
+class DirectBiAuthor {
+    String name
+    static hasMany = [books: DirectBiBook]
 }

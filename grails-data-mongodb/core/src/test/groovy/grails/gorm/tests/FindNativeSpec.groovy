@@ -18,9 +18,10 @@
  */
 package grails.gorm.tests
 
+import org.apache.grails.data.mongo.core.MongoDatastoreSpec
+
 import com.mongodb.client.FindIterable
 import org.apache.grails.data.mongo.core.GrailsDataMongoTckManager
-import org.apache.grails.data.testing.tck.base.GrailsDataTckSpec
 import org.bson.Document
 import org.grails.datastore.gorm.mongo.Product
 //tag::nativeImport[]
@@ -31,7 +32,7 @@ import static com.mongodb.client.model.Filters.eq
 /**
  * Created by graemerocher on 24/10/16.
  */
-class FindNativeSpec extends GrailsDataTckSpec<GrailsDataMongoTckManager> {
+class FindNativeSpec extends MongoDatastoreSpec {
 
     void setupSpec() {
         manager.addAllDomainClasses([Product])

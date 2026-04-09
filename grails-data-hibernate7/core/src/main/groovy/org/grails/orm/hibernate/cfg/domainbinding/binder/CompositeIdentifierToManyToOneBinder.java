@@ -30,7 +30,7 @@ import org.hibernate.engine.jdbc.env.spi.JdbcEnvironment;
 import org.hibernate.mapping.SimpleValue;
 
 import org.grails.orm.hibernate.cfg.ColumnConfig;
-import org.grails.orm.hibernate.cfg.CompositeIdentity;
+import org.grails.orm.hibernate.cfg.HibernateCompositeIdentity;
 import org.grails.orm.hibernate.cfg.PersistentEntityNamingStrategy;
 import org.grails.orm.hibernate.cfg.domainbinding.hibernate.GrailsHibernatePersistentEntity;
 import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernatePersistentProperty;
@@ -78,11 +78,11 @@ public class CompositeIdentifierToManyToOneBinder {
     public void bindCompositeIdentifierToManyToOne(
             HibernatePersistentProperty property,
             SimpleValue value,
-            CompositeIdentity compositeId,
+            HibernateCompositeIdentity compositeId,
             GrailsHibernatePersistentEntity refDomainClass,
             String path) {
         String[] propertyNames = compositeId.getPropertyNames();
-        List<ColumnConfig> columns = property.getMappedForm().getColumns();
+        List<ColumnConfig> columns = property.getHibernateMappedForm().getColumns();
         int existingCount = columns.size();
         if (existingCount !=
                 foreignKeyColumnCountCalculator.calculateForeignKeyColumnCount(refDomainClass, propertyNames)) {

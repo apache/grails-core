@@ -18,9 +18,12 @@
  */
 package org.grails.orm.hibernate.support;
 
+import java.io.Serial;
 import java.io.Serializable;
 import java.util.Map;
 import java.util.Optional;
+
+import jakarta.annotation.Nullable;
 
 import org.hibernate.Hibernate;
 import org.hibernate.HibernateException;
@@ -95,72 +98,62 @@ public class ClosureEventTriggeringInterceptor
                 PersistEventListener,
                 CallbackRegistryConsumer {
 
-    //    private final Logger log = LoggerFactory.getLogger(getClass());
-    private static final long serialVersionUID = 1;
-
-    private final DefaultPersistEventListener persistEventListener = new DefaultPersistEventListener();
-    private final DefaultMergeEventListener mergeEventListener = new DefaultMergeEventListener();
-
     /**
      * @deprecated Use {@link AbstractPersistenceEvent#ONLOAD_EVENT} instead
      */
     @Deprecated
     public static final String ONLOAD_EVENT = AbstractPersistenceEvent.ONLOAD_EVENT;
-
     /**
      * @deprecated Use {@link AbstractPersistenceEvent#ONLOAD_SAVE} instead
      */
     @Deprecated
     public static final String ONLOAD_SAVE = AbstractPersistenceEvent.ONLOAD_SAVE;
-
     /**
      * @deprecated Use {@link AbstractPersistenceEvent#BEFORE_LOAD_EVENT} instead
      */
     @Deprecated
     public static final String BEFORE_LOAD_EVENT = AbstractPersistenceEvent.BEFORE_LOAD_EVENT;
-
     /**
      * @deprecated Use {@link AbstractPersistenceEvent#BEFORE_INSERT_EVENT} instead
      */
     @Deprecated
     public static final String BEFORE_INSERT_EVENT = AbstractPersistenceEvent.BEFORE_INSERT_EVENT;
-
     /**
      * @deprecated Use {@link AbstractPersistenceEvent#AFTER_INSERT_EVENT} instead
      */
     @Deprecated
     public static final String AFTER_INSERT_EVENT = AbstractPersistenceEvent.AFTER_INSERT_EVENT;
-
     /**
      * @deprecated Use {@link AbstractPersistenceEvent#BEFORE_UPDATE_EVENT} instead
      */
     @Deprecated
     public static final String BEFORE_UPDATE_EVENT = AbstractPersistenceEvent.BEFORE_UPDATE_EVENT;
-
     /**
      * @deprecated Use {@link AbstractPersistenceEvent#AFTER_UPDATE_EVENT} instead
      */
     @Deprecated
     public static final String AFTER_UPDATE_EVENT = AbstractPersistenceEvent.AFTER_UPDATE_EVENT;
-
     /**
      * @deprecated Use {@link AbstractPersistenceEvent#BEFORE_DELETE_EVENT} instead
      */
     @Deprecated
     public static final String BEFORE_DELETE_EVENT = AbstractPersistenceEvent.BEFORE_DELETE_EVENT;
-
     /**
      * @deprecated Use {@link AbstractPersistenceEvent#AFTER_DELETE_EVENT} instead
      */
     @Deprecated
     public static final String AFTER_DELETE_EVENT = AbstractPersistenceEvent.AFTER_DELETE_EVENT;
-
     /**
      * @deprecated Use {@link AbstractPersistenceEvent#AFTER_LOAD_EVENT} instead
      */
     @Deprecated
     public static final String AFTER_LOAD_EVENT = AbstractPersistenceEvent.AFTER_LOAD_EVENT;
+    //    private final Logger log = LoggerFactory.getLogger(getClass());
+    @Serial
+    private static final long serialVersionUID = 1;
 
+    private final DefaultPersistEventListener persistEventListener = new DefaultPersistEventListener();
+    private final DefaultMergeEventListener mergeEventListener = new DefaultMergeEventListener();
     /** The datastore. */
     protected HibernateDatastore datastore;
 
@@ -239,12 +232,14 @@ public class ClosureEventTriggeringInterceptor
         persistEventListener.injectCallbackRegistry(callbackRegistry);
     }
 
+    @Override
     public void onPreLoad(PreLoadEvent hibernateEvent) {
         org.grails.datastore.mapping.engine.event.PreLoadEvent grailsEvent =
                 new org.grails.datastore.mapping.engine.event.PreLoadEvent(this.datastore, hibernateEvent.getEntity());
         publishEvent(hibernateEvent, grailsEvent);
     }
 
+    @Override
     public void onPostLoad(PostLoadEvent hibernateEvent) {
         Object entity = hibernateEvent.getEntity();
         activateDirtyChecking(entity);
@@ -252,9 +247,10 @@ public class ClosureEventTriggeringInterceptor
                 hibernateEvent, new org.grails.datastore.mapping.engine.event.PostLoadEvent(this.datastore, entity));
     }
 
+    @Override
     public boolean onPreInsert(PreInsertEvent hibernateEvent) {
         Object entity = hibernateEvent.getEntity();
-        Class type = Hibernate.getClass(entity);
+        Class<?> type = Hibernate.getClass(entity);
         PersistentEntity persistentEntity = mappingContext.getPersistentEntity(type.getName());
         AbstractPersistenceEvent grailsEvent;
         ModificationTrackingEntityAccess entityAccess = null;
@@ -334,6 +330,7 @@ public class ClosureEventTriggeringInterceptor
         }
     }
 
+    @Override
     public void onPostInsert(PostInsertEvent hibernateEvent) {
         Object entity = hibernateEvent.getEntity();
         org.grails.datastore.mapping.engine.event.PostInsertEvent grailsEvent =
@@ -342,9 +339,10 @@ public class ClosureEventTriggeringInterceptor
         publishEvent(hibernateEvent, grailsEvent);
     }
 
+    @Override
     public boolean onPreUpdate(PreUpdateEvent hibernateEvent) {
         Object entity = hibernateEvent.getEntity();
-        Class type = Hibernate.getClass(entity);
+        Class<?> type = Hibernate.getClass(entity);
         MappingContext mappingContext = datastore.getMappingContext();
         PersistentEntity persistentEntity = mappingContext.getPersistentEntity(type.getName());
         AbstractPersistenceEvent grailsEvent;
@@ -368,6 +366,7 @@ public class ClosureEventTriggeringInterceptor
         return cancelled;
     }
 
+    @Override
     public void onPostUpdate(PostUpdateEvent hibernateEvent) {
         Object entity = hibernateEvent.getEntity();
         activateDirtyChecking(entity);
@@ -375,6 +374,7 @@ public class ClosureEventTriggeringInterceptor
                 hibernateEvent, new org.grails.datastore.mapping.engine.event.PostUpdateEvent(this.datastore, entity));
     }
 
+    @Override
     public boolean onPreDelete(PreDeleteEvent hibernateEvent) {
         AbstractPersistenceEvent event = new org.grails.datastore.mapping.engine.event.PreDeleteEvent(
                 this.datastore, hibernateEvent.getEntity());
@@ -382,6 +382,7 @@ public class ClosureEventTriggeringInterceptor
         return event.isCancelled();
     }
 
+    @Override
     public void onPostDelete(PostDeleteEvent hibernateEvent) {
         org.grails.datastore.mapping.engine.event.PostDeleteEvent grailsEvent =
                 new org.grails.datastore.mapping.engine.event.PostDeleteEvent(
@@ -399,7 +400,7 @@ public class ClosureEventTriggeringInterceptor
     }
 
     @Override
-    public void setApplicationContext(ApplicationContext applicationContext) throws BeansException {
+    public void setApplicationContext(@Nullable ApplicationContext applicationContext) throws BeansException {
         if (applicationContext instanceof ConfigurableApplicationContext) {
 
             this.eventPublisher = new ConfigurableApplicationContextEventPublisher(
@@ -411,15 +412,15 @@ public class ClosureEventTriggeringInterceptor
         if (entity instanceof DirtyCheckable && proxyHandler.isInitialized(entity)) {
             PersistentEntity persistentEntity = mappingContext.getPersistentEntity(
                     Hibernate.getClass(entity).getName());
-            entity = proxyHandler.unwrap(entity);
-            DirtyCheckable dirtyCheckable = (DirtyCheckable) entity;
+            Object unwrapped = proxyHandler.unwrap(entity);
+            DirtyCheckable dirtyCheckable = (DirtyCheckable) unwrapped;
             Map<String, Object> dirtyCheckingState =
-                    persistentEntity.getReflector().getDirtyCheckingState(entity);
+                    persistentEntity.getReflector().getDirtyCheckingState(unwrapped);
             if (dirtyCheckingState == null) {
                 dirtyCheckable.trackChanges();
-                for (Embedded association : persistentEntity.getEmbedded()) {
+                for (Embedded<?> association : persistentEntity.getEmbedded()) {
                     if (DirtyCheckable.class.isAssignableFrom(association.getType())) {
-                        Object embedded = association.getReader().read(entity);
+                        Object embedded = association.getReader().read(unwrapped);
                         if (embedded != null) {
                             DirtyCheckable embeddedCheck = (DirtyCheckable) embedded;
                             if (embeddedCheck.listDirtyPropertyNames().isEmpty()) {
@@ -430,10 +431,5 @@ public class ClosureEventTriggeringInterceptor
                 }
             }
         }
-    }
-
-    @Override
-    public boolean requiresPostCommitHandling(EntityPersister persister) {
-        return false;
     }
 }

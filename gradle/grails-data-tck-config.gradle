@@ -97,8 +97,8 @@ tasks.withType(Test).configureEach { Test it ->
         }
 
         true
-    }
+        }
 
-    it.testClassesDirs = objects.fileCollection().from(extractTck, testClassesDirs)
-    it.finalizedBy(cleanupTask)
-}
+        it.testClassesDirs = project.files(extractTck.map { task -> task.outputs.files }, sourceSets.test.output.classesDirs)
+        it.finalizedBy(cleanupTask)
+        }

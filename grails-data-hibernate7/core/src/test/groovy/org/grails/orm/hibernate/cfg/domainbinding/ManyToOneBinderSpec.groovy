@@ -16,61 +16,64 @@
  *  specific language governing permissions and limitations
  *  under the License.
  */
-
 package org.grails.orm.hibernate.cfg.domainbinding
 
 import grails.gorm.specs.HibernateGormDatastoreSpec
-import org.grails.orm.hibernate.cfg.CompositeIdentity
-import org.grails.orm.hibernate.cfg.domainbinding.hibernate.GrailsHibernatePersistentEntity
-import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernatePersistentProperty
+import org.grails.orm.hibernate.cfg.HibernateCompositeIdentity
+import org.grails.orm.hibernate.cfg.domainbinding.hibernate.*
 import org.grails.orm.hibernate.cfg.Mapping
-import java.util.Optional
 import org.grails.orm.hibernate.cfg.PersistentEntityNamingStrategy
 import org.grails.orm.hibernate.cfg.PropertyConfig
-import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernateManyToManyProperty
-import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernateManyToOneProperty
+import org.grails.orm.hibernate.cfg.domainbinding.binder.*
 import org.hibernate.mapping.ManyToOne
+import org.hibernate.mapping.Table
+import org.hibernate.mapping.PersistentClass
+import org.hibernate.mapping.RootClass
+import org.hibernate.mapping.Map as HibernateMap // Use non-sealed Map instead of abstract Collection
+import org.hibernate.boot.spi.MetadataBuildingContext
 import spock.lang.Unroll
-
-import org.grails.orm.hibernate.cfg.domainbinding.binder.CompositeIdentifierToManyToOneBinder
-import org.grails.orm.hibernate.cfg.domainbinding.binder.ManyToOneBinder
-import org.grails.orm.hibernate.cfg.domainbinding.binder.ManyToOneValuesBinder
-import org.grails.orm.hibernate.cfg.domainbinding.binder.SimpleValueBinder
-import org.grails.orm.hibernate.cfg.domainbinding.util.SimpleValueColumnFetcher
 
 class ManyToOneBinderSpec extends HibernateGormDatastoreSpec {
 
+    ManyToOneBinder binder
+    PersistentEntityNamingStrategy namingStrategy = Mock()
+    SimpleValueBinder simpleValueBinder = Mock()
+    ManyToOneValuesBinder manyToOneValuesBinder = Mock()
+    CompositeIdentifierToManyToOneBinder compositeBinder = Mock()
+    MetadataBuildingContext metadataBuildingContext
+
+    def setup() {
+        metadataBuildingContext = getGrailsDomainBinder().getMetadataBuildingContext()
+        binder = new ManyToOneBinder(
+                metadataBuildingContext,
+                namingStrategy,
+                simpleValueBinder,
+                manyToOneValuesBinder,
+                compositeBinder
+        )
+    }
+
     @Unroll
-    def "Test bindManyToOne orchestration for #scenario"() {
+    def "Test bindManyToOne (ManyToOneProperty) orchestration for #scenario"() {
         given:
-        def namingStrategy = Mock(PersistentEntityNamingStrategy)
-        def simpleValueBinder = Mock(SimpleValueBinder)
-        def manyToOneValuesBinder = Mock(ManyToOneValuesBinder)
-        def compositeBinder = Mock(CompositeIdentifierToManyToOneBinder)
-
-        def binder = new ManyToOneBinder(getGrailsDomainBinder().getMetadataBuildingContext(), namingStrategy, simpleValueBinder, manyToOneValuesBinder, compositeBinder)
-
         def association = Mock(HibernateManyToOneProperty)
+        def table = Mock(Table)
         def path = "/test"
-        def mapping = new Mapping()
-        mapping.setIdentity(hasCompositeId ? new CompositeIdentity() : null)
-        def refDomainClass = Mock(GrailsHibernatePersistentEntity) {
-            getMappedForm() >> mapping
-            getHibernateCompositeIdentity() >> Optional.ofNullable(mapping.hasCompositeIdentifier() ? (CompositeIdentity) mapping.getIdentity() : null)
-        }
-        def propertyConfig = new PropertyConfig()
+        def (mapping, refDomainClass) = mockEntity(hasCompositeId)
 
         association.getHibernateAssociatedEntity() >> refDomainClass
+        def propertyConfig = Mock(PropertyConfig)
         association.getMappedForm() >> propertyConfig
+        association.getHibernateMappedForm() >> propertyConfig
 
         when:
-        def result = binder.bindManyToOne(association, null, path)
+        def result = binder.bindManyToOne(association, table, path)
 
         then:
         result instanceof ManyToOne
         1 * manyToOneValuesBinder.bindManyToOneValues(association, _ as ManyToOne)
-        compositeBinderCalls * compositeBinder.bindCompositeIdentifierToManyToOne(association as HibernatePersistentProperty, _ as ManyToOne, _, refDomainClass, path)
-        simpleValueBinderCalls * simpleValueBinder.bindSimpleValue(association as HibernatePersistentProperty, null, _ as ManyToOne, path)
+        compositeBinderCalls * compositeBinder.bindCompositeIdentifierToManyToOne(association, _ as ManyToOne, _, refDomainClass, path)
+        simpleValueBinderCalls * simpleValueBinder.bindSimpleValue(association, null, _ as ManyToOne, path)
 
         where:
         scenario                 | hasCompositeId | compositeBinderCalls | simpleValueBinderCalls
@@ -78,40 +81,83 @@ class ManyToOneBinderSpec extends HibernateGormDatastoreSpec {
         "a simple identifier"    | false          | 0                    | 1
     }
 
-    def "Test circular many-to-many binding"() {
+    def "Test bindManyToOne (ManyToManyProperty) with circular logic"() {
         given:
-        def namingStrategy = Mock(PersistentEntityNamingStrategy)
-        def simpleValueBinder = Mock(SimpleValueBinder)
-        def manyToOneValuesBinder = Mock(ManyToOneValuesBinder)
-        def compositeBinder = Mock(CompositeIdentifierToManyToOneBinder)
-
-        def binder = new ManyToOneBinder(getGrailsDomainBinder().getMetadataBuildingContext(), namingStrategy, simpleValueBinder, manyToOneValuesBinder, compositeBinder)
-
         def property = Mock(HibernateManyToManyProperty)
-        def mapping = new Mapping()
-        mapping.setColumns(new HashMap<String, PropertyConfig>())
-        def ownerEntity = Mock(GrailsHibernatePersistentEntity) {
-            getMappedForm() >> mapping
-            getHibernateCompositeIdentity() >> Optional.empty()
-        }
-        def propertyConfig = new PropertyConfig()
+        def otherSide = Mock(HibernateManyToManyProperty)
+        def table = Mock(Table)
+        def collectionTable = new Table("coll_table")
 
-        property.isCircular() >> true
-        property.getOwner() >> ownerEntity
-        property.getHibernateOwner() >> ownerEntity
-        property.getName() >> "myCircularProp"
-        property.getMappedForm() >> propertyConfig
-        namingStrategy.resolveColumnName("myCircularProp") >> "my_circular_prop"
+        // FIX: Provide real objects for the Map constructor
+        PersistentClass ownerClass = new RootClass(metadataBuildingContext)
+        def realCollection = new HibernateMap(metadataBuildingContext, ownerClass)
+        realCollection.setCollectionTable(collectionTable)
+
+        property.getCollection() >> realCollection
+        property.getHibernateInverseSide() >> otherSide
+
+        def (mapping, ownerEntity) = mockEntity(false)
+        mapping.setColumns([:])
+
+        def propertyConfig = Mock(PropertyConfig)
+        propertyConfig.hasJoinKeyMapping() >> false
+
+        otherSide.getHibernateOwner() >> ownerEntity
+        otherSide.getOwner() >> ownerEntity
+        ownerEntity.getName() >> "OwnerEntity"
+
+        otherSide.isCircular() >> true
+        otherSide.getName() >> "circularProp"
+        otherSide.getMappedForm() >> propertyConfig
+        otherSide.getHibernateMappedForm() >> propertyConfig
+        mapping.getColumns().put("circularProp", propertyConfig)
+
+        namingStrategy.resolveColumnName("circularProp") >> "circular_prop"
 
         when:
-        def result = binder.bindManyToOne(property, null, "/test")
+        def result = binder.bindManyToOne(property, "/test")
+
+        then:
+        result instanceof ManyToOne
+        result.getReferencedEntityName() == "OwnerEntity"
+        result.getTable() == collectionTable
+        1 * manyToOneValuesBinder.bindManyToOneValues(otherSide, _ as ManyToOne)
+        1 * simpleValueBinder.bindSimpleValue(otherSide, null, _ as ManyToOne, "/test")
+
+        mapping.getColumns().get("circularProp") == propertyConfig
+        1 * propertyConfig.setJoinTable({ it.key.name == "circular_prop_id" })
+    }
+
+    def "Test bindManyToOne (OneToOneProperty)"() {
+        given:
+        def property = Mock(HibernateOneToOneProperty)
+        def table = Mock(Table)
+        def (mapping, refDomainClass) = mockEntity(false)
+
+        property.getTable() >> table
+        property.getHibernateAssociatedEntity() >> refDomainClass
+        def propertyConfig = Mock(PropertyConfig)
+        property.getMappedForm() >> propertyConfig
+        property.getHibernateMappedForm() >> propertyConfig
+
+        when:
+        def result = binder.bindManyToOne(property, "/test/path")
 
         then:
         result instanceof ManyToOne
         1 * manyToOneValuesBinder.bindManyToOneValues(property, _ as ManyToOne)
-        1 * simpleValueBinder.bindSimpleValue(property as HibernatePersistentProperty, null, _ as ManyToOne, "/test")
-        def resultConfig = mapping.getColumns().get("myCircularProp")
-        resultConfig != null
-        resultConfig.getJoinTable().getKey().getName() == "my_circular_prop_id"
+        1 * simpleValueBinder.bindSimpleValue(property, null, _ as ManyToOne, "/test/path")
+    }
+
+    private List mockEntity(boolean composite) {
+        def mapping = new Mapping()
+        def compositeId = composite ? new HibernateCompositeIdentity() : null
+        mapping.setIdentity(compositeId)
+
+        def entity = Mock(GrailsHibernatePersistentEntity) {
+            getMappedForm() >> mapping
+            getHibernateCompositeIdentity() >> Optional.ofNullable(compositeId)
+        }
+        return [mapping, entity]
     }
 }

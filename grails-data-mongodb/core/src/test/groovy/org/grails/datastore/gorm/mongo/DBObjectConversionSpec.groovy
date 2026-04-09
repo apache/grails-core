@@ -18,13 +18,14 @@
  */
 package org.grails.datastore.gorm.mongo
 
+import org.apache.grails.data.mongo.core.MongoDatastoreSpec
+
 import org.apache.grails.data.mongo.core.GrailsDataMongoTckManager
-import org.apache.grails.data.testing.tck.base.GrailsDataTckSpec
 import spock.lang.Ignore
 
 // moved to 'gorm-ex
 @Ignore
-class DBObjectConversionSpec extends GrailsDataTckSpec<GrailsDataMongoTckManager> {
+class DBObjectConversionSpec extends MongoDatastoreSpec {
     void setupSpec() {
         manager.addAllDomainClasses([Boat, Sailor, Captain])
     }

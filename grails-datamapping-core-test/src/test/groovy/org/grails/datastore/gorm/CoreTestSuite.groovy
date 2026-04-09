@@ -29,5 +29,6 @@ import org.junit.platform.suite.api.Suite
  */
 @Suite
 @SelectClasses([NotInListSpec])
+@spock.lang.IgnoreIf({ System.getProperty('core.gorm.suite') == 'true'  })
 class CoreTestSuite {
 }

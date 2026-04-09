@@ -22,7 +22,6 @@ import java.util.Optional;
 
 import jakarta.annotation.Nonnull;
 
-import org.hibernate.FetchMode;
 import org.hibernate.mapping.Collection;
 
 import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernateToManyProperty;
@@ -31,9 +30,9 @@ import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernateToManyPrope
 public class CollectionForPropertyConfigBinder {
 
     /** Bind collection for property config. */
-    public void bindCollectionForPropertyConfig(
-            @Nonnull Collection collection, @Nonnull HibernateToManyProperty property) {
-        collection.setLazy(!FetchMode.JOIN.equals(property.getFetchMode()));
+    public void bindCollectionForPropertyConfig(@Nonnull HibernateToManyProperty property) {
+        Collection collection = property.getCollection();
+        collection.setLazy(property.isLazy());
         Optional.ofNullable(property.getLazy()).ifPresent(collection::setExtraLazy);
     }
 }

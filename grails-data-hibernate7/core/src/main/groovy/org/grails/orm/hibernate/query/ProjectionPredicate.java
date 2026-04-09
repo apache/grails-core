@@ -25,11 +25,6 @@ import org.grails.datastore.mapping.query.Query;
 
 public class ProjectionPredicate implements Predicate<Query.Projection> {
 
-    @Override
-    public boolean test(Query.Projection projection) {
-        return combinePredicates(projectionPredicates).test(projection);
-    }
-
     private final Predicate<Query.Projection> idProjectionPredicate =
             projection -> projection instanceof Query.IdProjection;
     private final Predicate<Query.Projection> distinctProjectionPredicate =
@@ -65,5 +60,10 @@ public class ProjectionPredicate implements Predicate<Query.Projection> {
     @SafeVarargs
     private static <T> Predicate<T> combinePredicates(Predicate<T>... predicates) {
         return Arrays.stream(predicates).reduce(Predicate::or).orElse(x -> true);
+    }
+
+    @Override
+    public boolean test(Query.Projection projection) {
+        return combinePredicates(projectionPredicates).test(projection);
     }
 }

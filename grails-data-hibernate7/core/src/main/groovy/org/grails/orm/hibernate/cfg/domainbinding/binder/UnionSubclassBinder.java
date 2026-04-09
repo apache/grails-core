@@ -85,10 +85,7 @@ public class UnionSubclassBinder {
         unionSubclass.setClassName(subClass.getName());
 
         if (LOG.isInfoEnabled()) {
-            LOG.info("Mapping union-subclass: " +
-                    unionSubclass.getEntityName() +
-                    " -> " +
-                    unionSubclass.getTable().getName());
+            LOG.info("Mapping union-subclass: {} -> {}", unionSubclass.getEntityName(), unionSubclass.getTable().getName());
         }
         return unionSubclass;
     }

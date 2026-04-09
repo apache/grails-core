@@ -38,6 +38,12 @@ public abstract class CollectionType {
     /** The building context. */
     protected final MetadataBuildingContext buildingContext;
 
+    /** Creates a new {@link CollectionType} instance. */
+    protected CollectionType(Class<?> clazz, MetadataBuildingContext buildingContext) {
+        this.clazz = clazz;
+        this.buildingContext = buildingContext;
+    }
+
     /** Create collection. */
     public abstract Collection createCollection(PersistentClass owner);
 
@@ -45,14 +51,11 @@ public abstract class CollectionType {
     public Collection create(HibernateToManyProperty property, PersistentClass owner) throws MappingException {
         Collection coll = createCollection(owner);
         coll.setCollectionTable(owner.getTable());
-        coll.setTypeName(getTypeName(property));
+        String typeName = getTypeName(property);
+        if (typeName != null && !clazz.getName().equals(typeName)) {
+            coll.setTypeName(typeName);
+        }
         return coll;
-    }
-
-    /** Creates a new {@link CollectionType} instance. */
-    protected CollectionType(Class<?> clazz, MetadataBuildingContext buildingContext) {
-        this.clazz = clazz;
-        this.buildingContext = buildingContext;
     }
 
     @Override

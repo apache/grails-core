@@ -27,6 +27,7 @@ import org.grails.orm.hibernate.cfg.PropertyConfig;
 
 /** Hibernate implementation of {@link org.grails.datastore.mapping.model.types.ManyToOne} */
 public class HibernateManyToOneProperty extends ManyToOneWithMapping<PropertyConfig> implements HibernateToOneProperty {
+
     public HibernateManyToOneProperty(PersistentEntity entity, MappingContext context, PropertyDescriptor property) {
         super(entity, context, property);
     }
@@ -36,10 +37,12 @@ public class HibernateManyToOneProperty extends ManyToOneWithMapping<PropertyCon
         return (GrailsHibernatePersistentEntity) super.getAssociatedEntity();
     }
 
+    @Override
     public String getReferencedEntityName() {
         return getHibernateAssociatedEntity().getName();
     }
 
+    @Override
     public boolean isValidHibernateManyToOne() {
 
         validateAssociation();

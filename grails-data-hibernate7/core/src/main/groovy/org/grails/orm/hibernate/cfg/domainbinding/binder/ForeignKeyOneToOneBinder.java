@@ -49,9 +49,9 @@ public class ForeignKeyOneToOneBinder {
     /**
      * Binds the one-to-one property as a {@link ManyToOne} value and applies unique-key constraints.
      */
-    public ManyToOne bind(HibernateOneToOneProperty property, org.hibernate.mapping.Table table, String path) {
+    public ManyToOne bind(HibernateOneToOneProperty property, String path) {
         GrailsHibernatePersistentEntity refDomainClass = property.getHibernateAssociatedEntity();
-        ManyToOne manyToOne = manyToOneBinder.doBind(property, refDomainClass, table, path);
+        ManyToOne manyToOne = manyToOneBinder.bindManyToOne(property, path);
         if (refDomainClass.getHibernateCompositeIdentity().isEmpty()) {
             bindUniqueKey(property, manyToOne);
         }
@@ -59,7 +59,7 @@ public class ForeignKeyOneToOneBinder {
     }
 
     private void bindUniqueKey(HibernateOneToOneProperty property, ManyToOne manyToOne) {
-        PropertyConfig config = property.getMappedForm();
+        PropertyConfig config = property.getHibernateMappedForm();
         manyToOne.setAlternateUniqueKey(true);
         Column c = simpleValueColumnFetcher.getColumnForSimpleValue(manyToOne);
         if (c == null) {

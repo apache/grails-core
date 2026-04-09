@@ -135,7 +135,7 @@ class HibernateMappingFactorySpec extends HibernateGormDatastoreSpec {
         PersistentEntity entity = mappingContext.getPersistentEntity(MappingFactoryBook.name)
 
         then:
-        entity.mapping.identifier.generator == ValueGenerator.NATIVE
+        entity.mapping.identifier.generator == ValueGenerator.IDENTITY
     }
 
     void "createIdentityMapping resolves CUSTOM generator for a custom class name"() {

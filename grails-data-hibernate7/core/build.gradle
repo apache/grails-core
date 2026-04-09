@@ -46,6 +46,9 @@ dependencies {
     api 'org.apache.groovy:groovy'
     api project(':grails-datamapping-core')
     api 'org.springframework:spring-orm'
+    compileOnly 'org.springframework:spring-webmvc'
+    compileOnly 'jakarta.servlet:jakarta.servlet-api'
+    implementation "net.bytebuddy:byte-buddy:1.18.7"
     api "org.hibernate.orm:hibernate-core:$hibernate7Version", {
         exclude group:'commons-logging', module:'commons-logging'
         exclude group:'com.h2database', module:'h2'
@@ -61,6 +64,8 @@ dependencies {
         exclude group:'commons-collections', module:'commons-collections'
         exclude group:'org.slf4j', module:'slf4j-api'
     }
+    api 'jakarta.validation:jakarta.validation-api:3.1.0'
+    api 'javax.validation:validation-api:2.0.1.Final'
     api ('org.checkerframework:checker-qual:3.48.4')
 
    api( 'org.jboss:jandex:3.2.3')
@@ -81,7 +86,6 @@ dependencies {
         exclude group:'xml-apis', module:'xml-apis'
     }
 
-    testImplementation platform('org.testcontainers:testcontainers-bom:2.0.3')
     testImplementation 'org.testcontainers:testcontainers'
     testImplementation 'org.postgresql:postgresql:42.7.5'
     testImplementation 'org.testcontainers:postgresql'
@@ -126,6 +130,11 @@ dependencies {
 
 }
 
+sourceSets {
+    test {
+        groovy.srcDirs = ['src/test/groovy']
+    }
+}
 
 apply {
     from rootProject.layout.projectDirectory.file('gradle/hibernate7-test-config.gradle')
@@ -142,10 +151,24 @@ jacocoTestReport {
     reports {
         xml.required = true
         html.required = true
+        csv.required = true
     }
 }
 
-// TODO: Re-enable SpotBugs when bugs have been fixed (build fails otherwise)
-//tasks.named('check') {
-//    dependsOn 'spotbugsMain'
-//}
+// spotbugs {
+//     effort = Effort.valueOf('MAX')
+//     reportLevel = Confidence.valueOf('HIGH')// or Confidence.MEDIUM, Confidence.LOW
+//     // other settings...
+// }
+//
+// tasks.withType(com.github.spotbugs.snom.SpotBugsTask).configureEach {
+//     onlyIf { project.hasProperty('runCodeStyle') }
+//     reports {
+//         xml.enabled = false
+//         html.enabled = true     // → nice HTML report in build/reports/spotbugs
+//     }
+// }
+//
+// tasks.named('check') {
+//     dependsOn 'spotbugsMain'
+// }

@@ -20,6 +20,7 @@
 package functionaltests
 
 class BookHibernateSpec extends grails.test.hibernate.HibernateSpec {
+
     def setup() {
         new Book(title: 'foo').save()
     }

@@ -18,7 +18,10 @@
  */
 package org.grails.orm.hibernate.cfg.domainbinding.hibernate
 
+import java.beans.PropertyDescriptor
+
 import groovy.transform.CompileStatic
+
 import org.grails.datastore.mapping.config.AbstractGormMappingFactory
 import org.grails.datastore.mapping.config.groovy.MappingConfigurationBuilder
 import org.grails.datastore.mapping.engine.types.CustomTypeMarshaller
@@ -38,11 +41,9 @@ import org.grails.datastore.mapping.model.types.Simple
 import org.grails.datastore.mapping.model.types.TenantId
 import org.grails.datastore.mapping.model.types.ToOne
 import org.grails.datastore.mapping.reflect.ClassUtils
-import org.grails.orm.hibernate.cfg.Identity
+import org.grails.orm.hibernate.cfg.HibernateSimpleIdentity
 import org.grails.orm.hibernate.cfg.Mapping
 import org.grails.orm.hibernate.cfg.PropertyConfig
-
-import java.beans.PropertyDescriptor
 
 /**
  * The {@link AbstractGormMappingFactory} implementation for Hibernate, responsible for
@@ -59,7 +60,21 @@ class HibernateMappingFactory extends AbstractGormMappingFactory<Mapping, Proper
     @Override
     org.grails.datastore.mapping.model.types.Identity<PropertyConfig> createIdentity(
             PersistentEntity owner, MappingContext context, PropertyDescriptor pd) {
-        HibernateIdentityProperty identity = new HibernateIdentityProperty(owner, context, pd)
+        HibernateSimpleIdentityProperty identity = new HibernateSimpleIdentityProperty(owner, context, pd)
+        identity.setMapping(createPropertyMapping(identity, owner))
+        identity
+    }
+
+    HibernateSimpleIdentityProperty createSimpleIdentityProperty(
+            PersistentEntity owner, MappingContext context, PropertyDescriptor pd) {
+        HibernateSimpleIdentityProperty identity = new HibernateSimpleIdentityProperty(owner, context, pd)
+        identity.setMapping(createPropertyMapping(identity, owner))
+        identity
+    }
+
+    HibernateCompositeIdentityProperty createCompositeIdentityProperty(
+            PersistentEntity owner, MappingContext context, PropertyDescriptor pd) {
+        HibernateCompositeIdentityProperty identity = new HibernateCompositeIdentityProperty(owner, context, pd)
         identity.setMapping(createPropertyMapping(identity, owner))
         identity
     }
@@ -166,17 +181,17 @@ class HibernateMappingFactory extends AbstractGormMappingFactory<Mapping, Proper
     @Override
     IdentityMapping createIdentityMapping(ClassMapping classMapping) {
         Mapping mappedForm = (Mapping) createMappedForm(classMapping.entity)
-        HibernateIdentity identity = mappedForm.identity
+        HibernatePropertyIdentity identity = mappedForm.identity
         ValueGenerator generator
 
-        if (identity instanceof Identity) {
-            Identity id = (Identity) identity
+        if (identity instanceof HibernateSimpleIdentity) {
+            HibernateSimpleIdentity id = (HibernateSimpleIdentity) identity
             String generatorName = id.generator
             if (generatorName != null) {
                 ValueGenerator resolvedGenerator
                 try {
                     resolvedGenerator = ValueGenerator.valueOf(generatorName.toUpperCase(Locale.ENGLISH))
-                } catch (IllegalArgumentException e) {
+                } catch (IllegalArgumentException ignored) {
                     if (generatorName.equalsIgnoreCase('table') || ClassUtils.isPresent(generatorName)) {
                         resolvedGenerator = ValueGenerator.CUSTOM
                     } else {

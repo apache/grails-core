@@ -49,6 +49,7 @@ import org.grails.orm.hibernate.HibernateDatastore;
  * @since 6.0
  */
 public class MultiTenantEventListener implements PersistenceEventListener {
+
     @Override
     public boolean supportsEventType(@Nullable Class<? extends ApplicationEvent> eventType) {
         return org.grails.datastore.gorm.multitenancy.MultiTenantEventListener.SUPPORTED_EVENTS.contains(eventType);
@@ -95,8 +96,7 @@ public class MultiTenantEventListener implements PersistenceEventListener {
                                 persistenceEvent.getEntityAccess().setProperty(tenantId.getName(), currentId);
                             } catch (Exception e) {
                                 throw new TenantException(
-                                        "Could not assigned tenant id [" +
-                                                currentId +
+                                        "Could not assigned tenant id [" + currentId +
                                                 "] to property [" +
                                                 tenantId +
                                                 "], probably due to a type mismatch. You should return a type from the tenant resolver that matches the property type of the tenant id!: " +

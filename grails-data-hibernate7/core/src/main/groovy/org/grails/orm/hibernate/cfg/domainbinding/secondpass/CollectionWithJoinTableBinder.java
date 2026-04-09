@@ -23,11 +23,12 @@ import jakarta.annotation.Nonnull;
 import org.hibernate.mapping.Collection;
 import org.hibernate.mapping.SimpleValue;
 
-import org.grails.orm.hibernate.cfg.CompositeIdentity;
+import org.grails.orm.hibernate.cfg.HibernateCompositeIdentity;
 import org.grails.orm.hibernate.cfg.PersistentEntityNamingStrategy;
 import org.grails.orm.hibernate.cfg.domainbinding.binder.CollectionForPropertyConfigBinder;
 import org.grails.orm.hibernate.cfg.domainbinding.binder.CompositeIdentifierToManyToOneBinder;
 import org.grails.orm.hibernate.cfg.domainbinding.binder.SimpleValueColumnBinder;
+import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernateBasicProperty;
 import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernateToManyProperty;
 
 import static org.grails.orm.hibernate.cfg.domainbinding.binder.GrailsDomainBinder.EMPTY_PATH;
@@ -60,18 +61,18 @@ public class CollectionWithJoinTableBinder {
     }
 
     /** Bind collection with join table. */
-    public void bindCollectionWithJoinTable(@Nonnull HibernateToManyProperty property, @Nonnull Collection collection) {
-
+    public void bindCollectionWithJoinTable(@Nonnull HibernateToManyProperty property) {
+        Collection collection = property.getCollection();
         collection.setInverse(false);
         SimpleValue element;
-        if (property.isBasic()) {
-            element = basicCollectionElementBinder.bind(property, collection);
+        if (property instanceof HibernateBasicProperty basic) {
+            element = basicCollectionElementBinder.bind(basic);
         } else {
-            element = unidirectionalOneToManyInverseValuesBinder.bind(property, collection);
+            element = unidirectionalOneToManyInverseValuesBinder.bind(property);
             final var domainClass = property.getHibernateAssociatedEntity();
             if (domainClass != null) {
                 if (domainClass.getHibernateCompositeIdentity().isPresent()) {
-                    CompositeIdentity ci =
+                    HibernateCompositeIdentity ci =
                             domainClass.getHibernateCompositeIdentity().get();
                     compositeIdentifierToManyToOneBinder.bindCompositeIdentifierToManyToOne(
                             property, element, ci, domainClass, EMPTY_PATH);
@@ -83,6 +84,6 @@ public class CollectionWithJoinTableBinder {
         }
 
         collection.setElement(element);
-        collectionForPropertyConfigBinder.bindCollectionForPropertyConfig(collection, property);
+        collectionForPropertyConfigBinder.bindCollectionForPropertyConfig(property);
     }
 }

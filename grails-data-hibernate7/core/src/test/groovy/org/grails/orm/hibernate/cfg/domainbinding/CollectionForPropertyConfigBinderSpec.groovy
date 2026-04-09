@@ -51,9 +51,11 @@ class CollectionForPropertyConfigBinderSpec extends HibernateGormDatastoreSpec {
         and: "the property is stubbed"
         property.getFetchMode() >> fetchMode
         property.getLazy() >> lazySetting
+        property.getCollection() >> collection
+        property.isLazy() >> expectedIsLazy
 
         when: "the binder is applied"
-        binder.bindCollectionForPropertyConfig(collection, property)
+        binder.bindCollectionForPropertyConfig(property)
 
         then: "the collection's lazy and extraLazy properties are set according to the binder's logic"
         collection.isLazy() == expectedIsLazy

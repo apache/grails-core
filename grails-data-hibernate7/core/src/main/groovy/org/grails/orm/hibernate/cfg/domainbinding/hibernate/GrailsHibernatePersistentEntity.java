@@ -28,15 +28,16 @@ import java.util.stream.Stream;
 
 import jakarta.annotation.Nonnull;
 
+import org.hibernate.FetchMode;
 import org.hibernate.boot.spi.InFlightMetadataCollector;
 import org.hibernate.mapping.PersistentClass;
 
 import org.grails.datastore.mapping.model.PersistentEntity;
 import org.grails.datastore.mapping.model.PersistentProperty;
 import org.grails.datastore.mapping.model.config.GormProperties;
-import org.grails.orm.hibernate.cfg.CompositeIdentity;
 import org.grails.orm.hibernate.cfg.DiscriminatorConfig;
-import org.grails.orm.hibernate.cfg.Identity;
+import org.grails.orm.hibernate.cfg.HibernateCompositeIdentity;
+import org.grails.orm.hibernate.cfg.HibernateSimpleIdentity;
 import org.grails.orm.hibernate.cfg.Mapping;
 import org.grails.orm.hibernate.cfg.PersistentEntityNamingStrategy;
 import org.grails.orm.hibernate.cfg.domainbinding.util.ConfigureDerivedPropertiesConsumer;
@@ -47,6 +48,14 @@ import static org.grails.orm.hibernate.cfg.domainbinding.binder.GrailsDomainBind
 
 /** Common interface for Hibernate persistent entities */
 public interface GrailsHibernatePersistentEntity extends PersistentEntity {
+
+    private static String resolveDiscriminatorValue(DiscriminatorConfig discriminatorConfig) {
+        return discriminatorConfig.getColumn() != null ?
+                discriminatorConfig.getColumn().getName() :
+                discriminatorConfig.getFormula();
+    }
+
+    @Override
     Mapping getMappedForm();
 
     @Nonnull
@@ -108,18 +117,18 @@ public interface GrailsHibernatePersistentEntity extends PersistentEntity {
                 .collect(Collectors.toSet());
     }
 
-    default HibernateIdentity getHibernateIdentity() {
+    default HibernatePropertyIdentity getHibernateIdentity() {
         return Optional.ofNullable(getMappedForm())
                 .map(Mapping::getIdentity)
                 .or(this::resolveCompositeIdentity)
                 .orElseGet(this::getDefaultIdentity);
     }
 
-    private Optional<HibernateIdentity> resolveCompositeIdentity() {
+    private Optional<HibernatePropertyIdentity> resolveCompositeIdentity() {
         return Optional.ofNullable(getCompositeIdentity())
                 .filter(compositeId -> compositeId.length > 1)
                 .map(compositeId -> {
-                    CompositeIdentity ci = new CompositeIdentity();
+                    HibernateCompositeIdentity ci = new HibernateCompositeIdentity();
                     ci.setPropertyNames(java.util.Arrays.stream(compositeId)
                             .map(PersistentProperty::getName)
                             .toArray(String[]::new));
@@ -127,8 +136,8 @@ public interface GrailsHibernatePersistentEntity extends PersistentEntity {
                 });
     }
 
-    private @Nonnull Identity getDefaultIdentity() {
-        Identity identity = new Identity();
+    private @Nonnull HibernateSimpleIdentity getDefaultIdentity() {
+        HibernateSimpleIdentity identity = new HibernateSimpleIdentity();
         identity.setName(Optional.ofNullable(getIdentity())
                 .map(PersistentProperty::getName)
                 .orElseGet(this::getName));
@@ -141,12 +150,12 @@ public interface GrailsHibernatePersistentEntity extends PersistentEntity {
     @Override
     HibernatePersistentProperty[] getCompositeIdentity();
 
-    default Optional<CompositeIdentity> getHibernateCompositeIdentity() {
+    default Optional<HibernateCompositeIdentity> getHibernateCompositeIdentity() {
         return Optional.ofNullable(getMappedForm())
                 .filter(Mapping::hasCompositeIdentifier)
                 .map(Mapping::getIdentity)
-                .filter(CompositeIdentity.class::isInstance)
-                .map(CompositeIdentity.class::cast);
+                .filter(HibernateCompositeIdentity.class::isInstance)
+                .map(HibernateCompositeIdentity.class::cast);
     }
 
     default String getDiscriminatorValue() {
@@ -156,9 +165,9 @@ public interface GrailsHibernatePersistentEntity extends PersistentEntity {
                 .orElse(getJavaClass().getSimpleName());
     }
 
-    void setDataSourceName(String dataSourceName);
-
     String getDataSourceName();
+
+    void setDataSourceName(String dataSourceName);
 
     boolean forGrailsDomainMapping(String dataSourceName);
 
@@ -233,9 +242,7 @@ public interface GrailsHibernatePersistentEntity extends PersistentEntity {
     }
 
     default List<HibernatePersistentEntity> getChildEntities(String dataSourceName) {
-        return getMappingContext()
-                .getDirectChildEntities(this)
-                .stream()
+        return getMappingContext().getDirectChildEntities(this).stream()
                 .filter(HibernatePersistentEntity.class::isInstance)
                 .map(HibernatePersistentEntity.class::cast)
                 .filter(persistentEntity -> persistentEntity.usesConnectionSource(dataSourceName))
@@ -300,12 +307,6 @@ public interface GrailsHibernatePersistentEntity extends PersistentEntity {
                 .orElse(JPA_DEFAULT_DISCRIMINATOR_TYPE);
     }
 
-    private static String resolveDiscriminatorValue(DiscriminatorConfig discriminatorConfig) {
-        return discriminatorConfig.getColumn() != null ?
-                discriminatorConfig.getColumn().getName() :
-                discriminatorConfig.getFormula();
-    }
-
     default List<HibernatePersistentProperty> getHibernatePersistentProperties() {
         var properties = new java.util.ArrayList<>(getPersistentProperties().stream()
                 .filter(HibernatePersistentProperty.class::isInstance)
@@ -314,7 +315,7 @@ public interface GrailsHibernatePersistentEntity extends PersistentEntity {
         properties.sort((p1, p2) -> {
             if (p1 instanceof org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernateEmbeddedProperty &&
                     !(p2 instanceof
-                                                        org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernateEmbeddedProperty)) {
+                            org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernateEmbeddedProperty)) {
                 return -1;
             } else if (!(p1 instanceof org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernateEmbeddedProperty) &&
                     p2 instanceof org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernateEmbeddedProperty) {
@@ -329,7 +330,32 @@ public interface GrailsHibernatePersistentEntity extends PersistentEntity {
         return Optional.ofNullable(getMappedForm()).map(Mapping::getComment).orElse(null);
     }
 
-    void setPersistentClass(PersistentClass persistentClass);
+    default Mapping getHibernateMappedForm() {
+        return getMappedForm();
+    }
 
     PersistentClass getPersistentClass();
+
+    void setPersistentClass(PersistentClass persistentClass);
+
+    /**
+     * Determines if the given property should be lazy.
+     *
+     * @param property The property
+     * @return True if it should be lazy
+     */
+    default boolean isLazy(HibernatePersistentProperty property) {
+        if (GormProperties.VERSION.equals(property.getName())) {
+            return false;
+        }
+
+        return Optional.ofNullable(property.getMappedForm())
+                .map(config -> {
+                    if (property instanceof HibernateAssociation && FetchMode.JOIN.equals(config.getFetchMode())) {
+                        return false;
+                    }
+                    return config.getLazy();
+                })
+                .orElseGet(() -> property instanceof HibernateAssociation);
+    }
 }

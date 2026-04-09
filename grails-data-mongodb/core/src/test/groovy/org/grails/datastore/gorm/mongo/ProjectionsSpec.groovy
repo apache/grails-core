@@ -18,17 +18,18 @@
  */
 package org.grails.datastore.gorm.mongo
 
+import org.apache.grails.data.mongo.core.MongoDatastoreSpec
+
 import grails.gorm.DetachedCriteria
 import grails.persistence.Entity
 import org.apache.grails.data.mongo.core.GrailsDataMongoTckManager
-import org.apache.grails.data.testing.tck.base.GrailsDataTckSpec
 import org.bson.types.ObjectId
 import spock.lang.Issue
 
 /**
  * Created by graemerocher on 15/04/14.
  */
-class ProjectionsSpec extends GrailsDataTckSpec<GrailsDataMongoTckManager> {
+class ProjectionsSpec extends MongoDatastoreSpec {
 
     void setupSpec() {
         manager.addAllDomainClasses([Dog])

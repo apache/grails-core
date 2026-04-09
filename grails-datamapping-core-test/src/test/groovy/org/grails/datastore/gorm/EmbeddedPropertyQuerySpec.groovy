@@ -18,15 +18,20 @@
  */
 package org.grails.datastore.gorm
 
+import spock.lang.Requires
+
 import grails.persistence.Entity
 import org.apache.grails.data.simple.core.GrailsDataCoreTckManager
 import org.apache.grails.data.testing.tck.base.GrailsDataTckSpec
 
 class EmbeddedPropertyQuerySpec extends GrailsDataTckSpec<GrailsDataCoreTckManager> {
     void setupSpec() {
-        manager.domainClasses += [Book2, Author2]
+        manager.addAllDomainClasses([Book2, Author2])
     }
 
+    @Requires({ System.getProperty('hibernate5.gorm.suite') == 'true' ||
+            System.getProperty('hibernate7.gorm.suite') == 'true' ||
+            System.getProperty('mongodb.gorm.suite') == 'true' })
     void "Test eq query of embedded properties"() {
         given:
         def book = new Book2(name: 'Game of Thrones', publishPeriod: new Period(startDate: new Date(2012, 1, 1), endDate: new Date(2013, 1, 1)))
@@ -38,6 +43,9 @@ class EmbeddedPropertyQuerySpec extends GrailsDataTckSpec<GrailsDataCoreTckManag
         book != null
     }
 
+    @Requires({ System.getProperty('hibernate5.gorm.suite') == 'true' ||
+            System.getProperty('hibernate7.gorm.suite') == 'true' ||
+            System.getProperty('mongodb.gorm.suite') == 'true' })
     void "Test gt query of embedded properties"() {
         given:
         def book = new Book2(name: 'Game of Thrones', publishPeriod: new Period(startDate: new Date(2012, 1, 1), endDate: new Date(2013, 1, 1)))
@@ -49,6 +57,9 @@ class EmbeddedPropertyQuerySpec extends GrailsDataTckSpec<GrailsDataCoreTckManag
         book != null
     }
 
+    @Requires({ System.getProperty('hibernate5.gorm.suite') == 'true' ||
+            System.getProperty('hibernate7.gorm.suite') == 'true' ||
+            System.getProperty('mongodb.gorm.suite') == 'true' })
     void "Test ge query of embedded properties"() {
         given:
         def book = new Book2(name: 'Game of Thrones', publishPeriod: new Period(startDate: new Date(2012, 1, 1), endDate: new Date(2013, 1, 1)))
@@ -60,6 +71,9 @@ class EmbeddedPropertyQuerySpec extends GrailsDataTckSpec<GrailsDataCoreTckManag
         book != null
     }
 
+    @Requires({ System.getProperty('hibernate5.gorm.suite') == 'true' ||
+            System.getProperty('hibernate7.gorm.suite') == 'true' ||
+            System.getProperty('mongodb.gorm.suite') == 'true' })
     void "Test lt query of embedded properties"() {
         given:
         def book = new Book2(name: 'Game of Thrones', publishPeriod: new Period(startDate: new Date(2012, 1, 1), endDate: new Date(2013, 1, 1)))
@@ -71,6 +85,9 @@ class EmbeddedPropertyQuerySpec extends GrailsDataTckSpec<GrailsDataCoreTckManag
         book != null
     }
 
+    @Requires({ System.getProperty('hibernate5.gorm.suite') == 'true' ||
+            System.getProperty('hibernate7.gorm.suite') == 'true' ||
+            System.getProperty('mongodb.gorm.suite') == 'true' })
     void "Test le query of embedded properties"() {
         given:
         def book = new Book2(name: 'Game of Thrones', publishPeriod: new Period(startDate: new Date(2012, 1, 1), endDate: new Date(2013, 1, 1)))
@@ -82,6 +99,9 @@ class EmbeddedPropertyQuerySpec extends GrailsDataTckSpec<GrailsDataCoreTckManag
         book != null
     }
 
+    @Requires({ System.getProperty('hibernate5.gorm.suite') == 'true' ||
+            System.getProperty('hibernate7.gorm.suite') == 'true' ||
+            System.getProperty('mongodb.gorm.suite') == 'true' })
     void "Test isNotNull query of embedded properties"() {
         given:
         def book = new Book2(name: 'Game of Thrones', publishPeriod: new Period(startDate: new Date(2012, 1, 1), endDate: new Date(2013, 1, 1)))
@@ -95,6 +115,9 @@ class EmbeddedPropertyQuerySpec extends GrailsDataTckSpec<GrailsDataCoreTckManag
         book != null
     }
 
+    @Requires({ System.getProperty('hibernate5.gorm.suite') == 'true' ||
+            System.getProperty('hibernate7.gorm.suite') == 'true' ||
+            System.getProperty('mongodb.gorm.suite') == 'true' })
     void "Test associated query of embedded property"() {
         given:
         def book = new Book2(name: 'Game of Thrones', publishPeriod: new Period(startDate: new Date(2012, 1, 1), endDate: new Date(2013, 1, 1)))

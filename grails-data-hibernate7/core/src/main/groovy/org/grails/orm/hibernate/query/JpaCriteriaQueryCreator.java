@@ -51,6 +51,7 @@ public class JpaCriteriaQueryCreator {
     private final PersistentEntity entity;
     private final DetachedCriteria<?> detachedCriteria;
     private final ConversionService conversionService;
+    private final HibernateQuery hibernateQuery;
 
     public JpaCriteriaQueryCreator(
             Query.ProjectionList projections,
@@ -58,11 +59,22 @@ public class JpaCriteriaQueryCreator {
             PersistentEntity entity,
             DetachedCriteria<?> detachedCriteria,
             ConversionService conversionService) {
+        this(projections, criteriaBuilder, entity, detachedCriteria, conversionService, null);
+    }
+
+    public JpaCriteriaQueryCreator(
+            Query.ProjectionList projections,
+            HibernateCriteriaBuilder criteriaBuilder,
+            PersistentEntity entity,
+            DetachedCriteria<?> detachedCriteria,
+            ConversionService conversionService,
+            HibernateQuery hibernateQuery) {
         this.projections = projections;
         this.criteriaBuilder = criteriaBuilder;
         this.entity = entity;
         this.detachedCriteria = detachedCriteria;
         this.conversionService = conversionService;
+        this.hibernateQuery = hibernateQuery;
     }
 
     public JpaCriteriaQuery<?> createQuery() {
@@ -71,7 +83,11 @@ public class JpaCriteriaQueryCreator {
         var cq = createCriteriaQuery(projectionList);
         Class<?> javaClass = entity.getJavaClass();
         Root<?> root = cq.from(javaClass);
-        var tablesByName = new JpaFromProvider(detachedCriteria, cq, root);
+        var tablesByName = new JpaFromProvider(
+                detachedCriteria,
+                projectionList,
+                hibernateQuery != null ? hibernateQuery.getAliases() : List.of(),
+                root);
         assignProjections(projectionList, cq, tablesByName);
         assignGroupBy(cq, tablesByName);
 
@@ -80,12 +96,15 @@ public class JpaCriteriaQueryCreator {
         return cq;
     }
 
-    @SuppressWarnings("unchecked")
     public <T> void populateSubquery(JpaSubQuery<T> subquery) {
         var projectionList = collectProjections();
         Class<?> javaClass = entity.getJavaClass();
         Root<?> root = subquery.from(javaClass);
-        var tablesByName = new JpaFromProvider(detachedCriteria, subquery, root);
+        var tablesByName = new JpaFromProvider(
+                detachedCriteria,
+                projectionList,
+                hibernateQuery != null ? hibernateQuery.getAliases() : List.of(),
+                root);
 
         var aliasedProjections = new java.util.concurrent.atomic.AtomicInteger(0);
         var projectionExpressions = projectionList.stream()
@@ -129,8 +148,7 @@ public class JpaCriteriaQueryCreator {
                                 .filter(it -> !(it instanceof Query.DistinctProjection ||
                                         it instanceof Query.DistinctPropertyProjection))
                                 .toList()
-                                .size() >
-                        1 ?
+                                .size() > 1 ?
                 criteriaBuilder.createTupleQuery() :
                 criteriaBuilder.createQuery(Object.class);
         projections.stream()

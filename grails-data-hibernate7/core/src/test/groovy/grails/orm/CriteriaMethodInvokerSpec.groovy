@@ -19,14 +19,12 @@
 
 package grails.orm
 
-import groovy.lang.Closure
-import groovy.lang.MissingMethodException
+
+import grails.gorm.DetachedCriteria
+import org.grails.datastore.gorm.query.criteria.DetachedAssociationCriteria
 import org.grails.orm.hibernate.query.HibernateQuery
-import org.grails.orm.hibernate.HibernateSession
-import org.hibernate.Session
+
 import org.hibernate.SessionFactory
-import org.springframework.orm.hibernate5.SessionHolder
-import org.springframework.transaction.support.TransactionSynchronizationManager
 import spock.lang.Specification
 
 class CriteriaMethodInvokerSpec extends Specification {
@@ -34,10 +32,14 @@ class CriteriaMethodInvokerSpec extends Specification {
     HibernateCriteriaBuilder builder = Mock(HibernateCriteriaBuilder)
     HibernateQuery query = Mock(HibernateQuery)
     SessionFactory sessionFactory = Mock(SessionFactory)
+    org.grails.orm.hibernate.HibernateSession session = Mock(org.grails.orm.hibernate.HibernateSession)
+    org.grails.datastore.mapping.model.MappingContext mappingContext = Mock(org.grails.datastore.mapping.model.MappingContext)
     CriteriaMethodInvoker invoker = new CriteriaMethodInvoker(builder)
 
     def setup() {
         builder.getHibernateQuery() >> query
+        query.getSession() >> session
+        session.getMappingContext() >> mappingContext
         _ * builder.isPaginationEnabledList() >> false
     }
 
@@ -146,6 +148,8 @@ class CriteriaMethodInvokerSpec extends Specification {
     void "test invokeMethod handles association query"() {
         given:
         def closure = { eq("amount", 10) }
+        def association = Mock(org.grails.datastore.mapping.model.types.Association)
+        def persistentEntity = Mock(org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernatePersistentEntity)
 
         when:
         invoker.invokeMethod("transactions", [closure] as Object[])
@@ -164,7 +168,12 @@ class CriteriaMethodInvokerSpec extends Specification {
         }
         1 * builder.getClassForAssociationType(_) >> InvokerTransaction
         1 * query.join("transactions", _)
-        1 * query.in("transactions", _)
+        1 * mappingContext.getPersistentEntity(InvokerAccount.name) >> persistentEntity
+        1 * persistentEntity.getPropertyByName("transactions") >> association
+        1 * query.getDetachedCriteria() >> Mock(DetachedCriteria)
+        1 * query.setDetachedCriteria(_ as DetachedAssociationCriteria)
+        1 * query.setDetachedCriteria(_ as DetachedCriteria)
+        1 * query.add(_ as DetachedAssociationCriteria)
     }
 
     void "test invokeMethod handles and/or/not junctions"() {
@@ -225,6 +234,16 @@ class CriteriaMethodInvokerSpec extends Specification {
 
         then:
         1 * builder.singleResult()
+    }
+
+    void "trySimpleCriteria: createAlias delegates to builder.createAlias"() {
+        when:
+        invoker.trySimpleCriteria('createAlias', CriteriaMethods.CREATE_ALIAS, ['transactions', 't'] as Object[])
+        invoker.trySimpleCriteria('createAlias', CriteriaMethods.CREATE_ALIAS, ['transactions', 't', 0] as Object[])
+
+        then:
+        1 * builder.createAlias('transactions', 't')
+        1 * builder.createAlias('transactions', 't', 0)
     }
 
     void "tryPropertyCriteria: fetchMode delegates to builder.fetchMode"() {

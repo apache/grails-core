@@ -27,6 +27,7 @@ import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernatePersistentP
 
 public class ColumnNameForPropertyAndPathFetcher {
 
+    private static final String UNDERSCORE = "_";
     private final PersistentEntityNamingStrategy namingStrategy;
     private final DefaultColumnNameFetcher defaultColumnNameFetcher;
     private final BackticksRemover backticksRemover;
@@ -39,8 +40,6 @@ public class ColumnNameForPropertyAndPathFetcher {
         this.defaultColumnNameFetcher = defaultColumnNameFetcher;
         this.backticksRemover = backticksRemover;
     }
-
-    private static final String UNDERSCORE = "_";
 
     public String getColumnNameForPropertyAndPath(
             HibernatePersistentProperty grailsProp, String path, ColumnConfig cc) {

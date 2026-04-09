@@ -19,12 +19,17 @@
 package org.grails.datastore.gorm
 
 import org.apache.grails.data.testing.tck.domains.ChildEntity
+import org.apache.grails.data.testing.tck.domains.Plant
 import org.apache.grails.data.testing.tck.domains.PlantCategory
 import org.apache.grails.data.testing.tck.domains.TestEntity
 import org.apache.grails.data.simple.core.GrailsDataCoreTckManager
 import org.apache.grails.data.testing.tck.base.GrailsDataTckSpec
 
 class QueryAssociationSpec extends GrailsDataTckSpec<GrailsDataCoreTckManager> {
+
+    void setupSpec() {
+        manager.addAllDomainClasses([TestEntity, ChildEntity, PlantCategory, Plant])
+    }
 
     void "Test query one-to-one association with disjunction"() {
         given:
@@ -44,6 +49,7 @@ class QueryAssociationSpec extends GrailsDataTckSpec<GrailsDataCoreTckManager> {
         results.size() == 1
         results[0].name == "Bob"
     }
+
 
     void "Test query one-to-one association with conjunction"() {
         given:

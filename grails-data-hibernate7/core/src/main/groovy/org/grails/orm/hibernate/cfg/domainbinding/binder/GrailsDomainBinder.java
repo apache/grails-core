@@ -32,13 +32,14 @@ import org.hibernate.service.ServiceRegistry;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import org.grails.datastore.mapping.core.connections.ConnectionSource;
 import org.grails.orm.hibernate.cfg.HibernateMappingContext;
 import org.grails.orm.hibernate.cfg.MappingCacheHolder;
 import org.grails.orm.hibernate.cfg.PersistentEntityNamingStrategy;
 import org.grails.orm.hibernate.cfg.domainbinding.collectionType.CollectionHolder;
 import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernatePersistentEntity;
 import org.grails.orm.hibernate.cfg.domainbinding.util.BackticksRemover;
-import org.grails.orm.hibernate.cfg.domainbinding.util.BasicValueIdCreator;
+import org.grails.orm.hibernate.cfg.domainbinding.util.BasicValueCreator;
 import org.grails.orm.hibernate.cfg.domainbinding.util.ColumnNameForPropertyAndPathFetcher;
 import org.grails.orm.hibernate.cfg.domainbinding.util.DefaultColumnNameFetcher;
 import org.grails.orm.hibernate.cfg.domainbinding.util.GrailsPropertyResolver;
@@ -65,34 +66,47 @@ public class GrailsDomainBinder implements AdditionalMappingContributor, TypeCon
     public static final String ENUM_CLASS_PROP = "enumClass";
     public static final Logger LOG = LoggerFactory.getLogger(GrailsDomainBinder.class);
 
-    /** Provider for naming strategies */
-    private static final NamingStrategyProvider NAMING_STRATEGY_PROVIDER = new NamingStrategyProvider();
-
     public static final String JPA_DEFAULT_DISCRIMINATOR_TYPE = "DTYPE";
 
     private final String sessionFactoryName;
     private final String dataSourceName;
     private final HibernateMappingContext hibernateMappingContext;
+    private final NamingStrategyProvider namingStrategyProvider;
+    private final MappingCacheHolder mappingCacheHolder;
     private PersistentEntityNamingStrategy namingStrategy;
     private MetadataBuildingContext metadataBuildingContext;
-    private final MappingCacheHolder mappingCacheHolder;
-
-    public JdbcEnvironment getJdbcEnvironment() {
-        return metadataBuildingContext.getMetadataCollector().getDatabase().getJdbcEnvironment();
-    }
 
     public GrailsDomainBinder(
             String dataSourceName, String sessionFactoryName, HibernateMappingContext hibernateMappingContext) {
+        this(
+                dataSourceName,
+                sessionFactoryName,
+                hibernateMappingContext,
+                new NamingStrategyProvider(),
+                new MappingCacheHolder());
+    }
+
+    public GrailsDomainBinder(
+            String dataSourceName,
+            String sessionFactoryName,
+            HibernateMappingContext hibernateMappingContext,
+            NamingStrategyProvider namingStrategyProvider,
+            MappingCacheHolder mappingCacheHolder) {
         this.sessionFactoryName = sessionFactoryName;
         this.dataSourceName = dataSourceName;
         this.hibernateMappingContext = hibernateMappingContext;
-        this.mappingCacheHolder = MappingCacheHolder.getInstance();
+        this.namingStrategyProvider = namingStrategyProvider;
+        this.mappingCacheHolder = mappingCacheHolder;
 
         // pre-build mappings
         for (HibernatePersistentEntity persistentEntity :
                 hibernateMappingContext.getHibernatePersistentEntities(dataSourceName)) {
             mappingCacheHolder.cacheMapping(persistentEntity);
         }
+    }
+
+    public JdbcEnvironment getJdbcEnvironment() {
+        return metadataBuildingContext.getMetadataCollector().getDatabase().getJdbcEnvironment();
     }
 
     @Override
@@ -103,7 +117,7 @@ public class GrailsDomainBinder implements AdditionalMappingContributor, TypeCon
             ResourceStreamLocator resourceStreamLocator,
             MetadataBuildingContext buildingContext) {
         this.metadataBuildingContext = new MetadataBuildingContextRootImpl(
-                "default",
+                ConnectionSource.DEFAULT,
                 metadataCollector.getBootstrapContext(),
                 metadataCollector.getMetadataBuildingOptions(),
                 metadataCollector,
@@ -119,7 +133,7 @@ public class GrailsDomainBinder implements AdditionalMappingContributor, TypeCon
         SimpleValueBinder simpleValueBinder =
                 new SimpleValueBinder(metadataBuildingContext, namingStrategy, jdbcEnvironment);
         EnumTypeBinder enumTypeBinder =
-                new EnumTypeBinder(metadataBuildingContext, columnNameForPropertyAndPathFetcher);
+                new EnumTypeBinder(metadataBuildingContext, columnNameForPropertyAndPathFetcher, namingStrategy);
         PropertyFromValueCreator propertyFromValueCreator = new PropertyFromValueCreator();
         ClassBinder classBinder = new ClassBinder(metadataCollector);
         SimpleValueColumnFetcher simpleValueColumnFetcher = new SimpleValueColumnFetcher();
@@ -168,7 +182,7 @@ public class GrailsDomainBinder implements AdditionalMappingContributor, TypeCon
         PropertyBinder propertyBinder = new PropertyBinder();
         SimpleIdBinder simpleIdBinder = new SimpleIdBinder(
                 metadataBuildingContext,
-                new BasicValueIdCreator(jdbcEnvironment, namingStrategy),
+                new BasicValueCreator(metadataBuildingContext, jdbcEnvironment, namingStrategy),
                 simpleValueBinder,
                 propertyBinder);
         IdentityBinder identityBinder = new IdentityBinder(simpleIdBinder, compositeIdBinder);
@@ -221,8 +235,7 @@ public class GrailsDomainBinder implements AdditionalMappingContributor, TypeCon
                 metadataCollector,
                 mappingCacheHolder);
 
-        hibernateMappingContext.getHibernatePersistentEntities(dataSourceName)
-                .stream()
+        hibernateMappingContext.getHibernatePersistentEntities(dataSourceName).stream()
                 .filter(persistentEntity -> persistentEntity.forGrailsDomainMapping(dataSourceName))
                 .forEach(rootBinder::bindRoot);
     }
@@ -237,15 +250,15 @@ public class GrailsDomainBinder implements AdditionalMappingContributor, TypeCon
      * @throws InstantiationException When an error occurred instantiating the strategy
      * @throws IllegalAccessException When an error occurred instantiating the strategy
      */
-    public static void configureNamingStrategy(final String datasourceName, final Object strategy)
+    public void configureNamingStrategy(final String datasourceName, final Object strategy)
             throws ClassNotFoundException, InstantiationException, IllegalAccessException {
-        NAMING_STRATEGY_PROVIDER.configureNamingStrategy(datasourceName, strategy);
+        namingStrategyProvider.configureNamingStrategy(datasourceName, strategy);
     }
 
     public PersistentEntityNamingStrategy getNamingStrategy() {
         if (namingStrategy == null) {
             namingStrategy = new NamingStrategyWrapper(
-                    NAMING_STRATEGY_PROVIDER.getPhysicalNamingStrategy(sessionFactoryName), getJdbcEnvironment());
+                    namingStrategyProvider.getPhysicalNamingStrategy(sessionFactoryName), getJdbcEnvironment());
         }
         return namingStrategy;
     }
@@ -265,4 +278,12 @@ public class GrailsDomainBinder implements AdditionalMappingContributor, TypeCon
 
     @Override
     public void contribute(TypeContributions typeContributions, ServiceRegistry serviceRegistry) {}
+
+    /**
+     * Manually triggers the contribution process. Useful for unit testing
+     * where the full Hibernate bootstrap is not invoked.
+     */
+    public void contribute(InFlightMetadataCollector metadataCollector) {
+        contribute(null, metadataCollector, null, getMetadataBuildingContext());
+    }
 }

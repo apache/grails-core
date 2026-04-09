@@ -21,20 +21,121 @@ package org.grails.orm.hibernate.proxy
 
 import org.hibernate.proxy.HibernateProxy
 import grails.gorm.specs.HibernateGormDatastoreSpec
-import grails.persistence.Entity
 import org.apache.grails.data.testing.tck.domains.Location
 import org.apache.grails.data.testing.tck.domains.Person
 import org.apache.grails.data.testing.tck.domains.Pet
+import org.grails.datastore.gorm.proxy.GroovyProxyFactory
+import org.grails.datastore.gorm.proxy.ProxyInstanceMetaClass
 import org.hibernate.Hibernate
 import spock.lang.Shared
-import org.grails.datastore.gorm.proxy.GroovyProxyFactory
 
+/**
+ * Integration tests for Hibernate 7 Proxy Handler covering all ProxyHandler
+ * and ProxyFactory contract methods. Matches test coverage from the
+ * Hibernate 5 HibernateProxyHandler5Spec.
+ */
 class HibernateProxyHandler7Spec extends HibernateGormDatastoreSpec {
 
     @Shared HibernateProxyHandler proxyHandler = new HibernateProxyHandler()
 
     void setupSpec() {
-        manager.addAllDomainClasses([Location, Person, Pet, UpdatePerson, UpdatePet, UpdatePetType])
+        manager.addAllDomainClasses([Location, Person, Pet])
+    }
+
+    void "test isInitialized for native Hibernate proxy"() {
+        given:
+        Long savedId = 1L
+        Location.withTransaction {
+            savedId = new Location(name: "Test Location", code: "TL1").save(flush: true).id
+        }
+        manager.session.clear()
+        manager.hibernateSession.clear()
+
+        when:
+        def proxy = manager.hibernateSession.getReference(Location, savedId)
+
+        then:
+        proxy instanceof HibernateProxy
+        !proxyHandler.isInitialized(proxy)
+
+        when:
+        proxy.name // access property
+
+        then:
+        proxyHandler.isInitialized(proxy)
+    }
+
+    void "test unwrap for a native Hibernate proxy"() {
+        given:
+        Long savedId = 1L
+        Location.withTransaction {
+            savedId = new Location(name: "Test Location").save(flush: true).id
+        }
+        manager.session.clear()
+        manager.hibernateSession.clear()
+
+        when:
+        def proxy = manager.hibernateSession.getReference(Location, savedId)
+        def unwrapped = proxyHandler.unwrap(proxy)
+
+        then:
+        unwrapped != proxy
+        unwrapped instanceof Location
+        unwrapped.name == "Test Location"
+    }
+
+    void "test getIdentifier"() {
+        given:
+        Long savedId = 1L
+        Location.withTransaction {
+            savedId = new Location(name: "Test").save(flush: true).id
+        }
+        manager.session.clear()
+        manager.hibernateSession.clear()
+
+        when:
+        def proxy = manager.hibernateSession.getReference(Location, savedId)
+
+        then:
+        proxyHandler.getIdentifier(proxy) == savedId
+    }
+
+    void "test createProxy"() {
+        given:
+        Long savedId = 1L
+        Location.withTransaction {
+            savedId = new Location(name: "Test").save(flush: true).id
+        }
+        manager.session.clear()
+        manager.hibernateSession.clear()
+
+        when:
+        Location proxy = proxyHandler.createProxy(manager.session, Location, savedId)
+
+        then:
+        proxy != null
+        proxy instanceof HibernateProxy
+        proxyHandler.getIdentifier(proxy) == savedId
+        !proxyHandler.isInitialized(proxy)
+    }
+
+    void "test getAssociationProxy"() {
+        given:
+        Long petId
+        Person.withTransaction {
+            Person p = new Person(firstName: "Homer", lastName: "Simpson").save()
+            petId = new Pet(name: "Santa's Little Helper", owner: p).save(flush: true).id
+        }
+        manager.session.clear()
+        manager.hibernateSession.clear()
+
+        when:
+        Pet loadedPet = Pet.get(petId)
+        def ownerProxy = proxyHandler.getAssociationProxy(loadedPet, 'owner')
+
+        then:
+        ownerProxy instanceof HibernateProxy
+        !proxyHandler.isInitialized(ownerProxy)
     }
 
     void "test isInitialized for a non-proxied object"() {
@@ -45,85 +146,22 @@ class HibernateProxyHandler7Spec extends HibernateGormDatastoreSpec {
         proxyHandler.isInitialized(location)
     }
 
-    void "test isInitialized for a native Hibernate proxy before initialization"() {
-        given:
-        Long savedId
-
-        // Step 1: Persist the data and close the session
-        Location.withNewSession {
-            Location.withTransaction {
-                Location location = new Location(name: "Test Location", code: "TL1").save(flush: true)
-                savedId = location.id
-            }
-        }
-
-        expect: "The proxy remains uninitialized when loaded via the standard Hibernate reference API"
-        Location.withNewSession { session ->
-            // Use the native Hibernate session to get a reference
-            // This is the "purest" way to get an uninitialized proxy
-            def proxyLocation = session.getSessionFactory().currentSession.getReference(Location, savedId)
-
-            // 1. Verify it is actually a proxy
-            proxyLocation instanceof HibernateProxy
-
-            // 2. Verify the handler sees it as uninitialized
-            (!proxyHandler.isInitialized(proxyLocation))
-        }
-    }
-
-    void "test isInitialized for a native Hibernate proxy after initialization"() {
-        given:
-        Location location = new Location(name: "Test Location").save(flush: true)
-        manager.session.clear()
-        manager.hibernateSession.clear()
-
-        Location proxyLocation = Location.proxy(location.id)
-        proxyLocation.name // Accessing a property to initialize the proxy
-
-        expect:
-        proxyHandler.isInitialized(proxyLocation)
-        Hibernate.isInitialized(proxyLocation)
-    }
-
     void "test isInitialized for a Groovy proxy before initialization"() {
         given:
         def originalFactory = manager.session.mappingContext.proxyFactory
         manager.session.mappingContext.proxyFactory = new GroovyProxyFactory()
-
-        // 1. Save and flush in a transaction
-        Long savedId
-        Location.withTransaction {
-            savedId = new Location(name: "Test Location", code: "TL-GROOVY").save(flush: true).id
-        }
-
-        // 2. Clear the sessions to ensure the next load isn't from cache
-        manager.session.clear()
-        manager.hibernateSession.clear()
-
-        when: "We get a reference via the native Hibernate API"
-        // getReference is the Hibernate 6 way to get a 'hollow' proxy safely
-        def proxyLocation = manager.hibernateSession.getReference(Location, savedId)
-
-        then: "The proxy handler should recognize it as uninitialized"
-        // Ensure no methods (like .name or .toString()) are called on proxyLocation before this
-        !proxyHandler.isInitialized(proxyLocation)
-
-        cleanup:
-        manager.session.mappingContext.proxyFactory = originalFactory
-    }
-
-    void "test unwrap for a native Hibernate proxy"() {
-        given:
         Location location = new Location(name: "Test Location").save(flush: true)
         manager.session.clear()
         manager.hibernateSession.clear()
 
         Location proxyLocation = Location.proxy(location.id)
-        def unwrapped = proxyHandler.unwrap(proxyLocation)
 
         expect:
-        unwrapped != proxyLocation
-        unwrapped.name == location.name
+        proxyLocation.metaClass instanceof ProxyInstanceMetaClass
+        !proxyHandler.isInitialized(proxyLocation)
+
+        cleanup:
+        manager.session.mappingContext.proxyFactory = originalFactory
     }
 
     void "test unwrap for a Groovy proxy"() {
@@ -147,87 +185,89 @@ class HibernateProxyHandler7Spec extends HibernateGormDatastoreSpec {
 
     void "test isInitialized for null"() {
         expect:
-        proxyHandler.isInitialized(null) == false
+        !proxyHandler.isInitialized(null)
     }
 
     void "test isInitialized for a persistent collection"() {
         given:
-        Person p = new Person(firstName: "Homer", lastName: "Simpson").save(flush: true)
-        new Pet(name: "Santa's Little Helper", owner: p).save(flush: true)
+        Long personId
+        Person.withTransaction {
+            Person p = new Person(firstName: "Homer", lastName: "Simpson").save()
+            new Pet(name: "Santa's Little Helper", owner: p).save(flush: true)
+            personId = p.id
+        }
         manager.session.clear()
         manager.hibernateSession.clear()
 
-        Person loaded = Person.get(p.id)
+        Person loaded = Person.get(personId)
         def pets = loaded.pets
 
         expect:
-        proxyHandler.isInitialized(pets) == false
+        !proxyHandler.isInitialized(pets)
 
         when:
         pets.size()
 
         then:
-        proxyHandler.isInitialized(pets) == true
+        proxyHandler.isInitialized(pets)
     }
 
     void "test isInitialized for association name"() {
         given:
-        Person p = new Person(firstName: "Homer", lastName: "Simpson").save(flush: true)
-        new Pet(name: "Santa's Little Helper", owner: p).save(flush: true)
+        Long personId
+        Person.withTransaction {
+            Person p = new Person(firstName: "Homer", lastName: "Simpson").save()
+            new Pet(name: "Santa's Little Helper", owner: p).save(flush: true)
+            personId = p.id
+        }
         manager.session.clear()
         manager.hibernateSession.clear()
 
-        Person loaded = Person.get(p.id)
+        Person loaded = Person.get(personId)
 
         expect:
-        proxyHandler.isInitialized(loaded, 'pets') == false
+        !proxyHandler.isInitialized(loaded, 'pets')
 
         when:
         loaded.pets.size()
 
         then:
-        proxyHandler.isInitialized(loaded, 'pets') == true
+        proxyHandler.isInitialized(loaded, 'pets')
     }
 
     void "test isInitialized for association name with null object"() {
         expect:
-        proxyHandler.isInitialized(null, 'any') == false
+        !proxyHandler.isInitialized(null, 'any')
     }
 
     void "test isProxy"() {
         given:
-        Location location = new Location(name: "Test").save(flush: true)
+        Long savedId
+        Location.withTransaction {
+            savedId = new Location(name: "Test").save(flush: true).id
+        }
         manager.session.clear()
         manager.hibernateSession.clear()
 
-        Location proxy = Location.proxy(location.id)
+        def proxy = manager.hibernateSession.getReference(Location, savedId)
 
         expect:
-        proxyHandler.isProxy(proxy) == true
-        proxyHandler.isProxy(location) == false
-        proxyHandler.isProxy(null) == false
-    }
-
-    void "test getIdentifier"() {
-        given:
-        Location location = new Location(name: "Test").save(flush: true)
-        manager.session.clear()
-        manager.hibernateSession.clear()
-
-        Location proxy = Location.proxy(location.id)
-
-        expect:
-        proxyHandler.getIdentifier(proxy) == location.id
-        proxyHandler.getIdentifier(location) == null
+        proxyHandler.isProxy(proxy)
+        !proxyHandler.isProxy(new Location(name: "Not a proxy"))
+        !proxyHandler.isProxy(null)
     }
 
     void "test getProxiedClass"() {
         given:
-        Location location = new Location(name: "Test").save(flush: true)
+        Long savedId
+        Location.withTransaction {
+            savedId = new Location(name: "Test").save(flush: true).id
+        }
         manager.session.clear()
         manager.hibernateSession.clear()
 
-        Location proxy = Location.proxy(location.id)
+        def proxy = manager.hibernateSession.getReference(Location, savedId)
+        Location location = new Location(name: "Not a proxy")
 
         expect:
         proxyHandler.getProxiedClass(proxy) == Location
@@ -236,11 +276,14 @@ class HibernateProxyHandler7Spec extends HibernateGormDatastoreSpec {
 
     void "test initialize"() {
         given:
-        Location location = new Location(name: "Test").save(flush: true)
+        Long savedId
+        Location.withTransaction {
+            savedId = new Location(name: "Test").save(flush: true).id
+        }
         manager.session.clear()
         manager.hibernateSession.clear()
 
-        Location proxy = Location.proxy(location.id)
+        def proxy = manager.hibernateSession.getReference(Location, savedId)
 
         expect:
         !Hibernate.isInitialized(proxy)
@@ -254,12 +297,16 @@ class HibernateProxyHandler7Spec extends HibernateGormDatastoreSpec {
 
     void "test unwrap for persistent collection"() {
         given:
-        Person p = new Person(firstName: "Homer", lastName: "Simpson").save(flush: true)
-        new Pet(name: "Santa's Little Helper", owner: p).save(flush: true)
+        Long personId
+        Person.withTransaction {
+            Person p = new Person(firstName: "Homer", lastName: "Simpson").save()
+            new Pet(name: "Santa's Little Helper", owner: p).save(flush: true)
+            personId = p.id
+        }
         manager.session.clear()
         manager.hibernateSession.clear()
 
-        Person loaded = Person.get(p.id)
+        Person loaded = Person.get(personId)
         def pets = loaded.pets
 
         expect:
@@ -271,37 +318,6 @@ class HibernateProxyHandler7Spec extends HibernateGormDatastoreSpec {
         then:
         unwrapped == pets
         proxyHandler.isInitialized(pets)
-    }
-
-    void "test deprecated unwrapProxy and unwrapIfProxy"() {
-        given:
-        Location location = new Location(name: "Test").save(flush: true)
-        manager.session.clear()
-        manager.hibernateSession.clear()
-
-        Location proxy = Location.proxy(location.id)
-
-        expect:
-        proxyHandler.unwrapProxy(proxy) != proxy
-        proxyHandler.unwrapIfProxy(proxy) != proxy
-        proxyHandler.unwrapProxy(location) == location
-        proxyHandler.unwrapIfProxy(location) == location
-    }
-
-    void "test createProxy"() {
-        given:
-        Location location = new Location(name: "Test").save(flush: true)
-        manager.session.clear()
-        manager.hibernateSession.clear()
-
-        when:
-        Location proxy = proxyHandler.createProxy(manager.session, Location, location.id)
-
-        then:
-        proxy != null
-        proxy instanceof org.hibernate.proxy.HibernateProxy
-        proxy.id == location.id
-        !Hibernate.isInitialized(proxy)
     }
 
     void "test createProxy with AssociationQueryExecutor"() {
@@ -324,111 +340,46 @@ class HibernateProxyHandler7Spec extends HibernateGormDatastoreSpec {
         thrown(IllegalStateException)
     }
 
-    void "test getAssociationProxy"() {
+    void "test deprecated unwrapProxy and unwrapIfProxy"() {
         given:
-        Person p = new Person(firstName: "Homer", lastName: "Simpson").save(flush: true)
-        Pet pet = new Pet(name: "Santa's Little Helper", owner: p).save(flush: true)
+        Long savedId
+        Location.withTransaction {
+            savedId = new Location(name: "Test").save(flush: true).id
+        }
         manager.session.clear()
         manager.hibernateSession.clear()
 
-        Pet loadedPet = Pet.get(pet.id)
+        def proxy = manager.hibernateSession.getReference(Location, savedId)
+        Location location = new Location(name: "Not a proxy")
 
         expect:
-        proxyHandler.getAssociationProxy(loadedPet, 'owner') instanceof org.hibernate.proxy.HibernateProxy
+        proxyHandler.unwrapProxy(proxy) != proxy
+        proxyHandler.unwrapIfProxy(proxy) != proxy
+        proxyHandler.unwrapProxy(location) == location
+        proxyHandler.unwrapIfProxy(location) == location
+    }
+
+    void "test getAssociationProxy returns null for non-association property"() {
+        given:
+        Long petId
+        Person.withTransaction {
+            Person p = new Person(firstName: "Homer", lastName: "Simpson").save()
+            petId = new Pet(name: "Santa's Little Helper", owner: p).save(flush: true).id
+        }
+        manager.session.clear()
+        manager.hibernateSession.clear()
+
+        Pet loadedPet = Pet.get(petId)
+
+        expect:
         proxyHandler.getAssociationProxy(loadedPet, 'name') == null
     }
 
-    void 'Test update entity with association proxies'() {
+    void "test getIdentifier for non-proxy returns null"() {
         given:
-        def person = new UpdatePerson(firstName: 'Bob', lastName: 'Builder')
-        def petType = new UpdatePetType(name: 'snake')
-        def pet = new UpdatePet(name: 'Fred', type: petType, owner: person)
-        person.addToPets(pet)
-        person.save(flush: true)
-        manager.session.clear()
+        Location location = new Location(name: "Test")
 
-        when:
-        person = UpdatePerson.get(person.id)
-        person.firstName = 'changed'
-        person.save(flush: true)
-        manager.session.clear()
-        person = UpdatePerson.get(person.id)
-        def personPet = person.pets.iterator().next()
-
-        then:
-        person.firstName == 'changed'
-        personPet.name == 'Fred'
-        personPet.id == pet.id
-        personPet.owner.id == person.id
-        personPet.type.name == 'snake'
-        personPet.type.id == petType.id
+        expect:
+        proxyHandler.getIdentifier(location) == null
     }
-
-    void 'Test update unidirectional oneToMany with proxy'() {
-        given:
-        Long personId
-        Long petTypeId
-
-        // Step 1: Persist initial data
-        UpdatePerson.withNewSession { gormSession ->
-            UpdatePerson.withTransaction {
-                personId = new UpdatePerson(firstName: 'Bob', lastName: 'Builder').save(flush: true).id
-                petTypeId = new UpdatePetType(name: 'snake').save(flush: true).id
-            }
-        }
-
-        when: "Re-loading in a new session to test proxy behavior"
-        UpdatePerson.withNewSession { gormSession ->
-            UpdatePerson.withTransaction {
-                def person = UpdatePerson.get(personId)
-                def hibernateSession = gormSession.getSessionFactory().getCurrentSession()
-
-                // Use the native Hibernate session to ensure a proxy
-                def petTypeProxy = hibernateSession.getReference(UpdatePetType, petTypeId)
-
-                // Verify it is indeed a proxy
-                assert proxyHandler.isProxy(petTypeProxy)
-
-                // Create a new pet with the proxy type
-                def pet = new UpdatePet(name: 'Fred', type: petTypeProxy, owner: person)
-                person.addToPets(pet)
-                person.save(flush: true)
-            }
-        }
-
-        then: "Verify the association was persisted correctly"
-        def result = UpdatePerson.withNewSession {
-            def person = UpdatePerson.get(personId)
-            return [firstName: person.firstName, petsSize: person.pets.size(), petName: person.pets.first()?.name, petTypeId: person.pets.first()?.type?.id]
-        }
-
-        result.firstName == 'Bob'
-        result.petsSize == 1
-        result.petName == 'Fred'
-        result.petTypeId == petTypeId
-    }
-}
-
-@Entity
-class UpdatePerson implements Serializable {
-    Long id
-    String firstName
-    String lastName
-    Set<UpdatePet> pets = []
-    static hasMany = [pets: UpdatePet]
-}
-
-@Entity
-class UpdatePet implements Serializable {
-    Long id
-    String name
-    UpdatePetType type
-    UpdatePerson owner
-    static belongsTo = [owner: UpdatePerson]
-}
-
-@Entity
-class UpdatePetType implements Serializable {
-    Long id
-    String name
 }

@@ -73,13 +73,13 @@ class MultiTenantMultiDataSourceSpec extends Specification {
     void "schema is created on secondary datasource not default"() {
         expect: 'The secondary datasource connects to secondaryDb'
         Metric.secondary.withNewSession { Session s ->
-            assert s.connection().metaData.getURL() == 'jdbc:h2:mem:secondaryDb'
+            assert s.doReturningWork { it.metaData.getURL() } == 'jdbc:h2:mem:secondaryDb'
             return true
         }
 
         and: 'The default datasource connects to defaultDb'
         hibernateDatastore.withNewSession { Session s ->
-            assert s.connection().metaData.getURL() == 'jdbc:h2:mem:defaultDb'
+            assert s.doReturningWork { it.metaData.getURL() } == 'jdbc:h2:mem:defaultDb'
             return true
         }
     }

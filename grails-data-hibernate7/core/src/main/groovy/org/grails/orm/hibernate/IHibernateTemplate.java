@@ -55,9 +55,9 @@ public interface IHibernateTemplate {
 
     boolean contains(Object o);
 
-    void setFlushMode(int mode);
-
     int getFlushMode();
+
+    void setFlushMode(int mode);
 
     void deleteAll(Collection<?> list);
 

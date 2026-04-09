@@ -52,7 +52,7 @@ class GroovyDiffToChangeLogCommandStep extends DiffChangelogCommandStep {
 
         DiffResult diffResult = diffCommandStep.createDiffResult(resultsBuilder)
 
-        PrintStream outputStream = new PrintStream(resultsBuilder.getOutputStream())
+        PrintStream outputStream = new PrintStream(resultsBuilder.getOutputStream(), false, 'UTF-8')
 
         ObjectQuotingStrategy originalStrategy = referenceDatabase.getObjectQuotingStrategy()
 

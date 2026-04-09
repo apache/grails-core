@@ -68,16 +68,15 @@ public class ListSecondPassBinder {
         this.mappings = mappings;
     }
 
-    public void bindListSecondPass(
-            @Nonnull HibernateToManyProperty property, Map<?, ?> persistentClasses, @Nonnull List list) {
+    public void bindListSecondPass(@Nonnull HibernateToManyProperty property, Map<?, ?> persistentClasses) {
 
-        collectionSecondPassBinder.bindCollectionSecondPass(property, persistentClasses, list);
+        List list = (List) property.getCollection();
+        collectionSecondPassBinder.bindCollectionSecondPass(property, persistentClasses);
         String columnName = property.getIndexColumnName(namingStrategy);
         final boolean isManyToMany = property instanceof HibernateManyToManyProperty;
 
         if (isManyToMany && !property.isOwningSide()) {
-            throw new MappingException("Invalid association [" +
-                    property +
+            throw new MappingException("Invalid association [" + property +
                     "]. List collection types only supported on the owning side of a many-to-many relationship.");
         }
 

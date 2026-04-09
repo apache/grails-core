@@ -20,6 +20,7 @@
 package org.grails.orm.hibernate
 
 import groovy.transform.CompileStatic
+
 import org.hibernate.boot.Metadata
 import org.hibernate.boot.spi.BootstrapContext
 import org.hibernate.engine.spi.SessionFactoryImplementor
@@ -32,8 +33,7 @@ class MetadataIntegrator implements Integrator {
     Metadata metadata
 
     @Override
-    void integrate(Metadata metadata, BootstrapContext bootstrapContext,
-                   SessionFactoryImplementor sessionFactory) {
+    void integrate(Metadata metadata, BootstrapContext bootstrapContext, SessionFactoryImplementor sessionFactory) {
         this.metadata = metadata
     }
 

@@ -18,17 +18,18 @@
  */
 package org.grails.datastore.gorm.mongo
 
+import org.apache.grails.data.mongo.core.MongoDatastoreSpec
+
 import grails.gorm.tests.Person
 import org.apache.grails.data.mongo.core.GrailsDataMongoTckManager
-import org.apache.grails.data.testing.tck.base.GrailsDataTckSpec
 
 /**
  * @author Graeme Rocher
  */
-class MongoResultsListIndexSpec extends GrailsDataTckSpec<GrailsDataMongoTckManager> {
+class MongoResultsListIndexSpec extends MongoDatastoreSpec {
 
     void setupSpec() {
-        manager.domainClasses += [Person]
+        manager.addAllDomainClasses([Person])
     }
 
     void "Test that indexing into results works with MongoDB"() {

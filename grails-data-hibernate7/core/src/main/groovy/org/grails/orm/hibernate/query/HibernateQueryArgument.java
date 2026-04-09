@@ -32,6 +32,7 @@ import org.grails.datastore.gorm.finders.DynamicFinder;
  *
  * @since 8.0
  */
+@SuppressWarnings("PMD.AvoidFieldNameMatchingMethodName")
 public enum HibernateQueryArgument {
 
     // ── pagination & execution ────────────────────────────────────────────────
@@ -51,6 +52,25 @@ public enum HibernateQueryArgument {
     IGNORE_CASE(DynamicFinder.ARGUMENT_IGNORE_CASE),
     ORDER_DESC(DynamicFinder.ORDER_DESC),
     ORDER_ASC(DynamicFinder.ORDER_ASC),
+    EAGER("eager"),
+    JOIN("join"),
+
+    // ── HQL keywords ──────────────────────────────────────────────────────────
+    HQL_SELECT("select"),
+    HQL_FROM("from"),
+    HQL_WHERE("where"),
+    HQL_JOIN("join"),
+    HQL_LEFT("left"),
+    HQL_RIGHT("right"),
+    HQL_INNER("inner"),
+    HQL_OUTER("outer"),
+    HQL_GROUP("group"),
+    HQL_ORDER("order"),
+    HQL_HAVING("having"),
+    HQL_DISTINCT("distinct"),
+    HQL_ALL("all"),
+    HQL_AS("as"),
+    HQL_NEW("new"),
 
     // ── Hibernate config properties ───────────────────────────────────────────
     CONFIG_CACHE_QUERIES("grails.hibernate.cache.queries"),

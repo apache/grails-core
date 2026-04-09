@@ -42,6 +42,7 @@ import org.grails.orm.hibernate.cfg.domainbinding.util.SimpleValueColumnFetcher;
 /** Refactored from CollectionBinder to handle map second pass binding. */
 @SuppressWarnings("PMD.DataflowAnomalyAnalysis")
 public class MapSecondPassBinder {
+
     private final MetadataBuildingContext metadataBuildingContext;
     private final PersistentEntityNamingStrategy namingStrategy;
     private final CollectionSecondPassBinder collectionSecondPassBinder;
@@ -64,17 +65,15 @@ public class MapSecondPassBinder {
         this.simpleValueColumnFetcher = simpleValueColumnFetcher;
     }
 
-    public void bindMapSecondPass(
-            @Nonnull HibernateToManyProperty property,
-            Map<?, ?> persistentClasses,
-            @Nonnull org.hibernate.mapping.Map map) {
-        collectionSecondPassBinder.bindCollectionSecondPass(property, persistentClasses, map);
+    public void bindMapSecondPass(@Nonnull HibernateToManyProperty property, Map<?, ?> persistentClasses) {
+        org.hibernate.mapping.Map map = (org.hibernate.mapping.Map) property.getCollection();
+        collectionSecondPassBinder.bindCollectionSecondPass(property, persistentClasses);
 
         String type = property.getIndexColumnType("string");
         String columnName1 = property.getIndexColumnName(namingStrategy);
         BasicValue value = simpleValueColumnBinder.bindSimpleValue(
                 metadataBuildingContext, map.getCollectionTable(), type, columnName1, true);
-        PropertyConfig mappedForm = property.getMappedForm();
+        PropertyConfig mappedForm = property.getHibernateMappedForm();
         if (mappedForm.getIndexColumn() != null) {
             Column column = simpleValueColumnFetcher.getColumnForSimpleValue(value);
             ColumnConfig columnConfig = getSingleColumnConfig(mappedForm.getIndexColumn());

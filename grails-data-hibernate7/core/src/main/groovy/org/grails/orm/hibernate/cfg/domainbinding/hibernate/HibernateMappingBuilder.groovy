@@ -1,4 +1,22 @@
 /*
+ *  Licensed to the Apache Software Foundation (ASF) under one
+ *  or more contributor license agreements.  See the NOTICE file
+ *  distributed with this work for additional information
+ *  regarding copyright ownership.  The ASF licenses this file
+ *  to you under the Apache License, Version 2.0 (the
+ *  "License"); you may not use this file except in compliance
+ *  with the License.  You may obtain a copy of the License at
+ *
+ *    https://www.apache.org/licenses/LICENSE-2.0
+ *
+ *  Unless required by applicable law or agreed to in writing,
+ *  software distributed under the License is distributed on an
+ *  "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ *  KIND, either express or implied.  See the License for the
+ *  specific language governing permissions and limitations
+ *  under the License.
+ */
+/*
  * Copyright 2003-2007 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -15,22 +33,25 @@
 package org.grails.orm.hibernate.cfg.domainbinding.hibernate
 
 import groovy.transform.CompileStatic
-import org.grails.datastore.mapping.config.groovy.MappingConfigurationBuilder
-import org.grails.datastore.mapping.model.config.GormProperties
-import org.grails.datastore.mapping.reflect.ClassPropertyFetcher
+
+import jakarta.persistence.AccessType
+
 import org.hibernate.FetchMode
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
-import jakarta.persistence.AccessType
+
+import org.grails.datastore.mapping.config.groovy.MappingConfigurationBuilder
+import org.grails.datastore.mapping.model.config.GormProperties
+import org.grails.datastore.mapping.reflect.ClassPropertyFetcher
 import org.grails.orm.hibernate.cfg.CacheConfig
-import org.grails.orm.hibernate.cfg.SortConfig
 import org.grails.orm.hibernate.cfg.ColumnConfig
-import org.grails.orm.hibernate.cfg.CompositeIdentity
-import org.grails.orm.hibernate.cfg.Identity
+import org.grails.orm.hibernate.cfg.HibernateCompositeIdentity
+import org.grails.orm.hibernate.cfg.HibernateSimpleIdentity
 import org.grails.orm.hibernate.cfg.Mapping
 import org.grails.orm.hibernate.cfg.NaturalId
 import org.grails.orm.hibernate.cfg.PropertyConfig
 import org.grails.orm.hibernate.cfg.PropertyDefinitionDelegate
+import org.grails.orm.hibernate.cfg.SortConfig
 
 /**
  * Implements the ORM mapping DSL constructing a model that can be evaluated by the
@@ -52,10 +73,6 @@ class HibernateMappingBuilder implements MappingConfigurationBuilder<Mapping, Pr
 
     private List<String> methodMissingExcludes = []
     private List<String> methodMissingIncludes
-
-    HibernateMappingBuilder(String className) {
-        this.className = className
-    }
 
     HibernateMappingBuilder(Mapping mapping, String className, Closure defaultConstraints = null) {
         this.mapping = mapping
@@ -102,7 +119,7 @@ class HibernateMappingBuilder implements MappingConfigurationBuilder<Mapping, Pr
 
     void hibernateCustomUserType(Map<String, Object> args) {
         if (args.type && (args['class'] instanceof Class)) {
-            mapping.userTypes[(Class)args['class']] = args.type.toString()
+            mapping.userTypes[(Class) args['class']] = args.type.toString()
         }
     }
 
@@ -150,7 +167,7 @@ class HibernateMappingBuilder implements MappingConfigurationBuilder<Mapping, Pr
     void sort(Map namesAndDirections) {
         if (namesAndDirections) {
             SortConfig sc = (SortConfig) mapping.getSort()
-            sc.namesAndDirections = (Map<String, String>)namesAndDirections
+            sc.namesAndDirections = (Map<String, String>) namesAndDirections
         }
     }
 
@@ -234,24 +251,24 @@ class HibernateMappingBuilder implements MappingConfigurationBuilder<Mapping, Pr
 
     void id(Map<String, Object> args) {
         if (args.composite) {
-            mapping.identity = new CompositeIdentity(propertyNames: (String[]) args.composite)
+            mapping.identity = new HibernateCompositeIdentity(propertyNames: (String[]) args.composite)
             if (args.compositeClass) {
-                (mapping.identity as CompositeIdentity).compositeClass = (Class) args.compositeClass
+                (mapping.identity as HibernateCompositeIdentity).compositeClass = (Class) args.compositeClass
             }
         } else {
             Object generatorVal = args.remove('generator')
             if (generatorVal != null) {
-                ((Identity) mapping.identity).generator = generatorVal.toString()
+                ((HibernateSimpleIdentity) mapping.identity).generator = generatorVal.toString()
             }
             Object nameVal = args.remove('name')
             if (nameVal != null) {
-                ((Identity) mapping.identity).name = nameVal.toString()
+                ((HibernateSimpleIdentity) mapping.identity).name = nameVal.toString()
             }
             Object paramsVal = args.remove('params')
             if (paramsVal instanceof Map) {
                 Map<String, String> stringParams = [:]
                 ((Map<Object, Object>) paramsVal).each { k, v -> stringParams[k.toString()] = v?.toString() }
-                ((Identity) mapping.identity).params = stringParams
+                ((HibernateSimpleIdentity) mapping.identity).params = stringParams
             }
         }
         Object naturalVal = args.remove('natural')
@@ -331,7 +348,7 @@ class HibernateMappingBuilder implements MappingConfigurationBuilder<Mapping, Pr
         }
 
         Object uniqueVal = namedArgs.unique
-        if (uniqueVal instanceof Boolean) property.setUnique((boolean)(Boolean) uniqueVal)
+        if (uniqueVal instanceof Boolean) property.setUnique((boolean) (Boolean) uniqueVal)
         else if (uniqueVal instanceof String) property.setUnique((String) uniqueVal)
         else if (uniqueVal instanceof List) property.setUnique((List<String>) uniqueVal)
         if (namedArgs.nullable instanceof Boolean) property.nullable = (Boolean) namedArgs.nullable
@@ -366,9 +383,9 @@ class HibernateMappingBuilder implements MappingConfigurationBuilder<Mapping, Pr
             Object enumTypeVal = namedArgs['enumType']
             if (enumTypeVal) cc.enumType = enumTypeVal.toString()
             Object indexVal = namedArgs['index']
-            if (indexVal) cc.index = indexVal.toString()
+            if (indexVal) cc.index = indexVal
             Object ccUniqueVal = namedArgs['unique']
-            if (ccUniqueVal) cc.unique = ccUniqueVal instanceof Boolean ? (Boolean) ccUniqueVal : ccUniqueVal
+            if (ccUniqueVal != null) cc.unique = ccUniqueVal
             Object readVal = namedArgs['read']
             if (readVal) cc.read = readVal.toString()
             Object writeVal = namedArgs['write']
@@ -428,6 +445,7 @@ class HibernateMappingBuilder implements MappingConfigurationBuilder<Mapping, Pr
     void columns(@DelegatesTo(value = Object, strategy = Closure.DELEGATE_ONLY) Closure callable) {
         callable.resolveStrategy = Closure.DELEGATE_ONLY
         callable.delegate = new Object() {
+
             Object invokeMethod(String methodName, Object args) {
                 Object[] argsArray = (Object[]) args
                 int argc = argsArray.length
@@ -467,7 +485,7 @@ class HibernateMappingBuilder implements MappingConfigurationBuilder<Mapping, Pr
             hibernateCustomUserType((Map<String, Object>) firstArg)
         } else if (keyword == HibernateMappingKeyword.IMPORT_FROM && hasArgs && firstArg instanceof Class) {
             List<Closure> constraintsToImport = ClassPropertyFetcher.getStaticPropertyValuesFromInheritanceHierarchy(
-                (Class) firstArg, GormProperties.CONSTRAINTS, Closure)
+                    (Class) firstArg, GormProperties.CONSTRAINTS, Closure)
             if (constraintsToImport) {
                 List<String> originalIncludes = methodMissingIncludes
                 List<String> originalExcludes = methodMissingExcludes

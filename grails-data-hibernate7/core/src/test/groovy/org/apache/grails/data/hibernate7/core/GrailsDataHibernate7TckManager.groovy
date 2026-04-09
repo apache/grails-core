@@ -35,8 +35,8 @@ import org.hibernate.SessionFactory
 import org.hibernate.dialect.H2Dialect
 import org.springframework.beans.factory.DisposableBean
 import org.springframework.context.ApplicationContext
-import org.springframework.orm.hibernate5.SessionFactoryUtils
-import org.springframework.orm.hibernate5.SessionHolder
+import org.grails.orm.hibernate.support.hibernate7.SessionFactoryUtils
+import org.grails.orm.hibernate.support.hibernate7.SessionHolder
 import org.springframework.transaction.TransactionStatus
 import org.springframework.transaction.support.DefaultTransactionDefinition
 import org.springframework.transaction.support.TransactionSynchronizationManager
@@ -67,7 +67,10 @@ class GrailsDataHibernate7TckManager extends GrailsDataTckManager {
         System.setProperty('hibernate7.gorm.suite', "true")
         grailsApplication = new DefaultGrailsApplication(domainClasses as Class[], new GroovyClassLoader(GrailsDataHibernate7TckManager.getClassLoader()))
         grailsConfig.dataSource.dbCreate = "create-drop"
-        grailsConfig.hibernate.proxy_factory_class = "yakworks.hibernate.proxy.ByteBuddyGroovyProxyFactory"
+        grailsConfig.hibernate.proxy_factory_class = "org.grails.orm.hibernate.proxy.ByteBuddyGroovyProxyFactory"
+        grailsConfig.'grails.gorm.default.mapping' = {
+            id generator: 'identity'
+        }
         if (grailsConfig) {
             grailsApplication.config.putAll(grailsConfig)
         }
@@ -135,6 +138,10 @@ class GrailsDataHibernate7TckManager extends GrailsDataTckManager {
                 'hibernate.flush.mode'     : 'COMMIT',
                 'hibernate.cache.queries'  : 'true',
                 'hibernate.hbm2ddl.auto'   : 'create-drop',
+                'hibernate.proxy_factory_class' : 'org.grails.orm.hibernate.proxy.ByteBuddyGroovyProxyFactory',
+                'grails.gorm.default.mapping' : {
+                    id generator: 'identity'
+                },
                 'dataSources.secondary'    : [url: "jdbc:h2:mem:tckSecondaryDB;LOCK_TIMEOUT=10000"],
         ]
         multiDataSourceDatastore = new HibernateDatastore(
@@ -176,6 +183,10 @@ class GrailsDataHibernate7TckManager extends GrailsDataTckManager {
                 'hibernate.flush.mode'                      : 'COMMIT',
                 'hibernate.cache.queries'                   : 'true',
                 'hibernate.hbm2ddl.auto'                    : 'create-drop',
+                'hibernate.proxy_factory_class'             : 'org.grails.orm.hibernate.proxy.ByteBuddyGroovyProxyFactory',
+                'grails.gorm.default.mapping'               : {
+                    id generator: 'identity'
+                },
                 'dataSources.secondary'                     : [url: "jdbc:h2:mem:tckMtSecondaryDB;LOCK_TIMEOUT=10000"],
         ]
         multiTenantMultiDataSourceDatastore = new HibernateDatastore(

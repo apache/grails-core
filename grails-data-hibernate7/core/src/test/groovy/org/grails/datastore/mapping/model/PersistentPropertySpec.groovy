@@ -51,7 +51,7 @@ class PersistentPropertySpec extends HibernateGormDatastoreSpec {
         def p = createPersistentEntity(Unidirectional).getPropertyByName("foos")
 
         then:
-        !p.isLazyAble()
+        p.isLazyAble()
 
         when:
         p = createPersistentEntity(BidirectionalChild).getPropertyByName("bar")

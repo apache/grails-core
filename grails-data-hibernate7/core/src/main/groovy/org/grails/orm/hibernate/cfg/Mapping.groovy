@@ -1,4 +1,22 @@
 /*
+ *  Licensed to the Apache Software Foundation (ASF) under one
+ *  or more contributor license agreements.  See the NOTICE file
+ *  distributed with this work for additional information
+ *  regarding copyright ownership.  The ASF licenses this file
+ *  to you under the Apache License, Version 2.0 (the
+ *  "License"); you may not use this file except in compliance
+ *  with the License.  You may obtain a copy of the License at
+ *
+ *    https://www.apache.org/licenses/LICENSE-2.0
+ *
+ *  Unless required by applicable law or agreed to in writing,
+ *  software distributed under the License is distributed on an
+ *  "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ *  KIND, either express or implied.  See the License for the
+ *  specific language governing permissions and limitations
+ *  under the License.
+ */
+/*
  * Copyright 2003-2007 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -18,12 +36,13 @@ package org.grails.orm.hibernate.cfg
 import groovy.transform.CompileStatic
 import groovy.transform.builder.Builder
 import groovy.transform.builder.SimpleStrategy
-import org.grails.datastore.mapping.config.Entity
-import org.grails.datastore.mapping.model.config.GormProperties
+
 import org.springframework.beans.MutablePropertyValues
 import org.springframework.validation.DataBinder
 
-import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernateIdentity
+import org.grails.datastore.mapping.config.Entity
+import org.grails.datastore.mapping.model.config.GormProperties
+import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernatePropertyIdentity
 
 /**
  * Models the mapping from GORM classes to the db.
@@ -95,7 +114,7 @@ class Mapping extends Entity<PropertyConfig> {
     /**
      * The identity definition
      */
-    HibernateIdentity identity = new Identity()
+    HibernatePropertyIdentity identity = new HibernateSimpleIdentity()
 
     /**
      * Caching config
@@ -199,8 +218,8 @@ class Mapping extends Entity<PropertyConfig> {
      */
     @Override
     Mapping id(Map identityConfig) {
-        if (identity instanceof Identity) {
-            Identity.configureExisting((Identity) identity, identityConfig)
+        if (identity instanceof HibernateSimpleIdentity) {
+            HibernateSimpleIdentity.configureExisting((HibernateSimpleIdentity) identity, identityConfig)
         }
         return this
     }
@@ -211,9 +230,9 @@ class Mapping extends Entity<PropertyConfig> {
      * @return This mapping
      */
     @Override
-    Mapping id(@DelegatesTo(Identity) Closure identityConfig) {
-        if (identity instanceof Identity) {
-            Identity.configureExisting((Identity) identity, identityConfig)
+    Mapping id(@DelegatesTo(HibernateSimpleIdentity) Closure identityConfig) {
+        if (identity instanceof HibernateSimpleIdentity) {
+            HibernateSimpleIdentity.configureExisting((HibernateSimpleIdentity) identity, identityConfig)
         }
         return this
     }
@@ -223,7 +242,7 @@ class Mapping extends Entity<PropertyConfig> {
      * @param identityConfig The id config
      * @return This mapping
      */
-    Mapping id(CompositeIdentity compositeIdentity) {
+    Mapping id(HibernateCompositeIdentity compositeIdentity) {
         this.identity = compositeIdentity
         return this
     }
@@ -338,8 +357,7 @@ class Mapping extends Entity<PropertyConfig> {
             discriminator.value = value
             if (args.column instanceof String) {
                 discriminator.column = new ColumnConfig(name: args.column.toString())
-            }
-            else if (args.column instanceof Map) {
+            } else if (args.column instanceof Map) {
                 ColumnConfig config = new ColumnConfig()
                 DataBinder dataBinder = new DataBinder(config)
                 dataBinder.bind(new MutablePropertyValues((Map) args.column))
@@ -362,9 +380,9 @@ class Mapping extends Entity<PropertyConfig> {
      * @param propertyNames
      * @return
      */
-    CompositeIdentity composite(String... propertyNames) {
-        identity = new CompositeIdentity(propertyNames: propertyNames)
-        return (CompositeIdentity) identity
+    HibernateCompositeIdentity composite(String... propertyNames) {
+        identity = new HibernateCompositeIdentity(propertyNames: propertyNames)
+        return (HibernateCompositeIdentity) identity
     }
 
     /**
@@ -443,8 +461,7 @@ class Mapping extends Entity<PropertyConfig> {
         if (columns.containsKey('*')) {
             PropertyConfig cloned = cloneGlobalConstraint()
             return PropertyConfig.configureExisting(cloned, propertyConfig)
-        }
-        else {
+        } else {
             return PropertyConfig.configureNew(propertyConfig)
         }
     }
@@ -472,8 +489,7 @@ class Mapping extends Entity<PropertyConfig> {
             // apply global constraints constraints
             PropertyConfig cloned = cloneGlobalConstraint()
             return PropertyConfig.configureExisting(cloned, propertyConfig)
-        }
-        else {
+        } else {
             return PropertyConfig.configureNew(propertyConfig)
         }
     }
@@ -519,11 +535,9 @@ class Mapping extends Entity<PropertyConfig> {
     def propertyMissing(String name, Object val) {
         if (val instanceof Closure) {
             property(name, (Closure) val)
-        }
-        else if (val instanceof PropertyConfig) {
+        } else if (val instanceof PropertyConfig) {
             columns[name] = ((PropertyConfig) val)
-        }
-        else {
+        } else {
             throw new MissingPropertyException(name, Mapping)
         }
     }
@@ -534,11 +548,9 @@ class Mapping extends Entity<PropertyConfig> {
             Object[] argsArray = (Object[]) args
             if (argsArray[0] instanceof Closure) {
                 property(name, (Closure) argsArray[0])
-            }
-            else if (argsArray[0] instanceof PropertyConfig) {
+            } else if (argsArray[0] instanceof PropertyConfig) {
                 columns[name] = (PropertyConfig) argsArray[0]
-            }
-            else if (argsArray[0] instanceof Map) {
+            } else if (argsArray[0] instanceof Map) {
                 PropertyConfig property = getOrInitializePropertyConfig(name)
                 Map namedArgs = (Map) argsArray[0]
                 if (argsArray[argsArray.length - 1] instanceof Closure) {
@@ -548,12 +560,10 @@ class Mapping extends Entity<PropertyConfig> {
                     )
                 }
                 PropertyConfig.configureExisting(property, namedArgs)
-            }
-            else {
+            } else {
                 throw new MissingMethodException(name, getClass(), argsArray)
             }
-        }
-        else {
+        } else {
             throw new MissingMethodException(name, getClass(), (Object[]) args)
         }
     }
@@ -570,8 +580,7 @@ class Mapping extends Entity<PropertyConfig> {
                     pc.firstColumnIsColumnCopy = true
                 }
             }
-        }
-        else {
+        } else {
             pc = columns[name]
         }
         if (pc == null) {
@@ -593,6 +602,6 @@ class Mapping extends Entity<PropertyConfig> {
     }
 
     boolean hasCompositeIdentifier() {
-        return identity instanceof CompositeIdentity
+        return identity instanceof HibernateCompositeIdentity
     }
 }

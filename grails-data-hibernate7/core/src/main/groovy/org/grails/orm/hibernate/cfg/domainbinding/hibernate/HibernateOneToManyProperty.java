@@ -30,6 +30,7 @@ import org.grails.orm.hibernate.cfg.PropertyConfig;
 /** Hibernate implementation of {@link org.grails.datastore.mapping.model.types.OneToMany} */
 public class HibernateOneToManyProperty extends OneToManyWithMapping<PropertyConfig>
         implements HibernateToManyProperty {
+
     private Collection collection;
 
     public HibernateOneToManyProperty(PersistentEntity entity, MappingContext context, PropertyDescriptor property) {
@@ -41,15 +42,23 @@ public class HibernateOneToManyProperty extends OneToManyWithMapping<PropertyCon
         return (GrailsHibernatePersistentEntity) super.getAssociatedEntity();
     }
 
+    @Override
     public String getReferencedEntityName() {
         return getHibernateAssociatedEntity().getName();
     }
 
+    @Override
     public Collection getCollection() {
         return collection;
     }
 
+    @Override
     public void setCollection(Collection collection) {
         this.collection = collection;
+    }
+
+    @Override
+    public boolean isLazy() {
+        return getHibernateOwner().isLazy(this);
     }
 }

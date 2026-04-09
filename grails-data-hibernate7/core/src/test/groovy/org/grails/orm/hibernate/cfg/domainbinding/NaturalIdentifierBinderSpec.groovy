@@ -20,12 +20,11 @@
 package org.grails.orm.hibernate.cfg.domainbinding
 
 import grails.gorm.specs.HibernateGormDatastoreSpec
-import org.grails.orm.hibernate.cfg.CompositeIdentity
 import org.grails.orm.hibernate.cfg.Mapping
 import org.grails.orm.hibernate.cfg.NaturalId
 import org.grails.orm.hibernate.cfg.domainbinding.binder.NaturalIdentifierBinder
 import org.grails.orm.hibernate.cfg.domainbinding.hibernate.GrailsHibernatePersistentEntity
-import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernateIdentity
+import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernatePropertyIdentity
 import org.grails.orm.hibernate.cfg.domainbinding.util.UniqueNameGenerator
 import org.hibernate.mapping.RootClass
 import org.hibernate.mapping.Table
@@ -37,7 +36,7 @@ class NaturalIdentifierBinderSpec extends HibernateGormDatastoreSpec {
         given:
         def persistentEntity = Mock(GrailsHibernatePersistentEntity)
         def mapping = Mock(Mapping)
-        def identity = Mock(HibernateIdentity)
+        def identity = Mock(HibernatePropertyIdentity)
         def naturalId = Mock(NaturalId)
         def uk = Mock(UniqueKey)
         def table = Mock(Table)
@@ -47,6 +46,7 @@ class NaturalIdentifierBinderSpec extends HibernateGormDatastoreSpec {
         def binder = new NaturalIdentifierBinder(uniqueNameGenerator)
 
         persistentEntity.getMappedForm() >> mapping
+        persistentEntity.getHibernateMappedForm() >> mapping
         mapping.getIdentity() >> identity
         identity.getNatural() >> naturalId
         naturalId.createUniqueKey(rootClass) >> Optional.of(uk)
@@ -63,13 +63,14 @@ class NaturalIdentifierBinderSpec extends HibernateGormDatastoreSpec {
         given:
         def persistentEntity = Mock(GrailsHibernatePersistentEntity)
         def mapping = Mock(Mapping)
-        def identity = Mock(HibernateIdentity)
+        def identity = Mock(HibernatePropertyIdentity)
         def naturalId = Mock(NaturalId)
         def rootClass = new RootClass(getGrailsDomainBinder().getMetadataBuildingContext())
         def uniqueNameGenerator = Mock(UniqueNameGenerator)
         def binder = new NaturalIdentifierBinder(uniqueNameGenerator)
 
         persistentEntity.getMappedForm() >> mapping
+        persistentEntity.getHibernateMappedForm() >> mapping
         mapping.getIdentity() >> identity
         identity.getNatural() >> naturalId
         naturalId.createUniqueKey(rootClass) >> Optional.empty()
@@ -90,6 +91,7 @@ class NaturalIdentifierBinderSpec extends HibernateGormDatastoreSpec {
         def binder = new NaturalIdentifierBinder(uniqueNameGenerator)
 
         persistentEntity.getMappedForm() >> mapping
+        persistentEntity.getHibernateMappedForm() >> mapping
         mapping.getIdentity() >> null
 
         when:

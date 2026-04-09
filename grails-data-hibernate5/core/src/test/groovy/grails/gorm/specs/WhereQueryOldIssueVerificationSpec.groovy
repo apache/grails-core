@@ -18,8 +18,6 @@
  */
 package grails.gorm.tests
 
-import spock.lang.IgnoreIf
-
 import grails.gorm.annotation.Entity
 import grails.gorm.hibernate.HibernateEntity
 import grails.gorm.transactions.Rollback

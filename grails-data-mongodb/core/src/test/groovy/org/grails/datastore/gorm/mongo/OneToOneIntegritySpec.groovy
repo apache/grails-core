@@ -18,18 +18,19 @@
  */
 package org.grails.datastore.gorm.mongo
 
+import org.apache.grails.data.mongo.core.MongoDatastoreSpec
+
 import grails.gorm.tests.Face
 import grails.gorm.tests.Nose
 import grails.gorm.tests.Person
 import grails.gorm.tests.Pet
 import org.apache.grails.data.mongo.core.GrailsDataMongoTckManager
-import org.apache.grails.data.testing.tck.base.GrailsDataTckSpec
 import org.bson.Document
 
-class OneToOneIntegritySpec extends GrailsDataTckSpec<GrailsDataMongoTckManager> {
+class OneToOneIntegritySpec extends MongoDatastoreSpec {
 
     void setupSpec() {
-        manager.domainClasses += [Person, Pet, Face, Nose]
+        manager.addAllDomainClasses([Person, Pet, Face, Nose])
     }
 
     def "Test persist and retrieve unidirectional many-to-one"() {

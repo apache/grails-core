@@ -27,6 +27,9 @@ import grails.testing.web.controllers.ControllerUnitTest
  */
 class BookControllerUnitSpec extends HibernateSpec implements ControllerUnitTest<BookController> {
 
+    @Override
+    List<Class> getDomainClasses() { [Book] }
+
     def setup() {
         def bookService = Mock(BookService)
         bookService.getBook(_) >> { args ->

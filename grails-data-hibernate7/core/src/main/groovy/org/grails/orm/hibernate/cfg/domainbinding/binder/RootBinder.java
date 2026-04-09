@@ -53,7 +53,8 @@ public class RootBinder {
             SubClassBinder subClassBinder,
             RootPersistentClassCommonValuesBinder rootPersistentClassCommonValuesBinder,
             DiscriminatorPropertyBinder discriminatorPropertyBinder,
-            InFlightMetadataCollector mappings, MappingCacheHolder mappingCacheHolder) {
+            InFlightMetadataCollector mappings,
+            MappingCacheHolder mappingCacheHolder) {
         this.dataSourceName = dataSourceName;
         this.multiTenantFilterBinder = multiTenantFilterBinder;
         this.subClassBinder = subClassBinder;
@@ -71,7 +72,9 @@ public class RootBinder {
      */
     public void bindRoot(@Nonnull HibernatePersistentEntity entity) {
         if (mappings.getEntityBinding(entity.getName()) != null) {
-            LOG.warn("[RootBinder] Class [" + entity.getName() + "] is already mapped, skipping.. ");
+            if (LOG.isWarnEnabled()) {
+                LOG.warn("[RootBinder] Class [{}] is already mapped, skipping.. ", entity.getName());
+            }
             return;
         }
 
@@ -83,9 +86,7 @@ public class RootBinder {
         }
 
         // bind the sub classes
-        children.stream()
-                .flatMap(sub -> getSubclassStream(sub, root))
-                .forEach(subClass -> addSubclass(subClass, root));
+        children.stream().flatMap(sub -> getSubclassStream(sub, root)).forEach(subClass -> addSubclass(subClass, root));
 
         multiTenantFilterBinder.bind(entity, root);
 

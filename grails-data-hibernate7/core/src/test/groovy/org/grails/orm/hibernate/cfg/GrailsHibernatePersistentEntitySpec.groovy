@@ -26,6 +26,7 @@ import org.grails.orm.hibernate.cfg.domainbinding.hibernate.GrailsHibernatePersi
 import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernatePersistentProperty
 import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernatePersistentEntity
 import org.grails.orm.hibernate.cfg.domainbinding.util.DefaultColumnNameFetcher
+import org.grails.datastore.mapping.core.connections.ConnectionSource
 
 class GrailsHibernatePersistentEntitySpec extends HibernateGormDatastoreSpec {
 
@@ -155,7 +156,7 @@ class GrailsHibernatePersistentEntitySpec extends HibernateGormDatastoreSpec {
         GrailsHibernatePersistentEntity vehicle = getPersistentEntity(Vehicle) as GrailsHibernatePersistentEntity
 
         when:
-        def children = vehicle.getChildEntities("DEFAULT")
+        def children = vehicle.getChildEntities(ConnectionSource.DEFAULT)
 
         then:
         children.size() == 2
@@ -259,7 +260,7 @@ class GrailsHibernatePersistentEntitySpec extends HibernateGormDatastoreSpec {
         def context = getMappingContext()
         GrailsHibernatePersistentEntity entity = Spy(HibernatePersistentEntity, constructorArgs: [Person, context])
         def mapping = Mock(Mapping)
-        def mappedIdentity = new Identity(name: "customId")
+        def mappedIdentity = new HibernateSimpleIdentity(name: "customId")
 
         entity.getMappedForm() >> mapping
         mapping.getIdentity() >> mappedIdentity
@@ -269,7 +270,7 @@ class GrailsHibernatePersistentEntitySpec extends HibernateGormDatastoreSpec {
 
         then:
         result == mappedIdentity
-        ((Identity)result).name == "customId"
+        ((HibernateSimpleIdentity)result).name == "customId"
     }
 
     def "test getHibernateIdentity returns CompositeIdentity if entity has multiple ID properties"() {
@@ -288,8 +289,8 @@ class GrailsHibernatePersistentEntitySpec extends HibernateGormDatastoreSpec {
         def result = entity.getHibernateIdentity()
 
         then:
-        result instanceof CompositeIdentity
-        ((CompositeIdentity)result).propertyNames == ["id1", "id2"] as String[]
+        result instanceof HibernateCompositeIdentity
+        ((HibernateCompositeIdentity)result).propertyNames == ["id1", "id2"] as String[]
     }
 
     def "test getHibernateIdentity returns synthetic Identity if no mapping or composite ID"() {
@@ -308,8 +309,8 @@ class GrailsHibernatePersistentEntitySpec extends HibernateGormDatastoreSpec {
         def result = entity.getHibernateIdentity()
 
         then:
-        result instanceof Identity
-        ((Identity)result).name == "myId"
+        result instanceof HibernateSimpleIdentity
+        ((HibernateSimpleIdentity)result).name == "myId"
     }
 
     def "test getHibernateIdentity defaults to entity name if identity name is null"() {
@@ -328,8 +329,8 @@ class GrailsHibernatePersistentEntitySpec extends HibernateGormDatastoreSpec {
         def result = entity.getHibernateIdentity()
 
         then:
-        result instanceof Identity
-        ((Identity)result).name == "Person"
+        result instanceof HibernateSimpleIdentity
+        ((HibernateSimpleIdentity)result).name == "Person"
     }
 
     def "test getHibernateCompositeIdentity returns CompositeIdentity when conditions met"() {
@@ -337,14 +338,14 @@ class GrailsHibernatePersistentEntitySpec extends HibernateGormDatastoreSpec {
         def context = getMappingContext()
         GrailsHibernatePersistentEntity entity = Spy(HibernatePersistentEntity, constructorArgs: [Person, context])
         def mapping = Mock(Mapping)
-        def compositeIdentity = new CompositeIdentity()
+        def compositeIdentity = new HibernateCompositeIdentity()
 
         entity.getMappedForm() >> mapping
         mapping.hasCompositeIdentifier() >> true
         mapping.getIdentity() >> compositeIdentity
 
         when:
-        Optional<CompositeIdentity> result = entity.getHibernateCompositeIdentity()
+        Optional<HibernateCompositeIdentity> result = entity.getHibernateCompositeIdentity()
 
         then:
         result.isPresent()
@@ -359,7 +360,7 @@ class GrailsHibernatePersistentEntitySpec extends HibernateGormDatastoreSpec {
         entity.getMappedForm() >> null
 
         when:
-        Optional<CompositeIdentity> result = entity.getHibernateCompositeIdentity()
+        Optional<HibernateCompositeIdentity> result = entity.getHibernateCompositeIdentity()
 
         then:
         !result.isPresent()
@@ -375,7 +376,7 @@ class GrailsHibernatePersistentEntitySpec extends HibernateGormDatastoreSpec {
         mapping.hasCompositeIdentifier() >> false
 
         when:
-        Optional<CompositeIdentity> result = entity.getHibernateCompositeIdentity()
+        Optional<HibernateCompositeIdentity> result = entity.getHibernateCompositeIdentity()
 
         then:
         !result.isPresent()
@@ -386,14 +387,14 @@ class GrailsHibernatePersistentEntitySpec extends HibernateGormDatastoreSpec {
         def context = getMappingContext()
         GrailsHibernatePersistentEntity entity = Spy(HibernatePersistentEntity, constructorArgs: [Person, context])
         def mapping = Mock(Mapping)
-        def nonCompositeIdentity = new Identity()
+        def nonCompositeIdentity = new HibernateSimpleIdentity()
 
         entity.getMappedForm() >> mapping
         mapping.hasCompositeIdentifier() >> true
         mapping.getIdentity() >> nonCompositeIdentity
 
         when:
-        Optional<CompositeIdentity> result = entity.getHibernateCompositeIdentity()
+        Optional<HibernateCompositeIdentity> result = entity.getHibernateCompositeIdentity()
 
         then:
         !result.isPresent()

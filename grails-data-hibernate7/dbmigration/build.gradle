@@ -18,11 +18,12 @@
  */
 
 plugins {
-    id 'java-library'
     id 'org.apache.grails.buildsrc.properties'
     id 'org.apache.grails.gradle.grails-plugin'
-
-
+    id 'org.apache.grails.buildsrc.compile'
+    id 'org.apache.grails.buildsrc.publish'
+    id 'org.apache.grails.buildsrc.sbom'
+    id 'org.apache.grails.gradle.grails-code-style'
 }
 
 version = projectVersion
@@ -44,7 +45,7 @@ dependencies {
         exclude group: 'org.liquibase', module: 'liquibase-core'
     }
 
-    implementation("org.liquibase:liquibase-core:4.33.0")
+    implementation("org.liquibase:liquibase-core:$liquibaseHibernate7CoreVersion")
     implementation("org.hibernate.models:hibernate-models:1.0.1")
     implementation project(':grails-data-hibernate7')
     compileOnly("org.hibernate.orm:hibernate-envers:$hibernate7Version")
@@ -83,22 +84,28 @@ dependencies {
     testImplementation project(':grails-core')
     testImplementation project(':grails-testing-support-datamapping')
     testImplementation project(':grails-testing-support-web')
-    testImplementation platform('org.testcontainers:testcontainers-bom:2.0.3')
+
     testImplementation 'org.testcontainers:testcontainers'
     testImplementation 'org.testcontainers:postgresql'
     testImplementation 'org.testcontainers:spock'
     testImplementation 'com.h2database:h2'
     testImplementation 'org.hsqldb:hsqldb'
     testImplementation 'org.postgresql:postgresql'
-    testImplementation 'org.liquibase:liquibase-test-harness:1.0.11'
+    testImplementation('org.liquibase:liquibase-test-harness:1.0.11') {
+        exclude group: 'org.liquibase', module: 'liquibase-commercial'
+    }
     testImplementation("org.hibernate.orm:hibernate-envers:$hibernate7Version")
 
     constraints {
         implementation("org.liquibase:liquibase-core") {
             version {
-                strictly "4.33.0"
+                strictly "$liquibaseHibernate7CoreVersion"
             }
         }
+        testImplementation("org.apache.derby:derby:10.16.1.1")
+        testImplementation("org.apache.derby:derbyshared:10.16.1.1")
+        testImplementation("org.apache.derby:derbytools:10.16.1.1")
+        testImplementation("org.apache.derby:derbyclient:10.16.1.1")
     }
 }
 
@@ -119,8 +126,6 @@ tasks.withType(Test).configureEach {
     }
 }
 apply {
-    from rootProject.layout.projectDirectory.file('gradle/java-config.gradle')
-    from rootProject.layout.projectDirectory.file('gradle/code-style-config.gradle')
     from rootProject.layout.projectDirectory.file('gradle/hibernate7-test-config.gradle')
     from rootProject.layout.projectDirectory.file('gradle/docs-config.gradle')
     from rootProject.layout.projectDirectory.file('gradle/grails-extension-gradle-config.gradle')

@@ -43,6 +43,7 @@ class GrailsDataCoreTckManager extends GrailsDataTckManager {
 
     @Override
     Session createSession() {
+        System.setProperty('core.gorm.suite', 'true')
         def ctx = new GenericApplicationContext()
         ctx.refresh()
         def simple = new SimpleMapDatastore(ctx)

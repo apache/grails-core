@@ -22,6 +22,7 @@ package org.grails.orm.hibernate.query;
  * @deprecated Use {@link HibernateQueryArgument} instead.
  */
 @Deprecated(since = "8.0", forRemoval = true)
+@SuppressWarnings("PMD.ConstantsInInterface")
 public interface HibernateQueryConstants {
 
     String ARGUMENT_FETCH_SIZE = HibernateQueryArgument.FETCH_SIZE.value();

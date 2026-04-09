@@ -20,20 +20,21 @@ package org.grails.orm.hibernate.cfg.domainbinding.binder;
 
 import jakarta.annotation.Nonnull;
 
-import org.hibernate.mapping.PersistentClass;
 import org.hibernate.mapping.Table;
 import org.hibernate.mapping.Value;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernateCustomProperty;
 import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernateEmbeddedProperty;
 import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernateEnumProperty;
 import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernateManyToOneProperty;
 import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernateOneToOneProperty;
 import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernatePersistentProperty;
+import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernateSimpleProperty;
+import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernateTenantIdProperty;
 import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernateToManyProperty;
 
-@SuppressWarnings("PMD.DataflowAnomalyAnalysis")
 public class GrailsPropertyBinder {
 
     private static final Logger LOG = LoggerFactory.getLogger(GrailsPropertyBinder.class);
@@ -64,34 +65,44 @@ public class GrailsPropertyBinder {
     }
 
     public Value bindProperty(
-            @Nonnull HibernatePersistentProperty currentGrailsProp, HibernatePersistentProperty parentProperty, String path) {
+            @Nonnull HibernatePersistentProperty currentGrailsProp,
+            HibernatePersistentProperty parentProperty,
+            String path) {
         Table table = currentGrailsProp.getTable();
-        PersistentClass persistentClass = currentGrailsProp.getHibernateOwner().getPersistentClass();
         if (LOG.isDebugEnabled()) {
-            LOG.debug("[GrailsPropertyBinder] Binding persistent property [" + currentGrailsProp.getName() + "]");
+            LOG.debug("[GrailsPropertyBinder] Binding persistent property [{}]", currentGrailsProp.getName());
         }
 
         Value value;
 
-        // 1. Create Value and apply binders (consolidated block)
-        if (currentGrailsProp instanceof HibernateEnumProperty) {
-            value = enumTypeBinder.bindEnumType(currentGrailsProp, currentGrailsProp.getType(), table, path);
+        if (currentGrailsProp instanceof HibernateEnumProperty hibernateEnumProperty) {
+            value = enumTypeBinder.bindEnumType(hibernateEnumProperty, table, path);
+        } else if (currentGrailsProp.isUserButNotCollectionType()) {
+            value = simpleValueBinder.bindSimpleValue(currentGrailsProp, parentProperty, table, path);
         } else if (currentGrailsProp instanceof HibernateOneToOneProperty oneToOne &&
                 oneToOne.isValidHibernateOneToOne()) {
             value = oneToOneBinder.bindOneToOne(oneToOne, path);
         } else if (currentGrailsProp instanceof HibernateOneToOneProperty oneToOne) {
-            value = foreignKeyOneToOneBinder.bind(oneToOne, table, path);
+            value = foreignKeyOneToOneBinder.bind(oneToOne, path);
         } else if (currentGrailsProp instanceof HibernateManyToOneProperty manyToOne) {
             value = manyToOneBinder.bindManyToOne(manyToOne, table, path);
         } else if (currentGrailsProp instanceof HibernateToManyProperty toMany &&
                 !currentGrailsProp.isSerializableType()) {
-            // HibernateToManyProperty
-            value = collectionBinder.bindCollection(toMany, persistentClass, path);
+            value = collectionBinder.bindCollection(toMany, path);
         } else if (currentGrailsProp instanceof HibernateEmbeddedProperty embedded) {
-            value = componentBinder.bindComponent(persistentClass, embedded, path);
+            value = componentBinder.bindComponent(embedded, path);
+        } else if (currentGrailsProp instanceof HibernateSimpleProperty simple) {
+            value = simpleValueBinder.bindSimpleValue(simple, parentProperty, table, path);
+        } else if (currentGrailsProp instanceof HibernateCustomProperty custom) {
+            value = simpleValueBinder.bindSimpleValue(custom, parentProperty, table, path);
+        } else if (currentGrailsProp instanceof HibernateTenantIdProperty tenantId) {
+            value = simpleValueBinder.bindSimpleValue(tenantId, parentProperty, table, path);
+        } else if (currentGrailsProp instanceof HibernateToManyProperty toMany &&
+                currentGrailsProp.isSerializableType()) {
+            value = simpleValueBinder.bindSimpleValue(toMany, parentProperty, table, path);
         } else {
-            // HibernateSimpleProperty
-            value = simpleValueBinder.bindSimpleValue(currentGrailsProp, parentProperty, table, path);
+            throw new RuntimeException(
+                    "Unsupported property type: " + currentGrailsProp.getClass().getName());
         }
 
         return value;

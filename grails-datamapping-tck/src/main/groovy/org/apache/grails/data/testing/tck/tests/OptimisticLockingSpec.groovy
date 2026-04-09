@@ -19,26 +19,19 @@
 package org.apache.grails.data.testing.tck.tests
 
 import spock.lang.IgnoreIf
+import spock.lang.Requires
 
 import org.apache.grails.data.testing.tck.base.GrailsDataTckSpec
 import org.apache.grails.data.testing.tck.domains.OptLockNotVersioned
 import org.apache.grails.data.testing.tck.domains.OptLockVersioned
+import org.springframework.dao.OptimisticLockingFailureException
+
 import org.grails.datastore.mapping.core.OptimisticLockingException
 
 /**
  * @author Burt Beckwith
  */
-@IgnoreIf({
-        try {
-            // This class is specific to the Spring/Hibernate 5 integration. If it's on the classpath,
-            // it means we are running against a Hibernate datastore, which has its own specific
-            // optimistic locking tests. This generic TCK test should be skipped.
-            Class.forName('org.springframework.orm.hibernate5.HibernateOptimisticLockingFailureException', false, Thread.currentThread().contextClassLoader)
-            return true
-        } catch (ClassNotFoundException | LinkageError ignored) {
-            return false
-        }
-})
+@Requires({ System.getProperty('hibernate5.gorm.suite') == 'true' || System.getProperty('hibernate7.gorm.suite') == 'true' || System.getProperty('mongodb.gorm.suite') == 'true' })
 class OptimisticLockingSpec extends GrailsDataTckSpec {
 
     def setupSpec() {
@@ -73,6 +66,7 @@ class OptimisticLockingSpec extends GrailsDataTckSpec {
         o.version == 1
     }
 
+    @IgnoreIf({ System.getProperty('mongodb.gorm.suite') == 'true' })
     void "Test optimistic locking"() {
 
         given:
@@ -112,9 +106,10 @@ class OptimisticLockingSpec extends GrailsDataTckSpec {
             }
         }
         then:
-        thrown OptimisticLockingException
+        thrown OptimisticLockingFailureException
     }
 
+    @IgnoreIf({ System.getProperty('mongodb.gorm.suite') == 'true' })
     void "Test optimistic locking disabled with 'version false'"() {
         given:
         def o = new OptLockNotVersioned(name: 'locked').save(flush: true)
@@ -150,6 +145,62 @@ class OptimisticLockingSpec extends GrailsDataTckSpec {
             o = OptLockNotVersioned.get(o.id)
 
         }
+
+        then:
+        ex == null
+        o.name == 'locked in main session'
+    }
+
+    @IgnoreIf({ System.getProperty('hibernate5.gorm.suite') == 'true' || System.getProperty('hibernate7.gorm.suite') == 'true' })
+    void "Test optimistic locking with withNewSession"() {
+
+        given:
+        def o = new OptLockVersioned(name: 'locked').save(flush: true)
+        manager.session.clear()
+
+        when:
+        o = OptLockVersioned.get(o.id)
+
+        OptLockVersioned.withNewSession { session ->
+            def reloaded = OptLockVersioned.get(o.id)
+            reloaded.name += ' in new session'
+            reloaded.save(flush: true)
+        }
+
+        o.name += ' in main session'
+        o.save(flush: true)
+
+        then:
+        thrown OptimisticLockingException
+    }
+
+    @IgnoreIf({ System.getProperty('hibernate5.gorm.suite') == 'true' || System.getProperty('hibernate7.gorm.suite') == 'true' })
+    void "Test optimistic locking disabled with 'version false' using withNewSession"() {
+        given:
+        def o = new OptLockNotVersioned(name: 'locked').save(flush: true)
+        manager.session.clear()
+
+        when:
+        o = OptLockNotVersioned.get(o.id)
+
+        OptLockNotVersioned.withNewSession { session ->
+            def reloaded = OptLockNotVersioned.get(o.id)
+            reloaded.name += ' in new session'
+            reloaded.save(flush: true)
+        }
+
+        def ex
+        try {
+            o.name += ' in main session'
+            o.save(flush: true)
+        }
+        catch (e) {
+            ex = e
+            e.printStackTrace()
+        }
+
+        manager.session.clear()
+        o = OptLockNotVersioned.get(o.id)
 
         then:
         ex == null

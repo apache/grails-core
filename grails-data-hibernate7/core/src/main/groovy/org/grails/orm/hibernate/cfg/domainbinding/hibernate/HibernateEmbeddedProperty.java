@@ -28,6 +28,7 @@ import org.grails.orm.hibernate.cfg.PropertyConfig;
 /** Hibernate implementation of {@link org.grails.datastore.mapping.model.types.Embedded} */
 public class HibernateEmbeddedProperty extends EmbeddedWithMapping<PropertyConfig>
         implements HibernatePersistentProperty {
+
     public HibernateEmbeddedProperty(PersistentEntity entity, MappingContext context, PropertyDescriptor property) {
         super(entity, context, property);
     }

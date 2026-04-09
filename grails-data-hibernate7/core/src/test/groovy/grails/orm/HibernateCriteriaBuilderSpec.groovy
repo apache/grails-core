@@ -252,7 +252,18 @@ class HibernateCriteriaBuilderSpec extends HibernateGormDatastoreSpec {
         results[0].firstName == "Fred"
     }
 
-    // ─── Logical combinators ───────────────────────────────────────────────
+    void "createAlias defines an explicit join with an alias"() {
+        when:
+        def results = c.list {
+            createAlias("transactions", "t")
+            gt("t.amount", BigDecimal.valueOf(40))
+        }
+        then:
+        results.size() == 1
+        results[0].firstName == "Barney"
+    }
+
+    // ─── logical combinators ───────────────────────────────────────────────
 
     /**
      * {@code and} / {@code or} / {@code not} — logical grouping of predicates.

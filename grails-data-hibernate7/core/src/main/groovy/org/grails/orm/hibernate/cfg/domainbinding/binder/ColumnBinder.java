@@ -110,10 +110,10 @@ public class ColumnBinder {
             // the column's length, precision, and scale
             Class<?> type = property.getType();
             if (type != null && (String.class.isAssignableFrom(type) || byte[].class.isAssignableFrom(type))) {
-                PropertyConfig mappedForm = property.getMappedForm();
+                PropertyConfig mappedForm = property.getHibernateMappedForm();
                 stringColumnConstraintsBinder.bindStringColumnConstraints(column, mappedForm);
             } else if (type != null && Number.class.isAssignableFrom(type)) {
-                PropertyConfig mappedForm = property.getMappedForm();
+                PropertyConfig mappedForm = property.getHibernateMappedForm();
                 numericColumnConstraintsBinder.bindNumericColumnConstraints(column, cc, mappedForm);
             }
         }
@@ -123,14 +123,11 @@ public class ColumnBinder {
 
         var owner = property.getHibernateOwner();
         if (!owner.isRoot()) {
-            Mapping mapping = owner.getMappedForm();
+            Mapping mapping = owner.getHibernateMappedForm();
             if (mapping != null && mapping.getTablePerHierarchy()) {
-                if (LOG.isDebugEnabled())
-                    LOG.debug("[GrailsDomainBinder] Sub class property [" +
-                            property.getName() +
-                            "] for column name [" +
-                            column.getName() +
-                            "] set to nullable");
+                if (LOG.isDebugEnabled()) {
+                    LOG.debug("[GrailsDomainBinder] Sub class property [{}] for column name [{}] set to nullable", property.getName(), column.getName());
+                }
                 column.setNullable(true);
             } else {
                 column.setNullable(property.isNullable());
@@ -138,16 +135,11 @@ public class ColumnBinder {
         }
 
         // Apply uniqueness last to ensure it isn't overridden by downstream binders
-        PropertyConfig mappedFormFinal = property.getMappedForm();
+        PropertyConfig mappedFormFinal = property.getHibernateMappedForm();
         column.setUnique(mappedFormFinal.isUnique() && !mappedFormFinal.isUniqueWithinGroup());
 
-        if (LOG.isDebugEnabled())
-            LOG.debug("[GrailsDomainBinder] bound property [" +
-                    property.getName() +
-                    "] to column name [" +
-                    column.getName() +
-                    "] in table [" +
-                    table.getName() +
-                    "]");
+        if (LOG.isDebugEnabled()) {
+            LOG.debug("[GrailsDomainBinder] bound property [{}] to column name [{}] in table [{}]", property.getName(), column.getName(), table.getName());
+        }
     }
 }

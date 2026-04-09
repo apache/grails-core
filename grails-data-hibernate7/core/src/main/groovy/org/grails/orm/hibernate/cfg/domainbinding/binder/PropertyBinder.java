@@ -60,7 +60,7 @@ public class PropertyBinder {
         prop.setValue(value);
         // set the property name
         prop.setName(persistentProperty.getName());
-        PropertyConfig config = persistentProperty.getMappedForm();
+        PropertyConfig config = persistentProperty.getHibernateMappedForm();
         if (config == null) {
             config = new PropertyConfig();
         }
@@ -86,18 +86,18 @@ public class PropertyBinder {
         prop.setPropertyAccessorName(accessorName);
 
         prop.setOptional(persistentProperty.isNullable());
+        //TODO Change to Hibernate hierarchy
         if (persistentProperty instanceof Association<?> association &&
                 !(persistentProperty instanceof HibernateEnumProperty)) {
             prop.setCascade(cascadeBehaviorFetcher.getCascadeBehaviour(association));
         }
 
-        // lazy to true
+        // Use centralized laziness determination
+        prop.setLazy(persistentProperty.isLazy());
 
-        if (persistentProperty.isLazyAble()) {
-            final boolean isLazy =
-                    Optional.ofNullable(config.getLazy()).orElse(persistentProperty instanceof Association);
-            prop.setLazy(isLazy);
-        }
+        prop.setInsertable(value.hasAnyInsertableColumns());
+        prop.setUpdatable(value.hasAnyUpdatableColumns());
+
         return prop;
     }
 }

@@ -81,8 +81,7 @@ public class MultiTenantFilterBinder {
      * @return null as it's redundant for single table subclasses
      */
     @Nullable
-    public FilterDefinition bind(
-            @Nonnull HibernatePersistentEntity entity, @Nonnull SingleTableSubclass subclass) {
+    public FilterDefinition bind(@Nonnull HibernatePersistentEntity entity, @Nonnull SingleTableSubclass subclass) {
         return null; // Redundant for SingleTableSubclass
     }
 
@@ -118,9 +117,13 @@ public class MultiTenantFilterBinder {
             return null;
         }
 
-        return Optional.ofNullable(entity.getHibernateTenantId())
-                .map(HibernatePersistentProperty::getName)
-                .map(name -> grailsPropertyResolver.getProperty(persistentClass, name))
+        HibernatePersistentProperty tenantId = entity.getHibernateTenantId();
+        if (tenantId == null) {
+            return null;
+        }
+
+        String name = tenantId.getName();
+        return Optional.ofNullable(grailsPropertyResolver.getProperty(persistentClass, name))
                 .filter(property -> shouldApplyFilter(entity, persistentClass, property))
                 .map(property -> {
                     var filterName = GormProperties.TENANT_IDENTITY;

@@ -26,6 +26,7 @@ import org.grails.datastore.gorm.validation.CascadingValidator
 
 class DeepValidateWithSaveSpec extends GrailsDataTckSpec<GrailsDataCoreTckManager> {
 
+    @spock.lang.Requires({ System.getProperty('hibernate5.gorm.suite') == 'true' || System.getProperty('hibernate7.gorm.suite') == 'true' || System.getProperty('mongodb.gorm.suite') == 'true' })
     void "save delegates deepValidate:true to CascadingValidator"() {
         given: "a CascadingValidator mock installed for TestEntity"
         def persistentEntity = manager.session.mappingContext.persistentEntities.find { it.javaClass == TestEntity }
@@ -41,6 +42,7 @@ class DeepValidateWithSaveSpec extends GrailsDataTckSpec<GrailsDataCoreTckManage
         1 * mockValidator.validate(entity, _, true)
     }
 
+    @spock.lang.Requires({ System.getProperty('hibernate5.gorm.suite') == 'true' || System.getProperty('hibernate7.gorm.suite') == 'true' || System.getProperty('mongodb.gorm.suite') == 'true' })
     void "save delegates deepValidate:false to CascadingValidator"() {
         given: "a CascadingValidator mock installed for TestEntity"
         def persistentEntity = manager.session.mappingContext.persistentEntities.find { it.javaClass == TestEntity }

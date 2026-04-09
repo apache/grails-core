@@ -26,8 +26,6 @@ import org.hibernate.mapping.Collection;
 import org.hibernate.mapping.ManyToOne;
 import org.hibernate.mapping.OneToMany;
 import org.hibernate.mapping.Value;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 import org.grails.orm.hibernate.cfg.domainbinding.hibernate.GrailsHibernatePersistentEntity;
 import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernateOneToManyProperty;
@@ -38,7 +36,6 @@ import static org.grails.orm.hibernate.cfg.domainbinding.binder.GrailsDomainBind
 /** Binds unidirectional one-to-many associations. */
 public class UnidirectionalOneToManyBinder {
 
-    private static final Logger LOG = LoggerFactory.getLogger(UnidirectionalOneToManyBinder.class);
     private final CollectionWithJoinTableBinder collectionWithJoinTableBinder;
     private final BackticksRemover backticksRemover = new BackticksRemover();
     private final InFlightMetadataCollector mappings;
@@ -49,9 +46,10 @@ public class UnidirectionalOneToManyBinder {
         this.mappings = mappings;
     }
 
-    public void bind(@Nonnull HibernateOneToManyProperty property, @Nonnull Collection collection) {
+    public void bind(@Nonnull HibernateOneToManyProperty property) {
+        Collection collection = property.getCollection();
         if (!property.shouldBindWithForeignKey()) {
-            collectionWithJoinTableBinder.bindCollectionWithJoinTable(property, collection);
+            collectionWithJoinTableBinder.bindCollectionWithJoinTable(property);
         } else {
             bindUnidirectionalOneToMany(property, collection);
         }
@@ -75,8 +73,7 @@ public class UnidirectionalOneToManyBinder {
         GrailsHibernatePersistentEntity owner = (GrailsHibernatePersistentEntity) property.getOwner();
         Backref backref = new Backref();
         backref.setEntityName(owner.getName());
-        backref.setName(UNDERSCORE +
-                backticksRemover.apply(owner.getJavaClass().getSimpleName()) +
+        backref.setName(UNDERSCORE + backticksRemover.apply(owner.getJavaClass().getSimpleName()) +
                 UNDERSCORE +
                 backticksRemover.apply(property.getName()) +
                 "Backref");

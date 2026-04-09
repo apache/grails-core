@@ -29,6 +29,7 @@ import org.testcontainers.containers.PostgreSQLContainer
 import org.testcontainers.spock.Testcontainers
 import spock.lang.Requires
 import spock.lang.Shared
+import org.grails.datastore.mapping.core.connections.ConnectionSource
 
 @Testcontainers
 @Requires({ isDockerAvailable() })
@@ -109,7 +110,7 @@ class HibernateDatastoreIntegrationSpec extends HibernateGormDatastoreSpec {
 
     void "dataSourceName defaults to DEFAULT"() {
         expect:
-        datastore.dataSourceName == 'DEFAULT'
+        datastore.dataSourceName == ConnectionSource.DEFAULT
     }
 
     void "isAutoFlush is false when grails.gorm.autoFlush is not set"() {

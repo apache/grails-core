@@ -48,19 +48,17 @@ import org.slf4j.LoggerFactory;
  */
 public class IdentityEnumType implements UserType, ParameterizedType, Serializable {
 
+    public static final String ENUM_ID_ACCESSOR = "getId";
+    public static final String PARAM_ENUM_CLASS = "enumClass";
+
     @Serial
     private static final long serialVersionUID = -6625622185856547501L;
 
     private static final Logger LOG = LoggerFactory.getLogger(IdentityEnumType.class);
-
-    private static TypeConfiguration typeConfiguration = new TypeConfiguration();
-    public static final String ENUM_ID_ACCESSOR = "getId";
-
-    public static final String PARAM_ENUM_CLASS = "enumClass";
-
     private static final Map<Class<? extends Enum<?>>, BidiEnumMap> ENUM_MAPPINGS = new HashMap<>();
+    private static final TypeConfiguration typeConfiguration = new TypeConfiguration();
     protected Class<? extends Enum<?>> enumClass;
-    protected BidiEnumMap bidiMap;
+    private BidiEnumMap bidiMap;
     protected AbstractStandardBasicType<?> type;
     protected int[] sqlTypes;
 
@@ -166,7 +164,7 @@ public class IdentityEnumType implements UserType, ParameterizedType, Serializab
     }
 
     @Override
-    public AttributeConverter getValueConverter() {
+    public AttributeConverter<?, ?> getValueConverter() {
         return UserType.super.getValueConverter();
     }
 
@@ -200,7 +198,9 @@ public class IdentityEnumType implements UserType, ParameterizedType, Serializab
                 Object id = idAccessor.invoke(value);
                 enumToKey.put((Enum) value, id);
                 if (keytoEnum.containsKey(id)) {
-                    LOG.warn("Duplicate Enum ID '{}' detected for Enum {}!", id, enumClass.getName());
+                    if (LOG.isWarnEnabled()) {
+                        LOG.warn("Duplicate Enum ID '{}' detected for Enum {}!", id, enumClass.getName());
+                    }
                 }
                 keytoEnum.put(id, value);
             }

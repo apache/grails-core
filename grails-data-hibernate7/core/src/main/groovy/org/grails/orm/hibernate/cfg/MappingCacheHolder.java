@@ -19,7 +19,6 @@
 package org.grails.orm.hibernate.cfg;
 
 import java.util.HashMap;
-import java.util.Iterator;
 import java.util.Map;
 
 import org.grails.orm.hibernate.cfg.domainbinding.hibernate.GrailsHibernatePersistentEntity;
@@ -27,15 +26,9 @@ import org.grails.orm.hibernate.cfg.domainbinding.hibernate.GrailsHibernatePersi
 /** Holder for the GORM mapping cache. */
 public class MappingCacheHolder {
 
-    private static final MappingCacheHolder INSTANCE = new MappingCacheHolder();
-
-    private MappingCacheHolder() {}
-
-    public static MappingCacheHolder getInstance() {
-        return INSTANCE;
-    }
-
     private final Map<Class<?>, Mapping> MAPPING_CACHE = new HashMap<>();
+
+    public MappingCacheHolder() {}
 
     /**
      * Obtains a mapping object for the given domain class nam
@@ -54,7 +47,7 @@ public class MappingCacheHolder {
      */
     public void cacheMapping(GrailsHibernatePersistentEntity entity) {
         if (entity != null) {
-            MAPPING_CACHE.put(entity.getJavaClass(), entity.getMappedForm());
+            MAPPING_CACHE.put(entity.getJavaClass(), entity.getHibernateMappedForm());
         }
     }
 
@@ -77,13 +70,6 @@ public class MappingCacheHolder {
     @SuppressWarnings("PMD.DataflowAnomalyAnalysis")
     public void clear(Class<?> theClass) {
         String className = theClass.getName();
-        for (Iterator<Map.Entry<Class<?>, Mapping>> it =
-                        MAPPING_CACHE.entrySet().iterator();
-                it.hasNext(); ) {
-            Map.Entry<Class<?>, Mapping> entry = it.next();
-            if (className.equals(entry.getKey().getName())) {
-                it.remove();
-            }
-        }
+        MAPPING_CACHE.entrySet().removeIf(entry -> className.equals(entry.getKey().getName()));
     }
 }

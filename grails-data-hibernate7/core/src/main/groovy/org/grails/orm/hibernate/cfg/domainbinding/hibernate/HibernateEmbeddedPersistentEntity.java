@@ -28,22 +28,29 @@ import org.grails.orm.hibernate.cfg.Mapping;
 
 public class HibernateEmbeddedPersistentEntity extends EmbeddedPersistentEntity<Mapping>
         implements GrailsHibernatePersistentEntity {
+
     private final ClassMapping<Mapping> classMapping;
     private String dataSourceName;
     private PersistentClass persistentClass;
 
+    public HibernateEmbeddedPersistentEntity(Class<?> type, MappingContext ctx) {
+        super(type, ctx);
+        this.classMapping = new HibernateEmbeddedClassMapping(this, ctx);
+    }
+
+    @Override
     public Mapping getMappedForm() {
         return classMapping.getMappedForm();
     }
 
     @Override
-    public void setDataSourceName(String dataSourceName) {
-        this.dataSourceName = dataSourceName;
+    public String getDataSourceName() {
+        return dataSourceName;
     }
 
     @Override
-    public String getDataSourceName() {
-        return dataSourceName;
+    public void setDataSourceName(String dataSourceName) {
+        this.dataSourceName = dataSourceName;
     }
 
     @Override
@@ -76,23 +83,18 @@ public class HibernateEmbeddedPersistentEntity extends EmbeddedPersistentEntity<
         return false;
     }
 
-    public HibernateEmbeddedPersistentEntity(Class<?> type, MappingContext ctx) {
-        super(type, ctx);
-        this.classMapping = new HibernateEmbeddedClassMapping(this, ctx);
-    }
-
     @Override
     public ClassMapping<Mapping> getMapping() {
         return classMapping;
     }
 
     @Override
-    public void setPersistentClass(PersistentClass persistentClass) {
-        this.persistentClass = persistentClass;
+    public PersistentClass getPersistentClass() {
+        return persistentClass;
     }
 
     @Override
-    public PersistentClass getPersistentClass() {
-        return persistentClass;
+    public void setPersistentClass(PersistentClass persistentClass) {
+        this.persistentClass = persistentClass;
     }
 }

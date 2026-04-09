@@ -237,13 +237,11 @@ class WhereQueryOldIssueVerificationSpec extends Specification {
     @Issue('https://github.com/apache/grails-core/issues/14600')
     def "findAllBy works with bidirectional hasMany relation"() {
         given: "authors with books in a bidirectional hasMany"
-        def author1 = new WqBiAuthor(name: "Stephen King").save(flush: true)
-        def book1 = new WqBiBook(title: "IT").save(flush: true)
-        def book2 = new WqBiBook(title: "The Shining").save(flush: true)
+        def author1 = new WqBiAuthor(name: "Stephen King")
+        def book1 = new WqBiBook(title: "IT")
+        def book2 = new WqBiBook(title: "The Shining")
         author1.addToBooks(book1)
         author1.addToBooks(book2)
-        book1.addToAuthors(author1)
-        book2.addToAuthors(author1)
         author1.save(flush: true)
 
         when: "using withCriteria to find books by author"
@@ -362,7 +360,7 @@ class WqBiBook implements HibernateEntity<WqBiBook> {
     String title
 
     static hasMany = [authors: WqBiAuthor]
-    static belongsTo = WqBiAuthor
+    static belongsTo = [WqBiAuthor]
 }
 
 @Entity

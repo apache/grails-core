@@ -28,6 +28,9 @@ import org.grails.datastore.mapping.multitenancy.resolvers.SystemPropertyTenantR
  */
 class PartitionedMultiTenancySpec extends HibernateSpec {
 
+    @Override
+    List<Class> getDomainClasses() { [Book] }
+
     BookService bookDataService = hibernateDatastore.getService(BookService)
 
     @Override

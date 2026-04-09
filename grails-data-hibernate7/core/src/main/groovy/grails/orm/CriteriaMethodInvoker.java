@@ -33,8 +33,12 @@ import jakarta.persistence.metamodel.Metamodel;
 import org.springframework.beans.BeanUtils;
 
 import grails.gorm.DetachedCriteria;
-import grails.gorm.PagedResultList;
+import org.grails.datastore.gorm.query.criteria.DetachedAssociationCriteria;
+import org.grails.datastore.mapping.model.PersistentEntity;
+import org.grails.datastore.mapping.model.PersistentProperty;
+import org.grails.datastore.mapping.model.types.Association;
 import org.grails.datastore.mapping.query.Query;
+import org.grails.orm.hibernate.query.HibernatePagedResultList;
 import org.grails.orm.hibernate.query.HibernateQuery;
 import org.grails.orm.hibernate.query.HibernateQueryArgument;
 
@@ -125,7 +129,7 @@ public class CriteriaMethodInvoker {
                     }
                     hibernateQuery.order(order);
                 }
-                result = new PagedResultList<>(hibernateQuery);
+                result = new HibernatePagedResultList<>(hibernateQuery);
             } else if (builder.isScroll()) {
                 result = hibernateQuery.scroll();
             } else {
@@ -188,18 +192,38 @@ public class CriteriaMethodInvoker {
 
             if (attribute.isAssociation()) {
                 Class<?> oldTargetClass = builder.getTargetClass();
-                builder.setTargetClass(builder.getClassForAssociationType(attribute));
+                Class<?> associationClass = builder.getClassForAssociationType(attribute);
+                builder.setTargetClass(associationClass);
                 JoinType joinType;
                 if (hasMoreThanOneArg) {
                     joinType = builder.convertFromInt((Integer) args[0]);
-                } else if (builder.getTargetClass().equals(oldTargetClass)) {
+                } else if (associationClass.equals(oldTargetClass)) {
                     joinType = JoinType.LEFT; // default to left join if joining on the same table
                 } else {
                     joinType = builder.convertFromInt(0);
                 }
 
                 hibernateQuery.join(name, joinType);
-                hibernateQuery.in(name, new DetachedCriteria<>(builder.getTargetClass()).build(callable));
+
+                PersistentEntity parentEntity =
+                        hibernateQuery.getSession().getMappingContext().getPersistentEntity(oldTargetClass.getName());
+                PersistentProperty<?> property = parentEntity.getPropertyByName(name);
+                if (property instanceof Association<?> association) {
+                    DetachedAssociationCriteria<?> associationCriteria =
+                            new DetachedAssociationCriteria<>(associationClass, association);
+                    DetachedCriteria<?> oldDetachedCriteria = hibernateQuery.getDetachedCriteria();
+                    hibernateQuery.setDetachedCriteria(associationCriteria);
+                    try {
+                        invokeClosureNode(callable);
+                    } finally {
+                        hibernateQuery.setDetachedCriteria(oldDetachedCriteria);
+                    }
+                    hibernateQuery.add((Query.Criterion) associationCriteria);
+                } else {
+                    // Fallback for non-GORM associations if any
+                    hibernateQuery.in(name, new DetachedCriteria<>(associationClass).build(callable));
+                }
+
                 builder.setTargetClass(oldTargetClass);
 
                 return name;
@@ -210,40 +234,53 @@ public class CriteriaMethodInvoker {
 
     @SuppressWarnings("PMD.DataflowAnomalyAnalysis")
     protected Object trySimpleCriteria(String name, CriteriaMethods method, Object... args) {
-        if (args.length != 1 || args[0] == null) {
-            return UNHANDLED;
-        }
-
         if (method != null) {
             switch (method) {
                 case ID_EQUALS:
-                    return builder.eq("id", args[0]);
+                    if (args.length == 1 && args[0] != null) {
+                        return builder.eq("id", args[0]);
+                    }
+                    break;
                 case CACHE:
-                    if (args[0] instanceof Boolean b) {
+                    if (args.length == 1 && args[0] instanceof Boolean b) {
                         builder.cache(b);
+                        return name;
                     }
-                    return name;
+                    break;
                 case READ_ONLY:
-                    if (args[0] instanceof Boolean b) {
+                    if (args.length == 1 && args[0] instanceof Boolean b) {
                         builder.readOnly(b);
+                        return name;
                     }
-                    return name;
+                    break;
                 case SINGLE_RESULT:
                     return builder.singleResult();
+                case CREATE_ALIAS:
+                    if (args.length == 2 && args[0] instanceof String s && args[1] instanceof String a) {
+                        return builder.createAlias(s, a);
+                    } else if (args.length == 3 &&
+                            args[0] instanceof String s &&
+                            args[1] instanceof String a &&
+                            args[2] instanceof Number jt) {
+                        builder.createAlias(s, a, jt.intValue());
+                        return builder;
+                    }
+                    return name;
                 case IS_NULL, IS_NOT_NULL, IS_EMPTY, IS_NOT_EMPTY:
-                    if (!(args[0] instanceof String)) {
+                    if (args.length == 1 && args[0] instanceof String value) {
+                        switch (method) {
+                            case IS_NULL -> builder.getHibernateQuery().isNull(value);
+                            case IS_NOT_NULL -> builder.getHibernateQuery().isNotNull(value);
+                            case IS_EMPTY -> builder.getHibernateQuery().isEmpty(value);
+                            case IS_NOT_EMPTY -> builder.getHibernateQuery().isNotEmpty(value);
+                            default -> { }
+                        }
+                        return name;
+                    } else if (args.length == 1 && args[0] != null) {
                         builder.throwRuntimeException(new IllegalArgumentException(
                                 "call to [" + name + "] with value [" + args[0] + "] requires a String value."));
                     }
-                    final String value = (String) args[0];
-                    switch (method) {
-                        case IS_NULL -> builder.getHibernateQuery().isNull(value);
-                        case IS_NOT_NULL -> builder.getHibernateQuery().isNotNull(value);
-                        case IS_EMPTY -> builder.getHibernateQuery().isEmpty(value);
-                        case IS_NOT_EMPTY -> builder.getHibernateQuery().isNotEmpty(value);
-                        default -> { }
-                    }
-                    return name;
+                    break;
                 default:
                     break;
             }

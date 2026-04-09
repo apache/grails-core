@@ -27,12 +27,13 @@ import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernateToOneProper
 // number of columns required for a column key we have to perform the calculation here
 @SuppressWarnings("PMD.DataflowAnomalyAnalysis")
 public class ForeignKeyColumnCountCalculator {
-    public int calculateForeignKeyColumnCount(GrailsHibernatePersistentEntity refDomainClass, String[] propertyNames) {
+
+    public int calculateForeignKeyColumnCount(GrailsHibernatePersistentEntity refDomainClass, String... propertyNames) {
         int expectedForeignKeyColumnLength = 0;
         for (String propertyName : propertyNames) {
             HibernatePersistentProperty referencedProperty = refDomainClass.getHibernatePropertyByName(propertyName);
             if (referencedProperty instanceof HibernateToOneProperty toOne) {
-                PersistentProperty[] compositeIdentity =
+                PersistentProperty<?>[] compositeIdentity =
                         toOne.getAssociatedEntity().getCompositeIdentity();
                 if (compositeIdentity != null) {
                     expectedForeignKeyColumnLength += compositeIdentity.length;

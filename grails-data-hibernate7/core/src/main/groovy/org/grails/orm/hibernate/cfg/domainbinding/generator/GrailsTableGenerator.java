@@ -28,22 +28,25 @@ import org.hibernate.engine.jdbc.env.spi.JdbcEnvironment;
 import org.hibernate.generator.GeneratorCreationContext;
 import org.hibernate.id.enhanced.TableGenerator;
 
-import org.grails.orm.hibernate.cfg.Identity;
+import org.grails.orm.hibernate.cfg.HibernateSimpleIdentity;
 
 public class GrailsTableGenerator extends TableGenerator {
 
     @Serial
     private static final long serialVersionUID = 1L;
 
-    public GrailsTableGenerator(GeneratorCreationContext context, Identity mappedId, JdbcEnvironment jdbcEnvironment) {
+    private static final String DEFAULT_ENTITY_NAME = "default";
+
+    public GrailsTableGenerator(GeneratorCreationContext context, HibernateSimpleIdentity mappedId, JdbcEnvironment jdbcEnvironment) {
         Properties generatorProps =
-                Optional.ofNullable(mappedId).map(Identity::getProperties).orElse(new Properties());
+                Optional.ofNullable(mappedId).map(HibernateSimpleIdentity::getProperties).orElse(new Properties());
 
         if (!generatorProps.containsKey(SEGMENT_VALUE_PARAM)) {
             String propertyName = context.getProperty().getName();
 
-            // Use the name we just ensured exists in BasicValueIdCreator
-            String entityName = (mappedId != null && mappedId.getName() != null) ? mappedId.getName() : "default";
+            // Use the name we just ensured exists in BasicValueCreator
+            String entityName =
+                    (mappedId != null && mappedId.getName() != null) ? mappedId.getName() : DEFAULT_ENTITY_NAME;
 
             generatorProps.put(SEGMENT_VALUE_PARAM, entityName + "." + propertyName);
         }

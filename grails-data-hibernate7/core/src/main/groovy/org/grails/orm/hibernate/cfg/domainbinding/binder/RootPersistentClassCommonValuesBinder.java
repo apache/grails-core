@@ -32,6 +32,7 @@ import org.grails.orm.hibernate.cfg.PersistentEntityNamingStrategy;
 import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernatePersistentEntity;
 
 public class RootPersistentClassCommonValuesBinder {
+
     public static final Logger LOG = LoggerFactory.getLogger(RootPersistentClassCommonValuesBinder.class);
 
     private final MetadataBuildingContext metadataBuildingContext;
@@ -65,7 +66,7 @@ public class RootPersistentClassCommonValuesBinder {
         classBinder.bindClass(hibernatePersistentEntity, root);
 
         // get the schema and catalog names from the configuration
-        Mapping gormMapping = hibernatePersistentEntity.getMappedForm();
+        Mapping gormMapping = hibernatePersistentEntity.getHibernateMappedForm();
 
         hibernatePersistentEntity.configureDerivedProperties();
         CacheConfig cc = gormMapping.getCache();
@@ -75,7 +76,8 @@ public class RootPersistentClassCommonValuesBinder {
             if ("read-only".equalsIgnoreCase(cc.getUsage().toString())) {
                 root.setMutable(false);
             }
-            root.setLazyPropertiesCacheable(!"non-lazy".equalsIgnoreCase(cc.getInclude().toString()));
+            root.setLazyPropertiesCacheable(
+                    !"non-lazy".equalsIgnoreCase(cc.getInclude().toString()));
         }
 
         var schema = hibernatePersistentEntity.getSchema(mappings);
@@ -92,13 +94,10 @@ public class RootPersistentClassCommonValuesBinder {
                 metadataBuildingContext);
         root.setTable(table);
         if (LOG.isDebugEnabled()) {
-            LOG.debug("[GrailsDomainBinder] Mapping Grails domain class: " +
-                    hibernatePersistentEntity.getName() +
-                    " -> " +
-                    root.getTable().getName());
+            LOG.debug("[GrailsDomainBinder] Mapping Grails domain class: {} -> {}", hibernatePersistentEntity.getName(), root.getTable().getName());
         }
 
-        identityBinder.bindIdentity(hibernatePersistentEntity, root);
+        identityBinder.bindIdentity(hibernatePersistentEntity);
         versionBinder.bindVersion(hibernatePersistentEntity.getVersion(), root);
         root.createPrimaryKey();
         classPropertiesBinder.bindClassProperties(hibernatePersistentEntity);

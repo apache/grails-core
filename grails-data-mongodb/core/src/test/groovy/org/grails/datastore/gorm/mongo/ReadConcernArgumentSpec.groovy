@@ -18,23 +18,24 @@
  */
 package org.grails.datastore.gorm.mongo
 
+import org.apache.grails.data.mongo.core.MongoDatastoreSpec
+
 import com.mongodb.MongoQueryException
 import com.mongodb.ReadConcern
 import com.mongodb.WriteConcern
 import grails.gorm.CriteriaBuilder
 import grails.gorm.DetachedCriteria
 import org.apache.grails.data.mongo.core.GrailsDataMongoTckManager
-import org.apache.grails.data.testing.tck.base.GrailsDataTckSpec
 import org.grails.datastore.mapping.mongo.MongoCodecSession
 import spock.lang.Ignore
 
 /**
  * Created by graemerocher on 03/02/2017.
  */
-class ReadConcernArgumentSpec extends GrailsDataTckSpec<GrailsDataMongoTckManager> {
+class ReadConcernArgumentSpec extends MongoDatastoreSpec {
 
     void setupSpec() {
-        manager.domainClasses += [grails.gorm.tests.Person]
+        manager.addAllDomainClasses([grails.gorm.tests.Person])
     }
 
     @Ignore

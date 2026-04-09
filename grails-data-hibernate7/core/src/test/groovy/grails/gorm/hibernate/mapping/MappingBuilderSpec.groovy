@@ -19,7 +19,7 @@
 package grails.gorm.hibernate.mapping
 
 import org.grails.datastore.mapping.model.config.GormProperties
-import org.grails.orm.hibernate.cfg.CompositeIdentity
+import org.grails.orm.hibernate.cfg.HibernateCompositeIdentity
 import org.grails.orm.hibernate.cfg.Mapping
 import org.grails.orm.hibernate.cfg.PropertyConfig
 import spock.lang.Specification
@@ -82,7 +82,7 @@ class MappingBuilderSpec extends Specification {
         }.build()
 
         expect:
-        mapping.identity instanceof CompositeIdentity
+        mapping.identity instanceof HibernateCompositeIdentity
         mapping.identity.propertyNames == ['foo', 'bar']
         mapping.identity.compositeClass == MappingBuilderSpec
     }

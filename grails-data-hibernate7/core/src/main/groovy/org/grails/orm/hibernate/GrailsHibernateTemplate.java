@@ -60,32 +60,92 @@ import org.springframework.jdbc.datasource.DataSourceUtils;
 import org.springframework.jdbc.datasource.TransactionAwareDataSourceProxy;
 import org.springframework.jdbc.support.SQLErrorCodeSQLExceptionTranslator;
 import org.springframework.jdbc.support.SQLExceptionTranslator;
-import org.springframework.orm.hibernate5.SessionFactoryUtils;
-import org.springframework.orm.hibernate5.SessionHolder;
 import org.springframework.transaction.support.TransactionSynchronization;
 import org.springframework.transaction.support.TransactionSynchronizationManager;
 import org.springframework.util.Assert;
+
+import org.grails.orm.hibernate.support.hibernate7.SessionFactoryUtils;
+import org.grails.orm.hibernate.support.hibernate7.SessionHolder;
 
 @SuppressWarnings({"PMD.CloseResource", "PMD.DataflowAnomalyAnalysis", "PMD.CompareObjectsWithEquals", "PMD.EmptyIfStmt"
 })
 public class GrailsHibernateTemplate implements IHibernateTemplate {
 
-    private static final Logger LOG = LoggerFactory.getLogger(GrailsHibernateTemplate.class);
+    /**
+     * Never flush is a good strategy for read-only units of work.
+     * Hibernate will not track and look
+     * for changes in this case, avoiding any overhead of modification detection.
+     *
+     * <p>In case of an existing Session, FLUSH_NEVER will turn the flush mode to NEVER for the scope
+     * of the current operation, resetting the previous flush mode afterwards.
+     *
+     * @see #setFlushMode
+     */
+    public static final int FLUSH_NEVER = 0;
+    /**
+     * Automatic flushing is the default mode for a Hibernate Session. A session will get flushed on
+     * transaction commit, and on certain find operations that might involve already modified
+     * instances, but not after each unit of work like with eager flushing.
+     *
+     * <p>In case of an existing Session, FLUSH_AUTO will participate in the existing flush mode, not
+     * modifying it for the current operation. This in particular means that this setting will not
+     * modify an existing flush mode NEVER, in contrast to FLUSH_EAGER.
+     *
+     * @see #setFlushMode
+     */
+    public static final int FLUSH_AUTO = 1;
+    /**
+     * Eager flushing leads to immediate synchronization with the database, even if in a transaction.
+     * This causes inconsistencies to show up and throw a respective exception immediately, and JDBC
+     * access code that participates in the same transaction will see the changes as the database is
+     * already aware of them then. But the drawbacks are:
+     *
+     * <ul>
+     *   <li>additional communication roundtrips with the database, instead of a single batch at
+     *       transaction commit;
+     *   <li>the fact that an actual database rollback is needed if the Hibernate transaction rolls
+     *       back (due to already submitted SQL statements).
+     * </ul>
+     *
+     * <p>In case of an existing Session, FLUSH_EAGER will turn the flush mode to AUTO for the scope
+     * of the current operation and issue a flush at the end, resetting the previous flush mode
+     * afterwards.
+     *
+     * @see #setFlushMode
+     */
+    public static final int FLUSH_EAGER = 2;
+    /**
+     * Flushing at commit only is intended for units of work where no intermediate flushing is
+     * desired, not even for find operations that might involve already modified instances.
+     *
+     * <p>In case of an existing Session, FLUSH_COMMIT will turn the flush mode to COMMIT for the
+     * scope of the current operation, resetting the previous flush mode afterwards. The only
+     * exception is an existing flush mode NEVER, which will not be modified through this setting.
+     *
+     * @see #setFlushMode
+     */
+    public static final int FLUSH_COMMIT = 3;
+    /**
+     * Flushing before every query statement is rarely necessary. It is only available for special
+     * needs.
+     *
+     * <p>In case of an existing Session, FLUSH_ALWAYS will turn the flush mode to ALWAYS for the
+     * scope of the current operation, resetting the previous flush mode afterwards.
+     *
+     * @see #setFlushMode
+     */
+    public static final int FLUSH_ALWAYS = 4;
 
-    private boolean osivReadOnly;
-    private boolean passReadOnlyToHibernate = false;
+    private static final Logger LOG = LoggerFactory.getLogger(GrailsHibernateTemplate.class);
     protected boolean exposeNativeSession = true;
     protected boolean cacheQueries = false;
-
     protected SessionFactory sessionFactory;
     protected DataSource dataSource = null;
     protected SQLExceptionTranslator jdbcExceptionTranslator;
     protected int flushMode = FLUSH_AUTO;
+    private boolean osivReadOnly;
+    private boolean passReadOnlyToHibernate = false;
     private boolean applyFlushModeOnlyToNonExistingTransactions = false;
-
-    public interface HibernateCallback<T> {
-        T doInHibernate(Session session) throws HibernateException, SQLException;
-    }
 
     protected GrailsHibernateTemplate() {
         // for testing
@@ -148,7 +208,9 @@ public class GrailsHibernateTemplate implements IHibernateTemplate {
 
     @Override
     public <T> T execute(Closure<T> callable) {
-        HibernateCallback<T> hibernateCallback = DefaultGroovyMethods.asType(callable, HibernateCallback.class);
+        @SuppressWarnings("unchecked")
+        HibernateCallback<T> hibernateCallback =
+                (HibernateCallback<T>) DefaultGroovyMethods.asType(callable, HibernateCallback.class);
         return execute(hibernateCallback);
     }
 
@@ -262,14 +324,15 @@ public class GrailsHibernateTemplate implements IHibernateTemplate {
         }
     }
 
-    public void setCacheQueries(boolean cacheQueries) {
-        this.cacheQueries = cacheQueries;
-    }
-
     public boolean isCacheQueries() {
         return cacheQueries;
     }
 
+    public void setCacheQueries(boolean cacheQueries) {
+        this.cacheQueries = cacheQueries;
+    }
+
+    @SuppressWarnings("PMD.PreserveStackTrace")
     public <T> T execute(HibernateCallback<T> action) throws DataAccessException {
         return doExecute(action, false);
     }
@@ -313,6 +376,7 @@ public class GrailsHibernateTemplate implements IHibernateTemplate {
      * @return a result object returned by the action, or <code>null</code>
      * @throws org.springframework.dao.DataAccessException in case of Hibernate errors
      */
+    @SuppressWarnings("PMD.PreserveStackTrace")
     protected <T> T doExecute(HibernateCallback<T> action, boolean enforceNativeSession) throws DataAccessException {
 
         Assert.notNull(action, "Callback object must not be null");
@@ -337,8 +401,8 @@ public class GrailsHibernateTemplate implements IHibernateTemplate {
         } catch (HibernateException ex) {
             throw convertHibernateAccessException(ex);
         } catch (PersistenceException ex) {
-            if (ex.getCause() instanceof HibernateException) {
-                throw SessionFactoryUtils.convertHibernateAccessException((HibernateException) ex.getCause());
+            if (ex.getCause() instanceof HibernateException hibernateException) {
+                throw SessionFactoryUtils.convertHibernateAccessException(hibernateException);
             }
             throw ex;
         } catch (SQLException ex) {
@@ -483,12 +547,12 @@ public class GrailsHibernateTemplate implements IHibernateTemplate {
                 true);
     }
 
-    public void setExposeNativeSession(boolean exposeNativeSession) {
-        this.exposeNativeSession = exposeNativeSession;
-    }
-
     public boolean isExposeNativeSession() {
         return exposeNativeSession;
+    }
+
+    public void setExposeNativeSession(boolean exposeNativeSession) {
+        this.exposeNativeSession = exposeNativeSession;
     }
 
     /**
@@ -522,74 +586,11 @@ public class GrailsHibernateTemplate implements IHibernateTemplate {
         internalQuery(jpaQuery);
     }
 
-    /**
-     * Never flush is a good strategy for read-only units of work.
-     * Hibernate will not track and look
-     * for changes in this case, avoiding any overhead of modification detection.
-     *
-     * <p>In case of an existing Session, FLUSH_NEVER will turn the flush mode to NEVER for the scope
-     * of the current operation, resetting the previous flush mode afterwards.
-     *
-     * @see #setFlushMode
-     */
-    public static final int FLUSH_NEVER = 0;
-
-    /**
-     * Automatic flushing is the default mode for a Hibernate Session. A session will get flushed on
-     * transaction commit, and on certain find operations that might involve already modified
-     * instances, but not after each unit of work like with eager flushing.
-     *
-     * <p>In case of an existing Session, FLUSH_AUTO will participate in the existing flush mode, not
-     * modifying it for the current operation. This in particular means that this setting will not
-     * modify an existing flush mode NEVER, in contrast to FLUSH_EAGER.
-     *
-     * @see #setFlushMode
-     */
-    public static final int FLUSH_AUTO = 1;
-
-    /**
-     * Eager flushing leads to immediate synchronization with the database, even if in a transaction.
-     * This causes inconsistencies to show up and throw a respective exception immediately, and JDBC
-     * access code that participates in the same transaction will see the changes as the database is
-     * already aware of them then. But the drawbacks are:
-     *
-     * <ul>
-     *   <li>additional communication roundtrips with the database, instead of a single batch at
-     *       transaction commit;
-     *   <li>the fact that an actual database rollback is needed if the Hibernate transaction rolls
-     *       back (due to already submitted SQL statements).
-     * </ul>
-     *
-     * <p>In case of an existing Session, FLUSH_EAGER will turn the flush mode to AUTO for the scope
-     * of the current operation and issue a flush at the end, resetting the previous flush mode
-     * afterwards.
-     *
-     * @see #setFlushMode
-     */
-    public static final int FLUSH_EAGER = 2;
-
-    /**
-     * Flushing at commit only is intended for units of work where no intermediate flushing is
-     * desired, not even for find operations that might involve already modified instances.
-     *
-     * <p>In case of an existing Session, FLUSH_COMMIT will turn the flush mode to COMMIT for the
-     * scope of the current operation, resetting the previous flush mode afterwards. The only
-     * exception is an existing flush mode NEVER, which will not be modified through this setting.
-     *
-     * @see #setFlushMode
-     */
-    public static final int FLUSH_COMMIT = 3;
-
-    /**
-     * Flushing before every query statement is rarely necessary. It is only available for special
-     * needs.
-     *
-     * <p>In case of an existing Session, FLUSH_ALWAYS will turn the flush mode to ALWAYS for the
-     * scope of the current operation, resetting the previous flush mode afterwards.
-     *
-     * @see #setFlushMode
-     */
-    public static final int FLUSH_ALWAYS = 4;
+    /** Return if a flush should be forced after executing the callback code. */
+    @Override
+    public int getFlushMode() {
+        return flushMode;
+    }
 
     /**
      * Set the flush behavior to one of the constants in this class. Default is FLUSH_AUTO.
@@ -599,12 +600,6 @@ public class GrailsHibernateTemplate implements IHibernateTemplate {
     @Override
     public void setFlushMode(int flushMode) {
         this.flushMode = flushMode;
-    }
-
-    /** Return if a flush should be forced after executing the callback code. */
-    @Override
-    public int getFlushMode() {
-        return flushMode;
     }
 
     /**
@@ -757,5 +752,10 @@ public class GrailsHibernateTemplate implements IHibernateTemplate {
 
     public void setApplyFlushModeOnlyToNonExistingTransactions(boolean applyFlushModeOnlyToNonExistingTransactions) {
         this.applyFlushModeOnlyToNonExistingTransactions = applyFlushModeOnlyToNonExistingTransactions;
+    }
+
+    public interface HibernateCallback<T> {
+
+        T doInHibernate(Session session) throws HibernateException, SQLException;
     }
 }

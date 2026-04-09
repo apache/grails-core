@@ -23,7 +23,6 @@ import jakarta.annotation.Nonnull;
 import org.hibernate.boot.spi.MetadataBuildingContext;
 import org.hibernate.mapping.Component;
 import org.hibernate.mapping.PersistentClass;
-import org.hibernate.mapping.Table;
 
 import org.grails.orm.hibernate.cfg.GrailsHibernateUtil;
 import org.grails.orm.hibernate.cfg.MappingCacheHolder;
@@ -52,8 +51,8 @@ public class ComponentBinder {
         this.grailsPropertyBinder = grailsPropertyBinder;
     }
 
-    public Component bindComponent(
-            PersistentClass owner, @Nonnull HibernateEmbeddedProperty embeddedProperty, String path) {
+    public Component bindComponent(@Nonnull HibernateEmbeddedProperty embeddedProperty, String path) {
+        var owner = embeddedProperty.getPersistentClass();
         Component component = new Component(metadataBuildingContext, owner);
         Class<?> type = embeddedProperty.getType();
         String role = GrailsHibernateUtil.qualify(type.getName(), embeddedProperty.getName());
@@ -66,15 +65,16 @@ public class ComponentBinder {
 
         PersistentClass persistentClass = component.getOwner();
         associatedEntity.setPersistentClass(persistentClass);
-        Table table = associatedEntity.getPersistentClass().getTable();
         String currentPath = path.isEmpty() ? embeddedProperty.getName() : path + "." + embeddedProperty.getName();
         Class<?> propertyType = embeddedProperty.getOwner().getJavaClass();
 
-        associatedEntity.getHibernateParentProperty(propertyType).ifPresent(p -> component.setParentProperty(p.getName()));
+        associatedEntity
+                .getHibernateParentProperty(propertyType)
+                .ifPresent(p -> component.setParentProperty(p.getName()));
 
-        for (HibernatePersistentProperty peerProperty : associatedEntity.getHibernatePersistentProperties(propertyType)) {
-            var value = grailsPropertyBinder.bindProperty(
-                    peerProperty, embeddedProperty, currentPath);
+        for (HibernatePersistentProperty peerProperty :
+                associatedEntity.getHibernatePersistentProperties(propertyType)) {
+            var value = grailsPropertyBinder.bindProperty(peerProperty, embeddedProperty, currentPath);
             componentUpdater.updateComponent(component, embeddedProperty, peerProperty, value);
         }
         return component;

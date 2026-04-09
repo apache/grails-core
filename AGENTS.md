@@ -51,6 +51,8 @@ export GRADLE_OPTS="-Xms2G -Xmx5G"
 8. **No internal APIs in docs** - Only document public APIs; never reference internal or package-private classes and methods in user-facing documentation
 9. **Test via public APIs** - Tests must exercise behavior through the same APIs an end user calls; never invoke internal implementations, package-private methods, or bypass the public surface directly
 10. **Always review and extend tests** - Review existing unit and functional tests before making changes; every code change must include new or enhanced tests that cover the affected behavior
+11. **Every code touch must update all tests for the changed class** - When a class is modified, find and update every test that covers it — unit, integration, and TCK. Do not leave any existing test out of sync with the new code.
+12. **Clean violations before commit** - Before every automated commit, run `./gradlew clean test aggregateTestFailures --continue` from the root and ensure that `TEST_FAILURES.md` reports no issues and is removed.
 
 ## Available Skills
 
@@ -229,8 +231,9 @@ class MyService { }
 1. **Fork & branch** from the target release branch (e.g., `7.0.x`)
 2. **Run tests** before submitting: `./gradlew build --rerun-tasks`
 3. **Run code style checks**: `./gradlew codeStyle`
-4. **Squash commits** into a single meaningful commit message
-5. **Reference issues** in PR description (e.g., "Fixes #1234")
+4. **Clean style violations**: Before committing, run `./gradlew clean aggregateStyleViolations` from the root and ensure that `CHECKSTYLE_VIOLATIONS.md`, `CODENARC_VIOLATIONS.md`, and `PMD_VIOLATIONS.md` have no issues.
+5. **Squash commits** into a single meaningful commit message
+6. **Reference issues** in PR description (e.g., "Fixes #1234")
 
 ### Review Process
 

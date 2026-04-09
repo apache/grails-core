@@ -23,7 +23,9 @@ import java.util.Optional;
 
 import jakarta.persistence.Entity;
 
+import org.hibernate.MappingException;
 import org.hibernate.mapping.PersistentClass;
+import org.hibernate.mapping.RootClass;
 
 import org.grails.datastore.mapping.core.connections.ConnectionSourcesSupport;
 import org.grails.datastore.mapping.model.AbstractClassMapping;
@@ -31,6 +33,7 @@ import org.grails.datastore.mapping.model.AbstractPersistentEntity;
 import org.grails.datastore.mapping.model.ClassMapping;
 import org.grails.datastore.mapping.model.MappingContext;
 import org.grails.datastore.mapping.model.PersistentProperty;
+import org.grails.orm.hibernate.cfg.HibernateSimpleIdentity;
 import org.grails.orm.hibernate.cfg.Mapping;
 
 /**
@@ -41,6 +44,7 @@ import org.grails.orm.hibernate.cfg.Mapping;
  */
 public class HibernatePersistentEntity extends AbstractPersistentEntity<Mapping>
         implements GrailsHibernatePersistentEntity {
+
     private final AbstractClassMapping<Mapping> classMapping;
     private String dataSourceName;
     private PersistentClass persistentClass;
@@ -52,13 +56,13 @@ public class HibernatePersistentEntity extends AbstractPersistentEntity<Mapping>
     }
 
     @Override
-    public void setDataSourceName(String dataSourceName) {
-        this.dataSourceName = dataSourceName;
+    public String getDataSourceName() {
+        return dataSourceName;
     }
 
     @Override
-    public String getDataSourceName() {
-        return dataSourceName;
+    public void setDataSourceName(String dataSourceName) {
+        this.dataSourceName = dataSourceName;
     }
 
     @Override
@@ -66,6 +70,7 @@ public class HibernatePersistentEntity extends AbstractPersistentEntity<Mapping>
         return this.classMapping;
     }
 
+    @Override
     public Mapping getMappedForm() {
         return Optional.ofNullable(getMapping())
                 .map(ClassMapping::getMappedForm)
@@ -89,14 +94,29 @@ public class HibernatePersistentEntity extends AbstractPersistentEntity<Mapping>
                 .toArray(HibernatePersistentProperty[]::new);
     }
 
+    public HibernateIdentityProperty getIdentityProperty() {
+        HibernatePersistentProperty[] compositeId = getCompositeIdentity();
+        if (compositeId != null && compositeId.length > 1) {
+            return new HibernateCompositeIdentityProperty(this, getMappingContext(), getName(), Object.class, compositeId);
+        }
+        HibernatePersistentProperty id = getIdentity();
+        if (id instanceof HibernateSimpleIdentityProperty simpleId) {
+            return simpleId;
+        }
+        throw new MappingException("Entity [" + getName() + "] has no identity property. " +
+                "Only embedded entities are allowed to have no identity.");
+    }
+
     private boolean isAnnotatedEntity() {
         return getJavaClass().isAnnotationPresent(Entity.class);
     }
 
+    @Override
     public boolean usesConnectionSource(String dataSourceName) {
         return ConnectionSourcesSupport.usesConnectionSource(this, dataSourceName);
     }
 
+    @Override
     public boolean forGrailsDomainMapping(String dataSourceName) {
         return !isAnnotatedEntity() && usesConnectionSource(dataSourceName) && isRoot();
     }
@@ -107,12 +127,25 @@ public class HibernatePersistentEntity extends AbstractPersistentEntity<Mapping>
     }
 
     @Override
+    public PersistentClass getPersistentClass() {
+        return persistentClass;
+    }
+
+    public RootClass getRootClass() {
+        return persistentClass.getRootClass();
+    }
+
+    @Override
     public void setPersistentClass(PersistentClass persistentClass) {
         this.persistentClass = persistentClass;
     }
 
-    @Override
-    public PersistentClass getPersistentClass() {
-        return persistentClass;
+    public String getIdentityGeneratorName() {
+        if (getHibernateIdentity() instanceof HibernateSimpleIdentity _identity) {
+            Mapping result = getHibernateMappedForm();
+            boolean useSequence = result != null && result.isTablePerConcreteClass();
+            return _identity.determineGeneratorName(useSequence);
+        }
+        throw new MappingException("Simple Identity expected");
     }
 }

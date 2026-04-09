@@ -79,28 +79,10 @@ public class HibernateHqlQuery extends Query {
         this.delegate = new MutationQueryDelegate(mutationQuery);
     }
 
-    @Override
-    protected void flushBeforeQuery() {
-        // Hibernate handles flushing internally
-    }
-
-    @Override
-    @SuppressWarnings("rawtypes")
-    protected List executeQuery(PersistentEntity entity, Junction criteria) {
-        Datastore datastore = getSession().getDatastore();
-        ApplicationEventPublisher publisher = datastore.getApplicationEventPublisher();
-        publisher.publishEvent(new PreQueryEvent(datastore, this));
-        if (uniqueResult) delegate.setMaxResults(1);
-        List results = delegate.list();
-        publisher.publishEvent(new PostQueryEvent(datastore, this, results));
-        return results;
-    }
-
-    // ─── Static factory API ──────────────────────────────────────────────────
-
     /**
      * Session-bound step — creates the appropriate Hibernate query from an open {@link
      * org.hibernate.Session} and wraps it in a {@link HibernateHqlQuery}.
+     * Note: The HqlQueryContext has a sanitized sql string
      */
     protected static HibernateHqlQuery buildQuery(
             org.hibernate.Session session,
@@ -109,30 +91,23 @@ public class HibernateHqlQuery extends Query {
             PersistentEntity entity,
             HqlQueryContext ctx) {
         HibernateSession hibernateSession = new HibernateSession(dataStore, sessionFactory);
-        if (StringUtils.isEmpty(ctx.hql())) {
+        String hql = ctx.hql();
+        if (StringUtils.isEmpty(hql)) {
             var q = session.createQuery("from " + ctx.targetClass().getName(), ctx.targetClass());
             return new HibernateHqlQuery(hibernateSession, entity, q);
         } else if (ctx.isUpdate()) {
-            var mq = session.createMutationQuery(ctx.hql());
+            var mq = session.createMutationQuery(hql);
             var result = new HibernateHqlQuery(hibernateSession, entity, mq);
             result.setFlushMode(session.getHibernateFlushMode());
             return result;
         } else {
             var q = ctx.isNative() ?
-                    session.createNativeQuery(ctx.hql(), ctx.targetClass()) :
-                    isScalarSelect(ctx.hql()) ?
-                            session.createQuery(ctx.hql()) :
-                            session.createQuery(ctx.hql(), ctx.targetClass());
+                    session.createNativeQuery(hql, ctx.targetClass()) :
+                    session.createQuery(hql, ctx.targetClass());
             var result = new HibernateHqlQuery(hibernateSession, entity, q);
             result.setFlushMode(session.getHibernateFlushMode());
             return result;
         }
-    }
-
-    /** Returns true if the HQL starts with a {@code select} clause that doesn't project the entity. */
-    private static boolean isScalarSelect(String hql) {
-        String trimmed = hql.stripLeading().toLowerCase();
-        return trimmed.startsWith("select") && !trimmed.startsWith("select e ") && !trimmed.startsWith("select e,");
     }
 
     /**
@@ -173,49 +148,13 @@ public class HibernateHqlQuery extends Query {
         return create(dataStore, sessionFactory, entity, ctx, template, conversionService);
     }
 
+    // ─── Static factory API ──────────────────────────────────────────────────
+
     /**
      * Builds the count HQL string used by {@link PagedResultList} when paging is requested.
      */
     public static String buildCountHql(PersistentEntity entity) {
         return new HqlListQueryBuilder(entity, Collections.emptyMap()).buildCountHql();
-    }
-
-    // ─── Query configuration ─────────────────────────────────────────────────
-
-    protected void setFlushMode(FlushMode flushMode) {
-        session.setFlushMode(
-                flushMode == FlushMode.AUTO || flushMode == FlushMode.ALWAYS ?
-                        FlushModeType.AUTO :
-                        FlushModeType.COMMIT);
-    }
-
-    protected void populateQuerySettings(Map<?, ?> args, ConversionService conversionService) {
-        ifPresent(args, HibernateQueryArgument.MAX.value(), v -> delegate.setMaxResults(toInt(v, conversionService)));
-        ifPresent(
-                args, HibernateQueryArgument.OFFSET.value(), v -> delegate.setFirstResult(toInt(v, conversionService)));
-        ifPresent(args, HibernateQueryArgument.CACHE.value(), v -> delegate.setCacheable(toBool(v)));
-        ifPresent(
-                args,
-                HibernateQueryArgument.FETCH_SIZE.value(),
-                v -> delegate.setFetchSize(toInt(v, conversionService)));
-        ifPresent(args, HibernateQueryArgument.TIMEOUT.value(), v -> delegate.setTimeout(toInt(v, conversionService)));
-        ifPresent(args, HibernateQueryArgument.READ_ONLY.value(), v -> delegate.setReadOnly(toBool(v)));
-        ifPresent(
-                args,
-                HibernateQueryArgument.FLUSH_MODE.value(),
-                v -> delegate.setQueryFlushMode(convertQueryFlushMode(v)));
-        if (toBoolFromMap(args, HibernateQueryArgument.LOCK.value())) {
-            delegate.setLockMode(LockModeType.PESSIMISTIC_WRITE);
-            delegate.setCacheable(false);
-        } else {
-            if (!args.containsKey(HibernateQueryArgument.CACHE.value())) {
-                org.grails.orm.hibernate.cfg.Mapping m = org.grails.orm.hibernate.cfg.MappingCacheHolder.getInstance()
-                        .getMapping(getEntity().getJavaClass());
-                if (m != null && m.getCache() != null && m.getCache().getEnabled()) {
-                    delegate.setCacheable(true);
-                }
-            }
-        }
     }
 
     public static QueryFlushMode convertQueryFlushMode(Object object) {
@@ -238,6 +177,105 @@ public class HibernateHqlQuery extends Query {
         }
     }
 
+    private static boolean isGormArgument(String name) {
+        for (HibernateQueryArgument arg : HibernateQueryArgument.values()) {
+            if (arg.value().equals(name)) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    // ─── Query configuration ─────────────────────────────────────────────────
+
+    private static int toInt(Object v, ConversionService cs) {
+        if (v instanceof Integer i) {
+            return i;
+        }
+        Integer i = cs.convert(v, Integer.class);
+        return i != null ? i : 0;
+    }
+
+    private static boolean toBool(Object v) {
+        return Boolean.parseBoolean(v.toString());
+    }
+
+    private static boolean toBoolFromMap(Map<?, ?> map, String key) {
+        Object v = map.get(key);
+        return v instanceof Boolean b ? b : v != null && Boolean.parseBoolean(v.toString());
+    }
+
+    private static void ifPresent(Map<?, ?> map, String key, java.util.function.Consumer<Object> action) {
+        Object v = map.get(key);
+        if (v != null) action.accept(v);
+    }
+
+    public GrailsHibernateTemplate getHibernateTemplate() {
+        return ((HibernateSession) getSession()).getHibernateTemplate();
+    }
+
+    @Override
+    protected void flushBeforeQuery() {
+        // Hibernate handles flushing internally
+    }
+
+    @Override
+    @SuppressWarnings("rawtypes")
+    protected List executeQuery(PersistentEntity entity, Junction criteria) {
+        Datastore datastore = getSession().getDatastore();
+        ApplicationEventPublisher publisher = datastore.getApplicationEventPublisher();
+        publisher.publishEvent(new PreQueryEvent(datastore, this));
+        if (uniqueResult) delegate.setMaxResults(1);
+        List results = delegate.list();
+        publisher.publishEvent(new PostQueryEvent(datastore, this, results));
+        return results;
+    }
+
+    protected void setFlushMode(FlushMode flushMode) {
+        session.setFlushMode(
+                flushMode == FlushMode.AUTO || flushMode == FlushMode.ALWAYS ?
+                        FlushModeType.AUTO :
+                        FlushModeType.COMMIT);
+    }
+
+    protected void populateQuerySettings(Map<?, ?> args, ConversionService conversionService) {
+        ifPresent(args, HibernateQueryArgument.MAX.value(), v -> {
+            int max = toInt(v, conversionService);
+            delegate.setMaxResults(max);
+            max(max);
+        });
+        ifPresent(args, HibernateQueryArgument.OFFSET.value(), v -> {
+            int offset = toInt(v, conversionService);
+            delegate.setFirstResult(offset);
+            offset(offset);
+        });
+        ifPresent(args, HibernateQueryArgument.CACHE.value(), v -> delegate.setCacheable(toBool(v)));
+        ifPresent(
+                args,
+                HibernateQueryArgument.FETCH_SIZE.value(),
+                v -> delegate.setFetchSize(toInt(v, conversionService)));
+        ifPresent(args, HibernateQueryArgument.TIMEOUT.value(), v -> delegate.setTimeout(toInt(v, conversionService)));
+        ifPresent(args, HibernateQueryArgument.READ_ONLY.value(), v -> delegate.setReadOnly(toBool(v)));
+        ifPresent(
+                args,
+                HibernateQueryArgument.FLUSH_MODE.value(),
+                v -> delegate.setQueryFlushMode(convertQueryFlushMode(v)));
+        if (toBoolFromMap(args, HibernateQueryArgument.LOCK.value())) {
+            delegate.setLockMode(LockModeType.PESSIMISTIC_WRITE);
+            delegate.setCacheable(false);
+        } else {
+            if (!args.containsKey(HibernateQueryArgument.CACHE.value())) {
+                org.grails.orm.hibernate.cfg.Mapping m = ((org.grails.orm.hibernate.cfg.HibernateMappingContext)
+                                getEntity().getMappingContext())
+                        .getMappingCacheHolder()
+                        .getMapping(getEntity().getJavaClass());
+                if (m != null && m.getCache() != null && m.getCache().getEnabled()) {
+                    delegate.setCacheable(true);
+                }
+            }
+        }
+    }
+
     protected void populateQueryWithNamedArguments(Map<?, ?> namedArgs) {
         if (namedArgs == null) return;
         namedArgs.forEach((key, value) -> {
@@ -245,6 +283,9 @@ public class HibernateHqlQuery extends Query {
                 throw new GrailsQueryException("Named parameter's name must be a String: " + namedArgs);
             }
             String name = key.toString();
+            if (isGormArgument(name)) {
+                return;
+            }
             if (value == null) {
                 delegate.setParameter(name, null);
             } else if (value instanceof Collection<?> col) {
@@ -258,6 +299,8 @@ public class HibernateHqlQuery extends Query {
             }
         });
     }
+
+    // ─── Private utilities ────────────────────────────────────────────────────
 
     protected void populateQueryWithIndexedArguments(List<?> params) {
         if (params == null) return;
@@ -286,26 +329,5 @@ public class HibernateHqlQuery extends Query {
 
     public int executeUpdate() {
         return delegate.executeUpdate();
-    }
-
-    // ─── Private utilities ────────────────────────────────────────────────────
-
-    private static int toInt(Object v, ConversionService cs) {
-        if (v instanceof Integer i) return i;
-        return cs.convert(v, Integer.class);
-    }
-
-    private static boolean toBool(Object v) {
-        return Boolean.parseBoolean(v.toString());
-    }
-
-    private static boolean toBoolFromMap(Map<?, ?> map, String key) {
-        Object v = map.get(key);
-        return v instanceof Boolean b ? b : v != null && Boolean.parseBoolean(v.toString());
-    }
-
-    private static void ifPresent(Map<?, ?> map, String key, java.util.function.Consumer<Object> action) {
-        Object v = map.get(key);
-        if (v != null) action.accept(v);
     }
 }

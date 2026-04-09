@@ -62,18 +62,6 @@ public enum CascadeBehavior {
     }
 
     /**
-     * @return The string representation of the cascade behavior used in the mapping block.
-     */
-    public String getValue() {
-        return value;
-    }
-
-    /** Returns whether save update. */
-    public boolean isSaveUpdate() {
-        return this == ALL || this == ALL_DELETE_ORPHAN || this == SAVE_UPDATE;
-    }
-
-    /**
      * Check if a save-update cascade is defined within the Hibernate cascade properties string.
      *
      * @param cascade The string containing the cascade properties.
@@ -107,5 +95,17 @@ public enum CascadeBehavior {
                         ("save-update".equalsIgnoreCase(value) && behavior == SAVE_UPDATE))
                 .findFirst()
                 .orElseThrow(() -> new MappingException("Invalid Cascade value: " + value + "."));
+    }
+
+    /**
+     * @return The string representation of the cascade behavior used in the mapping block.
+     */
+    public String getValue() {
+        return value;
+    }
+
+    /** Returns whether save update. */
+    public boolean isSaveUpdate() {
+        return this == ALL || this == ALL_DELETE_ORPHAN || this == SAVE_UPDATE;
     }
 }

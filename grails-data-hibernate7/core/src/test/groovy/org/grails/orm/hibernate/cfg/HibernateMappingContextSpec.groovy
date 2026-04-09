@@ -30,6 +30,7 @@ import org.grails.orm.hibernate.cfg.domainbinding.hibernate.GrailsHibernatePersi
 import org.grails.orm.hibernate.cfg.domainbinding.hibernate.GrailsJpaMappingConfigurationStrategy
 import org.grails.orm.hibernate.connections.HibernateConnectionSourceSettings
 import org.springframework.validation.Errors
+import org.grails.datastore.mapping.core.connections.ConnectionSource
 
 class HibernateMappingContextSpec extends HibernateGormDatastoreSpec {
 
@@ -120,11 +121,11 @@ class HibernateMappingContextSpec extends HibernateGormDatastoreSpec {
 
     void "getHibernatePersistentEntities returns GrailsHibernatePersistentEntity instances"() {
         when:
-        def entities = mappingContext.getHibernatePersistentEntities("DEFAULT")
+        def entities = mappingContext.getHibernatePersistentEntities(ConnectionSource.DEFAULT)
 
         then:
         entities.every { it instanceof GrailsHibernatePersistentEntity }
-        entities.every { it.dataSourceName == "DEFAULT" }
+        entities.every { it.dataSourceName == ConnectionSource.DEFAULT }
     }
 
     void "getHibernatePersistentEntities sets the dataSourceName on each entity"() {

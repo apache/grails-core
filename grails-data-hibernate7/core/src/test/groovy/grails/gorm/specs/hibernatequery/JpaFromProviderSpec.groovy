@@ -18,109 +18,79 @@
  */
 package grails.gorm.specs.hibernatequery
 
+import org.hibernate.query.criteria.JpaCriteriaQuery
+
 import grails.gorm.DetachedCriteria
+import grails.gorm.specs.HibernateGormDatastoreSpec
 import jakarta.persistence.criteria.From
+import jakarta.persistence.criteria.Join
 import jakarta.persistence.criteria.Path
 import org.grails.orm.hibernate.query.JpaFromProvider
-import spock.lang.Specification
+import grails.gorm.annotation.Entity
+import org.grails.datastore.gorm.GormEntity
 
-class JpaFromProviderSpec extends Specification {
+class JpaFromProviderSpec extends HibernateGormDatastoreSpec {
 
-    /** Build a bare JpaFromProvider with no joins by using an empty DetachedCriteria
-     *  and a mock JpaCriteriaQuery that can't be joined against (no fetch strategies). */
-    private JpaFromProvider bare(Class target, From root) {
-        def dc = new DetachedCriteria(target)
-        def cq = Mock(org.hibernate.query.criteria.JpaCriteriaQuery) {
-            from(_) >> root
-        }
-        def provider = new JpaFromProvider(dc, cq, root)
-        return provider
+    void setupSpec() {
+        manager.addAllDomainClasses([JpaFromProviderSpecPerson, JpaFromProviderSpecPet, JpaFromProviderSpecFace])
     }
 
-    def "getFullyQualifiedPath resolves a single-segment property against root"() {
-        given:
-        Path namePath = Mock(Path)
-        From root = Mock(From) {
-            getJavaType() >> String  // stub for getFromsByName internal logic
-            get("name") >> namePath
-        }
-        JpaFromProvider provider = bare(String, root)
-
-        when:
-        Path result = provider.getFullyQualifiedPath("name")
-
-        then:
-        result == namePath
-    }
-
-    def "getFullyQualifiedPath returns root From when key is 'root'"() {
-        given:
-        From root = Mock(From) {
+    private JpaFromProvider bare(Class clazz, From root) {
+        def dc = new DetachedCriteria(clazz)
+        root.join(_ as String, _ as jakarta.persistence.criteria.JoinType) >> Mock(Join) {
             getJavaType() >> String
+            alias(_) >> it
         }
-        JpaFromProvider provider = bare(String, root)
-
-        when:
-        Path result = provider.getFullyQualifiedPath("root")
-
-        then:
-        result == root
+        return new JpaFromProvider(dc, [], root)
     }
 
-    def "getFullyQualifiedPath resolves a named alias directly when key matches"() {
+    def "getFromsByName returns root for 'root' key"() {
         given:
-        From aliasFrom = Mock(From) {
-            getJavaType() >> Integer
-        }
         From root = Mock(From) {
-            getJavaType() >> String
+            getJavaType() >> JpaFromProviderSpecPerson
         }
-        JpaFromProvider provider = bare(String, root)
-        provider.put("t", aliasFrom)
+        root.join(_ as String, _ as jakarta.persistence.criteria.JoinType) >> Mock(Join) { alias(_) >> it }
+        
+        JpaFromProvider provider = bare(JpaFromProviderSpecPerson, root)
 
-        when:
-        Path result = provider.getFullyQualifiedPath("t")
-
-        then:
-        result == aliasFrom
+        expect:
+        provider.getFromsByName().get("root") == root
     }
 
-    def "getFullyQualifiedPath resolves a dotted path alias.property"() {
+    def "getFullyQualifiedPath returns root for entity name if it matches root"() {
         given:
-        Path clubPath = Mock(Path)
-        From aliasFrom = Mock(From) {
-            getJavaType() >> Integer
-            get("club") >> clubPath
-        }
         From root = Mock(From) {
-            getJavaType() >> String
+            getJavaType() >> JpaFromProviderSpecPerson
         }
-        JpaFromProvider provider = bare(String, root)
-        provider.put("t", aliasFrom)
+        root.join(_ as String, _ as jakarta.persistence.criteria.JoinType) >> Mock(Join) { alias(_) >> it }
 
-        when:
-        Path result = provider.getFullyQualifiedPath("t.club")
+        JpaFromProvider provider = bare(JpaFromProviderSpecPerson, root)
 
-        then:
-        result == clubPath
+        expect:
+        provider.getFullyQualifiedPath("JpaFromProviderSpecPerson") == root
     }
 
-    def "getFullyQualifiedPath throws for blank property name"() {
+    def "getFullyQualifiedPath returns root for 'root' prefix"() {
         given:
-        From root = Mock(From) { getJavaType() >> String }
-        JpaFromProvider provider = bare(String, root)
+        Path idPath = Mock(Path)
+        From root = Mock(From) {
+            getJavaType() >> JpaFromProviderSpecPerson
+            get("id") >> idPath
+        }
+        root.join(_ as String, _ as jakarta.persistence.criteria.JoinType) >> Mock(Join) { alias(_) >> it }
 
-        when:
-        provider.getFullyQualifiedPath("   ")
+        JpaFromProvider provider = bare(JpaFromProviderSpecPerson, root)
 
-        then:
-        thrown(IllegalArgumentException)
+        expect:
+        provider.getFullyQualifiedPath("root.id") == idPath
     }
 
     def "getFullyQualifiedPath throws for null property name"() {
         given:
-        From root = Mock(From) { getJavaType() >> String }
-        JpaFromProvider provider = bare(String, root)
+        From root = Mock(From)
+        root.join(_ as String, _ as jakarta.persistence.criteria.JoinType) >> Mock(Join) { alias(_) >> it }
+
+        JpaFromProvider provider = bare(JpaFromProviderSpecPerson, root)
 
         when:
         provider.getFullyQualifiedPath(null)
@@ -131,47 +101,52 @@ class JpaFromProviderSpec extends Specification {
 
     def "clone produces an independent copy that does not affect original"() {
         given:
-        From root = Mock(From) { getJavaType() >> String }
-        From extra = Mock(From) { getJavaType() >> Integer }
-        JpaFromProvider original = bare(String, root)
+        From root = Mock(From) {
+            getJavaType() >> JpaFromProviderSpecPerson
+        }
+        root.join(_ as String, _ as jakarta.persistence.criteria.JoinType) >> Mock(Join) { alias(_) >> it }
+
+        JpaFromProvider provider = bare(JpaFromProviderSpecPerson, root)
+        From extra = Mock(From)
 
         when:
-        JpaFromProvider copy = (JpaFromProvider) original.clone()
-        copy.put("extra", extra)
+        JpaFromProvider clone = provider.clone()
+        clone.put("extra", extra)
 
-        then: "original is unaffected"
-        original.getFullyQualifiedPath("root") == root
-        copy.getFullyQualifiedPath("root") == root
-        copy.getFullyQualifiedPath("extra") == extra
+        then:
+        clone.getFromsByName().containsKey("extra")
+        !provider.getFromsByName().containsKey("extra")
     }
 
     def "put overwrites an existing key"() {
         given:
-        From first = Mock(From) { getJavaType() >> String }
-        From second = Mock(From) { getJavaType() >> String }
-        JpaFromProvider provider = bare(String, first)
-        provider.put("root", second)
+        From root = Mock(From) {
+            getJavaType() >> JpaFromProviderSpecPerson
+        }
+        root.join(_ as String, _ as jakarta.persistence.criteria.JoinType) >> Mock(Join) { alias(_) >> it }
+
+        JpaFromProvider provider = bare(JpaFromProviderSpecPerson, root)
+        From newRoot = Mock(From)
 
         when:
-        def result = provider.getFullyQualifiedPath("root")
+        provider.put("root", newRoot)
 
         then:
-        result == second
+        provider.getFromsByName().get("root") == newRoot
     }
 
     def "root alias registered via setAlias is available for dotted lookup"() {
         given:
         Path idPath = Mock(Path)
         From root = Mock(From) {
-            getJavaType() >> String
+            getJavaType() >> JpaFromProviderSpecPerson
             get("id") >> idPath
         }
-        def dc = new DetachedCriteria(String)
+        root.join(_ as String, _ as jakarta.persistence.criteria.JoinType) >> Mock(Join) { alias(_) >> it }
+
+        def dc = new DetachedCriteria(JpaFromProviderSpecPerson)
         dc.setAlias("myAlias")
-        def cq = Mock(org.hibernate.query.criteria.JpaCriteriaQuery) {
-            from(_) >> root
-        }
-        JpaFromProvider provider = new JpaFromProvider(dc, cq, root)
+        JpaFromProvider provider = new JpaFromProvider(dc, [], root)
 
         when:
         Path result = provider.getFullyQualifiedPath("myAlias.id")
@@ -179,4 +154,100 @@ class JpaFromProviderSpec extends Specification {
         then:
         result == idPath
     }
+
+    def "getFromsByName creates hierarchical joins for projection paths"() {
+        given:
+        def dc = new DetachedCriteria(JpaFromProviderSpecPerson)
+        From root = Mock(From) {
+            getJavaType() >> JpaFromProviderSpecPerson
+        }
+        // Stub for auto-joined basic collections
+        root.join("nicknames", _) >> Mock(Join) { alias(_) >> it }
+
+        Join teamJoin = Mock(Join) {
+            getJavaType() >> String
+            alias(_) >> it
+        }
+        Join clubJoin = Mock(Join) {
+            getJavaType() >> String
+            alias(_) >> it
+        }
+
+        and: "projections with nested paths"
+        def projections = [
+                new org.grails.datastore.mapping.query.Query.PropertyProjection("team.club.name")
+        ]
+
+        when:
+        JpaFromProvider provider = new JpaFromProvider(dc, projections, root)
+
+        then: "joins are created hierarchically"
+        1 * root.join("team", jakarta.persistence.criteria.JoinType.LEFT) >> teamJoin
+        1 * teamJoin.join("club", jakarta.persistence.criteria.JoinType.LEFT) >> clubJoin
+        0 * clubJoin.join(_, _)
+
+        and: "paths are registered in provider"
+        provider.getFullyQualifiedPath("team") == teamJoin
+        provider.getFullyQualifiedPath("team.club") == clubJoin
+    }
+
+    def "constructor with parent provider inherits froms and supports correlation"() {
+        given:
+        From outerRoot = Mock(From) { getJavaType() >> JpaFromProviderSpecPerson }
+        JpaFromProvider parent = bare(JpaFromProviderSpecPerson, outerRoot)
+
+        and: "subquery detached criteria"
+        def subDc = new DetachedCriteria(JpaFromProviderSpecPet)
+        From subRoot = Mock(From) { getJavaType() >> JpaFromProviderSpecPet }
+        subRoot.join(_ as String, _ as jakarta.persistence.criteria.JoinType) >> Mock(Join) { alias(_) >> it }
+
+        when:
+        JpaFromProvider subProvider = new JpaFromProvider(parent, subDc, [], subRoot)
+
+        then: "subquery provider has its own root"
+        subProvider.getFullyQualifiedPath("root") == subRoot
+
+        and: "subquery provider inherits outer paths"
+        subProvider.getFullyQualifiedPath("root") != outerRoot // subquery root shadows outer root
+    }
+
+    def "getFromsByName automatically joins basic collections"() {
+        given:
+        def dc = new DetachedCriteria(JpaFromProviderSpecPerson)
+        From root = Mock(From) {
+            getJavaType() >> JpaFromProviderSpecPerson
+        }
+        Join nicknamesJoin = Mock(Join) {
+            getJavaType() >> String
+            alias(_) >> it
+        }
+
+        when:
+        JpaFromProvider provider = new JpaFromProvider(dc, [], root)
+
+        then: "basic collection is joined automatically"
+        1 * root.join("nicknames", jakarta.persistence.criteria.JoinType.LEFT) >> nicknamesJoin
+
+        and: "path is registered"
+        provider.getFullyQualifiedPath("nicknames") == nicknamesJoin
+    }
+}
+
+@Entity
+class JpaFromProviderSpecPerson implements GormEntity<JpaFromProviderSpecPerson> {
+    Long id
+    String firstName
+    Set<String> nicknames
+    static hasMany = [nicknames: String]
+}
+
+@Entity
+class JpaFromProviderSpecPet implements GormEntity<JpaFromProviderSpecPet> {
+    Long id
+    JpaFromProviderSpecPerson owner
+}
+
+@Entity
+class JpaFromProviderSpecFace implements GormEntity<JpaFromProviderSpecFace> {
+    Long id
 }

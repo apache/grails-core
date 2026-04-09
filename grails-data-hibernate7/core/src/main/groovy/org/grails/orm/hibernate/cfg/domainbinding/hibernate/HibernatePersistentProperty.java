@@ -22,6 +22,7 @@ import java.util.Optional;
 
 import org.checkerframework.checker.nullness.qual.Nullable;
 import org.hibernate.mapping.DependantValue;
+import org.hibernate.mapping.PersistentClass;
 import org.hibernate.mapping.Property;
 import org.hibernate.mapping.SimpleValue;
 import org.hibernate.mapping.Table;
@@ -38,6 +39,19 @@ import static java.util.Optional.ofNullable;
 
 /** Interface for Hibernate persistent properties */
 public interface HibernatePersistentProperty extends PersistentProperty<PropertyConfig> {
+
+    private static @Nullable String getMappingName(Class<?> propertyClass, Mapping mapping) {
+        return ofNullable(mapping)
+                .map(__ -> __.getTypeName(propertyClass))
+                .orElseGet(() -> getClassName(propertyClass));
+    }
+
+    private static @Nullable String getClassName(Class<?> propertyClass) {
+        return ofNullable(propertyClass)
+                .filter(__ -> !__.isEnum())
+                .map(Class::getName)
+                .orElse(null);
+    }
 
     default boolean isBidirectionalManyToOneWithListMapping(Property prop) {
         return false;
@@ -89,21 +103,8 @@ public interface HibernatePersistentProperty extends PersistentProperty<Property
                 .orElseGet(() -> getMappingName(propertyType, mapping));
     }
 
-    private static @Nullable String getMappingName(Class<?> propertyClass, Mapping mapping) {
-        return ofNullable(mapping)
-                .map(__ -> __.getTypeName(propertyClass))
-                .orElseGet(() -> getClassName(propertyClass));
-    }
-
-    private static @Nullable String getClassName(Class<?> propertyClass) {
-        return ofNullable(propertyClass)
-                .filter(__ -> !__.isEnum())
-                .map(Class::getName)
-                .orElse(null);
-    }
-
     default GrailsHibernatePersistentEntity getHibernateOwner() {
-        return getOwner() instanceof GrailsHibernatePersistentEntity ghpe ? ghpe : null;
+        return (GrailsHibernatePersistentEntity) getOwner();
     }
 
     @SuppressWarnings("PMD.DataflowAnomalyAnalysis")
@@ -151,6 +152,27 @@ public interface HibernatePersistentProperty extends PersistentProperty<Property
         return "serializable".equals(getTypeName());
     }
 
+    @Override
+    default boolean isLazyAble() {
+        return this instanceof HibernateAssociation ||
+                !(this instanceof Embedded) && !this.equals(this.getOwner().getIdentity());
+    }
+
+    /**
+     * @return The mapped form
+     */
+    default PropertyConfig getHibernateMappedForm() {
+        return getMappedForm();
+    }
+
+    /**
+     * Determines if the property should be lazy.
+     * @return True if it should be lazy
+     */
+    default boolean isLazy() {
+        return getHibernateOwner().isLazy(this);
+    }
+
     /**
      * @return true if the property has a join key mapping
      */
@@ -159,10 +181,9 @@ public interface HibernatePersistentProperty extends PersistentProperty<Property
     }
 
     default String getMappedColumnName() {
-        if (getMappedForm() != null) {
-            return getMappedForm().getColumn();
-        }
-        return null;
+        return Optional.ofNullable(getMappedForm())
+                .map(PropertyConfig::getColumn)
+                .orElse(null);
     }
 
     default String getColumnName(ColumnConfig cc) {
@@ -206,6 +227,20 @@ public interface HibernatePersistentProperty extends PersistentProperty<Property
     }
 
     default Table getTable() {
-        return getHibernateOwner().getPersistentClass().getTable();
+        return getPersistentClass().getTable();
+    }
+
+    default PersistentClass getPersistentClass() {
+        return getHibernateOwner().getPersistentClass();
+    }
+
+    /**
+     * Returns the generator name for this property. For identity properties the generator
+     * is resolved from the owning entity; for regular properties it comes from the mapped form.
+     *
+     * @return The generator name, or {@code null} if none is configured
+     */
+    default @Nullable String getGeneratorName() {
+        return Optional.ofNullable(getHibernateMappedForm()).map(PropertyConfig::getGenerator).orElse(null);
     }
 }

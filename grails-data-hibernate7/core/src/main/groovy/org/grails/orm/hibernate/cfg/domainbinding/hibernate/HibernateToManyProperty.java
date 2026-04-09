@@ -21,6 +21,7 @@ package org.grails.orm.hibernate.cfg.domainbinding.hibernate;
 import java.util.Map;
 import java.util.Optional;
 
+import org.checkerframework.checker.nullness.qual.NonNull;
 import org.hibernate.FetchMode;
 import org.hibernate.mapping.Collection;
 import org.hibernate.mapping.IndexedCollection;
@@ -35,36 +36,39 @@ import org.grails.orm.hibernate.cfg.JoinTable;
 import org.grails.orm.hibernate.cfg.PersistentEntityNamingStrategy;
 import org.grails.orm.hibernate.cfg.PropertyConfig;
 import org.grails.orm.hibernate.cfg.domainbinding.binder.GrailsDomainBinder;
+import org.grails.orm.hibernate.cfg.domainbinding.util.BackticksRemover;
+
+import static org.grails.orm.hibernate.cfg.domainbinding.binder.GrailsDomainBinder.UNDERSCORE;
 
 /** Marker interface for Hibernate to-many associations */
 public interface HibernateToManyProperty extends PropertyWithMapping<PropertyConfig>, HibernateAssociation {
 
     default boolean hasSort() {
-        return StringUtils.hasText(getMappedForm().getSort());
+        return StringUtils.hasText(getHibernateMappedForm().getSort());
     }
 
     default String getSort() {
-        return getMappedForm().getSort();
+        return getHibernateMappedForm().getSort();
     }
 
     default String getOrder() {
-        return getMappedForm().getOrder();
+        return getHibernateMappedForm().getOrder();
     }
 
     default boolean getIgnoreNotFound() {
-        return getMappedForm().getIgnoreNotFound();
+        return getHibernateMappedForm().getIgnoreNotFound();
     }
 
     default FetchMode getFetchMode() {
-        return getMappedForm().getFetchMode();
+        return getHibernateMappedForm().getFetchMode();
     }
 
     default Boolean getLazy() {
-        return getMappedForm().getLazy();
+        return getHibernateMappedForm().getLazy();
     }
 
     default String getCacheUsage() {
-        return Optional.ofNullable(getMappedForm())
+        return Optional.ofNullable(getHibernateMappedForm())
                 .map(PropertyConfig::getCache)
                 .map(CacheConfig::getUsage)
                 .map(Object::toString)
@@ -93,24 +97,90 @@ public interface HibernateToManyProperty extends PropertyWithMapping<PropertyCon
                 !(this instanceof Basic);
     }
 
-    default String getIndexColumnType(String defaultType) {
-        return java.util.Optional.ofNullable(getMappedForm())
-                .map(PropertyConfig::getIndexColumn)
-                .map(ic -> getTypeName(ic, getHibernateOwner().getMappedForm()))
-                .orElse(defaultType);
+    default String getIndexColumnName(PersistentEntityNamingStrategy namingStrategy) {
+        PropertyConfig mapped = getHibernateMappedForm();
+
+        if (mapped != null && mapped.getIndexColumn() != null) {
+            PropertyConfig indexColConfig = mapped.getIndexColumn();
+            if (!indexColConfig.getColumns().isEmpty()) {
+                String name = indexColConfig.getColumns().get(0).getName();
+                if (StringUtils.hasText(name)) {
+                    return name;
+                }
+            }
+        }
+
+        if (mapped == null || mapped.getColumns().isEmpty()) {
+            return namingStrategy.resolveColumnName(getName()) +
+                    UNDERSCORE +
+                    IndexedCollection.DEFAULT_INDEX_COLUMN_NAME;
+        }
+
+        ColumnConfig primaryCol = mapped.getColumns().get(0);
+        Object rawIndex = primaryCol.getIndex();
+        if (rawIndex instanceof groovy.lang.Closure) {
+            PropertyConfig indexColConfig = PropertyConfig.configureNew((groovy.lang.Closure<?>) rawIndex);
+            if (!indexColConfig.getColumns().isEmpty()) {
+                String name = indexColConfig.getColumns().get(0).getName();
+                if (StringUtils.hasText(name)) {
+                    return name;
+                }
+            }
+        }
+
+        try {
+            Map<String, String> indexMap = primaryCol.getIndexAsMap();
+            String colName = indexMap.get("column");
+
+            if (StringUtils.hasText(colName)) {
+                return colName;
+            }
+        } catch (Exception ignored) {
+            // ignored
+        }
+
+        return namingStrategy.resolveColumnName(getName()) + UNDERSCORE + IndexedCollection.DEFAULT_INDEX_COLUMN_NAME;
     }
 
-    default String getIndexColumnName(PersistentEntityNamingStrategy namingStrategy) {
-        return java.util.Optional.ofNullable(getMappedForm())
-                .map(PropertyConfig::getIndexColumn)
-                .map(PropertyConfig::getColumn)
-                .orElseGet(() -> namingStrategy.resolveColumnName(getName()) +
-                        GrailsDomainBinder.UNDERSCORE +
-                        IndexedCollection.DEFAULT_INDEX_COLUMN_NAME);
+    default String getIndexColumnType(String defaultType) {
+        PropertyConfig mapped = getHibernateMappedForm();
+
+        if (mapped != null && mapped.getIndexColumn() != null) {
+            PropertyConfig indexColConfig = mapped.getIndexColumn();
+            if (StringUtils.hasText(indexColConfig.getTypeName())) {
+                return indexColConfig.getTypeName();
+            }
+        }
+
+        if (mapped == null || mapped.getColumns().isEmpty()) {
+            return defaultType;
+        }
+
+        ColumnConfig primaryCol = mapped.getColumns().get(0);
+        Object rawIndex = primaryCol.getIndex();
+        if (rawIndex instanceof groovy.lang.Closure) {
+            PropertyConfig indexColConfig = PropertyConfig.configureNew((groovy.lang.Closure<?>) rawIndex);
+            if (StringUtils.hasText(indexColConfig.getTypeName())) {
+                return indexColConfig.getTypeName();
+            }
+        }
+
+        try {
+            Map<String, String> indexMap = primaryCol.getIndexAsMap();
+            String typeName = indexMap.get("type");
+
+            if (StringUtils.hasText(typeName)) {
+                return typeName;
+            }
+        } catch (Exception ignored) {
+            // ignored
+        }
+
+        return defaultType;
     }
 
     default String getMapElementName(PersistentEntityNamingStrategy namingStrategy) {
-        return java.util.Optional.ofNullable(getMappedForm())
+        return java.util.Optional.ofNullable(getHibernateMappedForm())
                 .map(PropertyConfig::getJoinTable)
                 .map(JoinTable::getColumn)
                 .map(ColumnConfig::getName)
@@ -120,7 +190,7 @@ public interface HibernateToManyProperty extends PropertyWithMapping<PropertyCon
     }
 
     default String resolveJoinTableForeignKeyColumnName(PersistentEntityNamingStrategy namingStrategy) {
-        return java.util.Optional.ofNullable(getMappedForm())
+        return java.util.Optional.ofNullable(getHibernateMappedForm())
                 .map(PropertyConfig::getJoinTableColumnConfig)
                 .map(ColumnConfig::getName)
                 .orElseGet(() -> namingStrategy.resolveColumnName(getHibernateAssociatedEntity()
@@ -130,7 +200,44 @@ public interface HibernateToManyProperty extends PropertyWithMapping<PropertyCon
                         GrailsDomainBinder.FOREIGN_KEY_SUFFIX);
     }
 
-    void setCollection(Collection collection);
+    default String joinTableColumName(PersistentEntityNamingStrategy namingStrategy) {
+        final Class<?> referencedType = getComponentType();
+        var joinColumnMappingOptional = getColumnConfigOptional();
+        boolean present = joinColumnMappingOptional.isPresent();
+        String columnName;
+        if (present) {
+            columnName = joinColumnMappingOptional.get().getName();
+        } else {
+            var clazz = namingStrategy.resolveColumnName(referencedType.getName());
+            var prop = namingStrategy.resolveTableName(getName());
+            columnName = referencedType.isEnum() ?
+                    clazz :
+                    new BackticksRemover().apply(prop) + UNDERSCORE + new BackticksRemover().apply(clazz);
+        }
+        return columnName;
+    }
+
+    @NonNull
+    default Optional<ColumnConfig> getColumnConfigOptional() {
+        return Optional.ofNullable(getHibernateMappedForm()).map(PropertyConfig::getJoinTableColumnConfig);
+    }
+
+    default boolean isEnum() {
+        return getComponentType().isEnum();
+    }
+
+    /**
+     * @return Whether the association column is nullable. ManyToMany is never nullable.
+     */
+    @Override
+    default boolean isAssociationColumnNullable() {
+        if (this instanceof HibernateManyToManyProperty) {
+            return false;
+        }
+        return isNullable();
+    }
 
     Collection getCollection();
+
+    void setCollection(Collection collection);
 }

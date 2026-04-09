@@ -20,12 +20,9 @@
 package org.grails.orm.hibernate.cfg.domainbinding.secondpass
 
 import grails.gorm.specs.HibernateGormDatastoreSpec
-import org.grails.orm.hibernate.cfg.PersistentEntityNamingStrategy
-import org.grails.orm.hibernate.cfg.domainbinding.binder.SimpleValueColumnBinder
 import org.grails.orm.hibernate.cfg.domainbinding.hibernate.GrailsHibernatePersistentEntity
 import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernateToManyProperty
-import org.hibernate.boot.spi.InFlightMetadataCollector
-import org.hibernate.boot.spi.MetadataBuildingContext
+
 import org.hibernate.mapping.OneToMany
 import org.hibernate.mapping.RootClass
 import org.hibernate.boot.spi.MetadataBuildingContext
@@ -43,7 +40,7 @@ import org.grails.orm.hibernate.cfg.domainbinding.binder.OneToOneBinder
 import org.grails.orm.hibernate.cfg.domainbinding.binder.ClassBinder
 import org.grails.orm.hibernate.cfg.domainbinding.binder.ComponentBinder
 import org.grails.orm.hibernate.cfg.domainbinding.binder.ComponentUpdater
-import org.grails.orm.hibernate.cfg.domainbinding.util.BasicValueIdCreator
+import org.grails.orm.hibernate.cfg.domainbinding.util.BasicValueCreator
 import org.grails.orm.hibernate.cfg.domainbinding.binder.GrailsPropertyBinder
 import org.grails.orm.hibernate.cfg.domainbinding.binder.IdentityBinder
 import org.hibernate.boot.spi.InFlightMetadataCollector
@@ -82,7 +79,7 @@ class ListSecondPassBinderSpec extends HibernateGormDatastoreSpec {
         ColumnNameForPropertyAndPathFetcher columnNameForPropertyAndPathFetcher = new ColumnNameForPropertyAndPathFetcher(namingStrategy, defaultColumnNameFetcher, backticksRemover)
         CollectionHolder collectionHolder = new CollectionHolder(metadataBuildingContext)
         SimpleValueBinder simpleValueBinder = new SimpleValueBinder(metadataBuildingContext, namingStrategy, jdbcEnvironment)
-        EnumTypeBinder enumTypeBinderToUse = new EnumTypeBinder(metadataBuildingContext, columnNameForPropertyAndPathFetcher)
+        EnumTypeBinder enumTypeBinderToUse = new EnumTypeBinder(metadataBuildingContext, columnNameForPropertyAndPathFetcher,namingStrategy)
         SimpleValueColumnFetcher simpleValueColumnFetcher = new SimpleValueColumnFetcher()
         CompositeIdentifierToManyToOneBinder compositeIdentifierToManyToOneBinder = new CompositeIdentifierToManyToOneBinder(
 
@@ -132,7 +129,7 @@ class ListSecondPassBinderSpec extends HibernateGormDatastoreSpec {
         )
         CompositeIdBinder compositeIdBinder = new CompositeIdBinder(metadataBuildingContext, componentUpdater, propertyBinder)
         PropertyBinder propertyBinderHelper = new PropertyBinder()
-        SimpleIdBinder simpleIdBinder = new SimpleIdBinder(metadataBuildingContext, new BasicValueIdCreator(jdbcEnvironment, namingStrategy), simpleValueBinder, propertyBinderHelper)
+        SimpleIdBinder simpleIdBinder = new SimpleIdBinder(metadataBuildingContext, new BasicValueCreator(metadataBuildingContext, jdbcEnvironment, namingStrategy), simpleValueBinder, propertyBinderHelper)
         IdentityBinder identityBinder = new IdentityBinder(simpleIdBinder, compositeIdBinder)
         VersionBinder versionBinder = new VersionBinder(metadataBuildingContext, simpleValueBinder, propertyBinderHelper, BasicValue::new)
 
@@ -198,7 +195,7 @@ class ListSecondPassBinderSpec extends HibernateGormDatastoreSpec {
         def petsProp = personEntity.getPropertyByName("pets") as HibernateToManyProperty
 
         when:
-        def collection = collectionBinder.bindCollection(petsProp, rootClass, "")
+        def collection = collectionBinder.bindCollection(petsProp, "")
 
         then:
         collection.role == "${personEntity.name}.pets".toString()
@@ -254,8 +251,10 @@ class ListSecondPassBinderSpec extends HibernateGormDatastoreSpec {
         element.setReferencedEntityName(LSBBook.name)
         list.setElement(element)
 
+        booksProp.setCollection(list)
+
         when:
-        listBinder.bindListSecondPass(booksProp, persistentClasses, list)
+        listBinder.bindListSecondPass(booksProp, persistentClasses)
 
         then:
         noExceptionThrown()

@@ -28,14 +28,18 @@ import org.hibernate.mapping.Collection;
 import org.hibernate.mapping.OneToMany;
 import org.hibernate.mapping.PersistentClass;
 
+import org.grails.datastore.mapping.model.types.Basic;
 import org.grails.orm.hibernate.cfg.domainbinding.binder.CollectionForPropertyConfigBinder;
 import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernateManyToManyProperty;
 import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernateOneToManyProperty;
 import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernateToManyProperty;
 
-/** Refactored from CollectionBinder to handle collection second pass binding. */
+/**
+ * Refactored from CollectionBinder to handle collection second pass binding.
+ */
 @SuppressWarnings("PMD.DataflowAnomalyAnalysis")
 public class CollectionSecondPassBinder {
+
     private final CollectionOrderByBinder collectionOrderByBinder;
     private final CollectionMultiTenantFilterBinder collectionMultiTenantFilterBinder;
     private final CollectionKeyColumnUpdater collectionKeyColumnUpdater;
@@ -45,7 +49,6 @@ public class CollectionSecondPassBinder {
     private final CollectionWithJoinTableBinder collectionWithJoinTableBinder;
     private final CollectionForPropertyConfigBinder collectionForPropertyConfigBinder;
 
-    /** Creates a new {@link CollectionSecondPassBinder} instance. */
     public CollectionSecondPassBinder(
             CollectionKeyColumnUpdater collectionKeyColumnUpdater,
             UnidirectionalOneToManyBinder unidirectionalOneToManyBinder,
@@ -65,27 +68,28 @@ public class CollectionSecondPassBinder {
         this.collectionMultiTenantFilterBinder = collectionMultiTenantFilterBinder;
     }
 
-    /** Bind collection second pass. */
-    public void bindCollectionSecondPass(
-            @Nonnull HibernateToManyProperty property,
-            Map<?, ?> persistentClasses,
-            @Nonnull Collection collection) {
+    public void bindCollectionSecondPass(@Nonnull HibernateToManyProperty property, Map<?, ?> persistentClasses) {
+        Collection collection = property.getCollection();
 
-        PersistentClass associatedClass = resolveAssociatedClass(property, persistentClasses);
-        collectionOrderByBinder.bind(property, collection, associatedClass);
-        bindOneToManyAssociation(property, associatedClass, collection);
-
-        collectionMultiTenantFilterBinder.bind(property, collection);
-        collection.setSorted(property.isSorted());
-
-        collectionKeyColumnUpdater.bind(property, associatedClass, collection);
+        if (property instanceof Basic) {
+            // Basic collections (scalars/enums) don't have an associated PersistentClass
+            collectionMultiTenantFilterBinder.bind(property);
+            collection.setSorted(property.isSorted());
+            collectionKeyColumnUpdater.bind(property, null);
+        } else {
+            PersistentClass associatedClass = resolveAssociatedClass(property, persistentClasses);
+            collectionOrderByBinder.bind(property, associatedClass);
+            bindOneToManyAssociation(property, associatedClass);
+            collectionMultiTenantFilterBinder.bind(property);
+            collection.setSorted(property.isSorted());
+            collectionKeyColumnUpdater.bind(property, associatedClass);
+        }
         collection.setCacheConcurrencyStrategy(property.getCacheUsage());
-
-        bindCollectionElement(property, collection);
+        bindCollectionElement(property);
     }
 
-    private void bindOneToManyAssociation(
-            HibernateToManyProperty property, PersistentClass associatedClass, Collection collection) {
+    private void bindOneToManyAssociation(HibernateToManyProperty property, PersistentClass associatedClass) {
+        Collection collection = property.getCollection();
         if (!collection.isOneToMany()) {
             return;
         }
@@ -94,25 +98,23 @@ public class CollectionSecondPassBinder {
         if (property.shouldBindWithForeignKey()) {
             collection.setCollectionTable(associatedClass.getTable());
         }
-        collectionForPropertyConfigBinder.bindCollectionForPropertyConfig(collection, property);
+        collectionForPropertyConfigBinder.bindCollectionForPropertyConfig(property);
     }
 
-    private void bindCollectionElement(
-            HibernateToManyProperty property, Collection collection) {
+    private void bindCollectionElement(HibernateToManyProperty property) {
         if (property instanceof HibernateManyToManyProperty manyToMany && manyToMany.isBidirectional()) {
-            manyToManyElementBinder.bind(manyToMany, collection);
+            manyToManyElementBinder.bind(manyToMany);
         } else if (property.isBidirectionalOneToManyMap() && property.isBidirectional()) {
-            bidirectionalMapElementBinder.bind(property, collection);
+            bidirectionalMapElementBinder.bind(property);
         } else if (property instanceof HibernateOneToManyProperty oneToManyProperty &&
                 oneToManyProperty.isUnidirectionalOneToMany()) {
-            unidirectionalOneToManyBinder.bind(oneToManyProperty, collection);
+            unidirectionalOneToManyBinder.bind(oneToManyProperty);
         } else if (property.supportsJoinColumnMapping()) {
-            collectionWithJoinTableBinder.bindCollectionWithJoinTable(property, collection);
+            collectionWithJoinTableBinder.bindCollectionWithJoinTable(property);
         }
     }
 
-    private @Nonnull PersistentClass resolveAssociatedClass(
-            HibernateToManyProperty property, Map<?, ?> persistentClasses) {
+    protected PersistentClass resolveAssociatedClass(HibernateToManyProperty property, Map<?, ?> persistentClasses) {
         return Optional.ofNullable(property.getHibernateAssociatedEntity())
                 .map(referenced -> (PersistentClass) persistentClasses.get(referenced.getName()))
                 .orElseThrow(

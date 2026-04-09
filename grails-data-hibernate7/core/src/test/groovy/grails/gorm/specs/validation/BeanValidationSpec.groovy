@@ -23,7 +23,7 @@ import grails.gorm.annotation.Entity
 import grails.gorm.specs.HibernateGormDatastoreSpec
 import grails.gorm.transactions.Rollback
 import jakarta.validation.constraints.Digits
-import org.hibernate.validator.constraints.NotBlank
+import jakarta.validation.constraints.NotBlank
 
 /**
  * Created by graemerocher on 07/04/2017.

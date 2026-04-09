@@ -1,4 +1,22 @@
 /*
+ *  Licensed to the Apache Software Foundation (ASF) under one
+ *  or more contributor license agreements.  See the NOTICE file
+ *  distributed with this work for additional information
+ *  regarding copyright ownership.  The ASF licenses this file
+ *  to you under the Apache License, Version 2.0 (the
+ *  "License"); you may not use this file except in compliance
+ *  with the License.  You may obtain a copy of the License at
+ *
+ *    https://www.apache.org/licenses/LICENSE-2.0
+ *
+ *  Unless required by applicable law or agreed to in writing,
+ *  software distributed under the License is distributed on an
+ *  "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ *  KIND, either express or implied.  See the License for the
+ *  specific language governing permissions and limitations
+ *  under the License.
+ */
+/*
  * Copyright 2003-2007 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -19,12 +37,19 @@ import groovy.transform.CompileStatic
 import groovy.transform.PackageScope
 import groovy.transform.builder.Builder
 import groovy.transform.builder.SimpleStrategy
-import org.grails.datastore.mapping.config.Property
+
+import jakarta.persistence.AccessType
+import jakarta.persistence.FetchType
 import org.hibernate.FetchMode
 import org.springframework.beans.MutablePropertyValues
 import org.springframework.validation.DataBinder
+import org.grails.datastore.mapping.config.Property
 
-import jakarta.persistence.FetchType
+import static jakarta.persistence.FetchType.EAGER
+import static jakarta.persistence.FetchType.LAZY
+import static org.hibernate.FetchMode.DEFAULT
+import static org.hibernate.FetchMode.JOIN
+import static org.hibernate.FetchMode.SELECT
 
 /**
  * Custom mapping for a single domain property. Note that a property
@@ -39,6 +64,7 @@ class PropertyConfig extends Property {
 
     PropertyConfig() {
         setFetchStrategy(null)
+        setAccessType(AccessType.PROPERTY)
     }
 
     @PackageScope
@@ -80,12 +106,12 @@ class PropertyConfig extends Property {
     boolean ignoreNotFound = false
 
     /**
-    * Whether or not this is column is insertable by hibernate
+     * Whether or not this is column is insertable by hibernate
      */
     boolean insertable = true
 
     /**
-    * Whether or not this column is updatable by hibernate
+     * Whether or not this column is updatable by hibernate
      */
     boolean updatable = true
 
@@ -123,8 +149,7 @@ class PropertyConfig extends Property {
         if (columns.size() == 1 && firstColumnIsColumnCopy) {
             firstColumnIsColumnCopy = false
             ColumnConfig.configureExisting(columns[0], columnDef)
-        }
-        else {
+        } else {
             columns.add(ColumnConfig.configureNew(columnDef))
         }
         return this
@@ -139,8 +164,7 @@ class PropertyConfig extends Property {
         if (columns.size() == 1 && firstColumnIsColumnCopy) {
             firstColumnIsColumnCopy = false
             ColumnConfig.configureExisting(columns[0], columnDef)
-        }
-        else {
+        } else {
             columns.add(ColumnConfig.configureNew(columnDef))
         }
         return this
@@ -155,8 +179,7 @@ class PropertyConfig extends Property {
         if (columns.size() == 1 && firstColumnIsColumnCopy) {
             firstColumnIsColumnCopy = false
             columns[0].name = columnDef
-        }
-        else {
+        } else {
             columns.add(ColumnConfig.configureNew(name: columnDef))
         }
         return this
@@ -243,12 +266,7 @@ class PropertyConfig extends Property {
      * @param fetch The Hibernate {@link FetchMode}
      */
     void setFetch(FetchMode fetch) {
-        if (FetchMode.JOIN.equals(fetch)) {
-            super.setFetchStrategy(FetchType.EAGER)
-        }
-        else {
-            super.setFetchStrategy(FetchType.LAZY)
-        }
+        super.setFetchStrategy(JOIN == fetch ? EAGER : LAZY)
     }
 
     /**
@@ -257,15 +275,15 @@ class PropertyConfig extends Property {
     FetchMode getFetchMode() {
         FetchType strategy = super.getFetchStrategy()
         if (strategy == null) {
-            return FetchMode.DEFAULT
+            return DEFAULT
         }
         switch (strategy) {
-            case FetchType.EAGER:
-                return FetchMode.JOIN
-            case FetchType.LAZY:
-                return FetchMode.SELECT
+            case EAGER:
+                return JOIN
+            case LAZY:
+                return SELECT
             default:
-                return FetchMode.DEFAULT
+                return DEFAULT
         }
     }
     /**
@@ -316,8 +334,7 @@ class PropertyConfig extends Property {
         ColumnConfig cc
         if (property.columns) {
             cc = property.columns[0]
-        }
-        else {
+        } else {
             cc = new ColumnConfig()
             property.columns.add(cc)
         }
@@ -389,8 +406,7 @@ class PropertyConfig extends Property {
     boolean isUnique() {
         if (columns.size() > 1) {
             return super.isUnique()
-        }
-        else {
+        } else {
             if (columns.isEmpty()) return super.isUnique()
             return columns[0].unique
         }
@@ -441,10 +457,9 @@ class PropertyConfig extends Property {
     @Override
     void setScale(int scale) {
         checkHasSingleColumn()
-        if (!columns.isEmpty())  {
+        if (!columns.isEmpty()) {
             columns[0].scale = scale
-        }
-        else {
+        } else {
             super.setScale(scale)
         }
     }

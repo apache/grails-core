@@ -40,10 +40,12 @@ public class HibernateEmbeddedCollectionProperty extends EmbeddedCollectionWithM
         super(entity, context, property);
     }
 
+    @Override
     public Collection getCollection() {
         return collection;
     }
 
+    @Override
     public void setCollection(Collection collection) {
         this.collection = collection;
     }

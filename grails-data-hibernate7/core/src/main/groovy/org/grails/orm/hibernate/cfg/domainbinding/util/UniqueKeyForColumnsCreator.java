@@ -29,6 +29,7 @@ import org.slf4j.LoggerFactory;
 
 public class UniqueKeyForColumnsCreator {
 
+    private static final Logger LOG = LoggerFactory.getLogger(UniqueKeyForColumnsCreator.class);
     private final UniqueNameGenerator uniqueNameGenerator;
 
     public UniqueKeyForColumnsCreator() {
@@ -38,8 +39,6 @@ public class UniqueKeyForColumnsCreator {
     protected UniqueKeyForColumnsCreator(UniqueNameGenerator uniqueNameGenerator) {
         this.uniqueNameGenerator = uniqueNameGenerator;
     }
-
-    private static final Logger LOG = LoggerFactory.getLogger(UniqueKeyForColumnsCreator.class);
 
     public void createUniqueKeyForColumns(Table table, List<Column> columns) {
         Collections.reverse(columns);

@@ -409,8 +409,16 @@ public class HibernateSession extends AbstractAttributeStoringSession implements
         return query;
     }
 
-    protected GrailsHibernateTemplate getHibernateTemplate() {
+    public GrailsHibernateTemplate getHibernateTemplate() {
         return (GrailsHibernateTemplate) getNativeInterface();
+    }
+
+    @Override
+    public FlushModeType getFlushMode() {
+        if (hibernateTemplate.getFlushMode() == GrailsHibernateTemplate.FLUSH_COMMIT) {
+            return FlushModeType.COMMIT;
+        }
+        return FlushModeType.AUTO;
     }
 
     @Override
@@ -420,13 +428,5 @@ public class HibernateSession extends AbstractAttributeStoringSession implements
         } else if (flushMode == FlushModeType.COMMIT) {
             hibernateTemplate.setFlushMode(GrailsHibernateTemplate.FLUSH_COMMIT);
         }
-    }
-
-    @Override
-    public FlushModeType getFlushMode() {
-        if (hibernateTemplate.getFlushMode() == GrailsHibernateTemplate.FLUSH_COMMIT) {
-            return FlushModeType.COMMIT;
-        }
-        return FlushModeType.AUTO;
     }
 }

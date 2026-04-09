@@ -20,7 +20,6 @@ package org.grails.orm.hibernate.cfg.domainbinding.secondpass;
 
 import java.util.Objects;
 
-import org.hibernate.mapping.Collection;
 import org.hibernate.mapping.DependantValue;
 import org.hibernate.mapping.PersistentClass;
 
@@ -37,8 +36,8 @@ public class CollectionKeyColumnUpdater {
     }
 
     /** Creates the key, sets it on the collection, and updates its columns. */
-    public void bind(HibernateToManyProperty property, PersistentClass associatedClass, Collection collection) {
-        DependantValue key = collectionKeyBinder.bind(property, associatedClass, collection);
+    public void bind(HibernateToManyProperty property, PersistentClass associatedClass) {
+        DependantValue key = collectionKeyBinder.bind(property, associatedClass);
         forceNullableAndCheckUpdatable(key, property);
     }
 

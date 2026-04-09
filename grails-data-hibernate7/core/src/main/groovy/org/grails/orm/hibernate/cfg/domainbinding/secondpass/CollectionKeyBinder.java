@@ -50,8 +50,8 @@ public class CollectionKeyBinder {
     }
 
     /** Creates the {@link DependantValue} key, sets it on the collection, and binds it. */
-    public DependantValue bind(
-            HibernateToManyProperty property, PersistentClass associatedClass, Collection collection) {
+    public DependantValue bind(HibernateToManyProperty property, PersistentClass associatedClass) {
+        Collection collection = property.getCollection();
         DependantValue key = primaryKeyValueCreator.createPrimaryKeyValue(collection);
         collection.setKey(key);
         if (property.isBidirectional()) {
@@ -63,11 +63,14 @@ public class CollectionKeyBinder {
                 dependentKeyValueBinder.bind(property, key);
             }
         } else {
-            if (property.getMappedForm().hasJoinKeyMapping()) {
+            if (property.getHibernateMappedForm().hasJoinKeyMapping()) {
                 simpleValueColumnBinder.bindSimpleValue(
                         key,
                         "long",
-                        property.getMappedForm().getJoinTable().getKey().getName(),
+                        property.getHibernateMappedForm()
+                                .getJoinTable()
+                                .getKey()
+                                .getName(),
                         true);
             } else {
                 dependentKeyValueBinder.bind(property, key);

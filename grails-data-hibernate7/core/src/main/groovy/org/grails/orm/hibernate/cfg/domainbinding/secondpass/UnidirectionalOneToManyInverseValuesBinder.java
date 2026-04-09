@@ -18,9 +18,6 @@
  */
 package org.grails.orm.hibernate.cfg.domainbinding.secondpass;
 
-import java.util.Optional;
-
-import org.hibernate.FetchMode;
 import org.hibernate.boot.spi.MetadataBuildingContext;
 import org.hibernate.mapping.Collection;
 import org.hibernate.mapping.ManyToOne;
@@ -36,11 +33,11 @@ public class UnidirectionalOneToManyInverseValuesBinder {
         this.metadataBuildingContext = metadataBuildingContext;
     }
 
-    public ManyToOne bind(HibernateToManyProperty property, Collection collection) {
+    public ManyToOne bind(HibernateToManyProperty property) {
+        Collection collection = property.getCollection();
         ManyToOne manyToOne = new ManyToOne(metadataBuildingContext, collection.getCollectionTable());
         manyToOne.setIgnoreNotFound(property.getIgnoreNotFound());
-        manyToOne.setLazy(!FetchMode.JOIN.equals(property.getFetchMode()));
-        Optional.ofNullable(property.getLazy()).ifPresent(manyToOne::setLazy);
+        manyToOne.setLazy(property.isLazy());
         manyToOne.setReferencedEntityName(
                 property.getHibernateAssociatedEntity().getName());
         return manyToOne;

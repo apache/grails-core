@@ -24,7 +24,7 @@ import org.grails.orm.hibernate.HibernateDatastore
 import org.hibernate.Session
 import org.hibernate.SessionFactory
 import org.hibernate.dialect.H2Dialect
-import org.springframework.orm.hibernate5.SessionHolder
+import org.grails.orm.hibernate.support.hibernate7.SessionHolder
 import org.springframework.transaction.support.TransactionSynchronizationManager
 import org.springframework.web.context.request.WebRequest
 import spock.lang.AutoCleanup

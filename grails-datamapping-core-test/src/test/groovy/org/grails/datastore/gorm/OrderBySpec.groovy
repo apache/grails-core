@@ -22,11 +22,17 @@ import org.apache.grails.data.testing.tck.domains.ChildEntity
 import org.apache.grails.data.testing.tck.domains.TestEntity
 import org.apache.grails.data.simple.core.GrailsDataCoreTckManager
 import org.apache.grails.data.testing.tck.base.GrailsDataTckSpec
+import spock.lang.Requires
 
 /**
  * @author Daniel Wiell
  */
 class OrderBySpec extends GrailsDataTckSpec<GrailsDataCoreTckManager> {
+
+    def setupSpec() {
+        manager.addAllDomainClasses([TestEntity])
+    }
+
     def setup() {
         def age = 40
         ["Bob", "Fred", "Barney", "Frank", "Joe", "Ernie"].each {
@@ -42,6 +48,9 @@ class OrderBySpec extends GrailsDataTckSpec<GrailsDataCoreTckManager> {
         45 == result.age
     }
 
+    @Requires({ System.getProperty('hibernate5.gorm.suite') == 'true' ||
+            System.getProperty('hibernate7.gorm.suite') == 'true' ||
+            System.getProperty('mongodb.gorm.suite') == 'true' })
     def 'Test order by property name with dynamic finder using max'() {
         when:
         def results = TestEntity.findAllByAgeGreaterThanEquals(40, [sort: "age", order: 'desc', max: 1])

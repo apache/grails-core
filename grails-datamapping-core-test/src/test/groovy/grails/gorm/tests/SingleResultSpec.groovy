@@ -18,6 +18,7 @@
  */
 package grails.gorm.tests
 
+import org.apache.grails.data.testing.tck.domains.Person
 import org.apache.grails.data.testing.tck.domains.TestEntity
 import org.apache.grails.data.simple.core.GrailsDataCoreTckManager
 import org.apache.grails.data.testing.tck.base.GrailsDataTckSpec
@@ -28,17 +29,21 @@ import spock.lang.Issue
  */
 class SingleResultSpec extends GrailsDataTckSpec<GrailsDataCoreTckManager> {
 
+    def setupSpec() {
+        manager.addAllDomainClasses([TestEntity])
+    }
+
     @Issue('https://github.com/apache/grails-data-mapping/issues/872')
     void "test single result state"() {
         when:
         def query = manager.session.createQuery(TestEntity)
 
         then:
-        query.uniqueResult == false
+        !query.uniqueResult
 
         when:
         def result = query.singleResult()
         then:
-        query.uniqueResult == true
+        query.uniqueResult
     }
 }

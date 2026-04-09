@@ -35,16 +35,6 @@ import org.hibernate.service.spi.SessionFactoryServiceRegistry;
 
 public class EventListenerIntegrator implements Integrator {
 
-    protected HibernateEventListeners hibernateEventListeners;
-    protected Map<String, Object> eventListeners;
-
-    public EventListenerIntegrator(
-            HibernateEventListeners hibernateEventListeners, Map<String, Object> eventListeners) {
-        this.hibernateEventListeners = hibernateEventListeners;
-        this.eventListeners = eventListeners;
-    }
-
-    @SuppressWarnings("unchecked")
     protected static final List<EventType<?>> TYPES = Arrays.asList(
             EventType.AUTO_FLUSH,
             EventType.MERGE,
@@ -77,12 +67,26 @@ public class EventListenerIntegrator implements Integrator {
             EventType.POST_COLLECTION_RECREATE,
             EventType.POST_COLLECTION_REMOVE,
             EventType.POST_COLLECTION_UPDATE);
+    protected HibernateEventListeners hibernateEventListeners;
+    protected Map<String, Object> eventListeners;
+
+    public EventListenerIntegrator(
+            HibernateEventListeners hibernateEventListeners, Map<String, Object> eventListeners) {
+        this.hibernateEventListeners = hibernateEventListeners;
+        this.eventListeners = eventListeners;
+    }
 
     @SuppressWarnings({"unchecked", "rawtypes", "PMD.DataflowAnomalyAnalysis"})
     @Override
-    public void integrate(Metadata metadata, BootstrapContext bootstrapContext, SessionFactoryImplementor sfi) {
+    public void integrate(
+            Metadata metadata,
+            BootstrapContext bootstrapContext,
+            SessionFactoryImplementor sfi) {
 
         EventListenerRegistry listenerRegistry = sfi.getServiceRegistry().getService(EventListenerRegistry.class);
+        if (listenerRegistry == null) {
+            throw new IllegalStateException("EventListenerRegistry not available from ServiceRegistry");
+        }
 
         if (eventListeners != null) {
             for (Map.Entry<String, Object> entry : eventListeners.entrySet()) {
@@ -115,7 +119,7 @@ public class EventListenerIntegrator implements Integrator {
                     // since ClosureEventTriggeringInterceptor extends DefaultSaveOrUpdateEventListener we
                     // want to override instead of append the listener here
                     // to avoid there being 2 implementations which would impact performance too
-                    group.clear();
+                    group.clearListeners();
                     group.appendListener(listener);
                 } else {
                     group.appendListener(listener);
@@ -151,6 +155,7 @@ public class EventListenerIntegrator implements Integrator {
         }
     }
 
+    @Override
     public void disintegrate(SessionFactoryImplementor sessionFactory, SessionFactoryServiceRegistry serviceRegistry) {
         // nothing to do
     }
