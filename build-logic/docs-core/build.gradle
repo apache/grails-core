@@ -58,7 +58,7 @@ dependencies {
 
     testImplementation "org.codehaus.groovy:groovy-test-junit5:${GroovySystem.version}"
     testImplementation 'org.junit.jupiter:junit-jupiter-api:5.12.2'
-    testImplementation 'org.junit.platform:junit-platform-runner:1.12.2'
+    testImplementation 'org.junit.platform:junit-platform-suite:1.12.2'
     testRuntimeOnly 'org.junit.platform:junit-platform-launcher:1.12.2'
     testRuntimeOnly 'org.junit.jupiter:junit-jupiter-engine:5.12.2'
 }

@@ -17,6 +17,8 @@
  *  under the License.
  */
 
+apply plugin: 'org.apache.grails.buildsrc.dependency-validator'
+
 group "examples"
 configurations.configureEach {
     exclude group: 'org.apache.grails', module: 'grails-data-simple'

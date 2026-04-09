@@ -18,205 +18,202 @@
  */
 package org.grails.web.servlet
 
+import spock.lang.Issue
+import spock.lang.Specification
+
+import grails.artefact.Artefact
 import grails.testing.web.controllers.ControllerUnitTest
 import grails.web.http.HttpHeaders
-import org.grails.plugins.testing.GrailsMockHttpServletRequest
-import org.grails.plugins.testing.GrailsMockHttpServletResponse
 import org.grails.web.servlet.mvc.exceptions.ControllerExecutionException
-import grails.artefact.Artefact
-import spock.lang.Specification
 
 /**
  * Tests for the render method.
- *
- * @author Graeme Rocher
  */
 class RenderMethodTests extends Specification implements ControllerUnitTest<RenderController> {
 
-    void testRenderFile() {
-        when:
-        controller.render file:"hello".bytes, contentType:"text/plain"
+    void 'renders file bytes with an explicit content type'() {
+        when: 'the controller renders file bytes'
+        controller.render(
+                file: 'hello'.bytes,
+                contentType: 'text/plain'
+        )
 
-        then:
-        "hello" == response.contentAsString
-
-        when:
-        response.reset()
-        controller.render file:"hello".bytes
-       
-        then:
-        thrown(ControllerExecutionException)
-
-        when:
-        response.reset()
-        controller.render file:new ByteArrayInputStream("hello".bytes), contentType:"text/plain"
-
-        then:
-        "hello" == response.contentAsString
-        null == response.getHeader(HttpHeaders.CONTENT_DISPOSITION)
-
-        when:
-        response.reset()
-        controller.render file:new ByteArrayInputStream("hello".bytes), contentType:"text/plain", fileName:"hello.txt"
-        
-        then:
-        "hello" == response.contentAsString
-        "attachment;filename=\"hello.txt\"" == response.getHeader(HttpHeaders.CONTENT_DISPOSITION)
+        then: 'the file contents are written to the response'
+        response.contentAsString == 'hello'
     }
 
-    void testRenderMethodWithStatus() {
-        when:
+    void 'requires a content type when rendering file bytes'() {
+        when: 'the controller renders file bytes without a content type'
+        controller.render(file: 'hello'.bytes)
+
+        then: 'a controller execution exception is thrown'
+        def e = thrown(ControllerExecutionException)
+        e.message == 'Argument [file] of render method specified without valid [contentType] argument'
+    }
+
+    void 'renders an input stream without setting content disposition by default'() {
+        when: 'the controller renders a file input stream'
+        controller.render(
+                file: new ByteArrayInputStream('hello'.bytes),
+                contentType: 'text/plain'
+        )
+
+        then: 'the response contains the stream contents and no attachment header'
+        response.contentAsString == 'hello'
+        response.getHeader(HttpHeaders.CONTENT_DISPOSITION) == null
+    }
+
+    void 'renders an input stream as an attachment when a filename is provided'() {
+        when: 'the controller renders a file input stream with a filename'
+        controller.render(
+                file: new ByteArrayInputStream('hello'.bytes),
+                contentType: 'text/plain',
+                fileName: 'hello.txt'
+        )
+
+        then: 'the response includes the file contents and attachment header'
+        response.contentAsString == 'hello'
+        response.getHeader(HttpHeaders.CONTENT_DISPOSITION) == 'attachment;filename="hello.txt"'
+    }
+
+    void 'renders text with the configured status code'() {
+        when: 'the controller renders a message with a status'
         controller.renderMessageWithStatus()
-        GrailsMockHttpServletResponse response = controller.response
 
-        then:
-        "test" == response.contentAsString
-        500 == response.status
+        then: 'the response body and status are both preserved'
+        response.contentAsString == 'test'
+        response.status == 500
     }
 
-    // bug GRAILS-3393
-    void testMissingNamedArgumentKey() {
-        when:
+    @Issue('GRAILS-3393')
+    void 'rejects render invocations with a missing named argument key'() {
+        when: 'render is invoked with a positional map after named arguments'
         controller.renderBug()
-        
-        then:
+
+        then: 'a missing method exception is thrown'
         thrown(MissingMethodException)
     }
 
-    void testRenderObject() {
-        when:
+    void 'renders an object using its string representation'() {
+        when: 'the controller renders an object'
         controller.renderObject()
-        GrailsMockHttpServletResponse response = controller.response
 
-        then:
-        "bar" == response.contentAsString
+        then: 'the object string value is written to the response'
+        response.contentAsString == 'bar'
     }
-    
-    void testRenderClosureWithStatus() {
-        when:
+
+    void 'renders a closure with the configured status code'() {
+        when: 'the controller renders a closure with a status'
         controller.renderClosureWithStatus()
-        GrailsMockHttpServletResponse response = controller.response
 
-        then:
-        500 == response.status
+        then: 'the response status is updated'
+        response.status == 500
     }
-    
-    void testRenderList() {
-        when:
+
+    void 'renders a list'() {
+        when: 'the controller renders a list'
         controller.renderList()
-        GrailsMockHttpServletResponse response = controller.response
 
-        then:
-        "[1, 2, 3]" == response.contentAsString
+        then: 'the response contains the list representation'
+        response.contentAsString == '[1, 2, 3]'
     }
 
-    void testRenderMap() {
-        when:
+    void 'renders a map'() {
+        when: 'the controller renders a map'
         controller.renderMap()
-        GrailsMockHttpServletResponse response = controller.response
-        
-        then:
+
+        then: 'the response contains the map representation'
         response.contentAsString == "['a':1, 'b':2]"
     }
-    
-    void testRenderGString() {
-        when:
+
+    void 'renders a GString'() {
+        when: 'the controller renders a GString'
         controller.renderGString()
-        GrailsMockHttpServletRequest request = controller.request
-        GrailsMockHttpServletResponse response = controller.response
 
-        then:
-        request != null
-        response != null
-        response.contentAsString == "test render"
+        then: 'the rendered response is available'
+        response.contentAsString == 'test render'
     }
 
-    void testRenderText() {
-        when:
+    void 'renders plain text'() {
+        when: 'the controller renders text'
         controller.renderText()
-        GrailsMockHttpServletRequest request = controller.request
-        GrailsMockHttpServletResponse response = controller.response
 
-        then:
-        request != null
-        response != null
-        response.contentAsString == "test render"
+        then: 'the rendered response are available'
+        response.contentAsString == 'test render'
     }
 
-    void testRenderXml() {
-        when:
+    void 'renders xml markup with the requested content type'() {
+        when: 'the controller renders XML markup'
         controller.renderXML()
-        GrailsMockHttpServletRequest request = controller.request
-        GrailsMockHttpServletResponse response = controller.response
 
-        then:
-        response != null
-        request != null
-        response.contentAsString == "<hello>world</hello>"
-        response.contentType == "text/xml;charset=utf-8"
-    }
-
-    void testRenderView() {
-        when:
-        controller.renderView()
-
-        then:
-        controller.modelAndView
-        controller.modelAndView.viewName == '/render/testView'
-    }
-
-    void testRenderViewWithContentType() {
-        when:
-        controller.renderXmlView()
-
-        then:
-        controller.modelAndView
-        controller.modelAndView.viewName == '/render/xmlView'
+        then: 'the response contains XML and the XML content type'
+        response.contentAsString == '<hello>world</hello>'
         response.contentType == 'text/xml;charset=utf-8'
     }
 
-    void testRenderTemplate() {
-        when:
-        views["/render/_testTemplate.gsp"] = 'hello ${hello}!'
+    void 'renders a view'() {
+        when: 'the controller renders a view'
+        controller.renderView()
+
+        then: 'the expected view is selected'
+        view == '/render/testView'
+    }
+
+    void 'renders a view with an explicit content type'() {
+        when: 'the controller renders an XML view'
+        controller.renderXmlView()
+
+        then: 'the expected view and content type are selected'
+        view == '/render/xmlView'
+        response.contentType == 'text/xml;charset=utf-8'
+    }
+
+    void 'renders a template with a model'() {
+        given: 'a template is available for rendering'
+        views['/render/_testTemplate.gsp'] = 'hello ${hello}!'
+
+        when: 'the controller renders the template'
         controller.renderTemplate()
 
-        then:
-        response.contentType == "text/html;charset=UTF-8"
-        response.contentAsString == "hello world!"
+        then: 'the rendered output contains the model values'
+        response.contentType == 'text/html;charset=UTF-8'
+        response.contentAsString == 'hello world!'
     }
 
-    void testRenderTemplateWithCollectionUsingImplicitITVariable() {
-        given:
+    void 'renders a template collection using the implicit it variable'() {
+        given: 'a template that uses the implicit it variable'
         def templateName = 'testRenderTemplateWithCollectionUsingImplicitITVariable'
-
-        when:
         views["/render/_${templateName}.gsp" as String] = '${it.firstName} ${it.middleName}<br/>'
+
+        when: 'the controller renders the template for each collection element'
         controller.renderTemplateWithCollection(templateName)
 
-        then:
+        then: 'each collection element is rendered with the implicit variable'
         response.contentAsString == 'Jacob Ray<br/>Zachary Scott<br/>'
     }
 
-    void testRenderTemplateWithCollectionUsingExplicitVariableName() {
-        given:
+    void 'renders a template collection using an explicit variable name'() {
+        given: 'a template that uses an explicit variable name'
         def templateName = 'testRenderTemplateWithCollectionUsingExplicitVariableName'
-
-        when:
         views["/render/_${templateName}.gsp" as String] = '${person.firstName} ${person.middleName}<br/>'
+
+        when: 'the controller renders the template for each collection element'
         controller.renderTemplateWithCollectionAndExplicitVarName(templateName)
 
-        then:
+        then: 'each collection element is rendered with the explicit variable'
         response.contentAsString == 'Jacob Ray<br/>Zachary Scott<br/>'
     }
 
-    void testRenderTemplateWithContentType() {
-        when:
-        views["/render/_xmlTemplate.gsp"] = '<hello>world</hello>'
+    void 'renders a template with an explicit content type'() {
+        given: 'an XML template is available for rendering'
+        views['/render/_xmlTemplate.gsp'] = '<hello>world</hello>'
+
+        when: 'the controller renders the XML template'
         controller.renderXmlTemplate()
 
-        then:
-        response.contentAsString == "<hello>world</hello>"
-        response.contentType == "text/xml;charset=utf-8"
+        then: 'the response contains the template output and XML content type'
+        response.contentAsString == '<hello>world</hello>'
+        response.contentType == 'text/xml;charset=utf-8'
     }
 }
 
@@ -224,40 +221,56 @@ class RenderMethodTests extends Specification implements ControllerUnitTest<Rend
 class RenderController {
 
     def renderBug() {
-        render(view:'login', [foo:"bar"])
+        render(view: 'login', [foo: 'bar'])
     }
 
-    def renderView() { render(view:'testView') }
+    def renderView() {
+        render(view: 'testView')
+    }
+
     def renderXmlView() {
-        render(view:'xmlView', contentType:'text/xml')
+        render(view: 'xmlView', contentType: 'text/xml')
     }
+
     def renderObject() {
-        render new RenderTest(foo:"bar")
+        render(new RenderTest(foo: 'bar'))
     }
+
     def renderClosureWithStatus() {
-        render(status: 500) {
-        }
+        render(status: 500) {}
     }
+
     def renderMessageWithStatus() {
-        render text:"test", status:500
+        render(text: 'test', status: 500)
     }
+
     def renderList() {
         render([1, 2, 3])
     }
+
     def renderMap() {
-        render([a:1, b:2])
+        render([a: 1, b: 2])
     }
-    def renderText() { render "test render" }
+
+    def renderText() {
+        render('test render')
+    }
+
     def renderGString() {
         def foo = 'render'
-        render "test $foo"
+        render("test $foo")
     }
+
     def renderXML() {
-        render(contentType:"text/xml") { hello("world") }
+        render(contentType: 'text/xml') {
+            hello('world')
+        }
     }
+
     def renderTemplate() {
-        render(template:"testTemplate", model:[hello:"world"])
+        render(template: 'testTemplate', model: [hello: 'world'])
     }
+
     def renderTemplateWithCollection(String template) {
         def people = [
             [firstName: 'Jacob', middleName: 'Ray'],
@@ -265,6 +278,7 @@ class RenderController {
         ]
         render(template: template, collection: people)
     }
+
     def renderTemplateWithCollectionAndExplicitVarName(String template) {
         def people = [
             [firstName: 'Jacob', middleName: 'Ray'],
@@ -272,12 +286,14 @@ class RenderController {
         ]
         render(var: 'person', template: template, collection: people)
     }
+
     def renderXmlTemplate() {
-        render(template:"xmlTemplate",contentType:"text/xml")
+        render(template: 'xmlTemplate', contentType: 'text/xml')
     }
 }
 
 class RenderTest {
+
     String foo
 
     String toString() { foo }

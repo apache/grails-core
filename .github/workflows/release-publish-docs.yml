@@ -25,7 +25,7 @@ permissions: { }
 env:
   GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
   JAVA_DISTRIBUTION: liberica
-  JAVA_VERSION: 17.0.18
+  JAVA_VERSION: 21.0.7
   TARGET_BRANCH: ${{ github.ref_name }}
   VERSION: ${{ inputs.version }}
 jobs:

@@ -56,6 +56,12 @@ public class SpringBootTomcatFeature extends SpringBootEmbeddedServlet {
                 .groupId("org.springframework.boot")
                 .artifactId("spring-boot-starter-tomcat")
                 .implementation());
+        // Spring Boot 4 split Tomcat classes into a dedicated module.
+        // Apps need spring-boot-tomcat for TomcatServletWebServerFactory and related classes.
+        generatorContext.addDependency(Dependency.builder()
+                .groupId("org.springframework.boot")
+                .artifactId("spring-boot-tomcat")
+                .implementation());
     }
 
     @Override

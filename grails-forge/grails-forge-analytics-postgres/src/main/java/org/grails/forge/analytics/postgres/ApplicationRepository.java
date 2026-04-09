@@ -18,6 +18,8 @@
  */
 package org.grails.forge.analytics.postgres;
 
+import io.micronaut.core.annotation.NonNull;
+import io.micronaut.data.annotation.Id;
 import io.micronaut.data.annotation.Join;
 import io.micronaut.data.jdbc.annotation.JdbcRepository;
 import io.micronaut.data.model.Pageable;
@@ -33,12 +35,19 @@ import java.util.List;
  * @since 6.0.0
  */
 @JdbcRepository(dialect = Dialect.POSTGRES)
-public interface ApplicationRepository extends PageableRepository<Application, Long> {
+public abstract class ApplicationRepository implements PageableRepository<Application, Long> {
     /**
      * List the applications with the features.
      * @param pageable The pageable
      * @return The application and the features
      */
     @Join("features")
-    List<Application> list(Pageable pageable);
+    public abstract List<Application> list(Pageable pageable);
+
+    public abstract void deleteById(@NonNull @Id Long id);
+
+    @Override
+    public void delete(@NonNull Application application) {
+        deleteById(application.getId());
+    }
 }

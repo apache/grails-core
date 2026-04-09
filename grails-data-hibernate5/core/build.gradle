@@ -21,6 +21,7 @@ plugins {
     id 'groovy'
     id 'java-library'
     id 'org.apache.grails.buildsrc.properties'
+    id 'org.apache.grails.buildsrc.dependency-validator'
     id 'org.apache.grails.buildsrc.compile'
     id 'org.apache.grails.buildsrc.publish'
     id 'org.apache.grails.buildsrc.sbom'
@@ -44,7 +45,9 @@ dependencies {
 
     api 'org.apache.groovy:groovy'
     api project(':grails-datamapping-core')
+    api project(':grails-data-hibernate5-spring-orm')
     api 'org.springframework:spring-orm'
+    compileOnly 'jakarta.servlet:jakarta.servlet-api'
     api "org.hibernate:hibernate-core-jakarta:$hibernate5Version", {
         exclude group:'commons-logging', module:'commons-logging'
         exclude group:'com.h2database', module:'h2'

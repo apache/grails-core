@@ -23,7 +23,7 @@ import org.apache.grails.core.plugins.PluginDescriptor
 import org.apache.grails.core.plugins.PluginDiscovery
 import org.apache.grails.core.plugins.PluginInfo
 import org.apache.grails.core.plugins.PluginMetadata
-import org.springframework.boot.ConfigurableBootstrapContext
+import org.springframework.boot.bootstrap.ConfigurableBootstrapContext
 import org.springframework.boot.SpringApplication
 import org.springframework.core.env.StandardEnvironment
 import org.springframework.core.io.Resource

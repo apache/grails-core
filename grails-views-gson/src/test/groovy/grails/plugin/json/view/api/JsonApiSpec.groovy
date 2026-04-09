@@ -18,7 +18,7 @@
  */
 package grails.plugin.json.view.api
 
-import com.fasterxml.jackson.databind.ObjectMapper
+import tools.jackson.databind.json.JsonMapper
 import grails.persistence.Entity
 import grails.plugin.json.view.test.JsonRenderResult
 import grails.plugin.json.view.test.JsonViewTest
@@ -34,7 +34,7 @@ class JsonApiSpec extends Specification implements JsonViewTest, GrailsUnitTest 
     private static final Class<?> STATIC_FIELD_HELPER = Class.forName('grails.validation.Validateable$Trait$StaticFieldHelper')
 
     @Shared
-    ObjectMapper objectMapper = new ObjectMapper()
+    JsonMapper objectMapper = JsonMapper.builder().build()
 
     void setup() {
         ConstraintEvalUtils.clearDefaultConstraints()

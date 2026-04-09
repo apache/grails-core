@@ -22,6 +22,7 @@ plugins {
     id 'java-library'
     id 'project-report'
     id 'org.apache.grails.buildsrc.properties'
+    id 'org.apache.grails.buildsrc.dependency-validator'
     id 'org.apache.grails.buildsrc.compile'
     id 'org.apache.grails.buildsrc.publish'
     id 'org.apache.grails.buildsrc.sbom'
@@ -44,6 +45,7 @@ dependencies {
     implementation 'com.github.ben-manes.caffeine:caffeine'
     api 'org.apache.groovy:groovy'
     api 'org.springframework.boot:spring-boot'
+    api 'org.springframework.boot:spring-boot-web-server'
     api 'org.springframework:spring-core'
     api 'org.springframework:spring-tx'
     api 'org.springframework:spring-beans'
@@ -64,11 +66,11 @@ dependencies {
     testImplementation 'org.hamcrest:hamcrest'
 
     testRuntimeOnly 'com.h2database:h2'
-    testRuntimeOnly 'com.fasterxml.jackson.core:jackson-databind'
+    testRuntimeOnly 'tools.jackson.core:jackson-databind'
 
     testImplementation 'org.apache.groovy:groovy-test-junit5'
     testImplementation 'org.junit.jupiter:junit-jupiter-api'
-    testImplementation 'org.junit.platform:junit-platform-runner'
+    testImplementation 'org.junit.platform:junit-platform-suite'
 
     testRuntimeOnly 'org.junit.jupiter:junit-jupiter-engine'
 

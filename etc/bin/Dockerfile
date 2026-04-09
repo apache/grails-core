@@ -17,7 +17,7 @@
 # run this from the root of the project
 # `docker build -t grails:testing -f etc/bin/Dockerfile . && docker run -it --rm -v $(pwd):/home/groovy/project grails:testing bash`
 # Keep java version synced with .sdkmanrc and .github/workflows/release.yml
-FROM bellsoft/liberica-openjdk-debian:17.0.18
+FROM bellsoft/liberica-openjdk-debian:21.0.7
 
 USER root
 RUN apt-get update && apt-get install -y curl unzip coreutils libdigest-sha-perl gpg vim sudo psmisc locales groovy rsync nano
