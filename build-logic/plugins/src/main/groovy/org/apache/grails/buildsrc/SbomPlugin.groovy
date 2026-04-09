@@ -79,10 +79,6 @@ class SbomPlugin implements Plugin<Project> {
                     id : 'CC0-1.0',
                     url: 'https://creativecommons.org/publicdomain/zero/1.0/'
             ],
-            'LGPL-2.1-only': [
-                    id : 'LGPL-2.1-only',
-                    url: 'https://spdx.org/licenses/LGPL-2.1-only.html'
-            ],
             // Variant of Apache 1.1 license. Approved by legal LEGAL-707
             'OpenSymphony': [
                     // id is optional and the opensymphony license doesn't have an SPDX id
