@@ -28,7 +28,7 @@ group = 'com.example.grails.plugins'
 apply plugin: 'org.apache.grails.gradle.grails-plugin'
 
 dependencies {
-    implementation platform(project(':grails-bom'))
+    implementation enforcedPlatform(project(':grails-bom'))
 
     api 'org.apache.grails:grails-dependencies-starter-web'
     api 'org.apache.grails:grails-micronaut'

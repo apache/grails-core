@@ -32,7 +32,7 @@ tasks.withType(Jar).configureEach {
 }
 
 dependencies {
-    implementation platform(project(':grails-bom'))
+    implementation enforcedPlatform(project(':grails-bom'))
     implementation 'org.apache.grails:grails-core'
     implementation 'org.apache.grails:grails-micronaut'
 

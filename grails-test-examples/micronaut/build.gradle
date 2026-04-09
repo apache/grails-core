@@ -37,7 +37,7 @@ apply plugin: 'cloud.wondrify.asset-pipeline'
 apply plugin: 'org.apache.grails.gradle.grails-gsp'
 
 dependencies {
-    implementation platform(project(':grails-bom'))
+    implementation enforcedPlatform(project(':grails-bom'))
 
     implementation "io.micronaut:micronaut-http-client:$micronautHttpClientVersion"
     implementation "io.micronaut:micronaut-retry:$micronautHttpClientVersion"
@@ -51,7 +51,7 @@ dependencies {
     annotationProcessor 'io.micronaut:micronaut-inject-java'
     annotationProcessor 'jakarta.annotation:jakarta.annotation-api'
 
-    testAndDevelopmentOnly platform(project(':grails-bom'))
+    testAndDevelopmentOnly enforcedPlatform(project(':grails-bom'))
     testAndDevelopmentOnly 'org.apache.grails:grails-dependencies-assets'
 
     runtimeOnly 'cloud.wondrify:asset-pipeline-grails'

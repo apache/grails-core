@@ -39,8 +39,9 @@ dependencies {
     api platform("io.micronaut.platform:micronaut-platform:$micronautPlatformVersion")
     api 'io.micronaut.spring:micronaut-spring-boot-starter'
 
-    // For the grails plugin interface
-    compileOnly platform(project(':grails-bom'))
+    // For the grails plugin interface. enforcedPlatform ensures Groovy 4.x from the
+    // grails-bom wins over Groovy 5.x from the micronaut platform during compilation.
+    compileOnly enforcedPlatform(project(':grails-bom'))
     compileOnly project(':grails-core')
 }
 

@@ -83,6 +83,8 @@ ext {
             'rxjava2.version'             : '2.2.21',
             'rxjava3.version'             : '3.1.12',
             'selenium.version'            : '4.38.0',
+            'kotlin.version'              : '2.2.21',
+            'mockito.version'             : '5.20.0',
             'spock.version'               : '2.3-groovy-4.0',
             'sitemesh.version'            : '2.6.0',
             'starter-sitemesh.version'    : '3.2.2',
@@ -103,6 +105,7 @@ ext {
             'bootstrap-icons'          : "org.webjars.npm:bootstrap-icons:${bomDependencyVersions['bootstrap-icons.version']}",
             'commons-codec'            : "commons-codec:commons-codec:${bomDependencyVersions['commons-codec.version']}",
             'commons-lang3'            : "org.apache.commons:commons-lang3:${bomDependencyVersions['commons-lang3.version']}",
+            'byte-buddy-agent'         : "net.bytebuddy:byte-buddy-agent:${gradleBomDependencyVersions['byte-buddy.version']}",
             'geb-spock'                : "org.apache.groovy.geb:geb-spock:${bomDependencyVersions['geb-spock.version']}",
             // start - restate the groovy-bom includes here because the spring dependency management will pick the library from spring-boot-dependencies otherwise
             'groovy'              : "org.apache.groovy:groovy:${bomDependencyVersions['groovy.version']}",
@@ -136,6 +139,16 @@ ext {
             'groovy-xml'          : "org.apache.groovy:groovy-xml:${bomDependencyVersions['groovy.version']}",
             'groovy-yaml'         : "org.apache.groovy:groovy-yaml:${bomDependencyVersions['groovy.version']}",
             // end - restate the groovy-bom here because the spring dependency management
+            // start - restate versions managed by Spring Boot / Spock BOMs so enforcedPlatform can enforce them
+            // when micronaut is used (Micronaut 5 platform declares higher versions that override preferences)
+            'kotlin-stdlib'            : "org.jetbrains.kotlin:kotlin-stdlib:${bomDependencyVersions['kotlin.version']}",
+            'kotlin-stdlib-common'     : "org.jetbrains.kotlin:kotlin-stdlib-common:${bomDependencyVersions['kotlin.version']}",
+            'kotlin-stdlib-jdk7'       : "org.jetbrains.kotlin:kotlin-stdlib-jdk7:${bomDependencyVersions['kotlin.version']}",
+            'kotlin-stdlib-jdk8'       : "org.jetbrains.kotlin:kotlin-stdlib-jdk8:${bomDependencyVersions['kotlin.version']}",
+            'mockito-core'             : "org.mockito:mockito-core:${bomDependencyVersions['mockito.version']}",
+            'spock-core'               : "org.spockframework:spock-core:${bomDependencyVersions['spock.version']}",
+            'spock-spring'             : "org.spockframework:spock-spring:${bomDependencyVersions['spock.version']}",
+            // end - restate versions managed by inherited BOMs
             'jquery'                   : "org.webjars.npm:jquery:${bomDependencyVersions['jquery.version']}",
             'liquibase-hibernate5'     : "org.liquibase:liquibase:${bomDependencyVersions['liquibase-hibernate5.version']}",
             'liquibase-hibernate5-cdi' : "org.liquibase:liquibase-cdi:${bomDependencyVersions['liquibase-hibernate5.version']}",

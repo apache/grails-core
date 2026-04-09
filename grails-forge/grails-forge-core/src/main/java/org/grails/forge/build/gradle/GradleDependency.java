@@ -104,7 +104,9 @@ public class GradleDependency extends DependencyCoordinate {
     public String toSnippet() {
         String optionalSpace = gradleConfiguration == INTEGRATION_TEST_IMPLEMENTATION_TEST_FIXTURES ? "" : " ";
         String snippet = gradleConfiguration.getConfigurationName() + optionalSpace;
-        if (isPom()) {
+        if (isPom() && isEnforced()) {
+            snippet += "enforcedPlatform(";
+        } else if (isPom()) {
             snippet += "platform(";
         } else if (gradleConfiguration == INTEGRATION_TEST_IMPLEMENTATION_TEST_FIXTURES) {
             snippet += "(";

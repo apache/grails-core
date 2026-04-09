@@ -27,7 +27,7 @@ apply plugin: 'org.springframework.boot'
 
 dependencies {
 
-    implementation platform(project(':grails-bom'))
+    implementation enforcedPlatform(project(':grails-bom'))
 
     implementation 'org.apache.grails:grails-data-mongodb-spring-boot'
     implementation 'org.apache.groovy:groovy'
