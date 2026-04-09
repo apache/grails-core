@@ -21,102 +21,148 @@ package org.grails.exception.reporting
 import org.grails.exceptions.reporting.DefaultStackTraceFilterer
 import spock.lang.Specification
 
+import org.grails.exceptions.reporting.StackTraceFilterer
+
 class StackTraceFiltererSpec extends Specification {
 
-    private filterer = new DefaultStackTraceFilterer()
-    private gcl = new GroovyClassLoader()
+    StackTraceFilterer filterer = new DefaultStackTraceFilterer()
+    ClassLoader gcl = new GroovyClassLoader()
 
-    void "Test basic filter"() {
-        given: "A controller that should throw a MissingPropertyException"
-            def cls = gcl.parseClass('''
-package test
+    def 'retains application frames when filtering a stack trace'() {
+        given: 'a controller action that raises a missing property exception'
+        def controller = gcl.parseClass('''
+            package test
+            
+            class FooController {
+                def show = {
+                    display()
+                }
+            
+                void display() {
+                    notHere
+                }
+            }
+        ''').getDeclaredConstructor().newInstance()
 
-class FooController {
-    def show = {
-        display()
-    }
-
-    void display() {
-        notHere
-    }
-}
-''')
-
-        when: "The stack trace is filtered with custom packages"
-           filterer.setCutOffPackage("org.spockframework.util")
-           Throwable exception
-           try {
-               cls.getDeclaredConstructor().newInstance().show()
-           } catch (e) {
-               filterer.filter(e)
-               exception = e
-           }
-
-        then: "Only valid stack elements are retained"
-            exception != null
-
-        when:
-        StackTraceElement[] stackTraces = exception.stackTrace
-
-        then:
-        stackTraces.find { it.className == 'test.FooController' && it.lineNumber == 10 }
-        stackTraces.find { it.className.startsWith('test.FooController') && it.lineNumber == 6 }
-    }
-
-    void "Test deep filter"() {
-        given: "A controller that calls a service and rethrows an exception"
-            def cls = gcl.parseClass('''
-package test
-
-class FooController {
-    def fooService = new FooService()
-    def show = {
-        display()
-    }
-
-    void display() {
+        when: 'the exception stack trace is filtered'
+        Throwable exception = null
         try {
-            fooService.notThere()
-        }
-        catch(e) {
-            throw new RuntimeException("Bad things happened", e)
+            controller['show']()
+        } catch (e) {
+            filterer.filter(e)
+            exception = e
         }
 
-    }
-}
-class FooService {
-    void doStuff() {
-        notThere()
-    }
-}
-''')
+        then: 'the exception is available for inspection'
+        exception != null
 
-        when: "The stack trace is filtered with custom packages"
-           filterer.setCutOffPackage("org.spockframework.util")
-           Throwable exception
+        and: 'the controller action and helper method frames remain in the filtered stack trace'
+        with(exception.stackTrace) {
+            it.find { it.className == 'test.FooController' && it.lineNumber == 10 }
+            it.find { it.className.startsWith('test.FooController') && it.lineNumber == 6 }
+        }
+    }
+
+    def 'retains controller frames across wrapped exceptions during recursive filtering'() {
+        given: 'a controller action that wraps a failure triggered during service interaction'
+            def controller = gcl.parseClass('''
+                package test
+                
+                class FooController {
+                    def fooService = new FooService()
+                    def show = {
+                        display()
+                    }
+                
+                    void display() {
+                        try {
+                            fooService.notThere()
+                        }
+                        catch(e) {
+                            throw new RuntimeException("Bad things happened", e)
+                        }
+                
+                    }
+                }
+                class FooService {
+                    void doStuff() {
+                        notThere()
+                    }
+                }
+            ''').getDeclaredConstructor().newInstance()
+
+        when: 'recursive filtering is applied to the exception'
+           Throwable exception = null
            try {
-               cls.getDeclaredConstructor().newInstance().show()
+               controller['show']()
            } catch (e) {
                filterer.filter(e, true)
-               println getExceptionContents(e)
                exception = e
            }
 
-        then: "Only valid stack elements are retained"
+        then: 'the wrapped exception is available for inspection'
             exception != null
 
-        when:
-        StackTraceElement[] stackTraces = exception.stackTrace
-
-        then:
-        stackTraces.find { it.className == 'test.FooController' && it.lineNumber == 15 }
-        stackTraces.find { it.className.startsWith('test.FooController') && it.lineNumber == 7 }
+        and: 'the filtered stack trace retains the controller frames for the wrapper and action'
+            with(exception.stackTrace) {
+                it.find { it.className == 'test.FooController' && it.lineNumber == 15 }
+                it.find { it.className.startsWith('test.FooController') && it.lineNumber == 7 }
+            }
     }
 
-    private String getExceptionContents(Throwable e) {
-        final sw = new StringWriter()
-        def pw = new PrintWriter(sw)
-        e.printStackTrace pw
-        return sw.toString()
+    def 'recursive filtering sanitizes the full cause chain while logging the full stack trace once'() {
+        given: 'a cause chain with both application and internal stack frames'
+        def filterer = new CountingStackTraceFilterer()
+        def rootCause = new IllegalStateException('root cause')
+        rootCause.stackTrace = [
+            new StackTraceElement('test.FooService', 'doStuff', 'FooService.groovy', 3),
+            new StackTraceElement('org.codehaus.groovy.runtime.InvokerHelper', 'invokeMethod', 'InvokerHelper.java', 12)
+        ] as StackTraceElement[]
+
+        def wrappedCause = new RuntimeException('wrapped cause', rootCause)
+        wrappedCause.stackTrace = [
+            new StackTraceElement('test.FooController', 'display', 'FooController.groovy', 11),
+            new StackTraceElement('org.codehaus.groovy.runtime.callsite.CallSiteArray', 'defaultCall', 'CallSiteArray.java', 15)
+        ] as StackTraceElement[]
+
+        def exception = new RuntimeException('top level', wrappedCause)
+        exception.stackTrace = [
+            new StackTraceElement('test.FooController', 'show', 'FooController.groovy', 7),
+            new StackTraceElement('org.codehaus.groovy.runtime.ScriptBytecodeAdapter', 'unwrap', 'ScriptBytecodeAdapter.java', 20)
+        ] as StackTraceElement[]
+
+        when: 'recursive filtering is applied to the top-level exception'
+        filterer.filter(exception, true)
+
+        then: 'the full stack trace logging path is invoked only for the top-level exception'
+        filterer.singleExceptionFilterInvocations == 1
+        filterer.filteredSources == [exception]
+
+        and: 'application stack frames are retained across the full cause chain'
+        with(exception) {
+            stackTrace*.className == ['test.FooController']
+            stackTrace*.lineNumber == [7]
+            cause.stackTrace*.className == ['test.FooController']
+            cause.stackTrace*.lineNumber == [11]
+            cause.cause.stackTrace*.className == ['test.FooService']
+            cause.cause.stackTrace*.lineNumber == [3]
+        }
+    }
+
+    private static class CountingStackTraceFilterer extends DefaultStackTraceFilterer {
+
+        int singleExceptionFilterInvocations
+        List<Throwable> filteredSources = []
+
+        CountingStackTraceFilterer() {
+            super(true)
+        }
+
+        @Override
+        Throwable filter(Throwable source) {
+            singleExceptionFilterInvocations++
+            filteredSources << source
+            source
+        }
     }
 }
