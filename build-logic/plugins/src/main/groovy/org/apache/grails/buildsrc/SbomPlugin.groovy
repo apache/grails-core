@@ -105,7 +105,6 @@ class SbomPlugin implements Plugin<Project> {
             'pkg:maven/com.oracle.coherence.ce/coherence-bom@22.06.2?type=pom': 'UPL-1.0', // does not have map based on license id
             'pkg:maven/opensymphony/sitemesh@2.6.0?type=jar'                  : 'OpenSymphony', // custom license approved by legal LEGAL-707
             'pkg:maven/org.jruby/jzlib@1.1.5?type=jar'                        : 'BSD-3-Clause', // https://web.archive.org/web/20240822213507/http://www.jcraft.com/jzlib/LICENSE.txt shows it's a 3 clause
-            'pkg:maven/org.jboss/jandex@3.2.3?type=pom'                       : 'CC0-1.0', // upstream declares Public Domain with CC0 URL but no SPDX id
     ]
 
     // we don't distribute these so these licenses are considered acceptable, but we still prefer ASF licenses.
