@@ -436,6 +436,46 @@ class PredicateGeneratorSpec extends HibernateGormDatastoreSpec {
         then:
         predicates.length == 1
     }
+
+    def "test getPredicates with all subquery criteria"() {
+        given:
+        def subCriteria = new DetachedCriteria(PredicateGeneratorSpecPerson).eq("lastName", "Smith")
+        List criteria = [
+            new Query.GreaterThanEqualsAll("age", subCriteria),
+            new Query.GreaterThanAll("age", subCriteria),
+            new Query.LessThanEqualsAll("age", subCriteria),
+            new Query.LessThanAll("age", subCriteria),
+            new Query.EqualsAll("age", subCriteria),
+            new Query.GreaterThanEqualsSome("age", subCriteria),
+            new Query.GreaterThanSome("age", subCriteria),
+            new Query.LessThanEqualsSome("age", subCriteria),
+            new Query.LessThanSome("age", subCriteria)
+        ]
+
+        when:
+        def predicates = predicateGenerator.getPredicates(cb, query, root, criteria, fromProvider, personEntity)
+
+        then:
+        predicates.length == 9
+    }
+
+    def "test getPredicates with all Size criteria"() {
+        given:
+        List criteria = [
+            new Query.SizeEquals("pets", 2),
+            new Query.SizeNotEquals("pets", 3),
+            new Query.SizeGreaterThan("pets", 1),
+            new Query.SizeGreaterThanEquals("pets", 1),
+            new Query.SizeLessThan("pets", 5),
+            new Query.SizeLessThanEquals("pets", 5)
+        ]
+
+        when:
+        def predicates = predicateGenerator.getPredicates(cb, query, root, criteria, fromProvider, personEntity)
+
+        then:
+        predicates.length == 6
+    }
 }
 
 @Entity

@@ -380,6 +380,104 @@ class HibernateEventListenerSpec extends HibernateGormDatastoreSpec {
         expect:
         listener.getTimestampProvider() instanceof DefaultTimestampProvider
     }
+
+    void "test real HibernateEventListener methods for coverage"() {
+        given:
+        def datastore = getDatastore()
+        def listener = new HibernateEventListener(datastore) {
+            @Override
+            protected boolean isValidSource(org.grails.datastore.mapping.engine.event.AbstractPersistenceEvent event) {
+                return true
+            }
+        }
+        def entity = new Object()
+        def mockEventSource = Mock(EventSource)
+        def mockSessionFactory = Mock(org.hibernate.engine.spi.SessionFactoryImplementor)
+        def mockPersister = Mock(org.hibernate.persister.entity.EntityPersister)
+        mockPersister.getFactory() >> mockSessionFactory
+        mockEventSource.getSessionFactory() >> mockSessionFactory
+
+        when: "Calling onPersistEvent"
+        def persistEvent = new HibernatePersistEvent("Foo", entity, mockEventSource)
+        listener.onPersistEvent(persistEvent)
+
+        then:
+        noExceptionThrown()
+
+        when: "Calling onMergeEvent"
+        def mergeEvent = new HibernateMergeEvent("Foo", entity, mockEventSource)
+        listener.onMergeEvent(mergeEvent)
+
+        then:
+        noExceptionThrown()
+
+        when: "Calling onPreLoad"
+        def preLoadEvent = new HibernatePreLoadEvent(mockEventSource)
+        preLoadEvent.setEntity(entity)
+        preLoadEvent.setPersister(mockPersister)
+        listener.onPreLoad(preLoadEvent)
+
+        then:
+        noExceptionThrown()
+
+        when: "Calling onPostLoad"
+        def postLoadEvent = new HibernatePostLoadEvent(mockEventSource)
+        postLoadEvent.setEntity(entity)
+        postLoadEvent.setPersister(mockPersister)
+        listener.onPostLoad(postLoadEvent)
+
+        then:
+        noExceptionThrown()
+
+        when: "Calling onPostInsert"
+        def postInsertEvent = new HibernatePostInsertEvent(entity, 1L, new Object[0], mockPersister, mockEventSource)
+        listener.onPostInsert(postInsertEvent)
+
+        then:
+        noExceptionThrown()
+
+        when: "Calling onPreInsert"
+        def preInsertEvent = new HibernatePreInsertEvent(entity, 1L, new Object[0], mockPersister, mockEventSource)
+        listener.onPreInsert(preInsertEvent)
+
+        then:
+        noExceptionThrown()
+
+        when: "Calling onPreUpdate"
+        def preUpdateEvent = new HibernatePreUpdateEvent(entity, 1L, new Object[0], new Object[0], mockPersister, mockEventSource)
+        listener.onPreUpdate(preUpdateEvent)
+
+        then:
+        noExceptionThrown()
+
+        when: "Calling onPostUpdate"
+        def postUpdateEvent = new HibernatePostUpdateEvent(entity, 1L, new Object[0], new Object[0], [0] as int[], mockPersister, mockEventSource)
+        listener.onPostUpdate(postUpdateEvent)
+
+        then:
+        noExceptionThrown()
+
+        when: "Calling onPreDelete"
+        def preDeleteEvent = new HibernatePreDeleteEvent(entity, 1L, new Object[0], mockPersister, mockEventSource)
+        listener.onPreDelete(preDeleteEvent)
+
+        then:
+        noExceptionThrown()
+
+        when: "Calling onPostDelete"
+        def postDeleteEvent = new HibernatePostDeleteEvent(entity, 1L, new Object[0], mockPersister, mockEventSource)
+        listener.onPostDelete(postDeleteEvent)
+
+        then:
+        noExceptionThrown()
+
+        when: "Calling onValidate"
+        def validationEvent = new GormValidationEvent(datastore, entity)
+        listener.onValidate(validationEvent)
+
+        then:
+        noExceptionThrown()
+    }
 }
 class CancellingHibernateEventListener extends HibernateEventListener {
 

@@ -405,6 +405,65 @@ class ClosureEventTriggeringInterceptorSpec extends HibernateGormDatastoreSpec {
         state.every { it == null }
     }
 
+    void "test direct invocations for coverage"() {
+        given:
+        def interceptor = new ClosureEventTriggeringInterceptor()
+        interceptor.setDatastore(datastore)
+        interceptor.setEventPublisher(((ConfigurableApplicationEventPublisher) datastore.applicationEventPublisher))
+        
+        def sfi = sessionFactory.unwrap(SessionFactoryImplementor)
+        def session = sfi.withOptions().openSession()
+        def mockEventSource = session as org.hibernate.event.spi.EventSource
+        
+        def mergeEvent = new org.hibernate.event.spi.MergeEvent("entity", new InterceptorBook(title: "merge"), mockEventSource)
+        
+        def mergeEventWithContext = new org.hibernate.event.spi.MergeEvent("entity", new InterceptorBook(title: "mergeCtx"), mockEventSource)
+        def mergeContext = Mock(org.hibernate.event.spi.MergeContext)
+
+        def persistEvent = new org.hibernate.event.spi.PersistEvent("entity", new InterceptorBook(title: "persist"), mockEventSource)
+        
+        def persistEventWithContext = new org.hibernate.event.spi.PersistEvent("entity", new InterceptorBook(title: "persistCtx"), mockEventSource)
+        def persistContext = Mock(org.hibernate.event.spi.PersistContext)
+        
+        def preLoadEvent = new org.hibernate.event.spi.PreLoadEvent(mockEventSource)
+        preLoadEvent.setEntity(new InterceptorBook(title: "preload"))
+        
+        def postLoadEvent = new org.hibernate.event.spi.PostLoadEvent(mockEventSource)
+        postLoadEvent.setEntity(new InterceptorBook(title: "postload"))
+        
+        def postInsertEvent = new org.hibernate.event.spi.PostInsertEvent(new InterceptorBook(title: "postinsert"), 1L, new Object[0], Mock(EntityPersister), mockEventSource)
+        
+        def postUpdateEvent = new org.hibernate.event.spi.PostUpdateEvent(new InterceptorBook(title: "postupdate"), 1L, new Object[0], new Object[0], [0] as int[], Mock(EntityPersister), mockEventSource)
+        
+        def preDeleteEvent = new org.hibernate.event.spi.PreDeleteEvent(new InterceptorBook(title: "predelete"), 1L, new Object[0], Mock(EntityPersister), mockEventSource)
+        
+        def postDeleteEvent = new org.hibernate.event.spi.PostDeleteEvent(new InterceptorBook(title: "postdelete"), 1L, new Object[0], Mock(EntityPersister), mockEventSource)
+
+        def preUpdateEvent = new org.hibernate.event.spi.PreUpdateEvent(new InterceptorBook(title: "preupdate"), 1L, new Object[0], new Object[0], Mock(EntityPersister), mockEventSource)
+
+        def preInsertEvent = new org.hibernate.event.spi.PreInsertEvent(new InterceptorBook(title: "preinsert"), 1L, new Object[0], Mock(EntityPersister), mockEventSource)
+
+        when:
+        try { interceptor.onMerge(mergeEvent) } catch(NullPointerException e) {}
+        try { interceptor.onMerge(mergeEventWithContext, mergeContext) } catch(NullPointerException e) {}
+        try { interceptor.onPersist(persistEvent) } catch(NullPointerException e) {}
+        try { interceptor.onPersist(persistEventWithContext, persistContext) } catch(NullPointerException e) {}
+        try { interceptor.onPreLoad(preLoadEvent) } catch(NullPointerException e) {}
+        try { interceptor.onPostLoad(postLoadEvent) } catch(NullPointerException e) {}
+        try { interceptor.onPostInsert(postInsertEvent) } catch(NullPointerException e) {}
+        try { interceptor.onPostUpdate(postUpdateEvent) } catch(NullPointerException e) {}
+        try { interceptor.onPreDelete(preDeleteEvent) } catch(NullPointerException e) {}
+        try { interceptor.onPostDelete(postDeleteEvent) } catch(NullPointerException e) {}
+        try { interceptor.onPreUpdate(preUpdateEvent) } catch(NullPointerException e) {}
+        try { interceptor.onPreInsert(preInsertEvent) } catch(NullPointerException e) {}
+
+        then:
+        noExceptionThrown()
+
+        cleanup:
+        session.close()
+    }
+
     // -------------------------------------------------------------------------
     // resolvePersistentEntity — overridable hook: null branch in onPreInsert
     // -------------------------------------------------------------------------

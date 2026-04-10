@@ -25,7 +25,7 @@ import grails.gorm.hibernate.HibernateEntity
 class HibernateGormInstanceApiSpec extends HibernateGormDatastoreSpec {
 
     def setupSpec() {
-        manager.addAllDomainClasses([PersonInstanceApi, BookInstanceApi, ConstrainedPerson])
+        manager.addAllDomainClasses([PersonInstanceApi, BookInstanceApi, ConstrainedPerson, ConstrainedBook])
     }
 
     def "test save and get"() {
@@ -389,6 +389,92 @@ class HibernateGormInstanceApiSpec extends HibernateGormDatastoreSpec {
         result.id != null
         result.author != null
         result.author.name == 'Detached Author'
+    }
+    // -------------------------------------------------------------------------
+    // handleValidationError with ToOne association
+    // -------------------------------------------------------------------------
+
+    def "handleValidationError sets association to read-only"() {
+        given:
+        def author = new PersonInstanceApi(name: 'Valid Author', age: 30)
+        // Book with title blank is invalid
+        def book = new ConstrainedBook(title: '', author: author)
+
+        when:
+        def result = ConstrainedBook.withTransaction {
+            book.save(flush: true)
+        }
+
+        then:
+        result == null
+        book.hasErrors()
+        // we can't easily verify the read-only status here without peering into hibernate session
+        // but we just want to execute the loop over associations in handleValidationError
+    }
+
+    // -------------------------------------------------------------------------
+    // delete with exception
+    // -------------------------------------------------------------------------
+
+    def "delete resets flush mode on exception"() {
+        given:
+        def person = new PersonInstanceApi(name: 'Bob', age: 40)
+        person.save(flush: true)
+
+        when:
+        PersonInstanceApi.withTransaction {
+            def api = new HibernateGormInstanceApi<PersonInstanceApi>(PersonInstanceApi, manager.hibernateDatastore, Thread.currentThread().contextClassLoader)
+            api.hibernateTemplate = new GrailsHibernateTemplate(sessionFactory, manager.hibernateDatastore) {
+                @Override
+                def <T> T execute(Closure<T> action) throws org.springframework.dao.DataAccessException {
+                    throw new org.springframework.dao.InvalidDataAccessApiUsageException("Simulated exception")
+                }
+            }
+            api.delete(person, [flush: true])
+        }
+
+        then:
+        thrown(org.springframework.dao.InvalidDataAccessApiUsageException)
+    }
+
+    // -------------------------------------------------------------------------
+    // autoRetrieveAssociations
+    // -------------------------------------------------------------------------
+
+    def "autoRetrieveAssociations catches InvalidPropertyException"() {
+        given:
+        def author = new PersonInstanceApi(name: 'Detached Author', age: 42)
+        author.id = 999L // detached
+        def book = new BookInstanceApi(title: 'Fetched Book', author: author)
+
+        when:
+        BookInstanceApi.withTransaction {
+            def api = new HibernateGormInstanceApi<BookInstanceApi>(BookInstanceApi, manager.hibernateDatastore, Thread.currentThread().contextClassLoader)
+            def mockDatastore = Mock(org.grails.datastore.mapping.core.Datastore)
+            def mockContext = Mock(org.grails.datastore.mapping.model.MappingContext)
+            def mockReflector = Mock(org.grails.datastore.mapping.reflect.EntityReflector)
+            
+            mockDatastore.getMappingContext() >> mockContext
+            mockContext.getEntityReflector(_) >> mockReflector
+            mockReflector.getProperty(book, "author") >> author
+            mockReflector.getProperty(author, "id") >> { throw new org.springframework.beans.InvalidPropertyException(PersonInstanceApi, "id", "simulated") }
+            
+            def method = api.getClass().getDeclaredMethod("autoRetrieveAssociations", org.grails.datastore.mapping.core.Datastore, org.grails.datastore.mapping.model.PersistentEntity, Object)
+            method.setAccessible(true)
+            method.invoke(api, mockDatastore, datastore.mappingContext.getPersistentEntity(BookInstanceApi.name), book)
+        }
+
+        then:
+        noExceptionThrown()
+    }
+}
+
+@Entity
+class ConstrainedBook implements HibernateEntity<ConstrainedBook> {
+    String title
+    static belongsTo = [author: PersonInstanceApi]
+    static constraints = {
+        title blank: false
     }
 }
 

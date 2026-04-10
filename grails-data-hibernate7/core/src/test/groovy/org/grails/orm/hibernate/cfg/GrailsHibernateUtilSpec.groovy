@@ -294,6 +294,63 @@ class GrailsHibernateUtilSpec extends HibernateGormDatastoreSpec {
         then:
         noExceptionThrown()
     }
+
+    @Rollback
+    def "setObjectToReadyOnly handles HibernateProxy correctly"() {
+        given:
+        GHUBook saved = GHUBook.withTransaction {
+            new GHUBook(title: "ProxyBook", version: 0L).save(flush: true, failOnError: true)
+        }
+
+        when:
+        GHUBook.withTransaction {
+            // using getReference() to get a proxy
+            def book = sessionFactory.currentSession.getReference(GHUBook, saved.id)
+            GrailsHibernateUtil.setObjectToReadyOnly(book, sessionFactory)
+        }
+
+        then:
+        noExceptionThrown()
+    }
+
+    @Rollback
+    def "setObjectToReadWrite handles HibernateProxy correctly"() {
+        given:
+        GHUBook saved = GHUBook.withTransaction {
+            new GHUBook(title: "ProxyBookRW", version: 0L).save(flush: true, failOnError: true)
+        }
+
+        when:
+        GHUBook.withTransaction {
+            def book = sessionFactory.currentSession.getReference(GHUBook, saved.id)
+            GrailsHibernateUtil.setObjectToReadyOnly(book, sessionFactory)
+            GrailsHibernateUtil.setObjectToReadWrite(book, sessionFactory)
+        }
+
+        then:
+        noExceptionThrown()
+    }
+
+    def "isDomainClass returns true for class with Entity annotation from jakarta.persistence"() {
+        expect:
+        GrailsHibernateUtil.isDomainClass(GHUJpaEntity)
+    }
+
+    def "isDomainClass returns false for POJO missing identity/version fields"() {
+        expect:
+        !GrailsHibernateUtil.isDomainClass(GHUPojoMissingVersion)
+    }
+}
+
+@jakarta.persistence.Entity
+class GHUJpaEntity {
+    @jakarta.persistence.Id
+    Long id
+}
+
+class GHUPojoMissingVersion {
+    Long id
+    String name
 }
 
 @Entity
