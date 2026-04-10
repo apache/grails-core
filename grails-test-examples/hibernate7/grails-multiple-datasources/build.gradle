@@ -31,7 +31,7 @@ configurations {
 }
 
 dependencies {
-    implementation platform(project(':grails-bom'))
+    implementation platform(project(':grails-hibernate7-bom'))
 
     astTransformation 'jakarta.servlet:jakarta.servlet-api'
     astTransformation 'org.apache.grails:grails-controllers'

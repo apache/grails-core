@@ -48,7 +48,7 @@ dependencies {
     api project(':grails-data-hibernate5-spring-orm')
     api 'org.springframework:spring-orm'
     compileOnly 'jakarta.servlet:jakarta.servlet-api'
-    api "org.hibernate:hibernate-core-jakarta:$hibernate5Version", {
+    api "org.hibernate:hibernate-core-jakarta", {
         exclude group:'commons-logging', module:'commons-logging'
         exclude group:'com.h2database', module:'h2'
         exclude group:'commons-collections', module:'commons-collections'
@@ -72,12 +72,12 @@ dependencies {
     testImplementation 'org.apache.groovy:groovy-json'
     testImplementation 'org.apache.tomcat:tomcat-jdbc'
     testImplementation 'org.spockframework:spock-core'
-    testImplementation "org.yakworks:hibernate-groovy-proxy:$yakworksHibernateGroovyProxyVersion", {
+    testImplementation 'org.yakworks:hibernate-groovy-proxy', {
         // groovy proxy fixes bytebuddy to be a bit smarter when it comes to groovy metaClass
         exclude group: 'org.codehaus.groovy', module: 'groovy'
     }
 
-    testRuntimeOnly "org.hibernate:hibernate-ehcache:$hibernate5Version", {
+    testRuntimeOnly "org.hibernate:hibernate-ehcache", {
         // exclude javax variant of hibernate-core 5.6
         exclude group: 'org.hibernate', module: 'hibernate-core'
     }

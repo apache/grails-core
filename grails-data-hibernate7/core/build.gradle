@@ -38,7 +38,7 @@ ext {
 
 dependencies {
     // TODO: Clarify and clean up dependencies
-    implementation platform(project(':grails-bom'))
+    implementation platform(project(':grails-hibernate7-bom'))
 
     api 'org.slf4j:slf4j-api'
 
@@ -48,8 +48,8 @@ dependencies {
     api 'org.springframework:spring-orm'
     compileOnly 'org.springframework:spring-webmvc'
     compileOnly 'jakarta.servlet:jakarta.servlet-api'
-    implementation "net.bytebuddy:byte-buddy:1.18.7"
-    api "org.hibernate.orm:hibernate-core:$hibernate7Version", {
+    implementation "net.bytebuddy:byte-buddy"
+    api 'org.hibernate.orm:hibernate-core', {
         exclude group:'commons-logging', module:'commons-logging'
         exclude group:'com.h2database', module:'h2'
         exclude group:'commons-collections', module:'commons-collections'
@@ -58,21 +58,18 @@ dependencies {
         exclude group:'org.slf4j', module:'slf4j-log4j12'
         exclude group:'xml-apis', module:'xml-apis'
     }
-    api "org.hibernate.models:hibernate-models:1.0.0"
+    api "org.hibernate.models:hibernate-models"
     api 'org.hibernate.validator:hibernate-validator', {
         exclude group:'commons-logging', module:'commons-logging'
         exclude group:'commons-collections', module:'commons-collections'
         exclude group:'org.slf4j', module:'slf4j-api'
     }
-    api 'jakarta.validation:jakarta.validation-api:3.1.0'
-    api 'javax.validation:validation-api:2.0.1.Final'
-    api ('org.checkerframework:checker-qual:3.48.4')
+    api 'jakarta.validation:jakarta.validation-api'
+    api 'org.checkerframework:checker-qual'
 
-    api 'io.smallrye:jandex:3.2.3'
+    api 'io.smallrye:jandex'
 
-    compileOnly "org.hibernate.orm:hibernate-core:$hibernate7Version"
-
-
+    compileOnly 'org.hibernate.orm:hibernate-core'
     compileOnly 'org.hibernate.orm:hibernate-jcache', {
         exclude group:'commons-collections', module:'commons-collections'
         exclude group:'commons-logging', module:'commons-logging'
@@ -87,18 +84,18 @@ dependencies {
     }
 
     testImplementation 'org.testcontainers:testcontainers'
-    testImplementation 'org.postgresql:postgresql:42.7.5'
-    testImplementation 'org.testcontainers:postgresql'
-    testImplementation 'com.mysql:mysql-connector-j:9.2.0'
-    testImplementation 'org.testcontainers:mysql'
-    testImplementation 'org.mariadb.jdbc:mariadb-java-client:3.5.2'
-    testImplementation 'org.testcontainers:mariadb'
-    testImplementation 'com.oracle.database.jdbc:ojdbc11:23.7.0.25.01'
-    testImplementation 'org.testcontainers:oracle-free'
-    testImplementation 'org.testcontainers:spock'
-    testImplementation 'org.jsr107.ri:cache-ri-impl:1.1.1'
+    testImplementation 'org.postgresql:postgresql'
+    testImplementation 'org.testcontainers:testcontainers-postgresql'
+    testImplementation 'com.mysql:mysql-connector-j'
+    testImplementation 'org.testcontainers:testcontainers-mysql'
+    testImplementation 'org.mariadb.jdbc:mariadb-java-client'
+    testImplementation 'org.testcontainers:testcontainers-mariadb'
+    testImplementation 'com.oracle.database.jdbc:ojdbc11'
+    testImplementation 'org.testcontainers:testcontainers-oracle-free'
+    testImplementation 'org.testcontainers:testcontainers-spock'
+    testImplementation 'org.jsr107.ri:cache-ri-impl'
 
-    testImplementation 'org.objenesis:objenesis:3.4' // or a more recent version if available
+    testImplementation 'org.objenesis:objenesis'
 
 
     testImplementation 'com.h2database:h2'
@@ -111,10 +108,10 @@ dependencies {
     testImplementation 'org.apache.groovy:groovy-json'
     testImplementation 'org.hibernate.orm:hibernate-jcache'
     testImplementation 'org.spockframework:spock-core'
-    testImplementation "org.hibernate.orm:hibernate-core:$hibernate7Version"
+    testImplementation "org.hibernate.orm:hibernate-core"
 
     // groovy proxy fixes bytebuddy to be a bit smarter when it comes to groovy metaClass
-    testImplementation "org.yakworks:hibernate-groovy-proxy:$yakworksHibernateGroovyProxyVersion", {
+    testImplementation 'org.yakworks:hibernate-groovy-proxy', {
         exclude group: 'org.codehaus.groovy', module: 'groovy'
         exclude group: 'org.hibernate', module: 'hibernate-core'
         exclude group: 'org.hibernate.orm', module: 'hibernate-core'
@@ -126,7 +123,7 @@ dependencies {
     testRuntimeOnly 'org.slf4j:slf4j-simple'
     testRuntimeOnly 'org.slf4j:jcl-over-slf4j'
     testRuntimeOnly 'org.springframework:spring-aop'
-    testRuntimeOnly 'org.mockito:mockito-inline:5.2.0'
+    testRuntimeOnly 'org.mockito:mockito-inline'
 
 }
 

@@ -38,7 +38,7 @@ ext {
 
 dependencies {
     // TODO: Clarify and clean up dependencies
-    implementation platform(project(':grails-bom'))
+    implementation platform(project(':grails-hibernate7-bom'))
 
     compileOnly project(':grails-shell-cli'), {
         exclude group:'org.apache.groovy', module:'groovy'

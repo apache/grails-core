@@ -75,8 +75,6 @@ tasks.named('rat') {
             'grails-forge/**/src/main/resources/**', // src/main/resources are included in generated application and should not include a license
             'grails-forge/**/src/test/resources/**', // src/test/resources are used in tests against files included in generated application and should not include a license
             'grails-gradle/**/build/**', // grails-gradle does not have a build package name so exclude any build directories
-            '*/build/**', // any build directories at the root
-            'grails-test-examples/**/build/**', // grails-test-examples build directories
             'grails-forge/*/build/**', // grails-forge build directories
             'grails-forge/build/**', // grails-forge build directories
             'build-logic/build/**', // grails-forge build directories
@@ -85,14 +83,6 @@ tasks.named('rat') {
             'build-logic/.idea/**', // grails-gradle idea directories
             'build/**', // build directories
             'buildSrc/build/**', // build directories
-            '**/build/**', // all build directories
-            'node_modules/**', // node modules
-            'local.properties', // local properties
-            'test_output.log', // test output log
-            '0_build_grails.txt', // large build log
-            '*_VIOLATIONS.md', // generated violation reports
-            'plans/*.md', // development plans
-            'grails-data-hibernate7/*.md', // hibernate 7 migration docs
     ] + rootProject.subprojects.collect{"${rootProject.projectDir.relativePath(it.layout.buildDirectory.get().asFile).toString()}/**/*" }
     // logger.lifecycle("Excludes for RAT task: ${allExcludes.join(', \n')}")
     excludes = allExcludes

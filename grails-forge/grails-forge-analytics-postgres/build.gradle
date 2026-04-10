@@ -44,7 +44,7 @@ dependencies {
 
     testImplementation "ch.qos.logback:logback-classic:$logbackClassicVersion"
     testImplementation 'io.micronaut:micronaut-http-client'
-    testImplementation 'org.testcontainers:postgresql'
+    testImplementation 'org.testcontainers:testcontainers-postgresql'
 }
 application {
     mainClass = 'org.grails.forge.analytics.postgres.Main'

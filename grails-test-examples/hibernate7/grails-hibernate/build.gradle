@@ -29,7 +29,7 @@ version = projectVersion
 group = 'examples'
 
 dependencies {
-    implementation platform(project(':grails-bom'))
+    implementation platform(project(':grails-hibernate7-bom'))
 
     implementation 'org.apache.grails:grails-data-hibernate7'
     implementation 'jakarta.persistence:jakarta.persistence-api'
@@ -44,7 +44,7 @@ dependencies {
         implementation 'org.apache.grails:grails-layout'
     }
 
-    testAndDevelopmentOnly platform(project(':grails-bom'))
+    testAndDevelopmentOnly platform(project(':grails-hibernate7-bom'))
     testAndDevelopmentOnly 'org.webjars.npm:jquery'
 
     runtimeOnly 'cloud.wondrify:asset-pipeline-grails'
@@ -54,10 +54,7 @@ dependencies {
     runtimeOnly 'org.apache.grails:grails-services'
     runtimeOnly 'org.apache.grails:grails-url-mappings'
     runtimeOnly 'org.apache.grails:grails-fields'
-    runtimeOnly "org.hibernate:hibernate-ehcache:$hibernate5Version", {
-        // exclude javax variant of hibernate-core 5.6
-        exclude group: 'org.hibernate', module: 'hibernate-core'
-    }
+    // TODO: hibernate-ehcache was icnluded here but historically was replaced by hibernate-jcache
     runtimeOnly "org.jboss.spec.javax.transaction:jboss-transaction-api_1.3_spec:$jbossTransactionApiVersion", {
         // required for hibernate-ehcache to work with javax variant of hibernate-core excluded
     }

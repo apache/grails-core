@@ -35,7 +35,7 @@ ext {
 }
 
 dependencies {
-    implementation platform(project(':grails-bom'))
+    implementation platform(project(':grails-hibernate7-bom'))
 
     api 'org.slf4j:slf4j-api'
     api 'org.springframework:spring-orm'
@@ -44,7 +44,7 @@ dependencies {
     api 'org.springframework:spring-beans'
     api 'org.springframework:spring-context'
     compileOnly 'jakarta.servlet:jakarta.servlet-api'
-    api "org.hibernate.orm:hibernate-core:${hibernate7Version}", {
+    api 'org.hibernate.orm:hibernate-core', {
         exclude group: 'commons-logging', module: 'commons-logging'
         exclude group: 'org.slf4j', module: 'slf4j-api'
     }

@@ -47,7 +47,7 @@ class TestContainersSpec extends ApplicationContextSpec {
                 .render()
 
         then:
-        template.contains('testImplementation "org.testcontainers:postgresql"')
+        template.contains('testImplementation "org.testcontainers:testcontainers-postgresql"')
         template.contains('testImplementation "org.testcontainers:testcontainers"')
     }
 
@@ -69,7 +69,7 @@ class TestContainersSpec extends ApplicationContextSpec {
                 .render()
 
         then:
-        template.contains('testImplementation "org.testcontainers:mongodb"')
+        template.contains('testImplementation "org.testcontainers:testcontainers-mongodb"')
         template.contains('testImplementation "org.testcontainers:testcontainers"')
     }
 
@@ -80,7 +80,7 @@ class TestContainersSpec extends ApplicationContextSpec {
                 .render()
 
         then:
-        template.contains('testImplementation "org.testcontainers:mongodb"')
+        template.contains('testImplementation "org.testcontainers:testcontainers-mongodb"')
         template.contains('testImplementation "org.testcontainers:testcontainers"')
     }
 

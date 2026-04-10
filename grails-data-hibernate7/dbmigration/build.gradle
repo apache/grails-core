@@ -33,29 +33,25 @@ ext {
     gormApiDocs = true
     pomTitle = 'Grails Database Migration Plugin for Hibernate 7'
     pomDescription = 'The Database Migration plugin helps you manage database changes, via Liquibase, while developing Grails applications for Hibernate 7'
-    pomDevelopers = [
-            'kazukiyamamoto': 'Kazuki YAMAMOTO',
-            'jamesfredley'  : 'James Fredley',
-    ]
 }
 
 dependencies {
     // TODO: Clarify and clean up dependencies
-    implementation platform(project(':grails-bom')) {
-        exclude group: 'org.liquibase', module: 'liquibase-core'
-    }
+    implementation platform(project(':grails-hibernate7-bom'))
 
-    implementation("org.liquibase:liquibase-core:$liquibaseHibernate7CoreVersion")
-    implementation("org.hibernate.models:hibernate-models:1.0.1")
+    implementation("org.liquibase:liquibase-core")
+    implementation("org.hibernate.models:hibernate-models")
     implementation project(':grails-data-hibernate7')
     implementation project(':grails-data-hibernate7-spring-orm')
-    compileOnly("org.hibernate.orm:hibernate-envers:$hibernate7Version")
-    testCompileOnly("org.hibernate.orm:hibernate-envers:$hibernate7Version")
+    compileOnly("org.hibernate.orm:hibernate-envers")
+    testCompileOnly("org.hibernate.orm:hibernate-envers")
 
-    compileOnly "org.projectlombok:lombok:1.18.42"
-    annotationProcessor "org.projectlombok:lombok:1.18.42"
-    testCompileOnly "org.projectlombok:lombok:1.18.42"
-    testAnnotationProcessor "org.projectlombok:lombok:1.18.42"
+    compileOnly "org.projectlombok:lombok"
+    annotationProcessor platform(project(':grails-hibernate7-bom'))
+    annotationProcessor 'org.projectlombok:lombok'
+    testCompileOnly "org.projectlombok:lombok"
+    testAnnotationProcessor platform(project(':grails-hibernate7-bom'))
+    testAnnotationProcessor "org.projectlombok:lombok"
 
     implementation(project(':grails-shell-cli')) {
         exclude group: 'org.slf4j', module: 'slf4j-simple'
@@ -87,27 +83,15 @@ dependencies {
     testImplementation project(':grails-testing-support-web')
 
     testImplementation 'org.testcontainers:testcontainers'
-    testImplementation 'org.testcontainers:postgresql'
-    testImplementation 'org.testcontainers:spock'
+    testImplementation 'org.testcontainers:testcontainers-postgresql'
+    testImplementation 'org.testcontainers:testcontainers-spock'
     testImplementation 'com.h2database:h2'
     testImplementation 'org.hsqldb:hsqldb'
     testImplementation 'org.postgresql:postgresql'
-    testImplementation('org.liquibase:liquibase-test-harness:1.0.11') {
+    testImplementation('org.liquibase:liquibase-test-harness') {
         exclude group: 'org.liquibase', module: 'liquibase-commercial'
     }
-    testImplementation("org.hibernate.orm:hibernate-envers:$hibernate7Version")
-
-    constraints {
-        implementation("org.liquibase:liquibase-core") {
-            version {
-                strictly "$liquibaseHibernate7CoreVersion"
-            }
-        }
-        testImplementation("org.apache.derby:derby:10.16.1.1")
-        testImplementation("org.apache.derby:derbyshared:10.16.1.1")
-        testImplementation("org.apache.derby:derbytools:10.16.1.1")
-        testImplementation("org.apache.derby:derbyclient:10.16.1.1")
-    }
+    testImplementation("org.hibernate.orm:hibernate-envers")
 }
 
 tasks.named('jar', Jar) {

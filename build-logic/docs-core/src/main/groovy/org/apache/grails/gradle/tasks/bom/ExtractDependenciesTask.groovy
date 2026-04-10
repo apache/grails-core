@@ -207,6 +207,9 @@ abstract class ExtractDependenciesTask extends DefaultTask {
 
             // fetch the BOM as a pom file so it can be expanded
             ExtractedDependencyConstraint constraint = propertyNameCalculator.calculate(bomCoordinate.groupId, bomCoordinate.artifactId, bomCoordinate.version, true)
+            if(!constraint) {
+                throw new GradleException("Failed to find a property name for BOM dependency: ${bomCoordinate.coordinates}. All platform dependencies must have a property name defined meeting the naming requirements.")
+            }
             constraint.source = bomCoordinate.artifactId
             constraints.put(bomCoordinate.toCoordinateHolder(), constraint)
 

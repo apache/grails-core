@@ -51,65 +51,19 @@ ext {
 }
 
 dependencies {
-    api platform(gradleBomPlatformDependencies['spring-boot-bom']), {
-        exclude group: 'org.apache.groovy'
-        exclude group: 'org.spockframework'
-    }
-
-    for (def entry : bomPlatformDependencies.entrySet()) {
-        api platform(entry.value)
-    }
-    api platform(gradleBomPlatformDependencies['testcontainers-bom'])
+    api platform(project(':grails-base-bom'))
 
     constraints {
-        for (def entry : gradleBomDependencies.entrySet()) {
-            api entry.value
-        }
-        for (def entry : bomDependencies.entrySet()) {
-            api entry.value
-        }
-
-        for (Project subproject : rootProject.subprojects) {
-            if (subproject.path == project.path || subproject.name in testProjects || subproject.name in docProjects || subproject.name in cliProjects) {
-                continue // ignore self & test projects
-            }
-
-            // skip other java-platform (BOM) projects - they are not library dependencies
-            if (subproject.pluginManager.hasPlugin('java-platform')) {
-                continue
-            }
-
-            boolean publishedProject = subproject.pluginManager.hasPlugin('org.apache.grails.gradle.grails-publish-profile') || subproject.pluginManager.hasPlugin('org.apache.grails.gradle.grails-publish')
-            if (!publishedProject) {
-                continue
-            }
-
-            api project(":${subproject.path}")
-        }
-
-        // since we're duplicating the bom instead of inheriting we have to add the grails-gradle projects
-        for (Map.Entry<String, String> dependency : project.ext.gradleBuildProjects.entrySet()) {
-            api "${dependency.value}:${dependency.key}:${projectVersion}"
-        }
-
-        api("org.liquibase:liquibase") {
-            version {
-                strictly "$liquibaseHibernate5Version"
-            }
-        }
-        api("org.liquibase:liquibase-cdi") {
-            version {
-                strictly "$liquibaseHibernate5Version"
-            }
-        }
-        api("org.liquibase:liquibase-core") {
-            version {
-                strictly "$liquibaseHibernate5Version"
-            }
-        }
-        api("org.liquibase.ext:liquibase-hibernate5") {
-            version {
-                strictly "$liquibaseHibernate5Version"
+        for (def entry : customBomDependencies.entrySet()) {
+            def parts = entry.value.split(':')
+            if (parts.length == 3) {
+                api("${parts[0]}:${parts[1]}") {
+                    version {
+                        strictly parts[2]
+                    }
+                }
+            } else {
+                api entry.value
             }
         }
     }
@@ -124,7 +78,7 @@ configurations.register('bomDependencies').configure {
 tasks.register('extractConstraints', ExtractDependenciesTask).configure { ExtractDependenciesTask it ->
     it.configuration = configurations.named('bomDependencies')
     it.configurationName = 'bomDependencies'
-    it.destination = project.layout.buildDirectory.file('grails-bom-constraints.adoc')
+    it.destination = project.layout.buildDirectory.file('grails-hibernate7-bom-constraints.adoc')
     it.platformDefinitions = combinedPlatforms
     it.definitions = combinedDependencies
     it.projectName = project.name
@@ -193,7 +147,7 @@ if (ext.isReleaseBuild && ext.isPublishedExternal) {
 }
 
 ext {
-    pomDescription = 'Grails BOM (Bill of Materials) for managing dependency versions used by Grails Projects'
+    pomDescription = 'Grails Hibernate 7 BOM (Bill of Materials) for managing dependency versions used by Grails Projects with Hibernate 7'
     pomCustomization = { xml ->
         def root = xml.asNode()
 
