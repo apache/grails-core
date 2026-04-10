@@ -50,11 +50,11 @@ databaseChangeLog = \\{
                 constraints\\(nullable: "false"\\)
             \\}
 
-            column\\(name: "author_id", type: "BIGINT"\\) \\{
+            column\\(name: "title", type: "VARCHAR\\(255\\)"\\) \\{
                 constraints\\(nullable: "false"\\)
             \\}
 
-            column\\(name: "title", type: "VARCHAR\\(255\\)"\\) \\{
+            column\\(name: "author_id", type: "BIGINT"\\) \\{
                 constraints\\(nullable: "false"\\)
             \\}
         \\}
@@ -89,11 +89,11 @@ databaseChangeLog = \\{
                 constraints\\(nullable: "false"\\)
             \\}
 
-            column\\(name: "author_id", type: "BIGINT"\\) \\{
+            column\\(name: "title", type: "VARCHAR\\(255\\)"\\) \\{
                 constraints\\(nullable: "false"\\)
             \\}
 
-            column\\(name: "title", type: "VARCHAR\\(255\\)"\\) \\{
+            column\\(name: "author_id", type: "BIGINT"\\) \\{
                 constraints\\(nullable: "false"\\)
             \\}
         \\}
