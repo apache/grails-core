@@ -36,7 +36,7 @@ class GrailsTestPlugin implements Plugin<Project> {
 
         project.tasks.register('aggregateTestFailures') { task ->
             task.group = 'verification'
-            task.description = 'Aggregates all test failures into a single Markdown report'
+            task.description = 'Aggregates all test failures across all modules into TEST_FAILURES.md'
 
             project.subprojects.each { subproject ->
                 subproject.tasks.withType(Test).configureEach { testTask ->
@@ -78,21 +78,15 @@ class GrailsTestPlugin implements Plugin<Project> {
                     }
                 }
 
-                // 1. All subprojects
                 project.subprojects.each { subproject ->
                     def testResultsDir = subproject.layout.buildDirectory.dir("test-results").get().asFile
                     processTestResults(testResultsDir, subproject.name)
                 }
 
-                // 2. Any other directory in root that might have test results (like grails-docs or build-logic)
                 project.layout.projectDirectory.asFile.eachDir { dir ->
                     if (!dir.name.startsWith('.') && dir.name != 'build' && dir.name != 'node_modules') {
-                        def testResultsDir = new File(dir, "build/test-results")
-                        processTestResults(testResultsDir, dir.name)
-                        
-                        // Also check for results in the directory itself (if it's a build output)
-                        def directTestResultsDir = new File(dir, "test-results")
-                        processTestResults(directTestResultsDir, dir.name)
+                        processTestResults(new File(dir, "build/test-results"), dir.name)
+                        processTestResults(new File(dir, "test-results"), dir.name)
                     }
                 }
 
@@ -124,6 +118,6 @@ class GrailsTestPlugin implements Plugin<Project> {
             }
         }
         reportFile.text = out.toString()
-        project.logger.lifecycle("Aggregated test failures report generated: ${reportFile.absolutePath}")
+        project.logger.lifecycle("Test failure report: ${reportFile.absolutePath}")
     }
 }

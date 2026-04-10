@@ -18,43 +18,43 @@
  */
 package org.apache.grails.data.mongo.core
 
-import groovy.util.logging.Slf4j
-
 import com.mongodb.BasicDBObject
 import com.mongodb.client.MongoClient
-import org.bson.Document
-import org.testcontainers.containers.MongoDBContainer
-
-import org.springframework.context.support.GenericApplicationContext
-import org.springframework.context.support.StaticMessageSource
-import org.springframework.validation.Validator
-
 import grails.core.DefaultGrailsApplication
 import grails.core.GrailsApplication
 import grails.gorm.validation.PersistentEntityValidator
+import groovy.util.logging.Slf4j
 import org.apache.grails.data.testing.tck.base.GrailsDataTckManager
 import org.apache.grails.testing.mongo.AbstractMongoGrailsExtension
+import org.bson.Document
 import org.grails.datastore.bson.query.BsonQuery
 import org.grails.datastore.gorm.GormEnhancer
 import org.grails.datastore.gorm.mongo.Birthday
 import org.grails.datastore.gorm.validation.constraints.eval.DefaultConstraintEvaluator
 import org.grails.datastore.gorm.validation.constraints.registry.DefaultConstraintRegistry
-import org.grails.datastore.mapping.core.DatastoreUtils
 import org.grails.datastore.mapping.core.Session
+import org.grails.datastore.mapping.multitenancy.MultiTenancySettings
+import org.grails.datastore.mapping.multitenancy.resolvers.SystemPropertyTenantResolver
 import org.grails.datastore.mapping.engine.types.AbstractMappingAwareCustomTypeMarshaller
 import org.grails.datastore.mapping.model.MappingContext
 import org.grails.datastore.mapping.model.PersistentEntity
 import org.grails.datastore.mapping.model.PersistentProperty
+import org.grails.datastore.mapping.mongo.AbstractMongoSession
+import org.grails.datastore.mapping.core.DatastoreUtils
 import org.grails.datastore.mapping.mongo.MongoDatastore
 import org.grails.datastore.mapping.mongo.config.MongoSettings
-import org.grails.datastore.mapping.multitenancy.MultiTenancySettings
-import org.grails.datastore.mapping.multitenancy.resolvers.SystemPropertyTenantResolver
 import org.grails.datastore.mapping.query.Query
+import org.slf4j.LoggerFactory
+import org.springframework.context.support.GenericApplicationContext
+import org.springframework.context.support.StaticMessageSource
+import org.springframework.validation.Validator
+import org.testcontainers.containers.MongoDBContainer
+import org.testcontainers.containers.output.Slf4jLogConsumer
 
 @Slf4j
 class GrailsDataMongoTckManager extends GrailsDataTckManager {
 
-    static MongoDBContainer mongoDBContainer
+    MongoDBContainer mongoDBContainer
 
     MongoDatastore mongoDatastore
     MongoClient mongoClient
@@ -68,19 +68,16 @@ class GrailsDataMongoTckManager extends GrailsDataTckManager {
     @Override
     void setupSpec() {
         super.setupSpec()
-        if (isDockerAvailable()) {
-            if (mongoDBContainer == null) {
-                mongoDBContainer = new MongoDBContainer(AbstractMongoGrailsExtension.desiredMongoDockerName)
-                mongoDBContainer.start()
-                // mongoDBContainer.followOutput(new Slf4jLogConsumer(LoggerFactory.getLogger("testcontainers")))
-            }
+        mongoDBContainer = new MongoDBContainer(AbstractMongoGrailsExtension.desiredMongoDockerName)
+        mongoDBContainer.start()
+        mongoDBContainer.followOutput(new Slf4jLogConsumer(LoggerFactory.getLogger("testcontainers")))
 
-            configuration = [
-                    (MongoSettings.SETTING_DATABASE_NAME): 'test',
-                    (MongoSettings.SETTING_HOST)         : mongoDBContainer.host,
-                    (MongoSettings.SETTING_PORT)         : mongoDBContainer.getMappedPort(AbstractMongoGrailsExtension.DEFAULT_MONGO_PORT) as String,
-            ]
-        }
+        configuration = [
+                (MongoSettings.SETTING_DATABASE_NAME): 'test',
+                (MongoSettings.SETTING_HOST)         : mongoDBContainer.host,
+                (MongoSettings.SETTING_PORT)         : mongoDBContainer.getMappedPort(AbstractMongoGrailsExtension.DEFAULT_MONGO_PORT) as String,
+                //TODO: 'grails.mongodb.url': "mongodb://${host}:${port as String}/myDb" as String
+        ]
     }
 
     @Override
@@ -91,10 +88,6 @@ class GrailsDataMongoTckManager extends GrailsDataTckManager {
 
     @Override
     Session createSession() {
-        if (mongoDBContainer == null || !mongoDBContainer.isRunning()) {
-            return null
-        }
-        System.setProperty('mongodb.gorm.suite', 'true')
         def allClasses = getDomainClasses() as Class[]
         def ctx = new GenericApplicationContext()
         ctx.refresh()
@@ -102,7 +95,6 @@ class GrailsDataMongoTckManager extends GrailsDataTckManager {
         mongoDatastore = new MongoDatastore(configuration)
         mappingContext = mongoDatastore.mappingContext
         mappingContext.mappingFactory.registerCustomType(new AbstractMappingAwareCustomTypeMarshaller<Birthday, Document, Document>(Birthday) {
-
             @Override
             protected Object writeInternal(PersistentProperty property, String key, Birthday value, Document nativeTarget) {
 
@@ -144,35 +136,17 @@ class GrailsDataMongoTckManager extends GrailsDataTckManager {
 
     @Override
     void destroy() {
-        if (mongoDatastore != null) {
-            mongoDatastore.getMongoClient().listDatabaseNames().findAll { !(it in ['admin', 'config', 'local']) }.each {
-                try {
-                    mongoDatastore?.mongoClient?.listDatabaseNames()
-                            ?.findAll { !(it in ['admin', 'config', 'local']) }
-                            ?.each {
-                                try {
-                                    mongoDatastore.mongoClient.getDatabase(it as String).drop()
-                                }
-                                catch (ignored) {
-                                    log.warn("Could not drop ${it}")
-                                }
-                            }
-                    for (cls in domainClasses) {
-                        GormEnhancer.findValidationApi(cls).validator = null
-                    }
-                }
-                finally {
-                    try {
-                        mongoDatastore?.close()
-                    }
-                    catch (ignored) {
-                    }
-                    mongoDatastore = null
-                    mongoClient = null
-                    grailsApplication = null
-                    mappingContext = null
-                }
+        mongoDatastore.getMongoClient().listDatabaseNames().findAll {!(it in ['admin', 'config', 'local']) }.each {
+            try {
+                mongoDatastore.getMongoClient().getDatabase(it).drop()
             }
+            catch(e) {
+                log.warn("Could not drop ${it}")
+            }
+        }
+        mongoDatastore.buildIndex()
+        for (cls in getDomainClasses()) {
+            GormEnhancer.findValidationApi(cls).setValidator(null)
         }
 
         super.destroy()
@@ -180,22 +154,20 @@ class GrailsDataMongoTckManager extends GrailsDataTckManager {
 
     @Override
     boolean supportsMultipleDataSources() {
-        mongoDBContainer != null && mongoDBContainer.isRunning()
+        true
     }
 
     @Override
     void setupMultiDataSource(Class... domainClasses) {
-        if (mongoDBContainer != null && mongoDBContainer.isRunning()) {
-            String host = mongoDBContainer.host
-            int port = mongoDBContainer.getMappedPort(AbstractMongoGrailsExtension.DEFAULT_MONGO_PORT)
-            Map config = [
-                    'grails.mongodb.url'        : "mongodb://${host}:${port}/tckDefaultDB" as String,
-                    'grails.mongodb.connections': [
-                            'secondary': ['url': "mongodb://${host}:${port}/tckSecondaryDB" as String],
-                    ],
-            ]
-            multiDataSourceDatastore = new MongoDatastore(DatastoreUtils.createPropertyResolver(config), domainClasses)
-        }
+        String host = mongoDBContainer.host
+        int port = mongoDBContainer.getMappedPort(AbstractMongoGrailsExtension.DEFAULT_MONGO_PORT)
+        Map config = [
+                'grails.mongodb.url'       : "mongodb://${host}:${port}/tckDefaultDB" as String,
+                'grails.mongodb.connections': [
+                        'secondary': ['url': "mongodb://${host}:${port}/tckSecondaryDB" as String],
+                ],
+        ]
+        multiDataSourceDatastore = new MongoDatastore(DatastoreUtils.createPropertyResolver(config), domainClasses)
     }
 
     @Override
@@ -212,32 +184,30 @@ class GrailsDataMongoTckManager extends GrailsDataTckManager {
     @Override
     def getServiceForConnection(Class serviceType, String connectionName) {
         multiDataSourceDatastore
-                ?.getDatastoreForConnection(connectionName)
-                ?.getService(serviceType)
+                .getDatastoreForConnection(connectionName)
+                .getService(serviceType)
     }
 
     @Override
     boolean supportsMultiTenantMultiDataSource() {
-        mongoDBContainer != null && mongoDBContainer.isRunning()
+        true
     }
 
     @Override
     void setupMultiTenantMultiDataSource(Class... domainClasses) {
-        if (mongoDBContainer != null && mongoDBContainer.isRunning()) {
-            String host = mongoDBContainer.host
-            int port = mongoDBContainer.getMappedPort(AbstractMongoGrailsExtension.DEFAULT_MONGO_PORT)
-            Map config = [
-                    'grails.gorm.multiTenancy.mode'               : MultiTenancySettings.MultiTenancyMode.DISCRIMINATOR,
-                    'grails.gorm.multiTenancy.tenantResolverClass': SystemPropertyTenantResolver,
-                    'grails.mongodb.url'                          : "mongodb://${host}:${port}/tckMtDefaultDB" as String,
-                    'grails.mongodb.connections'                  : [
-                            'secondary': ['url': "mongodb://${host}:${port}/tckMtSecondaryDB" as String],
-                    ],
-            ]
-            multiTenantMultiDataSourceDatastore = new MongoDatastore(
-                    DatastoreUtils.createPropertyResolver(config), domainClasses
-            )
-        }
+        String host = mongoDBContainer.host
+        int port = mongoDBContainer.getMappedPort(AbstractMongoGrailsExtension.DEFAULT_MONGO_PORT)
+        Map config = [
+                'grails.gorm.multiTenancy.mode'               : MultiTenancySettings.MultiTenancyMode.DISCRIMINATOR,
+                'grails.gorm.multiTenancy.tenantResolverClass' : SystemPropertyTenantResolver,
+                'grails.mongodb.url'                           : "mongodb://${host}:${port}/tckMtDefaultDB" as String,
+                'grails.mongodb.connections'                   : [
+                        'secondary': ['url': "mongodb://${host}:${port}/tckMtSecondaryDB" as String],
+                ],
+        ]
+        multiTenantMultiDataSourceDatastore = new MongoDatastore(
+                DatastoreUtils.createPropertyResolver(config), domainClasses
+        )
     }
 
     @Override
@@ -254,35 +224,17 @@ class GrailsDataMongoTckManager extends GrailsDataTckManager {
     @Override
     def getServiceForMultiTenantConnection(Class serviceType, String connectionName) {
         multiTenantMultiDataSourceDatastore
-                ?.getDatastoreForConnection(connectionName)
-                ?.getService(serviceType)
+                .getDatastoreForConnection(connectionName)
+                .getService(serviceType)
     }
 
     void setupValidator(Class entityClass, Validator validator = null) {
-        if (mappingContext != null) {
-            PersistentEntity entity = mappingContext.persistentEntities.find { PersistentEntity e -> e.javaClass == entityClass }
-            def messageSource = new StaticMessageSource()
-            def evaluator = new DefaultConstraintEvaluator(new DefaultConstraintRegistry(messageSource), mappingContext, Collections.emptyMap())
-            if (entity) {
-                mappingContext.addEntityValidator(entity, validator ?:
-                        new PersistentEntityValidator(entity, messageSource, evaluator))
-            }
+        PersistentEntity entity = mappingContext.persistentEntities.find { PersistentEntity e -> e.javaClass == entityClass }
+        def messageSource = new StaticMessageSource()
+        def evaluator = new DefaultConstraintEvaluator(new DefaultConstraintRegistry(messageSource), mappingContext, Collections.emptyMap())
+        if (entity) {
+            mappingContext.addEntityValidator(entity, validator ?:
+                    new PersistentEntityValidator(entity, messageSource, evaluator))
         }
-    }
-
-    static boolean isDockerAvailable() {
-        def candidates = [
-                System.getProperty('user.home') + '/.docker/run/docker.sock',
-                '/var/run/docker.sock',
-                System.getenv('DOCKER_HOST') ?: ''
-        ]
-        if (candidates.any { it && new File(it).exists() }) {
-            try {
-                return org.testcontainers.DockerClientFactory.instance().isDockerAvailable()
-            } catch (Throwable e) {
-                return false
-            }
-        }
-        return false
     }
 }
