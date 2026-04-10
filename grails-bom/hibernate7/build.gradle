@@ -54,6 +54,18 @@ dependencies {
     api platform(project(':grails-base-bom'))
 
     constraints {
+        // Re-declare base BOM constraints directly so enforcedPlatform() consumers
+        // get forced versions. Constraints inherited via platform() are not enforced
+        // by enforcedPlatform — only direct constraints are.
+        for (def entry : gradleBomDependencies.entrySet()) {
+            api entry.value
+        }
+        for (def entry : bomDependencies.entrySet()) {
+            api entry.value
+        }
+        for (def entry : bomPlatformDependencies.entrySet()) {
+            api entry.value
+        }
         for (def entry : customBomDependencies.entrySet()) {
             def parts = entry.value.split(':')
             if (parts.length == 3) {

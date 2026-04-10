@@ -64,38 +64,10 @@ dependencies {
 
     constraints {
         for (def entry : gradleBomDependencies.entrySet()) {
-            def parts = entry.value.split(':')
-            if (parts.length == 3) {
-                api("${parts[0]}:${parts[1]}") {
-                    version {
-                        strictly parts[2]
-                    }
-                }
-            } else {
-                api entry.value
-            }
-        }
-        for (def entry : bomPlatformDependencies.entrySet()) {
-            def parts = entry.value.split(':')
-            if (parts.length == 3) {
-                api("${parts[0]}:${parts[1]}") {
-                    version {
-                        strictly parts[2]
-                    }
-                }
-            }
+            api entry.value
         }
         for (def entry : bomDependencies.entrySet()) {
-            def parts = entry.value.split(':')
-            if (parts.length == 3) {
-                api("${parts[0]}:${parts[1]}") {
-                    version {
-                        strictly parts[2]
-                    }
-                }
-            } else {
-                api entry.value
-            }
+            api entry.value
         }
 
         for (Project subproject : rootProject.subprojects) {
