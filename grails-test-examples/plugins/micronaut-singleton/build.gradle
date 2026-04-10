@@ -34,6 +34,7 @@ dependencies {
     api 'org.apache.grails:grails-micronaut'
     api 'jakarta.servlet:jakarta.servlet-api'
 
+    annotationProcessor enforcedPlatform(project(':grails-bom'))
     annotationProcessor platform("io.micronaut.platform:micronaut-platform:$micronautPlatformVersion")
     annotationProcessor 'io.micronaut:micronaut-inject-java'
     annotationProcessor 'jakarta.annotation:jakarta.annotation-api'

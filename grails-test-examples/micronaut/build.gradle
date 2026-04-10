@@ -47,6 +47,7 @@ dependencies {
     implementation 'org.apache.grails:grails-scaffolding'
     implementation project(':grails-test-examples-plugins-micronaut-singleton')
 
+    annotationProcessor enforcedPlatform(project(':grails-bom'))
     annotationProcessor platform("io.micronaut.platform:micronaut-platform:$micronautPlatformVersion")
     annotationProcessor 'io.micronaut:micronaut-inject-java'
     annotationProcessor 'jakarta.annotation:jakarta.annotation-api'
