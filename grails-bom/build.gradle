@@ -59,6 +59,7 @@ dependencies {
     for (def entry : bomPlatformDependencies.entrySet()) {
         api platform(entry.value)
     }
+    api platform(gradleBomPlatformDependencies['testcontainers-bom'])
 
     constraints {
         for (def entry : gradleBomDependencies.entrySet()) {

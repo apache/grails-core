@@ -49,6 +49,10 @@ import com.github.spotbugs.snom.Effort
 import com.github.spotbugs.snom.SpotBugsExtension
 import com.github.spotbugs.snom.SpotBugsPlugin
 import com.github.spotbugs.snom.SpotBugsTask
+import org.gradle.api.tasks.testing.Test
+import org.gradle.testing.jacoco.plugins.JacocoPlugin
+import org.gradle.testing.jacoco.plugins.JacocoPluginExtension
+import org.gradle.testing.jacoco.tasks.JacocoReport
 
 /**
  * Convention plugin for Grails code style enforcement.
@@ -77,6 +81,8 @@ class GrailsCodeStylePlugin implements Plugin<Project> {
 
     static String SPOTBUGS_ENABLED_PROPERTY = 'grails.codestyle.enabled.spotbugs'
 
+    static String JACOCO_ENABLED_PROPERTY = 'grails.codestyle.enabled.jacoco'
+
     static String IGNORE_FAILURES_PROPERTY = 'grails.codestyle.ignoreFailures'
 
     static String TEST_STYLING_PROPERTY = 'grails.codestyle.enabled.tests'
@@ -88,6 +94,44 @@ class GrailsCodeStylePlugin implements Plugin<Project> {
         initExtension(project)
         configureCodeStyle(project)
         configureAggregation(project)
+        
+        boolean jacocoEnabled = GradleUtils.lookupProperty(project, JACOCO_ENABLED_PROPERTY, false)
+        if (jacocoEnabled) {
+            configureJacoco(project)
+            if (project == project.rootProject) {
+                project.logger.info("JaCoCo enabled globally, applying to subprojects")
+                project.subprojects.each { subproject ->
+                    subproject.pluginManager.withPlugin('java') {
+                        configureJacoco(subproject)
+                    }
+                    subproject.pluginManager.withPlugin('groovy') {
+                        configureJacoco(subproject)
+                    }
+                }
+            }
+        }
+    }
+
+    static void configureJacoco(Project project) {
+        project.logger.info("Configuring JaCoCo for project: ${project.name}")
+        project.pluginManager.apply(JacocoPlugin)
+
+        project.extensions.configure(JacocoPluginExtension) {
+            it.toolVersion = "0.8.14"
+        }
+
+        project.tasks.withType(Test).configureEach {
+            it.finalizedBy 'jacocoTestReport'
+        }
+
+        project.tasks.withType(JacocoReport).configureEach {
+            it.dependsOn project.tasks.withType(Test)
+            it.reports {
+                it.xml.required = true
+                it.html.required = true
+                it.csv.required = true
+            }
+        }
     }
 
     private static void configureAggregation(Project project) {
@@ -101,6 +145,7 @@ class GrailsCodeStylePlugin implements Plugin<Project> {
             task.description = 'Aggregates all code style violations into separate reports'
 
             boolean checkTests = GradleUtils.lookupProperty(project, TEST_STYLING_PROPERTY, false)
+            boolean jacocoEnabled = GradleUtils.lookupProperty(project, JACOCO_ENABLED_PROPERTY, false)
 
             // Dependencies: all check tasks in all subprojects
             root.subprojects.each { subproject ->
@@ -125,6 +170,10 @@ class GrailsCodeStylePlugin implements Plugin<Project> {
                         checkTests || (!t.name.toLowerCase().contains('test') && !t.name.toLowerCase().contains('integrationtest'))
                     })
                 }
+
+                if (jacocoEnabled) {
+                    task.dependsOn(subproject.tasks.withType(JacocoReport))
+                }
             }
 
             def reportsDir = project.extensions.getByType(GrailsCodeStyleExtension).reportsDirectory
@@ -133,7 +182,10 @@ class GrailsCodeStylePlugin implements Plugin<Project> {
             task.outputs.file(root.layout.projectDirectory.file('CHECKSTYLE_VIOLATIONS.md'))
             task.outputs.file(root.layout.projectDirectory.file('PMD_VIOLATIONS.md'))
             task.outputs.file(root.layout.projectDirectory.file('SPOTBUGS_VIOLATIONS.md'))
-            task.outputs.file(root.layout.projectDirectory.file('JACOCO_COVERAGE_VIOLATIONS.md'))
+            
+            if (jacocoEnabled) {
+                task.outputs.file(root.layout.projectDirectory.file('JACOCO_COVERAGE_VIOLATIONS.md'))
+            }
 
             task.doLast {
                 parseViolations(root, reportsDir.get())
@@ -148,6 +200,7 @@ class GrailsCodeStylePlugin implements Plugin<Project> {
         slurper.setFeature("http://xml.org/sax/features/namespaces", false)
 
         boolean checkTests = GradleUtils.lookupProperty(project, TEST_STYLING_PROPERTY, false)
+        boolean jacocoEnabled = GradleUtils.lookupProperty(project, JACOCO_ENABLED_PROPERTY, false)
 
         def getModule = { String fileName ->
             def lastDash = fileName.lastIndexOf('-')
@@ -326,56 +379,64 @@ class GrailsCodeStylePlugin implements Plugin<Project> {
         writeReport('SPOTBUGS_VIOLATIONS.md', spotbugsViolations, 'SpotBugs Violations Summary')
 
         // 5. JaCoCo
-        def jacocoCoverage = []
-        project.rootProject.allprojects.each { p ->
-            // JaCoCo reports for test are usually in build/reports/jacoco/test/jacocoTestReport.csv
-            def csvReport = p.file("build/reports/jacoco/test/jacocoTestReport.csv")
-            if (csvReport.exists()) {
-                csvReport.splitEachLine(',') { fields ->
-                    if (fields[0] == 'GROUP') return // header
-                    def module = fields[0]
-                    def pkg = fields[1]
-                    def clazz = fields[2]
-                    def missed = fields[3]
-                    def covered = fields[4]
-                    
-                    // Skip if fields are not numeric (handle potential header/empty lines)
-                    if (missed.isNumber() && covered.isNumber()) {
-                        def m = missed.toInteger()
-                        def c = covered.toInteger()
-                        def total = m + c
-                        def percent = total > 0 ? (c * 100 / total).round(2) : 100.0
-                        
-                        jacocoCoverage << [
-                            module: module,
-                            className: "${pkg}.${clazz}",
-                            percent: percent
-                        ]
+        if (jacocoEnabled) {
+            project.logger.info("Aggregating JaCoCo coverage reports")
+            def jacocoCoverage = []
+            project.rootProject.allprojects.each { p ->
+                // JaCoCo reports for test are usually in build/reports/jacoco/test/jacocoTestReport.csv
+                def csvReport = p.file("build/reports/jacoco/test/jacocoTestReport.csv")
+                if (csvReport.exists()) {
+                    project.logger.debug("Processing JaCoCo report: ${csvReport.absolutePath}")
+                    csvReport.splitEachLine(',') { fields ->
+                        if (fields.size() < 5 || fields[0] == 'GROUP') return // header or malformed line
+                        def module = fields[0]
+                        def pkg = fields[1]
+                        def clazz = fields[2]
+                        def missedStr = fields[3]
+                        def coveredStr = fields[4]
+
+                        // Skip if fields are not numeric
+                        if (missedStr.isNumber() && coveredStr.isNumber()) {
+                            def m = missedStr.toInteger()
+                            def c = coveredStr.toInteger()
+                            def total = m + c
+                            def percent = total > 0 ? (c * 100 / total).round(2) : 100.0
+
+                            jacocoCoverage << [
+                                    module   : module,
+                                    className: "${pkg}.${clazz}",
+                                    percent  : percent
+                            ]
+                        }
                     }
                 }
             }
-        }
 
-        // Filter out classes in the 'org.grails.orm.hibernate.support.hibernate7' package
-        jacocoCoverage.removeIf { it.className.startsWith('org.grails.orm.hibernate.support.hibernate7.') }
+            if (!jacocoCoverage.isEmpty()) {
+                // Filter out classes in the 'org.grails.orm.hibernate.support.hibernate7' package
+                jacocoCoverage.removeIf { it.className.startsWith('org.grails.orm.hibernate.support.hibernate7.') }
 
-        def jacocoReportFile = project.layout.projectDirectory.file('JACOCO_COVERAGE_VIOLATIONS.md').asFile
-        def out = new StringBuilder()
-        out.append("# JaCoCo Coverage Report\n")
-        out.append("Generated on: ${LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss"))}\n\n")
-        
-        def groupedByModule = jacocoCoverage.groupBy { it.module }.sort()
-        groupedByModule.each { module, coverageList ->
-            out.append("## Module: ${module}\n")
-            out.append("| Class | % Instructions Covered |\n")
-            out.append("| :--- | :--- |\n")
-            coverageList.sort { it.percent }.each { c ->
-                out.append("| ${c.className} | ${c.percent}% |\n")
+                def jacocoReportFile = project.layout.projectDirectory.file('JACOCO_COVERAGE_VIOLATIONS.md').asFile
+                def out = new StringBuilder()
+                out.append("# JaCoCo Coverage Report\n")
+                out.append("Generated on: ${LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss"))}\n\n")
+
+                def groupedByModule = jacocoCoverage.groupBy { it.module }.sort()
+                groupedByModule.each { module, coverageList ->
+                    out.append("## Module: ${module}\n")
+                    out.append("| Class | % Instructions Covered |\n")
+                    out.append("| :--- | :--- |\n")
+                    coverageList.sort { it.percent }.each { c ->
+                        out.append("| ${c.className} | ${c.percent}% |\n")
+                    }
+                    out.append("\n")
+                }
+                jacocoReportFile.text = out.toString()
+                project.logger.lifecycle("Aggregated JaCoCo report generated: ${jacocoReportFile.absolutePath}")
+            } else {
+                project.logger.info("No JaCoCo coverage reports found to aggregate")
             }
-            out.append("\n")
         }
-        jacocoReportFile.text = out.toString()
-        project.logger.lifecycle("Aggregated JaCoCo report generated: ${jacocoReportFile.absolutePath}")
     }
 
     private static void initExtension(Project project) {
@@ -533,7 +594,7 @@ class GrailsCodeStylePlugin implements Plugin<Project> {
         }
 
         if (!GradleUtils.lookupProperty(project, TEST_STYLING_PROPERTY, false)) {
-            project.tasks.named('checkstyleTest') {
+            project.tasks.matching { it.name == 'checkstyleTest' }.configureEach {
                 it.enabled = false // Do not check test sources at this time
             }
         }
@@ -743,10 +804,8 @@ class GrailsCodeStylePlugin implements Plugin<Project> {
             project.afterEvaluate {
                 // Do not check test sources at this time
                 ['codenarcIntegrationTest', 'codenarcTest'].each { testTaskName ->
-                    if (project.tasks.names.contains(testTaskName)) {
-                        project.tasks.named(testTaskName) {
-                            it.enabled = false
-                        }
+                    project.tasks.matching { it.name == testTaskName }.configureEach {
+                        it.enabled = false
                     }
                 }
             }
