@@ -248,6 +248,109 @@ class HibernateDatastoreSpec extends HibernateGormDatastoreSpec {
         expect:
         datastore.getMetadata() != null
     }
+
+    void "test toString returns datasource name"() {
+        expect:
+        datastore.toString() == "HibernateDatastore: default"
+    }
+
+    void "test withSession and withNewSession for connectionName"() {
+        when:
+        def result1 = datastore.withSession("default") { session -> return "session1" }
+        def result2 = datastore.withNewSession("default") { session -> return "session2" }
+
+        then:
+        result1 == "session1"
+        result2 == "session2"
+    }
+
+    void "test withNewSession with tenantId for non-DATABASE multitenancy"() {
+        when:
+        def result = datastore.withNewSession((Serializable) "someTenant") { session -> return "sessionTenant" }
+
+        then:
+        result == "sessionTenant"
+    }
+
+    void "test close handles exception"() {
+        given:
+        def ds = new HibernateDatastore(Collections.singletonMap(Settings.SETTING_DB_CREATE, "create-drop"), GHUBook) {
+            @Override
+            void destroy() throws Exception {
+                throw new RuntimeException("destroy failed")
+            }
+        }
+        
+        when:
+        ds.close()
+
+        then:
+        noExceptionThrown()
+    }
+    
+    void "test constructors"() {
+        given:
+        def configMap = new HashMap<>(manager.grailsConfig)
+        configMap.put("dataSource.url", "jdbc:h2:mem:grailsDB-constructors;LOCK_TIMEOUT=10000") // avoid clash with datastore
+        org.springframework.core.env.PropertyResolver propertyResolver = org.grails.datastore.mapping.core.DatastoreUtils.createPropertyResolver(configMap)
+        def dataSource = datastore.dataSource
+        def eventPublisher = datastore.applicationEventPublisher as org.grails.datastore.gorm.events.ConfigurableApplicationEventPublisher
+        Package pkg = String.getPackage()
+        
+        when: "Constructor with EventPublisher and Classes"
+        def ds1 = new HibernateDatastore(propertyResolver, eventPublisher, GHUBook)
+        then:
+        ds1 != null
+        ds1.close()
+
+        when: "Constructor with DataSource, EventPublisher and Classes"
+        def ds2 = new HibernateDatastore(dataSource, propertyResolver, eventPublisher, GHUBook)
+        then:
+        ds2 != null
+        ds2.close()
+
+        when: "Constructor with EventPublisher and Packages"
+        def ds3 = new HibernateDatastore(propertyResolver, eventPublisher, pkg)
+        then:
+        ds3 != null
+        ds3.close()
+
+        when: "Constructor with DataSource, EventPublisher and Packages"
+        def ds4 = new HibernateDatastore(dataSource, propertyResolver, eventPublisher, pkg)
+        then:
+        ds4 != null
+        ds4.close()
+
+        when: "Constructor with Configuration Map and Packages"
+        def ds5 = new HibernateDatastore(configMap, pkg)
+        then:
+        ds5 != null
+        ds5.close()
+        
+        when: "Constructor with Packages only"
+        def ds6 = new HibernateDatastore(pkg)
+        then:
+        ds6 != null
+        ds6.close()
+        
+        when: "Constructor with MappingContext, SessionFactory, PropertyResolver, ApplicationContext, dataSourceName"
+        def ds7 = new HibernateDatastore(datastore.mappingContext, datastore.sessionFactory, propertyResolver, datastore.applicationContext, "default")
+        then:
+        ds7 != null
+        
+        when: "Constructor with MappingContext, SessionFactory, PropertyResolver"
+        def ds8 = new HibernateDatastore(datastore.mappingContext, datastore.sessionFactory, propertyResolver)
+        then:
+        ds8 != null
+    }
+
+    void "test setMessageSource"() {
+        when:
+        datastore.setMessageSource(Mock(org.springframework.context.MessageSource))
+
+        then:
+        noExceptionThrown()
+    }
 }
 
 @Entity

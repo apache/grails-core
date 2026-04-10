@@ -290,6 +290,426 @@ class HibernateCriteriaBuilderDirectSpec extends HibernateGormDatastoreSpec {
         results[0].firstName == "Fred"
     }
 
+    void "test properties and projections methods"() {
+        when:
+        def b = new HibernateCriteriaBuilder(DirectAccount, manager.hibernateDatastore.sessionFactory, manager.hibernateDatastore)
+
+        then:
+        b.property("firstName")
+        b.distinct("lastName")
+        b.avg("balance")
+        b.projections() != null
+        b.closeSession()
+    }
+
+    void "test boolean flags and setter getter methods"() {
+        when:
+        def b = new HibernateCriteriaBuilder(DirectAccount, manager.hibernateDatastore.sessionFactory, manager.hibernateDatastore)
+        b.uniqueResult = true
+        b.distinct = true
+        b.count = true
+        b.paginationEnabledList = true
+        b.scroll = true
+        
+        then:
+        b.isUniqueResult() == true
+        b.isDistinct() == true
+        b.isCount() == true
+        b.isPaginationEnabledList() == true
+        b.isScroll() == true
+        b.getInstance() == null
+        b.getCriteriaBuilder() != null
+        b.getSessionFactory() != null
+        b.getHibernateQuery() != null
+        b.isParticipate() == true
+        b.getDefaultFlushMode() == org.grails.orm.hibernate.GrailsHibernateTemplate.FLUSH_AUTO
+        
+        when:
+        b.setDefaultFlushMode(1)
+        then:
+        b.getDefaultFlushMode() == 1
+        
+        when:
+        b.lock(true)
+        b.cache(true)
+        b.maxResults(10)
+        then:
+        noExceptionThrown()
+
+        cleanup:
+        b.closeSession()
+    }
+
+    void "test alias and join methods"() {
+        when:
+        def b = new HibernateCriteriaBuilder(DirectAccount, manager.hibernateDatastore.sessionFactory, manager.hibernateDatastore)
+        b.join("transactions")
+        b.join("transactions", jakarta.persistence.criteria.JoinType.INNER)
+        b.select("transactions")
+        b.createAlias("transactions", "t")
+        b.createAlias("transactions", "t2", 1) // LEFT
+        b.createAlias("transactions", "t3", 2) // RIGHT
+        b.createAlias("transactions", "t4", 3) // INNER
+        
+        then:
+        noExceptionThrown()
+        
+        cleanup:
+        b.closeSession()
+    }
+
+    void "test exception handling"() {
+        when:
+        def b = new HibernateCriteriaBuilder(DirectAccount, manager.hibernateDatastore.sessionFactory, manager.hibernateDatastore)
+        b.throwRuntimeException(new RuntimeException("test exception"))
+        
+        then:
+        thrown(RuntimeException)
+    }
+
+    void "test missing criterion methods"() {
+        when:
+        def b = new HibernateCriteriaBuilder(DirectAccount, manager.hibernateDatastore.sessionFactory, manager.hibernateDatastore)
+        b.eqProperty("firstName", "lastName")
+        b.neProperty("firstName", "lastName")
+        b.gtProperty("firstName", "lastName")
+        b.geProperty("firstName", "lastName")
+        b.ltProperty("firstName", "lastName")
+        b.leProperty("firstName", "lastName")
+        
+        b.allEq(["firstName": "Fred"])
+        b.idEq(1L)
+        b.idEquals(1L)
+        
+        b.isEmpty("firstName")
+        b.isNotEmpty("firstName")
+        b.isNull("firstName")
+        b.isNotNull("firstName")
+        
+        b.like("firstName", "Fre%")
+        b.ilike("firstName", "fre%")
+        b.rlike("firstName", ".*")
+        
+        b.in("firstName", ["Fred", "Barney"])
+        b.inList("firstName", ["Fred", "Barney"])
+        b.inList("firstName", "Fred", "Barney")
+        b.in("firstName", "Fred", "Barney")
+        b.notIn("firstName") { eq("firstName", "Wilma") }
+        
+        b.gt("balance", 100)
+        b.ge("balance", 100)
+        b.gte("balance", 100)
+        b.lt("balance", 100)
+        b.le("balance", 100)
+        b.lte("balance", 100)
+        b.ne("balance", 100)
+        b.between("balance", 100, 200)
+
+        b.sizeEq("transactions", 1)
+        b.sizeGt("transactions", 1)
+        b.sizeGe("transactions", 1)
+        b.sizeLt("transactions", 1)
+        b.sizeLe("transactions", 1)
+        b.sizeNe("transactions", 1)
+
+        b.order("firstName")
+        b.order("lastName", "desc")
+        b.firstResult(0)
+        
+        b.and { eq("firstName", "Fred") }
+        b.or { eq("firstName", "Fred") }
+        b.not { eq("firstName", "Fred") }
+
+        then:
+        noExceptionThrown()
+
+        cleanup:
+        b.closeSession()
+    }
+
+    void "test subqueries with closures"() {
+        when:
+        def b = new HibernateCriteriaBuilder(DirectAccount, manager.hibernateDatastore.sessionFactory, manager.hibernateDatastore)
+        
+        b.eqAll("balance") { eq("balance", 100) }
+        b.gtAll("balance") { eq("balance", 100) }
+        b.geAll("balance") { eq("balance", 100) }
+        b.ltAll("balance") { eq("balance", 100) }
+        b.leAll("balance") { eq("balance", 100) }
+        
+        b.gtSome("balance") { eq("balance", 100) }
+        b.geSome("balance") { eq("balance", 100) }
+        b.ltSome("balance") { eq("balance", 100) }
+        b.leSome("balance") { eq("balance", 100) }
+        
+        b.in("balance") { eq("balance", 100) }
+        b.inList("balance") { eq("balance", 100) }
+        b.notIn("balance") { eq("balance", 100) }
+        
+        then:
+        noExceptionThrown()
+        
+        cleanup:
+        b.closeSession()
+    }
+
+    void "test subqueries with QueryableCriteria"() {
+        when:
+        def b = new HibernateCriteriaBuilder(DirectAccount, manager.hibernateDatastore.sessionFactory, manager.hibernateDatastore)
+        def criteria = new grails.gorm.DetachedCriteria(DirectAccount).build { eq("balance", 100) }
+        
+        b.eqAll("balance", criteria)
+        b.gtAll("balance", criteria)
+        b.geAll("balance", criteria)
+        b.ltAll("balance", criteria)
+        b.leAll("balance", criteria)
+        
+        b.gtSome("balance", criteria)
+        b.geSome("balance", criteria)
+        b.ltSome("balance", criteria)
+        b.leSome("balance", criteria)
+        
+        b.in("balance", criteria)
+        b.inList("balance", criteria)
+        b.notIn("balance", criteria)
+
+        b.exists(criteria)
+        b.notExists(criteria)
+        
+        then:
+        noExceptionThrown()
+        
+        cleanup:
+        b.closeSession()
+    }
+
+    void "test execution methods"() {
+        when:
+        def b = new HibernateCriteriaBuilder(DirectAccount, manager.hibernateDatastore.sessionFactory, manager.hibernateDatastore)
+        b.list { eq("firstName", "Fred") }
+        b.list([max: 10]) { eq("firstName", "Fred") }
+        b.listDistinct { eq("firstName", "Fred") }
+        b.get { eq("firstName", "Fred") }
+        try { b.scroll { eq("firstName", "Fred") } } catch(UnsupportedOperationException e) { /* expected in this mock environment */ }
+        b.list()
+        
+        then:
+        noExceptionThrown()
+        
+        cleanup:
+        b.closeSession()
+    }
+
+    void "test properties and projections methods"() {
+        when:
+        def b = new HibernateCriteriaBuilder(DirectAccount, manager.hibernateDatastore.sessionFactory, manager.hibernateDatastore)
+
+        then:
+        b.property("firstName")
+        b.distinct("lastName")
+        b.avg("balance")
+        b.projections() != null
+        b.closeSession()
+    }
+
+    void "test boolean flags and setter getter methods"() {
+        when:
+        def b = new HibernateCriteriaBuilder(DirectAccount, manager.hibernateDatastore.sessionFactory, manager.hibernateDatastore)
+        b.uniqueResult = true
+        b.distinct = true
+        b.count = true
+        b.paginationEnabledList = true
+        b.scroll = true
+        
+        then:
+        b.isUniqueResult() == true
+        b.isDistinct() == true
+        b.isCount() == true
+        b.isPaginationEnabledList() == true
+        b.isScroll() == true
+        b.getInstance() == null
+        b.getCriteriaBuilder() != null
+        b.getSessionFactory() != null
+        b.getHibernateQuery() != null
+        b.isParticipate() == true
+        b.getDefaultFlushMode() == org.grails.orm.hibernate.GrailsHibernateTemplate.FLUSH_AUTO
+        
+        when:
+        b.setDefaultFlushMode(1)
+        then:
+        b.getDefaultFlushMode() == 1
+        
+        when:
+        b.lock(true)
+        b.cache(true)
+        b.maxResults(10)
+        then:
+        noExceptionThrown()
+
+        cleanup:
+        b.closeSession()
+    }
+
+    void "test alias and join methods"() {
+        when:
+        def b = new HibernateCriteriaBuilder(DirectAccount, manager.hibernateDatastore.sessionFactory, manager.hibernateDatastore)
+        b.join("transactions")
+        b.join("transactions", jakarta.persistence.criteria.JoinType.INNER)
+        b.select("transactions")
+        b.createAlias("transactions", "t")
+        b.createAlias("transactions", "t2", 1) // LEFT
+        b.createAlias("transactions", "t3", 2) // RIGHT
+        b.createAlias("transactions", "t4", 3) // INNER
+        
+        then:
+        noExceptionThrown()
+        
+        cleanup:
+        b.closeSession()
+    }
+
+    void "test exception handling"() {
+        when:
+        def b = new HibernateCriteriaBuilder(DirectAccount, manager.hibernateDatastore.sessionFactory, manager.hibernateDatastore)
+        b.throwRuntimeException(new RuntimeException("test exception"))
+        
+        then:
+        thrown(RuntimeException)
+    }
+
+    void "test missing criterion methods"() {
+        when:
+        def b = new HibernateCriteriaBuilder(DirectAccount, manager.hibernateDatastore.sessionFactory, manager.hibernateDatastore)
+        b.eqProperty("firstName", "lastName")
+        b.neProperty("firstName", "lastName")
+        b.gtProperty("firstName", "lastName")
+        b.geProperty("firstName", "lastName")
+        b.ltProperty("firstName", "lastName")
+        b.leProperty("firstName", "lastName")
+        
+        b.allEq(["firstName": "Fred"])
+        b.idEq(1L)
+        b.idEquals(1L)
+        
+        b.isEmpty("firstName")
+        b.isNotEmpty("firstName")
+        b.isNull("firstName")
+        b.isNotNull("firstName")
+        
+        b.like("firstName", "Fre%")
+        b.ilike("firstName", "fre%")
+        b.rlike("firstName", ".*")
+        
+        b.in("firstName", ["Fred", "Barney"])
+        b.inList("firstName", ["Fred", "Barney"])
+        b.inList("firstName", "Fred", "Barney")
+        b.in("firstName", "Fred", "Barney")
+        b.notIn("firstName") { eq("firstName", "Wilma") }
+        
+        b.gt("balance", 100)
+        b.ge("balance", 100)
+        b.gte("balance", 100)
+        b.lt("balance", 100)
+        b.le("balance", 100)
+        b.lte("balance", 100)
+        b.ne("balance", 100)
+        b.between("balance", 100, 200)
+
+        b.sizeEq("transactions", 1)
+        b.sizeGt("transactions", 1)
+        b.sizeGe("transactions", 1)
+        b.sizeLt("transactions", 1)
+        b.sizeLe("transactions", 1)
+        b.sizeNe("transactions", 1)
+
+        b.order("firstName")
+        b.order("lastName", "desc")
+        b.firstResult(0)
+        
+        b.and { eq("firstName", "Fred") }
+        b.or { eq("firstName", "Fred") }
+        b.not { eq("firstName", "Fred") }
+
+        then:
+        noExceptionThrown()
+
+        cleanup:
+        b.closeSession()
+    }
+
+    void "test subqueries with closures"() {
+        when:
+        def b = new HibernateCriteriaBuilder(DirectAccount, manager.hibernateDatastore.sessionFactory, manager.hibernateDatastore)
+        
+        b.eqAll("balance") { eq("balance", 100) }
+        b.gtAll("balance") { eq("balance", 100) }
+        b.geAll("balance") { eq("balance", 100) }
+        b.ltAll("balance") { eq("balance", 100) }
+        b.leAll("balance") { eq("balance", 100) }
+        
+        b.gtSome("balance") { eq("balance", 100) }
+        b.geSome("balance") { eq("balance", 100) }
+        b.ltSome("balance") { eq("balance", 100) }
+        b.leSome("balance") { eq("balance", 100) }
+        
+        b.in("balance") { eq("balance", 100) }
+        b.inList("balance") { eq("balance", 100) }
+        b.notIn("balance") { eq("balance", 100) }
+        
+        then:
+        noExceptionThrown()
+        
+        cleanup:
+        b.closeSession()
+    }
+
+    void "test subqueries with QueryableCriteria"() {
+        when:
+        def b = new HibernateCriteriaBuilder(DirectAccount, manager.hibernateDatastore.sessionFactory, manager.hibernateDatastore)
+        def criteria = new grails.gorm.DetachedCriteria(DirectAccount).build { eq("balance", 100) }
+        
+        b.eqAll("balance", criteria)
+        b.gtAll("balance", criteria)
+        b.geAll("balance", criteria)
+        b.ltAll("balance", criteria)
+        b.leAll("balance", criteria)
+        
+        b.gtSome("balance", criteria)
+        b.geSome("balance", criteria)
+        b.ltSome("balance", criteria)
+        b.leSome("balance", criteria)
+        
+        b.in("balance", criteria)
+        b.inList("balance", criteria)
+        b.notIn("balance", criteria)
+
+        b.exists(criteria)
+        b.notExists(criteria)
+        
+        then:
+        noExceptionThrown()
+        
+        cleanup:
+        b.closeSession()
+    }
+
+    void "test execution methods"() {
+        when:
+        def b = new HibernateCriteriaBuilder(DirectAccount, manager.hibernateDatastore.sessionFactory, manager.hibernateDatastore)
+        b.list { eq("firstName", "Fred") }
+        b.list([max: 10]) { eq("firstName", "Fred") }
+        b.listDistinct { eq("firstName", "Fred") }
+        b.get { eq("firstName", "Fred") }
+        try { b.scroll { eq("firstName", "Fred") } } catch(UnsupportedOperationException e) { /* expected in this mock environment */ }
+        b.list()
+        
+        then:
+        noExceptionThrown()
+        
+        cleanup:
+        b.closeSession()
+    }
+
     // ─── Comparison predicates ─────────────────────────────────────────────
 
     def "eq(String, Object) delegates and returns this"() {

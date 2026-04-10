@@ -32,7 +32,7 @@ import spock.lang.Shared
 import spock.lang.Specification
 
 /**
- * Verifies the behaviour of {@link HibernateDatastore.SchemaTenantGormEnhancer}
+ * Verifies the behaviour of SchemaTenantGormEnhancer
  * which is instantiated when the datastore runs in SCHEMA multi-tenancy mode.
  *
  * Because Hibernate infrastructure classes are final / sealed, we drive the
@@ -45,7 +45,7 @@ class SchemaTenantGormEnhancerSpec extends Specification {
     HibernateDatastore datastore
 
     @Shared
-    HibernateDatastore.SchemaTenantGormEnhancer enhancer
+    def enhancer
 
     void setupSpec() {
         System.setProperty(SystemPropertyTenantResolver.PROPERTY_NAME, "")
@@ -60,7 +60,7 @@ class SchemaTenantGormEnhancerSpec extends Specification {
                 'hibernate.hbm2ddl.auto'                  : 'create',
         ]
         datastore = new HibernateDatastore(DatastoreUtils.createPropertyResolver(config), SchemaTenantBook)
-        enhancer = datastore.gormEnhancer as HibernateDatastore.SchemaTenantGormEnhancer
+        enhancer = datastore.gormEnhancer
     }
 
     void cleanupSpec() {
@@ -70,7 +70,7 @@ class SchemaTenantGormEnhancerSpec extends Specification {
 
     void "gormEnhancer is an instance of SchemaTenantGormEnhancer in SCHEMA mode"() {
         expect:
-        enhancer instanceof HibernateDatastore.SchemaTenantGormEnhancer
+        enhancer.getClass().name == "org.grails.orm.hibernate.HibernateDatastore\$SchemaTenantGormEnhancer"
     }
 
     void "allQualifiers includes tenant IDs from AllTenantsResolver for MultiTenant entity"() {
@@ -112,15 +112,21 @@ class SchemaTenantGormEnhancerSpec extends Specification {
     }
 
     void "SchemaTenantGormEnhancer is a public static nested class of HibernateDatastore"() {
+        given:
+        def enhancerClass = Class.forName("org.grails.orm.hibernate.HibernateDatastore\$SchemaTenantGormEnhancer")
+        
         expect:
-        HibernateDatastore.SchemaTenantGormEnhancer.enclosingClass == HibernateDatastore
-        Modifier.isStatic(HibernateDatastore.SchemaTenantGormEnhancer.modifiers)
-        Modifier.isPublic(HibernateDatastore.SchemaTenantGormEnhancer.modifiers)
+        enhancerClass.enclosingClass == HibernateDatastore
+        Modifier.isStatic(enhancerClass.modifiers)
+        Modifier.isPublic(enhancerClass.modifiers)
     }
 
     void "SchemaTenantGormEnhancer extends HibernateGormEnhancer"() {
+        given:
+        def enhancerClass = Class.forName("org.grails.orm.hibernate.HibernateDatastore\$SchemaTenantGormEnhancer")
+
         expect:
-        HibernateGormEnhancer.isAssignableFrom(HibernateDatastore.SchemaTenantGormEnhancer)
+        HibernateGormEnhancer.isAssignableFrom(enhancerClass)
     }
 
     // -------------------------------------------------------------------------
@@ -142,7 +148,7 @@ class SchemaTenantGormEnhancerSpec extends Specification {
         ]
         HibernateDatastore schemaDs = new HibernateDatastore(
             DatastoreUtils.createPropertyResolver(config), SchemaTenantBook)
-        def schemaEnhancer = schemaDs.gormEnhancer as HibernateDatastore.SchemaTenantGormEnhancer
+        def schemaEnhancer = schemaDs.gormEnhancer
         def entity = schemaDs.getMappingContext().getPersistentEntity(SchemaTenantBook.name)
 
         when: "allQualifiers resolves via schemaHandler (H2 returns no custom schemas)"
