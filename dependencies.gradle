@@ -26,7 +26,7 @@ ext {
             'asciidoctor-gradle-jvm.version': '4.0.5',
             'asciidoctorj.version'          : '3.0.0',
             'asset-pipeline-gradle.version' : '5.1.0-M4',
-            'byte-buddy.version'            : '1.17.8',
+            'byte-buddy.version'            : '1.18.8',
             'commons-text.version'          : '1.14.0',
             'directory-watcher.version'     : '0.19.1',
             'gradle-spock.version'          : '2.3-groovy-3.0',
