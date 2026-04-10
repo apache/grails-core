@@ -220,8 +220,10 @@ The `bindProperty` method in `GrailsPropertyBinder.java` has been successfully r
 
 ## Testing Guidelines
 
-*   **HibernateGormDatastoreSpec**: Use `HibernateGormDatastoreSpec` for all Hibernate 7 integration and domain binding specifications. It provides a more opinionated and fluent API for configuring the Hibernate environment and managing entities during tests.
-*   **Unique Class Names**: When defining domain classes within a spec, ensure they are uniquely named to avoid package-level conflicts.
+*   **HibernateGormDatastoreSpec**: Use `HibernateGormDatastoreSpec` for all Hibernate 7 integration and domain binding specifications. Unit tests in Hibernate 7 cannot effectively mock Hibernate internal classes; this spec provides the necessary environment.
+*   **Entity Creation**: While `GrailsHibernatePersistentEntity` can be created manually using `createHibernatePersistentEntity`, it is more convenient to use `manager.addAllDomainClasses([...])` within `setupSpec()` to register entities for the test.
+*   **Top-Level Entities**: Entity classes used in tests must be defined as top-level classes within the same Groovy file as the specification.
+*   **Unique Class Names**: Ensure all domain classes defined within a spec have globally unique names within the package to avoid collisions with other test classes during parallel execution.
 *   **Real Entities**: Prefer using real entities defined as top-level classes in the spec file over heavy mocking when testing binder logic.
 
 ## Resolved Issues

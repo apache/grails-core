@@ -50,6 +50,7 @@ For testing the following was done:
 | Module | Description |
 |---|---|
 | `grails-data-hibernate7-core` | Domain binding pipeline, GORM/Hibernate mapping, `HibernateDatastore` |
+| `grails-data-hibernate7-spring-orm` | Shared Spring ORM / Hibernate integration support used by the core, boot-plugin, and Grails plugin modules |
 | `grails-data-hibernate7-boot-plugin` | Spring Boot autoconfiguration (`HibernateGormAutoConfiguration`) and Grails CLI SPI (`GormCompilerAutoConfiguration`) |
 
 ## Autoconfiguration

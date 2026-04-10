@@ -46,9 +46,39 @@ class HibernateDetachedCriteria<T> extends DetachedCriteria<T> {
     @Override
     def propertyMissing(String name) {
         PersistentProperty prop = getPersistentEntity()?.getPropertyByName(name)
-        if (prop != null && Number.isAssignableFrom(prop.type)) {
+        if (prop != null && isNumericPropertyType(prop.type)) {
             return new PropertyReference(name)
         }
         super.propertyMissing(name)
+    }
+
+    protected static boolean isNumericPropertyType(Class<?> type) {
+        if (type == null) {
+            return false
+        }
+        if (type.isPrimitive()) {
+            if (type == Byte.TYPE) {
+                type = Byte
+            }
+            else if (type == Short.TYPE) {
+                type = Short
+            }
+            else if (type == Integer.TYPE) {
+                type = Integer
+            }
+            else if (type == Long.TYPE) {
+                type = Long
+            }
+            else if (type == Float.TYPE) {
+                type = Float
+            }
+            else if (type == Double.TYPE) {
+                type = Double
+            }
+            else {
+                return false
+            }
+        }
+        Number.isAssignableFrom(type)
     }
 }

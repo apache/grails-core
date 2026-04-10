@@ -25,6 +25,7 @@ import org.grails.datastore.mapping.model.config.GormProperties
 import org.grails.datastore.mapping.multitenancy.MultiTenancySettings
 import org.grails.datastore.mapping.multitenancy.resolvers.SystemPropertyTenantResolver
 import org.grails.orm.hibernate.cfg.domainbinding.hibernate.GrailsHibernatePersistentEntity
+import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernateToManyEntityProperty
 import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernateToManyProperty
 import org.grails.orm.hibernate.cfg.domainbinding.util.BackticksRemover
 import org.grails.orm.hibernate.cfg.domainbinding.util.DefaultColumnNameFetcher
@@ -120,6 +121,20 @@ class ToManyEntityMultiTenantFilterBinderSpec extends HibernateGormDatastoreSpec
         then:
         collection.getFilters().isEmpty()
         collection.getManyToManyFilters().isEmpty()
+    }
+
+    def "bind does nothing when associated entity is null (partially-resolved association)"() {
+        given:
+        def property = Stub(HibernateToManyEntityProperty) {
+            getHibernateAssociatedEntity() >> null
+            isOneToMany() >> true
+        }
+
+        when:
+        binder.bind(property)
+
+        then:
+        noExceptionThrown()
     }
 }
 
