@@ -25,16 +25,17 @@ import org.grails.datastore.mapping.model.config.GormProperties
 import org.grails.datastore.mapping.multitenancy.MultiTenancySettings
 import org.grails.datastore.mapping.multitenancy.resolvers.SystemPropertyTenantResolver
 import org.grails.orm.hibernate.cfg.domainbinding.hibernate.GrailsHibernatePersistentEntity
+import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernateToManyEntityProperty
 import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernateToManyProperty
 import org.grails.orm.hibernate.cfg.domainbinding.util.BackticksRemover
 import org.grails.orm.hibernate.cfg.domainbinding.util.DefaultColumnNameFetcher
 import org.hibernate.mapping.Bag
 import spock.lang.Subject
 
-class CollectionMultiTenantFilterBinderSpec extends HibernateGormDatastoreSpec {
+class ToManyEntityMultiTenantFilterBinderSpec extends HibernateGormDatastoreSpec {
 
     @Subject
-    CollectionMultiTenantFilterBinder binder
+    ToManyEntityMultiTenantFilterBinder binder
 
     void setupSpec() {
         manager.addAllDomainClasses([
@@ -55,7 +56,7 @@ class CollectionMultiTenantFilterBinderSpec extends HibernateGormDatastoreSpec {
 
     void setup() {
         def ns = getGrailsDomainBinder().getNamingStrategy()
-        binder = new CollectionMultiTenantFilterBinder(new DefaultColumnNameFetcher(ns, new BackticksRemover()))
+        binder = new ToManyEntityMultiTenantFilterBinder(new DefaultColumnNameFetcher(ns, new BackticksRemover()))
     }
 
     private HibernateToManyProperty propertyFor(Class ownerClass, String name = "items") {
@@ -120,6 +121,20 @@ class CollectionMultiTenantFilterBinderSpec extends HibernateGormDatastoreSpec {
         then:
         collection.getFilters().isEmpty()
         collection.getManyToManyFilters().isEmpty()
+    }
+
+    def "bind does nothing when associated entity is null (partially-resolved association)"() {
+        given:
+        def property = Stub(HibernateToManyEntityProperty) {
+            getHibernateAssociatedEntity() >> null
+            isOneToMany() >> true
+        }
+
+        when:
+        binder.bind(property)
+
+        then:
+        noExceptionThrown()
     }
 }
 

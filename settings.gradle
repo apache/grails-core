@@ -102,6 +102,7 @@ include(
         'grails-web-databinding',
         'grails-web-mvc',
         'grails-web-url-mappings',
+        'grails-data-hibernate7-spring-orm',
 
         // POM / BOMs
         'grails-dependencies-starter-web',
@@ -241,6 +242,9 @@ findProject(':grails-data-simple').projectDir = file('grails-data-simple')
 // Core
 include 'grails-data-hibernate7-core'
 findProject(':grails-data-hibernate7-core').projectDir = file('grails-data-hibernate7/core')
+
+include 'grails-data-hibernate7-spring-orm'
+findProject(':grails-data-hibernate7-spring-orm').projectDir = new File(settingsDir, 'grails-data-hibernate7/spring-orm')
 
 // Documentation
 include 'grails-data-hibernate7-docs'

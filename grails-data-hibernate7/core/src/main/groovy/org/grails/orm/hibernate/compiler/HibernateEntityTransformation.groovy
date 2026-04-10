@@ -33,7 +33,9 @@ import org.codehaus.groovy.ast.FieldNode
 import org.codehaus.groovy.ast.InnerClassNode
 import org.codehaus.groovy.ast.MethodNode
 import org.codehaus.groovy.ast.Parameter
+import org.codehaus.groovy.ast.expr.MethodCallExpression
 import org.codehaus.groovy.ast.stmt.BlockStatement
+import org.codehaus.groovy.ast.stmt.ExpressionStatement
 import org.codehaus.groovy.ast.stmt.IfStatement
 import org.codehaus.groovy.ast.stmt.ReturnStatement
 import org.codehaus.groovy.ast.stmt.Statement
@@ -52,6 +54,7 @@ import org.hibernate.engine.spi.PersistentAttributeInterceptable
 import org.hibernate.engine.spi.PersistentAttributeInterceptor
 
 import grails.gorm.dirty.checking.DirtyCheckedProperty
+import grails.gorm.hibernate.HibernateEntity
 import org.grails.compiler.gorm.GormEntityTransformation
 import org.grails.datastore.mapping.model.config.GormProperties
 import org.grails.datastore.mapping.reflect.AstUtils
@@ -125,6 +128,32 @@ class HibernateEntityTransformation implements ASTTransformation, CompilationUni
         }
 
         new GormEntityTransformation(compilationUnit: compilationUnit).visit(classNode, sourceUnit)
+
+        // Retarget generated addToXxx methods to call HibernateEntity.addTo instead of GormEntity.addTo,
+        // so our H7 override (which initializes the PersistentBag before adding) is invoked.
+        ClassNode hibernateEntityClassNode = ClassHelper.make(HibernateEntity)
+        List<MethodNode> hibernateAddToMethods = hibernateEntityClassNode.getMethods('addTo')
+        if (!hibernateAddToMethods.isEmpty()) {
+            MethodNode hibernateAddTo = hibernateAddToMethods.get(0)
+            for (MethodNode method : classNode.getMethods()) {
+                String methodName = method.name
+                if (!methodName.startsWith('addTo') || method.parameters.length != 1) continue
+                if (method.code instanceof BlockStatement) {
+                    BlockStatement block = (BlockStatement) method.code
+                    for (def stmt : block.statements) {
+                        if (stmt instanceof ExpressionStatement) {
+                            def expr = ((ExpressionStatement) stmt).expression
+                            if (expr instanceof MethodCallExpression) {
+                                MethodCallExpression mce = (MethodCallExpression) expr
+                                if (mce.methodAsString == 'addTo') {
+                                    mce.setMethodTarget(hibernateAddTo)
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
 
         ClassNode managedEntityClassNode = ClassHelper.make(ManagedEntity)
         ClassNode attributeInterceptableClassNode = ClassHelper.make(PersistentAttributeInterceptable)

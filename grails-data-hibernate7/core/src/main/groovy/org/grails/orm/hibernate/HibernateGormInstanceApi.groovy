@@ -43,6 +43,7 @@ import org.hibernate.HibernateException
 import org.hibernate.LockMode
 import org.hibernate.Session
 import org.hibernate.SessionFactory
+import org.hibernate.collection.spi.PersistentCollection
 import org.hibernate.engine.spi.EntityEntry
 import org.hibernate.engine.spi.SessionImplementor
 import org.hibernate.persister.entity.EntityPersister
@@ -63,6 +64,8 @@ import org.grails.datastore.mapping.model.PersistentProperty
 import org.grails.datastore.mapping.model.config.GormProperties
 import org.grails.datastore.mapping.model.types.Association
 import org.grails.datastore.mapping.model.types.Embedded
+import org.grails.datastore.mapping.model.types.ManyToMany
+import org.grails.datastore.mapping.model.types.OneToMany
 import org.grails.datastore.mapping.model.types.ToOne
 import org.grails.datastore.mapping.reflect.ClassUtils
 import org.grails.datastore.mapping.reflect.EntityReflector
@@ -247,11 +250,20 @@ class HibernateGormInstanceApi<D> extends GormInstanceApi<D> {
 
     protected D performMerge(final D target, final boolean flush) {
         hibernateTemplate.execute { Session session ->
-            D merged = (D) session.merge(target)
-            session.lock(merged, LockModeType.NONE)
-            // Sync id back immediately so target has an identity
-            String idProp = persistentEntity.identity?.name ?: 'id'
-            InvokerHelper.setProperty(target, idProp, InvokerHelper.getProperty(merged, idProp))
+            D merged
+            if (session.contains(target)) {
+                // Entity is already managed in this session — merging would cause H7 to create
+                // a second PersistentCollection for the same role+key ("two representations").
+                // Just use the entity as-is; dirty-checking + cascade will handle children.
+                merged = target
+            } else {
+                reconcileCollections(session, target)
+                merged = (D) session.merge(target)
+                session.lock(merged, LockModeType.NONE)
+                // Sync id back immediately so target has an identity
+                String idProp = persistentEntity.identity?.name ?: 'id'
+                InvokerHelper.setProperty(target, idProp, InvokerHelper.getProperty(merged, idProp))
+            }
             if (flush) {
                 flushSession session
             }
@@ -276,6 +288,52 @@ class HibernateGormInstanceApi<D> extends GormInstanceApi<D> {
             } finally {
                 resetInsertActive()
             }
+        }
+    }
+
+    /**
+     * Reconciles collection fields on an entity before session.merge() to prevent H7's
+     * "Found two representations of same collection" error.
+     *
+     * Two scenarios cause this error:
+     *
+     * 1. Stale PersistentCollection: the field holds a PersistentCollection from a previous
+     *    (now closed) session. H7 merge in the new session sees two collection objects for the
+     *    same role + key. Fix: copy the items to a plain collection so merge can create a fresh one.
+     *
+     * 2. Plain collection on a managed entity: addTo* created a new ArrayList on a managed entity
+     *    that already has a session-tracked PersistentCollection for that field. Fix: handled
+     *    upstream by HibernateEntity.addTo override; reconcileCollections handles any residual cases.
+     */
+    @SuppressWarnings('unchecked')
+    private void reconcileCollections(Session session, D target) {
+        EntityReflector reflector = datastore.mappingContext.getEntityReflector(persistentEntity)
+        if (reflector == null) return
+
+        SessionImplementor si = (SessionImplementor) session
+
+        for (Association assoc in persistentEntity.associations) {
+            if (!(assoc instanceof OneToMany) && !(assoc instanceof ManyToMany)) continue
+
+            String propName = assoc.name
+            Object fieldValue = reflector.getProperty(target, propName)
+            if (fieldValue == null) continue
+
+            if (fieldValue instanceof PersistentCollection) {
+                PersistentCollection<?> pc = (PersistentCollection<?>) fieldValue
+                // If this PersistentCollection belongs to a different (closed) session,
+                // replace it with a plain collection so merge can create a fresh one.
+                if (pc.getSession() != si) {
+                    Collection<Object> plain = (Collection<Object>) [].asType(assoc.type)
+                    if (pc.wasInitialized()) {
+                        plain.addAll((Collection<Object>) pc)
+                    }
+                    reflector.setProperty(target, propName, plain)
+                }
+                // If it belongs to the current session, leave it alone — no issue.
+            }
+            // Plain (non-PersistentCollection) fields on managed entities should have been
+            // handled by HibernateEntity.addTo; nothing more to do here.
         }
     }
 

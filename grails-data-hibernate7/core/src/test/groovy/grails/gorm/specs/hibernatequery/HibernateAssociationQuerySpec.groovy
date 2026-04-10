@@ -157,4 +157,15 @@ class HibernateAssociationQuerySpec extends HibernateGormDatastoreSpec {
         results.size() == 2
         results*.firstName.toSet() == ["Bob", "Alice"].toSet()
     }
+
+    def "HibernateAssociationQuery supports negation"() {
+        given:
+        def assocQuery = personQuery.createQuery("pets") as HibernateAssociationQuery
+
+        when:
+        def neg = assocQuery.negation()
+
+        then: "negation returns a non-null Negation junction"
+        neg instanceof Query.Negation
+    }
 }

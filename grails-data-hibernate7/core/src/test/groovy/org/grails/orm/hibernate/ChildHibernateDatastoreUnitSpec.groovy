@@ -19,6 +19,7 @@
 package org.grails.orm.hibernate
 
 import grails.gorm.specs.HibernateGormDatastoreSpec
+import org.grails.datastore.mapping.config.Settings
 import org.grails.datastore.mapping.core.connections.ConnectionSource
 import org.grails.datastore.mapping.core.connections.SingletonConnectionSources
 import org.grails.datastore.gorm.jdbc.connections.DataSourceConnectionSource
@@ -27,6 +28,7 @@ import org.hibernate.Session
 import org.hibernate.SessionFactory
 import org.springframework.jdbc.datasource.DriverManagerDataSource
 import org.grails.orm.hibernate.connections.HibernateConnectionSourceSettings
+import org.grails.datastore.mapping.core.exceptions.ConfigurationException
 import spock.lang.AutoCleanup
 
 class ChildHibernateDatastoreUnitSpec extends HibernateGormDatastoreSpec {
@@ -70,6 +72,18 @@ class ChildHibernateDatastoreUnitSpec extends HibernateGormDatastoreSpec {
 
         then: "It returns the parent"
         resolved == parent
+
+        when: "Asking via the 'dataSource' setting name"
+        def resolvedBySettingName = child.getDatastoreForConnection(Settings.SETTING_DATASOURCE)
+
+        then: "It also returns the parent"
+        resolvedBySettingName == parent
+
+        when: "Asking for an unknown named connection"
+        child.getDatastoreForConnection("nonExistentDs")
+
+        then: "A ConfigurationException is thrown"
+        thrown(ConfigurationException)
 
         cleanup:
         secondaryConnectionSource?.close()

@@ -20,7 +20,6 @@
 plugins {
     id 'groovy'
     id 'java-library'
-    id 'jacoco'
     id 'org.apache.grails.buildsrc.properties'
     id 'org.apache.grails.buildsrc.compile'
     id 'org.apache.grails.buildsrc.publish'
@@ -45,6 +44,7 @@ dependencies {
 
     api 'org.apache.groovy:groovy'
     api project(':grails-datamapping-core')
+    api project(':grails-data-hibernate7-spring-orm')
     api 'org.springframework:spring-orm'
     compileOnly 'org.springframework:spring-webmvc'
     compileOnly 'jakarta.servlet:jakarta.servlet-api'
@@ -140,19 +140,6 @@ apply {
     from rootProject.layout.projectDirectory.file('gradle/hibernate7-test-config.gradle')
     from rootProject.layout.projectDirectory.file('gradle/grails-data-tck-config.gradle')
     from rootProject.layout.projectDirectory.file('gradle/docs-config.gradle')
-}
-
-test {
-    finalizedBy jacocoTestReport
-}
-
-jacocoTestReport {
-    dependsOn test
-    reports {
-        xml.required = true
-        html.required = true
-        csv.required = true
-    }
 }
 
 // spotbugs {

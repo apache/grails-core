@@ -20,6 +20,8 @@
 package org.grails.orm.hibernate.cfg.domainbinding.secondpass
 
 import grails.gorm.specs.HibernateGormDatastoreSpec
+import org.grails.orm.hibernate.cfg.ColumnConfig
+import org.grails.orm.hibernate.cfg.PropertyConfig
 import org.grails.orm.hibernate.cfg.domainbinding.hibernate.GrailsHibernatePersistentEntity
 import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernateToManyProperty
 
@@ -34,6 +36,7 @@ import org.grails.orm.hibernate.cfg.domainbinding.binder.ManyToOneBinder
 import org.grails.orm.hibernate.cfg.domainbinding.binder.ManyToOneValuesBinder
 import org.grails.orm.hibernate.cfg.domainbinding.binder.CompositeIdentifierToManyToOneBinder
 import org.grails.orm.hibernate.cfg.domainbinding.util.SimpleValueColumnFetcher
+import org.grails.orm.hibernate.cfg.domainbinding.util.TableForManyCalculator
 import org.grails.orm.hibernate.cfg.domainbinding.binder.CollectionBinder
 import org.grails.orm.hibernate.cfg.domainbinding.binder.OneToOneBinder
 import org.grails.orm.hibernate.cfg.domainbinding.binder.ClassBinder
@@ -93,18 +96,18 @@ class MapSecondPassBinderSpec extends HibernateGormDatastoreSpec {
         ManyToOneBinder manyToOneBinder = new ManyToOneBinder(metadataBuildingContext, namingStrategy, simpleValueBinder, new ManyToOneValuesBinder(), compositeIdentifierToManyToOneBinder)
         ForeignKeyOneToOneBinder foreignKeyOneToOneBinder = new ForeignKeyOneToOneBinder(manyToOneBinder, simpleValueColumnFetcher)
 
+        TableForManyCalculator tableForManyCalculator = new TableForManyCalculator(namingStrategy, getCollector())
         CollectionBinder collectionBinder = new CollectionBinder(
                 metadataBuildingContext,
-                namingStrategy
-                ,
+                namingStrategy,
                 simpleValueBinder,
                 enumTypeBinderToUse,
                 manyToOneBinder,
                 compositeIdentifierToManyToOneBinder,
-                simpleValueColumnFetcher
-                ,
+                simpleValueColumnFetcher,
                 collectionHolder,
-                getCollector()
+                getCollector(),
+                tableForManyCalculator
         )
         PropertyFromValueCreator propertyFromValueCreator = new PropertyFromValueCreator()
         ComponentUpdater componentUpdater = new ComponentUpdater(propertyFromValueCreator)
@@ -175,7 +178,8 @@ class MapSecondPassBinderSpec extends HibernateGormDatastoreSpec {
             org.apache.grails.data.testing.tck.domains.Person,
             org.apache.grails.data.testing.tck.domains.PetType,
             MapSPBAuthor,
-            MapSPBBook
+            MapSPBBook,
+            MapSPBOwner
         ])
     }
 
@@ -219,7 +223,7 @@ class MapSecondPassBinderSpec extends HibernateGormDatastoreSpec {
         booksProp.setCollection(map)
 
         when:
-        mapBinder.bindMapSecondPass(booksProp, persistentClasses)
+        mapBinder.bindMapSecondPass(booksProp)
 
         then:
         noExceptionThrown()
@@ -273,13 +277,165 @@ class MapSecondPassBinderSpec extends HibernateGormDatastoreSpec {
         booksProp.setCollection(map)
 
         when:
-        mapBinder.bindMapSecondPass(booksProp, persistentClasses)
+        mapBinder.bindMapSecondPass(booksProp)
 
         then:
         noExceptionThrown()
         map.index != null
         map.index.isTypeSpecified()
         map.index.getColumns()[0].name == "books_idx"
+    }
+
+    void "Test bind map with basic collection element sets the element value"() {
+        given:
+        def binder = getGrailsDomainBinder()
+        def collector = getCollector()
+        def metadataBuildingContext = binder.getMetadataBuildingContext()
+        def binders = getBinders(binder)
+        def collectionBinder = binders.collectionBinder
+        def mapBinder = collectionBinder.mapSecondPassBinder
+
+        def ownerEntity = getPersistentEntity(MapSPBOwner) as GrailsHibernatePersistentEntity
+        def attrsProp = ownerEntity.getPropertyByName("attributes") as HibernateToManyProperty
+
+        def rootClass = new RootClass(metadataBuildingContext)
+        rootClass.setEntityName(ownerEntity.name)
+        rootClass.setClassName(ownerEntity.name)
+        rootClass.setJpaEntityName(ownerEntity.name)
+        rootClass.setTable(collector.addTable(null, null, "MAPSPB_OWNER", null, false, metadataBuildingContext))
+        collector.addEntityBinding(rootClass)
+
+        def map = new org.hibernate.mapping.Map(metadataBuildingContext, rootClass)
+        map.setRole("${ownerEntity.name}.attributes".toString())
+        map.setCollectionTable(rootClass.getTable())
+
+        attrsProp.setCollection(map)
+
+        when:
+        mapBinder.bindMapSecondPass(attrsProp)
+
+        then:
+        noExceptionThrown()
+        map.index != null
+        map.index.isTypeSpecified()
+        map.element != null
+        map.element instanceof org.hibernate.mapping.BasicValue
+        !map.inverse
+    }
+
+    void "Test bind map with basic collection element uses correct column names"() {
+        given:
+        def binder = getGrailsDomainBinder()
+        def collector = getCollector()
+        def metadataBuildingContext = binder.getMetadataBuildingContext()
+        def binders = getBinders(binder)
+        def collectionBinder = binders.collectionBinder
+        def mapBinder = collectionBinder.mapSecondPassBinder
+
+        def ownerEntity = getPersistentEntity(MapSPBOwner) as GrailsHibernatePersistentEntity
+        def attrsProp = ownerEntity.getPropertyByName("attributes") as HibernateToManyProperty
+
+        def rootClass = new RootClass(metadataBuildingContext)
+        rootClass.setEntityName(ownerEntity.name)
+        rootClass.setClassName(ownerEntity.name)
+        rootClass.setJpaEntityName(ownerEntity.name)
+        rootClass.setTable(collector.addTable(null, null, "MAPSPB_OWNER2", null, false, metadataBuildingContext))
+        collector.addEntityBinding(rootClass)
+
+        def map = new org.hibernate.mapping.Map(metadataBuildingContext, rootClass)
+        map.setRole("${ownerEntity.name}.attributes2".toString())
+        map.setCollectionTable(rootClass.getTable())
+
+        attrsProp.setCollection(map)
+
+        when:
+        mapBinder.bindMapSecondPass(attrsProp)
+
+        then:
+        noExceptionThrown()
+        def indexColumn = map.index.getColumns()[0]
+        def elementColumn = map.element.getColumns()[0]
+        indexColumn != null
+        elementColumn != null
+    }
+
+    // -------------------------------------------------------------------------
+    // getSingleColumnConfig — null branches (package-protected for direct access)
+    // -------------------------------------------------------------------------
+
+    void "getSingleColumnConfig returns null when propertyConfig is null"() {
+        given:
+        def binder = getGrailsDomainBinder()
+        def binders = getBinders(binder)
+        def mapBinder = binders.collectionBinder.mapSecondPassBinder
+
+        expect:
+        mapBinder.getSingleColumnConfig(null) == null
+    }
+
+    void "getSingleColumnConfig returns null when columns list is empty"() {
+        given:
+        def binder = getGrailsDomainBinder()
+        def binders = getBinders(binder)
+        def mapBinder = binders.collectionBinder.mapSecondPassBinder
+
+        def propertyConfig = new org.grails.orm.hibernate.cfg.PropertyConfig()
+        // columns list is empty by default
+
+        expect:
+        mapBinder.getSingleColumnConfig(propertyConfig) == null
+    }
+
+    void "getSingleColumnConfig returns first ColumnConfig when present"() {
+        given:
+        def binder = getGrailsDomainBinder()
+        def binders = getBinders(binder)
+        def mapBinder = binders.collectionBinder.mapSecondPassBinder
+
+        def propertyConfig = new org.grails.orm.hibernate.cfg.PropertyConfig()
+        def column = new org.grails.orm.hibernate.cfg.ColumnConfig()
+        propertyConfig.columns << column
+
+        expect:
+        mapBinder.getSingleColumnConfig(propertyConfig) == column
+    }
+
+    void "bindMapSecondPass applies column config when mappedForm has indexColumn"() {
+        given:
+        def binder = getGrailsDomainBinder()
+        def collector = getCollector()
+        def metadataBuildingContext = binder.getMetadataBuildingContext()
+        def binders = getBinders(binder)
+        def mapBinder = binders.collectionBinder.mapSecondPassBinder
+
+        def ownerEntity = getPersistentEntity(MapSPBOwner) as GrailsHibernatePersistentEntity
+        def attrsProp = ownerEntity.getPropertyByName("attributes") as HibernateToManyProperty
+
+        def rootClass = new RootClass(metadataBuildingContext)
+        rootClass.setEntityName(ownerEntity.name)
+        rootClass.setClassName(ownerEntity.name)
+        rootClass.setJpaEntityName(ownerEntity.name)
+        rootClass.setTable(collector.addTable(null, null, "MAPSPB_OWNER3", null, false, metadataBuildingContext))
+        collector.addEntityBinding(rootClass)
+
+        def map = new org.hibernate.mapping.Map(metadataBuildingContext, rootClass)
+        map.setRole("${ownerEntity.name}.attributes3".toString())
+        map.setCollectionTable(rootClass.getTable())
+        attrsProp.setCollection(map)
+
+        and: "inject an indexColumn config into the mapped form"
+        def indexPc = new PropertyConfig()
+        def colConfig = new ColumnConfig()
+        colConfig.name = "custom_idx_col"
+        indexPc.columns << colConfig
+        attrsProp.getHibernateMappedForm().indexColumn = indexPc
+
+        when:
+        mapBinder.bindMapSecondPass(attrsProp)
+
+        then:
+        noExceptionThrown()
+        map.index != null
     }
 }
 
@@ -299,4 +455,11 @@ class MapSPBAuthor {
 class MapSPBBook {
     Long id
     String title
+}
+
+@grails.gorm.annotation.Entity
+class MapSPBOwner {
+    Long id
+    Map<String, String> attributes
+    static hasMany = [attributes: String]
 }

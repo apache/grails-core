@@ -1127,6 +1127,20 @@ class HibernateQuerySpec extends HibernateGormDatastoreSpec {
         hibernateQuery.getAliases().size() == 1
         hibernateQuery.getAliases()[0] == alias
     }
+
+    def "singleResult returns first result when multiple rows match"() {
+        given: "two people with the same last name"
+        new Person(firstName: "Alice", lastName: "Smith", age: 30).save(flush: true)
+        new Person(firstName: "Charlie", lastName: "Smith", age: 40).save(flush: true)
+        hibernateQuery.eq("lastName", "Smith")
+
+        when: "singleResult is called with multiple matches"
+        def result = hibernateQuery.singleResult()
+
+        then: "first match is returned without throwing"
+        result != null
+        result instanceof Person
+    }
 }
 
 

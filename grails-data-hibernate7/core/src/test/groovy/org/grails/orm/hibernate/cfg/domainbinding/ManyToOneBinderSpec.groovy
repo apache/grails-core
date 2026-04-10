@@ -149,6 +149,57 @@ class ManyToOneBinderSpec extends HibernateGormDatastoreSpec {
         1 * simpleValueBinder.bindSimpleValue(property, null, _ as ManyToOne, "/test/path")
     }
 
+    def "3-arg constructor creates a valid ManyToOneBinder with default sub-binders"() {
+        given:
+        def jdbcEnvironment = getGrailsDomainBinder().getJdbcEnvironment()
+        def ns = Mock(PersistentEntityNamingStrategy)
+        def threArgBinder = new ManyToOneBinder(metadataBuildingContext, ns, jdbcEnvironment)
+
+        expect:
+        threArgBinder != null
+    }
+
+    def "prepareCircularManyToMany populates columns when property name absent from columns map"() {
+        given:
+        def property = Mock(HibernateManyToManyProperty)
+        def otherSide = Mock(HibernateManyToManyProperty)
+        def collectionTable = new Table("coll_table")
+
+        PersistentClass ownerClass = new RootClass(metadataBuildingContext)
+        def realCollection = new HibernateMap(metadataBuildingContext, ownerClass)
+        realCollection.setCollectionTable(collectionTable)
+
+        property.getCollection() >> realCollection
+        property.getHibernateInverseSide() >> otherSide
+
+        def (mapping, ownerEntity) = mockEntity(false)
+        mapping.setColumns([:])  // empty — property name NOT present → L120 branch
+
+        def propertyConfig = Mock(PropertyConfig)
+        propertyConfig.hasJoinKeyMapping() >> false
+
+        otherSide.getHibernateOwner() >> ownerEntity
+        otherSide.getOwner() >> ownerEntity
+        ownerEntity.getName() >> "OwnerEntity"
+        ownerEntity.getHibernateMappedForm() >> mapping  // default method not auto-executed by Spock Mock
+
+        otherSide.isCircular() >> true
+        otherSide.getName() >> "newProp"
+        otherSide.getMappedForm() >> propertyConfig
+        otherSide.getHibernateMappedForm() >> propertyConfig
+        // columns map does NOT contain "newProp" → should add it at L120
+
+        namingStrategy.resolveColumnName("newProp") >> "new_prop"
+
+        when:
+        def result = binder.bindManyToOne(property, "/test")
+
+        then:
+        result instanceof ManyToOne
+        mapping.getColumns().containsKey("newProp")
+        1 * propertyConfig.setJoinTable({ it.key.name == "new_prop_id" })
+    }
+
     private List mockEntity(boolean composite) {
         def mapping = new Mapping()
         def compositeId = composite ? new HibernateCompositeIdentity() : null

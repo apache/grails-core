@@ -48,6 +48,7 @@ dependencies {
     implementation("org.liquibase:liquibase-core:$liquibaseHibernate7CoreVersion")
     implementation("org.hibernate.models:hibernate-models:1.0.1")
     implementation project(':grails-data-hibernate7')
+    implementation project(':grails-data-hibernate7-spring-orm')
     compileOnly("org.hibernate.orm:hibernate-envers:$hibernate7Version")
     testCompileOnly("org.hibernate.orm:hibernate-envers:$hibernate7Version")
 

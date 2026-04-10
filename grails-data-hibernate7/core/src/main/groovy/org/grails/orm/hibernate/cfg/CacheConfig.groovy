@@ -144,8 +144,8 @@ class CacheConfig implements Cloneable {
         }
     }
 
-    static final List<String> USAGE_OPTIONS = Usage.values().collect { it.toString() }
-    static final List<String> INCLUDE_OPTIONS = Include.values().collect { it.toString() }
+    static final List<String> USAGE_OPTIONS = Usage.values()*.toString()
+    static final List<String> INCLUDE_OPTIONS = Include.values()*.toString()
 
     /**
      * The cache usage

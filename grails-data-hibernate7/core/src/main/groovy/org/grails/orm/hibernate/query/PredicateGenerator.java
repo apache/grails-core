@@ -225,13 +225,17 @@ public class PredicateGenerator {
         } else if (pc instanceof Query.IdEquals c) {
             return cb.equal(root.get("id"), normalizeValue(c.getValue()));
         } else if (pc instanceof Query.GreaterThan c) {
-            return cb.gt((Expression<? extends Number>) fullyQualifiedPath, getNumericValue(c));
+            Expression<? extends Number> rhs = resolveNumericExpression(cb, root, c);
+            return rhs != null ? cb.gt((Expression<? extends Number>) fullyQualifiedPath, rhs) : cb.gt((Expression<? extends Number>) fullyQualifiedPath, getNumericValue(c));
         } else if (pc instanceof Query.GreaterThanEquals c) {
-            return cb.ge((Expression<? extends Number>) fullyQualifiedPath, getNumericValue(c));
+            Expression<? extends Number> rhs = resolveNumericExpression(cb, root, c);
+            return rhs != null ? cb.ge((Expression<? extends Number>) fullyQualifiedPath, rhs) : cb.ge((Expression<? extends Number>) fullyQualifiedPath, getNumericValue(c));
         } else if (pc instanceof Query.LessThan c) {
-            return cb.lt((Expression<? extends Number>) fullyQualifiedPath, getNumericValue(c));
+            Expression<? extends Number> rhs = resolveNumericExpression(cb, root, c);
+            return rhs != null ? cb.lt((Expression<? extends Number>) fullyQualifiedPath, rhs) : cb.lt((Expression<? extends Number>) fullyQualifiedPath, getNumericValue(c));
         } else if (pc instanceof Query.LessThanEquals c) {
-            return cb.le((Expression<? extends Number>) fullyQualifiedPath, getNumericValue(c));
+            Expression<? extends Number> rhs = resolveNumericExpression(cb, root, c);
+            return rhs != null ? cb.le((Expression<? extends Number>) fullyQualifiedPath, rhs) : cb.le((Expression<? extends Number>) fullyQualifiedPath, getNumericValue(c));
         } else if (pc instanceof Query.SizeEquals c) {
             return cb.equal(cb.size((Expression) fullyQualifiedPath), normalizeValue(c.getValue()));
         } else if (pc instanceof Query.SizeNotEquals c) {
@@ -572,5 +576,21 @@ public class PredicateGenerator {
         throw new ConfigurationException(String.format(
                 "Operation '%s' on property '%s' only accepts a numeric value, but received a %s",
                 criterion.getClass().getSimpleName(), criterion.getProperty(), "null"));
+    }
+
+    @SuppressWarnings("unchecked")
+    private Expression<? extends Number> resolveNumericExpression(HibernateCriteriaBuilder cb, From<?, ?> root, Query.PropertyCriterion criterion) {
+        Object value = criterion.getValue();
+        if (!(value instanceof PropertyArithmetic)) {
+            return null;
+        }
+        PropertyArithmetic pa = (PropertyArithmetic) value;
+        Expression<Number> propertyPath = root.get(pa.propertyName());
+        return switch (pa.operator()) {
+            case MULTIPLY -> cb.prod(propertyPath, pa.operand());
+            case ADD -> cb.sum(propertyPath, pa.operand());
+            case SUBTRACT -> cb.diff(propertyPath, pa.operand());
+            case DIVIDE -> cb.quot(propertyPath, pa.operand());
+        };
     }
 }

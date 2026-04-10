@@ -52,4 +52,19 @@ class UniqueKeyForColumnsCreatorSpec extends Specification {
             uk.columns.size() == 2
         })
     }
+
+    def "default constructor creates a functional UniqueKeyForColumnsCreator"() {
+        given:
+        def creator = new UniqueKeyForColumnsCreator()
+        def table = new Table("test", "my_table")
+        def columns = [new Column("a"), new Column("b")]
+
+        when:
+        creator.createUniqueKeyForColumns(table, columns)
+
+        then:
+        def keys = table.getUniqueKeys().values().toList()
+        keys.size() == 1
+        keys[0].columns*.name.toSet() == ["a", "b"].toSet()
+    }
 }

@@ -107,6 +107,41 @@ class NamingStrategyProviderSpec extends HibernateGormDatastoreSpec {
         then:
         strategy instanceof MockPhysicalNamingStrategy
     }
+
+    void "getPhysicalNamingStrategy with null name returns default strategy (L40)"() {
+        given:
+        def provider = new NamingStrategyProvider()
+
+        when:
+        def strategy = provider.getPhysicalNamingStrategy(null)
+
+        then:
+        strategy instanceof PhysicalNamingStrategySnakeCaseImpl
+    }
+
+    void "getPhysicalNamingStrategy with blank name returns default strategy (L40)"() {
+        given:
+        def provider = new NamingStrategyProvider()
+
+        when:
+        def strategy = provider.getPhysicalNamingStrategy("   ")
+
+        then:
+        strategy instanceof PhysicalNamingStrategySnakeCaseImpl
+    }
+
+    void "configureNamingStrategy with non-PhysicalNamingStrategy class falls back to snake_case (L69)"() {
+        given:
+        def provider = new NamingStrategyProvider()
+
+        when:
+        // HashMap is not a PhysicalNamingStrategy — triggers L69 fallback
+        provider.configureNamingStrategy("fallback", HashMap.class)
+        def strategy = provider.getPhysicalNamingStrategy("sessionFactory_fallback")
+
+        then:
+        strategy instanceof PhysicalNamingStrategySnakeCaseImpl
+    }
 }
 
 class MockPhysicalNamingStrategy implements PhysicalNamingStrategy {

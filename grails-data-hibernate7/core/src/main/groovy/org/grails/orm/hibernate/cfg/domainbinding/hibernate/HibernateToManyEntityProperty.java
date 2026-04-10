@@ -16,28 +16,24 @@
  *  specific language governing permissions and limitations
  *  under the License.
  */
-package org.grails.orm.hibernate;
+package org.grails.orm.hibernate.cfg.domainbinding.hibernate;
 
-import org.hibernate.SessionFactory;
+import org.hibernate.MappingException;
+import org.hibernate.mapping.PersistentClass;
 
 /**
- * Holds a reference to the SessionFactory, used to allow proxying of the session factory in
- * development mode.
- *
- * @since 2.0
- * @author Graeme Rocher
+ * Marker interface for Hibernate Collections
  */
-public class SessionFactoryHolder {
+public interface HibernateToManyEntityProperty extends HibernateToManyProperty {
 
-    public static final String BEAN_ID = "org.grails.internal.SESSION_FACTORY_HOLDER";
+    @Override
+    HibernatePersistentEntity getHibernateAssociatedEntity();
 
-    private SessionFactory sessionFactory;
-
-    public SessionFactory getSessionFactory() {
-        return sessionFactory;
-    }
-
-    public void setSessionFactory(SessionFactory sessionFactory) {
-        this.sessionFactory = sessionFactory;
+    default PersistentClass getAssociatedClass() {
+        PersistentClass associatedClass = getHibernateAssociatedEntity().getPersistentClass();
+        if (associatedClass == null) {
+            throw new MappingException("Association [" + getName() + "] has no associated class");
+        }
+        return associatedClass;
     }
 }

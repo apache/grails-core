@@ -32,10 +32,10 @@ import org.hibernate.mapping.ManyToOne
 import org.hibernate.mapping.Table
 import spock.lang.Subject
 
-class ManyToManyElementBinderSpec extends HibernateGormDatastoreSpec {
+class ManyToOneElementBinderSpec extends HibernateGormDatastoreSpec {
 
     @Subject
-    ManyToManyElementBinder binder
+    ManyToOneElementBinder binder
 
     void setupSpec() {
         manager.addAllDomainClasses([
@@ -54,7 +54,7 @@ class ManyToManyElementBinderSpec extends HibernateGormDatastoreSpec {
         def svb = new SimpleValueBinder(mbc, ns, je)
         def citmto = new CompositeIdentifierToManyToOneBinder(mbc, ns, je)
         def mtob = new ManyToOneBinder(mbc, ns, svb, new ManyToOneValuesBinder(), citmto)
-        binder = new ManyToManyElementBinder(mtob, new CollectionForPropertyConfigBinder())
+        binder = new ManyToOneElementBinder(mtob, new CollectionForPropertyConfigBinder())
     }
 
     private HibernateManyToManyProperty propertyFor(Class ownerClass, String name = "items") {

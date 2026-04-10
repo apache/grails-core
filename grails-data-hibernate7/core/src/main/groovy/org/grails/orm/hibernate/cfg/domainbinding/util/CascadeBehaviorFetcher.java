@@ -28,6 +28,7 @@ import org.slf4j.LoggerFactory;
 import org.grails.datastore.mapping.model.types.Association;
 import org.grails.datastore.mapping.model.types.Basic;
 import org.grails.datastore.mapping.model.types.Embedded;
+import org.grails.datastore.mapping.model.types.EmbeddedCollection;
 import org.grails.orm.hibernate.cfg.PropertyConfig;
 import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernateManyToManyProperty;
 import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernateManyToOneProperty;
@@ -91,6 +92,10 @@ public class CascadeBehaviorFetcher {
         }
 
         if (association instanceof Embedded) {
+            return ALL;
+        }
+
+        if (association instanceof EmbeddedCollection) {
             return ALL;
         }
 

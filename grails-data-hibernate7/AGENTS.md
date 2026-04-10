@@ -218,6 +218,14 @@ The `bindProperty` method in `GrailsPropertyBinder.java` has been successfully r
 
 - `GrailsIncrementGenerator`: Reflection hacks for Hibernate 7 (scheduled for removal in Hibernate 8).
 
+## Testing Guidelines
+
+*   **HibernateGormDatastoreSpec**: Use `HibernateGormDatastoreSpec` for all Hibernate 7 integration and domain binding specifications. Unit tests in Hibernate 7 cannot effectively mock Hibernate internal classes; this spec provides the necessary environment.
+*   **Entity Creation**: While `GrailsHibernatePersistentEntity` can be created manually using `createHibernatePersistentEntity`, it is more convenient to use `manager.addAllDomainClasses([...])` within `setupSpec()` to register entities for the test.
+*   **Top-Level Entities**: Entity classes used in tests must be defined as top-level classes within the same Groovy file as the specification.
+*   **Unique Class Names**: Ensure all domain classes defined within a spec have globally unique names within the package to avoid collisions with other test classes during parallel execution.
+*   **Real Entities**: Prefer using real entities defined as top-level classes in the spec file over heavy mocking when testing binder logic.
+
 ## Resolved Issues
 
 - `CollectionSecondPassBinder`: Unidirectional many-to-many support implemented.

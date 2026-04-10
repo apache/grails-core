@@ -48,7 +48,7 @@ class LoggingPoolFactory implements PoolFactory {
     private static final long KEEP_ALIVE_TIME = 10L
     public static final Logger LOG = LoggerFactory.getLogger(LoggingPoolFactory)
 
-    public static Method createThreadNameMethod
+    public static final Method createThreadNameMethod
 
     static {
         createThreadNameMethod = DefaultPool.getDeclaredMethod('createThreadName')

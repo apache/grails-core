@@ -20,9 +20,15 @@ package org.grails.orm.hibernate
 
 import grails.gorm.annotation.Entity
 import grails.gorm.specs.HibernateGormDatastoreSpec
+import org.grails.datastore.mapping.core.exceptions.ConfigurationException
+import org.grails.datastore.mapping.multitenancy.exceptions.TenantNotFoundException
 import org.grails.orm.hibernate.cfg.Settings
+import org.grails.orm.hibernate.GrailsHibernateTemplate
 import org.hibernate.FlushMode
+import org.springframework.context.ApplicationContext
 import org.springframework.context.support.GenericApplicationContext
+
+import java.io.IOException
 
 class HibernateDatastoreSpec extends HibernateGormDatastoreSpec {
 
@@ -86,6 +92,161 @@ class HibernateDatastoreSpec extends HibernateGormDatastoreSpec {
         
         cleanup:
         testDatastore.close()
+    }
+
+    void "test resolveTenantIds returns empty list in non-multi-tenant mode"() {
+        expect:
+        datastore.resolveTenantIds() == []
+    }
+
+    void "test resolveTenantIdentifier throws TenantNotFoundException when no tenant is set"() {
+        when:
+        datastore.resolveTenantIdentifier()
+
+        then:
+        thrown(TenantNotFoundException)
+    }
+
+    void "test getDataSource(connectionName) returns the default DataSource for default connection"() {
+        expect:
+        datastore.getDataSource('default') != null
+        datastore.getDataSource('default').is(datastore.dataSource)
+    }
+
+    void "test getHibernateTemplate returns a template for the given flush mode"() {
+        when:
+        def template = datastore.getHibernateTemplate(GrailsHibernateTemplate.FLUSH_AUTO)
+
+        then:
+        template != null
+        template instanceof GrailsHibernateTemplate
+    }
+
+    void "test openSession opens a session with the default flush mode"() {
+        when:
+        def session = datastore.openSession()
+
+        then:
+        session != null
+        session.hibernateFlushMode == datastore.defaultFlushMode
+
+        cleanup:
+        session.close()
+    }
+
+    void "test hasCurrentSession returns true when a session is bound to the transaction"() {
+        expect:
+        // The per-feature transaction from the TCK manager binds a session
+        datastore.hasCurrentSession()
+    }
+
+    void "test withFlushMode does not restore mode when callable throws"() {
+        given:
+        def session = datastore.sessionFactory.currentSession
+        def originalMode = session.hibernateFlushMode
+
+        when:
+        datastore.withFlushMode(FlushMode.ALWAYS) {
+            throw new RuntimeException("fail")
+        }
+
+        then:
+        // callable threw, so reset=false — mode is NOT restored
+        session.hibernateFlushMode == FlushMode.ALWAYS
+
+        cleanup:
+        session.setHibernateFlushMode(originalMode)
+    }
+
+    void "test setApplicationContext with non-ConfigurableApplicationContext is a no-op"() {
+        given:
+        def ctx = Mock(ApplicationContext)
+
+        when:
+        datastore.setApplicationContext(ctx)
+
+        then:
+        noExceptionThrown()
+    }
+
+    void "test getDatastoreForTenantId returns self in non-DATABASE multi-tenancy mode"() {
+        expect:
+        datastore.getDatastoreForTenantId('someTenant').is(datastore)
+    }
+
+    void "test addTenantForSchema throws ConfigurationException in non-SCHEMA mode"() {
+        when:
+        datastore.addTenantForSchema('some_schema')
+
+        then:
+        thrown(ConfigurationException)
+    }
+
+    void "test destroy is idempotent — second call is a no-op"() {
+        given:
+        def config = Collections.singletonMap(Settings.SETTING_DB_CREATE, "create-drop")
+        def ds = new HibernateDatastore(config, GHUBook)
+        ds.destroy()
+
+        when:
+        ds.destroy()
+
+        then:
+        noExceptionThrown()
+    }
+
+    void "test destroy logs error when closeConnectionSources throws IOException"() {
+        given:
+        def config = Collections.singletonMap(Settings.SETTING_DB_CREATE, "create-drop")
+        def ds = new HibernateDatastore(config, GHUBook) {
+            @Override
+            protected void closeConnectionSources() throws IOException {
+                throw new IOException("connection close failure")
+            }
+        }
+
+        when:
+        ds.destroy()
+
+        then:
+        noExceptionThrown()
+    }
+
+    void "test destroy logs error when closeGormEnhancer throws IOException"() {
+        given:
+        def config = Collections.singletonMap(Settings.SETTING_DB_CREATE, "create-drop")
+        def ds = new HibernateDatastore(config, GHUBook) {
+            @Override
+            protected void closeGormEnhancer() throws IOException {
+                throw new IOException("enhancer close failure")
+            }
+        }
+
+        when:
+        ds.destroy()
+
+        then:
+        noExceptionThrown()
+    }
+
+    void "test isAutoFlush reflects defaultFlushMode"() {
+        expect:
+        !datastore.autoFlush
+        datastore.defaultFlushMode == FlushMode.COMMIT
+        datastore.defaultFlushModeName == 'COMMIT'
+    }
+
+    void "test isFailOnError, isOsivReadOnly, isPassReadOnlyToHibernate, isCacheQueries"() {
+        expect:
+        !datastore.failOnError
+        !datastore.osivReadOnly
+        !datastore.passReadOnlyToHibernate
+        datastore.cacheQueries
+    }
+
+    void "test getMetadata returns non-null Metadata"() {
+        expect:
+        datastore.getMetadata() != null
     }
 }
 

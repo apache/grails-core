@@ -26,6 +26,8 @@ import java.util.SortedSet;
 
 import org.hibernate.boot.spi.MetadataBuildingContext;
 
+import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernateToManyProperty;
+
 /** Collection holder. */
 public record CollectionHolder(Map<Class<?>, CollectionType> map) {
 
@@ -42,5 +44,9 @@ public record CollectionHolder(Map<Class<?>, CollectionType> map) {
     /** Get. */
     public CollectionType get(Class<?> collectionClass) {
         return map.get(collectionClass);
+    }
+
+    public org.hibernate.mapping.Collection create(HibernateToManyProperty property) {
+        return map.get(property.getType()).create(property, property.getPersistentClass());
     }
 }

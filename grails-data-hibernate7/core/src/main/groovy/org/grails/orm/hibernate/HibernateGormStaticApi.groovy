@@ -50,6 +50,7 @@ import org.springframework.core.convert.ConversionService
 import org.springframework.transaction.PlatformTransactionManager
 
 import grails.orm.HibernateCriteriaBuilder
+import grails.gorm.DetachedCriteria
 import org.grails.datastore.gorm.GormStaticApi
 import org.grails.datastore.gorm.finders.FinderMethod
 import org.grails.datastore.mapping.core.connections.ConnectionSource
@@ -121,6 +122,21 @@ class HibernateGormStaticApi<D> extends GormStaticApi<D> {
 
     GormStaticApi<D> getApi(String qualifier) {
         (GormStaticApi<D>) HibernateGormEnhancer.findStaticApi(persistentClass, qualifier)
+    }
+
+    @Override
+    DetachedCriteria<D> where(Closure callable) {
+        new HibernateDetachedCriteria<D>(persistentClass).build(callable)
+    }
+
+    @Override
+    DetachedCriteria<D> whereLazy(Closure callable) {
+        new HibernateDetachedCriteria<D>(persistentClass).buildLazy(callable)
+    }
+
+    @Override
+    DetachedCriteria<D> whereAny(Closure callable) {
+        (DetachedCriteria<D>) new HibernateDetachedCriteria<D>(persistentClass).or(callable)
     }
 
     @Override

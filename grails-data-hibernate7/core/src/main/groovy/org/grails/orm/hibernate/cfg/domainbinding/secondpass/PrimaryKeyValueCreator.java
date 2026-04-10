@@ -20,6 +20,7 @@ package org.grails.orm.hibernate.cfg.domainbinding.secondpass;
 
 import org.hibernate.boot.spi.MetadataBuildingContext;
 import org.hibernate.mapping.Collection;
+import org.hibernate.mapping.Component;
 import org.hibernate.mapping.DependantValue;
 import org.hibernate.mapping.KeyValue;
 
@@ -48,7 +49,7 @@ public class PrimaryKeyValueCreator {
         key.setUpdateable(true);
 
         // JPA now requires to check for sorting
-        key.setSorted(collection.isSorted());
+        key.setSorted(collection.isSorted() || (keyValue instanceof Component));
         return key;
     }
 }

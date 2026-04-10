@@ -77,12 +77,8 @@ public class EnumTypeBinder {
     }
 
     public BasicValue bindEnumType(@Nonnull HibernateEnumProperty property, String path) {
-        return bindEnumType(property, property.getTable(), path);
-    }
-
-    public BasicValue bindEnumType(@Nonnull HibernateEnumProperty property, Table table, String path) {
         String columnName = columnNameForPropertyAndPathFetcher.getColumnNameForPropertyAndPath(property, path, null);
-        BasicValue simpleValue = new BasicValue(metadataBuildingContext, table);
+        BasicValue simpleValue = new BasicValue(metadataBuildingContext, property.getTable());
         bindEnumType(property, property.getType(), simpleValue, columnName);
         return simpleValue;
     }

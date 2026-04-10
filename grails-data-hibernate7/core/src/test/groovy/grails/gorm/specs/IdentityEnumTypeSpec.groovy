@@ -174,6 +174,56 @@ class IdentityEnumTypeSpec extends HibernateGormDatastoreSpec {
         expect:
         new IdentityEnumType().getSqlType() == 0
     }
+
+    def "getDefaultSqlLength returns without throwing"() {
+        expect:
+        new IdentityEnumType().getDefaultSqlLength() >= -1
+    }
+
+    def "getDefaultSqlPrecision returns without throwing"() {
+        expect:
+        new IdentityEnumType().getDefaultSqlPrecision() >= -1
+    }
+
+    def "getDefaultSqlScale returns without throwing"() {
+        expect:
+        new IdentityEnumType().getDefaultSqlScale() >= -1
+    }
+
+    def "getValueConverter returns null (default UserType behavior)"() {
+        expect:
+        new IdentityEnumType().getValueConverter() == null
+    }
+
+    def "BidiEnumMap.getEnumValue looks up enum by id"() {
+        given:
+        def bidiMap = IdentityEnumType.getBidiEnumMap(IdentityStatusEnum)
+
+        when:
+        def result = bidiMap.getEnumValue("A")
+
+        then:
+        result == IdentityStatusEnum.ACTIVE
+    }
+
+    def "BidiEnumMap.getKey looks up id by enum value"() {
+        given:
+        def bidiMap = IdentityEnumType.getBidiEnumMap(IdentityStatusEnum)
+
+        when:
+        def result = bidiMap.getKey(IdentityStatusEnum.INACTIVE)
+
+        then:
+        result == "I"
+    }
+
+    def "BidiEnumMap.getEnumValue returns null for unknown id"() {
+        given:
+        def bidiMap = IdentityEnumType.getBidiEnumMap(IdentityStatusEnum)
+
+        expect:
+        bidiMap.getEnumValue("UNKNOWN") == null
+    }
 }
 
 @Entity

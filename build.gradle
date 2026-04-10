@@ -17,6 +17,7 @@
 
 plugins {
     id 'org.apache.grails.gradle.test-aggregation'
+    id 'org.apache.grails.gradle.grails-code-style'
 }
 
 import java.time.Instant
@@ -85,11 +86,6 @@ subprojects {
             def cacheHours = isCiBuild || isReproducibleBuild ? 0 : 24
             cacheDynamicVersionsFor(cacheHours, 'hours')
             cacheChangingModulesFor(cacheHours, 'hours')
-        }
-    }
-    pluginManager.withPlugin('jacoco') {
-        jacoco {
-            toolVersion = "0.8.14" // Set the specific tool version here
         }
     }
 }

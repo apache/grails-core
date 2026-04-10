@@ -46,6 +46,7 @@ dependencies {
     implementation "org.hibernate.tool:hibernate-tools-utils:$hibernate7Version"
     api project(":grails-datastore-web")
     api project(":grails-datamapping-support")
+    api project(":grails-data-hibernate7-spring-orm")
     api project(":grails-data-hibernate7-core"), {
         exclude group:'org.springframework', module:'spring-context'
         exclude group:'org.springframework', module:'spring-core'

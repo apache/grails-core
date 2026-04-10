@@ -99,10 +99,6 @@ class HibernateCompositeIdentity extends Property implements HibernatePropertyId
             throw new MappingException("Property referenced in composite-id mapping of class [${domainClass.name}] is not a valid property!")
         }
 
-        if (composite.length == 0) {
-            throw new MappingException("No composite identifier properties found for class [${domainClass.name}]")
-        }
-
         composite
     }
 }

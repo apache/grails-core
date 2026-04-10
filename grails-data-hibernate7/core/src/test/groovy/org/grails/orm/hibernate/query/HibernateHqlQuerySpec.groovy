@@ -286,6 +286,64 @@ class HibernateHqlQuerySpec extends HibernateGormDatastoreSpec {
         noExceptionThrown()
         query.list().size() == 1
     }
+
+    void "singleResult returns first result when multiple rows match"() {
+        given: "a second author with multiple books matching the same HQL query"
+        def author2 = new HibernateHqlQuerySpecAuthor(name: "Tolkien2").save(flush: true)
+        new HibernateHqlQuerySpecBook(title: "Extra Book", pages: 200, author: author2).save(flush: true)
+
+        when: "singleResult is called on an HQL query that returns multiple rows"
+        def result = buildHqlQuery("from HibernateHqlQuerySpecBook").singleResult()
+
+        then: "first result is returned without throwing"
+        result != null
+        result instanceof HibernateHqlQuerySpecBook
+    }
+
+    void "aggregate avg() query returns a Double result"() {
+        when: "executing an avg aggregate HQL query"
+        def result = buildHqlQuery("select avg(b.pages) from HibernateHqlQuerySpecBook b").list()
+
+        then: "result is returned as a Double without type mismatch exception"
+        result.size() == 1
+        result[0] instanceof Double
+    }
+
+    void "aggregate max() on Integer column returns a Number result"() {
+        when: "executing a max aggregate HQL query on an Integer property"
+        def result = buildHqlQuery("select max(b.pages) from HibernateHqlQuerySpecBook b").list()
+
+        then: "result is returned as a Number without type mismatch exception"
+        result.size() == 1
+        result[0] instanceof Number
+    }
+
+    void "aggregate min() on Integer column returns a Number result"() {
+        when: "executing a min aggregate HQL query on an Integer property"
+        def result = buildHqlQuery("select min(b.pages) from HibernateHqlQuerySpecBook b").list()
+
+        then: "result is returned as a Number without type mismatch exception"
+        result.size() == 1
+        result[0] instanceof Number
+    }
+
+    void "aggregate sum() on Integer column returns a Number result"() {
+        when: "executing a sum aggregate HQL query on an Integer property"
+        def result = buildHqlQuery("select sum(b.pages) from HibernateHqlQuerySpecBook b").list()
+
+        then: "result is returned as a Number without type mismatch exception"
+        result.size() == 1
+        result[0] instanceof Number
+    }
+
+    void "count() aggregate returns a Long result"() {
+        when: "executing a count aggregate HQL query"
+        def result = buildHqlQuery("select count(b) from HibernateHqlQuerySpecBook b").list()
+
+        then: "result is returned as a Long without type mismatch exception"
+        result.size() == 1
+        result[0] instanceof Long
+    }
 }
 
 @Entity

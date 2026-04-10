@@ -140,8 +140,9 @@ class EnumTypeBinderSpec extends HibernateGormDatastoreSpec {
         def table = new Table("explicit_table")
         def property = setupProperty(Person01, "status", new Table("internal"))
 
+
         when: "the enum is bound with an explicit table"
-        def simpleValue = binder.bindEnumType(property as HibernateEnumProperty, table, "myPath")
+        def simpleValue = binder.bindEnumType(property as HibernateEnumProperty,  "myPath")
 
         then: "the provided table is used instead of the property's internal table"
         simpleValue.getTable() == table

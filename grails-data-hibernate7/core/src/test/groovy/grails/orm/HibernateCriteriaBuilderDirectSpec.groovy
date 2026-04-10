@@ -42,7 +42,7 @@ class HibernateCriteriaBuilderDirectSpec extends HibernateGormDatastoreSpec {
     @Shared HibernateCriteriaBuilder builder
 
     def setupSpec() {
-        manager.addAllDomainClasses([DirectAccount, DirectTransaction, DirectBiBook, DirectBiAuthor])
+        manager.addAllDomainClasses([DirectAccount, DirectTransaction, DirectBiBook, DirectBiAuthor, DirectItem])
     }
 
     def setup() {
@@ -672,6 +672,21 @@ class HibernateCriteriaBuilderDirectSpec extends HibernateGormDatastoreSpec {
             nativeSession.close()
         }
     }
+
+    void "where DSL supports cross-property arithmetic comparison (Integer gt BigDecimal * constant)"() {
+        given: "items where pageCount is an Integer and price is a BigDecimal"
+        new DirectItem(name: 'Long Cheap', pageCount: 1000, price: 5.00).save(flush: true)
+        new DirectItem(name: 'Short Expensive', pageCount: 100, price: 50.00).save(flush: true)
+
+        when: "filtering where pageCount > price * 10"
+        def results = DirectItem.where {
+            pageCount > price * 10
+        }.list()
+
+        then: "only the long cheap item qualifies"
+        results.size() == 1
+        results[0].name == 'Long Cheap'
+    }
 }
 
 @Entity
@@ -703,4 +718,17 @@ class DirectBiBook {
 class DirectBiAuthor {
     String name
     static hasMany = [books: DirectBiBook]
+}
+
+@Entity
+class DirectItem {
+    String name
+    Integer pageCount
+    BigDecimal price
+
+    static constraints = {
+        name nullable: false
+        pageCount nullable: false
+        price nullable: false
+    }
 }

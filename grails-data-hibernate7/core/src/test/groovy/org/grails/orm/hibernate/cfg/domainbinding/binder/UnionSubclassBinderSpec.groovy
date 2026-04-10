@@ -47,8 +47,8 @@ class UnionSubclassBinderSpec extends HibernateGormDatastoreSpec {
         def mappings = buildingContext.getMetadataCollector()
         
         // Register entities in mapping context
-        def rootEntity = createPersistentEntity(UnionSubClassRoot)
-        def subEntity = createPersistentEntity(UnionSubClassSub)
+        def rootEntity = createPersistentEntity(UnionSubClassRoot) as org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernatePersistentEntity
+        def subEntity = createPersistentEntity(UnionSubClassSub) as org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernatePersistentEntity
         
         // Setup Hibernate RootClass
         def rootClass = new RootClass(buildingContext)

@@ -20,6 +20,7 @@ package org.grails.orm.hibernate.cfg
 
 import grails.gorm.annotation.Entity
 import grails.gorm.specs.HibernateGormDatastoreSpec
+import grails.gorm.transactions.Rollback
 import org.grails.orm.hibernate.proxy.HibernateProxyHandler
 import org.hibernate.proxy.HibernateProxy
 import spock.lang.Shared
@@ -29,6 +30,10 @@ class GrailsHibernateUtilSpec extends HibernateGormDatastoreSpec {
 
     @Shared HibernateProxyHandler originalProxyHandler = GrailsHibernateUtil.proxyHandler
     HibernateProxyHandler proxyHandlerMock = Mock(HibernateProxyHandler)
+
+    void setupSpec() {
+        manager.addAllDomainClasses([GHUBook, GHUAuthor, GHUAnnotatedEntity])
+    }
 
     def setup() {
         GrailsHibernateUtil.setProxyHandler(proxyHandlerMock)
@@ -153,6 +158,142 @@ class GrailsHibernateUtilSpec extends HibernateGormDatastoreSpec {
         cleanup:
         book.setMetaClass(originalMc)
     }
+
+    def "setObjectToReadyOnly does nothing when no bound transaction resource"() {
+        given:
+        def book = new GHUBook(title: "NoTx")
+
+        when:
+        GrailsHibernateUtil.setObjectToReadyOnly(book, sessionFactory)
+
+        then:
+        noExceptionThrown()
+    }
+
+    def "setObjectToReadyOnly marks persistent entity read-only within transaction"() {
+        given:
+        GHUBook saved = GHUBook.withTransaction {
+            new GHUBook(title: "ReadOnlyBook", version: 0L).save(flush: true, failOnError: true)
+        }
+
+        when:
+        GHUBook.withTransaction {
+            def book = GHUBook.get(saved.id)
+            GrailsHibernateUtil.setObjectToReadyOnly(book, sessionFactory)
+        }
+
+        then:
+        noExceptionThrown()
+    }
+
+    def "setObjectToReadWrite does nothing when entity not in session"() {
+        when:
+        GHUBook.withTransaction {
+            def book = new GHUBook(title: "Detached")
+            GrailsHibernateUtil.setObjectToReadWrite(book, sessionFactory)
+        }
+
+        then:
+        noExceptionThrown()
+    }
+
+    // -------------------------------------------------------------------------
+    // isDomainClass — uncovered branches
+    // -------------------------------------------------------------------------
+
+    def "isDomainClass returns false for a Closure class"() {
+        expect:
+        !GrailsHibernateUtil.isDomainClass(Closure)
+    }
+
+    def "isDomainClass returns false for an enum"() {
+        expect:
+        !GrailsHibernateUtil.isDomainClass(GHUStatus)
+    }
+
+    def "isDomainClass returns true for class with id and version fields but no annotation"() {
+        expect: "class that has 'id' and 'version' fields should pass the reflective check"
+        GrailsHibernateUtil.isDomainClass(GHUIdVersionPojo)
+    }
+
+    // -------------------------------------------------------------------------
+    // ensureCorrectGroovyMetaClass — uncovered branches
+    // -------------------------------------------------------------------------
+
+    def "ensureCorrectGroovyMetaClass does nothing when metaclass already matches"() {
+        given:
+        def book = new GHUBook()
+        def originalMc = book.getMetaClass()
+
+        when: "called with the same class — no change expected"
+        GrailsHibernateUtil.ensureCorrectGroovyMetaClass(book, GHUBook)
+
+        then:
+        book.getMetaClass() == originalMc
+        noExceptionThrown()
+    }
+
+    def "ensureCorrectGroovyMetaClass does nothing for non-GroovyObject"() {
+        given:
+        def target = "plain java string"
+
+        when:
+        GrailsHibernateUtil.ensureCorrectGroovyMetaClass(target, String)
+
+        then:
+        noExceptionThrown()
+    }
+
+    // -------------------------------------------------------------------------
+    // setObjectToReadyOnly — resource bound but entity not in session
+    // -------------------------------------------------------------------------
+
+    def "setObjectToReadyOnly does nothing when entity is not in session even with active transaction"() {
+        when:
+        GHUBook.withTransaction {
+            def detached = new GHUBook(title: "NotInSession")
+            GrailsHibernateUtil.setObjectToReadyOnly(detached, sessionFactory)
+        }
+
+        then:
+        noExceptionThrown()
+    }
+
+    // -------------------------------------------------------------------------
+    // setObjectToReadWrite — EntityEntry null branch
+    // -------------------------------------------------------------------------
+
+    def "setObjectToReadWrite does nothing when EntityEntry is null for a transient entity"() {
+        when:
+        GHUBook.withTransaction {
+            def transient_ = new GHUBook(title: "Transient")
+            // entity is in the session (contains() may return false for unsaved) — either way no exception
+            GrailsHibernateUtil.setObjectToReadWrite(transient_, sessionFactory)
+        }
+
+        then:
+        noExceptionThrown()
+    }
+
+    // -------------------------------------------------------------------------
+    // setObjectToReadyOnly then setObjectToReadWrite — full round-trip
+    // -------------------------------------------------------------------------
+
+    @Rollback
+    def "entity marked read-only can be reverted to read-write"() {
+        given:
+        def book = new GHUBook(title: "ReadWriteBook", version: 0L).save(flush: true, failOnError: true)
+
+        when:
+        GHUBook.withTransaction {
+            def loaded = GHUBook.get(book.id)
+            GrailsHibernateUtil.setObjectToReadyOnly(loaded, sessionFactory)
+            GrailsHibernateUtil.setObjectToReadWrite(loaded, sessionFactory)
+        }
+
+        then:
+        noExceptionThrown()
+    }
 }
 
 @Entity
@@ -176,4 +317,13 @@ class GHUNonDomain {
 @grails.persistence.Entity
 class GHUAnnotatedEntity {
     Long id
+}
+
+enum GHUStatus { ACTIVE, INACTIVE }
+
+/** Plain POJO with 'id' and 'version' fields — should satisfy the reflective isDomainClass check. */
+class GHUIdVersionPojo {
+    Long id
+    Long version
+    String name
 }

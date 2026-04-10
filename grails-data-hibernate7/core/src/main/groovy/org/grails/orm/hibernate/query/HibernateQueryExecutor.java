@@ -53,10 +53,9 @@ public record HibernateQueryExecutor(
     public Object singleResult(Session session, JpaCriteriaQuery jpaCq) {
         var query = configureQuery(session, jpaCq);
         try {
-
             Object singleResult = query.getSingleResult();
             return proxyHandler.unwrap(singleResult);
-        } catch (NonUniqueResultException e) {
+        } catch (NonUniqueResultException | jakarta.persistence.NonUniqueResultException e) {
             return proxyHandler.unwrap(query.getResultList().get(0));
         } catch (jakarta.persistence.NoResultException e) {
             return null;

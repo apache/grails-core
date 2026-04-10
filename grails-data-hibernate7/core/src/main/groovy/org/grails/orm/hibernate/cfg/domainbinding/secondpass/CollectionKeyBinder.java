@@ -24,6 +24,7 @@ import org.hibernate.mapping.Collection;
 import org.hibernate.mapping.DependantValue;
 import org.hibernate.mapping.PersistentClass;
 
+import org.grails.datastore.mapping.model.types.EmbeddedCollection;
 import org.grails.datastore.mapping.model.types.ToOne;
 import org.grails.orm.hibernate.cfg.domainbinding.binder.SimpleValueColumnBinder;
 import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernateManyToManyProperty;
@@ -50,13 +51,14 @@ public class CollectionKeyBinder {
     }
 
     /** Creates the {@link DependantValue} key, sets it on the collection, and binds it. */
-    public DependantValue bind(HibernateToManyProperty property, PersistentClass associatedClass) {
+    public DependantValue bind(HibernateToManyProperty property) {
         Collection collection = property.getCollection();
         DependantValue key = primaryKeyValueCreator.createPrimaryKeyValue(collection);
         collection.setKey(key);
         if (property.isBidirectional()) {
             var inverseSide = property.getHibernateInverseSide();
             if (inverseSide instanceof ToOne && property.shouldBindWithForeignKey()) {
+                PersistentClass associatedClass = inverseSide.getHibernateOwner().getPersistentClass();
                 bidirectionalOneToManyLinker.link(collection, associatedClass, key, inverseSide);
             } else if (inverseSide instanceof HibernateManyToManyProperty ||
                     Map.class.isAssignableFrom(property.getType())) {
@@ -72,6 +74,10 @@ public class CollectionKeyBinder {
                                 .getKey()
                                 .getName(),
                         true);
+            } else if (property instanceof EmbeddedCollection) {
+                // For embedded (value-type) collections the DependantValue already wraps the owner PK;
+                // do not override the type name with the element class name.
+                key.setTypeName(null);
             } else {
                 dependentKeyValueBinder.bind(property, key);
             }

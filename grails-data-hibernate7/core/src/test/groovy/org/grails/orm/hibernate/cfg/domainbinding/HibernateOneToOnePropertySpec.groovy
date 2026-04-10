@@ -159,6 +159,40 @@ class HibernateOneToOnePropertySpec extends HibernateGormDatastoreSpec {
         then:
         rightProp.isAssociationColumnNullable()
     }
+
+    void "isValidHibernateManyToOne delegates to validateAssociation and isValidHibernateOneToOne"() {
+        when:
+        def leftEntity = mappingContext.getPersistentEntity(OneToOneLeft.name)
+        def rightProp = leftEntity.persistentProperties.find { it.name == 'right' } as HibernateOneToOneProperty
+
+        then:
+        rightProp.isValidHibernateManyToOne() != null
+    }
+
+    void "getHibernateReferencedEntityName returns associated entity name when no inverse side"() {
+        given:
+        createPersistentEntity(OneToOneUnidirSource)
+        createPersistentEntity(OneToOneUnidirDest)
+        def entity = mappingContext.getPersistentEntity(OneToOneUnidirSource.name)
+        def destProp = entity.persistentProperties.find { it.name == 'dest' } as HibernateOneToOneProperty
+
+        expect:
+        destProp.getHibernateReferencedEntityName() == OneToOneUnidirDest.name
+    }
+
+    void "validateAssociation throws MappingException for unidirectional hasOne"() {
+        given:
+        createPersistentEntity(OneToOneUnidirSource)
+        createPersistentEntity(OneToOneUnidirDest)
+        def entity = mappingContext.getPersistentEntity(OneToOneUnidirSource.name)
+        def destProp = entity.persistentProperties.find { it.name == 'dest' } as HibernateOneToOneProperty
+
+        when:
+        destProp.validateAssociation()
+
+        then:
+        thrown(org.hibernate.MappingException)
+    }
 }
 
 @Entity
@@ -186,4 +220,15 @@ class OneToOneLeft implements HibernateEntity<OneToOneLeft> {
     String label
     OneToOneRight right
     static belongsTo = [right: OneToOneRight]
+}
+
+@Entity
+class OneToOneUnidirSource implements HibernateEntity<OneToOneUnidirSource> {
+    OneToOneUnidirDest dest
+    static hasOne = [dest: OneToOneUnidirDest]
+}
+
+@Entity
+class OneToOneUnidirDest implements HibernateEntity<OneToOneUnidirDest> {
+    String value
 }

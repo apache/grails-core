@@ -204,7 +204,6 @@ public class HibernateDatastore extends AbstractDatastore
     protected final TenantResolver tenantResolver;
 
     private boolean destroyed;
-    private final boolean isChild;
 
     protected final GrailsHibernateTransactionManager transactionManager;
     protected final ConfigurableApplicationEventPublisher eventPublisher;
@@ -224,17 +223,15 @@ public class HibernateDatastore extends AbstractDatastore
             final ConnectionSources<SessionFactory, HibernateConnectionSourceSettings> connectionSources,
             final HibernateMappingContext mappingContext,
             final ConfigurableApplicationEventPublisher eventPublisher) {
-        this(connectionSources, mappingContext, eventPublisher, false, null);
+        this(connectionSources, mappingContext, eventPublisher, null);
     }
 
     private HibernateDatastore(
             final ConnectionSources<SessionFactory, HibernateConnectionSourceSettings> connectionSources,
             final HibernateMappingContext mappingContext,
             final ConfigurableApplicationEventPublisher eventPublisher,
-            boolean isChild,
             SessionFactory sessionFactory) {
         super(mappingContext, connectionSources.getBaseConfiguration(), null);
-        this.isChild = isChild;
         this.connectionSources = connectionSources;
         final HibernateConnectionSource defaultConnectionSource =
                 (HibernateConnectionSource) connectionSources.getDefaultConnectionSource();
@@ -291,7 +288,7 @@ public class HibernateDatastore extends AbstractDatastore
         });
         initializeConverters(this.mappingContext);
 
-        if (!isChild && !(connectionSources instanceof SingletonConnectionSources)) {
+        if (!(connectionSources instanceof SingletonConnectionSources)) {
             final HibernateDatastore parent = this;
             Iterable<ConnectionSource<SessionFactory, HibernateConnectionSourceSettings>> allConnectionSources =
                     connectionSources.getAllConnectionSources();
@@ -434,7 +431,6 @@ public class HibernateDatastore extends AbstractDatastore
             ApplicationContext applicationContext,
             String dataSourceName) {
         super(mappingContext, config, (ConfigurableApplicationContext) applicationContext);
-        this.isChild = false;
         this.connectionSources = new SingletonConnectionSources<>(
                 new HibernateConnectionSource(dataSourceName, sessionFactory, null, null), config);
         this.sessionFactory = sessionFactory;
@@ -552,33 +548,14 @@ public class HibernateDatastore extends AbstractDatastore
         final HibernateConnectionSource defaultConnectionSource =
                 (HibernateConnectionSource) getConnectionSources().getDefaultConnectionSource();
         if (multiTenantMode == MultiTenancySettings.MultiTenancyMode.SCHEMA) {
-            return new HibernateGormEnhancer(this, transactionManager, defaultConnectionSource.getSettings()) {
-                @Override
-                public List<String> allQualifiers(Datastore datastore, PersistentEntity entity) {
-                    List<String> allQualifiers = super.allQualifiers(datastore, entity);
-                    if (MultiTenant.class.isAssignableFrom(entity.getJavaClass())) {
-                        if (tenantResolver instanceof AllTenantsResolver allTenantsResolver) {
-                            Iterable<Serializable> tenantIds = allTenantsResolver.resolveTenantIds();
-                            for (Serializable id : tenantIds) {
-                                allQualifiers.add(id.toString());
-                            }
-                        } else {
-                            Collection<String> schemaNames =
-                                    schemaHandler.resolveSchemaNames(defaultConnectionSource.getDataSource());
-                            for (String schemaName : schemaNames) {
-                                if (INFORMATION_SCHEMA.equals(schemaName) || PUBLIC_SCHEMA.equals(schemaName)) continue;
-                                for (String connectionName : datastoresByConnectionSource.keySet()) {
-                                    if (schemaName.equalsIgnoreCase(connectionName)) {
-                                        allQualifiers.add(connectionName);
-                                    }
-                                }
-                            }
-                        }
-                    }
-
-                    return allQualifiers;
-                }
-            };
+            return new SchemaTenantGormEnhancer(
+                    this,
+                    transactionManager,
+                    defaultConnectionSource,
+                    tenantResolver,
+                    schemaHandler,
+                    datastoresByConnectionSource
+            );
         } else {
             return new HibernateGormEnhancer(this, transactionManager, defaultConnectionSource.getSettings());
         }
@@ -665,7 +642,7 @@ public class HibernateDatastore extends AbstractDatastore
                 super.destroy();
                 HibernateGormInstanceApi.resetInsertActive();
                 try {
-                    connectionSources.close();
+                    closeConnectionSources();
                 } catch (IOException e) {
                     if (LOG.isErrorEnabled()) {
                         LOG.error("There was an error shutting down GORM for an entity: {}", e.getMessage(), e);
@@ -674,9 +651,7 @@ public class HibernateDatastore extends AbstractDatastore
             } finally {
                 getMappingContext().getMappingCacheHolder().clear();
                 try {
-                    if (this.gormEnhancer != null) {
-                        this.gormEnhancer.close();
-                    }
+                    closeGormEnhancer();
                 } catch (IOException e) {
                     if (LOG.isErrorEnabled()) {
                         LOG.error("There was an error shutting down GORM enhancer", e);
@@ -718,6 +693,16 @@ public class HibernateDatastore extends AbstractDatastore
     protected void registerAllEntitiesWithEnhancer() {
         for (PersistentEntity persistentEntity : mappingContext.getPersistentEntities()) {
             gormEnhancer.registerEntity(persistentEntity);
+        }
+    }
+
+    protected void closeConnectionSources() throws IOException {
+        connectionSources.close();
+    }
+
+    protected void closeGormEnhancer() throws IOException {
+        if (this.gormEnhancer != null) {
+            this.gormEnhancer.close();
         }
     }
 
@@ -937,16 +922,14 @@ public class HibernateDatastore extends AbstractDatastore
 
     public <T> T withSession(String connectionName, final Closure<T> callable) {
         HibernateDatastore datastore = getDatastoreForConnection(connectionName);
-        Closure<?> multiTenantCallable = datastore.prepareMultiTenantClosure(callable);
-        IHibernateTemplate hibernateTemplate = datastore.getHibernateTemplate();
-        Object execute = hibernateTemplate.execute(multiTenantCallable);
-        return (T) execute;
+        Closure<T> multiTenantCallable = datastore.prepareMultiTenantClosure(callable);
+        return datastore.getHibernateTemplate().execute(multiTenantCallable);
     }
 
     public <T> T withNewSession(String connectionName, final Closure<T> callable) {
         HibernateDatastore datastore = getDatastoreForConnection(connectionName);
-        Closure<?> multiTenantCallable = datastore.prepareMultiTenantClosure(callable);
-        return (T) datastore.getHibernateTemplate().executeWithNewSession(multiTenantCallable);
+        Closure<T> multiTenantCallable = datastore.prepareMultiTenantClosure(callable);
+        return datastore.getHibernateTemplate().executeWithNewSession(multiTenantCallable);
     }
 
     public <T> T withNewSession(final Closure<T> callable) {
@@ -1013,6 +996,66 @@ public class HibernateDatastore extends AbstractDatastore
     }
 
     /**
+     * A {@link HibernateGormEnhancer} for SCHEMA multi-tenancy mode that resolves all tenant qualifiers
+     * from either the registered {@link AllTenantsResolver} or the available schema names on the data source.
+     */
+    public static class SchemaTenantGormEnhancer extends HibernateGormEnhancer {
+
+        private final HibernateConnectionSource defaultConnectionSource;
+        private final TenantResolver tenantResolver;
+        private final SchemaHandler schemaHandler;
+        private final Map<String, HibernateDatastore> datastoresByConnectionSource;
+
+        public SchemaTenantGormEnhancer(
+                Datastore datastore,
+                PlatformTransactionManager transactionManager,
+                HibernateConnectionSource defaultConnectionSource,
+                TenantResolver tenantResolver,
+                SchemaHandler schemaHandler,
+                Map<String, HibernateDatastore> datastoresByConnectionSource) {
+            super(datastore, transactionManager, defaultConnectionSource.getSettings());
+            this.defaultConnectionSource = defaultConnectionSource;
+            this.tenantResolver = tenantResolver;
+            this.schemaHandler = schemaHandler;
+            this.datastoresByConnectionSource = datastoresByConnectionSource;
+            // super() calls registerEntity → allQualifiers before our fields are set.
+            // Re-register now that all fields are initialized so schema qualifiers are wired correctly.
+            for (PersistentEntity entity : datastore.getMappingContext().getPersistentEntities()) {
+                registerEntity(entity);
+            }
+        }
+
+        @Override
+        public List<String> allQualifiers(Datastore datastore, PersistentEntity entity) {
+            List<String> allQualifiers = super.allQualifiers(datastore, entity);
+            // Guard against being called from super() before our fields are initialized.
+            if (defaultConnectionSource == null) {
+                return allQualifiers;
+            }
+            if (MultiTenant.class.isAssignableFrom(entity.getJavaClass())) {
+                if (tenantResolver instanceof AllTenantsResolver allTenantsResolver) {
+                    Iterable<Serializable> tenantIds = allTenantsResolver.resolveTenantIds();
+                    for (Serializable id : tenantIds) {
+                        allQualifiers.add(id.toString());
+                    }
+                } else {
+                    Collection<String> schemaNames =
+                            schemaHandler.resolveSchemaNames(defaultConnectionSource.getDataSource());
+                    for (String schemaName : schemaNames) {
+                        if (INFORMATION_SCHEMA.equals(schemaName) || PUBLIC_SCHEMA.equals(schemaName)) continue;
+                        for (String connectionName : datastoresByConnectionSource.keySet()) {
+                            if (schemaName.equalsIgnoreCase(connectionName)) {
+                                allQualifiers.add(connectionName);
+                            }
+                        }
+                    }
+                }
+            }
+            return allQualifiers;
+        }
+    }
+
+    /**
      * A datastore for a specific connection in a multiple data source setup.
      */
     public static class ChildHibernateDatastore extends HibernateDatastore {
@@ -1024,8 +1067,8 @@ public class HibernateDatastore extends AbstractDatastore
                 ConnectionSources<SessionFactory, HibernateConnectionSourceSettings> connectionSources,
                 HibernateMappingContext mappingContext,
                 ConfigurableApplicationEventPublisher eventPublisher) {
-            super(connectionSources, mappingContext, eventPublisher, true, 
-                  connectionSources.getDefaultConnectionSource().getSource());
+            super(connectionSources, mappingContext, eventPublisher,
+                connectionSources.getDefaultConnectionSource().getSource());
             this.parent = parent;
         }
 

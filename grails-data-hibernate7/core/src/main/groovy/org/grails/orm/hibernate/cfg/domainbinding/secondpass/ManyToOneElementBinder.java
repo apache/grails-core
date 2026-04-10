@@ -28,13 +28,13 @@ import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernateManyToManyP
 import static org.grails.orm.hibernate.cfg.domainbinding.binder.GrailsDomainBinder.EMPTY_PATH;
 
 /** Binds the element of a bidirectional many-to-many association. */
-public class ManyToManyElementBinder {
+public class ManyToOneElementBinder {
 
     private final ManyToOneBinder manyToOneBinder;
     private final CollectionForPropertyConfigBinder collectionForPropertyConfigBinder;
 
-    /** Creates a new {@link ManyToManyElementBinder} instance. */
-    public ManyToManyElementBinder(
+    /** Creates a new {@link ManyToOneElementBinder} instance. */
+    public ManyToOneElementBinder(
             ManyToOneBinder manyToOneBinder, CollectionForPropertyConfigBinder collectionForPropertyConfigBinder) {
         this.manyToOneBinder = manyToOneBinder;
         this.collectionForPropertyConfigBinder = collectionForPropertyConfigBinder;

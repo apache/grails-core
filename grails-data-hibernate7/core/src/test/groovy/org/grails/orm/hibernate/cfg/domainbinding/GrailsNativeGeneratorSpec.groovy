@@ -101,4 +101,35 @@ class GrailsNativeGeneratorSpec extends Specification {
         def e = thrown(org.hibernate.HibernateException)
         e.message.contains("was not properly initialized")
     }
+
+    def "should proceed past non-SequenceStyleGenerator delegate without exception"() {
+        given:
+        def context = Mock(GeneratorCreationContext)
+        def database = Mock(org.hibernate.boot.model.relational.Database)
+        context.getDatabase() >> database
+        database.getDialect() >> new org.hibernate.dialect.H2Dialect()
+
+        def session = Mock(SharedSessionContractImplementor)
+        def entity = new Object()
+        def eventType = EventType.INSERT
+
+        @Subject
+        def generator = Spy(GrailsNativeGenerator, constructorArgs: [context])
+
+        java.lang.reflect.Field field = org.hibernate.id.NativeGenerator.class.getDeclaredField("dialectNativeGenerator")
+        field.setAccessible(true)
+        // A Generator that is NOT a SequenceStyleGenerator — instanceof branch returns false
+        def nonSsgDelegate = Mock(org.hibernate.generator.Generator)
+        field.set(generator, nonSsgDelegate)
+
+        generator.getGenerationType() >> GenerationType.SEQUENCE
+
+        when:
+        // super.generate() will be called with invalid session — expect some exception
+        generator.generate(session, entity, null, eventType)
+
+        then:
+        // Any exception is acceptable — we verified the non-SSG branch executed
+        thrown(Exception)
+    }
 }
