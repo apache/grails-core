@@ -663,3 +663,35 @@ Integration tests for modules depending on Spring Security are disabled until th
 Applications using `grails-sitemesh3` should remain on the `grails-layout` plugin (SiteMesh 2.6.x) until SiteMesh 3 is updated.
 
 Check the https://github.com/apache/grails-core/issues[Grails issue tracker] for the latest status of plugin compatibility.
+
+===== 21. Custom JSON View Converters
+
+JSON views now use Groovy's `groovy.json.JsonGenerator` implementation instead of the previous Grails-specific
+JSON generator infrastructure.
+If you previously customized JSON view rendering with Grails-specific generator classes, migrate that logic to a
+`groovy.json.JsonGenerator.Converter` implementation.
+
+This change applies to JSON views rendered by the `grails-views-gson` module.
+The `grails.converters.JSON.registerObjectMarshaller(...)` API is still used by the `grails-converters` module
+for `render ... as JSON` and related converter-based rendering.
+
+To migrate your custom converters:
+
+- Implement `groovy.json.JsonGenerator.Converter` (was previously `grails.plugin.json.builder.JsonGenerator.Converter`)
+- Change the file name of the converter registration service loader to
+`src/main/resources/META-INF/services/groovy.json.JsonGenerator$Converter`
+(was previously `src/main/resources/META-INF/services/grails.plugin.json.builder.JsonGenerator$Converter`)
+
+===== 22 Rendering Enum values as JSON
+
+It is no longer possible to render a single enum value as JSON using the `render(Number.ONE as JSON)` syntax.
+Previously, rendering an enum value would produce a JSON string with the type and name of the enum value like:
+```json
+{
+  "enumType": "com.example.Number",
+  "name": "ONE"
+}
+```
+
+Rendering an enum value as JSON will now instead throw a `ConverterException`.
+See https://github.com/apache/grails-core/pull/15212[PR 15212] for more details on this change.

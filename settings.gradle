@@ -123,7 +123,6 @@ include(
 
         // events
         'grails-events-core',
-        'grails-events-compat',
         'grails-events-transforms',
         'grails-events-gpars',
         'grails-events-spring',
@@ -192,7 +191,6 @@ include(
 // Instead of using : to separate nested projects, fix the project directories by setting the projectDir explicitly
 // (Preserve the parent directory name as part of the nested project name)
 project(':grails-events-core').projectDir = file('grails-events/core')
-project(':grails-events-compat').projectDir = file('grails-events/compat')
 project(':grails-events-transforms').projectDir = file('grails-events/transforms')
 project(':grails-events-gpars').projectDir = file('grails-events/gpars')
 project(':grails-events-spring').projectDir = file('grails-events/spring')
@@ -442,6 +440,7 @@ include(
         'grails-test-examples-exploded',
         'grails-test-examples-external-configuration',
         'grails-test-examples-geb',
+        'grails-test-examples-geb-context-path',
         'grails-test-examples-geb-gebconfig',
         'grails-test-examples-gorm',
         'grails-test-examples-gsp-layout',
@@ -480,6 +479,7 @@ project(':grails-test-examples-exploded').projectDir = file('grails-test-example
 project(':grails-test-examples-datasources').projectDir = file('grails-test-examples/datasources')
 project(':grails-test-examples-database-cleanup').projectDir = file('grails-test-examples/database-cleanup')
 project(':grails-test-examples-geb').projectDir = file('grails-test-examples/geb')
+project(':grails-test-examples-geb-context-path').projectDir = file('grails-test-examples/geb-context-path')
 project(':grails-test-examples-geb-gebconfig').projectDir = file('grails-test-examples/geb-gebconfig')
 project(':grails-test-examples-namespaces').projectDir = file('grails-test-examples/namespaces')
 project(':grails-test-examples-gorm').projectDir = file('grails-test-examples/gorm')

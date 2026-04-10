@@ -44,15 +44,7 @@ class ProfilingGrailsApplicationPostProcessor extends GrailsApplicationPostProce
     long startTime
 
     ProfilingGrailsApplicationPostProcessor(GrailsApplicationLifeCycle lifeCycle, ApplicationContext applicationContext, Class... classes) {
-        this(lifeCycle, applicationContext, resolveAndResetDiscovery(applicationContext), classes)
-    }
-
-    /**
-     * @deprecated Use of this constructor is deprecated. Plugin discovery should be configured through the GrailsPluginDiscovery bean.
-     */
-    @Deprecated(forRemoval = true, since = '7.1.0')
-    ProfilingGrailsApplicationPostProcessor(GrailsApplicationLifeCycle lifeCycle, ApplicationContext applicationContext, PluginDiscovery pluginDiscovery, Class... classes) {
-        super(lifeCycle, applicationContext, pluginDiscovery, classes)
+        super(lifeCycle, applicationContext, resolveAndResetDiscovery(applicationContext), classes)
         ((ConfigurableApplicationContext) applicationContext).beanFactory.addBeanPostProcessor(this)
     }
 

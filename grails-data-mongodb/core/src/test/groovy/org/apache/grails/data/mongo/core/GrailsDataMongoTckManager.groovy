@@ -18,38 +18,38 @@
  */
 package org.apache.grails.data.mongo.core
 
+import groovy.util.logging.Slf4j
+
 import com.mongodb.BasicDBObject
 import com.mongodb.client.MongoClient
+import org.bson.Document
+import org.testcontainers.containers.MongoDBContainer
+
+import org.springframework.context.support.GenericApplicationContext
+import org.springframework.context.support.StaticMessageSource
+import org.springframework.validation.Validator
+
 import grails.core.DefaultGrailsApplication
 import grails.core.GrailsApplication
 import grails.gorm.validation.PersistentEntityValidator
-import groovy.util.logging.Slf4j
 import org.apache.grails.data.testing.tck.base.GrailsDataTckManager
 import org.apache.grails.testing.mongo.AbstractMongoGrailsExtension
-import org.bson.Document
 import org.grails.datastore.bson.query.BsonQuery
 import org.grails.datastore.gorm.GormEnhancer
 import org.grails.datastore.gorm.mongo.Birthday
 import org.grails.datastore.gorm.validation.constraints.eval.DefaultConstraintEvaluator
 import org.grails.datastore.gorm.validation.constraints.registry.DefaultConstraintRegistry
+import org.grails.datastore.mapping.core.DatastoreUtils
 import org.grails.datastore.mapping.core.Session
-import org.grails.datastore.mapping.multitenancy.MultiTenancySettings
-import org.grails.datastore.mapping.multitenancy.resolvers.SystemPropertyTenantResolver
 import org.grails.datastore.mapping.engine.types.AbstractMappingAwareCustomTypeMarshaller
 import org.grails.datastore.mapping.model.MappingContext
 import org.grails.datastore.mapping.model.PersistentEntity
 import org.grails.datastore.mapping.model.PersistentProperty
-import org.grails.datastore.mapping.mongo.AbstractMongoSession
-import org.grails.datastore.mapping.core.DatastoreUtils
 import org.grails.datastore.mapping.mongo.MongoDatastore
 import org.grails.datastore.mapping.mongo.config.MongoSettings
+import org.grails.datastore.mapping.multitenancy.MultiTenancySettings
+import org.grails.datastore.mapping.multitenancy.resolvers.SystemPropertyTenantResolver
 import org.grails.datastore.mapping.query.Query
-import org.slf4j.LoggerFactory
-import org.springframework.context.support.GenericApplicationContext
-import org.springframework.context.support.StaticMessageSource
-import org.springframework.validation.Validator
-import org.testcontainers.containers.MongoDBContainer
-import org.testcontainers.containers.output.Slf4jLogConsumer
 
 @Slf4j
 class GrailsDataMongoTckManager extends GrailsDataTckManager {
@@ -86,6 +86,7 @@ class GrailsDataMongoTckManager extends GrailsDataTckManager {
     @Override
     void cleanupSpec() {
         super.cleanupSpec()
+        mongoDBContainer.stop()
     }
 
     @Override
@@ -101,6 +102,7 @@ class GrailsDataMongoTckManager extends GrailsDataTckManager {
         mongoDatastore = new MongoDatastore(configuration)
         mappingContext = mongoDatastore.mappingContext
         mappingContext.mappingFactory.registerCustomType(new AbstractMappingAwareCustomTypeMarshaller<Birthday, Document, Document>(Birthday) {
+
             @Override
             protected Object writeInternal(PersistentProperty property, String key, Birthday value, Document nativeTarget) {
 
@@ -143,17 +145,33 @@ class GrailsDataMongoTckManager extends GrailsDataTckManager {
     @Override
     void destroy() {
         if (mongoDatastore != null) {
-            mongoDatastore.getMongoClient().listDatabaseNames().findAll {!(it in ['admin', 'config', 'local']) }.each {
+            mongoDatastore.getMongoClient().listDatabaseNames().findAll { !(it in ['admin', 'config', 'local']) }.each {
                 try {
-                    mongoDatastore.getMongoClient().getDatabase(it).drop()
+                    mongoDatastore?.mongoClient?.listDatabaseNames()
+                            ?.findAll { !(it in ['admin', 'config', 'local']) }
+                            ?.each {
+                                try {
+                                    mongoDatastore.mongoClient.getDatabase(it as String).drop()
+                                }
+                                catch (ignored) {
+                                    log.warn("Could not drop ${it}")
+                                }
+                            }
+                    for (cls in domainClasses) {
+                        GormEnhancer.findValidationApi(cls).validator = null
+                    }
                 }
-                catch(e) {
-                    log.warn("Could not drop ${it}")
+                finally {
+                    try {
+                        mongoDatastore?.close()
+                    }
+                    catch (ignored) {
+                    }
+                    mongoDatastore = null
+                    mongoClient = null
+                    grailsApplication = null
+                    mappingContext = null
                 }
-            }
-            mongoDatastore.buildIndex()
-            for (cls in getDomainClasses()) {
-                GormEnhancer.findValidationApi(cls).setValidator(null)
             }
         }
 
@@ -171,7 +189,7 @@ class GrailsDataMongoTckManager extends GrailsDataTckManager {
             String host = mongoDBContainer.host
             int port = mongoDBContainer.getMappedPort(AbstractMongoGrailsExtension.DEFAULT_MONGO_PORT)
             Map config = [
-                    'grails.mongodb.url'       : "mongodb://${host}:${port}/tckDefaultDB" as String,
+                    'grails.mongodb.url'        : "mongodb://${host}:${port}/tckDefaultDB" as String,
                     'grails.mongodb.connections': [
                             'secondary': ['url': "mongodb://${host}:${port}/tckSecondaryDB" as String],
                     ],
@@ -210,9 +228,9 @@ class GrailsDataMongoTckManager extends GrailsDataTckManager {
             int port = mongoDBContainer.getMappedPort(AbstractMongoGrailsExtension.DEFAULT_MONGO_PORT)
             Map config = [
                     'grails.gorm.multiTenancy.mode'               : MultiTenancySettings.MultiTenancyMode.DISCRIMINATOR,
-                    'grails.gorm.multiTenancy.tenantResolverClass' : SystemPropertyTenantResolver,
-                    'grails.mongodb.url'                           : "mongodb://${host}:${port}/tckMtDefaultDB" as String,
-                    'grails.mongodb.connections'                   : [
+                    'grails.gorm.multiTenancy.tenantResolverClass': SystemPropertyTenantResolver,
+                    'grails.mongodb.url'                          : "mongodb://${host}:${port}/tckMtDefaultDB" as String,
+                    'grails.mongodb.connections'                  : [
                             'secondary': ['url': "mongodb://${host}:${port}/tckMtSecondaryDB" as String],
                     ],
             ]

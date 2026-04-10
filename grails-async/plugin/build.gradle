@@ -37,7 +37,6 @@ dependencies {
 
     api project(':grails-async-core')
     api project(':grails-core')
-    api project(':grails-events-compat')
     api project(':grails-events-core')
     api project(':grails-web-common')
     api 'org.apache.groovy:groovy'

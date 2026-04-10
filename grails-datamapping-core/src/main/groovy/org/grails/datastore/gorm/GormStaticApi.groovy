@@ -33,6 +33,7 @@ import org.codehaus.groovy.runtime.InvokerHelper
 import org.grails.datastore.gorm.finders.DynamicFinder
 import org.grails.datastore.gorm.finders.FinderMethod
 import org.grails.datastore.gorm.multitenancy.TenantDelegatingGormOperations
+
 import org.grails.datastore.mapping.core.Datastore
 import org.grails.datastore.mapping.core.DatastoreUtils
 import org.grails.datastore.mapping.core.Session
@@ -47,7 +48,6 @@ import org.grails.datastore.mapping.model.PersistentProperty
 import org.grails.datastore.mapping.model.types.Association
 import org.grails.datastore.mapping.multitenancy.MultiTenancySettings.MultiTenancyMode
 import org.grails.datastore.mapping.query.Query
-import org.grails.datastore.gorm.query.NamedCriteriaProxy
 import org.grails.datastore.mapping.query.api.BuildableCriteria
 import org.grails.datastore.mapping.query.api.Criteria
 import org.springframework.beans.PropertyAccessorFactory
@@ -141,12 +141,6 @@ class GormStaticApi<D> extends AbstractGormApi<D> implements GormAllOperations<D
     def methodMissing(String methodName, Object args) {
         FinderMethod method = gormDynamicFinders.find { FinderMethod f -> f.isMethodMatch(methodName) }
         if (!method) {
-            if (args && args[-1] instanceof Closure) {
-                NamedCriteriaProxy proxy = GormEnhancer.createNamedQuery(persistentClass, methodName)
-                if (proxy != null) {
-                    return proxy.call(args)
-                }
-            }
             throw new MissingMethodException(methodName, persistentClass, args)
         }
 

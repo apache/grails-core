@@ -36,7 +36,6 @@ dependencies {
     implementation platform(project(':grails-bom'))
 
     api project(':grails-events-core')
-    api project(':grails-events-compat')
 
     // This dependency contains Groovy Ast transformations
     // that needs to be on the compile classpath of dependent projects.

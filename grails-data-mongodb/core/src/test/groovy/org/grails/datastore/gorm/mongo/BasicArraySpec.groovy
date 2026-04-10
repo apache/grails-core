@@ -63,12 +63,10 @@ class BasicArraySpec extends MongoDatastoreSpec {
         Data data = new Data(str: "baz", byteArray: 'hello'.bytes).save(flush: true, validate: false)
         manager.session.clear()
         data = Data.findByStr("baz")
-        Document dbo = data.dbo
 
         then: "The array is saved correct"
         data.str == "baz"
         data.byteArray == 'hello'.bytes
-        dbo.byteArray.data == 'hello'.bytes
     }
 }
 

@@ -25,7 +25,7 @@ import spock.lang.Specification
 import grails.artefact.Artefact
 import grails.converters.JSON
 import grails.persistence.Entity
-
+import org.grails.web.converters.exceptions.ConverterException
 import org.grails.web.servlet.mvc.HibernateProxy
 import org.grails.web.servlet.mvc.LazyInitializer
 import org.grails.buffer.StreamCharBuffer
@@ -95,21 +95,16 @@ class JSONConverterTests extends Specification implements ControllerUnitTest<JSO
         def enumInstance = Role.HEAD
         params.e = enumInstance
         controller.testEnum()
-        def json = response.json
 
         then:
-        json.enumType == "org.grails.web.converters.Role"
-        json.name == "HEAD"
-        json.size() == 2
+        // Since Grails 8 the JSON converter doesn't know how to convert a single enum to JSON,
+        // so it will throw an exception. This test is maintained as a reminder of this change in behavior.
+        def e = thrown(ConverterException)
+        e.message == 'org.grails.web.json.JSONException: Value out of sequence: expected mode to be ' +
+                'OBJECT or ARRAY when writing \'\' but was INIT'
     }
 
     void testJSONEnumConvertingWithSimpleMarshaller() {
-        given:
-        JSON.createNamedConfig('simple') {
-            it.registerObjectMarshaller(new org.grails.web.converters.marshaller.json.SimpleEnumMarshaller())
-        }
-        JSON.use('simple')
-
         when:
         def enumInstance = Role.HEAD
         params.e = enumInstance

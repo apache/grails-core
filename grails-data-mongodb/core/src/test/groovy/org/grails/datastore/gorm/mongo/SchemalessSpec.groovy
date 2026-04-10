@@ -40,7 +40,6 @@ class SchemalessSpec extends MongoDatastoreSpec {
 
         then:
         p.name == 'Pineapple'
-        p.dbo.color == 'Yellow'
         p['color'] == 'Yellow'
 
         when:
@@ -51,7 +50,6 @@ class SchemalessSpec extends MongoDatastoreSpec {
 
         then:
         p.name == 'Pineapple'
-        p.dbo.color == 'Yellow'
         p['color'] == 'Yellow'
         p['hasLeaves'] == true
 

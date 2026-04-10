@@ -39,6 +39,7 @@ class DomainClassWithInnerClassUsingStaticCompilationSpec extends Specification 
             SomeClass.mapping instanceof Closure
             SomeClass.mappingClosureCalled
     }
+
 }
 
 @GrailsCompileStatic

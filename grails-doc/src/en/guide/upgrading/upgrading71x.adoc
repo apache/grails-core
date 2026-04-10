@@ -719,8 +719,40 @@ If this causes issues with existing URL mappings, you can disable it in `applica
 [source,yaml]
 ----
 grails:
-    web:
-        url:
-            mapping:
-                validateWildcards: false
+    urlmapping:
+        validateWildcards: false
+----
+
+===== 2.10 ContainerGebSpec Context Path Support
+
+`ContainerGebSpec` now automatically includes the server's servlet context path in the browser's base URL. Previously, if your application configured a context path via `server.servlet.context-path`, the `ContainerGebSpec` base URL would only include the protocol, hostname, and port — causing all page navigations to miss the context path and result in 404 errors.
+
+Starting in Grails 7.1, the context path is looked up from the Spring `Environment` at test setup time and appended to the base URL automatically. No changes are required in your test code — Geb page URLs should remain relative to the context root (e.g., `static url = 'greeting'`), and the framework handles prepending the context path.
+
+====== Example
+
+[source,yaml]
+.application.yml
+----
+server:
+  servlet:
+    context-path: /myapp
+----
+
+[source,groovy]
+----
+// Page URL is relative — no need to include /myapp
+class GreetingPage extends Page {
+    static url = 'greeting'
+    static at = { title == 'Greeting' }
+}
+
+// Navigation automatically resolves to http://host:port/myapp/greeting
+@Integration
+class MySpec extends ContainerGebSpec {
+    void 'should reach the greeting page'() {
+        expect:
+        to(GreetingPage)
+    }
+}
 ----

@@ -20,7 +20,6 @@ package grails.plugin.formfields
 
 import org.springframework.validation.FieldError
 
-import grails.core.GrailsDomainClass
 import org.grails.datastore.mapping.model.PersistentEntity
 import org.grails.datastore.mapping.model.PersistentProperty
 import org.grails.scaffolding.model.property.Constrained
@@ -51,13 +50,6 @@ interface BeanPropertyAccessor {
      * @return the type of the object that owns the property at the end of the path, e.g. for a `address.home.street` then the type of `home` is returned.
      */
     Class getBeanType()
-
-    /**
-     * @return the GORM domain type of `beanType`. This will be null if `beanType` is not a domain class.
-     * @deprecated use {@link #getEntity}
-     */
-    @Deprecated(forRemoval = true)
-    GrailsDomainClass getBeanClass()
 
     /**
      * @return the GORM domain type of `beanType`. This will be null if `beanType` is not a domain class.

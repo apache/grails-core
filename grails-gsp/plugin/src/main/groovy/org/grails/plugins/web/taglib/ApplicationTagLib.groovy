@@ -37,7 +37,6 @@ import grails.core.support.GrailsApplicationAware
 import grails.gsp.TagLib
 import grails.plugins.GrailsPluginManager
 import grails.util.GrailsStringUtils
-import grails.util.GrailsUtil
 import grails.util.Metadata
 import grails.web.mapping.LinkGenerator
 import grails.web.mapping.UrlMappingsHolder
@@ -133,19 +132,6 @@ class ApplicationTagLib implements ApplicationContextAware, InitializingBean, Gr
 
         this."$scope"."$var" = value
         null
-    }
-
-    /**
-     * Creates a link to a resource, generally used as a method rather than a tag.<br/>
-     *
-     * eg. &lt;link type="text/css" href="${createLinkTo(dir:'css',file:'main.css')}" /&gt;
-     *
-     * @emptyTag
-     */
-    @Deprecated(forRemoval = true)
-    Closure createLinkTo = { attrs ->
-        GrailsUtil.deprecated('Tag [createLinkTo] is deprecated please use [resource] instead')
-        return resource(attrs)
     }
 
     /**
