@@ -83,7 +83,7 @@ class H2DatabaseCleaner implements DatabaseCleaner {
                 def tableName = row.getString('table_name')
                 stats.addTableRowCount(tableName, row.getLong('row_count_estimate'))
                 log.debug('Truncating table: {}', tableName)
-                sql.executeUpdate(/TRUNCATE TABLE "$tableName"/)
+                sql.executeUpdate(/TRUNCATE TABLE "$tableName"/ as String)
             }
             cleanupCacheLayer(applicationContext)
         }

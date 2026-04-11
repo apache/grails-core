@@ -16,7 +16,7 @@
  *  specific language governing permissions and limitations
  *  under the License.
  */
-package pubsub.demo
+package functionaltests
 
 import spock.lang.Specification
 import spock.lang.Tag
@@ -26,13 +26,13 @@ import org.apache.grails.testing.http.client.HttpClientSupport
 
 @Integration
 @Tag('http-client')
-class TaskControllerSpec extends Specification implements HttpClientSupport {
+class GspInWebappDirSpec extends Specification implements HttpClientSupport {
 
-    void 'test async error handling'() {
-        when: 'we invoke an endpoint that throws an exception'
-        def response = http('/task/error')
+    def 'GSP in src/main/webapp renders'() {
+        when:
+        def response = http('/gsp-in-webapp-dir.gsp')
 
-        then: 'the response is as expected'
-        response.assertEquals(500, 'error occurred')
+        then:
+        response.assertContains(200, 'Hello from GSP in src/main/webapp')
     }
 }

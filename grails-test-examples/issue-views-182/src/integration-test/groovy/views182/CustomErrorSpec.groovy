@@ -19,11 +19,13 @@
 package views182
 
 import spock.lang.Specification
+import spock.lang.Tag
 
 import grails.testing.mixin.integration.Integration
 import org.apache.grails.testing.http.client.HttpClientSupport
 
 @Integration
+@Tag('http-client')
 class CustomErrorSpec extends Specification implements HttpClientSupport {
 
     void 'it is possible to use gson views for handling exception errors'() {

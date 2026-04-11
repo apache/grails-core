@@ -20,6 +20,7 @@ package functionaltests.contentneg
 
 import spock.lang.Narrative
 import spock.lang.Specification
+import spock.lang.Tag
 
 import grails.testing.mixin.integration.Integration
 import org.apache.grails.testing.http.client.HttpClientSupport
@@ -37,6 +38,7 @@ Grails provides content negotiation that allows the same controller action
 to return different response formats (JSON, XML, HTML) based on the client's
 Accept header or URL extension.
 ''')
+@Tag('http-client')
 class ContentNegotiationSpec extends Specification implements HttpClientSupport {
 
     // ========== Accept Header-Based Negotiation ==========

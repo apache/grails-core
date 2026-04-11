@@ -19,6 +19,7 @@
 package functionaltests.requestresponse
 
 import spock.lang.Specification
+import spock.lang.Tag
 
 import grails.testing.mixin.integration.Integration
 import org.apache.grails.testing.http.client.HttpClientSupport
@@ -28,6 +29,7 @@ import org.apache.grails.testing.http.client.HttpClientSupport
  * headers, cookies, session management, and request attributes.
  */
 @Integration
+@Tag('http-client')
 class RequestResponseSpec extends Specification implements HttpClientSupport {
 
     // ========== Request Header Tests ==========
