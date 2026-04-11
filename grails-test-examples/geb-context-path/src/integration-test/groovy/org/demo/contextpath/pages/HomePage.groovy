@@ -16,15 +16,13 @@
  *  specific language governing permissions and limitations
  *  under the License.
  */
-package testphases
 
-class UrlMappings {
+package org.demo.contextpath.pages
 
-    static mappings = {
-        "/$controller/$action?/$id?(.$format)?" {
-            constraints {
-            }
-        }
-    }
+import geb.Page
 
+class HomePage extends Page {
+
+    static url = ''
+    static at = { title == 'Welcome to Grails' }
 }

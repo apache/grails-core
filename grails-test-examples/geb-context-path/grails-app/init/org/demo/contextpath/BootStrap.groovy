@@ -16,15 +16,14 @@
  *  specific language governing permissions and limitations
  *  under the License.
  */
-package testphases
 
-class UrlMappings {
+package org.demo.contextpath
 
-    static mappings = {
-        "/$controller/$action?/$id?(.$format)?" {
-            constraints {
-            }
-        }
+class BootStrap {
+
+    def init = {
     }
 
+    def destroy = {
+    }
 }

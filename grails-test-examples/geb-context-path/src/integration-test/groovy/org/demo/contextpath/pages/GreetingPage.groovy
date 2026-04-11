@@ -16,15 +16,17 @@
  *  specific language governing permissions and limitations
  *  under the License.
  */
-package testphases
 
-class UrlMappings {
+package org.demo.contextpath.pages
 
-    static mappings = {
-        "/$controller/$action?/$id?(.$format)?" {
-            constraints {
-            }
-        }
+import geb.Page
+
+class GreetingPage extends Page {
+
+    static url = 'greeting'
+    static at = { title == 'Greeting' }
+
+    static content = {
+        messageText { $('#message').text() }
     }
-
 }
