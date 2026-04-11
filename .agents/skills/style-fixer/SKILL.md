@@ -85,8 +85,8 @@ After running `aggregateStyleViolations`, these files appear in the repo root:
 |------|------|-----------------|
 | `CODENARC_VIOLATIONS.md` | CodeNarc | Yes |
 | `CHECKSTYLE_VIOLATIONS.md` | Checkstyle | Yes |
-| `PMD_VIOLATIONS.md` | PMD | Only if `grails.codestyle.enabled.pmd=true` |
-| `SPOTBUGS_VIOLATIONS.md` | SpotBugs | Only if `grails.codestyle.enabled.spotbugs=true` |
+| `PMD_VIOLATIONS.md` | PMD | Yes — may contain `No violations found!` when `grails.codestyle.enabled.pmd=false` |
+| `SPOTBUGS_VIOLATIONS.md` | SpotBugs | Yes — may contain `No violations found!` when `grails.codestyle.enabled.spotbugs=false` |
 | `JACOCO_COVERAGE_VIOLATIONS.md` | JaCoCo | Only if `grails.codestyle.enabled.jacoco=true` |
 
 Each file is a Markdown table grouped by module, with columns: **Class**, **Tool**, **Violation**, **Line**, **Message**.
