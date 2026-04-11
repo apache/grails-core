@@ -188,7 +188,7 @@ All properties can be set in `gradle.properties` or passed as `-P` flags:
 3. For CodeNarc, run `./gradlew codenarcFix` to auto-fix what it can
 4. Fix remaining violations manually using the table above
 5. Re-run `./gradlew aggregateStyleViolations` and confirm files contain `No violations found! 🎉`
-6. Delete the `*_VIOLATIONS.md` files before committing (clean state produces no output file)
+6. Delete the generated `*_VIOLATIONS.md` files before committing, even if they report no violations
 
 ---
 
