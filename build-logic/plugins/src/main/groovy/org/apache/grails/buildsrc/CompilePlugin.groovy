@@ -23,11 +23,13 @@ import java.nio.charset.StandardCharsets
 import java.util.concurrent.atomic.AtomicBoolean
 
 import groovy.transform.CompileStatic
+import groovy.transform.TypeCheckingMode
 
 import org.gradle.api.Plugin
 import org.gradle.api.Project
 import org.gradle.api.file.DuplicatesStrategy
 import org.gradle.api.plugins.JavaPluginExtension
+import org.gradle.api.tasks.SourceSetContainer
 import org.gradle.api.tasks.bundling.AbstractArchiveTask
 import org.gradle.api.tasks.bundling.Jar
 import org.gradle.api.tasks.compile.GroovyCompile
@@ -54,6 +56,7 @@ class CompilePlugin implements Plugin<Project> {
         configureJavaVersion(project)
         configureJars(project)
         configureCompiler(project)
+        configureAnnotationProcessors(project)
         configureReproducible(project)
     }
 
@@ -107,6 +110,33 @@ class CompilePlugin implements Plugin<Project> {
                 it.options.encoding = StandardCharsets.UTF_8.name()
                 it.options.fork = true
                 it.options.forkOptions.jvmArgs = ['-Xms128M', '-Xmx2G']
+            }
+        }
+    }
+
+    @CompileStatic(TypeCheckingMode.SKIP)
+    private static void configureAnnotationProcessors(Project project) {
+        // Configure Spring Boot configuration processor for modules with @ConfigurationProperties.
+        // Groovy modules intentionally avoid annotation processors due to incompatibility
+        // with incremental Groovy compilation (see issue #15211).
+        // Modules must opt-in via 'enableAnnotationProcessor = true' property.
+        project.afterEvaluate {
+            try {
+                // Check if this module has opted in to annotation processor support
+                def ext = project.extensions.extraProperties
+                def enableProcessor = ext.has('enableAnnotationProcessor') && ext.get('enableAnnotationProcessor') == true
+                
+                if (enableProcessor) {
+                    // Add annotation processor dependencies for modules with @ConfigurationProperties
+                    project.configurations.getByName('annotationProcessor').dependencies.add(
+                        project.dependencies.platform(project.project(':grails-bom'))
+                    )
+                    project.configurations.getByName('annotationProcessor').dependencies.add(
+                        project.dependencies.create('org.springframework.boot:spring-boot-configuration-processor')
+                    )
+                }
+            } catch (Exception ignored) {
+                // Configuration not available for this module
             }
         }
     }
