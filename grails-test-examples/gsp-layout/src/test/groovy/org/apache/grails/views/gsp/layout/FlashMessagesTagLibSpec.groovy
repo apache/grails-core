@@ -282,14 +282,14 @@ class FlashMessagesTagLibSpec extends Specification implements TagLibUnitTest<Ap
     void "afterPropertiesSet reads all flashMessages config keys"() {
         given:
         def config = grailsApplication.config
-        config.setAt('grails.views.flashMessages.messageClass', 'cfg-msg-class')
-        config.setAt('grails.views.flashMessages.messageIcon', 'cfg-msg-icon')
-        config.setAt('grails.views.flashMessages.errorClass', 'cfg-err-class')
-        config.setAt('grails.views.flashMessages.errorIcon', 'cfg-err-icon')
-        config.setAt('grails.views.flashMessages.warningClass', 'cfg-warn-class')
-        config.setAt('grails.views.flashMessages.warningIcon', 'cfg-warn-icon')
-        config.setAt('grails.views.flashMessages.role', 'status')
-        config.setAt('grails.views.flashMessages.dismissible', false)
+        config.setAt('grails.views.gsp.flashMessages.messageClass', 'cfg-msg-class')
+        config.setAt('grails.views.gsp.flashMessages.messageIcon', 'cfg-msg-icon')
+        config.setAt('grails.views.gsp.flashMessages.errorClass', 'cfg-err-class')
+        config.setAt('grails.views.gsp.flashMessages.errorIcon', 'cfg-err-icon')
+        config.setAt('grails.views.gsp.flashMessages.warningClass', 'cfg-warn-class')
+        config.setAt('grails.views.gsp.flashMessages.warningIcon', 'cfg-warn-icon')
+        config.setAt('grails.views.gsp.flashMessages.role', 'status')
+        config.setAt('grails.views.gsp.flashMessages.dismissible', false)
 
         when:
         tagLib.afterPropertiesSet()

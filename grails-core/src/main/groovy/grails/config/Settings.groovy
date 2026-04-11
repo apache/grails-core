@@ -71,56 +71,56 @@ interface Settings {
      *
      * @since 7.1
      */
-    String VIEWS_FLASH_MESSAGES_MESSAGE_CLASS = 'grails.views.flashMessages.messageClass'
+    String VIEWS_GSP_FLASH_MESSAGES_MESSAGE_CLASS = 'grails.views.gsp.flashMessages.messageClass'
 
     /**
      * Default icon class for {@code flash.message} alerts rendered by {@code <g:flashMessages />}.
      *
      * @since 7.1
      */
-    String VIEWS_FLASH_MESSAGES_MESSAGE_ICON = 'grails.views.flashMessages.messageIcon'
+    String VIEWS_GSP_FLASH_MESSAGES_MESSAGE_ICON = 'grails.views.gsp.flashMessages.messageIcon'
 
     /**
      * Default CSS class for {@code flash.error} alerts rendered by {@code <g:flashMessages />}.
      *
      * @since 7.1
      */
-    String VIEWS_FLASH_MESSAGES_ERROR_CLASS = 'grails.views.flashMessages.errorClass'
+    String VIEWS_GSP_FLASH_MESSAGES_ERROR_CLASS = 'grails.views.gsp.flashMessages.errorClass'
 
     /**
      * Default icon class for {@code flash.error} alerts rendered by {@code <g:flashMessages />}.
      *
      * @since 7.1
      */
-    String VIEWS_FLASH_MESSAGES_ERROR_ICON = 'grails.views.flashMessages.errorIcon'
+    String VIEWS_GSP_FLASH_MESSAGES_ERROR_ICON = 'grails.views.gsp.flashMessages.errorIcon'
 
     /**
      * Default CSS class for {@code flash.warning} alerts rendered by {@code <g:flashMessages />}.
      *
      * @since 7.1
      */
-    String VIEWS_FLASH_MESSAGES_WARNING_CLASS = 'grails.views.flashMessages.warningClass'
+    String VIEWS_GSP_FLASH_MESSAGES_WARNING_CLASS = 'grails.views.gsp.flashMessages.warningClass'
 
     /**
      * Default icon class for {@code flash.warning} alerts rendered by {@code <g:flashMessages />}.
      *
      * @since 7.1
      */
-    String VIEWS_FLASH_MESSAGES_WARNING_ICON = 'grails.views.flashMessages.warningIcon'
+    String VIEWS_GSP_FLASH_MESSAGES_WARNING_ICON = 'grails.views.gsp.flashMessages.warningIcon'
 
     /**
      * Default ARIA role for alerts rendered by {@code <g:flashMessages />}.
      *
      * @since 7.1
      */
-    String VIEWS_FLASH_MESSAGES_ROLE = 'grails.views.flashMessages.role'
+    String VIEWS_GSP_FLASH_MESSAGES_ROLE = 'grails.views.gsp.flashMessages.role'
 
     /**
      * Whether alerts rendered by {@code <g:flashMessages />} are dismissible by default.
      *
      * @since 7.1
      */
-    String VIEWS_FLASH_MESSAGES_DISMISSIBLE = 'grails.views.flashMessages.dismissible'
+    String VIEWS_GSP_FLASH_MESSAGES_DISMISSIBLE = 'grails.views.gsp.flashMessages.dismissible'
 
     /**
      * Whether to disable caching of resources in GSP

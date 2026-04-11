@@ -88,14 +88,14 @@ class ApplicationTagLib implements ApplicationContextAware, InitializingBean, Gr
         useJsessionId = config.getProperty(Settings.GRAILS_VIEWS_ENABLE_JSESSIONID, Boolean, false)
         hasResourceProcessor = applicationContext.containsBean('grailsResourceProcessor')
 
-        flashMessagesMessageClass = config.getProperty(Settings.VIEWS_FLASH_MESSAGES_MESSAGE_CLASS, String, flashMessagesMessageClass)
-        flashMessagesMessageIcon = config.getProperty(Settings.VIEWS_FLASH_MESSAGES_MESSAGE_ICON, String, flashMessagesMessageIcon)
-        flashMessagesErrorClass = config.getProperty(Settings.VIEWS_FLASH_MESSAGES_ERROR_CLASS, String, flashMessagesErrorClass)
-        flashMessagesErrorIcon = config.getProperty(Settings.VIEWS_FLASH_MESSAGES_ERROR_ICON, String, flashMessagesErrorIcon)
-        flashMessagesWarningClass = config.getProperty(Settings.VIEWS_FLASH_MESSAGES_WARNING_CLASS, String, flashMessagesWarningClass)
-        flashMessagesWarningIcon = config.getProperty(Settings.VIEWS_FLASH_MESSAGES_WARNING_ICON, String, flashMessagesWarningIcon)
-        flashMessagesRole = config.getProperty(Settings.VIEWS_FLASH_MESSAGES_ROLE, String, flashMessagesRole)
-        flashMessagesDismissible = config.getProperty(Settings.VIEWS_FLASH_MESSAGES_DISMISSIBLE, Boolean, flashMessagesDismissible)
+        flashMessagesMessageClass = config.getProperty(Settings.VIEWS_GSP_FLASH_MESSAGES_MESSAGE_CLASS, String, flashMessagesMessageClass)
+        flashMessagesMessageIcon = config.getProperty(Settings.VIEWS_GSP_FLASH_MESSAGES_MESSAGE_ICON, String, flashMessagesMessageIcon)
+        flashMessagesErrorClass = config.getProperty(Settings.VIEWS_GSP_FLASH_MESSAGES_ERROR_CLASS, String, flashMessagesErrorClass)
+        flashMessagesErrorIcon = config.getProperty(Settings.VIEWS_GSP_FLASH_MESSAGES_ERROR_ICON, String, flashMessagesErrorIcon)
+        flashMessagesWarningClass = config.getProperty(Settings.VIEWS_GSP_FLASH_MESSAGES_WARNING_CLASS, String, flashMessagesWarningClass)
+        flashMessagesWarningIcon = config.getProperty(Settings.VIEWS_GSP_FLASH_MESSAGES_WARNING_ICON, String, flashMessagesWarningIcon)
+        flashMessagesRole = config.getProperty(Settings.VIEWS_GSP_FLASH_MESSAGES_ROLE, String, flashMessagesRole)
+        flashMessagesDismissible = config.getProperty(Settings.VIEWS_GSP_FLASH_MESSAGES_DISMISSIBLE, Boolean, flashMessagesDismissible)
 
         if (applicationContext.containsBean('requestDataValueProcessor')) {
             requestDataValueProcessor = applicationContext.getBean('requestDataValueProcessor', RequestDataValueProcessor)
