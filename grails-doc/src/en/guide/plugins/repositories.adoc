@@ -17,8 +17,10 @@ specific language governing permissions and limitations
 under the License.
 ////
 
+= Plugin Repositories
 
-==== Distributing Plugins in the Grails Central Plugin Repository
+
+== Distributing Plugins in the Grails Central Plugin Repository
 
 
 The preferred way to distribute plugin is to publish to the official Grails Central Plugin Repository. This will make your plugin visible to the link:{commandLineRef}list-plugins.html[list-plugins] command:

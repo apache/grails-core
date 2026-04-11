@@ -1075,14 +1075,10 @@ include::plugins.adoc[]
 include::plugins/creatingAndInstallingPlugins.adoc[leveloffset=+2]
 
 [[repositories]]
-=== Plugin Repositories
-
-include::plugins/repositories.adoc[]
+include::plugins/repositories.adoc[leveloffset=+2]
 
 [[providingBasicArtefacts]]
-=== Providing Basic Artefacts
-
-include::plugins/providingBasicArtefacts.adoc[]
+include::plugins/providingBasicArtefacts.adoc[leveloffset=+2]
 
 [[evaluatingConventions]]
 === Evaluating Conventions
@@ -1090,29 +1086,19 @@ include::plugins/providingBasicArtefacts.adoc[]
 include::plugins/evaluatingConventions.adoc[]
 
 [[hookingIntoRuntimeConfiguration]]
-=== Hooking into Runtime Configuration
-
-include::plugins/hookingIntoRuntimeConfiguration.adoc[]
+include::plugins/hookingIntoRuntimeConfiguration.adoc[leveloffset=+2]
 
 [[addingMethodsAtCompileTime]]
-=== Adding Methods at Compile Time
-
-include::plugins/addingMethodsAtCompileTime.adoc[]
+include::plugins/addingMethodsAtCompileTime.adoc[leveloffset=+2]
 
 [[addingDynamicMethodsAtRuntime]]
-=== Adding Dynamic Methods at Runtime
-
-include::plugins/addingDynamicMethodsAtRuntime.adoc[]
+include::plugins/addingDynamicMethodsAtRuntime.adoc[leveloffset=+2]
 
 [[participatingInAutoReloadEvents]]
-=== Participating in Auto Reload Events
-
-include::plugins/participatingInAutoReloadEvents.adoc[]
+include::plugins/participatingInAutoReloadEvents.adoc[leveloffset=+2]
 
 [[understandingPluginLoadOrder]]
-=== Understanding Plugin Load Order
-
-include::plugins/understandingPluginLoadOrder.adoc[]
+include::plugins/understandingPluginLoadOrder.adoc[leveloffset=+2]
 
 [[artefactApi]]
 === The Artefact API

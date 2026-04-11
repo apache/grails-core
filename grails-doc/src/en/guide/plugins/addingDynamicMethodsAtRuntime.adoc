@@ -17,8 +17,10 @@ specific language governing permissions and limitations
 under the License.
 ////
 
+= Adding Dynamic Methods at Runtime
 
-==== The Basics
+
+== The Basics
 
 
 Grails plugins let you register dynamic methods with any Grails-managed or other class at runtime. This work is done in a `doWithDynamicMethods` method.
@@ -62,7 +64,7 @@ class ExamplePlugin extends Plugin  {
 ----
 
 
-==== Interacting with the ApplicationContext
+== Interacting with the ApplicationContext
 
 
 The `doWithDynamicMethods` closure gets passed the Spring `ApplicationContext` instance. This is useful as it lets you interact with objects within it. For example if you were implementing a method to interact with Hibernate you could use the `SessionFactory` instance in combination with a `HibernateTemplate`:
