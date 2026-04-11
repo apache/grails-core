@@ -21,6 +21,13 @@ package org.grails.orm.hibernate.cfg.domainbinding.hibernate
 import grails.gorm.annotation.Entity
 import grails.gorm.specs.HibernateGormDatastoreSpec
 import org.hibernate.MappingException
+import org.grails.datastore.mapping.model.PersistentProperty
+import org.grails.datastore.mapping.model.PersistentEntity
+import org.grails.datastore.mapping.model.PropertyMapping
+import org.grails.datastore.mapping.model.ClassMapping
+import org.grails.datastore.mapping.reflect.EntityReflector
+import org.grails.orm.hibernate.cfg.PropertyConfig
+import org.grails.orm.hibernate.cfg.Mapping
 
 class HibernateToManyPropertySpec extends HibernateGormDatastoreSpec {
 
@@ -466,6 +473,104 @@ class HibernateToManyPropertySpec extends HibernateGormDatastoreSpec {
         expect:
         prop.getElementTypeName() == org.hibernate.type.StandardBasicTypes.STRING.getName()
     }
+
+    // ─── Tests for default methods via Stub ──────────────────────────────────
+
+    def "isAssociationColumnNullable returns true for non-ManyToMany"() {
+        given:
+        def entity = (GrailsHibernatePersistentEntity) getMappingContext().getPersistentEntity(HTMPAuthor.name)
+        def stub = new TestHibernateToManyProperty(entity, HTMPBook, null)
+
+        expect:
+        stub.isAssociationColumnNullable()
+    }
+
+    def "isBidirectionalManyToOneWithListMapping coverage"() {
+        given:
+        def entity = (GrailsHibernatePersistentEntity) getMappingContext().getPersistentEntity(HTMPAuthor.name)
+        def stub = new TestHibernateToManyProperty(entity, HTMPBook, null)
+        def prop = Mock(org.hibernate.mapping.Property)
+        def manyToOne = GroovyMock(org.hibernate.mapping.ManyToOne)
+        prop.getValue() >> manyToOne
+
+        expect:
+        !stub.isBidirectionalManyToOneWithListMapping(prop)
+    }
+
+    def "getTypeName priority logic for ToMany"() {
+        given:
+        def entity = (GrailsHibernatePersistentEntity) getMappingContext().getPersistentEntity(HTMPAuthor.name)
+        def stub = new TestHibernateToManyProperty(entity, String, null)
+        
+        def config1 = new PropertyConfig(type: "custom")
+        def mapping1 = Mock(Mapping)
+        
+        def config2 = new PropertyConfig(type: null)
+        def mapping2 = Mock(Mapping)
+        
+        def config3 = new PropertyConfig(type: null)
+        def mapping3 = Mock(Mapping)
+
+        expect: "Config priority"
+        stub.getTypeName(String, config1, mapping1) == "custom"
+
+        when: "Mapping priority"
+        def res2 = stub.getTypeName(String, config2, mapping2)
+        
+        then:
+        1 * mapping2.getTypeName(String) >> "mapped"
+        res2 == "mapped"
+
+        when: "Neither have it"
+        def res3 = stub.getTypeName(String, config3, mapping3)
+        
+        then:
+        1 * mapping3.getTypeName(String) >> null
+        res3 == String.name
+    }
+
+    static class TestHibernateToManyProperty implements HibernateToManyProperty {
+        GrailsHibernatePersistentEntity ownerField
+        Class componentTypeField
+        PropertyConfig mappedFormField
+
+        TestHibernateToManyProperty(GrailsHibernatePersistentEntity entity, Class componentType, PropertyConfig mappedForm) {
+            this.ownerField = entity
+            this.componentTypeField = componentType
+            this.mappedFormField = mappedForm
+        }
+
+        @Override Class getComponentType() { componentTypeField }
+        @Override PropertyConfig getMappedForm() { mappedFormField }
+        @Override String getName() { "books" }
+        @Override Class getType() { List }
+        @Override PersistentEntity getOwner() { ownerField }
+
+        @Override String getCapitilizedName() { getName().capitalize() }
+        @Override PropertyMapping<PropertyConfig> getMapping() { 
+            return new PropertyMapping<PropertyConfig>() {
+                @Override ClassMapping getClassMapping() { null }
+                @Override PropertyConfig getMappedForm() { mappedFormField }
+            }
+        }
+        @Override boolean isNullable() { true }
+        @Override boolean isInherited() { false }
+        @Override EntityReflector.PropertyReader getReader() { null }
+        @Override EntityReflector.PropertyWriter getWriter() { null }
+        @Override boolean supportsJoinColumnMapping() { true }
+
+        @Override PersistentProperty<?> getInverseSide() { null }
+        @Override PersistentEntity getAssociatedEntity() { null }
+        @Override boolean isBidirectional() { false }
+        @Override boolean isOwningSide() { false }
+        @Override boolean isCircular() { false }
+        @Override boolean isBidirectionalToManyMap() { false }
+        @Override boolean isBasic() { false }
+        @Override boolean isOneToMany() { true }
+        @Override boolean isManyToMany() { false }
+        @Override void setHibernateCollection(org.hibernate.mapping.Collection collection) {}
+        @Override org.hibernate.mapping.Collection getHibernateCollection() { null }
+    }
 }
 
 // --- Supporting Entities ---
@@ -506,8 +611,6 @@ class HTMPCourse {
     String title
     static hasMany = [students: HTMPStudent]
 }
-
-import grails.persistence.Entity
 
 @Entity // Only if outside grails-app/domain
 class HTMPOrder {
