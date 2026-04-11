@@ -35,8 +35,6 @@ group = 'org.apache.grails.web'
 dependencies {
 
     implementation platform(project(':grails-bom'))
-    annotationProcessor platform(project(':grails-bom'))
-    annotationProcessor 'org.springframework.boot:spring-boot-configuration-processor'
 
     api project(':grails-web-common')
     compileOnly 'org.apache.grails.views:grails-gsp-core', {
