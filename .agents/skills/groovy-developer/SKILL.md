@@ -1,3 +1,9 @@
+---
+name: groovy-developer
+description: Expert guide for Groovy 4 development, covering concise syntax, closures, DSLs, metaprogramming, static compilation, and integration with Java 17 and Grails
+license: Apache-2.0
+---
+
 <!--
 SPDX-License-Identifier: Apache-2.0
 
@@ -13,17 +19,6 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 -->
----
-name: groovy-developer
-description: Expert guide for Groovy 4 development, covering concise syntax, closures, DSLs, metaprogramming, static compilation, and integration with Java 17 and Grails
-license: Apache-2.0
-compatibility: opencode, claude, grok, gemini, copilot, cursor, windsurf
-metadata:
-  audience: developers
-  languages: groovy, java
-  versions: 4.0
-  paradigms: dynamic, static, functional, object-oriented, DSL-oriented
----
 
 ## What I Do
 
