@@ -152,7 +152,7 @@ A small number of modules use `integrationTest` for full Spring context tests.
 
 ## Parallel Test Execution
 
-Tests run in parallel (`maxParallelForks` defaults to `availableProcessors * 3/4`). This can cause:
+Tests run in parallel (`maxParallelForks` defaults to `4` on CI and to `availableProcessors * 3/4` otherwise; override with `-PmaxTestParallel`). This can cause:
 
 - **Static state pollution** — one test mutating a static field that another test reads.
 - **Port conflicts** — multiple test JVMs binding the same port.
