@@ -194,4 +194,114 @@ class FlashMessagesTagLibSpec extends Specification implements TagLibUnitTest<Ap
         result.contains('bi bi-bell')
         !result.contains('alert-warning')
     }
+
+    void "configured messageClass default is used when attribute is not set"() {
+        given:
+        tagLib.flashMessagesMessageClass = 'my-success-banner'
+        tagLib.flashMessagesMessageIcon = 'icon-thumbs-up'
+        tagLib.flash.message = 'Saved'
+
+        when:
+        def result = applyTemplate('<g:flashMessages />')
+
+        then:
+        result.contains('my-success-banner')
+        result.contains('icon-thumbs-up')
+        !result.contains('alert-success')
+    }
+
+    void "configured errorClass default is used when attribute is not set"() {
+        given:
+        tagLib.flashMessagesErrorClass = 'my-error-banner'
+        tagLib.flashMessagesErrorIcon = 'icon-warning'
+        tagLib.flash.error = 'Failed'
+
+        when:
+        def result = applyTemplate('<g:flashMessages />')
+
+        then:
+        result.contains('my-error-banner')
+        result.contains('icon-warning')
+        !result.contains('alert-danger')
+    }
+
+    void "configured warningClass default is used when attribute is not set"() {
+        given:
+        tagLib.flashMessagesWarningClass = 'my-warning-banner'
+        tagLib.flashMessagesWarningIcon = 'icon-alert'
+        tagLib.flash.warning = 'Careful'
+
+        when:
+        def result = applyTemplate('<g:flashMessages />')
+
+        then:
+        result.contains('my-warning-banner')
+        result.contains('icon-alert')
+        !result.contains('alert-warning')
+    }
+
+    void "configured role default is used when attribute is not set"() {
+        given:
+        tagLib.flashMessagesRole = 'status'
+        tagLib.flash.message = 'Saved'
+
+        when:
+        def result = applyTemplate('<g:flashMessages />')
+
+        then:
+        result.contains('role="status"')
+        !result.contains('role="alert"')
+    }
+
+    void "configured dismissible default is used when attribute is not set"() {
+        given:
+        tagLib.flashMessagesDismissible = false
+        tagLib.flash.message = 'Saved'
+
+        when:
+        def result = applyTemplate('<g:flashMessages />')
+
+        then:
+        !result.contains('btn-close')
+        result.contains('Saved')
+    }
+
+    void "attribute overrides configured default"() {
+        given:
+        tagLib.flashMessagesMessageClass = 'configured-class'
+        tagLib.flash.message = 'Saved'
+
+        when:
+        def result = applyTemplate('<g:flashMessages messageClass="attribute-class" />')
+
+        then:
+        result.contains('attribute-class')
+        !result.contains('configured-class')
+    }
+
+    void "afterPropertiesSet reads all flashMessages config keys"() {
+        given:
+        def config = grailsApplication.config
+        config.setAt('grails.views.flashMessages.messageClass', 'cfg-msg-class')
+        config.setAt('grails.views.flashMessages.messageIcon', 'cfg-msg-icon')
+        config.setAt('grails.views.flashMessages.errorClass', 'cfg-err-class')
+        config.setAt('grails.views.flashMessages.errorIcon', 'cfg-err-icon')
+        config.setAt('grails.views.flashMessages.warningClass', 'cfg-warn-class')
+        config.setAt('grails.views.flashMessages.warningIcon', 'cfg-warn-icon')
+        config.setAt('grails.views.flashMessages.role', 'status')
+        config.setAt('grails.views.flashMessages.dismissible', false)
+
+        when:
+        tagLib.afterPropertiesSet()
+
+        then:
+        tagLib.flashMessagesMessageClass == 'cfg-msg-class'
+        tagLib.flashMessagesMessageIcon == 'cfg-msg-icon'
+        tagLib.flashMessagesErrorClass == 'cfg-err-class'
+        tagLib.flashMessagesErrorIcon == 'cfg-err-icon'
+        tagLib.flashMessagesWarningClass == 'cfg-warn-class'
+        tagLib.flashMessagesWarningIcon == 'cfg-warn-icon'
+        tagLib.flashMessagesRole == 'status'
+        tagLib.flashMessagesDismissible == false
+    }
 }

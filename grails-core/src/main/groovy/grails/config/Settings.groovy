@@ -67,6 +67,62 @@ interface Settings {
     String VIEWS_FILTERING_CODEC_FOR_CONTENT_TYPE = 'grails.views.filteringCodecForContentType'
 
     /**
+     * Default CSS class for {@code flash.message} alerts rendered by {@code <g:flashMessages />}.
+     *
+     * @since 7.1
+     */
+    String VIEWS_FLASH_MESSAGES_MESSAGE_CLASS = 'grails.views.flashMessages.messageClass'
+
+    /**
+     * Default icon class for {@code flash.message} alerts rendered by {@code <g:flashMessages />}.
+     *
+     * @since 7.1
+     */
+    String VIEWS_FLASH_MESSAGES_MESSAGE_ICON = 'grails.views.flashMessages.messageIcon'
+
+    /**
+     * Default CSS class for {@code flash.error} alerts rendered by {@code <g:flashMessages />}.
+     *
+     * @since 7.1
+     */
+    String VIEWS_FLASH_MESSAGES_ERROR_CLASS = 'grails.views.flashMessages.errorClass'
+
+    /**
+     * Default icon class for {@code flash.error} alerts rendered by {@code <g:flashMessages />}.
+     *
+     * @since 7.1
+     */
+    String VIEWS_FLASH_MESSAGES_ERROR_ICON = 'grails.views.flashMessages.errorIcon'
+
+    /**
+     * Default CSS class for {@code flash.warning} alerts rendered by {@code <g:flashMessages />}.
+     *
+     * @since 7.1
+     */
+    String VIEWS_FLASH_MESSAGES_WARNING_CLASS = 'grails.views.flashMessages.warningClass'
+
+    /**
+     * Default icon class for {@code flash.warning} alerts rendered by {@code <g:flashMessages />}.
+     *
+     * @since 7.1
+     */
+    String VIEWS_FLASH_MESSAGES_WARNING_ICON = 'grails.views.flashMessages.warningIcon'
+
+    /**
+     * Default ARIA role for alerts rendered by {@code <g:flashMessages />}.
+     *
+     * @since 7.1
+     */
+    String VIEWS_FLASH_MESSAGES_ROLE = 'grails.views.flashMessages.role'
+
+    /**
+     * Whether alerts rendered by {@code <g:flashMessages />} are dismissible by default.
+     *
+     * @since 7.1
+     */
+    String VIEWS_FLASH_MESSAGES_DISMISSIBLE = 'grails.views.flashMessages.dismissible'
+
+    /**
      * Whether to disable caching of resources in GSP
      */
     String GSP_DISABLE_CACHING_RESOURCES = 'grails.gsp.disable.caching.resources'

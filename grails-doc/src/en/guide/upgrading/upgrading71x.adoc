@@ -742,4 +742,19 @@ The default layout (`main.gsp`) and all scaffolding templates now use this tag. 
 <g:flashMessages />
 ----
 
-The tag supports optional attributes for customizing CSS classes, icons, ARIA role, and dismissibility. See the {gspTagsRef}flashMessages.html[flashMessages] tag reference for full details.
+The tag supports optional attributes for customizing CSS classes, icons, ARIA role, and dismissibility. Applications that do not use Bootstrap can override the defaults globally under `grails.views.flashMessages.*` in `application.yml`:
+
+[source,yaml]
+----
+grails:
+    views:
+        flashMessages:
+            messageClass: 'notification is-success'
+            messageIcon: 'fa-solid fa-check'
+            errorClass: 'notification is-danger'
+            errorIcon: 'fa-solid fa-triangle-exclamation'
+            warningClass: 'notification is-warning'
+            warningIcon: 'fa-solid fa-circle-exclamation'
+----
+
+See the {gspTagsRef}flashMessages.html[flashMessages] tag reference for full details.

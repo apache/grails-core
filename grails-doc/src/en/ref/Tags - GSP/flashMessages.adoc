@@ -108,6 +108,31 @@ The tag automatically sets a `_flashRendered` request attribute after rendering.
 
 All flash message content is HTML-encoded to prevent XSS.
 
+==== Configuration
+
+The defaults target Bootstrap 5. Applications that use a different CSS framework can override the defaults globally in `application.yml`:
+
+[source,yaml]
+----
+grails:
+    views:
+        flashMessages:
+            messageClass: 'notification is-success'
+            messageIcon: 'fa-solid fa-check'
+            errorClass: 'notification is-danger'
+            errorIcon: 'fa-solid fa-triangle-exclamation'
+            warningClass: 'notification is-warning'
+            warningIcon: 'fa-solid fa-circle-exclamation'
+            role: 'alert'
+            dismissible: true
+----
+
+Resolution order for every default is:
+
+. Tag attribute (e.g. `<g:flashMessages messageClass="..." />`)
+. Configured value under `grails.views.flashMessages.*`
+. Built-in Bootstrap fallback
+
 Attributes
 
 * `messageClass` (optional) - CSS class for `flash.message` alerts. Default: `alert alert-success alert-dismissible fade show`

@@ -73,11 +73,29 @@ class ApplicationTagLib implements ApplicationContextAware, InitializingBean, Gr
     boolean useJsessionId = false
     boolean hasResourceProcessor = false
 
+    String flashMessagesMessageClass = 'alert alert-success alert-dismissible fade show'
+    String flashMessagesMessageIcon = 'bi bi-check-circle me-2'
+    String flashMessagesErrorClass = 'alert alert-danger alert-dismissible fade show'
+    String flashMessagesErrorIcon = 'bi bi-exclamation-triangle me-2'
+    String flashMessagesWarningClass = 'alert alert-warning alert-dismissible fade show'
+    String flashMessagesWarningIcon = 'bi bi-exclamation-circle me-2'
+    String flashMessagesRole = 'alert'
+    boolean flashMessagesDismissible = true
+
     void afterPropertiesSet() {
         def config = grailsApplication.config
 
         useJsessionId = config.getProperty(Settings.GRAILS_VIEWS_ENABLE_JSESSIONID, Boolean, false)
         hasResourceProcessor = applicationContext.containsBean('grailsResourceProcessor')
+
+        flashMessagesMessageClass = config.getProperty(Settings.VIEWS_FLASH_MESSAGES_MESSAGE_CLASS, String, flashMessagesMessageClass)
+        flashMessagesMessageIcon = config.getProperty(Settings.VIEWS_FLASH_MESSAGES_MESSAGE_ICON, String, flashMessagesMessageIcon)
+        flashMessagesErrorClass = config.getProperty(Settings.VIEWS_FLASH_MESSAGES_ERROR_CLASS, String, flashMessagesErrorClass)
+        flashMessagesErrorIcon = config.getProperty(Settings.VIEWS_FLASH_MESSAGES_ERROR_ICON, String, flashMessagesErrorIcon)
+        flashMessagesWarningClass = config.getProperty(Settings.VIEWS_FLASH_MESSAGES_WARNING_CLASS, String, flashMessagesWarningClass)
+        flashMessagesWarningIcon = config.getProperty(Settings.VIEWS_FLASH_MESSAGES_WARNING_ICON, String, flashMessagesWarningIcon)
+        flashMessagesRole = config.getProperty(Settings.VIEWS_FLASH_MESSAGES_ROLE, String, flashMessagesRole)
+        flashMessagesDismissible = config.getProperty(Settings.VIEWS_FLASH_MESSAGES_DISMISSIBLE, Boolean, flashMessagesDismissible)
 
         if (applicationContext.containsBean('requestDataValueProcessor')) {
             requestDataValueProcessor = applicationContext.getBean('requestDataValueProcessor', RequestDataValueProcessor)
@@ -494,29 +512,29 @@ class ApplicationTagLib implements ApplicationContextAware, InitializingBean, Gr
         }
 
         boolean rendered = false
-        boolean dismissible = attrs.dismissible != null ? attrs.dismissible.toString().toBoolean() : true
-        String role = attrs.role ?: 'alert'
+        boolean dismissible = attrs.dismissible != null ? attrs.dismissible.toString().toBoolean() : flashMessagesDismissible
+        String role = attrs.role ?: flashMessagesRole
 
         if (flash.message) {
             renderFlashAlert(
-                    attrs.messageClass ?: 'alert alert-success alert-dismissible fade show',
-                    attrs.messageIcon ?: 'bi bi-check-circle me-2',
+                    attrs.messageClass ?: flashMessagesMessageClass,
+                    attrs.messageIcon ?: flashMessagesMessageIcon,
                     flash.message, dismissible, role)
             rendered = true
         }
 
         if (flash.error) {
             renderFlashAlert(
-                    attrs.errorClass ?: 'alert alert-danger alert-dismissible fade show',
-                    attrs.errorIcon ?: 'bi bi-exclamation-triangle me-2',
+                    attrs.errorClass ?: flashMessagesErrorClass,
+                    attrs.errorIcon ?: flashMessagesErrorIcon,
                     flash.error, dismissible, role)
             rendered = true
         }
 
         if (flash.warning) {
             renderFlashAlert(
-                    attrs.warningClass ?: 'alert alert-warning alert-dismissible fade show',
-                    attrs.warningIcon ?: 'bi bi-exclamation-circle me-2',
+                    attrs.warningClass ?: flashMessagesWarningClass,
+                    attrs.warningIcon ?: flashMessagesWarningIcon,
                     flash.warning, dismissible, role)
             rendered = true
         }
