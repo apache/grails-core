@@ -386,6 +386,117 @@ class HibernatePersistentPropertySpec extends HibernateGormDatastoreSpec {
         expect:
         property.getTypeParameters(mockValue).isEmpty()
     }
+
+    // ─── Tests using a stub to reach deep logic ──────────────────────────────
+
+    def "test isSerializableType and serializable type name"() {
+        given:
+        def assoc = new TestHibernatePersistentProperty(typeName: "serializable")
+
+        expect:
+        assoc.isSerializableType()
+        
+        when:
+        assoc.typeName = "string"
+        
+        then:
+        !assoc.isSerializableType()
+    }
+
+    def "getUserType handles ClassNotFoundException and returns null"() {
+        given:
+        def config = new org.grails.orm.hibernate.cfg.PropertyConfig()
+        config.type = 'com.nonexistent.DoesNotExist'
+        def assoc = new TestHibernatePersistentProperty(mappedForm: config)
+
+        expect:
+        assoc.getUserType() == null
+    }
+
+    def "isUserButNotCollectionType logic"() {
+        given:
+        def config = new org.grails.orm.hibernate.cfg.PropertyConfig()
+        def assoc = new TestHibernatePersistentProperty(mappedForm: config)
+
+        when:
+        config.type = type
+
+        then:
+        assoc.isUserButNotCollectionType() == result
+
+        where:
+        type | result
+        null | false
+        String | true
+        org.hibernate.usertype.UserCollectionType | false
+    }
+
+    def "getTypeName comprehensive logic"() {
+        given:
+        def assoc = new TestHibernatePersistentProperty(type: String)
+        def config1 = new org.grails.orm.hibernate.cfg.PropertyConfig(type: "fromConfig")
+        def mapping1 = Mock(org.grails.orm.hibernate.cfg.Mapping)
+        
+        def config2 = new org.grails.orm.hibernate.cfg.PropertyConfig(type: null)
+        def mapping2 = Mock(org.grails.orm.hibernate.cfg.Mapping)
+        
+        def config3 = new org.grails.orm.hibernate.cfg.PropertyConfig(type: null)
+        def mapping3 = Mock(org.grails.orm.hibernate.cfg.Mapping)
+        
+        def config4 = new org.grails.orm.hibernate.cfg.PropertyConfig(type: null)
+
+        expect: "Config priority"
+        assoc.getTypeName(String, config1, mapping1) == "fromConfig"
+
+        when: "Mapping priority when config type is null"
+        def res2 = assoc.getTypeName(String, config2, mapping2)
+        
+        then:
+        1 * mapping2.getTypeName(String) >> "fromMapping"
+        res2 == "fromMapping"
+
+        when: "Default class name when both are null"
+        def res3 = assoc.getTypeName(String, config3, mapping3)
+        
+        then:
+        1 * mapping3.getTypeName(String) >> null
+        res3 == String.name
+
+        when: "Mapping is null"
+        def res4 = assoc.getTypeName(String, config4, null)
+        
+        then:
+        res4 == String.name
+    }
+
+    static class TestHibernatePersistentProperty implements HibernatePersistentProperty {
+        String name = "test"
+        Class type
+        org.grails.orm.hibernate.cfg.PropertyConfig mappedForm
+        String typeName
+
+        @Override String getTypeName(org.grails.orm.hibernate.cfg.PropertyConfig config, org.grails.orm.hibernate.cfg.Mapping mapping) { 
+            return getTypeName(type, config, mapping) 
+        }
+        @Override String getTypeName() { typeName ?: getTypeName(getType()) }
+        @Override org.grails.orm.hibernate.cfg.PropertyConfig getMappedForm() { mappedForm }
+        @Override Class getType() { type }
+        @Override String getName() { name }
+
+        @Override String getCapitilizedName() { name.capitalize() }
+        @Override org.grails.datastore.mapping.model.PropertyMapping<org.grails.orm.hibernate.cfg.PropertyConfig> getMapping() { 
+            return new org.grails.datastore.mapping.model.PropertyMapping<org.grails.orm.hibernate.cfg.PropertyConfig>() {
+                @Override org.grails.datastore.mapping.model.ClassMapping getClassMapping() { null }
+                @Override org.grails.orm.hibernate.cfg.PropertyConfig getMappedForm() { mappedForm }
+            }
+        }
+        @Override org.grails.datastore.mapping.model.PersistentEntity getOwner() { null }
+        @Override boolean isNullable() { true }
+        @Override boolean isInherited() { false }
+        @Override org.grails.datastore.mapping.reflect.EntityReflector.PropertyReader getReader() { null }
+        @Override org.grails.datastore.mapping.reflect.EntityReflector.PropertyWriter getWriter() { null }
+        @Override boolean supportsJoinColumnMapping() { true }
+    }
 }
 
 @Entity
