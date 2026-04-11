@@ -89,7 +89,7 @@ A clean run produces:
 All tests passed! 🎉
 ```
 
-**A commit must not include a `TEST_FAILURES.md` with failures.**
+**A clean run should report no issues, and `TEST_FAILURES.md` is a generated artifact that must be removed before committing, whether it contains failures or not.**
 
 ---
 
