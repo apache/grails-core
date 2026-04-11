@@ -1,6 +1,8 @@
 package org.grails.orm.hibernate.cfg.domainbinding.hibernate
 
 import org.hibernate.type.StandardBasicTypes
+import org.hibernate.boot.model.naming.ImplicitNamingStrategy
+import org.hibernate.boot.model.naming.ImplicitNamingStrategyJpaCompliantImpl
 import spock.lang.Specification
 
 class HibernateToManyCollectionPropertySpec extends Specification {
@@ -43,5 +45,38 @@ class HibernateToManyCollectionPropertySpec extends Specification {
 
         expect:
         property.getElementTypeName() == StandardBasicTypes.STRING.getName()
+    }
+
+    void "test getRole with path"() {
+        given:
+        def property = Spy(HibernateToManyCollectionProperty)
+        property.getOwner() >> [getName: { "MyEntity" }] as org.grails.datastore.mapping.model.PersistentEntity
+        property.getName() >> "tags"
+
+        expect:
+        property.getRole("foo.bar") == "MyEntity.foo.bar.tags"
+        property.getRole(null) == "MyEntity.tags"
+    }
+
+    void "test getIndexColumnName fallback"() {
+        given:
+        def property = Spy(HibernateToManyCollectionProperty)
+        property.getName() >> "tags"
+        def namingStrategy = ImplicitNamingStrategyJpaCompliantImpl.INSTANCE
+
+        expect:
+        // By default ImplicitNamingStrategyJpaCompliantImpl uses the property name directly for the index
+        // but HibernateToManyProperty adds _idx suffix in the default implementation
+        property.getIndexColumnName(namingStrategy) == "tags_idx"
+    }
+
+    void "test getMapElementName fallback"() {
+        given:
+        def property = Spy(HibernateToManyCollectionProperty)
+        property.getName() >> "tags"
+        def namingStrategy = ImplicitNamingStrategyJpaCompliantImpl.INSTANCE
+
+        expect:
+        property.getMapElementName(namingStrategy) == "tags_elt"
     }
 }
