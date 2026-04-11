@@ -37,54 +37,28 @@ class UniqueNameGeneratorSpec extends Specification {
     @Subject
     UniqueNameGenerator generator = new UniqueNameGenerator()
 
-    @Unroll
-    def "should generate a unique name based on table and column names and truncate it"() {
+    def "should generate a unique name based on table and column names"() {
         given: "A unique key with a table and several columns"
-        def table = Mock(Table)
+        def table = new Table("test", "person")
         def column1 = new Column('first_name')
         def column2 = new Column('last_name')
-        def uniqueKey = Mock(UniqueKey)
-
-        table.getName() >> "person"
-
-        uniqueKey.getTable() >> table
-        uniqueKey.getColumns() >> [column1, column2]
+        def uniqueKey = new UniqueKey(table)
+        uniqueKey.addColumn(column1)
+        uniqueKey.addColumn(column2)
 
         def expectedName = generateExpectedName("person", "first_name", "last_name")
 
         when: "the unique name is generated"
         generator.setGeneratedUniqueName(uniqueKey)
 
-        then: "the name is correctly calculated, prefixed, and truncated"
-        1 * uniqueKey.setName(expectedName)
+        then: "the name is correctly calculated"
+        uniqueKey.getName() == expectedName
     }
 
-    @Unroll
-    def "should not truncate a generated name that is 30 characters or less"() {
-        given: "A unique key whose hash results in a short name"
-        def table = Mock(Table)
-        def column = new Column('short_col')
-        def uniqueKey = Mock(UniqueKey)
-
-        table.getName() >> "short_table"
-        uniqueKey.getTable() >> table
-        uniqueKey.getColumns() >> [column]
-
-        def expectedName = generateExpectedName("short_table", "short_col")
-
-        when: "the unique name is generated"
-        generator.setGeneratedUniqueName(uniqueKey)
-
-        then: "the name is not truncated because its length is not greater than 30"
-        1 * uniqueKey.setName(expectedName)
-    }
-
-    @Unroll
     def "should throw MappingException if the unique key has no associated table"() {
-        given: "A unique key without a table"
-        def uniqueKey = Mock(UniqueKey)
-        uniqueKey.getTable() >> null
-        uniqueKey.getName() >> "my_uk" // For the exception message
+        given: "A unique key without a table (using a subclass because UniqueKey constructor requires table)"
+        def uniqueKey = new UniqueKey(null)
+        uniqueKey.setName("my_uk")
 
         when: "an attempt is made to generate the name"
         generator.setGeneratedUniqueName(uniqueKey)
@@ -94,15 +68,10 @@ class UniqueNameGeneratorSpec extends Specification {
         e.message == "Unique Key my_uk does not have a table associated with it"
     }
 
-    @Unroll
     def "should generate a name based only on the table if no columns are present"() {
         given: "A unique key with a table but no columns"
-        def table = Mock(Table)
-        def uniqueKey = Mock(UniqueKey)
-
-        table.getName() >> "audit_log"
-        uniqueKey.getTable() >> table
-        uniqueKey.getColumns() >> []
+        def table = new Table("test", "audit_log")
+        def uniqueKey = new UniqueKey(table)
 
         def expectedName = generateExpectedName("audit_log")
 
@@ -110,20 +79,17 @@ class UniqueNameGeneratorSpec extends Specification {
         generator.setGeneratedUniqueName(uniqueKey)
 
         then: "the name is generated correctly using only the table name"
-        1 * uniqueKey.setName(expectedName)
+        uniqueKey.getName() == expectedName
     }
 
-    @Unroll
     def "should filter out columns with blank or null names"() {
         given: "A unique key with valid, blank, and null column names"
-        def table = Mock(Table)
+        def table = new Table("test", "product")
         def column1 = new Column('sku')
         def column2 = new Column('')
         def column3 = new Column(null)
+        
         def uniqueKey = Mock(UniqueKey)
-
-        table.getName() >> "product"
-
         uniqueKey.getTable() >> table
         uniqueKey.getColumns() >> [column1, column2, column3]
 

@@ -1024,6 +1024,88 @@ class GrailsHibernateTemplateSpec extends HibernateGormDatastoreSpec {
         cleanup:
         template.flushMode = GrailsHibernateTemplate.FLUSH_AUTO
     }
+
+    // ── Additional edge cases for coverage ───────────────────────────────────
+
+    void "executeFind returns null if action returns null"() {
+        when:
+        def result = template.executeFind { sess -> null }
+
+        then:
+        result == null
+    }
+
+    void "getIterableAsCollection handles non-Collection Iterables"() {
+        given:
+        def iterable = new Iterable() {
+            @Override
+            Iterator iterator() {
+                return ["a", "b"].iterator()
+            }
+        }
+
+        when:
+        def collection = template.getIterableAsCollection(iterable)
+
+        then:
+        collection instanceof List
+        collection.size() == 2
+        collection.contains("a")
+        collection.contains("b")
+    }
+
+    void "convertHibernateAccessException handles JDBCException"() {
+        given:
+        def jdbcEx = new org.hibernate.exception.ConstraintViolationException("msg", new java.sql.SQLException("inner", "23000"), "constraint")
+
+        when:
+        def converted = template.convertHibernateAccessException(jdbcEx)
+
+        then:
+        converted instanceof DataAccessException
+    }
+
+    void "convertHibernateAccessException handles GenericJDBCException"() {
+        given:
+        // Use a SQL state that is likely to be translated (e.g. 42000 for syntax error)
+        def genericEx = new org.hibernate.exception.GenericJDBCException("msg", new java.sql.SQLException("inner", "42000"))
+
+        when:
+        def converted = template.convertHibernateAccessException(genericEx)
+
+        then:
+        converted instanceof DataAccessException
+    }
+
+    void "createSessionProxy handles EventSource"() {
+        given:
+        def mockEventSourceSession = Mock(org.hibernate.event.spi.EventSource)
+        template.exposeNativeSession = false
+
+        when:
+        def proxy = template.createSessionProxy(mockEventSourceSession)
+
+        then:
+        proxy instanceof org.hibernate.event.spi.EventSource
+
+        cleanup:
+        template.exposeNativeSession = true
+    }
+
+    void "createSessionProxy handles SessionImplementor"() {
+        given:
+        def mockSessionImplementor = Mock(org.hibernate.engine.spi.SessionImplementor)
+        template.exposeNativeSession = false
+
+        when:
+        def proxy = template.createSessionProxy(mockSessionImplementor)
+
+        then:
+        proxy instanceof org.hibernate.engine.spi.SessionImplementor
+
+        cleanup:
+        template.exposeNativeSession = true
+    }
 }
 
 @Entity

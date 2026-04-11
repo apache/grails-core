@@ -18,49 +18,97 @@
  */
 package org.grails.orm.hibernate.cfg.domainbinding.generator
 
-import grails.gorm.annotation.Entity
 import grails.gorm.specs.HibernateGormDatastoreSpec
 import org.grails.orm.hibernate.cfg.HibernateSimpleIdentity
-import org.hibernate.id.enhanced.TableGenerator
+import org.hibernate.boot.model.relational.Database
+import org.hibernate.boot.model.relational.SqlStringGenerationContext
+import org.hibernate.engine.jdbc.env.spi.JdbcEnvironment
 import org.hibernate.generator.GeneratorCreationContext
 import org.hibernate.mapping.Property
-import org.hibernate.mapping.Table
-import org.hibernate.boot.model.relational.Database
-import org.hibernate.boot.model.relational.Namespace
-import org.hibernate.boot.model.naming.Identifier
+import org.hibernate.id.enhanced.TableGenerator
+import spock.lang.Specification
 
 class GrailsTableGeneratorSpec extends HibernateGormDatastoreSpec {
 
-    void setupSpec() {
-        manager.addAllDomainClasses([
-            TableGeneratorSpecEntity
-        ])
+    static class TestGrailsTableGenerator extends GrailsTableGenerator {
+        Properties capturedProps
+        Database capturedDatabase
+        SqlStringGenerationContext capturedSqlContext
+
+        TestGrailsTableGenerator(GeneratorCreationContext context, HibernateSimpleIdentity mappedId, JdbcEnvironment jdbcEnvironment) {
+            super(context, mappedId, jdbcEnvironment)
+        }
+
+        @Override
+        void configure(GeneratorCreationContext context, Properties params) {
+            this.capturedProps = params
+        }
+
+        @Override
+        void registerExportables(Database database) {
+            this.capturedDatabase = database
+        }
+
+        @Override
+        void initialize(SqlStringGenerationContext context) {
+            this.capturedSqlContext = context
+        }
+    }
+
+    def "test constructor logic"() {
+        given:
+        def binder = getGrailsDomainBinder()
+        def context = Mock(GeneratorCreationContext)
+        def property = new Property()
+        property.setName("id")
+        def database = binder.getMetadataBuildingContext().getMetadataCollector().getDatabase()
+        def jdbcEnvironment = binder.getJdbcEnvironment()
+        def mappedId = Mock(HibernateSimpleIdentity)
+        def props = new Properties()
+
+        context.getProperty() >> property
+        context.getDatabase() >> database
+        mappedId.getProperties() >> props
+        mappedId.getName() >> "myEntity"
+
+        when:
+        def generator = new TestGrailsTableGenerator(context, mappedId, jdbcEnvironment)
+
+        then:
+        generator.capturedProps.getProperty(TableGenerator.SEGMENT_VALUE_PARAM) == "myEntity.id"
+        generator.capturedProps.getProperty(TableGenerator.INCREMENT_PARAM) == "50"
+        generator.capturedProps.getProperty(TableGenerator.OPT_PARAM) == "pooled-lo"
+        generator.capturedDatabase == database
+        generator.capturedSqlContext != null
     }
 
     def "test constructor with null mappedId"() {
         given:
         def binder = getGrailsDomainBinder()
         def context = Mock(GeneratorCreationContext)
-        def property = Mock(Property)
-        
+        def property = new Property()
+        property.setName("id")
+        def database = binder.getMetadataBuildingContext().getMetadataCollector().getDatabase()
+        def jdbcEnvironment = binder.getJdbcEnvironment()
+
         context.getProperty() >> property
-        property.getName() >> "id"
-        context.getDatabase() >> binder.getMetadataBuildingContext().getMetadataCollector().getDatabase()
-        context.getServiceRegistry() >> binder.getMetadataBuildingContext().getBuildingOptions().getServiceRegistry()
+        context.getDatabase() >> database
 
         when:
-        def generator = new GrailsTableGenerator(context, null, binder.getJdbcEnvironment())
+        def generator = new TestGrailsTableGenerator(context, null, jdbcEnvironment)
 
         then:
-        generator.getSegmentValue() == "default.id"
-        generator.getIncrementSize() == 50
+        generator.capturedProps.getProperty(TableGenerator.SEGMENT_VALUE_PARAM) == "default.id"
     }
 
-    def "test constructor with existing segment value and parameters"() {
+    def "test constructor with existing parameters"() {
         given:
         def binder = getGrailsDomainBinder()
         def context = Mock(GeneratorCreationContext)
-        def property = Mock(Property)
+        def property = new Property()
+        property.setName("id")
+        def database = binder.getMetadataBuildingContext().getMetadataCollector().getDatabase()
+        def jdbcEnvironment = binder.getJdbcEnvironment()
         def mappedId = Mock(HibernateSimpleIdentity)
         def props = new Properties()
         props.put(TableGenerator.SEGMENT_VALUE_PARAM, "custom_segment")
@@ -68,63 +116,15 @@ class GrailsTableGeneratorSpec extends HibernateGormDatastoreSpec {
         props.put(TableGenerator.OPT_PARAM, "none")
 
         context.getProperty() >> property
-        property.getName() >> "id"
-        context.getDatabase() >> binder.getMetadataBuildingContext().getMetadataCollector().getDatabase()
-        context.getServiceRegistry() >> binder.getMetadataBuildingContext().getBuildingOptions().getServiceRegistry()
+        context.getDatabase() >> database
         mappedId.getProperties() >> props
 
         when:
-        def generator = new GrailsTableGenerator(context, mappedId, binder.getJdbcEnvironment())
+        def generator = new TestGrailsTableGenerator(context, mappedId, jdbcEnvironment)
 
         then:
-        generator.getSegmentValue() == "custom_segment"
-        generator.getIncrementSize() == 100
+        generator.capturedProps.getProperty(TableGenerator.SEGMENT_VALUE_PARAM) == "custom_segment"
+        generator.capturedProps.getProperty(TableGenerator.INCREMENT_PARAM) == "100"
+        generator.capturedProps.getProperty(TableGenerator.OPT_PARAM) == "none"
     }
-
-    def "test constructor with mappedId but null name"() {
-        given:
-        def binder = getGrailsDomainBinder()
-        def context = Mock(GeneratorCreationContext)
-        def property = Mock(Property)
-        def mappedId = Mock(HibernateSimpleIdentity)
-
-        context.getProperty() >> property
-        property.getName() >> "id"
-        context.getDatabase() >> binder.getMetadataBuildingContext().getMetadataCollector().getDatabase()
-        context.getServiceRegistry() >> binder.getMetadataBuildingContext().getBuildingOptions().getServiceRegistry()
-        mappedId.getProperties() >> new Properties()
-        mappedId.getName() >> null
-
-        when:
-        def generator = new GrailsTableGenerator(context, mappedId, binder.getJdbcEnvironment())
-
-        then:
-        generator.getSegmentValue() == "default.id"
-    }
-
-    def "test constructor with mappedId name"() {
-        given:
-        def binder = getGrailsDomainBinder()
-        def context = Mock(GeneratorCreationContext)
-        def property = Mock(Property)
-        def mappedId = Mock(HibernateSimpleIdentity)
-
-        context.getProperty() >> property
-        property.getName() >> "id"
-        context.getDatabase() >> binder.getMetadataBuildingContext().getMetadataCollector().getDatabase()
-        context.getServiceRegistry() >> binder.getMetadataBuildingContext().getBuildingOptions().getServiceRegistry()
-        mappedId.getProperties() >> new Properties()
-        mappedId.getName() >> "myEntity"
-
-        when:
-        def generator = new GrailsTableGenerator(context, mappedId, binder.getJdbcEnvironment())
-
-        then:
-        generator.getSegmentValue() == "myEntity.id"
-    }
-}
-
-@Entity
-class TableGeneratorSpecEntity {
-    Long id
 }

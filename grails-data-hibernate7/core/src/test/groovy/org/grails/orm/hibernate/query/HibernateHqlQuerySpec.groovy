@@ -344,6 +344,71 @@ class HibernateHqlQuerySpec extends HibernateGormDatastoreSpec {
         result.size() == 1
         result[0] instanceof Long
     }
+
+    // ─── Additional edge cases for coverage ───────────────────────────────────
+
+    def "convertQueryFlushMode handles various inputs"() {
+        expect:
+        HibernateHqlQuery.convertQueryFlushMode(FlushMode.ALWAYS) == org.hibernate.query.QueryFlushMode.FLUSH
+        HibernateHqlQuery.convertQueryFlushMode(FlushMode.MANUAL) == org.hibernate.query.QueryFlushMode.NO_FLUSH
+        HibernateHqlQuery.convertQueryFlushMode(FlushMode.COMMIT) == org.hibernate.query.QueryFlushMode.NO_FLUSH
+        HibernateHqlQuery.convertQueryFlushMode(FlushMode.AUTO) == org.hibernate.query.QueryFlushMode.DEFAULT
+        HibernateHqlQuery.convertQueryFlushMode("ALWAYS") == org.hibernate.query.QueryFlushMode.FLUSH
+        HibernateHqlQuery.convertQueryFlushMode("INVALID") == org.hibernate.query.QueryFlushMode.NO_FLUSH
+        HibernateHqlQuery.convertQueryFlushMode(null) == org.hibernate.query.QueryFlushMode.DEFAULT
+    }
+
+    def "populateQuerySettings handles timeout, readOnly, and flushMode"() {
+        when:
+        buildHqlQuery("from HibernateHqlQuerySpecBook", [:], null, [timeout: 10, readOnly: true, flushMode: FlushMode.ALWAYS])
+
+        then:
+        noExceptionThrown()
+    }
+
+    def "populateQuerySettings handles lock and cache interaction"() {
+        when:
+        buildHqlQuery("from HibernateHqlQuerySpecBook", [:], null, [lock: true])
+
+        then:
+        noExceptionThrown()
+    }
+
+    void "populateQueryWithNamedArguments handles array and CharSequence"() {
+        when:
+        def results = buildHqlQuery("from HibernateHqlQuerySpecBook b where b.title in (:titles)",
+                [titles: ["The Hobbit"] as String[]]).list()
+        then:
+        results.size() == 1
+
+        when:
+        def results2 = buildHqlQuery("from HibernateHqlQuerySpecBook b where b.title = :t",
+                [t: new StringBuilder("Fellowship")]).list()
+        then:
+        results2.size() == 1
+    }
+
+    void "populateQueryWithIndexedArguments handles CharSequence"() {
+        when:
+        def results = buildHqlQuery("from HibernateHqlQuerySpecBook b where b.title = ?1",
+                [:], [new StringBuilder("The Hobbit")]).list()
+        then:
+        results.size() == 1
+    }
+
+
+    def "buildQuery handles native query"() {
+        given:
+        def entity = mappingContext.getPersistentEntity(HibernateHqlQuerySpecBook.name)
+        def ctx = HqlQueryContext.prepare(entity, "SELECT * FROM hibernate_hql_query_spec_book", [:], null, [:], true, false)
+        def session = sessionFactory.currentSession
+
+        when:
+        def hqlQuery = HibernateHqlQuery.buildQuery(session, datastore, sessionFactory, entity, ctx)
+
+        then:
+        hqlQuery != null
+    }
 }
 
 @Entity

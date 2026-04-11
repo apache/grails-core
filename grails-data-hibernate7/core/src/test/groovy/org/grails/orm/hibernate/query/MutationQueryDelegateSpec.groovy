@@ -212,6 +212,23 @@ class MutationQueryDelegateSpec extends HibernateGormDatastoreSpec {
         thrown(UnsupportedOperationException)
     }
 
+    void "select-only methods are no-ops"() {
+        given:
+        MutationQuery mq = buildMutationQuery("UPDATE MutationQueryDelegateTestBook SET pages = 0")
+        HqlQueryDelegate delegate = new MutationQueryDelegate(mq)
+
+        when:
+        delegate.setMaxResults(10)
+        delegate.setFirstResult(5)
+        delegate.setCacheable(true)
+        delegate.setFetchSize(100)
+        delegate.setReadOnly(true)
+        delegate.setLockMode(jakarta.persistence.LockModeType.PESSIMISTIC_WRITE)
+
+        then:
+        noExceptionThrown()
+    }
+
     void "selectQuery returns null for mutation queries"() {
         given:
         MutationQuery mq = buildMutationQuery(

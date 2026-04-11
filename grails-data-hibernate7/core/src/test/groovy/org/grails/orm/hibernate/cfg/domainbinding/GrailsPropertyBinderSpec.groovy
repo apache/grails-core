@@ -125,7 +125,8 @@ class GrailsPropertyBinderSpec extends HibernateGormDatastoreSpec {
             PropertyBinderSpecHasOneOwner,
             PropertyBinderSpecHasOneProfile,
             PropertyBinderSpecFKOwner,
-            PropertyBinderSpecFKChild
+            PropertyBinderSpecFKChild,
+            PropertyBinderSpecTenantEntity
         ])
     }
 
@@ -304,6 +305,40 @@ class GrailsPropertyBinderSpec extends HibernateGormDatastoreSpec {
         then:
         value instanceof ManyToOne
     }
+
+    void "Test bind tenantId property"() {
+        given:
+        def binder = getGrailsDomainBinder()
+        def propertyBinder = getBinders(binder).propertyBinder
+        def persistentEntity = getPersistentEntity(PropertyBinderSpecTenantEntity) as GrailsHibernatePersistentEntity
+        def rootClass = new RootClass(binder.getMetadataBuildingContext())
+        rootClass.setTable(new Table("TENANT_ENTITY"))
+        persistentEntity.setPersistentClass(rootClass)
+
+        when:
+        def tenantIdProp = persistentEntity.getPropertyByName("tenantId") as HibernatePersistentProperty
+        Value value = propertyBinder.bindProperty(tenantIdProp, null, EMPTY_PATH)
+
+        then:
+        tenantIdProp instanceof HibernateTenantIdProperty
+        value instanceof SimpleValue
+    }
+
+    void "Test unsupported property type"() {
+        given:
+        def binder = getGrailsDomainBinder()
+        def propertyBinder = getBinders(binder).propertyBinder
+        HibernatePersistentProperty mockProp = Mock(HibernatePersistentProperty)
+        mockProp.getName() >> "unsupported"
+        mockProp.getTable() >> new Table("MOCK")
+
+        when:
+        propertyBinder.bindProperty(mockProp, null, EMPTY_PATH)
+
+        then:
+        RuntimeException e = thrown()
+        e.message.contains "Unsupported property type"
+    }
 }
 
 @Entity
@@ -364,12 +399,10 @@ class PropertyBinderSpecCustomUserTypeCollection {
     Long id
     Set<String> categories
     static mapping = {
-        // Assume this class exists or is mocked
         categories type: 'org.hibernate.type.YesNoConverter' 
     }
 }
 
-// --- hasOne (valid Hibernate one-to-one) for L84 ---
 @Entity
 class PropertyBinderSpecHasOneProfile {
     Long id
@@ -384,9 +417,6 @@ class PropertyBinderSpecHasOneOwner {
     static hasOne = [profile: PropertyBinderSpecHasOneProfile]
 }
 
-// --- FK one-to-one (isValidHibernateOneToOne = false) for L86 ---
-// PropertyBinderSpecFKChild has belongsTo PropertyBinderSpecFKOwner,
-// making PropertyBinderSpecFKOwner.child the owning side with isValidHibernateOneToOne = false
 @Entity
 class PropertyBinderSpecFKChild {
     Long id
@@ -398,4 +428,10 @@ class PropertyBinderSpecFKChild {
 class PropertyBinderSpecFKOwner {
     Long id
     PropertyBinderSpecFKChild child
+}
+
+@Entity
+class PropertyBinderSpecTenantEntity implements grails.gorm.MultiTenant<PropertyBinderSpecTenantEntity> {
+    Long id
+    Integer tenantId
 }

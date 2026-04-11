@@ -856,5 +856,37 @@ class HibernateMappingBuilderSpec extends Specification {
         m.getPropertyConfig('myProp') == null
     }
 
+    void "handlePropertyInternal handles shared constraints"() {
+        given:
+        def m = new Mapping()
+        m.columns['common'] = new PropertyConfig(batchSize: 100)
+        def builder = new HibernateMappingBuilder(m, "Foo", { common shared: true })
+
+        when:
+        builder.evaluate {
+            myProp shared: 'common', ignoreNotFound: true
+        }
+
+        then:
+        m.columns['myProp'].batchSize == 100
+        m.columns['myProp'].ignoreNotFound == true
+    }
+
+    void "handlePropertyInternal handles updateable deprecated property"() {
+        when:
+        Mapping m = evaluate { myProp updateable: false }
+
+        then:
+        !m.getPropertyConfig('myProp').updatable
+    }
+
+    void "id(Map) handles params conversion"() {
+        when:
+        Mapping m = evaluate { id generator: 'seq', params: [a: 1, b: '2'] }
+
+        then:
+        m.identity.params == [a: '1', b: '2']
+    }
+
     static class MyUserType {}
 }

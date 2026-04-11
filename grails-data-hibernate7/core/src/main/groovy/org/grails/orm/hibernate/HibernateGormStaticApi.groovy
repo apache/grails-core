@@ -411,7 +411,7 @@ class HibernateGormStaticApi<D> extends GormStaticApi<D> {
         getAllInternal(ids as List)
     }
 
-    private List<D> doListInternal(CharSequence hql,
+    protected List<D> doListInternal(CharSequence hql,
                                    Map namedParams,
                                    Collection positionalParams,
                                    Map args
@@ -458,7 +458,7 @@ class HibernateGormStaticApi<D> extends GormStaticApi<D> {
     }
 
     @SuppressWarnings('GroovyAssignabilityCheck')
-    private HibernateHqlQuery prepareHqlQuery(CharSequence hql, boolean isNative, boolean isUpdate,
+    protected HibernateHqlQuery prepareHqlQuery(CharSequence hql, boolean isNative, boolean isUpdate,
                                               Map<String, Object> namedParams, Collection<Object> positionalParams, Map<String, Object> querySettings) {
         def ctx = HqlQueryContext.prepare(persistentEntity, hql, namedParams, positionalParams, querySettings, isNative, isUpdate)
         return HibernateHqlQuery.createHqlQuery(

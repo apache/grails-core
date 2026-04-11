@@ -19,6 +19,7 @@
 package org.grails.orm.hibernate.proxy
 
 import grails.gorm.specs.HibernateGormDatastoreSpec
+import grails.gorm.annotation.Entity
 import org.apache.grails.data.testing.tck.domains.Location
 import org.hibernate.Hibernate
 import org.hibernate.proxy.HibernateProxy
@@ -137,5 +138,69 @@ class ByteBuddyGroovyInterceptorSpec extends HibernateGormDatastoreSpec {
         !Hibernate.isInitialized(proxy)
         proxy.id == savedId
         !Hibernate.isInitialized(proxy)
+    }
+
+    void "getIdentifier() on uninitialized proxy returns identifier without initialization"() {
+        given:
+        def proxy = manager.hibernateSession.getReference(Location, savedId)
+
+        expect:
+        !Hibernate.isInitialized(proxy)
+        // This should trigger the "getIdentifier" branch in the interceptor
+        proxy.getIdentifier() == savedId
+        !Hibernate.isInitialized(proxy)
+    }
+
+    void "setProperty on uninitialized proxy initializes the proxy"() {
+        given:
+        def proxy = manager.hibernateSession.getReference(Location, savedId) as Location
+
+        when:
+        proxy.setProperty('name', 'New Name')
+
+        then:
+        Hibernate.isInitialized(proxy)
+        proxy.name == 'New Name'
+    }
+
+    void "setMetaClass on uninitialized proxy initializes the proxy"() {
+        given:
+        def proxy = manager.hibernateSession.getReference(Location, savedId) as Location
+
+        when:
+        proxy.setMetaClass(proxy.getMetaClass())
+
+        then:
+        Hibernate.isInitialized(proxy)
+    }
+
+    void "Groovy method throwing exception is handled"() {
+        given:
+        def proxy = manager.hibernateSession.getReference(Location, savedId) as Location
+
+        when:
+        proxy.invokeMethod('throwError', [] as Object[])
+
+        then:
+        thrown(RuntimeException)
+    }
+}
+
+@Entity
+class Location implements Serializable {
+    Long id
+    String name
+    String code
+
+    Long getIdentifier() {
+        return id
+    }
+
+    String namedAndCode() {
+        "${name} - ${code}"
+    }
+
+    void throwError() {
+        throw new RuntimeException("error")
     }
 }

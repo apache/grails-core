@@ -147,6 +147,19 @@ class EnumTypeBinderSpec extends HibernateGormDatastoreSpec {
         then: "the provided table is used instead of the property's internal table"
         simpleValue.getTable() == table
     }
+
+    def "should bind explicit column for enum"() {
+        given:
+        def table = new Table("person")
+        def property = setupProperty(PersonWithExplicitColumn, "status", table)
+
+        when:
+        def simpleValue = binder.bindEnumType(property as HibernateEnumProperty, "")
+
+        then:
+        1 * columnBinder.bindColumnConfigToColumn(_, _, _)
+        1 * indexBinder.bindIndex("status_col", _, _, _)
+    }
 }
 
 // --- Supporting Classes ---
@@ -173,6 +186,10 @@ enum Status01 { AVAILABLE, OUT_OF_STOCK }
 @Entity class PersonWithCollection {
     Long id
     Set<Status01> statuses
+}
+@Entity class PersonWithExplicitColumn {
+    Long id; Status01 status
+    static mapping = { status column: "status_col", index: "idx_status" }
 }
 @Entity class Clown01 extends Person01 { String clownName }
 

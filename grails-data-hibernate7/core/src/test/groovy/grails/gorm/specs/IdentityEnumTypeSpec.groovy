@@ -224,6 +224,29 @@ class IdentityEnumTypeSpec extends HibernateGormDatastoreSpec {
         expect:
         bidiMap.getEnumValue("UNKNOWN") == null
     }
+
+    def "getSqlTypes returns null if not initialized"() {
+        expect:
+        new IdentityEnumType().getSqlTypes() == null
+    }
+
+    def "returnedClass returns null if not initialized"() {
+        expect:
+        new IdentityEnumType().returnedClass() == null
+    }
+
+    def "setParameterValues throws MappingException for non-existent class"() {
+        given:
+        def type = new IdentityEnumType()
+        def props = new Properties()
+        props.setProperty(IdentityEnumType.PARAM_ENUM_CLASS, "non.existent.Enum")
+
+        when:
+        type.setParameterValues(props)
+
+        then:
+        thrown(MappingException)
+    }
 }
 
 @Entity

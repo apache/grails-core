@@ -304,5 +304,30 @@ class TraitPropertyAccessStrategySpec extends Specification {
         access.getter instanceof GetterMethodImpl
         access.setter instanceof SetterMethodImpl
     }
+
+    void "buildPropertyAccess throws IllegalStateException if readMethod has no trait annotations"() {
+        when: "using a method that looks like a getter but is not from a trait"
+        strategy.buildPropertyAccess(NoTraitAnnotationEntity, 'notATraitProp')
+
+        then:
+        def e = thrown(IllegalStateException)
+        e.message.contains('not provided by a trait')
+    }
+
+    void "buildPropertyAccess ignores isXxx if return type is not boolean"() {
+        when: "calling for a property where isXxx returns String"
+        strategy.buildPropertyAccess(InvalidBooleanEntity, 'fakeBoolean')
+
+        then:
+        thrown(IllegalStateException)
+    }
+}
+
+class NoTraitAnnotationEntity {
+    String getNotATraitProp() { "foo" }
+}
+
+class InvalidBooleanEntity {
+    String isFakeBoolean() { "not a boolean" }
 }
 

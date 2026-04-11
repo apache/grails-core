@@ -92,6 +92,31 @@ class PropertyBinderSpec extends HibernateGormDatastoreSpec {
         property.getName() == "eagerAuthor"
         !property.isLazy()
     }
+
+    void "test default constructor"() {
+        expect:
+        new PropertyBinder() != null
+    }
+
+    void "test accessorName for field access"() {
+        given:
+        def entity = (HibernatePersistentEntity) getMappingContext().getPersistentEntity(PBEntity.name)
+        def persistentProperty = (HibernatePersistentProperty) entity.getPropertyByName("name")
+        def table = new Table("PB_ENTITY")
+        def value = new BasicValue(getGrailsDomainBinder().getMetadataBuildingContext(), table)
+        
+        def mockConfig = new org.grails.orm.hibernate.cfg.PropertyConfig()
+        mockConfig.setAccessType(jakarta.persistence.AccessType.FIELD)
+        
+        def spyProp = Spy(persistentProperty)
+        spyProp.getHibernateMappedForm() >> mockConfig
+
+        when:
+        def property = binder.bindProperty(spyProp, value)
+
+        then:
+        property.getPropertyAccessorName() == "field"
+    }
 }
 
 @Entity

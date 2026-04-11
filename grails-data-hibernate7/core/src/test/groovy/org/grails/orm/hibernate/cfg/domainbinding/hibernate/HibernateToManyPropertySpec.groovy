@@ -415,6 +415,29 @@ class HibernateToManyPropertySpec extends HibernateGormDatastoreSpec {
         noExceptionThrown()
     }
 
+    // ─── Additional edge cases for coverage ───────────────────────────────────
+
+    void "test index column name with empty columns"() {
+        given:
+        def property = createTestHibernateToManyProperty(HTMPOrderEmptyIndex, "items")
+        def namingStrategy = getGrailsDomainBinder().namingStrategy
+
+        expect:
+        property.getIndexColumnName(namingStrategy).endsWith("_idx")
+    }
+
+    void "test setCollection handles orphan delete"() {
+        given:
+        def property = createTestHibernateToManyProperty(HTMPAuthorOrphan, "books")
+        def mockCollection = Mock(org.hibernate.mapping.Set)
+
+        when:
+        property.setCollection(mockCollection)
+
+        then:
+        1 * mockCollection.setOrphanDelete(true)
+    }
+
     /**
      * Helper to register entity and return the property
      */
@@ -526,6 +549,16 @@ class HTMPOrderClosure {
     }
 }
 
+@Entity
+class HTMPOrderEmptyIndex {
+    Long id
+    List<String> items
+    static hasMany = [items: String]
+    static mapping = {
+        items index: { }
+    }
+}
+
 enum HTMPStatus { ACTIVE, INACTIVE }
 
 @Entity
@@ -563,6 +596,17 @@ class HTMPAuthorCached {
         books cache: true
     }
 }
+
+@Entity
+class HTMPAuthorOrphan {
+    Long id
+    String name
+    static hasMany = [books: HTMPBook]
+    static mapping = {
+        books cascade: 'all-delete-orphan'
+    }
+}
+
 @Entity
 class HTMPOwnerString {
     Long id

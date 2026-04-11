@@ -105,6 +105,24 @@ class HibernatePagedResultListSpec extends HibernateGormDatastoreSpec {
         deserializedResults[0].title == "Book 2"
         deserializedResults[1].title == "Book 3"
     }
+
+    void "test constructor with generic Query"() {
+        given:
+        def mockQuery = Mock(org.grails.datastore.mapping.query.Query)
+        mockQuery.getEntity() >> null
+        mockQuery.getMax() >> 10
+        mockQuery.getOffset() >> null
+        mockQuery.list() >> ["a", "b"]
+
+        when:
+        def results = new HibernatePagedResultList(mockQuery)
+
+        then:
+        results.size() == 2
+        results.max == 10
+        results.offset == 0
+        results.totalCount == 0 // countViaHql returns 0 if entity is null
+    }
 }
 
 @Entity
