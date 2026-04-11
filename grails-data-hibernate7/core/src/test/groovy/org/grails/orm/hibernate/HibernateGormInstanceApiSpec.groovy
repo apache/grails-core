@@ -26,6 +26,7 @@ import grails.validation.ValidationException
 import org.hibernate.Hibernate
 import org.hibernate.FlushMode
 import org.grails.orm.hibernate.query.HibernateHqlQuery
+import org.grails.orm.hibernate.HibernateGormStaticApi
 
 class HibernateGormInstanceApiSpec extends HibernateGormDatastoreSpec {
 
