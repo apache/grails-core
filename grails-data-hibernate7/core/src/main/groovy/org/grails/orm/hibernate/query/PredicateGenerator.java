@@ -225,17 +225,45 @@ public class PredicateGenerator {
         } else if (pc instanceof Query.IdEquals c) {
             return cb.equal(root.get("id"), normalizeValue(c.getValue()));
         } else if (pc instanceof Query.GreaterThan c) {
-            Expression<? extends Number> rhs = resolveNumericExpression(cb, root, c);
-            return rhs != null ? cb.gt((Expression<? extends Number>) fullyQualifiedPath, rhs) : cb.gt((Expression<? extends Number>) fullyQualifiedPath, (Number) getNumericValue(c));
+            if (c.getValue() == null) {
+                throw new ConfigurationException("Property [greaterThan] cannot be null");
+            }
+            if (c.getValue() instanceof Number || c.getValue() instanceof PropertyArithmetic) {
+                Expression<? extends Number> rhs = resolveNumericExpression(cb, root, c);
+                return rhs != null ? cb.gt((Expression<? extends Number>) fullyQualifiedPath, rhs) : cb.gt((Expression<? extends Number>) fullyQualifiedPath, (Number) getNumericValue(c));
+            } else {
+                return cb.greaterThan((Expression) fullyQualifiedPath, (Comparable) normalizeValue(c.getValue()));
+            }
         } else if (pc instanceof Query.GreaterThanEquals c) {
-            Expression<? extends Number> rhs = resolveNumericExpression(cb, root, c);
-            return rhs != null ? cb.ge((Expression<? extends Number>) fullyQualifiedPath, rhs) : cb.ge((Expression<? extends Number>) fullyQualifiedPath, (Number) getNumericValue(c));
+            if (c.getValue() == null) {
+                throw new ConfigurationException("Property [greaterThanEquals] cannot be null");
+            }
+            if (c.getValue() instanceof Number || c.getValue() instanceof PropertyArithmetic) {
+                Expression<? extends Number> rhs = resolveNumericExpression(cb, root, c);
+                return rhs != null ? cb.ge((Expression<? extends Number>) fullyQualifiedPath, rhs) : cb.ge((Expression<? extends Number>) fullyQualifiedPath, (Number) getNumericValue(c));
+            } else {
+                return cb.greaterThanOrEqualTo((Expression) fullyQualifiedPath, (Comparable) normalizeValue(c.getValue()));
+            }
         } else if (pc instanceof Query.LessThan c) {
-            Expression<? extends Number> rhs = resolveNumericExpression(cb, root, c);
-            return rhs != null ? cb.lt((Expression<? extends Number>) fullyQualifiedPath, rhs) : cb.lt((Expression<? extends Number>) fullyQualifiedPath, (Number) getNumericValue(c));
+            if (c.getValue() == null) {
+                throw new ConfigurationException("Property [lessThan] cannot be null");
+            }
+            if (c.getValue() instanceof Number || c.getValue() instanceof PropertyArithmetic) {
+                Expression<? extends Number> rhs = resolveNumericExpression(cb, root, c);
+                return rhs != null ? cb.lt((Expression<? extends Number>) fullyQualifiedPath, rhs) : cb.lt((Expression<? extends Number>) fullyQualifiedPath, (Number) getNumericValue(c));
+            } else {
+                return cb.lessThan((Expression) fullyQualifiedPath, (Comparable) normalizeValue(c.getValue()));
+            }
         } else if (pc instanceof Query.LessThanEquals c) {
-            Expression<? extends Number> rhs = resolveNumericExpression(cb, root, c);
-            return rhs != null ? cb.le((Expression<? extends Number>) fullyQualifiedPath, rhs) : cb.le((Expression<? extends Number>) fullyQualifiedPath, (Number) getNumericValue(c));
+            if (c.getValue() == null) {
+                throw new ConfigurationException("Property [lessThanEquals] cannot be null");
+            }
+            if (c.getValue() instanceof Number || c.getValue() instanceof PropertyArithmetic) {
+                Expression<? extends Number> rhs = resolveNumericExpression(cb, root, c);
+                return rhs != null ? cb.le((Expression<? extends Number>) fullyQualifiedPath, rhs) : cb.le((Expression<? extends Number>) fullyQualifiedPath, (Number) getNumericValue(c));
+            } else {
+                return cb.lessThanOrEqualTo((Expression) fullyQualifiedPath, (Comparable) normalizeValue(c.getValue()));
+            }
         } else if (pc instanceof Query.SizeEquals c) {
             return cb.equal(cb.size((Expression) fullyQualifiedPath), normalizeValue(c.getValue()));
         } else if (pc instanceof Query.SizeNotEquals c) {
