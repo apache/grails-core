@@ -48,7 +48,7 @@ class ChildHibernateDatastoreUnitSpec extends HibernateGormDatastoreSpec {
         def secondaryConnectionSource = factory.create("secondary", dataSourceConnectionSource, settings)
         
         when: "A child datastore is created"
-        def child = new HibernateDatastore.ChildHibernateDatastore(
+        def child = new ChildHibernateDatastore(
                 parent, 
                 new SingletonConnectionSources(secondaryConnectionSource, parent.connectionSources.getBaseConfiguration()),
                 parent.mappingContext,
