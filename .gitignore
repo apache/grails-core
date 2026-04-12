@@ -63,5 +63,5 @@ etc/bin/results
 .vscode/
 STATE_SNAPSHOT.xml
 0_build_grails.txt
-*_VIOLATIONS.md
+*VIOLATIONS.md
 /TEST_FAILURES.md
