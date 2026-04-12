@@ -128,6 +128,7 @@ categories:
     labels:
       - 'revert'
 change-template: '- $TITLE @$AUTHOR (#$NUMBER)'
+filter-by-commitish: true
 version-resolver:
   major:
     labels:
