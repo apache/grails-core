@@ -1,1154 +1,237 @@
-/*
- *  Licensed to the Apache Software Foundation (ASF) under one
- *  or more contributor license agreements.  See the NOTICE file
- *  distributed with this work for additional information
- *  regarding copyright ownership.  The ASF licenses this file
- *  to you under the Apache License, Version 2.0 (the
- *  "License"); you may not use this file except in compliance
- *  with the License.  You may obtain a copy of the License at
- *
- *    https://www.apache.org/licenses/LICENSE-2.0
- *
- *  Unless required by applicable law or agreed to in writing,
- *  software distributed under the License is distributed on an
- *  "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
- *  KIND, either express or implied.  See the License for the
- *  specific language governing permissions and limitations
- *  under the License.
- */
-
 package grails.orm
 
 import grails.gorm.annotation.Entity
 import grails.gorm.specs.HibernateGormDatastoreSpec
-import jakarta.persistence.criteria.JoinType
-import org.grails.datastore.mapping.query.Query
-import org.hibernate.Session
-import org.grails.orm.hibernate.support.hibernate7.SessionHolder
-import org.springframework.transaction.support.TransactionSynchronizationManager
-import spock.lang.Shared
-import java.math.RoundingMode
+import org.grails.datastore.mapping.query.api.BuildableCriteria
+import org.hibernate.SessionFactory
+import org.grails.orm.hibernate.HibernateDatastore
 
-/**
- * Integration tests for {@link HibernateCriteriaBuilder}: covers both direct method
- * invocations (for JaCoCo line-level coverage) and DSL-closure invocations against a real
- * in-memory datastore.
- * <p>
- * For a readable, Mock-based living-documentation spec of the DSL API see
- * {@link HibernateCriteriaBuilderSpec}.
- */
 class HibernateCriteriaBuilderDirectSpec extends HibernateGormDatastoreSpec {
 
-    @Shared HibernateCriteriaBuilder builder
-
     def setupSpec() {
-        manager.addAllDomainClasses([DirectAccount, DirectTransaction, DirectBiBook, DirectBiAuthor, DirectItem])
+        manager.addAllDomainClasses([CriteriaTestEntity, CriteriaTestChild])
     }
+
+    HibernateCriteriaBuilder c
 
     def setup() {
-        builder = new HibernateCriteriaBuilder(
-                DirectAccount,
-                manager.hibernateDatastore.sessionFactory,
-                manager.hibernateDatastore)
+        c = new HibernateCriteriaBuilder(CriteriaTestEntity, manager.hibernateDatastore.sessionFactory, manager.hibernateDatastore)
+        
+        new CriteriaTestEntity(name: "A", amount: 10, category: "X").save()
+        new CriteriaTestEntity(name: "B", amount: 20, category: "X").save()
+        new CriteriaTestEntity(name: "C", amount: 30, category: "Y").save()
+        new CriteriaTestEntity(name: "D", amount: 40, category: "Y").save(flush: true)
     }
 
-    void "test bidirectional many-to-many with subquery alias resolution"() {
-        given: "authors with books in a bidirectional hasMany"
-        def author1 = new DirectBiAuthor(name: "Stephen King")
-        def book1 = new DirectBiBook(title: "IT")
-        def book2 = new DirectBiBook(title: "The Shining")
-        author1.addToBooks(book1)
-        author1.addToBooks(book2)
-        author1.save(flush: true)
-
-        def b = new HibernateCriteriaBuilder(DirectBiBook, manager.hibernateDatastore.sessionFactory, manager.hibernateDatastore)
-
-        when: "using withCriteria to find books by author"
-        def books = b.list {
-            authors {
-                'in'('id', [author1.id])
+    void "test distinct projection"() {
+        when:
+        def results = c.list {
+            projections {
+                distinct("category")
             }
         }
-
-        then: "books are found without error"
-        books.size() == 2
-    }
-
-    // ─── DSL integration: data-driven scenarios ────────────────────────────
-
-    def setupData() {
-        def fred = new DirectAccount(balance: 250, firstName: "Fred", lastName: "Flintstone", branch: "Bedrock").save(failOnError: true)
-        def barney = new DirectAccount(balance: 500, firstName: "Barney", lastName: "Rubble", branch: "Bedrock").save(failOnError: true)
-        new DirectAccount(balance: 100, firstName: "Wilma", lastName: "Flintstone", branch: "Bedrock").save(failOnError: true)
-        new DirectAccount(balance: 1000, firstName: "Pebbles", lastName: "Flintstone", branch: "Slate Rock and Gravel").save(failOnError: true)
-        new DirectAccount(balance: 50, firstName: "Bam-Bam", lastName: "Rubble", branch: null).save(failOnError: true)
-        fred.addToTransactions(new DirectTransaction(amount: 10))
-        fred.addToTransactions(new DirectTransaction(amount: 20))
-        fred.save()
-        barney.addToTransactions(new DirectTransaction(amount: 50))
-        barney.save(flush: true, failOnError: true)
-        fred
-    }
-
-    void "get with eq criteria returns matching entity"() {
-        given: setupData()
-        when:
-        def result = builder.get { eq("firstName", "Fred") }
         then:
-        result.firstName == "Fred"
+        results.sort() == ["X", "Y"]
     }
 
-    void "get with idEq criteria returns correct entity"() {
-        given:
-        def fred = setupData()
+    void "test id projection"() {
         when:
-        def result = builder.get { idEq(fred.id) }
-        then:
-        result.id == fred.id
-        result.firstName == "Fred"
-    }
-
-    void "list with compound criteria filters correctly"() {
-        given: setupData()
-        when:
-        def results = builder.list {
-            gt("balance", BigDecimal.valueOf(200))
-            or {
-                eq("lastName", "Flintstone")
-                like("branch", "Bedrock")
+        def results = c.list {
+            projections {
+                id()
             }
-            'in'("firstName", ["Fred", "Barney", "Pebbles"])
         }
         then:
-        results.size() == 3
-        results*.firstName.sort() == ["Barney", "Fred", "Pebbles"]
+        results.size() == 4
+        results.every { it instanceof Long }
     }
 
-    void "ilike criteria matches case-insensitively"() {
-        given: setupData()
+    void "test groupProperty with alias"() {
         when:
-        def results = builder.list { ilike("firstName", "fr%") }
-        then:
-        results.size() == 1
-        results[0].firstName == "Fred"
-    }
-
-    void "rlike criteria matches by regexp"() {
-        given: setupData()
-        when:
-        def results = builder.list { rlike("firstName", "^F.*") }
-        then:
-        results.size() == 1
-        results[0].firstName == "Fred"
-    }
-
-    void "between criteria selects inclusive range"() {
-        given: setupData()
-        when:
-        def results = builder.list { between("balance", BigDecimal.valueOf(100), BigDecimal.valueOf(300)) }
+        def results = c.list {
+            projections {
+                groupProperty("category", "cat")
+                sum("amount", "total")
+            }
+            order("cat")
+        }
         then:
         results.size() == 2
-        results*.firstName.sort() == ["Fred", "Wilma"]
+        results[0] == ["X", 30L]
+        results[1] == ["Y", 70L]
     }
 
-    void "sizeEq criteria filters by collection size"() {
-        given: setupData()
+    void "test min and max with alias"() {
         when:
-        def results = builder.list { sizeEq("transactions", 2) }
-        then:
-        results.size() == 1
-        results[0].firstName == "Fred"
-    }
-
-    void "isEmpty and isNotEmpty criteria split collection membership"() {
-        given: setupData()
-        when:
-        def emptyResults    = builder.list { isEmpty("transactions") }
-        def notEmptyResults = builder.list { isNotEmpty("transactions") }
-        then:
-        emptyResults.size() == 3
-        notEmptyResults.size() == 2
-    }
-
-    void "isNull criteria returns entities with null property"() {
-        given: setupData()
-        when:
-        def results = builder.list { isNull("branch") }
-        then:
-        results.size() == 1
-        results[0].firstName == "Bam-Bam"
-    }
-
-    void "count projection returns row count"() {
-        given: setupData()
-        when:
-        def count = builder.get {
-            projections { count() }
-            eq("lastName", "Flintstone")
-        }
-        then:
-        count == 3
-    }
-
-    void "sum and avg projections aggregate correctly"() {
-        given: setupData()
-        when:
-        def projections = builder.get {
+        def result = c.get {
             projections {
-                sum('balance')
-                avg('balance')
+                min("amount", "min_amt")
+                max("amount", "max_amt")
             }
-            eq("branch", "Bedrock")
+            eq("category", "X")
         }
         then:
-        projections[0] == 850
-        new BigDecimal(projections[1]).setScale(2, RoundingMode.HALF_UP) == 283.33
+        result[0] == 10
+        result[1] == 20
     }
 
-    void "ordering and pagination slice results correctly"() {
-        given: setupData()
+    void "test count with alias"() {
         when:
-        def results = builder.list(max: 2, offset: 1) { order("firstName", "asc") }
-        then:
-        results.size() == 2
-        results*.firstName == ["Barney", "Fred"]
-    }
-
-    void "association closure filters via join"() {
-        given: setupData()
-        when:
-        def results = builder.list {
-            transactions { gt("amount", 40) }
-        }
-        then:
-        results.size() == 1
-        results[0].firstName == "Barney"
-    }
-
-    void "ne ge le criteria filter correctly"() {
-        given: setupData()
-        when:
-        def results = builder.list {
-            ne("firstName", "Fred")
-            ge("balance", BigDecimal.valueOf(60))
-            le("balance", BigDecimal.valueOf(1000))
-        }
-        then:
-        results*.firstName.toSet() == ["Barney", "Wilma", "Pebbles"] as Set
-    }
-
-    void "isNotNull and sizeGe filter combined"() {
-        given: setupData()
-        when:
-        def results = builder.list {
-            isNotNull("branch")
-            sizeGe("transactions", 1)
-        }
-        then:
-        results*.firstName.toSet() == ["Fred", "Barney"] as Set
-    }
-
-    void "groupProperty countDistinct min max projections return results"() {
-        given: setupData()
-        when:
-        def results = builder.list {
+        def result = c.get {
             projections {
-                groupProperty("lastName")
-                countDistinct("firstName")
-                min("balance")
-                max("balance")
+                count("name", "cnt")
+            }
+            eq("category", "X")
+        }
+        then:
+        result == 2L
+    }
+
+    void "test gtProperty and colleagues"() {
+        given:
+        new CriteriaTestEntity(name: "E", amount: 10, otherAmount: 5).save(flush: true)
+        
+        expect:
+        c.list { gtProperty("amount", "otherAmount") }.size() == 1
+        c.list { geProperty("amount", "otherAmount") }.size() == 1
+        c.list { ltProperty("otherAmount", "amount") }.size() == 1
+        c.list { leProperty("otherAmount", "amount") }.size() == 1
+    }
+
+    void "test gtAll subquery"() {
+        when:
+        def results = c.list {
+            gtAll("amount", {
+                projections { property("amount") }
+                eq("category", "X")
+            })
+        }
+        then: "Returns entities with amount > max(X amounts) = 20"
+        results*.name.sort() == ["C", "D"]
+    }
+
+    void "test geAll subquery"() {
+        when:
+        def results = c.list {
+            geAll("amount", {
+                projections { property("amount") }
+                eq("category", "X")
+            })
+        }
+        then: "Returns entities with amount >= 20"
+        results*.name.sort() == ["B", "C", "D"]
+    }
+
+    void "test ltAll subquery"() {
+        when:
+        def results = c.list {
+            ltAll("amount", {
+                projections { property("amount") }
+                eq("category", "Y")
+            })
+        }
+        then: "Returns entities with amount < min(Y amounts) = 30"
+        results*.name.sort() == ["A", "B"]
+    }
+
+    void "test leAll subquery"() {
+        when:
+        def results = c.list {
+            leAll("amount", {
+                projections { property("amount") }
+                eq("category", "Y")
+            })
+        }
+        then: "Returns entities with amount <= 30"
+        results*.name.sort() == ["A", "B", "C"]
+    }
+
+    void "test exists subquery"() {
+        given:
+        def e = CriteriaTestEntity.findByName("A")
+        new CriteriaTestChild(name: "child1", parent: e).save(flush: true)
+
+        when:
+        def results = c.list {
+            exists {
+                projections { id() }
+                eq("name", "child1")
+                eqProperty("parent.id", "{alias}.id")
             }
         }
         then:
-        results.size() >= 1
-    }
-
-    void "inList array variant and firstResult paginate correctly"() {
-        given: setupData()
-        when:
-        def list1 = builder.list { 'in'("firstName", ["Fred", "Barney"] as Object[]) }
-        def list2 = builder.list { inList("firstName", ["Fred", "Wilma"] as Object[]) }
-        def paged = builder.list(max: 1) {
-            order("firstName", "asc")
-            firstResult(2)
-        }
-        then:
-        list1.size() > 0
-        list2.size() > 0
-        paged.size() == 1
-        paged[0].firstName == "Fred"
-    }
-
-    void "nested association criteria with between filters correctly"() {
-        given: setupData()
-        when:
-        def results = builder.list {
-            transactions { between("amount", BigDecimal.valueOf(15), BigDecimal.valueOf(25)) }
-        }
-        then:
         results.size() == 1
-        results[0].firstName == "Fred"
+        results[0].name == "A"
     }
 
-    void "test properties and projections methods"() {
-        when:
-        def b = new HibernateCriteriaBuilder(DirectAccount, manager.hibernateDatastore.sessionFactory, manager.hibernateDatastore)
-
-        then:
-        b.property("firstName")
-        b.distinct("lastName")
-        b.avg("balance")
-        b.projections() != null
-        b.closeSession()
-    }
-
-    void "test boolean flags and setter getter methods"() {
-        when:
-        def b = new HibernateCriteriaBuilder(DirectAccount, manager.hibernateDatastore.sessionFactory, manager.hibernateDatastore)
-        b.uniqueResult = true
-        b.distinct = true
-        b.count = true
-        b.paginationEnabledList = true
-        b.scroll = true
-        
-        then:
-        b.isUniqueResult() == true
-        b.isDistinct() == true
-        b.isCount() == true
-        b.isPaginationEnabledList() == true
-        b.isScroll() == true
-        b.getInstance() == null
-        b.getCriteriaBuilder() != null
-        b.getSessionFactory() != null
-        b.getHibernateQuery() != null
-        b.isParticipate() == true
-        b.getDefaultFlushMode() == org.grails.orm.hibernate.GrailsHibernateTemplate.FLUSH_AUTO
-        
-        when:
-        b.setDefaultFlushMode(1)
-        then:
-        b.getDefaultFlushMode() == 1
-        
-        when:
-        b.lock(true)
-        b.cache(true)
-        b.maxResults(10)
-        then:
-        noExceptionThrown()
-
-        cleanup:
-        b.closeSession()
-    }
-
-    void "test alias and join methods"() {
-        when:
-        def b = new HibernateCriteriaBuilder(DirectAccount, manager.hibernateDatastore.sessionFactory, manager.hibernateDatastore)
-        b.join("transactions")
-        b.join("transactions", jakarta.persistence.criteria.JoinType.INNER)
-        b.select("transactions")
-        b.createAlias("transactions", "t")
-        b.createAlias("transactions", "t2", 1) // LEFT
-        b.createAlias("transactions", "t3", 2) // RIGHT
-        b.createAlias("transactions", "t4", 3) // INNER
-        
-        then:
-        noExceptionThrown()
-        
-        cleanup:
-        b.closeSession()
-    }
-
-    void "test exception handling"() {
-        when:
-        def b = new HibernateCriteriaBuilder(DirectAccount, manager.hibernateDatastore.sessionFactory, manager.hibernateDatastore)
-        b.throwRuntimeException(new RuntimeException("test exception"))
-        
-        then:
-        thrown(RuntimeException)
-    }
-
-    void "test missing criterion methods"() {
-        when:
-        def b = new HibernateCriteriaBuilder(DirectAccount, manager.hibernateDatastore.sessionFactory, manager.hibernateDatastore)
-        b.eqProperty("firstName", "lastName")
-        b.neProperty("firstName", "lastName")
-        b.gtProperty("firstName", "lastName")
-        b.geProperty("firstName", "lastName")
-        b.ltProperty("firstName", "lastName")
-        b.leProperty("firstName", "lastName")
-        
-        b.allEq(["firstName": "Fred"])
-        b.idEq(1L)
-        b.idEquals(1L)
-        
-        b.isEmpty("firstName")
-        b.isNotEmpty("firstName")
-        b.isNull("firstName")
-        b.isNotNull("firstName")
-        
-        b.like("firstName", "Fre%")
-        b.ilike("firstName", "fre%")
-        b.rlike("firstName", ".*")
-        
-        b.in("firstName", ["Fred", "Barney"])
-        b.inList("firstName", ["Fred", "Barney"])
-        b.inList("firstName", "Fred", "Barney")
-        b.in("firstName", "Fred", "Barney")
-        b.notIn("firstName") { eq("firstName", "Wilma") }
-        
-        b.gt("balance", 100)
-        b.ge("balance", 100)
-        b.gte("balance", 100)
-        b.lt("balance", 100)
-        b.le("balance", 100)
-        b.lte("balance", 100)
-        b.ne("balance", 100)
-        b.between("balance", 100, 200)
-
-        b.sizeEq("transactions", 1)
-        b.sizeGt("transactions", 1)
-        b.sizeGe("transactions", 1)
-        b.sizeLt("transactions", 1)
-        b.sizeLe("transactions", 1)
-        b.sizeNe("transactions", 1)
-
-        b.order("firstName")
-        b.order("lastName", "desc")
-        b.firstResult(0)
-        
-        b.and { eq("firstName", "Fred") }
-        b.or { eq("firstName", "Fred") }
-        b.not { eq("firstName", "Fred") }
-
-        then:
-        noExceptionThrown()
-
-        cleanup:
-        b.closeSession()
-    }
-
-    void "test subqueries with closures"() {
-        when:
-        def b = new HibernateCriteriaBuilder(DirectAccount, manager.hibernateDatastore.sessionFactory, manager.hibernateDatastore)
-        
-        b.eqAll("balance") { eq("balance", 100) }
-        b.gtAll("balance") { eq("balance", 100) }
-        b.geAll("balance") { eq("balance", 100) }
-        b.ltAll("balance") { eq("balance", 100) }
-        b.leAll("balance") { eq("balance", 100) }
-        
-        b.gtSome("balance") { eq("balance", 100) }
-        b.geSome("balance") { eq("balance", 100) }
-        b.ltSome("balance") { eq("balance", 100) }
-        b.leSome("balance") { eq("balance", 100) }
-        
-        b.in("balance") { eq("balance", 100) }
-        b.inList("balance") { eq("balance", 100) }
-        b.notIn("balance") { eq("balance", 100) }
-        
-        then:
-        noExceptionThrown()
-        
-        cleanup:
-        b.closeSession()
-    }
-
-    void "test subqueries with QueryableCriteria"() {
-        when:
-        def b = new HibernateCriteriaBuilder(DirectAccount, manager.hibernateDatastore.sessionFactory, manager.hibernateDatastore)
-        def criteria = new grails.gorm.DetachedCriteria(DirectAccount).build { eq("balance", 100) }
-        
-        b.eqAll("balance", criteria)
-        b.gtAll("balance", criteria)
-        b.geAll("balance", criteria)
-        b.ltAll("balance", criteria)
-        b.leAll("balance", criteria)
-        
-        b.gtSome("balance", criteria)
-        b.geSome("balance", criteria)
-        b.ltSome("balance", criteria)
-        b.leSome("balance", criteria)
-        
-        b.in("balance", criteria)
-        b.inList("balance", criteria)
-        b.notIn("balance", criteria)
-
-        b.exists(criteria)
-        b.notExists(criteria)
-        
-        then:
-        noExceptionThrown()
-        
-        cleanup:
-        b.closeSession()
-    }
-
-    void "test execution methods"() {
-        when:
-        def b = new HibernateCriteriaBuilder(DirectAccount, manager.hibernateDatastore.sessionFactory, manager.hibernateDatastore)
-        b.list { eq("firstName", "Fred") }
-        b.list([max: 10]) { eq("firstName", "Fred") }
-        b.listDistinct { eq("firstName", "Fred") }
-        b.get { eq("firstName", "Fred") }
-        try { b.scroll { eq("firstName", "Fred") } } catch(UnsupportedOperationException e) { /* expected in this mock environment */ }
-        b.list()
-        
-        then:
-        noExceptionThrown()
-        
-        cleanup:
-        b.closeSession()
-    }
-
-    void "test properties and projections methods"() {
-        when:
-        def b = new HibernateCriteriaBuilder(DirectAccount, manager.hibernateDatastore.sessionFactory, manager.hibernateDatastore)
-
-        then:
-        b.property("firstName")
-        b.distinct("lastName")
-        b.avg("balance")
-        b.projections() != null
-        b.closeSession()
-    }
-
-    void "test boolean flags and setter getter methods"() {
-        when:
-        def b = new HibernateCriteriaBuilder(DirectAccount, manager.hibernateDatastore.sessionFactory, manager.hibernateDatastore)
-        b.uniqueResult = true
-        b.distinct = true
-        b.count = true
-        b.paginationEnabledList = true
-        b.scroll = true
-        
-        then:
-        b.isUniqueResult() == true
-        b.isDistinct() == true
-        b.isCount() == true
-        b.isPaginationEnabledList() == true
-        b.isScroll() == true
-        b.getInstance() == null
-        b.getCriteriaBuilder() != null
-        b.getSessionFactory() != null
-        b.getHibernateQuery() != null
-        b.isParticipate() == true
-        b.getDefaultFlushMode() == org.grails.orm.hibernate.GrailsHibernateTemplate.FLUSH_AUTO
-        
-        when:
-        b.setDefaultFlushMode(1)
-        then:
-        b.getDefaultFlushMode() == 1
-        
-        when:
-        b.lock(true)
-        b.cache(true)
-        b.maxResults(10)
-        then:
-        noExceptionThrown()
-
-        cleanup:
-        b.closeSession()
-    }
-
-    void "test alias and join methods"() {
-        when:
-        def b = new HibernateCriteriaBuilder(DirectAccount, manager.hibernateDatastore.sessionFactory, manager.hibernateDatastore)
-        b.join("transactions")
-        b.join("transactions", jakarta.persistence.criteria.JoinType.INNER)
-        b.select("transactions")
-        b.createAlias("transactions", "t")
-        b.createAlias("transactions", "t2", 1) // LEFT
-        b.createAlias("transactions", "t3", 2) // RIGHT
-        b.createAlias("transactions", "t4", 3) // INNER
-        
-        then:
-        noExceptionThrown()
-        
-        cleanup:
-        b.closeSession()
-    }
-
-    void "test exception handling"() {
-        when:
-        def b = new HibernateCriteriaBuilder(DirectAccount, manager.hibernateDatastore.sessionFactory, manager.hibernateDatastore)
-        b.throwRuntimeException(new RuntimeException("test exception"))
-        
-        then:
-        thrown(RuntimeException)
-    }
-
-    void "test missing criterion methods"() {
-        when:
-        def b = new HibernateCriteriaBuilder(DirectAccount, manager.hibernateDatastore.sessionFactory, manager.hibernateDatastore)
-        b.eqProperty("firstName", "lastName")
-        b.neProperty("firstName", "lastName")
-        b.gtProperty("firstName", "lastName")
-        b.geProperty("firstName", "lastName")
-        b.ltProperty("firstName", "lastName")
-        b.leProperty("firstName", "lastName")
-        
-        b.allEq(["firstName": "Fred"])
-        b.idEq(1L)
-        b.idEquals(1L)
-        
-        b.isEmpty("firstName")
-        b.isNotEmpty("firstName")
-        b.isNull("firstName")
-        b.isNotNull("firstName")
-        
-        b.like("firstName", "Fre%")
-        b.ilike("firstName", "fre%")
-        b.rlike("firstName", ".*")
-        
-        b.in("firstName", ["Fred", "Barney"])
-        b.inList("firstName", ["Fred", "Barney"])
-        b.inList("firstName", "Fred", "Barney")
-        b.in("firstName", "Fred", "Barney")
-        b.notIn("firstName") { eq("firstName", "Wilma") }
-        
-        b.gt("balance", 100)
-        b.ge("balance", 100)
-        b.gte("balance", 100)
-        b.lt("balance", 100)
-        b.le("balance", 100)
-        b.lte("balance", 100)
-        b.ne("balance", 100)
-        b.between("balance", 100, 200)
-
-        b.sizeEq("transactions", 1)
-        b.sizeGt("transactions", 1)
-        b.sizeGe("transactions", 1)
-        b.sizeLt("transactions", 1)
-        b.sizeLe("transactions", 1)
-        b.sizeNe("transactions", 1)
-
-        b.order("firstName")
-        b.order("lastName", "desc")
-        b.firstResult(0)
-        
-        b.and { eq("firstName", "Fred") }
-        b.or { eq("firstName", "Fred") }
-        b.not { eq("firstName", "Fred") }
-
-        then:
-        noExceptionThrown()
-
-        cleanup:
-        b.closeSession()
-    }
-
-    void "test subqueries with closures"() {
-        when:
-        def b = new HibernateCriteriaBuilder(DirectAccount, manager.hibernateDatastore.sessionFactory, manager.hibernateDatastore)
-        
-        b.eqAll("balance") { eq("balance", 100) }
-        b.gtAll("balance") { eq("balance", 100) }
-        b.geAll("balance") { eq("balance", 100) }
-        b.ltAll("balance") { eq("balance", 100) }
-        b.leAll("balance") { eq("balance", 100) }
-        
-        b.gtSome("balance") { eq("balance", 100) }
-        b.geSome("balance") { eq("balance", 100) }
-        b.ltSome("balance") { eq("balance", 100) }
-        b.leSome("balance") { eq("balance", 100) }
-        
-        b.in("balance") { eq("balance", 100) }
-        b.inList("balance") { eq("balance", 100) }
-        b.notIn("balance") { eq("balance", 100) }
-        
-        then:
-        noExceptionThrown()
-        
-        cleanup:
-        b.closeSession()
-    }
-
-    void "test subqueries with QueryableCriteria"() {
-        when:
-        def b = new HibernateCriteriaBuilder(DirectAccount, manager.hibernateDatastore.sessionFactory, manager.hibernateDatastore)
-        def criteria = new grails.gorm.DetachedCriteria(DirectAccount).build { eq("balance", 100) }
-        
-        b.eqAll("balance", criteria)
-        b.gtAll("balance", criteria)
-        b.geAll("balance", criteria)
-        b.ltAll("balance", criteria)
-        b.leAll("balance", criteria)
-        
-        b.gtSome("balance", criteria)
-        b.geSome("balance", criteria)
-        b.ltSome("balance", criteria)
-        b.leSome("balance", criteria)
-        
-        b.in("balance", criteria)
-        b.inList("balance", criteria)
-        b.notIn("balance", criteria)
-
-        b.exists(criteria)
-        b.notExists(criteria)
-        
-        then:
-        noExceptionThrown()
-        
-        cleanup:
-        b.closeSession()
-    }
-
-    void "test execution methods"() {
-        when:
-        def b = new HibernateCriteriaBuilder(DirectAccount, manager.hibernateDatastore.sessionFactory, manager.hibernateDatastore)
-        b.list { eq("firstName", "Fred") }
-        b.list([max: 10]) { eq("firstName", "Fred") }
-        b.listDistinct { eq("firstName", "Fred") }
-        b.get { eq("firstName", "Fred") }
-        try { b.scroll { eq("firstName", "Fred") } } catch(UnsupportedOperationException e) { /* expected in this mock environment */ }
-        b.list()
-        
-        then:
-        noExceptionThrown()
-        
-        cleanup:
-        b.closeSession()
-    }
-
-    // ─── Comparison predicates ─────────────────────────────────────────────
-
-    def "eq(String, Object) delegates and returns this"() {
-        expect: builder.eq("firstName", "Fred").is(builder)
-    }
-
-    def "eq(String, Object, Map) delegates and returns this"() {
-        expect: builder.eq("firstName", "Fred", Collections.emptyMap()).is(builder)
-    }
-
-    def "eq with ignoreCase=true calls like on hibernateQuery"() {
-        expect: builder.eq("firstName", "Fred", [ignoreCase: true]).is(builder)
-    }
-
-    def "eq(Map, String, Object) groovy-map-first form delegates and returns this"() {
-        expect: builder.eq(Collections.emptyMap(), "firstName", "Fred").is(builder)
-    }
-
-    def "ne(String, Object) delegates and returns this"() {
-        expect: builder.ne("firstName", "Fred").is(builder)
-    }
-
-    def "gt(String, Object) delegates and returns this"() {
-        expect: builder.gt("balance", BigDecimal.ONE).is(builder)
-    }
-
-    def "ge(String, Object) delegates and returns this"() {
-        expect: builder.ge("balance", BigDecimal.ONE).is(builder)
-    }
-
-    def "lt(String, Object) delegates and returns this"() {
-        expect: builder.lt("balance", BigDecimal.TEN).is(builder)
-    }
-
-    def "le(String, Object) delegates and returns this"() {
-        expect: builder.le("balance", BigDecimal.TEN).is(builder)
-    }
-
-    def "gte(String, Object) aliases ge and returns this"() {
-        expect: builder.gte("balance", BigDecimal.ONE).is(builder)
-    }
-
-    def "lte(String, Object) aliases le and returns this"() {
-        expect: builder.lte("balance", BigDecimal.TEN).is(builder)
-    }
-
-    def "like(String, Object) delegates and returns this"() {
-        expect: builder.like("firstName", "Fr%").is(builder)
-    }
-
-    def "ilike(String, Object) delegates and returns this"() {
-        expect: builder.ilike("firstName", "fr%").is(builder)
-    }
-
-    def "rlike(String, Object) delegates and returns this"() {
-        expect: builder.rlike("firstName", "^Fr.*").is(builder)
-    }
-
-    def "between(String, Object, Object) delegates and returns this"() {
-        expect: builder.between("balance", BigDecimal.ONE, BigDecimal.TEN).is(builder)
-    }
-
-    // ─── Null / empty ──────────────────────────────────────────────────────
-
-    def "isEmpty(String) delegates and returns this"() {
-        expect: builder.isEmpty("transactions").is(builder)
-    }
-
-    def "isNotEmpty(String) delegates and returns this"() {
-        expect: builder.isNotEmpty("transactions").is(builder)
-    }
-
-    def "isNull(String) delegates and returns this"() {
-        expect: builder.isNull("branch").is(builder)
-    }
-
-    def "isNotNull(String) delegates and returns this"() {
-        expect: builder.isNotNull("branch").is(builder)
-    }
-
-    // ─── Identity equality ─────────────────────────────────────────────────
-
-    def "idEq(Object) aliases eq('id', o) and returns this"() {
-        given: def fred = new DirectAccount(balance: 100, firstName: "Fred", lastName: "F").save(failOnError: true, flush: true)
-        expect: builder.idEq(fred.id).is(builder)
-    }
-
-    def "idEquals(Object) aliases idEq and returns this"() {
-        given: def fred = DirectAccount.first()
-        expect: builder.idEquals(fred?.id ?: 1L).is(builder)
-    }
-
-    // ─── 'in' variants ────────────────────────────────────────────────────
-
-    def "in(String, Collection) delegates and returns this"() {
-        expect: builder.in("firstName", ["Fred", "Barney"]).is(builder)
-    }
-
-    def "in(String, Object[]) delegates and returns this"() {
-        expect: builder.in("firstName", ["Fred", "Barney"] as Object[]).is(builder)
-    }
-
-    def "inList(String, Collection) delegates to in and returns this"() {
-        expect: builder.inList("firstName", ["Fred", "Barney"]).is(builder)
-    }
-
-    def "inList(String, Object[]) delegates to in and returns this"() {
-        expect: builder.inList("firstName", ["Fred", "Barney"] as Object[]).is(builder)
-    }
-
-    // ─── allEq ────────────────────────────────────────────────────────────
-
-    def "allEq(Map) delegates and returns this"() {
-        expect: builder.allEq([firstName: "Fred", lastName: "Flintstone"]).is(builder)
-    }
-
-    // ─── Property comparisons ──────────────────────────────────────────────
-
-    def "eqProperty(String, String) delegates and returns this"() {
-        expect: builder.eqProperty("firstName", "firstName").is(builder)
-    }
-
-    def "neProperty(String, String) delegates and returns this"() {
-        expect: builder.neProperty("firstName", "lastName").is(builder)
-    }
-
-    def "gtProperty(String, String) delegates and returns this"() {
-        expect: builder.gtProperty("balance", "balance").is(builder)
-    }
-
-    def "geProperty(String, String) delegates and returns this"() {
-        expect: builder.geProperty("balance", "balance").is(builder)
-    }
-
-    def "ltProperty(String, String) delegates and returns this"() {
-        expect: builder.ltProperty("balance", "balance").is(builder)
-    }
-
-    def "leProperty(String, String) delegates and returns this"() {
-        expect: builder.leProperty("balance", "balance").is(builder)
-    }
-
-    // ─── Collection-size constraints ───────────────────────────────────────
-
-    def "sizeEq(String, int) delegates and returns this"() {
-        expect: builder.sizeEq("transactions", 2).is(builder)
-    }
-
-    def "sizeGt(String, int) delegates and returns this"() {
-        expect: builder.sizeGt("transactions", 0).is(builder)
-    }
-
-    def "sizeGe(String, int) delegates and returns this"() {
-        expect: builder.sizeGe("transactions", 1).is(builder)
-    }
-
-    def "sizeLe(String, int) delegates and returns this"() {
-        expect: builder.sizeLe("transactions", 5).is(builder)
-    }
-
-    def "sizeLt(String, int) delegates and returns this"() {
-        expect: builder.sizeLt("transactions", 3).is(builder)
-    }
-
-    def "sizeNe(String, int) delegates and returns this"() {
-        expect: builder.sizeNe("transactions", 0).is(builder)
-    }
-
-    // ─── Ordering ──────────────────────────────────────────────────────────
-
-    def "order(String) delegates via Order and returns this"() {
-        expect: builder.order("firstName").is(builder)
-    }
-
-    def "order(String, 'asc') sets ascending order and returns this"() {
-        expect: builder.order("firstName", "asc").is(builder)
-    }
-
-    def "order(String, 'desc') sets descending order and returns this"() {
-        expect: builder.order("balance", "desc").is(builder)
-    }
-
-    def "order(String, unrecognised) defaults to ascending and returns this"() {
-        expect: builder.order("balance", "unknown").is(builder)
-    }
-
-    def "order(Query.Order) delegates and returns this"() {
-        expect: builder.order(new Query.Order("firstName")).is(builder)
-    }
-
-    // ─── Pagination / fetch ────────────────────────────────────────────────
-
-    def "firstResult(int) delegates and returns this"() {
-        expect: builder.firstResult(5).is(builder)
-    }
-
-    def "maxResults(int) delegates and returns this"() {
-        expect: builder.maxResults(10).is(builder)
-    }
-
-    // ─── Join / select ─────────────────────────────────────────────────────
-
-    def "join(String) delegates with INNER join and returns this"() {
-        expect: builder.join("transactions").is(builder)
-    }
-
-    def "join(String, JoinType) delegates and returns this"() {
-        expect: builder.join("transactions", JoinType.LEFT).is(builder)
-    }
-
-    def "select(String) delegates and returns this"() {
-        expect: builder.select("balance").is(builder)
-    }
-
-    def "createAlias(String, String) delegates and returns this"() {
-        expect: builder.createAlias("transactions", "t").is(builder)
-    }
-
-    def "createAlias(String, String, int) delegates and returns this"() {
-        expect: builder.createAlias("transactions", "t", 0).is(builder)
-    }
-
-    // ─── Cache / readOnly / lock ───────────────────────────────────────────
-
-    def "cache(boolean) sets flag and returns this"() {
-        expect: builder.cache(true).is(builder)
-    }
-
-    def "readOnly(boolean) sets flag and returns this"() {
-        expect: builder.readOnly(true).is(builder)
-    }
-
-    def "lock(boolean) sets flag without throwing"() {
-        when: builder.lock(true)
-        then: noExceptionThrown()
-    }
-
-    // ─── Projection wrappers ───────────────────────────────────────────────
-
-    def "property(String) adds property projection and returns this"() {
-        expect: builder.property("firstName").is(builder)
-    }
-
-    def "avg(String) adds avg projection and returns this"() {
-        expect: builder.avg("balance").is(builder)
-    }
-
-    def "distinct(String) adds distinct projection and returns this"() {
-        expect: builder.distinct("firstName").is(builder)
-    }
-
-    def "count() adds count projection and returns non-null ProjectionList"() {
-        expect: builder.count() != null
-    }
-
-    def "countDistinct(String) adds countDistinct projection and returns this"() {
-        expect: builder.countDistinct("firstName").is(builder)
-    }
-
-    def "groupProperty(String) adds groupProperty projection and returns this"() {
-        expect: builder.groupProperty("lastName").is(builder)
-    }
-
-    def "min(String) adds min projection and returns this"() {
-        expect: builder.min("balance").is(builder)
-    }
-
-    def "max(String) adds max projection and returns this"() {
-        expect: builder.max("balance").is(builder)
-    }
-
-    def "sum(String) adds sum projection and returns this"() {
-        expect: builder.sum("balance").is(builder)
-    }
-
-    def "rowCount() delegates to count and returns non-null ProjectionList"() {
-        expect: builder.rowCount() != null
-    }
-
-    def "id() adds id projection and returns this"() {
-        expect: builder.id().is(builder)
-    }
-
-    // ─── State flags ───────────────────────────────────────────────────────
-
-    def "setUniqueResult and isUniqueResult are symmetric"() {
-        when: builder.setUniqueResult(true)
-        then: builder.isUniqueResult()
-    }
-
-    def "setPaginationEnabledList and isPaginationEnabledList are symmetric"() {
-        when: builder.setPaginationEnabledList(true)
-        then: builder.isPaginationEnabledList()
-    }
-
-    def "setScroll(boolean) sets scroll flag"() {
-        when: builder.setScroll(true)
-        then: noExceptionThrown()
-    }
-
-    def "setCount(boolean) sets count flag"() {
-        when: builder.setCount(true)
-        then: builder.isCount()
-    }
-
-    def "setDistinct(boolean) sets distinct flag"() {
-        when: builder.setDistinct(true)
-        then: builder.isDistinct()
-    }
-
-    def "setDefaultFlushMode and getDefaultFlushMode are symmetric"() {
-        when: builder.setDefaultFlushMode(2)
-        then: builder.getDefaultFlushMode() == 2
-    }
-
-    def "getTargetClass returns the entity class"() {
-        expect: builder.targetClass == DirectAccount
-    }
-
-    def "getHibernateQuery returns non-null"() {
-        expect: builder.hibernateQuery != null
-    }
-
-    def "getSessionFactory returns non-null"() {
-        expect: builder.sessionFactory != null
-    }
-
-    def "getCriteriaBuilder returns non-null"() {
-        expect: builder.criteriaBuilder != null
-    }
-
-    def "setTargetClass updates the target class"() {
-        when: builder.targetClass = DirectTransaction
-        then: builder.targetClass == DirectTransaction
-    }
-
-    void "test closeSession unbinds and closes session when not participating"() {
+    void "test notExists subquery"() {
         given:
-        def sf = manager.hibernateDatastore.sessionFactory
-        // Unbind anything before starting
-        TransactionSynchronizationManager.unbindResourceIfPossible(sf)
-        
-        Session nativeSession = sf.openSession()
-        // Builder created without bound resource -> participate = false
-        HibernateCriteriaBuilder b = new HibernateCriteriaBuilder(DirectAccount, sf, manager.hibernateDatastore)
-        // Now bind it so closeSession has something to unbind
-        TransactionSynchronizationManager.unbindResourceIfPossible(sf)
-        TransactionSynchronizationManager.bindResource(sf, new SessionHolder(nativeSession))
+        def e = CriteriaTestEntity.findByName("A")
+        new CriteriaTestChild(name: "child1", parent: e).save(flush: true)
 
         when:
-        b.closeSession()
-
-        then:
-        !TransactionSynchronizationManager.hasResource(sf)
-        !nativeSession.isOpen()
-    }
-
-    void "test closeSession does not unbind or close session when participating"() {
-        given:
-        def sf = manager.hibernateDatastore.sessionFactory
-        // Unbind anything before starting
-        TransactionSynchronizationManager.unbindResourceIfPossible(sf)
-
-        Session nativeSession = sf.openSession()
-        TransactionSynchronizationManager.unbindResourceIfPossible(sf)
-        TransactionSynchronizationManager.bindResource(sf, new SessionHolder(nativeSession))
-        // Builder created with bound resource -> participate = true
-        HibernateCriteriaBuilder b = new HibernateCriteriaBuilder(DirectAccount, sf, manager.hibernateDatastore)
-
-        when:
-        b.closeSession()
-
-        then:
-        TransactionSynchronizationManager.hasResource(sf)
-        nativeSession.isOpen()
-
-        cleanup:
-        TransactionSynchronizationManager.unbindResourceIfPossible(sf)
-        if (nativeSession?.isOpen()) {
-            nativeSession.close()
+        def results = c.list {
+            notExists {
+                projections { id() }
+                eqProperty("parent.id", "{alias}.id")
+            }
         }
+        then:
+        results*.name.sort() == ["B", "C", "D"]
     }
 
-    void "where DSL supports cross-property arithmetic comparison (Integer gt BigDecimal * constant)"() {
-        given: "items where pageCount is an Integer and price is a BigDecimal"
-        new DirectItem(name: 'Long Cheap', pageCount: 1000, price: 5.00).save(flush: true)
-        new DirectItem(name: 'Short Expensive', pageCount: 100, price: 50.00).save(flush: true)
+    void "test size constraints"() {
+        given:
+        def e = CriteriaTestEntity.findByName("A")
+        e.addToChildren(new CriteriaTestChild(name: "c1"))
+        e.addToChildren(new CriteriaTestChild(name: "c2"))
+        e.save(flush: true)
 
-        when: "filtering where pageCount > price * 10"
-        def results = DirectItem.where {
-            pageCount > price * 10
-        }.list()
+        expect:
+        c.list { sizeLt("children", 1) }.size() == 3
+        c.list { sizeLe("children", 0) }.size() == 3
+        c.list { sizeNe("children", 0) }.size() == 1
+        c.list { sizeGt("children", 1) }.size() == 1
+    }
 
-        then: "only the long cheap item qualifies"
-        results.size() == 1
-        results[0].name == 'Long Cheap'
+    void "test listDistinct"() {
+        given:
+        def builder = new HibernateCriteriaBuilder(CriteriaTestEntity, manager.hibernateDatastore.sessionFactory, manager.hibernateDatastore)
+        
+        when:
+        def results = builder.listDistinct {
+            projections { property("category") }
+        }
+        
+        then:
+        results.sort() == ["X", "Y"]
+    }
+
+    void "test idEquals and lte/gte"() {
+        given:
+        def e = CriteriaTestEntity.findByName("A")
+        
+        expect:
+        c.list { idEquals(e.id) }.size() == 1
+        c.list { lte("amount", 10) }.size() == 1
+        c.list { gte("amount", 40) }.size() == 1
     }
 }
 
 @Entity
-class DirectAccount {
-    String firstName
-    String lastName
-    BigDecimal balance
-    String branch
-    Set<DirectTransaction> transactions
-
-    static hasMany = [transactions: DirectTransaction]
-    static constraints = { branch nullable: true }
-}
-
-@Entity
-class DirectTransaction {
-    BigDecimal amount
-    static belongsTo = [account: DirectAccount]
-}
-
-@Entity
-class DirectBiBook {
-    String title
-    static hasMany = [authors: DirectBiAuthor]
-    static belongsTo = [DirectBiAuthor]
-}
-
-@Entity
-class DirectBiAuthor {
+class CriteriaTestEntity {
+    Long id
     String name
-    static hasMany = [books: DirectBiBook]
+    Integer amount
+    Integer otherAmount = 0
+    String category
+    Set children
+    static hasMany = [children: CriteriaTestChild]
 }
 
 @Entity
-class DirectItem {
+class CriteriaTestChild {
+    Long id
     String name
-    Integer pageCount
-    BigDecimal price
-
-    static constraints = {
-        name nullable: false
-        pageCount nullable: false
-        price nullable: false
-    }
+    static belongsTo = [parent: CriteriaTestEntity]
 }

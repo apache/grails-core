@@ -226,28 +226,28 @@ public class PredicateGenerator {
             return cb.equal(root.get("id"), normalizeValue(c.getValue()));
         } else if (pc instanceof Query.GreaterThan c) {
             Expression<? extends Number> rhs = resolveNumericExpression(cb, root, c);
-            return rhs != null ? cb.gt((Expression<? extends Number>) fullyQualifiedPath, rhs) : cb.gt((Expression<? extends Number>) fullyQualifiedPath, getNumericValue(c));
+            return rhs != null ? cb.gt((Expression<? extends Number>) fullyQualifiedPath, rhs) : cb.gt((Expression<? extends Number>) fullyQualifiedPath, (Number) getNumericValue(c));
         } else if (pc instanceof Query.GreaterThanEquals c) {
             Expression<? extends Number> rhs = resolveNumericExpression(cb, root, c);
-            return rhs != null ? cb.ge((Expression<? extends Number>) fullyQualifiedPath, rhs) : cb.ge((Expression<? extends Number>) fullyQualifiedPath, getNumericValue(c));
+            return rhs != null ? cb.ge((Expression<? extends Number>) fullyQualifiedPath, rhs) : cb.ge((Expression<? extends Number>) fullyQualifiedPath, (Number) getNumericValue(c));
         } else if (pc instanceof Query.LessThan c) {
             Expression<? extends Number> rhs = resolveNumericExpression(cb, root, c);
-            return rhs != null ? cb.lt((Expression<? extends Number>) fullyQualifiedPath, rhs) : cb.lt((Expression<? extends Number>) fullyQualifiedPath, getNumericValue(c));
+            return rhs != null ? cb.lt((Expression<? extends Number>) fullyQualifiedPath, rhs) : cb.lt((Expression<? extends Number>) fullyQualifiedPath, (Number) getNumericValue(c));
         } else if (pc instanceof Query.LessThanEquals c) {
             Expression<? extends Number> rhs = resolveNumericExpression(cb, root, c);
-            return rhs != null ? cb.le((Expression<? extends Number>) fullyQualifiedPath, rhs) : cb.le((Expression<? extends Number>) fullyQualifiedPath, getNumericValue(c));
+            return rhs != null ? cb.le((Expression<? extends Number>) fullyQualifiedPath, rhs) : cb.le((Expression<? extends Number>) fullyQualifiedPath, (Number) getNumericValue(c));
         } else if (pc instanceof Query.SizeEquals c) {
             return cb.equal(cb.size((Expression) fullyQualifiedPath), normalizeValue(c.getValue()));
         } else if (pc instanceof Query.SizeNotEquals c) {
             return cb.notEqual(cb.size((Expression) fullyQualifiedPath), normalizeValue(c.getValue()));
         } else if (pc instanceof Query.SizeGreaterThan c) {
-            return cb.gt(cb.size((Expression) fullyQualifiedPath), getNumericValue(c));
+            return cb.gt(cb.size((Expression) fullyQualifiedPath), (Number) getNumericValue(c));
         } else if (pc instanceof Query.SizeGreaterThanEquals c) {
-            return cb.ge(cb.size((Expression) fullyQualifiedPath), getNumericValue(c));
+            return cb.ge(cb.size((Expression) fullyQualifiedPath), (Number) getNumericValue(c));
         } else if (pc instanceof Query.SizeLessThan c) {
-            return cb.lt(cb.size((Expression) fullyQualifiedPath), getNumericValue(c));
+            return cb.lt(cb.size((Expression) fullyQualifiedPath), (Number) getNumericValue(c));
         } else if (pc instanceof Query.SizeLessThanEquals c) {
-            return cb.le(cb.size((Expression) fullyQualifiedPath), getNumericValue(c));
+            return cb.le(cb.size((Expression) fullyQualifiedPath), (Number) getNumericValue(c));
         } else if (pc instanceof Query.Between c) {
             return cb.between((Expression) fullyQualifiedPath, (Comparable) normalizeValue(c.getFrom()), (Comparable) normalizeValue(c.getTo()));
         }
@@ -340,42 +340,58 @@ public class PredicateGenerator {
             CriteriaQuery<?> criteriaQuery,
             JpaFromProvider fromsByProvider,
             Query.SubqueryCriterion c) {
-        Subquery subquery = criteriaQuery.subquery(Number.class);
-        PersistentEntity subEntity = c.getValue().getPersistentEntity();
+        
+        QueryableCriteria<?> subqueryable = c.getValue();
+        PersistentEntity subEntity = subqueryable.getPersistentEntity();
+        
+        var projection = findPropertyOrIdProjection(subqueryable);
+        var subProperty = findSubproperty(projection);
+        
+        Class<?> subqueryType = subEntity.getJavaClass();
+        if (projection instanceof Query.PropertyProjection pp) {
+            PersistentProperty prop = subEntity.getPropertyByName(pp.getPropertyName());
+            if (prop != null) subqueryType = prop.getType();
+        } else if (projection instanceof Query.IdProjection) {
+            if (subEntity.getIdentity() != null) subqueryType = subEntity.getIdentity().getType();
+        }
+
+        Subquery subquery = criteriaQuery.subquery(subqueryType);
         Root from = subquery.from(subEntity.getJavaClass());
-        JpaFromProvider newMap = (JpaFromProvider) fromsByProvider.clone();
-        newMap.put("root", from);
+        JpaFromProvider newMap = new JpaFromProvider(fromsByProvider, (DetachedCriteria<?>) subqueryable, java.util.Collections.emptyList(), from);
+        
         Predicate[] predicates =
                 getPredicates(cb, criteriaQuery, from, c.getValue().getCriteria(), newMap, subEntity);
+        
         Path path = fromsByProvider.getFullyQualifiedPath(c.getProperty());
+        Expression subExpression = (Expression) newMap.getFullyQualifiedPath(subProperty);
 
         if (c instanceof Query.GreaterThanEqualsAll) {
-            subquery.select(cb.max(from.get(c.getProperty()))).where(cb.and(predicates));
-            return cb.greaterThanOrEqualTo(path, subquery);
+            subquery.select(subExpression).where(cb.and(predicates));
+            return cb.greaterThanOrEqualTo(path, cb.all(subquery));
         } else if (c instanceof Query.GreaterThanAll) {
-            subquery.select(cb.max(from.get(c.getProperty()))).where(cb.and(predicates));
-            return cb.greaterThan(path, subquery);
+            subquery.select(subExpression).where(cb.and(predicates));
+            return cb.greaterThan(path, cb.all(subquery));
         } else if (c instanceof Query.LessThanEqualsAll) {
-            subquery.select(cb.min(from.get(c.getProperty()))).where(cb.and(predicates));
-            return cb.lessThanOrEqualTo(path, subquery);
+            subquery.select(subExpression).where(cb.and(predicates));
+            return cb.lessThanOrEqualTo(path, cb.all(subquery));
         } else if (c instanceof Query.LessThanAll) {
-            subquery.select(cb.min(from.get(c.getProperty()))).where(cb.and(predicates));
-            return cb.lessThan(path, subquery);
+            subquery.select(subExpression).where(cb.and(predicates));
+            return cb.lessThan(path, cb.all(subquery));
         } else if (c instanceof Query.EqualsAll) {
-            subquery.select(from.get(c.getProperty())).where(cb.and(predicates));
-            return cb.equal(path, subquery);
+            subquery.select(subExpression).where(cb.and(predicates));
+            return cb.equal(path, cb.all(subquery));
         } else if (c instanceof Query.GreaterThanEqualsSome) {
-            subquery.select(cb.max(from.get(c.getProperty()))).where(cb.or(predicates));
-            return cb.greaterThanOrEqualTo(path, subquery);
+            subquery.select(subExpression).where(cb.and(predicates));
+            return cb.greaterThanOrEqualTo(path, cb.some(subquery));
         } else if (c instanceof Query.GreaterThanSome) {
-            subquery.select(cb.max(from.get(c.getProperty()))).where(cb.or(predicates));
-            return cb.greaterThan(path, subquery);
+            subquery.select(subExpression).where(cb.and(predicates));
+            return cb.greaterThan(path, cb.some(subquery));
         } else if (c instanceof Query.LessThanEqualsSome) {
-            subquery.select(cb.min(from.get(c.getProperty()))).where(cb.or(predicates));
-            return cb.lessThanOrEqualTo(path, subquery);
+            subquery.select(subExpression).where(cb.and(predicates));
+            return cb.lessThanOrEqualTo(path, cb.some(subquery));
         } else if (c instanceof Query.LessThanSome) {
-            subquery.select(cb.min(from.get(c.getProperty()))).where(cb.or(predicates));
-            return cb.lessThan(path, subquery);
+            subquery.select(subExpression).where(cb.and(predicates));
+            return cb.lessThan(path, cb.some(subquery));
         }
         return null;
     }
@@ -558,24 +574,19 @@ public class PredicateGenerator {
         return value;
     }
 
-    private Number getNumericValue(Query.PropertyCriterion criterion) {
+    private Object getNumericValue(Query.PropertyCriterion criterion) {
         Object value = criterion.getValue();
+        if (value instanceof Number) {
+            return value;
+        }
         if (value != null) {
             try {
                 return conversionService.convert(value, Number.class);
             } catch (org.springframework.core.convert.ConversionException e) {
-                throw new ConfigurationException(
-                        String.format(
-                                "Operation '%s' on property '%s' only accepts a numeric value, but received a %s",
-                                criterion.getClass().getSimpleName(),
-                                criterion.getProperty(),
-                                value.getClass().getName()),
-                        e);
+                // ignore and return as is
             }
         }
-        throw new ConfigurationException(String.format(
-                "Operation '%s' on property '%s' only accepts a numeric value, but received a %s",
-                criterion.getClass().getSimpleName(), criterion.getProperty(), "null"));
+        return value;
     }
 
     @SuppressWarnings("unchecked")

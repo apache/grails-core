@@ -32,6 +32,9 @@ import jakarta.persistence.criteria.Path;
 import grails.gorm.DetachedCriteria;
 import org.grails.datastore.gorm.query.criteria.DetachedAssociationCriteria;
 import org.grails.datastore.mapping.model.PersistentEntity;
+import org.grails.datastore.mapping.model.PersistentProperty;
+import org.grails.datastore.mapping.model.types.Association;
+import org.grails.datastore.mapping.model.types.Basic;
 import org.grails.datastore.mapping.query.Query;
 
 @SuppressWarnings({
@@ -219,6 +222,19 @@ public class JpaFromProvider implements Cloneable {
                 continue;
             }
 
+            // Hibernate 7: Ensure we only join associations or basic collections
+            if (leaf.equals("{alias}")) {
+                continue;
+            }
+            PersistentProperty property = entity != null ? entity.getPropertyByName(leaf) : null;
+            if (property != null && !(property instanceof Association || property instanceof Basic)) {
+                continue;
+            }
+            if (property == null && parentPath.equals(ROOT_ALIAS)) {
+                // Top-level property not found or is a special token, skip join
+                continue;
+            }
+
             JoinType joinType = JoinType.INNER;
             if (joinTypes.containsKey(path)) {
                 joinType = joinTypes.get(path);
@@ -269,7 +285,7 @@ public class JpaFromProvider implements Cloneable {
         return paths;
     }
 
-    private Map<String, DetachedAssociationCriteria<?>> createAliasMap(
+    private Map<String, DetachedCriteria<?>> createAliasMap(
             List<DetachedAssociationCriteria<?>> detachedAssociationCriteriaList) {
         // Use a merge function and a stable map type to avoid DuplicateKey exceptions when the same
         // association path/alias appears multiple times (e.g., referenced in both predicate and sort).
