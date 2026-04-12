@@ -18,7 +18,7 @@
  */
 package grails.plugin.json.view
 
-import com.fasterxml.jackson.databind.ObjectMapper
+import tools.jackson.databind.json.JsonMapper
 import grails.plugin.json.view.test.JsonViewTest
 import spock.lang.Shared
 import spock.lang.Specification
@@ -26,7 +26,7 @@ import spock.lang.Specification
 class NullRenderingSpec extends Specification implements JsonViewTest {
 
     @Shared
-    ObjectMapper objectMapper = new ObjectMapper()
+    JsonMapper objectMapper = JsonMapper.builder().build()
 
     void 'test rendering nulls with a domain'() {
         given:

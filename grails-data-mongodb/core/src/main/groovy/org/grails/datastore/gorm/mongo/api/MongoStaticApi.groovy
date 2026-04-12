@@ -40,7 +40,6 @@ import org.bson.conversions.Bson
 import org.springframework.transaction.PlatformTransactionManager
 
 import grails.gorm.multitenancy.Tenants
-import grails.mongodb.MongoEntity
 import grails.mongodb.api.MongoAllOperations
 import org.grails.datastore.gorm.GormStaticApi
 import org.grails.datastore.gorm.finders.FinderMethod
@@ -285,12 +284,6 @@ class MongoStaticApi<D> extends GormStaticApi<D> implements MongoAllOperations<D
 
             new MongoQuery.MongoResultList(cursor.iterator(), 0, persister)
         })
-    }
-
-    @Override
-    @Deprecated(forRemoval = true)
-    Document getDbo(D instance) {
-        return ((MongoEntity) instance).dbo
     }
 
     protected Bson wrapFilterWithMultiTenancy(Bson filter) {

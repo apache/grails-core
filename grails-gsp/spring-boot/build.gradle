@@ -19,6 +19,7 @@
 
 plugins {
     id 'org.apache.grails.buildsrc.properties'
+    id 'org.apache.grails.buildsrc.dependency-validator'
     id 'org.apache.grails.buildsrc.compile'
     id 'org.apache.grails.gradle.grails-plugin'
 }
@@ -34,6 +35,9 @@ ext {
 dependencies {
     implementation platform(project(':grails-bom'))
     api project(':grails-sitemesh3')
+    // Spring Boot 4 modularized spring-boot-autoconfigure into domain-specific modules.
+    // WebMvc auto-configuration classes (e.g., WebMvcAutoConfiguration) moved to spring-boot-webmvc.
+    api 'org.springframework.boot:spring-boot-webmvc'
 }
 
 apply {

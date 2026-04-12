@@ -19,8 +19,6 @@
 
 package org.grails.plugins.events
 
-import reactor.bus.EventBus
-
 import grails.config.Config
 import grails.plugins.Plugin
 import org.grails.events.bus.spring.EventBusFactoryBean
@@ -48,9 +46,6 @@ class EventBusGrailsPlugin extends Plugin {
             Config config = grailsApplication.config
             grailsEventBus(EventBusFactoryBean)
             gormDispatchEventRegistrar(GormDispatcherRegistrar, ref('grailsEventBus'))
-
-            // the legacy reactor EventBus, here for backwards compatibility
-            eventBus(EventBus, ref('grailsEventBus'))
 
             // make it possible to enable reactor events
             if (config.getProperty(TRANSLATE_SPRING_EVENTS, Boolean, false)) {

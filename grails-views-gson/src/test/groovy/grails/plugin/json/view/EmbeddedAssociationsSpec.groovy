@@ -18,7 +18,7 @@
  */
 package grails.plugin.json.view
 
-import com.fasterxml.jackson.databind.ObjectMapper
+import tools.jackson.databind.json.JsonMapper
 import grails.gorm.annotation.Entity
 import grails.plugin.json.view.test.JsonViewTest
 import org.grails.testing.GrailsUnitTest
@@ -29,7 +29,7 @@ import spock.lang.Specification
 class EmbeddedAssociationsSpec extends Specification implements JsonViewTest, GrailsUnitTest {
 
     @Shared
-    ObjectMapper objectMapper = new ObjectMapper()
+    JsonMapper objectMapper = JsonMapper.builder().build()
 
     void 'Test render domain object with embedded associations'() {
         given: 'A domain class with embedded associations'

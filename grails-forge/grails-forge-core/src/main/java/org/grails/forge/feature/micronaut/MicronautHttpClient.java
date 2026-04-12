@@ -27,6 +27,8 @@ import org.grails.forge.build.dependencies.Dependency;
 import org.grails.forge.build.dependencies.PomDependencyVersionResolver;
 import org.grails.forge.feature.Category;
 import org.grails.forge.feature.Feature;
+import org.grails.forge.feature.FeatureContext;
+import org.grails.forge.options.JdkVersion;
 
 import java.util.Optional;
 
@@ -58,6 +60,18 @@ public class MicronautHttpClient implements Feature {
     @Override
     public boolean supports(ApplicationType applicationType) {
         return true;
+    }
+
+    @Override
+    public void processSelectedFeatures(FeatureContext featureContext) {
+        // micronaut-core's ScopedValues references java.lang.ScopedValue.CallableOp,
+        // which only exists in JDK 25+ (JEP 506). Refuse to apply on older JDKs.
+        JdkVersion jdk = featureContext.getJavaVersion();
+        if (jdk.majorVersion() < JdkVersion.JDK_25.majorVersion()) {
+            throw new IllegalArgumentException(
+                getName() + " requires JDK 25 or later (selected: JDK " + jdk.majorVersion() + ")."
+            );
+        }
     }
 
     @Override

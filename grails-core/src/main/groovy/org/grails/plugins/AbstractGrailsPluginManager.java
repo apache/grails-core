@@ -52,11 +52,9 @@ import org.springframework.util.StringUtils;
 import grails.artefact.Enhanced;
 import grails.core.ArtefactHandler;
 import grails.core.GrailsApplication;
-import grails.plugins.CompatibilityPluginFilter;
 import grails.plugins.GrailsPlugin;
 import grails.plugins.GrailsPluginManager;
 import grails.plugins.Plugin;
-import grails.plugins.PluginFilter;
 import grails.plugins.exceptions.PluginException;
 import grails.util.Environment;
 import grails.util.GrailsNameUtils;
@@ -386,42 +384,6 @@ public abstract class AbstractGrailsPluginManager implements GrailsPluginManager
 
     public boolean isShutdown() {
         return shutdown;
-    }
-
-    /**
-     * @deprecated Plugin filtering is now handled by {@link PluginDiscovery}.
-     * Use {@link PluginDiscovery#setPluginFilter(PluginFilter)} instead.
-     * This method will be removed in Grails 8.0.0.
-     */
-    @Deprecated(forRemoval = true, since = "7.1")
-    @Override
-    public void setPluginFilter(PluginFilter pluginFilter) {
-        pluginDiscovery.setPluginFilter(new CompatibilityPluginFilter(pluginFilter, plugins.values()));
-        reinitializeDiscovery();
-    }
-
-    /**
-     * @deprecated Core plugin loading is now handled by {@link PluginDiscovery}.
-     * Use {@link PluginDiscovery#setLoadPluginsFromClasspath(boolean)} instead.
-     * This method will be removed in Grails 8.0.0.
-     */
-    @Deprecated(forRemoval = true, since = "7.1")
-    @Override
-    public void setLoadCorePlugins(boolean shouldLoadCorePlugins) {
-        pluginDiscovery.setLoadPluginsFromClasspath(shouldLoadCorePlugins);
-        reinitializeDiscovery();
-    }
-
-    /**
-     * Resets and reinitializes plugin discovery if an application context is available.
-     * When called before the application context is set (the typical pre-startup case),
-     * the forwarded settings will be picked up during normal lifecycle initialization.
-     */
-    private void reinitializeDiscovery() {
-        if (applicationContext != null) {
-            pluginDiscovery.reset();
-            pluginDiscovery.init(applicationContext.getEnvironment());
-        }
     }
 
     public void informOfClassChange(Class<?> aClass) {

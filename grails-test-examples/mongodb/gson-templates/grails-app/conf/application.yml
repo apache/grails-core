@@ -30,7 +30,7 @@ spring:
     autoconfigure:
         exclude:
             # No need to start MongoDB, we only need access to the Point class from gorm-mongodb
-            - org.springframework.boot.autoconfigure.mongo.MongoAutoConfiguration
+            - org.springframework.boot.mongodb.autoconfigure.MongoAutoConfiguration
 ---
 grails:
     mime:

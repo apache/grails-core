@@ -198,7 +198,7 @@ import grails.gorm.transactions.Transactional
         mySpec.getDeclaredMethod('$tt__$spock_feature_0_0', Object, Object, Object, TransactionStatus)
 
         and:"The spec can be called"
-        mySpec.newInstance().'$tt__$spock_feature_0_0'(2,2,4,new DefaultTransactionStatus(new Object(), true, true, false, false, null))
+        mySpec.newInstance().'$tt__$spock_feature_0_0'(2,2,4,new DefaultTransactionStatus(null, new Object(), true, true, false, false, false, null))
 
 
     }
@@ -232,7 +232,7 @@ import grails.gorm.transactions.Transactional
         mySpec.getDeclaredMethod('$tt__$spock_feature_0_0', TransactionStatus)
 
         and:"The spec can be called"
-        mySpec.newInstance().'$tt__$spock_feature_0_0'(new DefaultTransactionStatus(new Object(), true, true, false, false, null))
+        mySpec.newInstance().'$tt__$spock_feature_0_0'(new DefaultTransactionStatus(null, new Object(), true, true, false, false, false, null))
 
 
     }

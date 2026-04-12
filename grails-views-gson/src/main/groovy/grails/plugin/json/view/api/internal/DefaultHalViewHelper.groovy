@@ -21,6 +21,8 @@ package grails.plugin.json.view.api.internal
 
 import java.lang.reflect.Field
 
+import groovy.json.JsonGenerator
+import groovy.json.StreamingJsonBuilder
 import groovy.transform.CompileDynamic
 import groovy.transform.CompileStatic
 
@@ -28,7 +30,6 @@ import org.springframework.http.HttpMethod
 
 import grails.gorm.PagedResultList
 import grails.plugin.json.builder.JsonOutput
-import grails.plugin.json.builder.StreamingJsonBuilder
 import grails.plugin.json.view.api.GrailsJsonViewHelper
 import grails.plugin.json.view.api.HalViewHelper
 import grails.plugin.json.view.api.JsonView
@@ -71,7 +72,7 @@ class DefaultHalViewHelper extends DefaultJsonViewHelper implements HalViewHelpe
     public static final String EMBEDDED_ATTRIBUTE = '_embedded'
     public static final String EMBEDDED_PARAMETER = 'embedded'
 
-    private groovy.json.StreamingJsonBuilder.StreamingJsonDelegate jsonDelegate
+    private StreamingJsonBuilder.StreamingJsonDelegate jsonDelegate
 
     GrailsJsonViewHelper viewHelper
     String contentType = MimeType.HAL_JSON.name
@@ -86,7 +87,7 @@ class DefaultHalViewHelper extends DefaultJsonViewHelper implements HalViewHelpe
      * Same as {@link GrailsJsonViewHelper#render(java.lang.Object, java.util.Map, groovy.lang.Closure)} but renders HAL links too
      */
     @Override
-    JsonOutput.JsonWritable render(Object object, Map arguments, @DelegatesTo(groovy.json.StreamingJsonBuilder.StreamingJsonDelegate) Closure customizer) {
+    JsonOutput.JsonWritable render(Object object, Map arguments, @DelegatesTo(StreamingJsonBuilder.StreamingJsonDelegate) Closure customizer) {
         if (arguments == null) {
             arguments = new LinkedHashMap()
         }
@@ -101,13 +102,13 @@ class DefaultHalViewHelper extends DefaultJsonViewHelper implements HalViewHelpe
             int size = iterable.size()
             Object firstObject = size > 0 ? iterable.first() : null
             DefaultHalViewHelper helper = this
-            groovy.json.JsonGenerator generator = getGenerator()
+            JsonGenerator generator = getGenerator()
             return new JsonOutput.JsonWritable() {
                 @Override
                 Writer writeTo(Writer out) throws IOException {
-                    groovy.json.StreamingJsonBuilder builder = new groovy.json.StreamingJsonBuilder(out, generator)
+                    StreamingJsonBuilder builder = new StreamingJsonBuilder(out, generator)
                     builder.call {
-                        helper.setDelegate((groovy.json.StreamingJsonBuilder.StreamingJsonDelegate) delegate)
+                        helper.setDelegate((StreamingJsonBuilder.StreamingJsonDelegate) delegate)
                         if (firstObject != null) {
                             helper.links(GrailsNameUtils.getPropertyName(firstObject.getClass()))
                         }
@@ -134,7 +135,7 @@ class DefaultHalViewHelper extends DefaultJsonViewHelper implements HalViewHelpe
      * Same as {@link GrailsJsonViewHelper#render(java.lang.Object, java.util.Map, groovy.lang.Closure)} but renders HAL links too
      */
     @Override
-    JsonOutput.JsonWritable render(Object object, @DelegatesTo(groovy.json.StreamingJsonBuilder.StreamingJsonDelegate) Closure customizer) {
+    JsonOutput.JsonWritable render(Object object, @DelegatesTo(StreamingJsonBuilder.StreamingJsonDelegate) Closure customizer) {
         render(object, (Map) null, customizer)
     }
 
@@ -144,13 +145,13 @@ class DefaultHalViewHelper extends DefaultJsonViewHelper implements HalViewHelpe
     }
 
     @Override
-    void inline(Object object, Map arguments = [:], @DelegatesTo(groovy.json.StreamingJsonBuilder.StreamingJsonDelegate) Closure customizer = null) {
+    void inline(Object object, Map arguments = [:], @DelegatesTo(StreamingJsonBuilder.StreamingJsonDelegate) Closure customizer = null) {
         arguments.put(ASSOCIATIONS, false)
         viewHelper.inline(object, arguments, customizer, jsonDelegate)
     }
 
     @Override
-    void inline(Object object, @DelegatesTo(groovy.json.StreamingJsonBuilder.StreamingJsonDelegate) Closure customizer) {
+    void inline(Object object, @DelegatesTo(StreamingJsonBuilder.StreamingJsonDelegate) Closure customizer) {
         inline(object, [:], customizer)
     }
 
@@ -175,7 +176,7 @@ class DefaultHalViewHelper extends DefaultJsonViewHelper implements HalViewHelpe
     void links(Closure callable) {
         jsonDelegate.call(LINKS_ATTRIBUTE) {
 
-            callable.setDelegate(new HalStreamingJsonDelegate(this, (groovy.json.StreamingJsonBuilder.StreamingJsonDelegate) delegate))
+            callable.setDelegate(new HalStreamingJsonDelegate(this, (StreamingJsonBuilder.StreamingJsonDelegate) delegate))
             callable.call()
         }
     }
@@ -197,29 +198,29 @@ class DefaultHalViewHelper extends DefaultJsonViewHelper implements HalViewHelpe
             for (entry in model.entrySet()) {
                 def object = entry.value
                 if (object instanceof Iterable) {
-                    ((groovy.json.StreamingJsonBuilder.StreamingJsonDelegate) delegate).call(entry.key.toString(), (Iterable) object) { o ->
-                        ((groovy.json.StreamingJsonBuilder.StreamingJsonDelegate) delegate).call(HREF_ATTRIBUTE, linkGenerator.link(resource: o, absolute: true))
+                    ((StreamingJsonBuilder.StreamingJsonDelegate) delegate).call(entry.key.toString(), (Iterable) object) { o ->
+                        ((StreamingJsonBuilder.StreamingJsonDelegate) delegate).call(HREF_ATTRIBUTE, linkGenerator.link(resource: o, absolute: true))
                         if (locale != null) {
-                            ((groovy.json.StreamingJsonBuilder.StreamingJsonDelegate) delegate).call(HREFLANG_ATTRIBUTE, locale.toString())
+                            ((StreamingJsonBuilder.StreamingJsonDelegate) delegate).call(HREFLANG_ATTRIBUTE, locale.toString())
                         }
                         def linkType = contentType
                         if (linkType) {
-                            ((groovy.json.StreamingJsonBuilder.StreamingJsonDelegate) delegate).call(TYPE_ATTRIBUTE, linkType)
+                            ((StreamingJsonBuilder.StreamingJsonDelegate) delegate).call(TYPE_ATTRIBUTE, linkType)
                         }
                     }
                 }
                 else if (object instanceof Map) {
-                    ((groovy.json.StreamingJsonBuilder.StreamingJsonDelegate) delegate).call(entry.key.toString(), (Map) object)
+                    ((StreamingJsonBuilder.StreamingJsonDelegate) delegate).call(entry.key.toString(), (Map) object)
                 }
                 else {
-                    ((groovy.json.StreamingJsonBuilder.StreamingJsonDelegate) delegate).call(entry.key.toString()) {
-                        ((groovy.json.StreamingJsonBuilder.StreamingJsonDelegate) delegate).call(HREF_ATTRIBUTE, linkGenerator.link(resource: object, absolute: true))
+                    ((StreamingJsonBuilder.StreamingJsonDelegate) delegate).call(entry.key.toString()) {
+                        ((StreamingJsonBuilder.StreamingJsonDelegate) delegate).call(HREF_ATTRIBUTE, linkGenerator.link(resource: object, absolute: true))
                         if (locale != null) {
-                            ((groovy.json.StreamingJsonBuilder.StreamingJsonDelegate) delegate).call(HREFLANG_ATTRIBUTE, locale.toString())
+                            ((StreamingJsonBuilder.StreamingJsonDelegate) delegate).call(HREFLANG_ATTRIBUTE, locale.toString())
                         }
                         def linkType = contentType
                         if (linkType) {
-                            ((groovy.json.StreamingJsonBuilder.StreamingJsonDelegate) delegate).call(TYPE_ATTRIBUTE, linkType)
+                            ((StreamingJsonBuilder.StreamingJsonDelegate) delegate).call(TYPE_ATTRIBUTE, linkType)
                         }
                     }
                 }
@@ -227,12 +228,12 @@ class DefaultHalViewHelper extends DefaultJsonViewHelper implements HalViewHelpe
                 if (paginationObject != null) {
                     List<Link> links = getPaginationLinks(paginationObject, total.intValue(), jsonView.params) as List<Link>
                     for (link in links) {
-                        ((groovy.json.StreamingJsonBuilder.StreamingJsonDelegate) delegate).call(link.rel) {
-                            ((groovy.json.StreamingJsonBuilder.StreamingJsonDelegate) delegate).call(HREF_ATTRIBUTE, link.href)
-                            ((groovy.json.StreamingJsonBuilder.StreamingJsonDelegate) delegate).call(HREFLANG_ATTRIBUTE, link.hreflang?.toString() ?: locale.toString())
+                        ((StreamingJsonBuilder.StreamingJsonDelegate) delegate).call(link.rel) {
+                            ((StreamingJsonBuilder.StreamingJsonDelegate) delegate).call(HREF_ATTRIBUTE, link.href)
+                            ((StreamingJsonBuilder.StreamingJsonDelegate) delegate).call(HREFLANG_ATTRIBUTE, link.hreflang?.toString() ?: locale.toString())
                             def linkType = link.contentType
                             if (linkType) {
-                                ((groovy.json.StreamingJsonBuilder.StreamingJsonDelegate) delegate).call(TYPE_ATTRIBUTE, linkType)
+                                ((StreamingJsonBuilder.StreamingJsonDelegate) delegate).call(TYPE_ATTRIBUTE, linkType)
                             }
                         }
                     }
@@ -271,19 +272,19 @@ class DefaultHalViewHelper extends DefaultJsonViewHelper implements HalViewHelpe
         MimeType contentTypeMimeType = jsonView.mimeUtility?.getMimeTypeForExtension(contentType)
         Locale locale = jsonView.locale ?: Locale.ENGLISH
         jsonDelegate.call(LINKS_ATTRIBUTE) {
-            ((groovy.json.StreamingJsonBuilder.StreamingJsonDelegate) delegate).call(SELF_ATTRIBUTE) {
-                ((groovy.json.StreamingJsonBuilder.StreamingJsonDelegate) delegate).call(HREF_ATTRIBUTE, viewHelper.link(resource: object, method: HttpMethod.GET, absolute: true, params: linkParams))  //TODO handle the max/offset here
-                ((groovy.json.StreamingJsonBuilder.StreamingJsonDelegate) delegate).call(HREFLANG_ATTRIBUTE, locale.toString())
-                ((groovy.json.StreamingJsonBuilder.StreamingJsonDelegate) delegate).call(TYPE_ATTRIBUTE, contentTypeMimeType ?: contentType)
+            ((StreamingJsonBuilder.StreamingJsonDelegate) delegate).call(SELF_ATTRIBUTE) {
+                ((StreamingJsonBuilder.StreamingJsonDelegate) delegate).call(HREF_ATTRIBUTE, viewHelper.link(resource: object, method: HttpMethod.GET, absolute: true, params: linkParams))  //TODO handle the max/offset here
+                ((StreamingJsonBuilder.StreamingJsonDelegate) delegate).call(HREFLANG_ATTRIBUTE, locale.toString())
+                ((StreamingJsonBuilder.StreamingJsonDelegate) delegate).call(TYPE_ATTRIBUTE, contentTypeMimeType ?: contentType)
             }
             List<Link> links = getPaginationLinks(object, total, max, offset, sort, order) as List<Link>
             for (link in links) {
-                ((groovy.json.StreamingJsonBuilder.StreamingJsonDelegate) delegate).call(link.rel) {
-                    ((groovy.json.StreamingJsonBuilder.StreamingJsonDelegate) delegate).call(HREF_ATTRIBUTE, link.href)
-                    ((groovy.json.StreamingJsonBuilder.StreamingJsonDelegate) delegate).call(HREFLANG_ATTRIBUTE, link.hreflang?.toString() ?: locale.toString())
+                ((StreamingJsonBuilder.StreamingJsonDelegate) delegate).call(link.rel) {
+                    ((StreamingJsonBuilder.StreamingJsonDelegate) delegate).call(HREF_ATTRIBUTE, link.href)
+                    ((StreamingJsonBuilder.StreamingJsonDelegate) delegate).call(HREFLANG_ATTRIBUTE, link.hreflang?.toString() ?: locale.toString())
                     def linkType = link.contentType
                     if (linkType) {
-                        ((groovy.json.StreamingJsonBuilder.StreamingJsonDelegate) delegate).call(TYPE_ATTRIBUTE, linkType)
+                        ((StreamingJsonBuilder.StreamingJsonDelegate) delegate).call(TYPE_ATTRIBUTE, linkType)
                     }
                 }
             }
@@ -339,7 +340,7 @@ class DefaultHalViewHelper extends DefaultJsonViewHelper implements HalViewHelpe
 
             if (!embeddedValues.isEmpty()) {
                 embedded {
-                    groovy.json.StreamingJsonBuilder.StreamingJsonDelegate jsonDelegate = (groovy.json.StreamingJsonBuilder.StreamingJsonDelegate) getDelegate()
+                    StreamingJsonBuilder.StreamingJsonDelegate jsonDelegate = (StreamingJsonBuilder.StreamingJsonDelegate) getDelegate()
                     for (entry in embeddedValues) {
                         def embeddedObject = entry.value
                         Association association = entry.key
@@ -348,7 +349,7 @@ class DefaultHalViewHelper extends DefaultJsonViewHelper implements HalViewHelpe
                         def propertyName = association.name
                         if (association instanceof ToOne) {
                             jsonDelegate.call(propertyName) {
-                                def associationJsonDelegate = (groovy.json.StreamingJsonBuilder.StreamingJsonDelegate) getDelegate()
+                                def associationJsonDelegate = (StreamingJsonBuilder.StreamingJsonDelegate) getDelegate()
                                 writeLinks(associationJsonDelegate, embeddedObject, this.contentType)
                                 renderEntityProperties(associatedEntity, embeddedObject, associationReflector, associationJsonDelegate)
                             }
@@ -357,7 +358,7 @@ class DefaultHalViewHelper extends DefaultJsonViewHelper implements HalViewHelpe
                         else if (association instanceof ToMany) {
                             if (embeddedObject instanceof Iterable) {
                                 jsonDelegate.call(propertyName, (Iterable) embeddedObject) { e ->
-                                    def associationJsonDelegate = (groovy.json.StreamingJsonBuilder.StreamingJsonDelegate) getDelegate()
+                                    def associationJsonDelegate = (StreamingJsonBuilder.StreamingJsonDelegate) getDelegate()
 //                                    writeLinks(associationJsonDelegate, e, this.contentType)
                                     renderEntityProperties(associatedEntity, e, associationReflector, associationJsonDelegate)
                                 }
@@ -382,7 +383,7 @@ class DefaultHalViewHelper extends DefaultJsonViewHelper implements HalViewHelpe
             def proxyHandler = mappingContext.proxyFactory
 
             embedded {
-                groovy.json.StreamingJsonBuilder.StreamingJsonDelegate jsonDelegate = (groovy.json.StreamingJsonBuilder.StreamingJsonDelegate) getDelegate()
+                StreamingJsonBuilder.StreamingJsonDelegate jsonDelegate = (StreamingJsonBuilder.StreamingJsonDelegate) getDelegate()
                 for (entry in model.entrySet()) {
                     Object embeddedObject = proxyHandler.unwrap(entry.value)
 
@@ -390,7 +391,7 @@ class DefaultHalViewHelper extends DefaultJsonViewHelper implements HalViewHelpe
                         jsonDelegate.call(entry.key.toString(), (Iterable) embeddedObject) { e ->
                             PersistentEntity entity = mappingContext.getPersistentEntity(e.getClass().name)
                             def entityReflector = mappingContext.getEntityReflector(entity)
-                            def associationJsonDelegate = (groovy.json.StreamingJsonBuilder.StreamingJsonDelegate) getDelegate()
+                            def associationJsonDelegate = (StreamingJsonBuilder.StreamingJsonDelegate) getDelegate()
                             writeLinks(associationJsonDelegate, e, this.contentType)
                             renderEntityProperties(entity, e, entityReflector, associationJsonDelegate)
                         }
@@ -401,7 +402,7 @@ class DefaultHalViewHelper extends DefaultJsonViewHelper implements HalViewHelpe
                             def entityReflector = mappingContext.getEntityReflector(entity)
                             jsonDelegate.call(entry.key.toString()) {
                                 if (entity != null) {
-                                    def associationJsonDelegate = (groovy.json.StreamingJsonBuilder.StreamingJsonDelegate) getDelegate()
+                                    def associationJsonDelegate = (StreamingJsonBuilder.StreamingJsonDelegate) getDelegate()
                                     writeLinks(associationJsonDelegate, embeddedObject, this.contentType)
                                     renderEntityProperties(entity, embeddedObject, entityReflector, associationJsonDelegate)
                                 }
@@ -414,37 +415,37 @@ class DefaultHalViewHelper extends DefaultJsonViewHelper implements HalViewHelpe
     }
 
     //TODO: Once GROOVY-9662 is fixed, remove explicit delegate call and typecast to StreamingJsonDelegate
-    protected void writeLinks(groovy.json.StreamingJsonBuilder.StreamingJsonDelegate jsonDelegate, object, String contentType) {
+    protected void writeLinks(StreamingJsonBuilder.StreamingJsonDelegate jsonDelegate, object, String contentType) {
         def locale = view.locale ?: Locale.ENGLISH
         contentType = view.mimeUtility?.getMimeTypeForExtension(contentType) ?: contentType
         jsonDelegate.call(LINKS_ATTRIBUTE) {
-            ((groovy.json.StreamingJsonBuilder.StreamingJsonDelegate) delegate).call(SELF_ATTRIBUTE) {
-                ((groovy.json.StreamingJsonBuilder.StreamingJsonDelegate) delegate).call(HREF_ATTRIBUTE, viewHelper.link(resource: object, method: HttpMethod.GET, absolute: true))
-                ((groovy.json.StreamingJsonBuilder.StreamingJsonDelegate) delegate).call(HREFLANG_ATTRIBUTE, locale.toString())
-                ((groovy.json.StreamingJsonBuilder.StreamingJsonDelegate) delegate).call(TYPE_ATTRIBUTE, contentType)
+            ((StreamingJsonBuilder.StreamingJsonDelegate) delegate).call(SELF_ATTRIBUTE) {
+                ((StreamingJsonBuilder.StreamingJsonDelegate) delegate).call(HREF_ATTRIBUTE, viewHelper.link(resource: object, method: HttpMethod.GET, absolute: true))
+                ((StreamingJsonBuilder.StreamingJsonDelegate) delegate).call(HREFLANG_ATTRIBUTE, locale.toString())
+                ((StreamingJsonBuilder.StreamingJsonDelegate) delegate).call(TYPE_ATTRIBUTE, contentType)
             }
 
             Set<Link> links = getLinks(object) as Set<Link>
             for (link in links) {
-                ((groovy.json.StreamingJsonBuilder.StreamingJsonDelegate) delegate).call(link.rel) {
-                    ((groovy.json.StreamingJsonBuilder.StreamingJsonDelegate) delegate).call(HREF_ATTRIBUTE, link.href)
-                    ((groovy.json.StreamingJsonBuilder.StreamingJsonDelegate) delegate).call(HREFLANG_ATTRIBUTE, link.hreflang?.toString() ?: locale.toString())
+                ((StreamingJsonBuilder.StreamingJsonDelegate) delegate).call(link.rel) {
+                    ((StreamingJsonBuilder.StreamingJsonDelegate) delegate).call(HREF_ATTRIBUTE, link.href)
+                    ((StreamingJsonBuilder.StreamingJsonDelegate) delegate).call(HREFLANG_ATTRIBUTE, link.hreflang?.toString() ?: locale.toString())
                     def linkType = link.contentType
                     if (linkType) {
-                        ((groovy.json.StreamingJsonBuilder.StreamingJsonDelegate) delegate).call(TYPE_ATTRIBUTE, linkType)
+                        ((StreamingJsonBuilder.StreamingJsonDelegate) delegate).call(TYPE_ATTRIBUTE, linkType)
                     }
                 }
             }
         }
     }
 
-    protected void renderEntityProperties(PersistentEntity entity, Object instance, EntityReflector entityReflector, groovy.json.StreamingJsonBuilder.StreamingJsonDelegate associationJsonDelegate) {
+    protected void renderEntityProperties(PersistentEntity entity, Object instance, EntityReflector entityReflector, StreamingJsonBuilder.StreamingJsonDelegate associationJsonDelegate) {
         for (prop in entity.persistentProperties) {
             renderProperty(instance, prop, entityReflector, associationJsonDelegate)
         }
     }
 
-    protected void renderProperty(Object embeddedObject, PersistentProperty prop,  EntityReflector associationReflector, groovy.json.StreamingJsonBuilder.StreamingJsonDelegate jsonDelegate) {
+    protected void renderProperty(Object embeddedObject, PersistentProperty prop,  EntityReflector associationReflector, StreamingJsonBuilder.StreamingJsonDelegate jsonDelegate) {
         def propertyName = prop.name
         def propVal = associationReflector.getProperty(embeddedObject, propertyName)
         def propertyType = prop.type
@@ -471,7 +472,7 @@ class DefaultHalViewHelper extends DefaultJsonViewHelper implements HalViewHelpe
                     jsonDelegate.call(propertyName, jsonWritable)
                 } else {
                     jsonDelegate.call(propertyName) {
-                        def associationJsonDelegate = (groovy.json.StreamingJsonBuilder.StreamingJsonDelegate) getDelegate()
+                        def associationJsonDelegate = (StreamingJsonBuilder.StreamingJsonDelegate) getDelegate()
                         def associatedEntity = embedded.associatedEntity
                         def embeddedReflector = associatedEntity.getMappingContext().getEntityReflector(associatedEntity)
                         renderEntityProperties(associatedEntity, propVal, embeddedReflector , associationJsonDelegate)
@@ -494,7 +495,7 @@ class DefaultHalViewHelper extends DefaultJsonViewHelper implements HalViewHelpe
                 else {
                     if (propVal instanceof Iterable) {
                         jsonDelegate.call(embedded.name, (Iterable) propVal) { eo ->
-                            groovy.json.StreamingJsonBuilder.StreamingJsonDelegate associationJsonDelegate = (groovy.json.StreamingJsonBuilder.StreamingJsonDelegate) getDelegate()
+                            StreamingJsonBuilder.StreamingJsonDelegate associationJsonDelegate = (StreamingJsonBuilder.StreamingJsonDelegate) getDelegate()
                             renderEntityProperties(associatedEntity, eo, embeddedReflector , associationJsonDelegate)
                         }
                     }
@@ -509,10 +510,10 @@ class DefaultHalViewHelper extends DefaultJsonViewHelper implements HalViewHelpe
      *
      * @param callable The callable
      */
-    void embedded(@DelegatesTo(groovy.json.StreamingJsonBuilder.StreamingJsonDelegate) Closure callable) {
+    void embedded(@DelegatesTo(StreamingJsonBuilder.StreamingJsonDelegate) Closure callable) {
         jsonDelegate.call(EMBEDDED_ATTRIBUTE) {
 
-            callable.setDelegate(new HalStreamingJsonDelegate(this, (groovy.json.StreamingJsonBuilder.StreamingJsonDelegate) delegate))
+            callable.setDelegate(new HalStreamingJsonDelegate(this, (StreamingJsonBuilder.StreamingJsonDelegate) delegate))
             callable.call()
         }
     }
@@ -522,10 +523,10 @@ class DefaultHalViewHelper extends DefaultJsonViewHelper implements HalViewHelpe
      *
      * @param callable The callable
      */
-    void embedded(String contentType, @DelegatesTo(groovy.json.StreamingJsonBuilder.StreamingJsonDelegate) Closure callable) {
+    void embedded(String contentType, @DelegatesTo(StreamingJsonBuilder.StreamingJsonDelegate) Closure callable) {
         jsonDelegate.call(EMBEDDED_ATTRIBUTE) {
 
-            callable.setDelegate(new HalStreamingJsonDelegate(contentType, this, (groovy.json.StreamingJsonBuilder.StreamingJsonDelegate) delegate))
+            callable.setDelegate(new HalStreamingJsonDelegate(contentType, this, (StreamingJsonBuilder.StreamingJsonDelegate) delegate))
             callable.call()
         }
     }
@@ -540,19 +541,19 @@ class DefaultHalViewHelper extends DefaultJsonViewHelper implements HalViewHelpe
         }
     }
 
-    static class HalStreamingJsonDelegate extends groovy.json.StreamingJsonBuilder.StreamingJsonDelegate {
+    static class HalStreamingJsonDelegate extends StreamingJsonBuilder.StreamingJsonDelegate {
         String contentType
         DefaultHalViewHelper viewHelper
-        groovy.json.StreamingJsonBuilder.StreamingJsonDelegate delegate
+        StreamingJsonBuilder.StreamingJsonDelegate delegate
 
-        HalStreamingJsonDelegate(DefaultHalViewHelper viewHelper, groovy.json.StreamingJsonBuilder.StreamingJsonDelegate delegate) {
+        HalStreamingJsonDelegate(DefaultHalViewHelper viewHelper, StreamingJsonBuilder.StreamingJsonDelegate delegate) {
             super(delegate.getWriter(), true)
             this.viewHelper = viewHelper
             this.delegate = delegate
             this.contentType = viewHelper.contentType
         }
 
-        HalStreamingJsonDelegate(String contentType, DefaultHalViewHelper viewHelper, groovy.json.StreamingJsonBuilder.StreamingJsonDelegate delegate) {
+        HalStreamingJsonDelegate(String contentType, DefaultHalViewHelper viewHelper, StreamingJsonBuilder.StreamingJsonDelegate delegate) {
             super(delegate.getWriter(), true)
             this.viewHelper = viewHelper
             this.delegate = delegate
@@ -636,7 +637,7 @@ class DefaultHalViewHelper extends DefaultJsonViewHelper implements HalViewHelpe
 
         @Override
         void call(String name, Object value,
-                  @DelegatesTo(groovy.json.StreamingJsonBuilder.StreamingJsonDelegate) Closure callable) throws IOException {
+                  @DelegatesTo(StreamingJsonBuilder.StreamingJsonDelegate) Closure callable) throws IOException {
             writeName(name)
             verifyValue()
             writeObject(value, callable)
@@ -644,7 +645,7 @@ class DefaultHalViewHelper extends DefaultJsonViewHelper implements HalViewHelpe
 
         protected void writeObject(value, Closure callable) {
             writer.write(JsonOutput.OPEN_BRACE)
-            groovy.json.StreamingJsonBuilder.StreamingJsonDelegate delegate = new groovy.json.StreamingJsonBuilder.StreamingJsonDelegate(writer, true)
+            StreamingJsonBuilder.StreamingJsonDelegate delegate = new StreamingJsonBuilder.StreamingJsonDelegate(writer, true)
             Closure curried = callable.curry(value)
             curried.setDelegate(delegate)
             curried.setResolveStrategy(Closure.DELEGATE_FIRST)
@@ -657,7 +658,7 @@ class DefaultHalViewHelper extends DefaultJsonViewHelper implements HalViewHelpe
         }
 
         @Override
-        void call(String name, @DelegatesTo(value = groovy.json.StreamingJsonBuilder.StreamingJsonDelegate, strategy = Closure.DELEGATE_FIRST) Closure value) throws IOException {
+        void call(String name, @DelegatesTo(value = StreamingJsonBuilder.StreamingJsonDelegate, strategy = Closure.DELEGATE_FIRST) Closure value) throws IOException {
             first = false
             delegate.call(name, value)
         }
@@ -673,7 +674,7 @@ class DefaultHalViewHelper extends DefaultJsonViewHelper implements HalViewHelpe
     protected Closure<Void> createlinksRenderingClosure(Map<String, Object> arguments = [:]) {
         def hal = this
         return { Object object ->
-            groovy.json.StreamingJsonBuilder.StreamingJsonDelegate local = (groovy.json.StreamingJsonBuilder.StreamingJsonDelegate) getDelegate()
+            StreamingJsonBuilder.StreamingJsonDelegate local = (StreamingJsonBuilder.StreamingJsonDelegate) getDelegate()
             hal.setDelegate(local)
             def shouldRenderEmbedded = ViewUtils.getBooleanFromMap(EMBEDDED_PARAMETER, arguments, true)
             if (shouldRenderEmbedded) {
@@ -684,13 +685,8 @@ class DefaultHalViewHelper extends DefaultJsonViewHelper implements HalViewHelpe
     }
 
     @Override
-    void setDelegate(groovy.json.StreamingJsonBuilder.StreamingJsonDelegate jsonDelegate) {
+    void setDelegate(StreamingJsonBuilder.StreamingJsonDelegate jsonDelegate) {
         this.jsonDelegate = jsonDelegate
     }
 
-    @Override
-    @Deprecated(since = '7.1', forRemoval = true)
-    void setDelegate(grails.plugin.json.builder.StreamingJsonBuilder.StreamingJsonDelegate jsonDelegate) {
-        this.jsonDelegate = jsonDelegate
-    }
 }

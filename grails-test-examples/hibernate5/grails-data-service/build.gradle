@@ -19,6 +19,7 @@
 
 plugins {
     id 'org.apache.grails.buildsrc.properties'
+    id 'org.apache.grails.buildsrc.dependency-validator'
     id 'org.apache.grails.gradle.grails-web'
     id 'org.apache.grails.gradle.grails-gson'
     id 'org.apache.grails.buildsrc.compile'

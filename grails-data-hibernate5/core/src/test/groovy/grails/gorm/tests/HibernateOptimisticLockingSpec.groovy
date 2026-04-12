@@ -22,7 +22,7 @@ import org.apache.grails.data.testing.tck.domains.OptLockNotVersioned
 import org.apache.grails.data.testing.tck.domains.OptLockVersioned
 import org.apache.grails.data.hibernate5.core.GrailsDataHibernate5TckManager
 import org.apache.grails.data.testing.tck.base.GrailsDataTckSpec
-import org.springframework.orm.hibernate5.HibernateOptimisticLockingFailureException
+import org.grails.orm.hibernate.support.hibernate5.HibernateOptimisticLockingFailureException
 
 /**
  * @author Burt Beckwith

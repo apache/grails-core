@@ -25,4 +25,4 @@ package grails.mongodb.api
  * @author Graeme Rocher
  * @since 6.0
  */
-interface MongoAllOperations<D> extends MongoInstanceOperations<D>, MongoStaticOperations<D> {}
+interface MongoAllOperations<D> extends MongoStaticOperations<D> {}

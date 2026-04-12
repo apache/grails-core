@@ -18,13 +18,11 @@
  */
 package org.apache.grails.core.plugins.filters;
 
-import grails.config.Settings;
-import grails.plugins.PluginFilter;
 import org.junit.jupiter.api.Test;
 
-import java.util.Set;
-
 import org.springframework.mock.env.MockEnvironment;
+
+import grails.config.Settings;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertInstanceOf;

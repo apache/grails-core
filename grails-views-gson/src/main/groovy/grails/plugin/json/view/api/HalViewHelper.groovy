@@ -19,6 +19,7 @@
 
 package grails.plugin.json.view.api
 
+import groovy.json.StreamingJsonBuilder
 import groovy.transform.CompileStatic
 
 import grails.plugin.json.builder.JsonOutput
@@ -33,7 +34,7 @@ interface HalViewHelper {
     /**
      * Same as {@link GrailsJsonViewHelper#render(java.lang.Object, java.util.Map, groovy.lang.Closure)} but renders HAL links too
      */
-    JsonOutput.JsonWritable render(Object object, Map arguments, @DelegatesTo(grails.plugin.json.builder.StreamingJsonBuilder.StreamingJsonDelegate) Closure customizer)
+    JsonOutput.JsonWritable render(Object object, Map arguments, @DelegatesTo(StreamingJsonBuilder.StreamingJsonDelegate) Closure customizer)
 
     /**
      * Same as {@link GrailsJsonViewHelper#render(java.lang.Object, java.util.Map)} but renders HAL links too
@@ -42,7 +43,7 @@ interface HalViewHelper {
     /**
      * Same as {@link GrailsJsonViewHelper#render(java.lang.Object, java.util.Map, groovy.lang.Closure)} but renders HAL links too
      */
-    JsonOutput.JsonWritable render(Object object, @DelegatesTo(grails.plugin.json.builder.StreamingJsonBuilder.StreamingJsonDelegate) Closure customizer)
+    JsonOutput.JsonWritable render(Object object, @DelegatesTo(StreamingJsonBuilder.StreamingJsonDelegate) Closure customizer)
 
     /**
      * Same as {@link GrailsJsonViewHelper#render(java.lang.Object)} but renders HAL links too
@@ -52,7 +53,7 @@ interface HalViewHelper {
     /**
      * Same as {@link GrailsJsonViewHelper#inline(java.lang.Object, java.util.Map, groovy.lang.Closure)} but renders HAL links too
      */
-    void inline(Object object, Map arguments, @DelegatesTo(grails.plugin.json.builder.StreamingJsonBuilder.StreamingJsonDelegate) Closure customizer)
+    void inline(Object object, Map arguments, @DelegatesTo(StreamingJsonBuilder.StreamingJsonDelegate) Closure customizer)
 
     /**
      * Same as {@link GrailsJsonViewHelper#inline(java.lang.Object, java.util.Map)} but renders HAL links too
@@ -61,7 +62,7 @@ interface HalViewHelper {
     /**
      * Same as {@link GrailsJsonViewHelper#inline(java.lang.Object, java.util.Map, groovy.lang.Closure)} but renders HAL links too
      */
-    void inline(Object object, @DelegatesTo(grails.plugin.json.builder.StreamingJsonBuilder.StreamingJsonDelegate) Closure customizer)
+    void inline(Object object, @DelegatesTo(StreamingJsonBuilder.StreamingJsonDelegate) Closure customizer)
 
     /**
      * Same as {@link GrailsJsonViewHelper#inline(java.lang.Object)} but renders HAL links too
@@ -182,7 +183,7 @@ interface HalViewHelper {
      *
      * @param callable The callable
      */
-    void embedded(@DelegatesTo(grails.plugin.json.builder.StreamingJsonBuilder.StreamingJsonDelegate) Closure callable)
+    void embedded(@DelegatesTo(StreamingJsonBuilder.StreamingJsonDelegate) Closure callable)
 
     /**
      * Outputs a HAL embedded entry for the content type and closure
@@ -190,10 +191,7 @@ interface HalViewHelper {
      * @param contentType The content type
      * @param callable The callable
      */
-    void embedded(String contentType, @DelegatesTo(grails.plugin.json.builder.StreamingJsonBuilder.StreamingJsonDelegate) Closure callable)
+    void embedded(String contentType, @DelegatesTo(StreamingJsonBuilder.StreamingJsonDelegate) Closure callable)
 
-    void setDelegate(groovy.json.StreamingJsonBuilder.StreamingJsonDelegate jsonDelegate)
-
-    @Deprecated(since = '7.1', forRemoval = true)
-    void setDelegate(grails.plugin.json.builder.StreamingJsonBuilder.StreamingJsonDelegate jsonDelegate)
+    void setDelegate(StreamingJsonBuilder.StreamingJsonDelegate jsonDelegate)
 }

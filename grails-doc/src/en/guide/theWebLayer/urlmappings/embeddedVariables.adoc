@@ -102,10 +102,8 @@ To disable this behavior, set in `application.yml`:
 [source,yaml]
 ----
 grails:
-    web:
-        url:
-            mapping:
-                validateWildcards: false
+    urlmapping:
+        validateWildcards: false
 ----
 
 You can also resolve the controller name and action name to execute dynamically using a closure:
