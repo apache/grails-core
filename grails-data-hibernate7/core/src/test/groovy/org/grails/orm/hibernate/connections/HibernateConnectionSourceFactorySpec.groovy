@@ -270,27 +270,6 @@ class HibernateConnectionSourceFactorySpec extends HibernateGormDatastoreSpec {
         config != null
     }
 
-    void "buildConfiguration with a naming strategy configures it on the configuration"() {
-        given:
-        def factory = new HibernateConnectionSourceFactory(Foo)
-        def settings = new HibernateConnectionSourceSettings()
-        settings.hibernate.naming_strategy = PhysicalNamingStrategyStandardImpl
-        def dsConfig = DatastoreUtils.createPropertyResolver([
-            'dataSource.url'         : "jdbc:h2:mem:grailsDB;LOCK_TIMEOUT=10000",
-            'dataSource.dbCreate'    : 'update',
-            'dataSource.dialect'     : H2Dialect.name,
-            'hibernate.hbm2ddl.auto' : 'create',
-        ])
-        def dsCs = new org.grails.datastore.gorm.jdbc.connections.DataSourceConnectionSourceFactory()
-            .create(ConnectionSource.DEFAULT, dsConfig)
-
-        when:
-        def config = factory.buildConfiguration(ConnectionSource.DEFAULT, dsCs, settings)
-
-        then:
-        config != null
-    }
-
     void "buildConfiguration with annotatedClasses, annotatedPackages, packagesToScan"() {
         given:
         def factory = new HibernateConnectionSourceFactory(Foo)

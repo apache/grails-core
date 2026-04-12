@@ -161,8 +161,18 @@ public class HibernateCriteriaBuilder extends GroovyObjectSupport implements Bui
         setDefaultFlushMode(GrailsHibernateTemplate.FLUSH_AUTO);
     }
 
+    public static final String ALIAS_SEPARATOR = ":";
+
     private static String getFullyQualifiedColumn(String propertyName, String alias) {
-        return (Objects.nonNull(alias) ? alias + "." : "") + propertyName;
+        return (Objects.nonNull(alias) ? alias + ALIAS_SEPARATOR : "") + propertyName;
+    }
+
+    public org.grails.datastore.mapping.query.api.Criteria exists(Closure  subquery) {
+        return exists(new grails.gorm.DetachedCriteria(targetClass).build(subquery));
+    }
+
+    public org.grails.datastore.mapping.query.api.Criteria notExists(Closure  subquery) {
+        return notExists(new grails.gorm.DetachedCriteria(targetClass).build(subquery));
     }
 
     public final void setDatastore(HibernateDatastore datastore) {
@@ -324,7 +334,7 @@ public class HibernateCriteriaBuilder extends GroovyObjectSupport implements Bui
      * @param alias The alias to use
      */
     public void count(String propertyName, String alias) {
-        hibernateQuery.projections().countDistinct(getFullyQualifiedColumn(propertyName, alias));
+        hibernateQuery.projections().add(new org.grails.orm.hibernate.query.Hibernate7CountProjection(getFullyQualifiedColumn(propertyName, alias)));
     }
 
     @Override

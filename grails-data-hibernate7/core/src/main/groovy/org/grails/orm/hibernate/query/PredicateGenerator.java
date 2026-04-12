@@ -27,6 +27,7 @@ import java.util.stream.Stream;
 
 import groovy.util.logging.Slf4j;
 
+import jakarta.persistence.criteria.AbstractQuery;
 import jakarta.persistence.criteria.CriteriaBuilder;
 import jakarta.persistence.criteria.CriteriaQuery;
 import jakarta.persistence.criteria.Expression;
@@ -37,7 +38,9 @@ import jakarta.persistence.criteria.Root;
 import jakarta.persistence.criteria.Subquery;
 
 import org.hibernate.query.criteria.HibernateCriteriaBuilder;
+import org.hibernate.query.criteria.JpaExpression;
 import org.hibernate.query.criteria.JpaInPredicate;
+import org.hibernate.query.criteria.JpaSubQuery;
 import org.hibernate.query.sqm.tree.domain.SqmPath;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -67,96 +70,95 @@ public class PredicateGenerator {
     private static final Logger log = LoggerFactory.getLogger(PredicateGenerator.class);
 
     private final ConversionService conversionService;
+    private final HibernateCriteriaBuilder criteriaBuilder;
 
-    public PredicateGenerator(ConversionService conversionService) {
+    public PredicateGenerator(HibernateCriteriaBuilder criteriaBuilder, ConversionService conversionService) {
+        this.criteriaBuilder = criteriaBuilder;
         this.conversionService = conversionService;
     }
 
     public Predicate[] getPredicates(
-            HibernateCriteriaBuilder cb,
-            CriteriaQuery<?> criteriaQuery,
+            AbstractQuery<?> criteriaQuery,
             From<?, ?> root_,
             List<? extends Query.QueryElement> criteriaList,
-            JpaFromProvider fromsByProvider,
+            JpaQueryContext fromsByProvider,
             PersistentEntity entity) {
 
         List<Predicate> list = criteriaList.stream()
-                .map(criterion -> handleCriterion(cb, criteriaQuery, root_, fromsByProvider, entity, criterion))
+                .map(criterion -> handleCriterion(criteriaQuery, root_, fromsByProvider, entity, criterion))
                 .filter(Objects::nonNull)
                 .toList();
 
         if (list.isEmpty()) {
-            list = List.of(cb.equal(cb.literal(1), cb.literal(1)));
+            list = List.of(criteriaBuilder.equal(criteriaBuilder.literal(1), criteriaBuilder.literal(1)));
         }
         return list.toArray(new Predicate[0]);
     }
 
     private Predicate handleCriterion(
-            HibernateCriteriaBuilder cb,
-            CriteriaQuery<?> criteriaQuery,
+            AbstractQuery<?> criteriaQuery,
             From<?, ?> root,
-            JpaFromProvider fromsByProvider,
+            JpaQueryContext fromsByProvider,
             PersistentEntity entity,
             Query.QueryElement criterion) {
+
         if (criterion instanceof Query.Junction junction) {
-            return handleJunction(cb, criteriaQuery, root, fromsByProvider, entity, junction);
+            return handleJunction(criteriaQuery, root, fromsByProvider, entity, junction);
         } else if (criterion instanceof Query.DistinctProjection) {
-            return cb.conjunction();
+            return criteriaBuilder.conjunction();
         } else if (criterion instanceof DetachedAssociationCriteria<?> c) {
-            return handleAssociationCriteria(cb, criteriaQuery, fromsByProvider, c);
+            return handleAssociationCriteria(criteriaQuery, fromsByProvider, c);
         } else if (criterion instanceof HibernateAssociationQuery haq) {
-            return handleHibernateAssociationQuery(cb, criteriaQuery, fromsByProvider, haq);
+            return handleHibernateAssociationQuery(criteriaQuery, fromsByProvider, haq);
         } else if (criterion instanceof Query.PropertyCriterion pc) {
-            return handlePropertyCriterion(cb, criteriaQuery, root, fromsByProvider, entity, pc);
+            return handlePropertyCriterion(criteriaQuery, root, fromsByProvider, entity, pc);
         } else if (criterion instanceof Query.PropertyComparisonCriterion c) {
-            return handlePropertyComparisonCriterion(cb, fromsByProvider, c);
+            return handlePropertyComparisonCriterion(fromsByProvider, c);
         } else if (criterion instanceof Query.PropertyNameCriterion c) {
-            return handlePropertyNameCriterion(cb, fromsByProvider, c);
+            return handlePropertyNameCriterion(fromsByProvider, c);
         } else if (criterion instanceof Query.Exists c) {
             return handleExists(
-                    cb, criteriaQuery, root, fromsByProvider, c.getSubquery().getPersistentEntity(), c);
+                    criteriaQuery, root, fromsByProvider, c.getSubquery().getPersistentEntity(), c);
         } else if (criterion instanceof Query.NotExists c) {
             PersistentEntity childEntity = c.getSubquery().getPersistentEntity();
-            return cb.not(handleExists(
-                    cb, criteriaQuery, root, fromsByProvider, childEntity, new Query.Exists(c.getSubquery())));
+            return criteriaBuilder.not(handleExists(
+                    criteriaQuery, root, fromsByProvider, childEntity, new Query.Exists(c.getSubquery())));
         } else if (criterion instanceof HibernateAlias) {
-            return null; // Metadata only, handled by JpaFromProvider
+            return null; // Metadata only, handled by JpaQueryContext
         }
         throw new IllegalArgumentException("Unsupported criterion: " + criterion);
     }
 
     private Predicate handleJunction(
-            HibernateCriteriaBuilder cb,
-            CriteriaQuery<?> criteriaQuery,
+            AbstractQuery<?> criteriaQuery,
             From<?, ?> root_,
-            JpaFromProvider fromsByProvider,
+            JpaQueryContext fromsByProvider,
             PersistentEntity entity,
             Query.Junction junction) {
-        var predicates = getPredicates(cb, criteriaQuery, root_, junction.getCriteria(), fromsByProvider, entity);
+        var predicates = getPredicates(criteriaQuery, root_, junction.getCriteria(), fromsByProvider, entity);
         if (junction instanceof Query.Disjunction) {
-            return cb.or(predicates);
+            return criteriaBuilder.or(predicates);
         } else if (junction instanceof Query.Conjunction) {
-            return cb.and(predicates);
+            return criteriaBuilder.and(predicates);
         } else if (junction instanceof Query.Negation) {
             if (predicates.length != 1) {
                 log.error("Must have a single predicate behind a not");
                 throw new RuntimeException("Must have a single predicate behind a not");
             }
-            return cb.not(predicates[0]);
+            return criteriaBuilder.not(predicates[0]);
         }
         return null;
     }
 
     private Predicate handleAssociationCriteria(
-            HibernateCriteriaBuilder cb,
-            CriteriaQuery<?> criteriaQuery,
-            JpaFromProvider fromsByProvider,
+            AbstractQuery<?> criteriaQuery,
+            JpaQueryContext fromsByProvider,
             DetachedAssociationCriteria<?> c) {
 
         From<?, ?> child = (From<?, ?>) fromsByProvider.getFullyQualifiedPath(c.getAssociationPath());
         PersistentEntity associatedEntity = c.getAssociation().getAssociatedEntity();
 
-        JpaFromProvider childTablesByName = new JpaFromProvider(
+        JpaQueryContext childTablesByName = new JpaQueryContext(
                 fromsByProvider,
                 associatedEntity,
                 c.getCriteria(),
@@ -165,16 +167,15 @@ public class PredicateGenerator {
                 c.getJoinTypes(),
                 child);
 
-        return cb.and(getPredicates(cb, criteriaQuery, child, c.getCriteria(), childTablesByName, associatedEntity));
+        return criteriaBuilder.and(getPredicates(criteriaQuery, child, c.getCriteria(), childTablesByName, associatedEntity));
     }
 
     private Predicate handleHibernateAssociationQuery(
-            HibernateCriteriaBuilder cb,
-            CriteriaQuery<?> criteriaQuery,
-            JpaFromProvider fromsByProvider,
+            AbstractQuery<?> criteriaQuery,
+            JpaQueryContext fromsByProvider,
             HibernateAssociationQuery haq) {
         From<?, ?> child = (From<?, ?>) fromsByProvider.getFullyQualifiedPath(haq.associationPath);
-        JpaFromProvider childFroms = new JpaFromProvider(
+        JpaQueryContext childFroms = new JpaQueryContext(
                 fromsByProvider,
                 haq.getEntity(),
                 haq.getAssociationCriteria(),
@@ -182,15 +183,14 @@ public class PredicateGenerator {
                 java.util.Collections.emptyMap(),
                 java.util.Collections.emptyMap(),
                 child);
-        return cb.and(
-                getPredicates(cb, criteriaQuery, child, haq.getAssociationCriteria(), childFroms, haq.getEntity()));
+        return criteriaBuilder.and(
+                getPredicates(criteriaQuery, child, haq.getAssociationCriteria(), childFroms, haq.getEntity()));
     }
 
     private Predicate handlePropertyCriterion(
-            HibernateCriteriaBuilder cb,
-            CriteriaQuery<?> criteriaQuery,
+            AbstractQuery<?> criteriaQuery,
             From<?, ?> root,
-            JpaFromProvider fromsByProvider,
+            JpaQueryContext fromsByProvider,
             PersistentEntity entity,
             Query.PropertyCriterion pc) {
 
@@ -199,437 +199,152 @@ public class PredicateGenerator {
                 !propertyName.contains(".") &&
                 entity.getPropertyByName(propertyName) == null &&
                 !fromsByProvider.hasAlias(propertyName)) {
-            throw new ConfigurationException(
-                    "Property [" + propertyName + "] is not a valid property of class [" + entity.getName() + "]");
+            throw new ConfigurationException("Property [" + propertyName + "] is not a valid property of [" + entity.getName() + "]");
         }
 
-        var fullyQualifiedPath = fromsByProvider.getFullyQualifiedPath(pc.getProperty());
+        Expression<?> propertyPath = fromsByProvider.getFullyQualifiedExpression(propertyName);
 
-        if (pc instanceof Query.NotIn c) {
-            return handleNotIn(cb, criteriaQuery, fromsByProvider, entity, c, fullyQualifiedPath);
-        } else if (pc instanceof Query.SubqueryCriterion c) {
-            return handleSubqueryCriterion(cb, criteriaQuery, fromsByProvider, c);
-        } else if (pc instanceof Query.In c) {
-            return handleIn(cb, criteriaQuery, fromsByProvider, entity, c, fullyQualifiedPath);
-        } else if (pc instanceof Query.ILike c) {
-            return cb.ilike(
-                    (Expression<String>) fullyQualifiedPath, c.getValue().toString());
-        } else if (pc instanceof Query.RLike c) {
-            return handleRLike(cb, fullyQualifiedPath, c);
-        } else if (pc instanceof Query.Like c) {
-            return cb.like((Expression<String>) fullyQualifiedPath, c.getValue().toString());
-        } else if (pc instanceof Query.Equals c) {
-            return cb.equal(fullyQualifiedPath, normalizeValue(c.getValue()));
-        } else if (pc instanceof Query.NotEquals c) {
-            return cb.or(cb.notEqual(fullyQualifiedPath, normalizeValue(c.getValue())), cb.isNull(fullyQualifiedPath));
-        } else if (pc instanceof Query.IdEquals c) {
-            return cb.equal(root.get("id"), normalizeValue(c.getValue()));
-        } else if (pc instanceof Query.GreaterThan c) {
-            if (c.getValue() == null) {
-                throw new ConfigurationException("Property [greaterThan] cannot be null");
-            }
-            if (c.getValue() instanceof Number || c.getValue() instanceof PropertyArithmetic) {
-                Expression<? extends Number> rhs = resolveNumericExpression(cb, root, c);
-                return rhs != null ? cb.gt((Expression<? extends Number>) fullyQualifiedPath, rhs) : cb.gt((Expression<? extends Number>) fullyQualifiedPath, (Number) getNumericValue(c));
+        if (pc instanceof Query.Equals) {
+            return handleEquals(criteriaQuery, pc, propertyPath);
+        } else if (pc instanceof Query.NotEquals) {
+            return criteriaBuilder.not(handleEquals(criteriaQuery, pc, propertyPath));
+        } else if (pc instanceof Query.Like) {
+            return criteriaBuilder.like((Expression<String>) propertyPath, (String) convertValue(entity, propertyName, pc.getValue()));
+        } else if (pc instanceof Query.ILike) {
+            return criteriaBuilder.like(criteriaBuilder.lower((Expression<String>) propertyPath), ((String) convertValue(entity, propertyName, pc.getValue())).toLowerCase());
+        } else if (pc instanceof Query.RLike rLike) {
+            return criteriaBuilder.like((Expression<String>) propertyPath, (String) convertValue(entity, propertyName, pc.getValue()));
+        } else if (pc instanceof Query.GreaterThan) {
+            Object value = convertValue(entity, propertyName, pc.getValue());
+            if (value instanceof Number) {
+                return criteriaBuilder.gt((Expression<? extends Number>) propertyPath, (Number) value);
             } else {
-                return cb.greaterThan((Expression) fullyQualifiedPath, (Comparable) normalizeValue(c.getValue()));
+                return criteriaBuilder.greaterThan((Expression<? extends Comparable>) propertyPath, (Comparable) value);
             }
-        } else if (pc instanceof Query.GreaterThanEquals c) {
-            if (c.getValue() == null) {
-                throw new ConfigurationException("Property [greaterThanEquals] cannot be null");
-            }
-            if (c.getValue() instanceof Number || c.getValue() instanceof PropertyArithmetic) {
-                Expression<? extends Number> rhs = resolveNumericExpression(cb, root, c);
-                return rhs != null ? cb.ge((Expression<? extends Number>) fullyQualifiedPath, rhs) : cb.ge((Expression<? extends Number>) fullyQualifiedPath, (Number) getNumericValue(c));
+        } else if (pc instanceof Query.GreaterThanEquals) {
+            Object value = convertValue(entity, propertyName, pc.getValue());
+            if (value instanceof Number) {
+                return criteriaBuilder.ge((Expression<? extends Number>) propertyPath, (Number) value);
             } else {
-                return cb.greaterThanOrEqualTo((Expression) fullyQualifiedPath, (Comparable) normalizeValue(c.getValue()));
+                return criteriaBuilder.greaterThanOrEqualTo((Expression<? extends Comparable>) propertyPath, (Comparable) value);
             }
-        } else if (pc instanceof Query.LessThan c) {
-            if (c.getValue() == null) {
-                throw new ConfigurationException("Property [lessThan] cannot be null");
-            }
-            if (c.getValue() instanceof Number || c.getValue() instanceof PropertyArithmetic) {
-                Expression<? extends Number> rhs = resolveNumericExpression(cb, root, c);
-                return rhs != null ? cb.lt((Expression<? extends Number>) fullyQualifiedPath, rhs) : cb.lt((Expression<? extends Number>) fullyQualifiedPath, (Number) getNumericValue(c));
+        } else if (pc instanceof Query.LessThan) {
+            Object value = convertValue(entity, propertyName, pc.getValue());
+            if (value instanceof Number) {
+                return criteriaBuilder.lt((Expression<? extends Number>) propertyPath, (Number) value);
             } else {
-                return cb.lessThan((Expression) fullyQualifiedPath, (Comparable) normalizeValue(c.getValue()));
+                return criteriaBuilder.lessThan((Expression<? extends Comparable>) propertyPath, (Comparable) value);
             }
-        } else if (pc instanceof Query.LessThanEquals c) {
-            if (c.getValue() == null) {
-                throw new ConfigurationException("Property [lessThanEquals] cannot be null");
-            }
-            if (c.getValue() instanceof Number || c.getValue() instanceof PropertyArithmetic) {
-                Expression<? extends Number> rhs = resolveNumericExpression(cb, root, c);
-                return rhs != null ? cb.le((Expression<? extends Number>) fullyQualifiedPath, rhs) : cb.le((Expression<? extends Number>) fullyQualifiedPath, (Number) getNumericValue(c));
+        } else if (pc instanceof Query.LessThanEquals) {
+            Object value = convertValue(entity, propertyName, pc.getValue());
+            if (value instanceof Number) {
+                return criteriaBuilder.le((Expression<? extends Number>) propertyPath, (Number) value);
             } else {
-                return cb.lessThanOrEqualTo((Expression) fullyQualifiedPath, (Comparable) normalizeValue(c.getValue()));
+                return criteriaBuilder.lessThanOrEqualTo((Expression<? extends Comparable>) propertyPath, (Comparable) value);
             }
-        } else if (pc instanceof Query.SizeEquals c) {
-            return cb.equal(cb.size((Expression) fullyQualifiedPath), normalizeValue(c.getValue()));
-        } else if (pc instanceof Query.SizeNotEquals c) {
-            return cb.notEqual(cb.size((Expression) fullyQualifiedPath), normalizeValue(c.getValue()));
-        } else if (pc instanceof Query.SizeGreaterThan c) {
-            return cb.gt(cb.size((Expression) fullyQualifiedPath), (Number) getNumericValue(c));
-        } else if (pc instanceof Query.SizeGreaterThanEquals c) {
-            return cb.ge(cb.size((Expression) fullyQualifiedPath), (Number) getNumericValue(c));
-        } else if (pc instanceof Query.SizeLessThan c) {
-            return cb.lt(cb.size((Expression) fullyQualifiedPath), (Number) getNumericValue(c));
-        } else if (pc instanceof Query.SizeLessThanEquals c) {
-            return cb.le(cb.size((Expression) fullyQualifiedPath), (Number) getNumericValue(c));
-        } else if (pc instanceof Query.Between c) {
-            return cb.between((Expression) fullyQualifiedPath, (Comparable) normalizeValue(c.getFrom()), (Comparable) normalizeValue(c.getTo()));
-        }
-        return null;
-    }
-
-    private Predicate handleNotIn(
-            HibernateCriteriaBuilder cb,
-            CriteriaQuery<?> criteriaQuery,
-            JpaFromProvider fromsByProvider,
-            PersistentEntity entity,
-            Query.NotIn c,
-            Path fullyQualifiedPath) {
-        var queryableCriteria = getQueryableCriteriaFromInCriteria(c);
-        if (Objects.nonNull(queryableCriteria)) {
-            return cb.not(getQueryableCriteriaValue(cb, criteriaQuery, fromsByProvider, entity, c, queryableCriteria));
-        } else if (Objects.nonNull(c.getSubquery()) &&
-                !c.getSubquery().getProjections().isEmpty()) {
-            Subquery subquery2 = criteriaQuery.subquery(Number.class);
-            PersistentEntity subEntity = c.getValue().getPersistentEntity();
-            Root from2 = subquery2.from(subEntity.getJavaClass());
-            JpaFromProvider newMap2 = (JpaFromProvider) fromsByProvider.clone();
-            var projection = c.getSubquery().getProjections().get(0);
-            if (projection instanceof Query.PropertyProjection pp) {
-                boolean distinct = projection instanceof Query.DistinctPropertyProjection;
-                Predicate[] predicates2 =
-                        getPredicates(cb, criteriaQuery, from2, c.getValue().getCriteria(), newMap2, subEntity);
-                subquery2
-                        .select(from2.get(pp.getPropertyName()))
-                        .distinct(distinct)
-                        .where(cb.and(predicates2));
-                return cb.not(cb.in(fullyQualifiedPath).value(subquery2));
-            } else if (projection instanceof Query.IdProjection) {
-                Predicate[] predicates2 =
-                        getPredicates(cb, criteriaQuery, from2, c.getValue().getCriteria(), newMap2, subEntity);
-                subquery2.select(from2).where(cb.and(predicates2));
-                return cb.not(cb.in(fullyQualifiedPath).value(subquery2));
+        } else if (pc instanceof Query.In) {
+            Collection<?> values = (Collection<?>) pc.getValue();
+            var in = criteriaBuilder.in(propertyPath);
+            for (Object value : values) {
+                ((CriteriaBuilder.In)in).value(convertValue(entity, propertyName, value));
             }
-        }
-        return cb.not(cb.in(fullyQualifiedPath, c.getValue()));
-    }
-
-    private Predicate handleIn(
-            HibernateCriteriaBuilder cb,
-            CriteriaQuery<?> criteriaQuery,
-            JpaFromProvider fromsByProvider,
-            PersistentEntity entity,
-            Query.In c,
-            Path<?> fullyQualifiedPath) {
-        var queryableCriteria = getQueryableCriteriaFromInCriteria(c);
-        if (Objects.nonNull(queryableCriteria)) {
-            return getQueryableCriteriaValue(cb, criteriaQuery, fromsByProvider, entity, c, queryableCriteria);
-        } else if (!c.getValues().isEmpty()) {
-            if (c.getValues().iterator().next() instanceof GormEntity firstEntity) {
-                List<GormEntity> gormEntities = new ArrayList<>(c.getValues());
-                Path id = criteriaQuery.from(firstEntity.getClass()).get("id");
-                Collection newValues =
-                        gormEntities.stream().map(GormEntity::ident).toList();
-                return cb.in(id, newValues);
-            }
-
-            // Hibernate 7: If the path is a collection, we must ensure it's correctly handled
-            if (fullyQualifiedPath instanceof SqmPath sqmPath &&
-                    sqmPath.getReferencedPathSource() instanceof jakarta.persistence.metamodel.PluralAttribute) {
-                // For basic collections, GORM's 'in' traditionally implies joining.
-                // We'll check if the path is already a join (From)
-                if (fullyQualifiedPath instanceof From) {
-                    return cb.in(fullyQualifiedPath, c.getValues());
-                }
-                // If not joined yet, we may need to use 'elements' or MEMBER OF
-                // but usually JpaFromProvider should have joined it if it was a property path
-                // that refers to a collection.
-            }
-
-            return cb.in(fullyQualifiedPath, c.getValues());
-        }
-        return null;
-    }
-
-    private Predicate handleRLike(HibernateCriteriaBuilder cb, Path fullyQualifiedPath, Query.RLike c) {
-        String pattern = c.getPattern().replaceAll("^/|/$", "");
-        return cb.equal(
-                cb.function(
-                        GrailsRLikeFunctionContributor.RLIKE, Boolean.class, fullyQualifiedPath, cb.literal(pattern)),
-                true);
-    }
-
-    private Predicate handleSubqueryCriterion(
-            HibernateCriteriaBuilder cb,
-            CriteriaQuery<?> criteriaQuery,
-            JpaFromProvider fromsByProvider,
-            Query.SubqueryCriterion c) {
-        
-        QueryableCriteria<?> subqueryable = c.getValue();
-        PersistentEntity subEntity = subqueryable.getPersistentEntity();
-        
-        var projection = findPropertyOrIdProjection(subqueryable);
-        var subProperty = findSubproperty(projection);
-        
-        Class<?> subqueryType = subEntity.getJavaClass();
-        if (projection instanceof Query.PropertyProjection pp) {
-            PersistentProperty prop = subEntity.getPropertyByName(pp.getPropertyName());
-            if (prop != null) subqueryType = prop.getType();
-        } else if (projection instanceof Query.IdProjection) {
-            if (subEntity.getIdentity() != null) subqueryType = subEntity.getIdentity().getType();
+            return in;
+        } else if (pc instanceof Query.Between between) {
+            return criteriaBuilder.between((Expression<? extends Comparable>) propertyPath, (Comparable) convertValue(entity, propertyName, between.getFrom()), (Comparable) convertValue(entity, propertyName, between.getTo()));
+        } else if (((Object)pc) instanceof Query.IsNull) {
+            return criteriaBuilder.isNull(propertyPath);
+        } else if (((Object)pc) instanceof Query.IsNotNull) {
+            return criteriaBuilder.isNotNull(propertyPath);
+        } else if (((Object)pc) instanceof Query.IsEmpty) {
+            return criteriaBuilder.isEmpty((Expression<Collection>) propertyPath);
+        } else if (((Object)pc) instanceof Query.IsNotEmpty) {
+            return criteriaBuilder.isNotEmpty((Expression<Collection>) propertyPath);
+        } else if (pc instanceof Query.SizeEquals sizeEquals) {
+            return criteriaBuilder.equal(criteriaBuilder.size((Expression<Collection>) propertyPath), (Integer) sizeEquals.getValue());
+        } else if (pc instanceof Query.SizeNotEquals sizeNotEquals) {
+            return criteriaBuilder.notEqual(criteriaBuilder.size((Expression<Collection>) propertyPath), (Integer) sizeNotEquals.getValue());
+        } else if (pc instanceof Query.SizeGreaterThan sizeGreaterThan) {
+            return criteriaBuilder.gt(criteriaBuilder.size((Expression<Collection>) propertyPath), (Integer) sizeGreaterThan.getValue());
+        } else if (pc instanceof Query.SizeGreaterThanEquals sizeGreaterThanEquals) {
+            return criteriaBuilder.ge(criteriaBuilder.size((Expression<Collection>) propertyPath), (Integer) sizeGreaterThanEquals.getValue());
+        } else if (pc instanceof Query.SizeLessThan sizeLessThan) {
+            return criteriaBuilder.lt(criteriaBuilder.size((Expression<Collection>) propertyPath), (Integer) sizeLessThan.getValue());
+        } else if (pc instanceof Query.SizeLessThanEquals sizeLessThanEquals) {
+            return criteriaBuilder.le(criteriaBuilder.size((Expression<Collection>) propertyPath), (Integer) sizeLessThanEquals.getValue());
         }
 
-        Subquery subquery = criteriaQuery.subquery(subqueryType);
-        Root from = subquery.from(subEntity.getJavaClass());
-        JpaFromProvider newMap = new JpaFromProvider(fromsByProvider, (DetachedCriteria<?>) subqueryable, java.util.Collections.emptyList(), from);
-        
-        Predicate[] predicates =
-                getPredicates(cb, criteriaQuery, from, c.getValue().getCriteria(), newMap, subEntity);
-        
-        Path path = fromsByProvider.getFullyQualifiedPath(c.getProperty());
-        Expression subExpression = (Expression) newMap.getFullyQualifiedPath(subProperty);
-
-        if (c instanceof Query.GreaterThanEqualsAll) {
-            subquery.select(subExpression).where(cb.and(predicates));
-            return cb.greaterThanOrEqualTo(path, cb.all(subquery));
-        } else if (c instanceof Query.GreaterThanAll) {
-            subquery.select(subExpression).where(cb.and(predicates));
-            return cb.greaterThan(path, cb.all(subquery));
-        } else if (c instanceof Query.LessThanEqualsAll) {
-            subquery.select(subExpression).where(cb.and(predicates));
-            return cb.lessThanOrEqualTo(path, cb.all(subquery));
-        } else if (c instanceof Query.LessThanAll) {
-            subquery.select(subExpression).where(cb.and(predicates));
-            return cb.lessThan(path, cb.all(subquery));
-        } else if (c instanceof Query.EqualsAll) {
-            subquery.select(subExpression).where(cb.and(predicates));
-            return cb.equal(path, cb.all(subquery));
-        } else if (c instanceof Query.GreaterThanEqualsSome) {
-            subquery.select(subExpression).where(cb.and(predicates));
-            return cb.greaterThanOrEqualTo(path, cb.some(subquery));
-        } else if (c instanceof Query.GreaterThanSome) {
-            subquery.select(subExpression).where(cb.and(predicates));
-            return cb.greaterThan(path, cb.some(subquery));
-        } else if (c instanceof Query.LessThanEqualsSome) {
-            subquery.select(subExpression).where(cb.and(predicates));
-            return cb.lessThanOrEqualTo(path, cb.some(subquery));
-        } else if (c instanceof Query.LessThanSome) {
-            subquery.select(subExpression).where(cb.and(predicates));
-            return cb.lessThan(path, cb.some(subquery));
-        }
-        return null;
+        throw new UnsupportedOperationException("Unsupported criterion: " + pc.getClass().getName());
     }
 
-    private Predicate handlePropertyComparisonCriterion(
-            HibernateCriteriaBuilder cb, JpaFromProvider fromsByProvider, Query.PropertyComparisonCriterion c) {
-        Path path = fromsByProvider.getFullyQualifiedPath(c.getProperty());
-        Path otherPath = fromsByProvider.getFullyQualifiedPath(c.getOtherProperty());
-        if (!path.getJavaType().equals(otherPath.getJavaType())) {
-            jakarta.persistence.criteria.Path parentOfPath = path.getParentPath();
-            if (parentOfPath != null && parentOfPath.getJavaType().equals(otherPath.getJavaType())) {
-                path = parentOfPath;
-            } else {
-                jakarta.persistence.criteria.Path parentOfOther = otherPath.getParentPath();
-                if (parentOfOther != null && parentOfOther.getJavaType().equals(path.getJavaType())) {
-                    otherPath = parentOfOther;
-                }
-            }
+    private Predicate handlePropertyComparisonCriterion(JpaQueryContext fromsByProvider, Query.PropertyComparisonCriterion c) {
+        Expression<?> propertyPath = fromsByProvider.getFullyQualifiedExpression(c.getProperty());
+        Expression<?> otherPropertyPath = fromsByProvider.getFullyQualifiedExpression(c.getOtherProperty());
+
+        if (c instanceof Query.EqualsProperty) {
+            return criteriaBuilder.equal(propertyPath, otherPropertyPath);
+        } else if (c instanceof Query.NotEqualsProperty) {
+            return criteriaBuilder.notEqual(propertyPath, otherPropertyPath);
+        } else if (c instanceof Query.GreaterThanProperty) {
+            return criteriaBuilder.greaterThan((Expression<? extends Comparable>) propertyPath, (Expression<? extends Comparable>) otherPropertyPath);
+        } else if (c instanceof Query.GreaterThanEqualsProperty) {
+            return criteriaBuilder.greaterThanOrEqualTo((Expression<? extends Comparable>) propertyPath, (Expression<? extends Comparable>) otherPropertyPath);
+        } else if (c instanceof Query.LessThanProperty) {
+            return criteriaBuilder.lessThan((Expression<? extends Comparable>) propertyPath, (Expression<? extends Comparable>) otherPropertyPath);
+        } else if (c instanceof Query.LessThanEqualsProperty) {
+            return criteriaBuilder.lessThanOrEqualTo((Expression<? extends Comparable>) propertyPath, (Expression<? extends Comparable>) otherPropertyPath);
         }
-        if (c instanceof Query.EqualsProperty) return cb.equal(path, otherPath);
-        if (c instanceof Query.NotEqualsProperty) return cb.notEqual(path, otherPath);
-        if (c instanceof Query.LessThanEqualsProperty) return cb.le(path, otherPath);
-        if (c instanceof Query.LessThanProperty) return cb.lt(path, otherPath);
-        if (c instanceof Query.GreaterThanEqualsProperty) return cb.ge(path, otherPath);
-        if (c instanceof Query.GreaterThanProperty) return cb.gt(path, otherPath);
-        return null;
+
+        throw new UnsupportedOperationException("Unsupported property comparison criterion: " + c.getClass().getName());
     }
 
-    private Predicate handlePropertyNameCriterion(
-            HibernateCriteriaBuilder cb, JpaFromProvider fromsByProvider, Query.PropertyNameCriterion c) {
-        Path path = fromsByProvider.getFullyQualifiedPath(c.getProperty());
-        if (c instanceof Query.IsNull) return cb.isNull(path);
-        if (c instanceof Query.IsNotNull) return cb.isNotNull(path);
-        if (c instanceof Query.IsEmpty) return cb.isEmpty(path);
-        if (c instanceof Query.IsNotEmpty) return cb.isNotEmpty(path);
-        return null;
+    private Predicate handlePropertyNameCriterion(JpaQueryContext fromsByProvider, Query.PropertyNameCriterion c) {
+        Expression<?> propertyPath = fromsByProvider.getFullyQualifiedExpression(c.getProperty());
+        if (((Object)c) instanceof Query.IsNull) {
+            return criteriaBuilder.isNull(propertyPath);
+        } else if (((Object)c) instanceof Query.IsNotNull) {
+            return criteriaBuilder.isNotNull(propertyPath);
+        } else if (((Object)c) instanceof Query.IsEmpty) {
+            return criteriaBuilder.isEmpty((Expression<Collection>) propertyPath);
+        } else if (((Object)c) instanceof Query.IsNotEmpty) {
+            return criteriaBuilder.isNotEmpty((Expression<Collection>) propertyPath);
+        }
+        throw new UnsupportedOperationException("Unsupported property name criterion: " + c.getClass().getName());
+    }
+
+    private Predicate handleEquals(AbstractQuery<?> criteriaQuery, Query.PropertyCriterion pc, Expression<?> propertyPath) {
+        if (pc.getValue() instanceof QueryableCriteria qc) {
+            Subquery<?> subquery = criteriaQuery.subquery(qc.getPersistentEntity().getJavaClass());
+            new JpaCriteriaQueryCreator(new Query.ProjectionList(), criteriaBuilder, qc.getPersistentEntity(), (DetachedCriteria) qc, conversionService).populateSubquery((JpaSubQuery)subquery);
+            return criteriaBuilder.equal(propertyPath, subquery);
+        } else {
+            return criteriaBuilder.equal(propertyPath, convertValue(null, pc.getProperty(), pc.getValue()));
+        }
     }
 
     private Predicate handleExists(
-            HibernateCriteriaBuilder cb,
-            CriteriaQuery<?> criteriaQuery,
-            From<?, ?> root_,
-            JpaFromProvider fromsByProvider,
+            AbstractQuery<?> criteriaQuery,
+            From<?, ?> root,
+            JpaQueryContext fromsByProvider,
             PersistentEntity entity,
-            Query.Exists c) {
-        QueryableCriteria<?> subqueryable = c.getSubquery();
-        PersistentEntity subEntity = subqueryable.getPersistentEntity();
-        Subquery<Integer> subquery = criteriaQuery.subquery(Integer.class);
-        Root<?> subRoot = subquery.from(subEntity.getJavaClass());
-
-        JpaFromProvider subFromsProvider = new JpaFromProvider(
-                fromsByProvider,
-                subEntity,
-                subqueryable.getCriteria(),
-                java.util.Collections.emptyList(),
-                java.util.Collections.emptyMap(),
-                java.util.Collections.emptyMap(),
-                subRoot);
-
-        var predicates =
-                getPredicates(cb, criteriaQuery, subRoot, subqueryable.getCriteria(), subFromsProvider, subEntity);
-        var existsPredicate = getExistsPredicate(cb, root_, entity, subRoot);
-        Predicate[] allPredicates = existsPredicate != null ?
-                Stream.concat(Arrays.stream(predicates), Stream.of(existsPredicate))
-                        .toArray(Predicate[]::new) :
-                predicates;
-        subquery.select(cb.literal(1)).where(cb.and(allPredicates));
-        return cb.exists(subquery);
+            Query.Exists exists) {
+        QueryableCriteria subqueryCriteria = exists.getSubquery();
+        Subquery<?> subquery = criteriaQuery.subquery(entity.getJavaClass());
+        new JpaCriteriaQueryCreator(new Query.ProjectionList(), criteriaBuilder, entity, (DetachedCriteria) subqueryCriteria, conversionService).populateSubquery((JpaSubQuery)subquery);
+        return criteriaBuilder.exists(subquery);
     }
 
-    private CriteriaBuilder.In getQueryableCriteriaValue(
-            HibernateCriteriaBuilder cb,
-            CriteriaQuery<?> criteriaQuery,
-            JpaFromProvider fromsByProvider,
-            PersistentEntity entity,
-            Query.PropertyNameCriterion criterion,
-            QueryableCriteria queryableCriteria) {
-        var projection = findPropertyOrIdProjection(queryableCriteria);
-        var subProperty = findSubproperty(projection);
-        var path = fromsByProvider.getFullyQualifiedPath(criterion.getProperty());
-        boolean isAssociation = isAssociation(entity, criterion.getProperty());
-        var in = findInPredicate(cb, projection, path, subProperty, isAssociation);
-
-        PersistentEntity subEntity = queryableCriteria.getPersistentEntity();
-        Class<?> subqueryType = subEntity.getJavaClass();
-        if (projection instanceof Query.PropertyProjection propertyProjection) {
-            PersistentProperty prop = subEntity.getPropertyByName(propertyProjection.getPropertyName());
-            if (prop != null) {
-                subqueryType = prop.getType();
-            } else if (propertyProjection.getPropertyName().contains(".")) {
-                // Handle aliased or nested properties in projections (e.g., "e1.id")
-                String propName = propertyProjection.getPropertyName();
-                String simplePropName = propName.substring(propName.lastIndexOf('.') + 1);
-                PersistentProperty simpleProp = subEntity.getPropertyByName(simplePropName);
-                if (simpleProp != null) {
-                    subqueryType = simpleProp.getType();
-                } else if ("id".equals(simplePropName)) {
-                    subqueryType = subEntity.getIdentity() != null ?
-                            subEntity.getIdentity().getType() :
-                            Long.class;
-                }
-            }
-        } else if (projection instanceof Query.IdProjection) {
-            subqueryType =
-                    subEntity.getIdentity() != null ? subEntity.getIdentity().getType() : Long.class;
-        } else if (isAssociation) {
-            subqueryType =
-                    subEntity.getIdentity() != null ? subEntity.getIdentity().getType() : Long.class;
-        }
-
-        var subquery = criteriaQuery.subquery(subqueryType);
-        var from = subquery.from(subEntity.getJavaClass());
-        var clonedProviderByName = new JpaFromProvider(
-                fromsByProvider, (DetachedCriteria<?>) queryableCriteria, java.util.Collections.emptyList(), from);
-        var predicates = getPredicates(
-                cb, criteriaQuery, from, queryableCriteria.getCriteria(), clonedProviderByName, subEntity);
-        subquery.select((Expression) clonedProviderByName.getFullyQualifiedPath(subProperty))
-                .distinct(true)
-                .where(cb.and(predicates));
-        return in.value(subquery);
-    }
-
-    private boolean isAssociation(PersistentEntity entity, String propertyName) {
-        if ("id".equals(propertyName) ||
-                (entity.getIdentity() != null &&
-                        propertyName.equals(entity.getIdentity().getName()))) {
-            return false;
-        }
-        PersistentProperty prop = entity.getPropertyByName(propertyName);
-        return prop instanceof Association;
-    }
-
-    private Predicate getExistsPredicate(
-            HibernateCriteriaBuilder cb, From<?, ?> root_, PersistentEntity childPersistentEntity, Root subRoot) {
-        return childPersistentEntity.getAssociations().stream()
-                .filter(assoc -> assoc.getAssociatedEntity().getJavaClass().equals(root_.getJavaType()))
-                .findFirst()
-                .map(owner -> (Predicate) cb.equal(subRoot.get(owner.getName()), root_))
-                .orElse(null);
-    }
-
-    private JpaInPredicate findInPredicate(
-            HibernateCriteriaBuilder cb, Object projection, Path path, String subProperty, boolean isAssociation) {
-        if (projection instanceof Query.PropertyProjection || !isAssociation) {
-            return cb.in(path);
-        } else {
-            return cb.in(((SqmPath) path).get(subProperty));
-        }
-    }
-
-    private String findSubproperty(Object projection) {
-        return projection instanceof Query.PropertyProjection ?
-                ((Query.PropertyProjection) projection).getPropertyName() :
-                "id";
-    }
-
-    private Query.Projection findPropertyOrIdProjection(QueryableCriteria queryableCriteria) {
-        return (Query.Projection) queryableCriteria.getProjections().stream()
-                .filter(p -> p instanceof Query.PropertyProjection || p instanceof Query.IdProjection)
-                .findFirst()
-                .orElse(new Query.IdProjection());
-    }
-
-    private QueryableCriteria getQueryableCriteriaFromInCriteria(Query.Criterion criterion) {
-        return criterion instanceof Query.In ?
-                ((Query.In) criterion).getSubquery() :
-                ((Query.NotIn) criterion).getSubquery();
-    }
-
-    /**
-     * Normalizes a criterion value for use with JPA Criteria API.
-     * Hibernate 7's SqmCriteriaNodeBuilder requires strict Java types and cannot
-     * coerce Groovy types like GString. This method converts CharSequence (including
-     * GString) to String so Hibernate can process the value correctly.
-     */
-    private static Object normalizeValue(Object value) {
-        if (value instanceof CharSequence && !(value instanceof String)) {
-            return value.toString();
-        }
-        return value;
-    }
-
-    private Object getNumericValue(Query.PropertyCriterion criterion) {
-        Object value = criterion.getValue();
-        if (value instanceof Number) {
-            return value;
-        }
-        if (value != null) {
-            try {
-                return conversionService.convert(value, Number.class);
-            } catch (org.springframework.core.convert.ConversionException e) {
-                // ignore and return as is
-            }
-        }
-        return value;
-    }
-
-    @SuppressWarnings("unchecked")
-    private Expression<? extends Number> resolveNumericExpression(HibernateCriteriaBuilder cb, From<?, ?> root, Query.PropertyCriterion criterion) {
-        Object value = criterion.getValue();
-        if (!(value instanceof PropertyArithmetic)) {
+    private Object convertValue(PersistentEntity entity, String propertyName, Object value) {
+        if (value == null) {
             return null;
         }
-        PropertyArithmetic pa = (PropertyArithmetic) value;
-        Expression<Number> propertyPath = root.get(pa.propertyName());
-        return switch (pa.operator()) {
-            case MULTIPLY -> cb.prod(propertyPath, pa.operand());
-            case ADD -> cb.sum(propertyPath, pa.operand());
-            case SUBTRACT -> cb.diff(propertyPath, pa.operand());
-            case DIVIDE -> cb.quot(propertyPath, pa.operand());
-        };
+        if (conversionService.canConvert(value.getClass(), Object.class)) {
+            return conversionService.convert(value, Object.class);
+        }
+        return value;
+    }
+
+    public Predicate generate(List<Query.Criterion> criteriaList, AbstractQuery<?> cq, From<?, ?> root, JpaQueryContext tablesByName, PersistentEntity entity) {
+        Predicate[] predicates = getPredicates(cq, root, criteriaList, tablesByName, entity);
+        return criteriaBuilder.and(predicates);
     }
 }
