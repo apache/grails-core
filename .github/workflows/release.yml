@@ -108,7 +108,7 @@ jobs:
           echo "Generated checksum for grails wrapper ZIP:"
           cat ${DIST_NAME}-wrapper-${VERSION}-bin.zip.sha512
       - name: "📤 Upload grails-wrapper ZIP"
-        uses: softprops/action-gh-release@v2.6.1
+        uses: softprops/action-gh-release@v3.0.0
         with:
           tag_name: ${{ env.TAG }}
           files: |
@@ -133,7 +133,7 @@ jobs:
           echo "Generated checksum for grails cli ZIP:"
           cat ${DIST_NAME}-${VERSION}-bin.zip.sha512
       - name: "📤 Upload grails-cli ZIP"
-        uses: softprops/action-gh-release@v2.6.1
+        uses: softprops/action-gh-release@v3.0.0
         with:
           tag_name: ${{ env.TAG }}
           files: |
@@ -222,7 +222,7 @@ jobs:
       - name: "📅 Generate build date file"
         run: echo "$SOURCE_DATE_EPOCH" >> build/BUILD_DATE.txt
       - name: "📤 Upload build date, checksums and published artifact files"
-        uses: softprops/action-gh-release@v2.6.1
+        uses: softprops/action-gh-release@v3.0.0
         with:
           tag_name: ${{ env.TAG }}
           files: |
@@ -308,7 +308,7 @@ jobs:
       - name: "📦 Create source distribution checksum"
         run: sha512sum ${DIST_NAME}-${VERSION}-src.zip > ${DIST_NAME}-${VERSION}-src.zip.sha512
       - name: "🚀 Upload ZIP and Signature to GitHub Release"
-        uses: softprops/action-gh-release@v2.6.1
+        uses: softprops/action-gh-release@v3.0.0
         with:
           tag_name: ${{ env.TAG }}
           files: |
@@ -429,7 +429,7 @@ jobs:
           cd dev-repo
           svn info ${VERSION} > DIST_SVN_REVISION.txt
       - name: "📤 Upload Distribution SVN revision"
-        uses: softprops/action-gh-release@v2.6.1
+        uses: softprops/action-gh-release@v3.0.0
         with:
           tag_name: ${{ env.TAG }}
           files: dev-repo/DIST_SVN_REVISION.txt
