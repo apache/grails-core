@@ -8,9 +8,6 @@ grails:
         defaultPackage: @grails.codegen.defaultPackage@
         profile: @grails.profile@
 spring:
-    groovy:
-        template:
-            check-template-location: false
     devtools:
         restart:
             additional-exclude:
