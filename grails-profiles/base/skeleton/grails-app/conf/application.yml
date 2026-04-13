@@ -1,12 +1,12 @@
-grails:
-    profile: @grails.profile@
-    codegen:
-        defaultPackage: @grails.codegen.defaultPackage@
 info:
     app:
         name: '@info.app.name@'
         version: '@info.app.version@'
         grailsVersion: '@info.app.grailsVersion@'
+grails:
+    profile: @grails.profile@
+    codegen:
+        defaultPackage: @grails.codegen.defaultPackage@
 spring:
     jmx:
         unique-names: true
