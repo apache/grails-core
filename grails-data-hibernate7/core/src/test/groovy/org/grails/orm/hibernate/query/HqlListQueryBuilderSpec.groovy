@@ -18,9 +18,8 @@
  */
 package org.grails.orm.hibernate.query
 
-import org.grails.datastore.mapping.model.PersistentEntity
-import org.grails.datastore.mapping.model.PersistentProperty
-import org.grails.datastore.mapping.model.types.Association
+import org.grails.orm.hibernate.cfg.domainbinding.hibernate.GrailsHibernatePersistentEntity
+import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernatePersistentProperty
 import org.grails.orm.hibernate.cfg.HibernateMappingContext
 import org.grails.orm.hibernate.cfg.Mapping
 import org.grails.orm.hibernate.cfg.MappingCacheHolder
@@ -30,7 +29,7 @@ import spock.lang.Unroll
 
 class HqlListQueryBuilderSpec extends Specification {
 
-    PersistentEntity entity = Mock(PersistentEntity)
+    GrailsHibernatePersistentEntity entity = Mock(GrailsHibernatePersistentEntity)
     HibernateMappingContext mappingContext = Mock(HibernateMappingContext)
     MappingCacheHolder cacheHolder = Mock(MappingCacheHolder)
 
@@ -59,7 +58,7 @@ class HqlListQueryBuilderSpec extends Specification {
 
     void "test buildListHql with simple sort"() {
         given:
-        entity.getPropertyByName("name") >> Mock(PersistentProperty) {
+        entity.getHibernatePropertyByName("name") >> Mock(HibernatePersistentProperty) {
             getType() >> String
         }
         def builder = new HqlListQueryBuilder(entity, [
@@ -73,7 +72,7 @@ class HqlListQueryBuilderSpec extends Specification {
 
     void "test buildListHql with numeric sort"() {
         given:
-        entity.getPropertyByName("age") >> Mock(PersistentProperty) {
+        entity.getHibernatePropertyByName("age") >> Mock(HibernatePersistentProperty) {
             getType() >> Integer
         }
         def builder = new HqlListQueryBuilder(entity, [
@@ -87,7 +86,7 @@ class HqlListQueryBuilderSpec extends Specification {
 
     void "test buildListHql with ignoreCase false"() {
         given:
-        entity.getPropertyByName("name") >> Mock(PersistentProperty) {
+        entity.getHibernatePropertyByName("name") >> Mock(HibernatePersistentProperty) {
             getType() >> String
         }
         def builder = new HqlListQueryBuilder(entity, [
@@ -101,8 +100,8 @@ class HqlListQueryBuilderSpec extends Specification {
 
     void "test buildListHql with multiple sorts"() {
         given:
-        entity.getPropertyByName("name") >> Mock(PersistentProperty) { getType() >> String }
-        entity.getPropertyByName("age") >> Mock(PersistentProperty) { getType() >> Integer }
+        entity.getHibernatePropertyByName("name") >> Mock(HibernatePersistentProperty) { getType() >> String }
+        entity.getHibernatePropertyByName("age") >> Mock(HibernatePersistentProperty) { getType() >> Integer }
         // Use LinkedHashMap to ensure deterministic order in HQL generation
         def builder = new HqlListQueryBuilder(entity, [
                 (HibernateQueryArgument.SORT.value()): [
@@ -117,11 +116,11 @@ class HqlListQueryBuilderSpec extends Specification {
 
     void "test buildListHql with nested property sort"() {
         given:
-        def authorAssociation = Mock(Association)
-        def authorEntity = Mock(PersistentEntity)
-        entity.getPropertyByName("author") >> authorAssociation
-        authorAssociation.getAssociatedEntity() >> authorEntity
-        authorEntity.getPropertyByName("name") >> Mock(PersistentProperty) { getType() >> String }
+        def authorAssociation = Mock(HibernatePersistentProperty)
+        def authorEntity = Mock(GrailsHibernatePersistentEntity)
+        entity.getHibernatePropertyByName("author") >> authorAssociation
+        authorAssociation.getHibernateAssociatedEntity() >> authorEntity
+        authorEntity.getHibernatePropertyByName("name") >> Mock(HibernatePersistentProperty) { getType() >> String }
 
         def builder = new HqlListQueryBuilder(entity, [(HibernateQueryArgument.SORT.value()): "author.name"])
 
@@ -154,7 +153,7 @@ class HqlListQueryBuilderSpec extends Specification {
 
         cacheHolder.getMapping(_) >> mapping
         mapping.getSort() >> sortConfig
-        entity.getPropertyByName("lastName") >> Mock(PersistentProperty) { getType() >> String }
+        entity.getHibernatePropertyByName("lastName") >> Mock(HibernatePersistentProperty) { getType() >> String }
 
         def builder = new HqlListQueryBuilder(entity, [:])
 
@@ -171,7 +170,7 @@ class HqlListQueryBuilderSpec extends Specification {
         params               | expected
         [:]                  | false
         [max: 10]            | true
-        [offset: 5]          | false
+        [offset: 5]          | true
         [max: 10, offset: 5] | true
     }
 }

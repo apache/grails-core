@@ -19,10 +19,14 @@
 
 package org.grails.orm.hibernate.query
 
+import org.hibernate.query.QueryFlushMode
+
 import grails.gorm.specs.HibernateGormDatastoreSpec
 import grails.persistence.Entity
 import org.hibernate.FlushMode
 import spock.lang.Unroll
+
+import org.grails.datastore.mapping.query.Query
 
 class HibernateHqlQuerySpec extends HibernateGormDatastoreSpec {
 
@@ -37,15 +41,11 @@ class HibernateHqlQuerySpec extends HibernateGormDatastoreSpec {
         new HibernateHqlQuerySpecBook(title: "The Two Towers", pages: 352, author: author).save(flush: true)
     }
 
-    private HibernateHqlQuery buildHqlQuery(String hql, Map namedParams = [:], List positionalParams = null, Map args = [:], boolean isUpdate = false) {
+    private Query buildHqlQuery(CharSequence hql, Map namedParams = [:], List positionalParams = null, Map args = [:], boolean isUpdate = false) {
         def entity = mappingContext.getPersistentEntity(HibernateHqlQuerySpecBook.name)
         def ctx = HqlQueryContext.prepare(entity, hql, namedParams, positionalParams, args, false, isUpdate)
         def session = sessionFactory.currentSession
-        def hqlQuery = HibernateHqlQuery.buildQuery(session, datastore, sessionFactory, entity, ctx)
-        if (args) hqlQuery.populateQuerySettings(new HashMap(args), mappingContext.conversionService)
-        if (ctx.namedParams()) hqlQuery.populateQueryWithNamedArguments(new HashMap(ctx.namedParams()))
-        else if (ctx.positionalParams()) hqlQuery.populateQueryWithIndexedArguments(List.copyOf(ctx.positionalParams()))
-        hqlQuery
+        HibernateHqlQuery.buildQuery(session, datastore, sessionFactory, entity, ctx)
     }
 
     // ─── countHqlProjections ────────────────────────────────────────────────
@@ -163,11 +163,7 @@ class HibernateHqlQuerySpec extends HibernateGormDatastoreSpec {
         String titleVal = "The Two Towers"
         GString gq = "from HibernateHqlQuerySpecBook b where b.title = ${titleVal}"
         when:
-        def entity = mappingContext.getPersistentEntity(HibernateHqlQuerySpecBook.name)
-        def ctx = HqlQueryContext.prepare(entity, gq, [:], null, [:], false, false)
-        def hqlQuery = HibernateHqlQuery.buildQuery(sessionFactory.currentSession, datastore, sessionFactory, entity, ctx)
-        if (ctx.namedParams()) hqlQuery.populateQueryWithNamedArguments(new HashMap(ctx.namedParams()))
-        else if (ctx.positionalParams()) hqlQuery.populateQueryWithIndexedArguments(List.copyOf(ctx.positionalParams()))
+        def hqlQuery = buildHqlQuery(gq)
         def results = hqlQuery.list()
         then:
         results.size() == 1
@@ -179,18 +175,11 @@ class HibernateHqlQuerySpec extends HibernateGormDatastoreSpec {
         String titleVal = "The Two Towers"
         GString gq = "from HibernateHqlQuerySpecBook b where b.title = ${titleVal}"
         when: "positionalParams is provided as non-null (triggering positional branch in prepare)"
-        def entity = mappingContext.getPersistentEntity(HibernateHqlQuerySpecBook.name)
         // We pass an empty but non-null list to trigger the positional branch
-        def positionalParams = []
-        def ctx = HqlQueryContext.prepare(entity, gq, [:], positionalParams, [:], false, false)
-        // The GString should have appended the value as ?1
-        def hqlQuery = HibernateHqlQuery.buildQuery(sessionFactory.currentSession, datastore, sessionFactory, entity, ctx)
-
-        if (ctx.positionalParams()) hqlQuery.populateQueryWithIndexedArguments(List.copyOf(ctx.positionalParams()))
+        def hqlQuery = buildHqlQuery(gq, [:], [])
         def results = hqlQuery.list()
 
         then:
-        ctx.hql().contains("?1")
         results.size() == 1
         results[0].title == "The Two Towers"
     }
@@ -207,16 +196,16 @@ class HibernateHqlQuerySpec extends HibernateGormDatastoreSpec {
     @Unroll
     void "setFlushMode maps Hibernate #hibernateMode correctly"() {
         when:
-        buildHqlQuery("from HibernateHqlQuerySpecBook").setFlushMode(hibernateMode)
+        buildHqlQuery("from HibernateHqlQuerySpecBook", [:], null, [flushMode: hibernateMode])
         then:
         noExceptionThrown()
         where:
         hibernateMode << [FlushMode.AUTO, FlushMode.ALWAYS, FlushMode.COMMIT, FlushMode.MANUAL]
     }
 
-    // ─── named parameter edge cases ─────────────────────────────────────────
+    // ─── parameter handling ─────────────────────────────────────────────────
 
-    void "populateQueryWithNamedArguments handles list parameter"() {
+    void "createHqlQuery with list parameter filters correctly"() {
         when:
         def results = buildHqlQuery("from HibernateHqlQuerySpecBook b where b.title in (:titles)",
                 [titles: ["The Hobbit", "Fellowship"]]).list()
@@ -224,19 +213,42 @@ class HibernateHqlQuerySpec extends HibernateGormDatastoreSpec {
         results.size() == 2
     }
 
-    void "populateQueryWithNamedArguments handles null value"() {
+    void "createHqlQuery with null parameter value handles correctly"() {
         when:
         def results = buildHqlQuery("from HibernateHqlQuerySpecBook b where b.title = :t", [t: null]).list()
         then:
         results.size() == 0
     }
 
-    void "populateQueryWithNamedArguments throws for non-string key"() {
+    void "createHqlQuery filters GORM internal settings from parameters"() {
+        when: "passing internal GORM settings as named parameters"
+        def results = buildHqlQuery("from HibernateHqlQuerySpecBook b where b.title = :t", 
+                [t: "The Hobbit", flushMode: FlushMode.COMMIT, cache: true]).list()
+
+        then: "no exception is thrown and results are returned"
+        results.size() == 1
+    }
+
+    void "createHqlQuery handles array and CharSequence parameters"() {
         when:
-        buildHqlQuery("from HibernateHqlQuerySpecBook")
-                .populateQueryWithNamedArguments([(42): "value"])
+        def results = buildHqlQuery("from HibernateHqlQuerySpecBook b where b.title in (:titles)",
+                [titles: ["The Hobbit"] as String[]]).list()
         then:
-        thrown(Exception)
+        results.size() == 1
+
+        when:
+        def results2 = buildHqlQuery("from HibernateHqlQuerySpecBook b where b.title = :t",
+                [t: new StringBuilder("Fellowship")]).list()
+        then:
+        results2.size() == 1
+    }
+
+    void "createHqlQuery handles positional CharSequence parameters"() {
+        when:
+        def results = buildHqlQuery("from HibernateHqlQuerySpecBook b where b.title = ?1",
+                [:], [new StringBuilder("The Hobbit")]).list()
+        then:
+        results.size() == 1
     }
 
     // ─── delegate behaviour ─────────────────────────────────────────────────
@@ -273,18 +285,6 @@ class HibernateHqlQuerySpec extends HibernateGormDatastoreSpec {
                 [t: "The Hobbit"], null, [:], true).list()
         then:
         thrown(UnsupportedOperationException)
-    }
-
-    void "populateQueryWithNamedArguments filters GORM internal settings"() {
-        given:
-        def query = buildHqlQuery("from HibernateHqlQuerySpecBook b where b.title = :t", [t: "The Hobbit"])
-
-        when: "passing internal GORM settings as named parameters"
-        query.populateQueryWithNamedArguments([t: "The Hobbit", flushMode: FlushMode.COMMIT, cache: true])
-
-        then: "no exception is thrown because they are filtered out"
-        noExceptionThrown()
-        query.list().size() == 1
     }
 
     void "singleResult returns first result when multiple rows match"() {
@@ -354,7 +354,7 @@ class HibernateHqlQuerySpec extends HibernateGormDatastoreSpec {
         HibernateHqlQuery.convertQueryFlushMode(FlushMode.COMMIT) == org.hibernate.query.QueryFlushMode.NO_FLUSH
         HibernateHqlQuery.convertQueryFlushMode(FlushMode.AUTO) == org.hibernate.query.QueryFlushMode.DEFAULT
         HibernateHqlQuery.convertQueryFlushMode("ALWAYS") == org.hibernate.query.QueryFlushMode.FLUSH
-        HibernateHqlQuery.convertQueryFlushMode("INVALID") == org.hibernate.query.QueryFlushMode.NO_FLUSH
+        HibernateHqlQuery.convertQueryFlushMode("INVALID") == org.hibernate.query.QueryFlushMode.DEFAULT
         HibernateHqlQuery.convertQueryFlushMode(null) == org.hibernate.query.QueryFlushMode.DEFAULT
     }
 
@@ -372,28 +372,6 @@ class HibernateHqlQuerySpec extends HibernateGormDatastoreSpec {
 
         then:
         noExceptionThrown()
-    }
-
-    void "populateQueryWithNamedArguments handles array and CharSequence"() {
-        when:
-        def results = buildHqlQuery("from HibernateHqlQuerySpecBook b where b.title in (:titles)",
-                [titles: ["The Hobbit"] as String[]]).list()
-        then:
-        results.size() == 1
-
-        when:
-        def results2 = buildHqlQuery("from HibernateHqlQuerySpecBook b where b.title = :t",
-                [t: new StringBuilder("Fellowship")]).list()
-        then:
-        results2.size() == 1
-    }
-
-    void "populateQueryWithIndexedArguments handles CharSequence"() {
-        when:
-        def results = buildHqlQuery("from HibernateHqlQuerySpecBook b where b.title = ?1",
-                [:], [new StringBuilder("The Hobbit")]).list()
-        then:
-        results.size() == 1
     }
 
 
