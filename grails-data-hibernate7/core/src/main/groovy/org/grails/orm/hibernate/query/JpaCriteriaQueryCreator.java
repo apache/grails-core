@@ -25,12 +25,15 @@ import jakarta.persistence.criteria.From;
 import jakarta.persistence.criteria.Root;
 import jakarta.persistence.criteria.Selection;
 import org.grails.datastore.mapping.model.PersistentEntity;
+import org.grails.datastore.gorm.query.criteria.DetachedAssociationCriteria;
 import org.grails.datastore.mapping.query.Query;
+import org.grails.orm.hibernate.cfg.domainbinding.hibernate.GrailsHibernatePersistentEntity;
 import org.hibernate.query.criteria.HibernateCriteriaBuilder;
 import org.hibernate.query.criteria.JpaCriteriaQuery;
 import org.hibernate.query.criteria.JpaSubQuery;
 import org.springframework.core.convert.ConversionService;
 
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
 
@@ -45,10 +48,11 @@ public class JpaCriteriaQueryCreator<T> {
 
     private final Query.ProjectionList projections;
     private final HibernateCriteriaBuilder criteriaBuilder;
-    private final PersistentEntity entity;
+    private final GrailsHibernatePersistentEntity entity;
     private final DetachedCriteria<?> detachedCriteria;
     private final ConversionService conversionService;
     private final HibernateQuery hibernateQuery;
+    private JpaQueryContext parentContext;
 
     public JpaCriteriaQueryCreator(
             Query.ProjectionList projections,
@@ -56,13 +60,13 @@ public class JpaCriteriaQueryCreator<T> {
             PersistentEntity entity,
             DetachedCriteria<?> detachedCriteria,
             ConversionService conversionService) {
-        this(projections, (HibernateCriteriaBuilder) criteriaBuilder, entity, detachedCriteria, conversionService, null);
+        this(projections, (HibernateCriteriaBuilder) criteriaBuilder, (GrailsHibernatePersistentEntity) entity, detachedCriteria, conversionService, null);
     }
 
     public JpaCriteriaQueryCreator(
             Query.ProjectionList projections,
             HibernateCriteriaBuilder criteriaBuilder,
-            PersistentEntity entity,
+            GrailsHibernatePersistentEntity entity,
             DetachedCriteria<?> detachedCriteria,
             ConversionService conversionService,
             HibernateQuery hibernateQuery) {
@@ -74,21 +78,40 @@ public class JpaCriteriaQueryCreator<T> {
         this.hibernateQuery = hibernateQuery;
     }
 
+    public void setParentContext(JpaQueryContext parentContext) {
+        this.parentContext = parentContext;
+    }
+
     public JpaCriteriaQuery<?> createQuery() {
         var projectionList = collectProjections();
         var cq = createCriteriaQuery(projectionList);
         Class<?> javaClass = entity.getJavaClass();
         Root<?> root = cq.from(javaClass);
-        var context = new JpaQueryContext(
-                detachedCriteria,
-                projectionList,
-                hibernateQuery != null ? hibernateQuery.getAliases() : List.of(),
-                root);
+        
+        List<HibernateAlias> aliases = new ArrayList<>();
+        if (hibernateQuery != null) {
+            aliases.addAll(hibernateQuery.getAliases());
+        }
+        for (Query.Criterion criterion : detachedCriteria.getCriteria()) {
+            if (criterion instanceof HibernateAlias ha) {
+                aliases.add(ha);
+            }
+        }
+
+        var context = new JpaQueryContext(aliases, root);
+        if (parentContext != null) {
+            context.setParent(parentContext);
+        }
         
         // Pass 1: Discover all projection aliases without full resolution
         for (Query.Projection projection : projectionList) {
             if (projection instanceof Query.PropertyProjection propertyProjection) {
+            if (propertyProjection.getPropertyName().contains(grails.orm.HibernateCriteriaBuilder.ALIAS_SEPARATOR)) {
+                String[] parts = propertyProjection.getPropertyName().split(grails.orm.HibernateCriteriaBuilder.ALIAS_SEPARATOR);
+                context.registerAlias(parts[0], new HibernateAlias(parts[0], parts[0])); 
+            } else {
                 context.registerAliasFromPath(propertyProjection.getPropertyName());
+            }
             } else if (projection instanceof Query.CountDistinctProjection countDistinctProjection) {
                 context.registerAliasFromPath(countDistinctProjection.getPropertyName());
             }
@@ -104,20 +127,36 @@ public class JpaCriteriaQueryCreator<T> {
         return cq;
     }
 
+    @SuppressWarnings("unchecked")
     public <T> void populateSubquery(JpaSubQuery<T> subquery) {
         var projectionList = collectProjections();
         Class<?> javaClass = entity.getJavaClass();
         Root<?> root = subquery.from(javaClass);
-        var context = new JpaQueryContext(
-                detachedCriteria,
-                projectionList,
-                hibernateQuery != null ? hibernateQuery.getAliases() : List.of(),
-                root);
+        
+        List<HibernateAlias> aliases = new ArrayList<>();
+        if (hibernateQuery != null) {
+            aliases.addAll(hibernateQuery.getAliases());
+        }
+        for (Query.Criterion criterion : detachedCriteria.getCriteria()) {
+            if (criterion instanceof HibernateAlias ha) {
+                aliases.add(ha);
+            }
+        }
+
+        var context = new JpaQueryContext(aliases, root);
+        if (parentContext != null) {
+            context.setParent(parentContext);
+        }
 
         // Pass 1: Discover all projection aliases
         for (Query.Projection projection : projectionList) {
             if (projection instanceof Query.PropertyProjection propertyProjection) {
+            if (propertyProjection.getPropertyName().contains(grails.orm.HibernateCriteriaBuilder.ALIAS_SEPARATOR)) {
+                String[] parts = propertyProjection.getPropertyName().split(grails.orm.HibernateCriteriaBuilder.ALIAS_SEPARATOR);
+                context.registerAlias(parts[0], new HibernateAlias(parts[0], parts[0])); 
+            } else {
                 context.registerAliasFromPath(propertyProjection.getPropertyName());
+            }
             } else if (projection instanceof Query.CountDistinctProjection countDistinctProjection) {
                 context.registerAliasFromPath(countDistinctProjection.getPropertyName());
             }
@@ -129,14 +168,20 @@ public class JpaCriteriaQueryCreator<T> {
 
         var translator = new JpaProjectionTranslator(criteriaBuilder, context);
 
-        var aliasedProjections = new java.util.concurrent.atomic.AtomicInteger(0);
         var projectionExpressions = projectionList.stream()
                 .map(translator::translate)
                 .filter(Objects::nonNull)
-                .map(expr -> expr.alias("col_" + aliasedProjections.getAndIncrement()))
                 .toList();
         if (!projectionExpressions.isEmpty()) {
-            subquery.multiselect(projectionExpressions.toArray(new Selection<?>[0]));
+            if (projectionExpressions.size() > 1 || subquery.getResultType().equals(Tuple.class)) {
+                subquery.multiselect(projectionExpressions.toArray(new Selection<?>[0]));
+            } else {
+                subquery.select((Expression) projectionExpressions.get(0));
+            }
+        } else if (subquery.getResultType().equals(entity.getJavaClass())) {
+            subquery.select((Expression) root);
+        } else if (projectionList.isEmpty() && subquery.getResultType().equals(entity.getIdentity().getType())) {
+            subquery.select((Expression) root.get(entity.getIdentity().getName()));
         }
 
         Expression<?>[] groupByPaths = collectGroupProjections().stream()
@@ -155,12 +200,16 @@ public class JpaCriteriaQueryCreator<T> {
     }
 
     private JpaCriteriaQuery<?> createCriteriaQuery(List<Query.Projection> projections) {
-        if (projections.size() > 1) {
+        List<Query.Projection> expressionProjections = projections.stream()
+                .filter(p -> !(p instanceof Query.DistinctProjection))
+                .toList();
+
+        if (expressionProjections.size() > 1) {
             return (JpaCriteriaQuery<?>) criteriaBuilder.createTupleQuery();
-        } else if (projections.isEmpty()) {
+        } else if (expressionProjections.isEmpty()) {
             return (JpaCriteriaQuery<?>) criteriaBuilder.createQuery(entity.getJavaClass());
         } else {
-            var first = projections.get(0);
+            var first = expressionProjections.get(0);
             if (first instanceof Query.CountProjection || first instanceof Query.CountDistinctProjection) {
                 return (JpaCriteriaQuery<?>) criteriaBuilder.createQuery(Long.class);
             } else if (first instanceof Query.PropertyProjection propertyProjection) {
@@ -184,7 +233,7 @@ public class JpaCriteriaQueryCreator<T> {
     @SuppressWarnings("unchecked")
     private <T> void assignProjections(
             List<Query.Projection> projections, CriteriaQuery<T> cq, JpaProjectionTranslator translator, JpaQueryContext context) {
-        if (projections.stream().anyMatch(Query.DistinctProjection.class::isInstance)) {
+        if (projections.stream().anyMatch(p -> p instanceof Query.DistinctProjection || p instanceof Query.DistinctPropertyProjection)) {
             cq.distinct(true);
         }
         var projectionExpressions = projections.stream()
@@ -192,7 +241,7 @@ public class JpaCriteriaQueryCreator<T> {
                 .filter(Objects::nonNull)
                 .toList();
         if (!projectionExpressions.isEmpty()) {
-            if (cq.getResultType().equals(Tuple.class)) {
+            if (cq.getResultType().equals(Tuple.class) && projectionExpressions.size() > 1) {
                 cq.select((Selection<? extends T>) criteriaBuilder.tuple(projectionExpressions.toArray(new Selection<?>[0])));
             } else {
                 cq.select((Selection<? extends T>) projectionExpressions.get(0));
@@ -236,12 +285,41 @@ public class JpaCriteriaQueryCreator<T> {
         }
     }
 
+    private void discoverAliases(List<Query.Criterion> criteria, JpaQueryContext context) {
+        if (criteria == null) return;
+        for (Query.Criterion criterion : criteria) {
+            if (criterion instanceof HibernateAlias ha) {
+                // If the alias is already defined in parent and materialized, just link it
+                if (!context.hasAlias(ha.alias())) {
+                    context.registerAlias(ha.alias(), ha);
+                }
+            } else if (criterion instanceof DetachedAssociationCriteria<?> dac) {
+                if (dac.getAlias() != null) {
+                    context.registerAlias(dac.getAlias(), new HibernateAlias(dac.getAssociationPath(), dac.getAlias()));
+                }
+                discoverAliases(dac.getCriteria(), context);
+            } else if (criterion instanceof Query.PropertyNameCriterion pnc) {
+                String propertyName = pnc.getProperty();
+                if (propertyName.contains(".")) {
+                    String alias = propertyName.substring(0, propertyName.indexOf("."));
+                    // Only register if not already known in this or parent context
+                    if (!context.hasAlias(alias)) {
+                        context.registerAlias(alias, new HibernateAlias(alias, alias));
+                    }
+                }
+            } else if (criterion instanceof Query.Junction junction) {
+                discoverAliases(junction.getCriteria(), context);
+            }
+        }
+    }
+
     private void assignCriteria(
-            AbstractQuery<?> cq, Root<?> root, JpaQueryContext context, PersistentEntity entity) {
+            AbstractQuery<?> cq, Root<?> root, JpaQueryContext context, GrailsHibernatePersistentEntity entity) {
         List<Query.Criterion> criteriaList = detachedCriteria.getCriteria();
         if (!criteriaList.isEmpty()) {
+            discoverAliases(criteriaList, context);
             var predicateGenerator = new PredicateGenerator(criteriaBuilder, conversionService);
-            var predicate = predicateGenerator.generate(criteriaList, cq, root, context, entity);
+            var predicate = predicateGenerator.generate(cq, root, criteriaList, context, entity);
             if (predicate != null) {
                 cq.where(predicate);
             }

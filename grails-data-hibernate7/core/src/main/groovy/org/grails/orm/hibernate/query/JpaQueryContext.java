@@ -18,212 +18,122 @@ package org.grails.orm.hibernate.query;
 import jakarta.persistence.criteria.Expression;
 import jakarta.persistence.criteria.From;
 import jakarta.persistence.criteria.Path;
-import org.hibernate.query.criteria.JpaExpression;
-import java.util.HashMap;
 import java.util.List;
-import java.util.Map;
-import grails.gorm.DetachedCriteria;
-import org.grails.datastore.mapping.model.PersistentEntity;
-import org.grails.datastore.mapping.query.Query;
 
 /**
- * A class that provides the {@link From} and {@link Path} for a given alias or property path.
+ * Orchestrator for JPA query translation state (Aliases, Joins, Expressions).
  *
- * @author burt
+ * TODO: Better separation of concerns between JpaQueryContext and ExpressionResolver.
+ * It is a bit icky that AliasRegistry and JoinTracker are passed into ExpressionResolver.
+ *
+ * @author walterduquedeestrada
  * @author graemerocher
  * @since 7.0.0
  */
 public class JpaQueryContext implements Cloneable {
 
-    private final Map<String, From<?, ?>> fromMap = new HashMap<>();
-    private final Map<String, Expression<?>> aliasMap = new HashMap<>();
-    private From<?, ?> root;
+    private final AliasRegistry aliasRegistry;
+    private final JoinTracker joinTracker;
+    private final ExpressionResolver resolver;
+    private JpaQueryContext parent;
 
-    public JpaQueryContext() {
+    public JpaQueryContext(From<?, ?> root) {
+        this(null, null, root);
     }
 
-    public JpaQueryContext(
-            DetachedCriteria<?> detachedCriteria,
-            List<Query.Projection> projections,
-            List<HibernateAlias> aliases,
-            From<?, ?> root) {
-        this.root = root;
+    public JpaQueryContext(List<HibernateAlias> aliases, From<?, ?> root) {
+        this(null, aliases, root);
     }
 
-    /**
-     * Constructor for PredicateGenerator subqueries.
-     */
-    public JpaQueryContext(
-            JpaQueryContext parent,
-            PersistentEntity entity,
-            List<Query.Criterion> criteria,
-            List<Object> arguments,
-            Map<?, ?> fetchStrategies,
-            Map<?, ?> joinTypes,
-            From<?, ?> root) {
-        this.root = root;
-        if (parent != null) {
-            this.fromMap.putAll(parent.fromMap);
-            this.aliasMap.putAll(parent.aliasMap);
-        }
+    public JpaQueryContext(JpaQueryContext parent, From<?, ?> root) {
+        this(parent, null, root);
     }
 
     /**
-     * Constructor for simpler subqueries or clones.
+     * Internal constructor for subqueries and base initialization.
      */
-    public JpaQueryContext(
-            JpaQueryContext parent,
-            DetachedCriteria<?> detachedCriteria,
-            List<Object> aliases,
-            From<?, ?> root) {
-        this.root = root;
-        if (parent != null) {
-            this.fromMap.putAll(parent.fromMap);
-            this.aliasMap.putAll(parent.aliasMap);
+    public JpaQueryContext(JpaQueryContext parent, List<HibernateAlias> aliases, From<?, ?> root) {
+        this.parent = parent;
+        this.joinTracker = new JoinTracker(parent != null ? parent.getJoinTracker() : null, root);
+        this.aliasRegistry = new AliasRegistry(parent != null ? parent.getAliasRegistry() : null);
+        this.resolver = new ExpressionResolver(aliasRegistry, joinTracker);
+        if (aliases != null) {
+            for (HibernateAlias alias : aliases) {
+                aliasRegistry.define(alias.alias(), alias);
+            }
         }
+        if (root != null) {
+            this.joinTracker.addJoin("root", root);
+        }
+    }
+
+    protected JoinTracker getJoinTracker() {
+        return joinTracker;
+    }
+
+    protected AliasRegistry getAliasRegistry() {
+        return aliasRegistry;
     }
 
     public void setRoot(From<?, ?> root) {
-        this.root = root;
+        this.joinTracker.setRoot(root);
+        this.joinTracker.addJoin("root", root);
+    }
+
+    public void setParent(JpaQueryContext parent) {
+        this.parent = parent;
     }
 
     public From<?, ?> getRoot() {
-        return root;
+        return joinTracker.getRoot();
     }
 
     public void addFrom(String path, From<?, ?> from) {
-        fromMap.put(path, from);
+        joinTracker.addJoin(path, from);
     }
 
     public From<?, ?> getFrom(String path) {
-        return fromMap.get(path);
+        return joinTracker.getJoin(path);
     }
 
     public void registerAlias(String alias, Expression<?> expression) {
-        aliasMap.put(alias, expression);
+        aliasRegistry.realize(alias, expression);
+    }
+
+    public void registerAlias(String alias, HibernateAlias definition) {
+        aliasRegistry.define(alias, definition);
     }
 
     public void registerAliasFromPath(String path) {
         if (path != null && path.contains(grails.orm.HibernateCriteriaBuilder.ALIAS_SEPARATOR)) {
             String alias = path.split(grails.orm.HibernateCriteriaBuilder.ALIAS_SEPARATOR)[0];
-            if (!aliasMap.containsKey(alias)) {
-                aliasMap.put(alias, null); // Placeholder to mark it as a known alias
+            if (!aliasRegistry.isDefined(alias) && !aliasRegistry.hasRealized(alias)) {
+                aliasRegistry.define(alias, null); // Mark as known
             }
         }
     }
 
     public boolean hasAlias(String alias) {
-        if (alias == null) return false;
-        String key = alias;
-        if (key.contains(grails.orm.HibernateCriteriaBuilder.ALIAS_SEPARATOR)) {
-            key = key.split(grails.orm.HibernateCriteriaBuilder.ALIAS_SEPARATOR)[0];
-        }
-        return aliasMap.containsKey(key);
+        return aliasRegistry.isDefined(alias) || aliasRegistry.hasRealized(alias);
     }
 
     public Expression<?> getAliasedExpression(String alias) {
-        if (alias == null) return null;
-        String key = alias;
-        if (key.contains(grails.orm.HibernateCriteriaBuilder.ALIAS_SEPARATOR)) {
-            key = key.split(grails.orm.HibernateCriteriaBuilder.ALIAS_SEPARATOR)[0];
-        }
-        
-        if (aliasMap.containsKey(key)) {
-            return aliasMap.get(key);
-        }
-        if (key.startsWith("root.")) {
-            String stripped = key.substring(5);
-            if (aliasMap.containsKey(stripped)) {
-                return aliasMap.get(stripped);
-            }
-        }
-        return null;
+        return aliasRegistry.getRealized(alias);
     }
 
     public Expression<?> getFullyQualifiedExpression(String path) {
-        Expression<?> aliased = getAliasedExpression(path);
-        if (aliased != null) {
-            return aliased;
-        }
-
-        if (path.equals("root")) {
-            return root;
-        }
-        
-        String propertyName = path;
-        if (propertyName.startsWith("root.")) {
-            propertyName = propertyName.substring(5);
-        }
-        
-        String alias = null;
-        if (propertyName.contains(grails.orm.HibernateCriteriaBuilder.ALIAS_SEPARATOR)) {
-            String[] parts = propertyName.split(grails.orm.HibernateCriteriaBuilder.ALIAS_SEPARATOR);
-            alias = parts[0];
-            propertyName = parts[1];
-        }
-
-        Expression<?> expression = getAliasedExpression(alias != null ? alias : propertyName);
-        if (expression == null) {
-            expression = getFullyQualifiedPath(propertyName);
-        }
-
-        if (alias != null && expression instanceof JpaExpression) {
-            ((JpaExpression<?>) expression).alias(alias);
-            registerAlias(alias, expression);
-        }
-        
-        return expression;
+        return resolver.resolve(path);
     }
 
     public Path<?> getFullyQualifiedPath(String path) {
-        if (hasAlias(path)) {
-            Expression<?> aliased = getAliasedExpression(path);
-            if (aliased instanceof Path<?>) {
-                return (Path<?>) aliased;
-            }
-            return null; // Known alias, not a path
-        }
-
-        String propertyName = path;
-        if (propertyName.contains(grails.orm.HibernateCriteriaBuilder.ALIAS_SEPARATOR)) {
-            propertyName = propertyName.split(grails.orm.HibernateCriteriaBuilder.ALIAS_SEPARATOR)[1];
-        }
-
-        if (propertyName.startsWith("root.")) {
-            propertyName = propertyName.substring(5);
-        }
-
-        if (hasAlias(propertyName)) {
-            Expression<?> aliased = getAliasedExpression(propertyName);
-            if (aliased instanceof Path<?>) {
-                return (Path<?>) aliased;
-            }
-            return null; // Known alias, not a path
-        }
-
-        if (propertyName.equals("root")) {
-            return root;
-        }
-        
-        String[] parts = propertyName.split("\\.");
-        if (hasAlias(parts[0])) {
-             return null;
-        }
-        
-        Path<?> p = root;
-        for (String part : parts) {
-            p = p.get(part);
-        }
-        return p;
+        Expression<?> resolved = resolver.resolve(path);
+        return resolved instanceof Path<?> path1 ? path1 : null;
     }
 
     @Override
     public JpaQueryContext clone() {
         try {
-            JpaQueryContext cloned = (JpaQueryContext) super.clone();
-            cloned.fromMap.putAll(this.fromMap);
-            cloned.aliasMap.putAll(this.aliasMap);
-            return cloned;
+            return (JpaQueryContext) super.clone();
         } catch (CloneNotSupportedException e) {
             throw new AssertionError();
         }
