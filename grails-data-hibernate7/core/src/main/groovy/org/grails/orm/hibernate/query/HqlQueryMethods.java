@@ -35,6 +35,11 @@ public interface HqlQueryMethods {
         }
     }
 
+    default void populateHints(HqlQueryDelegate d, Map<String, Object> hints) {
+        if (hints == null || hints.isEmpty()) return;
+        hints.forEach(d::setHint);
+    }
+
     static void populateParameters(HqlQueryDelegate d, HqlQueryContext queryContext) {
         if (queryContext.namedParams() != null && !queryContext.namedParams().isEmpty()) {
             queryContext.namedParams().forEach((key, value) -> {
