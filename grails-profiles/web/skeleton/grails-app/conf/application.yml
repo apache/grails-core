@@ -23,9 +23,6 @@ grails:
             xml:
               - text/xml
               - application/xml
-    urlmapping:
-        cache:
-            maxsize: 1000
     converters:
         encoding: UTF-8
     views:

@@ -25,8 +25,5 @@ grails:
             rss: application/rss+xml
             text: text/plain
             all: '*/*'            
-    urlmapping:
-        cache:
-            maxsize: 1000
     converters:
         encoding: UTF-8
