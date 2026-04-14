@@ -24,8 +24,6 @@ grails:
               - text/xml
               - application/xml
     views:
-        default:
-            codec: html
         gsp:
             encoding: UTF-8
             htmlcodec: xml

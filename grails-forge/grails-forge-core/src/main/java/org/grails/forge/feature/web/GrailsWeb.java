@@ -51,9 +51,4 @@ public class GrailsWeb implements DefaultFeature {
         return applicationType != ApplicationType.PLUGIN;
     }
 
-    @Override
-    public void apply(GeneratorContext generatorContext) {
-        final Map<String, Object> config = generatorContext.getConfiguration();
-        config.put("grails.views.default.codec", "html");
-    }
 }
