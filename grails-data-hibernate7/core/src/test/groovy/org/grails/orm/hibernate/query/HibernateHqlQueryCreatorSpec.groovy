@@ -31,7 +31,8 @@ class HibernateHqlQueryCreatorSpec extends HibernateGormDatastoreSpec {
     void "createHqlQuery returns SelectHqlQuery for SELECT"() {
         given:
         def entity = mappingContext.getPersistentEntity(HqlCreatorSpecBook.name)
-        def ctx = HqlQueryContext.prepare(entity, "from HqlCreatorSpecBook", [:], null, [:], false, false)
+        def ctx = HqlQueryContext.prepare(entity, "from HqlCreatorSpecBook", [:], null, [:], [:], false, false)
+
 
         when:
         def query = HibernateHqlQueryCreator.createHqlQuery(datastore, sessionFactory, entity, ctx)
@@ -43,7 +44,7 @@ class HibernateHqlQueryCreatorSpec extends HibernateGormDatastoreSpec {
     void "createHqlQuery returns MutationHqlQuery for UPDATE"() {
         given:
         def entity = mappingContext.getPersistentEntity(HqlCreatorSpecBook.name)
-        def ctx = HqlQueryContext.prepare(entity, "update HqlCreatorSpecBook set title = 'foo'", [:], null, [:], false, true)
+        def ctx = HqlQueryContext.prepare(entity, "update HqlCreatorSpecBook set title = 'foo'", [:], null, [:], [:], false, true)
 
         when:
         def query = HibernateHqlQueryCreator.createHqlQuery(datastore, sessionFactory, entity, ctx)
@@ -55,7 +56,7 @@ class HibernateHqlQueryCreatorSpec extends HibernateGormDatastoreSpec {
     void "createHqlQuery with native query"() {
         given:
         def entity = mappingContext.getPersistentEntity(HqlCreatorSpecBook.name)
-        def ctx = HqlQueryContext.prepare(entity, "SELECT * FROM hql_creator_spec_book", [:], null, [:], true, false)
+        def ctx = HqlQueryContext.prepare(entity, "SELECT * FROM hql_creator_spec_book", [:], null, [:], [:], true, false)
 
         when:
         def query = HibernateHqlQueryCreator.createHqlQuery(datastore, sessionFactory, entity, ctx)

@@ -32,7 +32,6 @@ import org.grails.orm.hibernate.cfg.domainbinding.hibernate.GrailsHibernatePersi
  * @author Graeme Rocher
  * @since 1.0
  */
-//TODO Cleanup
 public class HibernateHqlQueryCreator {
 
     public static Query createHqlQuery(
