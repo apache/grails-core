@@ -71,6 +71,11 @@ final class MutationQueryDelegate implements HqlQueryDelegate {
     }
 
     @Override
+    public void setHint(String hintName, Object value) {
+        mutationQuery.setHint(hintName, value);
+    }
+
+    @Override
     public void setParameterList(String name, Collection<?> values) {
         // MutationQuery has no setParameterList; pass collection directly as parameter value
         mutationQuery.setParameter(name, values);

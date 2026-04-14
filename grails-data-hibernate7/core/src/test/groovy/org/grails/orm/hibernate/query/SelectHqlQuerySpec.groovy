@@ -374,6 +374,20 @@ class SelectHqlQuerySpec extends HibernateGormDatastoreSpec {
         then:
         hqlQuery != null
     }
+
+    void "buildQuery handles hints"() {
+        given:
+        def entity = mappingContext.getPersistentEntity(SelectHqlQuerySpecBook.name)
+        def hql = "from SelectHqlQuerySpecBook"
+        def hints = ["jakarta.persistence.query.timeout": 1000]
+        def ctx = HqlQueryContext.prepare(entity, hql, [:], null, [:], hints, false, false)
+
+        when:
+        def hqlQuery = HibernateHqlQueryCreator.createHqlQuery(datastore, sessionFactory, entity, ctx)
+
+        then:
+        hqlQuery != null
+    }
 }
 
 @Entity

@@ -229,6 +229,18 @@ class MutationQueryDelegateSpec extends HibernateGormDatastoreSpec {
         noExceptionThrown()
     }
 
+    void "setHint delegates to MutationQuery"() {
+        given:
+        MutationQuery mq = buildMutationQuery("UPDATE MutationQueryDelegateTestBook SET pages = 0")
+        MutationQueryDelegate delegate = new MutationQueryDelegate(mq)
+
+        when:
+        delegate.setHint("org.hibernate.comment", "my comment")
+
+        then:
+        noExceptionThrown()
+    }
+
     void "selectQuery returns null for mutation queries"() {
         given:
         MutationQuery mq = buildMutationQuery(
