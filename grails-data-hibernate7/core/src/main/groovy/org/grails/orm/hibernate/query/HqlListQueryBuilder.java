@@ -94,31 +94,31 @@ public class HqlListQueryBuilder {
         Mapping mapping = mappingContext.getMappingCacheHolder().getMapping(entity.getJavaClass());
         if (mapping != null && mapping.getSort() != null) {
             SortConfig sortConfig = mapping.getSort();
-            return buildSortPart(sortConfig.getName(), sortConfig.getDirection(), isIgnoreCase);
+            Map<String, String> namesAndDirections = sortConfig.getNamesAndDirections();
+            if (namesAndDirections != null && !namesAndDirections.isEmpty()) {
+                List<String> parts = new ArrayList<>();
+                namesAndDirections.forEach((prop, direction) -> {
+                    parts.add(buildSortPart(prop, direction, isIgnoreCase));
+                });
+                return String.join(", ", parts);
+            }
+            String name = sortConfig.getName();
+            if (name != null) {
+                return buildSortPart(name, sortConfig.getDirection(), isIgnoreCase);
+            }
         }
 
         return "";
     }
 
     private String buildSortPart(String propertyName, String direction, boolean ignoreCase) {
+        if (propertyName == null) return "";
         String path = "e." + propertyName;
-        HibernatePersistentProperty prop = getProperty(entity, propertyName);
+        HibernatePersistentProperty prop = entity.getHibernatePropertyByPath(propertyName);
         if (prop != null && prop.getType() == String.class && ignoreCase) {
             return "upper(" + path + ") " + (direction != null ? direction : "asc");
         }
         return path + " " + (direction != null ? direction : "asc");
-    }
-
-    private HibernatePersistentProperty getProperty(GrailsHibernatePersistentEntity entity, String propertyName) {
-        if (propertyName.contains(".")) {
-            String[] parts = propertyName.split("\\.");
-            HibernatePersistentProperty prop = entity.getHibernatePropertyByName(parts[0]);
-            if (prop != null && prop.getHibernateAssociatedEntity() != null) {
-                return getProperty(prop.getHibernateAssociatedEntity(), propertyName.substring(parts[0].length() + 1));
-            }
-            return null;
-        }
-        return entity.getHibernatePropertyByName(propertyName);
     }
 
     public static boolean isPaged(Map<String, Object> params) {

@@ -58,9 +58,10 @@ class HqlListQueryBuilderSpec extends Specification {
 
     void "test buildListHql with simple sort"() {
         given:
-        entity.getHibernatePropertyByName("name") >> Mock(HibernatePersistentProperty) {
-            getType() >> String
-        }
+        def prop = Mock(HibernatePersistentProperty)
+        prop.getType() >> String
+        entity.getHibernatePropertyByPath("name") >> prop
+        
         def builder = new HqlListQueryBuilder(entity, [
                 (HibernateQueryArgument.SORT.value()) : "name",
                 (HibernateQueryArgument.ORDER.value()): HibernateQueryArgument.ORDER_DESC.value()
@@ -72,9 +73,10 @@ class HqlListQueryBuilderSpec extends Specification {
 
     void "test buildListHql with numeric sort"() {
         given:
-        entity.getHibernatePropertyByName("age") >> Mock(HibernatePersistentProperty) {
-            getType() >> Integer
-        }
+        def prop = Mock(HibernatePersistentProperty)
+        prop.getType() >> Integer
+        entity.getHibernatePropertyByPath("age") >> prop
+
         def builder = new HqlListQueryBuilder(entity, [
                 (HibernateQueryArgument.SORT.value()) : "age",
                 (HibernateQueryArgument.ORDER.value()): HibernateQueryArgument.ORDER_ASC.value()
@@ -86,9 +88,10 @@ class HqlListQueryBuilderSpec extends Specification {
 
     void "test buildListHql with ignoreCase false"() {
         given:
-        entity.getHibernatePropertyByName("name") >> Mock(HibernatePersistentProperty) {
-            getType() >> String
-        }
+        def prop = Mock(HibernatePersistentProperty)
+        prop.getType() >> String
+        entity.getHibernatePropertyByPath("name") >> prop
+
         def builder = new HqlListQueryBuilder(entity, [
                 (HibernateQueryArgument.SORT.value())       : "name",
                 (HibernateQueryArgument.IGNORE_CASE.value()): false
@@ -100,8 +103,14 @@ class HqlListQueryBuilderSpec extends Specification {
 
     void "test buildListHql with multiple sorts"() {
         given:
-        entity.getHibernatePropertyByName("name") >> Mock(HibernatePersistentProperty) { getType() >> String }
-        entity.getHibernatePropertyByName("age") >> Mock(HibernatePersistentProperty) { getType() >> Integer }
+        def nameProp = Mock(HibernatePersistentProperty)
+        nameProp.getType() >> String
+        def ageProp = Mock(HibernatePersistentProperty)
+        ageProp.getType() >> Integer
+        
+        entity.getHibernatePropertyByPath("name") >> nameProp
+        entity.getHibernatePropertyByPath("age") >> ageProp
+
         // Use LinkedHashMap to ensure deterministic order in HQL generation
         def builder = new HqlListQueryBuilder(entity, [
                 (HibernateQueryArgument.SORT.value()): [
@@ -116,11 +125,9 @@ class HqlListQueryBuilderSpec extends Specification {
 
     void "test buildListHql with nested property sort"() {
         given:
-        def authorAssociation = Mock(HibernatePersistentProperty)
-        def authorEntity = Mock(GrailsHibernatePersistentEntity)
-        entity.getHibernatePropertyByName("author") >> authorAssociation
-        authorAssociation.getHibernateAssociatedEntity() >> authorEntity
-        authorEntity.getHibernatePropertyByName("name") >> Mock(HibernatePersistentProperty) { getType() >> String }
+        def prop = Mock(HibernatePersistentProperty)
+        prop.getType() >> String
+        entity.getHibernatePropertyByPath("author.name") >> prop
 
         def builder = new HqlListQueryBuilder(entity, [(HibernateQueryArgument.SORT.value()): "author.name"])
 
@@ -153,12 +160,40 @@ class HqlListQueryBuilderSpec extends Specification {
 
         cacheHolder.getMapping(_) >> mapping
         mapping.getSort() >> sortConfig
-        entity.getHibernatePropertyByName("lastName") >> Mock(HibernatePersistentProperty) { getType() >> String }
+        
+        def prop = Mock(HibernatePersistentProperty)
+        prop.getType() >> String
+        entity.getHibernatePropertyByPath("lastName") >> prop
 
         def builder = new HqlListQueryBuilder(entity, [:])
 
         expect:
         builder.buildListHql() == "from Person e order by upper(e.lastName) asc"
+    }
+
+    void "test buildListHql with multiple default sorts from mapping"() {
+        given:
+        def mapping = Mock(Mapping)
+        // Use LinkedHashMap to ensure deterministic order in HQL generation
+        def namesAndDirections = [lastName: "asc", firstName: "desc"]
+        def sortConfig = Mock(SortConfig)
+        sortConfig.getNamesAndDirections() >> namesAndDirections
+
+        cacheHolder.getMapping(_) >> mapping
+        mapping.getSort() >> sortConfig
+        
+        def lastProp = Mock(HibernatePersistentProperty)
+        lastProp.getType() >> String
+        def firstProp = Mock(HibernatePersistentProperty)
+        firstProp.getType() >> String
+        
+        entity.getHibernatePropertyByPath("lastName") >> lastProp
+        entity.getHibernatePropertyByPath("firstName") >> firstProp
+
+        def builder = new HqlListQueryBuilder(entity, [:])
+
+        expect:
+        builder.buildListHql() == "from Person e order by upper(e.lastName) asc, upper(e.firstName) desc"
     }
 
     @Unroll

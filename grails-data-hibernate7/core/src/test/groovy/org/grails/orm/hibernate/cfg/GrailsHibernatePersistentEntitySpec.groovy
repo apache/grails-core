@@ -418,6 +418,51 @@ class GrailsHibernatePersistentEntitySpec extends HibernateGormDatastoreSpec {
         then:
         !result.isPresent()
     }
+
+    def "test getHibernatePropertyByPath"() {
+        given:
+        def context = getMappingContext()
+        GrailsHibernatePersistentEntity personEntity = Spy(HibernatePersistentEntity, constructorArgs: [Person, context])
+        GrailsHibernatePersistentEntity addressEntity = Spy(HibernatePersistentEntity, constructorArgs: [AddressOwner, context])
+        
+        def nameProp = Mock(HibernatePersistentProperty)
+        def addressProp = Mock(HibernatePersistentProperty)
+        def cityProp = Mock(HibernatePersistentProperty)
+        
+        when: "Testing simple property"
+        personEntity.getPropertyByName("name") >> nameProp
+        def result1 = personEntity.getHibernatePropertyByPath("name")
+        
+        then:
+        result1 == nameProp
+        
+        when: "Testing nested property"
+        personEntity.getPropertyByName("address") >> addressProp
+        addressProp.getHibernateAssociatedEntity() >> addressEntity
+        addressEntity.getPropertyByName("city") >> cityProp
+        
+        def result2 = personEntity.getHibernatePropertyByPath("address.city")
+        
+        then:
+        result2 == cityProp
+        
+        when: "Testing non-existent property"
+        personEntity.getPropertyByName("foo") >> null
+        def result3 = personEntity.getHibernatePropertyByPath("foo")
+        
+        then:
+        result3 == null
+
+        when: "Testing non-existent nested property"
+        personEntity.getPropertyByName("address") >> addressProp
+        addressProp.getHibernateAssociatedEntity() >> addressEntity
+        addressEntity.getPropertyByName("bar") >> null
+        
+        def result4 = personEntity.getHibernatePropertyByPath("address.bar")
+        
+        then:
+        result4 == null
+    }
 }
 
 @Entity
