@@ -42,7 +42,7 @@ class SelectHqlQuerySpec extends HibernateGormDatastoreSpec {
 
     private Query buildHqlQuery(CharSequence hql, Map namedParams = [:], List positionalParams = null, Map args = [:], boolean isUpdate = false) {
         def entity = mappingContext.getPersistentEntity(SelectHqlQuerySpecBook.name)
-        def ctx = HqlQueryContext.prepare(entity, hql, namedParams, positionalParams, args, false, isUpdate)
+        def ctx = HqlQueryContext.prepare(entity, hql, namedParams, positionalParams, args, [:], false, isUpdate)
         HibernateHqlQueryCreator.createHqlQuery(datastore, sessionFactory, entity, ctx)
     }
 
@@ -366,7 +366,7 @@ class SelectHqlQuerySpec extends HibernateGormDatastoreSpec {
     def "buildQuery handles native query"() {
         given:
         def entity = mappingContext.getPersistentEntity(SelectHqlQuerySpecBook.name)
-        def ctx = HqlQueryContext.prepare(entity, "SELECT * FROM select_hql_query_spec_book", [:], null, [:], true, false)
+        def ctx = HqlQueryContext.prepare(entity, "SELECT * FROM select_hql_query_spec_book", [:], null, [:], [:], true, false)
 
         when:
         def hqlQuery = HibernateHqlQueryCreator.createHqlQuery(datastore, sessionFactory, entity, ctx)

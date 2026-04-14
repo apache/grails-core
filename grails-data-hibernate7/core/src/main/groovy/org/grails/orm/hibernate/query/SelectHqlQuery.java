@@ -45,6 +45,7 @@ public class SelectHqlQuery extends Query implements HqlQueryMethods {
             d.setFirstResult(offset);
         }
         populateQuerySettings(d, queryContext.querySettings());
+        populateHints(d, queryContext.hints());
         HqlQueryMethods.populateParameters(d, queryContext);
     }
 
