@@ -36,17 +36,11 @@ package org.grails.orm.hibernate
 import groovy.transform.CompileStatic
 import groovy.util.logging.Slf4j
 
-import jakarta.persistence.criteria.CriteriaBuilder
-import jakarta.persistence.criteria.CriteriaQuery
-import jakarta.persistence.criteria.Expression
-import jakarta.persistence.criteria.Root
-
 import org.grails.datastore.mapping.query.Query as GormQuery
 
 import org.hibernate.Session
 import org.hibernate.SessionFactory
 import org.hibernate.jpa.AvailableHints
-import org.hibernate.query.Query as HibernateNativeQuery
 
 import org.springframework.core.convert.ConversionService
 import org.springframework.transaction.PlatformTransactionManager
@@ -204,22 +198,9 @@ class HibernateGormStaticApi<D> extends GormStaticApi<D> {
             return null
         }
 
-        (D) hibernateTemplate.execute { Session session ->
-            CriteriaBuilder criteriaBuilder = session.getCriteriaBuilder()
-            CriteriaQuery criteriaQuery = criteriaBuilder.createQuery(persistentEntity.javaClass)
-
-            Root queryRoot = criteriaQuery.from(persistentEntity.javaClass)
-            criteriaQuery = criteriaQuery.where(
-                    //TODO: Remove explicit type cast once GROOVY-9460
-                    criteriaBuilder.equal((Expression<?>) queryRoot.get(persistentEntity.identity.name), id)
-            )
-            HibernateNativeQuery criteria = session.createQuery(criteriaQuery)
-                    .setHint(AvailableHints.HINT_READ_ONLY, true)
-            HqlQueryContext queryContext = HqlQueryContext.prepare(persistentEntity, criteria.getQueryString(), null, null, null, false, false)
-            GormQuery hibernateHqlQuery = HibernateHqlQueryCreator.createHqlQuery(
-                     (HibernateDatastore) datastore, sessionFactory, persistentEntity, queryContext)
-            proxyHandler.unwrap(hibernateHqlQuery.singleResult())
-        }
+        String hql = "from ${persistentEntity.name} where ${persistentEntity.identity.name} = :id"
+        Map<String, Object> args = [(AvailableHints.HINT_READ_ONLY): (Object) true]
+        proxyHandler.unwrap(doSingleInternal(hql, [id: id], [], args, false)) as D
     }
 
     @Override
@@ -432,8 +413,8 @@ class HibernateGormStaticApi<D> extends GormStaticApi<D> {
     private D doSingleInternal(CharSequence hql,
                                Map namedParams,
                                Collection positionalParams,
-                               Map args
-                               , boolean isNative) {
+                               Map args, Map hints = [:], boolean isNative
+    ) {
         def hqlQuery = prepareHqlQuery(hql, isNative, false, namedParams, positionalParams, args)
         firePreQueryEvent()
         def sm = hqlQuery.singleResult()
@@ -463,9 +444,17 @@ class HibernateGormStaticApi<D> extends GormStaticApi<D> {
     }
 
     @SuppressWarnings('GroovyAssignabilityCheck')
-    protected GormQuery prepareHqlQuery(CharSequence hql, boolean isNative, boolean isUpdate,
-                                              Map<String, Object> namedParams, Collection<Object> positionalParams, Map<String, Object> querySettings) {
-        def ctx = HqlQueryContext.prepare(persistentEntity, hql, namedParams, positionalParams, querySettings, isNative, isUpdate)
+    protected GormQuery prepareHqlQuery(CharSequence hql
+                                        , boolean isNative
+                                        , boolean isUpdate
+                                        , Map<String, Object> namedParams
+                                        , Collection<Object> positionalParams
+                                        , Map<String, Object> querySettings
+                                        , Map<String, Object> hints = [:]) {
+        if (hints.isEmpty() && querySettings != null) {
+            hints = querySettings.findAll { AvailableHints.getDefinedHints().contains(it.key) }
+        }
+        def ctx = HqlQueryContext.prepare(persistentEntity, hql, namedParams, positionalParams, querySettings, hints, isNative, isUpdate)
         return HibernateHqlQueryCreator.createHqlQuery(
                 (HibernateDatastore) datastore,
                 sessionFactory,
@@ -503,7 +492,7 @@ class HibernateGormStaticApi<D> extends GormStaticApi<D> {
         firePreQueryEvent()
         HqlListQueryBuilder builder = new HqlListQueryBuilder((GrailsHibernatePersistentEntity) persistentEntity, params)
         String hql = builder.buildListHql()
-        HqlQueryContext ctx = HqlQueryContext.prepare(persistentEntity, hql, Collections.emptyMap(), Collections.emptyList(), params, false, false)
+        HqlQueryContext ctx = HqlQueryContext.prepare(persistentEntity, hql, Collections.emptyMap(), Collections.emptyList(), params, new HashMap<String, Object>(), false, false)
         GormQuery hqlQuery = HibernateHqlQueryCreator.createHqlQuery(
                 (HibernateDatastore) datastore,
                 sessionFactory,
