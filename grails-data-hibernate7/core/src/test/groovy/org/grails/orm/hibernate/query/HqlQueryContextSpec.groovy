@@ -144,9 +144,9 @@ class HqlQueryContextSpec extends Specification {
 
     void "convertValue handles CharSequence and Collection"() {
         expect:
-        HqlQueryContext.convertValue(new StringBuilder("test")) == "test"
-        HqlQueryContext.convertValue(["a", new StringBuilder("b")]) == ["a", "b"]
-        HqlQueryContext.convertValue(["a", "b"] as String[]) instanceof String[]
+        HqlQueryMethods.convertValue(new StringBuilder("test")) == "test"
+        HqlQueryMethods.convertValue(["a", new StringBuilder("b")]) == ["a", "b"]
+        HqlQueryMethods.convertValue(["a", "b"] as String[]) instanceof String[]
     }
 }
 

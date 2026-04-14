@@ -18,102 +18,36 @@
  */
 package org.grails.orm.hibernate.query;
 
-import java.io.IOException;
-import java.io.ObjectOutputStream;
-import java.io.Serial;
-import java.util.List;
-
-import org.hibernate.query.Query;
-
-import grails.gorm.PagedList;
 import org.grails.datastore.mapping.model.PersistentEntity;
+import org.grails.datastore.mapping.query.Query;
 import org.grails.orm.hibernate.GrailsHibernateTemplate;
+import org.grails.orm.hibernate.cfg.domainbinding.hibernate.GrailsHibernatePersistentEntity;
 
 /**
- * A {@link grails.gorm.PagedResultList} implementation for Hibernate.
+ * A PagedResultList for Hibernate 7.
  *
- * @param <E> The element type
+ * @author burt
+ * @since 7.0.0
  */
-public class HibernatePagedResultList<E> implements PagedList<E> {
+public class HibernatePagedResultList extends grails.gorm.PagedResultList {
 
-    @Serial
-    private static final long serialVersionUID = 1L;
-    // HQL-based count (new path)
-    private final String countHql;
-    private final transient GrailsHibernateTemplate hibernateTemplate;
-    private final transient PersistentEntity entity;
-    private final Integer max;
-    private int offset;
-    protected List<E> resultList;
-    protected int totalCount = Integer.MIN_VALUE;
+    private final GrailsHibernatePersistentEntity entity;
 
-    @SuppressWarnings({"unchecked", "PMD.NullAssignment"})
-    public HibernatePagedResultList(org.grails.datastore.mapping.query.Query query) {
+    public HibernatePagedResultList(HibernateQuery query) {
+        super(query);
         this.entity = query.getEntity();
-        this.hibernateTemplate = query instanceof HibernateQuery hibernateQuery ?
-                hibernateQuery.getHibernateTemplate() :
-                (query instanceof HibernateHqlQuery hibernateHqlQuery ?
-                        hibernateHqlQuery.getHibernateTemplate() :
-                        null);
-        this.max = query.getMax();
-        Integer offsetParam = query.getOffset();
-        this.offset = offsetParam != null ? offsetParam : 0;
-        this.resultList = query.list();
-        this.countHql = null;
     }
 
-    /** HQL constructor — count via scalar HQL. */
-    @SuppressWarnings({"unchecked", "PMD.NullAssignment"})
-    public HibernatePagedResultList(
-            GrailsHibernateTemplate template, PersistentEntity entity, HibernateHqlQuery hibernateHqlQuery) {
-        this.hibernateTemplate = template;
+    public HibernatePagedResultList(GrailsHibernateTemplate template, GrailsHibernatePersistentEntity entity, Query query) {
+        super(query);
         this.entity = entity;
-        this.max = hibernateHqlQuery.getMax();
-        Integer offsetParam = hibernateHqlQuery.getOffset();
-        this.offset = offsetParam != null ? offsetParam : 0;
-        this.resultList = hibernateHqlQuery.list();
-        this.countHql = HibernateHqlQuery.buildCountHql(entity);
     }
 
-    @Override
-    public List<E> getResultList() {
-        return resultList;
+    public HibernatePagedResultList(GrailsHibernateTemplate template, PersistentEntity entity, Query query) {
+        this(template, (GrailsHibernatePersistentEntity) entity, query);
     }
 
-    protected void initialize() {
-        // no-op, already initialized
-    }
-
-    @Override
-    public int getTotalCount() {
-        if (totalCount == Integer.MIN_VALUE) {
-            totalCount = countViaHql();
-        }
-        return totalCount;
-    }
-
-    public Integer getMax() {
-        return max;
-    }
-
-    public int getOffset() {
-        return offset;
-    }
-
-    private int countViaHql() {
-        if (hibernateTemplate == null || entity == null) {
-            return 0;
-        }
-        return hibernateTemplate.execute(session -> {
-            String hql = countHql != null ? countHql : HibernateHqlQuery.buildCountHql(entity);
-            Query<?> q = session.createQuery(hql, Long.class);
-            hibernateTemplate.applySettings(q);
-            return ((Number) q.uniqueResult()).intValue();
-        });
-    }
-
-    private void writeObject(ObjectOutputStream out) throws IOException {
-        getTotalCount();
-        out.defaultWriteObject();
+    public GrailsHibernatePersistentEntity getEntity() {
+        return entity;
     }
 }

@@ -37,8 +37,7 @@ class MutationHqlQuerySpec extends HibernateGormDatastoreSpec {
     private Query buildMutationQuery(CharSequence hql, Map namedParams = [:], Collection positionalParams = null) {
         def entity = mappingContext.getPersistentEntity(MutationHqlQuerySpecBook.name)
         def ctx = HqlQueryContext.prepare(entity, hql, namedParams, positionalParams, [:], false, true)
-        def session = sessionFactory.currentSession
-        HibernateHqlQuery.buildQuery(session, datastore, sessionFactory, entity, ctx)
+        HibernateHqlQueryCreator.createHqlQuery(datastore, sessionFactory, entity, ctx)
     }
 
     void "executeUpdate with named parameters updates correctly"() {
@@ -115,45 +114,6 @@ class MutationHqlQuerySpec extends HibernateGormDatastoreSpec {
         
         then:
         thrown(UnsupportedOperationException)
-    }
-
-    void "populateQuerySettings for MutationHqlQuery"() {
-        given:
-        def query = buildMutationQuery("update MutationHqlQuerySpecBook set pages = 1")
-        
-        when:
-        query.populateQuerySettings([flushMode: FlushMode.COMMIT], null)
-        
-        then:
-        noExceptionThrown()
-    }
-
-    void "populateQueryWithNamedArguments for MutationHqlQuery"() {
-        given:
-        def query = buildMutationQuery("update MutationHqlQuerySpecBook set pages = :p where title = :t")
-        
-        when:
-        query.populateQueryWithNamedArguments([p: 222, t: "The Hobbit"])
-        int updated = query.executeUpdate()
-        MutationHqlQuerySpecBook.withSession { it.clear() }
-        
-        then:
-        updated == 1
-        MutationHqlQuerySpecBook.findByTitle("The Hobbit").pages == 222
-    }
-
-    void "populateQueryWithIndexedArguments for MutationHqlQuery"() {
-        given:
-        def query = buildMutationQuery("update MutationHqlQuerySpecBook set pages = ?1 where title = ?2")
-        
-        when:
-        query.populateQueryWithIndexedArguments([333, "Fellowship"])
-        int updated = query.executeUpdate()
-        MutationHqlQuerySpecBook.withSession { it.clear() }
-        
-        then:
-        updated == 1
-        MutationHqlQuerySpecBook.findByTitle("Fellowship").pages == 333
     }
 
     void "selectQuery returns null for MutationHqlQuery"() {

@@ -34,6 +34,8 @@ import org.checkerframework.checker.nullness.qual.Nullable;
 
 import org.grails.datastore.mapping.model.PersistentEntity;
 
+import static org.grails.orm.hibernate.query.HqlQueryMethods.convertValue;
+
 /**
  * Immutable value object that holds all resolved HQL query state which can be computed without a
  * Hibernate {@code Session}: the final HQL string, the result target class, any named parameters
@@ -101,36 +103,12 @@ public record HqlQueryContext(
         // Final normalization
         _namedParams.replaceAll((k, v) -> convertValue(v));
         if (positionalParamsCopy != null) {
-            for (int i = 0; i < positionalParamsCopy.size(); i++) {
-                positionalParamsCopy.set(i, convertValue(positionalParamsCopy.get(i)));
-            }
+            positionalParamsCopy.replaceAll(HqlQueryMethods::convertValue);
         }
 
         Class<?> target = getTarget(hql, entity.getJavaClass());
         return new HqlQueryContext(
                 hql, target, _namedParams, positionalParamsCopy, querySettingsCopy, _isUpdate, _isNative);
-    }
-
-    private static Object convertValue(Object value) {
-        if (value instanceof CharSequence) {
-            return value.toString();
-        }
-        if (value instanceof Collection coll) {
-            List<Object> newList = new ArrayList<>(coll.size());
-            for (Object o : coll) {
-                newList.add(convertValue(o));
-            }
-            return newList;
-        }
-        if (value != null && value.getClass().isArray()) {
-            int length = Array.getLength(value);
-            Object newArray = Array.newInstance(value.getClass().getComponentType() == CharSequence.class || CharSequence.class.isAssignableFrom(value.getClass().getComponentType()) ? String.class : value.getClass().getComponentType(), length);
-            for (int i = 0; i < length; i++) {
-                Array.set(newArray, i, convertValue(Array.get(value, i)));
-            }
-            return newArray;
-        }
-        return value;
     }
 
     // ─── HQL resolution ──────────────────────────────────────────────────────
@@ -314,19 +292,7 @@ public record HqlQueryContext(
         // Read the next token; a clause keyword means no user-defined alias is present
         int tokenEnd = cur;
         while (tokenEnd < s.length() && !Character.isWhitespace(s.charAt(tokenEnd))) tokenEnd++;
-        String token = s.substring(cur, tokenEnd).toLowerCase(Locale.ROOT);
-        boolean hasAlias = !token.isEmpty() &&
-                !Set.of(
-                                HibernateQueryArgument.HQL_WHERE.value(),
-                                HibernateQueryArgument.HQL_JOIN.value(),
-                                HibernateQueryArgument.HQL_LEFT.value(),
-                                HibernateQueryArgument.HQL_RIGHT.value(),
-                                HibernateQueryArgument.HQL_INNER.value(),
-                                HibernateQueryArgument.HQL_OUTER.value(),
-                                HibernateQueryArgument.HQL_GROUP.value(),
-                                HibernateQueryArgument.HQL_ORDER.value(),
-                                HibernateQueryArgument.HQL_HAVING.value())
-                        .contains(token);
+        boolean hasAlias = isHasAlias(s, cur, tokenEnd);
         if (hasAlias) return s;
 
         // Strip DISTINCT/ALL prefix before adjusting the projection
@@ -344,6 +310,13 @@ public record HqlQueryContext(
         }
 
         // Qualify the projection with the synthetic alias
+        String adjusted = getAdjusted(projLower, entityName, projOrig);
+
+        return HibernateQueryArgument.HQL_SELECT.value() + " " + prefix + adjusted + " " +
+                HibernateQueryArgument.HQL_FROM.value() + " " + entityName + " e" + s.substring(entityEnd);
+    }
+
+    private static String getAdjusted(String projLower, String entityName, String projOrig) {
         String adjusted;
         if (projLower.equalsIgnoreCase(entityName)) {
             adjusted = "e"; // "select Person from Person" → "select e"
@@ -354,9 +327,23 @@ public record HqlQueryContext(
         } else {
             adjusted = projOrig; // functions / constructor expr / already qualified
         }
+        return adjusted;
+    }
 
-        return HibernateQueryArgument.HQL_SELECT.value() + " " + prefix + adjusted + " " +
-                HibernateQueryArgument.HQL_FROM.value() + " " + entityName + " e" + s.substring(entityEnd);
+    private static boolean isHasAlias(String s, int cur, int tokenEnd) {
+        String token = s.substring(cur, tokenEnd).toLowerCase(Locale.ROOT);
+        return !token.isEmpty() &&
+                !Set.of(
+                                HibernateQueryArgument.HQL_WHERE.value(),
+                                HibernateQueryArgument.HQL_JOIN.value(),
+                                HibernateQueryArgument.HQL_LEFT.value(),
+                                HibernateQueryArgument.HQL_RIGHT.value(),
+                                HibernateQueryArgument.HQL_INNER.value(),
+                                HibernateQueryArgument.HQL_OUTER.value(),
+                                HibernateQueryArgument.HQL_GROUP.value(),
+                                HibernateQueryArgument.HQL_ORDER.value(),
+                                HibernateQueryArgument.HQL_HAVING.value())
+                        .contains(token);
     }
 
     // ─── Private helpers ─────────────────────────────────────────────────────
@@ -378,7 +365,7 @@ public record HqlQueryContext(
         for (int i = 0; i < strings.length; i++) {
             sql.append(strings[i]);
             if (i < values.length) {
-                if (sql.length() > 0 && !Character.isWhitespace(sql.charAt(sql.length() - 1))) {
+                if (!sql.isEmpty() && !Character.isWhitespace(sql.charAt(sql.length() - 1))) {
                     sql.append(' ');
                 }
                 String name = "p" + i;
@@ -397,7 +384,7 @@ public record HqlQueryContext(
         for (int i = 0; i < strings.length; i++) {
             sql.append(strings[i]);
             if (i < values.length) {
-                if (sql.length() > 0 && !Character.isWhitespace(sql.charAt(sql.length() - 1))) {
+                if (!sql.isEmpty() && !Character.isWhitespace(sql.charAt(sql.length() - 1))) {
                     sql.append(' ');
                 }
                 if (isNative) {

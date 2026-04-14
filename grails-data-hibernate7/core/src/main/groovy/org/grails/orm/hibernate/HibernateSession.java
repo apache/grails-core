@@ -33,6 +33,9 @@ import jakarta.persistence.criteria.CriteriaQuery;
 import jakarta.persistence.criteria.Root;
 
 import org.hibernate.LockMode;
+import org.grails.orm.hibernate.query.HibernateHqlQueryCreator;
+import org.grails.orm.hibernate.query.HqlQueryContext;
+import org.grails.orm.hibernate.query.MutationHqlQuery;
 import org.hibernate.Session;
 import org.hibernate.SessionFactory;
 import org.hibernate.proxy.HibernateProxy;
@@ -47,7 +50,6 @@ import org.grails.datastore.mapping.core.AbstractAttributeStoringSession;
 import org.grails.datastore.mapping.core.Datastore;
 import org.grails.datastore.mapping.engine.Persister;
 import org.grails.datastore.mapping.model.MappingContext;
-import org.grails.datastore.mapping.model.PersistentEntity;
 import org.grails.datastore.mapping.model.PersistentProperty;
 import org.grails.datastore.mapping.model.config.GormProperties;
 import org.grails.datastore.mapping.proxy.ProxyHandler;
@@ -60,9 +62,9 @@ import org.grails.datastore.mapping.query.jpa.JpaQueryBuilder;
 import org.grails.datastore.mapping.query.jpa.JpaQueryInfo;
 import org.grails.datastore.mapping.reflect.ClassPropertyFetcher;
 import org.grails.datastore.mapping.transactions.Transaction;
+import org.grails.orm.hibernate.cfg.domainbinding.hibernate.GrailsHibernatePersistentEntity;
 import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernatePersistentEntity;
 import org.grails.orm.hibernate.proxy.HibernateProxyHandler;
-import org.grails.orm.hibernate.query.HibernateHqlQuery;
 import org.grails.orm.hibernate.query.HibernateQuery;
 
 /**
@@ -131,7 +133,7 @@ public class HibernateSession extends AbstractAttributeStoringSession implements
         hibernateTemplate.persist(o);
         try {
             MappingContext ctx = getDatastore().getMappingContext();
-            org.grails.datastore.mapping.model.PersistentEntity pe =
+            GrailsHibernatePersistentEntity pe = (GrailsHibernatePersistentEntity)
                     ctx.getPersistentEntity(o.getClass().getName());
             if (pe != null) {
                 return ctx.getEntityReflector(pe).getIdentifier(o);
@@ -292,7 +294,7 @@ public class HibernateSession extends AbstractAttributeStoringSession implements
         }
         Class<?> type = instance.getClass();
         ClassPropertyFetcher cpf = ClassPropertyFetcher.forClass(type);
-        final PersistentEntity persistentEntity = getMappingContext().getPersistentEntity(type.getName());
+        final GrailsHibernatePersistentEntity persistentEntity = (GrailsHibernatePersistentEntity) getMappingContext().getPersistentEntity(type.getName());
         if (persistentEntity != null) {
             return (Serializable) cpf.getPropertyValue(
                     instance, persistentEntity.getIdentity().getName());
@@ -317,8 +319,8 @@ public class HibernateSession extends AbstractAttributeStoringSession implements
 
             var query = createMutationQuery(session, jpaQueryInfo);
 
-            HibernateHqlQuery hqlQuery =
-                    new HibernateHqlQuery(HibernateSession.this, criteria.getPersistentEntity(), query);
+            HqlQueryContext ctx = HqlQueryContext.prepare(criteria.getPersistentEntity(), jpaQueryInfo.getQuery(), null, null, null, false, true);
+            MutationHqlQuery hqlQuery = (MutationHqlQuery) HibernateHqlQueryCreator.createHqlQuery((HibernateDatastore) getDatastore(), hibernateTemplate.getSessionFactory(), criteria.getPersistentEntity(), ctx);
             ApplicationEventPublisher applicationEventPublisher = datastore.getApplicationEventPublisher();
             applicationEventPublisher.publishEvent(new PreQueryEvent(datastore, hqlQuery));
             int result = query.executeUpdate();
@@ -354,9 +356,9 @@ public class HibernateSession extends AbstractAttributeStoringSession implements
             JpaQueryBuilder builder = new JpaQueryBuilder(criteria);
             builder.setConversionService(getMappingContext().getConversionService());
             builder.setHibernateCompatible(true);
-            HibernatePersistentEntity targetEntity = (HibernatePersistentEntity) criteria.getPersistentEntity();
-            PersistentProperty lastUpdated = targetEntity.getHibernatePropertyByName(GormProperties.LAST_UPDATED);
-            if (lastUpdated != null && targetEntity.getMapping().getMappedForm().isAutoTimestamp()) {
+            GrailsHibernatePersistentEntity targetEntity = (GrailsHibernatePersistentEntity) criteria.getPersistentEntity();
+            PersistentProperty lastUpdated = targetEntity.getPropertyByName(GormProperties.LAST_UPDATED);
+            if (lastUpdated != null && ((HibernatePersistentEntity) targetEntity).getMapping().getMappedForm().isAutoTimestamp()) {
                 if (timestampProvider == null) {
                     timestampProvider = new DefaultTimestampProvider();
                 }
@@ -368,7 +370,8 @@ public class HibernateSession extends AbstractAttributeStoringSession implements
 
             var query = createMutationQuery(session, jpaQueryInfo);
 
-            HibernateHqlQuery hqlQuery = new HibernateHqlQuery(HibernateSession.this, targetEntity, query);
+            HqlQueryContext ctx = HqlQueryContext.prepare(targetEntity, jpaQueryInfo.getQuery(), null, null, null, false, true);
+            MutationHqlQuery hqlQuery = (MutationHqlQuery) HibernateHqlQueryCreator.createHqlQuery((HibernateDatastore) getDatastore(), hibernateTemplate.getSessionFactory(), targetEntity, ctx);
             ApplicationEventPublisher applicationEventPublisher = datastore.getApplicationEventPublisher();
             applicationEventPublisher.publishEvent(new PreQueryEvent(datastore, hqlQuery));
             int result = query.executeUpdate();
@@ -381,7 +384,7 @@ public class HibernateSession extends AbstractAttributeStoringSession implements
     @Override
     @SuppressWarnings({"PMD.DataflowAnomalyAnalysis", "unchecked"})
     public List retrieveAll(final Class type, final Iterable keys) {
-        final PersistentEntity persistentEntity = getMappingContext().getPersistentEntity(type.getName());
+        final GrailsHibernatePersistentEntity persistentEntity = (GrailsHibernatePersistentEntity) getMappingContext().getPersistentEntity(type.getName());
         return getHibernateTemplate().execute(session -> {
             final CriteriaBuilder criteriaBuilder = session.getCriteriaBuilder();
             CriteriaQuery<?> criteriaQuery = criteriaBuilder.createQuery(type);
@@ -391,7 +394,8 @@ public class HibernateSession extends AbstractAttributeStoringSession implements
             final org.hibernate.query.Query<?> jpaQuery = session.createQuery(criteriaQuery);
             getHibernateTemplate().applySettings(jpaQuery);
 
-            return new HibernateHqlQuery(this, persistentEntity, jpaQuery).list();
+            HqlQueryContext queryContext = HqlQueryContext.prepare(persistentEntity, jpaQuery.getQueryString(), null, null, null, false, false);
+            return HibernateHqlQueryCreator.createHqlQuery((HibernateDatastore) getDatastore(), hibernateTemplate.getSessionFactory(), persistentEntity, queryContext).list();
         });
     }
 
@@ -402,7 +406,7 @@ public class HibernateSession extends AbstractAttributeStoringSession implements
 
     @Override
     public Query createQuery(Class type, String alias) {
-        HibernateQuery query = new HibernateQuery(this, getMappingContext().getPersistentEntity(type.getName()));
+        HibernateQuery query = new HibernateQuery(this, (GrailsHibernatePersistentEntity) getMappingContext().getPersistentEntity(type.getName()));
         if (alias != null) {
             query.getDetachedCriteria().setAlias(alias);
         }
