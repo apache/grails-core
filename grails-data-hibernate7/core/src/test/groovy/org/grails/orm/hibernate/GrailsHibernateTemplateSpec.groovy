@@ -452,6 +452,28 @@ class GrailsHibernateTemplateSpec extends HibernateGormDatastoreSpec {
         template.applyFlushModeOnlyToNonExistingTransactions
     }
 
+    void "execute with explicit HibernateCallback anonymous class"() {
+        given:
+        TemplateBook book = new TemplateBook(title: "Refactoring", author: "Martin Fowler")
+        TemplateBook.withTransaction {
+            template.persist(book)
+        }
+
+        when:
+        TemplateBook result = template.execute(new GrailsHibernateTemplate.HibernateCallback<TemplateBook>() {
+            @Override
+            TemplateBook doInHibernate(Session session) throws HibernateException {
+                return session.createQuery("from TemplateBook where title = :t", TemplateBook)
+                        .setParameter("t", "Refactoring")
+                        .uniqueResult()
+            }
+        })
+
+        then:
+        result != null
+        result.title == "Refactoring"
+    }
+
     // -------------------------------------------------------------------------
     // hibernateFlushModeToConstant — all branches
     // -------------------------------------------------------------------------
@@ -1105,6 +1127,40 @@ class GrailsHibernateTemplateSpec extends HibernateGormDatastoreSpec {
 
         cleanup:
         template.exposeNativeSession = true
+    }
+
+    void "test executeWithNewSession does not release connection for MultiTenantDataSource"() {
+        given: "A template with a multi-tenant data source"
+        def mockMultiTenantDataSource = Mock(org.grails.datastore.gorm.jdbc.MultiTenantDataSource)
+        mockMultiTenantDataSource.getConnection() >> Mock(java.sql.Connection) {
+            getMetaData() >> Mock(java.sql.DatabaseMetaData) {
+                getDatabaseProductName() >> "H2"
+            }
+        }
+        
+        def mockSessionFactory = Mock(org.hibernate.engine.spi.SessionFactoryImplementor)
+        def mockServiceRegistry = Mock(org.hibernate.service.spi.ServiceRegistryImplementor)
+        def mockConnectionProvider = Mock(org.hibernate.engine.jdbc.connections.spi.ConnectionProvider)
+        
+        mockSessionFactory.getServiceRegistry() >> mockServiceRegistry
+        mockServiceRegistry.getService(org.hibernate.engine.jdbc.connections.spi.ConnectionProvider) >> mockConnectionProvider
+        mockConnectionProvider.unwrap(javax.sql.DataSource) >> mockMultiTenantDataSource
+        
+        // Mocking the TransactionResources to return our multi-tenant data source
+        def mockTxResources = Mock(TransactionResources)
+        def templateUnderTest = new GrailsHibernateTemplate(mockSessionFactory)
+        templateUnderTest.txResources = mockTxResources
+
+        when: "executeWithNewSession is called"
+        templateUnderTest.executeWithNewSession { session -> }
+
+        then: "The multi-tenant data source is handled correctly"
+        1 * mockSessionFactory.openSession() >> Mock(org.hibernate.engine.spi.SessionImplementor)
+        // Ensure the resource is unbound
+        1 * mockTxResources.unbindResourceIfPossible(mockMultiTenantDataSource) >> null
+        
+        cleanup:
+        templateUnderTest.txResources = new org.grails.orm.hibernate.support.hibernate7.DefaultTransactionResources()
     }
 }
 

@@ -21,7 +21,7 @@ public class SelectHqlQuery extends Query implements HqlQueryMethods {
     @Override
     public List<?> list() {
         GrailsHibernateTemplate template = (GrailsHibernateTemplate) getHibernateTemplate();
-        return template.execute(session -> {
+        return template.execute(__ -> {
             applyQuerySettings(delegate);
             return delegate.list();
         });
@@ -30,7 +30,7 @@ public class SelectHqlQuery extends Query implements HqlQueryMethods {
     @Override
     public Object singleResult() {
         GrailsHibernateTemplate template = (GrailsHibernateTemplate) getHibernateTemplate();
-        return template.execute(session -> {
+        return template.execute(__ -> {
             applyQuerySettings(delegate);
             List<?> results = delegate.list();
             return results.isEmpty() ? null : results.getFirst();
@@ -62,7 +62,7 @@ public class SelectHqlQuery extends Query implements HqlQueryMethods {
         return list();
     }
 
-    public void setReadOnly(Boolean readOnly) {
+    public void setReadOnly(Boolean ignoredReadOnly) {
         // Compatibility method
     }
 

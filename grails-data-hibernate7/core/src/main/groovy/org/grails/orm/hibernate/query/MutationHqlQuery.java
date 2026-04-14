@@ -47,7 +47,7 @@ public class MutationHqlQuery extends Query implements HqlQueryMethods {
 
     public int executeUpdate() {
         GrailsHibernateTemplate template = (GrailsHibernateTemplate) getHibernateTemplate();
-        return template.execute(session -> {
+        return template.execute(__ -> {
             applyQuerySettings(delegate);
             return delegate.executeUpdate();
         });

@@ -36,7 +36,7 @@ import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernatePersistentP
  * @author graemerocher
  * @since 7.0.0
  */
-//TODO CLEANUP
+//TODO Cleanup
 public class HqlListQueryBuilder {
 
     private final GrailsHibernatePersistentEntity entity;

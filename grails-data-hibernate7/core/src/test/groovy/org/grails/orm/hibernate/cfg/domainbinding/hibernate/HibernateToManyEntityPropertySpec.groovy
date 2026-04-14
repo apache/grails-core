@@ -35,7 +35,8 @@ class HibernateToManyEntityPropertySpec extends Specification {
     def "getAssociatedClass returns the Hibernate PersistentClass"() {
         given:
         def associatedEntity = Mock(HibernatePersistentEntity)
-        def pc = new RootClass(null)
+        def buildingContext = Mock(org.hibernate.boot.spi.MetadataBuildingContext)
+        def pc = new RootClass(buildingContext)
         associatedEntity.getPersistentClass() >> pc
         
         def prop = new TestHibernateToManyEntityProperty(associatedEntity: associatedEntity)

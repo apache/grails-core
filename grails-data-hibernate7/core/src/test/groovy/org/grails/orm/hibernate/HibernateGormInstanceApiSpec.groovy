@@ -22,11 +22,9 @@ import grails.gorm.specs.HibernateGormDatastoreSpec
 import grails.gorm.annotation.Entity
 import grails.gorm.hibernate.HibernateEntity
 import grails.gorm.transactions.Rollback
-import grails.validation.ValidationException
-import org.hibernate.Hibernate
+
 import org.hibernate.FlushMode
-import org.grails.orm.hibernate.query.HibernateHqlQuery
-import org.grails.orm.hibernate.HibernateGormStaticApi
+import org.grails.orm.hibernate.query.HibernateHqlQueryCreator
 
 class HibernateGormInstanceApiSpec extends HibernateGormDatastoreSpec {
 
@@ -486,7 +484,7 @@ class HibernateGormInstanceApiSpec extends HibernateGormDatastoreSpec {
         
         then:
         query != null
-        query instanceof HibernateHqlQuery
+        query instanceof HibernateHqlQueryCreator
         
         when: "Using doListInternal (protected)"
         def results = staticApi.doListInternal("from PersonInstanceApi where name = 'Bob'", [:], [], [:], false)

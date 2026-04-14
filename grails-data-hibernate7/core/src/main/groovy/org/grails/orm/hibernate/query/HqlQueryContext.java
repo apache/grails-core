@@ -18,7 +18,6 @@
  */
 package org.grails.orm.hibernate.query;
 
-import java.lang.reflect.Array;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.HashMap;
@@ -29,8 +28,8 @@ import java.util.Set;
 
 import groovy.lang.GString;
 
-import org.checkerframework.checker.nullness.qual.NonNull;
-import org.checkerframework.checker.nullness.qual.Nullable;
+import jakarta.annotation.Nonnull;
+import jakarta.annotation.Nullable;
 
 import org.grails.datastore.mapping.model.PersistentEntity;
 
@@ -54,7 +53,7 @@ import static org.grails.orm.hibernate.query.HqlQueryMethods.convertValue;
     "PMD.AvoidLiteralsInIfCondition",
     "PMD.UseLocaleWithCaseConversions"
 })
-//TODO CLEANUP
+//TODO Cleanup
 public record HqlQueryContext(
         String hql,
         Class<?> targetClass,
@@ -97,7 +96,7 @@ public record HqlQueryContext(
 
         // Handle empty query string by defaulting to "from [Entity]"
         if (hql == null || hql.trim().isEmpty()) {
-            hql = "from " + entity.getName();
+            hql = "from %s".formatted(entity.getName());
         }
 
         // Final normalization
@@ -160,13 +159,13 @@ public record HqlQueryContext(
     private static @Nullable String getSingleProjectionClause(CharSequence hql) {
         if (hql == null) return null;
         String s = hql.toString().toLowerCase(Locale.ROOT).trim();
-        int selectIdx = s.indexOf(HibernateQueryArgument.HQL_SELECT.value() + " ");
+        int selectIdx = s.indexOf("%s ".formatted(HibernateQueryArgument.HQL_SELECT.value()));
         if (selectIdx < 0) return null;
-        int fromIdx = s.indexOf(" " + HibernateQueryArgument.HQL_FROM.value() + " ", selectIdx);
+        int fromIdx = s.indexOf(" %s ".formatted(HibernateQueryArgument.HQL_FROM.value()), selectIdx);
         return extractSelectClause(s, selectIdx, fromIdx);
     }
 
-    private static @NonNull String extractSelectClause(String s, int selectIdx, int fromIdx) {
+    private static @Nonnull String extractSelectClause(String s, int selectIdx, int fromIdx) {
         String clause = s.substring(
                         selectIdx + HibernateQueryArgument.HQL_SELECT.value().length(),
                         fromIdx < 0 ? s.length() : fromIdx)
@@ -196,7 +195,7 @@ public record HqlQueryContext(
         int selectIdx = lower.indexOf(HibernateQueryArgument.HQL_SELECT.value() + " ");
         if (selectIdx < 0) return 0;
 
-        int fromIdx = lower.indexOf(" " + HibernateQueryArgument.HQL_FROM.value() + " ", selectIdx);
+        int fromIdx = lower.indexOf(" %s ".formatted(HibernateQueryArgument.HQL_FROM.value()), selectIdx);
         String sel = s.substring(
                         selectIdx + HibernateQueryArgument.HQL_SELECT.value().length(),
                         fromIdx < 0 ? s.length() : fromIdx)
@@ -266,7 +265,7 @@ public record HqlQueryContext(
         int selectIdx = lower.indexOf(HibernateQueryArgument.HQL_SELECT.value() + " ");
         if (selectIdx < 0) return s; // no SELECT clause — nothing to normalize
 
-        int fromIdx = lower.indexOf(" " + HibernateQueryArgument.HQL_FROM.value() + " ", selectIdx);
+        int fromIdx = lower.indexOf(" %s ".formatted(HibernateQueryArgument.HQL_FROM.value()), selectIdx);
         if (fromIdx < 0) return s; // malformed — leave as-is
 
         int selectStart = selectIdx + HibernateQueryArgument.HQL_SELECT.value().length() + 1;

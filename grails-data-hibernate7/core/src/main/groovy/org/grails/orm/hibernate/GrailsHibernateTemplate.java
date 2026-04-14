@@ -272,7 +272,8 @@ public class GrailsHibernateTemplate implements IHibernateTemplate {
                 // if there is a connection holder and it holds an open connection close it
                 try {
                     if (connectionHolder != null &&
-                            !connectionHolder.getConnection().isClosed()) {
+                            !connectionHolder.getConnection().isClosed() &&
+                            !(dataSource instanceof org.grails.datastore.gorm.jdbc.MultiTenantDataSource)) {
                         Connection conn = connectionHolder.getConnection();
                         DataSourceUtils.releaseConnection(conn, dataSource);
                     }

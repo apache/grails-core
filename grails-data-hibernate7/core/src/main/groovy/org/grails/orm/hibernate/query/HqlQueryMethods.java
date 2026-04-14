@@ -35,7 +35,7 @@ public interface HqlQueryMethods {
         }
     }
 
-    static void populateParameters(HqlQueryDelegate d,HqlQueryContext queryContext) {
+    static void populateParameters(HqlQueryDelegate d, HqlQueryContext queryContext) {
         if (queryContext.namedParams() != null && !queryContext.namedParams().isEmpty()) {
             queryContext.namedParams().forEach((key, value) -> {
                 if (INTERNAL_SETTINGS.contains(key)) return;

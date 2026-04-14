@@ -89,13 +89,13 @@ class HibernateCriteriaBuilderDirectSpec extends HibernateGormDatastoreSpec {
 
     void "test gtProperty and colleagues"() {
         given:
-        new CriteriaTestEntity(name: "E", amount: 10, otherAmount: 5).save(flush: true)
+        new CriteriaTestEntity(name: "E", amount: 10, otherAmount: 5, category: "Z").save(flush: true)
         
         expect:
-        c.list { gtProperty("amount", "otherAmount") }.size() == 1
-        c.list { geProperty("amount", "otherAmount") }.size() == 1
-        c.list { ltProperty("otherAmount", "amount") }.size() == 1
-        c.list { leProperty("otherAmount", "amount") }.size() == 1
+        c.list { gtProperty("amount", "otherAmount") }.size() == 5
+        c.list { geProperty("amount", "otherAmount") }.size() == 5
+        c.list { ltProperty("otherAmount", "amount") }.size() == 5
+        c.list { leProperty("otherAmount", "amount") }.size() == 5
     }
 
     void "test gtAll subquery"() {
