@@ -20,18 +20,23 @@ package org.grails.orm.hibernate.query;
 
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
+import java.util.Optional;
 import java.util.Set;
+import java.util.stream.Collectors;
 
 import groovy.lang.GString;
 
 import jakarta.annotation.Nonnull;
 import jakarta.annotation.Nullable;
 
+import org.hibernate.jpa.AvailableHints;
 import org.grails.datastore.mapping.model.PersistentEntity;
+
 
 import static org.grails.orm.hibernate.query.HqlQueryMethods.convertValue;
 
@@ -60,6 +65,7 @@ public record HqlQueryContext(
         Map<String, Object> namedParams,
         List<Object> positionalParams,
         Map<String, Object> querySettings,
+        Map<String, Object> hints,
         boolean isUpdate,
         boolean isNative) {
 
@@ -70,49 +76,56 @@ public record HqlQueryContext(
      * named parameters. No {@code Session} is required.
      */
     public static HqlQueryContext prepare(
-            PersistentEntity entity,
-            CharSequence queryCharseq,
-            Map<String, Object> namedParams,
-            Collection<Object> positionalParams,
-            Map<String, Object> querySettings,
-            boolean isNative,
-            boolean isUpdate) {
-        Map<String, Object> _namedParams = namedParams != null ? new HashMap<>(namedParams) : new HashMap<>();
-        List<Object> positionalParamsCopy =
-                positionalParams != null ? new ArrayList<>(positionalParams) : null;
-        Map<String, Object> querySettingsCopy = querySettings != null ? new HashMap<>(querySettings) : new HashMap<>();
+        PersistentEntity entity,
+        CharSequence queryCharseq,
+        Map<String, Object> namedParams,
+        Collection<Object> positionalParams,
+        Map<String, Object> querySettings,
+        Map<String, Object> hints,
+        boolean isNative,
+        boolean isUpdate) {
 
-        boolean _isNative = toBool(isNative);
-        boolean _isUpdate = toBool(isUpdate);
+        var namedParamsCopy = Optional.ofNullable(namedParams)
+            .map(HashMap::new)
+            .orElseGet(HashMap::new);
 
-        String hql;
-        // If positionalParams is non-null (even if empty), we prefer positional resolution
-        // for GStrings or plain HQL. This allows the caller to explicitly choose.
-        if (positionalParamsCopy != null) {
-            hql = resolveHql(queryCharseq, _isNative, positionalParamsCopy);
-        } else {
-            hql = resolveHql(queryCharseq, _isNative, _namedParams);
-        }
+        var positionalParamsCopy = Optional.ofNullable(positionalParams)
+            .map(ArrayList::new)
+            .orElseGet(ArrayList::new);
 
-        // Handle empty query string by defaulting to "from [Entity]"
-        if (hql == null || hql.trim().isEmpty()) {
-            hql = "from %s".formatted(entity.getName());
-        }
+        var querySettingsCopy = Optional.ofNullable(querySettings)
+            .map(HashMap::new)
+            .orElseGet(HashMap::new);
 
-        // Final normalization
-        _namedParams.replaceAll((k, v) -> convertValue(v));
-        if (positionalParamsCopy != null) {
-            positionalParamsCopy.replaceAll(HqlQueryMethods::convertValue);
-        }
+        var filteredHints = Optional.ofNullable(hints)
+            .orElseGet(Collections::emptyMap)
+            .entrySet().stream()
+            .filter(e -> AvailableHints.getDefinedHints().contains(e.getKey()))
+            .collect(Collectors.toUnmodifiableMap(Map.Entry::getKey, Map.Entry::getValue));
 
-        Class<?> target = getTarget(hql, entity.getJavaClass());
+        var hql = Optional.ofNullable(positionalParamsCopy.isEmpty() ?
+                resolveHql(queryCharseq, isNative, namedParamsCopy) :
+                resolveHql(queryCharseq, isNative, positionalParamsCopy))
+            .filter(s -> !s.trim().isEmpty())
+            .orElseGet(() -> "from %s".formatted(entity.getName()));
+
+        namedParamsCopy.replaceAll((k, v) -> convertValue(v));
+        positionalParamsCopy.replaceAll(HqlQueryMethods::convertValue);
+
         return new HqlQueryContext(
-                hql, target, _namedParams, positionalParamsCopy, querySettingsCopy, _isUpdate, _isNative);
+            hql,
+            getTarget(hql, entity.getJavaClass()),
+            namedParamsCopy,
+            positionalParamsCopy,
+            querySettingsCopy,
+            filteredHints,
+            isUpdate,
+            isNative);
     }
 
     // ─── HQL resolution ──────────────────────────────────────────────────────
 
-    public static @Nullable String resolveHql(
+    static @Nullable String resolveHql(
             CharSequence queryCharseq, boolean isNative, Map<String, Object> namedParams) {
         String raw = queryCharseq instanceof GString gstr ?
                 buildNamedParameterQueryFromGString(gstr, namedParams) :
@@ -121,7 +134,7 @@ public record HqlQueryContext(
         return isNative ? normalized : normalizeNonAliasedSelect(normalized);
     }
 
-    public static @Nullable String resolveHql(
+    static @Nullable String resolveHql(
             CharSequence queryCharseq, boolean isNative, Collection<Object> positionalParams) {
         String raw = queryCharseq instanceof GString gstr ?
                 buildPositionalParameterQueryFromGString(gstr, positionalParams, isNative) :
@@ -137,7 +150,7 @@ public record HqlQueryContext(
      * or a single entity projection, {@code Object.class} for a single scalar projection, or {@code
      * Object[].class} for multiple projections.
      */
-    public static Class<?> getTarget(CharSequence hql, Class<?> clazz) {
+    static Class<?> getTarget(CharSequence hql, Class<?> clazz) {
         String normalized = normalizeNonAliasedSelect(hql == null ? null : hql.toString());
         return switch (countHqlProjections(normalized)) {
             case 0 -> clazz;
@@ -156,7 +169,7 @@ public record HqlQueryContext(
         };
     }
 
-    private static @Nullable String getSingleProjectionClause(CharSequence hql) {
+    static @Nullable String getSingleProjectionClause(CharSequence hql) {
         if (hql == null) return null;
         String s = hql.toString().toLowerCase(Locale.ROOT).trim();
         int selectIdx = s.indexOf("%s ".formatted(HibernateQueryArgument.HQL_SELECT.value()));
@@ -165,7 +178,7 @@ public record HqlQueryContext(
         return extractSelectClause(s, selectIdx, fromIdx);
     }
 
-    private static @Nonnull String extractSelectClause(String s, int selectIdx, int fromIdx) {
+    static @Nonnull String extractSelectClause(String s, int selectIdx, int fromIdx) {
         String clause = s.substring(
                         selectIdx + HibernateQueryArgument.HQL_SELECT.value().length(),
                         fromIdx < 0 ? s.length() : fromIdx)
@@ -216,7 +229,7 @@ public record HqlQueryContext(
         return commas == 0 ? 1 : 2;
     }
 
-    private static int getCommas(String sel) {
+    static int getCommas(String sel) {
         int depth = 0;
         int commas = 0;
         boolean inSingle = false;
@@ -376,7 +389,7 @@ public record HqlQueryContext(
     }
 
     private static String buildPositionalParameterQueryFromGString(
-            GString query, Collection<Object> positionalParams, boolean isNative) {
+        GString query, Collection<Object> positionalParams, boolean isNative) {
         StringBuilder sql = new StringBuilder();
         Object[] values = query.getValues();
         String[] strings = query.getStrings();
@@ -396,9 +409,5 @@ public record HqlQueryContext(
             }
         }
         return sql.toString();
-    }
-
-    private static boolean toBool(Object v) {
-        return v instanceof Boolean b ? b : v != null && Boolean.parseBoolean(v.toString());
     }
 }
