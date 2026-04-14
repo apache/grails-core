@@ -52,7 +52,10 @@ public interface HqlQueryDelegate {
 
     <T> void setParameter(int position, T value, Class<T> type);
 
+    void setHint(String hintName, Object value);
+
     // ── select-only (no-ops for mutation queries) ─────────────────────────────
+
 
     default void setMaxResults(int n) {}
 

@@ -37,6 +37,7 @@ class HqlQueryDelegateSpec extends Specification {
             @Override <T> void setParameter(String name, T value, Class<T> type) {}
             @Override void setParameter(int position, Object value) {}
             @Override <T> void setParameter(int position, T value, Class<T> type) {}
+            @Override void setHint(String hintName, Object value) {}
             @Override List list() { [] }
             @Override int executeUpdate() { 0 }
             @Override org.hibernate.query.Query<?> selectQuery() { null }
@@ -97,5 +98,12 @@ class HqlQueryDelegateSpec extends Specification {
         def delegate = stub()
         expect:
         delegate.setParameterList("names", "a", "b") == null
+    }
+
+    def "stub setHint is a no-op"() {
+        given:
+        def delegate = stub()
+        expect:
+        delegate.setHint("hint", "value") == null
     }
 }
