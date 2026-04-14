@@ -36,7 +36,7 @@ class MutationHqlQuerySpec extends HibernateGormDatastoreSpec {
 
     private Query buildMutationQuery(CharSequence hql, Map namedParams = [:], Collection positionalParams = null) {
         def entity = mappingContext.getPersistentEntity(MutationHqlQuerySpecBook.name)
-        def ctx = HqlQueryContext.prepare(entity, hql, namedParams, positionalParams, [:], false, true)
+        def ctx = HqlQueryContext.prepare(entity, hql, namedParams, positionalParams, [:], [:], false, true)
         HibernateHqlQueryCreator.createHqlQuery(datastore, sessionFactory, entity, ctx)
     }
 
@@ -119,6 +119,20 @@ class MutationHqlQuerySpec extends HibernateGormDatastoreSpec {
     void "selectQuery returns null for MutationHqlQuery"() {
         expect:
         buildMutationQuery("update MutationHqlQuerySpecBook set pages = 1").selectQuery() == null
+    }
+
+    void "buildQuery handles hints for mutation query"() {
+        given:
+        def entity = mappingContext.getPersistentEntity(MutationHqlQuerySpecBook.name)
+        def hql = "update MutationHqlQuerySpecBook set pages = 1"
+        def hints = ["org.hibernate.comment": "update hint"]
+        def ctx = HqlQueryContext.prepare(entity, hql, [:], null, [:], hints, false, true)
+
+        when:
+        def hqlQuery = HibernateHqlQueryCreator.createHqlQuery(datastore, sessionFactory, entity, ctx)
+
+        then:
+        hqlQuery != null
     }
 }
 
