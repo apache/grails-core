@@ -65,6 +65,11 @@ final class SelectQueryDelegate implements HqlQueryDelegate {
     }
 
     @Override
+    public void setHint(String hintName, Object value) {
+        query.setHint(hintName, value);
+    }
+
+    @Override
     public void setMaxResults(int n) {
         query.setMaxResults(n);
     }
