@@ -28,7 +28,7 @@ import org.hibernate.query.QueryFlushMode;
 /** {@link HqlQueryDelegate} for HQL SELECT queries backed by {@link org.hibernate.query.Query}. */
 final class SelectQueryDelegate implements HqlQueryDelegate {
 
-    private final org.hibernate.query.Query<?> query;
+    private final transient org.hibernate.query.Query<?> query;
 
     SelectQueryDelegate(org.hibernate.query.Query<?> query) {
         this.query = query;

@@ -392,7 +392,7 @@ public class HibernateSession extends AbstractAttributeStoringSession implements
         final String hql = "from " + entityName + " as e where e." + idName + " in (:keys)";
 
         return getHibernateTemplate().execute(session -> {
-            // Prepare the HqlQueryContext using our manual HQL string
+            // Prepare the HqlQueryContext using our manual HQL string and type override
             HqlQueryContext queryContext = HqlQueryContext.prepare(
                 persistentEntity,
                 hql,
@@ -401,7 +401,8 @@ public class HibernateSession extends AbstractAttributeStoringSession implements
                 null,
                 new HashMap<>(),
                 false,
-                false
+                false,
+                type
             );
 
             return HibernateHqlQueryCreator.createHqlQuery(

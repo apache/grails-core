@@ -84,6 +84,19 @@ public record HqlQueryContext(
         Map<String, Object> hints,
         boolean isNative,
         boolean isUpdate) {
+        return prepare(entity, queryCharseq, namedParams, positionalParams, querySettings, hints, isNative, isUpdate, null);
+    }
+
+    public static HqlQueryContext prepare(
+        PersistentEntity entity,
+        CharSequence queryCharseq,
+        Map<String, Object> namedParams,
+        Collection<Object> positionalParams,
+        Map<String, Object> querySettings,
+        Map<String, Object> hints,
+        boolean isNative,
+        boolean isUpdate,
+        Class<?> targetClassOverride) {
 
         var namedParamsCopy = Optional.ofNullable(namedParams)
             .map(HashMap::new)
@@ -112,9 +125,11 @@ public record HqlQueryContext(
         namedParamsCopy.replaceAll((k, v) -> convertValue(v));
         positionalParamsCopy.replaceAll(HqlQueryMethods::convertValue);
 
+        Class<?> targetClass = targetClassOverride != null ? targetClassOverride : getTarget(hql, entity.getJavaClass());
+
         return new HqlQueryContext(
             hql,
-            getTarget(hql, entity.getJavaClass()),
+            targetClass,
             namedParamsCopy,
             positionalParamsCopy,
             querySettingsCopy,

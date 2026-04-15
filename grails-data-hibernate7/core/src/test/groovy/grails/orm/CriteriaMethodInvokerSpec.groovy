@@ -26,6 +26,7 @@ import groovy.lang.MetaMethod
 import org.grails.datastore.gorm.query.criteria.DetachedAssociationCriteria
 import org.grails.orm.hibernate.query.HibernateQuery
 
+import org.grails.orm.hibernate.cfg.domainbinding.hibernate.GrailsHibernatePersistentEntity
 import org.hibernate.SessionFactory
 import spock.lang.Specification
 
@@ -150,7 +151,7 @@ class CriteriaMethodInvokerSpec extends Specification {
         given:
         def closure = { eq("amount", 10) }
         def association = Mock(org.grails.datastore.mapping.model.types.Association)
-        def persistentEntity = Mock(org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernatePersistentEntity)
+        def persistentEntity = Mock(GrailsHibernatePersistentEntity)
 
         when:
         invoker.invokeMethod("transactions", [closure] as Object[])
@@ -578,7 +579,7 @@ class CriteriaMethodInvokerSpec extends Specification {
         given:
         def closure = { }
         def association = Mock(org.grails.datastore.mapping.model.types.Association)
-        def persistentEntity = Mock(org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernatePersistentEntity)
+        def persistentEntity = Mock(GrailsHibernatePersistentEntity)
 
         when: "joining on the same class (self-association)"
         invoker.invokeMethod("parent", [closure] as Object[])

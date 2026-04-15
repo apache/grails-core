@@ -1,5 +1,6 @@
 package org.grails.orm.hibernate.query;
 
+import java.io.Serializable;
 import java.util.List;
 
 import org.grails.datastore.mapping.query.Query;
@@ -8,7 +9,7 @@ import org.grails.orm.hibernate.HibernateSession;
 import org.grails.orm.hibernate.IHibernateTemplate;
 import org.grails.orm.hibernate.cfg.domainbinding.hibernate.GrailsHibernatePersistentEntity;
 
-public class SelectHqlQuery extends Query implements HqlQueryMethods {
+public class SelectHqlQuery extends Query implements HqlQueryMethods, Serializable {
     protected final HqlQueryContext queryContext;
     protected final HqlQueryDelegate delegate;
 

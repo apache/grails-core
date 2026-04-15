@@ -55,7 +55,7 @@ import org.grails.datastore.mapping.query.event.PreQueryEvent;
  * @since 1.0
  */
 @SuppressWarnings({"rawtypes", "unchecked"})
-public abstract class Query implements Cloneable {
+public abstract class Query implements Cloneable, Serializable {
 
     protected final PersistentEntity entity;
     protected final Session session;

@@ -351,15 +351,17 @@ class HibernateGormStaticApi<D> extends GormStaticApi<D> {
     @Override
     D findWhere(Map queryMap, Map args) {
         if (!queryMap) return null
-        String hql = buildWhereHql(queryMap)
-        doSingleInternal(hql, queryMap, [], args, false)
+        Map coercedMap = queryMap.collectEntries { k, v -> [k.toString(), v] }
+        String hql = buildWhereHql(coercedMap)
+        doSingleInternal(hql, coercedMap, [], args, false)
     }
 
     @Override
     List<D> findAllWhere(Map queryMap, Map args) {
         if (!queryMap) return null
-        String hql = buildWhereHql(queryMap)
-        doListInternal(hql, queryMap, [], args, false)
+        Map coercedMap = queryMap.collectEntries { k, v -> [k.toString(), v] }
+        String hql = buildWhereHql(coercedMap)
+        doListInternal(hql, coercedMap, [], args, false)
     }
 
     private String buildWhereHql(Map queryMap) {
@@ -455,7 +457,8 @@ class HibernateGormStaticApi<D> extends GormStaticApi<D> {
         if (hints.isEmpty() && querySettings != null) {
             hints = querySettings.findAll { AvailableHints.getDefinedHints().contains(it.key) }
         }
-        def ctx = HqlQueryContext.prepare(persistentEntity, hql, namedParams, positionalParams, querySettings, hints, isNative, isUpdate)
+        Map<String, Object> coercedParams = namedParams?.collectEntries { k, v -> [k.toString(), v] } ?: [:]
+        def ctx = HqlQueryContext.prepare(persistentEntity, hql, coercedParams, positionalParams, querySettings, hints, isNative, isUpdate)
         return HibernateHqlQueryCreator.createHqlQuery(
                 (HibernateDatastore) datastore,
                 sessionFactory,

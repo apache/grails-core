@@ -34,7 +34,7 @@ import org.hibernate.query.QueryFlushMode;
  */
 final class MutationQueryDelegate implements HqlQueryDelegate {
 
-    private final MutationQuery mutationQuery;
+    private final transient MutationQuery mutationQuery;
 
     MutationQueryDelegate(MutationQuery mutationQuery) {
         this.mutationQuery = mutationQuery;

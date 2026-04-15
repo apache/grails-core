@@ -18,6 +18,7 @@
  */
 package org.grails.orm.hibernate.query;
 
+import java.io.Serializable;
 import java.util.Collection;
 import java.util.List;
 
@@ -36,7 +37,7 @@ import org.hibernate.query.QueryFlushMode;
  * in {@link SelectQueryDelegate} and vice-versa for {@link #list()} in
  * {@link MutationQueryDelegate}.
  */
-public interface HqlQueryDelegate {
+public interface HqlQueryDelegate extends Serializable {
 
     // ── common ────────────────────────────────────────────────────────────────
 

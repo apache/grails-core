@@ -110,23 +110,28 @@ public class PredicateGenerator {
     @SuppressWarnings("unchecked")
     private Predicate handleSubqueryCriterion(AbstractQuery<?> criteriaQuery, From<?, ?> root, JpaQueryContext fromsByProvider, GrailsHibernatePersistentEntity entity, Query.SubqueryCriterion c) {
         Expression<?> propertyPath = fromsByProvider.getFullyQualifiedExpression(c.getProperty());
-        QueryableCriteria qc = c.getValue();
-        
+        QueryableCriteria<?> qc = c.getValue();
+
         // If it's a comparison criterion, we expect the subquery to return the same type as the property
         Class<?> expectedType = propertyPath != null ? propertyPath.getJavaType() : qc.getPersistentEntity().getJavaClass();
-        
-        Subquery<?> subquery = criteriaQuery.subquery(expectedType);
-        var creator = new JpaCriteriaQueryCreator(new Query.ProjectionList(), criteriaBuilder, (GrailsHibernatePersistentEntity) qc.getPersistentEntity(), (DetachedCriteria) qc, conversionService);
-        creator.setParentContext(fromsByProvider);
-        
+
         // If the subquery has no projections, we default to projecting the SAME property name if available on the subquery entity
         if (qc.getProjections().isEmpty()) {
             PersistentProperty prop = qc.getPersistentEntity().getPropertyByName(c.getProperty());
             if (prop != null) {
-                qc.getProjections().add(Projections.property(c.getProperty()));
+                ((QueryableCriteria) qc).getProjections().add(Projections.property(c.getProperty()));
             }
         }
-        
+
+        Query.ProjectionList projectionList = new Query.ProjectionList();
+        for (Query.Projection p : qc.getProjections()) {
+            projectionList.add(p);
+        }
+
+        Subquery<?> subquery = criteriaQuery.subquery(expectedType);
+        var creator = new JpaCriteriaQueryCreator(projectionList, criteriaBuilder, (GrailsHibernatePersistentEntity) qc.getPersistentEntity(), (DetachedCriteria) qc, conversionService);
+        creator.setParentContext(fromsByProvider);
+
         creator.populateSubquery((JpaSubQuery) subquery);
 
         if (c instanceof Query.EqualsAll) {

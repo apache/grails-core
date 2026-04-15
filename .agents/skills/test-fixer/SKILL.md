@@ -51,20 +51,27 @@ Note: This plugin does **not** run tests itself. It only aggregates results alre
 
 ---
 
-## Key Task
+## Key Tasks
 
+### Targeted Testing (Recommended)
+To save time, clean old results and run only related tests:
+
+```bash
+# 1. Clear stale XML reports
+./gradlew clean
+
+# 2. Run related tests and aggregate
+./gradlew :grails-data-hibernate7-core:test --tests "grails.gorm.tests.BasicCollection*" aggregateTestFailures --continue
+```
+
+### Full Run
 ```bash
 # Run all tests across all modules, continue even on failure, then aggregate
 ./gradlew test aggregateTestFailures --continue
-
-# Run a single module's tests then aggregate
-./gradlew :grails-data-hibernate7-core:test aggregateTestFailures --continue
-
-# Re-run all tests (bypass Gradle's up-to-date caching)
-./gradlew test aggregateTestFailures --continue --rerun-tasks
 ```
 
 `--continue` is essential: without it, Gradle stops at the first failing module and `aggregateTestFailures` never runs.
+**ALWAYS run `clean` before a targeted run if you want `TEST_FAILURES.md` to reflect only the current run.**
 
 ---
 

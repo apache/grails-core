@@ -54,6 +54,20 @@ public class PagedResultList<E> implements PagedList<E> {
         return resultList;
     }
 
+    public Query getQuery() {
+        return query;
+    }
+
+    @Override
+    public int getMax() {
+        return query != null ? query.getMax() : -1;
+    }
+
+    @Override
+    public int getOffset() {
+        return query != null ? query.getOffset() : 0;
+    }
+
     /**
      * @return The total number of records for this query
      */
