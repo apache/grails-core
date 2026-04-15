@@ -134,11 +134,15 @@ public class JpaQueryContext implements Cloneable {
     }
 
     public boolean hasAlias(String alias) {
-        return aliasRegistry.isDefined(alias) || aliasRegistry.hasRealized(alias);
+        return aliasRegistry.isDefined(alias) || aliasRegistry.hasRealized(alias) || (parent != null && parent.hasAlias(alias));
     }
 
     public Expression<?> getAliasedExpression(String alias) {
-        return aliasRegistry.getRealized(alias);
+        Expression<?> expr = aliasRegistry.getRealized(alias);
+        if (expr == null && parent != null) {
+            return parent.getAliasedExpression(alias);
+        }
+        return expr;
     }
 
     public Expression<?> getFullyQualifiedExpression(String path) {

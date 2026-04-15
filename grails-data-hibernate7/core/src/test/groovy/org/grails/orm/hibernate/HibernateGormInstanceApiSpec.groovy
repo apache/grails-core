@@ -24,7 +24,7 @@ import grails.gorm.hibernate.HibernateEntity
 import grails.gorm.transactions.Rollback
 
 import org.hibernate.FlushMode
-import org.grails.orm.hibernate.query.HibernateHqlQueryCreator
+import org.grails.orm.hibernate.query.SelectHqlQuery
 
 class HibernateGormInstanceApiSpec extends HibernateGormDatastoreSpec {
 
@@ -484,7 +484,7 @@ class HibernateGormInstanceApiSpec extends HibernateGormDatastoreSpec {
         
         then:
         query != null
-        query instanceof HibernateHqlQueryCreator
+        query instanceof SelectHqlQuery
         
         when: "Using doListInternal (protected)"
         def results = staticApi.doListInternal("from PersonInstanceApi where name = 'Bob'", [:], [], [:], false)

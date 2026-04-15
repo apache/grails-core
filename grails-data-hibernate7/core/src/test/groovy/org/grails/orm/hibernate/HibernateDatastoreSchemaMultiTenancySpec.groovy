@@ -12,6 +12,7 @@ import spock.lang.Stepwise
 class HibernateDatastoreSchemaMultiTenancySpec extends HibernateGormDatastoreSpec {
 
     void setupSpec() {
+        manager.isTransactional = false
         manager.grailsConfig = [
                 'dataSource.url'               : "jdbc:h2:mem:grailsDB-schema;LOCK_TIMEOUT=10000;DB_CLOSE_DELAY=-1",
                 'dataSource.dbCreate'          : 'create-drop',

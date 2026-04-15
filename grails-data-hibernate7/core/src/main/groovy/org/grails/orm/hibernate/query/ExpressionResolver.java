@@ -62,7 +62,15 @@ public class ExpressionResolver {
         // 3. Handle alias:property
         if (cleanPath.contains(grails.orm.HibernateCriteriaBuilder.ALIAS_SEPARATOR)) {
             String[] parts = cleanPath.split(grails.orm.HibernateCriteriaBuilder.ALIAS_SEPARATOR);
-            return resolveFromAlias(parts[0], parts[1]);
+            Expression<?> resolved = resolveFromAlias(parts[0], parts[1]);
+            if (resolved == null) {
+                resolved = getPath(joinTracker.getRoot(), parts[1]);
+                if (resolved != null) {
+                    resolved.alias(parts[0]);
+                    aliasRegistry.realize(parts[0], resolved);
+                }
+            }
+            return resolved;
         }
 
         // 4. Handle alias.property

@@ -668,8 +668,10 @@ public class HibernateDatastore extends AbstractDatastore
 
     @Override
     public void addTenantForSchema(String schemaName) {
-        addTenantForSchemaInternal(schemaName);
-        registerAllEntitiesWithEnhancer();
+        if (!datastoresByConnectionSource.containsKey(schemaName)) {
+            addTenantForSchemaInternal(schemaName);
+            registerAllEntitiesWithEnhancer();
+        }
         HibernateConnectionSource defaultConnectionSource =
                 (HibernateConnectionSource) connectionSources.getDefaultConnectionSource();
         DataSource dataSource = defaultConnectionSource.getDataSource();
@@ -749,10 +751,14 @@ public class HibernateDatastore extends AbstractDatastore
         dataSource = new SchemaTenantDataSource(dataSource, schemaName, schemaHandler);
         DefaultConnectionSource<DataSource, DataSourceSettings> dataSourceConnectionSource =
                 new DefaultConnectionSource<>(schemaName, dataSource, tenantSettings.getDataSource());
-        ConnectionSource<SessionFactory, HibernateConnectionSourceSettings> connectionSource =
-                factory.create(schemaName, dataSourceConnectionSource, tenantSettings);
-        HibernateDatastore childDatastore = getChildDatastore(connectionSource);
-        datastoresByConnectionSource.put(connectionSource.getName(), childDatastore);
+        try {
+            ConnectionSource<SessionFactory, HibernateConnectionSourceSettings> connectionSource =
+                    factory.create(schemaName, dataSourceConnectionSource, tenantSettings);
+            HibernateDatastore childDatastore = getChildDatastore(connectionSource);
+            datastoresByConnectionSource.put(connectionSource.getName(), childDatastore);
+        } finally {
+            TransactionSynchronizationManager.unbindResourceIfPossible(dataSource);
+        }
     }
 
     private HibernateDatastore getChildDatastore(

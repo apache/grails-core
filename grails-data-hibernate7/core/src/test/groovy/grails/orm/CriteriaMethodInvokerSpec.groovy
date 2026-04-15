@@ -549,7 +549,7 @@ class CriteriaMethodInvokerSpec extends Specification {
     void "test invokeMethod handles metaMethod"() {
         given:
         def datastore = Mock(org.grails.orm.hibernate.HibernateDatastore)
-        def persistentEntity = Mock(org.grails.datastore.mapping.model.PersistentEntity)
+        def persistentEntity = Mock(GrailsHibernatePersistentEntity)
         persistentEntity.getJavaClass() >> CBEmployee
         datastore.getMappingContext() >> mappingContext
         mappingContext.getPersistentEntity(CBEmployee.name) >> persistentEntity

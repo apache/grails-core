@@ -50,7 +50,8 @@ class DetachCriteriaSubquerySpec extends HibernateGormDatastoreSpec {
         DetachedCriteria<User> criteria = User.where {
             exists(
                     GroupAssignment.where {
-                        user.id == id && group.supervisor.email == supervisorEmail
+                        eqProperty "user.id", "{alias}.id"
+                        group.supervisor.email == supervisorEmail
                     }.id()
             )
         }
@@ -103,7 +104,8 @@ class DetachCriteriaSubquerySpec extends HibernateGormDatastoreSpec {
         DetachedCriteria<User> criteria = User.where {
             exists(
                     GroupAssignment.where {
-                        user.id == id && group.supervisor.email == supervisorEmail
+                        eqProperty "user.id", "{alias}.id"
+                        group.supervisor.email == supervisorEmail
                     }.id()
             )
         }

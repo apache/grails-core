@@ -101,6 +101,8 @@ public class JpaCriteriaQueryCreator<T> {
         }
 
         var context = JpaQueryContext.forSubquery(parentContext, aliases, root);
+        registerDetachedJoins(context);
+        discoverAliases(detachedCriteria.getCriteria(), context);
         
         new JpaProjectionAdapter(criteriaBuilder, context).adapt(projections, (AbstractQuery<?>) cq);
         assignGroupBy(cq, context);
@@ -127,6 +129,8 @@ public class JpaCriteriaQueryCreator<T> {
         }
 
         var context = JpaQueryContext.forSubquery(parentContext, aliases, root);
+        registerDetachedJoins(context);
+        discoverAliases(detachedCriteria.getCriteria(), context);
 
         new JpaProjectionAdapter(criteriaBuilder, context).adapt(projections, (AbstractQuery<?>) subquery);
 
@@ -154,10 +158,12 @@ public class JpaCriteriaQueryCreator<T> {
                 return (JpaCriteriaQuery<?>) criteriaBuilder.createQuery(Long.class);
             } else if (first instanceof Query.AvgProjection) {
                 return (JpaCriteriaQuery<?>) criteriaBuilder.createQuery(Double.class);
+            } else if (first instanceof Query.IdProjection) {
+                var identity = entity.getIdentity();
+                Class<?> projectionType = identity != null ? identity.getType() : Object.class;
+                return (JpaCriteriaQuery<?>) criteriaBuilder.createQuery(projectionType);
             } else if (first instanceof Query.PropertyProjection propertyProjection) {
                 return (JpaCriteriaQuery<?>) criteriaBuilder.createQuery(resolveProjectionType(propertyProjection));
-            } else if (first instanceof Query.IdProjection) {
-                return (JpaCriteriaQuery<?>) criteriaBuilder.createQuery(entity.getIdentity().getType());
             }
             return (JpaCriteriaQuery<?>) criteriaBuilder.createQuery(entity.getJavaClass());
         }
@@ -236,6 +242,12 @@ public class JpaCriteriaQueryCreator<T> {
                 discoverAliases(junction.getCriteria(), context);
             }
         }
+    }
+
+    private void registerDetachedJoins(JpaQueryContext context) {
+        detachedCriteria.getJoinTypes().forEach((path, joinType) ->
+                context.registerAlias(path, new HibernateAlias(path, path, joinType))
+        );
     }
 
     private void assignCriteria(

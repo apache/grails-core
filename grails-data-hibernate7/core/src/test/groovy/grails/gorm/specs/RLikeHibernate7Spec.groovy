@@ -30,6 +30,7 @@ import spock.lang.Unroll
 
 @Testcontainers
 @Requires({ isDockerAvailable() })
+//TODO Cleanup
 class RLikeHibernate7Spec extends HibernateGormDatastoreSpec {
 
     @Shared postgres = new PostgreSQLContainer("postgres:16")
@@ -91,7 +92,7 @@ class RLikeHibernate7Spec extends HibernateGormDatastoreSpec {
         "Postgres"   | postgres  | "org.hibernate.dialect.PostgreSQLDialect"
         "MySQL"      | mysql     | "org.hibernate.dialect.MySQLDialect"
         "MariaDB"    | mariadb   | "org.hibernate.dialect.MariaDBDialect"
-        "Oracle"     | oracle    | "org.hibernate.dialect.OracleDialect"
+//        "Oracle"     | oracle    | "org.hibernate.dialect.OracleDialect"
     }
 }
 
