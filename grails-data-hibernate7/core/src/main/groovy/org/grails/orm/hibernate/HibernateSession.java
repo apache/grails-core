@@ -23,15 +23,12 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
 import jakarta.persistence.FlushModeType;
 import jakarta.persistence.LockModeType;
-import jakarta.persistence.criteria.CriteriaBuilder;
-import jakarta.persistence.criteria.CriteriaQuery;
-import jakarta.persistence.criteria.Root;
-
 import org.hibernate.LockMode;
 import org.grails.orm.hibernate.query.HibernateHqlQueryCreator;
 import org.grails.orm.hibernate.query.HqlQueryContext;
@@ -73,6 +70,7 @@ import org.grails.orm.hibernate.query.HibernateQuery;
  * @author Graeme Rocher
  * @since 1.0
  */
+//TODO Cleanup
 @SuppressWarnings({"rawtypes", "PMD.DataflowAnomalyAnalysis", "PMD.AvoidDuplicateLiterals"})
 public class HibernateSession extends AbstractAttributeStoringSession implements QueryAliasAwareSession {
 
@@ -286,6 +284,7 @@ public class HibernateSession extends AbstractAttributeStoringSession implements
 
     @Override
     @SuppressWarnings("PMD.DataflowAnomalyAnalysis")
+    //TODO Clean up
     public Serializable getObjectIdentifier(Object instance) {
         if (instance == null) return null;
         if (proxyHandler.isProxy(instance)) {
@@ -310,6 +309,7 @@ public class HibernateSession extends AbstractAttributeStoringSession implements
      */
     @Override
     @SuppressWarnings("PMD.DataflowAnomalyAnalysis")
+    //TODO Clean up
     public long deleteAll(final QueryableCriteria criteria) {
         return getHibernateTemplate().execute((GrailsHibernateTemplate.HibernateCallback<Integer>) session -> {
             JpaQueryBuilder builder = new JpaQueryBuilder(criteria);
@@ -319,7 +319,7 @@ public class HibernateSession extends AbstractAttributeStoringSession implements
 
             var query = createMutationQuery(session, jpaQueryInfo);
 
-            HqlQueryContext ctx = HqlQueryContext.prepare(criteria.getPersistentEntity(), jpaQueryInfo.getQuery(), null, null, null, false, true);
+            HqlQueryContext ctx = HqlQueryContext.prepare(criteria.getPersistentEntity(), jpaQueryInfo.getQuery(), null, null, null, new HashMap<>(), false, true);
             MutationHqlQuery hqlQuery = (MutationHqlQuery) HibernateHqlQueryCreator.createHqlQuery((HibernateDatastore) getDatastore(), hibernateTemplate.getSessionFactory(), criteria.getPersistentEntity(), ctx);
             ApplicationEventPublisher applicationEventPublisher = datastore.getApplicationEventPublisher();
             applicationEventPublisher.publishEvent(new PreQueryEvent(datastore, hqlQuery));
@@ -351,6 +351,7 @@ public class HibernateSession extends AbstractAttributeStoringSession implements
      */
     @Override
     @SuppressWarnings("PMD.DataflowAnomalyAnalysis")
+    //TODO Cleanup
     public long updateAll(final QueryableCriteria criteria, final Map<String, Object> properties) {
         return getHibernateTemplate().execute((GrailsHibernateTemplate.HibernateCallback<Integer>) session -> {
             JpaQueryBuilder builder = new JpaQueryBuilder(criteria);
@@ -370,7 +371,7 @@ public class HibernateSession extends AbstractAttributeStoringSession implements
 
             var query = createMutationQuery(session, jpaQueryInfo);
 
-            HqlQueryContext ctx = HqlQueryContext.prepare(targetEntity, jpaQueryInfo.getQuery(), null, null, null, false, true);
+            HqlQueryContext ctx = HqlQueryContext.prepare(targetEntity, jpaQueryInfo.getQuery(), null, null, null, new HashMap<>(), false, true);
             MutationHqlQuery hqlQuery = (MutationHqlQuery) HibernateHqlQueryCreator.createHqlQuery((HibernateDatastore) getDatastore(), hibernateTemplate.getSessionFactory(), targetEntity, ctx);
             ApplicationEventPublisher applicationEventPublisher = datastore.getApplicationEventPublisher();
             applicationEventPublisher.publishEvent(new PreQueryEvent(datastore, hqlQuery));
@@ -382,20 +383,33 @@ public class HibernateSession extends AbstractAttributeStoringSession implements
     }
 
     @Override
-    @SuppressWarnings({"PMD.DataflowAnomalyAnalysis", "unchecked"})
+    @SuppressWarnings({"PMD.DataflowAnomalyAnalysis"})
+    //TODO Cleanup
     public List retrieveAll(final Class type, final Iterable keys) {
         final GrailsHibernatePersistentEntity persistentEntity = (GrailsHibernatePersistentEntity) getMappingContext().getPersistentEntity(type.getName());
-        return getHibernateTemplate().execute(session -> {
-            final CriteriaBuilder criteriaBuilder = session.getCriteriaBuilder();
-            CriteriaQuery<?> criteriaQuery = criteriaBuilder.createQuery(type);
-            final Root<?> root = criteriaQuery.from(type);
-            final String id = persistentEntity.getIdentity().getName();
-            criteriaQuery = criteriaQuery.where(root.get(id).in(getIterableAsCollection(keys)));
-            final org.hibernate.query.Query<?> jpaQuery = session.createQuery(criteriaQuery);
-            getHibernateTemplate().applySettings(jpaQuery);
+        final String entityName = persistentEntity.getName();
+        final String idName = persistentEntity.getIdentity().getName();
+        final String hql = "from " + entityName + " as e where e." + idName + " in (:keys)";
 
-            HqlQueryContext queryContext = HqlQueryContext.prepare(persistentEntity, jpaQuery.getQueryString(), null, null, null, false, false);
-            return HibernateHqlQueryCreator.createHqlQuery((HibernateDatastore) getDatastore(), hibernateTemplate.getSessionFactory(), persistentEntity, queryContext).list();
+        return getHibernateTemplate().execute(session -> {
+            // Prepare the HqlQueryContext using our manual HQL string
+            HqlQueryContext queryContext = HqlQueryContext.prepare(
+                persistentEntity,
+                hql,
+                Map.of("keys", getIterableAsCollection(keys)),
+                null,
+                null,
+                new HashMap<>(),
+                false,
+                false
+            );
+
+            return HibernateHqlQueryCreator.createHqlQuery(
+                (HibernateDatastore) getDatastore(),
+                getHibernateTemplate().getSessionFactory(),
+                persistentEntity,
+                queryContext
+            ).list();
         });
     }
 
@@ -432,5 +446,17 @@ public class HibernateSession extends AbstractAttributeStoringSession implements
         } else if (flushMode == FlushModeType.COMMIT) {
             hibernateTemplate.setFlushMode(GrailsHibernateTemplate.FLUSH_COMMIT);
         }
+    }
+
+    //TODO could be used
+    protected <D> HibernateGormStaticApi<D> getStaticApi(Class<D> type) {
+        return new HibernateGormStaticApi<>(
+            type,
+            (HibernateDatastore) getDatastore(),
+            Collections.emptyList(),
+            Thread.currentThread().getContextClassLoader(),
+            ((HibernateDatastore) getDatastore()).getTransactionManager(),
+            null
+        );
     }
 }

@@ -72,6 +72,7 @@ import org.grails.orm.hibernate.support.HibernateRuntimeUtils
  */
 @Slf4j
 @CompileStatic
+//TODO Duplication!!
 class HibernateGormStaticApi<D> extends GormStaticApi<D> {
 
     protected GrailsHibernateTemplate hibernateTemplate
