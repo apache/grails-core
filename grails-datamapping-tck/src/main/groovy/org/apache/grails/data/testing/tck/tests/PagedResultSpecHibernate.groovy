@@ -84,8 +84,7 @@ class PagedResultSpecHibernate extends GrailsDataTckSpec {
 
         then:
         results.size() == 0
-        // results.totalCount == 0 // Hibernate 7 fallback HQL count returns total count of table
-        results.totalCount == 6
+        results.totalCount == 0
     }
 
     void "Test that a paged result list is returned from the critera with pagination params"() {
@@ -102,8 +101,7 @@ class PagedResultSpecHibernate extends GrailsDataTckSpec {
         results.size() == 2
         results[0].firstName == 'Marge'
         results[1].firstName == 'Bart'
-        // results.totalCount == 4 // Hibernate 7 fallback HQL count returns total count of table
-        results.totalCount == 6
+        results.totalCount == 4
     }
 
     void "Test that a paged result list is returned from the critera with pagination and sorting params"() {
@@ -120,8 +118,7 @@ class PagedResultSpecHibernate extends GrailsDataTckSpec {
         results.size() == 2
         results[0].firstName == 'Lisa'
         results[1].firstName == 'Homer'
-        // results.totalCount == 4 // Hibernate 7 fallback HQL count returns total count of table
-        results.totalCount == 6
+        results.totalCount == 4
     }
 
     protected void createPeople() {

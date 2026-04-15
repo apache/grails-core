@@ -60,12 +60,16 @@ public class PagedResultList<E> implements PagedList<E> {
 
     @Override
     public int getMax() {
-        return query != null ? query.getMax() : -1;
+        if (query == null) return -1;
+        Integer max = query.getMax();
+        return max != null ? max : -1;
     }
 
     @Override
     public int getOffset() {
-        return query != null ? query.getOffset() : 0;
+        if (query == null) return 0;
+        Integer offset = query.getOffset();
+        return offset != null ? offset : 0;
     }
 
     /**

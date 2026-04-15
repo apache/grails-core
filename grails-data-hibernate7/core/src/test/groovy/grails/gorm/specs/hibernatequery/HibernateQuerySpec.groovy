@@ -343,9 +343,12 @@ class HibernateQuerySpec extends HibernateGormDatastoreSpec {
         given:
         new Person(firstName: "Fred", lastName: "Rogers", age: 52).save(flush: true)
         new Pet(name: "Pluto", owner: oldBob).save(flush:true)
-        hibernateQuery.exists(
-                new DetachedCriteria(Pet)
-        )
+        def subquery = new DetachedCriteria(Pet).build {
+            projections { id() }
+            eq("name", "Pluto")
+            eqProperty("owner.id", "{alias}.id")
+        }
+        hibernateQuery.exists(subquery)
 
         when:
         def list = hibernateQuery.list()
@@ -359,7 +362,12 @@ class HibernateQuerySpec extends HibernateGormDatastoreSpec {
         given:
         def newBob = new Person(firstName: "Fred", lastName: "Rogers", age: 52).save(flush: true)
         new Pet(name: "Pluto", owner: newBob).save(flush:true)
-        hibernateQuery.notExits(new DetachedCriteria(Pet))
+        def subquery = new DetachedCriteria(Pet).build {
+            projections { id() }
+            eq("name", "Pluto")
+            eqProperty("owner.id", "{alias}.id")
+        }
+        hibernateQuery.notExits(subquery)
         when:
         def result = hibernateQuery.singleResult()
         then:

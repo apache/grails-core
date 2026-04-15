@@ -37,6 +37,10 @@ public class JpaQueryContext implements Cloneable {
     private final ExpressionResolver resolver;
     private JpaQueryContext parent;
 
+    public JpaQueryContext() {
+        this(null, null, null);
+    }
+
     public JpaQueryContext(From<?, ?> root) {
         this(null, null, root);
     }
@@ -47,6 +51,22 @@ public class JpaQueryContext implements Cloneable {
 
     public JpaQueryContext(JpaQueryContext parent, From<?, ?> root) {
         this(parent, null, root);
+    }
+
+    public static JpaQueryContext forRoot(From<?, ?> root) {
+        return new JpaQueryContext(null, null, root);
+    }
+
+    public static JpaQueryContext forRoot(List<HibernateAlias> aliases, From<?, ?> root) {
+        return new JpaQueryContext(null, aliases, root);
+    }
+
+    public static JpaQueryContext forSubquery(JpaQueryContext parent, From<?, ?> root) {
+        return new JpaQueryContext(parent, null, root);
+    }
+
+    public static JpaQueryContext forSubquery(JpaQueryContext parent, List<HibernateAlias> aliases, From<?, ?> root) {
+        return new JpaQueryContext(parent, aliases, root);
     }
 
     /**
@@ -122,10 +142,26 @@ public class JpaQueryContext implements Cloneable {
     }
 
     public Expression<?> getFullyQualifiedExpression(String path) {
+        if (parent != null) {
+            if ("{alias}".equals(path)) {
+                return parent.getRoot();
+            }
+            if (path != null && path.startsWith("{alias}.")) {
+                return parent.getFullyQualifiedExpression("root." + path.substring(8));
+            }
+        }
         return resolver.resolve(path);
     }
 
     public Path<?> getFullyQualifiedPath(String path) {
+        if (parent != null) {
+            if ("{alias}".equals(path)) {
+                return parent.getRoot();
+            }
+            if (path != null && path.startsWith("{alias}.")) {
+                return parent.getFullyQualifiedPath("root." + path.substring(8));
+            }
+        }
         Expression<?> resolved = resolver.resolve(path);
         return resolved instanceof Path<?> path1 ? path1 : null;
     }

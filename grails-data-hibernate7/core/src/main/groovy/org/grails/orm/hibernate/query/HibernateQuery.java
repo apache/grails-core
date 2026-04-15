@@ -87,6 +87,8 @@ public class HibernateQuery extends Query {
     public HibernateQuery(HibernateSession session, GrailsHibernatePersistentEntity entity) {
         super(session, entity);
         this.detachedCriteria = new DetachedCriteria<>(entity.getJavaClass());
+        this.jpaProjectionList = new JpaProjectionList();
+        this.projections = jpaProjectionList;
     }
 
     public GrailsHibernateTemplate getHibernateTemplate() {
@@ -695,6 +697,87 @@ public class HibernateQuery extends Query {
     public Query sizeLt(String propertyName, int size) {
         detachedCriteria.sizeLt(calculatePropertyName(propertyName), size);
         return this;
+    }
+
+    protected JpaProjectionList jpaProjectionList;
+
+    @Override
+    public ProjectionList projections() {
+        return jpaProjectionList;
+    }
+
+    protected class JpaProjectionList extends ProjectionList {
+
+        @Override
+        public ProjectionList add(Projection p) {
+            super.add(p);
+            return this;
+        }
+
+        @Override
+        public org.grails.datastore.mapping.query.api.ProjectionList countDistinct(String property) {
+            add(Projections.countDistinct(property));
+            return this;
+        }
+
+        @Override
+        public org.grails.datastore.mapping.query.api.ProjectionList distinct(String property) {
+            add(Projections.distinct(property));
+            return this;
+        }
+
+        @Override
+        public org.grails.datastore.mapping.query.api.ProjectionList rowCount() {
+            return count();
+        }
+
+        @Override
+        public ProjectionList id() {
+            add(Projections.id());
+            return this;
+        }
+
+        @Override
+        public ProjectionList count() {
+            add(Projections.count());
+            return this;
+        }
+
+        @Override
+        public ProjectionList property(String name) {
+            add(Projections.property(name));
+            return this;
+        }
+
+        @Override
+        public ProjectionList sum(String name) {
+            add(Projections.sum(name));
+            return this;
+        }
+
+        @Override
+        public ProjectionList min(String name) {
+            add(Projections.min(name));
+            return this;
+        }
+
+        @Override
+        public ProjectionList max(String name) {
+            add(Projections.max(name));
+            return this;
+        }
+
+        @Override
+        public ProjectionList avg(String name) {
+            add(Projections.avg(name));
+            return this;
+        }
+
+        @Override
+        public ProjectionList distinct() {
+            add(Projections.distinct());
+            return this;
+        }
     }
 
     public Query sizeNe(String propertyName, int size) {

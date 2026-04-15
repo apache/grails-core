@@ -34,6 +34,7 @@ import org.hibernate.query.criteria.JpaSubQuery;
 import org.springframework.core.convert.ConversionService;
 
 import java.util.Collection;
+import java.util.Collections;
 import java.util.List;
 import java.util.Objects;
 import java.util.stream.Collectors;
@@ -66,6 +67,13 @@ public class PredicateGenerator {
                 .filter(Objects::nonNull)
                 .toList()
                 .toArray(new Predicate[0]);
+    }
+
+    private boolean isCollectionPath(Expression<?> expression) {
+        if (expression instanceof jakarta.persistence.criteria.Path<?> path) {
+            return Collection.class.isAssignableFrom(path.getJavaType());
+        }
+        return false;
     }
 
     public Predicate handleCriterion(
@@ -240,11 +248,14 @@ public class PredicateGenerator {
             Query.PropertyCriterion pc) {
         String propertyName = pc.getProperty();
         Expression<?> propertyPath = fromsByProvider.getFullyQualifiedExpression(propertyName);
+        if (propertyPath == null) {
+            throw new ConfigurationException("Cannot use comparison criteria on non-existent property [" + propertyName + "] of class [" + entity.getJavaClass().getName() + "]");
+        }
 
         if (pc instanceof Query.Equals) {
             return handleEquals(criteriaQuery, pc, propertyPath, fromsByProvider, entity);
         } else if (pc instanceof Query.NotEquals) {
-            return criteriaBuilder.not(handleEquals(criteriaQuery, pc, propertyPath, fromsByProvider, entity));
+            return handleNotEquals(criteriaQuery, pc, propertyPath, fromsByProvider, entity);
         } else if (pc instanceof Query.ILike) {
             return criteriaBuilder.ilike((Expression<String>) propertyPath, (String) convertValue(entity, propertyName, pc.getValue(), propertyPath));
         } else if (pc instanceof Query.RLike rLike) {
@@ -263,25 +274,45 @@ public class PredicateGenerator {
             Object value = pc.getValue();
             if (value instanceof QueryableCriteria qc) {
                 Class<?> expectedType = propertyPath != null ? propertyPath.getJavaType() : qc.getPersistentEntity().getJavaClass();
-                Subquery<?> subquery = criteriaQuery.subquery(expectedType);
-                var creator = new JpaCriteriaQueryCreator(new Query.ProjectionList(), criteriaBuilder, (GrailsHibernatePersistentEntity) qc.getPersistentEntity(), (DetachedCriteria) qc, conversionService);
-                creator.setParentContext(fromsByProvider);
+
+                // If the subquery has no projections, we default to projecting the SAME property name if available on the subquery entity
                 if (qc.getProjections().isEmpty() && propertyPath != null) {
                     PersistentProperty prop = qc.getPersistentEntity().getPropertyByName(propertyName);
                     if (prop != null) {
-                        qc.getProjections().add(Projections.property(propertyName));
+                        ((QueryableCriteria) qc).getProjections().add(Projections.property(propertyName));
                     }
                 }
+
+                Query.ProjectionList projectionList = new Query.ProjectionList();
+                for (Object p : qc.getProjections()) {
+                    projectionList.add((Query.Projection) p);
+                }
+
+                Subquery<?> subquery = criteriaQuery.subquery(expectedType);
+                var creator = new JpaCriteriaQueryCreator(projectionList, criteriaBuilder, (GrailsHibernatePersistentEntity) qc.getPersistentEntity(), (DetachedCriteria) qc, conversionService);
+                creator.setParentContext(fromsByProvider);
+
                 creator.populateSubquery((JpaSubQuery) subquery);
                 return propertyPath.in(subquery);
             }
-            if (value instanceof Collection<?> collection) {
-                List<Object> converted = collection.stream()
-                        .map(v -> convertValue(entity, propertyName, v, propertyPath))
-                        .collect(Collectors.toList());
-                return propertyPath.in(converted);
+
+            Collection<?> collection = value instanceof Collection ? (Collection<?>) value : Collections.singletonList(value);
+            List<Object> converted = collection.stream()
+                    .map(v -> convertValue(entity, propertyName, v, propertyPath))
+                    .collect(Collectors.toList());
+
+            if (isCollectionPath(propertyPath)) {
+                // For collection properties, we use "member of" for each value joined with OR
+                if (converted.isEmpty()) {
+                    return criteriaBuilder.disjunction(); // Always false for empty IN on collection
+                }
+                Predicate[] memberOfPredicates = converted.stream()
+                        .map(v -> criteriaBuilder.isMember((Object) v, (Expression) propertyPath))
+                        .toArray(Predicate[]::new);
+                return criteriaBuilder.or(memberOfPredicates);
             }
-            return propertyPath.in((Collection<?>) convertValue(entity, propertyName, value, propertyPath));
+
+            return propertyPath.in(converted);
         } else if (pc instanceof Query.Between between) {
             return criteriaBuilder.between((Expression<? extends Comparable>) propertyPath, (Comparable) convertValue(entity, propertyName, between.getFrom(), propertyPath), (Comparable) convertValue(entity, propertyName, between.getTo(), propertyPath));
         } else if (pc instanceof Query.SizeEquals) {
@@ -376,6 +407,42 @@ public class PredicateGenerator {
         } else {
             return criteriaBuilder.equal(propertyPath, convertComparisonValue(entity, pc.getProperty(), pc.getValue(), fromsByProvider, propertyPath));
         }
+    }
+
+    @SuppressWarnings("unchecked")
+    private Predicate handleNotEquals(
+            AbstractQuery<?> criteriaQuery,
+            Query.PropertyCriterion pc,
+            Expression<?> propertyPath,
+            JpaQueryContext fromsByProvider,
+            GrailsHibernatePersistentEntity entity) {
+        Object value = pc.getValue();
+        if (value == null) {
+            return criteriaBuilder.isNotNull(propertyPath);
+        }
+        if (value instanceof QueryableCriteria qc) {
+            Class<?> expectedType = propertyPath != null ? propertyPath.getJavaType() : qc.getPersistentEntity().getJavaClass();
+            Subquery<?> subquery = criteriaQuery.subquery(expectedType);
+            var creator = new JpaCriteriaQueryCreator(new Query.ProjectionList(), criteriaBuilder, (GrailsHibernatePersistentEntity) qc.getPersistentEntity(), (DetachedCriteria) qc, conversionService);
+            creator.setParentContext(fromsByProvider);
+
+            if (qc.getProjections().isEmpty() && propertyPath != null) {
+                String propertyName = pc.getProperty();
+                if (propertyName.contains(grails.orm.HibernateCriteriaBuilder.ALIAS_SEPARATOR)) {
+                    propertyName = propertyName.split(grails.orm.HibernateCriteriaBuilder.ALIAS_SEPARATOR)[1];
+                }
+                PersistentProperty prop = qc.getPersistentEntity().getPropertyByName(propertyName);
+                if (prop != null) {
+                    qc.getProjections().add(Projections.property(propertyName));
+                }
+            }
+
+            creator.populateSubquery((JpaSubQuery) subquery);
+            return criteriaBuilder.or(criteriaBuilder.notEqual(propertyPath, subquery), criteriaBuilder.isNull(propertyPath));
+        }
+        return criteriaBuilder.or(
+                criteriaBuilder.notEqual(propertyPath, convertComparisonValue(entity, pc.getProperty(), value, fromsByProvider, propertyPath)),
+                criteriaBuilder.isNull(propertyPath));
     }
 
     @SuppressWarnings("unchecked")

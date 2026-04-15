@@ -30,6 +30,7 @@ import groovy.lang.MissingMethodException;
 import org.springframework.core.convert.ConversionException;
 
 import org.grails.datastore.mapping.core.Datastore;
+import org.grails.datastore.mapping.core.exceptions.ConfigurationException;
 import org.grails.datastore.mapping.model.MappingContext;
 
 /**
@@ -62,6 +63,7 @@ public class FindOrCreateByFinder extends AbstractFindByFinder {
         if (OPERATOR_OR.equals(invocation.getOperator())) {
             throw new MissingMethodException(invocation.getMethodName(), invocation.getJavaClass(), invocation.getArguments());
         }
+        validateInvocation(invocation);
 
         Object result;
         try {
@@ -87,6 +89,17 @@ public class FindOrCreateByFinder extends AbstractFindByFinder {
             }
         }
         return result;
+    }
+
+    protected void validateInvocation(DynamicFinderInvocation invocation) {
+        for (MethodExpression methodExpression : invocation.getExpressions()) {
+            if (methodExpression instanceof MethodExpression.GreaterThan
+                    || methodExpression instanceof MethodExpression.LessThan
+                    || methodExpression instanceof MethodExpression.GreaterThanEquals
+                    || methodExpression instanceof MethodExpression.LessThanEquals) {
+                throw new ConfigurationException("Only equality-based expressions are supported for " + invocation.getMethodName());
+            }
+        }
     }
 
     protected boolean shouldSaveOnCreate() {

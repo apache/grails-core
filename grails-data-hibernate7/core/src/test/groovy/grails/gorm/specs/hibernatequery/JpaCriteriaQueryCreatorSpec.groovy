@@ -89,6 +89,7 @@ class JpaCriteriaQueryCreatorSpec extends HibernateGormDatastoreSpec {
         then:
         query != null
         query.isDistinct()
+        query.resultType == String
     }
 
     def "test createQuery with association projection triggers auto-join"() {
@@ -137,6 +138,7 @@ class JpaCriteriaQueryCreatorSpec extends HibernateGormDatastoreSpec {
 
         then:
         query != null
+        query.resultType == String
     }
 
     def "test populateSubquery"() {
@@ -156,6 +158,74 @@ class JpaCriteriaQueryCreatorSpec extends HibernateGormDatastoreSpec {
 
         then:
         noExceptionThrown()
+    }
+
+    def "test populateSubquery with group projection does not cast to criteria query"() {
+        given:
+        var entity = getPersistentEntity(JpaCriteriaQueryCreatorSpecPerson)
+        var detachedCriteria = new DetachedCriteria(JpaCriteriaQueryCreatorSpecPerson)
+        var projections = new Query.ProjectionList()
+        projections.groupProperty("lastName")
+        var creator = new JpaCriteriaQueryCreator(projections, criteriaBuilder, entity, detachedCriteria, new DefaultConversionService())
+
+        var parentCq = criteriaBuilder.createQuery(JpaCriteriaQueryCreatorSpecPerson)
+        var subquery = parentCq.subquery(String)
+
+        when:
+        creator.populateSubquery(subquery)
+
+        then:
+        noExceptionThrown()
+        subquery.selection != null
+        subquery.groupList.size() == 1
+    }
+
+    def "test createQuery with id projection returns identifier type"() {
+        given:
+        var entity = getPersistentEntity(JpaCriteriaQueryCreatorSpecPerson)
+        var detachedCriteria = new DetachedCriteria(JpaCriteriaQueryCreatorSpecPerson)
+        var projections = new Query.ProjectionList()
+        projections.id()
+        var creator = new JpaCriteriaQueryCreator(projections, criteriaBuilder, entity, detachedCriteria, new DefaultConversionService())
+
+        when:
+        JpaCriteriaQuery<?> query = creator.createQuery()
+
+        then:
+        query != null
+        query.resultType == Long
+    }
+
+    def "test createQuery with aliased count returns long type"() {
+        given:
+        var entity = getPersistentEntity(JpaCriteriaQueryCreatorSpecPerson)
+        var detachedCriteria = new DetachedCriteria(JpaCriteriaQueryCreatorSpecPerson)
+        var projections = new Query.ProjectionList()
+        projections.add(new org.grails.orm.hibernate.query.Hibernate7CountProjection("cnt:firstName"))
+        var creator = new JpaCriteriaQueryCreator(projections, criteriaBuilder, entity, detachedCriteria, new DefaultConversionService())
+
+        when:
+        JpaCriteriaQuery<?> query = creator.createQuery()
+
+        then:
+        query != null
+        query.resultType == Long
+    }
+
+    def "test createQuery with avg projection returns double type"() {
+        given:
+        var entity = getPersistentEntity(JpaCriteriaQueryCreatorSpecPerson)
+        var detachedCriteria = new DetachedCriteria(JpaCriteriaQueryCreatorSpecPerson)
+        var projections = new Query.ProjectionList()
+        projections.avg("id")
+        var creator = new JpaCriteriaQueryCreator(projections, criteriaBuilder, entity, detachedCriteria, new DefaultConversionService())
+
+        when:
+        JpaCriteriaQuery<?> query = creator.createQuery()
+
+        then:
+        query != null
+        query.resultType == Double
     }
 
     def "test createQuery with aliased projection"() {

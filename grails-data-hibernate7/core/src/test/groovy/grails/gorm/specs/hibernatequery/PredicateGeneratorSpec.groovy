@@ -25,6 +25,7 @@ import grails.gorm.specs.HibernateGormDatastoreSpec
 import jakarta.persistence.criteria.CriteriaQuery
 import jakarta.persistence.criteria.Expression
 import jakarta.persistence.criteria.Root
+import jakarta.persistence.criteria.Predicate
 import org.hibernate.query.criteria.JpaExpression
 import org.grails.datastore.mapping.model.PersistentEntity
 import org.grails.datastore.mapping.query.Query
@@ -45,7 +46,7 @@ class PredicateGeneratorSpec extends HibernateGormDatastoreSpec {
     GrailsHibernatePersistentEntity personEntity
 
     void setupSpec() {
-        manager.addAllDomainClasses([PredicateGeneratorSpecPerson, PredicateGeneratorSpecPet, PredicateGeneratorSpecFace])
+        manager.addAllDomainClasses([PredicateGeneratorSpecPerson, PredicateGeneratorSpecPet, PredicateGeneratorSpecFace, PredicateGeneratorSpecNullableAgeEntity])
     }
 
     void setup() {
@@ -373,6 +374,25 @@ class PredicateGeneratorSpec extends HibernateGormDatastoreSpec {
         predicates.length == 1
     }
 
+    def "test getPredicates with NotEquals criterion includes null values"() {
+        given:
+        new PredicateGeneratorSpecNullableAgeEntity(name: "Null 1", age: null).save(failOnError: true)
+        new PredicateGeneratorSpecNullableAgeEntity(name: "Equal", age: 11).save(failOnError: true)
+        new PredicateGeneratorSpecNullableAgeEntity(name: "Null 2", age: null).save(flush: true, failOnError: true)
+        CriteriaQuery<Long> countQuery = cb.createQuery(Long)
+        Root<PredicateGeneratorSpecNullableAgeEntity> countRoot = countQuery.from(PredicateGeneratorSpecNullableAgeEntity)
+        GrailsHibernatePersistentEntity nullableAgeEntity = session.datastore.mappingContext.getPersistentEntity(PredicateGeneratorSpecNullableAgeEntity.name) as GrailsHibernatePersistentEntity
+        JpaQueryContext countFromProvider = new JpaQueryContext(countRoot)
+        Predicate[] predicates = predicateGenerator.getPredicates(countQuery, countRoot, [new Query.NotEquals("age", 11)], countFromProvider, nullableAgeEntity)
+
+        when:
+        countQuery.select(cb.count(countRoot)).where(predicates)
+        Long count = sessionFactory.currentSession.createQuery(countQuery).singleResult
+
+        then:
+        count == 2L
+    }
+
     def "test getPredicates with IdEquals criterion"() {
         given:
         List criteria = [new Query.IdEquals(1L)]
@@ -537,4 +557,15 @@ class PredicateGeneratorSpecPet implements GormEntity<PredicateGeneratorSpecPet>
 class PredicateGeneratorSpecFace implements GormEntity<PredicateGeneratorSpecFace> {
     Long id
     String name
+}
+
+@Entity
+class PredicateGeneratorSpecNullableAgeEntity implements GormEntity<PredicateGeneratorSpecNullableAgeEntity> {
+    Long id
+    String name
+    Integer age
+
+    static constraints = {
+        age nullable: true
+    }
 }

@@ -54,13 +54,18 @@ public class ExpressionResolver {
             return aliasRegistry.getRealized(cleanPath);
         }
 
-        // 2. Handle alias:property
+        // 2. Handle defined but unrealized aliases
+        if (aliasRegistry.isDefined(cleanPath)) {
+            return resolveFromAlias(cleanPath, null);
+        }
+
+        // 3. Handle alias:property
         if (cleanPath.contains(grails.orm.HibernateCriteriaBuilder.ALIAS_SEPARATOR)) {
             String[] parts = cleanPath.split(grails.orm.HibernateCriteriaBuilder.ALIAS_SEPARATOR);
             return resolveFromAlias(parts[0], parts[1]);
         }
 
-        // 3. Handle alias.property
+        // 4. Handle alias.property
         if (cleanPath.contains(".")) {
             int dotIdx = cleanPath.indexOf(".");
             String aliasCandidate = cleanPath.substring(0, dotIdx);
@@ -69,13 +74,13 @@ public class ExpressionResolver {
             }
         }
 
-        // 4. Check Join Tracker (Already joined paths)
+        // 5. Check Join Tracker (Already joined paths)
         From<?, ?> joined = joinTracker.getJoin(cleanPath);
         if (joined != null) {
             return joined;
         }
 
-        // 5. Fallback to Root path resolution
+        // 6. Fallback to Root path resolution
         return getPath(joinTracker.getRoot(), cleanPath);
     }
 
@@ -83,17 +88,17 @@ public class ExpressionResolver {
         // 1. Check if already realized in THIS or PARENT registry
         Expression<?> aliased = aliasRegistry.getRealized(alias);
         if (aliased != null) {
-            if (aliased instanceof From<?, ?> from) {
+            if (subPath != null && aliased instanceof From<?, ?> from) {
                 return getPath(from, subPath);
             }
-            return aliased; // It's a non-From expression (projection alias)
+            return aliased; // It's a non-From expression (projection alias) or subPath is null
         }
 
         // 2. Check if already joined in THIS or PARENT JoinTracker (correlated joins)
         aliased = joinTracker.getJoin(alias);
         if (aliased != null) {
             aliasRegistry.realize(alias, aliased);
-            return getPath((From<?, ?>) aliased, subPath);
+            return subPath != null ? getPath((From<?, ?>) aliased, subPath) : aliased;
         }
 
         // 3. If defined but not joined, materialize it on the CURRENT root
@@ -103,7 +108,7 @@ public class ExpressionResolver {
                 aliased = joinTracker.getRoot().join(def.path(), def.joinType());
                 aliasRegistry.realize(alias, aliased);
                 joinTracker.addJoin(alias, (From<?, ?>) aliased);
-                return getPath((From<?, ?>) aliased, subPath);
+                return subPath != null ? getPath((From<?, ?>) aliased, subPath) : aliased;
             }
         }
 

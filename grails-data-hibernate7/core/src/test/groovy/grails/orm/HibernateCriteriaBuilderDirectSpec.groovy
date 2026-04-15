@@ -1,5 +1,6 @@
 package grails.orm
 
+import grails.gorm.DetachedCriteria
 import grails.gorm.annotation.Entity
 import grails.gorm.specs.HibernateGormDatastoreSpec
 import org.grails.datastore.mapping.query.api.BuildableCriteria
@@ -150,14 +151,15 @@ class HibernateCriteriaBuilderDirectSpec extends HibernateGormDatastoreSpec {
         given:
         def e = CriteriaTestEntity.findByName("A")
         new CriteriaTestChild(name: "child1", parent: e).save(flush: true)
+        def subquery = new DetachedCriteria(CriteriaTestChild).build {
+            projections { id() }
+            eq("name", "child1")
+            eqProperty("parent.id", "{alias}.id")
+        }
 
         when:
         def results = c.list {
-            exists {
-                projections { id() }
-                eq("name", "child1")
-                eqProperty("parent.id", "{alias}.id")
-            }
+            exists(subquery)
         }
         then:
         results.size() == 1
@@ -168,13 +170,14 @@ class HibernateCriteriaBuilderDirectSpec extends HibernateGormDatastoreSpec {
         given:
         def e = CriteriaTestEntity.findByName("A")
         new CriteriaTestChild(name: "child1", parent: e).save(flush: true)
+        def subquery = new DetachedCriteria(CriteriaTestChild).build {
+            projections { id() }
+            eqProperty("parent.id", "{alias}.id")
+        }
 
         when:
         def results = c.list {
-            notExists {
-                projections { id() }
-                eqProperty("parent.id", "{alias}.id")
-            }
+            notExists(subquery)
         }
         then:
         results*.name.sort() == ["B", "C", "D"]

@@ -10,8 +10,8 @@ import org.grails.orm.hibernate.IHibernateTemplate;
 import org.grails.orm.hibernate.cfg.domainbinding.hibernate.GrailsHibernatePersistentEntity;
 
 public class SelectHqlQuery extends Query implements HqlQueryMethods, Serializable {
-    protected final HqlQueryContext queryContext;
-    protected final HqlQueryDelegate delegate;
+    protected final transient HqlQueryContext queryContext;
+    protected final transient HqlQueryDelegate delegate;
 
     protected SelectHqlQuery(HibernateSession session, GrailsHibernatePersistentEntity entity, HqlQueryContext queryContext, HqlQueryDelegate delegate) {
         super(session, entity);
@@ -60,7 +60,7 @@ public class SelectHqlQuery extends Query implements HqlQueryMethods, Serializab
     }
 
     @Override
-    protected List<?> executeQuery(org.grails.datastore.mapping.model.PersistentEntity entity, Junction criteria) {
+    protected List executeQuery(org.grails.datastore.mapping.model.PersistentEntity entity, Junction criteria) {
         return list();
     }
 
@@ -71,4 +71,18 @@ public class SelectHqlQuery extends Query implements HqlQueryMethods, Serializab
     public org.hibernate.query.Query<?> selectQuery() {
         return delegate.selectQuery();
     }
+
+@Override
+public Integer getMax() {
+    if (max != null && max > -1) return max;
+    Object m = queryContext.querySettings().get(HibernateQueryArgument.MAX.value());
+    return m instanceof Number n ? n.intValue() : -1;
+}
+
+@Override
+public Integer getOffset() {
+    if (offset != null && offset > -1) return offset;
+    Object o = queryContext.querySettings().get(HibernateQueryArgument.OFFSET.value());
+    return o instanceof Number n ? n.intValue() : 0;
+}
 }

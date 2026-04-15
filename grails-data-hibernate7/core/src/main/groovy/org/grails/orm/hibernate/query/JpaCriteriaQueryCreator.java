@@ -22,8 +22,10 @@ import jakarta.persistence.criteria.CriteriaBuilder;
 import jakarta.persistence.criteria.CriteriaQuery;
 import jakarta.persistence.criteria.Expression;
 import jakarta.persistence.criteria.From;
+import jakarta.persistence.criteria.Order;
 import jakarta.persistence.criteria.Root;
 import jakarta.persistence.criteria.Selection;
+import jakarta.persistence.criteria.Subquery;
 import org.grails.datastore.mapping.model.PersistentEntity;
 import org.grails.datastore.gorm.query.criteria.DetachedAssociationCriteria;
 import org.grails.datastore.mapping.query.Query;
@@ -98,28 +100,9 @@ public class JpaCriteriaQueryCreator<T> {
             }
         }
 
-        var context = new JpaQueryContext(aliases, root);
-        if (parentContext != null) {
-            context.setParent(parentContext);
-        }
+        var context = JpaQueryContext.forSubquery(parentContext, aliases, root);
         
-        // Pass 1: Discover all projection aliases without full resolution
-        for (Query.Projection projection : projectionList) {
-            if (projection instanceof Query.PropertyProjection propertyProjection) {
-            if (propertyProjection.getPropertyName().contains(grails.orm.HibernateCriteriaBuilder.ALIAS_SEPARATOR)) {
-                String[] parts = propertyProjection.getPropertyName().split(grails.orm.HibernateCriteriaBuilder.ALIAS_SEPARATOR);
-                context.registerAlias(parts[0], new HibernateAlias(parts[0], parts[0])); 
-            } else {
-                context.registerAliasFromPath(propertyProjection.getPropertyName());
-            }
-            } else if (projection instanceof Query.CountDistinctProjection countDistinctProjection) {
-                context.registerAliasFromPath(countDistinctProjection.getPropertyName());
-            }
-        }
-
-        var translator = new JpaProjectionTranslator(criteriaBuilder, context);
-
-        assignProjections(projectionList, cq, translator, context);
+        new JpaProjectionAdapter(criteriaBuilder, context).adapt(projections, (AbstractQuery<?>) cq);
         assignGroupBy(cq, context);
 
         assignOrderBy(cq, context);
@@ -143,54 +126,11 @@ public class JpaCriteriaQueryCreator<T> {
             }
         }
 
-        var context = new JpaQueryContext(aliases, root);
-        if (parentContext != null) {
-            context.setParent(parentContext);
-        }
+        var context = JpaQueryContext.forSubquery(parentContext, aliases, root);
 
-        // Pass 1: Discover all projection aliases
-        for (Query.Projection projection : projectionList) {
-            if (projection instanceof Query.PropertyProjection propertyProjection) {
-            if (propertyProjection.getPropertyName().contains(grails.orm.HibernateCriteriaBuilder.ALIAS_SEPARATOR)) {
-                String[] parts = propertyProjection.getPropertyName().split(grails.orm.HibernateCriteriaBuilder.ALIAS_SEPARATOR);
-                context.registerAlias(parts[0], new HibernateAlias(parts[0], parts[0])); 
-            } else {
-                context.registerAliasFromPath(propertyProjection.getPropertyName());
-            }
-            } else if (projection instanceof Query.CountDistinctProjection countDistinctProjection) {
-                context.registerAliasFromPath(countDistinctProjection.getPropertyName());
-            }
-        }
+        new JpaProjectionAdapter(criteriaBuilder, context).adapt(projections, (AbstractQuery<?>) subquery);
 
-        if (projectionList.stream().anyMatch(Query.DistinctProjection.class::isInstance)) {
-            subquery.distinct(true);
-        }
-
-        var translator = new JpaProjectionTranslator(criteriaBuilder, context);
-
-        var projectionExpressions = projectionList.stream()
-                .map(translator::translate)
-                .filter(Objects::nonNull)
-                .toList();
-        if (!projectionExpressions.isEmpty()) {
-            if (projectionExpressions.size() > 1 || subquery.getResultType().equals(Tuple.class)) {
-                subquery.multiselect(projectionExpressions.toArray(new Selection<?>[0]));
-            } else {
-                subquery.select((Expression) projectionExpressions.get(0));
-            }
-        } else if (subquery.getResultType().equals(entity.getJavaClass())) {
-            subquery.select((Expression) root);
-        } else if (projectionList.isEmpty() && subquery.getResultType().equals(entity.getIdentity().getType())) {
-            subquery.select((Expression) root.get(entity.getIdentity().getName()));
-        }
-
-        Expression<?>[] groupByPaths = collectGroupProjections().stream()
-                .map(gp -> context.getFullyQualifiedExpression(gp.getPropertyName()))
-                .filter(Objects::nonNull)
-                .toArray(Expression[]::new);
-        if (groupByPaths.length > 0) {
-            subquery.groupBy(groupByPaths);
-        }
+        assignGroupBy(subquery, context);
 
         assignCriteria(subquery, root, context, entity);
     }
@@ -212,17 +152,10 @@ public class JpaCriteriaQueryCreator<T> {
             var first = expressionProjections.get(0);
             if (first instanceof Query.CountProjection || first instanceof Query.CountDistinctProjection) {
                 return (JpaCriteriaQuery<?>) criteriaBuilder.createQuery(Long.class);
+            } else if (first instanceof Query.AvgProjection) {
+                return (JpaCriteriaQuery<?>) criteriaBuilder.createQuery(Double.class);
             } else if (first instanceof Query.PropertyProjection propertyProjection) {
-                PersistentEntity persistentEntity = entity.getMappingContext().getPersistentEntity(entity.getJavaClass().getName());
-                String propertyName = propertyProjection.getPropertyName();
-                if (propertyName.contains(grails.orm.HibernateCriteriaBuilder.ALIAS_SEPARATOR)) {
-                    propertyName = propertyName.split(grails.orm.HibernateCriteriaBuilder.ALIAS_SEPARATOR)[1];
-                }
-                var property = persistentEntity.getPropertyByName(propertyName);
-                if (property == null) {
-                    return (JpaCriteriaQuery<?>) criteriaBuilder.createQuery(Object.class);
-                }
-                return (JpaCriteriaQuery<?>) criteriaBuilder.createQuery(property.getType());
+                return (JpaCriteriaQuery<?>) criteriaBuilder.createQuery(resolveProjectionType(propertyProjection));
             } else if (first instanceof Query.IdProjection) {
                 return (JpaCriteriaQuery<?>) criteriaBuilder.createQuery(entity.getIdentity().getType());
             }
@@ -230,36 +163,28 @@ public class JpaCriteriaQueryCreator<T> {
         }
     }
 
-    @SuppressWarnings("unchecked")
-    private <T> void assignProjections(
-            List<Query.Projection> projections, CriteriaQuery<T> cq, JpaProjectionTranslator translator, JpaQueryContext context) {
-        if (projections.stream().anyMatch(p -> p instanceof Query.DistinctProjection || p instanceof Query.DistinctPropertyProjection)) {
-            cq.distinct(true);
-        }
-        var projectionExpressions = projections.stream()
-                .map(translator::translate)
-                .filter(Objects::nonNull)
-                .toList();
-        if (!projectionExpressions.isEmpty()) {
-            if (cq.getResultType().equals(Tuple.class) && projectionExpressions.size() > 1) {
-                cq.select((Selection<? extends T>) criteriaBuilder.tuple(projectionExpressions.toArray(new Selection<?>[0])));
-            } else {
-                cq.select((Selection<? extends T>) projectionExpressions.get(0));
-            }
-        } else {
-            // Default select root
-            cq.select((Selection<? extends T>) context.getRoot());
-        }
-    }
-
-    private void assignGroupBy(CriteriaQuery<?> cq, JpaQueryContext context) {
+    private void assignGroupBy(AbstractQuery<?> query, JpaQueryContext context) {
         var groupByExpressions = collectGroupProjections().stream()
                 .map(groupPropertyProjection -> context.getFullyQualifiedExpression(groupPropertyProjection.getPropertyName()))
                 .filter(Objects::nonNull)
                 .toArray(Expression[]::new);
         if (groupByExpressions.length > 0) {
-            cq.groupBy(groupByExpressions);
+            query.groupBy(groupByExpressions);
         }
+    }
+
+    private Class<?> resolveProjectionType(Query.PropertyProjection projection) {
+        PersistentEntity persistentEntity = entity.getMappingContext().getPersistentEntity(entity.getJavaClass().getName());
+        String propertyName = projection.getPropertyName();
+        if (propertyName.contains(grails.orm.HibernateCriteriaBuilder.ALIAS_SEPARATOR)) {
+            propertyName = propertyName.split(grails.orm.HibernateCriteriaBuilder.ALIAS_SEPARATOR, 2)[1];
+        }
+
+        var property = persistentEntity.getPropertyByName(propertyName);
+        if (property == null) {
+            return Object.class;
+        }
+        return property.getType();
     }
 
     @SuppressWarnings("unchecked")

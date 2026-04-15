@@ -70,7 +70,7 @@ class JpaQueryContextSpec extends Specification {
         parentContext.addFrom("f", faceJoin)
 
         def subRoot = Mock(From)
-        def subContext = new JpaQueryContext(parentContext, null, subRoot)
+        def subContext = JpaQueryContext.forSubquery(parentContext, subRoot)
 
         def namePath = Mock(Path)
 

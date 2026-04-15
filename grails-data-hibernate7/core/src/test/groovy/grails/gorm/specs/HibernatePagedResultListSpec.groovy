@@ -66,9 +66,7 @@ class HibernatePagedResultListSpec extends HibernateGormDatastoreSpec {
         then:
         results instanceof HibernatePagedResultList
         results.size() == 2
-        // Note: currently HibernatePagedResultList falls back to a simple HQL count for Criteria queries
-        // which returns the total number of items in the table, not filtered by criteria.
-        results.totalCount == 3 
+        results.totalCount == 2
         results.max == 2
         results.offset == 0
         results[0].title == "The Shining"

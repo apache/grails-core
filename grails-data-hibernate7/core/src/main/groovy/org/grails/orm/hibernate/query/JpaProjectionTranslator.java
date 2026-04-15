@@ -45,6 +45,8 @@ public class JpaProjectionTranslator {
 
         if (projection instanceof Hibernate7CountProjection countProjection) {
             propertyName = countProjection.getPropertyName();
+        } else if (projection instanceof Query.GroupPropertyProjection groupPropertyProjection) {
+            propertyName = groupPropertyProjection.getPropertyName();
         } else if (projection instanceof Query.PropertyProjection propertyProjection) {
             propertyName = propertyProjection.getPropertyName();
         } else if (projection instanceof Query.CountDistinctProjection countDistinctProjection) {
@@ -76,6 +78,8 @@ public class JpaProjectionTranslator {
             jpaExpression = (JpaExpression<?>) criteriaBuilder.countDistinct(pathExpr);
         } else if (projection instanceof Query.IdProjection) {
             jpaExpression = (JpaExpression<?>) context.getFullyQualifiedPath("root.id");
+        } else if (projection instanceof Query.DistinctPropertyProjection distinctPropertyProjection) {
+            return translate(org.grails.datastore.mapping.query.Projections.property(distinctPropertyProjection.getPropertyName()));
         } else if (projection instanceof Query.DistinctProjection) {
             return null;
         } else if (projection instanceof Query.PropertyProjection) {
