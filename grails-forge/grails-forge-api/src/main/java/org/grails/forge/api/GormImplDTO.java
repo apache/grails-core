@@ -27,7 +27,6 @@ import io.micronaut.core.naming.Described;
 import io.micronaut.core.naming.Named;
 import io.swagger.v3.oas.annotations.media.Schema;
 import org.grails.forge.options.GormImpl;
-import org.grails.forge.util.NameUtils;
 
 /**
  * DTO objects for {@link GormImpl}.
