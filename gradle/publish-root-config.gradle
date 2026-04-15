@@ -71,7 +71,7 @@ def publishedProjects = [
         'grails-scaffolding',
         'grails-services',
         'grails-shell-cli',
-        'grails-sitemesh3',
+        // TODO: 'grails-sitemesh3', // Sitemesh3 has not been updated to support boot 4
         'grails-spring',
         'grails-taglib',
         'grails-test-core',

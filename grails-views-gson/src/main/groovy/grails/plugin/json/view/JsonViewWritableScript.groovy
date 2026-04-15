@@ -44,14 +44,14 @@ abstract class JsonViewWritableScript extends AbstractWritableScript implements 
     Writer doWrite(Writer out) throws IOException {
 
         if (!prettyPrint) {
-            this.json = new grails.plugin.json.builder.StreamingJsonBuilder(out, this.generator)
+            this.json = new StreamingJsonBuilder(out, this.generator)
             run()
             return out
         }
         else {
             def writer = new FastStringWriter()
             setOut(writer)
-            this.json = new grails.plugin.json.builder.StreamingJsonBuilder(writer, this.generator)
+            this.json = new StreamingJsonBuilder(writer, this.generator)
             run()
             def prettyOutput = JsonOutput.prettyPrint(writer.toString())
             out.write(prettyOutput)
@@ -59,11 +59,7 @@ abstract class JsonViewWritableScript extends AbstractWritableScript implements 
         }
     }
 
-    /**
-     * @deprecated Return type will be changed to {@link groovy.json.StreamingJsonBuilder} in a future version.
-     */
-    @Deprecated(since = '7.1')
-    grails.plugin.json.builder.StreamingJsonBuilder json(@DelegatesTo(value = grails.plugin.json.builder.StreamingJsonBuilder.StreamingJsonDelegate, strategy = Closure.DELEGATE_FIRST) Closure callable) {
+    StreamingJsonBuilder json(@DelegatesTo(value = StreamingJsonBuilder.StreamingJsonDelegate, strategy = Closure.DELEGATE_FIRST) Closure callable) {
         if (parentData.size() > 0) {
             if (!inline) {
                 out.write(JsonOutput.OPEN_BRACE)
@@ -97,27 +93,19 @@ abstract class JsonViewWritableScript extends AbstractWritableScript implements 
                 json.call(callable)
             }
         }
-        return json as grails.plugin.json.builder.StreamingJsonBuilder
+        return json as StreamingJsonBuilder
     }
 
-    /**
-     * @deprecated Return type will be changed to {@link groovy.json.StreamingJsonBuilder} in a future version.
-     */
-    @Deprecated(since = '7.1')
-    grails.plugin.json.builder.StreamingJsonBuilder json(Iterable iterable) {
+    StreamingJsonBuilder json(Iterable iterable) {
         this.root = iterable
         json.call(iterable.asList())
-        return json as grails.plugin.json.builder.StreamingJsonBuilder
+        return json as StreamingJsonBuilder
     }
 
-    /**
-     * @deprecated Return type will be changed to {@link groovy.json.StreamingJsonBuilder} in a future version.
-     */
-    @Deprecated(since = '7.1')
-    grails.plugin.json.builder.StreamingJsonBuilder json(Map map) {
+    StreamingJsonBuilder json(Map map) {
         this.root = map
         json.call(map)
-        return json as grails.plugin.json.builder.StreamingJsonBuilder
+        return json as StreamingJsonBuilder
     }
 
     /**
@@ -126,12 +114,10 @@ abstract class JsonViewWritableScript extends AbstractWritableScript implements 
      * @param unescaped The unescaped JSON produced from templates
      *
      * @return The json builder
-     * @deprecated Return type will be changed to {@link groovy.json.StreamingJsonBuilder} in a future version.
      */
-    @Deprecated(since = '7.1')
-    grails.plugin.json.builder.StreamingJsonBuilder json(groovy.json.JsonOutput.JsonUnescaped unescaped) {
+    StreamingJsonBuilder json(groovy.json.JsonOutput.JsonUnescaped unescaped) {
         print(unescaped.text)
-        return json as grails.plugin.json.builder.StreamingJsonBuilder
+        return json as StreamingJsonBuilder
     }
 
     /**
@@ -140,10 +126,8 @@ abstract class JsonViewWritableScript extends AbstractWritableScript implements 
      * @param writable The unescaped JSON produced from templates
      *
      * @return The json builder
-     * @deprecated Return type will be changed to {@link groovy.json.StreamingJsonBuilder} in a future version.
      */
-    @Deprecated(since = '7.1')
-    grails.plugin.json.builder.StreamingJsonBuilder json(JsonOutput.JsonWritable writable) {
+    StreamingJsonBuilder json(JsonOutput.JsonWritable writable) {
         if (parentData.size() > 0) {
             if (!inline) {
                 out.write(JsonOutput.OPEN_BRACE)
@@ -169,23 +153,15 @@ abstract class JsonViewWritableScript extends AbstractWritableScript implements 
             writable.setInline(inline)
             writable.writeTo(out)
         }
-        return json as grails.plugin.json.builder.StreamingJsonBuilder
+        return json as StreamingJsonBuilder
     }
 
-    /**
-     * @deprecated Return type will be changed to {@link groovy.json.StreamingJsonBuilder} in a future version.
-     */
-    @Deprecated(since = '7.1')
-    grails.plugin.json.builder.StreamingJsonBuilder json(Iterable iterable, @DelegatesTo(value = grails.plugin.json.builder.StreamingJsonBuilder.StreamingJsonDelegate, strategy = Closure.DELEGATE_FIRST) Closure callable) {
+    StreamingJsonBuilder json(Iterable iterable, @DelegatesTo(value = StreamingJsonBuilder.StreamingJsonDelegate, strategy = Closure.DELEGATE_FIRST) Closure callable) {
         json.call(iterable.asList(), callable)
-        return json as grails.plugin.json.builder.StreamingJsonBuilder
+        return json as StreamingJsonBuilder
     }
 
-    /**
-     * @deprecated Return type will be changed to {@link groovy.json.StreamingJsonBuilder} in a future version.
-     */
-    @Deprecated(since = '7.1')
-    grails.plugin.json.builder.StreamingJsonBuilder json(Object...args) {
+    StreamingJsonBuilder json(Object...args) {
         if (args.length == 1) {
             def val = args[0]
             if (val instanceof groovy.json.JsonOutput.JsonUnescaped) {
@@ -201,7 +177,7 @@ abstract class JsonViewWritableScript extends AbstractWritableScript implements 
         else {
             json.call(args)
         }
-        return json as grails.plugin.json.builder.StreamingJsonBuilder
+        return json as StreamingJsonBuilder
     }
 
     private GrailsView prepareParentWritable(GrailsViewTemplate parentTemplate, Map parentModel) {

@@ -19,6 +19,7 @@
 
 package grails.plugin.json.view
 
+import groovy.json.JsonGenerator
 import groovy.text.Template
 import groovy.transform.CompileStatic
 import org.codehaus.groovy.control.CompilerConfiguration
@@ -56,15 +57,7 @@ class JsonViewTemplateEngine extends ResolvableGroovyTemplateEngine {
 
     private final boolean compileStatic
 
-    final groovy.json.JsonGenerator generator
-
-    /**
-     * @deprecated Return type will be changed to {@link groovy.json.JsonGenerator} in a future version
-     */
-    @Deprecated(since = '7.1')
-    grails.plugin.json.builder.JsonGenerator getGenerator() {
-        this.generator as grails.plugin.json.builder.JsonGenerator
-    }
+    final JsonGenerator generator
 
     @Autowired
     JsonApiIdRenderStrategy jsonApiIdRenderStrategy
@@ -92,7 +85,7 @@ class JsonViewTemplateEngine extends ResolvableGroovyTemplateEngine {
         super(configuration, classLoader)
         this.compileStatic = configuration.compileStatic
 
-        groovy.json.JsonGenerator.Options options = new groovy.json.JsonGenerator.Options()
+        JsonGenerator.Options options = new JsonGenerator.Options()
         JsonViewGeneratorConfiguration config = ((JsonViewConfiguration) configuration).generator
 
         if (!config.escapeUnicode) {
@@ -109,10 +102,9 @@ class JsonViewTemplateEngine extends ResolvableGroovyTemplateEngine {
         options.dateFormat(config.dateFormat, locale)
         options.timezone(config.timeZone)
 
-        Map<String, groovy.json.JsonGenerator.Converter> convertersByClass = new LinkedHashMap<>()
-        registerConverters(ServiceLoader.load(groovy.json.JsonGenerator.Converter, classLoader), convertersByClass)
-        registerConverters(ServiceLoader.load(grails.plugin.json.builder.JsonGenerator.Converter, classLoader), convertersByClass)
-        List<groovy.json.JsonGenerator.Converter> converters = new ArrayList<>(convertersByClass.values())
+        Map<String, JsonGenerator.Converter> convertersByClass = new LinkedHashMap<>()
+        registerConverters(ServiceLoader.load(JsonGenerator.Converter, classLoader), convertersByClass)
+        List<JsonGenerator.Converter> converters = new ArrayList<>(convertersByClass.values())
         converters.add(new InstantJsonConverter())
         converters.add(new LocalDateJsonConverter())
         converters.add(new LocalDateTimeJsonConverter())
@@ -129,9 +121,9 @@ class JsonViewTemplateEngine extends ResolvableGroovyTemplateEngine {
         this.generator = options.build()
     }
 
-    private static void registerConverters(Iterable<? extends groovy.json.JsonGenerator.Converter> source,
-                                           Map<String, groovy.json.JsonGenerator.Converter> target) {
-        for (groovy.json.JsonGenerator.Converter converter : source) {
+    private static void registerConverters(Iterable<? extends JsonGenerator.Converter> source,
+                                           Map<String, JsonGenerator.Converter> target) {
+        for (JsonGenerator.Converter converter : source) {
             target.putIfAbsent(converter.getClass().getName(), converter)
         }
     }

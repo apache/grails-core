@@ -22,6 +22,7 @@ plugins {
     id 'java-library'
     id 'project-report'
     id 'org.apache.grails.buildsrc.properties'
+    id 'org.apache.grails.buildsrc.dependency-validator'
     id 'org.apache.grails.buildsrc.compile'
     id 'org.apache.grails.buildsrc.publish'
     id 'org.apache.grails.buildsrc.sbom'
@@ -29,22 +30,6 @@ plugins {
 
 version = projectVersion
 group = 'org.apache.grails'
-
-// Micronaut 5.x requires JDK 21+. Use a Gradle toolchain so this module compiles
-// with JDK 21 while the rest of the build stays on JDK 17. Gradle Module Metadata
-// automatically stamps org.gradle.jvm.version=21, giving consumers on JDK 17 a
-// clean dependency resolution failure instead of a runtime UnsupportedClassVersionError.
-ext.javaVersion = 21
-
-java {
-    toolchain {
-        languageVersion = JavaLanguageVersion.of(21)
-    }
-}
-
-tasks.withType(Groovydoc).configureEach {
-    enabled = false
-}
 
 dependencies {
     compileOnlyApi platform("io.micronaut.platform:micronaut-platform:$micronautPlatformVersion")
@@ -54,8 +39,9 @@ dependencies {
     api platform("io.micronaut.platform:micronaut-platform:$micronautPlatformVersion")
     api 'io.micronaut.spring:micronaut-spring-boot-starter'
 
-    // For the grails plugin interface
-    compileOnly platform(project(':grails-bom'))
+    // For the grails plugin interface. enforcedPlatform ensures Groovy 4.x from the
+    // grails-bom wins over Groovy 5.x from the micronaut platform during compilation.
+    compileOnly enforcedPlatform(project(':grails-bom'))
     compileOnly project(':grails-core')
 }
 

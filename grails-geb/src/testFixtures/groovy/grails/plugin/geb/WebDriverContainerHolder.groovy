@@ -50,6 +50,7 @@ import org.testcontainers.images.PullPolicy
 import org.testcontainers.utility.DockerImageName
 
 import grails.plugin.geb.serviceloader.ServiceRegistry
+import grails.util.Holders
 
 import static GrailsGebSettings.DEFAULT_AT_CHECK_WAITING
 import static GrailsGebSettings.DEFAULT_TIMEOUT_IMPLICITLY_WAIT
@@ -112,6 +113,15 @@ class WebDriverContainerHolder {
                     'The `serverPort` property that should have been ' +
                     'injected by the @Integration annotation was not found.'
             )
+        }
+    }
+
+    private static String findServerContextPath() {
+        try {
+            def applicationContext = Holders.findApplicationContext()
+            return applicationContext?.environment?.getProperty('server.servlet.context-path', '/')
+        } catch (ignored) {
+            return '/'
         }
     }
 
@@ -285,8 +295,19 @@ class WebDriverContainerHolder {
     void setupBrowserUrl(IMethodInvocation methodInvocation) {
         if (!browser) return
         int hostPort = findServerPort(methodInvocation)
+        String contextPath = findServerContextPath()
         Testcontainers.exposeHostPorts(hostPort)
-        browser.baseUrl = "$containerConf.protocol://$containerConf.hostName:$hostPort"
+        String baseUrl = "$containerConf.protocol://$containerConf.hostName:$hostPort"
+        if (contextPath && contextPath != '/') {
+            if (!contextPath.startsWith('/')) {
+                contextPath = "/$contextPath"
+            }
+            if (!contextPath.endsWith('/')) {
+                contextPath = "$contextPath/"
+            }
+            baseUrl += contextPath
+        }
+        browser.baseUrl = baseUrl
     }
 
     private GebTestManager createTestManager() {

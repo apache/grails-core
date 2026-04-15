@@ -23,6 +23,7 @@ import jakarta.transaction.Transaction;
 import jakarta.transaction.TransactionManager;
 import jakarta.transaction.TransactionSynchronizationRegistry;
 import jakarta.transaction.UserTransaction;
+
 import org.hibernate.TransactionException;
 import org.hibernate.engine.transaction.jta.platform.spi.JtaPlatform;
 
@@ -47,7 +48,6 @@ class ConfigurableJtaPlatform implements JtaPlatform {
     @Nullable
     private final TransactionSynchronizationRegistry transactionSynchronizationRegistry;
 
-
     /**
      * Create a new ConfigurableJtaPlatform instance with the given
      * JTA TransactionManager and optionally a given UserTransaction.
@@ -56,14 +56,13 @@ class ConfigurableJtaPlatform implements JtaPlatform {
      * @param tsr the JTA 1.1 TransactionSynchronizationRegistry (optional)
      */
     public ConfigurableJtaPlatform(TransactionManager tm, @Nullable UserTransaction ut,
-            @Nullable TransactionSynchronizationRegistry tsr) {
+                                   @Nullable TransactionSynchronizationRegistry tsr) {
 
         Assert.notNull(tm, "TransactionManager reference must not be null");
         this.transactionManager = tm;
         this.userTransaction = (ut != null ? ut : new UserTransactionAdapter(tm));
         this.transactionSynchronizationRegistry = tsr;
     }
-
 
     @Override
     public TransactionManager retrieveTransactionManager() {
@@ -84,8 +83,7 @@ class ConfigurableJtaPlatform implements JtaPlatform {
     public boolean canRegisterSynchronization() {
         try {
             return (this.transactionManager.getStatus() == Status.STATUS_ACTIVE);
-        }
-        catch (SystemException ex) {
+        } catch (SystemException ex) {
             throw new TransactionException("Could not determine JTA transaction status", ex);
         }
     }
@@ -94,12 +92,10 @@ class ConfigurableJtaPlatform implements JtaPlatform {
     public void registerSynchronization(Synchronization synchronization) {
         if (this.transactionSynchronizationRegistry != null) {
             this.transactionSynchronizationRegistry.registerInterposedSynchronization(synchronization);
-        }
-        else {
+        } else {
             try {
                 this.transactionManager.getTransaction().registerSynchronization(synchronization);
-            }
-            catch (Exception ex) {
+            } catch (Exception ex) {
                 throw new TransactionException("Could not access JTA Transaction to register synchronization", ex);
             }
         }

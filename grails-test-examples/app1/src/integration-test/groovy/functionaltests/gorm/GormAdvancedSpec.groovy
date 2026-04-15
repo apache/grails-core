@@ -576,65 +576,6 @@ class GormAdvancedSpec extends Specification {
         results.size() > 0
     }
 
-    // ========== Named Query Tests ==========
-
-    def "named query - simple"() {
-        when: "using named query"
-        def results = Author.activeAuthors.list()
-
-        then: "active authors are returned"
-        results.size() >= 3  // At least our 3 test authors
-        results.every { it.active }
-    }
-
-    def "named query - with parameter"() {
-        when: "using named query with parameter"
-        def results = Author.fromCountry('USA').list()
-
-        then: "USA authors are returned"
-        results.size() >= 2  // At least our 2 USA test authors
-        results.every { it.country == 'USA' }
-    }
-
-    def "named query - chained"() {
-        when: "chaining named queries"
-        def results = Author.activeAuthors.fromCountry('USA').list()
-
-        then: "active USA authors"
-        results.size() >= 2  // At least our 2 active USA test authors
-        results.every { it.active && it.country == 'USA' }
-    }
-
-    def "named query - with criteria"() {
-        when: "combining named query with criteria"
-        def results = Author.activeAuthors.list {
-            gt('birthYear', 1970)
-        }
-
-        then: "active authors born after 1970"
-        results.every { it.active && it.birthYear > 1970 }
-    }
-
-    def "named query - book queries"() {
-        when: "using book named queries"
-        def fantasyBooks = GormBook.inGenre('Fantasy').list()
-        def highRated = GormBook.highlyRated.list()
-        def affordable = GormBook.pricedBetween(10.00, 20.00).list()
-
-        then: "queries return correct results"
-        fantasyBooks.every { it.genre == 'Fantasy' }
-        highRated.every { it.rating >= 4.0 }
-        affordable.every { it.price >= 10.00 && it.price <= 20.00 }
-    }
-
-    def "named query - count"() {
-        when: "counting with named query"
-        def count = GormBook.availableInPrint.count()
-
-        then: "count is returned"
-        count >= 9
-    }
-
     // ========== Detached Criteria Tests ==========
 
     def "detached criteria - basic"() {

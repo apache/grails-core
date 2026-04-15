@@ -32,11 +32,9 @@ public class SpringFlushSynchronization implements TransactionSynchronization {
 
     private final Session session;
 
-
     public SpringFlushSynchronization(Session session) {
         this.session = session;
     }
-
 
     @Override
     public void flush() {

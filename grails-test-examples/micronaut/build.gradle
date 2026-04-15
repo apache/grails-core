@@ -21,31 +21,15 @@ import org.springframework.boot.gradle.tasks.bundling.BootArchive
 plugins {
     id 'org.apache.grails.buildsrc.properties'
     id 'org.apache.grails.buildsrc.compile'
+    id 'org.apache.grails.buildsrc.dependency-validator'
 }
 
 version = '0.1'
 group = 'micronaut'
 
-ext.javaVersion = 21
-
 apply plugin: 'org.apache.grails.gradle.grails-web'
 
-java {
-    toolchain {
-        languageVersion = JavaLanguageVersion.of(21)
-    }
-}
-
-tasks.withType(Groovydoc).configureEach {
-    enabled = false
-}
-
 apply plugin: 'cloud.wondrify.asset-pipeline'
-
-// TODO: BOOT4 - asset-pipeline throws NPE on JDK 21. Disable until asset-pipeline is fixed.
-tasks.named('assetCompile') {
-    enabled = false
-}
 
 // The grails-gsp Gradle plugin is not needed for running the functional tests.
 // It is applied as a smoke test to check that compiling gsp
@@ -53,7 +37,7 @@ tasks.named('assetCompile') {
 apply plugin: 'org.apache.grails.gradle.grails-gsp'
 
 dependencies {
-    implementation platform(project(':grails-bom'))
+    implementation enforcedPlatform(project(':grails-bom'))
 
     implementation "io.micronaut:micronaut-http-client:$micronautHttpClientVersion"
     implementation "io.micronaut:micronaut-retry:$micronautHttpClientVersion"
@@ -67,7 +51,7 @@ dependencies {
     annotationProcessor 'io.micronaut:micronaut-inject-java'
     annotationProcessor 'jakarta.annotation:jakarta.annotation-api'
 
-    testAndDevelopmentOnly platform(project(':grails-bom'))
+    testAndDevelopmentOnly enforcedPlatform(project(':grails-bom'))
     testAndDevelopmentOnly 'org.apache.grails:grails-dependencies-assets'
 
     runtimeOnly 'cloud.wondrify:asset-pipeline-grails'

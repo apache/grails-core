@@ -25,7 +25,7 @@ on:
   workflow_dispatch:
 # queue jobs and only allow 1 run per branch due to the likelihood of hitting GitHub resource limits
 concurrency:
-  group: release-pipeline-71
+  group: release-pipeline-${{ github.event.pull_request.base.ref || github.ref_name }}
   cancel-in-progress: false
 jobs:
   update_release_draft:

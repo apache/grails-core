@@ -50,7 +50,6 @@ class BinaryPluginSpec extends Specification {
             binaryPlugin.version == "1.0"
             binaryPlugin.providedArtefacts.size() == 1
             binaryPlugin.providedArtefacts[0] == TestBinaryResource
-            binaryPlugin.binaryDescriptor != null
     }
 
 

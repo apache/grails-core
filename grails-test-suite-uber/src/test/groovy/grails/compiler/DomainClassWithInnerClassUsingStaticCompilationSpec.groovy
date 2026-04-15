@@ -40,15 +40,6 @@ class DomainClassWithInnerClassUsingStaticCompilationSpec extends Specification 
             SomeClass.mappingClosureCalled
     }
 
-    @Issue('https://github.com/apache/grails-core/issues/12461')
-    void 'a domain class marked with @GrailsCompileStatic containing an inner class and a "namedQueries" block'() {
-        setup:
-            SomeClass.getNamedQuery('test')
-
-        expect: 'the configuration from the "namedQueries" closure is available'
-            SomeClass.namedQueries instanceof Closure
-            SomeClass.namedQueriesClosureCalled
-    }
 }
 
 @GrailsCompileStatic

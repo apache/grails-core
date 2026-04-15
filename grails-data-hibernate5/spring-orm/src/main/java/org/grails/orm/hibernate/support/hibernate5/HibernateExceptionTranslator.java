@@ -17,6 +17,7 @@
 package org.grails.orm.hibernate.support.hibernate5;
 
 import jakarta.persistence.PersistenceException;
+
 import org.hibernate.HibernateException;
 import org.hibernate.JDBCException;
 
@@ -48,7 +49,6 @@ public class HibernateExceptionTranslator implements PersistenceExceptionTransla
     @Nullable
     private SQLExceptionTranslator jdbcExceptionTranslator;
 
-
     /**
      * Set the JDBC exception translator for Hibernate exception translation purposes.
      * <p>Applied to any detected {@link java.sql.SQLException} root cause of a Hibernate
@@ -63,7 +63,6 @@ public class HibernateExceptionTranslator implements PersistenceExceptionTransla
     public void setJdbcExceptionTranslator(SQLExceptionTranslator jdbcExceptionTranslator) {
         this.jdbcExceptionTranslator = jdbcExceptionTranslator;
     }
-
 
     @Override
     @Nullable
@@ -92,7 +91,7 @@ public class HibernateExceptionTranslator implements PersistenceExceptionTransla
     protected DataAccessException convertHibernateAccessException(HibernateException ex) {
         if (this.jdbcExceptionTranslator != null && ex instanceof JDBCException jdbcEx) {
             DataAccessException dae = this.jdbcExceptionTranslator.translate(
-                    "Hibernate operation: " + jdbcEx.getMessage(), jdbcEx.getSQL(), jdbcEx.getSQLException());
+                "Hibernate operation: " + jdbcEx.getMessage(), jdbcEx.getSQL(), jdbcEx.getSQLException());
             if (dae != null) {
                 return dae;
             }

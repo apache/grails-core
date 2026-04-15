@@ -18,7 +18,7 @@
  */
 package grails.plugin.json.view
 
-import com.fasterxml.jackson.databind.ObjectMapper
+import tools.jackson.databind.json.JsonMapper
 import grails.views.ViewException
 import grails.views.json.test.JsonViewUnitTest
 import spock.lang.Shared
@@ -27,10 +27,10 @@ import spock.lang.Specification
 class IterableRenderSpec extends Specification implements JsonViewUnitTest {
 
     @Shared
-    ObjectMapper objectMapper
+    JsonMapper objectMapper
 
     def setupSpec() {
-        objectMapper = new ObjectMapper()
+        objectMapper = JsonMapper.builder().build()
     }
 
     void 'Test render a collection type'() {

@@ -21,6 +21,7 @@
 
 <div class="bg-body-tertiary">
     <div class="container-lg py-4">
+        <g:flashMessages />
         <g:layoutBody/>
     </div>
 </div>

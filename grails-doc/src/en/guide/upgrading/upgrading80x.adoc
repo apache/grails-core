@@ -22,7 +22,29 @@ under the License.
 To ensure compatibility with Grails {version}, please review the following upgrade instructions carefully.
 This guide outlines the necessary steps and warnings to upgrade your Grails project from Grails 7.x to Grails 8.
 
-==== 1. Spring Boot 4.0.x
+[TIP]
+====
+**Before you start: add the Spring Boot properties migrator.**
+It is the fastest way to find deprecated or relocated configuration properties in your `application.yml` / `application.groovy`.
+Add it as a `runtimeOnly` dependency for the duration of your migration:
+
+[source,groovy]
+.build.gradle
+----
+runtimeOnly 'org.springframework.boot:spring-boot-properties-migrator'
+----
+
+Boot the application once; the migrator logs warnings for every deprecated property it finds and, in many cases, applies the rename automatically at runtime so the app keeps starting.
+Remove the dependency once your configuration is clean.
+====
+
+==== 1. Java 21 Minimum Requirement
+
+Grails 8 requires a minimum of Java 21 to both build and run Grails applications.
+This is an increase from Grails 7, which required Java 17.
+Update your project's toolchain, CI pipelines, and deployment environments to use JDK 21 or later.
+
+==== 2. Spring Boot 4.0.x
 
 Grails 8 upgrades from Spring Boot 3.5.x to Spring Boot 4.0.x.
 This is a major upgrade that brings Spring Framework 7.0.x, new module structure, and several breaking changes.
@@ -32,7 +54,7 @@ For full details, consult:
 1. https://github.com/spring-projects/spring-boot/wiki/Spring-Boot-4.0-Release-Notes[Spring Boot 4.0 Release Notes]
 2. https://github.com/spring-projects/spring-framework/wiki/Upgrading-to-Spring-Framework-7.x[Upgrading to Spring Framework 7]
 
-==== 2. Spring Boot Autoconfigure Modularization
+==== 3. Spring Boot Autoconfigure Modularization
 
 Spring Boot 4 split the monolithic `spring-boot-autoconfigure` module into domain-specific modules.
 Auto-configuration classes have moved to new packages.
@@ -55,7 +77,36 @@ import org.springframework.boot.autoconfigure.mongo.MongoAutoConfiguration
 import org.springframework.boot.mongodb.autoconfigure.MongoAutoConfiguration
 ----
 
-==== 3. MongoDB Configuration Property Changes
+In addition to the auto-configuration class moves, two foundational interfaces were relocated out of nested packages and into `org.springframework.boot` directly:
+
+[cols="1,1", options="header"]
+|===
+| Before (Spring Boot 3.x)
+| After (Spring Boot 4.x)
+
+| `org.springframework.boot.env.EnvironmentPostProcessor`
+| `org.springframework.boot.EnvironmentPostProcessor`
+
+| `org.springframework.boot.BootstrapRegistry` and related types in `org.springframework.boot`
+| `org.springframework.boot.bootstrap.BootstrapRegistry`, `org.springframework.boot.bootstrap.BootstrapRegistryInitializer`, `org.springframework.boot.bootstrap.ConfigurableBootstrapContext`
+|===
+
+The old locations are deprecated but retained for upgrade ease.
+If your application or plugin contributes an `EnvironmentPostProcessor` or `BootstrapRegistryInitializer`, update both the import and the corresponding `META-INF/spring.factories` key:
+
+[source,properties]
+.META-INF/spring.factories - Before
+----
+org.springframework.boot.env.EnvironmentPostProcessor=com.example.MyPostProcessor
+----
+
+[source,properties]
+.META-INF/spring.factories - After
+----
+org.springframework.boot.EnvironmentPostProcessor=com.example.MyPostProcessor
+----
+
+==== 4. MongoDB Configuration Property Changes
 
 Spring Boot 4 renamed the MongoDB configuration property namespace for Spring Boot's own auto-configuration.
 If your `application.yml` or `application.groovy` uses `spring.data.mongodb.*` properties for Spring Boot auto-configuration, you must rename them to `spring.mongodb.*`.
@@ -82,7 +133,7 @@ spring:
         database: mydb
 ----
 
-==== 4. Hibernate ORM Package Relocations
+==== 5. Hibernate ORM Package Relocations
 
 Spring Framework 7 removed the `org.springframework.orm.hibernate5` package entirely.
 Grails 8 vendors these classes from Spring Framework 6.2.x into a new module (`grails-data-hibernate5-spring-orm`) under the package `org.grails.orm.hibernate.support.hibernate5`.
@@ -119,7 +170,7 @@ However, if your application directly imports any of the following classes, you 
 
 All other classes from `org.springframework.orm.hibernate5` follow the same pattern - replace the `org.springframework.orm.hibernate5` prefix with `org.grails.orm.hibernate.support.hibernate5`.
 
-==== 5. HttpStatus.MOVED_TEMPORARILY Removed
+==== 6. HttpStatus.MOVED_TEMPORARILY Removed
 
 Spring Framework 7 removed the deprecated `HttpStatus.MOVED_TEMPORARILY` constant.
 Use `HttpStatus.FOUND` instead - both represent HTTP 302 with no behavioral change.
@@ -137,7 +188,9 @@ import org.springframework.http.HttpStatus
 response.status = HttpStatus.FOUND.value()
 ----
 
-==== 6. Micronaut Integration - CLASSIC Boot Loader Removed
+==== 7. Micronaut Integration Changes
+
+===== 7.1 CLASSIC Boot Loader Removed
 
 Spring Boot 4 removed the `CLASSIC` loader implementation (`LoaderImplementation.CLASSIC`).
 In Grails 7, the Grails Gradle Plugin automatically configured `bootJar` and `bootWar` tasks to use the `CLASSIC` loader when the `grails-micronaut` plugin was detected.
@@ -161,7 +214,60 @@ tasks.withType(BootArchive).configureEach {
 * The `grails-micronaut` plugin continues to work with Spring Boot 4's default loader.
 If you experience issues running your Micronaut-enabled Grails application via `java -jar`, please report them to the https://github.com/apache/grails-core/issues[Grails issue tracker].
 
-==== 7. Enum Serialization Default Changed
+===== 7.2 enforcedPlatform Required for grails-bom
+
+When using Micronaut, the `grails-bom` **must** be applied as `enforcedPlatform` instead of `platform`.
+The Micronaut 5 platform declares its own managed dependency versions that conflict with those managed by the `grails-bom`.
+Without `enforcedPlatform`, Gradle's default conflict resolution (highest version wins) allows the Micronaut platform to silently override `grails-bom` versions, leading to binary incompatibilities at runtime.
+
+For example, without `enforcedPlatform`:
+
+* **Groovy** is upgraded from 4.0.x to 5.0.x -- Groovy 5 has breaking API changes (e.g. `ArrayGroovyMethods` moved) that cause `NoClassDefFoundError` at runtime
+* **Spock** is upgraded from 2.3-groovy-4.0 to 2.4-groovy-5.0 -- compiled against Groovy 5, incompatible with Groovy 4 classes
+* **Kotlin**, **Mockito**, **Byte Buddy** are upgraded to versions not tested with the Grails stack
+
+Using `enforcedPlatform` makes all `grails-bom` constraints strictly versioned so they cannot be overridden by any transitive dependency.
+
+The Grails Gradle Plugin will error at configuration time if `grails-micronaut` is detected and `grails-bom` is not applied as `enforcedPlatform`.
+
+[source,groovy]
+.build.gradle
+----
+dependencies {
+    // enforcedPlatform is required when using grails-micronaut
+    implementation enforcedPlatform("org.apache.grails:grails-bom:$grailsVersion")
+
+    implementation 'org.apache.grails:grails-micronaut'
+}
+----
+
+NOTE: Applications generated by the Grails Forge automatically use `enforcedPlatform` when the Micronaut feature is selected.
+
+===== 7.3 Micronaut Features Require JDK 25
+
+While the Grails 8 baseline remains JDK 21, any Grails application that uses the Micronaut integration **must** run on JDK 25 or later.
+
+Micronaut Core's internal `io.micronaut.core.propagation.ScopedValues` class references `java.lang.ScopedValue.CallableOp`, which only exists in JDK 25.
+`ScopedValue` was a preview API in JDK 21–24 and was finalized by https://openjdk.org/jeps/506[JEP 506] in JDK 25, at which point its inner type was renamed from `Callable` to `CallableOp`.
+Running Micronaut on JDK 21–24 therefore fails at runtime with:
+
+[source]
+----
+java.lang.NoClassDefFoundError: java/lang/ScopedValue$CallableOp
+    at io.micronaut.core.propagation.ScopedValues.propagate(ScopedValues.java:45)
+    ...
+----
+
+This affects any code path that goes through Micronaut's HTTP client, filters, or context propagation -- including the declarative `@Client` interfaces and `micronaut-http-client-jdk`.
+
+**Action required:**
+
+* If your Grails 8 application uses `grails-micronaut`, `micronaut-http-client`, or any other Micronaut feature, upgrade your build, CI, and deployment JDK to **JDK 25 or later**.
+* Grails applications that do **not** use any Micronaut integration are unaffected and continue to run on JDK 21.
+
+NOTE: The Grails Forge generator enforces this requirement: selecting any Micronaut feature with a JDK version below 25 will fail with `IllegalArgumentException` at generation time.
+
+==== 8. Enum Serialization Default Changed
 
 As announced in the Grails 7.0.2 deprecation notice, the `SimpleEnumMarshaller` is now the default for JSON and XML enum serialization in Grails 8.
 Enums are serialized as simple string values (e.g., `"SUBMIT"`) instead of the verbose legacy format with type metadata.
@@ -183,7 +289,117 @@ grails:
 
 If you need to restore the legacy behavior temporarily, the deprecated marshallers remain available but will be removed in a future release.
 
-==== 8. Theme Support Removed
+==== 9. Jackson 3 is the New Default
+
+Spring Boot 4 ships Jackson 3 (`tools.jackson.*`) and auto-configures a `JsonMapper` bean instead of the Jackson 2 `ObjectMapper`.
+Grails 8 follows that change: any Grails module that previously declared `com.fasterxml.jackson.core:jackson-databind` (Jackson 2) now declares `tools.jackson.core:jackson-databind` (Jackson 3, currently 3.1.0 via the Spring Boot 4 BOM).
+
+**What stayed the same:**
+
+* **Jackson annotations.** All `@JsonProperty`, `@JsonCreator`, `@JsonIgnore`, `@JsonInclude`, `@JsonIgnoreProperties`, etc. remain at `com.fasterxml.jackson.annotation.*`.
+The Spring Boot 4 BOM explicitly permits the `jackson-annotations` 2.x artifact alongside the Jackson 3 BOM, so existing annotated DTOs and domain classes do **not** need to change.
+* The `readTree(String)`, `writeValueAsString(...)`, and `readValue(...)` method names on the mapper are unchanged.
+
+**What changed (and what you need to do if your code touches Jackson directly):**
+
+[cols="1,2,2",options="header"]
+|===
+| Concern | Jackson 2 | Jackson 3
+
+| Package
+| `com.fasterxml.jackson.databind.*`
+| `tools.jackson.databind.*`
+
+| Default mapper type
+| `ObjectMapper`
+| `tools.jackson.databind.json.JsonMapper`
+
+| Construction
+| `new ObjectMapper()`
+| `JsonMapper.builder().build()` (immutable; configuration locked after `build()`)
+
+| Exceptions
+| `JsonProcessingException` / `IOException` (checked)
+| `JacksonException` extends `RuntimeException` (unchecked)
+
+| Default date format
+| Numeric timestamps
+| ISO-8601 strings
+|===
+
+**If you inject the auto-configured mapper:**
+Spring Boot 4 provides a `tools.jackson.databind.json.JsonMapper` bean instead of `com.fasterxml.jackson.databind.ObjectMapper`.
+Update injection points to expect `JsonMapper`.
+
+**If you must stay on Jackson 2 temporarily:**
+Spring Boot 4 still manages the Jackson 2 BOM (currently 2.21.2) and provides an opt-in toggle so the auto-configured mapper preserves Jackson 2 defaults:
+
+[source,yaml]
+.application.yml
+----
+spring:
+    jackson:
+        use-jackson2-defaults: true
+----
+
+This is intended as a migration aid only; new code should target Jackson 3.
+
+**Spring Boot Jackson helper class renames.**
+If your code uses Spring Boot's Jackson helpers, rename them to the Jackson 3 equivalents:
+
+[cols="1,1", options="header"]
+|===
+| Spring Boot 3.x (Jackson 2)
+| Spring Boot 4.x (Jackson 3)
+
+| `Jackson2ObjectMapperBuilderCustomizer`
+| `JsonMapperBuilderCustomizer`
+
+| `JsonObjectSerializer`
+| `ObjectValueSerializer`
+
+| `JsonValueDeserializer`
+| `ObjectValueDeserializer`
+
+| `@JsonComponent`
+| `@JacksonComponent`
+
+| `@JsonMixin`
+| `@JacksonMixin`
+|===
+
+**Configuration property renames.**
+The `spring.jackson.*` namespace was reorganized.
+The `spring-boot-properties-migrator` (see the tip at the top of this guide) will detect most of these and warn at boot time:
+
+[cols="1,1", options="header"]
+|===
+| Before
+| After
+
+| `spring.jackson.read.*`
+| `spring.jackson.json.read.*`
+
+| `spring.jackson.write.*`
+| `spring.jackson.json.write.*`
+
+| `spring.jackson.parser.*`
+| `spring.jackson.json.read.*` (where equivalents exist)
+|===
+
+**Module auto-detection.**
+Jackson 3 auto-detects all Jackson modules on the classpath by default.
+If you need to disable this — for example, to avoid an unwanted module being picked up — set:
+
+[source,yaml]
+.application.yml
+----
+spring:
+    jackson:
+        find-and-modules: false
+----
+
+==== 10. Theme Support Removed
 
 Spring Framework 7 removed the theme infrastructure entirely.
 The following theme-specific classes and interfaces no longer exist:
@@ -200,7 +416,7 @@ This was deprecated in Spring Framework 6.0 and fully removed in 7.0.
 
 GSP layouts and views that relied on theme resolution will need to use alternative approaches such as configuration properties or session-based preferences managed in application code.
 
-==== 9. Embedded Server Module Relocations
+==== 11. Embedded Server Module Relocations
 
 Spring Boot 4 reorganized embedded server classes into separate modules.
 If your application or tests reference these classes directly, update the imports:
@@ -226,16 +442,22 @@ If your application or tests reference these classes directly, update the import
 | `org.springframework.boot.web.context.servlet.AnnotationConfigServletWebApplicationContext`
 |===
 
-Applications using embedded Tomcat, Jetty, or Undertow should check for any direct class references and update accordingly.
+Applications using embedded Tomcat or Jetty should check for any direct class references and update accordingly.
 The `spring-boot-tomcat` module must now be an explicit dependency if you reference Tomcat classes directly.
 
-==== 10. HandlerAdapter.getLastModified Removed
+**Undertow is temporarily unsupported.**
+Undertow has not yet been updated for Servlet 6.1, which Spring Boot 4 requires.
+As a result, Undertow is **not** an available embedded servlet container in Grails 8.
+Applications that previously used `spring-boot-starter-undertow` must switch to Tomcat or Jetty until Undertow ships Servlet 6.1 compatibility.
+The Grails Forge generator no longer offers Undertow as a selectable servlet implementation, and explicitly selecting it (for example, `--servlet=undertow` on the API/CLI) fails fast with `IllegalArgumentException` and a clear error message.
+
+==== 12. HandlerAdapter.getLastModified Removed
 
 Spring Framework 7 removed the deprecated `getLastModified` method from the `HandlerAdapter` interface.
 If your application implements `HandlerAdapter` directly and overrides this method, remove the override.
 The framework no longer calls this method for Last-Modified header management.
 
-==== 11. Spring Security Filter Ordering
+==== 13. Spring Security Filter Ordering
 
 Spring Boot 4 removed the `SecurityProperties.DEFAULT_FILTER_ORDER` constant.
 Spring Security is moving toward the fluent `HttpSecurity` configuration API for filter chain management, rather than explicit filter ordering via constants.
@@ -243,7 +465,193 @@ Spring Security is moving toward the fluent `HttpSecurity` configuration API for
 If your application references `DEFAULT_FILTER_ORDER` for custom filter positioning, replace it with the concrete value `-100` (computed as `OrderedFilter.REQUEST_WRAPPER_FILTER_MAX_ORDER - 100`).
 Longer term, consider migrating to the fluent `HttpSecurity` API for filter chain configuration.
 
-==== 12. Known Plugin Incompatibilities
+==== 14. Spring Boot Starter Renames
+
+Spring Boot 4 renamed several starters as part of its modularization effort.
+If your `build.gradle` references any of the following, update the artifact id:
+
+[cols="1,1", options="header"]
+|===
+| Before (Spring Boot 3.x)
+| After (Spring Boot 4.x)
+
+| `spring-boot-starter-web`
+| `spring-boot-starter-webmvc`
+
+| `spring-boot-starter-aop`
+| `spring-boot-starter-aspectj`
+
+| `spring-boot-starter-web-services`
+| `spring-boot-starter-webservices`
+
+| `spring-boot-starter-oauth2-authorization-server`
+| `spring-boot-starter-security-oauth2-authorization-server`
+
+| `spring-boot-starter-oauth2-client`
+| `spring-boot-starter-security-oauth2-client`
+
+| `spring-boot-starter-oauth2-resource-server`
+| `spring-boot-starter-security-oauth2-resource-server`
+|===
+
+[source,groovy]
+.build.gradle - Before
+----
+implementation 'org.springframework.boot:spring-boot-starter-web'
+implementation 'org.springframework.boot:spring-boot-starter-aop'
+----
+
+[source,groovy]
+.build.gradle - After
+----
+implementation 'org.springframework.boot:spring-boot-starter-webmvc'
+implementation 'org.springframework.boot:spring-boot-starter-aspectj'
+----
+
+NOTE: If you want a faster, lower-friction migration that pulls in *all* Spring Boot modules without picking starters individually, Spring Boot 4 ships `spring-boot-starter-classic` (and `spring-boot-starter-test-classic`) as a transitional fallback.
+This is intended as a stopgap; new code should target the modular starters.
+
+==== 15. WAR Deployment Uses spring-boot-starter-tomcat-runtime
+
+For WAR deployment to an external Servlet container, Spring Boot 4 introduced a dedicated `spring-boot-starter-tomcat-runtime` artifact that contributes only the integration classes needed to start under an external container, without bundling the embedded Tomcat distribution into the WAR.
+
+Replace the previous "change scope to `provided`/`testImplementation`" idiom with the new starter:
+
+[source,groovy]
+.build.gradle - Before
+----
+providedRuntime 'org.springframework.boot:spring-boot-starter-tomcat'
+----
+
+[source,groovy]
+.build.gradle - After
+----
+providedRuntime 'org.springframework.boot:spring-boot-starter-tomcat-runtime'
+----
+
+The Grails deployment guides have been updated to reflect this idiom.
+Embedded Tomcat usage (the default for `grails run-app` and bootable WARs) continues to use `spring-boot-starter-tomcat` unchanged.
+
+==== 16. Test Infrastructure Changes
+
+Spring Boot 4 made several breaking changes to its test infrastructure.
+Most Grails tests use `GrailsUnitTest`, `GrailsWebUnitTest`, and `Integration` and are unaffected, but if your application uses `@SpringBootTest` directly the following apply.
+
+**`@SpringBootTest` no longer auto-configures `MockMvc`, `WebClient`, or `TestRestTemplate`.**
+Add the corresponding `@AutoConfigureMockMvc` / `@AutoConfigureWebClient` / `@AutoConfigureTestRestTemplate` annotations to opt in.
+
+[source,groovy]
+----
+// Before
+@SpringBootTest
+class MyControllerSpec extends Specification {
+    @Autowired MockMvc mockMvc      // injected automatically
+    @Autowired TestRestTemplate rest // injected automatically
+}
+
+// After
+@SpringBootTest
+@AutoConfigureMockMvc
+@AutoConfigureTestRestTemplate
+class MyControllerSpec extends Specification {
+    @Autowired MockMvc mockMvc
+    @Autowired TestRestTemplate rest
+}
+----
+
+**`@MockBean` and `@SpyBean` were removed.**
+Replace them with `@MockitoBean` and `@MockitoSpyBean` from `org.springframework.test.context.bean.override.mockito`.
+The new annotations work as fields in test classes only — they cannot be declared in `@Configuration` classes.
+
+[source,groovy]
+----
+// Before
+import org.springframework.boot.test.mock.mockito.MockBean
+@SpringBootTest
+class MyServiceSpec extends Specification {
+    @MockBean BookRepository repo
+}
+
+// After
+import org.springframework.test.context.bean.override.mockito.MockitoBean
+@SpringBootTest
+class MyServiceSpec extends Specification {
+    @MockitoBean BookRepository repo
+}
+----
+
+**`MockitoTestExecutionListener` was removed.**
+If your test infrastructure registers it explicitly, remove the registration; Spring's bean override support handles `@MockitoBean` directly.
+
+**`TestRestTemplate` package change.**
+`TestRestTemplate` moved to `org.springframework.boot.resttestclient`.
+Update the import.
+A new `RestTestClient` and corresponding `@AutoConfigureRestTestClient` annotation are also available as a fluent alternative.
+
+==== 17. DevTools Live Reload Disabled by Default
+
+Spring Boot 4 changed the default of `spring.devtools.livereload.enabled` from `true` to `false`.
+If you rely on browser live reload during development, opt in explicitly under the development environment so non-development environments still honor the new Spring Boot 4 default:
+
+[source,yaml]
+.application-development.yml
+----
+spring:
+    devtools:
+        livereload:
+            enabled: true
+----
+
+NOTE: Apps generated by the Grails Forge with the `spring-boot-devtools` reloading option **do** set this property automatically in `application-development.yml`, restoring Grails 7 livereload behavior for the dev profile only.
+You can opt out by changing the value to `false` or by deleting the `application-development.yml` block after generation.
+Existing Grails 7 applications that opt in to devtools must add this configuration manually.
+
+==== 18. Spring Retry No Longer Managed
+
+Spring Boot 4 removed `spring-retry` from its managed dependencies.
+Spring for Apache Kafka and Spring AMQP have moved off Spring Retry to Spring Framework's new retry support; if you used Spring Retry transitively through those projects you may not need it any more.
+
+If your application *directly* uses `@Retryable`, `@EnableRetry`, or `@Recover`, declare the dependency explicitly in `build.gradle`:
+
+[source,groovy]
+.build.gradle
+----
+implementation 'org.springframework.retry:spring-retry'
+----
+
+NOTE: The `grails-bom` pins a known-good Spring Retry version (`2.0.x`), so you do not need to specify a version when using `enforcedPlatform("org.apache.grails:grails-bom:$grailsVersion")`.
+Override the BOM-managed version in your build if you need a newer release.
+
+==== 19. Other Default Behavior Changes
+
+Spring Boot 4 made several smaller default-behavior changes that you may notice but rarely require code changes:
+
+* **Logback default charset is now `UTF-8`** for log files (aligning with the existing Log4j2 default).
+Console output uses `Console#charset()` if available, otherwise `UTF-8`.
+If your log scraping tooling assumed a platform-default charset, switch it to UTF-8.
+
+* **Liveness and readiness probes are enabled by default** on the Health endpoint.
+The `liveness` and `readiness` health groups are exposed automatically.
+To disable, set:
++
+[source,yaml]
+.application.yml
+----
+management:
+    endpoint:
+        health:
+            probes:
+                enabled: false
+----
+
+* **`HttpMessageConverters` is deprecated.**
+If your application contributed `HttpMessageConverter` beans through this class, switch to the new `ClientHttpMessageConvertersCustomizer` and `ServerHttpMessageConvertersCustomizer` interfaces.
+
+* **JSpecify nullability annotations.**
+Spring Framework 7 deprecated `org.springframework.lang.Nullable` and `org.springframework.lang.NonNull` in favor of the JSpecify annotations (`org.jspecify.annotations.Nullable`, `org.jspecify.annotations.NonNull`).
+The Spring annotations still work, so this is non-blocking, but new code should prefer the JSpecify equivalents.
+
+==== 20. Known Plugin Incompatibilities
 
 Some third-party plugins have not yet been updated for Spring Boot 4 / Spring Framework 7 compatibility.
 The following are known blockers at this time:
@@ -255,3 +663,35 @@ Integration tests for modules depending on Spring Security are disabled until th
 Applications using `grails-sitemesh3` should remain on the `grails-layout` plugin (SiteMesh 2.6.x) until SiteMesh 3 is updated.
 
 Check the https://github.com/apache/grails-core/issues[Grails issue tracker] for the latest status of plugin compatibility.
+
+===== 21. Custom JSON View Converters
+
+JSON views now use Groovy's `groovy.json.JsonGenerator` implementation instead of the previous Grails-specific
+JSON generator infrastructure.
+If you previously customized JSON view rendering with Grails-specific generator classes, migrate that logic to a
+`groovy.json.JsonGenerator.Converter` implementation.
+
+This change applies to JSON views rendered by the `grails-views-gson` module.
+The `grails.converters.JSON.registerObjectMarshaller(...)` API is still used by the `grails-converters` module
+for `render ... as JSON` and related converter-based rendering.
+
+To migrate your custom converters:
+
+- Implement `groovy.json.JsonGenerator.Converter` (was previously `grails.plugin.json.builder.JsonGenerator.Converter`)
+- Change the file name of the converter registration service loader to
+`src/main/resources/META-INF/services/groovy.json.JsonGenerator$Converter`
+(was previously `src/main/resources/META-INF/services/grails.plugin.json.builder.JsonGenerator$Converter`)
+
+===== 22 Rendering Enum values as JSON
+
+It is no longer possible to render a single enum value as JSON using the `render(Number.ONE as JSON)` syntax.
+Previously, rendering an enum value would produce a JSON string with the type and name of the enum value like:
+```json
+{
+  "enumType": "com.example.Number",
+  "name": "ONE"
+}
+```
+
+Rendering an enum value as JSON will now instead throw a `ConverterException`.
+See https://github.com/apache/grails-core/pull/15212[PR 15212] for more details on this change.

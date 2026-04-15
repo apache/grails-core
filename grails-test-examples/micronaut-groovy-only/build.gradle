@@ -18,25 +18,14 @@
  */
 plugins {
     id 'org.apache.grails.buildsrc.properties'
+    id 'org.apache.grails.buildsrc.dependency-validator'
     id 'org.apache.grails.buildsrc.compile'
 }
 
 version = '0.1'
 group = 'micronautgroovyonly'
 
-ext.javaVersion = 21
-
 apply plugin: 'org.apache.grails.gradle.grails-web'
-
-java {
-    toolchain {
-        languageVersion = JavaLanguageVersion.of(21)
-    }
-}
-
-tasks.withType(Groovydoc).configureEach {
-    enabled = false
-}
 
 // This module intentionally has NO annotationProcessor dependencies.
 // It validates that a Groovy-only Grails application works with
@@ -45,7 +34,7 @@ tasks.withType(Groovydoc).configureEach {
 // processors when grails-micronaut is present on the classpath.
 
 dependencies {
-    implementation platform(project(':grails-bom'))
+    implementation enforcedPlatform(project(':grails-bom'))
 
     implementation 'org.apache.grails:grails-dependencies-starter-web'
     implementation 'org.apache.grails:grails-micronaut'

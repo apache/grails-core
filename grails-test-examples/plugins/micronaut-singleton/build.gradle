@@ -18,28 +18,17 @@
  */
 plugins {
     id 'org.apache.grails.buildsrc.properties'
+    id 'org.apache.grails.buildsrc.dependency-validator'
     id 'org.apache.grails.buildsrc.compile'
 }
 
 version = '0.1-SNAPSHOT'
 group = 'com.example.grails.plugins'
 
-ext.javaVersion = 21
-
 apply plugin: 'org.apache.grails.gradle.grails-plugin'
 
-java {
-    toolchain {
-        languageVersion = JavaLanguageVersion.of(21)
-    }
-}
-
-tasks.withType(Groovydoc).configureEach {
-    enabled = false
-}
-
 dependencies {
-    implementation platform(project(':grails-bom'))
+    implementation enforcedPlatform(project(':grails-bom'))
 
     api 'org.apache.grails:grails-dependencies-starter-web'
     api 'org.apache.grails:grails-micronaut'
