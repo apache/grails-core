@@ -94,6 +94,7 @@ class SbomPlugin implements Plugin<Project> {
             'pkg:maven/org.jline/jline@3.30.6?type=jar'                       : 'BSD-3-Clause', // maps incorrectly because of https://github.com/CycloneDX/cyclonedx-core-java/issues/205
             'pkg:maven/org.liquibase.ext/liquibase-hibernate5@4.27.0?type=jar': 'Apache-2.0', // maps incorrectly because of https://github.com/liquibase/liquibase/issues/2445 & the base pom does not define a license
             'pkg:maven/com.oracle.coherence.ce/coherence-bom@25.03.1?type=pom': 'UPL-1.0', // does not have map based on license id
+            'pkg:maven/com.oracle.coherence.ce/coherence-bom@25.03.2?type=pom': 'UPL-1.0', // does not have map based on license id
             'pkg:maven/com.oracle.coherence.ce/coherence-bom@22.06.2?type=pom': 'UPL-1.0', // does not have map based on license id
             'pkg:maven/opensymphony/sitemesh@2.6.0?type=jar'                  : 'OpenSymphony', // custom license approved by legal LEGAL-707
             'pkg:maven/org.jruby/jzlib@1.1.5?type=jar'                        : 'BSD-3-Clause'// https://web.archive.org/web/20240822213507/http://www.jcraft.com/jzlib/LICENSE.txt shows it's a 3 clause
@@ -112,6 +113,10 @@ class SbomPlugin implements Plugin<Project> {
                     'pkg:maven/org.hibernate/hibernate-core-jakarta@5.6.15.Final?type=jar'             : 'LGPL-2.1-only', // hibernate 5 is LGPL, we are migrating to ASF license in hibernate 7
             ],
             'grails-data-hibernate5-spring-boot': [
+                    'pkg:maven/org.hibernate.common/hibernate-commons-annotations@5.1.2.Final?type=jar': 'LGPL-2.1-only', // hibernate 5 is LGPL, we are migrating to ASF license in hibernate 7
+                    'pkg:maven/org.hibernate/hibernate-core-jakarta@5.6.15.Final?type=jar'             : 'LGPL-2.1-only', // hibernate 5 is LGPL, we are migrating to ASF license in hibernate 7
+            ],
+            'grails-data-hibernate5-spring-orm' : [
                     'pkg:maven/org.hibernate.common/hibernate-commons-annotations@5.1.2.Final?type=jar': 'LGPL-2.1-only', // hibernate 5 is LGPL, we are migrating to ASF license in hibernate 7
                     'pkg:maven/org.hibernate/hibernate-core-jakarta@5.6.15.Final?type=jar'             : 'LGPL-2.1-only', // hibernate 5 is LGPL, we are migrating to ASF license in hibernate 7
             ],

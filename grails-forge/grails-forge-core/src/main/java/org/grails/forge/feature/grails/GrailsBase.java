@@ -24,6 +24,7 @@ import org.grails.forge.application.generator.GeneratorContext;
 import org.grails.forge.build.dependencies.Dependency;
 import org.grails.forge.feature.DefaultFeature;
 import org.grails.forge.feature.Feature;
+import org.grails.forge.feature.micronaut.GrailsMicronaut;
 import org.grails.forge.options.Options;
 import org.grails.forge.template.URLTemplate;
 
@@ -55,11 +56,15 @@ public class GrailsBase implements DefaultFeature {
     @Override
     public void apply(GeneratorContext generatorContext) {
 
-        // This ensures that grails-bom forces milestones to override snapshots
+        // When micronaut is used, enforcedPlatform is required to prevent the Micronaut
+        // platform from overriding grails-bom managed versions (e.g. Groovy 5 over Groovy 4)
+        boolean useEnforced = generatorContext.isFeaturePresent(GrailsMicronaut.class);
+
         generatorContext.addDependency(Dependency.builder()
                 .groupId("org.apache.grails")
                 .artifactId("grails-bom")
                 .pom(true)
+                .enforced(useEnforced)
                 .version("$grailsVersion")
                 .implementation());
 

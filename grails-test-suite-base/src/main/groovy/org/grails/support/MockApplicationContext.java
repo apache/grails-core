@@ -510,4 +510,9 @@ public class MockApplicationContext extends GroovyObjectSupport implements WebAp
             }
         };
     }
+
+    @Override
+    public <T> ObjectProvider<T> getBeanProvider(org.springframework.core.ParameterizedTypeReference<T> requiredType) {
+        return getBeanProvider(ResolvableType.forType(requiredType.getType()));
+    }
 }

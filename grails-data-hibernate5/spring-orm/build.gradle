@@ -1,0 +1,55 @@
+/*
+ *  Licensed to the Apache Software Foundation (ASF) under one or more
+ *  contributor license agreements.  See the NOTICE file distributed with
+ *  this work for additional information regarding copyright ownership.
+ *  The ASF licenses this file to You under the Apache License, Version 2.0
+ *  (the "License"); you may not use this file except in compliance with
+ *  the License.  You may obtain a copy of the License at
+ *
+ *      https://www.apache.org/licenses/LICENSE-2.0
+ *
+ *  Unless required by applicable law or agreed to in writing, software
+ *  distributed under the License is distributed on an "AS IS" BASIS,
+ *  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ *  See the License for the specific language governing permissions and
+ *  limitations under the License.
+ */
+
+// Vendored Spring Framework ORM Hibernate 5 integration classes.
+// These classes were removed in Spring Framework 7.0 and are vendored here
+// from Spring Framework 6.2.x (org.springframework.orm.hibernate5 package).
+// Original source: https://github.com/spring-projects/spring-framework/tree/v6.2.0/spring-orm/src/main/java/org/springframework/orm/hibernate5
+
+plugins {
+    id 'java-library'
+    id 'org.apache.grails.buildsrc.properties'
+    id 'org.apache.grails.buildsrc.dependency-validator'
+    id 'org.apache.grails.buildsrc.compile'
+    id 'org.apache.grails.buildsrc.publish'
+    id 'org.apache.grails.buildsrc.sbom'
+    id 'org.apache.grails.gradle.grails-code-style'
+}
+
+version = projectVersion
+group = 'org.apache.grails.data'
+
+ext {
+    pomTitle = 'Grails GORM ORM Hibernate 5 Support'
+    pomDescription = 'Vendored Spring Framework ORM Hibernate 5 integration classes for Grails GORM'
+}
+
+dependencies {
+    implementation platform(project(':grails-bom'))
+
+    api 'org.slf4j:slf4j-api'
+    api 'org.springframework:spring-orm'
+    api 'org.springframework:spring-web'
+    api 'org.springframework:spring-tx'
+    api 'org.springframework:spring-beans'
+    api 'org.springframework:spring-context'
+    compileOnly 'jakarta.servlet:jakarta.servlet-api'
+    api "org.hibernate:hibernate-core-jakarta:${hibernate5Version}", {
+        exclude group: 'commons-logging', module: 'commons-logging'
+        exclude group: 'org.slf4j', module: 'slf4j-api'
+    }
+}

@@ -21,6 +21,7 @@ plugins {
     id 'groovy'
     id 'java-library'
     id 'org.apache.grails.buildsrc.properties'
+    id 'org.apache.grails.buildsrc.dependency-validator'
     id 'org.apache.grails.buildsrc.compile'
     id 'org.apache.grails.buildsrc.publish'
     id 'org.apache.grails.buildsrc.sbom'
@@ -84,8 +85,10 @@ dependencies {
         // impl: ConfigurableEnvironment
     }
     implementation 'org.springframework.boot:spring-boot-autoconfigure', {
-        // impl: AutoConfigurationPackages, @AutoConfigureAfter(runtime), @ConditionalOnMissingBean(runtime),
-        //       MongoAutoConfiguration, MongoProperties
+        // impl: AutoConfigurationPackages, @AutoConfigureAfter(runtime), @ConditionalOnMissingBean(runtime)
+    }
+    implementation 'org.springframework.boot:spring-boot-mongodb', {
+        // impl: MongoAutoConfiguration, MongoProperties
     }
 
     compileOnlyApi 'jakarta.persistence:jakarta.persistence-api', {

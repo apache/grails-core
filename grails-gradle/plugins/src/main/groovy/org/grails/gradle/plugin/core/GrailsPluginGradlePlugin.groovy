@@ -234,7 +234,11 @@ class GrailsPluginGradlePlugin extends GrailsGradlePlugin {
                     'application.yml',
                     'logback.groovy',
                     'logback.xml',
-                    'logback-spring.xml'
+                    'logback-spring.xml',
+                    // Plugins must not ship spring/resources.groovy (use doWithSpring instead),
+                    // but it must remain in build/resources/main/ so it is on the integration
+                    // test classpath for plugin modules that test their own resources.groovy.
+                    'spring/resources.groovy'
             )
         }
     }
@@ -258,7 +262,8 @@ class GrailsPluginGradlePlugin extends GrailsGradlePlugin {
             processResources.setDuplicatesStrategy(DuplicatesStrategy.INCLUDE)
             processResources.dependsOn(*processResourcesDependencies)
             project.processResources {
-                exclude('spring/resources.groovy')
+                // spring/resources.groovy is excluded from the published jar (see configureJarTask)
+                // but is allowed into build/resources/main/ so plugin integration tests can load it.
                 exclude('**/*.gsp')
             }
         }

@@ -19,6 +19,7 @@
 package functional.tests
 
 import spock.lang.Specification
+import spock.lang.Tag
 import spock.lang.Unroll
 
 import org.springframework.beans.factory.annotation.Autowired
@@ -27,6 +28,7 @@ import grails.testing.mixin.integration.Integration
 import org.apache.grails.testing.http.client.HttpClientSupport
 
 @Integration
+@Tag('http-client')
 class ModelInterceptorIntSpec extends Specification implements HttpClientSupport {
 
     @Autowired

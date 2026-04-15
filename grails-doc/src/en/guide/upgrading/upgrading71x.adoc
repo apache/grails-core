@@ -719,8 +719,77 @@ If this causes issues with existing URL mappings, you can disable it in `applica
 [source,yaml]
 ----
 grails:
-    web:
-        url:
-            mapping:
-                validateWildcards: false
+    urlmapping:
+        validateWildcards: false
 ----
+
+===== 2.10 ContainerGebSpec Context Path Support
+
+`ContainerGebSpec` now automatically includes the server's servlet context path in the browser's base URL. Previously, if your application configured a context path via `server.servlet.context-path`, the `ContainerGebSpec` base URL would only include the protocol, hostname, and port — causing all page navigations to miss the context path and result in 404 errors.
+
+Starting in Grails 7.1, the context path is looked up from the Spring `Environment` at test setup time and appended to the base URL automatically. No changes are required in your test code — Geb page URLs should remain relative to the context root (e.g., `static url = 'greeting'`), and the framework handles prepending the context path.
+
+====== Example
+
+[source,yaml]
+.application.yml
+----
+server:
+  servlet:
+    context-path: /myapp
+----
+
+[source,groovy]
+----
+// Page URL is relative — no need to include /myapp
+class GreetingPage extends Page {
+    static url = 'greeting'
+    static at = { title == 'Greeting' }
+}
+
+// Navigation automatically resolves to http://host:port/myapp/greeting
+@Integration
+class MySpec extends ContainerGebSpec {
+    void 'should reach the greeting page'() {
+        expect:
+        to(GreetingPage)
+    }
+}
+----
+
+===== 2.11 Flash Messages Tag (`g:flashMessages`)
+
+Grails 7.1 introduces a new `<g:flashMessages />` tag that renders `flash.message`, `flash.error`, and `flash.warning` as Bootstrap 5 dismissible alerts with appropriate styling (success, danger, and warning respectively).
+
+The tag automatically prevents duplicate rendering -- if called in both a page and its layout, only the first invocation produces output. All flash content is HTML-encoded to prevent XSS.
+
+The default layout (`main.gsp`) and all scaffolding templates now use this tag. If your application has custom views that render flash messages manually, you can replace the boilerplate:
+
+[source,xml]
+----
+<%-- Before --%>
+<g:if test="${flash.message}">
+    <div class="alert alert-primary" role="alert">${flash.message}</div>
+</g:if>
+
+<%-- After --%>
+<g:flashMessages />
+----
+
+The tag supports optional attributes for customizing CSS classes, icons, ARIA role, and dismissibility. Applications that do not use Bootstrap can override the defaults globally under `grails.views.gsp.flashMessages.*` in `application.yml`:
+
+[source,yaml]
+----
+grails:
+    views:
+        gsp:
+            flashMessages:
+                messageClass: 'notification is-success'
+                messageIcon: 'fa-solid fa-check'
+                errorClass: 'notification is-danger'
+                errorIcon: 'fa-solid fa-triangle-exclamation'
+                warningClass: 'notification is-warning'
+                warningIcon: 'fa-solid fa-circle-exclamation'
+----
+
+See the {gspTagsRef}flashMessages.html[flashMessages] tag reference for full details.

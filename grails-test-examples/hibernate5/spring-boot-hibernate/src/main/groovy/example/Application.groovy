@@ -24,7 +24,7 @@ import groovy.transform.CompileStatic
 import org.springframework.boot.CommandLineRunner
 import org.springframework.boot.SpringApplication
 import org.springframework.boot.autoconfigure.SpringBootApplication
-import org.springframework.boot.autoconfigure.orm.jpa.HibernateJpaAutoConfiguration
+import org.springframework.boot.hibernate.autoconfigure.HibernateJpaAutoConfiguration
 
 @CompileStatic
 @SpringBootApplication(exclude = HibernateJpaAutoConfiguration)

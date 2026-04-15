@@ -18,15 +18,12 @@
  */
 package org.grails.datastore.gorm
 
-import grails.gorm.annotation.AutoTimestamp
 import grails.gorm.annotation.CreatedDate
 import grails.gorm.annotation.LastModifiedDate
 import grails.persistence.Entity
 import org.apache.grails.data.simple.core.GrailsDataCoreTckManager
 import org.apache.grails.data.testing.tck.base.GrailsDataTckSpec
 import org.grails.datastore.gorm.events.AutoTimestampEventListener
-
-import static grails.gorm.annotation.AutoTimestamp.EventType.CREATED
 
 class CustomAutoTimestampSpec extends GrailsDataTckSpec<GrailsDataCoreTckManager> {
     void setupSpec() {
@@ -218,16 +215,16 @@ class CustomAutoTimestampSpec extends GrailsDataTckSpec<GrailsDataCoreTckManager
 class RecordCustom {
     Long id
     String name
-    @AutoTimestamp(CREATED)
+    @CreatedDate
     Date created
-    @AutoTimestamp
+    @LastModifiedDate
     Date modified
 }
 
 class Media {
-    @AutoTimestamp(CREATED)
+    @CreatedDate
     Date created
-    @AutoTimestamp
+    @LastModifiedDate
     Date modified
 }
 
@@ -240,9 +237,9 @@ class Image extends Media {
 @Entity
 class AutoTimestampedParentEntity {
     Long id
-    @AutoTimestamp(CREATED)
+    @CreatedDate
     Date created
-    @AutoTimestamp
+    @LastModifiedDate
     Date modified
 }
 

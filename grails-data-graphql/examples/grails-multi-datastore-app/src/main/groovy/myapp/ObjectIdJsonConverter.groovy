@@ -19,7 +19,7 @@
 
 package myapp
 
-import grails.plugin.json.builder.JsonGenerator
+import groovy.json.JsonGenerator
 import org.bson.types.ObjectId
 
 class ObjectIdJsonConverter implements JsonGenerator.Converter {

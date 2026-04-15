@@ -47,7 +47,7 @@ class DefaultUrlCreatorTests {
     @Test
     void testCreateUrlNoCharacterEncoding() {
         def webRequest = GrailsWebMockUtil.bindMockWebRequest()
-        webRequest.currentRequest.characterEncoding = null
+        webRequest.currentRequest.setCharacterEncoding((String) null)
 
         def creator = new DefaultUrlCreator("foo", "index")
 

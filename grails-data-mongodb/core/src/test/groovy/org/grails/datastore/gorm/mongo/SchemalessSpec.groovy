@@ -39,7 +39,6 @@ class SchemalessSpec extends GrailsDataTckSpec<GrailsDataMongoTckManager> {
 
         then:
         p.name == 'Pineapple'
-        p.dbo.color == 'Yellow'
         p['color'] == 'Yellow'
 
         when:
@@ -50,7 +49,6 @@ class SchemalessSpec extends GrailsDataTckSpec<GrailsDataMongoTckManager> {
 
         then:
         p.name == 'Pineapple'
-        p.dbo.color == 'Yellow'
         p['color'] == 'Yellow'
         p['hasLeaves'] == true
 

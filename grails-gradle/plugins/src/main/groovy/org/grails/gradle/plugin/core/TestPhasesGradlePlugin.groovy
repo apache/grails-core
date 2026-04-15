@@ -25,6 +25,8 @@ import org.gradle.api.NamedDomainObjectContainer
 import org.gradle.api.Plugin
 import org.gradle.api.Project
 import org.gradle.api.artifacts.ConfigurationContainer
+import org.gradle.api.file.Directory
+import org.gradle.api.provider.Provider
 import org.gradle.api.tasks.SourceSet
 import org.gradle.api.tasks.SourceSetContainer
 import org.gradle.api.tasks.SourceSetOutput
@@ -95,9 +97,6 @@ class TestPhasesGradlePlugin implements Plugin<Project> {
             }
         }
 
-        def resources = new File(project.projectDir, 'grails-app/conf')
-        phaseSourceSet.resources.srcDir(resources)
-
         def dependencies = project.dependencies
         dependencies.add(implConfigName, mainSourceSetOutput)
         dependencies.add(implConfigName, testSourceSetOutput)
@@ -139,19 +138,42 @@ class TestPhasesGradlePlugin implements Plugin<Project> {
 
     private static void registerMergeTestReports(Project project) {
         project.tasks.register(MERGE_TEST_REPORTS_TASK_NAME, TestReport) {
-            it.mustRunAfter(project.tasks.withType(Test).toArray())
+            it.mustRunAfter(project.tasks.withType(Test))
             it.destinationDirectory.set(project.layout.buildDirectory.dir('reports/tests'))
             it.testResults.from(
+                    // WARNING: this must be a path & not a reference to the test task so Gradle doesn't force other tests to run
                     project.files(project.layout.buildDirectory.dir('test-results/test/binary'))
             )
+
+            def testResultDirectory = project.layout.buildDirectory.dir('test-results')
+            it.doFirst {
+                // because a test task could be interrupted, support cleaning up bad data to prevent unnecessary errors from previous, partial runs
+                cleanOrphanedBinaryResults(testResultDirectory)
+            }
         }
     }
 
     private static void addPhaseToMergeTestReports(Project project, String phaseName) {
         project.tasks.named(MERGE_TEST_REPORTS_TASK_NAME, TestReport) {
             it.testResults.from(
-                    project.files(project.layout.buildDirectory.dir("test-results/${phaseName}/binary"))
+                    // WARNING: this must be a path & not a reference to the test task so Gradle doesn't force other tests to run
+                    project.files(project.layout.buildDirectory.dir("test-results/${phaseName}/binary" as String))
             )
+        }
+    }
+
+    private static void cleanOrphanedBinaryResults(Provider<Directory> testResultDirectory) {
+        File testResultsDir = testResultDirectory.get().asFile
+        if (!testResultsDir.exists()) {
+            return
+        }
+        testResultsDir.eachDir { File phaseDir ->
+            File binaryDir = new File(phaseDir, 'binary')
+            File outputBin = new File(binaryDir, 'output.bin')
+            File outputBinIdx = new File(binaryDir, 'output.bin.idx')
+            if (outputBin.exists() && !outputBinIdx.exists()) {
+                outputBin.delete()
+            }
         }
     }
 

@@ -34,13 +34,14 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import org.springframework.dao.DataAccessResourceFailureException;
-import org.springframework.orm.hibernate5.SessionHolder;
-import org.springframework.orm.hibernate5.SpringFlushSynchronization;
-import org.springframework.orm.hibernate5.SpringJtaSessionContext;
-import org.springframework.orm.hibernate5.SpringSessionSynchronization;
 import org.springframework.transaction.jta.SpringJtaSynchronizationAdapter;
 import org.springframework.transaction.support.TransactionSynchronization;
 import org.springframework.transaction.support.TransactionSynchronizationManager;
+
+import org.grails.orm.hibernate.support.hibernate5.SessionHolder;
+import org.grails.orm.hibernate.support.hibernate5.SpringFlushSynchronization;
+import org.grails.orm.hibernate.support.hibernate5.SpringJtaSessionContext;
+import org.grails.orm.hibernate.support.hibernate5.SpringSessionSynchronization;
 
 /**
  * Based on org.springframework.orm.hibernate4.SpringSessionContext.

@@ -24,6 +24,7 @@ import io.micronaut.context.ApplicationContext as MicronautApplicationContext
 import io.micronaut.http.client.exceptions.HttpClientResponseException
 import micronaut.client.MicronautTestClient
 import spock.lang.AutoCleanup
+import spock.lang.IgnoreIf
 import spock.lang.Specification
 
 import org.springframework.beans.factory.annotation.Autowired
@@ -31,6 +32,9 @@ import org.springframework.beans.factory.annotation.Value
 
 import grails.testing.mixin.integration.Integration
 
+// micronaut-core's ScopedValues references java.lang.ScopedValue.CallableOp,
+// which only exists in JDK 25+ (JEP 506). Skip on older JDKs.
+@IgnoreIf({ Runtime.version().feature() < 25 })
 @Integration
 class MicronautDeclarativeClientSpec extends Specification {
 
