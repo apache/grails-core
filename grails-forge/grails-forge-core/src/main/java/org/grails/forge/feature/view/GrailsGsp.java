@@ -18,6 +18,7 @@
  */
 package org.grails.forge.feature.view;
 
+import io.micronaut.core.annotation.NonNull;
 import jakarta.inject.Singleton;
 import org.grails.forge.application.ApplicationType;
 import org.grails.forge.application.generator.GeneratorContext;
@@ -51,12 +52,21 @@ public class GrailsGsp implements DefaultFeature {
 
     @Override
     public String getTitle() {
-        return "Grails GSP";
+        return "GSP";
     }
 
+    @NonNull
     @Override
     public String getName() {
-        return "grails-gsp";
+        return "gsp";
+    }
+
+    @NonNull
+    @Override
+    public String getDescription() {
+        return "GSP (Groovy Server Pages) is the server-side view technology used in Grails. " +
+            "It is designed to be familiar to developers with experience in ASP or JSP, while providing " +
+            "a more flexible, expressive, and intuitive way to build web pages.";
     }
 
     @Override

@@ -84,6 +84,7 @@ public class GormImplDTO extends Linkable implements Named, Described, Selectabl
 
     }
 
+    @NonNull
     @Override
     @Schema(description = "A description of the GORM Implementation")
     public String getDescription() {
@@ -106,6 +107,6 @@ public class GormImplDTO extends Linkable implements Named, Described, Selectabl
     @Override
     @Schema(description = "The label of the GORM Implementation for select options")
     public String getLabel() {
-        return NameUtils.getNaturalNameOfEnum(name);
+        return value.getLabel();
     }
 }

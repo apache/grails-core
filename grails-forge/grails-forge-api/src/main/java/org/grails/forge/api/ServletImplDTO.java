@@ -73,6 +73,7 @@ public class ServletImplDTO extends Linkable implements Named, Described, Select
         this.description = messageSource.getMessage(MESSAGE_PREFIX + name + ".description", messageContext, name);
     }
 
+    @NonNull
     @Override
     @Schema(description = "A description of the GORM Implementation")
     public String getDescription() {
@@ -95,6 +96,6 @@ public class ServletImplDTO extends Linkable implements Named, Described, Select
     @Override
     @Schema(description = "The label of the Servlet Implementation for select options")
     public String getLabel() {
-        return NameUtils.getNaturalNameOfEnum(name);
+        return value.getLabel();
     }
 }
