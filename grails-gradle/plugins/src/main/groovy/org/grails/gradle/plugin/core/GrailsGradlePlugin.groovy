@@ -520,21 +520,32 @@ ${importStatements}
             return
         }
 
+        // The Grails Gradle Plugin injects a regular platform(grails-bom) into every
+        // declarable configuration via applyGrailsBom(). For Micronaut projects the user
+        // must additionally declare an enforcedPlatform(grails-bom). Because both
+        // dependencies co-exist on the 'implementation' configuration we must scan all
+        // grails-bom declarations and accept the configuration as valid when at least one
+        // of them is an enforcedPlatform.
+        boolean grailsBomPresent = false
         for (Dependency dep : implConfig.dependencies) {
             if (dep.name == 'grails-bom' && dep instanceof ModuleDependency) {
+                grailsBomPresent = true
                 Object categoryAttr = ((ModuleDependency) dep).attributes.getAttribute(
                         org.gradle.api.attributes.Category.CATEGORY_ATTRIBUTE
                 )
                 if (categoryAttr != null && categoryAttr.toString() == org.gradle.api.attributes.Category.ENFORCED_PLATFORM) {
                     return // correctly configured
                 }
-                throw new GradleException(
-                        "Project '${project.name}' uses Micronaut but applies grails-bom as a regular platform. " +
-                                'Micronaut\'s platform declares higher versions of Groovy, Spock, and Kotlin that will ' +
-                                'override the grails-bom via conflict resolution. Change to:\n\n' +
-                                '    implementation enforcedPlatform(project(\':grails-bom\'))\n'
-                )
             }
+        }
+
+        if (grailsBomPresent) {
+            throw new GradleException(
+                    "Project '${project.name}' uses Micronaut but applies grails-bom as a regular platform. " +
+                            'Micronaut\'s platform declares higher versions of Groovy, Spock, and Kotlin that will ' +
+                            'override the grails-bom via conflict resolution. Change to:\n\n' +
+                            '    implementation enforcedPlatform(project(\':grails-bom\'))\n'
+            )
         }
     }
 
