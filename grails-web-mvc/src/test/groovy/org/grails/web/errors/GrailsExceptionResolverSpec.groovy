@@ -93,6 +93,80 @@ class GrailsExceptionResolverSpec extends Specification {
             System.setErr(originalErr)
     }
 
+    void "getRequestLogMessage appends auditor when logAuditor is enabled and the lookup returns a value"() {
+        given:
+            def config = Mock(Config)
+            config.getProperty('grails.exceptionresolver.logAuditor', Boolean, true) >> true
+            config.getProperty('grails.exceptionresolver.logRequestParameters', Boolean, _) >> false
+            def grailsApp = Mock(GrailsApplication)
+            grailsApp.getConfig() >> config
+            def resolver = new GrailsExceptionResolver()
+            resolver.grailsApplication = grailsApp
+            resolver.auditorAwareLookup = new AuditorAwareLookup(null) {
+                @Override
+                Optional<?> getCurrentAuditor() { Optional.of('alice') }
+            }
+            def request = new MockHttpServletRequest('GET', '/test')
+
+        when:
+            def msg = resolver.getRequestLogMessage('RuntimeException', request, 'boom')
+
+        then:
+            msg.contains('(user: alice)')
+    }
+
+    void "getRequestLogMessage omits auditor when logAuditor is disabled"() {
+        given:
+            def config = Mock(Config)
+            config.getProperty('grails.exceptionresolver.logAuditor', Boolean, true) >> false
+            config.getProperty('grails.exceptionresolver.logRequestParameters', Boolean, _) >> false
+            def grailsApp = Mock(GrailsApplication)
+            grailsApp.getConfig() >> config
+            def resolver = new GrailsExceptionResolver()
+            resolver.grailsApplication = grailsApp
+            resolver.auditorAwareLookup = new AuditorAwareLookup(null) {
+                @Override
+                Optional<?> getCurrentAuditor() { Optional.of('alice') }
+            }
+            def request = new MockHttpServletRequest('GET', '/test')
+
+        when:
+            def msg = resolver.getRequestLogMessage('RuntimeException', request, 'boom')
+
+        then:
+            !msg.contains('(user:')
+    }
+
+    void "getRequestLogMessage omits auditor when logAuditor is enabled but auditor is absent"() {
+        given:
+            def config = Mock(Config)
+            config.getProperty('grails.exceptionresolver.logAuditor', Boolean, true) >> true
+            config.getProperty('grails.exceptionresolver.logRequestParameters', Boolean, _) >> false
+            def grailsApp = Mock(GrailsApplication)
+            grailsApp.getConfig() >> config
+            def resolver = new GrailsExceptionResolver()
+            resolver.grailsApplication = grailsApp
+            resolver.auditorAwareLookup = new AuditorAwareLookup(null) {
+                @Override
+                Optional<?> getCurrentAuditor() { Optional.empty() }
+            }
+            def request = new MockHttpServletRequest('GET', '/test')
+
+        when:
+            def msg = resolver.getRequestLogMessage('RuntimeException', request, 'boom')
+
+        then:
+            !msg.contains('(user:')
+    }
+
+    void "AuditorAwareLookup returns empty when no application context is provided"() {
+        given:
+            def lookup = new AuditorAwareLookup(null)
+
+        expect:
+            !lookup.getCurrentAuditor().isPresent()
+    }
+
     void "logFullStackTraceIfEnabled emits the unfiltered trace when opt-in is enabled, and filterStackTrace then removes internal frames so the resolver log only sees the filtered trace"() {
         given: "Captured System.err"
             def originalErr = System.err
@@ -102,6 +176,7 @@ class GrailsExceptionResolverSpec extends Specification {
         and: "A resolver whose config opts in to full stack trace logging"
             def config = Mock(Config)
             config.getProperty('grails.exceptionresolver.logFullStackTrace', Boolean, false) >> true
+            config.getProperty('grails.exceptionresolver.logAuditor', Boolean, true) >> false
             config.getProperty('grails.exceptionresolver.logRequestParameters', Boolean, _) >> false
             config.getProperty('grails.logging.stackTraceFiltererClass', Class, _) >>
                 DefaultStackTraceFilterer

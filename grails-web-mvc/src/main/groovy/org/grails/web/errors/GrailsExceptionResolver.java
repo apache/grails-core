@@ -77,6 +77,7 @@ public class GrailsExceptionResolver extends SimpleMappingExceptionResolver impl
     protected ServletContext servletContext;
     protected GrailsApplication grailsApplication;
     protected StackTraceFilterer stackFilterer;
+    protected AuditorAwareLookup auditorAwareLookup;
 
     /* (non-Javadoc)
      * @see org.springframework.web.servlet.handler.SimpleMappingExceptionResolver#resolveException(jakarta.servlet.http.HttpServletRequest, jakarta.servlet.http.HttpServletResponse, java.lang.Object, java.lang.Exception)
@@ -125,6 +126,7 @@ public class GrailsExceptionResolver extends SimpleMappingExceptionResolver impl
     public void setGrailsApplication(GrailsApplication grailsApplication) {
         this.grailsApplication = grailsApplication;
         createStackFilterer();
+        this.auditorAwareLookup = new AuditorAwareLookup(grailsApplication.getMainContext());
     }
 
     /**
@@ -281,6 +283,11 @@ public class GrailsExceptionResolver extends SimpleMappingExceptionResolver impl
         return config != null && config.getProperty(Settings.SETTING_LOG_FULL_STACKTRACE, Boolean.class, false);
     }
 
+    protected boolean shouldLogAuditor() {
+        Config config = grailsApplication != null ? grailsApplication.getConfig() : null;
+        return config != null && config.getProperty(Settings.SETTING_LOG_AUDITOR, Boolean.class, true);
+    }
+
     protected Exception findWrappedException(Exception e) {
         if ((e instanceof InvokerInvocationException) || (e instanceof GrailsMVCException)) {
             Throwable t = getRootCause(e);
@@ -302,6 +309,12 @@ public class GrailsExceptionResolver extends SimpleMappingExceptionResolver impl
             sb.append(request.getAttribute(WebUtils.FORWARD_REQUEST_URI_ATTRIBUTE));
         } else {
             sb.append(request.getRequestURI());
+        }
+
+        if (shouldLogAuditor() && auditorAwareLookup != null) {
+            auditorAwareLookup.getCurrentAuditor().ifPresent(auditor ->
+                sb.append(" (user: ").append(auditor).append(")")
+            );
         }
 
         Config config = grailsApplication != null ? grailsApplication.getConfig() : null;

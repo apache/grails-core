@@ -86,3 +86,31 @@ Setting the `StackTrace` logger level to `OFF` in Logback makes the opt-in a no-
 
 This is useful if the property is enabled in a shared `application.yml` but a particular environment needs to
 silence the extra record.
+
+==== Including the Current User in the Exception Log
+
+When the application has registered an `AuditorAware` bean (see the GORM audit timestamps section), the resolver
+calls `getCurrentAuditor()` on that bean and appends ` (user: <value>)` to the headline, reusing the same auditor
+resolution that populates `@CreatedBy` and `@LastModifiedBy` fields. This avoids registering a second "current
+user" bean purely for logging. An example headline:
+
+----
+RuntimeException occurred when processing request: [GET] /admin/users/42 (user: alice)
+Stacktrace follows:
+----
+
+The appended value is the `toString()` of whatever the `AuditorAware` implementation returns — typically a
+username string or a numeric id, depending on the type parameter chosen for the bean. If no `AuditorAware` bean
+is registered, or if it returns `Optional.empty()` for the current request (for example, an unauthenticated
+request), the headline is emitted unchanged with no `user:` suffix.
+
+The behavior is enabled by default. To keep user identifiers out of exception logs — for example to satisfy a
+PII separation policy, or because downstream alerting keys off the legacy headline format — set:
+
+[source, yaml]
+.grails-app/conf/application.yml
+----
+grails:
+    exceptionresolver:
+        logAuditor: false
+----

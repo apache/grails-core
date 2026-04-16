@@ -793,3 +793,31 @@ grails:
 ----
 
 See the {gspTagsRef}flashMessages.html[flashMessages] tag reference for full details.
+
+===== 2.12 Exception Log Line Includes the Current User
+
+When an application registers an `AuditorAware` bean (see section 2.4), `GrailsExceptionResolver` now appends
+the current auditor to its exception log headline:
+
+----
+RuntimeException occurred when processing request: [GET] /admin/users/42 (user: alice)
+----
+
+This reuses the same resolution that populates `@CreatedBy` / `@LastModifiedBy` so no second "current user" bean
+is needed. Applications that do not register an `AuditorAware` bean see no change.
+
+====== Impact
+
+Any log parser, alert rule, or log-aggregation query that matches on the exact exception headline format will
+need to tolerate the optional ` (user: <value>)` suffix. The new behavior is enabled by default; opt out by
+setting:
+
+[source, yaml]
+.grails-app/conf/application.yml
+----
+grails:
+    exceptionresolver:
+        logAuditor: false
+----
+
+See the Logging Full Stack Traces section of the user guide for details.

@@ -300,6 +300,14 @@ interface Settings {
      */
     String SETTING_LOG_FULL_STACKTRACE = 'grails.exceptionresolver.logFullStackTrace'
     /**
+     * Whether the exception resolver should append the current auditor (resolved via a
+     * registered {@code org.grails.datastore.gorm.timestamp.AuditorAware} bean) to the
+     * exception log line. Defaults to {@code true}; set to {@code false} to keep user
+     * identifiers out of exception logs. When no {@code AuditorAware} bean is registered
+     * the log line is unchanged regardless of this setting.
+     */
+    String SETTING_LOG_AUDITOR = 'grails.exceptionresolver.logAuditor'
+    /**
      * The class to use for stacktrace filtering. Should be an instanceof {@link org.grails.exceptions.reporting.StackTraceFilterer}
      */
     String SETTING_LOGGING_STACKTRACE_FILTER_CLASS = 'grails.logging.stackTraceFiltererClass'
