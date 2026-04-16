@@ -50,7 +50,8 @@ dependencies {
     testImplementation platform('org.testcontainers:testcontainers-bom:1.20.4')
     testImplementation "ch.qos.logback:logback-classic:$logbackClassicVersion"
     testImplementation 'io.micronaut:micronaut-http-client'
-    testImplementation 'org.testcontainers:testcontainers-postgresql'
+    // The artifact is org.testcontainers:postgresql, not testcontainers-postgresql.
+    testImplementation 'org.testcontainers:postgresql'
 }
 application {
     mainClass = 'org.grails.forge.analytics.postgres.Main'
