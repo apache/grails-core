@@ -214,7 +214,10 @@ ext {
         customBomVersions = [
                 'cache-ri-impl.version'         : '1.1.1',
                 'hibernate-models.version'      : '1.0.1',
-                'hibernate.version'             : '7.2.5.Final',
+                // Aligned with Spring Boot 4.0.5's managed Hibernate version to avoid a
+                // version-constraint conflict when consumers import both grails-hibernate7-bom
+                // (via grails-data-hibernate7) and spring-boot-dependencies (via grails-base-bom).
+                'hibernate.version'             : '7.2.7.Final',
                 'jandex.version'                : '3.2.3',
                 'liquibase-hibernate.version'   : '4.27.0',
                 'liquibase-test-harness.version': '1.0.11',
