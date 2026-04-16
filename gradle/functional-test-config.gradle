@@ -44,6 +44,12 @@ List<String> h7IncompatibleProjects = [
         'grails-test-examples-scaffolding-fields',
 ]
 
+// Redirect the default grails-bom to grails-hibernate7-bom for general functional tests when
+// running with -PhibernateVersion=7, so consumers get the Hibernate 7 version constraints
+// (hibernate.version=7.2.5.Final and related). The default grails-bom and grails-hibernate5-bom
+// ship the Hibernate 5 constraints.
+def redirectBomToH7 = isGeneralFunctionalTest && targetHibernateVersion == '7' && !(project.name in h7IncompatibleProjects)
+
 configurations.configureEach {
     resolutionStrategy.dependencySubstitution {
         // Test projects will often include dependencies from local projects. This will ensure any dependencies
@@ -55,7 +61,8 @@ configurations.configureEach {
                 //TODO: This does not handle libraries that are both test fixtures & a libraries like grails-data-mongodb,
                 // see grails-test-examples-mongodb-base, & grails-test-examples-mongodb-hibernate5 for project() workaround
                 if (possibleProject.name == 'grails-bom') {
-                    substitute module(substitutedArtifact) using platform(project(':grails-bom'))
+                    def targetBom = redirectBomToH7 ? ':grails-hibernate7-bom' : ':grails-bom'
+                    substitute module(substitutedArtifact) using platform(project(targetBom))
                 }
                 else if(possibleProject.name == 'grails-geb') {
                     def selector = it.variant(module(substitutedArtifact)) { VariantSelectionDetails details ->
@@ -79,7 +86,7 @@ configurations.configureEach {
         // to Hibernate 7 projects when -PhibernateVersion=7 is set. These rules are added after the loop
         // so they override the default substitutions for the h5 modules.
         // Projects in h7IncompatibleProjects are excluded since they use H5-specific GORM APIs.
-        if (isGeneralFunctionalTest && targetHibernateVersion == '7' && !(project.name in h7IncompatibleProjects)) {
+        if (redirectBomToH7) {
             substitute module('org.apache.grails:grails-data-hibernate5') using project(':grails-data-hibernate7')
             substitute module('org.apache.grails:grails-data-hibernate5-spring-boot') using project(':grails-data-hibernate7-spring-boot')
         }
