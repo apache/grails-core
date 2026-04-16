@@ -91,7 +91,7 @@ echo "Checking Shell CLI ..."
 echo "✅ Generated Shell App"
 
 echo "Checking Forge CLI ..."
-./grails-forge-cli create-app -x -g mongodb ForgeApp
+./grails-forge-cli create-app -x -g mongodb -f gradle-settings-file ForgeApp
 echo "✅ Generated Forge App"
 
 echo "✅✅✅ All cli binary distribution checks passed successfully for Apache Grails ${VERSION}."

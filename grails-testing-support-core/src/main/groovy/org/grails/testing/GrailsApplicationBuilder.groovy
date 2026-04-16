@@ -35,7 +35,6 @@ import org.springframework.beans.factory.support.RootBeanDefinition
 import org.springframework.boot.autoconfigure.AutoConfiguration
 import org.springframework.boot.context.annotation.ImportCandidates
 import org.springframework.boot.test.context.ConfigDataApplicationContextInitializer
-import org.springframework.boot.web.servlet.context.AnnotationConfigServletWebApplicationContext
 import org.springframework.context.ConfigurableApplicationContext
 import org.springframework.context.annotation.AnnotationConfigRegistry
 import org.springframework.context.annotation.AnnotationConfigUtils
@@ -44,6 +43,7 @@ import org.springframework.context.support.PropertySourcesPlaceholderConfigurer
 import org.springframework.context.support.StaticMessageSource
 import org.springframework.core.Ordered
 import org.springframework.util.ClassUtils
+import org.springframework.web.context.ConfigurableWebApplicationContext
 
 import grails.boot.config.GrailsApplicationPostProcessor
 import grails.core.GrailsApplication
@@ -52,6 +52,7 @@ import grails.core.support.proxy.DefaultProxyHandler
 import grails.plugins.GrailsPluginManager
 import grails.spring.BeanBuilder
 import grails.util.Holders
+import org.grails.core.support.GrailsApplicationDiscoveryStrategy
 import org.apache.grails.core.plugins.DefaultPluginDiscovery
 import org.apache.grails.core.plugins.filters.IncludingPluginFilter
 import org.apache.grails.core.plugins.PluginDiscovery
@@ -65,7 +66,10 @@ import org.grails.transaction.TransactionManagerPostProcessor
 @CompileStatic
 class GrailsApplicationBuilder {
 
-    public static final boolean isServletApiPresent = ClassUtils.isPresent('jakarta.servlet.ServletContext', GrailsApplicationBuilder.classLoader)
+    public static final boolean isServletApiPresent = ClassUtils.isPresent(
+            'jakarta.servlet.ServletContext',
+            GrailsApplicationBuilder.classLoader
+    )
 
     static final Set DEFAULT_INCLUDED_PLUGINS = ['core', 'eventBus'] as Set
 
@@ -78,7 +82,6 @@ class GrailsApplicationBuilder {
     GrailsApplication grailsApplication
     Object servletContext
 
-    @CompileDynamic
     GrailsApplicationBuilder build() {
 
         servletContext = createServletContext()
@@ -91,14 +94,28 @@ class GrailsApplicationBuilder {
             // be removed so rather than implement a real solution, this hack will
             // do for now to keep the build healthy.
             try {
-                def segads = Class.forName('org.grails.web.context.ServletEnvironmentGrailsApplicationDiscoveryStrategy')
-                Holders.addApplicationDiscoveryStrategy(segads.newInstance(servletContext))
+                def appDiscoveryStrategyClass = Class.forName(
+                        'org.grails.web.context.ServletEnvironmentGrailsApplicationDiscoveryStrategy'
+                )
+                def appDiscoveryStrategy = appDiscoveryStrategyClass
+                        .getDeclaredConstructor(ServletContext)
+                        .newInstance(servletContext)
+                Holders.addApplicationDiscoveryStrategy(
+                        (GrailsApplicationDiscoveryStrategy) appDiscoveryStrategy
+                )
             }
             catch (Throwable ignored) {}
 
             try {
                 def gcu = Class.forName('org.grails.web.servlet.context.GrailsConfigUtils')
-                gcu.configureServletContextAttributes(servletContext, grailsApplication, mainContext.getBean(GrailsPluginManager.BEAN_NAME, GrailsPluginManager), mainContext)
+                def method = gcu.methods.find { it.name == 'configureServletContextAttributes' }
+                method?.invoke(
+                        null,
+                        servletContext,
+                        grailsApplication,
+                        mainContext.getBean(GrailsPluginManager.BEAN_NAME, GrailsPluginManager),
+                        mainContext
+                )
             }
             catch (Throwable ignored) {}
         }
@@ -127,10 +144,18 @@ class GrailsApplicationBuilder {
     protected ConfigurableApplicationContext createMainContext(Object servletContext) {
         ConfigurableApplicationContext context
         if (isServletApiPresent && servletContext != null) {
-            context = (AnnotationConfigServletWebApplicationContext) ClassUtils.forName('org.springframework.boot.web.servlet.context.AnnotationConfigServletWebApplicationContext').getDeclaredConstructor().newInstance()
-            ((AnnotationConfigServletWebApplicationContext) context).servletContext = (ServletContext) servletContext
+            // Spring Boot 4.0: AnnotationConfigServletWebApplicationContext relocated from
+            // org.springframework.boot.web.servlet.context to org.springframework.boot.web.context.servlet
+            context = (ConfigurableApplicationContext) ClassUtils
+                    .forName('org.springframework.boot.web.context.servlet.AnnotationConfigServletWebApplicationContext')
+                    .getDeclaredConstructor()
+                    .newInstance()
+            ((ConfigurableWebApplicationContext) context).setServletContext((ServletContext) servletContext)
         } else {
-            context = (ConfigurableApplicationContext) ClassUtils.forName('org.springframework.context.annotation.AnnotationConfigApplicationContext').getDeclaredConstructor().newInstance()
+            context = (ConfigurableApplicationContext) ClassUtils
+                    .forName('org.springframework.context.annotation.AnnotationConfigApplicationContext')
+                    .getDeclaredConstructor()
+                    .newInstance()
         }
 
         def classLoader = this.class.classLoader
@@ -141,8 +166,7 @@ class GrailsApplicationBuilder {
             ((AnnotationConfigRegistry) context).register(ClassUtils.forName(it, classLoader))
         }
 
-        def beanFactory = context.beanFactory
-        (beanFactory as DefaultListableBeanFactory).with {
+        def beanFactory = (context.beanFactory as DefaultListableBeanFactory).tap {
             allowBeanDefinitionOverriding = true
             allowCircularReferences = true
         }

@@ -18,7 +18,7 @@
  */
 package grails.plugin.json.view
 
-import com.fasterxml.jackson.databind.ObjectMapper
+import tools.jackson.databind.json.JsonMapper
 import grails.plugin.json.view.test.JsonRenderResult
 import grails.plugin.json.view.test.JsonViewTest
 import org.grails.datastore.mapping.core.Session
@@ -29,7 +29,7 @@ import spock.lang.Specification
 class ExpandSpec extends Specification implements JsonViewTest, GrailsUnitTest {
 
     @Shared
-    ObjectMapper objectMapper = new ObjectMapper()
+    JsonMapper objectMapper = JsonMapper.builder().build()
 
     void setup() {
         mappingContext.addPersistentEntities(Team, Player)

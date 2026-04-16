@@ -19,6 +19,7 @@
 package functionaltests.codecs
 
 import spock.lang.Specification
+import spock.lang.Tag
 
 import grails.testing.mixin.integration.Integration
 import org.apache.grails.testing.http.client.HttpClientSupport
@@ -38,6 +39,7 @@ import org.apache.grails.testing.http.client.HttpClientSupport
  * - Hash consistency verification
  */
 @Integration
+@Tag('http-client')
 class SecurityCodecsSpec extends Specification implements HttpClientSupport {
 
     // ========== HTML Encoding Tests (XSS Prevention) ==========

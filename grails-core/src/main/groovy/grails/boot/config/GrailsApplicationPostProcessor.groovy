@@ -99,16 +99,6 @@ class GrailsApplicationPostProcessor implements BeanDefinitionRegistryPostProces
     }
 
     /**
-     * @deprecated Use {@link #GrailsApplicationPostProcessor(GrailsApplicationLifeCycle, ApplicationContext, PluginDiscovery, Class [ ])} instead.
-     * Plugin discovery is resolved from the application context when available, otherwise a default instance is created.
-     * Will be removed in Grails 8.0.0.
-     */
-    @Deprecated(forRemoval = true, since = '7.1')
-    GrailsApplicationPostProcessor(GrailsApplicationLifeCycle lifeCycle, ApplicationContext applicationContext, Class... classes) {
-        this(lifeCycle, applicationContext, resolvePluginDiscovery(applicationContext), classes)
-    }
-
-    /**
      * Resolves the {@link PluginDiscovery} from the application context.
      * The bootstrap registry promotes the discovery bean before context refresh,
      * so it is always available by bean name at this stage.
@@ -137,20 +127,6 @@ class GrailsApplicationPostProcessor implements BeanDefinitionRegistryPostProces
         loadApplicationConfig()
         customizeGrailsApplication(grailsApplication)
         performGrailsInitializationSequence()
-    }
-
-    /**
-     * @deprecated Plugin manager customization is now handled through {@link PluginDiscovery}.
-     * This method will be removed in Grails 8.0.0.
-     *
-     * @throws UnsupportedOperationException always - callers must switch to {@link PluginDiscovery}
-     */
-    @Deprecated(forRemoval = true, since = '7.1')
-    protected void customizePluginManager(GrailsPluginManager pluginManager) {
-        throw new UnsupportedOperationException(
-                'customizePluginManager() is no longer supported. ' +
-                        'Use org.apache.grails.core.plugins.GrailsPluginDiscovery to configure plugin discovery instead.'
-        )
     }
 
     protected void customizeGrailsApplication(GrailsApplication grailsApplication) {

@@ -21,8 +21,8 @@ package org.apache.grails.core;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import org.springframework.boot.BootstrapRegistry;
-import org.springframework.boot.BootstrapRegistryInitializer;
+import org.springframework.boot.bootstrap.BootstrapRegistry;
+import org.springframework.boot.bootstrap.BootstrapRegistryInitializer;
 
 import org.apache.grails.core.plugins.DefaultPluginDiscovery;
 import org.apache.grails.core.plugins.PluginDiscovery;
@@ -37,7 +37,7 @@ import org.apache.grails.core.plugins.PluginDiscovery;
  * access the same discovered, filtered, and sorted set of plugins.</p>
  *
  * <p>This class is registered via {@code META-INF/spring.factories} under the
- * {@code org.springframework.boot.BootstrapRegistryInitializer} key.</p>
+ * {@code org.springframework.boot.bootstrap.BootstrapRegistryInitializer} key.</p>
  *
  * @since 7.1
  */

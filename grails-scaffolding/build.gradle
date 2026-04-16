@@ -20,6 +20,7 @@
 plugins {
     id 'project-report'
     id 'org.apache.grails.buildsrc.properties'
+    id 'org.apache.grails.buildsrc.dependency-validator'
     id 'org.apache.grails.gradle.grails-plugin'
     id 'org.apache.grails.gradle.grails-gsp'
     id 'org.apache.grails.buildsrc.compile'

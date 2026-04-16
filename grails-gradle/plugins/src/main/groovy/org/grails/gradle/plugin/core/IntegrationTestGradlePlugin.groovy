@@ -38,22 +38,7 @@ import org.gradle.api.Project
 @CompileStatic
 class IntegrationTestGradlePlugin implements Plugin<Project> {
 
-    @Deprecated(forRemoval = true, since = '7.1')
-    static final String INTEGRATION_TEST_IMPLEMENTATION_CONFIGURATION_NAME = 'integrationTestImplementation'
-
-    @Deprecated(forRemoval = true, since = '7.1')
-    static final String INTEGRATION_TEST_RUNTIME_ONLY_CONFIGURATION_NAME = 'integrationTestRuntimeOnly'
-
     static final String INTEGRATION_TEST_SOURCE_SET_NAME = 'integrationTest'
-
-    @Deprecated(forRemoval = true, since = '7.1')
-    static final String INTEGRATION_TEST_TASK_NAME = 'integrationTest'
-
-    @Deprecated(forRemoval = true, since = '7.1')
-    static final String MERGE_TEST_REPORTS_TASK_NAME = 'mergeTestReports'
-
-    @Deprecated(forRemoval = true, since = '7.1')
-    static final String GRAILS_INTEGRATION_TEST_INDICATOR = 'is.grails.integration.test'
 
     boolean ideaIntegration = true
 

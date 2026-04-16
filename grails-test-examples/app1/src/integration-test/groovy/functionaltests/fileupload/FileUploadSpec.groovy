@@ -19,6 +19,7 @@
 package functionaltests.fileupload
 
 import spock.lang.Specification
+import spock.lang.Tag
 
 import grails.testing.mixin.integration.Integration
 import org.apache.grails.testing.http.client.HttpClientSupport
@@ -31,6 +32,7 @@ import org.apache.grails.testing.http.client.MultipartBody
  * file validation, and metadata extraction.
  */
 @Integration
+@Tag('http-client')
 class FileUploadSpec extends Specification implements HttpClientSupport {
 
     // ========== Single File Upload Tests ==========

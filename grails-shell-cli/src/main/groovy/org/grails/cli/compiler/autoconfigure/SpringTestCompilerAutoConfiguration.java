@@ -48,7 +48,7 @@ public class SpringTestCompilerAutoConfiguration extends CompilerAutoConfigurati
 
     @Override
     public void applyDependencies(DependencyCustomizer dependencies) {
-        dependencies.ifAnyMissingClasses("org.springframework.http.HttpHeaders").add("spring-boot-starter-web");
+        dependencies.ifAnyMissingClasses("org.springframework.http.HttpHeaders").add("spring-boot-starter-webmvc");
     }
 
     @Override

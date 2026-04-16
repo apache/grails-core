@@ -240,16 +240,6 @@ public interface GrailsPluginManager extends ApplicationContextAware {
     void shutdown();
 
     /**
-     * Set whether the core plugins should be loaded.
-     *
-     * @param shouldLoadCorePlugins True if they should
-     * @deprecated Core plugin loading is now handled by {@link org.apache.grails.core.plugins.PluginDiscovery}.
-     * This method is a no-op and will be removed in Grails 8.0.0.
-     */
-    @Deprecated(forRemoval = true, since = "7.1")
-    void setLoadCorePlugins(boolean shouldLoadCorePlugins);
-
-    /**
      * Method for handling changes to a class and triggering {@link Plugin#onChange onChange} events etc.
      *
      * @param aClass The class that has changed
@@ -367,14 +357,4 @@ public interface GrailsPluginManager extends ApplicationContextAware {
      */
     boolean isShutdown();
 
-    /**
-     * Sets a {@link PluginFilter filter} to filter which plugins should be loaded
-     * and which should be ignored.
-     *
-     * @param pluginFilter The {@link PluginFilter filter} filter
-     * @deprecated Plugin filtering is now handled by {@link org.apache.grails.core.plugins.PluginDiscovery}.
-     * This method is a no-op and will be removed in Grails 8.0.0.
-     */
-    @Deprecated(forRemoval = true, since = "7.1")
-    void setPluginFilter(PluginFilter pluginFilter);
 }

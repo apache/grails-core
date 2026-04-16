@@ -100,11 +100,10 @@ class UrlMappingsHandlerMapping extends AbstractHandlerMapping {
             chain.addInterceptors(webRequestHandlerInterceptors)
         }
 
-        String lookupPath = this.urlPathHelper.getLookupPathForRequest(request)
         for (HandlerInterceptor interceptor in this.adaptedInterceptors) {
             if (interceptor instanceof MappedInterceptor) {
                 MappedInterceptor mappedInterceptor = mappedInterceptor(interceptor)
-                if (mappedInterceptor.matches(lookupPath, this.pathMatcher)) {
+                if (mappedInterceptor.matches(request)) {
                     chain.addInterceptor(mappedInterceptor.getInterceptor())
                 }
             }

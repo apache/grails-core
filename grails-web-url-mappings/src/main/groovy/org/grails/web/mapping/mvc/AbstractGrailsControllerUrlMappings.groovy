@@ -60,7 +60,7 @@ abstract class AbstractGrailsControllerUrlMappings implements UrlMappings {
         this.urlMappingsHolderDelegate = urlMappingsHolderDelegate
         this.urlConverter = urlConverter
         this.validateWildcardMappings = grailsApplication.config.getProperty(
-                Settings.WEB_URL_MAPPING_VALIDATE_WILDCARDS, Boolean, true)
+                Settings.URL_MAPPING_VALIDATE_WILDCARDS, Boolean, true)
         def controllerArtefacts = grailsApplication.getArtefacts(ControllerArtefactHandler.TYPE)
         for (GrailsClass gc in controllerArtefacts) {
             registerController((GrailsControllerClass) gc)
@@ -210,12 +210,10 @@ abstract class AbstractGrailsControllerUrlMappings implements UrlMappings {
 
     protected UrlMappingInfo[] collectControllerMappings(UrlMappingInfo[] infos) {
         def webRequest = GrailsWebRequest.lookup()
-        List<UrlMappingInfo> wildcardActionMatches = []
-        List<UrlMappingInfo> otherMatches = []
-        boolean hasLiteralControllerMatch = false
+        List<UrlMappingInfo> matches = []
         for (UrlMappingInfo info : infos) {
             if (info.redirectInfo) {
-                otherMatches.add(info)
+                matches.add(info)
                 continue
             }
             if (webRequest != null) {
@@ -225,30 +223,32 @@ abstract class AbstractGrailsControllerUrlMappings implements UrlMappings {
             ControllerKey controllerKey = new ControllerKey(info.namespace, info.controllerName, info.actionName, info.pluginName)
             GrailsControllerClass controllerClass = info ? mappingsToGrailsControllerMap.get(controllerKey) : null
             if (controllerClass) {
-                def wrapped = new GrailsControllerUrlMappingInfo(controllerClass, info)
-                if (validateWildcardMappings && info.hasWildcardCaptures()) {
-                    wildcardActionMatches.add(wrapped)
-                } else {
-                    otherMatches.add(wrapped)
-                    if (!hasLiteralControllerMatch) {
-                        // A literal match has no URL-captured parameters beyond standard routing params
-                        def params = info.parameters
-                        hasLiteralControllerMatch = params == null || params.keySet().every { it in ROUTING_PARAMS }
-                    }
-                }
+                matches.add(new GrailsControllerUrlMappingInfo(controllerClass, info))
             } else if (!validateWildcardMappings || !info.hasWildcardCaptures()) {
-                otherMatches.add(info)
+                matches.add(info)
             }
             // else: wildcard-captured values didn't match a registered controller/action — skip
         }
-        // Wildcard-resolved matches take priority over parameterized catch-all matches
-        // (e.g., $controller=feed beats $communitySlug=feed), but NOT over literal path
-        // matches (e.g., /community or post /invites) which are always more specific
-        if (hasLiteralControllerMatch) {
-            (otherMatches + wildcardActionMatches) as UrlMappingInfo[]
-        } else {
-            (wildcardActionMatches + otherMatches) as UrlMappingInfo[]
+        // When wildcard validation is enabled, promote validated wildcard matches
+        // (e.g., $action? resolving to a real action) only when they have strictly fewer
+        // non-routing URL captures — meaning they matched a more specific URL pattern.
+        // Same wildcard status: preserve URL matcher's original order (stable sort).
+        // When validation is disabled, preserve original URL matcher order entirely.
+        if (validateWildcardMappings) {
+            matches.sort(true) { a, b ->
+                if (a.hasWildcardCaptures() == b.hasWildcardCaptures()) return 0
+                int diff = nonRoutingParamCount(a) - nonRoutingParamCount(b)
+                if (a.hasWildcardCaptures() && diff < 0) return -1
+                if (b.hasWildcardCaptures() && diff < 0) return 1
+                0  // preserve original order
+            }
         }
+        matches as UrlMappingInfo[]
+    }
+
+    private static int nonRoutingParamCount(UrlMappingInfo info) {
+        def params = info.parameters
+        params == null ? 0 : (int) params.keySet().count { !(it in ROUTING_PARAMS) }
     }
 
     protected UrlMappingInfo collectControllerMapping(UrlMappingInfo info) {

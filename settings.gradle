@@ -120,7 +120,6 @@ include(
 
         // events
         'grails-events-core',
-        'grails-events-compat',
         'grails-events-transforms',
         'grails-events-gpars',
         'grails-events-spring',
@@ -140,14 +139,14 @@ include(
         // gsp
         'grails-gsp-core',
         'grails-gsp',
-        'grails-sitemesh3',
+        // TODO: 'grails-sitemesh3', // sitemesh3 does not support boot 4 at this time
         'grails-layout',
         'grails-taglib',
         'grails-web-gsp',
         'grails-web-gsp-taglib',
         'grails-web-jsp',
         'grails-web-taglib',
-        'grails-gsp-spring-boot',
+        // TODO: 'grails-gsp-spring-boot', // sitemesh3 does not support boot4 at this time
 
         'grails-datastore-core',
         'grails-datastore-web',
@@ -189,7 +188,6 @@ include(
 // Instead of using : to separate nested projects, fix the project directories by setting the projectDir explicitly
 // (Preserve the parent directory name as part of the nested project name)
 project(':grails-events-core').projectDir = file('grails-events/core')
-project(':grails-events-compat').projectDir = file('grails-events/compat')
 project(':grails-events-transforms').projectDir = file('grails-events/transforms')
 project(':grails-events-gpars').projectDir = file('grails-events/gpars')
 project(':grails-events-spring').projectDir = file('grails-events/spring')
@@ -211,14 +209,14 @@ project(':grails-dependencies-assets').projectDir = file('grails-dependencies/as
 
 project(':grails-gsp-core').projectDir = file('grails-gsp/core')
 project(':grails-gsp').projectDir = file('grails-gsp/plugin')
-project(':grails-sitemesh3').projectDir = file('grails-gsp/grails-sitemesh3')
+// TODO: project(':grails-sitemesh3').projectDir = file('grails-gsp/grails-sitemesh3')
 project(':grails-layout').projectDir = file('grails-gsp/grails-layout')
 project(':grails-taglib').projectDir = file('grails-gsp/grails-taglib')
 project(':grails-web-gsp').projectDir = file('grails-gsp/grails-web-gsp')
 project(':grails-web-gsp-taglib').projectDir = file('grails-gsp/grails-web-gsp-taglib')
 project(':grails-web-jsp').projectDir = file('grails-gsp/grails-web-jsp')
 project(':grails-web-taglib').projectDir = file('grails-gsp/grails-web-taglib')
-project(':grails-gsp-spring-boot').projectDir = file('grails-gsp/spring-boot')
+// TODO: project(':grails-gsp-spring-boot').projectDir = file('grails-gsp/spring-boot')
 
 // Data Mapping - Documentation
 include 'grails-data-docs-guide-developer'
@@ -239,6 +237,9 @@ findProject(':grails-data-simple').projectDir = file('grails-data-simple')
 // Core
 include 'grails-data-hibernate5-core'
 findProject(':grails-data-hibernate5-core').projectDir = file('grails-data-hibernate5/core')
+
+include 'grails-data-hibernate5-spring-orm'
+findProject(':grails-data-hibernate5-spring-orm').projectDir = new File(settingsDir, 'grails-data-hibernate5/spring-orm')
 
 // Documentation
 include 'grails-data-hibernate5-docs'
@@ -374,11 +375,12 @@ include(
         'grails-test-examples-exploded',
         'grails-test-examples-external-configuration',
         'grails-test-examples-geb',
+        'grails-test-examples-geb-context-path',
         'grails-test-examples-geb-gebconfig',
         'grails-test-examples-gorm',
         'grails-test-examples-gsp-layout',
-        'grails-test-examples-gsp-sitemesh3',
-        'grails-test-examples-gsp-spring-boot',
+        // TODO: 'grails-test-examples-gsp-sitemesh3',
+        // TODO: 'grails-test-examples-gsp-spring-boot',
         'grails-test-examples-hyphenated',
         'grails-test-examples-issue-11102',
         'grails-test-examples-issue-11767',
@@ -412,12 +414,13 @@ project(':grails-test-examples-exploded').projectDir = file('grails-test-example
 project(':grails-test-examples-datasources').projectDir = file('grails-test-examples/datasources')
 project(':grails-test-examples-database-cleanup').projectDir = file('grails-test-examples/database-cleanup')
 project(':grails-test-examples-geb').projectDir = file('grails-test-examples/geb')
+project(':grails-test-examples-geb-context-path').projectDir = file('grails-test-examples/geb-context-path')
 project(':grails-test-examples-geb-gebconfig').projectDir = file('grails-test-examples/geb-gebconfig')
 project(':grails-test-examples-namespaces').projectDir = file('grails-test-examples/namespaces')
 project(':grails-test-examples-gorm').projectDir = file('grails-test-examples/gorm')
 project(':grails-test-examples-gsp-layout').projectDir = file('grails-test-examples/gsp-layout')
-project(':grails-test-examples-gsp-sitemesh3').projectDir = file('grails-test-examples/gsp-sitemesh3')
-project(':grails-test-examples-gsp-spring-boot').projectDir = file('grails-test-examples/gsp-spring-boot/app')
+//TODO: project(':grails-test-examples-gsp-sitemesh3').projectDir = file('grails-test-examples/gsp-sitemesh3')
+//TODO: project(':grails-test-examples-gsp-spring-boot').projectDir = file('grails-test-examples/gsp-spring-boot/app')
 project(':grails-test-examples-issue-698-domain-save-npe').projectDir = file('grails-test-examples/issue-698-domain-save-npe')
 project(':grails-test-examples-hyphenated').projectDir = file('grails-test-examples/hyphenated')
 project(':grails-test-examples-issue-views-182').projectDir = file('grails-test-examples/issue-views-182')

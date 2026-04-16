@@ -24,6 +24,7 @@ import org.grails.forge.ApplicationContextSpec
 import org.grails.forge.application.ApplicationType
 import org.grails.forge.fixture.CommandOutputFixture
 import org.grails.forge.options.DevelopmentReloading
+import org.grails.forge.options.JdkVersion
 import org.grails.forge.options.Options
 
 class SpringBootDevToolsSpec extends ApplicationContextSpec implements CommandOutputFixture {
@@ -65,6 +66,8 @@ class SpringBootDevToolsSpec extends ApplicationContextSpec implements CommandOu
 
     void "test spring-boot-devtools is not applied when grails-micronaut is selected"() {
         expect:
-        !('spring-boot-devtools' in getFeatures(['grails-micronaut'], new Options(DevelopmentReloading.DEVTOOLS)))
+        // Micronaut features require JDK 25+ because micronaut-core's ScopedValues
+        // references java.lang.ScopedValue.CallableOp (JEP 506, finalized in JDK 25).
+        !('spring-boot-devtools' in getFeatures(['grails-micronaut'], new Options(DevelopmentReloading.DEVTOOLS, JdkVersion.JDK_25)))
     }
 }

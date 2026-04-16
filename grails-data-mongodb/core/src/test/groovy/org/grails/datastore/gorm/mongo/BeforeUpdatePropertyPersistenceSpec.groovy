@@ -18,7 +18,7 @@
  */
 package org.grails.datastore.gorm.mongo
 
-import grails.gorm.annotation.AutoTimestamp
+import grails.gorm.annotation.LastModifiedDate
 import grails.persistence.Entity
 import org.apache.grails.data.mongo.core.GrailsDataMongoTckManager
 import org.apache.grails.data.testing.tck.base.GrailsDataTckSpec
@@ -184,7 +184,7 @@ class UserWithBeforeUpdateAndAutoTimestamp {
     String random
     Date dateCreated
     Date lastUpdated
-    @AutoTimestamp Date modified
+    @LastModifiedDate Date modified
 
     static constraints = {
         random nullable: true

@@ -21,13 +21,14 @@ package grails.plugin.formfields.mock
 import java.time.Instant
 import java.time.LocalDate
 
-import grails.gorm.annotation.AutoTimestamp
+import grails.gorm.annotation.CreatedDate
+import grails.gorm.annotation.LastModifiedDate
 import grails.persistence.Entity
 
 @Entity
 class Cyborg extends Person {
-	@AutoTimestamp(AutoTimestamp.EventType.CREATED) Date created
-	@AutoTimestamp Date modified
+	@CreatedDate Date created
+	@LastModifiedDate Date modified
 	Instant timestamp
 	LocalDate birthDate
 }
