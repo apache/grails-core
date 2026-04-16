@@ -19,9 +19,9 @@
 package grails.gorm.specs
 
 import grails.gorm.annotation.Entity
-import org.testcontainers.containers.MariaDBContainer
-import org.testcontainers.containers.MySQLContainer
-import org.testcontainers.containers.PostgreSQLContainer
+import org.testcontainers.mariadb.MariaDBContainer
+import org.testcontainers.mysql.MySQLContainer
+import org.testcontainers.postgresql.PostgreSQLContainer
 import org.testcontainers.oracle.OracleContainer
 import org.testcontainers.spock.Testcontainers
 import spock.lang.Requires
@@ -30,7 +30,6 @@ import spock.lang.Unroll
 
 @Testcontainers
 @Requires({ isDockerAvailable() })
-//TODO Cleanup
 class RLikeHibernate7Spec extends HibernateGormDatastoreSpec {
 
     @Shared postgres = new PostgreSQLContainer("postgres:16")
@@ -42,39 +41,32 @@ class RLikeHibernate7Spec extends HibernateGormDatastoreSpec {
         manager.addAllDomainClasses([RlikeFoo])
     }
 
-    void cleanupSpec() {
-        // Testcontainers @Testcontainers + @Shared handles stopping
-    }
-
-    @Unroll
     void "test rlike works with #db"() {
         given:
         if (container != null && !container.isRunning()) {
             container.start()
         }
 
-        String url = container ? container.jdbcUrl : "jdbc:h2:mem:grailsDB"
-        String driver = container ? container.driverClassName : "org.h2.Driver"
-        String username = container ? container.username : "sa"
-        String password = container ? container.password : ""
-
         // Reconfigure manager for this specific database
-        manager.cleanup() // Clean up previous session/datastore
+        manager.destroy() // Ensure a completely fresh state for each DB
         manager.grailsConfig = [
-                'dataSource.url'           : url,
-                'dataSource.driverClassName': driver,
-                'dataSource.username'      : username,
-                'dataSource.password'      : password,
-                'dataSource.dbCreate'      : 'create-drop',
-                'hibernate.dialect'        : dialect,
-                'hibernate.hbm2ddl.auto'   : 'create',
-                'hibernate.show_sql'       : 'true',
-                'hibernate.format_sql'     : 'true',
+                'dataSource.url'                     : container?.jdbcUrl ?: "jdbc:h2:mem:rlikeDB;LOCK_TIMEOUT=10000",
+                'dataSource.driverClassName'         : container?.driverClassName ?: "org.h2.Driver",
+                'dataSource.username'                : container?.username ?: "sa",
+                'dataSource.password'                : container?.password ?: "",
+                'dataSource.dbCreate'                : 'create-drop',
+                'hibernate.show_sql'                 : 'true',
+                'hibernate.format_sql'               : 'true',
+                'hibernate.highlight_sql'            : 'true',
                 'hibernate.id.new_generator_mappings': 'true'
         ]
-        manager.setup(this.class) // Initialize with new config
+        // Note: 'hibernate.dialect' is intentionally omitted here.
+        // Hibernate 7 is capable of auto-detecting the dialect from JDBC metadata,
+        // which avoids deprecation warnings and hardcoded dialect strings.
+        
+        manager.setup(this.class)
 
-        // Use the same given data
+        // Seed data
         new RlikeFoo(name: "ABC").save()
         new RlikeFoo(name: "ABCDEF").save()
         new RlikeFoo(name: "ABCDEFGHI").save(flush: true)
@@ -87,13 +79,13 @@ class RLikeHibernate7Spec extends HibernateGormDatastoreSpec {
         allFoos.size() == 2
 
         where:
-        db           | container | dialect
-        "H2"         | null      | "org.hibernate.dialect.H2Dialect"
-        "Postgres"   | postgres  | "org.hibernate.dialect.PostgreSQLDialect"
-        "MySQL"      | mysql     | "org.hibernate.dialect.MySQLDialect"
-        "MariaDB"    | mariadb   | "org.hibernate.dialect.MariaDBDialect"
-        //        "Oracle"     | oracle    | "org.hibernate.dialect.OracleDialect"
-        }
+        db           | container
+        "H2"         | null
+        "Postgres"   | postgres
+        "MySQL"      | mysql
+        "MariaDB"    | mariadb
+        // "Oracle"     | oracle
+    }
 }
 
 @Entity

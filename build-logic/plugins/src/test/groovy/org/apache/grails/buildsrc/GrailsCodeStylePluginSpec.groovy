@@ -102,6 +102,7 @@ class GrailsCodeStylePluginSpec extends Specification {
         def csvReport = new File(jacocoDir, 'jacocoTestReport.csv')
         csvReport.text = """GROUP,PACKAGE,CLASS,INSTRUCTION_MISSED,INSTRUCTION_COVERED,BRANCH_MISSED,BRANCH_COVERED,LINE_MISSED,LINE_COVERED,COMPLEXITY_MISSED,COMPLEXITY_COVERED,METHOD_MISSED,METHOD_COVERED
 app-module,com.example,AppClass,1,9,0,0,0,1,0,1,0,1
+app-module,org.grails.orm.hibernate.support.hibernate7,FilteredClass,1,9,0,0,0,1,0,1,0,1
 """
 
         when: "running aggregateStyleViolations with jacoco enabled"
@@ -130,6 +131,7 @@ app-module,com.example,AppClass,1,9,0,0,0,1,0,1,0,1
         def jacocoMd = testProjectDir.resolve('JACOCO_COVERAGE_VIOLATIONS.md').toFile().text
         jacocoMd.contains('## Module: app-module')
         jacocoMd.contains('| com.example.AppClass | 90.00% |')
+        !jacocoMd.contains('FilteredClass')
     }
 
     def "test codenarcFix task fixes violations"() {

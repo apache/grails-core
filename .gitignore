@@ -65,3 +65,4 @@ STATE_SNAPSHOT.xml
 0_build_grails.txt
 *VIOLATIONS.md
 /TEST_FAILURES.md
+local-tasks.gradle
