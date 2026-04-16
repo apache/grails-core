@@ -88,7 +88,83 @@ class HibernateDatastoreSpringInitializerSpec extends Specification{
                     assert s.doReturningWork { it.getMetaData().getURL() } == "jdbc:h2:mem:moreBooks"
                     return true
                 }
+        cleanup:
+        applicationContext.close()
+    }
 
+    void "test other constructors and edge cases"() {
+        when: "Constructed with packages"
+        def initializer = new HibernateDatastoreSpringInitializer(org.grails.datastore.mapping.core.DatastoreUtils.createPropertyResolver([:]), "grails.orm.bootstrap")
+        
+        then: "Data sources are empty if not in config"
+        initializer.dataSources == [] as Set
+
+        when: "configureForDataSource is called"
+        def dataSource = Mock(javax.sql.DataSource)
+        def ctx = initializer.configureForDataSource(dataSource)
+        
+        then: "It works"
+        ctx.getBean('dataSource') == dataSource
+        
+        cleanup:
+        ctx?.close()
+    }
+
+    void "test configureDataSources with null"() {
+        given:
+        def initializer = new HibernateDatastoreSpringInitializer([:], Person)
+        
+        when:
+        initializer.configureDataSources(null)
+        
+        then:
+        initializer.dataSources == ['default'] as Set
+    }
+
+    void "test isWebApplication branch"() {
+        given:
+        def initializer = new HibernateDatastoreSpringInitializer([:], Person)
+        def registry = new org.springframework.context.support.GenericApplicationContext()
+        registry.registerBeanDefinition('dispatcherServlet', new org.springframework.beans.factory.support.RootBeanDefinition(Object))
+        
+        when:
+        initializer.configureForBeanDefinitionRegistry(registry)
+        
+        then:
+        registry.containsBeanDefinition('openSessionInViewInterceptor')
+        
+        cleanup:
+        registry.close()
+    }
+
+    void "test beanDefinitions closure"() {
+        given:
+        def initializer = new HibernateDatastoreSpringInitializer([:], Person)
+        initializer.beanDefinitions = {
+            myCustomBean(String, "hello")
+        }
+        
+        when:
+        def ctx = initializer.configure()
+        
+        then:
+        ctx.getBean('myCustomBean') == "hello"
+        
+        cleanup:
+        ctx.close()
+    }
+
+    void "test illegal state if datastore not registered"() {
+        given:
+        def initializer = new HibernateDatastoreSpringInitializer([:], Person)
+        def registry = Mock(org.springframework.beans.factory.support.BeanDefinitionRegistry)
+        registry.containsBeanDefinition('hibernateDatastore') >> false
+        
+        when:
+        initializer.configureForBeanDefinitionRegistry(registry)
+        
+        then:
+        thrown(IllegalStateException)
     }
 }
 @Entity

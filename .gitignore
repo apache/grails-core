@@ -35,7 +35,8 @@
 /grails.iws
 /idea-target
 /lib
-/local.properties
+/local*
+local*
 /out
 /src
 /test/grails-app
@@ -65,4 +66,3 @@ STATE_SNAPSHOT.xml
 0_build_grails.txt
 *VIOLATIONS.md
 /TEST_FAILURES.md
-local-tasks.gradle

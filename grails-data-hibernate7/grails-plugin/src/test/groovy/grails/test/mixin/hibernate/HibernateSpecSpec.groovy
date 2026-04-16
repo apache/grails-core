@@ -62,6 +62,19 @@ class HibernateSpecSpec extends HibernateSpec {
         hibernateDatastore.failOnError == false
         and: "Default"
         hibernateDatastore.defaultFlushModeName == "COMMIT"
+        and: "Hibernate session and session factory are available"
+        hibernateSession != null
+        sessionFactory != null
+        getHibernateSession() != null
+        getSessionFactory() != null
+    }
+
+    void "test getCollector"() {
+        when:
+        def collector = getCollector()
+
+        then:
+        collector != null
     }
 
     List<Class> getDomainClasses() { [Person, Player, Book] }

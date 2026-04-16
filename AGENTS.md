@@ -39,6 +39,24 @@ limitations under the License.
 export GRADLE_OPTS="-Xms2G -Xmx5G"
 ```
 
+### Local Configuration (Experimental)
+
+The following files are used for local development and isolation to avoid memory issues (OOM) and improve iteration speed. These files are typically ignored by Git.
+
+| File | Purpose |
+|------|---------|
+| `local.properties` | Defines user-specific properties, such as `grails.test.modules` (comma-separated list of modules to isolate). |
+| `local-tasks.gradle` | Contains custom tasks (e.g., `testSelected`) and logic to disable unneeded tasks or boost memory for selected modules. |
+| `local-init.gradle` | A Gradle Initialization Script used to apply `local-tasks.gradle` without modifying the project's `build.gradle`. |
+
+**Usage:**
+To run tests only for the modules defined in `local.properties` with boosted memory and sequential execution:
+```bash
+./gradlew --init-script local-init.gradle testSelected aggregateStyleViolations
+```
+
+---
+
 ## Critical Rules
 
 1. **Use `jakarta.*` NOT `javax.*`** - All packages migrated to Jakarta EE 10
