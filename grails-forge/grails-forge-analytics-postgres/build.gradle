@@ -28,9 +28,11 @@ group = 'org.apache.grails.forge'
 
 dependencies {
 
+    annotationProcessor platform("io.micronaut:micronaut-bom:$micronautVersion")
     annotationProcessor 'io.micronaut:micronaut-graal'
     annotationProcessor 'io.micronaut.data:micronaut-data-processor'
 
+    implementation platform("io.micronaut:micronaut-bom:$micronautVersion")
     implementation project(':grails-forge-core')
     implementation "com.google.cloud.sql:postgres-socket-factory:$postgresSocketFactoryVersion"
     implementation 'io.micronaut.data:micronaut-data-jdbc'
@@ -40,8 +42,10 @@ dependencies {
 
     runtimeOnly "ch.qos.logback:logback-classic:$logbackClassicVersion"
 
+    testAnnotationProcessor platform("io.micronaut:micronaut-bom:$micronautVersion")
     testCompileOnly "io.micronaut:micronaut-inject-groovy:$micronautVersion"
 
+    testImplementation platform("io.micronaut:micronaut-bom:$micronautVersion")
     testImplementation "ch.qos.logback:logback-classic:$logbackClassicVersion"
     testImplementation 'io.micronaut:micronaut-http-client'
     testImplementation 'org.testcontainers:testcontainers-postgresql'
