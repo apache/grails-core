@@ -73,8 +73,9 @@ tasks.named('dockerfileNative') {
     // plugin silently clamps to Java 17 (see NativeImageDockerfile.SUPPORTED_JAVA_VERSIONS =
     // [17, 11]). Without the explicit `graalImage` override below the builder would still use
     // `ghcr.io/graalvm/native-image:ol7-java17-22.3.2` and fail with class file version 65.0.
-    graalImage = 'ghcr.io/graalvm/native-image-community:21.0.2-ol9'
-    baseImage('ghcr.io/graalvm/native-image-community:21.0.2-ol9')
+    def nativeImageContainer = 'ghcr.io/graalvm/native-image-community:21.0.2-ol9'
+    graalImage = nativeImageContainer
+    baseImage(nativeImageContainer)
 }
 
 tasks.named('dockerBuildNative') {
