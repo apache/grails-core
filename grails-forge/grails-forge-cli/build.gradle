@@ -99,7 +99,7 @@ dependencies {
     testImplementation "org.reflections:reflections:$reflectionsVersion"
     // The testcontainers BOM is not imported by micronaut-bom 3.10.4, so pin the version explicitly.
     // Also: the published artifact id is org.testcontainers:spock, not testcontainers-spock.
-    testImplementation platform('org.testcontainers:testcontainers-bom:1.20.4')
+    testImplementation platform("org.testcontainers:testcontainers-bom:$testcontainersVersion")
     testImplementation 'org.testcontainers:spock'
     if (project.hasProperty('micronautVersion')) {
         testCompileOnly "io.micronaut:micronaut-inject-groovy:$micronautVersion"
