@@ -35,6 +35,10 @@ ext {
     pomDescription = 'The Database Migration plugin helps you manage database changes, via Liquibase, while developing Grails applications for Hibernate 7'
 }
 
+configurations {
+    enversRuntime.extendsFrom(testImplementation)
+}
+
 dependencies {
     // TODO: Clarify and clean up dependencies
     implementation platform(project(':grails-hibernate7-bom'))
@@ -91,7 +95,7 @@ dependencies {
     testImplementation('org.liquibase:liquibase-test-harness') {
         exclude group: 'org.liquibase', module: 'liquibase-commercial'
     }
-    testImplementation("org.hibernate.orm:hibernate-envers")
+    enversRuntime("org.hibernate.orm:hibernate-envers")
 }
 
 tasks.named('jar', Jar) {
@@ -99,6 +103,9 @@ tasks.named('jar', Jar) {
 }
 
 tasks.withType(Test).configureEach {
+    if (name == 'test') {
+        classpath += configurations.enversRuntime
+    }
     develocity.testRetry {
         if (isCiBuild) {
             maxRetries = 2

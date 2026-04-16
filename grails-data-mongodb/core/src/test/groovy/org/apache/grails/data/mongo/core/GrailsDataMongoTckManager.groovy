@@ -237,4 +237,13 @@ class GrailsDataMongoTckManager extends GrailsDataTckManager {
                     new PersistentEntityValidator(entity, messageSource, evaluator))
         }
     }
+
+    static boolean isDockerAvailable() {
+        def candidates = [
+                System.getProperty('user.home') + '/.docker/run/docker.sock',
+                '/var/run/docker.sock',
+                System.getenv('DOCKER_HOST') ?: ''
+        ]
+        candidates.any { it && new File(it).exists() }
+    }
 }

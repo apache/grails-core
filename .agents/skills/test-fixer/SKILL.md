@@ -96,7 +96,7 @@ A clean run produces:
 All tests passed! 🎉
 ```
 
-**A clean run should report no issues, and `TEST_FAILURES.md` is a generated artifact that must be removed before committing, whether it contains failures or not.**
+**A clean run should report no issues. Note that `TEST_FAILURES.md` is a generated artifact and is ignored by git, so it will not be committed.**
 
 ---
 

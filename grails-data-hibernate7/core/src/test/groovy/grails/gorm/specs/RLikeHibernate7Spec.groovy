@@ -92,8 +92,8 @@ class RLikeHibernate7Spec extends HibernateGormDatastoreSpec {
         "Postgres"   | postgres  | "org.hibernate.dialect.PostgreSQLDialect"
         "MySQL"      | mysql     | "org.hibernate.dialect.MySQLDialect"
         "MariaDB"    | mariadb   | "org.hibernate.dialect.MariaDBDialect"
-//        "Oracle"     | oracle    | "org.hibernate.dialect.OracleDialect"
-    }
+        //        "Oracle"     | oracle    | "org.hibernate.dialect.OracleDialect"
+        }
 }
 
 @Entity
