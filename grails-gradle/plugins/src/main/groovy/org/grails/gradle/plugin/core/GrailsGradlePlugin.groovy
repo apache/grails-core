@@ -392,13 +392,16 @@ ${importStatements}
         // the behavior of the Spring Dependency Management plugin which applied version
         // constraints globally via configurations.all() + resolutionStrategy.eachDependency().
         // Non-declarable configurations (e.g. apiElements, runtimeElements) inherit
-        // constraints through their parent configurations. Code quality tool
-        // configurations (checkstyle, codenarc, etc.) are excluded because adding BOM
-        // constraints to tool classpaths can upgrade transitive dependencies and break
-        // the tools - unlike resolutionStrategy hooks, platform() constraints
-        // participate in version conflict resolution.
+        // constraints through their parent configurations. Tool/annotation-processor
+        // configurations are excluded because they hold independent classpaths that
+        // already use their own platforms (e.g. Micronaut's annotation processors
+        // import io.micronaut.platform:micronaut-platform). Adding grails-bom as a
+        // second non-enforced platform on those configurations causes version conflict
+        // resolution to upgrade transitives and break the tools/processors - unlike
+        // resolutionStrategy hooks, platform() constraints participate in version
+        // conflict resolution.
         project.configurations.configureEach { Configuration conf ->
-            if (conf.canBeDeclared && !isCodeQualityConfiguration(conf.name)) {
+            if (conf.canBeDeclared && !isExcludedFromBomPlatform(conf.name)) {
                 project.dependencies.add(conf.name, project.dependencies.platform(bomCoordinates))
             }
         }
@@ -413,15 +416,10 @@ ${importStatements}
         }
     }
 
-    /**
-     * Returns {@code true} if the given configuration name belongs to a code quality
-     * tool (Checkstyle, CodeNarc, PMD, SpotBugs). These configurations hold tool
-     * classpaths and must not receive the BOM platform because {@code platform()}
-     * constraints can upgrade transitive dependencies and break the tools.
-     */
-    private static boolean isCodeQualityConfiguration(String name) {
+    private static boolean isExcludedFromBomPlatform(String name) {
         name == 'checkstyle' || name == 'codenarc' || name == 'pmd' ||
-                name == 'spotbugs' || name == 'spotbugsPlugins'
+                name == 'spotbugs' || name == 'spotbugsPlugins' ||
+                name == 'annotationProcessor' || name.endsWith('AnnotationProcessor')
     }
 
     protected void applySpringBootPlugin(Project project) {
