@@ -21,7 +21,6 @@ package grails.dev.commands.template
 
 import groovy.text.GStringTemplateEngine
 import groovy.text.Template
-import groovy.transform.CompileDynamic
 import groovy.transform.CompileStatic
 
 import grails.codegen.model.Model
@@ -50,17 +49,31 @@ class TemplateRendererImpl implements TemplateRenderer {
     /**
      * Render with the given named arguments
      *
-     * @param namedArguments The named arguments are 'template', 'destination' and 'model'
+     * @param namedArguments The named arguments are 'template', 'destination', 'model', and 'overwrite'
      */
     @Override
-    @CompileDynamic
     void render(Map<String, Object> namedArguments) {
-        if (namedArguments?.template && namedArguments?.destination) {
-            def templateArg = namedArguments.template
-            Resource template = templateArg instanceof Resource ? templateArg : template(templateArg)
-            boolean overwrite = namedArguments.overwrite as Boolean ?: false
-            render(template, file(namedArguments.destination), namedArguments.model ?: [:], overwrite)
+        if (!namedArguments?.template || !namedArguments?.destination) {
+            return
         }
+        // Resolve template to a Resource. This was previously left to @CompileDynamic
+        // dispatch, but Groovy 5's invokedynamic-based runtime picked up the wrong
+        // `template(Object)` overload through the @Delegate chain on commands that
+        // extend GrailsApplicationCommand, causing the call to silently no-op.
+        // Keep the resolution explicit and statically typed so both the Groovy 4
+        // and Groovy 5 compilers route through the correct Resource-based overload.
+        Object templateArg = namedArguments.template
+        Resource templateResource
+        if (templateArg instanceof Resource) {
+            templateResource = (Resource) templateArg
+        } else {
+            templateResource = template(templateArg)
+        }
+        File destinationFile = file(namedArguments.destination)
+        Object modelArg = namedArguments.model
+        Map modelMap = modelArg instanceof Map ? (Map) modelArg : [:]
+        boolean overwrite = namedArguments.overwrite as Boolean ?: false
+        render(templateResource, destinationFile, modelMap, overwrite)
     }
 
     /**
