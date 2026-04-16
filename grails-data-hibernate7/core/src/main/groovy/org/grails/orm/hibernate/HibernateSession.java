@@ -29,10 +29,8 @@ import java.util.Map;
 
 import jakarta.persistence.FlushModeType;
 import jakarta.persistence.LockModeType;
+
 import org.hibernate.LockMode;
-import org.grails.orm.hibernate.query.HibernateHqlQueryCreator;
-import org.grails.orm.hibernate.query.HqlQueryContext;
-import org.grails.orm.hibernate.query.MutationHqlQuery;
 import org.hibernate.Session;
 import org.hibernate.SessionFactory;
 import org.hibernate.proxy.HibernateProxy;
@@ -62,7 +60,10 @@ import org.grails.datastore.mapping.transactions.Transaction;
 import org.grails.orm.hibernate.cfg.domainbinding.hibernate.GrailsHibernatePersistentEntity;
 import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernatePersistentEntity;
 import org.grails.orm.hibernate.proxy.HibernateProxyHandler;
+import org.grails.orm.hibernate.query.HibernateHqlQueryCreator;
 import org.grails.orm.hibernate.query.HibernateQuery;
+import org.grails.orm.hibernate.query.HqlQueryContext;
+import org.grails.orm.hibernate.query.MutationHqlQuery;
 
 /**
  * Session implementation that wraps a Hibernate {@link org.hibernate.Session}.

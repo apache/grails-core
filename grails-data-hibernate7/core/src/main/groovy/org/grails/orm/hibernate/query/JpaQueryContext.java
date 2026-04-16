@@ -15,10 +15,11 @@
  */
 package org.grails.orm.hibernate.query;
 
+import java.util.List;
+
 import jakarta.persistence.criteria.Expression;
 import jakarta.persistence.criteria.From;
 import jakarta.persistence.criteria.Path;
-import java.util.List;
 
 /**
  * Orchestrator for JPA query translation state (Aliases, Joins, Expressions).

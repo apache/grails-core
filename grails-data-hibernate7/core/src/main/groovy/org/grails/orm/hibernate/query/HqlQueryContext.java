@@ -35,8 +35,8 @@ import jakarta.annotation.Nonnull;
 import jakarta.annotation.Nullable;
 
 import org.hibernate.jpa.AvailableHints;
-import org.grails.datastore.mapping.model.PersistentEntity;
 
+import org.grails.datastore.mapping.model.PersistentEntity;
 
 import static org.grails.orm.hibernate.query.HqlQueryMethods.convertValue;
 

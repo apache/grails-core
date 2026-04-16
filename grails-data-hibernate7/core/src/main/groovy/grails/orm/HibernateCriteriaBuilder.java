@@ -169,11 +169,11 @@ public class HibernateCriteriaBuilder extends GroovyObjectSupport implements Bui
         return (Objects.nonNull(alias) ? alias + ALIAS_SEPARATOR : "") + propertyName;
     }
 
-    public org.grails.datastore.mapping.query.api.Criteria exists(Closure  subquery) {
+    public org.grails.datastore.mapping.query.api.Criteria exists(Closure subquery) {
         return exists(new grails.gorm.DetachedCriteria(targetClass).build(subquery));
     }
 
-    public org.grails.datastore.mapping.query.api.Criteria notExists(Closure  subquery) {
+    public org.grails.datastore.mapping.query.api.Criteria notExists(Closure subquery) {
         return notExists(new grails.gorm.DetachedCriteria(targetClass).build(subquery));
     }
 

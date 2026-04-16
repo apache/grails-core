@@ -838,7 +838,7 @@ class GrailsCodeStylePlugin implements Plugin<Project> {
                     content = content.replaceAll(/(\(\s*(?:[\w\-.]+|'[^']+'|"[^"]+")):([^\s\/])/, '$1: $2')
 
                     // 3. UnnecessaryGString
-                    content = content.replaceAll(/(?<!")"([^"$\n\\]*)"(?!")/) { all, inner ->
+                    content = content.replaceAll(/(?<!\\)(?<!")"([^"$\n\\]*)"(?!")/) { all, inner ->
                         if (!inner.contains("'")) {
                             return "'$inner'"
                         }

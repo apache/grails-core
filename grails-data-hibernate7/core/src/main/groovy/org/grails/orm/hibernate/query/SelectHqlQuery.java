@@ -72,17 +72,21 @@ public class SelectHqlQuery extends Query implements HqlQueryMethods, Serializab
         return delegate.selectQuery();
     }
 
-@Override
-public Integer getMax() {
-    if (max != null && max > -1) return max;
-    Object m = queryContext.querySettings().get(HibernateQueryArgument.MAX.value());
-    return m instanceof Number n ? n.intValue() : -1;
-}
+    @Override
+    public Integer getMax() {
+        if (max != null && max > -1) {
+            return max;
+        }
+        Object m = queryContext.querySettings().get(HibernateQueryArgument.MAX.value());
+        return m instanceof Number n ? n.intValue() : -1;
+    }
 
-@Override
-public Integer getOffset() {
-    if (offset != null && offset > -1) return offset;
-    Object o = queryContext.querySettings().get(HibernateQueryArgument.OFFSET.value());
-    return o instanceof Number n ? n.intValue() : 0;
-}
+    @Override
+    public Integer getOffset() {
+        if (offset != null && offset > -1) {
+            return offset;
+        }
+        Object o = queryContext.querySettings().get(HibernateQueryArgument.OFFSET.value());
+        return o instanceof Number n ? n.intValue() : 0;
+    }
 }

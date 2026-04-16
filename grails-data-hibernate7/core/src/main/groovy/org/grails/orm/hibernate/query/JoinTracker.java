@@ -15,9 +15,10 @@
  */
 package org.grails.orm.hibernate.query;
 
-import jakarta.persistence.criteria.From;
 import java.util.HashMap;
 import java.util.Map;
+
+import jakarta.persistence.criteria.From;
 
 /**
  * Tracks physical JPA Joins and Roots to ensure consistency and avoid duplicate joins.

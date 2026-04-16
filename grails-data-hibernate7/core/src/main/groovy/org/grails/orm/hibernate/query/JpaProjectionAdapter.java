@@ -15,17 +15,17 @@
  */
 package org.grails.orm.hibernate.query;
 
+import java.util.ArrayList;
+import java.util.List;
+
 import jakarta.persistence.Tuple;
-import jakarta.persistence.criteria.AbstractQuery;
-import jakarta.persistence.criteria.CriteriaBuilder;
 import jakarta.persistence.criteria.CriteriaQuery;
 import jakarta.persistence.criteria.Selection;
 import jakarta.persistence.criteria.Subquery;
-import org.grails.datastore.mapping.query.Query;
+
 import org.hibernate.query.criteria.HibernateCriteriaBuilder;
 
-import java.util.ArrayList;
-import java.util.List;
+import org.grails.datastore.mapping.query.Query;
 
 /**
  * Adapts Grails datastore projections to JPA Selections.

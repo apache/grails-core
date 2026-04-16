@@ -17,8 +17,10 @@ package org.grails.orm.hibernate.query;
 
 import jakarta.persistence.criteria.CriteriaBuilder;
 import jakarta.persistence.criteria.Expression;
-import org.grails.datastore.mapping.query.Query;
+
 import org.hibernate.query.criteria.JpaExpression;
+
+import org.grails.datastore.mapping.query.Query;
 
 /**
  * A class that translates GORM projections to JPA expressions.

@@ -93,10 +93,10 @@ public class FindOrCreateByFinder extends AbstractFindByFinder {
 
     protected void validateInvocation(DynamicFinderInvocation invocation) {
         for (MethodExpression methodExpression : invocation.getExpressions()) {
-            if (methodExpression instanceof MethodExpression.GreaterThan
-                    || methodExpression instanceof MethodExpression.LessThan
-                    || methodExpression instanceof MethodExpression.GreaterThanEquals
-                    || methodExpression instanceof MethodExpression.LessThanEquals) {
+            if (methodExpression instanceof MethodExpression.GreaterThan ||
+                    methodExpression instanceof MethodExpression.LessThan ||
+                    methodExpression instanceof MethodExpression.GreaterThanEquals ||
+                    methodExpression instanceof MethodExpression.LessThanEquals) {
                 throw new ConfigurationException("Only equality-based expressions are supported for " + invocation.getMethodName());
             }
         }

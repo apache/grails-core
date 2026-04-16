@@ -18,20 +18,20 @@
  */
 package org.grails.orm.hibernate;
 
-import grails.gorm.MultiTenant;
-import org.grails.datastore.mapping.core.Datastore;
-import org.grails.datastore.mapping.multitenancy.AllTenantsResolver;
-import org.grails.datastore.mapping.multitenancy.TenantResolver;
-import org.grails.datastore.mapping.model.PersistentEntity;
-import org.grails.datastore.gorm.jdbc.schema.SchemaHandler;
-import org.grails.orm.hibernate.connections.HibernateConnectionSource;
-import org.springframework.transaction.PlatformTransactionManager;
-
 import java.io.Serializable;
-import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
 import java.util.Map;
+
+import org.springframework.transaction.PlatformTransactionManager;
+
+import grails.gorm.MultiTenant;
+import org.grails.datastore.gorm.jdbc.schema.SchemaHandler;
+import org.grails.datastore.mapping.core.Datastore;
+import org.grails.datastore.mapping.model.PersistentEntity;
+import org.grails.datastore.mapping.multitenancy.AllTenantsResolver;
+import org.grails.datastore.mapping.multitenancy.TenantResolver;
+import org.grails.orm.hibernate.connections.HibernateConnectionSource;
 
 /**
  * A {@link HibernateGormEnhancer} for SCHEMA multi-tenancy mode that resolves all tenant qualifiers

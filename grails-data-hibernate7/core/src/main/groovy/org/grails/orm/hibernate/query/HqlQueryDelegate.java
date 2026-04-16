@@ -57,7 +57,6 @@ public interface HqlQueryDelegate extends Serializable {
 
     // ── select-only (no-ops for mutation queries) ─────────────────────────────
 
-
     default void setMaxResults(int n) {}
 
     default void setFirstResult(int n) {}

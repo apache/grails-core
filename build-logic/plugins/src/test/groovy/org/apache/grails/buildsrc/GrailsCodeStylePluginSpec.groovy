@@ -166,4 +166,54 @@ class Test{
         !fixedContent.contains(";")
         fixedContent.count('\n\n') == 3 // ConsecutiveBlankLines
     }
+
+    def "test codenarcFix task does not break strings with single quotes"() {
+        given: "a file with double quoted strings containing single quotes"
+        groovyFile.text = """package org.test
+
+class Test {
+    def s1 = "it's a test"
+    def s2 = "format 'yyyy-MM-dd'"
+    def s3 = "contains \\"double\\" and 'single' quotes"
+}
+"""
+        when: "running codenarcFix"
+        def result = GradleRunner.create()
+                .withProjectDir(testProjectDir.toFile())
+                .withArguments('codenarcFix', '--stacktrace')
+                .withPluginClasspath()
+                .build()
+
+        then: "task finished successfully"
+        result.task(':codenarcFix').outcome == org.gradle.testkit.runner.TaskOutcome.SUCCESS
+
+        and: "strings with single quotes are NOT changed to single quotes (which would break them)"
+        def content = groovyFile.text
+        content.contains('def s1 = "it\'s a test"')
+        content.contains('def s2 = "format \'yyyy-MM-dd\'"')
+        // s3 has escaped double quotes, so it should also remain double quoted
+        content.contains('def s3 = "contains \\"double\\" and \'single\' quotes"')
+    }
+
+    def "test codenarcFix task does not break escaped double quotes in double quotes"() {
+        given: "a file with escaped double quotes"
+        groovyFile.text = """package org.test
+
+class Test {
+    def s = "\\"\\\$it\\""
+}
+"""
+        when: "running codenarcFix"
+        def result = GradleRunner.create()
+                .withProjectDir(testProjectDir.toFile())
+                .withArguments('codenarcFix', '--stacktrace')
+                .withPluginClasspath()
+                .build()
+
+        then: "task finished successfully"
+        result.task(':codenarcFix').outcome == org.gradle.testkit.runner.TaskOutcome.SUCCESS
+
+        and: "escaped quotes are NOT broken"
+        groovyFile.text.contains('"\\"\\$it\\""')
+    }
 }

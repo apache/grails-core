@@ -18,12 +18,13 @@
  */
 package org.grails.orm.hibernate;
 
+import org.hibernate.SessionFactory;
+
+import org.grails.datastore.gorm.events.ConfigurableApplicationEventPublisher;
 import org.grails.datastore.mapping.core.connections.ConnectionSource;
 import org.grails.datastore.mapping.core.connections.ConnectionSources;
 import org.grails.orm.hibernate.cfg.HibernateMappingContext;
 import org.grails.orm.hibernate.cfg.Settings;
-import org.hibernate.SessionFactory;
-import org.grails.datastore.gorm.events.ConfigurableApplicationEventPublisher;
 import org.grails.orm.hibernate.connections.HibernateConnectionSourceSettings;
 
 /**

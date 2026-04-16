@@ -15,9 +15,10 @@
  */
 package org.grails.orm.hibernate.query;
 
-import jakarta.persistence.criteria.Expression;
 import java.util.HashMap;
 import java.util.Map;
+
+import jakarta.persistence.criteria.Expression;
 
 /**
  * Registry for user-defined and auto-generated aliases in a JPA query.

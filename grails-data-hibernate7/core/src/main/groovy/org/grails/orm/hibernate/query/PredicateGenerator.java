@@ -18,26 +18,34 @@
  */
 package org.grails.orm.hibernate.query;
 
-import grails.gorm.DetachedCriteria;
-import jakarta.persistence.criteria.*;
-import org.grails.datastore.gorm.query.criteria.DetachedAssociationCriteria;
-import org.grails.datastore.mapping.model.PersistentProperty;
-import org.grails.datastore.mapping.query.Query;
-import org.grails.datastore.mapping.query.Projections;
-import org.grails.datastore.mapping.query.api.QueryableCriteria;
-import org.grails.datastore.mapping.core.exceptions.ConfigurationException;
-import org.grails.orm.hibernate.cfg.domainbinding.hibernate.GrailsHibernatePersistentEntity;
-import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernatePersistentProperty;
-import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernateToManyProperty;
-import org.hibernate.query.criteria.HibernateCriteriaBuilder;
-import org.hibernate.query.criteria.JpaSubQuery;
-import org.springframework.core.convert.ConversionService;
-
 import java.util.Collection;
 import java.util.Collections;
 import java.util.List;
 import java.util.Objects;
 import java.util.stream.Collectors;
+
+import jakarta.persistence.criteria.AbstractQuery;
+import jakarta.persistence.criteria.Expression;
+import jakarta.persistence.criteria.From;
+import jakarta.persistence.criteria.JoinType;
+import jakarta.persistence.criteria.Predicate;
+import jakarta.persistence.criteria.Subquery;
+
+import org.hibernate.query.criteria.HibernateCriteriaBuilder;
+import org.hibernate.query.criteria.JpaSubQuery;
+
+import org.springframework.core.convert.ConversionService;
+
+import grails.gorm.DetachedCriteria;
+import org.grails.datastore.gorm.query.criteria.DetachedAssociationCriteria;
+import org.grails.datastore.mapping.core.exceptions.ConfigurationException;
+import org.grails.datastore.mapping.model.PersistentProperty;
+import org.grails.datastore.mapping.query.Projections;
+import org.grails.datastore.mapping.query.Query;
+import org.grails.datastore.mapping.query.api.QueryableCriteria;
+import org.grails.orm.hibernate.cfg.domainbinding.hibernate.GrailsHibernatePersistentEntity;
+import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernatePersistentProperty;
+import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernateToManyProperty;
 
 /**
  * A class that generates predicates for a given list of criteria.
@@ -199,7 +207,7 @@ public class PredicateGenerator {
         if (associationRoot == null) {
             // Check if we already have it in our parent or alias map
             Expression<?> expr = fromsByProvider.getFullyQualifiedExpression(associationName);
-            if (expr instanceof From<?,?> from) {
+            if (expr instanceof From<?, ?> from) {
                 associationRoot = from;
             } else {
                 associationRoot = fromsByProvider.getRoot().join(associationName);
@@ -223,7 +231,7 @@ public class PredicateGenerator {
         From<?, ?> associationRoot = fromsByProvider.getFrom(associationName);
         if (associationRoot == null) {
             Expression<?> expr = fromsByProvider.getFullyQualifiedExpression(associationName);
-            if (expr instanceof From<?,?> from) {
+            if (expr instanceof From<?, ?> from) {
                 associationRoot = from;
             } else {
                 associationRoot = fromsByProvider.getRoot().join(associationName, JoinType.INNER);
@@ -371,13 +379,13 @@ public class PredicateGenerator {
 
     private Predicate handlePropertyNameCriterion(JpaQueryContext fromsByProvider, Query.PropertyNameCriterion c) {
         Expression<?> propertyPath = fromsByProvider.getFullyQualifiedExpression(c.getProperty());
-        if (((Object)c) instanceof Query.IsNull) {
+        if (((Object) c) instanceof Query.IsNull) {
             return criteriaBuilder.isNull(propertyPath);
-        } else if (((Object)c) instanceof Query.IsNotNull) {
+        } else if (((Object) c) instanceof Query.IsNotNull) {
             return criteriaBuilder.isNotNull(propertyPath);
-        } else if (((Object)c) instanceof Query.IsEmpty) {
+        } else if (((Object) c) instanceof Query.IsEmpty) {
             return criteriaBuilder.isEmpty((Expression<java.util.Collection<?>>) propertyPath);
-        } else if (((Object)c) instanceof Query.IsNotEmpty) {
+        } else if (((Object) c) instanceof Query.IsNotEmpty) {
             return criteriaBuilder.isNotEmpty((Expression<java.util.Collection<?>>) propertyPath);
         }
         throw new UnsupportedOperationException("Unsupported property name criterion: " + c.getClass().getName());
@@ -402,7 +410,7 @@ public class PredicateGenerator {
                 }
             }
             
-            creator.populateSubquery((JpaSubQuery)subquery);
+            creator.populateSubquery((JpaSubQuery) subquery);
             return criteriaBuilder.equal(propertyPath, subquery);
         } else {
             return criteriaBuilder.equal(propertyPath, convertComparisonValue(entity, pc.getProperty(), pc.getValue(), fromsByProvider, propertyPath));
@@ -455,7 +463,7 @@ public class PredicateGenerator {
         Subquery<?> subquery = criteriaQuery.subquery(subqueryEntity.getJavaClass());
         var creator = new JpaCriteriaQueryCreator(new Query.ProjectionList(), criteriaBuilder, subqueryEntity, (DetachedCriteria) subqueryCriteria, conversionService);
         creator.setParentContext(fromsByProvider);
-        creator.populateSubquery((JpaSubQuery)subquery);
+        creator.populateSubquery((JpaSubQuery) subquery);
         return criteriaBuilder.exists(subquery);
     }
 
