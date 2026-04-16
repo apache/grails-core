@@ -44,7 +44,7 @@ jobs:
             echo "range=~${BRANCH%.x}.0" >> "$GITHUB_OUTPUT"
           fi
       - name: "📝 Update Release Draft"
-        uses: release-drafter/release-drafter@v7
+        uses: release-drafter/release-drafter@5de93583980a40bd78603b6dfdcda5b4df377b32 # v7.2.0
         continue-on-error: true
         with:
           commitish: ${{ github.event.pull_request.base.ref || github.ref_name }}

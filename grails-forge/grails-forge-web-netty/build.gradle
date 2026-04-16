@@ -59,7 +59,12 @@ micronaut {
 }
 tasks.named('dockerfileNative') {
     // https://www.graalvm.org/latest/docs/getting-started/container-images/
-    baseImage('ghcr.io/graalvm/jdk:ol8-java17-22.3.3')
+    // The GraalVM Native Image Community image bundles the `native-image` tool and matches the
+    // Java 21 baseline used to compile the Forge modules. The previous Java 17 image caused
+    // dockerBuildNative to fail with `UnsupportedClassVersionError` (class file version 65.0).
+    // Pin to a specific patch + OS so dockerBuildNative is reproducible (21.0.2 is the final
+    // GraalVM Community release for JDK 21; later GraalVM Community releases target JDK 22+).
+    baseImage('ghcr.io/graalvm/native-image-community:21.0.2-ol9')
 }
 
 tasks.named('dockerBuildNative') {
