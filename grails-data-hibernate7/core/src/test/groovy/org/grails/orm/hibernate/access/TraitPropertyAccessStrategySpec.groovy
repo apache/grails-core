@@ -61,6 +61,14 @@ class FlaggedEntity implements HasFlag {}
 /** Groovy class implementing a computed-property trait. */
 class ComputedEntity implements HasComputed {}
 
+/** Computed read-write property via trait methods (no backing field). */
+trait HasComputedRW {
+    String getComputedRW() { "rw" }
+    void setComputedRW(String v) { }
+}
+
+class ComputedRWEntity implements HasComputedRW {}
+
 // ─── Spec ─────────────────────────────────────────────────────────────────────
 
 class TraitPropertyAccessStrategySpec extends Specification {
@@ -285,6 +293,16 @@ class TraitPropertyAccessStrategySpec extends Specification {
 
         then:
         thrown(MappingException)
+    }
+
+    void "buildPropertyAccess for computed read-write property creates method-based getter and setter"() {
+        when:
+        def access = strategy.buildPropertyAccess(ComputedRWEntity, 'computedRW', false)
+
+        then:
+        access != null
+        access.getter instanceof GetterMethodImpl
+        access.setter instanceof SetterMethodImpl
     }
 }
 

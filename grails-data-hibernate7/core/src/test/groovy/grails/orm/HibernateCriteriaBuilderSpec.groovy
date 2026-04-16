@@ -543,6 +543,19 @@ class HibernateCriteriaBuilderSpec extends HibernateGormDatastoreSpec {
         result != null
         result.firstName == "Fred"
     }
+
+    void "not combinator excludes matching rows"() {
+        when:
+        def results = c.list {
+            not {
+                isNull('branch')
+            }
+        }
+
+        then:
+        results.size() == 4
+        results.every { it.branch != null }
+    }
 }
 
 @Entity

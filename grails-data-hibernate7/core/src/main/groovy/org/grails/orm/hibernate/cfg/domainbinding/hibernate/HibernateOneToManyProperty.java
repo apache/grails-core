@@ -19,7 +19,9 @@
 package org.grails.orm.hibernate.cfg.domainbinding.hibernate;
 
 import java.beans.PropertyDescriptor;
+import java.util.Map;
 
+import org.hibernate.MappingException;
 import org.hibernate.mapping.Collection;
 
 import org.grails.datastore.mapping.model.MappingContext;
@@ -29,7 +31,7 @@ import org.grails.orm.hibernate.cfg.PropertyConfig;
 
 /** Hibernate implementation of {@link org.grails.datastore.mapping.model.types.OneToMany} */
 public class HibernateOneToManyProperty extends OneToManyWithMapping<PropertyConfig>
-        implements HibernateToManyProperty {
+        implements HibernateToManyEntityProperty {
 
     private Collection collection;
 
@@ -38,8 +40,8 @@ public class HibernateOneToManyProperty extends OneToManyWithMapping<PropertyCon
     }
 
     @Override
-    public GrailsHibernatePersistentEntity getHibernateAssociatedEntity() {
-        return (GrailsHibernatePersistentEntity) super.getAssociatedEntity();
+    public HibernatePersistentEntity getHibernateAssociatedEntity() {
+        return (HibernatePersistentEntity) super.getAssociatedEntity();
     }
 
     @Override
@@ -48,17 +50,30 @@ public class HibernateOneToManyProperty extends OneToManyWithMapping<PropertyCon
     }
 
     @Override
-    public Collection getCollection() {
+    public Collection getHibernateCollection() {
         return collection;
     }
 
     @Override
-    public void setCollection(Collection collection) {
+    public void setHibernateCollection(Collection collection) {
         this.collection = collection;
     }
 
     @Override
     public boolean isLazy() {
         return getHibernateOwner().isLazy(this);
+    }
+
+    @Override
+    public HibernatePersistentProperty validateProperty() {
+        if (hasSort() && !isBidirectional()) {
+            throw new MappingException("Default sort for associations [" + getHibernateOwner().getName() + "->" + getName() + "] are not supported with unidirectional one to many relationships.");
+        }
+        return this;
+    }
+
+    @Override
+    public boolean shouldBindWithForeignKey() {
+        return (isBidirectional() || !isUnidirectionalOneToMany()) && !Map.class.isAssignableFrom(getType());
     }
 }

@@ -37,16 +37,17 @@ ext {
 
 dependencies {
     // TODO: Clarify and clean up dependencies
-    implementation platform(project(':grails-bom'))
+    implementation platform(project(':grails-hibernate7-bom'))
 
-    api "org.springframework.boot:spring-boot"
-    api "org.springframework:spring-orm"
-    api "org.hibernate.orm:hibernate-core"
-    implementation "org.hibernate.tool:hibernate-tools-orm:$hibernate7Version"
-    implementation "org.hibernate.tool:hibernate-tools-utils:$hibernate7Version"
-    api project(":grails-datastore-web")
-    api project(":grails-datamapping-support")
-    api project(":grails-data-hibernate7-core"), {
+    api 'org.springframework.boot:spring-boot'
+    api 'org.springframework:spring-orm'
+    api 'org.hibernate.orm:hibernate-core'
+    implementation 'org.hibernate.tool:hibernate-tools-orm'
+    implementation 'org.hibernate.tool:hibernate-tools-utils'
+    api project(':grails-datastore-web')
+    api project(':grails-datamapping-support')
+    api project(':grails-data-hibernate7-spring-orm')
+    api project(':grails-data-hibernate7-core'), {
         exclude group:'org.springframework', module:'spring-context'
         exclude group:'org.springframework', module:'spring-core'
         exclude group:'org.springframework', module:'spring-beans'
@@ -73,7 +74,7 @@ dependencies {
 
     testRuntimeOnly 'com.h2database:h2'
     testRuntimeOnly 'org.apache.tomcat:tomcat-jdbc'
-    testRuntimeOnly "org.hibernate.orm:hibernate-jcache", {
+    testRuntimeOnly 'org.hibernate.orm:hibernate-jcache', {
         // exclude javax variant of hibernate-core 5.6
 
     }

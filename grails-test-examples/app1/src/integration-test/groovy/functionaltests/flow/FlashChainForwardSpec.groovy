@@ -22,6 +22,7 @@ import java.net.http.HttpClient
 
 import spock.lang.Shared
 import spock.lang.Specification
+import spock.lang.Tag
 
 import grails.testing.mixin.integration.Integration
 import org.apache.grails.testing.http.client.HttpClientSupport
@@ -38,6 +39,7 @@ import org.apache.grails.testing.http.client.TestHttpResponse
  * flash scope and chain model which rely on HTTP session state.
  */
 @Integration
+@Tag('http-client')
 class FlashChainForwardSpec extends Specification implements HttpClientSupport {
 
     @Shared

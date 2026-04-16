@@ -21,7 +21,6 @@ package org.grails.datastore.mapping.dirty.checking
 import groovy.transform.CompileStatic
 
 import org.grails.datastore.mapping.collection.PersistentCollection
-import org.grails.datastore.mapping.core.Session
 import org.grails.datastore.mapping.model.MappingContext
 import org.grails.datastore.mapping.model.PersistentEntity
 import org.grails.datastore.mapping.model.types.Association
@@ -42,19 +41,6 @@ class DirtyCheckingSupport {
      * Used internally as a marker. Do not use in user code
      */
     public static final  Map DIRTY_CLASS_MARKER = [:].asImmutable()
-    /**
-     * Checks whether associations are dirty
-     *
-     * @param session The session
-     * @param entity The entity
-     * @param instance The instance
-     * @return True if they are
-     * @deprecated Use {@link #areAssociationsDirty(org.grails.datastore.mapping.model.PersistentEntity, java.lang.Object)} instead
-     */
-    @Deprecated(forRemoval = true)
-    static boolean areAssociationsDirty(Session session, PersistentEntity entity, Object instance) {
-        areAssociationsDirty(entity, instance)
-    }
 
     /**
      * Checks whether associations are dirty

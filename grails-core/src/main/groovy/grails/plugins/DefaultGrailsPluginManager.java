@@ -70,36 +70,6 @@ public class DefaultGrailsPluginManager extends AbstractGrailsPluginManager {
         super(application, pluginDiscovery);
     }
 
-    /**
-     * @deprecated Use {@link #DefaultGrailsPluginManager(GrailsApplication, PluginDiscovery)} instead.
-     * Plugin discovery is now handled by {@link PluginDiscovery}. This constructor fetches the
-     * existing discovery bean, resets and reinitializes it. Will be removed in Grails 8.0.0.
-     */
-    @Deprecated(forRemoval = true, since = "7.1")
-    public DefaultGrailsPluginManager(String resourcePath, GrailsApplication application) {
-        this(application, reinitDiscovery(application, resourcePath));
-    }
-
-    /**
-     * @deprecated Use {@link #DefaultGrailsPluginManager(GrailsApplication, PluginDiscovery)} instead.
-     * Plugin discovery is now handled by {@link PluginDiscovery}. This constructor fetches the
-     * existing discovery bean, resets and reinitializes it. Will be removed in Grails 8.0.0.
-     */
-    @Deprecated(forRemoval = true, since = "7.1")
-    public DefaultGrailsPluginManager(String[] pluginResources, GrailsApplication application) {
-        this(application, reinitDiscovery(application, pluginResources));
-    }
-
-    /**
-     * @deprecated Use {@link #DefaultGrailsPluginManager(GrailsApplication, PluginDiscovery)} instead.
-     * Plugin discovery is now handled by {@link PluginDiscovery}. This constructor fetches the
-     * existing discovery bean, resets and reinitializes it. Will be removed in Grails 8.0.0.
-     */
-    @Deprecated(forRemoval = true, since = "7.1")
-    public DefaultGrailsPluginManager(Class<?>[] plugins, GrailsApplication application) {
-        this(application, reinitDiscovery(application, plugins));
-    }
-
     private static PluginDiscovery reinitDiscovery(GrailsApplication application, Class<?>[] plugins) {
         PluginDiscovery discovery = resolveAndResetDiscovery(application);
         discovery.setPluginClasses(plugins);

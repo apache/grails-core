@@ -24,6 +24,129 @@ import spock.lang.Unroll
 
 class IdentitySpec extends Specification {
 
+    def "test toString includes generator, column and type"() {
+        given:
+        HibernateSimpleIdentity identity = new HibernateSimpleIdentity(generator: 'sequence', column: 'my_id', type: Integer)
+
+        expect:
+        identity.toString() == 'id[generator:sequence, column:my_id, type:class java.lang.Integer]'
+    }
+
+    def "test toString uses defaults"() {
+        given:
+        HibernateSimpleIdentity identity = new HibernateSimpleIdentity()
+
+        expect:
+        identity.toString() == 'id[generator:native, column:id, type:class java.lang.Long]'
+    }
+
+    def "test naturalId configures NaturalId delegate"() {
+        given:
+        HibernateSimpleIdentity identity = new HibernateSimpleIdentity()
+
+        when:
+        identity.naturalId {
+            mutable = true
+            propertyNames = ['email']
+        }
+
+        then:
+        identity.natural != null
+        identity.natural.mutable == true
+        identity.natural.propertyNames == ['email']
+    }
+
+    def "test naturalId returns this"() {
+        given:
+        HibernateSimpleIdentity identity = new HibernateSimpleIdentity()
+
+        when:
+        HibernateSimpleIdentity returned = identity.naturalId { }
+
+        then:
+        returned.is(identity)
+    }
+
+    def "test configureNew with closure"() {
+        when:
+        HibernateSimpleIdentity identity = HibernateSimpleIdentity.configureNew {
+            generator = 'uuid'
+            column = 'uuid_id'
+            type = String
+        }
+
+        then:
+        identity.generator == 'uuid'
+        identity.column == 'uuid_id'
+        identity.type == String
+    }
+
+    def "test configureExisting with map"() {
+        given:
+        HibernateSimpleIdentity identity = new HibernateSimpleIdentity()
+
+        when:
+        HibernateSimpleIdentity result = HibernateSimpleIdentity.configureExisting(identity, [generator: 'assigned', column: 'pk'])
+
+        then:
+        result.is(identity)
+        result.generator == 'assigned'
+        result.column == 'pk'
+    }
+
+    def "test configureExisting with closure"() {
+        given:
+        HibernateSimpleIdentity identity = new HibernateSimpleIdentity()
+
+        when:
+        HibernateSimpleIdentity result = HibernateSimpleIdentity.configureExisting(identity) {
+            generator = 'increment'
+            name = 'myId'
+        }
+
+        then:
+        result.is(identity)
+        result.generator == 'increment'
+        result.name == 'myId'
+    }
+
+    def "test getProperties returns empty Properties when params is empty"() {
+        given:
+        HibernateSimpleIdentity identity = new HibernateSimpleIdentity()
+
+        when:
+        Properties props = identity.getProperties()
+
+        then:
+        props != null
+        props.isEmpty()
+    }
+
+    def "test getProperties returns Properties populated from params"() {
+        given:
+        HibernateSimpleIdentity identity = new HibernateSimpleIdentity(params: [sequenceName: 'my_seq', allocationSize: '50'])
+
+        when:
+        Properties props = identity.getProperties()
+
+        then:
+        props.getProperty('sequenceName') == 'my_seq'
+        props.getProperty('allocationSize') == '50'
+    }
+
+    def "test getProperties with null params returns empty Properties"() {
+        given:
+        HibernateSimpleIdentity identity = new HibernateSimpleIdentity()
+        identity.params = null
+
+        when:
+        Properties props = identity.getProperties()
+
+        then:
+        props != null
+        props.isEmpty()
+    }
+
     @Unroll
     def "test determineGeneratorName with generator=#generatorName and useSequence=#useSequence"() {
         given:

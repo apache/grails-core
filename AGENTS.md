@@ -52,7 +52,8 @@ export GRADLE_OPTS="-Xms2G -Xmx5G"
 9. **Test via public APIs** - Tests must exercise behavior through the same APIs an end user calls; never invoke internal implementations, package-private methods, or bypass the public surface directly
 10. **Always review and extend tests** - Review existing unit and functional tests before making changes; every code change must include new or enhanced tests that cover the affected behavior
 11. **Every code touch must update all tests for the changed class** - When a class is modified, find and update every test that covers it — unit, integration, and TCK. Do not leave any existing test out of sync with the new code.
-12. **Clean violations before commit** - Before every automated commit, run `./gradlew clean test aggregateTestFailures --continue` from the root and ensure that `TEST_FAILURES.md` reports no issues and is removed.
+12. **Clean violations before commit** - Before every automated commit, run `./gradlew clean aggregateStyleViolations test aggregateTestFailures --continue` from the root and ensure that `CHECKSTYLE_VIOLATIONS.md`, `CODENARC_VIOLATIONS.md`, `PMD_VIOLATIONS.md`, and `TEST_FAILURES.md` report no issues and are removed.
+13. **Mandatory test coverage** - Any class touched in a commit MUST be covered with tests that verify all behavior. You must run ALL tests in the affected module(s) and ensure they pass before committing.
 
 ## Available Skills
 
@@ -73,7 +74,7 @@ export GRADLE_OPTS="-Xms2G -Xmx5G"
 
 | Component | Version |
 |-----------|---------|
-| JDK | 17+ (baseline 17) |
+| JDK | 21+ (baseline 21) |
 | Groovy | 4.0.x |
 | Spring Boot | 4.0.x |
 | Spring Framework | 7.0.x |
@@ -232,7 +233,8 @@ class MyService { }
 2. **Run tests** before submitting: `./gradlew build --rerun-tasks`
 3. **Run code style checks**: `./gradlew codeStyle`
 4. **Clean style violations**: Before committing, run `./gradlew clean aggregateStyleViolations` from the root and ensure that `CHECKSTYLE_VIOLATIONS.md`, `CODENARC_VIOLATIONS.md`, and `PMD_VIOLATIONS.md` have no issues.
-5. **Squash commits** into a single meaningful commit message
+5. **Verify test coverage**: Ensure any touched class is covered by tests verifying all behavior. You must run ALL tests in the affected module(s) and ensure they pass before submission.
+6. **Squash commits** into a single meaningful commit message
 6. **Reference issues** in PR description (e.g., "Fixes #1234")
 
 ### Review Process

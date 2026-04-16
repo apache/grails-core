@@ -44,20 +44,6 @@ public class GrailsConfigUtils {
      * @param application The Grails ApplicationContext instance
      * @param webContext The WebApplicationContext instance
      * @param servletContext The ServletContext instance
-     * @deprecated Use executeGrailsBootstraps with Grails plugin manager parameter instead
-     */
-    @Deprecated(forRemoval = true)
-    public static void executeGrailsBootstraps(GrailsApplication application, WebApplicationContext webContext,
-                                               ServletContext servletContext) {
-        executeGrailsBootstraps(application, webContext, servletContext, null);
-    }
-
-    /**
-     * Executes Grails bootstrap classes
-     *
-     * @param application The Grails ApplicationContext instance
-     * @param webContext The WebApplicationContext instance
-     * @param servletContext The ServletContext instance
      */
     public static void executeGrailsBootstraps(GrailsApplication application, WebApplicationContext webContext,
             ServletContext servletContext, GrailsPluginManager grailsPluginManager) {

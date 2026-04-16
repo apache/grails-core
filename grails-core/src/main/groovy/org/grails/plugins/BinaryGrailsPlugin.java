@@ -44,7 +44,6 @@ import grails.io.ResourceUtils;
 import grails.plugins.exceptions.PluginException;
 import grails.util.BuildSettings;
 import org.apache.grails.core.plugins.PluginDescriptor;
-import org.apache.grails.core.plugins.PluginUtils;
 import org.grails.core.io.StaticResourceLoader;
 
 /**
@@ -72,18 +71,6 @@ public class BinaryGrailsPlugin extends DefaultGrailsPlugin {
     private final Resource baseResourcesResource;
     private final boolean isJar;
     private final File projectDirectory;
-
-    /**
-     * Creates a binary plugin instance.
-     *
-     * @param pluginClass The plugin class
-     * @param descriptor The META-INF/grails-plugin.xml descriptor
-     * @param application The application
-     */
-    @Deprecated(forRemoval = true, since = "7.1")
-    public BinaryGrailsPlugin(Class<?> pluginClass, BinaryGrailsPluginDescriptor descriptor, GrailsApplication application) {
-        this(pluginClass, PluginUtils.createPluginInfo(pluginClass, descriptor.getResource(), false).getPluginDescriptor(), application);
-    }
 
     /**
      * Creates a binary plugin instance.
@@ -207,15 +194,6 @@ public class BinaryGrailsPlugin extends DefaultGrailsPlugin {
     @Override
     public Class<?>[] getProvidedArtefacts() {
         return providedArtefacts;
-    }
-
-    /**
-     * @deprecated Use {@link #getPluginDescriptor()} instead.
-     * @return The META-INF/grails-plugin.xml descriptor
-     */
-    @Deprecated(forRemoval = true, since = "7.1")
-    public BinaryGrailsPluginDescriptor getBinaryDescriptor() {
-        return new BinaryGrailsPluginDescriptor(descriptor);
     }
 
     /**

@@ -18,6 +18,7 @@
  */
 plugins {
     id 'org.apache.grails.buildsrc.properties'
+    id 'org.apache.grails.buildsrc.dependency-validator'
     id 'org.apache.grails.buildsrc.compile'
 }
 
@@ -27,7 +28,7 @@ group = 'issue11767.app'
 apply plugin: 'org.apache.grails.gradle.grails-web'
 
 dependencies {
-    implementation platform(project(':grails-bom'))
+    implementation enforcedPlatform(project(':grails-bom'))
 
     implementation 'org.apache.grails:grails-dependencies-starter-web'
     implementation 'org.apache.grails:grails-micronaut'

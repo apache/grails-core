@@ -33,7 +33,6 @@ import org.hibernate.cfg.Configuration;
 import org.hibernate.context.spi.CurrentTenantIdentifierResolver;
 import org.hibernate.engine.jdbc.connections.spi.MultiTenantConnectionProvider;
 import org.hibernate.integrator.spi.Integrator;
-import org.hibernate.service.ServiceRegistry;
 
 import org.springframework.beans.factory.BeanFactory;
 import org.springframework.beans.factory.BeanFactoryAware;
@@ -77,8 +76,8 @@ import org.springframework.lang.Nullable;
  * @see org.springframework.orm.jpa.LocalContainerEntityManagerFactoryBean
  */
 public class LocalSessionFactoryBean extends HibernateExceptionTranslator
-        implements FactoryBean<SessionFactory>, ResourceLoaderAware, BeanFactoryAware,
-        InitializingBean, SmartInitializingSingleton, DisposableBean {
+    implements FactoryBean<SessionFactory>, ResourceLoaderAware, BeanFactoryAware,
+    InitializingBean, SmartInitializingSingleton, DisposableBean {
 
     @Nullable
     private DataSource dataSource;
@@ -160,7 +159,6 @@ public class LocalSessionFactoryBean extends HibernateExceptionTranslator
     @Nullable
     private SessionFactory sessionFactory;
 
-
     /**
      * Set the DataSource to be used by the SessionFactory.
      * If set, this will override corresponding settings in Hibernate properties.
@@ -179,7 +177,7 @@ public class LocalSessionFactoryBean extends HibernateExceptionTranslator
      * @see Configuration#configure(java.net.URL)
      */
     public void setConfigLocation(Resource configLocation) {
-        this.configLocations = new Resource[] {configLocation};
+        this.configLocations = new Resource[]{configLocation};
     }
 
     /**
@@ -416,7 +414,7 @@ public class LocalSessionFactoryBean extends HibernateExceptionTranslator
      * existing one), potentially populated with a custom Hibernate bootstrap
      * {@link org.hibernate.service.ServiceRegistry} as well.
      * @since 4.3
-     * @see MetadataSources#MetadataSources(ServiceRegistry)
+     * @see MetadataSources#MetadataSources(org.hibernate.service.ServiceRegistry)
      * @see BootstrapServiceRegistryBuilder#build()
      */
     public void setMetadataSources(MetadataSources metadataSources) {
@@ -485,7 +483,6 @@ public class LocalSessionFactoryBean extends HibernateExceptionTranslator
         }
     }
 
-
     @Override
     public void afterPropertiesSet() throws IOException {
         if (this.metadataSources != null && !this.metadataSourcesAccessed) {
@@ -494,7 +491,7 @@ public class LocalSessionFactoryBean extends HibernateExceptionTranslator
         }
 
         LocalSessionFactoryBuilder sfb = new LocalSessionFactoryBuilder(
-                this.dataSource, getResourceLoader(), getMetadataSources());
+            this.dataSource, getResourceLoader(), getMetadataSources());
 
         if (this.configLocations != null) {
             for (Resource resource : this.configLocations) {
@@ -538,7 +535,7 @@ public class LocalSessionFactoryBean extends HibernateExceptionTranslator
                 File file = resource.getFile();
                 if (!file.isDirectory()) {
                     throw new IllegalArgumentException(
-                            "Mapping directory location [" + resource + "] does not denote a directory");
+                        "Mapping directory location [" + resource + "] does not denote a directory");
                 }
                 sfb.addDirectory(file);
             }
@@ -622,7 +619,7 @@ public class LocalSessionFactoryBean extends HibernateExceptionTranslator
      */
     protected SessionFactory buildSessionFactory(LocalSessionFactoryBuilder sfb) {
         return (this.bootstrapExecutor != null ? sfb.buildSessionFactory(this.bootstrapExecutor) :
-                sfb.buildSessionFactory());
+            sfb.buildSessionFactory());
     }
 
     /**
@@ -636,7 +633,6 @@ public class LocalSessionFactoryBean extends HibernateExceptionTranslator
         }
         return this.configuration;
     }
-
 
     @Override
     @Nullable
@@ -653,7 +649,6 @@ public class LocalSessionFactoryBean extends HibernateExceptionTranslator
     public boolean isSingleton() {
         return true;
     }
-
 
     @Override
     public void destroy() {

@@ -58,23 +58,20 @@ public class SimpleIdBinder {
         return metadataBuildingContext;
     }
 
-    public void bindSimpleId(@Nonnull HibernatePersistentEntity domainClass) {
-        if (domainClass.getIdentityProperty() instanceof HibernateSimpleIdentityProperty simpleIdentityProperty) {
-            RootClass rootClass = domainClass.getRootClass();
+    public void bindSimpleId(@Nonnull HibernatePersistentEntity persistentEntity) {
+        if (persistentEntity.getIdentityProperty() instanceof HibernateSimpleIdentityProperty simpleIdentityProperty) {
+            RootClass rootClass = persistentEntity.getRootClass();
             BasicValue id = basicValueCreator.bindBasicValue(simpleIdentityProperty);
-
-            var identifier = basicValueCreator.resolveIdentifierProperty(domainClass, simpleIdentityProperty);
-
             Property idProperty = new Property();
-            idProperty.setName(identifier.getName());
+            idProperty.setName(simpleIdentityProperty.getName());
             idProperty.setValue(id);
             rootClass.setDeclaredIdentifierProperty(idProperty);
             rootClass.setIdentifier(id);
             // set type
-            simpleValueBinder.bindSimpleValue(identifier, null, id, EMPTY_PATH);
+            simpleValueBinder.bindSimpleValue(simpleIdentityProperty, null, id, EMPTY_PATH);
 
             // bind property
-            Property prop = propertyBinder.bindProperty(identifier, id);
+            Property prop = propertyBinder.bindProperty(simpleIdentityProperty, id);
             // set identifier property
             rootClass.setIdentifierProperty(prop);
 
@@ -82,6 +79,6 @@ public class SimpleIdBinder {
             pkTable.setPrimaryKey(new PrimaryKey(pkTable));
             return;
         }
-        throw new MappingException("Invalid simple id binding for entity [" + domainClass.getName() + "]");
+        throw new MappingException("Invalid simple id binding for entity [" + persistentEntity.getName() + "]");
     }
 }

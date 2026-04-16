@@ -27,7 +27,6 @@ import jakarta.transaction.TransactionManager;
 import org.hibernate.FlushMode;
 import org.hibernate.HibernateException;
 import org.hibernate.Session;
-import org.hibernate.SessionFactory;
 import org.hibernate.context.spi.CurrentSessionContext;
 import org.hibernate.engine.spi.SessionFactoryImplementor;
 import org.hibernate.engine.transaction.jta.platform.spi.JtaPlatform;
@@ -74,9 +73,25 @@ public class GrailsSessionContext implements CurrentSessionContext {
     }
 
     public void initJta() {
+        TransactionManager tm = resolveJtaTransactionManager();
+        jtaSessionContext = tm == null ? null : buildJtaSessionContext();
+    }
+
+    /**
+     * Resolves the JTA {@link TransactionManager} from the session factory's service registry.
+     * Protected to allow overriding in tests without a real JTA platform.
+     */
+    protected TransactionManager resolveJtaTransactionManager() {
         JtaPlatform jtaPlatform = sessionFactory.getServiceRegistry().getService(JtaPlatform.class);
-        TransactionManager transactionManager = jtaPlatform != null ? jtaPlatform.retrieveTransactionManager() : null;
-        jtaSessionContext = transactionManager == null ? null : new SpringJtaSessionContext(sessionFactory);
+        return jtaPlatform != null ? jtaPlatform.retrieveTransactionManager() : null;
+    }
+
+    /**
+     * Creates the JTA-backed {@link CurrentSessionContext}.
+     * Protected to allow overriding in tests without a real JTA platform.
+     */
+    protected CurrentSessionContext buildJtaSessionContext() {
+        return new SpringJtaSessionContext(sessionFactory);
     }
 
     /** Retrieve the Spring-managed Session for the current thread, if any. */
@@ -150,14 +165,6 @@ public class GrailsSessionContext implements CurrentSessionContext {
             // No Spring transaction management active -> try JTA transaction synchronization.
             registerJtaSynchronization(session, sessionHolder);
         }
-
-        /*        // Check whether we are allowed to return the Session.
-                if (!allowCreate && !isSessionTransactional(session, sessionFactory)) {
-                   closeSession(session);
-                   throw new IllegalStateException("No Hibernate Session bound to thread, " +
-                      "and configuration does not allow creation of non-transactional one here");
-                }
-        */
         return session;
     }
 
@@ -166,7 +173,7 @@ public class GrailsSessionContext implements CurrentSessionContext {
         // JTA synchronization is only possible with a jakarta.transaction.TransactionManager.
         // We'll check the Hibernate SessionFactory: If a TransactionManagerLookup is specified
         // in Hibernate configuration, it will contain a TransactionManager reference.
-        TransactionManager jtaTm = getJtaTransactionManager(session);
+        TransactionManager jtaTm = lookupJtaTransactionManager(this.sessionFactory);
         if (jtaTm == null) {
             return;
         }
@@ -201,32 +208,15 @@ public class GrailsSessionContext implements CurrentSessionContext {
         }
     }
 
-    @SuppressWarnings("PMD.CloseResource")
-    protected TransactionManager getJtaTransactionManager(Session session) {
-        final SessionFactoryImplementor sessionFactoryImpl;
-        if (this.sessionFactory != null) {
-            sessionFactoryImpl = this.sessionFactory;
-        } else if (session != null) {
-            SessionFactory internalFactory = session.getSessionFactory();
-            if (internalFactory instanceof SessionFactoryImplementor) {
-                sessionFactoryImpl = (SessionFactoryImplementor) internalFactory;
-            } else {
-                sessionFactoryImpl = null;
-            }
-        } else {
-            sessionFactoryImpl = null;
-        }
-
-        if (sessionFactoryImpl == null) {
-            return null;
-        }
-
-        ServiceBinding<JtaPlatform> sb =
-                sessionFactoryImpl.getServiceRegistry().locateServiceBinding(JtaPlatform.class);
+    /**
+     * Looks up the JTA {@link TransactionManager} from the given session factory's service registry.
+     * Protected to allow overriding in tests without a real JTA platform binding.
+     */
+    protected TransactionManager lookupJtaTransactionManager(SessionFactoryImplementor sf) {
+        ServiceBinding<JtaPlatform> sb = sf.getServiceRegistry().locateServiceBinding(JtaPlatform.class);
         if (sb == null || sb.getService() == null) {
             return null;
         }
-
         return sb.getService().retrieveTransactionManager();
     }
 

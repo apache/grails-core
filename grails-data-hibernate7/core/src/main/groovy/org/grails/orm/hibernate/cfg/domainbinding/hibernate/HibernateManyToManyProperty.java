@@ -29,7 +29,7 @@ import org.grails.orm.hibernate.cfg.PropertyConfig;
 
 /** Hibernate implementation of {@link org.grails.datastore.mapping.model.types.ManyToMany} */
 public class HibernateManyToManyProperty extends ManyToManyWithMapping<PropertyConfig>
-        implements HibernateToManyProperty {
+        implements HibernateToManyEntityProperty {
 
     private Collection collection;
 
@@ -38,8 +38,8 @@ public class HibernateManyToManyProperty extends ManyToManyWithMapping<PropertyC
     }
 
     @Override
-    public GrailsHibernatePersistentEntity getHibernateAssociatedEntity() {
-        return (GrailsHibernatePersistentEntity) super.getAssociatedEntity();
+    public HibernatePersistentEntity getHibernateAssociatedEntity() {
+        return (HibernatePersistentEntity) super.getAssociatedEntity();
     }
 
     @Override
@@ -48,13 +48,22 @@ public class HibernateManyToManyProperty extends ManyToManyWithMapping<PropertyC
     }
 
     @Override
-    public Collection getCollection() {
+    public Collection getHibernateCollection() {
         return collection;
     }
 
     @Override
-    public void setCollection(Collection collection) {
+    public void setHibernateCollection(Collection collection) {
         this.collection = collection;
+    }
+
+    @Override
+    public void validateOwningSide() {
+        HibernateToManyEntityProperty.super.validateOwningSide();
+        if (!isOwningSide()) {
+            throw new org.hibernate.MappingException("Invalid association [" + this +
+                    "]. List collection types only supported on the owning side of a many-to-many relationship.");
+        }
     }
 
     @Override

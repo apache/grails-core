@@ -22,9 +22,11 @@ package org.grails.orm.hibernate.cfg.domainbinding.secondpass
 import grails.gorm.annotation.Entity
 import grails.gorm.specs.HibernateGormDatastoreSpec
 import org.grails.datastore.mapping.model.PersistentEntity
+import org.grails.orm.hibernate.cfg.HibernateCompositeIdentity
 import org.grails.orm.hibernate.cfg.domainbinding.binder.CollectionForPropertyConfigBinder
 import org.grails.orm.hibernate.cfg.domainbinding.binder.CompositeIdentifierToManyToOneBinder
 import org.grails.orm.hibernate.cfg.domainbinding.binder.SimpleValueColumnBinder
+import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernatePersistentEntity
 import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernateToManyProperty
 import org.hibernate.boot.spi.InFlightMetadataCollector
 import org.hibernate.mapping.Collection
@@ -104,6 +106,57 @@ class CollectionWithJoinTableBinderSpec extends HibernateGormDatastoreSpec {
 
         then:
         collection.getElement() instanceof ManyToOne
+        1 * collectionForPropertyConfigBinder.bindCollectionForPropertyConfig(property)
+    }
+
+    void "test bindCollectionWithJoinTable with null associated entity skips column binding"() {
+        given:
+        def domainBinder = getGrailsDomainBinder()
+        def owner = new RootClass(domainBinder.metadataBuildingContext)
+        Collection collection = new Set(domainBinder.metadataBuildingContext, owner)
+        collection.setCollectionTable(new Table("CWJTB_NULL_ASSOC"))
+
+        def manyToOne = new ManyToOne(domainBinder.metadataBuildingContext, collection.getCollectionTable())
+
+        def property = Mock(org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernateToManyEntityProperty)
+        property.getCollection() >> collection
+        property.getHibernateAssociatedEntity() >> null
+        unidirectionalOneToManyInverseValuesBinder.bind(property) >> manyToOne
+
+        when:
+        binder.bindCollectionWithJoinTable(property)
+
+        then:
+        noExceptionThrown()
+        collection.getElement() == manyToOne
+        1 * collectionForPropertyConfigBinder.bindCollectionForPropertyConfig(property)
+        0 * compositeIdentifierToManyToOneBinder._
+    }
+
+    void "test bindCollectionWithJoinTable with composite identity delegates to compositeIdentifierToManyToOneBinder"() {
+        given:
+        def domainBinder = getGrailsDomainBinder()
+        def owner = new RootClass(domainBinder.metadataBuildingContext)
+        Collection collection = new Set(domainBinder.metadataBuildingContext, owner)
+        collection.setCollectionTable(new Table("CWJTB_COMPOSITE"))
+
+        def manyToOne = new ManyToOne(domainBinder.metadataBuildingContext, collection.getCollectionTable())
+
+        def compositeId = new org.grails.orm.hibernate.cfg.HibernateCompositeIdentity()
+
+        def associatedEntity = Mock(org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernatePersistentEntity)
+        associatedEntity.getHibernateCompositeIdentity() >> Optional.of(compositeId)
+
+        def property = Mock(org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernateToManyEntityProperty)
+        property.getCollection() >> collection
+        property.getHibernateAssociatedEntity() >> associatedEntity
+        unidirectionalOneToManyInverseValuesBinder.bind(property) >> manyToOne
+
+        when:
+        binder.bindCollectionWithJoinTable(property)
+
+        then:
+        1 * compositeIdentifierToManyToOneBinder.bindCompositeIdentifierToManyToOne(property, manyToOne, compositeId, associatedEntity, "")
         1 * collectionForPropertyConfigBinder.bindCollectionForPropertyConfig(property)
     }
 }

@@ -19,12 +19,17 @@
 package grails.gorm.specs.sessioncontext
 
 import grails.gorm.specs.HibernateGormDatastoreSpec
+import jakarta.transaction.Status
+import jakarta.transaction.Transaction
+import jakarta.transaction.TransactionManager
 import org.grails.orm.hibernate.GrailsSessionContext
 import org.grails.orm.hibernate.HibernateDatastore
+import org.grails.orm.hibernate.support.hibernate7.SessionHolder
+import org.grails.orm.hibernate.support.hibernate7.SpringSessionSynchronization
 import org.hibernate.FlushMode
 import org.hibernate.Session
+import org.hibernate.context.spi.CurrentSessionContext
 import org.hibernate.engine.spi.SessionFactoryImplementor
-import org.grails.orm.hibernate.support.hibernate7.SessionHolder
 import org.springframework.transaction.support.TransactionSynchronizationManager
 
 class GrailsSessionContextSpec extends HibernateGormDatastoreSpec {
@@ -173,5 +178,219 @@ class GrailsSessionContextSpec extends HibernateGormDatastoreSpec {
 
         cleanup:
         if (session?.isOpen()) session.close()
+    }
+
+    void "test createSession() sets FlushMode MANUAL when transaction is read-only"() {
+        given:
+        SessionFactoryImplementor sessionFactory = manager.hibernateDatastore.sessionFactory as SessionFactoryImplementor
+        GrailsSessionContext sessionContext = new GrailsSessionContext(sessionFactory)
+        sessionContext.allowCreate = true
+
+        TransactionSynchronizationManager.initSynchronization()
+        TransactionSynchronizationManager.setCurrentTransactionReadOnly(true)
+
+        when:
+        Session session = sessionContext.currentSession()
+
+        then:
+        session != null
+        session.getHibernateFlushMode() == FlushMode.MANUAL
+
+        cleanup:
+        if (session?.isOpen()) session.close()
+        TransactionSynchronizationManager.setCurrentTransactionReadOnly(false)
+    }
+
+    void "test currentSession() with already-synchronized SessionHolder skips re-registration"() {
+        given:
+        SessionFactoryImplementor sessionFactory = manager.hibernateDatastore.sessionFactory as SessionFactoryImplementor
+        GrailsSessionContext sessionContext = new GrailsSessionContext(sessionFactory)
+        Session session = sessionFactory.openSession()
+        SessionHolder holder = new SessionHolder(session)
+        holder.setSynchronizedWithTransaction(true)
+
+        TransactionSynchronizationManager.initSynchronization()
+        TransactionSynchronizationManager.bindResource(sessionFactory, holder)
+
+        when:
+        Session current = sessionContext.currentSession()
+
+        then:
+        current == session
+        holder.isSynchronizedWithTransaction()
+
+        cleanup:
+        if (session.isOpen()) session.close()
+    }
+
+    void "test initJta sets jtaSessionContext when resolveJtaTransactionManager returns non-null"() {
+        given:
+        SessionFactoryImplementor sessionFactory = manager.hibernateDatastore.sessionFactory as SessionFactoryImplementor
+        def mockTm = Mock(TransactionManager)
+        def mockJtaContext = Mock(CurrentSessionContext)
+
+        GrailsSessionContext sessionContext = new GrailsSessionContext(sessionFactory) {
+            @Override
+            protected TransactionManager resolveJtaTransactionManager() { mockTm }
+            @Override
+            protected CurrentSessionContext buildJtaSessionContext() { mockJtaContext }
+        }
+
+        when:
+        sessionContext.initJta()
+
+        then:
+        sessionContext.jtaSessionContext == mockJtaContext
+    }
+
+    void "test initJta leaves jtaSessionContext null when resolveJtaTransactionManager returns null"() {
+        given:
+        SessionFactoryImplementor sessionFactory = manager.hibernateDatastore.sessionFactory as SessionFactoryImplementor
+
+        GrailsSessionContext sessionContext = new GrailsSessionContext(sessionFactory) {
+            @Override
+            protected TransactionManager resolveJtaTransactionManager() { null }
+        }
+
+        when:
+        sessionContext.initJta()
+
+        then:
+        sessionContext.jtaSessionContext == null
+    }
+
+    void "test currentSession() delegates to jtaSessionContext when set"() {
+        given:
+        SessionFactoryImplementor sessionFactory = manager.hibernateDatastore.sessionFactory as SessionFactoryImplementor
+        Session mockSession = sessionFactory.openSession()
+        def mockTm = Mock(TransactionManager)
+        def mockJtaContext = Mock(CurrentSessionContext) { currentSession() >> mockSession }
+
+        GrailsSessionContext sessionContext = new GrailsSessionContext(sessionFactory) {
+            @Override
+            protected TransactionManager resolveJtaTransactionManager() { mockTm }
+            @Override
+            protected CurrentSessionContext buildJtaSessionContext() { mockJtaContext }
+        }
+        sessionContext.initJta()
+
+        when:
+        Session result = sessionContext.currentSession()
+
+        then:
+        result == mockSession
+
+        cleanup:
+        if (mockSession.isOpen()) mockSession.close()
+    }
+
+    void "test currentSession() registers SpringFlushSynchronization when jtaSessionContext is set and sync is active"() {
+        given:
+        SessionFactoryImplementor sessionFactory = manager.hibernateDatastore.sessionFactory as SessionFactoryImplementor
+        Session mockSession = sessionFactory.openSession()
+        def mockTm = Mock(TransactionManager)
+        def mockJtaContext = Mock(CurrentSessionContext) { currentSession() >> mockSession }
+
+        GrailsSessionContext sessionContext = new GrailsSessionContext(sessionFactory) {
+            @Override
+            protected TransactionManager resolveJtaTransactionManager() { mockTm }
+            @Override
+            protected CurrentSessionContext buildJtaSessionContext() { mockJtaContext }
+        }
+        sessionContext.initJta()
+        TransactionSynchronizationManager.initSynchronization()
+
+        when:
+        Session result = sessionContext.currentSession()
+
+        then:
+        result == mockSession
+        TransactionSynchronizationManager.synchronizations.size() == 1
+
+        cleanup:
+        if (mockSession.isOpen()) mockSession.close()
+    }
+
+    void "test registerJtaSynchronization registers sync with active JTA transaction via lookupJtaTransactionManager"() {
+        given:
+        SessionFactoryImplementor sessionFactory = manager.hibernateDatastore.sessionFactory as SessionFactoryImplementor
+        Session session = sessionFactory.openSession()
+
+        def mockTx = Mock(Transaction) { getStatus() >> Status.STATUS_ACTIVE }
+        def mockTm = Mock(TransactionManager) { getTransaction() >> mockTx }
+
+        GrailsSessionContext sessionContext = new GrailsSessionContext(sessionFactory) {
+            @Override
+            protected TransactionManager lookupJtaTransactionManager(SessionFactoryImplementor sf) { mockTm }
+        }
+
+        when:
+        sessionContext.registerJtaSynchronization(session, null)
+
+        then:
+        1 * mockTx.registerSynchronization(_)
+
+        cleanup:
+        if (session.isOpen()) session.close()
+    }
+
+    void "test registerJtaSynchronization uses existing SessionHolder when provided"() {
+        given:
+        SessionFactoryImplementor sessionFactory = manager.hibernateDatastore.sessionFactory as SessionFactoryImplementor
+        Session session = sessionFactory.openSession()
+        SessionHolder existingHolder = new SessionHolder(session)
+
+        def mockTx = Mock(Transaction) { getStatus() >> Status.STATUS_ACTIVE }
+        def mockTm = Mock(TransactionManager) { getTransaction() >> mockTx }
+
+        GrailsSessionContext sessionContext = new GrailsSessionContext(sessionFactory) {
+            @Override
+            protected TransactionManager lookupJtaTransactionManager(SessionFactoryImplementor sf) { mockTm }
+        }
+
+        when:
+        sessionContext.registerJtaSynchronization(session, existingHolder)
+
+        then:
+        existingHolder.isSynchronizedWithTransaction()
+        1 * mockTx.registerSynchronization(_)
+
+        cleanup:
+        if (session.isOpen()) session.close()
+    }
+
+    void "test registerJtaSynchronization skips when JTA transaction is not active"() {
+        given:
+        SessionFactoryImplementor sessionFactory = manager.hibernateDatastore.sessionFactory as SessionFactoryImplementor
+        Session session = sessionFactory.openSession()
+
+        def mockTx = Mock(Transaction) { getStatus() >> Status.STATUS_COMMITTED }
+        def mockTm = Mock(TransactionManager) { getTransaction() >> mockTx }
+
+        GrailsSessionContext sessionContext = new GrailsSessionContext(sessionFactory) {
+            @Override
+            protected TransactionManager lookupJtaTransactionManager(SessionFactoryImplementor sf) { mockTm }
+        }
+
+        when:
+        sessionContext.registerJtaSynchronization(session, null)
+
+        then:
+        0 * mockTx.registerSynchronization(_)
+
+        cleanup:
+        if (session.isOpen()) session.close()
+    }
+
+    void "test lookupJtaTransactionManager returns null when no service binding"() {
+        given:
+        SessionFactoryImplementor sessionFactory = manager.hibernateDatastore.sessionFactory as SessionFactoryImplementor
+        GrailsSessionContext sessionContext = new GrailsSessionContext(sessionFactory)
+
+        when:
+        TransactionManager result = sessionContext.lookupJtaTransactionManager(sessionFactory)
+
+        then:
+        result == null
     }
 }

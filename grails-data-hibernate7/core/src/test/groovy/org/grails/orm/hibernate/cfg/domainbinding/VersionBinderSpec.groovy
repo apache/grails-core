@@ -19,65 +19,61 @@
 
 package org.grails.orm.hibernate.cfg.domainbinding
 
+import grails.gorm.annotation.Entity
+import grails.gorm.hibernate.HibernateEntity
 import grails.gorm.specs.HibernateGormDatastoreSpec
-import org.grails.datastore.mapping.model.PersistentEntity
-import org.grails.datastore.mapping.model.PropertyMapping
-import org.grails.datastore.mapping.reflect.EntityReflector
-import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernatePersistentProperty
-import org.grails.orm.hibernate.cfg.PropertyConfig
-import org.hibernate.boot.spi.MetadataBuildingContext
-import org.hibernate.engine.OptimisticLockStyle
-import org.hibernate.mapping.BasicValue
-import org.hibernate.mapping.Property
-import org.hibernate.mapping.RootClass
-import org.hibernate.mapping.Table
-import java.util.function.BiFunction
-
 import org.grails.orm.hibernate.cfg.domainbinding.binder.PropertyBinder
 import org.grails.orm.hibernate.cfg.domainbinding.binder.SimpleValueBinder
 import org.grails.orm.hibernate.cfg.domainbinding.binder.VersionBinder
+import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernateVersionProperty
+import org.hibernate.boot.spi.MetadataBuildingContext
+import org.hibernate.engine.OptimisticLockStyle
+import org.hibernate.mapping.BasicValue
+import org.hibernate.mapping.RootClass
+import org.hibernate.mapping.Column
+import org.hibernate.mapping.Table
 
 class VersionBinderSpec extends HibernateGormDatastoreSpec {
 
     MetadataBuildingContext metadataBuildingContext
     SimpleValueBinder simpleValueBinder
     PropertyBinder propertyBinder
-    BiFunction<MetadataBuildingContext, Table, BasicValue> basicValueFactory
     VersionBinder versionBinder
 
     def setup() {
-        metadataBuildingContext = getGrailsDomainBinder().getMetadataBuildingContext()
-        simpleValueBinder = Mock(SimpleValueBinder)
-        propertyBinder = Spy(PropertyBinder)
-        basicValueFactory = Mock(BiFunction)
-        def jdbcEnvironment = Mock(org.hibernate.engine.jdbc.env.spi.JdbcEnvironment)
+        def binder = getGrailsDomainBinder()
+        metadataBuildingContext = binder.getMetadataBuildingContext()
+        simpleValueBinder = new SimpleValueBinder(metadataBuildingContext, binder.getNamingStrategy(), binder.getJdbcEnvironment())
+        propertyBinder = new PropertyBinder()
         
-        versionBinder = new VersionBinder(metadataBuildingContext, simpleValueBinder, propertyBinder, basicValueFactory)
+        versionBinder = new VersionBinder(metadataBuildingContext, simpleValueBinder, propertyBinder, BasicValue::new)
     }
 
     def "should bind version property correctly"() {
         given:
+        def entity = createPersistentEntity(VersionBinderUniqueEntity)
         def rootClass = new RootClass(metadataBuildingContext)
-        def table = new Table("TEST_TABLE")
-        rootClass.setTable(table)
+        rootClass.setTable(new Table("version_binder_unique_entity"))
+        entity.setPersistentClass(rootClass)
+        def versionProperty = entity.getVersion()
         
-        def versionProperty = new StubGrailsHibernatePersistentProperty("version")
-        
-        def basicValue = new BasicValue(metadataBuildingContext, table)
-        
+        expect:
+        versionProperty instanceof HibernateVersionProperty
+
         when:
         versionBinder.bindVersion(versionProperty, rootClass)
         
         then:
-        1 * basicValueFactory.apply(metadataBuildingContext, table) >> basicValue
-        1 * simpleValueBinder.bindSimpleValue(versionProperty, null, basicValue, "")
-        1 * propertyBinder.bindProperty(versionProperty, basicValue)
-        
         rootClass.getVersion() != null
         rootClass.getDeclaredVersion() != null
         rootClass.getOptimisticLockStyle() == OptimisticLockStyle.VERSION
-        rootClass.getVersion().getValue() == basicValue
-        basicValue.getTypeName() == "integer"
+        
+        def value = rootClass.getVersion().getValue()
+        value instanceof BasicValue
+        value.getTypeName() == "java.lang.Long"
+        
+        def column = value.getColumns().first() as Column
+        column.getName() == "my_version_col"
     }
 
     def "should set optimistic lock style to NONE if version is null"() {
@@ -92,43 +88,63 @@ class VersionBinderSpec extends HibernateGormDatastoreSpec {
         rootClass.getVersion() == null
     }
 
-    def "should default type to timestamp if version property name is not 'version'"() {
+    def "should respect custom column name configured via version DSL"() {
         given:
+        def entity = createPersistentEntity(VersionBinderCustomUniqueEntity)
         def rootClass = new RootClass(metadataBuildingContext)
-        def table = new Table("TEST_TABLE")
-        rootClass.setTable(table)
-        
-        def versionProperty = new StubGrailsHibernatePersistentProperty("lastUpdated")
-        
-        def basicValue = new BasicValue(metadataBuildingContext, table)
+        rootClass.setTable(new Table("version_binder_custom_unique_entity"))
+        entity.setPersistentClass(rootClass)
+        def versionProperty = entity.getVersion()
         
         when:
         versionBinder.bindVersion(versionProperty, rootClass)
         
         then:
-        1 * basicValueFactory.apply(metadataBuildingContext, table) >> basicValue
-        1 * propertyBinder.bindProperty(versionProperty, basicValue)
-        basicValue.getTypeName() == "timestamp"
+        rootClass.getVersion() != null
+        rootClass.getVersion().getValue().getTypeName() == "java.lang.Long"
+        
+        def column = rootClass.getVersion().getValue().getColumns().first() as Column
+        column.getName() == "my_custom_ver_col"
     }
 
-    static class StubGrailsHibernatePersistentProperty implements HibernatePersistentProperty {
-        String name
-        StubGrailsHibernatePersistentProperty(String name) { this.name = name }
-        @Override String getName() { name }
-        @Override String getCapitilizedName() { name.capitalize() }
-        @Override Class getType() { Object }
-        @Override boolean isNullable() { false }
-        @Override PersistentEntity getOwner() { null }
-        @Override PropertyMapping getMapping() { null }
-        @Override PropertyConfig getMappedForm() { new PropertyConfig() }
-        @Override PropertyConfig getHibernateMappedForm() { getMappedForm() }
-        @Override boolean isInherited() { false }
-        @Override EntityReflector.PropertyReader getReader() { null }
-        @Override EntityReflector.PropertyWriter getWriter() { null }
-        @Override String getOwnerClassName() { "Test" }
-        @Override boolean isLazyAble() { false }
-        @Override boolean isLazy() { false }
-        @Override org.grails.orm.hibernate.cfg.domainbinding.hibernate.GrailsHibernatePersistentEntity getHibernateOwner() { null }
-        boolean isBidirectionalManyToOneWithListMapping(Property prop) { false }
+    def "should set OptimisticLockStyle.NONE when entity has no version property"() {
+        given:
+        def entity = createPersistentEntity(VersionBinderNoVersionEntity)
+        def rootClass = new RootClass(metadataBuildingContext)
+        rootClass.setTable(new Table("version_binder_no_version_entity"))
+        entity.setPersistentClass(rootClass)
+
+        when:
+        versionBinder.bindVersion(null, rootClass)
+
+        then:
+        rootClass.getOptimisticLockStyle() == OptimisticLockStyle.NONE
+        rootClass.getVersion() == null
+    }
+}
+
+@Entity
+class VersionBinderUniqueEntity implements HibernateEntity<VersionBinderUniqueEntity> {
+    Long id
+    Long version
+    static mapping = {
+        version column: "my_version_col"
+    }
+}
+
+@Entity
+class VersionBinderCustomUniqueEntity implements HibernateEntity<VersionBinderCustomUniqueEntity> {
+    Long id
+    Long version
+    static mapping = {
+        version column: "my_custom_ver_col"
+    }
+}
+
+@Entity
+class VersionBinderNoVersionEntity implements HibernateEntity<VersionBinderNoVersionEntity> {
+    Long id
+    static mapping = {
+        version false
     }
 }

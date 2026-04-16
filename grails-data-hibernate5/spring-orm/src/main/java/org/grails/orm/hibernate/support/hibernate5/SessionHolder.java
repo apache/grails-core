@@ -44,11 +44,9 @@ public class SessionHolder extends EntityManagerHolder {
     @Nullable
     private FlushMode previousFlushMode;
 
-
     public SessionHolder(Session session) {
         super(session);
     }
-
 
     public Session getSession() {
         return (Session) getEntityManager();
@@ -72,7 +70,6 @@ public class SessionHolder extends EntityManagerHolder {
     public FlushMode getPreviousFlushMode() {
         return this.previousFlushMode;
     }
-
 
     @Override
     public void clear() {

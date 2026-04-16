@@ -485,4 +485,130 @@ class PropertyConfigSpec extends Specification {
         !pc.updatable
     }
 
+    // ─── column(Closure) with firstColumnIsColumnCopy ────────────────────────
+
+    void "column(Closure) reuses existing column in-place when firstColumnIsColumnCopy is true"() {
+        given:
+        PropertyConfig pc = new PropertyConfig()
+        def existing = new ColumnConfig(name: 'orig')
+        pc.columns << existing
+        pc.firstColumnIsColumnCopy = true
+
+        when:
+        pc.column { name = 'updated' }
+
+        then:
+        pc.columns.size() == 1
+        pc.columns[0].name == 'updated'
+        !pc.firstColumnIsColumnCopy
+    }
+
+    // ─── getJoinTableColumnConfig ─────────────────────────────────────────────
+
+    void "getJoinTableColumnConfig returns joinTable column when joinTable is set"() {
+        given:
+        PropertyConfig pc = new PropertyConfig()
+        pc.joinTable { name = 'jt'; column { name = 'jt_col' } }
+
+        expect:
+        pc.getJoinTableColumnConfig() != null
+        pc.getJoinTableColumnConfig().name == 'jt_col'
+    }
+
+    void "getJoinTableColumnConfig returns null when no joinTable"() {
+        expect:
+        new PropertyConfig().getJoinTableColumnConfig() == null
+    }
+
+    // ─── configureExisting(PropertyConfig, Map) with existing columns ─────────
+
+    void "configureExisting(Map) reuses first existing column when columns are present"() {
+        given:
+        PropertyConfig pc = new PropertyConfig()
+        pc.column('existing_col')
+
+        when:
+        PropertyConfig.configureExisting(pc, [column: 'new_col'])
+
+        then:
+        pc.columns.size() == 1
+        pc.columns[0].name == 'new_col'
+    }
+
+    // ─── column-delegate getters when columns are non-empty ──────────────────
+
+    void "getEnumType returns column enumType when columns are present"() {
+        given:
+        PropertyConfig pc = new PropertyConfig()
+        pc.column { enumType = 'ordinal' }
+
+        expect:
+        pc.getEnumType() == 'ordinal'
+    }
+
+    void "getSqlType returns column sqlType when columns are present"() {
+        given:
+        PropertyConfig pc = new PropertyConfig()
+        pc.column { sqlType = 'varchar(100)' }
+
+        expect:
+        pc.getSqlType() == 'varchar(100)'
+    }
+
+    void "getIndexName returns column index as string when columns are present"() {
+        given:
+        PropertyConfig pc = new PropertyConfig()
+        pc.column { index = 'idx_name' }
+
+        expect:
+        pc.getIndexName() == 'idx_name'
+    }
+
+    void "getLength returns column length when columns are present"() {
+        given:
+        PropertyConfig pc = new PropertyConfig()
+        pc.column { length = 42 }
+
+        expect:
+        pc.getLength() == 42
+    }
+
+    void "getPrecision returns column precision when columns are present"() {
+        given:
+        PropertyConfig pc = new PropertyConfig()
+        pc.column { precision = 10 }
+
+        expect:
+        pc.getPrecision() == 10
+    }
+
+    // ─── toString ─────────────────────────────────────────────────────────────
+
+    void "toString includes type lazy columns insertable and updatable"() {
+        given:
+        PropertyConfig pc = new PropertyConfig()
+        pc.type = 'String'
+        pc.lazy = true
+
+        expect:
+        pc.toString().contains('type:String')
+        pc.toString().contains('lazy:true')
+    }
+
+    // ─── clone with typeParams ────────────────────────────────────────────────
+
+    void "clone copies typeParams independently when typeParams is set"() {
+        given:
+        PropertyConfig pc = new PropertyConfig()
+        pc.typeParams = new Properties()
+        pc.typeParams.setProperty('key', 'value')
+
+        when:
+        PropertyConfig cloned = pc.clone() as PropertyConfig
+
+        then:
+        cloned.typeParams != null
+        cloned.typeParams.getProperty('key') == 'value'
+        !cloned.typeParams.is(pc.typeParams)
+    }
 }

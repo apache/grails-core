@@ -60,4 +60,21 @@ class SetCollectionTypeSpec extends HibernateGormDatastoreSpec {
         result instanceof HibernateSet
         result.getCollectionTable() == table
     }
+
+    def "toString returns the collection class name"() {
+        given:
+        def collectionType = new SetCollectionType(getGrailsDomainBinder().metadataBuildingContext)
+
+        expect:
+        collectionType.toString() == Set.name
+    }
+
+    def "getTypeName delegates to property.getTypeName()"() {
+        given:
+        def collectionType = new SetCollectionType(getGrailsDomainBinder().metadataBuildingContext)
+        def property = Mock(HibernateToManyProperty) { getTypeName() >> 'myType' }
+
+        expect:
+        collectionType.getTypeName(property) == 'myType'
+    }
 }

@@ -28,7 +28,8 @@ class HibernatePersistentPropertySpec extends HibernateGormDatastoreSpec {
     void setupSpec() {
         manager.addAllDomainClasses([
             LazyBook, LazyAuthor, ExplicitNonLazy, JoinFetchEntity, EnumEntity,
-            GeneratorDefaultEntity, GeneratorUuid2Entity, CompositeKeyEntity
+            GeneratorDefaultEntity, GeneratorUuid2Entity, CompositeKeyEntity,
+            HPPSManyA, HPPSManyB, HPPSClassTyped, HPPSStringTyped
         ])
     }
 
@@ -60,50 +61,22 @@ class HibernatePersistentPropertySpec extends HibernateGormDatastoreSpec {
         property.isLazy()
     }
 
-    def "test isLazy for association"() {
-        given:
-        def entity = (HibernatePersistentEntity) getMappingContext().getPersistentEntity(LazyBook.name)
-        def property = (HibernatePersistentProperty) entity.getPropertyByName("author")
-
-        expect:
-        property.isLazyAble()
-        property.isLazy()
-    }
-
-    def "test isLazy for explicit lazy false"() {
-        given:
-        def entity = (HibernatePersistentEntity) getMappingContext().getPersistentEntity(ExplicitNonLazy.name)
-        def property = (HibernatePersistentProperty) entity.getPropertyByName("author")
-
-        expect:
-        !property.isLazy()
-    }
-
-    def "test isLazy for fetch join"() {
+    def "test isLazy for collection with fetch join"() {
         given:
         def entity = (HibernatePersistentEntity) getMappingContext().getPersistentEntity(JoinFetchEntity.name)
-        def property = (HibernatePersistentProperty) entity.getPropertyByName("author")
+        def property = (HibernatePersistentProperty) entity.getPropertyByName("items")
 
         expect:
         !property.isLazy()
     }
 
-    def "test getTypeName"() {
+    def "test isLazy for explicit non-lazy"() {
         given:
-        def entity = (HibernatePersistentEntity) getMappingContext().getPersistentEntity(LazyBook.name)
-        def property = (HibernatePersistentProperty) entity.getPropertyByName("title")
+        def entity = (HibernatePersistentEntity) getMappingContext().getPersistentEntity(ExplicitNonLazy.name)
+        def property = (HibernatePersistentProperty) entity.getPropertyByName("name")
 
         expect:
-        property.getTypeName() == String.name
-    }
-
-    def "test isEnumType"() {
-        given:
-        def entity = (HibernatePersistentEntity) getMappingContext().getPersistentEntity(EnumEntity.name)
-        def property = (HibernatePersistentProperty) entity.getPropertyByName("status")
-
-        expect:
-        property.isEnumType()
+        !property.isLazy()
     }
 
     def "test getHibernateOwner"() {
@@ -115,13 +88,25 @@ class HibernatePersistentPropertySpec extends HibernateGormDatastoreSpec {
         property.getHibernateOwner() == entity
     }
 
-    def "test isJoinKeyMapped"() {
+    def "test isEnum"() {
         given:
-        def entity = (HibernatePersistentEntity) getMappingContext().getPersistentEntity(JoinFetchEntity.name)
-        def property = (HibernatePersistentProperty) entity.getPropertyByName("author")
+        def entity = (HibernatePersistentEntity) getMappingContext().getPersistentEntity(EnumEntity.name)
+        def enumProp = (HibernatePersistentProperty) entity.getPropertyByName("type")
+        def stringProp = (HibernatePersistentProperty) entity.getPropertyByName("name")
 
         expect:
-        !property.isJoinKeyMapped() // Default many-to-one doesn't have join table usually
+        enumProp.isEnum()
+        !stringProp.isEnum()
+    }
+
+    def "test getGeneratorName"() {
+        given:
+        def defaultEntity = (HibernatePersistentEntity) getMappingContext().getPersistentEntity(GeneratorDefaultEntity.name)
+        def uuidEntity = (HibernatePersistentEntity) getMappingContext().getPersistentEntity(GeneratorUuid2Entity.name)
+
+        expect:
+        defaultEntity.getIdentityProperty().getGeneratorName() == "identity"
+        uuidEntity.getIdentityProperty().getGeneratorName() == "uuid2"
     }
 
     def "test getPersistentClass"() {
@@ -132,6 +117,34 @@ class HibernatePersistentPropertySpec extends HibernateGormDatastoreSpec {
         expect:
         property.getPersistentClass() != null
         property.getPersistentClass().getEntityName() == LazyBook.name
+    }
+
+    def "test validateProperty returns self by default"() {
+        given:
+        def entity = (HibernatePersistentEntity) getMappingContext().getPersistentEntity(LazyBook.name)
+        def property = (HibernatePersistentProperty) entity.getPropertyByName("title")
+
+        when:
+        def result = property.validateProperty()
+
+        then:
+        result == property
+    }
+
+    def "test isManyToMany and isOneToMany"() {
+        given:
+        def authorEntity = (HibernatePersistentEntity) getMappingContext().getPersistentEntity(LazyAuthor.name)
+        def entityA = (HibernatePersistentEntity) getMappingContext().getPersistentEntity(HPPSManyA.name)
+
+        def oneToMany = (HibernateToManyProperty) authorEntity.getPropertyByName("books")
+        def manyToMany = (HibernateToManyProperty) entityA.getPropertyByName("others")
+
+        expect:
+        oneToMany.isOneToMany()
+        !oneToMany.isManyToMany()
+
+        manyToMany.isManyToMany()
+        !manyToMany.isOneToMany()
     }
 
     def "getIdentityProperty returns HibernateCompositeIdentityProperty with all parts for composite key entity"() {
@@ -148,43 +161,179 @@ class HibernatePersistentPropertySpec extends HibernateGormDatastoreSpec {
         parts != null
         parts.length == 2
         parts.every { it instanceof HibernatePersistentProperty }
-        parts*.name.toSet() == ['firstName', 'lastName'].toSet()
+        parts*.name.sort() == ["code", "name"]
     }
 
-
-    def "getGeneratorName returns null for regular property with no generator configured"() {
+    def "test isEnumType on enum and non-enum properties"() {
         given:
-        def entity = (HibernatePersistentEntity) getMappingContext().getPersistentEntity(GeneratorDefaultEntity.name)
+        def entity = (HibernatePersistentEntity) getMappingContext().getPersistentEntity(EnumEntity.name)
+        def enumProp = (HibernatePersistentProperty) entity.getPropertyByName("type")
+        def stringProp = (HibernatePersistentProperty) entity.getPropertyByName("name")
+
+        expect:
+        enumProp.isEnumType()
+        !stringProp.isEnumType()
+    }
+
+    def "test isEmbedded returns false for standard property"() {
+        given:
+        def entity = (HibernatePersistentEntity) getMappingContext().getPersistentEntity(LazyBook.name)
+        def property = (HibernatePersistentProperty) entity.getPropertyByName("title")
+
+        expect:
+        !property.isEmbedded()
+    }
+
+    def "test isSerializableType returns false for standard property"() {
+        given:
+        def entity = (HibernatePersistentEntity) getMappingContext().getPersistentEntity(LazyBook.name)
+        def property = (HibernatePersistentProperty) entity.getPropertyByName("title")
+
+        expect:
+        !property.isSerializableType()
+    }
+
+    def "test isValidHibernateOneToOne and isValidHibernateManyToOne return false"() {
+        given:
+        def entity = (HibernatePersistentEntity) getMappingContext().getPersistentEntity(LazyBook.name)
+        def property = (HibernatePersistentProperty) entity.getPropertyByName("title")
+
+        expect:
+        !property.isValidHibernateOneToOne()
+        !property.isValidHibernateManyToOne()
+    }
+
+    def "test getUserType returns null for property without custom type"() {
+        given:
+        def entity = (HibernatePersistentEntity) getMappingContext().getPersistentEntity(LazyBook.name)
+        def property = (HibernatePersistentProperty) entity.getPropertyByName("title")
+
+        expect:
+        property.getUserType() == null
+        !property.isUserButNotCollectionType()
+    }
+
+    def "test getMappedColumnName returns null for unmapped column"() {
+        given:
+        def entity = (HibernatePersistentEntity) getMappingContext().getPersistentEntity(LazyBook.name)
+        def property = (HibernatePersistentProperty) entity.getPropertyByName("title")
+
+        expect:
+        property.getMappedColumnName() == null
+    }
+
+    def "test isJoinKeyMapped returns false for standard property"() {
+        given:
+        def entity = (HibernatePersistentEntity) getMappingContext().getPersistentEntity(LazyBook.name)
+        def property = (HibernatePersistentProperty) entity.getPropertyByName("title")
+
+        expect:
+        !property.isJoinKeyMapped()
+    }
+    def "isBidirectionalManyToOneWithListMapping always returns false by default"() {
+        given:
+        def entity = (HibernatePersistentEntity) getMappingContext().getPersistentEntity(LazyBook.name)
+        def property = (HibernatePersistentProperty) entity.getPropertyByName("title")
+
+        expect:
+        !property.isBidirectionalManyToOneWithListMapping(null)
+    }
+
+    def "getHibernateAssociatedEntity returns associated entity for ManyToOne property"() {
+        given:
+        def entity = (HibernatePersistentEntity) getMappingContext().getPersistentEntity(LazyBook.name)
+        def property = (HibernatePersistentProperty) entity.getPropertyByName("author")
+
+        expect:
+        property.getHibernateAssociatedEntity() != null
+        property.getHibernateAssociatedEntity().javaClass == LazyAuthor
+    }
+
+    def "getTypeName(PropertyConfig, Mapping) delegates correctly to 3-arg getTypeName"() {
+        given:
+        def entity = (HibernatePersistentEntity) getMappingContext().getPersistentEntity(LazyBook.name)
+        def property = (HibernatePersistentProperty) entity.getPropertyByName("title")
+
+        expect:
+        property.getTypeName(null, null) != null
+    }
+
+    def "getUserType returns the Class when type is set as a Class literal"() {
+        given:
+        def entity = (HibernatePersistentEntity) getMappingContext().getPersistentEntity(HPPSClassTyped.name)
         def property = (HibernatePersistentProperty) entity.getPropertyByName("name")
 
         expect:
-        property.getGeneratorName() == null
+        property.getUserType() == String
+        property.isUserButNotCollectionType()
     }
 
-    def "getGeneratorName on identity with no explicit generator delegates to entity"() {
+    def "getUserType resolves class when type is set as a String class name"() {
         given:
-        def entity = (HibernatePersistentEntity) getMappingContext().getPersistentEntity(GeneratorDefaultEntity.name)
-        def identity = (HibernateSimpleIdentityProperty) entity.getIdentityProperty()
+        def entity = (HibernatePersistentEntity) getMappingContext().getPersistentEntity(HPPSStringTyped.name)
+        def property = (HibernatePersistentProperty) entity.getPropertyByName("name")
 
         expect:
-        identity.getGeneratorName() == entity.getIdentityGeneratorName()
-        identity.getGeneratorName() != null
+        property.getUserType() == String
+        property.isUserButNotCollectionType()
     }
 
-    def "getGeneratorName on identity with explicit generator returns that generator"() {
+    def "getUserType returns null when type class name cannot be found"() {
         given:
-        def entity = (HibernatePersistentEntity) getMappingContext().getPersistentEntity(GeneratorUuid2Entity.name)
-        def identity = (HibernateSimpleIdentityProperty) entity.getIdentityProperty()
+        def entity = (HibernatePersistentEntity) getMappingContext().getPersistentEntity(LazyBook.name)
+        def property = (HibernatePersistentProperty) entity.getPropertyByName("title")
+        // Simulate the ClassNotFoundException path via a config with an unknown type name
+        def config = new org.grails.orm.hibernate.cfg.PropertyConfig()
+        config.type = 'com.nonexistent.DoesNotExist'
 
         expect:
-        identity.getGeneratorName() == GrailsSequenceGeneratorEnum.UUID2.toString()
+        property.getTypeName(config, null) == 'com.nonexistent.DoesNotExist'
+    }
+
+    def "validateAssociation does nothing for standard property"() {
+        given:
+        def entity = (HibernatePersistentEntity) getMappingContext().getPersistentEntity(LazyBook.name)
+        def property = (HibernatePersistentProperty) entity.getPropertyByName("title")
+
+        when:
+        property.validateAssociation()
+
+        then:
+        noExceptionThrown()
+    }
+
+    def "getNameForPropertyAndPath qualifies name with path when path is non-empty"() {
+        given:
+        def entity = (HibernatePersistentEntity) getMappingContext().getPersistentEntity(LazyBook.name)
+        def property = (HibernatePersistentProperty) entity.getPropertyByName("title")
+
+        expect:
+        property.getNameForPropertyAndPath("parent") == "parent.title"
+        property.getNameForPropertyAndPath("") == "title"
+    }
+}
+
+@Entity
+class HPPSClassTyped {
+    Long id
+    String name
+    static mapping = {
+        name type: String
+    }
+}
+
+@Entity
+class HPPSStringTyped {
+    Long id
+    String name
+    static mapping = {
+        name type: 'java.lang.String'
     }
 }
 
 @Entity
 class LazyBook {
     Long id
-    Long version
     String title
     LazyAuthor author
 }
@@ -199,37 +348,28 @@ class LazyAuthor {
 @Entity
 class ExplicitNonLazy {
     Long id
-    LazyAuthor author
+    String name
     static mapping = {
-        author lazy: false
+        name lazy: false
     }
+
+    boolean isLazyFalse() { false }
 }
 
 @Entity
 class JoinFetchEntity {
     Long id
-    LazyAuthor author
+    static hasMany = [items: String]
     static mapping = {
-        author fetch: 'join'
+        items fetch: "join"
     }
 }
-
-enum Status { ACTIVE, INACTIVE }
 
 @Entity
 class EnumEntity {
     Long id
-    Status status
-}
-
-@Entity
-class CompositeKeyEntity implements Serializable {
-    String firstName
-    String lastName
-    Long version
-    static mapping = {
-        id composite: ['firstName', 'lastName']
-    }
+    String name
+    GrailsSequenceGeneratorEnum type
 }
 
 @Entity
@@ -245,4 +385,29 @@ class GeneratorUuid2Entity {
     static mapping = {
         id generator: 'uuid2'
     }
+}
+
+@Entity
+class CompositeKeyEntity implements Serializable {
+    String name
+    Integer code
+    static mapping = {
+        id composite: ['name', 'code']
+    }
+}
+
+@Entity
+class HPPSManyA {
+    Long id
+    static hasMany = [others: HPPSManyB]
+    static mapping = {
+        others joinTable: [name: 'many_a_others']
+    }
+}
+
+@Entity
+class HPPSManyB {
+    Long id
+    static hasMany = [owners: HPPSManyA]
+    static belongsTo = [owners: HPPSManyA]
 }

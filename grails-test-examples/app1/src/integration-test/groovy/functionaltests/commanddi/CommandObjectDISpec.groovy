@@ -19,6 +19,7 @@
 package functionaltests.commanddi
 
 import spock.lang.Specification
+import spock.lang.Tag
 import spock.lang.Unroll
 
 import grails.testing.mixin.integration.Integration
@@ -29,6 +30,7 @@ import org.apache.grails.testing.http.client.HttpClientSupport
  * Tests the ability to inject Spring services into Grails command objects.
  */
 @Integration
+@Tag('http-client')
 class CommandObjectDISpec extends Specification implements HttpClientSupport {
 
     // ========== Basic Service Injection Tests ==========

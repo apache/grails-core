@@ -34,7 +34,7 @@ public class GrailsCompilerAutoConfiguration extends CompilerAutoConfiguration {
 
     @Override
     public void applyDependencies(DependencyCustomizer dependencies) {
-        dependencies.ifAnyMissingClasses("org.springframework.web.servlet.mvc.Controller").add("spring-boot-starter-web");
+        dependencies.ifAnyMissingClasses("org.springframework.web.servlet.mvc.Controller").add("spring-boot-starter-webmvc");
         dependencies.ifAnyMissingClasses("grails.boot.config.GrailsAutoConfiguration").add("grails-boot");
         dependencies.ifAnyMissingClasses("grails.core.DefaultGrailsApplication").add("grails-core");
         dependencies.add("grails-web");

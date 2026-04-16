@@ -21,12 +21,14 @@ import org.springframework.boot.gradle.tasks.bundling.BootArchive
 plugins {
     id 'org.apache.grails.buildsrc.properties'
     id 'org.apache.grails.buildsrc.compile'
+    id 'org.apache.grails.buildsrc.dependency-validator'
 }
 
 version = '0.1'
 group = 'micronaut'
 
 apply plugin: 'org.apache.grails.gradle.grails-web'
+
 apply plugin: 'cloud.wondrify.asset-pipeline'
 
 // The grails-gsp Gradle plugin is not needed for running the functional tests.
@@ -35,7 +37,7 @@ apply plugin: 'cloud.wondrify.asset-pipeline'
 apply plugin: 'org.apache.grails.gradle.grails-gsp'
 
 dependencies {
-    implementation platform(project(':grails-bom'))
+    implementation enforcedPlatform(project(':grails-bom'))
 
     implementation "io.micronaut:micronaut-http-client:$micronautHttpClientVersion"
     implementation "io.micronaut:micronaut-retry:$micronautHttpClientVersion"
@@ -45,11 +47,12 @@ dependencies {
     implementation 'org.apache.grails:grails-scaffolding'
     implementation project(':grails-test-examples-plugins-micronaut-singleton')
 
+    annotationProcessor enforcedPlatform(project(':grails-bom'))
     annotationProcessor platform("io.micronaut.platform:micronaut-platform:$micronautPlatformVersion")
     annotationProcessor 'io.micronaut:micronaut-inject-java'
     annotationProcessor 'jakarta.annotation:jakarta.annotation-api'
 
-    testAndDevelopmentOnly platform(project(':grails-bom'))
+    testAndDevelopmentOnly enforcedPlatform(project(':grails-bom'))
     testAndDevelopmentOnly 'org.apache.grails:grails-dependencies-assets'
 
     runtimeOnly 'cloud.wondrify:asset-pipeline-grails'

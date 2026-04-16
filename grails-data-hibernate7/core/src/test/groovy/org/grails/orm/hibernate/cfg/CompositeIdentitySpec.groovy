@@ -94,4 +94,41 @@ class CompositeIdentitySpec extends Specification {
         expect:
         compositeIdentity.getPropertyNames() == propertyNames
     }
+
+    def "naturalId closure configures NaturalId and returns this"() {
+        given:
+        def compositeIdentity = new HibernateCompositeIdentity(propertyNames: ['firstName', 'lastName'] as String[])
+
+        when:
+        def result = compositeIdentity.naturalId { mutable true }
+
+        then:
+        result.is(compositeIdentity)
+        compositeIdentity.natural != null
+        compositeIdentity.natural.mutable
+    }
+
+    def "naturalId closure sets propertyNames on NaturalId"() {
+        given:
+        def compositeIdentity = new HibernateCompositeIdentity(propertyNames: ['code'] as String[])
+
+        when:
+        compositeIdentity.naturalId { propertyNames(['code']) }
+
+        then:
+        compositeIdentity.natural.propertyNames == ['code']
+    }
+
+    def "getHibernateProperties throws exception when domain class returns empty composite array"() {
+        given:
+        def domainClass = Mock(GrailsHibernatePersistentEntity)
+        def compositeIdentity = new HibernateCompositeIdentity()
+
+        when:
+        compositeIdentity.getHibernateProperties(domainClass)
+
+        then:
+        1 * domainClass.getCompositeIdentity() >> ([] as HibernatePersistentProperty[])
+        thrown(MappingException)
+    }
 }

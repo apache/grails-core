@@ -27,7 +27,7 @@ import org.grails.datastore.mapping.model.types.mapping.BasicWithMapping;
 import org.grails.orm.hibernate.cfg.PropertyConfig;
 
 /** Hibernate implementation of {@link org.grails.datastore.mapping.model.types.Basic} */
-public class HibernateBasicProperty extends BasicWithMapping<PropertyConfig> implements HibernateToManyProperty {
+public class HibernateBasicProperty extends BasicWithMapping<PropertyConfig> implements HibernateToManyCollectionProperty {
 
     private Collection collection;
 
@@ -37,12 +37,12 @@ public class HibernateBasicProperty extends BasicWithMapping<PropertyConfig> imp
     }
 
     @Override
-    public Collection getCollection() {
+    public Collection getHibernateCollection() {
         return collection;
     }
 
     @Override
-    public void setCollection(Collection collection) {
+    public void setHibernateCollection(Collection collection) {
         this.collection = collection;
     }
 }

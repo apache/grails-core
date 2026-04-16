@@ -19,6 +19,7 @@
 package functionaltests.errorhandling
 
 import spock.lang.Specification
+import spock.lang.Tag
 import spock.lang.Unroll
 
 import grails.testing.mixin.integration.Integration
@@ -30,6 +31,7 @@ import org.apache.grails.testing.http.client.HttpClientSupport
  * and error response headers.
  */
 @Integration
+@Tag('http-client')
 class ErrorHandlingSpec extends Specification implements HttpClientSupport {
 
     // ========== HTTP Status Code Tests ==========

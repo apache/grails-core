@@ -55,12 +55,10 @@ public class VersionBinder {
 
             BasicValue val = basicValueFactory.apply(metadataBuildingContext, entity.getTable());
 
-            // set type
+            // set type — bindSimpleValue resolves the Java property type (e.g. "java.lang.Long")
+            // or the explicit DSL type if one was configured; no override needed here
             simpleValueBinder.bindSimpleValue(version, null, val, EMPTY_PATH);
 
-            if (!val.isTypeSpecified()) {
-                val.setTypeName("version".equals(version.getName()) ? "integer" : "timestamp");
-            }
             Property prop = propertyBinder.bindProperty(version, val);
             prop.setLazy(false);
             val.setNullValue("undefined");

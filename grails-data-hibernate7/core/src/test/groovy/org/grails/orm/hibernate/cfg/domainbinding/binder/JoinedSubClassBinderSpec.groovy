@@ -54,8 +54,8 @@ class JoinedSubClassBinderSpec extends HibernateGormDatastoreSpec {
         def mappings = buildingContext.getMetadataCollector()
         
         // Register entities in mapping context
-        def rootEntity = createPersistentEntity(JoinedSubClassRoot)
-        def subEntity = createPersistentEntity(JoinedSubClassSub)
+        def rootEntity = createPersistentEntity(JoinedSubClassRoot) as org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernatePersistentEntity
+        def subEntity = createPersistentEntity(JoinedSubClassSub) as org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernatePersistentEntity
         
         // Setup Hibernate RootClass
         def rootClass = new RootClass(buildingContext)

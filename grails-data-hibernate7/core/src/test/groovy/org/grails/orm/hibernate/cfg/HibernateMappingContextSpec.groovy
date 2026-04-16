@@ -27,6 +27,7 @@ import org.grails.datastore.mapping.model.PersistentProperty
 import org.grails.datastore.mapping.model.ValueGenerator
 import org.grails.datastore.mapping.model.config.JpaMappingConfigurationStrategy
 import org.grails.orm.hibernate.cfg.domainbinding.hibernate.GrailsHibernatePersistentEntity
+import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernatePersistentProperty
 import org.grails.orm.hibernate.cfg.domainbinding.hibernate.GrailsJpaMappingConfigurationStrategy
 import org.grails.orm.hibernate.connections.HibernateConnectionSourceSettings
 import org.springframework.validation.Errors
@@ -167,6 +168,41 @@ class HibernateMappingContextSpec extends HibernateGormDatastoreSpec {
         mappingContext.mappingFactory != null
         mappingContext.mappingFactory instanceof org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernateMappingFactory
     }
+
+    void "setDefaultConstraints propagates to the mapping factory"() {
+        given:
+        def ctx = new HibernateMappingContext()
+        Closure constraints = { maxSize 100 }
+
+        when:
+        ctx.setDefaultConstraints(constraints)
+
+        then:
+        noExceptionThrown()
+    }
+
+    void "createPersistentEntity returns null for non-GormEntity class"() {
+        given:
+        def ctx = new HibernateMappingContext()
+
+        when:
+        def entity = ctx.addPersistentEntity(MappingContextAddress)
+
+        then:
+        entity == null
+    }
+
+    void "PersistentEntityNamingStrategy default resolveTableName delegates to resolveTableName(String)"() {
+        given:
+        def entity = mappingContext.getPersistentEntity(MappingContextBook.name) as GrailsHibernatePersistentEntity
+        def strategy = new PersistentEntityNamingStrategyTestImpl()
+
+        when:
+        def tableName = strategy.resolveTableName(entity)
+
+        then:
+        tableName == 'MappingContextBook'
+    }
 }
 
 // --- domain classes used in integration tests ---
@@ -209,4 +245,13 @@ class MappingContextTypeMarshaller extends AbstractMappingAwareCustomTypeMarshal
 
     @Override
     protected Object readInternal(PersistentProperty property, String key, Object nativeSource) { nativeSource }
+}
+
+class PersistentEntityNamingStrategyTestImpl implements PersistentEntityNamingStrategy {
+    @Override
+    String resolveColumnName(String logicalName) { logicalName }
+    @Override
+    String resolveTableName(String logicalName) { logicalName }
+    @Override
+    String resolveForeignKeyForPropertyDomainClass(HibernatePersistentProperty property) { property.name }
 }

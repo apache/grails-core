@@ -18,7 +18,7 @@
  */
 package grails.plugin.json.view
 
-import com.fasterxml.jackson.databind.ObjectMapper
+import tools.jackson.databind.json.JsonMapper
 import grails.persistence.Entity
 import grails.views.json.test.JsonViewUnitTest
 import spock.lang.Shared
@@ -27,10 +27,10 @@ import spock.lang.Specification
 class EnumRenderingSpec extends Specification implements JsonViewUnitTest {
 
     @Shared
-    ObjectMapper objectMapper
+    JsonMapper objectMapper
 
     void setupSpec() {
-        objectMapper = new ObjectMapper()
+        objectMapper = JsonMapper.builder().build()
     }
 
     void 'Test the render method when a domain instance defines an enum'() {

@@ -21,6 +21,7 @@ plugins {
     id 'groovy'
     id 'java-library'
     id 'org.apache.grails.buildsrc.properties'
+    id 'org.apache.grails.buildsrc.dependency-validator'
     id 'org.apache.grails.buildsrc.compile'
     id 'org.apache.grails.buildsrc.publish'
     id 'org.apache.grails.buildsrc.sbom'
@@ -48,8 +49,8 @@ dependencies {
 
     testImplementation 'org.apache.groovy:groovy'
     testImplementation 'org.postgresql:postgresql'
-    testImplementation 'org.testcontainers:postgresql:1.20.1'
-    testImplementation 'org.testcontainers:testcontainers:1.20.1'
+    testImplementation 'org.testcontainers:testcontainers-postgresql'
+    testImplementation 'org.testcontainers:testcontainers'
     testImplementation 'org.slf4j:slf4j-simple'
     testRuntimeOnly 'net.bytebuddy:byte-buddy'
 }

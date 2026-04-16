@@ -18,7 +18,7 @@
  */
 package org.grails.plugins.web.rest.render.hal
 
-import com.fasterxml.jackson.databind.ObjectMapper
+import tools.jackson.databind.json.JsonMapper
 import grails.config.Config
 import grails.core.DefaultGrailsApplication
 import grails.core.GrailsApplication
@@ -76,11 +76,11 @@ import jakarta.xml.bind.DatatypeConverter
 class HalJsonRendererSpec extends Specification {
 
     @Shared
-    ObjectMapper objectMapper
+    JsonMapper objectMapper
 
     void setupSpec() {
 
-        objectMapper = new ObjectMapper()
+        objectMapper = JsonMapper.builder().build()
 
         // ensure clean state
         ShutdownOperations.runOperations()

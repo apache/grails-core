@@ -99,7 +99,7 @@ public class DefaultGrailsApplication extends AbstractGrailsApplication implemen
     protected static final Pattern GETCLASS_PATTERN = Pattern.compile("(get)(\\w+)Class");
 
     protected Class<?>[] allClasses = new Class[0];
-    protected static Log log = LogFactory.getLog(DefaultGrailsApplication.class);
+    protected static final Log log = LogFactory.getLog(DefaultGrailsApplication.class);
 
     protected Set<Class<?>> loadedClasses = new LinkedHashSet<>();
     protected ArtefactHandler[] artefactHandlers;

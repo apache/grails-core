@@ -45,8 +45,8 @@ class SingleTableSubclassBinderSpec extends HibernateGormDatastoreSpec {
         def mappings = buildingContext.getMetadataCollector()
         
         // Register entities in mapping context
-        def rootEntity = createPersistentEntity(SingleTableSubClassRoot)
-        def subEntity = createPersistentEntity(SingleTableSubClassSub)
+        def rootEntity = createPersistentEntity(SingleTableSubClassRoot) as org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernatePersistentEntity
+        def subEntity = createPersistentEntity(SingleTableSubClassSub) as org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernatePersistentEntity
         
         // Setup Hibernate RootClass
         def rootClass = new RootClass(buildingContext)

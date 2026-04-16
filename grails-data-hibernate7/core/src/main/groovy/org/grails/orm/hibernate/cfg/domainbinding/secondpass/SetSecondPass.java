@@ -47,7 +47,7 @@ public class SetSecondPass implements org.hibernate.boot.spi.SecondPass, GrailsS
 
     @Override
     public void doSecondPass(Map persistentClasses) throws MappingException {
-        collectionSecondPassBinder.bindCollectionSecondPass(property, persistentClasses);
+        collectionSecondPassBinder.bindCollectionSecondPass(property);
         createCollectionKeys(property.getCollection());
     }
 }

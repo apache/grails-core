@@ -36,6 +36,8 @@ import org.grails.orm.hibernate.cfg.Mapping;
 import org.grails.orm.hibernate.cfg.PropertyConfig;
 
 import static java.util.Optional.ofNullable;
+import static org.grails.orm.hibernate.cfg.GrailsHibernateUtil.isNotEmpty;
+import static org.grails.orm.hibernate.cfg.GrailsHibernateUtil.qualify;
 
 /** Interface for Hibernate persistent properties */
 public interface HibernatePersistentProperty extends PersistentProperty<PropertyConfig> {
@@ -132,6 +134,13 @@ public interface HibernatePersistentProperty extends PersistentProperty<Property
 
     default boolean isEnumType() {
         return Optional.ofNullable(getType()).map(Class::isEnum).orElse(false);
+    }
+
+    /**
+     * @return Whether this property is an enum property.
+     */
+    default boolean isEnum() {
+        return this instanceof HibernateEnumProperty;
     }
 
     default boolean isValidHibernateOneToOne() {
@@ -242,5 +251,16 @@ public interface HibernatePersistentProperty extends PersistentProperty<Property
      */
     default @Nullable String getGeneratorName() {
         return Optional.ofNullable(getHibernateMappedForm()).map(PropertyConfig::getGenerator).orElse(null);
+    }
+
+    default HibernatePersistentProperty validateProperty() {
+        return this;
+    }
+
+    default String getNameForPropertyAndPath(String path) {
+        if (isNotEmpty(path)) {
+            return qualify(path, getName());
+        }
+        return getName();
     }
 }
