@@ -75,7 +75,7 @@ abstract class HibernateSpec extends Specification {
     @Shared @AutoCleanup HibernateDatastore hibernateDatastore
     @Shared PlatformTransactionManager transactionManager
     @Shared HibernateProxyHandler proxyHandler = new HibernateProxyHandler()
-    @Shared @AutoCleanup('close') ApplicationContext applicationContext
+    @Shared @AutoCleanup('close') public ApplicationContext applicationContext
 
     static class TestGrailsBytecodeProvider extends GrailsBytecodeProvider {
 
@@ -303,5 +303,17 @@ abstract class HibernateSpec extends Specification {
             .stream(loader.fileExtensions)
             .map { String extension -> extension.toLowerCase() }
             .anyMatch { String extension -> name.toLowerCase().endsWith(extension) }
+    }
+
+    @CompileStatic(TypeCheckingMode.SKIP)
+    void setupSpecCleanup() {
+        if (hibernateDatastore != null) {
+            hibernateDatastore.close()
+            hibernateDatastore = null
+        }
+        if (applicationContext != null && applicationContext instanceof Closeable) {
+            ((Closeable) applicationContext).close()
+            applicationContext = null
+        }
     }
 }

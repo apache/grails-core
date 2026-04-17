@@ -65,7 +65,14 @@ class HibernateGrailsPluginSpec extends Specification {
         context.getBean('hibernateDatastore') instanceof HibernateDatastore
         context.containsBean('sessionFactory')
         context.getBean('sessionFactory') instanceof SessionFactory
-        
+
+        when: "Testing the converter"
+        def conversionService = context.getEnvironment().getConversionService()
+        def resolvedClass = conversionService.convert("java.lang.String", Class)
+
+        then:
+        resolvedClass == String
+
         cleanup:
         context.close()
     }

@@ -16,29 +16,24 @@
  *  specific language governing permissions and limitations
  *  under the License.
  */
-package grails.test.mixin.hibernate
+package org.grails.orm.hibernate.query
 
-import grails.test.hibernate.HibernateSpec
-import org.hibernate.SessionFactory
-import org.hibernate.Session
+import org.grails.datastore.gorm.query.criteria.DetachedAssociationCriteria
+import spock.lang.Specification
 
-/**
- * Edge cases for HibernateSpec
- * 
- * We use normal Spock inheritance to test the methods.
- */
-class HibernateSpecEdgeCasesSpec extends HibernateSpec {
+class AliasMapEntryFunctionSpec extends Specification {
 
-    @Override
-    List<Class> getDomainClasses() { [grails.orm.bootstrap.Person] }
+    def "test apply"() {
+        given:
+        def function = new AliasMapEntryFunction()
+        def criteria = Mock(DetachedAssociationCriteria)
+        criteria.getAssociationPath() >> "testPath"
 
-    def "test HibernateSpec methods"() {
-        expect:
-        hibernateDatastore != null
-        applicationContext != null
-        getCollector() != null
-        sessionFactory instanceof SessionFactory
-        hibernateSession instanceof Session
-        isRollback() == true
+        when:
+        def entry = function.apply(criteria)
+
+        then:
+        entry.key == "testPath"
+        entry.value == criteria
     }
 }

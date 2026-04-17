@@ -43,6 +43,8 @@ public class ProjectionPredicate implements Predicate<Query.Projection> {
             projection -> projection instanceof Query.AvgProjection;
     private final Predicate<Query.Projection> propertyProjectionPredicate =
             projection -> projection instanceof Query.PropertyProjection;
+    private final Predicate<Query.Projection> groupPropertyProjectionPredicate =
+            projection -> projection instanceof Query.GroupPropertyProjection;
 
     @SuppressWarnings("unchecked")
     Predicate<Query.Projection>[] projectionPredicates = new Predicate[] {
@@ -54,7 +56,8 @@ public class ProjectionPredicate implements Predicate<Query.Projection> {
         minProjectionPredicate,
         sumProjectionPredicate,
         avgProjectionPredicate,
-        distinctProjectionPredicate
+        distinctProjectionPredicate,
+        groupPropertyProjectionPredicate
     };
 
     @SafeVarargs

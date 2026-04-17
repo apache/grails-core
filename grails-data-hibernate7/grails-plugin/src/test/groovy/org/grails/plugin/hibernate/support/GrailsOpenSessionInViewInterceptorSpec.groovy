@@ -358,6 +358,78 @@ class GrailsOpenSessionInViewInterceptorSpec extends Specification {
             TransactionSynchronizationManager.unbindResource(primarySf)
         }
     }
+
+    def "test postHandle with null sessionHolder"() {
+        given: "An OSIV interceptor with NO session bound"
+        def interceptor = new GrailsOpenSessionInViewInterceptor()
+        def mockSessionFactory = Mock(SessionFactory)
+        interceptor.setSessionFactory(mockSessionFactory)
+        // Ensure no resource is bound
+        assert TransactionSynchronizationManager.getResource(mockSessionFactory) == null
+
+        WebRequest webRequest = Mock(WebRequest)
+
+        when: "postHandle is called"
+        interceptor.postHandle(webRequest, null)
+
+        then: "No exception is thrown and it completes"
+        noExceptionThrown()
+    }
+
+    def "test afterCompletion calls super even if additional sessions fail"() {
+        given: "An OSIV interceptor where additional session unbind fails"
+        def interceptor = new GrailsOpenSessionInViewInterceptor()
+        
+        def primarySf = Mock(SessionFactory)
+        interceptor.setSessionFactory(primarySf)
+        
+        // Setup a secondary session that we can't unbind easily? 
+        // Actually, let's just make one that throws on close.
+        def secondarySf = Mock(SessionFactory)
+        def secondarySession = Mock(Session)
+        
+        def mockDatastore = Mock(HibernateDatastore)
+        mockDatastore.getSessionFactory() >> primarySf
+        mockDatastore.getDefaultFlushModeName() >> 'MANUAL'
+        
+        def connectionSources = Mock(org.grails.datastore.mapping.core.connections.ConnectionSources)
+        def secondarySource = Mock(org.grails.datastore.mapping.core.connections.ConnectionSource)
+        secondarySource.getName() >> 'secondary'
+        connectionSources.getAllConnectionSources() >> [secondarySource]
+        mockDatastore.getConnectionSources() >> connectionSources
+        
+        def secondaryDatastore = Mock(HibernateDatastore)
+        secondaryDatastore.isOsivReadOnly() >> true
+        secondaryDatastore.getSessionFactory() >> secondarySf
+        mockDatastore.getDatastoreForConnection('secondary') >> secondaryDatastore
+        
+        interceptor.setHibernateDatastore(mockDatastore)
+        
+        TransactionSynchronizationManager.bindResource(secondarySf, new SessionHolder(secondarySession))
+        TransactionSynchronizationManager.bindResource(primarySf, new SessionHolder(Mock(Session)))
+
+        WebRequest webRequest = Mock(WebRequest)
+
+        when: "afterCompletion is called"
+        interceptor.afterCompletion(webRequest, null)
+
+        then: "additional session close is attempted"
+        1 * secondarySession.isOpen() >> true
+        1 * secondarySession.close() >> { throw new RuntimeException("fail") }
+        
+        and: "primary session is still handled via super"
+        // If super.afterCompletion was called, it would have tried to get resource for primarySf
+        !TransactionSynchronizationManager.hasResource(secondarySf)
+        !TransactionSynchronizationManager.hasResource(primarySf)
+
+        cleanup:
+        if (TransactionSynchronizationManager.hasResource(secondarySf)) {
+            TransactionSynchronizationManager.unbindResource(secondarySf)
+        }
+        if (TransactionSynchronizationManager.hasResource(primarySf)) {
+            TransactionSynchronizationManager.unbindResource(primarySf)
+        }
+    }
 }
 
 @Entity

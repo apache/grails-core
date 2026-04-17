@@ -64,4 +64,28 @@ class DetachedAssociationFunctionSpec extends Specification {
         then: "it should NOT extract the internal association criteria (isolation)"
         result.isEmpty()
     }
+
+    def "apply returns extracted criteria for Junction"() {
+        given:
+        def association1 = Mock(org.grails.datastore.mapping.model.types.Association) {
+            getName() >> "test1"
+        }
+        def association2 = Mock(org.grails.datastore.mapping.model.types.Association) {
+            getName() >> "test2"
+        }
+        def criteria1 = new DetachedAssociationCriteria(Object, association1)
+        def criteria2 = new DetachedAssociationCriteria(Object, association2)
+        def junction = new Query.Conjunction()
+        junction.add(criteria1)
+        junction.add(criteria2)
+        junction.add(new Query.Equals("prop", "value"))
+
+        when:
+        def result = function.apply(junction)
+
+        then:
+        result.size() == 2
+        result.contains(criteria1)
+        result.contains(criteria2)
+    }
 }

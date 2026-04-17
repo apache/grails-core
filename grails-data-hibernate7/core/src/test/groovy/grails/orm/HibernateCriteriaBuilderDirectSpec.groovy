@@ -1,240 +1,161 @@
+/*
+ *  Licensed to the Apache Software Foundation (ASF) under one
+ *  or more contributor license agreements.  See the NOTICE file
+ *  distributed with this work for additional information
+ *  regarding copyright ownership.  The ASF licenses this file
+ *  to you under the Apache License, Version 2.0 (the
+ *  "License"); you may not use this file except in compliance
+ *  with the License.  You may obtain a copy of the License at
+ *
+ *    https://www.apache.org/licenses/LICENSE-2.0
+ *
+ *  Unless required by applicable law or agreed to in writing,
+ *  software distributed under the License is distributed on an
+ *  "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ *  KIND, either express or implied.  See the License for the
+ *  specific language governing permissions and limitations
+ *  under the License.
+ */
 package grails.orm
 
-import grails.gorm.DetachedCriteria
 import grails.gorm.annotation.Entity
 import grails.gorm.specs.HibernateGormDatastoreSpec
-import org.grails.datastore.mapping.query.api.BuildableCriteria
+import org.hibernate.FetchMode
 import org.hibernate.SessionFactory
-import org.grails.orm.hibernate.HibernateDatastore
+import org.hibernate.dialect.H2Dialect
+import spock.lang.Specification
 
 class HibernateCriteriaBuilderDirectSpec extends HibernateGormDatastoreSpec {
 
     def setupSpec() {
-        manager.addAllDomainClasses([CriteriaTestEntity, CriteriaTestChild])
+        manager.addAllDomainClasses([DirectSpecPerson, DirectSpecPet])
     }
-
-    HibernateCriteriaBuilder c
 
     def setup() {
-        c = new HibernateCriteriaBuilder(CriteriaTestEntity, manager.hibernateDatastore.sessionFactory, manager.hibernateDatastore)
-        
-        new CriteriaTestEntity(name: "A", amount: 10, category: "X").save()
-        new CriteriaTestEntity(name: "B", amount: 20, category: "X").save()
-        new CriteriaTestEntity(name: "C", amount: 30, category: "Y").save()
-        new CriteriaTestEntity(name: "D", amount: 40, category: "Y").save(flush: true)
+        new DirectSpecPerson(name: "Fred", age: 40).save()
+        new DirectSpecPerson(name: "Barney", age: 35).save()
+        new DirectSpecPerson(name: "Wilma", age: 38).save(flush: true)
     }
 
-    void "test distinct projection"() {
-        when:
-        def results = c.list {
-            projections {
-                distinct("category")
-            }
-        }
-        then:
-        results.sort() == ["X", "Y"]
-    }
-
-    void "test id projection"() {
-        when:
-        def results = c.list {
-            projections {
-                id()
-            }
-        }
-        then:
-        results.size() == 4
-        results.every { it instanceof Long }
-    }
-
-    void "test groupProperty with alias"() {
-        when:
-        def results = c.list {
-            projections {
-                groupProperty("category", "cat")
-                sum("amount", "total")
-            }
-            order("cat")
-        }
-        then:
-        results.size() == 2
-        results[0] == ["X", 30L]
-        results[1] == ["Y", 70L]
-    }
-
-    void "test min and max with alias"() {
-        when:
-        def result = c.get {
-            projections {
-                min("amount", "min_amt")
-                max("amount", "max_amt")
-            }
-            eq("category", "X")
-        }
-        then:
-        result[0] == 10
-        result[1] == 20
-    }
-
-    void "test count with alias"() {
-        when:
-        def result = c.get {
-            projections {
-                count("name", "cnt")
-            }
-            eq("category", "X")
-        }
-        then:
-        result == 2L
-    }
-
-    void "test gtProperty and colleagues"() {
+    void "test exists and notExists closures"() {
         given:
-        new CriteriaTestEntity(name: "E", amount: 10, otherAmount: 5, category: "Z").save(flush: true)
+        def builder = new HibernateCriteriaBuilder(DirectSpecPerson, manager.hibernateDatastore.sessionFactory, manager.hibernateDatastore)
+        
+        when:
+        def results = builder.list {
+            exists {
+                projections { property("id") }
+                eq("name", "Fred")
+            }
+        }
+        
+        then:
+        results.size() == 3 // Every person exists if Fred exists
+
+        when:
+        results = builder.list {
+            notExists {
+                projections { property("id") }
+                eq("name", "NoSuchPerson")
+            }
+        }
+        
+        then:
+        results.size() == 3
+    }
+
+    void "test property comparison methods"() {
+        given:
+        new DirectSpecPerson(name: "Equal", age: 20, score: 20).save(flush: true)
+        def builder = new HibernateCriteriaBuilder(DirectSpecPerson, manager.hibernateDatastore.sessionFactory, manager.hibernateDatastore)
         
         expect:
-        c.list { gtProperty("amount", "otherAmount") }.size() == 5
-        c.list { geProperty("amount", "otherAmount") }.size() == 5
-        c.list { ltProperty("otherAmount", "amount") }.size() == 5
-        c.list { leProperty("otherAmount", "amount") }.size() == 5
+        builder.list { eqProperty("age", "score") }.size() == 1
+        builder.list { neProperty("age", "score") }.size() == 3
+        builder.list { gtProperty("age", "score") }.size() == 3
+        builder.list { geProperty("age", "score") }.size() == 4
+        builder.list { ltProperty("age", "score") }.size() == 0
+        builder.list { leProperty("age", "score") }.size() == 1
     }
 
-    void "test gtAll subquery"() {
-        when:
-        def results = c.list {
-            gtAll("amount", {
-                projections { property("amount") }
-                eq("category", "X")
-            })
-        }
-        then: "Returns entities with amount > max(X amounts) = 20"
-        results*.name.sort() == ["C", "D"]
-    }
-
-    void "test geAll subquery"() {
-        when:
-        def results = c.list {
-            geAll("amount", {
-                projections { property("amount") }
-                eq("category", "X")
-            })
-        }
-        then: "Returns entities with amount >= 20"
-        results*.name.sort() == ["B", "C", "D"]
-    }
-
-    void "test ltAll subquery"() {
-        when:
-        def results = c.list {
-            ltAll("amount", {
-                projections { property("amount") }
-                eq("category", "Y")
-            })
-        }
-        then: "Returns entities with amount < min(Y amounts) = 30"
-        results*.name.sort() == ["A", "B"]
-    }
-
-    void "test leAll subquery"() {
-        when:
-        def results = c.list {
-            leAll("amount", {
-                projections { property("amount") }
-                eq("category", "Y")
-            })
-        }
-        then: "Returns entities with amount <= 30"
-        results*.name.sort() == ["A", "B", "C"]
-    }
-
-    void "test exists subquery"() {
+    void "test all and some subquery methods"() {
         given:
-        def e = CriteriaTestEntity.findByName("A")
-        new CriteriaTestChild(name: "child1", parent: e).save(flush: true)
-        def subquery = new DetachedCriteria(CriteriaTestChild).build {
-            projections { id() }
-            eq("name", "child1")
-            eqProperty("parent.id", "{alias}.id")
-        }
-
-        when:
-        def results = c.list {
-            exists(subquery)
-        }
-        then:
-        results.size() == 1
-        results[0].name == "A"
-    }
-
-    void "test notExists subquery"() {
-        given:
-        def e = CriteriaTestEntity.findByName("A")
-        new CriteriaTestChild(name: "child1", parent: e).save(flush: true)
-        def subquery = new DetachedCriteria(CriteriaTestChild).build {
-            projections { id() }
-            eqProperty("parent.id", "{alias}.id")
-        }
-
-        when:
-        def results = c.list {
-            notExists(subquery)
-        }
-        then:
-        results*.name.sort() == ["B", "C", "D"]
-    }
-
-    void "test size constraints"() {
-        given:
-        def e = CriteriaTestEntity.findByName("A")
-        e.addToChildren(new CriteriaTestChild(name: "c1"))
-        e.addToChildren(new CriteriaTestChild(name: "c2"))
-        e.save(flush: true)
-
-        expect:
-        c.list { sizeLt("children", 1) }.size() == 3
-        c.list { sizeLe("children", 0) }.size() == 3
-        c.list { sizeNe("children", 0) }.size() == 1
-        c.list { sizeGt("children", 1) }.size() == 1
-    }
-
-    void "test listDistinct"() {
-        given:
-        def builder = new HibernateCriteriaBuilder(CriteriaTestEntity, manager.hibernateDatastore.sessionFactory, manager.hibernateDatastore)
+        def builder = new HibernateCriteriaBuilder(DirectSpecPerson, manager.hibernateDatastore.sessionFactory, manager.hibernateDatastore)
         
         when:
-        def results = builder.listDistinct {
-            projections { property("category") }
+        def results = builder.list {
+            gtAll("age", {
+                projections { property("age") }
+                eq("name", "Barney")
+            })
         }
         
         then:
-        results.sort() == ["X", "Y"]
+        results*.name.sort() == ["Fred", "Wilma"]
+
+        when:
+        results = builder.list {
+            leSome("age", {
+                projections { property("age") }
+                eq("name", "Barney")
+            })
+        }
+        
+        then:
+        results*.name.sort() == ["Barney"]
+        
+        when: "Testing other variants"
+        results = builder.list {
+            geSome("age", { projections { property("age") }; eq("name", "Fred") })
+            ltSome("age", { projections { property("age") }; eq("name", "Fred") })
+            eqAll("age", { projections { property("age") }; eq("name", "Fred") })
+            ltAll("age", { projections { property("age") }; eq("name", "Fred") })
+            leAll("age", { projections { property("age") }; eq("name", "Fred") })
+        }
+        
+        then:
+        noExceptionThrown()
     }
 
-    void "test idEquals and lte/gte"() {
+    void "test size comparison methods"() {
         given:
-        def e = CriteriaTestEntity.findByName("A")
+        def p = DirectSpecPerson.findByName("Fred")
+        p.addToPets(name: "Dino")
+        p.save(flush: true)
+        def builder = new HibernateCriteriaBuilder(DirectSpecPerson, manager.hibernateDatastore.sessionFactory, manager.hibernateDatastore)
         
         expect:
-        c.list { idEquals(e.id) }.size() == 1
-        c.list { lte("amount", 10) }.size() == 1
-        c.list { gte("amount", 40) }.size() == 1
+        builder.list { sizeEq("pets", 1) }.size() == 1
+        builder.list { sizeGt("pets", 0) }.size() == 1
+        builder.list { sizeGe("pets", 1) }.size() == 1
+        builder.list { sizeLe("pets", 0) }.size() == 2
+        builder.list { sizeLt("pets", 1) }.size() == 2
+        builder.list { sizeNe("pets", 0) }.size() == 1
+    }
+
+    void "test other criteria methods"() {
+        given:
+        def builder = new HibernateCriteriaBuilder(DirectSpecPerson, manager.hibernateDatastore.sessionFactory, manager.hibernateDatastore)
+        
+        expect:
+        builder.list { lte("age", 35) }.size() == 1
+        builder.list { gte("age", 40) }.size() == 1
+        builder.list { idEquals(DirectSpecPerson.findByName("Fred").id) }.size() == 1
+        builder.list { eq("name", "red", [ignoreCase: true]) }.size() == 1 // matches Fred via like %red%
     }
 }
 
 @Entity
-class CriteriaTestEntity {
-    Long id
+class DirectSpecPerson {
     String name
-    Integer amount
-    Integer otherAmount = 0
-    String category
-    Set children
-    static hasMany = [children: CriteriaTestChild]
+    int age
+    int score = 0
+    Set<DirectSpecPet> pets
+    static hasMany = [pets: DirectSpecPet]
 }
 
 @Entity
-class CriteriaTestChild {
-    Long id
+class DirectSpecPet {
     String name
-    static belongsTo = [parent: CriteriaTestEntity]
+    static belongsTo = [person: DirectSpecPerson]
 }

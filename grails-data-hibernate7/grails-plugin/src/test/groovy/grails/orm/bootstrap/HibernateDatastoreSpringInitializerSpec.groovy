@@ -166,6 +166,71 @@ class HibernateDatastoreSpringInitializerSpec extends Specification{
         then:
         thrown(IllegalStateException)
     }
+
+    void "test more constructors and methods"() {
+        when: "Constructed with Map and Collection"
+        def init1 = new HibernateDatastoreSpringInitializer([:], [Person])
+        def init2 = new HibernateDatastoreSpringInitializer([:], Person)
+        def init3 = new HibernateDatastoreSpringInitializer(org.grails.datastore.mapping.core.DatastoreUtils.createPropertyResolver([:]), [Person])
+        
+        then:
+        init1.persistentClasses.contains(Person)
+        init2.persistentClasses.contains(Person)
+        init3.persistentClasses.contains(Person)
+
+        when: "getPersistenceInterceptorClass is called"
+        def interceptorClass = init1.getPersistenceInterceptorClass()
+        
+        then:
+        interceptorClass.name == 'org.grails.plugin.hibernate.support.HibernatePersistenceContextInterceptor'
+
+        when: "getTestDbUrl is called"
+        def url = init1.getTestDbUrl()
+        
+        then:
+        url == HibernateDatastoreSpringInitializer.TEST_DB_URL
+    }
+
+    void "test configureDataSources variants"() {
+        given:
+        def initializer = new HibernateDatastoreSpringInitializer([:], Person)
+        def resolver = Mock(org.springframework.core.env.PropertyResolver)
+        
+        when: "Config has dataSources map"
+        resolver.getProperty('grails.hibernate.dataSources', Map, _) >> [:] // Not used by HibernateDatastoreSpringInitializer directly
+        resolver.getProperty('dataSources', Map, _) >> [books: [url: 'jdbc:h2:mem:books']]
+        resolver.getProperty('hibernate.dataSource', Map, _) >> [:]
+        initializer.configureDataSources(resolver)
+        
+        then:
+        initializer.dataSources.contains('books')
+
+        when: "Config has default dataSource"
+        resolver.getProperty('dataSources', Map, _) >> [:]
+        resolver.getProperty('dataSource', Map, _) >> [url: 'jdbc:h2:mem:default']
+        initializer.configureDataSources(resolver)
+        
+        then:
+        initializer.dataSources.contains('default')
+    }
+
+    void "test PropertyResolver constructor"() {
+        given:
+        def resolver = Mock(org.springframework.core.env.PropertyResolver)
+        resolver.getProperty('dataSources', Map, _) >> [:]
+        resolver.getProperty('dataSource', Map, _) >> [:]
+        
+        when:
+        def init = new HibernateDatastoreSpringInitializer(resolver, Person)
+        
+        then:
+        init.persistentClasses.contains(Person)
+    }
+
+    void "test isGrailsPresent"() {
+        expect:
+        new HibernateDatastoreSpringInitializer([:], Person).isGrailsPresent()
+    }
 }
 @Entity
 class Person {

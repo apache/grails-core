@@ -104,6 +104,96 @@ class HibernatePersistenceContextInterceptorSpec extends Specification {
         !TransactionSynchronizationManager.hasResource(sf)
     }
 
+    def "test setReadOnly and setReadWrite"() {
+        given:
+        def interceptor = new HibernatePersistenceContextInterceptor()
+        interceptor.setHibernateDatastore(datastore)
+
+        when:
+        interceptor.init()
+        interceptor.setReadOnly()
+
+        then:
+        interceptor.getSession().getHibernateFlushMode() == org.hibernate.FlushMode.MANUAL
+
+        when:
+        interceptor.setReadWrite()
+
+        then:
+        interceptor.getSession().getHibernateFlushMode() == org.hibernate.FlushMode.AUTO
+
+        cleanup:
+        interceptor.destroy()
+    }
+
+    def "test isOpen"() {
+        given:
+        def interceptor = new HibernatePersistenceContextInterceptor()
+        interceptor.setHibernateDatastore(datastore)
+
+        expect:
+        !interceptor.isOpen()
+
+        when:
+        interceptor.init()
+
+        then:
+        interceptor.isOpen()
+
+        cleanup:
+        interceptor.destroy()
+    }
+
+    def "test participate flag"() {
+        given:
+        def interceptor = new HibernatePersistenceContextInterceptor()
+        interceptor.setHibernateDatastore(datastore)
+        SessionFactory sf = datastore.sessionFactory
+        
+        // Mock a session bound by someone else
+        TransactionSynchronizationManager.bindResource(sf, new SessionHolder(datastore.openSession()))
+
+        when:
+        interceptor.init()
+
+        then:
+        TransactionSynchronizationManager.hasResource(sf)
+        
+        when:
+        interceptor.destroy()
+
+        then: "it should NOT unbind because it's participating"
+        TransactionSynchronizationManager.hasResource(sf)
+
+        cleanup:
+        def holder = TransactionSynchronizationManager.unbindResource(sf)
+        holder.session.close()
+    }
+
+    def "test getSession throws exception when no session and allowCreate is false"() {
+        given:
+        def interceptor = new HibernatePersistenceContextInterceptor()
+        interceptor.setHibernateDatastore(datastore)
+
+        when:
+        interceptor.isOpen() // this calls getSession(false) internally
+
+        then: "it returns false instead of throwing exception due to catch block in isOpen"
+        noExceptionThrown()
+    }
+
+    def "test decNestingCount below zero"() {
+        given:
+        def interceptor = new HibernatePersistenceContextInterceptor()
+        interceptor.setHibernateDatastore(datastore)
+
+        when:
+        interceptor.destroy() // decNestingCount called when nesting was 0
+
+        then:
+        noExceptionThrown()
+    }
+
     def "test flush and clear"() {
         given: "A persistence context interceptor"
         def interceptor = new HibernatePersistenceContextInterceptor()

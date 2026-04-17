@@ -21,11 +21,11 @@ package functional.tests
 import functional.tests.pages.BookCreatePage
 import functional.tests.pages.BookListPage
 import functional.tests.pages.BookShowPage
-import grails.plugin.geb.ContainerGebSpec
+import geb.spock.GebSpec
 import grails.testing.mixin.integration.Integration
 
 @Integration(applicationClass = Application)
-class BookControllerSpec extends ContainerGebSpec {
+class BookControllerSpec extends GebSpec {
 
     void "Test list books"() {
         expect: 'The book list page can be visited'

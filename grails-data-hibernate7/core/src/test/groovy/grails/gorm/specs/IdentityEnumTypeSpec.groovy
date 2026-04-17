@@ -219,6 +219,99 @@ class IdentityEnumTypeSpec extends HibernateGormDatastoreSpec {
         then:
         1 * st.setString(1, "I")
     }
+
+    def "setParameterValues uses fallback for Class parameter"() {
+        given:
+        def type = new IdentityEnumType()
+        def props = new Properties()
+        props.put(IdentityEnumType.PARAM_ENUM_CLASS, IdentityStatusEnum)
+
+        when:
+        type.setParameterValues(props)
+
+        then:
+        type.returnedClass() == IdentityStatusEnum
+    }
+
+    def "setParameterValues throws MappingException if enumClass is missing"() {
+        given:
+        def type = new IdentityEnumType()
+        def props = new Properties()
+
+        when:
+        type.setParameterValues(props)
+
+        then:
+        thrown(MappingException)
+    }
+
+    def "setParameterValues handles Integer id"() {
+        given:
+        def type = new IdentityEnumType()
+        def props = new Properties()
+        props.setProperty(IdentityEnumType.PARAM_ENUM_CLASS, IntegerIdEnum.name)
+
+        when:
+        type.setParameterValues(props)
+
+        then:
+        type.getSqlType() == java.sql.Types.INTEGER
+    }
+
+    def "setParameterValues handles Long id"() {
+        given:
+        def type = new IdentityEnumType()
+        def props = new Properties()
+        props.setProperty(IdentityEnumType.PARAM_ENUM_CLASS, LongIdEnum.name)
+
+        when:
+        type.setParameterValues(props)
+
+        then:
+        type.getSqlType() == java.sql.Types.BIGINT
+    }
+
+    def "setParameterValues handles other id types as String/Varchar"() {
+        given:
+        def type = new IdentityEnumType()
+        def props = new Properties()
+        props.setProperty(IdentityEnumType.PARAM_ENUM_CLASS, DoubleIdEnum.name)
+
+        when:
+        type.setParameterValues(props)
+
+        then:
+        type.getSqlType() == java.sql.Types.VARCHAR
+    }
+
+    def "BidiEnumMap detects duplicate IDs"() {
+        when:
+        IdentityEnumType.getBidiEnumMap(DuplicateIdEnum)
+
+        then:
+        noExceptionThrown()
+    }
+}
+
+/** Enum with an Integer id. */
+enum IntegerIdEnum {
+    ONE(1), TWO(2)
+    final Integer id
+    IntegerIdEnum(Integer id) { this.id = id }
+}
+
+/** Enum with a Long id. */
+enum LongIdEnum {
+    ONE(1L), TWO(2L)
+    final Long id
+    LongIdEnum(Long id) { this.id = id }
+}
+
+/** Enum with a Double id. */
+enum DoubleIdEnum {
+    ONE(1.0), TWO(2.0)
+    final Double id
+    DoubleIdEnum(Double id) { this.id = id }
 }
 
 @Entity

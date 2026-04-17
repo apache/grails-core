@@ -556,6 +556,30 @@ class HibernateCriteriaBuilderSpec extends HibernateGormDatastoreSpec {
         results.size() == 4
         results.every { it.branch != null }
     }
+
+    void "exists subquery filters rows where subquery returns results"() {
+        when:
+        def results = c.list {
+            exists {
+                eq("firstName", "Fred")
+            }
+        }
+
+        then:
+        results.size() == 5
+    }
+
+    void "notExists subquery filters rows correctly"() {
+        when:
+        def results = c.list {
+            notExists {
+                eq("firstName", "NonExistent")
+            }
+        }
+
+        then:
+        results.size() == 5
+    }
 }
 
 @Entity
