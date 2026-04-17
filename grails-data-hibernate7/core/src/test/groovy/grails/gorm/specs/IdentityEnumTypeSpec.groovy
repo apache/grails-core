@@ -291,6 +291,17 @@ class IdentityEnumTypeSpec extends HibernateGormDatastoreSpec {
         then:
         noExceptionThrown()
     }
+
+    def "BidiEnumMap handles nulls"() {
+        given:
+        def bidiMap = IdentityEnumType.getBidiEnumMap(IdentityStatusEnum)
+
+        expect:
+        bidiMap.getEnumValue(null) == null
+        bidiMap.getKey(null) == null
+        bidiMap.getEnumValue("A") == IdentityStatusEnum.ACTIVE
+        bidiMap.getKey(IdentityStatusEnum.ACTIVE) == "A"
+    }
 }
 
 /** Enum with an Integer id. */

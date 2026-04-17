@@ -26,6 +26,12 @@ import org.junit.platform.suite.api.Suite
  * Created by graemerocher on 06/07/2016.
  */
 @Suite
-@SelectClasses([FirstAndLastMethodSpec])
+@SelectClasses([
+    FirstAndLastMethodSpec,
+    org.grails.orm.hibernate.query.ProjPredSpec,
+    org.grails.orm.hibernate.query.AliasMapEntryFunctionSpec,
+    org.grails.orm.hibernate.query.DetachedAssociationFunctionSpec,
+    grails.orm.HibernateCriteriaBuilderSpec
+])
 class Hibernate7Suite {
 }

@@ -19,21 +19,24 @@
 package org.grails.orm.hibernate.query
 
 import org.grails.datastore.gorm.query.criteria.DetachedAssociationCriteria
+import org.grails.datastore.mapping.model.types.Association
 import spock.lang.Specification
 
 class AliasMapEntryFunctionSpec extends Specification {
 
-    def "test apply"() {
+    void "test AliasMapEntryFunction"() {
         given:
         def function = new AliasMapEntryFunction()
-        def criteria = Mock(DetachedAssociationCriteria)
-        criteria.getAssociationPath() >> "testPath"
+        def association = Mock(Association) {
+            getName() >> "associationPath"
+        }
+        def criteria = new DetachedAssociationCriteria(Object, association)
 
         when:
         def entry = function.apply(criteria)
 
         then:
-        entry.key == "testPath"
+        entry.key == "associationPath"
         entry.value == criteria
     }
 }

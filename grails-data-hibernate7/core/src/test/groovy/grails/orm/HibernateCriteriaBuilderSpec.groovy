@@ -580,6 +580,52 @@ class HibernateCriteriaBuilderSpec extends HibernateGormDatastoreSpec {
         then:
         results.size() == 5
     }
+
+    void "createAlias with join type"() {
+        when:
+        def results = c.list {
+            createAlias("transactions", "t", 1) // 1 == LEFT JOIN
+            gt("t.amount", BigDecimal.valueOf(40))
+        }
+        then:
+        results.size() == 1
+        results[0].firstName == "Barney"
+    }
+
+    void "eq with ignoreCase"() {
+        when:
+        def result = c.get {
+            eq("firstName", "FRED", [ignoreCase: true])
+        }
+        then:
+        result.firstName == "Fred"
+    }
+
+    void "size comparison constraints"() {
+        when:
+        def sizeNe = c.list { sizeNe("transactions", 1) }
+        def sizeLt = c.list { sizeLt("transactions", 2) }
+        def sizeLe = c.list { sizeLe("transactions", 2) }
+        def sizeGt = c.list { sizeGt("transactions", 1) }
+
+        then:
+        sizeNe.size() == 4 // Fred has 2, Barney 1, Others 0
+        sizeLt.size() == 4 // Barney (1) and Others (0)
+        sizeLe.size() == 5
+        sizeGt.size() == 1 // Only Fred (2)
+    }
+
+    void "in with subquery"() {
+        when:
+        def results = c.list {
+            'in'("firstName", new grails.gorm.DetachedCriteria(CriteriaAccount).build {
+                projections { property("firstName") }
+                eq("lastName", "Rubble")
+            })
+        }
+        then:
+        results*.firstName.sort() == ["Bam-Bam", "Barney"]
+    }
 }
 
 @Entity

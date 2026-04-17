@@ -88,4 +88,26 @@ class DetachedAssociationFunctionSpec extends Specification {
         result.contains(criteria1)
         result.contains(criteria2)
     }
+
+    def "apply handles nested Junctions recursively"() {
+        given:
+        def association1 = Mock(org.grails.datastore.mapping.model.types.Association) {
+            getName() >> "test1"
+        }
+        def criteria1 = new DetachedAssociationCriteria(Object, association1)
+        
+        def innerJunction = new Query.Disjunction()
+        innerJunction.add(criteria1)
+        
+        def outerJunction = new Query.Conjunction()
+        outerJunction.add(innerJunction)
+        outerJunction.add(new Query.IsNull("otherProp"))
+
+        when:
+        def result = function.apply(outerJunction)
+
+        then:
+        result.size() == 1
+        result[0] == criteria1
+    }
 }
