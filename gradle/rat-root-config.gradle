@@ -66,6 +66,11 @@ tasks.named('rat') {
             'bin/**', // scripts generated during build for grails-shell-cli
             'build-logic/plugins/build/**', // exclude build artifacts
             'build-logic/docs-core/build/**', // exclude build artifacts
+            'grails-test-examples/*/build/**', // build directories
+            'grails-gsp/*/build/**', // build directories
+            'grails-test-examples/gsp-spring-boot/app/build', // build directories
+            '*/build', // build directories
+            'grails-events/compat/build', // build directories
             'build-logic/docs-core/src/main/template/**', // template files that people are expected to use in the end application
             'grails-common/src/main/groovy/org/apache/grails/common/compiler/asm/Attribute.java', // See license file, BSD licensed
             'grails-common/src/main/groovy/org/apache/grails/common/compiler/asm/ByteVector.java', // See license file, BSD licensed
