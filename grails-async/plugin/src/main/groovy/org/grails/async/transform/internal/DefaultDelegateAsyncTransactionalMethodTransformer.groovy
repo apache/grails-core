@@ -102,27 +102,29 @@ class DefaultDelegateAsyncTransactionalMethodTransformer implements DelegateAsyn
             }
             final promiseLookupExpression = new BinaryExpression(new PropertyExpression(EXPRESSION_THIS, FIELD_NAME_PROMISE_DECORATORS), Token.newSymbol(Types.LEFT_SQUARE_BRACKET, -1, -1), new ConstantExpression(currentIndex))
             setTransactionManagerMethodBody.addStatement(
-                    new ExpressionStatement(
+                new ExpressionStatement(
                     new BinaryExpression(
-                    promiseLookupExpression,
-                    OPERATOR_ASSIGNMENT,
-                    new MethodCallExpression(
-                    new ClassExpression(new ClassNode(TransactionalAsyncTransformUtils).getPlainNodeReference()),
-                    'createTransactionalPromiseDecorator',
-                    new ArgumentListExpression(new VariableExpression(VARIABLE_TRANSACTION_MANAGER),
-                    new MethodCallExpression(
-                    new ClassExpression(delegateClassNode),
-                    'getDeclaredMethod', methodLookupArguments
-                    )
-                    )
-                    )
+                        promiseLookupExpression,
+                        OPERATOR_ASSIGNMENT,
+                        new MethodCallExpression(
+                             new ClassExpression(new ClassNode(TransactionalAsyncTransformUtils).getPlainNodeReference()),
+                            'createTransactionalPromiseDecorator',
+                             new ArgumentListExpression(new VariableExpression(VARIABLE_TRANSACTION_MANAGER),
+                                                        new MethodCallExpression(
+                                                            new ClassExpression(delegateClassNode),
+                                                            'getDeclaredMethod', methodLookupArguments
+                                                        )
+                             )
+                        )
 
                     )
-                    )
-                    )
+                )
+            )
 
             promiseDecorators.addExpression(promiseLookupExpression)
+
         }
+
     }
 
     static BlockStatement getSetTransactionManagerMethodBody(ClassNode classNode) {
@@ -147,25 +149,26 @@ class DefaultDelegateAsyncTransactionalMethodTransformer implements DelegateAsyn
             def parameters = [transactionManagerParameter] as Parameter[]
             final txMgrParam = new VariableExpression(transactionManagerParameter)
             methodBody.addStatement(
-                    new ExpressionStatement(
+                new ExpressionStatement(
                     new BinaryExpression(
-                    new PropertyExpression(EXPRESSION_THIS, FIELD_NAME_TRANSACTION_MANAGER),
-                    OPERATOR_ASSIGNMENT,
-                    txMgrParam
+                        new PropertyExpression(EXPRESSION_THIS, FIELD_NAME_TRANSACTION_MANAGER),
+                        OPERATOR_ASSIGNMENT,
+                        txMgrParam
                     )
-                    )
-                    )
+                )
+            )
             methodBody.addStatement(
-                    new ExpressionStatement(
+                new ExpressionStatement(
                     new DeclarationExpression(
-                    new VariableExpression(VARIABLE_TRANSACTION_MANAGER, INTERFACE_TRANSACTION_MANAGER),
-                    OPERATOR_ASSIGNMENT,
-                    txMgrParam
+                        new VariableExpression(VARIABLE_TRANSACTION_MANAGER, INTERFACE_TRANSACTION_MANAGER),
+                        OPERATOR_ASSIGNMENT,
+                        txMgrParam
                     )
-                    )
-                    )
+                )
+            )
             method = new MethodNode(METHOD_NAME_SET_TRANSACTION_MANAGER, Modifier.PUBLIC, ClassHelper.VOID_TYPE, parameters, [] as ClassNode[], methodBody)
             classNode.addMethod(method)
+
         }
 
         return (BlockStatement) method.getCode()

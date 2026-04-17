@@ -18,6 +18,8 @@
  */
 package grails.gorm.services
 
+import spock.lang.Requires
+
 import grails.gorm.annotation.Entity
 import grails.gorm.validation.PersistentEntityValidator
 import grails.validation.ValidationException
@@ -56,7 +58,7 @@ class ServiceImplSpec extends Specification {
 
     }
 
-    @spock.lang.Requires({ System.getProperty('hibernate5.gorm.suite') == 'true' || System.getProperty('hibernate7.gorm.suite') == 'true' || System.getProperty('mongodb.gorm.suite') == 'true' })
+    @Requires({ System.getProperty('hibernate5.gorm.suite') == 'true' || System.getProperty('hibernate7.gorm.suite') == 'true' || System.getProperty('mongodb.gorm.suite') == 'true' })
     void "test list products"() {
         given:
         Product p1 = new Product(name: "Apple", type:"Fruit").save(flush:true)
@@ -327,7 +329,7 @@ class ServiceImplSpec extends Specification {
 
     }
 
-    @spock.lang.Requires({ System.getProperty('hibernate5.gorm.suite') == 'true' || System.getProperty('hibernate7.gorm.suite') == 'true' || System.getProperty('mongodb.gorm.suite') == 'true' })
+    @Requires({ System.getProperty('hibernate5.gorm.suite') == 'true' || System.getProperty('hibernate7.gorm.suite') == 'true' || System.getProperty('mongodb.gorm.suite') == 'true' })
     void "test interface projection"() {
         given:
         ProductService productService = datastore.getService(ProductService)
