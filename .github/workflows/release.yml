@@ -38,7 +38,7 @@ env:
   TARGET_BRANCH: ${{ github.event.release.target_commitish }}
   VERSION: will be computed in each job
 concurrency:
-  group: release-pipeline-71
+  group: release-pipeline-${{ github.event.release.target_commitish }}
   cancel-in-progress: false
 jobs:
   publish:
