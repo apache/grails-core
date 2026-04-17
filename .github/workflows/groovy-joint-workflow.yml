@@ -125,7 +125,6 @@ jobs:
         run: |
           cd groovy
           ./gradlew pTML -x groovydoc -x javadoc -x javadocAll -x groovydocAll -x asciidoc -x docGDK
-
   build_grails:
     needs: [build_groovy]
     runs-on: ubuntu-latest

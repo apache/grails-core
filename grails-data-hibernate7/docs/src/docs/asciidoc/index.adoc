@@ -17,3 +17,154 @@ specific language governing permissions and limitations
 under the License.
 ////
 
+= GORM for Hibernate 7
+:revnumber: {version}
+:imagesdir: ./images
+:source-highlighter: coderay
+:last-update-label!:
+:toc:
+:sectnums:
+
+[[introduction]]
+== Introduction
+
+include::introduction.adoc[]
+
+[[gettingStarted]]
+== Getting Started
+
+include::gettingStarted.adoc[]
+
+[[quickStartGuide]]
+== Quick Start Guide
+
+include::quickStartGuide.adoc[]
+
+[[configuration]]
+== Configuration
+
+include::configuration/index.adoc[]
+
+[[domainClasses]]
+== Domain Modelling in GORM
+
+include::domainClasses.adoc[]
+
+[[persistenceBasics]]
+== Persistence Basics
+
+include::persistenceBasics.adoc[]
+
+[[savingAndUpdating]]
+=== Saving and Updating
+
+include::persistenceBasics/savingAndUpdating.adoc[]
+
+[[deletingObjects]]
+=== Deleting Objects
+
+include::persistenceBasics/deletingObjects.adoc[]
+
+[[cascades]]
+=== Understanding Cascading Updates and Deletes
+
+include::persistenceBasics/cascades.adoc[]
+
+[[fetching]]
+=== Eager and Lazy Fetching
+
+include::persistenceBasics/fetching.adoc[]
+
+[[locking]]
+=== Pessimistic and Optimistic Locking
+
+include::persistenceBasics/locking.adoc[]
+
+[[modificationChecking]]
+=== Modification Checking
+
+include::persistenceBasics/modificationChecking.adoc[]
+
+[[querying]]
+== Querying with GORM
+
+include::querying.adoc[]
+
+[[finders]]
+=== Dynamic Finders
+
+include::querying/finders.adoc[]
+
+[[whereQueries]]
+=== Where Queries
+
+include::querying/whereQueries.adoc[]
+
+[[criteria]]
+=== Criteria Queries
+
+include::querying/criteria.adoc[]
+
+[[detachedCriteria]]
+=== Detached Criteria
+
+include::querying/detachedCriteria.adoc[]
+
+[[hql]]
+=== Hibernate Query Language (HQL)
+
+include::querying/hql.adoc[]
+
+[[nativeSql]]
+=== Native SQL
+
+include::querying/nativeSql.adoc[]
+
+[[advancedGORMFeatures]]
+== Advanced GORM Features
+
+include::advancedGORMFeatures.adoc[]
+
+[[ormdsl]]
+=== Custom ORM Mapping
+
+include::advancedGORMFeatures/ormdsl.adoc[]
+
+[[defaultSortOrder]]
+=== Default Sort Order
+
+include::advancedGORMFeatures/defaultSortOrder.adoc[]
+
+[[programmaticTransactions]]
+== Programmatic Transactions
+
+include::programmaticTransactions.adoc[]
+
+[[dataServices]]
+== GORM Data Services
+include::services/index.adoc[]
+
+[[multipleDataSources]]
+== Multiple Data Sources
+
+include::multipleDataSources/index.adoc[]
+
+[[multiTenancy]]
+== Multi-Tenancy
+
+include::multiTenancy/index.adoc[]
+
+[[constraints]]
+== Validation and Constraints
+
+include::constraints/index.adoc[]
+
+[[testing]]
+== GORM and Testing
+
+include::testing/index.adoc[]
+
+[[databaseMigration]]
+== Database Migration Plugin
+
+include::databaseMigration/index.adoc[]

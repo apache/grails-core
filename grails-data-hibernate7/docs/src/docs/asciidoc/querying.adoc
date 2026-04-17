@@ -21,7 +21,10 @@
 
 GORM provides multiple querying mechanisms, ranging from simple dynamic finders to full SQL queries.
 
-* xref:querying-whereQueries[Where Queries (Criteria DSL)] — type-safe Groovy criteria queries
+* xref:querying-finders[Dynamic Finders] — auto-generated methods based on properties
+* xref:querying-whereQueries[Where Queries] — type-safe Groovy criteria DSL
+* xref:querying-criteria[Criteria Queries] — advanced query builder with Hibernate 7 DSL
+* xref:querying-detachedCriteria[Detached Criteria] — reusable query fragments and subqueries
 * xref:querying-hql[HQL Queries] — Hibernate Query Language
 * xref:querying-nativeSql[Native SQL Queries] — raw database SQL via Hibernate
 
