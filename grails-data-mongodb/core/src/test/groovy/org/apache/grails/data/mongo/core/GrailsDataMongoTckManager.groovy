@@ -39,7 +39,6 @@ import org.grails.datastore.mapping.engine.types.AbstractMappingAwareCustomTypeM
 import org.grails.datastore.mapping.model.MappingContext
 import org.grails.datastore.mapping.model.PersistentEntity
 import org.grails.datastore.mapping.model.PersistentProperty
-import org.grails.datastore.mapping.mongo.AbstractMongoSession
 import org.grails.datastore.mapping.core.DatastoreUtils
 import org.grails.datastore.mapping.mongo.MongoDatastore
 import org.grails.datastore.mapping.mongo.config.MongoSettings
@@ -136,17 +135,31 @@ class GrailsDataMongoTckManager extends GrailsDataTckManager {
 
     @Override
     void destroy() {
-        mongoDatastore.getMongoClient().listDatabaseNames().findAll {!(it in ['admin', 'config', 'local']) }.each {
-            try {
-                mongoDatastore.getMongoClient().getDatabase(it).drop()
-            }
-            catch(e) {
-                log.warn("Could not drop ${it}")
+        try {
+            mongoDatastore?.mongoClient?.listDatabaseNames()
+                    ?.findAll { !(it in ['admin', 'config', 'local']) }
+                    ?.each {
+                        try {
+                            mongoDatastore.mongoClient.getDatabase(it as String).drop()
+                        }
+                        catch (ignored) {
+                            log.warn("Could not drop ${it}")
+                        }
+                    }
+            for (cls in domainClasses) {
+                GormEnhancer.findValidationApi(cls).validator = null
             }
         }
-        mongoDatastore.buildIndex()
-        for (cls in getDomainClasses()) {
-            GormEnhancer.findValidationApi(cls).setValidator(null)
+        finally {
+            try {
+                mongoDatastore?.close()
+            }
+            catch (ignored) {
+            }
+            mongoDatastore = null
+            mongoClient = null
+            grailsApplication = null
+            mappingContext = null
         }
 
         super.destroy()
@@ -236,14 +249,5 @@ class GrailsDataMongoTckManager extends GrailsDataTckManager {
             mappingContext.addEntityValidator(entity, validator ?:
                     new PersistentEntityValidator(entity, messageSource, evaluator))
         }
-    }
-
-    static boolean isDockerAvailable() {
-        def candidates = [
-                System.getProperty('user.home') + '/.docker/run/docker.sock',
-                '/var/run/docker.sock',
-                System.getenv('DOCKER_HOST') ?: ''
-        ]
-        candidates.any { it && new File(it).exists() }
     }
 }
