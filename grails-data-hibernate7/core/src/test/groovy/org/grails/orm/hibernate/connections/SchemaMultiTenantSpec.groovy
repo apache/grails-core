@@ -27,12 +27,19 @@ import org.grails.orm.hibernate.HibernateDatastore
 import org.hibernate.Session
 import org.hibernate.dialect.H2Dialect
 import org.hibernate.resource.jdbc.spi.JdbcSessionOwner
+import spock.lang.AutoCleanup
+import spock.lang.Shared
 import spock.lang.Specification
+import spock.util.environment.RestoreSystemProperties
 
 /**
  * Created by graemerocher on 20/07/2016.
  */
+@RestoreSystemProperties
 class SchemaMultiTenantSpec extends Specification {
+
+    @Shared @AutoCleanup HibernateDatastore datastore
+
     void "Test a database per tenant multi tenancy"() {
         given:"A configuration for multiple data sources"
         System.setProperty(SystemPropertyTenantResolver.PROPERTY_NAME, "")
@@ -48,7 +55,7 @@ class SchemaMultiTenantSpec extends Specification {
                 'hibernate.hbm2ddl.auto': 'create',
         ]
 
-        HibernateDatastore datastore = new HibernateDatastore(DatastoreUtils.createPropertyResolver(config), SingleTenantAuthor )
+        datastore = new HibernateDatastore(DatastoreUtils.createPropertyResolver(config), SingleTenantAuthor )
         HibernateConnectionSource connectionSource = datastore.getConnectionSources().defaultConnectionSource
         def connection = connectionSource.dataSource.getConnection()
         connection.close()

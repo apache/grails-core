@@ -24,12 +24,16 @@ import org.grails.datastore.mapping.core.connections.ConnectionSource
 import org.grails.orm.hibernate.HibernateDatastore
 import org.hibernate.dialect.H2Dialect
 import spock.lang.Issue
+import spock.lang.AutoCleanup
+import spock.lang.Shared
 import spock.lang.Specification
 
 /**
  * Created by graemerocher on 20/02/2017.
  */
 class MultipleDataSourcesWithEventsSpec extends Specification {
+
+    @Shared @AutoCleanup HibernateDatastore datastore
 
     @Issue('https://github.com/apache/grails-core/issues/10451')
     void "Test multiple data sources register the correct events"() {
@@ -47,7 +51,7 @@ class MultipleDataSourcesWithEventsSpec extends Specification {
         ]
 
         when:"A entity is saved with the default connection"
-        HibernateDatastore datastore = new HibernateDatastore(DatastoreUtils.createPropertyResolver(config),EventsBook, SecondaryBook )
+        datastore = new HibernateDatastore(DatastoreUtils.createPropertyResolver(config),EventsBook, SecondaryBook )
         EventsBook book = new EventsBook(name:"test")
         EventsBook.withTransaction {
             book.save(flush:true)

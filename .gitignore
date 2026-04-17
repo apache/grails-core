@@ -66,3 +66,4 @@ STATE_SNAPSHOT.xml
 *VIOLATIONS.md
 /TEST_FAILURES.md
 local-tasks.gradle
+local-init.gradle

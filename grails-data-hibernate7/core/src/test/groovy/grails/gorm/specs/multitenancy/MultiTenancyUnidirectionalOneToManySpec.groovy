@@ -25,14 +25,20 @@ import org.grails.datastore.mapping.multitenancy.resolvers.SystemPropertyTenantR
 import grails.gorm.MultiTenant
 import org.grails.orm.hibernate.HibernateDatastore
 import org.hibernate.dialect.H2Dialect
+import spock.lang.AutoCleanup
 import spock.lang.Issue
+import spock.lang.Shared
 import spock.lang.Specification
+import spock.util.environment.RestoreSystemProperties
 
 /**
  * Created by graemerocher on 16/06/2017.
  */
 //TODO Multitenancy not working
+@RestoreSystemProperties
 class MultiTenancyUnidirectionalOneToManySpec extends Specification {
+
+    @Shared @AutoCleanup HibernateDatastore datastore
 
     @Issue('https://github.com/grails/grails-data-mapping/issues/954')
     void "test multi-tenancy with unidirectional one-to-many"() {
@@ -51,7 +57,7 @@ class MultiTenancyUnidirectionalOneToManySpec extends Specification {
                 'hibernate.hbm2ddl.auto'                      : 'create',
         ]
 
-        HibernateDatastore datastore = new HibernateDatastore(DatastoreUtils.createPropertyResolver(config), getClass().getPackage())
+        datastore = new HibernateDatastore(DatastoreUtils.createPropertyResolver(config), getClass().getPackage())
 
         when:
         System.setProperty(SystemPropertyTenantResolver.PROPERTY_NAME, "ford")
@@ -82,8 +88,6 @@ class MultiTenancyUnidirectionalOneToManySpec extends Specification {
 
         cleanup:
         System.setProperty(SystemPropertyTenantResolver.PROPERTY_NAME, "")
-        // ensure datastore resources are released between tests
-        datastore?.close()
     }
 }
 

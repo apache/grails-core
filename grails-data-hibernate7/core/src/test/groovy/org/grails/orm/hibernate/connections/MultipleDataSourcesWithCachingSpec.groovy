@@ -22,12 +22,16 @@ import grails.gorm.annotation.Entity
 import org.grails.datastore.mapping.core.DatastoreUtils
 import org.grails.orm.hibernate.HibernateDatastore
 import org.hibernate.dialect.H2Dialect
+import spock.lang.AutoCleanup
+import spock.lang.Shared
 import spock.lang.Specification
 
 /**
  * Created by graemerocher on 15/07/2016.
  */
 class MultipleDataSourcesWithCachingSpec extends Specification {
+
+    @Shared @AutoCleanup HibernateDatastore datastore
 
     void "Test map to multiple data sources"() {
         given:"A configuration for multiple data sources"
@@ -45,7 +49,7 @@ class MultipleDataSourcesWithCachingSpec extends Specification {
         ]
 
         when:
-        HibernateDatastore datastore = new HibernateDatastore(DatastoreUtils.createPropertyResolver(config),CachingBook )
+        datastore = new HibernateDatastore(DatastoreUtils.createPropertyResolver(config),CachingBook )
         CachingBook book = CachingBook.withTransaction {
             new CachingBook(name:"The Stand").save(flush:true)
             CachingBook.get( CachingBook.first().id )

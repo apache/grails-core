@@ -33,6 +33,7 @@ import spock.lang.AutoCleanup
 import spock.lang.Issue
 import spock.lang.Shared
 import spock.lang.Specification
+import spock.util.environment.RestoreSystemProperties
 
 /**
  * Created by puneetbehl on 21/03/2018.
@@ -53,8 +54,10 @@ import spock.lang.Specification
  *   providing a more robust way to query associations in a multi-tenant context.
  */
 //TODO Multitenancy not working
+@RestoreSystemProperties
 class MultiTenancyBidirectionalManyToManySpec extends Specification {
 
+    @Shared
     final Map config = [
             "grails.gorm.multiTenancy.mode":MultiTenancySettings.MultiTenancyMode.DISCRIMINATOR,
             "grails.gorm.multiTenancy.tenantResolverClass":SystemPropertyTenantResolver.name,
@@ -72,7 +75,7 @@ class MultiTenancyBidirectionalManyToManySpec extends Specification {
     @Shared @AutoCleanup HibernateDatastore datastore
 
 
-    void setup() {
+    void setupSpec() {
         System.setProperty(SystemPropertyTenantResolver.PROPERTY_NAME, "oci")
         datastore = new HibernateDatastore(DatastoreUtils.createPropertyResolver(config), getClass().getPackage() )
         departmentService = datastore.getService(DepartmentService)
