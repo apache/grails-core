@@ -19,33 +19,31 @@
 
 package org.grails.orm.hibernate.query
 
+
 import grails.gorm.specs.HibernateGormDatastoreSpec
 import grails.persistence.Entity
 import org.hibernate.FlushMode
 import spock.lang.Unroll
 
-class HibernateHqlQuerySpec extends HibernateGormDatastoreSpec {
+import org.grails.datastore.mapping.query.Query
+
+class SelectHqlQuerySpec extends HibernateGormDatastoreSpec {
 
     void setupSpec() {
-        manager.addAllDomainClasses([HibernateHqlQuerySpecBook, HibernateHqlQuerySpecAuthor])
+        manager.addAllDomainClasses([SelectHqlQuerySpecBook, SelectHqlQuerySpecAuthor])
     }
 
     def setup() {
-        def author = new HibernateHqlQuerySpecAuthor(name: "Tolkien").save(flush: true)
-        new HibernateHqlQuerySpecBook(title: "The Hobbit",     pages: 310, author: author).save()
-        new HibernateHqlQuerySpecBook(title: "Fellowship",     pages: 423, author: author).save()
-        new HibernateHqlQuerySpecBook(title: "The Two Towers", pages: 352, author: author).save(flush: true)
+        def author = new SelectHqlQuerySpecAuthor(name: "Tolkien").save(flush: true)
+        new SelectHqlQuerySpecBook(title: "The Hobbit",     pages: 310, author: author).save()
+        new SelectHqlQuerySpecBook(title: "Fellowship",     pages: 423, author: author).save()
+        new SelectHqlQuerySpecBook(title: "The Two Towers", pages: 352, author: author).save(flush: true)
     }
 
-    private HibernateHqlQuery buildHqlQuery(String hql, Map namedParams = [:], List positionalParams = null, Map args = [:], boolean isUpdate = false) {
-        def entity = mappingContext.getPersistentEntity(HibernateHqlQuerySpecBook.name)
-        def ctx = HqlQueryContext.prepare(entity, hql, namedParams, positionalParams, args, false, isUpdate)
-        def session = sessionFactory.currentSession
-        def hqlQuery = HibernateHqlQuery.buildQuery(session, datastore, sessionFactory, entity, ctx)
-        if (args) hqlQuery.populateQuerySettings(new HashMap(args), mappingContext.conversionService)
-        if (ctx.namedParams()) hqlQuery.populateQueryWithNamedArguments(new HashMap(ctx.namedParams()))
-        else if (ctx.positionalParams()) hqlQuery.populateQueryWithIndexedArguments(List.copyOf(ctx.positionalParams()))
-        hqlQuery
+    private Query buildHqlQuery(CharSequence hql, Map namedParams = [:], List positionalParams = null, Map args = [:], boolean isUpdate = false) {
+        def entity = mappingContext.getPersistentEntity(SelectHqlQuerySpecBook.name)
+        def ctx = HqlQueryContext.prepare(entity, hql, namedParams, positionalParams, args, [:], false, isUpdate)
+        HibernateHqlQueryCreator.createHqlQuery(datastore, sessionFactory, entity, ctx)
     }
 
     // ─── countHqlProjections ────────────────────────────────────────────────
@@ -59,63 +57,63 @@ class HibernateHqlQuerySpec extends HibernateGormDatastoreSpec {
     }
 
     void "countHqlProjections returns 0 when no SELECT clause"() {
-        expect: HqlQueryContext.countHqlProjections("from HibernateHqlQuerySpecBook") == 0
+        expect: HqlQueryContext.countHqlProjections("from SelectHqlQuerySpecBook") == 0
     }
 
     void "countHqlProjections returns 1 for single projection"() {
-        expect: HqlQueryContext.countHqlProjections("select b.title from HibernateHqlQuerySpecBook b") == 1
+        expect: HqlQueryContext.countHqlProjections("select b.title from SelectHqlQuerySpecBook b") == 1
     }
 
     void "countHqlProjections returns 2 for multiple top-level projections"() {
-        expect: HqlQueryContext.countHqlProjections("select b.title, b.pages from HibernateHqlQuerySpecBook b") == 2
+        expect: HqlQueryContext.countHqlProjections("select b.title, b.pages from SelectHqlQuerySpecBook b") == 2
     }
 
     void "countHqlProjections ignores commas inside function calls"() {
-        expect: HqlQueryContext.countHqlProjections("select count(b.title) from HibernateHqlQuerySpecBook b") == 1
+        expect: HqlQueryContext.countHqlProjections("select count(b.title) from SelectHqlQuerySpecBook b") == 1
     }
 
     void "countHqlProjections handles DISTINCT single projection"() {
-        expect: HqlQueryContext.countHqlProjections("select distinct b.title from HibernateHqlQuerySpecBook b") == 1
+        expect: HqlQueryContext.countHqlProjections("select distinct b.title from SelectHqlQuerySpecBook b") == 1
     }
 
     void "countHqlProjections handles constructor expression as single projection"() {
-        expect: HqlQueryContext.countHqlProjections("select new map(b.title as t, b.pages as p) from HibernateHqlQuerySpecBook b") == 1
+        expect: HqlQueryContext.countHqlProjections("select new map(b.title as t, b.pages as p) from SelectHqlQuerySpecBook b") == 1
     }
 
     // ─── getTarget ──────────────────────────────────────────────────────────
 
     void "getTarget returns entity class when no SELECT clause"() {
         expect:
-        HqlQueryContext.getTarget("from HibernateHqlQuerySpecBook", HibernateHqlQuerySpecBook) == HibernateHqlQuerySpecBook
+        HqlQueryContext.getTarget("from SelectHqlQuerySpecBook", SelectHqlQuerySpecBook) == SelectHqlQuerySpecBook
     }
 
     void "getTarget returns entity class for single entity projection"() {
         expect:
-        HqlQueryContext.getTarget("select b from HibernateHqlQuerySpecBook b", HibernateHqlQuerySpecBook) == HibernateHqlQuerySpecBook
+        HqlQueryContext.getTarget("select b from SelectHqlQuerySpecBook b", SelectHqlQuerySpecBook) == SelectHqlQuerySpecBook
     }
 
     void "getTarget returns Object for single scalar projection"() {
         expect:
-        HqlQueryContext.getTarget("select b.title from HibernateHqlQuerySpecBook b", HibernateHqlQuerySpecBook) == Object
+        HqlQueryContext.getTarget("select b.title from SelectHqlQuerySpecBook b", SelectHqlQuerySpecBook) == Object
     }
 
     void "getTarget returns Object array for multiple projections"() {
         expect:
-        HqlQueryContext.getTarget("select b.title, b.pages from HibernateHqlQuerySpecBook b", HibernateHqlQuerySpecBook) == Object[].class
+        HqlQueryContext.getTarget("select b.title, b.pages from SelectHqlQuerySpecBook b", SelectHqlQuerySpecBook) == Object[].class
     }
 
     // ─── createHqlQuery + executeQuery ──────────────────────────────────────
 
     void "createHqlQuery with plain HQL returns all results"() {
         when:
-        def results = buildHqlQuery("from HibernateHqlQuerySpecBook").list()
+        def results = buildHqlQuery("from SelectHqlQuerySpecBook").list()
         then:
         results.size() == 3
     }
 
     void "createHqlQuery with named parameters filters correctly"() {
         when:
-        def results = buildHqlQuery("from HibernateHqlQuerySpecBook b where b.title = :title", [title: "The Hobbit"]).list()
+        def results = buildHqlQuery("from SelectHqlQuerySpecBook b where b.title = :title", [title: "The Hobbit"]).list()
         then:
         results.size() == 1
         results[0].title == "The Hobbit"
@@ -123,7 +121,7 @@ class HibernateHqlQuerySpec extends HibernateGormDatastoreSpec {
 
     void "createHqlQuery with positional parameters filters correctly"() {
         when:
-        def results = buildHqlQuery("from HibernateHqlQuerySpecBook b where b.title = ?1", [:], ["Fellowship"]).list()
+        def results = buildHqlQuery("from SelectHqlQuerySpecBook b where b.title = ?1", [:], ["Fellowship"]).list()
         then:
         results.size() == 1
         results[0].title == "Fellowship"
@@ -131,14 +129,14 @@ class HibernateHqlQuerySpec extends HibernateGormDatastoreSpec {
 
     void "createHqlQuery with max arg limits results"() {
         when:
-        def results = buildHqlQuery("from HibernateHqlQuerySpecBook", [:], null, [max: 2]).list()
+        def results = buildHqlQuery("from SelectHqlQuerySpecBook", [:], null, [max: 2]).list()
         then:
         results.size() == 2
     }
 
     void "createHqlQuery with offset arg skips results"() {
         when:
-        def results = buildHqlQuery("from HibernateHqlQuerySpecBook order by title", [:], null, [offset: 2]).list()
+        def results = buildHqlQuery("from SelectHqlQuerySpecBook order by title", [:], null, [offset: 2]).list()
         then:
         results.size() == 1
     }
@@ -152,7 +150,7 @@ class HibernateHqlQuerySpec extends HibernateGormDatastoreSpec {
 
     void "createHqlQuery executes update"() {
         when:
-        int updated = buildHqlQuery("update HibernateHqlQuerySpecBook set pages = 999 where title = :t",
+        int updated = buildHqlQuery("update SelectHqlQuerySpecBook set pages = 999 where title = :t",
                 [t: "The Hobbit"], null, [:], true).executeUpdate()
         then:
         updated == 1
@@ -161,13 +159,9 @@ class HibernateHqlQuerySpec extends HibernateGormDatastoreSpec {
     void "createHqlQuery with GString builds named parameters automatically"() {
         given:
         String titleVal = "The Two Towers"
-        GString gq = "from HibernateHqlQuerySpecBook b where b.title = ${titleVal}"
+        GString gq = "from SelectHqlQuerySpecBook b where b.title = ${titleVal}"
         when:
-        def entity = mappingContext.getPersistentEntity(HibernateHqlQuerySpecBook.name)
-        def ctx = HqlQueryContext.prepare(entity, gq, [:], null, [:], false, false)
-        def hqlQuery = HibernateHqlQuery.buildQuery(sessionFactory.currentSession, datastore, sessionFactory, entity, ctx)
-        if (ctx.namedParams()) hqlQuery.populateQueryWithNamedArguments(new HashMap(ctx.namedParams()))
-        else if (ctx.positionalParams()) hqlQuery.populateQueryWithIndexedArguments(List.copyOf(ctx.positionalParams()))
+        def hqlQuery = buildHqlQuery(gq)
         def results = hqlQuery.list()
         then:
         results.size() == 1
@@ -177,27 +171,20 @@ class HibernateHqlQuerySpec extends HibernateGormDatastoreSpec {
     void "createHqlQuery with GString can build positional parameters if explicitly requested"() {
         given:
         String titleVal = "The Two Towers"
-        GString gq = "from HibernateHqlQuerySpecBook b where b.title = ${titleVal}"
+        GString gq = "from SelectHqlQuerySpecBook b where b.title = ${titleVal}"
         when: "positionalParams is provided as non-null (triggering positional branch in prepare)"
-        def entity = mappingContext.getPersistentEntity(HibernateHqlQuerySpecBook.name)
         // We pass an empty but non-null list to trigger the positional branch
-        def positionalParams = []
-        def ctx = HqlQueryContext.prepare(entity, gq, [:], positionalParams, [:], false, false)
-        // The GString should have appended the value as ?1
-        def hqlQuery = HibernateHqlQuery.buildQuery(sessionFactory.currentSession, datastore, sessionFactory, entity, ctx)
-
-        if (ctx.positionalParams()) hqlQuery.populateQueryWithIndexedArguments(List.copyOf(ctx.positionalParams()))
+        def hqlQuery = buildHqlQuery(gq, [:], [])
         def results = hqlQuery.list()
 
         then:
-        ctx.hql().contains("?1")
         results.size() == 1
         results[0].title == "The Two Towers"
     }
 
     void "createHqlQuery with multiline query normalizes whitespace"() {
         when:
-        def results = buildHqlQuery("from HibernateHqlQuerySpecBook b\nwhere b.pages > :p", [p: 350]).list()
+        def results = buildHqlQuery("from SelectHqlQuerySpecBook b\nwhere b.pages > :p", [p: 350]).list()
         then:
         results.size() == 2
     }
@@ -207,54 +194,77 @@ class HibernateHqlQuerySpec extends HibernateGormDatastoreSpec {
     @Unroll
     void "setFlushMode maps Hibernate #hibernateMode correctly"() {
         when:
-        buildHqlQuery("from HibernateHqlQuerySpecBook").setFlushMode(hibernateMode)
+        buildHqlQuery("from SelectHqlQuerySpecBook", [:], null, [flushMode: hibernateMode])
         then:
         noExceptionThrown()
         where:
         hibernateMode << [FlushMode.AUTO, FlushMode.ALWAYS, FlushMode.COMMIT, FlushMode.MANUAL]
     }
 
-    // ─── named parameter edge cases ─────────────────────────────────────────
+    // ─── parameter handling ─────────────────────────────────────────────────
 
-    void "populateQueryWithNamedArguments handles list parameter"() {
+    void "createHqlQuery with list parameter filters correctly"() {
         when:
-        def results = buildHqlQuery("from HibernateHqlQuerySpecBook b where b.title in (:titles)",
+        def results = buildHqlQuery("from SelectHqlQuerySpecBook b where b.title in (:titles)",
                 [titles: ["The Hobbit", "Fellowship"]]).list()
         then:
         results.size() == 2
     }
 
-    void "populateQueryWithNamedArguments handles null value"() {
+    void "createHqlQuery with null parameter value handles correctly"() {
         when:
-        def results = buildHqlQuery("from HibernateHqlQuerySpecBook b where b.title = :t", [t: null]).list()
+        def results = buildHqlQuery("from SelectHqlQuerySpecBook b where b.title = :t", [t: null]).list()
         then:
         results.size() == 0
     }
 
-    void "populateQueryWithNamedArguments throws for non-string key"() {
+    void "createHqlQuery filters GORM internal settings from parameters"() {
+        when: "passing internal GORM settings as named parameters"
+        def results = buildHqlQuery("from SelectHqlQuerySpecBook b where b.title = :t", 
+                [t: "The Hobbit", flushMode: FlushMode.COMMIT, cache: true]).list()
+
+        then: "no exception is thrown and results are returned"
+        results.size() == 1
+    }
+
+    void "createHqlQuery handles array and CharSequence parameters"() {
         when:
-        buildHqlQuery("from HibernateHqlQuerySpecBook")
-                .populateQueryWithNamedArguments([(42): "value"])
+        def results = buildHqlQuery("from SelectHqlQuerySpecBook b where b.title in (:titles)",
+                [titles: ["The Hobbit"] as String[]]).list()
         then:
-        thrown(Exception)
+        results.size() == 1
+
+        when:
+        def results2 = buildHqlQuery("from SelectHqlQuerySpecBook b where b.title = :t",
+                [t: new StringBuilder("Fellowship")]).list()
+        then:
+        results2.size() == 1
+    }
+
+    void "createHqlQuery handles positional CharSequence parameters"() {
+        when:
+        def results = buildHqlQuery("from SelectHqlQuerySpecBook b where b.title = ?1",
+                [:], [new StringBuilder("The Hobbit")]).list()
+        then:
+        results.size() == 1
     }
 
     // ─── delegate behaviour ─────────────────────────────────────────────────
 
     void "selectQuery is non-null for SELECT queries"() {
         expect:
-        buildHqlQuery("from HibernateHqlQuerySpecBook").selectQuery() != null
+        buildHqlQuery("from SelectHqlQuerySpecBook").selectQuery() != null
     }
 
     void "selectQuery is null for UPDATE/DELETE queries"() {
         expect:
-        buildHqlQuery("update HibernateHqlQuerySpecBook set pages = 1 where title = :t",
+        buildHqlQuery("update SelectHqlQuerySpecBook set pages = 1 where title = :t",
                 [t: "The Hobbit"], null, [:], true).selectQuery() == null
     }
 
     void "populateQuerySettings silently ignores select-only args for mutation queries"() {
         when: "max/offset/cache args passed to an UPDATE query — should not throw"
-        buildHqlQuery("update HibernateHqlQuerySpecBook set pages = 1 where title = :t",
+        buildHqlQuery("update SelectHqlQuerySpecBook set pages = 1 where title = :t",
                 [t: "The Hobbit"], null, [max: 2, offset: 1, cache: true, fetchSize: 10, readOnly: true], true)
         then:
         noExceptionThrown()
@@ -262,47 +272,35 @@ class HibernateHqlQuerySpec extends HibernateGormDatastoreSpec {
 
     void "executeUpdate throws UnsupportedOperationException for SELECT query"() {
         when:
-        buildHqlQuery("from HibernateHqlQuerySpecBook").executeUpdate()
+        buildHqlQuery("from SelectHqlQuerySpecBook").executeUpdate()
         then:
         thrown(UnsupportedOperationException)
     }
 
     void "list throws UnsupportedOperationException for UPDATE query"() {
         when:
-        buildHqlQuery("update HibernateHqlQuerySpecBook set pages = 1 where title = :t",
+        buildHqlQuery("update SelectHqlQuerySpecBook set pages = 1 where title = :t",
                 [t: "The Hobbit"], null, [:], true).list()
         then:
         thrown(UnsupportedOperationException)
     }
 
-    void "populateQueryWithNamedArguments filters GORM internal settings"() {
-        given:
-        def query = buildHqlQuery("from HibernateHqlQuerySpecBook b where b.title = :t", [t: "The Hobbit"])
-
-        when: "passing internal GORM settings as named parameters"
-        query.populateQueryWithNamedArguments([t: "The Hobbit", flushMode: FlushMode.COMMIT, cache: true])
-
-        then: "no exception is thrown because they are filtered out"
-        noExceptionThrown()
-        query.list().size() == 1
-    }
-
     void "singleResult returns first result when multiple rows match"() {
         given: "a second author with multiple books matching the same HQL query"
-        def author2 = new HibernateHqlQuerySpecAuthor(name: "Tolkien2").save(flush: true)
-        new HibernateHqlQuerySpecBook(title: "Extra Book", pages: 200, author: author2).save(flush: true)
+        def author2 = new SelectHqlQuerySpecAuthor(name: "Tolkien2").save(flush: true)
+        new SelectHqlQuerySpecBook(title: "Extra Book", pages: 200, author: author2).save(flush: true)
 
         when: "singleResult is called on an HQL query that returns multiple rows"
-        def result = buildHqlQuery("from HibernateHqlQuerySpecBook").singleResult()
+        def result = buildHqlQuery("from SelectHqlQuerySpecBook").singleResult()
 
         then: "first result is returned without throwing"
         result != null
-        result instanceof HibernateHqlQuerySpecBook
+        result instanceof SelectHqlQuerySpecBook
     }
 
     void "aggregate avg() query returns a Double result"() {
         when: "executing an avg aggregate HQL query"
-        def result = buildHqlQuery("select avg(b.pages) from HibernateHqlQuerySpecBook b").list()
+        def result = buildHqlQuery("select avg(b.pages) from SelectHqlQuerySpecBook b").list()
 
         then: "result is returned as a Double without type mismatch exception"
         result.size() == 1
@@ -311,7 +309,7 @@ class HibernateHqlQuerySpec extends HibernateGormDatastoreSpec {
 
     void "aggregate max() on Integer column returns a Number result"() {
         when: "executing a max aggregate HQL query on an Integer property"
-        def result = buildHqlQuery("select max(b.pages) from HibernateHqlQuerySpecBook b").list()
+        def result = buildHqlQuery("select max(b.pages) from SelectHqlQuerySpecBook b").list()
 
         then: "result is returned as a Number without type mismatch exception"
         result.size() == 1
@@ -320,7 +318,7 @@ class HibernateHqlQuerySpec extends HibernateGormDatastoreSpec {
 
     void "aggregate min() on Integer column returns a Number result"() {
         when: "executing a min aggregate HQL query on an Integer property"
-        def result = buildHqlQuery("select min(b.pages) from HibernateHqlQuerySpecBook b").list()
+        def result = buildHqlQuery("select min(b.pages) from SelectHqlQuerySpecBook b").list()
 
         then: "result is returned as a Number without type mismatch exception"
         result.size() == 1
@@ -329,7 +327,7 @@ class HibernateHqlQuerySpec extends HibernateGormDatastoreSpec {
 
     void "aggregate sum() on Integer column returns a Number result"() {
         when: "executing a sum aggregate HQL query on an Integer property"
-        def result = buildHqlQuery("select sum(b.pages) from HibernateHqlQuerySpecBook b").list()
+        def result = buildHqlQuery("select sum(b.pages) from SelectHqlQuerySpecBook b").list()
 
         then: "result is returned as a Number without type mismatch exception"
         result.size() == 1
@@ -338,21 +336,67 @@ class HibernateHqlQuerySpec extends HibernateGormDatastoreSpec {
 
     void "count() aggregate returns a Long result"() {
         when: "executing a count aggregate HQL query"
-        def result = buildHqlQuery("select count(b) from HibernateHqlQuerySpecBook b").list()
+        def result = buildHqlQuery("select count(b) from SelectHqlQuerySpecBook b").list()
 
         then: "result is returned as a Long without type mismatch exception"
         result.size() == 1
         result[0] instanceof Long
     }
+
+    // ─── Additional edge cases for coverage ───────────────────────────────────
+
+
+    def "populateQuerySettings handles timeout, readOnly, and flushMode"() {
+        when:
+        buildHqlQuery("from SelectHqlQuerySpecBook", [:], null, [timeout: 10, readOnly: true, flushMode: FlushMode.ALWAYS])
+
+        then:
+        noExceptionThrown()
+    }
+
+    def "populateQuerySettings handles lock and cache interaction"() {
+        when:
+        buildHqlQuery("from SelectHqlQuerySpecBook", [:], null, [lock: true])
+
+        then:
+        noExceptionThrown()
+    }
+
+
+    def "buildQuery handles native query"() {
+        given:
+        def entity = mappingContext.getPersistentEntity(SelectHqlQuerySpecBook.name)
+        def ctx = HqlQueryContext.prepare(entity, "SELECT * FROM select_hql_query_spec_book", [:], null, [:], [:], true, false)
+
+        when:
+        def hqlQuery = HibernateHqlQueryCreator.createHqlQuery(datastore, sessionFactory, entity, ctx)
+
+        then:
+        hqlQuery != null
+    }
+
+    void "buildQuery handles hints"() {
+        given:
+        def entity = mappingContext.getPersistentEntity(SelectHqlQuerySpecBook.name)
+        def hql = "from SelectHqlQuerySpecBook"
+        def hints = ["jakarta.persistence.query.timeout": 1000]
+        def ctx = HqlQueryContext.prepare(entity, hql, [:], null, [:], hints, false, false)
+
+        when:
+        def hqlQuery = HibernateHqlQueryCreator.createHqlQuery(datastore, sessionFactory, entity, ctx)
+
+        then:
+        hqlQuery != null
+    }
 }
 
 @Entity
-class HibernateHqlQuerySpecBook {
+class SelectHqlQuerySpecBook {
     String title
     Integer pages
-    HibernateHqlQuerySpecAuthor author
+    SelectHqlQuerySpecAuthor author
 
-    static belongsTo = [author: HibernateHqlQuerySpecAuthor]
+    static belongsTo = [author: SelectHqlQuerySpecAuthor]
 
     static constraints = {
         title nullable: false
@@ -362,10 +406,10 @@ class HibernateHqlQuerySpecBook {
 }
 
 @Entity
-class HibernateHqlQuerySpecAuthor {
+class SelectHqlQuerySpecAuthor {
     String name
 
-    static hasMany = [books: HibernateHqlQuerySpecBook]
+    static hasMany = [books: SelectHqlQuerySpecBook]
 
     static constraints = {
         name nullable: false

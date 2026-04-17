@@ -89,6 +89,7 @@ class JpaCriteriaQueryCreatorSpec extends HibernateGormDatastoreSpec {
         then:
         query != null
         query.isDistinct()
+        query.resultType == String
     }
 
     def "test createQuery with association projection triggers auto-join"() {
@@ -137,6 +138,7 @@ class JpaCriteriaQueryCreatorSpec extends HibernateGormDatastoreSpec {
 
         then:
         query != null
+        query.resultType == String
     }
 
     def "test populateSubquery"() {
@@ -158,18 +160,127 @@ class JpaCriteriaQueryCreatorSpec extends HibernateGormDatastoreSpec {
         noExceptionThrown()
     }
 
-    def "test createQuery with HibernateAlias triggers join"() {
+    def "test populateSubquery with group projection does not cast to criteria query"() {
+        given:
+        var entity = getPersistentEntity(JpaCriteriaQueryCreatorSpecPerson)
+        var detachedCriteria = new DetachedCriteria(JpaCriteriaQueryCreatorSpecPerson)
+        var projections = new Query.ProjectionList()
+        projections.groupProperty("lastName")
+        var creator = new JpaCriteriaQueryCreator(projections, criteriaBuilder, entity, detachedCriteria, new DefaultConversionService())
+
+        var parentCq = criteriaBuilder.createQuery(JpaCriteriaQueryCreatorSpecPerson)
+        var subquery = parentCq.subquery(String)
+
+        when:
+        creator.populateSubquery(subquery)
+
+        then:
+        noExceptionThrown()
+        subquery.selection != null
+        subquery.groupList.size() == 1
+    }
+
+    def "test createQuery with id projection returns identifier type"() {
+        given:
+        var entity = getPersistentEntity(JpaCriteriaQueryCreatorSpecPerson)
+        var detachedCriteria = new DetachedCriteria(JpaCriteriaQueryCreatorSpecPerson)
+        var projections = new Query.ProjectionList()
+        projections.id()
+        var creator = new JpaCriteriaQueryCreator(projections, criteriaBuilder, entity, detachedCriteria, new DefaultConversionService())
+
+        when:
+        JpaCriteriaQuery<?> query = creator.createQuery()
+
+        then:
+        query != null
+        query.resultType == Long
+    }
+
+    def "test createQuery with aliased count returns long type"() {
+        given:
+        var entity = getPersistentEntity(JpaCriteriaQueryCreatorSpecPerson)
+        var detachedCriteria = new DetachedCriteria(JpaCriteriaQueryCreatorSpecPerson)
+        var projections = new Query.ProjectionList()
+        projections.add(new org.grails.orm.hibernate.query.Hibernate7CountProjection("cnt:firstName"))
+        var creator = new JpaCriteriaQueryCreator(projections, criteriaBuilder, entity, detachedCriteria, new DefaultConversionService())
+
+        when:
+        JpaCriteriaQuery<?> query = creator.createQuery()
+
+        then:
+        query != null
+        query.resultType == Long
+    }
+
+    def "test createQuery with avg projection returns double type"() {
+        given:
+        var entity = getPersistentEntity(JpaCriteriaQueryCreatorSpecPerson)
+        var detachedCriteria = new DetachedCriteria(JpaCriteriaQueryCreatorSpecPerson)
+        var projections = new Query.ProjectionList()
+        projections.avg("id")
+        var creator = new JpaCriteriaQueryCreator(projections, criteriaBuilder, entity, detachedCriteria, new DefaultConversionService())
+
+        when:
+        JpaCriteriaQuery<?> query = creator.createQuery()
+
+        then:
+        query != null
+        query.resultType == Double
+    }
+
+    def "test createQuery with aliased projection"() {
         given:
         var entity = getPersistentEntity(JpaCriteriaQueryCreatorSpecPerson)
         var detachedCriteria = new DetachedCriteria(JpaCriteriaQueryCreatorSpecPerson)
         
-        // Mock HibernateQuery to provide an alias for a basic collection
-        def hibernateQuery = Mock(org.grails.orm.hibernate.query.HibernateQuery) {
-            getAliases() >> [new org.grails.orm.hibernate.query.HibernateAlias("nicknames", "n")]
-            getEntity() >> entity
-        }
+        var projections = new Query.ProjectionList()
+        // Property with alias is supported
+        projections.property("cnt:firstName")
 
-        var creator = new JpaCriteriaQueryCreator(new Query.ProjectionList(), criteriaBuilder, entity, detachedCriteria, new DefaultConversionService(), hibernateQuery)
+        var creator = new JpaCriteriaQueryCreator(projections, criteriaBuilder, entity, detachedCriteria, new DefaultConversionService())
+
+        when:
+        JpaCriteriaQuery<?> query = creator.createQuery()
+
+        then:
+        noExceptionThrown()
+        query != null
+    }
+
+    def "test createQuery with aliased group property and order by alias"() {
+        given:
+        var entity = getPersistentEntity(JpaCriteriaQueryCreatorSpecPerson)
+        var detachedCriteria = new DetachedCriteria(JpaCriteriaQueryCreatorSpecPerson)
+        
+        var projections = new Query.ProjectionList()
+        // Group by property with alias
+        projections.groupProperty("groupAlias:lastName")
+        
+        // Order by the alias
+        detachedCriteria.order(Query.Order.asc("groupAlias"))
+
+        var creator = new JpaCriteriaQueryCreator(projections, criteriaBuilder, entity, detachedCriteria, new DefaultConversionService())
+
+        when:
+        JpaCriteriaQuery<?> query = creator.createQuery()
+
+        then:
+        noExceptionThrown()
+        query != null
+    }
+
+    def "test createQuery with aliased countDistinct and order by alias"() {
+        given:
+        var entity = getPersistentEntity(JpaCriteriaQueryCreatorSpecPerson)
+        var detachedCriteria = new DetachedCriteria(JpaCriteriaQueryCreatorSpecPerson)
+        
+        var projections = new Query.ProjectionList()
+        projections.countDistinct("distinctCnt:firstName")
+        
+        // Order by the alias
+        detachedCriteria.order(Query.Order.asc("distinctCnt"))
+
+        var creator = new JpaCriteriaQueryCreator(projections, criteriaBuilder, entity, detachedCriteria, new DefaultConversionService())
 
         when:
         JpaCriteriaQuery<?> query = creator.createQuery()

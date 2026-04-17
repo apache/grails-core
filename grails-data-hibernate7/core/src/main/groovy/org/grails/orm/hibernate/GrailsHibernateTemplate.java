@@ -261,10 +261,6 @@ public class GrailsHibernateTemplate implements IHibernateTemplate {
                 }
                 // If there is a synchronization active then leave it to the synchronization to close the
                 // session
-                if (newSession != null) {
-                    SessionFactoryUtils.closeSession(newSession);
-                }
-
                 // Clear any bound sessions and connections
                 txResources.unbindResource(sessionFactory);
                 ConnectionHolder connectionHolder =
@@ -272,6 +268,7 @@ public class GrailsHibernateTemplate implements IHibernateTemplate {
                 // if there is a connection holder and it holds an open connection close it
                 try {
                     if (connectionHolder != null &&
+                            !(dataSource instanceof org.grails.datastore.gorm.jdbc.MultiTenantDataSource) &&
                             !connectionHolder.getConnection().isClosed()) {
                         Connection conn = connectionHolder.getConnection();
                         DataSourceUtils.releaseConnection(conn, dataSource);
@@ -283,6 +280,10 @@ public class GrailsHibernateTemplate implements IHibernateTemplate {
                                 "Could not close opened JDBC connection. Did the application close the connection manually?: " +
                                         e.getMessage());
                     }
+                }
+
+                if (newSession != null) {
+                    SessionFactoryUtils.closeSession(newSession);
                 }
             } finally {
                 // if there were previously active synchronizations then register those again

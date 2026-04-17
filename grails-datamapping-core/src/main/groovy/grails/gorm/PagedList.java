@@ -42,6 +42,16 @@ public interface PagedList<E> extends List<E>, Serializable {
      */
     List<E> getResultList();
 
+    /**
+     * @return The maximum number of results
+     */
+    int getMax();
+
+    /**
+     * @return The offset
+     */
+    int getOffset();
+
     @Override
     default int size() {
         return getResultList().size();

@@ -70,7 +70,7 @@ class SchemaTenantGormEnhancerSpec extends Specification {
 
     void "gormEnhancer is an instance of SchemaTenantGormEnhancer in SCHEMA mode"() {
         expect:
-        enhancer.getClass().name == "org.grails.orm.hibernate.HibernateDatastore\$SchemaTenantGormEnhancer"
+        enhancer instanceof SchemaTenantGormEnhancer
     }
 
     void "allQualifiers includes tenant IDs from AllTenantsResolver for MultiTenant entity"() {
@@ -111,22 +111,9 @@ class SchemaTenantGormEnhancerSpec extends Specification {
         qualifiers.containsAll(["tenantA", "tenantB"])
     }
 
-    void "SchemaTenantGormEnhancer is a public static nested class of HibernateDatastore"() {
-        given:
-        def enhancerClass = Class.forName("org.grails.orm.hibernate.HibernateDatastore\$SchemaTenantGormEnhancer")
-        
-        expect:
-        enhancerClass.enclosingClass == HibernateDatastore
-        Modifier.isStatic(enhancerClass.modifiers)
-        Modifier.isPublic(enhancerClass.modifiers)
-    }
-
     void "SchemaTenantGormEnhancer extends HibernateGormEnhancer"() {
-        given:
-        def enhancerClass = Class.forName("org.grails.orm.hibernate.HibernateDatastore\$SchemaTenantGormEnhancer")
-
         expect:
-        HibernateGormEnhancer.isAssignableFrom(enhancerClass)
+        HibernateGormEnhancer.isAssignableFrom(SchemaTenantGormEnhancer)
     }
 
     // -------------------------------------------------------------------------

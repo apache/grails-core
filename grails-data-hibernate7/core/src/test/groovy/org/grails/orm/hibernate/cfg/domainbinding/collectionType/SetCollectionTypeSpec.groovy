@@ -77,4 +77,22 @@ class SetCollectionTypeSpec extends HibernateGormDatastoreSpec {
         expect:
         collectionType.getTypeName(property) == 'myType'
     }
+
+    def "create sets custom type name if different from default"() {
+        given:
+        def metadataBuildingContext = getGrailsDomainBinder().getMetadataBuildingContext()
+        def collectionType = new SetCollectionType(metadataBuildingContext)
+        
+        def property = Mock(HibernateToManyProperty)
+        property.getTypeName() >> "com.custom.SetType"
+        
+        def owner = new RootClass(metadataBuildingContext)
+        owner.setTable(new Table("test"))
+
+        when:
+        def result = collectionType.create(property, owner)
+
+        then:
+        result.getTypeName() == "com.custom.SetType"
+    }
 }

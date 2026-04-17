@@ -1,3 +1,9 @@
+---
+name: java-developer
+description: Guide for developing in Java 17 LTS, including modern features, best practices, and integration with Groovy/Grails projects
+license: Apache-2.0
+---
+
 <!--
 SPDX-License-Identifier: Apache-2.0
 
@@ -13,16 +19,6 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 -->
----
-name: java-developer
-description: Guide for developing in Java 17 LTS, including modern features, best practices, and integration with Groovy/Grails projects
-license: Apache-2.0
-compatibility: opencode, claude, grok, gemini, copilot, cursor, windsurf
-metadata:
-  audience: developers
-  languages: java
-  versions: 17
----
 
 ## What I Do
 

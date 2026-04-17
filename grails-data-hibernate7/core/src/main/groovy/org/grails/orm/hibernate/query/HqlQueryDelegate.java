@@ -18,6 +18,7 @@
  */
 package org.grails.orm.hibernate.query;
 
+import java.io.Serializable;
 import java.util.Collection;
 import java.util.List;
 
@@ -27,7 +28,7 @@ import org.hibernate.query.QueryFlushMode;
  * Abstracts over Hibernate's {@link org.hibernate.query.Query} (SELECT) and
  * {@link org.hibernate.query.MutationQuery} (UPDATE/DELETE). The two types are
  * siblings under {@link org.hibernate.query.CommonQueryContract} and cannot be held
- * in a single typed field, so {@link HibernateHqlQuery} delegates all query
+ * in a single typed field, so {@link HibernateHqlQueryCreator} delegates all query
  * operations through this interface instead.
  *
  * <p>Select-only methods ({@link #setMaxResults}, {@link #setCacheable}, etc.) are
@@ -36,7 +37,7 @@ import org.hibernate.query.QueryFlushMode;
  * in {@link SelectQueryDelegate} and vice-versa for {@link #list()} in
  * {@link MutationQueryDelegate}.
  */
-interface HqlQueryDelegate {
+public interface HqlQueryDelegate extends Serializable {
 
     // ── common ────────────────────────────────────────────────────────────────
 
@@ -51,6 +52,8 @@ interface HqlQueryDelegate {
     void setParameter(int position, Object value);
 
     <T> void setParameter(int position, T value, Class<T> type);
+
+    void setHint(String hintName, Object value);
 
     // ── select-only (no-ops for mutation queries) ─────────────────────────────
 

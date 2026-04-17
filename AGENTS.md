@@ -61,6 +61,10 @@ export GRADLE_OPTS="-Xms2G -Xmx5G"
 > - Writing Grails code → Read `.agents/skills/grails-developer/SKILL.md`
 > - Writing Groovy code → Read `.agents/skills/groovy-developer/SKILL.md`
 > - Writing Java code → Read `.agents/skills/java-developer/SKILL.md`
+> - Writing Hibernate code → Read `.agents/skills/hibernate-developer/SKILL.md`
+> - Styling code → Read `.agents/skills/style-fixer/SKILL.md`
+> - Fixing broken test → Read `.agents/skills/test-fixer/SKILL.md`
+> - Indexing code -> Read `.agents/skills/codebase-memory/SKILL.md`
 >
 > Use your file reading capability to load the skill content before proceeding with any code changes.
 
@@ -69,6 +73,10 @@ export GRADLE_OPTS="-Xms2G -Xmx5G"
 | **grails-developer** | `.agents/skills/grails-developer/SKILL.md` | Grails 7 apps, GORM, controllers, views |
 | **groovy-developer** | `.agents/skills/groovy-developer/SKILL.md` | Groovy 4 syntax, closures, DSLs, Spock |
 | **java-developer** | `.agents/skills/java-developer/SKILL.md` | Java 17 features, Groovy interop |
+| **hibernate-developer** | `.agents/skills/hibernate-developer/SKILL.md` | Hibernate 7 mapping, binders, generators |
+| **style-fixer** | `.agents/skills/style-fixer/SKILL.md` | Fix style violations (CodeNarc, Checkstyle) |
+| **test-fixer** | `.agents/skills/test-fixer/SKILL.md` | Aggregate and fix test failures |
+| **codebase-memory** | `.agents/skills/codebase-memory/SKILL.md` | Setup codebase-memory-mcp locally |
 
 ## Technology Stack
 

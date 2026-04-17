@@ -217,6 +217,45 @@ class HibernateRuntimeUtilsSpec extends HibernateGormDatastoreSpec {
         then:
         result == badValue
     }
+
+    // ─── Additional edge cases for coverage ───────────────────────────────────
+
+    void "setupErrorsProperty handles non-GormValidateable target"() {
+        given:
+        def target = new NonGormValidateable()
+        target.errors = new ValidationErrors(target)
+        target.errors.addError(new FieldError("nonGorm", "name", "bad", true, null, null, "fail"))
+
+        when:
+        def errors = HibernateRuntimeUtils.setupErrorsProperty(target)
+
+        then:
+        errors.getFieldErrors("name").size() == 1
+    }
+
+    void "setupErrorsProperty copies ObjectError"() {
+        given:
+        def profile = new HibernateRuntimeUtilsSpecProfile(name: "Alice")
+        def existing = new ValidationErrors(profile)
+        existing.addError(new org.springframework.validation.ObjectError("profile", "global error"))
+        profile.errors = existing
+
+        when:
+        def errors = HibernateRuntimeUtils.setupErrorsProperty(profile)
+
+        then:
+        errors.getGlobalErrors().size() == 1
+    }
+
+    void "convertValueToType converts String to other Number types"() {
+        expect:
+        HibernateRuntimeUtils.convertValueToType("123.45", BigDecimal, conversionService) == 123.45g
+        HibernateRuntimeUtils.convertValueToType("123.45", Float, conversionService) == 123.45f
+    }
+}
+
+class NonGormValidateable {
+    org.springframework.validation.Errors errors
 }
 
 @Entity

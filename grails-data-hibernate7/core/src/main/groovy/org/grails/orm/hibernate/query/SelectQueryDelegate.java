@@ -28,7 +28,7 @@ import org.hibernate.query.QueryFlushMode;
 /** {@link HqlQueryDelegate} for HQL SELECT queries backed by {@link org.hibernate.query.Query}. */
 final class SelectQueryDelegate implements HqlQueryDelegate {
 
-    private final org.hibernate.query.Query<?> query;
+    private final transient org.hibernate.query.Query<?> query;
 
     SelectQueryDelegate(org.hibernate.query.Query<?> query) {
         this.query = query;
@@ -62,6 +62,11 @@ final class SelectQueryDelegate implements HqlQueryDelegate {
     @Override
     public <T> void setParameter(int position, T value, Class<T> type) {
         query.setParameter(position, value, type);
+    }
+
+    @Override
+    public void setHint(String hintName, Object value) {
+        query.setHint(hintName, value);
     }
 
     @Override

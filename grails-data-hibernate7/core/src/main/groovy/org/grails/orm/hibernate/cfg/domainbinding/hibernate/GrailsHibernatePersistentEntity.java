@@ -201,6 +201,29 @@ public interface GrailsHibernatePersistentEntity extends PersistentEntity {
     }
 
     /**
+     * Returns the persistent property with the given path (e.g. "author.name") cast to {@link HibernatePersistentProperty},
+     * or {@code null} if no such property exists.
+     *
+     * @param path The path to the property
+     * @return The property or null
+     */
+    default HibernatePersistentProperty getHibernatePropertyByPath(String path) {
+        if (path == null) return null;
+        if (path.contains(".")) {
+            String[] parts = path.split("\\.", 2);
+            HibernatePersistentProperty prop = getHibernatePropertyByName(parts[0]);
+            if (prop != null) {
+                GrailsHibernatePersistentEntity associated = prop.getHibernateAssociatedEntity();
+                if (associated != null) {
+                    return associated.getHibernatePropertyByPath(parts[1]);
+                }
+            }
+            return null;
+        }
+        return getHibernatePropertyByName(path);
+    }
+
+    /**
      * @param parentType The type of the parent entity
      * @return The parent property if it exists
      */

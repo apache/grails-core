@@ -1,3 +1,9 @@
+---
+name: grails-developer
+description: Comprehensive guide for Grails 7 development, covering web applications, REST APIs, GORM, controllers, services, views, plugins, and testing with Spock and Geb
+license: Apache-2.0
+---
+
 <!--
 SPDX-License-Identifier: Apache-2.0
 
@@ -13,16 +19,6 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 -->
----
-name: grails-developer
-description: Comprehensive guide for Grails 7 development, covering web applications, REST APIs, GORM, controllers, services, views, plugins, and testing with Spock and Geb
-license: Apache-2.0
-compatibility: opencode, claude, grok, gemini, copilot, cursor, windsurf
-metadata:
-  audience: developers
-  frameworks: grails
-  versions: 7
----
 
 ## What I Do
 

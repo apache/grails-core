@@ -55,10 +55,10 @@ import org.grails.datastore.mapping.query.event.PreQueryEvent;
  * @since 1.0
  */
 @SuppressWarnings({"rawtypes", "unchecked"})
-public abstract class Query implements Cloneable {
+public abstract class Query implements Cloneable, Serializable {
 
-    protected final PersistentEntity entity;
-    protected final Session session;
+    protected final transient PersistentEntity entity;
+    protected final transient Session session;
 
     protected Junction criteria = new Conjunction();
     protected ProjectionList projections = new ProjectionList();
@@ -793,14 +793,15 @@ public abstract class Query implements Cloneable {
     /**
      * Common interface for all query elements
      */
-    public static interface QueryElement {}
+    public static interface QueryElement extends Serializable {}
 
     public static interface Criterion extends QueryElement {}
 
     /**
      * The ordering of results.
      */
-    public static class Order {
+    public static class Order implements Serializable {
+        private static final long serialVersionUID = 1L;
         private Direction direction = Direction.ASC;
         private String property;
         private boolean ignoreCase = false;

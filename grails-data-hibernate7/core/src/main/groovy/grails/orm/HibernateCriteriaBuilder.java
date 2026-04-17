@@ -9,11 +9,12 @@
  *
  *    https://www.apache.org/licenses/LICENSE-2.0
  *
- *  Unless required by applicable law or agreed to in writing, software
- *  distributed under the License is distributed on an "AS IS" BASIS,
- *  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- *  See the License for the specific language governing permissions and
- *  limitations under the License.
+ *  Unless required by applicable law or agreed to in writing,
+ *  software distributed under the License is distributed on an
+ *  "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ *  KIND, either express or implied.  See the License for the
+ *  specific language governing permissions and limitations
+ *  under the License.
  */
 package grails.orm;
 
@@ -49,6 +50,7 @@ import org.grails.datastore.mapping.query.api.QueryableCriteria;
 import org.grails.orm.hibernate.GrailsHibernateTemplate;
 import org.grails.orm.hibernate.HibernateDatastore;
 import org.grails.orm.hibernate.HibernateSession;
+import org.grails.orm.hibernate.cfg.domainbinding.hibernate.GrailsHibernatePersistentEntity;
 import org.grails.orm.hibernate.query.HibernateQuery;
 import org.grails.orm.hibernate.support.hibernate7.SessionHolder;
 
@@ -157,12 +159,22 @@ public class HibernateCriteriaBuilder extends GroovyObjectSupport implements Bui
         }
         HibernateSession session = (HibernateSession) datastore.connect();
         hibernateQuery = new HibernateQuery(
-                session, datastore.getMappingContext().getPersistentEntity(targetClass.getTypeName()));
+                session, (GrailsHibernatePersistentEntity) datastore.getMappingContext().getPersistentEntity(targetClass.getName()));
         setDefaultFlushMode(GrailsHibernateTemplate.FLUSH_AUTO);
     }
 
+    public static final String ALIAS_SEPARATOR = ":";
+
     private static String getFullyQualifiedColumn(String propertyName, String alias) {
-        return (Objects.nonNull(alias) ? alias + "." : "") + propertyName;
+        return (Objects.nonNull(alias) ? alias + ALIAS_SEPARATOR : "") + propertyName;
+    }
+
+    public org.grails.datastore.mapping.query.api.Criteria exists(Closure subquery) {
+        return exists(new grails.gorm.DetachedCriteria(targetClass).build(subquery));
+    }
+
+    public org.grails.datastore.mapping.query.api.Criteria notExists(Closure subquery) {
+        return notExists(new grails.gorm.DetachedCriteria(targetClass).build(subquery));
     }
 
     public final void setDatastore(HibernateDatastore datastore) {
@@ -324,7 +336,7 @@ public class HibernateCriteriaBuilder extends GroovyObjectSupport implements Bui
      * @param alias The alias to use
      */
     public void count(String propertyName, String alias) {
-        hibernateQuery.projections().countDistinct(getFullyQualifiedColumn(propertyName, alias));
+        hibernateQuery.projections().add(new org.grails.orm.hibernate.query.Hibernate7CountProjection(getFullyQualifiedColumn(propertyName, alias)));
     }
 
     @Override
@@ -654,6 +666,7 @@ public class HibernateCriteriaBuilder extends GroovyObjectSupport implements Bui
 
     @Override
     public Criteria gtSome(String propertyName, QueryableCriteria<?> propertyValue) {
+        hibernateQuery.gtSome(propertyName, propertyValue);
         return this;
     }
 

@@ -426,6 +426,57 @@ class HibernateSessionSpec extends HibernateGormDatastoreSpec {
         then:
         query instanceof HibernateQuery
     }
+
+    // ─── Additional edge cases for coverage ───────────────────────────────────
+
+    void "getObjectIdentifier returns null for null instance"() {
+        expect:
+        getSession().getObjectIdentifier(null) == null
+    }
+
+    void "getObjectIdentifier handles proxy"() {
+        given:
+        def session = getSession()
+        def book = new HSBook(title: "Proxy Book").save(flush: true)
+        session.clear()
+        def proxy = session.proxy(HSBook, book.id)
+
+        expect:
+        session.getObjectIdentifier(proxy) == book.id
+    }
+
+    void "getIterableAsCollection handles non-Collection Iterable"() {
+        given:
+        def iterable = new Iterable() {
+            @Override
+            Iterator iterator() {
+                return ["a", "b"].iterator()
+            }
+        }
+
+        when:
+        def collection = getSession().getIterableAsCollection(iterable)
+
+        then:
+        collection.size() == 2
+        collection.contains("a")
+        collection.contains("b")
+    }
+
+    void "updateAll handles lastUpdated auto-timestamp"() {
+        given:
+        def session = getSession()
+        def book = new HSBook(title: "Timestamp Book").save(flush: true)
+        def criteria = new DetachedCriteria(HSBook).build {
+            eq('id', book.id)
+        }
+
+        when:
+        session.updateAll(criteria, [title: "Updated Title"])
+
+        then:
+        noExceptionThrown()
+    }
 }
 
 @Entity

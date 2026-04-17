@@ -47,4 +47,28 @@ class GrailsEnumTypeSpec extends Specification {
         GrailsEnumType.valueOf("ORDINAL") == GrailsEnumType.ORDINAL
         GrailsEnumType.valueOf("IDENTITY") == GrailsEnumType.IDENTITY
     }
+
+    @Unroll
+    def "fromString should return #expectedType for #value"() {
+        expect:
+        GrailsEnumType.fromString(value) == expectedType
+
+        where:
+        value      | expectedType
+        null       | GrailsEnumType.DEFAULT
+        "default"  | GrailsEnumType.DEFAULT
+        "DEFAULT"  | GrailsEnumType.DEFAULT
+        "string"   | GrailsEnumType.STRING
+        "ordinal"  | GrailsEnumType.ORDINAL
+        "identity" | GrailsEnumType.IDENTITY
+    }
+
+    def "fromString should throw MappingException for invalid value"() {
+        when:
+        GrailsEnumType.fromString("invalid")
+
+        then:
+        def e = thrown(org.hibernate.MappingException)
+        e.message.contains("Invalid enum type [invalid]")
+    }
 }

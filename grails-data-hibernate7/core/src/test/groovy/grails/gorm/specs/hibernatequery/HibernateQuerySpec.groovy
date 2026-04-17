@@ -61,8 +61,8 @@ class HibernateQuerySpec extends HibernateGormDatastoreSpec {
 
     def equalsJoins() {
         given:
-        oldBob.addToPets(new Pet(name: "Lucky")).save(flush: true)
-        hibernateQuery.join("pets").eq("pets.name", "Lucky")
+        oldBob.addToPets(new Pet(name: "Pluto")).save(flush: true)
+        hibernateQuery.join("pets").eq("pets.name", "Pluto")
         when:
         def newBob = hibernateQuery.singleResult()
         then:
@@ -269,7 +269,7 @@ class HibernateQuerySpec extends HibernateGormDatastoreSpec {
     }
 
     def isNotEmpty() {
-        Pet pet = new Pet(name: "Lucky")
+        Pet pet = new Pet(name: "Pluto")
         oldBob.addToPets(pet)
         oldBob.save(flush: true)
         given:
@@ -342,10 +342,13 @@ class HibernateQuerySpec extends HibernateGormDatastoreSpec {
     def exists() {
         given:
         new Person(firstName: "Fred", lastName: "Rogers", age: 52).save(flush: true)
-        new Pet(name: "Lucky", owner: oldBob).save(flush:true)
-        hibernateQuery.exists(
-                new DetachedCriteria(Pet)
-        )
+        new Pet(name: "Pluto", owner: oldBob).save(flush:true)
+        def subquery = new DetachedCriteria(Pet).build {
+            projections { id() }
+            eq("name", "Pluto")
+            eqProperty("owner.id", "{alias}.id")
+        }
+        hibernateQuery.exists(subquery)
 
         when:
         def list = hibernateQuery.list()
@@ -358,8 +361,13 @@ class HibernateQuerySpec extends HibernateGormDatastoreSpec {
     def notExists() {
         given:
         def newBob = new Person(firstName: "Fred", lastName: "Rogers", age: 52).save(flush: true)
-        new Pet(name: "Lucky", owner: newBob).save(flush:true)
-        hibernateQuery.notExits(new DetachedCriteria(Pet))
+        new Pet(name: "Pluto", owner: newBob).save(flush:true)
+        def subquery = new DetachedCriteria(Pet).build {
+            projections { id() }
+            eq("name", "Pluto")
+            eqProperty("owner.id", "{alias}.id")
+        }
+        hibernateQuery.notExits(subquery)
         when:
         def result = hibernateQuery.singleResult()
         then:
@@ -368,11 +376,11 @@ class HibernateQuerySpec extends HibernateGormDatastoreSpec {
 
     def greaterThanAll() {
         new Person(firstName: "Fred", lastName: "Rogers", age: 48).save(flush: true)
-        new Pet(name: "Lucky", age: 1, owner: oldBob).save(flush:true)
+        new Pet(name: "Pluto", age: 1, owner: oldBob).save(flush:true)
 
         def property = new DetachedCriteria(Pet)
                 .eq("age", 1)
-                .eq("name", "Lucky")
+                .eq("name", "Pluto")
                 .property("age")
         given:
         hibernateQuery.gtAll("age", property)
@@ -385,11 +393,11 @@ class HibernateQuerySpec extends HibernateGormDatastoreSpec {
 
     def lessThanEqualsAll() {
         new Person(firstName: "Fred", lastName: "Rogers", age: 52).save(flush: true)
-        new Pet(name: "Lucky", age: 52, owner: oldBob).save(flush:true)
+        new Pet(name: "Pluto", age: 52, owner: oldBob).save(flush:true)
         given:
         hibernateQuery.leAll("age", new DetachedCriteria(Pet)
                 .eq("age", 52)
-                .eq("name", "Lucky")
+                .eq("name", "Pluto")
                 .property("age")
         )
         when:
@@ -400,11 +408,11 @@ class HibernateQuerySpec extends HibernateGormDatastoreSpec {
 
     def lessThanAll() {
         new Person(firstName: "Fred", lastName: "Builder", age: 52).save(flush: true)
-        new Pet(name: "Lucky", age: 100, owner: oldBob).save(flush:true)
+        new Pet(name: "Pluto", age: 100, owner: oldBob).save(flush:true)
         given:
         hibernateQuery.ltAll("age",  new DetachedCriteria(Pet)
                 .eq("age", 100)
-                .eq("name", "Lucky")
+                .eq("name", "Pluto")
                 .property("age")
         )
         when:
@@ -416,11 +424,11 @@ class HibernateQuerySpec extends HibernateGormDatastoreSpec {
 
     def greaterThanEqualsAll() {
         new Person(firstName: "Fred", lastName: "Rogers", age: 48).save(flush: true)
-        new Pet(name: "Lucky", age: 48, owner: oldBob).save(flush:true)
+        new Pet(name: "Pluto", age: 48, owner: oldBob).save(flush:true)
         given:
         hibernateQuery.geAll("age", new DetachedCriteria(Pet)
                 .eq("age", 48)
-                .eq("name", "Lucky")
+                .eq("name", "Pluto")
                 .property("age")
         )
         when:
@@ -431,7 +439,7 @@ class HibernateQuerySpec extends HibernateGormDatastoreSpec {
 
     def greaterThanSome() {
         new Person(firstName: "Fred", lastName: "Rogers", age: 48).save(flush: true)
-        new Pet(name: "Lucky", age: 1, owner: oldBob).save(flush:true)
+        new Pet(name: "Pluto", age: 1, owner: oldBob).save(flush:true)
         given:
         hibernateQuery.gtSome("age", new DetachedCriteria(Pet)
                 .eq("age", 1)
@@ -448,7 +456,7 @@ class HibernateQuerySpec extends HibernateGormDatastoreSpec {
 
     def lessThanEqualsSome() {
         new Person(firstName: "Fred", lastName: "Rogers", age: 52).save(flush: true)
-        new Pet(name: "Lucky", age: 52, owner: oldBob).save(flush:true)
+        new Pet(name: "Pluto", age: 52, owner: oldBob).save(flush:true)
         given:
         hibernateQuery.leSome("age", new DetachedCriteria(Pet)
                 .eq("age", 52)
@@ -463,7 +471,7 @@ class HibernateQuerySpec extends HibernateGormDatastoreSpec {
 
     def lessThanSome() {
         new Person(firstName: "Fred", lastName: "Builder", age: 52).save(flush: true)
-        new Pet(name: "Lucky", age: 100, owner: oldBob).save(flush:true)
+        new Pet(name: "Pluto", age: 100, owner: oldBob).save(flush:true)
         given:
         hibernateQuery.ltSome( "age", new DetachedCriteria(Pet)
                 .eq("age", 100)
@@ -479,7 +487,7 @@ class HibernateQuerySpec extends HibernateGormDatastoreSpec {
 
     def greaterThanEqualsSome() {
         new Person(firstName: "Fred", lastName: "Rogers", age: 48).save(flush: true)
-        new Pet(name: "Lucky", age: 48, owner: oldBob).save(flush:true)
+        new Pet(name: "Pluto", age: 48, owner: oldBob).save(flush:true)
         given:
         hibernateQuery.geSome("age", new DetachedCriteria(Pet)
                 .eq("age", 48)
@@ -494,11 +502,11 @@ class HibernateQuerySpec extends HibernateGormDatastoreSpec {
 
     def equalsAll() {
         new Person(firstName: "Fred", lastName: "Rogers", age: 48).save(flush: true)
-        new Pet(name: "Lucky", age: 50, owner: oldBob).save(flush:true)
+        new Pet(name: "Pluto", age: 50, owner: oldBob).save(flush:true)
         given:
         hibernateQuery.eqAll( "age", new DetachedCriteria(Pet)
                 .eq("age", 50)
-                .eq("name", "Lucky")
+                .eq("name", "Pluto")
                 .property("age")
         )
         when:
@@ -755,7 +763,7 @@ class HibernateQuerySpec extends HibernateGormDatastoreSpec {
 
     def sizeEquals() {
         given:
-        new Pet(name: "Lucky", age: 48, owner: oldBob).save(flush:true)
+        new Pet(name: "Pluto", age: 48, owner: oldBob).save(flush:true)
         hibernateQuery.sizeEq("pets", 1)
         when:
         def newBob = hibernateQuery.singleResult()
@@ -765,7 +773,7 @@ class HibernateQuerySpec extends HibernateGormDatastoreSpec {
 
     def sizeGe() {
         given:
-        new Pet(name: "Lucky", age: 48, owner: oldBob).save(flush:true)
+        new Pet(name: "Pluto", age: 48, owner: oldBob).save(flush:true)
         hibernateQuery.sizeGe("pets", 0)
         when:
         def newBob = hibernateQuery.singleResult()
@@ -775,7 +783,7 @@ class HibernateQuerySpec extends HibernateGormDatastoreSpec {
 
     def sizeGt() {
         given:
-        new Pet(name: "Lucky", age: 48, owner: oldBob).save(flush:true)
+        new Pet(name: "Pluto", age: 48, owner: oldBob).save(flush:true)
         hibernateQuery.sizeGt("pets", 0)
         when:
         def newBob = hibernateQuery.singleResult()
@@ -785,7 +793,7 @@ class HibernateQuerySpec extends HibernateGormDatastoreSpec {
 
     def sizeLe() {
         given:
-        new Pet(name: "Lucky", age: 48, owner: oldBob).save(flush:true)
+        new Pet(name: "Pluto", age: 48, owner: oldBob).save(flush:true)
         hibernateQuery.sizeLe("pets", 2)
         when:
         def newBob = hibernateQuery.singleResult()
@@ -795,7 +803,7 @@ class HibernateQuerySpec extends HibernateGormDatastoreSpec {
 
     def sizeLt() {
         given:
-        new Pet(name: "Lucky", age: 48, owner: oldBob).save(flush:true)
+        new Pet(name: "Pluto", age: 48, owner: oldBob).save(flush:true)
         hibernateQuery.sizeLt("pets", 2)
         when:
         def newBob = hibernateQuery.singleResult()
@@ -886,7 +894,7 @@ class HibernateQuerySpec extends HibernateGormDatastoreSpec {
 
     def sizeNe() {
         given:
-        new Pet(name: "Lucky", age: 48, owner: oldBob).save(flush:true)
+        new Pet(name: "Pluto", age: 48, owner: oldBob).save(flush:true)
         hibernateQuery.sizeNe("pets", 0)
         when:
         def newBob = hibernateQuery.singleResult()
@@ -1077,8 +1085,8 @@ class HibernateQuerySpec extends HibernateGormDatastoreSpec {
 
     def equalsAllQueryable() {
         given:
-        new Pet(name: "Lucky", age: 50, owner: oldBob).save(flush:true)
-        hibernateQuery.eqAll("age", new DetachedCriteria(Pet).eq("name", "Lucky").property("age"))
+        new Pet(name: "Pluto", age: 50, owner: oldBob).save(flush:true)
+        hibernateQuery.eqAll("age", new DetachedCriteria(Pet).eq("name", "Pluto").property("age"))
         when:
         def result = hibernateQuery.singleResult()
         then:

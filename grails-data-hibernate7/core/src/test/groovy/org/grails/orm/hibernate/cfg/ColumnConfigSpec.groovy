@@ -152,4 +152,39 @@ class ColumnConfigSpec extends Specification {
         expect:
         config.toString() == "column[name:foo, index:bar, unique:true, length:10, precision:5, scale:2]"
     }
+
+    void "test isUnique with various values"() {
+        expect:
+        new ColumnConfig(unique: true).isUnique() == true
+        new ColumnConfig(unique: false).isUnique() == false
+        new ColumnConfig(unique: "true").isUnique() == true
+        new ColumnConfig(unique: "any string").isUnique() == true
+        new ColumnConfig(unique: null).isUnique() == false
+    }
+
+    void "test clone"() {
+        given:
+        def config = new ColumnConfig(name: "foo", index: "bar", unique: true)
+
+        when:
+        def cloned = config.clone()
+
+        then:
+        cloned !== config
+        cloned.name == config.name
+        cloned.index == config.index
+        cloned.unique == config.unique
+    }
+
+    void "test configureExisting with map"() {
+        given:
+        def config = new ColumnConfig(name: "old")
+
+        when:
+        ColumnConfig.configureExisting(config, [name: "new", length: 50])
+
+        then:
+        config.name == "new"
+        config.length == 50
+    }
 }

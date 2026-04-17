@@ -458,6 +458,66 @@ class ColumnBinderSpec extends HibernateGormDatastoreSpec {
         1 * keyCreator.createKeyForProps(prop, null, table, "sub_col")
         1 * indexBinder.bindIndex("sub_col", column, null, table)
     }
+
+    def "byte array property triggers string constraints binder"() {
+        given:
+        def columnNameFetcher = Mock(ColumnNameForPropertyAndPathFetcher)
+        def stringBinder = Mock(StringColumnConstraintsBinder)
+        def numericBinder = Mock(NumericColumnConstraintsBinder)
+        def keyCreator = Mock(CreateKeyForProps)
+        def indexBinder = Mock(IndexBinder)
+
+        def binder = new ColumnBinder(
+                columnNameFetcher,
+                stringBinder,
+                numericBinder,
+                keyCreator,
+                indexBinder
+        )
+
+        def entity = createPersistentEntity(CBByteArrayEntity)
+        def prop = entity.getPropertyByName("data")
+        def column = new Column("test")
+        def table = new Table()
+
+        columnNameFetcher.getColumnNameForPropertyAndPath(prop, null, null) >> "data_col"
+
+        when:
+        binder.bindColumn(prop, null, column, null, null, table)
+
+        then:
+        1 * stringBinder.bindStringColumnConstraints(column, _)
+    }
+
+    def "uniqueness is false when uniqueWithinGroup is true"() {
+        given:
+        def columnNameFetcher = Mock(ColumnNameForPropertyAndPathFetcher)
+        def stringBinder = Mock(StringColumnConstraintsBinder)
+        def numericBinder = Mock(NumericColumnConstraintsBinder)
+        def keyCreator = Mock(CreateKeyForProps)
+        def indexBinder = Mock(IndexBinder)
+
+        def binder = new ColumnBinder(
+                columnNameFetcher,
+                stringBinder,
+                numericBinder,
+                keyCreator,
+                indexBinder
+        )
+
+        def entity = createPersistentEntity(CBUniqueGroupEntity)
+        def prop = entity.getPropertyByName("groupedProp")
+        def column = new Column("test")
+        def table = new Table()
+
+        columnNameFetcher.getColumnNameForPropertyAndPath(prop, null, null) >> "g_col"
+
+        when:
+        binder.bindColumn(prop, null, column, null, null, table)
+
+        then:
+        !column.isUnique()
+    }
 }
 
 @Entity
@@ -549,5 +609,18 @@ class CBSubNonTph extends CBBaseNonTph {
     String subProp
     static constraints = {
         subProp nullable: false
+    }
+}
+
+@Entity
+class CBByteArrayEntity {
+    byte[] data
+}
+
+@Entity
+class CBUniqueGroupEntity {
+    String groupedProp
+    static mapping = {
+        groupedProp unique: 'group1'
     }
 }

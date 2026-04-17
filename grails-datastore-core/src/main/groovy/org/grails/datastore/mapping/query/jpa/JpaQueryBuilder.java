@@ -65,7 +65,7 @@ public class JpaQueryBuilder {
     public static final String NOT_CLAUSE = " NOT";
     public static final String LOGICAL_AND = " AND ";
     public static final String UPDATE_CLAUSE = "UPDATE ";
-    public static final String DELETE_CLAUSE = "DELETE ";
+    public static final String DELETE_CLAUSE = "DELETE FROM ";
 
     public static final String LOGICAL_OR = " OR ";
     private static final Map<Class, QueryHandler> queryHandlers = new HashMap<>();

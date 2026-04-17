@@ -58,7 +58,7 @@ import org.grails.datastore.mapping.query.event.PreQueryEvent;
 import org.grails.orm.hibernate.GrailsHibernateTemplate;
 import org.grails.orm.hibernate.HibernateSession;
 import org.grails.orm.hibernate.IHibernateTemplate;
-import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernatePersistentEntity;
+import org.grails.orm.hibernate.cfg.domainbinding.hibernate.GrailsHibernatePersistentEntity;
 import org.grails.orm.hibernate.proxy.HibernateProxyHandler;
 
 /**
@@ -75,7 +75,7 @@ public class HibernateQuery extends Query {
     private final List<HibernateAlias> aliases = new java.util.ArrayList<>();
     protected String alias;
     protected int aliasCount;
-    protected Deque<PersistentEntity> entityStack = new LinkedList<>();
+    protected Deque<GrailsHibernatePersistentEntity> entityStack = new LinkedList<>();
     protected Deque<Association> associationStack = new LinkedList<>();
     protected DetachedCriteria<?> detachedCriteria;
     protected ProxyHandler proxyHandler = new HibernateProxyHandler();
@@ -84,9 +84,11 @@ public class HibernateQuery extends Query {
     private QueryFlushMode flushMode;
     private Boolean readOnly;
 
-    public HibernateQuery(HibernateSession session, PersistentEntity entity) {
+    public HibernateQuery(HibernateSession session, GrailsHibernatePersistentEntity entity) {
         super(session, entity);
         this.detachedCriteria = new DetachedCriteria<>(entity.getJavaClass());
+        this.jpaProjectionList = new JpaProjectionList();
+        this.projections = jpaProjectionList;
     }
 
     public GrailsHibernateTemplate getHibernateTemplate() {
@@ -145,11 +147,11 @@ public class HibernateQuery extends Query {
     }
 
     @Override
-    public PersistentEntity getEntity() {
+    public GrailsHibernatePersistentEntity getEntity() {
         if (!entityStack.isEmpty()) {
             return entityStack.getLast();
         }
-        return super.getEntity();
+        return (GrailsHibernatePersistentEntity) super.getEntity();
     }
 
     private String getAssociationPath(String propertyName) {
@@ -336,13 +338,13 @@ public class HibernateQuery extends Query {
     @Override
     public AssociationQuery createQuery(String associationName) {
         final PersistentProperty property =
-                ((HibernatePersistentEntity) entity).getHibernatePropertyByName(calculatePropertyName(associationName));
+                ((GrailsHibernatePersistentEntity) entity).getPropertyByName(calculatePropertyName(associationName));
         if ((property instanceof Association association)) {
             String alias = generateAlias(associationName);
             CriteriaAndAlias subCriteria = getOrCreateAlias(associationName, alias);
             return new HibernateAssociationQuery(
                     (HibernateSession) getSession(),
-                    association.getAssociatedEntity(),
+                    (GrailsHibernatePersistentEntity) association.getAssociatedEntity(),
                     association,
                     subCriteria.associationPath,
                     alias);
@@ -442,7 +444,7 @@ public class HibernateQuery extends Query {
     public JpaCriteriaQuery<?> getJpaCriteriaQuery() {
         ConversionService conversionService = getSession().getMappingContext().getConversionService();
         return new JpaCriteriaQueryCreator(
-                        projections, getCriteriaBuilder(), entity, detachedCriteria, conversionService, this)
+                        projections, getCriteriaBuilder(), (GrailsHibernatePersistentEntity) entity, detachedCriteria, conversionService, this)
                 .createQuery();
     }
 
@@ -485,7 +487,7 @@ public class HibernateQuery extends Query {
             JpaSubQuery<Tuple> innerSubquery = countQuery.subquery(Tuple.class);
 
             ConversionService cs = getSession().getMappingContext().getConversionService();
-            new JpaCriteriaQueryCreator(projections, cb, entity, detachedCriteria, cs).populateSubquery(innerSubquery);
+            new JpaCriteriaQueryCreator(projections, cb, (GrailsHibernatePersistentEntity) entity, detachedCriteria, cs).populateSubquery(innerSubquery);
 
             countQuery.from(innerSubquery);
             countQuery.select(cb.count(cb.literal(1)));
@@ -566,7 +568,7 @@ public class HibernateQuery extends Query {
     }
 
     public void setHibernateFlushMode(FlushMode flushMode) {
-        this.flushMode = HibernateHqlQuery.convertQueryFlushMode(flushMode);
+        this.flushMode = GrailsQueryFlushMode.mapToHibernateQueryFlushMode(flushMode);
     }
 
     public void setReadOnly(Boolean readOnly) {
@@ -697,6 +699,87 @@ public class HibernateQuery extends Query {
         return this;
     }
 
+    protected JpaProjectionList jpaProjectionList;
+
+    @Override
+    public ProjectionList projections() {
+        return jpaProjectionList;
+    }
+
+    protected class JpaProjectionList extends ProjectionList {
+
+        @Override
+        public ProjectionList add(Projection p) {
+            super.add(p);
+            return this;
+        }
+
+        @Override
+        public org.grails.datastore.mapping.query.api.ProjectionList countDistinct(String property) {
+            add(Projections.countDistinct(property));
+            return this;
+        }
+
+        @Override
+        public org.grails.datastore.mapping.query.api.ProjectionList distinct(String property) {
+            add(Projections.distinct(property));
+            return this;
+        }
+
+        @Override
+        public org.grails.datastore.mapping.query.api.ProjectionList rowCount() {
+            return count();
+        }
+
+        @Override
+        public ProjectionList id() {
+            add(Projections.id());
+            return this;
+        }
+
+        @Override
+        public ProjectionList count() {
+            add(Projections.count());
+            return this;
+        }
+
+        @Override
+        public ProjectionList property(String name) {
+            add(Projections.property(name));
+            return this;
+        }
+
+        @Override
+        public ProjectionList sum(String name) {
+            add(Projections.sum(name));
+            return this;
+        }
+
+        @Override
+        public ProjectionList min(String name) {
+            add(Projections.min(name));
+            return this;
+        }
+
+        @Override
+        public ProjectionList max(String name) {
+            add(Projections.max(name));
+            return this;
+        }
+
+        @Override
+        public ProjectionList avg(String name) {
+            add(Projections.avg(name));
+            return this;
+        }
+
+        @Override
+        public ProjectionList distinct() {
+            add(Projections.distinct());
+            return this;
+        }
+    }
+
     public Query sizeNe(String propertyName, int size) {
         detachedCriteria.sizeNe(calculatePropertyName(propertyName), size);
         return this;
@@ -725,7 +808,7 @@ public class HibernateQuery extends Query {
                 (GrailsHibernateTemplate) hibernateSession.getNativeInterface();
         return (HibernateQuery)
                 hibernateTemplate.execute((GrailsHibernateTemplate.HibernateCallback<Object>) session -> {
-                    HibernateQuery hibernateQuery = new HibernateQuery(hibernateSession, entity);
+                    HibernateQuery hibernateQuery = new HibernateQuery(hibernateSession, (GrailsHibernatePersistentEntity) entity);
                     if (this.max != null && this.max > 0) {
                         hibernateQuery.max(this.max);
                     }

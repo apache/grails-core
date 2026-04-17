@@ -91,4 +91,21 @@ class ClassPropertiesBinderSpec extends HibernateGormDatastoreSpec {
         then:
         binder != null
     }
+
+    void "bindClassProperties throws MappingException if persistentClass has no table"() {
+        given:
+        def binder = new ClassPropertiesBinder(Mock(GrailsPropertyBinder), Mock(PropertyFromValueCreator))
+        def domainClass = Mock(HibernatePersistentEntity)
+        def persistentClass = new RootClass(getGrailsDomainBinder().getMetadataBuildingContext())
+        // By default table is null in RootClass until set
+        domainClass.getPersistentClass() >> persistentClass
+        persistentClass.setEntityName("MyEntity")
+
+        when:
+        binder.bindClassProperties(domainClass)
+
+        then:
+        def e = thrown(org.hibernate.MappingException)
+        e.message.contains("does not have a table associated with it")
+    }
 }

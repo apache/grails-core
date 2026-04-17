@@ -21,9 +21,12 @@ package grails.orm
 
 
 import grails.gorm.DetachedCriteria
+import groovy.lang.MetaClass
+import groovy.lang.MetaMethod
 import org.grails.datastore.gorm.query.criteria.DetachedAssociationCriteria
 import org.grails.orm.hibernate.query.HibernateQuery
 
+import org.grails.orm.hibernate.cfg.domainbinding.hibernate.GrailsHibernatePersistentEntity
 import org.hibernate.SessionFactory
 import spock.lang.Specification
 
@@ -33,7 +36,7 @@ class CriteriaMethodInvokerSpec extends Specification {
     HibernateQuery query = Mock(HibernateQuery)
     SessionFactory sessionFactory = Mock(SessionFactory)
     org.grails.orm.hibernate.HibernateSession session = Mock(org.grails.orm.hibernate.HibernateSession)
-    org.grails.datastore.mapping.model.MappingContext mappingContext = Mock(org.grails.datastore.mapping.model.MappingContext)
+    org.grails.orm.hibernate.cfg.HibernateMappingContext mappingContext = Mock(org.grails.orm.hibernate.cfg.HibernateMappingContext)
     CriteriaMethodInvoker invoker = new CriteriaMethodInvoker(builder)
 
     def setup() {
@@ -114,12 +117,11 @@ class CriteriaMethodInvokerSpec extends Specification {
         invoker.invokeMethod("list", [params, closure] as Object[])
 
         then:
-        _ * builder.isPaginationEnabledList() >> false // initially false
         1 * builder.setPaginationEnabledList(true)
+        1 * builder.isPaginationEnabledList() >> true // Stub for the check later
         1 * query.maxResults(10)
         1 * query.firstResult(5)
         1 * builder.isUniqueResult() >> false
-        _ * builder.isPaginationEnabledList() >> true // then true
     }
 
     void "test invokeMethod handles criteria methods"() {
@@ -149,7 +151,7 @@ class CriteriaMethodInvokerSpec extends Specification {
         given:
         def closure = { eq("amount", 10) }
         def association = Mock(org.grails.datastore.mapping.model.types.Association)
-        def persistentEntity = Mock(org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernatePersistentEntity)
+        def persistentEntity = Mock(GrailsHibernatePersistentEntity)
 
         when:
         invoker.invokeMethod("transactions", [closure] as Object[])
@@ -494,12 +496,121 @@ class CriteriaMethodInvokerSpec extends Specification {
         result != null  // UNHANDLED sentinel
         0 * builder._
     }
+
+    // ─── Additional edge cases for coverage ───────────────────────────────────
+
+    void "test invokeMethod handles scroll call"() {
+        given:
+        def closure = { eq("foo", "bar") }
+
+        when:
+        invoker.invokeMethod("scroll", [closure] as Object[])
+
+        then:
+        1 * builder.setScroll(true)
+        1 * builder.isUniqueResult() >> false
+        1 * builder.isScroll() >> true
+        1 * query.scroll() >> null
+        1 * builder.isParticipate() >> true
+    }
+
+    void "test invokeMethod handles list with sort and order"() {
+        given:
+        def params = [sort: 'name', order: 'desc', ignoreCase: false]
+        def closure = { }
+
+        when:
+        invoker.invokeMethod("list", [params, closure] as Object[])
+
+        then:
+        1 * builder.isPaginationEnabledList() >> true
+        1 * query.order(_) >> { args ->
+            def o = args[0] as org.grails.datastore.mapping.query.Query.Order
+            assert o.property == 'name'
+            assert o.direction == org.grails.datastore.mapping.query.Query.Order.Direction.DESC
+            return query
+        }
+        1 * builder.isUniqueResult() >> false
+    }
+
+    void "test invokeMethod calls closeSession if not participating"() {
+        given:
+        def closure = { }
+
+        when:
+        invoker.invokeMethod("list", [closure] as Object[])
+
+        then:
+        1 * builder.isUniqueResult() >> false
+        1 * builder.isParticipate() >> false
+        1 * builder.closeSession()
+    }
+
+    void "test invokeMethod handles metaMethod"() {
+        given:
+        def datastore = Mock(org.grails.orm.hibernate.HibernateDatastore)
+        def persistentEntity = Mock(GrailsHibernatePersistentEntity)
+        persistentEntity.getJavaClass() >> CBEmployee
+        datastore.getMappingContext() >> mappingContext
+        mappingContext.getPersistentEntity(CBEmployee.name) >> persistentEntity
+        
+        def myBuilder = new HibernateCriteriaBuilder(CBEmployee, sessionFactory, datastore)
+        def myInvoker = new CriteriaMethodInvoker(myBuilder)
+
+        // Add meta method to the real builder instance
+        myBuilder.metaClass.customMethod = { String arg -> "result: $arg" }
+
+        when:
+        def result = myInvoker.invokeMethod("customMethod", ["arg1"] as Object[])
+
+        then:
+        result == "result: arg1"
+    }
+
+    void "trySimpleCriteria: createAlias with join type delegates to builder"() {
+        when:
+        invoker.trySimpleCriteria('createAlias', CriteriaMethods.CREATE_ALIAS, ['transactions', 't', 1] as Object[])
+
+        then:
+        1 * builder.createAlias('transactions', 't', 1)
+    }
+
+    void "tryAssociationOrJunction: self-join uses LEFT join by default"() {
+        given:
+        def closure = { }
+        def association = Mock(org.grails.datastore.mapping.model.types.Association)
+        def persistentEntity = Mock(GrailsHibernatePersistentEntity)
+
+        when: "joining on the same class (self-association)"
+        invoker.invokeMethod("parent", [closure] as Object[])
+
+        then:
+        _ * builder.getTargetClass() >> CBEmployee
+        1 * builder.getSessionFactory() >> Mock(SessionFactory) {
+            getMetamodel() >> Mock(jakarta.persistence.metamodel.Metamodel) {
+                entity(CBEmployee) >> Mock(jakarta.persistence.metamodel.EntityType) {
+                    getAttribute("parent") >> Mock(jakarta.persistence.metamodel.Attribute) {
+                        isAssociation() >> true
+                    }
+                }
+            }
+        }
+        1 * builder.getClassForAssociationType(_) >> CBEmployee
+        1 * query.join("parent", jakarta.persistence.criteria.JoinType.LEFT)
+        1 * mappingContext.getPersistentEntity(CBEmployee.name) >> persistentEntity
+        1 * persistentEntity.getPropertyByName("parent") >> association
+        1 * query.getDetachedCriteria() >> Mock(DetachedCriteria)
+        1 * query.add(_ as org.grails.datastore.mapping.query.Query.Criterion)
+    }
 }
 
+class CBEmployee {
+    String name
+    CBEmployee parent
+}
 
 class InvokerAccount {
     String firstName
     Set<InvokerTransaction> transactions
 }
 class InvokerTransaction {}
-

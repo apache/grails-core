@@ -165,6 +165,9 @@ class COBAssociatedItem {
     String value
     COBOwnerEntity owner
     static belongsTo = [owner: COBOwnerEntity]
+    static mapping = {
+        value column: 'item_value'
+    }
 }
 
 @Entity
@@ -177,6 +180,9 @@ class COBUnidirectionalOwner {
 class COBBaseItem {
     Long id
     String value
+    static mapping = {
+        value column: 'base_value'
+    }
 }
 
 @Entity
