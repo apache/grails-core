@@ -63,7 +63,7 @@ tasks.withType(Test).configureEach {
     }
     excludes = ['**/*TestCase.class', '**/*$*.class']
     maxParallelForks = configuredTestParallel
-    maxHeapSize = isCiBuild ? '768m' : '1024m'
+    maxHeapSize = isCiBuild ? '3072m' : '1024m'
     forkEvery = hasProperty('forkEveryUnitTest') ? getProperty('forkEveryUnitTest') as long : (isCiBuild ? 20 : 100)
     if (System.getProperty('debug.tests')) {
         jvmArgs += debugArguments

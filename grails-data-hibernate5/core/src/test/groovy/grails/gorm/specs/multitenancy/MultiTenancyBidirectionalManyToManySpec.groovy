@@ -41,7 +41,7 @@ import spock.lang.Specification
 @RestoreSystemProperties
 class MultiTenancyBidirectionalManyToManySpec extends Specification {
 
-    final Map config = [
+    @Shared final Map config = [
             "grails.gorm.multiTenancy.mode":MultiTenancySettings.MultiTenancyMode.DISCRIMINATOR,
             "grails.gorm.multiTenancy.tenantResolverClass":SystemPropertyTenantResolver.name,
             'dataSource.url':"jdbc:h2:mem:grailsDB;LOCK_TIMEOUT=10000",
