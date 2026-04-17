@@ -97,7 +97,7 @@ dependencies {
 
     testImplementation 'io.micronaut.picocli:micronaut-picocli'
     testImplementation "org.reflections:reflections:$reflectionsVersion"
-    testImplementation 'org.testcontainers:testcontainers-spock'
+    testImplementation "org.testcontainers:testcontainers-spock:$testcontainersVersion"
     if (project.hasProperty('micronautVersion')) {
         testCompileOnly "io.micronaut:micronaut-inject-groovy:$micronautVersion"
     }

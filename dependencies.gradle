@@ -88,6 +88,7 @@ ext {
             'spock.version'                 : '2.3-groovy-4.0',
             'sitemesh.version'              : '2.6.0',
             'starter-sitemesh.version'      : '3.2.2',
+            'testcontainers.version'        : '2.0.4',
             // Spring Boot 4 no longer manages spring-retry; pin it here so the
             // grails-shell-cli SpringRetryCompilerAutoConfiguration's unversioned
             // reference resolves and consumer apps using @Retryable get a known version.
@@ -99,6 +100,7 @@ ext {
     bomPlatformDependencies = [
             'asset-pipeline-bom': "cloud.wondrify:asset-pipeline-bom:${bomDependencyVersions['asset-pipeline-bom.version']}",
             'spock-bom'         : "org.spockframework:spock-bom:${bomDependencyVersions['spock.version']}",
+            'testcontainers-bom': "org.testcontainers:testcontainers-bom:${bomDependencyVersions['testcontainers.version']}",
             'groovy-bom'        : "org.apache.groovy:groovy-bom:${bomDependencyVersions['groovy.version']}",
             'selenium-bom'      : "org.seleniumhq.selenium:selenium-bom:${bomDependencyVersions['selenium.version']}",
     ]
@@ -166,6 +168,16 @@ ext {
             'sitemesh'              : "opensymphony:sitemesh:${bomDependencyVersions['sitemesh.version']}",
             'starter-sitemesh'      : "org.sitemesh:spring-boot-starter-sitemesh:${bomDependencyVersions['starter-sitemesh.version']}",
             'spring-retry'          : "org.springframework.retry:spring-retry:${bomDependencyVersions['spring-retry.version']}",
+            'testcontainers'        : "org.testcontainers:testcontainers:${bomDependencyVersions['testcontainers.version']}",
+            'testcontainers-spock'  : "org.testcontainers:testcontainers-spock:${bomDependencyVersions['testcontainers.version']}",
+            'testcontainers-junit-jupiter': "org.testcontainers:testcontainers-junit-jupiter:${bomDependencyVersions['testcontainers.version']}",
+            'testcontainers-postgresql': "org.testcontainers:testcontainers-postgresql:${bomDependencyVersions['testcontainers.version']}",
+            'testcontainers-mysql'  : "org.testcontainers:testcontainers-mysql:${bomDependencyVersions['testcontainers.version']}",
+            'testcontainers-mariadb': "org.testcontainers:testcontainers-mariadb:${bomDependencyVersions['testcontainers.version']}",
+            'testcontainers-mongodb': "org.testcontainers:testcontainers-mongodb:${bomDependencyVersions['testcontainers.version']}",
+            'testcontainers-oracle-free': "org.testcontainers:testcontainers-oracle-free:${bomDependencyVersions['testcontainers.version']}",
+            'testcontainers-selenium': "org.testcontainers:testcontainers-selenium:${bomDependencyVersions['testcontainers.version']}",
+            'testcontainers-mssqlserver': "org.testcontainers:testcontainers-mssqlserver:${bomDependencyVersions['testcontainers.version']}",
     ]
 
     // Because pom exclusions aren't properly supported by gradle, we can't inherit the grails-gradle-bom
