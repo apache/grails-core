@@ -47,6 +47,13 @@ import org.gradle.api.artifacts.result.ResolvedComponentResult
 class GrailsDependencyValidatorPlugin implements Plugin<Project> {
 
     static final String VALIDATE_TASK_NAME = 'validateDependencyVersions'
+    /**
+     * Project ext property name that holds a collection of {@code "group:name"} keys
+     * to exempt from version validation. Use this when a deliberate override is applied
+     * (e.g. via {@code resolutionStrategy.useVersion}) and the divergence from the BOM
+     * is intentional.
+     */
+    static final String ALLOWED_OVERRIDES_EXT = 'allowedBomOverrides'
     private static final Set<String> BOM_PROJECT_NAMES = ['grails-bom', 'grails-gradle-bom'].toSet()
 
     @Override
@@ -79,10 +86,14 @@ class GrailsDependencyValidatorPlugin implements Plugin<Project> {
             return
         }
 
+        Set<String> allowedOverrides = resolveAllowedOverrides(project)
         Map<String, String> resolvedVersions = collectResolvedVersions(bomConfigurations)
         List<String> violations = new ArrayList<>()
 
         for (Map.Entry<String, String> entry : resolvedVersions.entrySet()) {
+            if (allowedOverrides.contains(entry.key)) {
+                continue
+            }
             String bomVersion = bomVersions.get(entry.key)
             if (bomVersion != null && bomVersion != entry.value) {
                 violations.add("  ${entry.key} - resolved ${entry.value}, expected ${bomVersion}" as String)
@@ -94,9 +105,36 @@ class GrailsDependencyValidatorPlugin implements Plugin<Project> {
                     "The following dependencies resolved to versions different from the BOM (${bomPath}):\n\n" +
                     violations.join('\n') + '\n\n' +
                     'A transitive dependency is upgrading these versions.\n' +
-                    'To fix, update the dependency version in dependencies.gradle or add an exclusion in the build file.'
+                    'To fix, update the dependency version in dependencies.gradle or add an exclusion in the build file.\n' +
+                    "For intentional overrides, add the coordinate to project.ext.${ALLOWED_OVERRIDES_EXT} (e.g. as a Set<String> of 'group:name' keys)."
             throw new GradleException(message)
         }
+    }
+
+    /**
+     * Resolves the set of {@code "group:name"} coordinates the project has marked as
+     * intentional version overrides, via the {@link #ALLOWED_OVERRIDES_EXT} ext property.
+     * Accepts a {@link Collection} or a single {@link CharSequence}. Unknown types are
+     * silently ignored.
+     */
+    private static Set<String> resolveAllowedOverrides(Project project) {
+        if (!project.extensions.extraProperties.has(ALLOWED_OVERRIDES_EXT)) {
+            return Collections.emptySet()
+        }
+        Object raw = project.extensions.extraProperties.get(ALLOWED_OVERRIDES_EXT)
+        if (raw instanceof CharSequence) {
+            return Collections.singleton(raw.toString())
+        }
+        if (raw instanceof Collection) {
+            Set<String> result = new LinkedHashSet<>()
+            for (Object item : (Collection<?>) raw) {
+                if (item != null) {
+                    result.add(item.toString())
+                }
+            }
+            return result
+        }
+        return Collections.emptySet()
     }
 
     /**

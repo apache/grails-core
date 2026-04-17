@@ -454,9 +454,39 @@ ${importStatements}
                         project.logger.info('Forcing Micronaut Platform version to {}', micronautPlatformVersion)
                         details.useVersion(micronautPlatformVersion)
                     }
+                    // Micronaut's micronaut-core-processor (used by micronaut-inject-java/-groovy)
+                    // brings javaparser-symbol-solver-core:3.27.1 and its bytecode calls
+                    // com.github.javaparser.StaticJavaParser.parseJavadoc(String). javaparser 3.28.0
+                    // replaced that method with parseJavadoc(String, boolean), so pinning the BOM
+                    // to 3.28.0 (required by groovy-groovydoc 4.0.30+) throws NoSuchMethodError
+                    // during annotation processing. Force 3.27.1 on Micronaut projects until
+                    // Micronaut ships a release compiled against javaparser 3.28.
+                    if (group == 'com.github.javaparser' && dependencyName == 'javaparser-core') {
+                        details.useVersion('3.27.1')
+                        details.because('Micronaut 5 annotation processor requires javaparser 3.27.x API')
+                    }
                 }
             }
 
+            // TODO: Start
+            // this should NOT ship with Grails 8, it's here for our benefit to avoid configuring all of our projects
+            // Tell the dependency validator that the javaparser-core downgrade above is intentional
+            // so it does not fail validateDependencyVersions on Micronaut projects.
+            Object existing = project.extensions.extraProperties.has('allowedBomOverrides') ?
+                    project.extensions.extraProperties.get('allowedBomOverrides') : null
+            Set<String> overrides = new LinkedHashSet<>()
+            if (existing instanceof Collection) {
+                for (Object item : (Collection<?>) existing) {
+                    if (item != null) {
+                        overrides.add(item.toString())
+                    }
+                }
+            } else if (existing instanceof CharSequence) {
+                overrides.add(existing.toString())
+            }
+            overrides.add('com.github.javaparser:javaparser-core')
+            project.extensions.extraProperties.set('allowedBomOverrides', overrides)
+            // TODO: End
         }
     }
 
