@@ -30,6 +30,7 @@ import org.gradle.api.file.DuplicatesStrategy
 import org.gradle.api.plugins.JavaPluginExtension
 import org.gradle.api.tasks.bundling.AbstractArchiveTask
 import org.gradle.api.tasks.bundling.Jar
+import org.gradle.api.tasks.compile.AbstractCompile
 import org.gradle.api.tasks.compile.GroovyCompile
 import org.gradle.api.tasks.compile.JavaCompile
 import org.gradle.api.tasks.javadoc.Javadoc
@@ -58,8 +59,13 @@ class CompilePlugin implements Plugin<Project> {
     }
 
     private static void configureJavaVersion(Project project) {
+        Integer javaVersion = lookupPropertyByType(project, 'javaVersion', Integer)
         project.tasks.withType(JavaCompile).configureEach {
-            it.options.release.set(lookupPropertyByType(project, 'javaVersion', Integer))
+            it.options.release.set(javaVersion)
+        }
+        project.tasks.withType(AbstractCompile).configureEach {
+            it.sourceCompatibility = javaVersion.toString()
+            it.targetCompatibility = javaVersion.toString()
         }
     }
 
