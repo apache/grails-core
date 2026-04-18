@@ -70,7 +70,10 @@ class RenderSitemeshTagLib implements TagLibrary {
         if (!name) {
             return null
         }
-        Content content = request.getAttribute(WebAppContext.CONTENT_KEY)
+        Content content = (Content) request.getAttribute(WebAppContext.CONTENT_KEY)
+        if (content == null) {
+            return null
+        }
         ContentProperty currentProperty = content.getExtractedProperties()
         for (String childPropertyName : name.split('\\.')) {
             currentProperty = currentProperty.getChild(childPropertyName)
@@ -126,34 +129,37 @@ class RenderSitemeshTagLib implements TagLibrary {
         }
     }
 
+    // layoutTitle/layoutHead/layoutBody inline-expand at tag-render time.
+    // This avoids emitting <sitemesh:write> placeholders that would otherwise
+    // require a second HTML parse of the layout output to expand. The
+    // property is pulled directly from the Content being merged (set on the
+    // request under WebAppContext.CONTENT_KEY by WebAppContext.decorate).
     Closure layoutTitle = { attrs ->
-        out << """<sitemesh:write property="title">${attrs.default ?: ''}</sitemesh:write>""".toString()
+        ContentProperty titleProp = getContentProperty('title')
+        String defaultValue = attrs.default?.toString() ?: ''
+        if (titleProp?.hasValue()) {
+            titleProp.writeValueTo(out)
+        } else if (defaultValue) {
+            out << defaultValue
+        }
     }
 
     Closure layoutHead = { attrs, body ->
-        StringBuilder tag = new StringBuilder('<sitemesh:write property="head"')
-        String bodyContent = body()
-        if (bodyContent) {
-            tag.append('>')
-            tag.append(bodyContent)
-            tag.append('</sitemesh:write>')
-        } else {
-            tag.append('/>')
+        ContentProperty headProp = getContentProperty('head')
+        if (headProp?.hasValue()) {
+            headProp.writeValueTo(out)
+        } else if (body) {
+            out << body()
         }
-        out << tag.toString()
     }
 
     Closure layoutBody = { attrs, body ->
-        StringBuilder tag = new StringBuilder('<sitemesh:write property="body"')
-        String bodyContent = body()
-        if (bodyContent) {
-            tag.append('>')
-            tag.append(bodyContent)
-            tag.append('</sitemesh:write>')
-        } else {
-            tag.append('/>')
+        ContentProperty bodyProp = getContentProperty('body')
+        if (bodyProp?.hasValue()) {
+            bodyProp.writeValueTo(out)
+        } else if (body) {
+            out << body()
         }
-        out << tag.toString()
     }
 
     Closure content = { attrs, body ->

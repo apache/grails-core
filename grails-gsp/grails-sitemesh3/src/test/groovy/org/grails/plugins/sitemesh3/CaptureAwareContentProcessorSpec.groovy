@@ -88,11 +88,29 @@ class CaptureAwareContentProcessorSpec extends Specification {
         content.is(fallbackContent)
     }
 
-    void 'falls back during decoration phase even when captured page is populated'() {
+    void 'decoration phase reuses the layout captured page with rendered content attached'() {
         given:
-        Sitemesh3CapturedPage page = new Sitemesh3CapturedPage()
-        page.setBodyBuffer(bufferOf('<p>hi</p>'))
-        request.setAttribute(Sitemesh3CapturedPage.REQUEST_ATTRIBUTE, page)
+        Sitemesh3CapturedPage layoutPage = new Sitemesh3CapturedPage()
+        layoutPage.setBodyBuffer(bufferOf('<body>from layout</body>'))
+        request.setAttribute(Sitemesh3CapturedPage.REQUEST_ATTRIBUTE, layoutPage)
+        Content decorateContext = new InMemoryContent()
+        WebAppContext decorating = Stub(WebAppContext) {
+            getRequest() >> request
+            getContentToMerge() >> decorateContext
+        }
+        String layoutOutput = '<html><body>from layout</body></html>'
+
+        when:
+        Content content = processor.build(CharBuffer.wrap(layoutOutput), decorating)
+
+        then:
+        0 * fallback._
+        content.is(layoutPage)
+        layoutPage.getData().getValue() == layoutOutput
+    }
+
+    void 'decoration phase falls back to parser when no capture happened'() {
+        given:
         Content decorateContext = new InMemoryContent()
         Content fallbackContent = new InMemoryContent()
         WebAppContext decorating = Stub(WebAppContext) {
@@ -101,7 +119,7 @@ class CaptureAwareContentProcessorSpec extends Specification {
         }
 
         when:
-        Content content = processor.build(CharBuffer.wrap('<layout/>'), decorating)
+        Content content = processor.build(CharBuffer.wrap('<plain/>'), decorating)
 
         then:
         1 * fallback.build(_ as CharBuffer, _ as SiteMeshContext) >> fallbackContent

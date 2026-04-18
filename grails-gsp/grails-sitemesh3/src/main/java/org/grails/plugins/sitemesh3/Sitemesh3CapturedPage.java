@@ -51,6 +51,7 @@ public class Sitemesh3CapturedPage implements Content {
     private StreamCharBuffer bodyBuffer;
     private StreamCharBuffer titleBuffer;
     private StreamCharBuffer pageBuffer;
+    private String renderedContent;
 
     private final Map<String, StreamCharBuffer> contentBuffers = new LinkedHashMap<>();
     private final Map<String, String> pageProperties = new HashMap<>();
@@ -75,6 +76,15 @@ public class Sitemesh3CapturedPage implements Content {
 
     public void setPageBuffer(StreamCharBuffer buffer) {
         this.pageBuffer = buffer;
+    }
+
+    // Attaches fully-rendered content (e.g. a layout's output after
+    // inline-expanded taglibs have run) as the page's data, bypassing the
+    // HTML parse step that would otherwise build the data from captured
+    // buffers.
+    public void setRenderedContent(String content) {
+        this.renderedContent = content;
+        markUsed();
     }
 
     public StreamCharBuffer getHeadBuffer() {
@@ -136,6 +146,9 @@ public class Sitemesh3CapturedPage implements Content {
     @Override
     public ContentChunk getData() {
         materializeProperties();
+        if (renderedContent != null) {
+            return new RawDataChunk(renderedContent, this);
+        }
         return delegate.getData();
     }
 
@@ -158,7 +171,9 @@ public class Sitemesh3CapturedPage implements Content {
 
         ContentProperty root = delegate.getExtractedProperties();
 
-        if (pageBuffer != null) {
+        if (renderedContent != null) {
+            delegate.getData().setValue(renderedContent);
+        } else if (pageBuffer != null) {
             delegate.getData().setValue(pageBuffer.toString());
         }
 
@@ -196,6 +211,52 @@ public class Sitemesh3CapturedPage implements Content {
             current = current.getChild(part);
         }
         current.setValue(value);
+    }
+
+    // ContentChunk whose writeValueTo emits the raw rendered content verbatim
+    // instead of re-walking the property tree (which is InMemoryContent's
+    // default behavior). Used when the captured page carries pre-rendered
+    // layout output that has already had its placeholders inlined.
+    private static final class RawDataChunk implements ContentChunk {
+        private String value;
+        private final Content owner;
+
+        RawDataChunk(String value, Content owner) {
+            this.value = value;
+            this.owner = owner;
+        }
+
+        @Override
+        public boolean hasValue() {
+            return value != null;
+        }
+
+        @Override
+        public String getValue() {
+            return value;
+        }
+
+        @Override
+        public String getNonNullValue() {
+            return value == null ? "" : value;
+        }
+
+        @Override
+        public void writeValueTo(Appendable out) throws IOException {
+            if (value != null) {
+                out.append(value);
+            }
+        }
+
+        @Override
+        public void setValue(CharSequence newValue) {
+            this.value = newValue == null ? null : newValue.toString();
+        }
+
+        @Override
+        public Content getOwningContent() {
+            return owner;
+        }
     }
 
     private static java.io.Writer appendableToWriter(Appendable out) {

@@ -61,16 +61,24 @@ public class CaptureAwareContentProcessor implements ContentProcessor {
 
     @Override
     public Content build(CharBuffer data, SiteMeshContext context) throws IOException {
-        // During the decorator phase (BaseSiteMeshContext.decorate sets
-        // currentContent before calling build), the buffer being parsed is the
-        // layout's output — containing <sitemesh:write property="..."/>
-        // placeholders that Sm2TagRuleBundle expands against the inner
-        // content. Skip the capture short-circuit or those placeholders leak
-        // through to the response unexpanded.
+        Sitemesh3CapturedPage captured = findCapturedPage(context);
+
+        // Decoration phase: RenderSitemeshTagLib has already inlined layout
+        // placeholders at tag-render time, so the layout output is final.
+        // If the layout's own capture taglibs populated a page (the common
+        // case when the layout has <head>/<body>), attach the raw layout
+        // output as the page's rendered data and return it — chained
+        // decoration can still read head/body/title properties from the
+        // captured page. Fall back to the parser only when no capture
+        // happened (e.g. a layout with no HTML skeleton).
         if (context.getContentToMerge() != null) {
+            if (captured != null && captured.isUsed()) {
+                captured.setRenderedContent(data.toString());
+                return captured;
+            }
             return fallback.build(data, context);
         }
-        Sitemesh3CapturedPage captured = findCapturedPage(context);
+
         if (captured != null && captured.isUsed()) {
             return captured;
         }

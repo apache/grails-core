@@ -73,22 +73,20 @@ public class GrailsViewDispatchContext extends WebAppContext {
             throw new ServletException("Layout view not found: " + path);
         }
         // The layout GSP is also preprocessed, so its own <head>/<body>/etc.
-        // trigger capture taglibs at render time. If the inner page's captured
-        // page is still on the request, those captures would clobber the
-        // buffers we need intact for <sitemesh:write> expansion. Clear the
-        // attribute so layout-side captures are no-ops.
-        Object previousCaptured = request.getAttribute(Sitemesh3CapturedPage.REQUEST_ATTRIBUTE);
-        request.removeAttribute(Sitemesh3CapturedPage.REQUEST_ATTRIBUTE);
+        // trigger capture taglibs at render time. Push a fresh
+        // Sitemesh3CapturedPage so the layout's captures populate a separate
+        // page (kept on the request post-render so CaptureAwareContentProcessor
+        // can return it as the decorated Content — enabling chained
+        // decoration without a second HTML parse). Sitemesh3LayoutView's
+        // outer finally restores the original attribute.
+        Sitemesh3CapturedPage layoutPage = new Sitemesh3CapturedPage();
+        request.setAttribute(Sitemesh3CapturedPage.REQUEST_ATTRIBUTE, layoutPage);
         try {
             view.render(Collections.emptyMap(), request, response);
         } catch (IOException | ServletException e) {
             throw e;
         } catch (Exception e) {
             throw new ServletException("Failed to render layout view: " + path, e);
-        } finally {
-            if (previousCaptured != null) {
-                request.setAttribute(Sitemesh3CapturedPage.REQUEST_ATTRIBUTE, previousCaptured);
-            }
         }
     }
 }
