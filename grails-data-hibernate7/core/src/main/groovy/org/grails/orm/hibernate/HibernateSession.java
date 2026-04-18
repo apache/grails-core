@@ -89,7 +89,7 @@ public class HibernateSession extends AbstractAttributeStoringSession implements
 
     public HibernateSession(HibernateDatastore hibernateDatastore, SessionFactory sessionFactory) {
         datastore = hibernateDatastore;
-        hibernateTemplate = new GrailsHibernateTemplate(sessionFactory, datastore);
+        hibernateTemplate = (IHibernateTemplate) hibernateDatastore.getHibernateTemplate();
     }
 
     @Override

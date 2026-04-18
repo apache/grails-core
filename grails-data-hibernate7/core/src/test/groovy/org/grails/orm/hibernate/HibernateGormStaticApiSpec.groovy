@@ -30,6 +30,15 @@ class HibernateGormStaticApiSpec extends HibernateGormDatastoreSpec {
         manager.addAllDomainClasses([HibernateGormStaticApiEntity, Club, HibernateGormStaticApiMultiTenantEntity])
     }
 
+    void "Test that HibernateGormStaticApi uses the shared template from the datastore"() {
+        given:
+        def enhancer = manager.hibernateDatastore.gormEnhancer
+        def api = enhancer.getStaticApi(HibernateGormStaticApiEntity)
+
+        expect:
+        api.hibernateTemplate.is(manager.hibernateDatastore.getHibernateTemplate())
+    }
+
     void "proxy test"() {
         given:
         def entity = new Club(name: "test").save(flush: true, failOnError: true)

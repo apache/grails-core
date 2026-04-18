@@ -37,6 +37,15 @@ class HibernateGormValidationApiSpec extends Specification {
     @Shared @AutoCleanup HibernateDatastore hibernateDatastore = new HibernateDatastore(configuration, ValidatedBook)
     @Shared PlatformTransactionManager transactionManager = hibernateDatastore.getTransactionManager()
 
+    void "Test that HibernateGormValidationApi uses the shared template from the datastore"() {
+        given:
+        def enhancer = hibernateDatastore.gormEnhancer
+        def api = enhancer.getValidationApi(ValidatedBook)
+
+        expect:
+        api.hibernateTemplate.is(hibernateDatastore.getHibernateTemplate())
+    }
+
     @Rollback
     void "validate returns true (not a boxed Boolean) for a valid instance"() {
         given:

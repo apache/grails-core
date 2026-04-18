@@ -113,7 +113,17 @@ class HibernateDatastoreSpec extends HibernateGormDatastoreSpec {
         datastore.getDataSource('default').is(datastore.dataSource)
     }
 
-    void "test getHibernateTemplate returns a template for the given flush mode"() {
+    void "test getHibernateTemplate returns a singleton instance"() {
+        when:
+        def template1 = datastore.getHibernateTemplate()
+        def template2 = datastore.getHibernateTemplate()
+
+        then:
+        template1 != null
+        template1.is(template2)
+    }
+
+    void "test getHibernateTemplate(flushMode) returns a new instance"() {
         when:
         def template = datastore.getHibernateTemplate(GrailsHibernateTemplate.FLUSH_AUTO)
 

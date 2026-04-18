@@ -79,6 +79,11 @@ class HibernateSessionSpec extends HibernateGormDatastoreSpec {
         getSession().getHibernateTemplate() != null
     }
 
+    void "getHibernateTemplate returns the same template as the datastore"() {
+        expect:
+        getSession().getHibernateTemplate().is(datastore.getHibernateTemplate())
+    }
+
     // -------------------------------------------------------------------------
     // Transaction guards
     // -------------------------------------------------------------------------

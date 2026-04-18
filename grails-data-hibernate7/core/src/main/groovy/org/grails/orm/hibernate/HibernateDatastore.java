@@ -162,6 +162,9 @@ public class HibernateDatastore extends AbstractDatastore
 
     protected SessionFactory sessionFactory;
 
+    /** The hibernate template. */
+    protected IHibernateTemplate hibernateTemplate;
+
     /** The connection sources. */
     protected final ConnectionSources<SessionFactory, HibernateConnectionSourceSettings> connectionSources;
 
@@ -920,7 +923,10 @@ public class HibernateDatastore extends AbstractDatastore
     }
 
     public IHibernateTemplate getHibernateTemplate() {
-        return new GrailsHibernateTemplate(getSessionFactory(), this);
+        if (this.hibernateTemplate == null) {
+            this.hibernateTemplate = new GrailsHibernateTemplate(getSessionFactory(), this);
+        }
+        return this.hibernateTemplate;
     }
 
     @Override

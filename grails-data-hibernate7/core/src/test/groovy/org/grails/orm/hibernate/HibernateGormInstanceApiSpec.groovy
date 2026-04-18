@@ -32,6 +32,15 @@ class HibernateGormInstanceApiSpec extends HibernateGormDatastoreSpec {
         manager.addAllDomainClasses([PersonInstanceApi, BookInstanceApi, ConstrainedPerson, ConstrainedBook, HGIAuthor, HGIBook])
     }
 
+    void "Test that HibernateGormInstanceApi uses the shared template from the datastore"() {
+        given:
+        def enhancer = manager.hibernateDatastore.gormEnhancer
+        def api = enhancer.getInstanceApi(PersonInstanceApi)
+
+        expect:
+        api.hibernateTemplate.is(manager.hibernateDatastore.getHibernateTemplate())
+    }
+
     @Rollback
     def "test save and get"() {
         given:
