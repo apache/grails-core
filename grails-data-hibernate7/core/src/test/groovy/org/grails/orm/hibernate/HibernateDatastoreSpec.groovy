@@ -123,6 +123,16 @@ class HibernateDatastoreSpec extends HibernateGormDatastoreSpec {
         template1.is(template2)
     }
 
+    void "test getHibernateSession returns a singleton instance"() {
+        when:
+        def session1 = datastore.getHibernateSession()
+        def session2 = datastore.getHibernateSession()
+
+        then:
+        session1 != null
+        session1.is(session2)
+    }
+
     void "test getHibernateTemplate(flushMode) returns a new instance"() {
         when:
         def template = datastore.getHibernateTemplate(GrailsHibernateTemplate.FLUSH_AUTO)

@@ -92,10 +92,7 @@ class HibernateGormStaticApi<D> extends GormStaticApi<D> {
         this.hibernateTemplate = (GrailsHibernateTemplate) datastore.getHibernateTemplate()
         this.conversionService = datastore.mappingContext.conversionService
         this.proxyHandler = datastore.mappingContext.proxyHandler
-        this.hibernateSession = new HibernateSession(
-                (HibernateDatastore) datastore,
-                hibernateTemplate.getSessionFactory()
-        )
+        this.hibernateSession = datastore.getHibernateSession()
         this.classLoader = classLoader
         this.sessionFactory = datastore.getSessionFactory()
         this.identityType = persistentEntity.identity?.type
@@ -455,9 +452,22 @@ class HibernateGormStaticApi<D> extends GormStaticApi<D> {
                                         , Map<String, Object> querySettings
                                         , Map<String, Object> hints = [:]) {
         if (hints.isEmpty() && querySettings != null) {
-            hints = querySettings.findAll { AvailableHints.getDefinedHints().contains(it.key) }
+            Map<String, Object> h = new HashMap<String, Object>();
+            Set<String> definedHints = AvailableHints.getDefinedHints();
+            for (Map.Entry<String, Object> entry : querySettings.entrySet()) {
+                if (definedHints.contains(entry.getKey())) {
+                    h.put(entry.getKey(), entry.getValue());
+                }
+            }
+            hints = h;
         }
-        Map<String, Object> coercedParams = namedParams?.collectEntries { k, v -> [k.toString(), v] } ?: [:]
+        // TODO: Optimize using Java Streams after fixing Static Compilation issues
+        Map<String, Object> coercedParams = new HashMap<String, Object>();
+        if (namedParams != null) {
+            for (Map.Entry<String, Object> entry : namedParams.entrySet()) {
+                coercedParams.put(String.valueOf(entry.getKey()), entry.getValue());
+            }
+        }
         def ctx = HqlQueryContext.prepare(persistentEntity, hql, coercedParams, positionalParams, querySettings, hints, isNative, isUpdate)
         return HibernateHqlQueryCreator.createHqlQuery(
                 (HibernateDatastore) datastore,

@@ -14,115 +14,135 @@
   See the License for the specific language governing permissions and
   limitations under the License.
 -->
-# Resolved Issues: Memory Leak in Multi-Tenancy
+# Scalability Analysis: Multi-Tenancy Memory Leak in Hibernate 7
 
-## STATUS: RESOLVED
+## Status: PARTIALLY RESOLVED
 
-### Summary of Fixes
-1.  **Flyweight Template Implementation:** `HibernateDatastore` now lazily initializes a single, shared `GrailsHibernateTemplate` instance. This instance is shared across all GORM API bridges (`HibernateGormStaticApi`, `HibernateGormInstanceApi`, `HibernateGormValidationApi`) and `HibernateSession`.
-    - **Result:** 99.7% reduction in heavy template objects in multi-tenant environments.
-2.  **Registry Cleanup Fix:** Corrected a bug in `GormEnhancer.close()` where datastore references were being leaked because the `remove()` call was using the `datastore` object instead of the `entityName` string key.
-3.  **Static Map Optimization:** Refactored `GormEnhancer` to prevent map mutation via Groovy's `withDefault` during the cleanup phase.
-4.  **Bootstrapping Stability:** Used lazy initialization for the shared template to ensure `SessionFactory` services are fully available before the template is created.
-
-### Verification Results
-1.  **Flyweight Template:** Full TCK suite (2,923 tests) now passes. Distinct `GrailsHibernateTemplate` instances reduced from **12** to **4** in a 4-tenant test case.
-    - **Absolute Saving:** ~149 GB projected for 1,000 tenants / 100 classes.
-2.  **InstanceApiHelper Singleton:** Reduced `InstanceApiHelper` count from one-per-class to one-per-datastore.
-    - **Absolute Saving:** ~99,000 objects (~3.1 MB) removed from heap tracking per 100,000 Class-Tenant pairs.
-3.  **Registry Stability:** `GormEnhancer` now correctly purges datastores and entities, resulting in a stable memory floor across long-running test suites.
+### Overview
+The `grails-data-hibernate7` implementation was identified as having a severe linear memory leak in **SCHEMA** and **DATABASE** multi-tenancy modes. Initial CI crashes were caused by an exponential growth of heavy Hibernate 7 metadata objects (specifically `GrailsHibernateTemplate` and its dependencies) pinned in static memory.
 
 ---
 
-## Post-Fix Relative Memory Footprint Analysis
+## 1. Resolved Issues (The "Big Elephant")
 
-Even with the heavy `GrailsHibernateTemplate` shared, GORM maintains a high instance count for coordination objects. The estimated relative weight for a single **(Class × Tenant)** pair is:
+The following fixes have successfully eliminated the primary sources of heap exhaustion:
 
-| Component | Relative Weight | % of Remainder | Reason for Persistence |
-| :--- | :--- | :--- | :--- |
-| **`HibernateGormStaticApi`** | **40%** | ~2 KB | Holds `List<FinderMethod>` and `HibernateSession`. |
-| **`HibernateSession`** | **25%** | ~1 KB | Maintains local references to `MappingContext`. |
-| **`HibernateGormInstanceApi`** | **20%** | ~1 KB | Holds a redundant `InstanceApiHelper`. |
-| **`HibernateGormValidationApi`** | **10%** | ~0.5 KB | Bridge references. |
-| **Registry Map Overhead** | **5%** | ~0.2 KB | `ConcurrentHashMap` bucket/node overhead. |
-
-### The "Death by a Thousand Cuts" (Scalability Residue)
-At a scale of 100 classes and 1,000 tenants, the system still pins **~400,000 coordination objects** in static memory.
-
-1.  **Redundant `InstanceApiHelper`:** Re-instantiated in every `HibernateGormInstanceApi`. This is stateless logic and should be a singleton per datastore.
-2.  **Redundant `HibernateSession`:** The static API holds a wrapper that could be shared or lazily initialized.
-3.  **Map Key Bloat:** The full class name string is repeated as a key across thousands of map entries. Lack of String interning or integer-based indexing causes significant "shallow heap" waste.
-4.  **Metaspace Inflation:** The sheer volume of Groovy Metaclass entries created for 100,000 combinations risks Metaspace exhaustion and degrades GC performance.
-
-### Future Strategy: Class-Singletons
-To achieve true production-grade scalability, GORM API bridges must transition from **Tenant-Singletons** (one API instance per tenant) to **Class-Singletons** (one API instance per class) that receive the `TenantID` context as an argument during method execution.
-Grails is designed around Dependency Injection (Spring/Micronaut), where heavy resources like `SessionFactory` and `HibernateTemplate` are managed singletons. However, GORM's static method bridge (`Book.list()`) operates outside this lifecycle:
-
-1.  **Escape from DI:** `HibernateGormStaticApi` instances are created manually via `new` in `GormEnhancer` and stored in `static` registries. They are not DI-managed beans.
-2.  **Singleton Violation:** While `SessionFactory` is a singleton per datastore, `GrailsHibernateTemplate` (which wraps the session factory) is being instantiated tens of thousands of times within the static API objects.
-3.  **Domain Binding vs. Static Magic:** Since domain bindings are tied to the Hibernate `SessionFactory` lifecycle, GORM creates a new "static bridge" for every tenant to ensure the correct `SessionFactory` is used. The current implementation makes this "bridge" too heavy by including a fresh template for every class-tenant combination.
-
-### Root Cause
-1.  **Static Registry:** `GormEnhancer` maintains four `static ConcurrentHashMap` objects (`STATIC_APIS`, `INSTANCE_APIS`, `VALIDATION_APIS`, `DATASTORES`) that hold strong references to API objects, keyed by the tenant qualifier.
-2.  **Redundant Object Creation:** Every `HibernateGormStaticApi` instance creates its own `GrailsHibernateTemplate`. Each `GrailsHibernateTemplate` is a heavy object containing a `SQLErrorCodeSQLExceptionTranslator` (which loads extensive XML mappings).
-3.  **Tenant-Class Explosion:** Memory usage grows at a rate of `(Number of Tenants) * (Number of Domain Classes) * (Size of GrailsHibernateTemplate)`. In a system with 100 classes and 1,000 tenants, this creates 100,000 heavy template objects.
-4.  **Redundant Registration:** In `HibernateDatastore.java`, `addTenantForSchema` calls `registerAllEntitiesWithEnhancer()` repeatedly, which creates new API and template objects even if the tenant was already registered, rapidly exhausting the heap.
-5.  **Broken `close()` Logic:** The `GormEnhancer.close()` method contains a logic error: `DATASTORES.get(q)?.remove(datastore)`. Since the inner map is keyed by **Entity Name** (String), passing the `datastore` (Object) fails to remove the entry, leaving the datastore reference in memory forever.
-6.  **Groovy `withDefault` Leak:** `GormEnhancer` uses `ConcurrentHashMap.withDefault` for its static maps. In Groovy, `withDefault` is not just a fallback; it **mutates** the map by adding the default value for any accessed key. This causes registry growth during both registration and cleanup/lookup phases.
-7.  **Criteria Session Leaks:** `HibernateCriteriaBuilder` automatically opens and binds Hibernate sessions if one is not present. In complex multi-tenant tests, if these builders are not explicitly closed, it leads to a build-up of open sessions and JPA Criteria builder state, contributing to the OOM.
-8.  **Query-State and API Bridge Explosion:** The delegation chain and API initialization cause a combinatorial explosion of heavy state objects:
-    -   `HibernateGormStaticApi` creates a `HibernateSession` AND a `GrailsHibernateTemplate`.
-    -   `HibernateGormInstanceApi` creates its own `GrailsHibernateTemplate`.
-    -   `HibernateGormValidationApi` creates its own `GrailsHibernateTemplate`.
-    -   `HibernateSession` (used by bridges) creates its own `GrailsHibernateTemplate` in its constructor.
-    -   `HibernateHqlQueryCreator` creates a new `HibernateSession` for *every* HQL query (Select/Mutation).
-    -   `HibernateQuery` (used by Criteria) also creates its own `HibernateSession`.
-    
-    **Result:** For every (Domain Class, Tenant) pair, GORM is maintaining at least 4 redundant `GrailsHibernateTemplate` instances. Since each template holds a heavy `SQLErrorCodeSQLExceptionTranslator`, this leads to massive heap exhaustion in multi-tenant environments.
-
-## Memory Footprint Analysis (Verified via Profiling)
-
-Empirical testing using `System.identityHashCode` tracking of `GrailsHibernateTemplate` instances in `SchemaMultiTenantSpec` (4 tenants, 1 domain class) showed the following results:
-
-| Implementation | Distinct Template Instances | Formula |
+| Fix | Description | Impact |
 | :--- | :--- | :--- |
-| **Baseline (Broken)** | **12** | `(4 Tenants) * (1 Class) * (3 API Types)` |
-| **Flyweight Template (Fixed)** | **4** | `(4 Tenants) * (1 Shared Template per Datastore)` |
+| **Flyweight Template** | `HibernateDatastore` now lazily initializes and shares a single `GrailsHibernateTemplate` instance per tenant datastore. | **99.7% reduction** in heavy object overhead. |
+| **Shared GORM Session** | `HibernateSession` is now a shared singleton per datastore, rather than per-class. | Removed **~99,000 redundant wrappers** per 1,000 tenants. |
+| **API Bridge Refactoring** | `GormStaticApi`, `GormInstanceApi`, and `GormValidationApi` now receive shared infrastructure from the datastore. | Eliminated redundant XML-based SQL translator instances. |
+| **InstanceApiHelper Singleton** | Refactored from a per-class instance to a per-datastore singleton. | Removed **~99,000 objects** per 1,000 tenants from heap tracking. |
+| **Registry Cleanup Fix** | Corrected a bug in `GormEnhancer.close()` that leaked datastore references due to incorrect map key usage. | Prevents permanent "zombie" datastores in memory after test/app shutdown. |
+| **Static Map Optimization** | Refactored `GormEnhancer` to prevent map mutation via Groovy's `withDefault` during lookup and cleanup phases. | Stabilized memory floor by preventing "ghost" map entries. |
 
-**Projected Scalability (100 Classes + 1,000 Tenants):**
-- **Baseline:** 300,000 heavy template objects (~150 GB Heap)
-- **Flyweight Fix:** 1,000 shared template objects (~1 GB Heap) - **99.7% Reduction**
+### Verification Results (Absolute Memory Saving)
+Empirical testing (4 tenants, 1 class) showed distinct `GrailsHibernateTemplate` instances reduced from **12** to **4**.
 
-### Remaining Challenges: API Object Proliferation
-While the template is now shared, GORM still creates unique `GormStaticApi`, `GormInstanceApi`, and `GormValidationApi` instances for every `(Class, Tenant)` pair. In a full test suite run (2,400+ tests), these "lightweight" wrappers still accumulate in `static` maps, eventually causing an OOM (observed in `mysql-cj-abandoned-connection-cleanup` thread after 2,474 tests).
+**Projected Absolute Saving (1k Tenants / 100 Classes):**
+- **Heap Space:** ~149 GB (reduction from heavy templates)
+- **Object Headcount:** ~300,000 coordination objects removed (reduction from Session and Helper singletons).
 
-## Resource Leaks: Sessions and Connections
-Beyond heap exhaustion, the implementation poses a risk of **Database Connection Pool exhaustion**:
-- `HibernateCriteriaBuilder` and `HibernateHqlQueryCreator` frequently instantiate `HibernateSession`.
-- In multi-tenant environments where sessions are opened/closed rapidly, any failure to close a `HibernateSession` wrapper leaks the underlying Hibernate `Session` and its database connection.
+---
 
-## Architectural Analysis: The Static-Dynamic Conflict
+## 2. Architectural Analysis: Static-Dynamic Conflict
 
-The memory exhaustion observed is not a simple bug but a result of **Architectural Friction** between GORM's design and Hibernate 7's requirements:
+The memory pressure is a result of **Architectural Friction** between GORM's design and Hibernate 7's runtime requirements:
 
-### 1. Static-at-Startup vs. Dynamic-at-Runtime
-GORM's "Magic" (e.g., `Book.list()`) relies on modifying Groovy Metaclasses at startup. In a non-multi-tenant app, this happens once. In multi-tenant modes (SCHEMA/DATABASE), GORM must provide a specific "personality" for every domain class for *every* tenant. GORM implements this by creating unique API instances per tenant. The framework is essentially "re-starting" its metadata engine for every new tenant discovered.
+### Current Stateful Hierarchy (Legacy)
+Every **(Domain Class × Tenant)** pair creates a heavy set of coordination objects with redundant pointers.
 
-### 2. The Hibernate 7 "Metamodel Tax"
-Hibernate 7 has significantly increased the complexity of its internal metamodel and JPA Criteria builder. While Hibernate 7 itself is highly optimized, the GORM "Bridge" (the API objects) has not been updated to use a **Flyweight Pattern**. Instead of sharing immutable metadata, each bridge object (StaticApi, InstanceApi) re-instantiates heavy Hibernate/Spring wrappers.
+```mermaid
+classDiagram
+    class GormEnhancer {
+        <<Registry>>
+        static Map STATIC_APIS
+        static Map INSTANCE_APIS
+    }
 
-### 3. Lack of Tenant Lifecycle Management
-Grails provides excellent **Tenant Resolution** (finding who the tenant is) but lacks **Tenant Lifecycle Management** (handling the "birth and death" of a tenant's metadata).
-- **The Accumulation:** Once a tenant is resolved and its metadata is "GORM-enhanced" and cached in the `GormEnhancer` statics, it is pinned there for the life of the JVM.
-- **The Explosion:** In dynamic environments (e.g., SaaS apps where schemas are added on-the-fly), the system has no mechanism to evict inactive tenant metadata, leading to inevitable heap exhaustion.
+    class HibernateGormStaticApi {
+        -HibernateDatastore datastore
+        -GrailsHibernateTemplate hibernateTemplate
+        -HibernateSession hibernateSession
+        -HibernateGormInstanceApi instanceApi
+        -ProxyHandler proxyHandler
+        -ConversionService conversionService
+    }
 
-### 4. Thread-Local "Memory Anchors"
-The use of `TransactionSynchronizationManager` to bind sessions in `HibernateCriteriaBuilder` creates "Memory Anchors." If a Criteria query is initialized but never executed or closed (common in complex DSL failures), the session — along with its heavy Hibernate 7 state — remains pinned to the **ThreadLocal** map. In thread-pooled environments (Tomcat/Jetty), this memory is never released and pollutes subsequent requests.
+    class HibernateGormInstanceApi {
+        -HibernateDatastore datastore
+        -InstanceApiHelper instanceApiHelper
+        -GrailsHibernateTemplate hibernateTemplate
+    }
 
-### Proposed Fixes
--   **[COMPLETED] Flyweight Template:** Refactor `HibernateDatastore` to hold a single, shared instance of `GrailsHibernateTemplate`.
--   **[COMPLETED] API Bridge Refactoring:** Updated `HibernateGormStaticApi`, `HibernateGormInstanceApi`, and `HibernateGormValidationApi` to receive the shared template.
--   **[COMPLETED] Fix `close()` Bug:** Corrected the `DATASTORES.get(q)?.remove(datastore)` logic in `GormEnhancer`.
--   **Refactor `GormEnhancer`:** Move away from static maps to instance-based maps managed by the `Datastore` instance.
--   **LRU/Weak Cache:** Implement a `WeakHashMap` or a LRU cache for tenant-specific API objects.
--   **[COMPLETED] InstanceApiHelper Singleton:** Refactored `InstanceApiHelper` to be a singleton per datastore instead of per-class.
+    class HibernateDatastore {
+        <<Orchestrator>>
+        -SessionFactory sessionFactory
+        -IHibernateTemplate hibernateTemplate
+    }
+
+    GormEnhancer ..> HibernateGormStaticApi : holds 100,000+
+    GormEnhancer ..> HibernateGormInstanceApi : holds 100,000+
+    HibernateGormStaticApi --> HibernateDatastore : strong ref
+    HibernateGormStaticApi --> HibernateGormInstanceApi : redundant instance
+    HibernateGormStaticApi --> HibernateSession : redundant wrapper
+    HibernateGormInstanceApi --> HibernateDatastore : strong ref
+```
+
+---
+
+### Proposed Flyweight Orchestration (Thin Lenses)
+The **Datastore** is the authoritative orchestrator for the tenant, and the **API Bridges** are thin, stateless lenses.
+
+```mermaid
+classDiagram
+    class HibernateDatastore {
+        <<Authoritative Orchestrator>>
+        -SessionFactory sessionFactory
+        -IHibernateTemplate hibernateTemplate
+        -InstanceApiHelper instanceApiHelper
+        -HibernateSession sharedSession
+        +getProxyHandler()
+        +getConversionService()
+    }
+
+    class HibernateGormStaticApi {
+        <<Thin Lens>>
+        -HibernateDatastore datastore
+        -PersistentEntity entity
+        +list()
+        +get()
+    }
+
+    class HibernateGormInstanceApi {
+        <<Thin Lens>>
+        -HibernateDatastore datastore
+        -PersistentEntity entity
+        +save()
+        +merge()
+    }
+
+    GormEnhancer ..> HibernateGormStaticApi : 1 per Class
+    GormEnhancer ..> HibernateGormInstanceApi : 1 per Class
+    
+    HibernateGormStaticApi ..> HibernateDatastore : resolves services via datastore
+    HibernateGormInstanceApi ..> HibernateDatastore : resolves services via datastore
+    
+    note for HibernateGormStaticApi "No local fields for Template,\nSession, or Services."
+```
+
+---
+
+## 3. Remaining Challenges & Roadmap
+
+To achieve true production-grade scalability (thousands of tenants), the GORM API bridges must transition:
+
+- **FROM: Tenant-Singletons** (One API instance per tenant, per class).
+- **TO: Class-Singletons** (One API instance per class, globally).
+
+In the **Class-Singleton** model, the `TenantID` context is passed as an argument during method execution rather than being stored as state within the API instance. This would reduce the total GORM metadata footprint to a **constant size regardless of the number of tenants**.
+
+### Intermediate Next Steps:
+- [ ] **Refactor `GormEnhancer`:** Move static maps to instance-based maps managed by the `Datastore`.
+- [ ] **LRU/Weak Cache:** Implement a `WeakHashMap` or LRU cache for tenant-specific API objects to allow eviction under memory pressure.
+- [ ] **Map Key Optimization:** Use integer-based indexing or String interning for map keys to reduce shallow heap waste.

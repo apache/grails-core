@@ -39,6 +39,15 @@ class HibernateGormStaticApiSpec extends HibernateGormDatastoreSpec {
         api.hibernateTemplate.is(manager.hibernateDatastore.getHibernateTemplate())
     }
 
+    void "Test that HibernateGormStaticApi uses the shared session from the datastore"() {
+        given:
+        def enhancer = manager.hibernateDatastore.gormEnhancer
+        def api = enhancer.getStaticApi(HibernateGormStaticApiEntity)
+
+        expect:
+        api.hibernateSession.is(manager.hibernateDatastore.getHibernateSession())
+    }
+
     void "proxy test"() {
         given:
         def entity = new Club(name: "test").save(flush: true, failOnError: true)

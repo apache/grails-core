@@ -66,20 +66,28 @@ class GormEnhancer implements Closeable {
 
     private static final Map<String, Map<String, Closure>> NAMED_QUERIES = new ConcurrentHashMap<>()
 
-    private static final Map<String, Map<String, GormStaticApi>> STATIC_APIS = new ConcurrentHashMap<String, Map<String, GormStaticApi>>().withDefault { String key ->
-        return new ConcurrentHashMap() as Map<String, GormStaticApi>
-    }
-    private static final Map<String, Map<String, GormInstanceApi>> INSTANCE_APIS = new ConcurrentHashMap<String, Map<String, GormInstanceApi>>().withDefault { String key ->
-        return new ConcurrentHashMap() as Map<String, GormInstanceApi>
-    }
-    private static final Map<String, Map<String, GormValidationApi>> VALIDATION_APIS = new ConcurrentHashMap<String, Map<String, GormValidationApi>>().withDefault { String key ->
-        return new ConcurrentHashMap() as Map<String, GormValidationApi>
-    }
-    private static final Map<String, Map<String, Datastore>> DATASTORES = new ConcurrentHashMap<String, Map<String, Datastore>>().withDefault { String key ->
-        return new ConcurrentHashMap() as Map<String, Datastore>
-    }
+    private static final Map<String, Map<String, GormStaticApi>> STATIC_APIS = new ConcurrentHashMap<String, Map<String, GormStaticApi>>()
+    private static final Map<String, Map<String, GormInstanceApi>> INSTANCE_APIS = new ConcurrentHashMap<String, Map<String, GormInstanceApi>>()
+    private static final Map<String, Map<String, GormValidationApi>> VALIDATION_APIS = new ConcurrentHashMap<String, Map<String, GormValidationApi>>()
+    private static final Map<String, Map<String, Datastore>> DATASTORES = new ConcurrentHashMap<String, Map<String, Datastore>>()
 
     private static final Map<Class, Datastore> DATASTORES_BY_TYPE = new ConcurrentHashMap<Class, Datastore>()
+
+    private static Map<String, GormStaticApi> getStaticApiMap(String qualifier) {
+        return STATIC_APIS.computeIfAbsent(qualifier) { new ConcurrentHashMap<String, GormStaticApi>() }
+    }
+
+    private static Map<String, GormInstanceApi> getInstanceApiMap(String qualifier) {
+        return INSTANCE_APIS.computeIfAbsent(qualifier) { new ConcurrentHashMap<String, GormInstanceApi>() }
+    }
+
+    private static Map<String, GormValidationApi> getValidationApiMap(String qualifier) {
+        return VALIDATION_APIS.computeIfAbsent(qualifier) { new ConcurrentHashMap<String, GormValidationApi>() }
+    }
+
+    private static Map<String, Datastore> getDatastoreMap(String qualifier) {
+        return DATASTORES.computeIfAbsent(qualifier) { new ConcurrentHashMap<String, Datastore>() }
+    }
 
     final Datastore datastore
     PlatformTransactionManager transactionManager
@@ -144,23 +152,23 @@ class GormEnhancer implements Closeable {
                 def firstQualifier = qualifiers.first()
                 def staticApi = getStaticApi(cls, firstQualifier)
                 def name = entity.name
-                STATIC_APIS.get(ConnectionSource.DEFAULT).put(name, staticApi)
+                getStaticApiMap(ConnectionSource.DEFAULT).put(name, staticApi)
                 def instanceApi = getInstanceApi(cls, firstQualifier)
-                INSTANCE_APIS.get(ConnectionSource.DEFAULT).put(name, instanceApi)
+                getInstanceApiMap(ConnectionSource.DEFAULT).put(name, instanceApi)
                 def validationApi = getValidationApi(cls, firstQualifier)
-                VALIDATION_APIS.get(ConnectionSource.DEFAULT).put(name, validationApi)
-                DATASTORES.get(ConnectionSource.DEFAULT).put(name, this.datastore)
+                getValidationApiMap(ConnectionSource.DEFAULT).put(name, validationApi)
+                getDatastoreMap(ConnectionSource.DEFAULT).put(name, this.datastore)
 
             }
             for (qualifier in qualifiers) {
                 def staticApi = getStaticApi(cls, qualifier)
                 def name = entity.name
-                STATIC_APIS.get(qualifier).put(name, staticApi)
+                getStaticApiMap(qualifier).put(name, staticApi)
                 def instanceApi = getInstanceApi(cls, qualifier)
-                INSTANCE_APIS.get(qualifier).put(name, instanceApi)
+                getInstanceApiMap(qualifier).put(name, instanceApi)
                 def validationApi = getValidationApi(cls, qualifier)
-                VALIDATION_APIS.get(qualifier).put(name, validationApi)
-                DATASTORES.get(qualifier).put(name, this.datastore)
+                getValidationApiMap(qualifier).put(name, validationApi)
+                getDatastoreMap(qualifier).put(name, this.datastore)
             }
         }
     }
@@ -245,10 +253,13 @@ class GormEnhancer implements Closeable {
     static <D> GormStaticApi<D> findStaticApi(Class<D> entity, String qualifier = findTenantId(entity)) {
         String className = NameUtils.getClassName(entity)
         def staticApi = STATIC_APIS.get(qualifier)?.get(className)
+        if (staticApi == null && qualifier != ConnectionSource.DEFAULT) {
+            staticApi = STATIC_APIS.get(ConnectionSource.DEFAULT)?.get(className)
+        }
         if (staticApi == null) {
             throw stateException(entity)
         }
-        return staticApi
+        return (GormStaticApi<D>) staticApi
     }
 
     /**
@@ -261,11 +272,15 @@ class GormEnhancer implements Closeable {
      * @throws IllegalStateException if no instance API is found for the type
      */
     static <D> GormInstanceApi<D> findInstanceApi(Class<D> entity, String qualifier = findTenantId(entity)) {
-        def instanceApi = INSTANCE_APIS.get(qualifier)?.get(NameUtils.getClassName(entity))
+        String className = NameUtils.getClassName(entity)
+        def instanceApi = INSTANCE_APIS.get(qualifier)?.get(className)
+        if (instanceApi == null && qualifier != ConnectionSource.DEFAULT) {
+            instanceApi = INSTANCE_APIS.get(ConnectionSource.DEFAULT)?.get(className)
+        }
         if (instanceApi == null) {
             throw stateException(entity)
         }
-        return instanceApi
+        return (GormInstanceApi<D>) instanceApi
     }
 
     /**
@@ -278,11 +293,15 @@ class GormEnhancer implements Closeable {
      * @throws IllegalStateException if no validation API is found for the type
      */
     static <D> GormValidationApi<D> findValidationApi(Class<D> entity, String qualifier = findTenantId(entity)) {
-        def instanceApi = VALIDATION_APIS.get(qualifier)?.get(NameUtils.getClassName(entity))
-        if (instanceApi == null) {
+        String className = NameUtils.getClassName(entity)
+        def validationApi = VALIDATION_APIS.get(qualifier)?.get(className)
+        if (validationApi == null && qualifier != ConnectionSource.DEFAULT) {
+            validationApi = VALIDATION_APIS.get(ConnectionSource.DEFAULT)?.get(className)
+        }
+        if (validationApi == null) {
             throw stateException(entity)
         }
-        return instanceApi
+        return (GormValidationApi<D>) validationApi
     }
 
     /**
@@ -295,7 +314,11 @@ class GormEnhancer implements Closeable {
      * @throws IllegalStateException if no datastore is found for the type
      */
     static Datastore findDatastore(Class entity, String qualifier = findTenantId(entity)) {
-        def datastore = DATASTORES.get(qualifier)?.get(entity.name)
+        String className = entity.name
+        def datastore = DATASTORES.get(qualifier)?.get(className)
+        if (datastore == null && qualifier != ConnectionSource.DEFAULT) {
+            datastore = DATASTORES.get(ConnectionSource.DEFAULT)?.get(className)
+        }
         if (datastore == null) {
             throw stateException(entity)
         }

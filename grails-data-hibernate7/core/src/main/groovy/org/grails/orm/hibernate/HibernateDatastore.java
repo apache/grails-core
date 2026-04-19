@@ -168,6 +168,9 @@ public class HibernateDatastore extends AbstractDatastore
     /** The instance API helper. */
     protected InstanceApiHelper instanceApiHelper;
 
+    /** The shared hibernate session. */
+    protected HibernateSession hibernateSession;
+
     /** The connection sources. */
     protected final ConnectionSources<SessionFactory, HibernateConnectionSourceSettings> connectionSources;
 
@@ -937,6 +940,13 @@ public class HibernateDatastore extends AbstractDatastore
             this.instanceApiHelper = new InstanceApiHelper((GrailsHibernateTemplate) getHibernateTemplate());
         }
         return this.instanceApiHelper;
+    }
+
+    public HibernateSession getHibernateSession() {
+        if (this.hibernateSession == null) {
+            this.hibernateSession = new HibernateSession(this, getSessionFactory());
+        }
+        return this.hibernateSession;
     }
 
     @Override
