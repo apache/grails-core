@@ -29,11 +29,13 @@ import org.sitemesh.webapp.WebAppContext
 import org.sitemesh.webapp.contentfilter.ResponseMetaData
 
 import org.springframework.beans.factory.annotation.Autowired
+import org.springframework.beans.factory.annotation.Qualifier
+import org.springframework.context.annotation.Lazy
 import org.springframework.web.servlet.ViewResolver
 
 import grails.artefact.TagLibrary
 import grails.gsp.TagLib
-import org.grails.plugins.sitemesh3.GrailsViewDispatchContext
+import org.grails.plugins.sitemesh3.GrailsSiteMeshViewContext
 import org.grails.web.util.WebUtils
 
 /**
@@ -44,15 +46,23 @@ import org.grails.web.util.WebUtils
 class RenderSitemeshTagLib implements TagLibrary {
 
     @Autowired
-    ContentProcessor sitemesh3ContentProcessor
+    ContentProcessor contentProcessor
 
     @Autowired
-    DecoratorSelector<SiteMeshContext> sitemesh3DecoratorSelector
+    DecoratorSelector<SiteMeshContext> decoratorSelector
 
+    // Break the circular dependency
+    // RenderSitemeshTagLib -> ViewResolver -> groovyPagesTemplateEngine ->
+    // gspTagLibraryLookup -> RenderSitemeshTagLib by deferring resolution.
+    // @Qualifier is required because the context has several ViewResolver
+    // beans (mvcViewResolver, beanNameViewResolver, groovyMarkupViewResolver,
+    // jspViewResolver, gspViewResolver) and autowiring by type is ambiguous.
     @Autowired
+    @Lazy
+    @Qualifier('jspViewResolver')
     ViewResolver viewResolver
 
-    // Dispatches via GrailsViewDispatchContext so the layout is rendered
+    // Dispatches via GrailsSiteMeshViewContext so the layout is rendered
     // through Spring's View API rather than RequestDispatcher.forward().
     // Using the default WebAppContext here would re-enter the servlet
     // pipeline on every <g:applyLayout> call, and nesting (applyLayout
@@ -61,16 +71,16 @@ class RenderSitemeshTagLib implements TagLibrary {
     // causing "request is not active anymore" errors.
     Closure applyLayout = { Map attrs, body ->
         String savedAttribute = request.getAttribute(WebUtils.LAYOUT_ATTRIBUTE)
-        GrailsViewDispatchContext context = new GrailsViewDispatchContext(
+        GrailsSiteMeshViewContext context = new GrailsSiteMeshViewContext(
                 'text/html', request, response, servletContext,
-                sitemesh3ContentProcessor, new ResponseMetaData(), false,
+                contentProcessor, new ResponseMetaData(), false,
                 viewResolver, request.getLocale())
-        Content content = sitemesh3ContentProcessor.build(CharBuffer.wrap(body()), context)
+        Content content = contentProcessor.build(CharBuffer.wrap(body()), context)
         if (attrs.name) {
             request.setAttribute(WebUtils.LAYOUT_ATTRIBUTE, attrs.name)
         }
         try {
-            String[] decoratorPaths = sitemesh3DecoratorSelector.selectDecoratorPaths(content, context)
+            String[] decoratorPaths = decoratorSelector.selectDecoratorPaths(content, context)
             for (String decoratorPath : decoratorPaths) {
                 Content next = context.decorate(decoratorPath, content)
                 if (next == null) {

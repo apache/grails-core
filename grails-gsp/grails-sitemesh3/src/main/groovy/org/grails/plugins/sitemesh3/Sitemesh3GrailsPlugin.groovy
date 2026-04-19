@@ -95,14 +95,15 @@ class Sitemesh3GrailsPlugin extends Plugin {
             String resolvedDefaultLayout = config.getProperty('grails.sitemesh.default.layout') ?:
                     config.getProperty('sitemesh.decorator.default')
 
-            sitemesh3ContentProcessor(CaptureAwareContentProcessor)
+            // Bean names match the @ConditionalOnMissingBean(name = "contentProcessor"/"decoratorSelector")
+            // guards on upstream's SiteMeshViewResolverAutoConfiguration, so
+            // our implementations replace upstream's defaults.
+            contentProcessor(CaptureAwareContentProcessor)
 
-            sitemesh3DecoratorSelector(Sitemesh3LayoutFinder, ref('groovyPageLocator')) {
+            decoratorSelector(Sitemesh3LayoutFinder, ref('groovyPageLocator')) {
                 gspReloadEnabled = enableReload
                 defaultDecoratorName = resolvedDefaultLayout ?: null
             }
-
-            sitemesh3LayoutViewResolverPostProcessor(Sitemesh3LayoutViewResolverPostProcessor)
 
             // Replace the filter registration from
             // org.sitemesh.autoconfigure.SiteMeshAutoConfiguration with a no-op
