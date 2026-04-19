@@ -61,8 +61,8 @@ svn_exists() {
 for folder in $(svn ls "${svn_flags[@]}" "${RELEASE_ROOT}"); do
   folder=$(echo "$folder" | sed 's|/$||')
   PRIOR_RELEASE_URL="${RELEASE_ROOT}/${folder}"
-  read -r -p "Remove old release folder '${folder}' at ${PRIOR_RELEASE_URL}? [y/N] " confirm
-  if [[ "${confirm}" =~ ^[Yy]$ ]]; then
+  read -r -p "Remove old release folder '${folder}' at ${PRIOR_RELEASE_URL}? [y/N] " confirm < /dev/tty
+  if [[ "${confirm}" =~ ^[Yy](es)?$ ]]; then
     echo "🗑️ Deleting old release folder: ${PRIOR_RELEASE_URL}"
     svn rm "${svn_flags[@]}" -m "Remove previous release ${folder}" "${PRIOR_RELEASE_URL}"
     echo "✅ Deleted old release folder"
