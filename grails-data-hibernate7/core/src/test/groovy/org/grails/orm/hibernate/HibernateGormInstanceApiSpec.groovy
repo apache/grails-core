@@ -41,6 +41,15 @@ class HibernateGormInstanceApiSpec extends HibernateGormDatastoreSpec {
         api.hibernateTemplate.is(manager.hibernateDatastore.getHibernateTemplate())
     }
 
+    void "Test that HibernateGormInstanceApi uses the shared InstanceApiHelper from the datastore"() {
+        given:
+        def enhancer = manager.hibernateDatastore.gormEnhancer
+        def api = enhancer.getInstanceApi(PersonInstanceApi)
+
+        expect:
+        api.instanceApiHelper.is(manager.hibernateDatastore.getInstanceApiHelper())
+    }
+
     @Rollback
     def "test save and get"() {
         given:

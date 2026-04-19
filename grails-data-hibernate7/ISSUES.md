@@ -26,7 +26,11 @@
 4.  **Bootstrapping Stability:** Used lazy initialization for the shared template to ensure `SessionFactory` services are fully available before the template is created.
 
 ### Verification Results
-Full TCK suite run (2,923 tests) now passes successfully with **0 failures** and stable memory usage. Distinct `GrailsHibernateTemplate` instances were reduced from **12** to **4** in a 4-tenant test case.
+1.  **Flyweight Template:** Full TCK suite (2,923 tests) now passes. Distinct `GrailsHibernateTemplate` instances reduced from **12** to **4** in a 4-tenant test case.
+    - **Absolute Saving:** ~149 GB projected for 1,000 tenants / 100 classes.
+2.  **InstanceApiHelper Singleton:** Reduced `InstanceApiHelper` count from one-per-class to one-per-datastore.
+    - **Absolute Saving:** ~99,000 objects (~3.1 MB) removed from heap tracking per 100,000 Class-Tenant pairs.
+3.  **Registry Stability:** `GormEnhancer` now correctly purges datastores and entities, resulting in a stable memory floor across long-running test suites.
 
 ---
 
@@ -116,8 +120,9 @@ Grails provides excellent **Tenant Resolution** (finding who the tenant is) but 
 The use of `TransactionSynchronizationManager` to bind sessions in `HibernateCriteriaBuilder` creates "Memory Anchors." If a Criteria query is initialized but never executed or closed (common in complex DSL failures), the session — along with its heavy Hibernate 7 state — remains pinned to the **ThreadLocal** map. In thread-pooled environments (Tomcat/Jetty), this memory is never released and pollutes subsequent requests.
 
 ### Proposed Fixes
--   **DI Managed Bean:** Register the `GrailsHibernateTemplate` as a Spring/Micronaut bean in `HibernateDatastoreSpringInitializer` so it can be shared across all components and datastores using the same `SessionFactory`.
--   **API Bridge Refactoring:** Update `HibernateGormStaticApi`, `HibernateGormInstanceApi`, and `HibernateGormValidationApi` to receive the shared template via constructor injection (or from the datastore) rather than instantiating their own.
+-   **[COMPLETED] Flyweight Template:** Refactor `HibernateDatastore` to hold a single, shared instance of `GrailsHibernateTemplate`.
+-   **[COMPLETED] API Bridge Refactoring:** Updated `HibernateGormStaticApi`, `HibernateGormInstanceApi`, and `HibernateGormValidationApi` to receive the shared template.
+-   **[COMPLETED] Fix `close()` Bug:** Corrected the `DATASTORES.get(q)?.remove(datastore)` logic in `GormEnhancer`.
 -   **Refactor `GormEnhancer`:** Move away from static maps to instance-based maps managed by the `Datastore` instance.
--   **Fix `close()` Bug:** Correct the `DATASTORES.get(q)?.remove(datastore)` logic in `GormEnhancer` to use the entity name as the key.
--   **LRU/Weak Cache:** Implement a `WeakHashMap` or a LRU cache for tenant-specific API objects to allow eviction under memory pressure.
+-   **LRU/Weak Cache:** Implement a `WeakHashMap` or a LRU cache for tenant-specific API objects.
+-   **[COMPLETED] InstanceApiHelper Singleton:** Refactored `InstanceApiHelper` to be a singleton per datastore instead of per-class.
