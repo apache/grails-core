@@ -48,19 +48,12 @@ import org.springframework.web.servlet.ViewResolver;
  */
 public class GrailsSiteMeshView extends SiteMeshView {
 
-    private final ContentProcessor contentProcessor;
-    private final ServletContext servletContext;
-    private final ViewResolver viewResolver;
-
     public GrailsSiteMeshView(View innerView,
                               ContentProcessor contentProcessor,
                               DecoratorSelector<SiteMeshContext> decoratorSelector,
                               ServletContext servletContext,
                               ViewResolver viewResolver) {
         super(innerView, contentProcessor, decoratorSelector, servletContext, viewResolver);
-        this.contentProcessor = contentProcessor;
-        this.servletContext = servletContext;
-        this.viewResolver = viewResolver;
     }
 
     @Override
@@ -85,8 +78,8 @@ public class GrailsSiteMeshView extends SiteMeshView {
                                                 String contentType,
                                                 ResponseMetaData metaData) {
         return new GrailsSiteMeshViewContext(
-                contentType, request, response, servletContext,
-                contentProcessor, metaData, false,
-                viewResolver, request.getLocale());
+                contentType, request, response, getServletContext(),
+                getContentProcessor(), metaData, false,
+                getViewResolver(), request.getLocale());
     }
 }
