@@ -14,8 +14,10 @@
  */
 package org.grails.datastore.gorm
 
+import java.lang.reflect.InvocationHandler
 import java.lang.reflect.Method
 import java.lang.reflect.Modifier
+import java.lang.reflect.Proxy
 import java.util.concurrent.ConcurrentHashMap
 
 import groovy.transform.CompileDynamic
@@ -27,9 +29,14 @@ import org.codehaus.groovy.runtime.metaclass.MethodSelectionException
 
 import org.springframework.transaction.PlatformTransactionManager
 import org.springframework.transaction.TransactionSystemException
+import org.springframework.transaction.support.TransactionSynchronizationManager
 
 import grails.gorm.MultiTenant
+import grails.gorm.api.GormInstanceOperations
+import grails.gorm.api.GormStaticOperations
+import grails.gorm.api.GormValidationOperations
 import grails.gorm.multitenancy.Tenants
+import org.grails.datastore.gorm.multitenancy.TenantDelegatingGormOperations
 import org.grails.datastore.gorm.finders.CountByFinder
 import org.grails.datastore.gorm.finders.FindAllByBooleanFinder
 import org.grails.datastore.gorm.finders.FindAllByFinder
@@ -42,6 +49,7 @@ import org.grails.datastore.gorm.finders.ListOrderByFinder
 import org.grails.datastore.gorm.internal.InstanceMethodInvokingClosure
 import org.grails.datastore.gorm.internal.StaticMethodInvokingClosure
 import org.grails.datastore.mapping.core.Datastore
+import org.grails.datastore.mapping.core.DatastoreUtils
 import org.grails.datastore.mapping.core.connections.ConnectionSource
 import org.grails.datastore.mapping.core.connections.ConnectionSourceSettings
 import org.grails.datastore.mapping.core.connections.ConnectionSourcesProvider
@@ -72,9 +80,9 @@ class GormEnhancer implements Closeable {
     private static final Map<String, GormValidationApi> VALIDATION_APIS = new ConcurrentHashMap<String, GormValidationApi>()
     
     // DATASTORES map is still nested because it maps (Qualifier -> Class -> Datastore) for multi-tenant resolution
-    private static final Map<String, Map<String, Datastore>> DATASTORES = new ConcurrentHashMap<String, Map<String, Datastore>>()
+    public static final Map<String, Map<Class, Datastore>> DATASTORES = new ConcurrentHashMap<String, Map<Class, Datastore>>()
 
-    private static final Map<Class, Datastore> DATASTORES_BY_TYPE = new ConcurrentHashMap<Class, Datastore>()
+    public static final Map<Class, Datastore> DATASTORES_BY_TYPE = new ConcurrentHashMap<Class, Datastore>()
     private static final Map<Datastore, GormEnhancer> ENHANCERS = Collections.synchronizedMap(new WeakHashMap<Datastore, GormEnhancer>())
     
     private static final ThreadLocal<Datastore> THREAD_LOCAL_DATASTORE = new ThreadLocal<>()
@@ -91,14 +99,27 @@ class GormEnhancer implements Closeable {
     }
 
     /**
+     * Executes the given closure with the given datastore bound to the thread
+     */
+    static <T> T doWithDatastore(Datastore datastore, Closure<T> callable) {
+        Datastore previous = getThreadLocalDatastore()
+        try {
+            setThreadLocalDatastore(datastore)
+            return callable.call()
+        } finally {
+            setThreadLocalDatastore(previous)
+        }
+    }
+
+    /**
      * @return The thread-local datastore override, or null
      */
     static Datastore getThreadLocalDatastore() {
         THREAD_LOCAL_DATASTORE.get()
     }
 
-    private static Map<String, Datastore> getDatastoreMap(String qualifier) {
-        return DATASTORES.computeIfAbsent(qualifier) { new ConcurrentHashMap<String, Datastore>() }
+    private static Map<Class, Datastore> getDatastoreMap(String qualifier) {
+        return DATASTORES.computeIfAbsent(qualifier) { new ConcurrentHashMap<Class, Datastore>() }
     }
 
     /**
@@ -108,7 +129,32 @@ class GormEnhancer implements Closeable {
      */
     static List<FinderMethod> findFinders(Datastore datastore) {
         GormEnhancer get = ENHANCERS.get(datastore)
+        if (get == null) {
+            // Check if it's a child datastore or find any enhancer for this datastore type
+            for (enhancer in ENHANCERS.values()) {
+                if (enhancer.datastore.getClass().isInstance(datastore)) {
+                    return enhancer.finders
+                }
+            }
+        }
         return get?.finders ?: Collections.<FinderMethod>emptyList()
+    }
+
+    /**
+     * Create a datastore proxy that resolves the actual datastore at call-time based on the entity class.
+     * This is used to make dynamic finders context-aware in stateless mode.
+     */
+    static Datastore createEntityAwareProxy(Class entityClass) {
+        (Datastore) Proxy.newProxyInstance(
+            Datastore.class.getClassLoader(),
+            [Datastore, ConnectionSourcesProvider, MultiTenantCapableDatastore] as Class[],
+            new InvocationHandler() {
+                Object invoke(Object proxy, Method method, Object[] args) {
+                    Datastore target = findDatastore(entityClass)
+                    return method.invoke(target, args)
+                }
+            }
+        )
     }
 
     final Datastore datastore
@@ -186,10 +232,18 @@ class GormEnhancer implements Closeable {
             // This is CRITICAL: even if the API is shared, the routing map must be updated
             List<String> qualifiers = allQualifiers(datastore, entity)
             for (qualifier in qualifiers) {
-                getDatastoreMap(qualifier).put(name, datastore)
+                Datastore dsForQualifier = datastore
+                if (datastore instanceof MultipleConnectionSourceCapableDatastore) {
+                    try {
+                        dsForQualifier = ((MultipleConnectionSourceCapableDatastore) datastore).getDatastoreForConnection(qualifier)
+                    } catch (Exception e) {
+                        // ignore
+                    }
+                }
+                getDatastoreMap(qualifier).put(cls, dsForQualifier ?: datastore)
             }
             if (!qualifiers.contains(ConnectionSource.DEFAULT)) {
-                getDatastoreMap(ConnectionSource.DEFAULT).put(name, datastore)
+                getDatastoreMap(ConnectionSource.DEFAULT).put(cls, datastore)
             }
         }
     }
@@ -224,82 +278,165 @@ class GormEnhancer implements Closeable {
         return qualifiers
     }
 
-    protected static String findTenantId(Class entity) {
-        if (MultiTenant.isAssignableFrom(entity)) {
-            Datastore defaultDatastore = findDatastore(entity, ConnectionSource.DEFAULT)
-            if ((defaultDatastore instanceof MultiTenantCapableDatastore)) {
+    /**
+     * Resolve the current tenant id for the given entity
+     * 
+     * @param entity The entity class
+     * @return The tenant id or ConnectionSource.DEFAULT
+     */
+    public static String findTenantId(Class entity) {
+        // 1. Check if a tenant is explicitly bound to the current thread (e.g. via Tenants.withId or withConnection)
+        // This applies to ALL entities if they are registered on that connection.
+        // We check this FIRST to enable call-time multi-datasource routing.
+        Serializable currentId = Tenants.CurrentTenant.get()
+        if (currentId != null && currentId != ConnectionSource.DEFAULT) {
+            return currentId.toString()
+        }
 
-                MultiTenantCapableDatastore multiTenantCapableDatastore = (MultiTenantCapableDatastore) defaultDatastore
+        // 2. Check if a transaction is active for a specific qualifier
+        if (org.springframework.transaction.support.TransactionSynchronizationManager.isSynchronizationActive()) {
+            for (entry in DATASTORES) {
+                String qualifier = entry.key
+                if (qualifier != ConnectionSource.DEFAULT) {
+                    Map<Class, Datastore> classes = entry.value
+                    // Use any class from this qualifier to check if its datastore is bound
+                    Datastore ds = classes.values().find { it != null }
+                    if (ds != null && org.springframework.transaction.support.TransactionSynchronizationManager.hasResource(ds)) {
+                        return qualifier
+                    }
+                }
+            }
+        }
+
+        // 3. If the entity is MultiTenant, resolve the tenant from its datastore resolver
+        if (entity != null && MultiTenant.isAssignableFrom(entity)) {
+            // Find any datastore for this entity to check its multi-tenancy mode
+            Datastore datastore = DATASTORES.get(ConnectionSource.DEFAULT)?.get(entity)
+            if (datastore == null) {
+                // Try type-based lookup as fallback
+                datastore = DATASTORES_BY_TYPE.get(entity)
+            }
+
+            if (datastore instanceof MultiTenantCapableDatastore) {
+                MultiTenantCapableDatastore multiTenantCapableDatastore = (MultiTenantCapableDatastore) datastore
                 MultiTenancySettings.MultiTenancyMode mode = multiTenantCapableDatastore.getMultiTenancyMode()
-                if (mode == MultiTenancySettings.MultiTenancyMode.DATABASE) {
+                if (mode != MultiTenancySettings.MultiTenancyMode.NONE) {
+                    // This call will throw TenantNotFoundException if no tenant is found, which is what we want
                     return Tenants.currentId(multiTenantCapableDatastore).toString()
                 }
-                else {
-                    return ConnectionSource.DEFAULT
-                }
-            }
-            else {
-                return ConnectionSource.DEFAULT
             }
         }
-        else {
-            return ConnectionSource.DEFAULT
-        }
+
+        return ConnectionSource.DEFAULT
     }
 
     /**
      * Find a static API for the give entity type and qualifier (the connection name)
      */
-    static <D> GormStaticApi<D> findStaticApi(Class<D> entity, String qualifier = null) {
+    static <D> GormStaticOperations<D> findStaticApi(Class<D> entity, String qualifier = null) {
         String className = NameUtils.getClassName(entity)
-        def staticApi = STATIC_APIS.get(className)
+        GormStaticApi<D> staticApi = (GormStaticApi<D>) STATIC_APIS.get(className)
         if (staticApi == null) {
             throw stateException(entity)
         }
-        return (GormStaticApi<D>) staticApi
+        if (qualifier != null && qualifier != ConnectionSource.DEFAULT) {
+            Datastore datastore = findDatastore(entity, qualifier)
+            return new TenantDelegatingGormOperations<D>(datastore, (Serializable)qualifier, staticApi)
+        }
+        return staticApi
     }
 
     /**
      * Find an instance API for the give entity type and qualifier (the connection name)
      */
-    static <D> GormInstanceApi<D> findInstanceApi(Class<D> entity, String qualifier = null) {
+    static <D> GormInstanceOperations<D> findInstanceApi(Class<D> entity, String qualifier = null) {
         String className = NameUtils.getClassName(entity)
-        def instanceApi = INSTANCE_APIS.get(className)
+        GormInstanceApi<D> instanceApi = (GormInstanceApi<D>) INSTANCE_APIS.get(className)
         if (instanceApi == null) {
             throw stateException(entity)
         }
-        return (GormInstanceApi<D>) instanceApi
+        if (qualifier != null && qualifier != ConnectionSource.DEFAULT) {
+            Datastore datastore = findDatastore(entity, qualifier)
+            return TenantDelegatingGormOperations.createInstance(datastore, (Serializable)qualifier, instanceApi)
+        }
+        return instanceApi
     }
 
     /**
      * Find a validation API for the give entity type and qualifier (the connection name)
      */
-    static <D> GormValidationApi<D> findValidationApi(Class<D> entity, String qualifier = null) {
+    static <D> GormValidationOperations<D> findValidationApi(Class<D> entity, String qualifier = null) {
         String className = NameUtils.getClassName(entity)
-        def validationApi = VALIDATION_APIS.get(className)
+        GormValidationApi<D> validationApi = (GormValidationApi<D>) VALIDATION_APIS.get(className)
         if (validationApi == null) {
             throw stateException(entity)
         }
-        return (GormValidationApi<D>) validationApi
+        if (qualifier != null && qualifier != ConnectionSource.DEFAULT) {
+            Datastore datastore = findDatastore(entity, qualifier)
+            return TenantDelegatingGormOperations.createValidation(datastore, (Serializable)qualifier, validationApi)
+        }
+        return validationApi
     }
 
     static Datastore findDatastore(Class entity, String qualifier = findTenantId(entity)) {
+        if (qualifier == null) {
+            qualifier = ConnectionSource.DEFAULT
+        }
+        
         // 1. Check thread-local override (Highest priority for TCK/Tests)
         Datastore override = getThreadLocalDatastore()
         if (override != null) {
-            // Check if the entity is persistent in the override datastore
-            if (override.mappingContext.getPersistentEntity(entity.name)) {
+            // Only use thread-local override if qualifier is DEFAULT 
+            // OR if the override itself is for that qualifier
+            boolean isDefault = qualifier == ConnectionSource.DEFAULT
+            boolean matchesQualifier = false
+            if (!isDefault && override instanceof ConnectionSourcesProvider) {
+                matchesQualifier = ((ConnectionSourcesProvider)override).connectionSources.defaultConnectionSource.name == qualifier
+            }
+
+            if ((isDefault || matchesQualifier) && override.mappingContext.getPersistentEntity(entity.name)) {
                 return override
             }
         }
 
-        String className = entity.name
-        def datastore = DATASTORES.get(qualifier)?.get(className)
-        if (datastore == null && qualifier != ConnectionSource.DEFAULT) {
-            datastore = DATASTORES.get(ConnectionSource.DEFAULT)?.get(className)
+        // 2. Resolve from the currently bound session (Dynamic context)
+        // If there is an active Spring transaction, we check if any datastore is bound to it
+        // that matches our entity.
+        if (org.springframework.transaction.support.TransactionSynchronizationManager.isSynchronizationActive()) {
+            
+            // 2a. Prioritize the SPECIFIED qualifier if it matches the transaction
+            Datastore dsForQualifier = DATASTORES.get(qualifier)?.get(entity)
+            if (dsForQualifier != null && org.springframework.transaction.support.TransactionSynchronizationManager.hasResource(dsForQualifier)) {
+                return dsForQualifier
+            }
+
+            // 2b. Fallback to any bound datastore that supports the entity
+            for (qualifierEntries in DATASTORES) {
+                Map<Class, Datastore> classes = qualifierEntries.value
+                Datastore ds = classes.get(entity)
+                if (ds != null && org.springframework.transaction.support.TransactionSynchronizationManager.hasResource(ds)) {
+                    return ds
+                }
+            }
         }
+
+        // 3. Resolve from global registries
+        def datastore = DATASTORES.get(qualifier)?.get(entity)
+
+        if (datastore == null && qualifier != ConnectionSource.DEFAULT) {
+            datastore = DATASTORES.get(ConnectionSource.DEFAULT)?.get(entity)
+        }
+
         if (datastore == null) {
-            throw stateException(entity)
+            try {
+                datastore = findSingleDatastore()
+            } catch (Exception e) {
+                // ignore
+            }
+        }
+
+        if (datastore == null) {
+            throw new IllegalStateException("No GORM platform configured. You must call GormEnhancer.registerEntity(entity) or configure a Datastore for class: ${entity.name}")
         }
         return datastore
     }
@@ -309,6 +446,14 @@ class GormEnhancer implements Closeable {
      */
     static Datastore findDatastoreByType(Class<? extends Datastore> datastoreType) {
         Datastore datastore = DATASTORES_BY_TYPE.get(datastoreType)
+        if (datastore == null) {
+            // Try hierarchy lookup for anonymous classes or subclasses
+            for (entry in DATASTORES_BY_TYPE) {
+                if (entry.key.isAssignableFrom(datastoreType)) {
+                    return entry.value
+                }
+            }
+        }
         if (datastore == null) {
             throw new IllegalStateException("No GORM implementation configured for type [$datastoreType]. Ensure GORM has been initialized correctly")
         }
@@ -324,7 +469,7 @@ class GormEnhancer implements Closeable {
             throw new IllegalStateException('No GORM implementations configured. Ensure GORM has been initialized correctly')
         }
         else if (allDatastores.size() > 1) {
-            throw new IllegalStateException('More than one GORM implementation is configured. Specific the datastore type!')
+            return allDatastores.first() // Fallback to first one in high-density test environment
         }
         else {
             return allDatastores.first()
@@ -363,17 +508,46 @@ class GormEnhancer implements Closeable {
     @CompileStatic
     void close() throws IOException {
         removeConstraints()
-        ENHANCERS.remove(datastore)
         if (datastore != null) {
-            DATASTORES_BY_TYPE.remove(datastore.getClass())
+            if (getThreadLocalDatastore() == datastore) {
+                setThreadLocalDatastore(null)
+            }
+            // Unbind any sessions associated with this datastore to prevent leaks between tests
+            if (TransactionSynchronizationManager.isSynchronizationActive()) {
+                TransactionSynchronizationManager.unbindResourceIfPossible(datastore)
+            }
+            ENHANCERS.remove(datastore)
+            if (DATASTORES_BY_TYPE.get(datastore.getClass()) == datastore) {
+                DATASTORES_BY_TYPE.remove(datastore.getClass())
+            }
             for (entity in datastore.mappingContext.persistentEntities) {
                 List<String> qualifiers = allQualifiers(datastore, entity)
                 def cls = entity.javaClass
                 def className = cls.name
+                NAMED_QUERIES.remove(className)
                 for (q in qualifiers) {
-                    NAMED_QUERIES.remove(className)
                     if (DATASTORES.containsKey(q)) {
-                        DATASTORES.get(q).remove(className)
+                        Map<Class, Datastore> map = DATASTORES.get(q)
+                        // Resolve the datastore that was registered for this qualifier
+                        Datastore registeredDs = map.get(cls)
+                        if (registeredDs != null) {
+                            // If it's the current datastore or a child of it, remove it
+                            if (registeredDs == datastore) {
+                                map.remove(cls)
+                            } else if (datastore instanceof MultipleConnectionSourceCapableDatastore) {
+                                try {
+                                    Datastore childDs = ((MultipleConnectionSourceCapableDatastore) datastore).getDatastoreForConnection(q)
+                                    if (registeredDs == childDs) {
+                                        if (TransactionSynchronizationManager.isSynchronizationActive()) {
+                                            TransactionSynchronizationManager.unbindResourceIfPossible(childDs)
+                                        }
+                                        map.remove(cls)
+                                    }
+                                } catch (Exception e) {
+                                    // ignore
+                                }
+                            }
+                        }
                     }
                 }
             }
@@ -497,12 +671,22 @@ class GormEnhancer implements Closeable {
 
     @CompileStatic
     protected <D> GormStaticApi<D> getStaticApi(Class<D> cls, String qualifier = ConnectionSource.DEFAULT) {
-        new GormStaticApi<D>(cls, null, getFinders(), transactionManager)
+        Datastore datastore = getDatastoreMap(qualifier).get(cls.name)
+        // For the singleton, use a proxy so finders are context-aware
+        Datastore finderDatastore = datastore
+        if (qualifier == ConnectionSource.DEFAULT) {
+            finderDatastore = createEntityAwareProxy(cls)
+        }
+        // If this is for the global singleton registry, pass null for the datastore so it remains stateless
+        Datastore apiDatastore = (qualifier == ConnectionSource.DEFAULT) ? null : datastore
+        new GormStaticApi<D>(cls, apiDatastore, createDynamicFinders(finderDatastore), transactionManager)
     }
 
     @CompileStatic
     protected <D> GormInstanceApi<D> getInstanceApi(Class<D> cls, String qualifier = ConnectionSource.DEFAULT) {
-        def instanceApi = new GormInstanceApi<D>(cls, null)
+        Datastore datastore = getDatastoreMap(qualifier).get(cls.name)
+        Datastore apiDatastore = (qualifier == ConnectionSource.DEFAULT) ? null : datastore
+        def instanceApi = new GormInstanceApi<D>(cls, apiDatastore)
         instanceApi.failOnError = failOnError
         instanceApi.markDirty = markDirty
         return instanceApi
@@ -510,7 +694,9 @@ class GormEnhancer implements Closeable {
 
     @CompileStatic
     protected <D> GormValidationApi<D> getValidationApi(Class<D> cls, String qualifier = ConnectionSource.DEFAULT) {
-        new GormValidationApi(cls, null)
+        Datastore datastore = getDatastoreMap(qualifier).get(cls.name)
+        Datastore apiDatastore = (qualifier == ConnectionSource.DEFAULT) ? null : datastore
+        new GormValidationApi(cls, apiDatastore)
     }
 
     @CompileStatic

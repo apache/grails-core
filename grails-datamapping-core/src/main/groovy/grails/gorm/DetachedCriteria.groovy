@@ -19,6 +19,7 @@
 
 package grails.gorm
 
+import grails.gorm.api.GormStaticOperations
 import groovy.transform.CompileStatic
 import groovy.util.logging.Slf4j
 
@@ -30,6 +31,7 @@ import org.grails.datastore.gorm.finders.DynamicFinder
 import org.grails.datastore.gorm.query.GormOperations
 import org.grails.datastore.gorm.query.criteria.AbstractDetachedCriteria
 import org.grails.datastore.mapping.core.Session
+import org.grails.datastore.mapping.core.connections.ConnectionSource
 import org.grails.datastore.mapping.query.Query
 import org.grails.datastore.mapping.query.api.ProjectionList
 import org.grails.datastore.mapping.query.api.QueryAliasAwareSession
@@ -740,8 +742,8 @@ class DetachedCriteria<T> extends AbstractDetachedCriteria<T> implements GormOpe
     }
 
     private withPopulatedQuery(Map args, Closure additionalCriteria, Closure callable)  {
-
-        GormStaticApi staticApi = persistentEntity.isMultiTenant() ? GormEnhancer.findStaticApi(targetClass) : GormEnhancer.findStaticApi(targetClass, connectionName)
+        String qualifier = connectionName != null ? connectionName : ConnectionSource.DEFAULT
+        GormStaticOperations<T> staticApi = (qualifier == ConnectionSource.DEFAULT && getPersistentEntity().isMultiTenant()) ? GormEnhancer.findStaticApi(targetClass) : GormEnhancer.findStaticApi(targetClass, qualifier)
         staticApi.withDatastoreSession { Session session ->
             applyLazyCriteria()
             Query query

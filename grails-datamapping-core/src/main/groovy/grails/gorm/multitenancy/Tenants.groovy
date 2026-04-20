@@ -342,7 +342,7 @@ class Tenants {
     }
 
     @CompileStatic
-    protected static class CurrentTenant  {
+    public static class CurrentTenant  {
 
         private static final ThreadLocal<Serializable> currentTenantThreadLocal = new ThreadLocal<>()
 

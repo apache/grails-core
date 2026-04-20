@@ -137,4 +137,38 @@ interface GormInstanceOperations<D> {
      * Deletes an instance from the datastore
      */
     void delete(D instance, Map params)
+
+    /**
+     * Checks whether a field is dirty
+     *
+     * @param instance The instance
+     * @param fieldName The name of the field
+     *
+     * @return true if the field is dirty
+     */
+    boolean isDirty(D instance, String fieldName)
+
+    /**
+     * Checks whether an entity is dirty
+     *
+     * @param instance The instance
+     * @return true if it is dirty
+     */
+    boolean isDirty(D instance)
+
+    /**
+     * Obtains a list of property names that are dirty
+     *
+     * @param instance The instance
+     * @return A list of property names that are dirty
+     */
+    List getDirtyPropertyNames(D instance)
+
+    /**
+     * Gets the original persisted value of a field.
+     *
+     * @param fieldName The field name
+     * @return The original persisted value
+     */
+    Object getPersistentValue(D instance, String fieldName)
 }

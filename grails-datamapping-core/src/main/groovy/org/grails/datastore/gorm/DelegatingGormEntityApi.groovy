@@ -19,6 +19,7 @@
 
 package org.grails.datastore.gorm
 
+import grails.gorm.api.GormInstanceOperations
 import groovy.transform.CompileStatic
 
 /**
@@ -30,10 +31,10 @@ import groovy.transform.CompileStatic
 @CompileStatic
 class DelegatingGormEntityApi<D> implements GormEntityApi<D> {
 
-    final GormInstanceApi<D> instanceApi
+    final GormInstanceOperations<D> instanceApi
     final D target
 
-    DelegatingGormEntityApi(GormInstanceApi<D> instanceApi, D target) {
+    DelegatingGormEntityApi(GormInstanceOperations<D> instanceApi, D target) {
         this.instanceApi = instanceApi
         this.target = target
     }

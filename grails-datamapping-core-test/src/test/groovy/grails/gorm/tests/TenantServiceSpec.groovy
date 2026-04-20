@@ -45,12 +45,12 @@ class TenantServiceSpec extends Specification {
                     (Settings.SETTING_MULTI_TENANT_RESOLVER): new SystemPropertyTenantResolver()
             ),
             [ConnectionSource.DEFAULT, 'two'],
-            Team
+            MultiTenantTeam
     )
 
     void "test multi tenancy with in-memory datastore"() {
         when:
-        Team.count()
+        MultiTenantTeam.count()
 
         then:
         thrown TenantNotFoundException
@@ -58,11 +58,11 @@ class TenantServiceSpec extends Specification {
         when:
         TenantService tenantService = datastore.getService(TenantService)
         def twoCount = tenantService.withId("two") {
-            new Team(name: "Arsenal").save(flush:true)
-            Team.count()
+            new MultiTenantTeam(name: "Arsenal").save(flush:true)
+            MultiTenantTeam.count()
         }
-        def defaultCount = tenantService.withId(ConnectionSource.DEFAULT) { Team.count() }
-        Team.count()
+        def defaultCount = tenantService.withId(ConnectionSource.DEFAULT) { MultiTenantTeam.count() }
+        MultiTenantTeam.count()
 
         then:
         twoCount == 1
@@ -71,36 +71,36 @@ class TenantServiceSpec extends Specification {
 
         when:"The current tenant is set"
         System.setProperty(SystemPropertyTenantResolver.PROPERTY_NAME, "two")
-        new Team(name: "Chelsea").save(flush:true)
-        twoCount == Team.count()
+        new MultiTenantTeam(name: "Chelsea").save(flush:true)
+        twoCount == MultiTenantTeam.count()
         defaultCount = tenantService.withoutId {
-            Team.count()
+            MultiTenantTeam.count()
         }
 
         then:
         tenantService.currentId() == "two"
-        Team.findByName("Chelsea") != null
-        Team.findByName("Arsenal") != null
+        MultiTenantTeam.findByName("Chelsea") != null
+        MultiTenantTeam.findByName("Arsenal") != null
         defaultCount == 0
-        Team.count() == 2
+        MultiTenantTeam.count() == 2
 
 
         when:"The current tenant is set"
         System.setProperty(SystemPropertyTenantResolver.PROPERTY_NAME, ConnectionSource.DEFAULT)
-        new Team(name: "Manchester United").save(flush:true)
+        new MultiTenantTeam(name: "Manchester United").save(flush:true)
 
 
         then:
         tenantService.currentId() == ConnectionSource.DEFAULT
-        Team.findByName("Chelsea") == null
-        Team.findByName("Arsenal") == null
-        Team.count() == 1
+        MultiTenantTeam.findByName("Chelsea") == null
+        MultiTenantTeam.findByName("Arsenal") == null
+        MultiTenantTeam.count() == 1
 
     }
 }
 
 @Entity
-class Team implements MultiTenant<Team> {
+class MultiTenantTeam implements MultiTenant<MultiTenantTeam> {
     String name
 }
 

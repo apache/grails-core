@@ -34,6 +34,9 @@ import org.springframework.transaction.support.TransactionSynchronizationManager
 
 import org.grails.datastore.mapping.cache.TPCacheAdapterRepository;
 import org.grails.datastore.mapping.config.Property;
+import org.grails.datastore.mapping.core.connections.ConnectionSource;
+import org.grails.datastore.mapping.core.connections.ConnectionSourcesProvider;
+import org.grails.datastore.mapping.core.connections.MultipleConnectionSourceCapableDatastore;
 import org.grails.datastore.mapping.model.MappingContext;
 import org.grails.datastore.mapping.model.PersistentEntity;
 import org.grails.datastore.mapping.model.PersistentProperty;
@@ -125,6 +128,27 @@ public abstract class AbstractDatastore implements Datastore, StatelessDatastore
     }
 
     public Session connect() {
+        // If we are a parent datastore and a transaction is active for a connection, 
+        // return a session from the child datastore.
+        if (this instanceof MultipleConnectionSourceCapableDatastore && org.springframework.transaction.support.TransactionSynchronizationManager.isSynchronizationActive()) {
+            MultipleConnectionSourceCapableDatastore multiDs = (MultipleConnectionSourceCapableDatastore) this;
+            if (this instanceof ConnectionSourcesProvider) {
+                Iterable<ConnectionSource> all = ((ConnectionSourcesProvider)this).getConnectionSources().getAllConnectionSources();
+                for (ConnectionSource cs : all) {
+                    String connectionName = cs.getName();
+                    if (!ConnectionSource.DEFAULT.equals(connectionName)) {
+                        try {
+                            Datastore childDs = multiDs.getDatastoreForConnection(connectionName);
+                            if (childDs != null && childDs != this && org.springframework.transaction.support.TransactionSynchronizationManager.hasResource(childDs)) {
+                                return childDs.connect();
+                            }
+                        } catch (Exception e) {
+                            // ignore
+                        }
+                    }
+                }
+            }
+        }
         return connect(connectionDetails);
     }
 
@@ -167,7 +191,34 @@ public abstract class AbstractDatastore implements Datastore, StatelessDatastore
     }
 
     public Session getCurrentSession() throws ConnectionNotFoundException {
-        return DatastoreUtils.doGetSession(this, false);
+        Session session = DatastoreUtils.doGetSession(this, false);
+        if (session != null) {
+            return session;
+        }
+
+        // If we are a parent datastore and a transaction is active for a connection, 
+        // find if any of our child datastores have a bound session.
+        if (this instanceof MultipleConnectionSourceCapableDatastore && org.springframework.transaction.support.TransactionSynchronizationManager.isSynchronizationActive()) {
+            MultipleConnectionSourceCapableDatastore multiDs = (MultipleConnectionSourceCapableDatastore) this;
+            if (this instanceof ConnectionSourcesProvider) {
+                Iterable<ConnectionSource> all = ((ConnectionSourcesProvider)this).getConnectionSources().getAllConnectionSources();
+                for (ConnectionSource cs : all) {
+                    String connectionName = cs.getName();
+                    if (!ConnectionSource.DEFAULT.equals(connectionName)) {
+                        try {
+                            Datastore childDs = multiDs.getDatastoreForConnection(connectionName);
+                            session = DatastoreUtils.doGetSession(childDs, false);
+                            if (session != null) {
+                                return session;
+                            }
+                        } catch (Exception e) {
+                            // ignore
+                        }
+                    }
+                }
+            }
+        }
+        return null;
     }
 
     public boolean hasCurrentSession() {

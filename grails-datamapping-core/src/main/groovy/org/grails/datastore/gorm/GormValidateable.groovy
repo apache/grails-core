@@ -18,6 +18,7 @@
  */
 package org.grails.datastore.gorm
 
+import grails.gorm.api.GormValidationOperations
 import groovy.transform.CompileStatic
 import groovy.transform.Generated
 
@@ -137,7 +138,7 @@ trait GormValidateable {
      * Used to obtain the {@link GormValidationApi} instance. This method is used internally by the framework and SHOULD NOT be called by the developer
      */
     @Generated
-    private GormValidationApi currentGormValidationApi() {
+    private GormValidationOperations currentGormValidationApi() {
         GormEnhancer.findValidationApi(getClass())
     }
 }

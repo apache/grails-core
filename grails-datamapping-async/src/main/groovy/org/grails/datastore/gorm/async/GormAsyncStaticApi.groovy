@@ -41,7 +41,7 @@ class GormAsyncStaticApi<D> implements PromiseDecoratorProvider {
         return { args -> staticApi.withNewSession { callable.call(*args) } }
     } as PromiseDecorator ]
 
-    GormAsyncStaticApi(GormStaticApi<D> staticApi) {
+    GormAsyncStaticApi(GormStaticOperations<D> staticApi) {
         this.staticApi = staticApi
     }
 

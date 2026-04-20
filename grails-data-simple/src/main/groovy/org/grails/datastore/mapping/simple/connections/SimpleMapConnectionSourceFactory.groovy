@@ -40,9 +40,24 @@ import org.grails.datastore.mapping.core.connections.DefaultConnectionSource
 @CompileStatic
 class SimpleMapConnectionSourceFactory extends AbstractConnectionSourceFactory<Map<String,Map>, ConnectionSourceSettings> {
 
+    private static final Map<String, Map<String, Map>> GLOBAL_MAPS = new ConcurrentHashMap<>()
+
     @Override
     ConnectionSource<Map<String, Map>, ConnectionSourceSettings> create(String name, ConnectionSourceSettings settings) {
-        return new DefaultConnectionSource<Map<String,Map>, ConnectionSourceSettings>(name, new ConcurrentHashMap<String, Map>(), settings)
+        Map<String, Map> data = GLOBAL_MAPS.get(name)
+        if (data == null) {
+            data = new ConcurrentHashMap<String, Map>()
+            GLOBAL_MAPS.put(name, data)
+        }
+        System.out.println("Factory: Created connection [${name}] with map [${System.identityHashCode(data)}]")
+        return new DefaultConnectionSource<Map<String,Map>, ConnectionSourceSettings>(name, data, settings)
+    }
+    
+    /**
+     * Clear all global maps. Used for testing.
+     */
+    static void clearSettings() {
+        GLOBAL_MAPS.clear()
     }
     @Override
     Serializable getConnectionSourcesConfigurationKey() {

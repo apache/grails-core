@@ -27,7 +27,7 @@ import org.springframework.context.ApplicationEvent
 
 import org.grails.datastore.gorm.GormEnhancer
 import org.grails.datastore.gorm.GormValidateable
-import org.grails.datastore.gorm.GormValidationApi
+import grails.gorm.api.GormValidationOperations
 import org.grails.datastore.mapping.core.Datastore
 import org.grails.datastore.mapping.core.Session
 import org.grails.datastore.mapping.core.connections.ConnectionSourcesProvider
@@ -70,7 +70,7 @@ class ValidationEventListener extends AbstractPersistenceEventListener {
                     boolean hasErrors = false
                     if (source instanceof ConnectionSourcesProvider) {
                         def connectionSourceName = ((ConnectionSourcesProvider) source).connectionSources.defaultConnectionSource.name
-                        GormValidationApi validationApi = GormEnhancer.findValidationApi((Class<Object>) entityObject.getClass(), connectionSourceName)
+                        GormValidationOperations validationApi = GormEnhancer.findValidationApi((Class<Object>) entityObject.getClass(), connectionSourceName)
                         hasErrors = !validationApi.validate((Object) entityObject)
                     }
                     else {

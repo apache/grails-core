@@ -23,6 +23,7 @@ import grails.gorm.DetachedCriteria
 import grails.gorm.MultiTenant
 import grails.gorm.PagedResultList
 import grails.gorm.api.GormAllOperations
+import grails.gorm.api.GormStaticOperations
 import grails.gorm.multitenancy.Tenants
 import grails.gorm.transactions.GrailsTransactionTemplate
 import groovy.transform.CompileDynamic
@@ -68,16 +69,22 @@ class GormStaticApi<D> extends AbstractGormApi<D> implements GormAllOperations<D
 
     protected final PlatformTransactionManager transactionManager
 
+    protected final List<FinderMethod> gormDynamicFinders
+
     GormStaticApi(Class<D> persistentClass, Datastore datastore, List<FinderMethod> finders) {
         this(persistentClass, datastore, finders, null)
     }
 
     GormStaticApi(Class<D> persistentClass, Datastore datastore, List<FinderMethod> finders, PlatformTransactionManager transactionManager) {
-        super(persistentClass, datastore)
+        super(persistentClass, (Datastore)null)
         this.transactionManager = transactionManager
+        this.gormDynamicFinders = finders
     }
 
     List<FinderMethod> getGormDynamicFinders() {
+        if (gormDynamicFinders != null) {
+            return gormDynamicFinders
+        }
         GormEnhancer.findFinders(getDatastore())
     }
 
@@ -135,11 +142,15 @@ class GormStaticApi<D> extends AbstractGormApi<D> implements GormAllOperations<D
             FinderMethod method = getGormDynamicFinders().find { FinderMethod f -> f.isMethodMatch(name) }
             if (method != null) {
                 // Return a variadic closure that invokes the finder on the current persistent class
+                // ensuring the current datastore context is preserved
                 return { Object... args ->
-                    if (args == null) {
-                        return method.invoke(persistentClass, name, [null] as Object[])
+                    Datastore currentDs = getDatastore()
+                    GormEnhancer.doWithDatastore(currentDs) {
+                        if (args == null) {
+                            return method.invoke(persistentClass, name, [null] as Object[])
+                        }
+                        return method.invoke(persistentClass, name, args)
                     }
-                    return method.invoke(persistentClass, name, args)
                 }
             }
             // 3. Otherwise, return the static API for the tenant specified by the property name
@@ -538,6 +549,26 @@ class GormStaticApi<D> extends AbstractGormApi<D> implements GormAllOperations<D
     void delete(D instance, Map params) {
         GormEnhancer.findInstanceApi(persistentClass, getDefaultQualifier()).delete(instance, params)
     }
+
+    @Override
+    boolean isDirty(D instance, String fieldName) {
+        GormEnhancer.findInstanceApi(persistentClass, getDefaultQualifier()).isDirty(instance, fieldName)
+    }
+
+    @Override
+    boolean isDirty(D instance) {
+        GormEnhancer.findInstanceApi(persistentClass, getDefaultQualifier()).isDirty(instance)
+    }
+
+    @Override
+    List getDirtyPropertyNames(D instance) {
+        GormEnhancer.findInstanceApi(persistentClass, getDefaultQualifier()).getDirtyPropertyNames(instance)
+    }
+
+    @Override
+    Object getPersistentValue(D instance, String fieldName) {
+        GormEnhancer.findInstanceApi(persistentClass, getDefaultQualifier()).getPersistentValue(instance, fieldName)
+    }
     /**
      * Counts the number of persisted entities
      * @return The number of persisted entities
@@ -871,7 +902,7 @@ class GormStaticApi<D> extends AbstractGormApi<D> implements GormAllOperations<D
     }
 
     GormAllOperations<D> withConnection(String connectionName) {
-        return new TenantDelegatingGormOperations<D>(getDatastore(), connectionName, this)
+        return new TenantDelegatingGormOperations<D>(getDatastore(), connectionName, (GormStaticOperations<D>)this)
     }
 
     def <T> T withTenant(Serializable tenantId, Closure<T> callable) {
@@ -903,7 +934,7 @@ class GormStaticApi<D> extends AbstractGormApi<D> implements GormAllOperations<D
     }
 
     GormAllOperations<D> withTenant(Serializable tenantId) {
-        return new TenantDelegatingGormOperations<D>(getDatastore(), tenantId, this)
+        return new TenantDelegatingGormOperations<D>(getDatastore(), tenantId, (GormStaticOperations<D>)this)
     }
     /**
      * Executes the closure within the context of a new transaction

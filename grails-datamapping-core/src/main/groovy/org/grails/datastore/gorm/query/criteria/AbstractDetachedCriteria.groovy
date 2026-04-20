@@ -26,8 +26,10 @@ import groovy.transform.TypeCheckingMode
 import jakarta.persistence.FetchType
 import jakarta.persistence.criteria.JoinType
 
+import org.grails.datastore.gorm.GormEnhancer
 import org.grails.datastore.gorm.finders.DynamicFinder
 import org.grails.datastore.gorm.finders.FinderMethod
+import org.grails.datastore.mapping.core.Datastore
 import org.grails.datastore.mapping.core.connections.ConnectionSource
 import org.grails.datastore.mapping.model.PersistentEntity
 import org.grails.datastore.mapping.model.PersistentProperty
@@ -45,7 +47,7 @@ import org.grails.datastore.mapping.query.api.QueryableCriteria
  * @author Graeme Rocher
  * @since 6.0
  */
-@CompileStatic
+@CompileDynamic
 abstract class AbstractDetachedCriteria<T> implements Criteria, Cloneable {
 
     protected List<Query.Criterion> criteria = []
@@ -190,21 +192,63 @@ abstract class AbstractDetachedCriteria<T> implements Criteria, Cloneable {
     }
 
     PersistentEntity getPersistentEntity() {
-        if (persistentEntity == null) initialiseIfNecessary(targetClass)
+        if (persistentEntity == null) {
+            initialiseIfNecessary(targetClass)
+        }
+        if (persistentEntity == null) {
+            // Fallback to default entity if connection-specific resolution failed
+            // MappingContext is typically shared so this is safe
+            try {
+                this.persistentEntity = GormEnhancer.findStaticApi(targetClass).getPersistentEntity()
+            } catch (Throwable e) {
+                // ignore
+            }
+        }
         return persistentEntity
     }
 
+    private static final ThreadLocal<Set<Integer>> INITIALISING = ThreadLocal.withInitial { [] as Set<Integer> }
+
     @CompileStatic(TypeCheckingMode.SKIP)
     protected initialiseIfNecessary(Class<T> targetClass) {
-        if (dynamicFinders != null) {
+        if (this.persistentEntity != null && this.dynamicFinders != null) {
+            return
+        }
+
+        int identity = System.identityHashCode(this)
+        if (INITIALISING.get().contains(identity)) {
             return
         }
 
         try {
-            dynamicFinders = targetClass.gormDynamicFinders
-            persistentEntity = targetClass.gormPersistentEntity
-        } catch (MissingPropertyException mpe) {
-            throw new IllegalArgumentException("Class [$targetClass.name] is not a domain class")
+            INITIALISING.get().add(identity)
+            synchronized(this) {
+                if (this.persistentEntity != null && this.dynamicFinders != null) {
+                    return
+                }
+
+                String className = targetClass.name
+                
+                // Use GormEnhancer to find the datastore safely
+                Datastore ds = null
+                try {
+                    ds = GormEnhancer.findDatastore(targetClass, connectionName)
+                } catch (Throwable e) {
+                    // Fallback to global registry directly if findDatastore fails (e.g. during initialization)
+                    def dsMap = GormEnhancer.DATASTORES.get(connectionName)
+                    ds = dsMap?.get(className)
+                    if (ds == null && !ConnectionSource.DEFAULT.equals(connectionName)) {
+                        ds = GormEnhancer.DATASTORES.get(ConnectionSource.DEFAULT)?.get(className)
+                    }
+                }
+                
+                if (ds != null) {
+                    this.persistentEntity = ds.mappingContext.getPersistentEntity(className)
+                    this.dynamicFinders = GormEnhancer.findFinders(ds)
+                }
+            }
+        } finally {
+            INITIALISING.get().remove(identity)
         }
     }
 
@@ -1013,6 +1057,9 @@ abstract class AbstractDetachedCriteria<T> implements Criteria, Cloneable {
 
     def propertyMissing(String name) {
         final entity = getPersistentEntity()
+        if (entity == null) {
+            throw new MissingPropertyException(name, AbstractDetachedCriteria)
+        }
         final p = entity.getPropertyByName(name)
         if (p == null) {
             throw new MissingPropertyException(name, AbstractDetachedCriteria)

@@ -87,6 +87,9 @@ dependencies {
     compileOnly 'org.apache.groovy:groovy', {
         // comp: CompileStatic
     }
+
+    testImplementation 'org.junit.jupiter:junit-jupiter-api'
+    testImplementation 'org.spockframework:spock-core'
 }
 
 apply {

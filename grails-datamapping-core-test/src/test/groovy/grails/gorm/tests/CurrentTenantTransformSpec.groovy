@@ -18,6 +18,7 @@
  */
 package grails.gorm.tests
 
+import grails.gorm.annotation.Entity
 import grails.gorm.multitenancy.CurrentTenant
 import grails.gorm.multitenancy.Tenant
 import grails.gorm.multitenancy.Tenants
@@ -49,8 +50,8 @@ class CurrentTenantTransformSpec  extends Specification {
                     (Settings.SETTING_MULTI_TENANT_RESOLVER): new SystemPropertyTenantResolver()
             ),
             [ConnectionSource.DEFAULT, 'one','two'],
-            Team,
-            Player
+            CurrentTenantTeam,
+            CurrentTenantPlayer
     )
 
     void "Test parsing of @WithoutTenant"() {
@@ -105,7 +106,7 @@ class TestService {
 
 return TestService
 ''')
-        TeamService teamService = new TeamService()
+        CurrentTenantTeamService teamService = new CurrentTenantTeamService()
         teamService.setTargetDatastore(Mock(Datastore))
 
         expect:
@@ -117,7 +118,7 @@ return TestService
 
     void "Test @CurrentTenant with service"() {
         given:"A service with @CurrentTenant at the class level is used"
-        TeamService teamService = new TeamService()
+        CurrentTenantTeamService teamService = new CurrentTenantTeamService()
         def results
 
         when:"a method is invoked"
@@ -189,29 +190,39 @@ class PlayService {
 }
 
 @CurrentTenant
-class TeamService {
+class CurrentTenantTeamService {
 
     @WithoutTenant
     int countPlayers() {
-        Player.count()
+        CurrentTenantPlayer.count()
     }
 
     @Tenant({"two"})
-    List<Team> allTwoTeams() {
-        Team.list()
+    List<CurrentTenantTeam> allTwoTeams() {
+        CurrentTenantTeam.list()
     }
 
-    List<Team> listTeams() {
-        Team.list(max:10)
+    List<CurrentTenantTeam> listTeams() {
+        CurrentTenantTeam.list(max:10)
     }
 
     @Transactional
     void addTeam(String name) {
-        new Team(name:name).save(flush:true)
+        new CurrentTenantTeam(name:name).save(flush:true)
     }
 
     @Transactional
     void addTeamCheckTransaction(String name) {
         assert transactionStatus.transaction.sessionHolder.sessions.first().datastore.connectionSources.defaultConnectionSource.name == Tenants.currentId()
     }
+}
+
+@Entity
+class CurrentTenantTeam implements grails.gorm.MultiTenant<CurrentTenantTeam> {
+    String name
+}
+
+@Entity
+class CurrentTenantPlayer implements grails.gorm.MultiTenant<CurrentTenantPlayer> {
+    String name
 }

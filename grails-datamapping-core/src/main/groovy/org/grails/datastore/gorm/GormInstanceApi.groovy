@@ -23,6 +23,7 @@ import groovy.transform.CompileStatic
 import org.codehaus.groovy.runtime.InvokerHelper
 
 import grails.gorm.api.GormInstanceOperations
+import grails.gorm.api.GormValidationOperations
 import org.grails.datastore.mapping.core.Datastore
 import org.grails.datastore.mapping.core.Session
 import org.grails.datastore.mapping.core.SessionCallback
@@ -50,7 +51,7 @@ class GormInstanceApi<D> extends AbstractGormApi<D> implements GormInstanceOpera
     boolean markDirty = true
 
     GormInstanceApi(Class<D> persistentClass, Datastore datastore) {
-        super(persistentClass, datastore)
+        super(persistentClass, (Datastore)null)
         validationException = ValidationException.VALIDATION_EXCEPTION_TYPE
     }
 
@@ -348,7 +349,7 @@ class GormInstanceApi<D> extends AbstractGormApi<D> implements GormInstanceOpera
 
                     String connectionSourceName = connectionSources.defaultConnectionSource.name
                     if (connectionSourceName != ConnectionSource.DEFAULT) {
-                        GormValidationApi<D> validationApi = GormEnhancer.findValidationApi((Class<D>) instance.getClass(), connectionSourceName)
+                        GormValidationOperations<D> validationApi = GormEnhancer.findValidationApi((Class<D>) instance.getClass(), connectionSourceName)
                         hasErrors = !validationApi.validate((D) instance, params)
                     }
                     else {

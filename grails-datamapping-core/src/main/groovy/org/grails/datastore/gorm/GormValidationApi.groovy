@@ -29,6 +29,7 @@ import org.springframework.validation.ObjectError
 import org.springframework.validation.Validator
 
 import grails.gorm.validation.CascadingValidator
+import grails.gorm.api.GormValidationOperations
 import org.grails.datastore.gorm.support.BeforeValidateHelper
 import org.grails.datastore.gorm.validation.ValidatorProvider
 import org.grails.datastore.mapping.core.Datastore
@@ -48,7 +49,7 @@ import org.grails.datastore.mapping.validation.ValidationErrors
  * @since 1.0
  */
 @CompileStatic
-class GormValidationApi<D> extends AbstractGormApi<D> {
+class GormValidationApi<D> extends AbstractGormApi<D> implements GormValidationOperations<D> {
 
     public static final String ARGUMENT_DEEP_VALIDATE = 'deepValidate'
 
@@ -56,12 +57,12 @@ class GormValidationApi<D> extends AbstractGormApi<D> {
     BeforeValidateHelper beforeValidateHelper
 
     GormValidationApi(Class<D> persistentClass, Datastore datastore) {
-        super(persistentClass, datastore)
+        super(persistentClass, (Datastore)null)
         beforeValidateHelper = new BeforeValidateHelper()
     }
 
     GormValidationApi(Class<D> persistentClass, MappingContext mappingContext, ApplicationEventPublisher eventPublisher) {
-        super(persistentClass, mappingContext)
+        super(persistentClass, (MappingContext)null)
         beforeValidateHelper = new BeforeValidateHelper()
     }
 
