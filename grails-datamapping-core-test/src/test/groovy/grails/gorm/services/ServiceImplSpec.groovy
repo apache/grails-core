@@ -40,7 +40,7 @@ import spock.lang.Specification
 class ServiceImplSpec extends Specification {
 
     @AutoCleanup SimpleMapDatastore datastore = new SimpleMapDatastore(
-            Product
+            Product, Attribute
     )
 
     def setup() {

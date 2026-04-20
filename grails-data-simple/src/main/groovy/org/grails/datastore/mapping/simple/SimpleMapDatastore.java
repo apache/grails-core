@@ -242,19 +242,17 @@ public class SimpleMapDatastore extends AbstractDatastore implements Closeable, 
             @Override
             protected <D> GormStaticApi<D> getStaticApi(Class<D> cls, String qualifier) {
                 SimpleMapDatastore datastore = getDatastoreForQualifier(cls, qualifier);
-                return new GormStaticApi<>(cls, datastore, createDynamicFinders(datastore), datastore.getTransactionManager());
+                return new GormStaticApi<>(cls, (Datastore)null, createDynamicFinders(datastore), datastore.getTransactionManager());
             }
 
             @Override
             protected <D> GormValidationApi<D> getValidationApi(Class<D> cls, String qualifier) {
-                SimpleMapDatastore datastore = getDatastoreForQualifier(cls, qualifier);
-                return new GormValidationApi<>(cls, datastore);
+                return new GormValidationApi<>(cls, (Datastore)null);
             }
 
             @Override
             protected <D> GormInstanceApi<D> getInstanceApi(Class<D> cls, String qualifier) {
-                SimpleMapDatastore datastore = getDatastoreForQualifier(cls, qualifier);
-                GormInstanceApi<D> instanceApi = new GormInstanceApi<>(cls, datastore);
+                GormInstanceApi<D> instanceApi = new GormInstanceApi<>(cls, (Datastore)null);
                 instanceApi.setFailOnError(failOnError);
                 return instanceApi;
             }
@@ -366,6 +364,9 @@ public class SimpleMapDatastore extends AbstractDatastore implements Closeable, 
 
     @Override
     public void close() throws IOException {
+        if (GormEnhancer.getThreadLocalDatastore() == this) {
+            GormEnhancer.setThreadLocalDatastore(null);
+        }
         try {
             destroy();
         } catch (Exception e) {
@@ -396,5 +397,6 @@ public class SimpleMapDatastore extends AbstractDatastore implements Closeable, 
         for (PersistentEntity persistentEntity : mappingContext.getPersistentEntities()) {
             gormEnhancer.registerEntity(persistentEntity);
         }
+        GormEnhancer.setThreadLocalDatastore(this);
     }
 }

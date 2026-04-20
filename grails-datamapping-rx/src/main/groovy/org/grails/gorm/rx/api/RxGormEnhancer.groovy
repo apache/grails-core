@@ -41,16 +41,11 @@ import java.util.concurrent.ConcurrentHashMap
 @Slf4j
 class RxGormEnhancer {
 
-    private static final Map<String, Map<String,RxGormStaticApi>> STATIC_APIS = new ConcurrentHashMap<String, Map<String,RxGormStaticApi>>().withDefault { String key ->
-        return new ConcurrentHashMap() as Map<String, RxGormStaticApi>
-    }
-    private static final Map<String, Map<String, RxGormInstanceApi>> INSTANCE_APIS = new ConcurrentHashMap<String, Map<String, RxGormInstanceApi>>().withDefault { String key ->
-        return new ConcurrentHashMap() as Map<String, RxGormInstanceApi>
-    }
-    private static final Map<String, Map<String, RxGormValidationApi>> VALIDATION_APIS = new ConcurrentHashMap<String, Map<String, RxGormValidationApi>>().withDefault { String key ->
-        return new ConcurrentHashMap() as Map<String, RxGormValidationApi>
-    }
+    private static final Map<String, RxGormStaticApi> STATIC_APIS = new ConcurrentHashMap<String, RxGormStaticApi>()
+    private static final Map<String, RxGormInstanceApi> INSTANCE_APIS = new ConcurrentHashMap<String, RxGormInstanceApi>()
+    private static final Map<String, RxGormValidationApi> VALIDATION_APIS = new ConcurrentHashMap<String, RxGormValidationApi>()
     private static final Map<Class<? extends RxDatastoreClient>, RxDatastoreClient> DATASTORE_CLIENTS = new ConcurrentHashMap<Class<? extends RxDatastoreClient>, RxDatastoreClient>()
+
 
 
 
@@ -158,7 +153,7 @@ class RxGormEnhancer {
      * @return The static api
      */
     static <T> RxGormStaticApi<T> findStaticApi(Class<T> type, String qualifier = findTenantId(type)) {
-        def api = STATIC_APIS.get(qualifier).get(type.name)
+        def api = STATIC_APIS.get(type.name)
         if(api == null) {
             throw stateException(type)
         }
@@ -174,7 +169,7 @@ class RxGormEnhancer {
      * @return The static api
      */
     static <T> RxGormInstanceApi<T> findInstanceApi(Class<T> type, String qualifier = findTenantId(type)) {
-        def api = INSTANCE_APIS.get(qualifier).get(type.name)
+        def api = INSTANCE_APIS.get(type.name)
         if(api == null) {
             throw stateException(type)
         }
@@ -190,18 +185,21 @@ class RxGormEnhancer {
      */
 
     static <T> RxGormValidationApi<T> findValidationApi(Class<T> type, String qualifier = findTenantId(type)) {
-        def api = VALIDATION_APIS.get(qualifier).get(type.name)
+        def api = VALIDATION_APIS.get(type.name)
         if(api == null) {
             throw stateException(type)
         }
         return api
     }
 
+
     protected static void registerEntityWithConnectionSource(PersistentEntity entity, String qualifierName, String connectionSourceName, RxDatastoreClientImplementor rxDatastoreClientImplementor) {
         String entityName = entity.getName()
-        STATIC_APIS.get(qualifierName).put(entityName, rxDatastoreClientImplementor.createStaticApi(entity, connectionSourceName))
-        INSTANCE_APIS.get(qualifierName).put(entityName, rxDatastoreClientImplementor.createInstanceApi(entity, connectionSourceName))
-        VALIDATION_APIS.get(qualifierName).put(entityName, rxDatastoreClientImplementor.createValidationApi(entity, connectionSourceName))
+        if (!STATIC_APIS.containsKey(entityName)) {
+            STATIC_APIS.put(entityName, rxDatastoreClientImplementor.createStaticApi(entity, connectionSourceName))
+            INSTANCE_APIS.put(entityName, rxDatastoreClientImplementor.createInstanceApi(entity, connectionSourceName))
+            VALIDATION_APIS.put(entityName, rxDatastoreClientImplementor.createValidationApi(entity, connectionSourceName))
+        }
     }
 
     private static IllegalStateException stateException(Class entity) {

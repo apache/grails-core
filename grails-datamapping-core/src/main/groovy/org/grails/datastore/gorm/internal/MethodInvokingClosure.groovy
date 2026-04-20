@@ -21,39 +21,43 @@ import org.codehaus.groovy.runtime.metaclass.MethodSelectionException
  * Not public API. Used by GormEnhancer
  */
 @SuppressWarnings('rawtypes')
-@CompileStatic
 abstract class MethodInvokingClosure extends Closure {
 
     protected String methodName
     protected apiDelegate
-    protected Class[] parameterTypes
-    protected MetaMethod metaMethod
+    protected Class targetClass
 
-    MethodInvokingClosure(apiDelegate, String methodName, Class[] parameterTypes) {
+    MethodInvokingClosure(apiDelegate, Class targetClass, String methodName) {
         super(apiDelegate, apiDelegate)
+        this.targetClass = targetClass
         this.apiDelegate = apiDelegate
         this.methodName = methodName
-        this.parameterTypes = parameterTypes
+    }
+
+    Object call(Object[] args) {
+        doCall(args)
     }
 
     @Override
-    abstract Object call(Object[] args)
-
-    Object doCall(Object[] args) {
-        call(args)
+    Object call(Object arg) {
+        doCall([arg] as Object[])
     }
 
     @Override
-    Class[] getParameterTypes() { parameterTypes }
+    Object call() {
+        doCall([] as Object[])
+    }
+
+    abstract Object doCall(Object[] args)
 
     @Override
-    int getMaximumNumberOfParameters() {
-        parameterTypes.length
-    }
+    Class[] getParameterTypes() { [Object[]] as Class[] }
+
+    @Override
+    int getMaximumNumberOfParameters() { 1 }
 
     /**
      * Utility method for choosing matching metamethod, handles MethodSelectionException
-     *
      *
      * @param theMetaClass
      * @param methodName

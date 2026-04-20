@@ -96,29 +96,40 @@ class HibernateGormInstanceApi<D> extends GormInstanceApi<D> {
 
     static final ThreadLocal<Boolean> insertActiveThreadLocal = new ThreadLocal<Boolean>()
 
-    protected SessionFactory sessionFactory
     protected ClassLoader classLoader
-    protected IHibernateTemplate hibernateTemplate
-    boolean autoFlush
-    protected InstanceApiHelper instanceApiHelper
 
     HibernateGormInstanceApi(Class<D> persistentClass, HibernateDatastore datastore, ClassLoader classLoader) {
         super(persistentClass, datastore as Datastore)
         this.classLoader = classLoader
-        this.sessionFactory = datastore.getSessionFactory()
-        this.hibernateTemplate = (GrailsHibernateTemplate) datastore.getHibernateTemplate()
-        this.autoFlush = datastore.autoFlush
-        this.failOnError = datastore.failOnError
-        this.markDirty = datastore.markDirty
-        this.instanceApiHelper = datastore.getInstanceApiHelper()
+    }
+
+    @Override
+    HibernateDatastore getDatastore() {
+        (HibernateDatastore) super.getDatastore()
+    }
+
+    IHibernateTemplate getHibernateTemplate() {
+        getDatastore().getHibernateTemplate()
+    }
+
+    SessionFactory getSessionFactory() {
+        getDatastore().getSessionFactory()
+    }
+
+    InstanceApiHelper getInstanceApiHelper() {
+        getDatastore().getInstanceApiHelper()
+    }
+
+    boolean isAutoFlush() {
+        getDatastore().isAutoFlush()
     }
 
     @Override
     D save(D target, Map arguments) {
-        PersistentEntity domainClass = persistentEntity
+        PersistentEntity domainClass = getPersistentEntity()
         runDeferredBinding()
         boolean shouldFlush = shouldFlush(arguments)
-        boolean shouldValidate = shouldValidate(arguments, persistentEntity)
+        boolean shouldValidate = shouldValidate(arguments, domainClass)
 
         HibernateRuntimeUtils.autoAssociateBidirectionalOneToOnes(domainClass, target)
 
@@ -128,11 +139,11 @@ class HibernateGormInstanceApi<D> extends GormInstanceApi<D> {
         }
 
         if (shouldValidate) {
-            Validator validator = datastore.mappingContext.getEntityValidator(domainClass)
+            Validator validator = getDatastore().mappingContext.getEntityValidator(domainClass)
             Errors errors = HibernateRuntimeUtils.setupErrorsProperty(target)
 
             if (validator) {
-                datastore.applicationEventPublisher?.publishEvent new ValidationEvent(datastore, target)
+                getDatastore().applicationEventPublisher?.publishEvent new ValidationEvent(getDatastore(), target)
 
                 if (validator instanceof CascadingValidator) {
                     ((CascadingValidator) validator).validate target, errors, deepValidate
@@ -153,7 +164,7 @@ class HibernateGormInstanceApi<D> extends GormInstanceApi<D> {
             }
         }
 
-        autoRetrieveAssociations datastore, domainClass, target
+        autoRetrieveAssociations getDatastore(), domainClass, target
 
         GormValidateable validateable = (GormValidateable) target
         validateable.skipValidation(true)
@@ -187,14 +198,14 @@ class HibernateGormInstanceApi<D> extends GormInstanceApi<D> {
 
     @Override
     void discard(D instance) {
-        hibernateTemplate.evict instance
+        getHibernateTemplate().evict instance
     }
 
     @Override
     void delete(D instance, Map params = Collections.emptyMap()) {
         boolean flush = shouldFlush(params)
         try {
-            hibernateTemplate.execute { Session session ->
+            getHibernateTemplate().execute { Session session ->
                 session.remove instance
                 if (flush) {
                     session.flush()
@@ -203,7 +214,7 @@ class HibernateGormInstanceApi<D> extends GormInstanceApi<D> {
         }
         catch (DataAccessException e) {
             try {
-                hibernateTemplate.execute { Session session ->
+                getHibernateTemplate().execute { Session session ->
                     session.setFlushMode(FlushModeType.COMMIT)
                 }
             }
@@ -215,30 +226,30 @@ class HibernateGormInstanceApi<D> extends GormInstanceApi<D> {
 
     @Override
     boolean isAttached(D instance) {
-        hibernateTemplate.contains instance
+        getHibernateTemplate().contains instance
     }
 
     @Override
     D lock(D instance) {
-        hibernateTemplate.lock(instance, LockMode.PESSIMISTIC_WRITE)
+        getHibernateTemplate().lock(instance, LockMode.PESSIMISTIC_WRITE)
         instance
     }
 
     @Override
     D attach(D instance) {
-        return (D) hibernateTemplate.execute { Session session ->
+        return (D) getHibernateTemplate().execute { Session session ->
             return session.merge(instance)
         }
     }
 
     @Override
     D refresh(D instance) {
-        hibernateTemplate.refresh(instance)
+        getHibernateTemplate().refresh(instance)
         return instance
     }
 
     protected D performUpsert(D target, boolean shouldFlush) {
-        PersistentEntity entity = persistentEntity
+        PersistentEntity entity = getPersistentEntity()
         String idPropertyName = entity.identity?.name ?: 'id'
         Object idVal = InvokerHelper.getProperty(target, idPropertyName)
         if (idVal == null) {
@@ -249,7 +260,7 @@ class HibernateGormInstanceApi<D> extends GormInstanceApi<D> {
     }
 
     protected D performMerge(final D target, final boolean flush) {
-        hibernateTemplate.execute { Session session ->
+        getHibernateTemplate().execute { Session session ->
             D merged
             if (session.contains(target)) {
                 // Entity is already managed in this session — merging would cause H7 to create
@@ -261,14 +272,14 @@ class HibernateGormInstanceApi<D> extends GormInstanceApi<D> {
                 merged = (D) session.merge(target)
                 session.lock(merged, LockModeType.NONE)
                 // Sync id back immediately so target has an identity
-                String idProp = persistentEntity.identity?.name ?: 'id'
+                String idProp = getPersistentEntity().identity?.name ?: 'id'
                 InvokerHelper.setProperty(target, idProp, InvokerHelper.getProperty(merged, idProp))
             }
             if (flush) {
                 flushSession session
             }
             // Sync version after flush so the incremented value is captured
-            PersistentProperty versionProperty = persistentEntity.version
+            PersistentProperty versionProperty = getPersistentEntity().version
             if (versionProperty != null) {
                 InvokerHelper.setProperty(target, versionProperty.name, InvokerHelper.getProperty(merged, versionProperty.name))
             }
@@ -277,7 +288,7 @@ class HibernateGormInstanceApi<D> extends GormInstanceApi<D> {
     }
 
     protected D performPersist(final D target, final boolean shouldFlush) {
-        hibernateTemplate.execute { Session session ->
+        getHibernateTemplate().execute { Session session ->
             try {
                 markInsertActive()
                 session.persist target
@@ -307,12 +318,12 @@ class HibernateGormInstanceApi<D> extends GormInstanceApi<D> {
      */
     @SuppressWarnings('unchecked')
     private void reconcileCollections(Session session, D target) {
-        EntityReflector reflector = datastore.mappingContext.getEntityReflector(persistentEntity)
+        EntityReflector reflector = getDatastore().mappingContext.getEntityReflector(getPersistentEntity())
         if (reflector == null) return
 
         SessionImplementor si = (SessionImplementor) session
 
-        for (Association assoc in persistentEntity.associations) {
+        for (Association assoc in getPersistentEntity().associations) {
             if (!(assoc instanceof OneToMany) && !(assoc instanceof ManyToMany)) continue
 
             String propName = assoc.name
@@ -349,7 +360,7 @@ class HibernateGormInstanceApi<D> extends GormInstanceApi<D> {
     @SuppressWarnings('unchecked')
     private void autoRetrieveAssociations(Datastore datastore, PersistentEntity entity, Object target) {
         EntityReflector reflector = datastore.mappingContext.getEntityReflector(entity)
-        IHibernateTemplate t = this.hibernateTemplate
+        IHibernateTemplate t = getHibernateTemplate()
         for (PersistentProperty prop in entity.associations) {
             if (prop instanceof ToOne && !(prop instanceof Embedded)) {
                 ToOne toOne = (ToOne) prop
@@ -393,14 +404,14 @@ class HibernateGormInstanceApi<D> extends GormInstanceApi<D> {
         if (map?.containsKey(ARGUMENT_FLUSH)) {
             return ClassUtils.getBooleanFromMap(ARGUMENT_FLUSH, map)
         }
-        return autoFlush
+        return isAutoFlush()
     }
 
     protected boolean shouldFail(Map map) {
         if (map?.containsKey(ARGUMENT_FAIL_ON_ERROR)) {
             return ClassUtils.getBooleanFromMap(ARGUMENT_FAIL_ON_ERROR, map)
         }
-        return failOnError
+        return getDatastore().failOnError
     }
 
     protected Object handleValidationError(PersistentEntity entity, final Object target, Errors errors) {
@@ -439,7 +450,7 @@ class HibernateGormInstanceApi<D> extends GormInstanceApi<D> {
     // --- Dirty Checking Logic ---
 
     boolean isDirty(D instance, String fieldName) {
-        SessionImplementor session = (SessionImplementor) sessionFactory.currentSession
+        SessionImplementor session = (SessionImplementor) getSessionFactory().currentSession
         EntityEntry entry = findEntityEntry(instance, session)
         if (!entry || !entry.loadedState) return false
 
@@ -459,7 +470,7 @@ class HibernateGormInstanceApi<D> extends GormInstanceApi<D> {
     }
 
     boolean isDirty(D instance) {
-        SessionImplementor session = (SessionImplementor) sessionFactory.currentSession
+        SessionImplementor session = (SessionImplementor) getSessionFactory().currentSession
         EntityEntry entry = findEntityEntry(instance, session)
         if (!entry || !entry.loadedState) return false
 
@@ -470,7 +481,7 @@ class HibernateGormInstanceApi<D> extends GormInstanceApi<D> {
     }
 
     List<String> getDirtyPropertyNames(D instance) {
-        SessionImplementor session = (SessionImplementor) sessionFactory.currentSession
+        SessionImplementor session = (SessionImplementor) getSessionFactory().currentSession
         EntityEntry entry = findEntityEntry(instance, session)
         if (!entry || !entry.loadedState) return []
 
@@ -489,7 +500,7 @@ class HibernateGormInstanceApi<D> extends GormInstanceApi<D> {
     }
 
     Object getPersistentValue(D instance, String fieldName) {
-        SessionImplementor session = (SessionImplementor) sessionFactory.currentSession
+        SessionImplementor session = (SessionImplementor) getSessionFactory().currentSession
         def entry = findEntityEntry(instance, session, false)
         if (!entry || !entry.loadedState) return null
 
@@ -513,10 +524,10 @@ class HibernateGormInstanceApi<D> extends GormInstanceApi<D> {
     }
 
     void setObjectToReadWrite(Object target) {
-        GrailsHibernateUtil.setObjectToReadWrite(target, sessionFactory)
+        GrailsHibernateUtil.setObjectToReadWrite(target, getSessionFactory())
     }
 
     void setObjectToReadOnly(Object target) {
-        GrailsHibernateUtil.setObjectToReadyOnly(target, sessionFactory)
+        GrailsHibernateUtil.setObjectToReadyOnly(target, getSessionFactory())
     }
 }

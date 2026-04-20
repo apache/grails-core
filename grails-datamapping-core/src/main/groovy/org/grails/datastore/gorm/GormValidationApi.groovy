@@ -35,6 +35,7 @@ import org.grails.datastore.mapping.core.Datastore
 import org.grails.datastore.mapping.core.Session
 import org.grails.datastore.mapping.engine.event.ValidationEvent
 import org.grails.datastore.mapping.model.MappingContext
+import org.grails.datastore.mapping.model.PersistentEntity
 import org.grails.datastore.mapping.model.config.GormProperties
 import org.grails.datastore.mapping.reflect.ClassUtils
 import org.grails.datastore.mapping.validation.ValidationErrors
@@ -53,37 +54,41 @@ class GormValidationApi<D> extends AbstractGormApi<D> {
 
     private Validator internalValidator
     BeforeValidateHelper beforeValidateHelper
-    protected final MappingContext mappingContext
-    protected final ApplicationEventPublisher eventPublisher
-    protected final boolean hasDatastore
 
     GormValidationApi(Class<D> persistentClass, Datastore datastore) {
         super(persistentClass, datastore)
         beforeValidateHelper = new BeforeValidateHelper()
-        this.mappingContext = datastore.mappingContext
-        this.eventPublisher = datastore.applicationEventPublisher
-        this.hasDatastore = datastore != null
     }
 
     GormValidationApi(Class<D> persistentClass, MappingContext mappingContext, ApplicationEventPublisher eventPublisher) {
         super(persistentClass, mappingContext)
         beforeValidateHelper = new BeforeValidateHelper()
-        this.mappingContext = mappingContext
-        this.eventPublisher = eventPublisher
-        this.hasDatastore = false
+    }
+
+    MappingContext getMappingContext() {
+        if (getDatastore() != null) {
+            return getDatastore().mappingContext
+        }
+        return super.getMappingContext()
+    }
+
+    protected ApplicationEventPublisher getEventPublisher() {
+        getDatastore().applicationEventPublisher
     }
 
     Validator getValidator() {
         if (!internalValidator) {
-            if (persistentEntity instanceof ValidatorProvider) {
-                internalValidator = ((ValidatorProvider) persistentEntity).validator
+            PersistentEntity pe = getPersistentEntity()
+            if (pe instanceof ValidatorProvider) {
+                internalValidator = ((ValidatorProvider) pe).validator
             }
-            if (!internalValidator) {
-                internalValidator = mappingContext.getEntityValidator(persistentEntity)
+            else {
+                internalValidator = getMappingContext().getEntityValidator(pe)
             }
         }
-        internalValidator
+        return internalValidator
     }
+
 
     void setValidator(Validator validator) {
         internalValidator = validator
@@ -98,8 +103,13 @@ class GormValidationApi<D> extends AbstractGormApi<D> {
             deepValidate = ClassUtils.getBooleanFromMap(ARGUMENT_DEEP_VALIDATE, arguments)
         }
 
-        if (hasDatastore) {
-            currentSession = datastore.currentSession
+        Datastore ds = null
+        try {
+            ds = getDatastore()
+        } catch (e) {}
+
+        if (ds != null) {
+            currentSession = ds.currentSession
             previousFlushMode = currentSession.flushMode
             currentSession.setFlushMode(FlushModeType.COMMIT)
         }
@@ -193,15 +203,16 @@ class GormValidationApi<D> extends AbstractGormApi<D> {
      * @param target The target instance.
      * @param fields The list of fields being validated, or null.
      */
-    private void fireEvent(target, List fields) {
+    private void fireEvent(D target, List fields) {
         ValidationEvent event = createValidationEvent(target)
         event.validatedFields = fields
-        eventPublisher?.publishEvent(event)
+        getEventPublisher()?.publishEvent(event)
     }
 
-    protected ValidationEvent createValidationEvent(target) {
-        new ValidationEvent(datastore, target)
+    protected ValidationEvent createValidationEvent(D target) {
+        new ValidationEvent(getDatastore(), target)
     }
+
 
     /**
      * Validates an instance
@@ -228,8 +239,8 @@ class GormValidationApi<D> extends AbstractGormApi<D> {
             return errors
         }
         else {
-
-            Errors errors = (Errors) datastore.currentSession.getAttribute(instance, GormProperties.ERRORS)
+            Datastore ds = getDatastore()
+            Errors errors = (Errors) ds.currentSession.getAttribute(instance, GormProperties.ERRORS)
             if (errors == null) {
                 errors = resetErrors(instance)
             }
@@ -254,7 +265,7 @@ class GormValidationApi<D> extends AbstractGormApi<D> {
             gv.errors = errors
         }
         else {
-            datastore.currentSession.setAttribute(instance, GormProperties.ERRORS, errors)
+            getDatastore().currentSession.setAttribute(instance, GormProperties.ERRORS, errors)
         }
     }
 
@@ -277,8 +288,8 @@ class GormValidationApi<D> extends AbstractGormApi<D> {
             return gv.hasErrors()
         }
         else {
-            Errors errors = (Errors) datastore.currentSession.getAttribute(instance, GormProperties.ERRORS)
-            errors?.hasErrors()
+            Errors errors = (Errors) getDatastore().currentSession.getAttribute(instance, GormProperties.ERRORS)
+            return errors != null && errors.hasErrors()
         }
     }
 }

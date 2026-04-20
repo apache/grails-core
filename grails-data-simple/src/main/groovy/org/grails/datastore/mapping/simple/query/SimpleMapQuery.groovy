@@ -118,11 +118,15 @@ class SimpleMapQuery extends Query {
                         results.add(propertyValues.min())
                     }
                     else if (p instanceof Query.SumProjection) {
-                        results.add(propertyValues.sum())
+                        results.add(propertyValues ? propertyValues.sum() : 0)
                     }
                     else if (p instanceof Query.AvgProjection) {
-                        def average = propertyValues.sum() / propertyValues.size()
-                        results.add(average)
+                        if (propertyValues) {
+                            def average = propertyValues.sum() / propertyValues.size()
+                            results.add(average)
+                        } else {
+                            results.add(0.0)
+                        }
                     }
                     else {
                         PersistentProperty prop = entity.getPropertyByName(p.propertyName)

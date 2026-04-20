@@ -22,6 +22,7 @@ package org.apache.grails.data.simple.core
 
 import org.apache.grails.data.testing.tck.base.GrailsDataTckManager
 import org.grails.datastore.gorm.Birthday
+import org.grails.datastore.gorm.GormEnhancer
 import org.grails.datastore.mapping.core.Session
 import org.grails.datastore.mapping.engine.types.AbstractMappingAwareCustomTypeMarshaller
 import org.grails.datastore.mapping.model.PersistentEntity
@@ -87,6 +88,11 @@ class GrailsDataCoreTckManager extends GrailsDataTckManager {
         for (cls in domainClasses) {
             simple.mappingContext.addPersistentEntity(cls)
         }
+
+        for (entity in simple.mappingContext.persistentEntities) {
+            simple.gormEnhancer.registerEntity(entity)
+        }
+        GormEnhancer.setThreadLocalDatastore(simple)
 
         PersistentEntity entity = simple.mappingContext.persistentEntities.find {
             PersistentEntity e -> e.name.contains("TestEntity")}

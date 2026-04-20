@@ -14,22 +14,26 @@
  */
 package org.grails.datastore.gorm.internal
 
-import groovy.transform.CompileStatic
+import org.grails.datastore.gorm.GormEnhancer
 
 /**
  * Not public API. Used by GormEnhancer
  */
 @SuppressWarnings('rawtypes')
-@CompileStatic
 class StaticMethodInvokingClosure extends MethodInvokingClosure {
 
-    StaticMethodInvokingClosure(apiDelegate, String methodName, Class[] parameterTypes) {
-        super(apiDelegate, methodName, parameterTypes)
-        super.metaMethod = pickMetaMethod(apiDelegate.getMetaClass(), methodName, parameterTypes, true)
+    StaticMethodInvokingClosure(apiDelegate, Class targetClass, String methodName) {
+        super(apiDelegate, targetClass, methodName)
     }
 
     @Override
-    Object call(Object[] args) {
-        metaMethod.invoke(apiDelegate, args)
+    Object doCall(Object[] args) {
+        def activeDelegate = GormEnhancer.findStaticApi(targetClass)
+        def parameterTypes = args ? args.collect { it?.getClass() ?: Object } as Class[] : [] as Class[]
+        def metaMethod = pickMetaMethod(activeDelegate.getMetaClass(), methodName, parameterTypes, false)
+        if (metaMethod == null) {
+             throw new MissingMethodException(methodName, targetClass, args)
+        }
+        metaMethod.invoke(activeDelegate, args)
     }
 }

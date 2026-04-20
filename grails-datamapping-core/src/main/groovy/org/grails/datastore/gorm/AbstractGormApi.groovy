@@ -65,7 +65,9 @@ abstract class AbstractGormApi<D> extends AbstractDatastoreApi {
     AbstractGormApi(Class<D> persistentClass, Datastore datastore) {
         super(datastore)
         this.persistentClass = persistentClass
-        this.persistentEntity = datastore.getMappingContext().getPersistentEntity(persistentClass.name)
+        if (datastore != null) {
+            this.persistentEntity = datastore.getMappingContext().getPersistentEntity(persistentClass.name)
+        }
     }
 
     AbstractGormApi(Class<D> persistentClass, MappingContext mappingContext) {
@@ -74,8 +76,21 @@ abstract class AbstractGormApi<D> extends AbstractDatastoreApi {
         this.persistentEntity = mappingContext.getPersistentEntity(persistentClass.name)
     }
 
+    MappingContext getMappingContext() {
+        getDatastore().mappingContext
+    }
+
+    PersistentEntity getPersistentEntity() {
+        if (persistentEntity == null) {
+            persistentEntity = getMappingContext().getPersistentEntity(persistentClass.name)
+        }
+        return persistentEntity
+    }
+
     @CompileDynamic
     protected initializeMethods(clazz) {
+        methods = []
+        extendedMethods = []
         while (clazz != Object) {
             final methodsToAdd = clazz.declaredMethods.findAll { Method m ->
                 def mods = m.getModifiers()

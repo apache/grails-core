@@ -108,9 +108,9 @@ class GormEnhancerAllQualifiersSpec extends Specification {
         def entity = mockEntity(NonMultiTenantSecondaryEntity, ['secondary'])
         when: "registering the entity"
         enhancer.registerEntity(entity)
-        then: "static api is available under DEFAULT and secondary qualifiers"
-        GormEnhancer.@STATIC_APIS.get(ConnectionSource.DEFAULT).containsKey(entity.name)
-        GormEnhancer.@STATIC_APIS.get('secondary').containsKey(entity.name)
+        then: "static api is available in the flattened registry"
+        GormEnhancer.@STATIC_APIS.containsKey(entity.name)
+        GormEnhancer.findDatastore(NonMultiTenantSecondaryEntity, 'secondary') != null
     }
 
     void "registerEntity adds static api under default and secondary for MultiTenant entity"() {
@@ -119,9 +119,9 @@ class GormEnhancerAllQualifiersSpec extends Specification {
         def entity = mockEntity(MultiTenantSecondaryEntity, ['secondary'])
         when: "registering the entity"
         enhancer.registerEntity(entity)
-        then: "static api is available under DEFAULT and secondary qualifiers"
-        GormEnhancer.@STATIC_APIS.get(ConnectionSource.DEFAULT).containsKey(entity.name)
-        GormEnhancer.@STATIC_APIS.get('secondary').containsKey(entity.name)
+        then: "static api is available in the flattened registry"
+        GormEnhancer.@STATIC_APIS.containsKey(entity.name)
+        GormEnhancer.findDatastore(MultiTenantSecondaryEntity, 'secondary') != null
     }
 
     void "MultiTenant entity with default datasource expands to all qualifiers"() {
@@ -188,7 +188,7 @@ class GormEnhancerAllQualifiersSpec extends Specification {
         when: "registering the entity"
         enhancer.registerEntity(entity)
         then: "static api is available under DEFAULT qualifier"
-        GormEnhancer.@STATIC_APIS.get(ConnectionSource.DEFAULT).containsKey(entity.name)
+        GormEnhancer.@STATIC_APIS.containsKey(entity.name)
     }
 
     void "non-MultiTenant entity with ALL datasource expands to all qualifiers"() {

@@ -22,6 +22,7 @@ import groovy.transform.CompileStatic
 
 import org.grails.datastore.mapping.core.Datastore
 import org.grails.datastore.mapping.core.DatastoreUtils
+import org.grails.datastore.mapping.core.Session
 import org.grails.datastore.mapping.core.SessionCallback
 import org.grails.datastore.mapping.core.VoidSessionCallback
 
@@ -38,23 +39,30 @@ abstract class AbstractDatastoreApi {
     }
 
     protected <T> T execute(SessionCallback<T> callback) {
-        if (datastore == null) {
-            throw new IllegalStateException('Cannot execute session callback with null datastore')
-        }
-        DatastoreUtils.execute(datastore, callback)
+        Datastore ds = getDatastore()
+        DatastoreUtils.execute(ds, callback)
     }
 
     protected void execute(VoidSessionCallback callback) {
-        if (datastore == null) {
-            throw new IllegalStateException('Cannot execute session callback with null datastore')
-        }
-        DatastoreUtils.execute(datastore, callback)
+        Datastore ds = getDatastore()
+        DatastoreUtils.execute(ds, callback)
     }
 
     Datastore getDatastore() {
-        if (datastore == null) {
+        if (this.datastore == null) {
+            // 1. Check for Thread-Local override (Highest priority for TCK/Unit Tests)
+            Datastore override = GormEnhancer.getThreadLocalDatastore()
+            if (override != null) {
+                return override
+            }
+
+            // 2. Resolve from the currently bound session (Dynamic context)
+            if (this instanceof AbstractGormApi) {
+                Class persistentClass = ((AbstractGormApi) this).persistentClass
+                return GormEnhancer.findDatastore(persistentClass)
+            }
             throw new IllegalStateException('No datastore configured in stateless mode')
         }
-        return datastore
+        return this.datastore
     }
 }

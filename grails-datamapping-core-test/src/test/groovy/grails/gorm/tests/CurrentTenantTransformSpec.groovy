@@ -118,9 +118,10 @@ return TestService
     void "Test @CurrentTenant with service"() {
         given:"A service with @CurrentTenant at the class level is used"
         TeamService teamService = new TeamService()
+        def results
 
         when:"a method is invoked"
-        def results = teamService.listTeams()
+        results = teamService.listTeams()
 
         then:"An exception is thrown because no tenant is present"
         thrown(TenantNotFoundException)

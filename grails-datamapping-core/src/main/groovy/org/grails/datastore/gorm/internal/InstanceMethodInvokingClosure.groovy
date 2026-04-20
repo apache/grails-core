@@ -14,27 +14,21 @@
  */
 package org.grails.datastore.gorm.internal
 
-import groovy.transform.CompileStatic
+import org.grails.datastore.gorm.GormEnhancer
 
 /**
  * Not public API. Used by GormEnhancer
  */
 @SuppressWarnings('rawtypes')
-@CompileStatic
 class InstanceMethodInvokingClosure extends MethodInvokingClosure {
 
-    InstanceMethodInvokingClosure(apiDelegate, Class<?> persistentClass, String methodName, Class[] parameterTypes) {
-        super(apiDelegate, methodName, parameterTypes)
-        List<Class> params = parameterTypes.toList()
-        params.add(persistentClass)
-
-        Class[] metaMethodParams = params.toArray() as Class[]
-        super.metaMethod = pickMetaMethod(apiDelegate.getMetaClass(), methodName, metaMethodParams, false)
+    InstanceMethodInvokingClosure(apiDelegate, Class<?> persistentClass, String methodName) {
+        super(apiDelegate, persistentClass, methodName)
     }
 
     @Override
-    Object call(Object[] args) {
-        def delegateArg = Collections.singletonList(delegate).toArray()
+    Object doCall(Object[] args) {
+        def activeDelegate = GormEnhancer.findInstanceApi(targetClass)
         Object[] arguments
         if (args) {
             def argList = []
@@ -43,8 +37,14 @@ class InstanceMethodInvokingClosure extends MethodInvokingClosure {
             arguments = argList.toArray()
         }
         else {
-            arguments = delegateArg
+            arguments = Collections.singletonList(delegate).toArray()
         }
-        metaMethod.invoke(apiDelegate, arguments)
+
+        def parameterTypes = arguments.collect { it?.getClass() ?: Object } as Class[]
+        def metaMethod = pickMetaMethod(activeDelegate.getMetaClass(), methodName, parameterTypes, false)
+        if (metaMethod == null) {
+            throw new MissingMethodException(methodName, targetClass, args)
+        }
+        metaMethod.invoke(activeDelegate, arguments)
     }
 }

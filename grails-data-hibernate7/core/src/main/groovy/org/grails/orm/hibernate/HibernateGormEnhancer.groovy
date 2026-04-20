@@ -63,29 +63,26 @@ class HibernateGormEnhancer extends GormEnhancer {
     }
 
     @Override
-    protected <D> GormStaticApi<D> getStaticApi(Class<D> cls, String qualifier) {
+    protected <D> GormStaticApi<D> getStaticApi(Class<D> cls, String qualifier = null) {
         HibernateDatastore hibernateDatastore = (HibernateDatastore) datastore
-        HibernateDatastore datastoreForConnection = hibernateDatastore.getDatastoreForConnection(qualifier)
         new HibernateGormStaticApi<D>(
                 cls,
-                datastoreForConnection,
-                createDynamicFinders(datastoreForConnection),
+                hibernateDatastore,
+                createDynamicFinders(hibernateDatastore),
                 Thread.currentThread().contextClassLoader,
-                datastoreForConnection.getTransactionManager(),
-                qualifier
+                transactionManager,
+                null
         )
     }
 
     @Override
-    protected <D> GormInstanceApi<D> getInstanceApi(Class<D> cls, String qualifier) {
-        HibernateDatastore hibernateDatastore = (HibernateDatastore) datastore
-        new HibernateGormInstanceApi<D>(cls, hibernateDatastore.getDatastoreForConnection(qualifier), Thread.currentThread().contextClassLoader)
+    protected <D> GormInstanceApi<D> getInstanceApi(Class<D> cls, String qualifier = null) {
+        new HibernateGormInstanceApi<D>(cls, (HibernateDatastore) datastore, Thread.currentThread().contextClassLoader)
     }
 
     @Override
-    protected <D> GormValidationApi<D> getValidationApi(Class<D> cls, String qualifier) {
-        HibernateDatastore hibernateDatastore = (HibernateDatastore) datastore
-        new HibernateGormValidationApi<D>(cls, hibernateDatastore.getDatastoreForConnection(qualifier), Thread.currentThread().contextClassLoader)
+    protected <D> GormValidationApi<D> getValidationApi(Class<D> cls, String qualifier = null) {
+        new HibernateGormValidationApi<D>(cls, (HibernateDatastore) datastore, Thread.currentThread().contextClassLoader)
     }
 
     @Override

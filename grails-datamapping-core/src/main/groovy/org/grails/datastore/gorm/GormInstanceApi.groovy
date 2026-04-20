@@ -18,6 +18,7 @@
  */
 package org.grails.datastore.gorm
 
+import groovy.transform.CompileDynamic
 import groovy.transform.CompileStatic
 import org.codehaus.groovy.runtime.InvokerHelper
 
@@ -53,9 +54,24 @@ class GormInstanceApi<D> extends AbstractGormApi<D> implements GormInstanceOpera
         validationException = ValidationException.VALIDATION_EXCEPTION_TYPE
     }
 
+    @CompileDynamic
+    Object methodMissing(D instance, String methodName, Object args) {
+        // 1. Try to invoke 'real' method on this API instance
+        // Instance API methods usually take the instance as the first argument
+        Object[] argsWithInstance = new Object[((Object[])args).length + 1]
+        argsWithInstance[0] = instance
+        System.arraycopy(args, 0, argsWithInstance, 1, ((Object[])args).length)
+
+        def metaMethod = getMetaClass().getMetaMethod(methodName, argsWithInstance)
+        if (metaMethod != null) {
+            return metaMethod.invoke(this, argsWithInstance)
+        }
+        
+        throw new MissingMethodException(methodName, persistentClass, args)
+    }
+
     Object propertyMissing(D instance, String name) {
         try {
-
             def instanceApi = GormEnhancer.findInstanceApi(persistentClass, name)
             return new DelegatingGormEntityApi(instanceApi, instance)
         } catch (IllegalStateException ise) {
@@ -326,8 +342,10 @@ class GormInstanceApi<D> extends AbstractGormApi<D> implements GormInstanceOpera
             def validateable = (GormValidateable) instance
             if (validate) {
                 validateable.skipValidation(false)
-                if (datastore instanceof ConnectionSourcesProvider) {
-                    ConnectionSources connectionSources = ((ConnectionSourcesProvider) datastore).connectionSources
+                Datastore ds = getDatastore()
+                if (ds instanceof ConnectionSourcesProvider) {
+                    ConnectionSources connectionSources = ((ConnectionSourcesProvider) ds).connectionSources
+
                     String connectionSourceName = connectionSources.defaultConnectionSource.name
                     if (connectionSourceName != ConnectionSource.DEFAULT) {
                         GormValidationApi<D> validationApi = GormEnhancer.findValidationApi((Class<D>) instance.getClass(), connectionSourceName)
