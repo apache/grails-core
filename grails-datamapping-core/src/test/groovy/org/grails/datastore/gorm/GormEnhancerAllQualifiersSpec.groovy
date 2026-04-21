@@ -109,7 +109,7 @@ class GormEnhancerAllQualifiersSpec extends Specification {
         when: "registering the entity"
         enhancer.registerEntity(entity)
         then: "static api is available in the flattened registry"
-        GormEnhancer.@STATIC_APIS.containsKey(entity.name)
+        GormEnhancer.@STATIC_APIS.containsKey(entity.javaClass)
         GormEnhancer.findDatastore(NonMultiTenantSecondaryEntity, 'secondary') != null
     }
 
@@ -120,7 +120,7 @@ class GormEnhancerAllQualifiersSpec extends Specification {
         when: "registering the entity"
         enhancer.registerEntity(entity)
         then: "static api is available in the flattened registry"
-        GormEnhancer.@STATIC_APIS.containsKey(entity.name)
+        GormEnhancer.@STATIC_APIS.containsKey(entity.javaClass)
         GormEnhancer.findDatastore(MultiTenantSecondaryEntity, 'secondary') != null
     }
 
@@ -188,7 +188,7 @@ class GormEnhancerAllQualifiersSpec extends Specification {
         when: "registering the entity"
         enhancer.registerEntity(entity)
         then: "static api is available under DEFAULT qualifier"
-        GormEnhancer.@STATIC_APIS.containsKey(entity.name)
+        GormEnhancer.@STATIC_APIS.containsKey(entity.javaClass)
     }
 
     void "non-MultiTenant entity with ALL datasource expands to all qualifiers"() {

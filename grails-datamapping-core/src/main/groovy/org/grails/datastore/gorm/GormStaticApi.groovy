@@ -126,9 +126,15 @@ class GormStaticApi<D> extends AbstractGormApi<D> implements GormAllOperations<D
         return ConnectionSource.DEFAULT
     }
 
+    @Override
+    Class<D> getPersistentClass() {
+        return this.@persistentClass
+    }
+
     /**
      * @return The PersistentEntity for this class
      */
+    @Override
     PersistentEntity getGormPersistentEntity() {
         getPersistentEntity()
     }

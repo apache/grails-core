@@ -107,6 +107,11 @@ class TenantDelegatingGormOperations<D> implements GormAllOperations<D>, GormVal
     }
 
     @Override
+    Class<D> getPersistentClass() {
+        getStaticOps().getPersistentClass()
+    }
+
+    @Override
     boolean validate(D instance) {
         Tenants.withId((Class<Datastore>) datastore.getClass(), tenantId) {
             getValidationOps().validate(instance)
@@ -304,12 +309,12 @@ class TenantDelegatingGormOperations<D> implements GormAllOperations<D>, GormVal
 
     @Override
     PersistentEntity getGormPersistentEntity() {
-        getStaticOps().gormPersistentEntity
+        getStaticOps().getGormPersistentEntity()
     }
 
     @Override
     List<FinderMethod> getGormDynamicFinders() {
-        return getStaticOps().gormDynamicFinders
+        return getStaticOps().getGormDynamicFinders()
     }
 
     @Override
@@ -570,12 +575,16 @@ class TenantDelegatingGormOperations<D> implements GormAllOperations<D>, GormVal
     }
 
     @Override
+    D last(Map queryParams) {
+        Tenants.withId((Class<Datastore>) datastore.getClass(), tenantId) {
+            getStaticOps().last(queryParams)
+        }
+    }
+
+    @Override
     Object methodMissing(String methodName, Object args) {
         Tenants.withId((Class<Datastore>) datastore.getClass(), tenantId) {
-            if (args instanceof Object[]) {
-                return getStaticOps().methodMissing(methodName, (Object[])args)
-            }
-            return getStaticOps().methodMissing(methodName, args)
+            getStaticOps().methodMissing(methodName, args)
         }
     }
 
@@ -590,13 +599,6 @@ class TenantDelegatingGormOperations<D> implements GormAllOperations<D>, GormVal
     void propertyMissing(String property, Object value) {
         Tenants.withId((Class<Datastore>) datastore.getClass(), tenantId) {
             getStaticOps().propertyMissing(property, value)
-        }
-    }
-
-    @Override
-    D last(Map queryParams) {
-        Tenants.withId((Class<Datastore>) datastore.getClass(), tenantId) {
-            getStaticOps().last(queryParams)
         }
     }
 

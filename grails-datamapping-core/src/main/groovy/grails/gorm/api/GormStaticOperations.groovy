@@ -41,6 +41,11 @@ interface GormStaticOperations<D> {
     PersistentEntity getGormPersistentEntity()
 
     /**
+     * @return The persistent class
+     */
+    Class<D> getPersistentClass()
+
+    /**
      * @return The GORM dynamic finders
      */
     List<FinderMethod> getGormDynamicFinders()
