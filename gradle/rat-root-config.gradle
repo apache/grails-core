@@ -88,6 +88,12 @@ tasks.named('rat') {
             'build-logic/.idea/**', // grails-gradle idea directories
             'build/**', // build directories
             'buildSrc/build/**', // build directories
+            '**/build/**', // recursive build directories
+            'node_modules/**', // exclude node_modules
+            '**/*.log', // exclude log files
+            '*_VIOLATIONS.md', // exclude violation reports
+            'local-tasks.gradle', // exclude local helper scripts
+            'task_failure.log', // exclude task failure logs
     ] + rootProject.subprojects.collect{"${rootProject.projectDir.relativePath(it.layout.buildDirectory.get().asFile).toString()}/**/*" }
     // logger.lifecycle("Excludes for RAT task: ${allExcludes.join(', \n')}")
     excludes = allExcludes

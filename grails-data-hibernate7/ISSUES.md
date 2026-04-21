@@ -54,13 +54,31 @@ At a scale of 100 classes and 1,000 tenants, the system still pins **~400,000 co
 3.  **Map Key Bloat:** The full class name string is repeated as a key across thousands of map entries. Lack of String interning or integer-based indexing causes significant "shallow heap" waste.
 4.  **Metaspace Inflation:** The sheer volume of Groovy Metaclass entries created for 100,000 combinations risks Metaspace exhaustion and degrades GC performance.
 
-### Future Strategy: Class-Singletons
-To achieve true production-grade scalability, GORM API bridges must transition from **Tenant-Singletons** (one API instance per tenant) to **Class-Singletons** (one API instance per class) that receive the `TenantID` context as an argument during method execution.
-Grails is designed around Dependency Injection (Spring/Micronaut), where heavy resources like `SessionFactory` and `HibernateTemplate` are managed singletons. However, GORM's static method bridge (`Book.list()`) operates outside this lifecycle:
+## Current Scalability Limits & System Assertions
 
-1.  **Escape from DI:** `HibernateGormStaticApi` instances are created manually via `new` in `GormEnhancer` and stored in `static` registries. They are not DI-managed beans.
-2.  **Singleton Violation:** While `SessionFactory` is a singleton per datastore, `GrailsHibernateTemplate` (which wraps the session factory) is being instantiated tens of thousands of times within the static API objects.
-3.  **Domain Binding vs. Static Magic:** Since domain bindings are tied to the Hibernate `SessionFactory` lifecycle, GORM creates a new "static bridge" for every tenant to ensure the correct `SessionFactory` is used. The current implementation makes this "bridge" too heavy by including a fresh template for every class-tenant combination.
+The current GORM architecture (Hibernate 7 implementation) remains bounded by a **Tenant-Singleton** model. While recent flyweight optimizations have significantly reduced heap pressure, the underlying coordination mechanism poses the following hard limits:
+
+### Hard Scalability Limitations
+1.  **Metaspace Fragmentation:** GORM relies on per-tenant `ExpandoMetaClass` modifications and registry entries. Metaspace is not reclaimed by Heap GC, creating a hard **"uptime ceiling"** for nodes.
+2.  **Registry Bloat:** For every `(Domain Class × Tenant)` pair, the system pins 4 coordination objects in `static` memory. In a typical application with 100 domain classes, every 100 new tenants adds **40,000 long-lived objects** to the heap.
+3.  **Eager Registration Ceiling:** Current code (post-stabilization) blindly expands qualifiers for all tenants during bootstrap. Without the safety ceiling (50k threshold), massive multi-tenant deployments will trigger OOM during the bootstrap phase.
+
+### Operational Assertions
+Based on the current implementation, we assert the following safe operating ranges:
+
+| Metric | Safe Range | High Risk Range | Critical Failure |
+| :--- | :--- | :--- | :--- |
+| **Total Domain Classes** | < 150 | 150 - 300 | > 500 |
+| **Total Tenants** | < 200 | 200 - 500 | > 1,000 |
+| **Total API Objects** | < 30,000 | 30k - 50,000 | > 100,000 |
+
+### Application Suitability
+- **Small-to-Medium Apps:** Fully supported and stable.
+- **Enterprise SaaS:** High risk. Nodes will require frequent restarts (weekly or monthly) to "flush" Metaspace fragmentation.
+- **Dynamic Schema SaaS:** **NOT SUPPORTED.** The lack of Tenant Lifecycle management (no eviction) leads to inevitable system failure as new schemas are added at runtime.
+
+### Immediate Requirement for June Release
+To stabilize these limits, the system **must** transition to a **Class-Singleton** orchestrator model where `GormStaticApi` instances are shared across all tenants, resolving the tenant context dynamically at method execution time. Until this transition is complete, the **50,000 API object ceiling** remains a mandatory safety requirement for production stability.
 
 ### Root Cause
 1.  **Static Registry:** `GormEnhancer` maintains four `static ConcurrentHashMap` objects (`STATIC_APIS`, `INSTANCE_APIS`, `VALIDATION_APIS`, `DATASTORES`) that hold strong references to API objects, keyed by the tenant qualifier.
