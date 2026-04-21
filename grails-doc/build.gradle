@@ -20,7 +20,7 @@
 import grails.doc.git.FetchTagsTask
 import grails.doc.dropdown.CreateReleaseDropDownTask
 import grails.doc.gradle.PublishGuideTask
-import org.grails.doc.gradle.FixGroovydocLinksTask
+import org.grails.doc.gradle.AuditGroovydocLinksTask
 
 plugins {
     id 'base'
@@ -122,10 +122,9 @@ combinedGroovydoc.configure { Groovydoc gdoc ->
     gdoc.outputs.dir(gdoc.destinationDir)
 }
 
-def fixGroovydocLinks = tasks.register('fixGroovydocLinks', FixGroovydocLinksTask) {
+def auditGroovydocLinks = tasks.register('auditGroovydocLinks', AuditGroovydocLinksTask) {
     dependsOn combinedGroovydoc
     apiDocsDir = combinedGroovydoc.get().destinationDir
-    auditMode = project.hasProperty('auditGroovydocLinks')
 }
 
 String getVersion(String artifact) {
@@ -285,7 +284,7 @@ createReleaseDropdownTask.configure {
 
 def docsTask = tasks.register('docs', Sync)
 docsTask.configure { Sync it ->
-    it.dependsOn(combinedGroovydoc, fixGroovydocLinks, createReleaseDropdownTask, ':grails-data-docs-stage:docs')
+    it.dependsOn(combinedGroovydoc, auditGroovydocLinks, createReleaseDropdownTask, ':grails-data-docs-stage:docs')
     it.group = 'documentation'
 
     def manualDocsDir = project.layout.buildDirectory.dir('modified-guide')

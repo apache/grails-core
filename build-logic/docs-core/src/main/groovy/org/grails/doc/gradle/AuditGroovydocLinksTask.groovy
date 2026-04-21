@@ -27,24 +27,17 @@ import java.util.regex.Matcher
 import java.util.regex.Pattern
 
 /**
- * A task that repairs malformed navigation links in generated Groovydocs.
+ * A task that audits generated Groovydocs for malformed navigation links.
  * Specifically targets 'phantom' links and relative path issues in navigation files
  * like overview-summary.html, deprecated-list.html, and help-doc.html.
  */
-abstract class FixGroovydocLinksTask extends DefaultTask {
-    
-    /**
-     * If true, the task will fail the build if any malformed links are found.
-     * If false, the task will attempt to repair the links (patching mode).
-     */
-    @org.gradle.api.tasks.Input
-    boolean auditMode = false
+abstract class AuditGroovydocLinksTask extends DefaultTask {
 
     @InputDirectory
     abstract DirectoryProperty getApiDocsDir()
 
     @TaskAction
-    void fixLinks() {
+    void auditLinks() {
         File apiDir = apiDocsDir.get().asFile
         if (!apiDir.exists()) {
             logger.warn "API documentation directory does not exist: ${apiDir.absolutePath}"
@@ -59,24 +52,20 @@ abstract class FixGroovydocLinksTask extends DefaultTask {
             (Pattern.compile(/href='([^']+?)\/overview-summary\.html'/)): "href='overview-summary.html'"
         ]
 
-        int totalFixes = 0
         List<String> violations = []
 
         apiDir.eachFileRecurse { File file ->
             if (file.name.endsWith(".html")) {
                 String content = file.text
-                boolean changed = false
                 
                 replacements.each { pattern, replacement ->
                     Matcher matcher = pattern.matcher(content)
                     if (matcher.find()) {
-                        content = matcher.replaceAll(replacement)
-                        changed = true
-                        violations << "Malformed nav link in ${file.name}"
+                        violations << "Malformed nav link in ${file.name}: ${matcher.group(0)}"
                     }
                 }
                 
-                // Fix specific inner class path issues like Query/Order.Direction.html -> Query.Order.Direction.html
+                // Check specific inner class path issues like Query/Order.Direction.html -> Query.Order.Direction.html
                 Pattern innerClassPattern = Pattern.compile(/href='([^']+?)\/([A-Z][A-Za-z0-9_]*?)\/([A-Z][A-Za-z0-9_.]*?\.html)'/)
                 Matcher innerMatcher = innerClassPattern.matcher(content)
                 while (innerMatcher.find()) {
@@ -88,30 +77,16 @@ abstract class FixGroovydocLinksTask extends DefaultTask {
                     Path targetPath = currentPath.resolve(relPath).resolve("${outer}.${inner}").normalize()
                     
                     if (Files.exists(targetPath)) {
-                        String newHref = "href='${relPath}/${outer}.${inner}'"
-                        content = content.replace(innerMatcher.group(0), newHref)
-                        changed = true
-                        violations << "Malformed inner class link in ${file.name}: ${innerMatcher.group(0)} -> ${newHref}"
-                    }
-                }
-
-                if (changed) {
-                    totalFixes++
-                    if (!auditMode) {
-                        file.text = content
+                        violations << "Malformed inner class link in ${file.name}: ${innerMatcher.group(0)}"
                     }
                 }
             }
         }
         
-        if (totalFixes > 0) {
-            if (auditMode) {
-                violations.take(10).each { logger.error(it) }
-                if (violations.size() > 10) logger.error("... and ${violations.size() - 10} more")
-                throw new org.gradle.api.GradleException("Found ${violations.size()} malformed links in Groovydoc. Please fix the source issue rather than patching. See logs for details.")
-            } else {
-                logger.lifecycle "Repaired ${totalFixes} HTML files in ${apiDir.absolutePath}"
-            }
+        if (!violations.isEmpty()) {
+            violations.take(10).each { logger.error(it) }
+            if (violations.size() > 10) logger.error("... and ${violations.size() - 10} more")
+            throw new org.gradle.api.GradleException("Found ${violations.size()} malformed links in Groovydoc. Please fix the source issue rather than patching. See logs for details.")
         } else {
             logger.lifecycle "No malformed Groovydoc links found in ${apiDir.absolutePath}"
         }
