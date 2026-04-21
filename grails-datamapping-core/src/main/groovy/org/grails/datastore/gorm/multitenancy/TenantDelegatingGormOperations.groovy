@@ -570,9 +570,12 @@ class TenantDelegatingGormOperations<D> implements GormAllOperations<D>, GormVal
     }
 
     @Override
-    Object methodMissing(String methodName, Object arg) {
+    Object methodMissing(String methodName, Object args) {
         Tenants.withId((Class<Datastore>) datastore.getClass(), tenantId) {
-            getStaticOps().methodMissing(methodName, arg)
+            if (args instanceof Object[]) {
+                return getStaticOps().methodMissing(methodName, (Object[])args)
+            }
+            return getStaticOps().methodMissing(methodName, args)
         }
     }
 

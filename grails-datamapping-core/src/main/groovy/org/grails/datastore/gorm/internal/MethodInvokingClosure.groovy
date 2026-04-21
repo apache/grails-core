@@ -34,27 +34,20 @@ abstract class MethodInvokingClosure extends Closure {
         this.methodName = methodName
     }
 
-    Object call(Object[] args) {
-        doCall(args)
+    Object doCall(Object... args) {
+        if (args == null) {
+            return execute([null] as Object[])
+        }
+        return execute(args)
     }
 
-    @Override
-    Object call(Object arg) {
-        doCall([arg] as Object[])
-    }
-
-    @Override
-    Object call() {
-        doCall([] as Object[])
-    }
-
-    abstract Object doCall(Object[] args)
+    abstract Object execute(Object[] args)
 
     @Override
     Class[] getParameterTypes() { [Object[]] as Class[] }
 
     @Override
-    int getMaximumNumberOfParameters() { 1 }
+    int getMaximumNumberOfParameters() { 10 }
 
     /**
      * Utility method for choosing matching metamethod, handles MethodSelectionException

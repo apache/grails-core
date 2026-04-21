@@ -27,13 +27,13 @@ class StaticMethodInvokingClosure extends MethodInvokingClosure {
     }
 
     @Override
-    Object doCall(Object[] args) {
+    Object execute(Object[] args) {
         def activeDelegate = GormEnhancer.findStaticApi(targetClass)
         def parameterTypes = args ? args.collect { it?.getClass() ?: Object } as Class[] : [] as Class[]
         def metaMethod = pickMetaMethod(activeDelegate.getMetaClass(), methodName, parameterTypes, false)
         if (metaMethod == null) {
              throw new MissingMethodException(methodName, targetClass, args)
         }
-        metaMethod.invoke(activeDelegate, args)
+        return metaMethod.invoke(activeDelegate, args)
     }
 }

@@ -45,6 +45,7 @@ import org.springframework.validation.Validator
 
 import org.grails.datastore.gorm.GormValidationApi
 import org.grails.datastore.gorm.validation.CascadingValidator
+import org.grails.datastore.mapping.core.Datastore
 import org.grails.datastore.mapping.engine.event.ValidationEvent
 import org.grails.datastore.mapping.reflect.ClassUtils
 import org.grails.datastore.mapping.validation.ValidationErrors
@@ -57,14 +58,19 @@ class HibernateGormValidationApi<D> extends GormValidationApi<D> {
     private static final String ARGUMENT_EVICT = 'evict'
 
     protected ClassLoader classLoader
-    protected HibernateDatastore datastore
-    protected IHibernateTemplate hibernateTemplate
 
     HibernateGormValidationApi(Class<D> persistentClass, HibernateDatastore datastore, ClassLoader classLoader) {
-        super(persistentClass, datastore)
+        super(persistentClass, (Datastore)null)
         this.classLoader = classLoader
-        this.datastore = datastore
-        hibernateTemplate = (IHibernateTemplate) datastore.getHibernateTemplate()
+    }
+
+    @Override
+    HibernateDatastore getDatastore() {
+        (HibernateDatastore) super.getDatastore()
+    }
+
+    protected IHibernateTemplate getHibernateTemplate() {
+        (IHibernateTemplate) getDatastore().getHibernateTemplate()
     }
 
     @Override
@@ -96,7 +102,7 @@ class HibernateGormValidationApi<D> extends GormValidationApi<D> {
 
         fireEvent(instance, validatedFieldsList)
 
-        hibernateTemplate.execute { Session session ->
+        getHibernateTemplate().execute { Session session ->
             FlushMode previous = session.getHibernateFlushMode()
             session.setHibernateFlushMode(FlushMode.MANUAL)
             try {
@@ -120,8 +126,8 @@ class HibernateGormValidationApi<D> extends GormValidationApi<D> {
         if (errors.hasErrors()) {
             valid = false
             if (evict) {
-                if (hibernateTemplate.contains(instance)) {
-                    hibernateTemplate.evict(instance)
+                if (getHibernateTemplate().contains(instance)) {
+                    getHibernateTemplate().evict(instance)
                 }
             }
         }
@@ -134,9 +140,9 @@ class HibernateGormValidationApi<D> extends GormValidationApi<D> {
     }
 
     private void fireEvent(Object target, List<?> validatedFieldsList) {
-        ValidationEvent event = new ValidationEvent(datastore, target)
+        ValidationEvent event = new ValidationEvent(getDatastore(), target)
         event.setValidatedFields(validatedFieldsList)
-        datastore.getApplicationEventPublisher().publishEvent(event)
+        getDatastore().getApplicationEventPublisher().publishEvent(event)
     }
 
     @SuppressWarnings('rawtypes')

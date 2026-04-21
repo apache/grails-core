@@ -304,7 +304,6 @@ public class SimpleMapDatastore extends AbstractDatastore implements Closeable, 
     }
 
     public void clearData() {
-        org.grails.datastore.mapping.simple.connections.SimpleMapConnectionSourceFactory.clearSettings();
         inmemoryData.clear();
         indices.clear();
     }

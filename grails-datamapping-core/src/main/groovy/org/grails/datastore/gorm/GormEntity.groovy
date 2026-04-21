@@ -27,6 +27,8 @@ import jakarta.persistence.Transient
 import org.springframework.transaction.TransactionDefinition
 
 import grails.gorm.DetachedCriteria
+import grails.gorm.api.GormInstanceOperations
+import grails.gorm.api.GormStaticOperations
 import org.grails.datastore.gorm.finders.FinderMethod
 import org.grails.datastore.mapping.dirty.checking.DirtyCheckable
 import org.grails.datastore.mapping.model.MappingContext
@@ -445,7 +447,7 @@ trait GormEntity<D> implements GormValidateable, DirtyCheckable, GormEntityApi<D
 
     @Generated
     private MappingContext lookupMappingContext() {
-        currentGormStaticApi().datastore.mappingContext
+        GormEnhancer.findDatastore(getClass()).mappingContext
     }
 
     /**
@@ -453,12 +455,12 @@ trait GormEntity<D> implements GormValidateable, DirtyCheckable, GormEntityApi<D
      */
     @Generated
     static PersistentEntity getGormPersistentEntity() {
-        currentGormStaticApi().persistentEntity
+        currentGormStaticApi().getGormPersistentEntity()
     }
 
     @Generated
     static List<FinderMethod> getGormDynamicFinders() {
-        currentGormStaticApi().gormDynamicFinders
+        currentGormStaticApi().getGormDynamicFinders()
     }
     /**
      *
@@ -1343,7 +1345,7 @@ trait GormEntity<D> implements GormValidateable, DirtyCheckable, GormEntityApi<D
     }
 
     /**
-     * Finds an object for the given string-based query and positional parameters
+     * Finds an object for the given string-based query, positional parameters and arguments
      *
      * @param query The query
      * @param params The parameters
@@ -1450,12 +1452,12 @@ trait GormEntity<D> implements GormValidateable, DirtyCheckable, GormEntityApi<D
     }
 
     @Generated
-    private GormInstanceApi<D> currentGormInstanceApi() {
-        (GormInstanceApi<D>) GormEnhancer.findInstanceApi(getClass())
+    private GormInstanceOperations<D> currentGormInstanceApi() {
+        GormEnhancer.findInstanceApi(getClass())
     }
 
     @Generated
-    private static GormStaticApi<D> currentGormStaticApi() {
-        (GormStaticApi<D>) GormEnhancer.findStaticApi(this)
+    private static GormStaticOperations<D> currentGormStaticApi() {
+        GormEnhancer.findStaticApi(this)
     }
 }

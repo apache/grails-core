@@ -214,7 +214,7 @@ public class HibernateDatastore extends AbstractDatastore
 
     protected final GrailsHibernateTransactionManager transactionManager;
     protected final ConfigurableApplicationEventPublisher eventPublisher;
-    protected final HibernateGormEnhancer gormEnhancer;
+    protected HibernateGormEnhancer gormEnhancer;
     protected final Map<String, HibernateDatastore> datastoresByConnectionSource = Collections.synchronizedMap(new LinkedHashMap<>());
     protected final Metadata metadata;
     protected final org.grails.orm.hibernate.proxy.GrailsBytecodeProvider bytecodeProvider;
@@ -290,7 +290,9 @@ public class HibernateDatastore extends AbstractDatastore
         this.mappingContext.addMappingContextListener(new MappingContext.Listener() {
             @Override
             public void persistentEntityAdded(PersistentEntity entity) {
-                gormEnhancer.registerEntity(entity);
+                if (gormEnhancer != null) {
+                    gormEnhancer.registerEntity(entity);
+                }
             }
         });
         initializeConverters(this.mappingContext);
@@ -638,8 +640,8 @@ public class HibernateDatastore extends AbstractDatastore
     }
 
     @Override
-    public Session getCurrentSession() throws ConnectionNotFoundException {
-        return new HibernateSession(this, sessionFactory);
+    public Session connect() {
+        return (Session) super.connect();
     }
 
     @Override
@@ -705,8 +707,10 @@ public class HibernateDatastore extends AbstractDatastore
     }
 
     protected void registerAllEntitiesWithEnhancer() {
-        for (PersistentEntity persistentEntity : mappingContext.getPersistentEntities()) {
-            gormEnhancer.registerEntity(persistentEntity);
+        if (gormEnhancer != null) {
+            for (PersistentEntity persistentEntity : mappingContext.getPersistentEntities()) {
+                gormEnhancer.registerEntity(persistentEntity);
+            }
         }
     }
 

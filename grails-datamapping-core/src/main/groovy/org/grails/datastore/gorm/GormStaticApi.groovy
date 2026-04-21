@@ -39,6 +39,11 @@ import org.grails.datastore.mapping.core.Datastore
 import org.grails.datastore.mapping.core.DatastoreUtils
 import org.grails.datastore.mapping.core.Session
 import org.grails.datastore.mapping.core.SessionCallback
+import org.grails.datastore.mapping.core.VoidSessionCallback
+import org.grails.datastore.mapping.core.connections.ConnectionSourcesProvider
+import org.grails.datastore.mapping.core.connections.MultipleConnectionSourceCapableDatastore
+import org.grails.datastore.mapping.query.Query
+
 import org.grails.datastore.mapping.core.StatelessDatastore
 import org.grails.datastore.mapping.core.connections.ConnectionSource
 import org.grails.datastore.mapping.core.connections.ConnectionSourceSettings
@@ -153,8 +158,12 @@ class GormStaticApi<D> extends AbstractGormApi<D> implements GormAllOperations<D
                     }
                 }
             }
-            // 3. Otherwise, return the static API for the tenant specified by the property name
-            return GormEnhancer.findStaticApi(persistentClass, name)
+            // 3. Otherwise, check if it's a connection name
+            if (((ConnectionSourcesProvider)ds).connectionSources.getConnectionSource(name) != null) {
+                Datastore childDs = ((MultipleConnectionSourceCapableDatastore)ds).getDatastoreForConnection(name)
+                return new TenantDelegatingGormOperations<D>(childDs, (Serializable)name, (GormStaticApi<D>)this)
+            }
+            throw new MissingPropertyException(name, persistentClass)
         } else {
             throw new MissingPropertyException(name, persistentClass)
         }
@@ -178,16 +187,18 @@ class GormStaticApi<D> extends AbstractGormApi<D> implements GormAllOperations<D
      */
     @CompileDynamic
     def methodMissing(String methodName, Object args) {
+        if (methodName == "call") {
+             throw new MissingMethodException(methodName, persistentClass, args as Object[])
+        }
         if (methodName == 'withTenant' || methodName == 'eachTenant') {
             return InvokerHelper.invokeMethod(this, methodName, args)
         }
         FinderMethod method = getGormDynamicFinders().find { FinderMethod f -> f.isMethodMatch(methodName) }
         if (method != null) {
-            return method.invoke(persistentClass, methodName, (Object[])args)
+            Object[] argsArray = args instanceof Object[] ? (Object[])args : [args] as Object[]
+            return method.invoke(persistentClass, methodName, argsArray)
         }
-        else {
-            throw new MissingMethodException(methodName, persistentClass, args)
-        }
+        throw new MissingMethodException(methodName, persistentClass, args instanceof Object[] ? (Object[])args : [args] as Object[])
     }
 
     /**
@@ -902,7 +913,7 @@ class GormStaticApi<D> extends AbstractGormApi<D> implements GormAllOperations<D
     }
 
     GormAllOperations<D> withConnection(String connectionName) {
-        return new TenantDelegatingGormOperations<D>(getDatastore(), connectionName, (GormStaticOperations<D>)this)
+        return new TenantDelegatingGormOperations<D>(getDatastore(), connectionName, (GormStaticApi<D>)this)
     }
 
     def <T> T withTenant(Serializable tenantId, Closure<T> callable) {
@@ -934,7 +945,7 @@ class GormStaticApi<D> extends AbstractGormApi<D> implements GormAllOperations<D
     }
 
     GormAllOperations<D> withTenant(Serializable tenantId) {
-        return new TenantDelegatingGormOperations<D>(getDatastore(), tenantId, (GormStaticOperations<D>)this)
+        return new TenantDelegatingGormOperations<D>(getDatastore(), tenantId, (GormStaticApi<D>)this)
     }
     /**
      * Executes the closure within the context of a new transaction

@@ -99,7 +99,7 @@ class HibernateGormInstanceApi<D> extends GormInstanceApi<D> {
     protected ClassLoader classLoader
 
     HibernateGormInstanceApi(Class<D> persistentClass, HibernateDatastore datastore, ClassLoader classLoader) {
-        super(persistentClass, datastore as Datastore)
+        super(persistentClass, (Datastore)null)
         this.classLoader = classLoader
     }
 

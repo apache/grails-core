@@ -21,6 +21,7 @@
 package org.apache.grails.data.simple.core
 
 import org.apache.grails.data.testing.tck.base.GrailsDataTckManager
+import spock.lang.Specification
 import org.grails.datastore.gorm.Birthday
 import org.grails.datastore.gorm.GormEnhancer
 import org.grails.datastore.mapping.core.Session
@@ -42,11 +43,32 @@ import org.springframework.validation.Validator
  */
 class GrailsDataCoreTckManager extends GrailsDataTckManager {
 
+    private SimpleMapDatastore datastoreInstance
+
+    @Override
+    void setup(Class<? extends Specification> spec) {
+        // Ensure global registries are clean before each test
+        GormEnhancer.clearRegistry()
+        org.grails.datastore.mapping.simple.connections.SimpleMapConnectionSourceFactory.clearSettings()
+        super.setup(spec)
+    }
+
+    @Override
+    void cleanup() {
+        super.cleanup()
+        if (datastoreInstance != null) {
+            datastoreInstance.clearData()
+        }
+        GormEnhancer.clearRegistry()
+        org.grails.datastore.mapping.simple.connections.SimpleMapConnectionSourceFactory.clearSettings()
+    }
+
     @Override
     Session createSession() {
         def ctx = new GenericApplicationContext()
         ctx.refresh()
-        def simple = new SimpleMapDatastore(ctx)
+        this.datastoreInstance = new SimpleMapDatastore(ctx)
+        def simple = this.datastoreInstance
 
         simple.mappingContext.mappingFactory.registerCustomType(new AbstractMappingAwareCustomTypeMarshaller<Birthday, Map, SimpleMapResultList>(Birthday) {
             @Override

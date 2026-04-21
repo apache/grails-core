@@ -40,12 +40,16 @@ abstract class AbstractDatastoreApi {
 
     protected <T> T execute(SessionCallback<T> callback) {
         Datastore ds = getDatastore()
-        DatastoreUtils.execute(ds, callback)
+        GormEnhancer.doWithDatastore(ds) {
+            DatastoreUtils.execute(ds, callback)
+        }
     }
 
     protected void execute(VoidSessionCallback callback) {
         Datastore ds = getDatastore()
-        DatastoreUtils.execute(ds, callback)
+        GormEnhancer.doWithDatastore(ds) {
+            DatastoreUtils.execute(ds, callback)
+        }
     }
 
     Datastore getDatastore() {

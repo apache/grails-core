@@ -32,16 +32,16 @@
  */
 package org.grails.orm.hibernate
 
+import grails.gorm.api.GormStaticOperations
 import groovy.transform.CompileStatic
-
-import org.springframework.transaction.PlatformTransactionManager
-
 import org.grails.datastore.gorm.GormEnhancer
 import org.grails.datastore.gorm.GormInstanceApi
 import org.grails.datastore.gorm.GormStaticApi
 import org.grails.datastore.gorm.GormValidationApi
 import org.grails.datastore.mapping.core.Datastore
+import org.grails.datastore.mapping.core.connections.ConnectionSource
 import org.grails.datastore.mapping.core.connections.ConnectionSourceSettings
+import org.springframework.transaction.PlatformTransactionManager
 
 /**
  * Extended GORM Enhancer that fills out the remaining GORM for Hibernate methods
@@ -60,29 +60,49 @@ class HibernateGormEnhancer extends GormEnhancer {
 
     HibernateGormEnhancer(Datastore datastore, PlatformTransactionManager transactionManager, ConnectionSourceSettings settings) {
         super(datastore, transactionManager, settings)
+        if (datastore != null) {
+            for (entity in datastore.mappingContext.persistentEntities) {
+                registerEntity(entity)
+            }
+        }
     }
 
     @Override
-    protected <D> GormStaticApi<D> getStaticApi(Class<D> cls, String qualifier = null) {
-        HibernateDatastore hibernateDatastore = (HibernateDatastore) datastore
+    protected <D> GormStaticApi<D> getStaticApi(Class<D> cls, String qualifier = ConnectionSource.DEFAULT) {
+        Datastore datastore = getDatastoreMap(qualifier).get(cls)
+        // For the singleton, use a proxy so finders are context-aware
+        Datastore finderDatastore = datastore
+        if (qualifier == ConnectionSource.DEFAULT) {
+            finderDatastore = createEntityAwareProxy(cls)
+        }
+        // If this is for the global singleton registry, pass null for the datastore so it remains stateless
+        Datastore apiDatastore = (qualifier == ConnectionSource.DEFAULT) ? null : datastore
+        
         new HibernateGormStaticApi<D>(
                 cls,
-                hibernateDatastore,
-                createDynamicFinders(hibernateDatastore),
+                (HibernateDatastore) apiDatastore,
+                createDynamicFinders(finderDatastore),
                 Thread.currentThread().contextClassLoader,
                 transactionManager,
-                null
+                qualifier
         )
     }
 
     @Override
-    protected <D> GormInstanceApi<D> getInstanceApi(Class<D> cls, String qualifier = null) {
-        new HibernateGormInstanceApi<D>(cls, (HibernateDatastore) datastore, Thread.currentThread().contextClassLoader)
+    protected <D> GormInstanceApi<D> getInstanceApi(Class<D> cls, String qualifier = ConnectionSource.DEFAULT) {
+        Datastore datastore = getDatastoreMap(qualifier).get(cls)
+        Datastore apiDatastore = (qualifier == ConnectionSource.DEFAULT) ? null : datastore
+        def instanceApi = new HibernateGormInstanceApi<D>(cls, (HibernateDatastore) apiDatastore, Thread.currentThread().contextClassLoader)
+        instanceApi.failOnError = failOnError
+        instanceApi.markDirty = markDirty
+        return instanceApi
     }
 
     @Override
-    protected <D> GormValidationApi<D> getValidationApi(Class<D> cls, String qualifier = null) {
-        new HibernateGormValidationApi<D>(cls, (HibernateDatastore) datastore, Thread.currentThread().contextClassLoader)
+    protected <D> GormValidationApi<D> getValidationApi(Class<D> cls, String qualifier = ConnectionSource.DEFAULT) {
+        Datastore datastore = getDatastoreMap(qualifier).get(cls)
+        Datastore apiDatastore = (qualifier == ConnectionSource.DEFAULT) ? null : datastore
+        new HibernateGormValidationApi<D>(cls, (HibernateDatastore) apiDatastore, Thread.currentThread().contextClassLoader)
     }
 
     @Override
@@ -90,7 +110,7 @@ class HibernateGormEnhancer extends GormEnhancer {
         // no-op
     }
 
-    public static <D> GormStaticApi<D> findStaticApi(Class<D> cls, String qualifier) {
+    public static <D> GormStaticOperations<D> findStaticApi(Class<D> cls, String qualifier = null) {
         GormEnhancer.findStaticApi(cls, qualifier)
     }
 }

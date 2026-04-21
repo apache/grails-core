@@ -75,20 +75,26 @@ import org.grails.orm.hibernate.support.HibernateRuntimeUtils
 //TODO Duplication!!
 class HibernateGormStaticApi<D> extends GormStaticApi<D> {
 
-    protected ConversionService conversionService
-    protected ProxyHandler proxyHandler
-    protected Class identityType
     protected ClassLoader classLoader
     private HibernateGormInstanceApi<D> instanceApi
 
     HibernateGormStaticApi(Class<D> persistentClass, HibernateDatastore datastore, List<FinderMethod> finders,
                            ClassLoader classLoader, PlatformTransactionManager transactionManager, String qualifier = null) {
-        super(persistentClass, datastore, finders, transactionManager)
-        this.conversionService = datastore.mappingContext.conversionService
-        this.proxyHandler = datastore.mappingContext.proxyHandler
+        super(persistentClass, (HibernateDatastore)null, finders, transactionManager)
         this.classLoader = classLoader
-        this.identityType = persistentEntity.identity?.type
-        this.instanceApi = new HibernateGormInstanceApi<>(persistentClass, datastore, classLoader)
+        this.instanceApi = new HibernateGormInstanceApi<>(persistentClass, (HibernateDatastore)null, classLoader)
+    }
+
+    protected ConversionService getConversionService() {
+        getDatastore().mappingContext.conversionService
+    }
+
+    protected ProxyHandler getProxyHandler() {
+        getDatastore().mappingContext.proxyHandler
+    }
+
+    protected Class getIdentityType() {
+        getPersistentEntity().identity?.type
     }
 
     @Override

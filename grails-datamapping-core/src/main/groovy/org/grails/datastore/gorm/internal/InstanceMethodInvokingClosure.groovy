@@ -27,7 +27,7 @@ class InstanceMethodInvokingClosure extends MethodInvokingClosure {
     }
 
     @Override
-    Object doCall(Object[] args) {
+    Object execute(Object[] args) {
         def activeDelegate = GormEnhancer.findInstanceApi(targetClass)
         Object[] arguments
         if (args) {
@@ -45,6 +45,6 @@ class InstanceMethodInvokingClosure extends MethodInvokingClosure {
         if (metaMethod == null) {
             throw new MissingMethodException(methodName, targetClass, args)
         }
-        metaMethod.invoke(activeDelegate, arguments)
+        return metaMethod.invoke(activeDelegate, arguments)
     }
 }

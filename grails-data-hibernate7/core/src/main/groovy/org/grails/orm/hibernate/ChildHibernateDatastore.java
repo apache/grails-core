@@ -42,6 +42,11 @@ public class ChildHibernateDatastore extends HibernateDatastore {
         super(connectionSources, mappingContext, eventPublisher,
             connectionSources.getDefaultConnectionSource().getSource());
         this.parent = parent;
+        if (parent.gormEnhancer != null) {
+            for (org.grails.datastore.mapping.model.PersistentEntity entity : mappingContext.getPersistentEntities()) {
+                parent.gormEnhancer.registerEntity(entity);
+            }
+        }
     }
 
     @Override
