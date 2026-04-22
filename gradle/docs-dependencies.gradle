@@ -31,16 +31,10 @@ dependencies {
 }
 
 String resolveProjectVersion(String artifact) {
-    String version = configurations.runtimeClasspath
-            .resolvedConfiguration
-            .resolvedArtifacts
-            .find {
-                it.moduleVersion.id.name == artifact
-            }?.moduleVersion?.id?.version
-    if (!version) {
-        return null
+    def component = configurations.runtimeClasspath.incoming.resolutionResult.allComponents.find {
+        it.moduleVersion?.name == artifact
     }
-    version
+    return component?.moduleVersion?.version
 }
 
 def configureGroovyDoc = tasks.register('configureGroovyDoc') {
@@ -56,12 +50,35 @@ def configureGroovyDoc = tasks.register('configureGroovyDoc') {
         }
         def springVersion = resolveProjectVersion('spring-core')
         if (springVersion) {
-            links << [packages: 'org.springframework.core.', href: "https://docs.spring.io/spring-framework/docs/${springVersion}/javadoc-api/"]
+            links << [packages: 'org.springframework.', href: "https://docs.spring.io/spring-framework/docs/${springVersion}/javadoc-api/"]
         }
         def springBootVersion = resolveProjectVersion('spring-boot')
         if (springBootVersion) {
             links << [packages: 'org.springframework.boot.', href: "https://docs.spring.io/spring-boot/docs/${springBootVersion}/api/"]
         }
+        def hibernateVersion = resolveProjectVersion('hibernate-core')
+        if (hibernateVersion) {
+            def shortVersion = hibernateVersion.split('\\.').take(2).join('.')
+            links << [packages: 'org.hibernate.', href: "https://docs.jboss.org/hibernate/orm/${shortVersion}/javadocs/"]
+        }
+        def jakartaValidationVersion = resolveProjectVersion('jakarta.validation-api')
+        if (jakartaValidationVersion) {
+            links << [packages: 'jakarta.validation.', href: "https://jakarta.ee/specifications/bean-validation/3.0/apidocs/"]
+        }
+        def jakartaPersistenceVersion = resolveProjectVersion('jakarta.persistence-api')
+        if (jakartaPersistenceVersion) {
+            links << [packages: 'jakarta.persistence.', href: "https://jakarta.ee/specifications/persistence/3.1/apidocs/"]
+        }
+        def jakartaServletVersion = resolveProjectVersion('jakarta.servlet-api')
+        if (jakartaServletVersion) {
+            links << [packages: 'jakarta.servlet.', href: "https://jakarta.ee/specifications/platform/10/apidocs/"]
+        }
+        links << [packages: 'org.grails.datastore.', href: "https://gorm.grails.org/latest/api/"]
+        links << [packages: 'grails.gorm.', href: "https://gorm.grails.org/latest/api/"]
+        links << [packages: 'org.grails.gorm.', href: "https://gorm.grails.org/latest/api/"]
+        links << [packages: 'groovy.', href: "https://docs.groovy-lang.org/latest/html/gapi/"]
+        links << [packages: 'org.apache.groovy.', href: "https://docs.groovy-lang.org/latest/html/gapi/"]
+        links << [packages: 'org.codehaus.groovy.', href: "https://docs.groovy-lang.org/latest/html/gapi/"]
         if (it.ext.has('groovydocLinks')) {
             links.addAll(it.ext.groovydocLinks as List<Map<String, String>>)
         }
