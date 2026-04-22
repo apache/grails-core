@@ -79,6 +79,7 @@ ext {
             'jquery.version'                : '3.7.1',
             'liquibase-hibernate5.version'  : '4.27.0',
             'mongodb.version'               : '5.6.4',
+            'reactor.version'               : '3.8.5',
             'rxjava.version'                : '1.3.8',
             'rxjava2.version'               : '2.2.21',
             'rxjava3.version'               : '3.1.12',
@@ -93,6 +94,7 @@ ext {
             // grails-shell-cli SpringRetryCompilerAutoConfiguration's unversioned
             // reference resolves and consumer apps using @Retryable get a known version.
             'spring-retry.version'          : '2.0.11',
+            'tomcat-jdbc.version'                : '11.0.21',
             'hibernate-groovy-proxy.version': '1.1',
     ]
 
@@ -149,6 +151,7 @@ ext {
             // end - restate the groovy-bom here because the spring dependency management
             // start - restate versions managed by Spring Boot / Spock BOMs so enforcedPlatform can enforce them
             // when micronaut is used (Micronaut 5 platform declares higher versions that override preferences)
+            'reactor-core'          : "io.projectreactor:reactor-core:${bomDependencyVersions['reactor.version']}",
             'kotlin-stdlib'         : "org.jetbrains.kotlin:kotlin-stdlib:${bomDependencyVersions['kotlin.version']}",
             'kotlin-stdlib-common'  : "org.jetbrains.kotlin:kotlin-stdlib-common:${bomDependencyVersions['kotlin.version']}",
             'kotlin-stdlib-jdk7'    : "org.jetbrains.kotlin:kotlin-stdlib-jdk7:${bomDependencyVersions['kotlin.version']}",
@@ -156,6 +159,7 @@ ext {
             'mockito-core'          : "org.mockito:mockito-core:${bomDependencyVersions['mockito.version']}",
             'spock-core'            : "org.spockframework:spock-core:${bomDependencyVersions['spock.version']}",
             'spock-spring'          : "org.spockframework:spock-spring:${bomDependencyVersions['spock.version']}",
+            'tomcat-jdbc'          : "org.apache.tomcat:tomcat-jdbc:${bomDependencyVersions['tomcat-jdbc.version']}",
             // end - restate versions managed by inherited BOMs
             'jquery'                : "org.webjars.npm:jquery:${bomDependencyVersions['jquery.version']}",
             'mongodb-bson'          : "org.mongodb:bson:${bomDependencyVersions['mongodb.version']}",
@@ -237,7 +241,7 @@ ext {
         customBomDependencies = [
                 'cache-ri-impl'         : "org.jsr107.ri:cache-ri-impl:${combinedVersions['cache-ri-impl.version']}",
                 'hibernate-core'        : "org.hibernate.orm:hibernate-core:${combinedVersions['hibernate.version']}",
-                'hibernate-jcache'        : "org.hibernate.orm:hibernate-jcache:${combinedVersions['hibernate.version']}",
+                'hibernate-jcache'      : "org.hibernate.orm:hibernate-jcache:${combinedVersions['hibernate.version']}",
                 'hibernate-models'      : "org.hibernate.models:hibernate-models:${combinedVersions['hibernate-models.version']}",
                 'hibernate-tools-orm'   : "org.hibernate.tool:hibernate-tools-orm:${combinedVersions['hibernate.version']}",
                 'hibernate-tools-utils' : "org.hibernate.tool:hibernate-tools-utils:${combinedVersions['hibernate.version']}",
