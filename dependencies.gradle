@@ -76,7 +76,7 @@ ext {
             'commons-codec.version'       : '1.19.0',
             'commons-lang3.version'       : '3.20.0',
             'geb-spock.version'           : '8.0.1',
-            'groovy.version'              : '5.0.5',
+            'groovy.version'              : '5.0.6-SNAPSHOT',
             'jquery.version'              : '3.7.1',
             'liquibase-hibernate5.version': '4.27.0',
             'mongodb.version'             : '5.6.4',
