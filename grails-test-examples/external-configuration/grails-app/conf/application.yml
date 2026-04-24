@@ -17,34 +17,14 @@ grails:
   profile: web
   codegen:
     defaultPackage: test.app
-  gorm:
-    reactor:
-      # Whether to translate GORM events into Reactor events
-      # Disabled by default for performance reasons
-      events: false
 info:
   app:
     name: '@info.app.name@'
     version: '@info.app.version@'
     grailsVersion: '@info.app.grailsVersion@'
-spring:
-  main:
-    banner-mode: "off"
-  groovy:
-    template:
-      check-template-location: false
-
 ---
 grails:
   mime:
-    disable:
-      accept:
-        header:
-          userAgents:
-            - Gecko
-            - WebKit
-            - Presto
-            - Trident
     types:
       all: '*/*'
       atom: application/atom+xml
@@ -68,24 +48,12 @@ grails:
       xml:
         - text/xml
         - application/xml
-  urlmapping:
-    cache:
-      maxsize: 1000
-  controllers:
-    defaultScope: singleton
-  converters:
-    encoding: UTF-8
   views:
-    default:
-      codec: html
     gsp:
       encoding: UTF-8
       htmlcodec: xml
       codecs:
-        expression: html
-        scriptlets: html
-        taglib: none
-        staticparts: none
+        scriptlet: html
 ---
 hibernate:
   cache:
@@ -133,6 +101,7 @@ environments:
 ---
 test:
   config:
+    number: 12345
     value: "From application.yml"
 ---
 grails:

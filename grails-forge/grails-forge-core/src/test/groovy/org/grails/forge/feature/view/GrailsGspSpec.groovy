@@ -60,10 +60,7 @@ class GrailsGspSpec extends ApplicationContextSpec implements CommandOutputFixtu
         then:
         ctx.getConfiguration().containsKey("grails.views.gsp.encoding")
         ctx.getConfiguration().containsKey("grails.views.gsp.htmlcodec")
-        ctx.getConfiguration().containsKey("grails.views.gsp.codecs.expression")
         ctx.getConfiguration().containsKey("grails.views.gsp.codecs.scriptlet")
-        ctx.getConfiguration().containsKey("grails.views.gsp.codecs.taglib")
-        ctx.getConfiguration().containsKey("grails.views.gsp.codecs.staticparts")
     }
 
     void "test mime configuration"() {
@@ -71,7 +68,6 @@ class GrailsGspSpec extends ApplicationContextSpec implements CommandOutputFixtu
         final GeneratorContext ctx = buildGeneratorContext(["gsp"])
 
         then:
-        ctx.getConfiguration().get("grails.mime.disable.accept.header.userAgents") == Arrays.asList("Gecko", "WebKit", "Presto", "Trident")
         ctx.getConfiguration().get("grails.mime.types.all") == "*/*"
         ctx.getConfiguration().get("grails.mime.types.atom") == "application/atom+xml"
         ctx.getConfiguration().get("grails.mime.types.css") == "text/css"
