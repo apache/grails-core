@@ -54,7 +54,7 @@ class TemplateRendererImpl implements TemplateRenderer {
     @Override
     void render(Map<String, Object> namedArguments) {
         if (namedArguments == null) {
-            throw new IllegalArgumentException("render(Map) called with null namedArguments")
+            throw new IllegalArgumentException('render(Map) called with null namedArguments')
         }
         Object templateArg = namedArguments.get('template')
         Object destArg = namedArguments.get('destination')
@@ -190,7 +190,7 @@ class TemplateRendererImpl implements TemplateRenderer {
      */
     void render(Resource template, File destination, Map model = Collections.emptyMap(), boolean overwrite = false) {
         if (template == null) {
-            throw new TemplateException("render(Resource, File, Map, boolean) called with null template")
+            throw new TemplateException('render(Resource, File, Map, boolean) called with null template')
         }
         if (destination == null) {
             throw new IllegalArgumentException(
