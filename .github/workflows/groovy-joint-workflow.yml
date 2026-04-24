@@ -128,16 +128,50 @@ jobs:
           echo "" >> $GITHUB_OUTPUT
           echo "EOF" >> $GITHUB_OUTPUT
       - name: "🐘 Configure Gradle Plugins (step 3/3)"
+        # Pattern-based (not line-number-based) so upstream Groovy restructuring
+        # does not silently break this workflow - see GROOVY_4_0_X vs GROOVY_5_0_X.
         run: |
           cd groovy
-          # Delete existing plugins from settings.gradle file
-          sed -i '32,37d' settings.gradle
-          # Add Develocity setup related configuration after line no 31 in settings.gradle
-          echo "${{ steps.develocity-conf-1.outputs.value }}" | sed -i -e "31r /dev/stdin" settings.gradle
-          # Delete existing buildCache configuration from gradle/build-scans.gradle file
-          sed -i '23,46d' gradle/build-scans.gradle
-          # Add Develocity setup related configuration after line no 22 in gradle/build-scans.gradle
-          echo "${{ steps.develocity-conf-2.outputs.value }}" | sed -i -e "22r /dev/stdin" gradle/build-scans.gradle
+
+          cat > /tmp/grails-plugins-block.gradle <<'EOF_PLUGINS'
+          ${{ steps.develocity-conf-1.outputs.value }}
+          EOF_PLUGINS
+
+          cat > /tmp/grails-build-scans.gradle <<'EOF_SCANS'
+          ${{ steps.develocity-conf-2.outputs.value }}
+          EOF_SCANS
+
+          # `^plugins \{$` deliberately excludes `pluginManagement {`.
+          awk '
+            BEGIN { in_block = 0; replaced = 0 }
+            /^plugins \{$/ && !replaced {
+              in_block = 1
+              while ((getline line < "/tmp/grails-plugins-block.gradle") > 0) print line
+              close("/tmp/grails-plugins-block.gradle")
+              replaced = 1
+              next
+            }
+            in_block && /^\}$/ { in_block = 0; next }
+            in_block { next }
+            { print }
+          ' settings.gradle > settings.gradle.new
+          if ! grep -q "com.gradle.develocity" settings.gradle.new; then
+            echo "::error::Failed to inject develocity plugins block into groovy/settings.gradle"
+            diff settings.gradle settings.gradle.new || true
+            exit 1
+          fi
+          mv settings.gradle.new settings.gradle
+
+          awk '
+            /^develocity \{$/ { exit }
+            { print }
+          ' gradle/build-scans.gradle > gradle/build-scans.gradle.new
+          cat /tmp/grails-build-scans.gradle >> gradle/build-scans.gradle.new
+          if ! grep -q "tag('grails-core')" gradle/build-scans.gradle.new; then
+            echo "::error::Failed to inject develocity config into groovy/gradle/build-scans.gradle"
+            exit 1
+          fi
+          mv gradle/build-scans.gradle.new gradle/build-scans.gradle
       - name: "🔨 Publish Groovy to local maven repository (no docs)"
         run: |
           cd groovy
