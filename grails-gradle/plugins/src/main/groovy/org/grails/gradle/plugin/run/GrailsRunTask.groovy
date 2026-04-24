@@ -21,6 +21,7 @@ package org.grails.gradle.plugin.run
 import groovy.transform.CompileStatic
 
 import org.gradle.api.tasks.JavaExec
+import org.gradle.work.DisableCachingByDefault
 
 /**
  * Extension to the standard JavaExec task to run Grails applications
@@ -29,4 +30,5 @@ import org.gradle.api.tasks.JavaExec
  * @since 3.2
  */
 @CompileStatic
-class GrailsRunTask extends JavaExec {}
+@DisableCachingByDefault(because = 'Application run tasks produce no cacheable output')
+abstract class GrailsRunTask extends JavaExec {}

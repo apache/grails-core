@@ -442,8 +442,13 @@ jobs:
           ./gradlew :grails-wrapper:distZip
       - name: "✅ Verify grails-wrapper"
         if: success()
+        env:
+          GRAILS_WRAPPER_ALLOWED_TYPES: 'SNAPSHOT'
         run: |
-          export GRAILS_WRAPPER_ALLOWED_TYPES='SNAPSHOT'
+          # Pin the wrapper to this branch's snapshot so it doesn't resolve the
+          # globally latest SNAPSHOT in the Apache repo, which may be compiled
+          # for a newer Java runtime than this job's JDK.
+          export PREFERRED_GRAILS_VERSION=$(grep '^projectVersion=' gradle.properties | cut -d'=' -f2)
           cp grails-wrapper/build/distributions/apache-grails-wrapper-*.zip build/wrapper.zip
           cd build
           unzip wrapper -d tmp
@@ -453,7 +458,7 @@ jobs:
         uses: actions/upload-artifact@v7.0.0
         with:
           name: apache-grails-wrapper-SNAPSHOT-bin
-          path: tmp/wrapper
+          path: build/tmp/wrapper
   publishForge:
     if: github.repository_owner == 'apache' && (github.event_name == 'push' || github.event_name == 'workflow_dispatch')
     needs: [ buildForge, publishGradle, publish ]

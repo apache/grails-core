@@ -19,4 +19,8 @@
 
 apply plugin:'java'
 
-task hello2 << {println 'Another hello world!'}
+tasks.register('hello2') {
+    doLast {
+        println 'Another hello world!'
+    }
+}

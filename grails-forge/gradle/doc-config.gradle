@@ -24,10 +24,10 @@ groovydocEnhancer {
 }
 
 dependencies {
-    documentation "org.codehaus.groovy:groovy-templates:$groovyVersion"
-    documentation "org.codehaus.groovy:groovy-dateutil:$groovyVersion"
-    documentation "org.codehaus.groovy:groovy-ant:$groovyVersion"
-    documentation "org.codehaus.groovy:groovy-groovydoc:$groovyVersion"
+    documentation "org.apache.groovy:groovy-templates:$groovyVersion"
+    documentation "org.apache.groovy:groovy-dateutil:$groovyVersion"
+    documentation "org.apache.groovy:groovy-ant:$groovyVersion"
+    documentation "org.apache.groovy:groovy-groovydoc:$groovyVersion"
 }
 
 tasks.withType(Groovydoc).configureEach { Groovydoc gdoc ->

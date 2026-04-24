@@ -204,3 +204,43 @@ Micronaut for Spring 4.5.1 provides seamless integration between Micronaut and S
 ==== 13. Upgrading the Spring Security Plugin
 
 If your application uses the Grails Spring Security plugin, please consult the https://apache.github.io/grails-spring-security/snapshot/guide/index.html#upgrading-from-previous-versions[Upgrading from Previous Versions] section of the Spring Security plugin documentation for specific upgrade instructions related to Grails 7.
+
+==== 14. Changes in CLI- and Forge-generated configuration files
+
+From Grails 7.0.11 onwards, the CLIs (`grails-shell-cli` and `grails-forge-cli`) and the https://start.grails.org[Grails Forge website] no longer include several previously generated properties in `application.yml`.
+
+Most of the removed entries simply restated framework defaults, so omitting them reduces clutter without changing behavior. However, `grails.urlmapping.cache.maxsize` is a special case: older generated applications explicitly set it to `1000`, while the framework default is now `5000`. If you want to preserve the older generated cache size, keep that property in your application.
+
+If the application you are upgrading relies on a custom value for any of the following properties, or if you want to preserve the previous generated value of `grails.urlmapping.cache.maxsize`, keep that setting in your `application.yml` file.
+
+These are the properties that were removed from generated `application.yml` files:
+
+[source,yml]
+.application.yml
+----
+grails:
+  controllers:
+    defaultScope: singleton # already framework default
+  converters:
+    encoding: UTF-8 # already framework default
+  mime:
+    disable:
+      accept:
+        header:
+          userAgents: # already framework default
+            - Gecko
+            - WebKit
+            - Presto
+            - Trident
+  urlmapping:
+    cache:
+      maxsize: 1000 # Attention! framework default: 5000
+  views:
+    default:
+      codec: html # redundant because GSP expressions already default to html encoding
+    gsp:
+      codecs:
+        expression: html # already framework default
+        taglib: none # already framework default
+        staticparts: none # already framework default
+----

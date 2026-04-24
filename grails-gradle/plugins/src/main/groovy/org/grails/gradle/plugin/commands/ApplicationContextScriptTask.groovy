@@ -21,10 +21,15 @@ package org.grails.gradle.plugin.commands
 import groovy.transform.CompileStatic
 
 import org.gradle.api.tasks.JavaExec
+import org.gradle.work.DisableCachingByDefault
+
+import javax.inject.Inject
 
 @CompileStatic
-class ApplicationContextScriptTask extends JavaExec {
+@DisableCachingByDefault(because = 'Application script tasks produce no cacheable output')
+abstract class ApplicationContextScriptTask extends JavaExec {
 
+    @Inject
     ApplicationContextScriptTask() {
         mainClass.set('grails.ui.script.GrailsApplicationScriptRunner')
         dependsOn('classes', 'findMainClass')

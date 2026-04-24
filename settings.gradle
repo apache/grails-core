@@ -20,6 +20,23 @@ import org.apache.tools.ant.DirectoryScanner
 import org.gradle.api.initialization.resolve.RepositoriesMode
 
 pluginManagement {
+    repositories {
+        mavenCentral()
+        gradlePluginPortal()
+        // Needed to resolve grails-publish snapshots that the build-logic composite
+        // build depends on while pluginManagement itself is being initialised - the
+        // org.apache.grails.buildsrc.repo plugin below cannot add this repo soon
+        // enough because Gradle must first build its classpath.
+        maven {
+            url = 'https://repository.apache.org/content/groups/snapshots'
+            content {
+                includeVersionByRegex('org[.]apache[.]grails[.]gradle.*', '.*', '.*-SNAPSHOT')
+            }
+            mavenContent {
+                snapshotsOnly()
+            }
+        }
+    }
     includeBuild('./grails-gradle') {
         name = 'grails-gradle'
     }
@@ -63,10 +80,15 @@ pluginManagement {
 }
 
 plugins {
-    id 'com.gradle.develocity' version '4.2.2'
-    id 'com.gradle.common-custom-user-data-gradle-plugin' version '2.3'
+    id 'com.gradle.develocity' version '4.3.2'
+    id 'com.gradle.common-custom-user-data-gradle-plugin' version '2.4.0'
     id 'org.apache.grails.buildsrc.repo'
 }
+
+// NOTE: Known Gradle deprecation warnings (scheduled for removal in Gradle 10):
+// 1. StartParameter.isConfigurationCacheRequested - from org.asciidoctor.jvm.convert plugin (4.0.5)
+//    Fix available in asciidoctor-gradle-plugin 5.0.0+ (currently alpha)
+//    Tracking: https://github.com/asciidoctor/asciidoctor-gradle-plugin/issues/756
 
 def isCI = System.getenv().containsKey('CI')
 def isLocal = !isCI
@@ -431,6 +453,7 @@ include(
         'grails-test-examples-plugins-loadfirst',
         'grails-test-examples-plugins-loadsecond',
         'grails-test-examples-plugins-micronaut-singleton',
+        'grails-test-examples-config-report',
         'grails-test-examples-scaffolding',
         'grails-test-examples-scaffolding-fields',
         'grails-test-examples-test-phases',
@@ -472,6 +495,7 @@ project(':grails-test-examples-plugins-exploded').projectDir = file('grails-test
 project(':grails-test-examples-plugins-issue-11767').projectDir = file('grails-test-examples/plugins/issue-11767')
 project(':grails-test-examples-plugins-micronaut-singleton').projectDir = file('grails-test-examples/plugins/micronaut-singleton')
 project(':grails-test-examples-cache').projectDir = file('grails-test-examples/cache')
+project(':grails-test-examples-config-report').projectDir = file('grails-test-examples/config-report')
 project(':grails-test-examples-scaffolding').projectDir = file('grails-test-examples/scaffolding')
 project(':grails-test-examples-scaffolding-fields').projectDir = file('grails-test-examples/scaffolding-fields')
 project(':grails-test-examples-views-functional-tests').projectDir = file('grails-test-examples/views-functional-tests')

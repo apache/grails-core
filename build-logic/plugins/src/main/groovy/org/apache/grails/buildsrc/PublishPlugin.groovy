@@ -92,9 +92,14 @@ class PublishPlugin implements Plugin<Project> {
             task.group = 'publishing'
             task.outputs.dir(artifactsDir)
             task.dependsOn(project.tasks.withType(Jar))
+
+            // Capture publishing extension at configuration time to avoid Task.project access at execution time
+            // See: https://docs.gradle.org/current/userguide/configuration_cache.html#config_cache:requirements:use_project_during_execution
+            def publishingExtension = project.extensions.getByType(PublishingExtension)
+
             task.doLast {
                 Map<String, String> artifacts = [:]
-                project.extensions.getByType(PublishingExtension).publications.withType(MavenPublication).each { MavenPublication publication ->
+                publishingExtension.publications.withType(MavenPublication).each { MavenPublication publication ->
                     publication.artifacts.each { MavenArtifact artifact ->
                         if (!artifact.file.exists() || artifact.file.name in ['grails-plugin.xml', 'profile.yml']) {
                             return

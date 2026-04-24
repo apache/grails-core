@@ -38,7 +38,7 @@ import org.grails.forge.util.NameUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import javax.validation.constraints.Pattern;
+import jakarta.validation.constraints.Pattern;
 import java.util.Collections;
 import java.util.List;
 
