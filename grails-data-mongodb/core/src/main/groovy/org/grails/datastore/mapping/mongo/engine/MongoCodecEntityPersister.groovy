@@ -182,6 +182,15 @@ class MongoCodecEntityPersister extends ThirdPartyCacheEntityPersister<Object> {
      * Coerce an identifier value to the {@code storedAs} type declared in the entity's id
      * mapping, so that point-lookup queries target the BSON type actually on disk.
      * See {@code IdentityMapping#getStoredAs()}.
+     *
+     * <p>Exercised end-to-end (via {@code retrieveEntity}/{@code retrieveAllEntities}) by
+     * {@code StringIdWithObjectIdStorageSpec}, specifically:
+     * <ul>
+     *   <li>"with storedAs ObjectId, point lookup by hex string works" — happy path, String&nbsp;&rarr;&nbsp;ObjectId</li>
+     *   <li>"with storedAs ObjectId, batch getAll resolves all ids (coerces each key in the in-list filter)"</li>
+     *   <li>"with storedAs ObjectId, point lookup of a non-hex id matches the BSON String the encoder wrote" — null-return fallback</li>
+     *   <li>"with storedAs ObjectId, legacy documents written directly as BSON ObjectId are fully accessible"</li>
+     * </ul>
      */
     protected Object coerceIdToStoredType(Object key, PersistentEntity entity) {
         if (key == null) return key

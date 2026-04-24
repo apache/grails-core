@@ -292,6 +292,14 @@ class MongoCodecSession extends AbstractMongoSession {
      * the correct type (otherwise {@code {_id: "<hex>"}} sent as a BSON String would never
      * match an {@code _id: ObjectId(...)} document on disk, and the write would silently miss,
      * surfacing as a misleading {@link OptimisticLockingException}).
+     *
+     * <p>Exercised end-to-end by {@code StringIdWithObjectIdStorageSpec}:
+     * <ul>
+     *   <li>"with storedAs ObjectId, updates persist (no phantom OptimisticLockingException)" — happy path on update filter</li>
+     *   <li>"with storedAs ObjectId, update of a non-hex id document lands on the right row" — null-return fallback on update filter</li>
+     *   <li>"with storedAs ObjectId, delete of a non-hex id document removes the row" — null-return fallback on delete filter</li>
+     *   <li>"with storedAs ObjectId, legacy documents written directly as BSON ObjectId are fully accessible" — update path against legacy BSON ObjectId _id</li>
+     * </ul>
      */
     protected Object coerceIdToStoredType(Object nativeKey, PersistentEntity entity) {
         if (nativeKey == null) return null

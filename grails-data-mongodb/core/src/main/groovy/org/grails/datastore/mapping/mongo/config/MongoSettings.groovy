@@ -108,5 +108,5 @@ interface MongoSettings extends Settings {
      *
      * @since 7.1.1
      */
-    String SETTING_STRING_IDS_DEFAULT_STORED_AS = 'grails.mongodb.stringIdsDefaultStoredAs'
+    String SETTING_STRING_IDS_DEFAULT_STORED_AS = 'grails.mongodb.stringIds.defaultStoredAs'
 }

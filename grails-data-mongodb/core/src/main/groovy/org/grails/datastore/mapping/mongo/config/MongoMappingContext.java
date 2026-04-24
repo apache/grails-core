@@ -217,7 +217,8 @@ public class MongoMappingContext extends DocumentMappingContext {
         super(settings.getDatabase(), settings);
         // Must run BEFORE initialize(classes) so that MongoDocumentMappingFactory.createIdentity
         // (invoked during entity registration) can read the global default.
-        this.stringIdDefaultStoredAs = parseStoredAs(settings.getStringIdsDefaultStoredAs());
+        String storedAsDefault = settings.getStringIds() != null ? settings.getStringIds().getDefaultStoredAs() : null;
+        this.stringIdDefaultStoredAs = parseStoredAs(storedAsDefault);
         initialize(classes);
     }
 

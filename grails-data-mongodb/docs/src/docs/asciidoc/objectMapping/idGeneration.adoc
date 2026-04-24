@@ -106,7 +106,8 @@ You can opt in globally with an `application.yml` setting, which applies to ever
 ----
 grails:
   mongodb:
-    stringIdsDefaultStoredAs: objectid
+    stringIds:
+      defaultStoredAs: objectid
 ----
 
 Valid values are `string` (current default, BSON String) and `objectid` (BSON ObjectId). Unrecognized values fall back to the default with a warning logged at startup.

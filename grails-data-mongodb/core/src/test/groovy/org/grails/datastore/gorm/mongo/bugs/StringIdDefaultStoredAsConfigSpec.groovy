@@ -53,7 +53,7 @@ class StringIdDefaultStoredAsConfigSpec extends Specification {
         entity.mapping.identifier.storedAs == null
     }
 
-    void "with grails.mongodb.stringIds.defaultStoredAs=objectid, String id picks up ObjectId storedAs"() {
+    void "with the global default set to objectid, String id picks up ObjectId storedAs"() {
         given:
         MongoMappingContext ctx = contextFor(
                 [(MongoSettings.SETTING_STRING_IDS_DEFAULT_STORED_AS): 'objectid'],

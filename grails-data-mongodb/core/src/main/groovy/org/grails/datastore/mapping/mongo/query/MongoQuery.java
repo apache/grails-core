@@ -134,6 +134,12 @@ public class MongoQuery extends BsonQuery implements QueryArgumentsAware {
 
     static {
         queryHandlers.put(IdEquals.class, new QueryHandler<IdEquals>() {
+            // Exercised end-to-end by StringIdWithObjectIdStorageSpec:
+            //   - "with storedAs ObjectId, point lookup by hex string works" (happy path)
+            //   - "with storedAs ObjectId, point lookup of a non-hex id matches the
+            //     BSON String the encoder wrote" (null-return fallback for natural keys)
+            //   - "with storedAs ObjectId, updates persist (no phantom OptimisticLockingException)"
+            //     and related update/delete specs (which also hit IdEquals via the session filter)
             public void handle(EmbeddedQueryEncoder queryEncoder, IdEquals criterion, Document query, PersistentEntity entity) {
                 Object value = criterion.getValue();
                 MappingContext mappingContext = entity.getMappingContext();
@@ -167,6 +173,12 @@ public class MongoQuery extends BsonQuery implements QueryArgumentsAware {
         // Domain.createCriteria().list { 'in'('id', [...]) }, etc.) honor 'storedAs' the same way
         // IdEquals does. Without this, a domain declaring storedAs: ObjectId would send BSON Strings
         // in {_id: {$in: [...]}} and miss all stored ObjectId documents.
+        //
+        // Exercised end-to-end by StringIdWithObjectIdStorageSpec:
+        //   - "with storedAs ObjectId, findAllByIdInList resolves all ids" (happy path via dynamic finder)
+        //   - "with storedAs ObjectId, criteria in('id', [...]) resolves all ids" (happy path via createCriteria)
+        //   - "with storedAs ObjectId, batch getAll with non-hex ids falls back to BSON String in the in-list"
+        //     (null-return fallback for natural keys)
         queryHandlers.put(In.class, new QueryHandler<In>() {
             public void handle(EmbeddedQueryEncoder queryEncoder, In in, Document query, PersistentEntity entity) {
                 Document inQuery = new Document();
