@@ -20,6 +20,7 @@ package org.grails.datastore.gorm
 
 import java.lang.reflect.Method
 import java.lang.reflect.Modifier
+import java.util.concurrent.ConcurrentHashMap
 
 import groovy.transform.CompileDynamic
 import groovy.transform.CompileStatic
@@ -28,68 +29,72 @@ import org.grails.datastore.gorm.utils.ReflectionUtils
 import org.grails.datastore.mapping.core.Datastore
 import org.grails.datastore.mapping.model.MappingContext
 import org.grails.datastore.mapping.model.PersistentEntity
+import org.grails.datastore.mapping.reflect.EntityReflector
 
 /**
- * Abstract GORM API provider.
+ * Abstract base class for GORM API objects
  *
  * @author Graeme Rocher
- * @param <D> the entity/domain class
  * @since 1.0
  */
 @CompileStatic
 abstract class AbstractGormApi<D> extends AbstractDatastoreApi {
 
-    static final List<String> EXCLUDES = [
-        'setProperty',
-        'getProperty',
-        'getMetaClass',
-        'setMetaClass',
-        'invokeMethod',
-        'getMethods',
-        'getExtendedMethods',
-        'wait',
-        'equals',
-        'toString',
-        'hashCode',
-        'getClass',
-        'notify',
-        'notifyAll',
-        'setTransactionManager'
+    protected static final List<String> EXCLUDES = [
+        'wait', 'notify', 'notifyAll', 'toString', 'hashCode', 'equals', 'getClass',
+        'getMetaClass', 'setMetaClass', 'getProperty', 'setProperty', 'invokeMethod'
     ]
 
+    private static final Map<Class, List<Method>> METHODS_CACHE = new ConcurrentHashMap<>()
+    private static final Map<Class, List<Method>> EXTENDED_METHODS_CACHE = new ConcurrentHashMap<>()
+
     protected Class<D> persistentClass
-    protected PersistentEntity persistentEntity
     private List<Method> methods
     private List<Method> extendedMethods
 
     AbstractGormApi(Class<D> persistentClass, Datastore datastore) {
         super(datastore)
         this.persistentClass = persistentClass
-        this.persistentEntity = datastore.getMappingContext().getPersistentEntity(persistentClass.name)
     }
 
-    AbstractGormApi(Class<D> persistentClass, MappingContext mappingContext) {
-        super(null)
+    AbstractGormApi(Class<D> persistentClass, MappingContext mappingContext, DatastoreResolver datastoreResolver) {
+        super(datastoreResolver)
         this.persistentClass = persistentClass
-        this.persistentEntity = mappingContext.getPersistentEntity(persistentClass.name)
+    }
+
+    /**
+     * @return The persistent entity
+     */
+    PersistentEntity getGormPersistentEntity() {
+        getDatastore()?.mappingContext?.getPersistentEntity(persistentClass.name)
     }
 
     @CompileDynamic
-    protected initializeMethods(clazz) {
-        while (clazz != Object) {
-            final methodsToAdd = clazz.declaredMethods.findAll { Method m ->
-                def mods = m.getModifiers()
-                !m.isSynthetic() && !Modifier.isStatic(mods) && Modifier.isPublic(mods) &&
-                        !AbstractGormApi.EXCLUDES.contains(m.name)
+    protected synchronized void initializeMethods(Class apiClass) {
+        if (methods == null) {
+            if (!METHODS_CACHE.containsKey(apiClass)) {
+                List<Method> methodList = []
+                List<Method> extendedMethodList = []
+                Class cls = apiClass
+                while (cls != Object) {
+                    final methodsToAdd = cls.declaredMethods.findAll { Method m ->
+                        def mods = m.getModifiers()
+                        !m.isSynthetic() && !Modifier.isStatic(mods) && Modifier.isPublic(mods) &&
+                                !AbstractGormApi.EXCLUDES.contains(m.name)
+                    }
+                    methodList.addAll(methodsToAdd)
+                    if (cls != GormStaticApi && cls != GormInstanceApi && cls != GormValidationApi && cls != AbstractGormApi) {
+                        def extendedMethodsToAdd = methodsToAdd.findAll { Method m -> !ReflectionUtils.isMethodOverriddenFromParent(m) }
+                        extendedMethodList.addAll(extendedMethodsToAdd)
+                    }
+                    cls = cls.getSuperclass()
+                }
+                METHODS_CACHE.put(apiClass, Collections.unmodifiableList(methodList))
+                EXTENDED_METHODS_CACHE.put(apiClass, Collections.unmodifiableList(extendedMethodList))
             }
-            methods.addAll(methodsToAdd)
-            if (clazz != GormStaticApi && clazz != GormInstanceApi && clazz != GormValidationApi && clazz != AbstractGormApi) {
-                def extendedMethodsToAdd = methodsToAdd.findAll { Method m -> !ReflectionUtils.isMethodOverriddenFromParent(m) }
-                extendedMethods.addAll(extendedMethodsToAdd)
-            }
-            clazz = clazz.getSuperclass()
+            this.methods = METHODS_CACHE.get(apiClass)
+            this.extendedMethods = EXTENDED_METHODS_CACHE.get(apiClass)
         }
-        return clazz
     }
 
     List<Method> getMethods() {
@@ -105,4 +110,6 @@ abstract class AbstractGormApi<D> extends AbstractDatastoreApi {
         }
         return extendedMethods
     }
+
+    abstract org.springframework.transaction.PlatformTransactionManager getTransactionManager()
 }

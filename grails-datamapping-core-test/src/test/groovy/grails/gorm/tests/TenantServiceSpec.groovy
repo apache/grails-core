@@ -48,6 +48,14 @@ class TenantServiceSpec extends Specification {
             Team
     )
 
+    def setup() {
+        org.grails.datastore.gorm.GormEnhancer.setPreferredDatastore(datastore)
+    }
+
+    def cleanup() {
+        org.grails.datastore.gorm.GormEnhancer.clearPreferredDatastore()
+    }
+
     void "test multi tenancy with in-memory datastore"() {
         when:
         Team.count()

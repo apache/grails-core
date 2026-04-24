@@ -36,6 +36,14 @@ class MultipleDataSourceSpec extends Specification {
             Player
     )
 
+    def setup() {
+        org.grails.datastore.gorm.GormEnhancer.setPreferredDatastore(datastore)
+    }
+
+    def cleanup() {
+        org.grails.datastore.gorm.GormEnhancer.clearPreferredDatastore()
+    }
+
     void 'test multiple datasource support with in-memory GORM'() {
         given:
         new Player(name: 'Giggs').save(flush: true)

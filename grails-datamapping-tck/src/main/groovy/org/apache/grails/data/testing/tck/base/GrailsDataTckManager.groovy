@@ -18,6 +18,7 @@
  */
 package org.apache.grails.data.testing.tck.base
 
+import org.grails.datastore.gorm.GormRegistry
 import org.grails.datastore.mapping.core.DatastoreUtils
 import org.grails.datastore.mapping.core.Session
 import spock.lang.Specification

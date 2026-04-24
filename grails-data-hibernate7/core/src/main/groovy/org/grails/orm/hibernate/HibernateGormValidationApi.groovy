@@ -63,8 +63,23 @@ class HibernateGormValidationApi<D> extends GormValidationApi<D> {
     HibernateGormValidationApi(Class<D> persistentClass, HibernateDatastore datastore, ClassLoader classLoader) {
         super(persistentClass, datastore)
         this.classLoader = classLoader
-        this.datastore = datastore
         hibernateTemplate = (IHibernateTemplate) datastore.getHibernateTemplate()
+    }
+
+    HibernateGormValidationApi(Class<D> persistentClass, org.grails.datastore.mapping.model.MappingContext mappingContext, org.grails.datastore.gorm.DatastoreResolver datastoreResolver, ClassLoader classLoader) {
+        super(persistentClass, mappingContext, datastoreResolver)
+        this.classLoader = classLoader
+    }
+
+    protected HibernateDatastore getHibernateDatastore() {
+        (HibernateDatastore) getDatastore()
+    }
+
+    protected IHibernateTemplate getHibernateTemplate() {
+        if (hibernateTemplate == null) {
+            return (IHibernateTemplate) hibernateDatastore.getHibernateTemplate()
+        }
+        return hibernateTemplate
     }
 
     @Override
@@ -96,7 +111,7 @@ class HibernateGormValidationApi<D> extends GormValidationApi<D> {
 
         fireEvent(instance, validatedFieldsList)
 
-        hibernateTemplate.execute { Session session ->
+        getHibernateTemplate().execute { Session session ->
             FlushMode previous = session.getHibernateFlushMode()
             session.setHibernateFlushMode(FlushMode.MANUAL)
             try {
@@ -120,8 +135,8 @@ class HibernateGormValidationApi<D> extends GormValidationApi<D> {
         if (errors.hasErrors()) {
             valid = false
             if (evict) {
-                if (hibernateTemplate.contains(instance)) {
-                    hibernateTemplate.evict(instance)
+                if (getHibernateTemplate().contains(instance)) {
+                    getHibernateTemplate().evict(instance)
                 }
             }
         }
@@ -134,9 +149,9 @@ class HibernateGormValidationApi<D> extends GormValidationApi<D> {
     }
 
     private void fireEvent(Object target, List<?> validatedFieldsList) {
-        ValidationEvent event = new ValidationEvent(datastore, target)
+        ValidationEvent event = new ValidationEvent(getHibernateDatastore(), target)
         event.setValidatedFields(validatedFieldsList)
-        datastore.getApplicationEventPublisher().publishEvent(event)
+        getHibernateDatastore().getApplicationEventPublisher().publishEvent(event)
     }
 
     @SuppressWarnings('rawtypes')

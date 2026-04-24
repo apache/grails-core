@@ -40,6 +40,7 @@ import grails.gorm.multitenancy.Tenant
 import grails.gorm.multitenancy.TenantService
 import grails.gorm.multitenancy.WithoutTenant
 import org.apache.grails.common.compiler.GroovyTransformOrder
+import org.grails.datastore.gorm.GormEnhancer
 import org.grails.datastore.gorm.transform.AbstractDatastoreMethodDecoratingTransformation
 import org.grails.datastore.mapping.multitenancy.exceptions.TenantNotFoundException
 import org.grails.datastore.mapping.reflect.AstUtils
@@ -62,6 +63,10 @@ import static org.codehaus.groovy.ast.tools.GeneralUtils.stmt
 import static org.codehaus.groovy.ast.tools.GeneralUtils.throwS
 import static org.codehaus.groovy.ast.tools.GeneralUtils.varX
 import static org.grails.datastore.gorm.transform.AstMethodDispatchUtils.callD
+import static org.codehaus.groovy.ast.tools.GeneralUtils.callX
+import static org.codehaus.groovy.ast.tools.GeneralUtils.propX
+import static org.grails.datastore.mapping.reflect.AstUtils.implementsInterface
+import static org.grails.datastore.mapping.reflect.AstUtils.findAnnotation
 import static org.grails.datastore.mapping.reflect.AstUtils.copyParameters
 import static org.grails.datastore.mapping.reflect.AstUtils.varThis
 
@@ -100,8 +105,26 @@ class TenantTransform extends AbstractDatastoreMethodDecoratingTransformation {
         VariableScope variableScope = methodNode.getVariableScope()
         VariableExpression tenantServiceVar = varX('$tenantService', tenantServiceClassNode)
         variableScope.putDeclaredVariable(tenantServiceVar)
+
+        Expression datastoreExpr
+        boolean isService = implementsInterface(classNode, 'org.grails.datastore.mapping.services.Service') ||
+                AstUtils.findAnnotation(classNode, grails.gorm.services.Service) != null
+
+        if (isService) {
+            // For services, resolve entirely via static bridge to avoid MetaClass recursion
+            ClassExpression gormEnhancerExpr = classX(GormEnhancer)
+            // Use the domain class from the @Service annotation
+            AnnotationNode serviceAnn = findAnnotation(classNode, grails.gorm.services.Service)
+            Expression domainClassExpr = serviceAnn?.getMember('value') ?: classX(org.codehaus.groovy.ast.ClassHelper.OBJECT_TYPE)
+            datastoreExpr = callX(gormEnhancerExpr, 'findDatastore', args(domainClassExpr))
+        }
+        else {
+            // Static bridge for regular objects too, to keep it stateless and avoid field injection
+            datastoreExpr = callX(classX(GormEnhancer), 'findSingleDatastore')
+        }
+
         newMethodBody.addStatement(
-            declS(tenantServiceVar, callD(ServiceRegistry, 'targetDatastore', 'getService', classX(tenantServiceClassNode)))
+            declS(tenantServiceVar, callX(castX(make(ServiceRegistry), datastoreExpr), 'getService', classX(tenantServiceClassNode)))
         )
 
         ClassNode serializableClassNode = make(Serializable)

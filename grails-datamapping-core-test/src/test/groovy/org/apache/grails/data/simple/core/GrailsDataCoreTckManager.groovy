@@ -35,55 +35,65 @@ import org.springframework.context.support.GenericApplicationContext
 import org.springframework.util.StringUtils
 import org.springframework.validation.Errors
 import org.springframework.validation.Validator
+import spock.lang.Specification
 
 /**
  * @author graemerocher
  */
 class GrailsDataCoreTckManager extends GrailsDataTckManager {
 
-    @Override
-    Session createSession() {
-        def ctx = new GenericApplicationContext()
-        ctx.refresh()
-        def simple = new SimpleMapDatastore(ctx)
+    private SimpleMapDatastore simpleDatastore
 
-        simple.mappingContext.mappingFactory.registerCustomType(new AbstractMappingAwareCustomTypeMarshaller<Birthday, Map, SimpleMapResultList>(Birthday) {
-            @Override
-            protected Object writeInternal(PersistentProperty property, String key, Birthday value, Map nativeTarget) {
-                if (value == null) {
+    private SimpleMapDatastore getSimpleDatastore() {
+        if (simpleDatastore == null) {
+            def ctx = new GenericApplicationContext()
+            ctx.refresh()
+            simpleDatastore = new SimpleMapDatastore(ctx)
+
+            simpleDatastore.mappingContext.mappingFactory.registerCustomType(new AbstractMappingAwareCustomTypeMarshaller<Birthday, Map, SimpleMapResultList>(Birthday) {
+                @Override
+                protected Object writeInternal(PersistentProperty property, String key, Birthday value, Map nativeTarget) {
+                    if (value == null) {
+                        return null
+                    }
+
+                    final converted = value.date.time
+                    nativeTarget.put(key, converted)
+                    return converted
+                }
+
+                @Override
+                protected void queryInternal(PersistentProperty property, String key, PropertyCriterion criterion, SimpleMapResultList nativeQuery) {
+                    SimpleMapQuery query = nativeQuery.query
+                    def handler = query.handlers[criterion.getClass()]
+
+                    if (criterion instanceof Between) {
+                        criterion.from = criterion.from.date.time
+                        criterion.to = criterion.to.date.time
+                        nativeQuery.results << handler?.call(criterion, property) ?: []
+                    }
+                    else {
+                        criterion.value = criterion.value.date.time
+                        nativeQuery.results << handler?.call(criterion, property) ?: []
+                    }
+                }
+
+                @Override
+                protected Birthday readInternal(PersistentProperty property, String key, Map nativeSource) {
+                    final num = nativeSource.get(key)
+                    if (num instanceof Long) {
+                        return new Birthday(new Date(num))
+                    }
                     return null
                 }
+            })
+        }
+        return simpleDatastore
+    }
 
-                final converted = value.date.time
-                nativeTarget.put(key, converted)
-                return converted
-            }
-
-            @Override
-            protected void queryInternal(PersistentProperty property, String key, PropertyCriterion criterion, SimpleMapResultList nativeQuery) {
-                SimpleMapQuery query = nativeQuery.query
-                def handler = query.handlers[criterion.getClass()]
-
-                if (criterion instanceof Between) {
-                    criterion.from = criterion.from.date.time
-                    criterion.to = criterion.to.date.time
-                    nativeQuery.results << handler?.call(criterion, property) ?: []
-                }
-                else {
-                    criterion.value = criterion.value.date.time
-                    nativeQuery.results << handler?.call(criterion, property) ?: []
-                }
-            }
-
-            @Override
-            protected Birthday readInternal(PersistentProperty property, String key, Map nativeSource) {
-                final num = nativeSource.get(key)
-                if (num instanceof Long) {
-                    return new Birthday(new Date(num))
-                }
-                return null
-            }
-        })
+    @Override
+    Session createSession() {
+        def simple = getSimpleDatastore()
         for (cls in domainClasses) {
             simple.mappingContext.addPersistentEntity(cls)
         }
@@ -91,16 +101,34 @@ class GrailsDataCoreTckManager extends GrailsDataTckManager {
         PersistentEntity entity = simple.mappingContext.persistentEntities.find {
             PersistentEntity e -> e.name.contains("TestEntity")}
 
-        simple.mappingContext.addEntityValidator(entity, [
-                supports: { Class c -> true },
-                validate: { Object o, Errors errors ->
-                    if (!StringUtils.hasText(o.name)) {
-                        errors.rejectValue("name", "name.is.blank")
+        if (entity != null) {
+            simple.mappingContext.addEntityValidator(entity, [
+                    supports: { Class c -> true },
+                    validate: { Object o, Errors errors ->
+                        if (!StringUtils.hasText(o.name)) {
+                            errors.rejectValue("name", "name.is.blank")
+                        }
                     }
-                }
-        ] as Validator)
-
+            ] as Validator)
+        }
 
         simple.connect()
+    }
+
+    @Override
+    void setup(Class<? extends Specification> spec) {
+        super.setup(spec)
+        org.grails.datastore.gorm.GormEnhancer.setPreferredDatastore(simpleDatastore)
+    }
+
+    @Override
+    void cleanup() {
+        super.cleanup()
+        org.grails.datastore.gorm.GormEnhancer.clearPreferredDatastore()
+        if (simpleDatastore != null) {
+            org.grails.datastore.gorm.GormRegistry.instance.removeDatastore(simpleDatastore)
+            simpleDatastore.clearData()
+        }
+        simpleDatastore = null
     }
 }

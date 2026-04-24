@@ -39,7 +39,7 @@ trait GormEntityDirtyCheckable extends DirtyCheckable {
     @Override
     @Generated
     boolean hasChanged(String propertyName) {
-        PersistentEntity entity = currentGormInstanceApi().persistentEntity
+        PersistentEntity entity = currentGormInstanceApi().getGormPersistentEntity()
 
         PersistentProperty persistentProperty = entity.getPropertyByName(propertyName)
         if (!persistentProperty) {

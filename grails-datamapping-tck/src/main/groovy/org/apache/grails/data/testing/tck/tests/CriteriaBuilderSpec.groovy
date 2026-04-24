@@ -86,7 +86,7 @@ class CriteriaBuilderSpec extends GrailsDataTckSpec {
     void 'Test disjunction query'() {
         given:
         def age = 40
-        ['Bob', 'Fred', 'Barney', 'Frank'].each { new TestEntity(name: it, age: age++, child: new ChildEntity(name: "$it Child")).save() }
+        ['Bob', 'Fred', 'Barney', 'Frank'].each { new TestEntity(name: it, age: age++, child: new ChildEntity(name: "$it Child")).save(flush: true) }
         def criteria = TestEntity.createCriteria()
 
         when:

@@ -54,6 +54,7 @@ import org.grails.datastore.gorm.finders.MethodExpression.NotEqual;
 import org.grails.datastore.gorm.finders.MethodExpression.NotInList;
 import org.grails.datastore.gorm.finders.MethodExpression.Rlike;
 import org.grails.datastore.gorm.query.criteria.AbstractDetachedCriteria;
+import org.grails.datastore.gorm.DatastoreResolver;
 import org.grails.datastore.mapping.core.Datastore;
 import org.grails.datastore.mapping.core.Session;
 import org.grails.datastore.mapping.model.MappingContext;
@@ -132,6 +133,15 @@ public abstract class DynamicFinder extends AbstractFinder implements QueryBuild
         resetMethodExpressionPattern();
     }
 
+    protected DynamicFinder(final Pattern pattern, final String[] operators, final DatastoreResolver datastoreResolver, MappingContext mappingContext) {
+        super(datastoreResolver);
+        this.mappingContext = mappingContext;
+        this.pattern = pattern;
+        this.operators = operators;
+        this.operatorPatterns = new Pattern[operators.length];
+        populateOperators(operators);
+    }
+
     protected DynamicFinder(final Pattern pattern, final String[] operators, final Datastore datastore) {
         super(datastore);
         this.mappingContext = datastore.getMappingContext();
@@ -142,7 +152,7 @@ public abstract class DynamicFinder extends AbstractFinder implements QueryBuild
     }
 
     protected DynamicFinder(final Pattern pattern, final String[] operators, final MappingContext mappingContext) {
-        super(null);
+        super((Datastore)null);
         this.mappingContext = mappingContext;
         this.pattern = pattern;
         this.operators = operators;

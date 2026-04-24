@@ -99,6 +99,9 @@ import org.grails.datastore.mapping.core.connections.MultipleConnectionSourceCap
 import org.grails.datastore.mapping.core.order.OrderedComparator
 import org.grails.datastore.mapping.transactions.TransactionCapableDatastore
 
+import static org.codehaus.groovy.ast.tools.GeneralUtils.*
+import static org.grails.datastore.mapping.reflect.AstUtils.ZERO_PARAMETERS
+
 import static org.apache.groovy.ast.tools.AnnotatedNodeUtils.markAsGenerated
 import static org.codehaus.groovy.ast.tools.GeneralUtils.args
 import static org.codehaus.groovy.ast.tools.GeneralUtils.assignS
@@ -240,31 +243,34 @@ class ServiceTransformation extends AbstractTraitApplyingGormASTTransformation i
                     superClass,
                     interfaces)
 
+            // weave the trait class
+            ClassExpression ce = (ClassExpression) annotationNode.getMember('value')
+            ClassNode targetDomainClass = ce != null ? ce.type : ClassHelper.OBJECT_TYPE
+
+            ClassNode datastoreType = ClassHelper.make(Datastore)
             if (!propertiesFields.isEmpty()) {
-
-                ClassNode datastoreType = ClassHelper.make(Datastore)
-                FieldNode datastoreField = impl.addField('datastore', Modifier.PRIVATE, datastoreType, null)
-                VariableExpression datastoreFieldVar = varX(datastoreField)
-
-                BlockStatement body = block()
+                // If there are properties to inject, we still need a setter to initialize them
+                // but we don't want to store the datastore itself.
+                BlockStatement setterBody = block()
                 Parameter datastoreParam = param(datastoreType, 'd')
                 MethodNode datastoreSetterNode = impl.addMethod('setDatastore', Modifier.PUBLIC, ClassHelper.VOID_TYPE, params(
                         datastoreParam
-                ), null, body)
+                ), null, setterBody)
                 markAsGenerated(impl, datastoreSetterNode)
-                body.addStatement(
-                        assignS(datastoreFieldVar, varX(datastoreParam))
-                )
-                MethodNode datastoreGetterNode = impl.addMethod('getDatastore', Modifier.PUBLIC, datastoreType.plainNodeReference, ZERO_PARAMETERS, null,
-                        returnS(datastoreFieldVar)
-                )
-                markAsGenerated(impl, datastoreGetterNode)
+
+                VariableExpression datastoreVar = varX(datastoreParam)
                 for (FieldNode fn in propertiesFields) {
-                    body.addStatement(
-                            assignS(varX(fn), callX(datastoreFieldVar, 'getService', classX(fn.type.plainNodeReference)))
+                    setterBody.addStatement(
+                            assignS(varX(fn), callX(datastoreVar, 'getService', classX(fn.type.plainNodeReference)))
                     )
                 }
             }
+
+            // Always override getDatastore() for dynamic resolution
+            MethodNode datastoreGetterNode = impl.addMethod('getDatastore', Modifier.PUBLIC, datastoreType.plainNodeReference, ZERO_PARAMETERS, null,
+                    returnS(callX(classX(GormEnhancer), 'findDatastore', args(classX(targetDomainClass))))
+            )
+            markAsGenerated(impl, datastoreGetterNode)
 
             copyAnnotations(classNode, impl)
             AnnotationNode serviceAnnotation = findAnnotation(impl, Service)
@@ -274,9 +280,6 @@ class ServiceTransformation extends AbstractTraitApplyingGormASTTransformation i
             }
             // add compile static by default
             impl.addAnnotation(new AnnotationNode(COMPILE_STATIC_TYPE))
-            // weave the trait class
-            ClassExpression ce = (ClassExpression) annotationNode.getMember('value')
-            ClassNode targetDomainClass = ce != null ? ce.type : ClassHelper.OBJECT_TYPE
             // weave with generic argument
             weaveTraitWithGenerics(impl, getTraitClass(), targetDomainClass)
 

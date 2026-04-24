@@ -18,17 +18,20 @@
  */
 package org.grails.datastore.gorm
 
-import org.apache.grails.data.testing.tck.tests.NotInListSpec
-import org.junit.platform.suite.api.SelectClasses
-import org.junit.platform.suite.api.Suite
+import groovy.transform.CompileStatic
+import org.grails.datastore.mapping.core.Datastore
 
 /**
- * Use this class to run tck classes against the current implementation.
+ * Strategy interface for resolving a Datastore at call-time.
+ * This breaks the circular dependency between API objects and GormEnhancer.
  *
- * @author graemerocher
+ * @author Walter Duque de Estrada
+ * @since 8.0.0
  */
-@Suite
-@SelectClasses([NotInListSpec])
-@spock.lang.IgnoreIf({ System.getProperty('core.gorm.suite') == 'true'  })
-class CoreTestSuite {
+@CompileStatic
+interface DatastoreResolver {
+    /**
+     * @return The datastore to use for the current call
+     */
+    Datastore resolve()
 }
