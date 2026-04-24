@@ -59,7 +59,6 @@ public class ViewMarkup extends GrailsViews implements Feature {
     @Override
     public void apply(GeneratorContext generatorContext) {
         final Map<String, Object> config = generatorContext.getConfiguration();
-        config.put("grails.mime.disable.accept.header.userAgents", Arrays.asList("Gecko", "WebKit", "Presto", "Trident"));
         config.put("grails.mime.types.xml", Arrays.asList("text/xml", "application/xml"));
         config.put("grails.mime.types.atom", "application/atom+xml");
         config.put("grails.mime.types.json", Arrays.asList("application/json", "text/json"));

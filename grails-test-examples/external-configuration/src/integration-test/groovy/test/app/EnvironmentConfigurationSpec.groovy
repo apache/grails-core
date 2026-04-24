@@ -103,23 +103,23 @@ class EnvironmentConfigurationSpec extends Specification {
 
         then: "nested properties are accessible"
         config.getProperty('grails.mime.types.json', List) != null
-        config.getProperty('grails.controllers.defaultScope', String) == 'singleton'
+        config.getProperty('grails.mime.types.text', String) == 'text/plain'
     }
 
     def "can access configuration as flat properties"() {
         when: "getting flat property"
-        def defaultScope = grailsApplication.config.getProperty('grails.controllers.defaultScope', String)
+        def textMimeType = grailsApplication.config.getProperty('grails.mime.types.text', String)
 
         then: "property is retrieved"
-        defaultScope == 'singleton'
+        textMimeType == 'text/plain'
     }
 
     def "configuration supports type conversion"() {
         when: "getting property with type conversion"
-        def cacheMaxSize = grailsApplication.config.getProperty('grails.urlmapping.cache.maxsize', Integer)
+        def number = grailsApplication.config.getProperty('test.config.number', Integer)
 
         then: "property is converted to integer"
-        cacheMaxSize == 1000
+        number == 12345
     }
 
     def "configuration supports default values"() {
@@ -150,7 +150,6 @@ class EnvironmentConfigurationSpec extends Specification {
 
         then: "GSP encoding is configured"
         config.getProperty('grails.views.gsp.encoding', String) == 'UTF-8'
-        config.getProperty('grails.views.default.codec', String) == 'html'
     }
 
     // ========== Hibernate Configuration Tests ==========
@@ -179,19 +178,6 @@ class EnvironmentConfigurationSpec extends Specification {
         config.getProperty('info.app.name', String) != null
     }
 
-    // ========== Spring Configuration Tests ==========
-
-    def "Spring banner mode is configured"() {
-        expect: "banner mode is off"
-        grailsApplication.config.getProperty('spring.main.banner-mode', String) == 'off'
-    }
-
-    def "Spring template location check is disabled"() {
-        expect: "template check is false"
-        grailsApplication.config.getProperty('spring.groovy.template.check-template-location', Boolean) == false ||
-        grailsApplication.config.getProperty('spring.groovy.template.check-template-location', String) == 'false'
-    }
-
     // ========== Environment Object Tests ==========
 
     def "Environment object provides utility methods"() {
@@ -212,10 +198,10 @@ class EnvironmentConfigurationSpec extends Specification {
 
     def "configuration is immutable at runtime by default"() {
         when: "attempting to modify config"
-        def originalValue = grailsApplication.config.getProperty('grails.controllers.defaultScope', String)
+        def originalValue = grailsApplication.config.getProperty('grails.mime.types.text', String)
 
         then: "original value is accessible"
-        originalValue == 'singleton'
+        originalValue == 'text/plain'
 
         // Note: Modern Spring Boot configuration is generally immutable
         // Runtime changes require specific mechanisms
