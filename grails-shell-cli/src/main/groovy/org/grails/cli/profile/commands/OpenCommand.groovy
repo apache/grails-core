@@ -23,8 +23,11 @@ import java.awt.Desktop
 
 import groovy.transform.CompileStatic
 
-import jline.console.completer.Completer
-import jline.console.completer.FileNameCompleter
+import org.jline.builtins.Completers.FileNameCompleter
+import org.jline.reader.Candidate
+import org.jline.reader.Completer
+import org.jline.reader.LineReader
+import org.jline.reader.ParsedLine
 
 import org.grails.cli.profile.CommandDescription
 import org.grails.cli.profile.ExecutionContext
@@ -71,7 +74,7 @@ class OpenCommand implements ProjectCommand, Completer {
     }
 
     @Override
-    int complete(String buffer, int cursor, List<CharSequence> candidates) {
-        return new FileNameCompleter().complete(buffer, cursor, candidates)
+    void complete(LineReader reader, ParsedLine line, List<Candidate> candidates) {
+        new FileNameCompleter().complete(reader, line, candidates)
     }
 }

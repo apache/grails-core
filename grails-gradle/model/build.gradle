@@ -59,7 +59,8 @@ dependencies {
         // impl: org.springframework.boot.env.YamlPropertySourceLoader
     }
 
-    compileOnly 'jline:jline' // for profile compilation
+    compileOnly 'org.jline:jline' // for profile compilation
+    compileOnly 'org.fusesource.jansi:jansi'
 
     api 'org.yaml:snakeyaml'
 

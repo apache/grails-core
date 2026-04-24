@@ -52,7 +52,7 @@ dependencies {
 
     runtimeOnly project(':grails-i18n')
 
-    testRuntimeOnly 'jline:jline'
+    testRuntimeOnly 'org.jline:jline'
     testRuntimeOnly 'org.fusesource.jansi:jansi'
 
     compileOnly 'jakarta.servlet:jakarta.servlet-api'
