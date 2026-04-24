@@ -398,10 +398,19 @@ jobs:
         if: success()
         run: |
           export GRAILS_WRAPPER_ALLOWED_TYPES='SNAPSHOT'
+          # Pin the wrapper to this branch's snapshot; otherwise it resolves the
+          # globally latest SNAPSHOT in the Apache repo (e.g. 8.0.0-SNAPSHOT from
+          # the main development branch), which may be compiled for a newer Java
+          # runtime than this job's JDK and fail with UnsupportedClassVersionError.
+          PROJECT_VERSION=$(grep '^projectVersion=' gradle.properties | cut -d'=' -f2)
           cp grails-wrapper/build/distributions/apache-grails-wrapper-*.zip build/wrapper.zip
           cd build
           unzip wrapper -d tmp
           mv tmp/apache-grails-wrapper-* tmp/wrapper
+          # The wrapper reads `grailsVersion` from gradle.properties in its CWD
+          # (see grails.init.GrailsVersion#getPreferredGrailsVersion) to select
+          # which Grails CLI snapshot to download.
+          echo "grailsVersion=${PROJECT_VERSION}" > gradle.properties
           ./tmp/wrapper/grailsw --version
       - name: "📤 Upload Wrapper Zip to Workflow Summary Page"
         uses: actions/upload-artifact@v7.0.0
