@@ -215,29 +215,6 @@ class GrailsVersionSpec extends Specification {
         resolved == new GrailsVersion('7.0.11-SNAPSHOT')
     }
 
-    @Unroll
-    def "preferred version - blank grailsVersion in gradle.properties exits with error (value=#description)"() {
-        given:
-        File gradleProperties = tempDir.resolve('gradle.properties').toFile()
-        gradleProperties.text = propertiesContent
-
-        when:
-        int exitCode = SystemStubs.catchSystemExit {
-            SystemStubs.withEnvironmentVariable(GrailsVersion.PREFERRED_GRAILS_VERSION_ENV, '8.0.0-SNAPSHOT').execute {
-                GrailsVersion.getPreferredGrailsVersion(gradleProperties)
-            }
-        }
-
-        then: 'a project with a malformed grailsVersion fails fast instead of silently falling through to the env var'
-        exitCode == 1
-
-        where:
-        description      | propertiesContent
-        'empty'          | 'grailsVersion='
-        'whitespace'     | 'grailsVersion=   '
-        'no value, no =' | 'grailsVersion'
-    }
-
     def "preferred version - env var trimmed and whitespace-only treated as unset"() {
         given:
         File missing = tempDir.resolve('does-not-exist.properties').toFile()

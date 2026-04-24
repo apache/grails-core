@@ -166,14 +166,16 @@ public class GrailsVersion implements Comparable<GrailsVersion> {
         }
 
         String overrideGrailsVersion = System.getenv(PREFERRED_GRAILS_VERSION_ENV);
-        if (overrideGrailsVersion != null && !overrideGrailsVersion.trim().isEmpty()) {
-            try {
-                return new GrailsVersion(overrideGrailsVersion.trim());
-            } catch (Exception e) {
-                System.out.println("An invalid Grails Version [" + overrideGrailsVersion + "] was specified in " + PREFERRED_GRAILS_VERSION_ENV);
-                e.printStackTrace();
-                System.exit(1);
-            }
+        if (overrideGrailsVersion == null || (overrideGrailsVersion = overrideGrailsVersion.trim()).isEmpty()) {
+            return null;
+        }
+
+        try {
+            return new GrailsVersion(overrideGrailsVersion);
+        } catch (Exception e) {
+            System.out.println("An invalid Grails Version [" + overrideGrailsVersion + "] was specified in " + PREFERRED_GRAILS_VERSION_ENV);
+            e.printStackTrace();
+            System.exit(1);
         }
 
         return null;
@@ -193,18 +195,18 @@ public class GrailsVersion implements Comparable<GrailsVersion> {
             System.exit(1);
         }
 
-        if (!properties.containsKey(GRAILS_VERSION_PROPERTY)) {
+        String grailsVersion = properties.getProperty(GRAILS_VERSION_PROPERTY);
+        if (grailsVersion == null) {
             return null;
         }
-
-        String grailsVersion = properties.getProperty(GRAILS_VERSION_PROPERTY);
-        if (grailsVersion == null || grailsVersion.trim().isEmpty()) {
+        grailsVersion = grailsVersion.trim();
+        if (grailsVersion.isEmpty()) {
             System.out.println("A blank Grails Version was specified in gradle.properties for key [" + GRAILS_VERSION_PROPERTY + "]");
             System.exit(1);
         }
 
         try {
-            return new GrailsVersion(grailsVersion.trim());
+            return new GrailsVersion(grailsVersion);
         } catch (Exception e) {
             System.out.println("An invalid Grails Version [" + grailsVersion + "] was specified in gradle.properties");
             e.printStackTrace();
