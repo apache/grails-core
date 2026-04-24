@@ -159,7 +159,9 @@ Using `flush: true` ensures the delete is executed immediately, so any errors ar
 
 To dynamically build queries based on optional parameters a common pattern is to use `DetachedCriteria` and progressively compose filters depending on the provided inputs.
 
-Consider the following example using the `Person` domain:
+==== Properties
+
+Consider the following example using the `Person` domain class:
 
 [source,groovy]
 ----
@@ -167,7 +169,6 @@ import grails.gorm.DetachedCriteria
 
 private DetachedCriteria<Person> buildQuery(Map filterParams) {
     def query = Person.where {}
-
 
     if (filterParams.containsKey('id')) query = query.where {
         id == filterParams.id
@@ -182,6 +183,30 @@ private DetachedCriteria<Person> buildQuery(Map filterParams) {
     }
 
     return query
+}
+----
+
+==== Associations
+
+You can filter by associated properties using dot notation or nested criteria. For example, if `Person` has a self-referencing relationship `parent`, you can filter by properties of the parent.
+
+Using dot notation:
+
+[source,groovy]
+----
+if (filterParams.containsKey('parent.name')) query = query.where {
+    parent.name == filterParams.'parent.name'
+}
+----
+
+Using a nested criteria block, which is useful when filtering multiple properties of the association:
+
+[source,groovy]
+----
+if (filterParams.containsKey('parent.name')) query = query.where {
+    parent {
+        name == filterParams.'parent.name'
+    }
 }
 ----
 
