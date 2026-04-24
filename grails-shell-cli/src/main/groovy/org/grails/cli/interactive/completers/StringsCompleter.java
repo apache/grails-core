@@ -21,12 +21,14 @@ package org.grails.cli.interactive.completers;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.List;
+import java.util.Objects;
 import java.util.SortedSet;
 import java.util.TreeSet;
 
-import jline.console.completer.Completer;
-
-import static jline.internal.Preconditions.checkNotNull;
+import org.jline.reader.Candidate;
+import org.jline.reader.Completer;
+import org.jline.reader.LineReader;
+import org.jline.reader.ParsedLine;
 
 /**
  * A completer that completes based on a collection of Strings
@@ -34,9 +36,8 @@ import static jline.internal.Preconditions.checkNotNull;
  * @author Graeme Rocher
  * @since 3.0
  */
-public class StringsCompleter
-    implements Completer
-{
+public class StringsCompleter implements Completer {
+    
     private SortedSet<String> strings = new TreeSet<>();
 
     public StringsCompleter() {
@@ -44,7 +45,7 @@ public class StringsCompleter
     }
 
     public StringsCompleter(final Collection<String> strings) {
-        checkNotNull(strings);
+        Objects.requireNonNull(strings);
         getStrings().addAll(strings);
     }
 
@@ -60,23 +61,23 @@ public class StringsCompleter
         this.strings = strings;
     }
 
-    public int complete(final String buffer, final int cursor, final List<CharSequence> candidates) {
-        // buffer could be null
-        checkNotNull(candidates);
+    @Override
+    public void complete(LineReader reader, ParsedLine line, List<Candidate> candidates) {
+        Objects.requireNonNull(candidates);
 
-        if (buffer == null) {
-            candidates.addAll(getStrings());
-        }
-        else {
+        String buffer = line.word();
+        
+        if (buffer == null || buffer.isEmpty()) {
+            for (String string : getStrings()) {
+                candidates.add(new Candidate(string));
+            }
+        } else {
             for (String match : getStrings().tailSet(buffer)) {
                 if (!match.startsWith(buffer)) {
                     break;
                 }
-
-                candidates.add(match);
+                candidates.add(new Candidate(match));
             }
         }
-
-        return candidates.isEmpty() ? -1 : 0;
     }
 }

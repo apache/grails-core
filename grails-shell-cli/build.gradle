@@ -55,7 +55,7 @@ dependencies {
     api 'org.apache.grails.gradle:grails-gradle-model'
     api 'org.apache.ant:ant'
     api 'org.fusesource.jansi:jansi'
-    api 'jline:jline'
+    api 'org.jline:jline'
     api "org.gradle:gradle-tooling-api:$gradleToolingApiVersion"
     
     compileOnly 'org.springframework.boot:spring-boot'

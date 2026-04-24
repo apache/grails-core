@@ -18,8 +18,10 @@
  */
 package org.grails.cli.interactive.completers
 
-import jline.console.completer.Completer
-import jline.console.completer.StringsCompleter
+import org.jline.reader.Candidate
+import org.jline.reader.Completer
+import org.jline.reader.LineReader
+import org.jline.reader.ParsedLine
 
 /**
  * JLine Completor that mixes a fixed set of options with file path matches.
@@ -30,8 +32,8 @@ import jline.console.completer.StringsCompleter
  */
 class SimpleOrFileNameCompletor implements Completer {
 
-    private simpleCompletor
-    private fileNameCompletor
+    private Completer simpleCompletor
+    private Completer fileNameCompletor
 
     SimpleOrFileNameCompletor(List fixedOptions) {
         this(fixedOptions as String[])
@@ -42,20 +44,17 @@ class SimpleOrFileNameCompletor implements Completer {
         fileNameCompletor = new EscapingFileNameCompletor()
     }
 
-    int complete(String buffer, int cursor, List candidates) {
+    @Override
+    void complete(LineReader reader, ParsedLine line, List<Candidate> candidates) {
         // Try the simple completor first...
-        def retval = simpleCompletor.complete(buffer, cursor, candidates)
+        List<Candidate> simpleCandidates = []
+        simpleCompletor.complete(reader, line, simpleCandidates)
+        candidates.addAll(simpleCandidates)
 
         // ...and then the file path completor. By using the given candidate
         // list with both completors we aggregate the results automatically.
-        def fileRetval = fileNameCompletor.complete(buffer, cursor, candidates)
-
-        // If the simple completor has matched, we return its value, otherwise
-        // we return whatever the file path matcher returned. This ensures that
-        // both simple completor and file path completor candidates appear
-        // correctly in the command prompt. If neither competors have matches,
-        // we of course return -1.
-        if (retval == -1) retval = fileRetval
-        return candidates ? retval : -1
+        List<Candidate> fileCandidates = []
+        fileNameCompletor.complete(reader, line, fileCandidates)
+        candidates.addAll(fileCandidates)
     }
 }

@@ -90,7 +90,7 @@ class SbomPlugin implements Plugin<Project> {
     private static Map<String, String> LICENSE_MAPPING = [
             'pkg:maven/org.antlr/antlr4-runtime@4.7.2?type=jar'               : 'BSD-3-Clause', // maps incorrectly because of https://github.com/CycloneDX/cyclonedx-core-java/issues/205
             'pkg:maven/jline/jline@2.14.6?type=jar'                           : 'BSD-2-Clause', // maps incorrectly because of https://github.com/CycloneDX/cyclonedx-core-java/issues/205
-            'pkg:maven/org.jline/jline@3.23.0?type=jar'                       : 'BSD-2-Clause', // maps incorrectly because of https://github.com/CycloneDX/cyclonedx-core-java/issues/205
+            'pkg:maven/org.jline/jline@3.30.6?type=jar'                       : 'BSD-3-Clause', // maps incorrectly because of https://github.com/CycloneDX/cyclonedx-core-java/issues/205
             'pkg:maven/org.liquibase.ext/liquibase-hibernate5@4.27.0?type=jar': 'Apache-2.0', // maps incorrectly because of https://github.com/liquibase/liquibase/issues/2445 & the base pom does not define a license
             'pkg:maven/com.oracle.coherence.ce/coherence-bom@25.03.1?type=pom': 'UPL-1.0', // does not have map based on license id
             'pkg:maven/com.oracle.coherence.ce/coherence-bom@25.03.2?type=pom': 'UPL-1.0', // does not have map based on license id

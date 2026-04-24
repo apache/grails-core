@@ -42,6 +42,8 @@ dependencies {
     api 'org.apache.groovy:groovy-swing'
     api 'org.apache.groovy:groovy-groovysh'
     implementation 'org.fusesource.jansi:jansi'
+    implementation 'org.jline:jline'
+    // TODO: Remove jline:jline (JLine 2) when upgrading to Groovy 5 (groovy-groovysh 5.x uses JLine 3)
     implementation 'jline:jline'
     implementation 'net.java.dev.jna:jna'
 
