@@ -71,7 +71,7 @@ import grails.web.mapping.UrlMappings;
 public class DefaultUrlMappingsHolder implements UrlMappings {
 
     private static final transient Log LOG = LogFactory.getLog(DefaultUrlMappingsHolder.class);
-    private static final int DEFAULT_MAX_WEIGHTED_CAPACITY = 5000;
+    private static final int DEFAULT_MAX_WEIGHTED_CAPACITY = 1000;
     public static final UrlMappingInfo[] EMPTY_RESULTS = new UrlMappingInfo[0];
 
     private int maxWeightedCacheCapacity = DEFAULT_MAX_WEIGHTED_CAPACITY;

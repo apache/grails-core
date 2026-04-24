@@ -199,8 +199,8 @@
         {
             "name": "grails.mime.disable.accept.header.userAgents",
             "type": "java.util.List<java.lang.String>",
-            "description": "List of user agent substrings (e.g., Gecko, WebKit) for which Accept header processing is disabled.",
-            "defaultValue": []
+            "description": "List of user agent substrings (matched case-insensitively) for which Accept header processing is disabled.",
+            "defaultValue": ["Gecko", "WebKit", "Presto", "Trident"]
         },
         {
             "name": "grails.mime.disable.accept.header.userAgentsXhr",
