@@ -18,65 +18,113 @@
  */
 package org.grails.datastore.gorm
 
-import groovy.transform.CompileStatic
+import groovy.transform.CompileDynamic
 import org.codehaus.groovy.runtime.InvokerHelper
 
 import grails.gorm.api.GormInstanceOperations
 import org.grails.datastore.mapping.core.Datastore
 import org.grails.datastore.mapping.core.Session
 import org.grails.datastore.mapping.core.SessionCallback
+import org.grails.datastore.mapping.core.VoidSessionCallback
 import org.grails.datastore.mapping.core.connections.ConnectionSource
-import org.grails.datastore.mapping.core.connections.ConnectionSources
 import org.grails.datastore.mapping.core.connections.ConnectionSourcesProvider
-import org.grails.datastore.mapping.dirty.checking.DirtyCheckable
-import org.grails.datastore.mapping.dirty.checking.DirtyCheckingSupport
+import org.grails.datastore.mapping.model.MappingContext
+import org.grails.datastore.mapping.model.PersistentEntity
 import org.grails.datastore.mapping.model.PersistentProperty
 import org.grails.datastore.mapping.proxy.EntityProxy
+import org.grails.datastore.mapping.reflect.ClassUtils
 import org.grails.datastore.mapping.reflect.EntityReflector
 import org.grails.datastore.mapping.validation.ValidationException
+import org.grails.datastore.mapping.core.connections.ConnectionSources
+import org.grails.datastore.mapping.multitenancy.MultiTenancySettings.MultiTenancyMode
+import org.grails.datastore.gorm.multitenancy.TenantDelegatingGormOperations
+import org.springframework.transaction.PlatformTransactionManager
+import org.grails.datastore.mapping.transactions.TransactionCapableDatastore
+import org.grails.datastore.mapping.dirty.checking.DirtyCheckable
 
 /**
- * Instance methods of the GORM API.
+ * GORM instance API implementation.
  *
  * @author Graeme Rocher
- * @param <D> the entity/domain class
+ * @since 1.0
  */
-@CompileStatic
+@CompileDynamic
 class GormInstanceApi<D> extends AbstractGormApi<D> implements GormInstanceOperations<D> {
 
-    Class<? extends Exception> validationException = ValidationException
+    Class<? extends Exception> validationException = ValidationException.VALIDATION_EXCEPTION_TYPE
     boolean failOnError = false
     boolean markDirty = true
 
     GormInstanceApi(Class<D> persistentClass, Datastore datastore) {
         super(persistentClass, datastore)
-        validationException = ValidationException.VALIDATION_EXCEPTION_TYPE
+        if (datastore != null) {
+            def mappingFactory = datastore.getMappingContext().getMappingFactory()
+            try {
+                def defaultSettings = mappingFactory.getClass().getMethod("getDefaultSettings").invoke(mappingFactory)
+                this.failOnError = (boolean)defaultSettings.getClass().getMethod("isFailOnError").invoke(defaultSettings)
+                this.markDirty = (boolean)defaultSettings.getClass().getMethod("isMarkDirty").invoke(defaultSettings)
+            } catch (Throwable e) {
+                this.failOnError = false
+                this.markDirty = true
+            }
+        }
     }
 
-    Object propertyMissing(D instance, String name) {
+    GormInstanceApi(Class<D> persistentClass, MappingContext mappingContext, DatastoreResolver datastoreResolver) {
+        super(persistentClass, mappingContext, datastoreResolver)
+        def mappingFactory = mappingContext.getMappingFactory()
         try {
-
-            def instanceApi = GormEnhancer.findInstanceApi(persistentClass, name)
-            return new DelegatingGormEntityApi(instanceApi, instance)
-        } catch (IllegalStateException ise) {
-            throw new MissingPropertyException(name, persistentClass)
+            def defaultSettings = mappingFactory.getClass().getMethod("getDefaultSettings").invoke(mappingFactory)
+            this.failOnError = (boolean)defaultSettings.getClass().getMethod("isFailOnError").invoke(defaultSettings)
+            this.markDirty = (boolean)defaultSettings.getClass().getMethod("isMarkDirty").invoke(defaultSettings)
+        } catch (Throwable e) {
+            this.failOnError = false
+            this.markDirty = true
         }
     }
 
-    /**
-     * Proxy aware instanceOf implementation.
-     */
-    boolean instanceOf(D o, Class cls) {
-        if (o instanceof EntityProxy) {
-            o = (D) ((EntityProxy)o).getTarget()
+    @Override
+    PlatformTransactionManager getTransactionManager() {
+        Datastore ds = getDatastore()
+        if (ds instanceof TransactionCapableDatastore) {
+            return ((TransactionCapableDatastore)ds).getTransactionManager()
         }
-        return o in cls
+        return null
     }
 
-    /**
-     * Upgrades an existing persistence instance to a write lock
-     * @return The instance
-     */
+    GormInstanceApi<D> forQualifier(String qualifier) {
+        DatastoreResolver resolver = new DatastoreResolver() {
+            @Override Datastore resolve() { GormEnhancer.findDatastore(persistentClass, qualifier) }
+        }
+        GormInstanceApi<D> newApi = new GormInstanceApi<D>(persistentClass, mappingContext, resolver)
+        newApi.failOnError = failOnError
+        newApi.markDirty = markDirty
+        return newApi
+    }
+
+    @Override
+    Object propertyMissing(D instance, String name) {
+        Datastore ds = getDatastore()
+        if (ds instanceof ConnectionSourcesProvider) {
+            ConnectionSources sources = ((ConnectionSourcesProvider) ds).connectionSources
+            if (sources != null && sources.getConnectionSource(name) != null) {
+                def instanceApi = GormEnhancer.findInstanceApi(persistentClass, name)
+                return new DelegatingGormEntityApi(instanceApi, instance)
+            }
+        }
+        throw new MissingPropertyException(name, persistentClass)
+    }
+
+    @Override
+    boolean instanceOf(D instance, Class cls) {
+        if (instance == null) return false
+        if (instance instanceof EntityProxy) {
+            return cls.isInstance(((EntityProxy) instance).getTarget())
+        }
+        return cls.isInstance(instance)
+    }
+
+    @Override
     D lock(D instance) {
         execute({ Session session ->
             session.lock(instance)
@@ -84,29 +132,15 @@ class GormInstanceApi<D> extends AbstractGormApi<D> implements GormInstanceOpera
         } as SessionCallback)
     }
 
-    /**
-     * Locks the instance for updates for the scope of the passed closure
-     *
-     * @param callable The closure
-     * @return The result of the closure
-     */
-    <T> T mutex(D instance, Closure<T> callable) {
+    @Override
+    def <T> T mutex(D instance, Closure<T> callable) {
         execute({ Session session ->
-            try {
-                session.lock(instance)
-                callable?.call()
-            }
-            finally {
-                session.unlock(instance)
-            }
+            session.lock(instance)
+            callable?.call()
         } as SessionCallback)
     }
 
-    /**
-     * Refreshes the state of the current instance
-     * @param instance The instance
-     * @return The instance
-     */
+    @Override
     D refresh(D instance) {
         execute({ Session session ->
             session.refresh(instance)
@@ -114,263 +148,143 @@ class GormInstanceApi<D> extends AbstractGormApi<D> implements GormInstanceOpera
         } as SessionCallback)
     }
 
-    /**
-     * Saves an object the datastore
-     * @param instance The instance
-     * @return Returns the instance
-     */
-    D save(D instance) {
-        save(instance, Collections.emptyMap())
+    @Override
+    D merge(D instance, Map args) {
+        save(instance, args)
     }
 
-    /**
-     * Forces an insert of an object to the datastore
-     * @param instance The instance
-     * @return Returns the instance
-     */
-    D insert(D instance) {
-        insert(instance, Collections.emptyMap())
-    }
-
-    /**
-     * Forces an insert of an object to the datastore
-     * @param instance The instance
-     * @return Returns the instance
-     */
-    D insert(D instance, Map params) {
-        execute({ Session session ->
-            doSave(instance, params, session, true)
-        } as SessionCallback)
-    }
-
-    /**
-     * Saves an object the datastore
-     * @param instance The instance
-     * @return Returns the instance
-     */
+    @Override
     D merge(D instance) {
-        save(instance, Collections.emptyMap())
+        save(instance, [:])
     }
 
-    /**
-     * Saves an object the datastore
-     * @param instance The instance
-     * @return Returns the instance
-     */
-    D merge(D instance, Map params) {
-        save(instance, params)
+    @Override
+    D save(D instance) {
+        save(instance, [:])
     }
 
-    /**
-     * Save method that takes a boolean which indicates whether to perform validation or not
-     *
-     * @param instance The instance
-     * @param validate Whether to perform validation
-     *
-     * @return The instance or null if validation fails
-     */
+    @Override
     D save(D instance, boolean validate) {
         save(instance, [validate: validate])
     }
 
-    /**
-     * Saves an object with the given parameters
-     * @param instance The instance
-     * @param params The parameters
-     * @return The instance
-     */
-    D save(D instance, Map params) {
+    @Override
+    D save(D instance, Map arguments) {
+        boolean shouldFlush = arguments?.containsKey("flush") ? (boolean)arguments.get("flush") : false
+        boolean validate = arguments?.containsKey("validate") ? (boolean)arguments.get("validate") : true
+
+        if (validate) {
+            if (!GormEnhancer.findValidationApi(persistentClass).validate(instance, arguments)) {
+                if (shouldFail(arguments)) {
+                    throw validationException.newInstance('Validation Error(s) occurred during save()', instance.errors)
+                }
+                return null
+            }
+        } else {
+            GormEnhancer.findValidationApi(persistentClass).clearErrors(instance)
+        }
+
         execute({ Session session ->
-            doSave(instance, params, session)
+            session.persist(instance)
+            if (shouldFlush) {
+                session.flush()
+            }
+            return instance
         } as SessionCallback)
     }
 
-    /**
-     * Returns the objects identifier
-     */
-    Serializable ident(D instance) {
-        PersistentProperty identity = persistentEntity.getIdentity()
-        if (identity != null) {
-            return (Serializable) instance[identity.name]
+    private boolean shouldFail(Map arguments) {
+        if (arguments?.containsKey("failOnError")) {
+            return (boolean)arguments.get("failOnError")
         }
-        else {
-            PersistentProperty[] idProperties = persistentEntity.getCompositeIdentity()
-            if (idProperties != null) {
-                EntityReflector entityReflector = persistentEntity.getReflector()
-                def idInstance = persistentEntity.newInstance()
-                if (idInstance instanceof Serializable) {
-                    for (prop in idProperties) {
-                        String propertName = prop.name
-                        entityReflector.setProperty(
-                                idInstance, propertName, entityReflector.getProperty(instance, propertName)
-                        )
-                    }
-                    return (Serializable) idInstance
-                }
-            }
-        }
-        return null
+        return failOnError
     }
 
-    /**
-     * Attaches an instance to an existing session. Requries a session-based model
-     * @param instance The instance
-     * @return
-     */
+    @Override
+    D insert(D instance) {
+        insert(instance, [:])
+    }
+
+    @Override
+    D insert(D instance, Map arguments) {
+        boolean shouldFlush = arguments?.containsKey("flush") ? (boolean)arguments.get("flush") : false
+        execute({ Session session ->
+            session.insert(instance)
+            if (shouldFlush) {
+                session.flush()
+            }
+            return instance
+        } as SessionCallback)
+    }
+
+    @Override
+    void delete(D instance) {
+        delete(instance, [:])
+    }
+
+    @Override
+    void delete(D instance, Map arguments) {
+        boolean shouldFlush = arguments?.containsKey("flush") ? (boolean)arguments.get("flush") : false
+        execute({ Session session ->
+            session.delete(instance)
+            if (shouldFlush) {
+                session.flush()
+            }
+        } as VoidSessionCallback)
+    }
+
+    @Override
+    Serializable ident(D instance) {
+        (Serializable)InvokerHelper.getProperty(instance, "id")
+    }
+
+    @Override
     D attach(D instance) {
         execute({ Session session ->
             session.attach(instance)
-            instance
+            return instance
         } as SessionCallback)
     }
 
-    /**
-     * No concept of session-based model so defaults to true
-     */
+    @Override
     boolean isAttached(D instance) {
         execute({ Session session ->
             session.contains(instance)
         } as SessionCallback)
     }
 
-    /**
-     * Discards any pending changes. Requires a session-based model.
-     */
+    @Override
     void discard(D instance) {
         execute({ Session session ->
             session.clear(instance)
         } as SessionCallback)
     }
 
-    /**
-     * Deletes an instance from the datastore
-     * @param instance The instance to delete
-     */
-    void delete(D instance) {
-        delete(instance, Collections.emptyMap())
-    }
-
-    /**
-     * Deletes an instance from the datastore
-     * @param instance The instance to delete
-     */
-    void delete(D instance, Map params) {
-        execute({ Session session ->
-            session.delete(instance)
-            if (params?.flush) {
-                session.flush()
-            }
-        } as SessionCallback)
-    }
-
-    /**
-     * Checks whether a field is dirty
-     *
-     * @param instance The instance
-     * @param fieldName The name of the field
-     *
-     * @return true if the field is dirty
-     */
-    boolean isDirty(D instance, String fieldName) {
-        if (instance instanceof DirtyCheckable) {
-            return ((DirtyCheckable) instance).hasChanged(fieldName)
-        }
-        return true
-    }
-
-    /**
-     * Checks whether an entity is dirty
-     *
-     * @param instance The instance
-     * @return true if it is dirty
-     */
     boolean isDirty(D instance) {
         if (instance instanceof DirtyCheckable) {
-            return ((DirtyCheckable) instance).hasChanged() || DirtyCheckingSupport.areAssociationsDirty(persistentEntity, instance)
+            return ((DirtyCheckable)instance).hasChanged()
         }
-        return true
+        return false
     }
 
-    /**
-     * Obtains a list of property names that are dirty
-     *
-     * @param instance The instance
-     * @return A list of property names that are dirty
-     */
-    List getDirtyPropertyNames(D instance) {
+    boolean isDirty(D instance, String fieldName) {
         if (instance instanceof DirtyCheckable) {
-            return ((DirtyCheckable) instance).listDirtyPropertyNames()
+            return ((DirtyCheckable)instance).hasChanged(fieldName)
         }
-        return []
+        return false
     }
 
-    /**
-     * Gets the original persisted value of a field.
-     *
-     * @param fieldName The field name
-     * @return The original persisted value
-     */
+    List<String> getDirtyPropertyNames(D instance) {
+        if (instance instanceof DirtyCheckable) {
+            return ((DirtyCheckable)instance).listDirtyPropertyNames()
+        }
+        return Collections.emptyList()
+    }
+
     Object getPersistentValue(D instance, String fieldName) {
         if (instance instanceof DirtyCheckable) {
-            return ((DirtyCheckable) instance).getOriginalValue(fieldName)
+            return ((DirtyCheckable)instance).getOriginalValue(fieldName)
         }
         return null
-    }
-
-    protected D doSave(D instance, Map params, Session session, boolean isInsert = false) {
-        boolean hasErrors = false
-        boolean validate = params?.containsKey('validate') ? params.validate : true
-        boolean shouldFlush = params?.flush ? params.flush : false
-        if (instance instanceof GormValidateable) {
-
-            def validateable = (GormValidateable) instance
-            if (validate) {
-                validateable.skipValidation(false)
-                if (datastore instanceof ConnectionSourcesProvider) {
-                    ConnectionSources connectionSources = ((ConnectionSourcesProvider) datastore).connectionSources
-                    String connectionSourceName = connectionSources.defaultConnectionSource.name
-                    if (connectionSourceName != ConnectionSource.DEFAULT) {
-                        GormValidationApi<D> validationApi = GormEnhancer.findValidationApi((Class<D>) instance.getClass(), connectionSourceName)
-                        hasErrors = !validationApi.validate((D) instance, params)
-                    }
-                    else {
-                        hasErrors = !validateable.validate(params)
-                    }
-                }
-                else {
-                    hasErrors = !validateable.validate(params)
-                }
-                // don't revalidate
-                if (shouldFlush) {
-                    validateable.skipValidation(true)
-                }
-
-            } else {
-                validateable.skipValidation(true)
-                validateable.clearErrors()
-            }
-        }
-
-        if (hasErrors) {
-            boolean failOnErrorEnabled = params?.containsKey('failOnError') ? params.failOnError : failOnError
-            if (failOnErrorEnabled) {
-                throw validationException.newInstance('Validation error occurred during call to save()', InvokerHelper.getProperty(instance, 'errors'))
-            }
-            return null
-        }
-        if (isInsert) {
-            session.insert(instance)
-        }
-        else {
-            if (instance instanceof DirtyCheckable && markDirty) {
-                // since this is an explicit call to save() we mark the instance as dirty to ensure it happens
-                instance.markDirty()
-            }
-            session.persist(instance)
-        }
-        if (shouldFlush) {
-            session.flush()
-        }
-        return instance
     }
 }

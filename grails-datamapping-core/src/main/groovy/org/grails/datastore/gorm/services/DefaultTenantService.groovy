@@ -18,10 +18,13 @@
  */
 package org.grails.datastore.gorm.services
 
+import grails.gorm.transactions.NotTransactional
+import grails.gorm.transactions.ReadOnly
 import groovy.transform.CompileStatic
 
 import grails.gorm.multitenancy.TenantService
 import grails.gorm.multitenancy.Tenants
+import org.grails.datastore.mapping.core.Datastore
 import org.grails.datastore.mapping.model.DatastoreConfigurationException
 import org.grails.datastore.mapping.multitenancy.MultiTenancySettings
 import org.grails.datastore.mapping.multitenancy.MultiTenantCapableDatastore
@@ -35,6 +38,8 @@ import org.grails.datastore.mapping.services.Service
  */
 @CompileStatic
 class DefaultTenantService implements Service, TenantService {
+
+    private static final ThreadLocal<Boolean> RESOLVING = ThreadLocal.withInitial { false }
 
     @Override
     void eachTenant(Closure callable) {
@@ -50,7 +55,7 @@ class DefaultTenantService implements Service, TenantService {
             return Tenants.currentId(multiTenantCapableDatastore)
         }
         else {
-            throw new DatastoreConfigurationException("Current datastore [$datastore] is not configured for Multi-Tenancy")
+            throw new DatastoreConfigurationException("Current datastore [${getDatastore()}] is not configured for Multi-Tenancy")
         }
     }
 
@@ -62,40 +67,57 @@ class DefaultTenantService implements Service, TenantService {
             return Tenants.withoutId(multiTenantCapableDatastore, callable)
         }
         else {
-            throw new DatastoreConfigurationException("Current datastore [$datastore] is not configured for Multi-Tenancy")
+            throw new DatastoreConfigurationException("Current datastore [${getDatastore()}] is not configured for Multi-Tenancy")
         }
     }
 
     @Override
     def <T> T withCurrent(Closure<T> callable) {
-        MultiTenantCapableDatastore multiTenantCapableDatastore = multiTenantDatastore()
-        def mode = multiTenantCapableDatastore.getMultiTenancyMode()
-        if (mode != MultiTenancySettings.MultiTenancyMode.NONE) {
-            return Tenants.withId(multiTenantCapableDatastore, currentId(), callable)
+        if (RESOLVING.get()) {
+            return (T)callable.call()
         }
-        else {
-            throw new DatastoreConfigurationException("Current datastore [$datastore] is not configured for Multi-Tenancy")
+        RESOLVING.set(true)
+        try {
+            MultiTenantCapableDatastore multiTenantCapableDatastore = multiTenantDatastore()
+            def mode = multiTenantCapableDatastore.getMultiTenancyMode()
+            if (mode != MultiTenancySettings.MultiTenancyMode.NONE) {
+                return Tenants.withId(multiTenantCapableDatastore, currentId(), callable)
+            }
+            else {
+                throw new DatastoreConfigurationException("Current datastore [${getDatastore()}] is not configured for Multi-Tenancy")
+            }
+        } finally {
+            RESOLVING.set(false)
         }
     }
 
     @Override
     def <T> T withId(Serializable tenantId, Closure<T> callable) {
-        MultiTenantCapableDatastore multiTenantCapableDatastore = multiTenantDatastore()
-        def mode = multiTenantCapableDatastore.getMultiTenancyMode()
-        if (mode != MultiTenancySettings.MultiTenancyMode.NONE) {
-            return Tenants.withId(multiTenantCapableDatastore, tenantId, callable)
+        if (RESOLVING.get()) {
+            return (T)callable.call()
         }
-        else {
-            throw new DatastoreConfigurationException("Current datastore [$datastore] is not configured for Multi-Tenancy")
+        RESOLVING.set(true)
+        try {
+            MultiTenantCapableDatastore multiTenantCapableDatastore = multiTenantDatastore()
+            def mode = multiTenantCapableDatastore.getMultiTenancyMode()
+            if (mode != MultiTenancySettings.MultiTenancyMode.NONE) {
+                return Tenants.withId(multiTenantCapableDatastore, tenantId, callable)
+            }
+            else {
+                throw new DatastoreConfigurationException("Current datastore [${getDatastore()}] is not configured for Multi-Tenancy")
+            }
+        } finally {
+            RESOLVING.set(false)
         }
     }
 
     protected MultiTenantCapableDatastore multiTenantDatastore() {
         MultiTenantCapableDatastore multiTenantCapableDatastore
-        if (datastore instanceof MultiTenantCapableDatastore) {
-            multiTenantCapableDatastore = (MultiTenantCapableDatastore) datastore
+        Datastore ds = getDatastore()
+        if (ds instanceof MultiTenantCapableDatastore) {
+            multiTenantCapableDatastore = (MultiTenantCapableDatastore) ds
         } else {
-            throw new DatastoreConfigurationException("Current datastore [$datastore] is not Multi-Tenant capable")
+            throw new DatastoreConfigurationException("Current datastore [$ds] is not Multi-Tenant capable")
         }
         return multiTenantCapableDatastore
     }

@@ -766,25 +766,25 @@ public class MongoDatastore extends AbstractDatastore implements MappingContext.
 
         return new MongoGormEnhancer(this, transactionManager, settings) {
             @Override
-            protected <D> MongoStaticApi<D> getStaticApi(Class<D> cls, String qualifier) {
-                MongoDatastore mongoDatastore = getDatastoreForQualifier(cls, qualifier);
-                return new MongoStaticApi<>(cls, mongoDatastore, createDynamicFinders(mongoDatastore), transactionManager);
+            protected <D> MongoStaticApi<D> getStaticApi(Class<D> cls, org.grails.datastore.gorm.DatastoreResolver resolver, String qualifier) {
+                return new MongoStaticApi<>(cls, getMappingContext(), createDynamicFinders(resolver, getMappingContext()), resolver, qualifier);
             }
 
             @Override
-            protected <D> GormInstanceApi<D> getInstanceApi(Class<D> cls, String qualifier) {
-                MongoDatastore mongoDatastore = getDatastoreForQualifier(cls, qualifier);
-
-                GormInstanceApi<D> instanceApi = new GormInstanceApi<>(cls, mongoDatastore);
+            protected <D> GormInstanceApi<D> getInstanceApi(Class<D> cls, org.grails.datastore.gorm.DatastoreResolver resolver) {
+                GormInstanceApi<D> instanceApi = new GormInstanceApi<>(cls, getMappingContext(), resolver);
                 instanceApi.setFailOnError(getFailOnError());
                 instanceApi.setMarkDirty(getMarkDirty());
                 return instanceApi;
             }
 
             @Override
-            protected <D> GormValidationApi<D> getValidationApi(Class<D> cls, String qualifier) {
-                MongoDatastore mongoDatastore = getDatastoreForQualifier(cls, qualifier);
-                return new GormValidationApi<>(cls, mongoDatastore);
+            protected <D> GormValidationApi<D> getValidationApi(Class<D> cls, org.grails.datastore.gorm.DatastoreResolver resolver) {
+                return new GormValidationApi<>(cls, getMappingContext(), resolver);
+            }
+
+            private <D> MongoDatastore getMongoDatastore(org.grails.datastore.gorm.DatastoreResolver resolver) {
+                return (MongoDatastore) resolver.resolve();
             }
 
             private <D> MongoDatastore getDatastoreForQualifier(Class<D> cls, String qualifier) {

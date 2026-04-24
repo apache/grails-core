@@ -103,6 +103,57 @@ abstract class AbstractHibernateGormInstanceApi<D> extends GormInstanceApi<D> {
         this.markDirty = datastore.markDirty
     }
 
+    protected AbstractHibernateGormInstanceApi(Class<D> persistentClass, org.grails.datastore.mapping.model.MappingContext mappingContext, org.grails.datastore.gorm.DatastoreResolver datastoreResolver) {
+        super(persistentClass, mappingContext, datastoreResolver)
+    }
+
+    protected HibernateDatastore getHibernateDatastore() {
+        (HibernateDatastore) getDatastore()
+    }
+
+    protected SessionFactory getSessionFactory() {
+        if (sessionFactory == null) {
+            return hibernateDatastore.sessionFactory
+        }
+        return sessionFactory
+    }
+
+    protected IHibernateTemplate getHibernateTemplate() {
+        if (hibernateTemplate == null) {
+            return (IHibernateTemplate) hibernateDatastore.getHibernateTemplate()
+        }
+        return hibernateTemplate
+    }
+
+    protected ProxyHandler getProxyHandler() {
+        if (proxyHandler == null) {
+            return mappingContext.proxyHandler
+        }
+        return proxyHandler
+    }
+
+    protected boolean isAutoFlush() {
+        if (hibernateDatastore != null) {
+            return hibernateDatastore.autoFlush
+        }
+        return autoFlush
+    }
+
+    @Override
+    protected boolean isFailOnError() {
+        if (hibernateDatastore != null) {
+            return hibernateDatastore.failOnError
+        }
+        return failOnError
+    }
+
+    protected boolean isMarkDirty() {
+        if (hibernateDatastore != null) {
+            return hibernateDatastore.markDirty
+        }
+        return markDirty
+    }
+
     @Override
     D save(D target, Map arguments) {
 

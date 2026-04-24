@@ -79,6 +79,36 @@ class HibernateGormStaticApi<D> extends AbstractHibernateGormStaticApi<D> {
         instanceApi = new HibernateGormInstanceApi<>(persistentClass, datastore, classLoader)
     }
 
+    HibernateGormStaticApi(Class<D> persistentClass, org.grails.datastore.mapping.model.MappingContext mappingContext, List<FinderMethod> finders, org.grails.datastore.gorm.DatastoreResolver datastoreResolver, String qualifier, ClassLoader classLoader) {
+        super(persistentClass, mappingContext, finders, datastoreResolver, qualifier)
+        this.classLoader = classLoader
+    }
+
+    protected HibernateDatastore getHibernateDatastore() {
+        (HibernateDatastore) getDatastore()
+    }
+
+    protected SessionFactory getSessionFactory() {
+        if (sessionFactory == null) {
+            return hibernateDatastore.getSessionFactory()
+        }
+        return sessionFactory
+    }
+
+    protected ConversionService getConversionService() {
+        if (conversionService == null) {
+            return hibernateDatastore.mappingContext.conversionService
+        }
+        return conversionService
+    }
+
+    protected Class getIdentityType() {
+        if (identityType == null) {
+            return persistentEntity.identity?.type
+        }
+        return identityType
+    }
+
     @Override
     GrailsHibernateTemplate getHibernateTemplate() {
         return (GrailsHibernateTemplate) super.getHibernateTemplate()

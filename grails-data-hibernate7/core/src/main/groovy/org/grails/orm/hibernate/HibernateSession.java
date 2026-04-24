@@ -452,12 +452,14 @@ public class HibernateSession extends AbstractAttributeStoringSession implements
 
     //TODO could be used
     protected <D> HibernateGormStaticApi<D> getStaticApi(Class<D> type) {
+        HibernateDatastore datastore = (HibernateDatastore) getDatastore();
         return new HibernateGormStaticApi<>(
             type,
-            (HibernateDatastore) getDatastore(),
+            datastore.getMappingContext(),
             Collections.emptyList(),
-            Thread.currentThread().getContextClassLoader(),
-            ((HibernateDatastore) getDatastore()).getTransactionManager(),
+            new org.grails.datastore.gorm.DatastoreResolver() {
+                @Override public Datastore resolve() { return getDatastore(); }
+            },
             null
         );
     }

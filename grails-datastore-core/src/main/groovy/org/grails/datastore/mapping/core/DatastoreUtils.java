@@ -489,7 +489,7 @@ public abstract class DatastoreUtils {
         }
         else {
 
-            Map<String, Object>[] configurations = new Map[1];
+            Map<String, Object>[] configurations = (Map<String, Object>[]) new Map[1];
             configurations[0] = configuration;
             return createPropertyResolvers(configurations);
         }

@@ -35,8 +35,10 @@ import org.grails.datastore.mapping.query.Query
 import org.grails.datastore.mapping.query.Restrictions
 import org.grails.datastore.mapping.query.api.QueryableCriteria
 import org.grails.datastore.mapping.query.criteria.FunctionCallingCriterion
+import org.grails.datastore.mapping.simple.SimpleMapDatastore
 import org.grails.datastore.mapping.simple.SimpleMapSession
 import org.grails.datastore.mapping.simple.engine.SimpleMapEntityPersister
+import groovy.transform.CompileDynamic
 
 /**
  * Simple query implementation that queries a map of objects.
@@ -44,22 +46,49 @@ import org.grails.datastore.mapping.simple.engine.SimpleMapEntityPersister
  * @author Graeme Rocher
  * @since 1.0
  */
+@CompileDynamic
 class SimpleMapQuery extends Query {
 
-    Map<String, Map> datastore
     private String family
     private SimpleMapEntityPersister entityPersister
 
     SimpleMapQuery(SimpleMapSession session, PersistentEntity entity, SimpleMapEntityPersister entityPersister) {
         super(session, entity)
-        this.datastore = session.getBackingMap()
         family = getFamily(entity)
         this.entityPersister = entityPersister
+    }
+
+    protected Map<String, Map> getDatastoreMap() {
+        ((SimpleMapSession)session).getBackingMap()
+    }
+
+    protected Map getIndices() {
+        ((SimpleMapSession)session).getIndices()
+    }
+
+    List list(Map params) {
+        if (params.containsKey("max")) {
+            this.max = Integer.valueOf(params.max.toString())
+        }
+        if (params.containsKey("offset")) {
+            this.offset = Integer.valueOf(params.offset.toString())
+        }
+        if (params.containsKey("sort")) {
+            def sort = params.sort.toString()
+            def order = params.order?.toString() ?: "asc"
+            if (order == "desc") {
+                this.order(Query.Order.desc(sort))
+            } else {
+                this.order(Query.Order.asc(sort))
+            }
+        }
+        return list()
     }
 
     protected List executeQuery(PersistentEntity entity, Query.Junction criteria) {
         def results = []
         def entityMap = [:]
+        def datastore = getDatastoreMap()
         if (criteria.isEmpty()) {
             populateQueryResult(datastore[family].keySet().toList(), entityMap)
         }
@@ -85,7 +114,7 @@ class SimpleMapQuery extends Query {
             }
         }
         if (projections.isEmpty()) {
-            results = entityMap.values() as List
+            results = entityMap.keySet().collect { session.retrieve(entity.javaClass, it as Serializable) }
         }
         else {
             def projectionList = projections.projectionList
@@ -100,382 +129,349 @@ class SimpleMapQuery extends Query {
                 }
 
                 if (p instanceof Query.IdProjection) {
-                    if (projectionCount == 1) {
-                        results = entityMap.keySet().toList()
-                    }
-                    else {
-                        results.add(entityMap.keySet().toList())
-                    }
+                    results << entityMap.keySet().toList()
                 }
                 else if (p instanceof Query.CountProjection) {
-                    results.add(entityList.size())
+                    results << [entityList.size()]
                 }
                 else if (p instanceof Query.CountDistinctProjection) {
-                    final uniqueList = new ArrayList(entityList).unique { it."$p.propertyName" }
-                    results.add(uniqueList.size())
+                    results << [entityList.collect { it."$p.propertyName" }.unique().size()]
                 }
                 else if (p instanceof Query.PropertyProjection) {
                     def propertyValues = entityList.collect { it."$p.propertyName" }
                     if (p instanceof Query.MaxProjection) {
-                        results.add(propertyValues.max())
+                        results << [propertyValues.max()]
                     }
                     else if (p instanceof Query.MinProjection) {
-                        results.add(propertyValues.min())
+                        results << [propertyValues.min()]
                     }
                     else if (p instanceof Query.SumProjection) {
-                        results.add(propertyValues.sum())
+                        results << [propertyValues.sum()]
                     }
                     else if (p instanceof Query.AvgProjection) {
-                        def average = propertyValues.sum() / propertyValues.size()
-                        results.add(average)
+                        def res = propertyValues.isEmpty() ? 0 : propertyValues.sum() / propertyValues.size()
+                        if (res instanceof BigDecimal) res = res.doubleValue()
+                        results << [res]
                     }
                     else {
                         PersistentProperty prop = entity.getPropertyByName(p.propertyName)
-                        boolean distinct = p instanceof Query.DistinctPropertyProjection
-                        if (distinct) {
-                            propertyValues = propertyValues.unique()
+                        if (prop instanceof ToOne) {
+                             propertyValues = propertyValues.collect { session.retrieve(prop.type, it as Serializable) }
                         }
-
-                        if (prop) {
-                            if (prop instanceof ToOne) {
-                                propertyValues = propertyValues.collect {
-                                    if (prop.associatedEntity.isInstance(it)) {
-                                        return it
-                                    }
-                                    session.retrieve(prop.type, it)
-                                }
-                            }
-                            if (projectionCount == 1) {
-                                results.addAll(propertyValues)
-                            }
-                            else {
-                                results.add(propertyValues)
-                            }
-                        }
+                        results << propertyValues
                     }
                 }
             }
-            if (results.size() <= 1)                            // [<col>]
-                results
-            else if (projectionCount == 1)                      // [<row>, <row>, ...]
-                results
-            else if (!(results[0] instanceof Collection))       // [<col>, <col>, ...]
-                results = [results]
-            else                                                // [[<col>, <col>, ...], ...]
-                results = results.transpose()
-        }
-        if (results) {
-            return applyMaxAndOffset(results)
-        }
-        return Collections.emptyList()
-    }
 
-    private List applyMaxAndOffset(List sortedResults) {
-        final def total = sortedResults.size()
-        def from = offset != null ? offset : 0
-        if (from >= total) return Collections.emptyList()
-
-        // 0..3
-        // 0..-1
-        // 1..1
-        def max = this.max != null ? this.max : -1
-        def to = max == -1 ? -1 : (from + max) - 1      // 15
-        if (to >= total) to = -1
-
-        return sortedResults[from..to]
-    }
-
-    def associationQueryHandlers = [
-        (AssociationQuery): { allEntities, Association association, AssociationQuery aq ->
-            Query.Junction queryCriteria = aq.criteria
-            return executeAssociationSubQuery(datastore[getFamily(association.associatedEntity)], association.associatedEntity, queryCriteria, aq.association)
-        },
-
-        (FunctionCallingCriterion): { allEntities, Association association, FunctionCallingCriterion fcc ->
-            def criterion = fcc.propertyCriterion
-            def handler = associationQueryHandlers[criterion.class]
-            def function = functionHandlers[fcc.functionName]
-            if (handler != null && function != null) {
-                try {
-                   return handler.call(allEntities, association, criterion, function)
+            if (projectionCount == 1) {
+                results = results[0]
+            }
+            else {
+                def finalResults = []
+                if (!results.isEmpty()) {
+                    def firstList = results[0]
+                    if (firstList instanceof Collection) {
+                        for (int i = 0; i < firstList.size(); i++) {
+                            def row = []
+                            for (int j = 0; j < projectionCount; j++) {
+                                row << results[j][i]
+                            }
+                            finalResults << row
+                        }
+                    }
                 }
-                catch (MissingMethodException ignored) {
-                    throw new InvalidDataAccessResourceUsageException("Unsupported function '$function' used in query")
+                results = finalResults
+            }
+        }
+
+        if (max > -1) {
+            def from = offset > 0 ? offset : 0
+            def to = max + from - 1
+            if (to >= results.size()) to = results.size() - 1
+            if (from < results.size()) {
+                results = results[from..to]
+            }
+            else {
+                results = []
+            }
+        }
+        else if (offset > 0) {
+            def from = offset
+            def to = results.size() - 1
+            if (from < results.size()) {
+                results = results[from..to]
+            }
+            else {
+                results = []
+            }
+        }
+
+        return results
+    }
+
+    private String getFamily(PersistentEntity entity) {
+        def cm = entity.getMapping()
+        String table = null
+        if (cm.getMappedForm() != null) {
+            table = cm.getMappedForm().getFamily()
+        }
+        if (table == null) table = entity.getJavaClass().getName()
+        
+        def datastore = (SimpleMapDatastore)session.datastore
+        def connectionName = datastore.connectionSources.defaultConnectionSource.name
+        if (!org.grails.datastore.mapping.core.connections.ConnectionSource.DEFAULT.equals(connectionName)) {
+            table = "${connectionName}:${table}"
+        }
+        
+        return table
+    }
+
+    private Map executeSubQuery(Query.Junction criteria, criteriaList) {
+        def entityMap = [:]
+        if (criteria instanceof Query.Conjunction) {
+            def resultList = executeSubQueryInternal(criteria, criteriaList)
+
+            if (resultList.isEmpty()) {
+                return entityMap
+            }
+
+            def finalKeys = resultList[0]
+            for (int i = 1; i < resultList.size(); i++) {
+                finalKeys = finalKeys.intersect(resultList[i])
+            }
+
+            populateQueryResult(finalKeys, entityMap)
+        }
+        else if (criteria instanceof Query.Disjunction) {
+            def resultList = executeSubQueryInternal(criteria, criteriaList)
+            if (resultList.isEmpty()) {
+                return entityMap
+            }
+
+            def finalKeys = resultList[0]
+            for (int i = 1; i < resultList.size(); i++) {
+                finalKeys = finalKeys.plus(resultList[i])
+            }
+            populateQueryResult(finalKeys.unique(), entityMap)
+        }
+        return entityMap
+    }
+
+    private List executeSubQueryInternal(criteria, criteriaList) {
+        def resultList = []
+        for (Query.Criterion c in criteriaList) {
+            def handler = handlers[c.class]
+            if (handler != null) {
+                def property = entity.getPropertyByName(c.property)
+                resultList << handler.call(c, property)
+            }
+            else if (c instanceof Query.Junction) {
+                resultList << executeSubQuery(c, c.criteria).keySet().toList()
+            }
+            else if (c instanceof FunctionCallingCriterion) {
+                def property = entity.getPropertyByName(c.property)
+                def functionName = c.functionName
+                Closure function = null
+                if (functionName == 'year') {
+                    function = { val ->
+                        if (val instanceof Date) {
+                           def cal = new GregorianCalendar()
+                           cal.time = val
+                           return cal.get(Calendar.YEAR)
+                        }
+                        return val
+                    }
+                }
+                
+                if (function != null) {
+                    resultList << handlers[Query.Equals].call(c.propertyCriterion, property, function)
+                }
+                else {
+                    throw new InvalidDataAccessResourceUsageException("Unsupported query function $functionName")
                 }
             }
             else {
-                throw new InvalidDataAccessResourceUsageException("Unsupported function '$function' used in query")
-            }
-        },
-        (Query.Like): { allEntities, Association association, Query.Like like, Closure function = {it} ->
-            queryAssociation(allEntities, association) {
-                def regexFormat = like.pattern.replaceAll('%', '.*?')
-                function(resolveIfEmbedded(like.property, it)) ==~ regexFormat
-            }
-        },
-        (Query.RLike): { allEntities, Association association, Query.RLike like, Closure function = {it} ->
-            queryAssociation(allEntities, association) {
-                def regexFormat = like.pattern
-                function(resolveIfEmbedded(like.property, it)) ==~ regexFormat
-            }
-        },
-        (Query.ILike): { allEntities, Association association, Query.Like like, Closure function = {it} ->
-            queryAssociation(allEntities, association) {
-                def regexFormat = like.pattern.replaceAll('%', '.*?')
-                def pattern = Pattern.compile(regexFormat, Pattern.CASE_INSENSITIVE)
-                pattern.matcher(function(resolveIfEmbedded(like.property, it))).find()
-            }
-        },
-        (Query.Equals): { allEntities, Association association, Query.Equals eq, Closure function = {it} ->
-            queryAssociation(allEntities, association) {
-                final value = subqueryIfNecessary(eq)
-                function(resolveIfEmbedded(eq.property, it)) == value
-            }
-        },
-        (Query.IsNull): { allEntities, Association association, Query.IsNull eq, Closure function = {it} ->
-            queryAssociation(allEntities, association) {
-                function(resolveIfEmbedded(eq.property, it)) == null
-            }
-        },
-        (Query.NotEquals): { allEntities, Association association, Query.NotEquals eq , Closure function = {it} ->
-            queryAssociation(allEntities, association) {
-                final value = subqueryIfNecessary(eq)
-                function(resolveIfEmbedded(eq.property, it)) != value
-            }
-        },
-        (Query.IsNotNull): { allEntities, Association association, Query.IsNotNull eq , Closure function = {it} ->
-            queryAssociation(allEntities, association) {
-                function(resolveIfEmbedded(eq.property, it)) != null
-            }
-        },
-        (Query.IdEquals): { allEntities, Association association, Query.IdEquals eq , Closure function = {it} ->
-            queryAssociation(allEntities, association) {
-                function(resolveIfEmbedded(eq.property, it)) == eq.value
-            }
-        },
-        (Query.Between): { allEntities, Association association, Query.Between between, Closure function = {it} ->
-            queryAssociation(allEntities, association) {
-                def from = between.from
-                def to = between.to
-                function(resolveIfEmbedded(between.property, it)) >= from && function(resolveIfEmbedded(between.property, it)) <= to
-            }
-        },
-        (Query.GreaterThan): { allEntities, Association association, Query.GreaterThan gt, Closure function = {it} ->
-            queryAssociation(allEntities, association) {
-                final value = subqueryIfNecessary(gt)
-                function(resolveIfEmbedded(gt.property, it)) > value
-            }
-        },
-        (Query.LessThan): { allEntities, Association association, Query.LessThan lt, Closure function = {it} ->
-            queryAssociation(allEntities, association) {
-                final value = subqueryIfNecessary(lt)
-                function(resolveIfEmbedded(lt.property, it)) < value
-            }
-        },
-        (Query.GreaterThanEquals): { allEntities, Association association, Query.GreaterThanEquals gt, Closure function = {it} ->
-            queryAssociation(allEntities, association) {
-                final value = subqueryIfNecessary(gt)
-                function(resolveIfEmbedded(gt.property, it)) >= value
-            }
-        },
-        (Query.LessThanEquals): { allEntities, Association association, Query.LessThanEquals lt, Closure function = {it} ->
-            queryAssociation(allEntities, association) {
-                final value = subqueryIfNecessary(lt)
-                function(resolveIfEmbedded(lt.property, it)) <= value
-            }
-        },
-        (Query.In): { allEntities, Association association, Query.In inList, Closure function = {it} ->
-            queryAssociation(allEntities, association) {
-                inList.values?.contains(function(resolveIfEmbedded(inList.property, it)))
+                def associationHandler = associationQueryHandlers[c.class]
+                if (associationHandler != null) {
+                    resultList << associationHandler.call(c, entity.getPropertyByName(c.association.name))
+                }
+                else {
+                    throw new InvalidDataAccessResourceUsageException("Unsupported query criterion $c")
+                }
             }
         }
-    ]
-
-    protected queryAssociation(allEntities, Association association, Closure callable) {
-        allEntities?.findAll {
-            def propertyName = association.name
-            if (association instanceof ToOne) {
-
-                def id = it.value[propertyName]
-
-                // If the entity isn't mocked properly this will happen and can cause a NPE.
-                PersistentEntity associatedEntity = association.associatedEntity
-                if (associatedEntity == null) {
-                    throw new IllegalStateException("No associated entity found for ${association.owner}.${association.name}")
-                }
-
-                def associated = session.retrieve(associatedEntity.javaClass, id)
-                if (associated) {
-                    callable.call(associated)
-                }
-            }
-            else {
-                def indexer = entityPersister.getAssociationIndexer(it.value, association)
-                def results = indexer.query(it.key)
-                if (results) {
-                    def associatedEntities = session.retrieveAll(association.associatedEntity.javaClass, results)
-                    return associatedEntities.any(callable)
-                }
-            }
-        }?.keySet()?.toList()
+        return resultList
     }
 
-    protected queryAssociationList(allEntities, Association association, Closure callable) {
-        allEntities.findAll {
-            def indexer = entityPersister.getAssociationIndexer(it.value, association)
-            def results = indexer.query(it.key)
-            callable.call(results)
-        }.keySet().toList()
+    private void populateQueryResult(List keys, Map entityMap) {
+        def datastore = getDatastoreMap()
+        for (key in keys) {
+            entityMap[key] = datastore[family][key]
+        }
     }
 
-    def executeAssociationSubQuery(allEntities, PersistentEntity associatedEntity, Query.Junction queryCriteria, PersistentProperty property) {
-        List resultList = []
-        for (Query.Criterion criterion in queryCriteria.getCriteria()) {
-            def handler = associationQueryHandlers[criterion.getClass()]
-
-            if (handler) {
-                resultList << handler.call(allEntities, property, criterion)
-            }
-            else if (criterion instanceof Query.Junction) {
-                Query.Junction junction = criterion
-                resultList << executeAssociationSubQuery(allEntities, associatedEntity, junction, property)
+    protected def marshalValue(PersistentProperty property, value) {
+        if (value != null && property instanceof Custom) {
+            def marshaller = ((Custom)property).customTypeMarshaller
+            if (marshaller.targetType.isInstance(value)) {
+                return marshaller.write(property, value, [:])
             }
         }
-        return applyJunctionToResults(queryCriteria, resultList)
+        return value
     }
 
-    def functionHandlers = [
-            second: { it[Calendar.SECOND] },
-            minute: { it[Calendar.MINUTE] },
-            hour: { it[Calendar.HOUR_OF_DAY] },
-            year: { it[Calendar.YEAR] },
-            month: { it[Calendar.MONTH] },
-            day: { it[Calendar.DAY_OF_MONTH] },
-            lower: { it.toString().toLowerCase() },
-            upper: { it.toString().toUpperCase() },
-            trim: { it.toString().trim() },
-            length: { it.toString().size() }
-    ]
     def handlers = [
-        (FunctionCallingCriterion): { FunctionCallingCriterion fcc, PersistentProperty property ->
-            def criterion = fcc.propertyCriterion
-            def handler = handlers[criterion.class]
-            def function = functionHandlers[fcc.functionName]
-            if (handler != null && function != null) {
-                try {
-                    handler.call(criterion, property, function, fcc.onValue)
-                }
-                catch (MissingMethodException e) {
-                    throw new InvalidDataAccessResourceUsageException("Unsupported function '$function' used in query")
-                }
+        (Query.In): { Query.In inList, PersistentProperty property ->
+            def disjunction = new Query.Disjunction()
+            for (value in inList.values) {
+                disjunction.add(Restrictions.eq(inList.name, value))
             }
-            else {
-                throw new InvalidDataAccessResourceUsageException("Unsupported function '$function' used in query")
-            }
+
+            executeSubQueryInternal(disjunction, disjunction.criteria).flatten().unique()
         },
-        (AssociationQuery): { AssociationQuery aq, PersistentProperty property ->
-            Query.Junction queryCriteria = aq.criteria
-            return executeAssociationSubQuery(datastore[family], aq.association.associatedEntity, queryCriteria, property)
-        },
-        (Query.EqualsAll): { Query.EqualsAll equalsAll, PersistentProperty property, Closure function=null, boolean onValue = false ->
-            def name = equalsAll.property
-            final values = subqueryIfNecessary(equalsAll, false)
-            Assert.isTrue(values.every { property.type.isInstance(it) }, "Subquery returned values that are not compatible with the type of property '$name': $values")
-            def allEntities = datastore[family]
-            allEntities.findAll { entry ->
-                values.every { (function != null ? function(resolveIfEmbedded(name, entry.value)) : resolveIfEmbedded(name, entry.value)) == it  }
-            }
-            .collect { it.key }
-        },
-        (Query.NotEqualsAll): { Query.NotEqualsAll notEqualsAll, PersistentProperty property, Closure function=null, boolean onValue = false ->
-            def name = notEqualsAll.property
-            final values = subqueryIfNecessary(notEqualsAll, false)
-            Assert.isTrue(values.every { property.type.isInstance(it) }, "Subquery returned values that are not compatible with the type of property '$name': $values")
-            def allEntities = datastore[family]
-            allEntities.findAll { entry ->
-                values.every { (function != null ? function(resolveIfEmbedded(name, entry.value)) : resolveIfEmbedded(name, entry.value)) != it  }
-            }
-            .collect { it.key }
-        },
-        (Query.GreaterThanAll): { Query.GreaterThanAll greaterThanAll, PersistentProperty property, Closure function=null, boolean onValue = false ->
-            def name = greaterThanAll.property
-            final values = subqueryIfNecessary(greaterThanAll, false)
-            Assert.isTrue(values.every { property.type.isInstance(it) }, "Subquery returned values that are not compatible with the type of property '$name': $values")
-            def allEntities = datastore[family]
-            allEntities.findAll { entry ->
-                values.every { (function != null ? function(resolveIfEmbedded(name, entry.value)) : resolveIfEmbedded(name, entry.value)) > it  }
-            }
-            .collect { it.key }
-        },
-        (Query.LessThanAll): { Query.LessThanAll lessThanAll, PersistentProperty property, Closure function=null, boolean onValue = false ->
-            def name = lessThanAll.property
-            final values = subqueryIfNecessary(lessThanAll, false)
-            Assert.isTrue(values.every { property.type.isInstance(it) }, "Subquery returned values that are not compatible with the type of property '$name': $values")
-            def allEntities = datastore[family]
-            allEntities.findAll { entry ->
-                values.every { (function != null ? function(resolveIfEmbedded(name, entry.value)) : resolveIfEmbedded(name, entry.value)) < it  }
-            }
-            .collect { it.key }
-        },
-        (Query.LessThanEqualsAll): { Query.LessThanEqualsAll lessThanEqualsAll, PersistentProperty property, Closure function=null, boolean onValue = false ->
-            def name = lessThanEqualsAll.property
-            final values = subqueryIfNecessary(lessThanEqualsAll, false)
-            Assert.isTrue(values.every { property.type.isInstance(it) }, "Subquery returned values that are not compatible with the type of property '$name': $values")
-            def allEntities = datastore[family]
-            allEntities.findAll { entry ->
-                values.every { (function != null ? function(resolveIfEmbedded(name, entry.value)) : resolveIfEmbedded(name, entry.value)) <= it  }
-            }
-            .collect { it.key }
-        },
-        (Query.GreaterThanEqualsAll): { Query.GreaterThanEqualsAll greaterThanAll, PersistentProperty property, Closure function=null, boolean onValue = false ->
-            def name = greaterThanAll.property
-            final values = subqueryIfNecessary(greaterThanAll, false)
-            Assert.isTrue(values.every { property.type.isInstance(it) }, "Subquery returned values that are not compatible with the type of property '$name': $values")
-            def allEntities = datastore[family]
-            allEntities.findAll { entry ->
-                values.every { (function != null ? function(resolveIfEmbedded(name, entry.value)) : resolveIfEmbedded(name, entry.value)) >= it  }
-            }
-            .collect { it.key }
+        (Query.IdEquals): { Query.IdEquals equals, PersistentProperty property ->
+            def indexer = entityPersister.getPropertyIndexer(entity.identity)
+            return indexer.query(equals.value)
         },
         (Query.Equals): { Query.Equals equals, PersistentProperty property, Closure function = null, boolean onValue = false ->
             def indexer = entityPersister.getPropertyIndexer(property)
             def value = subqueryIfNecessary(equals)
+            value = marshalValue(property, value)
 
             if (value && property instanceof ToOne && property.type.isInstance(value)) {
-               value = entityPersister.getObjectIdentifier(value)
+               value = session.getPersister(value).getObjectIdentifier(value)
             }
 
             if (function != null) {
-                def allEntities = datastore[family]
+                def allEntities = getDatastoreMap()[family]
                 allEntities.findAll {
-                    def calculatedValue = function(it.value[property.name])
+                    def val = resolveIfEmbedded(property.name, it.value)
+                    def calculatedValue = function(val)
                     calculatedValue == value
                 }.collect { it.key }
             }
             else {
                 if (equals.property.contains('.') || value == null) {
-                    def allEntities = datastore[family]
-                    return allEntities.findAll { resolveIfEmbedded(equals.property, it.value) == value }.collect { it.key }
+                    def allEntities = getDatastoreMap()[family]
+                    return allEntities.findAll {
+                        def val = resolveIfEmbedded(equals.property, it.value)
+                        val == value
+                    }.collect { it.key }
                 }
                 else {
                     return indexer.query(value)
                 }
             }
         },
-        (Query.IsNull): { Query.IsNull equals, PersistentProperty property, Closure function = null , boolean onValue = false ->
-            handlers[Query.Equals].call(new Query.Equals(equals.property, null), property, function)
-        },
-        (Query.IdEquals): { Query.IdEquals equals, PersistentProperty property ->
-            def indexer = entityPersister.getPropertyIndexer(property)
-            return indexer.query(equals.value)
-        },
         (Query.NotEquals): { Query.NotEquals equals, PersistentProperty property, Closure function = null, boolean onValue = false ->
             def indexed = handlers[Query.Equals].call(new Query.Equals(equals.property, equals.value), property, function)
             return negateResults(indexed)
         },
+        (Query.IsNull): { Query.IsNull equals, PersistentProperty property, Closure function = null , boolean onValue = false ->
+            handlers[Query.Equals].call(new Query.Equals(equals.property, null), property, function)
+        },
         (Query.IsNotNull): { Query.IsNotNull equals, PersistentProperty property, Closure function = null, boolean onValue = false ->
             def indexed = handlers[Query.Equals].call(new Query.Equals(equals.property, null), property, function)
             return negateResults(indexed)
+        },
+        (Query.Between): { Query.Between between, PersistentProperty property, Closure function = null, boolean onValue = false ->
+            def from = marshalValue(property, between.from)
+            def to = marshalValue(property, between.to)
+            def name = between.property
+            def allEntities = getDatastoreMap()[family]
+
+            allEntities.findAll {
+                def val = (function != null ? function(resolveIfEmbedded(name, it.value)) : resolveIfEmbedded(name, it.value))
+                val >= from && val <= to
+            }.collect { it.key }
+        },
+        (Query.GreaterThan): { Query.GreaterThan gt, PersistentProperty property, Closure function = null, boolean onValue = false ->
+            def name = gt.property
+            final value = marshalValue(property, subqueryIfNecessary(gt))
+            def allEntities = getDatastoreMap()[family]
+
+            allEntities.findAll {
+                def val = (function != null ? function(resolveIfEmbedded(name, it.value)) : resolveIfEmbedded(name, it.value))
+                val > value
+            }.collect { it.key }
+        },
+        (Query.LessThan): { Query.LessThan lt, PersistentProperty property ->
+            def name = lt.property
+            final value = marshalValue(property, subqueryIfNecessary(lt))
+            def allEntities = getDatastoreMap()[family]
+
+            allEntities.findAll {
+                def val = resolveIfEmbedded(name, it.value)
+                val < value
+            }.collect { it.key }
+        },
+        (Query.GreaterThanEquals): { Query.GreaterThanEquals gt, PersistentProperty property ->
+            def name = gt.property
+            final value = marshalValue(property, subqueryIfNecessary(gt))
+            def allEntities = getDatastoreMap()[family]
+
+            allEntities.findAll {
+                def val = resolveIfEmbedded(name, it.value)
+                val >= value
+            }.collect { it.key }
+        },
+        (Query.LessThanEquals): { Query.LessThanEquals lte, PersistentProperty property ->
+            def name = lte.property
+            final value = marshalValue(property, subqueryIfNecessary(lte))
+            def allEntities = getDatastoreMap()[family]
+
+            allEntities.findAll {
+                def val = resolveIfEmbedded(name, it.value)
+                val <= value
+            }.collect { it.key }
+        },
+        (Query.EqualsAll): { Query.EqualsAll equalsAll, PersistentProperty property ->
+            def name = equalsAll.property
+            final values = subqueryIfNecessary(equalsAll, false)
+            def allEntities = getDatastoreMap()[family]
+            allEntities.findAll { entry ->
+                values.every { resolveIfEmbedded(name, entry.value) == it }
+            }.collect { it.key }
+        },
+        (Query.NotEqualsAll): { Query.NotEqualsAll equalsAll, PersistentProperty property ->
+            def name = equalsAll.property
+            final values = subqueryIfNecessary(equalsAll, false)
+            def allEntities = getDatastoreMap()[family]
+            allEntities.findAll { entry ->
+                values.every { resolveIfEmbedded(name, entry.value) != it }
+            }.collect { it.key }
+        },
+        (Query.GreaterThanAll): { Query.GreaterThanAll gtAll, PersistentProperty property ->
+            def name = gtAll.property
+            final values = subqueryIfNecessary(gtAll, false)
+            def allEntities = getDatastoreMap()[family]
+            allEntities.findAll { entry ->
+                values.every { resolveIfEmbedded(name, entry.value) > it }
+            }.collect { it.key }
+        },
+        (Query.LessThanAll): { Query.LessThanAll ltAll, PersistentProperty property ->
+            def name = ltAll.property
+            final values = subqueryIfNecessary(ltAll, false)
+            def allEntities = getDatastoreMap()[family]
+            allEntities.findAll { entry ->
+                values.every { resolveIfEmbedded(name, entry.value) < it }
+            }.collect { it.key }
+        },
+        (Query.GreaterThanEqualsAll): { Query.GreaterThanEqualsAll geAll, PersistentProperty property ->
+            def name = geAll.property
+            final values = subqueryIfNecessary(geAll, false)
+            def allEntities = getDatastoreMap()[family]
+            allEntities.findAll { entry ->
+                values.every { resolveIfEmbedded(name, entry.value) >= it }
+            }.collect { it.key }
+        },
+        (Query.LessThanEqualsAll): { Query.LessThanEqualsAll leAll, PersistentProperty property ->
+            def name = leAll.property
+            final values = subqueryIfNecessary(leAll, false)
+            def allEntities = getDatastoreMap()[family]
+            allEntities.findAll { entry ->
+                values.every { resolveIfEmbedded(name, entry.value) <= it }
+            }.collect { it.key }
         },
         (Query.Like): { Query.Like like, PersistentProperty property ->
             def indexer = entityPersister.getPropertyIndexer(property)
@@ -483,7 +479,7 @@ class SimpleMapQuery extends Query {
             def root = indexer.indexRoot
             def regexFormat = like.pattern.replaceAll('%', '.*?')
             def pattern = "${root}:${regexFormat}"
-            def matchingIndices = entityPersister.indices.findAll { key, value ->
+            def matchingIndices = getIndices().findAll { key, value ->
                 key ==~ pattern
             }
 
@@ -496,174 +492,245 @@ class SimpleMapQuery extends Query {
         },
         (Query.ILike): { Query.ILike like, PersistentProperty property ->
             def regexFormat = like.pattern.replaceAll('%', '.*?')
-            return executeLikeWithRegex(entityPersister, property, regexFormat)
+            return executeLikeWithRegex(property, regexFormat)
         },
         (Query.RLike): { Query.RLike like, PersistentProperty property ->
             def regexFormat = like.pattern
-            return executeLikeWithRegex(entityPersister, property, regexFormat)
-        },
-        (Query.In): { Query.In inList, PersistentProperty property ->
-            def disjunction = new Query.Disjunction()
-            for (value in inList.values) {
-                disjunction.add(Restrictions.eq(inList.name, value))
-            }
-
-            executeSubQueryInternal(disjunction, disjunction.criteria)
-        },
-        (Query.Between): { Query.Between between, PersistentProperty property, Closure function = null, boolean onValue = false ->
-            def from = between.from
-            def to = between.to
-            def name = between.property
-            def allEntities = datastore[family]
-
-            if (function != null) {
-                allEntities.findAll { function(resolveIfEmbedded(name, it.value)) >= from && function(resolveIfEmbedded(name, it.value)) <= to }.collect { it.key }
-            }
-            else {
-                allEntities.findAll { resolveIfEmbedded(name, it.value) >= from && resolveIfEmbedded(name, it.value) <= to }.collect { it.key }
-            }
-        },
-        (Query.GreaterThan): { Query.GreaterThan gt, PersistentProperty property, Closure function = null, boolean onValue = false ->
-            def name = gt.property
-            final value = subqueryIfNecessary(gt)
-            def allEntities = datastore[family]
-
-            allEntities.findAll { (function != null ? function(resolveIfEmbedded(name, it.value)) : resolveIfEmbedded(name, it.value)) > value }.collect { it.key }
-        },
-        (Query.GreaterThanProperty): { Query.GreaterThanProperty gt, PersistentProperty property, Closure function = null, boolean onValue = false ->
-            def name = gt.property
-            def other = gt.otherProperty
-            def allEntities = datastore[family]
-
-            allEntities.findAll { (function != null ? function(resolveIfEmbedded(name, it.value)) : resolveIfEmbedded(name, it.value)) > it.value[other] }.collect { it.key }
-        },
-        (Query.GreaterThanEqualsProperty): { Query.GreaterThanEqualsProperty gt, PersistentProperty property, Closure function = null, boolean onValue = false ->
-            def name = gt.property
-            def other = gt.otherProperty
-            def allEntities = datastore[family]
-
-            allEntities.findAll { resolveIfEmbedded(name, it.value) >= it.value[other] }.collect { it.key }
-        },
-        (Query.LessThanProperty): { Query.LessThanProperty gt, PersistentProperty property ->
-            def name = gt.property
-            def other = gt.otherProperty
-            def allEntities = datastore[family]
-
-            allEntities.findAll { resolveIfEmbedded(name, it.value) < it.value[other] }.collect { it.key }
-        },
-        (Query.LessThanEqualsProperty): { Query.LessThanEqualsProperty gt, PersistentProperty property ->
-            def name = gt.property
-            def other = gt.otherProperty
-            def allEntities = datastore[family]
-
-            allEntities.findAll { resolveIfEmbedded(name, it.value) <= it.value[other] }.collect { it.key }
+            return executeLikeWithRegex(property, regexFormat)
         },
         (Query.EqualsProperty): { Query.EqualsProperty gt, PersistentProperty property ->
             def name = gt.property
             def other = gt.otherProperty
-            def allEntities = datastore[family]
+            def allEntities = getDatastoreMap()[family]
 
             allEntities.findAll { resolveIfEmbedded(name, it.value) == it.value[other] }.collect { it.key }
         },
         (Query.NotEqualsProperty): { Query.NotEqualsProperty gt, PersistentProperty property ->
             def name = gt.property
             def other = gt.otherProperty
-            def allEntities = datastore[family]
+            def allEntities = getDatastoreMap()[family]
 
             allEntities.findAll { resolveIfEmbedded(name, it.value) != it.value[other] }.collect { it.key }
         },
+        (Query.GreaterThanProperty): { Query.GreaterThanProperty gt, PersistentProperty property ->
+            def name = gt.property
+            def other = gt.otherProperty
+            def allEntities = getDatastoreMap()[family]
+
+            allEntities.findAll { resolveIfEmbedded(name, it.value) > it.value[other] }.collect { it.key }
+        },
+        (Query.GreaterThanEqualsProperty): { Query.GreaterThanEqualsProperty gt, PersistentProperty property ->
+            def name = gt.property
+            def other = gt.otherProperty
+            def allEntities = getDatastoreMap()[family]
+
+            allEntities.findAll { resolveIfEmbedded(name, it.value) >= it.value[other] }.collect { it.key }
+        },
+        (Query.LessThanProperty): { Query.LessThanProperty gt, PersistentProperty property ->
+            def name = gt.property
+            def other = gt.otherProperty
+            def allEntities = getDatastoreMap()[family]
+
+            allEntities.findAll { resolveIfEmbedded(name, it.value) < it.value[other] }.collect { it.key }
+        },
+        (Query.LessThanEqualsProperty): { Query.LessThanEqualsProperty gt, PersistentProperty property ->
+            def name = gt.property
+            def other = gt.otherProperty
+            def allEntities = getDatastoreMap()[family]
+
+            allEntities.findAll { resolveIfEmbedded(name, it.value) <= it.value[other] }.collect { it.key }
+        },
         (Query.SizeEquals): { Query.SizeEquals se, PersistentProperty property ->
-            def allEntities = datastore[family]
+            def allEntities = getDatastoreMap()[family]
             final value = subqueryIfNecessary(se)
-            queryAssociationList(allEntities, property) { it.size() == value }
+            queryAssociationList(allEntities, property as Association) { it.size() == value }
         },
        (Query.SizeNotEquals): { Query.SizeNotEquals se, PersistentProperty property ->
-            def allEntities = datastore[family]
+            def allEntities = getDatastoreMap()[family]
             final value = subqueryIfNecessary(se)
-            queryAssociationList(allEntities, property) { it.size() != value }
+            queryAssociationList(allEntities, property as Association) { it.size() != value }
         },
         (Query.SizeGreaterThan): { Query.SizeGreaterThan se, PersistentProperty property ->
-            def allEntities = datastore[family]
+            def allEntities = getDatastoreMap()[family]
             final value = subqueryIfNecessary(se)
-            queryAssociationList(allEntities, property) { it.size() > value }
+            queryAssociationList(allEntities, property as Association) { it.size() > value }
         },
         (Query.SizeGreaterThanEquals): { Query.SizeGreaterThanEquals se, PersistentProperty property ->
-            def allEntities = datastore[family]
+            def allEntities = getDatastoreMap()[family]
             final value = subqueryIfNecessary(se)
-            queryAssociationList(allEntities, property) { it.size() >= value }
+            queryAssociationList(allEntities, property as Association) { it.size() >= value }
         },
         (Query.SizeLessThan): { Query.SizeLessThan se, PersistentProperty property ->
-            def allEntities = datastore[family]
+            def allEntities = getDatastoreMap()[family]
             final value = subqueryIfNecessary(se)
-            queryAssociationList(allEntities, property) { it.size() < value }
+            queryAssociationList(allEntities, property as Association) { it.size() < value }
         },
         (Query.SizeLessThanEquals): { Query.SizeLessThanEquals se, PersistentProperty property ->
-            def allEntities = datastore[family]
+            def allEntities = getDatastoreMap()[family]
             final value = subqueryIfNecessary(se)
-            queryAssociationList(allEntities, property) { it.size() <= value }
-        },
-        (Query.GreaterThanEquals): { Query.GreaterThanEquals gt, PersistentProperty property ->
-            def name = gt.property
-            final value = subqueryIfNecessary(gt)
-            def allEntities = datastore[family]
-
-            allEntities.findAll { resolveIfEmbedded(name, it.value) >= value }.collect { it.key }
-        },
-        (Query.LessThan): { Query.LessThan lt, PersistentProperty property ->
-            def name = lt.property
-            final value = subqueryIfNecessary(lt)
-            def allEntities = datastore[family]
-
-            allEntities.findAll { resolveIfEmbedded(name, it.value) < value }.collect { it.key }
-        },
-        (Query.LessThanEquals): { Query.LessThanEquals lte, PersistentProperty property ->
-            def name = lte.property
-            final value = subqueryIfNecessary(lte)
-            def allEntities = datastore[family]
-
-            allEntities.findAll { resolveIfEmbedded(name, it.value) <= value }.collect { it.key }
+            queryAssociationList(allEntities, property as Association) { it.size() <= value }
         }
     ]
 
-    protected def subqueryIfNecessary(Query.PropertyCriterion pc, boolean uniqueResult = true) {
-        def value = pc.value
-        if (value instanceof QueryableCriteria) {
-            QueryableCriteria criteria = value
-            if (uniqueResult) {
-                value = criteria.find()
+    def associationQueryHandlers = [
+        (AssociationQuery): { AssociationQuery aq, PersistentProperty property ->
+            Query.Junction queryCriteria = aq.criteria
+            def association = aq.association
+            def associatedEntity = association.associatedEntity
+            def associatedPersister = session.getPersister(associatedEntity.javaClass)
+            def associatedQuery = new SimpleMapQuery(session, associatedEntity, associatedPersister as SimpleMapEntityPersister)
+            associatedQuery.criteria = queryCriteria
+            def associatedIds = associatedQuery.list().collect { associatedPersister.getObjectIdentifier(it) }
+            
+            // Now find owners that have these associated IDs
+            def allEntities = getDatastoreMap()[family]
+            allEntities.findAll { entry ->
+                if (association instanceof ToOne) {
+                    def val = entry.value[association.name]
+                    return associatedIds.contains(val)
+                }
+                else {
+                    def indexer = entityPersister.getAssociationIndexer(entry.value as Map, association)
+                    def ownerId = entry.key
+                    def results = indexer.query(ownerId)
+                    return !results.intersect(associatedIds).isEmpty()
+                }
+            }.collect { it.key }
+        }
+    ]
+
+    protected List executeAssociationSubQuery(Map allEntities, PersistentEntity entity, Query.Junction criteria, PersistentProperty property) {
+        def criteriaList = criteria.getCriteria()
+        def entityMap = executeSubQueryOnMap(entity, criteria, criteriaList, allEntities)
+        return entityMap.keySet().toList()
+    }
+
+    private Map executeSubQueryOnMap(PersistentEntity entity, Query.Junction criteria, List criteriaList, Map allEntities) {
+        def entityMap = [:]
+        if (criteria instanceof Query.Conjunction) {
+            def resultList = executeSubQueryInternalOnMap(entity, criteria, criteriaList, allEntities)
+
+            if (resultList.isEmpty()) {
+                return entityMap
             }
-            else {
-                value = criteria.list()
+
+            def finalKeys = resultList[0]
+            for (int i = 1; i < resultList.size(); i++) {
+                finalKeys = finalKeys.intersect(resultList[i])
+            }
+
+            allEntities.each { k, v -> if (finalKeys.contains(k)) entityMap[k] = v }
+        }
+        else if (criteria instanceof Query.Disjunction) {
+            def resultList = executeSubQueryInternalOnMap(entity, criteria, criteriaList, allEntities)
+            if (resultList.isEmpty()) {
+                return entityMap
+            }
+
+            def finalKeys = resultList[0]
+            for (int i = 1; i < resultList.size(); i++) {
+                finalKeys = finalKeys.plus(resultList[i])
+            }
+            allEntities.each { k, v -> if (finalKeys.contains(k)) entityMap[k] = v }
+        }
+        return entityMap
+    }
+
+    private List executeSubQueryInternalOnMap(PersistentEntity entity, Query.Junction criteria, List criteriaList, Map allEntities) {
+        def resultList = []
+        for (Query.Criterion c in criteriaList) {
+            if (c instanceof Query.PropertyCriterion) {
+                def name = c.property
+                def value = c.value
+                if (c instanceof Query.Equals) {
+                    resultList << allEntities.findAll { it.value[name] == value }.collect { it.key }
+                }
+                else if (c instanceof Query.NotEquals) {
+                    resultList << allEntities.findAll { it.value[name] != value }.collect { it.key }
+                }
             }
         }
+        return resultList
+    }
 
+    private ArrayList negateResults(List results) {
+        def entityMap = getDatastoreMap()[family]
+        if (entityMap == null) return []
+        def allIds = new ArrayList(entityMap.keySet())
+        // Ensure we are comparing IDs to IDs by using toString() as a universal normalizer for SimpleMap IDs
+        def resultIds = results.collect { (session.mappingContext.isPersistentEntity(it) ? session.getPersister(it).getObjectIdentifier(it) : it)?.toString() }
+        def normalizedAllIds = allIds.collect { it.toString() }
+        
+        normalizedAllIds.removeAll(resultIds)
+        
+        // Map back to original IDs
+        return allIds.findAll { normalizedAllIds.contains(it.toString()) }
+    }
+
+    private def subqueryIfNecessary(Query.PropertyCriterion pc, boolean uniqueResult = true) {
+        def value = pc.value
+        if (value instanceof QueryableCriteria) {
+            def query = session.createQuery(value.persistentEntity.javaClass)
+            for (Query.Criterion c in value.getCriteria()) {
+                query.add(c)
+            }
+            
+            // Copy projections from the subquery
+            for (Query.Projection p in value.getProjections()) {
+                query.projections().add(p)
+            }
+            
+            // If it's a property comparison and NO projection exists, default to ID
+            if (query.projections.isEmpty()) {
+                query.projections().add(Restrictions.id())
+            }
+            
+            def results = query.list()
+            if (uniqueResult) {
+                def res = results.isEmpty() ? null : results[0]
+                if (session.mappingContext.isPersistentEntity(res)) {
+                    res = session.getPersister(res).getObjectIdentifier(res)
+                }
+                if (res instanceof BigDecimal) res = res.doubleValue()
+                return res
+            }
+            else {
+                return results.collect { 
+                    def res = session.mappingContext.isPersistentEntity(it) ? session.getPersister(it).getObjectIdentifier(it) : it
+                    if (res instanceof BigDecimal) res = res.doubleValue()
+                    return res
+                }
+            }
+        }
         return value
     }
 
-    /**
-     * If the property name refers to an embedded property like 'foo.startDate', then we need
-     * resolve the value of startDate by walking through the key list.
-     *
-     * @param propertyName the full property name
-     * @return
-     */
-    protected resolveIfEmbedded(propertyName, obj) {
-        if (propertyName.contains('.')) {
-            def (embeddedProperty, nestedProperty) = propertyName.tokenize('.')
-            obj?."${embeddedProperty}"?."${nestedProperty}"
+    private def resolveIfEmbedded(String name, Map map) {
+        if (name.contains('.')) {
+            def parts = name.split(/\./)
+            def current = map
+            for (part in parts) {
+                if (current instanceof Map) {
+                    current = current[part]
+                }
+                else {
+                    break
+                }
+            }
+            return current
         }
         else {
-            obj?."${propertyName}"
+            return map[name]
         }
     }
 
-    protected List executeLikeWithRegex(SimpleMapEntityPersister entityPersister, PersistentProperty property, regexFormat) {
+    protected List executeLikeWithRegex(PersistentProperty property, regexFormat) {
         def indexer = entityPersister.getPropertyIndexer(property)
 
         def root = indexer.indexRoot
         def pattern = Pattern.compile("${root}:${regexFormat}", Pattern.CASE_INSENSITIVE)
-        def matchingIndices = entityPersister.indices.findAll { key, value ->
-            pattern.matcher(key).matches()
+        def matchingIndices = getIndices().findAll { key, value ->
+            pattern.matcher(key as String).matches()
         }
 
         Set result = []
@@ -674,118 +741,11 @@ class SimpleMapQuery extends Query {
         return result.toList()
     }
 
-    private ArrayList negateResults(List results) {
-        def entityMap = datastore[family]
-        def allIds = new ArrayList(entityMap.keySet())
-        allIds.removeAll(results)
-        return allIds
-    }
-
-    Map executeSubQuery(criteria, criteriaList) {
-
-        def finalIdentifiers = executeSubQueryInternal(criteria, criteriaList)
-
-        Map queryResult = [:]
-        populateQueryResult(finalIdentifiers, queryResult)
-        return queryResult
-    }
-
-    Collection executeSubQueryInternal(criteria, criteriaList) {
-        SimpleMapResultList resultList = new SimpleMapResultList(this)
-        for (Query.Criterion criterion in criteriaList) {
-            if (criterion instanceof Query.Junction) {
-                resultList.results << executeSubQueryInternal(criterion, criterion.criteria)
-            }
-            else {
-                PersistentProperty property = getValidProperty(criterion)
-
-                if ((property instanceof Custom) && (criterion instanceof Query.PropertyCriterion)) {
-                    CustomTypeMarshaller customTypeMarshaller = ((Custom) property).getCustomTypeMarshaller()
-                    customTypeMarshaller.query(property, criterion, resultList)
-                    continue
-                }
-                else {
-                    def handler = handlers[criterion.getClass()]
-
-                    def results = handler?.call(criterion, property) ?: []
-                    resultList.results << results
-                }
-            }
-        }
-        return applyJunctionToResults(criteria, resultList.results)
-    }
-
-    private List applyJunctionToResults(Query.Junction criteria, List resultList) {
-        def finalIdentifiers = []
-        if (!resultList.isEmpty()) {
-            if (resultList.size() > 1) {
-                if (criteria instanceof Query.Conjunction) {
-                    def total = resultList.size()
-                    finalIdentifiers = resultList[0]
-                    for (num in 1..<total) {
-                        def secondList = resultList[num]
-                        finalIdentifiers = finalIdentifiers.intersect(secondList)
-                    }
-                }
-                else if (criteria instanceof Query.Negation) {
-                    def total = resultList.size()
-                    finalIdentifiers = negateResults(resultList[0])
-                    for (num in 1..<total) {
-                        def secondList = negateResults(resultList[num])
-                        finalIdentifiers = finalIdentifiers.intersect(secondList)
-                    }
-                }
-                else {
-                    finalIdentifiers = resultList.flatten()
-                }
-            }
-            else {
-                if (criteria instanceof Query.Negation) {
-                    finalIdentifiers = negateResults(resultList[0])
-                }
-                else {
-                    finalIdentifiers = resultList[0]
-                }
-            }
-        }
-        return finalIdentifiers
-    }
-
-    protected PersistentProperty getValidProperty(criterion) {
-        if (criterion instanceof Query.PropertyNameCriterion) {
-            def property = entity.getPropertyByName(criterion.property)
-            if (property == null) {
-                def identity = entity.identity
-                if (identity.name == criterion.property) return identity
-                else {
-                    throw new InvalidDataAccessResourceUsageException('Cannot query [' + entity + '] on non-existent property: ' + criterion.property)
-                }
-            }
-            return property
-        }
-        else if (criterion instanceof AssociationQuery) {
-            return criterion.association
-        }
-    }
-
-    private boolean isIndexed(PersistentProperty property) {
-        KeyValue kv = (KeyValue) property.getMapping().getMappedForm()
-        return kv.isIndex()
-    }
-
-    protected populateQueryResult(identifiers, Map queryResult) {
-        for (id in identifiers) {
-            queryResult.put(id, session.retrieve(entity.javaClass, id))
-        }
-    }
-
-    protected String getFamily(PersistentEntity entity) {
-        def cm = entity.getMapping()
-        String table = null
-        if (cm.getMappedForm() != null) {
-            table = cm.getMappedForm().getFamily()
-        }
-        if (table == null) table = entity.getJavaClass().getName()
-        return table
+    protected queryAssociationList(Map allEntities, Association association, Closure callable) {
+        allEntities.findAll {
+            def indexer = entityPersister.getAssociationIndexer(it.value as Map, association)
+            def results = indexer.query(it.key)
+            callable.call(results)
+        }.keySet().toList()
     }
 }

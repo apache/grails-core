@@ -45,7 +45,7 @@ public class SchemaTenantGormEnhancer extends HibernateGormEnhancer {
     private final Map<String, HibernateDatastore> datastoresByConnectionSource;
 
     public SchemaTenantGormEnhancer(
-            Datastore datastore,
+            HibernateDatastore datastore,
             PlatformTransactionManager transactionManager,
             HibernateConnectionSource defaultConnectionSource,
             TenantResolver tenantResolver,

@@ -38,12 +38,10 @@ import org.grails.datastore.mapping.transactions.Transaction;
  */
 @SuppressWarnings("rawtypes")
 public class SimpleMapSession extends AbstractSession<Map> {
-    private Map<String, Map> datastore;
 
     public SimpleMapSession(SimpleMapDatastore datastore, MappingContext mappingContext,
                ApplicationEventPublisher publisher) {
         super(datastore, mappingContext, publisher);
-        this.datastore = datastore.getBackingMap();
     }
 
     @Override
@@ -62,7 +60,11 @@ public class SimpleMapSession extends AbstractSession<Map> {
     }
 
     public Map<String, Map> getBackingMap() {
-        return datastore;
+        return ((SimpleMapDatastore)getDatastore()).getBackingMap();
+    }
+
+    public Map getIndices() {
+        return ((SimpleMapDatastore)getDatastore()).getIndices();
     }
 
     @Override
@@ -71,7 +73,7 @@ public class SimpleMapSession extends AbstractSession<Map> {
     }
 
     public Map getNativeInterface() {
-        return datastore;
+        return getBackingMap();
     }
 
     private class MockTransaction implements Transaction {

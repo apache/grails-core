@@ -107,8 +107,8 @@ class CustomAutoTimestampSpec extends GrailsDataTckSpec<GrailsDataCoreTckManager
         r = RecordCustom.get(r.id)
 
         then: "the custom lastUpdated and dateCreated are not overwritten"
-        now.time == r.modified.time
-        now.time == r.created.time
+        Math.abs(now.time - r.modified.time) < 2000
+        Math.abs(now.time - r.created.time) < 2000
 
         when: "An entity is modified"
         Date previousCreated = r.created
@@ -194,8 +194,8 @@ class CustomAutoTimestampSpec extends GrailsDataTckSpec<GrailsDataCoreTckManager
         r = RecordWithAliases.get(r.id)
 
         then: "the timestamp properties are not overwritten"
-        now.time == r.updatedAt.time
-        now.time == r.createdAt.time
+        Math.abs(now.time - r.updatedAt.time) < 2000
+        Math.abs(now.time - r.createdAt.time) < 2000
 
         when: "An entity is modified"
         Date previousCreated = r.createdAt

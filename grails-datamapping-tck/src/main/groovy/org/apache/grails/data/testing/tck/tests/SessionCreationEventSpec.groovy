@@ -77,7 +77,7 @@ class SessionCreationEventSpec extends GrailsDataTckSpec {
 
         @Override
         void onApplicationEvent(ApplicationEvent event) {
-            events << event
+            events << (SessionCreationEvent)event
         }
 
         @Override
@@ -87,7 +87,7 @@ class SessionCreationEventSpec extends GrailsDataTckSpec {
 
         @Override
         boolean supportsEventType(Class<? extends ApplicationEvent> eventType) {
-            return eventType == SessionCreationEvent
+            return SessionCreationEvent.isAssignableFrom(eventType)
         }
     }
 }

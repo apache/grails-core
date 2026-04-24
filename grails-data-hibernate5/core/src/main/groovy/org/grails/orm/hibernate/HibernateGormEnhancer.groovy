@@ -49,28 +49,28 @@ class HibernateGormEnhancer extends GormEnhancer {
     }
 
     @Override
-    protected <D> GormStaticApi<D> getStaticApi(Class<D> cls, String qualifier) {
+    protected <D> GormStaticApi<D> getStaticApi(Class<D> cls, org.grails.datastore.gorm.DatastoreResolver resolver, String qualifier) {
         HibernateDatastore hibernateDatastore = (HibernateDatastore) datastore
-        HibernateDatastore datastoreForConnection = hibernateDatastore.getDatastoreForConnection(qualifier)
         new HibernateGormStaticApi<D>(
                 cls,
-                datastoreForConnection,
-                createDynamicFinders(datastoreForConnection),
-                Thread.currentThread().contextClassLoader,
-                datastoreForConnection.getTransactionManager()
+                hibernateDatastore.mappingContext,
+                createDynamicFinders(hibernateDatastore),
+                resolver,
+                qualifier,
+                hibernateDatastore.classLoader
         )
     }
 
     @Override
-    protected <D> GormInstanceApi<D> getInstanceApi(Class<D> cls, String qualifier) {
+    protected <D> GormInstanceApi<D> getInstanceApi(Class<D> cls, org.grails.datastore.gorm.DatastoreResolver resolver) {
         HibernateDatastore hibernateDatastore = (HibernateDatastore) datastore
-        new HibernateGormInstanceApi<D>(cls, hibernateDatastore.getDatastoreForConnection(qualifier), Thread.currentThread().contextClassLoader)
+        new HibernateGormInstanceApi<D>(cls, hibernateDatastore.mappingContext, resolver, hibernateDatastore.classLoader)
     }
 
     @Override
-    protected <D> GormValidationApi<D> getValidationApi(Class<D> cls, String qualifier) {
+    protected <D> GormValidationApi<D> getValidationApi(Class<D> cls, org.grails.datastore.gorm.DatastoreResolver resolver) {
         HibernateDatastore hibernateDatastore = (HibernateDatastore) datastore
-        new HibernateGormValidationApi<D>(cls, hibernateDatastore.getDatastoreForConnection(qualifier), Thread.currentThread().contextClassLoader)
+        new HibernateGormValidationApi<D>(cls, hibernateDatastore.mappingContext, resolver, hibernateDatastore.classLoader)
     }
 
     @Override

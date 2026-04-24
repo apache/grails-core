@@ -102,19 +102,71 @@ class HibernateGormInstanceApi<D> extends GormInstanceApi<D> {
     boolean autoFlush
     protected InstanceApiHelper instanceApiHelper
 
-    HibernateGormInstanceApi(Class<D> persistentClass, HibernateDatastore datastore, ClassLoader classLoader) {
-        super(persistentClass, datastore as Datastore)
-        this.classLoader = classLoader
-        this.sessionFactory = datastore.getSessionFactory()
-        this.hibernateTemplate = (GrailsHibernateTemplate) datastore.getHibernateTemplate()
-        this.autoFlush = datastore.autoFlush
-        this.failOnError = datastore.failOnError
-        this.markDirty = datastore.markDirty
-        this.instanceApiHelper = datastore.getInstanceApiHelper()
+    protected SessionFactory getSessionFactory() {
+        if (sessionFactory == null) {
+            return hibernateDatastore.sessionFactory
+        }
+        return sessionFactory
+    }
+
+    protected IHibernateTemplate getHibernateTemplate() {
+        if (hibernateTemplate == null) {
+            return (IHibernateTemplate) hibernateDatastore.getHibernateTemplate()
+        }
+        return hibernateTemplate
+    }
+
+    protected boolean isAutoFlush() {
+        if (hibernateDatastore != null) {
+            return hibernateDatastore.autoFlush
+        }
+        return autoFlush
     }
 
     @Override
-    D save(D target, Map arguments) {
+    protected boolean isFailOnError() {
+        if (hibernateDatastore != null) {
+            return hibernateDatastore.failOnError
+        }
+        return failOnError
+    }
+
+    protected boolean isMarkDirty() {
+        if (hibernateDatastore != null) {
+            return hibernateDatastore.markDirty
+        }
+        return markDirty
+    }
+
+    protected InstanceApiHelper getInstanceApiHelper() {
+        if (instanceApiHelper == null) {
+            return hibernateDatastore.getInstanceApiHelper()
+        }
+        return instanceApiHelper
+    }
+HibernateGormInstanceApi(Class<D> persistentClass, HibernateDatastore datastore, ClassLoader classLoader) {
+    super(persistentClass, datastore as Datastore)
+    this.classLoader = classLoader
+    this.sessionFactory = datastore.getSessionFactory()
+    this.hibernateTemplate = (GrailsHibernateTemplate) datastore.getHibernateTemplate()
+    this.autoFlush = datastore.autoFlush
+    this.failOnError = datastore.failOnError
+    this.markDirty = datastore.markDirty
+    this.instanceApiHelper = datastore.getInstanceApiHelper()
+}
+
+HibernateGormInstanceApi(Class<D> persistentClass, org.grails.datastore.mapping.model.MappingContext mappingContext, org.grails.datastore.gorm.DatastoreResolver datastoreResolver, ClassLoader classLoader) {
+    super(persistentClass, mappingContext, datastoreResolver)
+    this.classLoader = classLoader
+}
+
+protected HibernateDatastore getHibernateDatastore() {
+    (HibernateDatastore) getDatastore()
+}
+
+@Override
+D save(D target, Map arguments) {
+
         PersistentEntity domainClass = persistentEntity
         runDeferredBinding()
         boolean shouldFlush = shouldFlush(arguments)

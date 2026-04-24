@@ -25,6 +25,7 @@ import org.codehaus.groovy.ast.ClassHelper
 import org.codehaus.groovy.ast.ClassNode
 import org.codehaus.groovy.ast.MethodNode
 import org.codehaus.groovy.ast.Parameter
+import org.codehaus.groovy.ast.expr.ConstantExpression
 import org.codehaus.groovy.ast.expr.Expression
 import org.codehaus.groovy.transform.trait.Traits
 
@@ -45,12 +46,9 @@ import org.grails.datastore.mapping.services.ServiceRegistry
 import org.grails.datastore.mapping.transactions.TransactionCapableDatastore
 
 import static org.codehaus.groovy.ast.ClassHelper.make
-import static org.codehaus.groovy.ast.tools.GeneralUtils.args
-import static org.codehaus.groovy.ast.tools.GeneralUtils.castX
-import static org.codehaus.groovy.ast.tools.GeneralUtils.classX
-import static org.codehaus.groovy.ast.tools.GeneralUtils.propX
-import static org.codehaus.groovy.ast.tools.GeneralUtils.varX
+import static org.codehaus.groovy.ast.tools.GeneralUtils.*
 import static org.grails.datastore.gorm.transform.AstMethodDispatchUtils.callD
+import static org.grails.datastore.mapping.reflect.AstUtils.varThis
 
 /**
  * Abstract implementation of the {@link ServiceImplementer} interface
@@ -132,35 +130,35 @@ abstract class AbstractServiceImplementer implements PrefixedServiceImplementer,
      * @return The datastore expression
      */
     protected Expression datastore() {
-        return propX(varX('this'), 'targetDatastore')
+        return propX(varThis(), 'datastore')
     }
 
     /**
      * @return The datastore expression
      */
     protected Expression transactionalDatastore() {
-        return castX(ClassHelper.make(TransactionCapableDatastore), propX(varX('this'), 'targetDatastore'))
+        return castX(ClassHelper.make(TransactionCapableDatastore), datastore())
     }
 
     /**
      * @return The datastore expression
      */
     protected Expression multiTenantDatastore() {
-        return castX(ClassHelper.make(MultiTenantCapableDatastore), propX(varX('this'), 'targetDatastore'))
+        return castX(ClassHelper.make(MultiTenantCapableDatastore), datastore())
     }
 
     /**
      * @return The tenant service
      */
     protected Expression tenantService() {
-        return callD(ServiceRegistry, 'targetDatastore', 'getService', classX(make(TenantService)))
+        return callX(multiTenantDatastore(), 'getService', args(classX(make(TenantService))))
     }
 
     /**
      * @return The transaction service
      */
     protected Expression transactionService() {
-        return callD(ServiceRegistry, 'targetDatastore', 'getService', classX(make(TransactionService)))
+        return callX(transactionalDatastore(), 'getService', args(classX(make(TransactionService))))
     }
 
     protected Expression findConnectionId(MethodNode methodNode) {
@@ -181,33 +179,23 @@ abstract class AbstractServiceImplementer implements PrefixedServiceImplementer,
 
     protected Expression buildInstanceApiLookup(ClassNode domainClass, Expression connectionId) {
         return AstMethodDispatchUtils.callD(
-            classX(GormEnhancer), 'findInstanceApi', args(classX(domainClass), connectionId)
+            classX(GormEnhancer), 'findInstanceApi', args(classX(domainClass), connectionId ?: ConstantExpression.NULL)
         )
     }
 
     protected Expression buildStaticApiLookup(ClassNode domainClass, Expression connectionId) {
         return AstMethodDispatchUtils.callD(
-                classX(GormEnhancer), 'findStaticApi', args(classX(domainClass), connectionId)
+                classX(GormEnhancer), 'findStaticApi', args(classX(domainClass), connectionId ?: ConstantExpression.NULL)
         )
     }
 
     protected Expression findInstanceApiForConnectionId(ClassNode domainClass, MethodNode methodNode) {
         Expression connectionId = findConnectionId(methodNode)
-        if (connectionId != null) {
-            return buildInstanceApiLookup(domainClass, connectionId)
-        }
-        else {
-            return classX(domainClass.plainNodeReference)
-        }
+        return buildInstanceApiLookup(domainClass, connectionId)
     }
 
     protected Expression findStaticApiForConnectionId(ClassNode domainClass, MethodNode methodNode) {
         Expression connectionId = findConnectionId(methodNode)
-        if (connectionId != null) {
-            return buildStaticApiLookup(domainClass, connectionId)
-        }
-        else {
-            return classX(domainClass.plainNodeReference)
-        }
+        return buildStaticApiLookup(domainClass, connectionId)
     }
 }

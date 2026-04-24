@@ -453,7 +453,7 @@ trait GormEntity<D> implements GormValidateable, DirtyCheckable, GormEntityApi<D
      */
     @Generated
     static PersistentEntity getGormPersistentEntity() {
-        currentGormStaticApi().persistentEntity
+        currentGormStaticApi().getGormPersistentEntity()
     }
 
     @Generated
@@ -542,6 +542,25 @@ trait GormEntity<D> implements GormValidateable, DirtyCheckable, GormEntityApi<D
     @Generated
     static List<Serializable> saveAll(Iterable<?> objectsToSave) {
         currentGormStaticApi().saveAll(objectsToSave)
+    }
+
+    /**
+     * Deletes all objects
+     * @return The number of objects deleted
+     */
+    @Generated
+    static Number deleteAll() {
+        currentGormStaticApi().deleteAll()
+    }
+
+    /**
+     * Deletes all objects for the given arguments
+     * @param params The arguments
+     * @return The number of objects deleted
+     */
+    @Generated
+    static Number deleteAll(Map params) {
+        currentGormStaticApi().deleteAll(params)
     }
 
     /**
@@ -855,9 +874,15 @@ trait GormEntity<D> implements GormValidateable, DirtyCheckable, GormEntityApi<D
     @Generated
     static Object staticPropertyMissing(String property) {
         try {
-            currentGormStaticApi().propertyMissing(property)
-        } catch (IllegalStateException e) {
-            throw new MissingPropertyException(property, this)
+            def result = currentGormStaticApi().propertyMissing(property)
+            if (result == null) {
+                throw new MissingPropertyException(property, this)
+            }
+            return result
+        } catch (MissingPropertyException e) {
+            throw e
+        } catch (Throwable e) {
+            throw new MissingPropertyException(property, this, e)
         }
     }
 
@@ -1456,6 +1481,6 @@ trait GormEntity<D> implements GormValidateable, DirtyCheckable, GormEntityApi<D
 
     @Generated
     private static GormStaticApi<D> currentGormStaticApi() {
-        (GormStaticApi<D>) GormEnhancer.findStaticApi(this)
+        return (GormStaticApi<D>) GormEnhancer.findStaticApi(this)
     }
 }

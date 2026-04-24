@@ -87,7 +87,7 @@ class Foo implements MultiTenant<Foo> {
         fooService.saveFoo(foo)
 
         then:
-        thrown(IllegalStateException)
+        thrown(org.grails.datastore.mapping.multitenancy.exceptions.TenantNotFoundException)
 
     }
 
