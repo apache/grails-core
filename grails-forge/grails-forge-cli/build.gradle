@@ -88,7 +88,7 @@ dependencies {
     implementation "com.fizzed:rocker-runtime:$rockerVersion"
     implementation "info.picocli:picocli:$picocliVersion"
     implementation "info.picocli:picocli-shell-jline3:$picocliVersion"
-    implementation "jakarta.inject:jakarta.inject-api:$jakartaInjectVersion"
+    implementation 'jakarta.inject:jakarta.inject-api'
     implementation "org.fusesource.jansi:jansi:$jansiVersion"
     implementation "org.slf4j:slf4j-nop:$slf4jVersion"
     implementation "org.yaml:snakeyaml:$snakeyamlVersion"
@@ -100,7 +100,7 @@ dependencies {
     testImplementation 'org.testcontainers:spock'
     testCompileOnly 'io.micronaut:micronaut-inject-groovy'
 
-    testImplementation "org.apache.groovy:groovy:$groovyVersion"
+    testImplementation 'org.apache.groovy:groovy'
     testImplementation "org.spockframework:spock-core:$spockVersion", {
         exclude group: 'org.apache.groovy', module: 'groovy-all'
     }
@@ -108,7 +108,7 @@ dependencies {
     testImplementation "cglib:cglib-nodep:$cglibVersion"
     testImplementation "org.objenesis:objenesis:$objenesisVersion"
     testRuntimeOnly "ch.qos.logback:logback-classic:$logbackClassicVersion"
-    testImplementation "org.apache.groovy:groovy-test:$groovyVersion"
+    testImplementation 'org.apache.groovy:groovy-test'
 }
 
 rocker {
@@ -160,9 +160,6 @@ jarTask.configure { Jar it ->
 configurations.configureEach {
     resolutionStrategy {
         eachDependency { DependencyResolveDetails details ->
-            if (details.requested.group == 'org.apache.groovy') {
-                details.useVersion(groovyVersion)
-            }
             if (details.requested.name == 'spock-core') {
                 details.useVersion(spockVersion)
             }

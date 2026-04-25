@@ -107,7 +107,6 @@ configurations.register('bomDependencies').configure {
 }
 
 tasks.register('extractConstraints', ExtractDependenciesTask).configure { ExtractDependenciesTask it ->
-    // Capture project services at configuration time so the task avoids the deprecated Task.project at execution time
     it.captureProjectServices(project.dependencies, project.configurations)
     it.configuration = configurations.named('bomDependencies')
     it.configurationName = 'bomDependencies'

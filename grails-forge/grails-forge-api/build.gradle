@@ -49,7 +49,7 @@ dependencies {
     api 'io.micronaut:micronaut-inject'
     api 'io.micronaut:micronaut-runtime'
     api 'io.micronaut.validation:micronaut-validation'
-    api "jakarta.inject:jakarta.inject-api:$jakartaInjectVersion"
+    api 'jakarta.inject:jakarta.inject-api'
 
     implementation 'io.swagger.core.v3:swagger-annotations'
     implementation 'io.projectreactor:reactor-core'
@@ -62,7 +62,7 @@ dependencies {
 
     testCompileOnly 'io.micronaut:micronaut-inject-groovy'
 
-    testImplementation "org.apache.groovy:groovy:$groovyVersion"
+    testImplementation 'org.apache.groovy:groovy'
     testImplementation "org.spockframework:spock-core:$spockVersion", {
         exclude group: 'org.apache.groovy', module: 'groovy-all'
     }
@@ -70,7 +70,7 @@ dependencies {
     testImplementation "cglib:cglib-nodep:$cglibVersion"
     testImplementation "org.objenesis:objenesis:$objenesisVersion"
     testRuntimeOnly "ch.qos.logback:logback-classic:$logbackClassicVersion"
-    testImplementation "org.apache.groovy:groovy-test:$groovyVersion"
+    testImplementation 'org.apache.groovy:groovy-test'
 }
 
 apply {
@@ -83,9 +83,6 @@ apply {
 configurations.configureEach {
     resolutionStrategy {
         eachDependency { DependencyResolveDetails details ->
-            if (details.requested.group == 'org.apache.groovy') {
-                details.useVersion(groovyVersion)
-            }
             if (details.requested.name == 'spock-core') {
                 details.useVersion(spockVersion)
             }
