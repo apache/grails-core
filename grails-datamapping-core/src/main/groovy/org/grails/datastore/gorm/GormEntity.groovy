@@ -606,30 +606,6 @@ trait GormEntity<D> implements GormValidateable, DirtyCheckable, GormEntityApi<D
         currentGormStaticApi().get(id)
     }
 
-    /**
-     * Groovy 6 generic-property-getter overload (see GROOVY-11829). Resolves
-     * {@link Class} bean properties first, then falls back to GORM's
-     * {@code propertyMissing} (handles datasource qualifiers and dynamic GORM
-     * properties), and finally to {@link #get(Serializable)} for entity-by-ID
-     * lookups. Throws {@link MissingPropertyException} when nothing matches so
-     * Groovy's MOP can continue normal property resolution.
-     */
-    @Generated
-    static Object get(String nameOrId) {
-        MetaProperty mp = InvokerHelper.getMetaClass(Class).hasProperty(this, nameOrId)
-        if (mp != null) {
-            return mp.getProperty(this)
-        }
-        try {
-            return currentGormStaticApi().propertyMissing(nameOrId)
-        } catch (MissingPropertyException | IllegalStateException ignore) {
-            try {
-                return currentGormStaticApi().get((Serializable) nameOrId)
-            } catch (IllegalStateException e) {
-                throw new MissingPropertyException(nameOrId, this)
-            }
-        }
-    }
 
     /**
      * Retrieves an object from the datastore. eg. Book.read(1)
