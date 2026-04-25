@@ -18,13 +18,16 @@
  */
 package org.grails.orm.hibernate
 
+import groovy.transform.CompileDynamic
 import groovy.transform.CompileStatic
-import org.grails.datastore.gorm.DatastoreResolver
+import org.grails.datastore.gorm.AbstractGormApi
 import org.grails.datastore.gorm.GormStaticApi
 import org.grails.datastore.gorm.finders.FinderMethod
+import org.grails.datastore.mapping.core.connections.ConnectionSource
 import org.grails.datastore.mapping.model.MappingContext
-import org.grails.orm.hibernate.GrailsHibernateTemplate
-import org.springframework.transaction.PlatformTransactionManager
+import org.grails.datastore.gorm.DatastoreResolver
+import org.hibernate.Session
+import org.hibernate.query.NativeQuery
 
 /**
  * Hibernate GORM static API.
@@ -37,12 +40,12 @@ class HibernateGormStaticApi<D> extends GormStaticApi<D> {
 
     protected GrailsHibernateTemplate hibernateTemplate
 
-    HibernateGormStaticApi(Class<D> persistentClass, HibernateDatastore datastore, List<FinderMethod> finders, String qualifier) {
-        super(persistentClass, datastore, finders, qualifier)
+    HibernateGormStaticApi(Class<D> persistentClass, HibernateDatastore datastore, List<FinderMethod> finders, DatastoreResolver datastoreResolver, String qualifier, ClassLoader classLoader) {
+        super(persistentClass, datastore.mappingContext, finders, datastoreResolver, qualifier)
         this.hibernateTemplate = new GrailsHibernateTemplate(datastore.sessionFactory, datastore)
     }
 
-    HibernateGormStaticApi(Class<D> persistentClass, MappingContext mappingContext, List<FinderMethod> finders, DatastoreResolver datastoreResolver, String qualifier) {
+    HibernateGormStaticApi(Class<D> persistentClass, MappingContext mappingContext, List<FinderMethod> finders, DatastoreResolver datastoreResolver, String qualifier, ClassLoader classLoader) {
         super(persistentClass, mappingContext, finders, datastoreResolver, qualifier)
     }
 
@@ -52,5 +55,89 @@ class HibernateGormStaticApi<D> extends GormStaticApi<D> {
             return new GrailsHibernateTemplate(datastore.sessionFactory, datastore)
         }
         return hibernateTemplate
+    }
+
+    /**
+     * Finds all results for this entity for the given SQL query
+     *
+     * @param sql The SQL query
+     * @param args The arguments
+     * @return All entities matching the SQL query
+     */
+    @CompileDynamic
+    List<D> findAllWithNativeSql(CharSequence sql, Map args = Collections.emptyMap()) {
+        return (List<D>) hibernateTemplate.execute { Session session ->
+
+            List params = []
+            if (sql instanceof GString) {
+                sql = buildOrdinalParameterQueryFromGString((GString)sql, params)
+            }
+
+            NativeQuery q = (NativeQuery)session.createNativeQuery(sql.toString(), persistentClass)
+
+            hibernateTemplate.applySettings(q)
+
+            params.eachWithIndex { val, int i ->
+                i++
+                if (val instanceof CharSequence) {
+                    q.setParameter(i, val.toString())
+                }
+                else {
+                    q.setParameter(i, val)
+                }
+            }
+            populateQueryArguments(q, args)
+            return q.list()
+        }
+    }
+
+    /**
+     * Finds a single result for this entity for the given SQL query
+     *
+     * @param sql The SQL query
+     * @param args The arguments
+     * @return The entity matching the SQL query
+     */
+    @CompileDynamic
+    D findWithNativeSql(CharSequence sql, Map args = Collections.emptyMap()) {
+        return (D) hibernateTemplate.execute { Session session ->
+
+            List params = []
+            if (sql instanceof GString) {
+                sql = buildOrdinalParameterQueryFromGString((GString)sql, params)
+            }
+
+            NativeQuery q = (NativeQuery)session.createNativeQuery(sql.toString(), persistentClass)
+
+            hibernateTemplate.applySettings(q)
+
+            params.eachWithIndex { val, int i ->
+                i++
+                if (val instanceof CharSequence) {
+                    q.setParameter(i, val.toString())
+                }
+                else {
+                    q.setParameter(i, val)
+                }
+            }
+            populateQueryArguments(q, args)
+            q.setMaxResults(1)
+            return q.uniqueResult()
+        }
+    }
+
+    protected String buildOrdinalParameterQueryFromGString(GString query, List params) {
+        StringBuilder sqlString = new StringBuilder()
+        int i = 0
+        Object[] values = query.values
+        def strings = query.getStrings()
+        for (str in strings) {
+            sqlString.append(str)
+            if (i < values.length) {
+                sqlString.append('?')
+                params.add(values[i++])
+            }
+        }
+        return sqlString.toString()
     }
 }
