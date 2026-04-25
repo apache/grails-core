@@ -48,7 +48,7 @@ dependencies {
     testAnnotationProcessor 'io.micronaut:micronaut-inject-java'
 
     api platform("io.micronaut.platform:micronaut-platform:$micronautVersion") // TODO: Should this be api?
-    api "com.fasterxml.jackson.core:jackson-databind:$jacksonDatabindVersion"
+    api 'com.fasterxml.jackson.core:jackson-databind'
     api 'jakarta.validation:jakarta.validation-api'
     api "com.fizzed:rocker-runtime:$rockerVersion"
     api "io.github.java-diff-utils:java-diff-utils:$javaDiffUtils"
@@ -67,7 +67,7 @@ dependencies {
 
     testCompileOnly 'io.micronaut:micronaut-inject-groovy'
 
-    testImplementation "org.apache.groovy:groovy:$groovyVersion"
+    testImplementation 'org.apache.groovy:groovy'
     testImplementation "org.spockframework:spock-core:$spockVersion", {
         exclude group: 'org.apache.groovy', module: 'groovy-all'
     }
@@ -75,7 +75,7 @@ dependencies {
     testImplementation "cglib:cglib-nodep:$cglibVersion"
     testImplementation "org.objenesis:objenesis:$objenesisVersion"
     testRuntimeOnly "ch.qos.logback:logback-classic:$logbackClassicVersion"
-    testImplementation "org.apache.groovy:groovy-test:$groovyVersion"
+    testImplementation 'org.apache.groovy:groovy-test'
 }
 
 
@@ -136,9 +136,6 @@ nohttp {
 configurations.configureEach {
     resolutionStrategy {
         eachDependency { DependencyResolveDetails details ->
-            if (details.requested.group == 'org.apache.groovy') {
-                details.useVersion(groovyVersion)
-            }
             if (details.requested.name == 'spock-core') {
                 details.useVersion(spockVersion)
             }

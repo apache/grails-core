@@ -87,8 +87,6 @@ class GrailsProfileGradlePlugin implements Plugin<Project> {
         project.configurations.named('runtimeElements')
                 .configure { it.extendsFrom(runtimeOnlyConfiguration.get()) }
 
-        // Use Sync task type instead of project.sync in doLast to avoid Task.project access at execution time
-        // See: https://docs.gradle.org/current/userguide/configuration_cache.html#config_cache:requirements:use_project_during_execution
         TaskProvider<Sync> processProfileResourcesTask = project.tasks.register('processProfileResources', Sync)
         processProfileResourcesTask.configure { Sync task ->
             task.group = 'build'

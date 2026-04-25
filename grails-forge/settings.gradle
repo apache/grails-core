@@ -19,62 +19,15 @@
 import org.gradle.api.initialization.resolve.RepositoriesMode
 
 pluginManagement {
-    repositories {
-        mavenCentral()
-        gradlePluginPortal()
-        // Needed to resolve grails-publish snapshots that the build-logic composite
-        // build depends on while pluginManagement itself is being initialised - the
-        // org.apache.grails.buildsrc.repo plugin below cannot add this repo soon
-        // enough because Gradle must first build its classpath.
-        maven {
-            url = 'https://repository.apache.org/content/groups/snapshots'
-            content {
-                includeVersionByRegex('org[.]apache[.]grails[.]gradle.*', '.*', '.*-SNAPSHOT')
-            }
-            mavenContent {
-                snapshotsOnly()
-            }
-        }
-    }
     includeBuild('../grails-gradle') {
         name = 'grails-gradle'
     }
     includeBuild('../build-logic') {
         name = 'build-logic-root'
     }
+    apply from: file('../gradle/plugin-repositories.gradle')
     repositories {
-        // because our publish plugin uses other plugins, those dependencies have to be resolvable
-        // mavenLocal()
-        mavenCentral()
-        gradlePluginPortal()
-        maven {
-            url = 'https://repository.apache.org/content/groups/snapshots'
-            content {
-                includeVersionByRegex('org[.]apache[.]grails[.]gradle.*', '.*', '.*-SNAPSHOT')
-            }
-            mavenContent {
-                snapshotsOnly()
-            }
-        }
-        maven {
-            url = 'https://central.sonatype.com/repository/maven-snapshots'
-            content {
-                includeVersionByRegex('cloud[.]wondrify.*', '.*', '.*-SNAPSHOT')
-                includeGroup('org.spockframework')
-            }
-            mavenContent {
-                snapshotsOnly()
-            }
-        }
-        maven {
-            url = 'https://repository.apache.org/content/groups/staging'
-            content {
-                includeModuleByRegex('org[.]apache[.]grails[.]gradle', 'grails-publish')
-            }
-            mavenContent {
-                releasesOnly()
-            }
-        }
+        configurePluginRepositories(delegate)
     }
 }
 

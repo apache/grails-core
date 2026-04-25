@@ -978,8 +978,6 @@ ${importStatements}
             it.inputs.dir(src)
             it.outputs.dir(dest)
 
-            // Capture ant builder at configuration time to avoid Task.project access at execution time
-            // See: https://docs.gradle.org/current/userguide/configuration_cache.html#config_cache:requirements:use_project_during_execution
             def antBuilder = it.ant
 
             it.doLast {
