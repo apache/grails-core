@@ -173,10 +173,10 @@ class MongoCodecSession extends AbstractMongoSession {
                                     currentVersion = entityAccess.getProperty(persistentEntity.version.name)
                                 }
                                 id[GormProperties.VERSION] = currentVersion
-                                numberOfOptimisticUpdates[name] = numberOfOptimisticUpdates[name] + 1
+                                numberOfOptimisticUpdates[name]++
                             }
                             else {
-                                numberOfPessimisticUpdates[name] = numberOfOptimisticUpdates[name] + 1
+                                numberOfPessimisticUpdates[name]++
                             }
                             final options = new UpdateOptions()
 
