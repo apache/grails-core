@@ -72,7 +72,7 @@ class CommandSpec extends Specification {
         pb.environment().put('JAVA_HOME', System.getenv('JAVA_HOME') ?: System.getProperty('java.home'))
         pb.environment().put('GRAILS_REPO_URL', System.getenv('GRAILS_REPO_URL') ?: null)
         process = pb.directory(dir).start()
-        process.consumeProcessOutputStream(output)
+        process.consumeProcessOutput(output, output)
         process
     }
 
