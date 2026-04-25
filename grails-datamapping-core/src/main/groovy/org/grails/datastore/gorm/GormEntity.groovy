@@ -606,7 +606,6 @@ trait GormEntity<D> implements GormValidateable, DirtyCheckable, GormEntityApi<D
         currentGormStaticApi().get(id)
     }
 
-
     /**
      * Retrieves an object from the datastore. eg. Book.read(1)
      *
