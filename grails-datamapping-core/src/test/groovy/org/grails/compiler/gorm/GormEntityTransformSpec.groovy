@@ -217,6 +217,38 @@ class GormEntityTransformSpec extends Specification{
         thrown(MissingPropertyException)
     }
 
+    void 'test Groovy 6 genericGetMethod regression workaround (GROOVY-11829)'() {
+        expect: 'Class bean properties remain accessible via dynamic property access (the workaround target)'
+        Book.simpleName == 'Book'
+        Book.name.endsWith('Book')
+
+        and: 'the get(String) Groovy-6 compatibility overload exists and is @Generated'
+        def getStringMethod = Book.getMethod('get', String)
+        getStringMethod != null
+        getStringMethod.isAnnotationPresent(Generated)
+
+        and: 'the original get(Serializable) overload still exists for entity-by-id lookups'
+        def getSerializableMethod = Book.getMethod('get', Serializable)
+        getSerializableMethod != null
+        getSerializableMethod.isAnnotationPresent(Generated)
+    }
+
+    void 'test get(String) throws MissingPropertyException when GORM not initialized and string is not a Class property'() {
+        when: 'a name that is neither a Class property nor a known qualifier is passed'
+        Book.get('definitelyNotAClassPropertyOrEntityIdABCXYZ')
+
+        then: 'we do NOT leak the IllegalStateException raised by uninitialized GORM'
+        thrown(MissingPropertyException)
+    }
+
+    void 'test get(String) returns Class bean property when name matches Class property and GORM not initialized'() {
+        expect: 'explicit get("simpleName") returns the Class.simpleName because the Groovy 6 generic-getter workaround intercepts Class properties before delegating to the GORM static API'
+        Book.get('simpleName') == 'Book'
+
+        and: 'this is a documented behavior change vs Grails on Groovy 5: prior to GROOVY-11829, Book.get("simpleName") would call get(Serializable) and attempt an entity-by-id lookup. See GormEntity.get(String) docstring.'
+        Book.get('canonicalName') == Book.canonicalName
+    }
+
     void 'test that all GormEntity/GormValidateable trait methods are marked as Generated'() {
 
         expect: 'all GormEntity methods are marked as Generated on implementation class'
