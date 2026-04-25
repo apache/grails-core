@@ -2,7 +2,12 @@
  *  Licensed to the Apache Software Foundation (ASF) under one
  *  or more contributor license agreements.  See the NOTICE file
  *  distributed with this work for additional information
- *  regarding copyright ownership.  The ASF licenses this file
+ *  regarding copyright ownership.  The AS
+ *
+ *  Licensed to the Apache Software Foundation (ASF) under one
+ *  or more contributor license agreements.  See the NOTICE file
+ *  distributed with this work for additional information
+ *  regarding copyright ownership.  The AS licenses this file
  *  to you under the Apache License, Version 2.0 (the
  *  "License"); you may not use this file except in compliance
  *  with the License.  You may obtain a copy of the License at
@@ -18,29 +23,28 @@
  */
 package org.grails.datastore.mapping.simple.engine
 
-import org.springframework.context.ApplicationEventPublisher
-
-import org.grails.datastore.mapping.config.Property
-import org.grails.datastore.mapping.core.IdentityGenerationException
-import org.grails.datastore.mapping.core.OptimisticLockingException
-import org.grails.datastore.mapping.core.Session
 import org.grails.datastore.mapping.engine.AssociationIndexer
 import org.grails.datastore.mapping.engine.EntityAccess
-import org.grails.datastore.mapping.engine.EntityPersister
+import org.grails.datastore.mapping.engine.NativeEntryEntityPersister
 import org.grails.datastore.mapping.engine.PropertyValueIndexer
 import org.grails.datastore.mapping.keyvalue.engine.AbstractKeyValueEntityPersister
 import org.grails.datastore.mapping.model.MappingContext
 import org.grails.datastore.mapping.model.PersistentEntity
 import org.grails.datastore.mapping.model.PersistentProperty
 import org.grails.datastore.mapping.model.types.Association
-import org.grails.datastore.mapping.model.types.ManyToMany
+import org.grails.datastore.mapping.model.types.ToOne
+import org.grails.datastore.mapping.model.types.Embedded
 import org.grails.datastore.mapping.query.Query
 import org.grails.datastore.mapping.simple.SimpleMapDatastore
 import org.grails.datastore.mapping.simple.SimpleMapSession
 import org.grails.datastore.mapping.simple.query.SimpleMapQuery
+import org.springframework.context.ApplicationEventPublisher
+import org.grails.datastore.mapping.core.OptimisticLockingException
+import org.grails.datastore.mapping.core.Session
+import java.util.concurrent.ConcurrentHashMap
 
 /**
- * A simple implementation of the {@link org.grails.datastore.mapping.engine.EntityPersister} abstract class that backs onto an in-memory map.
+ * A {@link org.grails.datastore.mapping.engine.EntityPersister} abstract class that backs onto an in-memory map.
  * Mainly used for mocking and testing scenarios
  *
  * @author Graeme Rocher
@@ -48,136 +52,263 @@ import org.grails.datastore.mapping.simple.query.SimpleMapQuery
  */
 class SimpleMapEntityPersister extends AbstractKeyValueEntityPersister<Map, Object> {
 
-    def lastKey
-    String family
-
-    SimpleMapEntityPersister(MappingContext context, PersistentEntity entity, Session session,
-                             SimpleMapDatastore datastore, ApplicationEventPublisher publisher) {
-        super(context, entity, session, publisher)
-        family = getEntityFamily(entity)
-        
-        // Ensure map exists for this family
-        if (getDatastore()[family] == null) getDatastore()[family] = [:]
-
-        final identity = entity.getIdentity()
-        def idType = identity?.type
-        if (idType == Integer) {
-            lastKey = getDatastore()[family].size()
-        }
-        else {
-            lastKey = getDatastore()[family].size().longValue()
-        }
+    SimpleMapEntityPersister(MappingContext mappingContext, PersistentEntity entity, Session session, ApplicationEventPublisher publisher) {
+        super(mappingContext, entity, session, publisher)
     }
 
     protected String getEntityFamily(PersistentEntity entity) {
-        String family = getFamily(entity, entity.getMapping())
-        def datastore = (SimpleMapDatastore)session.datastore
-        def connectionName = datastore.connectionSources.defaultConnectionSource.name
-        if (!org.grails.datastore.mapping.core.connections.ConnectionSource.DEFAULT.equals(connectionName)) {
+        def connectionName = getConnectionName()
+        def family = entity.rootEntity.name
+        if (connectionName != null && !org.grails.datastore.mapping.core.connections.ConnectionSource.DEFAULT.equals(connectionName)) {
             family = "${connectionName}:${family}"
         }
         return family
     }
 
-    protected Map<String, Map> getDatastore() {
-        ((SimpleMapDatastore)session.datastore).backingMap
+    protected String getConnectionName() {
+        ((SimpleMapDatastore)session.datastore).getConnectionName()
+    }
+
+    @Override
+    String getEntityFamily() {
+        return getEntityFamily(getPersistentEntity())
+    }
+
+    protected Map<Serializable, Map> getDatastore() {
+        ((SimpleMapDatastore)session.datastore).getBackingMap()
     }
 
     protected Map getIndices() {
-        ((SimpleMapSession)session).getIndices()
+        ((SimpleMapDatastore)session.datastore).getIndices()
     }
 
-    protected PersistentEntity discriminatePersistentEntity(PersistentEntity persistentEntity, Map nativeEntry) {
-        def disc = nativeEntry?.discriminator
-        if (disc) {
-            def childEntity = getMappingContext().getChildEntityByDiscriminator(persistentEntity.rootEntity, disc)
-            if (childEntity) return childEntity
+    @Override
+    protected void setEntryValue(Map nativeEntry, String property, Object value) {
+        nativeEntry.put(property, value)
+    }
+
+    @Override
+    protected Object getEntryValue(Map nativeEntry, String property) {
+        return nativeEntry.get(property)
+    }
+
+    @Override
+    protected Object generateIdentifier(PersistentEntity persistentEntity, Map entry) {
+        return ((SimpleMapDatastore)session.datastore).nextId()
+    }
+
+    @Override
+    boolean isDirty(Object entity, Object entry) {
+        if (!(entry instanceof Map)) return true
+        
+        def persistentEntity = getPersistentEntity()
+        def reflector = mappingContext.getEntityReflector(persistentEntity)
+        
+        for (PersistentProperty prop in persistentEntity.persistentProperties) {
+            def currentValue = reflector.getProperty(entity, prop.name)
+            def entryValue = ((Map)entry).get(prop.name)
+            
+            def marshalled = marshalProperty(prop, currentValue)
+            if (marshalled != entryValue) return true
         }
-        return persistentEntity
+        return false
     }
 
-    Query createQuery() {
-        return new SimpleMapQuery(session, getPersistentEntity(), this)
+    private Object marshalProperty(PersistentProperty prop, Object value) {
+        if (value == null) return null
+        if (prop instanceof Embedded) {
+            def associated = prop.associatedEntity
+            def embeddedEntry = [:]
+            if (associated != null) {
+                def embeddedReflector = mappingContext.getEntityReflector(associated)
+                for (PersistentProperty embeddedProp in associated.persistentProperties) {
+                    embeddedEntry.put(embeddedProp.name, embeddedReflector.getProperty(value, embeddedProp.name))
+                }
+            } else {
+                // Fallback for non-entity embedded types
+                def type = prop.type
+                for (java.lang.reflect.Field field in type.declaredFields) {
+                    if (!field.synthetic && !java.lang.reflect.Modifier.isStatic(field.modifiers)) {
+                        field.setAccessible(true)
+                        embeddedEntry.put(field.name, field.get(value))
+                    }
+                }
+            }
+            return embeddedEntry
+        } else if (prop instanceof Association) {
+            if (value instanceof Collection) {
+                 return value.collect { 
+                     if (it == null) return null
+                     def persister = session.getPersister(it)
+                     if (persister != null) {
+                         return persister.getObjectIdentifier(it)
+                     }
+                     return it
+                 }
+            } else if (value != null) {
+                def persister = session.getPersister(value)
+                return persister != null ? persister.getObjectIdentifier(value) : value
+            }
+            return null
+        } else {
+            String propClassName = prop.getClass().name
+            if (propClassName.contains(".Basic") || propClassName.contains(".Custom")) {
+                 def marshaller = prop.getCustomTypeMarshaller()
+                 if (marshaller != null && marshaller.supports(mappingContext)) {
+                     return marshaller.write(prop, value, [:])
+                 }
+            }
+        }
+        return value
     }
 
-    protected void deleteEntry(String family, key, entry) {
-        getDatastore()[family].remove(key)
-        def parent = persistentEntity.parentEntity
-        while (parent != null) {
-            def f = getEntityFamily(parent)
-            getDatastore()[f].remove(key)
-            parent = parent.parentEntity
+    @Override
+    protected void updateEntry(PersistentEntity persistentEntity, EntityAccess entityAccess, Object key, Map entry) {
+        def family = getEntityFamily(persistentEntity)
+        def existing = getDatastore()[family]?.get(key instanceof Number ? key.longValue() : key)
+        
+        if (isVersioned(entityAccess)) {
+            if (existing == null || isDirty(entityAccess.getEntity(), existing)) {
+                incrementVersion(entityAccess)
+            }
+        }
+        
+        populateEntry(persistentEntity, entityAccess, entry)
+        if (getDatastore()[family] == null) {
+            getDatastore()[family] = new ConcurrentHashMap<>()
+        }
+        
+        Object k = key instanceof Number ? key.longValue() : key
+        if (existing == null) {
+            getDatastore()[family].put(k, entry)
+        }
+        else {
+            existing.putAll(entry)
+        }
+        updateInheritanceHierarchy(persistentEntity, k, entry)
+    }
+
+    @Override
+    protected Object storeEntry(PersistentEntity persistentEntity, EntityAccess entityAccess, Object storeId, Map nativeEntry) {
+        if (isVersioned(entityAccess)) {
+            setVersion(entityAccess)
+        }
+        populateEntry(persistentEntity, entityAccess, nativeEntry)
+        def f = getEntityFamily(persistentEntity)
+        def connectionName = getConnectionName()
+        System.err.println("SimpleMapEntityPersister.storeEntry: entity=${persistentEntity.name}, connectionName=$connectionName, family=$f, id=$storeId")
+        def dsMap = getDatastore()
+        Map<Object, Map> familyMap = (Map) dsMap[f]
+        if (familyMap == null) {
+            familyMap = new ConcurrentHashMap<>()
+            dsMap[f] = familyMap
+        }
+        familyMap.put(storeId instanceof Number ? storeId.longValue() : storeId, nativeEntry)
+        updateInheritanceHierarchy(persistentEntity, storeId, nativeEntry)
+        return storeId
+    }
+
+    private void populateEntry(PersistentEntity persistentEntity, EntityAccess entityAccess, Map entry) {
+        if (!persistentEntity.root) {
+            entry.discriminator = persistentEntity.discriminator
+        }
+        for (PersistentProperty prop in persistentEntity.persistentProperties) {
+            def value = entityAccess.getProperty(prop.name)
+            entry.put(prop.name, marshalProperty(prop, value))
         }
     }
 
     @Override
-    protected boolean isPropertyIndexed(Property mappedProperty) {
-        return true // index all
+    protected Map createNewEntry(String family) {
+        return [:]
     }
 
+    @Override
+    protected Map retrieveEntry(PersistentEntity persistentEntity, String family, Serializable key) {
+        def dsMap = getDatastore()
+        Map familyMap = (Map) dsMap[family]
+        if (familyMap == null) return null
+        
+        Object k = key instanceof Number ? key.longValue() : key
+        Map entry = (Map) familyMap.get(k)
+        if (entry != null) {
+            return new LinkedHashMap<>(entry)
+        }
+        return null
+    }
+
+    @Override
+    protected void deleteEntry(String family, key, entry) {
+        getDatastore()[family]?.remove(key instanceof Number ? key.longValue() : key)
+    }
+
+    @Override
     PropertyValueIndexer getPropertyIndexer(PersistentProperty property) {
         return new PropertyValueIndexer() {
-
-            String getIndexRoot() {
-                def datastore = (SimpleMapDatastore)session.datastore
-                def connectionName = datastore.connectionSources.defaultConnectionSource.name
-                return "~${connectionName}:${property.owner.rootEntity.name}:${property.name}"
-            }
-
-            void deindex(value, primaryKey) {
-                def index = getIndexName(value)
-                List indexed = getIndices()[index]
-                if (indexed) {
-                    indexed.removeElement(primaryKey)
+            private String getIndexRoot() {
+                def connectionName = getConnectionName()
+                def indexRoot = "~${property.owner.rootEntity.name}:${property.name}"
+                if (connectionName != null && !org.grails.datastore.mapping.core.connections.ConnectionSource.DEFAULT.equals(connectionName)) {
+                    indexRoot = "${connectionName}:${indexRoot}"
                 }
+                return indexRoot
             }
 
-            void index(value, primaryKey) {
+            @Override
+            String getIndexName(Object value) {
+                "${getIndexRoot()}:${value}"
+            }
 
+            @Override
+            void index(Object value, Object primaryKey) {
                 def index = getIndexName(value)
-                def indexed = getIndices()[index]
+                def indexed = (List) getIndices()[index]
                 if (indexed == null) {
                     indexed = []
                     getIndices()[index] = indexed
                 }
-                if (!indexed.contains(primaryKey)) {
-                    indexed << primaryKey
+                def pk = primaryKey instanceof Number ? primaryKey.longValue() : primaryKey
+                if (!indexed.contains(pk)) {
+                    indexed << pk
                 }
             }
 
-            List query(value) {
+            @Override
+            List query(Object value) {
                 query(value, 0, -1)
             }
 
-            List query(value, int offset, int max) {
+            @Override
+            List query(Object value, int offset, int max) {
                 def index = getIndexName(value)
-
-                def indexed = getIndices()[index]
-                if (!indexed) {
-                    return Collections.emptyList()
+                def results = (List) getIndices()[index] ?: []
+                if (offset > 0 && max > 0) {
+                    int last = offset + max - 1
+                    if (offset >= results.size()) return []
+                    return results[offset..Math.min(last, results.size() - 1)]
                 }
-                return indexed[offset..max]
+                if (max > 0) {
+                    return results[0..Math.min(max - 1, results.size() - 1)]
+                }
+                if (offset > 0) {
+                    if (offset >= results.size()) return []
+                    return results[offset..(results.size() - 1)]
+                }
+                return results
             }
 
-            String getIndexName(value) {
-                return "${indexRoot}:$value"
+            @Override
+            void deindex(Object value, Object primaryKey) {
+                def index = getIndexName(value)
+                def pk = primaryKey instanceof Number ? primaryKey.longValue() : primaryKey
+                ((List) getIndices()[index])?.remove(pk)
             }
         }
     }
 
+    @Override
     AssociationIndexer getAssociationIndexer(Map nativeEntry, Association association) {
-        if (association?.associatedEntity == null) {
-            return null
-        }
-
         return new AssociationIndexer() {
-
-            private getIndexName(primaryKey) {
-                def datastore = (SimpleMapDatastore)session.datastore
-                def connectionName = datastore.connectionSources.defaultConnectionSource.name
-                "~${connectionName}:${association.owner.name}:${association.name}:$primaryKey"
-            }
-
             @Override
             boolean doesReturnKeys() {
                 return true
@@ -185,203 +316,148 @@ class SimpleMapEntityPersister extends AbstractKeyValueEntityPersister<Map, Obje
 
             @Override
             void preIndex(Object primaryKey, List foreignKeys) {
-                // handled by index below.
+                // no-op
             }
 
-            void index(primaryKey, List foreignKeys) {
-                def indexed = getIndex(primaryKey)
-
-                indexed.addAll(foreignKeys)
-                def index = getIndexName(primaryKey)
-                indexed = indexed.unique()
-                getIndices()[index] = indexed
+            @Override
+            void index(Object primaryKey, List foreignKeys) {
+                def k = primaryKey instanceof Number ? primaryKey.longValue() : primaryKey
+                def index = getIndexName(k)
+                getIndices()[index] = foreignKeys.collect { it instanceof Number ? it.longValue() : it }
             }
 
-            private List getIndex(primaryKey) {
-                def index = getIndexName(primaryKey)
-                def indexed = getIndices()[index]
+            @Override
+            void index(Object primaryKey, Object foreignKey) {
+                Object k = primaryKey instanceof Number ? primaryKey.longValue() : primaryKey
+                Object f = foreignKey instanceof Number ? foreignKey.longValue() : foreignKey
+                
+                if (association.getAssociatedEntity().getJavaClass().isInstance(primaryKey)) {
+                    Object temp = k
+                    k = f
+                    f = temp
+                }
+                
+                def index = getIndexName(k)
+                def indexed = (List) getIndices()[index]
                 if (indexed == null) {
                     indexed = []
                     getIndices()[index] = indexed
                 }
-                return indexed
-            }
-
-            void index(primaryKey, foreignKey) {
-                def indexed = getIndex(primaryKey)
-                if (!indexed.contains(foreignKey))
-                    indexed.add(foreignKey)
-            }
-
-            List query(primaryKey) {
-                def index = getIndexName(primaryKey)
-                def indexed = getIndices()[index]
-                if (indexed == null) {
-                    return Collections.emptyList()
+                if (!indexed.contains(f)) {
+                    indexed << f
                 }
-                return indexed
             }
 
+            @Override
+            List query(Object primaryKey) {
+                def k = primaryKey instanceof Number ? primaryKey.longValue() : primaryKey
+                def index = getIndexName(k)
+                return (List) getIndices()[index] ?: []
+            }
+
+            @Override
             PersistentEntity getIndexedEntity() {
-                return association.associatedEntity
+                return association.getAssociatedEntity()
+            }
+
+            void deindex(Object primaryKey, Object foreignKey) {
+                def k = primaryKey instanceof Number ? primaryKey.longValue() : primaryKey
+                def f = foreignKey instanceof Number ? foreignKey.longValue() : foreignKey
+                def index = getIndexName(k)
+                ((List) getIndices()[index])?.remove(f)
+            }
+
+            void deindex(Object primaryKey) {
+                def k = primaryKey instanceof Number ? primaryKey.longValue() : primaryKey
+                def index = getIndexName(k)
+                getIndices().remove(index)
+            }
+
+            private String getIndexName(Object primaryKey) {
+                def connectionName = getConnectionName()
+                def k = primaryKey instanceof Number ? primaryKey.longValue() : primaryKey
+                def indexName = "~${association.owner.rootEntity.name}:${association.name}:${k}"
+                if (connectionName != null && !org.grails.datastore.mapping.core.connections.ConnectionSource.DEFAULT.equals(connectionName)) {
+                    indexName = "${connectionName}:${indexName}"
+                }
+                return indexName
             }
         }
     }
 
     @Override
-    protected void setManyToMany(PersistentEntity persistentEntity, Object obj, Map nativeEntry, ManyToMany manyToMany, Collection associatedObjects, Map<Association, List<Serializable>> toManyKeys) {
-
-        def identifiers
-        if (manyToMany.isOwningSide()) {
-            identifiers = session.persist(associatedObjects)
+    protected PersistentEntity discriminatePersistentEntity(PersistentEntity persistentEntity, Map nativeEntry) {
+        def disc = nativeEntry?.get("discriminator")
+        if (disc) {
+            def child = mappingContext.getChildEntityByDiscriminator(persistentEntity.rootEntity, disc.toString())
+            if (child) return child
         }
-        else {
-            identifiers = associatedObjects.collect {
-                EntityPersister persister = session.getPersister(it)
-                persister.getObjectIdentifier(it)
-            }
-        }
-        toManyKeys.put(manyToMany, identifiers)
+        return persistentEntity
     }
 
-    @Override
-    protected Collection getManyToManyKeys(PersistentEntity persistentEntity, Object obj, Serializable nativeKey, Map nativeEntry, ManyToMany manyToMany) {
-        final indexer = getAssociationIndexer(nativeEntry, manyToMany)
-        final primaryKey = getObjectIdentifier(obj)
-        indexer.query(primaryKey)
-    }
-
-    protected Map createNewEntry(String family) {
-        return [:]
-    }
-
-    protected getEntryValue(Map nativeEntry, String property) {
-        return nativeEntry[property]
-    }
-
-    protected void setEntryValue(Map nativeEntry, String key, value) {
-        if (mappingContext.isPersistentEntity(value)) {
-            EntityPersister persister = session.getPersister(value)
-            value = persister.getObjectIdentifier(value)
-        }
-        nativeEntry[key] = value
-    }
-
-    protected void setEmbedded(Map nativeEntry, String key, Map values) {
-        nativeEntry[key] = values
-    }
-
-    protected Map getEmbedded(Map nativeEntry, String key) {
-        nativeEntry[key]
-    }
-
-    protected Map retrieveEntry(PersistentEntity persistentEntity, String family, Serializable key) {
-        def dsMap = getDatastore()
-        Map familyMap = dsMap[family]
-        if (familyMap == null) return null
-        Map entry = familyMap.get(key)
-        if (entry != null) {
-            // returning a copy is important here so that updates are applied to the copy and not the original
-            return new LinkedHashMap<>(entry)
-        }
-        return null
-    }
-
-    protected generateIdentifier(PersistentEntity persistentEntity, Map id) {
-        final isRoot = persistentEntity.root
-        final type = isRoot ? persistentEntity.identity.type : persistentEntity.rootEntity.identity.type
-        if ((String.isAssignableFrom(type)) || (Number.isAssignableFrom(type))) {
-            def key
-            if (isRoot) {
-                key = ++lastKey
-            }
-            else {
-                def root = persistentEntity.rootEntity
-                session.getPersister(root).lastKey++
-                key = session.getPersister(root).lastKey
-            }
-            return type == String ? key.toString() : key
-        }
-        else if (UUID.isAssignableFrom(type)) {
-            return UUID.randomUUID()
-        }
-        else {
-            try {
-                return type.newInstance()
-            } catch (e) {
-                throw new IdentityGenerationException("Cannot generator identity for entity $persistentEntity with type $type")
-            }
-        }
-    }
-
-    protected storeEntry(PersistentEntity persistentEntity, EntityAccess entityAccess, storeId, Map nativeEntry) {
-        if (!persistentEntity.root) {
-            nativeEntry.discriminator = persistentEntity.discriminator
-        }
-        def dsMap = getDatastore()
-        dsMap[family].put(storeId, nativeEntry)
-        indexIdentifier(persistentEntity, storeId)
-        updateInheritanceHierarchy(persistentEntity, storeId, nativeEntry)
-        return storeId
-    }
-
-    protected def indexIdentifier(PersistentEntity persistentEntity, storeId) {
-        final indexer = getPropertyIndexer(persistentEntity.identity)
-        indexer.index(storeId, storeId)
-    }
-
-    private updateInheritanceHierarchy(PersistentEntity persistentEntity, storeId, Map nativeEntry) {
+    protected void updateInheritanceHierarchy(PersistentEntity persistentEntity, Object key, Map entry) {
         def parent = persistentEntity.parentEntity
         while (parent != null) {
-
             def f = getEntityFamily(parent)
-            def parentEntry = getDatastore()[f]
-            if (parentEntry == null) {
-                parentEntry = [:]
-                getDatastore()[f] = parentEntry
+            def parentMap = getDatastore()[f]
+            if (parentMap == null) {
+                parentMap = new ConcurrentHashMap()
+                getDatastore()[f] = parentMap
             }
-            parentEntry.put(storeId, nativeEntry)
+            parentMap.put(key instanceof Number ? key.longValue() : key, entry)
             parent = parent.parentEntity
         }
     }
 
-    protected void updateEntry(PersistentEntity persistentEntity, EntityAccess entityAccess, key, Map entry) {
-        def family = getEntityFamily(persistentEntity)
-        def existing = getDatastore()[family].get(key)
-
-        if (isVersioned(entityAccess)) {
-            if (existing == null) {
-                setVersion(entityAccess)
-            }
-            else {
-                def oldVersion = existing.version
-                def currentVersion = entityAccess.getProperty('version')
-                if (Number.isAssignableFrom(entityAccess.getPropertyType('version'))) {
-                    oldVersion = existing.version?.toLong()
-                    currentVersion = entityAccess.getProperty('version')?.toLong()
-                    if (currentVersion == null && oldVersion == null) {
-                        currentVersion = 0L
-                        entityAccess.setProperty('version', currentVersion)
-                        entry['version'] = currentVersion
+    @Override
+    Object createObjectFromNativeEntry(PersistentEntity persistentEntity, Serializable nativeKey, Map nativeEntry) {
+        def obj = super.createObjectFromNativeEntry(persistentEntity, nativeKey, nativeEntry)
+        def reflector = mappingContext.getEntityReflector(persistentEntity)
+        
+        for (PersistentProperty prop in persistentEntity.persistentProperties) {
+            if (prop instanceof Embedded) {
+                def embeddedEntry = nativeEntry.get(prop.name)
+                if (embeddedEntry instanceof Map) {
+                    def type = prop.type
+                    def embeddedInstance = type.newInstance()
+                    def associated = prop.associatedEntity
+                    if (associated != null) {
+                        def embeddedReflector = mappingContext.getEntityReflector(associated)
+                        for (PersistentProperty embeddedProp in associated.persistentProperties) {
+                            embeddedReflector.setProperty(embeddedInstance, embeddedProp.name, embeddedEntry.get(embeddedProp.name))
+                        }
+                    } else {
+                        // Fallback for non-entity embedded types
+                        for (java.lang.reflect.Field field in type.declaredFields) {
+                            if (!field.synthetic && !java.lang.reflect.Modifier.isStatic(field.modifiers)) {
+                                field.setAccessible(true)
+                                field.set(embeddedInstance, embeddedEntry.get(field.name))
+                            }
+                        }
                     }
+                    reflector.setProperty(obj, prop.name, embeddedInstance)
                 }
-                if (oldVersion != null && currentVersion != null && !oldVersion.equals(currentVersion)) {
-                    throw new OptimisticLockingException(persistentEntity, key)
-                }
-                incrementVersion(entityAccess)
             }
         }
-
-        indexIdentifier(persistentEntity, key)
-        if (existing == null) {
-            getDatastore()[family].put(key, entry)
-        }
-        else {
-            existing.putAll(entry)
-        }
-        updateInheritanceHierarchy(persistentEntity, key, entry)
+        return obj
     }
 
+    @Override
+    protected Collection getManyToManyKeys(PersistentEntity persistentEntity, Object obj,
+            Serializable nativeKey, Map nativeEntry, org.grails.datastore.mapping.model.types.ManyToMany manyToMany) {
+        def val = nativeEntry.get(manyToMany.getName())
+        if (val instanceof Collection) {
+            return (Collection) val
+        }
+        return Collections.emptyList()
+    }
+
+    @Override
+    org.grails.datastore.mapping.query.Query createQuery() {
+        return new org.grails.datastore.mapping.simple.query.SimpleMapQuery((org.grails.datastore.mapping.simple.SimpleMapSession)session, getPersistentEntity(), this)
+    }
+
+    @Override
     protected void deleteEntries(String family, List<Object> keys) {
         keys?.each {
             deleteEntry(family, it, null)

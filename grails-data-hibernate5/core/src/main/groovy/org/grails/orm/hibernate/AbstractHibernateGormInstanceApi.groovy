@@ -535,8 +535,4 @@ abstract class AbstractHibernateGormInstanceApi<D> extends GormInstanceApi<D> {
             }
         }
     }
-
-    SessionFactory getSessionFactory() {
-        return this.sessionFactory
-    }
 }

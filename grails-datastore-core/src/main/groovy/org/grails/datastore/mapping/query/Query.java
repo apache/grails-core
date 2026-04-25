@@ -647,7 +647,7 @@ public abstract class Query implements Cloneable, Serializable {
 
         ApplicationEventPublisher publisher = session.getDatastore().getApplicationEventPublisher();
         if (publisher != null) {
-            publisher.publishEvent(new PreQueryEvent(this));
+            publisher.publishEvent(new PreQueryEvent(session.getDatastore(), this));
         }
 
         List results = executeQuery(entity, criteria);

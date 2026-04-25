@@ -33,7 +33,6 @@ class EmbeddedAssociationWithNoEntityAndGlobalNullableConstraintSpec extends Spe
 
     @Shared @AutoCleanup SimpleMapDatastore datastore = new SimpleMapDatastore(
         DatastoreUtils.createPropertyResolver((Settings.SETTING_DEFAULT_CONSTRAINTS): { '*'(nullable: true) }),
-        [],
         User2
     )
 

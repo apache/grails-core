@@ -89,6 +89,36 @@ All tests passed! 🎉
 
 ---
 
+## Isolated Testing (local.properties)
+
+The project supports an **Isolation Mode** for focused development. By configuring `local.properties`, you can limit test execution to specific modules and enable aggressive heap settings for those tests.
+
+### Configuration
+
+In `local.properties`:
+```properties
+# List the modules you want to focus on
+grails.test.modules=:grails-datamapping-core-test,:grails-data-simple
+```
+
+### Usage
+
+```bash
+# Runs ONLY the modules defined in grails.test.modules
+# Automatically aggregates failures and style violations
+# MANDATORY: Must include the local-init.gradle initialization script
+./gradlew -I local-init.gradle testSelected
+```
+
+When `testSelected` is run:
+- Only tests in the specified modules are enabled.
+- `maxParallelForks` is set to `1` (serial) for stability.
+- Heap size is increased to `3g`.
+- `ignoreFailures` is set to `true` to ensure aggregation tasks run.
+- Non-selected modules have their test and quality tasks disabled.
+
+---
+
 ## Interpreting Failures
 
 Each row in the table gives you:

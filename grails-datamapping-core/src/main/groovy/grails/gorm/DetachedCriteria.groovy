@@ -771,7 +771,7 @@ class DetachedCriteria<T> extends AbstractDetachedCriteria<T> implements GormOpe
 
             DynamicFinder.populateArgumentsForCriteria(targetClass, query, args)
 
-            callable.call(query)
+            return callable.call(query)
         }
     }
 
