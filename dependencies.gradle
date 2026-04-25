@@ -83,16 +83,10 @@ ext {
             'jquery.version'              : '3.7.1',
             'liquibase-hibernate5.version': '4.27.0',
             'mongodb.version'             : '5.6.4',
-            // Selenium 4.41+ requires OpenTelemetry 1.59+, which is newer than the
-            // 1.55.x that Spring Boot 4.0.5 manages. Pin the version on the individual
-            // OpenTelemetry modules (see the constraints block in grails-bom/build.gradle)
-            // so the explicit constraint overrides whatever Spring Boot's imported BOM
-            // declares, regardless of platform import ordering.
-            'opentelemetry.version'       : '1.59.0',
             'rxjava.version'              : '1.3.8',
             'rxjava2.version'             : '2.2.21',
             'rxjava3.version'             : '3.1.12',
-            'selenium.version'            : '4.41.0',
+            'selenium.version'            : '4.37.0',
             'kotlin.version'              : '2.2.21',
             'mockito.version'             : '5.23.0',
             'spock.version'               : '2.3-groovy-4.0',
@@ -172,39 +166,6 @@ ext {
             'mongodb-driver-core'      : "org.mongodb:mongodb-driver-core:${bomDependencyVersions['mongodb.version']}",
             'mongodb-driver-sync'      : "org.mongodb:mongodb-driver-sync:${bomDependencyVersions['mongodb.version']}",
             'mongodb-record-codec'     : "org.mongodb:bson-record-codec:${bomDependencyVersions['mongodb.version']}",
-            // start - individual opentelemetry modules pinned explicitly. Selenium 4.41+ requires
-            // OpenTelemetry 1.59+ while Spring Boot 4.0.5's BOM declares 1.55.x. Importing the
-            // opentelemetry-bom as a platform would only win over Spring Boot's BOM through
-            // import order, which neither Gradle nor Maven guarantees for transitive resolution.
-            // Explicit module constraints override any imported BOM's managed version, so this
-            // works regardless of platform ordering and keeps the dependency validator's
-            // "resolved vs BOM-declared" check consistent.
-            // The module list mirrors io.opentelemetry:opentelemetry-bom:1.59.0 dependencyManagement.
-            'opentelemetry-api'                                  : "io.opentelemetry:opentelemetry-api:${bomDependencyVersions['opentelemetry.version']}",
-            'opentelemetry-common'                               : "io.opentelemetry:opentelemetry-common:${bomDependencyVersions['opentelemetry.version']}",
-            'opentelemetry-context'                              : "io.opentelemetry:opentelemetry-context:${bomDependencyVersions['opentelemetry.version']}",
-            'opentelemetry-exporter-common'                      : "io.opentelemetry:opentelemetry-exporter-common:${bomDependencyVersions['opentelemetry.version']}",
-            'opentelemetry-exporter-logging'                     : "io.opentelemetry:opentelemetry-exporter-logging:${bomDependencyVersions['opentelemetry.version']}",
-            'opentelemetry-exporter-logging-otlp'                : "io.opentelemetry:opentelemetry-exporter-logging-otlp:${bomDependencyVersions['opentelemetry.version']}",
-            'opentelemetry-exporter-otlp'                        : "io.opentelemetry:opentelemetry-exporter-otlp:${bomDependencyVersions['opentelemetry.version']}",
-            'opentelemetry-exporter-otlp-common'                 : "io.opentelemetry:opentelemetry-exporter-otlp-common:${bomDependencyVersions['opentelemetry.version']}",
-            'opentelemetry-exporter-sender-grpc-managed-channel' : "io.opentelemetry:opentelemetry-exporter-sender-grpc-managed-channel:${bomDependencyVersions['opentelemetry.version']}",
-            'opentelemetry-exporter-sender-jdk'                  : "io.opentelemetry:opentelemetry-exporter-sender-jdk:${bomDependencyVersions['opentelemetry.version']}",
-            'opentelemetry-exporter-sender-okhttp'               : "io.opentelemetry:opentelemetry-exporter-sender-okhttp:${bomDependencyVersions['opentelemetry.version']}",
-            'opentelemetry-exporter-zipkin'                      : "io.opentelemetry:opentelemetry-exporter-zipkin:${bomDependencyVersions['opentelemetry.version']}",
-            'opentelemetry-extension-kotlin'                     : "io.opentelemetry:opentelemetry-extension-kotlin:${bomDependencyVersions['opentelemetry.version']}",
-            'opentelemetry-extension-trace-propagators'          : "io.opentelemetry:opentelemetry-extension-trace-propagators:${bomDependencyVersions['opentelemetry.version']}",
-            'opentelemetry-opentracing-shim'                     : "io.opentelemetry:opentelemetry-opentracing-shim:${bomDependencyVersions['opentelemetry.version']}",
-            'opentelemetry-sdk'                                  : "io.opentelemetry:opentelemetry-sdk:${bomDependencyVersions['opentelemetry.version']}",
-            'opentelemetry-sdk-common'                           : "io.opentelemetry:opentelemetry-sdk-common:${bomDependencyVersions['opentelemetry.version']}",
-            'opentelemetry-sdk-extension-autoconfigure'          : "io.opentelemetry:opentelemetry-sdk-extension-autoconfigure:${bomDependencyVersions['opentelemetry.version']}",
-            'opentelemetry-sdk-extension-autoconfigure-spi'      : "io.opentelemetry:opentelemetry-sdk-extension-autoconfigure-spi:${bomDependencyVersions['opentelemetry.version']}",
-            'opentelemetry-sdk-extension-jaeger-remote-sampler'  : "io.opentelemetry:opentelemetry-sdk-extension-jaeger-remote-sampler:${bomDependencyVersions['opentelemetry.version']}",
-            'opentelemetry-sdk-logs'                             : "io.opentelemetry:opentelemetry-sdk-logs:${bomDependencyVersions['opentelemetry.version']}",
-            'opentelemetry-sdk-metrics'                          : "io.opentelemetry:opentelemetry-sdk-metrics:${bomDependencyVersions['opentelemetry.version']}",
-            'opentelemetry-sdk-testing'                          : "io.opentelemetry:opentelemetry-sdk-testing:${bomDependencyVersions['opentelemetry.version']}",
-            'opentelemetry-sdk-trace'                            : "io.opentelemetry:opentelemetry-sdk-trace:${bomDependencyVersions['opentelemetry.version']}",
-            // end - opentelemetry modules
             'rxjava'                   : "io.reactivex:rxjava:${bomDependencyVersions['rxjava.version']}",
             'rxjava2'                  : "io.reactivex.rxjava2:rxjava:${bomDependencyVersions['rxjava2.version']}",
             'rxjava3'                  : "io.reactivex.rxjava3:rxjava:${bomDependencyVersions['rxjava3.version']}",
