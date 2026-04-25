@@ -47,6 +47,9 @@ class GormRegistry {
     
     // O(N) storage for Datastores (indexed by Qualifier)
     private final Map<String, Datastore> datastoresByQualifier = new ConcurrentHashMap<>()
+
+    // O(N) storage for Transaction Managers (indexed by Qualifier)
+    private final Map<String, org.springframework.transaction.PlatformTransactionManager> transactionManagersByQualifier = new ConcurrentHashMap<>()
     
     // Entity-specific overrides (for complex multi-datasource setups)
     private final Map<String, Map<String, Datastore>> entityDatastores = new ConcurrentHashMap<>()
@@ -68,6 +71,7 @@ class GormRegistry {
         instance.instanceApis.clear()
         instance.validationApis.clear()
         instance.datastoresByQualifier.clear()
+        instance.transactionManagersByQualifier.clear()
         instance.entityDatastores.clear()
         instance.datastoresByType.clear()
         instance.allDatastores.clear()
@@ -163,6 +167,23 @@ class GormRegistry {
         String q = qualifier ?: ConnectionSource.DEFAULT
         datastoresByQualifier.put(q, datastore)
         allDatastores.add(datastore)
+    }
+
+    /**
+     * Registers a transaction manager for a qualifier. (O(N) part)
+     */
+    void registerTransactionManager(String qualifier, org.springframework.transaction.PlatformTransactionManager transactionManager) {
+        if (transactionManager == null) return
+        String q = qualifier ?: ConnectionSource.DEFAULT
+        transactionManagersByQualifier.put(q, transactionManager)
+    }
+
+    /**
+     * Finds a transaction manager for a qualifier.
+     */
+    org.springframework.transaction.PlatformTransactionManager getTransactionManager(String qualifier) {
+        String q = qualifier ?: ConnectionSource.DEFAULT
+        return transactionManagersByQualifier.get(q)
     }
 
     /**

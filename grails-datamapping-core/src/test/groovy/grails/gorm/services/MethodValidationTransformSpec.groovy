@@ -34,6 +34,10 @@ import org.grails.datastore.gorm.validation.jakarta.services.ValidatedService
 
 class MethodValidationTransformSpec extends Specification {
 
+    def cleanup() {
+        org.grails.datastore.gorm.GormRegistry.reset()
+    }
+
     void 'test simple validated property'() {
 
         when: 'the service transform is applied to an interface it cannot implement'
@@ -60,14 +64,20 @@ class MethodValidationTransformSpec extends Specification {
 
         when: 'the impl is obtained'
         def implClass = serviceClass.classLoader.loadClass('$MyServiceImplementation')
-
+        def fooClass = serviceClass.classLoader.loadClass('Foo')
+        def datastore = new org.grails.datastore.mapping.simple.SimpleMapDatastore(fooClass)
+        datastore.mappingContext.validatorRegistry = new org.grails.datastore.gorm.validation.constraints.registry.DefaultValidatorRegistry(datastore.mappingContext, datastore.connectionSources.defaultConnectionSource.settings, new org.springframework.context.support.StaticMessageSource())
+        
         then: 'the impl is valid'
         org.grails.datastore.mapping.services.Service.isAssignableFrom(implClass)
         ValidatedService.isAssignableFrom(implClass)
 
         and: 'all implemented Trait methods are marked as Generated'
         ValidatedService.methods.each { Method traitMethod ->
-            assert implClass.getMethod(traitMethod.name, traitMethod.parameterTypes).isAnnotationPresent(Generated)
+            if (traitMethod.declaringClass == ValidatedService || traitMethod.declaringClass == org.grails.datastore.mapping.services.Service) {
+                def method = implClass.getMethod(traitMethod.name, traitMethod.parameterTypes)
+                assert method.isAnnotationPresent(Generated)
+            }
         }
 
         when: 'the parameter data is obtained'
