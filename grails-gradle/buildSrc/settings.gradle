@@ -20,6 +20,10 @@ pluginManagement {
     includeBuild('../../build-logic') {
         name = 'build-logic-root'
     }
+    apply from: file('../../gradle/plugin-repositories.gradle')
+    repositories {
+        configurePluginRepositories(delegate)
+    }
 }
 
 plugins {

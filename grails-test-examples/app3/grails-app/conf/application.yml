@@ -23,11 +23,6 @@ info:
         name: '@info.app.name@'
         version: '@info.app.version@'
         grailsVersion: '@info.app.grailsVersion@'
-spring:
-    groovy:
-        template:
-            check-template-location: false
-
 ---
 grails:
     mime:
@@ -61,28 +56,15 @@ grails:
             xml:
               - text/xml
               - application/xml
-    urlmapping:
-        cache:
-            maxsize: 1000
-    controllers:
-        defaultScope: singleton
-    converters:
-        encoding: UTF-8
     hibernate:
         cache:
             queries: false
     views:
-        default:
-            codec: html
         gsp:
             encoding: UTF-8
             htmlcodec: xml
             codecs:
-                expression: html
                 scriptlets: html
-                taglib: none
-                staticparts: none
-
 ---
 dataSource:
     pooled: true

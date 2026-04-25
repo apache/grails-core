@@ -43,6 +43,7 @@ dependencies {
 
     implementation 'com.github.ben-manes.caffeine:caffeine'
     api 'org.apache.groovy:groovy'
+    implementation 'org.apache.groovy:groovy-json'
     api 'org.springframework.boot:spring-boot'
     api 'org.springframework:spring-core'
     api 'org.springframework:spring-tx'
