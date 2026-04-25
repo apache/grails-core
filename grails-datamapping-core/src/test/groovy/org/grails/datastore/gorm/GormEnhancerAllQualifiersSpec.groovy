@@ -84,9 +84,17 @@ class GormEnhancerAllQualifiersSpec extends Specification {
         def allSources = Mock(ConnectionSources) {
             getAllConnectionSources() >> connectionSourceMocks
         }
+        def mappingContext = Mock(MappingContext) {
+            getPersistentEntities() >> []
+        }
         Mock(TestConnectionSourcesProviderDatastore) {
             getConnectionSources() >> allSources
+            getMappingContext() >> mappingContext
         }
+    }
+
+    def cleanup() {
+        GormRegistry.reset()
     }
 
     void "MultiTenant entity with explicit non-default datasource preserves qualifier"() {
@@ -109,8 +117,8 @@ class GormEnhancerAllQualifiersSpec extends Specification {
         when: "registering the entity"
         enhancer.registerEntity(entity)
         then: "static api is available under DEFAULT and secondary qualifiers"
-        GormEnhancer.@STATIC_APIS.get(ConnectionSource.DEFAULT).containsKey(entity.name)
-        GormEnhancer.@STATIC_APIS.get('secondary').containsKey(entity.name)
+        GormRegistry.instance.getDatastore(entity.name, ConnectionSource.DEFAULT) != null
+        GormRegistry.instance.getDatastore(entity.name, 'secondary') != null
     }
 
     void "registerEntity adds static api under default and secondary for MultiTenant entity"() {
@@ -120,15 +128,15 @@ class GormEnhancerAllQualifiersSpec extends Specification {
         when: "registering the entity"
         enhancer.registerEntity(entity)
         then: "static api is available under DEFAULT and secondary qualifiers"
-        GormEnhancer.@STATIC_APIS.get(ConnectionSource.DEFAULT).containsKey(entity.name)
-        GormEnhancer.@STATIC_APIS.get('secondary').containsKey(entity.name)
+        GormRegistry.instance.getDatastore(entity.name, ConnectionSource.DEFAULT) != null
+        GormRegistry.instance.getDatastore(entity.name, 'secondary') != null
     }
 
     void "MultiTenant entity with default datasource expands to all qualifiers"() {
         given: "a MultiTenant entity on the default datasource"
-        def enhancer = createEnhancer()
         def entity = mockEntity(MultiTenantDefaultEntity, [ConnectionSource.DEFAULT])
         def datastore = mockMultiConnectionDatastore([ConnectionSource.DEFAULT, 'secondary', 'reporting'])
+        def enhancer = new GormEnhancer(datastore)
 
         when:
         def qualifiers = enhancer.allQualifiers(datastore, entity)
@@ -142,9 +150,9 @@ class GormEnhancerAllQualifiersSpec extends Specification {
 
     void "MultiTenant entity with ALL datasource expands to all qualifiers"() {
         given: "a MultiTenant entity declared with ConnectionSource.ALL"
-        def enhancer = createEnhancer()
         def entity = mockEntity(MultiTenantAllEntity, [ConnectionSource.ALL])
         def datastore = mockMultiConnectionDatastore([ConnectionSource.DEFAULT, 'secondary'])
+        def enhancer = new GormEnhancer(datastore)
 
         when:
         def qualifiers = enhancer.allQualifiers(datastore, entity)
@@ -188,14 +196,14 @@ class GormEnhancerAllQualifiersSpec extends Specification {
         when: "registering the entity"
         enhancer.registerEntity(entity)
         then: "static api is available under DEFAULT qualifier"
-        GormEnhancer.@STATIC_APIS.get(ConnectionSource.DEFAULT).containsKey(entity.name)
+        GormRegistry.instance.getDatastore(entity.name, ConnectionSource.DEFAULT) != null
     }
 
     void "non-MultiTenant entity with ALL datasource expands to all qualifiers"() {
         given: "a non-MultiTenant entity declared with ConnectionSource.ALL"
-        def enhancer = createEnhancer()
         def entity = mockEntity(NonMultiTenantAllEntity, [ConnectionSource.ALL])
         def datastore = mockMultiConnectionDatastore([ConnectionSource.DEFAULT, 'secondary'])
+        def enhancer = new GormEnhancer(datastore)
 
         when:
         def qualifiers = enhancer.allQualifiers(datastore, entity)

@@ -45,10 +45,8 @@ class MethodValidationTransformSpec extends Specification {
             @Service(Foo)
             interface MyService {
             
-                @grails.gorm.transactions.NotTransactional
                 Foo find(@NotNull String title) throws jakarta.validation.ConstraintViolationException
                 
-                @grails.gorm.transactions.NotTransactional
                 Foo findAgain(@NotNull @NotBlank String title)
             }
             @Entity

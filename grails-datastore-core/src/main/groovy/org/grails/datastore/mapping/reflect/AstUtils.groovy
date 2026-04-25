@@ -358,8 +358,10 @@ class AstUtils {
             String annotationClassName = node.getClassNode().getName()
             if ((excluded == null || !excluded.contains(annotationClassName)) &&
                     (included == null || included.contains(annotationClassName))) {
-                final AnnotationNode copyOfAnnotationNode = cloneAnnotation(node)
-                to.addAnnotation(copyOfAnnotationNode)
+                if (to.getAnnotations(node.getClassNode()).isEmpty()) {
+                    final AnnotationNode copyOfAnnotationNode = cloneAnnotation(node)
+                    to.addAnnotation(copyOfAnnotationNode)
+                }
             }
         }
     }

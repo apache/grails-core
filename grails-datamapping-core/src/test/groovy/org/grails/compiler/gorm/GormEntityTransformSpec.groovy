@@ -35,6 +35,18 @@ import org.grails.datastore.mapping.dirty.checking.DirtyCheckable
  */
 class GormEntityTransformSpec extends Specification{
 
+    void setup() {
+        def datastore = Mock(org.grails.datastore.mapping.core.Datastore)
+        def mappingContext = Mock(org.grails.datastore.mapping.model.MappingContext)
+        datastore.mappingContext >> mappingContext
+        mappingContext.persistentEntities >> []
+        new org.grails.datastore.gorm.GormEnhancer(datastore)
+    }
+
+    def cleanup() {
+        org.grails.datastore.gorm.GormRegistry.reset()
+    }
+
     void 'test parse named queries'() {
         when:
         def bookClass = new GroovyClassLoader().parseClass('''
@@ -194,11 +206,18 @@ class GormEntityTransformSpec extends Specification{
     }
 
     void 'test property/method missing'() {
+        given:
+        def mappingContext = Mock(org.grails.datastore.mapping.model.MappingContext)
+        mappingContext.persistentEntities >> []
+        def datastore = Mock(org.grails.datastore.mapping.core.Datastore)
+        datastore.mappingContext >> mappingContext
+        new org.grails.datastore.gorm.GormEnhancer(datastore)
+
         when:
         Book.foo()
 
         then:
-        thrown(IllegalStateException)
+        thrown(MissingMethodException)
 
         when:
         Book.bar

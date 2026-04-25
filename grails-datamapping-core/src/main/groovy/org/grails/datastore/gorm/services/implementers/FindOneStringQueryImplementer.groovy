@@ -83,11 +83,19 @@ class FindOneStringQueryImplementer extends AbstractStringQueryImplementer imple
         else if (!AstUtils.isSubclassOfOrImplementsInterface(returnType, Iterable.name) && !returnType.isArray() && !returnType.packageName?.startsWith('rx.')) {
             def queryAnnotation = AstUtils.findAnnotation(methodNode, getAnnotationType())
             def query = queryAnnotation.getMember('value')
+            String queryText = null
             if (query instanceof GStringExpression) {
                 GStringExpression gstring = (GStringExpression) query
                 List<ConstantExpression> strings = gstring.strings
-                ConstantExpression stem = strings.first()
-                if (stem.text.toLowerCase(Locale.ENGLISH).contains('select')) {
+                queryText = strings.first().text
+            }
+            else if (query instanceof ConstantExpression) {
+                queryText = query.text
+            }
+
+            if (queryText != null) {
+                String queryLower = queryText.toLowerCase(Locale.ENGLISH)
+                if (queryLower.contains('select') || queryLower.contains('from')) {
                     return returnType != ClassHelper.VOID_TYPE
                 }
             }

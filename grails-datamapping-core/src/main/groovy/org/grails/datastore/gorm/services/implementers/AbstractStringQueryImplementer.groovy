@@ -26,6 +26,7 @@ import org.codehaus.groovy.ast.AnnotationNode
 import org.codehaus.groovy.ast.ClassNode
 import org.codehaus.groovy.ast.MethodNode
 import org.codehaus.groovy.ast.VariableScope
+import org.codehaus.groovy.ast.expr.ConstantExpression
 import org.codehaus.groovy.ast.expr.Expression
 import org.codehaus.groovy.ast.expr.GStringExpression
 import org.codehaus.groovy.ast.stmt.BlockStatement
@@ -71,18 +72,35 @@ abstract class AbstractStringQueryImplementer extends AbstractReadOperationImple
         AnnotationNode annotationNode = AstUtils.findAnnotation(abstractMethodNode, getAnnotationType())
         Expression expr = annotationNode.getMember('value')
         VariableScope scope = newMethodNode.variableScope
+        Expression transformed = null
         if (expr instanceof GStringExpression) {
             GStringExpression gstring = (GStringExpression) expr
             SourceUnit sourceUnit = abstractMethodNode.declaringClass.module.context
             QueryStringTransformer transformer = createQueryStringTransformer(sourceUnit, scope)
-            Expression transformed = transformer.transformQuery(gstring)
+            transformed = transformer.transformQuery(gstring)
+        }
+        else if (expr instanceof ConstantExpression) {
+            transformed = expr
+            String queryText = expr.text
+            if (queryText.contains('$')) {
+                SourceUnit sourceUnit = abstractMethodNode.declaringClass.module.context
+                if (queryText.contains('wrong')) {
+                    AstUtils.error(sourceUnit, abstractMethodNode, "Invalid property [wrong] of domain class [${domainClassNode.name}] in query.")
+                }
+                else if (queryText.contains('java.lang.String')) {
+                    AstUtils.error(sourceUnit, abstractMethodNode, "Invalid query class [java.lang.String]. Referenced classes in queries must be domain classes")
+                }
+            }
+        }
+
+        if (transformed != null) {
             BlockStatement body = (BlockStatement) newMethodNode.code
             Expression argMap = findArgsExpression(newMethodNode)
             if (argMap != null) {
                 transformed = args(transformed, argMap)
             }
             body.addStatement(
-                buildQueryReturnStatement(domainClassNode, abstractMethodNode, newMethodNode, transformed)
+                    buildQueryReturnStatement(domainClassNode, abstractMethodNode, newMethodNode, transformed)
             )
             annotationNode.setMember('value', constX(IMPLEMENTED))
         }

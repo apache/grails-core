@@ -54,6 +54,7 @@ export GRADLE_OPTS="-Xms2G -Xmx5G"
 11. **Every code touch must update all tests for the changed class** - When a class is modified, find and update every test that covers it — unit, integration, and TCK. Do not leave any existing test out of sync with the new code.
 12. **Clean violations before commit** - Before every automated commit, run `./gradlew clean aggregateStyleViolations test aggregateTestFailures --continue` from the root and ensure that `CHECKSTYLE_VIOLATIONS.md`, `CODENARC_VIOLATIONS.md`, `PMD_VIOLATIONS.md`, and `TEST_FAILURES.md` report no issues and are removed.
 13. **Mandatory test coverage** - Any class touched in a commit MUST be covered with tests that verify all behavior. You must run ALL tests in the affected module(s) and ensure they pass before committing.
+14. **NEVER delete `local*` files and DO NOT remove values** - Files prefixed with `local` (e.g., `local.properties`, `local-tasks.gradle`) must NEVER be deleted. When modifying these files, NEVER remove existing values; instead, comment them out and append new values to maintain history and prevent loss of local configuration.
 
 ## Available Skills
 
@@ -266,6 +267,11 @@ See `CONTRIBUTING.md` for full details.
 | Cache issues | `./gradlew --rerun-tasks` |
 | Deprecation details | `./gradlew <task> --warning-mode all` |
 
+
+## Local Configuration
+
+- **Local File Preservation**: NEVER delete files prefixed with `local` (e.g., `local.properties`, `local-tasks.gradle`). These files are used for local developer overrides and environment-specific tasks and must be maintained.
+- **Commenting over Deletion**: When instructed to modify any `local*` files or similar configuration files, DO NOT delete the existing lines. Instead, comment out the old entries and append the new ones. This ensures a traceable history of local configuration changes.
 
 ### Reporting Vulnerabilities
 
