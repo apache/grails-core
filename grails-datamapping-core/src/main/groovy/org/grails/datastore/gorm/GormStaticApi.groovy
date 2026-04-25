@@ -98,12 +98,13 @@ class GormStaticApi<D> extends AbstractGormApi<D> implements GormAllOperations<D
 
     @Override
     Object methodMissing(String name, Object args) {
+        Object[] argsArray = (args instanceof Object[]) ? (Object[]) args : ([args] as Object[])
         for (FinderMethod fm : finders) {
             if (fm.isMethodMatch(name)) {
-                return fm.invoke(persistentClass, name, (Object[]) args)
+                return fm.invoke(persistentClass, name, argsArray)
             }
         }
-        throw new MissingMethodException(name, persistentClass, (Object[]) args)
+        throw new MissingMethodException(name, persistentClass, argsArray)
     }
 
     @Override
@@ -119,8 +120,13 @@ class GormStaticApi<D> extends AbstractGormApi<D> implements GormAllOperations<D
         Datastore ds = getDatastore()
         if (ds instanceof ConnectionSourcesProvider) {
             ConnectionSources sources = ((ConnectionSourcesProvider) ds).connectionSources
-            if (sources != null && sources.getConnectionSource(name) != null) {
-                return GormEnhancer.findStaticApi(persistentClass, name)
+            if (sources != null) {
+                if (sources.getConnectionSource(name) != null) {
+                    return GormEnhancer.findStaticApi(persistentClass, name)
+                }
+                if (name.equalsIgnoreCase(ConnectionSource.DEFAULT) || name.equalsIgnoreCase(ConnectionSource.OLD_DEFAULT)) {
+                    return GormEnhancer.findStaticApi(persistentClass, ConnectionSource.DEFAULT)
+                }
             }
         }
         throw new MissingPropertyException(name, persistentClass)
@@ -432,15 +438,16 @@ class GormStaticApi<D> extends AbstractGormApi<D> implements GormAllOperations<D
 
     @Override
     List<D> findAll(D example) {
-        execute({ Session session ->
-            def pe = getGormPersistentEntity()
-            session.createQuery(persistentClass).add(org.grails.datastore.mapping.query.Restrictions.eq(pe.identity.name, session.getPersister(example).getObjectIdentifier(example))).list()
-        } as SessionCallback<List<D>>)
+        findAll(example, Collections.emptyMap())
     }
 
     @Override
     List<D> findAll(D example, Map args) {
-        findAll(example) // simplified
+        execute({ Session session ->
+            def query = session.createQuery(persistentClass)
+            populateQueryByExample(session, query, example)
+            query.list(args)
+        } as SessionCallback<List<D>>)
     }
 
     @Override
@@ -455,15 +462,38 @@ class GormStaticApi<D> extends AbstractGormApi<D> implements GormAllOperations<D
 
     @Override
     D find(D example) {
-        execute({ Session session ->
-            def pe = getGormPersistentEntity()
-            session.createQuery(persistentClass).add(org.grails.datastore.mapping.query.Restrictions.eq(pe.identity.name, session.getPersister(example).getObjectIdentifier(example))).singleResult()
-        } as SessionCallback<D>)
+        find(example, Collections.emptyMap())
     }
 
     @Override
     D find(D example, Map args) {
-        find(example) // simplified
+        execute({ Session session ->
+            def query = session.createQuery(persistentClass)
+            populateQueryByExample(session, query, example)
+            query.singleResult()
+        } as SessionCallback<D>)
+    }
+
+    private void populateQueryByExample(Session session, org.grails.datastore.mapping.query.Query query, D example) {
+        def pe = getGormPersistentEntity()
+        def persister = session.getPersister(example)
+        if (persister != null) {
+            def id = persister.getObjectIdentifier(example)
+            if (id != null) {
+                query.add(org.grails.datastore.mapping.query.Restrictions.eq(pe.identity.name, id))
+            }
+            else {
+                def ea = pe.mappingContext.createEntityAccess(pe, example)
+                for (prop in pe.persistentProperties) {
+                    if (prop instanceof org.grails.datastore.mapping.model.types.Simple || prop instanceof org.grails.datastore.mapping.model.types.Basic) {
+                        def val = ea.getProperty(prop.name)
+                        if (val != null) {
+                            query.add(org.grails.datastore.mapping.query.Restrictions.eq(prop.name, val))
+                        }
+                    }
+                }
+            }
+        }
     }
 
     @Override
@@ -534,8 +564,8 @@ class GormStaticApi<D> extends AbstractGormApi<D> implements GormAllOperations<D
     def <T1> T1 withTransaction(Closure<T1> callable) {
         execute({ Session session ->
             DatastoreUtils.execute(getDatastore(), (Session s) -> {
-                callable.call(s)
-            })
+                return (T1)callable.call(s)
+            } as SessionCallback<T1>)
         } as SessionCallback<T1>)
     }
 
@@ -721,13 +751,16 @@ class GormStaticApi<D> extends AbstractGormApi<D> implements GormAllOperations<D
     }
 
     def <T1> T1 withId(Serializable tenantId, Closure<T1> callable) {
-        Datastore tenantDatastore = GormEnhancer.findDatastore(persistentClass, tenantId.toString())
+        DatastoreResolver resolver = new DatastoreResolver() {
+            @Override Datastore resolve() { GormEnhancer.findDatastore(persistentClass, tenantId.toString()) }
+        }
+        Datastore tenantDatastore = resolver.resolve()
         if (tenantDatastore instanceof MultiTenantCapableDatastore) {
-            return (T1) ((MultiTenantCapableDatastore)tenantDatastore).withNewSession(tenantId, callable)
+            return (T1) Tenants.withId((MultiTenantCapableDatastore)tenantDatastore, tenantId, callable)
         } else {
             return DatastoreUtils.execute(tenantDatastore, (Session session) -> {
                 return (T1) callable.call(session)
-            })
+            } as SessionCallback<T1>)
         }
     }
 

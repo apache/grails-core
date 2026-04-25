@@ -1,45 +1,40 @@
-/*
- *  Licensed to the Apache Software Foundation (ASF) under one
- *  or more contributor license agreements.  See the NOTICE file
- *  distributed with this work for additional information
- *  regarding copyright ownership.  The ASF licenses this file
- *  to you under the Apache License, Version 2.0 (the
- *  "License"); you may not use this file except in compliance
- *  with the License.  You may obtain a copy of the License at
+/* Copyright (C) 2010-2025 the original author or authors.
  *
- *    https://www.apache.org/licenses/LICENSE-2.0
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
  *
- *  Unless required by applicable law or agreed to in writing,
- *  software distributed under the License is distributed on an
- *  "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
- *  KIND, either express or implied.  See the License for the
- *  specific language governing permissions and limitations
- *  under the License.
+ *      https://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
  */
 package org.grails.datastore.mapping.simple;
 
-import java.util.Map;
-
-import org.springframework.context.ApplicationEventPublisher;
-
 import org.grails.datastore.mapping.core.AbstractSession;
-import org.grails.datastore.mapping.engine.Persister;
+import org.grails.datastore.mapping.core.Datastore;
+import org.grails.datastore.mapping.engine.EntityPersister;
 import org.grails.datastore.mapping.model.MappingContext;
 import org.grails.datastore.mapping.model.PersistentEntity;
 import org.grails.datastore.mapping.simple.engine.SimpleMapEntityPersister;
 import org.grails.datastore.mapping.transactions.Transaction;
+import org.springframework.context.ApplicationEventPublisher;
+
+import java.io.Serializable;
+import java.util.Map;
 
 /**
- * A simple implementation of the {@link org.grails.datastore.mapping.core.Session} interface that backs onto an in-memory map.
- * Mainly used for mocking and testing scenarios
+ * A {@link org.grails.datastore.mapping.core.Session} implementation that backs onto an in-memory map.
  *
  * @author Graeme Rocher
  * @since 1.0
  */
-@SuppressWarnings("rawtypes")
-public class SimpleMapSession extends AbstractSession<Map> {
+public class SimpleMapSession extends AbstractSession {
 
-    public SimpleMapSession(SimpleMapDatastore datastore, MappingContext mappingContext,
+    public SimpleMapSession(Datastore datastore, MappingContext mappingContext,
                ApplicationEventPublisher publisher) {
         super(datastore, mappingContext, publisher);
     }
@@ -49,17 +44,7 @@ public class SimpleMapSession extends AbstractSession<Map> {
         return false;
     }
 
-    @Override
-    protected Persister createPersister(Class cls, MappingContext mappingContext) {
-        PersistentEntity entity = mappingContext.getPersistentEntity(cls.getName());
-        if (entity == null) {
-            return null;
-        }
-        return new SimpleMapEntityPersister(mappingContext, entity, this,
-            (SimpleMapDatastore) getDatastore(), publisher);
-    }
-
-    public Map<String, Map> getBackingMap() {
+    public Map<Serializable, Map> getBackingMap() {
         return ((SimpleMapDatastore)getDatastore()).getBackingMap();
     }
 
@@ -68,11 +53,22 @@ public class SimpleMapSession extends AbstractSession<Map> {
     }
 
     @Override
+    protected EntityPersister createPersister(Class cls, MappingContext mappingContext) {
+        PersistentEntity entity = mappingContext.getPersistentEntity(cls.getName());
+        if (entity == null) {
+            return null;
+        }
+        return new SimpleMapEntityPersister(mappingContext, entity, this,
+                publisher);
+    }
+
+    @Override
     protected Transaction beginTransactionInternal() {
         return new MockTransaction(this);
     }
 
-    public Map getNativeInterface() {
+    @Override
+    public Map<Serializable, Map> getNativeInterface() {
         return getBackingMap();
     }
 
@@ -81,7 +77,7 @@ public class SimpleMapSession extends AbstractSession<Map> {
         }
 
         public void commit() {
-            // do nothing
+            flush();
         }
 
         public void rollback() {

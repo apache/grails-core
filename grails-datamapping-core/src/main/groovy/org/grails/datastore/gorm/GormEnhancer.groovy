@@ -258,6 +258,13 @@ class GormEnhancer implements Closeable {
         PREFERRED_DATASTORE.set(datastore)
     }
 
+    /**
+     * @return The preferred datastore for the current thread
+     */
+    static Datastore getPreferredDatastore() {
+        return PREFERRED_DATASTORE.get()
+    }
+
     static void clearPreferredDatastore() {
         PREFERRED_DATASTORE.remove()
     }
@@ -391,7 +398,10 @@ class GormEnhancer implements Closeable {
                 if (preferred instanceof org.grails.datastore.mapping.core.connections.MultipleConnectionSourceCapableDatastore) {
                     try {
                         Datastore ds = ((org.grails.datastore.mapping.core.connections.MultipleConnectionSourceCapableDatastore)preferred).getDatastoreForConnection(qualifier)
-                        if (ds != null) return ds
+                        if (ds != null) {
+                            // System.out.println "RESOLVED DATASTORE: $qualifier (via preferred child)"
+                            return ds
+                        }
                     } catch (Throwable e) {
                         // ignore
                     }
@@ -433,7 +443,7 @@ class GormEnhancer implements Closeable {
                 }
             }
         }
-
+        
         // PRIORITY 2: If qualifier is provided, use it from registry
         if (qualifier != null && !ConnectionSource.DEFAULT.equals(qualifier)) {
             Object resource = TransactionSynchronizationManager.getResource(qualifier)
@@ -465,6 +475,9 @@ class GormEnhancer implements Closeable {
             if (TransactionSynchronizationManager.hasResource(registeredDs)) {
                 if (className != null) {
                     if (registry.getDatastore(className, ConnectionSource.DEFAULT) == registeredDs) {
+                        return registeredDs
+                    }
+                    else if (registeredDs.getMappingContext().getPersistentEntity(className) != null) {
                         return registeredDs
                     }
                 }
@@ -710,10 +723,26 @@ class GormEnhancer implements Closeable {
         ExpandoMetaClass mc = MetaClassUtils.getExpandoMetaClass(cls)
         
         mc.static.methodMissing = { String name, args ->
-            GormEnhancer.findStaticApi(cls).methodMissing(name, args)
+            def api = GormEnhancer.findStaticApi(cls)
+            try {
+                return api.invokeMethod(name, args)
+            } catch (MissingMethodException mme) {
+                if (mme.method == name && mme.type == api.class) {
+                    return api.methodMissing(name, args)
+                }
+                throw mme
+            }
         }
         mc.static.propertyMissing = { String name ->
-            GormEnhancer.findStaticApi(cls).propertyMissing(name)
+            def api = GormEnhancer.findStaticApi(cls)
+            try {
+                return api.getProperty(name)
+            } catch (MissingPropertyException mpe) {
+                if (mpe.property == name && mpe.type == api.class) {
+                    return api.propertyMissing(name)
+                }
+                throw mpe
+            }
         }
     }
 
@@ -727,19 +756,35 @@ class GormEnhancer implements Closeable {
         ExpandoMetaClass mc = MetaClassUtils.getExpandoMetaClass(cls)
         
         mc.methodMissing = { String name, args ->
-            GormEnhancer.findInstanceApi(cls).methodMissing(name, args)
+            def api = GormEnhancer.findInstanceApi(cls)
+            try {
+                return api.invokeMethod(name, args)
+            } catch (MissingMethodException mme) {
+                if (mme.method == name && mme.type == api.class) {
+                    return api.methodMissing(name, args)
+                }
+                throw mme
+            }
         }
         mc.propertyMissing = { String name ->
-            GormEnhancer.findInstanceApi(cls).propertyMissing(name)
+            def api = GormEnhancer.findInstanceApi(cls)
+            try {
+                return api.getProperty(name)
+            } catch (MissingPropertyException mpe) {
+                if (mpe.property == name && mpe.type == api.class) {
+                    return api.propertyMissing(name)
+                }
+                throw mpe
+            }
         }
         mc.propertyMissing = { String name, val ->
-            GormEnhancer.findInstanceApi(cls).propertyMissing(name, val)
+            GormEnhancer.findInstanceApi(cls).setProperty(name, val)
         }
     }
 
     @CompileStatic
     protected <D> GormStaticApi<D> getStaticApi(Class<D> cls) {
-        getStaticApi(cls, getDefaultDatastoreResolver(), ConnectionSource.DEFAULT)
+        getStaticApi(cls, getDatastoreResolver(cls), ConnectionSource.DEFAULT)
     }
 
     @CompileStatic
@@ -749,7 +794,7 @@ class GormEnhancer implements Closeable {
 
     @CompileStatic
     protected <D> GormInstanceApi<D> getInstanceApi(Class<D> cls) {
-        getInstanceApi(cls, getDefaultDatastoreResolver())
+        getInstanceApi(cls, getDatastoreResolver(cls))
     }
 
     @CompileStatic
@@ -762,7 +807,7 @@ class GormEnhancer implements Closeable {
 
     @CompileStatic
     protected <D> GormValidationApi<D> getValidationApi(Class<D> cls) {
-        getValidationApi(cls, getDefaultDatastoreResolver())
+        getValidationApi(cls, getDatastoreResolver(cls))
     }
 
     @CompileStatic
@@ -770,17 +815,26 @@ class GormEnhancer implements Closeable {
         new GormValidationApi<D>(cls, datastore.mappingContext, resolver)
     }
 
+    protected DatastoreResolver getDatastoreResolver(Class cls) {
+        new DatastoreResolver() {
+            @Override
+            Datastore resolve() {
+                GormEnhancer.findDatastore(cls)
+            }
+        }
+    }
+
     protected DatastoreResolver getDefaultDatastoreResolver() {
         new DatastoreResolver() {
             @Override
             Datastore resolve() {
-                datastore
+                GormEnhancer.findDatastore(null)
             }
         }
     }
 
     protected List<FinderMethod> createDynamicFinders() {
-        createDynamicFinders(this.datastore)
+        createDynamicFinders(getDefaultDatastoreResolver(), datastore.mappingContext)
     }
 
     static List<FinderMethod> createDynamicFinders(Datastore targetDatastore) {

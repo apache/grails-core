@@ -16,30 +16,24 @@
  *  specific language governing permissions and limitations
  *  under the License.
  */
-
 package org.grails.datastore.gorm.multitenancy;
 
-import java.io.Serializable;
-import java.util.Arrays;
-import java.util.List;
-
-import org.springframework.context.ApplicationEvent;
-
 import grails.gorm.multitenancy.Tenants;
-import org.grails.datastore.gorm.GormEnhancer;
 import org.grails.datastore.mapping.core.Datastore;
 import org.grails.datastore.mapping.core.connections.ConnectionSource;
-import org.grails.datastore.mapping.engine.event.AbstractPersistenceEvent;
-import org.grails.datastore.mapping.engine.event.PersistenceEventListener;
-import org.grails.datastore.mapping.engine.event.PreInsertEvent;
-import org.grails.datastore.mapping.engine.event.PreUpdateEvent;
-import org.grails.datastore.mapping.engine.event.ValidationEvent;
+import org.grails.datastore.mapping.engine.event.*;
 import org.grails.datastore.mapping.model.PersistentEntity;
 import org.grails.datastore.mapping.model.types.TenantId;
 import org.grails.datastore.mapping.multitenancy.MultiTenantCapableDatastore;
 import org.grails.datastore.mapping.multitenancy.exceptions.TenantException;
 import org.grails.datastore.mapping.query.Query;
 import org.grails.datastore.mapping.query.event.PreQueryEvent;
+import org.springframework.context.ApplicationEvent;
+import org.grails.datastore.gorm.GormEnhancer;
+
+import java.io.Serializable;
+import java.util.Arrays;
+import java.util.List;
 
 /**
  * An event listener that hooks into persistence events to enable discriminator based multi tenancy (ie {@link org.grails.datastore.mapping.multitenancy.MultiTenancySettings.MultiTenancyMode#DISCRIMINATOR}
@@ -75,6 +69,7 @@ public class MultiTenantEventListener implements PersistenceEventListener {
                 Query query = preQueryEvent.getQuery();
 
                 PersistentEntity entity = query.getEntity();
+                System.out.println("MultiTenantEventListener.onApplicationEvent: event=" + eventClass.getSimpleName() + ", datastore=" + datastore + ", this.datastore=" + this.datastore + ", equals=" + this.datastore.equals(datastore));
                 if (entity.isMultiTenant()) {
                     if (datastore == null) {
                         datastore = GormEnhancer.findDatastore(entity.getJavaClass());
@@ -90,7 +85,13 @@ public class MultiTenantEventListener implements PersistenceEventListener {
                             else {
                                 currentId = Tenants.currentId(datastore.getClass());
                             }
-                            query.eq(tenantId.getName(), currentId);
+
+                            if (currentId != null) {
+                                if (ConnectionSource.DEFAULT.equals(currentId) && Number.class.isAssignableFrom(tenantId.getType())) {
+                                    currentId = 0L;
+                                }
+                                query.eq(tenantId.getName(), currentId );
+                            }
                         }
                     }
                 }
@@ -104,23 +105,29 @@ public class MultiTenantEventListener implements PersistenceEventListener {
                         datastore = GormEnhancer.findDatastore(entity.getJavaClass());
                     }
                     if (supportsSourceType(datastore.getClass()) && this.datastore.equals(datastore)) {
-                        Serializable currentId;
+                        Serializable currentId = null;
+                        try {
+                            if (datastore instanceof MultiTenantCapableDatastore) {
+                                currentId = Tenants.currentId((MultiTenantCapableDatastore) datastore);
+                            }
+                            else {
+                                currentId = Tenants.currentId(datastore.getClass());
+                            }
 
-                        if (datastore instanceof MultiTenantCapableDatastore) {
-                            currentId = Tenants.currentId((MultiTenantCapableDatastore) datastore);
-                        }
-                        else {
-                            currentId = Tenants.currentId(datastore.getClass());
-                        }
-                        if (currentId != null) {
-                            try {
-                                if (currentId == ConnectionSource.DEFAULT) {
-                                    currentId = (Serializable) preInsertEvent.getEntityAccess().getProperty(tenantId.getName());
+                            if (currentId != null) {
+                                if (event instanceof ValidationEvent) {
+                                    Object existingId = preInsertEvent.getEntityAccess().getProperty(tenantId.getName());
+                                    if (existingId != null) {
+                                        currentId = (Serializable) existingId;
+                                    }
+                                }
+                                if (ConnectionSource.DEFAULT.equals(currentId) && Number.class.isAssignableFrom(tenantId.getType())) {
+                                    currentId = 0L;
                                 }
                                 preInsertEvent.getEntityAccess().setProperty(tenantId.getName(), currentId);
-                            } catch (Exception e) {
-                                throw new TenantException("Could not assigned tenant id [" + currentId + "] to property [" + tenantId + "], probably due to a type mismatch. You should return a type from the tenant resolver that matches the property type of the tenant id!: " + e.getMessage(), e);
                             }
+                        } catch (Exception e) {
+                            throw new TenantException("Could not assigned tenant id [" + currentId + "] to property [" + tenantId + "], probably due to a type mismatch. You should return a type from the tenant resolver that matches the property type of the tenant id!: " + e.getMessage(), e);
                         }
                     }
                 }
@@ -133,4 +140,3 @@ public class MultiTenantEventListener implements PersistenceEventListener {
         return DEFAULT_ORDER;
     }
 }
-

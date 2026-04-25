@@ -42,6 +42,17 @@ import org.grails.datastore.mapping.multitenancy.TenantResolver
 class Tenants {
 
     /**
+     * Execute the given closure with the given tenant id.
+     *
+     * @param tenantId The tenant id
+     * @param callable The closure
+     * @return The result of the closure
+     */
+    static <T> T withTenant(Serializable tenantId, Closure<T> callable) {
+        return CurrentTenant.withTenant(tenantId, callable)
+    }
+
+    /**
      * Execute the given closure for each tenant.
      *
      * @param callable The closure
