@@ -24,9 +24,8 @@ import org.grails.build.parsing.CommandLine
 
 trait CommandLineHelper {
 
-    // Note: SUCCESS/FAILURE constants removed from this trait because Groovy 5
-    // generates invalid bytecode for traits with static fields (GROOVY-11907).
-    // Commands should use true/false directly for return values.
+    static final boolean SUCCESS = true
+    static final boolean FAILURE = false
 
     abstract ExecutionContext getExecutionContext()
 

@@ -72,26 +72,23 @@ import org.testcontainers.containers.GenericContainer
 
 /**
  * Inheritable version of {@link ContainerGebConfiguration}.
- * Implemented as a trait instead of an interface with default methods to avoid
- * Groovy 5 IncompatibleClassChangeError caused by $getCallSiteArray() on interfaces.
- *
  * @since 4.2
  */
-trait IContainerGebConfiguration {
+interface IContainerGebConfiguration {
 
-    String protocol() {
+    default String protocol() {
         ContainerGebConfiguration.DEFAULT_PROTOCOL
     }
 
-    String hostName() {
+    default String hostName() {
         ContainerGebConfiguration.DEFAULT_HOSTNAME_FROM_CONTAINER
     }
 
-    boolean reporting() {
+    default boolean reporting() {
         false
     }
 
-    Class<? extends ContainerFileDetector> fileDetector() {
+    default Class<? extends ContainerFileDetector> fileDetector() {
         ContainerGebConfiguration.DEFAULT_FILE_DETECTOR
     }
 }
