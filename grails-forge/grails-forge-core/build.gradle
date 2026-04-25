@@ -48,7 +48,7 @@ dependencies {
     testAnnotationProcessor 'io.micronaut:micronaut-inject-java'
 
     api platform("io.micronaut.platform:micronaut-platform:$micronautVersion") // TODO: Should this be api?
-    api "com.fasterxml.jackson.core:jackson-databind:$jacksonDatabindVersion"
+    api 'com.fasterxml.jackson.core:jackson-databind'
     api 'jakarta.validation:jakarta.validation-api'
     api "com.fizzed:rocker-runtime:$rockerVersion"
     api "io.github.java-diff-utils:java-diff-utils:$javaDiffUtils"
