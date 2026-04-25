@@ -94,27 +94,19 @@ class SbomPlugin implements Plugin<Project> {
             'pkg:maven/jline/jline@2.14.6?type=jar'                           : 'BSD-2-Clause', // legacy jline:jline group, BSD-2; maps incorrectly because of https://github.com/CycloneDX/cyclonedx-core-java/issues/205
             'pkg:maven/opensymphony/sitemesh@2.6.0?type=jar'                  : 'OpenSymphony', // custom license approved by legal LEGAL-707
             'pkg:maven/org.antlr/antlr4-runtime@4.7.2?type=jar'               : 'BSD-3-Clause', // maps incorrectly because of https://github.com/CycloneDX/cyclonedx-core-java/issues/205
+            'pkg:maven/org.jline/jansi@4.0.12?type=jar'                       : 'BSD-3-Clause', // jline 4.0.12 LICENSE.txt at https://github.com/jline/jline3/blob/jline-parent-4.0.12/LICENSE.txt confirms BSD-3-Clause; cyclonedx misreports as BSD-4-Clause (cyclonedx-core-java#205); resolved transitively via groovy-groovysh on Groovy 6
+            'pkg:maven/org.jline/jline@3.30.6?type=jar'                       : 'BSD-3-Clause', // jline 3.30.6 LICENSE at https://github.com/jline/jline3/blob/jline-parent-3.30.6/LICENSE.txt confirms BSD-3-Clause; direct dependency declared at jline.version in dependencies.gradle
+            'pkg:maven/org.jline/jline-builtins@4.0.12?type=jar'              : 'BSD-3-Clause', // jline 4.0.12 LICENSE.txt at https://github.com/jline/jline3/blob/jline-parent-4.0.12/LICENSE.txt confirms BSD-3-Clause; resolved transitively via groovy-groovysh on Groovy 6
+            'pkg:maven/org.jline/jline-console@4.0.12?type=jar'               : 'BSD-3-Clause', // jline 4.0.12 LICENSE.txt at https://github.com/jline/jline3/blob/jline-parent-4.0.12/LICENSE.txt confirms BSD-3-Clause; resolved transitively via groovy-groovysh on Groovy 6
+            'pkg:maven/org.jline/jline-console-ui@4.0.12?type=jar'            : 'BSD-3-Clause', // jline 4.0.12 LICENSE.txt at https://github.com/jline/jline3/blob/jline-parent-4.0.12/LICENSE.txt confirms BSD-3-Clause; resolved transitively via groovy-groovysh on Groovy 6
+            'pkg:maven/org.jline/jline-native@4.0.12?type=jar'                : 'BSD-3-Clause', // jline 4.0.12 LICENSE.txt at https://github.com/jline/jline3/blob/jline-parent-4.0.12/LICENSE.txt confirms BSD-3-Clause; resolved transitively via groovy-groovysh on Groovy 6
+            'pkg:maven/org.jline/jline-reader@4.0.12?type=jar'                : 'BSD-3-Clause', // jline 4.0.12 LICENSE.txt at https://github.com/jline/jline3/blob/jline-parent-4.0.12/LICENSE.txt confirms BSD-3-Clause; resolved transitively via groovy-groovysh on Groovy 6
+            'pkg:maven/org.jline/jline-shell@4.0.12?type=jar'                 : 'BSD-3-Clause', // jline 4.0.12 LICENSE.txt at https://github.com/jline/jline3/blob/jline-parent-4.0.12/LICENSE.txt confirms BSD-3-Clause; resolved transitively via groovy-groovysh on Groovy 6
+            'pkg:maven/org.jline/jline-style@4.0.12?type=jar'                 : 'BSD-3-Clause', // jline 4.0.12 LICENSE.txt at https://github.com/jline/jline3/blob/jline-parent-4.0.12/LICENSE.txt confirms BSD-3-Clause; resolved transitively via groovy-groovysh on Groovy 6
+            'pkg:maven/org.jline/jline-terminal@4.0.12?type=jar'              : 'BSD-3-Clause', // jline 4.0.12 LICENSE.txt at https://github.com/jline/jline3/blob/jline-parent-4.0.12/LICENSE.txt confirms BSD-3-Clause; resolved transitively via groovy-groovysh on Groovy 6
+            'pkg:maven/org.jline/jline-terminal-jni@4.0.12?type=jar'          : 'BSD-3-Clause', // jline 4.0.12 LICENSE.txt at https://github.com/jline/jline3/blob/jline-parent-4.0.12/LICENSE.txt confirms BSD-3-Clause; resolved transitively via groovy-groovysh on Groovy 6
             'pkg:maven/org.jruby/jzlib@1.1.5?type=jar'                        : 'BSD-3-Clause', // https://web.archive.org/web/20240822213507/http://www.jcraft.com/jzlib/LICENSE.txt shows it's a 3 clause
             'pkg:maven/org.liquibase.ext/liquibase-hibernate5@4.27.0?type=jar': 'Apache-2.0', // maps incorrectly because of https://github.com/liquibase/liquibase/issues/2445 & the base pom does not define a license
-    ]
-
-    /**
-     * Group-level license overrides applied AFTER {@link #LICENSE_MAPPING} fails to match.
-     * The key is a purl prefix (e.g. {@code 'pkg:maven/org.jline/'}) and the value is the
-     * SPDX license id to force for any artifact whose bomRef starts with that prefix.
-     *
-     * This exists for groups that:
-     * (a) have a stable license across all artifacts and versions, AND
-     * (b) suffer from cyclonedx-core-java#205 (license is misreported), AND
-     * (c) are pulled transitively by SNAPSHOT dependencies (e.g. groovy-groovysh ->
-     *     org.jline:* drifts on every Groovy SNAPSHOT bump), making per-version entries
-     *     unmaintainable.
-     *
-     * Only add a group entry when ALL three conditions hold. Per-version entries in
-     * {@link #LICENSE_MAPPING} should still be preferred for one-off overrides.
-     */
-    private static Map<String, String> LICENSE_GROUP_MAPPING = [
-            'pkg:maven/org.jline/': 'BSD-3-Clause', // entire org.jline group is BSD-3-Clause; cyclonedx misreports it (cyclonedx-core-java#205) and versions drift via groovy-groovysh on every SNAPSHOT bump
     ]
 
     // we don't distribute these so these licenses are considered acceptable, but we still prefer ASF licenses.
@@ -327,21 +319,6 @@ class SbomPlugin implements Plugin<Project> {
             // see the licenseMapping map above for details
             def licenseId = LICENSE_MAPPING[bomRef]
             logger.lifecycle('Forcing license for {} to {}', bomRef, licenseId)
-
-            def licenseBlock = LICENSES[licenseId]
-            if (!licenseBlock) {
-                throw new GradleException("Cannot find license information for id ${licenseId} to use for bomRef ${bomRef} in project ${projectName}")
-            }
-
-            return licenseBlock
-        }
-
-        // Fallback: group-level override matched by purl prefix. See LICENSE_GROUP_MAPPING
-        // for criteria (stable license + cyclonedx misreport + SNAPSHOT version drift).
-        def groupOverride = LICENSE_GROUP_MAPPING.find { prefix, _ -> bomRef.startsWith(prefix) }
-        if (groupOverride) {
-            def licenseId = groupOverride.value
-            logger.lifecycle('Forcing license for {} to {} via group rule {}', bomRef, licenseId, groupOverride.key)
 
             def licenseBlock = LICENSES[licenseId]
             if (!licenseBlock) {
