@@ -95,7 +95,7 @@ class SbomPlugin implements Plugin<Project> {
             'pkg:maven/com.oracle.coherence.ce/coherence-bom@25.03.1?type=pom': 'UPL-1.0', // does not have map based on license id
             'pkg:maven/com.oracle.coherence.ce/coherence-bom@25.03.2?type=pom': 'UPL-1.0', // does not have map based on license id
             'pkg:maven/com.oracle.coherence.ce/coherence-bom@22.06.2?type=pom': 'UPL-1.0', // does not have map based on license id
-            'pkg:maven/jline/jline@2.14.6?type=jar'                           : 'BSD-2-Clause', // maps incorrectly because of https://github.com/CycloneDX/cyclonedx-core-java/issues/205
+            'pkg:maven/jline/jline@2.14.6?type=jar'                           : 'BSD-2-Clause', // legacy jline:jline group, BSD-2; maps incorrectly because of https://github.com/CycloneDX/cyclonedx-core-java/issues/205
             'pkg:maven/opensymphony/sitemesh@2.6.0?type=jar'                  : 'OpenSymphony', // custom license approved by legal LEGAL-707
             'pkg:maven/org.antlr/antlr4-runtime@4.7.2?type=jar'               : 'BSD-3-Clause', // maps incorrectly because of https://github.com/CycloneDX/cyclonedx-core-java/issues/205
             'pkg:maven/org.jline/jansi@3.30.9?type=jar'                       : 'BSD-3-Clause', // maps incorrectly because of https://github.com/CycloneDX/cyclonedx-core-java/issues/205

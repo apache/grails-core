@@ -35,7 +35,11 @@ class MappingContextAwareConstraintFactory extends DefaultConstraintFactory {
 
     final MappingContext mappingContext
 
-    MappingContextAwareConstraintFactory(Class<? extends Constraint> constraintClass, MessageSource messageSource, MappingContext mappingContext, List<Class> targetTypes = [Object]) {
+    MappingContextAwareConstraintFactory(Class<? extends Constraint> constraintClass, MessageSource messageSource, MappingContext mappingContext) {
+        this(constraintClass, messageSource, mappingContext, [Object] as List<Class>)
+    }
+
+    MappingContextAwareConstraintFactory(Class<? extends Constraint> constraintClass, MessageSource messageSource, MappingContext mappingContext, List<Class> targetTypes) {
         super(constraintClass, messageSource, targetTypes)
         this.mappingContext = mappingContext
     }
