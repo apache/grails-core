@@ -19,18 +19,16 @@
 package org.grails.orm.hibernate
 
 import groovy.transform.CompileStatic
-import org.grails.datastore.gorm.DatastoreResolver
 import org.grails.datastore.gorm.GormEnhancer
 import org.grails.datastore.gorm.GormInstanceApi
 import org.grails.datastore.gorm.GormStaticApi
 import org.grails.datastore.gorm.GormValidationApi
 import org.grails.datastore.mapping.core.Datastore
-import org.grails.datastore.mapping.core.connections.ConnectionSource
 import org.grails.datastore.mapping.core.connections.ConnectionSourceSettings
 import org.springframework.transaction.PlatformTransactionManager
 
 /**
- * Hibernate GORM enhancer.
+ * A {@link GormEnhancer} for Hibernate.
  *
  * @author Graeme Rocher
  * @since 1.0
@@ -43,26 +41,32 @@ class HibernateGormEnhancer extends GormEnhancer {
     }
 
     @Override
-    protected <D> GormStaticApi<D> getStaticApi(Class<D> cls, DatastoreResolver resolver, String qualifier) {
+    protected <D> GormStaticApi<D> getStaticApi(Class<D> cls, org.grails.datastore.gorm.DatastoreResolver resolver, String qualifier) {
         HibernateDatastore hibernateDatastore = (HibernateDatastore) datastore
         new HibernateGormStaticApi<D>(
                 cls,
                 hibernateDatastore.mappingContext,
                 createDynamicFinders(hibernateDatastore),
                 resolver,
-                qualifier
+                qualifier,
+                hibernateDatastore.mappingContext.getMappingFactory().getClass().getClassLoader()
         )
     }
 
     @Override
-    protected <D> GormInstanceApi<D> getInstanceApi(Class<D> cls, DatastoreResolver resolver) {
+    protected <D> GormInstanceApi<D> getInstanceApi(Class<D> cls, org.grails.datastore.gorm.DatastoreResolver resolver) {
         HibernateDatastore hibernateDatastore = (HibernateDatastore) datastore
-        new HibernateGormInstanceApi<D>(cls, hibernateDatastore.mappingContext, resolver, hibernateDatastore.classLoader)
+        new HibernateGormInstanceApi<D>(cls, hibernateDatastore.mappingContext, resolver, hibernateDatastore.mappingContext.getMappingFactory().getClass().getClassLoader())
     }
 
     @Override
-    protected <D> GormValidationApi<D> getValidationApi(Class<D> cls, DatastoreResolver resolver) {
+    protected <D> GormValidationApi<D> getValidationApi(Class<D> cls, org.grails.datastore.gorm.DatastoreResolver resolver) {
         HibernateDatastore hibernateDatastore = (HibernateDatastore) datastore
-        new HibernateGormValidationApi<D>(cls, hibernateDatastore.mappingContext, resolver, hibernateDatastore.classLoader)
+        new HibernateGormValidationApi<D>(cls, hibernateDatastore.mappingContext, resolver, hibernateDatastore.mappingContext.getMappingFactory().getClass().getClassLoader())
+    }
+
+    @Override
+    protected void registerConstraints(Datastore datastore) {
+        // no-op
     }
 }

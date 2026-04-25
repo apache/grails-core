@@ -877,7 +877,7 @@ public class HibernateDatastore extends AbstractDatastore
         return failOnError;
     }
 
-    public boolean isOsivReadOnly() {
+    public boolean isOsivReadOnly(SessionFactory sessionFactory) {
         return osivReadOnly;
     }
 

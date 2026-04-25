@@ -112,4 +112,17 @@ abstract class AbstractGormApi<D> extends AbstractDatastoreApi {
     }
 
     abstract org.springframework.transaction.PlatformTransactionManager getTransactionManager()
+
+    static class ConstantDatastoreResolver implements DatastoreResolver {
+        private final Datastore datastore
+
+        ConstantDatastoreResolver(Datastore datastore) {
+            this.datastore = datastore
+        }
+
+        @Override
+        Datastore resolve() {
+            return datastore
+        }
+    }
 }

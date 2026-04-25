@@ -148,6 +148,15 @@ class GormInstanceApi<D> extends AbstractGormApi<D> implements GormInstanceOpera
         } as SessionCallback)
     }
 
+    /**
+     * Implementation of read() for GormInstanceApi
+     */
+    D read(Serializable id) {
+        getDatastore().execute({ org.grails.datastore.mapping.core.Session session ->
+            session.retrieve(persistentClass, id)
+        } as org.grails.datastore.mapping.core.SessionCallback) as D
+    }
+
     @Override
     D merge(D instance, Map args) {
         save(instance, args)
