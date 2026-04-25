@@ -136,35 +136,32 @@ class NavigableMap implements Map<String, Object>, Cloneable {
     }
 
     void merge(Map sourceMap, boolean parseFlatKeys = false) {
-        // Groovy 5 compatibility: Convert ConfigObject to regular Map before processing
-        // ConfigObject has dynamic property access that can cause infinite recursion
-        Map processableMap = sourceMap instanceof ConfigObject ? convertConfigObjectToMap(sourceMap) : sourceMap
+        // Groovy 5 compatibility: shallow-convert ConfigObject so mergeMaps can iterate
+        // its entries without triggering dynamic property creation. Nested ConfigObjects
+        // are converted lazily on demand in mergeMapEntry, so this stays O(N) overall.
+        Map processableMap = sourceMap instanceof ConfigObject ? convertConfigObjectToMap((ConfigObject) sourceMap) : sourceMap
         mergeMaps(this, '', this, processableMap, parseFlatKeys)
     }
 
     /**
-     * Groovy 5 compatibility: Convert ConfigObject to a regular LinkedHashMap recursively.
-     * This is needed because ConfigObject has dynamic property access that can cause
-     * infinite recursion when merged into NavigableMap.
+     * Groovy 5 compatibility: shallow-convert a ConfigObject to a regular LinkedHashMap.
+     *
+     * Only the immediate level is materialised - nested ConfigObjects stay as ConfigObjects
+     * and are converted by mergeMapEntry when (and only when) the recursive merge actually
+     * descends into them. This avoids the O(N^2) cost of the previous deep-copy implementation
+     * and keeps subtrees that are filtered out by spring profile guards from being copied at all.
+     *
+     * The keySet() iteration is used to avoid triggering ConfigObject's dynamic property
+     * creation; empty nested ConfigObjects (auto-generated placeholders) are skipped.
      */
-    @CompileDynamic
-    private static Map<String, Object> convertConfigObjectToMap(Map config) {
-        Map<String, Object> result = new LinkedHashMap<>()
-        // Use keySet() to avoid triggering dynamic property creation in ConfigObject
-        Set keys = config.keySet()
-        for (Object key : keys) {
+    private static Map<String, Object> convertConfigObjectToMap(ConfigObject config) {
+        Map<String, Object> result = new LinkedHashMap<>(config.size())
+        for (Object key : config.keySet()) {
             Object value = config.get(key)
-            if (value instanceof ConfigObject) {
-                // Skip empty ConfigObjects (they are auto-generated placeholders)
-                if (((ConfigObject) value).isEmpty()) {
-                    continue
-                }
-                result.put(String.valueOf(key), convertConfigObjectToMap((ConfigObject) value))
-            } else if (value instanceof Map) {
-                result.put(String.valueOf(key), convertConfigObjectToMap((Map) value))
-            } else {
-                result.put(String.valueOf(key), value)
+            if (value instanceof ConfigObject && ((ConfigObject) value).isEmpty()) {
+                continue
             }
+            result.put(String.valueOf(key), value)
         }
         return result
     }
@@ -319,8 +316,9 @@ class NavigableMap implements Map<String, Object>, Cloneable {
                     }
                 }
                 String newPath = path ? "${path}.${sourceKey}" : sourceKey
-                // Groovy 5 compatibility: Convert nested ConfigObject to regular Map
-                Map mapToMerge = sourceValue instanceof ConfigObject ? convertConfigObjectToMap((Map) sourceValue) : (Map) sourceValue
+                // Groovy 5 compatibility: lazily shallow-convert a nested ConfigObject so
+                // mergeMaps can iterate it. Plain Maps pass through unchanged.
+                Map mapToMerge = sourceValue instanceof ConfigObject ? convertConfigObjectToMap((ConfigObject) sourceValue) : (Map) sourceValue
                 mergeMaps(rootMap, newPath , subMap, mapToMerge, parseFlatKeys)
                 newValue = subMap
             } else {
