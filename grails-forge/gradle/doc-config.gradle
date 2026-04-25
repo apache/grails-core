@@ -24,6 +24,11 @@ groovydocEnhancer {
 }
 
 dependencies {
+    // The `documentation` configuration is registered by the buildsrc.groovydoc
+    // plugin and is independent of compileClasspath/testRuntimeClasspath, so the
+    // micronaut-platform BOM we apply elsewhere does not reach it. Apply it here so
+    // the unversioned groovy-* artifacts below resolve through groovy-bom.
+    documentation platform("io.micronaut.platform:micronaut-platform:$micronautVersion")
     documentation 'org.apache.groovy:groovy-templates'
     documentation 'org.apache.groovy:groovy-dateutil'
     documentation 'org.apache.groovy:groovy-ant'
