@@ -19,8 +19,6 @@
 package grails.gorm.tests
 
 import grails.gorm.transactions.Rollback
-import org.grails.datastore.gorm.GormEnhancer
-import org.grails.orm.hibernate.AbstractHibernateGormStaticApi
 import org.grails.orm.hibernate.HibernateDatastore
 import org.springframework.transaction.PlatformTransactionManager
 import spock.lang.AutoCleanup
@@ -43,9 +41,7 @@ class SqlQuerySpec extends Specification {
 
         when:"Some test data is saved"
         String name = "Arsenal"
-        // Static SQL methods moved to AbstractHibernateGormStaticApi for Groovy 5 compatibility
-        def staticApi = (AbstractHibernateGormStaticApi) GormEnhancer.findStaticApi(Club)
-        Club c = staticApi.findWithSql("select * from club c where c.name = $name")
+        Club c = Club.findWithSql("select * from club c where c.name = $name")
 
         then:"The results are correct"
         c != null
@@ -59,8 +55,7 @@ class SqlQuerySpec extends Specification {
         setupTestData()
 
         when:"Some test data is saved"
-        def staticApi = (AbstractHibernateGormStaticApi) GormEnhancer.findStaticApi(Club)
-        List<Club> results = staticApi.findAllWithSql("select * from club c order by c.name")
+        List<Club> results = Club.findAllWithSql("select * from club c order by c.name")
 
         then:"The results are correct"
         results.size() == 3
@@ -74,8 +69,7 @@ class SqlQuerySpec extends Specification {
 
         when:"Some test data is saved"
         String p = "%l%"
-        def staticApi = (AbstractHibernateGormStaticApi) GormEnhancer.findStaticApi(Club)
-        List<Club> results = staticApi.findAllWithSql("select * from club c where c.name like $p order by c.name")
+        List<Club> results = Club.findAllWithSql("select * from club c where c.name like $p order by c.name")
 
         then:"The results are correct"
         results.size() == 2

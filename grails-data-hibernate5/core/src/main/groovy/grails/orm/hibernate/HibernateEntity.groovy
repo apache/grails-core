@@ -20,16 +20,14 @@
 package grails.gorm.hibernate
 
 import groovy.transform.CompileStatic
+import groovy.transform.Generated
 
 import org.grails.datastore.gorm.GormEnhancer
 import org.grails.datastore.gorm.GormEntity
 import org.grails.orm.hibernate.AbstractHibernateGormStaticApi
 
 /**
- * Extends the {@link GormEntity} trait adding additional Hibernate specific methods.
- * 
- * Note: Static methods for SQL queries are provided via {@link HibernateEntityStaticApi}
- * which is accessible via the static methods on implementing domain classes.
+ * Extends the {@link GormEntity} trait adding additional Hibernate specific methods
  *
  * @author Graeme Rocher
  * @since 6.1
@@ -37,8 +35,54 @@ import org.grails.orm.hibernate.AbstractHibernateGormStaticApi
 @CompileStatic
 trait HibernateEntity<D> extends GormEntity<D> {
 
-    // Note: Static SQL methods have been moved to AbstractHibernateGormStaticApi
-    // and are accessible via GormEnhancer.findStaticApi(DomainClass).findAllWithSql(...) etc.
-    // This change was required for Groovy 5 compatibility - traits with static methods
-    // cause Java stub generation issues during joint compilation.
+    /**
+     * Finds all objects for the given string-based query
+     *
+     * @param sql The query
+     *
+     * @return The object
+     */
+    @Generated
+    static List<D> findAllWithSql(CharSequence sql) {
+        currentHibernateStaticApi().findAllWithSql(sql, Collections.emptyMap())
+    }
+
+    /**
+     * Finds an entity for the given SQL query
+     *
+     * @param sql The sql query
+     * @return The entity
+     */
+    @Generated
+    static D findWithSql(CharSequence sql) {
+        currentHibernateStaticApi().findWithSql(sql, Collections.emptyMap())
+    }
+
+    /**
+     * Finds all objects for the given string-based query
+     *
+     * @param sql The query
+     *
+     * @return The object
+     */
+    @Generated
+    static List<D> findAllWithSql(CharSequence sql, Map args) {
+        currentHibernateStaticApi().findAllWithSql(sql, args)
+    }
+
+    /**
+     * Finds an entity for the given SQL query
+     *
+     * @param sql The sql query
+     * @return The entity
+     */
+    @Generated
+    static D findWithSql(CharSequence sql, Map args) {
+        currentHibernateStaticApi().findWithSql(sql, args)
+    }
+
+    @Generated
+    private static AbstractHibernateGormStaticApi currentHibernateStaticApi() {
+        (AbstractHibernateGormStaticApi) GormEnhancer.findStaticApi(this)
+    }
 }
