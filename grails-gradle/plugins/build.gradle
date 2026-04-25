@@ -21,6 +21,7 @@ plugins {
     id 'groovy'
     id 'java-gradle-plugin'
     id 'org.apache.grails.buildsrc.properties'
+    id 'org.apache.grails.buildsrc.dependency-validator'
     id 'org.apache.grails.buildsrc.compile'
     id 'org.apache.grails.buildsrc.publish'
     id 'org.apache.grails.buildsrc.sbom'
@@ -40,9 +41,8 @@ dependencies {
     implementation platform(project(':grails-gradle-bom'))
 
     // compile grails-gradle-plugin with the Groovy version provided by Gradle
-    // to ensure build compatibility with Gradle, currently Groovy 3.0.x
     // see: https://docs.gradle.org/current/userguide/compatibility.html#groovy
-    compileOnly "org.codehaus.groovy:groovy"
+    compileOnly "org.apache.groovy:groovy"
 
     implementation project(':grails-gradle-common')
     implementation project(':grails-gradle-tasks')
@@ -59,7 +59,7 @@ dependencies {
 
     // Testing - Gradle TestKit is auto-added by java-gradle-plugin
     testImplementation('org.spockframework:spock-core') { transitive = false }
-    testImplementation 'org.codehaus.groovy:groovy-test-junit5'
+    testImplementation 'org.apache.groovy:groovy-test-junit5'
     testRuntimeOnly 'org.junit.jupiter:junit-jupiter-engine'
 }
 

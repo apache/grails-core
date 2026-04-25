@@ -36,7 +36,7 @@ import org.grails.io.support.Resource
  * @since 7.1.0
  */
 @CompileStatic
-class CreateScaffoldServiceCommand implements GrailsApplicationCommand, CommandLineHelper, SkipBootstrap {
+class CreateScaffoldServiceCommand extends GrailsApplicationCommand implements CommandLineHelper, SkipBootstrap {
 
     String description = 'Creates a scaffolded service'
 
@@ -47,12 +47,12 @@ class CreateScaffoldServiceCommand implements GrailsApplicationCommand, CommandL
         final String domainClassName = args[0]
         if (!domainClassName) {
             error('No domain-class specified')
-            return FAILURE
+            return false
         }
         final Resource sourceClass = source(domainClassName)
         if (!sourceClass) {
             error("No domain-class found for name: ${domainClassName}")
-            return FAILURE
+            return false
         }
         boolean overwrite = isFlagPresent('force')
         final Model model = model(sourceClass)
@@ -69,6 +69,6 @@ class CreateScaffoldServiceCommand implements GrailsApplicationCommand, CommandL
                 overwrite: overwrite)
         verbose('Scaffold service created for domain class')
 
-        return SUCCESS
+        return true
     }
 }

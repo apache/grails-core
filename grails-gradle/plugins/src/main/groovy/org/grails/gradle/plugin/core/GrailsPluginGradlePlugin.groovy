@@ -28,6 +28,7 @@ import org.gradle.api.Task
 import org.gradle.api.file.DuplicatesStrategy
 import org.gradle.api.tasks.Copy
 import org.gradle.api.tasks.JavaExec
+import org.gradle.api.tasks.TaskProvider
 import org.gradle.api.tasks.SourceSetContainer
 import org.gradle.api.tasks.bundling.Jar
 import org.gradle.api.tasks.compile.GroovyCompile
@@ -98,7 +99,7 @@ class GrailsPluginGradlePlugin extends GrailsGradlePlugin {
     }
 
     @Override
-    protected Task createBuildPropertiesTask(Project project) {
+    protected void createBuildPropertiesTask(Project project) {
         // no-op
     }
 
@@ -234,7 +235,11 @@ class GrailsPluginGradlePlugin extends GrailsGradlePlugin {
                     'application.yml',
                     'logback.groovy',
                     'logback.xml',
-                    'logback-spring.xml'
+                    'logback-spring.xml',
+                    // Plugins must not ship spring/resources.groovy (use doWithSpring instead),
+                    // but it must remain in build/resources/main/ so it is on the integration
+                    // test classpath for plugin modules that test their own resources.groovy.
+                    'spring/resources.groovy'
             )
         }
     }
@@ -244,21 +249,20 @@ class GrailsPluginGradlePlugin extends GrailsGradlePlugin {
         project.afterEvaluate() {
             ProcessResources processResources = (ProcessResources) project.tasks.getByName('processResources')
 
-            def processResourcesDependencies = []
-
-            processResourcesDependencies << project.task(type: Copy, 'copyCommands') {
+            TaskProvider<Copy> copyCommands = project.tasks.register('copyCommands', Copy) {
                 from("${project.projectDir}/src/main/scripts")
                 into("${processResources.destinationDir}/META-INF/commands")
             }
 
-            processResourcesDependencies << project.task(type: Copy, 'copyTemplates') {
+            TaskProvider<Copy> copyTemplates = project.tasks.register('copyTemplates', Copy) {
                 from("${project.projectDir}/src/main/templates")
                 into("${processResources.destinationDir}/META-INF/templates")
             }
             processResources.setDuplicatesStrategy(DuplicatesStrategy.INCLUDE)
-            processResources.dependsOn(*processResourcesDependencies)
+            processResources.dependsOn(copyCommands, copyTemplates)
             project.processResources {
-                exclude('spring/resources.groovy')
+                // spring/resources.groovy is excluded from the published jar (see configureJarTask)
+                // but is allowed into build/resources/main/ so plugin integration tests can load it.
                 exclude('**/*.gsp')
             }
         }

@@ -25,7 +25,7 @@ import spock.lang.Specification
 @Integration
 class WildcardValidationDisabledSpec extends Specification implements HttpClientSupport {
 
-    def 'grails.web.url.mapping.validateWildcards false keeps the fallback mapping selected ahead of a valid wildcard controller match'() {
+    def 'grails.urlmapping.validateWildcards false keeps the fallback mapping selected ahead of a valid wildcard controller match'() {
         when: 'requesting a path that matches both the fallback mapping and a registered controller'
         def response = http('/wildcard-disabled/target')
 

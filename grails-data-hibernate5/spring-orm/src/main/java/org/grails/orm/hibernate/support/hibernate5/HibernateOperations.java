@@ -91,7 +91,6 @@ public interface HibernateOperations {
     @Nullable
     <T> T execute(HibernateCallback<T> action) throws DataAccessException;
 
-
     //-------------------------------------------------------------------------
     // Convenience methods for loading individual objects
     //-------------------------------------------------------------------------
@@ -311,7 +310,6 @@ public interface HibernateOperations {
      * transactional Session (in which case this operation does not make sense)
      */
     Filter enableFilter(String filterName) throws IllegalStateException;
-
 
     //-------------------------------------------------------------------------
     // Convenience methods for storing individual objects
@@ -582,7 +580,6 @@ public interface HibernateOperations {
      */
     void clear() throws DataAccessException;
 
-
     //-------------------------------------------------------------------------
     // Convenience finder methods for detached criteria
     //-------------------------------------------------------------------------
@@ -668,8 +665,7 @@ public interface HibernateOperations {
      * @see org.hibernate.Criteria#setMaxResults(int)
      */
     <T> List<T> findByExample(String entityName, T exampleEntity, int firstResult, int maxResults)
-            throws DataAccessException;
-
+        throws DataAccessException;
 
     //-------------------------------------------------------------------------
     // Convenience finder methods for HQL strings
@@ -734,7 +730,6 @@ public interface HibernateOperations {
     @Deprecated
     List<?> findByValueBean(String queryString, Object valueBean) throws DataAccessException;
 
-
     //-------------------------------------------------------------------------
     // Convenience finder methods for named queries
     //-------------------------------------------------------------------------
@@ -769,7 +764,7 @@ public interface HibernateOperations {
      */
     @Deprecated
     List<?> findByNamedQueryAndNamedParam(String queryName, String paramName, Object value)
-            throws DataAccessException;
+        throws DataAccessException;
 
     /**
      * Execute a named query, binding a number of values to ":" named
@@ -786,7 +781,7 @@ public interface HibernateOperations {
      */
     @Deprecated
     List<?> findByNamedQueryAndNamedParam(String queryName, String[] paramNames, Object[] values)
-            throws DataAccessException;
+        throws DataAccessException;
 
     /**
      * Execute a named query, binding the properties of the given bean to
@@ -803,7 +798,6 @@ public interface HibernateOperations {
      */
     @Deprecated
     List<?> findByNamedQueryAndValueBean(String queryName, Object valueBean) throws DataAccessException;
-
 
     //-------------------------------------------------------------------------
     // Convenience query methods for iteration and bulk updates/deletes

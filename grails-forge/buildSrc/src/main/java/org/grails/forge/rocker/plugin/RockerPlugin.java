@@ -21,9 +21,9 @@ package org.grails.forge.rocker.plugin;
 
 import org.gradle.api.Plugin;
 import org.gradle.api.Project;
-import org.gradle.api.internal.plugins.DslObject;
+import org.gradle.api.plugins.ExtensionAware;
 import org.gradle.api.plugins.JavaLibraryPlugin;
-import org.gradle.api.plugins.JavaPluginConvention;
+import org.gradle.api.plugins.JavaPluginExtension;
 import org.gradle.api.tasks.SourceSet;
 import org.gradle.api.tasks.SourceSetContainer;
 import org.gradle.api.tasks.TaskProvider;
@@ -52,9 +52,9 @@ public class RockerPlugin implements Plugin<Project> {
                 project.getLayout().getBuildDirectory().dir("classes")
         );
 
-        // Create own source set extension
-        SourceSetContainer sourceSets = project.getConvention().getPlugin(
-                JavaPluginConvention.class).getSourceSets();
+        // Create own source set extension using the modern JavaPluginExtension API
+        SourceSetContainer sourceSets = project.getExtensions()
+                .getByType(JavaPluginExtension.class).getSourceSets();
         sourceSets.all(sourceSet -> processSourceSet(project, sourceSet, rockerConfig));
 
     }
@@ -62,10 +62,10 @@ public class RockerPlugin implements Plugin<Project> {
     private static void processSourceSet(Project project, SourceSet sourceSet,
                                          RockerConfiguration rockerConfig) {
         // for each source set we will:
-        // 1) Add a new 'rocker' property to the source set
+        // 1) Add a new 'rocker' extension to the source set
         RockerSourceSetProperty rockerProperty
                 = new RockerSourceSetProperty(project);
-        new DslObject(sourceSet).getConvention().getPlugins().put(
+        ((ExtensionAware) sourceSet).getExtensions().add(
                 "rocker", rockerProperty);
 
         // 2) Create a rocker task for this sourceSet following the gradle

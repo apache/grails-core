@@ -18,7 +18,7 @@
  */
 package grails.plugin.json.view
 
-import com.fasterxml.jackson.databind.ObjectMapper
+import tools.jackson.databind.json.JsonMapper
 import grails.core.support.proxy.ProxyHandler
 import grails.persistence.Entity
 import grails.plugin.json.view.api.JsonView
@@ -37,7 +37,7 @@ import spock.lang.Specification
 class JsonViewHelperSpec extends Specification implements JsonViewTest, GrailsUnitTest {
 
     @Shared
-    ObjectMapper objectMapper = new ObjectMapper()
+    JsonMapper objectMapper = JsonMapper.builder().build()
 
     void 'test render toMany association'() {
         given: 'A view helper'

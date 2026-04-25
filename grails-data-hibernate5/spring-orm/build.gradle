@@ -23,9 +23,11 @@
 plugins {
     id 'java-library'
     id 'org.apache.grails.buildsrc.properties'
+    id 'org.apache.grails.buildsrc.dependency-validator'
     id 'org.apache.grails.buildsrc.compile'
     id 'org.apache.grails.buildsrc.publish'
     id 'org.apache.grails.buildsrc.sbom'
+    id 'org.apache.grails.gradle.grails-code-style'
 }
 
 version = projectVersion
@@ -51,11 +53,3 @@ dependencies {
         exclude group: 'org.slf4j', module: 'slf4j-api'
     }
 }
-
-// Javadoc references Spring Framework internals not on our classpath - suppress errors for vendored code
-tasks.withType(Javadoc).configureEach {
-    options.addStringOption('Xdoclint:none', '-quiet')
-    failOnError = false
-}
-
-

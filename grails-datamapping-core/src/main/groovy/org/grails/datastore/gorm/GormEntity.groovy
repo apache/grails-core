@@ -28,7 +28,6 @@ import org.springframework.transaction.TransactionDefinition
 
 import grails.gorm.DetachedCriteria
 import org.grails.datastore.gorm.finders.FinderMethod
-import org.grails.datastore.gorm.query.GormQueryOperations
 import org.grails.datastore.mapping.dirty.checking.DirtyCheckable
 import org.grails.datastore.mapping.model.MappingContext
 import org.grails.datastore.mapping.model.PersistentEntity
@@ -594,17 +593,27 @@ trait GormEntity<D> implements GormValidateable, DirtyCheckable, GormEntityApi<D
     /**
      * Retrieves an object from the datastore. eg. Book.get(1)
      *
-     * Groovy 6 registers this as the genericGetMethod for dynamic property
-     * resolution (GROOVY-xxxxx). The String overload below intercepts property-
-     * style calls like {@code Entity.name} and delegates to Class.class when the
-     * property belongs to java.lang.Class, preventing false "GORM not initialized"
-     * errors.
+     * Groovy 6 (GROOVY-11829) relaxed {@code MetaClassImpl.isGenericGetMethod} to
+     * accept {@code get(Serializable)} as a generic property getter where Groovy 5
+     * required {@code get(String)}. Without the {@link #get(String)} overload below,
+     * every dynamic property access on a GORM entity (e.g. {@code Book.name},
+     * {@code Book.simpleName}) routes through this method instead of
+     * {@link Class#getName()}, breaking property resolution and triggering false
+     * "GORM not initialized" errors during class loading.
      */
     @Generated
     static D get(Serializable id) {
         currentGormStaticApi().get(id)
     }
 
+    /**
+     * Groovy 6 generic-property-getter overload (see GROOVY-11829). Resolves
+     * {@link Class} bean properties first, then falls back to GORM's
+     * {@code propertyMissing} (handles datasource qualifiers and dynamic GORM
+     * properties), and finally to {@link #get(Serializable)} for entity-by-ID
+     * lookups. Throws {@link MissingPropertyException} when nothing matches so
+     * Groovy's MOP can continue normal property resolution.
+     */
     @Generated
     static Object get(String nameOrId) {
         MetaProperty mp = InvokerHelper.getMetaClass(Class).hasProperty(this, nameOrId)
@@ -1476,33 +1485,6 @@ trait GormEntity<D> implements GormValidateable, DirtyCheckable, GormEntityApi<D
     @Generated
     static List<D> findAll(CharSequence query, Collection params, Map args) {
         currentGormStaticApi().findAll(query, params, args)
-    }
-
-    /**
-     * Looks up a named query
-     *
-     * @param queryName The name of the query
-     * @return The query or null
-     *
-     * @deprecated Named queries are deprecated, use where queries instead
-     */
-    @Generated
-    @Deprecated(since = '3.2', forRemoval = true)
-    static GormQueryOperations<D> getNamedQuery(String queryName) {
-        GormEnhancer.createNamedQuery(this, queryName)
-    }
-    /**
-     * Looks up a named query
-     *
-     * @param queryName The name of the query
-     * @return The query or null
-     *
-     * @deprecated Named queries are deprecated, use where queries instead
-     */
-    @Generated
-    @Deprecated(since = '3.2', forRemoval = true)
-    static GormQueryOperations<D> getNamedQuery(String queryName, Object...args) {
-        GormEnhancer.createNamedQuery(this, queryName, args)
     }
 
     @Generated

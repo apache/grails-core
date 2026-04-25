@@ -26,8 +26,8 @@ import org.grails.forge.options.*;
 import io.swagger.v3.oas.annotations.Parameter;
 import org.reactivestreams.Publisher;
 
-import javax.validation.constraints.NotBlank;
-import javax.validation.constraints.NotNull;
+import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.NotNull;
 import java.io.IOException;
 import java.util.List;
 

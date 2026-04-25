@@ -34,7 +34,7 @@ import grails.plugin.scaffolding.SkipBootstrap
  * @since 5.0.0
  */
 @CompileStatic
-class GenerateAllCommand implements GrailsApplicationCommand, CommandLineHelper, SkipBootstrap {
+class GenerateAllCommand extends GrailsApplicationCommand implements CommandLineHelper, SkipBootstrap {
 
     String description = 'Generates a controller that performs CRUD operations and the associated views'
 
@@ -45,7 +45,7 @@ class GenerateAllCommand implements GrailsApplicationCommand, CommandLineHelper,
     boolean handle() {
         if (!args) {
             error('No domain-class specified')
-            return FAILURE
+            return false
         }
         return new GenerateControllerCommand().handle(executionContext) &&
         new GenerateViewsCommand().handle(executionContext)

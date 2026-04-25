@@ -22,6 +22,7 @@ plugins {
     id 'java-library'
     id 'project-report'
     id 'org.apache.grails.buildsrc.properties'
+    id 'org.apache.grails.buildsrc.dependency-validator'
     id 'org.apache.grails.buildsrc.compile'
     id 'org.apache.grails.buildsrc.publish'
     id 'org.apache.grails.buildsrc.sbom'
@@ -41,6 +42,8 @@ dependencies {
     api 'org.apache.groovy:groovy-swing'
     api 'org.apache.groovy:groovy-groovysh'
     implementation 'org.fusesource.jansi:jansi'
+    implementation 'org.jline:jline'
+    // TODO: Remove jline:jline (JLine 2) when upgrading to Groovy 5 (groovy-groovysh 5.x uses JLine 3)
     implementation 'jline:jline'
     implementation 'net.java.dev.jna:jna'
 

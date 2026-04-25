@@ -19,6 +19,8 @@
 
 package grails.plugin.json.view.api
 
+import groovy.json.JsonGenerator
+import groovy.json.StreamingJsonBuilder
 import groovy.transform.CompileStatic
 
 import grails.plugin.json.view.api.internal.DefaultGrailsJsonViewHelper
@@ -44,7 +46,7 @@ trait JsonView extends GrailsView {
     /**
      * The default generator
      */
-    groovy.json.JsonGenerator generator
+    JsonGenerator generator
 
     /**
      * The strategy to use to render identifiers in the JSON API specification
@@ -54,7 +56,7 @@ trait JsonView extends GrailsView {
     /**
      * The {@link groovy.json.StreamingJsonBuilder} instance
      */
-    groovy.json.StreamingJsonBuilder json
+    StreamingJsonBuilder json
 
     Collection<ParentInfo> parentData = []
     /**
@@ -85,24 +87,8 @@ trait JsonView extends GrailsView {
      */
     TemplateRenderer tmpl = new TemplateRenderer(viewHelper)
 
-    /**
-     * @deprecated Use {@code setGenerator(groovy.json.JsonGenerator)} instead.
-     */
-    @Deprecated(since = '7.1', forRemoval = true)
-    void setGenerator(grails.plugin.json.builder.JsonGenerator jsonGenerator) {
+    void setGenerator(JsonGenerator jsonGenerator) {
         this.generator = jsonGenerator
-    }
-
-    void setGenerator(groovy.json.JsonGenerator jsonGenerator) {
-        this.generator = jsonGenerator
-    }
-
-    /**
-     * @deprecated  Return type will be changed to {@link groovy.json.JsonGenerator} in a future version.
-     */
-    @Deprecated(since = '7.1')
-    grails.plugin.json.builder.JsonGenerator getGenerator() {
-        this.generator as grails.plugin.json.builder.JsonGenerator
     }
 
     /**
@@ -228,7 +214,7 @@ trait JsonView extends GrailsView {
      * @param coll a collection
      * @param c a closure used to convert the objects of coll
      */
-    Object json(Iterable coll, @DelegatesTo(value = grails.plugin.json.builder.StreamingJsonBuilder.StreamingJsonDelegate, strategy = Closure.DELEGATE_FIRST) Closure c) throws IOException {
+    Object json(Iterable coll, @DelegatesTo(value = StreamingJsonBuilder.StreamingJsonDelegate, strategy = Closure.DELEGATE_FIRST) Closure c) throws IOException {
         json.call(coll, c)
     }
 
@@ -250,7 +236,7 @@ trait JsonView extends GrailsView {
      *
      * @param c a closure whose method call statements represent key / values of a JSON object
      */
-    Object json(@DelegatesTo(value = grails.plugin.json.builder.StreamingJsonBuilder.StreamingJsonDelegate, strategy = Closure.DELEGATE_FIRST) Closure c) throws IOException {
+    Object json(@DelegatesTo(value = StreamingJsonBuilder.StreamingJsonDelegate, strategy = Closure.DELEGATE_FIRST) Closure c) throws IOException {
         json.call(c)
     }
 
@@ -273,7 +259,7 @@ trait JsonView extends GrailsView {
      * @param name The key for the JSON object
      * @param c a closure whose method call statements represent key / values of a JSON object
      */
-    void json(String name, @DelegatesTo(value = grails.plugin.json.builder.StreamingJsonBuilder.StreamingJsonDelegate, strategy = Closure.DELEGATE_FIRST) Closure c) throws IOException {
+    void json(String name, @DelegatesTo(value = StreamingJsonBuilder.StreamingJsonDelegate, strategy = Closure.DELEGATE_FIRST) Closure c) throws IOException {
         json.call(name, c)
     }
 
@@ -300,7 +286,7 @@ trait JsonView extends GrailsView {
      * @param coll a collection
      * @param c a closure used to convert the objects of coll
      */
-    void json(String name, Iterable coll, @DelegatesTo(value = grails.plugin.json.builder.StreamingJsonBuilder.StreamingJsonDelegate, strategy = Closure.DELEGATE_FIRST) Closure c) throws IOException {
+    void json(String name, Iterable coll, @DelegatesTo(value = StreamingJsonBuilder.StreamingJsonDelegate, strategy = Closure.DELEGATE_FIRST) Closure c) throws IOException {
         json.call(name, coll, c)
     }
 
@@ -326,7 +312,7 @@ trait JsonView extends GrailsView {
      * @param callable Additional attributes of the JSON object represented by the closure
      * @throws IOException
      */
-    void json(String name, Map map, @DelegatesTo(value = grails.plugin.json.builder.StreamingJsonBuilder.StreamingJsonDelegate, strategy = Closure.DELEGATE_FIRST) Closure callable) throws IOException {
+    void json(String name, Map map, @DelegatesTo(value = StreamingJsonBuilder.StreamingJsonDelegate, strategy = Closure.DELEGATE_FIRST) Closure callable) throws IOException {
         json.call(name, map, callable)
     }
 }

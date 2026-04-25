@@ -35,7 +35,7 @@ import org.grails.io.support.Resource
  * @since 5.0.0
  */
 @CompileStatic
-class CreateScaffoldControllerCommand implements GrailsApplicationCommand, CommandLineHelper, SkipBootstrap {
+class CreateScaffoldControllerCommand extends GrailsApplicationCommand implements CommandLineHelper, SkipBootstrap {
 
     String description = 'Creates a scaffolded controller'
 
@@ -46,12 +46,12 @@ class CreateScaffoldControllerCommand implements GrailsApplicationCommand, Comma
         final String domainClassName = args[0]
         if (!domainClassName) {
             error('No domain-class specified')
-            return FAILURE
+            return false
         }
         final Resource sourceClass = source(domainClassName)
         if (!sourceClass) {
             error("No domain-class found for name: ${domainClassName}")
-            return FAILURE
+            return false
         }
         boolean overwrite = isFlagPresent('force')
         final Model model = model(sourceClass)
@@ -78,6 +78,6 @@ class CreateScaffoldControllerCommand implements GrailsApplicationCommand, Comma
                 overwrite: overwrite)
         verbose('Scaffold controller created for domain class')
 
-        return SUCCESS
+        return true
     }
 }

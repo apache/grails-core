@@ -21,6 +21,7 @@ plugins {
     id 'groovy'
     id 'java-library'
     id 'org.apache.grails.buildsrc.properties'
+    id 'org.apache.grails.buildsrc.dependency-validator'
     id 'org.apache.grails.buildsrc.compile'
     id 'org.apache.grails.buildsrc.publish'
     id 'org.apache.grails.buildsrc.sbom'
@@ -39,7 +40,9 @@ ext {
 dependencies {
     implementation platform(project(':grails-gradle-bom'))
 
-    implementation "org.apache.groovy:groovy:${bomDependencyVersions['groovy.version']}"
+    // grails-gradle-tasks targets Gradle's embedded Groovy 4 (gradleBomDependencyVersions['gradle-groovy.version']).
+    // Do NOT use the main groovy.version here - that is Groovy 5.x in Grails 8 and would override the gradle-groovy-bom platform.
+    implementation "org.apache.groovy:groovy:${gradleBomDependencyVersions['gradle-groovy.version']}"
 
     // spock is leaking from the grails-gradle-bom through grails-gradle-model
     implementation project(':grails-gradle-model'), {

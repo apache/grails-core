@@ -18,6 +18,7 @@
  */
 plugins {
     id 'org.apache.grails.buildsrc.properties'
+    id 'org.apache.grails.buildsrc.dependency-validator'
     id 'org.apache.grails.buildsrc.compile'
 }
 
@@ -27,7 +28,7 @@ group = 'issue11767.plugin'
 apply plugin: 'org.apache.grails.gradle.grails-plugin'
 
 dependencies {
-    implementation platform(project(':grails-bom'))
+    implementation enforcedPlatform(project(':grails-bom'))
     implementation 'org.apache.grails:grails-core'
     implementation 'org.apache.grails:grails-micronaut'
 
@@ -40,3 +41,61 @@ apply {
     from rootProject.layout.projectDirectory.file('gradle/functional-test-config.gradle')
     from rootProject.layout.projectDirectory.file('gradle/grails-extension-gradle-config.gradle')
 }
+
+// Root-cause fix for duplicate META-INF/spring-configuration-metadata.json:
+//
+// This plugin intentionally exposes both a Java bean (PluginJavaMicronautBean) and a
+// Groovy bean (PluginGroovyMicronautBean) that share the @ConfigurationProperties('my')
+// prefix to exercise the original issue 11767 scenario. As a side effect, two different
+// Micronaut tools produce the same metadata file:
+//   - micronaut-inject-java runs as a Java annotation processor during compileJava and
+//     writes build/classes/java/main/META-INF/spring-configuration-metadata.json
+//     describing PluginJavaMicronautBean.
+//   - micronaut-inject-groovy (pulled in transitively via grails-micronaut) runs as a
+//     Groovy AST transform during compileGroovy and writes
+//     build/classes/groovy/main/META-INF/spring-configuration-metadata.json describing
+//     PluginGroovyMicronautBean.
+// The two files are not equivalent: each describes the beans visible to its own compiler.
+// The shared CompilePlugin convention sets jar.duplicatesStrategy = FAIL so the build
+// surfaces any double-configuration. Here the duplicate is by design, so we merge the
+// two JSON documents into a single file (preserving every group / property / hint) and
+// remove the now-merged source so the jar task sees exactly one metadata file. This is
+// preferable to dropping one of the documents (DuplicatesStrategy.EXCLUDE) because that
+// would silently lose the bean type information for one of the languages.
+def mergeMicronautConfigMetadata = tasks.register('mergeMicronautConfigMetadata') {
+    description = 'Merges the spring-configuration-metadata.json emitted separately by ' +
+            'micronaut-inject-java and micronaut-inject-groovy into one combined document.'
+    group = 'build'
+
+    def metadataRelativePath = 'META-INF/spring-configuration-metadata.json'
+    def javaMetadataProvider = layout.buildDirectory.file("classes/java/main/${metadataRelativePath}")
+    def groovyMetadataProvider = layout.buildDirectory.file("classes/groovy/main/${metadataRelativePath}")
+
+    // Re-run whenever either compile step emits new metadata; the task mutates files
+    // inside the compile output directories so we cannot rely on standard up-to-date
+    // tracking. The work is cheap (two small JSON files) so always running is acceptable.
+    outputs.upToDateWhen { false }
+
+    doLast {
+        def javaFile = javaMetadataProvider.get().asFile
+        def groovyFile = groovyMetadataProvider.get().asFile
+        if (!javaFile.exists() || !groovyFile.exists()) {
+            return // Only one (or neither) compile step emitted metadata; no conflict to merge
+        }
+        def slurper = new groovy.json.JsonSlurper()
+        def parsedJava = slurper.parse(javaFile)
+        def parsedGroovy = slurper.parse(groovyFile)
+        def combined = [:]
+        ['groups', 'properties', 'hints'].each { String section ->
+            def merged = []
+            if (parsedJava[section]) merged.addAll(parsedJava[section])
+            if (parsedGroovy[section]) merged.addAll(parsedGroovy[section])
+            if (merged) combined[section] = merged
+        }
+        groovyFile.text = groovy.json.JsonOutput.toJson(combined)
+        javaFile.delete() // Single canonical file remains under build/classes/groovy/main
+    }
+}
+
+tasks.named('classes').configure { finalizedBy mergeMicronautConfigMetadata }
+tasks.named('jar').configure { dependsOn mergeMicronautConfigMetadata }

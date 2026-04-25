@@ -18,8 +18,6 @@
  */
 package grails.dev.commands.template
 
-import groovy.transform.CompileDynamic
-
 import grails.codegen.model.Model
 import org.grails.io.support.Resource
 
@@ -34,9 +32,8 @@ interface TemplateRenderer {
     /**
      * Render with the given named arguments
      *
-     * @param namedArguments The named arguments are 'template', 'destination' and 'model'
+     * @param namedArguments The named arguments are 'template', 'destination', 'model', and 'overwrite'
      */
-    @CompileDynamic
     void render(Map<String, Object> namedArguments)
     /**
      * Render the given template to the give destination for the given model

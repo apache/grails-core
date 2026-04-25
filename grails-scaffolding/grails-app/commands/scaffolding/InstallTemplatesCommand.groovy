@@ -36,7 +36,7 @@ import org.grails.io.support.SpringIOUtils
  * @since 5.0.0
  */
 @CompileStatic
-class InstallTemplatesCommand implements GrailsApplicationCommand, SkipBootstrap, CommandLineHelper {
+class InstallTemplatesCommand extends GrailsApplicationCommand implements SkipBootstrap, CommandLineHelper {
 
     @Delegate ConsoleLogger consoleLogger = GrailsConsole.getInstance()
 
@@ -59,7 +59,7 @@ class InstallTemplatesCommand implements GrailsApplicationCommand, SkipBootstrap
                 }
             }
             consoleLogger.verbose('Templates installation complete')
-            return SUCCESS
+            return true
         } catch (e) {
             consoleLogger.error(e.message, e)
         }

@@ -34,8 +34,7 @@ class ProductController extends RestfulController<Product> {
      * @param max The maximum
      * @return A list of resources
      */
-    @Override
-    def index(Integer max) {
+    def index() {
         params.max = Math.min(params.int('max', 10), 100)
         return [
                 productList : listAllResources(params),

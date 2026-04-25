@@ -68,10 +68,10 @@ ext {
 }
 
 dependencies {
-    annotationProcessor platform("io.micronaut:micronaut-bom:$micronautVersion")
-    implementation platform("io.micronaut:micronaut-bom:$micronautVersion")
+    annotationProcessor platform("io.micronaut.platform:micronaut-platform:$micronautVersion")
+    implementation platform("io.micronaut.platform:micronaut-platform:$micronautVersion")
     annotationProcessor 'io.micronaut:micronaut-inject-java'
-    testAnnotationProcessor platform("io.micronaut:micronaut-bom:$micronautVersion")
+    testAnnotationProcessor platform("io.micronaut.platform:micronaut-platform:$micronautVersion")
     testAnnotationProcessor 'io.micronaut:micronaut-inject-java'
 
     generateConfig "info.picocli:picocli-codegen:$picocliVersion"
@@ -84,7 +84,7 @@ dependencies {
         exclude group: 'org.apache.grails', module: 'grails-bom'
         exclude group: 'org.apache.groovy'
     }
-    compileOnly 'org.codehaus.groovy:groovy'
+    compileOnly 'org.apache.groovy:groovy'
     implementation "com.fizzed:rocker-runtime:$rockerVersion"
     implementation "info.picocli:picocli:$picocliVersion"
     implementation "info.picocli:picocli-shell-jline3:$picocliVersion"
@@ -98,19 +98,17 @@ dependencies {
     testImplementation 'io.micronaut.picocli:micronaut-picocli'
     testImplementation "org.reflections:reflections:$reflectionsVersion"
     testImplementation 'org.testcontainers:spock'
-    if (project.hasProperty('micronautVersion')) {
-        testCompileOnly "io.micronaut:micronaut-inject-groovy:$micronautVersion"
-    }
+    testCompileOnly 'io.micronaut:micronaut-inject-groovy'
 
-    testImplementation "org.codehaus.groovy:groovy:$groovyVersion"
+    testImplementation "org.apache.groovy:groovy:$groovyVersion"
     testImplementation "org.spockframework:spock-core:$spockVersion", {
-        exclude group: 'org.codehaus.groovy', module: 'groovy-all'
+        exclude group: 'org.apache.groovy', module: 'groovy-all'
     }
 
     testImplementation "cglib:cglib-nodep:$cglibVersion"
     testImplementation "org.objenesis:objenesis:$objenesisVersion"
     testRuntimeOnly "ch.qos.logback:logback-classic:$logbackClassicVersion"
-    testImplementation "org.codehaus.groovy:groovy-test:$groovyVersion"
+    testImplementation "org.apache.groovy:groovy-test:$groovyVersion"
 }
 
 rocker {
@@ -162,7 +160,7 @@ jarTask.configure { Jar it ->
 configurations.configureEach {
     resolutionStrategy {
         eachDependency { DependencyResolveDetails details ->
-            if (details.requested.group == 'org.codehaus.groovy') {
+            if (details.requested.group == 'org.apache.groovy') {
                 details.useVersion(groovyVersion)
             }
             if (details.requested.name == 'spock-core') {

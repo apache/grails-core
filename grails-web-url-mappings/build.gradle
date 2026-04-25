@@ -22,6 +22,7 @@ plugins {
     id 'java-library'
     id 'project-report'
     id 'org.apache.grails.buildsrc.properties'
+    id 'org.apache.grails.buildsrc.dependency-validator'
     id 'org.apache.grails.buildsrc.compile'
     id 'org.apache.grails.buildsrc.publish'
     id 'org.apache.grails.buildsrc.sbom'
@@ -48,7 +49,7 @@ dependencies {
 
     compileOnly 'org.fusesource.jansi:jansi'
     testRuntimeOnly 'org.fusesource.jansi:jansi'
-    compileOnly 'jline:jline'
+    compileOnly 'org.jline:jline'
 
     implementation 'com.github.ben-manes.caffeine:caffeine'
 

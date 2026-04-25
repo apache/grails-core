@@ -36,7 +36,7 @@ import org.grails.io.support.Resource
  * @since 5.0.0
  */
 @CompileStatic
-class GenerateControllerCommand implements GrailsApplicationCommand, CommandLineHelper, SkipBootstrap {
+class GenerateControllerCommand extends GrailsApplicationCommand implements CommandLineHelper, SkipBootstrap {
 
     String description = 'Generates a controller that performs CRUD operations'
 
@@ -47,7 +47,7 @@ class GenerateControllerCommand implements GrailsApplicationCommand, CommandLine
     boolean handle() {
         if (!args) {
             error('No domain-class specified')
-            return FAILURE
+            return false
         }
 
         List<String> domainClassNames
@@ -64,25 +64,22 @@ class GenerateControllerCommand implements GrailsApplicationCommand, CommandLine
             final Resource sourceClass = source(domainClassName)
             if (sourceClass) {
                 final Model model = model(sourceClass)
-                render(template: 'scaffolding/Controller.groovy',
-                        destination: file("grails-app/controllers/${model.packagePath}/${model.convention('Controller')}.groovy"),
-                        model: model,
-                        overwrite: overwrite)
-
-                render(template: 'scaffolding/Service.groovy',
-                        destination: file("grails-app/services/${model.packagePath}/${model.convention('Service')}.groovy"),
-                        model: model,
-                        overwrite: overwrite)
-
-                render(template: 'scaffolding/Spec.groovy',
-                        destination: file("src/test/groovy/${model.packagePath}/${model.convention('ControllerSpec')}.groovy"),
-                        model: model,
-                        overwrite: overwrite)
-
-                render(template: 'scaffolding/ServiceSpec.groovy',
-                        destination: file("src/test/groovy/${model.packagePath}/${model.convention('ServiceSpec')}.groovy"),
-                        model: model,
-                        overwrite: overwrite)
+                // Call the explicit (Resource, File, Model, boolean) overload directly on
+                // templateRenderer. Named-arg render(...) dispatch through the @Delegate
+                // bridge has shown silent no-ops under Groovy 5 @CompileStatic in Forge's
+                // Gradle TestKit runs, even after GROOVY-11907 landed. See PR #15557.
+                generateFile(sourceClass, model, 'scaffolding/Controller.groovy',
+                        "grails-app/controllers/${model.packagePath}/${model.convention('Controller')}.groovy",
+                        overwrite)
+                generateFile(sourceClass, model, 'scaffolding/Service.groovy',
+                        "grails-app/services/${model.packagePath}/${model.convention('Service')}.groovy",
+                        overwrite)
+                generateFile(sourceClass, model, 'scaffolding/Spec.groovy',
+                        "src/test/groovy/${model.packagePath}/${model.convention('ControllerSpec')}.groovy",
+                        overwrite)
+                generateFile(sourceClass, model, 'scaffolding/ServiceSpec.groovy',
+                        "src/test/groovy/${model.packagePath}/${model.convention('ServiceSpec')}.groovy",
+                        overwrite)
 
                 addStatus("Scaffolding complete for ${projectPath(sourceClass)}")
             } else {
@@ -90,7 +87,22 @@ class GenerateControllerCommand implements GrailsApplicationCommand, CommandLine
                 failureCount++
             }
         }
-        return failureCount ? FAILURE : SUCCESS
+        return failureCount ? false : true
 
+    }
+
+    private void generateFile(Resource sourceClass, Model model, String templatePath,
+                              String destinationPath, boolean overwrite) {
+        Resource templateResource = templateRenderer.template(templatePath)
+        if (templateResource == null) {
+            throw new IllegalStateException(
+                "Scaffolding template [${templatePath}] could not be resolved for ${sourceClass?.filename}")
+        }
+        File destination = file(destinationPath)
+        if (destination == null) {
+            throw new IllegalStateException(
+                "Scaffolding destination [${destinationPath}] resolved to null File")
+        }
+        templateRenderer.render(templateResource, destination, model, overwrite)
     }
 }

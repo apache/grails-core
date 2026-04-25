@@ -72,7 +72,7 @@ public class PreviewController extends AbstractCreateController implements Previ
      * @param name The name of the application The name of the application
      * @param features The features The chosen features
      * @param build The build type (optional, defaults to Gradle)
-     * @param reloading the development reloading (jrebel, dev tools, none, etc)
+     * @param reloading the development reloading (jrebel, spring boot devtools, none, etc)
      * @param gorm The GORM (optional, defaults to Hibernate)
      * @param servlet The Servlet (optional, defaults to Embedded Tomcat)
      * @return A preview of the application contents.

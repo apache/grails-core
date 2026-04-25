@@ -17,6 +17,23 @@
  *  under the License.
  */
 pluginManagement {
+    repositories {
+        mavenCentral()
+        gradlePluginPortal()
+        // Needed to resolve grails-publish snapshots that the build-logic composite
+        // build depends on while pluginManagement itself is being initialised - the
+        // org.apache.grails.buildsrc.repo plugin below cannot add this repo soon
+        // enough because Gradle must first build its classpath.
+        maven {
+            url = 'https://repository.apache.org/content/groups/snapshots'
+            content {
+                includeVersionByRegex('org[.]apache[.]grails[.]gradle.*', '.*', '.*-SNAPSHOT')
+            }
+            mavenContent {
+                snapshotsOnly()
+            }
+        }
+    }
     includeBuild('../build-logic') {
         name = 'build-logic-root'
     }

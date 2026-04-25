@@ -36,7 +36,7 @@ import org.grails.io.support.Resource
  * @since 5.0.0
  */
 @CompileStatic
-class GenerateViewsCommand implements GrailsApplicationCommand, CommandLineHelper, SkipBootstrap {
+class GenerateViewsCommand extends GrailsApplicationCommand implements CommandLineHelper, SkipBootstrap {
 
     @Delegate ConsoleLogger consoleLogger = GrailsConsole.getInstance()
 
@@ -44,7 +44,7 @@ class GenerateViewsCommand implements GrailsApplicationCommand, CommandLineHelpe
     boolean handle() {
         if (!args) {
             error('No domain-class specified')
-            return FAILURE
+            return false
         }
         List<String> domainClassesNames
         if (args[0] == '*') {
@@ -72,7 +72,7 @@ class GenerateViewsCommand implements GrailsApplicationCommand, CommandLineHelpe
                 failureCount++
             }
         }
-        return failureCount ? FAILURE : SUCCESS
+        return failureCount ? false : true
     }
 
     private List<String> resolveViewNames() {

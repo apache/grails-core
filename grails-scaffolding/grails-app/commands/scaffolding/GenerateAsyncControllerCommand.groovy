@@ -36,7 +36,7 @@ import org.grails.io.support.Resource
  * @since 5.0.0
  */
 @CompileStatic
-class GenerateAsyncControllerCommand implements GrailsApplicationCommand, CommandLineHelper, SkipBootstrap {
+class GenerateAsyncControllerCommand extends GrailsApplicationCommand implements CommandLineHelper, SkipBootstrap {
 
     String description = 'Generates an asynchronous controller that performs CRUD operations.'
 
@@ -47,7 +47,7 @@ class GenerateAsyncControllerCommand implements GrailsApplicationCommand, Comman
     boolean handle() {
         if (!args) {
             error('No domain-class specified')
-            return FAILURE
+            return false
         }
 
         List<String> domainClassNames
@@ -80,6 +80,6 @@ class GenerateAsyncControllerCommand implements GrailsApplicationCommand, Comman
                 failureCount++
             }
         }
-        return failureCount ? FAILURE : SUCCESS
+        return failureCount ? false : true
     }
 }

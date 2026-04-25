@@ -18,29 +18,37 @@
  */
 
 plugins {
-    id "com.gradle.enterprise" version "3.15.1"
-    id 'com.gradle.common-custom-user-data-gradle-plugin' version '1.12.1'
+    id 'com.gradle.develocity' version '4.3.2'
+    id 'com.gradle.common-custom-user-data-gradle-plugin' version '2.4.0'
 }
 
-gradleEnterprise {
+def isCI = System.getenv().containsKey('CI')
+def isLocal = !isCI
+def isReproducibleBuild = System.getenv('SOURCE_DATE_EPOCH') != null
+if (isReproducibleBuild) {
+    gradle.settingsEvaluated {
+        logger.warn('*************** Remote Build Cache Disabled due to Reproducible Build ********************')
+        logger.warn("Build date will be set to (SOURCE_DATE_EPOCH=${System.getenv("SOURCE_DATE_EPOCH")})")
+    }
+}
+
+develocity {
     server = 'https://develocity.apache.org'
     buildScan {
-        publishAlwaysIf(System.getenv('CI') == 'true')
-        publishIfAuthenticated()
-        uploadInBackground = System.getenv("CI") == null
-        capture {
-            taskInputFiles = true
-        }
+        tag('grails')
+        tag('grails-data-graphql')
+        publishing.onlyIf { it.authenticated }
+        uploadInBackground = isLocal
     }
 }
 
 buildCache {
-    local { enabled = System.getenv('CI') != 'true' }
-    remote(gradleEnterprise.buildCache) {
-        def isAuthenticated = System.getenv('GRADLE_ENTERPRISE_ACCESS_KEY')
-        push = System.getenv('CI') == 'true' && isAuthenticated
-        enabled = true
-    }}
+    local { enabled = (isLocal && !isReproducibleBuild) || (isCI && isReproducibleBuild) }
+    remote(develocity.buildCache) {
+        push = isCI
+        enabled = !isReproducibleBuild
+    }
+}
 
 include 'core'
 include 'plugin'

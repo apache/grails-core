@@ -24,24 +24,13 @@ info:
         version: '@info.app.version@'
         grailsVersion: '@info.app.grailsVersion@'
 spring:
-    groovy:
-        template:
-            check-template-location: false
     autoconfigure:
         exclude:
             # No need to start MongoDB, we only need access to the Point class from gorm-mongodb
-            - org.springframework.boot.autoconfigure.mongo.MongoAutoConfiguration
+            - org.springframework.boot.mongodb.autoconfigure.MongoAutoConfiguration
 ---
 grails:
     mime:
-        disable:
-            accept:
-                header:
-                    userAgents:
-                        - Gecko
-                        - WebKit
-                        - Presto
-                        - Trident
         types:
             json:
                 - application/json
@@ -65,29 +54,13 @@ grails:
             multipartForm: multipart/form-data
             pdf: application/pdf
             all: '*/*'
-    urlmapping:
-        cache:
-            maxsize: 1000
-    controllers:
-        defaultScope: singleton
-    converters:
-        encoding: UTF-8
     views:
-        default:
-            codec: html
         gsp:
             encoding: UTF-8
             htmlcodec: xml
             codecs:
-                expression: html
-                scriptlets: html
-                taglib: none
-                staticparts: none
+                scriptlet: html
 ---
-endpoints:
-    jmx:
-        unique-names: true
-
 dataSource:
     pooled: true
     jmxExport: true
