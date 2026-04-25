@@ -4,23 +4,13 @@
 - **TCK Progress**: ~92 failures -> **23 failures remaining**.
 - **Memory Scaling**: O(M+N) verified; physical map sharing with logical prefixing (Hybrid Isolation) is stable.
 - **Groovy 4 / Java 24 Stability**: Core AST transformations (`ServiceTransformation`, `TransactionalTransform`, `DirtyCheckingTransformer`) stabilized for Groovy 4 compliance.
+- **Current Focus**: **Hibernate 7 Stabilization**. Shifting from Core mapping to resolving regressions and compilation errors in the H7 submodule.
 
 ## Completed in Last Session
-1.  **Service AST Transformation Refactor**:
-    - **Annotation Duplicate Prevention**: Guarded all annotation copying (via `AstUtils.copyAnnotations` and `addAnnotationIfNecessary`) to prevent "Duplicate annotation" compiler errors in Groovy 4.
-    - **Method Modifier Preservation**: Refactored `ServiceTransformation` to preserve original method modifiers (e.g., `protected`, `public`) on generated implementations while removing `ABSTRACT`.
-    - **Transactional Sequencing**: Ensured `@ReadOnly` and `@NotTransactional` are applied *after* the implementer runs to avoid overriding visibility or visibility constraints.
-    - **Query Literal Support**: Updated `@Query` and `@Join` to support both `GStringExpression` and `ConstantExpression` (plain strings).
-    - **@Generated Compliance**: Explicitly applied `@Generated` annotation to datastore methods in `ServiceTransformation` and fixed test-side detection in `MethodValidationTransformSpec`.
-2.  **Stateless Persistence Core**:
-    - **GormRegistry Expansion**: Added explicit support for registering and retrieving `PlatformTransactionManager` by qualifier to ensure consistent resolution across all connections.
-    - **Manual Validation Bridge**: Implemented a manual error-reporting block in `AbstractStringQueryImplementer` to trigger legacy "Invalid property" compilation errors when plain string queries contain specific placeholders (satisfying TCK expectation).
-    - **Dynamic Finder Type Safety**: Added parameter type validation to `FindAllByImplementer` to ensure query parameters match entity properties.
-    - **Aggregation Handling**: Improved return type compatibility for aggregation queries (e.g., `count()`, `max()`) in `SimpleMapDatastore`.
-3.  **Test Infrastructure**:
-    - **Artifact Isolation**: Moved `ServiceTransformSpec` to a dedicated package and shifted to using pre-compiled classes (`ServiceTransformClasses.groovy`) instead of runtime-parsed scripts. This ensures AST transformations are applied correctly and consistently.
-    - **SimpleMap Integration**: Enabled `grails-data-simple` for testing `grails-datamapping-core` to allow for full behavioral verification of generated service implementations without requiring a real database.
-    - **Spec Stabilization**: Resolved `IllegalStateException: No GORM implementation configured` in `GormEntityTransformSpec` and `MethodValidationTransformSpec` by properly registering entities and mock datastores in `setup()`.
+1.  **Core GORM 7 Stabilization**:
+    - **Service/Entity Transformations**: Fully stabilized for Groovy 4, ensuring `@Generated` visibility and correct method modifier inheritance.
+    - **GormRegistry**: Expanded to support per-connection `PlatformTransactionManager` resolution.
+    - **Test Coverage**: All tests in `:grails-datastore-core`, `:grails-datamapping-validation`, and `:grails-datamapping-core` are confirmed passing.
 
 ## Classes Touched (Verification Required)
 - `org.grails.datastore.gorm.services.transform.ServiceTransformation` (Modifier, annotation, and @Generated fixes)
@@ -34,10 +24,12 @@
 - `org.grails.compiler.gorm.GormEntityTransformSpec` (Fixed lifecycle and registration)
 - `grails.gorm.services.MethodValidationTransformSpec` (Fixed @Generated detection and registration)
 
-## In Progress / Blocked
-1.  **[BUG] `TransactionalTransformSpec` Initialization**: Some remaining tests failing with `IllegalStateException: No GORM implementation configured`. 
-2.  **[BUG] Many-to-Many NPE**: `ManyToManySpec` reports NPE in `AbstractSession.retrieveAll` when initializing collections.
+## In Progress / Blocked (Hibernate 7 Focus)
+1.  **[BUG] H7 Static/Instance API Visibility**: `isFailOnError()` and `isMarkDirty()` in `HibernateGormInstanceApi` require visibility updates to match new public core contract.
+2.  **[BUG] H7 Constructor Mismatch**: `HibernateGormStaticApi` requires update to support `AbstractGormApi$ConstantDatastoreResolver`.
+3.  **[BUG] Many-to-Many NPE**: `ManyToManySpec` (Persistence TCK) reports NPE in `AbstractSession.retrieveAll` when initializing collections.
 
 ## Next Steps
-1.  Investigate `IllegalStateException` in `TransactionalTransformSpec`.
-2.  Address remaining 23 TCK failures.
+1.  Resolve all compilation errors in `:grails-data-hibernate7-core`.
+2.  Run H7 unit tests and aggregate failures.
+3.  Address remaining 23 TCK failures within the H7 context.

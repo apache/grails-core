@@ -182,7 +182,7 @@ public class GrailsOpenSessionInViewInterceptor extends OpenSessionInViewInterce
 
     public void setHibernateDatastore(HibernateDatastore hibernateDatastore) {
         String defaultFlushModeName = hibernateDatastore.getDefaultFlushModeName();
-        if (hibernateDatastore.isOsivReadOnly()) {
+        if (hibernateDatastore.isOsivReadOnly(hibernateDatastore.getSessionFactory())) {
             this.hibernateFlushMode = FlushMode.MANUAL;
         } else {
             this.hibernateFlushMode = FlushMode.valueOf(defaultFlushModeName);
@@ -196,7 +196,7 @@ public class GrailsOpenSessionInViewInterceptor extends OpenSessionInViewInterce
                 if (!ConnectionSource.DEFAULT.equals(connectionName)) {
                     HibernateDatastore childDatastore = hibernateDs.getDatastoreForConnection(connectionName);
                     FlushMode childFlushMode;
-                    if (childDatastore.isOsivReadOnly()) {
+                    if (childDatastore.isOsivReadOnly(childDatastore.getSessionFactory())) {
                         childFlushMode = FlushMode.MANUAL;
                     } else {
                         childFlushMode = FlushMode.valueOf(childDatastore.getDefaultFlushModeName());

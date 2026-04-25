@@ -43,6 +43,7 @@ import org.springframework.transaction.support.TransactionSynchronizationManager
 import org.grails.datastore.gorm.timestamp.DefaultTimestampProvider;
 import org.grails.datastore.mapping.core.AbstractAttributeStoringSession;
 import org.grails.datastore.mapping.core.Datastore;
+import org.grails.datastore.mapping.core.connections.ConnectionSource;
 import org.grails.datastore.mapping.engine.Persister;
 import org.grails.datastore.mapping.model.MappingContext;
 import org.grails.datastore.mapping.model.PersistentProperty;
@@ -453,14 +454,15 @@ public class HibernateSession extends AbstractAttributeStoringSession implements
     //TODO could be used
     protected <D> HibernateGormStaticApi<D> getStaticApi(Class<D> type) {
         HibernateDatastore datastore = (HibernateDatastore) getDatastore();
-        return new HibernateGormStaticApi<>(
+        return new HibernateGormStaticApi<D>(
             type,
-            datastore.getMappingContext(),
+            datastore,
             Collections.emptyList(),
             new org.grails.datastore.gorm.DatastoreResolver() {
                 @Override public Datastore resolve() { return getDatastore(); }
             },
-            null
+            ConnectionSource.DEFAULT,
+            ((HibernateDatastore)getDatastore()).getMappingContext().getMappingFactory().getClass().getClassLoader()
         );
     }
 }

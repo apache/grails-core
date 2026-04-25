@@ -182,7 +182,7 @@ public class GrailsHibernateTemplate implements IHibernateTemplate {
         this(sessionFactory);
         if (datastore != null) {
             cacheQueries = datastore.isCacheQueries();
-            this.osivReadOnly = datastore.isOsivReadOnly();
+            this.osivReadOnly = datastore.isOsivReadOnly(sessionFactory);
             this.passReadOnlyToHibernate = datastore.isPassReadOnlyToHibernate();
             this.flushMode = hibernateFlushModeToConstant(datastore.getDefaultFlushMode());
         }
@@ -192,7 +192,7 @@ public class GrailsHibernateTemplate implements IHibernateTemplate {
         this(sessionFactory);
         if (datastore != null) {
             cacheQueries = datastore.isCacheQueries();
-            this.osivReadOnly = datastore.isOsivReadOnly();
+            this.osivReadOnly = datastore.isOsivReadOnly(sessionFactory);
             this.passReadOnlyToHibernate = datastore.isPassReadOnlyToHibernate();
         }
         this.flushMode = defaultFlushMode;
