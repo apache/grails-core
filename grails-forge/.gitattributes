@@ -1,8 +1,5 @@
-# Force LF line endings on checkout for all text files so that tools
-# like Spotless (which normalize to LF) do not report format violations
-# on systems where git is configured with core.autocrlf=true.
-* text=auto eol=lf
+# Auto detect text files and perform LF normalization
+* text=auto
 
-# Files that must always have CRLF line endings on checkout
+# Files that will always have CRLF line endings on checkout
 *.bat text eol=crlf
-*.cmd text eol=crlf
