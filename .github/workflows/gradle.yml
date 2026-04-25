@@ -474,6 +474,9 @@ jobs:
           # globally latest SNAPSHOT in the Apache repo, which may be compiled
           # for a newer Java runtime than this job's JDK.
           export PREFERRED_GRAILS_VERSION=$(grep '^projectVersion=' gradle.properties | cut -d'=' -f2)
+          # actions/download-artifact does not preserve the executable bit, so
+          # restore it before invoking the wrapper script (see actions/upload-artifact#38).
+          chmod +x ./wrapper/grailsw
           ./wrapper/grailsw --version
   docs:
     if: github.repository_owner == 'apache' && github.event_name == 'push'
