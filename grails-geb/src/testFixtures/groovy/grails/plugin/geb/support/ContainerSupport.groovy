@@ -18,7 +18,7 @@
  */
 package grails.plugin.geb.support
 
-import groovy.transform.CompileDynamic
+import groovy.transform.CompileStatic
 import groovy.transform.SelfType
 
 import geb.download.DownloadSupport
@@ -34,11 +34,7 @@ import grails.plugin.geb.ContainerGebSpec
  * @author Mattias Reichel
  * @since 4.2
  */
-// GROOVY-11907: @CompileStatic on a trait with static fields generates invalid
-// bytecode when method-level DYNAMIC_RESOLUTION is present (ASM 9.9.1 rejects it).
-// Use @CompileDynamic until the Groovy fix is released, then restore @CompileStatic.
-// See: https://issues.apache.org/jira/browse/GROOVY-11907
-@CompileDynamic
+@CompileStatic
 @SelfType(ContainerGebSpec)
 trait ContainerSupport implements DownloadSupport {
 
