@@ -39,7 +39,6 @@ import org.grails.datastore.mapping.model.types.ToOne
 import org.grails.datastore.mapping.query.api.BuildableCriteria
 import org.grails.datastore.mapping.query.api.Criteria
 import org.grails.datastore.mapping.reflect.EntityReflector
-import org.codehaus.groovy.runtime.InvokerHelper
 
 /**
  *
@@ -602,23 +601,6 @@ trait GormEntity<D> implements GormValidateable, DirtyCheckable, GormEntityApi<D
     @Generated
     static D get(Serializable id) {
         currentGormStaticApi().get(id)
-    }
-
-    @Generated
-    static Object get(String nameOrId) {
-        MetaProperty mp = InvokerHelper.getMetaClass(Class).hasProperty(this, nameOrId)
-        if (mp != null) {
-            return mp.getProperty(this)
-        }
-        try {
-            return currentGormStaticApi().propertyMissing(nameOrId)
-        } catch (MissingPropertyException | IllegalStateException ignore) {
-            try {
-                return currentGormStaticApi().get((Serializable) nameOrId)
-            } catch (IllegalStateException e) {
-                throw new MissingPropertyException(nameOrId, this)
-            }
-        }
     }
 
     /**
