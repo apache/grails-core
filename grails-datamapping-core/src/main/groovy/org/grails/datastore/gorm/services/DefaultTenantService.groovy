@@ -41,6 +41,18 @@ class DefaultTenantService implements Service, TenantService {
 
     private static final ThreadLocal<Boolean> RESOLVING = ThreadLocal.withInitial { false }
 
+    private Datastore datastore
+
+    @Override
+    Datastore getDatastore() {
+        return this.datastore
+    }
+
+    @Override
+    void setDatastore(Datastore datastore) {
+        this.datastore = datastore
+    }
+
     @Override
     void eachTenant(Closure callable) {
         MultiTenantCapableDatastore multiTenantCapableDatastore = multiTenantDatastore()

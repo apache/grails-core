@@ -100,7 +100,9 @@ abstract class AbstractServiceImplementer implements PrefixedServiceImplementer,
         List<AnnotationNode> annotations = abstractMethod.getAnnotations()
         for (AnnotationNode annotation in annotations) {
             if (annotation.getClassNode() != Traits.TRAIT_CLASSNODE) {
-                impl.addAnnotation(annotation)
+                if (impl.getAnnotations(annotation.getClassNode()).isEmpty()) {
+                    impl.addAnnotation(annotation)
+                }
             }
         }
     }

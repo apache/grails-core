@@ -52,7 +52,10 @@ import static org.codehaus.groovy.ast.tools.GeneralUtils.callX
 import static org.codehaus.groovy.ast.tools.GeneralUtils.castX
 import static org.codehaus.groovy.ast.tools.GeneralUtils.classX
 import static org.codehaus.groovy.ast.tools.GeneralUtils.constX
+import static org.codehaus.groovy.ast.tools.GeneralUtils.declS
 import static org.codehaus.groovy.ast.tools.GeneralUtils.ifElseS
+import static org.codehaus.groovy.ast.tools.GeneralUtils.ifS
+import static org.codehaus.groovy.ast.tools.GeneralUtils.indexX
 import static org.codehaus.groovy.ast.tools.GeneralUtils.notNullX
 import static org.codehaus.groovy.ast.tools.GeneralUtils.param
 import static org.codehaus.groovy.ast.tools.GeneralUtils.params
@@ -114,7 +117,13 @@ abstract class AbstractDatastoreMethodDecoratingTransformation extends AbstractM
 
         Parameter[] getTargetDatastoreParams = params(connectionNameParam)
 
-        if (declaringClassNode.getMethod(METHOD_GET_TARGET_DATASTORE, getTargetDatastoreParams) == null) {
+        FieldNode targetDatastoreField = declaringClassNode.getField(FIELD_TARGET_DATASTORE)
+        if (targetDatastoreField == null) {
+            targetDatastoreField = declaringClassNode.addField(FIELD_TARGET_DATASTORE, Modifier.PRIVATE, datastoreType, null)
+            markAsGenerated(declaringClassNode, targetDatastoreField)
+        }
+
+        if (declaringClassNode.getMethod(METHOD_GET_TARGET_DATASTORE, getTargetDatastoreParams) == null && !AstUtils.hasProperty(declaringClassNode, "targetDatastore")) {
             MethodNode mn = declaringClassNode.addMethod(METHOD_GET_TARGET_DATASTORE, Modifier.PUBLIC, datastoreType, getTargetDatastoreParams, null,
                     returnS(datastoreLookupCall)
             )
@@ -123,9 +132,9 @@ abstract class AbstractDatastoreMethodDecoratingTransformation extends AbstractM
                 compileMethodStatically(source, mn)
             }
         }
-        if (declaringClassNode.getMethod(METHOD_GET_TARGET_DATASTORE, ZERO_PARAMETERS) == null) {
+        if (declaringClassNode.getMethod(METHOD_GET_TARGET_DATASTORE, ZERO_PARAMETERS) == null && !AstUtils.hasProperty(declaringClassNode, "targetDatastore")) {
             MethodNode mn = declaringClassNode.addMethod(METHOD_GET_TARGET_DATASTORE, Modifier.PUBLIC,  datastoreType, ZERO_PARAMETERS, null,
-                    returnS(datastoreLookupDefaultCall)
+                    ifElseS(notNullX(varX(targetDatastoreField)), returnS(varX(targetDatastoreField)), returnS(datastoreLookupDefaultCall))
             )
             markAsGenerated(declaringClassNode, mn)
 
@@ -134,11 +143,34 @@ abstract class AbstractDatastoreMethodDecoratingTransformation extends AbstractM
             }
         }
 
+        // Add setter for single datastore
+        Parameter datastoreParam = param(datastoreType, 'd')
+        if (declaringClassNode.getMethod('setTargetDatastore', params(datastoreParam)) == null) {
+            BlockStatement setTargetDatastoreBody = block()
+            setTargetDatastoreBody.addStatement(
+                    assignS(varX(targetDatastoreField), varX(datastoreParam))
+            )
+            weaveSetTargetDatastoreBody(source, annotationNode, declaringClassNode, varX(datastoreParam), setTargetDatastoreBody)
+            MethodNode setterNode = declaringClassNode.addMethod('setTargetDatastore', Modifier.PUBLIC, VOID_TYPE, params(datastoreParam), null, setTargetDatastoreBody)
+            markAsGenerated(declaringClassNode, setterNode)
+        }
+
         // Add dummy setter for compatibility
         Parameter datastoresParam = param(datastoreType.makeArray(), 'datastores')
         if (declaringClassNode.getMethod('setTargetDatastore', params(datastoresParam)) == null) {
-            MethodNode setterNode = declaringClassNode.addMethod('setTargetDatastore', Modifier.PUBLIC, VOID_TYPE, params(datastoresParam), null, block())
+            BlockStatement setTargetDatastoresBody = block()
+            VariableExpression firstDatastore = varX('first')
+            setTargetDatastoresBody.addStatement(
+                    declS(firstDatastore, indexX(varX(datastoresParam), constX(0)))
+            )
+            setTargetDatastoresBody.addStatement(
+                    assignS(varX(targetDatastoreField), firstDatastore)
+            )
+            weaveSetTargetDatastoreBody(source, annotationNode, declaringClassNode, firstDatastore, setTargetDatastoresBody)
+
+            MethodNode setterNode = declaringClassNode.addMethod('setTargetDatastore', Modifier.PUBLIC, VOID_TYPE, params(datastoresParam), null, setTargetDatastoresBody)
             markAsGenerated(declaringClassNode, setterNode)
+            AstUtils.addAnnotationIfNecessary(setterNode, Autowired)
         }
         return
         }

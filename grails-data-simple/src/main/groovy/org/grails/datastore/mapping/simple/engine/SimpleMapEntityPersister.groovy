@@ -195,8 +195,6 @@ class SimpleMapEntityPersister extends AbstractKeyValueEntityPersister<Map, Obje
         }
         populateEntry(persistentEntity, entityAccess, nativeEntry)
         def f = getEntityFamily(persistentEntity)
-        def connectionName = getConnectionName()
-        System.err.println("SimpleMapEntityPersister.storeEntry: entity=${persistentEntity.name}, connectionName=$connectionName, family=$f, id=$storeId")
         def dsMap = getDatastore()
         Map<Object, Map> familyMap = (Map) dsMap[f]
         if (familyMap == null) {
@@ -239,7 +237,24 @@ class SimpleMapEntityPersister extends AbstractKeyValueEntityPersister<Map, Obje
 
     @Override
     protected void deleteEntry(String family, key, entry) {
-        getDatastore()[family]?.remove(key instanceof Number ? key.longValue() : key)
+        def dsMap = getDatastore()
+        def familyMap = (Map) dsMap[family]
+        if (familyMap != null) {
+            def k = key instanceof Number ? key.longValue() : key
+            def existing = entry ?: familyMap.get(k)
+            if (existing instanceof Map) {
+                for (PersistentProperty prop in persistentEntity.persistentProperties) {
+                    def indexer = getPropertyIndexer(prop)
+                    if (indexer != null) {
+                        def val = existing.get(prop.name)
+                        if (val != null) {
+                            indexer.deindex(val, k)
+                        }
+                    }
+                }
+            }
+            familyMap.remove(k)
+        }
     }
 
     @Override
