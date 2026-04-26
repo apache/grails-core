@@ -45,12 +45,21 @@ jobs:
         with:
           path: ~/.m2/repository
           key: cache-local-maven-${{ github.sha }}
-      - name: "📥 Checkout Grails Core to derive Groovy branch"
+      - name: "📥 Checkout Grails Core files needed for the Groovy joint-build"
+        # Sparse-checkout fetches only the two paths this job actually needs:
+        #   - dependencies.gradle: parsed below to derive the matching Apache
+        #     Groovy branch (GROOVY_<major>_0_X) for this Grails branch.
+        #   - .github/scripts/groovy-joint-build.init.gradle: passed to
+        #     ./gradlew --init-script when publishing Groovy to local Maven so
+        #     the joint build reuses our Develocity / build-cache settings.
+        # Both paths must be listed here; otherwise the init-script step fails
+        # with "The specified initialization script ... does not exist."
         uses: actions/checkout@v6
         with:
           sparse-checkout-cone-mode: false
           sparse-checkout: |
             dependencies.gradle
+            .github/scripts/groovy-joint-build.init.gradle
       - name: "📝 Derive matching Apache Groovy branch from dependencies.gradle"
         id: groovy-branch
         run: |
