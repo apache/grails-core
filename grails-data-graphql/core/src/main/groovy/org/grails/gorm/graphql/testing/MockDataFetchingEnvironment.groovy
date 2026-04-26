@@ -28,7 +28,12 @@ import graphql.language.Document
 import graphql.language.Field
 import graphql.language.FragmentDefinition
 import graphql.language.OperationDefinition
-import graphql.schema.*
+import graphql.schema.DataFetchingEnvironment
+import graphql.schema.DataFetchingFieldSelectionSet
+import graphql.schema.GraphQLFieldDefinition
+import graphql.schema.GraphQLOutputType
+import graphql.schema.GraphQLSchema
+import graphql.schema.GraphQLType
 import groovy.transform.CompileStatic
 import org.dataloader.DataLoader
 import org.dataloader.DataLoaderRegistry
@@ -108,7 +113,7 @@ class MockDataFetchingEnvironment implements DataFetchingEnvironment {
 
     @Override
     OperationDefinition getOperationDefinition() {
-         operationDefinition
+        operationDefinition
     }
 
     @Override

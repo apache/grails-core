@@ -19,7 +19,13 @@
 package org.grails.gorm.graphql.types.output
 
 import graphql.TypeResolutionEnvironment
-import graphql.schema.*
+import graphql.schema.GraphQLArgument
+import graphql.schema.GraphQLCodeRegistry
+import graphql.schema.GraphQLFieldDefinition
+import graphql.schema.GraphQLInterfaceType
+import graphql.schema.GraphQLObjectType
+import graphql.schema.GraphQLOutputType
+import graphql.schema.TypeResolver
 import groovy.transform.CompileStatic
 import org.grails.datastore.mapping.model.MappingContext
 import org.grails.datastore.mapping.model.PersistentEntity
@@ -155,15 +161,16 @@ abstract class AbstractObjectTypeBuilder implements ObjectTypeBuilder {
                 .name(name)
                 .description(description)
                 .fields(fields)
-                .typeResolver(new TypeResolver() {
-                    @Override
-                    GraphQLObjectType getType(TypeResolutionEnvironment env) {
-                        final String typeName = typeManager.namingConvention.getType(env.object.class.simpleName, GraphQLPropertyType.OUTPUT)
-                        (GraphQLObjectType)env.schema.getType(typeName)
-                    }
-                })
+                .typeResolver(buildEntityTypeResolver())
 
         obj.build()
+    }
+
+    protected TypeResolver buildEntityTypeResolver() {
+        { TypeResolutionEnvironment env ->
+            final String typeName = typeManager.namingConvention.getType(env.object.class.simpleName, GraphQLPropertyType.OUTPUT)
+            (GraphQLObjectType) env.schema.getType(typeName)
+        } as TypeResolver
     }
 
 }

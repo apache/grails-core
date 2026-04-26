@@ -17,39 +17,90 @@
  *  under the License.
  */
 
-
 plugins {
-    id "org.apache.grails.gradle.grails-plugin"
-    id "org.apache.grails.gradle.grails-gson"
+    id 'org.apache.grails.buildsrc.properties'
+    id 'org.apache.grails.gradle.grails-plugin'
+    id 'org.apache.grails.gradle.grails-gson'
+    id 'org.apache.grails.buildsrc.compile'
+    id 'org.apache.grails.buildsrc.publish'
+    id 'org.apache.grails.buildsrc.sbom'
+    id 'org.apache.grails.gradle.grails-code-style'
+}
+
+version = projectVersion
+group = 'org.apache.grails'
+
+ext {
+    gormApiDocs = true
+    pomTitle = 'GORM for GraphQL'
+    pomDescription = 'Generates a GraphQL schema based on entities in GORM'
 }
 
 dependencies {
-    api "org.apache.grails:grails-controllers"
-    api "org.apache.grails:grails-databinding"
-    api("org.apache.grails:grails-rest-transforms") {
+
+    implementation platform(project(':grails-bom'))
+
+    api project(':grails-data-graphql-core'), {
+        // api: GraphQLEntityNamingConvention, Schema, GraphQLSchema generation
+    }
+    api project(':grails-controllers'), {
+        // api: GraphqlController extends from grails controller infrastructure
+    }
+    api project(':grails-databinding'), {
+        // api: data binding for GraphQL request payloads
+    }
+    api project(':grails-rest-transforms'), {
+        // api: REST transforms used for JSON marshalling
         exclude group: 'org.apache.grails', module: 'grails-converters'
     }
-    api "org.apache.grails:grails-url-mappings"
-    api "org.apache.grails:grails-views-gson:$viewsJsonVersion"
-    api "io.micronaut.rxjava2:micronaut-rxjava2-http-client:$micronautRxjava2Version"
-    api "jakarta.servlet:jakarta.servlet-api:$servletApiVersion"
-    api "io.micronaut:micronaut-http-client:$micronautVersion"
-    api "org.apache.grails:grails-converters:$grailsVersion"
-    api 'com.github.javaparser:javaparser-core:3.25.7'
-    api "com.graphql-java:graphql-java:$graphqlJavaVersion"
-    testImplementation "org.apache.grails:grails-testing-support-web"
+    api project(':grails-url-mappings'), {
+        // api: URL mappings for /graphql endpoint
+    }
+    api project(':grails-converters'), {
+        // api: JSON converters used by the controller
+    }
+    api project(':grails-views-gson'), {
+        // api: GSON view rendering for GraphQL responses
+    }
+    api 'com.github.javaparser:javaparser-core', {
+        // api: parsing of GORM entity sources for schema introspection
+    }
+    api "com.graphql-java:graphql-java:$graphqlJavaVersion", {
+        // api: GraphQL execution and schema types
+    }
+    api 'jakarta.servlet:jakarta.servlet-api', {
+        // api: HttpServletRequest/Response in GraphqlController
+    }
+    api "io.micronaut:micronaut-http-client:$micronautHttpClientVersion", {
+        // api: HTTP client used by integration tests / playground
+    }
+    api "io.micronaut.rxjava2:micronaut-rxjava2-http-client:$micronautRxjava2Version", {
+        // api: RxJava2 variant of micronaut-http-client used by integration tests
+    }
+
+    testImplementation project(':grails-testing-support-web')
     // Spock 2.3 on Groovy 4 / JDK 17 uses net.bytebuddy for class mocking;
     // cglib-nodep no longer works on JDK 17+.
-    testImplementation "net.bytebuddy:byte-buddy"
-    profile "org.apache.grails.profiles:web-plugin"
-
-    api project(":gorm-graphql")
+    testImplementation 'net.bytebuddy:byte-buddy'
+    testImplementation 'org.spockframework:spock-core'
 }
 
 compileGsonViews {
-    packageName = "gorm-graphql"
+    packageName = 'gorm-graphql'
 }
 
-tasks.withType(Test) {
+def disabledTasks = ['bootRun', 'bootTestRun']
+disabledTasks.each { taskName ->
+    tasks.named(taskName) {
+        enabled = false
+    }
+}
+
+apply {
+    from rootProject.layout.projectDirectory.file('gradle/docs-config.gradle')
+    from rootProject.layout.projectDirectory.file('gradle/grails-extension-gradle-config.gradle')
+}
+
+tasks.withType(Test).configureEach {
     useJUnitPlatform()
 }

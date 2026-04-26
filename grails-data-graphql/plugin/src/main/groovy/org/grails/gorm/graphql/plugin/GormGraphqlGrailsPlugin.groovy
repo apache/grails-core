@@ -38,65 +38,73 @@ import org.grails.gorm.graphql.types.DefaultGraphQLTypeManager
 
 class GormGraphqlGrailsPlugin extends Plugin {
 
-    def grailsVersion = "7.1.0 > *"
-    def title = "Gorm GraphQL"
-    def author = "James Kleeh"
-    def authorEmail = "james.kleeh@gmail.com"
+    def grailsVersion = '7.1.0 > *'
+    def title = 'Gorm GraphQL'
+    def author = 'James Kleeh'
+    def authorEmail = 'james.kleeh@gmail.com'
     def profiles = ['web']
-    def documentation = "https://grails.github.io/grails-data-graphql/3.0.x/hibernate/guide/index.html"
-    def license = "APACHE"
-    def developers = [ [ name: "Puneet Behl", email: "behlp@objectcomputing.com" ]]
-    def issueManagement = [ system: "GitHub", url: "https://github.com/apache/grails-core/issues" ]
-    def scm = [ url: "https://github.com/apache/grails-core/" ]
+    def documentation = 'https://grails.github.io/grails-data-graphql/3.0.x/hibernate/guide/index.html'
+    def license = 'APACHE'
+    def developers = [[name: 'Puneet Behl', email: 'behlp@objectcomputing.com']]
+    def issueManagement = [system: 'GitHub', url: 'https://github.com/apache/grails-core/issues']
+    def scm = [url: 'https://github.com/apache/grails-core/']
 
-    public static MimeType GRAPHQL_MIME =  new MimeType('application/graphql')
+    public static final MimeType GRAPHQL_MIME = new MimeType('application/graphql')
 
-    Closure doWithSpring() {{ ->
-        grailsGraphQLConfiguration(GrailsGraphQLConfiguration)
+    @Override
+    Closure doWithSpring() {
+        { ->
+            grailsGraphQLConfiguration(GrailsGraphQLConfiguration)
 
-        if (!config.getProperty('grails.gorm.graphql.enabled', Boolean, true)) {
-            return
+            if (!config.getProperty('grails.gorm.graphql.enabled', Boolean, true)) {
+                return
+            }
+
+            graphQLContextBuilder(DefaultGraphQLContextBuilder)
+
+            graphQLDataBinder(GrailsGraphQLDataBinder)
+            graphQLCodeRegistry(GraphQLCodeRegistry) { bean ->
+                bean.factoryMethod = 'newCodeRegistry'
+            }
+            graphQLErrorsResponseHandler(DefaultGraphQLErrorsResponseHandler, ref('messageSource'), ref('graphQLCodeRegistry'))
+            graphQLEntityNamingConvention(GraphQLEntityNamingConvention)
+            graphQLDomainPropertyManager(DefaultGraphQLDomainPropertyManager)
+            graphQLPaginationResponseHandler(DefaultGraphQLPaginationResponseHandler)
+
+            graphQLTypeManager(DefaultGraphQLTypeManager,
+                    ref('graphQLCodeRegistry'),
+                    ref('graphQLEntityNamingConvention'),
+                    ref('graphQLErrorsResponseHandler'),
+                    ref('graphQLDomainPropertyManager'),
+                    ref('graphQLPaginationResponseHandler'))
+            graphQLDataBinderManager(DefaultGraphQLDataBinderManager, ref('graphQLDataBinder'))
+            graphQLDeleteResponseHandler(DefaultGraphQLDeleteResponseHandler)
+            graphQLDataFetcherManager(DefaultGraphQLDataFetcherManager)
+            graphQLInterceptorManager(DefaultGraphQLInterceptorManager)
+            graphQLServiceManager(GraphQLServiceManager)
+
+            graphQLSchemaGenerator(Schema) {
+                codeRegistry = ref('graphQLCodeRegistry')
+                deleteResponseHandler = ref('graphQLDeleteResponseHandler')
+                namingConvention = ref('graphQLEntityNamingConvention')
+                typeManager = ref('graphQLTypeManager')
+                dataBinderManager = ref('graphQLDataBinderManager')
+                dataFetcherManager = ref('graphQLDataFetcherManager')
+                interceptorManager = ref('graphQLInterceptorManager')
+                paginationResponseHandler = ref('graphQLPaginationResponseHandler')
+                serviceManager = ref('graphQLServiceManager')
+
+                dateFormats = '#{grailsGraphQLConfiguration.getDateFormats()}'
+                dateFormatLenient = '#{grailsGraphQLConfiguration.getDateFormatLenient()}'
+                listArguments = '#{grailsGraphQLConfiguration.getListArguments()}'
+            }
+
+            graphQLSchema(graphQLSchemaGenerator: 'generate')
+            graphQLBuilder(GraphQL.Builder, ref('graphQLSchema'))
+            graphQL(GraphQL) { bean ->
+                bean.factoryBean = 'graphQLBuilder'
+                bean.factoryMethod = 'build'
+            }
         }
-
-        graphQLContextBuilder(DefaultGraphQLContextBuilder)
-
-        graphQLDataBinder(GrailsGraphQLDataBinder)
-        graphQLCodeRegistry(GraphQLCodeRegistry) { bean ->
-            bean.factoryMethod = "newCodeRegistry"
-        }
-        graphQLErrorsResponseHandler(DefaultGraphQLErrorsResponseHandler, ref("messageSource"), ref("graphQLCodeRegistry"))
-        graphQLEntityNamingConvention(GraphQLEntityNamingConvention)
-        graphQLDomainPropertyManager(DefaultGraphQLDomainPropertyManager)
-        graphQLPaginationResponseHandler(DefaultGraphQLPaginationResponseHandler)
-
-        graphQLTypeManager(DefaultGraphQLTypeManager, ref("graphQLCodeRegistry"), ref("graphQLEntityNamingConvention"), ref("graphQLErrorsResponseHandler"), ref("graphQLDomainPropertyManager"), ref("graphQLPaginationResponseHandler"))
-        graphQLDataBinderManager(DefaultGraphQLDataBinderManager, ref("graphQLDataBinder"))
-        graphQLDeleteResponseHandler(DefaultGraphQLDeleteResponseHandler)
-        graphQLDataFetcherManager(DefaultGraphQLDataFetcherManager)
-        graphQLInterceptorManager(DefaultGraphQLInterceptorManager)
-        graphQLServiceManager(GraphQLServiceManager)
-
-        graphQLSchemaGenerator(Schema) {
-            codeRegistry = ref("graphQLCodeRegistry")
-            deleteResponseHandler = ref("graphQLDeleteResponseHandler")
-            namingConvention = ref("graphQLEntityNamingConvention")
-            typeManager = ref("graphQLTypeManager")
-            dataBinderManager = ref("graphQLDataBinderManager")
-            dataFetcherManager = ref("graphQLDataFetcherManager")
-            interceptorManager = ref("graphQLInterceptorManager")
-            paginationResponseHandler = ref("graphQLPaginationResponseHandler")
-            serviceManager = ref("graphQLServiceManager")
-
-            dateFormats = '#{grailsGraphQLConfiguration.getDateFormats()}'
-            dateFormatLenient = '#{grailsGraphQLConfiguration.getDateFormatLenient()}'
-            listArguments = '#{grailsGraphQLConfiguration.getListArguments()}'
-        }
-
-        graphQLSchema(graphQLSchemaGenerator: "generate")
-        graphQLBuilder(GraphQL.Builder, ref("graphQLSchema"))
-        graphQL(GraphQL) { bean ->
-            bean.factoryBean = "graphQLBuilder"
-            bean.factoryMethod = "build"
-        }
-    }}
+    }
 }

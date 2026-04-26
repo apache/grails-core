@@ -19,7 +19,14 @@
 
 package org.grails.gorm.graphql
 
-import graphql.schema.*
+import graphql.schema.DataFetcher
+import graphql.schema.GraphQLCodeRegistry
+import graphql.schema.GraphQLFieldDefinition
+import graphql.schema.GraphQLInputType
+import graphql.schema.GraphQLObjectType
+import graphql.schema.GraphQLOutputType
+import graphql.schema.GraphQLSchema
+import graphql.schema.GraphQLType
 import groovy.transform.CompileStatic
 import javassist.Modifier
 import org.grails.datastore.mapping.model.MappingContext
@@ -66,7 +73,13 @@ import org.grails.gorm.graphql.types.DefaultGraphQLTypeManager
 import org.grails.gorm.graphql.types.GraphQLPropertyType
 import org.grails.gorm.graphql.types.GraphQLTypeManager
 import org.grails.gorm.graphql.types.scalars.coercing.DateCoercion
-import org.grails.gorm.graphql.types.scalars.coercing.jsr310.*
+import org.grails.gorm.graphql.types.scalars.coercing.jsr310.InstantCoercion
+import org.grails.gorm.graphql.types.scalars.coercing.jsr310.LocalDateCoercion
+import org.grails.gorm.graphql.types.scalars.coercing.jsr310.LocalDateTimeCoercion
+import org.grails.gorm.graphql.types.scalars.coercing.jsr310.LocalTimeCoercion
+import org.grails.gorm.graphql.types.scalars.coercing.jsr310.OffsetDateTimeCoercion
+import org.grails.gorm.graphql.types.scalars.coercing.jsr310.OffsetTimeCoercion
+import org.grails.gorm.graphql.types.scalars.coercing.jsr310.ZonedDateTimeCoercion
 import org.springframework.context.support.StaticMessageSource
 import jakarta.annotation.PostConstruct
 import java.time.Instant
@@ -83,7 +96,12 @@ import static graphql.schema.GraphQLFieldDefinition.newFieldDefinition
 import static graphql.schema.GraphQLList.list
 import static graphql.schema.GraphQLObjectType.newObject
 import static graphql.schema.GraphQLScalarType.newScalar
-import static org.grails.gorm.graphql.fetcher.GraphQLDataFetcherType.*
+import static org.grails.gorm.graphql.fetcher.GraphQLDataFetcherType.COUNT
+import static org.grails.gorm.graphql.fetcher.GraphQLDataFetcherType.CREATE
+import static org.grails.gorm.graphql.fetcher.GraphQLDataFetcherType.DELETE
+import static org.grails.gorm.graphql.fetcher.GraphQLDataFetcherType.GET
+import static org.grails.gorm.graphql.fetcher.GraphQLDataFetcherType.LIST
+import static org.grails.gorm.graphql.fetcher.GraphQLDataFetcherType.UPDATE
 
 /**
  * Created by jameskleeh on 5/19/17.

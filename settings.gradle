@@ -318,6 +318,19 @@ project(':grails-data-mongodb').projectDir = new File(settingsDir, 'grails-data-
 include 'grails-data-mongodb-gson-templates'
 project(':grails-data-mongodb-gson-templates').projectDir = new File(settingsDir, 'grails-data-mongodb/gson-templates')
 
+// GraphQL
+// core
+include 'grails-data-graphql-core'
+project(':grails-data-graphql-core').projectDir = new File(settingsDir, 'grails-data-graphql/core')
+
+// documentation
+include 'grails-data-graphql-docs'
+project(':grails-data-graphql-docs').projectDir = new File(settingsDir, 'grails-data-graphql/docs')
+
+// plugins
+include 'grails-data-graphql'
+project(':grails-data-graphql').projectDir = new File(settingsDir, 'grails-data-graphql/plugin')
+
 // functional tests - mongodb examples
 include 'grails-test-examples-mongodb-base'
 project(':grails-test-examples-mongodb-base').projectDir = new File(settingsDir, 'grails-test-examples/mongodb/base')

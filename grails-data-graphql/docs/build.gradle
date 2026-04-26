@@ -17,41 +17,52 @@
  *  under the License.
  */
 
+import org.asciidoctor.gradle.jvm.AsciidoctorTask
+
 plugins {
-    id 'org.asciidoctor.jvm.convert' version '4.0.5'
+    id 'org.asciidoctor.jvm.convert'
 }
 
-repositories {
-    mavenCentral()
-}
+version = projectVersion
+group = 'org.apache.grails'
 
-asciidoctorj {
-    version = '3.0.0'
-}
+def asciidoctorAttributes = [
+        'doctype'           : 'book',
+        'toc'               : 'left',
+        'toclevels'         : 3,
+        'icons'             : 'font',
+        'source-highlighter': 'coderay',
+        'sectanchors'       : '',
+        'idprefix'          : '',
+        'idseparator'       : '-',
+        'project-version'   : project.version,
+        'grails-version'    : projectVersion,
+        'gorm-version'      : projectVersion,
+        'imagesdir'         : 'images',
+        'sourcedir'         : rootDir.absolutePath.replace('\\', '/')
+]
 
-asciidoctor {
-    baseDirFollowsSourceFile()
-    sourceDir = file('src/main/docs')
-    sources {
+tasks.named('asciidoctor', AsciidoctorTask).configure { AsciidoctorTask it ->
+    it.inputs.dir(project.layout.projectDirectory.dir('src/main/docs'))
+            .withPropertyName('docsSrcDir')
+            .withPathSensitivity(PathSensitivity.RELATIVE)
+    it.outputs.dir project.layout.buildDirectory.dir('docs/manual')
+
+    it.jvm {
+        jvmArgs('--add-opens', 'java.base/sun.nio.ch=ALL-UNNAMED',
+                '--add-opens', 'java.base/java.io=ALL-UNNAMED')
+    }
+    it.baseDirFollowsSourceFile()
+    it.sourceDir project.layout.projectDirectory.dir('src/main/docs')
+    it.sources {
         include 'index.adoc'
     }
-    outputDir = layout.buildDirectory.dir('docs/manual').get().asFile
-
-    attributes 'toc'                : 'left',
-               'toclevels'          : 3,
-               'icons'              : 'font',
-               'source-highlighter' : 'coderay',
-               'sectanchors'        : '',
-               'idprefix'           : '',
-               'idseparator'        : '-',
-               'project-version'    : project.version,
-               'grails-version'     : grailsVersion,
-               'gorm-version'       : gormVersion,
-               'sourcedir'          : rootDir.absolutePath.replace('\\', '/')
+    it.outputDir = project.layout.buildDirectory.dir('docs/manual').get().asFile
+    it.attributes asciidoctorAttributes
 }
 
 tasks.register('docs') {
     group = 'documentation'
-    description = 'Builds the reference guide.'
+    description = 'Builds the GORM for GraphQL reference guide.'
     dependsOn tasks.named('asciidoctor')
 }

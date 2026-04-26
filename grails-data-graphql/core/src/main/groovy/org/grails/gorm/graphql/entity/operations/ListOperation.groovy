@@ -36,6 +36,7 @@ import org.grails.gorm.graphql.entity.dsl.helpers.Describable
 @Builder(prefix = '', builderStrategy = SimpleStrategy)
 @CompileStatic
 class ListOperation implements Describable<ListOperation>, Deprecatable<ListOperation> {
+
     boolean enabled = true
     boolean paginate = false
 }

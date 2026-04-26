@@ -111,7 +111,7 @@ class GraphqlController {
                     staticBase = staticBase + '/'
                 }
 
-                resolvedBrowserHtml = IOUtils.toString(resource, "UTF8")
+                resolvedBrowserHtml = IOUtils.toString(resource, 'UTF8')
                         .replaceAll(/\{endpoint}/, endpoint)
                         .replaceAll(/\{staticBase}/, staticBase)
             }

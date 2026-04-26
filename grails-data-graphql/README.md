@@ -14,15 +14,35 @@ See the License for the specific language governing permissions and
 limitations under the License.
 -->
 
-# Gorm GraphQL
+# GORM for GraphQL
 
-This project has not been updated for Grails 7 yet and is not included in the build.
+An automatic GraphQL schema generator for [GORM](https://grails.apache.org/docs/latest/grails-data/).
 
-## An automatic GraphQL schema generator for GORM
+This project is part of the main Grails monorepo build. The published modules
+are wired into the root `settings.gradle`:
 
-Current documentation https://grails.github.io/grails-data-graphql/3.0.x/hibernate/guide/index.html
+| Module          | Gradle path                  | Maven coordinates                                 |
+| --------------- | ---------------------------- | ------------------------------------------------- |
+| Core schema lib | `:grails-data-graphql-core`  | `org.apache.grails.data:grails-data-graphql-core` |
+| Grails plugin   | `:grails-data-graphql`       | `org.apache.grails:grails-data-graphql`           |
+| Reference guide | `:grails-data-graphql-docs`  | (not published)                                   |
 
+## Building
 
-### Dependencies
+Run from the repository root:
 
-- [Graphql Java](https://github.com/graphql-java/graphql-java)
+```bash
+./gradlew :grails-data-graphql-core:build
+./gradlew :grails-data-graphql:build
+./gradlew :grails-data-graphql-docs:asciidoctor
+```
+
+## Example applications
+
+Demo applications under `grails-test-examples/graphql/` will be added in a
+follow-up PR (matching the layout used by `grails-test-examples/mongodb/` and
+`grails-test-examples/hibernate5/`).
+
+## Dependencies
+
+- [graphql-java](https://github.com/graphql-java/graphql-java)
