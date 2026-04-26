@@ -144,3 +144,15 @@ The use of `TransactionSynchronizationManager` to bind sessions in `HibernateCri
 -   **Refactor `GormEnhancer`:** Move away from static maps to instance-based maps managed by the `Datastore` instance.
 -   **LRU/Weak Cache:** Implement a `WeakHashMap` or a LRU cache for tenant-specific API objects.
 -   **[COMPLETED] InstanceApiHelper Singleton:** Refactored `InstanceApiHelper` to be a singleton per datastore instead of per-class.
+
+### In Progress: `withNewSession` transaction binding bug
+Currently investigating a `java.lang.IllegalStateException: Already value [org.grails.datastore.mapping.transactions.SessionHolder@...] for key [HibernateDatastore: default] bound to thread` in `HibernateDatastoreSpringInitializerSpec`.
+This appears to be related to `withNewSession` not correctly managing the `TransactionSynchronizationManager` state when `HibernateDatastore.withNewSession` delegates to `GrailsHibernateTemplate.executeWithNewSession`. The recent addition of explicit `withNewSession` overrides to `HibernateGormStaticApi` exposed an issue where the closure is called with `HibernateSession` instead of the expected argument type (e.g. `MissingMethodException: No signature of method... is applicable for argument types: (org.grails.orm.hibernate.HibernateSession)`).
+
+### In Progress: `withNewSession` transaction binding bug
+Currently investigating a `java.lang.IllegalStateException: Already value [org.grails.datastore.mapping.transactions.SessionHolder@...] for key [HibernateDatastore: default] bound to thread` in `HibernateDatastoreSpringInitializerSpec`.
+This appears to be related to `withNewSession` not correctly managing the `TransactionSynchronizationManager` state when `HibernateDatastore.withNewSession` delegates to `GrailsHibernateTemplate.executeWithNewSession`. The recent addition of explicit `withNewSession` overrides to `HibernateGormStaticApi` exposed an issue where the closure is called with `HibernateSession` instead of the expected argument type (e.g. `MissingMethodException: No signature of method... is applicable for argument types: (org.grails.orm.hibernate.HibernateSession)`).
+
+**Findings:**
+The static property lookup `Author.moreBooks` calls `GormEnhancer.findStaticApi()`. In `grails-datamapping-core`, `findStaticApi()` with a qualifier explicitly returns `new GormStaticApi(...)` instead of delegating to `api.forQualifier(qualifier)`. This causes `Author.moreBooks` to return a plain `GormStaticApi` instead of a `HibernateGormStaticApi`, which lacks our overrides. 
+We need to modify `GormEnhancer` to use `api.forQualifier()` and then override `forQualifier()` in the Hibernate GORM API classes.

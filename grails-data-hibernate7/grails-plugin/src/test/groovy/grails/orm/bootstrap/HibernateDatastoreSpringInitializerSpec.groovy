@@ -68,6 +68,7 @@ class HibernateDatastoreSpringInitializerSpec extends Specification{
 
         and:"Each domain has the correct data source(s)"
         HibernateDatastore hibernateDatastore = applicationContext.getBean(HibernateDatastore)
+        println "Author.moreBooks class is: " + Author.moreBooks.getClass().getName()
         Person.withNewSession { Person.count() == 0 }
                 hibernateDatastore.withNewSession { Session s ->
                     assert s.doReturningWork { it.getMetaData().getURL() } == "jdbc:h2:mem:people"

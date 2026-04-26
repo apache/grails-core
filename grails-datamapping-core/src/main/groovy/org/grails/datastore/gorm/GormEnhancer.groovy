@@ -309,12 +309,7 @@ class GormEnhancer implements Closeable {
         }
 
         if (qualifier != null && qualifier != ConnectionSource.DEFAULT) {
-            final MappingContext mappingContext = api.getDatastore().getMappingContext()
-            final List<FinderMethod> finders = api.getGormDynamicFinders()
-            DatastoreResolver resolver = new DatastoreResolver() {
-                @Override Datastore resolve() { GormEnhancer.findDatastore(entity, qualifier) }
-            }
-            return new GormStaticApi<D>(entity, mappingContext, finders, resolver, qualifier)
+            return api.forQualifier(qualifier)
         }
         return (GormStaticApi<D>) api
     }
@@ -335,14 +330,7 @@ class GormEnhancer implements Closeable {
         }
 
         if (qualifier != null && qualifier != ConnectionSource.DEFAULT) {
-            final MappingContext mappingContext = api.getDatastore().getMappingContext()
-            DatastoreResolver resolver = new DatastoreResolver() {
-                @Override Datastore resolve() { GormEnhancer.findDatastore(entity, qualifier) }
-            }
-            def instanceApi = new GormInstanceApi<D>(entity, mappingContext, resolver)
-            instanceApi.failOnError = api.failOnError
-            instanceApi.markDirty = api.markDirty
-            return instanceApi
+            return api.forQualifier(qualifier)
         }
         return (GormInstanceApi<D>) api
     }
@@ -363,11 +351,7 @@ class GormEnhancer implements Closeable {
         }
 
         if (qualifier != null && qualifier != ConnectionSource.DEFAULT) {
-            final MappingContext mappingContext = api.getDatastore().getMappingContext()
-            DatastoreResolver resolver = new DatastoreResolver() {
-                @Override Datastore resolve() { GormEnhancer.findDatastore(entity, qualifier) }
-            }
-            return new GormValidationApi<D>(entity, mappingContext, resolver)
+            return api.forQualifier(qualifier)
         }
         return (GormValidationApi<D>) api
     }
