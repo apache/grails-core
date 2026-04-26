@@ -506,7 +506,7 @@ jobs:
         uses: actions/setup-java@v4
         with:
           distribution: liberica
-          java-version: 17
+          java-version: 21
       - name: "📥 Download Wrapper"
         uses: actions/download-artifact@v7.0.0
         with:

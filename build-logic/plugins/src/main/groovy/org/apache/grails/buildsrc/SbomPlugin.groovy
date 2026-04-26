@@ -25,8 +25,8 @@ import groovy.json.JsonOutput
 import groovy.json.JsonSlurper
 import groovy.transform.CompileDynamic
 import groovy.transform.CompileStatic
-import org.cyclonedx.gradle.CycloneDxPlugin
-import org.cyclonedx.gradle.CycloneDxTask
+import org.cyclonedx.gradle.CyclonedxPlugin
+import org.cyclonedx.gradle.CyclonedxDirectTask
 import org.cyclonedx.model.Component
 import org.cyclonedx.model.ExternalReference
 import org.cyclonedx.model.License
@@ -126,7 +126,7 @@ class SbomPlugin implements Plugin<Project> {
 
     @Override
     void apply(Project project) {
-        project.pluginManager.apply(CycloneDxPlugin)
+        project.pluginManager.apply(CyclonedxPlugin)
 
         def sbomOutputLocation = project.layout.buildDirectory.file(
                 project.provider {
@@ -145,13 +145,11 @@ class SbomPlugin implements Plugin<Project> {
     }
 
     private static void configureSbomTask(Project project, Provider<RegularFile> sbomOutputLocation) {
-        project.tasks.withType(CycloneDxTask).configureEach { CycloneDxTask task ->
+        project.tasks.withType(CyclonedxDirectTask).configureEach { CyclonedxDirectTask task ->
             task.with {
-                // the 2.x version of Cyclonedx uses a legacy syntax & helpers for setting inputs so the syntax below
-                // is required until the 3.x version is GA
-                projectType = Component.Type.valueOf(lookupProperty(project, 'sbomProjectType', 'FRAMEWORK'))
-                componentName = lookupProperty(project, 'pomArtifactId', project.name)
-                task.@organizationalEntity.set(new OrganizationalEntity(
+                projectType.set(Component.Type.valueOf(lookupProperty(project, 'sbomProjectType', 'FRAMEWORK').toString()))
+                componentName.set(lookupProperty(project, 'pomArtifactId', project.name).toString())
+                organizationalEntity.set(new OrganizationalEntity(
                         name: 'Apache Software Foundation',
                         urls: [
                                 'https://www.apache.org/',
@@ -164,7 +162,7 @@ class SbomPlugin implements Plugin<Project> {
                                 )
                         ]
                 ))
-                task.@licenseChoice.set(new LicenseChoice(
+                licenseChoice.set(new LicenseChoice(
                         licenses: [
                                 new License(
                                         name: 'Apache-2.0',
@@ -174,7 +172,7 @@ class SbomPlugin implements Plugin<Project> {
                 ))
 
                 def projectVersion = project.findProperty('projectVersion').toString()
-                def references = [
+                List<ExternalReference> references = [
                         new ExternalReference(
                                 url: 'https://grails.apache.org',
                                 type: ExternalReference.Type.WEBSITE
@@ -197,14 +195,13 @@ class SbomPlugin implements Plugin<Project> {
                             )
                     )
                 }
-                task.@externalReferences.set(references)
+                externalReferences.set(references)
 
                 // sboms are published for the purposes of vulnerability analysis so only include the runtime classpath
-                includeConfigs = ['runtimeClasspath']
-                skipConfigs = ['compileClasspath', 'testRuntimeClasspath']
+                includeConfigs.set(['runtimeClasspath'])
 
                 // turn off license text since it's base64 encoded & will inflate the jar sizes
-                includeLicenseText = false
+                includeLicenseText.set(false)
 
                 // disable xml output
                 xmlOutput.unsetConvention()
@@ -213,6 +210,13 @@ class SbomPlugin implements Plugin<Project> {
 
                 // cyclonedx does not support "choosing" the license placed in the sbom
                 // see: https://github.com/CycloneDX/cyclonedx-gradle-plugin/issues/16
+                // Capture project name/path at configuration time to avoid deprecated Task.project access at execution time.
+                // isReproducibleBuild and buildDate are providers so they are evaluated lazily at execution time.
+                // See: https://docs.gradle.org/current/userguide/configuration_cache.html#config_cache:requirements:use_project_during_execution
+                def projectName = project.name
+                def projectPath = project.path
+                Provider<Boolean> isReproducibleBuildProvider = project.provider { lookupProperty(project, 'isReproducibleBuild') as boolean }
+                Provider<ZonedDateTime> buildDateProvider = project.provider { lookupProperty(project, 'buildDate') as ZonedDateTime }
                 doLast {
                     // json schema is documented here: https://cyclonedx.org/docs/1.6/json/
                     def rewriteSbom = { File f ->
@@ -222,9 +226,8 @@ class SbomPlugin implements Plugin<Project> {
                         // Use a fixed epoch when SOURCE_DATE_EPOCH is not set so the SBOM is identical between
                         // builds. This prevents the non-reproducible timestamp from changing the jar checksum
                         // and cascading cache misses through the compile classpath of downstream projects.
-                        boolean isReproducibleBuild = lookupProperty(project, 'isReproducibleBuild')
-                        ZonedDateTime sbomTimestamp = isReproducibleBuild ?
-                                lookupProperty(project, 'buildDate') as ZonedDateTime :
+                        ZonedDateTime sbomTimestamp = isReproducibleBuildProvider.get() ?
+                                buildDateProvider.get() :
                                 Instant.EPOCH.atZone(ZoneOffset.UTC)
                         bom['metadata']['timestamp'] = DateTimeFormatter.ISO_INSTANT.format(sbomTimestamp.truncatedTo(ChronoUnit.SECONDS))
 
@@ -233,7 +236,7 @@ class SbomPlugin implements Plugin<Project> {
                         comps.each { c ->
                             // .licenses => choose a license that is compatible with ASF policy if multiple licensed
                             if (c instanceof Map && c.licenses instanceof List && !(c.licenses as List).empty) {
-                                def chosen = pickLicense(task, c['bom-ref'] as String, c.licenses as List)
+                                def chosen = pickLicense(logger, projectName, c['bom-ref'] as String, c.licenses as List)
                                 if (chosen != null) {
                                     c.licenses = [chosen]
                                 }
@@ -266,7 +269,7 @@ class SbomPlugin implements Plugin<Project> {
 
                         f.setText(JsonOutput.prettyPrint(JsonOutput.toJson(bom)), StandardCharsets.UTF_8.name())
 
-                        logger.info('Rewrote JSON SBOM ({}) to pick preferred license', project.relativePath(f))
+                        logger.info('Rewrote JSON SBOM ({}) to pick preferred license', projectPath)
                     }
 
                     sbomOutputLocation.get().with { rewriteSbom(it.asFile) }
@@ -283,29 +286,40 @@ class SbomPlugin implements Plugin<Project> {
             }
         }
     }
+
+    /**
+     * Picks the most appropriate license for a dependency from a list of license choices.
+     * This method is called at execution time and should not access Task.project.
+     *
+     * @param logger the logger to use for logging
+     * @param projectName the name of the project (captured at configuration time)
+     * @param bomRef the bom reference for the dependency
+     * @param licenseChoices the list of license choices
+     * @return the chosen license
+     */
     @CompileDynamic
-    private static Object pickLicense(CycloneDxTask task, String bomRef, List licenseChoices) {
+    private static Object pickLicense(org.gradle.api.logging.Logger logger, String projectName, String bomRef, List licenseChoices) {
         if (!bomRef) {
-            throw new GradleException("No bomRef found for a dependency of ${task.project.name}, cannot pick license")
+            throw new GradleException("No bomRef found for a dependency of ${projectName}, cannot pick license")
         }
 
-        task.logger.info('Picking license for {} from {} choices', bomRef, licenseChoices.size())
+        logger.info('Picking license for {} from {} choices', bomRef, licenseChoices.size())
         if (LICENSE_MAPPING.containsKey(bomRef)) {
             // There are several reasons that cyclone will get the license wrong, usually due to upstream not publishing information or publishing it incorrectly
             // see the licenseMapping map above for details
             def licenseId = LICENSE_MAPPING[bomRef]
-            task.logger.lifecycle('Forcing license for {} to {}', bomRef, licenseId)
+            logger.lifecycle('Forcing license for {} to {}', bomRef, licenseId)
 
             def licenseBlock = LICENSES[licenseId]
             if (!licenseBlock) {
-                throw new GradleException("Cannot find license information for id ${licenseId} to use for bomRef ${bomRef} in project ${task.project.name}")
+                throw new GradleException("Cannot find license information for id ${licenseId} to use for bomRef ${bomRef} in project ${projectName}")
             }
 
             return licenseBlock
         }
 
         if (!(licenseChoices instanceof List) || licenseChoices.isEmpty()) {
-            throw new GradleException("No License was found for dependency: ${bomRef} in project ${task.project.name}")
+            throw new GradleException("No License was found for dependency: ${bomRef} in project ${projectName}")
         }
 
         def licenseIds = licenseChoices.findAll { it instanceof Map && it.license instanceof Map && it.license.id }
@@ -317,13 +331,13 @@ class SbomPlugin implements Plugin<Project> {
         def defaultLicense = licenseChoices[0] // pick the first one found
         def defaultLicenseId = defaultLicense.license.id as String
         if (defaultLicenseId == null) {
-            throw new GradleException("Could not determine License id for dependency: ${bomRef} in project ${task.project.name} for value ${defaultLicense}")
+            throw new GradleException("Could not determine License id for dependency: ${bomRef} in project ${projectName} for value ${defaultLicense}")
         }
         if (!(defaultLicenseId in PREFERRED_LICENSES)) {
-            def projectLicenseExemptions = LICENSE_EXCEPTIONS[task.project.name] ?: [:]
+            def projectLicenseExemptions = LICENSE_EXCEPTIONS[projectName] ?: [:]
             def permittedLicense = projectLicenseExemptions.get(bomRef) == defaultLicenseId
             if (!permittedLicense) {
-                throw new GradleException("Unpermitted License found for bom dependency: ${bomRef} in project ${task.project.name} : ${defaultLicenseId}")
+                throw new GradleException("Unpermitted License found for bom dependency: ${bomRef} in project ${projectName} : ${defaultLicenseId}")
             }
         }
 
@@ -333,11 +347,11 @@ class SbomPlugin implements Plugin<Project> {
     private static void ensureLicensesValidated(Project project) {
         def initialized = new AtomicBoolean(false)
         // platforms only have constraints, so validate is not performed at this time
-        ['java', 'java-library'].each {
+                ['java', 'java-library'].each {
             project.plugins.withId(it) {
                 if (initialized.compareAndSet(false, true)) {
                     project.tasks.named('build').configure {
-                        it.dependsOn('cyclonedxBom')
+                        it.dependsOn('cyclonedxDirectBom')
                     }
                 }
             }
@@ -352,7 +366,7 @@ class SbomPlugin implements Plugin<Project> {
                     project.afterEvaluate {
                         if (!project.findProperty('skipJavaComponent')) {
                             project.tasks.named('jar', Jar).configure { Jar jar ->
-                                jar.dependsOn('cyclonedxBom')
+                                jar.dependsOn('cyclonedxDirectBom')
                                 jar.from(sbomOutputLocation) { CopySpec spec ->
                                     spec.into('META-INF')
                                     spec.rename {

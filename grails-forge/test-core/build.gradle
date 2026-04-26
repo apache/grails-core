@@ -46,28 +46,28 @@ configurations.configureEach {
 
 dependencies {
     implementation gradleTestKit()
+    implementation platform("io.micronaut.platform:micronaut-platform:$micronautVersion")
+    testImplementation platform("io.micronaut.platform:micronaut-platform:$micronautVersion")
     generateConfig "info.picocli:picocli-codegen:$picocliVersion"
 
-    implementation "io.micronaut:micronaut-inject-groovy:$micronautVersion"
+    implementation 'io.micronaut:micronaut-inject-groovy'
 
     testImplementation project(':grails-forge-cli')
     testImplementation project(':grails-forge-core')
     testImplementation "ch.qos.logback:logback-classic:$logbackClassicVersion"
     testImplementation 'io.micronaut.picocli:micronaut-picocli'
 
-    if (project.hasProperty('micronautVersion')) {
-        testCompileOnly "io.micronaut:micronaut-inject-groovy:$micronautVersion"
-    }
+    testCompileOnly 'io.micronaut:micronaut-inject-groovy'
 
-    testImplementation "org.codehaus.groovy:groovy:$groovyVersion"
+    testImplementation 'org.apache.groovy:groovy'
     testImplementation "org.spockframework:spock-core:$spockVersion", {
-        exclude group: 'org.codehaus.groovy', module: 'groovy-all'
+        exclude group: 'org.apache.groovy', module: 'groovy-all'
     }
 
     testImplementation "cglib:cglib-nodep:$cglibVersion"
     testImplementation "org.objenesis:objenesis:$objenesisVersion"
     testRuntimeOnly "ch.qos.logback:logback-classic:$logbackClassicVersion"
-    testImplementation "org.codehaus.groovy:groovy-test:$groovyVersion"
+    testImplementation 'org.apache.groovy:groovy-test'
 }
 
 apply {

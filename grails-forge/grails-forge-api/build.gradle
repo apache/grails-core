@@ -28,17 +28,18 @@ version = projectVersion
 group = 'org.apache.grails.forge'
 
 dependencies {
-    annotationProcessor platform("io.micronaut:micronaut-bom:$micronautVersion")
-    implementation platform("io.micronaut:micronaut-bom:$micronautVersion")
+    annotationProcessor platform("io.micronaut.platform:micronaut-platform:$micronautVersion")
+    implementation platform("io.micronaut.platform:micronaut-platform:$micronautVersion")
     annotationProcessor 'io.micronaut:micronaut-inject-java'
-    testAnnotationProcessor platform("io.micronaut:micronaut-bom:$micronautVersion")
+    annotationProcessor 'io.micronaut.validation:micronaut-validation-processor'
+    testAnnotationProcessor platform("io.micronaut.platform:micronaut-platform:$micronautVersion")
     testAnnotationProcessor 'io.micronaut:micronaut-inject-java'
 
     annotationProcessor 'com.google.code.findbugs:jsr305'
     annotationProcessor "io.micronaut.docs:micronaut-docs-asciidoc-config-props:$micronautDocsVersion"
     annotationProcessor 'io.micronaut.openapi:micronaut-openapi'
 
-    api platform("io.micronaut:micronaut-bom:$micronautVersion")
+    api platform("io.micronaut.platform:micronaut-platform:$micronautVersion")
 
     api project(':grails-forge-core'), {
         exclude group:'org.slf4j', module:'slf4j-nop'
@@ -47,8 +48,8 @@ dependencies {
     api 'io.micronaut:micronaut-http-client'
     api 'io.micronaut:micronaut-inject'
     api 'io.micronaut:micronaut-runtime'
-    api 'io.micronaut:micronaut-validation'
-    api group: 'javax.inject', name: 'javax.inject', version: '1'
+    api 'io.micronaut.validation:micronaut-validation'
+    api 'jakarta.inject:jakarta.inject-api'
 
     implementation 'io.swagger.core.v3:swagger-annotations'
     implementation 'io.projectreactor:reactor-core'
@@ -57,22 +58,19 @@ dependencies {
     testImplementation 'io.micronaut:micronaut-http-client'
     testImplementation 'io.micronaut:micronaut-http-server-netty'
     testImplementation 'io.micronaut.test:micronaut-test-spock'
+    testRuntimeOnly 'io.micronaut:micronaut-jackson-databind'
 
-    testCompileOnly "io.micronaut:micronaut-inject-groovy:$micronautVersion"
+    testCompileOnly 'io.micronaut:micronaut-inject-groovy'
 
-    if (project.hasProperty('micronautVersion')) {
-        testCompileOnly "io.micronaut:micronaut-inject-groovy:$micronautVersion"
-    }
-
-    testImplementation "org.codehaus.groovy:groovy:$groovyVersion"
+    testImplementation 'org.apache.groovy:groovy'
     testImplementation "org.spockframework:spock-core:$spockVersion", {
-        exclude group: 'org.codehaus.groovy', module: 'groovy-all'
+        exclude group: 'org.apache.groovy', module: 'groovy-all'
     }
 
     testImplementation "cglib:cglib-nodep:$cglibVersion"
     testImplementation "org.objenesis:objenesis:$objenesisVersion"
     testRuntimeOnly "ch.qos.logback:logback-classic:$logbackClassicVersion"
-    testImplementation "org.codehaus.groovy:groovy-test:$groovyVersion"
+    testImplementation 'org.apache.groovy:groovy-test'
 }
 
 apply {
@@ -85,9 +83,6 @@ apply {
 configurations.configureEach {
     resolutionStrategy {
         eachDependency { DependencyResolveDetails details ->
-            if (details.requested.group == 'org.codehaus.groovy') {
-                details.useVersion(groovyVersion)
-            }
             if (details.requested.name == 'spock-core') {
                 details.useVersion(spockVersion)
             }

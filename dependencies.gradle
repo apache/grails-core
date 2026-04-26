@@ -22,15 +22,21 @@
 // These files are split to facilitate separation of build vs application dependencies. These are the application dependencies.
 ext {
     gradleBomDependencyVersions = [
-            'ant.version'                   : '1.10.15',
+            'ant.version'                   : '1.10.17',
             'asciidoctor-gradle-jvm.version': '4.0.5',
             'asciidoctorj.version'          : '3.0.0',
             'asset-pipeline-gradle.version' : '5.1.0-M4',
-            'byte-buddy.version'            : '1.17.8',
-            'commons-text.version'          : '1.14.0',
+            'byte-buddy.version'            : '1.18.8',
+            'commons-text.version'          : '1.15.0',
             'directory-watcher.version'     : '0.19.1',
-            'gradle-spock.version'          : '2.3-groovy-3.0',
-            'grails-publish-plugin.version' : '0.0.4',
+            // Hard-coded rather than GroovySystem.version: the latter returns Gradle's
+            // bundled Groovy, which can lag the version grails-gradle code resolves
+            // transitively via grails-core. validateDependencyVersions requires the
+            // BOM-declared version to match what we actually resolve, so this needs to
+            // track grails-core's chosen Groovy, not Gradle's.
+            'gradle-groovy.version'         : '4.0.31',
+            'gradle-spock.version'          : '2.3-groovy-4.0',
+            'grails-publish-plugin.version' : '1.0.0-SNAPSHOT',
             'jansi.version'                 : '2.4.2',
             'javaparser-core.version'       : '3.28.0',
             'jline.version'                 : '3.30.6',
@@ -43,8 +49,9 @@ ext {
 
     // Note: the name of the dependency must be the prefix of the property name so properties in the pom are resolved correctly
     gradleBomPlatformDependencies = [
-            'spring-boot-bom' : "org.springframework.boot:spring-boot-dependencies:${gradleBomDependencyVersions['spring-boot.version']}",
-            'gradle-spock-bom': "org.spockframework:spock-bom:${gradleBomDependencyVersions['gradle-spock.version']}",
+            'spring-boot-bom'  : "org.springframework.boot:spring-boot-dependencies:${gradleBomDependencyVersions['spring-boot.version']}",
+            'gradle-groovy-bom': "org.apache.groovy:groovy-bom:${gradleBomDependencyVersions['gradle-groovy.version']}",
+            'gradle-spock-bom' : "org.spockframework:spock-bom:${gradleBomDependencyVersions['gradle-spock.version']}",
     ]
 
     // Note: the name of the dependency must be the prefix of the property name so properties in the pom are resolved correctly
@@ -73,7 +80,7 @@ ext {
             'asset-pipeline-bom.version'  : '5.1.0-M4',
             'bootstrap-icons.version'     : '1.13.1',
             'bootstrap.version'           : '5.3.8',
-            'commons-codec.version'       : '1.19.0',
+            'commons-codec.version'       : '1.21.0',
             'commons-lang3.version'       : '3.20.0',
             'geb-spock.version'           : '8.0.1',
             'groovy.version'              : '4.0.31',
@@ -84,9 +91,9 @@ ext {
             'rxjava.version'              : '1.3.8',
             'rxjava2.version'             : '2.2.21',
             'rxjava3.version'             : '3.1.12',
-            'selenium.version'            : '4.38.0',
+            'selenium.version'            : '4.37.0',
             'kotlin.version'              : '2.2.21',
-            'mockito.version'             : '5.20.0',
+            'mockito.version'             : '5.23.0',
             'spock.version'               : '2.3-groovy-4.0',
             'sitemesh.version'            : '2.6.0',
             'starter-sitemesh.version'    : '3.2.2',

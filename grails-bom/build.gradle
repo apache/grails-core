@@ -107,6 +107,7 @@ configurations.register('bomDependencies').configure {
 }
 
 tasks.register('extractConstraints', ExtractDependenciesTask).configure { ExtractDependenciesTask it ->
+    it.captureProjectServices(project.dependencies, project.configurations)
     it.configuration = configurations.named('bomDependencies')
     it.configurationName = 'bomDependencies'
     it.destination = project.layout.buildDirectory.file('grails-bom-constraints.adoc')

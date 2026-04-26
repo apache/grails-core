@@ -38,10 +38,11 @@ apply plugin: 'org.apache.grails.gradle.grails-gsp'
 
 dependencies {
     implementation enforcedPlatform(project(':grails-bom'))
+    implementation platform("io.micronaut.platform:micronaut-platform:$micronautPlatformVersion")
 
-    implementation "io.micronaut:micronaut-http-client:$micronautHttpClientVersion"
-    implementation "io.micronaut:micronaut-retry:$micronautHttpClientVersion"
-    implementation "io.micronaut.serde:micronaut-serde-jackson:$micronautSerdeJacksonVersion"
+    implementation 'io.micronaut:micronaut-http-client'
+    implementation 'io.micronaut:micronaut-retry'
+    implementation 'io.micronaut.serde:micronaut-serde-jackson'
     implementation 'org.apache.grails:grails-dependencies-starter-web'
     implementation 'org.apache.grails:grails-micronaut'
     implementation 'org.apache.grails:grails-scaffolding'
