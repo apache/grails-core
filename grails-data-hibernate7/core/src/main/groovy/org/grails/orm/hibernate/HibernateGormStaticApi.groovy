@@ -57,6 +57,24 @@ class HibernateGormStaticApi<D> extends GormStaticApi<D> {
         return hibernateTemplate
     }
 
+    @Override
+    def <T> T withNewSession(Closure<T> callable) {
+        HibernateDatastore hibernateDatastore = (HibernateDatastore) datastore
+        hibernateDatastore.withNewSession(callable)
+    }
+
+    @Override
+    def <T> T withSession(Closure<T> callable) {
+        HibernateDatastore hibernateDatastore = (HibernateDatastore) datastore
+        hibernateDatastore.withSession(callable)
+    }
+
+    @Override
+    def <T> T withNewSession(Serializable tenantId, Closure<T> callable) {
+        HibernateDatastore hibernateDatastore = (HibernateDatastore) datastore
+        hibernateDatastore.withNewSession(tenantId, callable)
+    }
+
     /**
      * Finds all results for this entity for the given SQL query
      *

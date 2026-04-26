@@ -57,20 +57,20 @@ class HibernateGormEnhancer extends GormEnhancer {
                 createDynamicFinders(hibernateDatastore),
                 resolver,
                 qualifier,
-                hibernateDatastore.classLoader
+                hibernateDatastore.mappingContext.classLoader
         )
     }
 
     @Override
     protected <D> GormInstanceApi<D> getInstanceApi(Class<D> cls, org.grails.datastore.gorm.DatastoreResolver resolver) {
         HibernateDatastore hibernateDatastore = (HibernateDatastore) datastore
-        new HibernateGormInstanceApi<D>(cls, hibernateDatastore.mappingContext, resolver, hibernateDatastore.classLoader)
+        new HibernateGormInstanceApi<D>(cls, hibernateDatastore.mappingContext, resolver, hibernateDatastore.mappingContext.classLoader)
     }
 
     @Override
     protected <D> GormValidationApi<D> getValidationApi(Class<D> cls, org.grails.datastore.gorm.DatastoreResolver resolver) {
         HibernateDatastore hibernateDatastore = (HibernateDatastore) datastore
-        new HibernateGormValidationApi<D>(cls, hibernateDatastore.mappingContext, resolver, hibernateDatastore.classLoader)
+        new HibernateGormValidationApi<D>(cls, hibernateDatastore.mappingContext, resolver, hibernateDatastore.mappingContext.classLoader)
     }
 
     @Override

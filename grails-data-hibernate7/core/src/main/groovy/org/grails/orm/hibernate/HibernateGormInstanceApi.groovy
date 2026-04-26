@@ -63,22 +63,19 @@ import org.grails.orm.hibernate.support.HibernateRuntimeUtils
 @CompileStatic
 class HibernateGormInstanceApi<D> extends GormInstanceApi<D> {
 
-    protected HibernateDatastore hibernateDatastore
-    protected GrailsHibernateTemplate hibernateTemplate
-    protected ProxyHandler proxyHandler
     protected Class<? extends Exception> validationException
 
-    HibernateGormInstanceApi(Class<D> persistentClass, HibernateDatastore datastore, ClassLoader classLoader, PlatformTransactionManager transactionManager) {
-        super(persistentClass, datastore)
-        this.hibernateDatastore = datastore
-        this.hibernateTemplate = new GrailsHibernateTemplate(datastore.sessionFactory, datastore)
-        this.proxyHandler = datastore.mappingContext.proxyHandler
-        try {
-            this.validationException = (Class<? extends Exception>)classLoader.loadClass("grails.validation.ValidationException")
-        } catch (ClassNotFoundException e) {
-            this.validationException = org.grails.datastore.mapping.validation.ValidationException
-        }
-    }
+//    HibernateGormInstanceApi(Class<D> persistentClass, HibernateDatastore datastore, ClassLoader classLoader, PlatformTransactionManager transactionManager) {
+//        super(persistentClass, datastore)
+//        this.hibernateDatastore = datastore
+//        this.hibernateTemplate = new GrailsHibernateTemplate(datastore.sessionFactory, datastore)
+//        this.proxyHandler = datastore.mappingContext.proxyHandler
+//        try {
+//            this.validationException = (Class<? extends Exception>)classLoader.loadClass("grails.validation.ValidationException")
+//        } catch (ClassNotFoundException e) {
+//            this.validationException = org.grails.datastore.mapping.validation.ValidationException
+//        }
+//    }
 
     HibernateGormInstanceApi(Class<D> persistentClass, MappingContext mappingContext, DatastoreResolver datastoreResolver, ClassLoader classLoader) {
         super(persistentClass, mappingContext, datastoreResolver)
@@ -90,47 +87,26 @@ class HibernateGormInstanceApi<D> extends GormInstanceApi<D> {
     }
 
     protected HibernateDatastore getHibernateDatastore() {
-        if (hibernateDatastore == null) {
-            return (HibernateDatastore) getDatastore()
-        }
-        return hibernateDatastore
+        return (HibernateDatastore) getDatastore()
     }
 
     protected IHibernateTemplate getHibernateTemplate() {
-        if (hibernateTemplate == null) {
-            return (IHibernateTemplate) hibernateDatastore.getHibernateTemplate()
-        }
-        return hibernateTemplate
+        return (IHibernateTemplate) getHibernateDatastore().getHibernateTemplate()
     }
 
-    protected ProxyHandler getProxyHandler() {
-        if (proxyHandler == null) {
-            return datastore.mappingContext.proxyHandler
-        }
-        return proxyHandler
-    }
 
     protected boolean isAutoFlush() {
-        if (hibernateDatastore != null) {
-            return hibernateDatastore.isAutoFlush()
-        }
-        return this.autoFlush
+        return getHibernateDatastore().isAutoFlush()
     }
 
     @Override
     boolean isFailOnError() {
-        if (hibernateDatastore != null) {
-            return hibernateDatastore.failOnError
-        }
-        return failOnError
+        return getHibernateDatastore().isFailOnError()
     }
 
     @Override
     boolean isMarkDirty() {
-        if (hibernateDatastore != null) {
-            return hibernateDatastore.markDirty
-        }
-        return markDirty
+        return getHibernateDatastore().markDirty
     }
 
     @Override
@@ -252,7 +228,7 @@ class HibernateGormInstanceApi<D> extends GormInstanceApi<D> {
 
     @Override
     void discard(D target) {
-        hibernateTemplate.execute { Session session ->
+        getHibernateTemplate().execute { Session session ->
             if (session.contains(target)) {
                 session.detach target
             }
@@ -261,14 +237,14 @@ class HibernateGormInstanceApi<D> extends GormInstanceApi<D> {
 
     @Override
     boolean isAttached(D target) {
-        hibernateTemplate.execute { Session session ->
+        getHibernateTemplate().execute { Session session ->
             session.contains target
         }
     }
 
     @Override
     D lock(D target) {
-        hibernateTemplate.execute { Session session ->
+        getHibernateTemplate().execute { Session session ->
             session.lock target, LockModeType.PESSIMISTIC_WRITE
         }
         return target
@@ -276,20 +252,20 @@ class HibernateGormInstanceApi<D> extends GormInstanceApi<D> {
 
     @Override
     D refresh(D target) {
-        hibernateTemplate.execute { Session session ->
+        getHibernateTemplate().execute { Session session ->
             session.refresh target
         }
         return target
     }
 
     D read(Serializable id) {
-        (D) hibernateTemplate.execute { Session session ->
+        (D) getHibernateTemplate().execute { Session session ->
             session.get(persistentClass, id)
         }
     }
 
     protected D performUpsert(D target, boolean shouldFlush) {
-        hibernateTemplate.execute { Session session ->
+        getHibernateTemplate().execute { Session session ->
             if (session.contains(target)) {
                 if (shouldFlush) {
                     flushSession session
@@ -315,7 +291,7 @@ class HibernateGormInstanceApi<D> extends GormInstanceApi<D> {
     }
 
     protected D performMerge(final D target, final boolean flush) {
-        hibernateTemplate.execute { Session session ->
+        getHibernateTemplate().execute { Session session ->
             D merged
             if (session.contains(target)) {
                 // Entity is already managed in this session — merging would cause H7 to create
@@ -345,7 +321,7 @@ class HibernateGormInstanceApi<D> extends GormInstanceApi<D> {
     }
 
     protected D performPersist(final D target, final boolean shouldFlush) {
-        hibernateTemplate.execute { Session session ->
+        getHibernateTemplate().execute { Session session ->
             try {
                 markInsertActive()
                 session.persist target
