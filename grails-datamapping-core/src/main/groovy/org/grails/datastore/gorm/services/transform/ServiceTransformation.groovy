@@ -23,7 +23,6 @@ import java.lang.reflect.Modifier
 
 import groovy.transform.CompilationUnitAware
 import groovy.transform.CompileStatic
-import groovy.transform.Generated
 import org.codehaus.groovy.ast.AnnotatedNode
 import org.codehaus.groovy.ast.AnnotationNode
 import org.codehaus.groovy.ast.ClassHelper
@@ -387,7 +386,6 @@ class ServiceTransformation extends AbstractTraitApplyingGormASTTransformation i
                     datastoreParam
             ), null, setterBody)
             markAsGenerated(classNode, datastoreSetterNode)
-            addAnnotationIfNecessary(datastoreSetterNode, Generated.class)
 
             if (!propertiesFields.isEmpty()) {
                 // If there are properties to inject, we use the setter to initialize them
@@ -407,7 +405,6 @@ class ServiceTransformation extends AbstractTraitApplyingGormASTTransformation i
                     returnS(callX(classX(GormEnhancer), 'findDatastore', args(classX(targetDomainClass))))
             )
             markAsGenerated(classNode, datastoreGetterNode)
-            addAnnotationIfNecessary(datastoreGetterNode, Generated.class)
         }
     }
 
