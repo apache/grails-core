@@ -47,9 +47,10 @@ import org.grails.forge.options.ServletImpl;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import javax.validation.constraints.NotBlank;
-import javax.validation.constraints.NotNull;
-import javax.validation.constraints.Pattern;
+import io.micronaut.validation.Validated;
+import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.NotNull;
+import jakarta.validation.constraints.Pattern;
 import java.io.IOException;
 import java.io.OutputStream;
 import java.io.Writer;
@@ -64,6 +65,7 @@ import java.util.List;
  */
 @Controller
 @ExecuteOn(TaskExecutors.IO)
+@Validated
 public class ZipCreateController extends AbstractCreateController implements ZipCreateOperation {
 
     public static final String MEDIA_TYPE_APPLICATION_ZIP = "application/zip";

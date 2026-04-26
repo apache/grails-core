@@ -49,6 +49,11 @@ class PluginDefiner implements DependencyHandler, GroovyInterceptable {
     def invokeMethod(String name, Object objArgs) {
         def argArray = (objArgs instanceof Object[]) ? objArgs : [objArgs] as Object[]
 
+        // Gradle 9 removed DependencyHandler.project(String); convert to the Map form
+        if (name == 'project' && argArray.length == 1 && argArray[0] instanceof String) {
+            argArray = [[path: argArray[0]]] as Object[]
+        }
+
         def methodMethod = target.metaClass.getMetaMethod(name, argArray)
         def result = (methodMethod ? methodMethod.invoke(target, argArray) : target.invokeMethod(name, argArray))
 

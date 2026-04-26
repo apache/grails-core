@@ -30,7 +30,7 @@ import org.grails.forge.options.GormImpl;
 import org.grails.forge.options.ServletImpl;
 import org.grails.forge.options.JdkVersion;
 
-import javax.validation.constraints.Pattern;
+import jakarta.validation.constraints.Pattern;
 import java.util.List;
 
 /**

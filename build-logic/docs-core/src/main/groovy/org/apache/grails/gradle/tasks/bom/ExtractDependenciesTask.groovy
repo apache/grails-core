@@ -27,11 +27,13 @@ import org.gradle.api.DefaultTask
 import org.gradle.api.GradleException
 import org.gradle.api.NamedDomainObjectProvider
 import org.gradle.api.artifacts.Configuration
+import org.gradle.api.artifacts.ConfigurationContainer
 import org.gradle.api.artifacts.Dependency
 import org.gradle.api.artifacts.DependencyConstraint
 import org.gradle.api.artifacts.ExcludeRule
 import org.gradle.api.artifacts.ModuleDependency
 import org.gradle.api.artifacts.component.ModuleComponentSelector
+import org.gradle.api.artifacts.dsl.DependencyHandler
 import org.gradle.api.artifacts.result.DependencyResult
 import org.gradle.api.artifacts.result.ResolvedDependencyResult
 import org.gradle.api.file.ConfigurableFileCollection
@@ -42,6 +44,7 @@ import org.gradle.api.tasks.CacheableTask
 import org.gradle.api.tasks.Classpath
 import org.gradle.api.tasks.Input
 import org.gradle.api.tasks.InputFiles
+import org.gradle.api.tasks.Internal
 import org.gradle.api.tasks.OutputFile
 import org.gradle.api.tasks.TaskAction
 
@@ -83,17 +86,26 @@ abstract class ExtractDependenciesTask extends DefaultTask {
     @Input
     abstract MapProperty<String, String> getProjectCoordinateProperties()
 
+    // Captured at configuration time to avoid deprecated Task.project access at execution time.
+    // See: https://docs.gradle.org/current/userguide/configuration_cache.html#config_cache:requirements:use_project_during_execution
+    @Internal
+    DependencyHandler dependencyHandler
+
+    @Internal
+    ConfigurationContainer configurationContainer
+
     void setConfiguration(NamedDomainObjectProvider<Configuration> config) {
         dependencyArtifacts.from(config)
         configurationName.set(config.name)
     }
 
-    ExtractDependenciesTask() {
-        doFirst {
-            if (!project.pluginManager.hasPlugin('java-platform')) {
-                throw new GradleException(/The 'java-platform' plugin must be applied to the project to use this task./)
-            }
-        }
+    /**
+     * Captures project-scoped services at configuration time so they can be used
+     * at execution time without accessing the deprecated Task.project property.
+     */
+    void captureProjectServices(DependencyHandler dependencies, ConfigurationContainer configurations) {
+        this.dependencyHandler = dependencies
+        this.configurationContainer = configurations
     }
 
     @TaskAction
@@ -115,7 +127,7 @@ abstract class ExtractDependenciesTask extends DefaultTask {
             propertyNameCalculator.addProject(coordinates.groupId, coordinates.artifactId, coordinates.version, entry.value)
         }
 
-        Configuration configuration = project.configurations.named(configurationName.get()).get()
+        Configuration configuration = configurationContainer.named(configurationName.get()).get()
         if (!configuration.canBeResolved) {
             throw new GradleException("The configuration ${configuration.name} must be resolvable to use this task.")
         }
@@ -208,8 +220,8 @@ abstract class ExtractDependenciesTask extends DefaultTask {
     }
 
     Properties populatePlatformDependencies(CoordinateVersionHolder bomCoordinates, List<CoordinateHolder> exclusionRules, Map<CoordinateHolder, ExtractedDependencyConstraint> constraints, boolean error = true, int level = 0) {
-        Dependency bomDependency = project.dependencies.create("${bomCoordinates.coordinates}@pom")
-        Configuration dependencyConfiguration = project.configurations.detachedConfiguration(bomDependency)
+        Dependency bomDependency = dependencyHandler.create("${bomCoordinates.coordinates}@pom")
+        Configuration dependencyConfiguration = configurationContainer.detachedConfiguration(bomDependency)
         File bomPomFile = dependencyConfiguration.singleFile
 
         MavenXpp3Reader reader = new MavenXpp3Reader()

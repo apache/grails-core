@@ -33,10 +33,15 @@ pluginManagement {
 }
 
 plugins {
-    id 'com.gradle.develocity' version '4.2.2'
-    id 'com.gradle.common-custom-user-data-gradle-plugin' version '2.3'
+    id 'com.gradle.develocity' version '4.3.2'
+    id 'com.gradle.common-custom-user-data-gradle-plugin' version '2.4.0'
     id 'org.apache.grails.buildsrc.repo'
 }
+
+// NOTE: Known Gradle deprecation warnings (scheduled for removal in Gradle 10):
+// 1. StartParameter.isConfigurationCacheRequested - from org.asciidoctor.jvm.convert plugin (4.0.5)
+//    Fix available in asciidoctor-gradle-plugin 5.0.0+ (currently alpha)
+//    Tracking: https://github.com/asciidoctor/asciidoctor-gradle-plugin/issues/756
 
 def isCI = System.getenv().containsKey('CI')
 def isLocal = !isCI

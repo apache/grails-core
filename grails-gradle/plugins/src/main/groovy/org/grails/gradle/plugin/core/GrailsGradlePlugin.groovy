@@ -388,12 +388,11 @@ ${importStatements}
     }
 
     @CompileDynamic
-    protected Task createBuildPropertiesTask(Project project) {
+    protected void createBuildPropertiesTask(Project project) {
         if (project.tasks.findByName('buildProperties') == null) {
             File resourcesDir = SourceSets.findMainSourceSet(project).output.resourcesDir
             File buildInfoFile = new File(resourcesDir, 'META-INF/grails.build.info')
 
-            Task buildPropertiesTask = project.tasks.create('buildProperties')
             Map<String, Object> buildPropertiesContents = [
                     'grails.env': Environment.isSystemSet() ? Environment.getCurrent().getName() : Environment.PRODUCTION.getName(),
                     'info.app.name': project.name,
@@ -401,17 +400,25 @@ ${importStatements}
                     'info.app.grailsVersion': project.properties.get('grailsVersion')
             ]
 
-            buildPropertiesTask.inputs.properties(buildPropertiesContents)
-            buildPropertiesTask.outputs.file(buildInfoFile)
-            buildPropertiesTask.doLast {
-                project.buildDir.mkdirs()
-                ant.mkdir(dir: buildInfoFile.parentFile)
-                ant.propertyfile(file: buildInfoFile) {
-                    for (me in buildPropertiesTask.inputs.properties) {
-                        entry(key: me.key, value: me.value)
+            // Capture build directory at configuration time to avoid Task.project access at execution time
+            def buildDir = project.layout.buildDirectory.asFile.get()
+
+            TaskProvider<Task> buildPropertiesTask = project.tasks.register('buildProperties') { Task task ->
+                task.inputs.properties(buildPropertiesContents)
+                task.outputs.file(buildInfoFile)
+
+                task.doLast {
+                    buildDir.mkdirs()
+                    buildInfoFile.parentFile.mkdirs()
+                    Properties props = new Properties()
+                    task.inputs.properties.each { key, value ->
+                        props.setProperty(key as String, value as String)
                     }
+                    buildInfoFile.withOutputStream { out ->
+                        props.store(out, null)
+                    }
+                    PropertyFileUtils.makePropertiesFileReproducible(buildInfoFile)
                 }
-                PropertyFileUtils.makePropertiesFileReproducible(buildInfoFile)
             }
 
             TaskContainer tasks = project.tasks
@@ -968,12 +975,15 @@ ${importStatements}
     @CompileDynamic
     protected TaskProvider<Task> createNative2AsciiTask(TaskContainer tasks, src, dest) {
         TaskProvider<Task> native2asciiTask = tasks.register('native2ascii').configure {
-            it.doLast {
-                it.ant.native2ascii(src: src, dest: dest,
-                        includes: '**/*.properties', encoding: 'UTF-8')
-            }
             it.inputs.dir(src)
             it.outputs.dir(dest)
+
+            def antBuilder = it.ant
+
+            it.doLast {
+                antBuilder.native2ascii(src: src, dest: dest,
+                        includes: '**/*.properties', encoding: 'UTF-8')
+            }
         }
 
         native2asciiTask
