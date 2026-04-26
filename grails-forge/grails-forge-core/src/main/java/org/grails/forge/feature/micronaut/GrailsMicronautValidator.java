@@ -36,7 +36,7 @@ public class GrailsMicronautValidator implements FeatureValidator {
         if (features.stream().anyMatch(f -> f instanceof GrailsMicronaut)) {
             if (features.stream().anyMatch(f -> (f instanceof SpringBootDevTools))) {
                 // See: https://github.com/micronaut-projects/micronaut-spring/issues/769
-                throw new IllegalArgumentException("Spring Boot Dev Tools are not supported with Grails Micronaut");
+                throw new IllegalArgumentException("Spring Boot DevTools are not supported with Grails Micronaut");
             }
         }
     }

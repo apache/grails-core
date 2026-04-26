@@ -20,6 +20,9 @@
 import grails.doc.git.FetchTagsTask
 import grails.doc.dropdown.CreateReleaseDropDownTask
 import grails.doc.gradle.PublishGuideTask
+import groovy.json.JsonSlurper
+
+import java.util.zip.ZipFile
 
 plugins {
     id 'base'
@@ -167,9 +170,328 @@ generateBomDocumentation.configure { Task it ->
     }
 }
 
+def generateConfigReference = tasks.register('generateConfigReference')
+generateConfigReference.configure { Task it ->
+    it.dependsOn(
+            project(':grails-core').tasks.named('jar'),
+            project(':grails-web-core').tasks.named('jar'),
+            project(':grails-gsp').tasks.named('jar'),
+            project(':grails-databinding').tasks.named('jar'),
+            project(':grails-data-hibernate5-core').tasks.named('jar'),
+            project(':grails-cache').tasks.named('jar'),
+            project(':grails-data-hibernate5-dbmigration').tasks.named('jar'),
+            project(':grails-data-mongodb').tasks.named('jar'),
+            project(':grails-views-gson').tasks.named('jar')
+    )
+
+    it.description = 'Generates the Application Properties reference from configuration metadata.'
+    it.group = 'documentation'
+
+    def configDir = project.layout.projectDirectory.dir('src/en/ref/Configuration')
+    def outputFile = project.layout.projectDirectory.file('src/en/ref/Configuration/Application Properties.adoc')
+
+    it.inputs.files(
+            project(':grails-core').tasks.named('jar').flatMap { task -> task.archiveFile },
+            project(':grails-web-core').tasks.named('jar').flatMap { task -> task.archiveFile },
+            project(':grails-gsp').tasks.named('jar').flatMap { task -> task.archiveFile },
+            project(':grails-databinding').tasks.named('jar').flatMap { task -> task.archiveFile },
+            project(':grails-data-hibernate5-core').tasks.named('jar').flatMap { task -> task.archiveFile },
+            project(':grails-cache').tasks.named('jar').flatMap { task -> task.archiveFile },
+            project(':grails-data-hibernate5-dbmigration').tasks.named('jar').flatMap { task -> task.archiveFile },
+            project(':grails-data-mongodb').tasks.named('jar').flatMap { task -> task.archiveFile },
+            project(':grails-views-gson').tasks.named('jar').flatMap { task -> task.archiveFile }
+    )
+    it.outputs.file(outputFile)
+
+    it.doFirst {
+        configDir.asFile.mkdirs()
+    }
+
+    it.doLast {
+        List<File> jarFiles = [
+                project(':grails-core').tasks.named('jar').get().archiveFile.get().asFile,
+                project(':grails-web-core').tasks.named('jar').get().archiveFile.get().asFile,
+                project(':grails-gsp').tasks.named('jar').get().archiveFile.get().asFile,
+                project(':grails-databinding').tasks.named('jar').get().archiveFile.get().asFile,
+                project(':grails-data-hibernate5-core').tasks.named('jar').get().archiveFile.get().asFile,
+                project(':grails-cache').tasks.named('jar').get().archiveFile.get().asFile,
+                project(':grails-data-hibernate5-dbmigration').tasks.named('jar').get().archiveFile.get().asFile,
+                project(':grails-data-mongodb').tasks.named('jar').get().archiveFile.get().asFile,
+                project(':grails-views-gson').tasks.named('jar').get().archiveFile.get().asFile
+        ]
+
+        Map<String, String> groupDescriptions = new LinkedHashMap<String, String>()
+        List<Map<String, Object>> properties = new ArrayList<Map<String, Object>>()
+        JsonSlurper slurper = new JsonSlurper()
+
+        jarFiles.each { File jarFile ->
+            if (!jarFile.exists()) {
+                return
+            }
+            ZipFile zipFile = new ZipFile(jarFile)
+            try {
+                def entry = zipFile.getEntry('META-INF/spring-configuration-metadata.json')
+                if (entry == null) {
+                    return
+                }
+                String jsonText = zipFile.getInputStream(entry).getText('UTF-8')
+                Map<String, Object> jsonData = (Map<String, Object>) slurper.parseText(jsonText)
+                Object groupsObject = jsonData.get('groups')
+                if (groupsObject instanceof List) {
+                    ((List<Object>) groupsObject).each { Object groupObject ->
+                        if (groupObject instanceof Map) {
+                            Map<String, Object> groupMap = (Map<String, Object>) groupObject
+                            Object nameObject = groupMap.get('name')
+                            Object descriptionObject = groupMap.get('description')
+                            if (nameObject instanceof String && descriptionObject instanceof String) {
+                                groupDescriptions.put((String) nameObject, (String) descriptionObject)
+                            }
+                        }
+                    }
+                }
+                Object propertiesObject = jsonData.get('properties')
+                if (propertiesObject instanceof List) {
+                    ((List<Object>) propertiesObject).each { Object propertyObject ->
+                        if (!(propertyObject instanceof Map)) {
+                            return
+                        }
+                        Map<String, Object> propertyMap = (Map<String, Object>) propertyObject
+                        Object nameObject = propertyMap.get('name')
+                        if (!(nameObject instanceof String)) {
+                            return
+                        }
+                        String name = (String) nameObject
+                        if (!(name.startsWith('grails.') || name.startsWith('dataSource.') || name.startsWith('hibernate.'))) {
+                            return
+                        }
+                        String description = propertyMap.get('description') instanceof String ? (String) propertyMap.get('description') : ''
+                        Object defaultValue = propertyMap.get('defaultValue')
+                        String group = propertyMap.get('group') instanceof String ? (String) propertyMap.get('group') : null
+                        properties.add([
+                                name        : name,
+                                description : description,
+                                defaultValue: defaultValue,
+                                group       : group
+                        ])
+                    }
+                }
+            }
+            finally {
+                zipFile.close()
+            }
+        }
+
+        Set<String> groupNames = groupDescriptions.keySet()
+        Closure<String> fallbackGroup = { String name ->
+            int delimiter = name.lastIndexOf('.')
+            if (delimiter <= 0) {
+                return name
+            }
+            name.substring(0, delimiter)
+        }
+        Closure<String> resolveGroup = { String name, String group ->
+            if (group) {
+                return group
+            }
+            if (groupNames == null || groupNames.isEmpty()) {
+                return fallbackGroup(name)
+            }
+            String match = groupNames.findAll { String groupName ->
+                name == groupName || name.startsWith("${groupName}.")
+            }.sort { String left, String right -> right.length() <=> left.length() }
+                .find { String groupName -> groupName }
+            match ?: fallbackGroup(name)
+        }
+
+        Closure<String> escapeAsciidoc = { String value ->
+            if (!value) {
+                return value
+            }
+            value.replace('|', '\\|')
+        }
+
+        Closure<String> formatDefaultValue = { Object value ->
+            if (value == null) {
+                return ''
+            }
+            if (value instanceof List) {
+                List<Object> values = (List<Object>) value
+                String joined = values.collect { Object item -> "\"${item?.toString()}\"" }.join(', ')
+                return "[${joined}]"
+            }
+            if (value instanceof Map) {
+                Map<Object, Object> mapValue = (Map<Object, Object>) value
+                if (mapValue.isEmpty()) {
+                    return '{}'
+                }
+                return mapValue.toString()
+            }
+            value.toString()
+        }
+
+        Map<String, List<Map<String, Object>>> categories = new LinkedHashMap<String, List<Map<String, Object>>>()
+        properties.each { Map<String, Object> property ->
+            String name = (String) property.get('name')
+            String resolvedGroup = resolveGroup(name, (String) property.get('group'))
+            String category = groupDescriptions.get(resolvedGroup) ?: resolvedGroup
+            if (!categories.containsKey(category)) {
+                categories.put(category, new ArrayList<Map<String, Object>>())
+            }
+            categories.get(category).add([
+                    name        : name,
+                    description : property.get('description') as String,
+                    defaultValue: property.get('defaultValue')
+            ])
+        }
+
+        List<String> preferredOrder = [
+                'Core Properties',
+                'Web & Controllers',
+                'CORS',
+                'Views & GSP',
+                'Content Negotiation & MIME Types',
+                'Data Binding',
+                'Internationalization',
+                'Static Resources',
+                'URL Mappings',
+                'Scaffolding',
+                'Development & Reloading',
+                'Events',
+                'JSON & Converters',
+                'GORM',
+                'DataSource',
+                'Hibernate',
+                'Database Migration Plugin',
+                'Cache Plugin',
+                'MongoDB GORM Plugin'
+        ]
+        List<String> orderedCategories = new ArrayList<String>()
+        preferredOrder.each { String category ->
+            if (categories.containsKey(category)) {
+                orderedCategories.add(category)
+            }
+        }
+        categories.keySet().findAll { String category -> !orderedCategories.contains(category) }.sort().each { String category ->
+            orderedCategories.add(category)
+        }
+
+        def documentFile = outputFile.asFile
+        documentFile.withWriter('UTF-8') { writer ->
+            writer.writeLine('////')
+            writer.writeLine('Licensed to the Apache Software Foundation (ASF) under one')
+            writer.writeLine('or more contributor license agreements.  See the NOTICE file')
+            writer.writeLine('distributed with this work for additional information')
+            writer.writeLine('regarding copyright ownership.  The ASF licenses this file')
+            writer.writeLine('to you under the Apache License, Version 2.0 (the')
+            writer.writeLine('"License"); you may not use this file except in compliance')
+            writer.writeLine('with the License.  You may obtain a copy of the License at')
+            writer.writeLine('')
+            writer.writeLine('https://www.apache.org/licenses/LICENSE-2.0')
+            writer.writeLine('')
+            writer.writeLine('Unless required by applicable law or agreed to in writing,')
+            writer.writeLine('software distributed under the License is distributed on an')
+            writer.writeLine('"AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY')
+            writer.writeLine('KIND, either express or implied.  See the License for the')
+            writer.writeLine('specific language governing permissions and limitations')
+            writer.writeLine('under the License.')
+            writer.writeLine('////')
+            writer.writeLine('')
+            writer.writeLine('== Application Properties')
+            writer.writeLine('')
+            writer.writeLine('A comprehensive reference of all configuration properties specific to Grails and its bundled modules. These properties are set in `grails-app/conf/application.yml` (or `application.groovy`).')
+            writer.writeLine('')
+            writer.writeLine('Since Grails is built on Spring Boot, all https://docs.spring.io/spring-boot/{springBootVersion}/appendix/application-properties/index.html[Spring Boot Common Application Properties] are also available (for example `server.port`, `logging.*`, `spring.datasource.hikari.*`, and `management.*`). This reference covers only Grails-specific properties.')
+            writer.writeLine('')
+            writer.writeLine('=== Environment-Specific Configuration')
+            writer.writeLine('')
+            writer.writeLine('Properties in `application.yml` (or `application.groovy`) are global by default - they apply to all environments. To override a property for a specific environment, nest it under an `environments` block:')
+            writer.writeLine('')
+            writer.writeLine('[source,yaml]')
+            writer.writeLine('----')
+            writer.writeLine('# Global (applies to all environments)')
+            writer.writeLine('grails:')
+            writer.writeLine('    serverURL: https://my.app.com')
+            writer.writeLine('')
+            writer.writeLine('# Environment-specific overrides')
+            writer.writeLine('environments:')
+            writer.writeLine('    development:')
+            writer.writeLine('        grails:')
+            writer.writeLine('            serverURL: http://localhost:8080')
+            writer.writeLine('    test:')
+            writer.writeLine('        grails:')
+            writer.writeLine('            serverURL: http://localhost:8080')
+            writer.writeLine('    production:')
+            writer.writeLine('        grails:')
+            writer.writeLine('            serverURL: https://my.app.com')
+            writer.writeLine('----')
+            writer.writeLine('')
+            writer.writeLine('Or in `application.groovy`:')
+            writer.writeLine('')
+            writer.writeLine('[source,groovy]')
+            writer.writeLine('----')
+            writer.writeLine("grails.serverURL = 'https://my.app.com'")
+            writer.writeLine('')
+            writer.writeLine('environments {')
+            writer.writeLine('    development {')
+            writer.writeLine("        grails.serverURL = 'http://localhost:8080'")
+            writer.writeLine('    }')
+            writer.writeLine('    test {')
+            writer.writeLine("        grails.serverURL = 'http://localhost:8080'")
+            writer.writeLine('    }')
+            writer.writeLine('    production {')
+            writer.writeLine("        grails.serverURL = 'https://my.app.com'")
+            writer.writeLine('    }')
+            writer.writeLine('}')
+            writer.writeLine('----')
+            writer.writeLine('')
+
+            orderedCategories.each { String category ->
+                List<Map<String, Object>> categoryProperties = categories.get(category)
+                if (categoryProperties == null || categoryProperties.isEmpty()) {
+                    return
+                }
+                writer.writeLine("=== ${category}")
+                writer.writeLine('')
+                writer.writeLine('[cols="3,5,2", options="header"]')
+                writer.writeLine('|===')
+                writer.writeLine('| Property | Description | Default')
+                writer.writeLine('')
+                categoryProperties.sort { Map<String, Object> left, Map<String, Object> right ->
+                    (left.get('name') as String) <=> (right.get('name') as String)
+                }.each { Map<String, Object> property ->
+                    String name = property.get('name') as String
+                    String description = property.get('description') as String
+                    String defaultValue = formatDefaultValue(property.get('defaultValue'))
+                    writer.writeLine("| `${name}`")
+                    writer.writeLine("| ${escapeAsciidoc(description)}")
+                    if (defaultValue) {
+                        writer.writeLine("| `${escapeAsciidoc(defaultValue)}`")
+                    }
+                    else {
+                        writer.writeLine('|')
+                    }
+                    writer.writeLine('')
+                }
+                writer.writeLine('|===')
+                writer.writeLine('')
+            }
+
+            writer.writeLine('== Plugin References')
+            writer.writeLine('')
+            writer.writeLine('The following plugin documentation covers configuration properties that are not listed above:')
+            writer.writeLine('')
+            writer.writeLine('- https://apache.github.io/grails-spring-security/snapshot/core-plugin/guide/index.html#_configuration_properties[Spring Security Core Configuration Properties]')
+            writer.writeLine('- https://wondrify.github.io/asset-pipeline/[Asset Pipeline Configuration Properties]')
+            writer.writeLine('')
+        }
+
+        it.logger.lifecycle "Application Properties reference generated to: ${documentFile.absolutePath}"
+    }
+}
+
 def publishGuideTask = tasks.register('publishGuide', PublishGuideTask)
 publishGuideTask.configure { PublishGuideTask publish ->
-    publish.dependsOn([generateBomDocumentation])
+    publish.dependsOn([generateBomDocumentation, generateConfigReference])
 
     // No language setting because we want the English guide to be
     // generated with a 'en' in the path, but the source is in 'en'
