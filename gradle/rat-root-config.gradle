@@ -52,6 +52,7 @@ tasks.named('rat') {
             'plugin-ui/plugin/grails-app/assets/stylesheets/jquery.jdMenu.css', // See license file, MIT licensed
             'plugin-ui/plugin/grails-app/assets/stylesheets/jquery.jdMenu.slate.css', // See license file, MIT licensed
             'plugin-ui/plugin/src/main/templates/**', // template files that people are expected to use in the end application
+            '**/spring-configuration-metadata.json', // JSON files cannot contain license headers
     ]
     // never cache license audits
     outputs.upToDateWhen { false }

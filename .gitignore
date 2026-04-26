@@ -15,3 +15,4 @@ atlassian-ide-plugin.xml
 plugin-ui/plugin/src/main/templates/views/*
 !etc/bin
 etc/bin/results
+plugin-core/docs/src/docs/configurationProperties.adoc

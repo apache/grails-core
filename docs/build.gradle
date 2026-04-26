@@ -128,6 +128,7 @@ ext {
 }
 
 tasks.named('asciidoctor', AsciidoctorTask) {
+    dependsOn(':core-docs:generateConfigurationProperties')
     sourceDir(layout.projectDirectory.file('src/docs'))
     sources { include('index.adoc') }
     outputDir = layout.buildDirectory.file('docs')

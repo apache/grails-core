@@ -89,6 +89,8 @@ include::{core-docs-dir}/voters.adoc[leveloffset=+1]
 
 include::{core-docs-dir}/miscProperties.adoc[leveloffset=+1]
 
+include::{core-docs-dir}/configurationProperties.adoc[leveloffset=+1]
+
 include::{core-docs-dir}/tutorials.adoc[leveloffset=+1]
 
 include::{core-docs-dir}/examples.adoc[leveloffset=+1]
