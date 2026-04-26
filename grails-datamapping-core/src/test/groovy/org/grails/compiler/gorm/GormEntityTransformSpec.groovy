@@ -217,7 +217,7 @@ class GormEntityTransformSpec extends Specification{
         thrown(MissingPropertyException)
     }
 
-    void 'test Groovy 6 genericGetMethod regression workaround (GROOVY-11829)'() {
+    void 'test Groovy 6 generic-getter instance-dispatch guard'() {
         expect: 'Class bean properties remain accessible via dynamic property access on @Entity classes under Groovy 6'
         Book.simpleName == 'Book'
         Book.name.endsWith('Book')
@@ -227,7 +227,7 @@ class GormEntityTransformSpec extends Specification{
         getSerializableMethod != null
         getSerializableMethod.isAnnotationPresent(Generated)
 
-        and: 'the AST-added INSTANCE get(String) overload exists on each @Entity class to keep instance dispatch (e.g. book.someConnection) routed through propertyMissing under Groovy 6 (GROOVY-11829). Trait-level declaration would conflict with any sibling static get(String); see GormEntityTransformation.'
+        and: 'GormEntityTransformation has AST-added an INSTANCE get(String) overload to each @Entity class so instance MOP routes book.someConnection through propertyMissing instead of any trait-static get(String). Declaring it on the trait would clash with any sibling static get(String) at trait-merge time, so the AST is the only viable home. See GormEntityTransformation for the full rationale and failure mode.'
         def instanceGetString = Book.getDeclaredMethod('get', String)
         instanceGetString != null
         !java.lang.reflect.Modifier.isStatic(instanceGetString.modifiers)
