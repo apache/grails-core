@@ -591,15 +591,22 @@ trait GormEntity<D> implements GormValidateable, DirtyCheckable, GormEntityApi<D
     }
 
     /**
-     * Retrieves an object from the datastore. eg. Book.get(1)
+     * Retrieves an object from the datastore. eg. {@code Book.get(1)}.
      *
-     * Groovy 6 (GROOVY-11829) relaxed {@code MetaClassImpl.isGenericGetMethod} to
-     * accept {@code get(Serializable)} as a generic property getter where Groovy 5
-     * required {@code get(String)}. Without the {@link #get(String)} overload below,
-     * every dynamic property access on a GORM entity (e.g. {@code Book.name},
-     * {@code Book.simpleName}) routes through this method instead of
-     * {@link Class#getName()}, breaking property resolution and triggering false
-     * "GORM not initialized" errors during class loading.
+     * On Groovy 6, dynamic property access on a GORM entity instance
+     * (e.g. {@code book.someConnection}) was being mis-routed through this
+     * static {@code get(Serializable)} method when it was the only candidate
+     * the runtime could find for the implementing class's generic-getter
+     * fallback - a connection-aware static API was returned where the
+     * entity-level {@code propertyMissing(String)} should have produced a
+     * {@code DelegatingGormEntityApi}, leading to "Unknown entity:
+     * java.util.LinkedHashMap" deep inside Hibernate. The fix is the
+     * per-{@code @Entity} instance overload {@code Object get(String name)}
+     * added by {@code GormEntityTransformation}, which gives instance MOP a
+     * more specific candidate than this trait-static one. There is no
+     * upstream Apache Groovy JIRA for the dispatch behaviour at the time of
+     * writing - if you find one or file one, link it from
+     * {@code GormEntityTransformation} too.
      */
     @Generated
     static D get(Serializable id) {
