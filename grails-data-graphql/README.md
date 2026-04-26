@@ -39,9 +39,22 @@ Run from the repository root:
 
 ## Example applications
 
-Demo applications under `grails-test-examples/graphql/` will be added in a
-follow-up PR (matching the layout used by `grails-test-examples/mongodb/` and
-`grails-test-examples/hibernate5/`).
+Five demo applications live under `grails-test-examples/graphql/`:
+
+| Project gradle path                                            | Description                                              |
+| -------------------------------------------------------------- | -------------------------------------------------------- |
+| `:grails-test-examples-graphql-grails-test-app`                | End-to-end Grails REST app exercising every type/feature |
+| `:grails-test-examples-graphql-grails-docs-app`                | Grails REST app backing the reference-guide examples     |
+| `:grails-test-examples-graphql-grails-tenant-app`              | Grails app demonstrating GORM multi-tenancy              |
+| `:grails-test-examples-graphql-grails-multi-datastore-app`     | Grails app combining Hibernate5 + MongoDB datastores     |
+| `:grails-test-examples-graphql-spring-boot-app`                | Standalone Spring Boot app embedding the schema generator core |
+
+Run them like any other functional test in the monorepo, e.g.:
+
+```bash
+./gradlew :grails-test-examples-graphql-grails-test-app:integrationTest
+./gradlew :grails-test-examples-graphql-spring-boot-app:test
+```
 
 ## Dependencies
 

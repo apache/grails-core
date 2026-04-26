@@ -89,6 +89,14 @@ compileGsonViews {
     packageName = 'gorm-graphql'
 }
 
+// compileGsonViews writes compiled GSON view classes into build/gson-classes/main,
+// which the Groovy plugin treats as part of the main source-set output. Without an
+// explicit dependency the groovydoc task implicitly consumes that output, which
+// Gradle 8.x rejects as an undeclared task input.
+tasks.named('groovydoc').configure {
+    dependsOn tasks.named('compileGsonViews')
+}
+
 def disabledTasks = ['bootRun', 'bootTestRun']
 disabledTasks.each { taskName ->
     tasks.named(taskName) {

@@ -43,9 +43,6 @@ dependencies {
     api project(':grails-datamapping-core'), {
         // api: ConstrainedProperty, GormEntity, MappingContext, PersistentEntity, PersistentProperty
     }
-    api project(':grails-views-gson'), {
-        // api: GsonViewTemplateEngine
-    }
     api "com.graphql-java:graphql-java:$graphqlJavaVersion", {
         // api: GraphQLSchema, GraphQLType, GraphQLObjectType, DataFetcher, DataFetchingEnvironment
     }
