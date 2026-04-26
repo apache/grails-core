@@ -26,13 +26,13 @@ ext {
             'asciidoctor-gradle-jvm.version': '4.0.5',
             'asciidoctorj.version'          : '3.0.0',
             'asset-pipeline-gradle.version' : '5.0.34',
-            'byte-buddy.version'            : '1.17.7',
+            'byte-buddy.version'            : '1.17.8',
             'commons-text.version'          : '1.13.1',
             'directory-watcher.version'     : '0.19.1',
             'gradle-spock.version'          : '2.3-groovy-3.0',
             'grails-publish-plugin.version' : '0.0.4',
             'jansi.version'                 : '1.18',
-            'javaparser-core.version'       : '3.27.0',
+            'javaparser-core.version'       : '3.28.0',
             'jline.version'                 : '2.14.6',
             'jna.version'                   : '5.17.0',
             'jquery.version'                : '3.7.1',
@@ -77,6 +77,8 @@ ext {
             'jackson.version'             : '2.19.1',
             'jquery.version'              : '3.7.1',
             'hibernate-groovy-proxy.version': '1.1',
+            'junit.version'               : '5.13.3',
+            'junit-platform.version'      : '1.13.3',
             'mongodb.version'             : '5.5.1',
             'rxjava.version'              : '1.3.8',
             'rxjava2.version'             : '2.2.21',
@@ -93,6 +95,7 @@ ext {
             'spock-bom'         : "org.spockframework:spock-bom:${bomDependencyVersions['spock.version']}",
             'jackson-bom'       : "com.fasterxml.jackson:jackson-bom:${bomDependencyVersions['jackson.version']}",
             'groovy-bom'        : "org.apache.groovy:groovy-bom:${bomDependencyVersions['groovy.version']}",
+            'junit-bom'         : "org.junit:junit-bom:${bomDependencyVersions['junit.version']}",
             'selenium-bom'      : "org.seleniumhq.selenium:selenium-bom:${bomDependencyVersions['selenium.version']}",
     ]
 
@@ -136,6 +139,20 @@ ext {
             'groovy-yaml'         : "org.apache.groovy:groovy-yaml:${bomDependencyVersions['groovy.version']}",
             // end - restate the groovy-bom here because the spring dependency management
             'jquery'                   : "org.webjars.npm:jquery:${bomDependencyVersions['jquery.version']}",
+            // start - boot & spock conflict, so pin the version we want (newest)
+            'junit-jupiter'                 : "org.junit.jupiter:junit-jupiter:${bomDependencyVersions['junit.version']}",
+            'junit-jupiter-api'             : "org.junit.jupiter:junit-jupiter-api:${bomDependencyVersions['junit.version']}",
+            'junit-jupiter-engine'          : "org.junit.jupiter:junit-jupiter-engine:${bomDependencyVersions['junit.version']}",
+            'junit-jupiter-params'          : "org.junit.jupiter:junit-jupiter-params:${bomDependencyVersions['junit.version']}",
+            'junit-platform-commons'        : "org.junit.platform:junit-platform-commons:${bomDependencyVersions['junit-platform.version']}",
+            'junit-platform-engine'         : "org.junit.platform:junit-platform-engine:${bomDependencyVersions['junit-platform.version']}",
+            'junit-platform-launcher'       : "org.junit.platform:junit-platform-launcher:${bomDependencyVersions['junit-platform.version']}",
+            'junit-platform-runner'         : "org.junit.platform:junit-platform-runner:${bomDependencyVersions['junit-platform.version']}",
+            'junit-platform-suite'          : "org.junit.platform:junit-platform-suite:${bomDependencyVersions['junit-platform.version']}",
+            'junit-platform-suite-api'      : "org.junit.platform:junit-platform-suite-api:${bomDependencyVersions['junit-platform.version']}",
+            'junit-platform-suite-commons'  : "org.junit.platform:junit-platform-suite-commons:${bomDependencyVersions['junit-platform.version']}",
+            'junit-platform-suite-engine'   : "org.junit.platform:junit-platform-suite-engine:${bomDependencyVersions['junit-platform.version']}",
+            // end - boot & spock conflict, so pin the version we want (newest)
             'hibernate-groovy-proxy'   : "org.yakworks:hibernate-groovy-proxy:${bomDependencyVersions['hibernate-groovy-proxy.version']}",
             'mongodb-bson'             : "org.mongodb:bson:${bomDependencyVersions['mongodb.version']}",
             'mongodb-driver-core'      : "org.mongodb:mongodb-driver-core:${bomDependencyVersions['mongodb.version']}",
@@ -158,8 +175,6 @@ ext {
     // by PropertyNameCalculator. The actual dependency constraints are declared directly in the
     // BOM projects (grails-bom, grails-hibernate5-bom) so consumers of the hibernate5 BOM get the
     // correct versions without needing to declare them.
-    customBomVersions = [:]
-    customBomDependencies = [:]
     if (project.name in ['grails-bom', 'grails-hibernate5-bom'] || project.name.startsWith('grails-data-hibernate5')) {
         customBomVersions = [
                 'liquibase-hibernate.version': '4.27.0',
