@@ -20,9 +20,9 @@ package org.grails.datastore.gorm
 
 import groovy.transform.CompileDynamic
 import groovy.transform.CompileStatic
-import org.codehaus.groovy.runtime.metaclass.MethodSelectionException
 
 import grails.gorm.MultiTenant
+import grails.gorm.multitenancy.CurrentTenantHolder
 import org.grails.datastore.gorm.finders.CountByFinder
 import org.grails.datastore.gorm.finders.FindAllByBooleanFinder
 import org.grails.datastore.gorm.finders.FindAllByFinder
@@ -32,22 +32,16 @@ import org.grails.datastore.gorm.finders.FindOrCreateByFinder
 import org.grails.datastore.gorm.finders.FindOrSaveByFinder
 import org.grails.datastore.gorm.finders.FinderMethod
 import org.grails.datastore.gorm.finders.ListOrderByFinder
-import org.grails.datastore.gorm.internal.InstanceMethodInvokingClosure
-import org.grails.datastore.gorm.internal.StaticMethodInvokingClosure
-import org.grails.datastore.gorm.validation.constraints.eval.ConstraintsEvaluator
 import org.grails.datastore.mapping.core.Datastore
-import org.grails.datastore.mapping.core.DatastoreUtils
+
 import org.springframework.transaction.support.TransactionSynchronizationManager
 import org.grails.datastore.mapping.core.connections.ConnectionSource
 import org.grails.datastore.mapping.core.connections.ConnectionSourceSettings
 import org.grails.datastore.mapping.core.connections.ConnectionSources
 import org.grails.datastore.mapping.core.connections.ConnectionSourcesProvider
 import org.grails.datastore.mapping.core.connections.ConnectionSourcesSupport
-import org.grails.datastore.mapping.core.connections.MultipleConnectionSourceCapableDatastore
 import org.grails.datastore.mapping.model.MappingContext
 import org.grails.datastore.mapping.model.PersistentEntity
-import org.grails.datastore.mapping.model.types.Association
-import org.grails.datastore.mapping.multitenancy.MultiTenancySettings
 import org.grails.datastore.mapping.multitenancy.MultiTenantCapableDatastore
 import org.grails.datastore.mapping.multitenancy.exceptions.TenantNotFoundException
 import grails.gorm.multitenancy.Tenants
@@ -58,7 +52,6 @@ import org.slf4j.Logger
 import org.slf4j.LoggerFactory
 import org.springframework.transaction.PlatformTransactionManager
 
-import java.lang.reflect.Method
 import java.util.concurrent.ConcurrentHashMap
 
 /**
@@ -398,7 +391,7 @@ class GormEnhancer implements Closeable {
                     if (preferred instanceof MultiTenantCapableDatastore) {
                         MultiTenantCapableDatastore mtds = (MultiTenantCapableDatastore) preferred
                         try {
-                            Serializable tid = Tenants.CurrentTenant.get()
+                            Serializable tid = CurrentTenantHolder.get()
                             // If tid is null and it is a MultiTenant entity, we MUST enforce context
                             if (tid == null && entity != null && MultiTenant.isAssignableFrom(entity)) {
                                 tid = mtds.tenantResolver.resolveTenantIdentifier()
@@ -476,7 +469,7 @@ class GormEnhancer implements Closeable {
         if (defaultDs instanceof MultiTenantCapableDatastore) {
             MultiTenantCapableDatastore multiTenantCapableDatastore = (MultiTenantCapableDatastore) defaultDs
             try {
-                Serializable currentTenantId = Tenants.CurrentTenant.get()
+                Serializable currentTenantId = CurrentTenantHolder.get()
                 if (currentTenantId == null && entity != null && MultiTenant.isAssignableFrom(entity)) {
                     currentTenantId = multiTenantCapableDatastore.tenantResolver.resolveTenantIdentifier()
                 }

@@ -20,6 +20,7 @@
 package org.apache.grails.data.testing.tck.domains
 
 import grails.persistence.Entity
+import org.grails.datastore.gorm.GormEnhancer
 
 @Entity
 class Book implements Serializable {

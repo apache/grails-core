@@ -66,13 +66,17 @@ class MethodValidationTransformSpec extends Specification {
         ValidatedService.isAssignableFrom(implClass)
 
         and: 'all implemented Trait methods are marked as Generated'
-        ValidatedService.methods.each { Method traitMethod ->
+        ValidatedService.declaredMethods.findAll { !it.synthetic && !it.name.contains('$') }.each { Method traitMethod ->
             assert implClass.getMethod(traitMethod.name, traitMethod.parameterTypes).isAnnotationPresent(Generated)
         }
 
         when: 'the parameter data is obtained'
+        def fooClass = serviceClass.classLoader.loadClass('Foo')
+        def datastore = new org.grails.datastore.mapping.simple.SimpleMapDatastore(fooClass)
+        datastore.mappingContext.setValidatorRegistry(new org.grails.datastore.gorm.validation.constraints.registry.DefaultValidatorRegistry(datastore.mappingContext, datastore.connectionSources.defaultConnectionSource.settings))
         def parameterNameProvider = (ParameterNameProvider) serviceClass.classLoader.loadClass('$MyServiceImplementation$ParameterNameProvider').newInstance()
         def instance = implClass.newInstance()
+        instance.setDatastore(datastore)
 
         then: 'it is correct'
         parameterNameProvider != null

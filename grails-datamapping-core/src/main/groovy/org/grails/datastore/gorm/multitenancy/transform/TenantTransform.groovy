@@ -64,7 +64,6 @@ import static org.codehaus.groovy.ast.tools.GeneralUtils.throwS
 import static org.codehaus.groovy.ast.tools.GeneralUtils.varX
 import static org.grails.datastore.gorm.transform.AstMethodDispatchUtils.callD
 import static org.codehaus.groovy.ast.tools.GeneralUtils.callX
-import static org.codehaus.groovy.ast.tools.GeneralUtils.propX
 import static org.grails.datastore.mapping.reflect.AstUtils.implementsInterface
 import static org.grails.datastore.mapping.reflect.AstUtils.findAnnotation
 import static org.grails.datastore.mapping.reflect.AstUtils.copyParameters

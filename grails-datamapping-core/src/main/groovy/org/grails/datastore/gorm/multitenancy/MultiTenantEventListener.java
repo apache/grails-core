@@ -35,6 +35,9 @@ import java.io.Serializable;
 import java.util.Arrays;
 import java.util.List;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 /**
  * An event listener that hooks into persistence events to enable discriminator based multi tenancy (ie {@link org.grails.datastore.mapping.multitenancy.MultiTenancySettings.MultiTenancyMode#DISCRIMINATOR}
  *
@@ -42,6 +45,7 @@ import java.util.List;
  * @since 6.0
  */
 public class MultiTenantEventListener implements PersistenceEventListener {
+    private static final Logger LOG = LoggerFactory.getLogger(MultiTenantEventListener.class);
     protected final Datastore datastore;
     public static final List<Class<? extends ApplicationEvent>> SUPPORTED_EVENTS = Arrays.asList(PreQueryEvent.class, ValidationEvent.class, PreInsertEvent.class, PreUpdateEvent.class);
 
@@ -56,20 +60,28 @@ public class MultiTenantEventListener implements PersistenceEventListener {
 
     @Override
     public boolean supportsSourceType(Class<?> sourceType) {
-        return Datastore.class.isAssignableFrom(sourceType);
+        return datastore.getClass().isAssignableFrom(sourceType);
+    }
+
+    private boolean isValidSource(ApplicationEvent event) {
+        Object source = event.getSource();
+        if (source instanceof Datastore) {
+            Datastore eventDatastore = (Datastore) source;
+            return this.datastore.equals(eventDatastore);
+        }
+        return false;
     }
 
     @Override
     public void onApplicationEvent(ApplicationEvent event) {
-        Class<? extends ApplicationEvent> eventClass = event.getClass();
-        if (supportsEventType(eventClass)) {
+        if (isValidSource(event)) {
+            Class<? extends ApplicationEvent> eventClass = event.getClass();
             Datastore datastore = (Datastore) event.getSource();
             if (event instanceof PreQueryEvent) {
                 PreQueryEvent preQueryEvent = (PreQueryEvent) event;
                 Query query = preQueryEvent.getQuery();
 
                 PersistentEntity entity = query.getEntity();
-                System.out.println("MultiTenantEventListener.onApplicationEvent: event=" + eventClass.getSimpleName() + ", datastore=" + datastore + ", this.datastore=" + this.datastore + ", equals=" + this.datastore.equals(datastore));
                 if (entity.isMultiTenant()) {
                     if (datastore == null) {
                         datastore = GormEnhancer.findDatastore(entity.getJavaClass());
@@ -78,11 +90,9 @@ public class MultiTenantEventListener implements PersistenceEventListener {
                         TenantId tenantId = entity.getTenantId();
                         if (tenantId != null) {
                             Serializable currentId;
-
                             if (datastore instanceof MultiTenantCapableDatastore) {
                                 currentId = Tenants.currentId((MultiTenantCapableDatastore) datastore);
-                            }
-                            else {
+                            } else {
                                 currentId = Tenants.currentId(datastore.getClass());
                             }
 
@@ -109,17 +119,14 @@ public class MultiTenantEventListener implements PersistenceEventListener {
                         try {
                             if (datastore instanceof MultiTenantCapableDatastore) {
                                 currentId = Tenants.currentId((MultiTenantCapableDatastore) datastore);
-                            }
-                            else {
+                            } else {
                                 currentId = Tenants.currentId(datastore.getClass());
                             }
 
                             if (currentId != null) {
-                                if (event instanceof ValidationEvent) {
-                                    Object existingId = preInsertEvent.getEntityAccess().getProperty(tenantId.getName());
-                                    if (existingId != null) {
-                                        currentId = (Serializable) existingId;
-                                    }
+                                Object existingId = preInsertEvent.getEntityAccess().getProperty(tenantId.getName());
+                                if (existingId != null) {
+                                    currentId = (Serializable) existingId;
                                 }
                                 if (ConnectionSource.DEFAULT.equals(currentId) && Number.class.isAssignableFrom(tenantId.getType())) {
                                     currentId = 0L;

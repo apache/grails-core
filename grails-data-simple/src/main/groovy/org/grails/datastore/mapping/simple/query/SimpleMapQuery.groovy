@@ -255,7 +255,7 @@ class SimpleMapQuery extends Query {
             if (arguments.sort) {
                 String sort = arguments.sort
                 String order = arguments.order ?: "asc"
-                if (order == "desc") {
+                if (order.equalsIgnoreCase("desc")) {
                     this.order(Query.Order.desc(sort))
                 } else {
                     this.order(Query.Order.asc(sort))
@@ -267,7 +267,7 @@ class SimpleMapQuery extends Query {
         if (arguments?.sort) {
              String sort = arguments.sort
              String order = arguments.order ?: "asc"
-             if (order == "desc") {
+             if (order.equalsIgnoreCase("desc")) {
                  this.order(Query.Order.desc(sort))
              } else {
                  this.order(Query.Order.asc(sort))
@@ -277,13 +277,7 @@ class SimpleMapQuery extends Query {
     }
 
     private String calculateFamily(PersistentEntity entity) {
-        String table = entity.rootEntity.name
-        
-        def connectionName = getConnectionName()
-        if (connectionName != null && !org.grails.datastore.mapping.core.connections.ConnectionSource.DEFAULT.equals(connectionName)) {
-            table = "${connectionName}:${table}"
-        }
-        return table
+        return entity.rootEntity.name
     }
 
     private String getConnectionName() {
@@ -488,6 +482,13 @@ class SimpleMapQuery extends Query {
         }
         
         if (property != null && value != null) {
+            if (!property.type.isInstance(value)) {
+                try {
+                    value = session.getMappingContext().getConversionService().convert(value, property.getType())
+                } catch (Throwable e) {
+                    // ignore and try other methods
+                }
+            }
             String propClassName = property.getClass().name
             if (propClassName.contains(".Basic") || propClassName.contains(".Custom")) {
                  if (!(value instanceof Number || value instanceof String || value instanceof Boolean)) {
@@ -659,11 +660,7 @@ class SimpleMapQuery extends Query {
             
             def results = []
             def allIndices = query.getIndices()
-            def connectionName = query.getConnectionName()
             def root = "~${ac.getAssociation().owner.rootEntity.name}:${ac.getAssociation().name}:"
-            if (connectionName != null && !org.grails.datastore.mapping.core.connections.ConnectionSource.DEFAULT.equals(connectionName)) {
-                root = "${connectionName}:${root}"
-            }
             
             allIndices.each { k, v ->
                 if (k.startsWith(root) && v instanceof Collection) {

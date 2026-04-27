@@ -16,9 +16,12 @@ package org.grails.datastore.mapping.simple;
 
 import org.grails.datastore.mapping.core.AbstractSession;
 import org.grails.datastore.mapping.core.Datastore;
+import org.grails.datastore.mapping.core.connections.ConnectionSource;
 import org.grails.datastore.mapping.engine.EntityPersister;
 import org.grails.datastore.mapping.model.MappingContext;
 import org.grails.datastore.mapping.model.PersistentEntity;
+import org.grails.datastore.mapping.multitenancy.MultiTenancySettings;
+import grails.gorm.multitenancy.Tenants;
 import org.grails.datastore.mapping.simple.engine.SimpleMapEntityPersister;
 import org.grails.datastore.mapping.transactions.Transaction;
 import org.springframework.context.ApplicationEventPublisher;
@@ -45,11 +48,27 @@ public class SimpleMapSession extends AbstractSession {
     }
 
     public Map<Serializable, Map> getBackingMap() {
-        return ((SimpleMapDatastore)getDatastore()).getBackingMap();
+        SimpleMapDatastore datastore = (SimpleMapDatastore) getDatastore();
+        MultiTenancySettings.MultiTenancyMode mode = datastore.getMultiTenancyMode();
+        if (mode == MultiTenancySettings.MultiTenancyMode.DATABASE || mode == MultiTenancySettings.MultiTenancyMode.SCHEMA) {
+            Serializable tenantId = Tenants.currentId(datastore);
+            if (tenantId != null) {
+                return datastore.getBackingMap(tenantId.toString());
+            }
+        }
+        return datastore.getBackingMap();
     }
 
     public Map getIndices() {
-        return ((SimpleMapDatastore)getDatastore()).getIndices();
+        SimpleMapDatastore datastore = (SimpleMapDatastore) getDatastore();
+        MultiTenancySettings.MultiTenancyMode mode = datastore.getMultiTenancyMode();
+        if (mode == MultiTenancySettings.MultiTenancyMode.DATABASE || mode == MultiTenancySettings.MultiTenancyMode.SCHEMA) {
+            Serializable tenantId = Tenants.currentId(datastore);
+            if (tenantId != null) {
+                return datastore.getIndices(tenantId.toString());
+            }
+        }
+        return datastore.getIndices();
     }
 
     @Override

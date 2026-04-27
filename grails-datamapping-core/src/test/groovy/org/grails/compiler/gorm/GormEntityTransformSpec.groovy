@@ -36,10 +36,7 @@ import org.grails.datastore.mapping.dirty.checking.DirtyCheckable
 class GormEntityTransformSpec extends Specification{
 
     void setup() {
-        def datastore = Mock(org.grails.datastore.mapping.core.Datastore)
-        def mappingContext = Mock(org.grails.datastore.mapping.model.MappingContext)
-        datastore.mappingContext >> mappingContext
-        mappingContext.persistentEntities >> []
+        def datastore = new org.grails.datastore.mapping.simple.SimpleMapDatastore(Book, Author)
         new org.grails.datastore.gorm.GormEnhancer(datastore)
     }
 
@@ -207,10 +204,7 @@ class GormEntityTransformSpec extends Specification{
 
     void 'test property/method missing'() {
         given:
-        def mappingContext = Mock(org.grails.datastore.mapping.model.MappingContext)
-        mappingContext.persistentEntities >> []
-        def datastore = Mock(org.grails.datastore.mapping.core.Datastore)
-        datastore.mappingContext >> mappingContext
+        def datastore = new org.grails.datastore.mapping.simple.SimpleMapDatastore(Book, Author)
         new org.grails.datastore.gorm.GormEnhancer(datastore)
 
         when:

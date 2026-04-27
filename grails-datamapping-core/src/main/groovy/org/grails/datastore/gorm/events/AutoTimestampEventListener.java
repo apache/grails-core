@@ -29,6 +29,8 @@ import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentLinkedQueue;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.BeansException;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.ApplicationContext;
@@ -61,6 +63,8 @@ import org.grails.datastore.mapping.model.PersistentProperty;
  * @since 1.0
  */
 public class AutoTimestampEventListener extends AbstractPersistenceEventListener implements MappingContext.Listener, ApplicationContextAware {
+
+    private static final Logger LOG = LoggerFactory.getLogger(AutoTimestampEventListener.class);
 
     // if false, will not set timestamp on insert event if value is not null
     @Value("${" + Settings.SETTING_AUTO_TIMESTAMP_INSERT_OVERWRITE + ":true}")
