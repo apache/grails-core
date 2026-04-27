@@ -136,34 +136,7 @@ class NavigableMap implements Map<String, Object>, Cloneable {
     }
 
     void merge(Map sourceMap, boolean parseFlatKeys = false) {
-        // Groovy 5 compatibility: shallow-convert ConfigObject so mergeMaps can iterate
-        // its entries without triggering dynamic property creation. Nested ConfigObjects
-        // are converted lazily on demand in mergeMapEntry, so this stays O(N) overall.
-        Map processableMap = sourceMap instanceof ConfigObject ? convertConfigObjectToMap((ConfigObject) sourceMap) : sourceMap
-        mergeMaps(this, '', this, processableMap, parseFlatKeys)
-    }
-
-    /**
-     * Groovy 5 compatibility: shallow-convert a ConfigObject to a regular LinkedHashMap.
-     *
-     * Only the immediate level is materialised - nested ConfigObjects stay as ConfigObjects
-     * and are converted by mergeMapEntry when (and only when) the recursive merge actually
-     * descends into them. This avoids the O(N^2) cost of the previous deep-copy implementation
-     * and keeps subtrees that are filtered out by spring profile guards from being copied at all.
-     *
-     * The keySet() iteration is used to avoid triggering ConfigObject's dynamic property
-     * creation; empty nested ConfigObjects (auto-generated placeholders) are skipped.
-     */
-    private static Map<String, Object> convertConfigObjectToMap(ConfigObject config) {
-        Map<String, Object> result = new LinkedHashMap<>(config.size())
-        for (Object key : config.keySet()) {
-            Object value = config.get(key)
-            if (value instanceof ConfigObject && ((ConfigObject) value).isEmpty()) {
-                continue
-            }
-            result.put(String.valueOf(key), value)
-        }
-        return result
+        mergeMaps(this, '', this, sourceMap, parseFlatKeys)
     }
 
     private void mergeMaps(NavigableMap rootMap,
@@ -198,7 +171,18 @@ class NavigableMap implements Map<String, Object>, Cloneable {
     }
 
     private static Object resolveConfigMapValue(Map map, Object... keys) {
-        keys.inject(map) { acc, key -> acc instanceof Map ? acc[key] : null }
+        // Use containsKey + get instead of `acc[key]` so we never mutate a ConfigObject
+        // by triggering its dynamic property creation on a missing key. Under Groovy 5,
+        // `acc[key]` on a ConfigObject inserts a new empty ConfigObject for any missing
+        // key, which then shows up in the merge iteration and recurses infinitely back
+        // into isSourceMapExcludedBySpringProfile -> resolveConfigMapValue. See PR #15557.
+        keys.inject(map) { acc, key -> acc instanceof Map && acc.containsKey(key) ? acc.get(key) : null }
+    }
+
+    private static Object readWithoutCreating(Map map, Object key) {
+        // Same rationale as resolveConfigMapValue: avoid Groovy's `[]` operator on a
+        // ConfigObject because it creates an empty ConfigObject for missing keys.
+        map.containsKey(key) ? map.get(key) : null
     }
 
     private static boolean isSourceMapExcludedBySpringProfile(Map configSource, String path) {
@@ -209,8 +193,8 @@ class NavigableMap implements Map<String, Object>, Cloneable {
         // lookup 'spring.config.activate.on-profile' in this config source
         def onProfile =
                 resolveConfigMapValue(configSource, 'spring', 'config', 'activate', 'on-profile') ?:
-                        (path == 'spring.config.activate' ? configSource['on-profile'] : null) ?:
-                                configSource['spring.config.activate.on-profile']
+                        (path == 'spring.config.activate' ? readWithoutCreating(configSource, 'on-profile') : null) ?:
+                                readWithoutCreating(configSource, 'spring.config.activate.on-profile')
 
         // no active profile is set but 'spring.config.activate.on-profile' is set in this config source -> exclude it
         if (!active && onProfile) return true
@@ -220,8 +204,8 @@ class NavigableMap implements Map<String, Object>, Cloneable {
         // lookup (legacy) 'spring.profiles' in this config source
         def profiles =
                 resolveConfigMapValue(configSource, 'spring', 'profiles') ?:
-                        (path == 'spring' ? configSource['profiles'] : null) ?:
-                                configSource['spring.profiles']
+                        (path == 'spring' ? readWithoutCreating(configSource, 'profiles') : null) ?:
+                                readWithoutCreating(configSource, 'spring.profiles')
 
         // no active profile is set but 'spring.profiles' is set in this config source -> exclude it
         if (!active && profiles) return true
@@ -316,10 +300,7 @@ class NavigableMap implements Map<String, Object>, Cloneable {
                     }
                 }
                 String newPath = path ? "${path}.${sourceKey}" : sourceKey
-                // Groovy 5 compatibility: lazily shallow-convert a nested ConfigObject so
-                // mergeMaps can iterate it. Plain Maps pass through unchanged.
-                Map mapToMerge = sourceValue instanceof ConfigObject ? convertConfigObjectToMap((ConfigObject) sourceValue) : (Map) sourceValue
-                mergeMaps(rootMap, newPath , subMap, mapToMerge, parseFlatKeys)
+                mergeMaps(rootMap, newPath , subMap, (Map) sourceValue, parseFlatKeys)
                 newValue = subMap
             } else {
                 newValue = sourceValue
