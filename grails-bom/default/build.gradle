@@ -52,6 +52,9 @@ ext {
 
 dependencies {
     api platform(project(':grails-base-bom'))
+    api platform(gradleBomPlatformDependencies['spring-boot-bom']), {
+        exclude group: 'org.hibernate.orm'
+    }
 
     constraints {
         // Re-declare base BOM constraints directly so enforcedPlatform() consumers
