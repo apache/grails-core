@@ -479,8 +479,8 @@ generateConfigReference.configure { Task it ->
             writer.writeLine('')
             writer.writeLine('The following plugin documentation covers configuration properties that are not listed above:')
             writer.writeLine('')
-            writer.writeLine('- https://apache.github.io/grails-spring-security/snapshot/core-plugin/guide/index.html#_configuration_properties[Spring Security Core Configuration Properties]')
-            writer.writeLine('- https://wondrify.github.io/asset-pipeline/[Asset Pipeline Configuration Properties]')
+            writer.writeLine('- https://apache.github.io/grails-spring-security/snapshot/guide/index.html#configuration-properties[Spring Security Core Configuration Properties]')
+            writer.writeLine('- https://wondrify.github.io/asset-pipeline/#configuration-properties[Asset Pipeline Configuration Properties]')
             writer.writeLine('')
         }
 
