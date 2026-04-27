@@ -65,13 +65,14 @@ class GenerateControllerCommand implements GrailsApplicationCommand, CommandLine
             if (sourceClass) {
                 final Model model = model(sourceClass)
                 // Call the explicit (Resource, File, Model, boolean) overload directly on
-                // templateRenderer. Under Groovy 5 @CompileStatic, the named-argument shape
+                // templateRenderer. Under Groovy 5/6 @CompileStatic, the named-argument shape
                 // `render(template: ..., destination: ..., model: ..., overwrite: ...)` -
                 // which compiles to a single-arg render(Map) - silently no-ops before the
                 // method body is even entered. The failure is at the call site, not in the
                 // @Delegate forwarder or the trait bridge: it reproduces equally with the
                 // forwarder, with a direct call on the field, and with an explicit
                 // Map<String,Object> literal. Only the typed positional overload survives.
+                // Reproduces on Groovy 5.0.6-SNAPSHOT and 6.0.0-SNAPSHOT.
                 // Standalone reproducer: https://github.com/jamesfredley/groovy5-compiledynamic-trait-bug
                 generateFile(sourceClass, model, 'scaffolding/Controller.groovy',
                         "grails-app/controllers/${model.packagePath}/${model.convention('Controller')}.groovy",

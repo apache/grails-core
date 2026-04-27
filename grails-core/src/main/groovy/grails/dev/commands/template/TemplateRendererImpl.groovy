@@ -63,11 +63,12 @@ class TemplateRendererImpl implements TemplateRenderer {
                 "render(Map) requires non-null 'template' and 'destination' entries; got template=${templateArg}, destination=${destArg}")
         }
         // Preserve already-normalized inputs instead of re-routing through template(..) / file(..).
-        // Note: this body being statically typed is *not* by itself enough to fix the Groovy 5
+        // Note: this body being statically typed is *not* by itself enough to fix the Groovy 5/6
         // regression - under @CompileStatic, the named-argument call site
         // `templateRenderer.render(template: ..., destination: ...)` resolves to render(Map)
-        // and silently no-ops before reaching this body at all. See the standalone reproducer
-        // at https://github.com/jamesfredley/groovy5-compiledynamic-trait-bug for the four
+        // and silently no-ops before reaching this body at all on both Groovy 5.0.6-SNAPSHOT
+        // and Groovy 6.0.0-SNAPSHOT. See the standalone reproducer at
+        // https://github.com/jamesfredley/groovy5-compiledynamic-trait-bug for the four
         // call shapes that were tested. The actual workaround is at the call sites in
         // grails-scaffolding (typed positional `templateRenderer.render(Resource, File, Map, boolean)`),
         // and this body is kept statically typed as defence-in-depth so any caller that does
