@@ -233,7 +233,10 @@ class ResourceTransform implements ASTTransformation, CompilationUnitAware, Tran
 
                     final resourcesUrlMapping = new MethodCallExpression(buildThisExpression(), uri, new MapExpression([ new MapEntryExpression(new ConstantExpression('resources'), new ConstantExpression(domainPropertyName))]))
                     final urlMappingsClosure = new ClosureExpression(null, new ExpressionStatement(resourcesUrlMapping))
-                    // Groovy 5 requires ClosureExpression to have a non-null VariableScope for bytecode generation
+                    // Groovy 5/6 ClosureWriter NPEs on a ClosureExpression with a null VariableScope
+                    // when emitting bytecode for AST-synthesised closures. ResourceTransformSpec
+                    // 'creates a controller class with the correct default formats' fails without
+                    // this guard. Same family as AbstractMethodDecoratingTransformation.makeDelegatingClosureCall.
                     urlMappingsClosure.setVariableScope(new VariableScope())
 
                     def addMappingsMethodCall = applyDefaultMethodTarget(new MethodCallExpression(urlMappingsVar, 'addMappings', urlMappingsClosure), urlMappingsClassNode)
