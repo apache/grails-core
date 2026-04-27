@@ -34,16 +34,26 @@ import grails.plugin.geb.ContainerGebSpec
  * @author Mattias Reichel
  * @since 4.2
  */
-// GROOVY-11907 / indy=false bytecode bug: @CompileStatic on a trait with static
-// fields generates invalid bytecode for the static setter helpers when the
-// downstream consumer is compiled with grailsIndy=false. The Trait$Helper
-// methods come out with mismatched local slots (e.g. dload_3 on a 2-local
-// frame) and trip a JVM VerifyError ("get long/double overflows locals") at
-// ContainerGebSpec class init, which cascades into NoClassDefFoundError on
-// every spec that extends ContainerGebSpec. Reproduced locally on Groovy
-// 5.0.6-SNAPSHOT with ./gradlew :grails-test-examples-app2:integrationTest
-// -PgrailsIndy=false. Keep @CompileDynamic until a Groovy fix lands that
-// covers the static-setter path under indy=false.
+// GROOVY-11907 follow-up / indy=false bytecode bug: @CompileStatic on a trait
+// with static fields generates invalid bytecode for the static setter helpers
+// when the downstream consumer is compiled with grailsIndy=false. The
+// Trait$Helper methods come out with mismatched local slots (e.g. dload_3 on
+// a 2-local frame) and trip a JVM VerifyError ("get long/double overflows
+// locals") at ContainerGebSpec class init, cascading into NoClassDefFoundError
+// on every spec that extends ContainerGebSpec.
+//
+// Tracked upstream as GROOVY-11968 (open as of 2026-04-27, apache/groovy
+// PR #2495 by @paulk-asert):
+//   https://issues.apache.org/jira/browse/GROOVY-11968
+//   https://github.com/apache/groovy/pull/2495
+//
+// Standalone reproducer (`TraitStaticFieldsCheck.groovy` in `quick-checks/`):
+//   https://github.com/jamesfredley/groovy5-compiledynamic-trait-bug/tree/main/quick-checks
+//
+// Reproduces on Groovy 5.0.6-SNAPSHOT and on Groovy 6.0.0-SNAPSHOT build #518
+// (2026-04-27 14:33 UTC). Keep @CompileDynamic until apache/groovy#2495 merges
+// and a fresh snapshot is published, then re-validate and switch back to
+// @CompileStatic.
 @CompileDynamic
 @SelfType(ContainerGebSpec)
 trait ContainerSupport implements DownloadSupport {
