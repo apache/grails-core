@@ -326,6 +326,17 @@ def results = query.list(sort: "o.lastName")
 
 Without an explicit alias, sorting on association properties may fail due to dynamically generated aliases.
 
+In the example above, GORM will generate an alias for the `owner` association such as `owner_alias_0`. These generated aliases are fine for most cases, but are not useful if you want to later sort or use a projection on the results. For example the following query will fail:
+
+[source,groovy]
+----
+// fails because a dynamic alias is used
+Pet.where {
+    owner.firstName == "Fred"
+}.list(sort:"owner.lastName")
+----
+
+
 ==== Subqueries
 
 
