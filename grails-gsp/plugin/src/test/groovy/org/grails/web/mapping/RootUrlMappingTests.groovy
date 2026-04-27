@@ -24,6 +24,7 @@ import spock.lang.Specification
 
 class RootUrlMappingTests extends Specification implements UrlMappingsUnitTest<StoreUrlMappings> {
 
+    boolean purgeTagLibMetaClass = true
 
     def testMappingToController() {
         when:

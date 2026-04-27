@@ -24,6 +24,7 @@ import spock.lang.Specification
 
 class LinkRenderingTagLibTests extends Specification implements UrlMappingsUnitTest<LinkRenderingTestUrlMappings> {
 
+    boolean purgeTagLibMetaClass = true
 
     def testMappingsWhichSpecifyAPlugin() {
         when:

@@ -29,6 +29,7 @@ import spock.lang.Specification
  */
 class ReverseUrlMappingTests extends Specification implements UrlMappingsUnitTest<CustomUrlMappings> {
 
+    boolean purgeTagLibMetaClass = true
 
     def testLinkTagRendering() {
         when:

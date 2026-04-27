@@ -30,6 +30,8 @@ import spock.lang.Specification
  */
 class OverlappingReverseMappedLinkTests extends Specification implements UrlMappingsUnitTest<OverLappingReverseMappedLinkUrlMappings> {
 
+    boolean purgeTagLibMetaClass = true
+
     def testSimpleLink() {
         when:
         def template = '<g:link controller="author" action="list">link1</g:link>'

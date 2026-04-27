@@ -32,6 +32,7 @@ import org.grails.core.artefact.ControllerArtefactHandler
 import org.grails.core.artefact.UrlMappingsArtefactHandler
 import org.grails.gsp.GroovyPagesTemplateEngine
 import org.grails.testing.ParameterizedGrailsUnitTest
+import org.grails.testing.runtime.support.LazyTagLibraryLookup
 import org.grails.web.mapping.UrlMappingsHolderFactoryBean
 import org.grails.web.mapping.mvc.GrailsControllerUrlMappingInfo
 
@@ -63,8 +64,20 @@ trait UrlMappingsUnitTest<T> implements ParameterizedGrailsUnitTest<T>, GrailsWe
      * bean so each feature method starts with only this spec's mappings active. Other specs
      * running in the same JVM may register their own mappings or clear the registry; calling
      * this restores the state expected by this spec.
+     *
+     * Also purges stale tag lib metaclass entries from any previous spec (regardless of
+     * whether that spec had {@code purgeTagLibMetaClass} enabled) so the first
+     * {@code applyTemplate()} call in this feature re-registers tag methods against this
+     * spec's own {@code TagLibraryLookup}, {@code linkGenerator}, and
+     * {@code urlMappingsHolder}.
      */
     void resetUrlMappingsForFeature() {
+        try {
+            LazyTagLibraryLookup lookup = applicationContext.getBean(LazyTagLibraryLookup)
+            if (lookup) {
+                lookup.cleanTagLibsMetaClass()
+            }
+        } catch (ignored) {}
         Class<T> typeUnderTest = getTypeUnderTest()
         if (typeUnderTest != null) {
             mockArtefact(typeUnderTest)
