@@ -18,15 +18,21 @@
  */
 package grails.boot
 
+import org.springframework.boot.tomcat.servlet.TomcatServletWebServerFactory
+import org.springframework.boot.web.server.servlet.ConfigurableServletWebServerFactory
+import org.springframework.core.env.ConfigurableEnvironment
+import org.springframework.web.context.support.StandardServletEnvironment
+
 import grails.artefact.Artefact
 import grails.boot.config.GrailsAutoConfiguration
 import grails.web.Controller
 import org.springframework.boot.autoconfigure.EnableAutoConfiguration
-import org.springframework.boot.web.embedded.tomcat.TomcatServletWebServerFactory
-import org.springframework.boot.web.servlet.context.AnnotationConfigServletWebServerApplicationContext
-import org.springframework.boot.web.servlet.server.ConfigurableServletWebServerFactory
+import org.springframework.boot.web.server.servlet.context.AnnotationConfigServletWebServerApplicationContext
 import org.springframework.context.annotation.Bean
 import spock.lang.Specification
+
+import org.apache.grails.core.plugins.DefaultPluginDiscovery
+import org.apache.grails.core.plugins.PluginDiscovery
 
 /**
  * Created by graemerocher on 28/05/14.
@@ -40,17 +46,31 @@ class EmbeddedContainerWithGrailsSpec extends Specification {
     }
 
     void "Test that you can load Grails in an embedded server config"() {
-        when:"An embedded server config is created"
-            this.context = new AnnotationConfigServletWebServerApplicationContext(Application)
+        given: 'bootstrapped context'
+        ConfigurableEnvironment env = new StandardServletEnvironment()
+        PluginDiscovery pluginDiscovery = new DefaultPluginDiscovery()
+        pluginDiscovery.init(env)
 
-        then:"The context is valid"
-            context != null
-            new URL("http://localhost:${context.webServer.port}/foo/bar").text == 'hello world'
-            new URL("http://localhost:${context.webServer.port}/foos").text == 'all foos'
+        when: "An embedded server config is created"
+        this.context = new AnnotationConfigServletWebServerApplicationContext()
+        // simulate spring's environment setup
+        this.context.setEnvironment(env)
+        // simulate what the bootstrap registry would do
+        this.context.registerBean(PluginDiscovery.BEAN_NAME, PluginDiscovery, () -> pluginDiscovery)
+        // mark the application for actual load
+        this.context.register(Application)
+        // load it
+        this.context.refresh()
+
+        then: "The context is valid"
+        context != null
+        new URL("http://localhost:${context.webServer.port}/foo/bar").text == 'hello world'
+        new URL("http://localhost:${context.webServer.port}/foos").text == 'all foos'
     }
 
     @EnableAutoConfiguration
     static class Application extends GrailsAutoConfiguration {
+
         @Bean
         ConfigurableServletWebServerFactory webServerFactory() {
             new TomcatServletWebServerFactory(0)
@@ -61,9 +81,11 @@ class EmbeddedContainerWithGrailsSpec extends Specification {
 
 @Controller
 class FooController {
+
     def bar() {
         render "hello world"
     }
+
     def list() {
         render "all foos"
     }
@@ -73,9 +95,9 @@ class FooController {
 
 @Artefact('UrlMappings')
 class UrlMappings {
+
     static mappings = {
         "/$controller/$action?/$id?(.$format)?"()
-        "/foos"(controller:'foo', action:"list")
+        "/foos"(controller: 'foo', action: "list")
     }
 }
-

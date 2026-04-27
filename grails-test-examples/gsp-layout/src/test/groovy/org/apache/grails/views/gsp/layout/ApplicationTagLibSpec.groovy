@@ -32,7 +32,7 @@ class ApplicationTagLibSpec extends Specification implements TagLibUnitTest<Appl
 <body>
 <g:form name="testForm" controller="begin" action="create">
 <g:textField name="testField"/>
-<g:actionSubmit class="buttons" action="testAction" value="This
+<g:formActionSubmit class="buttons" action="testAction" value="This
 is a test action description"
 onclick="if (testForm.testField.value=='') { alert('Please enter some text.'); return false; }"
 />
@@ -49,8 +49,8 @@ onclick="if (testForm.testField.value=='') { alert('Please enter some text.'); r
 <body>
 <form action="/begin/create" method="post" name="testForm" id="testForm" >
 <input type="text" name="testField" value="" id="testField" />
-<input type="submit" name="_action_testAction" value="This
-is a test action description" class="buttons" onclick="if (testForm.testField.value==&#39;&#39;) { alert(&#39;Please enter some text.&#39;); return false; }" />
+<input type="submit" formaction="/test/testAction" class="buttons" value="This
+is a test action description" onclick="if (testForm.testField.value==&#39;&#39;) { alert(&#39;Please enter some text.&#39;); return false; }" />
 </form>
 </body>
 </html>'''

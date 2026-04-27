@@ -43,6 +43,7 @@ import grails.io.IOUtils;
 import grails.io.ResourceUtils;
 import grails.plugins.exceptions.PluginException;
 import grails.util.BuildSettings;
+import org.apache.grails.core.plugins.PluginDescriptor;
 import org.grails.core.io.StaticResourceLoader;
 
 /**
@@ -63,7 +64,7 @@ public class BinaryGrailsPlugin extends DefaultGrailsPlugin {
     public static final String DEFAULT_PROPERTIES_ENCODING = "UTF-8";
     public static final String PLUGIN_DESCRIPTOR_PATH = "META-INF/grails-plugin.xml";
 
-    private final BinaryGrailsPluginDescriptor descriptor;
+    private final PluginDescriptor descriptor;
     private Class[] providedArtefacts = {};
     private final Map<String, Class> precompiledViewMap = new HashMap<>();
     private final Resource baseResource;
@@ -78,7 +79,7 @@ public class BinaryGrailsPlugin extends DefaultGrailsPlugin {
      * @param descriptor The META-INF/grails-plugin.xml descriptor
      * @param application The application
      */
-    public BinaryGrailsPlugin(Class<?> pluginClass, BinaryGrailsPluginDescriptor descriptor, GrailsApplication application) {
+    public BinaryGrailsPlugin(Class<?> pluginClass, PluginDescriptor descriptor, GrailsApplication application) {
         super(pluginClass, application);
         this.descriptor = descriptor;
         URL rootResource = IOUtils.findRootResource(pluginClass);
@@ -110,7 +111,7 @@ public class BinaryGrailsPlugin extends DefaultGrailsPlugin {
 
         this.baseResourcesResource = new UrlResource(rootResourcesURL);
         if (descriptor != null) {
-            initializeProvidedArtefacts(descriptor.getProvidedlassNames());
+            initializeProvidedArtefacts(descriptor.getProvidedClasses());
             initializeViewMap(descriptor);
         }
     }
@@ -119,7 +120,7 @@ public class BinaryGrailsPlugin extends DefaultGrailsPlugin {
         return projectDirectory;
     }
 
-    protected void initializeViewMap(BinaryGrailsPluginDescriptor descriptor) {
+    protected void initializeViewMap(PluginDescriptor descriptor) {
         final Resource descriptorResource = descriptor.getResource();
 
         Resource viewsPropertiesResource = null;
@@ -198,7 +199,7 @@ public class BinaryGrailsPlugin extends DefaultGrailsPlugin {
     /**
      * @return The META-INF/grails-plugin.xml descriptor
      */
-    public BinaryGrailsPluginDescriptor getBinaryDescriptor() {
+    public PluginDescriptor getPluginDescriptor() {
         return descriptor;
     }
 

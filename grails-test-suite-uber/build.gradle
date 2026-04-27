@@ -21,6 +21,7 @@ plugins {
     id 'groovy'
     id 'project-report'
     id 'org.apache.grails.buildsrc.properties'
+    id 'org.apache.grails.buildsrc.dependency-validator'
     id 'org.apache.grails.buildsrc.compile'
 }
 
@@ -46,7 +47,7 @@ dependencies {
     testImplementation 'org.apache.groovy:groovy'
     testImplementation 'org.apache.groovy:groovy-test-junit5'
     testImplementation 'org.junit.jupiter:junit-jupiter-api'
-    testImplementation 'com.fasterxml.jackson.core:jackson-databind'
+    testImplementation 'tools.jackson.core:jackson-databind'
     testImplementation project(':grails-data-hibernate5-core')
     testImplementation project(':grails-gsp')
     if(System.getenv('SITEMESH3_TESTING_ENABLED') == 'true') {

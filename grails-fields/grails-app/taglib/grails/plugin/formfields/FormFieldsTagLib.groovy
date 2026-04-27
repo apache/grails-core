@@ -310,17 +310,6 @@ class FormFieldsTagLib {
     }
 
     /**
-     * @deprecated since version 1.5 - Use widget instead
-     * @attr bean Name of the source bean in the GSP model.
-     * @attr property REQUIRED The name of the property to display. This is resolved
-     * against the specified bean or the bean in the current scope.
-     */
-    @Deprecated(since = '1.5', forRemoval = true)
-    def input = { attrs ->
-        out << widget(attrs)
-    }
-
-    /**
      * @attr bean Name of the source bean in the GSP model.
      * @attr property REQUIRED The name of the property to display. This is resolved
      * against the specified bean or the bean in the current scope.

@@ -44,6 +44,28 @@ These can be set on the command line like so:
 * `skipMongodbTests` - does not run mongo related tests
 * `skipTests` - no tests will run
 
+## Test slicing
+
+Test classes tagged with `@spock.lang.Tag('some-tag')` can be run separately.\
+Tags are inherited from superclasses, so a test class is also included if any of its ancestors is tagged.
+
+Example:
+
+```bash
+./gradlew iT -PincludeTestTags=geb
+```
+
+Available project properties:
+
+* `includeTestTags` - comma-separated list of test tags to include
+* `excludeTestTags` - comma-separated list of test tags to exclude
+
+Example with multiple tags:
+
+```bash
+./gradlew iT -PincludeTestTags=geb,api
+```
+
 ## Environment variables
 
 * `DO_NOT_CACHE_TESTS` - set to `1` (or any truthy value) to force every `Test` task to run

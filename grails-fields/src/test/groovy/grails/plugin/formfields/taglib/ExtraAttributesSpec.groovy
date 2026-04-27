@@ -145,7 +145,7 @@ class ExtraAttributesSpec extends AbstractFormFieldsTagLibSpec implements TagLib
         applyTemplate('<f:display bean="personInstance" property="name" foo="bar"/>', [personInstance: personInstance]) == 'bar'
     }
 
-	void 'arbitrary attributes on f:input are passed to the input template'() {
+	void 'arbitrary attributes on f:widget are passed to the input template'() {
 		given:
 		views["/_fields/person/name/_widget.gsp"] = '${foo}'
 
@@ -153,7 +153,7 @@ class ExtraAttributesSpec extends AbstractFormFieldsTagLibSpec implements TagLib
 		mockFormFieldsTemplateService.findTemplate(_, 'widget', null, null) >> [path: '/_fields/person/name/widget']
 
 		expect:
-		applyTemplate('<f:input bean="personInstance" property="name" foo="bar"/>', [personInstance: personInstance]) == 'bar'
+		applyTemplate('<f:widget bean="personInstance" property="name" foo="bar"/>', [personInstance: personInstance]) == 'bar'
 	}
 
 	void 'arbitrary attributes on f:displayWidget are passed to the displayWidget template'() {
@@ -167,9 +167,9 @@ class ExtraAttributesSpec extends AbstractFormFieldsTagLibSpec implements TagLib
 		applyTemplate('<f:displayWidget bean="personInstance" property="name" foo="bar"/>', [personInstance: personInstance]) == 'bar'
 	}
 
-	void 'arbitrary attributes on f:input are passed to the default input'() {
+	void 'arbitrary attributes on f:widget are passed to the default input'() {
 		expect:
-		applyTemplate('<f:input bean="personInstance" property="name" foo="bar"/>', [personInstance: personInstance]) == '<input type="text" foo="bar" name="name" value="Bart Simpson" required="" id="name" />'
+		applyTemplate('<f:widget bean="personInstance" property="name" foo="bar"/>', [personInstance: personInstance]) == '<input type="text" foo="bar" name="name" value="Bart Simpson" required="" id="name" />'
 	}
 
 	@Issue("https://github.com/grails/fields/pull/49")

@@ -50,4 +50,8 @@ public interface Coordinate {
     String getVersion();
 
     boolean isPom();
+
+    default boolean isEnforced() {
+        return false;
+    }
 }

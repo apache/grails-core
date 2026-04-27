@@ -24,10 +24,9 @@ This section covers all the new features introduced in Grails 8
 Grails 8 is a major release that includes new features, improvements, and dependency upgrades.
 This release focuses on enhancing the developer experience, improving performance, and ensuring compatibility with the latest technologies.
 
-For detailed information on how to upgrade to Grails 8, including major dependency changes, please see the xref:upgrading#upgrading70x[Upgrading from Grails 7 to Grails 8] section.
+For detailed information on how to upgrade to Grails 8, including major dependency changes, please see the xref:upgrading#upgrading80x[Upgrading from Grails 7 to Grails 8] section.
 Notable new features are included below.
 
 ==== No New Features at this time
 
 No new features at this time
-

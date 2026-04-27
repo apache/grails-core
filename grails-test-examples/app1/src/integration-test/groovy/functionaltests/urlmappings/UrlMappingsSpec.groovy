@@ -20,6 +20,7 @@ package functionaltests.urlmappings
 
 import spock.lang.Narrative
 import spock.lang.Specification
+import spock.lang.Tag
 
 import grails.testing.mixin.integration.Integration
 import org.apache.grails.testing.http.client.HttpClientSupport
@@ -35,6 +36,7 @@ import org.apache.grails.testing.http.client.HttpClientSupport
 Grails URL mappings provide flexible routing of HTTP requests to controller actions.
 This includes path variables, constraints, HTTP method-based routing, and redirects.
 ''')
+@Tag('http-client')
 class UrlMappingsSpec extends Specification implements HttpClientSupport {
 
     // ========== Static Path Mappings ==========
@@ -204,6 +206,75 @@ class UrlMappingsSpec extends Specification implements HttpClientSupport {
 
         then: "redirect is performed and final response received"
         response.assertJsonContains(200, [action: 'index'])
+    }
+
+    // ========== Group Default Mappings ==========
+
+    def 'group defaults are inherited by child mappings'() {
+        when: 'requesting a child mapping that relies on grouped controller and namespace defaults'
+        def response = http('/group-defaults/list')
+
+        then: 'the grouped defaults resolve to the expected controller action'
+        response.assertJson(200, [
+            namespace: 'api',
+            controller: 'groupDefaults',
+            action: 'list'
+        ])
+
+        when: 'requesting another child mapping that inherits the same defaults'
+        response = http('/group-defaults/show')
+
+        then: 'the inherited defaults still apply to the second child mapping'
+        response.assertJsonContains(200, [
+            namespace: 'api',
+            controller: 'groupDefaults',
+            action: 'show'
+        ])
+    }
+
+    def 'child mappings can override grouped defaults'() {
+        when: 'requesting the child mapping that overrides the grouped controller and action'
+        def response = http('/group-override/special')
+
+        then: 'the child mapping uses its explicit controller and action values'
+        response.assertJson(200, [
+            namespace: 'api',
+            controller: 'groupOverride',
+            action: 'handle'
+        ])
+
+        when: 'requesting the child mapping that does not provide an override'
+        response = http('/group-override/normal')
+
+        then: 'the grouped defaults remain in effect for that child mapping'
+        response.assertJson(200, [
+            namespace: 'api',
+            controller: 'groupDefaults',
+            action: 'index'
+        ])
+    }
+
+    def 'groups without defaults still support explicit child mappings'() {
+        when: 'requesting a child mapping that provides its own controller and action'
+        def response = http('/group-no-defaults/info')
+
+        then: 'the explicit child mapping resolves successfully'
+        response.assertJsonContains(200, [
+            controller: 'urlMappingsTest',
+            action: 'index'
+        ])
+    }
+
+    def 'nested groups combine outer and inner defaults'() {
+        when: 'requesting a mapping inside nested groups'
+        def response = http('/community/topics/gallery')
+
+        then: 'the request inherits namespace and controller defaults from both groups'
+        response.assertJson(200, [
+            namespace: 'api',
+            controller: 'groupDefaults',
+            action: 'gallery'
+        ])
     }
 
     // ========== Default Controller/Action Mapping ==========

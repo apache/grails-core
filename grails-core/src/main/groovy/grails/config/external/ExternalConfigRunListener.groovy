@@ -26,7 +26,7 @@ import java.nio.file.Path
 import groovy.transform.CompileStatic
 import groovy.util.logging.Slf4j
 
-import org.springframework.boot.ConfigurableBootstrapContext
+import org.springframework.boot.bootstrap.ConfigurableBootstrapContext
 import org.springframework.boot.SpringApplication
 import org.springframework.boot.SpringApplicationRunListener
 import org.springframework.boot.env.PropertiesPropertySourceLoader

@@ -37,12 +37,6 @@ import org.grails.datastore.gorm.GormEntity
 import org.grails.datastore.gorm.mongo.MongoCriteriaBuilder
 import org.grails.datastore.gorm.mongo.api.MongoStaticApi
 import org.grails.datastore.gorm.schemaless.DynamicAttributes
-import org.grails.datastore.mapping.core.AbstractDatastore
-import org.grails.datastore.mapping.core.SessionImplementor
-import org.grails.datastore.mapping.engine.EntityPersister
-import org.grails.datastore.mapping.mongo.AbstractMongoSession
-import org.grails.datastore.mapping.mongo.MongoDatastore
-import org.grails.datastore.mapping.mongo.engine.MongoEntityPersister
 
 /**
  * Enhances the default {@link GormEntity} class with MongoDB specific methods
@@ -75,40 +69,6 @@ trait MongoEntity<D> implements GormEntity<D>, DynamicAttributes {
         DynamicAttributes.super.putAt(name, val)
     }
 
-    /**
-     * Return the DBObject instance for the entity
-     *
-     * @deprecated use dynamic properties instead
-     * @param instance The instance
-     * @return The DBObject instance
-     */
-    @Deprecated(forRemoval = true)
-    Document getDbo() {
-        AbstractMongoSession session = (AbstractMongoSession) AbstractDatastore.retrieveSession(MongoDatastore)
-        // check first for embedded cached entries
-        SessionImplementor<Document> si = (SessionImplementor<Document>) session
-        def persistentEntity = session.mappingContext.getPersistentEntity(getClass().name)
-        Document dbo = (Document) si.getCachedEntry(persistentEntity, MongoEntityPersister.createEmbeddedCacheEntryKey(this))
-        if (dbo != null) return dbo
-        // otherwise check if instance is contained within session
-        if (!session.contains(this)) {
-            dbo = new Document()
-            si.cacheEntry(persistentEntity, MongoEntityPersister.createInstanceCacheEntryKey(this), dbo)
-            return dbo
-        }
-
-        EntityPersister persister = (EntityPersister) session.getPersister(this)
-        def id = persister.getObjectIdentifier(this)
-        dbo = (Document) ((SessionImplementor)session).getCachedEntry(persister.getPersistentEntity(), id)
-        if (dbo == null) {
-            MongoCollection<Document> coll = session.getCollection(persistentEntity)
-            dbo = coll.find((Bson) new Document(MongoEntityPersister.MONGO_ID_FIELD, id))
-                    .limit(1)
-                    .first()
-
-        }
-        return dbo
-    }
     /**
      * Finds all of the entities in the collection.
      *

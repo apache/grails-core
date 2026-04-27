@@ -19,6 +19,7 @@
 
 plugins {
     id 'org.apache.grails.buildsrc.properties'
+    id 'org.apache.grails.buildsrc.dependency-validator'
     id 'org.apache.grails.buildsrc.compile'
 }
 
@@ -67,7 +68,7 @@ dependencies {
 
     testImplementation 'org.apache.grails:grails-testing-support-web'
 
-    integrationTestImplementation project(':grails-testing-support-http-client')
+    integrationTestImplementation 'org.apache.grails:grails-testing-support-http-client'
 }
 
 bootRun {

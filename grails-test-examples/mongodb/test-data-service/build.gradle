@@ -18,6 +18,7 @@
  */
 plugins {
     id 'org.apache.grails.buildsrc.properties'
+    id 'org.apache.grails.buildsrc.dependency-validator'
     id 'org.apache.grails.buildsrc.compile'
 }
 
@@ -48,10 +49,11 @@ dependencies {
 
     integrationTestImplementation 'org.apache.grails:grails-testing-support-datamapping'
     integrationTestImplementation 'org.spockframework:spock-core'
-    implementation 'org.testcontainers:mongodb'
+    implementation 'org.testcontainers:testcontainers-mongodb'
 }
 
 apply {
     from rootProject.layout.projectDirectory.file('gradle/functional-test-config.gradle')
+    from rootProject.layout.projectDirectory.file('gradle/boot4-disabled-integration-test-config.gradle')
     from rootProject.layout.projectDirectory.file('gradle/grails-extension-gradle-config.gradle')
 }

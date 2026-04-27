@@ -68,11 +68,6 @@ public abstract class DatabaseDriverFeature implements OneOfFeature {
 
     public abstract boolean embedded();
 
-    @Deprecated(since = "6.2.2", forRemoval = true)
-    public String getJdbcUrl() {
-        return getJdbcProdUrl();
-    }
-
     public abstract String getJdbcDevUrl();
 
     public abstract String getJdbcTestUrl();

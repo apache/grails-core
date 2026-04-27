@@ -50,13 +50,13 @@ import org.springframework.core.io.ResourceLoader;
 import org.springframework.core.io.support.PathMatchingResourcePatternResolver;
 import org.springframework.core.io.support.ResourcePatternResolver;
 import org.springframework.core.io.support.ResourcePatternUtils;
-import org.springframework.orm.hibernate5.HibernateExceptionTranslator;
 import org.springframework.transaction.PlatformTransactionManager;
 import org.springframework.util.Assert;
 
 import org.grails.datastore.mapping.core.connections.ConnectionSource;
 import org.grails.orm.hibernate.cfg.HibernateMappingContext;
 import org.grails.orm.hibernate.cfg.HibernateMappingContextConfiguration;
+import org.grails.orm.hibernate.support.hibernate5.HibernateExceptionTranslator;
 
 /**
  * Configures a SessionFactory using a {@link org.grails.orm.hibernate.cfg.HibernateMappingContext} and a {@link org.grails.orm.hibernate.cfg.HibernateMappingContextConfiguration}

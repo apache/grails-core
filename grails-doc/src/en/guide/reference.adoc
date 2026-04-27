@@ -1138,6 +1138,11 @@ include::ref/Tags/fieldValue.adoc[]
 
 include::ref/Tags/findAll.adoc[]
 
+[[ref-tags-flashMessages]]
+==== flashMessages
+
+include::ref/Tags/flashMessages.adoc[]
+
 [[ref-tags-form]]
 ==== form
 

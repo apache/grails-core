@@ -46,8 +46,8 @@ Activate this skill when developing with Grails 7, including:
 ## Technology Stack
 
 Grails 7 is built on:
-- **Spring Boot**: 3.5.x
-- **Spring Framework**: 6.2.x
+- **Spring Boot**: 4.0.x
+- **Spring Framework**: 7.0.x
 - **Groovy**: 4.0.x
 - **Gradle**: 8.14.x
 - **Spock**: 2.3-groovy-4.0

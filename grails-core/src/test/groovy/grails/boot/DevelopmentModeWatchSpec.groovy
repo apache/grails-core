@@ -43,7 +43,7 @@ class DevelopmentModeWatchSpec extends Specification {
         System.setProperty("base.dir", ".")
         GrailsApp app = new GrailsApp(GrailsTestConfigurationClass.class)
         ConfigurableApplicationContext context = app.run()
-        WatchedResourcesGrailsPlugin plugin = context.getBean('grailsPluginManager').pluginList[0].plugin.instance
+        WatchedResourcesGrailsPlugin plugin = context.getBean('grailsPluginManager').plugins.values().first().instance
 
         when:
         File watchedFile = new File('testWatchedFile.properties')

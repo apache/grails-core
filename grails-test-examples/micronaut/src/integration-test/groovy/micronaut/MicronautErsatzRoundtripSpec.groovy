@@ -22,15 +22,21 @@ import io.github.cjstehno.ersatz.GroovyErsatzServer
 import io.github.cjstehno.ersatz.cfg.ServerConfig
 import io.micronaut.http.client.exceptions.HttpClientException
 import spock.lang.AutoCleanup
+import spock.lang.IgnoreIf
 import spock.lang.Retry
 import spock.lang.Specification
+import spock.lang.Tag
 
 import org.springframework.beans.factory.annotation.Autowired
 
 import grails.testing.mixin.integration.Integration
 import org.apache.grails.testing.http.client.HttpClientSupport
 
+// micronaut-core's ScopedValues references java.lang.ScopedValue.CallableOp,
+// which only exists in JDK 25+ (JEP 506). Skip on older JDKs.
+@IgnoreIf({ Runtime.version().feature() < 25 })
 @Integration
+@Tag('http-client')
 class MicronautErsatzRoundtripSpec extends Specification implements HttpClientSupport {
 
     @Autowired ExternalApiService externalApiService

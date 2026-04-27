@@ -54,7 +54,6 @@ dependencies {
     api platform(gradleBomPlatformDependencies['spring-boot-bom']), {
         exclude group: 'org.apache.groovy'
         exclude group: 'org.spockframework'
-        exclude group: 'com.fasterxml.jackson'
     }
 
     for (def entry : bomPlatformDependencies.entrySet()) {

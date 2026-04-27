@@ -18,19 +18,20 @@
  */
 package grails.boot
 
+import org.springframework.boot.web.server.servlet.context.AnnotationConfigServletWebServerApplicationContext
+
 import grails.boot.config.GrailsAutoConfiguration
 import org.springframework.boot.SpringApplication
 import org.springframework.boot.autoconfigure.EnableAutoConfiguration
-import org.springframework.boot.web.embedded.tomcat.TomcatServletWebServerFactory
-import org.springframework.boot.web.servlet.context.AnnotationConfigServletWebServerApplicationContext
-import org.springframework.boot.web.servlet.server.ConfigurableServletWebServerFactory
+import org.springframework.boot.tomcat.servlet.TomcatServletWebServerFactory
+import org.springframework.boot.web.server.servlet.ConfigurableServletWebServerFactory
 import org.springframework.context.annotation.Bean
 import spock.lang.Specification
 
 /**
  * Created by graemerocher on 28/05/14.
  */
-class GrailsSpringApplicationSpec extends Specification{
+class GrailsSpringApplicationSpec extends Specification {
 
     AnnotationConfigServletWebServerApplicationContext context
 
@@ -39,19 +40,20 @@ class GrailsSpringApplicationSpec extends Specification{
     }
 
     void "Test run Grails via SpringApplication"() {
-        when:"SpringApplication is used to run a Grails app"
-        SpringApplication springApplication  = new SpringApplication(Application)
+        when: "SpringApplication is used to run a Grails app"
+        SpringApplication springApplication = new SpringApplication(Application)
         springApplication.allowBeanDefinitionOverriding = true
         context = (AnnotationConfigServletWebServerApplicationContext) springApplication.run()
 
-        then:"The application runs"
-            context != null
-            new URL("http://localhost:${context.webServer.port}/foo/bar").text == 'hello world'
+        then: "The application runs"
+        context != null
+        new URL("http://localhost:${context.webServer.port}/foo/bar").text == 'hello world'
     }
 
 
     @EnableAutoConfiguration
     static class Application extends GrailsAutoConfiguration {
+
         @Bean
         ConfigurableServletWebServerFactory webServerFactory() {
             TomcatServletWebServerFactory factory = new TomcatServletWebServerFactory(0)
