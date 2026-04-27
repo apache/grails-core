@@ -292,22 +292,21 @@ class GormEntityTransformation extends AbstractASTTransformation implements Comp
                 classNode.addMethod('$static_propertyMissing', Modifier.PUBLIC | Modifier.STATIC, AstUtils.OBJECT_CLASS_NODE, propertyMissingGetParameters, null, propertyMissingGetBody)
         markAsGenerated(classNode, propertyMissingNodeGetter)
 
-        // INSTANCE Object get(String name) - Groovy 6 instance-dispatch guard.
-        // On Groovy 6, a static get(String) on the GormEntity trait was being picked up
-        // by the implementing class's instance MOP as the generic-getter for instance
-        // property access (it appears in metaClass.respondsTo(instance, 'get', String)),
-        // returning a connection-scoped GormStaticApi where the entity-level
-        // propertyMissing should have returned a DelegatingGormEntityApi. The mismatched
-        // type silently corrupts call chains like book.someConnection.delete(flush: true) -
-        // "Unknown entity: java.util.LinkedHashMap" deep in Hibernate.
-        // Adding an instance overload directly to the entity class via AST gives instance
-        // MOP a more specific candidate than the trait-static path, so it wins dispatch
-        // and delegates back to the existing instance propertyMissing. Adding via AST
-        // instead of declaring on the trait also avoids the "static and instance methods
-        // having the same signature" trait-merge error.
-        // No upstream Apache Groovy JIRA identified for this dispatch behaviour; the AST
-        // shim should be removed once one is filed and fixed (or once Spock 2.x releases
-        // a Groovy 6-compatible artifact and we re-validate the canary end-to-end).
+        // INSTANCE Object get(String name) - Groovy 6 generic-getter MOP regression workaround.
+        // On Groovy 6, MetaClassImpl picks up the inherited GormEntity.get(Serializable)
+        // entity-by-ID method as the genericGetMethod for instance property access on the
+        // implementing class, hijacking every dynamic property read - including ones that
+        // should fall through to propertyMissing(String) for datasource qualifiers. Result:
+        // book.someConnection.delete(flush: true) silently returns the get(Serializable) value
+        // (an entity row or null) instead of the expected DelegatingGormEntityApi, which then
+        // surfaces as "Unknown entity: java.util.LinkedHashMap" deep in Hibernate or as NPEs
+        // in HibernateRuntimeUtils.setupErrorsProperty.
+        // Workaround: add an instance Object get(String) directly on every @Entity class via
+        // AST. Groovy's instance MOP picks the more-specific String overload over the
+        // inherited Serializable one, so the generic-getter winds up routing through the
+        // existing propertyMissing(String) and yields a DelegatingGormEntityApi as expected.
+        // Standalone reproducer: https://github.com/jamesfredley/groovy6-get-as-generic-getter
+        // No upstream Apache Groovy JIRA filed yet; remove this shim once one is filed and fixed.
         def instanceGetBody = new BlockStatement()
         def instanceGetNameParam = new Parameter(ClassHelper.make(String), 'name')
         def instanceGetArgs = new ArgumentListExpression(instanceGetNameParam)
