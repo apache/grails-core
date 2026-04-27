@@ -462,7 +462,7 @@ jobs:
           distribution: liberica
           java-version: 17
       - name: "📥 Download Wrapper"
-        uses: actions/download-artifact@v7.0.0
+        uses: actions/download-artifact@v8.0.1
         with:
           name: apache-grails-wrapper-SNAPSHOT-bin
           path: wrapper
