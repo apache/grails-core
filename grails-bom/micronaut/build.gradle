@@ -50,6 +50,12 @@ ext {
     ]
 }
 
+// Register the Micronaut platform in combinedPlatforms/combinedVersions so
+// PropertyNameCalculator (used by extractConstraints and pomCustomization) can
+// resolve a property name for the micronaut-platform constraint.
+project.ext.combinedPlatforms = combinedPlatforms + ['micronaut-platform': "io.micronaut.platform:micronaut-platform:$micronautPlatformVersion".toString()]
+project.ext.combinedVersions = combinedVersions + ['micronaut-platform.version': micronautPlatformVersion as String]
+
 // Coordinates we override via customBomDependencies — these must be excluded from the
 // inherited platform chain so they don't conflict with our strictly-versioned overrides
 // when consumers apply this BOM via enforcedPlatform.
@@ -122,6 +128,11 @@ tasks.register('extractConstraints', ExtractDependenciesTask).configure { Extrac
     it.definitions = combinedDependencies
     it.projectName = project.name
     it.versions = combinedVersions
+    // Micronaut's platform imports many sub-BOMs (micronaut-*-bom, netty-bom, etc.) that are
+    // not explicitly registered in dependencies.gradle. Auto-register them so extractConstraints
+    // can document their versions without requiring manual entries for every transitive platform.
+    // this is required because the micronaut bom format uses gradle modules instead of a pom like spring boot
+    it.autoRegisterTransitivePlatforms = true
     rootProject.subprojects.each { p ->
         evaluationDependsOn(p.path)
     }

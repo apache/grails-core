@@ -84,12 +84,28 @@ abstract class ExtractDependenciesTask extends DefaultTask {
     @Input
     abstract MapProperty<String, String> getProjectCoordinateProperties()
 
+    /**
+     * When {@code true}, transitive platform dependencies that are not explicitly
+     * registered in {@code combinedPlatforms} / {@code dependencies.gradle} will be
+     * auto-registered in {@link PropertyNameCalculator} instead of causing a build
+     * failure.  This is required for BOMs that import an external platform via the
+     * gradle module format (e.g. {@code micronaut-platform}) which itself imports
+     * many sub-BOMs that Grails does not manage directly.
+     *
+     * <p>Defaults to {@code false} so that existing BOMs (grails-bom, grails-base-bom)
+     * retain the strict validation that every platform dependency has a known property
+     * name in {@code dependencies.gradle}.</p>
+     */
+    @Input
+    abstract Property<Boolean> getAutoRegisterTransitivePlatforms()
+
     void setConfiguration(NamedDomainObjectProvider<Configuration> config) {
         dependencyArtifacts.from(config)
         configurationName.set(config.name)
     }
 
     ExtractDependenciesTask() {
+        autoRegisterTransitivePlatforms.convention(false)
         doFirst {
             if (!project.pluginManager.hasPlugin('java-platform')) {
                 throw new GradleException(/The 'java-platform' plugin must be applied to the project to use this task./)
@@ -207,8 +223,15 @@ abstract class ExtractDependenciesTask extends DefaultTask {
 
             // fetch the BOM as a pom file so it can be expanded
             ExtractedDependencyConstraint constraint = propertyNameCalculator.calculate(bomCoordinate.groupId, bomCoordinate.artifactId, bomCoordinate.version, true)
-            if(!constraint) {
-                throw new GradleException("Failed to find a property name for BOM dependency: ${bomCoordinate.coordinates}. All platform dependencies must have a property name defined meeting the naming requirements.")
+            if (!constraint) {
+                if (autoRegisterTransitivePlatforms.get()) {
+                    // Auto-register the transitive platform so it can be documented and expanded,
+                    // but without a version property reference since the version is managed by the
+                    // parent platform (e.g. micronaut-platform), not by a Grails property.
+                    constraint = new ExtractedDependencyConstraint(bomCoordinate.coordinates)
+                } else {
+                    throw new GradleException("Failed to find a property name for BOM dependency: ${bomCoordinate.coordinates}. All platform dependencies must have a property name defined meeting the naming requirements.")
+                }
             }
             constraint.source = bomCoordinate.artifactId
             constraints.put(bomCoordinate.toCoordinateHolder(), constraint)
