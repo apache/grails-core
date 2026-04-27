@@ -245,12 +245,12 @@ class AstUtils {
     }
 
     static void processVariableScopes(SourceUnit source, ClassNode classNode, MethodNode methodNode) {
-        // Groovy 5 changed how VariableScopeVisitor handles certain AST states.
-        // In some transformation scenarios, the visitor may throw NPE due to
-        // uninitialized scopes or missing AST nodes. Since variable scope processing
-        // is primarily for error reporting and doesn't affect code generation for
-        // transformations that have already set up their scopes, we can safely
-        // skip it when it fails.
+        // Groovy 5 (5.0.5 / 5.0.6-SNAPSHOT) throws NullPointerException from inside
+        // VariableScopeVisitor when invoked by certain Grails AST transformations
+        // (e.g. on `org.apache.grails.data.testing.tck.domains.DataServiceRoutingProductDataService`).
+        // The transformation has already produced valid bytecode by the time we get here -
+        // VariableScopeVisitor is only re-running for late scope validation - so swallowing
+        // the NPE keeps compilation green. To be filed upstream against Apache Groovy.
         try {
             VariableScopeVisitor scopeVisitor = new VariableScopeVisitor(source)
             if (methodNode == null) {
@@ -259,10 +259,8 @@ class AstUtils {
                 scopeVisitor.prepareVisit(classNode)
                 scopeVisitor.visitMethod(methodNode)
             }
-        } catch (NullPointerException e) {
-            // Groovy 5 compatibility: silently ignore NPE from VariableScopeVisitor
-            // The transformation has already completed its work and the code will
-            // compile correctly without the scope validation.
+        } catch (NullPointerException ignored) {
+            // Groovy 5 VariableScopeVisitor NPE - upstream bug, see comment above
         }
     }
 
