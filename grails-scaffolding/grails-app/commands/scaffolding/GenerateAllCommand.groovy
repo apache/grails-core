@@ -34,7 +34,7 @@ import grails.plugin.scaffolding.SkipBootstrap
  * @since 5.0.0
  */
 @CompileStatic
-class GenerateAllCommand extends GrailsApplicationCommand implements CommandLineHelper, SkipBootstrap {
+class GenerateAllCommand implements GrailsApplicationCommand, CommandLineHelper, SkipBootstrap {
 
     String description = 'Generates a controller that performs CRUD operations and the associated views'
 

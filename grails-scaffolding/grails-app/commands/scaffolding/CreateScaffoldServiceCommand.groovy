@@ -36,7 +36,7 @@ import org.grails.io.support.Resource
  * @since 7.1.0
  */
 @CompileStatic
-class CreateScaffoldServiceCommand extends GrailsApplicationCommand implements CommandLineHelper, SkipBootstrap {
+class CreateScaffoldServiceCommand implements GrailsApplicationCommand, CommandLineHelper, SkipBootstrap {
 
     String description = 'Creates a scaffolded service'
 

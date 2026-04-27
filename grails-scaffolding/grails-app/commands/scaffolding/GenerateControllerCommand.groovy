@@ -36,7 +36,7 @@ import org.grails.io.support.Resource
  * @since 5.0.0
  */
 @CompileStatic
-class GenerateControllerCommand extends GrailsApplicationCommand implements CommandLineHelper, SkipBootstrap {
+class GenerateControllerCommand implements GrailsApplicationCommand, CommandLineHelper, SkipBootstrap {
 
     String description = 'Generates a controller that performs CRUD operations'
 
@@ -65,9 +65,14 @@ class GenerateControllerCommand extends GrailsApplicationCommand implements Comm
             if (sourceClass) {
                 final Model model = model(sourceClass)
                 // Call the explicit (Resource, File, Model, boolean) overload directly on
-                // templateRenderer. Named-arg render(...) dispatch through the @Delegate
-                // bridge has shown silent no-ops under Groovy 5 @CompileStatic in Forge's
-                // Gradle TestKit runs, even after GROOVY-11907 landed. See PR #15557.
+                // templateRenderer. Under Groovy 5 @CompileStatic, the named-argument shape
+                // `render(template: ..., destination: ..., model: ..., overwrite: ...)` -
+                // which compiles to a single-arg render(Map) - silently no-ops before the
+                // method body is even entered. The failure is at the call site, not in the
+                // @Delegate forwarder or the trait bridge: it reproduces equally with the
+                // forwarder, with a direct call on the field, and with an explicit
+                // Map<String,Object> literal. Only the typed positional overload survives.
+                // Standalone reproducer: https://github.com/jamesfredley/groovy5-compiledynamic-trait-bug
                 generateFile(sourceClass, model, 'scaffolding/Controller.groovy',
                         "grails-app/controllers/${model.packagePath}/${model.convention('Controller')}.groovy",
                         overwrite)

@@ -115,7 +115,7 @@ class HibernateEntityTransformation implements ASTTransformation, CompilationUni
             return
         }
 
-        if (InnerClassNode.isAssignableFrom(classNode.getClass()) || classNode.isEnum()) {
+        if ((classNode instanceof InnerClassNode) || classNode.isEnum()) {
             // do not apply transform to enums or inner classes
             return
         }

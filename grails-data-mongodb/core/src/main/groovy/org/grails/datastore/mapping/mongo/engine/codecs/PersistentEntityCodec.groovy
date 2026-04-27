@@ -486,6 +486,15 @@ class PersistentEntityCodec extends BsonPersistentEntityCodec {
         @Override
         void decode(BsonReader reader, Association property, EntityAccess entityAccess, DecoderContext decoderContext, CodecRegistry codecRegistry) {
             def session = AbstractDatastore.retrieveSession(MongoDatastore)
+            // Groovy 5 @CompileStatic bug: in the else branch of
+            // `if (a && !(x instanceof Y)) { ... } else { ... }`, the compiler incorrectly
+            // smart-casts x to Y and emits `checkcast Y` for subsequent property access on x,
+            // throwing ClassCastException when x is genuinely not a Y (which is the only
+            // case the else branch should NOT cover, but does because it is also entered
+            // when `a` is false). Replacing with `isAssignableFrom(getClass())` defeats the
+            // bogus smart-cast because Groovy does not flow-type from a Class.isAssignableFrom
+            // call. Reproducer:
+            // https://github.com/jamesfredley/groovy5-compiledynamic-trait-bug/blob/main/quick-checks/src/main/groovy/SmartCastCheck.groovy
             if (property.isBidirectional() && !ManyToMany.isAssignableFrom(property.getClass())) {
 
                 initializePersistentCollection(session, entityAccess, property)
@@ -559,6 +568,7 @@ class PersistentEntityCodec extends BsonPersistentEntityCodec {
 
         @Override
         void encode(BsonWriter writer, Association property, Object value, EntityAccess parentAccess, EncoderContext encoderContext, CodecRegistry codecRegistry) {
+            // Groovy 5 @CompileStatic incorrect smart-cast bug; see comment in OneToManyDecoder.decode above.
             boolean shouldEncodeIds = !property.isBidirectional() || ManyToMany.isAssignableFrom(property.getClass())
             MongoCodecSession mongoSession = (MongoCodecSession) AbstractDatastore.retrieveSession(MongoDatastore)
             if (shouldEncodeIds) {

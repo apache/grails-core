@@ -61,18 +61,18 @@ Creates a submit button that sets the `formaction` attribute, which allows one t
 
 Attributes
 
-* `value` (required) - The caption of the button and name of action when not explicitly defined.
-* `id` (optional) - The element id of the input element
-* `action` (optional) - The name of the action to use in the link; if not specified the default action will be linked
-* `controller` (optional) - The name of the controller to use in the link; if not specified the current controller will be linked
-* `namespace` (optional) - The namespace of the controller to use in the link
-* `plugin` (optional) - The name of the plugin which provides the controller
-* `id` (optional) - The id to use in the link
-* `fragment` (optional) - The link fragment (often called anchor tag) to use
-* `mapping` (optional) - The link:{guidePath}/theWebLayer.html#namedMappings to use to rewrite the link
-* `method` (optional) - The HTTP method specified in the corresponding URL mapping
-* `params` (optional) - A map containing URL query parameters for the link
-* `url` (optional) - A Map containing the action, controller, id etc.
+* `value` (required) - The label shown on the submit button.
+* `id` (optional) - The DOM id of the rendered input element.
+* `disabled` (optional) - Disables the rendered button when the value evaluates to true.
+* `action` (optional) - The name of the action to use in the link; if not specified the default action will be linked.
+* `controller` (optional) - The name of the controller to use in the link; if not specified the current controller will be linked.
+* `namespace` (optional) - The namespace of the controller to use in the link.
+* `plugin` (optional) - The name of the plugin which provides the controller.
+* `fragment` (optional) - The link fragment (often called anchor tag) to use.
+* `mapping` (optional) - The link:{guidePath}/theWebLayer.html#namedMappings to use to rewrite the link.
+* `method` (optional) - The HTTP method specified in the corresponding URL mapping.
+* `params` (optional) - A map containing URL query parameters for the link.
+* `url` (optional) - A Map containing the action, controller, id, etc. for the generated link. If the target URL needs an `id`, provide it here because the top-level `id` attribute is used for the input element.
 * `uri` (optional) - A string for a relative path in the running app.
 * `relativeUri` (optional) - Used to specify a uri relative to the current path.
 * `absolute` (optional) - If `true` will prefix the link target address with the value of the `grails.serverURL` property from the application configuration, or http://localhost:8080 if there is no setting in the config and not running in production.

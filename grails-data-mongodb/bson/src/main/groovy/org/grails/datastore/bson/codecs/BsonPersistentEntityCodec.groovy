@@ -157,7 +157,7 @@ class BsonPersistentEntityCodec implements Codec {
                 else {
                     PersistentProperty property = persistentEntity.getPropertyByName(name)
                     if (property && bsonType != BsonType.NULL) {
-                        def propKind = resolvePropertyType(property.getClass())
+                        def propKind = (Class<? extends PersistentProperty>) property.getClass().superclass
 
                         if (CharSequence.isAssignableFrom(property.type) && bsonType == BsonType.STRING) {
                             access.setPropertyNoConversion(property.name, bsonReader.readString())
@@ -222,7 +222,7 @@ class BsonPersistentEntityCodec implements Codec {
         }
 
         for (PersistentProperty prop in entity.persistentProperties) {
-            def propKind = resolvePropertyType(prop.getClass())
+            def propKind = (Class<? extends PersistentProperty>) prop.getClass().superclass
             Object v = access.getProperty(prop.name)
             if (v != null) {
                 def encoder = getPropertyEncoder(propKind)
@@ -303,7 +303,7 @@ class BsonPersistentEntityCodec implements Codec {
                             // TODO: embedded collections
                         }
                         else {
-                            def propKind = resolvePropertyType(prop.getClass())
+                            def propKind = (Class<? extends PersistentProperty>) prop.getClass().superclass
                             if (prop instanceof PersistentProperty) {
                                 def propertyEncoder = getPropertyEncoder(propKind)
                                 ((PropertyEncoder<PersistentProperty>) propertyEncoder)?.encode(
@@ -480,25 +480,5 @@ class BsonPersistentEntityCodec implements Codec {
      */
     protected <D extends PersistentProperty> PropertyDecoder<D> getPropertyDecoder(Class<D> type) {
         return DECODERS.get(type)
-    }
-
-    /**
-     * Resolves the registered property type by walking up the class hierarchy.
-     * This is needed because anonymous inner classes (e.g., from MappingFactory) may have
-     * intermediate synthetic superclasses in Groovy 5 that are not directly registered.
-     *
-     * @param propertyClass The actual property class
-     * @return The registered superclass, or the immediate superclass as fallback
-     */
-    protected static Class<? extends PersistentProperty> resolvePropertyType(Class<?> propertyClass) {
-        Class<?> current = propertyClass
-        while (current != null && current != Object) {
-            if (DECODERS.containsKey(current) || ENCODERS.containsKey(current)) {
-                return (Class<? extends PersistentProperty>) current
-            }
-            current = current.superclass
-        }
-        // Fallback to immediate superclass for backward compatibility
-        return (Class<? extends PersistentProperty>) propertyClass.superclass
     }
 }
