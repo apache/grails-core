@@ -54,7 +54,7 @@ class GrailsDependencyValidatorPlugin implements Plugin<Project> {
      * is intentional.
      */
     static final String ALLOWED_OVERRIDES_EXT = 'allowedBomOverrides'
-    private static final Set<String> BOM_PROJECT_NAMES = ['grails-bom', 'grails-gradle-bom'].toSet()
+    private static final Set<String> BOM_PROJECT_NAMES = ['grails-bom', 'grails-gradle-bom', 'grails-base-bom', 'grails-hibernate5-bom', 'grails-micronaut-bom'].toSet()
 
     @Override
     void apply(Project project) {
