@@ -96,9 +96,7 @@ new BookService()
 
     void "test @WithoutTenant transforms a service class and makes a method that is wrapped in without tenant handling"() {
         given:"A service with @CurrentTenant applied as the class level"
-        def bookService = new GroovyShell().evaluate('''
-import grails.gorm.multitenancy.CurrentTenant
-import grails.gorm.multitenancy.WithoutTenant
+        def bookService = new GroovyShell().evaluate('''import grails.gorm.multitenancy.WithoutTenant
 
 @WithoutTenant
 class BookService {

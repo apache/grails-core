@@ -44,11 +44,16 @@ class PartitionMultiTenancySpec extends Specification {
              (Settings.SETTING_DB_CREATE): "create-drop"],
             getClass().getPackage()
     )
-    @Shared IBookService bookDataService = datastore.getService(IBookService)
+
+    def setupSpec() {
+        datastore.mappingContext.addPersistentEntity(Book)
+    }
 
     void 'Test partitioned multi-tenancy with GORM services'() {
         setup:
-        BookService bookService = new BookService()
+        IBookService bookService = datastore.getService(IBookService)
+        BookService bookDataService = new BookService()
+        bookDataService.setTransactionManager(datastore.getTransactionManager())
 
         when: "When there is no tenant"
         Book.count()
@@ -70,7 +75,7 @@ class PartitionMultiTenancySpec extends Specification {
         then:
         bookService.countBooks() == 2
         bookDataService.countBooks()== 2
-        bookService.findBooks("The Shining")[0].title == "The Shining"
+        bookDataService.findBooks("The Shining")[0].title == "The Shining"
 
         when:"Swapping to another schema and we get the right results!"
         System.setProperty(SystemPropertyTenantResolver.PROPERTY_NAME, "13")
@@ -110,6 +115,10 @@ class PartitionMultiTenancySpec extends Specification {
 class Book implements MultiTenant<Book> {
     Long tenantId
     String title
+
+    static mapping = {
+        multiTenancy strategy: 'DISCRIMINATOR'
+    }
 }
 
 @CurrentTenant
@@ -117,7 +126,7 @@ class Book implements MultiTenant<Book> {
 class BookService {
 
     @WithoutTenant
-    void saveBook(Book book) {
+    Book saveBook(Book book) {
         book.save()
     }
 

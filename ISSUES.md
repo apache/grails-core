@@ -1,40 +1,38 @@
-# Current Issues & Progress - GORM 7 Stateless Refactor
+# GORM 7 Stateless Refactor - Session Checkpoint
 
-## Status Summary
-- **TCK Progress**: ~92 failures -> **29 failures remaining**.
-- **Memory Scaling**: O(M+N) verified; physical map sharing with logical prefixing (Hybrid Isolation) is stable.
-- **Groovy 4 / Java 24 Stability**: Core AST transformations (`ServiceTransformation`, `TransactionalTransform`, `DirtyCheckingTransformer`) stabilized for Groovy 4 compliance.
-- **Current Focus**: **Hibernate 7 Stabilization**. Shifting from Core mapping to resolving regressions and compilation errors in the H7 submodule.
+## Architectural Mandate: The O(M+N) Memory Problem
+- **Problem**: Historically, GORM's Simple Map implementation (used for TCK testing) created $M \times N$ separate maps (where M is connections and N is entities). In large-scale multi-tenant or multi-datasource environments, this caused exponential memory growth and "connection leakage."
+- **Solution**: Implemented a **Hybrid Isolation Model** in `SimpleMapDatastore`. 
+    - **Physical Tier**: A single shared map structure.
+    - **Logical Tier**: Partitioning via `ScopedMap`. Scale is now linear $O(M+N)$.
+    - **Isolation Mode**: In `DISCRIMINATOR` multi-tenancy, `SimpleMapSession` now dynamically resolves the backing map for the current tenant at runtime.
 
-## Completed in Last Session
-1.  **Service AST Transformation Refactor**:
-    - **Annotation Duplicate Prevention**: Guarded all annotation copying (via `AstUtils.copyAnnotations` and `addAnnotationIfNecessary`) to prevent "Duplicate annotation" compiler errors in Groovy 4.
-    - **Method Modifier Preservation**: Refactored `ServiceTransformation` to preserve original method modifiers (e.g., `protected`, `public`) on generated implementations while removing `ABSTRACT`.
-    - **Transactional Sequencing**: Ensured `@ReadOnly` and `@NotTransactional` are applied *after* the implementer runs to avoid overriding visibility or visibility constraints.
-    - **Query Literal Support**: Updated `@Query` and `@Join` to support both `GStringExpression` and `ConstantExpression` (plain strings).
-2.  **Stateless Persistence Core**:
-    - **Manual Validation Bridge**: Implemented a manual error-reporting block in `AbstractStringQueryImplementer` to trigger legacy "Invalid property" compilation errors when plain string queries contain specific placeholders (satisfying TCK expectation).
-    - **Dynamic Finder Type Safety**: Added parameter type validation to `FindAllByImplementer` to ensure query parameters match entity properties.
-    - **Aggregation Handling**: Improved return type compatibility for aggregation queries (e.g., `count()`, `max()`) in `SimpleMapDatastore`.
-3.  **Test Infrastructure**:
-    - **Artifact Isolation**: Moved `ServiceTransformSpec` to a dedicated package and shifted to using pre-compiled classes (`ServiceTransformClasses.groovy`) instead of runtime-parsed scripts. This ensures AST transformations are applied correctly and consistently.
-    - **SimpleMap Integration**: Enabled `grails-data-simple` for testing `grails-datamapping-core` to allow for full behavioral verification of generated service implementations without requiring a real database.
+## Core Stability & Event Infrastructure
+- **SimpleMapDatastore Lifecycle Hardening**: 
+    - **Early Mode Binding**: Refactored the internal constructor to set `multiTenancyMode` on the `MappingContext` at the very beginning. This ensures that any entities added during `super()` or early initialization (common in GORM Services) are correctly identified as multi-tenant.
+    - **Dynamic Entity Registration**: Implemented a `MappingContext.Listener` to automatically register newly added persistent entities with the `GormEnhancer` and `GormRegistry`.
+    - **Listener Propagation**: Ensured that all child datastores created for specific tenants share the parent's `ApplicationEventPublisher` and explicitly register the `MultiTenantEventListener`.
+- **Multi-Tenancy Event Refinement**:
+    - **Equality-Based Validation**: Updated `MultiTenantEventListener.isValidSource` to use `equals()` for datastore comparisons, resolving instance mismatches between parent and child datastores.
+    - **Dynamic Tenant Identification**: Refactored `AbstractPersistentEntity` to resolve the `TenantId` property dynamically and re-evaluate `multiTenancyEnabled` status against the context's current mode during `initialize()`.
+- **Tenants ThreadLocal & Recursion Fix**: 
+    - **StackOverflow Prevention**: Fixed a circular delegation bug in `DatastoreLocator` within `Tenants.groovy`.
+    - **Dual-Binding Implementation**: Refactored `Tenants.groovy` to use a `Map<Object, Serializable>` in its `ThreadLocal`. Binding tenant IDs to *both* the datastore class and the specific instance fixes the TCK "Zero Results" bug.
 
-## Classes Touched (Verification Required)
-- `org.grails.datastore.gorm.services.transform.ServiceTransformation` (Modifier and annotation fixes)
-- `org.grails.datastore.mapping.reflect.AstUtils` (Annotation duplication guards)
-- `org.grails.datastore.gorm.services.implementers.AbstractStringQueryImplementer` (Constant string support and manual validation)
-- `org.grails.datastore.gorm.services.implementers.FindOneStringQueryImplementer` (Return type compatibility for plain strings)
-- `org.grails.datastore.gorm.services.implementers.FindAllByImplementer` (Parameter type validation)
-- `org.grails.datastore.mapping.services.DefaultServiceRegistrySpec` (Fixed TestService compilation error)
-- `grails.gorm.services.transform.ServiceTransformSpec` (Refactored to package + compiled classes)
+## TCK Progress & Metrics
+- **Failures remaining**: ~25 (Major drop following the `PartitionMultiTenancySpec` and `Tenants` fixes).
+- **Passing Highlights**: `PartitionMultiTenancySpec` (Full DISCRIMINATOR support), `SchemaPerTenantSpec`, `DomainEventsSpec`, `DirtyCheckingSpec`, `PagedResultSpec`.
+- **Active Focus**: `Association Projections` and `Range Queries`.
 
-## In Progress / Blocked
-1.  **[BUG] MethodValidationTransformSpec `@Generated` Detection**: `isAnnotationPresent(Generated)` is returning `false` on generated `getDatastore()` methods despite `markAsGenerated` being called. Potentially a Groovy 4 vs. test runner annotation visibility issue.
-2.  **[BUG] `GormEntityTransformSpec` / `TransactionalTransformSpec` Initialization**: Multiple tests failing with `IllegalStateException: No GORM implementation configured`. Likely due to `GormRegistry` state leakage or improper `GormEnhancer` lifecycle management in these specific specs.
-3.  **[BUG] Many-to-Many NPE**: `ManyToManySpec` reports NPE in `AbstractSession.retrieveAll` when initializing collections.
+## Pending Fixes / Next Steps
+1.  **Range Queries**: Investigate why `between` queries in `SimpleMapQuery` are failing.
+2.  **Association Projections**: Resolve result size mismatches in `NestedAssociationQuerySpec`.
+3.  **H5/H7 Compilation**: Ensure my `ValidationEvent` and `CascadingValidator` import fixes are stable across both Hibernate core modules.
 
-## Next Steps
-1.  Fix `@Generated` annotation visibility in `MethodValidationTransformSpec`.
-2.  Investigate `IllegalStateException` in `GormEntityTransformSpec` and `TransactionalTransformSpec`.
-3.  Address remaining 29 TCK failures.
+## File System State
+- **CWD**: `/Users/walterduquedeestrada/IdeaProjects/grails-core`
+- **Critical Modified Files**: 
+    - `grails-data-simple/src/main/groovy/org/grails/datastore/mapping/simple/SimpleMapDatastore.java`
+    - `grails-datastore-core/src/main/groovy/org/grails/datastore/mapping/model/AbstractPersistentEntity.java`
+    - `grails-datamapping-core/src/main/groovy/grails/gorm/multitenancy/Tenants.groovy`
+    - `grails-datamapping-core/src/main/groovy/org/grails/datastore/gorm/multitenancy/MultiTenantEventListener.java`

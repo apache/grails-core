@@ -36,8 +36,6 @@ import spock.lang.AutoCleanup
 import spock.lang.Shared
 import spock.lang.Specification
 
-import java.sql.Connection
-
 /**
  * Created by graemerocher on 07/07/2016.
  */

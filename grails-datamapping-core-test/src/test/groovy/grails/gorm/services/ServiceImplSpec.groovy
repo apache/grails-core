@@ -442,7 +442,7 @@ interface ProductService {
 
     ProductInfo findProductInfo(String name, String type)
 
-    @Query("from ${Product p} where $p.name like $pattern")
+    @Query('from ${Product p} where $p.name like $pattern')
     ProductInfo searchProductInfo(String pattern)
 
     ProductInfo findByTypeLike(String type)
@@ -450,16 +450,16 @@ interface ProductService {
     @Where({ name ==~ pattern })
     ProductInfo searchProductInfoByName(String pattern)
 
-    @Query("from ${Product p} where $p.name like $pattern")
+    @Query('from ${Product p} where $p.name like $pattern')
     Product searchWithQuery(String pattern)
 
-    @Query("select ${p.type} from ${Product p} where $p.name like $pattern")
+    @Query('select ${p.type} from ${Product p} where $p.name like $pattern')
     String searchProductType(String pattern)
 
-    @Query("from ${Product p} where $p.name like $pattern")
+    @Query('from ${Product p} where $p.name like $pattern')
     List<Product> searchAllWithQuery(String pattern)
 
-    @Query("select $p.name from ${Product p} where $p.name like $pattern")
+    @Query('select $p.name from ${Product p} where $p.name like $pattern')
     List<String> searchProductNames(String pattern)
 
     @Where({ type ==~ pattern })

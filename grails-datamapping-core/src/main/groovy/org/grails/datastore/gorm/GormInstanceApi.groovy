@@ -96,7 +96,8 @@ class GormInstanceApi<D> extends AbstractGormApi<D> implements GormInstanceOpera
         DatastoreResolver resolver = new DatastoreResolver() {
             @Override Datastore resolve() { GormEnhancer.findDatastore(persistentClass, qualifier) }
         }
-        GormInstanceApi<D> newApi = new GormInstanceApi<D>(persistentClass, mappingContext, resolver)
+        getDatastore().mappingContext
+        GormInstanceApi<D> newApi = new GormInstanceApi<D>(persistentClass, getDatastore().mappingContext, resolver)
         newApi.failOnError = failOnError
         newApi.markDirty = markDirty
         return newApi
@@ -152,7 +153,7 @@ class GormInstanceApi<D> extends AbstractGormApi<D> implements GormInstanceOpera
      * Implementation of read() for GormInstanceApi
      */
     D read(Serializable id) {
-        getDatastore().execute({ org.grails.datastore.mapping.core.Session session ->
+        execute({ org.grails.datastore.mapping.core.Session session ->
             session.retrieve(persistentClass, id)
         } as org.grails.datastore.mapping.core.SessionCallback) as D
     }

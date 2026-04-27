@@ -94,6 +94,7 @@ ext {
             // grails-shell-cli SpringRetryCompilerAutoConfiguration's unversioned
             // reference resolves and consumer apps using @Retryable get a known version.
             'spring-retry.version'          : '2.0.11',
+            'slf4j.version'                 : '2.0.17',
             'tomcat-jdbc.version'                : '11.0.21',
             'hibernate-groovy-proxy.version': '1.1',
     ]
@@ -159,6 +160,7 @@ ext {
             'mockito-core'          : "org.mockito:mockito-core:${bomDependencyVersions['mockito.version']}",
             'spock-core'            : "org.spockframework:spock-core:${bomDependencyVersions['spock.version']}",
             'spock-spring'          : "org.spockframework:spock-spring:${bomDependencyVersions['spock.version']}",
+            'slf4j-simple'          : "org.slf4j:slf4j-simple:${bomDependencyVersions['slf4j.version']}",
             'tomcat-jdbc'          : "org.apache.tomcat:tomcat-jdbc:${bomDependencyVersions['tomcat-jdbc.version']}",
             // end - restate versions managed by inherited BOMs
             'jquery'                : "org.webjars.npm:jquery:${bomDependencyVersions['jquery.version']}",

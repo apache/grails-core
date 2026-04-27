@@ -31,13 +31,11 @@ import org.codehaus.groovy.ast.expr.Expression
 import org.codehaus.groovy.ast.expr.MethodCallExpression
 import org.codehaus.groovy.ast.expr.VariableExpression
 import org.codehaus.groovy.ast.stmt.BlockStatement
-import org.codehaus.groovy.ast.stmt.Statement
 import org.codehaus.groovy.control.SourceUnit
 
 import org.springframework.beans.factory.annotation.Autowired
 
 import org.grails.datastore.gorm.GormEnhancer
-import org.grails.datastore.gorm.internal.RuntimeSupport
 import org.grails.datastore.mapping.core.Datastore
 import org.grails.datastore.mapping.core.connections.MultipleConnectionSourceCapableDatastore
 import org.grails.datastore.mapping.reflect.AstUtils
@@ -48,26 +46,19 @@ import static org.codehaus.groovy.ast.ClassHelper.VOID_TYPE
 import static org.codehaus.groovy.ast.ClassHelper.make
 import static org.codehaus.groovy.ast.tools.GeneralUtils.assignS
 import static org.codehaus.groovy.ast.tools.GeneralUtils.block
-import static org.codehaus.groovy.ast.tools.GeneralUtils.callX
-import static org.codehaus.groovy.ast.tools.GeneralUtils.castX
 import static org.codehaus.groovy.ast.tools.GeneralUtils.classX
 import static org.codehaus.groovy.ast.tools.GeneralUtils.constX
 import static org.codehaus.groovy.ast.tools.GeneralUtils.declS
 import static org.codehaus.groovy.ast.tools.GeneralUtils.ifElseS
-import static org.codehaus.groovy.ast.tools.GeneralUtils.ifS
 import static org.codehaus.groovy.ast.tools.GeneralUtils.indexX
 import static org.codehaus.groovy.ast.tools.GeneralUtils.notNullX
 import static org.codehaus.groovy.ast.tools.GeneralUtils.param
 import static org.codehaus.groovy.ast.tools.GeneralUtils.params
-import static org.codehaus.groovy.ast.tools.GeneralUtils.propX
 import static org.codehaus.groovy.ast.tools.GeneralUtils.returnS
 import static org.codehaus.groovy.ast.tools.GeneralUtils.varX
 import static org.grails.datastore.gorm.transform.AstMethodDispatchUtils.callD
 import static org.grails.datastore.mapping.reflect.AstUtils.ZERO_PARAMETERS
-import static org.grails.datastore.mapping.reflect.AstUtils.addAnnotationOrGetExisting
-import static org.grails.datastore.mapping.reflect.AstUtils.implementsInterface
 import static org.grails.datastore.mapping.reflect.AstUtils.isSpockTest
-import static org.grails.datastore.mapping.reflect.AstUtils.varThis
 
 /**
  * An abstract implementation for transformations that decorate a method invocation such that

@@ -119,6 +119,38 @@ When `testSelected` is run:
 
 ---
 
+## Iterative Test Fixing Workflow
+
+When tasked with fixing a large number of test failures (especially in isolation mode), adhere to this highly efficient, iterative loop:
+
+**Step 1: The Initial Assessment**
+Run the full isolated test suite once to generate the master list of all current failures in `TEST_FAILURES.md`.
+```bash
+./gradlew -I local-tasks.gradle clean testSelected aggregateTestFailures
+```
+
+**Step 2: The Inner Loop (One by One)**
+Take the generated list of failures and iterate through it **one test at a time**.
+For *each* individual test (or closely related group of tests in the same class) on the list:
+1. Investigate the specific failure.
+2. Apply a targeted code fix.
+3. Verify the fix by running **only that single test** to maintain a fast feedback loop. Do NOT rerun the entire suite.
+```bash
+./gradlew :<module_name>:test --tests "<fully_qualified_class_name>.<test_method_name>"
+```
+4. Once that single test passes locally, move on to the *next* failing test on the list and repeat the process.
+
+**Step 3: The Outer Loop (Full Verification)**
+Only after you have gone through the entire list and fixed every test *individually* in the inner loop, run the full aggregated suite again to verify no regressions were introduced and to update the master list.
+```bash
+./gradlew -I local-tasks.gradle clean testSelected aggregateTestFailures
+```
+
+**Step 4: Iterate**
+If the full suite reveals any new or remaining failures in `TEST_FAILURES.md`, repeat the entire process starting from Step 2, continuing until the final aggregated run produces zero failures.
+
+---
+
 ## Interpreting Failures
 
 Each row in the table gives you:
@@ -216,3 +248,34 @@ Gradle writes JUnit XML test results to:
 ```
 
 `aggregateTestFailures` scans all these directories automatically.
+
+# Iterative Test Fixing Workflow
+
+When tasked with fixing a large number of test failures (especially in isolation mode), adhere to this highly efficient, iterative loop:
+
+**Step 1: The Initial Assessment**
+Run the full isolated test suite once to generate the master list of all current failures in `TEST_FAILURES.md`.
+```bash
+./gradlew -I local-tasks.gradle clean testSelected aggregateTestFailures
+```
+
+**Step 2: The Inner Loop (One by One)**
+Take the generated list of failures and iterate through it **one test at a time**.
+For *each* individual test (or closely related group of tests in the same class) on the list:
+1. Investigate the specific failure.
+2. Apply a targeted code fix.
+3. Verify the fix by running **only that single test** to maintain a fast feedback loop. Do NOT rerun the entire suite.
+```bash
+./gradlew :<module_name>:test --tests "<fully_qualified_class_name>.<test_method_name>"
+```
+4. Once that single test passes locally, move on to the *next* failing test on the list and repeat the process.
+
+**Step 3: The Outer Loop (Full Verification)**
+Only after you have gone through the entire list and fixed every test *individually* in the inner loop, run the full aggregated suite again to verify no regressions were introduced and to update the master list.
+```bash
+./gradlew -I local-tasks.gradle clean testSelected aggregateTestFailures
+```
+
+**Step 4: Iterate**
+If the full suite reveals any new or remaining failures in `TEST_FAILURES.md`, repeat the entire process starting from Step 2, continuing until the final aggregated run produces zero failures.
+

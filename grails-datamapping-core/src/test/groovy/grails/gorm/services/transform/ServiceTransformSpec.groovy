@@ -18,18 +18,17 @@
  */
 package grails.gorm.services.transform
 
+import grails.gorm.multitenancy.CurrentTenant
 import grails.gorm.multitenancy.TenantService
-import grails.gorm.services.Service
 import grails.gorm.transactions.ReadOnly
 import grails.gorm.transactions.TransactionService
 import grails.gorm.transactions.Transactional
-import grails.gorm.annotation.Entity
+
 import org.codehaus.groovy.control.MultipleCompilationErrorsException
-import org.grails.datastore.gorm.GormEntity
+
 import org.grails.datastore.gorm.services.Implemented
 import org.grails.datastore.gorm.services.implementers.FindAllImplementer
 import org.grails.datastore.gorm.services.implementers.FindOneInterfaceProjectionImplementer
-import org.grails.datastore.mapping.core.Datastore
 import org.grails.datastore.mapping.services.DefaultServiceRegistry
 import org.grails.datastore.mapping.services.ServiceRegistry
 import spock.lang.Specification
@@ -75,7 +74,7 @@ class ServiceTransformSpec extends Specification {
         expect:
         def impl = service.classLoader.loadClass("${service.package.name}.\$${service.simpleName}Implementation")
         impl != null
-        impl.getAnnotation(grails.gorm.multitenancy.CurrentTenant) != null
+        impl.getAnnotation(CurrentTenant) != null
     }
 
     void "test service transform on abstract protected methods"() {

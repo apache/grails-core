@@ -18,6 +18,12 @@
 plugins {
     id 'org.apache.grails.gradle.test-aggregation'
     id 'org.apache.grails.gradle.grails-code-style'
+    id "dev.iurysouza.modulegraph" version "0.13.0"
+}
+
+moduleGraphConfig {
+    readmePath.set(project.layout.projectDirectory.file("MODULE_GRAPH.md").asFile.absolutePath)
+    heading.set("### Dependency Graph")
 }
 
 import java.time.Instant
@@ -126,6 +132,7 @@ apply {
     from layout.projectDirectory.file('gradle/publish-root-config.gradle')
     from layout.projectDirectory.file('gradle/rat-root-config.gradle')
 }
+apply plugin: 'project-report'
 
 // For debugging the gradle task graph: Uncomment to show task dependencies when a task is run
 //gradle.taskGraph.whenReady {taskGraph ->

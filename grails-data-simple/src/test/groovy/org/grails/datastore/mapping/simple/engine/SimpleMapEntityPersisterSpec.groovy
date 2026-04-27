@@ -26,6 +26,8 @@ package org.grails.datastore.mapping.simple.engine
 import grails.gorm.annotation.Entity
 import org.grails.datastore.mapping.core.DatastoreUtils
 import org.grails.datastore.mapping.simple.SimpleMapDatastore
+import org.grails.datastore.mapping.multitenancy.MultiTenancySettings
+import grails.gorm.multitenancy.Tenants
 import spock.lang.AutoCleanup
 import spock.lang.Shared
 import spock.lang.Specification
@@ -33,6 +35,39 @@ import spock.lang.Specification
 class SimpleMapEntityPersisterSpec extends Specification {
 
     @Shared @AutoCleanup SimpleMapDatastore datastore = new SimpleMapDatastore(TestEntity, Author, Book)
+
+    def "test multi-tenancy logical isolation"() {
+        given: "A datastore in DISCRIMINATOR mode"
+        SimpleMapDatastore mtDatastore = new SimpleMapDatastore(
+                ["grails.gorm.multiTenancy.mode": MultiTenancySettings.MultiTenancyMode.DISCRIMINATOR],
+                TestEntity
+        )
+        def session = mtDatastore.connect()
+        def persister = session.getPersister(TestEntity)
+        
+        when: "We save in tenant 1"
+        def id1
+        Tenants.withId(mtDatastore, "1") {
+            def entity1 = new TestEntity(name: "tenant1")
+            id1 = persister.persist(entity1)
+            session.flush()
+        }
+
+        then: "It is stored in tenant 1"
+        id1 != null
+        Tenants.withId(mtDatastore, "1") {
+            persister.retrieveEntry(persister.persistentEntity, persister.entityFamily, id1) != null
+        }
+
+        when: "We check tenant 2"
+        then: "It is not there"
+        Tenants.withId(mtDatastore, "2") {
+            persister.retrieveEntry(persister.persistentEntity, persister.entityFamily, id1) == null
+        }
+
+        cleanup:
+        session.disconnect()
+    }
 
     def "test store and retrieve entry"() {
         given:

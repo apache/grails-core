@@ -263,7 +263,12 @@ class ServiceTransformation extends AbstractTraitApplyingGormASTTransformation i
                     if (!hasExplicitConnectionAnnotation(classNode)) {
                         applyDomainConnectionToService(classNode, impl, domainConnection)
                     }
+                } else {
+                    // Generate a default transaction manager getter for DEFAULT connections
+                    generateDefaultTransactionManager(impl, targetDomainClass)
                 }
+            } else {
+                generateDefaultTransactionManager(impl, targetDomainClass)
             }
 
             List<MethodNode> abstractMethods = findAllUnimplementedAbstractMethods(classNode)
@@ -622,6 +627,46 @@ class ServiceTransformation extends AbstractTraitApplyingGormASTTransformation i
                 gormEnhancerExpr,
                 'findSingleTransactionManager',
                 args(connectionExpr)
+        )
+
+        // if (datastore != null) { return <datastoreTxManager> } else { return <fallbackTxManager> }
+        def body = ifElseS(
+                notNullX(datastoreVar),
+                returnS(datastoreTxManager),
+                returnS(fallbackTxManager)
+        )
+
+        def methodNode = implClass.addMethod(
+                'getTransactionManager',
+                Modifier.PUBLIC,
+                transactionManagerClassNode,
+                ZERO_PARAMETERS, null,
+                body
+        )
+        markAsGenerated(implClass, methodNode)
+    }
+
+    private static void generateDefaultTransactionManager(ClassNode implClass, ClassNode targetDomainClass) {
+        // Remove any existing getTransactionManager() that was added without connection awareness
+        implClass.getMethods('getTransactionManager').each {
+            implClass.removeMethod(it)
+        }
+
+        def transactionManagerClassNode = ClassHelper.make(PlatformTransactionManager)
+        def transactionCapableDatastore = ClassHelper.make(TransactionCapableDatastore)
+        def gormEnhancerExpr = classX(GormEnhancer)
+
+        // getDatastore() call (method from Service trait or overridden on impl)
+        def datastoreVar = callX(varX('this'), 'getDatastore')
+        // .getTransactionManager()
+        def datastoreTxManager = propX(
+                castX(transactionCapableDatastore, datastoreVar),
+                'transactionManager'
+        )
+        // GormEnhancer.findSingleTransactionManager()
+        def fallbackTxManager = callX(
+                gormEnhancerExpr,
+                'findSingleTransactionManager'
         )
 
         // if (datastore != null) { return <datastoreTxManager> } else { return <fallbackTxManager> }

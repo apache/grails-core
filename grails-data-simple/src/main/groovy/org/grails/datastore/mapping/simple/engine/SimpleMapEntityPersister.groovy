@@ -57,12 +57,7 @@ class SimpleMapEntityPersister extends AbstractKeyValueEntityPersister<Map, Obje
     }
 
     protected String getEntityFamily(PersistentEntity entity) {
-        def connectionName = getConnectionName()
-        def family = entity.rootEntity.name
-        if (connectionName != null && !org.grails.datastore.mapping.core.connections.ConnectionSource.DEFAULT.equals(connectionName)) {
-            family = "${connectionName}:${family}"
-        }
-        return family
+        return entity.rootEntity.name
     }
 
     protected String getConnectionName() {
@@ -74,12 +69,12 @@ class SimpleMapEntityPersister extends AbstractKeyValueEntityPersister<Map, Obje
         return getEntityFamily(getPersistentEntity())
     }
 
-    protected Map<Serializable, Map> getDatastore() {
-        ((SimpleMapDatastore)session.datastore).getBackingMap()
+    protected Map<Serializable, Map> getDatastoreMap() {
+        ((SimpleMapSession)session).getBackingMap()
     }
 
     protected Map getIndices() {
-        ((SimpleMapDatastore)session.datastore).getIndices()
+        ((SimpleMapSession)session).getIndices()
     }
 
     @Override
@@ -165,7 +160,7 @@ class SimpleMapEntityPersister extends AbstractKeyValueEntityPersister<Map, Obje
     @Override
     protected void updateEntry(PersistentEntity persistentEntity, EntityAccess entityAccess, Object key, Map entry) {
         def family = getEntityFamily(persistentEntity)
-        def existing = getDatastore()[family]?.get(key instanceof Number ? key.longValue() : key)
+        def existing = getDatastoreMap()[family]?.get(key instanceof Number ? key.longValue() : key)
         
         if (isVersioned(entityAccess)) {
             if (existing == null || isDirty(entityAccess.getEntity(), existing)) {
@@ -174,15 +169,25 @@ class SimpleMapEntityPersister extends AbstractKeyValueEntityPersister<Map, Obje
         }
         
         populateEntry(persistentEntity, entityAccess, entry)
-        if (getDatastore()[family] == null) {
-            getDatastore()[family] = new ConcurrentHashMap<>()
+        if (getDatastoreMap()[family] == null) {
+            getDatastoreMap()[family] = new ConcurrentHashMap<>()
         }
         
         Object k = key instanceof Number ? key.longValue() : key
         if (existing == null) {
-            getDatastore()[family].put(k, entry)
+            getDatastoreMap()[family].put(k, entry)
         }
         else {
+            for (PersistentProperty prop in persistentEntity.persistentProperties) {
+                def oldVal = existing.get(prop.name)
+                def newVal = entry.get(prop.name)
+                if (oldVal != newVal) {
+                    def indexer = getPropertyIndexer(prop)
+                    if (indexer != null && oldVal != null) {
+                        indexer.deindex(oldVal, k)
+                    }
+                }
+            }
             existing.putAll(entry)
         }
         updateInheritanceHierarchy(persistentEntity, k, entry)
@@ -195,15 +200,16 @@ class SimpleMapEntityPersister extends AbstractKeyValueEntityPersister<Map, Obje
         }
         populateEntry(persistentEntity, entityAccess, nativeEntry)
         def f = getEntityFamily(persistentEntity)
-        def dsMap = getDatastore()
+        def dsMap = getDatastoreMap()
         Map<Object, Map> familyMap = (Map) dsMap[f]
         if (familyMap == null) {
             familyMap = new ConcurrentHashMap<>()
-            dsMap[f] = familyMap
+            dsMap.put(f, familyMap)
         }
-        familyMap.put(storeId instanceof Number ? storeId.longValue() : storeId, nativeEntry)
-        updateInheritanceHierarchy(persistentEntity, storeId, nativeEntry)
-        return storeId
+        Object k = storeId instanceof Number ? storeId.longValue() : storeId
+        familyMap.put(k, nativeEntry)
+        updateInheritanceHierarchy(persistentEntity, k, nativeEntry)
+        return k
     }
 
     private void populateEntry(PersistentEntity persistentEntity, EntityAccess entityAccess, Map entry) {
@@ -223,25 +229,19 @@ class SimpleMapEntityPersister extends AbstractKeyValueEntityPersister<Map, Obje
 
     @Override
     protected Map retrieveEntry(PersistentEntity persistentEntity, String family, Serializable key) {
-        def dsMap = getDatastore()
+        def dsMap = getDatastoreMap()
         Map familyMap = (Map) dsMap[family]
         if (familyMap == null) return null
-        
-        Object k = key instanceof Number ? key.longValue() : key
-        Map entry = (Map) familyMap.get(k)
-        if (entry != null) {
-            return new LinkedHashMap<>(entry)
-        }
-        return null
+        return (Map) familyMap.get(key instanceof Number ? key.longValue() : key)
     }
 
     @Override
     protected void deleteEntry(String family, key, entry) {
-        def dsMap = getDatastore()
+        def dsMap = getDatastoreMap()
         def familyMap = (Map) dsMap[family]
         if (familyMap != null) {
             def k = key instanceof Number ? key.longValue() : key
-            def existing = entry ?: familyMap.get(k)
+            def existing = familyMap.get(k)
             if (existing instanceof Map) {
                 for (PersistentProperty prop in persistentEntity.persistentProperties) {
                     def indexer = getPropertyIndexer(prop)
@@ -261,12 +261,7 @@ class SimpleMapEntityPersister extends AbstractKeyValueEntityPersister<Map, Obje
     PropertyValueIndexer getPropertyIndexer(PersistentProperty property) {
         return new PropertyValueIndexer() {
             private String getIndexRoot() {
-                def connectionName = getConnectionName()
-                def indexRoot = "~${property.owner.rootEntity.name}:${property.name}"
-                if (connectionName != null && !org.grails.datastore.mapping.core.connections.ConnectionSource.DEFAULT.equals(connectionName)) {
-                    indexRoot = "${connectionName}:${indexRoot}"
-                }
-                return indexRoot
+                return "~${property.owner.rootEntity.name}:${property.name}"
             }
 
             @Override
@@ -277,10 +272,11 @@ class SimpleMapEntityPersister extends AbstractKeyValueEntityPersister<Map, Obje
             @Override
             void index(Object value, Object primaryKey) {
                 def index = getIndexName(value)
-                def indexed = (List) getIndices()[index]
+                def indicesMap = getIndices()
+                def indexed = (List) indicesMap[index]
                 if (indexed == null) {
                     indexed = []
-                    getIndices()[index] = indexed
+                    indicesMap[index] = indexed
                 }
                 def pk = primaryKey instanceof Number ? primaryKey.longValue() : primaryKey
                 if (!indexed.contains(pk)) {
@@ -414,10 +410,11 @@ class SimpleMapEntityPersister extends AbstractKeyValueEntityPersister<Map, Obje
         def parent = persistentEntity.parentEntity
         while (parent != null) {
             def f = getEntityFamily(parent)
-            def parentMap = getDatastore()[f]
+            def dsMap = getDatastoreMap()
+            Map<Object, Map> parentMap = (Map) dsMap[f]
             if (parentMap == null) {
                 parentMap = new ConcurrentHashMap()
-                getDatastore()[f] = parentMap
+                dsMap.put(f, parentMap)
             }
             parentMap.put(key instanceof Number ? key.longValue() : key, entry)
             parent = parent.parentEntity

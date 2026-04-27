@@ -36,7 +36,7 @@ import org.springframework.context.ApplicationEventPublisher
 import org.springframework.transaction.PlatformTransactionManager
 import org.springframework.validation.Errors
 import org.springframework.validation.Validator
-import org.grails.datastore.gorm.validation.CascadingValidator
+import org.grails.datastore.mapping.validation.CascadingValidator
 import org.grails.datastore.gorm.DatastoreResolver
 import org.hibernate.Session
 import org.hibernate.resource.transaction.spi.TransactionStatus

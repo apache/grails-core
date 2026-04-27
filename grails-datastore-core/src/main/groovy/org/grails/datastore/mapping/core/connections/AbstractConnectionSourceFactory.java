@@ -88,6 +88,17 @@ public abstract class AbstractConnectionSourceFactory<T, S extends ConnectionSou
         S settings = buildRuntimeSettings(name, configuration, fallbackSettings);
         return create(name, settings);
     }
+
+    /**
+     * Creates the settings for the given configuration
+     * @param configuration The configuration
+     * @return The settings
+     */
+    public S createSettings(PropertyResolver configuration) {
+        ConnectionSourceSettingsBuilder builder = new ConnectionSourceSettingsBuilder(configuration);
+        ConnectionSourceSettings fallbackSettings = builder.build();
+        return (S) buildSettings(ConnectionSource.DEFAULT, configuration, fallbackSettings, true);
+    }
     
     public <F extends ConnectionSourceSettings> S buildRuntimeSettings(String name, PropertyResolver configuration, F fallbackSettings) {
         return buildSettings(name, configuration, fallbackSettings, false);

@@ -23,7 +23,7 @@ import groovy.transform.CompileStatic
 import groovy.transform.Generated
 import org.grails.datastore.gorm.GormInstanceApi
 import org.grails.datastore.gorm.GormValidateable
-import org.grails.datastore.gorm.validation.ValidationEvent
+import org.grails.datastore.mapping.engine.event.ValidationEvent
 import org.grails.datastore.mapping.core.Datastore
 import org.grails.datastore.mapping.core.connections.ConnectionSource
 import org.grails.datastore.mapping.model.MappingContext
@@ -37,7 +37,7 @@ import org.springframework.context.ApplicationEventPublisher
 import org.springframework.transaction.PlatformTransactionManager
 import org.springframework.validation.Errors
 import org.springframework.validation.Validator
-import org.grails.datastore.gorm.validation.CascadingValidator
+import org.grails.datastore.mapping.validation.CascadingValidator
 import org.grails.datastore.gorm.DatastoreResolver
 
 /**
