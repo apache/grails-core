@@ -25,12 +25,7 @@ import grails.dev.commands.io.FileSystemInteractionImpl
 import grails.dev.commands.template.TemplateRenderer
 import grails.dev.commands.template.TemplateRendererImpl
 
-// Converted from trait to abstract class for Groovy 5 compatibility.
-// Groovy 5's DelegateASTTransformation generates direct field access (varX) for
-// @Delegate fields, but trait fields require helper method access via the trait
-// bridge. This mismatch causes @Delegate fields in traits to silently return null.
-// As an abstract class, @Delegate works correctly with standard field access.
-abstract class GrailsApplicationCommand implements ApplicationCommand, ModelBuilder {
+trait GrailsApplicationCommand implements ApplicationCommand, ModelBuilder {
 
     @Delegate TemplateRenderer templateRenderer
     @Delegate FileSystemInteraction fileSystemInteraction

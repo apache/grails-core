@@ -36,7 +36,7 @@ import org.grails.io.support.Resource
  * @since 5.0.0
  */
 @CompileStatic
-class GenerateServiceCommand extends GrailsApplicationCommand implements CommandLineHelper, SkipBootstrap {
+class GenerateServiceCommand implements GrailsApplicationCommand, CommandLineHelper, SkipBootstrap {
 
     String description = 'Generates a Grails data service for the specified domain-class.'
 

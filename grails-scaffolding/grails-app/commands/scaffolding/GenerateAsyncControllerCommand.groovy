@@ -36,7 +36,7 @@ import org.grails.io.support.Resource
  * @since 5.0.0
  */
 @CompileStatic
-class GenerateAsyncControllerCommand extends GrailsApplicationCommand implements CommandLineHelper, SkipBootstrap {
+class GenerateAsyncControllerCommand implements GrailsApplicationCommand, CommandLineHelper, SkipBootstrap {
 
     String description = 'Generates an asynchronous controller that performs CRUD operations.'
 
