@@ -193,24 +193,7 @@ class MongoCodecEntityPersister extends ThirdPartyCacheEntityPersister<Object> {
      * </ul>
      */
     protected Object coerceIdToStoredType(Object key, PersistentEntity entity) {
-        if (key == null) return key
-        Class<?> storedAs = null
-        try {
-            storedAs = entity?.mapping?.identifier?.storedAs
-        } catch (Throwable ignored) {
-            return key
-        }
-        if (storedAs == null || storedAs.isInstance(key)) return key
-        try {
-            def converted = mappingContext.conversionService.convert(key, storedAs)
-            // Symmetry with IdentityEncoder's non-hex fallback: a null return (vs a throw)
-            // means the converter rejected the value — e.g. a natural-key String being
-            // converted to ObjectId. Keep the original so the query matches the document
-            // the encoder actually wrote.
-            return converted != null ? converted : key
-        } catch (Throwable ignored) {
-            return key
-        }
+        MongoIdCoercion.coerceIdToStoredType(key, entity)
     }
 
     @Override

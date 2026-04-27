@@ -137,6 +137,7 @@ public class MongoMappingContext extends DocumentMappingContext {
 
     private CodecRegistry codecRegistry;
     private Map<Class, Boolean> hasCodecCache = new HashMap<>();
+
     /**
      * Global default storage type for {@code String id} fields that don't declare an explicit
      * {@code id storedAs: ...} in their mapping. Null means "no default — use the declared

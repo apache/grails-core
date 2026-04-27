@@ -62,7 +62,6 @@ import org.grails.datastore.mapping.engine.EntityAccess;
 import org.grails.datastore.mapping.engine.EntityPersister;
 import org.grails.datastore.mapping.engine.types.CustomTypeMarshaller;
 import org.grails.datastore.mapping.model.EmbeddedPersistentEntity;
-import org.grails.datastore.mapping.model.MappingContext;
 import org.grails.datastore.mapping.model.PersistentEntity;
 import org.grails.datastore.mapping.model.PersistentProperty;
 import org.grails.datastore.mapping.model.types.Association;
@@ -77,6 +76,7 @@ import org.grails.datastore.mapping.mongo.MongoDatastore;
 import org.grails.datastore.mapping.mongo.config.MongoCollection;
 import org.grails.datastore.mapping.mongo.engine.MongoCodecEntityPersister;
 import org.grails.datastore.mapping.mongo.engine.MongoEntityPersister;
+import org.grails.datastore.mapping.mongo.engine.MongoIdCoercion;
 import org.grails.datastore.mapping.mongo.engine.codecs.PersistentEntityCodec;
 import org.grails.datastore.mapping.query.AssociationQuery;
 import org.grails.datastore.mapping.query.Query;
@@ -142,22 +142,11 @@ public class MongoQuery extends BsonQuery implements QueryArgumentsAware {
             //     and related update/delete specs (which also hit IdEquals via the session filter)
             public void handle(EmbeddedQueryEncoder queryEncoder, IdEquals criterion, Document query, PersistentEntity entity) {
                 Object value = criterion.getValue();
-                MappingContext mappingContext = entity.getMappingContext();
-                PersistentProperty identity = entity.getIdentity();
                 // Prefer the configured storage type ('storedAs' on the id mapping) so query BSON
                 // matches what's actually on disk. Falls back to the declared Java type otherwise.
-                Class<?> targetType = null;
-                try {
-                    if (entity.getMapping() != null && entity.getMapping().getIdentifier() != null) {
-                        targetType = entity.getMapping().getIdentifier().getStoredAs();
-                    }
-                } catch (Throwable ignored) {
-                    // defensive: some mapping implementations may not expose storedAs yet
-                }
-                if (targetType == null) {
-                    targetType = identity.getType();
-                }
-                Object converted = mappingContext.getConversionService().convert(value, targetType);
+                Class<?> storedAs = MongoIdCoercion.resolveStoredAs(entity);
+                Class<?> targetType = storedAs != null ? storedAs : entity.getIdentity().getType();
+                Object converted = entity.getMappingContext().getConversionService().convert(value, targetType);
                 // Symmetry with IdentityEncoder's non-hex fallback: if the converter returns
                 // null for a non-null input (e.g. a natural-key String being converted to
                 // ObjectId), keep the original value so the query targets what the encoder
@@ -184,34 +173,12 @@ public class MongoQuery extends BsonQuery implements QueryArgumentsAware {
                 Document inQuery = new Document();
                 List<Object> values = getInListQueryValues(entity, in);
 
-                Class<?> storedAs = null;
-                try {
-                    PersistentProperty identityProp = entity.getIdentity();
-                    if (identityProp != null && identityProp.getName().equals(in.getProperty()) &&
-                            entity.getMapping() != null && entity.getMapping().getIdentifier() != null) {
-                        storedAs = entity.getMapping().getIdentifier().getStoredAs();
-                    }
-                } catch (Throwable ignored) {
-                    // defensive: mapping implementations without storedAs support fall through
-                }
-                if (storedAs != null) {
-                    MappingContext mappingContext = entity.getMappingContext();
+                PersistentProperty identityProp = entity.getIdentity();
+                boolean isIdInList = identityProp != null && identityProp.getName().equals(in.getProperty());
+                if (isIdInList && MongoIdCoercion.resolveStoredAs(entity) != null) {
                     List<Object> coerced = new ArrayList<>(values.size());
                     for (Object v : values) {
-                        if (v == null || storedAs.isInstance(v)) {
-                            coerced.add(v);
-                        } else {
-                            Object c;
-                            try {
-                                c = mappingContext.getConversionService().convert(v, storedAs);
-                            } catch (Throwable ignored) {
-                                c = v;
-                            }
-                            // A null return (vs a throw) means the converter rejected the value —
-                            // e.g. a natural-key String being converted to ObjectId. Fall back to
-                            // the original so the $in list matches what the encoder actually wrote.
-                            coerced.add(c != null ? c : v);
-                        }
+                        coerced.add(MongoIdCoercion.coerceIdToStoredType(v, entity));
                     }
                     values = coerced;
                 }

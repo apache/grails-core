@@ -19,12 +19,16 @@
 
 package org.grails.datastore.bson.codecs.encoders
 
+import java.util.concurrent.ConcurrentHashMap
+
 import groovy.transform.CompileStatic
 
 import org.bson.BsonWriter
 import org.bson.codecs.EncoderContext
 import org.bson.codecs.configuration.CodecRegistry
 import org.bson.types.ObjectId
+import org.slf4j.Logger
+import org.slf4j.LoggerFactory
 
 import org.grails.datastore.bson.codecs.PropertyEncoder
 import org.grails.datastore.mapping.engine.EntityAccess
@@ -36,6 +40,12 @@ import org.grails.datastore.mapping.model.types.Identity
  */
 @CompileStatic
 class IdentityEncoder implements PropertyEncoder<Identity> {
+
+    private static final Logger log = LoggerFactory.getLogger(IdentityEncoder)
+
+    // One warn per (owning entity class) so a misconfigured 'storedAs: ObjectId' on
+    // natural-key data is debuggable in the field without flooding logs at write rate.
+    private static final Set<String> warnedNonHexEntities = ConcurrentHashMap.newKeySet()
 
     @Override
     void encode(BsonWriter writer, Identity property, Object id, EntityAccess parentAccess, EncoderContext encoderContext, CodecRegistry codecRegistry) {
@@ -53,6 +63,7 @@ class IdentityEncoder implements PropertyEncoder<Identity> {
                     writer.writeObjectId(new ObjectId(hex))
                     return
                 }
+                warnNonHexFallback(property, hex)
             }
             if (String.isAssignableFrom(storedAs) && !(id instanceof String)) {
                 writer.writeString(id.toString())
@@ -73,8 +84,18 @@ class IdentityEncoder implements PropertyEncoder<Identity> {
     private static Class<?> resolveStoredAs(Identity property) {
         try {
             return property?.owner?.mapping?.identifier?.storedAs
-        } catch (Throwable ignored) {
+        } catch (Exception ignored) {
             return null
+        }
+    }
+
+    private static void warnNonHexFallback(Identity property, String hex) {
+        if (!log.warnEnabled) return
+        String entityName = property?.owner?.javaClass?.name ?: 'unknown'
+        if (warnedNonHexEntities.add(entityName)) {
+            log.warn(
+                "Identity for {} is mapped storedAs: ObjectId but value '{}' is not a valid 24-char hex ObjectId; persisting as BSON String. Use storedAs: String for natural-key domains. (warned once per entity class)",
+                entityName, hex)
         }
     }
 

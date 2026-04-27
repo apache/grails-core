@@ -48,7 +48,7 @@ import org.grails.datastore.mapping.core.OptimisticLockingException
 class StringIdWithObjectIdStorageSpec extends GrailsDataTckSpec<GrailsDataMongoTckManager> {
 
     void setupSpec() {
-        manager.domainClasses.addAll([LegacyVideo, ObjectIdVideo, StoredAsVideo, AssignedNonHexVideo])
+        manager.domainClasses.addAll([LegacyVideo, ObjectIdVideo, StoredAsVideo, AssignedNonHexVideo, VersionedStoredAsVideo])
     }
 
     void "scan read decodes a BSON ObjectId _id into a String-typed id field"() {
@@ -182,6 +182,36 @@ class StringIdWithObjectIdStorageSpec extends GrailsDataTckSpec<GrailsDataMongoT
         then:
         raw != null
         raw.getString('title') == 'Updated'
+    }
+
+    void "with storedAs ObjectId AND versioning on, updates persist (proves the OptimisticLockingException path is genuinely fixed)"() {
+        // The headline bug is a misleading OptimisticLockingException on save: when the
+        // update filter sends the id as the wrong BSON type, zero documents match, and a
+        // versioned domain interprets that as a concurrency conflict. StoredAsVideo
+        // declares 'version false' so it can't actually exercise the OLE check — this
+        // parallel domain keeps versioning on so the regression test fails (OLE thrown)
+        // if the storedAs id-coercion is ever broken on the update path.
+        given:
+        VersionedStoredAsVideo v = new VersionedStoredAsVideo(title: 'Original').save(flush: true, failOnError: true)
+        String hex = v.id
+        Long initialVersion = v.version
+
+        when:
+        manager.session.clear()
+        VersionedStoredAsVideo reloaded = VersionedStoredAsVideo.get(hex)
+        reloaded.title = 'Updated'
+        reloaded.save(flush: true, failOnError: true)
+        manager.session.clear()
+
+        and:
+        Document raw = manager.mongoClient.getDatabase('test')
+                .getCollection('versionedStoredAsVideo')
+                .find(new Document('_id', new ObjectId(hex))).first()
+
+        then: 'no OLE was thrown, the document was updated, and version incremented'
+        raw != null
+        raw.getString('title') == 'Updated'
+        raw.getLong('version') == initialVersion + 1
     }
 
     void "with storedAs ObjectId, batch getAll resolves all ids (coerces each key in the in-list filter)"() {
@@ -384,5 +414,19 @@ class AssignedNonHexVideo {
     static mapping = {
         id generator: 'assigned', storedAs: ObjectId
         version false
+    }
+}
+
+// Mirrors StoredAsVideo but keeps versioning on. The 'updates persist (no phantom
+// OptimisticLockingException)' regression can only be genuinely exercised when a
+// version field is present — without it, GORM never raises OLE regardless of
+// whether the update filter matches.
+@Entity
+class VersionedStoredAsVideo {
+    String id
+    String title
+
+    static mapping = {
+        id storedAs: ObjectId
     }
 }

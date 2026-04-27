@@ -62,6 +62,7 @@ import org.grails.datastore.mapping.model.types.Association
 import org.grails.datastore.mapping.model.types.ToOne
 import org.grails.datastore.mapping.mongo.engine.MongoCodecEntityPersister
 import org.grails.datastore.mapping.mongo.engine.MongoEntityPersister
+import org.grails.datastore.mapping.mongo.engine.MongoIdCoercion
 import org.grails.datastore.mapping.mongo.engine.codecs.PersistentEntityCodec
 import org.grails.datastore.mapping.mongo.query.MongoQuery
 import org.grails.datastore.mapping.query.Query
@@ -302,26 +303,7 @@ class MongoCodecSession extends AbstractMongoSession {
      * </ul>
      */
     protected Object coerceIdToStoredType(Object nativeKey, PersistentEntity entity) {
-        if (nativeKey == null) return null
-        Class<?> storedAs = null
-        try {
-            storedAs = entity?.mapping?.identifier?.storedAs
-        } catch (Throwable ignored) {
-            return nativeKey
-        }
-        if (storedAs == null) return nativeKey
-        if (storedAs.isInstance(nativeKey)) return nativeKey
-        try {
-            def converted = mappingContext.conversionService.convert(nativeKey, storedAs)
-            // Symmetry with IdentityEncoder's non-hex fallback: a null return (vs a throw)
-            // means the converter rejected the value — e.g. a natural-key String being
-            // converted to ObjectId. Keep the original so update/delete filters match the
-            // document the encoder actually wrote (BSON String), rather than targeting
-            // {_id: null} and surfacing as a misleading OptimisticLockingException.
-            return converted != null ? converted : nativeKey
-        } catch (Throwable ignored) {
-            return nativeKey
-        }
+        MongoIdCoercion.coerceIdToStoredType(nativeKey, entity)
     }
 
     @Override
