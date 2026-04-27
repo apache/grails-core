@@ -33,14 +33,13 @@ group = 'org.apache.grails'
 
 dependencies {
     // The Micronaut platform is re-exported by grails-micronaut-bom so consumers don't need
-    // to declare it explicitly. enforcedPlatform on grails-micronaut-bom is required:
-    // Micronaut's platform declares higher versions of javaparser and other libraries that
-    // would otherwise override the grails-bom via Gradle's conflict resolution.
-    compileOnlyApi enforcedPlatform(project(':grails-micronaut-bom'))
+    // to declare it explicitly. Using platform() (not enforcedPlatform) so the dependency is
+    // safe to publish — consumers can choose to enforce it themselves.
+    compileOnlyApi platform(project(':grails-micronaut-bom'))
     compileOnlyApi 'io.micronaut:micronaut-inject-groovy'
 
     // Use the micronaut spring starter so that any bean in the spring context will be exposed to micronaut
-    api enforcedPlatform(project(':grails-micronaut-bom'))
+    api platform(project(':grails-micronaut-bom'))
     api 'io.micronaut.spring:micronaut-spring-boot-starter'
 
     // For the grails plugin interface
