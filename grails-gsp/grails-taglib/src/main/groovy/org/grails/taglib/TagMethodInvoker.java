@@ -150,6 +150,10 @@ public final class TagMethodInvoker {
         if (name.startsWith("get") && method.getParameterCount() == 0) {
             return false;
         }
+        if (name.startsWith("is") && method.getParameterCount() == 0
+                && (method.getReturnType() == boolean.class || method.getReturnType() == Boolean.class)) {
+            return false;
+        }
         if (name.startsWith("set") && method.getParameterCount() == 1) {
             return false;
         }
