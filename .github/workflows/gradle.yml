@@ -566,3 +566,4 @@ jobs:
           TARGET_REPOSITORY: 'apache/grails-website'
           TARGET_FOLDER: 'docs'
           DOCUMENTATION_BRANCH: 'asf-site-production'
+          SKIP_SNAPSHOT_FOLDER: 'true'
