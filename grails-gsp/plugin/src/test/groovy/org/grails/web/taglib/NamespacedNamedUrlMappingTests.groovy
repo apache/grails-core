@@ -24,8 +24,6 @@ import spock.lang.Specification
 
 class NamespacedNamedUrlMappingTests extends Specification implements UrlMappingsUnitTest<TestUrlMappings> {
 
-    boolean purgeTagLibMetaClass = true
-
     def testLinkAttributes() {
         when:
         def template = '<link:productDetail attrs="[class: \'fancy\']" productName="licorice" flavor="strawberry">Strawberry Licorice</link:productDetail>'

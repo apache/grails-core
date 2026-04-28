@@ -24,8 +24,6 @@ import spock.lang.Specification
 
 class LinkRenderingTagLib2Tests extends Specification implements UrlMappingsUnitTest<LinkRenderingTagLib2TestUrlMappings> {
 
-    boolean purgeTagLibMetaClass = true
-
     def testLinkWithOnlyId() {
         when:
         def template = '<g:link id="competition">Enter</g:link>'

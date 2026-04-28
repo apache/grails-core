@@ -30,8 +30,6 @@ import spock.lang.Specification
  */
 class ReverseUrlMappingToDefaultActionTests extends Specification implements UrlMappingsUnitTest<ReverseUrlMappingToDefaultActionUrlMappings> {
 
-    boolean purgeTagLibMetaClass = true
-
     @OnceBefore
     void mockControllers() {
         mockController(ReverseUrlMappingContentController)

@@ -29,8 +29,6 @@ import spock.lang.Specification
  */
 class ReverseUrlMappingTests extends Specification implements UrlMappingsUnitTest<CustomUrlMappings> {
 
-    boolean purgeTagLibMetaClass = true
-
     def testLinkTagRendering() {
         when:
         def template1 = '<g:link controller="product" action="create" params="[mslug:mslug]">New Product</g:link>'

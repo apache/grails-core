@@ -31,8 +31,6 @@ import spock.lang.Specification
 
 class RenderTagLibTests  extends Specification implements UrlMappingsUnitTest<RenderTagLibTestUrlMappings> {
 
-    boolean purgeTagLibMetaClass = true
-
     void testPageProperty() {
 
         def template = '<g:pageProperty name="foo.bar" />'

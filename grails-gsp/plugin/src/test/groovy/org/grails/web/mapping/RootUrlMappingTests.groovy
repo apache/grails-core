@@ -24,8 +24,6 @@ import spock.lang.Specification
 
 class RootUrlMappingTests extends Specification implements UrlMappingsUnitTest<StoreUrlMappings> {
 
-    boolean purgeTagLibMetaClass = true
-
     def testMappingToController() {
         when:
         def template = '<g:link controller="store">Show the time !</g:link>'

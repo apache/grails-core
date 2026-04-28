@@ -36,8 +36,6 @@ import spock.lang.Specification
  */
 class RenderTagLibTests extends Specification implements UrlMappingsUnitTest<RenderTagLibTestUrlMappings> {
 
-    boolean purgeTagLibMetaClass = true
-
     // test for GRAILS-5376
     void testPaginateTag() {
         when:

@@ -29,8 +29,6 @@ import spock.lang.Specification
  */
 class RestfulReverseUrlRenderingTests extends Specification implements UrlMappingsUnitTest<RestfulReverseUrlMappings> {
 
-    boolean purgeTagLibMetaClass = true
-
     def testLinkTagRendering() {
         when:
         def template = '<g:link controller="restfulCar">create</g:link>'
