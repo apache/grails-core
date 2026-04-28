@@ -214,6 +214,7 @@ ext {
     else if (project.name == 'grails-micronaut-bom') {
         customBomVersions = [
                 'groovy.version'  : '5.0.4',
+                'spock.version'   : '2.4-groovy-5.0',
                 'protobuf.version': '4.30.2',
         ]
         combinedVersions += customBomVersions
@@ -249,9 +250,12 @@ ext {
                 'groovy-xml'           : "org.apache.groovy:groovy-xml:${combinedVersions['groovy.version']}",
                 'groovy-yaml'          : "org.apache.groovy:groovy-yaml:${combinedVersions['groovy.version']}",
                 'protobuf-java'        : "com.google.protobuf:protobuf-java:${combinedVersions['protobuf.version']}",
+                'spock-core'           : "org.spockframework:spock-core:${combinedVersions['spock.version']}",
+                'spock-spring'         : "org.spockframework:spock-spring:${combinedVersions['spock.version']}",
         ]
         def customBomPlatformDependencies = [
                 'groovy-bom': "org.apache.groovy:groovy-bom:${combinedVersions['groovy.version']}",
+                'spock-bom' : "org.spockframework:spock-bom:${combinedVersions['spock.version']}",
         ]
         bomPlatformDependencies += customBomPlatformDependencies
         combinedDependencies += customBomDependencies
