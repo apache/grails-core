@@ -140,33 +140,74 @@ String getVersion(String artifact) {
 
 def generateBomDocumentation = tasks.register('generateBomDocumentation')
 generateBomDocumentation.configure { Task it ->
-    it.dependsOn(':grails-bom:extractConstraints')
+    it.dependsOn(':grails-bom:extractConstraints', ':grails-hibernate5-bom:extractConstraints', ':grails-micronaut-bom:extractConstraints')
 
-    it.description = 'Generates an AsciiDoc table listing Group, Artifact, and Version for project dependencies.'
+    it.description = 'Generates AsciiDoc tables listing Group, Artifact, and Version for all BOM variants (default, hibernate5, micronaut).'
     it.group = 'documentation'
 
     it.inputs.files(project(':grails-bom').layout.projectDirectory.asFileTree)
+    it.inputs.files(project(':grails-hibernate5-bom').layout.projectDirectory.asFileTree)
+    it.inputs.files(project(':grails-micronaut-bom').layout.projectDirectory.asFileTree)
     it.outputs.file(project.layout.projectDirectory.file('src/en/ref/Versions/Grails BOM.adoc'))
+    it.outputs.file(project.layout.projectDirectory.file('src/en/ref/Versions/Grails BOM Hibernate5.adoc'))
+    it.outputs.file(project.layout.projectDirectory.file('src/en/ref/Versions/Grails BOM Micronaut.adoc'))
 
     def versionsDir = project.layout.projectDirectory.dir('src/en/ref/Versions')
     it.doFirst {
         versionsDir.asFile.mkdirs()
     }
 
+    // Default BOM
     def bomDocumentFile = project.layout.projectDirectory.file('src/en/ref/Versions/Grails BOM.adoc')
     def grailsBomConstraintFile = project(':grails-bom').layout.buildDirectory.file('grails-bom-constraints.adoc')
+
+    // Hibernate 5 BOM
+    def bomHibernate5DocumentFile = project.layout.projectDirectory.file('src/en/ref/Versions/Grails BOM Hibernate5.adoc')
+    def grailsBomHibernate5ConstraintFile = project(':grails-hibernate5-bom').layout.buildDirectory.file('grails-hibernate5-bom-constraints.adoc')
+
+    // Micronaut BOM
+    def bomMicronautDocumentFile = project.layout.projectDirectory.file('src/en/ref/Versions/Grails BOM Micronaut.adoc')
+    def grailsBomMicronautConstraintFile = project(':grails-micronaut-bom').layout.buildDirectory.file('grails-micronaut-bom-constraints.adoc')
+
     it.doLast {
-        def bomDocument = bomDocumentFile.asFile
-        bomDocument.withWriter { writer ->
+        // Generate default BOM page
+        bomDocumentFile.asFile.withWriter { writer ->
             writer.writeLine '== Grails BOM Dependencies'
             writer.writeLine ''
-            writer.writeLine 'This document provides information about the dependencies defined in the Grails BOM - also known as `org.apache.grails:grails-bom`. It includes the artifact coordinates, where in the hierarchy the coordinate was defined, and the maven property that defines the version.'
+            writer.writeLine 'This document provides information about the dependencies defined in the default Grails BOM - also known as `org.apache.grails:grails-bom`. The default BOM uses Hibernate 5 compatible dependency versions.'
+            writer.writeLine ''
+            writer.writeLine 'NOTE: Variant BOMs are also available: link:Grails%20BOM%20Hibernate5.html[Grails Hibernate 5 BOM] | link:Grails%20BOM%20Micronaut.html[Grails Micronaut BOM]'
             writer.writeLine ''
             writer.write(grailsBomConstraintFile.get().asFile.text)
             writer.writeLine ''
         }
+        it.logger.lifecycle "BOM Dependency Page generated to: ${bomDocumentFile.asFile.absolutePath}"
 
-        it.logger.lifecycle "BOM Dependency Page generated to: ${bomDocument.absolutePath}"
+        // Generate Hibernate 5 BOM page
+        bomHibernate5DocumentFile.asFile.withWriter { writer ->
+            writer.writeLine '== Grails Hibernate 5 BOM Dependencies'
+            writer.writeLine ''
+            writer.writeLine 'This document provides information about the dependencies defined in `org.apache.grails:grails-hibernate5-bom`. This BOM inherits from the default `grails-bom` and explicitly enforces Hibernate 5 compatible dependency versions for consumers using `enforcedPlatform`.'
+            writer.writeLine ''
+            writer.writeLine 'See also: link:Grails%20BOM.html[Default BOM] | link:Grails%20BOM%20Micronaut.html[Grails Micronaut BOM]'
+            writer.writeLine ''
+            writer.write(grailsBomHibernate5ConstraintFile.get().asFile.text)
+            writer.writeLine ''
+        }
+        it.logger.lifecycle "BOM Hibernate 5 Dependency Page generated to: ${bomHibernate5DocumentFile.asFile.absolutePath}"
+
+        // Generate Micronaut BOM page
+        bomMicronautDocumentFile.asFile.withWriter { writer ->
+            writer.writeLine '== Grails Micronaut BOM Dependencies'
+            writer.writeLine ''
+            writer.writeLine 'This document provides information about the dependencies defined in `org.apache.grails:grails-micronaut-bom`. This BOM inherits from the default `grails-bom` and layers Micronaut-specific dependency overrides on top. Consumers integrating with Micronaut should apply this BOM as `enforcedPlatform` so the Micronaut platform cannot override the managed versions.'
+            writer.writeLine ''
+            writer.writeLine 'See also: link:Grails%20BOM.html[Default BOM] | link:Grails%20BOM%20Hibernate5.html[Grails Hibernate 5 BOM]'
+            writer.writeLine ''
+            writer.write(grailsBomMicronautConstraintFile.get().asFile.text)
+            writer.writeLine ''
+        }
+        it.logger.lifecycle "BOM Micronaut Dependency Page generated to: ${bomMicronautDocumentFile.asFile.absolutePath}"
     }
 }
 
@@ -601,7 +642,7 @@ createReleaseDropdownTask.configure {
 
 def docsTask = tasks.register('docs', Sync)
 docsTask.configure { Sync it ->
-    it.dependsOn(combinedGroovydoc, createReleaseDropdownTask, ':grails-data-docs-stage:docs')
+    it.dependsOn(combinedGroovydoc, createReleaseDropdownTask, ':grails-data-docs-stage:docs', ':grails-data-docs-stage:groovydoc')
     it.group = 'documentation'
 
     def manualDocsDir = project.layout.buildDirectory.dir('modified-guide')

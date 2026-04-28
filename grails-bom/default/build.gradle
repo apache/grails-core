@@ -51,50 +51,34 @@ ext {
 }
 
 dependencies {
+    api platform(project(':grails-base-bom'))
     api platform(gradleBomPlatformDependencies['spring-boot-bom']), {
-        exclude group: 'org.apache.groovy'
-        exclude group: 'org.spockframework'
-    }
-
-    for (def entry : bomPlatformDependencies.entrySet()) {
-        api platform(entry.value)
+        exclude group: 'org.hibernate.orm'
     }
 
     constraints {
+        // Re-declare base BOM constraints directly so enforcedPlatform() consumers
+        // get forced versions. Constraints inherited via platform() are not enforced
+        // by enforcedPlatform — only direct constraints are.
         for (def entry : gradleBomDependencies.entrySet()) {
             api entry.value
         }
         for (def entry : bomDependencies.entrySet()) {
             api entry.value
         }
-
-        for (Project subproject : rootProject.subprojects) {
-            if (subproject.path == project.path || subproject.name in testProjects || subproject.name in docProjects || subproject.name in cliProjects) {
-                continue // ignore self & test projects
-            }
-
-            boolean publishedProject = subproject.pluginManager.hasPlugin('org.apache.grails.gradle.grails-publish-profile') || subproject.pluginManager.hasPlugin('org.apache.grails.gradle.grails-publish')
-            if (!publishedProject) {
-                continue
-            }
-
-            api project(":${subproject.path}")
+        for (def entry : bomPlatformDependencies.entrySet()) {
+            api entry.value
         }
-
-        // since we're duplicating the bom instead of inheriting we have to add the grails-gradle projects
-        for (Map.Entry<String, String> dependency : project.ext.gradleBuildProjects.entrySet()) {
-            api "${dependency.value}:${dependency.key}:${projectVersion}"
-        }
-
-        // because we are not yet publishing hibernate6, just force the hibernate5 version for now
-        api("org.liquibase:liquibase-core") {
-            version {
-                strictly "$liquibaseHibernate5Version"
-            }
-        }
-        api("org.liquibase.ext:liquibase-hibernate5") {
-            version {
-                strictly "$liquibaseHibernate5Version"
+        for (def entry : customBomDependencies.entrySet()) {
+            def parts = entry.value.split(':')
+            if (parts.length == 3) {
+                api("${parts[0]}:${parts[1]}") {
+                    version {
+                        strictly parts[2]
+                    }
+                }
+            } else {
+                api entry.value
             }
         }
     }
@@ -107,7 +91,6 @@ configurations.register('bomDependencies').configure {
 }
 
 tasks.register('extractConstraints', ExtractDependenciesTask).configure { ExtractDependenciesTask it ->
-    it.captureProjectServices(project.dependencies, project.configurations)
     it.configuration = configurations.named('bomDependencies')
     it.configurationName = 'bomDependencies'
     it.destination = project.layout.buildDirectory.file('grails-bom-constraints.adoc')
