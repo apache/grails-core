@@ -18,6 +18,7 @@
  */
 plugins {
     id 'org.apache.grails.buildsrc.properties'
+    id 'org.apache.grails.buildsrc.dependency-validator'
     id 'org.apache.grails.buildsrc.compile'
 }
 
@@ -54,7 +55,7 @@ dependencies {
     runtimeOnly 'org.fusesource.jansi:jansi'
     runtimeOnly 'org.apache.grails:grails-scaffolding'
     runtimeOnly 'org.apache.grails:grails-url-mappings'
-    runtimeOnly "org.hibernate:hibernate-ehcache:$hibernate5Version", {
+    runtimeOnly 'org.hibernate:hibernate-ehcache', {
         // exclude javax variant of hibernate-core
         exclude group: 'org.hibernate', module: 'hibernate-core'
     }

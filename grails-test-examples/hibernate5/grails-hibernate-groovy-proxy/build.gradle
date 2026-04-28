@@ -19,6 +19,7 @@
 
 plugins {
     id 'org.apache.grails.buildsrc.properties'
+    id 'org.apache.grails.buildsrc.dependency-validator'
     id 'org.apache.grails.gradle.grails-web'
     id 'org.apache.grails.buildsrc.compile'
 }
@@ -31,7 +32,7 @@ dependencies {
 
     implementation 'org.apache.grails:grails-data-hibernate5'
     implementation 'org.apache.grails:grails-core'
-    implementation "org.yakworks:hibernate-groovy-proxy:$yakworksHibernateGroovyProxyVersion", {
+    implementation 'org.yakworks:hibernate-groovy-proxy', {
         exclude group: 'org.codehaus.groovy', module: 'groovy'
     }
 

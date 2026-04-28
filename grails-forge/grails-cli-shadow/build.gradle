@@ -22,6 +22,7 @@ plugins {
     id 'groovy'
     id 'com.gradleup.shadow'
     id 'org.apache.grails.buildsrc.properties'
+    id 'org.apache.grails.buildsrc.dependency-validator'
     id 'org.apache.grails.buildsrc.compile'
 }
 
