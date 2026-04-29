@@ -21,7 +21,6 @@
 // external plugin/library incompatibilities with Spring Boot 4 / Spring Framework 7.
 //
 // Known blockers:
-//   - grails-spring-security: ReflectionUtils.getApplication() removed in Spring Boot 4
 //   - SiteMesh3: Decorator/layout not compatible with Spring Framework 7
 //
 // Re-enable each module's integrationTest when its blocking dependency is updated.

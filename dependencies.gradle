@@ -31,7 +31,7 @@ ext {
             'directory-watcher.version'     : '0.19.1',
             'gradle-groovy.version'         : '4.0.31',
             'gradle-spock.version'          : '2.3-groovy-4.0',
-            'grails-publish-plugin.version' : '1.0.0-SNAPSHOT',
+            'grails-publish-plugin.version' : '1.0.0-M1',
             'jansi.version'                 : '2.4.2',
             'javaparser-core.version'       : '3.28.0',
             'jline.version'                 : '3.30.6',
