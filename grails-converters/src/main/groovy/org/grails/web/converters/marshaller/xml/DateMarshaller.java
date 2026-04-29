@@ -29,14 +29,16 @@ import org.grails.web.converters.exceptions.ConverterException;
 import org.grails.web.converters.marshaller.ObjectMarshaller;
 
 /**
+ * XML ObjectMarshaller which converts a Date Object to an ISO 8601 offset
+ * date-time string in the system default zone (e.g. {@code 2024-06-15T14:30:45.123-04:00}).
+ *
  * @author Siegfried Puchbauer
  * @since 1.1
  */
 public class DateMarshaller implements ObjectMarshaller<XML> {
 
     private static final DateTimeFormatter DEFAULT_FORMATTER =
-            DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss.SSS z")
-                    .withZone(ZoneId.systemDefault());
+            DateTimeFormatter.ISO_OFFSET_DATE_TIME.withZone(ZoneId.systemDefault());
 
     private final Format legacyFormatter;
 
@@ -49,10 +51,11 @@ public class DateMarshaller implements ObjectMarshaller<XML> {
     }
 
     /**
-     * Default constructor.
+     * Default constructor — uses {@link DateTimeFormatter#ISO_OFFSET_DATE_TIME}
+     * with the system default zone.
      */
     public DateMarshaller() {
-        this.legacyFormatter = null;
+        this(null);
     }
 
     public boolean supports(Object object) {
@@ -62,9 +65,9 @@ public class DateMarshaller implements ObjectMarshaller<XML> {
     public void marshalObject(Object object, XML xml) throws ConverterException {
         try {
             Date date = (Date) object;
-            String formatted = legacyFormatter != null ?
-                    legacyFormatter.format(date) :
-                    DEFAULT_FORMATTER.format(date.toInstant());
+            String formatted = legacyFormatter != null
+                    ? legacyFormatter.format(date)
+                    : DEFAULT_FORMATTER.format(date.toInstant());
             xml.chars(formatted);
         }
         catch (Exception e) {

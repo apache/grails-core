@@ -46,14 +46,14 @@ class DateMarshallerSpec extends Specification {
         !marshaller.supports(null)
     }
 
-    void "default formatter produces date in system timezone with three-digit millis"() {
+    void "default formatter produces ISO_OFFSET_DATE_TIME in system zone"() {
         given:
         def marshaller = new DateMarshaller()
         def date = new Date(1718461845123L)
         def xml = Mock(XML)
 
-        // Compute expected output independently using the same pattern and system timezone
-        def expected = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss.SSS z")
+        and: "expected output computed independently using the same formatter"
+        def expected = DateTimeFormatter.ISO_OFFSET_DATE_TIME
                 .withZone(ZoneId.systemDefault())
                 .format(date.toInstant())
 
@@ -64,21 +64,7 @@ class DateMarshallerSpec extends Specification {
         1 * xml.chars(expected)
     }
 
-    void "default formatter pads milliseconds to three digits"() {
-        given:
-        def marshaller = new DateMarshaller()
-        // 5 milliseconds past epoch second
-        def date = new Date(1704067200005L)
-        def xml = Mock(XML)
-
-        when:
-        marshaller.marshalObject(date, xml)
-
-        then:
-        1 * xml.chars({ String s -> s.contains('.005') })
-    }
-
-    void "default formatter output matches expected pattern"() {
+    void "default formatter output matches ISO 8601 offset date-time pattern"() {
         given:
         def marshaller = new DateMarshaller()
         def date = new Date(1718461845123L)
@@ -87,8 +73,8 @@ class DateMarshallerSpec extends Specification {
         when:
         marshaller.marshalObject(date, xml)
 
-        then:
-        1 * xml.chars({ String s -> s ==~ /\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}\.\d{3} .+/ })
+        then: "matches yyyy-MM-ddTHH:mm:ss(.fraction)?(Z|+HH:MM)"
+        1 * xml.chars({ String s -> s ==~ /\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(\.\d+)?(Z|[+-]\d{2}:\d{2})/ })
     }
 
     void "legacy formatter is used when provided"() {

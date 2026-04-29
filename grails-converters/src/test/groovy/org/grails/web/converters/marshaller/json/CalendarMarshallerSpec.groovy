@@ -73,7 +73,7 @@ class CalendarMarshallerSpec extends Specification {
         result == '["2024-06-15T14:30:45.123Z"]'
     }
 
-    void "default formatter pads milliseconds to three digits"() {
+    void "default formatter pads sub-100 milliseconds to three digits"() {
         given:
         def marshaller = new CalendarMarshaller()
         def calendar = Calendar.getInstance(TimeZone.getTimeZone("UTC"))

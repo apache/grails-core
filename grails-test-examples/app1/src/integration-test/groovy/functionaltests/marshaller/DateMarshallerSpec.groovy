@@ -24,6 +24,7 @@ import groovy.json.JsonSlurper
 import java.time.Instant
 import java.time.ZoneId
 import java.time.format.DateTimeFormatter
+
 import io.micronaut.http.HttpRequest
 import io.micronaut.http.HttpStatus
 import io.micronaut.http.MediaType
@@ -36,21 +37,17 @@ import grails.testing.mixin.integration.Integration
 
 /**
  * Functional tests verifying that Date and Calendar objects are marshalled
- * through the Grails JSON and XML converters using DateTimeFormatter.
+ * through the Grails JSON and XML converters using the JDK's ISO formatters.
  *
- * These tests exercise the DateTimeFormatter-based marshallers:
- * - org.grails.web.converters.marshaller.json.DateMarshaller (ISO 8601 UTC)
- * - org.grails.web.converters.marshaller.json.CalendarMarshaller (ISO 8601 UTC)
- * - org.grails.web.converters.marshaller.xml.DateMarshaller (system default timezone)
- *
- * JSON format: yyyy-MM-dd'T'HH:mm:ss.SSS'Z' (always UTC)
- * XML format: yyyy-MM-dd HH:mm:ss.SSS z (system default timezone)
+ * - JSON marshallers use {@link DateTimeFormatter#ISO_INSTANT} (UTC, "Z" suffix).
+ * - XML marshaller uses {@link DateTimeFormatter#ISO_OFFSET_DATE_TIME} in the
+ *   system default zone (numeric offset, e.g. "+00:00", "-04:00").
  */
 @Integration
 @Narrative('''
-Grails converters marshal Date and Calendar objects using DateTimeFormatter.
-JSON output uses ISO 8601 UTC format. XML output uses system default timezone.
-Both produce consistent 3-digit millisecond formatting (.000, .123, etc.).
+Grails converters marshal Date and Calendar objects using the JDK's standard
+ISO formatters. JSON output is RFC 3339 / ISO 8601 in UTC. XML output is
+ISO 8601 offset date-time in the system default zone.
 ''')
 class DateMarshallerSpec extends Specification {
 
@@ -67,90 +64,86 @@ class DateMarshallerSpec extends Specification {
 
     // ========== JSON Date Marshalling ==========
 
-    def "Date at epoch is marshalled to ISO 8601 UTC in JSON"() {
-        when: "requesting date endpoint with Accept: application/json"
+    def "Date at epoch is marshalled to ISO_INSTANT in JSON"() {
+        when:
         def response = client.toBlocking().exchange(
             HttpRequest.GET('/dateMarshaller/date')
                 .accept(MediaType.APPLICATION_JSON),
             String
         )
 
-        then: "response contains date in yyyy-MM-dd'T'HH:mm:ss.SSS'Z' format"
+        then:
         response.status == HttpStatus.OK
 
-        and: "date value is epoch in UTC"
+        and: "ISO_INSTANT drops the fraction on whole-second instants"
         def json = new JsonSlurper().parseText(response.body())
-        json.dateField == '1970-01-01T00:00:00.000Z'
+        json.dateField == '1970-01-01T00:00:00Z'
     }
 
-    def "Date with milliseconds uses 3-digit padded format in JSON"() {
-        when: "requesting dateWithMillis endpoint with Accept: application/json"
+    def "Date with milliseconds renders fraction to .SSS in JSON"() {
+        when:
         def response = client.toBlocking().exchange(
             HttpRequest.GET('/dateMarshaller/dateWithMillis')
                 .accept(MediaType.APPLICATION_JSON),
             String
         )
 
-        then: "response contains date with .123 milliseconds"
+        then:
         response.status == HttpStatus.OK
 
-        and: "milliseconds are 3-digit zero-padded"
+        and:
         def json = new JsonSlurper().parseText(response.body())
         json.dateField == '2009-02-13T23:31:30.123Z'
     }
 
     // ========== JSON Calendar Marshalling ==========
 
-    def "Calendar at epoch is marshalled to ISO 8601 UTC in JSON"() {
-        when: "requesting calendar endpoint with Accept: application/json"
+    def "Calendar at epoch is marshalled to ISO_INSTANT in JSON"() {
+        when:
         def response = client.toBlocking().exchange(
             HttpRequest.GET('/dateMarshaller/calendar')
                 .accept(MediaType.APPLICATION_JSON),
             String
         )
 
-        then: "response contains calendar in ISO 8601 UTC format"
+        then:
         response.status == HttpStatus.OK
 
-        and: "calendar value is epoch in UTC"
+        and:
         def json = new JsonSlurper().parseText(response.body())
-        json.calField == '1970-01-01T00:00:00.000Z'
+        json.calField == '1970-01-01T00:00:00Z'
     }
 
     // ========== XML Date Marshalling ==========
 
-    def "Date at epoch is marshalled in system default timezone in XML"() {
-        given: "the expected formatted date using the same pattern as the XML marshaller"
-        def expectedDate = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss.SSS z")
-                .withZone(ZoneId.systemDefault())
-                .format(Instant.EPOCH)
+    def "Date at epoch is marshalled as ISO_OFFSET_DATE_TIME in XML"() {
+        given:
+        def expectedDate = xmlFormatter().format(Instant.EPOCH)
 
-        when: "requesting date endpoint with Accept: application/xml"
+        when:
         def response = client.toBlocking().exchange(
             HttpRequest.GET('/dateMarshaller/date')
                 .accept(MediaType.APPLICATION_XML),
             String
         )
 
-        then: "response is XML containing date in system default timezone format"
+        then:
         response.status == HttpStatus.OK
         response.body().contains(expectedDate)
     }
 
-    def "Date with milliseconds uses 3-digit padded format in XML"() {
-        given: "the expected formatted date"
-        def expectedDate = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss.SSS z")
-                .withZone(ZoneId.systemDefault())
-                .format(Instant.ofEpochMilli(1234567890123L))
+    def "Date with milliseconds renders fraction in XML"() {
+        given:
+        def expectedDate = xmlFormatter().format(Instant.ofEpochMilli(1234567890123L))
 
-        when: "requesting dateWithMillis endpoint with Accept: application/xml"
+        when:
         def response = client.toBlocking().exchange(
             HttpRequest.GET('/dateMarshaller/dateWithMillis')
                 .accept(MediaType.APPLICATION_XML),
             String
         )
 
-        then: "response is XML containing date with .123 milliseconds"
+        then:
         response.status == HttpStatus.OK
         response.body().contains(expectedDate)
     }
@@ -158,34 +151,36 @@ class DateMarshallerSpec extends Specification {
     // ========== URL Extension Format ==========
 
     def "Date JSON via .json URL extension"() {
-        when: "requesting date with .json extension"
+        when:
         def response = client.toBlocking().exchange(
             HttpRequest.GET('/dateMarshaller/date.json'),
             String
         )
 
-        then: "response is JSON with correct date format"
+        then:
         response.status == HttpStatus.OK
 
-        and: "date is in ISO 8601 UTC format"
+        and:
         def json = new JsonSlurper().parseText(response.body())
-        json.dateField == '1970-01-01T00:00:00.000Z'
+        json.dateField == '1970-01-01T00:00:00Z'
     }
 
     def "Date XML via .xml URL extension"() {
-        given: "the expected formatted date"
-        def expectedDate = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss.SSS z")
-                .withZone(ZoneId.systemDefault())
-                .format(Instant.EPOCH)
+        given:
+        def expectedDate = xmlFormatter().format(Instant.EPOCH)
 
-        when: "requesting date with .xml extension"
+        when:
         def response = client.toBlocking().exchange(
             HttpRequest.GET('/dateMarshaller/date.xml'),
             String
         )
 
-        then: "response is XML with correct date format"
+        then:
         response.status == HttpStatus.OK
         response.body().contains(expectedDate)
+    }
+
+    private static DateTimeFormatter xmlFormatter() {
+        DateTimeFormatter.ISO_OFFSET_DATE_TIME.withZone(ZoneId.systemDefault())
     }
 }

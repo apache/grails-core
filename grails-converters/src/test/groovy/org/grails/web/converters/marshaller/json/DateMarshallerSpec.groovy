@@ -58,7 +58,7 @@ class DateMarshallerSpec extends Specification {
         result == '["2024-06-15T14:30:45.123Z"]'
     }
 
-    void "default formatter formats zero milliseconds correctly"() {
+    void "default formatter omits fractional seconds when millis are zero (ISO_INSTANT)"() {
         given:
         def marshaller = new DateMarshaller()
         // 2024-01-01T00:00:00.000 UTC
@@ -67,11 +67,11 @@ class DateMarshallerSpec extends Specification {
         when:
         def result = marshalToString(marshaller, date)
 
-        then:
-        result == '["2024-01-01T00:00:00.000Z"]'
+        then: "ISO_INSTANT drops the fraction entirely on whole-second instants"
+        result == '["2024-01-01T00:00:00Z"]'
     }
 
-    void "default formatter pads milliseconds to three digits"() {
+    void "default formatter pads sub-100 milliseconds to three digits"() {
         given:
         def marshaller = new DateMarshaller()
         // 5 milliseconds past epoch second
