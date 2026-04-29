@@ -92,7 +92,7 @@ class TagLibraryMetaUtils {
 
     @CompileStatic
     static void registerNamespaceMetaProperty(MetaClass metaClass, TagLibraryLookup gspTagLibraryLookup, String namespace) {
-        if (!metaClass.hasProperty(namespace) && !doesMethodExist(metaClass, GrailsClassUtils.getGetterName(namespace), [] as Class[])) {
+        if (!doesMethodExist(metaClass, GrailsClassUtils.getGetterName(namespace), [] as Class[], false, true)) {
             registerPropertyMissingForTag(metaClass, namespace, gspTagLibraryLookup.lookupNamespaceDispatcher(namespace))
         }
     }

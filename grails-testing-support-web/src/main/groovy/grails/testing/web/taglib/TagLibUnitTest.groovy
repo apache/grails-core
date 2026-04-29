@@ -93,8 +93,9 @@ trait TagLibUnitTest<T> implements ParameterizedGrailsUnitTest<T>, GrailsWebUnit
     private void ensureTaglibHasBeenMocked() {
         if (!hasBeenMocked || !areMockedTagLibsRegistered()) {
             Set<Class<?>> mockedTagLibClasses = getMockedTagLibClasses()
-            if (mockedTagLibClasses.isEmpty()) {
-                mockedTagLibClasses.add(getTagLibTypeUnderTest())
+            Class<?> tagLibTypeUnderTest = getTagLibTypeUnderTest()
+            if (tagLibTypeUnderTest != null) {
+                mockedTagLibClasses.add(tagLibTypeUnderTest)
             }
             for (Class<?> tagLibClass in mockedTagLibClasses) {
                 GrailsWebUnitTest.super.mockTagLib(tagLibClass)
