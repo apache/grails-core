@@ -106,7 +106,6 @@ class ViewJsonSpec extends ApplicationContextSpec implements CommandOutputFixtur
         final GeneratorContext ctx = buildGeneratorContext(["views-json"], new Options(null), ApplicationType.REST_API)
 
         then:
-        ctx.getConfiguration().get("grails.mime.disable.accept.header.userAgents") == Arrays.asList("Gecko", "WebKit", "Presto", "Trident")
         ctx.getConfiguration().get("grails.mime.types.json") == Arrays.asList("application/json", "text/json")
         ctx.getConfiguration().get("grails.mime.types.hal") == Arrays.asList("application/hal+json", "application/hal+xml")
         ctx.getConfiguration().get("grails.mime.types.xml") == Arrays.asList("text/xml", "application/xml")

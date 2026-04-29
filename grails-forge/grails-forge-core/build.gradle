@@ -23,6 +23,7 @@ plugins {
     id 'groovy'
     id 'java-library'
     id 'org.apache.grails.buildsrc.properties'
+    id 'org.apache.grails.buildsrc.dependency-validator'
     id 'org.grails.forge.rocker'
     id 'org.apache.grails.buildsrc.compile'
     id 'org.apache.grails.buildsrc.publish'
@@ -84,7 +85,7 @@ def grailsVersionInfoTask = tasks.register('grailsVersionInfo', WriteGrailsVersi
 grailsVersionInfoTask.configure { WriteGrailsVersionInfoTask it ->
     def bomPublicationTask = gradle.includedBuild('grails-core').task(':grails-bom:generatePomFileForMavenPublication')
     it.dependsOn(bomPublicationTask)
-    it.bomPublicationFile = rootProject.layout.projectDirectory.file('../grails-bom/build/publications/maven/pom-default.xml')
+    it.bomPublicationFile = rootProject.layout.projectDirectory.file('../grails-bom/default/build/publications/maven/pom-default.xml')
     it.versionsDirectory = grailsVersionsPath
 }
 sourceSets.main.resources.srcDir(grailsVersionsPath)

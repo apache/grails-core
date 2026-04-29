@@ -1,0 +1,46 @@
+{
+    "groups": [
+        {
+            "name": "grails.cache",
+            "description": "Cache Plugin"
+        }
+    ],
+    "properties": [
+        {
+            "name": "grails.cache.enabled",
+            "type": "java.lang.Boolean",
+            "description": "Whether the cache plugin is enabled.",
+            "defaultValue": true
+        },
+        {
+            "name": "grails.cache.clearAtStartup",
+            "type": "java.lang.Boolean",
+            "description": "Whether to clear all caches when the application starts.",
+            "defaultValue": false
+        },
+        {
+            "name": "grails.cache.cacheManager",
+            "type": "java.lang.String",
+            "description": "The cache manager implementation class name. Use `GrailsConcurrentLinkedMapCacheManager` for bounded caches with maxCapacity support.",
+            "defaultValue": "GrailsConcurrentMapCacheManager"
+        },
+        {
+            "name": "grails.cache.caches",
+            "type": "java.util.Map",
+            "description": "Map of cache-specific configurations keyed by cache name, each supporting a `maxCapacity` setting (used by GrailsConcurrentLinkedMapCacheManager).",
+            "defaultValue": {}
+        },
+        {
+            "name": "grails.cache.ehcache.ehcacheXmlLocation",
+            "type": "java.lang.String",
+            "description": "Location of the Ehcache XML configuration file on the classpath.",
+            "defaultValue": "classpath:ehcache.xml"
+        },
+        {
+            "name": "grails.cache.ehcache.lockTimeout",
+            "type": "java.lang.Integer",
+            "description": "The timeout in milliseconds for acquiring a lock on a cache element.",
+            "defaultValue": 200
+        }
+    ]
+}

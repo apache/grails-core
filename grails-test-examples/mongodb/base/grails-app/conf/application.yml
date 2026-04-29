@@ -20,26 +20,18 @@ info:
         grailsVersion: '@info.app.grailsVersion@'
 ---
 grails:
-  profile: web
-  codegen:
-    defaultPackage: functional.tests
-  gorm:
-    failOnError: true
-  mongodb:
-    url: mongodb://${spring.data.mongodb.host:localhost}:${spring.data.mongodb.port:27017}/mydb
-    options:
-      maxWaitTime: 10000
+    profile: web
+    codegen:
+        defaultPackage: functional.tests
+    gorm:
+        failOnError: true
+    mongodb:
+        url: mongodb://${spring.data.mongodb.host:localhost}:${spring.data.mongodb.port:27017}/mydb
+        options:
+            maxWaitTime: 10000
 ---
 grails:
     mime:
-        disable:
-            accept:
-                header:
-                    userAgents:
-                        - Gecko
-                        - WebKit
-                        - Presto
-                        - Trident
         types:
             all: '*/*'
             atom: application/atom+xml
@@ -63,19 +55,9 @@ grails:
             xml:
               - text/xml
               - application/xml
-    urlmapping:
-        cache:
-            maxsize: 1000
-    converters:
-        encoding: UTF-8
     views:
-        default:
-            codec: html
         gsp:
             encoding: UTF-8
             htmlcodec: xml
             codecs:
-                expression: html
-                scriptlets: html
-                taglib: none
-                staticparts: none
+                scriptlet: html

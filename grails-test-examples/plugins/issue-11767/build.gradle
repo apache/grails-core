@@ -18,6 +18,7 @@
  */
 plugins {
     id 'org.apache.grails.buildsrc.properties'
+    id 'org.apache.grails.buildsrc.dependency-validator'
     id 'org.apache.grails.buildsrc.compile'
 }
 
@@ -27,11 +28,11 @@ group = 'issue11767.plugin'
 apply plugin: 'org.apache.grails.gradle.grails-plugin'
 
 dependencies {
-    implementation platform(project(':grails-bom'))
+    implementation enforcedPlatform(project(':grails-micronaut-bom'))
     implementation 'org.apache.grails:grails-core'
     implementation 'org.apache.grails:grails-micronaut'
 
-    annotationProcessor platform("io.micronaut.platform:micronaut-platform:$micronautPlatformVersion")
+    annotationProcessor enforcedPlatform(project(':grails-micronaut-bom'))
     annotationProcessor 'io.micronaut:micronaut-inject-java'
     annotationProcessor 'jakarta.annotation:jakarta.annotation-api'
 }

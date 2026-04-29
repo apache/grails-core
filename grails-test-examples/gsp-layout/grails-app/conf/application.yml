@@ -21,14 +21,6 @@ info:
 grails:
   profile: web
   mime:
-    disable:
-      accept:
-        header:
-          userAgents:
-          - Gecko
-          - WebKit
-          - Presto
-          - Trident
     types:
       all: '*/*'
       atom: application/atom+xml
@@ -57,9 +49,4 @@ grails:
       encoding: UTF-8
       htmlcodec: xml
       codecs:
-        expression: html
         scriptlet: html
-        taglib: none
-        staticparts: none
-    default:
-      codec: html

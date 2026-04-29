@@ -26,6 +26,10 @@ pluginManagement {
     includeBuild('./build-logic') {
         name = 'build-logic-root'
     }
+    apply from: file('gradle/plugin-repositories.gradle')
+    repositories {
+        configurePluginRepositories(delegate)
+    }
 }
 
 plugins {
@@ -107,7 +111,10 @@ include(
         'grails-dependencies-starter-web',
         'grails-dependencies-test',
         'grails-dependencies-assets',
-        'grails-bom',
+        'grails-base-bom',
+        'grails-bom', // the default bom
+        'grails-hibernate5-bom',
+        'grails-micronaut-bom',
 
         // Docs
         'grails-doc',
@@ -185,6 +192,11 @@ include(
         // micronaut plugin for integration with Grails
         'grails-micronaut',
 )
+
+project(':grails-bom').projectDir = file('grails-bom/default')
+project(':grails-base-bom').projectDir = file('grails-bom/base')
+project(':grails-hibernate5-bom').projectDir = file('grails-bom/hibernate5')
+project(':grails-micronaut-bom').projectDir = file('grails-bom/micronaut')
 
 // Instead of using : to separate nested projects, fix the project directories by setting the projectDir explicitly
 // (Preserve the parent directory name as part of the nested project name)
@@ -393,6 +405,7 @@ include(
         'grails-test-examples-plugins-issue-11767',
         'grails-test-examples-plugins-micronaut-singleton',
         'grails-test-examples-cache',
+        'grails-test-examples-config-report',
         'grails-test-examples-scaffolding',
         'grails-test-examples-scaffolding-fields',
         'grails-test-examples-views-functional-tests',
@@ -430,6 +443,7 @@ project(':grails-test-examples-plugins-exploded').projectDir = file('grails-test
 project(':grails-test-examples-plugins-issue-11767').projectDir = file('grails-test-examples/plugins/issue-11767')
 project(':grails-test-examples-plugins-micronaut-singleton').projectDir = file('grails-test-examples/plugins/micronaut-singleton')
 project(':grails-test-examples-cache').projectDir = file('grails-test-examples/cache')
+project(':grails-test-examples-config-report').projectDir = file('grails-test-examples/config-report')
 project(':grails-test-examples-scaffolding').projectDir = file('grails-test-examples/scaffolding')
 project(':grails-test-examples-scaffolding-fields').projectDir = file('grails-test-examples/scaffolding-fields')
 project(':grails-test-examples-views-functional-tests').projectDir = file('grails-test-examples/views-functional-tests')

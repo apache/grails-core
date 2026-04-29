@@ -127,7 +127,10 @@ categories:
   - title: '⏪ Reverts'
     labels:
       - 'revert'
+exclude-labels:
+  - 'skip-changelog'
 change-template: '- $TITLE @$AUTHOR (#$NUMBER)'
+filter-by-commitish: true
 version-resolver:
   major:
     labels:
