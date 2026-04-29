@@ -18,6 +18,8 @@
  */
 package org.grails.datastore.gorm
 
+import org.springframework.transaction.support.DefaultTransactionDefinition
+
 import grails.gorm.api.GormAllOperations
 import grails.gorm.api.GormStaticOperations
 import grails.gorm.api.GormInstanceOperations
@@ -27,6 +29,8 @@ import groovy.lang.MissingMethodException
 import groovy.lang.MissingPropertyException
 import groovy.transform.CompileDynamic
 import groovy.transform.CompileStatic
+
+import grails.gorm.transactions.GrailsTransactionTemplate
 import org.grails.datastore.gorm.finders.FinderMethod
 import org.grails.datastore.mapping.core.Datastore
 import org.grails.datastore.mapping.core.Session
@@ -370,7 +374,7 @@ class GormStaticApi<D> extends AbstractGormApi<D> implements GormAllOperations<D
 
     @Override
     grails.gorm.DetachedCriteria<D> whereAny(Closure callable) {
-        where(callable)
+        new grails.gorm.DetachedCriteria<D>(persistentClass).or(callable)
     }
 
     @Override
@@ -562,31 +566,42 @@ class GormStaticApi<D> extends AbstractGormApi<D> implements GormAllOperations<D
 
     @Override
     def <T1> T1 withTransaction(Closure<T1> callable) {
-        execute({ Session session ->
-            DatastoreUtils.execute(getDatastore(), (Session s) -> {
-                return (T1)callable.call(s)
-            } as SessionCallback<T1>)
-        } as SessionCallback<T1>)
+        new GrailsTransactionTemplate(getTransactionManager()).execute(callable)
     }
 
     @Override
     def <T1> T1 withNewTransaction(Closure<T1> callable) {
-        withTransaction(callable)
+        DefaultTransactionDefinition definition = new DefaultTransactionDefinition()
+        definition.setPropagationBehavior(TransactionDefinition.PROPAGATION_REQUIRES_NEW)
+        withTransaction(definition, callable)
     }
 
     @Override
     def <T1> T1 withTransaction(Map transactionProperties, Closure<T1> callable) {
-        withTransaction(callable)
+        DefaultTransactionDefinition definition = new DefaultTransactionDefinition()
+        for (String key : transactionProperties.keySet()) {
+            if (definition.metaClass.hasProperty(definition, key)) {
+                definition.setProperty(key, transactionProperties.get(key))
+            }
+        }
+        withTransaction(definition, callable)
     }
 
     @Override
     def <T1> T1 withNewTransaction(Map transactionProperties, Closure<T1> callable) {
-        withTransaction(callable)
+        DefaultTransactionDefinition definition = new DefaultTransactionDefinition()
+        for (String key : transactionProperties.keySet()) {
+            if (definition.metaClass.hasProperty(definition, key)) {
+                definition.setProperty(key, transactionProperties.get(key))
+            }
+        }
+        definition.setPropagationBehavior(TransactionDefinition.PROPAGATION_REQUIRES_NEW)
+        withTransaction(definition, callable)
     }
 
     @Override
     def <T1> T1 withTransaction(org.springframework.transaction.TransactionDefinition definition, Closure<T1> callable) {
-        withTransaction(callable)
+        new GrailsTransactionTemplate(getTransactionManager(), definition).execute(callable)
     }
 
     @Override

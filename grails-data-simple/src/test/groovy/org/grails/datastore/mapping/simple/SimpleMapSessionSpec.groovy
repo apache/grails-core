@@ -38,13 +38,16 @@ class SimpleMapSessionSpec extends Specification {
             indices2 = session.getIndices()
         }
 
-        then: "Data is isolated"
-        map2.get("foo") == null
-        indices2.get("idx1") == null
+        then: "Backing maps are SHARED in DISCRIMINATOR mode"
+        map1.is(map2)
+        indices1.is(indices2)
         
-        and: "The physical map contains both with prefixes"
-        datastore.sharedState.inmemoryData.containsKey("1:foo")
-        datastore.sharedState.inmemoryData.get("1:foo") == "bar"
-        datastore.sharedState.indices.containsKey("1:idx1")
+        and: "Data is NOT isolated at the map level because they share the map"
+        map2.get("foo") == "bar"
+        
+        and: "The physical map contains the keys without prefixes"
+        datastore.sharedState.inmemoryData.containsKey("foo")
+        datastore.sharedState.inmemoryData.get("foo") == "bar"
+        datastore.sharedState.indices.containsKey("idx1")
     }
 }

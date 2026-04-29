@@ -27,7 +27,11 @@ import org.grails.datastore.mapping.transactions.Transaction;
 import org.springframework.context.ApplicationEventPublisher;
 
 import java.io.Serializable;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
+import java.util.concurrent.atomic.AtomicLong;
 
 /**
  * A {@link org.grails.datastore.mapping.core.Session} implementation that backs onto an in-memory map.
@@ -51,7 +55,7 @@ public class SimpleMapSession extends AbstractSession {
         SimpleMapDatastore datastore = (SimpleMapDatastore) getDatastore();
         MultiTenancySettings.MultiTenancyMode mode = datastore.getMultiTenancyMode();
         if (mode == MultiTenancySettings.MultiTenancyMode.DATABASE || mode == MultiTenancySettings.MultiTenancyMode.SCHEMA) {
-            Serializable tenantId = Tenants.currentId(datastore);
+            Serializable tenantId = Tenants.currentId((org.grails.datastore.mapping.multitenancy.MultiTenantCapableDatastore)datastore);
             if (tenantId != null) {
                 return datastore.getBackingMap(tenantId.toString());
             }
@@ -63,7 +67,7 @@ public class SimpleMapSession extends AbstractSession {
         SimpleMapDatastore datastore = (SimpleMapDatastore) getDatastore();
         MultiTenancySettings.MultiTenancyMode mode = datastore.getMultiTenancyMode();
         if (mode == MultiTenancySettings.MultiTenancyMode.DATABASE || mode == MultiTenancySettings.MultiTenancyMode.SCHEMA) {
-            Serializable tenantId = Tenants.currentId(datastore);
+            Serializable tenantId = Tenants.currentId((org.grails.datastore.mapping.multitenancy.MultiTenantCapableDatastore)datastore);
             if (tenantId != null) {
                 return datastore.getIndices(tenantId.toString());
             }
@@ -81,8 +85,26 @@ public class SimpleMapSession extends AbstractSession {
                 publisher);
     }
 
+    private boolean rollbackOnly = false;
+
+    public void setRollbackOnly() {
+        this.rollbackOnly = true;
+    }
+
+    public boolean isRollbackOnly() {
+        return this.rollbackOnly;
+    }
+
+    @Override
+    public void flush() {
+        if (!isRollbackOnly()) {
+            super.flush();
+        }
+    }
+
     @Override
     protected Transaction beginTransactionInternal() {
+        System.err.println("SimpleMapSession.beginTransactionInternal: starting transaction for session " + System.identityHashCode(this));
         return new MockTransaction(this);
     }
 
@@ -92,15 +114,67 @@ public class SimpleMapSession extends AbstractSession {
     }
 
     private class MockTransaction implements Transaction {
+        private final SimpleMapSession session;
+        private final Map<Serializable, Map> dataBackup;
+        private final Map<String, List> indicesBackup;
+        private final Map<String, Long> lastKeysBackup;
+
         public MockTransaction(SimpleMapSession simpleMapSession) {
+            this.session = simpleMapSession;
+            System.err.println("MockTransaction.constructor: creating transaction for session " + System.identityHashCode(session));
+            SimpleMapDatastore datastore = (SimpleMapDatastore) session.getDatastore();
+            SimpleMapDatastore.SharedState state = datastore.getSharedState();
+            
+            this.dataBackup = new HashMap<>();
+            for (Map.Entry<Serializable, Map> entry : state.inmemoryData.entrySet()) {
+                Map familyMap = entry.getValue();
+                Map familyBackup = new HashMap();
+                for (Object key : familyMap.keySet()) {
+                    Object val = familyMap.get(key);
+                    if (val instanceof Map) {
+                        familyBackup.put(key, new HashMap((Map) val));
+                    } else {
+                        familyBackup.put(key, val);
+                    }
+                }
+                dataBackup.put(entry.getKey(), familyBackup);
+            }
+            
+            this.indicesBackup = new HashMap<>();
+            for (Map.Entry<String, List> entry : state.indices.entrySet()) {
+                indicesBackup.put(entry.getKey(), new ArrayList(entry.getValue()));
+            }
+            
+            this.lastKeysBackup = new HashMap<>();
+            for (Map.Entry<String, AtomicLong> entry : state.lastKeys.entrySet()) {
+                lastKeysBackup.put(entry.getKey(), entry.getValue().get());
+            }
         }
 
         public void commit() {
-            flush();
+            if (!session.isRollbackOnly()) {
+                session.flush();
+            }
         }
 
         public void rollback() {
-            // do nothing
+            session.setRollbackOnly();
+            SimpleMapDatastore datastore = (SimpleMapDatastore) session.getDatastore();
+            SimpleMapDatastore.SharedState state = datastore.getSharedState();
+            
+            System.err.println("MockTransaction.rollback: backing up to size=" + dataBackup.size() + ", current size=" + state.inmemoryData.size());
+            state.inmemoryData.clear();
+            state.inmemoryData.putAll(dataBackup);
+            
+            state.indices.clear();
+            state.indices.putAll(indicesBackup);
+            
+            for (Map.Entry<String, Long> entry : lastKeysBackup.entrySet()) {
+                AtomicLong al = state.lastKeys.get(entry.getKey());
+                if (al != null) {
+                    al.set(entry.getValue());
+                }
+            }
         }
 
         public Object getNativeTransaction() {
@@ -113,6 +187,14 @@ public class SimpleMapSession extends AbstractSession {
 
         public void setTimeout(int timeout) {
             // do nothing
+        }
+
+        public void setRollbackOnly() {
+            session.setRollbackOnly();
+        }
+
+        public boolean isRollbackOnly() {
+            return session.isRollbackOnly();
         }
     }
 }
