@@ -257,7 +257,7 @@ class GlobalGrailsClassInjectorTransformation implements ASTTransformation, Comp
         String baseDirProp = System.getProperty('base.dir')
         if (baseDirProp) {
             File baseDir = new File(baseDirProp)
-            if (baseDir.isDirectory()) {
+            if (baseDir.exists() && baseDir.isDirectory()) {
                 return baseDir
             }
         }
