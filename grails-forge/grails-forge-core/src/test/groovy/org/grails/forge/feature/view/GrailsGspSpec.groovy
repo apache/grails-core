@@ -27,26 +27,24 @@ import org.grails.forge.application.generator.GeneratorContext
 import org.grails.forge.feature.Features
 import org.grails.forge.fixture.CommandOutputFixture
 import org.grails.forge.options.DevelopmentReloading
-import org.grails.forge.options.JdkVersion
 import org.grails.forge.options.Options
-import org.grails.forge.options.TestFramework
 import spock.lang.Unroll
 
 class GrailsGspSpec extends ApplicationContextSpec implements CommandOutputFixture {
 
-    void "test grails-gsp feature"() {
+    void "test gsp feature"() {
         when:
-        final Features features = getFeatures(["grails-gsp"])
+        final Features features = getFeatures(["gsp"])
 
         then:
         features.contains("grails-web")
-        features.contains("grails-gsp")
+        features.contains("gsp")
     }
 
     void "test dependencies are present for Gradle"() {
         when:
         final String template = new BuildBuilder(beanContext)
-            .features(["grails-gsp"])
+            .features(["gsp"])
             .render()
 
         then:
@@ -57,23 +55,19 @@ class GrailsGspSpec extends ApplicationContextSpec implements CommandOutputFixtu
 
     void "test gsp configuration"() {
         when:
-        final GeneratorContext ctx = buildGeneratorContext(["grails-gsp"])
+        final GeneratorContext ctx = buildGeneratorContext(["gsp"])
 
         then:
         ctx.getConfiguration().containsKey("grails.views.gsp.encoding")
         ctx.getConfiguration().containsKey("grails.views.gsp.htmlcodec")
-        ctx.getConfiguration().containsKey("grails.views.gsp.codecs.expression")
         ctx.getConfiguration().containsKey("grails.views.gsp.codecs.scriptlet")
-        ctx.getConfiguration().containsKey("grails.views.gsp.codecs.taglib")
-        ctx.getConfiguration().containsKey("grails.views.gsp.codecs.staticparts")
     }
 
     void "test mime configuration"() {
         when:
-        final GeneratorContext ctx = buildGeneratorContext(["grails-gsp"])
+        final GeneratorContext ctx = buildGeneratorContext(["gsp"])
 
         then:
-        ctx.getConfiguration().get("grails.mime.disable.accept.header.userAgents") == Arrays.asList("Gecko", "WebKit", "Presto", "Trident")
         ctx.getConfiguration().get("grails.mime.types.all") == "*/*"
         ctx.getConfiguration().get("grails.mime.types.atom") == "application/atom+xml"
         ctx.getConfiguration().get("grails.mime.types.css") == "text/css"

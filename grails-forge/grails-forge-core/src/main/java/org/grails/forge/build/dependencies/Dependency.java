@@ -36,6 +36,7 @@ public final class Dependency {
     private final int order;
     private final boolean annotationProcessorPriority;
     private final boolean pom;
+    private final boolean enforced;
 
     private Dependency(Scope scope,
                        String groupId,
@@ -46,7 +47,8 @@ public final class Dependency {
                        boolean requiresLookup,
                        boolean annotationProcessorPriority,
                        int order,
-                       boolean pom) {
+                       boolean pom,
+                       boolean enforced) {
         this.scope = scope;
         this.groupId = groupId;
         this.artifactId = artifactId;
@@ -57,6 +59,7 @@ public final class Dependency {
         this.annotationProcessorPriority = annotationProcessorPriority;
         this.order = order;
         this.pom = pom;
+        this.enforced = enforced;
     }
 
     private Dependency(Scope scope,
@@ -67,8 +70,9 @@ public final class Dependency {
                        boolean requiresLookup,
                        boolean annotationProcessorPriority,
                        int order,
-                       boolean pom) {
-        this(scope, groupId, artifactId, version, versionProperty, null, requiresLookup, annotationProcessorPriority, order, pom);
+                       boolean pom,
+                       boolean enforced) {
+        this(scope, groupId, artifactId, version, versionProperty, null, requiresLookup, annotationProcessorPriority, order, pom, enforced);
     }
 
     public Scope getScope() {
@@ -101,6 +105,10 @@ public final class Dependency {
         return pom;
     }
 
+    public boolean isEnforced() {
+        return enforced;
+    }
+
     public static Builder builder() {
         return new Builder();
     }
@@ -119,7 +127,8 @@ public final class Dependency {
                 false,
                 annotationProcessorPriority,
                 order,
-                coordinate.isPom());
+                coordinate.isPom(),
+                coordinate.isEnforced());
     }
 
     public Dependency scope(Scope newScope) {
@@ -132,7 +141,8 @@ public final class Dependency {
                 requiresLookup,
                 annotationProcessorPriority,
                 order,
-                pom);
+                pom,
+                enforced);
     }
 
     public boolean isAnnotationProcessorPriority() {
@@ -172,6 +182,7 @@ public final class Dependency {
         private boolean template = false;
         private boolean annotationProcessorPriority = false;
         private boolean pom = false;
+        private boolean enforced = false;
 
         public Builder scope(@NonNull Scope scope) {
             if (template) {
@@ -325,6 +336,11 @@ public final class Dependency {
             return this;
         }
 
+        public Builder enforced(boolean enforced) {
+            this.enforced = enforced;
+            return this;
+        }
+
         public Dependency build() {
             Objects.requireNonNull(scope, "The dependency scope must be set");
             Objects.requireNonNull(artifactId, "The artifact id must be set");
@@ -352,7 +368,8 @@ public final class Dependency {
                     requiresLookup,
                     annotationProcessorPriority,
                     order,
-                    pom);
+                    pom,
+                    enforced);
         }
 
         private Builder copy() {
@@ -370,7 +387,7 @@ public final class Dependency {
             if (extension != null) {
                 builder.extension(extension);
             }
-            return builder.order(order).pom(pom);
+            return builder.order(order).pom(pom).enforced(enforced);
         }
     }
 }

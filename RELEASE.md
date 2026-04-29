@@ -547,7 +547,7 @@ Secrets we use for our builds include:
     * `SVC_DIST_GRAILS_USERNAME` - the SVN username
     * `SVC_DIST_GRAILS_PASSWORD` - the SVN password
 
-7. Develocity Access Key - secret name: `GRAILS_DEVELOCITY_ACCESS_KEY `
+7. Develocity Access Key - secret name: `DEVELOCITY_ACCESS_KEY `
    Grails uses Gradle's Develocity with it's Gradle builds. This secret contains the access key to publish / use the
    cache in Develocity.
 

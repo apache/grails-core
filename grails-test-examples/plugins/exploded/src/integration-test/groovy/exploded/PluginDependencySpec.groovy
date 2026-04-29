@@ -102,7 +102,7 @@ class PluginDependencySpec extends Specification {
 
         then: "config values are accessible"
         // The actual value depends on plugin load order
-        config.getProperty('grails.controllers.defaultScope', String) != null
+        config.getProperty('grails.mime.types.text', String) != null
     }
 
     // ========== Plugin Bean Registration Tests ==========

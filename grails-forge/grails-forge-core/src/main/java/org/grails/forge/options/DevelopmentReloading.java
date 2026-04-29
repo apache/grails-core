@@ -24,11 +24,16 @@ import java.util.Locale;
 
 public enum DevelopmentReloading {
 
-    DEVTOOLS,
-    JREBEL,
-    NONE;
+    DEVTOOLS("Spring Boot DevTools"),
+    JREBEL("JRebel"),
+    NONE("None");
 
     public static final DevelopmentReloading DEFAULT_OPTION = DEVTOOLS;
+    private final String label;
+
+    DevelopmentReloading(String label) {
+        this.label = label;
+    }
 
     @Override
     public String toString() {
@@ -38,6 +43,11 @@ public enum DevelopmentReloading {
     @NonNull
     public String getName() {
         return name().toLowerCase(Locale.ENGLISH);
+    }
+
+    @NonNull
+    public String getLabel() {
+        return label;
     }
 
     public DevelopmentReloading toDevelopmentReloading() {
