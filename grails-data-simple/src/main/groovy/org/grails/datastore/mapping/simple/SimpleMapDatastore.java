@@ -259,7 +259,6 @@ public class SimpleMapDatastore extends AbstractDatastore implements Transaction
     @Override
     protected Session createSession(PropertyResolver connectionDetails) {
         SimpleMapSession session = new SimpleMapSession(this, getMappingContext(), getApplicationEventPublisher());
-        System.err.println("SimpleMapDatastore.createSession: created session " + System.identityHashCode(session) + " for datastore " + System.identityHashCode(this));
         return session;
     }
 

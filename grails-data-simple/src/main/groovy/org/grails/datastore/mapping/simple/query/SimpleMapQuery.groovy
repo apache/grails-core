@@ -30,6 +30,8 @@ import org.grails.datastore.mapping.simple.SimpleMapSession
 import org.grails.datastore.mapping.simple.engine.SimpleMapEntityPersister
 import org.grails.datastore.mapping.multitenancy.MultiTenancySettings
 import grails.gorm.multitenancy.Tenants
+import org.grails.datastore.mapping.query.event.PreQueryEvent
+import org.grails.datastore.mapping.query.event.PostQueryEvent
 import java.util.concurrent.ConcurrentHashMap
 
 /**
@@ -163,7 +165,7 @@ class SimpleMapQuery extends Query {
         List finalResults
         if (projections.isEmpty()) {
             finalResults = resultList.collect {
-                entityPersister.createObjectFromNativeEntry(entity, it.key, it.value)
+                session.retrieve(entity.javaClass, (Serializable) it.key)
             }
         }
         else {

@@ -173,7 +173,6 @@ class SimpleMapEntityPersister extends AbstractKeyValueEntityPersister<Map, Obje
         Object k = key instanceof Number ? key.longValue() : key
         Map existing = (Map) dsMap[family].get(k)
         
-        System.err.println("SimpleMapEntityPersister.updateEntry: family=${family}, key=${k}, connection=${getConnectionName()}")
 
         if (isVersioned(entityAccess)) {
             if (existing == null || isDirty(entityAccess.getEntity(), existing)) {
@@ -216,7 +215,6 @@ class SimpleMapEntityPersister extends AbstractKeyValueEntityPersister<Map, Obje
             dsMap.put(f, familyMap)
         }
         Object k = storeId instanceof Number ? storeId.longValue() : storeId
-        System.err.println("SimpleMapEntityPersister.storeEntry: family=${f}, key=${k}, connection=${getConnectionName()}")
         familyMap.put(k, nativeEntry)
         updateInheritanceHierarchy(persistentEntity, k, nativeEntry)
         return k
