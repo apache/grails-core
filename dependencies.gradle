@@ -30,7 +30,7 @@ ext {
             'commons-text.version'          : '1.14.0',
             'directory-watcher.version'     : '0.19.1',
             'gradle-spock.version'          : '2.3-groovy-3.0',
-            'grails-publish-plugin.version' : '0.0.4',
+            'grails-publish-plugin.version' : '0.0.5',
             'jansi.version'                 : '1.18',
             'javaparser-core.version'       : '3.28.0',
             'jline.version'                 : '2.14.6',
