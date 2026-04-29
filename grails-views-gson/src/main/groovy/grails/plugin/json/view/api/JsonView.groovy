@@ -19,10 +19,10 @@
 
 package grails.plugin.json.view.api
 
+import groovy.json.JsonGenerator
+import groovy.json.StreamingJsonBuilder
 import groovy.transform.CompileStatic
 
-import grails.plugin.json.builder.JsonGenerator
-import grails.plugin.json.builder.StreamingJsonBuilder
 import grails.plugin.json.view.api.internal.DefaultGrailsJsonViewHelper
 import grails.plugin.json.view.api.internal.DefaultHalViewHelper
 import grails.plugin.json.view.api.internal.DefaultJsonApiViewHelper
@@ -54,7 +54,7 @@ trait JsonView extends GrailsView {
     JsonApiIdRenderStrategy jsonApiIdRenderStrategy
 
     /**
-     * The {@link StreamingJsonBuilder} instance
+     * The {@link groovy.json.StreamingJsonBuilder} instance
      */
     StreamingJsonBuilder json
 
@@ -86,6 +86,10 @@ trait JsonView extends GrailsView {
      * The template namespace
      */
     TemplateRenderer tmpl = new TemplateRenderer(viewHelper)
+
+    void setGenerator(JsonGenerator jsonGenerator) {
+        this.generator = jsonGenerator
+    }
 
     /**
      * Specify a template that this template inherits from

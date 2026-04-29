@@ -66,6 +66,7 @@ Plugin that generates scaffolded controllers and views for a Grails application.
                 bean.lazyInit = true
                 bean.parent = 'abstractViewResolver'
                 enableReload = reloadEnabled
+                enableNamespaceViewDefaults = config.getProperty('grails.scaffolding.enableNamespaceViewDefaults', Boolean, false)
             }
         }
     }

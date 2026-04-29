@@ -32,9 +32,6 @@ import org.springframework.beans.factory.support.DefaultListableBeanFactory;
 import org.springframework.beans.factory.support.GenericBeanDefinition;
 import org.springframework.context.ApplicationContext;
 import org.springframework.context.support.GenericApplicationContext;
-import org.springframework.ui.context.Theme;
-import org.springframework.ui.context.ThemeSource;
-import org.springframework.ui.context.support.UiApplicationContextUtils;
 
 /**
  * An ApplicationContext that extends StaticApplicationContext and implements GroovyObject such that
@@ -47,7 +44,6 @@ public class GrailsApplicationContext extends GenericApplicationContext implemen
 
     protected MetaClass metaClass;
     private BeanWrapper ctxBean = new BeanWrapperImpl(this);
-    private ThemeSource themeSource;
     private static final String GRAILS_ENVIRONMENT_BEAN_NAME = "springEnvironment";
 
     public GrailsApplicationContext(DefaultListableBeanFactory defaultListableBeanFactory) {
@@ -94,18 +90,6 @@ public class GrailsApplicationContext extends GenericApplicationContext implemen
 
     public void setMetaClass(MetaClass metaClass) {
         this.metaClass = metaClass;
-    }
-
-    /**
-     * Initialize the theme capability.
-     */
-    @Override
-    protected void onRefresh() {
-        themeSource = UiApplicationContextUtils.initThemeSource(this);
-    }
-
-    public Theme getTheme(String themeName) {
-        return themeSource.getTheme(themeName);
     }
 
     public void setProperty(String property, Object newValue) {

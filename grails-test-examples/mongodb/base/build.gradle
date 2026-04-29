@@ -18,13 +18,13 @@
  */
 plugins {
     id 'org.apache.grails.buildsrc.properties'
+    id 'org.apache.grails.buildsrc.dependency-validator'
     id 'org.apache.grails.buildsrc.compile'
 }
 
 version = projectVersion
 group = 'examples'
 
-apply plugin: 'groovy'
 apply plugin: 'org.apache.grails.gradle.grails-web'
 apply plugin: 'cloud.wondrify.asset-pipeline'
 

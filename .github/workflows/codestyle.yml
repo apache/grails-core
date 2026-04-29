@@ -37,21 +37,31 @@ jobs:
         uses: actions/setup-java@v4
         with:
           distribution: liberica
-          java-version: 17
+          java-version: 21
       - name: "🐘 Setup Gradle"
-        uses: gradle/actions/setup-gradle@v4
+        uses: gradle/actions/setup-gradle@4d9f0ba0025fe599b4ebab900eb7f3a1d93ef4c2 # v5.0.0
         with:
-          develocity-access-key: ${{ secrets.GRAILS_DEVELOCITY_ACCESS_KEY }}
+          develocity-access-key: ${{ secrets.DEVELOCITY_ACCESS_KEY }}
       - name: "🔎 Check Core Projects"
         run: ./gradlew codeStyle
       - name: "📤 Upload Failure Reports"
-        if: failure()
-        uses: actions/upload-artifact@v6
+        if: always()
+        uses: actions/upload-artifact@v7.0.1
         with:
           name: core-reports
-          path: |
-            **/build/reports/checkstyle/
-            **/build/reports/codenarc/
+          path: build/reports/codestyle/
+      - name: "📋 Publish Code Style Report in Job Summary"
+        if: always()
+        run: |
+          echo "## 🔎 Code Style Report - Core Projects" >> $GITHUB_STEP_SUMMARY
+          for file in build/reports/codestyle/checkstyle/*.xml build/reports/codestyle/codenarc/*.xml; do
+            [ -f "$file" ] || continue
+            if grep -q "<error " "$file" || grep -q "<Violation " "$file"; then
+              echo "### ❌ $(basename $file .xml)" >> $GITHUB_STEP_SUMMARY
+              grep "<error " "$file" | awk -F'"' '{print "- **Line " $2 "**: " $8}' >> $GITHUB_STEP_SUMMARY
+              grep "<Violation " "$file" | awk -F"'" '{print "- **Line " $6 "**: " $2}' >> $GITHUB_STEP_SUMMARY
+            fi
+          done
   check_gradle_plugin_projects:
     name: "Gradle Plugin Projects"
     runs-on: ubuntu-24.04
@@ -64,22 +74,32 @@ jobs:
         uses: actions/setup-java@v4
         with:
           distribution: liberica
-          java-version: 17
+          java-version: 21
       - name: "🐘 Setup Gradle"
-        uses: gradle/actions/setup-gradle@v4
+        uses: gradle/actions/setup-gradle@4d9f0ba0025fe599b4ebab900eb7f3a1d93ef4c2 # v5.0.0
         with:
-          develocity-access-key: ${{ secrets.GRAILS_DEVELOCITY_ACCESS_KEY }}
+          develocity-access-key: ${{ secrets.DEVELOCITY_ACCESS_KEY }}
       - name: "🔎 Check Gradle Plugin Projects"
         working-directory: grails-gradle
         run: ./gradlew codeStyle
       - name: "📤 Upload Failure Reports"
-        if: failure()
-        uses: actions/upload-artifact@v6
+        if: always()
+        uses: actions/upload-artifact@v7.0.1
         with:
           name: gradle-plugin-reports
-          path: |
-            grails-gradle/**/build/reports/checkstyle/
-            grails-gradle/**/build/reports/codenarc/
+          path: grails-gradle/build/reports/codestyle/
+      - name: "📋 Publish Code Style Report in Job Summary"
+        if: always()
+        run: |
+          echo "## 🔎 Code Style Report - Gradle Plugin Projects" >> $GITHUB_STEP_SUMMARY
+          for file in grails-gradle/build/reports/codestyle/checkstyle/*.xml grails-gradle/build/reports/codestyle/codenarc/*.xml; do
+            [ -f "$file" ] || continue
+            if grep -q "<error " "$file" || grep -q "<Violation " "$file"; then
+              echo "### ❌ $(basename $file .xml)" >> $GITHUB_STEP_SUMMARY
+              grep "<error " "$file" | awk -F'"' '{print "- **Line " $2 "**: " $8}' >> $GITHUB_STEP_SUMMARY
+              grep "<Violation " "$file" | awk -F"'" '{print "- **Line " $6 "**: " $2}' >> $GITHUB_STEP_SUMMARY
+            fi
+          done
   check_grails_forge_projects:
     name: "Forge Projects"
     runs-on: ubuntu-24.04
@@ -92,20 +112,29 @@ jobs:
         uses: actions/setup-java@v4
         with:
           distribution: liberica
-          java-version: 17
+          java-version: 21
       - name: "🐘 Setup Gradle"
-        uses: gradle/actions/setup-gradle@v4
+        uses: gradle/actions/setup-gradle@4d9f0ba0025fe599b4ebab900eb7f3a1d93ef4c2 # v5.0.0
         with:
-          develocity-access-key: ${{ secrets.GRAILS_DEVELOCITY_ACCESS_KEY }}
+          develocity-access-key: ${{ secrets.DEVELOCITY_ACCESS_KEY }}
       - name: "🔎 Check Forge Projects"
         working-directory: grails-forge
         run: ./gradlew codeStyle
       - name: "📤 Upload Failure Reports"
-        if: failure()
-        uses: actions/upload-artifact@v6
+        if: always()
+        uses: actions/upload-artifact@v7.0.1
         with:
           name: forge-reports
-          path: |
-            grails-forge/**/build/reports/checkstyle/
-            grails-forge/**/build/reports/checkstyleNohttp/
-            grails-forge/**/build/reports/codenarc/
+          path: grails-forge/build/reports/codestyle/
+      - name: "📋 Publish Code Style Report in Job Summary"
+        if: always()
+        run: |
+          echo "## 🔎 Code Style Report - Forge Projects" >> $GITHUB_STEP_SUMMARY
+          for file in grails-forge/build/reports/codestyle/checkstyle/*.xml grails-forge/build/reports/codestyle/codenarc/*.xml; do
+            [ -f "$file" ] || continue
+            if grep -q "<error " "$file" || grep -q "<Violation " "$file"; then
+              echo "### ❌ $(basename $file .xml)" >> $GITHUB_STEP_SUMMARY
+              grep "<error " "$file" | awk -F'"' '{print "- **Line " $2 "**: " $8}' >> $GITHUB_STEP_SUMMARY
+              grep "<Violation " "$file" | awk -F"'" '{print "- **Line " $6 "**: " $2}' >> $GITHUB_STEP_SUMMARY
+            fi
+          done

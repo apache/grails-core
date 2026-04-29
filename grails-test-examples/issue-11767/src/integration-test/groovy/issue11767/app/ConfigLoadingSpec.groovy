@@ -16,44 +16,33 @@
  *  specific language governing permissions and limitations
  *  under the License.
  */
-
 package issue11767.app
 
-import grails.testing.mixin.integration.Integration
-import io.micronaut.http.HttpRequest
-import io.micronaut.http.client.HttpClient
-import spock.lang.AutoCleanup
-import spock.lang.Shared
 import spock.lang.Specification
+import spock.lang.Tag
 import spock.lang.Unroll
 
+import grails.testing.mixin.integration.Integration
+import org.apache.grails.testing.http.client.HttpClientSupport
+
 @Integration
-class ConfigLoadingSpec extends Specification {
-
-    @Shared
-    @AutoCleanup
-    HttpClient httpClient
-
-    void setup() {
-        def baseUrl = "http://localhost:$serverPort"
-        httpClient = HttpClient.create(baseUrl.toURL())
-    }
+@Tag('http-client')
+class ConfigLoadingSpec extends Specification implements HttpClientSupport {
 
     @Unroll
-    void '#beanType beans can load plugin config values'(String beanType, String expectedResponseValue) {
+    void '#beanType beans can load plugin config values'(String expectedResponseValue) {
 
         when: 'The app controller is visited'
-            def request = HttpRequest.GET('/app')
-            String response = httpClient.toBlocking().retrieve(request, String)
+        def response = http('/app')
 
         then: 'The value from the plugin is found'
-            response.contains(expectedResponseValue)
+        response.assertContains(expectedResponseValue)
 
         where:
-            beanType                  || expectedResponseValue
-            'Plugin Groovy Spring'    || 'Plugin Groovy Spring Bean - my.value2: this is value 2 from plugin.yml'
-            'Plugin Groovy Micronaut' || 'Plugin Groovy Micronaut Bean - my.value2: this is value 2 from plugin.yml'
-            'Plugin Java Micronaut'   || 'Plugin Java Micronaut Bean - my.value2: this is value 2 from plugin.yml'
-            'App Groovy Micronaut'    || 'App Groovy Micronaut Bean - my.value2: this is value 2 from plugin.yml'
+        beanType                  || expectedResponseValue
+        'Plugin Groovy Spring'    || 'Plugin Groovy Spring Bean - my.value2: this is value 2 from plugin.yml'
+        'Plugin Groovy Micronaut' || 'Plugin Groovy Micronaut Bean - my.value2: this is value 2 from plugin.yml'
+        'Plugin Java Micronaut'   || 'Plugin Java Micronaut Bean - my.value2: this is value 2 from plugin.yml'
+        'App Groovy Micronaut'    || 'App Groovy Micronaut Bean - my.value2: this is value 2 from plugin.yml'
     }
 }

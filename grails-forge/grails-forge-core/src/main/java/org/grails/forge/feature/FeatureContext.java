@@ -21,11 +21,11 @@ package org.grails.forge.feature;
 import io.micronaut.core.annotation.Nullable;
 import org.grails.forge.application.ApplicationType;
 import org.grails.forge.application.OperatingSystem;
-import org.grails.forge.feature.test.TestFeature;
+import org.grails.forge.feature.reloading.ReloadingFeature;
 import org.grails.forge.io.ConsoleOutput;
+import org.grails.forge.options.DevelopmentReloading;
 import org.grails.forge.options.JdkVersion;
 import org.grails.forge.options.Options;
-import org.grails.forge.options.TestFramework;
 
 import java.util.*;
 
@@ -49,14 +49,14 @@ public class FeatureContext {
         this.applicationType = applicationType;
         this.operatingSystem = operatingSystem;
         this.selectedFeatures = selectedFeatures;
-        if (options.getTestFramework() == null) {
-            TestFramework testFramework = selectedFeatures.stream()
-                    .filter(TestFeature.class::isInstance)
-                    .map(TestFeature.class::cast)
-                    .map(TestFeature::getTestFramework)
-                    .findFirst()
-                    .orElseThrow(() -> new IllegalArgumentException(String.format("No test framework could derived from the selected features [%s]", selectedFeatures)));
-            options = options.withTestFramework(testFramework);
+        if (options.getDevelopmentReloading() == null) {
+            DevelopmentReloading reloading = selectedFeatures.stream()
+                .filter(ReloadingFeature.class::isInstance)
+                .map(ReloadingFeature.class::cast)
+                .map(ReloadingFeature::getReloading)
+                .findFirst()
+                .orElse(DevelopmentReloading.DEFAULT_OPTION);
+            options = options.withDevelopmentReloading(reloading);
         }
         this.options = options;
     }
@@ -78,7 +78,7 @@ public class FeatureContext {
 
     public Set<Feature> getFinalFeatures(ConsoleOutput consoleOutput) {
         return features.stream().filter(feature -> {
-            for (FeaturePredicate predicate: exclusions) {
+            for (FeaturePredicate predicate : exclusions) {
                 if (predicate.test(feature)) {
                     predicate.getWarning().ifPresent(message -> {
                         throw new IllegalArgumentException(message);
@@ -90,8 +90,8 @@ public class FeatureContext {
         }).collect(collectingAndThen(toSet(), Collections::unmodifiableSet));
     }
 
-    public TestFramework getTestFramework() {
-        return options.getTestFramework();
+    public DevelopmentReloading getDevelopmentReloading() {
+        return options.getDevelopmentReloading();
     }
 
     public JdkVersion getJavaVersion() {
@@ -122,9 +122,9 @@ public class FeatureContext {
 
     public boolean isPresent(Class<? extends Feature> feature) {
         return features.stream()
-                .filter(f -> exclusions.stream().noneMatch(e -> e.test(f)))
-                .map(Feature::getClass)
-                .anyMatch(feature::isAssignableFrom);
+            .filter(f -> exclusions.stream().noneMatch(e -> e.test(f)))
+            .map(Feature::getClass)
+            .anyMatch(feature::isAssignableFrom);
     }
 
     public OperatingSystem getOperatingSystem() {

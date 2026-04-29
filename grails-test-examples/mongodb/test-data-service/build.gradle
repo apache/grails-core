@@ -18,13 +18,13 @@
  */
 plugins {
     id 'org.apache.grails.buildsrc.properties'
+    id 'org.apache.grails.buildsrc.dependency-validator'
     id 'org.apache.grails.buildsrc.compile'
 }
 
 version = projectVersion
 group = 'examples'
 
-apply plugin: 'groovy'
 apply plugin: 'org.apache.grails.gradle.grails-web'
 
 dependencies {
@@ -49,7 +49,7 @@ dependencies {
 
     integrationTestImplementation 'org.apache.grails:grails-testing-support-datamapping'
     integrationTestImplementation 'org.spockframework:spock-core'
-    implementation 'org.testcontainers:mongodb'
+    implementation 'org.testcontainers:testcontainers-mongodb'
 }
 
 apply {

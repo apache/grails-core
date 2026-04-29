@@ -63,7 +63,7 @@ public class ContextFactory {
         }
 
         Options newOptions = options
-                .withTestFramework(determineTestFramework(options.getTestFramework()))
+                .withDevelopmentReloading(determineDevelopmentReloading(options.getDevelopmentReloading()))
                 .withGormImpl(determineGormImpl(options.getGormImpl()))
                 .withServletImpl(determineServletImpl(options.getServletImpl()));
 
@@ -89,11 +89,11 @@ public class ContextFactory {
         return new GeneratorContext(project, featureContext.getApplicationType(), featureContext.getOptions(), featureContext.getOperatingSystem(), featureList, coordinateResolver);
     }
 
-    TestFramework determineTestFramework(TestFramework testFramework) {
-        if (testFramework == null) {
-            testFramework = TestFramework.DEFAULT_OPTION;
+    DevelopmentReloading determineDevelopmentReloading(DevelopmentReloading reloading) {
+        if (reloading == null) {
+            reloading = DevelopmentReloading.DEFAULT_OPTION;
         }
-        return testFramework;
+        return reloading;
     }
 
     Language determineLanguage(Language language, Set<Feature> features) {
@@ -123,6 +123,15 @@ public class ContextFactory {
     ServletImpl determineServletImpl(ServletImpl servletImpl) {
         if (servletImpl == null) {
             servletImpl = ServletImpl.DEFAULT_OPTION;
+        }
+        if (servletImpl == ServletImpl.UNDERTOW) {
+            // Undertow has not been updated for Servlet 6.1, which Spring Boot 4 requires.
+            // Fail fast with a clear message rather than silently dropping the selection.
+            throw new IllegalArgumentException(
+                "Embedded Undertow is not currently supported in Grails 8. " +
+                "Undertow does not yet provide Servlet 6.1 compatibility, which Spring Boot 4 requires. " +
+                "Use TOMCAT or JETTY instead."
+            );
         }
         return servletImpl;
     }

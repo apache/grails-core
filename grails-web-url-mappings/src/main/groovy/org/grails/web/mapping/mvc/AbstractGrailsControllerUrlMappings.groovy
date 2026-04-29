@@ -22,9 +22,11 @@ import java.util.concurrent.ConcurrentHashMap
 
 import groovy.transform.Canonical
 import groovy.transform.CompileStatic
+import groovy.util.logging.Slf4j
 
 import org.springframework.http.HttpMethod
 
+import grails.config.Settings
 import grails.core.GrailsApplication
 import grails.core.GrailsClass
 import grails.core.GrailsControllerClass
@@ -45,16 +47,20 @@ import org.grails.web.servlet.mvc.GrailsWebRequest
  * @since 3.0
  */
 @CompileStatic
+@Slf4j
 abstract class AbstractGrailsControllerUrlMappings implements UrlMappings {
 
     UrlMappings urlMappingsHolderDelegate
     UrlConverter urlConverter
+    boolean validateWildcardMappings
     ConcurrentHashMap<ControllerKey, GrailsControllerClass> mappingsToGrailsControllerMap = new ConcurrentHashMap<>()
     ConcurrentHashMap<ControllerKey, GrailsControllerClass> deferredMappings = new ConcurrentHashMap<>()
 
     AbstractGrailsControllerUrlMappings(GrailsApplication grailsApplication, UrlMappings urlMappingsHolderDelegate, UrlConverter urlConverter = null) {
         this.urlMappingsHolderDelegate = urlMappingsHolderDelegate
         this.urlConverter = urlConverter
+        this.validateWildcardMappings = grailsApplication.config.getProperty(
+                Settings.URL_MAPPING_VALIDATE_WILDCARDS, Boolean, true)
         def controllerArtefacts = grailsApplication.getArtefacts(ControllerArtefactHandler.TYPE)
         for (GrailsClass gc in controllerArtefacts) {
             registerController((GrailsControllerClass) gc)
@@ -177,6 +183,7 @@ abstract class AbstractGrailsControllerUrlMappings implements UrlMappings {
             mapToUse.put(noPluginDefaultActionKey, controller)
         }
 
+        log.debug('Registering controller: namespace={}, name={}, plugin={}, actions={}', namespace, controllerName, pluginNameToRegister, controller.actions)
         for (action in controller.actions) {
             action = hasUrlConverter ? urlConverter.toUrlElement(action) : action
             def withPluginKey = new ControllerKey(namespace, controllerName, action, pluginNameToRegister)
@@ -199,11 +206,15 @@ abstract class AbstractGrailsControllerUrlMappings implements UrlMappings {
         }
     }
 
+    private static final Set<String> ROUTING_PARAMS = ['controller', 'action', 'namespace', 'plugin', 'format', 'id', 'version'] as Set
+
     protected UrlMappingInfo[] collectControllerMappings(UrlMappingInfo[] infos) {
         def webRequest = GrailsWebRequest.lookup()
-        infos.collect({ UrlMappingInfo info ->
+        List<UrlMappingInfo> matches = []
+        for (UrlMappingInfo info : infos) {
             if (info.redirectInfo) {
-                return info
+                matches.add(info)
+                continue
             }
             if (webRequest != null) {
                 webRequest.resetParams()
@@ -212,11 +223,32 @@ abstract class AbstractGrailsControllerUrlMappings implements UrlMappings {
             ControllerKey controllerKey = new ControllerKey(info.namespace, info.controllerName, info.actionName, info.pluginName)
             GrailsControllerClass controllerClass = info ? mappingsToGrailsControllerMap.get(controllerKey) : null
             if (controllerClass) {
-                return new GrailsControllerUrlMappingInfo(controllerClass, info)
-            } else {
-                return info
+                matches.add(new GrailsControllerUrlMappingInfo(controllerClass, info))
+            } else if (!validateWildcardMappings || !info.hasWildcardCaptures()) {
+                matches.add(info)
             }
-        }) as UrlMappingInfo[]
+            // else: wildcard-captured values didn't match a registered controller/action — skip
+        }
+        // When wildcard validation is enabled, promote validated wildcard matches
+        // (e.g., $action? resolving to a real action) only when they have strictly fewer
+        // non-routing URL captures — meaning they matched a more specific URL pattern.
+        // Same wildcard status: preserve URL matcher's original order (stable sort).
+        // When validation is disabled, preserve original URL matcher order entirely.
+        if (validateWildcardMappings) {
+            matches.sort(true) { a, b ->
+                if (a.hasWildcardCaptures() == b.hasWildcardCaptures()) return 0
+                int diff = nonRoutingParamCount(a) - nonRoutingParamCount(b)
+                if (a.hasWildcardCaptures() && diff < 0) return -1
+                if (b.hasWildcardCaptures() && diff < 0) return 1
+                0  // preserve original order
+            }
+        }
+        matches as UrlMappingInfo[]
+    }
+
+    private static int nonRoutingParamCount(UrlMappingInfo info) {
+        def params = info.parameters
+        params == null ? 0 : (int) params.keySet().count { !(it in ROUTING_PARAMS) }
     }
 
     protected UrlMappingInfo collectControllerMapping(UrlMappingInfo info) {

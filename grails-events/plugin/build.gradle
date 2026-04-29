@@ -22,6 +22,7 @@ plugins {
     id 'java-library'
     id 'project-report'
     id 'org.apache.grails.buildsrc.properties'
+    id 'org.apache.grails.buildsrc.dependency-validator'
     id 'org.apache.grails.buildsrc.compile'
     id 'org.apache.grails.buildsrc.publish'
     id 'org.apache.grails.buildsrc.sbom'
@@ -35,7 +36,6 @@ dependencies {
     implementation platform(project(':grails-bom'))
 
     api project(':grails-events-core')
-    api project(':grails-events-compat')
 
     // This dependency contains Groovy Ast transformations
     // that needs to be on the compile classpath of dependent projects.

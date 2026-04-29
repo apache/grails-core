@@ -43,7 +43,7 @@ public class SpringMvcCompilerAutoConfiguration extends CompilerAutoConfiguratio
     @Override
     public void applyDependencies(DependencyCustomizer dependencies) {
         dependencies.ifAnyMissingClasses("org.springframework.web.servlet.mvc.Controller")
-            .add("spring-boot-starter-web");
+            .add("spring-boot-starter-webmvc");
         dependencies.ifAnyMissingClasses("groovy.text.TemplateEngine").add("groovy-templates");
     }
 

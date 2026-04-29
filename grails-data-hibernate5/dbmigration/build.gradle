@@ -19,6 +19,7 @@
 
 plugins {
     id 'org.apache.grails.buildsrc.properties'
+    id 'org.apache.grails.buildsrc.dependency-validator'
     id 'org.apache.grails.gradle.grails-plugin'
     id 'org.apache.grails.buildsrc.compile'
     id 'org.apache.grails.buildsrc.publish'
@@ -31,23 +32,24 @@ group = 'org.apache.grails'
 
 ext {
     gormApiDocs = true
-    pomTitle = 'Grails Database Migration Plugin'
-    pomDescription = 'The Database Migration plugin helps you manage database changes, via Liquibase, while developing Grails applications'
+    pomTitle = 'Grails Database Migration Plugin for Hibernate 5'
+    pomDescription = 'The Database Migration plugin helps you manage database changes, via Liquibase, while developing Grails applications for Hibernate 5'
 }
 
 dependencies {
     // TODO: Clarify and clean up dependencies
-    implementation platform(project(':grails-bom')) {
-        exclude group: 'org.liquibase', module: 'liquibase-core'
-    }
+    implementation platform(project(':grails-hibernate5-bom'))
 
-    implementation("org.liquibase:liquibase-core:$liquibaseHibernate5Version")
-    implementation("org.liquibase.ext:liquibase-hibernate5:$liquibaseHibernate5Version") {
+    implementation("org.liquibase:liquibase-core") {
+        exclude group: 'javax.xml.bind', module: 'jaxb-api'
+    }
+    implementation("org.liquibase.ext:liquibase-hibernate5") {
         exclude group: 'org.hibernate', module: 'hibernate-core'
         exclude group: 'org.hibernate', module: 'hibernate-entitymanager'
         exclude group: 'org.hibernate', module: 'hibernate-envers'
         exclude group: 'com.h2database', module: 'h2'
         exclude group: 'org.liquibase', module: 'liquibase-commercial'
+        exclude group: 'org.liquibase', module: 'liquibase-core'
     }
 
     implementation(project(':grails-shell-cli')) {
@@ -72,19 +74,6 @@ dependencies {
     testImplementation project(':grails-testing-support-datamapping')
     testImplementation project(':grails-testing-support-web')
     testImplementation 'com.h2database:h2'
-
-    constraints {
-        implementation("org.liquibase:liquibase-core") {
-            version {
-                strictly "$liquibaseHibernate5Version"
-            }
-        }
-        implementation("org.liquibase.ext:liquibase-hibernate5") {
-            version {
-                strictly "$liquibaseHibernate5Version"
-            }
-        }
-    }
 }
 
 tasks.named('jar', Jar) {

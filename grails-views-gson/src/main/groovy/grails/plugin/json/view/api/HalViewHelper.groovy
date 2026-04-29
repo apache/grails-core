@@ -19,10 +19,10 @@
 
 package grails.plugin.json.view.api
 
+import groovy.json.StreamingJsonBuilder
 import groovy.transform.CompileStatic
 
 import grails.plugin.json.builder.JsonOutput
-import grails.plugin.json.builder.StreamingJsonBuilder
 
 /**
  * @author Graeme Rocher

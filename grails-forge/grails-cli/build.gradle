@@ -25,6 +25,7 @@ plugins {
     id 'com.gradleup.shadow'
     id 'io.sdkman.vendors'
     id 'org.apache.grails.buildsrc.properties'
+    id 'org.apache.grails.buildsrc.dependency-validator'
     id 'org.apache.grails.buildsrc.compile'
     id 'org.apache.grails.buildsrc.publish'
     id 'org.apache.grails.buildsrc.sbom'
@@ -124,8 +125,10 @@ shadowJarTask.configure { ShadowJar it ->
             'about.html' // restatement of the Eclipse Distribution License - Version 1.0 for jakarta
     )
 }
-// publish shadow jar separately from the regular library
-artifacts           { archives shadowJarTask }
+// Make shadow jar a direct dependency of assemble instead of using deprecated archives configuration
+tasks.named('assemble').configure {
+    dependsOn(shadowJarTask)
+}
 
 TaskProvider<CreateStartScripts> cliStartScripts = tasks.register('createCliStartScripts', CreateStartScripts)
 cliStartScripts.configure { CreateStartScripts t ->

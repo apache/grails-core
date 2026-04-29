@@ -93,11 +93,6 @@ abstract class FindMainClassTask extends DefaultTask {
     @TaskAction
     void setMainClassProperty() {
         File cacheFile = mainClassCacheFile.get().asFile
-        if (cacheFile.exists()) {
-            // the only time this task should invoke is when gradle has deemed it necessary to run, always remove the
-            // the cache file to prevent invalid states when running tasks other than bootRun, bootJar, or bootWar
-            cacheFile.delete()
-        }
 
         if (mainClassName.isPresent()) {
             def overrideClassName = mainClassName.get()

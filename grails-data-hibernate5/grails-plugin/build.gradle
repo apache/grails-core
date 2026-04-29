@@ -19,6 +19,7 @@
 
 plugins {
     id 'org.apache.grails.buildsrc.properties'
+    id 'org.apache.grails.buildsrc.dependency-validator'
     id 'org.apache.grails.gradle.grails-plugin'
     id 'org.apache.grails.buildsrc.compile'
     id 'org.apache.grails.buildsrc.publish'
@@ -41,7 +42,7 @@ dependencies {
 
     api "org.springframework.boot:spring-boot"
     api "org.springframework:spring-orm"
-    api "org.hibernate:hibernate-core-jakarta:$hibernate5Version"
+    api 'org.hibernate:hibernate-core-jakarta'
     api project(":grails-datastore-web")
     api project(":grails-datamapping-support")
     api project(":grails-data-hibernate5-core"), {
@@ -70,7 +71,7 @@ dependencies {
 
     testRuntimeOnly 'com.h2database:h2'
     testRuntimeOnly 'org.apache.tomcat:tomcat-jdbc'
-    testRuntimeOnly "org.hibernate:hibernate-ehcache:$hibernate5Version", {
+    testRuntimeOnly 'org.hibernate:hibernate-ehcache', {
         // exclude javax variant of hibernate-core 5.6
         exclude group: 'org.hibernate', module: 'hibernate-core'
     }

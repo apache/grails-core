@@ -1,0 +1,37 @@
+{
+  "properties": [
+    {
+      "name": "grails.banner.art.display",
+        "description": "Whether to display the Grails banner art.",
+      "type": "java.lang.Boolean",
+      "defaultValue": true
+    },
+    {
+        "name": "grails.banner.art.file",
+        "description": "The file path on the classpath to the Grails banner art to display.",
+        "type": "java.lang.String",
+        "defaultValue": "grails-banner.txt"
+    },
+    {
+      "name": "grails.banner.versions.display",
+      "description": "Whether to display version information in the Grails banner.",
+      "type": "java.lang.Boolean",
+      "defaultValue": true
+    },
+    {
+      "name": "grails.banner.versions.include",
+      "description": "A list of optional versions to include in the banner.",
+      "type": "java.util.List<grails.boot.GrailsBanner.OptionalVersionOption>"
+    },
+    {
+      "name": "grails.banner.versions.exclude",
+      "description": "A list of versions to exclude from the banner.",
+      "type": "java.util.List<grails.boot.GrailsBanner.DefaultVersionOption>"
+    },
+    {
+      "name": "grails.banner.versions.order",
+      "description": "A sorted list of versions to put first in the banner versions.",
+      "type": "java.util.List<grails.boot.GrailsBanner.VersionOption>"
+    }
+  ]
+}

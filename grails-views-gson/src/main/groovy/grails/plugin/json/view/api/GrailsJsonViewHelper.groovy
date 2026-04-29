@@ -19,10 +19,10 @@
 
 package grails.plugin.json.view.api
 
+import groovy.json.StreamingJsonBuilder
 import groovy.transform.CompileStatic
 
 import grails.plugin.json.builder.JsonOutput
-import grails.plugin.json.builder.StreamingJsonBuilder
 import grails.views.api.GrailsViewHelper
 
 /**
@@ -56,6 +56,7 @@ interface GrailsJsonViewHelper extends GrailsViewHelper {
      * @return The unescaped JSON
      */
     JsonOutput.JsonWritable render(Object object, Map arguments, @DelegatesTo(StreamingJsonBuilder.StreamingJsonDelegate) Closure customizer)
+
     /**
      * Renders the given object to JSON, typically a domain class, ignoring lazy and internal properties
      *

@@ -23,6 +23,7 @@ import org.grails.forge.BeanContextSpec
 import org.grails.forge.BuildBuilder
 import org.grails.forge.application.ApplicationType
 import org.grails.forge.fixture.CommandOutputFixture
+import org.grails.forge.options.DevelopmentReloading
 import org.grails.forge.options.JdkVersion
 import org.grails.forge.options.Options
 import org.grails.forge.options.ServletImpl
@@ -36,7 +37,7 @@ class SpringBootSpec extends BeanContextSpec implements CommandOutputFixture {
         when:
         def output = generate(
                 applicationType,
-                new Options(TestFramework.SPOCK)
+                new Options(DevelopmentReloading.DEVTOOLS)
         )
         final String build = output['build.gradle']
 
@@ -55,7 +56,7 @@ class SpringBootSpec extends BeanContextSpec implements CommandOutputFixture {
         when:
         def output = generate(
                 ApplicationType.PLUGIN,
-                new Options(TestFramework.SPOCK)
+                new Options(DevelopmentReloading.DEVTOOLS)
         )
         final String build = output['build.gradle']
 
@@ -68,15 +69,19 @@ class SpringBootSpec extends BeanContextSpec implements CommandOutputFixture {
         !build.contains("implementation \"org.springframework.boot:spring-boot-starter-tomcat\"")
     }
 
-    void "test undertow servlet includes jboss-threads dependency"() {
+    void "test undertow servlet is unavailable with Spring Boot 4"() {
         when:
-        String build = new BuildBuilder(beanContext)
+        // Undertow does not yet support Servlet 6.1, which Spring Boot 4 requires.
+        // ContextFactory.determineServletImpl rejects the selection with a clear
+        // IllegalArgumentException so users get a meaningful error rather than a
+        // silently dropped servlet implementation.
+        new BuildBuilder(beanContext)
                 .servletImpl(ServletImpl.UNDERTOW)
                 .render()
 
         then:
-        build.contains('implementation "org.springframework.boot:spring-boot-starter-undertow"')
-        build.contains('runtimeOnly "org.jboss.threads:jboss-threads')
-        !build.contains('implementation "org.springframework.boot:spring-boot-starter-tomcat"')
+        IllegalArgumentException ex = thrown()
+        ex.message.contains('Undertow is not currently supported')
+        ex.message.contains('Servlet 6.1')
     }
 }

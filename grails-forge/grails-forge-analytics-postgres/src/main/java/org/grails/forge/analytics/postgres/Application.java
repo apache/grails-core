@@ -23,11 +23,11 @@ import io.micronaut.core.annotation.NonNull;
 import io.micronaut.core.annotation.Nullable;
 import io.micronaut.data.annotation.*;
 import org.grails.forge.application.ApplicationType;
+import org.grails.forge.options.DevelopmentReloading;
 import org.grails.forge.options.GormImpl;
 import org.grails.forge.options.JdkVersion;
-import org.grails.forge.options.TestFramework;
 
-import javax.validation.constraints.NotBlank;
+import jakarta.validation.constraints.NotBlank;
 import java.time.LocalDateTime;
 import java.util.Collections;
 import java.util.Objects;
@@ -48,7 +48,7 @@ public class Application {
     private Set<Feature> features = Collections.emptySet();
     private final ApplicationType type;
     private final GormImpl gorm;
-    private final TestFramework testFramework;
+    private final DevelopmentReloading reloading;
     private final JdkVersion jdkVersion;
     private final String grailsVersion;
     @DateCreated
@@ -58,12 +58,12 @@ public class Application {
     public Application(
             @NonNull ApplicationType type,
             @NonNull GormImpl gorm,
-            @NonNull TestFramework testFramework,
+            @NonNull DevelopmentReloading reloading,
             @NonNull JdkVersion jdkVersion,
             @NonNull @NotBlank String grailsVersion) {
         this.type = Objects.requireNonNull(type, "Type cannot be null");
         this.gorm = Objects.requireNonNull(gorm, "Gorm cannot be null");
-        this.testFramework = Objects.requireNonNull(testFramework, "Test framework cannot be null");
+        this.reloading = Objects.requireNonNull(reloading, "Development Reloading cannot be null");
         this.jdkVersion = Objects.requireNonNull(jdkVersion, "JDK version cannot be null");
         this.grailsVersion = Objects.requireNonNull(grailsVersion, "Grails version cannot be null");
     }
@@ -83,10 +83,10 @@ public class Application {
     }
 
     /**
-     * @return The test framework
+     * @return The development reloading
      */
-    public @NonNull TestFramework getTestFramework() {
-        return testFramework;
+    public @NonNull DevelopmentReloading getDevelopmentReloading() {
+        return reloading;
     }
 
     /**

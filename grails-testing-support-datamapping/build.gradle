@@ -21,6 +21,7 @@ plugins {
     id 'groovy'
     id 'java-library'
     id 'org.apache.grails.buildsrc.properties'
+    id 'org.apache.grails.buildsrc.dependency-validator'
     id 'org.apache.grails.buildsrc.compile'
     id 'org.apache.grails.buildsrc.publish'
     id 'org.apache.grails.buildsrc.sbom'
@@ -75,7 +76,7 @@ dependencies {
             exclude group: 'org.spockframework', module: 'spock-core'
             exclude group: 'org.apache.groovy', module: 'groovy-test-junit5'
             exclude group: 'org.junit.jupiter', module: 'junit-jupiter-api'
-            exclude group: 'org.junit.platform', module: 'junit-platform-runner'
+            exclude group: 'org.junit.platform', module: 'junit-platform-suite'
         }
     }
     api 'org.springframework:spring-context', {

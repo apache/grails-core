@@ -44,6 +44,7 @@ class DatabaseCleanupInterceptor extends AbstractMethodInterceptor {
 
     private final DatabaseCleanupContext context
     private final boolean classLevelCleanup
+    private final boolean cleanupAfterSpec
     private final DatasourceCleanupMapping mapping
     private final ApplicationContextResolver resolver
 
@@ -51,6 +52,8 @@ class DatabaseCleanupInterceptor extends AbstractMethodInterceptor {
      * @param context the cleanup context containing the cleaners and configuration
      * @param classLevelCleanup if true, cleanup runs after every test method;
      *        if false, only after methods annotated with @DatabaseCleanup
+     * @param cleanupAfterSpec if true, cleanup is deferred until after the entire spec
+     *        finishes (cleanupSpec phase) instead of after each test method
      * @param mapping the parsed datasource-to-type mapping from the class-level annotation;
      *        for method-level cleanup, the method's own annotation values are parsed at runtime
      * @param resolver the strategy for resolving the ApplicationContext from test instances
@@ -58,11 +61,13 @@ class DatabaseCleanupInterceptor extends AbstractMethodInterceptor {
     DatabaseCleanupInterceptor(
             DatabaseCleanupContext context,
             boolean classLevelCleanup,
+            boolean cleanupAfterSpec,
             DatasourceCleanupMapping mapping,
             ApplicationContextResolver resolver
     ) {
         this.context = context
         this.classLevelCleanup = classLevelCleanup
+        this.cleanupAfterSpec = cleanupAfterSpec
         this.mapping = mapping
         this.resolver = resolver
     }
@@ -84,22 +89,51 @@ class DatabaseCleanupInterceptor extends AbstractMethodInterceptor {
         }
         finally {
             try {
-                def methodMapping = invocation.
+                def methodAnnotated = invocation.
                         feature?.
                         featureMethod?.
                         isAnnotationPresent(DatabaseCleanup)
-                if (!classLevelCleanup && !methodMapping) {
+
+                // When cleanupAfterSpec is true, skip class-level per-test cleanup —
+                // it will happen in cleanupSpec. But if the individual method has its own
+                // @DatabaseCleanup annotation, still honor that and clean up after this method.
+                if (cleanupAfterSpec && !methodAnnotated) {
+                    return
+                }
+
+                if (!classLevelCleanup && !methodAnnotated) {
                     return
                 }
                 log.debug(
                         'Performing database cleanup after test method: {}',
                         invocation.feature?.name ?: 'unknown'
                 )
-                def selectedMapping = methodMapping ?
+                def selectedMapping = methodAnnotated ?
                         getMethodMapping(invocation)
                         : mapping
                 long startTime = System.currentTimeMillis()
                 def stats = context.performCleanup(selectedMapping)
+                logStats(stats, startTime)
+            }
+            finally {
+                TestContextHolderListener.CURRENT.remove()
+            }
+        }
+    }
+
+    @Override
+    void interceptCleanupSpecMethod(IMethodInvocation invocation) throws Throwable {
+        try {
+            invocation.proceed()
+        }
+        finally {
+            try {
+                log.debug(
+                        'Performing database cleanup after spec: {}',
+                        invocation.spec?.name ?: 'unknown'
+                )
+                long startTime = System.currentTimeMillis()
+                def stats = context.performCleanup(mapping)
                 logStats(stats, startTime)
             }
             finally {

@@ -183,6 +183,7 @@ class DatabaseCleanupExtensionSpec extends Specification {
         def annotatedMethod = MethodAnnotatedSpec.getDeclaredMethod('annotatedMethod')
         def methodInfo = Mock(MethodInfo) {
             isAnnotationPresent(DatabaseCleanup) >> true
+            getAnnotation(DatabaseCleanup) >> annotatedMethod.getAnnotation(DatabaseCleanup)
             getReflection() >> annotatedMethod
         }
         def feature = Mock(FeatureInfo) {
@@ -204,6 +205,59 @@ class DatabaseCleanupExtensionSpec extends Specification {
         1 * spec.addSetupInterceptor(_ as DatabaseCleanupInterceptor)
         1 * spec.addCleanupInterceptor(_ as DatabaseCleanupInterceptor)
         0 * spec.addCleanupSpecInterceptor(_)
+    }
+
+    def "visitSpec registers cleanupSpec interceptor when cleanupAfterSpec is true"() {
+        given:
+        def extension = createExtensionWithCleaner()
+
+        def spec = Mock(SpecInfo) {
+            isAnnotationPresent(SpringBootTest) >> true
+            getAnnotation(SpringBootTest) >> CleanupAfterSpecClassSpec.getAnnotation(SpringBootTest)
+            isAnnotationPresent(DatabaseCleanup) >> true
+            getAnnotation(DatabaseCleanup) >> CleanupAfterSpecClassSpec.getAnnotation(DatabaseCleanup)
+        }
+
+        when:
+        extension.visitSpec(spec)
+
+        then:
+        1 * spec.addSetupInterceptor(_ as DatabaseCleanupInterceptor)
+        1 * spec.addCleanupInterceptor(_ as DatabaseCleanupInterceptor)
+        1 * spec.addCleanupSpecInterceptor(_ as DatabaseCleanupInterceptor)
+    }
+
+    def "visitSpec throws when method-level @DatabaseCleanup has cleanupAfterSpec = true"() {
+        given:
+        def extension = createExtensionWithCleaner()
+
+        def annotatedMethod = MethodAnnotatedWithCleanupAfterSpec.getDeclaredMethod('annotatedMethod')
+        def methodAnnotation = annotatedMethod.getAnnotation(DatabaseCleanup)
+        def methodInfo = Mock(MethodInfo) {
+            isAnnotationPresent(DatabaseCleanup) >> true
+            getAnnotation(DatabaseCleanup) >> methodAnnotation
+            getName() >> 'annotatedMethod'
+        }
+        def feature = Mock(FeatureInfo) {
+            getFeatureMethod() >> methodInfo
+        }
+
+        def spec = Mock(SpecInfo) {
+            isAnnotationPresent(SpringBootTest) >> true
+            getAnnotation(SpringBootTest) >> MethodAnnotatedWithCleanupAfterSpec.getAnnotation(SpringBootTest)
+            isAnnotationPresent(DatabaseCleanup) >> false
+            getReflection() >> MethodAnnotatedWithCleanupAfterSpec
+            getFeatures() >> [feature]
+            getName() >> 'MethodAnnotatedWithCleanupAfterSpec'
+        }
+
+        when:
+        extension.visitSpec(spec)
+
+        then:
+        def ex = thrown(IllegalStateException)
+        ex.message.contains('cleanupAfterSpec')
+        ex.message.contains('class-level')
     }
 
     def "visitSpec skips spec with no annotations at all"() {
@@ -378,5 +432,15 @@ class DatabaseCleanupExtensionSpec extends Specification {
         void setup() {}
 
         void featureMethod() {}
+    }
+
+    @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
+    @DatabaseCleanup(cleanupAfterSpec = true)
+    static class CleanupAfterSpecClassSpec {}
+
+    @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
+    static class MethodAnnotatedWithCleanupAfterSpec {
+        @DatabaseCleanup(cleanupAfterSpec = true)
+        void annotatedMethod() {}
     }
 }

@@ -38,7 +38,7 @@ jobs:
       - name: "☕️ Setup JDK"
         uses: actions/setup-java@v4
         with:
-          java-version: 17
+          java-version: 21
           distribution: liberica
       - name: "🗄️ Cache local Maven repository"
         uses: actions/cache@v4
@@ -63,9 +63,11 @@ jobs:
       - name: "📥 Checkout Groovy 4_0_X (Grails 7 and later)"
         run: git clone --depth 1 https://github.com/apache/groovy.git -b GROOVY_4_0_X --single-branch
       - name: "🐘 Setup Gradle"
-        uses: gradle/actions/setup-gradle@v4
+        uses: gradle/actions/setup-gradle@4d9f0ba0025fe599b4ebab900eb7f3a1d93ef4c2 # v5.0.0
         with:
-          develocity-access-key: ${{ secrets.GRAILS_DEVELOCITY_ACCESS_KEY  }}
+          develocity-access-key: ${{ secrets.DEVELOCITY_ACCESS_KEY  }}
+      - name: "🔍 Setup TestLens"
+        uses: testlens-app/setup-testlens@v1
       - name: "📝 Store Groovy version to use when building Grails"
         id: groovy-version
         run: |
@@ -87,7 +89,7 @@ jobs:
         id: develocity-conf-2
         run: |
           echo "VALUE<<EOF" >> $GITHUB_OUTPUT
-          echo "def isAuthenticated = System.getenv('GRAILS_DEVELOCITY_ACCESS_KEY ') != null" >> $GITHUB_OUTPUT
+          echo "def isAuthenticated = System.getenv('DEVELOCITY_ACCESS_KEY ') != null" >> $GITHUB_OUTPUT
           echo "develocity {" >> $GITHUB_OUTPUT
           echo "    server = 'https://develocity.apache.org'" >> $GITHUB_OUTPUT
           echo "    buildScan {" >> $GITHUB_OUTPUT
@@ -141,12 +143,14 @@ jobs:
       - name: "☕️ Setup JDK"
         uses: actions/setup-java@v4
         with:
-          java-version: 17
+          java-version: 21
           distribution: liberica
       - name: "🐘 Setup Gradle"
-        uses: gradle/actions/setup-gradle@v4
+        uses: gradle/actions/setup-gradle@4d9f0ba0025fe599b4ebab900eb7f3a1d93ef4c2 # v5.0.0
         with:
-          develocity-access-key: ${{ secrets.GRAILS_DEVELOCITY_ACCESS_KEY  }}
+          develocity-access-key: ${{ secrets.DEVELOCITY_ACCESS_KEY  }}
+      - name: "🔍 Setup TestLens"
+        uses: testlens-app/setup-testlens@v1
       - name: "🗄️ Restore local Maven repository from cache"
         uses: actions/cache@v4
         with:
@@ -158,7 +162,11 @@ jobs:
       - name: "🔨 Build and test Grails using the locally built Groovy snapshot"
         run: >
           ./gradlew build
+          --continue
+          --stacktrace
           -x groovydoc
+          -PgebAtCheckWaiting
           -PskipCodeStyle
+          -PmaxTestParallel=3
         env:
           GRAILS_INCLUDE_MAVEN_LOCAL: true

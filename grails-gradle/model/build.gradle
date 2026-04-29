@@ -22,6 +22,7 @@ plugins {
     id 'java-library'
     id 'project-report'
     id 'org.apache.grails.buildsrc.properties'
+    id 'org.apache.grails.buildsrc.dependency-validator'
     id 'org.apache.grails.buildsrc.compile'
     id 'org.apache.grails.buildsrc.publish'
     id 'org.apache.grails.buildsrc.sbom'
@@ -41,15 +42,15 @@ dependencies {
     implementation platform(project(':grails-gradle-bom'))
 
     // compile grails-gradle-model with the Groovy version provided by Gradle
-    // to ensure build compatibility with Gradle, currently Groovy 3.0.x
+    // Groovy 4+ uses org.apache.groovy coordinates
     // when used by grails-gradle-plugin
     // see: https://docs.gradle.org/current/userguide/compatibility.html#groovy
-    compileOnly 'org.codehaus.groovy:groovy'
-    compileOnly 'org.codehaus.groovy:groovy-xml'
+    compileOnly 'org.apache.groovy:groovy'
+    compileOnly 'org.apache.groovy:groovy-xml'
 
-    testImplementation 'org.codehaus.groovy:groovy-test-junit5'
+    testImplementation 'org.apache.groovy:groovy-test-junit5'
     testImplementation 'org.junit.jupiter:junit-jupiter-api'
-    testImplementation 'org.junit.platform:junit-platform-runner'
+    testImplementation 'org.junit.platform:junit-platform-suite'
 
     testRuntimeOnly 'org.junit.jupiter:junit-jupiter-engine'
 
@@ -58,7 +59,8 @@ dependencies {
         // impl: org.springframework.boot.env.YamlPropertySourceLoader
     }
 
-    compileOnly 'jline:jline' // for profile compilation
+    compileOnly 'org.jline:jline' // for profile compilation
+    compileOnly 'org.fusesource.jansi:jansi'
 
     api 'org.yaml:snakeyaml'
 
@@ -67,8 +69,8 @@ dependencies {
     api 'org.slf4j:jcl-over-slf4j'
 
     // Testing
-    testImplementation 'org.codehaus.groovy:groovy'
-    testImplementation 'org.codehaus.groovy:groovy-xml'
+    testImplementation 'org.apache.groovy:groovy'
+    testImplementation 'org.apache.groovy:groovy-xml'
     testImplementation 'org.slf4j:slf4j-simple'
     testImplementation('org.spockframework:spock-core') {
         transitive = false

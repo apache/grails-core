@@ -26,7 +26,6 @@ import groovy.transform.ToString
 import org.springframework.context.support.StaticMessageSource
 import org.springframework.validation.FieldError
 
-import grails.core.GrailsDomainClass
 import grails.gorm.validation.DefaultConstrainedProperty
 import grails.util.GrailsNameUtils
 import org.grails.datastore.gorm.validation.constraints.registry.DefaultConstraintRegistry
@@ -59,8 +58,6 @@ class PropertyPathAccessor implements BeanPropertyAccessor {
     Object getRootBean() { null }
 
     Class getRootBeanType() { null }
-
-    GrailsDomainClass getBeanClass() { null }
 
     PersistentEntity getEntity() { null }
 

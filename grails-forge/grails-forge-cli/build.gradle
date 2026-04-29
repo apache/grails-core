@@ -24,6 +24,7 @@ plugins {
     id 'groovy'
     id 'java-library'
     id 'org.apache.grails.buildsrc.properties'
+    id 'org.apache.grails.buildsrc.dependency-validator'
     id 'org.grails.forge.rocker'
     id 'org.apache.grails.buildsrc.compile'
     id 'org.apache.grails.buildsrc.publish'
@@ -68,10 +69,10 @@ ext {
 }
 
 dependencies {
-    annotationProcessor platform("io.micronaut:micronaut-bom:$micronautVersion")
-    implementation platform("io.micronaut:micronaut-bom:$micronautVersion")
+    annotationProcessor platform("io.micronaut.platform:micronaut-platform:$micronautVersion")
+    implementation platform("io.micronaut.platform:micronaut-platform:$micronautVersion")
     annotationProcessor 'io.micronaut:micronaut-inject-java'
-    testAnnotationProcessor platform("io.micronaut:micronaut-bom:$micronautVersion")
+    testAnnotationProcessor platform("io.micronaut.platform:micronaut-platform:$micronautVersion")
     testAnnotationProcessor 'io.micronaut:micronaut-inject-java'
 
     generateConfig "info.picocli:picocli-codegen:$picocliVersion"
@@ -80,10 +81,15 @@ dependencies {
     annotationProcessor 'io.micronaut:micronaut-inject-java'
 
     implementation project(':grails-forge-core')
+    implementation("org.apache.grails.bootstrap:grails-bootstrap:$projectVersion") {
+        exclude group: 'org.apache.grails', module: 'grails-bom'
+        exclude group: 'org.apache.groovy'
+    }
+    compileOnly 'org.apache.groovy:groovy'
     implementation "com.fizzed:rocker-runtime:$rockerVersion"
     implementation "info.picocli:picocli:$picocliVersion"
     implementation "info.picocli:picocli-shell-jline3:$picocliVersion"
-    implementation "jakarta.inject:jakarta.inject-api:$jakartaInjectVersion"
+    implementation 'jakarta.inject:jakarta.inject-api'
     implementation "org.fusesource.jansi:jansi:$jansiVersion"
     implementation "org.slf4j:slf4j-nop:$slf4jVersion"
     implementation "org.yaml:snakeyaml:$snakeyamlVersion"
@@ -93,19 +99,17 @@ dependencies {
     testImplementation 'io.micronaut.picocli:micronaut-picocli'
     testImplementation "org.reflections:reflections:$reflectionsVersion"
     testImplementation 'org.testcontainers:spock'
-    if (project.hasProperty('micronautVersion')) {
-        testCompileOnly "io.micronaut:micronaut-inject-groovy:$micronautVersion"
-    }
+    testCompileOnly 'io.micronaut:micronaut-inject-groovy'
 
-    testImplementation "org.codehaus.groovy:groovy:$groovyVersion"
+    testImplementation 'org.apache.groovy:groovy'
     testImplementation "org.spockframework:spock-core:$spockVersion", {
-        exclude group: 'org.codehaus.groovy', module: 'groovy-all'
+        exclude group: 'org.apache.groovy', module: 'groovy-all'
     }
 
     testImplementation "cglib:cglib-nodep:$cglibVersion"
     testImplementation "org.objenesis:objenesis:$objenesisVersion"
     testRuntimeOnly "ch.qos.logback:logback-classic:$logbackClassicVersion"
-    testImplementation "org.codehaus.groovy:groovy-test:$groovyVersion"
+    testImplementation 'org.apache.groovy:groovy-test'
 }
 
 rocker {
@@ -157,9 +161,6 @@ jarTask.configure { Jar it ->
 configurations.configureEach {
     resolutionStrategy {
         eachDependency { DependencyResolveDetails details ->
-            if (details.requested.group == 'org.codehaus.groovy') {
-                details.useVersion(groovyVersion)
-            }
             if (details.requested.name == 'spock-core') {
                 details.useVersion(spockVersion)
             }

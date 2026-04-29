@@ -26,7 +26,6 @@ import groovy.transform.TupleConstructor
 import org.springframework.validation.FieldError
 
 import grails.core.GrailsApplication
-import grails.core.GrailsDomainClass
 import grails.gorm.Entity
 import grails.gorm.validation.ConstrainedProperty
 import grails.util.GrailsClassUtils
@@ -47,7 +46,6 @@ class BeanPropertyAccessorImpl implements BeanPropertyAccessor {
 
     Object rootBean
     Class rootBeanType
-    GrailsDomainClass beanClass
     Class beanType
     String pathFromRoot
     String propertyName

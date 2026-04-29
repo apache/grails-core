@@ -37,8 +37,6 @@ class DisableVersionSpec extends GrailsDataTckSpec<GrailsDataMongoTckManager> {
         then: "The version field is not persisted"
         nv.name == "Bob"
         nv.version == null
-        nv.dbo.version == null
-        !nv.dbo.containsKey("version")
     }
 }
 

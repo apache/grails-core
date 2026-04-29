@@ -18,7 +18,10 @@
  */
 package com.example
 
-import grails.gorm.annotation.AutoTimestamp
+import grails.gorm.annotation.CreatedBy
+import grails.gorm.annotation.CreatedDate
+import grails.gorm.annotation.LastModifiedBy
+import grails.gorm.annotation.LastModifiedDate
 import org.springframework.security.core.GrantedAuthority
 import org.springframework.security.core.authority.SimpleGrantedAuthority
 import org.springframework.security.core.userdetails.UserDetails
@@ -38,16 +41,18 @@ class User implements UserDetails {
     boolean credentialsNonExpired = true
     boolean enabled = true
 
-    @AutoTimestamp(AutoTimestamp.EventType.CREATED) LocalDateTime created
-    @AutoTimestamp LocalDateTime modified
+    @CreatedDate LocalDateTime created
+    @LastModifiedDate LocalDateTime modified
+    @CreatedBy String createdBy
+    @LastModifiedBy String modifiedBy
 
     static constraints = {
         firstName blank: false
         lastName blank: false
         email email: true, blank: false
         password password:true
-        created nullable: true  // Grails 7 Bug
-        modified nullable: true // Grails 7 Bug
+        createdBy nullable: true
+        modifiedBy nullable: true
     }
 
     static mapping = {
@@ -56,7 +61,14 @@ class User implements UserDetails {
 
     @Override
     Collection<? extends GrantedAuthority> getAuthorities() {
-        roles.split('').collect { new SimpleGrantedAuthority(it) }
+        if (!roles) {
+            return []
+        }
+        roles
+                .split(',')
+                .collect { it.trim() }
+                .findAll { it }
+                .collect { new SimpleGrantedAuthority(it) }
     }
 
     @Override

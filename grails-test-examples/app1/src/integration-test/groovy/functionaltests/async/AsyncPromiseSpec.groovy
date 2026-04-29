@@ -16,58 +16,41 @@
  *  specific language governing permissions and limitations
  *  under the License.
  */
-
 package functionaltests.async
 
 import java.util.concurrent.TimeUnit
 
-import groovy.json.JsonSlurper
-
 import functionaltests.services.AsyncProcessingService
-import io.micronaut.http.HttpRequest
-import io.micronaut.http.HttpStatus
-import io.micronaut.http.MediaType
-import io.micronaut.http.client.HttpClient
-import spock.lang.Shared
 import spock.lang.Specification
+import spock.lang.Tag
 import spock.lang.Unroll
 
+import org.springframework.beans.factory.annotation.Autowired
+
 import grails.testing.mixin.integration.Integration
+import org.apache.grails.testing.http.client.HttpClientSupport
 
 /**
  * Integration tests for async/promise functionality in Grails.
  * Tests various async patterns including tasks, promises, chaining, and error handling.
  */
 @Integration
-class AsyncPromiseSpec extends Specification {
+@Tag('http-client')
+class AsyncPromiseSpec extends Specification implements HttpClientSupport {
 
-    @Shared
-    HttpClient client
-
-    AsyncProcessingService asyncProcessingService
-
-    def setup() {
-        client = client ?: HttpClient.create(new URL("http://localhost:${serverPort}"))
-    }
-
-    def cleanupSpec() {
-        client.close()
-    }
+    @Autowired AsyncProcessingService asyncProcessingService
 
     // ========== Basic Async Task Tests ==========
 
     def "simple async task completes successfully"() {
         when: "calling simple task endpoint"
-        def response = client.toBlocking().exchange(
-            HttpRequest.GET('/asyncTest/simpleTask'),
-            String
-        )
-        def json = new JsonSlurper().parseText(response.body())
+        def response = http('/asyncTest/simpleTask')
 
         then: "task completes with success status"
-        response.status == HttpStatus.OK
-        json.status == 'completed'
-        json.message == 'Task finished'
+        response.assertJson(200, [
+                status: 'completed',
+                message: 'Task finished'
+        ])
     }
 
     def "compute task returns calculated value"() {
@@ -75,33 +58,28 @@ class AsyncPromiseSpec extends Specification {
         def value = 7
 
         when: "calling compute endpoint"
-        def response = client.toBlocking().exchange(
-            HttpRequest.GET("/asyncTest/computeTask?value=${value}"),
-            String
-        )
-        def json = new JsonSlurper().parseText(response.body())
+        def response = http("/asyncTest/computeTask?value=${value}")
 
         then: "computed result is correct"
-        response.status == HttpStatus.OK
-        json.input == value
-        json.result == value * value
+        response.assertJson(200, [
+                input: value,
+                result: value * value
+        ])
     }
 
     def "parallel tasks complete and return all results"() {
         when: "calling parallel tasks endpoint"
-        def response = client.toBlocking().exchange(
-            HttpRequest.GET('/asyncTest/parallelTasks'),
-            String
-        )
-        def json = new JsonSlurper().parseText(response.body())
+        def response = http('/asyncTest/parallelTasks')
 
         then: "all tasks complete"
-        response.status == HttpStatus.OK
-        json.status == 'completed'
-        json.results.size() == 3
-        json.results.contains('Task 1 result')
-        json.results.contains('Task 2 result')
-        json.results.contains('Task 3 result')
+        response.assertJson(200, [
+                status: 'completed',
+                results: [
+                        'Task 1 result',
+                        'Task 2 result',
+                        'Task 3 result'
+                ]
+        ])
     }
 
     def "chained tasks process data through multiple stages"() {
@@ -109,49 +87,40 @@ class AsyncPromiseSpec extends Specification {
         def input = 'hello'
 
         when: "calling chained endpoint"
-        def response = client.toBlocking().exchange(
-            HttpRequest.GET("/asyncTest/chainedTasks?input=${input}"),
-            String
-        )
-        def json = new JsonSlurper().parseText(response.body())
+        def response = http("/asyncTest/chainedTasks?input=${input}")
 
         then: "data is processed through all stages"
-        response.status == HttpStatus.OK
-        json.original == input
-        // HELLO reversed is OLLEH
-        json.final == input.toUpperCase().reverse()
+        response.assertJson(200, [
+                original: input,
+                final: input.toUpperCase().reverse()
+        ])
     }
 
     // ========== Error Handling Tests ==========
 
     def "async task handles success without error"() {
         when: "calling task that should succeed"
-        def response = client.toBlocking().exchange(
-            HttpRequest.GET('/asyncTest/taskWithError?fail=false'),
-            String
-        )
-        def json = new JsonSlurper().parseText(response.body())
+        def response = http('/asyncTest/taskWithError?fail=false')
 
         then: "success response returned"
-        response.status == HttpStatus.OK
-        json.status == 'success'
-        json.result == 'Success'
+        response.assertJson(200, [
+                status: 'success',
+                result: 'Success'
+        ])
     }
 
     @Unroll
     def "async task with timeout completes within time limit"(int delay, int timeout, int elapsedMin, String status, String result) {
         when: "calling task with reasonable timeout"
-        def response = client.toBlocking().exchange(
-            HttpRequest.GET("/asyncTest/taskWithTimeout?delay=$delay&timeout=$timeout"),
-            String
-        )
-        def json = new JsonSlurper().parseText(response.body())
+        def response = http("/asyncTest/taskWithTimeout?delay=$delay&timeout=$timeout")
 
         then: "task completes as expected"
-        response.status == HttpStatus.OK
-        json.status == status
-        json.result.startsWith(result)
-        json.elapsedMs >= elapsedMin
+        response.assertStatus(200)
+        with(response.json()) {
+            it.status == status
+            it.result.startsWith(result)
+            elapsedMs >= elapsedMin
+        }
 
         where:
         delay | timeout | elapsedMin | status      | result
@@ -166,16 +135,13 @@ class AsyncPromiseSpec extends Specification {
         def input = 'test'
 
         when: "calling async service endpoint"
-        def response = client.toBlocking().exchange(
-            HttpRequest.GET("/asyncTest/useAsyncService?input=${input}"),
-            String
-        )
-        def json = new JsonSlurper().parseText(response.body())
+        def response = http("/asyncTest/useAsyncService?input=${input}")
 
         then: "service processes input correctly"
-        response.status == HttpStatus.OK
-        json.input == input
-        json.result == "Processed: ${input.toUpperCase()}"
+        response.assertJson(200, [
+                input: input,
+                result: "Processed: ${input.toUpperCase()}"
+        ])
     }
 
     def "async service calculates square"() {
@@ -183,31 +149,27 @@ class AsyncPromiseSpec extends Specification {
         def value = 6
 
         when: "calling async calculation endpoint"
-        def response = client.toBlocking().exchange(
-            HttpRequest.GET("/asyncTest/asyncCalculation?value=${value}"),
-            String
-        )
-        def json = new JsonSlurper().parseText(response.body())
+        def response = http("/asyncTest/asyncCalculation?value=${value}")
 
         then: "calculation is correct"
-        response.status == HttpStatus.OK
-        json.input == value
-        json.squared == value * value
+        response.assertJson(200, [
+                input: value,
+                squared: value * value
+        ])
     }
 
     def "async batch processing reverses all items"() {
         when: "calling batch endpoint with default items"
-        def response = client.toBlocking().exchange(
-            HttpRequest.GET('/asyncTest/asyncBatch'),
-            String
-        )
-        def json = new JsonSlurper().parseText(response.body())
+        def response = http('/asyncTest/asyncBatch')
 
         then: "all items are reversed"
-        response.status == HttpStatus.OK
-        json.original.size() == json.processed.size()
-        json.original.eachWithIndex { item, idx ->
-            assert json.processed[idx] == item.reverse()
+        response.assertStatus(200)
+        def json = response.json()
+        def original = json['original'] as List<String>
+        def processed = json['processed'] as List<String>
+        original.size() == processed.size()
+        original.eachWithIndex { item, idx ->
+            assert processed[idx] == item.reverse()
         }
     }
 
@@ -216,18 +178,16 @@ class AsyncPromiseSpec extends Specification {
         def taskId = 'task-123'
 
         when: "calling long running endpoint"
-        def response = client.toBlocking().exchange(
-            HttpRequest.GET("/asyncTest/longRunning?taskId=${taskId}"),
-            String
-        )
-        def json = new JsonSlurper().parseText(response.body())
+        def response = http("/asyncTest/longRunning?taskId=${taskId}")
 
         then: "operation completes with expected info"
-        response.status == HttpStatus.OK
-        json.taskId == taskId
-        json.status == 'completed'
-        json.durationMs >= 200
-        json.completedAt != null
+        response.assertStatus(200)
+        with(response.json()) {
+            it.taskId == taskId
+            status == 'completed'
+            durationMs >= 200
+            completedAt != null
+        }
     }
 
     def "CompletableFuture composition combines results"() {
@@ -236,17 +196,14 @@ class AsyncPromiseSpec extends Specification {
         def v2 = 4
 
         when: "calling compose endpoint"
-        def response = client.toBlocking().exchange(
-            HttpRequest.GET("/asyncTest/composeFutures?v1=${v1}&v2=${v2}"),
-            String
-        )
-        def json = new JsonSlurper().parseText(response.body())
+        def response = http("/asyncTest/composeFutures?v1=${v1}&v2=${v2}")
 
         then: "both futures are combined correctly"
-        response.status == HttpStatus.OK
-        json.value1Squared == v1 * v1  // 9
-        json.value2Squared == v2 * v2  // 16
-        json.sum == (v1 * v1) + (v2 * v2)  // 25
+        response.assertJson(200, [
+                value1Squared: v1 * v1,  // 9
+                value2Squared: v2 * v2,  // 16
+                sum: (v1 * v1) + (v2 * v2)  // 25
+        ])
     }
 
     // ========== Request Data Processing Tests ==========
@@ -256,49 +213,44 @@ class AsyncPromiseSpec extends Specification {
         def body = '{"name": "test", "value": "hello"}'
 
         when: "posting to process endpoint"
-        def response = client.toBlocking().exchange(
-            HttpRequest.POST('/asyncTest/processRequestData', body)
-                .contentType(MediaType.APPLICATION_JSON),
-            String
-        )
-        def json = new JsonSlurper().parseText(response.body())
+        def response = httpPostJson('/asyncTest/processRequestData', body)
 
         then: "data is processed correctly"
-        response.status == HttpStatus.OK
-        json.original.name == 'test'
-        json.processed.name == 'TEST'
-        json.processed.value == 'HELLO'
+        response.assertJson(200, [
+                original: [
+                        name: 'test',
+                        value: 'hello'
+                ],
+                processed: [
+                        name: 'TEST',
+                        value: 'HELLO'
+                ]
+        ])
     }
 
     def "multi-stage process reports all stages"() {
         when: "calling multi-stage endpoint"
-        def response = client.toBlocking().exchange(
-            HttpRequest.GET('/asyncTest/multiStageProcess'),
-            String
-        )
-        def json = new JsonSlurper().parseText(response.body())
+        def response = http('/asyncTest/multiStageProcess')
 
         then: "all stages are reported"
-        response.status == HttpStatus.OK
-        json.status == 'completed'
-        json.totalStages == 3
-        json.stages.size() == 3
-        json.stages[0].action == 'initialize'
-        json.stages[1].action == 'process'
-        json.stages[2].action == 'finalize'
+        response.assertJsonContains(200, [
+                status: 'completed',
+                totalStages: 3,
+                stages: [
+                        [action: 'initialize'],
+                        [action: 'process'],
+                        [action: 'finalize']
+                ]
+        ])
     }
 
     def "stages execute in correct order"() {
         when: "calling multi-stage endpoint"
-        def response = client.toBlocking().exchange(
-            HttpRequest.GET('/asyncTest/multiStageProcess'),
-            String
-        )
-        def json = new JsonSlurper().parseText(response.body())
+        def response = http('/asyncTest/multiStageProcess')
 
         then: "stages have increasing timestamps"
-        response.status == HttpStatus.OK
-        def times = json.stages.collect { it.time as Long }
+        response.assertStatus(200)
+        def times = response.json().stages.collect { it['time'] as Long }
         times[0] <= times[1]
         times[1] <= times[2]
     }
@@ -310,17 +262,13 @@ class AsyncPromiseSpec extends Specification {
         def input = 'grails'
 
         when: "calling with async=true"
-        def response = client.toBlocking().exchange(
-            HttpRequest.GET("/asyncTest/conditionalAsync?async=true&input=${input}"),
-            String
-        )
-        def json = new JsonSlurper().parseText(response.body())
+        def response = http("/asyncTest/conditionalAsync?async=true&input=${input}")
 
         then: "async mode is used"
-        response.status == HttpStatus.OK
-        json.mode == 'async'
-        json.result.contains('Async')
-        json.result.contains(input.toUpperCase())
+        response.assertJson(200, [
+                mode: 'async',
+                result: "Async: ${input.toUpperCase()}"
+        ])
     }
 
     def "conditional async uses sync mode when requested"() {
@@ -328,17 +276,13 @@ class AsyncPromiseSpec extends Specification {
         def input = 'grails'
 
         when: "calling with async=false"
-        def response = client.toBlocking().exchange(
-            HttpRequest.GET("/asyncTest/conditionalAsync?async=false&input=${input}"),
-            String
-        )
-        def json = new JsonSlurper().parseText(response.body())
+        def response = http("/asyncTest/conditionalAsync?async=false&input=${input}")
 
         then: "sync mode is used"
-        response.status == HttpStatus.OK
-        json.mode == 'sync'
-        json.result.contains('Sync')
-        json.result.contains(input.toUpperCase())
+        response.assertJson(200, [
+                mode: 'sync',
+                result: "Sync: ${input.toUpperCase()}"
+        ])
     }
 
     // ========== Direct Service Tests ==========

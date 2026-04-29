@@ -27,12 +27,10 @@ import org.codehaus.groovy.control.CompilationFailedException
 import org.codehaus.groovy.control.CompilationUnit
 import org.codehaus.groovy.control.CompilerConfiguration
 
-import org.springframework.boot.ResourceBanner
 import org.springframework.boot.SpringApplication
-import org.springframework.boot.web.context.WebServerApplicationContext
+import org.springframework.boot.web.server.context.WebServerApplicationContext
 import org.springframework.context.ConfigurableApplicationContext
 import org.springframework.core.env.ConfigurableEnvironment
-import org.springframework.core.io.ClassPathResource
 import org.springframework.core.io.ResourceLoader
 
 import grails.compiler.ast.ClassInjector
@@ -61,7 +59,6 @@ import org.grails.plugins.support.WatchPattern
 @CompileStatic
 class GrailsApp extends SpringApplication {
 
-    private static final String GRAILS_BANNER = 'grails-banner.txt'
     private static final String SPRING_PROFILES = 'spring.profiles.active'
 
     private static boolean developmentModeActive = false
@@ -95,7 +92,7 @@ class GrailsApp extends SpringApplication {
      */
     GrailsApp(ResourceLoader resourceLoader, Class<?>... sources) {
         super(resourceLoader, sources)
-        banner = new ResourceBanner(new ClassPathResource(GRAILS_BANNER))
+        banner = new GrailsBanner()
     }
 
     @Override

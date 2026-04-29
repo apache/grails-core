@@ -39,7 +39,7 @@ import org.grails.gradle.plugin.views.AbstractGroovyTemplateCompileTask
  */
 @CompileStatic
 @CacheableTask
-class MarkupViewCompilerTask extends AbstractGroovyTemplateCompileTask {
+abstract class MarkupViewCompilerTask extends AbstractGroovyTemplateCompileTask {
 
     @Input
     final Property<String> fileExtension

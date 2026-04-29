@@ -21,6 +21,7 @@ apply plugin: 'org.apache.grails.buildsrc.groovydoc'
 dependencies {
     add('documentation', platform(project(':grails-bom')))
     add('documentation', 'org.fusesource.jansi:jansi')
+    // TODO: Remove jline:jline (JLine 2) when upgrading to Groovy 5 (groovy-groovysh 5.x uses JLine 3)
     add('documentation', 'jline:jline')
     add('documentation', 'com.github.javaparser:javaparser-core')
     add('documentation', 'org.apache.groovy:groovy')
@@ -43,12 +44,8 @@ String resolveProjectVersion(String artifact) {
     version
 }
 
-tasks.withType(Groovydoc).configureEach { Groovydoc gdoc ->
-    gdoc.exclude('META-INF/**', '*yml', '*properties', '*xml', '**/Application.groovy', '**/Bootstrap.groovy', '**/resources.groovy')
-    gdoc.windowTitle = "${project.findProperty('pomArtifactId') ?: project.name} - $projectVersion"
-    gdoc.docTitle = "${project.findProperty('pomArtifactId') ?: project.name} - $projectVersion"
-
-    gdoc.doFirst {
+def configureGroovyDoc = tasks.register('configureGroovyDoc') {
+    doLast {
         List<Map<String, String>> links = []
         def gebVersion = resolveProjectVersion('geb-spock')
         if (gebVersion) {
@@ -66,9 +63,17 @@ tasks.withType(Groovydoc).configureEach { Groovydoc gdoc ->
         if (springBootVersion) {
             links << [packages: 'org.springframework.boot.', href: "https://docs.spring.io/spring-boot/docs/${springBootVersion}/api/"]
         }
-        if (gdoc.ext.has('groovydocLinks')) {
-            links.addAll(gdoc.ext.groovydocLinks as List<Map<String, String>>)
+        if (it.ext.has('groovydocLinks')) {
+            links.addAll(it.ext.groovydocLinks as List<Map<String, String>>)
         }
-        gdoc.ext.groovydocLinks = links
+        it.ext.groovydocLinks = links
     }
+}
+
+tasks.withType(Groovydoc).configureEach { Groovydoc gdoc ->
+    dependsOn(configureGroovyDoc)
+
+    gdoc.exclude('META-INF/**', '*yml', '*properties', '*xml', '**/Application.groovy', '**/Bootstrap.groovy', '**/resources.groovy')
+    gdoc.windowTitle = "${project.findProperty('pomArtifactId') ?: project.name} - $projectVersion"
+    gdoc.docTitle = "${project.findProperty('pomArtifactId') ?: project.name} - $projectVersion"
 }

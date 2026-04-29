@@ -20,7 +20,10 @@ package org.grails.cli.interactive.completers
 
 import java.util.regex.Pattern
 
-import jline.console.completer.Completer
+import org.jline.reader.Candidate
+import org.jline.reader.Completer
+import org.jline.reader.LineReader
+import org.jline.reader.ParsedLine
 
 /**
  * JLine Completor that accepts a string if it matches a given regular
@@ -44,17 +47,16 @@ class RegexCompletor implements Completer {
     /**
      * <p>Check whether the whole buffer matches the configured pattern.
      * If it does, the buffer is added to the <tt>candidates</tt> list
-     * (which indicates acceptance of the buffer string) and returns 0,
-     * i.e. the start of the buffer. This mimics the behaviour of SimpleCompletor.
+     * (which indicates acceptance of the buffer string).
      * </p>
-     * <p>If the buffer doesn't match the configured pattern, this returns
-     * -1 and the <tt>candidates</tt> list is left empty.</p>
+     * <p>If the buffer doesn't match the configured pattern, the
+     * <tt>candidates</tt> list is left empty.</p>
      */
-    int complete(String buffer, int cursor, List candidates) {
+    @Override
+    void complete(LineReader reader, ParsedLine line, List<Candidate> candidates) {
+        String buffer = line.word()
         if (buffer ==~ pattern) {
-            candidates << buffer
-            return 0
+            candidates.add(new Candidate(buffer))
         }
-        else return -1
     }
 }

@@ -21,6 +21,7 @@ plugins {
     id 'groovy'
     id 'java-library'
     id 'org.apache.grails.buildsrc.properties'
+    id 'org.apache.grails.buildsrc.dependency-validator'
     id 'org.apache.grails.buildsrc.compile'
     id 'org.apache.grails.buildsrc.publish'
     id 'org.apache.grails.buildsrc.sbom'
@@ -40,17 +41,22 @@ dependencies {
     // TODO: Clarify and clean up dependencies
     implementation platform(project(':grails-bom'))
 
+    api project(":grails-data-hibernate5-core")
+    api "org.apache.groovy:groovy"
+    api "org.springframework.boot:spring-boot-autoconfigure"
+
     compileOnly project(':grails-shell-cli'), {
         exclude group:'org.apache.groovy', module:'groovy'
     }
-    api "org.apache.groovy:groovy"
-    api "org.springframework.boot:spring-boot-autoconfigure"
-    api project(":grails-data-hibernate5-core")
+    compileOnly "org.springframework.boot:spring-boot-jdbc"
+    compileOnly "org.springframework.boot:spring-boot-hibernate"
 
     testImplementation project(':grails-shell-cli'), {
         exclude group:'org.apache.groovy', module:'groovy'
     }
     testImplementation "org.spockframework:spock-core"
+    testImplementation "org.springframework.boot:spring-boot-jdbc"
+    testImplementation "org.springframework.boot:spring-boot-hibernate"
 
     testRuntimeOnly "org.apache.tomcat:tomcat-jdbc"
     testRuntimeOnly "com.h2database:h2"

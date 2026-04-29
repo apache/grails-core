@@ -17,7 +17,19 @@
  *  under the License.
  */
 
+// Add JUnit Platform launcher dependency required by Gradle 9 for running tests
+// Also add ByteBuddy for Spock mocking on Java 17+ (CGLIB doesn't support Java 17 class files)
+dependencies {
+    testRuntimeOnly 'org.junit.platform:junit-platform-launcher:1.12.2'
+    testImplementation "net.bytebuddy:byte-buddy:$byteBuddyVersion"
+}
+
 tasks.withType(Test).configureEach {
+    // Honor DO_NOT_CACHE_TESTS=1 so developers can repeatedly invoke the same test command
+    // without --rerun-tasks (and without recompiling everything else).
+    outputs.cacheIf { !doNotCacheTests }
+    outputs.upToDateWhen { !doNotCacheTests }
+
     onlyIf {
         ![
                 'skipTests'
@@ -34,7 +46,8 @@ tasks.withType(Test).configureEach {
     }
 
     environment('GRAILS_REPO_URL', uri(rootProject.layout.projectDirectory.dir('../build/local-maven')))
-    jvmArgs('-Duser.country=US', '-Duser.language=en')
+    jvmArgs('-Duser.country=US', '-Duser.language=en',
+            '--add-opens', 'java.base/java.lang=ALL-UNNAMED')
     forkEvery = 100
     maxParallelForks = Runtime.runtime.availableProcessors().intdiv(2) ?: 1
     maxHeapSize = '2G'

@@ -21,6 +21,7 @@ import org.springframework.boot.gradle.tasks.bundling.BootArchive
 plugins {
     id 'org.apache.grails.buildsrc.properties'
     id 'org.apache.grails.buildsrc.compile'
+    id 'org.apache.grails.buildsrc.dependency-validator'
 }
 
 version = '0.1'
@@ -35,32 +36,33 @@ apply plugin: 'cloud.wondrify.asset-pipeline'
 apply plugin: 'org.apache.grails.gradle.grails-gsp'
 
 dependencies {
-    implementation platform(project(':grails-bom'))
+    implementation enforcedPlatform(project(':grails-micronaut-bom'))
 
-    implementation "io.micronaut:micronaut-http-client:$micronautHttpClientVersion"
-    implementation "io.micronaut:micronaut-retry:$micronautHttpClientVersion"
-    implementation "io.micronaut.serde:micronaut-serde-jackson:$micronautSerdeJacksonVersion"
+    implementation 'io.micronaut:micronaut-http-client'
+    implementation 'io.micronaut:micronaut-retry'
+    implementation 'io.micronaut.serde:micronaut-serde-jackson'
     implementation 'org.apache.grails:grails-dependencies-starter-web'
     implementation 'org.apache.grails:grails-micronaut'
     implementation 'org.apache.grails:grails-scaffolding'
     implementation project(':grails-test-examples-plugins-micronaut-singleton')
 
-    annotationProcessor platform("io.micronaut.platform:micronaut-platform:$micronautPlatformVersion")
+    annotationProcessor enforcedPlatform(project(':grails-micronaut-bom'))
     annotationProcessor 'io.micronaut:micronaut-inject-java'
     annotationProcessor 'jakarta.annotation:jakarta.annotation-api'
 
-    testAndDevelopmentOnly platform(project(':grails-bom'))
+    testAndDevelopmentOnly enforcedPlatform(project(':grails-micronaut-bom'))
     testAndDevelopmentOnly 'org.apache.grails:grails-dependencies-assets'
 
     runtimeOnly 'cloud.wondrify:asset-pipeline-grails'
     runtimeOnly 'com.h2database:h2'
     runtimeOnly 'org.apache.tomcat:tomcat-jdbc'
 
-    testImplementation "io.micronaut:micronaut-http-client:$micronautHttpClientVersion"
     testImplementation 'org.apache.grails:grails-dependencies-test'
 
     integrationTestImplementation testFixtures('org.apache.grails:grails-geb')
     integrationTestImplementation "io.github.cjstehno.ersatz:ersatz:$ersatzVersion"
+    integrationTestImplementation "io.github.cjstehno.ersatz:ersatz-groovy:$ersatzVersion"
+    integrationTestImplementation 'org.apache.grails:grails-testing-support-http-client'
 }
 
 apply {

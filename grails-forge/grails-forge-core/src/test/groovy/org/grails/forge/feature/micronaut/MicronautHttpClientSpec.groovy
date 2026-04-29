@@ -21,14 +21,18 @@ package org.grails.forge.feature.micronaut
 
 import org.grails.forge.BeanContextSpec
 import org.grails.forge.BuildBuilder
+import org.grails.forge.options.JdkVersion
 
 class MicronautHttpClientSpec extends BeanContextSpec {
 
 
     void "test dependencies"() {
         when:
+        // Micronaut features require JDK 25+ because micronaut-core's ScopedValues
+        // references java.lang.ScopedValue.CallableOp (JEP 506, finalized in JDK 25).
         final String template = new BuildBuilder(beanContext)
                 .features(["micronaut-http-client"])
+                .jdkVersion(JdkVersion.JDK_25)
                 .render()
 
         then:

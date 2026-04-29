@@ -18,6 +18,9 @@
  */
 package grails.boot.config.tools
 
+import org.apache.commons.logging.Log
+import org.apache.commons.logging.LogFactory
+
 import org.springframework.beans.BeansException
 import org.springframework.beans.factory.config.BeanPostProcessor
 import org.springframework.context.ApplicationContext
@@ -25,6 +28,8 @@ import org.springframework.context.ConfigurableApplicationContext
 
 import grails.boot.config.GrailsApplicationPostProcessor
 import grails.core.GrailsApplicationLifeCycle
+import grails.plugins.DefaultGrailsPluginManager
+import org.apache.grails.core.plugins.PluginDiscovery
 
 /**
  * Profiles bean creation outputting data to the console
@@ -34,11 +39,28 @@ import grails.core.GrailsApplicationLifeCycle
  */
 class ProfilingGrailsApplicationPostProcessor extends GrailsApplicationPostProcessor implements BeanPostProcessor {
 
+    private static final Log LOG = LogFactory.getLog(DefaultGrailsPluginManager)
+
     long startTime
 
     ProfilingGrailsApplicationPostProcessor(GrailsApplicationLifeCycle lifeCycle, ApplicationContext applicationContext, Class... classes) {
-        super(lifeCycle, applicationContext, classes)
+        super(lifeCycle, applicationContext, resolveAndResetDiscovery(applicationContext), classes)
         ((ConfigurableApplicationContext) applicationContext).beanFactory.addBeanPostProcessor(this)
+    }
+
+    /**
+     * Resolves the {@link PluginDiscovery} bean from the application context,
+     * resets and reinitializes it. The GrailsApplication always has an application context
+     * set when these deprecated constructors are called.
+     */
+    private static PluginDiscovery resolveAndResetDiscovery(ApplicationContext ctx) {
+        PluginDiscovery discovery = (PluginDiscovery) ctx.getBean(PluginDiscovery.BEAN_NAME)
+        LOG.warn('Using deprecated DefaultGrailsPluginManager constructor. ' +
+                'Plugin discovery should be configured through the GrailsPluginDiscovery bean. ' +
+                'Reinitializing plugin discovery.')
+        discovery.reset()
+        discovery.init(ctx.getEnvironment())
+        discovery
     }
 
     @Override

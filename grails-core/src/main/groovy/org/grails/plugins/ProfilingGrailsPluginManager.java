@@ -21,6 +21,9 @@ package org.grails.plugins;
 import groovy.lang.GroovySystem;
 import groovy.lang.MetaClassRegistry;
 
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
+
 import org.springframework.context.ApplicationContext;
 import org.springframework.core.io.Resource;
 
@@ -28,6 +31,7 @@ import grails.core.GrailsApplication;
 import grails.plugins.DefaultGrailsPluginManager;
 import grails.plugins.GrailsPlugin;
 import grails.plugins.exceptions.PluginException;
+import org.apache.grails.core.plugins.PluginDiscovery;
 import org.grails.core.exceptions.GrailsConfigurationException;
 import org.grails.spring.RuntimeSpringConfiguration;
 
@@ -39,24 +43,68 @@ import org.grails.spring.RuntimeSpringConfiguration;
  */
 public class ProfilingGrailsPluginManager extends DefaultGrailsPluginManager {
 
-    public ProfilingGrailsPluginManager(GrailsApplication application) {
-        super(application);
+    private static final Log LOG = LogFactory.getLog(DefaultGrailsPluginManager.class);
+
+    public ProfilingGrailsPluginManager(GrailsApplication application, PluginDiscovery pluginDiscovery) {
+        super(application, pluginDiscovery);
     }
 
     public ProfilingGrailsPluginManager(Class<?>[] plugins, GrailsApplication application) {
-        super(plugins, application);
+        this(application, reinitDiscovery(application, plugins));
     }
 
     public ProfilingGrailsPluginManager(Resource[] pluginFiles, GrailsApplication application) {
-        super(pluginFiles, application);
+        this(application, reinitDiscovery(application, pluginFiles));
     }
 
     public ProfilingGrailsPluginManager(String resourcePath, GrailsApplication application) {
-        super(resourcePath, application);
+        this(application, reinitDiscovery(application, resourcePath));
     }
 
     public ProfilingGrailsPluginManager(String[] pluginResources, GrailsApplication application) {
-        super(pluginResources, application);
+        this(application, reinitDiscovery(application, pluginResources));
+    }
+
+    private static PluginDiscovery reinitDiscovery(GrailsApplication application, Class<?>[] plugins) {
+        PluginDiscovery discovery = resolveAndResetDiscovery(application);
+        discovery.setPluginClasses(plugins);
+        discovery.init(application.getMainContext().getEnvironment());
+        return discovery;
+    }
+
+    private static PluginDiscovery reinitDiscovery(GrailsApplication application, String[] pluginResources) {
+        PluginDiscovery discovery = resolveAndResetDiscovery(application);
+        discovery.setPluginResources(pluginResources);
+        discovery.init(application.getMainContext().getEnvironment());
+        return discovery;
+    }
+
+    private static PluginDiscovery reinitDiscovery(GrailsApplication application, Resource[] pluginResources) {
+        PluginDiscovery discovery = resolveAndResetDiscovery(application);
+        discovery.setPluginResources(pluginResources);
+        discovery.init(application.getMainContext().getEnvironment());
+        return discovery;
+    }
+
+    private static PluginDiscovery reinitDiscovery(GrailsApplication application, String resourcePath) {
+        PluginDiscovery discovery = resolveAndResetDiscovery(application);
+        discovery.setPluginResources(resourcePath);
+        discovery.init(application.getMainContext().getEnvironment());
+        return discovery;
+    }
+
+    /**
+     * Resolves the {@link PluginDiscovery} bean from the application context,
+     * resets it.
+     */
+    private static PluginDiscovery resolveAndResetDiscovery(GrailsApplication application) {
+        ApplicationContext ctx = application.getMainContext();
+        PluginDiscovery discovery = (PluginDiscovery) ctx.getBean(PluginDiscovery.BEAN_NAME);
+        LOG.warn("Using deprecated DefaultGrailsPluginManager constructor. " +
+                "Plugin discovery should be configured through the GrailsPluginDiscovery bean. " +
+                "Reinitializing plugin discovery.");
+        discovery.reset();
+        return discovery;
     }
 
     @Override
@@ -77,7 +125,7 @@ public class ProfilingGrailsPluginManager extends DefaultGrailsPluginManager {
         for (Class<?> COMMON_CLASS : COMMON_CLASSES) {
             registry.removeMetaClass(COMMON_CLASS);
         }
-        for (GrailsPlugin plugin : pluginList) {
+        for (GrailsPlugin plugin : getAllPlugins()) {
             if (plugin.supportsCurrentScopeAndEnvironment()) {
                 try {
                     long pluginTime = System.currentTimeMillis();
@@ -86,8 +134,7 @@ public class ProfilingGrailsPluginManager extends DefaultGrailsPluginManager {
                     plugin.doWithDynamicMethods(applicationContext);
 
                     System.out.println("doWithDynamicMethods for plugin [" + plugin.getName() + "] took " + (System.currentTimeMillis() - pluginTime));
-                }
-                catch (Throwable t) {
+                } catch (Throwable t) {
                     throw new GrailsConfigurationException("Error configuring dynamic methods for plugin " + plugin + ": " + t.getMessage(), t);
                 }
             }
@@ -101,7 +148,7 @@ public class ProfilingGrailsPluginManager extends DefaultGrailsPluginManager {
 
         System.out.println("doWithSpring started");
         checkInitialised();
-        for (GrailsPlugin plugin : pluginList) {
+        for (GrailsPlugin plugin : getAllPlugins()) {
             if (plugin.supportsCurrentScopeAndEnvironment()) {
                 long pluginTime = System.currentTimeMillis();
                 System.out.println("doWithSpring for plugin [" + plugin.getName() + "] started");
@@ -117,7 +164,7 @@ public class ProfilingGrailsPluginManager extends DefaultGrailsPluginManager {
         long time = System.currentTimeMillis();
         System.out.println("doWithApplicationContext started");
         checkInitialised();
-        for (GrailsPlugin plugin : pluginList) {
+        for (GrailsPlugin plugin : getAllPlugins()) {
             if (plugin.supportsCurrentScopeAndEnvironment()) {
                 long pluginTime = System.currentTimeMillis();
                 System.out.println("doWithApplicationContext for plugin [" + plugin.getName() + "] started");

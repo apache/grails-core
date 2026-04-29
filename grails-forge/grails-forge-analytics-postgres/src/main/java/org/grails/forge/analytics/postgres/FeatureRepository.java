@@ -18,6 +18,8 @@
  */
 package org.grails.forge.analytics.postgres;
 
+import io.micronaut.core.annotation.NonNull;
+import io.micronaut.data.annotation.Id;
 import io.micronaut.data.jdbc.annotation.JdbcRepository;
 import io.micronaut.data.jdbc.runtime.JdbcOperations;
 import io.micronaut.data.model.query.builder.sql.Dialect;
@@ -36,6 +38,13 @@ public abstract class FeatureRepository implements CrudRepository<Feature, Long>
 
     public FeatureRepository(JdbcOperations jdbcOperations) {
         this.jdbcOperations = jdbcOperations;
+    }
+
+    public abstract void deleteById(@NonNull @Id Long id);
+
+    @Override
+    public void delete(@NonNull Feature feature) {
+        deleteById(feature.getId());
     }
 
     @ReadOnly
@@ -72,9 +81,9 @@ public abstract class FeatureRepository implements CrudRepository<Feature, Long>
     }
 
     @ReadOnly
-    List<TotalDTO> topTestFrameworks() {
+    List<TotalDTO> topReloading() {
         return this.jdbcOperations
-                .prepareStatement(query("test_framework", "application"),
+                .prepareStatement(query("reloading", "application"),
                         statement -> {
                             try (ResultSet resultSet = statement.executeQuery()) {
                                 return resultSetToTotals(resultSet);

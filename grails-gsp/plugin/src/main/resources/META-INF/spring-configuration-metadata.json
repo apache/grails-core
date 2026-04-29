@@ -1,0 +1,99 @@
+{
+    "groups": [
+        {
+            "name": "grails.views",
+            "description": "Views & GSP"
+        },
+        {
+            "name": "grails.views.gsp",
+            "description": "Views & GSP"
+        },
+        {
+            "name": "grails.views.gsp.codecs",
+            "description": "Views & GSP"
+        },
+        {
+            "name": "grails.gsp",
+            "description": "Views & GSP"
+        }
+    ],
+    "properties": [
+        {
+            "name": "grails.views.default.codec",
+            "type": "java.lang.String",
+            "description": "Fallback default for `grails.views.gsp.codecs.expression`, `scriptlet`, `taglib` and `staticparts` when those are not set. Options: `none`, `html`, `base64`.",
+            "defaultValue": "html"
+        },
+        {
+            "name": "grails.views.gsp.encoding",
+            "type": "java.lang.String",
+            "description": "The file encoding for GSP source files.",
+            "defaultValue": "UTF-8"
+        },
+        {
+            "name": "grails.views.gsp.htmlcodec",
+            "type": "java.lang.String",
+            "description": "Selects the HTML escaping style for GSP output. When not set (or when the value does not start with `xml` or equal (ignoring case) `xhtml`), a legacy HTML4-compatible encoder is used. Set to `xml` or `xhtml` to use the XML-safe encoder."
+        },
+        {
+            "name": "grails.views.gsp.codecs.expression",
+            "type": "java.lang.String",
+            "description": "The codec applied to GSP ${} expressions.",
+            "defaultValue": "html"
+        },
+        {
+            "name": "grails.views.gsp.codecs.scriptlet",
+            "type": "java.lang.String",
+            "description": "The codec applied to GSP <% %> scriptlet output.",
+            "defaultValue": "html"
+        },
+        {
+            "name": "grails.views.gsp.codecs.taglib",
+            "type": "java.lang.String",
+            "description": "The codec applied to tag library output.",
+            "defaultValue": "none"
+        },
+        {
+            "name": "grails.views.gsp.codecs.staticparts",
+            "type": "java.lang.String",
+            "description": "The codec applied to static HTML parts of GSP pages.",
+            "defaultValue": "none"
+        },
+        {
+            "name": "grails.views.gsp.layout.preprocess",
+            "type": "java.lang.Boolean",
+            "description": "Whether GSP layout preprocessing is enabled. Disabling allows Grails to parse rendered HTML but slows rendering.",
+            "defaultValue": true
+        },
+        {
+            "name": "grails.views.enable.jsessionid",
+            "type": "java.lang.Boolean",
+            "description": "Whether to include the jsessionid in rendered links.",
+            "defaultValue": false
+        },
+        {
+            "name": "grails.views.filteringCodecForContentType",
+            "type": "java.util.Map<java.lang.String,java.lang.Object>",
+            "description": "Map of content types to encoding codecs.",
+            "defaultValue": {}
+        },
+        {
+            "name": "grails.gsp.disable.caching.resources",
+            "type": "java.lang.Boolean",
+            "description": "Whether to disable GSP resource caching.",
+            "defaultValue": false
+        },
+        {
+            "name": "grails.gsp.enable.reload",
+            "type": "java.lang.Boolean",
+            "description": "Whether to enable GSP reloading in production.",
+            "defaultValue": false
+        },
+        {
+            "name": "grails.gsp.view.dir",
+            "type": "java.lang.String",
+            "description": "Custom directory for GSP view resolution.",
+            "defaultValue": "grails-app/views"
+        }
+    ]
+}

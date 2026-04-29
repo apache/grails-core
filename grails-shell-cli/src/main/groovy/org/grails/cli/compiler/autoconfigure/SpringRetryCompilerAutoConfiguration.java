@@ -41,7 +41,7 @@ public class SpringRetryCompilerAutoConfiguration extends CompilerAutoConfigurat
     @Override
     public void applyDependencies(DependencyCustomizer dependencies) {
         dependencies.ifAnyMissingClasses("org.springframework.retry.annotation.EnableRetry")
-            .add("spring-retry", "spring-boot-starter-aop");
+            .add("spring-retry", "spring-boot-starter-aspectj");
     }
 
     @Override

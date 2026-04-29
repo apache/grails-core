@@ -19,6 +19,7 @@
 
 plugins {
     id 'org.apache.grails.buildsrc.properties'
+    id 'org.apache.grails.buildsrc.dependency-validator'
     id 'org.apache.grails.buildsrc.compile'
 }
 
@@ -41,9 +42,8 @@ dependencies {
     testImplementation 'org.apache.grails:grails-testing-support-views-gson'
     testImplementation 'org.apache.grails.testing:grails-testing-support-core'
 
-    integrationTestImplementation 'com.fasterxml.jackson.core:jackson-databind'
-    integrationTestImplementation "io.micronaut:micronaut-http-client:$micronautHttpClientVersion"
-    integrationTestImplementation "io.micronaut:micronaut-jackson-databind:$micronautHttpClientVersion"
+    integrationTestImplementation 'tools.jackson.core:jackson-databind'
+    integrationTestImplementation 'org.apache.grails:grails-testing-support-http-client'
 }
 
 apply {

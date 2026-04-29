@@ -17,77 +17,16 @@ specific language governing permissions and limitations
 under the License.
 ////
 
-This section covers all the new features introduced in Grails 7
+This section covers all the new features introduced in Grails 8
 
 === Overview
 
-Grails 7 is a major release that includes new features, improvements, and dependency upgrades.
+Grails 8 is a major release that includes new features, improvements, and dependency upgrades.
 This release focuses on enhancing the developer experience, improving performance, and ensuring compatibility with the latest technologies.
 
-For detailed information on how to upgrade to Grails 7, including major dependency changes, please see the xref:upgrading#upgrading60x[Upgrading from Grails 6 to Grails 7] section.
+For detailed information on how to upgrade to Grails 8, including major dependency changes, please see the xref:upgrading#upgrading80x[Upgrading from Grails 7 to Grails 8] section.
 Notable new features are included below.
 
-=== External Configuration
+==== No New Features at this time
 
-The https://github.com/sbglasius/external-config[external configuration plugin] is now integrated into Grails.
-See the xref:conf.adoc#externalConfiguration[Configuration] section for details.
-
-=== Ubiquitous Containerized Browser Testing with Geb
-
-The https://github.com/apache/grails-core/tree/HEAD/grails-geb#readme[Grails Geb Plugin] has received a significant update, introducing test fixtures that enable ubiquitous containerized browser testing.
-
-This new approach is now the recommended way to write functional tests in Grails. However, the previous method using WebDriver binaries remains supported for backward compatibility.
-
-==== Key Features
-
-By extending your test classes with `ContainerGebSpec`, your tests will automatically leverage a containerized browser provided by https://java.testcontainers.org/[Testcontainers]. This setup eliminates the need for managing browser versions and ensures consistent test environments.
-
-==== Requirements
-
-To use `ContainerGebSpec`, ensure that you have a compatible container runtime installed. Supported options include:
-
-- **Docker Desktop**
-- **OrbStack** (macOS only)
-- **Rancher Desktop**
-- **Podman Desktop**
-- **Colima** (macOS and Linux)
-
-==== How It Works
-
-Once a compatible container runtime is installed, no additional configuration is needed. Simply extend your test classes with `ContainerGebSpec` (instead of `GebSpec`), and the following will happen:
-
-1. A container will be started automatically when you run your integration tests.
-2. The container will be configured to launch a browser capable of accessing your application under test.
-
-With this setup, you gain the benefits of containerized testing, such as isolation, reproducibility, and reduced setup complexity.
-
-==== formActionSubmit tag
-
-A new tag `formActionSubmit` has been added to replace `actionSubmit`.
-Dispatching actions via a parameter name on a form submit will be removed in a future version of grails.
-See ticket https://github.com/grails/grails-gsp/issues/551[#551] for details.
-
-==== @Scaffold support for Controllers and Services
-
-The `@Scaffold` annotation was added to customize scaffolding generation for controllers and services.
-
-==== Bootstrap 5.3.3 support
-
-Bootstrap 5.3.3 support.
-Saffolding and Fields tags now optionally support boostrap classes.
-
-==== Prioritization of AutoConfiguration over bean overriding.
-
-The core dependencies of Grails are moving to using `@Configuration` to better integrate with the Spring Boot ecosystem.
-Please note that this does mean that some beans are now initialized earlier in the application context lifecycle.
-
-==== Significant Dependency Removals
-
-With the removal of Micronaut, and the fixes to the asset pipeline plugin, Grails build sizes should now be significantly reduced.
-
-==== g:form & CSRF protection
-
-The `g:form` tag now automatically provides csrf protection when Spring Security CSRF is enabled.
-
-
-
+No new features at this time

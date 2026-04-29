@@ -19,6 +19,8 @@
 package grails.plugin.formfields
 
 import java.sql.Blob
+import java.text.DecimalFormat
+import java.text.DecimalFormatSymbols
 import java.text.NumberFormat
 import java.time.Instant
 import java.time.LocalDate
@@ -41,6 +43,7 @@ import org.springframework.context.MessageSourceResolvable
 import org.springframework.context.NoSuchMessageException
 import org.springframework.web.servlet.LocaleResolver
 
+import grails.gorm.validation.DisplayType
 import grails.util.GrailsStringUtils
 import org.grails.buffer.FastStringWriter
 import org.grails.datastore.mapping.model.MappingContext
@@ -304,16 +307,6 @@ class FormFieldsTagLib {
                         displayStyle: displayStyle,
                         theme: theme])
         }
-    }
-
-    /**
-     * @deprecated since version 1.5 - Use widget instead
-     * @attr bean Name of the source bean in the GSP model.
-     * @attr property REQUIRED The name of the property to display. This is resolved
-     * against the specified bean or the bean in the current scope.
-     */
-    def input = { attrs ->
-        out << widget(attrs)
     }
 
     /**
@@ -617,12 +610,24 @@ class FormFieldsTagLib {
                 fieldsDomainPropertyFactory.build(domainClass.getPropertyByName(propertyName))
             }
         } else {
-            properties = list ? domainModelService.getListOutputProperties(domainClass) : domainModelService.getInputProperties(domainClass,
-                    exclusionType == ExclusionType.Input ? exclusionsInput : exclusionsDisplay)
+            if (list) {
+                properties = domainModelService.getListOutputProperties(domainClass)
+            } else if (exclusionType == ExclusionType.Display) {
+                properties = domainModelService.getOutputProperties(domainClass, exclusionsDisplay)
+            } else {
+                properties = domainModelService.getInputProperties(domainClass, exclusionsInput, true)
+            }
             // If 'except' is not set, but 'list' is, exclude 'id', 'dateCreated' and 'lastUpdated' by default
             List<String> blacklist = attrs.containsKey('except') ? getList(attrs.except) : (list ? exclusionsList : [])
 
-            properties.removeAll { it.name in blacklist }
+            properties.removeAll { property ->
+                if (property.name in blacklist) {
+                    DisplayType displayType = property.constrained?.displayType
+                    // DisplayType.ALL or OUTPUT_ONLY explicitly overrides the blacklist for output views
+                    return displayType != DisplayType.ALL && displayType != DisplayType.OUTPUT_ONLY
+                }
+                false
+            }
         }
 
         return properties
@@ -833,7 +838,15 @@ class FormFieldsTagLib {
 
     @CompileStatic
     protected NumberFormat getNumberFormatter() {
-        NumberFormat.getInstance(getLocale())
+        NumberFormat numberFormat = NumberFormat.getInstance(getLocale())
+        // Normalize Unicode minus sign (U+2212) to ASCII hyphen-minus (U+002D)
+        // for HTML compatibility (fixes grails-core#15178)
+        if (numberFormat instanceof DecimalFormat) {
+            DecimalFormatSymbols symbols = ((DecimalFormat) numberFormat).decimalFormatSymbols
+            symbols.minusSign = '-' as char
+            ((DecimalFormat) numberFormat).decimalFormatSymbols = symbols
+        }
+        return numberFormat
     }
 
     @CompileStatic

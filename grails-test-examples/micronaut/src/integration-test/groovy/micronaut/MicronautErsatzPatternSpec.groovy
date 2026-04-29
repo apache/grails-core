@@ -18,39 +18,35 @@
  */
 package micronaut
 
-import io.github.cjstehno.ersatz.ErsatzServer
-import io.github.cjstehno.ersatz.cfg.ContentType
+import io.github.cjstehno.ersatz.GroovyErsatzServer
+import io.github.cjstehno.ersatz.cfg.ServerConfig
 import io.micronaut.context.ApplicationContext as MicronautApplicationContext
-import io.micronaut.http.HttpRequest
-import io.micronaut.http.MediaType
-import io.micronaut.http.client.HttpClient
-import io.micronaut.http.client.exceptions.HttpClientResponseException
 import micronaut.client.MicronautFilteredClient
 import micronaut.client.MicronautPathClient
 import micronaut.client.MicronautReactiveClient
 import micronaut.client.MicronautRetryableClient
 import spock.lang.AutoCleanup
+import spock.lang.IgnoreIf
 import spock.lang.Specification
+import spock.lang.Tag
 
 import org.springframework.beans.factory.annotation.Autowired
-import org.springframework.beans.factory.annotation.Value
 
 import grails.testing.mixin.integration.Integration
+import org.apache.grails.testing.http.client.HttpClientSupport
 
+// micronaut-core's ScopedValues references java.lang.ScopedValue.CallableOp,
+// which only exists in JDK 25+ (JEP 506). Skip on older JDKs.
+@IgnoreIf({ Runtime.version().feature() < 25 })
 @Integration
-class MicronautErsatzPatternSpec extends Specification {
+@Tag('http-client')
+class MicronautErsatzPatternSpec extends Specification implements HttpClientSupport {
 
-    @Autowired
-    MicronautApplicationContext micronautContext
-
-    @Autowired
-    ExternalApiService externalApiService
-
-    @Value('${local.server.port}')
-    Integer serverPort
+    @Autowired ExternalApiService externalApiService
+    @Autowired MicronautApplicationContext micronautContext
 
     @AutoCleanup
-    ErsatzServer ersatz = new ErsatzServer({ cfg ->
+    GroovyErsatzServer ersatz = new GroovyErsatzServer({ ServerConfig cfg ->
         cfg.httpPort(19876)
     })
 
@@ -58,15 +54,15 @@ class MicronautErsatzPatternSpec extends Specification {
 
     void "CompletableFuture GET resolves with ersatz-mocked data"() {
         given: 'ersatz mocks the async endpoint'
-        ersatz.expectations({ expect ->
-            expect.GET('/micronaut-test/async', { req ->
-                req.called(1)
-                req.responder({ res ->
-                    res.code(200)
-                    res.body('{"async":"get-result"}', ContentType.APPLICATION_JSON)
-                })
-            })
-        })
+        ersatz.expectations {
+            GET('/micronaut-test/async') {
+                called(1)
+                responder {
+                    code(200)
+                    body('{"async":"get-result"}', 'application/json')
+                }
+            }
+        }
 
         and: 'the reactive client'
         def client = micronautContext.getBean(MicronautReactiveClient)
@@ -86,15 +82,15 @@ class MicronautErsatzPatternSpec extends Specification {
 
     void "CompletableFuture POST resolves with ersatz-mocked creation response"() {
         given: 'ersatz mocks the async POST endpoint'
-        ersatz.expectations({ expect ->
-            expect.POST('/micronaut-test/async', { req ->
-                req.called(1)
-                req.responder({ res ->
-                    res.code(201)
-                    res.body('{"id":"async-1","created":true}', ContentType.APPLICATION_JSON)
-                })
-            })
-        })
+        ersatz.expectations {
+            POST('/micronaut-test/async') {
+                called(1)
+                responder {
+                    code(201)
+                    body('{"id":"async-1","created":true}', 'application/json')
+                }
+            }
+        }
 
         and: 'the reactive client'
         def client = micronautContext.getBean(MicronautReactiveClient)
@@ -114,14 +110,14 @@ class MicronautErsatzPatternSpec extends Specification {
 
     void "CompletableFuture DELETE resolves with HttpResponse from ersatz"() {
         given: 'ersatz mocks the async DELETE endpoint'
-        ersatz.expectations({ expect ->
-            expect.DELETE('/micronaut-test/async/77', { req ->
-                req.called(1)
-                req.responder({ res ->
-                    res.code(204)
-                })
-            })
-        })
+        ersatz.expectations {
+            DELETE('/micronaut-test/async/77') {
+                called(1)
+                responder {
+                    code(204)
+                }
+            }
+        }
 
         and: 'the reactive client'
         def client = micronautContext.getBean(MicronautReactiveClient)
@@ -139,14 +135,14 @@ class MicronautErsatzPatternSpec extends Specification {
 
     void "void return type completes without error and ersatz verifies the call"() {
         given: 'ersatz mocks the fire-and-forget endpoint'
-        ersatz.expectations({ expect ->
-            expect.POST('/micronaut-test/fire-and-forget', { req ->
-                req.called(1)
-                req.responder({ res ->
-                    res.code(202)
-                })
-            })
-        })
+        ersatz.expectations {
+            POST('/micronaut-test/fire-and-forget') {
+                called(1)
+                responder {
+                    code(202)
+                }
+            }
+        }
 
         and: 'the reactive client'
         def client = micronautContext.getBean(MicronautReactiveClient)
@@ -165,15 +161,15 @@ class MicronautErsatzPatternSpec extends Specification {
 
     void "@Client path prepends base path to GET request verified by ersatz"() {
         given: 'ersatz mocks the versioned API endpoint'
-        ersatz.expectations({ expect ->
-            expect.GET('/api/v1/items', { req ->
-                req.called(1)
-                req.responder({ res ->
-                    res.code(200)
-                    res.body('[{"id":"1","name":"path-item"}]', ContentType.APPLICATION_JSON)
-                })
-            })
-        })
+        ersatz.expectations {
+            GET('/api/v1/items') {
+                called(1)
+                responder {
+                    code(200)
+                    body('[{"id":"1","name":"path-item"}]', 'application/json')
+                }
+            }
+        }
 
         and: 'the path client'
         def client = micronautContext.getBean(MicronautPathClient)
@@ -191,15 +187,15 @@ class MicronautErsatzPatternSpec extends Specification {
 
     void "@Client path prepends base path to GET with @PathVariable verified by ersatz"() {
         given: 'ersatz mocks the versioned API endpoint with id'
-        ersatz.expectations({ expect ->
-            expect.GET('/api/v1/items/55', { req ->
-                req.called(1)
-                req.responder({ res ->
-                    res.code(200)
-                    res.body('{"id":"55","name":"versioned-item"}', ContentType.APPLICATION_JSON)
-                })
-            })
-        })
+        ersatz.expectations {
+            GET('/api/v1/items/55') {
+                called(1)
+                responder {
+                    code(200)
+                    body('{"id":"55","name":"versioned-item"}', 'application/json')
+                }
+            }
+        }
 
         and: 'the path client'
         def client = micronautContext.getBean(MicronautPathClient)
@@ -218,15 +214,15 @@ class MicronautErsatzPatternSpec extends Specification {
 
     void "@Client path prepends base path to POST request verified by ersatz"() {
         given: 'ersatz mocks the versioned API POST endpoint'
-        ersatz.expectations({ expect ->
-            expect.POST('/api/v1/items', { req ->
-                req.called(1)
-                req.responder({ res ->
-                    res.code(201)
-                    res.body('{"id":"new","name":"path-created"}', ContentType.APPLICATION_JSON)
-                })
-            })
-        })
+        ersatz.expectations {
+            POST('/api/v1/items') {
+                called(1)
+                responder {
+                    code(201)
+                    body('{"id":"new","name":"path-created"}', 'application/json')
+                }
+            }
+        }
 
         and: 'the path client'
         def client = micronautContext.getBean(MicronautPathClient)
@@ -246,16 +242,16 @@ class MicronautErsatzPatternSpec extends Specification {
 
     void "@ClientFilter auto-injects X-Auth-Token header verified by ersatz"() {
         given: 'ersatz expects the auto-injected header'
-        ersatz.expectations({ expect ->
-            expect.GET('/micronaut-test/filtered/data', { req ->
-                req.header('X-Auth-Token', 'auto-injected-token-123')
-                req.called(1)
-                req.responder({ res ->
-                    res.code(200)
-                    res.body('{"filtered":"data"}', ContentType.APPLICATION_JSON)
-                })
-            })
-        })
+        ersatz.expectations {
+            GET('/micronaut-test/filtered/data') {
+                header('X-Auth-Token', 'auto-injected-token-123')
+                called(1)
+                responder {
+                    code(200)
+                    body('{"filtered":"data"}', 'application/json')
+                }
+            }
+        }
 
         and: 'the filtered client'
         def client = micronautContext.getBean(MicronautFilteredClient)
@@ -273,16 +269,16 @@ class MicronautErsatzPatternSpec extends Specification {
 
     void "@ClientFilter applies to nested paths with @PathVariable"() {
         given: 'ersatz expects the auto-injected header on nested path'
-        ersatz.expectations({ expect ->
-            expect.GET('/micronaut-test/filtered/details/42', { req ->
-                req.header('X-Auth-Token', 'auto-injected-token-123')
-                req.called(1)
-                req.responder({ res ->
-                    res.code(200)
-                    res.body('{"id":"42","detail":"filtered"}', ContentType.APPLICATION_JSON)
-                })
-            })
-        })
+        ersatz.expectations {
+            GET('/micronaut-test/filtered/details/42') {
+                header('X-Auth-Token', 'auto-injected-token-123')
+                called(1)
+                responder {
+                    code(200)
+                    body('{"id":"42","detail":"filtered"}', 'application/json')
+                }
+            }
+        }
 
         and: 'the filtered client'
         def client = micronautContext.getBean(MicronautFilteredClient)
@@ -302,15 +298,15 @@ class MicronautErsatzPatternSpec extends Specification {
 
     void "@Retryable client succeeds on first attempt through ersatz"() {
         given: 'ersatz mocks a successful response'
-        ersatz.expectations({ expect ->
-            expect.GET('/micronaut-test/retryable', { req ->
-                req.called(1)
-                req.responder({ res ->
-                    res.code(200)
-                    res.body('{"retry":"not-needed"}', ContentType.APPLICATION_JSON)
-                })
-            })
-        })
+        ersatz.expectations {
+            GET('/micronaut-test/retryable') {
+                called(1)
+                responder {
+                    code(200)
+                    body('{"retry":"not-needed"}', 'application/json')
+                }
+            }
+        }
 
         and: 'the retryable client'
         def client = micronautContext.getBean(MicronautRetryableClient)
@@ -328,23 +324,23 @@ class MicronautErsatzPatternSpec extends Specification {
 
     void "@Retryable retries on 503 errors and succeeds on third attempt via ersatz sequential responses"() {
         given: 'ersatz responds with 503 twice then 200'
-        ersatz.expectations({ expect ->
-            expect.GET('/micronaut-test/retryable', { req ->
-                req.called(3)
-                req.responder({ res ->
-                    res.code(503)
-                    res.body('unavailable', ContentType.TEXT_PLAIN)
-                })
-                req.responder({ res ->
-                    res.code(503)
-                    res.body('still unavailable', ContentType.TEXT_PLAIN)
-                })
-                req.responder({ res ->
-                    res.code(200)
-                    res.body('{"retry":"succeeded"}', ContentType.APPLICATION_JSON)
-                })
-            })
-        })
+        ersatz.expectations {
+            GET('/micronaut-test/retryable') {
+                called(3)
+                responder {
+                    code(503)
+                    body('unavailable', 'text/plain')
+                }
+                responder {
+                    code(503)
+                    body('still unavailable', 'text/plain')
+                }
+                responder {
+                    code(200)
+                    body('{"retry":"succeeded"}', 'application/json')
+                }
+            }
+        }
 
         and: 'the retryable client'
         def client = micronautContext.getBean(MicronautRetryableClient)
@@ -384,98 +380,71 @@ class MicronautErsatzPatternSpec extends Specification {
 
     void "full roundtrip: CompletableFuture through Grails controller to ersatz"() {
         given: 'ersatz mocks the async endpoint'
-        ersatz.expectations({ expect ->
-            expect.GET('/micronaut-test/async', { req ->
-                req.called(1)
-                req.responder({ res ->
-                    res.code(200)
-                    res.body('{"async":"roundtrip-data"}', ContentType.APPLICATION_JSON)
-                })
-            })
-        })
-
-        and: 'a Micronaut HTTP client targeting Grails'
-        def httpClient = HttpClient.create("http://localhost:$serverPort".toURL())
+        ersatz.expectations {
+            GET('/micronaut-test/async') {
+                called(1)
+                responder {
+                    code(200)
+                    body('{"async":"roundtrip-data"}', 'application/json')
+                }
+            }
+        }
 
         when: 'calling the Grails async controller endpoint'
-        def response = httpClient.toBlocking().exchange(
-                HttpRequest.GET('/external-api/async').accept(MediaType.APPLICATION_JSON),
-                String
+        def response = http(
+                '/external-api/async',
+                'Accept': 'application/json'
         )
 
         then: 'the response contains the ersatz-mocked async data'
-        response.status.code == 200
-        response.body().contains('roundtrip-data')
+        response.assertContains(200, 'roundtrip-data')
 
         and: 'ersatz verifies the call'
         ersatz.verify()
-
-        cleanup:
-        httpClient.close()
     }
 
     void "full roundtrip: path client through Grails controller to ersatz"() {
         given: 'ersatz mocks the versioned API endpoint'
-        ersatz.expectations({ expect ->
-            expect.GET('/api/v1/items/88', { req ->
-                req.called(1)
-                req.responder({ res ->
-                    res.code(200)
-                    res.body('{"id":"88","name":"path-roundtrip"}', ContentType.APPLICATION_JSON)
-                })
-            })
-        })
-
-        and: 'a Micronaut HTTP client targeting Grails'
-        def httpClient = HttpClient.create("http://localhost:$serverPort".toURL())
+        ersatz.expectations {
+            GET('/api/v1/items/88') {
+                called(1)
+                responder {
+                    code(200)
+                    body('{"id":"88","name":"path-roundtrip"}', 'application/json')
+                }
+            }
+        }
 
         when: 'calling the Grails path controller endpoint'
-        def response = httpClient.toBlocking().exchange(
-                HttpRequest.GET('/external-api/path/88').accept(MediaType.APPLICATION_JSON),
-                String
-        )
+        def response = http('/external-api/path/88', 'Accept': 'application/json')
 
         then: 'the response contains the ersatz-mocked path data'
-        response.status.code == 200
-        response.body().contains('path-roundtrip')
+        response.assertContains(200, 'path-roundtrip')
 
         and: 'ersatz verifies the call'
         ersatz.verify()
-
-        cleanup:
-        httpClient.close()
     }
 
     void "full roundtrip: filtered client through Grails controller to ersatz with auto-injected header"() {
         given: 'ersatz expects the auto-injected header on the filtered path'
-        ersatz.expectations({ expect ->
-            expect.GET('/micronaut-test/filtered/data', { req ->
-                req.header('X-Auth-Token', 'auto-injected-token-123')
-                req.called(1)
-                req.responder({ res ->
-                    res.code(200)
-                    res.body('{"filtered":"roundtrip-data"}', ContentType.APPLICATION_JSON)
-                })
-            })
-        })
-
-        and: 'a Micronaut HTTP client targeting Grails'
-        def httpClient = HttpClient.create("http://localhost:$serverPort".toURL())
+        ersatz.expectations {
+            GET('/micronaut-test/filtered/data') {
+                header('X-Auth-Token', 'auto-injected-token-123')
+                called(1)
+                responder {
+                    code(200)
+                    body('{"filtered":"roundtrip-data"}', 'application/json')
+                }
+            }
+        }
 
         when: 'calling the Grails filtered controller endpoint'
-        def response = httpClient.toBlocking().exchange(
-                HttpRequest.GET('/external-api/filtered').accept(MediaType.APPLICATION_JSON),
-                String
-        )
+        def response = http('/external-api/filtered', 'Accept': 'application/json')
 
         then: 'the response contains the filtered data'
-        response.status.code == 200
-        response.body().contains('roundtrip-data')
+        response.assertContains(200, 'roundtrip-data')
 
         and: 'ersatz verifies the header was auto-injected'
         ersatz.verify()
-
-        cleanup:
-        httpClient.close()
     }
 }

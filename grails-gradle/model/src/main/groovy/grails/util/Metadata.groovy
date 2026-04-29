@@ -241,16 +241,6 @@ class Metadata {
         return this.propertyResolver.containsProperty((String) key)
     }
 
-    @Deprecated
-    Object get(Object key) {
-        getProperty(key.toString(), Object, null)
-    }
-
-    @Deprecated
-    Object getProperty(String propertyName) {
-        get(propertyName)
-    }
-
     <T> T getProperty(String key, Class<T> targetType, T defaultValue) {
         return this.propertyResolver.getProperty(key, targetType, defaultValue)
     }

@@ -26,6 +26,7 @@ import org.grails.forge.application.ApplicationType
 import org.grails.forge.application.generator.GeneratorContext
 import org.grails.forge.feature.Features
 import org.grails.forge.fixture.CommandOutputFixture
+import org.grails.forge.options.DevelopmentReloading
 import org.grails.forge.options.JdkVersion
 import org.grails.forge.options.Options
 import org.grails.forge.options.TestFramework
@@ -65,7 +66,7 @@ class HibernateGormSpec extends ApplicationContextSpec implements CommandOutputF
 
     void "test buildSrc is present for buildscript dependencies"() {
         given:
-        final def output = generate(ApplicationType.WEB, new Options(TestFramework.SPOCK))
+        final def output = generate(ApplicationType.WEB, new Options(DevelopmentReloading.DEVTOOLS))
         final def buildGradle = output["build.gradle"]
 
         expect:
@@ -89,7 +90,7 @@ class HibernateGormSpec extends ApplicationContextSpec implements CommandOutputF
     void "test match values of datasource config"() {
 
         when:
-        final def output = generate(ApplicationType.WEB, new Options(TestFramework.SPOCK))
+        final def output = generate(ApplicationType.WEB, new Options(DevelopmentReloading.DEVTOOLS))
         final String applicationYaml = output["grails-app/conf/application.yml"]
         def config = new YamlSlurper().parseText(applicationYaml)
 

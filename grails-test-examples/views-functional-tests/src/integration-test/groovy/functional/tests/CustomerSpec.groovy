@@ -16,38 +16,31 @@
  *  specific language governing permissions and limitations
  *  under the License.
  */
-
 package functional.tests
 
+import spock.lang.Specification
+import spock.lang.Tag
+
 import grails.testing.mixin.integration.Integration
-import grails.testing.spock.RunOnce
-import io.micronaut.http.HttpRequest
-import io.micronaut.http.HttpResponse
-import io.micronaut.http.HttpStatus
-import org.junit.jupiter.api.BeforeEach
+import org.apache.grails.testing.http.client.HttpClientSupport
 
-@Integration(applicationClass = Application)
-class CustomerSpec extends HttpClientSpec {
-
-    @RunOnce
-    @BeforeEach
-    void init() {
-        super.init()
-    }
+@Integration
+@Tag('http-client')
+class CustomerSpec extends Specification implements HttpClientSupport {
 
     void "Test that circular references are correctly rendered for one to many relationship"() {
         when:
-        HttpRequest request = HttpRequest.GET("/customer")
-        HttpResponse<Map> resp = client.toBlocking().exchange(request, Map)
-        Map json = resp.body()
+        def response = http('/customer')
 
-        then:"The correct response is returned"
-        resp.status == HttpStatus.OK
-        json.id == 1
-        json.name == "Nokia"
-        json.sites.find { it.id == 1 }.name == "Salo"
-        json.sites.find { it.id == 1 }.customer == null
-        json.sites.find { it.id == 2 }.name == "Helsinki"
-        json.sites.find { it.id == 2 }.customer == null
+        then: "The correct response is returned"
+        response.assertStatus(200)
+        with(response.json()) {
+            id == 1
+            name == 'Nokia'
+            sites.find { it.id == 1 }.name == 'Salo'
+            sites.find { it.id == 1 }.customer == null
+            sites.find { it.id == 2 }.name == 'Helsinki'
+            sites.find { it.id == 2 }.customer == null
+        }
      }
 }

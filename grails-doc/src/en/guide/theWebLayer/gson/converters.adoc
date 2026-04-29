@@ -17,7 +17,7 @@ specific language governing permissions and limitations
 under the License.
 ////
 
-It is possible to register custom converters to change how a given class is rendered with json views. To do so, create a class that implements link:{api}grails/plugin/json/builder/JsonGenerator.Converter.html[Converter]. Then you must register the class in `src/main/resources/META-INF/services/grails.plugin.json.builder.JsonGenerator$Converter`.
+It is possible to register custom converters to change how a given class is rendered with json views. To do so, create a class that implements link:{groovyapi}groovy.json.JsonGenerator.Converter.html[Converter]. Then you must register the class in `src/main/resources/META-INF/services/groovy.json.JsonGenerator$Converter`.
 
 [source,groovy]
 ----
@@ -45,7 +45,7 @@ class CustomClass {
 Because plugins could potentially provide converters, you can also determine the order by implementing the http://docs.spring.io/spring/docs/current/javadoc-api/org/springframework/core/Ordered.html[Ordered] interface in your converter.
 
 [source]
-.src/main/resources/META-INF/services/grails.plugin.json.builder.JsonGenerator$Converter
+.src/main/resources/META-INF/services/groovy.json.JsonGenerator$Converter
 ----
 foo.MyCustomConverter
 ----

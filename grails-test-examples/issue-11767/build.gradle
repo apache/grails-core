@@ -18,6 +18,7 @@
  */
 plugins {
     id 'org.apache.grails.buildsrc.properties'
+    id 'org.apache.grails.buildsrc.dependency-validator'
     id 'org.apache.grails.buildsrc.compile'
 }
 
@@ -27,19 +28,16 @@ group = 'issue11767.app'
 apply plugin: 'org.apache.grails.gradle.grails-web'
 
 dependencies {
-    implementation platform(project(':grails-bom'))
+    implementation enforcedPlatform(project(':grails-micronaut-bom'))
 
     implementation 'org.apache.grails:grails-dependencies-starter-web'
     implementation 'org.apache.grails:grails-micronaut'
     implementation project(':grails-test-examples-plugins-issue-11767')
 
-    testImplementation platform("io.micronaut.platform:micronaut-platform:$micronautPlatformVersion")
-    testImplementation "io.micronaut:micronaut-http-client"
-    testImplementation "io.micronaut.serde:micronaut-serde-jackson"
-    testImplementation 'io.micronaut:micronaut-inject-groovy'
-
     testImplementation 'org.apache.grails:grails-testing-support-web'
     testImplementation 'org.spockframework:spock-core'
+
+    integrationTestImplementation 'org.apache.grails:grails-testing-support-http-client'
 }
 
 apply {

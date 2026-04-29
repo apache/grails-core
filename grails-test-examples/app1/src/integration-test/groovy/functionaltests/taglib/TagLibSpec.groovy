@@ -18,145 +18,101 @@
  */
 package functionaltests.taglib
 
-import io.micronaut.http.HttpRequest
-import io.micronaut.http.client.HttpClient
-import spock.lang.Shared
 import spock.lang.Specification
+import spock.lang.Tag
 import spock.lang.Unroll
 
 import grails.testing.mixin.integration.Integration
+import org.apache.grails.testing.http.client.HttpClientSupport
 
 /**
  * Integration tests for GSP Tag Libraries.
  * Tests both custom tag libraries and built-in Grails tags.
  */
 @Integration
-class TagLibSpec extends Specification {
-
-    @Shared
-    HttpClient client
-
-    def setup() {
-        client = client ?: HttpClient.create(new URL("http://localhost:$serverPort"))
-    }
-
-    def cleanupSpec() {
-        client.close()
-    }
+@Tag('http-client')
+class TagLibSpec extends Specification implements HttpClientSupport {
 
     // ========== Custom Tag: hello ==========
 
     def "custom:hello tag renders greeting with name attribute"() {
         when: "calling the hello tag test endpoint"
-        def response = client.toBlocking().exchange(
-            HttpRequest.GET('/tagLibTest/testHelloTag?name=Grails'),
-            String
-        )
+        def response = http('/tagLibTest/testHelloTag?name=Grails')
 
         then: "greeting is rendered with the name"
-        response.status.code == 200
-        response.body().contains('Hello, Grails!')
+        response.assertContains(200, 'Hello, Grails!')
     }
 
     def "custom:hello tag uses default name when not provided"() {
         when: "calling the hello tag test endpoint"
-        def response = client.toBlocking().exchange(
-            HttpRequest.GET('/tagLibTest/testHelloTag'),
-            String
-        )
+        def response = http('/tagLibTest/testHelloTag')
 
         then: "greeting is rendered with default name"
-        response.status.code == 200
-        response.body().contains('Hello, World!')
+        response.assertContains(200, 'Hello, World!')
     }
 
     // ========== Custom Tag: wrapper ==========
 
     def "custom:wrapper tag renders title and body content"() {
         when: "calling the wrapper tag test endpoint"
-        def response = client.toBlocking().exchange(
-            HttpRequest.GET('/tagLibTest/testWrapperTag?title=My%20Section&content=Section%20content'),
-            String
+        def response = http(
+            '/tagLibTest/testWrapperTag?title=My%20Section&content=Section%20content'
         )
 
         then: "wrapper with title and content is rendered"
-        response.status.code == 200
-        def body = response.body()
-        body.contains('<div class="wrapper">')
-        body.contains('<h2>My Section</h2>')
-        body.contains('Section content')
+        response.assertContains(200, '<div class="wrapper">')
+                .assertContains('<h2>My Section</h2>')
+                .assertContains('Section content')
     }
 
     def "custom:wrapper tag applies custom CSS class"() {
         when: "calling the wrapper tag test endpoint"
-        def response = client.toBlocking().exchange(
-            HttpRequest.GET('/tagLibTest/testWrapperTag?title=Test&content=Test&cssClass=custom-wrapper'),
-            String
+        def response = http(
+            '/tagLibTest/testWrapperTag?title=Test&content=Test&cssClass=custom-wrapper'
         )
 
         then: "custom CSS class is applied"
-        response.status.code == 200
-        response.body().contains('<div class="custom-wrapper">')
+        response.assertContains(200, '<div class="custom-wrapper">')
     }
 
     // ========== Custom Tag: iterate ==========
 
     def "custom:iterate tag iterates over items"() {
         when: "calling the iterate tag test endpoint"
-        def response = client.toBlocking().exchange(
-            HttpRequest.GET('/tagLibTest/testIterateTag?items=A,B,C'),
-            String
-        )
+        def response = http('/tagLibTest/testIterateTag?items=A,B,C')
 
         then: "all items are rendered"
-        response.status.code == 200
-        def body = response.body()
-        body.contains('Item: A')
-        body.contains('Item: B')
-        body.contains('Item: C')
+        response.assertContains(200, 'Item: A')
+                .assertContains('Item: B')
+                .assertContains('Item: C')
     }
 
     def "custom:iterate tag uses separator between items"() {
         when: "calling the iterate tag test endpoint"
-        def response = client.toBlocking().exchange(
-            HttpRequest.GET('/tagLibTest/testIterateTag?items=X,Y,Z&separator=-'),
-            String
-        )
+        def response = http('/tagLibTest/testIterateTag?items=X,Y,Z&separator=-')
 
         then: "items are separated by the specified separator"
-        response.status.code == 200
-        def body = response.body()
-        body.contains('Item: X-Item: Y-Item: Z')
+        response.assertContains(200, 'Item: X-Item: Y-Item: Z')
     }
 
     // ========== Custom Tag: showIf/hideIf ==========
 
     def "custom:showIf tag shows content when condition is true"() {
         when: "calling the conditional tags test endpoint"
-        def response = client.toBlocking().exchange(
-            HttpRequest.GET('/tagLibTest/testConditionalTags?condition=true'),
-            String
-        )
+        def response = http('/tagLibTest/testConditionalTags?condition=true')
 
         then: "showIf content is visible, hideIf content is hidden"
-        response.status.code == 200
-        def body = response.body()
-        body.contains('id="showIf-result">VISIBLE')
-        !body.contains('id="hideIf-result">HIDDEN')
+        response.assertContains(200, 'id="showIf-result">VISIBLE')
+                .assertNotContains('id="hideIf-result">HIDDEN')
     }
 
     def "custom:hideIf tag shows content when condition is false"() {
         when: "calling the conditional tags test endpoint"
-        def response = client.toBlocking().exchange(
-            HttpRequest.GET('/tagLibTest/testConditionalTags?condition=false'),
-            String
-        )
+        def response = http('/tagLibTest/testConditionalTags?condition=false')
 
         then: "showIf content is hidden, hideIf content is visible"
-        response.status.code == 200
-        def body = response.body()
-        !body.contains('id="showIf-result">VISIBLE')
-        body.contains('id="hideIf-result">HIDDEN')
+        response.assertContains(200, 'id="hideIf-result">HIDDEN')
+                .assertNotContains('id="showIf-result">VISIBLE')
     }
 
     // ========== Custom Tag: formatted ==========
@@ -164,14 +120,12 @@ class TagLibSpec extends Specification {
     @Unroll
     def "custom:formatted tag formats value as #format"() {
         when: "calling the formatted tag test endpoint"
-        def response = client.toBlocking().exchange(
-            HttpRequest.GET("/tagLibTest/testFormattedTag?value=${value}&format=${format}&decimals=${decimals}"),
-            String
+        def response = http(
+            "/tagLibTest/testFormattedTag?value=${value}&format=${format}&decimals=${decimals}"
         )
 
         then: "value is formatted correctly"
-        response.status.code == 200
-        response.body().contains(expected)
+        response.assertContains(200, expected)
 
         where:
         value    | format       | decimals | expected
@@ -184,64 +138,49 @@ class TagLibSpec extends Specification {
 
     def "custom:list tag renders unordered list by default"() {
         when: "calling the list tag test endpoint"
-        def response = client.toBlocking().exchange(
-            HttpRequest.GET('/tagLibTest/testListTag?items=Apple,Banana,Cherry'),
-            String
-        )
+        def response = http('/tagLibTest/testListTag?items=Apple,Banana,Cherry')
 
         then: "unordered list is rendered"
-        response.status.code == 200
-        def body = response.body()
-        body.contains('<ul>')
-        body.contains('<li>Apple</li>')
-        body.contains('<li>Banana</li>')
-        body.contains('<li>Cherry</li>')
-        body.contains('</ul>')
+        response.assertContains(200, '<ul>')
+                .assertContains('<li>Apple</li>')
+                .assertContains('<li>Banana</li>')
+                .assertContains('<li>Cherry</li>')
+                .assertContains('</ul>')
     }
 
     def "custom:list tag renders ordered list when type is ordered"() {
         when: "calling the list tag test endpoint"
-        def response = client.toBlocking().exchange(
-            HttpRequest.GET('/tagLibTest/testListTag?items=First,Second,Third&type=ordered'),
-            String
-        )
+        def response = http('/tagLibTest/testListTag?items=First,Second,Third&type=ordered')
 
         then: "ordered list is rendered"
-        response.status.code == 200
-        def body = response.body()
-        body.contains('<ol>')
-        body.contains('</ol>')
+        response.assertContains(200, '<ol>')
+                .assertContains('</ol>')
     }
 
     // ========== Custom Tag: panel ==========
 
     def "custom:panel tag renders panel with title and body"() {
         when: "calling the panel tag test endpoint"
-        def response = client.toBlocking().exchange(
-            HttpRequest.GET('/tagLibTest/testPanelTag?title=Info%20Panel&type=info&content=Panel%20content'),
-            String
+        def response = http(
+                '/tagLibTest/testPanelTag?title=Info%20Panel&type=info&content=Panel%20content'
         )
 
         then: "panel is rendered correctly"
-        response.status.code == 200
-        def body = response.body()
-        body.contains('class="panel panel-info"')
-        body.contains('class="panel-header"')
-        body.contains('<h3>Info Panel</h3>')
-        body.contains('class="panel-body"')
-        body.contains('Panel content')
+        response.assertContains(200, 'class="panel panel-info"')
+                .assertContains('class="panel-header"')
+                .assertContains('<h3>Info Panel</h3>')
+                .assertContains('class="panel-body"')
+                .assertContains('Panel content')
     }
 
     def "custom:panel tag renders collapse button when collapsible"() {
         when: "calling the panel tag test endpoint"
-        def response = client.toBlocking().exchange(
-            HttpRequest.GET('/tagLibTest/testPanelTag?title=Collapsible&collapsible=true'),
-            String
+        def response = http(
+            '/tagLibTest/testPanelTag?title=Collapsible&collapsible=true'
         )
 
         then: "collapse button is rendered"
-        response.status.code == 200
-        response.body().contains('class="collapse-btn"')
+        response.assertContains(200, 'class="collapse-btn"')
     }
 
     // ========== Custom Tag: badge ==========
@@ -249,17 +188,14 @@ class TagLibSpec extends Specification {
     @Unroll
     def "custom:badge tag renders badge with type=#type and size=#size"() {
         when: "calling the badge tag test endpoint"
-        def response = client.toBlocking().exchange(
-            HttpRequest.GET("/tagLibTest/testBadgeTag?type=${type}&size=${size}&content=${content}"),
-            String
+        def response = http(
+            "/tagLibTest/testBadgeTag?type=${type}&size=${size}&content=${content}"
         )
 
         then: "badge is rendered with correct classes"
-        response.status.code == 200
-        def body = response.body()
-        body.contains("badge-${type}")
-        body.contains("badge-${size}")
-        body.contains(">${content}<")
+        response.assertContains(200, "badge-${type}")
+                .assertContains("badge-${size}")
+                .assertContains(">${content}<")
 
         where:
         type      | size    | content
@@ -272,137 +208,101 @@ class TagLibSpec extends Specification {
 
     def "custom:progress tag renders progress bar with percentage"() {
         when: "calling the progress tag test endpoint"
-        def response = client.toBlocking().exchange(
-            HttpRequest.GET('/tagLibTest/testProgressTag?value=75&max=100'),
-            String
-        )
+        def response = http('/tagLibTest/testProgressTag?value=75&max=100')
 
         then: "progress bar is rendered"
-        response.status.code == 200
-        def body = response.body()
-        body.contains('class="progress"')
-        body.contains('class="progress-bar"')
-        body.contains('style="width: 75%"')
-        body.contains('75%')
+        response.assertContains(200, 'class="progress"')
+                .assertContains('class="progress-bar"')
+                .assertContains('style="width: 75%"')
+                .assertContains('75%')
     }
 
     def "custom:progress tag hides label when showLabel is false"() {
         when: "calling the progress tag test endpoint"
-        def response = client.toBlocking().exchange(
-            HttpRequest.GET('/tagLibTest/testProgressTag?value=50&max=100&showLabel=false'),
-            String
-        )
+        def response = http('/tagLibTest/testProgressTag?value=50&max=100&showLabel=false')
 
         then: "progress bar is rendered without label text"
-        response.status.code == 200
-        def body = response.body()
-        body.contains('class="progress-bar"')
-        !body.contains('>50%<')
+        response.assertContains(200, 'class="progress-bar"')
+                .assertNotContains('>50%<')
     }
 
     // ========== Custom Tag: repeat ==========
 
     def "custom:repeat tag repeats body content specified times"() {
         when: "calling the repeat tag test endpoint"
-        def response = client.toBlocking().exchange(
-            HttpRequest.GET('/tagLibTest/testRepeatTag?times=3'),
-            String
-        )
+        def response = http('/tagLibTest/testRepeatTag?times=3')
 
         then: "content is repeated"
-        response.status.code == 200
-        def body = response.body()
-        body.contains('Repeat #1')
-        body.contains('Repeat #2')
-        body.contains('Repeat #3')
+        response.assertContains(200, 'Repeat #1')
+                .assertContains('Repeat #2')
+                .assertContains('Repeat #3')
     }
 
     def "custom:repeat tag uses separator between repetitions"() {
         when: "calling the repeat tag test endpoint"
-        def response = client.toBlocking().exchange(
-            HttpRequest.GET('/tagLibTest/testRepeatTag?times=2&separator=%20-%20'),
-            String
-        )
+        def response = http('/tagLibTest/testRepeatTag?times=2&separator=%20-%20')
 
         then: "repetitions are separated"
-        response.status.code == 200
-        response.body().contains('Repeat #1 - Repeat #2')
+        response.assertContains(200, 'Repeat #1 - Repeat #2')
     }
 
     // ========== Custom Tag: raw ==========
 
     def "custom:raw tag outputs unescaped HTML content"() {
         when: "calling the raw tag test endpoint"
-        def response = client.toBlocking().exchange(
-            HttpRequest.GET('/tagLibTest/testRawTag'),
-            String
-        )
+        def response = http('/tagLibTest/testRawTag')
 
         then: "HTML content is not escaped"
-        response.status.code == 200
-        response.body().contains('<strong>Bold Text</strong>')
+        response.assertContains(200, '<strong>Bold Text</strong>')
     }
 
     // ========== Custom Tag: definitionList ==========
 
     def "custom:definitionList tag renders definition list from map"() {
         when: "calling the definition list tag test endpoint"
-        def response = client.toBlocking().exchange(
-            HttpRequest.GET('/tagLibTest/testDefinitionListTag'),
-            String
-        )
+        def response = http('/tagLibTest/testDefinitionListTag')
 
         then: "definition list is rendered"
-        response.status.code == 200
-        def body = response.body()
-        body.contains('<dl>')
-        body.contains('<dt>name</dt>')
-        body.contains('<dd>John Doe</dd>')
-        body.contains('<dt>age</dt>')
-        body.contains('<dd>30</dd>')
-        body.contains('</dl>')
+        response.assertContains(200, '<dl>')
+                .assertContains('<dt>name</dt>')
+                .assertContains('<dd>John Doe</dd>')
+                .assertContains('<dt>age</dt>')
+                .assertContains('<dd>30</dd>')
+                .assertContains('</dl>')
     }
 
     // ========== Custom Tag: requestInfo ==========
 
     def "custom:requestInfo tag retrieves request attributes"() {
         when: "calling the request info tag test endpoint"
-        def response = client.toBlocking().exchange(
-            HttpRequest.GET('/tagLibTest/testRequestInfoTag?attr=method'),
-            String
-        )
+        def response = http('/tagLibTest/testRequestInfoTag?attr=method')
 
         then: "request attribute is output"
-        response.status.code == 200
-        response.body().contains('GET')
+        response.assertContains(200, 'GET')
     }
 
     // ========== Custom Tag: sessionValue ==========
 
     def "custom:sessionValue tag displays default when session value not set"() {
         when: "calling the session value tag test endpoint"
-        def response = client.toBlocking().exchange(
-            HttpRequest.GET('/tagLibTest/testSessionValueTag?key=nonexistent&default=DefaultUser'),
-            String
+        def response = http(
+            '/tagLibTest/testSessionValueTag?key=nonexistent&default=DefaultUser'
         )
 
         then: "default value is displayed"
-        response.status.code == 200
-        response.body().contains('DefaultUser')
+        response.assertContains(200, 'DefaultUser')
     }
 
     // ========== Custom Tag: setVar ==========
 
     def "custom:setVar tag sets pageScope variable"() {
         when: "calling the setVar tag test endpoint"
-        def response = client.toBlocking().exchange(
-            HttpRequest.GET('/tagLibTest/testSetVarTag?varName=testVar&varValue=TestValue'),
-            String
+        def response = http(
+            '/tagLibTest/testSetVarTag?varName=testVar&varValue=TestValue'
         )
 
         then: "variable is set and accessible"
-        response.status.code == 200
-        response.body().contains('Variable testVar = TestValue')
+        response.assertContains(200, 'Variable testVar = TestValue')
     }
 
     // ========== Custom Tag: alert ==========
@@ -410,16 +310,13 @@ class TagLibSpec extends Specification {
     @Unroll
     def "custom:alert tag renders #type alert"() {
         when: "calling the alert tag test endpoint"
-        def response = client.toBlocking().exchange(
-            HttpRequest.GET("/tagLibTest/testAlertTag?type=${type}&message=${URLEncoder.encode(message, 'UTF-8')}"),
-            String
+        def response = http(
+            "/tagLibTest/testAlertTag?type=${type}&message=${URLEncoder.encode(message, 'UTF-8')}"
         )
 
         then: "alert is rendered"
-        response.status.code == 200
-        def body = response.body()
-        body.contains("alert-${type}")
-        body.contains(message)
+        response.assertContains(200, "alert-${type}")
+                .assertContains(message)
 
         where:
         type      | message
@@ -431,538 +328,395 @@ class TagLibSpec extends Specification {
 
     def "custom:alert tag renders dismissible button when dismissible=true"() {
         when: "calling the alert tag test endpoint"
-        def response = client.toBlocking().exchange(
-            HttpRequest.GET('/tagLibTest/testAlertTag?type=info&dismissible=true'),
-            String
-        )
+        def response = http('/tagLibTest/testAlertTag?type=info&dismissible=true')
 
         then: "close button is rendered"
-        response.status.code == 200
-        def body = response.body()
-        body.contains('alert-dismissible')
-        body.contains('class="close"')
+        response.assertContains(200, 'alert-dismissible')
+                .assertContains('class="close"')
     }
 
     // ========== Custom Tag: join ==========
 
     def "custom:join tag joins items with separator"() {
         when: "calling the join tag test endpoint"
-        def response = client.toBlocking().exchange(
-            HttpRequest.GET('/tagLibTest/testJoinTag?items=red,green,blue&separator=-'),
-            String
+        def response = http(
+            '/tagLibTest/testJoinTag?items=red,green,blue&separator=-'
         )
 
         then: "items are joined with separator"
-        response.status.code == 200
-        response.body().contains('red-green-blue')
+        response.assertContains(200, 'red-green-blue')
     }
 
     // ========== Custom Tag: cssClass ==========
 
     def "custom:cssClass tag builds class string from boolean attributes"() {
         when: "calling the cssClass tag test endpoint"
-        def response = client.toBlocking().exchange(
-            HttpRequest.GET('/tagLibTest/testCssClassTag?base=btn&active=true&disabled=false&highlighted=true'),
-            String
+        def response = http(
+            '/tagLibTest/testCssClassTag?base=btn&active=true&disabled=false&highlighted=true'
         )
 
         then: "class string is built correctly"
-        response.status.code == 200
-        def body = response.body()
-        body.contains('btn')
-        body.contains('active')
-        body.contains('highlighted')
-        !body.contains('disabled')
+        response.assertContains(200, 'btn')
+                .assertContains('active')
+                .assertContains('highlighted')
+                .assertNotContains('disabled')
     }
 
     // ========== Built-in Tag: g:if ==========
 
     def "g:if tag shows content when condition is true"() {
         when: "calling the built-in if test endpoint"
-        def response = client.toBlocking().exchange(
-            HttpRequest.GET('/tagLibTest/testBuiltInIf?value=10'),
-            String
-        )
+        def response = http('/tagLibTest/testBuiltInIf?value=10')
 
         then: "if condition content is shown"
-        response.status.code == 200
-        def body = response.body()
-        body.contains('Greater than 5')
-        !body.contains('Less than 5')
+        response.assertContains(200, 'Greater than 5')
+                .assertNotContains('Less than 5')
     }
 
     def "g:elseif and g:else work correctly"() {
         when: "calling the built-in if test endpoint"
-        def response = client.toBlocking().exchange(
-            HttpRequest.GET('/tagLibTest/testBuiltInIf?value=30'),
-            String
-        )
+        def response = http('/tagLibTest/testBuiltInIf?value=30')
 
         then: "elseif content is shown"
-        response.status.code == 200
-        response.body().contains('Over 20')
+        response.assertContains(200, 'Over 20')
     }
 
     // ========== Built-in Tag: g:each ==========
 
     def "g:each tag iterates over collection"() {
         when: "calling the built-in each test endpoint"
-        def response = client.toBlocking().exchange(
-            HttpRequest.GET('/tagLibTest/testBuiltInEach?items=A,B,C'),
-            String
-        )
+        def response = http('/tagLibTest/testBuiltInEach?items=A,B,C')
 
         then: "each item is rendered"
-        response.status.code == 200
-        def body = response.body()
-        body.contains('[A]')
-        body.contains('[B]')
-        body.contains('[C]')
+        response.assertContains(200, '[A]')
+                .assertContains('[B]')
+                .assertContains('[C]')
     }
 
     def "g:each tag provides status variable"() {
         when: "calling the built-in each test endpoint"
-        def response = client.toBlocking().exchange(
-            HttpRequest.GET('/tagLibTest/testBuiltInEach?items=X,Y,Z'),
-            String
-        )
+        def response = http('/tagLibTest/testBuiltInEach?items=X,Y,Z')
 
         then: "status index is available"
-        response.status.code == 200
-        def body = response.body()
-        body.contains('0:X')
-        body.contains('1:Y')
-        body.contains('2:Z')
+        response.assertContains(200, '0:X')
+                .assertContains('1:Y')
+                .assertContains('2:Z')
     }
 
     // ========== Built-in Tag: g:collect ==========
 
     def "g:collect tag transforms items"() {
         when: "calling the built-in collect test endpoint"
-        def response = client.toBlocking().exchange(
-            HttpRequest.GET('/tagLibTest/testBuiltInCollect?items=apple,banana'),
-            String
-        )
+        def response = http('/tagLibTest/testBuiltInCollect?items=apple,banana')
 
         then: "items are transformed"
-        response.status.code == 200
-        def body = response.body()
-        body.contains('APPLE')
-        body.contains('BANANA')
+        response.assertContains(200, 'APPLE')
+                .assertContains('BANANA')
     }
 
     // ========== Built-in Tag: g:findAll ==========
 
     def "g:findAll tag filters items"() {
         when: "calling the built-in findAll test endpoint"
-        def response = client.toBlocking().exchange(
-            HttpRequest.GET('/tagLibTest/testBuiltInFindAll?threshold=7'),
-            String
-        )
+        def response = http('/tagLibTest/testBuiltInFindAll?threshold=7')
 
         then: "only matching items are rendered"
-        response.status.code == 200
-        def body = response.body()
-        body.contains('8')
-        body.contains('9')
-        body.contains('10')
-        !body.contains('7 ')
+        response.assertContains(200, '8')
+                .assertContains('9')
+                .assertContains('10')
+                .assertNotContains('7 ')
     }
 
     // ========== Built-in Tag: g:link ==========
 
     def "g:link tag creates link with controller and action"() {
         when: "calling the built-in link test endpoint"
-        def response = client.toBlocking().exchange(
-            HttpRequest.GET('/tagLibTest/testBuiltInLink?targetController=book&targetAction=show&targetId=42&linkText=View'),
-            String
+        def response = http(
+            '/tagLibTest/testBuiltInLink?targetController=book&targetAction=show&targetId=42&linkText=View'
         )
 
         then: "link is rendered"
-        response.status.code == 200
-        def body = response.body()
-        body.contains('<a href=')
-        body.contains('/book/show/42')
-        body.contains('>View</a>')
+        response.assertContains(200, '<a href=')
+                .assertContains('/book/show/42')
+                .assertContains('>View</a>')
     }
 
     // ========== Built-in Tag: g:createLink ==========
 
     def "g:createLink tag creates URL string"() {
         when: "calling the built-in createLink test endpoint"
-        def response = client.toBlocking().exchange(
-            HttpRequest.GET('/tagLibTest/testBuiltInCreateLink?targetController=book&targetAction=list'),
-            String
+        def response = http(
+            '/tagLibTest/testBuiltInCreateLink?targetController=book&targetAction=list'
         )
 
         then: "URL is rendered"
-        response.status.code == 200
-        response.body().contains('/book/list')
+        response.assertContains(200, '/book/list')
     }
 
     // ========== Built-in Tag: g:form ==========
 
     def "g:form tag creates form with action"() {
         when: "calling the built-in form test endpoint"
-        def response = client.toBlocking().exchange(
-            HttpRequest.GET('/tagLibTest/testBuiltInForm?targetController=book&targetAction=save'),
-            String
+        def response = http(
+            '/tagLibTest/testBuiltInForm?targetController=book&targetAction=save'
         )
 
         then: "form is rendered"
-        response.status.code == 200
-        def body = response.body()
-        body.contains('<form')
-        body.contains('action=')
-        body.contains('/book/save')
-        body.contains('method="post"')
+        response.assertContains(200, '<form')
+                .assertContains('action=')
+                .assertContains('/book/save')
+                .assertContains('method="post"')
     }
 
     // ========== Built-in Tag: g:message ==========
 
     def "g:message tag renders message with default"() {
         when: "calling the built-in message test endpoint"
-        def response = client.toBlocking().exchange(
-            HttpRequest.GET('/tagLibTest/testBuiltInMessage?code=nonexistent.key&default=Default%20Message'),
-            String
+        def response = http(
+            '/tagLibTest/testBuiltInMessage?code=nonexistent.key&default=Default%20Message'
         )
 
         then: "default message is rendered"
-        response.status.code == 200
-        response.body().contains('Default Message')
+        response.assertContains(200, 'Default Message')
     }
 
     // ========== Built-in Tag: g:formatDate ==========
 
     def "g:formatDate tag formats date"() {
         when: "calling the built-in formatDate test endpoint"
-        def response = client.toBlocking().exchange(
-            HttpRequest.GET('/tagLibTest/testBuiltInFormatDate'),
-            String
-        )
+        def response = http('/tagLibTest/testBuiltInFormatDate')
 
         then: "date is formatted"
-        response.status.code == 200
         // Just verify it rendered something in date format
-        response.body() =~ /\d{4}-\d{2}-\d{2}/
+        response.assertContainsMatches(200, ~/\d{4}-\d{2}-\d{2}/)
     }
 
     // ========== Built-in Tag: g:formatNumber ==========
 
     def "g:formatNumber tag formats number"() {
         when: "calling the built-in formatNumber test endpoint"
-        def response = client.toBlocking().exchange(
-            HttpRequest.GET('/tagLibTest/testBuiltInFormatNumber?number=1234567.89'),
-            String
-        )
+        def response = http('/tagLibTest/testBuiltInFormatNumber?number=1234567.89')
 
         then: "number is formatted"
-        response.status.code == 200
         // Should contain formatted number (locale-dependent)
-        response.body() =~ /1.*234.*567/
+        response.assertContainsMatches(200, ~/1.*234.*567/)
     }
 
     // ========== Built-in Tag: g:set ==========
 
     def "g:set tag sets and updates variables"() {
         when: "calling the built-in set test endpoint"
-        def response = client.toBlocking().exchange(
-            HttpRequest.GET('/tagLibTest/testBuiltInSet?initialValue=First&newValue=Second'),
-            String
+        def response = http(
+            '/tagLibTest/testBuiltInSet?initialValue=First&newValue=Second'
         )
 
         then: "variable values are correct"
-        response.status.code == 200
-        def body = response.body()
-        body.contains('id="set-initial">First')
-        body.contains('id="set-updated">Second')
+        response.assertContains(200, 'id="set-initial">First')
+                .assertContains('id="set-updated">Second')
     }
 
     // ========== Built-in Tag: g:join ==========
 
     def "g:join tag joins items with delimiter"() {
         when: "calling the built-in join test endpoint"
-        def response = client.toBlocking().exchange(
-            HttpRequest.GET('/tagLibTest/testBuiltInJoin?items=red,green,blue&delimiter=%20-%20'),
-            String
+        def response = http(
+            '/tagLibTest/testBuiltInJoin?items=red,green,blue&delimiter=%20-%20'
         )
 
         then: "items are joined"
-        response.status.code == 200
-        response.body().contains('red - green - blue')
+        response.assertContains(200, 'red - green - blue')
     }
 
     // ========== Built-in Tag: g:include ==========
 
     def "g:include tag includes content from another action"() {
         when: "calling the built-in include test endpoint"
-        def response = client.toBlocking().exchange(
-            HttpRequest.GET('/tagLibTest/testBuiltInInclude?message=Test%20Message'),
-            String
-        )
+        def response = http('/tagLibTest/testBuiltInInclude?message=Test%20Message')
 
         then: "included content is rendered"
-        response.status.code == 200
-        response.body().contains('Included content: Test Message')
+        response.assertContains(200, 'Included content: Test Message')
     }
 
     // ========== Built-in Tag: g:render ==========
 
     def "g:render tag renders template with model"() {
         when: "calling the built-in render test endpoint"
-        def response = client.toBlocking().exchange(
-            HttpRequest.GET('/tagLibTest/testBuiltInRender?text=Hello%20Template'),
-            String
-        )
+        def response = http('/tagLibTest/testBuiltInRender?text=Hello%20Template')
 
         then: "template is rendered"
-        response.status.code == 200
-        response.body().contains('Template content: Hello Template')
+        response.assertContains(200, 'Template content: Hello Template')
     }
 
     // ========== Built-in Tag: g:while ==========
 
     def "g:while tag loops while condition is true"() {
         when: "calling the built-in while test endpoint"
-        def response = client.toBlocking().exchange(
-            HttpRequest.GET('/tagLibTest/testBuiltInWhile?count=3'),
-            String
-        )
+        def response = http('/tagLibTest/testBuiltInWhile?count=3')
 
         then: "loop executes correct number of times"
-        response.status.code == 200
-        def body = response.body()
-        body.contains('Count: 1')
-        body.contains('Count: 2')
-        body.contains('Count: 3')
-        !body.contains('Count: 4')
+        response.assertContains(200, 'Count: 1')
+                .assertContains('Count: 2')
+                .assertContains('Count: 3')
+                .assertNotContains('Count: 4')
     }
 
     // ========== Built-in Tag: g:uploadForm ==========
 
     def "g:uploadForm tag creates multipart form"() {
         when: "calling the built-in uploadForm test endpoint"
-        def response = client.toBlocking().exchange(
-            HttpRequest.GET('/tagLibTest/testBuiltInUploadForm'),
-            String
-        )
+        def response = http('/tagLibTest/testBuiltInUploadForm')
 
         then: "multipart form is rendered"
-        response.status.code == 200
-        def body = response.body()
-        body.contains('<form')
-        body.contains('enctype="multipart/form-data"')
+        response.assertContains(200, '<form')
+                .assertContains('enctype="multipart/form-data"')
     }
 
     // ========== Built-in Tag: g:select ==========
 
     def "g:select tag creates select element with options"() {
         when: "calling the built-in select test endpoint"
-        def response = client.toBlocking().exchange(
-            HttpRequest.GET('/tagLibTest/testBuiltInSelect?selected=2'),
-            String
-        )
+        def response = http('/tagLibTest/testBuiltInSelect?selected=2')
 
         then: "select with options is rendered"
-        response.status.code == 200
-        def body = response.body()
-        body.contains('<select')
-        body.contains('<option')
-        body.contains('value="2" selected')
+        response.assertContains(200, '<select')
+                .assertContains('<option')
+                .assertContains('value="2" selected')
     }
 
     // ========== Built-in Tag: g:radio ==========
 
     def "g:radio tag creates radio buttons"() {
         when: "calling the built-in radio test endpoint"
-        def response = client.toBlocking().exchange(
-            HttpRequest.GET('/tagLibTest/testBuiltInRadio?selected=Option%20B'),
-            String
-        )
+        def response = http('/tagLibTest/testBuiltInRadio?selected=Option%20B')
 
         then: "radio buttons are rendered"
-        response.status.code == 200
-        def body = response.body()
-        body.contains('type="radio"')
-        body.contains('checked="checked"')
+        response.assertContains(200, 'type="radio"')
+                .assertContains('checked="checked"')
     }
 
     // ========== Built-in Tag: g:checkBox ==========
 
     def "g:checkBox tag creates checkbox"() {
         when: "calling the built-in checkbox test endpoint"
-        def response = client.toBlocking().exchange(
-            HttpRequest.GET('/tagLibTest/testBuiltInCheckBox?checked=true'),
-            String
-        )
+        def response = http('/tagLibTest/testBuiltInCheckBox?checked=true')
 
         then: "checkbox is rendered"
-        response.status.code == 200
-        def body = response.body()
-        body.contains('type="checkbox"')
-        body.contains('checked="checked"')
+        response.assertContains(200, 'type="checkbox"')
+                .assertContains('checked="checked"')
     }
 
     // ========== Built-in Tag: g:textArea ==========
 
     def "g:textArea tag creates textarea"() {
         when: "calling the built-in textarea test endpoint"
-        def response = client.toBlocking().exchange(
-            HttpRequest.GET('/tagLibTest/testBuiltInTextArea?value=Test%20Content&rows=5&cols=40'),
-            String
+        def response = http(
+            '/tagLibTest/testBuiltInTextArea?value=Test%20Content&rows=5&cols=40'
         )
 
         then: "textarea is rendered"
-        response.status.code == 200
-        def body = response.body()
-        body.contains('<textarea')
-        body.contains('rows="5"')
-        body.contains('cols="40"')
-        body.contains('Test Content')
+        response.assertContains(200, '<textarea')
+                .assertContains('rows="5"')
+                .assertContains('cols="40"')
+                .assertContains('Test Content')
     }
 
     // ========== Built-in Tag: g:textField ==========
 
     def "g:textField tag creates text input"() {
         when: "calling the built-in textField test endpoint"
-        def response = client.toBlocking().exchange(
-            HttpRequest.GET('/tagLibTest/testBuiltInTextField?value=Test%20Value&maxlength=50'),
-            String
-        )
+        def response = http('/tagLibTest/testBuiltInTextField?value=Test%20Value&maxlength=50')
 
         then: "text field is rendered"
-        response.status.code == 200
-        def body = response.body()
-        body.contains('type="text"')
-        body.contains('value="Test Value"')
-        body.contains('maxlength="50"')
+        response.assertContains(200, 'type="text"')
+                .assertContains('value="Test Value"')
+                .assertContains('maxlength="50"')
     }
 
     // ========== Built-in Tag: g:passwordField ==========
 
     def "g:passwordField tag creates password input"() {
         when: "calling the built-in passwordField test endpoint"
-        def response = client.toBlocking().exchange(
-            HttpRequest.GET('/tagLibTest/testBuiltInPasswordField'),
-            String
-        )
+        def response = http('/tagLibTest/testBuiltInPasswordField')
 
         then: "password field is rendered"
-        response.status.code == 200
-        response.body().contains('type="password"')
+        response.assertContains(200, 'type="password"')
     }
 
     // ========== Built-in Tag: g:hiddenField ==========
 
     def "g:hiddenField tag creates hidden input"() {
         when: "calling the built-in hiddenField test endpoint"
-        def response = client.toBlocking().exchange(
-            HttpRequest.GET('/tagLibTest/testBuiltInHiddenField?value=secret-value'),
-            String
-        )
+        def response = http('/tagLibTest/testBuiltInHiddenField?value=secret-value')
 
         then: "hidden field is rendered"
-        response.status.code == 200
-        def body = response.body()
-        body.contains('type="hidden"')
-        body.contains('value="secret-value"')
+        response.assertContains(200, 'type="hidden"')
+                .assertContains('value="secret-value"')
     }
 
     // ========== Built-in Tag: g:fieldValue ==========
 
     def "g:fieldValue tag extracts bean field value"() {
         when: "calling the built-in fieldValue test endpoint"
-        def response = client.toBlocking().exchange(
-            HttpRequest.GET('/tagLibTest/testBuiltInFieldValue?field=title'),
-            String
-        )
+        def response = http('/tagLibTest/testBuiltInFieldValue?field=title')
 
         then: "field value is extracted"
-        response.status.code == 200
-        response.body().contains('Grails in Action')
+        response.assertContains(200, 'Grails in Action')
     }
 
     // ========== Built-in Tag: g:sortableColumn ==========
 
     def "g:sortableColumn tag creates sortable table header"() {
         when: "calling the built-in sortableColumn test endpoint"
-        def response = client.toBlocking().exchange(
-            HttpRequest.GET('/tagLibTest/testBuiltInSortableColumn'),
-            String
-        )
+        def response = http('/tagLibTest/testBuiltInSortableColumn')
 
         then: "sortable columns are rendered"
-        response.status.code == 200
-        def body = response.body()
-        body.contains('<th')
-        body.contains('Title')
-        body.contains('Author')
+        response.assertContains(200, '<th')
+                .assertContains('Title')
+                .assertContains('Author')
     }
 
     // ========== Built-in Tag: g:paginate ==========
 
     def "g:paginate tag creates pagination links"() {
         when: "calling the built-in paginate test endpoint"
-        def response = client.toBlocking().exchange(
-            HttpRequest.GET('/tagLibTest/testBuiltInPaginate?total=100&max=10&offset=0'),
-            String
-        )
+        def response = http('/tagLibTest/testBuiltInPaginate?total=100&max=10&offset=0')
 
         then: "pagination links are rendered"
-        response.status.code == 200
-        def body = response.body()
         // Pagination should contain some links
-        body.contains('class=')
+        response.assertContains(200, 'class=')
     }
 
     // ========== Complex/Combined Tests ==========
 
     def "nested custom tags render correctly"() {
         when: "calling the nested tags test endpoint"
-        def response = client.toBlocking().exchange(
-            HttpRequest.GET('/tagLibTest/testNestedTags'),
-            String
-        )
+        def response = http('/tagLibTest/testNestedTags')
 
         then: "nested tags are rendered"
-        response.status.code == 200
-        def body = response.body()
-        body.contains('<ul>')
-        body.contains('class="badge')
+        response.assertContains(200, '<ul>')
+                .assertContains('class="badge')
     }
 
     def "tags work with complex model data"() {
         when: "calling the tags with model test endpoint"
-        def response = client.toBlocking().exchange(
-            HttpRequest.GET('/tagLibTest/testTagsWithModel'),
-            String
-        )
+        def response = http('/tagLibTest/testTagsWithModel')
 
         then: "model data is processed correctly"
-        response.status.code == 200
-        def body = response.body()
-        body.contains('panel-success')  // Alice is active
-        body.contains('panel-default')  // Charlie is not active
-        body.contains('Alice')
-        body.contains('Bob')
-        body.contains('Charlie')
-        body.contains('Admin')
-        body.contains('User')
+        response.assertContains(200, 'panel-success')  // Alice is active
+                .assertContains('panel-default')  // Charlie is not active
+                .assertContains('Alice')
+                .assertContains('Bob')
+                .assertContains('Charlie')
+                .assertContains('Admin')
+                .assertContains('User')
     }
 
     def "encoding tags properly escape content"() {
         when: "calling the encoding tags test endpoint"
-        def response = client.toBlocking().exchange(
-            HttpRequest.GET('/tagLibTest/testEncodingTags'),
-            String
-        )
+        def response = http('/tagLibTest/testEncodingTags')
 
         then: "content is properly encoded"
-        response.status.code == 200
-        def body = response.body()
-        // HTML encoded content should have escaped tags
-        body.contains('&lt;script&gt;')
-        // Raw content should preserve HTML
-        body.contains('id="raw-content">')
+        response.assertContains(200, '&lt;script&gt;') // HTML encoded content should have escaped tags
+                .assertContains('id="raw-content">') // Raw content should preserve HTML
     }
 }

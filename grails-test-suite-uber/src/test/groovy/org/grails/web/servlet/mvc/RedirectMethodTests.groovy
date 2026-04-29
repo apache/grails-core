@@ -299,8 +299,8 @@ class RedirectMethodTests extends Specification implements UrlMappingsUnitTest<U
         webRequest.controllerName = 'redirect'
         c.toActionMovedTemporary()
 
-        then: "should use HTTP 302 Moved Temporary"
-        HttpStatus.MOVED_TEMPORARILY.value() == response.status
+        then: "should use HTTP 302 Found (formerly Moved Temporarily)"
+        HttpStatus.FOUND.value() == response.status
         "/redirect/foo" == response.redirectedUrl
     }
 

@@ -19,6 +19,7 @@
 
 package grails.plugin.json.view
 
+import groovy.json.JsonGenerator
 import groovy.text.Template
 import groovy.transform.CompileStatic
 import org.codehaus.groovy.control.CompilerConfiguration
@@ -27,7 +28,6 @@ import org.codehaus.groovy.control.customizers.ASTTransformationCustomizer
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.core.OrderComparator
 
-import grails.plugin.json.builder.JsonGenerator
 import grails.plugin.json.converters.InstantJsonConverter
 import grails.plugin.json.converters.LocalDateJsonConverter
 import grails.plugin.json.converters.LocalDateTimeJsonConverter
@@ -102,11 +102,9 @@ class JsonViewTemplateEngine extends ResolvableGroovyTemplateEngine {
         options.dateFormat(config.dateFormat, locale)
         options.timezone(config.timeZone)
 
-        ServiceLoader<JsonGenerator.Converter> loader = ServiceLoader.load(JsonGenerator.Converter)
-        List<JsonGenerator.Converter> converters = []
-        for (JsonGenerator.Converter converter : loader) {
-            converters.add(converter)
-        }
+        Map<String, JsonGenerator.Converter> convertersByClass = new LinkedHashMap<>()
+        registerConverters(ServiceLoader.load(JsonGenerator.Converter, classLoader), convertersByClass)
+        List<JsonGenerator.Converter> converters = new ArrayList<>(convertersByClass.values())
         converters.add(new InstantJsonConverter())
         converters.add(new LocalDateJsonConverter())
         converters.add(new LocalDateTimeJsonConverter())
@@ -121,6 +119,13 @@ class JsonViewTemplateEngine extends ResolvableGroovyTemplateEngine {
         }
 
         this.generator = options.build()
+    }
+
+    private static void registerConverters(Iterable<? extends JsonGenerator.Converter> source,
+                                           Map<String, JsonGenerator.Converter> target) {
+        for (JsonGenerator.Converter converter : source) {
+            target.putIfAbsent(converter.getClass().getName(), converter)
+        }
     }
 
     @Override
@@ -143,6 +148,7 @@ class JsonViewTemplateEngine extends ResolvableGroovyTemplateEngine {
         'JsonView'.intern()
     }
 
+    @Override
     protected WritableScriptTemplate createTemplate(Class<? extends Template> cls, File sourceFile) {
         def template = new JsonViewTemplate((Class<? extends GrailsView>) cls, sourceFile)
         template.generator = this.generator

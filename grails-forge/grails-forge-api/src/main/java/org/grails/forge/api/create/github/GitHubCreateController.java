@@ -36,7 +36,7 @@ import io.swagger.v3.oas.annotations.media.Content;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import org.grails.forge.api.RequestInfo;
-import org.grails.forge.api.TestFramework;
+import org.grails.forge.api.DevelopmentReloading;
 import org.grails.forge.application.ApplicationType;
 import org.grails.forge.client.github.v3.GitHubRepository;
 import org.grails.forge.options.BuildTool;
@@ -46,7 +46,7 @@ import org.grails.forge.options.ServletImpl;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import javax.validation.constraints.Pattern;
+import jakarta.validation.constraints.Pattern;
 import java.net.URI;
 import java.util.List;
 
@@ -78,14 +78,14 @@ public class GitHubCreateController implements GitHubCreateOperation {
      * @param name     The name of the application The name of the application
      * @param features The features The chosen features
      * @param build    The build type (optional, defaults to Gradle)
-     * @param test     The test framework (optional, defaults to JUnit)
+     * @param reloading     The reloading framework (optional, defaults to JUnit)
      * @param gorm     The GORM (optional, defaults to Hibernate)
      * @param servlet  The Servlet (optional, defaults to Embedded Tomcat)
      * @param state    An unguessable random string. It is used to protect against cross-site request forgery attacks.
      * @return A json containing the generated application details.
      */
     @Override
-    @Get(uri = "/github/{type}/{name}{?features,gorm,servlet,build,test,javaVersion,code,state}", produces = MediaType.APPLICATION_JSON)
+    @Get(uri = "/github/{type}/{name}{?features,gorm,servlet,build,reloading,javaVersion,code,state}", produces = MediaType.APPLICATION_JSON)
     @ApiResponses(value = {
             @ApiResponse(
                     responseCode = "200",
@@ -109,7 +109,7 @@ public class GitHubCreateController implements GitHubCreateOperation {
             @Pattern(regexp = "[\\w\\d-_\\.]+") String name,
             @Nullable List<String> features,
             @Nullable BuildTool build,
-            @Nullable TestFramework test,
+            @Nullable DevelopmentReloading reloading,
             @Nullable GormImpl gorm,
             @Nullable ServletImpl servlet,
             @Nullable JdkVersion javaVersion,
@@ -123,7 +123,7 @@ public class GitHubCreateController implements GitHubCreateOperation {
                 return HttpResponse.temporaryRedirect(redirectService.constructOAuthRedirectUrl(requestInfo));
             } else {
                 GitHubRepository repository = gitHubCreateService.creatApp(
-                        type, name, features, build, test, gorm, servlet, javaVersion, code, state, userAgent);
+                        type, name, features, build, reloading, gorm, servlet, javaVersion, code, state, userAgent);
 
                 if (launcherURI == null) {
                     return HttpResponse.ok(new GitHubCreateDTO(repository.getUrl(), repository.getCloneUrl(), repository.getHtmlUrl()));
@@ -150,7 +150,7 @@ public class GitHubCreateController implements GitHubCreateOperation {
      * @param error            error code
      * @param errorDescription description
      * @return Http redirects
-     * @see <a href="https://docs.github.com/en/free-pro-team@latest/developers/apps/troubleshooting-oauth-app-access-token-request-errors">Troubleshooting OAuth App access token request errors</a>
+     * @see <a href="https://docs.github.com/en/free-pro-team@lareloading/developers/apps/troubleshooting-oauth-app-access-token-request-errors">Troubleshooting OAuth App access token request errors</a>
      */
     @Get(uri = "/github{?error,error_description}", produces = MediaType.APPLICATION_JSON)
     @ApiResponses(value = {

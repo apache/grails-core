@@ -28,7 +28,7 @@ import io.micronaut.scheduling.TaskExecutors;
 import io.micronaut.scheduling.annotation.ExecuteOn;
 import org.grails.forge.analytics.Generated;
 
-import javax.transaction.Transactional;
+import jakarta.transaction.Transactional;
 import java.util.List;
 import java.util.stream.Collectors;
 
@@ -66,9 +66,9 @@ public class AnalyticsController {
         return featureRepository.topGorm();
     }
 
-    @Get("/top/testFrameworks")
-    List<TotalDTO> topTestFrameworks() {
-        return featureRepository.topTestFrameworks();
+    @Get("/top/reloading")
+    List<TotalDTO> topReloading() {
+        return featureRepository.topReloading();
     }
 
     /**
@@ -83,7 +83,7 @@ public class AnalyticsController {
         Application application = new Application(
                 generated.getType(),
                 generated.getGorm(),
-                generated.getTestFramework(),
+                generated.getReloading(),
                 generated.getJdkVersion(),
                 generated.getGrailsVersion()
         );

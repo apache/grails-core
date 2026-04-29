@@ -1,0 +1,28 @@
+{
+    "groups": [
+        {
+            "name": "hibernate.cache",
+            "description": "Hibernate"
+        }
+    ],
+    "properties": [
+        {
+            "name": "hibernate.cache.queries",
+            "type": "java.lang.Boolean",
+            "description": "Whether to cache Hibernate queries.",
+            "defaultValue": false
+        },
+        {
+            "name": "hibernate.cache.use_second_level_cache",
+            "type": "java.lang.Boolean",
+            "description": "Whether to enable Hibernate's second-level cache.",
+            "defaultValue": false
+        },
+        {
+            "name": "hibernate.cache.use_query_cache",
+            "type": "java.lang.Boolean",
+            "description": "Whether to enable Hibernate's query cache.",
+            "defaultValue": false
+        }
+    ]
+}

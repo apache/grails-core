@@ -26,8 +26,8 @@ import org.grails.forge.options.*;
 import io.swagger.v3.oas.annotations.Parameter;
 import org.reactivestreams.Publisher;
 
-import javax.validation.constraints.NotBlank;
-import javax.validation.constraints.NotNull;
+import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.NotNull;
 import java.io.IOException;
 import java.util.List;
 
@@ -45,7 +45,7 @@ public interface DiffOperations {
      * @param name        The project name
      * @param feature     The feature
      * @param build       The build tool
-     * @param test        The test framework
+     * @param reloading   The development reloading
      * @param gorm        The GORM implementation
      * @param servlet     The Servlet implementation
      * @param javaVersion The java version
@@ -58,7 +58,7 @@ public interface DiffOperations {
             @Nullable String name,
             @NotBlank @NonNull String feature,
             @Nullable BuildTool build,
-            @Nullable TestFramework test,
+            @Nullable DevelopmentReloading reloading,
             @Nullable GormImpl gorm,
             @Nullable ServletImpl servlet,
             @Nullable JdkVersion javaVersion,
@@ -71,7 +71,7 @@ public interface DiffOperations {
      * @param name        The name of the application
      * @param features    The features
      * @param build       The build tool
-     * @param test        The test framework
+     * @param reloading        The reloading framework
      * @param gorm        The GORM implementation
      * @param servlet     The Servlet implementation
      * @param javaVersion The java version
@@ -84,7 +84,7 @@ public interface DiffOperations {
             @Nullable String name,
             @Nullable List<String> features,
             @Nullable BuildTool build,
-            @Nullable TestFramework test,
+            @Nullable DevelopmentReloading reloading,
             @Nullable GormImpl gorm,
             @Nullable ServletImpl servlet,
             @Nullable JdkVersion javaVersion,

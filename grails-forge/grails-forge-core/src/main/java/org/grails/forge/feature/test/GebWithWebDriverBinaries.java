@@ -26,7 +26,6 @@ import org.grails.forge.application.generator.GeneratorContext;
 import org.grails.forge.build.dependencies.Dependency;
 import org.grails.forge.build.gradle.GradlePlugin;
 import org.grails.forge.feature.*;
-import org.grails.forge.feature.test.template.groovyJunit;
 import org.grails.forge.feature.test.template.webdriverBinariesPlugin;
 import org.grails.forge.options.*;
 import org.grails.forge.template.RockerTemplate;
@@ -131,13 +130,12 @@ public class GebWithWebDriverBinaries implements Feature {
 
         Project project = generatorContext.getProject();
         TestRockerModelProvider provider = new DefaultTestRockerModelProvider(
-                org.grails.forge.feature.test.template.spock.template(project),
-                groovyJunit.template(project)
+                org.grails.forge.feature.test.template.spock.template(project)
         );
         generatorContext.addTemplate("applicationTest",
                 new RockerTemplate(
                         generatorContext.getIntegrationTestSourcePath("/{packagePath}/{className}"),
-                        provider.findModel(Language.DEFAULT_OPTION, generatorContext.getTestFramework())
+                        provider.findModel(TestFramework.SPOCK)
                 )
         );
         generatorContext.addTemplate("gebConfig",

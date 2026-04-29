@@ -18,7 +18,10 @@
  */
 package com.example.community
 
-import grails.gorm.annotation.AutoTimestamp
+import grails.gorm.annotation.CreatedBy
+import grails.gorm.annotation.CreatedDate
+import grails.gorm.annotation.LastModifiedBy
+import grails.gorm.annotation.LastModifiedDate
 import jakarta.persistence.Entity
 import jakarta.persistence.GeneratedValue
 import jakarta.persistence.GenerationType
@@ -34,14 +37,16 @@ class User {
     String firstName
     String lastName
 
-    @AutoTimestamp(AutoTimestamp.EventType.CREATED) LocalDateTime created
-    @AutoTimestamp LocalDateTime modified
+    @CreatedDate LocalDateTime created
+    @LastModifiedDate LocalDateTime modified
+    @CreatedBy String createdBy
+    @LastModifiedBy String modifiedBy
 
     static constraints = {
         firstName blank: false
         lastName blank: false
-        created nullable: true  // Grails 7 Bug
-        modified nullable: true // Grails 7 Bug
+        createdBy nullable: true
+        modifiedBy nullable: true
     }
 
     static mapping = {

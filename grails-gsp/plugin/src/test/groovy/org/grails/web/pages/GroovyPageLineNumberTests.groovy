@@ -53,7 +53,7 @@ class GroovyPageLineNumberTests extends Specification implements TagLibUnitTest<
         output == "one two"
 
         when:
-        template = '<g:createLinkTo dir="${foo}" file="${foo + \' \' + bar}" />'
+        template = '<g:resource dir="${foo}" file="${foo + \' \' + bar}" />'
         output = applyTemplate(template, [foo:"one", bar:"two"])
 
         then:

@@ -24,14 +24,14 @@ import io.micronaut.http.HttpHeaders;
 import io.micronaut.http.HttpResponse;
 import io.micronaut.http.annotation.Header;
 import org.grails.forge.api.RequestInfo;
-import org.grails.forge.api.TestFramework;
+import org.grails.forge.api.DevelopmentReloading;
 import org.grails.forge.application.ApplicationType;
 import org.grails.forge.options.BuildTool;
 import org.grails.forge.options.GormImpl;
 import org.grails.forge.options.JdkVersion;
 import org.grails.forge.options.ServletImpl;
 
-import javax.validation.constraints.Pattern;
+import jakarta.validation.constraints.Pattern;
 import java.util.List;
 
 /**
@@ -49,7 +49,7 @@ public interface GitHubCreateOperation {
      * @param name        The name of the application and GitHub repository
      * @param features    The features
      * @param build       The build tool
-     * @param test        The test framework
+     * @param reloading   The development reloading option
      * @param gorm        The GORM
      * @param servlet     The Servlet
      * @param javaVersion The java version
@@ -64,7 +64,7 @@ public interface GitHubCreateOperation {
             @Pattern(regexp = "[\\w\\d-_\\.]+") String name,
             @Nullable List<String> features,
             @Nullable BuildTool build,
-            @Nullable TestFramework test,
+            @Nullable DevelopmentReloading reloading,
             @Nullable GormImpl gorm,
             @Nullable ServletImpl servlet,
             @Nullable JdkVersion javaVersion,

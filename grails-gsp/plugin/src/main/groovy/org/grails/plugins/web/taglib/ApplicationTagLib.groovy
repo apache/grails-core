@@ -37,7 +37,6 @@ import grails.core.support.GrailsApplicationAware
 import grails.gsp.TagLib
 import grails.plugins.GrailsPluginManager
 import grails.util.GrailsStringUtils
-import grails.util.GrailsUtil
 import grails.util.Metadata
 import grails.web.mapping.LinkGenerator
 import grails.web.mapping.UrlMappingsHolder
@@ -73,11 +72,29 @@ class ApplicationTagLib implements ApplicationContextAware, InitializingBean, Gr
     boolean useJsessionId = false
     boolean hasResourceProcessor = false
 
+    String flashMessagesMessageClass = 'alert alert-success alert-dismissible fade show'
+    String flashMessagesMessageIcon = 'bi bi-check-circle me-2'
+    String flashMessagesErrorClass = 'alert alert-danger alert-dismissible fade show'
+    String flashMessagesErrorIcon = 'bi bi-exclamation-triangle me-2'
+    String flashMessagesWarningClass = 'alert alert-warning alert-dismissible fade show'
+    String flashMessagesWarningIcon = 'bi bi-exclamation-circle me-2'
+    String flashMessagesRole = 'alert'
+    boolean flashMessagesDismissible = true
+
     void afterPropertiesSet() {
         def config = grailsApplication.config
 
         useJsessionId = config.getProperty(Settings.GRAILS_VIEWS_ENABLE_JSESSIONID, Boolean, false)
         hasResourceProcessor = applicationContext.containsBean('grailsResourceProcessor')
+
+        flashMessagesMessageClass = config.getProperty(Settings.VIEWS_GSP_FLASH_MESSAGES_MESSAGE_CLASS, String, flashMessagesMessageClass)
+        flashMessagesMessageIcon = config.getProperty(Settings.VIEWS_GSP_FLASH_MESSAGES_MESSAGE_ICON, String, flashMessagesMessageIcon)
+        flashMessagesErrorClass = config.getProperty(Settings.VIEWS_GSP_FLASH_MESSAGES_ERROR_CLASS, String, flashMessagesErrorClass)
+        flashMessagesErrorIcon = config.getProperty(Settings.VIEWS_GSP_FLASH_MESSAGES_ERROR_ICON, String, flashMessagesErrorIcon)
+        flashMessagesWarningClass = config.getProperty(Settings.VIEWS_GSP_FLASH_MESSAGES_WARNING_CLASS, String, flashMessagesWarningClass)
+        flashMessagesWarningIcon = config.getProperty(Settings.VIEWS_GSP_FLASH_MESSAGES_WARNING_ICON, String, flashMessagesWarningIcon)
+        flashMessagesRole = config.getProperty(Settings.VIEWS_GSP_FLASH_MESSAGES_ROLE, String, flashMessagesRole)
+        flashMessagesDismissible = config.getProperty(Settings.VIEWS_GSP_FLASH_MESSAGES_DISMISSIBLE, Boolean, flashMessagesDismissible)
 
         if (applicationContext.containsBean('requestDataValueProcessor')) {
             requestDataValueProcessor = applicationContext.getBean('requestDataValueProcessor', RequestDataValueProcessor)
@@ -133,18 +150,6 @@ class ApplicationTagLib implements ApplicationContextAware, InitializingBean, Gr
 
         this."$scope"."$var" = value
         null
-    }
-
-    /**
-     * Creates a link to a resource, generally used as a method rather than a tag.<br/>
-     *
-     * eg. &lt;link type="text/css" href="${createLinkTo(dir:'css',file:'main.css')}" /&gt;
-     *
-     * @emptyTag
-     */
-    Closure createLinkTo = { attrs ->
-        GrailsUtil.deprecated('Tag [createLinkTo] is deprecated please use [resource] instead')
-        return resource(attrs)
     }
 
     /**
@@ -452,7 +457,7 @@ class ApplicationTagLib implements ApplicationContextAware, InitializingBean, Gr
         if (!attrs.name) {
             throwTagError('Tag ["meta"] missing required attribute ["name"]')
         }
-        return Metadata.current[attrs.name]
+        return Metadata.current.getOrDefault(attrs.name, null)
     }
 
     /**
@@ -469,5 +474,69 @@ class ApplicationTagLib implements ApplicationContextAware, InitializingBean, Gr
     Closure applyCodec = { Map attrs, Closure body ->
         // encoding is handled in GroovyPage.invokeTag and GroovyPage.captureTagOutput
         body()
+    }
+
+    /**
+     * Renders flash.message, flash.error, and flash.warning as Bootstrap alert divs.
+     * Automatically skips rendering if already called during this request, preventing
+     * duplicate display when used in both pages and layouts.
+     *
+     * @emptyTag
+     *
+     * @attr messageClass CSS class for flash.message alerts (default: 'alert alert-success alert-dismissible fade show')
+     * @attr messageIcon Icon class for flash.message alerts (default: 'bi bi-check-circle me-2')
+     * @attr errorClass CSS class for flash.error alerts (default: 'alert alert-danger alert-dismissible fade show')
+     * @attr errorIcon Icon class for flash.error alerts (default: 'bi bi-exclamation-triangle me-2')
+     * @attr warningClass CSS class for flash.warning alerts (default: 'alert alert-warning alert-dismissible fade show')
+     * @attr warningIcon Icon class for flash.warning alerts (default: 'bi bi-exclamation-circle me-2')
+     * @attr role ARIA role for alert divs (default: 'alert')
+     * @attr dismissible Whether to show a close button (default: true)
+     */
+    Closure flashMessages = { attrs ->
+        if (request.getAttribute('_flashRendered')) {
+            return
+        }
+
+        boolean rendered = false
+        boolean dismissible = attrs.dismissible != null ? attrs.dismissible.toString().toBoolean() : flashMessagesDismissible
+        String role = attrs.role ?: flashMessagesRole
+
+        if (flash.message) {
+            renderFlashAlert(
+                    attrs.messageClass ?: flashMessagesMessageClass,
+                    attrs.messageIcon ?: flashMessagesMessageIcon,
+                    flash.message, dismissible, role)
+            rendered = true
+        }
+
+        if (flash.error) {
+            renderFlashAlert(
+                    attrs.errorClass ?: flashMessagesErrorClass,
+                    attrs.errorIcon ?: flashMessagesErrorIcon,
+                    flash.error, dismissible, role)
+            rendered = true
+        }
+
+        if (flash.warning) {
+            renderFlashAlert(
+                    attrs.warningClass ?: flashMessagesWarningClass,
+                    attrs.warningIcon ?: flashMessagesWarningIcon,
+                    flash.warning, dismissible, role)
+            rendered = true
+        }
+
+        if (rendered) {
+            request.setAttribute('_flashRendered', true)
+        }
+    }
+
+    private void renderFlashAlert(String cssClass, String icon, Object message, boolean dismissible, String role) {
+        out << "<div class=\"${cssClass}\" role=\"${role}\">"
+        out << "<i class=\"${icon}\"></i>"
+        out << message.toString().encodeAsHTML()
+        if (dismissible) {
+            out << '<button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>'
+        }
+        out << '</div>'
     }
 }

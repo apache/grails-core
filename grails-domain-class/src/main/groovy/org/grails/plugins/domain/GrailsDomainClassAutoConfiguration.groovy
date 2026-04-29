@@ -30,10 +30,9 @@ import org.springframework.context.annotation.Bean
 import org.springframework.context.annotation.Lazy
 
 import grails.core.GrailsApplication
-import grails.validation.ConstraintsEvaluator
 import org.grails.datastore.gorm.validation.constraints.factory.ConstraintFactory
 import org.grails.datastore.mapping.model.MappingContext
-import org.grails.plugins.domain.support.ConstraintEvaluatorAdapter
+
 import org.grails.plugins.domain.support.DefaultConstraintEvaluatorFactoryBean
 import org.grails.plugins.domain.support.DefaultMappingContextFactoryBean
 import org.grails.plugins.domain.support.ValidatorRegistryFactoryBean
@@ -67,12 +66,6 @@ class GrailsDomainClassAutoConfiguration {
     @Bean
     DefaultConstraintEvaluatorFactoryBean validateableConstraintsEvaluator(@Qualifier('grailsDomainClassMappingContext') MappingContext mappingContext) {
         new DefaultConstraintEvaluatorFactoryBean(messageSources, mappingContext, grailsApplication)
-    }
-
-    @Lazy
-    @Bean(name = ConstraintsEvaluator.BEAN_NAME)
-    ConstraintEvaluatorAdapter constraintsEvaluator(DefaultConstraintEvaluatorFactoryBean validateableConstraintsEvaluator) {
-        new ConstraintEvaluatorAdapter(validateableConstraintsEvaluator.object)
     }
 
     @Lazy

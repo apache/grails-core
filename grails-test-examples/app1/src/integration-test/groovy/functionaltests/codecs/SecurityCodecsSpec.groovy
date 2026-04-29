@@ -18,12 +18,11 @@
  */
 package functionaltests.codecs
 
-import io.micronaut.http.HttpRequest
-import io.micronaut.http.client.HttpClient
-import spock.lang.Shared
 import spock.lang.Specification
+import spock.lang.Tag
 
 import grails.testing.mixin.integration.Integration
+import org.apache.grails.testing.http.client.HttpClientSupport
 
 /**
  * Comprehensive integration tests for Grails codec functionality.
@@ -40,384 +39,338 @@ import grails.testing.mixin.integration.Integration
  * - Hash consistency verification
  */
 @Integration
-class SecurityCodecsSpec extends Specification {
-
-    @Shared
-    HttpClient client
-
-    def setup() {
-        client = client ?: HttpClient.create(new URL("http://localhost:$serverPort"))
-    }
-
-    def cleanupSpec() {
-        client.close()
-    }
+@Tag('http-client')
+class SecurityCodecsSpec extends Specification implements HttpClientSupport {
 
     // ========== HTML Encoding Tests (XSS Prevention) ==========
 
     def "test HTML encoding escapes dangerous tags"() {
         when:
-        def response = client.toBlocking().exchange(
-            HttpRequest.GET('/codecTest/encodeHtml?input=%3Cscript%3Ealert(%22XSS%22)%3C/script%3E'),
-            Map
+        def response = http(
+            '/codecTest/encodeHtml?input=%3Cscript%3Ealert(%22XSS%22)%3C/script%3E'
         )
 
         then: "script tags should be HTML encoded"
-        response.status.code == 200
-        response.body().input == '<script>alert("XSS")</script>'
-        response.body().encoded.contains('&lt;script&gt;')
-        response.body().encoded.contains('&lt;/script&gt;')
-        !response.body().encoded.contains('<script>')
-        response.body().decodedBack == '<script>alert("XSS")</script>'
+        response.assertStatus(200)
+        with(response.json()) {
+            input == '<script>alert("XSS")</script>'
+            encoded.contains('&lt;script&gt;')
+            encoded.contains('&lt;/script&gt;')
+            !encoded.contains('<script>')
+            decodedBack == '<script>alert("XSS")</script>'
+        }
     }
 
     def "test HTML encoding escapes quotes"() {
         when:
-        def response = client.toBlocking().exchange(
-            HttpRequest.GET('/codecTest/encodeHtml?input=%22quoted%22'),
-            Map
-        )
+        def response = http('/codecTest/encodeHtml?input=%22quoted%22')
 
         then: "quotes should be HTML encoded"
-        response.status.code == 200
-        response.body().encoded.contains('&quot;')
-        response.body().decodedBack == '"quoted"'
+        response.assertStatus(200)
+        with(response.json()) {
+            encoded.contains('&quot;')
+            decodedBack == '"quoted"'
+        }
     }
 
     def "test HTML encoding escapes ampersands"() {
         when:
-        def response = client.toBlocking().exchange(
-            HttpRequest.GET('/codecTest/encodeHtml?input=foo%26bar'),
-            Map
-        )
+        def response = http('/codecTest/encodeHtml?input=foo%26bar')
 
         then: "ampersands should be HTML encoded"
-        response.status.code == 200
-        response.body().input == 'foo&bar'
-        response.body().encoded.contains('&amp;')
-        response.body().decodedBack == 'foo&bar'
+        response.assertStatus(200)
+        with(response.json()) {
+            input == 'foo&bar'
+            encoded.contains('&amp;')
+            decodedBack == 'foo&bar'
+        }
     }
 
     // ========== URL Encoding Tests ==========
 
     def "test URL encoding escapes spaces and special chars"() {
         when:
-        def response = client.toBlocking().exchange(
-            HttpRequest.GET('/codecTest/encodeUrl?input=hello+world%26foo%3Dbar'),
-            Map
-        )
+        def response = http('/codecTest/encodeUrl?input=hello+world%26foo%3Dbar')
 
         then: "spaces and special chars should be URL encoded"
-        response.status.code == 200
-        response.body().input == 'hello world&foo=bar'
-        response.body().encoded.contains('+') || response.body().encoded.contains('%20')
-        response.body().encoded.contains('%26')
-        response.body().encoded.contains('%3D')
-        response.body().decodedBack == 'hello world&foo=bar'
+        response.assertStatus(200)
+        with(response.json()) {
+            input == 'hello world&foo=bar'
+            encoded.contains('+') || json.encoded.contains('%20')
+            encoded.contains('%26')
+            encoded.contains('%3D')
+            decodedBack == 'hello world&foo=bar'
+        }
     }
 
     // ========== Base64 Encoding Tests ==========
 
     def "test Base64 encoding and decoding text"() {
         when:
-        def response = client.toBlocking().exchange(
-            HttpRequest.GET('/codecTest/encodeBase64?input=Hello%2C+World!'),
-            Map
-        )
+        def response = http('/codecTest/encodeBase64?input=Hello%2C+World!')
 
         then: "text should be Base64 encoded and decodable"
-        response.status.code == 200
-        response.body().input == 'Hello, World!'
-        response.body().encoded == 'SGVsbG8sIFdvcmxkIQ=='
-        response.body().decodedBack == 'Hello, World!'
+        response.assertJson(200, [
+                input: 'Hello, World!',
+                encoded: 'SGVsbG8sIFdvcmxkIQ==',
+                decodedBack: 'Hello, World!'
+        ])
     }
 
     def "test Base64 encoding with binary data"() {
         when:
-        def response = client.toBlocking().exchange(
-            HttpRequest.GET('/codecTest/encodeBase64Binary'),
-            Map
-        )
+        def response = http('/codecTest/encodeBase64Binary')
 
         then: "binary data should be correctly Base64 encoded"
-        response.status.code == 200
-        response.body().originalBytes == [72, 101, 108, 108, 111] // "Hello" in ASCII
-        response.body().encoded == 'SGVsbG8='
-        response.body().decodedBytes == [72, 101, 108, 108, 111]
+        response.assertJson(200, [
+                originalBytes: [72, 101, 108, 108, 111], // "Hello" in ASCII
+                encoded: 'SGVsbG8=',
+                decodedBytes: [72, 101, 108, 108, 111]
+        ])
     }
 
     // ========== MD5 Hash Tests ==========
 
     def "test MD5 hashing produces consistent 32-char hex string"() {
         when:
-        def response = client.toBlocking().exchange(
-            HttpRequest.GET('/codecTest/encodeMd5?input=password123'),
-            Map
-        )
+        def response = http('/codecTest/encodeMd5?input=password123')
 
         then: "MD5 hash should be 32 characters (hex)"
-        response.status.code == 200
-        response.body().input == 'password123'
-        response.body().hashLength == 32
-        response.body().md5Hash ==~ /^[a-f0-9]{32}$/
+        response.assertStatus(200)
+        with(response.json()) {
+            input == 'password123'
+            hashLength == 32
+            md5Hash ==~ /^[a-f0-9]{32}$/
+        }
     }
 
     def "test MD5 bytes produces 16 bytes"() {
         when:
-        def response = client.toBlocking().exchange(
-            HttpRequest.GET('/codecTest/encodeMd5Bytes?input=password123'),
-            Map
-        )
+        def response = http('/codecTest/encodeMd5Bytes?input=password123')
 
         then: "MD5 bytes should be 16 bytes"
-        response.status.code == 200
-        response.body().bytesLength == 16
-        response.body().md5Bytes.size() == 16
+        response.assertStatus(200)
+        with(response.json()) {
+            bytesLength == 16
+            md5Bytes.size() == 16
+        }
     }
 
     // ========== SHA1 Hash Tests ==========
 
     def "test SHA1 hashing produces consistent 40-char hex string"() {
         when:
-        def response = client.toBlocking().exchange(
-            HttpRequest.GET('/codecTest/encodeSha1?input=password123'),
-            Map
-        )
+        def response = http('/codecTest/encodeSha1?input=password123')
 
         then: "SHA1 hash should be 40 characters (hex)"
-        response.status.code == 200
-        response.body().hashLength == 40
-        response.body().sha1Hash ==~ /^[a-f0-9]{40}$/
+        response.assertStatus(200)
+        with(response.json()) {
+            hashLength == 40
+            sha1Hash ==~ /^[a-f0-9]{40}$/
+        }
     }
 
     def "test SHA1 bytes produces 20 bytes"() {
         when:
-        def response = client.toBlocking().exchange(
-            HttpRequest.GET('/codecTest/encodeSha1Bytes?input=password123'),
-            Map
-        )
+        def response = http('/codecTest/encodeSha1Bytes?input=password123')
 
         then: "SHA1 bytes should be 20 bytes"
-        response.status.code == 200
-        response.body().bytesLength == 20
+        response.assertJsonContains(200, [bytesLength: 20])
     }
 
     // ========== SHA256 Hash Tests ==========
 
     def "test SHA256 hashing produces consistent 64-char hex string"() {
         when:
-        def response = client.toBlocking().exchange(
-            HttpRequest.GET('/codecTest/encodeSha256?input=password123'),
-            Map
-        )
+        def response = http('/codecTest/encodeSha256?input=password123')
 
         then: "SHA256 hash should be 64 characters (hex)"
-        response.status.code == 200
-        response.body().hashLength == 64
-        response.body().sha256Hash ==~ /^[a-f0-9]{64}$/
+        response.assertStatus(200)
+        with(response.json()) {
+            hashLength == 64
+            sha256Hash ==~ /^[a-f0-9]{64}$/
+        }
     }
 
     def "test SHA256 bytes produces 32 bytes"() {
         when:
-        def response = client.toBlocking().exchange(
-            HttpRequest.GET('/codecTest/encodeSha256Bytes?input=password123'),
-            Map
-        )
+        def response = http('/codecTest/encodeSha256Bytes?input=password123')
 
         then: "SHA256 bytes should be 32 bytes"
-        response.status.code == 200
-        response.body().bytesLength == 32
+        response.assertJsonContains(200, [bytesLength: 32])
     }
 
     // ========== Hex Encoding Tests ==========
 
     def "test Hex encoding and decoding"() {
         when:
-        def response = client.toBlocking().exchange(
-            HttpRequest.GET('/codecTest/encodeHex?input=Hello'),
-            Map
-        )
+        def response = http('/codecTest/encodeHex?input=Hello')
 
         then: "text should be Hex encoded and decodable"
-        response.status.code == 200
-        response.body().input == 'Hello'
-        response.body().hexEncoded == '48656c6c6f' // "Hello" in hex
-        response.body().decodedBack == 'Hello'
+        response.assertJson(200, [
+                input: 'Hello',
+                hexEncoded: '48656c6c6f', // "Hello" in hex
+                decodedBack: 'Hello'
+        ])
     }
 
     // ========== JavaScript Encoding Tests ==========
 
     def "test JavaScript encoding escapes quotes and newlines"() {
         when:
-        def response = client.toBlocking().exchange(
-            HttpRequest.GET("/codecTest/encodeJavaScript"),
-            Map
-        )
+        def response = http('/codecTest/encodeJavaScript')
 
         then: "JavaScript special chars should be escaped"
-        response.status.code == 200
-        response.body().input.contains("'")
-        response.body().input.contains('"')
-        response.body().input.contains('\n')
-        // The encoded output should escape these characters
-        response.body().encoded.contains("\\'") || response.body().encoded.contains("\\u0027")
+        response.assertStatus(200)
+        with(response.json()) {
+            input.contains("'")
+            input.contains('"')
+            input.contains('\n')
+            // The encoded output should escape these characters
+            encoded.contains("\\'") || encoded.contains("\\u0027")
+        }
     }
 
     // ========== Raw Output Tests ==========
 
     def "test Raw encoding preserves content without escaping"() {
         when:
-        def response = client.toBlocking().exchange(
-            HttpRequest.GET('/codecTest/encodeRaw'),
-            Map
-        )
+        def response = http('/codecTest/encodeRaw')
 
         then: "raw content should be preserved"
-        response.status.code == 200
-        response.body().input == '<b>Bold</b>'
-        response.body().raw == '<b>Bold</b>'
+        response.assertJson(200, [
+                input: '<b>Bold</b>',
+                raw: '<b>Bold</b>',
+                rawClass: 'java.lang.String'
+        ])
     }
 
     // ========== Multiple Encodings Tests ==========
 
     def "test chaining multiple encodings"() {
         when:
-        def response = client.toBlocking().exchange(
-            HttpRequest.GET('/codecTest/multipleEncodings'),
-            Map
-        )
+        def response = http('/codecTest/multipleEncodings')
 
         then: "multiple encodings should be reversible"
-        response.status.code == 200
-        response.body().input == '<script>alert(1)</script>'
-        response.body().htmlEncoded.contains('&lt;')
-        response.body().fullyDecoded == '<script>alert(1)</script>'
+        response.assertStatus(200)
+        with(response.json()) {
+            input == '<script>alert(1)</script>'
+            htmlEncoded.contains('&lt;')
+            fullyDecoded == '<script>alert(1)</script>'
+        }
     }
 
     // ========== Special Characters Tests ==========
 
     def "test encoding with Unicode and special characters"() {
         when:
-        def response = client.toBlocking().exchange(
-            HttpRequest.GET('/codecTest/encodeSpecialChars?input=%E6%97%A5%E6%9C%AC%E8%AA%9E+%26+%C3%A9moji+%F0%9F%91%8D+%3Ctag%3E'),
-            Map
+        def response = http(
+                '/codecTest/encodeSpecialChars?input=%E6%97%A5%E6%9C%AC%E8%AA%9E+%26+%C3%A9moji+%F0%9F%91%8D+%3Ctag%3E'
         )
 
         then: "special characters should be properly encoded"
-        response.status.code == 200
-        response.body().input.contains('日本語')
-        response.body().htmlEncoded.contains('&lt;tag&gt;')
-        response.body().urlEncoded != null
-        response.body().base64Encoded != null
+        response.assertStatus(200)
+        with(response.json()) {
+            input.contains('日本語')
+            htmlEncoded.contains('&lt;tag&gt;')
+            urlEncoded != null
+            base64Encoded != null
+        }
     }
 
     // ========== Null Handling Tests ==========
 
     def "test encoding null values returns null safely"() {
         when:
-        def response = client.toBlocking().exchange(
-            HttpRequest.GET('/codecTest/encodeNull'),
-            Map
-        )
+        def response = http('/codecTest/encodeNull')
 
         then: "null values should be handled gracefully"
-        response.status.code == 200
-        response.body().nullBase64 == null
-        response.body().nullMd5 == null
-        response.body().nullHtml == null
+        response.assertStatus(200)
+        with(response.json()) {
+            nullBase64 == null
+            nullMd5 == null
+            nullHtml == null
+        }
     }
 
     // ========== Empty String Tests ==========
 
     def "test encoding empty strings"() {
         when:
-        def response = client.toBlocking().exchange(
-            HttpRequest.GET('/codecTest/encodeEmpty'),
-            Map
-        )
+        def response = http('/codecTest/encodeEmpty')
 
         then: "empty strings should be encoded without errors"
-        response.status.code == 200
-        response.body().input == ''
-        // Empty string Base64 is empty
-        response.body().base64Encoded == ''
-        // Empty string still has a hash
-        response.body().md5Hash != null
-        response.body().md5Hash.length() == 32
-        response.body().sha256Hash != null
-        response.body().sha256Hash.length() == 64
+        response.assertStatus(200)
+        with(response.json()) {
+            input == ''
+            // Empty string Base64 is empty
+            base64Encoded == ''
+            // Empty string still has a hash
+            md5Hash != null
+            md5Hash.length() == 32
+            sha256Hash != null
+            sha256Hash.length() == 64
+        }
     }
 
     // ========== Hash Consistency Tests ==========
 
     def "test hash functions produce consistent results"() {
         when:
-        def response = client.toBlocking().exchange(
-            HttpRequest.GET('/codecTest/hashConsistency?input=test-consistency'),
-            Map
-        )
+        def response = http('/codecTest/hashConsistency?input=test-consistency')
 
         then: "same input should always produce same hash"
-        response.status.code == 200
-        response.body().md5Consistent == true
-        response.body().sha1Consistent == true
-        response.body().sha256Consistent == true
+        response.assertJsonContains(200, [
+                md5Consistent: true,
+                sha1Consistent: true,
+                sha256Consistent: true
+        ])
     }
 
     def "test different inputs produce different hashes"() {
         when:
-        def response1 = client.toBlocking().exchange(
-            HttpRequest.GET('/codecTest/hashConsistency?input=input1'),
-            Map
-        )
-        def response2 = client.toBlocking().exchange(
-            HttpRequest.GET('/codecTest/hashConsistency?input=input2'),
-            Map
-        )
+        def response1 = http('/codecTest/hashConsistency?input=input1')
+        def response2 = http('/codecTest/hashConsistency?input=input2')
 
         then: "different inputs should produce different hashes"
-        response1.status.code == 200
-        response2.status.code == 200
-        response1.body().md5Hash != response2.body().md5Hash
-        response1.body().sha1Hash != response2.body().sha1Hash
-        response1.body().sha256Hash != response2.body().sha256Hash
+        response1.assertStatus(200)
+        response2.assertStatus(200)
+        def json1 = response1.json()
+        def json2 = response2.json()
+        json1.md5Hash != json2.md5Hash
+        json1.sha1Hash != json2.sha1Hash
+        json1.sha256Hash != json2.sha256Hash
     }
 
     // ========== Known Hash Values Tests ==========
 
     def "test MD5 produces known hash for 'hello'"() {
         when:
-        def response = client.toBlocking().exchange(
-            HttpRequest.GET('/codecTest/encodeMd5?input=hello'),
-            Map
-        )
+        def response = http('/codecTest/encodeMd5?input=hello')
 
         then: "MD5 of 'hello' should match known value"
-        response.status.code == 200
-        response.body().md5Hash == '5d41402abc4b2a76b9719d911017c592'
+        response.assertJsonContains(200, [
+                md5Hash: '5d41402abc4b2a76b9719d911017c592'
+        ])
     }
 
     def "test SHA1 produces known hash for 'hello'"() {
         when:
-        def response = client.toBlocking().exchange(
-            HttpRequest.GET('/codecTest/encodeSha1?input=hello'),
-            Map
-        )
+        def response = http('/codecTest/encodeSha1?input=hello')
 
         then: "SHA1 of 'hello' should match known value"
-        response.status.code == 200
-        response.body().sha1Hash == 'aaf4c61ddcc5e8a2dabede0f3b482cd9aea9434d'
+        response.assertJsonContains(200, [
+                sha1Hash: 'aaf4c61ddcc5e8a2dabede0f3b482cd9aea9434d'
+        ])
     }
 
     def "test SHA256 produces known hash for 'hello'"() {
         when:
-        def response = client.toBlocking().exchange(
-            HttpRequest.GET('/codecTest/encodeSha256?input=hello'),
-            Map
-        )
+        def response = http('/codecTest/encodeSha256?input=hello')
 
         then: "SHA256 of 'hello' should match known value"
-        response.status.code == 200
-        response.body().sha256Hash == '2cf24dba5fb0a30e26e83b2ac5b9e29e1b161e5c1fa7425e73043362938b9824'
+        response.assertJsonContains(200, [
+                sha256Hash: '2cf24dba5fb0a30e26e83b2ac5b9e29e1b161e5c1fa7425e73043362938b9824'
+        ])
     }
 }

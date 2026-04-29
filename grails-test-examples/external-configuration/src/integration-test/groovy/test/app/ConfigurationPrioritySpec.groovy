@@ -217,7 +217,7 @@ class ConfigurationPrioritySpec extends Specification {
 
     def "deeply nested properties are accessible"() {
         when: "accessing deeply nested property"
-        def codec = grailsApplication.config.getProperty('grails.views.gsp.codecs.expression', String)
+        def codec = grailsApplication.config.getProperty('grails.views.gsp.codecs.scriptlet', String)
 
         then: "property is retrieved"
         codec == 'html'

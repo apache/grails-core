@@ -20,8 +20,8 @@ package grails.build.logging;
 
 import java.io.IOException;
 
-import jline.Terminal;
-import jline.UnsupportedTerminal;
+import org.jline.terminal.Terminal;
+import org.jline.terminal.TerminalBuilder;
 
 /**
  * This class is meant to keep changes made in support of Eclipse separate from
@@ -73,8 +73,10 @@ public class GrailsEclipseConsole extends GrailsConsole {
     }
 
     @Override
-    protected Terminal createTerminal() {
-        // unix or windows terminal have no relation at all to the behavior of an Eclipse console.
-        return new UnsupportedTerminal();
+    protected Terminal createTerminal() throws IOException {
+        // For Eclipse, create a dumb terminal that doesn't try to interact with the console
+        return TerminalBuilder.builder()
+                .dumb(true)
+                .build();
     }
 }

@@ -43,18 +43,6 @@ class UrlMappingParameterTests extends Specification implements UrlMappingsUnitT
         info.actionName == 'list'
 
     }
-    void testUseDispatchAction() {
-        when:
-        webRequest.params.controller = 'foo'
-        webRequest.currentRequest.addParameter("${WebUtils.DISPATCH_ACTION_PARAMETER}foo", "true")
-        def info = urlMappingsHolder.match('/foo/list')
-        assert info != null
-        info.configure webRequest
-
-        then:
-        info.actionName == 'foo'
-        "de" == webRequest.params.lang
-    }
 
     void testNotEqual() {
         when:

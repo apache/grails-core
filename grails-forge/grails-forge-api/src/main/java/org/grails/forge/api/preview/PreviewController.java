@@ -27,7 +27,7 @@ import io.micronaut.http.annotation.Get;
 import io.micronaut.http.exceptions.HttpStatusException;
 import org.grails.forge.api.Relationship;
 import org.grails.forge.api.RequestInfo;
-import org.grails.forge.api.TestFramework;
+import org.grails.forge.api.DevelopmentReloading;
 import org.grails.forge.api.create.AbstractCreateController;
 import org.grails.forge.application.ApplicationType;
 import org.grails.forge.application.Project;
@@ -72,19 +72,19 @@ public class PreviewController extends AbstractCreateController implements Previ
      * @param name The name of the application The name of the application
      * @param features The features The chosen features
      * @param build The build type (optional, defaults to Gradle)
-     * @param test The test framework (optional, defaults to JUnit)
+     * @param reloading the development reloading (jrebel, spring boot devtools, none, etc)
      * @param gorm The GORM (optional, defaults to Hibernate)
      * @param servlet The Servlet (optional, defaults to Embedded Tomcat)
      * @return A preview of the application contents.
      */
-    @Get(uri = "/{type}/{name}{?features,gorm,servlet,build,test,javaVersion}", produces = MediaType.APPLICATION_JSON)
+    @Get(uri = "/{type}/{name}{?features,gorm,servlet,build,reloading,javaVersion}", produces = MediaType.APPLICATION_JSON)
     @Override
     public PreviewDTO previewApp(
             ApplicationType type,
             String name,
             @Nullable List<String> features,
             @Nullable BuildTool build,
-            @Nullable TestFramework test,
+            @Nullable DevelopmentReloading reloading,
             @Nullable GormImpl gorm,
             @Nullable ServletImpl servlet,
             @Nullable JdkVersion javaVersion,
@@ -95,7 +95,7 @@ public class PreviewController extends AbstractCreateController implements Previ
             projectGenerator.generate(type,
                     project,
                     new Options(
-                            test != null ? test.toTestFramework() : null,
+                            reloading != null ? reloading.toDevelopmentReloading() : null,
                             gorm == null ? GormImpl.DEFAULT_OPTION : gorm,
                             servlet == null ? ServletImpl.DEFAULT_OPTION : servlet,
                             javaVersion == null ? JdkVersion.DEFAULT_OPTION : javaVersion,
