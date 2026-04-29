@@ -116,7 +116,7 @@ include(
         'grails-dependencies-starter-web',
         'grails-dependencies-test',
         'grails-dependencies-assets',
-        'grails-base-bom', // Not published
+        'grails-base-bom',
         'grails-bom', // the default bom
         'grails-hibernate5-bom',
         'grails-micronaut-bom',

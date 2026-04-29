@@ -27,6 +27,7 @@ buildscript {
 
 plugins {
     id 'java-platform'
+    id 'org.apache.grails.buildsrc.publish'
     id 'org.apache.grails.buildsrc.sbom'
 }
 

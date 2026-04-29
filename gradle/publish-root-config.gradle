@@ -30,6 +30,7 @@ def publishedProjects = [
         'grails-async-rxjava',
         'grails-async-rxjava2',
         'grails-async-rxjava3',
+        'grails-base-bom',
         'grails-bom',
         'grails-hibernate5-bom',
         'grails-micronaut-bom',
