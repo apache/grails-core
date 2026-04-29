@@ -41,7 +41,7 @@ ext {
     // Set DO_NOT_CACHE_TESTS=1 to force test tasks to re-run on every invocation without
     // needing --rerun-tasks. Useful for repeatedly running the same test command while
     // chasing flaky tests across runs.
-    doNotCacheTests = System.getenv().get('DO_NOT_CACHE_TESTS')?.toBoolean()
+    doNotCacheTests = System.getenv('DO_NOT_CACHE_TESTS')?.toBoolean()
 }
 
 allprojects {
