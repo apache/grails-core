@@ -2,11 +2,6 @@
  *  Licensed to the Apache Software Foundation (ASF) under one
  *  or more contributor license agreements.  See the NOTICE file
  *  distributed with this work for additional information
- *  regarding copyright ownership.  The AS
- *
- *  Licensed to the Apache Software Foundation (ASF) under one
- *  or more contributor license agreements.  See the NOTICE file
- *  distributed with this work for additional information
  *  regarding copyright ownership.  The AS licenses this file
  *  to you under the Apache License, Version 2.0 (the
  *  "License"); you may not use this file except in compliance
@@ -23,16 +18,18 @@
  */
 package org.grails.datastore.mapping.simple.query
 
+import org.grails.datastore.mapping.engine.EntityPersister
 import org.grails.datastore.mapping.model.PersistentEntity
 import org.grails.datastore.mapping.model.PersistentProperty
 import org.grails.datastore.mapping.model.types.Association
 import org.grails.datastore.mapping.model.types.ToOne
-import org.grails.datastore.mapping.model.types.Basic
 import org.grails.datastore.mapping.query.Query
 import org.grails.datastore.mapping.query.api.QueryableCriteria
 import org.grails.datastore.mapping.simple.SimpleMapDatastore
 import org.grails.datastore.mapping.simple.SimpleMapSession
 import org.grails.datastore.mapping.simple.engine.SimpleMapEntityPersister
+import org.grails.datastore.mapping.multitenancy.MultiTenancySettings
+import grails.gorm.multitenancy.Tenants
 import java.util.concurrent.ConcurrentHashMap
 
 /**
@@ -58,22 +55,6 @@ class SimpleMapQuery extends Query {
         ((SimpleMapSession)session).getIndices()
     }
 
-    Number deleteAll() {
-        List<Object> results = list()
-        for (Object result in results) {
-            session.delete(result)
-        }
-        return results.size()
-    }
-
-    org.grails.datastore.mapping.model.MappingContext getMappingContext() {
-        session.datastore.mappingContext
-    }
-
-    String getFamily() {
-        calculateFamily(entity)
-    }
-
     @Override
     protected List executeQuery(PersistentEntity entity, Query.Junction criteria) {
         def entityMap = [:]
@@ -94,6 +75,20 @@ class SimpleMapQuery extends Query {
             }
         }
 
+        // Multi-tenancy support for DISCRIMINATOR mode
+        SimpleMapDatastore datastoreInstance = (SimpleMapDatastore)session.datastore
+        if (datastoreInstance.getMultiTenancyMode() == MultiTenancySettings.MultiTenancyMode.DISCRIMINATOR) {
+            if (entity.isMultiTenant()) {
+                def currentTenantId = Tenants.currentId(datastoreInstance)
+                if (currentTenantId != null) {
+                    entityMap = entityMap.findAll { entry ->
+                        def entryTenantId = entry.value.get("tenantId")
+                        return entryTenantId == null || entryTenantId.toString() == currentTenantId.toString()
+                    }
+                }
+            }
+        }
+
         if (!entity.isRoot()) {
             def discriminator = entity.discriminator
             entityMap = entityMap.findAll { it.value.discriminator == discriminator }
@@ -104,12 +99,12 @@ class SimpleMapQuery extends Query {
 
         if (orderBy) {
             entityMap = entityMap.sort { a, b ->
-                int result = 0
-                for (Query.Order order in orderBy) {
-                    boolean desc = order.direction == Query.Order.Direction.DESC
-                    def val1 = a.value[order.property]
-                    def val2 = b.value[order.property]
-                    if (desc) {
+                def result = 0
+                for (Order order in orderBy) {
+                    def name = order.property
+                    def val1 = resolveIfEmbedded(name, a.value)
+                    def val2 = resolveIfEmbedded(name, b.value)
+                    if (order.direction == Order.Direction.DESC) {
                         result = val2 <=> val1
                     }
                     else {
@@ -127,14 +122,13 @@ class SimpleMapQuery extends Query {
                 return k1 <=> k2
             }
         }
-
+        
         def resultList = []
         if (max > -1 && offset > -1) {
             def last = offset + max - 1
             def keys = entityMap.keySet().toList()
             if (offset < keys.size()) {
-                def to = Math.min(last, keys.size() - 1)
-                keys = keys[offset..to]
+                keys = keys[offset..Math.min(last, keys.size() - 1)]
             }
             else {
                 keys = []
@@ -152,7 +146,7 @@ class SimpleMapQuery extends Query {
             }
             populateQueryResult(keys, resultList, entityMap)
         }
-        else if (offset > 0) {
+        else if (offset > -1) {
             def keys = entityMap.keySet().toList()
             if (offset < keys.size()) {
                 keys = keys[offset..(keys.size() - 1)]
@@ -244,51 +238,73 @@ class SimpleMapQuery extends Query {
         return finalResults
     }
 
-    List list(Map arguments) {
-        if (arguments?.max || arguments?.offset) {
-            if (arguments.max) {
-                this.max = (arguments.max as Integer)
+    List list(Map params) {
+        String sortProperty = params.sort?.toString()
+        String sortDirection = params.order?.toString() ?: "asc"
+        
+        if (sortProperty || params.order) {
+            if (!sortProperty) {
+                sortProperty = entity.getIdentity()?.getName() ?: "id"
             }
-            if (arguments.offset) {
-                this.offset = (arguments.offset as Integer)
+            if (sortDirection.equalsIgnoreCase("desc")) {
+                order(Query.Order.desc(sortProperty))
+            } else {
+                order(Query.Order.asc(sortProperty))
             }
-            if (arguments.sort) {
-                String sort = arguments.sort
-                String order = arguments.order ?: "asc"
-                if (order.equalsIgnoreCase("desc")) {
-                    this.order(Query.Order.desc(sort))
-                } else {
-                    this.order(Query.Order.asc(sort))
-                }
-            }
-            return new grails.gorm.PagedResultList(this)
+        }
+        if (params.max) {
+            max(Integer.parseInt(params.max.toString()))
+        }
+        if (params.offset) {
+            offset(Integer.parseInt(params.offset.toString()))
         }
         
-        if (arguments?.sort) {
-             String sort = arguments.sort
-             String order = arguments.order ?: "asc"
-             if (order.equalsIgnoreCase("desc")) {
-                 this.order(Query.Order.desc(sort))
-             } else {
-                 this.order(Query.Order.asc(sort))
-             }
+        List results = list()
+        if (params.max || params.offset) {
+            try {
+                def pagedResultListClass = Class.forName("grails.gorm.PagedResultList")
+                def pagedResultList = pagedResultListClass.getConstructor(Query.class).newInstance(this)
+                return (List)pagedResultList
+            } catch (Throwable e) {
+                // ignore
+            }
         }
-        return list()
+        return results
     }
 
-    private String calculateFamily(PersistentEntity entity) {
-        return entity.rootEntity.name
+    long deleteAll() {
+        def results = list()
+        for (result in results) {
+            session.delete(result)
+        }
+        return results.size()
     }
 
-    private String getConnectionName() {
-        ((SimpleMapDatastore)session.datastore).getConnectionName()
+    private void populateQueryResult(List keys, List resultList, Map entityMap) {
+        for (key in keys) {
+            resultList << [key: key, value: entityMap[key]]
+        }
     }
 
     protected Map executeSubQuery(Query.Junction criteria, List<Query.Criterion> criterionList) {
-        def entityMap = [:]
         def datastore = getDatastoreMap()
         def familyMap = (Map) datastore[getFamily()] ?: [:]
-        
+        def entityMap = familyMap
+
+        // Multi-tenancy support for DISCRIMINATOR mode
+        SimpleMapDatastore datastoreInstance = (SimpleMapDatastore)session.datastore
+        if (datastoreInstance.getMultiTenancyMode() == MultiTenancySettings.MultiTenancyMode.DISCRIMINATOR) {
+            if (entity.isMultiTenant()) {
+                def currentTenantId = Tenants.currentId(datastoreInstance)
+                if (currentTenantId != null) {
+                    entityMap = entityMap.findAll { entry ->
+                        def entryTenantId = entry.value.get("tenantId")
+                        return entryTenantId == null || entryTenantId.toString() == currentTenantId.toString()
+                    }
+                }
+            }
+        }
+
         if (criteria instanceof Query.Conjunction) {
             def resultList = []
             for (c in criterionList) {
@@ -301,16 +317,15 @@ class SimpleMapQuery extends Query {
             }
 
             if (resultList.isEmpty()) {
-                return [:]
+                return entityMap
             }
-            def intersectKeys = resultList[0] as Set
+            def intersectKeys = resultList[0]
             for (int i = 1; i < resultList.size(); i++) {
-                intersectKeys = intersectKeys.intersect(resultList[i] as Set)
+                intersectKeys = intersectKeys.intersect(resultList[i])
             }
-            
-            for (key in intersectKeys) {
-                Object k = key instanceof Number ? key.longValue() : key
-                if (familyMap.containsKey(k)) entityMap[k] = familyMap[key]
+            return entityMap.findAll { entry -> 
+                def key = entry.key instanceof Number ? entry.key.longValue() : entry.key
+                intersectKeys.contains(key) 
             }
         }
         else if (criteria instanceof Query.Disjunction) {
@@ -323,106 +338,28 @@ class SimpleMapQuery extends Query {
                     unionKeys.addAll(handleCriterion(c).collect { it instanceof Number ? it.longValue() : it })
                 }
             }
-            
-            for (key in unionKeys) {
-                Object k = key instanceof Number ? key.longValue() : key
-                if (familyMap.containsKey(k)) entityMap[k] = familyMap[key]
+            return entityMap.findAll { entry -> 
+                def key = entry.key instanceof Number ? entry.key.longValue() : entry.key
+                unionKeys.contains(key) 
             }
         }
         else if (criteria instanceof Query.Negation) {
-             def currentViewKeys = familyMap.keySet().collect { it instanceof Number ? it.longValue() : it } as Set
-             
-             def excludedKeys = [] as Set
-             for (c in criterionList) {
+            def negationKeys = [] as Set
+            for (c in criterionList) {
                 if (c instanceof Query.Junction) {
-                    excludedKeys.addAll(executeSubQuery(c, c.getCriteria()).keySet().collect { it instanceof Number ? it.longValue() : it })
+                    negationKeys.addAll(executeSubQuery(c, c.getCriteria()).keySet().collect { it instanceof Number ? it.longValue() : it })
                 }
                 else {
-                    excludedKeys.addAll(handleCriterion(c).collect { it instanceof Number ? it.longValue() : it })
+                    negationKeys.addAll(handleCriterion(c).collect { it instanceof Number ? it.longValue() : it })
                 }
-             }
-             
-             def negatedKeys = currentViewKeys - excludedKeys
-             for (key in negatedKeys) {
-                 Object k = key instanceof Number ? key.longValue() : key
-                 if (familyMap.containsKey(k)) entityMap[k] = familyMap[key]
-             }
-        }
-        else {
-            throw new UnsupportedOperationException("Junction type ${criteria.getClass().name} not supported in executeSubQuery")
-        }
-        return entityMap
-    }
-
-    private Object applyFunction(String functionName, Object val) {
-        Object result = val
-        switch(functionName.toLowerCase()) {
-            case 'length': result = val.toString().length(); break
-            case 'lower': result = val.toString().toLowerCase(); break
-            case 'upper': result = val.toString().toUpperCase(); break
-            case 'trim': result = val.toString().trim(); break
-            case 'year': 
-                def c = Calendar.getInstance()
-                c.time = (Date)val
-                result = c.get(Calendar.YEAR)
-                break
-            case 'month':
-                def c = Calendar.getInstance()
-                c.time = (Date)val
-                result = c.get(Calendar.MONTH) + 1
-                break
-            case 'day':
-                def c = Calendar.getInstance()
-                c.time = (Date)val
-                result = c.get(Calendar.DAY_OF_MONTH)
-                break
-            case 'hour':
-                def c = Calendar.getInstance()
-                c.time = (Date)val
-                result = c.get(Calendar.HOUR_OF_DAY)
-                break
-            case 'minute':
-                def c = Calendar.getInstance()
-                c.time = (Date)val
-                result = c.get(Calendar.MINUTE)
-                break
-            case 'second':
-                def c = Calendar.getInstance()
-                c.time = (Date)val
-                result = c.get(Calendar.SECOND)
-                break
-        }
-        return result
-    }
-
-    private boolean matchesCriterion(SimpleMapQuery query, Query.PropertyCriterion pc, Object val) {
-        def value = pc.value
-        def prop = entity.getPropertyByName(pc.property)
-        
-        // Marshal both sides to their persistent form
-        val = query.marshalValue(prop, val)
-        value = query.marshalValue(prop, value)
-
-        if (val instanceof Number && value instanceof Number) {
-            val = val.doubleValue()
-            value = value.doubleValue()
-        }
-        
-        boolean match = false
-        if (pc instanceof Query.Equals) match = (val == value)
-        else if (pc instanceof Query.NotEquals) match = (val != value)
-        else if (val instanceof Comparable && value instanceof Comparable) {
-            try {
-                if (pc instanceof Query.GreaterThan) match = (val > value)
-                else if (pc instanceof Query.LessThan) match = (val < value)
-                else if (pc instanceof Query.GreaterThanEquals) match = (val >= value)
-                else if (pc instanceof Query.LessThanEquals) match = (val <= value)
-            } catch (Throwable e) {
-                // ignore
+            }
+            return entityMap.findAll { entry -> 
+                def key = entry.key instanceof Number ? entry.key.longValue() : entry.key
+                !negationKeys.contains(key) 
             }
         }
-        
-        return match
+
+        return entityMap
     }
 
     private Collection handleCriterion(Query.Criterion c) {
@@ -432,98 +369,232 @@ class SimpleMapQuery extends Query {
         }
         if (handler) {
             PersistentProperty property = null
-            try {
-                if (c instanceof Query.PropertyNameCriterion) {
-                    property = entity.getPropertyByName(((Query.PropertyNameCriterion)c).getProperty())
-                    
-                    // Handle value-side functions
-                    if (c instanceof Query.PropertyCriterion) {
-                        def val = ((Query.PropertyCriterion)c).getValue()
-                        if (val instanceof org.grails.datastore.mapping.query.criteria.FunctionCallingCriterion) {
-                            def fcc = (org.grails.datastore.mapping.query.criteria.FunctionCallingCriterion)val
-                            def baseVal = fcc.getPropertyCriterion().getValue()
-                            def funcResult = applyFunction(fcc.getFunctionName(), baseVal)
-                            // Create a new criterion with the resolved value
-                            c = c.getClass().newInstance(((Query.PropertyCriterion)c).getProperty(), funcResult)
-                        }
-                    }
-                }
-                else if (c instanceof org.grails.datastore.mapping.query.api.AssociationCriteria) {
-                    property = ((org.grails.datastore.mapping.query.api.AssociationCriteria)c).getAssociation()
-                }
-                else if (c instanceof org.grails.datastore.mapping.query.AssociationQuery) {
-                    property = ((org.grails.datastore.mapping.query.AssociationQuery)c).getAssociation()
-                }
-            } catch (Throwable e) {
-                // ignore
+            if (c instanceof Query.PropertyNameCriterion) {
+                property = entity.getPropertyByName(((Query.PropertyNameCriterion)c).property)
+            }
+            else if (c instanceof org.grails.datastore.mapping.query.AssociationQuery) {
+                property = ((org.grails.datastore.mapping.query.AssociationQuery)c).getAssociation()
             }
             def results = handler.call(this, c, property)
             if (results instanceof Collection) {
-                def finalRes = results.collect { it instanceof Number ? it.longValue() : it }
-                return finalRes
+                return results.collect { it instanceof Number ? it.longValue() : it }
             }
-            return []
+            else {
+                return results ? [results instanceof Number ? results.longValue() : results] : []
+            }
         }
         return []
     }
 
-    private void populateQueryResult(List keys, List resultList, Map entityMap) {
-        for (key in keys) {
-            resultList << [key: key, value: entityMap[key]]
-        }
-    }
-
     protected marshalValue(PersistentProperty property, value) {
-        if (value instanceof org.grails.datastore.mapping.query.api.QueryableCriteria) {
-            value = ((org.grails.datastore.mapping.query.api.QueryableCriteria)value).list()
-            if (value instanceof List && value.size() == 1) {
-                value = value[0]
-            }
+        if (value instanceof QueryableCriteria) {
+            return value
         }
-        
         if (property != null && value != null) {
+            if (property instanceof Association) {
+                if (value instanceof Collection) {
+                    return value.collect { 
+                        if (it == null) return null
+                        if (property.type.isInstance(it)) {
+                            def persister = session.getPersister(it)
+                            return persister != null ? persister.getObjectIdentifier(it) : it
+                        }
+                        return it
+                    }
+                } else if (property.type.isInstance(value)) {
+                    def persister = session.getPersister(value)
+                    return persister != null ? persister.getObjectIdentifier(value) : value
+                }
+            }
             if (!property.type.isInstance(value)) {
                 try {
                     value = session.getMappingContext().getConversionService().convert(value, property.getType())
                 } catch (Throwable e) {
-                    // ignore and try other methods
+                    // ignore
                 }
             }
-            String propClassName = property.getClass().name
-            if (propClassName.contains(".Basic") || propClassName.contains(".Custom")) {
-                 if (!(value instanceof Number || value instanceof String || value instanceof Boolean)) {
-                     def marshaller = property.getCustomTypeMarshaller()
-                     if (marshaller != null && marshaller.supports(getMappingContext())) {
-                         try {
-                             value = marshaller.write(property, value, [:])
-                         } catch (Throwable e) {
-                             // ignore
-                         }
-                     }
-                 }
+            def marshaller = property.respondsTo("getCustomTypeMarshaller") ? property.getCustomTypeMarshaller() : null
+            if (marshaller != null && marshaller.supports(session.getMappingContext())) {
+                try {
+                    value = marshaller.write(property, value, [:])
+                } catch (Throwable e) {
+                    // ignore
+                }
             }
-        }
-
-        if (value instanceof Number && property && Number.isAssignableFrom(property.type)) {
-            return value.asType(property.type)
         }
         return value
     }
 
+    protected boolean matchesCriterion(SimpleMapQuery query, Query.PropertyCriterion pc, Object val) {
+        def value = pc.value
+        def prop = entity.getPropertyByName(pc.property)
+        
+        if (value instanceof QueryableCriteria) {
+            value = value.get()
+        }
+
+        // Marshal the target value to its persistent form
+        val = query.marshalValue(prop, val)
+
+        if (pc instanceof Query.In) {
+            if (value instanceof Collection) {
+                def convertedValues = value.collect { query.marshalValue(prop, it) }
+                if (val instanceof Number) {
+                    val = val.doubleValue()
+                    convertedValues = convertedValues.collect { it instanceof Number ? it.doubleValue() : it }
+                }
+                return convertedValues.contains(val)
+            }
+            return false
+        }
+
+        // Marshal scalar value to its persistent form
+        value = query.marshalValue(prop, value)
+
+        if (val instanceof Number && value instanceof Number) {
+            val = val.doubleValue()
+            value = value.doubleValue()
+        }
+
+        if (pc instanceof Query.Equals) {
+            return val == value
+        }
+        else if (pc instanceof Query.NotEquals) {
+            return val != value
+        }
+        else if (pc instanceof Query.GreaterThan) {
+            if (val != null && value != null) {
+                return val > value
+            }
+        }
+        else if (pc instanceof Query.GreaterThanEquals) {
+            if (val != null && value != null) {
+                return val >= value
+            }
+        }
+        else if (pc instanceof Query.LessThan) {
+            if (val != null && value != null) {
+                return val < value
+            }
+        }
+        else if (pc instanceof Query.LessThanEquals) {
+            if (val != null && value != null) {
+                return val <= value
+            }
+        }
+        else if (pc instanceof Query.ILike) {
+            if (val != null && value != null) {
+                def pattern = "(?i)" + value.toString().replace('%', '.*').replace('_', '.')
+                return val.toString() ==~ pattern
+            }
+        }
+        else if (pc instanceof Query.Like) {
+            if (val != null && value != null) {
+                def pattern = value.toString().replaceAll('%', '.*')
+                return val.toString() ==~ pattern
+            }
+        }
+        else if (pc instanceof Query.RLike) {
+            if (val != null && value != null) {
+                return val.toString() ==~ value.toString()
+            }
+        }
+        return false
+    }
+
+    protected boolean matchesSubqueryCriterion(SimpleMapQuery query, Query.SubqueryCriterion sc, Object val, List subqueryResults) {
+        if (val == null) return false
+        
+        def prop = entity.getPropertyByName(sc.property)
+        val = query.marshalValue(prop, val)
+        def results = subqueryResults.collect { query.marshalValue(prop, it) }
+        
+        if (val instanceof Number) {
+            val = val.doubleValue()
+            results = results.collect { it instanceof Number ? it.doubleValue() : it }
+        }
+
+        if (sc instanceof Query.EqualsAll) {
+            return results.every { val == it }
+        }
+        else if (sc instanceof Query.NotEqualsAll) {
+            return results.every { val != it }
+        }
+        else if (sc instanceof Query.GreaterThanAll) {
+            return results.every { val > it }
+        }
+        else if (sc instanceof Query.GreaterThanEqualsAll) {
+            return results.every { val >= it }
+        }
+        else if (sc instanceof Query.LessThanAll) {
+            return results.every { val < it }
+        }
+        else if (sc instanceof Query.LessThanEqualsAll) {
+            return results.every { val <= it }
+        }
+        else if (sc instanceof Query.GreaterThanSome) {
+            return results.any { val > it }
+        }
+        else if (sc instanceof Query.GreaterThanEqualsSome) {
+            return results.any { val >= it }
+        }
+        else if (sc instanceof Query.LessThanSome) {
+            return results.any { val < it }
+        }
+        else if (sc instanceof Query.LessThanEqualsSome) {
+            return results.any { val <= it }
+        }
+        else if (sc instanceof Query.NotIn) {
+            return !results.contains(val)
+        }
+        return false
+    }
+
     private static Map handlers = [
+        (Query.SubqueryCriterion): { SimpleMapQuery query, Query.SubqueryCriterion sc, PersistentProperty property ->
+            def results = []
+            def datastore = query.getDatastoreMap()
+            def familyMap = (Map) datastore[query.getFamily()] ?: [:]
+            
+            def subqueryResults = sc.value.list()
+            
+            familyMap.each { ok, ov ->
+                def val = query.resolveIfEmbedded(sc.property, ov)
+                if (query.matchesSubqueryCriterion(query, sc, val, subqueryResults)) results << ok
+            }
+            return results
+        },
         (Query.IdEquals): { SimpleMapQuery query, Query.IdEquals ie, PersistentProperty property ->
             def datastore = query.getDatastoreMap()
             def familyMap = (Map) datastore[query.getFamily()] ?: [:]
-            def prop = property ?: query.entity.identity
-            def value = query.marshalValue(prop, ie.value)
-            Object v = value instanceof Number ? value.longValue() : value
-            if (familyMap.containsKey(v)) {
-                return [v]
-            }
+            def key = ie.value instanceof Number ? ie.value.longValue() : ie.value
+            if (familyMap.containsKey(key)) return [key]
             return []
         },
-        (Query.IsNull): { SimpleMapQuery query, Query.IsNull isNull, PersistentProperty property ->
-            def name = isNull.property
+        (Query.Equals): { SimpleMapQuery query, Query.Equals eq, PersistentProperty property ->
+            def name = eq.property
+            def results = []
+            def datastore = query.getDatastoreMap()
+            def familyMap = (Map) datastore[query.getFamily()] ?: [:]
+            familyMap.each { ok, ov ->
+                def val = query.resolveIfEmbedded(name, ov)
+                if (query.matchesCriterion(query, eq, val)) results << ok
+            }
+            return results
+        },
+        (Query.NotEquals): { SimpleMapQuery query, Query.NotEquals eq, PersistentProperty property ->
+            def name = eq.property
+            def results = []
+            def datastore = query.getDatastoreMap()
+            def familyMap = (Map) datastore[query.getFamily()] ?: [:]
+            familyMap.each { ok, ov ->
+                def val = query.resolveIfEmbedded(name, ov)
+                if (query.matchesCriterion(query, eq, val)) results << ok
+            }
+            return results
+        },
+        (Query.IsNull): { SimpleMapQuery query, Query.IsNull eq, PersistentProperty property ->
+            def name = eq.property
             def results = []
             def datastore = query.getDatastoreMap()
             def familyMap = (Map) datastore[query.getFamily()] ?: [:]
@@ -533,8 +604,8 @@ class SimpleMapQuery extends Query {
             }
             return results
         },
-        (Query.IsNotNull): { SimpleMapQuery query, Query.IsNotNull isNotNull, PersistentProperty property ->
-            def name = isNotNull.property
+        (Query.IsNotNull): { SimpleMapQuery query, Query.IsNotNull eq, PersistentProperty property ->
+            def name = eq.property
             def results = []
             def datastore = query.getDatastoreMap()
             def familyMap = (Map) datastore[query.getFamily()] ?: [:]
@@ -544,39 +615,107 @@ class SimpleMapQuery extends Query {
             }
             return results
         },
-        (Query.Like): { SimpleMapQuery query, Query.Like like, PersistentProperty property ->
-            def name = like.property
-            def pattern = like.value.replaceAll('%', '.*')
+        (Query.In): { SimpleMapQuery query, Query.In eq, PersistentProperty property ->
+            def name = eq.property
             def results = []
             def datastore = query.getDatastoreMap()
             def familyMap = (Map) datastore[query.getFamily()] ?: [:]
             familyMap.each { ok, ov ->
                 def val = query.resolveIfEmbedded(name, ov)
-                if (val != null && (val.toString() =~ /^${pattern}$/)) results << ok
+                if (query.matchesCriterion(query, eq, val)) results << ok
             }
             return results
         },
-        (Query.ILike): { SimpleMapQuery query, Query.ILike like, PersistentProperty property ->
-            def name = like.property
-            def pattern = like.value.replaceAll('%', '.*')
+        (Query.Between): { SimpleMapQuery query, Query.Between bt, PersistentProperty property ->
+            def name = bt.property
             def results = []
+            def from = bt.from
+            def to = bt.to
             def datastore = query.getDatastoreMap()
             def familyMap = (Map) datastore[query.getFamily()] ?: [:]
             familyMap.each { ok, ov ->
                 def val = query.resolveIfEmbedded(name, ov)
-                if (val != null && (val.toString() =~ /(?i)^${pattern}$/)) results << ok
+                if (query.matchesCriterion(query, new Query.GreaterThanEquals(name, from), val) &&
+                    query.matchesCriterion(query, new Query.LessThanEquals(name, to), val)) {
+                    results << ok
+                }
             }
             return results
         },
-        (Query.RLike): { SimpleMapQuery query, Query.RLike like, PersistentProperty property ->
-            def name = like.property
-            def pattern = like.value
+        (Query.GreaterThan): { SimpleMapQuery query, Query.GreaterThan gt, PersistentProperty property ->
+            def name = gt.property
             def results = []
             def datastore = query.getDatastoreMap()
             def familyMap = (Map) datastore[query.getFamily()] ?: [:]
             familyMap.each { ok, ov ->
                 def val = query.resolveIfEmbedded(name, ov)
-                if (val != null && (val.toString() =~ pattern)) results << ok
+                if (query.matchesCriterion(query, gt, val)) results << ok
+            }
+            return results
+        },
+        (Query.GreaterThanEquals): { SimpleMapQuery query, Query.GreaterThanEquals gt, PersistentProperty property ->
+            def name = gt.property
+            def results = []
+            def datastore = query.getDatastoreMap()
+            def familyMap = (Map) datastore[query.getFamily()] ?: [:]
+            familyMap.each { ok, ov ->
+                def val = query.resolveIfEmbedded(name, ov)
+                if (query.matchesCriterion(query, gt, val)) results << ok
+            }
+            return results
+        },
+        (Query.LessThan): { SimpleMapQuery query, Query.LessThan lt, PersistentProperty property ->
+            def name = lt.property
+            def results = []
+            def datastore = query.getDatastoreMap()
+            def familyMap = (Map) datastore[query.getFamily()] ?: [:]
+            familyMap.each { ok, ov ->
+                def val = query.resolveIfEmbedded(name, ov)
+                if (query.matchesCriterion(query, lt, val)) results << ok
+            }
+            return results
+        },
+        (Query.LessThanEquals): { SimpleMapQuery query, Query.LessThanEquals lt, PersistentProperty property ->
+            def name = lt.property
+            def results = []
+            def datastore = query.getDatastoreMap()
+            def familyMap = (Map) datastore[query.getFamily()] ?: [:]
+            familyMap.each { ok, ov ->
+                def val = query.resolveIfEmbedded(name, ov)
+                if (query.matchesCriterion(query, lt, val)) results << ok
+            }
+            return results
+        },
+        (Query.Like): { SimpleMapQuery query, Query.Like li, PersistentProperty property ->
+            def name = li.property
+            def results = []
+            def datastore = query.getDatastoreMap()
+            def familyMap = (Map) datastore[query.getFamily()] ?: [:]
+            familyMap.each { ok, ov ->
+                def val = query.resolveIfEmbedded(name, ov)
+                if (query.matchesCriterion(query, li, val)) results << ok
+            }
+            return results
+        },
+        (Query.ILike): { SimpleMapQuery query, Query.ILike li, PersistentProperty property ->
+            def name = li.property
+            def results = []
+            def datastore = query.getDatastoreMap()
+            def familyMap = (Map) datastore[query.getFamily()] ?: [:]
+            familyMap.each { ok, ov ->
+                def val = query.resolveIfEmbedded(name, ov)
+                if (query.matchesCriterion(query, li, val)) results << ok
+            }
+            return results
+        },
+        (Query.RLike): { SimpleMapQuery query, Query.RLike li, PersistentProperty property ->
+            def name = li.property
+            def results = []
+            def datastore = query.getDatastoreMap()
+            def familyMap = (Map) datastore[query.getFamily()] ?: [:]
+            familyMap.each { ok, ov ->
+                def val = query.resolveIfEmbedded(name, ov)
+                if (query.matchesCriterion(query, li, val)) results << ok
             }
             return results
         },
@@ -646,33 +785,6 @@ class SimpleMapQuery extends Query {
             }
             return results
         },
-        (org.grails.datastore.mapping.query.api.AssociationCriteria): { SimpleMapQuery query, org.grails.datastore.mapping.query.api.AssociationCriteria ac, PersistentProperty property ->
-            def matchingAssociatedKeys = [] as Set
-            if (!ac.getCriteria().isEmpty()) {
-                def subQuery = query.session.createQuery(ac.getAssociation().getAssociatedEntity().javaClass)
-                subQuery.criteria = new Query.Conjunction(ac.getCriteria())
-                def subResults = subQuery.list()
-                matchingAssociatedKeys = subResults.collect { 
-                    def id = query.session.getPersister(it).getObjectIdentifier(it)
-                    return id instanceof Number ? id.longValue() : id
-                } as Set
-            }
-            
-            def results = []
-            def allIndices = query.getIndices()
-            def root = "~${ac.getAssociation().owner.rootEntity.name}:${ac.getAssociation().name}:"
-            
-            allIndices.each { k, v ->
-                if (k.startsWith(root) && v instanceof Collection) {
-                    if (v.any { matchingAssociatedKeys.contains(it instanceof Number ? it.longValue() : it) }) {
-                        def parentIdStr = k.substring(root.length())
-                        def parentId = parentIdStr.isLong() ? parentIdStr.toLong() : parentIdStr
-                        results << parentId
-                    }
-                }
-            }
-            return results
-        },
         (org.grails.datastore.mapping.query.AssociationQuery): { SimpleMapQuery query, org.grails.datastore.mapping.query.AssociationQuery aq, PersistentProperty property ->
             def results = []
             def datastore = query.getDatastoreMap()
@@ -730,249 +842,84 @@ class SimpleMapQuery extends Query {
             }
             return []
         },
-        (Query.Equals): { SimpleMapQuery query, Query.Equals equals, PersistentProperty property ->
-            def value = query.marshalValue(property, equals.value)
-            final indexer = query.entityPersister.getPropertyIndexer(property)
-
-            if (value && property instanceof ToOne && property.type.isInstance(value)) {
-               value = query.session.getPersister(value).getObjectIdentifier(value)
+        (Query.NotExists): { SimpleMapQuery query, Query.NotExists exists, PersistentProperty property ->
+            def subQuery = query.session.createQuery(exists.getSubquery().getPersistentEntity().javaClass)
+            subQuery.criteria = exists.getSubquery().getCriteria()
+            def subResults = subQuery.list()
+            if (subResults.isEmpty()) {
+                return query.getDatastoreMap()[query.getFamily()]?.keySet() ?: []
             }
-
-            if (equals.property.contains('.') || value == null) {
-                def results = []
-                def datastore = query.getDatastoreMap()
-                def familyMap = (Map) datastore[query.getFamily()] ?: [:]
-                familyMap.each { ok, ov ->
-                    if (query.matchesCriterion(query, equals, query.resolveIfEmbedded(equals.property, ov))) results << ok
-                }
-                return results
-            }
-            else {
-                def indexName = indexer.getIndexName(value)
-                def allIndices = query.getIndices()
-                def results = (List)allIndices[indexName] ?: []
-                
-                if (results.isEmpty()) {
-                     // Fallback to scan
-                     def scanResults = []
-                     def datastore = query.getDatastoreMap()
-                     def familyMap = (Map) datastore[query.getFamily()] ?: [:]
-                     familyMap.each { ok, ov ->
-                         if (query.matchesCriterion(query, equals, query.resolveIfEmbedded(equals.property, ov))) {
-                             scanResults << ok
-                         }
-                     }
-                     return scanResults
-                }
-                return results
-            }
-        },
-        (Query.NotEquals): { SimpleMapQuery query, Query.NotEquals equals, PersistentProperty property ->
-            def results = []
-            def datastore = query.getDatastoreMap()
-            def familyMap = (Map) datastore[query.getFamily()] ?: [:]
-            familyMap.each { ok, ov ->
-                if (query.matchesCriterion(query, equals, query.resolveIfEmbedded(equals.property, ov))) results << ok
-            }
-            return results
-        },
-        (Query.In): { SimpleMapQuery query, Query.In inList, PersistentProperty property ->
-            def values = inList.values
-            if (values instanceof QueryableCriteria) {
-                 values = ((QueryableCriteria)values).list().collect { 
-                     def id = query.session.getPersister(it).getObjectIdentifier(it)
-                     return id instanceof Number ? id.longValue() : id
-                 }
-            }
-            def results = [] as Set
-            for (value in values) {
-                results.addAll(handlers[Query.Equals].call(query, new Query.Equals(inList.property, value), property))
-            }
-            return results
-        },
-        (Query.Between): { SimpleMapQuery query, Query.Between between, PersistentProperty property ->
-            def from = between.from
-            def to = between.to
-            def name = between.property
-            def results = []
-            def datastore = query.getDatastoreMap()
-            def familyMap = (Map) datastore[query.getFamily()] ?: [:]
-            familyMap.each { ok, ov ->
-                def val = query.resolveIfEmbedded(name, ov)
-                if (query.matchesCriterion(query, new Query.GreaterThanEquals(name, from), val) &&
-                    query.matchesCriterion(query, new Query.LessThanEquals(name, to), val)) {
-                    results << ok
-                }
-            }
-            return results
+            return []
         },
         (Query.SizeEquals): { SimpleMapQuery query, Query.SizeEquals se, PersistentProperty property ->
-            def name = se.property
-            def value = se.value
             def results = []
             def datastore = query.getDatastoreMap()
             def familyMap = (Map) datastore[query.getFamily()] ?: [:]
-            
-            if (property instanceof Association) {
-                 def indexer = query.entityPersister.getAssociationIndexer(null, (Association)property)
-                 familyMap.each { ok, ov ->
-                     if (indexer.query(ok).size() == value) results << ok
-                 }
-            } else {
-                familyMap.each { ok, ov ->
-                    def val = query.resolveIfEmbedded(name, ov)
-                    if (val instanceof Collection && val.size() == value) results << ok
-                    else if (val instanceof Map && val.size() == value) results << ok
-                }
-            }
-            return results
-        },
-        (Query.SizeGreaterThan): { SimpleMapQuery query, Query.SizeGreaterThan se, PersistentProperty property ->
-            def name = se.property
-            def value = se.value
-            def results = []
-            def datastore = query.getDatastoreMap()
-            def familyMap = (Map) datastore[query.getFamily()] ?: [:]
-            
-            if (property instanceof Association) {
-                 def indexer = query.entityPersister.getAssociationIndexer(null, (Association)property)
-                 familyMap.each { ok, ov ->
-                     if (indexer.query(ok).size() > value) results << ok
-                 }
-            } else {
-                familyMap.each { ok, ov ->
-                    def val = query.resolveIfEmbedded(name, ov)
-                    if (val instanceof Collection && val.size() > value) results << ok
-                    else if (val instanceof Map && val.size() > value) results << ok
-                }
-            }
-            return results
-        },
-        (Query.SizeLessThan): { SimpleMapQuery query, Query.SizeLessThan se, PersistentProperty property ->
-            def name = se.property
-            def value = se.value
-            def results = []
-            def datastore = query.getDatastoreMap()
-            def familyMap = (Map) datastore[query.getFamily()] ?: [:]
-            
-            if (property instanceof Association) {
-                 def indexer = query.entityPersister.getAssociationIndexer(null, (Association)property)
-                 familyMap.each { ok, ov ->
-                     if (indexer.query(ok).size() < value) results << ok
-                 }
-            } else {
-                familyMap.each { ok, ov ->
-                    def val = query.resolveIfEmbedded(name, ov)
-                    if (val instanceof Collection && val.size() < value) results << ok
-                    else if (val instanceof Map && val.size() < value) results << ok
-                }
-            }
-            return results
-        },
-        (Query.SizeGreaterThanEquals): { SimpleMapQuery query, Query.SizeGreaterThanEquals se, PersistentProperty property ->
-            def name = se.property
-            def value = se.value
-            def results = []
-            def datastore = query.getDatastoreMap()
-            def familyMap = (Map) datastore[query.getFamily()] ?: [:]
-            
-            if (property instanceof Association) {
-                 def indexer = query.entityPersister.getAssociationIndexer(null, (Association)property)
-                 familyMap.each { ok, ov ->
-                     if (indexer.query(ok).size() >= value) results << ok
-                 }
-            } else {
-                familyMap.each { ok, ov ->
-                    def val = query.resolveIfEmbedded(name, ov)
-                    if (val instanceof Collection && val.size() >= value) results << ok
-                    else if (val instanceof Map && val.size() >= value) results << ok
-                }
-            }
-            return results
-        },
-        (Query.SizeLessThanEquals): { SimpleMapQuery query, Query.SizeLessThanEquals se, PersistentProperty property ->
-            def name = se.property
-            def value = se.value
-            def results = []
-            def datastore = query.getDatastoreMap()
-            def familyMap = (Map) datastore[query.getFamily()] ?: [:]
-            
-            if (property instanceof Association) {
-                 def indexer = query.entityPersister.getAssociationIndexer(null, (Association)property)
-                 familyMap.each { ok, ov ->
-                     if (indexer.query(ok).size() <= value) results << ok
-                 }
-            } else {
-                familyMap.each { ok, ov ->
-                    def val = query.resolveIfEmbedded(name, ov)
-                    if (val instanceof Collection && val.size() <= value) results << ok
-                    else if (val instanceof Map && val.size() <= value) results << ok
+            familyMap.each { ok, ov ->
+                def val = query.resolveIfEmbedded(se.property, ov)
+                if (val instanceof Collection) {
+                    if (val.size() == se.value) results << ok
                 }
             }
             return results
         },
         (Query.SizeNotEquals): { SimpleMapQuery query, Query.SizeNotEquals se, PersistentProperty property ->
-            def name = se.property
-            def value = se.value
             def results = []
             def datastore = query.getDatastoreMap()
             def familyMap = (Map) datastore[query.getFamily()] ?: [:]
-            
-            if (property instanceof Association) {
-                 def indexer = query.entityPersister.getAssociationIndexer(null, (Association)property)
-                 familyMap.each { ok, ov ->
-                     if (indexer.query(ok).size() != value) results << ok
-                 }
-            } else {
-                familyMap.each { ok, ov ->
-                    def val = query.resolveIfEmbedded(name, ov)
-                    if (val instanceof Collection && val.size() != value) results << ok
-                    else if (val instanceof Map && val.size() != value) results << ok
+            familyMap.each { ok, ov ->
+                def val = query.resolveIfEmbedded(se.property, ov)
+                if (val instanceof Collection) {
+                    if (val.size() != se.value) results << ok
                 }
             }
             return results
         },
-        (Query.GreaterThan): { SimpleMapQuery query, Query.GreaterThan gt, PersistentProperty property ->
-            def name = gt.property
+        (Query.SizeGreaterThan): { SimpleMapQuery query, Query.SizeGreaterThan se, PersistentProperty property ->
             def results = []
             def datastore = query.getDatastoreMap()
             def familyMap = (Map) datastore[query.getFamily()] ?: [:]
             familyMap.each { ok, ov ->
-                def val = query.resolveIfEmbedded(name, ov)
-                if (query.matchesCriterion(query, gt, val)) results << ok
+                def val = query.resolveIfEmbedded(se.property, ov)
+                if (val instanceof Collection) {
+                    if (val.size() > se.value) results << ok
+                }
             }
             return results
         },
-        (Query.LessThan): { SimpleMapQuery query, Query.LessThan lt, PersistentProperty property ->
-            def name = lt.property
+        (Query.SizeGreaterThanEquals): { SimpleMapQuery query, Query.SizeGreaterThanEquals se, PersistentProperty property ->
             def results = []
             def datastore = query.getDatastoreMap()
             def familyMap = (Map) datastore[query.getFamily()] ?: [:]
             familyMap.each { ok, ov ->
-                def val = query.resolveIfEmbedded(name, ov)
-                if (query.matchesCriterion(query, lt, val)) results << ok
+                def val = query.resolveIfEmbedded(se.property, ov)
+                if (val instanceof Collection) {
+                    if (val.size() >= se.value) results << ok
+                }
             }
             return results
         },
-        (Query.GreaterThanEquals): { SimpleMapQuery query, Query.GreaterThanEquals gt, PersistentProperty property ->
-            def name = gt.property
+        (Query.SizeLessThan): { SimpleMapQuery query, Query.SizeLessThan se, PersistentProperty property ->
             def results = []
             def datastore = query.getDatastoreMap()
             def familyMap = (Map) datastore[query.getFamily()] ?: [:]
             familyMap.each { ok, ov ->
-                def val = query.resolveIfEmbedded(name, ov)
-                if (query.matchesCriterion(query, gt, val)) results << ok
+                def val = query.resolveIfEmbedded(se.property, ov)
+                if (val instanceof Collection) {
+                    if (val.size() < se.value) results << ok
+                }
             }
             return results
         },
-        (Query.LessThanEquals): { SimpleMapQuery query, Query.LessThanEquals lte, PersistentProperty property ->
-            def name = lte.property
+        (Query.SizeLessThanEquals): { SimpleMapQuery query, Query.SizeLessThanEquals se, PersistentProperty property ->
             def results = []
             def datastore = query.getDatastoreMap()
             def familyMap = (Map) datastore[query.getFamily()] ?: [:]
             familyMap.each { ok, ov ->
-                def val = query.resolveIfEmbedded(name, ov)
-                if (query.matchesCriterion(query, lte, val)) results << ok
+                def val = query.resolveIfEmbedded(se.property, ov)
+                if (val instanceof Collection) {
+                    if (val.size() <= se.value) results << ok
+                }
             }
             return results
         }
@@ -982,16 +929,64 @@ class SimpleMapQuery extends Query {
         if (name.contains('.')) {
             def parts = name.split('\\.')
             def current = entry
+            def currentEntity = entity
             for (part in parts) {
+                def prop = currentEntity.getPropertyByName(part)
                 if (current instanceof Map) {
                     current = current[part]
                 }
                 else {
                     return null
                 }
+                
+                if (prop instanceof ToOne) {
+                    currentEntity = ((ToOne)prop).getAssociatedEntity()
+                    if (current != null && !(current instanceof Map)) {
+                        // Resolve the entry for the association
+                        def family = currentEntity.rootEntity.name
+                        def datastore = getDatastoreMap()
+                        def familyMap = (Map) datastore[family]
+                        if (familyMap != null) {
+                            current = familyMap[current]
+                        } else {
+                            current = null
+                        }
+                    }
+                }
             }
             return current
         }
         return entry[name]
+    }
+
+    protected Object applyFunction(String functionName, Object value) {
+        switch (functionName) {
+            case "year":
+                if (value instanceof Date) {
+                    Calendar cal = Calendar.getInstance()
+                    cal.time = (Date)value
+                    return cal.get(Calendar.YEAR)
+                }
+                break
+            case "month":
+                if (value instanceof Date) {
+                    Calendar cal = Calendar.getInstance()
+                    cal.time = (Date)value
+                    return cal.get(Calendar.MONTH) + 1
+                }
+                break
+            case "day":
+                if (value instanceof Date) {
+                    Calendar cal = Calendar.getInstance()
+                    cal.time = (Date)value
+                    return cal.get(Calendar.DAY_OF_MONTH)
+                }
+                break
+        }
+        return value
+    }
+
+    public String getFamily() {
+        return entity.rootEntity.name
     }
 }

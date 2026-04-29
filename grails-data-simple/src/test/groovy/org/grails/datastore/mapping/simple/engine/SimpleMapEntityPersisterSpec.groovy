@@ -162,11 +162,13 @@ class SimpleMapEntityPersisterSpec extends Specification {
 }
 
 @Entity
-class TestEntity {
+class TestEntity implements grails.gorm.MultiTenant<TestEntity> {
     Long id
     String name
+    String tenantId
     static mapping = {
         name index: true
+        multiTenancy strategy: 'DISCRIMINATOR'
     }
 }
 

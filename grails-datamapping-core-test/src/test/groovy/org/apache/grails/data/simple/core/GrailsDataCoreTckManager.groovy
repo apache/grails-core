@@ -97,6 +97,7 @@ class GrailsDataCoreTckManager extends GrailsDataTckManager {
         for (cls in domainClasses) {
             simple.mappingContext.addPersistentEntity(cls)
         }
+        def enhancer = new org.grails.datastore.gorm.GormEnhancer(simple, simple.transactionManager)
 
         PersistentEntity entity = simple.mappingContext.persistentEntities.find {
             PersistentEntity e -> e.name.contains("TestEntity")}
@@ -118,7 +119,8 @@ class GrailsDataCoreTckManager extends GrailsDataTckManager {
     @Override
     void setup(Class<? extends Specification> spec) {
         super.setup(spec)
-        org.grails.datastore.gorm.GormEnhancer.setPreferredDatastore(simpleDatastore)
+        def datastore = getSimpleDatastore()
+        org.grails.datastore.gorm.GormEnhancer.setPreferredDatastore(datastore)
     }
 
     @Override
