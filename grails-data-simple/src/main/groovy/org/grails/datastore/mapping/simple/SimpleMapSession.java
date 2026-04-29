@@ -104,7 +104,6 @@ public class SimpleMapSession extends AbstractSession {
 
     @Override
     protected Transaction beginTransactionInternal() {
-        System.err.println("SimpleMapSession.beginTransactionInternal: starting transaction for session " + System.identityHashCode(this));
         return new MockTransaction(this);
     }
 
@@ -121,7 +120,6 @@ public class SimpleMapSession extends AbstractSession {
 
         public MockTransaction(SimpleMapSession simpleMapSession) {
             this.session = simpleMapSession;
-            System.err.println("MockTransaction.constructor: creating transaction for session " + System.identityHashCode(session));
             SimpleMapDatastore datastore = (SimpleMapDatastore) session.getDatastore();
             SimpleMapDatastore.SharedState state = datastore.getSharedState();
             
@@ -162,7 +160,6 @@ public class SimpleMapSession extends AbstractSession {
             SimpleMapDatastore datastore = (SimpleMapDatastore) session.getDatastore();
             SimpleMapDatastore.SharedState state = datastore.getSharedState();
             
-            System.err.println("MockTransaction.rollback: backing up to size=" + dataBackup.size() + ", current size=" + state.inmemoryData.size());
             state.inmemoryData.clear();
             state.inmemoryData.putAll(dataBackup);
             

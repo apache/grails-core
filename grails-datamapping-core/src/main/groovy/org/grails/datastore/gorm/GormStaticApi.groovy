@@ -18,6 +18,7 @@
  */
 package org.grails.datastore.gorm
 
+import org.springframework.transaction.TransactionDefinition
 import org.springframework.transaction.support.DefaultTransactionDefinition
 
 import grails.gorm.api.GormAllOperations
@@ -753,15 +754,11 @@ class GormStaticApi<D> extends AbstractGormApi<D> implements GormAllOperations<D
         throw new UnsupportedOperationException("eachTenant not supported")
     }
 
-    def <T1> T1 withTransaction(Serializable tenantId, Closure<T1> callable) {
+    def <T1> T1 withTenantTransaction(Serializable tenantId, Closure<T1> callable) {
         withId(tenantId, callable)
     }
 
-    def <T1> T1 withNewTransaction(Serializable tenantId, Closure<T1> callable) {
-        withId(tenantId, callable)
-    }
-
-    def <T1> T1 withTransaction(Serializable tenantId, org.springframework.transaction.TransactionDefinition definition, Closure<T1> callable) {
+    def <T1> T1 withTenantTransaction(Serializable tenantId, org.springframework.transaction.TransactionDefinition definition, Closure<T1> callable) {
         withId(tenantId, callable)
     }
 
