@@ -22,6 +22,7 @@ plugins {
     id 'java-library'
     id 'project-report'
     id 'org.apache.grails.buildsrc.properties'
+    id 'org.apache.grails.buildsrc.dependency-validator'
     id 'org.apache.grails.buildsrc.compile'
     id 'org.apache.grails.buildsrc.publish'
     id 'org.apache.grails.buildsrc.sbom'
@@ -31,15 +32,17 @@ version = projectVersion
 group = 'org.apache.grails'
 
 dependencies {
-    compileOnlyApi platform("io.micronaut.platform:micronaut-platform:$micronautPlatformVersion")
+    // The Micronaut platform is re-exported by grails-micronaut-bom so consumers don't need
+    // to declare it explicitly. Using platform() (not enforcedPlatform) so the dependency is
+    // safe to publish — consumers can choose to enforce it themselves.
+    compileOnlyApi platform(project(':grails-micronaut-bom'))
     compileOnlyApi 'io.micronaut:micronaut-inject-groovy'
 
     // Use the micronaut spring starter so that any bean in the spring context will be exposed to micronaut
-    api platform("io.micronaut.platform:micronaut-platform:$micronautPlatformVersion")
+    api platform(project(':grails-micronaut-bom'))
     api 'io.micronaut.spring:micronaut-spring-boot-starter'
 
     // For the grails plugin interface
-    compileOnly platform(project(':grails-bom'))
     compileOnly project(':grails-core')
 }
 

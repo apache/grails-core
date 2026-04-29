@@ -28,14 +28,6 @@ grails:
       mode: DISCRIMINATOR
       tenantResolverClass: org.grails.datastore.mapping.multitenancy.resolvers.SystemPropertyTenantResolver
   mime:
-    disable:
-      accept:
-        header:
-          userAgents:
-            - Gecko
-            - WebKit
-            - Presto
-            - Trident
     types:
       all: '*/*'
       html:

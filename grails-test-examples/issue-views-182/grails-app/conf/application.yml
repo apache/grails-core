@@ -18,40 +18,14 @@ grails:
     profile: rest-api
     codegen:
         defaultPackage: issueviews182
-    gorm:
-        reactor:
-            # Whether to translate GORM events into Reactor events
-            # Disabled by default for performance reasons
-            events: false
 info:
     app:
         name: '@info.app.name@'
         version: '@info.app.version@'
         grailsVersion: '@info.app.grailsVersion@'
-spring:
-    main:
-        banner-mode: "off"
-    groovy:
-        template:
-            check-template-location: false
-
-# Spring Actuator Endpoints are Disabled by Default
-endpoints:
-    enabled: false
-    jmx:
-        enabled: true
-
 ---
 grails:
     mime:
-        disable:
-            accept:
-                header:
-                    userAgents:
-                        - Gecko
-                        - WebKit
-                        - Presto
-                        - Trident
         types:
             json:
               - application/json
@@ -69,14 +43,6 @@ grails:
             rss: application/rss+xml
             text: text/plain
             all: '*/*'            
-    urlmapping:
-        cache:
-            maxsize: 1000
-    controllers:
-        defaultScope: singleton
-    converters:
-        encoding: UTF-8
-
 ---
 hibernate:
     cache:
