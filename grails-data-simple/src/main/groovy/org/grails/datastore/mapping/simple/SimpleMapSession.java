@@ -53,25 +53,11 @@ public class SimpleMapSession extends AbstractSession {
 
     public Map<Serializable, Map> getBackingMap() {
         SimpleMapDatastore datastore = (SimpleMapDatastore) getDatastore();
-        MultiTenancySettings.MultiTenancyMode mode = datastore.getMultiTenancyMode();
-        if (mode == MultiTenancySettings.MultiTenancyMode.DATABASE || mode == MultiTenancySettings.MultiTenancyMode.SCHEMA) {
-            Serializable tenantId = Tenants.currentId((org.grails.datastore.mapping.multitenancy.MultiTenantCapableDatastore)datastore);
-            if (tenantId != null) {
-                return datastore.getBackingMap(tenantId.toString());
-            }
-        }
         return datastore.getBackingMap();
     }
 
     public Map getIndices() {
         SimpleMapDatastore datastore = (SimpleMapDatastore) getDatastore();
-        MultiTenancySettings.MultiTenancyMode mode = datastore.getMultiTenancyMode();
-        if (mode == MultiTenancySettings.MultiTenancyMode.DATABASE || mode == MultiTenancySettings.MultiTenancyMode.SCHEMA) {
-            Serializable tenantId = Tenants.currentId((org.grails.datastore.mapping.multitenancy.MultiTenantCapableDatastore)datastore);
-            if (tenantId != null) {
-                return datastore.getIndices(tenantId.toString());
-            }
-        }
         return datastore.getIndices();
     }
 

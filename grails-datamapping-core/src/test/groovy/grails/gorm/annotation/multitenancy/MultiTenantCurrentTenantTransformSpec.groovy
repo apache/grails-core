@@ -23,7 +23,7 @@ import spock.lang.Specification
 /**
  * Created by graemerocher on 16/01/2017.
  */
-class CurrentTenantTransformSpec extends Specification {
+class MultiTenantCurrentTenantTransformSpec extends Specification {
 
     void "test @CurrentTenant transforms a service and makes a method that is wrapped in current tenant handling"() {
         given:"A service with @CurrentTenant applied as the class level"

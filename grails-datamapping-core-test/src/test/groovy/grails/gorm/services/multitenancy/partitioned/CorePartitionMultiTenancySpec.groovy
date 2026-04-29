@@ -36,13 +36,13 @@ import spock.lang.Shared
 import spock.lang.Specification
 
 @RestoreSystemProperties
-class PartitionMultiTenancySpec extends Specification {
+class CorePartitionMultiTenancySpec extends Specification {
 
     @Shared @AutoCleanup SimpleMapDatastore datastore = new SimpleMapDatastore(
             [(Settings.SETTING_MULTI_TENANCY_MODE): MultiTenancySettings.MultiTenancyMode.DISCRIMINATOR,
              (Settings.SETTING_MULTI_TENANT_RESOLVER): new SystemPropertyTenantResolver(),
              (Settings.SETTING_DB_CREATE): "create-drop"],
-            getClass().getPackage()
+            Book
     )
 
     def setupSpec() {

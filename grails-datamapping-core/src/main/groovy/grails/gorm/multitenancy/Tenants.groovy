@@ -117,11 +117,14 @@ class Tenants {
      */
     static Serializable currentId(MultiTenantCapableDatastore multiTenantCapableDatastore) {
         def tenantId = CurrentTenantHolder.get(multiTenantCapableDatastore)
+        log.debug("Tenants.currentId: CurrentTenantHolder.get({}) returned {}", multiTenantCapableDatastore, tenantId)
         if (tenantId != null) {
             return tenantId
         } else {
             TenantResolver tenantResolver = multiTenantCapableDatastore.getTenantResolver()
-            return tenantResolver.resolveTenantIdentifier()
+            def resolved = tenantResolver.resolveTenantIdentifier()
+            log.debug("Tenants.currentId: tenantResolver returned {}", resolved)
+            return resolved
         }
     }
 
@@ -289,22 +292,27 @@ class Tenants {
      * @return The result of the closure
      */
     static <T> T withId(MultiTenantCapableDatastore multiTenantCapableDatastore, Serializable tenantId, Closure<T> callable) {
+        log.debug("Tenants.withId called for datastore {} with tenantId {}", multiTenantCapableDatastore, tenantId)
         return CurrentTenantHolder.withTenant(multiTenantCapableDatastore, tenantId) {
             if (multiTenantCapableDatastore.getMultiTenancyMode().isSharedConnection()) {
                 def i = callable.parameterTypes.length
                 if (i == 2) {
                     return multiTenantCapableDatastore.withSession { session ->
-                        return callable.call(tenantId, session)
+                        def result = callable.call(tenantId, session)
+                        log.debug("Result from shared connection with 2 args: {}", result)
+                        return result
                     }
                 }
                 else {
                     switch (i) {
                         case 0:
-                            return callable.call()
-                            break
+                            def result = callable.call()
+                            log.debug("Result from shared connection with 0 args: {}", result)
+                            return result
                         case 1:
-                            return callable.call(tenantId)
-                            break
+                            def result = callable.call(tenantId)
+                            log.debug("Result from shared connection with 1 arg: {}", result)
+                            return result
                         default:
                             throw new IllegalArgumentException('Provided closure accepts too many arguments')
                     }
@@ -312,16 +320,21 @@ class Tenants {
             }
             else {
                 return multiTenantCapableDatastore.withNewSession(tenantId) { session ->
+                    log.debug("Inside withNewSession for tenantId {}", tenantId)
                     def i = callable.parameterTypes.length
                     switch (i) {
                         case 0:
-                            return callable.call()
-                            break
+                            def result = callable.call()
+                            log.debug("Result from new session with 0 args: {}", result)
+                            return result
                         case 1:
-                            return callable.call(tenantId)
-                            break
+                            def result = callable.call(tenantId)
+                            log.debug("Result from new session with 1 arg: {}", result)
+                            return result
                         case 2:
-                            return callable.call(tenantId, session)
+                            def result = callable.call(tenantId, session)
+                            log.debug("Result from new session with 2 args: {}", result)
+                            return result
                         default:
                             throw new IllegalArgumentException('Provided closure accepts too many arguments')
                     }
