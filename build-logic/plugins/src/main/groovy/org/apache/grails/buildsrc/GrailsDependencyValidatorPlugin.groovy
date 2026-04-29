@@ -28,9 +28,11 @@ import org.gradle.api.Task
 import org.gradle.api.artifacts.Configuration
 import org.gradle.api.artifacts.Dependency
 import org.gradle.api.artifacts.DependencyConstraint
+import org.gradle.api.artifacts.ModuleDependency
 import org.gradle.api.artifacts.VersionConstraint
 import org.gradle.api.artifacts.component.ModuleComponentIdentifier
 import org.gradle.api.artifacts.result.ResolvedComponentResult
+import org.gradle.api.attributes.Category
 
 /**
  * Validates that transitive dependencies do not replace versions what the
@@ -159,19 +161,49 @@ class GrailsDependencyValidatorPlugin implements Plugin<Project> {
 
     /**
      * Scans the project's configurations to find which BOM project is in use.
+     *
+     * <p>When multiple known BOMs are declared on the same project (for example,
+     * the {@code grails-app} plugin auto-injects {@code platform(grails-bom)} on
+     * every declarable configuration while a Micronaut project additionally
+     * declares {@code enforcedPlatform(grails-micronaut-bom)}), this method
+     * prefers an {@code enforcedPlatform} declaration over a regular
+     * {@code platform}. The enforced BOM is the one whose constraints actually
+     * win at resolution time, so it is the correct reference for the
+     * "expected" versions reported by the validator.</p>
      */
     static String detectBomPath(Project project) {
+        String regularPlatformBomPath = null
+
         for (Configuration config : project.configurations) {
             for (Dependency dep : config.dependencies) {
-                if (BOM_PROJECT_NAMES.contains(dep.name)) {
-                    Project bomProject = project.rootProject.findProject(":${dep.name}" as String)
-                    if (bomProject != null) {
-                        return bomProject.path
-                    }
+                if (!BOM_PROJECT_NAMES.contains(dep.name)) {
+                    continue
+                }
+                Project bomProject = project.rootProject.findProject(":${dep.name}" as String)
+                if (bomProject == null) {
+                    continue
+                }
+                if (isEnforcedPlatformDependency(dep)) {
+                    return bomProject.path
+                }
+                if (regularPlatformBomPath == null) {
+                    regularPlatformBomPath = bomProject.path
                 }
             }
         }
-        null
+
+        regularPlatformBomPath
+    }
+
+    private static boolean isEnforcedPlatformDependency(Dependency dep) {
+        if (!(dep instanceof ModuleDependency)) {
+            return false
+        }
+        Object categoryAttr = ((ModuleDependency) dep).attributes.getAttribute(Category.CATEGORY_ATTRIBUTE)
+        if (categoryAttr == null) {
+            return false
+        }
+        categoryAttr.toString() == Category.ENFORCED_PLATFORM
     }
 
     /**
