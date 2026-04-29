@@ -644,6 +644,7 @@ jobs:
       - name: "⚙️ Run post-release"
         uses: apache/grails-github-actions/post-release@asf
         env:
+          PR_LABELS: skip-changelog
           RELEASE_SCRIPT_PATH: '.github/scripts/setSnapshotGrailsVersion.sh'
       - name: "🌎 MANUAL - Create Blog Post"
         run: |

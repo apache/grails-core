@@ -21,6 +21,7 @@ plugins {
     id 'java-gradle-plugin'
     id 'groovy-gradle-plugin'
     id 'org.apache.grails.buildsrc.properties'
+    id 'org.apache.grails.buildsrc.dependency-validator'
 }
 
 configurations.configureEach {

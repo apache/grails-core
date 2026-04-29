@@ -78,5 +78,9 @@ gradlePlugin {
             id = 'org.apache.grails.buildsrc.repo'
             implementationClass = 'org.apache.grails.buildsrc.GrailsRepoSettingsPlugin'
         }
+        register('grailsDependencyValidator') {
+            id = 'org.apache.grails.buildsrc.dependency-validator'
+            implementationClass = 'org.apache.grails.buildsrc.GrailsDependencyValidatorPlugin'
+        }
     }
 }
