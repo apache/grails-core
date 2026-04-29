@@ -16,22 +16,20 @@
  *  specific language governing permissions and limitations
  *  under the License.
  */
-package org.grails.gradle.plugin.core
+package org.grails.gradle.plugin.bom
 
 import spock.lang.Specification
 
 /**
- * Tests for the Grails BOM platform integration that replaced the
- * Spring Dependency Management plugin.
+ * Unit tests for {@link BomManagedVersions}.
  *
- * <p>Verifies that {@link BomManagedVersions} correctly parses BOM POM
- * files, extracts property-to-artifact mappings, and that the Grails
- * Gradle plugin applies {@code grails-bom} as a Gradle
- * {@code platform()} dependency.</p>
+ * <p>Verifies that the utility correctly parses BOM POM files,
+ * extracts {@code <properties>}, builds property-to-artifact mappings
+ * from {@code <dependencyManagement>} entries, and skips dependencies
+ * with hardcoded versions.</p>
  *
  * @since 8.0
  * @see BomManagedVersions
- * @see GrailsGradlePlugin#applyGrailsBom
  */
 class BomManagedVersionsSpec extends Specification {
 

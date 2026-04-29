@@ -10,6 +10,9 @@ tasks.register('inspectBomSetup') {
         }
         println "HAS_PLATFORM_BOM=${hasPlatform}"
 
+        def hasBomPropertyOverrides = project.plugins.findPlugin('org.apache.grails.gradle.bom-property-overrides') != null
+        println "HAS_BOM_PROPERTY_OVERRIDES=${hasBomPropertyOverrides}"
+
         def hasSpringDm = project.plugins.findPlugin('io.spring.dependency-management') != null
         println "HAS_SPRING_DM=${hasSpringDm}"
     }

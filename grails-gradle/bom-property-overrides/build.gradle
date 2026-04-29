@@ -1,0 +1,81 @@
+/*
+ *  Licensed to the Apache Software Foundation (ASF) under one
+ *  or more contributor license agreements.  See the NOTICE file
+ *  distributed with this work for additional information
+ *  regarding copyright ownership.  The ASF licenses this file
+ *  to you under the Apache License, Version 2.0 (the
+ *  "License"); you may not use this file except in compliance
+ *  with the License.  You may obtain a copy of the License at
+ *
+ *    https://www.apache.org/licenses/LICENSE-2.0
+ *
+ *  Unless required by applicable law or agreed to in writing,
+ *  software distributed under the License is distributed on an
+ *  "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ *  KIND, either express or implied.  See the License for the
+ *  specific language governing permissions and limitations
+ *  under the License.
+ */
+
+plugins {
+    id 'groovy'
+    id 'java-gradle-plugin'
+    id 'org.apache.grails.buildsrc.properties'
+    id 'org.apache.grails.buildsrc.dependency-validator'
+    id 'org.apache.grails.buildsrc.compile'
+    id 'org.apache.grails.buildsrc.publish'
+    id 'org.apache.grails.buildsrc.sbom'
+    id 'org.apache.grails.gradle.grails-code-style'
+}
+
+version = projectVersion
+group = 'org.apache.grails'
+
+ext {
+    pomTitle = 'Grails BOM Property Overrides Gradle Plugin'
+    pomDescription = 'A standalone Gradle plugin that enables Maven-style property-based version overrides for any Gradle platform() BOM. Reads the BOM POM <properties> block and lets consumers override versions via gradle.properties or ext[\'property.name\']. Reusable independently of Grails.'
+    pomMavenPublicationName = 'pluginMaven'
+}
+
+dependencies {
+    implementation platform(project(':grails-gradle-bom'))
+
+    // compile with the Groovy version provided by Gradle
+    // see: https://docs.gradle.org/current/userguide/compatibility.html#groovy
+    compileOnly 'org.apache.groovy:groovy'
+
+    // Testing - Gradle TestKit is auto-added by java-gradle-plugin
+    testImplementation('org.spockframework:spock-core') { transitive = false }
+    testImplementation 'org.apache.groovy:groovy-test-junit5'
+    testRuntimeOnly 'org.junit.jupiter:junit-jupiter-engine'
+}
+
+configurations {
+    testCompileClasspath.exclude group: 'org.apache.groovy', module: 'groovy'
+    testRuntimeClasspath.exclude group: 'org.apache.groovy', module: 'groovy'
+}
+
+gradlePlugin {
+    plugins {
+        bomPropertyOverrides {
+            displayName = 'Grails BOM Property Overrides Plugin'
+            description = 'Enables Maven-style property-based version overrides for any Gradle platform() BOM. ' +
+                    'Apply this plugin and override versions via gradle.properties or ext[\'property.name\']. ' +
+                    'Auto-detects declared platform() BOMs by default, or accepts an explicit list via the ' +
+                    'bomPropertyOverrides extension.'
+            id = 'org.apache.grails.gradle.bom-property-overrides'
+            implementationClass = 'org.grails.gradle.plugin.bom.BomPropertyOverridesPlugin'
+        }
+    }
+}
+
+tasks.withType(Copy) {
+    configure {
+        duplicatesStrategy = DuplicatesStrategy.INCLUDE
+    }
+}
+
+apply {
+    from rootProject.layout.projectDirectory.file('gradle/docs-config.gradle')
+    from rootProject.layout.projectDirectory.file('gradle/test-config.gradle')
+}

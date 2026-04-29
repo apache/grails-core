@@ -16,7 +16,7 @@
  *  specific language governing permissions and limitations
  *  under the License.
  */
-package org.grails.gradle.plugin.core
+package org.grails.gradle.plugin.bom
 
 import groovy.transform.CompileStatic
 import org.gradle.api.Project
@@ -46,6 +46,11 @@ import javax.xml.parsers.DocumentBuilderFactory
  * one feature Gradle lacks: property-based version customization
  * (see <a href="https://github.com/gradle/gradle/issues/9160">Gradle #9160</a>).</p>
  *
+ * <p>This is the underlying utility used by the
+ * {@code org.apache.grails.gradle.bom-property-overrides} plugin. It is
+ * BOM-agnostic and can be used directly with any BOM that follows the
+ * Maven {@code <properties>} convention for managed versions.</p>
+ *
  * @since 8.0
  */
 @CompileStatic
@@ -65,18 +70,35 @@ class BomManagedVersions {
      * @return a BomManagedVersions instance containing any version overrides to apply
      */
     static BomManagedVersions resolve(Project project, String bomCoordinates) {
-        BomManagedVersions instance = new BomManagedVersions()
+        return resolve(project, [bomCoordinates])
+    }
 
-        String[] parts = bomCoordinates.split(':')
-        if (parts.length != 3) {
-            LOG.warn('Invalid BOM coordinates: {}', bomCoordinates)
-            return instance
-        }
+    /**
+     * Resolves multiple BOMs, parses their POM chains, and determines which
+     * managed dependency versions need to be overridden based on project
+     * properties. Useful when a project applies several platforms (e.g., a
+     * Grails BOM plus a Micronaut BOM) and any of them may declare overridable
+     * properties.
+     *
+     * @param project the Gradle project (used for artifact resolution and property lookup)
+     * @param bomCoordinatesList list of BOM coordinates in {@code group:artifact:version} format
+     * @return a BomManagedVersions instance containing any version overrides to apply
+     */
+    static BomManagedVersions resolve(Project project, Collection<String> bomCoordinatesList) {
+        BomManagedVersions instance = new BomManagedVersions()
 
         Map<String, String> bomProperties = new LinkedHashMap<>()
         Map<String, List<String>> propertyToArtifacts = new LinkedHashMap<>()
+        Set<String> processed = new HashSet<>()
 
-        processBom(project, parts[0], parts[1], parts[2], bomProperties, propertyToArtifacts, new HashSet<String>())
+        for (String bomCoordinates : bomCoordinatesList) {
+            String[] parts = bomCoordinates?.split(':')
+            if (parts == null || parts.length != 3) {
+                LOG.warn('Invalid BOM coordinates: {}', bomCoordinates)
+                continue
+            }
+            processBom(project, parts[0], parts[1], parts[2], bomProperties, propertyToArtifacts, processed)
+        }
 
         for (Map.Entry<String, List<String>> entry : propertyToArtifacts.entrySet()) {
             String propertyName = entry.key
@@ -89,7 +111,7 @@ class BomManagedVersions {
                         instance.versionOverrides.put(artifactKey, overrideVersion)
                     }
                     LOG.lifecycle(
-                        'Grails BOM version override: {} = {} (BOM default: {})',
+                        'BOM version override: {} = {} (BOM default: {})',
                         propertyName, overrideVersion, defaultVersion ?: 'unknown'
                     )
                 }
@@ -97,7 +119,7 @@ class BomManagedVersions {
         }
 
         if (!instance.versionOverrides.isEmpty()) {
-            LOG.info('Grails BOM: {} version override(s) will be applied', instance.versionOverrides.size())
+            LOG.info('BOM property overrides: {} version override(s) will be applied', instance.versionOverrides.size())
         }
 
         return instance
@@ -119,7 +141,7 @@ class BomManagedVersions {
             String override = overrides.get(key)
             if (override != null) {
                 details.useVersion(override)
-                details.because('Grails BOM version override via project property')
+                details.because('BOM version override via project property')
             }
         }
     }

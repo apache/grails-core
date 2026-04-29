@@ -83,10 +83,10 @@ class GrailsExtension {
 
     /**
      * @deprecated The Spring Dependency Management plugin has been replaced with Gradle's native
-     * {@code platform()} support plus lightweight property-based version overrides.
+     * {@code platform()} support plus lightweight property-based version overrides
+     * supplied by the {@code org.apache.grails.gradle.bom-property-overrides} plugin.
      * This property is no longer used. Set version overrides in {@code gradle.properties}
      * or via {@code ext['property.name']} instead.
-     * @see BomManagedVersions
      */
     @Deprecated
     boolean springDependencyManagement = true

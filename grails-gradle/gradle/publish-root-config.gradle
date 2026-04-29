@@ -25,6 +25,7 @@ group = 'this.will.be.overridden'
 
 def publishedProjects = [
         'grails-gradle-bom',
+        'grails-gradle-bom-property-overrides',
         'grails-gradle-common',
         'grails-gradle-model',
         'grails-gradle-plugins',

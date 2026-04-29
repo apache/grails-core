@@ -62,6 +62,7 @@ import org.gradle.language.jvm.tasks.ProcessResources
 import org.gradle.process.JavaForkOptions
 import org.gradle.tooling.provider.model.ToolingModelBuilderRegistry
 import org.grails.build.parsing.CommandLineParser
+import org.grails.gradle.plugin.bom.BomPropertyOverridesPlugin
 import org.grails.gradle.plugin.commands.ApplicationContextCommandTask
 import org.grails.gradle.plugin.commands.ApplicationContextScriptTask
 import org.grails.gradle.plugin.exploded.ExplodedCompatibilityRule
@@ -356,14 +357,22 @@ ${importStatements}
     }
 
     /**
-     * Applies the Grails BOM as a Gradle platform and configures property-based
-     * version overrides. This replaces the Spring Dependency Management plugin with
-     * a lightweight mechanism that:
+     * Applies the Grails BOM as a Gradle platform and enables property-based
+     * version overrides via the standalone
+     * {@code org.apache.grails.gradle.bom-property-overrides} plugin.
+     *
+     * <p>This replaces the Spring Dependency Management plugin with two
+     * orthogonal pieces:</p>
      * <ol>
-     *   <li>Imports {@code grails-bom} via Gradle's native {@code platform()} support</li>
-     *   <li>Parses the BOM POM chain to discover which Maven properties control which artifact versions</li>
-     *   <li>Checks project properties ({@code gradle.properties} or {@code ext['property.name']}) for overrides</li>
-     *   <li>Applies any overrides via {@code ResolutionStrategy.eachDependency()}</li>
+     *   <li><strong>BOM import</strong>: {@code grails-bom} is added as a
+     *       Gradle {@code platform()} dependency on every declarable
+     *       configuration, mirroring the global behaviour Spring DM provided
+     *       via {@code configurations.all() + resolutionStrategy.eachDependency()}.</li>
+     *   <li><strong>Property overrides</strong>: the BOM-agnostic
+     *       {@link BomPropertyOverridesPlugin} reads the BOM's
+     *       {@code <properties>} block and applies any project-level
+     *       overrides via Gradle's
+     *       {@code ResolutionStrategy.eachDependency()}.</li>
      * </ol>
      *
      * <p>Usage: to override a version managed by the Grails or Spring Boot BOM, set the
@@ -376,7 +385,7 @@ ${importStatements}
      * ext['slf4j.version'] = '1.7.36'
      * </pre>
      *
-     * @see BomManagedVersions
+     * @see BomPropertyOverridesPlugin
      * @since 8.0
      */
     protected void applyGrailsBom(Project project) {
@@ -406,14 +415,13 @@ ${importStatements}
             }
         }
 
-        project.afterEvaluate {
-            BomManagedVersions managedVersions = BomManagedVersions.resolve(project, bomCoordinates)
-            if (managedVersions.hasOverrides()) {
-                project.configurations.configureEach { Configuration conf ->
-                    managedVersions.applyTo(conf)
-                }
-            }
-        }
+        // Delegate property-based version overrides to the standalone plugin.
+        // Auto-detect picks up the platform(grails-bom) declarations we just
+        // added, plus any additional platform()/enforcedPlatform() the user
+        // declares (e.g. grails-micronaut-bom). Users can extend the override
+        // surface by declaring their own platforms - no extra configuration
+        // is required here.
+        project.plugins.apply(BomPropertyOverridesPlugin)
     }
 
     private static boolean isExcludedFromBomPlatform(String name) {

@@ -22,16 +22,17 @@ package org.grails.gradle.plugin.core
  * Functional tests for the Gradle platform-based BOM integration.
  *
  * <p>Uses Gradle TestKit to verify that the Grails Gradle plugin correctly
- * applies {@code grails-bom} as a Gradle {@code platform()} dependency
- * and no longer depends on the Spring Dependency Management plugin.</p>
+ * applies {@code grails-bom} as a Gradle {@code platform()} dependency,
+ * applies the standalone
+ * {@code org.apache.grails.gradle.bom-property-overrides} plugin, and no
+ * longer depends on the Spring Dependency Management plugin.</p>
  *
  * @since 8.0
- * @see BomManagedVersions
  * @see GrailsGradlePlugin#applyGrailsBom
  */
 class BomPlatformFunctionalSpec extends GradleSpecification {
 
-    def "plugin applies grails-bom as Gradle platform and does not apply Spring DM plugin"() {
+    def "plugin applies grails-bom as Gradle platform, applies bom-property-overrides plugin, and does not apply Spring DM plugin"() {
         given:
         setupTestResourceProject('bom-platform-basic')
 
@@ -40,6 +41,7 @@ class BomPlatformFunctionalSpec extends GradleSpecification {
 
         then:
         result.output.contains('HAS_PLATFORM_BOM=true')
+        result.output.contains('HAS_BOM_PROPERTY_OVERRIDES=true')
         result.output.contains('HAS_SPRING_DM=false')
     }
 }

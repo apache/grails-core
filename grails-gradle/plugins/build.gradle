@@ -46,6 +46,7 @@ dependencies {
 
     implementation project(':grails-gradle-common')
     implementation project(':grails-gradle-tasks')
+    implementation project(':grails-gradle-bom-property-overrides')
 
     // spock is leaking from the grails-gradle-bom through grails-gradle-model
     implementation project(':grails-gradle-model'), {
