@@ -174,6 +174,8 @@ public abstract class AbstractDatastore implements Datastore, StatelessDatastore
     public void addApplicationListener(ApplicationListener<?> listener) {
         if (applicationEventPublisher instanceof ConfigurableApplicationContext) {
             ((ConfigurableApplicationContext) applicationEventPublisher).addApplicationListener(listener);
+        } else if (applicationEventPublisher instanceof DefaultApplicationEventPublisher) {
+            ((DefaultApplicationEventPublisher) applicationEventPublisher).addApplicationListener(listener);
         }
         else {
             try {

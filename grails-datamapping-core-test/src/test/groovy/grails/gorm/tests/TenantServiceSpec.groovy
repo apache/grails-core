@@ -33,10 +33,13 @@ import spock.util.environment.RestoreSystemProperties
 import spock.lang.Shared
 import spock.lang.Specification
 
+import groovy.util.logging.Slf4j
+
 /**
  * Created by graemerocher on 11/01/2017.
  */
 @RestoreSystemProperties
+@Slf4j
 class TenantServiceSpec extends Specification {
 
     @Shared @AutoCleanup SimpleMapDatastore datastore = new SimpleMapDatastore(
@@ -80,7 +83,7 @@ class TenantServiceSpec extends Specification {
         when:"The current tenant is set"
         System.setProperty(SystemPropertyTenantResolver.PROPERTY_NAME, "two")
         new Team(name: "Chelsea").save(flush:true)
-        twoCount == Team.count()
+        twoCount = Team.count()
         defaultCount = tenantService.withoutId {
             Team.count()
         }

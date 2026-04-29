@@ -663,8 +663,8 @@ class GormEnhancer implements Closeable {
 
     @CompileStatic
     List<FinderMethod> getFinders() {
-        if (finders == null) {
-            finders = Collections.unmodifiableList(createDynamicFinders())
+        if(finders == null) {
+            finders = Collections.unmodifiableList(createDynamicFinders(datastore))
         }
         return finders
     }
@@ -766,7 +766,7 @@ class GormEnhancer implements Closeable {
 
     @CompileStatic
     protected <D> GormStaticApi<D> getStaticApi(Class<D> cls, DatastoreResolver resolver, String qualifier) {
-        new GormStaticApi<D>(cls, datastore.mappingContext, getFinders(), resolver, qualifier)
+        new GormStaticApi<D>(cls, datastore.mappingContext, createDynamicFinders(resolver, datastore.mappingContext), resolver, qualifier)
     }
 
     @CompileStatic

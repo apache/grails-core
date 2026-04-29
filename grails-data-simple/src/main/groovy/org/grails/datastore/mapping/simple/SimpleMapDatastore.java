@@ -109,7 +109,9 @@ public class SimpleMapDatastore extends AbstractDatastore implements Transaction
         }
 
         GormRegistry.getInstance().registerDatastore(this.connectionName, this);
-        new GormEnhancer(this, this.transactionManager);
+        if (ConnectionSource.DEFAULT.equals(this.connectionName)) {
+            new GormEnhancer(this, this.transactionManager);
+        }
         addApplicationListener(new DomainEventListener(this));
         addApplicationListener(new AutoTimestampEventListener(this));
 
@@ -144,7 +146,11 @@ public class SimpleMapDatastore extends AbstractDatastore implements Transaction
     }
 
     public SimpleMapDatastore(PropertyResolver configuration, ApplicationEventPublisher ctx) {
-        this(createConnectionSources(configuration), (KeyValueMappingContext)createMappingContext(configuration, new Class[0]), ctx, null);
+        this(configuration, ctx, new Class[0]);
+    }
+
+    public SimpleMapDatastore(PropertyResolver configuration, ApplicationEventPublisher ctx, Class... classes) {
+        this(createConnectionSources(configuration), (KeyValueMappingContext)createMappingContext(configuration, classes), ctx, null);
     }
 
     public SimpleMapDatastore(PropertyResolver configuration, Class... classes) {
@@ -345,10 +351,75 @@ public class SimpleMapDatastore extends AbstractDatastore implements Transaction
         }
         SimpleMapDatastore child = childDatastores.get(connectionName);
         if (child == null) {
-            child = new SimpleMapDatastore(connectionSources, (KeyValueMappingContext) mappingContext, getApplicationEventPublisher(), state, connectionName, multiTenancyMode, tenantResolver);
+            ConnectionSource<Map<String, Map>, ConnectionSourceSettings> tenantConnectionSource = connectionSources.getConnectionSource(connectionName);
+            if (tenantConnectionSource == null) {
+                tenantConnectionSource = connectionSources.addConnectionSource(connectionName, connectionSources.getBaseConfiguration());
+            }
+            ConnectionSources<Map<String, Map>, ConnectionSourceSettings> childConnectionSources = new RebasedConnectionSources<>(tenantConnectionSource, connectionSources);
+            child = new SimpleMapDatastore(childConnectionSources, (KeyValueMappingContext) mappingContext, getApplicationEventPublisher(), state, connectionName, multiTenancyMode, tenantResolver);
             childDatastores.put(connectionName, child);
         }
         return child;
+    }
+
+    private static class RebasedConnectionSources<T, S extends ConnectionSourceSettings> implements ConnectionSources<T, S> {
+        private final ConnectionSource<T, S> defaultConnectionSource;
+        private final ConnectionSources<T, S> delegate;
+
+        RebasedConnectionSources(ConnectionSource<T, S> defaultConnectionSource, ConnectionSources<T, S> delegate) {
+            this.defaultConnectionSource = defaultConnectionSource;
+            this.delegate = delegate;
+        }
+
+        @Override
+        public PropertyResolver getBaseConfiguration() {
+            return delegate.getBaseConfiguration();
+        }
+
+        @Override
+        public ConnectionSourceFactory<T, S> getFactory() {
+            return delegate.getFactory();
+        }
+
+        @Override
+        public Iterable<ConnectionSource<T, S>> getAllConnectionSources() {
+            return delegate.getAllConnectionSources();
+        }
+
+        @Override
+        public ConnectionSource<T, S> getConnectionSource(String name) {
+            return delegate.getConnectionSource(name);
+        }
+
+        @Override
+        public ConnectionSource<T, S> getDefaultConnectionSource() {
+            return defaultConnectionSource;
+        }
+
+        @Override
+        public ConnectionSource<T, S> addConnectionSource(String name, PropertyResolver configuration) {
+            return delegate.addConnectionSource(name, configuration);
+        }
+
+        @Override
+        public ConnectionSource<T, S> addConnectionSource(String name, Map<String, Object> configuration) {
+            return delegate.addConnectionSource(name, configuration);
+        }
+
+        @Override
+        public ConnectionSources<T, S> addListener(ConnectionSourcesListener<T, S> listener) {
+            return delegate.addListener(listener);
+        }
+
+        @Override
+        public void close() throws IOException {
+            // Do not close delegate, it's shared
+        }
+
+        @Override
+        public Iterator<ConnectionSource<T, S>> iterator() {
+            return delegate.iterator();
+        }
     }
 
     private static class ScopedMap<K, V> extends AbstractMap<K, V> {

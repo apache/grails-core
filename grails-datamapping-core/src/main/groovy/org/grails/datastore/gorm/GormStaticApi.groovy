@@ -50,12 +50,15 @@ import grails.gorm.multitenancy.Tenants
 import org.grails.datastore.mapping.multitenancy.MultiTenantCapableDatastore
 import org.grails.datastore.mapping.multitenancy.exceptions.TenantNotFoundException
 
+import groovy.util.logging.Slf4j
+
 /**
  * Static methods for GORM
  *
  * @author Graeme Rocher
  */
 @CompileDynamic
+@Slf4j
 class GormStaticApi<D> extends AbstractGormApi<D> implements GormAllOperations<D> {
 
     protected final List<FinderMethod> finders
@@ -291,12 +294,16 @@ class GormStaticApi<D> extends AbstractGormApi<D> implements GormAllOperations<D
 
     @Override
     Integer count() {
-        execute({ Session session ->
+        log.debug("GormStaticApi.count() called for {}", persistentClass.name)
+        Integer result = execute({ Session session ->
             def query = session.createQuery(persistentClass);
             query.projections().count();
             def res = query.singleResult();
+            log.debug("Query singleResult returned {}", res)
             res instanceof Number ? ((Number)res).intValue() : 0
         } as SessionCallback<Integer>)
+        log.debug("count() result is {}", result)
+        return result
     }
 
     @Override
@@ -607,132 +614,138 @@ class GormStaticApi<D> extends AbstractGormApi<D> implements GormAllOperations<D
 
     @Override
     def <T1> T1 withNewSession(Closure<T1> callable) {
-        withSession(callable)
+        Datastore ds = getDatastore()
+        DatastoreUtils.executeWithNewSession(ds, { Session session ->
+            callable.call(session)
+        } as SessionCallback<T1>)
     }
 
     @Override
     def <T1> T1 withStatelessSession(Closure<T1> callable) {
-        withSession(callable)
+        Datastore ds = getDatastore()
+        DatastoreUtils.executeWithNewSession(ds, { Session session ->
+            callable.call(session)
+        } as SessionCallback<T1>)
     }
 
     @Override
     List executeQuery(CharSequence query) {
-        throw new UnsupportedOperationException("executeQuery not supported by this datastore")
+        throw new UnsupportedOperationException("String-based queries like [executeQuery] are currently not supported in this implementation of GORM. Use criteria instead.")
     }
 
     @Override
     List executeQuery(CharSequence query, Map args) {
-        throw new UnsupportedOperationException("executeQuery not supported by this datastore")
+        throw new UnsupportedOperationException("String-based queries like [executeQuery] are currently not supported in this implementation of GORM. Use criteria instead.")
     }
 
     @Override
     List executeQuery(CharSequence query, Map params, Map args) {
-        throw new UnsupportedOperationException("executeQuery not supported by this datastore")
+        throw new UnsupportedOperationException("String-based queries like [executeQuery] are currently not supported in this implementation of GORM. Use criteria instead.")
     }
 
     @Override
     List executeQuery(CharSequence query, Collection params) {
-        throw new UnsupportedOperationException("executeQuery not supported by this datastore")
+        throw new UnsupportedOperationException("String-based queries like [executeQuery] are currently not supported in this implementation of GORM. Use criteria instead.")
     }
 
     @Override
     List executeQuery(CharSequence query, Object... params) {
-        throw new UnsupportedOperationException("executeQuery not supported by this datastore")
+        throw new UnsupportedOperationException("String-based queries like [executeQuery] are currently not supported in this implementation of GORM. Use criteria instead.")
     }
 
     @Override
     List executeQuery(CharSequence query, Collection params, Map args) {
-        throw new UnsupportedOperationException("executeQuery not supported by this datastore")
+        throw new UnsupportedOperationException("String-based queries like [executeQuery] are currently not supported in this implementation of GORM. Use criteria instead.")
     }
 
     @Override
     Integer executeUpdate(CharSequence query) {
-        throw new UnsupportedOperationException("executeUpdate not supported by this datastore")
+        throw new UnsupportedOperationException("String-based queries like [executeUpdate] are currently not supported in this implementation of GORM. Use criteria instead.")
     }
 
     @Override
     Integer executeUpdate(CharSequence query, Map args) {
-        throw new UnsupportedOperationException("executeUpdate not supported by this datastore")
+        throw new UnsupportedOperationException("String-based queries like [executeUpdate] are currently not supported in this implementation of GORM. Use criteria instead.")
     }
 
     @Override
     Integer executeUpdate(CharSequence query, Map params, Map args) {
-        throw new UnsupportedOperationException("executeUpdate not supported by this datastore")
+        throw new UnsupportedOperationException("String-based queries like [executeUpdate] are currently not supported in this implementation of GORM. Use criteria instead.")
     }
 
     @Override
     Integer executeUpdate(CharSequence query, Collection params) {
-        throw new UnsupportedOperationException("executeUpdate not supported by this datastore")
+        throw new UnsupportedOperationException("String-based queries like [executeUpdate] are currently not supported in this implementation of GORM. Use criteria instead.")
     }
 
     @Override
     Integer executeUpdate(CharSequence query, Object... params) {
-        throw new UnsupportedOperationException("executeUpdate not supported by this datastore")
+        throw new UnsupportedOperationException("String-based queries like [executeUpdate] are currently not supported in this implementation of GORM. Use criteria instead.")
     }
 
     @Override
     Integer executeUpdate(CharSequence query, Collection params, Map args) {
-        throw new UnsupportedOperationException("executeUpdate not supported by this datastore")
+        throw new UnsupportedOperationException("String-based queries like [executeUpdate] are currently not supported in this implementation of GORM. Use criteria instead.")
     }
 
     @Override
     D find(CharSequence query) {
-        throw new UnsupportedOperationException("find not supported by this datastore")
+        throw new UnsupportedOperationException("String-based queries like [find] are currently not supported in this implementation of GORM. Use criteria instead.")
     }
 
     @Override
     D find(CharSequence query, Map params) {
-        throw new UnsupportedOperationException("find not supported by this datastore")
+        throw new UnsupportedOperationException("String-based queries like [find] are currently not supported in this implementation of GORM. Use criteria instead.")
     }
 
     @Override
     D find(CharSequence query, Map params, Map args) {
-        throw new UnsupportedOperationException("find not supported by this datastore")
+        throw new UnsupportedOperationException("String-based queries like [find] are currently not supported in this implementation of GORM. Use criteria instead.")
     }
 
     @Override
     D find(CharSequence query, Collection params) {
-        throw new UnsupportedOperationException("find not supported by this datastore")
+        throw new UnsupportedOperationException("String-based queries like [find] are currently not supported in this implementation of GORM. Use criteria instead.")
     }
 
     @Override
     D find(CharSequence query, Object[] params) {
-        throw new UnsupportedOperationException("find not supported by this datastore")
+        throw new UnsupportedOperationException("String-based queries like [find] are currently not supported in this implementation of GORM. Use criteria instead.")
     }
 
     @Override
     D find(CharSequence query, Collection params, Map args) {
-        throw new UnsupportedOperationException("find not supported by this datastore")
+        throw new UnsupportedOperationException("String-based queries like [find] are currently not supported in this implementation of GORM. Use criteria instead.")
     }
 
     @Override
     List<D> findAll(CharSequence query) {
-        throw new UnsupportedOperationException("findAll not supported by this datastore")
+        throw new UnsupportedOperationException("String-based queries like [findAll] are currently not supported in this implementation of GORM. Use criteria instead.")
     }
 
     @Override
     List<D> findAll(CharSequence query, Map params) {
-        throw new UnsupportedOperationException("findAll not supported by this datastore")
+        throw new UnsupportedOperationException("String-based queries like [findAll] are currently not supported in this implementation of GORM. Use criteria instead.")
     }
 
     @Override
     List<D> findAll(CharSequence query, Map params, Map args) {
-        throw new UnsupportedOperationException("findAll not supported by this datastore")
+        throw new UnsupportedOperationException("String-based queries like [findAll] are currently not supported in this implementation of GORM. Use criteria instead.")
     }
 
     @Override
     List<D> findAll(CharSequence query, Collection params) {
-        throw new UnsupportedOperationException("findAll not supported by this datastore")
+        throw new UnsupportedOperationException("String-based queries like [findAll] are currently not supported in this implementation of GORM. Use criteria instead.")
     }
 
     @Override
     List<D> findAll(CharSequence query, Object[] params) {
-        throw new UnsupportedOperationException("findAll not supported by this datastore")
+        throw new UnsupportedOperationException("String-based queries like [findAll] are currently not supported in this implementation of GORM. Use criteria instead.")
     }
 
     @Override
     List<D> findAll(CharSequence query, Collection params, Map args) {
-        throw new UnsupportedOperationException("findAll not supported by this datastore")
+        throw new UnsupportedOperationException("String-based queries like [findAll] are currently not supported in this implementation of GORM. Use criteria instead.")
     }
 
     @Override
@@ -781,6 +794,12 @@ class GormStaticApi<D> extends AbstractGormApi<D> implements GormAllOperations<D
     }
 
     def <T1> T1 withNewSession(Serializable tenantId, Closure<T1> callable) {
-        withId(tenantId, callable)
+        DatastoreResolver resolver = new DatastoreResolver() {
+            @Override Datastore resolve() { GormEnhancer.findDatastore(persistentClass, tenantId.toString()) }
+        }
+        Datastore tenantDatastore = resolver.resolve()
+        DatastoreUtils.executeWithNewSession(tenantDatastore, { Session session ->
+            return (T1) callable.call(session)
+        } as SessionCallback<T1>)
     }
 }

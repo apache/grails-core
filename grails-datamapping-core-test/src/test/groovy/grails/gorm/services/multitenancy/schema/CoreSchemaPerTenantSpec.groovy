@@ -35,13 +35,13 @@ import spock.lang.Shared
 import spock.lang.Specification
 
 @RestoreSystemProperties
-class SchemaPerTenantSpec extends Specification {
+class CoreSchemaPerTenantSpec extends Specification {
 
     @Shared @AutoCleanup SimpleMapDatastore datastore = new SimpleMapDatastore(
             [(Settings.SETTING_MULTI_TENANCY_MODE): MultiTenancySettings.MultiTenancyMode.SCHEMA,
              (Settings.SETTING_MULTI_TENANT_RESOLVER): new SystemPropertyTenantResolver(),
              (Settings.SETTING_DB_CREATE): "create-drop"],
-            getClass().getPackage()
+            Book
     )
     @Shared IBookService bookDataService = datastore.getService(IBookService)
 

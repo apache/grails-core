@@ -362,6 +362,52 @@ public abstract class DatastoreUtils {
     }
 
     /**
+     * Execute the given callback with a new session, regardless of whether an existing session is present
+     * @param datastore The datastore
+     * @param callback The callback
+     * @param <T> The return type
+     * @return The result of the callback
+     */
+    public static <T> T executeWithNewSession(Datastore datastore, SessionCallback<T> callback) {
+        Session session = bindNewSession(datastore.connect());
+        try {
+            return callback.doInSession(session);
+        }
+        finally {
+            SessionHolder sessionHolder = (SessionHolder) TransactionSynchronizationManager.getResource(datastore);
+            if (sessionHolder != null) {
+                sessionHolder.removeSession(session);
+                if (sessionHolder.isEmpty()) {
+                    TransactionSynchronizationManager.unbindResource(datastore);
+                }
+            }
+            closeSessionOrRegisterDeferredClose(session, datastore);
+        }
+    }
+
+    /**
+     * Execute the given callback with a new session, regardless of whether an existing session is present
+     * @param datastore The datastore
+     * @param callback The callback
+     */
+    public static void executeWithNewSession(Datastore datastore, VoidSessionCallback callback) {
+        Session session = bindNewSession(datastore.connect());
+        try {
+            callback.doInSession(session);
+        }
+        finally {
+            SessionHolder sessionHolder = (SessionHolder) TransactionSynchronizationManager.getResource(datastore);
+            if (sessionHolder != null) {
+                sessionHolder.removeSession(session);
+                if (sessionHolder.isEmpty()) {
+                    TransactionSynchronizationManager.unbindResource(datastore);
+                }
+            }
+            closeSessionOrRegisterDeferredClose(session, datastore);
+        }
+    }
+
+    /**
      * Bind the session to the thread with a SessionHolder keyed by its Datastore.
      * @param session the session
      * @return the session (for method chaining)
