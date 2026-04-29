@@ -50,51 +50,72 @@ ext {
     ]
 }
 
+// Register the Micronaut platform in combinedPlatforms/combinedVersions so
+// PropertyNameCalculator (used by extractConstraints and pomCustomization) can
+// resolve a property name for the micronaut-platform constraint.
+project.ext.combinedPlatforms = combinedPlatforms + ['micronaut-platform': "io.micronaut.platform:micronaut-platform:$micronautPlatformVersion".toString()]
+project.ext.combinedVersions = combinedVersions + ['micronaut-platform.version': micronautPlatformVersion as String]
+
+// Coordinates we override via customBomDependencies — these must be excluded from the
+// inherited platform chain so they don't conflict with our strictly-versioned overrides
+// when consumers apply this BOM via enforcedPlatform.
+def overriddenModules = customBomDependencies.values().collect { String coord ->
+    def parts = coord.split(':')
+    [group: parts[0], module: parts[1]]
+}
+Set<String> overriddenCoords = overriddenModules.collect { "${it.group}:${it.module}".toString() } as Set
+
 dependencies {
-    api platform(gradleBomPlatformDependencies['spring-boot-bom']), {
+    api(platform(project(':grails-base-bom'))) {
+        overriddenModules.each { ovr ->
+            exclude group: ovr.group, module: ovr.module
+        }
+    }
+
+    // Re-export the Micronaut platform so consumers of grails-micronaut-bom inherit Micronaut's
+    // managed versions transitively and don't need to declare the platform themselves.
+    // Exclude Groovy since we declare the required version explicitly below via customBomDependencies.
+    // Exclude Spock since the base BOM manages that version.
+    api(platform("io.micronaut.platform:micronaut-platform:$micronautPlatformVersion")) {
         exclude group: 'org.apache.groovy'
         exclude group: 'org.spockframework'
     }
 
-    for (def entry : bomPlatformDependencies.entrySet()) {
-        api platform(entry.value)
-    }
-
     constraints {
-        for (def entry : gradleBomDependencies.entrySet()) {
+        // Re-declare base BOM constraints directly so enforcedPlatform() consumers
+        // get forced versions. Constraints inherited via platform() are not enforced
+        // by enforcedPlatform — only direct constraints are.
+        // Skip entries we override below in customBomDependencies to avoid conflicting
+        // strictly constraints under enforcedPlatform.
+        gradleBomDependencies.values().each { String coord ->
+            def parts = coord.split(':')
+            String key = parts[0] + ':' + parts[1]
+            if (key in overriddenCoords) {
+                return
+            }
+            api coord
+        }
+        bomDependencies.values().each { String coord ->
+            def parts = coord.split(':')
+            String key = parts[0] + ':' + parts[1]
+            if (key in overriddenCoords) return
+            api coord
+        }
+        for (def entry : bomPlatformDependencies.entrySet()) {
             api entry.value
         }
-        for (def entry : bomDependencies.entrySet()) {
-            api entry.value
-        }
-
-        for (Project subproject : rootProject.subprojects) {
-            if (subproject.path == project.path || subproject.name in testProjects || subproject.name in docProjects || subproject.name in cliProjects) {
-                continue // ignore self & test projects
-            }
-
-            boolean publishedProject = subproject.pluginManager.hasPlugin('org.apache.grails.gradle.grails-publish-profile') || subproject.pluginManager.hasPlugin('org.apache.grails.gradle.grails-publish')
-            if (!publishedProject) {
-                continue
-            }
-
-            api project(":${subproject.path}")
-        }
-
-        // since we're duplicating the bom instead of inheriting we have to add the grails-gradle projects
-        for (Map.Entry<String, String> dependency : project.ext.gradleBuildProjects.entrySet()) {
-            api "${dependency.value}:${dependency.key}:${projectVersion}"
-        }
-
-        // because we are not yet publishing hibernate6, just force the hibernate5 version for now
-        api("org.liquibase:liquibase-core") {
-            version {
-                strictly "$liquibaseHibernate5Version"
-            }
-        }
-        api("org.liquibase.ext:liquibase-hibernate5") {
-            version {
-                strictly "$liquibaseHibernate5Version"
+        // Re-declare the Micronaut platform as a constraint for enforcedPlatform support
+        api "io.micronaut.platform:micronaut-platform:$micronautPlatformVersion"
+        for (def entry : customBomDependencies.entrySet()) {
+            def parts = entry.value.split(':')
+            if (parts.length == 3) {
+                api("${parts[0]}:${parts[1]}") {
+                    version {
+                        strictly parts[2]
+                    }
+                }
+            } else {
+                api entry.value
             }
         }
     }
@@ -110,11 +131,16 @@ tasks.register('extractConstraints', ExtractDependenciesTask).configure { Extrac
     it.captureProjectServices(project.dependencies, project.configurations)
     it.configuration = configurations.named('bomDependencies')
     it.configurationName = 'bomDependencies'
-    it.destination = project.layout.buildDirectory.file('grails-bom-constraints.adoc')
+    it.destination = project.layout.buildDirectory.file('grails-micronaut-bom-constraints.adoc')
     it.platformDefinitions = combinedPlatforms
     it.definitions = combinedDependencies
     it.projectName = project.name
     it.versions = combinedVersions
+    // Micronaut's platform imports many sub-BOMs (micronaut-*-bom, netty-bom, etc.) that are
+    // not explicitly registered in dependencies.gradle. Auto-register them so extractConstraints
+    // can document their versions without requiring manual entries for every transitive platform.
+    // this is required because the micronaut bom format uses gradle modules instead of a pom like spring boot
+    it.autoRegisterTransitivePlatforms = true
     rootProject.subprojects.each { p ->
         evaluationDependsOn(p.path)
     }
@@ -179,7 +205,7 @@ if (ext.isReleaseBuild && ext.isPublishedExternal) {
 }
 
 ext {
-    pomDescription = 'Grails BOM (Bill of Materials) for managing dependency versions used by Grails Projects'
+    pomDescription = 'Grails Micronaut BOM (Bill of Materials) for Grails projects integrating with Micronaut. Layers Micronaut-specific dependency overrides on top of grails-bom; consume as enforcedPlatform.'
     pomCustomization = { xml ->
         def root = xml.asNode()
 
@@ -210,7 +236,7 @@ ext {
                     ExtractedDependencyConstraint extractedConstraint = propertyNameCalculator.calculate(groupId, artifactId, inlineVersion, isBom)
                     if (extractedConstraint?.versionPropertyReference) {
                         // use the property reference instead of the hard coded version so that it can be
-                        // overridden by project properties (gradle.properties or ext['property.name'])
+                        // overriden by the spring boot dependency management plugin
                         dep.version[0].value = extractedConstraint.versionPropertyReference
 
                         // Add an entry in the <properties> node with the actual version number

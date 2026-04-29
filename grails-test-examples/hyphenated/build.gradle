@@ -50,7 +50,7 @@ dependencies {
     testAndDevelopmentOnly platform(project(':grails-bom'))
     testAndDevelopmentOnly 'org.webjars.npm:jquery'
 
-    runtimeOnly "org.hibernate:hibernate-ehcache:$hibernate5Version", {
+    runtimeOnly 'org.hibernate:hibernate-ehcache', {
         // exclude javax variant of hibernate-core
         exclude group: 'org.hibernate', module: 'hibernate-core'
     }

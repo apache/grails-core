@@ -56,15 +56,16 @@ public class GrailsBase implements DefaultFeature {
     @Override
     public void apply(GeneratorContext generatorContext) {
 
-        // When micronaut is used, enforcedPlatform is required to prevent the Micronaut
-        // platform from overriding grails-bom managed versions (e.g. Groovy 5 over Groovy 4)
-        boolean useEnforced = generatorContext.isFeaturePresent(GrailsMicronaut.class);
+        // When Micronaut is used, the application must consume grails-micronaut-bom as an
+        // enforcedPlatform so the Micronaut platform cannot override grails-bom
+        boolean useMicronautBom = generatorContext.isFeaturePresent(GrailsMicronaut.class);
+        String bomArtifactId = useMicronautBom ? "grails-micronaut-bom" : "grails-bom";
 
         generatorContext.addDependency(Dependency.builder()
                 .groupId("org.apache.grails")
-                .artifactId("grails-bom")
+                .artifactId(bomArtifactId)
                 .pom(true)
-                .enforced(useEnforced)
+                .enforced(useMicronautBom)
                 .version("$grailsVersion")
                 .implementation());
 

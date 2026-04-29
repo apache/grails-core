@@ -34,7 +34,7 @@ apply plugin: 'org.apache.grails.gradle.grails-web'
 // processors when grails-micronaut is present on the classpath.
 
 dependencies {
-    implementation enforcedPlatform(project(':grails-bom'))
+    implementation enforcedPlatform(project(':grails-micronaut-bom'))
 
     implementation 'org.apache.grails:grails-dependencies-starter-web'
     implementation 'org.apache.grails:grails-micronaut'

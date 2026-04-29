@@ -28,13 +28,13 @@ group = 'com.example.grails.plugins'
 apply plugin: 'org.apache.grails.gradle.grails-plugin'
 
 dependencies {
-    implementation enforcedPlatform(project(':grails-bom'))
+    implementation enforcedPlatform(project(':grails-micronaut-bom'))
 
     api 'org.apache.grails:grails-dependencies-starter-web'
     api 'org.apache.grails:grails-micronaut'
     api 'jakarta.servlet:jakarta.servlet-api'
 
-    annotationProcessor platform("io.micronaut.platform:micronaut-platform:$micronautPlatformVersion")
+    annotationProcessor enforcedPlatform(project(':grails-micronaut-bom'))
     annotationProcessor 'io.micronaut:micronaut-inject-java'
     annotationProcessor 'jakarta.annotation:jakarta.annotation-api'
 

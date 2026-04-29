@@ -116,7 +116,10 @@ include(
         'grails-dependencies-starter-web',
         'grails-dependencies-test',
         'grails-dependencies-assets',
-        'grails-bom',
+        'grails-base-bom',
+        'grails-bom', // the default bom
+        'grails-hibernate5-bom',
+        'grails-micronaut-bom',
 
         // Docs
         'grails-doc',
@@ -193,6 +196,11 @@ include(
         // micronaut plugin for integration with Grails
         'grails-micronaut',
 )
+
+project(':grails-bom').projectDir = file('grails-bom/default')
+project(':grails-base-bom').projectDir = file('grails-bom/base')
+project(':grails-hibernate5-bom').projectDir = file('grails-bom/hibernate5')
+project(':grails-micronaut-bom').projectDir = file('grails-bom/micronaut')
 
 // Instead of using : to separate nested projects, fix the project directories by setting the projectDir explicitly
 // (Preserve the parent directory name as part of the nested project name)

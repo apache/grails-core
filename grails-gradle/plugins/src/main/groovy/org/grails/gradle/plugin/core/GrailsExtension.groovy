@@ -92,9 +92,18 @@ class GrailsExtension {
     boolean springDependencyManagement = true
 
     /**
-     * Whether the Micronaut `annotationProcessor` dependencies should be auto-added to the project
-     * on detection of the `grails-micronaut` plugin, and the version defined by the `micronautPlatformVersion`
-     * Gradle property is enforced.
+     * Whether the Micronaut auto-setup should run when the `grails-micronaut` plugin is detected.
+     * When enabled, the Grails Gradle plugin:
+     * <ul>
+     *   <li>validates that `grails-micronaut-bom` is applied as `enforcedPlatform` and fails the build
+     *       at configuration time with an actionable error if not (`grails-micronaut-bom` is the single
+     *       source of truth for the Micronaut platform version);</li>
+     *   <li>configures the Spring Boot `bootJar`/`bootWar` tasks to use the {@code CLASSIC} loader
+     *       implementation (required for {@code java -jar} compatibility with the Micronaut-Spring
+     *       integration).</li>
+     * </ul>
+     * Disabling this is rarely appropriate; consumer projects should normally apply the BOM as
+     * `enforcedPlatform` so that the Micronaut platform cannot override grails-bom-managed versions.
      */
     boolean micronautAutoSetup = true
 

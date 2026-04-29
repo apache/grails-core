@@ -39,8 +39,8 @@ import org.gradle.api.Task
 import org.gradle.api.artifacts.Configuration
 import org.gradle.api.artifacts.Dependency
 import org.gradle.api.artifacts.DependencyResolveDetails
-import org.gradle.api.artifacts.ModuleDependency
 import org.gradle.api.artifacts.DependencySet
+import org.gradle.api.artifacts.ModuleDependency
 import org.gradle.api.attributes.AttributeMatchingStrategy
 import org.gradle.api.file.DuplicatesStrategy
 import org.gradle.api.file.FileCollection
@@ -487,39 +487,24 @@ ${importStatements}
 
             project.logger.lifecycle('Micronaut Support Detected for {}', project.name)
 
-            final String micronautPlatformVersion = project.properties['micronautPlatformVersion']
-            if (!micronautPlatformVersion) {
-                throw new GradleException('`micronautPlatformVersion` property must be set to use the Grails Micronaut plugin.')
-            }
-
-            // Validate that grails-bom is applied as enforcedPlatform. Micronaut 5's platform
-            // declares Groovy 5, Kotlin 2.3, etc. which override the grails-bom via conflict
-            // resolution. enforcedPlatform makes all BOM constraints strictly versioned so they
-            // cannot be overridden by transitive dependencies.
-            validateEnforcedBom(project)
-
-            // grails-micronaut exports the platform, but force the version to the user specified version
-            project.configurations.configureEach { Configuration configuration ->
-                configuration.resolutionStrategy.eachDependency { DependencyResolveDetails details ->
-                    String dependencyName = details.requested.name
-                    String group = details.requested.group
-                    if (group == 'io.micronaut.platform' && dependencyName.startsWith('micronaut-platform')) {
-                        project.logger.info('Forcing Micronaut Platform version to {}', micronautPlatformVersion)
-                        details.useVersion(micronautPlatformVersion)
-                    }
-                }
-            }
+            // Validate that grails-micronaut-bom is applied as enforcedPlatform. The BOM is now the
+            // single source of truth for the Micronaut platform version: applying it as
+            // enforcedPlatform pins io.micronaut.platform:micronaut-platform with a strict
+            // constraint that no transitive can override.
+            validateMicronautBom(project)
 
         }
     }
 
     /**
-     * Validates that grails-bom is applied as an enforcedPlatform when micronaut is used.
-     * Without enforcedPlatform, the Micronaut platform's version constraints (e.g. Groovy 5,
-     * Kotlin 2.3, Spock 2.4) will override the grails-bom versions via conflict resolution.
+     * Validates that grails-micronaut-bom is applied as an enforcedPlatform when micronaut is used.
+     * The grails-micronaut-bom layers Micronaut-specific overrides (e.g. javaparser-core) on top
+     * of grails-bom; without enforcedPlatform, Micronaut's platform would override these versions
+     * via Gradle's conflict resolution. Regular Grails projects (without Micronaut) should continue
+     * to use the spring-managed versions via plain platform(:grails-bom).
      */
     @CompileStatic
-    protected static void validateEnforcedBom(Project project) {
+    protected static void validateMicronautBom(Project project) {
         Configuration implConfig = project.configurations.findByName('implementation')
         if (implConfig == null) {
             return
@@ -527,14 +512,13 @@ ${importStatements}
 
         // The Grails Gradle Plugin injects a regular platform(grails-bom) into every
         // declarable configuration via applyGrailsBom(). For Micronaut projects the user
-        // must additionally declare an enforcedPlatform(grails-bom). Because both
-        // dependencies co-exist on the 'implementation' configuration we must scan all
-        // grails-bom declarations and accept the configuration as valid when at least one
-        // of them is an enforcedPlatform.
-        boolean grailsBomPresent = false
+        // must additionally declare an enforcedPlatform(grails-micronaut-bom) - a different
+        // BOM artifact that layers Micronaut-specific overrides on top of grails-bom. We
+        // scan all grails-micronaut-bom declarations on the 'implementation' configuration
+        // and accept the configuration as valid when at least one of them is an
+        // enforcedPlatform.
         for (Dependency dep : implConfig.dependencies) {
-            if (dep.name == 'grails-bom' && dep instanceof ModuleDependency) {
-                grailsBomPresent = true
+            if (dep.name == 'grails-micronaut-bom' && dep instanceof ModuleDependency) {
                 Object categoryAttr = ((ModuleDependency) dep).attributes.getAttribute(
                         org.gradle.api.attributes.Category.CATEGORY_ATTRIBUTE
                 )
@@ -544,14 +528,12 @@ ${importStatements}
             }
         }
 
-        if (grailsBomPresent) {
-            throw new GradleException(
-                    "Project '${project.name}' uses Micronaut but applies grails-bom as a regular platform. " +
-                            'Micronaut\'s platform declares higher versions of Groovy, Spock, and Kotlin that will ' +
-                            'override the grails-bom via conflict resolution. Change to:\n\n' +
-                            '    implementation enforcedPlatform(project(\':grails-bom\'))\n'
-            )
-        }
+        throw new GradleException(
+                "Project '${project.name}' uses Micronaut but does not apply grails-micronaut-bom as an enforcedPlatform. " +
+                        "Micronaut's platform declares higher versions of javaparser-core and other libraries that would " +
+                        'override the grails-bom versions via conflict resolution. Change to:\n\n' +
+                        '    implementation enforcedPlatform(project(\':grails-micronaut-bom\'))\n'
+        )
     }
 
     @CompileStatic
