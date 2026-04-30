@@ -36,6 +36,10 @@ ext {
             DateTimeFormatter.ISO_DATE.format(LocalDate.ofInstant(buildInstant as Instant, ZoneOffset.UTC))
     buildDate = (buildInstant as Instant).atZone(ZoneOffset.UTC) // for reproducible builds
     isCiBuild = System.getenv().get('CI') as Boolean
+    // Set DO_NOT_CACHE_TESTS=1 to force test tasks to re-run on every invocation without
+    // needing --rerun-tasks. Useful for repeatedly running the same test command while
+    // chasing flaky tests across runs.
+    doNotCacheTests = System.getenv('DO_NOT_CACHE_TESTS')?.toBoolean()
     configuredTestParallel = findProperty('maxTestParallel') as Integer ?: (isCiBuild ? 4 : Runtime.runtime.availableProcessors() * 3 / 4 as int ?: 1)
     excludeUnusedTransDeps = findProperty('excludeUnusedTransDeps')
 

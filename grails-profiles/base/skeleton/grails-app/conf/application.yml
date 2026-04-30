@@ -6,4 +6,4 @@ info:
 grails:
     codegen:
         defaultPackage: @grails.codegen.defaultPackage@
-        profile: @grails.profile@
+    profile: @grails.profile@
