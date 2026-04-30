@@ -56,8 +56,11 @@ class GrailsDependencyVersions implements DependencyManagement {
         this(grape, [group: 'org.apache.grails', module: 'grails-bom', version: Environment.grailsVersion, type: 'pom'])
     }
 
-    GrailsDependencyVersions(GrapeEngine grape, Map<String, String> bomCoords) {
+    GrailsDependencyVersions(GrapeEngine grape, Map bomCoords) {
         this.grapeEngine = grape
+        if (!bomCoords.containsKey('transitive')) {
+            bomCoords.put('transitive', false)
+        }
         def results = grape.resolve(null, bomCoords)
 
         for (URI u in results) {
@@ -90,10 +93,11 @@ class GrailsDependencyVersions implements DependencyManagement {
             String scope = dep.scope.text()
             String type = dep.type.text()
 
-            // Recursively resolve imported BOMs to pick up their managed dependencies
-            if (scope == 'import' || type == 'pom') {
+            // Recursively resolve imported Grails BOMs (e.g. grails-base-bom) to pick up their managed dependencies.
+            // Only follow Grails BOMs to avoid recursing into third-party BOMs like spring-boot-dependencies.
+            if ((scope == 'import' && type == 'pom') && groupId == 'org.apache.grails') {
                 resolveImportedBom(groupId, artifactId, version)
-            } else {
+            } else if (scope != 'import') {
                 addDependency(groupId, artifactId, version)
             }
         }
@@ -105,7 +109,7 @@ class GrailsDependencyVersions implements DependencyManagement {
             return
         }
         try {
-            def results = grapeEngine.resolve(null, [group: groupId, module: artifactId, version: version, type: 'pom'])
+            def results = grapeEngine.resolve(null, [group: groupId, module: artifactId, version: version, type: 'pom', transitive: false])
             for (URI u in results) {
                 def importedPom = new XmlSlurper().parseText(u.toURL().text)
                 addDependencyManagement(importedPom)
