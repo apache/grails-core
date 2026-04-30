@@ -16,7 +16,28 @@
 * Proceed to Hibernate 7, Hibernate 5, and MongoDB modules.
 
 
-# Implementation Guidelines for `AbstractDatastore`
+# Future Architecture: Core SessionResolver
+To eliminate fragmented session and datastore resolution logic across GORM implementations, we plan to introduce a core `SessionResolver` interface.
+
+## Proposal: Core SessionResolver Abstraction
+The current GORM design lacks a formal `SessionResolver` interface, forcing each implementation to manually handle binding and lookup via `TransactionSynchronizationManager`.
+
+### The Contract (grails-datastore-core)
+```java
+public interface SessionResolver<S extends Session> {
+    S resolve();
+    S resolve(String qualifier);
+    void bind(S session);
+    void unbind();
+}
+```
+
+### Transition Strategy
+1.  **Augment `Datastore`**: Add `getSessionResolver()` to the base `Datastore` interface.
+2.  **Implementation**: Each backend (Hibernate, Mongo, etc.) implements its own `SessionResolver`.
+3.  **Refactor**: Replace all direct `TransactionSynchronizationManager` calls in `GormEnhancer`, `GormStaticApi`, and `GrailsHibernateTransactionManager` with `SessionResolver` calls.
+4.  **Cleanup**: Remove the temporary patches introduced in the Hibernate 7 migration once the central resolver assumes responsibility for session lifecycle and isolation.
+
 
 To ensure compatibility with GORM's multi-tenancy, event system, and session management, implementations should follow these patterns learned during the `grails-data-simple` refactoring:
 

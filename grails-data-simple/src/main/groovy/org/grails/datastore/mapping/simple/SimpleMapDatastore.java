@@ -72,6 +72,12 @@ public class SimpleMapDatastore extends AbstractDatastore implements Transaction
     protected final MultiTenancySettings.MultiTenancyMode multiTenancyMode;
     protected final TenantResolver tenantResolver;
     protected final Map<String, SimpleMapDatastore> childDatastores = new ConcurrentHashMap<>();
+    protected final org.grails.datastore.mapping.core.SessionResolver sessionResolver = new org.grails.datastore.mapping.core.ThreadLocalSessionResolver<>();
+
+    @Override
+    public org.grails.datastore.mapping.core.SessionResolver getSessionResolver() {
+        return sessionResolver;
+    }
 
     public SimpleMapDatastore(ConnectionSources<Map<String, Map>, ConnectionSourceSettings> connectionSources, MappingContext mappingContext, ApplicationEventPublisher eventPublisher) {
         this(connectionSources, (KeyValueMappingContext)mappingContext, eventPublisher, null);

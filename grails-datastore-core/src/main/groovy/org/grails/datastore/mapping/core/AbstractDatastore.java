@@ -93,6 +93,16 @@ public abstract class AbstractDatastore implements Datastore, StatelessDatastore
     protected final ServiceRegistry serviceRegistry;
     protected final PropertyResolver connectionDetails;
     protected final TPCacheAdapterRepository cacheAdapterRepository;
+    protected SessionResolver sessionResolver;
+
+    @Override
+    public SessionResolver getSessionResolver() {
+        return sessionResolver;
+    }
+
+    public void setSessionResolver(SessionResolver sessionResolver) {
+        this.sessionResolver = sessionResolver;
+    }
 
     public AbstractDatastore(MappingContext mappingContext) {
         this(mappingContext, (PropertyResolver) null, null);
@@ -114,6 +124,7 @@ public abstract class AbstractDatastore implements Datastore, StatelessDatastore
         this.connectionDetails = connectionDetails;
         this.cacheAdapterRepository = cacheAdapterRepository;
         this.applicationEventPublisher = ctx != null ? ctx : new DefaultApplicationEventPublisher();
+        this.sessionResolver = new ThreadLocalSessionResolver<>();
         setApplicationContext(ctx);
         DefaultServiceRegistry defaultServiceRegistry = new DefaultServiceRegistry(this);
         this.serviceRegistry = defaultServiceRegistry;
