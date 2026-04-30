@@ -26,7 +26,8 @@ import org.gradle.process.CommandLineArgumentProvider
 import grails.util.BuildSettings
 
 /**
- * Provides the {@code -Dgrails.build.base.dir} system property to forked JVM tasks.
+ * Provides the {@code -Dbase.dir} system property (see {@link BuildSettings#APP_BASE_DIR})
+ * to forked JVM tasks.
  *
  * The directory is marked {@link Internal} rather than {@code @InputDirectory} because
  * the project directory encompasses task output directories (e.g. {@code build/}).

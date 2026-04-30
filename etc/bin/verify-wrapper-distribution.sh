@@ -29,6 +29,7 @@ if [ -z "${RELEASE_TAG}" ]; then
 fi
 
 VERSION=${RELEASE_TAG#v}
+export PREFERRED_GRAILS_VERSION=${VERSION}
 
 cd $DOWNLOAD_LOCATION
 ZIP_FILE=$(ls "apache-grails-wrapper-${VERSION}-bin.zip" 2>/dev/null | head -n 1)
