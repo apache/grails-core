@@ -193,6 +193,12 @@ class GrailsGradlePlugin implements Plugin<Project> {
             Provider<RegularFile> groovyCompilerConfigFile = project.layout.buildDirectory.file("grailsGroovyCompilerConfig-${c.name}.groovy")
             c.outputs.file(groovyCompilerConfigFile)
 
+            // Publish the project base directory to the Groovy compiler's worker daemon JVM so the
+            // GlobalGrailsClassInjectorTransformation AST transform can locate
+            // src/main/resources/META-INF/grails.factories without relying on hardcoded
+            // "build"/"target" output-directory names. Reuses the same CommandLineArgumentProvider
+            // pattern as forked test/run tasks (see configureForkSettings).
+            c.groovyOptions.forkOptions.jvmArgumentProviders.add(new GrailsAppBaseDirProvider(project.projectDir))
             Closure<String> userScriptGenerator = getGroovyCompilerScript(c, project)
             c.doFirst {
                 // This isn't ideal - we're performing configuration at execution time, but the alternative would be having
