@@ -552,6 +552,7 @@ public class HibernateDatastore extends AbstractDatastore
     }
 
     protected HibernateGormEnhancer initialize() {
+        this.sessionResolver = new HibernateSessionResolver(this, this.sessionFactory);
         final HibernateConnectionSource defaultConnectionSource =
                 (HibernateConnectionSource) getConnectionSources().getDefaultConnectionSource();
         if (multiTenantMode == MultiTenancySettings.MultiTenancyMode.SCHEMA) {
