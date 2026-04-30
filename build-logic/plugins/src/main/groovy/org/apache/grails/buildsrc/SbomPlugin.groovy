@@ -261,7 +261,7 @@ class SbomPlugin implements Plugin<Project> {
                             }
                         }
 
-                        // force the serialNumber to be reproducible by removing it & recalculating.
+                        // force the serialNumber to be reproducible by clearing it & recalculating.
                         // Mix the projectPath into the UUID seed so two modules whose post-processed
                         // BOM JSON happens to be identical (for example, empty BOM platforms with no
                         // runtime dependencies, or modules whose metadata.component is filled in
@@ -272,9 +272,9 @@ class SbomPlugin implements Plugin<Project> {
                         // CycloneDX 3.0.0 / Gradle 9 metadata changes.
                         // See: https://cyclonedx.org/docs/1.6/json/#serialNumber
                         bom['serialNumber'] = ''
-                        def withOutSerial = JsonOutput.prettyPrint(JsonOutput.toJson(bom))
-                        def uuidSeed = "${projectPath}\n${withOutSerial}"
-                        def uuid = UUID.nameUUIDFromBytes(uuidSeed.getBytes(StandardCharsets.UTF_8.name()))
+                        def withoutSerial = JsonOutput.prettyPrint(JsonOutput.toJson(bom))
+                        def uuidSeed = "${projectPath}\n${withoutSerial}"
+                        def uuid = UUID.nameUUIDFromBytes(uuidSeed.getBytes(StandardCharsets.UTF_8))
                         bom['serialNumber'] = "urn:uuid:$uuid".toString()
 
                         f.setText(JsonOutput.prettyPrint(JsonOutput.toJson(bom)), StandardCharsets.UTF_8.name())
