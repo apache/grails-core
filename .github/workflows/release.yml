@@ -52,6 +52,12 @@ jobs:
         run: echo "VERSION=${TAG#v}" >> "$GITHUB_ENV"
       - name: "🌐 Output Agent IP" # in the event RAO blocks this agent, this can be used to debug it
         run: curl -s https://api.ipify.org
+      - name: "🔬 Check Rate Limit"
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          current_limit=$(gh api rate_limit --jq '.resources.graphql')
+          echo "Current Rate Limit: $current_limit"
       - name: "📥 Checkout repository"
         uses: actions/checkout@v6
         with:
@@ -238,6 +244,13 @@ jobs:
     steps:
       - name: "📝 Establish release version"
         run: echo "VERSION=${TAG#v}" >> "$GITHUB_ENV"
+      - name: "🔬 Check Rate Limit"
+        working-directory: grails
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          current_limit=$(gh api rate_limit --jq '.resources.graphql')
+          echo "Current Rate Limit: $current_limit"
       - name: "📥 Checkout Grails Core repository"
         uses: actions/checkout@v6
         with:
@@ -357,6 +370,12 @@ jobs:
     steps:
       - name: "📝 Establish release version"
         run: echo "VERSION=${TAG#v}" >> "$GITHUB_ENV"
+      - name: "🔬 Check Rate Limit"
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          current_limit=$(gh api rate_limit --jq '.resources.graphql')
+          echo "Current Rate Limit: $current_limit"
       - name: "🛠️ Install tools"
         run: sudo apt-get install -y subversion subversion-tools tree gettext-base
       - name: "👀 Ensure dev/${{ env.SVN_PROJECT }} folder exists"
@@ -478,6 +497,12 @@ jobs:
     steps:
       - name: "📝 Establish release version"
         run: echo "VERSION=${TAG#v}" >> "$GITHUB_ENV"
+      - name: "🔬 Check Rate Limit"
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          current_limit=$(gh api rate_limit --jq '.resources.graphql')
+          echo "Current Rate Limit: $current_limit"
       - name: "📥 Checkout repository"
         uses: actions/checkout@v6
         with:
@@ -547,6 +572,12 @@ jobs:
     steps:
       - name: "📝 Establish release version"
         run: echo "VERSION=${TAG#v}" >> "$GITHUB_ENV"
+      - name: "🔬 Check Rate Limit"
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          current_limit=$(gh api rate_limit --jq '.resources.graphql')
+          echo "Current Rate Limit: $current_limit"
       - name: "⚙️ Maximize build space"
         run: |
           echo "-- Dotnet"
@@ -596,6 +627,12 @@ jobs:
     steps:
       - name: "📝 Establish release version"
         run: echo "VERSION=${TAG#v}" >> "$GITHUB_ENV"
+      - name: "🔬 Check Rate Limit"
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          current_limit=$(gh api rate_limit --jq '.resources.graphql')
+          echo "Current Rate Limit: $current_limit"
       - name: "📥 Checkout repository"
         uses: actions/checkout@v6
         with:
@@ -636,6 +673,12 @@ jobs:
     steps:
       - name: "📝 Establish release version"
         run: echo "VERSION=${TAG#v}" >> "$GITHUB_ENV"
+      - name: "🔬 Check Rate Limit"
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          current_limit=$(gh api rate_limit --jq '.resources.graphql')
+          echo "Current Rate Limit: $current_limit"
       - name: "📥 Checkout repository"
         uses: actions/checkout@v6
         with:
