@@ -206,8 +206,8 @@ Using dot notation:
 
 [source,groovy]
 ----
-if (filterParams.containsKey('parent.name')) query = query.where {
-    parent.name == filterParams.'parent.name'
+if (filterParams.containsKey('parent.name')) {
+    query = query.where { parent.name == filterParams.'parent.name' }
 }
 ----
 
@@ -215,9 +215,11 @@ Using a nested criteria block, which is useful when filtering multiple propertie
 
 [source,groovy]
 ----
-if (filterParams.containsKey('parent.name')) query = query.where {
-    parent {
-        name == filterParams.'parent.name'
+if (filterParams.containsKey('parent.name')) {
+    query = query.where {
+        parent {
+            name == filterParams.'parent.name'
+        }
     }
 }
 ----

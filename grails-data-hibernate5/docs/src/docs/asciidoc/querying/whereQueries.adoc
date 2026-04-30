@@ -323,7 +323,7 @@ For example the following query will fail:
 // fails because a dynamic alias is used
 Pet.where {
     owner.firstName == "Fred"
-}.list(sort:"owner.lastName")
+}.list(sort: "owner.lastName")
 ----
 
 In this case GORM will generate an alias for the `owner` association such as `owner_alias_0`. These generated aliases are internal and are not suitable for later reference in sorting or projections.
