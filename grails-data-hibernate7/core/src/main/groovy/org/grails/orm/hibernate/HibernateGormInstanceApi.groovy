@@ -36,7 +36,7 @@ import org.springframework.context.ApplicationEventPublisher
 import org.springframework.transaction.PlatformTransactionManager
 import org.springframework.validation.Errors
 import org.springframework.validation.Validator
-import org.grails.datastore.mapping.validation.CascadingValidator
+import grails.gorm.validation.CascadingValidator
 import org.grails.datastore.gorm.DatastoreResolver
 import org.hibernate.Session
 import org.hibernate.resource.transaction.spi.TransactionStatus
@@ -404,7 +404,7 @@ class HibernateGormInstanceApi<D> extends GormInstanceApi<D> {
 
     @CompileDynamic
     void setObjectToReadOnly(Object target) {
-        HibernateRuntimeUtils.setObjectToReadyOnly(target, hibernateDatastore.sessionFactory)
+        HibernateRuntimeUtils.setObjectToReadOnly(target, hibernateDatastore.sessionFactory)
     }
 
     @CompileDynamic

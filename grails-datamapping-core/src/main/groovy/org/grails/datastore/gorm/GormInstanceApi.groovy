@@ -184,14 +184,22 @@ class GormInstanceApi<D> extends AbstractGormApi<D> implements GormInstanceOpera
         boolean validate = arguments?.containsKey("validate") ? (boolean)arguments.get("validate") : true
 
         if (validate) {
-            if (!GormEnhancer.findValidationApi(persistentClass).validate(instance, arguments)) {
+            Datastore ds = getDatastore()
+            String qualifier = ds instanceof org.grails.datastore.mapping.core.connections.ConnectionSourcesProvider ?
+                ((org.grails.datastore.mapping.core.connections.ConnectionSourcesProvider)ds).getConnectionSources().getDefaultConnectionSource().getName() :
+                org.grails.datastore.mapping.core.connections.ConnectionSource.DEFAULT
+            if (!GormEnhancer.findValidationApi(persistentClass, qualifier).validate(instance, arguments)) {
                 if (shouldFail(arguments)) {
                     throw validationException.newInstance('Validation Error(s) occurred during save()', instance.errors)
                 }
                 return null
             }
         } else {
-            GormEnhancer.findValidationApi(persistentClass).clearErrors(instance)
+            Datastore ds = getDatastore()
+            String qualifier = ds instanceof org.grails.datastore.mapping.core.connections.ConnectionSourcesProvider ?
+                ((org.grails.datastore.mapping.core.connections.ConnectionSourcesProvider)ds).getConnectionSources().getDefaultConnectionSource().getName() :
+                org.grails.datastore.mapping.core.connections.ConnectionSource.DEFAULT
+            GormEnhancer.findValidationApi(persistentClass, qualifier).clearErrors(instance)
         }
 
         execute({ Session session ->

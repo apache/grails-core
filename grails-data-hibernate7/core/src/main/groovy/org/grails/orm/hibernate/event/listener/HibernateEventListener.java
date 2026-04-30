@@ -251,7 +251,7 @@ public class HibernateEventListener extends AbstractPersistenceEventListener {
                             datastore.getMappingContext().getPersistentEntity(clazz.getName());
                     shouldTrigger = (persistentEntity != null && isValidSessionFactory);
                     if (shouldTrigger) {
-                        eventListener = new ClosureEventListener(persistentEntity, failOnError, failOnErrorPackages);
+                        eventListener = new ClosureEventListener(datastore, persistentEntity, failOnError, failOnErrorPackages);
                         ClosureEventListener previous = eventListeners.putIfAbsent(key, eventListener);
                         if (previous != null) {
                             eventListener = previous;

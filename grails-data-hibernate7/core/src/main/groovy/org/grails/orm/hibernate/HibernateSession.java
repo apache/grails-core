@@ -279,6 +279,10 @@ public class HibernateSession extends AbstractAttributeStoringSession implements
         return hibernateTemplate;
     }
 
+    public Session getNativeSession() {
+        return hibernateTemplate.getSessionFactory().getCurrentSession();
+    }
+
     @Override
     public void setSynchronizedWithTransaction(boolean synchronizedWithTransaction) {
         // no-op

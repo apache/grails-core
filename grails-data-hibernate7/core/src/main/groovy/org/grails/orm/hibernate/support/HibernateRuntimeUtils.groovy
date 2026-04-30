@@ -130,6 +130,33 @@ class HibernateRuntimeUtils {
         }
     }
 
+    private static ThreadLocal<Boolean> insertActive = new ThreadLocal<Boolean>() {
+        @Override
+        protected Boolean initialValue() {
+            return Boolean.FALSE
+        }
+    }
+
+    static void markInsertActive() {
+        insertActive.set(Boolean.TRUE)
+    }
+
+    static void resetInsertActive() {
+        insertActive.set(Boolean.FALSE)
+    }
+
+    static boolean isInsertActive() {
+        return insertActive.get()
+    }
+
+    static void setObjectToReadWrite(Object target, SessionFactory sessionFactory) {
+        org.grails.orm.hibernate.cfg.GrailsHibernateUtil.setObjectToReadWrite(target, sessionFactory)
+    }
+
+    static void setObjectToReadOnly(Object target, SessionFactory sessionFactory) {
+        org.grails.orm.hibernate.cfg.GrailsHibernateUtil.setObjectToReadyOnly(target, sessionFactory)
+    }
+
     static Object convertValueToType(Object value, Class targetType, ConversionService conversionService) {
         if (targetType != null && value != null && !targetType.isInstance(value)) {
             if (value instanceof CharSequence) {

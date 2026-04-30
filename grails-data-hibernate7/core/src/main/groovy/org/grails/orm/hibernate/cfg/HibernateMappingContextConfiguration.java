@@ -77,6 +77,8 @@ import org.grails.orm.hibernate.EventListenerIntegrator;
 import org.grails.orm.hibernate.GrailsSessionContext;
 import org.grails.orm.hibernate.HibernateEventListeners;
 import org.grails.orm.hibernate.MetadataIntegrator;
+import org.grails.orm.hibernate.cfg.domainbinding.hibernate.GrailsHibernatePersistentEntity;
+import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernatePersistentEntity;
 import org.grails.orm.hibernate.cfg.domainbinding.binder.GrailsDomainBinder;
 import org.grails.orm.hibernate.cfg.domainbinding.util.NamingStrategyProvider;
 import org.grails.orm.hibernate.proxy.GrailsBytecodeProvider;
@@ -310,7 +312,7 @@ public class HibernateMappingContextConfiguration extends Configuration
                 hibernateMappingContext.getMappingCacheHolder());
 
         List<Class> annotatedClasses = new ArrayList<>();
-        for (PersistentEntity persistentEntity : hibernateMappingContext.getPersistentEntities()) {
+        for (HibernatePersistentEntity persistentEntity : hibernateMappingContext.getHibernatePersistentEntities(dataSourceName)) {
             Class<?> javaClass = persistentEntity.getJavaClass();
             if (javaClass.isAnnotationPresent(Entity.class)) {
                 annotatedClasses.add(javaClass);
@@ -320,7 +322,12 @@ public class HibernateMappingContextConfiguration extends Configuration
         if (!additionalClasses.isEmpty()) {
             for (Class additionalClass : additionalClasses) {
                 if (GormEntity.class.isAssignableFrom(additionalClass)) {
-                    hibernateMappingContext.addPersistentEntity(additionalClass);
+                    PersistentEntity pe = hibernateMappingContext.addPersistentEntity(additionalClass);
+                    if (pe instanceof GrailsHibernatePersistentEntity && ((GrailsHibernatePersistentEntity)pe).usesConnectionSource(dataSourceName)) {
+                         if (additionalClass.isAnnotationPresent(Entity.class)) {
+                             annotatedClasses.add(additionalClass);
+                         }
+                    }
                 }
             }
         }
