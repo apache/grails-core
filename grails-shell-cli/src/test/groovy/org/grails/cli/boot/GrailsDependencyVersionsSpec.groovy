@@ -73,7 +73,7 @@ class GrailsDependencyVersionsSpec extends Specification {
         versions.find('org.apache.grails', 'grails-web').version == '7.0.11'
     }
 
-    def "addDependencyManagement recursively resolves imported BOMs"() {
+    def "addDependencyManagement recursively resolves imported Grails BOMs"() {
         given: "A base BOM with profile dependencies and a parent BOM that imports it"
         String baseBomXml = '''\
             <project>
@@ -150,15 +150,89 @@ class GrailsDependencyVersionsSpec extends Specification {
         versions.find('org.apache.grails', 'grails-core').version == '7.0.11'
     }
 
-    def "addDependencyManagement gracefully handles unresolvable imported BOMs"() {
-        given: "A BOM that imports another BOM which cannot be resolved"
+    def "addDependencyManagement does not recurse into third-party imported BOMs"() {
+        given: "A BOM that imports both a Grails BOM and third-party BOMs"
+        String grailsBaseBomXml = '''\
+            <project>
+                <dependencyManagement>
+                    <dependencies>
+                        <dependency>
+                            <groupId>org.apache.grails.profiles</groupId>
+                            <artifactId>web</artifactId>
+                            <version>7.0.11</version>
+                        </dependency>
+                    </dependencies>
+                </dependencyManagement>
+            </project>
+        '''
+
         String parentBomXml = '''\
             <project>
                 <dependencyManagement>
                     <dependencies>
                         <dependency>
-                            <groupId>org.example</groupId>
-                            <artifactId>missing-bom</artifactId>
+                            <groupId>org.apache.grails</groupId>
+                            <artifactId>grails-base-bom</artifactId>
+                            <version>7.0.11</version>
+                            <type>pom</type>
+                            <scope>import</scope>
+                        </dependency>
+                        <dependency>
+                            <groupId>org.springframework.boot</groupId>
+                            <artifactId>spring-boot-dependencies</artifactId>
+                            <version>3.5.0</version>
+                            <type>pom</type>
+                            <scope>import</scope>
+                        </dependency>
+                        <dependency>
+                            <groupId>org.apache.groovy</groupId>
+                            <artifactId>groovy-bom</artifactId>
+                            <version>4.0.30</version>
+                            <type>pom</type>
+                            <scope>import</scope>
+                        </dependency>
+                        <dependency>
+                            <groupId>org.apache.grails</groupId>
+                            <artifactId>grails-web-mvc</artifactId>
+                            <version>7.0.11</version>
+                        </dependency>
+                    </dependencies>
+                </dependencyManagement>
+            </project>
+        '''
+
+        URI grailsBaseBomUri = writePom('grails-base-bom.pom', grailsBaseBomXml)
+        URI parentBomUri = writePom('grails-bom.pom', parentBomXml)
+
+        GrapeEngine grape = Mock(GrapeEngine)
+
+        when: "GrailsDependencyVersions is constructed"
+        def versions = new GrailsDependencyVersions(grape, [group: 'org.apache.grails', module: 'grails-bom', version: '7.0.11', type: 'pom'])
+
+        then: "The parent BOM is resolved"
+        1 * grape.resolve(null, { it.module == 'grails-bom' }) >> [parentBomUri]
+
+        and: "The Grails base BOM is resolved"
+        1 * grape.resolve(null, { it.module == 'grails-base-bom' }) >> [grailsBaseBomUri]
+
+        and: "Third-party BOMs are never resolved"
+        0 * grape.resolve(null, { it.module == 'spring-boot-dependencies' })
+        0 * grape.resolve(null, { it.module == 'groovy-bom' })
+
+        and: "Dependencies from both Grails BOMs are available"
+        versions.find('org.apache.grails', 'grails-web-mvc') != null
+        versions.find('org.apache.grails.profiles', 'web') != null
+    }
+
+    def "addDependencyManagement gracefully handles unresolvable imported Grails BOMs"() {
+        given: "A BOM that imports a Grails BOM which cannot be resolved"
+        String parentBomXml = '''\
+            <project>
+                <dependencyManagement>
+                    <dependencies>
+                        <dependency>
+                            <groupId>org.apache.grails</groupId>
+                            <artifactId>grails-missing-bom</artifactId>
                             <version>1.0.0</version>
                             <type>pom</type>
                             <scope>import</scope>
@@ -182,8 +256,8 @@ class GrailsDependencyVersionsSpec extends Specification {
         then: "The parent BOM is resolved"
         1 * grape.resolve(null, { it.module == 'grails-bom' }) >> [parentBomUri]
 
-        and: "The missing imported BOM resolution throws but is caught"
-        1 * grape.resolve(null, { it.module == 'missing-bom' }) >> { throw new RuntimeException("Not found") }
+        and: "The missing Grails BOM resolution throws but is caught"
+        1 * grape.resolve(null, { it.module == 'grails-missing-bom' }) >> { throw new RuntimeException("Not found") }
 
         and: "Direct dependencies from the parent BOM are still available"
         versions.find('org.apache.grails', 'grails-core') != null
@@ -191,7 +265,29 @@ class GrailsDependencyVersionsSpec extends Specification {
     }
 
     def "addDependencyManagement without grapeEngine skips imported BOMs without error"() {
-        given: "A GrailsDependencyVersions with no grape engine and a BOM with an import"
+        given: "A BOM with an import and a mock grape engine"
+        String simpleBomXml = '''\
+            <project>
+                <dependencyManagement>
+                    <dependencies>
+                        <dependency>
+                            <groupId>org.apache.grails</groupId>
+                            <artifactId>grails-bootstrap</artifactId>
+                            <version>7.0.11</version>
+                        </dependency>
+                    </dependencies>
+                </dependencyManagement>
+            </project>
+        '''
+        URI simpleBomUri = writePom('simple-bom.pom', simpleBomXml)
+        GrapeEngine grape = Mock(GrapeEngine)
+        grape.resolve(null, _) >> [simpleBomUri]
+
+        and: "A GrailsDependencyVersions instance with grapeEngine then set to null"
+        def versions = new GrailsDependencyVersions(grape, [group: 'org.apache.grails', module: 'grails-bom', version: '7.0.11', type: 'pom'])
+        versions.@grapeEngine = null
+
+        and: "A POM with a Grails BOM import"
         String parentBomXml = '''\
             <project>
                 <dependencyManagement>
@@ -213,17 +309,12 @@ class GrailsDependencyVersionsSpec extends Specification {
             </project>
         '''
 
-        URI bomUri = writePom('grails-bom.pom', parentBomXml)
-        GrapeEngine grape = Mock(GrapeEngine)
-        grape.resolve(null, { it.module == 'grails-bom' }) >> [bomUri]
+        when: "addDependencyManagement is called with null grapeEngine"
+        def pom = new groovy.xml.XmlSlurper().parseText(parentBomXml)
+        versions.addDependencyManagement(pom)
 
-        when: "GrailsDependencyVersions is constructed and then grapeEngine is cleared"
-        def versions = new GrailsDependencyVersions(grape, [group: 'org.apache.grails', module: 'grails-bom', version: '7.0.11', type: 'pom'])
-
-        then: "The imported BOM is attempted to be resolved via the grape engine"
-        1 * grape.resolve(null, { it.module == 'grails-base-bom' && it.type == 'pom' }) >> { throw new RuntimeException("Not found") }
-
-        and: "Direct dependencies are still resolved"
+        then: "No exception is thrown and direct dependencies are resolved"
+        noExceptionThrown()
         versions.find('org.apache.grails', 'grails-core') != null
     }
 }
