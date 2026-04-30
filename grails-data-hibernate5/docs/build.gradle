@@ -46,7 +46,7 @@ dependencies {
     documentation project(':grails-bootstrap')
     documentation project(':grails-core')
     documentation project(':grails-spring')
-    documentation "org.hibernate:hibernate-core-jakarta:$hibernate5Version"
+    documentation 'org.hibernate:hibernate-core-jakarta'
     coreProjects.each {
         documentation "org.apache.grails.data:$it"
     }

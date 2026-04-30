@@ -42,6 +42,7 @@ class GrailsDependencyVersions implements DependencyManagement {
     protected Map<String, String> artifactToGroupAndArtifact = [:]
     protected List<Dependency> dependencies = []
     protected Map<String, String> versionProperties = [:]
+    private GrapeEngine grapeEngine
 
     GrailsDependencyVersions() {
         this(getDefaultEngine())
@@ -56,6 +57,7 @@ class GrailsDependencyVersions implements DependencyManagement {
     }
 
     GrailsDependencyVersions(GrapeEngine grape, Map<String, String> bomCoords) {
+        this.grapeEngine = grape
         def results = grape.resolve(null, bomCoords)
 
         for (URI u in results) {
@@ -82,7 +84,34 @@ class GrailsDependencyVersions implements DependencyManagement {
     void addDependencyManagement(GPathResult pom) {
         versionProperties = pom.properties.'*'.collectEntries { [(it.name()): it.text()] }
         pom.dependencyManagement.dependencies.dependency.each { dep ->
-            addDependency(dep.groupId.text(), dep.artifactId.text(), versionLookup(dep.version.text()))
+            String groupId = dep.groupId.text()
+            String artifactId = dep.artifactId.text()
+            String version = versionLookup(dep.version.text())
+            String scope = dep.scope.text()
+            String type = dep.type.text()
+
+            // Recursively resolve imported BOMs to pick up their managed dependencies
+            if (scope == 'import' || type == 'pom') {
+                resolveImportedBom(groupId, artifactId, version)
+            } else {
+                addDependency(groupId, artifactId, version)
+            }
+        }
+    }
+
+    @CompileDynamic
+    private void resolveImportedBom(String groupId, String artifactId, String version) {
+        if (grapeEngine == null) {
+            return
+        }
+        try {
+            def results = grapeEngine.resolve(null, [group: groupId, module: artifactId, version: version, type: 'pom'])
+            for (URI u in results) {
+                def importedPom = new XmlSlurper().parseText(u.toURL().text)
+                addDependencyManagement(importedPom)
+            }
+        } catch (Exception e) {
+            // If the imported BOM cannot be resolved, skip it
         }
     }
 
