@@ -93,7 +93,7 @@ dependencies {
                 continue
             }
 
-            boolean publishedProject = subproject.pluginManager.hasPlugin('org.apache.grails.gradle.grails-publish-profile') || subproject.pluginManager.hasPlugin('org.apache.grails.gradle.grails-publish')
+            boolean publishedProject = subproject.pluginManager.hasPlugin('org.apache.grails.gradle.grails-publish-profile') || subproject.pluginManager.hasPlugin('org.apache.grails.gradle.grails-publish') || subproject.pluginManager.hasPlugin('org.apache.grails.gradle.grails-profile')
             if (!publishedProject) {
                 continue
             }

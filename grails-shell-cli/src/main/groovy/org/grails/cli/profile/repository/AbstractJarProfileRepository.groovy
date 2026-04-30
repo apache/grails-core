@@ -23,6 +23,7 @@ import groovy.transform.CompileStatic
 import org.eclipse.aether.artifact.Artifact
 import org.eclipse.aether.artifact.DefaultArtifact
 
+import grails.util.Environment
 import org.grails.cli.GrailsCli
 import org.grails.cli.profile.AbstractProfile
 import org.grails.cli.profile.Command
@@ -81,14 +82,28 @@ abstract class AbstractJarProfileRepository implements ProfileRepository {
         }
 
         String groupId = DEFAULT_PROFILE_GROUPID
-        String version = null
+        // Default to the running Grails version. Profiles are released in lock-step with
+        // grails-core since the move to the apache/grails-core monorepo, so the CLI version
+        // is the correct profile version. This guarantees resolution succeeds even when the
+        // BOM declared in dependency management does not list the profile coordinates (e.g.
+        // when GRAILS_REPO_URL points at an Apache staging repository before promotion, or
+        // any repository whose BOM omits org.apache.grails.profiles entries). The Aether
+        // resolver in MavenResolverGrapeEngine still falls back to the BOM-managed version
+        // only when the requested version is null, so we override that path here.
+        String version = Environment.grailsVersion
 
         Map<String, Map> defaultValues = GrailsCli.getSetting('grails.profiles', Map, [:])
         defaultValues.remove('repositories')
         def data = defaultValues.get(profileName)
         if (data instanceof Map) {
-            groupId = data.get('groupId')
-            version = data.get('version')
+            String configuredGroupId = data.get('groupId') as String
+            if (configuredGroupId) {
+                groupId = configuredGroupId
+            }
+            String configuredVersion = data.get('version') as String
+            if (configuredVersion) {
+                version = configuredVersion
+            }
         }
 
         return new DefaultArtifact(groupId, profileName, null, version)
