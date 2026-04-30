@@ -56,8 +56,11 @@ class GrailsDependencyVersions implements DependencyManagement {
         this(grape, [group: 'org.apache.grails', module: 'grails-bom', version: Environment.grailsVersion, type: 'pom'])
     }
 
-    GrailsDependencyVersions(GrapeEngine grape, Map<String, String> bomCoords) {
+    GrailsDependencyVersions(GrapeEngine grape, Map bomCoords) {
         this.grapeEngine = grape
+        if (!bomCoords.containsKey('transitive')) {
+            bomCoords.put('transitive', false)
+        }
         def results = grape.resolve(null, bomCoords)
 
         for (URI u in results) {
@@ -106,7 +109,7 @@ class GrailsDependencyVersions implements DependencyManagement {
             return
         }
         try {
-            def results = grapeEngine.resolve(null, [group: groupId, module: artifactId, version: version, type: 'pom'])
+            def results = grapeEngine.resolve(null, [group: groupId, module: artifactId, version: version, type: 'pom', transitive: false])
             for (URI u in results) {
                 def importedPom = new XmlSlurper().parseText(u.toURL().text)
                 addDependencyManagement(importedPom)
