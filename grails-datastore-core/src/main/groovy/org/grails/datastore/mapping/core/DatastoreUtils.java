@@ -423,7 +423,9 @@ public abstract class DatastoreUtils {
      * @return the session (for method chaining)
      */
     public static Session bindSession(final Session session, Object creator) {
-        TransactionSynchronizationManager.bindResource(session.getDatastore(), new SessionHolder(session, creator));
+        if (!TransactionSynchronizationManager.hasResource(session.getDatastore())) {
+            TransactionSynchronizationManager.bindResource(session.getDatastore(), new SessionHolder(session, creator));
+        }
         return session;
     }
 

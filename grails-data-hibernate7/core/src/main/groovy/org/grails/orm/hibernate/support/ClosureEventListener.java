@@ -112,8 +112,12 @@ public class ClosureEventListener
     private final boolean failOnErrorEnabled;
     private final Map validateParams;
 
+    private final transient org.grails.orm.hibernate.HibernateDatastore hibernateDatastore;
+
     public ClosureEventListener(
+            org.grails.orm.hibernate.HibernateDatastore hibernateDatastore,
             GrailsHibernatePersistentEntity persistentEntity, boolean failOnError, List failOnErrorPackages) {
+        this.hibernateDatastore = hibernateDatastore;
         this.persistentEntity = persistentEntity;
         Class domainClazz = persistentEntity.getJavaClass();
         this.domainMetaClass = GroovySystem.getMetaClassRegistry().getMetaClass(domainClazz);
@@ -240,14 +244,22 @@ public class ClosureEventListener
 
     protected boolean doValidate(Object entity) {
         GormValidateable validateable = (GormValidateable) entity;
-        if (!validateable.shouldSkipValidation() && !validateable.validate(validateParams)) {
-            if (failOnErrorEnabled) {
-                throw ValidationException.newInstance(
-                        "Validation error whilst flushing entity [" +
-                                entity.getClass().getName() + "]",
-                        validateable.getErrors());
+        if (!validateable.shouldSkipValidation()) {
+            String qualifier = org.grails.datastore.mapping.core.connections.ConnectionSource.DEFAULT;
+            if (hibernateDatastore != null) {
+                qualifier = hibernateDatastore.getConnectionSources().getDefaultConnectionSource().getName();
             }
-            return true;
+            org.grails.datastore.gorm.GormValidationApi validationApi = org.grails.datastore.gorm.GormEnhancer.findValidationApi(entity.getClass(), qualifier);
+            
+            if (validationApi != null && !validationApi.validate(entity, validateParams)) {
+                if (failOnErrorEnabled) {
+                    throw org.grails.datastore.mapping.validation.ValidationException.newInstance(
+                            "Validation error whilst flushing entity [" +
+                                    entity.getClass().getName() + "]",
+                            validateable.getErrors());
+                }
+                return true;
+            }
         }
         return false;
     }

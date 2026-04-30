@@ -284,4 +284,6 @@ Please see the page of the [ASF Security Team](https://www.apache.org/security/)
 - **Spock 2.3 Docs**: https://spockframework.org/spock/docs/2.3/all_in_one.html
 - **GORM Docs**: https://grails.apache.org/docs/latest/grails-data/
 - **Issues**: https://github.com/apache/grails-core/issues
-- **Slack**: https://grails.slack.com
+
+## Agent Commit Policy
+When committing changes assisted by an AI agent, you MUST include a note in the commit message stating that the agent acted as a collaborator and that the user (borinquenkid) is the primary author and remains responsible for the changes. Do not present the agent as the sole author of the code.

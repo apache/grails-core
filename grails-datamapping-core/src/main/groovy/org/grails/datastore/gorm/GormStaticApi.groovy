@@ -101,7 +101,11 @@ class GormStaticApi<D> extends AbstractGormApi<D> implements GormAllOperations<D
         DatastoreResolver resolver = new DatastoreResolver() {
             @Override Datastore resolve() { GormEnhancer.findDatastore(persistentClass, qualifier) }
         }
-        return new GormStaticApi<D>(persistentClass, getDatastore().mappingContext, finders, resolver, qualifier)
+        createStaticApi(persistentClass, getDatastore().mappingContext, finders, resolver, qualifier)
+    }
+
+    protected GormStaticApi<D> createStaticApi(Class<D> persistentClass, MappingContext mappingContext, List<FinderMethod> finders, DatastoreResolver resolver, String qualifier) {
+        new GormStaticApi<D>(persistentClass, mappingContext, finders, resolver, qualifier)
     }
 
     @Override
@@ -288,7 +292,9 @@ class GormStaticApi<D> extends AbstractGormApi<D> implements GormAllOperations<D
     @Override
     List<D> list(Map params) {
         execute({ Session session ->
-            session.createQuery(persistentClass).list(params)
+            org.grails.datastore.mapping.query.Query q = session.createQuery(persistentClass)
+            org.grails.datastore.gorm.finders.DynamicFinder.populateArgumentsForCriteria(persistentClass, q, params)
+            q.list()
         } as SessionCallback<List<D>>)
     }
 

@@ -39,14 +39,17 @@ import org.hibernate.query.NativeQuery
 class HibernateGormStaticApi<D> extends GormStaticApi<D> {
 
     protected GrailsHibernateTemplate hibernateTemplate
+    protected final ClassLoader classLoader
 
     HibernateGormStaticApi(Class<D> persistentClass, HibernateDatastore datastore, List<FinderMethod> finders, DatastoreResolver datastoreResolver, String qualifier, ClassLoader classLoader) {
         super(persistentClass, datastore.mappingContext, finders, datastoreResolver, qualifier)
         this.hibernateTemplate = new GrailsHibernateTemplate(datastore.sessionFactory, datastore)
+        this.classLoader = classLoader
     }
 
     HibernateGormStaticApi(Class<D> persistentClass, MappingContext mappingContext, List<FinderMethod> finders, DatastoreResolver datastoreResolver, String qualifier, ClassLoader classLoader) {
         super(persistentClass, mappingContext, finders, datastoreResolver, qualifier)
+        this.classLoader = classLoader
     }
 
     protected GrailsHibernateTemplate getHibernateTemplate() {
@@ -60,19 +63,45 @@ class HibernateGormStaticApi<D> extends GormStaticApi<D> {
     @Override
     def <T> T withNewSession(Closure<T> callable) {
         HibernateDatastore hibernateDatastore = (HibernateDatastore) datastore
-        hibernateDatastore.withNewSession(callable)
+        hibernateDatastore.withNewSession { session ->
+            callable.call(((HibernateSession)session).getNativeSession())
+        }
     }
 
     @Override
     def <T> T withSession(Closure<T> callable) {
         HibernateDatastore hibernateDatastore = (HibernateDatastore) datastore
-        hibernateDatastore.withSession(callable)
+        hibernateDatastore.withSession { session ->
+            callable.call(((HibernateSession)session).getNativeSession())
+        }
+    }
+
+    @Override
+    def <T1> T1 withDatastoreSession(Closure<T1> callable) {
+        HibernateDatastore hibernateDatastore = (HibernateDatastore) datastore
+        hibernateDatastore.withSession { session ->
+            callable.call(session)
+        }
     }
 
     @Override
     def <T> T withNewSession(Serializable tenantId, Closure<T> callable) {
-        HibernateDatastore hibernateDatastore = (HibernateDatastore) datastore
-        hibernateDatastore.withNewSession(tenantId, callable)
+        HibernateDatastore hibernateDatastore = (HibernateDatastore) ((org.grails.datastore.mapping.multitenancy.MultiTenantCapableDatastore)datastore).getDatastoreForTenantId(tenantId)
+        hibernateDatastore.withNewSession { session ->
+            callable.call(((HibernateSession)session).getNativeSession())
+        }
+    }
+
+    @Override
+    protected GormStaticApi<D> createStaticApi(Class<D> persistentClass, org.grails.datastore.mapping.model.MappingContext mappingContext, List<org.grails.datastore.gorm.finders.FinderMethod> finders, org.grails.datastore.gorm.DatastoreResolver resolver, String qualifier) {
+        new HibernateGormStaticApi<D>(
+                persistentClass,
+                mappingContext,
+                finders,
+                resolver,
+                qualifier,
+                classLoader
+        )
     }
 
     /**

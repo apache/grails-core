@@ -738,7 +738,7 @@ class GormEnhancer implements Closeable {
                 return api.invokeMethod(name, args)
             } catch (MissingMethodException mme) {
                 if (mme.method == name && mme.type == api.class) {
-                    return api.methodMissing(name, args)
+                    return api.methodMissing(delegate, name, args)
                 }
                 throw mme
             }
@@ -749,7 +749,7 @@ class GormEnhancer implements Closeable {
                 return api.getProperty(name)
             } catch (MissingPropertyException mpe) {
                 if (mpe.property == name && mpe.type == api.class) {
-                    return api.propertyMissing(name)
+                    return api.propertyMissing(delegate, name)
                 }
                 throw mpe
             }

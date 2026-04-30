@@ -28,6 +28,8 @@ import org.grails.orm.hibernate.support.hibernate7.HibernateTransactionManager
 import org.grails.orm.hibernate.support.hibernate7.SessionHolder
 import org.springframework.transaction.TransactionDefinition
 import org.springframework.transaction.support.TransactionSynchronizationManager
+import org.springframework.transaction.support.DefaultTransactionStatus
+import org.grails.datastore.mapping.core.Datastore
 
 /**
  * Extends the standard class to always set the flush mode to manual when in a read-only transaction.
@@ -39,6 +41,7 @@ import org.springframework.transaction.support.TransactionSynchronizationManager
 class GrailsHibernateTransactionManager extends HibernateTransactionManager {
 
     final FlushMode defaultFlushMode
+    Datastore datastore
 
     GrailsHibernateTransactionManager(SessionFactory sessionFactory, DataSource dataSource, FlushMode defaultFlushMode = FlushMode.AUTO) {
         super(sessionFactory)
@@ -51,20 +54,22 @@ class GrailsHibernateTransactionManager extends HibernateTransactionManager {
     @Override
     protected void doBegin(Object transaction, TransactionDefinition definition) {
         super.doBegin transaction, definition
-
-        if (definition.isReadOnly()) {
-            // transaction is HibernateTransactionManager.HibernateTransactionObject private class instance
-            // always set to manual; the base class doesn't because the OSIV has already registered a session
-
-            SessionHolder holder = (SessionHolder) TransactionSynchronizationManager.getResource(sessionFactory)
-            if (holder != null) {
+        
+        SessionHolder holder = (SessionHolder) TransactionSynchronizationManager.getResource(sessionFactory)
+        if (holder != null) {
+            if (definition.isReadOnly()) {
                 holder.session.setHibernateFlushMode(FlushMode.MANUAL)
-            }
-        } else if (defaultFlushMode != FlushMode.AUTO) {
-            SessionHolder holder = (SessionHolder) TransactionSynchronizationManager.getResource(sessionFactory)
-            if (holder != null) {
+            } else if (defaultFlushMode != FlushMode.AUTO) {
                 holder.session.setHibernateFlushMode(defaultFlushMode)
             }
+            if (datastore != null && !TransactionSynchronizationManager.hasResource(datastore)) {
+                TransactionSynchronizationManager.bindResource(datastore, holder)
+            }
         }
+    }
+
+    @Override
+    protected void doCleanupAfterCompletion(Object transaction) {
+        super.doCleanupAfterCompletion(transaction)
     }
 }

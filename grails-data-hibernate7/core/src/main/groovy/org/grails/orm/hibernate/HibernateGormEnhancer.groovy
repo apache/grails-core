@@ -24,6 +24,7 @@ import org.grails.datastore.gorm.GormInstanceApi
 import org.grails.datastore.gorm.GormStaticApi
 import org.grails.datastore.gorm.GormValidationApi
 import org.grails.datastore.mapping.core.Datastore
+import org.grails.datastore.mapping.core.connections.ConnectionSource
 import org.grails.datastore.mapping.core.connections.ConnectionSourceSettings
 import org.springframework.transaction.PlatformTransactionManager
 
@@ -43,10 +44,13 @@ class HibernateGormEnhancer extends GormEnhancer {
     @Override
     protected <D> GormStaticApi<D> getStaticApi(Class<D> cls, org.grails.datastore.gorm.DatastoreResolver resolver, String qualifier) {
         HibernateDatastore hibernateDatastore = (HibernateDatastore) datastore
+        if (qualifier != null && ConnectionSource.DEFAULT != qualifier) {
+            hibernateDatastore = (HibernateDatastore) hibernateDatastore.getDatastoreForConnection(qualifier)
+        }
         new HibernateGormStaticApi<D>(
                 cls,
                 hibernateDatastore.mappingContext,
-                createDynamicFinders(hibernateDatastore),
+                createDynamicFinders(resolver, hibernateDatastore.mappingContext),
                 resolver,
                 qualifier,
                 hibernateDatastore.mappingContext.getMappingFactory().getClass().getClassLoader()

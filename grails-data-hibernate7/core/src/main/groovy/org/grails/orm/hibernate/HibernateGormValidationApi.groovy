@@ -71,6 +71,15 @@ class HibernateGormValidationApi<D> extends GormValidationApi<D> {
         this.classLoader = classLoader
     }
 
+    @Override
+    GormValidationApi<D> forQualifier(String qualifier) {
+        if (!hasDatastore) return this
+        org.grails.datastore.gorm.DatastoreResolver resolver = new org.grails.datastore.gorm.DatastoreResolver() {
+            @Override org.grails.datastore.mapping.core.Datastore resolve() { org.grails.datastore.gorm.GormEnhancer.findDatastore(persistentClass, qualifier) }
+        }
+        return new HibernateGormValidationApi<D>(persistentClass, mappingContext, resolver, classLoader)
+    }
+
     protected HibernateDatastore getHibernateDatastore() {
         (HibernateDatastore) getDatastore()
     }

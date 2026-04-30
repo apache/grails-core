@@ -148,6 +148,9 @@ public class GrailsHibernateUtil extends HibernateRuntimeUtils {
      */
     @SuppressWarnings({"PMD.CloseResource", "PMD.DataflowAnomalyAnalysis"})
     public static void setObjectToReadWrite(final Object target, SessionFactory sessionFactory) {
+        if (target == null || sessionFactory == null) {
+            return;
+        }
         Session session = sessionFactory.getCurrentSession();
         if (!canModifyReadWriteState(session, target)) {
             return;
