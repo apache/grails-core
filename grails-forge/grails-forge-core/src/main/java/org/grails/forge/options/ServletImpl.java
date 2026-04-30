@@ -27,20 +27,28 @@ import io.micronaut.core.annotation.NonNull;
  * @since 6.0.0
  */
 public enum ServletImpl {
-    NONE("NONE"),
-    TOMCAT("spring-boot-starter-tomcat"),
-    JETTY("spring-boot-starter-jetty"),
-    UNDERTOW("spring-boot-starter-undertow");
+
+    TOMCAT("spring-boot-starter-tomcat", "Tomcat"),
+    JETTY("spring-boot-starter-jetty", "Jetty"),
+    UNDERTOW("spring-boot-starter-undertow", "Undertow"),
+    NONE("NONE", "None");
 
     public static final ServletImpl DEFAULT_OPTION = TOMCAT;
     private final String featureName;
+    private final String label;
 
-    ServletImpl(String featureName) {
+    ServletImpl(String featureName, String label) {
         this.featureName = featureName;
+        this.label = label;
     }
 
     @NonNull
     public String getName() {
         return featureName;
+    }
+
+    @NonNull
+    public String getLabel() {
+        return label;
     }
 }

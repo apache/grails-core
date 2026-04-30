@@ -18,6 +18,7 @@
  */
 package org.grails.forge.feature.view;
 
+import io.micronaut.core.annotation.NonNull;
 import jakarta.inject.Singleton;
 import org.grails.forge.application.ApplicationType;
 import org.grails.forge.application.generator.GeneratorContext;
@@ -51,12 +52,21 @@ public class GrailsGsp implements DefaultFeature {
 
     @Override
     public String getTitle() {
-        return "Grails GSP";
+        return "GSP";
     }
 
+    @NonNull
     @Override
     public String getName() {
-        return "grails-gsp";
+        return "gsp";
+    }
+
+    @NonNull
+    @Override
+    public String getDescription() {
+        return "GSP (Groovy Server Pages) is the server-side view technology used in Grails. " +
+            "It is designed to be familiar to developers with experience in ASP or JSP, while providing " +
+            "a more flexible, expressive, and intuitive way to build web pages.";
     }
 
     @Override
@@ -79,7 +89,6 @@ public class GrailsGsp implements DefaultFeature {
     @Override
     public void apply(GeneratorContext generatorContext) {
         final Map<String, Object> config = generatorContext.getConfiguration();
-        config.put("grails.mime.disable.accept.header.userAgents", Arrays.asList("Gecko", "WebKit", "Presto", "Trident"));
         config.put("grails.mime.types.all", "*/*");
         config.put("grails.mime.types.atom", "application/atom+xml");
         config.put("grails.mime.types.css", "text/css");
@@ -96,10 +105,7 @@ public class GrailsGsp implements DefaultFeature {
         config.put("grails.mime.types.xml", Arrays.asList("text/xml", "application/xml"));
         config.put("grails.views.gsp.encoding", "UTF-8");
         config.put("grails.views.gsp.htmlcodec", "xml");
-        config.put("grails.views.gsp.codecs.expression", "html");
         config.put("grails.views.gsp.codecs.scriptlet", "html");
-        config.put("grails.views.gsp.codecs.taglib", "none");
-        config.put("grails.views.gsp.codecs.staticparts", "none");
         generatorContext.addDependency(Dependency.builder()
                 .groupId("org.apache.grails")
                 .artifactId("grails-gsp")

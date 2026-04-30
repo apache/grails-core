@@ -33,6 +33,15 @@ import java.util.stream.Collectors;
  */
 public class GrailsVersion implements Comparable<GrailsVersion> {
 
+    /** Environment variable honoured outside a Grails project to pin the wrapper to a specific version. */
+    public static final String PREFERRED_GRAILS_VERSION_ENV = "PREFERRED_GRAILS_VERSION";
+
+    /** Environment variable used to restrict which release types the wrapper will resolve (e.g. {@code SNAPSHOT,RC}). */
+    public static final String GRAILS_WRAPPER_ALLOWED_TYPES_ENV = "GRAILS_WRAPPER_ALLOWED_TYPES";
+
+    /** Property key read from {@code gradle.properties} to pin the wrapper to a specific version inside a project. */
+    public static final String GRAILS_VERSION_PROPERTY = "grailsVersion";
+
     private static final Pattern VERSION_PATTERN = Pattern.compile("^(\\d+)[.](\\d+)[.](\\d+)-?(.*)$");
 
     private static final Pattern RC = Pattern.compile("^RC(\\d+)$");
@@ -86,7 +95,7 @@ public class GrailsVersion implements Comparable<GrailsVersion> {
     }
 
     public static LinkedHashSet<GrailsReleaseType> getAllowedReleaseTypes(GrailsVersion preferredVersion, GrailsWrapper wrapper) {
-        String raw = System.getenv("GRAILS_WRAPPER_ALLOWED_TYPES");
+        String raw = System.getenv(GRAILS_WRAPPER_ALLOWED_TYPES_ENV);
         if (raw == null || raw.trim().isEmpty()) {
             if (preferredVersion != null) {
                 //inside a grails project pull the equivalent version type or newer
@@ -116,15 +125,63 @@ public class GrailsVersion implements Comparable<GrailsVersion> {
                 try {
                     return GrailsReleaseType.valueOf(input);
                 } catch (Exception e) {
-                    throw new IllegalStateException("Invalid Value in GRAILS_WRAPPER_ALLOWED_TYPES: " + input);
+                    throw new IllegalStateException("Invalid Value in " + GRAILS_WRAPPER_ALLOWED_TYPES_ENV + ": " + input);
                 }
             })
             .collect(Collectors.toCollection(LinkedHashSet::new));
     }
 
     public static GrailsVersion getPreferredGrailsVersion() {
-        // Check for a properties file in case inside a grails project
-        File gradleProperties = new File("gradle.properties");
+        return getPreferredGrailsVersion(new File("gradle.properties"));
+    }
+
+    /**
+     * Determine the preferred Grails version.
+     *
+     * <p>Precedence matches the documented behaviour in the wrapper README:
+     * <ol>
+     *   <li>Inside a Grails project (a {@code gradle.properties} containing a
+     *       {@code grailsVersion} key with a non-blank value), use that value
+     *       and ignore environment variables. A present-but-blank value or an
+     *       unparseable version is treated as a project misconfiguration and
+     *       exits the process.</li>
+     *   <li>Outside a Grails project (no {@code gradle.properties}, or one
+     *       without {@code grailsVersion}), honour the
+     *       {@code PREFERRED_GRAILS_VERSION} environment variable. A
+     *       whitespace-only value is treated as unset.</li>
+     *   <li>Otherwise return {@code null} and let the wrapper resolve the
+     *       latest version from Maven metadata.</li>
+     * </ol>
+     *
+     * @param gradleProperties the properties file to inspect; exposed as a
+     *                         parameter for testability
+     * @return the pinned {@link GrailsVersion} or {@code null} if none was
+     *         specified
+     */
+    static GrailsVersion getPreferredGrailsVersion(File gradleProperties) {
+        GrailsVersion fromProperties = readVersionFromProperties(gradleProperties);
+        if (fromProperties != null) {
+            // Inside a Grails project: gradle.properties wins and the env var is intentionally ignored per the wrapper README.
+            return fromProperties;
+        }
+
+        String overrideGrailsVersion = System.getenv(PREFERRED_GRAILS_VERSION_ENV);
+        if (overrideGrailsVersion == null || (overrideGrailsVersion = overrideGrailsVersion.trim()).isEmpty()) {
+            return null;
+        }
+
+        try {
+            return new GrailsVersion(overrideGrailsVersion);
+        } catch (Exception e) {
+            System.out.println("An invalid Grails Version [" + overrideGrailsVersion + "] was specified in " + PREFERRED_GRAILS_VERSION_ENV);
+            e.printStackTrace();
+            System.exit(1);
+        }
+
+        return null;
+    }
+
+    private static GrailsVersion readVersionFromProperties(File gradleProperties) {
         if (!gradleProperties.exists()) {
             return null;
         }
@@ -138,25 +195,14 @@ public class GrailsVersion implements Comparable<GrailsVersion> {
             System.exit(1);
         }
 
-        if (!properties.containsKey("grailsVersion")) {
+        String grailsVersion = properties.getProperty(GRAILS_VERSION_PROPERTY);
+        if (grailsVersion == null) {
             return null;
         }
-
-        String grailsVersion = properties.getProperty("grailsVersion");
-        if (grailsVersion == null) {
-            String overrideGrailsVersion = System.getenv("PREFERRED_GRAILS_VERSION");
-            if (overrideGrailsVersion != null) {
-                try {
-                    return new GrailsVersion(overrideGrailsVersion);
-                } catch (Exception e) {
-                    System.out.println("An invalid Grails Version [" + overrideGrailsVersion + "] was specified in PREFERRED_GRAILS_VERSION");
-                    e.printStackTrace();
-                    System.exit(1);
-                }
-            }
-
-            System.out.println("gradle.properties does not contain grailsVersion; assuming latest Grails Version");
-            return null;
+        grailsVersion = grailsVersion.trim();
+        if (grailsVersion.isEmpty()) {
+            System.out.println("A blank Grails Version was specified in gradle.properties for key [" + GRAILS_VERSION_PROPERTY + "]");
+            System.exit(1);
         }
 
         try {

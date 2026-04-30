@@ -42,6 +42,7 @@ import org.gradle.api.artifacts.Configuration
 import org.gradle.api.artifacts.Dependency
 import org.gradle.api.artifacts.DependencyResolveDetails
 import org.gradle.api.artifacts.DependencySet
+import org.gradle.api.artifacts.ModuleDependency
 import org.gradle.api.attributes.AttributeMatchingStrategy
 import org.gradle.api.file.DuplicatesStrategy
 import org.gradle.api.file.FileCollection
@@ -436,22 +437,11 @@ ${importStatements}
 
             project.logger.lifecycle('Micronaut Support Detected for {}', project.name)
 
-            final String micronautPlatformVersion = project.properties['micronautPlatformVersion']
-            if (!micronautPlatformVersion) {
-                throw new GradleException('`micronautPlatformVersion` property must be set to use the Grails Micronaut plugin.')
-            }
-
-            // grails-micronaut exports the platform, but force the version to the user specified version
-            project.configurations.configureEach { Configuration configuration ->
-                configuration.resolutionStrategy.eachDependency { DependencyResolveDetails details ->
-                    String dependencyName = details.requested.name
-                    String group = details.requested.group
-                    if (group == 'io.micronaut.platform' && dependencyName.startsWith('micronaut-platform')) {
-                        project.logger.info('Forcing Micronaut Platform version to {}', micronautPlatformVersion)
-                        details.useVersion(micronautPlatformVersion)
-                    }
-                }
-            }
+            // Validate that grails-micronaut-bom is applied as enforcedPlatform. The BOM is now the
+            // single source of truth for the Micronaut platform version: applying it as
+            // enforcedPlatform pins io.micronaut.platform:micronaut-platform with a strict
+            // constraint that no transitive can override.
+            validateMicronautBom(project)
 
             project.logger.info('Configuring CLASSIC boot loader for Micronaut compatibility in {}', project.name)
             project.tasks.withType(BootArchive).configureEach {
@@ -459,6 +449,39 @@ ${importStatements}
             }
 
         }
+    }
+
+    /**
+     * Validates that grails-micronaut-bom is applied as an enforcedPlatform when micronaut is used.
+     * The grails-micronaut-bom layers Micronaut-specific overrides (e.g. javaparser-core) on top
+     * of grails-bom; without enforcedPlatform, Micronaut's platform would override these versions
+     * via Gradle's conflict resolution. Regular Grails projects (without Micronaut) should continue
+     * to use the spring-managed versions via plain platform(:grails-bom).
+     */
+    @CompileStatic
+    protected static void validateMicronautBom(Project project) {
+        Configuration implConfig = project.configurations.findByName('implementation')
+        if (implConfig == null) {
+            return
+        }
+
+        for (Dependency dep : implConfig.dependencies) {
+            if (dep.name == 'grails-micronaut-bom' && dep instanceof ModuleDependency) {
+                Object categoryAttr = ((ModuleDependency) dep).attributes.getAttribute(
+                        org.gradle.api.attributes.Category.CATEGORY_ATTRIBUTE
+                )
+                if (categoryAttr != null && categoryAttr.toString() == org.gradle.api.attributes.Category.ENFORCED_PLATFORM) {
+                    return // correctly configured
+                }
+            }
+        }
+
+        throw new GradleException(
+                "Project '${project.name}' uses Micronaut but does not apply grails-micronaut-bom as an enforcedPlatform. " +
+                        "Micronaut's platform declares higher versions of javaparser-core and other libraries that would " +
+                        'override the grails-bom versions via conflict resolution. Change to:\n\n' +
+                        '    implementation enforcedPlatform(project(\':grails-micronaut-bom\'))\n'
+        )
     }
 
     @CompileStatic

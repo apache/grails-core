@@ -1,0 +1,40 @@
+{
+    "groups": [
+        {
+            "name": "grails.databinding",
+            "description": "Data Binding"
+        }
+    ],
+    "properties": [
+        {
+            "name": "grails.databinding.trimStrings",
+            "type": "java.lang.Boolean",
+            "description": "Whether to trim whitespace from String values during data binding.",
+            "defaultValue": true
+        },
+        {
+            "name": "grails.databinding.convertEmptyStringsToNull",
+            "type": "java.lang.Boolean",
+            "description": "Whether empty String values are converted to null during data binding.",
+            "defaultValue": true
+        },
+        {
+            "name": "grails.databinding.autoGrowCollectionLimit",
+            "type": "java.lang.Integer",
+            "description": "The maximum size to which indexed collections can auto-grow during data binding.",
+            "defaultValue": 256
+        },
+        {
+            "name": "grails.databinding.dateFormats",
+            "type": "java.util.List<java.lang.String>",
+            "description": "List of date format strings used to parse date values during data binding.",
+            "defaultValue": ["yyyy-MM-dd HH:mm:ss.S", "yyyy-MM-dd'T'HH:mm:ss'Z'", "yyyy-MM-dd HH:mm:ss.S z", "yyyy-MM-dd'T'HH:mm:ssX"]
+        },
+        {
+            "name": "grails.databinding.dateParsingLenient",
+            "type": "java.lang.Boolean",
+            "description": "Whether date parsing is lenient (accepting invalid dates like Feb 30).",
+            "defaultValue": false
+        }
+    ]
+}
