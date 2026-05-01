@@ -45,10 +45,23 @@ public class HibernateSessionResolver implements SessionResolver<Session> {
 
     @Override
     public Session resolve() {
-        Object resource = TransactionSynchronizationManager.getResource(sessionFactory)
-        if (resource instanceof SessionHolder) {
-            return new HibernateSession(datastore, sessionFactory) // Wraps current session
+        // 1. Try to find a GORM session bound to the datastore
+        Object resource = TransactionSynchronizationManager.getResource(datastore)
+        if (resource instanceof org.grails.datastore.mapping.transactions.SessionHolder) {
+            return ((org.grails.datastore.mapping.transactions.SessionHolder) resource).getSession()
         }
+
+        // 2. Fallback to native Hibernate session bound to the datastore (legacy Grails binding)
+        if (resource instanceof SessionHolder) {
+            return new HibernateSession(datastore, sessionFactory)
+        }
+
+        // 3. Fallback to native Hibernate session bound to the session factory
+        resource = TransactionSynchronizationManager.getResource(sessionFactory)
+        if (resource instanceof SessionHolder) {
+            return new HibernateSession(datastore, sessionFactory)
+        }
+        
         return null
     }
 

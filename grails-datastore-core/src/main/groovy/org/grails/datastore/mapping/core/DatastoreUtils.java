@@ -116,11 +116,15 @@ public abstract class DatastoreUtils {
 
         Assert.notNull(datastore, "No Datastore specified");
 
+        Session session = datastore.getSessionResolver().resolve();
+        if (session != null) {
+            return session;
+        }
+
         SessionHolder sessionHolder = (SessionHolder) TransactionSynchronizationManager.getResource(datastore);
 
         if (sessionHolder != null && !sessionHolder.isEmpty()) {
             // pre-bound Datastore Session
-            Session session;
             if (TransactionSynchronizationManager.isSynchronizationActive() &&
                     sessionHolder.doesNotHoldNonDefaultSession()) {
                 // Spring transaction management is active ->
@@ -150,7 +154,7 @@ public abstract class DatastoreUtils {
         if (logger.isDebugEnabled()) {
             logger.debug("Opening Datastore Session");
         }
-        Session session = datastore.connect();
+        session = datastore.connect();
 
         // Use same Session for further Datastore actions within the transaction.
         // Thread object will get removed by synchronization at transaction completion.

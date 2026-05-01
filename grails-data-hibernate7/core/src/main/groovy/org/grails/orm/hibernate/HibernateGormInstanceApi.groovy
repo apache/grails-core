@@ -18,35 +18,33 @@
  */
 package org.grails.orm.hibernate
 
+import java.util.Arrays
+import java.util.Collections
+import java.util.ArrayList
 import groovy.transform.CompileDynamic
 import groovy.transform.CompileStatic
-import groovy.transform.Generated
 import org.grails.datastore.gorm.GormInstanceApi
 import org.grails.datastore.gorm.GormValidateable
 import org.grails.datastore.mapping.engine.event.ValidationEvent
 import org.grails.datastore.mapping.core.Datastore
-import org.grails.datastore.mapping.core.connections.ConnectionSource
 import org.grails.datastore.mapping.model.MappingContext
 import org.grails.datastore.mapping.model.PersistentEntity
 import org.grails.datastore.mapping.model.config.GormProperties
-import org.grails.datastore.mapping.proxy.ProxyHandler
 import org.grails.datastore.mapping.reflect.ClassUtils
-import org.grails.orm.hibernate.cfg.HibernateMappingContext
-import org.springframework.context.ApplicationEventPublisher
-import org.springframework.transaction.PlatformTransactionManager
 import org.springframework.validation.Errors
 import org.springframework.validation.Validator
 import grails.gorm.validation.CascadingValidator
 import org.grails.datastore.gorm.DatastoreResolver
 import org.hibernate.Session
-import org.hibernate.resource.transaction.spi.TransactionStatus
 import org.hibernate.engine.spi.SessionImplementor
+import org.hibernate.engine.spi.EntityEntry
+import org.hibernate.persister.entity.EntityPersister
 import org.grails.datastore.mapping.reflect.EntityReflector
+import org.grails.datastore.mapping.dirty.checking.DirtyCheckable
 import org.grails.datastore.mapping.model.types.Association
 import org.grails.datastore.mapping.model.types.OneToMany
 import org.grails.datastore.mapping.model.types.ManyToMany
 import org.hibernate.collection.spi.PersistentCollection
-import org.hibernate.LockMode
 import jakarta.persistence.LockModeType
 import org.codehaus.groovy.runtime.InvokerHelper
 import org.grails.datastore.mapping.model.PersistentProperty
@@ -64,21 +62,23 @@ import org.grails.orm.hibernate.support.HibernateRuntimeUtils
 class HibernateGormInstanceApi<D> extends GormInstanceApi<D> {
 
     protected Class<? extends Exception> validationException
+    protected final ClassLoader classLoader
+    protected IHibernateTemplate hibernateTemplate
 
-//    HibernateGormInstanceApi(Class<D> persistentClass, HibernateDatastore datastore, ClassLoader classLoader, PlatformTransactionManager transactionManager) {
-//        super(persistentClass, datastore)
-//        this.hibernateDatastore = datastore
-//        this.hibernateTemplate = new GrailsHibernateTemplate(datastore.sessionFactory, datastore)
-//        this.proxyHandler = datastore.mappingContext.proxyHandler
-//        try {
-//            this.validationException = (Class<? extends Exception>)classLoader.loadClass("grails.validation.ValidationException")
-//        } catch (ClassNotFoundException e) {
-//            this.validationException = org.grails.datastore.mapping.validation.ValidationException
-//        }
-//    }
+    HibernateGormInstanceApi(Class<D> persistentClass, HibernateDatastore datastore, ClassLoader classLoader) {
+        super(persistentClass, datastore)
+        this.classLoader = classLoader
+        this.hibernateTemplate = (IHibernateTemplate) datastore.getHibernateTemplate()
+        try {
+            this.validationException = (Class<? extends Exception>)classLoader.loadClass("grails.validation.ValidationException")
+        } catch (ClassNotFoundException e) {
+            this.validationException = org.grails.datastore.mapping.validation.ValidationException
+        }
+    }
 
     HibernateGormInstanceApi(Class<D> persistentClass, MappingContext mappingContext, DatastoreResolver datastoreResolver, ClassLoader classLoader) {
         super(persistentClass, mappingContext, datastoreResolver)
+        this.classLoader = classLoader
         try {
             this.validationException = (Class<? extends Exception>)classLoader.loadClass("grails.validation.ValidationException")
         } catch (ClassNotFoundException e) {
@@ -90,28 +90,108 @@ class HibernateGormInstanceApi<D> extends GormInstanceApi<D> {
         return (HibernateDatastore) getDatastore()
     }
 
+    @Override
+    HibernateGormInstanceApi<D> forQualifier(String qualifier) {
+        Datastore ds = getDatastore()
+        if (ds == null) return this
+        
+        org.grails.datastore.gorm.DatastoreResolver resolver = new org.grails.datastore.gorm.DatastoreResolver() {
+            @Override Datastore resolve() { org.grails.datastore.gorm.GormEnhancer.findDatastore(persistentClass, qualifier) }
+        }
+        HibernateGormInstanceApi<D> newApi = new HibernateGormInstanceApi<D>(persistentClass, ds.mappingContext, resolver, classLoader)
+        newApi.failOnError = failOnError
+        newApi.markDirty = markDirty
+        return newApi
+    }
+
     protected IHibernateTemplate getHibernateTemplate() {
-        return (IHibernateTemplate) getHibernateDatastore().getHibernateTemplate()
+        if (this.hibernateTemplate == null) {
+            return (IHibernateTemplate) getHibernateDatastore().getHibernateTemplate()
+        }
+        return hibernateTemplate
     }
 
+    /**
+     * Checks whether a field is dirty
+     * Gets the original persisted value of a field.
+     *
+     * @param fieldName The field name
+     * @return The original persisted value
+     */
+    Object getPersistentValue(D instance, String fieldName) {
+        SessionImplementor session = (SessionImplementor) getHibernateDatastore().getSessionFactory().getCurrentSession()
+        EntityEntry entry = findEntityEntry(instance, session)
+        if (entry == null || entry.getLoadedState() == null) {
+            if (instance instanceof DirtyCheckable) {
+                return ((DirtyCheckable) instance).getOriginalValue(fieldName)
+            }
+            return null
+        }
 
-    protected boolean isAutoFlush() {
-        return getHibernateDatastore().isAutoFlush()
+        EntityPersister persister = entry.getPersister()
+        int fieldIndex = Arrays.asList(persister.getPropertyNames()).indexOf(fieldName)
+        return fieldIndex == -1 ? null : entry.getLoadedState()[fieldIndex]
+    }
+
+    protected EntityEntry findEntityEntry(D instance, SessionImplementor session) {
+        return session.getPersistenceContext().getEntry(instance)
     }
 
     @Override
-    boolean isFailOnError() {
-        return getHibernateDatastore().isFailOnError()
+    List<String> getDirtyPropertyNames(D instance) {
+        if (instance instanceof DirtyCheckable) {
+            return ((DirtyCheckable) instance).listDirtyPropertyNames()
+        }
+        SessionImplementor session = (SessionImplementor) getHibernateDatastore().getSessionFactory().getCurrentSession()
+        EntityEntry entry = findEntityEntry(instance, session)
+        if (entry == null) {
+            return Collections.emptyList()
+        }
+
+        Object[] loadedState = entry.getLoadedState()
+        if (loadedState == null) {
+            return Collections.emptyList()
+        }
+
+        EntityPersister persister = entry.getPersister()
+        Object[] values = persister.getPropertyValues(instance)
+        int[] dirtyPropertyIndexes = persister.findDirty(values, loadedState, instance, session)
+        if (dirtyPropertyIndexes == null) {
+            return Collections.emptyList()
+        }
+
+        List<String> names = new ArrayList<>()
+        String[] propertyNames = persister.getPropertyNames()
+        for (int index : dirtyPropertyIndexes) {
+            names.add(propertyNames[index])
+        }
+        return names
     }
 
     @Override
-    boolean isMarkDirty() {
-        return getHibernateDatastore().markDirty
+    boolean isDirty(D instance) {
+        if (instance instanceof DirtyCheckable) {
+            return ((DirtyCheckable) instance).hasChanged()
+        }
+        SessionImplementor session = (SessionImplementor) getHibernateDatastore().getSessionFactory().getCurrentSession()
+        EntityEntry entry = findEntityEntry(instance, session)
+        if (entry == null) {
+            return false
+        }
+
+        Object[] loadedState = entry.getLoadedState()
+        if (loadedState == null) {
+            return true // brand new
+        }
+
+        EntityPersister persister = entry.getPersister()
+        Object[] values = persister.getPropertyValues(instance)
+        int[] dirtyPropertyIndexes = persister.findDirty(values, loadedState, instance, session)
+        return dirtyPropertyIndexes != null && dirtyPropertyIndexes.length > 0
     }
 
     @Override
     D save(D target, Map arguments) {
-
         PersistentEntity domainClass = getGormPersistentEntity()
         runDeferredBinding()
         boolean shouldFlush = shouldFlush(arguments)
@@ -129,7 +209,7 @@ class HibernateGormInstanceApi<D> extends GormInstanceApi<D> {
             Errors errors = HibernateRuntimeUtils.setupErrorsProperty(target)
 
             if (validator) {
-                datastore.applicationEventPublisher?.publishEvent new ValidationEvent(datastore, target)
+                getHibernateDatastore().applicationEventPublisher?.publishEvent new ValidationEvent(getHibernateDatastore(), target)
 
                 if (validator instanceof CascadingValidator) {
                     ((CascadingValidator) validator).validate target, errors, deepValidate
@@ -150,7 +230,7 @@ class HibernateGormInstanceApi<D> extends GormInstanceApi<D> {
             }
         }
 
-        autoRetrieveAssociations datastore, domainClass, target
+        autoRetrieveAssociations getHibernateDatastore(), domainClass, target
 
         GormValidateable validateable = (GormValidateable) target
         validateable.skipValidation(true)
@@ -182,7 +262,24 @@ class HibernateGormInstanceApi<D> extends GormInstanceApi<D> {
         // no-op, handled by Hibernate
     }
 
+    protected boolean isAutoFlush() {
+        return getHibernateDatastore().isAutoFlush()
+    }
+
+    @Override
+    boolean isFailOnError() {
+        return getHibernateDatastore().isFailOnError()
+    }
+
+    @Override
+    boolean isMarkDirty() {
+        return getHibernateDatastore().markDirty
+    }
+
     protected boolean shouldFlush(Map arguments) {
+        if (arguments?.containsKey("flush")) {
+            return ClassUtils.getBooleanFromMap("flush", arguments)
+        }
         if (arguments?.containsKey(DynamicFinder.ARGUMENT_FLUSH_MODE)) {
             return ClassUtils.getBooleanFromMap(DynamicFinder.ARGUMENT_FLUSH_MODE, arguments)
         }
@@ -190,6 +287,9 @@ class HibernateGormInstanceApi<D> extends GormInstanceApi<D> {
     }
 
     protected boolean shouldValidate(Map arguments, PersistentEntity domainClass) {
+        if (arguments?.containsKey("validate")) {
+            return ClassUtils.getBooleanFromMap("validate", arguments)
+        }
         if (arguments?.containsKey(org.grails.datastore.gorm.GormValidationApi.ARGUMENT_DEEP_VALIDATE)) {
             return ClassUtils.getBooleanFromMap(org.grails.datastore.gorm.GormValidationApi.ARGUMENT_DEEP_VALIDATE, arguments)
         }
@@ -210,7 +310,7 @@ class HibernateGormInstanceApi<D> extends GormInstanceApi<D> {
 
     @Override
     void delete(D target, Map arguments) {
-        hibernateTemplate.execute { Session session ->
+        getHibernateTemplate().execute { Session session ->
             session.remove target
             if (shouldFlush(arguments)) {
                 session.flush()
@@ -220,7 +320,7 @@ class HibernateGormInstanceApi<D> extends GormInstanceApi<D> {
 
     @Override
     D attach(D target) {
-        hibernateTemplate.execute { Session session ->
+        getHibernateTemplate().execute { Session session ->
             session.lock target, LockModeType.NONE
         }
         return target
@@ -399,12 +499,12 @@ class HibernateGormInstanceApi<D> extends GormInstanceApi<D> {
 
     @CompileDynamic
     void setObjectToReadWrite(Object target) {
-        HibernateRuntimeUtils.setObjectToReadWrite(target, hibernateDatastore.sessionFactory)
+        HibernateRuntimeUtils.setObjectToReadWrite(target, getHibernateDatastore().sessionFactory)
     }
 
     @CompileDynamic
     void setObjectToReadOnly(Object target) {
-        HibernateRuntimeUtils.setObjectToReadOnly(target, hibernateDatastore.sessionFactory)
+        HibernateRuntimeUtils.setObjectToReadOnly(target, getHibernateDatastore().sessionFactory)
     }
 
     @CompileDynamic
