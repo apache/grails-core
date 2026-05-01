@@ -207,11 +207,20 @@ public class HibernateSession extends AbstractAttributeStoringSession implements
 
     @Override
     public <T> T retrieve(Class<T> type, Serializable key) {
-        return getHibernateTemplate().execute(session -> session.find(type, key));
+        return getHibernateTemplate().execute(session -> {
+            try {
+                return session.find(type, key);
+            } catch (IllegalArgumentException e) {
+                return null;
+            }
+        });
     }
 
     @Override
     public <T> T proxy(Class<T> type, Serializable key) {
+        if (key == null) {
+            return null;
+        }
         return hibernateTemplate.load(type, key);
     }
 
