@@ -73,13 +73,17 @@ buildCache {
 
 rootProject.name = 'grails.core.ROOT'
 
-// When set, the Grails-Micronaut "island" is excluded from the build graph entirely:
+// Presence-based toggle (matches project convention: skipFunctionalTests, skipCodeStyle, etc.).
+// When -PskipMicronautTests is passed (regardless of value), the Grails-Micronaut "island"
+// is excluded from the build graph entirely:
 //   * grails-micronaut (Grails plugin that re-exports the Micronaut platform)
 //   * grails-micronaut-bom (overrides Groovy/Spock to Groovy 5 / Spock 2.4-groovy-5.0)
 //   * the five grails-test-examples that consume grails-micronaut-bom
 //
 // Used by .github/workflows/groovy-joint-workflow.yml so the joint Groovy 4 snapshot
 // build does not try to compile Spock specs against a Groovy-5-only Spock artifact.
+// Consumers that reference :grails-micronaut-bom (e.g. grails-doc:generateBomDocumentation)
+// must guard those references with findProject(':grails-micronaut-bom') != null.
 // See https://github.com/apache/grails-core/issues/15613.
 def skipMicronautTests = providers.gradleProperty('skipMicronautTests').isPresent()
 
