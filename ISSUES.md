@@ -6,13 +6,39 @@
 *   **Stability**: Fixed `DatastoreUtils.bindSession` to be idempotent, preventing `IllegalStateException` during double-binding scenarios (common in TCK lifecycles).
 *   **Verification**: All core unit and integration tests are passing.
 
-## grails-data-hibernate7 (COMPLETED & VERIFIED)
-*   **Dynamic Resolution**: Implemented dynamic `DatastoreResolver` logic in `HibernateGormEnhancer` and all GORM API classes (`Static`, `Instance`, `Validation`). This ensures that operations like `count()`, `save()`, and `validate()` correctly target the active connection in multi-datasource scenarios.
-*   **Dirty Checking Stabilization**: Fixed `GrailsEntityDirtinessStrategy` by updating it to the Hibernate 7.2 `AttributeChecker` API. Corrected `shouldFlush` logic in `HibernateGormInstanceApi` to properly handle the `flush: true` argument.
-*   **Transaction Lifecycle**: Resolved a major session leak in `GrailsHibernateTransactionManager` by ensuring datastore-bound sessions are correctly unbound upon transaction completion.
-*   **Resource Management**: Updated `HibernateDatastore` and `ChildHibernateDatastore` to ensure all session factories are properly closed during destruction, enabling clean database shutdowns in TCK tests.
-*   **Visibility & Compilation**: Fixed multiple static compilation errors and expanded `HibernateTransactionObject` visibility to `public static` to support cross-module access.
-*   **Verification**: `HibernateDirtyCheckingSpec`, `DomainMultiDataSourceSpec`, and the new `HibernateTransactionManagerSpec` are all passing (100%).
+## grails-data-hibernate7 (IN PROGRESS - RUNTIME FAILURES)
+*   **Core Stabilization (COMPLETED)**:
+    *   **Dynamic Resolution**: Implemented dynamic `DatastoreResolver` logic in `HibernateGormEnhancer` and all GORM API classes (`Static`, `Instance`, `Validation`).
+    *   **Dirty Checking**: Fixed `GrailsEntityDirtinessStrategy` for Hibernate 7.2 `AttributeChecker` API.
+    *   **Transaction Lifecycle**: Resolved session leaks in `GrailsHibernateTransactionManager`.
+    *   **Resource Management**: Ensured `SessionFactory` closure in `ChildHibernateDatastore`.
+*   **Static API Stabilization (COMPLETED)**:
+    *   **Null ID Handling**: Updated `HibernateSession.proxy` and `retrieve` to safely handle null identifiers, preventing `IllegalArgumentException`.
+    *   **Recursion Fix**: Implemented a re-entrant safe `list()` in `HibernateQuery` using a `wrapping` flag. This prevents infinite recursion when creating `HibernatePagedResultList`.
+    *   **Read-Only Support**: Fixed `HibernateGormInstanceApi.read()` to explicitly set instances to read-only in the Hibernate session.
+    *   **HQL Support**: Added `HibernateHqlQuery` and implemented `executeQuery`, `executeUpdate`, `find`, and `findAll` (HQL variants) in `HibernateGormStaticApi`.
+    *   **Query by Example**: Added `populateQueryByExample` to `HibernateGormStaticApi`.
+*   **Compilation Blockers (RESOLVED)**:
+    *   **Missing Native SQL methods**: Added `findAllWithNativeSql` and `findWithNativeSql` to `HibernateGormStaticApi` (called by `HibernateEntity` trait).
+    *   **Utility Method**: Added `ClassUtils.getIntegerFromMap` in `grails-datastore-core` for type-safe integer extraction under `@CompileStatic`.
+    *   **Query list args**: Replaced `query.list(args)` with explicit `max`/`offset` extraction, then `query.list()` (H7 `Query` has no `list(Map)` overload).
+    *   **Session.getPersister routing**: Corrected `getPersister(example)` call from `session.getDatastore()` to `session` directly.
+    *   **forQualifier field access**: Removed illegal `failOnError`/`markDirty` field copies that don't exist on `GormStaticApi`.
+*   **Current Test Failures (3 open — investigated 2026-05-01)**:
+
+    ### Issue H7-1 · `withNewSession` session binding mismatch *(PRIORITY: HIGH)*
+    *   **Tests**: `HibernatePersistenceContextInterceptorSpec.test flush and clear` and `HibernateDatastoreSpringInitializerSpec.Test configure multiple data sources`
+    *   **Exception**: `org.hibernate.HibernateException: No Session found for current thread`
+    *   **Stack pivot**: `HibernateDatastore.withNewSession` (line 978) → `sessionFactory.getCurrentSession()` → `GrailsSessionContext.currentSession()`
+    *   **Root cause**: `withNewSession()` opens a new GORM session via `DatastoreUtils.executeWithNewSession`, then inside the callback tries to bind a `SessionHolder` by calling `sessionFactory.getCurrentSession()`. But `GrailsSessionContext.currentSession()` looks in `TransactionSynchronizationManager` for an existing binding — which doesn't exist yet — so it throws. The lambda tries to use `getCurrentSession()` to get the session *before* it has been registered, creating a chicken-and-egg failure.
+    *   **Fix**: Replace `sessionFactory.getCurrentSession()` with extraction of the native Hibernate `Session` from the GORM `session` callback parameter (cast to `HibernateSession`, call `getNativeInterface()`), then pass that to `new SessionHolder(nativeSession)`.
+
+    ### Issue H7-2 · H7 `SessionImpl.contains()` throws on secondary-datasource entity *(PRIORITY: MEDIUM)*
+    *   **Test**: `MultiDataSourceSessionSpec.CRUD operations work on secondary datasource with OSIV`
+    *   **Exception**: `java.lang.IllegalArgumentException: Class '...OsivBook' is not an entity class`
+    *   **Stack pivot**: `GrailsHibernateUtil.canModifyReadWriteState(session, target)` → `session.contains(target)` → `SessionImpl.assertInstanceOfEntityType()`
+    *   **Root cause**: `OsivBook` has `static mapping = { datasource 'secondary' }`. `GrailsHibernateUtil.setObjectToReadWrite()` calls `sessionFactory.getCurrentSession()` (defaulting to primary) then `session.contains(target)`. In Hibernate 5, `contains()` returned `false` for unknown entity classes. In **Hibernate 7**, `SessionImpl.contains()` calls `assertInstanceOfEntityType()` which **throws `IllegalArgumentException`** when the class is not registered in that session factory's metamodel.
+    *   **Fix**: Wrap the `session.contains(target)` call in `canModifyReadWriteState()` with a try-catch for `IllegalArgumentException` and return `false`.
 
 # Current Status (grails-data-simple)
 

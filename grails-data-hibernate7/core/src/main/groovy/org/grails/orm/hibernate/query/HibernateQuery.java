@@ -83,6 +83,7 @@ public class HibernateQuery extends Query {
     private Integer timeout;
     private QueryFlushMode flushMode;
     private Boolean readOnly;
+    private boolean wrapping = false;
 
     public HibernateQuery(HibernateSession session, GrailsHibernatePersistentEntity entity) {
         super(session, entity);
@@ -423,6 +424,18 @@ public class HibernateQuery extends Query {
 
     @Override
     public List list() {
+        if (max != null && max > 0 && !wrapping) {
+            wrapping = true;
+            try {
+                return new HibernatePagedResultList(this);
+            } finally {
+                wrapping = false;
+            }
+        }
+        return executeListInternal();
+    }
+
+    public List executeListInternal() {
         firePreQueryEvent();
         List results = executeList();
         return firePostQueryEvent(results);

@@ -360,7 +360,11 @@ class HibernateGormInstanceApi<D> extends GormInstanceApi<D> {
 
     D read(Serializable id) {
         (D) getHibernateTemplate().execute { Session session ->
-            session.get(persistentClass, id)
+            D instance = (D) session.get(persistentClass, id)
+            if (instance != null) {
+                session.setReadOnly(instance, true)
+            }
+            return instance
         }
     }
 

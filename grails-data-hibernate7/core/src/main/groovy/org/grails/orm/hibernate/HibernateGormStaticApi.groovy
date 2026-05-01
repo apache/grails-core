@@ -20,14 +20,31 @@ package org.grails.orm.hibernate
 
 import groovy.transform.CompileDynamic
 import groovy.transform.CompileStatic
-import org.grails.datastore.gorm.AbstractGormApi
+import org.grails.datastore.gorm.GormInstanceApi
 import org.grails.datastore.gorm.GormStaticApi
-import org.grails.datastore.gorm.finders.FinderMethod
-import org.grails.datastore.mapping.core.connections.ConnectionSource
+import org.grails.datastore.mapping.core.Datastore
+import org.grails.datastore.mapping.core.Session
+import org.grails.datastore.mapping.core.SessionCallback
+import org.grails.datastore.mapping.engine.EntityPersister
 import org.grails.datastore.mapping.model.MappingContext
+import org.grails.datastore.mapping.model.PersistentEntity
+import org.grails.datastore.mapping.model.types.Basic
+import org.grails.datastore.mapping.model.types.Simple
+import org.grails.datastore.mapping.query.Query
+import org.grails.datastore.mapping.query.Restrictions
+import org.grails.datastore.mapping.reflect.ClassUtils
+import org.grails.orm.hibernate.query.HibernateHqlQuery
+import org.hibernate.FlushMode
+import org.hibernate.query.QueryFlushMode
+import org.hibernate.SessionFactory
+import org.springframework.transaction.support.TransactionSynchronizationManager
 import org.grails.datastore.gorm.DatastoreResolver
-import org.hibernate.Session
-import org.hibernate.query.NativeQuery
+import org.grails.datastore.gorm.finders.FinderMethod
+import org.grails.datastore.gorm.finders.DynamicFinder
+import org.grails.orm.hibernate.support.hibernate7.SessionHolder
+import org.grails.datastore.mapping.query.event.PreQueryEvent
+import org.grails.datastore.mapping.query.event.PostQueryEvent
+import org.springframework.context.ApplicationEventPublisher
 
 /**
  * Hibernate GORM static API.
@@ -43,8 +60,12 @@ class HibernateGormStaticApi<D> extends GormStaticApi<D> {
 
     HibernateGormStaticApi(Class<D> persistentClass, HibernateDatastore datastore, List<FinderMethod> finders, DatastoreResolver datastoreResolver, String qualifier, ClassLoader classLoader) {
         super(persistentClass, datastore.mappingContext, finders, datastoreResolver, qualifier)
-        this.hibernateTemplate = new GrailsHibernateTemplate(datastore.sessionFactory, datastore)
+        this.hibernateTemplate = (GrailsHibernateTemplate) datastore.getHibernateTemplate()
         this.classLoader = classLoader
+    }
+
+    HibernateGormStaticApi(Class<D> persistentClass, HibernateDatastore datastore, List<FinderMethod> finders, ClassLoader classLoader, DatastoreResolver datastoreResolver, String qualifier) {
+        this(persistentClass, datastore, finders, datastoreResolver, qualifier, classLoader)
     }
 
     HibernateGormStaticApi(Class<D> persistentClass, MappingContext mappingContext, List<FinderMethod> finders, DatastoreResolver datastoreResolver, String qualifier, ClassLoader classLoader) {
@@ -56,12 +77,28 @@ class HibernateGormStaticApi<D> extends GormStaticApi<D> {
         (HibernateDatastore) getDatastore()
     }
 
+    String getQualifier() {
+        return this.@qualifier
+    }
+
     protected GrailsHibernateTemplate getHibernateTemplate() {
         if (this.hibernateTemplate == null) {
             HibernateDatastore datastore = getHibernateDatastore()
-            return new GrailsHibernateTemplate(datastore.sessionFactory, datastore)
+            this.hibernateTemplate = (GrailsHibernateTemplate) datastore.getHibernateTemplate()
         }
         return hibernateTemplate
+    }
+
+    @Override
+    HibernateGormStaticApi<D> forQualifier(String qualifier) {
+        Datastore ds = getDatastore()
+        if (ds == null) return this
+        
+        org.grails.datastore.gorm.DatastoreResolver resolver = new org.grails.datastore.gorm.DatastoreResolver() {
+            @Override Datastore resolve() { org.grails.datastore.gorm.GormEnhancer.findDatastore(persistentClass, qualifier) }
+        }
+        HibernateGormStaticApi<D> newApi = new HibernateGormStaticApi<D>(persistentClass, ds.mappingContext, finders, resolver, qualifier, classLoader)
+        return newApi
     }
 
     @Override
@@ -94,83 +131,285 @@ class HibernateGormStaticApi<D> extends GormStaticApi<D> {
     }
 
     @Override
-    protected GormStaticApi<D> createStaticApi(Class<D> persistentClass, org.grails.datastore.mapping.model.MappingContext mappingContext, List<org.grails.datastore.gorm.finders.FinderMethod> finders, org.grails.datastore.gorm.DatastoreResolver resolver, String qualifier) {
-        new HibernateGormStaticApi<D>(
-                persistentClass,
-                mappingContext,
-                finders,
-                resolver,
-                qualifier,
-                classLoader
-        )
+    List executeQuery(CharSequence query, Map params, Map args) {
+        def template = getHibernateTemplate()
+        return (List) template.execute { org.hibernate.Session session ->
+            org.hibernate.query.Query q = session.createQuery(query.toString())
+            template.applySettings(q)
+            populateQueryArguments(q, params)
+            populateQueryArguments(q, args)
+            populateQueryWithNamedArguments(q, params)
+
+            new HibernateHqlQuery((HibernateSession)getDatastore().currentSession, getGormPersistentEntity(), q).list()
+        }
     }
 
-    /**
-     * Finds all results for this entity for the given SQL query
-     *
-     * @param sql The SQL query
-     * @param args The arguments
-     * @return All entities matching the SQL query
-     */
-    @CompileDynamic
-    List<D> findAllWithNativeSql(CharSequence sql, Map args = Collections.emptyMap()) {
-        return (List<D>) hibernateTemplate.execute { Session session ->
-
-            List params = []
-            if (sql instanceof GString) {
-                sql = buildOrdinalParameterQueryFromGString((GString)sql, params)
-            }
-
-            NativeQuery q = (NativeQuery)session.createNativeQuery(sql.toString(), persistentClass)
-
-            hibernateTemplate.applySettings(q)
-
-            params.eachWithIndex { val, int i ->
-                i++
-                if (val instanceof CharSequence) {
-                    q.setParameter(i, val.toString())
-                }
-                else {
-                    q.setParameter(i, val)
-                }
+    @Override
+    List executeQuery(CharSequence query, Collection params, Map args) {
+        def template = getHibernateTemplate()
+        return (List) template.execute { org.hibernate.Session session ->
+            org.hibernate.query.Query q = session.createQuery(query.toString())
+            template.applySettings(q)
+            int i = 0
+            for (param in params) {
+                q.setParameter(i++, param)
             }
             populateQueryArguments(q, args)
-            return q.list()
+
+            new HibernateHqlQuery((HibernateSession)getDatastore().currentSession, getGormPersistentEntity(), q).list()
+        }
+    }
+
+    @Override
+    Integer executeUpdate(CharSequence query, Map params, Map args) {
+        def template = getHibernateTemplate()
+        return (Integer) template.execute { org.hibernate.Session session ->
+            org.hibernate.query.Query q = session.createQuery(query.toString())
+            template.applySettings(q)
+            populateQueryArguments(q, params)
+            populateQueryArguments(q, args)
+            populateQueryWithNamedArguments(q, params)
+
+            q.executeUpdate()
+        }
+    }
+
+    @Override
+    Integer executeUpdate(CharSequence query, Collection params, Map args) {
+        def template = getHibernateTemplate()
+        return (Integer) template.execute { org.hibernate.Session session ->
+            org.hibernate.query.Query q = session.createQuery(query.toString())
+            template.applySettings(q)
+            int i = 0
+            for (param in params) {
+                q.setParameter(i++, param)
+            }
+            populateQueryArguments(q, args)
+
+            q.executeUpdate()
+        }
+    }
+
+    @Override
+    D find(CharSequence query, Map params, Map args) {
+        def template = getHibernateTemplate()
+        return (D) template.execute { org.hibernate.Session session ->
+            org.hibernate.query.Query q = session.createQuery(query.toString())
+            template.applySettings(q)
+            populateQueryArguments(q, params)
+            populateQueryArguments(q, args)
+            populateQueryWithNamedArguments(q, params)
+            q.setMaxResults(1)
+
+            List results = new HibernateHqlQuery((HibernateSession)getDatastore().currentSession, getGormPersistentEntity(), q).list()
+            return results ? results[0] : null
+        }
+    }
+
+    @Override
+    D find(CharSequence query, Collection params, Map args) {
+        def template = getHibernateTemplate()
+        return (D) template.execute { org.hibernate.Session session ->
+            org.hibernate.query.Query q = session.createQuery(query.toString())
+            template.applySettings(q)
+            int i = 0
+            for (param in params) {
+                q.setParameter(i++, param)
+            }
+            populateQueryArguments(q, args)
+            q.setMaxResults(1)
+
+            List results = new HibernateHqlQuery((HibernateSession)getDatastore().currentSession, getGormPersistentEntity(), q).list()
+            return results ? results[0] : null
+        }
+    }
+
+    @Override
+    List<D> findAll(CharSequence query, Map params, Map args) {
+        def template = getHibernateTemplate()
+        return (List<D>) template.execute { org.hibernate.Session session ->
+            org.hibernate.query.Query q = session.createQuery(query.toString())
+            template.applySettings(q)
+            populateQueryArguments(q, params)
+            populateQueryArguments(q, args)
+            populateQueryWithNamedArguments(q, params)
+
+            new HibernateHqlQuery((HibernateSession)getDatastore().currentSession, getGormPersistentEntity(), q).list()
+        }
+    }
+
+    @Override
+    List<D> findAll(CharSequence query, Collection params, Map args) {
+        def template = getHibernateTemplate()
+        return (List<D>) template.execute { org.hibernate.Session session ->
+            org.hibernate.query.Query q = session.createQuery(query.toString())
+            template.applySettings(q)
+            int i = 0
+            for (param in params) {
+                q.setParameter(i++, param)
+            }
+            populateQueryArguments(q, args)
+
+            new HibernateHqlQuery((HibernateSession)getDatastore().currentSession, getGormPersistentEntity(), q).list()
+        }
+    }
+
+    @Override
+    List<D> findAll(D example, Map args) {
+        execute({ Session session ->
+            def query = session.createQuery(persistentClass)
+            populateQueryByExample(session, query, example)
+            Integer max = ClassUtils.getIntegerFromMap(DynamicFinder.ARGUMENT_MAX, args)
+            Integer offset = ClassUtils.getIntegerFromMap(DynamicFinder.ARGUMENT_OFFSET, args)
+            if (max != null) {
+                query.max(max.intValue())
+            }
+            if (offset != null) {
+                query.offset(offset.intValue())
+            }
+            query.list()
+        } as SessionCallback<List<D>>)
+    }
+
+    @Override
+    D find(D example, Map args) {
+        execute({ Session session ->
+            def query = session.createQuery(persistentClass)
+            populateQueryByExample(session, query, example)
+            query.singleResult()
+        } as SessionCallback<D>)
+    }
+
+    protected void populateQueryByExample(Session session, Query query, D example) {
+        PersistentEntity pe = getGormPersistentEntity()
+        MappingContext mappingContext = pe.mappingContext
+        def p = session.getPersister(example)
+        if (p instanceof EntityPersister) {
+            EntityPersister persister = (EntityPersister) p
+            def id = persister.getObjectIdentifier(example)
+            if (id != null) {
+                query.add(Restrictions.eq(pe.identity.name, id))
+            }
+            else {
+                def ea = mappingContext.createEntityAccess(pe, example)
+                for (prop in pe.persistentProperties) {
+                    if (prop instanceof Simple || prop instanceof Basic) {
+                        def val = ea.getProperty(prop.name)
+                        if (val != null) {
+                            query.add(Restrictions.eq(prop.name, val))
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    protected void populateQueryArguments(org.hibernate.query.Query q, Map args) {
+        if (args?.containsKey(DynamicFinder.ARGUMENT_MAX)) {
+            Integer val = ClassUtils.getIntegerFromMap(DynamicFinder.ARGUMENT_MAX, args)
+            if (val != null) {
+                q.setMaxResults(val.intValue())
+            }
+        }
+        if (args?.containsKey(DynamicFinder.ARGUMENT_OFFSET)) {
+            Integer val = ClassUtils.getIntegerFromMap(DynamicFinder.ARGUMENT_OFFSET, args)
+            if (val != null) {
+                q.setFirstResult(val.intValue())
+            }
+        }
+        if (args?.containsKey(DynamicFinder.ARGUMENT_FETCH_SIZE)) {
+            Integer val = ClassUtils.getIntegerFromMap(DynamicFinder.ARGUMENT_FETCH_SIZE, args)
+            if (val != null) {
+                q.setFetchSize(val.intValue())
+            }
+        }
+        if (args?.containsKey(DynamicFinder.ARGUMENT_TIMEOUT)) {
+            Integer val = ClassUtils.getIntegerFromMap(DynamicFinder.ARGUMENT_TIMEOUT, args)
+            if (val != null) {
+                q.setTimeout(val.intValue())
+            }
+        }
+        if (args?.containsKey(DynamicFinder.ARGUMENT_READ_ONLY)) {
+            q.setReadOnly(ClassUtils.getBooleanFromMap(DynamicFinder.ARGUMENT_READ_ONLY, args))
+        }
+    }
+
+    protected void populateQueryWithNamedArguments(org.hibernate.query.Query q, Map params) {
+        for (entry in params.entrySet()) {
+            if (entry.key instanceof String) {
+                def val = entry.value
+                if (val instanceof Collection) {
+                    q.setParameterList((String) entry.key, (Collection) val)
+                }
+                else if (val.getClass().isArray()) {
+                    q.setParameterList((String) entry.key, (Object[]) val)
+                }
+                else {
+                    q.setParameter((String) entry.key, val)
+                }
+            }
         }
     }
 
     /**
-     * Finds a single result for this entity for the given SQL query
+     * Finds all entities matching the given native SQL query.
+     * If {@code sql} is a GString, interpolated values are bound as ordinal parameters.
      *
-     * @param sql The SQL query
-     * @param args The arguments
-     * @return The entity matching the SQL query
+     * @param sql  Native SQL query, optionally a GString for safe parameter binding
+     * @param args Pagination/query settings (max, offset, readOnly, etc.)
+     * @return The matching entities
      */
     @CompileDynamic
-    D findWithNativeSql(CharSequence sql, Map args = Collections.emptyMap()) {
-        return (D) hibernateTemplate.execute { Session session ->
-
+    List<D> findAllWithNativeSql(CharSequence sql, Map args) {
+        def template = getHibernateTemplate()
+        return (List<D>) template.execute { org.hibernate.Session session ->
             List params = []
-            if (sql instanceof GString) {
-                sql = buildOrdinalParameterQueryFromGString((GString)sql, params)
-            }
-
-            NativeQuery q = (NativeQuery)session.createNativeQuery(sql.toString(), persistentClass)
-
-            hibernateTemplate.applySettings(q)
-
+            String sqlStr = sql instanceof GString ?
+                buildOrdinalParameterQueryFromGString((GString) sql, params) :
+                sql.toString()
+            org.hibernate.query.NativeQuery<D> q = session.createNativeQuery(sqlStr, persistentClass)
+            template.applySettings(q)
             params.eachWithIndex { val, int i ->
-                i++
                 if (val instanceof CharSequence) {
-                    q.setParameter(i, val.toString())
-                }
-                else {
-                    q.setParameter(i, val)
+                    q.setParameter(i + 1, val.toString())
+                } else {
+                    q.setParameter(i + 1, val)
                 }
             }
             populateQueryArguments(q, args)
+            q.list()
+        }
+    }
+
+    /**
+     * Finds a single entity matching the given native SQL query.
+     * If {@code sql} is a GString, interpolated values are bound as ordinal parameters.
+     *
+     * @param sql  Native SQL query, optionally a GString for safe parameter binding
+     * @param args Pagination/query settings
+     * @return The matching entity, or {@code null}
+     */
+    @CompileDynamic
+    D findWithNativeSql(CharSequence sql, Map args) {
+        def template = getHibernateTemplate()
+        return (D) template.execute { org.hibernate.Session session ->
+            List params = []
+            String sqlStr = sql instanceof GString ?
+                buildOrdinalParameterQueryFromGString((GString) sql, params) :
+                sql.toString()
+            org.hibernate.query.NativeQuery<D> q = session.createNativeQuery(sqlStr, persistentClass)
+            template.applySettings(q)
+            params.eachWithIndex { val, int i ->
+                if (val instanceof CharSequence) {
+                    q.setParameter(i + 1, val.toString())
+                } else {
+                    q.setParameter(i + 1, val)
+                }
+            }
             q.setMaxResults(1)
-            return q.uniqueResult()
+            populateQueryArguments(q, args)
+            List results = q.list()
+            results.isEmpty() ? null : results.get(0)
         }
     }
 
@@ -178,8 +417,8 @@ class HibernateGormStaticApi<D> extends GormStaticApi<D> {
         StringBuilder sqlString = new StringBuilder()
         int i = 0
         Object[] values = query.values
-        def strings = query.getStrings()
-        for (str in strings) {
+        String[] strings = query.getStrings()
+        for (String str in strings) {
             sqlString.append(str)
             if (i < values.length) {
                 sqlString.append('?')
