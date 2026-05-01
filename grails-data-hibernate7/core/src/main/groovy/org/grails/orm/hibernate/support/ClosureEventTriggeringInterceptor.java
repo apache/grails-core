@@ -422,19 +422,12 @@ public class ClosureEventTriggeringInterceptor
                     Hibernate.getClass(entity).getName());
             Object unwrapped = proxyHandler.unwrap(entity);
             DirtyCheckable dirtyCheckable = (DirtyCheckable) unwrapped;
-            Map<String, Object> dirtyCheckingState =
-                    persistentEntity.getReflector().getDirtyCheckingState(unwrapped);
-            if (dirtyCheckingState == null) {
-                dirtyCheckable.trackChanges();
-                for (Embedded<?> association : persistentEntity.getEmbedded()) {
-                    if (DirtyCheckable.class.isAssignableFrom(association.getType())) {
-                        Object embedded = association.getReader().read(unwrapped);
-                        if (embedded != null) {
-                            DirtyCheckable embeddedCheck = (DirtyCheckable) embedded;
-                            if (embeddedCheck.listDirtyPropertyNames().isEmpty()) {
-                                embeddedCheck.trackChanges();
-                            }
-                        }
+            dirtyCheckable.trackChanges();
+            for (Embedded<?> association : persistentEntity.getEmbedded()) {
+                if (DirtyCheckable.class.isAssignableFrom(association.getType())) {
+                    Object embedded = association.getReader().read(unwrapped);
+                    if (embedded != null) {
+                        ((DirtyCheckable) embedded).trackChanges();
                     }
                 }
             }

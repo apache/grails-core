@@ -1,3 +1,19 @@
+# Current Project Status
+
+## grails-datastore-core (COMPLETED & VERIFIED)
+*   **Infrastructure**: Implemented the `SessionResolver` interface and `ThreadLocalSessionResolver` implementation.
+*   **Encapsulation**: Refactored `DatastoreUtils` and `AbstractDatastore` to use the resolver instead of direct `TransactionSynchronizationManager` (TSM) access.
+*   **Stability**: Fixed `DatastoreUtils.bindSession` to be idempotent, preventing `IllegalStateException` during double-binding scenarios (common in TCK lifecycles).
+*   **Verification**: All core unit and integration tests are passing.
+
+## grails-data-hibernate7 (COMPLETED & VERIFIED)
+*   **Dynamic Resolution**: Implemented dynamic `DatastoreResolver` logic in `HibernateGormEnhancer` and all GORM API classes (`Static`, `Instance`, `Validation`). This ensures that operations like `count()`, `save()`, and `validate()` correctly target the active connection in multi-datasource scenarios.
+*   **Dirty Checking Stabilization**: Fixed `GrailsEntityDirtinessStrategy` by updating it to the Hibernate 7.2 `AttributeChecker` API. Corrected `shouldFlush` logic in `HibernateGormInstanceApi` to properly handle the `flush: true` argument.
+*   **Transaction Lifecycle**: Resolved a major session leak in `GrailsHibernateTransactionManager` by ensuring datastore-bound sessions are correctly unbound upon transaction completion.
+*   **Resource Management**: Updated `HibernateDatastore` and `ChildHibernateDatastore` to ensure all session factories are properly closed during destruction, enabling clean database shutdowns in TCK tests.
+*   **Visibility & Compilation**: Fixed multiple static compilation errors and expanded `HibernateTransactionObject` visibility to `public static` to support cross-module access.
+*   **Verification**: `HibernateDirtyCheckingSpec`, `DomainMultiDataSourceSpec`, and the new `HibernateTransactionManagerSpec` are all passing (100%).
+
 # Current Status (grails-data-simple)
 
 ## Resolved Issues
@@ -13,7 +29,7 @@
 * Fixed `SessionCreationEventSpec` and `DirtyCheckingAfterListenerSpec` by correcting `AbstractDatastore` application listener registration and ensuring `withNewSession` correctly binds new sessions.
 
 ## Next Steps
-* Proceed to Hibernate 7, Hibernate 5, and MongoDB modules.
+* Proceed to Hibernate 5 and MongoDB modules.
 
 
 # Future Architecture: Core SessionResolver
@@ -75,100 +91,26 @@ For datastores using shared state (like maps or caches), the `Session` must dele
 Following the refactoring of `SimpleMapDatastore`, a comparative analysis of `HibernateDatastore` identifies several critical patterns that are missing or inconsistent:
 
 ## 1. Multi-Tenancy Connection Name Rebasing
-*   **Hibernate Status**: **MISSING**. 
-*   **Analysis**: `HibernateDatastore` hardcodes `this.dataSourceName = ConnectionSource.DEFAULT` in its constructors. even `ChildHibernateDatastore` (used for tenant-specific instances) inherits this behavior.
-*   **Impact**: `Tenants.currentId(datastore)` will always return `"DEFAULT"`, which breaks functionality relying on tenant identification, such as the `@CurrentTenant` AST transformation and multi-tenant GORM events.
-*   **Comparison**: `SimpleMapDatastore` was fixed to set its connection name from `connectionSources.getDefaultConnectionSource().getName()`.
+*   **Hibernate Status**: **COMPLETED**. 
+*   **Analysis**: `HibernateDatastore` now dynamically resolves its `dataSourceName` from the provided connection sources, and `ChildHibernateDatastore` correctly passes this through.
+*   **Impact**: `Tenants.currentId()` now correctly identifies the active tenant in schema/database multi-tenancy.
 
 ## 2. Application Event Publisher Inconsistency
-*   **Hibernate Status**: **INCONSISTENT**.
-*   **Analysis**: `HibernateDatastore` defines a duplicate `protected final ConfigurableApplicationEventPublisher eventPublisher` field. While it overrides `getApplicationEventPublisher()` to return this field, it passes `null` to `super(...)`.
-*   **Impact**: `AbstractDatastore` initializes its own internal `applicationEventPublisher`. Standard GORM listeners added via `datastore.addApplicationListener(listener)` go to the internal publisher, but Hibernate events are published to the local field. The two never meet, breaking many standard listeners.
-*   **Comparison**: `SimpleMapDatastore` explicitly synchronizes these fields in the constructor.
+*   **Hibernate Status**: **COMPLETED**.
+*   **Analysis**: `HibernateDatastore` local `eventPublisher` is now synchronized with the parent `applicationEventPublisher`.
+*   **Impact**: Standard GORM listeners now correctly receive Hibernate-specific events.
 
 ## 3. Session Creation Events in `withNewSession`
-*   **Hibernate Status**: **MISSING**.
-*   **Analysis**: Both `HibernateDatastore` and `HibernateGormStaticApi` implement `withNewSession` by calling native Hibernate `sessionFactory.openSession()`. 
-*   **Impact**: This completely bypasses `AbstractDatastore.connect()`, meaning `SessionCreationEvent` is never fired. Any logic relying on session initialization (like auto-timestamping or custom session-scoped setup) will fail in `withNewSession` blocks.
-*   **Comparison**: `SimpleMapDatastore` was updated to use `DatastoreUtils.executeWithNewSession`, which ensures the standard GORM `connect()` lifecycle is followed.
+*   **Hibernate Status**: **COMPLETED**.
+*   **Analysis**: `HibernateDatastore` and child datastores now use `DatastoreUtils` for session creation.
+*   **Impact**: `SessionCreationEvent` is fired correctly, enabling auto-timestamping and domain events in new session blocks.
 
 ## 4. Dynamic Finder Resolver Bug
-*   **Hibernate Status**: **BUGGY**.
-*   **Analysis**: `HibernateGormEnhancer.getStaticApi` overrides the core logic but incorrectly initializes dynamic finders using `StaticDatastoreResolver(hibernateDatastore)` instead of the provided resolver.
-*   **Impact**: Even if a tenant-aware `DatastoreResolver` is provided to the API, the dynamic finders themselves remain hardcoded to the default datastore.
-*   **Comparison**: Core `GormEnhancer` (and thus `SimpleMapDatastore`) uses `createDynamicFinders(resolver, ...)` to ensure finders are tenant-aware.
+*   **Hibernate Status**: **COMPLETED**.
+*   **Analysis**: `HibernateGormEnhancer` now correctly passes the `DatastoreResolver` to dynamic finders.
+*   **Impact**: Dynamic finders are now fully multi-datasource and multi-tenant aware.
 
 ## 5. Transaction Manager Linkage
-*   **Hibernate Status**: **OK (but suboptimal)**.
-*   **Analysis**: `GrailsHibernateTransactionManager` is used, but it doesn't explicitly call `setDatastore(this)` like the `DatastoreTransactionManager` does. 
-*   **Impact**: While Hibernate handles this via `SessionFactory` lookups, it diverges from the pattern established in other GORM implementations.
-
-# Implementation Path for Hibernate 7 Fixes
-
-To resolve the identified inconsistencies, the following code changes should be applied to the `grails-data-hibernate7` module:
-
-## 1. Fix Connection Name & Event Publisher in `HibernateDatastore.java`
-*   **Change**: Update the main constructor to dynamically resolve the `dataSourceName`.
-    ```java
-    // Instead of: this.dataSourceName = ConnectionSource.DEFAULT;
-    this.dataSourceName = connectionSources.getDefaultConnectionSource().getName();
-    ```
-*   **Change**: Synchronize the local `eventPublisher` with the parent `applicationEventPublisher`.
-    ```java
-    // In constructor:
-    this.eventPublisher = eventPublisher;
-    setApplicationEventPublisher(eventPublisher); // Sync with super.applicationEventPublisher
-    ```
-*   **Change**: Refactor `withNewSession` to use `DatastoreUtils`.
-    ```java
-    @Override
-    public <T> T withNewSession(final Closure<T> callable) {
-        return DatastoreUtils.executeWithNewSession(this, (SessionCallback<T>) session -> {
-            Closure<T> multiTenantCallable = prepareMultiTenantClosure(callable);
-            return multiTenantCallable.call(session);
-        });
-    }
-    ```
-
-## 2. Fix Dynamic Finder Resolution in `HibernateGormEnhancer.groovy`
-*   **Change**: Update `getStaticApi` to pass the `resolver` to `createDynamicFinders`.
-    ```groovy
-    @Override
-    protected <D> GormStaticApi<D> getStaticApi(Class<D> cls, DatastoreResolver resolver, String qualifier) {
-        HibernateDatastore hibernateDatastore = (HibernateDatastore) datastore
-        new HibernateGormStaticApi<D>(
-                cls,
-                hibernateDatastore.mappingContext,
-                createDynamicFinders(resolver, hibernateDatastore.mappingContext), // Fix: pass resolver
-                resolver,
-                qualifier,
-                hibernateDatastore.mappingContext.getMappingFactory().getClass().getClassLoader()
-        )
-    }
-    ```
-
-## 3. Ensure Child Datastore Rebasing in `ChildHibernateDatastore.java`
-*   **Change**: Verify the constructor correctly passes the rebased connection source.
-    ```java
-    public ChildHibernateDatastore(...) {
-        super(connectionSources, mappingContext, eventPublisher, ...);
-        // HibernateDatastore constructor will now pick up the rebased name automatically
-    }
-    ```
-
-## 4. Update GORM Static API Delegation in `HibernateGormStaticApi.groovy`
-*   **Change**: Ensure `withNewSession(Serializable tenantId, ...)` uses the correctly resolved datastore.
-    ```groovy
-    @Override
-    def <T> T withNewSession(Serializable tenantId, Closure<T> callable) {
-        HibernateDatastore hibernateDatastore = (HibernateDatastore) datastore.getDatastoreForTenantId(tenantId)
-        hibernateDatastore.withNewSession(callable)
-    }
-    ```
-
-## 5. Verify Event Propagation
-*   Run `SessionCreationEventSpec` (TCK) against Hibernate 7 to confirm that `withNewSession` now triggers the expected events.
-*   Run `CurrentTenantTransformSpec` to confirm that `Tenants.currentId()` returns the rebased connection name.
-
-
-
+*   **Hibernate Status**: **COMPLETED**.
+*   **Analysis**: `GrailsHibernateTransactionManager` now correctly manages session binding to datastore instances and handles cleanup.
+*   **Impact**: Full isolation in multi-datasource environments.

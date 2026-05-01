@@ -41,6 +41,7 @@ import org.springframework.transaction.TransactionStatus
 import org.springframework.transaction.support.DefaultTransactionDefinition
 import org.springframework.transaction.support.TransactionSynchronizationManager
 import spock.lang.Specification
+import org.grails.datastore.gorm.GormRegistry
 
 class GrailsDataHibernate7TckManager extends GrailsDataTckManager {
     GrailsApplication grailsApplication
@@ -155,9 +156,24 @@ class GrailsDataHibernate7TckManager extends GrailsDataTckManager {
         if (multiDataSourceDatastore != null) {
             multiDataSourceDatastore.destroy()
             multiDataSourceDatastore = null
-            shutdownInMemDb('jdbc:h2:mem:tckDefaultDB')
-            shutdownInMemDb('jdbc:h2:mem:tckSecondaryDB')
         }
+        if (transactionStatus != null) {
+            TransactionStatus tx = transactionStatus
+            transactionStatus = null
+            try {
+                transactionManager.rollback(tx)
+            } catch (Throwable e) {
+                // ignore
+            }
+        }
+        if (hibernateDatastore != null) {
+            hibernateDatastore.destroy()
+            hibernateDatastore = null
+        }
+        GormRegistry.instance.reset()
+        cleanRegistry()
+        shutdownInMemDb('jdbc:h2:mem:tckDefaultDB')
+        shutdownInMemDb('jdbc:h2:mem:tckSecondaryDB')
     }
 
     @Override

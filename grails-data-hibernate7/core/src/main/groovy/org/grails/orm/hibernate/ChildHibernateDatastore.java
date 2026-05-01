@@ -52,8 +52,7 @@ public class ChildHibernateDatastore extends HibernateDatastore {
     @Override
     public void destroy() {
         if (!this.destroyed) {
-            // Only mark as destroyed, don't close shared resources
-            this.destroyed = true;
+            super.destroy();
         }
     }
 

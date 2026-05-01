@@ -250,6 +250,7 @@ public class HibernateDatastore extends AbstractDatastore
 
         this.dataSourceName = defaultConnectionSource.getName();
         this.sessionFactory = sessionFactory != null ? sessionFactory : defaultConnectionSource.getSource();
+        setSessionResolver(new HibernateSessionResolver(this, this.sessionFactory));
 
         HibernateConnectionSourceSettings settings = defaultConnectionSource.getSettings();
         HibernateConnectionSourceSettings.HibernateSettings hibernateSettings = settings.getHibernate();
@@ -552,7 +553,6 @@ public class HibernateDatastore extends AbstractDatastore
     }
 
     protected HibernateGormEnhancer initialize() {
-        this.sessionResolver = new HibernateSessionResolver(this, this.sessionFactory);
         final HibernateConnectionSource defaultConnectionSource =
                 (HibernateConnectionSource) getConnectionSources().getDefaultConnectionSource();
         if (multiTenantMode == MultiTenancySettings.MultiTenancyMode.SCHEMA) {
@@ -565,7 +565,7 @@ public class HibernateDatastore extends AbstractDatastore
                     datastoresByConnectionSource
             );
         } else {
-            return new HibernateGormEnhancer(this, transactionManager, defaultConnectionSource.getSettings());
+            return new HibernateGormEnhancer(this, transactionManager, defaultConnectionSource.getSettings(), datastoresByConnectionSource);
         }
     }
 
@@ -656,7 +656,7 @@ public class HibernateDatastore extends AbstractDatastore
         if (!this.destroyed) {
             try {
                 for (HibernateDatastore childDatastore : datastoresByConnectionSource.values()) {
-                    if (childDatastore != this && childDatastore.getMappingContext() != getMappingContext()) {
+                    if (childDatastore != this) {
                         childDatastore.destroy();
                     }
                 }

@@ -245,7 +245,7 @@ public abstract class AbstractDatastore implements Datastore, StatelessDatastore
     }
 
     public boolean hasCurrentSession() {
-        return TransactionSynchronizationManager.hasResource(this);
+        return sessionResolver.resolve() != null || TransactionSynchronizationManager.hasResource(this);
     }
 
     /**

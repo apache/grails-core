@@ -52,9 +52,13 @@ class HibernateGormStaticApi<D> extends GormStaticApi<D> {
         this.classLoader = classLoader
     }
 
+    protected HibernateDatastore getHibernateDatastore() {
+        (HibernateDatastore) getDatastore()
+    }
+
     protected GrailsHibernateTemplate getHibernateTemplate() {
         if (this.hibernateTemplate == null) {
-            HibernateDatastore datastore = (HibernateDatastore) getDatastore()
+            HibernateDatastore datastore = getHibernateDatastore()
             return new GrailsHibernateTemplate(datastore.sessionFactory, datastore)
         }
         return hibernateTemplate
@@ -62,31 +66,28 @@ class HibernateGormStaticApi<D> extends GormStaticApi<D> {
 
     @Override
     def <T> T withNewSession(Closure<T> callable) {
-        HibernateDatastore hibernateDatastore = (HibernateDatastore) datastore
-        hibernateDatastore.withNewSession { session ->
+        getHibernateDatastore().withNewSession { session ->
             callable.call(((HibernateSession)session).getNativeSession())
         }
     }
 
     @Override
     def <T> T withSession(Closure<T> callable) {
-        HibernateDatastore hibernateDatastore = (HibernateDatastore) datastore
-        hibernateDatastore.withSession { session ->
+        getHibernateDatastore().withSession { session ->
             callable.call(((HibernateSession)session).getNativeSession())
         }
     }
 
     @Override
     def <T1> T1 withDatastoreSession(Closure<T1> callable) {
-        HibernateDatastore hibernateDatastore = (HibernateDatastore) datastore
-        hibernateDatastore.withSession { session ->
+        getHibernateDatastore().withSession { session ->
             callable.call(session)
         }
     }
 
     @Override
     def <T> T withNewSession(Serializable tenantId, Closure<T> callable) {
-        HibernateDatastore hibernateDatastore = (HibernateDatastore) ((org.grails.datastore.mapping.multitenancy.MultiTenantCapableDatastore)datastore).getDatastoreForTenantId(tenantId)
+        HibernateDatastore hibernateDatastore = (HibernateDatastore) ((org.grails.datastore.mapping.multitenancy.MultiTenantCapableDatastore)getHibernateDatastore()).getDatastoreForTenantId(tenantId)
         hibernateDatastore.withNewSession { session ->
             callable.call(((HibernateSession)session).getNativeSession())
         }

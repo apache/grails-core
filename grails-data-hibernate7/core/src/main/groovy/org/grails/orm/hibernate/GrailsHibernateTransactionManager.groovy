@@ -71,5 +71,11 @@ class GrailsHibernateTransactionManager extends HibernateTransactionManager {
     @Override
     protected void doCleanupAfterCompletion(Object transaction) {
         super.doCleanupAfterCompletion(transaction)
+        if (datastore != null) {
+            HibernateTransactionManager.HibernateTransactionObject txObject = (HibernateTransactionManager.HibernateTransactionObject) transaction
+            if (txObject.isNewSessionHolder()) {
+                TransactionSynchronizationManager.unbindResourceIfPossible(datastore)
+            }
+        }
     }
 }
