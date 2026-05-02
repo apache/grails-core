@@ -67,23 +67,28 @@ class HibernateGormInstanceApi<D> extends GormInstanceApi<D> {
 
     HibernateGormInstanceApi(Class<D> persistentClass, HibernateDatastore datastore, ClassLoader classLoader) {
         super(persistentClass, datastore)
-        this.classLoader = classLoader
+        this.classLoader = classLoader ?: persistentClass.classLoader
         this.hibernateTemplate = (IHibernateTemplate) datastore.getHibernateTemplate()
-        try {
-            this.validationException = (Class<? extends Exception>)classLoader.loadClass("grails.validation.ValidationException")
-        } catch (ClassNotFoundException e) {
-            this.validationException = org.grails.datastore.mapping.validation.ValidationException
-        }
+        initializeValidationException(this.classLoader)
     }
 
     HibernateGormInstanceApi(Class<D> persistentClass, MappingContext mappingContext, DatastoreResolver datastoreResolver, ClassLoader classLoader) {
         super(persistentClass, mappingContext, datastoreResolver)
-        this.classLoader = classLoader
-        try {
-            this.validationException = (Class<? extends Exception>)classLoader.loadClass("grails.validation.ValidationException")
-        } catch (ClassNotFoundException e) {
-            this.validationException = org.grails.datastore.mapping.validation.ValidationException
+        this.classLoader = classLoader ?: persistentClass.classLoader
+        initializeValidationException(this.classLoader)
+    }
+
+    protected void initializeValidationException(ClassLoader classLoader) {
+        for (cl in [classLoader, Thread.currentThread().getContextClassLoader(), HibernateGormInstanceApi.class.classLoader]) {
+            if (cl == null) continue
+            try {
+                this.validationException = (Class<? extends Exception>) cl.loadClass("grails.validation.ValidationException")
+                return
+            } catch (Throwable e) {
+                // ignore
+            }
         }
+        this.validationException = org.grails.datastore.mapping.validation.ValidationException
     }
 
     protected HibernateDatastore getHibernateDatastore() {
@@ -222,7 +227,7 @@ class HibernateGormInstanceApi<D> extends GormInstanceApi<D> {
                 if (errors.hasErrors()) {
                     handleValidationError(domainClass, target, errors)
                     if (shouldFail(arguments)) {
-                        throw validationException.newInstance('Validation Error(s) occurred during save()', errors)
+                        throw org.grails.datastore.mapping.validation.ValidationException.newInstance('Validation Error(s) occurred during save()', errors)
                     }
                     return null
                 }

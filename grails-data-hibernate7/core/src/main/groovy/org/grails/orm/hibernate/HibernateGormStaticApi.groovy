@@ -61,6 +61,20 @@ class HibernateGormStaticApi<D> extends GormStaticApi<D> {
     protected GrailsHibernateTemplate hibernateTemplate
     protected final ClassLoader classLoader
 
+    private static final Set<String> PAGINATION_ARGS = Collections.unmodifiableSet(new HashSet<>(Arrays.asList(
+            DynamicFinder.ARGUMENT_MAX,
+            DynamicFinder.ARGUMENT_OFFSET,
+            DynamicFinder.ARGUMENT_SORT,
+            DynamicFinder.ARGUMENT_ORDER,
+            DynamicFinder.ARGUMENT_FETCH,
+            DynamicFinder.ARGUMENT_IGNORE_CASE,
+            DynamicFinder.ARGUMENT_FETCH_SIZE,
+            DynamicFinder.ARGUMENT_TIMEOUT,
+            DynamicFinder.ARGUMENT_READ_ONLY,
+            DynamicFinder.ARGUMENT_FLUSH_MODE,
+            "cache"
+    )))
+
     HibernateGormStaticApi(Class<D> persistentClass, HibernateDatastore datastore, List<FinderMethod> finders, DatastoreResolver datastoreResolver, String qualifier, ClassLoader classLoader) {
         super(persistentClass, datastore.mappingContext, finders, datastoreResolver, qualifier)
         this.hibernateTemplate = (GrailsHibernateTemplate) datastore.getHibernateTemplate()
@@ -160,6 +174,7 @@ class HibernateGormStaticApi<D> extends GormStaticApi<D> {
                 template.applySettings(q)
                 populateQueryArguments(q, args)
                 populateQueryWithNamedArguments(q, allParams)
+                populateQueryWithNamedArguments(q, args)
                 new HibernateHqlQuery((HibernateSession)getDatastore().currentSession, getGormPersistentEntity(), q).list()
             }
         }
@@ -169,6 +184,7 @@ class HibernateGormStaticApi<D> extends GormStaticApi<D> {
             populateQueryArguments(q, params)
             populateQueryArguments(q, args)
             populateQueryWithNamedArguments(q, params)
+            populateQueryWithNamedArguments(q, args)
 
             new HibernateHqlQuery((HibernateSession)getDatastore().currentSession, getGormPersistentEntity(), q).list()
         }
@@ -181,7 +197,12 @@ class HibernateGormStaticApi<D> extends GormStaticApi<D> {
             String hql = buildNamedParameterQueryFromGString((GString) query, params)
             return executeQuery(hql, params, Collections.emptyMap())
         }
-        throw new UnsupportedOperationException('Use executeQuery(CharSequence, Map) or executeQuery(CharSequence, Collection) with parameters')
+        return executeQuery(query.toString(), Collections.emptyMap(), Collections.emptyMap())
+    }
+
+    @Override
+    List executeQuery(CharSequence query, Object... params) {
+        executeQuery(query, Arrays.asList(params))
     }
 
     @Override
@@ -195,6 +216,7 @@ class HibernateGormStaticApi<D> extends GormStaticApi<D> {
                 template.applySettings(q)
                 populateQueryArguments(q, args)
                 populateQueryWithNamedArguments(q, allParams)
+                populateQueryWithNamedArguments(q, args)
                 q.setMaxResults(1)
                 List results = new HibernateHqlQuery((HibernateSession)getDatastore().currentSession, getGormPersistentEntity(), q).list()
                 return results ? results[0] : null
@@ -206,6 +228,7 @@ class HibernateGormStaticApi<D> extends GormStaticApi<D> {
             populateQueryArguments(q, params)
             populateQueryArguments(q, args)
             populateQueryWithNamedArguments(q, params)
+            populateQueryWithNamedArguments(q, args)
             q.setMaxResults(1)
 
             List results = new HibernateHqlQuery((HibernateSession)getDatastore().currentSession, getGormPersistentEntity(), q).list()
@@ -224,6 +247,7 @@ class HibernateGormStaticApi<D> extends GormStaticApi<D> {
                 template.applySettings(q)
                 populateQueryArguments(q, args)
                 populateQueryWithNamedArguments(q, allParams)
+                populateQueryWithNamedArguments(q, args)
                 new HibernateHqlQuery((HibernateSession)getDatastore().currentSession, getGormPersistentEntity(), q).list()
             }
         }
@@ -233,6 +257,7 @@ class HibernateGormStaticApi<D> extends GormStaticApi<D> {
             populateQueryArguments(q, params)
             populateQueryArguments(q, args)
             populateQueryWithNamedArguments(q, params)
+            populateQueryWithNamedArguments(q, args)
 
             new HibernateHqlQuery((HibernateSession)getDatastore().currentSession, getGormPersistentEntity(), q).list()
         }
@@ -337,10 +362,7 @@ class HibernateGormStaticApi<D> extends GormStaticApi<D> {
         return (List) template.execute { org.hibernate.Session session ->
             org.hibernate.query.Query q = session.createQuery(query.toString())
             template.applySettings(q)
-            int i = 1
-            for (param in params) {
-                q.setParameter(i++, param)
-            }
+            populateQueryWithCollectionArguments(q, params)
             populateQueryArguments(q, args)
 
             new HibernateHqlQuery((HibernateSession)getDatastore().currentSession, getGormPersistentEntity(), q).list()
@@ -366,6 +388,7 @@ class HibernateGormStaticApi<D> extends GormStaticApi<D> {
             populateQueryArguments(q, params)
             populateQueryArguments(q, args)
             populateQueryWithNamedArguments(q, params)
+            populateQueryWithNamedArguments(q, args)
 
             q.executeUpdate()
         }
@@ -377,10 +400,7 @@ class HibernateGormStaticApi<D> extends GormStaticApi<D> {
         return (Integer) template.execute { org.hibernate.Session session ->
             org.hibernate.query.Query q = session.createQuery(query.toString())
             template.applySettings(q)
-            int i = 1
-            for (param in params) {
-                q.setParameter(i++, param)
-            }
+            populateQueryWithCollectionArguments(q, params)
             populateQueryArguments(q, args)
 
             q.executeUpdate()
@@ -408,10 +428,7 @@ class HibernateGormStaticApi<D> extends GormStaticApi<D> {
         return (D) template.execute { org.hibernate.Session session ->
             org.hibernate.query.Query q = session.createQuery(query.toString())
             template.applySettings(q)
-            int i = 1
-            for (param in params) {
-                q.setParameter(i++, param)
-            }
+            populateQueryWithCollectionArguments(q, params)
             populateQueryArguments(q, args)
             q.setMaxResults(1)
 
@@ -436,15 +453,17 @@ class HibernateGormStaticApi<D> extends GormStaticApi<D> {
     }
 
     @Override
+    List<D> findAll(CharSequence query, Object[] params) {
+        findAll(query, Arrays.asList(params))
+    }
+
+    @Override
     List<D> findAll(CharSequence query, Collection params, Map args) {
         def template = getHibernateTemplate()
         return (List<D>) template.execute { org.hibernate.Session session ->
             org.hibernate.query.Query q = session.createQuery(query.toString())
             template.applySettings(q)
-            int i = 1
-            for (param in params) {
-                q.setParameter(i++, param)
-            }
+            populateQueryWithCollectionArguments(q, params)
             populateQueryArguments(q, args)
 
             new HibernateHqlQuery((HibernateSession)getDatastore().currentSession, getGormPersistentEntity(), q).list()
@@ -535,31 +554,47 @@ class HibernateGormStaticApi<D> extends GormStaticApi<D> {
         }
     }
 
-    protected void populateQueryWithNamedArguments(org.hibernate.query.Query q, Map params) {
-        for (entry in params.entrySet()) {
-            if (entry.key instanceof String) {
-                def val = entry.value
-                if (val instanceof Collection) {
-                    q.setParameterList((String) entry.key, (Collection) val)
-                }
-                else if (val.getClass().isArray()) {
-                    q.setParameterList((String) entry.key, (Object[]) val)
-                }
-                else {
-                    q.setParameter((String) entry.key, val)
-                }
+    protected void populateQueryWithCollectionArguments(org.hibernate.query.Query q, Collection params) {
+        if (params == null || params.isEmpty()) return
+        Set<String> namedParameters = q.getParameterMetadata().getNamedParameterNames()
+        if (namedParameters.size() > 0 && params.size() == namedParameters.size()) {
+            Iterator<String> it = namedParameters.iterator()
+            for (param in params) {
+                q.setParameter(it.next(), param)
+            }
+        }
+        else {
+            int i = 1
+            for (param in params) {
+                q.setParameter(i++, param)
             }
         }
     }
 
-    /**
-     * Finds all entities matching the given native SQL query.
-     * If {@code sql} is a GString, interpolated values are bound as ordinal parameters.
-     *
-     * @param sql  Native SQL query, optionally a GString for safe parameter binding
-     * @param args Pagination/query settings (max, offset, readOnly, etc.)
-     * @return The matching entities
-     */
+    protected void populateQueryWithNamedArguments(org.hibernate.query.Query q, Map params) {
+        if (params == null) return
+        Set<String> namedParameters = q.getParameterMetadata().getNamedParameterNames()
+        for (entry in params.entrySet()) {
+            String name = entry.key?.toString()
+            if (name == null || PAGINATION_ARGS.contains(name)) continue
+
+            def val = entry.value
+            try {
+                if (val instanceof Collection) {
+                    q.setParameterList(name, (Collection) val)
+                }
+                else if (val?.getClass()?.isArray()) {
+                    q.setParameterList(name, (Object[]) val)
+                }
+                else {
+                    q.setParameter(name, val)
+                }
+            } catch (Throwable e) {
+                // Ignore if the parameter is not defined in the query
+            }
+        }
+    }
+
     @CompileDynamic
     List<D> findAllWithNativeSql(CharSequence sql, Map args) {
         def template = getHibernateTemplate()
@@ -582,14 +617,6 @@ class HibernateGormStaticApi<D> extends GormStaticApi<D> {
         }
     }
 
-    /**
-     * Finds a single entity matching the given native SQL query.
-     * If {@code sql} is a GString, interpolated values are bound as ordinal parameters.
-     *
-     * @param sql  Native SQL query, optionally a GString for safe parameter binding
-     * @param args Pagination/query settings
-     * @return The matching entity, or {@code null}
-     */
     @CompileDynamic
     D findWithNativeSql(CharSequence sql, Map args) {
         def template = getHibernateTemplate()

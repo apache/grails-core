@@ -1,5 +1,7 @@
 # Current Project Status
 
+**CURRENT FOCUS**: Achieving 100% test pass rate for the Hibernate 7 (`grails-data-hibernate7-core`) module before proceeding to Hibernate 5 or MongoDB.
+
 ## grails-datastore-core (COMPLETED & VERIFIED)
 *   **Infrastructure**: Implemented the `SessionResolver` interface and `ThreadLocalSessionResolver` implementation.
 *   **Encapsulation**: Refactored `DatastoreUtils` and `AbstractDatastore` to use the resolver instead of direct `TransactionSynchronizationManager` (TSM) access.
@@ -56,8 +58,15 @@
     *   **Status**: All 68 tests in `HibernateGormStaticApiSpec` now pass (verified from `build/test-results` XML, 2026-05-02T09:02:50Z). The failures listed in the previous `TEST_FAILURES.md` were stale (generated before commits `35d0cdd835` and `a4b6a26c05`).
     *   **Note on hanging**: This spec can hang when run alongside other specs with `--rerun-tasks`. Run it in isolation or via the `testSelected` task.
 
+    ### Issue H7-6 · Hibernate 7 Strict Parameter Binding and Validation Fixes *(RESOLVED — 2026-05-02)*
+    *   **Fix 1 (Instance API)**: Fixed `HibernateGormInstanceApi.save` to use standard GORM `ValidationException.newInstance()`.
+    *   **Fix 2 (Static API)**: Updated `HibernateGormStaticApi` to handle Hibernate 7's stricter named parameter requirements.
+    *   **Fix 3 (Binding Maps)**: Improved `executeQuery` and `findAll` to bind from both `params` and `args` maps.
+    *   **Fix 4 (Collection Binding)**: Enhanced Collection-based methods to bind by name when size matches.
+    *   **Verification**: `AddToManagedEntitySpec` is now passing. `DataServiceSpec` progress: 14/17 tests passing.
+
 *   **Remaining Open Failures (grails-data-hibernate7-core, as of 2026-05-02)**:
-    See the Test Registry below. Still-failing specs include: `AddToManagedEntitySpec`, `DataServiceSpec`, `SqlQuerySpec`, `UniqueWithMultipleDataSourcesSpec`, validation specs (`DeepValidationSpec`, `EmbeddedWithValidationExceptionSpec`, `SkipValidationSpec`, `UniqueWithinGroupSpec`), `WithNewSessionAndExistingTransactionSpec`, `GormEnhancerCleanupSpec`, `ChildHibernateDatastoreUnitSpec`, `ExistsCrossJoinSpec`, `HibernateDatastoreIntegrationSpec`, `HibernateDatastoreSchemaMultiTenancySpec`, `HibernateDatastoreSpec`, `HibernateGormEnhancerSpec`, `HibernateGormInstanceApiSpec`, `JoinPerfSpec`, `Hibernate7GroovyProxySpec`.
+    See the Test Registry below. Still-failing specs include: `DataServiceSpec`, `SqlQuerySpec`, `UniqueWithMultipleDataSourcesSpec`, validation specs (`DeepValidationSpec`, `EmbeddedWithValidationExceptionSpec`, `SkipValidationSpec`, `UniqueWithinGroupSpec`), `WithNewSessionAndExistingTransactionSpec`, `GormEnhancerCleanupSpec`, `ChildHibernateDatastoreUnitSpec`, `ExistsCrossJoinSpec`, `HibernateDatastoreIntegrationSpec`, `HibernateDatastoreSchemaMultiTenancySpec`, `HibernateDatastoreSpec`, `HibernateGormEnhancerSpec`, `HibernateGormInstanceApiSpec`, `JoinPerfSpec`, `Hibernate7GroovyProxySpec`.
 
 # Current Status (grails-data-simple)
 
@@ -74,7 +83,8 @@
 * Fixed `SessionCreationEventSpec` and `DirtyCheckingAfterListenerSpec` by correcting `AbstractDatastore` application listener registration and ensuring `withNewSession` correctly binds new sessions.
 
 ## Next Steps
-* Proceed to Hibernate 5 and MongoDB modules.
+* **Primary Priority**: Stabilize and resolve all remaining failures in `grails-data-hibernate7-core`.
+* Once H7 is 100% passing, proceed to Hibernate 5 and MongoDB modules.
 
 
 # Future Architecture: Core SessionResolver
@@ -198,7 +208,7 @@ _Run 1/4 batches at a time. If a run exceeds 2x expected time (~9 min), stop it,
 | 1 | `grails.gorm.hibernate.mapping.HibernateMappingBuilderSpec` | PASS |
 | 2 | `grails.gorm.hibernate.mapping.HibernateOptimisticLockingStyleMappingSpec` | PASS |
 | 3 | `grails.gorm.hibernate.mapping.MappingBuilderSpec` | PASS |
-| 4 | `grails.gorm.specs.AddToManagedEntitySpec` | FAIL |
+| 4 | `grails.gorm.specs.AddToManagedEntitySpec` | PASS |
 | 5 | `grails.gorm.specs.autoimport.AutoImportSpec` | PASS |
 | 6 | `grails.gorm.specs.AutoTimestampSpec` | PASS |
 | 7 | `grails.gorm.specs.BasicCollectionInQuerySpec` | PASS |
@@ -261,7 +271,7 @@ _Run 1/4 batches at a time. If a run exceeds 2x expected time (~9 min), stop it,
 | 64 | `grails.gorm.specs.SaveWithExistingValidationErrorSpec` | PASS |
 | 65 | `grails.gorm.specs.SchemaNameSpec` | PASS |
 | 66 | `grails.gorm.specs.SequenceIdSpec` | PASS |
-| 67 | `grails.gorm.specs.services.DataServiceSpec` | FAIL |
+| 67 | `grails.gorm.specs.services.DataServiceSpec` | FAIL (Improved: 14/17 passing) |
 | 68 | `grails.gorm.specs.sessioncontext.GrailsSessionContextSpec` | PASS |
 | 69 | `grails.gorm.specs.SizeConstraintSpec` | PASS |
 | 70 | `grails.gorm.specs.softdelete.SoftDeleteSpec` | PASS |
