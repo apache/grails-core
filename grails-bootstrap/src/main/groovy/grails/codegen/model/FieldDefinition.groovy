@@ -150,7 +150,7 @@ class FieldDefinition extends AbstractMemberDefinition {
         }
     }
 
-    static Builder builder() {
-        new Builder()
+    static FieldDefinition.Builder builder() {
+        new FieldDefinition.Builder()
     }
 }

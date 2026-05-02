@@ -113,7 +113,7 @@ class PropertyDefinition extends AbstractMemberDefinition {
         }
     }
 
-    static Builder builder() {
-        new Builder()
+    static PropertyDefinition.Builder builder() {
+        new PropertyDefinition.Builder()
     }
 }

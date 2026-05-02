@@ -25,8 +25,9 @@ import groovy.json.JsonOutput
 import groovy.json.JsonSlurper
 import groovy.transform.CompileDynamic
 import groovy.transform.CompileStatic
-import org.cyclonedx.gradle.CyclonedxPlugin
+import org.cyclonedx.gradle.CyclonedxAggregateTask
 import org.cyclonedx.gradle.CyclonedxDirectTask
+import org.cyclonedx.gradle.CyclonedxPlugin
 import org.cyclonedx.model.Component
 import org.cyclonedx.model.ExternalReference
 import org.cyclonedx.model.License
@@ -147,6 +148,7 @@ class SbomPlugin implements Plugin<Project> {
         )
 
         configureSbomTask(project, sbomOutputLocation)
+        configureAggregateSbomReproducibility(project)
         configureNormalization(project)
         ensureLicensesValidated(project)
 
@@ -228,75 +230,97 @@ class SbomPlugin implements Plugin<Project> {
                 Provider<Boolean> isReproducibleBuildProvider = project.provider { lookupProperty(project, 'isReproducibleBuild') as boolean }
                 Provider<ZonedDateTime> buildDateProvider = project.provider { lookupProperty(project, 'buildDate') as ZonedDateTime }
                 doLast {
-                    // json schema is documented here: https://cyclonedx.org/docs/1.6/json/
-                    def rewriteSbom = { File f ->
-                        def bom = new JsonSlurper().parse(f)
-
-                        // timestamp is not reproducible: https://github.com/CycloneDX/cyclonedx-gradle-plugin/issues/292
-                        // Use a fixed epoch when SOURCE_DATE_EPOCH is not set so the SBOM is identical between
-                        // builds. This prevents the non-reproducible timestamp from changing the jar checksum
-                        // and cascading cache misses through the compile classpath of downstream projects.
-                        ZonedDateTime sbomTimestamp = isReproducibleBuildProvider.get() ?
-                                buildDateProvider.get() :
-                                Instant.EPOCH.atZone(ZoneOffset.UTC)
-                        bom['metadata']['timestamp'] = DateTimeFormatter.ISO_INSTANT.format(sbomTimestamp.truncatedTo(ChronoUnit.SECONDS))
-
-                        // components[*]
-                        def comps = (bom instanceof Map && bom.components instanceof List) ? bom.components : []
-                        comps.each { c ->
-                            // .licenses => choose a license that is compatible with ASF policy if multiple licensed
-                            if (c instanceof Map && c.licenses instanceof List && !(c.licenses as List).empty) {
-                                def chosen = pickLicense(logger, projectName, c['bom-ref'] as String, c.licenses as List)
-                                if (chosen != null) {
-                                    c.licenses = [chosen]
-                                }
-                            }
-
-                            // .hashes => project hashes are only generated if the jar file has been created,
-                            // which with a parallel build may not have occurred, so for any dependency that is a
-                            // project we exclude them
-                            if (c instanceof Map && c.hashes instanceof List && !(c.hashes as List).empty) {
-                                def componentPath = c['bom-ref'] as String
-                                if (componentPath.contains('?project_path=')) {
-                                    c.remove('hashes')
-                                }
-                            }
-                        }
-
-                        // dependencies[*].dependsOn is not reproducible, so sort it
-                        def dependencies = (bom instanceof Map && bom.dependencies instanceof List) ? bom.dependencies : []
-                        dependencies.each { d ->
-                            if (d instanceof Map && d.dependsOn instanceof List && !(d.dependsOn as List).empty) {
-                                d.dependsOn = (d.dependsOn as List).sort()
-                            }
-                        }
-
-                        // force the serialNumber to be reproducible by clearing it & recalculating.
-                        // Mix the projectPath into the UUID seed so two modules whose post-processed
-                        // BOM JSON happens to be identical (for example, empty BOM platforms with no
-                        // runtime dependencies, or modules whose metadata.component is filled in
-                        // identically by the CycloneDX plugin) still receive distinct serialNumbers
-                        // as required by the CycloneDX specification. Including projectPath preserves
-                        // reproducibility because the same project path + same content always yields
-                        // the same UUID across rebuilds. This guards against collisions introduced by
-                        // CycloneDX 3.0.0 / Gradle 9 metadata changes.
-                        // See: https://cyclonedx.org/docs/1.6/json/#serialNumber
-                        bom['serialNumber'] = ''
-                        def withoutSerial = JsonOutput.prettyPrint(JsonOutput.toJson(bom))
-                        def uuidSeed = "${projectPath}\n${withoutSerial}"
-                        def uuid = UUID.nameUUIDFromBytes(uuidSeed.getBytes(StandardCharsets.UTF_8))
-                        bom['serialNumber'] = "urn:uuid:$uuid".toString()
-
-                        f.setText(JsonOutput.prettyPrint(JsonOutput.toJson(bom)), StandardCharsets.UTF_8.name())
-
-                        logger.info('Rewrote JSON SBOM ({}) to pick preferred license', projectPath)
+                    ZonedDateTime sbomTimestamp = isReproducibleBuildProvider.get() ?
+                            buildDateProvider.get() :
+                            Instant.EPOCH.atZone(ZoneOffset.UTC)
+                    sbomOutputLocation.get().with {
+                        rewriteSbomFile(it.asFile, logger, projectName, projectPath, sbomTimestamp,
+                                ['build-system'] as Set<String>)
                     }
-
-                    sbomOutputLocation.get().with { rewriteSbom(it.asFile) }
                 }
 
             }
         }
+    }
+
+    private static void configureAggregateSbomReproducibility(Project project) {
+        project.tasks.withType(CyclonedxAggregateTask).configureEach { CyclonedxAggregateTask task ->
+            String projectName = project.name
+            String projectPath = project.path
+            Provider<Boolean> isReproducibleBuildProvider = project.provider { lookupProperty(project, 'isReproducibleBuild') as boolean }
+            Provider<ZonedDateTime> buildDateProvider = project.provider { lookupProperty(project, 'buildDate') as ZonedDateTime }
+            task.doLast {
+                if (!task.jsonOutput.isPresent()) {
+                    return
+                }
+                ZonedDateTime sbomTimestamp = isReproducibleBuildProvider.get() ?
+                        buildDateProvider.get() :
+                        Instant.EPOCH.atZone(ZoneOffset.UTC)
+                rewriteSbomFile(task.jsonOutput.get().asFile, task.logger, projectName, projectPath,
+                        sbomTimestamp, ['build-system', 'vcs'] as Set<String>)
+            }
+        }
+    }
+
+    @CompileDynamic
+    private static void rewriteSbomFile(
+            File f,
+            org.gradle.api.logging.Logger logger,
+            String projectName,
+            String projectPath,
+            ZonedDateTime sbomTimestamp,
+            Set<String> externalRefTypesToStrip) {
+        def bom = new JsonSlurper().parse(f)
+
+        bom['metadata']['timestamp'] = DateTimeFormatter.ISO_INSTANT.format(sbomTimestamp.truncatedTo(ChronoUnit.SECONDS))
+
+        def comps = (bom instanceof Map && bom.components instanceof List) ? bom.components : []
+        comps.each { c ->
+            if (c instanceof Map && c.licenses instanceof List && !(c.licenses as List).empty) {
+                def chosen = pickLicense(logger, projectName, c['bom-ref'] as String, c.licenses as List)
+                if (chosen != null) {
+                    c.licenses = [chosen]
+                }
+            }
+
+            if (c instanceof Map && c.hashes instanceof List && !(c.hashes as List).empty) {
+                def componentPath = c['bom-ref'] as String
+                if (componentPath.contains('?project_path=')) {
+                    c.remove('hashes')
+                }
+            }
+        }
+
+        def dependencies = (bom instanceof Map && bom.dependencies instanceof List) ? bom.dependencies : []
+        dependencies.each { d ->
+            if (d instanceof Map && d.dependsOn instanceof List && !(d.dependsOn as List).empty) {
+                d.dependsOn = (d.dependsOn as List).sort()
+            }
+        }
+
+        def componentMeta = (bom instanceof Map && bom.metadata instanceof Map) ? bom.metadata.component : null
+        if (componentMeta instanceof Map && componentMeta.externalReferences instanceof List) {
+            componentMeta.externalReferences = (componentMeta.externalReferences as List).findAll { ref ->
+                !(ref instanceof Map) || !externalRefTypesToStrip.contains(ref['type'] as String)
+            }
+        }
+
+        // Mix projectPath into the UUID seed so two modules whose post-processed BOM JSON
+        // happens to be identical (for example, empty BOM platforms with no runtime
+        // dependencies, or modules whose metadata.component is filled in identically by the
+        // CycloneDX plugin) still receive distinct serialNumbers as required by the CycloneDX
+        // specification. Including projectPath preserves reproducibility because the same
+        // project path + same content always yields the same UUID across rebuilds. See
+        // https://cyclonedx.org/docs/1.6/json/#serialNumber and PR #15614.
+        bom['serialNumber'] = ''
+        def withoutSerial = JsonOutput.prettyPrint(JsonOutput.toJson(bom))
+        def uuidSeed = "${projectPath}\n${withoutSerial}"
+        def uuid = UUID.nameUUIDFromBytes(uuidSeed.getBytes(StandardCharsets.UTF_8))
+        bom['serialNumber'] = "urn:uuid:$uuid".toString()
+
+        f.setText(JsonOutput.prettyPrint(JsonOutput.toJson(bom)), StandardCharsets.UTF_8.name())
+
+        logger.info('Rewrote JSON SBOM ({}) for reproducibility', projectPath)
     }
 
     private static void configureNormalization(Project project) {
