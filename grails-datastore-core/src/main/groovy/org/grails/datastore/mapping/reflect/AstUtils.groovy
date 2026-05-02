@@ -251,6 +251,7 @@ class AstUtils {
         // The transformation has already produced valid bytecode by the time we get here -
         // VariableScopeVisitor is only re-running for late scope validation - so swallowing
         // the NPE keeps compilation green. To be filed upstream against Apache Groovy.
+        // Re-verified failing on Groovy 5.0.6-SNAPSHOT build #22 (2026-05-02).
         try {
             VariableScopeVisitor scopeVisitor = new VariableScopeVisitor(source)
             if (methodNode == null) {

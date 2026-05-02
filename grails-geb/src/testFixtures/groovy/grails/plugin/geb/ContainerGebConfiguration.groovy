@@ -73,7 +73,12 @@ import org.testcontainers.containers.GenericContainer
 /**
  * Inheritable version of {@link ContainerGebConfiguration}.
  * Implemented as a trait instead of an interface with default methods to avoid
- * Groovy 5 IncompatibleClassChangeError caused by $getCallSiteArray() on interfaces.
+ * Groovy 5 IncompatibleClassChangeError caused by $getCallSiteArray() being
+ * generated on the interface and then referenced via a Methodref constant
+ * (instead of InterfaceMethodref) from downstream classes compiled with
+ * grailsIndy=false. Verified still failing on Groovy 5.0.6-SNAPSHOT build #22
+ * (2026-05-02). Distinct from GROOVY-11968 (resolved in 5.0.6) which fixes
+ * the trait-static-field VerifyError in @CompileStatic methods.
  *
  * @since 4.2
  */
