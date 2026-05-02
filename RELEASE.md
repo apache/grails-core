@@ -27,6 +27,29 @@ Prior to starting the release process, ensure that any other dependent library i
 
 Due to a limitation with GitHub, private groups cannot be used as approvers for an environment.  For this reason, prior to performing the release, add GitHub username to asf.yaml in the environment section for approvers. Only 6 approvers may exist on a given environment.
 
+### Pre-tag Branch Verification (Optional but Recommended)
+
+Before publishing the GitHub release that triggers the staging workflow, run `etc/bin/verify-branch.sh` against the release branch. This script runs every release-readiness check that can be performed locally without a tag, GitHub release, or staged artifacts: SNAPSHOT-dependency scan, KEYS file integrity, Apache RAT license audit, code style, and the same `assemble` / `grails-doc:build` steps that `.github/workflows/release.yml`'s `publish` job runs. Running it locally before tagging avoids tagging a branch that would fail staging.
+
+```bash
+# Default checks (15-30 minutes): SNAPSHOT, KEYS, RAT, codeStyle, assemble, docs
+etc/bin/verify-branch.sh
+
+# Fast triage (5-10 minutes): everything except the assemble / docs steps
+etc/bin/verify-branch.sh --skip-build
+
+# Add the slow reproducibility check
+etc/bin/verify-branch.sh --include-reproducibility
+
+# Run inside the verification container for parity with CI
+docker build -t grails:testing -f etc/bin/Dockerfile .
+docker run -it --rm -v "$(pwd):/home/groovy/project" grails:testing bash
+cd /home/groovy/project
+etc/bin/verify-branch.sh
+```
+
+If `verify-branch.sh` passes, the branch is ready to be tagged. After staging completes, run `verify.sh <tag> .` to verify the staged artifacts (Section 2 below).
+
 ## 1. Staging 
 
 During the staging step, we must create a source distribution & stage any binary artifacts that end users will consume.
