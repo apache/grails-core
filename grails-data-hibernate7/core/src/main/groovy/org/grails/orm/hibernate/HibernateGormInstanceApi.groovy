@@ -51,6 +51,7 @@ import org.grails.datastore.mapping.model.PersistentProperty
 import org.grails.orm.hibernate.HibernateGormValidationApi
 import org.grails.datastore.gorm.finders.DynamicFinder
 import org.grails.orm.hibernate.support.HibernateRuntimeUtils
+import org.grails.orm.hibernate.support.ClosureEventListener
 
 /**
  * Hibernate GORM instance API.
@@ -239,11 +240,17 @@ class HibernateGormInstanceApi<D> extends GormInstanceApi<D> {
 
         GormValidateable validateable = (GormValidateable) target
         validateable.skipValidation(true)
+        if (!deepValidate) {
+            ClosureEventListener.SKIP_DEEP_VALIDATION.set(Boolean.TRUE)
+        }
 
         try {
             return performUpsert(target, shouldFlush)
         } finally {
             validateable.skipValidation(false)
+            if (!deepValidate) {
+                ClosureEventListener.SKIP_DEEP_VALIDATION.remove()
+            }
         }
     }
 
@@ -311,6 +318,47 @@ class HibernateGormInstanceApi<D> extends GormInstanceApi<D> {
     @Override
     D merge(D target, Map arguments) {
         return performMerge(target, shouldFlush(arguments))
+    }
+
+    @Override
+    D insert(D target, Map arguments) {
+        PersistentEntity domainClass = getGormPersistentEntity()
+        runDeferredBinding()
+        boolean shouldFlush = shouldFlush(arguments)
+        boolean shouldValidate = shouldValidate(arguments, domainClass)
+
+        if (shouldValidate) {
+            Validator validator = datastore.mappingContext.getEntityValidator(domainClass)
+            Errors errors = HibernateRuntimeUtils.setupErrorsProperty(target)
+
+            if (validator) {
+                getHibernateDatastore().applicationEventPublisher?.publishEvent new ValidationEvent(getHibernateDatastore(), target)
+                validator.validate target, errors
+
+                if (errors.hasErrors()) {
+                    handleValidationError(domainClass, target, errors)
+                    if (shouldFail(arguments)) {
+                        throw org.grails.datastore.mapping.validation.ValidationException.newInstance('Validation Error(s) occurred during insert()', errors)
+                    }
+                    return null
+                }
+            }
+        }
+
+        GormValidateable validateable = (GormValidateable) target
+        validateable.skipValidation(true)
+
+        try {
+            return (D) execute({ org.grails.datastore.mapping.core.Session session ->
+                session.insert(target)
+                if (shouldFlush) {
+                    session.flush()
+                }
+                return target
+            } as org.grails.datastore.mapping.core.SessionCallback)
+        } finally {
+            validateable.skipValidation(false)
+        }
     }
 
     @Override

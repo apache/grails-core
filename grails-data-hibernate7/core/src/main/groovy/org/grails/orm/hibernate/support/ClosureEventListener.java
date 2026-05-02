@@ -98,6 +98,16 @@ public class ClosureEventListener
     @Serial
     private static final long serialVersionUID = 1;
 
+    /**
+     * Thread-local flag set by {@code save(deepValidate: false)} to suppress validation
+     * inside Hibernate cascade events for all transitively reachable entities within the
+     * same {@code session.persist()} call.  In Hibernate 7, a vetoed insert throws
+     * {@link org.hibernate.action.internal.EntityActionVetoException} rather than silently
+     * cancelling the action as Hibernate 5 did, so cascade-reachable entities must not be
+     * validated when the root save explicitly opts out of deep validation.
+     */
+    public static final ThreadLocal<Boolean> SKIP_DEEP_VALIDATION = new ThreadLocal<>();
+
     private final transient EventTriggerCaller beforeInsertCaller;
     private final transient EventTriggerCaller preLoadEventCaller;
     private final transient EventTriggerCaller postLoadEventListener;
@@ -244,7 +254,7 @@ public class ClosureEventListener
 
     protected boolean doValidate(Object entity) {
         GormValidateable validateable = (GormValidateable) entity;
-        if (!validateable.shouldSkipValidation()) {
+        if (!validateable.shouldSkipValidation() && !Boolean.TRUE.equals(SKIP_DEEP_VALIDATION.get())) {
             String qualifier = org.grails.datastore.mapping.core.connections.ConnectionSource.DEFAULT;
             if (hibernateDatastore != null) {
                 qualifier = hibernateDatastore.getConnectionSources().getDefaultConnectionSource().getName();
