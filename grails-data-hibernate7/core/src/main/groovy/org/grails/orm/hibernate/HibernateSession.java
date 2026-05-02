@@ -24,6 +24,7 @@ import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.HashMap;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 
@@ -399,19 +400,31 @@ public class HibernateSession extends AbstractAttributeStoringSession implements
 
     @Override
     @SuppressWarnings({"PMD.DataflowAnomalyAnalysis"})
-    //TODO Cleanup
     public List retrieveAll(final Class type, final Iterable keys) {
         final GrailsHibernatePersistentEntity persistentEntity = (GrailsHibernatePersistentEntity) getMappingContext().getPersistentEntity(type.getName());
         final String entityName = persistentEntity.getName();
         final String idName = persistentEntity.getIdentity().getName();
+
+        // Collect input keys preserving order (including duplicates)
+        List<Object> inputKeys = new ArrayList<>();
+        for (Object k : keys) {
+            inputKeys.add(k);
+        }
+        if (inputKeys.isEmpty()) {
+            return Collections.emptyList();
+        }
+        // Determine the unique set of keys for the HQL IN query
+        Collection<Object> uniqueKeys = new LinkedHashMap<Object, Object>() {{
+            for (Object k : inputKeys) { put(k, k); }
+        }}.keySet();
+
         final String hql = "from " + entityName + " as e where e." + idName + " in (:keys)";
 
-        return getHibernateTemplate().execute(session -> {
-            // Prepare the HqlQueryContext using our manual HQL string and type override
+        Map<Object, Object> entityById = getHibernateTemplate().execute(session -> {
             HqlQueryContext queryContext = HqlQueryContext.prepare(
                 persistentEntity,
                 hql,
-                Map.of("keys", getIterableAsCollection(keys)),
+                Map.of("keys", uniqueKeys),
                 null,
                 null,
                 new HashMap<>(),
@@ -420,13 +433,28 @@ public class HibernateSession extends AbstractAttributeStoringSession implements
                 type
             );
 
-            return HibernateHqlQueryCreator.createHqlQuery(
+            List fetched = HibernateHqlQueryCreator.createHqlQuery(
                 (HibernateDatastore) getDatastore(),
                 getHibernateTemplate().getSessionFactory(),
                 persistentEntity,
                 queryContext
             ).list();
+
+            Map<Object, Object> byId = new LinkedHashMap<>();
+            org.hibernate.Session nativeSession = session;
+            for (Object entity : fetched) {
+                Object id = nativeSession.getIdentifier(entity);
+                byId.put(id, entity);
+            }
+            return byId;
         });
+
+        // Build result list in input order, with null for missing IDs
+        List<Object> result = new ArrayList<>(inputKeys.size());
+        for (Object k : inputKeys) {
+            result.add(entityById.get(k));
+        }
+        return result;
     }
 
     @Override
