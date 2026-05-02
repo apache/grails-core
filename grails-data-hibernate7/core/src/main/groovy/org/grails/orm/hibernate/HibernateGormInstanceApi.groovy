@@ -329,7 +329,7 @@ class HibernateGormInstanceApi<D> extends GormInstanceApi<D> {
     @Override
     void discard(D target) {
         getHibernateTemplate().execute { Session session ->
-            if (session.contains(target)) {
+            if (sessionContains(session, target)) {
                 session.detach target
             }
         }
@@ -338,7 +338,7 @@ class HibernateGormInstanceApi<D> extends GormInstanceApi<D> {
     @Override
     boolean isAttached(D target) {
         getHibernateTemplate().execute { Session session ->
-            session.contains target
+            sessionContains(session, target)
         }
     }
 
@@ -370,7 +370,7 @@ class HibernateGormInstanceApi<D> extends GormInstanceApi<D> {
 
     protected D performUpsert(D target, boolean shouldFlush) {
         getHibernateTemplate().execute { Session session ->
-            if (session.contains(target)) {
+            if (sessionContains(session, target)) {
                 if (shouldFlush) {
                     flushSession session
                 }
@@ -394,11 +394,24 @@ class HibernateGormInstanceApi<D> extends GormInstanceApi<D> {
         session.flush()
     }
 
+    /**
+     * Hibernate 7 changed {@code Session.contains()} to throw {@link IllegalArgumentException}
+     * when the supplied object's class is not a mapped entity in this session factory, instead of
+     * returning {@code false} as Hibernate 5 did.  All call sites in this class must go through
+     * this helper so they safely degrade to {@code false} for cross-datasource entities.
+     */
+    private static boolean sessionContains(Session session, Object target) {
+        try {
+            return session.contains(target)
+        } catch (IllegalArgumentException ignored) {
+            return false
+        }
+    }
+
     protected D performMerge(final D target, final boolean flush) {
         getHibernateTemplate().execute { Session session ->
             D merged
-            if (session.contains(target)) {
-                // Entity is already managed in this session — merging would cause H7 to create
+            if (sessionContains(session, target)) {
                 // a second PersistentCollection for the same role+key ("two representations").
                 // Just use the entity as-is; dirty-checking + cascade will handle children.
                 merged = target

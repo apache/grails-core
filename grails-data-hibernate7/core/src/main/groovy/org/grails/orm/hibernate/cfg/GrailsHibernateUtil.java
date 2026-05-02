@@ -135,7 +135,12 @@ public class GrailsHibernateUtil extends HibernateRuntimeUtils {
     }
 
     private static boolean canModifyReadWriteState(Session session, Object target) {
-        return session.contains(target) && Hibernate.isInitialized(target);
+        try {
+            return session.contains(target) && Hibernate.isInitialized(target);
+        } catch (IllegalArgumentException e) {
+            // Hibernate 7: session.contains() throws when the class is not a known entity type
+            return false;
+        }
     }
 
     /**
