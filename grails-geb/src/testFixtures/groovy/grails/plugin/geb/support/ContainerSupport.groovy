@@ -34,27 +34,7 @@ import grails.plugin.geb.ContainerGebSpec
  * @author Mattias Reichel
  * @since 4.2
  */
-// GROOVY-11907 follow-up / indy=false bytecode bug: @CompileStatic on a trait
-// with static fields generates invalid bytecode for the static setter helpers
-// when the downstream consumer is compiled with grailsIndy=false. The
-// Trait$Helper methods come out with mismatched local slots (e.g. dload_3 on
-// a 2-local frame) and trip a JVM VerifyError ("get long/double overflows
-// locals") at ContainerGebSpec class init, cascading into NoClassDefFoundError
-// on every spec that extends ContainerGebSpec.
-//
-// Fixed for Groovy 5.0.6-SNAPSHOT (commit 74da8078b5 on grails8-groovy5-sb4
-// restored @CompileStatic for Groovy 5). Tracked upstream as GROOVY-11968
-// (apache/groovy PR #2495 by @paulk-asert):
-//   https://issues.apache.org/jira/browse/GROOVY-11968
-//   https://github.com/apache/groovy/pull/2495
-//
-// Standalone reproducer (`TraitStaticFieldsCheck.groovy` in `quick-checks/`):
-//   https://github.com/jamesfredley/groovy5-compiledynamic-trait-bug/tree/main/quick-checks
-//
-// Status to re-verify against latest Groovy 6.0.0-SNAPSHOT before each canary
-// rebuild: if the fix has propagated to the Groovy 6 line, drop @CompileDynamic
-// and switch back to @CompileStatic.
-@CompileDynamic
+@CompileStatic
 @SelfType(ContainerGebSpec)
 trait ContainerSupport implements DownloadSupport {
 
