@@ -136,7 +136,7 @@ Example:
 ```
 
 ### Manual Verification: Reproducible Jar Files
-After all jar files are verified to be signed by a valid Grails key, we need to build a local copy to ensure the file was built with the right code base. The `very-reproducible.sh` script handles this check, but if the bootstrap needs to be manually bootstrapped, perform the following step: 
+After all jar files are verified to be signed by a valid Grails key, we need to build a local copy to ensure the file was built with the right code base. The `verify-reproducible.sh` script handles this check, but if the bootstrap needs to be manually bootstrapped, perform the following step: 
 
     gradle -p gradle-bootstrap
 
@@ -288,7 +288,7 @@ an example call to the checked in script to move the distributions.
 After moving the distributions, you will receive an email from the ASF reporter. Click the link in the email to mark the
 release as published or go to https://reporter.apache.org/addrelease.html?grails. The `release` job in the `Release` workflow has a step to remind you of this.
 
-For example, if the release is out of core with version `7.0.0-M4`, then the release name with be `CORE-7.0.0-M4`. Enter
+For example, if the release is out of core with version `7.0.0-M4`, then the release name will be `CORE-7.0.0-M4`. Enter
 the date you moved the distribution artifacts and report the release.
 
 ### Deploy the release to Grails Forge
@@ -383,7 +383,7 @@ Setup the key for validity:
 # Appendix: Verification from a Container
 
 The Grails image is officially built on linux in a GitHub action using an Ubuntu container. To run a linux container
-locally, you can use the following command (substitute `<git-tag-of-release` with the tag name):
+locally, you can use the following command (substitute `<git-tag-of-release>` with the tag name):
 
 **macOS/Linux**
 ```bash
