@@ -22,9 +22,11 @@ import groovy.transform.CompileDynamic
 import groovy.transform.CompileStatic
 import org.grails.datastore.gorm.GormInstanceApi
 import org.grails.datastore.gorm.GormStaticApi
+import grails.orm.HibernateCriteriaBuilder
 import org.grails.datastore.mapping.core.Datastore
 import org.grails.datastore.mapping.core.Session
 import org.grails.datastore.mapping.core.SessionCallback
+import org.grails.datastore.mapping.query.api.BuildableCriteria
 import org.grails.datastore.mapping.engine.EntityPersister
 import org.grails.datastore.mapping.model.MappingContext
 import org.grails.datastore.mapping.model.PersistentEntity
@@ -88,6 +90,12 @@ class HibernateGormStaticApi<D> extends GormStaticApi<D> {
             this.hibernateTemplate = (GrailsHibernateTemplate) datastore.getHibernateTemplate()
         }
         return hibernateTemplate
+    }
+
+    @Override
+    BuildableCriteria createCriteria() {
+        HibernateDatastore ds = getHibernateDatastore()
+        new HibernateCriteriaBuilder(persistentClass, ds.sessionFactory, ds)
     }
 
     @Override
