@@ -109,25 +109,11 @@ class GroovyPageCompiler {
             }
             compilerConfig.setTargetDirectory(targetDir)
             compilerConfig.setSourceEncoding(encoding)
-            // GSP compilation parallelism is intentionally configurable via the
-            // grails.gsp.compiler.parallelism system property. The default is
-            // 1 (serial) under Groovy 6 because Groovy 6.0.0-SNAPSHOT contains
-            // a thread-safety bug in org.codehaus.groovy.util.ListHashMap that
-            // surfaces during AnnotationNode.isTargetAllowed -> NodeMetaDataHandler
-            // .getNodeMetaData -> Map.computeIfAbsent on shared annotation
-            // metadata (e.g. @Inject, @CompileStatic) when multiple GSPs are
-            // compiled concurrently. The symptom is "General error during
-            // instruction selection: Index N out of bounds for length N" with
-            // an ArrayIndexOutOfBoundsException in ListHashMap.toMap. Falling
-            // back to a single thread eliminates the race at a small cost in
-            // wall-clock time. Override with -Dgrails.gsp.compiler.parallelism=N
-            // (or 0 to use availableProcessors*2) once Groovy 6 fixes this.
-            int parallelism = computeGspCompilerParallelism()
-            ExecutorService threadPool = Executors.newFixedThreadPool(parallelism)
+            ExecutorService threadPool = Executors.newFixedThreadPool(Runtime.getRuntime().availableProcessors() * 2)
             CompletionService completionService = new ExecutorCompletionService(threadPool)
             List<Future<Map>> futures = []
             try {
-                Integer collationLevel = parallelism
+                Integer collationLevel = Runtime.getRuntime().availableProcessors() * 2
                 if (srcFiles.size() < collationLevel) {
                     collationLevel = 1
                 }
@@ -186,48 +172,6 @@ class GroovyPageCompiler {
             }
         }
         return compileGSPRegistry
-    }
-
-    /**
-     * Resolves the worker-thread count for parallel GSP compilation.
-     *
-     * Honours -Dgrails.gsp.compiler.parallelism=N. A value of 0 (or any
-     * non-positive number) means "use availableProcessors() * 2" (the
-     * historical Grails default). When the property is unset we default
-     * to 1 on Groovy 6 (see the inline comment at the call site for why)
-     * and to availableProcessors() * 2 on Groovy 5 and earlier.
-     */
-    private static int computeGspCompilerParallelism() {
-        int cores = Runtime.getRuntime().availableProcessors()
-        int defaultParallelism = isGroovy6OrLater() ? 1 : cores * 2
-
-        String override = System.getProperty('grails.gsp.compiler.parallelism')
-        if (override == null || override.isEmpty()) {
-            return defaultParallelism
-        }
-        try {
-            int requested = Integer.parseInt(override.trim())
-            if (requested <= 0) {
-                return cores * 2
-            }
-            return requested
-        } catch (NumberFormatException ignore) {
-            return defaultParallelism
-        }
-    }
-
-    private static boolean isGroovy6OrLater() {
-        String version = groovy.lang.GroovySystem.getVersion()
-        if (version == null || version.isEmpty()) {
-            return false
-        }
-        try {
-            int dot = version.indexOf('.')
-            int major = Integer.parseInt(dot >= 0 ? version.substring(0, dot) : version)
-            return major >= 6
-        } catch (NumberFormatException ignore) {
-            return false
-        }
     }
 
     /**

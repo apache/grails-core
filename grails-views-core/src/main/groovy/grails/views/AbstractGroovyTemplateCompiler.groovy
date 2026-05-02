@@ -82,25 +82,11 @@ abstract class AbstractGroovyTemplateCompiler {
 
     void compile(List<File> sources) {
 
-        // Mirror the GSP-side guard in GroovyPageCompiler: Groovy 6.0.0-SNAPSHOT
-        // contains a thread-safety bug in org.codehaus.groovy.util.ListHashMap
-        // reachable through AnnotationNode.isTargetAllowed ->
-        // NodeMetaDataHandler.getNodeMetaData -> Map.computeIfAbsent on shared
-        // annotation metadata when multiple template compiles concurrently
-        // touch the same AST. Surfaces in CI as
-        //   General error during instruction selection: Index N out of bounds
-        //   java.lang.ArrayIndexOutOfBoundsException ... at ListHashMap.toMap
-        // during :grails-test-examples-*:compileGsonViews. Default to a single
-        // worker on Groovy 6 to dodge the race; preserve the historical
-        // availableProcessors() * 2 default on Groovy 5 and earlier. Override
-        // with -Dgrails.views.compiler.parallelism=N once Groovy 6 fixes this
-        // (or 0 to use availableProcessors() * 2 explicitly).
-        int parallelism = computeParallelism()
-        ExecutorService threadPool = Executors.newFixedThreadPool(parallelism)
+        ExecutorService threadPool = Executors.newFixedThreadPool(Runtime.getRuntime().availableProcessors() * 2)
         CompletionService completionService = new ExecutorCompletionService(threadPool)
 
         try {
-            Integer collationLevel = parallelism
+            Integer collationLevel = Runtime.getRuntime().availableProcessors() * 2
             if (sources.size() < collationLevel) {
                 collationLevel = 1
             }
@@ -155,47 +141,6 @@ abstract class AbstractGroovyTemplateCompiler {
 
     void compile(File...sources) {
         compile(Arrays.asList(sources))
-    }
-
-    /**
-     * Resolves the worker-thread count for parallel template compilation.
-     * Honours -Dgrails.views.compiler.parallelism=N. A non-positive override
-     * means "use availableProcessors() * 2" (the historical default). When the
-     * property is unset we default to 1 on Groovy 6 (see the inline comment at
-     * the call site for the ListHashMap thread-safety reasoning) and to
-     * availableProcessors() * 2 on Groovy 5 and earlier.
-     */
-    private static int computeParallelism() {
-        int cores = Runtime.getRuntime().availableProcessors()
-        int defaultParallelism = isGroovy6OrLater() ? 1 : cores * 2
-
-        String override = System.getProperty('grails.views.compiler.parallelism')
-        if (override == null || override.isEmpty()) {
-            return defaultParallelism
-        }
-        try {
-            int requested = Integer.parseInt(override.trim())
-            if (requested <= 0) {
-                return cores * 2
-            }
-            return requested
-        } catch (NumberFormatException ignore) {
-            return defaultParallelism
-        }
-    }
-
-    private static boolean isGroovy6OrLater() {
-        String version = groovy.lang.GroovySystem.getVersion()
-        if (version == null || version.isEmpty()) {
-            return false
-        }
-        try {
-            int dot = version.indexOf('.')
-            int major = Integer.parseInt(dot >= 0 ? version.substring(0, dot) : version)
-            return major >= 6
-        } catch (NumberFormatException ignore) {
-            return false
-        }
     }
 
     static void run(String[] args, Class<? extends GenericViewConfiguration> configurationClass, Class<? extends AbstractGroovyTemplateCompiler> compilerClass) {
