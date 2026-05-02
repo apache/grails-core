@@ -160,6 +160,11 @@ jobs:
         run: |
           sed -i "/['\"]groovy\.version['\"][[:space:]]*:/c\'groovy.version':'${{ needs.build_groovy.outputs.groovyVersion }}'," dependencies.gradle
       - name: "🔨 Build and test Grails using the locally built Groovy snapshot"
+        # -PskipMicronautProjects excludes the Grails-Micronaut "island" (grails-micronaut,
+        # grails-micronaut-bom, and the micronaut-tied test-examples) from the build graph.
+        # That island intentionally pins Groovy 5 / Spock 2.4-groovy-5.0 via grails-micronaut-bom,
+        # which is incompatible with the Groovy 4.x snapshot this job swaps in above.
+        # See https://github.com/apache/grails-core/issues/15613.
         run: >
           ./gradlew build
           --continue
@@ -167,6 +172,7 @@ jobs:
           -x groovydoc
           -PgebAtCheckWaiting
           -PskipCodeStyle
+          -PskipMicronautProjects
           -PmaxTestParallel=3
         env:
           GRAILS_INCLUDE_MAVEN_LOCAL: true
