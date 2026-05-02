@@ -32,7 +32,7 @@ dependencies {
 
     implementation 'org.apache.grails:grails-data-hibernate5'
     implementation 'org.apache.grails:grails-core'
-    implementation "org.yakworks:hibernate-groovy-proxy:$yakworksHibernateGroovyProxyVersion", {
+    implementation 'org.yakworks:hibernate-groovy-proxy', {
         exclude group: 'org.codehaus.groovy', module: 'groovy'
     }
 

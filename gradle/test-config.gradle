@@ -56,8 +56,11 @@ tasks.withType(GroovyCompile).configureEach {
 }
 
 tasks.withType(Test).configureEach {
-    // Disable build cache for tests in CI to ensure they always run
-    outputs.cacheIf { !isCiBuild }
+    // Disable build cache for tests in CI to ensure they always run.
+    // Also honor DO_NOT_CACHE_TESTS=1 so developers can repeatedly invoke the same test
+    // command without --rerun-tasks (and without recompiling everything else).
+    outputs.cacheIf { !isCiBuild && !doNotCacheTests }
+    outputs.upToDateWhen { !doNotCacheTests }
 
     systemProperty('spock.iKnowWhatImDoing.disableGroovyVersionCheck', 'true')
     onlyIf {

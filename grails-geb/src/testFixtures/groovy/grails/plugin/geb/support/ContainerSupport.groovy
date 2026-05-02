@@ -18,7 +18,7 @@
  */
 package grails.plugin.geb.support
 
-import groovy.transform.CompileDynamic
+import groovy.transform.CompileStatic
 import groovy.transform.SelfType
 
 import geb.download.DownloadSupport
@@ -42,18 +42,18 @@ import grails.plugin.geb.ContainerGebSpec
 // locals") at ContainerGebSpec class init, cascading into NoClassDefFoundError
 // on every spec that extends ContainerGebSpec.
 //
-// Tracked upstream as GROOVY-11968 (open as of 2026-04-27, apache/groovy
-// PR #2495 by @paulk-asert):
+// Fixed for Groovy 5.0.6-SNAPSHOT (commit 74da8078b5 on grails8-groovy5-sb4
+// restored @CompileStatic for Groovy 5). Tracked upstream as GROOVY-11968
+// (apache/groovy PR #2495 by @paulk-asert):
 //   https://issues.apache.org/jira/browse/GROOVY-11968
 //   https://github.com/apache/groovy/pull/2495
 //
 // Standalone reproducer (`TraitStaticFieldsCheck.groovy` in `quick-checks/`):
 //   https://github.com/jamesfredley/groovy5-compiledynamic-trait-bug/tree/main/quick-checks
 //
-// Reproduces on Groovy 5.0.6-SNAPSHOT and on Groovy 6.0.0-SNAPSHOT build #518
-// (2026-04-27 14:33 UTC). Keep @CompileDynamic until apache/groovy#2495 merges
-// and a fresh snapshot is published, then re-validate and switch back to
-// @CompileStatic.
+// Status to re-verify against latest Groovy 6.0.0-SNAPSHOT before each canary
+// rebuild: if the fix has propagated to the Groovy 6 line, drop @CompileDynamic
+// and switch back to @CompileStatic.
 @CompileDynamic
 @SelfType(ContainerGebSpec)
 trait ContainerSupport implements DownloadSupport {

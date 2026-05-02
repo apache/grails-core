@@ -87,6 +87,12 @@ def java17moduleReflectionCompatibilityArguments = [
         '--add-opens=java.base/java.util=ALL-UNNAMED'
 ]
 tasks.withType(Test).configureEach {
+    // Honor DO_NOT_CACHE_TESTS=1 so developers can repeatedly invoke the same test command
+    // without --rerun-tasks (and without recompiling everything else).
+    boolean doNotCacheTests = System.getenv('DO_NOT_CACHE_TESTS')?.toBoolean()
+    outputs.cacheIf { !doNotCacheTests }
+    outputs.upToDateWhen { !doNotCacheTests }
+
     onlyIf {
         ![
                 'onlyFunctionalTests',

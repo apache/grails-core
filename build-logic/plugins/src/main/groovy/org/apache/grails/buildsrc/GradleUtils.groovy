@@ -48,6 +48,10 @@ class GradleUtils {
             def v = findProperty(project, name)
             return v == null ? null : Integer.valueOf(v as String) as T
         }
+        if (type && (type == Boolean || type == boolean.class)) {
+            def v = findProperty(project, name)
+            return v == null ? null : Boolean.parseBoolean(v as String) as T
+        }
 
         findProperty(project, name) as T
     }

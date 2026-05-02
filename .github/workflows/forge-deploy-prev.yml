@@ -96,7 +96,7 @@ jobs:
           gcloud run deploy ${{ secrets.GCP_PROJECT_ID }}-prev
           --image $IMAGE_NAME
           --region us-central1
-          --update-env-vars=HOSTNAME="prev.grails.org",CORS_ALLOWED_ORIGIN="https://start.grails.org",GITHUB_OAUTH_APP_CLIENT_ID=${{ secrets.GH_OAUTH_SNAPSHOT_CLIENT_ID }},GITHUB_OAUTH_APP_CLIENT_SECRET=${{ secrets.GH_OAUTH_SNAPSHOT_CLIENT_SECRET }},GITHUB_USER_AGENT=${{ secrets.GH_USER_AGENT }},GITHUB_REDIRECT_URL=${{ secrets.GH_REDIRECT_URL }}
+          --update-env-vars=HOSTNAME="prev.grails.org",CORS_ALLOWED_ORIGIN="https://start.grails.org",CORS_ALLOWED_ORIGIN_APACHE="https://grails.apache.org",GITHUB_OAUTH_APP_CLIENT_ID=${{ secrets.GH_OAUTH_SNAPSHOT_CLIENT_ID }},GITHUB_OAUTH_APP_CLIENT_SECRET=${{ secrets.GH_OAUTH_SNAPSHOT_CLIENT_SECRET }},GITHUB_USER_AGENT=${{ secrets.GH_USER_AGENT }},GITHUB_REDIRECT_URL=${{ secrets.GH_REDIRECT_URL }}
           --platform managed
           --allow-unauthenticated
           --service-account=${{ secrets.GCLOUD_EMAIL }}
