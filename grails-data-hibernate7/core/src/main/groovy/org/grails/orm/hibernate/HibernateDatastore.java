@@ -47,6 +47,8 @@ import org.hibernate.SessionFactory;
 import org.hibernate.boot.Metadata;
 import org.hibernate.cfg.Environment;
 import org.hibernate.engine.spi.SessionFactoryImplementor;
+import org.hibernate.event.service.spi.EventListenerRegistry;
+import org.hibernate.event.spi.EventType;
 import org.hibernate.integrator.spi.Integrator;
 import org.hibernate.integrator.spi.IntegratorService;
 import org.hibernate.service.ServiceRegistry;
@@ -121,6 +123,7 @@ import org.grails.orm.hibernate.event.listener.HibernateEventListener;
 import org.grails.orm.hibernate.multitenancy.MultiTenantEventListener;
 import org.grails.orm.hibernate.query.HibernateQueryArgument;
 import org.grails.orm.hibernate.support.ClosureEventTriggeringInterceptor;
+import org.grails.orm.hibernate.support.GormAutoTimestampFlushEntityEventListener;
 
 /**
  * Datastore implementation that uses a Hibernate SessionFactory underneath.
@@ -287,6 +290,7 @@ public class HibernateDatastore extends AbstractDatastore
         interceptor.setDatastore(this);
         interceptor.setEventPublisher(eventPublisher);
         registerEventListeners(this.eventPublisher);
+        registerAutoTimestampFlushEntityEventListener();
         configureValidatorRegistry(mappingContext);
         this.mappingContext.addMappingContextListener(new MappingContext.Listener() {
             @Override
@@ -535,6 +539,26 @@ public class HibernateDatastore extends AbstractDatastore
             eventPublisher.addApplicationListener(eventTriggeringInterceptor);
         }
     }
+
+    /**
+     * Registers {@link GormAutoTimestampFlushEntityEventListener} as a prepended
+     * {@code FLUSH_ENTITY} listener so it runs before Hibernate's
+     * {@code DefaultFlushEntityEventListener} and can update {@code lastUpdated} on the
+     * entity before the dirty-property set is computed. This ensures {@code lastUpdated}
+     * is included in dynamic-update SQL even when {@code dynamicUpdate = true}.
+     */
+    protected void registerAutoTimestampFlushEntityEventListener() {
+        if (this.sessionFactory instanceof SessionFactoryImplementor sfi) {
+            EventListenerRegistry elr =
+                    sfi.getServiceRegistry().getService(EventListenerRegistry.class);
+            if (elr != null) {
+                elr.getEventListenerGroup(EventType.FLUSH_ENTITY)
+                        .prependListener(new GormAutoTimestampFlushEntityEventListener(
+                                autoTimestampEventListener, mappingContext));
+            }
+        }
+    }
+
 
     protected void configureValidatorRegistry(HibernateMappingContext mappingContext) {
         StaticMessageSource messageSource = new StaticMessageSource();
