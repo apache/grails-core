@@ -996,20 +996,32 @@ public class HibernateDatastore extends AbstractDatastore
     }
 
     public <T> T withNewSession(final Closure<T> callable) {
-        return DatastoreUtils.executeWithNewSession(this, (SessionCallback<T>) session -> {
-            boolean bindHibernate = TransactionSynchronizationManager.getResource(sessionFactory) == null;
+        // Open a fresh native Hibernate session, bind it under the sessionFactory key so
+        // that GrailsSessionContext.currentSession() can find it, then wrap it in the GORM
+        // HibernateSession facade before handing off to the caller's closure.
+        // We cannot use sessionFactory.getCurrentSession() here because no session is bound yet;
+        // and we cannot use DatastoreUtils.executeWithNewSession because it creates only a lazy
+        // HibernateSession wrapper without ever binding a real Hibernate session first.
+        org.hibernate.Session hibSession = openSession();
+        boolean bindHibernate = TransactionSynchronizationManager.getResource(sessionFactory) == null;
+        if (bindHibernate) {
+            TransactionSynchronizationManager.bindResource(sessionFactory,
+                    new org.grails.orm.hibernate.support.hibernate7.SessionHolder(hibSession));
+        }
+        try {
+            HibernateSession gormSession = new HibernateSession(this, sessionFactory);
+            Closure<T> multiTenantCallable = prepareMultiTenantClosure(callable);
+            return multiTenantCallable.call(gormSession);
+        } finally {
             if (bindHibernate) {
-                TransactionSynchronizationManager.bindResource(sessionFactory, new org.grails.orm.hibernate.support.hibernate7.SessionHolder(sessionFactory.getCurrentSession()));
+                TransactionSynchronizationManager.unbindResource(sessionFactory);
             }
             try {
-                Closure<T> multiTenantCallable = prepareMultiTenantClosure(callable);
-                return multiTenantCallable.call(session);
-            } finally {
-                if (bindHibernate) {
-                    TransactionSynchronizationManager.unbindResource(sessionFactory);
-                }
+                hibSession.close();
+            } catch (Exception ignored) {
+                // best-effort close
             }
-        });
+        }
     }
 
     @Override
