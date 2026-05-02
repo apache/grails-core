@@ -78,6 +78,33 @@ class HibernateConnectionSourceSettings extends ConnectionSourceSettings {
     @AutoClone
     static class HibernateSettings extends LinkedHashMap<String, String> {
 
+        // Groovy 6.0.0-SNAPSHOT (build #546+) stub generator regression: when
+        // @AutoClone is applied to a class that extends a JDK type whose
+        // clone() does not declare CloneNotSupportedException (here
+        // LinkedHashMap.clone()), the Java stub generator still emits the
+        // override with `throws CloneNotSupportedException`, and javac
+        // rejects it as not a valid override. Defining clone() explicitly
+        // suppresses the @AutoClone-generated method (AutoClone skips when
+        // a user-supplied clone() already exists) and keeps the stub
+        // signature in lock-step with LinkedHashMap.clone(). The body
+        // mirrors what @AutoClone(style = CLONE) would produce: a shallow
+        // copy from LinkedHashMap.clone() followed by deep-cloning of the
+        // Cloneable typed fields so that tenant-specific
+        // HibernateConnectionSourceSettings instances (cloned in
+        // HibernateDatastore.createTenantConnectionSource) do not share
+        // mutable nested settings. Removable once upstream Groovy fixes
+        // the stub generator.
+        @Override
+        HibernateSettings clone() {
+            HibernateSettings copy = (HibernateSettings) super.clone()
+            copy.osiv = osiv != null ? (OsivSettings) osiv.clone() : null
+            copy.cache = cache != null ? (CacheSettings) cache.clone() : null
+            copy.flush = flush != null ? (FlushSettings) flush.clone() : null
+            copy.additionalProperties = additionalProperties != null ?
+                    (Properties) additionalProperties.clone() : null
+            return copy
+        }
+
         /**
          * Whether OpenSessionInView should be read-only
          */
