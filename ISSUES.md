@@ -24,21 +24,40 @@
     *   **Query list args**: Replaced `query.list(args)` with explicit `max`/`offset` extraction, then `query.list()` (H7 `Query` has no `list(Map)` overload).
     *   **Session.getPersister routing**: Corrected `getPersister(example)` call from `session.getDatastore()` to `session` directly.
     *   **forQualifier field access**: Removed illegal `failOnError`/`markDirty` field copies that don't exist on `GormStaticApi`.
-*   **Current Test Failures (3 open — investigated 2026-05-01)**:
+*   **Critical Runtime Fixes (COMPLETED — 2026-05-01/02)**:
 
-    ### Issue H7-1 · `withNewSession` session binding mismatch *(PRIORITY: HIGH)*
-    *   **Tests**: `HibernatePersistenceContextInterceptorSpec.test flush and clear` and `HibernateDatastoreSpringInitializerSpec.Test configure multiple data sources`
+    ### Issue H7-1 · `withNewSession` session binding mismatch *(RESOLVED — commit `a4b6a26c05`)*
+    *   **Tests affected**: `MultiTenancyUnidirectionalOneToManySpec` and related multi-tenancy tests
     *   **Exception**: `org.hibernate.HibernateException: No Session found for current thread`
-    *   **Stack pivot**: `HibernateDatastore.withNewSession` (line 978) → `sessionFactory.getCurrentSession()` → `GrailsSessionContext.currentSession()`
-    *   **Root cause**: `withNewSession()` opens a new GORM session via `DatastoreUtils.executeWithNewSession`, then inside the callback tries to bind a `SessionHolder` by calling `sessionFactory.getCurrentSession()`. But `GrailsSessionContext.currentSession()` looks in `TransactionSynchronizationManager` for an existing binding — which doesn't exist yet — so it throws. The lambda tries to use `getCurrentSession()` to get the session *before* it has been registered, creating a chicken-and-egg failure.
-    *   **Fix**: Replace `sessionFactory.getCurrentSession()` with extraction of the native Hibernate `Session` from the GORM `session` callback parameter (cast to `HibernateSession`, call `getNativeInterface()`), then pass that to `new SessionHolder(nativeSession)`.
+    *   **Root cause**: `HibernateDatastore.withNewSession(Closure)` called `DatastoreUtils.executeWithNewSession(this, callback)` which creates a lazy GORM `HibernateSession` wrapper without opening a real Hibernate session. Inside the callback, the code called `sessionFactory.getCurrentSession()` to bind a `SessionHolder` — but `GrailsSessionContext.currentSession()` looks in `TransactionSynchronizationManager` for an existing binding which doesn't exist yet → chicken-and-egg failure.
+    *   **Fix applied**: Rewrote `withNewSession(Closure)` to explicitly call `openSession()`, bind the native session to `TransactionSynchronizationManager` under the `sessionFactory` key, wrap it in a `HibernateSession` for the closure, then unbind and close in `finally`.
+    *   **Key insight**: `HibernateGormStaticApi.withNewSession` casts the closure parameter to `HibernateSession` (calls `getNativeSession()`), so the closure must receive a GORM `HibernateSession`, not a raw Hibernate `Session`. `GrailsHibernateTemplate.executeWithNewSession` passes raw → incompatible.
 
-    ### Issue H7-2 · H7 `SessionImpl.contains()` throws on secondary-datasource entity *(PRIORITY: MEDIUM)*
+    ### Issue H7-2 · H7 `SessionImpl.contains()` throws on secondary-datasource entity *(RESOLVED — prior session)*
     *   **Test**: `MultiDataSourceSessionSpec.CRUD operations work on secondary datasource with OSIV`
     *   **Exception**: `java.lang.IllegalArgumentException: Class '...OsivBook' is not an entity class`
-    *   **Stack pivot**: `GrailsHibernateUtil.canModifyReadWriteState(session, target)` → `session.contains(target)` → `SessionImpl.assertInstanceOfEntityType()`
-    *   **Root cause**: `OsivBook` has `static mapping = { datasource 'secondary' }`. `GrailsHibernateUtil.setObjectToReadWrite()` calls `sessionFactory.getCurrentSession()` (defaulting to primary) then `session.contains(target)`. In Hibernate 5, `contains()` returned `false` for unknown entity classes. In **Hibernate 7**, `SessionImpl.contains()` calls `assertInstanceOfEntityType()` which **throws `IllegalArgumentException`** when the class is not registered in that session factory's metamodel.
-    *   **Fix**: Wrap the `session.contains(target)` call in `canModifyReadWriteState()` with a try-catch for `IllegalArgumentException` and return `false`.
+    *   **Root cause**: In Hibernate 7, `SessionImpl.contains()` calls `assertInstanceOfEntityType()` which **throws** when the class is not registered in that session factory's metamodel. Hibernate 5 returned `false`.
+    *   **Fix**: Wrapped `session.contains(target)` in `canModifyReadWriteState()` with try-catch for `IllegalArgumentException`, returning `false`.
+
+    ### Issue H7-3 · `performMerge` returns wrong object → `NonUniqueObjectException` *(RESOLVED — commit `35d0cdd835`)*
+    *   **Tests affected**: `MultipleOneToOneSpec` and any test with cascaded associations after `save()`
+    *   **Exception**: `org.hibernate.NonUniqueObjectException: A different object with the same identifier value was already associated with the session`
+    *   **Root cause**: In Hibernate 7, `session.merge(entity)` returns a **different Java object** (`merged`) than the input (`target`). `merged` is the session-managed canonical instance. The old code returned `target` (the caller's original), leaving `merged` in the session. When `target` was later cascade-persisted by Hibernate, it found `merged` already in the session with the same id → `NonUniqueObjectException`.
+    *   **Fix**: Changed `performMerge()` to `return merged` instead of `return target`. Id and version are still synced back to `target` for callers who kept a reference to the original. The managed instance is now what `save()` returns.
+    *   **Key insight**: This is a semantic change from Hibernate 5 to 7: callers that cache the result of `save()` now hold the managed instance, not the original detached object. All cascade operations will use the correct session-managed object.
+
+    ### Issue H7-4 · Composite ID `performUpsert` NPE *(RESOLVED — commit `35d0cdd835`)*
+    *   **Tests affected**: `CompositeIdWithDeepOneToManyMappingSpec`, `GlobalConstraintWithCompositeIdSpec`, `CompositeIdWithJoinTableSpec`
+    *   **Root cause**: `performUpsert()` dereferenced `getGormPersistentEntity().identity` (which is `null` for composite-identity entities) before the null-check guard.
+    *   **Fix**: Added null-check for `identity` before dereferencing; composite-ID entities are routed directly to `performMerge()`.
+
+    ### Issue H7-5 · `HibernateGormStaticApiSpec` — `HibernateGormStaticApi` test failures *(RESOLVED — 2026-05-02)*
+    *   **Tests**: `proxy test`, `Test that load returns`, `Test find with example`, `Test findAll with example`
+    *   **Status**: All 68 tests in `HibernateGormStaticApiSpec` now pass (verified from `build/test-results` XML, 2026-05-02T09:02:50Z). The failures listed in the previous `TEST_FAILURES.md` were stale (generated before commits `35d0cdd835` and `a4b6a26c05`).
+    *   **Note on hanging**: This spec can hang when run alongside other specs with `--rerun-tasks`. Run it in isolation or via the `testSelected` task.
+
+*   **Remaining Open Failures (grails-data-hibernate7-core, as of 2026-05-02)**:
+    See the Test Registry below. Still-failing specs include: `AddToManagedEntitySpec`, `DataServiceSpec`, `SqlQuerySpec`, `UniqueWithMultipleDataSourcesSpec`, validation specs (`DeepValidationSpec`, `EmbeddedWithValidationExceptionSpec`, `SkipValidationSpec`, `UniqueWithinGroupSpec`), `WithNewSessionAndExistingTransactionSpec`, `GormEnhancerCleanupSpec`, `ChildHibernateDatastoreUnitSpec`, `ExistsCrossJoinSpec`, `HibernateDatastoreIntegrationSpec`, `HibernateDatastoreSchemaMultiTenancySpec`, `HibernateDatastoreSpec`, `HibernateGormEnhancerSpec`, `HibernateGormInstanceApiSpec`, `JoinPerfSpec`, `Hibernate7GroovyProxySpec`.
 
 # Current Status (grails-data-simple)
 
@@ -185,9 +204,9 @@ _Run 1/4 batches at a time. If a run exceeds 2x expected time (~9 min), stop it,
 | 7 | `grails.gorm.specs.BasicCollectionInQuerySpec` | PASS |
 | 8 | `grails.gorm.specs.belongsto.BidirectionalOneToOneWithUniqueSpec` | PASS |
 | 9 | `grails.gorm.specs.CascadeToBidirectionalAsssociationSpec` | PASS |
-| 10 | `grails.gorm.specs.compositeid.CompositeIdWithDeepOneToManyMappingSpec` | FAIL |
-| 11 | `grails.gorm.specs.compositeid.GlobalConstraintWithCompositeIdSpec` | FAIL |
-| 12 | `grails.gorm.specs.CompositeIdWithJoinTableSpec` | FAIL |
+| 10 | `grails.gorm.specs.compositeid.CompositeIdWithDeepOneToManyMappingSpec` | PASS |
+| 11 | `grails.gorm.specs.compositeid.GlobalConstraintWithCompositeIdSpec` | PASS |
+| 12 | `grails.gorm.specs.CompositeIdWithJoinTableSpec` | PASS |
 | 13 | `grails.gorm.specs.CompositeIdWithManyToOneAndSequenceSpec` | PASS |
 | 14 | `grails.gorm.specs.CountByWithEmbeddedSpec` | PASS |
 | 15 | `grails.gorm.specs.DeleteAllWhereSpec` | PASS |
@@ -211,7 +230,7 @@ _Run 1/4 batches at a time. If a run exceeds 2x expected time (~9 min), stop it,
 | 33 | `grails.gorm.specs.HibernateEntityTraitGeneratedSpec` | PASS |
 | 34 | `grails.gorm.specs.HibernateGormDatastoreSpec` | PASS |
 | 35 | `grails.gorm.specs.HibernateMappingFactorySpec` | PASS |
-| 36 | `grails.gorm.specs.HibernatePagedResultListSpec` | FAIL |
+| 36 | `grails.gorm.specs.HibernatePagedResultListSpec` | PASS |
 | 37 | `grails.gorm.specs.hibernatequery.HibernateAssociationQuerySpec` | PASS |
 | 38 | `grails.gorm.specs.hibernatequery.HibernateQuerySpec` | PASS |
 | 39 | `grails.gorm.specs.hibernatequery.JpaCriteriaQueryCreatorSpec` | PASS |
@@ -225,15 +244,15 @@ _Run 1/4 batches at a time. If a run exceeds 2x expected time (~9 min), stop it,
 | 47 | `grails.gorm.specs.inheritance.TablePerConcreteClassAndDateCreatedSpec` | PASS |
 | 48 | `grails.gorm.specs.inheritance.TablePerConcreteClassImportedSpec` | PASS |
 | 49 | `grails.gorm.specs.jpa.SimpleJpaEntitySpec` | PASS |
-| 50 | `grails.gorm.specs.LastUpdateWithDynamicUpdateSpec` | FAIL |
+| 50 | `grails.gorm.specs.LastUpdateWithDynamicUpdateSpec` | PASS |
 | 51 | `grails.gorm.specs.ManyToOneSpec` | PASS |
-| 52 | `grails.gorm.specs.mappedby.MultipleOneToOneSpec` | FAIL |
+| 52 | `grails.gorm.specs.mappedby.MultipleOneToOneSpec` | PASS |
 | 53 | `grails.gorm.specs.MultiColumnUniqueConstraintSpec` | PASS |
 | 54 | `grails.gorm.specs.multitenancy.MultiTenancyBidirectionalManyToManySpec` | PASS |
-| 55 | `grails.gorm.specs.multitenancy.MultiTenancyUnidirectionalOneToManySpec` | FAIL |
+| 55 | `grails.gorm.specs.multitenancy.MultiTenancyUnidirectionalOneToManySpec` | PASS |
 | 56 | `grails.gorm.specs.NullableAndLengthSpec` | PASS |
 | 57 | `grails.gorm.specs.NullValueEqualSpec` | PASS |
-| 58 | `grails.gorm.specs.PagedResultListSpec` | FAIL |
+| 58 | `grails.gorm.specs.PagedResultListSpec` | PASS |
 | 59 | `grails.gorm.specs.perf.JoinPerfSpec` | FAIL |
 | 60 | `grails.gorm.specs.proxy.Hibernate7GroovyProxySpec` | FAIL |
 | 61 | `grails.gorm.specs.ReadOperationSpec` | PASS |
@@ -447,7 +466,7 @@ _Run 1/4 batches at a time. If a run exceeds 2x expected time (~9 min), stop it,
 | 269 | `org.grails.orm.hibernate.HibernateEventListenersSpec` | PASS |
 | 270 | `org.grails.orm.hibernate.HibernateGormEnhancerSpec` | FAIL |
 | 271 | `org.grails.orm.hibernate.HibernateGormInstanceApiSpec` | FAIL |
-| 272 | `org.grails.orm.hibernate.HibernateGormStaticApiSpec` | FAIL |
+| 272 | `org.grails.orm.hibernate.HibernateGormStaticApiSpec` | PASS |
 | 273 | `org.grails.orm.hibernate.HibernateGormValidationApiSpec` | PASS |
 | 274 | `org.grails.orm.hibernate.HibernateSessionSpec` | PASS |
 | 275 | `org.grails.orm.hibernate.InstanceApiHelperSpec` | PASS |
@@ -489,4 +508,75 @@ _Run 1/4 batches at a time. If a run exceeds 2x expected time (~9 min), stop it,
 | 311 | `org.grails.orm.hibernate.support.HibernateRuntimeUtilsSpec` | PASS |
 | 312 | `org.grails.orm.hibernate.support.HibernateVersionSupportSpec` | PASS |
 | 313 | `org.grails.orm.hibernate.support.SoftKeySpec` | PASS |
-___BEGIN___COMMAND_DONE_MARKER___0
+
+---
+
+# MongoDB Migration Guide
+
+Unlike the Hibernate 7 migration (which required deep ORM session lifecycle rewrites), MongoDB does **not** have Hibernate's `SessionFactory`/`TransactionSynchronizationManager` architecture. The expected failure modes are lighter-weight API changes, not session binding redesign.
+
+## Key Differences from Hibernate Migration
+
+| Area | Hibernate 7 | MongoDB |
+|------|-------------|---------|
+| Session management | Full TSM/SessionHolder redesign required | MongoDB uses `MongoClient` / codec registry — no session binding |
+| Object identity | `merge()` returns new object (critical H7 change) | No JPA merge semantics; MongoDB uses direct document upserts |
+| Transaction support | Full JTA/JPA transaction lifecycle | Mongo sessions are lightweight; `MongoTransactionManager` wraps `ClientSession` |
+| Type system | JPA metamodel, `assertInstanceOfEntityType()` throws | BSON codec registry — unknown types silently skip |
+| Proxy generation | ByteBuddy proxy changes broke `contains()` | No Hibernate proxy — lazy loading via DBRef or manual |
+| Criteria API | `CriteriaBuilder` JPA replacement for Criteria API | `Bson` filters replace `Criteria` — `DetachedCriteria` translates to `Bson` |
+
+## Expected Failure Patterns
+
+### 1. Driver API Changes (Spring Data MongoDB 4.x / MongoDB Driver 5.x)
+*   `MongoClient.getDatabase()` returns `MongoDatabase` — largely unchanged.
+*   `MongoCollection.find(Bson filter)` — check `FindIterable` API; `.first()` replaces `.one()`.
+*   **Action**: Search for deprecated driver calls in `grails-datastore-gorm-mongodb`. Run `./gradlew :grails-datastore-gorm-mongodb:compileGroovy` first; fix compilation before running tests.
+
+### 2. `WriteConcern` / `ReadPreference` API
+*   MongoDB Driver 5.x removed some `WriteConcern` constructors. Use `WriteConcern.ACKNOWLEDGED` constants.
+*   **Action**: Grep for `new WriteConcern(` and replace with static factories.
+
+### 3. `CodecRegistry` and Custom Type Codecs
+*   `CodecRegistries.fromProviders()` may behave differently for Groovy types.
+*   BSON codec for `GrailsDomainClass` instances — check `PersistentEntityCodec` for API changes.
+*   **Action**: If tests fail with `CodecConfigurationException`, the codec chain is broken. Start from `MongoMappingContext` codec registration.
+
+### 4. `MongoTransactionManager` — Spring Integration
+*   Spring Data MongoDB 4.x changed how `ClientSession` is bound via `TransactionSynchronizationManager`.
+*   Key class: `MongoTransactionManager` — verify it binds `ClientSessionHolder` with `TransactionSynchronizationManager`.
+*   **Action**: Similar to H7's `SessionHolder` binding, but simpler — MongoDB's `ClientSession` is a plain value holder, not a heavyweight ORM session.
+
+### 5. Multi-Tenancy in MongoDB
+*   MongoDB multi-tenancy uses **database-per-tenant** (DATABASE mode) — each tenant gets its own `MongoDatabase`.
+*   The child datastore pattern from H7 (`ChildHibernateDatastore`) has a MongoDB equivalent: `ChildMongoDatastore`.
+*   Apply the same **connection name rebasing** pattern from `grails-data-simple` (see Section 1 of the Architecture guide above).
+*   **Action**: Verify `ChildMongoDatastore.getDataSourceName()` returns the tenant ID, not `DEFAULT`.
+
+### 6. `DetachedCriteria` / `where` Queries
+*   MongoDB DetachedCriteria translates to BSON via `MongoQuery`. Verify the `GrailsMongoQuery` translator still handles all operators.
+*   Unlike H7 (which removed `CriteriaBuilder` entirely), MongoDB retained a Criteria-style API — changes should be evolutionary, not breaking.
+
+## Recommended Test-Fixing Workflow
+
+```bash
+# Step 1: Check compile status first (fail fast)
+./gradlew :grails-datastore-gorm-mongodb:compileGroovy compileTestGroovy
+
+# Step 2: Add to local.properties and run selected tests
+# grails.test.modules=:grails-datastore-gorm-mongodb
+
+./gradlew -I local-tasks.gradle clean testSelected aggregateTestFailures --continue
+
+# Step 3: Inner loop — fix one test at a time
+./gradlew :grails-datastore-gorm-mongodb:test \
+  --tests "org.grails.datastore.gorm.mongo.SomeFailingSpec"
+```
+
+## Key Files to Check
+| File | Why |
+|------|-----|
+| `grails-datastore-gorm-mongodb/src/main/groovy/org/grails/datastore/mapping/mongo/MongoDatastore.groovy` | Main datastore — session creation, event listeners, multi-tenancy |
+| `grails-datastore-gorm-mongodb/src/main/groovy/org/grails/datastore/mapping/mongo/engine/MongoEntityPersister.groovy` | CRUD ops, codec usage |
+| `grails-datastore-gorm-mongodb/src/main/groovy/org/grails/datastore/mapping/mongo/query/MongoQuery.groovy` | Query translation to BSON |
+| `grails-datastore-gorm-mongodb/src/main/groovy/org/grails/datastore/mapping/mongo/config/MongoMappingContext.groovy` | Codec registration |
