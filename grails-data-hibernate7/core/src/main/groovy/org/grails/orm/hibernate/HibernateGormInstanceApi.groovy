@@ -376,7 +376,13 @@ class HibernateGormInstanceApi<D> extends GormInstanceApi<D> {
                 }
                 return target
             } else {
-                Serializable id = (Serializable) InvokerHelper.getProperty(target, getGormPersistentEntity().identity.name)
+                PersistentProperty identityProperty = getGormPersistentEntity().identity
+                if (identityProperty == null) {
+                    // Composite ID entity — the user always supplies all key properties.
+                    // Hibernate merge() handles both the first-save (INSERT) and update (UPDATE) paths.
+                    return performMerge(target, shouldFlush)
+                }
+                Serializable id = (Serializable) InvokerHelper.getProperty(target, identityProperty.name)
                 if (id == null) {
                     return performPersist(target, shouldFlush)
                 } else {
@@ -433,7 +439,10 @@ class HibernateGormInstanceApi<D> extends GormInstanceApi<D> {
             if (versionProperty != null) {
                 InvokerHelper.setProperty(target, versionProperty.name, InvokerHelper.getProperty(merged, versionProperty.name))
             }
-            return target
+            // Return the session-managed instance so callers can use it in subsequent session
+            // operations without triggering NonUniqueObjectException when the same entity
+            // is referenced again (e.g. as a cascade target or query parameter).
+            return merged
         }
     }
 
