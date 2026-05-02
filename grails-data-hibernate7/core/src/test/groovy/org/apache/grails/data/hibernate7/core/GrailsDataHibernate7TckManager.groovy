@@ -60,6 +60,11 @@ class GrailsDataHibernate7TckManager extends GrailsDataTckManager {
     @Override
     void setup(Class<? extends Specification> spec) {
         cleanRegistry()
+        // Reset GormRegistry so each test gets fresh GormStaticApi instances.
+        // Without this, registerEntity() skips re-creation (if (getStaticApi == null))
+        // and the cached hibernateTemplate on the old instance points to a destroyed
+        // session factory, causing "Could not obtain current Hibernate Session".
+        GormRegistry.reset()
         super.setup(spec)
     }
 
