@@ -18,6 +18,7 @@ import com.github.jengelman.gradle.plugins.shadow.tasks.ShadowJar
 import org.apache.grails.forge.buildlogic.shadowjar.GrailsGroovyExtensionTransformer
 import org.apache.grails.forge.buildlogic.shadowjar.GrailsShadowLicenseTransform
 import org.apache.grails.forge.buildlogic.shadowjar.GrailsShadowNoticeTransform
+import org.cyclonedx.gradle.CyclonedxDirectTask
 
 plugins {
     id 'groovy'
@@ -122,8 +123,24 @@ shadowJarTask.configure { ShadowJar it ->
             'META-INF/DEPENDENCIES', // until we publish our own SBOM, this won't be correct so exclude
             'META-INF/grails-plugin.xml', // we do not start or compile a grails application so these files are not needed (grails-core, url mappings, etc plugins)
             'META-INF/grails-plugin.xml.asc', // avoid signing artifacts
+            'META-INF/sbom.json', // re-introduced below from this project's own cyclonedxDirectBom output to avoid the wrong transitive SBOM winning the shadow merge
             'about.html' // restatement of the Eclipse Distribution License - Version 1.0 for jakarta
     )
+
+    // Re-introduce this project's own SBOM into the fat jar (mirrors org.apache.grails.buildsrc.sbom).
+    if (!project.findProperty('skipJavaComponent')) {
+        TaskProvider<CyclonedxDirectTask> cyclonedxDirectBomTask = tasks.named('cyclonedxDirectBom', CyclonedxDirectTask)
+        it.from(cyclonedxDirectBomTask) { CopySpec spec ->
+            spec.into('META-INF')
+            spec.rename {
+                'sbom.json'
+            }
+        }
+        it.manifest { Manifest manifest ->
+            manifest.attributes('Sbom-Location': 'META-INF/sbom.json')
+            manifest.attributes('Sbom-Format': 'CycloneDX')
+        }
+    }
 }
 // Make shadow jar a direct dependency of assemble instead of using deprecated archives configuration
 tasks.named('assemble').configure {
