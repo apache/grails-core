@@ -206,6 +206,7 @@ ext {
                 'liquibase-hibernate'   : "org.liquibase.ext:liquibase-hibernate5:${combinedVersions['liquibase-hibernate.version']}",
                 'hibernate-core-jakarta': "org.hibernate:hibernate-core-jakarta:${combinedVersions['hibernate.version']}",
                 'hibernate-ehcache'     : "org.hibernate:hibernate-ehcache:${combinedVersions['hibernate.version']}",
+                'hibernate-envers'      : "org.hibernate:hibernate-envers:${combinedVersions['hibernate.version']}",
         ]
         combinedDependencies += customBomDependencies
     } else if (project.name in ['grails-hibernate7-bom'] || project.name.startsWith('grails-data-hibernate7')) {
@@ -223,6 +224,7 @@ ext {
         customBomDependencies = [
                 'cache-ri-impl'         : "org.jsr107.ri:cache-ri-impl:${combinedVersions['cache-ri-impl.version']}",
                 'hibernate-core'        : "org.hibernate.orm:hibernate-core:${combinedVersions['hibernate.version']}",
+                'hibernate-envers'      : "org.hibernate.orm:hibernate-envers:${combinedVersions['hibernate.version']}",
                 'hibernate-jcache'      : "org.hibernate.orm:hibernate-jcache:${combinedVersions['hibernate.version']}",
                 'hibernate-models'      : "org.hibernate.models:hibernate-models:${combinedVersions['hibernate-models.version']}",
                 'hibernate-tools-orm'   : "org.hibernate.tool:hibernate-tools-orm:${combinedVersions['hibernate.version']}",
