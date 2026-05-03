@@ -63,7 +63,7 @@ class GrailsHibernateTransactionManager extends HibernateTransactionManager {
                 holder.session.setHibernateFlushMode(defaultFlushMode)
             }
             if (datastore != null && !TransactionSynchronizationManager.hasResource(datastore)) {
-                TransactionSynchronizationManager.bindResource(datastore, holder)
+                TransactionSynchronizationManager.bindResource(datastore, new org.grails.datastore.mapping.transactions.SessionHolder(new HibernateSession((HibernateDatastore) datastore, sessionFactory)))
             }
         }
     }

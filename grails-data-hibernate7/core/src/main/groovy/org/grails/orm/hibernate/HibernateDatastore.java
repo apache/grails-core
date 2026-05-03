@@ -1005,7 +1005,14 @@ public class HibernateDatastore extends AbstractDatastore
             @Override
             public T call(Object... args) {
                 HibernateSession gormSession = new HibernateSession(self, self.getSessionFactory());
-                return multiTenantCallable.call(gormSession);
+                DatastoreUtils.bindNewSession(gormSession);
+                try {
+                    return multiTenantCallable.call(gormSession);
+                } finally {
+                    DatastoreUtils.unbindSession(gormSession);
+                    // Native session is closed by executeWithNewSession's finally block,
+                    // but we still want to clean up any GORM-specific state if needed.
+                }
             }
         });
     }
