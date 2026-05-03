@@ -131,19 +131,7 @@ class GormRegistry {
         }
         
         // 2. Check the global qualifier map
-        Datastore ds = datastoresByQualifier.get(qualifier)
-        if (ds != null) return ds
-        
-        // 3. Fallback to DEFAULT
-        if (qualifier != ConnectionSource.DEFAULT) {
-            if (className != null) {
-                ds = entityDatastores.get(className)?.get(ConnectionSource.DEFAULT)
-                if (ds != null) return ds
-            }
-            return datastoresByQualifier.get(ConnectionSource.DEFAULT)
-        }
-        
-        return null
+        return datastoresByQualifier.get(qualifier)
     }
 
     /**

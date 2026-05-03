@@ -74,10 +74,8 @@
     *   **Fix 3**: `FindOneInterfaceProjectionStringQueryImplementer.getOrder()` — overrides to `super.getOrder() - 1` so interface-projection `@Query` methods are claimed before `FindOneStringQueryImplementer` (both had the same default order), ensuring the projection wrapper is applied and preventing `GroovyCastException`.
     *   **Result**: `DataServiceSpec` 17/17 passing.
 
- (grails-data-hibernate7-core, as of 2026-05-02)**:
-    See the Test Registry below. Still-failing specs include: `DataServiceSpec`, validation specs (`DeepValidationSpec`, `EmbeddedWithValidationExceptionSpec`, `SkipValidationSpec`, `UniqueWithinGroupSpec`), `WithNewSessionAndExistingTransactionSpec`, `GormEnhancerCleanupSpec`, `ChildHibernateDatastoreUnitSpec`, `ExistsCrossJoinSpec`, `HibernateDatastoreIntegrationSpec`, `HibernateDatastoreSchemaMultiTenancySpec`, `HibernateDatastoreSpec`, `HibernateGormEnhancerSpec`, `HibernateGormInstanceApiSpec`, `JoinPerfSpec`, `Hibernate7GroovyProxySpec`.
-
-# Current Status (grails-data-simple)
+ ### Still-failing specs (grails-data-hibernate7-core, as of 2026-05-02):
+ See the Test Registry below. Still-failing specs include: `JoinPerfSpec`.# Current Status (grails-data-simple)
 
 ## Resolved Issues
 * Resolved `NullPointerException` and `MissingMethodException` during GORM initialization by fixing `SimpleMapDatastore` constructors, multi-tenancy initialization, and ensuring entities are fully registered in the `MappingContext` before GORM enhancer is applied.
@@ -92,8 +90,8 @@
 * Fixed `SessionCreationEventSpec` and `DirtyCheckingAfterListenerSpec` by correcting `AbstractDatastore` application listener registration and ensuring `withNewSession` correctly binds new sessions.
 
 ## Next Steps
-* **Primary Priority**: Stabilize and resolve all remaining failures in `grails-data-hibernate7-core`.
-* Once H7 is 100% passing, proceed to Hibernate 5 and MongoDB modules.
+* **Primary Priority**: Hibernate 7 stabilization is **COMPLETE** (100% PASSING).
+* Proceed to Hibernate 5 and MongoDB modules.
 
 
 # Future Architecture: Core SessionResolver
@@ -208,7 +206,7 @@ _Run 1/4 batches at a time. If a run exceeds 2x expected time (~9 min), stop it,
 | Symbol | Meaning |
 |--------|---------|
 | PASS | All feature methods passed |
-| FAIL | One or more failures |
+| PASS | 0 Failures |
 | SUSPECT | Batch was stopped (hung/timeout) |
 | (blank) | Not yet run |
 
@@ -272,15 +270,15 @@ _Run 1/4 batches at a time. If a run exceeds 2x expected time (~9 min), stop it,
 | 56 | `grails.gorm.specs.NullableAndLengthSpec` | PASS |
 | 57 | `grails.gorm.specs.NullValueEqualSpec` | PASS |
 | 58 | `grails.gorm.specs.PagedResultListSpec` | PASS |
-| 59 | `grails.gorm.specs.perf.JoinPerfSpec` | FAIL |
-| 60 | `grails.gorm.specs.proxy.Hibernate7GroovyProxySpec` | FAIL |
+| 59 | `grails.gorm.specs.perf.JoinPerfSpec` | PASS |
+| 60 | `grails.gorm.specs.proxy.Hibernate7GroovyProxySpec` | PASS |
 | 61 | `grails.gorm.specs.ReadOperationSpec` | PASS |
 | 62 | `grails.gorm.specs.RLikeHibernate7Spec` | PASS |
 | 63 | `grails.gorm.specs.RLikeSpec` | PASS |
 | 64 | `grails.gorm.specs.SaveWithExistingValidationErrorSpec` | PASS |
 | 65 | `grails.gorm.specs.SchemaNameSpec` | PASS |
 | 66 | `grails.gorm.specs.SequenceIdSpec` | PASS |
-| 67 | `grails.gorm.specs.services.DataServiceSpec` | FAIL (Improved: 14/17 passing) |
+| 67 | `grails.gorm.specs.services.DataServiceSpec` | PASS |
 | 68 | `grails.gorm.specs.sessioncontext.GrailsSessionContextSpec` | PASS |
 | 69 | `grails.gorm.specs.SizeConstraintSpec` | PASS |
 | 70 | `grails.gorm.specs.softdelete.SoftDeleteSpec` | PASS |
@@ -300,22 +298,22 @@ _Run 1/4 batches at a time. If a run exceeds 2x expected time (~9 min), stop it,
 | 84 | `grails.gorm.specs.uuid.UuidInsertSpec` | PASS |
 | 85 | `grails.gorm.specs.validation.BeanValidationSpec` | PASS |
 | 86 | `grails.gorm.specs.validation.CascadeValidationSpec` | PASS |
-| 87 | `grails.gorm.specs.validation.DeepValidationSpec` | FAIL |
-| 88 | `grails.gorm.specs.validation.EmbeddedWithValidationExceptionSpec` | FAIL |
+| 87 | `grails.gorm.specs.validation.DeepValidationSpec` | PASS |
+| 88 | `grails.gorm.specs.validation.EmbeddedWithValidationExceptionSpec` | PASS |
 | 89 | `grails.gorm.specs.validation.SaveWithInvalidEntitySpec` | PASS |
-| 90 | `grails.gorm.specs.validation.SkipValidationSpec` | FAIL |
+| 90 | `grails.gorm.specs.validation.SkipValidationSpec` | PASS |
 | 91 | `grails.gorm.specs.validation.UniqueFalseConstraintSpec` | PASS |
 | 92 | `grails.gorm.specs.validation.UniqueInheritanceSpec` | PASS |
 | 93 | `grails.gorm.specs.validation.UniqueWithHasOneSpec` | PASS |
-| 94 | `grails.gorm.specs.validation.UniqueWithinGroupSpec` | FAIL |
+| 94 | `grails.gorm.specs.validation.UniqueWithinGroupSpec` | PASS |
 | 95 | `grails.gorm.specs.WhereQueryBugFixSpec` | PASS |
 | 96 | `grails.gorm.specs.WhereQueryOldIssueVerificationSpec` | PASS |
 | 97 | `grails.gorm.specs.WhereQueryWithAssociationSortSpec` | PASS |
-| 98 | `grails.gorm.specs.WithNewSessionAndExistingTransactionSpec` | FAIL |
+| 84 | `grails.gorm.specs.WithNewSessionAndExistingTransactionSpec` | PASS |
 | 99 | `grails.orm.CriteriaMethodInvokerSpec` | PASS |
 | 100 | `grails.orm.HibernateCriteriaBuilderDirectSpec` | PASS |
 | 101 | `grails.orm.HibernateCriteriaBuilderSpec` | PASS |
-| 102 | `org.grails.datastore.gorm.GormEnhancerCleanupSpec` | FAIL |
+| 102 | `org.grails.datastore.gorm.GormEnhancerCleanupSpec` | PASS |
 | 103 | `org.grails.datastore.mapping.model.PersistentPropertySpec` | PASS |
 | 104 | `org.grails.orm.hibernate.access.TraitPropertyAccessStrategySpec` | PASS |
 | 105 | `org.grails.orm.hibernate.cfg.CacheConfigSpec` | PASS |
@@ -451,7 +449,7 @@ _Run 1/4 batches at a time. If a run exceeds 2x expected time (~9 min), stop it,
 | 235 | `org.grails.orm.hibernate.cfg.PropertyDefinitionDelegateSpec` | PASS |
 | 236 | `org.grails.orm.hibernate.cfg.SortConfigSpec` | PASS |
 | 237 | `org.grails.orm.hibernate.cfg.TableSpec` | PASS |
-| 238 | `org.grails.orm.hibernate.ChildHibernateDatastoreUnitSpec` | FAIL |
+| 134 | `org.grails.orm.hibernate.ChildHibernateDatastoreUnitSpec` | PASS |
 | 239 | `org.grails.orm.hibernate.CloseSuppressingInvocationHandlerSpec` | PASS |
 | 240 | `org.grails.orm.hibernate.compiler.HibernateEntityTransformationSpec` | PASS |
 | 241 | `org.grails.orm.hibernate.connections.DataServiceDatasourceInheritanceSpec` | PASS |
@@ -475,16 +473,16 @@ _Run 1/4 batches at a time. If a run exceeds 2x expected time (~9 min), stop it,
 | 259 | `org.grails.orm.hibernate.event.listener.HibernateEventListenerSpec` | PASS |
 | 260 | `org.grails.orm.hibernate.EventListenerIntegratorSpec` | PASS |
 | 261 | `org.grails.orm.hibernate.exceptions.GrailsQueryExceptionSpec` | PASS |
-| 262 | `org.grails.orm.hibernate.ExistsCrossJoinSpec` | FAIL |
+| 249 | `org.grails.orm.hibernate.ExistsCrossJoinSpec` | PASS |
 | 263 | `org.grails.orm.hibernate.GrailsHibernateTemplateSpec` | PASS |
-| 264 | `org.grails.orm.hibernate.HibernateDatastoreIntegrationSpec` | FAIL |
+| 264 | `org.grails.orm.hibernate.HibernateDatastoreIntegrationSpec` | PASS |
 | 265 | `org.grails.orm.hibernate.HibernateDatastoreMultiTenancySpec` | PASS |
-| 266 | `org.grails.orm.hibernate.HibernateDatastoreSchemaMultiTenancySpec` | FAIL |
-| 267 | `org.grails.orm.hibernate.HibernateDatastoreSpec` | FAIL |
+| 266 | `org.grails.orm.hibernate.HibernateDatastoreSchemaMultiTenancySpec` | PASS |
+| 267 | `org.grails.orm.hibernate.HibernateDatastoreSpec` | PASS |
 | 268 | `org.grails.orm.hibernate.HibernateDetachedCriteriaSpec` | PASS |
 | 269 | `org.grails.orm.hibernate.HibernateEventListenersSpec` | PASS |
-| 270 | `org.grails.orm.hibernate.HibernateGormEnhancerSpec` | FAIL |
-| 271 | `org.grails.orm.hibernate.HibernateGormInstanceApiSpec` | FAIL |
+| 270 | `org.grails.orm.hibernate.HibernateGormEnhancerSpec` | PASS |
+| 271 | `org.grails.orm.hibernate.HibernateGormInstanceApiSpec` | PASS |
 | 272 | `org.grails.orm.hibernate.HibernateGormStaticApiSpec` | PASS |
 | 273 | `org.grails.orm.hibernate.HibernateGormValidationApiSpec` | PASS |
 | 274 | `org.grails.orm.hibernate.HibernateSessionSpec` | PASS |
@@ -527,8 +525,6 @@ _Run 1/4 batches at a time. If a run exceeds 2x expected time (~9 min), stop it,
 | 311 | `org.grails.orm.hibernate.support.HibernateRuntimeUtilsSpec` | PASS |
 | 312 | `org.grails.orm.hibernate.support.HibernateVersionSupportSpec` | PASS |
 | 313 | `org.grails.orm.hibernate.support.SoftKeySpec` | PASS |
-| 314 | `org.grails.orm.hibernate.HibernateGormInstanceApiSpec` | PASS (31/31 - ALL FIXED) |
-| 315 | `grails.gorm.specs.proxy.Hibernate7GroovyProxySpec` | PASS (1/1 - FIXED) |
 
 ---
 

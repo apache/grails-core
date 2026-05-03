@@ -50,23 +50,25 @@ class GrailsHibernateTransactionManager extends HibernateTransactionManager {
         }
         this.defaultFlushMode = defaultFlushMode
     }
+@Override
+protected void doBegin(Object transaction, TransactionDefinition definition) {
+    System.err.println "doBegin on sessionFactory: ${sessionFactory} datastore: ${datastore}"
+    super.doBegin transaction, definition
 
-    @Override
-    protected void doBegin(Object transaction, TransactionDefinition definition) {
-        super.doBegin transaction, definition
-        
-        SessionHolder holder = (SessionHolder) TransactionSynchronizationManager.getResource(sessionFactory)
-        if (holder != null) {
-            if (definition.isReadOnly()) {
-                holder.session.setHibernateFlushMode(FlushMode.MANUAL)
-            } else if (defaultFlushMode != FlushMode.AUTO) {
-                holder.session.setHibernateFlushMode(defaultFlushMode)
-            }
-            if (datastore != null && !TransactionSynchronizationManager.hasResource(datastore)) {
-                TransactionSynchronizationManager.bindResource(datastore, new org.grails.datastore.mapping.transactions.SessionHolder(new HibernateSession((HibernateDatastore) datastore, sessionFactory)))
-            }
+    SessionHolder holder = (SessionHolder) TransactionSynchronizationManager.getResource(sessionFactory)
+    if (holder != null) {
+        if (definition.readOnly) {
+            holder.session.setHibernateFlushMode FlushMode.MANUAL
+        }
+        else {
+            holder.session.setHibernateFlushMode(defaultFlushMode)
+        }
+        if (datastore != null && !TransactionSynchronizationManager.hasResource(datastore)) {
+            System.err.println "Binding datastore ${datastore} to TSM"
+            TransactionSynchronizationManager.bindResource(datastore, new org.grails.datastore.mapping.transactions.SessionHolder(new HibernateSession((HibernateDatastore) datastore, sessionFactory)))
         }
     }
+}
 
     @Override
     protected void doCleanupAfterCompletion(Object transaction) {
