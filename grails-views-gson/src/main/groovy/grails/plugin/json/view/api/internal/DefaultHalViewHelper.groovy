@@ -321,13 +321,13 @@ class DefaultHalViewHelper extends DefaultJsonViewHelper implements HalViewHelpe
                         def value = entityReflector.getProperty(object, propertyName)
                         if (value != null) {
 
-                            if (association instanceof ToOne) {
+                            if (association instanceof ToMany && !(association instanceof Basic)) {
                                 if (deep || expandProperties.contains(propertyName) || proxyHandler == null || proxyHandler.isInitialized(value)) {
                                     embeddedValues.put((Association) association, value)
                                 }
                                 excs.add(propertyName)
                             }
-                            else if (association instanceof ToMany && !(association instanceof Basic)) {
+                            else if (association instanceof ToOne) {
                                 if (deep || expandProperties.contains(propertyName) || proxyHandler == null || proxyHandler.isInitialized(value)) {
                                     embeddedValues.put((Association) association, value)
                                 }
