@@ -65,8 +65,17 @@
     *   **Fix 4 (Collection Binding)**: Enhanced Collection-based methods to bind by name when size matches.
     *   **Verification**: `AddToManagedEntitySpec` is now passing. `DataServiceSpec` progress: 14/17 tests passing.
 
-*   **Remaining Open Failures (grails-data-hibernate7-core, as of 2026-05-02)**:
-    See the Test Registry below. Still-failing specs include: `DataServiceSpec`, `SqlQuerySpec`, `UniqueWithMultipleDataSourcesSpec`, validation specs (`DeepValidationSpec`, `EmbeddedWithValidationExceptionSpec`, `SkipValidationSpec`, `UniqueWithinGroupSpec`), `WithNewSessionAndExistingTransactionSpec`, `GormEnhancerCleanupSpec`, `ChildHibernateDatastoreUnitSpec`, `ExistsCrossJoinSpec`, `HibernateDatastoreIntegrationSpec`, `HibernateDatastoreSchemaMultiTenancySpec`, `HibernateDatastoreSpec`, `HibernateGormEnhancerSpec`, `HibernateGormInstanceApiSpec`, `JoinPerfSpec`, `Hibernate7GroovyProxySpec`.
+    ### Issue H7-7 · `@Query` named parameter binding gap in Data Services *(RESOLVED — commit `bc94253e9b`)*
+    *   **Tests affected**: `DataServiceSpec` (3 of 17 failing — `test string query`, `test interface projection`, `test join query on attributes with @Query`)
+    *   **Exception**: `HibernateQueryException: No argument for named parameter ':pattern'` / `':name'`
+    *   **Root cause (code generation)**: `AbstractStringQueryImplementer.doImplement()` only passes method arguments as a named-params map when the method has an explicit `args: Map` parameter (legacy convention). For `@Query("...LIKE :pattern") List<String> searchProductType(String pattern)`, no map is passed → Hibernate 7's strict `QueryParameterBindingsImpl.validate()` throws before `list()` is called.
+    *   **Fix 1**: `AbstractStringQueryImplementer.buildNamedParamsFromQuery()` — extracts `:paramName` tokens from the HQL string and builds a `MapExpression` binding each to its corresponding method parameter by name. Called when `findArgsExpression` returns null but the query has named params.
+    *   **Fix 2**: `FindOneStringQueryImplementer.buildQueryReturnStatement()` — when `queryArg` is already an `ArgumentListExpression` (query + named params), spreads its elements before appending the `max:1` pagination map, producing `executeQuery(query, params, [max:1])` instead of the broken `executeQuery([query, params], [max:1])`.
+    *   **Fix 3**: `FindOneInterfaceProjectionStringQueryImplementer.getOrder()` — overrides to `super.getOrder() - 1` so interface-projection `@Query` methods are claimed before `FindOneStringQueryImplementer` (both had the same default order), ensuring the projection wrapper is applied and preventing `GroovyCastException`.
+    *   **Result**: `DataServiceSpec` 17/17 passing.
+
+ (grails-data-hibernate7-core, as of 2026-05-02)**:
+    See the Test Registry below. Still-failing specs include: `DataServiceSpec`, validation specs (`DeepValidationSpec`, `EmbeddedWithValidationExceptionSpec`, `SkipValidationSpec`, `UniqueWithinGroupSpec`), `WithNewSessionAndExistingTransactionSpec`, `GormEnhancerCleanupSpec`, `ChildHibernateDatastoreUnitSpec`, `ExistsCrossJoinSpec`, `HibernateDatastoreIntegrationSpec`, `HibernateDatastoreSchemaMultiTenancySpec`, `HibernateDatastoreSpec`, `HibernateGormEnhancerSpec`, `HibernateGormInstanceApiSpec`, `JoinPerfSpec`, `Hibernate7GroovyProxySpec`.
 
 # Current Status (grails-data-simple)
 
@@ -275,7 +284,7 @@ _Run 1/4 batches at a time. If a run exceeds 2x expected time (~9 min), stop it,
 | 68 | `grails.gorm.specs.sessioncontext.GrailsSessionContextSpec` | PASS |
 | 69 | `grails.gorm.specs.SizeConstraintSpec` | PASS |
 | 70 | `grails.gorm.specs.softdelete.SoftDeleteSpec` | PASS |
-| 71 | `grails.gorm.specs.SqlQuerySpec` | FAIL |
+| 71 | `grails.gorm.specs.SqlQuerySpec` | PASS |
 | 72 | `grails.gorm.specs.SubclassMultipleListCollectionSpec` | PASS |
 | 73 | `grails.gorm.specs.SubqueryAliasSpec` | PASS |
 | 74 | `grails.gorm.specs.TablePerSubClassAndEmbeddedSpec` | PASS |
@@ -287,7 +296,7 @@ _Run 1/4 batches at a time. If a run exceeds 2x expected time (~9 min), stop it,
 | 80 | `grails.gorm.specs.txs.TransactionalWithinReadOnlySpec` | PASS |
 | 81 | `grails.gorm.specs.txs.TransactionPropagationSpec` | PASS |
 | 82 | `grails.gorm.specs.UniqueConstraintHibernateSpec` | PASS |
-| 83 | `grails.gorm.specs.UniqueWithMultipleDataSourcesSpec` | FAIL |
+| 83 | `grails.gorm.specs.UniqueWithMultipleDataSourcesSpec` | PASS |
 | 84 | `grails.gorm.specs.uuid.UuidInsertSpec` | PASS |
 | 85 | `grails.gorm.specs.validation.BeanValidationSpec` | PASS |
 | 86 | `grails.gorm.specs.validation.CascadeValidationSpec` | PASS |
@@ -518,6 +527,156 @@ _Run 1/4 batches at a time. If a run exceeds 2x expected time (~9 min), stop it,
 | 311 | `org.grails.orm.hibernate.support.HibernateRuntimeUtilsSpec` | PASS |
 | 312 | `org.grails.orm.hibernate.support.HibernateVersionSupportSpec` | PASS |
 | 313 | `org.grails.orm.hibernate.support.SoftKeySpec` | PASS |
+| 314 | `org.grails.orm.hibernate.HibernateGormInstanceApiSpec` | PASS (31/31 - ALL FIXED) |
+| 315 | `grails.gorm.specs.proxy.Hibernate7GroovyProxySpec` | PASS (1/1 - FIXED) |
+
+---
+
+## Session 5e0d1e64 — Latest Fixes (Proxy & Instance API)
+
+### Fixed Issues (Checkpoint 023)
+
+**HibernateGormInstanceApiSpec** (31/31 PASS) — Fixed 4 critical failures:
+
+1. **Missing `instanceApiHelper` property** 
+   - Added `InstanceApiHelper getInstanceApiHelper()` getter to `HibernateGormInstanceApi`
+   - Delegates to `getHibernateDatastore().getInstanceApiHelper()`
+   - Test: `api.instanceApiHelper.is(manager.hibernateDatastore.getInstanceApiHelper())` ✓
+
+2. **Proxy method dispatch (`isInitialized()`, `initialize()`, `getTarget()`)**
+   - Added `Object methodMissing(Object target, String name, Object[] args)` to `HibernateGormInstanceApi`
+   - Routes Hibernate proxy methods via `GroovyProxyInterceptorLogic` or `Hibernate.isInitialized(target)`
+   - Handles both GroovyProxyFactory and Hibernate ByteBuddy proxies
+
+3. **`isDirty()` returns true for transient instances**
+   - Fixed `isDirty(D instance)` to return `false` for non-attached instances (before checking `DirtyCheckable`)
+   - Added `isDirty(D instance, String fieldName)` override (was missing)
+   - Transient instances: `isAttached(instance) == false` → return `false`
+
+4. **`attach()` broken on H7 (DetachedObjectException)**
+   - Changed from `session.lock(target, LockModeType.NONE)` → `session.merge(target)`
+   - H7 breaks: `lock(detached, NONE)` throws `DetachedObjectException`
+   - H5/H6 used `lock(detached, NONE)` for re-attach; H7 removed that behavior
+   - Test: `person = person.attach()` now works ✓
+
+**Hibernate7GroovyProxySpec** (1/1 PASS) — Fixed proxy routing:
+
+5. **GroovyProxyFactory not honored by `Location.proxy(id)`**
+   - Updated `HibernateSession.proxy()` to check `mappingContext.getProxyFactory()` first
+   - If `GroovyProxyFactory`, delegate to `groovyProxyFactory.createProxy(this, type, key)`
+   - Else fallback to `hibernateTemplate.load(type, key)` (Hibernate ByteBuddy proxy)
+   - Override added `HibernateGormStaticApi.proxy(id)` to use session-level proxy routing
+   - Test: `location.isInitialized()` → GroovyProxyFactory metaclass → returns uninitialized state ✓
+
+**Additional fixes for test infrastructure:**
+
+6. **`getTransactionManager()` in `HibernateGormDatastoreSpec`**
+   - Added `protected GrailsHibernateTransactionManager getTransactionManager()` method
+   - Allows test specs to access `transactionManager` directly from manager
+
+7. **`HibernateGormStaticApi` new constructor**
+   - Added: `HibernateGormStaticApi(Class, HibernateDatastore, List, ClassLoader, PlatformTransactionManager)`
+   - Maps to existing constructor via `DatastoreResolver` wrapper
+   - Enables test construction: `new HibernateGormStaticApi<>(cls, datastore, [], loader, txManager)`
+
+8. **`prepareHqlQuery()` and `doListInternal()` methods**
+   - Added `SelectHqlQuery prepareHqlQuery(String hql, boolean readOnly, boolean cache, Map params, List positional, Map hints)`
+   - Added `List doListInternal(String hql, Map params, List positional, Map hints, boolean readOnly)`
+   - Uses `HqlQueryContext.prepare()` and `HibernateHqlQueryCreator.createHqlQuery()`
+   - Enables test access to protected HQL query building
+
+### Files Modified (UNCOMMITTED)
+
+- `grails-data-hibernate7/core/src/main/groovy/org/grails/orm/hibernate/HibernateGormInstanceApi.groovy`
+  - Added: `getInstanceApiHelper()`, `methodMissing(Object, String, Object[])`, `isDirty(D, String)`
+  - Fixed: `isDirty(D)`, `attach(D)`
+
+- `grails-data-hibernate7/core/src/main/groovy/org/grails/orm/hibernate/HibernateGormStaticApi.groovy`
+  - Added: new constructor, `proxy(Serializable)` override, `prepareHqlQuery()`, `doListInternal()`
+  - Added imports: `PlatformTransactionManager`, `GroovyProxyFactory`, `HqlQueryContext`, `SelectHqlQuery`
+
+- `grails-data-hibernate7/core/src/main/groovy/org/grails/orm/hibernate/HibernateSession.java`
+  - Fixed: `proxy(Class<T>, Serializable)` to honor `GroovyProxyFactory` from mapping context
+  - Added import: `org.grails.datastore.gorm.proxy.GroovyProxyFactory`
+
+- `grails-data-hibernate7/core/src/test/groovy/grails/gorm/specs/HibernateGormDatastoreSpec.groovy`
+  - Added: `getTransactionManager()` method
+  - Added import: `GrailsHibernateTransactionManager`
+
+### Test Results
+
+- **HibernateGormInstanceApiSpec**: 31/31 PASS ✓
+- **Hibernate7GroovyProxySpec**: 1/1 PASS ✓
+- **Full isolated suite** (in progress): Running `./gradlew -I local-tasks.gradle clean testSelected aggregateTestFailures`
+
+### Next Steps (Still TODO)
+
+1. **Verify full suite completion** — Full test run hangs at 1h+; rerun targeted specs or investigate timeout
+2. **Commit all changes** with Co-authored-by trailer
+3. **Run remaining failing specs** (lifecycle-related, multi-tenancy, transaction handling)
+4. **MongoDB migration** — Use as baseline for similar patterns in MongoDB module
+
+---
+
+## CRITICAL: Uncommitted Changes & Test Status
+
+### Files with Pending Changes (DO NOT LOSE)
+
+```
+ M ISSUES.md
+ M grails-data-hibernate7/core/src/main/groovy/org/grails/orm/hibernate/GrailsHibernateTemplate.java
+ M grails-data-hibernate7/core/src/main/groovy/org/grails/orm/hibernate/HibernateDatastore.java
+ M grails-data-hibernate7/core/src/main/groovy/org/grails/orm/hibernate/HibernateGormInstanceApi.groovy
+ M grails-data-hibernate7/core/src/main/groovy/org/grails/orm/hibernate/HibernateGormStaticApi.groovy
+ M grails-data-hibernate7/core/src/main/groovy/org/grails/orm/hibernate/HibernateSession.java
+ M grails-data-hibernate7/core/src/test/groovy/grails/gorm/specs/HibernateGormDatastoreSpec.groovy
+```
+
+These changes fix 32 tests total (31 HibernateGormInstanceApiSpec + 1 Hibernate7GroovyProxySpec). **Commit before proceeding.**
+
+### Test Suite Status
+
+**Isolated test configuration** (from `local.properties`):
+```properties
+grails.test.modules=:grails-data-hibernate7-core,:grails-data-hibernate7-spring-orm,:grails-data-hibernate7,:grails-data-hibernate7-dbmigration,:grails-data-hibernate7-spring-boot
+```
+
+**Run command**: `./gradlew -I local-tasks.gradle clean testSelected aggregateTestFailures --continue`
+
+**Known issues**:
+- Full isolated suite hangs after 1+ hour of test execution (likely test JVM memory leak or hanging test case)
+- Workaround: Run specs in quarters (one module at a time) via `run_quarter.py` script
+- Specific problem: `WithNewSessionAndExistingTransactionSpec` Test 3 still has connection leak (UNRESOLVED)
+
+### Remaining Failing Specs (Before Latest Fixes)
+
+See `failing_specs.txt` for the list from the last full run. After applying the fixes in this session, re-run to get updated list:
+
+```bash
+./gradlew -I local-tasks.gradle clean testSelected aggregateTestFailures --continue
+```
+
+Then check `TEST_FAILURES.md` in repo root for the current failure list.
+
+### Key Architectural Insights (For Next Agent)
+
+1. **Query architecture decentralization** (H7):
+   - `HibernateHqlQuery` + `HibernateHqlQueryCreator` for HQL SELECT queries (immutable `HqlQueryContext`)
+   - `SelectHqlQuery` / `MutationHqlQuery` wrap delegates for query execution
+   - `HibernateGormStaticApi` constructs queries directly via `session.createQuery(hql)`
+   - This design avoids the `CriteriaAPI` removal issue (no backward-compat layer needed)
+
+2. **Proxy handling (critical for detached objects)**:
+   - H7 `session.lock(detached, LockModeType.NONE)` → throws `DetachedObjectException` (changed from H5/H6)
+   - Use `session.merge(target)` instead for re-attachment
+   - `methodMissing` dispatch routes dynamic proxy methods to `HibernateGormInstanceApi`
+   - GroovyProxyFactory must be honored at **both** `HibernateSession.proxy()` AND `HibernateGormStaticApi.proxy()`
+
+3. **Session lifecycle binding** (O(M+N) fix):
+   - `GrailsHibernateTransactionManager.doBegin()` binds `(datastore, sessionHolder)` separately to TSM
+   - `doCleanupAfterCompletion()` only unbinds `datastore` if `isNewSessionHolder()`
+   - This allows nested `withNewSession` to restore outer session correctly
+   - Pattern: outer transaction creates outer session; `withNewSession` creates child session in same thread; child cleanup restores outer
 
 ---
 
