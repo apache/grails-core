@@ -22,7 +22,7 @@ import groovy.transform.Canonical
 import groovy.transform.CompileDynamic
 import groovy.transform.CompileStatic
 
-import jline.console.completer.Completer
+import org.jline.reader.Completer
 
 /**
  * Describes a {@link Command}

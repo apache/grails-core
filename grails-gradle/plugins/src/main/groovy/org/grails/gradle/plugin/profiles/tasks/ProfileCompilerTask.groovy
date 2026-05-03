@@ -67,7 +67,7 @@ import org.grails.gradle.plugin.profiles.GrailsProfileGradlePlugin
  */
 @CompileStatic
 @CacheableTask
-class ProfileCompilerTask extends AbstractCompile {
+abstract class ProfileCompilerTask extends AbstractCompile {
 
     public static final String DEFAULT_COMPATIBILITY = JavaVersion.VERSION_17.majorVersion
     public static final String PROFILE_NAME = 'name'

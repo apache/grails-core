@@ -74,6 +74,7 @@ public class DevelopmentReloadingDTO extends Linkable implements Named, Describe
         this.description = messageSource.getMessage(MESSAGE_PREFIX + name + ".description", messageContext, NameUtils.getNaturalNameOfEnum(name));
     }
 
+    @NonNull
     @Override
     @Schema(description = "A description of the developmentReloading")
     public String getDescription() {
@@ -97,6 +98,6 @@ public class DevelopmentReloadingDTO extends Linkable implements Named, Describe
     @Override
     @Schema(description = "The label of the developmentReloading for select options")
     public String getLabel() {
-        return description;
+        return value.getLabel();
     }
 }

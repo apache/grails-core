@@ -18,7 +18,10 @@
  */
 package grails.build.logging
 
-import jline.console.ConsoleReader
+import org.jline.reader.LineReader
+import org.jline.reader.LineReaderBuilder
+import org.jline.terminal.Terminal
+import org.jline.terminal.TerminalBuilder
 import org.fusesource.jansi.Ansi
 import spock.lang.IgnoreIf
 import spock.lang.Issue
@@ -48,18 +51,25 @@ class GrailsConsoleSpec extends Specification {
     PrintStream out
     GrailsConsole console
     String output
+    Terminal terminal
 
     def setup() {
-        InputStream systemIn = Mock(InputStream)
-        systemIn.read(* _) >> -1
         out = Mock(PrintStream)
+        terminal = TerminalBuilder.builder().dumb(true).build()
 
         console = GrailsConsole.getInstance()
         console.ansiEnabled = true
         console.out = out
-        console.reader = new ConsoleReader(systemIn, out)
+        console.@terminal = terminal
+        console.@reader = LineReaderBuilder.builder()
+                .terminal(terminal)
+                .build()
 
         output = ""
+    }
+
+    def cleanup() {
+        terminal?.close()
     }
 
     @Issue('GRAILS-10753')

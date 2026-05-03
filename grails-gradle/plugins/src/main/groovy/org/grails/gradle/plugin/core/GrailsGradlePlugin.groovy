@@ -41,8 +41,8 @@ import org.gradle.api.Task
 import org.gradle.api.artifacts.Configuration
 import org.gradle.api.artifacts.Dependency
 import org.gradle.api.artifacts.DependencyResolveDetails
-import org.gradle.api.artifacts.ModuleDependency
 import org.gradle.api.artifacts.DependencySet
+import org.gradle.api.artifacts.ModuleDependency
 import org.gradle.api.attributes.AttributeMatchingStrategy
 import org.gradle.api.file.DuplicatesStrategy
 import org.gradle.api.file.FileCollection
@@ -194,6 +194,12 @@ class GrailsGradlePlugin implements Plugin<Project> {
             Provider<RegularFile> groovyCompilerConfigFile = project.layout.buildDirectory.file("grailsGroovyCompilerConfig-${c.name}.groovy")
             c.outputs.file(groovyCompilerConfigFile)
 
+            // Publish the project base directory to the Groovy compiler's worker daemon JVM so the
+            // GlobalGrailsClassInjectorTransformation AST transform can locate
+            // src/main/resources/META-INF/grails.factories without relying on hardcoded
+            // "build"/"target" output-directory names. Reuses the same CommandLineArgumentProvider
+            // pattern as forked test/run tasks (see configureForkSettings).
+            c.groovyOptions.forkOptions.jvmArgumentProviders.add(new GrailsAppBaseDirProvider(project.projectDir))
             Closure<String> userScriptGenerator = getGroovyCompilerScript(c, project)
             c.doFirst {
                 // This isn't ideal - we're performing configuration at execution time, but the alternative would be having
@@ -388,12 +394,11 @@ ${importStatements}
     }
 
     @CompileDynamic
-    protected Task createBuildPropertiesTask(Project project) {
+    protected void createBuildPropertiesTask(Project project) {
         if (project.tasks.findByName('buildProperties') == null) {
             File resourcesDir = SourceSets.findMainSourceSet(project).output.resourcesDir
             File buildInfoFile = new File(resourcesDir, 'META-INF/grails.build.info')
 
-            Task buildPropertiesTask = project.tasks.create('buildProperties')
             Map<String, Object> buildPropertiesContents = [
                     'grails.env': Environment.isSystemSet() ? Environment.getCurrent().getName() : Environment.PRODUCTION.getName(),
                     'info.app.name': project.name,
@@ -401,17 +406,25 @@ ${importStatements}
                     'info.app.grailsVersion': project.properties.get('grailsVersion')
             ]
 
-            buildPropertiesTask.inputs.properties(buildPropertiesContents)
-            buildPropertiesTask.outputs.file(buildInfoFile)
-            buildPropertiesTask.doLast {
-                project.buildDir.mkdirs()
-                ant.mkdir(dir: buildInfoFile.parentFile)
-                ant.propertyfile(file: buildInfoFile) {
-                    for (me in buildPropertiesTask.inputs.properties) {
-                        entry(key: me.key, value: me.value)
+            // Capture build directory at configuration time to avoid Task.project access at execution time
+            def buildDir = project.layout.buildDirectory.asFile.get()
+
+            TaskProvider<Task> buildPropertiesTask = project.tasks.register('buildProperties') { Task task ->
+                task.inputs.properties(buildPropertiesContents)
+                task.outputs.file(buildInfoFile)
+
+                task.doLast {
+                    buildDir.mkdirs()
+                    buildInfoFile.parentFile.mkdirs()
+                    Properties props = new Properties()
+                    task.inputs.properties.each { key, value ->
+                        props.setProperty(key as String, value as String)
                     }
+                    buildInfoFile.withOutputStream { out ->
+                        props.store(out, null)
+                    }
+                    PropertyFileUtils.makePropertiesFileReproducible(buildInfoFile)
                 }
-                PropertyFileUtils.makePropertiesFileReproducible(buildInfoFile)
             }
 
             TaskContainer tasks = project.tasks
@@ -434,60 +447,46 @@ ${importStatements}
 
             project.logger.lifecycle('Micronaut Support Detected for {}', project.name)
 
-            final String micronautPlatformVersion = project.properties['micronautPlatformVersion']
-            if (!micronautPlatformVersion) {
-                throw new GradleException('`micronautPlatformVersion` property must be set to use the Grails Micronaut plugin.')
-            }
-
-            // Validate that grails-bom is applied as enforcedPlatform. Micronaut 5's platform
-            // declares Groovy 5, Kotlin 2.3, etc. which override the grails-bom via conflict
-            // resolution. enforcedPlatform makes all BOM constraints strictly versioned so they
-            // cannot be overridden by transitive dependencies.
-            validateEnforcedBom(project)
-
-            // grails-micronaut exports the platform, but force the version to the user specified version
-            project.configurations.configureEach { Configuration configuration ->
-                configuration.resolutionStrategy.eachDependency { DependencyResolveDetails details ->
-                    String dependencyName = details.requested.name
-                    String group = details.requested.group
-                    if (group == 'io.micronaut.platform' && dependencyName.startsWith('micronaut-platform')) {
-                        project.logger.info('Forcing Micronaut Platform version to {}', micronautPlatformVersion)
-                        details.useVersion(micronautPlatformVersion)
-                    }
-                }
-            }
+            // Validate that grails-micronaut-bom is applied as enforcedPlatform. The BOM is now the
+            // single source of truth for the Micronaut platform version: applying it as
+            // enforcedPlatform pins io.micronaut.platform:micronaut-platform with a strict
+            // constraint that no transitive can override.
+            validateMicronautBom(project)
 
         }
     }
 
     /**
-     * Validates that grails-bom is applied as an enforcedPlatform when micronaut is used.
-     * Without enforcedPlatform, the Micronaut platform's version constraints (e.g. Groovy 5,
-     * Kotlin 2.3, Spock 2.4) will override the grails-bom versions via conflict resolution.
+     * Validates that grails-micronaut-bom is applied as an enforcedPlatform when micronaut is used.
+     * The grails-micronaut-bom layers Micronaut-specific overrides (e.g. javaparser-core) on top
+     * of grails-bom; without enforcedPlatform, Micronaut's platform would override these versions
+     * via Gradle's conflict resolution. Regular Grails projects (without Micronaut) should continue
+     * to use the spring-managed versions via plain platform(:grails-bom).
      */
     @CompileStatic
-    protected static void validateEnforcedBom(Project project) {
+    protected static void validateMicronautBom(Project project) {
         Configuration implConfig = project.configurations.findByName('implementation')
         if (implConfig == null) {
             return
         }
 
         for (Dependency dep : implConfig.dependencies) {
-            if (dep.name == 'grails-bom' && dep instanceof ModuleDependency) {
+            if (dep.name == 'grails-micronaut-bom' && dep instanceof ModuleDependency) {
                 Object categoryAttr = ((ModuleDependency) dep).attributes.getAttribute(
                         org.gradle.api.attributes.Category.CATEGORY_ATTRIBUTE
                 )
                 if (categoryAttr != null && categoryAttr.toString() == org.gradle.api.attributes.Category.ENFORCED_PLATFORM) {
                     return // correctly configured
                 }
-                throw new GradleException(
-                        "Project '${project.name}' uses Micronaut but applies grails-bom as a regular platform. " +
-                                'Micronaut\'s platform declares higher versions of Groovy, Spock, and Kotlin that will ' +
-                                'override the grails-bom via conflict resolution. Change to:\n\n' +
-                                '    implementation enforcedPlatform(project(\':grails-bom\'))\n'
-                )
             }
         }
+
+        throw new GradleException(
+                "Project '${project.name}' uses Micronaut but does not apply grails-micronaut-bom as an enforcedPlatform. " +
+                        "Micronaut's platform declares higher versions of javaparser-core and other libraries that would " +
+                        'override the grails-bom versions via conflict resolution. Change to:\n\n' +
+                        '    implementation enforcedPlatform(project(\':grails-micronaut-bom\'))\n'
+        )
     }
 
     @CompileStatic
@@ -968,12 +967,15 @@ ${importStatements}
     @CompileDynamic
     protected TaskProvider<Task> createNative2AsciiTask(TaskContainer tasks, src, dest) {
         TaskProvider<Task> native2asciiTask = tasks.register('native2ascii').configure {
-            it.doLast {
-                it.ant.native2ascii(src: src, dest: dest,
-                        includes: '**/*.properties', encoding: 'UTF-8')
-            }
             it.inputs.dir(src)
             it.outputs.dir(dest)
+
+            def antBuilder = it.ant
+
+            it.doLast {
+                antBuilder.native2ascii(src: src, dest: dest,
+                        includes: '**/*.properties', encoding: 'UTF-8')
+            }
         }
 
         native2asciiTask

@@ -171,31 +171,32 @@ class FormTagLib2Tests extends AbstractGrailsTagTests {
     }
 
     private void testDatePickerTag(Object date, String precision) {
-        Document document = getDatePickerOutput(date, precision, null)
+        // Capture "now" upfront to prevent test pollution at minute/hour/day boundaries.
+        Calendar calendar = new GregorianCalendar()
+        Date xdefault = null
+        if (date == null) {
+            xdefault = calendar.getTime()
+        } else if (date instanceof Date) {
+            calendar.setTime(date)
+        } /*else if (date instanceof TemporalAccessor) {
+            ZonedDateTime zonedDateTime
+            if (date instanceof LocalDateTime) {
+                zonedDateTime = ZonedDateTime.of(date, ZoneId.systemDefault())
+            } else if (date instanceof LocalDate) {
+                zonedDateTime = ZonedDateTime.of(date, LocalTime.MIN, ZoneId.systemDefault())
+            } else {
+                zonedDateTime = ZonedDateTime.from(date)
+            }
+            calendar = GregorianCalendar.from(zonedDateTime)
+        }*/
+
+        Document document = getDatePickerOutput(date, precision, xdefault)
         assertNotNull(document)
 
         // validate presence and structure of hidden date picker form field
         assertXPathExists(
                 document,
                 "//input[@name='" + DATE_PICKER_TAG_NAME + "' and @type='hidden' and @value='date.struct']")
-
-        // if no date was given, default to the current date
-        Calendar calendar = new GregorianCalendar()
-        if (date != null) {
-            if (date instanceof Date) {
-                calendar.setTime(date)
-            } /*else if (date instanceof TemporalAccessor) {
-                ZonedDateTime zonedDateTime
-                if (date instanceof LocalDateTime) {
-                    zonedDateTime = ZonedDateTime.of(date, ZoneId.systemDefault())
-                } else if (date instanceof LocalDate) {
-                    zonedDateTime = ZonedDateTime.of(date, LocalTime.MIN, ZoneId.systemDefault())
-                } else {
-                    zonedDateTime = ZonedDateTime.from(date)
-                }
-                calendar = GregorianCalendar.from(zonedDateTime)
-            }*/
-        }
 
         // validate id attributes
         String xp

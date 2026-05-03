@@ -23,6 +23,7 @@ plugins {
     id 'groovy'
     id 'java-library'
     id 'org.apache.grails.buildsrc.properties'
+    id 'org.apache.grails.buildsrc.dependency-validator'
     id 'org.grails.forge.rocker'
     id 'org.apache.grails.buildsrc.compile'
     id 'org.apache.grails.buildsrc.publish'
@@ -41,13 +42,15 @@ sourceSets {
 }
 
 dependencies {
-    annotationProcessor platform("io.micronaut:micronaut-bom:$micronautVersion")
-    implementation platform("io.micronaut:micronaut-bom:$micronautVersion")
+    annotationProcessor platform("io.micronaut.platform:micronaut-platform:$micronautVersion")
+    implementation platform("io.micronaut.platform:micronaut-platform:$micronautVersion")
     annotationProcessor 'io.micronaut:micronaut-inject-java'
-    testAnnotationProcessor platform("io.micronaut:micronaut-bom:$micronautVersion")
+    testAnnotationProcessor platform("io.micronaut.platform:micronaut-platform:$micronautVersion")
     testAnnotationProcessor 'io.micronaut:micronaut-inject-java'
 
-    api platform("io.micronaut:micronaut-bom:$micronautVersion") // TODO: Should this be api?
+    api platform("io.micronaut.platform:micronaut-platform:$micronautVersion") // TODO: Should this be api?
+    api 'com.fasterxml.jackson.core:jackson-databind'
+    api 'jakarta.validation:jakarta.validation-api'
     api "com.fizzed:rocker-runtime:$rockerVersion"
     api "io.github.java-diff-utils:java-diff-utils:$javaDiffUtils"
     api 'io.micronaut:micronaut-http'
@@ -61,21 +64,19 @@ dependencies {
 
     compileOnly 'com.google.code.findbugs:jsr305'
 
-    testImplementation 'org.codehaus.groovy:groovy-yaml'
+    testImplementation 'org.apache.groovy:groovy-yaml'
 
-    if (project.hasProperty('micronautVersion')) {
-        testCompileOnly "io.micronaut:micronaut-inject-groovy:$micronautVersion"
-    }
+    testCompileOnly 'io.micronaut:micronaut-inject-groovy'
 
-    testImplementation "org.codehaus.groovy:groovy:$groovyVersion"
+    testImplementation 'org.apache.groovy:groovy'
     testImplementation "org.spockframework:spock-core:$spockVersion", {
-        exclude group: 'org.codehaus.groovy', module: 'groovy-all'
+        exclude group: 'org.apache.groovy', module: 'groovy-all'
     }
 
     testImplementation "cglib:cglib-nodep:$cglibVersion"
     testImplementation "org.objenesis:objenesis:$objenesisVersion"
     testRuntimeOnly "ch.qos.logback:logback-classic:$logbackClassicVersion"
-    testImplementation "org.codehaus.groovy:groovy-test:$groovyVersion"
+    testImplementation 'org.apache.groovy:groovy-test'
 }
 
 
@@ -136,9 +137,6 @@ nohttp {
 configurations.configureEach {
     resolutionStrategy {
         eachDependency { DependencyResolveDetails details ->
-            if (details.requested.group == 'org.codehaus.groovy') {
-                details.useVersion(groovyVersion)
-            }
             if (details.requested.name == 'spock-core') {
                 details.useVersion(spockVersion)
             }

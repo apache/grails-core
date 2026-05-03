@@ -27,17 +27,12 @@ group = 'issue11767.plugin'
 
 apply plugin: 'org.apache.grails.gradle.grails-plugin'
 
-tasks.withType(Jar).configureEach {
-    duplicatesStrategy = DuplicatesStrategy.EXCLUDE
-}
-
 dependencies {
-    implementation enforcedPlatform(project(':grails-bom'))
+    implementation enforcedPlatform(project(':grails-micronaut-bom'))
     implementation 'org.apache.grails:grails-core'
     implementation 'org.apache.grails:grails-micronaut'
 
-    annotationProcessor enforcedPlatform(project(':grails-bom'))
-    annotationProcessor platform("io.micronaut.platform:micronaut-platform:$micronautPlatformVersion")
+    annotationProcessor enforcedPlatform(project(':grails-micronaut-bom'))
     annotationProcessor 'io.micronaut:micronaut-inject-java'
     annotationProcessor 'jakarta.annotation:jakarta.annotation-api'
 }
@@ -45,4 +40,85 @@ dependencies {
 apply {
     from rootProject.layout.projectDirectory.file('gradle/functional-test-config.gradle')
     from rootProject.layout.projectDirectory.file('gradle/grails-extension-gradle-config.gradle')
+}
+
+// This plugin intentionally exposes both a Java bean (PluginJavaMicronautBean) and a
+// Groovy bean (PluginGroovyMicronautBean) under @ConfigurationProperties('my') to
+// exercise the issue 11767 scenario. As a side effect, micronaut-inject-java (Java AP)
+// and micronaut-inject-groovy (Groovy AST) each emit a non-equivalent
+// META-INF/spring-configuration-metadata.json describing only the beans visible to
+// their compiler, which collides with the shared jar.duplicatesStrategy = FAIL.
+// Merge the two JSON documents into one combined file in a dedicated build directory,
+// then exclude the per-compiler copies from the jar and feed the merged file in.
+def metadataRelativePath = 'META-INF/spring-configuration-metadata.json'
+def javaMetadata = layout.buildDirectory.file("classes/java/main/${metadataRelativePath}")
+def groovyMetadata = layout.buildDirectory.file("classes/groovy/main/${metadataRelativePath}")
+def mergedMetadataDir = layout.buildDirectory.dir('merged-spring-configuration-metadata')
+def mergedMetadata = mergedMetadataDir.map { it.file(metadataRelativePath) }
+
+def mergeMicronautConfigMetadata = tasks.register('mergeMicronautConfigMetadata') {
+    description = 'Merges the spring-configuration-metadata.json emitted separately by ' +
+            'micronaut-inject-java and micronaut-inject-groovy into one combined document.'
+    group = 'build'
+
+    // Both files may or may not exist depending on which compiler ran and what beans
+    // it found, so feed them as a lazy FileCollection that filters to existing files
+    // at execution time. Declaring the producing tasks as dependencies anchors them
+    // in the task graph so this task runs after compileJava and compileGroovy.
+    dependsOn tasks.named('compileJava'), tasks.named('compileGroovy')
+    inputs.files(provider {
+        [javaMetadata.get().asFile, groovyMetadata.get().asFile].findAll { it.exists() }
+    }).withPropertyName('inputMetadataFiles').withPathSensitivity(PathSensitivity.NONE)
+    outputs.file(mergedMetadata).withPropertyName('mergedMetadata')
+    outputs.cacheIf { true }
+
+    doLast {
+        def javaFile = javaMetadata.get().asFile
+        def groovyFile = groovyMetadata.get().asFile
+        def outputFile = mergedMetadata.get().asFile
+        outputFile.parentFile.mkdirs()
+
+        def javaExists = javaFile.exists()
+        def groovyExists = groovyFile.exists()
+        if (!javaExists && !groovyExists) {
+            outputFile.text = '{}'
+            return
+        }
+        if (!javaExists) {
+            outputFile.text = groovyFile.text
+            return
+        }
+        if (!groovyExists) {
+            outputFile.text = javaFile.text
+            return
+        }
+        def slurper = new groovy.json.JsonSlurper()
+        def parsedJava = slurper.parse(javaFile)
+        def parsedGroovy = slurper.parse(groovyFile)
+        def combined = [:]
+        ['groups', 'properties', 'hints'].each { String section ->
+            def merged = []
+            if (parsedJava[section]) merged.addAll(parsedJava[section])
+            if (parsedGroovy[section]) merged.addAll(parsedGroovy[section])
+            if (merged) combined[section] = merged
+        }
+        outputFile.text = groovy.json.JsonOutput.toJson(combined)
+    }
+}
+
+tasks.named('classes').configure { finalizedBy mergeMicronautConfigMetadata }
+tasks.named('jar', Jar).configure {
+    dependsOn mergeMicronautConfigMetadata
+    // The two per-compiler copies in build/classes/{java,groovy}/main are replaced
+    // by the merged document from build/merged-spring-configuration-metadata/.
+    // A global exclude would drop our merged copy too, so filter by absolute source
+    // path - only the merged-dir copy survives.
+    def mergedDirPath = mergedMetadataDir.get().asFile.absolutePath
+    eachFile { FileCopyDetails details ->
+        if (details.path == metadataRelativePath
+                && !details.file.absolutePath.startsWith(mergedDirPath)) {
+            details.exclude()
+        }
+    }
+    from(mergedMetadataDir)
 }

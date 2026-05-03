@@ -27,7 +27,7 @@ import org.grails.forge.options.DevelopmentReloading;
 import org.grails.forge.options.GormImpl;
 import org.grails.forge.options.JdkVersion;
 
-import javax.validation.constraints.NotBlank;
+import jakarta.validation.constraints.NotBlank;
 import java.time.LocalDateTime;
 import java.util.Collections;
 import java.util.Objects;

@@ -1,20 +1,18 @@
 /*
- *  Licensed to the Apache Software Foundation (ASF) under one
- *  or more contributor license agreements.  See the NOTICE file
- *  distributed with this work for additional information
- *  regarding copyright ownership.  The ASF licenses this file
- *  to you under the Apache License, Version 2.0 (the
- *  "License"); you may not use this file except in compliance
- *  with the License.  You may obtain a copy of the License at
+ *  Licensed to the Apache Software Foundation (ASF) under one or more
+ *  contributor license agreements.  See the NOTICE file distributed with
+ *  this work for additional information regarding copyright ownership.
+ *  The ASF licenses this file to You under the Apache License, Version 2.0
+ *  (the "License"); you may not use this file except in compliance with
+ *  the License.  You may obtain a copy of the License at
  *
- *    https://www.apache.org/licenses/LICENSE-2.0
+ *      https://www.apache.org/licenses/LICENSE-2.0
  *
- *  Unless required by applicable law or agreed to in writing,
- *  software distributed under the License is distributed on an
- *  "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
- *  KIND, either express or implied.  See the License for the
- *  specific language governing permissions and limitations
- *  under the License.
+ *  Unless required by applicable law or agreed to in writing, software
+ *  distributed under the License is distributed on an "AS IS" BASIS,
+ *  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ *  See the License for the specific language governing permissions and
+ *  limitations under the License.
  */
 
 apply plugin: 'org.nosphere.apache.rat'
@@ -58,6 +56,7 @@ tasks.named('rat') {
             'grails-doc/src/en/ref/Versions/Grails BOM.adoc', // exclude generated data
             'grails-doc/src/en/ref/Versions/Grails BOM Hibernate5.adoc', // exclude generated data
             'grails-doc/src/en/ref/Versions/Grails BOM Hibernate7.adoc', // exclude generated data
+            'grails-doc/src/en/ref/Versions/Grails BOM Micronaut.adoc', // exclude generated data
             'grails-profiles/**/templates/**', // template files that people are expected to use in the end application
             'grails-profiles/**/commands/**', // template files that people are expected to use in the end application
             'grails-profiles/**/features/**', // template files that people are expected to use in the end application
@@ -69,7 +68,7 @@ tasks.named('rat') {
             'grails-test-examples/*/build/**', // build directories
             'grails-gsp/*/build/**', // build directories
             'grails-test-examples/gsp-spring-boot/app/build', // build directories
-            '*/build', // build directories
+            '*/build', // root build directories
             'grails-events/compat/build', // build directories
             'build-logic/docs-core/src/main/template/**', // template files that people are expected to use in the end application
             'grails-common/src/main/groovy/org/apache/grails/common/compiler/asm/Attribute.java', // See license file, BSD licensed
@@ -88,7 +87,6 @@ tasks.named('rat') {
             'build-logic/.idea/**', // grails-gradle idea directories
             'build/**', // build directories
             'buildSrc/build/**', // build directories
-            '**/build/**', // recursive build directories
             'node_modules/**', // exclude node_modules
             '**/*.log', // exclude log files
             '*_VIOLATIONS.md', // exclude violation reports

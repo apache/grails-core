@@ -113,7 +113,20 @@ class PropertyDefinition extends AbstractMemberDefinition {
         }
     }
 
-    static Builder builder() {
-        new Builder()
+    /**
+     * Factory for the {@link PropertyDefinition.Builder}. The return type is intentionally fully qualified:
+     * {@code FieldDefinition} declares an inner Builder of the same simple name, and groovydoc resolves
+     * unqualified {@code Builder} references inconsistently between builds (depends on filesystem iteration
+     * order). Keep this qualified to ensure groovydoc renders {@code PropertyDefinition.Builder} reproducibly.
+     *
+     * TODO(GROOVY-11954): Revisit and simplify the return type to {@code Builder} once Grails depends on
+     * Groovy 4.0.32+ (also fixed in 5.0.6 and 6.0.0-alpha-1). The upstream fix corrects the shared
+     * short-name resolution cache in {@code SimpleGroovyClassDoc} that causes this non-reproducibility,
+     * so the workaround here will no longer be needed. As of writing, Grails pins {@code groovy.version=4.0.31}
+     * and 4.0.32 has not yet been released to Maven Central. See:
+     * https://issues.apache.org/jira/browse/GROOVY-11954 and https://github.com/apache/groovy/pull/2484.
+     */
+    static PropertyDefinition.Builder builder() {
+        new PropertyDefinition.Builder()
     }
 }

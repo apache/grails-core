@@ -20,7 +20,10 @@ package org.grails.cli.interactive.completers
 
 import groovy.transform.CompileStatic
 
-import jline.console.completer.Completer
+import org.jline.reader.Candidate
+import org.jline.reader.Completer
+import org.jline.reader.LineReader
+import org.jline.reader.ParsedLine
 
 /**
  * @author Graeme Rocher
@@ -38,13 +41,13 @@ class ClosureCompleter implements Completer {
 
     Completer getCompleter() {
         if (completer == null) {
-            completer = new jline.console.completer.StringsCompleter(closure.call())
+            completer = new StringsCompleter(closure.call())
         }
         completer
     }
 
     @Override
-    int complete(String buffer, int cursor, List<CharSequence> candidates) {
-        getCompleter().complete(buffer, cursor, candidates)
+    void complete(LineReader reader, ParsedLine line, List<Candidate> candidates) {
+        getCompleter().complete(reader, line, candidates)
     }
 }

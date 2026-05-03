@@ -63,6 +63,11 @@ tasks.withType(Test).configureEach { Test task ->
     boolean isHibernate7 = !project.name.startsWith('grails-test-examples-hibernate7')
     boolean isMongo = !project.name.startsWith('grails-test-examples-mongodb')
 
+    // Honor DO_NOT_CACHE_TESTS=1 so developers can repeatedly invoke the same test command
+    // without --rerun-tasks (and without recompiling everything else).
+    task.outputs.cacheIf { !doNotCacheTests }
+    task.outputs.upToDateWhen { !doNotCacheTests }
+
     onlyIf {
         if (['skipFunctionalTests', 'onlyCoreTests', 'skipTests'].any { project.hasProperty(it) }) {
             return false

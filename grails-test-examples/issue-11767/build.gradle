@@ -28,7 +28,7 @@ group = 'issue11767.app'
 apply plugin: 'org.apache.grails.gradle.grails-web'
 
 dependencies {
-    implementation enforcedPlatform(project(':grails-bom'))
+    implementation enforcedPlatform(project(':grails-micronaut-bom'))
 
     implementation 'org.apache.grails:grails-dependencies-starter-web'
     implementation 'org.apache.grails:grails-micronaut'

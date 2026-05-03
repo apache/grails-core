@@ -42,7 +42,8 @@ dependencies {
     api project(':grails-fields')
     api project(':grails-rest-transforms')
 
-    compileOnly 'jline:jline'
+    compileOnly 'org.jline:jline'
+    compileOnly 'org.fusesource.jansi:jansi'
 
     testImplementation 'org.spockframework:spock-core'
     testImplementation project(':grails-web-gsp')

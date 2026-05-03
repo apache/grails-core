@@ -18,33 +18,37 @@
  */
 
 plugins {
-    id "com.gradle.enterprise" version "3.16.2"
-    id 'com.gradle.common-custom-user-data-gradle-plugin' version '1.12.1'
+    id 'com.gradle.develocity' version '4.3.2'
+    id 'com.gradle.common-custom-user-data-gradle-plugin' version '2.4.0'
 }
 
-gradleEnterprise {
+def isCI = System.getenv().containsKey('CI')
+def isLocal = !isCI
+def isReproducibleBuild = System.getenv('SOURCE_DATE_EPOCH') != null
+if (isReproducibleBuild) {
+    gradle.settingsEvaluated {
+        logger.warn('*************** Remote Build Cache Disabled due to Reproducible Build ********************')
+        logger.warn("Build date will be set to (SOURCE_DATE_EPOCH=${System.getenv("SOURCE_DATE_EPOCH")})")
+    }
+}
+
+develocity {
     server = 'https://develocity.apache.org'
     buildScan {
-        publishAlwaysIf(System.getenv('CI') == 'true')
-        publishIfAuthenticated()
-        uploadInBackground = System.getenv("CI") == null
-        capture {
-            taskInputFiles = true
-        }
+        tag('grails')
+        tag('grails-data-neo4j')
+        publishing.onlyIf { it.authenticated }
+        uploadInBackground = isLocal
     }
 }
 
 buildCache {
-    local { enabled = System.getenv('CI') != 'true' }
-    remote(HttpBuildCache) {
-        push = System.getenv('CI') == 'true'
-        enabled = true
-        url = 'https://develocity.apache.org/cache/'
-        credentials {
-            username = System.getenv('GRADLE_ENTERPRISE_BUILD_CACHE_NODE_USER')
-            password = System.getenv('GRADLE_ENTERPRISE_BUILD_CACHE_NODE_KEY')
-        }
-    }}
+    local { enabled = (isLocal && !isReproducibleBuild) || (isCI && isReproducibleBuild) }
+    remote(develocity.buildCache) {
+        push = isCI
+        enabled = !isReproducibleBuild
+    }
+}
 
 // core
 include "grails-datastore-gorm-neo4j"
@@ -73,4 +77,3 @@ include 'examples-test-data-service'
 project(":examples-test-data-service").projectDir = new File(settingsDir, "examples/test-data-service")
 
 findProject(':boot-plugin').name = 'gorm-neo4j-spring-boot'
-

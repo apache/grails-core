@@ -34,6 +34,7 @@ def publishedProjects = [
         'grails-bom',
         'grails-hibernate5-bom',
         'grails-hibernate7-bom',
+        'grails-micronaut-bom',
         'grails-bootstrap',
         'grails-cache',
         'grails-codecs',

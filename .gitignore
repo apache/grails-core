@@ -12,6 +12,7 @@
 .gradle
 .gradle/
 .idea
+.mailmap
 .idea/
 !.idea/codeStyles/
 !.idea/codeStyles/Project.xml
@@ -54,6 +55,8 @@ _alternativeTable.gsp
 **/src/en/ref/Versions/Grails BOM.adoc
 **/src/en/ref/Versions/Grails BOM Hibernate5.adoc
 **/src/en/ref/Versions/Grails BOM Hibernate7.adoc
+**/src/en/ref/Versions/Grails BOM Micronaut.adoc
+**/src/en/ref/Configuration/Application Properties.adoc
 stacktrace.log
 target
 tmp/

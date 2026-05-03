@@ -21,6 +21,7 @@ apply plugin: 'org.apache.grails.buildsrc.groovydoc'
 dependencies {
     add('documentation', platform(project(':grails-bom')))
     add('documentation', 'org.fusesource.jansi:jansi')
+    // TODO: Remove jline:jline (JLine 2) when upgrading to Groovy 5 (groovy-groovysh 5.x uses JLine 3)
     add('documentation', 'jline:jline')
     add('documentation', 'com.github.javaparser:javaparser-core')
     add('documentation', 'org.apache.groovy:groovy')

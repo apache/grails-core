@@ -26,13 +26,22 @@ pluginManagement {
     includeBuild('./build-logic') {
         name = 'build-logic-root'
     }
+    apply from: file('gradle/plugin-repositories.gradle')
+    repositories {
+        configurePluginRepositories(delegate)
+    }
 }
 
 plugins {
-    id 'com.gradle.develocity' version '4.2.2'
-    id 'com.gradle.common-custom-user-data-gradle-plugin' version '2.3'
+    id 'com.gradle.develocity' version '4.3.2'
+    id 'com.gradle.common-custom-user-data-gradle-plugin' version '2.4.0'
     id 'org.apache.grails.buildsrc.repo'
 }
+
+// NOTE: Known Gradle deprecation warnings (scheduled for removal in Gradle 10):
+// 1. StartParameter.isConfigurationCacheRequested - from org.asciidoctor.jvm.convert plugin (4.0.5)
+//    Fix available in asciidoctor-gradle-plugin 5.0.0+ (currently alpha)
+//    Tracking: https://github.com/asciidoctor/asciidoctor-gradle-plugin/issues/756
 
 def isCI = System.getenv().containsKey('CI')
 def isLocal = !isCI
@@ -63,6 +72,20 @@ buildCache {
 }
 
 rootProject.name = 'grails.core.ROOT'
+
+// Presence-based toggle (matches project convention: skipFunctionalTests, skipCodeStyle, etc.).
+// When -PskipMicronautProjects is passed (regardless of value), the Grails-Micronaut "island"
+// is excluded from the build graph entirely:
+//   * grails-micronaut (Grails plugin that re-exports the Micronaut platform)
+//   * grails-micronaut-bom (overrides Groovy/Spock to Groovy 5 / Spock 2.4-groovy-5.0)
+//   * the five grails-test-examples that consume grails-micronaut-bom
+//
+// Used by .github/workflows/groovy-joint-workflow.yml so the joint Groovy 4 snapshot
+// build does not try to compile Spock specs against a Groovy-5-only Spock artifact.
+// Consumers that reference :grails-micronaut-bom (e.g. grails-doc:generateBomDocumentation)
+// must guard those references with findProject(':grails-micronaut-bom') != null.
+// See https://github.com/apache/grails-core/issues/15613.
+def skipMicronautProjects = providers.gradleProperty('skipMicronautProjects').isPresent()
 
 include(
         'grails-bootstrap',
@@ -102,14 +125,13 @@ include(
         'grails-web-databinding',
         'grails-web-mvc',
         'grails-web-url-mappings',
-        'grails-data-hibernate7-spring-orm',
 
         // POM / BOMs
         'grails-dependencies-starter-web',
         'grails-dependencies-test',
         'grails-dependencies-assets',
         'grails-base-bom',
-        'grails-bom',
+        'grails-bom', // the default bom
         'grails-hibernate5-bom',
         'grails-hibernate7-bom',
 
@@ -184,9 +206,6 @@ include(
 
         // wrapper
         'grails-wrapper',
-
-        // micronaut plugin for integration with Grails
-        'grails-micronaut',
 )
 
 project(':grails-bom').projectDir = file('grails-bom/default')
@@ -454,20 +473,16 @@ include(
         // TODO: 'grails-test-examples-gsp-spring-boot',
         'grails-test-examples-hyphenated',
         'grails-test-examples-issue-11102',
-        'grails-test-examples-issue-11767',
         'grails-test-examples-issue-15228',
         'grails-test-examples-issue-698-domain-save-npe',
         'grails-test-examples-issue-views-182',
-        'grails-test-examples-micronaut',
-        'grails-test-examples-micronaut-groovy-only',
         'grails-test-examples-namespaces',
         'grails-test-examples-plugins-exploded',
-        'grails-test-examples-plugins-issue-11767',
         'grails-test-examples-plugins-issue11005',
         'grails-test-examples-plugins-loadafter',
         'grails-test-examples-plugins-loadfirst',
         'grails-test-examples-plugins-loadsecond',
-        'grails-test-examples-plugins-micronaut-singleton',
+        'grails-test-examples-config-report',
         'grails-test-examples-scaffolding',
         'grails-test-examples-scaffolding-fields',
         'grails-test-examples-test-phases',
@@ -497,18 +512,14 @@ project(':grails-test-examples-hyphenated').projectDir = file('grails-test-examp
 project(':grails-test-examples-issue-views-182').projectDir = file('grails-test-examples/issue-views-182')
 project(':grails-test-examples-issue-11102').projectDir = file('grails-test-examples/issue-11102')
 project(':grails-test-examples-demo33').projectDir = file('grails-test-examples/demo33')
-project(':grails-test-examples-micronaut').projectDir = file('grails-test-examples/micronaut')
-project(':grails-test-examples-micronaut-groovy-only').projectDir = file('grails-test-examples/micronaut-groovy-only')
 project(':grails-test-examples-plugins-loadfirst').projectDir = file('grails-test-examples/plugins/loadfirst')
 project(':grails-test-examples-plugins-loadsecond').projectDir = file('grails-test-examples/plugins/loadsecond')
 project(':grails-test-examples-plugins-loadafter').projectDir = file('grails-test-examples/plugins/loadafter')
 project(':grails-test-examples-plugins-issue11005').projectDir = file('grails-test-examples/plugins/issue11005')
-project(':grails-test-examples-issue-11767').projectDir = file('grails-test-examples/issue-11767')
 project(':grails-test-examples-issue-15228').projectDir = file('grails-test-examples/issue-15228')
 project(':grails-test-examples-plugins-exploded').projectDir = file('grails-test-examples/plugins/exploded')
-project(':grails-test-examples-plugins-issue-11767').projectDir = file('grails-test-examples/plugins/issue-11767')
-project(':grails-test-examples-plugins-micronaut-singleton').projectDir = file('grails-test-examples/plugins/micronaut-singleton')
 project(':grails-test-examples-cache').projectDir = file('grails-test-examples/cache')
+project(':grails-test-examples-config-report').projectDir = file('grails-test-examples/config-report')
 project(':grails-test-examples-scaffolding').projectDir = file('grails-test-examples/scaffolding')
 project(':grails-test-examples-scaffolding-fields').projectDir = file('grails-test-examples/scaffolding-fields')
 project(':grails-test-examples-views-functional-tests').projectDir = file('grails-test-examples/views-functional-tests')
@@ -520,6 +531,30 @@ includeBuild('./grails-gradle') {
 }
 includeBuild('./build-logic') {
     name = 'build-logic-root'
+}
+
+// Grails-Micronaut "island" - kept on its own dependency graph because the Micronaut
+// platform pins Groovy 5 / Spock 2.4-groovy-5.0, which is incompatible with the
+// Groovy 4 / Spock 2.3-groovy-4.0 stack the rest of grails-core targets. Skipping
+// these projects (via -PskipMicronautProjects) keeps Micronaut's version overrides
+// from leaking into builds where Groovy 4 is in play (notably the joint validation
+// build that swaps in an apache/groovy 4.x snapshot).
+if (!skipMicronautProjects) {
+    include(
+            'grails-micronaut-bom',
+            'grails-micronaut',
+            'grails-test-examples-issue-11767',
+            'grails-test-examples-micronaut',
+            'grails-test-examples-micronaut-groovy-only',
+            'grails-test-examples-plugins-issue-11767',
+            'grails-test-examples-plugins-micronaut-singleton',
+    )
+    project(':grails-micronaut-bom').projectDir = file('grails-bom/micronaut')
+    project(':grails-test-examples-issue-11767').projectDir = file('grails-test-examples/issue-11767')
+    project(':grails-test-examples-micronaut').projectDir = file('grails-test-examples/micronaut')
+    project(':grails-test-examples-micronaut-groovy-only').projectDir = file('grails-test-examples/micronaut-groovy-only')
+    project(':grails-test-examples-plugins-issue-11767').projectDir = file('grails-test-examples/plugins/issue-11767')
+    project(':grails-test-examples-plugins-micronaut-singleton').projectDir = file('grails-test-examples/plugins/micronaut-singleton')
 }
 
 // Due to https://github.com/gradle/gradle/issues/2986 , we can't change the global exclude for profiles, it must be done everywhere
