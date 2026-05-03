@@ -52,6 +52,8 @@ import org.grails.orm.hibernate.HibernateGormValidationApi
 import org.grails.datastore.gorm.finders.DynamicFinder
 import org.grails.orm.hibernate.support.HibernateRuntimeUtils
 import org.grails.orm.hibernate.support.ClosureEventListener
+import org.grails.orm.hibernate.proxy.GroovyProxyInterceptorLogic
+import org.hibernate.Hibernate
 
 /**
  * Hibernate GORM instance API.
@@ -94,6 +96,26 @@ class HibernateGormInstanceApi<D> extends GormInstanceApi<D> {
 
     protected HibernateDatastore getHibernateDatastore() {
         return (HibernateDatastore) getDatastore()
+    }
+
+    InstanceApiHelper getInstanceApiHelper() {
+        return getHibernateDatastore().getInstanceApiHelper()
+    }
+
+    /**
+     * Handles proxy-related method calls on Hibernate or Groovy proxies (e.g. isInitialized()).
+     */
+    @CompileDynamic
+    Object methodMissing(Object target, String name, Object[] args) {
+        if ("isInitialized" == name) {
+            Boolean groovyResult = GroovyProxyInterceptorLogic.isInitialized(target)
+            return groovyResult != null ? groovyResult : Hibernate.isInitialized(target)
+        }
+        if ("initialize" == name || "getTarget" == name) {
+            Hibernate.initialize(target)
+            return target
+        }
+        throw new MissingMethodException(name, target?.class ?: persistentClass, args, false)
     }
 
     @Override
@@ -176,6 +198,9 @@ class HibernateGormInstanceApi<D> extends GormInstanceApi<D> {
 
     @Override
     boolean isDirty(D instance) {
+        if (!isAttached(instance)) {
+            return false
+        }
         if (instance instanceof DirtyCheckable) {
             return ((DirtyCheckable) instance).hasChanged()
         }
@@ -194,6 +219,17 @@ class HibernateGormInstanceApi<D> extends GormInstanceApi<D> {
         Object[] values = persister.getPropertyValues(instance)
         int[] dirtyPropertyIndexes = persister.findDirty(values, loadedState, instance, session)
         return dirtyPropertyIndexes != null && dirtyPropertyIndexes.length > 0
+    }
+
+    @Override
+    boolean isDirty(D instance, String fieldName) {
+        if (!isAttached(instance)) {
+            return false
+        }
+        if (instance instanceof DirtyCheckable) {
+            return ((DirtyCheckable) instance).hasChanged(fieldName)
+        }
+        return false
     }
 
     @Override
@@ -373,10 +409,9 @@ class HibernateGormInstanceApi<D> extends GormInstanceApi<D> {
 
     @Override
     D attach(D target) {
-        getHibernateTemplate().execute { Session session ->
-            session.lock target, LockModeType.NONE
+        (D) getHibernateTemplate().execute { Session session ->
+            session.merge(target)
         }
-        return target
     }
 
     @Override

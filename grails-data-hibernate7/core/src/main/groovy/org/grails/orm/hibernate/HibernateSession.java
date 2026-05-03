@@ -41,6 +41,7 @@ import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.transaction.TransactionDefinition;
 import org.springframework.transaction.support.TransactionSynchronizationManager;
 
+import org.grails.datastore.gorm.proxy.GroovyProxyFactory;
 import org.grails.datastore.gorm.timestamp.DefaultTimestampProvider;
 import org.grails.datastore.mapping.core.AbstractAttributeStoringSession;
 import org.grails.datastore.mapping.core.Datastore;
@@ -221,6 +222,10 @@ public class HibernateSession extends AbstractAttributeStoringSession implements
     public <T> T proxy(Class<T> type, Serializable key) {
         if (key == null) {
             return null;
+        }
+        var proxyFactory = getMappingContext().getProxyFactory();
+        if (proxyFactory instanceof GroovyProxyFactory groovyProxyFactory) {
+            return groovyProxyFactory.createProxy(this, type, key);
         }
         return hibernateTemplate.load(type, key);
     }
