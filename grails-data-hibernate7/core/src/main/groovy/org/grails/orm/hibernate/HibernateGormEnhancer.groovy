@@ -23,6 +23,7 @@ import org.grails.datastore.gorm.GormEnhancer
 import org.grails.datastore.gorm.GormInstanceApi
 import org.grails.datastore.gorm.GormStaticApi
 import org.grails.datastore.gorm.GormValidationApi
+import org.grails.datastore.gorm.DatastoreResolver
 import org.grails.datastore.mapping.core.Datastore
 import org.grails.datastore.mapping.core.connections.ConnectionSource
 import org.grails.datastore.mapping.core.connections.ConnectionSourceSettings
@@ -40,6 +41,11 @@ import org.springframework.transaction.PlatformTransactionManager
 class HibernateGormEnhancer extends GormEnhancer {
 
     protected final Map<String, HibernateDatastore> datastoresByConnectionSource
+
+    @Deprecated
+    HibernateGormEnhancer(HibernateDatastore datastore, PlatformTransactionManager transactionManager) {
+        this(datastore, transactionManager, datastore.connectionSources.defaultConnectionSource.settings)
+    }
 
     HibernateGormEnhancer(HibernateDatastore datastore, PlatformTransactionManager transactionManager, ConnectionSourceSettings settings) {
         this(datastore, transactionManager, settings, Collections.<String, HibernateDatastore>emptyMap())
@@ -75,63 +81,62 @@ class HibernateGormEnhancer extends GormEnhancer {
         return qualifiers.unique()
     }
 
+    protected <D> GormStaticApi<D> getStaticApi(Class<D> cls, String qualifier) {
+        getStaticApi(cls, getDatastoreResolver(cls, qualifier), qualifier)
+    }
+
+    protected <D> GormInstanceApi<D> getInstanceApi(Class<D> cls, String qualifier) {
+        getInstanceApi(cls, getDatastoreResolver(cls, qualifier))
+    }
+
+    protected <D> GormValidationApi<D> getValidationApi(Class<D> cls, String qualifier) {
+        getValidationApi(cls, getDatastoreResolver(cls, qualifier))
+    }
+
     @Override
-    protected <D> GormStaticApi<D> getStaticApi(Class<D> cls, org.grails.datastore.gorm.DatastoreResolver resolver, String qualifier) {
+    protected <D> GormStaticApi<D> getStaticApi(Class<D> cls, DatastoreResolver resolver, String qualifier) {
         HibernateDatastore hibernateDatastore = (HibernateDatastore) datastore
-        HibernateGormEnhancer self = this
-        org.grails.datastore.gorm.DatastoreResolver dynamicResolver = new org.grails.datastore.gorm.DatastoreResolver() {
-            @Override Datastore resolve() {
-                if (ConnectionSource.DEFAULT.equals(qualifier)) {
-                    return self.resolveOwningDatastore(cls)
-                }
-                return org.grails.datastore.gorm.GormEnhancer.findDatastore(cls, qualifier)
-            }
-        }
         new HibernateGormStaticApi<D>(
                 cls,
                 hibernateDatastore.mappingContext,
                 createDynamicFinders(resolver, hibernateDatastore.mappingContext),
-                dynamicResolver,
+                resolver,
                 qualifier,
                 hibernateDatastore.mappingContext.getMappingFactory().getClass().getClassLoader()
         )
     }
 
     @Override
-    protected <D> GormInstanceApi<D> getInstanceApi(Class<D> cls, org.grails.datastore.gorm.DatastoreResolver resolver) {
+    protected <D> GormInstanceApi<D> getInstanceApi(Class<D> cls, DatastoreResolver resolver) {
         HibernateDatastore hibernateDatastore = (HibernateDatastore) datastore
-        HibernateGormEnhancer self = this
-        org.grails.datastore.gorm.DatastoreResolver dynamicResolver = new org.grails.datastore.gorm.DatastoreResolver() {
-            @Override Datastore resolve() { self.resolveOwningDatastore(cls) }
-        }
-        new HibernateGormInstanceApi<D>(cls, hibernateDatastore.mappingContext, dynamicResolver, hibernateDatastore.mappingContext.getMappingFactory().getClass().getClassLoader())
+        new HibernateGormInstanceApi<D>(cls, hibernateDatastore.mappingContext, resolver, hibernateDatastore.mappingContext.getMappingFactory().getClass().getClassLoader())
     }
 
     @Override
-    protected <D> GormValidationApi<D> getValidationApi(Class<D> cls, org.grails.datastore.gorm.DatastoreResolver resolver) {
+    protected <D> GormValidationApi<D> getValidationApi(Class<D> cls, DatastoreResolver resolver) {
         HibernateDatastore hibernateDatastore = (HibernateDatastore) datastore
-        HibernateGormEnhancer self = this
-        org.grails.datastore.gorm.DatastoreResolver dynamicResolver = new org.grails.datastore.gorm.DatastoreResolver() {
-            @Override Datastore resolve() { self.resolveOwningDatastore(cls) }
-        }
-        new HibernateGormValidationApi<D>(cls, hibernateDatastore.mappingContext, dynamicResolver, hibernateDatastore.mappingContext.getMappingFactory().getClass().getClassLoader())
+        new HibernateGormValidationApi<D>(cls, hibernateDatastore.mappingContext, resolver, hibernateDatastore.mappingContext.getMappingFactory().getClass().getClassLoader())
     }
 
-    /**
-     * Resolves the {@link HibernateDatastore} that owns the given entity class.
-     *
-     * <p>For secondary-only entities (e.g. {@code static mapping = { datasource 'secondary' }}),
-     * {@link GormEnhancer#findDatastore(Class, String)} with {@link ConnectionSource#DEFAULT} returns
-     * the ROOT datastore whose {@link org.hibernate.SessionFactory} does not know the entity, causing
-     * an {@code UnknownEntityTypeException} on persist. This method uses the Hibernate-native
-     * {@link org.hibernate.engine.spi.SessionFactoryImplementor#getMappingMetamodel()} API to detect
-     * that case and falls back to the sub-datastore whose session factory actually owns the entity.</p>
-     *
-     * <p>This method reads {@link #datastoresByConnectionSource} lazily (at resolve-time) to avoid
-     * capturing a null reference during the {@link GormEnhancer} super-constructor, which calls
-     * {@link #registerEntity(org.grails.datastore.mapping.model.PersistentEntity)} before subclass
-     * field initializers run.</p>
-     */
+    protected DatastoreResolver getDatastoreResolver(Class cls, String qualifier) {
+        HibernateDatastore hibernateDatastore = (HibernateDatastore) datastore
+        HibernateGormEnhancer self = this
+        new DatastoreResolver() {
+            @Override Datastore resolve() {
+                if (ConnectionSource.DEFAULT.equals(qualifier)) {
+                    if (hibernateDatastore.getMultiTenancyMode() != org.grails.datastore.mapping.multitenancy.MultiTenancySettings.MultiTenancyMode.NONE) {
+                        Serializable tenantId = grails.gorm.multitenancy.Tenants.currentId((Class<? extends Datastore>)hibernateDatastore.getClass())
+                        if (tenantId != null && !ConnectionSource.DEFAULT.equals(tenantId.toString())) {
+                            return hibernateDatastore.getDatastoreForTenantId(tenantId)
+                        }
+                    }
+                    return self.resolveOwningDatastore(cls)
+                }
+                return org.grails.datastore.gorm.GormEnhancer.findDatastore(cls, qualifier)
+            }
+        }
+    }
+
     protected Datastore resolveOwningDatastore(Class cls) {
         Datastore ds = GormEnhancer.findDatastore(cls, ConnectionSource.DEFAULT)
         Map<String, HibernateDatastore> byConn = datastoresByConnectionSource
