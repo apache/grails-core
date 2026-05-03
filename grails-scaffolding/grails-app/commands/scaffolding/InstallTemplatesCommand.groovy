@@ -59,7 +59,7 @@ class InstallTemplatesCommand implements GrailsApplicationCommand, SkipBootstrap
                 }
             }
             consoleLogger.verbose('Templates installation complete')
-            return true
+            return SUCCESS
         } catch (e) {
             consoleLogger.error(e.message, e)
         }

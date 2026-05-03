@@ -47,12 +47,12 @@ class GenerateScaffoldAllCommand implements GrailsApplicationCommand, CommandLin
         final String domainClassName = args[0]
         if (!domainClassName) {
             error('No domain-class specified')
-            return false
+            return FAILURE
         }
         final Resource sourceClass = source(domainClassName)
         if (!sourceClass) {
             error("No domain-class found for name: ${domainClassName}")
-            return false
+            return FAILURE
         }
         boolean overwrite = isFlagPresent('force')
         final Model model = model(sourceClass)
@@ -91,6 +91,6 @@ class GenerateScaffoldAllCommand implements GrailsApplicationCommand, CommandLin
                 overwrite: overwrite)
         verbose('Scaffold controller created for domain class with service reference')
 
-        return true
+        return SUCCESS
     }
 }

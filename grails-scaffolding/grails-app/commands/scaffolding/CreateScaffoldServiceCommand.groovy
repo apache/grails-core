@@ -47,12 +47,12 @@ class CreateScaffoldServiceCommand implements GrailsApplicationCommand, CommandL
         final String domainClassName = args[0]
         if (!domainClassName) {
             error('No domain-class specified')
-            return false
+            return FAILURE
         }
         final Resource sourceClass = source(domainClassName)
         if (!sourceClass) {
             error("No domain-class found for name: ${domainClassName}")
-            return false
+            return FAILURE
         }
         boolean overwrite = isFlagPresent('force')
         final Model model = model(sourceClass)
@@ -69,6 +69,6 @@ class CreateScaffoldServiceCommand implements GrailsApplicationCommand, CommandL
                 overwrite: overwrite)
         verbose('Scaffold service created for domain class')
 
-        return true
+        return SUCCESS
     }
 }

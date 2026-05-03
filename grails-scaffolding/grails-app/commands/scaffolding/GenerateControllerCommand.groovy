@@ -47,7 +47,7 @@ class GenerateControllerCommand implements GrailsApplicationCommand, CommandLine
     boolean handle() {
         if (!args) {
             error('No domain-class specified')
-            return false
+            return FAILURE
         }
 
         List<String> domainClassNames
@@ -93,7 +93,7 @@ class GenerateControllerCommand implements GrailsApplicationCommand, CommandLine
                 failureCount++
             }
         }
-        return failureCount ? false : true
+        return failureCount ? FAILURE : SUCCESS
 
     }
 

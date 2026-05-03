@@ -67,6 +67,6 @@ class GenerateServiceCommand implements GrailsApplicationCommand, CommandLineHel
                 overwrite: overwrite)
 
         verbose("Service created for domain-class ${projectPath(sourceClass)}")
-        return true
+        return SUCCESS
     }
 }
