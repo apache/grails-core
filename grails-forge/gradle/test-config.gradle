@@ -21,7 +21,7 @@
 // Also add ByteBuddy for Spock mocking on Java 17+ (CGLIB doesn't support Java 17 class files)
 dependencies {
     testRuntimeOnly 'org.junit.platform:junit-platform-launcher:1.12.2'
-    testImplementation "net.bytebuddy:byte-buddy:$byteBuddyVersion"
+    testImplementation "net.bytebuddy:byte-buddy"
 }
 
 tasks.withType(Test).configureEach {
