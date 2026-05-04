@@ -544,7 +544,7 @@ public class HibernateQuery extends Query {
     }
 
     private Session getCurrentSession() {
-        return getSessionFactory().getCurrentSession();
+        return ((HibernateSession) session).getNativeSession();
     }
 
     private SessionFactory getSessionFactory() {

@@ -64,6 +64,7 @@ import org.grails.orm.hibernate.cfg.domainbinding.hibernate.GrailsHibernatePersi
 import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernatePersistentEntity;
 import org.grails.orm.hibernate.proxy.HibernateProxyHandler;
 import org.grails.orm.hibernate.query.HibernateHqlQueryCreator;
+import org.grails.orm.hibernate.query.HibernateHqlQuery;
 import org.grails.orm.hibernate.query.HibernateQuery;
 import org.grails.orm.hibernate.query.HqlQueryContext;
 import org.grails.orm.hibernate.query.MutationHqlQuery;
@@ -87,12 +88,19 @@ public class HibernateSession extends AbstractAttributeStoringSession implements
     /** The hibernate template. */
     protected IHibernateTemplate hibernateTemplate;
 
+    protected Session nativeSession;
+
     ProxyHandler proxyHandler = new HibernateProxyHandler();
     DefaultTimestampProvider timestampProvider;
 
     public HibernateSession(HibernateDatastore hibernateDatastore, SessionFactory sessionFactory) {
+        this(hibernateDatastore, sessionFactory, null);
+    }
+
+    public HibernateSession(HibernateDatastore hibernateDatastore, SessionFactory sessionFactory, Session nativeSession) {
         datastore = hibernateDatastore;
         hibernateTemplate = (IHibernateTemplate) hibernateDatastore.getHibernateTemplate();
+        this.nativeSession = nativeSession;
     }
 
     @Override
@@ -106,13 +114,16 @@ public class HibernateSession extends AbstractAttributeStoringSession implements
     }
 
     @Override
-    public boolean isConnected() {
-        return connected;
+    public void disconnect() {
+        connected = false;
+        if (nativeSession != null && nativeSession.isOpen()) {
+            nativeSession.close();
+        }
     }
 
     @Override
-    public void disconnect() {
-        connected = false; // don't actually do any disconnection here. This will be handled by OSVI
+    public boolean isConnected() {
+        return connected;
     }
 
     @Override
@@ -295,6 +306,9 @@ public class HibernateSession extends AbstractAttributeStoringSession implements
     }
 
     public Session getNativeSession() {
+        if (nativeSession != null) {
+            return nativeSession;
+        }
         return hibernateTemplate.getSessionFactory().getCurrentSession();
     }
 
@@ -460,6 +474,17 @@ public class HibernateSession extends AbstractAttributeStoringSession implements
             result.add(entityById.get(k));
         }
         return result;
+    }
+
+    public Query createQuery(String queryString) {
+        return createQuery(queryString, null);
+    }
+
+    public Query createQuery(String queryString, Class resultType) {
+        org.hibernate.query.Query q = resultType != null ?
+                getNativeSession().createQuery(queryString, resultType) :
+                getNativeSession().createQuery(queryString);
+        return new HibernateHqlQuery(this, null, q);
     }
 
     @Override

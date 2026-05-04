@@ -118,6 +118,10 @@ class GrailsEntityDirtinessStrategy implements CustomEntityDirtinessStrategy {
                 return true
             }
 
+            if (propertyName == "lastUpdated" && dirtyCheckable.hasChanged()) {
+                return true
+            }
+
             final PersistentEntity persistentEntity = GormEnhancer.findEntity(Hibernate.getClass(entity))
             if (persistentEntity != null) {
                 final PersistentProperty property = persistentEntity.getPropertyByName(propertyName)

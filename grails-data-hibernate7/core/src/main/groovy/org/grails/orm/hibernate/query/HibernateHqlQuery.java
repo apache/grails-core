@@ -44,6 +44,10 @@ public class HibernateHqlQuery extends Query {
         this.query = query;
     }
 
+    public Object uniqueResult() {
+        return singleResult();
+    }
+
     @Override
     protected void flushBeforeQuery() {
         // do nothing, hibernate handles this

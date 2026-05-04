@@ -46,7 +46,7 @@ class SchemaMultiTenantSpec extends Specification {
         Map config = [
                 "grails.gorm.multiTenancy.mode":"SCHEMA",
                 "grails.gorm.multiTenancy.tenantResolverClass":MyResolver,
-                'dataSource.url':"jdbc:h2:mem:grailsDB;LOCK_TIMEOUT=10000",
+                'dataSource.url':"jdbc:h2:mem:grailsDB;LOCK_TIMEOUT=10000;DB_CLOSE_DELAY=-1",
                 'dataSource.dbCreate': 'update',
                 'dataSource.dialect': H2Dialect.name,
                 'dataSource.formatSql': 'true',

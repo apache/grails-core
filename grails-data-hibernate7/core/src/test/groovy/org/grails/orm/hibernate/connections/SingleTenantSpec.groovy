@@ -57,8 +57,8 @@ class SingleTenantSpec extends Specification {
                 'hibernate.flush.mode': 'COMMIT',
                 'hibernate.cache.queries': 'true',
                 'hibernate.hbm2ddl.auto': 'create',
-                'dataSources.books':[url:"jdbc:h2:mem:books;LOCK_TIMEOUT=10000"],
-                'dataSources.moreBooks':[url:"jdbc:h2:mem:moreBooks;LOCK_TIMEOUT=10000"]
+                'dataSources.books':[url:"jdbc:h2:mem:books;LOCK_TIMEOUT=10000;DB_CLOSE_DELAY=-1"],
+                'dataSources.moreBooks':[url:"jdbc:h2:mem:moreBooks;LOCK_TIMEOUT=10000;DB_CLOSE_DELAY=-1"]
         ]
 
         datastore = new HibernateDatastore(DatastoreUtils.createPropertyResolver(config),Book, SingleTenantAuthor )
