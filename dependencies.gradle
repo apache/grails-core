@@ -212,6 +212,7 @@ ext {
     } else if (project.name in ['grails-hibernate7-bom'] || project.name.startsWith('grails-data-hibernate7')) {
         customBomVersions = [
                 'cache-ri-impl.version'         : '1.1.1',
+                'derby.version'                 : '10.17.1.0',
                 'hibernate-models.version'      : '1.0.1',
                 'hibernate.version'             : '7.2.5.Final',
                 'jandex.version'                : '3.2.3',
@@ -223,6 +224,10 @@ ext {
         combinedVersions += customBomVersions
         customBomDependencies = [
                 'cache-ri-impl'         : "org.jsr107.ri:cache-ri-impl:${combinedVersions['cache-ri-impl.version']}",
+                'derby'                 : "org.apache.derby:derby:${combinedVersions['derby.version']}",
+                'derbyclient'           : "org.apache.derby:derbyclient:${combinedVersions['derby.version']}",
+                'derbyshared'           : "org.apache.derby:derbyshared:${combinedVersions['derby.version']}",
+                'derbytools'            : "org.apache.derby:derbytools:${combinedVersions['derby.version']}",
                 'hibernate-core'        : "org.hibernate.orm:hibernate-core:${combinedVersions['hibernate.version']}",
                 'hibernate-envers'      : "org.hibernate.orm:hibernate-envers:${combinedVersions['hibernate.version']}",
                 'hibernate-jcache'      : "org.hibernate.orm:hibernate-jcache:${combinedVersions['hibernate.version']}",
