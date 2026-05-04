@@ -483,8 +483,10 @@ class HibernateGormInstanceApi<D> extends GormInstanceApi<D> {
     protected void flushSession(Session session) {
         HibernateDatastore datastore = getHibernateDatastore()
         if (datastore.isOsivReadOnly(datastore.sessionFactory)) {
+            System.err.println "SKIPPING flush because OSIV is read-only"
             return
         }
+        System.err.println "Executing session.flush() on ${session}"
         session.flush()
     }
 

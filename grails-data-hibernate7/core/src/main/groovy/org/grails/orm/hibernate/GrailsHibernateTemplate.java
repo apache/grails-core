@@ -220,17 +220,10 @@ public class GrailsHibernateTemplate implements IHibernateTemplate {
     @SuppressWarnings("PMD.DataflowAnomalyAnalysis")
     @Override
     public <T> T executeWithNewSession(final Closure<T> callable) {
-        System.err.println("executeWithNewSession dataSource: " + (dataSource != null ? dataSource.getClass().getName() + "@" + System.identityHashCode(dataSource) : "null"));
-        for (Object key : org.springframework.transaction.support.TransactionSynchronizationManager.getResourceMap().keySet()) {
-            if (key instanceof DataSource) {
-                System.err.println("Bound DataSource key: " + key.getClass().getName() + "@" + System.identityHashCode(key));
-            }
-        }
         SessionHolder sessionHolder = (SessionHolder) txResources.getResource(sessionFactory);
         SessionHolder previousHolder = sessionHolder;
         ConnectionHolder previousConnectionHolder =
                 (ConnectionHolder) txResources.getResource(dataSource);
-        System.err.println("previousConnectionHolder is: " + previousConnectionHolder);
         Session newSession = null;
         boolean previousActiveSynchronization = txResources.isSynchronizationActive();
         List<TransactionSynchronization> transactionSynchronizations =

@@ -27,6 +27,7 @@ import org.grails.datastore.gorm.DatastoreResolver
 import org.grails.datastore.mapping.core.Datastore
 import org.grails.datastore.mapping.core.connections.ConnectionSource
 import org.grails.datastore.mapping.core.connections.ConnectionSourceSettings
+import org.grails.datastore.mapping.model.MappingContext
 import org.grails.datastore.mapping.model.PersistentEntity
 import org.hibernate.engine.spi.SessionFactoryImplementor
 import org.springframework.transaction.PlatformTransactionManager
@@ -54,21 +55,14 @@ class HibernateGormEnhancer extends GormEnhancer {
     HibernateGormEnhancer(HibernateDatastore datastore, PlatformTransactionManager transactionManager, ConnectionSourceSettings settings, Map<String, HibernateDatastore> datastoresByConnectionSource) {
         super(datastore, transactionManager, settings)
         this.datastoresByConnectionSource = datastoresByConnectionSource
-        for (entry in datastoresByConnectionSource.entrySet()) {
-            if (entry.key != ConnectionSource.DEFAULT) {
-                registry.registerDatastore(entry.key, entry.value)
-            }
+        if (datastore instanceof ChildHibernateDatastore) {
+            registry.removeDatastoreFromDiscovery(datastore)
         }
     }
 
     @Override
     void close() throws IOException {
         super.close()
-        for (child in datastoresByConnectionSource.values()) {
-            if (child != datastore) {
-                registry.removeDatastore(child)
-            }
-        }
     }
 
     @Override
@@ -124,26 +118,31 @@ class HibernateGormEnhancer extends GormEnhancer {
         new DatastoreResolver() {
             @Override Datastore resolve() {
                 if (ConnectionSource.DEFAULT.equals(qualifier)) {
-                    if (hibernateDatastore.getMultiTenancyMode() != org.grails.datastore.mapping.multitenancy.MultiTenancySettings.MultiTenancyMode.NONE) {
-                        Serializable tenantId = grails.gorm.multitenancy.Tenants.currentId((Class<? extends Datastore>)hibernateDatastore.getClass())
+                    org.grails.datastore.mapping.multitenancy.MultiTenancySettings.MultiTenancyMode mode = hibernateDatastore.getMultiTenancyMode()
+                    if (mode != org.grails.datastore.mapping.multitenancy.MultiTenancySettings.MultiTenancyMode.NONE) {
+                        Serializable tenantId = grails.gorm.multitenancy.Tenants.currentId((org.grails.datastore.mapping.multitenancy.MultiTenantCapableDatastore)hibernateDatastore)
+                        System.err.println "RESOLVE for ${cls.name} mode: ${mode} tenantId: ${tenantId}"
                         if (tenantId != null && !ConnectionSource.DEFAULT.equals(tenantId.toString())) {
-                            return hibernateDatastore.getDatastoreForTenantId(tenantId)
+                            Datastore ds = hibernateDatastore.getDatastoreForTenantId(tenantId)
+                            System.err.println "ROUTED to child ds: ${ds}"
+                            return ds
                         }
                     }
                     return self.resolveOwningDatastore(cls)
                 }
+                Datastore ds = hibernateDatastore.getDatastoreForConnection(qualifier)
+                if (ds != null) return ds
                 return org.grails.datastore.gorm.GormEnhancer.findDatastore(cls, qualifier)
             }
         }
     }
 
     protected Datastore resolveOwningDatastore(Class cls) {
-        Datastore ds = GormEnhancer.findDatastore(cls, ConnectionSource.DEFAULT)
-        Map<String, HibernateDatastore> byConn = datastoresByConnectionSource
-        if (byConn != null && !byConn.isEmpty() && ds instanceof HibernateDatastore) {
-            HibernateDatastore hds = (HibernateDatastore) ds
-            SessionFactoryImplementor sfi = (SessionFactoryImplementor) hds.sessionFactory
-            if (sfi.mappingMetamodel.findEntityDescriptor(cls) == null) {
+        HibernateDatastore hds = (HibernateDatastore) datastore
+        PersistentEntity entity = hds.getMappingContext().getPersistentEntity(cls.name)
+        if (entity != null && !org.grails.datastore.mapping.core.connections.ConnectionSourcesSupport.usesConnectionSource(entity, ConnectionSource.DEFAULT)) {
+            Map<String, HibernateDatastore> byConn = datastoresByConnectionSource
+            if (byConn != null && !byConn.isEmpty()) {
                 for (HibernateDatastore sub : byConn.values()) {
                     if (sub != hds) {
                         SessionFactoryImplementor subSfi = (SessionFactoryImplementor) sub.sessionFactory
@@ -154,7 +153,34 @@ class HibernateGormEnhancer extends GormEnhancer {
                 }
             }
         }
-        return ds
+        return GormEnhancer.findDatastore(cls, ConnectionSource.DEFAULT)
+    }
+
+    @Override
+    void registerEntity(PersistentEntity entity) {
+        HibernateDatastore hds = (HibernateDatastore) datastore
+        String defaultConnectionName = hds.connectionSources.defaultConnectionSource.name
+        
+        // Register datastore for this qualifier
+        if (org.grails.datastore.mapping.core.connections.ConnectionSourcesSupport.usesConnectionSource(entity, defaultConnectionName)) {
+            registry.registerEntityDatastore(entity.name, defaultConnectionName, hds)
+        }
+        if (ConnectionSource.DEFAULT.equals(defaultConnectionName) && org.grails.datastore.mapping.core.connections.ConnectionSourcesSupport.usesConnectionSource(entity, ConnectionSource.ALL)) {
+            registry.registerEntityDatastore(entity.name, ConnectionSource.ALL, hds)
+        }
+
+        // Only register APIs for the PREFERRED connection source to avoid overwriting
+        List<String> names = org.grails.datastore.mapping.core.connections.ConnectionSourcesSupport.getConnectionSourceNames(entity)
+        String preferred = names.isEmpty() ? ConnectionSource.DEFAULT : names.get(0)
+        
+        boolean isAll = ConnectionSource.ALL.equals(preferred)
+        if (defaultConnectionName.equals(preferred) || (ConnectionSource.DEFAULT.equals(defaultConnectionName) && isAll)) {
+            String apiQualifier = isAll ? ConnectionSource.DEFAULT : preferred
+            GormStaticApi staticApi = getStaticApi(entity.javaClass, apiQualifier)
+            GormInstanceApi instanceApi = getInstanceApi(entity.javaClass, apiQualifier)
+            GormValidationApi validationApi = getValidationApi(entity.javaClass, apiQualifier)
+            registry.registerApi(entity.name, staticApi, instanceApi, validationApi)
+        }
     }
 
     @Override

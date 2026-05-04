@@ -124,13 +124,19 @@ class GormRegistry {
     Datastore getDatastore(String className, String qualifier) {
         qualifier = qualifier ?: ConnectionSource.DEFAULT
         
-        // 1. Check if there is an entity-specific override for this qualifier
         if (className != null) {
-            Datastore ds = entityDatastores.get(className)?.get(qualifier)
-            if (ds != null) return ds
+            Map<String, Datastore> mappedDatastores = entityDatastores.get(className)
+            if (mappedDatastores != null) {
+                Datastore ds = mappedDatastores.get(qualifier)
+                if (ds != null) return ds
+                
+                // If requested qualifier not found, return the first one available for this entity
+                if (ConnectionSource.DEFAULT.equals(qualifier) && !mappedDatastores.isEmpty()) {
+                    return mappedDatastores.values().iterator().next()
+                }
+            }
         }
         
-        // 2. Check the global qualifier map
         return datastoresByQualifier.get(qualifier)
     }
 
@@ -154,13 +160,21 @@ class GormRegistry {
     }
 
     /**
+     * Registers a datastore by qualifier only, without adding it to the global type-based discovery.
+     */
+    void registerDatastoreByQualifier(String qualifier, Datastore datastore) {
+        if (qualifier != null && datastore != null) {
+            datastoresByQualifier.put(qualifier, datastore)
+        }
+    }
+
+    /**
      * Registers an entity-specific datastore override.
      */
     void registerEntityDatastore(String className, String qualifier, Datastore datastore) {
         if (datastore != null) {
             String q = qualifier ?: ConnectionSource.DEFAULT
             getInternalMap(entityDatastores, className).put(q, datastore)
-            allDatastores.add(datastore)
         }
     }
 
@@ -174,6 +188,17 @@ class GormRegistry {
         if (datastore == null) return
         datastoresByType.remove(datastore.getClass())
         // Don't remove from allDatastores here, as it might still be registered by qualifier
+    }
+
+    /**
+     * Removes a datastore from global discovery (allDatastores and datastoresByType)
+     * but keeps it in datastoresByQualifier.
+     */
+    void removeDatastoreFromDiscovery(Datastore datastore) {
+        if (datastore == null) return
+        System.err.println "REMOVING datastore from discovery: ${datastore}"
+        allDatastores.remove(datastore)
+        datastoresByType.remove(datastore.getClass())
     }
 
     /**

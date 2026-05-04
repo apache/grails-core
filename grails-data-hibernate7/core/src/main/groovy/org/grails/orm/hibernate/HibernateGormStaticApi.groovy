@@ -153,31 +153,30 @@ class HibernateGormStaticApi<D> extends GormStaticApi<D> {
     }
 
     @Override
-    def <T> T withNewSession(Closure<T> callable) {
-        getHibernateDatastore().withNewSession { session ->
-            callable.call(((HibernateSession)session).getNativeSession())
-        }
-    }
-
-    @Override
     def <T> T withSession(Closure<T> callable) {
-        getHibernateDatastore().withSession { session ->
-            callable.call(((HibernateSession)session).getNativeSession())
-        }
-    }
-
-    @Override
-    def <T1> T1 withDatastoreSession(Closure<T1> callable) {
         getHibernateDatastore().withSession { session ->
             callable.call(session)
         }
     }
 
     @Override
+    def <T> T withNewSession(Closure<T> callable) {
+        getHibernateDatastore().withNewSession { session ->
+            callable.call(session)
+        }
+    }
+
+    @Override
+    def <T1> T1 withDatastoreSession(Closure<T1> callable) {
+        getHibernateDatastore().withSession { session ->
+            callable.call(new HibernateSession(getHibernateDatastore(), getHibernateDatastore().getSessionFactory(), (org.hibernate.Session)session))
+        }
+    }
+
+    @Override
     def <T> T withNewSession(Serializable tenantId, Closure<T> callable) {
-        HibernateDatastore hibernateDatastore = (HibernateDatastore) ((org.grails.datastore.mapping.multitenancy.MultiTenantCapableDatastore)getHibernateDatastore()).getDatastoreForTenantId(tenantId)
-        hibernateDatastore.withNewSession { session ->
-            callable.call(((HibernateSession)session).getNativeSession())
+        return (T) grails.gorm.multitenancy.Tenants.withId((org.grails.datastore.mapping.multitenancy.MultiTenantCapableDatastore)getDatastore(), tenantId) { id, session ->
+            callable.call(session)
         }
     }
 
@@ -231,6 +230,41 @@ class HibernateGormStaticApi<D> extends GormStaticApi<D> {
     @Override
     List executeQuery(CharSequence query, Object... params) {
         executeQuery(query, Arrays.asList(params))
+    }
+
+    @Override
+    grails.gorm.api.GormAllOperations<D> eachTenant(Closure callable) {
+        grails.gorm.multitenancy.Tenants.eachTenant((Class<? extends Datastore>)getDatastore().getClass()) { Serializable tenantId ->
+            withTenant(tenantId).withSession {
+                callable.call(tenantId)
+            }
+        }
+        return this
+    }
+
+    @Override
+    grails.gorm.api.GormAllOperations<D> withTenant(Serializable tenantId) {
+        HibernateDatastore hibernateDatastore = (HibernateDatastore) ((org.grails.datastore.mapping.multitenancy.MultiTenantCapableDatastore)getDatastore()).getDatastoreForTenantId(tenantId)
+        final org.grails.datastore.gorm.DatastoreResolver resolver = new org.grails.datastore.gorm.DatastoreResolver() {
+            @Override Datastore resolve() { hibernateDatastore }
+        }
+        return (grails.gorm.api.GormAllOperations<D>) new HibernateGormStaticApi<D>(persistentClass, hibernateDatastore, finders, resolver, tenantId.toString(), classLoader)
+    }
+
+    @Override
+    def <T1> T1 withTenant(Serializable tenantId, Closure<T1> callable) {
+        return (T1) grails.gorm.multitenancy.Tenants.withId((org.grails.datastore.mapping.multitenancy.MultiTenantCapableDatastore)getDatastore(), tenantId) { id, session ->
+            if (callable.maximumNumberOfParameters == 2) {
+                callable.call(tenantId, session)
+            } else {
+                callable.call(session)
+            }
+        }
+    }
+
+    @Override
+    Integer count() {
+        return super.count()
     }
 
     @Override
@@ -409,6 +443,16 @@ class HibernateGormStaticApi<D> extends GormStaticApi<D> {
 
             new HibernateHqlQuery((HibernateSession)getDatastore().currentSession, getGormPersistentEntity(), q).list()
         }
+    }
+
+    @Override
+    Integer executeUpdate(CharSequence query) {
+        if (query instanceof GString) {
+            Map params = new LinkedHashMap()
+            String hql = buildNamedParameterQueryFromGString((GString) query, params)
+            return executeUpdate(hql, params, Collections.emptyMap())
+        }
+        return executeUpdate(query.toString(), Collections.emptyMap(), Collections.emptyMap())
     }
 
     @Override
@@ -636,6 +680,9 @@ class HibernateGormStaticApi<D> extends GormStaticApi<D> {
             if (name == null || PAGINATION_ARGS.contains(name)) continue
 
             def val = entry.value
+            if (val instanceof CharSequence) {
+                val = val.toString()
+            }
             try {
                 if (val instanceof Collection) {
                     q.setParameterList(name, (Collection) val)

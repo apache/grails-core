@@ -314,7 +314,7 @@ public class HibernateMappingContextConfiguration extends Configuration
         List<Class> annotatedClasses = new ArrayList<>();
         for (HibernatePersistentEntity persistentEntity : hibernateMappingContext.getHibernatePersistentEntities(dataSourceName)) {
             Class<?> javaClass = persistentEntity.getJavaClass();
-            if (javaClass.isAnnotationPresent(Entity.class)) {
+            if (javaClass.isAnnotationPresent(Entity.class) || javaClass.isAnnotationPresent(grails.gorm.annotation.Entity.class)) {
                 annotatedClasses.add(javaClass);
             }
         }
@@ -324,7 +324,7 @@ public class HibernateMappingContextConfiguration extends Configuration
                 if (GormEntity.class.isAssignableFrom(additionalClass)) {
                     PersistentEntity pe = hibernateMappingContext.addPersistentEntity(additionalClass);
                     if (pe instanceof GrailsHibernatePersistentEntity && ((GrailsHibernatePersistentEntity)pe).usesConnectionSource(dataSourceName)) {
-                         if (additionalClass.isAnnotationPresent(Entity.class)) {
+                         if (additionalClass.isAnnotationPresent(Entity.class) || additionalClass.isAnnotationPresent(grails.gorm.annotation.Entity.class)) {
                              annotatedClasses.add(additionalClass);
                          }
                     }

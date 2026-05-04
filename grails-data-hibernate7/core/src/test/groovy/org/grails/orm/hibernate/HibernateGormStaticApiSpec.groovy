@@ -231,10 +231,12 @@ class HibernateGormStaticApiSpec extends HibernateGormDatastoreSpec {
 
         when:
         String hql = "select name from HibernateGormStaticApiEntity"
-        HibernateGormStaticApiEntity.executeQuery(hql)
+        List results = HibernateGormStaticApiEntity.executeQuery(hql)
 
         then:
-        thrown(UnsupportedOperationException)
+        results.size() == 2
+        results.contains("test1")
+        results.contains("test2")
     }
 
     void "Test executeUpdate with plain String"() {
@@ -242,11 +244,12 @@ class HibernateGormStaticApiSpec extends HibernateGormDatastoreSpec {
         new HibernateGormStaticApiEntity(name: "test").save(flush: true, failOnError: true)
 
         when:
-        String hql = "update HibernateGormStaticApiEntity set name = 'updated'"
-        HibernateGormStaticApiEntity.executeUpdate(hql)
+        String hql = "update HibernateGormStaticApiEntity set name = 'updated' where name = 'test'"
+        int result = HibernateGormStaticApiEntity.executeUpdate(hql)
 
         then:
-        thrown(UnsupportedOperationException)
+        result == 1
+        HibernateGormStaticApiEntity.countByName("updated") == 1
     }
 
 

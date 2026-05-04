@@ -26,6 +26,8 @@ import org.grails.datastore.mapping.core.connections.ConnectionSources;
 import org.grails.orm.hibernate.cfg.HibernateMappingContext;
 import org.grails.orm.hibernate.cfg.Settings;
 import org.grails.orm.hibernate.connections.HibernateConnectionSourceSettings;
+import org.grails.datastore.mapping.core.connections.SingletonConnectionSources;
+import java.util.Collections;
 
 /**
  * A datastore for a specific connection in a multiple data source setup.
@@ -46,7 +48,7 @@ public class ChildHibernateDatastore extends HibernateDatastore {
 
     @Override
     protected HibernateGormEnhancer initialize() {
-        return null;
+        return new HibernateGormEnhancer(this, transactionManager, connectionSources.getDefaultConnectionSource().getSettings(), Collections.emptyMap());
     }
 
     @Override
