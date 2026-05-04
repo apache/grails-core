@@ -11,5 +11,5 @@ Additional Licenses
 Liquibase Hibernate Support
 This product includes software from the Liquibase Hibernate project (https://github.com/liquibase/liquibase-hibernate),
 originally from Liquibase Hibernate v4.27.0.
-Copyright the original author or authors.
+Copyright Liquibase.
 Licensed under the Apache License, Version 2.0.

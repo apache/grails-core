@@ -76,6 +76,7 @@ tasks.named('rat') {
             'grails-common/src/main/groovy/org/apache/grails/common/compiler/asm/ClassReader.java', // See license file, BSD licensed
             'grails-common/src/main/groovy/org/apache/grails/common/compiler/asm/Context.java', // See license file, BSD licensed
             'grails-common/src/main/groovy/org/apache/grails/common/compiler/asm/TypePath.java', // See license file, BSD licensed
+            'grails-data-hibernate7/dbmigration-core/src/**', // Forked from liquibase-hibernate, Apache 2.0 licensed third-party code - see META-INF/NOTICE
             'grails-forge/**/src/main/resources/**', // src/main/resources are included in generated application and should not include a license
             'grails-forge/**/src/test/resources/**', // src/test/resources are used in tests against files included in generated application and should not include a license
             'grails-gradle/**/build/**', // grails-gradle does not have a build package name so exclude any build directories
