@@ -47,6 +47,11 @@ public class ChildHibernateDatastore extends HibernateDatastore {
     }
 
     @Override
+    public HibernateDatastore getPrimaryDatastore() {
+        return parent;
+    }
+
+    @Override
     protected HibernateGormEnhancer initialize() {
         return new HibernateGormEnhancer(this, transactionManager, connectionSources.getDefaultConnectionSource().getSettings(), Collections.emptyMap());
     }

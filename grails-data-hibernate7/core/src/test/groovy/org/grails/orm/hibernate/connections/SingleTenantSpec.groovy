@@ -122,13 +122,19 @@ class SingleTenantSpec extends Specification {
         }
         SingleTenantAuthor.withTenant("moreBooks") { String tenantId, Session s ->
             assert s != null
-            SingleTenantAuthor.count() == 2
+            int c = SingleTenantAuthor.count()
+            assert c == 2
+            return true
         }
         Tenants.withId("books") {
-            SingleTenantAuthor.count() == 0
+            int c = SingleTenantAuthor.count()
+            assert c == 0
+            return true
         }
         Tenants.withId("moreBooks") {
-            SingleTenantAuthor.count() == 2
+            int c = SingleTenantAuthor.count()
+            assert c == 2
+            return true
         }
         Tenants.withCurrent {
             SingleTenantAuthor.count() == 0

@@ -629,7 +629,7 @@ public class HibernateDatastore extends AbstractDatastore
 
     @Override
     protected Session createSession(PropertyResolver connectionDetails) {
-        return new HibernateSession(this, getSessionFactory(), getSessionFactory().openSession());
+        return new HibernateSession(this, getSessionFactory());
     }
 
     @Override
@@ -873,11 +873,16 @@ public class HibernateDatastore extends AbstractDatastore
                 messageSource);
     }
 
+    /**
+     * @return The primary datastore
+     */
+    public HibernateDatastore getPrimaryDatastore() {
+        return this;
+    }
+
     @Override
     public MultiTenancySettings.MultiTenancyMode getMultiTenancyMode() {
-        return this.multiTenantMode == MultiTenancySettings.MultiTenancyMode.SCHEMA ?
-                MultiTenancySettings.MultiTenancyMode.DATABASE :
-                this.multiTenantMode;
+        return this.multiTenantMode;
     }
 
     @Override

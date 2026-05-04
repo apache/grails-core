@@ -135,6 +135,11 @@ class GormEnhancer implements Closeable {
         if (datastore != null) {
             registerConstraints(datastore)
             this.registry.registerDatastoreByType(datastore)
+            String qualifier = ConnectionSource.DEFAULT
+            if (datastore instanceof ConnectionSourcesProvider) {
+                qualifier = ((ConnectionSourcesProvider) datastore).connectionSources.defaultConnectionSource.name
+            }
+            this.registry.registerDatastore(qualifier, datastore)
         }
 
         for (entity in datastore.mappingContext.persistentEntities) {

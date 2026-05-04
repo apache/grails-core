@@ -1,0 +1,398 @@
+> Task :build-logic-root:build-logic:extractPluginRequests NO-SOURCE
+> Task :build-logic-root:build-logic:generatePluginAdapters NO-SOURCE
+> Task :build-logic-root:build-logic:compileJava NO-SOURCE
+> Task :build-logic-root:build-logic:compileGroovy UP-TO-DATE
+> Task :build-logic-root:build-logic:compileGroovyPlugins NO-SOURCE
+> Task :build-logic-root:build-logic:pluginDescriptors UP-TO-DATE
+> Task :build-logic-root:build-logic:processResources UP-TO-DATE
+> Task :build-logic-root:build-logic:classes UP-TO-DATE
+> Task :build-logic-root:build-logic:jar UP-TO-DATE
+> Task :grails-gradle:buildSrc:extractPluginRequests NO-SOURCE
+> Task :grails-gradle:buildSrc:generatePluginAdapters NO-SOURCE
+> Task :grails-gradle:buildSrc:compileJava NO-SOURCE
+> Task :grails-gradle:buildSrc:compileGroovy NO-SOURCE
+> Task :grails-gradle:buildSrc:compileGroovyPlugins NO-SOURCE
+> Task :grails-gradle:buildSrc:pluginDescriptors UP-TO-DATE
+> Task :grails-gradle:buildSrc:processResources NO-SOURCE
+> Task :grails-gradle:buildSrc:classes UP-TO-DATE
+> Task :grails-gradle:buildSrc:jar UP-TO-DATE
+Maven Publication Found for project: grails-gradle-bom with name maven
+Maven Publication Found for project: grails-gradle-common with name maven
+Maven Publication Found for project: grails-gradle-model with name maven
+Maven Publication Found for project: grails-gradle-plugins with name grailsCorePluginMarkerMaven
+Maven Publication Found for project: grails-gradle-plugins with name grailsExplodedPluginMarkerMaven
+Maven Publication Found for project: grails-gradle-plugins with name grailsGsonPluginMarkerMaven
+Maven Publication Found for project: grails-gradle-plugins with name grailsGspPluginMarkerMaven
+Maven Publication Found for project: grails-gradle-plugins with name grailsIntegrationTestPluginMarkerMaven
+Maven Publication Found for project: grails-gradle-plugins with name grailsMarkupPluginMarkerMaven
+Maven Publication Found for project: grails-gradle-plugins with name grailsPluginPluginMarkerMaven
+Maven Publication Found for project: grails-gradle-plugins with name grailsProfilePluginMarkerMaven
+Maven Publication Found for project: grails-gradle-plugins with name grailsProfilePublishPluginMarkerMaven
+Maven Publication Found for project: grails-gradle-plugins with name grailsTestPhasesPluginMarkerMaven
+Maven Publication Found for project: grails-gradle-plugins with name grailsWebPluginMarkerMaven
+Maven Publication Found for project: grails-gradle-plugins with name pluginMaven
+Maven Publication Found for project: grails-gradle-tasks with name maven
+> Task :build-logic-root:grails-docs-core:compileJava NO-SOURCE
+> Task :buildSrc:extractPluginRequests NO-SOURCE
+> Task :grails-gradle:grails-gradle-tasks:processResources NO-SOURCE
+> Task :grails-gradle:grails-gradle-model:compileJava NO-SOURCE
+> Task :grails-gradle:grails-gradle-common:compileJava NO-SOURCE
+> Task :buildSrc:generatePluginAdapters NO-SOURCE
+> Task :grails-gradle:grails-gradle-plugins:pluginDescriptors UP-TO-DATE
+> Task :grails-gradle:grails-gradle-tasks:cyclonedxBom UP-TO-DATE
+> Task :buildSrc:pluginDescriptors UP-TO-DATE
+> Task :buildSrc:processResources NO-SOURCE
+> Task :grails-gradle:grails-gradle-plugins:processResources UP-TO-DATE
+> Task :grails-gradle:grails-gradle-plugins:cyclonedxBom UP-TO-DATE
+> Task :grails-gradle:grails-gradle-common:compileGroovy UP-TO-DATE
+> Task :grails-gradle:grails-gradle-model:compileGroovy UP-TO-DATE
+> Task :grails-gradle:grails-gradle-model:processResources NO-SOURCE
+> Task :grails-gradle:grails-gradle-model:classes UP-TO-DATE
+> Task :grails-gradle:grails-gradle-common:processResources NO-SOURCE
+> Task :grails-gradle:grails-gradle-common:classes UP-TO-DATE
+> Task :grails-gradle:grails-gradle-common:cyclonedxBom UP-TO-DATE
+> Task :grails-gradle:grails-gradle-model:cyclonedxBom UP-TO-DATE
+> Task :grails-gradle:grails-gradle-common:jar UP-TO-DATE
+> Task :grails-gradle:grails-gradle-model:jar UP-TO-DATE
+> Task :grails-gradle:grails-gradle-tasks:compileJava NO-SOURCE
+> Task :build-logic-root:grails-docs-core:compileGroovy UP-TO-DATE
+> Task :build-logic-root:grails-docs-core:processResources UP-TO-DATE
+> Task :build-logic-root:grails-docs-core:classes UP-TO-DATE
+> Task :build-logic-root:grails-docs-core:docFilesJar UP-TO-DATE
+> Task :build-logic-root:grails-docs-core:jar UP-TO-DATE
+> Task :grails-gradle:grails-gradle-tasks:compileGroovy UP-TO-DATE
+> Task :grails-gradle:grails-gradle-tasks:classes UP-TO-DATE
+> Task :grails-gradle:grails-gradle-tasks:jar UP-TO-DATE
+> Task :grails-gradle:grails-gradle-plugins:compileJava NO-SOURCE
+> Task :grails-gradle:grails-gradle-plugins:compileGroovy UP-TO-DATE
+> Task :grails-gradle:grails-gradle-plugins:classes UP-TO-DATE
+> Task :grails-gradle:grails-gradle-plugins:jar UP-TO-DATE
+> Task :buildSrc:compileJava NO-SOURCE
+> Task :buildSrc:compileGroovy NO-SOURCE
+> Task :buildSrc:compileGroovyPlugins NO-SOURCE
+> Task :buildSrc:classes UP-TO-DATE
+> Task :buildSrc:jar UP-TO-DATE
+
+> Configure project :grails-cache
+A sourcesJar task was not found, creating one.
+
+> Configure project :grails-data-hibernate5
+A sourcesJar task was not found, creating one.
+
+> Configure project :grails-data-hibernate5-dbmigration
+A sourcesJar task was not found, creating one.
+
+> Configure project :grails-data-hibernate7
+A sourcesJar task was not found, creating one.
+
+> Configure project :grails-data-hibernate7-dbmigration
+A sourcesJar task was not found, creating one.
+
+> Configure project :grails-data-mongodb
+A sourcesJar task was not found, creating one.
+
+> Configure project :grails-fields
+A sourcesJar task was not found, creating one.
+
+> Configure project :grails-geb
+A sourcesJar task was not found, creating one.
+
+> Configure project :grails-gsp
+A sourcesJar task was not found, creating one.
+
+> Configure project :grails-layout
+A sourcesJar task was not found, creating one.
+
+> Configure project :grails-scaffolding
+A sourcesJar task was not found, creating one.
+
+> Configure project :grails-views-gson
+A sourcesJar task was not found, creating one.
+
+> Configure project :grails-views-markup
+A sourcesJar task was not found, creating one.
+
+> Configure project :grails-test-examples-issue-11767
+Micronaut Support Detected for grails-test-examples-issue-11767
+
+> Configure project :grails-test-examples-micronaut
+Micronaut Support Detected for grails-test-examples-micronaut
+
+> Configure project :grails-test-examples-micronaut-groovy-only
+Micronaut Support Detected for grails-test-examples-micronaut-groovy-only
+
+> Configure project :grails-test-examples-plugins-issue-11767
+Micronaut Support Detected for grails-test-examples-plugins-issue-11767
+
+> Configure project :grails-test-examples-plugins-micronaut-singleton
+Micronaut Support Detected for grails-test-examples-plugins-micronaut-singleton
+Maven Publication Found for project: grails-async with name maven
+Maven Publication Found for project: grails-async-core with name maven
+Maven Publication Found for project: grails-async-gpars with name maven
+Maven Publication Found for project: grails-async-rxjava with name maven
+Maven Publication Found for project: grails-async-rxjava2 with name maven
+Maven Publication Found for project: grails-async-rxjava3 with name maven
+Maven Publication Found for project: grails-base-bom with name maven
+Maven Publication Found for project: grails-bom with name maven
+Maven Publication Found for project: grails-bootstrap with name maven
+Maven Publication Found for project: grails-cache with name maven
+Maven Publication Found for project: grails-codecs with name maven
+Maven Publication Found for project: grails-codecs-core with name maven
+Maven Publication Found for project: grails-common with name maven
+Maven Publication Found for project: grails-console with name maven
+Maven Publication Found for project: grails-controllers with name maven
+Maven Publication Found for project: grails-converters with name maven
+Maven Publication Found for project: grails-core with name maven
+Maven Publication Found for project: grails-data-hibernate5 with name maven
+Maven Publication Found for project: grails-data-hibernate5-core with name maven
+Maven Publication Found for project: grails-data-hibernate5-dbmigration with name maven
+Maven Publication Found for project: grails-data-hibernate5-spring-boot with name maven
+Maven Publication Found for project: grails-data-hibernate5-spring-orm with name maven
+Maven Publication Found for project: grails-data-hibernate7 with name maven
+Maven Publication Found for project: grails-data-hibernate7-core with name maven
+Maven Publication Found for project: grails-data-hibernate7-dbmigration with name maven
+Maven Publication Found for project: grails-data-hibernate7-spring-boot with name maven
+Maven Publication Found for project: grails-data-hibernate7-spring-orm with name maven
+Maven Publication Found for project: grails-data-mongodb with name maven
+Maven Publication Found for project: grails-data-mongodb-bson with name maven
+Maven Publication Found for project: grails-data-mongodb-core with name maven
+Maven Publication Found for project: grails-data-mongodb-ext with name maven
+Maven Publication Found for project: grails-data-mongodb-gson-templates with name maven
+Maven Publication Found for project: grails-data-mongodb-spring-boot with name maven
+Maven Publication Found for project: grails-data-simple with name maven
+Maven Publication Found for project: grails-databinding with name maven
+Maven Publication Found for project: grails-databinding-core with name maven
+Maven Publication Found for project: grails-datamapping-async with name maven
+Maven Publication Found for project: grails-datamapping-core with name maven
+Maven Publication Found for project: grails-datamapping-core-test with name maven
+Maven Publication Found for project: grails-datamapping-support with name maven
+Maven Publication Found for project: grails-datamapping-tck with name maven
+Maven Publication Found for project: grails-datamapping-validation with name maven
+Maven Publication Found for project: grails-datasource with name maven
+Maven Publication Found for project: grails-datastore-async with name maven
+Maven Publication Found for project: grails-datastore-core with name maven
+Maven Publication Found for project: grails-datastore-web with name maven
+Maven Publication Found for project: grails-dependencies-assets with name maven
+Maven Publication Found for project: grails-dependencies-starter-web with name maven
+Maven Publication Found for project: grails-dependencies-test with name maven
+Maven Publication Found for project: grails-domain-class with name maven
+Maven Publication Found for project: grails-encoder with name maven
+Maven Publication Found for project: grails-events with name maven
+Maven Publication Found for project: grails-events-core with name maven
+Maven Publication Found for project: grails-events-gpars with name maven
+Maven Publication Found for project: grails-events-rxjava with name maven
+Maven Publication Found for project: grails-events-rxjava2 with name maven
+Maven Publication Found for project: grails-events-rxjava3 with name maven
+Maven Publication Found for project: grails-events-spring with name maven
+Maven Publication Found for project: grails-events-transforms with name maven
+Maven Publication Found for project: grails-fields with name maven
+Maven Publication Found for project: grails-geb with name maven
+Maven Publication Found for project: grails-gsp with name maven
+Maven Publication Found for project: grails-gsp-core with name maven
+Maven Publication Found for project: grails-hibernate5-bom with name maven
+Maven Publication Found for project: grails-hibernate7-bom with name maven
+Maven Publication Found for project: grails-i18n with name maven
+Maven Publication Found for project: grails-interceptors with name maven
+Maven Publication Found for project: grails-layout with name maven
+Maven Publication Found for project: grails-logging with name maven
+Maven Publication Found for project: grails-micronaut with name maven
+Maven Publication Found for project: grails-mimetypes with name maven
+Maven Publication Found for project: grails-profiles-base with name maven
+Maven Publication Found for project: grails-profiles-plugin with name maven
+Maven Publication Found for project: grails-profiles-profile with name maven
+Maven Publication Found for project: grails-profiles-rest-api with name maven
+Maven Publication Found for project: grails-profiles-rest-api-plugin with name maven
+Maven Publication Found for project: grails-profiles-web with name maven
+Maven Publication Found for project: grails-profiles-web-plugin with name maven
+Maven Publication Found for project: grails-rest-transforms with name maven
+Maven Publication Found for project: grails-scaffolding with name maven
+Maven Publication Found for project: grails-services with name maven
+Maven Publication Found for project: grails-shell-cli with name maven
+Maven Publication Found for project: grails-spring with name maven
+Maven Publication Found for project: grails-taglib with name maven
+Maven Publication Found for project: grails-test-core with name maven
+Maven Publication Found for project: grails-testing-support-core with name maven
+Maven Publication Found for project: grails-testing-support-datamapping with name maven
+Maven Publication Found for project: grails-testing-support-dbcleanup-core with name maven
+Maven Publication Found for project: grails-testing-support-dbcleanup-h2 with name maven
+Maven Publication Found for project: grails-testing-support-dbcleanup-postgresql with name maven
+Maven Publication Found for project: grails-testing-support-http-client with name maven
+Maven Publication Found for project: grails-testing-support-mongodb with name maven
+Maven Publication Found for project: grails-testing-support-views-gson with name maven
+Maven Publication Found for project: grails-testing-support-web with name maven
+Maven Publication Found for project: grails-url-mappings with name maven
+Maven Publication Found for project: grails-validation with name maven
+Maven Publication Found for project: grails-views-core with name maven
+Maven Publication Found for project: grails-views-gson with name maven
+Maven Publication Found for project: grails-views-markup with name maven
+Maven Publication Found for project: grails-web-boot with name maven
+Maven Publication Found for project: grails-web-common with name maven
+Maven Publication Found for project: grails-web-core with name maven
+Maven Publication Found for project: grails-web-databinding with name maven
+Maven Publication Found for project: grails-web-gsp with name maven
+Maven Publication Found for project: grails-web-gsp-taglib with name maven
+Maven Publication Found for project: grails-web-jsp with name maven
+Maven Publication Found for project: grails-web-mvc with name maven
+Maven Publication Found for project: grails-web-taglib with name maven
+Maven Publication Found for project: grails-web-url-mappings with name maven
+Maven Publication Found for project: grails-wrapper with name maven
+
+> Task :grails-datastore-core:processResources NO-SOURCE
+> Task :grails-datastore-async:processResources NO-SOURCE
+> Task :grails-spring:processResources NO-SOURCE
+> Task :grails-common:compileJava NO-SOURCE
+> Task :grails-datamapping-async:processResources NO-SOURCE
+> Task :grails-datastore-async:cyclonedxBom UP-TO-DATE
+> Task :grails-async-core:processResources NO-SOURCE
+> Task :grails-datamapping-validation:processResources UP-TO-DATE
+> Task :grails-bootstrap:compileJava NO-SOURCE
+> Task :grails-core:writeGrailsProperties UP-TO-DATE
+> Task :grails-datamapping-support:processResources UP-TO-DATE
+> Task :grails-datastore-core:cyclonedxBom UP-TO-DATE
+> Task :grails-datamapping-tck:processResources NO-SOURCE
+> Task :grails-spring:cyclonedxBom UP-TO-DATE
+> Task :grails-datamapping-async:cyclonedxBom UP-TO-DATE
+> Task :grails-datamapping-core:processResources UP-TO-DATE
+> Task :grails-datamapping-validation:cyclonedxBom UP-TO-DATE
+> Task :grails-data-hibernate7-core:processResources UP-TO-DATE
+> Task :grails-async-core:cyclonedxBom UP-TO-DATE
+> Task :grails-datamapping-support:cyclonedxBom UP-TO-DATE
+> Task :grails-core:processResources UP-TO-DATE
+> Task :grails-datamapping-tck:cyclonedxBom UP-TO-DATE
+> Task :grails-data-hibernate7-core:processTestResources UP-TO-DATE
+> Task :grails-datamapping-core:cyclonedxBom UP-TO-DATE
+> Task :grails-core:cyclonedxBom UP-TO-DATE
+> Task :grails-data-hibernate7-spring-orm:compileJava UP-TO-DATE
+> Task :grails-data-hibernate7-spring-orm:processResources NO-SOURCE
+> Task :grails-data-hibernate7-spring-orm:classes UP-TO-DATE
+> Task :grails-data-hibernate7-spring-orm:cyclonedxBom UP-TO-DATE
+> Task :grails-data-hibernate7-spring-orm:jar UP-TO-DATE
+> Task :grails-bootstrap:compileGroovy UP-TO-DATE
+> Task :grails-common:compileGroovy UP-TO-DATE
+> Task :grails-common:processResources NO-SOURCE
+> Task :grails-common:classes UP-TO-DATE
+> Task :grails-bootstrap:processResources UP-TO-DATE
+> Task :grails-bootstrap:classes UP-TO-DATE
+> Task :grails-common:cyclonedxBom UP-TO-DATE
+> Task :grails-bootstrap:cyclonedxBom UP-TO-DATE
+> Task :grails-common:jar UP-TO-DATE
+> Task :grails-bootstrap:jar UP-TO-DATE
+> Task :grails-async-core:compileJava NO-SOURCE
+> Task :grails-datastore-core:compileJava NO-SOURCE
+> Task :grails-spring:compileJava NO-SOURCE
+> Task :grails-spring:compileGroovy UP-TO-DATE
+> Task :grails-spring:classes UP-TO-DATE
+> Task :grails-async-core:compileGroovy UP-TO-DATE
+> Task :grails-async-core:classes UP-TO-DATE
+> Task :grails-spring:jar UP-TO-DATE
+> Task :grails-async-core:jar UP-TO-DATE
+> Task :grails-datastore-async:compileJava NO-SOURCE
+> Task :grails-datastore-async:compileGroovy UP-TO-DATE
+> Task :grails-datastore-async:classes UP-TO-DATE
+> Task :grails-datastore-async:jar UP-TO-DATE
+> Task :grails-datastore-core:compileGroovy UP-TO-DATE
+> Task :grails-datastore-core:classes UP-TO-DATE
+> Task :grails-datastore-core:jar UP-TO-DATE
+> Task :grails-core:compileJava NO-SOURCE
+> Task :grails-datamapping-validation:compileJava NO-SOURCE
+> Task :grails-datamapping-validation:compileGroovy UP-TO-DATE
+> Task :grails-datamapping-validation:classes UP-TO-DATE
+> Task :grails-datamapping-validation:jar UP-TO-DATE
+> Task :grails-datamapping-core:compileJava NO-SOURCE
+> Task :grails-core:compileGroovy UP-TO-DATE
+> Task :grails-core:classes UP-TO-DATE
+> Task :grails-core:jar UP-TO-DATE
+> Task :grails-datamapping-core:compileGroovy UP-TO-DATE
+> Task :grails-datamapping-core:classes UP-TO-DATE
+> Task :grails-datamapping-core:jar UP-TO-DATE
+> Task :grails-datamapping-async:compileJava NO-SOURCE
+> Task :grails-datamapping-support:compileJava NO-SOURCE
+> Task :grails-data-hibernate7-core:compileJava UP-TO-DATE
+> Task :grails-datamapping-support:compileGroovy UP-TO-DATE
+> Task :grails-datamapping-support:classes UP-TO-DATE
+> Task :grails-datamapping-async:compileGroovy UP-TO-DATE
+> Task :grails-datamapping-async:classes UP-TO-DATE
+> Task :grails-datamapping-support:jar UP-TO-DATE
+> Task :grails-datamapping-async:jar UP-TO-DATE
+> Task :grails-datamapping-tck:compileJava NO-SOURCE
+> Task :grails-datamapping-tck:compileGroovy FROM-CACHE
+> Task :grails-datamapping-tck:classes UP-TO-DATE
+> Task :grails-datamapping-tck:jar UP-TO-DATE
+
+> Task :grails-data-hibernate7-core:compileGroovy
+/Users/walterduquedeestrada/IdeaProjects/grails-core/grails-data-hibernate7/core/src/main/groovy/org/grails/orm/hibernate/proxy/GrailsBytecodeProvider.java:61: warning: [removal] getReflectionOptimizer(Class,String[],String[],Class[]) in BytecodeProvider has been deprecated and marked for removal
+    public ReflectionOptimizer getReflectionOptimizer(
+                               ^
+/Users/walterduquedeestrada/IdeaProjects/grails-core/grails-data-hibernate7/core/build/tmp/compileGroovy/groovy-java-stubs/org/grails/orm/hibernate/HibernateGormStaticApi.java:78: error: count() in HibernateGormStaticApi cannot implement count() in GormStaticOperations
+@java.lang.Override() public  java.lang.Number count() { return (java.lang.Number)null;}
+                                               ^
+  return type Number is not compatible with Integer
+/Users/walterduquedeestrada/IdeaProjects/grails-core/grails-data-hibernate7/core/build/tmp/compileGroovy/groovy-java-stubs/org/grails/orm/hibernate/HibernateGormStaticApi.java:78: error: method does not override or implement a method from a supertype
+@java.lang.Override() public  java.lang.Number count() { return (java.lang.Number)null;}
+^
+/Users/walterduquedeestrada/IdeaProjects/grails-core/grails-data-hibernate7/core/src/main/groovy/org/grails/orm/hibernate/cfg/IdentityEnumType.java:159: warning: [removal] nullSafeSet(PreparedStatement,J,int,SharedSessionContractImplementor) in UserType has been deprecated and marked for removal
+    public void nullSafeSet(PreparedStatement st, Object value, int index, SharedSessionContractImplementor session) throws SQLException {
+                ^
+  where J is a type-variable:
+    J extends Object declared in interface UserType
+/Users/walterduquedeestrada/IdeaProjects/grails-core/grails-data-hibernate7/core/src/main/groovy/org/grails/orm/hibernate/cfg/IdentityEnumType.java:148: warning: [removal] nullSafeGet(ResultSet,int,SharedSessionContractImplementor,Object) in UserType has been deprecated and marked for removal
+    public Object nullSafeGet(ResultSet rs, int position, SharedSessionContractImplementor session, Object owner) throws SQLException {
+                  ^
+  where J is a type-variable:
+    J extends Object declared in interface UserType
+Note: Some input files use or override a deprecated API.
+Note: Recompile with -Xlint:deprecation for details.
+Note: Some input files use unchecked or unsafe operations.
+Note: Recompile with -Xlint:unchecked for details.
+2 errors
+3 warnings
+startup failed:
+Compilation failed; see the compiler output below.
+Note: Recompile with -Xlint:deprecation for details.
+/Users/walterduquedeestrada/IdeaProjects/grails-core/grails-data-hibernate7/core/build/tmp/compileGroovy/groovy-java-stubs/org/grails/orm/hibernate/HibernateGormStaticApi.java:78: error: count() in HibernateGormStaticApi cannot implement count() in GormStaticOperations
+@java.lang.Override() public  java.lang.Number count() { return (java.lang.Number)null;}
+                                               ^
+  return type Number is not compatible with Integer
+Note: Recompile with -Xlint:unchecked for details.
+Note: Some input files use or override a deprecated API.
+/Users/walterduquedeestrada/IdeaProjects/grails-core/grails-data-hibernate7/core/build/tmp/compileGroovy/groovy-java-stubs/org/grails/orm/hibernate/HibernateGormStaticApi.java:78: error: method does not override or implement a method from a supertype
+@java.lang.Override() public  java.lang.Number count() { return (java.lang.Number)null;}
+^
+/Users/walterduquedeestrada/IdeaProjects/grails-core/grails-data-hibernate7/core/src/main/groovy/org/grails/orm/hibernate/proxy/GrailsBytecodeProvider.java:61: warning: [removal] getReflectionOptimizer(Class,String[],String[],Class[]) in BytecodeProvider has been deprecated and marked for removal
+    public ReflectionOptimizer getReflectionOptimizer(
+                               ^
+/Users/walterduquedeestrada/IdeaProjects/grails-core/grails-data-hibernate7/core/src/main/groovy/org/grails/orm/hibernate/cfg/IdentityEnumType.java:159: warning: [removal] nullSafeSet(PreparedStatement,J,int,SharedSessionContractImplementor) in UserType has been deprecated and marked for removal
+    public void nullSafeSet(PreparedStatement st, Object value, int index, SharedSessionContractImplementor session) throws SQLException {
+                ^
+  where J is a type-variable:
+    J extends Object declared in interface UserType
+/Users/walterduquedeestrada/IdeaProjects/grails-core/grails-data-hibernate7/core/src/main/groovy/org/grails/orm/hibernate/cfg/IdentityEnumType.java:148: warning: [removal] nullSafeGet(ResultSet,int,SharedSessionContractImplementor,Object) in UserType has been deprecated and marked for removal
+    public Object nullSafeGet(ResultSet rs, int position, SharedSessionContractImplementor session, Object owner) throws SQLException {
+                  ^
+  where J is a type-variable:
+    J extends Object declared in interface UserType
+Note: Some input files use unchecked or unsafe operations.
+2 errors
+3 warnings
+
+1 error
+
+
+> Task :grails-data-hibernate7-core:compileGroovy FAILED
+
+[Incubating] Problems report is available at: file:///Users/walterduquedeestrada/IdeaProjects/grails-core/build/reports/problems/problems-report.html
+
+FAILURE: Build failed with an exception.
+
+* What went wrong:
+Execution failed for task ':grails-data-hibernate7-core:compileGroovy'.
+> Compilation failed; see the compiler error output for details.
+
+Deprecated Gradle features were used in this build, making it incompatible with Gradle 9.0.
+
+You can use '--warning-mode all' to show the individual deprecation warnings and determine if they come from your own scripts or plugins.
+
+For more on this, please refer to https://docs.gradle.org/8.14.4/userguide/command_line_interface.html#sec:command_line_warnings in the Gradle documentation.
+
+BUILD FAILED in 17s
+75 actionable tasks: 1 executed, 1 from cache, 73 up-to-date
