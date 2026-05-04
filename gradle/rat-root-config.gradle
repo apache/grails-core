@@ -76,7 +76,48 @@ tasks.named('rat') {
             'grails-common/src/main/groovy/org/apache/grails/common/compiler/asm/ClassReader.java', // See license file, BSD licensed
             'grails-common/src/main/groovy/org/apache/grails/common/compiler/asm/Context.java', // See license file, BSD licensed
             'grails-common/src/main/groovy/org/apache/grails/common/compiler/asm/TypePath.java', // See license file, BSD licensed
-            'grails-data-hibernate7/dbmigration-core/src/**', // Forked from liquibase-hibernate, Apache 2.0 licensed third-party code - see META-INF/NOTICE
+            // Forked from liquibase-hibernate v4.27.0, Apache 2.0 licensed third-party code - see META-INF/NOTICE
+            'grails-data-hibernate7/dbmigration-core/src/main/java/liquibase/ext/hibernate/customfactory/CustomMetadataFactory.java',
+            'grails-data-hibernate7/dbmigration-core/src/main/java/liquibase/ext/hibernate/database/HibernateClassicDatabase.java',
+            'grails-data-hibernate7/dbmigration-core/src/main/java/liquibase/ext/hibernate/database/HibernateDatabase.java',
+            'grails-data-hibernate7/dbmigration-core/src/main/java/liquibase/ext/hibernate/database/HibernateEjb3Database.java',
+            'grails-data-hibernate7/dbmigration-core/src/main/java/liquibase/ext/hibernate/database/HibernateGenericDialect.java',
+            'grails-data-hibernate7/dbmigration-core/src/main/java/liquibase/ext/hibernate/database/HibernateSpringBeanDatabase.java',
+            'grails-data-hibernate7/dbmigration-core/src/main/java/liquibase/ext/hibernate/database/HibernateSpringPackageDatabase.java',
+            'grails-data-hibernate7/dbmigration-core/src/main/java/liquibase/ext/hibernate/database/JpaPersistenceDatabase.java',
+            'grails-data-hibernate7/dbmigration-core/src/main/java/liquibase/ext/hibernate/database/connection/HibernateConnection.java',
+            'grails-data-hibernate7/dbmigration-core/src/main/java/liquibase/ext/hibernate/database/connection/HibernateConnectionMetadata.java',
+            'grails-data-hibernate7/dbmigration-core/src/main/java/liquibase/ext/hibernate/database/connection/HibernateDriver.java',
+            'grails-data-hibernate7/dbmigration-core/src/main/java/liquibase/ext/hibernate/snapshot/HibernateSnapshotGenerator.java',
+            'grails-data-hibernate7/dbmigration-core/src/main/java/liquibase/ext/hibernate/snapshot/extension/ExtendedSnapshotGenerator.java',
+            'grails-data-hibernate7/dbmigration-core/src/main/java/liquibase/ext/hibernate/snapshot/extension/TableGeneratorSnapshotGenerator.java',
+            // Renamed/derivative third-party files (originally from liquibase-hibernate v4.27.0)
+            'grails-data-hibernate7/dbmigration-core/src/main/java/liquibase/ext/hibernate/database/NoOpConnectionProvider.java',
+            'grails-data-hibernate7/dbmigration-core/src/main/java/liquibase/ext/hibernate/database/NoOpMultiTenantConnectionProvider.java',
+            'grails-data-hibernate7/dbmigration-core/src/main/java/liquibase/ext/hibernate/diff/HibernateChangedColumnChangeGenerator.java',
+            'grails-data-hibernate7/dbmigration-core/src/main/java/liquibase/ext/hibernate/diff/HibernateChangedForeignKeyChangeGenerator.java',
+            'grails-data-hibernate7/dbmigration-core/src/main/java/liquibase/ext/hibernate/diff/HibernateChangedPrimaryKeyChangeGenerator.java',
+            'grails-data-hibernate7/dbmigration-core/src/main/java/liquibase/ext/hibernate/diff/HibernateMissingSequenceChangeGenerator.java',
+            'grails-data-hibernate7/dbmigration-core/src/main/java/liquibase/ext/hibernate/diff/HibernateUnexpectedIndexChangeGenerator.java',
+            'grails-data-hibernate7/dbmigration-core/src/main/java/liquibase/ext/hibernate/snapshot/HibernateCatalogSnapshotGenerator.java',
+            'grails-data-hibernate7/dbmigration-core/src/main/java/liquibase/ext/hibernate/snapshot/HibernateColumnSnapshotGenerator.java',
+            'grails-data-hibernate7/dbmigration-core/src/main/java/liquibase/ext/hibernate/snapshot/HibernateForeignKeySnapshotGenerator.java',
+            'grails-data-hibernate7/dbmigration-core/src/main/java/liquibase/ext/hibernate/snapshot/HibernateIndexSnapshotGenerator.java',
+            'grails-data-hibernate7/dbmigration-core/src/main/java/liquibase/ext/hibernate/snapshot/HibernatePrimaryKeySnapshotGenerator.java',
+            'grails-data-hibernate7/dbmigration-core/src/main/java/liquibase/ext/hibernate/snapshot/HibernateSchemaSnapshotGenerator.java',
+            'grails-data-hibernate7/dbmigration-core/src/main/java/liquibase/ext/hibernate/snapshot/HibernateSequenceSnapshotGenerator.java',
+            'grails-data-hibernate7/dbmigration-core/src/main/java/liquibase/ext/hibernate/snapshot/HibernateTableSnapshotGenerator.java',
+            'grails-data-hibernate7/dbmigration-core/src/main/java/liquibase/ext/hibernate/snapshot/HibernateUniqueConstraintSnapshotGenerator.java',
+            'grails-data-hibernate7/dbmigration-core/src/main/java/liquibase/ext/hibernate/snapshot/HibernateViewSnapshotGenerator.java',
+            // Third-party test fixtures from liquibase-hibernate v4.27.0
+            'grails-data-hibernate7/dbmigration-core/src/test/java/com/example/customconfig/**',
+            'grails-data-hibernate7/dbmigration-core/src/test/java/com/example/ejb3/**',
+            'grails-data-hibernate7/dbmigration-core/src/test/java/com/example/pojo/**',
+            'grails-data-hibernate7/dbmigration-core/src/test/java/liquibase/ext/hibernate/HibernateIntegrationTest.java',
+            'grails-data-hibernate7/dbmigration-core/src/test/java/liquibase/ext/hibernate/SpringPackageScanningIntegrationTest.java',
+            'grails-data-hibernate7/dbmigration-core/src/test/java/liquibase/ext/hibernate/database/**',
+            'grails-data-hibernate7/dbmigration-core/src/test/java/liquibase/ext/hibernate/snapshot/HibernateColumnSnapshotGeneratorTest.java',
+            'grails-data-hibernate7/dbmigration-core/src/test/java/liquibase/harness/**',
             'grails-forge/**/src/main/resources/**', // src/main/resources are included in generated application and should not include a license
             'grails-forge/**/src/test/resources/**', // src/test/resources are used in tests against files included in generated application and should not include a license
             'grails-gradle/**/build/**', // grails-gradle does not have a build package name so exclude any build directories
