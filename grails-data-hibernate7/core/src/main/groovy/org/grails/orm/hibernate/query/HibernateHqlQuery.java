@@ -37,9 +37,19 @@ import org.grails.datastore.mapping.query.event.PreQueryEvent;
  * @since 6.0
  */
 public class HibernateHqlQuery extends Query {
-    private final org.hibernate.query.Query<?> query;
+    private final Object query;
 
     public HibernateHqlQuery(Session session, PersistentEntity entity, org.hibernate.query.Query<?> query) {
+        super(session, entity);
+        this.query = query;
+    }
+
+    public HibernateHqlQuery(Session session, PersistentEntity entity, org.hibernate.query.SelectionQuery<?> query) {
+        super(session, entity);
+        this.query = query;
+    }
+
+    public HibernateHqlQuery(Session session, PersistentEntity entity, org.hibernate.query.MutationQuery query) {
         super(session, entity);
         this.query = query;
     }
@@ -63,12 +73,18 @@ public class HibernateHqlQuery extends Query {
         }
 
         List results;
-        if (uniqueResult) {
-            query.setMaxResults(1);
-            results = query.getResultList();
+        if (query instanceof org.hibernate.query.SelectionQuery) {
+            org.hibernate.query.SelectionQuery selectionQuery = (org.hibernate.query.SelectionQuery) query;
+            if (uniqueResult) {
+                selectionQuery.setMaxResults(1);
+            }
+            results = selectionQuery.getResultList();
+        }
+        else if (query instanceof org.hibernate.query.MutationQuery) {
+            results = java.util.Collections.singletonList(((org.hibernate.query.MutationQuery) query).executeUpdate());
         }
         else {
-            results = query.getResultList();
+            throw new IllegalStateException("Unsupported query type: " + query.getClass().getName());
         }
 
         if (applicationEventPublisher != null) {

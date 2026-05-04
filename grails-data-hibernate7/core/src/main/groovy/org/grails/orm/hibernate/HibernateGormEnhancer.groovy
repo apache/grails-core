@@ -121,11 +121,8 @@ class HibernateGormEnhancer extends GormEnhancer {
                     org.grails.datastore.mapping.multitenancy.MultiTenancySettings.MultiTenancyMode mode = hibernateDatastore.getMultiTenancyMode()
                     if (mode != org.grails.datastore.mapping.multitenancy.MultiTenancySettings.MultiTenancyMode.NONE) {
                         Serializable tenantId = grails.gorm.multitenancy.Tenants.currentId((org.grails.datastore.mapping.multitenancy.MultiTenantCapableDatastore)hibernateDatastore)
-                        System.err.println "RESOLVE for ${cls.name} mode: ${mode} tenantId: ${tenantId}"
                         if (tenantId != null && !ConnectionSource.DEFAULT.equals(tenantId.toString())) {
-                            Datastore ds = hibernateDatastore.getDatastoreForTenantId(tenantId)
-                            System.err.println "ROUTED to child ds: ${ds}"
-                            return ds
+                            return hibernateDatastore.getDatastoreForTenantId(tenantId)
                         }
                     }
                     return self.resolveOwningDatastore(cls)

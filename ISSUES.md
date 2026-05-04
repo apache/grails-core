@@ -74,24 +74,29 @@
     *   **Fix 3**: `FindOneInterfaceProjectionStringQueryImplementer.getOrder()` — overrides to `super.getOrder() - 1` so interface-projection `@Query` methods are claimed before `FindOneStringQueryImplementer` (both had the same default order), ensuring the projection wrapper is applied and preventing `GroovyCastException`.
     *   **Result**: `DataServiceSpec` 17/17 passing.
 
- ### Still-failing specs (grails-data-hibernate7-core, as of 2026-05-02):
- See the Test Registry below. Still-failing specs include: `JoinPerfSpec`.# Current Status (grails-data-simple)
+    ### Issue H7-8 · Native SQL Argument Population (`SqlQuerySpec`) *(RESOLVED)*
+    *   **Tests affected**: `SqlQuerySpec`
+    *   **Exception**: `MissingMethodException` / `ClassCastException`
+    *   **Root cause**: `HibernateGormStaticApi` was missing `populateQueryArguments` which is required for native SQL query execution. Additionally, passing immutable or empty maps to native SQL queries triggered `ClassCastException` when attempting to modify them.
+    *   **Fix**: Implemented `populateQueryArguments` and `intValue` helper methods in `HibernateGormStaticApi`. Fixed the `ClassCastException` by ensuring input maps are copied to a `HashMap`. Corrected method resolution by using the `this.` prefix in dynamic closures.
+    *   **Result**: `SqlQuerySpec` 6/6 passing.
 
-## Resolved Issues
-* Resolved `NullPointerException` and `MissingMethodException` during GORM initialization by fixing `SimpleMapDatastore` constructors, multi-tenancy initialization, and ensuring entities are fully registered in the `MappingContext` before GORM enhancer is applied.
-* Implemented `MultiTenantCapableDatastore` in `SimpleMapDatastore`.
-* Added transaction rollback support in `SimpleMapSession` via `setRollbackOnly()` and overriding `flush()`.
-* Fixed `SimpleMapEntityPersister` NPEs and `StackOverflowError` in `ManyToMany` relationships by adding recursion guards and filtering null IDs.
-* Handled `SizeEquals`, `SizeGreaterThan`, etc. in `SimpleMapQuery`.
-* Added `deleteAll()` support in `SimpleMapQuery`.
-* Added subquery (`QueryableCriteria`) evaluation in `SimpleMapQuery`.
-* Applied DISCRIMINATOR multi-tenancy filtering directly in `SimpleMapQuery.executeSubQuery`.
-* Resolved `WhereMethodSpec` TCK failures (`whereAny`, `ilike`, `in list`) by fixing datastore/session scoping and multi-tenancy rebasing.
-* Fixed `SessionCreationEventSpec` and `DirtyCheckingAfterListenerSpec` by correcting `AbstractDatastore` application listener registration and ensuring `withNewSession` correctly binds new sessions.
+    ### Issue H7-9 · Incompatible `count()` return type *(RESOLVED)*
+    *   **Symptom**: Compilation failure in `HibernateGormStaticApi` (return type `Number` not compatible with `Integer` in Groovy-generated stubs).
+    *   **Fix**: Removed the redundant `count()` override in `HibernateGormStaticApi`. The parent class `GormStaticApi` already provides the correct implementation returning `Integer`.
 
+ ### Still-failing specs (grails-data-hibernate7-core, as of 2026-05-04):
+ See the Test Registry below. Still-failing specs include: `JoinPerfSpec`, `FirstAndLastMethodSpec` (composite key case).
+
+---
+
+## grails-data-simple (COMPLETED)
+...
 ## Next Steps
-* **Primary Priority**: Hibernate 7 stabilization is **COMPLETE** (100% PASSING).
-* Proceed to Hibernate 5 and MongoDB modules.
+*   Fix `last()` for composite keys in `FirstAndLastMethodSpec`.
+*   Fix `PagedResultList` totalCount and serialization issues.
+*   Resolve Multi-Tenancy and Connection Routing test failures.
+*   Proceed to Hibernate 5 and MongoDB modules.
 
 
 # Future Architecture: Core SessionResolver
@@ -183,12 +188,6 @@ Following the refactoring of `SimpleMapDatastore`, a comparative analysis of `Hi
 ## Format Line that has *Spec in it is the file
 ### Then followed by the test name
 [root]
-[root]
-[root]
-ChildHibernateDatastoreUnitSpec
-test child datastore with real objects
-CompositeIdCriteria
-test that composite to-many can be used in criteria
 CrossLayerMultiDataSourceSpec
 domain save visible through data service
 CrudOperationsSpec
@@ -199,73 +198,43 @@ findAllByName routes to secondary datasource
 findByName routes to secondary datasource
 interface and abstract services share the same datasource
 save, get, and find round-trip through Data Service
-DataServiceMultiDataSourceSpec
-@Query aggregate works on books datasource
-@Query find-all routes to books datasource - abstract service
-@Query find-all routes to books datasource - interface service
-@Query find-one returns null for non-existent - abstract service
-@Query find-one routes to books datasource - abstract service
-@Query find-one routes to books datasource - interface service
-@Query update routes to books datasource - abstract service
-@Query update routes to books datasource - interface service
-count routes to books datasource
-delete by ID routes to books datasource - DeleteImplementer
-delete by ID routes to books datasource - FindAndDeleteImplementer
-findAllByName routes to books datasource
-findByName routes to books datasource
-get by ID routes to books datasource
-interface and abstract services share the same datasource
-interface service: delete routes to books datasource
-interface service: get by ID routes to books datasource
-interface service: save routes to books datasource
-interface service: void delete routes to books datasource
-save, get, and find round-trip through Data Service
-save routes to books datasource
-save with constructor-style arguments routes to books datasource
-schema is created on the books datasource
-DataServiceMultiTenantMultiDataSourceSpec
-schema is created on analytics datasource
 DeleteAllSpec
 Test that many objects can be deleted at once using multiple arguments and flushes
 Test that many objects can be deleted using an iterable and flushes
-DomainMultiTenantMultiDataSourceSpec
-criteria query scoped to tenant on secondary via domain API
 FindByMethodSpec
 Test Using OR Multiple Times In A Dynamic Finder
 FirstAndLastMethodSpec
 Test first and last method with composite key
 GormEnhancerSpec
-Test count by query
-HasManyWithInQuerySpec
-test 'in' criteria
 Hibernate7Suite
 Spock
 FirstAndLastMethodSpec
 Test first and last method with composite key
-HibernateQuerySpec
-geProperty
-gtProperty
-isNotEmpty
-leftJoin
-leProperty
-lock
-ltProperty
-test query publishes PreQueryEvent and PostQueryEvent
+HibernateDatastoreSchemaMultiTenancySpec
+HibernateGormInstanceApiSpec
+test prepareHqlQuery and executeUpdate via HibernateGormStaticApi
+HibernateGormStaticApiSpec
+list with max parameter returns a HibernatePagedResultList
+HibernatePagedResultListSpec
+test HibernatePagedResultList serialization
+test HibernatePagedResultList totalCount with HQL query
+HqlQueryContextSpec
 ListOrderBySpec
 Test listOrderBy property name method
+PagedResultListSpec
+test PagedResultList totalCount with HQL query
+test PagedResultList with offset and max
+PagedResultSpecHibernate
 PartitionedMultiTenancySpec
-test tenant switching and data isolation
+Test findAll with max params
+Test first
+Test last
+Test list with 'max' parameter
 SchemaMultiTenantSpec
-Test a database per tenant multi tenancy
-SingleTenantSpec
-Test a database per tenant multi tenancy
 WhereLazySpec
-test deleteAll with whereLazy
-test updateAll with whereLazy
 WhereQueryConnectionRoutingSpec
 findByName routes to secondary datasource
 WhereQueryMultiDataSourceSpec
-findByName routes to secondary datasource
 
 ---
 

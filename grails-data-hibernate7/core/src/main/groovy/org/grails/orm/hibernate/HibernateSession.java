@@ -481,10 +481,16 @@ public class HibernateSession extends AbstractAttributeStoringSession implements
     }
 
     public Query createQuery(String queryString, Class resultType) {
-        org.hibernate.query.Query q = resultType != null ?
-                getNativeSession().createQuery(queryString, resultType) :
-                getNativeSession().createQuery(queryString);
-        return new HibernateHqlQuery(this, null, q);
+        String trimmed = queryString.trim().toLowerCase(java.util.Locale.ENGLISH);
+        if (trimmed.startsWith("delete") || trimmed.startsWith("update")) {
+            org.hibernate.query.MutationQuery q = getNativeSession().createMutationQuery(queryString);
+            return new HibernateHqlQuery(this, null, q);
+        } else {
+            org.hibernate.query.Query q = resultType != null ?
+                    getNativeSession().createQuery(queryString, resultType) :
+                    getNativeSession().createQuery(queryString);
+            return new HibernateHqlQuery(this, null, q);
+        }
     }
 
     @Override
