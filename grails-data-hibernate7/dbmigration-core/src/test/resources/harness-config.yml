@@ -1,0 +1,11 @@
+inputFormat: xml
+context: testContext
+
+databasesUnderTest:
+  - name: hibernateClassic
+    url: hibernate:classic:liquibase/harness/diff/xml/Hibernate.cfg.xml
+#    username:
+#    password:
+
+  - name: h2
+    url: jdbc:h2:tcp://localhost:1523/test

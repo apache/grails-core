@@ -278,6 +278,8 @@ include ':grails-data-hibernate7'
 findProject(':grails-data-hibernate7').projectDir = new File(settingsDir, 'grails-data-hibernate7/grails-plugin')
 //
 //TODO: need to publish or have forked version of liquibase
+include 'grails-data-hibernate7-dbmigration-core'
+findProject(':grails-data-hibernate7-dbmigration-core').projectDir = new File(settingsDir, 'grails-data-hibernate7/dbmigration-core')
 include 'grails-data-hibernate7-dbmigration'
 findProject(':grails-data-hibernate7-dbmigration').projectDir = new File(settingsDir, 'grails-data-hibernate7/dbmigration')
 //
