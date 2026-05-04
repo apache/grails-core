@@ -74,7 +74,7 @@ dependencies {
 
     // Re-export the Micronaut platform so consumers inherit Micronaut's managed versions
     // transitively. Exclude Groovy since we declare the required version explicitly via
-    // customBomDependencies. Exclude Spock since we manage that version ourselves.
+    // customBomDependencies. Exclude Spock since the base BOM manages that version.
     api(platform("io.micronaut.platform:micronaut-platform:$micronautPlatformVersion")) {
         exclude group: 'org.apache.groovy'
         exclude group: 'org.spockframework'
@@ -130,7 +130,7 @@ tasks.register('extractConstraints', ExtractDependenciesTask).configure { Extrac
     it.captureProjectServices(project.dependencies, project.configurations)
     it.configuration = configurations.named('bomDependencies')
     it.configurationName = 'bomDependencies'
-    it.destination = project.layout.buildDirectory.file('grails-micronaut-bom-constraints.adoc')
+    it.destination = project.layout.buildDirectory.file('grails-hibernate7-micronaut-bom-constraints.adoc')
     it.platformDefinitions = combinedPlatforms
     it.definitions = combinedDependencies
     it.projectName = project.name
@@ -204,7 +204,7 @@ if (ext.isReleaseBuild && ext.isPublishedExternal) {
 }
 
 ext {
-    pomDescription = 'Grails Micronaut BOM (Bill of Materials) for Grails projects integrating with Micronaut. Layers Micronaut-specific dependency overrides on top of grails-bom; consume as enforcedPlatform.'
+    pomDescription = 'Grails Hibernate 7 Micronaut BOM (Bill of Materials) for Grails projects integrating with Micronaut and Hibernate 7. Layers Hibernate 7 dependency management on top of grails-base-bom with Micronaut platform; consume as enforcedPlatform.'
     pomCustomization = { xml ->
         def root = xml.asNode()
 

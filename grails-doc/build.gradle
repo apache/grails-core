@@ -141,16 +141,24 @@ String getVersion(String artifact) {
 def generateBomDocumentation = tasks.register('generateBomDocumentation')
 generateBomDocumentation.configure { Task it ->
     // grails-micronaut-bom is gated by -PskipMicronautProjects in settings.gradle (see grails-core#15613).
-    // findProject returns null when the flag is set; the Micronaut BOM page is then omitted.
+    // findProject returns null when the flag is set; the Micronaut BOM pages are then omitted.
     def grailsMicronautBom = findProject(':grails-micronaut-bom')
+    def grailsHibernate5MicronautBom = findProject(':grails-hibernate5-micronaut-bom')
+    def grailsHibernate7MicronautBom = findProject(':grails-hibernate7-micronaut-bom')
 
     def extractConstraintsDeps = [':grails-bom:extractConstraints', ':grails-hibernate5-bom:extractConstraints', ':grails-hibernate7-bom:extractConstraints']
     if (grailsMicronautBom != null) {
         extractConstraintsDeps << ':grails-micronaut-bom:extractConstraints'
     }
+    if (grailsHibernate5MicronautBom != null) {
+        extractConstraintsDeps << ':grails-hibernate5-micronaut-bom:extractConstraints'
+    }
+    if (grailsHibernate7MicronautBom != null) {
+        extractConstraintsDeps << ':grails-hibernate7-micronaut-bom:extractConstraints'
+    }
     it.dependsOn(*extractConstraintsDeps)
 
-    it.description = 'Generates AsciiDoc tables listing Group, Artifact, and Version for all BOM variants (default, hibernate5, hibernate7, micronaut).'
+    it.description = 'Generates AsciiDoc tables listing Group, Artifact, and Version for all BOM variants (default, hibernate5, hibernate7, micronaut, hibernate5-micronaut, hibernate7-micronaut).'
     it.group = 'documentation'
 
     it.inputs.files(project(':grails-bom').layout.projectDirectory.asFileTree)
@@ -159,11 +167,23 @@ generateBomDocumentation.configure { Task it ->
     if (grailsMicronautBom != null) {
         it.inputs.files(grailsMicronautBom.layout.projectDirectory.asFileTree)
     }
+    if (grailsHibernate5MicronautBom != null) {
+        it.inputs.files(grailsHibernate5MicronautBom.layout.projectDirectory.asFileTree)
+    }
+    if (grailsHibernate7MicronautBom != null) {
+        it.inputs.files(grailsHibernate7MicronautBom.layout.projectDirectory.asFileTree)
+    }
     it.outputs.file(project.layout.projectDirectory.file('src/en/ref/Versions/Grails BOM.adoc'))
     it.outputs.file(project.layout.projectDirectory.file('src/en/ref/Versions/Grails BOM Hibernate5.adoc'))
     it.outputs.file(project.layout.projectDirectory.file('src/en/ref/Versions/Grails BOM Hibernate7.adoc'))
     if (grailsMicronautBom != null) {
         it.outputs.file(project.layout.projectDirectory.file('src/en/ref/Versions/Grails BOM Micronaut.adoc'))
+    }
+    if (grailsHibernate5MicronautBom != null) {
+        it.outputs.file(project.layout.projectDirectory.file('src/en/ref/Versions/Grails BOM Hibernate5 Micronaut.adoc'))
+    }
+    if (grailsHibernate7MicronautBom != null) {
+        it.outputs.file(project.layout.projectDirectory.file('src/en/ref/Versions/Grails BOM Hibernate7 Micronaut.adoc'))
     }
 
     def versionsDir = project.layout.projectDirectory.dir('src/en/ref/Versions')
@@ -188,8 +208,21 @@ generateBomDocumentation.configure { Task it ->
             ? project.layout.projectDirectory.file('src/en/ref/Versions/Grails BOM Micronaut.adoc')
             : null
     def grailsBomMicronautConstraintFile = grailsMicronautBom?.layout?.buildDirectory?.file('grails-micronaut-bom-constraints.adoc')
+
+    // Hibernate 5 Micronaut BOM
+    def bomHibernate5MicronautDocumentFile = grailsHibernate5MicronautBom != null
+            ? project.layout.projectDirectory.file('src/en/ref/Versions/Grails BOM Hibernate5 Micronaut.adoc')
+            : null
+    def grailsBomHibernate5MicronautConstraintFile = grailsHibernate5MicronautBom?.layout?.buildDirectory?.file('grails-hibernate5-micronaut-bom-constraints.adoc')
+
+    // Hibernate 7 Micronaut BOM
+    def bomHibernate7MicronautDocumentFile = grailsHibernate7MicronautBom != null
+            ? project.layout.projectDirectory.file('src/en/ref/Versions/Grails BOM Hibernate7 Micronaut.adoc')
+            : null
+    def grailsBomHibernate7MicronautConstraintFile = grailsHibernate7MicronautBom?.layout?.buildDirectory?.file('grails-hibernate7-micronaut-bom-constraints.adoc')
+
     def micronautBomCrossRefSuffix = grailsMicronautBom != null
-            ? ' | link:Grails%20BOM%20Micronaut.html[Grails Micronaut BOM]'
+            ? ' | link:Grails%20BOM%20Micronaut.html[Grails Micronaut BOM] | link:Grails%20BOM%20Hibernate5%20Micronaut.html[Grails Hibernate 5 Micronaut BOM] | link:Grails%20BOM%20Hibernate7%20Micronaut.html[Grails Hibernate 7 Micronaut BOM]'
             : ''
 
     it.doLast {
@@ -239,12 +272,42 @@ generateBomDocumentation.configure { Task it ->
                 writer.writeLine ''
                 writer.writeLine 'This document provides information about the dependencies defined in `org.apache.grails:grails-micronaut-bom`. This BOM inherits from the default `grails-bom` and layers Micronaut-specific dependency overrides on top. Consumers integrating with Micronaut should apply this BOM as `enforcedPlatform` so the Micronaut platform cannot override the managed versions.'
                 writer.writeLine ''
-                writer.writeLine 'See also: link:Grails%20BOM.html[Default BOM] | link:Grails%20BOM%20Hibernate5.html[Grails Hibernate 5 BOM]'
+                writer.writeLine 'See also: link:Grails%20BOM.html[Default BOM] | link:Grails%20BOM%20Hibernate5.html[Grails Hibernate 5 BOM] | link:Grails%20BOM%20Hibernate5%20Micronaut.html[Grails Hibernate 5 Micronaut BOM] | link:Grails%20BOM%20Hibernate7%20Micronaut.html[Grails Hibernate 7 Micronaut BOM]'
                 writer.writeLine ''
                 writer.write(grailsBomMicronautConstraintFile.get().asFile.text)
                 writer.writeLine ''
             }
             it.logger.lifecycle "BOM Micronaut Dependency Page generated to: ${bomMicronautDocumentFile.asFile.absolutePath}"
+        }
+
+        if (grailsHibernate5MicronautBom != null) {
+            // Generate Hibernate 5 Micronaut BOM page
+            bomHibernate5MicronautDocumentFile.asFile.withWriter { writer ->
+                writer.writeLine '== Grails Hibernate 5 Micronaut BOM Dependencies'
+                writer.writeLine ''
+                writer.writeLine 'This document provides information about the dependencies defined in `org.apache.grails:grails-hibernate5-micronaut-bom`. This BOM combines Hibernate 5 dependency management with Micronaut-specific overrides (Groovy 5, Spock 2.4). Consumers integrating with Micronaut and Hibernate 5 should apply this BOM as `enforcedPlatform`.'
+                writer.writeLine ''
+                writer.writeLine 'See also: link:Grails%20BOM.html[Default BOM] | link:Grails%20BOM%20Micronaut.html[Grails Micronaut BOM] | link:Grails%20BOM%20Hibernate7%20Micronaut.html[Grails Hibernate 7 Micronaut BOM]'
+                writer.writeLine ''
+                writer.write(grailsBomHibernate5MicronautConstraintFile.get().asFile.text)
+                writer.writeLine ''
+            }
+            it.logger.lifecycle "BOM Hibernate 5 Micronaut Dependency Page generated to: ${bomHibernate5MicronautDocumentFile.asFile.absolutePath}"
+        }
+
+        if (grailsHibernate7MicronautBom != null) {
+            // Generate Hibernate 7 Micronaut BOM page
+            bomHibernate7MicronautDocumentFile.asFile.withWriter { writer ->
+                writer.writeLine '== Grails Hibernate 7 Micronaut BOM Dependencies'
+                writer.writeLine ''
+                writer.writeLine 'This document provides information about the dependencies defined in `org.apache.grails:grails-hibernate7-micronaut-bom`. This BOM combines Hibernate 7 dependency management with Micronaut-specific overrides (Groovy 5, Spock 2.4). Consumers integrating with Micronaut and Hibernate 7 should apply this BOM as `enforcedPlatform`.'
+                writer.writeLine ''
+                writer.writeLine 'See also: link:Grails%20BOM.html[Default BOM] | link:Grails%20BOM%20Micronaut.html[Grails Micronaut BOM] | link:Grails%20BOM%20Hibernate5%20Micronaut.html[Grails Hibernate 5 Micronaut BOM]'
+                writer.writeLine ''
+                writer.write(grailsBomHibernate7MicronautConstraintFile.get().asFile.text)
+                writer.writeLine ''
+            }
+            it.logger.lifecycle "BOM Hibernate 7 Micronaut Dependency Page generated to: ${bomHibernate7MicronautDocumentFile.asFile.absolutePath}"
         }
     }
 }

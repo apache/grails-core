@@ -130,7 +130,7 @@ tasks.register('extractConstraints', ExtractDependenciesTask).configure { Extrac
     it.captureProjectServices(project.dependencies, project.configurations)
     it.configuration = configurations.named('bomDependencies')
     it.configurationName = 'bomDependencies'
-    it.destination = project.layout.buildDirectory.file('grails-micronaut-bom-constraints.adoc')
+    it.destination = project.layout.buildDirectory.file('grails-hibernate5-micronaut-bom-constraints.adoc')
     it.platformDefinitions = combinedPlatforms
     it.definitions = combinedDependencies
     it.projectName = project.name
@@ -204,7 +204,7 @@ if (ext.isReleaseBuild && ext.isPublishedExternal) {
 }
 
 ext {
-    pomDescription = 'Grails Micronaut BOM (Bill of Materials) for Grails projects integrating with Micronaut. Layers Micronaut-specific dependency overrides on top of grails-bom; consume as enforcedPlatform.'
+    pomDescription = 'Grails Hibernate 5 Micronaut BOM (Bill of Materials) for Grails projects integrating with Micronaut and Hibernate 5. Layers Hibernate 5 dependency management on top of grails-micronaut-bom; consume as enforcedPlatform.'
     pomCustomization = { xml ->
         def root = xml.asNode()
 
