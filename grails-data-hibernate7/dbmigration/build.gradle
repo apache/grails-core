@@ -103,21 +103,10 @@ tasks.named('jar', Jar) {
     exclude('testapp/**/**')
 }
 
-tasks.withType(Test).configureEach {
-    if (name == 'test') {
-        classpath += configurations.enversRuntime
-    }
-    develocity.testRetry {
-        if (isCiBuild) {
-            maxRetries = 2
-            maxFailures = 20
-            failOnPassedAfterRetry = true
-            filter {
-                excludeClasses.add('*.GroovyChangeLogSpec')
-            }
-        }
-    }
+tasks.named('test', Test) {
+    classpath += configurations.enversRuntime
 }
+
 apply {
     from rootProject.layout.projectDirectory.file('gradle/hibernate7-test-config.gradle')
     from rootProject.layout.projectDirectory.file('gradle/docs-config.gradle')
