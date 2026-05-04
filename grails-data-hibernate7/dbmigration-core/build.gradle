@@ -20,6 +20,7 @@
 plugins {
     id 'groovy'
     id 'java-library'
+    id 'java-test-fixtures'
     id 'org.apache.grails.buildsrc.properties'
     id 'org.apache.grails.buildsrc.dependency-validator'
     id 'org.apache.grails.buildsrc.compile'
@@ -52,6 +53,13 @@ dependencies {
     compileOnly "org.projectlombok:lombok"
     annotationProcessor platform(project(':grails-hibernate7-bom'))
     annotationProcessor 'org.projectlombok:lombok'
+
+    testFixturesApi platform(project(':grails-hibernate7-bom'))
+    testFixturesApi("org.hibernate.orm:hibernate-core")
+    testFixturesApi("org.hibernate.orm:hibernate-envers")
+    testFixturesCompileOnly "org.projectlombok:lombok"
+    testFixturesAnnotationProcessor platform(project(':grails-hibernate7-bom'))
+    testFixturesAnnotationProcessor 'org.projectlombok:lombok'
 
     compileOnly 'org.springframework:spring-beans'
     compileOnly 'org.springframework:spring-context'

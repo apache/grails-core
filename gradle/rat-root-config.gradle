@@ -110,9 +110,9 @@ tasks.named('rat') {
             'grails-data-hibernate7/dbmigration-core/src/main/java/liquibase/ext/hibernate/snapshot/HibernateUniqueConstraintSnapshotGenerator.java',
             'grails-data-hibernate7/dbmigration-core/src/main/java/liquibase/ext/hibernate/snapshot/HibernateViewSnapshotGenerator.java',
             // Third-party test fixtures from liquibase-hibernate v4.27.0
-            'grails-data-hibernate7/dbmigration-core/src/test/java/com/example/customconfig/**',
-            'grails-data-hibernate7/dbmigration-core/src/test/java/com/example/ejb3/**',
-            'grails-data-hibernate7/dbmigration-core/src/test/java/com/example/pojo/**',
+            'grails-data-hibernate7/dbmigration-core/src/testFixtures/java/com/example/customconfig/**',
+            'grails-data-hibernate7/dbmigration-core/src/testFixtures/java/com/example/ejb3/**',
+            'grails-data-hibernate7/dbmigration-core/src/testFixtures/java/com/example/pojo/**',
             'grails-data-hibernate7/dbmigration-core/src/test/java/liquibase/ext/hibernate/HibernateIntegrationTest.java',
             'grails-data-hibernate7/dbmigration-core/src/test/java/liquibase/ext/hibernate/SpringPackageScanningIntegrationTest.java',
             'grails-data-hibernate7/dbmigration-core/src/test/java/liquibase/ext/hibernate/database/**',
