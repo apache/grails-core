@@ -1,6 +1,1 @@
-liquibase.ext.hibernate.database.HibernateClassicDatabase
-liquibase.ext.hibernate.database.HibernateEjb3Database
-liquibase.ext.hibernate.database.HibernateSpringBeanDatabase
-liquibase.ext.hibernate.database.HibernateSpringPackageDatabase
-liquibase.ext.hibernate.database.JpaPersistenceDatabase
 org.grails.plugins.databasemigration.liquibase.GormDatabase

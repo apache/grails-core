@@ -1,11 +1,1 @@
-liquibase.ext.hibernate.snapshot.HibernateCatalogSnapshotGenerator
-liquibase.ext.hibernate.snapshot.HibernateColumnSnapshotGenerator
-liquibase.ext.hibernate.snapshot.HibernateForeignKeySnapshotGenerator
-liquibase.ext.hibernate.snapshot.HibernateIndexSnapshotGenerator
-liquibase.ext.hibernate.snapshot.HibernatePrimaryKeySnapshotGenerator
-liquibase.ext.hibernate.snapshot.HibernateSchemaSnapshotGenerator
-liquibase.ext.hibernate.snapshot.HibernateSequenceSnapshotGenerator
-liquibase.ext.hibernate.snapshot.HibernateTableSnapshotGenerator
-liquibase.ext.hibernate.snapshot.HibernateUniqueConstraintSnapshotGenerator
-liquibase.ext.hibernate.snapshot.HibernateViewSnapshotGenerator
 org.grails.plugins.databasemigration.liquibase.GormColumnSnapshotGenerator

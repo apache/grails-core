@@ -46,6 +46,7 @@ dependencies {
 
     implementation("org.liquibase:liquibase-core")
     implementation("org.hibernate.models:hibernate-models")
+    implementation project(':grails-data-hibernate7-dbmigration-core')
     implementation project(':grails-data-hibernate7')
     implementation project(':grails-data-hibernate7-spring-orm')
     compileOnly("org.hibernate.orm:hibernate-envers")

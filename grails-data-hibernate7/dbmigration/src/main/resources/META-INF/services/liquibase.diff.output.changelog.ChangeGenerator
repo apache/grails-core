@@ -1,7 +1,0 @@
-liquibase.ext.hibernate.diff.HibernateChangedColumnChangeGenerator
-liquibase.ext.hibernate.diff.HibernateChangedForeignKeyChangeGenerator
-liquibase.ext.hibernate.diff.HibernateChangedPrimaryKeyChangeGenerator
-liquibase.ext.hibernate.diff.HibernateChangedSequenceChangeGenerator
-liquibase.ext.hibernate.diff.HibernateChangedUniqueConstraintChangeGenerator
-liquibase.ext.hibernate.diff.HibernateMissingSequenceChangeGenerator
-liquibase.ext.hibernate.diff.HibernateUnexpectedIndexChangeGenerator
