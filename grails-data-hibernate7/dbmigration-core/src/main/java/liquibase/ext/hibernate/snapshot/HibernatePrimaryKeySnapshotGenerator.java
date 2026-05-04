@@ -4,6 +4,7 @@ import liquibase.Scope;
 import liquibase.exception.DatabaseException;
 import liquibase.snapshot.DatabaseSnapshot;
 import liquibase.snapshot.InvalidExampleException;
+import liquibase.snapshot.SnapshotGenerator;
 import liquibase.structure.DatabaseObject;
 import liquibase.structure.core.Column;
 import liquibase.structure.core.Index;
@@ -11,40 +12,42 @@ import liquibase.structure.core.PrimaryKey;
 import liquibase.structure.core.Table;
 import org.hibernate.sql.Alias;
 
-public class PrimaryKeySnapshotGenerator extends HibernateSnapshotGenerator {
+public class HibernatePrimaryKeySnapshotGenerator extends HibernateSnapshotGenerator {
 
     private static final int PK_NAME_LENGTH = 63;
     private static final String PK_NAME_SUFFIX = "PK";
     private static final Alias PK_NAME_ALIAS = new Alias(PK_NAME_LENGTH, PK_NAME_SUFFIX);
 
-    public PrimaryKeySnapshotGenerator() {
-        super(PrimaryKey.class, new Class[]{Table.class});
+    public HibernatePrimaryKeySnapshotGenerator() {
+        super(PrimaryKey.class, new Class[] {Table.class});
     }
 
     @Override
-    protected DatabaseObject snapshotObject(DatabaseObject example, DatabaseSnapshot snapshot) throws DatabaseException, InvalidExampleException {
+    protected DatabaseObject snapshotObject(DatabaseObject example, DatabaseSnapshot snapshot)
+            throws DatabaseException, InvalidExampleException {
         return example;
     }
 
     @Override
-    protected void addTo(DatabaseObject foundObject, DatabaseSnapshot snapshot) throws DatabaseException, InvalidExampleException {
+    protected void addTo(DatabaseObject foundObject, DatabaseSnapshot snapshot)
+            throws DatabaseException, InvalidExampleException {
         if (!snapshot.getSnapshotControl().shouldInclude(PrimaryKey.class)) {
             return;
         }
-        if (foundObject instanceof Table) {
-            Table table = (Table) foundObject;
-            org.hibernate.mapping.Table hibernateTable = findHibernateTable(table, snapshot);
+        if (foundObject instanceof Table table) {
+            var hibernateTable = findHibernateTable(table, snapshot);
             if (hibernateTable == null) {
                 return;
             }
-            org.hibernate.mapping.PrimaryKey hibernatePrimaryKey = hibernateTable.getPrimaryKey();
+            var hibernatePrimaryKey = hibernateTable.getPrimaryKey();
             if (hibernatePrimaryKey != null) {
-                PrimaryKey pk = new PrimaryKey();
+                var pk = new PrimaryKey();
                 String hbnTableName = hibernateTable.getName();
 
                 String pkName = PK_NAME_ALIAS.toAliasString(hbnTableName);
                 if (pkName.length() == PK_NAME_LENGTH) {
-                    String suffix = "_" + Integer.toHexString(hbnTableName.hashCode()).toUpperCase() + "_" + PK_NAME_SUFFIX;
+                    String suffix =
+                            "_" + Integer.toHexString(hbnTableName.hashCode()).toUpperCase() + "_" + PK_NAME_SUFFIX;
                     pkName = pkName.substring(0, PK_NAME_LENGTH - suffix.length()) + suffix;
                 }
                 pk.setName(pkName);
@@ -67,4 +70,8 @@ public class PrimaryKeySnapshotGenerator extends HibernateSnapshotGenerator {
         }
     }
 
+    @Override
+    public Class<? extends SnapshotGenerator>[] replaces() {
+        return new Class[] {liquibase.snapshot.jvm.PrimaryKeySnapshotGenerator.class};
+    }
 }

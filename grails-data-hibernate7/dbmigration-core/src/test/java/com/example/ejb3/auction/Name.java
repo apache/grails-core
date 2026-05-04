@@ -1,7 +1,11 @@
 package com.example.ejb3.auction;
 
-import javax.persistence.Embeddable;
+import jakarta.persistence.Embeddable;
+import lombok.Getter;
+import lombok.Setter;
 
+@Setter
+@Getter
 @Embeddable
 public class Name {
     private String firstName;
@@ -12,30 +16,6 @@ public class Name {
         firstName = first;
         initial = middle;
         lastName = last;
-    }
-
-    public String getFirstName() {
-        return firstName;
-    }
-
-    public void setFirstName(String firstName) {
-        this.firstName = firstName;
-    }
-
-    public Character getInitial() {
-        return initial;
-    }
-
-    public void setInitial(Character initial) {
-        this.initial = initial;
-    }
-
-    public String getLastName() {
-        return lastName;
-    }
-
-    public void setLastName(String lastName) {
-        this.lastName = lastName;
     }
 
     public String toString() {

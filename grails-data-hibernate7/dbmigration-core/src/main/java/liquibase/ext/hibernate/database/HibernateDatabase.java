@@ -1,5 +1,8 @@
 package liquibase.ext.hibernate.database;
 
+import java.lang.reflect.InvocationTargetException;
+import java.util.concurrent.atomic.AtomicReference;
+
 import liquibase.Scope;
 import liquibase.database.AbstractJdbcDatabase;
 import liquibase.database.DatabaseConnection;
@@ -9,32 +12,18 @@ import liquibase.exception.UnexpectedLiquibaseException;
 import liquibase.ext.hibernate.customfactory.CustomMetadataFactory;
 import liquibase.ext.hibernate.database.connection.HibernateConnection;
 import liquibase.ext.hibernate.database.connection.HibernateDriver;
-import liquibase.logging.LogFactory;
-import liquibase.logging.LogService;
-import liquibase.logging.Logger;
-import org.hibernate.annotations.common.reflection.ClassLoaderDelegate;
-import org.hibernate.annotations.common.reflection.ClassLoadingException;
 import org.hibernate.boot.Metadata;
 import org.hibernate.boot.MetadataBuilder;
 import org.hibernate.boot.MetadataSources;
-import org.hibernate.boot.internal.MetadataBuilderImpl;
 import org.hibernate.boot.model.naming.ImplicitNamingStrategy;
 import org.hibernate.boot.model.naming.PhysicalNamingStrategy;
 import org.hibernate.boot.registry.StandardServiceRegistryBuilder;
-import org.hibernate.boot.spi.MetadataBuilderImplementor;
 import org.hibernate.cfg.AvailableSettings;
 import org.hibernate.dialect.Dialect;
 import org.hibernate.dialect.MySQLDialect;
 import org.hibernate.engine.jdbc.connections.spi.ConnectionProvider;
 import org.hibernate.engine.jdbc.connections.spi.MultiTenantConnectionProvider;
 import org.hibernate.service.ServiceRegistry;
-
-import java.lang.reflect.Field;
-import java.sql.Connection;
-import java.sql.SQLException;
-import java.util.concurrent.Executors;
-import java.util.concurrent.ThreadFactory;
-import java.util.concurrent.atomic.AtomicReference;
 
 /**
  * Base class for all Hibernate Databases. This extension interacts with Hibernate by creating standard liquibase.database.Database implementations that
@@ -47,20 +36,24 @@ public abstract class HibernateDatabase extends AbstractJdbcDatabase {
 
     private boolean indexesForForeignKeys = false;
     public static final String DEFAULT_SCHEMA = "HIBERNATE";
+    public static final String HIBERNATE_TEMP_USE_JDBC_METADATA_DEFAULTS = "hibernate.temp.use_jdbc_metadata_defaults";
 
     public HibernateDatabase() {
         setDefaultCatalogName(DEFAULT_SCHEMA);
         setDefaultSchemaName(DEFAULT_SCHEMA);
     }
 
+    @Override
     public boolean requiresPassword() {
         return false;
     }
 
+    @Override
     public boolean requiresUsername() {
         return false;
     }
 
+    @Override
     public String getDefaultDriver(String url) {
         if (url.startsWith("hibernate")) {
             return HibernateDriver.class.getName();
@@ -68,17 +61,19 @@ public abstract class HibernateDatabase extends AbstractJdbcDatabase {
         return null;
     }
 
+    @Override
     public int getPriority() {
         return PRIORITY_DEFAULT;
     }
-
 
     @Override
     public void setConnection(DatabaseConnection conn) {
         super.setConnection(conn);
 
         try {
-            Scope.getCurrentScope().getLog(getClass()).info("Reading hibernate configuration " + getConnection().getURL());
+            Scope.getCurrentScope()
+                    .getLog(getClass())
+                    .info("Reading hibernate configuration " + getConnection().getURL());
 
             this.metadata = buildMetadata();
 
@@ -86,7 +81,6 @@ public abstract class HibernateDatabase extends AbstractJdbcDatabase {
         } catch (DatabaseException e) {
             throw new UnexpectedLiquibaseException(e);
         }
-
     }
 
     /**
@@ -106,16 +100,30 @@ public abstract class HibernateDatabase extends AbstractJdbcDatabase {
     /**
      * Return the hibernate {@link Metadata} used by this database.
      */
-    public Metadata getMetadata() throws DatabaseException {
+    public Metadata getMetadata() {
         return metadata;
     }
-
 
     /**
      * Convenience method to return the underlying HibernateConnection in the JdbcConnection returned by {@link #getConnection()}
      */
     protected HibernateConnection getHibernateConnection() {
-        return ((HibernateConnection) ((JdbcConnection) getConnection()).getUnderlyingConnection());
+        DatabaseConnection originalConnection = getConnection();
+        if (originalConnection instanceof liquibase.database.jvm.JdbcConnection) {
+            java.sql.Connection underlyingConnection =
+                    ((JdbcConnection) originalConnection).getUnderlyingConnection();
+            if (underlyingConnection instanceof HibernateConnection) {
+                return (HibernateConnection) underlyingConnection;
+            } else {
+                throw new UnexpectedLiquibaseException("Underlying connection is not a HibernateConnection: " +
+                        underlyingConnection.getClass().getName());
+            }
+        } else if (originalConnection instanceof HibernateConnection) {
+            return (HibernateConnection) originalConnection;
+        } else {
+            throw new UnexpectedLiquibaseException(
+                    "Unknown connection type: " + originalConnection.getClass().getName());
+        }
     }
 
     /**
@@ -127,16 +135,25 @@ public abstract class HibernateDatabase extends AbstractJdbcDatabase {
         String path = getHibernateConnection().getPath();
         if (!path.contains("/")) {
             try {
-                Class<?> clazz = Thread.currentThread().getContextClassLoader().loadClass(path);
+                // Fix: Use Thread Context ClassLoader for J2EE/Spring compliance (PMD #7)
+                ClassLoader contextClassLoader = Thread.currentThread().getContextClassLoader();
+                Class<?> clazz = contextClassLoader.loadClass(path);
+
                 if (CustomMetadataFactory.class.isAssignableFrom(clazz)) {
                     try {
-                        return ((CustomMetadataFactory) clazz.newInstance()).getMetadata(this, getHibernateConnection());
-                    } catch (InstantiationException | IllegalAccessException e) {
+                        return ((CustomMetadataFactory)
+                                clazz.getDeclaredConstructor().newInstance())
+                                .getMetadata(this, getHibernateConnection());
+                    } catch (InstantiationException |
+                             IllegalAccessException |
+                             InvocationTargetException |
+                             NoSuchMethodException e) {
                         throw new DatabaseException(e);
                     }
                 }
             } catch (ClassNotFoundException ignore) {
-                //not really a class, continue
+                // Fix: Avoid empty catch blocks by documenting the intent (PMD #6)
+                Scope.getCurrentScope().getLog(getClass()).debug("Path " + path + " is not a CustomMetadataFactory, continuing with standard build.");
             }
         }
 
@@ -159,12 +176,13 @@ public abstract class HibernateDatabase extends AbstractJdbcDatabase {
         AtomicReference<Metadata> result = new AtomicReference<>();
 
         Thread t = new Thread(() -> result.set(metadataBuilder.build()));
-        t.setContextClassLoader(Scope.getCurrentScope().getClassLoader());
-        t.setUncaughtExceptionHandler((_t,e) -> thrownException.set(e));
+        t.setContextClassLoader(Thread.currentThread().getContextClassLoader());
+        t.setUncaughtExceptionHandler((_t, e) -> thrownException.set(e));
         t.start();
         try {
             t.join();
         } catch (InterruptedException e) {
+            Thread.currentThread().interrupt(); // Restore interrupted status
             throw new DatabaseException(e);
         }
         Throwable thrown = thrownException.get();
@@ -174,7 +192,6 @@ public abstract class HibernateDatabase extends AbstractJdbcDatabase {
         return result.get();
     }
 
-
     /**
      * Creates the base {@link MetadataSources} to use for this database.
      * Normally, the result of this method is passed through {@link #configureSources(MetadataSources)}.
@@ -183,86 +200,106 @@ public abstract class HibernateDatabase extends AbstractJdbcDatabase {
         String dialectString = findDialectName();
         if (dialectString != null) {
             try {
-                dialect = (Dialect) Thread.currentThread().getContextClassLoader().loadClass(dialectString).newInstance();
+                dialect = (Dialect) Thread.currentThread()
+                        .getContextClassLoader()
+                        .loadClass(dialectString)
+                        .getDeclaredConstructor()
+                        .newInstance();
                 Scope.getCurrentScope().getLog(getClass()).info("Using dialect " + dialectString);
-            } catch (Exception e) {
+            } catch (InstantiationException |
+                     IllegalAccessException |
+                     InvocationTargetException |
+                     NoSuchMethodException |
+                     ClassNotFoundException e) {
                 throw new DatabaseException(e);
             }
         } else {
-            Scope.getCurrentScope().getLog(getClass()).info("Could not determine hibernate dialect, using HibernateGenericDialect");
+            Scope.getCurrentScope()
+                    .getLog(getClass())
+                    .info("Could not determine hibernate dialect, using HibernateGenericDialect");
             dialect = new HibernateGenericDialect();
         }
 
-
         ServiceRegistry standardRegistry = new StandardServiceRegistryBuilder()
                 .applySetting(AvailableSettings.DIALECT, dialect)
+                .applySetting(HibernateDatabase.HIBERNATE_TEMP_USE_JDBC_METADATA_DEFAULTS, Boolean.FALSE.toString())
                 .addService(ConnectionProvider.class, new NoOpConnectionProvider())
-                .addService(MultiTenantConnectionProvider.class, new NoOpConnectionProvider())
+                .addService(MultiTenantConnectionProvider.class, new NoOpMultiTenantConnectionProvider())
                 .build();
 
         return new MetadataSources(standardRegistry);
     }
-
 
     /**
      * Adds any implementation-specific sources to the given {@link MetadataSources}
      */
     protected abstract void configureSources(MetadataSources sources) throws DatabaseException;
 
-
-    protected void configureNewIdentifierGeneratorSupport(String value, MetadataBuilder builder) throws DatabaseException {
-        String _value;
-        _value = getHibernateConnection().getProperties().getProperty(AvailableSettings.USE_NEW_ID_GENERATOR_MAPPINGS, value);
-
-        try {
-            if (_value != null) {
-                builder.enableNewIdentifierGeneratorSupport(Boolean.valueOf(_value));
-            }
-        } catch (Exception e) {
-            throw new DatabaseException(e);
-        }
-    }
-
-    protected void configurePhysicalNamingStrategy(String physicalNamingStrategy, MetadataBuilder builder) throws DatabaseException {
+    protected void configurePhysicalNamingStrategy(String physicalNamingStrategy, MetadataBuilder builder)
+            throws DatabaseException {
         String namingStrategy;
-        namingStrategy = getHibernateConnection().getProperties().getProperty(AvailableSettings.PHYSICAL_NAMING_STRATEGY, physicalNamingStrategy);
+        namingStrategy = getHibernateConnection()
+                .getProperties()
+                .getProperty(AvailableSettings.PHYSICAL_NAMING_STRATEGY, physicalNamingStrategy);
 
         try {
             if (namingStrategy != null) {
-                builder.applyPhysicalNamingStrategy((PhysicalNamingStrategy) Thread.currentThread().getContextClassLoader().loadClass(namingStrategy).newInstance());
+                builder.applyPhysicalNamingStrategy((PhysicalNamingStrategy) Thread.currentThread()
+                        .getContextClassLoader()
+                        .loadClass(namingStrategy)
+                        .getDeclaredConstructor()
+                        .newInstance());
             }
-        } catch (Exception e) {
+        } catch (InstantiationException |
+                 IllegalAccessException |
+                 InvocationTargetException |
+                 NoSuchMethodException |
+                 ClassNotFoundException e) {
             throw new DatabaseException(e);
         }
     }
 
-    protected void configureImplicitNamingStrategy(String implicitNamingStrategy, MetadataBuilder builder) throws DatabaseException {
+    protected void configureImplicitNamingStrategy(String implicitNamingStrategy, MetadataBuilder builder)
+            throws DatabaseException {
         String namingStrategy;
-        namingStrategy = getHibernateConnection().getProperties().getProperty(AvailableSettings.IMPLICIT_NAMING_STRATEGY, implicitNamingStrategy);
+        namingStrategy = getHibernateConnection()
+                .getProperties()
+                .getProperty(AvailableSettings.IMPLICIT_NAMING_STRATEGY, implicitNamingStrategy);
 
         try {
             if (namingStrategy != null) {
                 switch (namingStrategy) {
                     case "default":
                     case "jpa":
-                        builder.applyImplicitNamingStrategy(org.hibernate.boot.model.naming.ImplicitNamingStrategyJpaCompliantImpl.INSTANCE);
+                        builder.applyImplicitNamingStrategy(
+                                org.hibernate.boot.model.naming.ImplicitNamingStrategyJpaCompliantImpl.INSTANCE);
                         break;
                     case "legacy-hbm":
-                        builder.applyImplicitNamingStrategy(org.hibernate.boot.model.naming.ImplicitNamingStrategyLegacyHbmImpl.INSTANCE);
+                        builder.applyImplicitNamingStrategy(
+                                org.hibernate.boot.model.naming.ImplicitNamingStrategyLegacyHbmImpl.INSTANCE);
                         break;
                     case "legacy-jpa":
-                        builder.applyImplicitNamingStrategy(org.hibernate.boot.model.naming.ImplicitNamingStrategyLegacyJpaImpl.INSTANCE);
+                        builder.applyImplicitNamingStrategy(
+                                org.hibernate.boot.model.naming.ImplicitNamingStrategyLegacyJpaImpl.INSTANCE);
                         break;
                     case "component-path":
-                        builder.applyImplicitNamingStrategy(org.hibernate.boot.model.naming.ImplicitNamingStrategyComponentPathImpl.INSTANCE);
+                        builder.applyImplicitNamingStrategy(
+                                org.hibernate.boot.model.naming.ImplicitNamingStrategyComponentPathImpl.INSTANCE);
                         break;
                     default:
-                        builder.applyImplicitNamingStrategy((ImplicitNamingStrategy) Thread.currentThread().getContextClassLoader().loadClass(namingStrategy).newInstance());
+                        builder.applyImplicitNamingStrategy((ImplicitNamingStrategy) Thread.currentThread()
+                                .getContextClassLoader()
+                                .loadClass(namingStrategy)
+                                .getDeclaredConstructor()
+                                .newInstance());
                         break;
                 }
-
             }
-        } catch (Exception e) {
+        } catch (InstantiationException |
+                 IllegalAccessException |
+                 InvocationTargetException |
+                 NoSuchMethodException |
+                 ClassNotFoundException e) {
             throw new DatabaseException(e);
         }
     }
@@ -276,12 +313,10 @@ public abstract class HibernateDatabase extends AbstractJdbcDatabase {
         }
     }
 
-
     /**
      * Called by {@link #buildMetadataFromPath()} to do final configuration on the {@link MetadataBuilder} before {@link MetadataBuilder#build()} is called.
      */
     protected void configureMetadataBuilder(MetadataBuilder metadataBuilder) throws DatabaseException {
-        configureNewIdentifierGeneratorSupport(getProperty(AvailableSettings.USE_NEW_ID_GENERATOR_MAPPINGS), metadataBuilder);
         configureImplicitNamingStrategy(getProperty(AvailableSettings.IMPLICIT_NAMING_STRATEGY), metadataBuilder);
         configurePhysicalNamingStrategy(getProperty(AvailableSettings.PHYSICAL_NAMING_STRATEGY), metadataBuilder);
         metadataBuilder.enableGlobalNationalizedCharacterDataSupport(
@@ -295,6 +330,11 @@ public abstract class HibernateDatabase extends AbstractJdbcDatabase {
         return getHibernateConnection().getProperties().getProperty(name);
     }
 
+    /** Required for snapshot auto-increment detection of identity/sequence columns managed by Hibernate. */
+    @Override
+    public boolean supportsAutoIncrement() {
+        return true;
+    }
 
     @Override
     public boolean createsIndexesForForeignKeys() {
@@ -317,7 +357,7 @@ public abstract class HibernateDatabase extends AbstractJdbcDatabase {
     }
 
     @Override
-    protected String getConnectionCatalogName() throws DatabaseException {
+    protected String getConnectionCatalogName() {
         return getDefaultCatalogName();
     }
 
@@ -337,73 +377,12 @@ public abstract class HibernateDatabase extends AbstractJdbcDatabase {
     }
 
     @Override
-    public boolean isSafeToRunUpdate() throws DatabaseException {
+    public boolean isSafeToRunUpdate() {
         return true;
     }
 
     @Override
     public boolean isCaseSensitive() {
         return false;
-    }
-
-    @Override
-    public boolean supportsSchemas() {
-        return true;
-    }
-
-    @Override
-    public boolean supportsCatalogs() {
-        return false;
-    }
-
-    /**
-     * Used by hibernate to ensure no database access is performed.
-     */
-    static class NoOpConnectionProvider implements ConnectionProvider, MultiTenantConnectionProvider {
-
-        @Override
-        public Connection getConnection() throws SQLException {
-            throw new SQLException("No connection");
-        }
-
-        @Override
-        public void closeConnection(Connection conn) throws SQLException {
-
-        }
-
-        @Override
-        public boolean supportsAggressiveRelease() {
-            return false;
-        }
-
-        @Override
-        public boolean isUnwrappableAs(Class unwrapType) {
-            return false;
-        }
-
-        @Override
-        public <T> T unwrap(Class<T> unwrapType) {
-            return null;
-        }
-
-        @Override
-        public Connection getAnyConnection() throws SQLException {
-            return getConnection();
-        }
-
-        @Override
-        public void releaseAnyConnection(Connection connection) throws SQLException {
-
-        }
-
-        @Override
-        public Connection getConnection(String tenantIdentifier) throws SQLException {
-            return getConnection();
-        }
-
-        @Override
-        public void releaseConnection(String tenantIdentifier, Connection connection) throws SQLException {
-
-        }
     }
 }

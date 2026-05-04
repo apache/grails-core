@@ -14,5 +14,4 @@ public interface CustomMetadataFactory {
      * Create a hibernate Configuration for the given database and connection.
      */
     Metadata getMetadata(HibernateDatabase hibernateDatabase, HibernateConnection connection);
-
 }

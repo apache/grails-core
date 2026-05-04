@@ -19,11 +19,11 @@
 		
 		<property name="password" 
 				not-null="true"
+				  unique-key="ux-password"
 				length="15"
 				column="password"/>
 		
-		<property name="email"/>
-		
+		<property name="email" unique-key="ux_email"/>
 		<component name="name">
 			<property name="firstName"
 					length="50"
@@ -37,14 +37,14 @@
 		
 		<bag name="bids"
 				inverse="true" 
-				cascade="save-update,lock">
+				cascade="persist,merge,lock">
 			<key column="bidder"/>
 			<one-to-many class="Bid"/>
 		</bag>
 		
 		<bag name="auctions"
 				inverse="true" 
-				cascade="save-update,lock">
+				cascade="persist,merge,lock">
 			<key column="seller"/>
 			<one-to-many class="AuctionItem"/>
 		</bag>

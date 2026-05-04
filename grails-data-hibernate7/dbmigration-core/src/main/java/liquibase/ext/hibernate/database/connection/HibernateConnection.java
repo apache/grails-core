@@ -1,26 +1,42 @@
 package liquibase.ext.hibernate.database.connection;
 
-import liquibase.resource.ResourceAccessor;
-
 import java.io.IOException;
 import java.io.StringReader;
 import java.net.URLDecoder;
-import java.sql.*;
+import java.nio.charset.StandardCharsets;
+import java.sql.Array;
+import java.sql.Blob;
+import java.sql.CallableStatement;
+import java.sql.Clob;
+import java.sql.Connection;
+import java.sql.DatabaseMetaData;
+import java.sql.NClob;
+import java.sql.PreparedStatement;
+import java.sql.SQLException;
+import java.sql.SQLFeatureNotSupportedException;
+import java.sql.SQLWarning;
+import java.sql.SQLXML;
+import java.sql.Savepoint;
+import java.sql.Statement;
+import java.sql.Struct;
+import java.util.Collections;
 import java.util.Map;
 import java.util.Properties;
 import java.util.concurrent.Executor;
+
+import liquibase.resource.ResourceAccessor;
 
 /**
  * Implements java.sql.Connection in order to pretend a hibernate configuration is a database in order to fit into the Liquibase framework.
  * Beyond standard Connection methods, this class exposes {@link #getPrefix()}, {@link #getPath()} and {@link #getProperties()} to access the setting passed in the JDBC URL.
  */
 public class HibernateConnection implements Connection {
-    private String prefix;
-    private String url;
+    private final String prefix;
+    private final String url;
 
     private String path;
-    private ResourceAccessor resourceAccessor;
-    private Properties properties;
+    private final ResourceAccessor resourceAccessor;
+    private final Properties properties;
 
     public HibernateConnection(String url, ResourceAccessor resourceAccessor) {
         this.url = url;
@@ -51,12 +67,12 @@ public class HibernateConnection implements Connection {
     /**
      * Creates properties to attach to this connection based on the passed query string.
      */
-    protected Properties readProperties(String queryString) {
+    protected final Properties readProperties(String queryString) {
         Properties properties = new Properties();
-        queryString = queryString.replaceAll("&", System.getProperty("line.separator"));
+        String propertiesString = queryString.replaceAll("&", System.lineSeparator());
         try {
-            queryString = URLDecoder.decode(queryString, "UTF-8");
-            properties.load(new StringReader(queryString));
+            propertiesString = URLDecoder.decode(propertiesString, StandardCharsets.UTF_8);
+            properties.load(new StringReader(propertiesString));
         } catch (IOException ioe) {
             throw new IllegalStateException("Failed to read properties from url", ioe);
         }
@@ -70,7 +86,6 @@ public class HibernateConnection implements Connection {
     public String getUrl() {
         return url;
     }
-
 
     /**
      * Returns the 'protocol' of the URL. For example, "hibernate:classic" or "hibernate:ejb3"
@@ -97,228 +112,247 @@ public class HibernateConnection implements Connection {
         return properties;
     }
 
-
     ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
     /// JDBC METHODS
     ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
+    @Override
     public Statement createStatement() throws SQLException {
-        return null;
+        throw new SQLFeatureNotSupportedException();
     }
 
+    @Override
     public PreparedStatement prepareStatement(String sql) throws SQLException {
-        return null;
+        throw new SQLFeatureNotSupportedException();
     }
 
+    @Override
     public CallableStatement prepareCall(String sql) throws SQLException {
-        return null;
+        throw new SQLFeatureNotSupportedException();
     }
 
+    @Override
     public String nativeSQL(String sql) throws SQLException {
-        return null;
+        throw new SQLFeatureNotSupportedException();
     }
 
-    public void setAutoCommit(boolean autoCommit) throws SQLException {
+    @Override
+    public void setAutoCommit(boolean autoCommit) {}
 
-    }
-
-    public boolean getAutoCommit() throws SQLException {
+    @Override
+    public boolean getAutoCommit() {
         return false;
     }
 
-    public void commit() throws SQLException {
+    @Override
+    public void commit() {}
 
-    }
+    @Override
+    public void rollback() {}
 
-    public void rollback() throws SQLException {
+    @Override
+    public void close() {}
 
-    }
-
-    public void close() throws SQLException {
-
-    }
-
-    public boolean isClosed() throws SQLException {
+    @Override
+    public boolean isClosed() {
         return false;
     }
 
-    public DatabaseMetaData getMetaData() throws SQLException {
+    @Override
+    public DatabaseMetaData getMetaData() {
         return new HibernateConnectionMetadata(url);
     }
 
-    public void setReadOnly(boolean readOnly) throws SQLException {
+    @Override
+    public void setReadOnly(boolean readOnly) {}
 
-    }
-
-    public boolean isReadOnly() throws SQLException {
+    @Override
+    public boolean isReadOnly() {
         return true;
     }
 
-    public void setCatalog(String catalog) throws SQLException {
+    @Override
+    public void setCatalog(String catalog) {}
 
-    }
-
-    public String getCatalog() throws SQLException {
+    @Override
+    public String getCatalog() {
         return "HIBERNATE";
     }
 
-    public void setTransactionIsolation(int level) throws SQLException {
+    @Override
+    public void setTransactionIsolation(int level) {}
 
+    @Override
+    public int getTransactionIsolation() {
+        return Connection.TRANSACTION_NONE;
     }
 
-    public int getTransactionIsolation() throws SQLException {
+    @Override
+    public SQLWarning getWarnings() {
+        return null;
+    }
+
+    @Override
+    public void clearWarnings() {}
+
+    @Override
+    public Statement createStatement(int resultSetType, int resultSetConcurrency) {
+        return null;
+    }
+
+    @Override
+    public PreparedStatement prepareStatement(String sql, int resultSetType, int resultSetConcurrency) {
+        return null;
+    }
+
+    @Override
+    public CallableStatement prepareCall(String sql, int resultSetType, int resultSetConcurrency) {
+        return null;
+    }
+
+    @Override
+    public Map<String, Class<?>> getTypeMap() {
+        return Collections.emptyMap();
+    }
+
+    @Override
+    public void setTypeMap(Map<String, Class<?>> map) {}
+
+    @Override
+    public void setHoldability(int holdability) {}
+
+    @Override
+    public int getHoldability() {
         return 0;
     }
 
-    public SQLWarning getWarnings() throws SQLException {
+    @Override
+    public Savepoint setSavepoint() {
         return null;
     }
 
-    public void clearWarnings() throws SQLException {
-
-    }
-
-    public Statement createStatement(int resultSetType, int resultSetConcurrency) throws SQLException {
+    @Override
+    public Savepoint setSavepoint(String name) {
         return null;
     }
 
-    public PreparedStatement prepareStatement(String sql, int resultSetType, int resultSetConcurrency) throws SQLException {
+    @Override
+    public void rollback(Savepoint savepoint) {}
+
+    @Override
+    public void releaseSavepoint(Savepoint savepoint) {}
+
+    @Override
+    public Statement createStatement(int resultSetType, int resultSetConcurrency, int resultSetHoldability) {
         return null;
     }
 
-    public CallableStatement prepareCall(String sql, int resultSetType, int resultSetConcurrency) throws SQLException {
+    @Override
+    public PreparedStatement prepareStatement(
+            String sql, int resultSetType, int resultSetConcurrency, int resultSetHoldability) {
         return null;
     }
 
-    public Map<String, Class<?>> getTypeMap() throws SQLException {
+    @Override
+    public CallableStatement prepareCall(
+            String sql, int resultSetType, int resultSetConcurrency, int resultSetHoldability) {
         return null;
     }
 
-    public void setTypeMap(Map<String, Class<?>> map) throws SQLException {
-
-    }
-
-    public void setHoldability(int holdability) throws SQLException {
-
-    }
-
-    public int getHoldability() throws SQLException {
-        return 0;
-    }
-
-    public Savepoint setSavepoint() throws SQLException {
+    @Override
+    public PreparedStatement prepareStatement(String sql, int autoGeneratedKeys) {
         return null;
     }
 
-    public Savepoint setSavepoint(String name) throws SQLException {
+    @Override
+    public PreparedStatement prepareStatement(String sql, int[] columnIndexes) {
         return null;
     }
 
-    public void rollback(Savepoint savepoint) throws SQLException {
-
-    }
-
-    public void releaseSavepoint(Savepoint savepoint) throws SQLException {
-
-    }
-
-    public Statement createStatement(int resultSetType, int resultSetConcurrency, int resultSetHoldability) throws SQLException {
+    @Override
+    public PreparedStatement prepareStatement(String sql, String[] columnNames) {
         return null;
     }
 
-    public PreparedStatement prepareStatement(String sql, int resultSetType, int resultSetConcurrency, int resultSetHoldability) throws SQLException {
+    @Override
+    public Clob createClob() {
         return null;
     }
 
-    public CallableStatement prepareCall(String sql, int resultSetType, int resultSetConcurrency, int resultSetHoldability) throws SQLException {
+    @Override
+    public Blob createBlob() {
         return null;
     }
 
-    public PreparedStatement prepareStatement(String sql, int autoGeneratedKeys) throws SQLException {
+    @Override
+    public NClob createNClob() {
         return null;
     }
 
-    public PreparedStatement prepareStatement(String sql, int[] columnIndexes) throws SQLException {
+    @Override
+    public SQLXML createSQLXML() {
         return null;
     }
 
-    public PreparedStatement prepareStatement(String sql, String[] columnNames) throws SQLException {
-        return null;
-    }
-
-    public Clob createClob() throws SQLException {
-        return null;
-    }
-
-    public Blob createBlob() throws SQLException {
-        return null;
-    }
-
-    public NClob createNClob() throws SQLException {
-        return null;
-    }
-
-    public SQLXML createSQLXML() throws SQLException {
-        return null;
-    }
-
-    public boolean isValid(int timeout) throws SQLException {
+    @Override
+    public boolean isValid(int timeout) {
         return false;
     }
 
-    public void setClientInfo(String name, String value) throws SQLClientInfoException {
+    @Override
+    public void setClientInfo(String name, String value) {}
 
-    }
+    @Override
+    public void setClientInfo(Properties properties) {}
 
-    public void setClientInfo(Properties properties) throws SQLClientInfoException {
-
-    }
-
-    public String getClientInfo(String name) throws SQLException {
+    @Override
+    public String getClientInfo(String name) {
         return null;
     }
 
-    public Properties getClientInfo() throws SQLException {
+    @Override
+    public Properties getClientInfo() {
+        return new Properties();
+    }
+
+    @Override
+    public Array createArrayOf(String typeName, Object[] elements) {
         return null;
     }
 
-    public Array createArrayOf(String typeName, Object[] elements) throws SQLException {
+    @Override
+    public Struct createStruct(String typeName, Object[] attributes) {
         return null;
     }
 
-    public Struct createStruct(String typeName, Object[] attributes) throws SQLException {
+    @Override
+    public <T> T unwrap(Class<T> iface) {
         return null;
     }
 
-    public <T> T unwrap(Class<T> iface) throws SQLException {
-        return null;
-    }
-
-    public boolean isWrapperFor(Class<?> iface) throws SQLException {
+    @Override
+    public boolean isWrapperFor(Class<?> iface) {
         return false;
     }
 
-    //@Override only in java 1.7
-    public void abort(Executor arg0) throws SQLException {
-    }
+    @Override
+    public void abort(Executor arg0) {}
 
-    //@Override only in java 1.7
-    public int getNetworkTimeout() throws SQLException {
+    @Override
+    public int getNetworkTimeout() {
         return 0;
     }
 
-    //@Override only in java 1.7
-    public String getSchema() throws SQLException {
+    @Override
+    public String getSchema() {
         return "HIBERNATE";
     }
 
-    //@Override only in java 1.7
-    public void setNetworkTimeout(Executor arg0, int arg1) throws SQLException {
-    }
+    @Override
+    public void setNetworkTimeout(Executor arg0, int arg1) {}
 
-    //@Override only in java 1.7
-    public void setSchema(String arg0) throws SQLException {
-    }
+    @Override
+    public void setSchema(String arg0) {}
 
     public ResourceAccessor getResourceAccessor() {
         return resourceAccessor;

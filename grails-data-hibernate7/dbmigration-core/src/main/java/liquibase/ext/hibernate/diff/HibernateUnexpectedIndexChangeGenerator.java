@@ -12,7 +12,8 @@ import liquibase.structure.core.Index;
  * Indexes tend to be added in the database that don't correspond to what is in Hibernate, so we suppress all dropIndex changes
  * based on indexes defined in the database but not in hibernate.
  */
-public class UnexpectedIndexChangeGenerator extends liquibase.diff.output.changelog.core.UnexpectedIndexChangeGenerator {
+public class HibernateUnexpectedIndexChangeGenerator
+        extends liquibase.diff.output.changelog.core.UnexpectedIndexChangeGenerator {
 
     @Override
     public int getPriority(Class<? extends DatabaseObject> objectType, Database database) {
@@ -23,9 +24,14 @@ public class UnexpectedIndexChangeGenerator extends liquibase.diff.output.change
     }
 
     @Override
-    public Change[] fixUnexpected(DatabaseObject unexpectedObject, DiffOutputControl control, Database referenceDatabase, Database comparisonDatabase, ChangeGeneratorChain chain) {
+    public Change[] fixUnexpected(
+            DatabaseObject unexpectedObject,
+            DiffOutputControl control,
+            Database referenceDatabase,
+            Database comparisonDatabase,
+            ChangeGeneratorChain chain) {
         if (referenceDatabase instanceof HibernateDatabase || comparisonDatabase instanceof HibernateDatabase) {
-            return null;
+            return new Change[0];
         } else {
             return super.fixUnexpected(unexpectedObject, control, referenceDatabase, comparisonDatabase, chain);
         }

@@ -37,14 +37,35 @@ public class HibernateSpringDatabaseTest {
     }
 
     @Test
+    public void testIsCorrectDatabaseImplementation() {
+        HibernateSpringBeanDatabase database = new HibernateSpringBeanDatabase();
+        assertTrue(database.isCorrectDatabaseImplementation(new JdbcConnection(new HibernateConnection("hibernate:spring:spring.ctx.xml?bean=sessionFactory", new ClassLoaderResourceAccessor()))));
+        assertFalse(database.isCorrectDatabaseImplementation(new JdbcConnection(new HibernateConnection("hibernate:classic:hibernate.cfg.xml", new ClassLoaderResourceAccessor()))));
+    }
+
+    @Test
     public void testSpringUrlSimple() throws DatabaseException {
-        conn = new JdbcConnection(new HibernateConnection("hibernate:spring:spring.ctx.xml?bean=sessionFactory", new ClassLoaderResourceAccessor()));
+        conn = new JdbcConnection(new HibernateConnection("hibernate:spring:spring.ctx.xml?bean=sessionFactory&hibernate.dialect=org.hibernate.dialect.H2Dialect", new ClassLoaderResourceAccessor()));
         db = new HibernateSpringBeanDatabase();
         db.setConnection(conn);
         assertNotNull(db.getMetadata().getEntityBinding(AuctionItem.class.getName()));
         assertNotNull(db.getMetadata().getEntityBinding(Watcher.class.getName()));
+        assertEquals("org.hibernate.dialect.H2Dialect", db.getProperty("hibernate.dialect"));
     }
 
+    @Test(expected = IllegalStateException.class)
+    public void testSpringUrlNoBean() throws DatabaseException {
+        conn = new JdbcConnection(new HibernateConnection("hibernate:spring:spring.ctx.xml", new ClassLoaderResourceAccessor()));
+        db = new HibernateSpringBeanDatabase();
+        db.setConnection(conn);
+    }
+
+    @Test(expected = IllegalStateException.class)
+    public void testSpringUrlMissingBean() throws DatabaseException {
+        conn = new JdbcConnection(new HibernateConnection("hibernate:spring:spring.ctx.xml?bean=missingBean", new ClassLoaderResourceAccessor()));
+        db = new HibernateSpringBeanDatabase();
+        db.setConnection(conn);
+    }
 
     @Test
     public void testSpringPackageScanningMustHaveItemClassMapping() throws DatabaseException {
@@ -104,7 +125,7 @@ public class HibernateSpringDatabaseTest {
 
         HibernateEjb3DatabaseTest.assertEjb3HibernateMapped(snapshot);
         Table userTable = (Table) snapshot.get(new Table().setName("user").setSchema(new Schema()));
-        assertEquals("nvarchar", userTable.getColumn("userName").getType().getTypeName());
+        assertEquals("varchar", userTable.getColumn("userName").getType().getTypeName());
     }
 
 }

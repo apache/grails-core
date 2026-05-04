@@ -1,13 +1,22 @@
 package liquibase.ext.hibernate.database;
 
+import java.io.IOException;
+import java.net.URL;
+import java.util.List;
+import java.util.Optional;
+import java.util.Properties;
+import java.util.stream.Stream;
+
 import liquibase.Scope;
 import liquibase.database.DatabaseConnection;
 import liquibase.exception.DatabaseException;
 import liquibase.ext.hibernate.database.connection.HibernateConnection;
 import org.hibernate.boot.Metadata;
 import org.hibernate.boot.MetadataSources;
+
 import org.springframework.beans.MutablePropertyValues;
 import org.springframework.beans.PropertyValue;
+import org.springframework.beans.factory.NoSuchBeanDefinitionException;
 import org.springframework.beans.factory.config.BeanDefinition;
 import org.springframework.beans.factory.config.TypedStringValue;
 import org.springframework.beans.factory.support.BeanDefinitionRegistry;
@@ -18,12 +27,6 @@ import org.springframework.core.io.ClassPathResource;
 import org.springframework.core.io.Resource;
 import org.springframework.core.io.support.PathMatchingResourcePatternResolver;
 import org.springframework.core.io.support.ResourcePatternResolver;
-import org.springframework.orm.hibernate5.LocalSessionFactoryBean;
-
-import java.net.URL;
-import java.util.List;
-import java.util.Map;
-import java.util.Properties;
 
 /**
  * Database implementation for "spring" hibernate configurations where a bean name is given. If a package is used, {@link HibernateSpringPackageDatabase} will be used.
@@ -33,8 +36,11 @@ public class HibernateSpringBeanDatabase extends HibernateDatabase {
     private BeanDefinition beanDefinition;
     private ManagedProperties beanDefinitionProperties;
 
-    public boolean isCorrectDatabaseImplementation(DatabaseConnection conn) throws DatabaseException {
-        return conn.getURL().startsWith("hibernate:spring:");
+    @Override
+    public boolean isCorrectDatabaseImplementation(DatabaseConnection conn) {
+        return Optional.ofNullable(conn.getURL())
+                .map(url -> url.startsWith("hibernate:spring:"))
+                .orElse(false);
     }
 
     /**
@@ -46,108 +52,123 @@ public class HibernateSpringBeanDatabase extends HibernateDatabase {
         return super.buildMetadataFromPath();
     }
 
-
     @Override
     public String getProperty(String name) {
-        String value = super.getProperty(name);
-        if (value == null && beanDefinitionProperties != null) {
-            for (Map.Entry entry : ((ManagedProperties) beanDefinition.getPropertyValues().getPropertyValue("hibernateProperties").getValue()).entrySet()) {
-                if (entry.getKey() instanceof TypedStringValue && entry.getValue() instanceof TypedStringValue) {
-                    if (((TypedStringValue) entry.getKey()).getValue().equals(name)) {
-                        return ((TypedStringValue) entry.getValue()).getValue();
-                    }
-                }
-            }
+        return Optional.ofNullable(super.getProperty(name))
+                .or(() -> findPropertyInBeanDefinition(name))
+                .orElseGet(() -> beanDefinitionProperties != null ? beanDefinitionProperties.getProperty(name) : null);
+    }
 
-            value = beanDefinitionProperties.getProperty(name);
+    private Optional<String> findPropertyInBeanDefinition(String name) {
+        return Optional.ofNullable(beanDefinitionProperties)
+                .flatMap(props -> props.entrySet().stream()
+                        .filter(entry -> name.equals(resolveString(entry.getKey())))
+                        .map(entry -> resolveString(entry.getValue()))
+                        .filter(java.util.Objects::nonNull)
+                        .findFirst());
+    }
+
+    private String resolveString(Object obj) {
+        if (obj instanceof TypedStringValue tsv) {
+            return tsv.getValue();
+        } else if (obj instanceof String s) {
+            return s;
         }
-        return value;
+        return null;
     }
 
     /**
      * Parse the given URL assuming it is a spring XML file
      */
-    protected void loadBeanDefinition() throws DatabaseException {
+    protected void loadBeanDefinition() {
         // Read configuration
         BeanDefinitionRegistry registry = new SimpleBeanDefinitionRegistry();
         XmlBeanDefinitionReader reader = new XmlBeanDefinitionReader(registry);
         reader.setNamespaceAware(true);
-        HibernateConnection connection = getHibernateConnection();
-        reader.loadBeanDefinitions(new ClassPathResource(connection.getPath()));
 
-        Properties props = connection.getProperties();
+        // Fix: Use try-with-resources to ensure HibernateConnection is closed (PMD #8)
+        try (HibernateConnection connection = getHibernateConnection()) {
+            String path = Optional.ofNullable(connection.getPath())
+                    .orElseThrow(() -> new IllegalStateException("Hibernate connection path is null"));
+            reader.loadBeanDefinitions(new ClassPathResource(path));
 
-        String beanName = props.getProperty("bean", null);
+            Properties props = Optional.ofNullable(connection.getProperties())
+                    .orElseThrow(() -> new IllegalStateException("Hibernate connection properties are null"));
 
-        if (beanName == null) {
-            throw new IllegalStateException("A 'bean' name is required, definition in '" + connection.getPath() + "'.");
+            String beanName = Optional.ofNullable(props.getProperty("bean"))
+                    .orElseThrow(() -> new IllegalStateException("A 'bean' name is required, definition in '" + path + "'."));
+
+            try {
+                beanDefinition = registry.getBeanDefinition(beanName);
+                Optional.ofNullable(beanDefinition.getPropertyValues().getPropertyValue("hibernateProperties"))
+                        .map(PropertyValue::getValue)
+                        .filter(ManagedProperties.class::isInstance)
+                        .map(ManagedProperties.class::cast)
+                        .ifPresent(p -> beanDefinitionProperties = p);
+            } catch (NoSuchBeanDefinitionException e) {
+                throw new IllegalStateException(
+                        "A bean named '" + beanName + "' could not be found in '" + path + "'.", e);
+            }
         }
-
-        beanDefinition = registry.getBeanDefinition(beanName);
-        if (beanDefinition == null) {
-            throw new IllegalStateException("A bean named '" + beanName + "' could not be found in '" + connection.getPath() + "'.");
-        }
-
-        beanDefinitionProperties = (ManagedProperties) beanDefinition.getPropertyValues().getPropertyValue("hibernateProperties").getValue();
     }
 
     @Override
     protected void configureSources(MetadataSources sources) throws DatabaseException {
-        MutablePropertyValues properties = beanDefinition.getPropertyValues();
+        BeanDefinition bd = Optional.ofNullable(beanDefinition)
+                .orElseThrow(() -> new DatabaseException("Bean definition is not loaded."));
+        MutablePropertyValues properties = bd.getPropertyValues();
 
         // Add annotated classes list.
-        PropertyValue annotatedClassesProperty = properties.getPropertyValue("annotatedClasses");
-        if (annotatedClassesProperty != null) {
-            List<TypedStringValue> annotatedClasses = (List<TypedStringValue>) annotatedClassesProperty.getValue();
-            if (annotatedClasses != null) {
-                for (TypedStringValue className : annotatedClasses) {
-                    Scope.getCurrentScope().getLog(getClass()).info("Found annotated class " + className.getValue());
-                    sources.addAnnotatedClass(findClass(className.getValue()));
-                }
-            }
-        }
+        extractListProperty(properties, "annotatedClasses")
+                .forEach(className -> {
+                    Scope.getCurrentScope().getLog(getClass()).info("Found annotated class " + className);
+                    sources.addAnnotatedClass(findClass(className));
+                });
 
-        try {
-            // Add mapping locations
-            PropertyValue mappingLocationsProp = properties.getPropertyValue("mappingLocations");
-            if (mappingLocationsProp != null) {
-                List<TypedStringValue> mappingLocations = (List<TypedStringValue>) mappingLocationsProp.getValue();
-                if (mappingLocations != null) {
-                    ResourcePatternResolver resourcePatternResolver = new PathMatchingResourcePatternResolver();
-                    for (TypedStringValue mappingLocation : mappingLocations) {
-                        Scope.getCurrentScope().getLog(getClass()).info("Found mappingLocation " + mappingLocation.getValue());
-                        Resource[] resources = resourcePatternResolver.getResources(mappingLocation.getValue());
-                        for (int i = 0; i < resources.length; i++) {
-                            URL url = resources[i].getURL();
+        // Add mapping locations
+        ResourcePatternResolver resourcePatternResolver = new PathMatchingResourcePatternResolver();
+        extractListProperty(properties, "mappingLocations")
+                .forEach(mappingLocation -> {
+                    try {
+                        Scope.getCurrentScope().getLog(getClass()).info("Found mappingLocation " + mappingLocation);
+                        Resource[] resources = resourcePatternResolver.getResources(mappingLocation);
+                        for (Resource resource : resources) {
+                            URL url = resource.getURL();
                             Scope.getCurrentScope().getLog(getClass()).info("Adding resource  " + url);
                             sources.addURL(url);
                         }
+                    } catch (IOException e) {
+                        // Fix: Pass 'e' as cause to preserve stack trace (PMD #9)
+                        throw new RuntimeException("Error resolving mapping location: " + mappingLocation, e);
                     }
-                }
-            }
-        } catch (Exception e) {
-            if (e instanceof DatabaseException) {
-                throw (DatabaseException) e;
-            } else {
-                throw new DatabaseException(e);
-            }
-        }
+                });
+    }
+
+    private Stream<String> extractListProperty(MutablePropertyValues properties, String propertyName) {
+        return Optional.ofNullable(properties.getPropertyValue(propertyName))
+                .map(PropertyValue::getValue)
+                .filter(List.class::isInstance)
+                .map(v -> (List<?>) v)
+                .stream()
+                .flatMap(List::stream)
+                .filter(TypedStringValue.class::isInstance)
+                .map(TypedStringValue.class::cast)
+                .map(TypedStringValue::getValue)
+                .filter(java.util.Objects::nonNull);
     }
 
     private Class<?> findClass(String className) {
-        return findClass(className, Object.class);
-    }
-
-    private <T> Class<? extends T> findClass(String className, Class<T> superClass) {
         try {
             Class<?> newClass = Class.forName(className);
-            if (superClass.isAssignableFrom(newClass)) {
-                return newClass.asSubclass(superClass);
+            if (Object.class.isAssignableFrom(newClass)) {
+                return newClass.asSubclass(Object.class);
             } else {
-                throw new IllegalStateException("The provided class '" + className + "' is not assignable from the '" + superClass.getName() + "' superclass.");
+                throw new IllegalStateException("The provided class '" + className + "' is not assignable from the '" +
+                        Object.class.getName() + "' superclass.");
             }
         } catch (ClassNotFoundException e) {
-            throw new IllegalStateException("Unable to find required class: '" + className + "'. Please check classpath and class name.");
+            throw new IllegalStateException(
+                    "Unable to find required class: '" + className + "'. Please check classpath and class name.", e);
         }
     }
 
@@ -160,5 +181,4 @@ public class HibernateSpringBeanDatabase extends HibernateDatabase {
     protected String getDefaultDatabaseProductName() {
         return "Hibernate Spring Bean";
     }
-
 }

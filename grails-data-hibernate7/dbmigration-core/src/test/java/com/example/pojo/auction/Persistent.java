@@ -1,14 +1,11 @@
 package com.example.pojo.auction;
 
+import lombok.Getter;
+import lombok.Setter;
+
 public class Persistent {
+    @Setter
+    @Getter
     private Long id;
-
-    public Long getId() {
-        return id;
-    }
-
-    public void setId(Long long1) {
-        id = long1;
-    }
 
 }

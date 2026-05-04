@@ -1,28 +1,15 @@
 package com.example.pojo.auction;
 
+import lombok.Getter;
+
 import java.util.Date;
 
+@Getter
 public class AuctionInfo {
     private long id;
     private String description;
     private Date ends;
     private Float maxAmount;
-
-    public String getDescription() {
-        return description;
-    }
-
-    public Date getEnds() {
-        return ends;
-    }
-
-    public long getId() {
-        return id;
-    }
-
-    public Float getMaxAmount() {
-        return maxAmount;
-    }
 
     public AuctionInfo(long id, String description, Date ends, Float maxAmount) {
         this.id = id;

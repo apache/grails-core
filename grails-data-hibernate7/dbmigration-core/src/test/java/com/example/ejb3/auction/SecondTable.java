@@ -1,19 +1,16 @@
 package com.example.ejb3.auction;
 
-import javax.persistence.Column;
-import javax.persistence.Embeddable;
+import jakarta.persistence.Column;
+import jakarta.persistence.Embeddable;
+import lombok.Getter;
+import lombok.Setter;
 
 @Embeddable
 public class SecondTable {
 
     @Column(table = "second_table")
+    @Getter
+    @Setter
     private String secondName;
 
-    public String getSecondName() {
-        return secondName;
-    }
-
-    public void setSecondName(String secondName) {
-        this.secondName = secondName;
-    }
 }

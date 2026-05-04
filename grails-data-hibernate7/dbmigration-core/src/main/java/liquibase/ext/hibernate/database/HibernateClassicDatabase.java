@@ -1,9 +1,12 @@
 package liquibase.ext.hibernate.database;
 
+import java.util.Optional;
+
 import liquibase.database.DatabaseConnection;
 import liquibase.exception.DatabaseException;
 import org.hibernate.boot.Metadata;
 import org.hibernate.boot.MetadataSources;
+import org.hibernate.boot.registry.StandardServiceRegistryBuilder;
 import org.hibernate.cfg.AvailableSettings;
 import org.hibernate.cfg.Configuration;
 import org.hibernate.engine.jdbc.connections.spi.ConnectionProvider;
@@ -16,44 +19,65 @@ import org.hibernate.service.ServiceRegistry;
 public class HibernateClassicDatabase extends HibernateDatabase {
 
     protected Configuration configuration;
+    // Track the registry so we can close it later
+    private ServiceRegistry serviceRegistry;
 
-    public boolean isCorrectDatabaseImplementation(DatabaseConnection conn) throws DatabaseException {
-        return conn.getURL().startsWith("hibernate:classic:");
+    @Override
+    public boolean isCorrectDatabaseImplementation(DatabaseConnection conn) {
+        return Optional.ofNullable(conn.getURL())
+                .map(url -> url.startsWith("hibernate:classic:"))
+                .orElse(false);
     }
 
     @Override
     protected String findDialectName() {
-        String dialectName = super.findDialectName();
-
-        if (dialectName == null) {
-            dialectName = configuration.getProperty(AvailableSettings.DIALECT);
-        }
-        return dialectName;
+        return Optional.ofNullable(super.findDialectName())
+                .or(() -> Optional.ofNullable(configuration).map(c -> c.getProperty(AvailableSettings.DIALECT)))
+                .orElse(null);
     }
 
-
+    @Override
     protected Metadata buildMetadataFromPath() throws DatabaseException {
         this.configuration = new Configuration();
-        this.configuration.configure(getHibernateConnection().getPath());
+        String path = Optional.ofNullable(getHibernateConnection().getPath())
+                .orElseThrow(() -> new IllegalStateException("Hibernate connection path is null"));
+        this.configuration.configure(path);
 
         return super.buildMetadataFromPath();
     }
 
     @Override
-    protected void configureSources(MetadataSources sources) throws DatabaseException {
+    protected void configureSources(MetadataSources sources) {
         Configuration config = new Configuration(sources);
-        config.configure(getHibernateConnection().getPath());
+        String path = Optional.ofNullable(getHibernateConnection().getPath())
+                .orElseThrow(() -> new IllegalStateException("Hibernate connection path is null"));
+        config.configure(path);
 
-        config.setProperty("hibernate.temp.use_jdbc_metadata_defaults", "false");
+        config.setProperty(HibernateDatabase.HIBERNATE_TEMP_USE_JDBC_METADATA_DEFAULTS, Boolean.FALSE.toString());
         config.setProperty("hibernate.cache.use_second_level_cache", "false");
 
-        ServiceRegistry standardRegistry = configuration.getStandardServiceRegistryBuilder()
+        // Assign to the class field instead of a local variable
+        this.serviceRegistry = configuration
+                .getStandardServiceRegistryBuilder()
                 .applySettings(config.getProperties())
                 .addService(ConnectionProvider.class, new NoOpConnectionProvider())
-                .addService(MultiTenantConnectionProvider.class, new NoOpConnectionProvider())
+                .addService(MultiTenantConnectionProvider.class, new NoOpMultiTenantConnectionProvider())
                 .build();
 
-        config.buildSessionFactory(standardRegistry);
+        // We build the factory to finalize the configuration, but we don't
+        // need to hold a reference to it here if we aren't using it.
+        config.buildSessionFactory(serviceRegistry);
+    }
+
+    @Override
+    public void close() throws DatabaseException {
+        try {
+            if (serviceRegistry != null) {
+                StandardServiceRegistryBuilder.destroy(serviceRegistry);
+            }
+        } finally {
+            super.close();
+        }
     }
 
     @Override
@@ -65,6 +89,4 @@ public class HibernateClassicDatabase extends HibernateDatabase {
     protected String getDefaultDatabaseProductName() {
         return "Hibernate Classic";
     }
-
-
 }

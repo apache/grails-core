@@ -4,16 +4,16 @@ import liquibase.structure.core.Column;
 import liquibase.structure.core.DataType;
 import liquibase.structure.core.PrimaryKey;
 import liquibase.structure.core.Table;
-import org.hibernate.id.IdentifierGenerator;
+import org.hibernate.generator.Generator;
 import org.hibernate.id.enhanced.TableGenerator;
 
-public class TableGeneratorSnapshotGenerator implements ExtendedSnapshotGenerator<IdentifierGenerator, Table> {
+public class TableGeneratorSnapshotGenerator implements ExtendedSnapshotGenerator<Generator, Table> {
 
     private static final String PK_DATA_TYPE = "varchar";
     private static final String VALUE_DATA_TYPE = "bigint";
 
     @Override
-    public Table snapshot(IdentifierGenerator ig) {
+    public Table snapshot(Generator ig) {
         TableGenerator tableGenerator = (TableGenerator) ig;
         Table table = new Table().setName(tableGenerator.getTableName());
 
@@ -44,8 +44,7 @@ public class TableGeneratorSnapshotGenerator implements ExtendedSnapshotGenerato
     }
 
     @Override
-    public boolean supports(IdentifierGenerator ig) {
+    public boolean supports(Generator ig) {
         return ig instanceof TableGenerator;
     }
-
 }

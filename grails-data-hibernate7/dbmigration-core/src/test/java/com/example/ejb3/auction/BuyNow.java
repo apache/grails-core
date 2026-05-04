@@ -1,7 +1,7 @@
 package com.example.ejb3.auction;
 
-import javax.persistence.Entity;
-import javax.persistence.Transient;
+import jakarta.persistence.Entity;
+import jakarta.persistence.Transient;
 
 @Entity
 public class BuyNow extends Bid {

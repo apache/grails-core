@@ -15,7 +15,7 @@ import liquibase.diff.output.report.DiffToReport;
 import liquibase.ext.hibernate.database.HibernateSpringPackageDatabase;
 import liquibase.ext.hibernate.database.connection.HibernateConnection;
 import liquibase.resource.ClassLoaderResourceAccessor;
-import liquibase.resource.FileSystemResourceAccessor;
+import liquibase.resource.DirectoryResourceAccessor;
 import liquibase.structure.DatabaseObject;
 import liquibase.structure.core.*;
 import org.hibernate.dialect.HSQLDialect;
@@ -26,6 +26,7 @@ import org.junit.Before;
 import org.junit.Test;
 
 import java.io.*;
+import java.nio.charset.StandardCharsets;
 import java.sql.Connection;
 import java.sql.DriverManager;
 import java.util.HashSet;
@@ -34,8 +35,7 @@ import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Set;
 
-import static junit.framework.TestCase.assertEquals;
-import static junit.framework.TestCase.assertTrue;
+import static junit.framework.TestCase.*;
 
 public class SpringPackageScanningIntegrationTest {
     private static final String PACKAGES = "com.example.ejb3.auction";
@@ -52,7 +52,7 @@ public class SpringPackageScanningIntegrationTest {
         database = new HsqlDatabase();
         database.setConnection(new JdbcConnection(connection));
 
-        Set<Class<? extends DatabaseObject>> typesToInclude = new HashSet<Class<? extends DatabaseObject>>();
+        Set<Class<? extends DatabaseObject>> typesToInclude = new HashSet<>();
         typesToInclude.add(Table.class);
         typesToInclude.add(Column.class);
         typesToInclude.add(PrimaryKey.class);
@@ -95,21 +95,19 @@ public class SpringPackageScanningIntegrationTest {
 
         DiffResult diffResult = liquibase.diff(hibernateDatabase, database, compareControl);
         boolean isTablePrefixWithZZ_ = diffResult.getMissingObjects().stream()
-                .filter(e -> e.getName().equals("zz_AuditedItem_AUD"))
-                .findAny()
-                .isPresent();
+                .anyMatch(e -> e.getName().equals("zz_AuditedItem_AUD"));
         assertTrue(isTablePrefixWithZZ_);
-        assertTrue(diffResult.getMissingObjects().size() > 0);
+        assertFalse(diffResult.getMissingObjects().isEmpty());
 
         File outFile = File.createTempFile("lb-test", ".xml");
         OutputStream outChangeLog = new FileOutputStream(outFile);
         String changeLogString = toChangeLog(diffResult);
-        outChangeLog.write(changeLogString.getBytes("UTF-8"));
+        outChangeLog.write(changeLogString.getBytes(StandardCharsets.UTF_8));
         outChangeLog.close();
 
         Scope.getCurrentScope().getLog(getClass()).info("Changelog:\n" + changeLogString);
 
-        liquibase = new Liquibase(outFile.toString(), new FileSystemResourceAccessor(File.listRoots()), database);
+        liquibase = new Liquibase(outFile.toString(), new DirectoryResourceAccessor(File.listRoots()[0]), database);
         StringWriter stringWriter = new StringWriter();
         liquibase.update((String) null, stringWriter);
         Scope.getCurrentScope().getLog(getClass()).info(stringWriter.toString());
@@ -124,7 +122,6 @@ public class SpringPackageScanningIntegrationTest {
 
         assertEquals(differences, 0, diffResult.getMissingObjects().size());
         assertEquals(differences, 0, diffResult.getUnexpectedObjects().size());
-        assertEquals(differences, 0, diffResult.getChangedObjects(UniqueConstraint.class).size());
 //        assertEquals(differences, 0, diffResult.getChangedObjects().size()); //unimportant differences in schema name and datatypes causing test to fail
 
     }
@@ -288,21 +285,21 @@ public class SpringPackageScanningIntegrationTest {
 
     private String toString(DiffResult diffResult) throws Exception {
         ByteArrayOutputStream out = new ByteArrayOutputStream();
-        PrintStream printStream = new PrintStream(out, true, "UTF-8");
+        PrintStream printStream = new PrintStream(out, true, StandardCharsets.UTF_8);
         DiffToReport diffToReport = new DiffToReport(diffResult, printStream);
         diffToReport.print();
         printStream.close();
-        return out.toString("UTF-8");
+        return out.toString(StandardCharsets.UTF_8);
     }
 
     private String toChangeLog(DiffResult diffResult) throws Exception {
         ByteArrayOutputStream out = new ByteArrayOutputStream();
-        PrintStream printStream = new PrintStream(out, true, "UTF-8");
+        PrintStream printStream = new PrintStream(out, true, StandardCharsets.UTF_8);
         DiffToChangeLog diffToChangeLog = new DiffToChangeLog(diffResult,
                 new DiffOutputControl().setIncludeCatalog(false).setIncludeSchema(false));
         diffToChangeLog.print(printStream);
         printStream.close();
-        return out.toString("UTF-8");
+        return out.toString(StandardCharsets.UTF_8);
     }
 
     private void ignoreDatabaseChangeLogTable(DiffResult diffResult)

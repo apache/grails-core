@@ -1,16 +1,16 @@
 package liquibase.ext.hibernate.database;
 
-import java.util.Collections;
+import java.util.Map;
+import java.util.Optional;
 
-import javax.persistence.spi.PersistenceUnitInfo;
-
-import org.hibernate.jpa.boot.internal.EntityManagerFactoryBuilderImpl;
-import org.hibernate.jpa.boot.spi.Bootstrap;
-import org.springframework.orm.jpa.persistenceunit.DefaultPersistenceUnitManager;
+import jakarta.persistence.spi.PersistenceUnitInfo;
 
 import liquibase.database.DatabaseConnection;
-import liquibase.exception.DatabaseException;
 import liquibase.ext.hibernate.database.connection.HibernateDriver;
+import org.hibernate.jpa.boot.internal.EntityManagerFactoryBuilderImpl;
+import org.hibernate.jpa.boot.spi.Bootstrap;
+
+import org.springframework.orm.jpa.persistenceunit.DefaultPersistenceUnitManager;
 
 /**
  * Database implementation for JPA configurations.
@@ -19,13 +19,15 @@ import liquibase.ext.hibernate.database.connection.HibernateDriver;
 public class JpaPersistenceDatabase extends HibernateEjb3Database {
 
     @Override
-    public boolean isCorrectDatabaseImplementation(DatabaseConnection conn) throws DatabaseException {
-        return conn.getURL().startsWith("jpa:persistence:");
+    public boolean isCorrectDatabaseImplementation(DatabaseConnection conn) {
+        return Optional.ofNullable(conn.getURL())
+                .map(url -> url.startsWith("jpa:persistence:"))
+                .orElse(false);
     }
 
     @Override
     public String getDefaultDriver(String url) {
-        if (url.startsWith("jpa:persistence:")) {
+        if (url != null && url.startsWith("jpa:persistence:")) {
             return HibernateDriver.class.getName();
         }
         return null;
@@ -45,14 +47,17 @@ public class JpaPersistenceDatabase extends HibernateEjb3Database {
     protected EntityManagerFactoryBuilderImpl createEntityManagerFactoryBuilder() {
         DefaultPersistenceUnitManager internalPersistenceUnitManager = new DefaultPersistenceUnitManager();
 
-        internalPersistenceUnitManager.setPersistenceXmlLocation(getHibernateConnection().getPath());
-        internalPersistenceUnitManager.setDefaultPersistenceUnitRootLocation(null);
+        String path = Optional.ofNullable(getHibernateConnection().getPath())
+                .orElseThrow(() -> new IllegalStateException("Hibernate connection path is null"));
+
+        internalPersistenceUnitManager.setPersistenceXmlLocation(path);
 
         internalPersistenceUnitManager.preparePersistenceUnitInfos();
-        PersistenceUnitInfo persistenceUnitInfo = internalPersistenceUnitManager.obtainDefaultPersistenceUnitInfo();
+        PersistenceUnitInfo persistenceUnitInfo = Optional.of(internalPersistenceUnitManager.obtainDefaultPersistenceUnitInfo())
+                .orElseThrow(() -> new IllegalStateException("No persistence unit info found for path: " + path));
 
-        EntityManagerFactoryBuilderImpl builder = (EntityManagerFactoryBuilderImpl) Bootstrap.getEntityManagerFactoryBuilder(persistenceUnitInfo, Collections.emptyMap());
-        return builder;
+        return (EntityManagerFactoryBuilderImpl) Bootstrap.getEntityManagerFactoryBuilder(
+                persistenceUnitInfo,
+                Map.of(HibernateDatabase.HIBERNATE_TEMP_USE_JDBC_METADATA_DEFAULTS, Boolean.FALSE.toString()));
     }
-
 }

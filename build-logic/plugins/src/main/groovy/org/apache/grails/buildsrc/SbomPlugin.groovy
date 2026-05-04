@@ -126,6 +126,9 @@ class SbomPlugin implements Plugin<Project> {
             'grails-data-hibernate5-dbmigration': [
                     'pkg:maven/javax.xml.bind/jaxb-api@2.3.1?type=jar': 'CDDL-1.1', // api export
             ],
+            'grails-data-hibernate7-dbmigration-core': [
+                    'pkg:maven/javax.xml.bind/jaxb-api@2.3.1?type=jar': 'CDDL-1.1', // api export
+            ],
             'grails-data-hibernate7-dbmigration': [
                     'pkg:maven/javax.xml.bind/jaxb-api@2.3.1?type=jar': 'CDDL-1.1', // api export
             ],

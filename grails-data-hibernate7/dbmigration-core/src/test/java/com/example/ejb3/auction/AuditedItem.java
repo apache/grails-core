@@ -1,11 +1,20 @@
 package com.example.ejb3.auction;
 
+import lombok.Getter;
+import lombok.Setter;
 import org.hibernate.envers.Audited;
 
-import javax.persistence.*;
+import jakarta.persistence.Column;
+import jakarta.persistence.Entity;
+import jakarta.persistence.GeneratedValue;
+import jakarta.persistence.GenerationType;
+import jakarta.persistence.Id;
+import jakarta.persistence.SequenceGenerator;
 
 @Audited
 @Entity
+@Getter
+@Setter
 public class AuditedItem {
 
     @Id
@@ -14,21 +23,5 @@ public class AuditedItem {
     private long id;
     @Column(unique = true)
     private String name;
-
-    public long getId() {
-        return id;
-    }
-
-    public void setId(long id) {
-        this.id = id;
-    }
-
-    public String getName() {
-        return name;
-    }
-
-    public void setName(String name) {
-        this.name = name;
-    }
 
 }

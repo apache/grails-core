@@ -36,6 +36,10 @@ ext {
     pomDescription = 'Grails Database Migration integrations with Hibernate 7 & Liquibase'
 }
 
+configurations {
+    enversRuntime.extendsFrom(testImplementation)
+}
+
 dependencies {
     implementation platform(project(':grails-hibernate7-bom'))
 
@@ -74,6 +78,11 @@ dependencies {
     testImplementation 'org.testcontainers:testcontainers-postgresql'
     testImplementation 'org.testcontainers:testcontainers-spock'
     testImplementation 'org.postgresql:postgresql'
+    enversRuntime("org.hibernate.orm:hibernate-envers")
+}
+
+tasks.named('test', Test) {
+    classpath += configurations.enversRuntime
 }
 
 apply {
