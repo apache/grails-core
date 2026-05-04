@@ -53,7 +53,7 @@ dependencies {
     // The GraphQL schema generator (core library only - no Grails plugin needed here).
     implementation 'org.apache.grails.data:grails-data-graphql-core'
     implementation 'com.github.javaparser:javaparser-core'
-    implementation "com.graphql-java:graphql-java:$graphqlJavaVersion"
+    implementation 'com.graphql-java:graphql-java'
 
     runtimeOnly 'com.h2database:h2'
     runtimeOnly 'org.apache.tomcat:tomcat-jdbc'

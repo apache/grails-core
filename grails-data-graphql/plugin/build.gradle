@@ -65,7 +65,7 @@ dependencies {
     api 'com.github.javaparser:javaparser-core', {
         // api: parsing of GORM entity sources for schema introspection
     }
-    api "com.graphql-java:graphql-java:$graphqlJavaVersion", {
+    api 'com.graphql-java:graphql-java', {
         // api: GraphQL execution and schema types
     }
     api 'jakarta.servlet:jakarta.servlet-api', {

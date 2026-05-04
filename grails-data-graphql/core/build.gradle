@@ -43,10 +43,10 @@ dependencies {
     api project(':grails-datamapping-core'), {
         // api: ConstrainedProperty, GormEntity, MappingContext, PersistentEntity, PersistentProperty
     }
-    api "com.graphql-java:graphql-java:$graphqlJavaVersion", {
+    api 'com.graphql-java:graphql-java', {
         // api: GraphQLSchema, GraphQLType, GraphQLObjectType, DataFetcher, DataFetchingEnvironment
     }
-    api "com.graphql-java:graphql-java-extended-scalars:$graphqlJavaScalarExtVersion", {
+    api 'com.graphql-java:graphql-java-extended-scalars', {
         // api: ExtendedScalars
     }
     api 'com.github.javaparser:javaparser-core', {

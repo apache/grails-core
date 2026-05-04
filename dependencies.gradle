@@ -73,6 +73,8 @@ ext {
             'commons-codec.version'         : '1.18.0',
             'commons-lang3.version'         : '3.20.0',
             'geb-spock.version'             : '8.0.1',
+            'graphql-java.version'          : '24.3',
+            'graphql-java-extended-scalars.version': '24.0',
             'groovy.version'                : '4.0.31',
             'jackson.version'               : '2.21.2',
             'jquery.version'                : '3.7.1',
@@ -109,6 +111,8 @@ ext {
             'commons-codec'               : "commons-codec:commons-codec:${bomDependencyVersions['commons-codec.version']}",
             'commons-lang3'               : "org.apache.commons:commons-lang3:${bomDependencyVersions['commons-lang3.version']}",
             'geb-spock'                   : "org.apache.groovy.geb:geb-spock:${bomDependencyVersions['geb-spock.version']}",
+            'graphql-java'                : "com.graphql-java:graphql-java:${bomDependencyVersions['graphql-java.version']}",
+            'graphql-java-extended-scalars': "com.graphql-java:graphql-java-extended-scalars:${bomDependencyVersions['graphql-java-extended-scalars.version']}",
             // start - restate the groovy-bom includes here because the spring dependency management will pick the library from spring-boot-dependencies otherwise
             'groovy'                      : "org.apache.groovy:groovy:${bomDependencyVersions['groovy.version']}",
             'groovy-ant'                  : "org.apache.groovy:groovy-ant:${bomDependencyVersions['groovy.version']}",
