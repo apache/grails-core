@@ -134,18 +134,28 @@ class HibernateGormEnhancer extends GormEnhancer {
     protected Datastore resolveOwningDatastore(Class cls) {
         HibernateDatastore hds = (HibernateDatastore) datastore
         PersistentEntity entity = hds.getMappingContext().getPersistentEntity(cls.name)
-        if (entity != null && !org.grails.datastore.mapping.core.connections.ConnectionSourcesSupport.usesConnectionSource(entity, ConnectionSource.DEFAULT)) {
-            Map<String, HibernateDatastore> byConn = datastoresByConnectionSource
-            if (byConn != null && !byConn.isEmpty()) {
-                for (HibernateDatastore sub : byConn.values()) {
-                    if (sub != hds) {
-                        SessionFactoryImplementor subSfi = (SessionFactoryImplementor) sub.sessionFactory
-                        if (subSfi.mappingMetamodel.findEntityDescriptor(cls) != null) {
-                            return sub
+        if (entity != null) {
+            if (!org.grails.datastore.mapping.core.connections.ConnectionSourcesSupport.usesConnectionSource(entity, ConnectionSource.DEFAULT)) {
+                // Entity is mapped to a non-DEFAULT connection source — find the child datastore
+                Map<String, HibernateDatastore> byConn = datastoresByConnectionSource
+                if (byConn != null && !byConn.isEmpty()) {
+                    for (HibernateDatastore sub : byConn.values()) {
+                        if (sub != hds) {
+                            SessionFactoryImplementor subSfi = (SessionFactoryImplementor) sub.sessionFactory
+                            if (subSfi.mappingMetamodel.findEntityDescriptor(cls) != null) {
+                                return sub
+                            }
                         }
                     }
                 }
             }
+            // Entity is known to this datastore (DEFAULT or ALL) — return it directly.
+            // Do NOT delegate to GormEnhancer.findDatastore() here because that method
+            // respects PREFERRED_DATASTORE, which may be set to an unrelated datastore
+            // (e.g. the per-test hibernateDatastore) during multi-datasource tests,
+            // causing it to return the wrong datastore and making `domain.secondary`
+            // fail with MissingPropertyException.
+            return hds
         }
         return GormEnhancer.findDatastore(cls, ConnectionSource.DEFAULT)
     }
@@ -175,6 +185,11 @@ class HibernateGormEnhancer extends GormEnhancer {
             GormValidationApi validationApi = getValidationApi(entity.javaClass, apiQualifier)
             registry.registerApi(entity.name, staticApi, instanceApi, validationApi)
         }
+
+        // Always (re-)install metaclass handlers so propertyMissing/methodMissing are wired
+        // after cleanRegistry() removes the MetaClass between tests.
+        addStaticMethods(entity)
+        addInstanceMethods(entity, false)
     }
 
     @Override

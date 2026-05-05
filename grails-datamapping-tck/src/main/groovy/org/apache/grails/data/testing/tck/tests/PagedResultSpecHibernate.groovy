@@ -51,7 +51,7 @@ class PagedResultSpecHibernate extends GrailsDataTckSpec {
         def results = Person.list(offset: 2, max: 2)
 
         then: 'You get a paged result list back'
-        results.getClass().simpleName == 'HibernatePagedResultList' // Grails/Hibernate has a custom class in different package
+        results.getClass().simpleName == 'PagedResultList' // Grails/Hibernate has a custom class in different package
         results.size() == 2
         results[0].firstName == 'Bart'
         results[1].firstName == 'Lisa'
@@ -66,7 +66,7 @@ class PagedResultSpecHibernate extends GrailsDataTckSpec {
         def results = Person.list(offset: 2, max: 2, sort: 'firstName', order: 'DESC')
 
         then: 'You get a paged result list back'
-        results.getClass().simpleName == 'HibernatePagedResultList' // Grails/Hibernate has a custom class in different package
+        results.getClass().simpleName == 'PagedResultList' // Grails/Hibernate has a custom class in different package
         results.size() == 2
         results[0].firstName == 'Homer'
         results[1].firstName == 'Fred'
@@ -97,7 +97,7 @@ class PagedResultSpecHibernate extends GrailsDataTckSpec {
         }
 
         then: 'You get a paged result list back'
-        results.getClass().simpleName == 'HibernatePagedResultList' // Grails/Hibernate has a custom class in different package
+        results.getClass().simpleName == 'PagedResultList' // Grails/Hibernate has a custom class in different package
         results.size() == 2
         results[0].firstName == 'Marge'
         results[1].firstName == 'Bart'
@@ -114,7 +114,7 @@ class PagedResultSpecHibernate extends GrailsDataTckSpec {
         }
 
         then: 'You get a paged result list back'
-        results.getClass().simpleName == 'HibernatePagedResultList' // Grails/Hibernate has a custom class in different package
+        results.getClass().simpleName == 'PagedResultList' // Grails/Hibernate has a custom class in different package
         results.size() == 2
         results[0].firstName == 'Lisa'
         results[1].firstName == 'Homer'

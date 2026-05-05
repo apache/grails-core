@@ -691,9 +691,53 @@ public class HibernateDatastore extends AbstractDatastore
         return session;
     }
 
+    /**
+     * Returns the current GORM session for this datastore, using a priority-based lookup.
+     *
+     * <p>Priority order:
+     * <ol>
+     *   <li>Custom session resolver (e.g. {@code StaticSingletonPersistenceContextInterceptor})</li>
+     *   <li>GORM session holder in TSM (key = this datastore)</li>
+     *   <li>Spring TX {@link SessionFactory} holder in TSM (key = SessionFactory) — used when
+     *       {@code withTransaction{}} is active and the TX manager has bound the session</li>
+     * </ol>
+     *
+     * <p>Without priority 3, {@code DatastoreUtils.execute()} would call {@link #connect()} and
+     * open a brand-new standalone session even inside a {@code withTransaction{}} block,
+     * causing {@code TransactionRequiredException} on flush for SCHEMA multi-tenancy child
+     * datastores (each of which has its own {@link SessionFactory}).</p>
+     */
     @Override
     public Session getCurrentSession() throws ConnectionNotFoundException {
-        return new HibernateSession(this, sessionFactory);
+        // Priority 1: custom session resolver
+        Session resolved = getSessionResolver().resolve();
+        if (resolved != null) {
+            return resolved;
+        }
+        // Priority 2: GORM session holder (key = this datastore)
+        org.grails.datastore.mapping.transactions.SessionHolder gormHolder =
+                (org.grails.datastore.mapping.transactions.SessionHolder)
+                        TransactionSynchronizationManager.getResource(this);
+        if (gormHolder != null) {
+            Session s = gormHolder.getValidatedSession();
+            if (s != null) {
+                return s;
+            }
+        }
+        // Priority 3: Spring TX SessionFactory holder (key = SessionFactory).
+        // When withTransaction{} is active, the TX manager binds the Hibernate session here.
+        SessionFactory sf = getSessionFactory();
+        if (sf != null) {
+            Object resource = TransactionSynchronizationManager.getResource(sf);
+            if (resource instanceof org.grails.orm.hibernate.support.hibernate7.SessionHolder sfHolder) {
+                org.hibernate.Session nativeSession = sfHolder.getSession();
+                if (nativeSession != null && nativeSession.isOpen()) {
+                    return new HibernateSession(this, sf, nativeSession);
+                }
+            }
+        }
+        throw new ConnectionNotFoundException(
+                "No Datastore Session bound to thread, and configuration does not allow creation of non-transactional one here");
     }
 
     @Override

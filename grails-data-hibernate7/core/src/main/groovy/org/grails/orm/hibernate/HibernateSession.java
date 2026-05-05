@@ -38,6 +38,7 @@ import org.hibernate.proxy.HibernateProxy;
 import org.hibernate.query.MutationQuery;
 
 import org.springframework.context.ApplicationEventPublisher;
+import org.springframework.core.convert.ConversionService;
 import org.springframework.transaction.TransactionDefinition;
 import org.springframework.transaction.support.TransactionSynchronizationManager;
 
@@ -48,6 +49,7 @@ import org.grails.datastore.mapping.core.Datastore;
 import org.grails.datastore.mapping.core.connections.ConnectionSource;
 import org.grails.datastore.mapping.engine.Persister;
 import org.grails.datastore.mapping.model.MappingContext;
+import org.grails.datastore.mapping.model.PersistentEntity;
 import org.grails.datastore.mapping.model.PersistentProperty;
 import org.grails.datastore.mapping.model.config.GormProperties;
 import org.grails.datastore.mapping.proxy.ProxyHandler;
@@ -220,9 +222,27 @@ public class HibernateSession extends AbstractAttributeStoringSession implements
 
     @Override
     public <T> T retrieve(Class<T> type, Serializable key) {
+        if (key == null) {
+            return null;
+        }
+        PersistentEntity entity = getMappingContext().getPersistentEntity(type.getName());
+        if (entity != null) {
+            PersistentProperty identity = entity.getIdentity();
+            if (identity != null && !identity.getType().isAssignableFrom(key.getClass())) {
+                ConversionService conversionService = getMappingContext().getConversionService();
+                if (conversionService.canConvert(key.getClass(), identity.getType())) {
+                    try {
+                        key = (Serializable) conversionService.convert(key, identity.getType());
+                    } catch (Exception ignored) {
+                        return null;
+                    }
+                }
+            }
+        }
+        final Serializable finalKey = key;
         return getHibernateTemplate().execute(session -> {
             try {
-                return session.find(type, key);
+                return session.find(type, finalKey);
             } catch (IllegalArgumentException e) {
                 return null;
             }

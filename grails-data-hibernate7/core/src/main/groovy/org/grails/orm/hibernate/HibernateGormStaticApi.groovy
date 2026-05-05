@@ -166,11 +166,15 @@ class HibernateGormStaticApi<D> extends GormStaticApi<D> {
     HibernateGormStaticApi<D> forQualifier(String qualifier) {
         Datastore ds = getDatastore()
         if (ds == null) return this
-        
+
         org.grails.datastore.gorm.DatastoreResolver resolver = new org.grails.datastore.gorm.DatastoreResolver() {
             @Override Datastore resolve() { org.grails.datastore.gorm.GormEnhancer.findDatastore(persistentClass, qualifier) }
         }
-        HibernateGormStaticApi<D> newApi = new HibernateGormStaticApi<D>(persistentClass, ds.mappingContext, finders, resolver, qualifier, classLoader)
+        // Create new finders with the qualifier-specific resolver so dynamic finders (e.g. findByName)
+        // execute against the correct (non-DEFAULT) datasource session factory.
+        List<org.grails.datastore.gorm.finders.FinderMethod> qualifiedFinders =
+                org.grails.datastore.gorm.GormEnhancer.createDynamicFinders(resolver, ds.mappingContext)
+        HibernateGormStaticApi<D> newApi = new HibernateGormStaticApi<D>(persistentClass, ds.mappingContext, qualifiedFinders, resolver, qualifier, classLoader)
         return newApi
     }
 
@@ -628,5 +632,37 @@ class HibernateGormStaticApi<D> extends GormStaticApi<D> {
             }
         }
         return sqlString.toString()
+    }
+
+    /**
+     * Prepares a {@link SelectHqlQuery} from a raw HQL string.
+     *
+     * @param query           the HQL query string
+     * @param readOnly        whether the query should be read-only
+     * @param cache           whether to use the second-level cache
+     * @param namedParams     named parameters map
+     * @param positionalParams positional parameters list
+     * @param args            additional query arguments (max, offset, etc.)
+     * @return the prepared {@link SelectHqlQuery}
+     */
+    protected SelectHqlQuery prepareHqlQuery(CharSequence query, boolean readOnly, boolean cache, Map namedParams, Collection positionalParams, Map args) {
+        PersistentEntity entity = getGormPersistentEntity()
+        HqlQueryContext ctx = HqlQueryContext.prepare(entity, query, namedParams, positionalParams, args, new HashMap<>(), readOnly, false)
+        return (SelectHqlQuery) HibernateHqlQueryCreator.createHqlQuery(getHibernateDatastore(), getHibernateDatastore().getSessionFactory(), entity, ctx)
+    }
+
+    /**
+     * Executes a list query using HQL and returns the results.
+     *
+     * @param query           the HQL query string
+     * @param namedParams     named parameters map
+     * @param positionalParams positional parameters list
+     * @param args            additional query arguments (max, offset, etc.)
+     * @param readOnly        whether the query should be read-only
+     * @return list of matching domain objects
+     */
+    protected List<D> doListInternal(CharSequence query, Map namedParams, Collection positionalParams, Map args, boolean readOnly) {
+        SelectHqlQuery hqlQuery = prepareHqlQuery(query, readOnly, false, namedParams, positionalParams, args)
+        return (List<D>) hqlQuery.list()
     }
 }

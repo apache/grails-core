@@ -178,6 +178,20 @@ public class HibernateQuery extends Query {
         detachedCriteria.add(criterion);
     }
 
+    @Override
+    public Junction disjunction() {
+        Disjunction dis = new Disjunction();
+        detachedCriteria.add(dis);
+        return dis;
+    }
+
+    @Override
+    public Junction conjunction() {
+        Conjunction con = new Conjunction();
+        detachedCriteria.add(con);
+        return con;
+    }
+
     public void add(DetachedCriteria<?> detachedCriteria) {
         detachedCriteria.add(new Conjunction(detachedCriteria.getCriteria()));
     }
@@ -447,6 +461,16 @@ public class HibernateQuery extends Query {
 
     public List list(Session session) {
         return getHibernateQueryExecutor().list(session, getJpaCriteriaQuery());
+    }
+
+    /**
+     * Deletes all entities matching the current criteria.
+     * Called by {@code GormStaticApi.deleteAll()} via {@code session.createQuery(cls).deleteAll()}.
+     *
+     * @return the number of entities deleted
+     */
+    public Number deleteAll() {
+        return ((HibernateSession) getSession()).deleteAll(detachedCriteria);
     }
 
     private HibernateQueryExecutor getHibernateQueryExecutor() {

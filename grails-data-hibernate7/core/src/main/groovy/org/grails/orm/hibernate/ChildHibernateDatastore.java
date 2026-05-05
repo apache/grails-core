@@ -21,6 +21,7 @@ package org.grails.orm.hibernate;
 import org.hibernate.SessionFactory;
 
 import org.grails.datastore.gorm.events.ConfigurableApplicationEventPublisher;
+import org.grails.datastore.mapping.core.Session;
 import org.grails.datastore.mapping.core.connections.ConnectionSource;
 import org.grails.datastore.mapping.core.connections.ConnectionSources;
 import org.grails.orm.hibernate.cfg.HibernateMappingContext;
@@ -77,5 +78,33 @@ public class ChildHibernateDatastore extends HibernateDatastore {
             }
             return hibernateDatastore;
         }
+    }
+
+    /**
+     * Opens a real Hibernate session eagerly so that
+     * {@link HibernateSession#getNativeSession()} can return it directly
+     * without falling back to {@code SessionFactory.getCurrentSession()},
+     * which would throw "No Session found for current thread" when there is
+     * no surrounding transaction.
+     *
+     * <p>This is required by the SCHEMA multi-tenancy model: each child
+     * datastore has its own {@link SessionFactory}, so {@code DatastoreUtils.execute()}
+     * (used internally by GORM finders like {@code count()}) must receive a
+     * session that is already open on the child's factory.</p>
+     *
+     * <p>Session lifecycle is safe: {@link HibernateSession#disconnect()} closes
+     * the {@code nativeSession} when it is non-null, and
+     * {@code DatastoreUtils.closeSessionOrRegisterDeferredClose()} always delegates
+     * to {@code disconnect()} for non-transactional sessions.</p>
+     *
+     * <p>NOTE: Long-term this routing logic belongs in
+     * {@code grails-datamapping-core} — {@code Tenants.withId()} should
+     * differentiate SCHEMA (needs a new session on the child factory) from
+     * DISCRIMINATOR (reuses the existing session). Until that core change is
+     * made, this override is the H7-only workaround.</p>
+     */
+    @Override
+    public Session connect() {
+        return new HibernateSession(this, getSessionFactory(), getSessionFactory().openSession());
     }
 }
