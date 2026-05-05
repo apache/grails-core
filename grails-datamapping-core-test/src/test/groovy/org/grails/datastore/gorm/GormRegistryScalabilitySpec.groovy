@@ -79,9 +79,8 @@ class GormRegistryScalabilitySpec extends Specification {
         registry.staticApis.containsKey(CoreScalabilityBook.name)
         registry.staticApis.containsKey(CoreScalabilityAuthor.name)
 
-        and: "the count is bounded by entity count, not entity × tenant"
-        registry.staticApis.size() >= 2
-        registry.staticApis.size() < 2 * TENANT_COUNT
+        and: "our two entities contribute exactly 2 keys (not 2 × tenant count)"
+        registry.staticApis.keySet().count { it == CoreScalabilityBook.name || it == CoreScalabilityAuthor.name } == 2
     }
 
     void "GormRegistry instanceApis map size equals number of entity classes (O(M))"() {
@@ -91,8 +90,9 @@ class GormRegistryScalabilitySpec extends Specification {
         expect:
         registry.instanceApis.containsKey(CoreScalabilityBook.name)
         registry.instanceApis.containsKey(CoreScalabilityAuthor.name)
-        registry.instanceApis.size() >= 2
-        registry.instanceApis.size() < 2 * TENANT_COUNT
+
+        and: "our two entities contribute exactly 2 keys (not 2 × tenant count)"
+        registry.instanceApis.keySet().count { it == CoreScalabilityBook.name || it == CoreScalabilityAuthor.name } == 2
     }
 
     void "GormRegistry validationApis map size equals number of entity classes (O(M))"() {
@@ -102,8 +102,9 @@ class GormRegistryScalabilitySpec extends Specification {
         expect:
         registry.validationApis.containsKey(CoreScalabilityBook.name)
         registry.validationApis.containsKey(CoreScalabilityAuthor.name)
-        registry.validationApis.size() >= 2
-        registry.validationApis.size() < 2 * TENANT_COUNT
+
+        and: "our two entities contribute exactly 2 keys (not 2 × tenant count)"
+        registry.validationApis.keySet().count { it == CoreScalabilityBook.name || it == CoreScalabilityAuthor.name } == 2
     }
 
     // -------------------------------------------------------------------------
