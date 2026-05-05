@@ -22,6 +22,7 @@ import groovy.transform.CompileDynamic
 
 import org.gradle.api.Plugin
 import org.gradle.api.Project
+import org.gradle.api.plugins.JavaPlugin
 import org.gradle.api.tasks.testing.Test
 import org.gradle.testing.jacoco.plugins.JacocoPlugin
 import org.gradle.testing.jacoco.plugins.JacocoPluginExtension
@@ -29,9 +30,16 @@ import org.gradle.testing.jacoco.tasks.JacocoReport
 
 /**
  * Convention plugin for JaCoCo code coverage. Apply to each subproject that compiles code.
+ *
+ * In addition to configuring per-subproject coverage, this plugin lazily registers a
+ * jacocoAggregateReport task on the root project the first time it is applied, then wires
+ * each subproject's exec data into that task. The aggregate produces a single XML report
+ * at build/reports/jacoco/aggregate/jacocoAggregateReport.xml suitable for Codecov upload.
  */
 @CompileDynamic
 class GrailsJacocoPlugin implements Plugin<Project> {
+
+    static final String AGGREGATE_TASK_NAME = 'jacocoAggregateReport'
 
     @Override
     void apply(Project project) {
@@ -52,6 +60,52 @@ class GrailsJacocoPlugin implements Plugin<Project> {
                 it.xml.required = true
                 it.html.required = true
                 it.csv.required = true
+            }
+        }
+
+        contributeToRootAggregateReport(project)
+    }
+
+    private static void contributeToRootAggregateReport(Project project) {
+        Project root = project.rootProject
+
+        // Ensure JacocoPlugin is on the root so its JacocoReport task has tooling available.
+        // pluginManager.apply is idempotent — safe to call from every subproject.
+        root.pluginManager.apply(JacocoPlugin)
+
+        // Register the aggregate task once on the first apply; subsequent subprojects find it by name.
+        def aggregateTask
+        if (root.tasks.names.contains(AGGREGATE_TASK_NAME)) {
+            aggregateTask = root.tasks.named(AGGREGATE_TASK_NAME, JacocoReport)
+        } else {
+            aggregateTask = root.tasks.register(AGGREGATE_TASK_NAME, JacocoReport) { JacocoReport task ->
+                task.group = 'verification'
+                task.description = 'Aggregates JaCoCo coverage from all subprojects into a single XML report for Codecov.'
+                task.reports {
+                    it.xml.required = true
+                    it.xml.outputLocation = root.layout.buildDirectory.file(
+                        'reports/jacoco/aggregate/jacocoAggregateReport.xml'
+                    )
+                    it.html.required = false
+                    it.csv.required = false
+                }
+                task.onlyIf { JacocoReport t -> !t.executionData.files.isEmpty() }
+            }
+        }
+
+        // Wire this subproject's test exec data into the aggregate.
+        aggregateTask.configure { JacocoReport task ->
+            task.dependsOn project.tasks.withType(Test)
+            task.executionData.from(
+                project.fileTree(project.file('build/jacoco')) { include '*.exec' }
+            )
+        }
+
+        // Add source and class directories once the Java plugin is confirmed present.
+        project.plugins.withType(JavaPlugin) {
+            aggregateTask.configure { JacocoReport task ->
+                task.sourceDirectories.from(project.sourceSets.main.allSource.srcDirs)
+                task.classDirectories.from(project.sourceSets.main.output.classesDirs)
             }
         }
     }
