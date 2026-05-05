@@ -137,7 +137,7 @@ class GormEnhancer implements Closeable {
             this.registry.registerDatastoreByType(datastore)
             String qualifier = ConnectionSource.DEFAULT
             if (datastore instanceof ConnectionSourcesProvider) {
-                qualifier = ((ConnectionSourcesProvider) datastore).connectionSources.defaultConnectionSource.name
+                qualifier = ((ConnectionSourcesProvider) datastore).connectionSources?.defaultConnectionSource?.name ?: ConnectionSource.DEFAULT
             }
             this.registry.registerDatastore(qualifier, datastore)
         }
@@ -192,6 +192,23 @@ class GormEnhancer implements Closeable {
             }
             
             registry.registerEntityDatastore(className, ConnectionSource.DEFAULT, datastore)
+
+            // Also register entity-specific non-default qualifiers (e.g. declared via `datasource 'secondary'`)
+            // so that GormRegistry.getDatastore(className, qualifier) resolves them even when those
+            // qualifiers are not in the enhancer's own connectionSourceNames list.
+            for (String entityQualifier in ConnectionSourcesSupport.getConnectionSourceNames(entity)) {
+                if (!ConnectionSource.DEFAULT.equals(entityQualifier) && !ConnectionSource.ALL.equals(entityQualifier)) {
+                    Datastore dsForQualifier = datastore
+                    if (datastore instanceof org.grails.datastore.mapping.core.connections.MultipleConnectionSourceCapableDatastore) {
+                        try {
+                            dsForQualifier = ((org.grails.datastore.mapping.core.connections.MultipleConnectionSourceCapableDatastore)datastore).getDatastoreForConnection(entityQualifier)
+                        } catch (Throwable e) {
+                            // fall back to main datastore if the qualifier isn't available
+                        }
+                    }
+                    registry.registerEntityDatastore(className, entityQualifier, dsForQualifier)
+                }
+            }
 
             addStaticMethods(entity)
             addInstanceMethods(entity, false)
