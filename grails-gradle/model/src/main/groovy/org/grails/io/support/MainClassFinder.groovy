@@ -24,11 +24,11 @@ import java.util.concurrent.ConcurrentHashMap
 
 import groovy.transform.CompileStatic
 
-import groovyjarjarasm.asm.ClassReader
-import groovyjarjarasm.asm.ClassVisitor
-import groovyjarjarasm.asm.MethodVisitor
-import groovyjarjarasm.asm.Opcodes
-import groovyjarjarasm.asm.Type
+import org.objectweb.asm.ClassReader
+import org.objectweb.asm.ClassVisitor
+import org.objectweb.asm.MethodVisitor
+import org.objectweb.asm.Opcodes
+import org.objectweb.asm.Type
 
 import grails.util.BuildSettings
 
