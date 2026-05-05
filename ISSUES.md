@@ -1,8 +1,10 @@
 # Hibernate 7 Migration — Issue Tracker
 
-**CURRENT FOCUS**: H7 dependent modules — `grails-data-hibernate7`, `grails-data-hibernate7-spring-boot`, `grails-data-hibernate7-spring-orm`, `grails-data-hibernate7-dbmigration`.
+**CURRENT FOCUS**: `grails-datamapping-core` regressions introduced by our `GormEnhancer.groovy` changes.
 
-**`grails-data-hibernate7-core` is 100% passing** (all Q1–Q4 quarterly runs green as of 2026-05-05).
+**`grails-data-hibernate7-core` is 100% passing** (all Q1–Q4 quarterly runs green, SCHEMA multi-tenancy fixed 2026-05-05).
+
+**`grails-datamapping-core` has 15 failures** — all in `GormEnhancerAllQualifiersSpec`, caused by our O(M+N) refactor to `GormEnhancer.groovy`. See Open Issues below.
 
 **Run command** (quarterly batches via `run_quarter.py` — full suite hangs):
 ```bash
@@ -70,7 +72,39 @@ Also: removed the `if (this instanceof ChildHibernateDatastore) return withNewSe
 
 ## Open Issues
 
-*None known — all quarterly runs passing. Run full Q1–Q4 via `run_quarter.py` to confirm.*
+### `grails-datamapping-core` — GormEnhancerAllQualifiersSpec (15 failures)
+
+**Module**: `grails-datamapping-core`
+**Spec**: `org.grails.datastore.gorm.GormEnhancerAllQualifiersSpec`
+**Root cause**: Our O(M+N) refactor to `GormEnhancer.groovy` introduced two regressions.
+
+#### Failure Type A — NPE in constructor (3 tests)
+
+**Tests**:
+- `MultiTenant entity with default datasource expands to all qualifiers`
+- `MultiTenant entity with ALL datasource expands to all qualifiers`
+- `non-MultiTenant entity with ALL datasource expands to all qualifiers`
+
+**Cause**: `GormEnhancer.<init>` line 140 calls `getDefaultConnectionSource().getName()` but mock `ConnectionSources` doesn't stub `getDefaultConnectionSource()` → returns null → NPE.
+```
+java.lang.NullPointerException: Cannot invoke "ConnectionSource.getName()"
+    because the return value of "ConnectionSources.getDefaultConnectionSource()" is null
+    at GormEnhancer.<init>(GormEnhancer.groovy:140)
+```
+**Fix**: Guard with null-safe: `qualifier = cs.defaultConnectionSource?.name ?: ConnectionSource.DEFAULT`
+
+#### Failure Type B — Registry empty after `registerEntity` (2 tests × 3 forks = 6 failures)
+
+**Tests**:
+- `registerEntity adds static api under default and secondary for non-default datasource`
+- `registerEntity adds static api under default and secondary for MultiTenant entity`
+
+**Cause**: `registerEntity` iterates `this.connectionSourceNames` (which is `['DEFAULT']` for a plain mock datastore). An entity declaring `datasource 'secondary'` has its secondary qualifier listed in `ConnectionSourcesSupport.getConnectionSourceNames(entity)`, but `registerEntity` never iterates those — so `getDatastore(entity.name, 'secondary')` returns null.
+```
+GormRegistry.instance.getDatastore(entity.name, 'secondary') != null → false
+(registry is empty: staticApis=[:] datastoresByQualifier=[:] ...)
+```
+**Fix**: In `registerEntity`, after the main loop, also iterate over the entity's declared datasource qualifiers and call `registry.registerEntityDatastore(className, qualifier, datastore)` for each non-ALL qualifier.
 
 ---
 
@@ -98,7 +132,8 @@ bug will surface — fix it in `Tenants.withId()` at that point.
 
 ## Constraints & Rules
 
-1. **Never modify** `grails-datamapping-core` or `grails-datastore-core` — changes spread to H5 and MongoDB.
+1. **Can modify `grails-datamapping-core`** — but requires running ALL grails-datamapping-core tests to verify no H5/MongoDB regressions before committing.
+2. **Never modify `grails-datastore-core`** — changes spread to H5 and MongoDB with no test coverage here.
 2. **`local.properties`** — never delete; comment out old values, append new ones.
 3. **No `git push`** until full suite passes.
 4. Full suite hangs — run specs in quarters via `run_quarter.py` with `specs_q{1..4}.txt`.
