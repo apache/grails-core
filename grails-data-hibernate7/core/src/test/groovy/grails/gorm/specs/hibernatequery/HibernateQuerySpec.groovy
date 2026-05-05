@@ -1063,6 +1063,52 @@ class HibernateQuerySpec extends HibernateGormDatastoreSpec {
         result == oldBob
     }
 
+    def "disjunction() adds Disjunction to detachedCriteria not base criteria field"() {
+        when: "a disjunction is created via the disjunction() API"
+        Query.Junction dis = hibernateQuery.disjunction()
+        dis.add(new Query.Equals("firstName", "Bob"))
+        def baseCriteriaField = Query.getDeclaredField('criteria')
+        baseCriteriaField.accessible = true
+        Query.Junction baseCriteria = baseCriteriaField.get(hibernateQuery)
+
+        then: "getAllCriteria() (backed by detachedCriteria) holds the disjunction"
+        hibernateQuery.allCriteria.any { it instanceof Query.Disjunction }
+
+        and: "the base criteria field does NOT hold it (to prevent double-application)"
+        !baseCriteria.getCriteria().any { it instanceof Query.Disjunction }
+    }
+
+    def "conjunction() adds Conjunction to detachedCriteria not base criteria field"() {
+        when: "a conjunction is created via the conjunction() API"
+        Query.Junction con = hibernateQuery.conjunction()
+        con.add(new Query.Equals("firstName", "Bob"))
+        def baseCriteriaField = Query.getDeclaredField('criteria')
+        baseCriteriaField.accessible = true
+        Query.Junction baseCriteria = baseCriteriaField.get(hibernateQuery)
+
+        then: "getAllCriteria() (backed by detachedCriteria) holds the conjunction"
+        hibernateQuery.allCriteria.any { it instanceof Query.Conjunction }
+
+        and: "the base criteria field does NOT hold it"
+        !baseCriteria.getCriteria().any { it instanceof Query.Conjunction }
+    }
+
+    def "disjunction() returns correct results for OR query"() {
+        given:
+        new Person(firstName: "Fred", lastName: "Rogers", age: 51).save(flush: true)
+        new Person(firstName: "Alice", lastName: "Smith", age: 30).save(flush: true)
+        Query.Junction dis = hibernateQuery.disjunction()
+        dis.add(new Query.Equals("firstName", "Bob"))
+        dis.add(new Query.Equals("firstName", "Fred"))
+
+        when:
+        def results = hibernateQuery.list()
+
+        then: "only the two matching persons are returned, not all rows"
+        results.size() == 2
+        results*.firstName.sort() == ["Bob", "Fred"]
+    }
+
     def scroll() {
         given:
         hibernateQuery.eq("firstName", "Bob")

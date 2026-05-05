@@ -431,12 +431,19 @@ class GormStaticApi<D> extends AbstractGormApi<D> implements GormAllOperations<D
 
     @Override
     void deleteAll(Map params, Iterable objectsToDelete) {
-        deleteAll(objectsToDelete)
+        execute({ Session session ->
+            for (obj in objectsToDelete) {
+                session.delete(obj)
+            }
+            if (params?.flush) {
+                session.flush()
+            }
+        } as SessionCallback<Void>)
     }
 
     @Override
     void deleteAll(Map params, Object... objectsToDelete) {
-        deleteAll(objectsToDelete)
+        deleteAll(params, Arrays.asList(objectsToDelete))
     }
 
     @Override

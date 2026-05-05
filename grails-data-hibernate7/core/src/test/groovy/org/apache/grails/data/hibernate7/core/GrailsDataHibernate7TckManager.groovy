@@ -66,6 +66,14 @@ class GrailsDataHibernate7TckManager extends GrailsDataTckManager {
         // session factory, causing "Could not obtain current Hibernate Session".
         GormRegistry.reset()
         super.setup(spec)
+        // cleanRegistry() removes MetaClass handlers installed by setupMultiDataSource().
+        // Re-register multi-datasource entities so their propertyMissing handlers are restored.
+        if (multiDataSourceDatastore != null) {
+            multiDataSourceDatastore.registerAllEntitiesWithEnhancer()
+        }
+        if (multiTenantMultiDataSourceDatastore != null) {
+            multiTenantMultiDataSourceDatastore.registerAllEntitiesWithEnhancer()
+        }
     }
 
     @Override

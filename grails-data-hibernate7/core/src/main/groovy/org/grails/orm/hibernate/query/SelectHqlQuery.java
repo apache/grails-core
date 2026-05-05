@@ -21,7 +21,12 @@ package org.grails.orm.hibernate.query;
 import java.io.Serializable;
 import java.util.List;
 
+import org.springframework.context.ApplicationEventPublisher;
+
+import org.grails.datastore.mapping.core.Datastore;
 import org.grails.datastore.mapping.query.Query;
+import org.grails.datastore.mapping.query.event.PostQueryEvent;
+import org.grails.datastore.mapping.query.event.PreQueryEvent;
 import org.grails.orm.hibernate.GrailsHibernateTemplate;
 import org.grails.orm.hibernate.HibernateDatastore;
 import org.grails.orm.hibernate.HibernateSession;
@@ -66,8 +71,9 @@ public class SelectHqlQuery extends Query implements HqlQueryMethods, Serializab
     }
 
     protected List<?> executeListInternal() {
+        firePreQueryEvent();
         GrailsHibernateTemplate template = (GrailsHibernateTemplate) getHibernateTemplate();
-        return template.execute(__ -> {
+        List<?> results = template.execute(__ -> {
             if (countQuery) {
                 HqlListQueryBuilder builder = new HqlListQueryBuilder((GrailsHibernatePersistentEntity) entity, queryContext.querySettings());
                 String countHql = builder.buildCountHql();
@@ -78,6 +84,26 @@ public class SelectHqlQuery extends Query implements HqlQueryMethods, Serializab
             applyQuerySettings(delegate);
             return delegate.list();
         });
+        return firePostQueryEvent(results);
+    }
+
+    private void firePreQueryEvent() {
+        Datastore datastore = getSession().getDatastore();
+        ApplicationEventPublisher publisher = datastore.getApplicationEventPublisher();
+        if (publisher != null) {
+            publisher.publishEvent(new PreQueryEvent(datastore, this));
+        }
+    }
+
+    private List<?> firePostQueryEvent(List<?> results) {
+        Datastore datastore = getSession().getDatastore();
+        ApplicationEventPublisher publisher = datastore.getApplicationEventPublisher();
+        if (publisher != null) {
+            PostQueryEvent postQueryEvent = new PostQueryEvent(datastore, this, results);
+            publisher.publishEvent(postQueryEvent);
+            return postQueryEvent.getResults();
+        }
+        return results;
     }
 
     @Override
@@ -100,8 +126,9 @@ public class SelectHqlQuery extends Query implements HqlQueryMethods, Serializab
 
     @Override
     public Object singleResult() {
+        firePreQueryEvent();
         GrailsHibernateTemplate template = (GrailsHibernateTemplate) getHibernateTemplate();
-        return template.execute(__ -> {
+        Object result = template.execute(__ -> {
             if (countQuery) {
                 HqlListQueryBuilder builder = new HqlListQueryBuilder((GrailsHibernatePersistentEntity) entity, queryContext.querySettings());
                 String countHql = builder.buildCountHql();
@@ -113,6 +140,9 @@ public class SelectHqlQuery extends Query implements HqlQueryMethods, Serializab
             List<?> results = delegate.list();
             return results.isEmpty() ? null : results.getFirst();
         });
+        List<?> resultList = result != null ? java.util.Collections.singletonList(result) : java.util.Collections.emptyList();
+        List<?> fired = firePostQueryEvent(resultList);
+        return fired.isEmpty() ? null : fired.get(0);
     }
 
     protected void applyQuerySettings(HqlQueryDelegate d) {
