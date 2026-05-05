@@ -21,7 +21,6 @@ plugins {
     id 'com.gradleup.shadow'
     id 'org.apache.grails.buildsrc.properties'
     id 'org.apache.grails.buildsrc.dependency-validator'
-    id 'org.apache.grails.buildsrc.vulnerability-scan'
     id 'io.micronaut.application' version "$micronautApplicationPluginVersion"
 }
 
