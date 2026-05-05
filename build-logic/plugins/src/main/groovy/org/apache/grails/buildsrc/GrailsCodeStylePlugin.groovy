@@ -466,23 +466,6 @@ class GrailsCodeStylePlugin implements Plugin<Project> {
             directory
         })
 
-        gce.spotlessDirectory.set(project.provider {
-            def directory = project.hasProperty(SPOTLESS_DIR_PROPERTY) ?
-                    project.rootProject.layout.projectDirectory.dir(project.property(SPOTLESS_DIR_PROPERTY) as String) :
-                    project.rootProject.layout.buildDirectory.get().dir('codestyle').dir('spotless')
-
-            def toCreate = directory.asFile.toPath()
-            Files.createDirectories(toCreate)
-
-            createOrLoad(
-                    toCreate.resolve(SPOTLESS_GRECLIPSE_CONFIG_FILE_NAME),
-                    "${BASE_RESOURCE_PATH}/spotless/${SPOTLESS_GRECLIPSE_CONFIG_FILE_NAME}",
-                    project
-            )
-
-            directory
-        })
-
         gce.pmdDirectory.set(project.provider {
             def directory = project.hasProperty(PMD_DIR_PROPERTY) ?
                     project.rootProject.layout.projectDirectory.dir(project.property(PMD_DIR_PROPERTY) as String) :
@@ -605,6 +588,23 @@ class GrailsCodeStylePlugin implements Plugin<Project> {
         if (!GradleUtils.lookupProperty(project, SPOTLESS_ENABLED_PROPERTY, false)) {
             return
         }
+
+        project.extensions.getByType(GrailsCodeStyleExtension).spotlessDirectory.set(project.provider {
+            def directory = project.hasProperty(SPOTLESS_DIR_PROPERTY) ?
+                    project.rootProject.layout.projectDirectory.dir(project.property(SPOTLESS_DIR_PROPERTY) as String) :
+                    project.rootProject.layout.buildDirectory.get().dir('codestyle').dir('spotless')
+
+            def toCreate = directory.asFile.toPath()
+            Files.createDirectories(toCreate)
+
+            createOrLoad(
+                    toCreate.resolve(SPOTLESS_GRECLIPSE_CONFIG_FILE_NAME),
+                    "${BASE_RESOURCE_PATH}/spotless/${SPOTLESS_GRECLIPSE_CONFIG_FILE_NAME}",
+                    project
+            )
+
+            directory
+        })
 
         project.pluginManager.apply(SpotlessPlugin)
 
