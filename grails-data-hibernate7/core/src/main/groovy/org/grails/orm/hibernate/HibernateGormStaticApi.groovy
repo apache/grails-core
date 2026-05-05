@@ -39,7 +39,9 @@ import org.grails.datastore.mapping.query.Restrictions
 import org.grails.datastore.mapping.reflect.ClassUtils
 import org.grails.orm.hibernate.query.HibernateHqlQuery
 import org.grails.orm.hibernate.query.HibernateHqlQueryCreator
+import org.grails.orm.hibernate.query.PagedResultList
 import org.grails.orm.hibernate.query.HqlQueryContext
+import org.grails.orm.hibernate.query.HqlListQueryBuilder
 import org.grails.orm.hibernate.query.MutationHqlQuery
 import org.grails.orm.hibernate.query.SelectHqlQuery
 import org.hibernate.FlushMode
@@ -205,7 +207,11 @@ class HibernateGormStaticApi<D> extends GormStaticApi<D> {
     List<D> list(Map params) {
         PersistentEntity entity = getGormPersistentEntity()
         HqlQueryContext ctx = HqlQueryContext.prepare(entity, null, null, null, params, new HashMap<>(), false, false)
-        return (List<D>) HibernateHqlQueryCreator.createHqlQuery(getHibernateDatastore(), getHibernateDatastore().getSessionFactory(), entity, ctx).list()
+        Query q = HibernateHqlQueryCreator.createHqlQuery(getHibernateDatastore(), getHibernateDatastore().getSessionFactory(), entity, ctx)
+        if (HqlListQueryBuilder.isPaged(params)) {
+            return (List<D>) new PagedResultList(q)
+        }
+        return (List<D>) q.list()
     }
 
     @Override

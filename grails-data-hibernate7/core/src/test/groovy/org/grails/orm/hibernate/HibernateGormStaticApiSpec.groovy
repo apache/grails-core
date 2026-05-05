@@ -827,10 +827,10 @@ class HibernateGormStaticApiSpec extends HibernateGormDatastoreSpec {
     }
 
     // -------------------------------------------------------------------------
-    // list with max — returns HibernatePagedResultList
+    // list with max — returns PagedResultList
     // -------------------------------------------------------------------------
 
-    void "list with max parameter returns a HibernatePagedResultList"() {
+    void "list with max parameter returns a PagedResultList"() {
         given:
         setupTestData()
 
@@ -838,7 +838,7 @@ class HibernateGormStaticApiSpec extends HibernateGormDatastoreSpec {
         def result = Club.list(max: 2)
 
         then:
-        result instanceof org.grails.orm.hibernate.query.HibernatePagedResultList
+        result instanceof org.grails.orm.hibernate.query.PagedResultList
         result.size() <= 2
     }
 

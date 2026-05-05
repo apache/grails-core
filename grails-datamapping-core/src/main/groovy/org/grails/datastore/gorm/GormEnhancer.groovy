@@ -252,7 +252,7 @@ class GormEnhancer implements Closeable {
         return GormRegistry.instance
     }
 
-    static void setPreferredDatastore(Datastore datastore) {
+    public static void setPreferredDatastore(Datastore datastore) {
         PREFERRED_DATASTORE.set(datastore)
     }
 

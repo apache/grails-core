@@ -23,6 +23,7 @@ import java.util.List;
 
 import org.grails.datastore.mapping.query.Query;
 import org.grails.orm.hibernate.GrailsHibernateTemplate;
+import org.grails.orm.hibernate.HibernateDatastore;
 import org.grails.orm.hibernate.HibernateSession;
 import org.grails.orm.hibernate.IHibernateTemplate;
 import org.grails.orm.hibernate.cfg.domainbinding.hibernate.GrailsHibernatePersistentEntity;
@@ -31,6 +32,9 @@ public class SelectHqlQuery extends Query implements HqlQueryMethods, Serializab
     protected final transient HqlQueryContext queryContext;
     protected final transient HqlQueryDelegate delegate;
 
+    private boolean wrapping = false;
+    private boolean countQuery = false;
+
     protected SelectHqlQuery(HibernateSession session, GrailsHibernatePersistentEntity entity, HqlQueryContext queryContext, HqlQueryDelegate delegate) {
         super(session, entity);
         this.queryContext = queryContext;
@@ -38,18 +42,73 @@ public class SelectHqlQuery extends Query implements HqlQueryMethods, Serializab
     }
 
     @Override
+    public ProjectionList projections() {
+        return new ProjectionList() {
+            @Override
+            public org.grails.datastore.mapping.query.api.ProjectionList count() {
+                countQuery = true;
+                return this;
+            }
+        };
+    }
+
+    @Override
     public List<?> list() {
+        if (getMax() > 0 && !wrapping && !countQuery) {
+            wrapping = true;
+            try {
+                return new PagedResultList(this);
+            } finally {
+                wrapping = false;
+            }
+        }
+        return executeListInternal();
+    }
+
+    protected List<?> executeListInternal() {
         GrailsHibernateTemplate template = (GrailsHibernateTemplate) getHibernateTemplate();
         return template.execute(__ -> {
+            if (countQuery) {
+                HqlListQueryBuilder builder = new HqlListQueryBuilder((GrailsHibernatePersistentEntity) entity, queryContext.querySettings());
+                String countHql = builder.buildCountHql();
+                org.hibernate.query.Query<?> q = __.createQuery(countHql, Long.class);
+                HqlQueryMethods.populateParameters(new SelectQueryDelegate(q), queryContext);
+                return q.list();
+            }
             applyQuerySettings(delegate);
             return delegate.list();
         });
     }
 
     @Override
+    public SelectHqlQuery clone() {
+        HibernateSession hibernateSession = (HibernateSession) getSession();
+        SelectHqlQuery cloned = (SelectHqlQuery) HibernateHqlQueryCreator.createHqlQuery(
+                (HibernateDatastore) hibernateSession.getDatastore(),
+                hibernateSession.getHibernateTemplate().getSessionFactory(),
+                entity,
+                queryContext
+        );
+        if (this.max != null) {
+            cloned.max(this.max);
+        }
+        if (this.offset != null) {
+            cloned.offset(this.offset);
+        }
+        return cloned;
+    }
+
+    @Override
     public Object singleResult() {
         GrailsHibernateTemplate template = (GrailsHibernateTemplate) getHibernateTemplate();
         return template.execute(__ -> {
+            if (countQuery) {
+                HqlListQueryBuilder builder = new HqlListQueryBuilder((GrailsHibernatePersistentEntity) entity, queryContext.querySettings());
+                String countHql = builder.buildCountHql();
+                org.hibernate.query.Query<?> q = __.createQuery(countHql, Long.class);
+                HqlQueryMethods.populateParameters(new SelectQueryDelegate(q), queryContext);
+                return q.getSingleResult();
+            }
             applyQuerySettings(delegate);
             List<?> results = delegate.list();
             return results.isEmpty() ? null : results.getFirst();

@@ -427,7 +427,7 @@ public class HibernateQuery extends Query {
         if (max != null && max > 0 && !wrapping) {
             wrapping = true;
             try {
-                return new HibernatePagedResultList(this);
+                return new PagedResultList(this);
             } finally {
                 wrapping = false;
             }

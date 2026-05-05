@@ -1,186 +1,18 @@
 # Current Project Status
 
-**CURRENT FOCUS**: Achieving 100% test pass rate for the Hibernate 7 (`grails-data-hibernate7-core`) module before proceeding to Hibernate 5 or MongoDB.
+**CURRENT FOCUS**: Achieving 100% test pass rate for the Hibernate 7 (`grails-data-hibernate7-core`) module.
 
 ## grails-datastore-core (COMPLETED & VERIFIED)
-*   **Infrastructure**: Implemented the `SessionResolver` interface and `ThreadLocalSessionResolver` implementation.
-*   **Encapsulation**: Refactored `DatastoreUtils` and `AbstractDatastore` to use the resolver instead of direct `TransactionSynchronizationManager` (TSM) access.
-*   **Stability**: Fixed `DatastoreUtils.bindSession` to be idempotent, preventing `IllegalStateException` during double-binding scenarios (common in TCK lifecycles).
-*   **Verification**: All core unit and integration tests are passing.
-
-## grails-data-hibernate7 (IN PROGRESS - RUNTIME FAILURES)
-*   **Core Stabilization (COMPLETED)**:
-    *   **Dynamic Resolution**: Implemented dynamic `DatastoreResolver` logic in `HibernateGormEnhancer` and all GORM API classes (`Static`, `Instance`, `Validation`).
-    *   **Dirty Checking**: Fixed `GrailsEntityDirtinessStrategy` for Hibernate 7.2 `AttributeChecker` API.
-    *   **Transaction Lifecycle**: Resolved session leaks in `GrailsHibernateTransactionManager`.
-    *   **Resource Management**: Ensured `SessionFactory` closure in `ChildHibernateDatastore`.
-*   **Static API Stabilization (COMPLETED)**:
-    *   **Null ID Handling**: Updated `HibernateSession.proxy` and `retrieve` to safely handle null identifiers, preventing `IllegalArgumentException`.
-    *   **Recursion Fix**: Implemented a re-entrant safe `list()` in `HibernateQuery` using a `wrapping` flag. This prevents infinite recursion when creating `HibernatePagedResultList`.
-    *   **Read-Only Support**: Fixed `HibernateGormInstanceApi.read()` to explicitly set instances to read-only in the Hibernate session.
-    *   **HQL Support**: Added `HibernateHqlQuery` and implemented `executeQuery`, `executeUpdate`, `find`, and `findAll` (HQL variants) in `HibernateGormStaticApi`.
-    *   **Query by Example**: Added `populateQueryByExample` to `HibernateGormStaticApi`.
-*   **Compilation Blockers (RESOLVED)**:
-    *   **Missing Native SQL methods**: Added `findAllWithNativeSql` and `findWithNativeSql` to `HibernateGormStaticApi` (called by `HibernateEntity` trait).
-    *   **Utility Method**: Added `ClassUtils.getIntegerFromMap` in `grails-datastore-core` for type-safe integer extraction under `@CompileStatic`.
-    *   **Query list args**: Replaced `query.list(args)` with explicit `max`/`offset` extraction, then `query.list()` (H7 `Query` has no `list(Map)` overload).
-    *   **Session.getPersister routing**: Corrected `getPersister(example)` call from `session.getDatastore()` to `session` directly.
-    *   **forQualifier field access**: Removed illegal `failOnError`/`markDirty` field copies that don't exist on `GormStaticApi`.
-*   **Critical Runtime Fixes (COMPLETED — 2026-05-01/02)**:
-
-    ### Issue H7-1 · `withNewSession` session binding mismatch *(RESOLVED — commit `a4b6a26c05`)*
-    *   **Tests affected**: `MultiTenancyUnidirectionalOneToManySpec` and related multi-tenancy tests
-    *   **Exception**: `org.hibernate.HibernateException: No Session found for current thread`
-    *   **Root cause**: `HibernateDatastore.withNewSession(Closure)` called `DatastoreUtils.executeWithNewSession(this, callback)` which creates a lazy GORM `HibernateSession` wrapper without opening a real Hibernate session. Inside the callback, the code called `sessionFactory.getCurrentSession()` to bind a `SessionHolder` — but `GrailsSessionContext.currentSession()` looks in `TransactionSynchronizationManager` for an existing binding which doesn't exist yet → chicken-and-egg failure.
-    *   **Fix applied**: Rewrote `withNewSession(Closure)` to explicitly call `openSession()`, bind the native session to `TransactionSynchronizationManager` under the `sessionFactory` key, wrap it in a `HibernateSession` for the closure, then unbind and close in `finally`.
-    *   **Key insight**: `HibernateGormStaticApi.withNewSession` casts the closure parameter to `HibernateSession` (calls `getNativeSession()`), so the closure must receive a GORM `HibernateSession`, not a raw Hibernate `Session`. `GrailsHibernateTemplate.executeWithNewSession` passes raw → incompatible.
-
-    ### Issue H7-2 · H7 `SessionImpl.contains()` throws on secondary-datasource entity *(RESOLVED — prior session)*
-    *   **Test**: `MultiDataSourceSessionSpec.CRUD operations work on secondary datasource with OSIV`
-    *   **Exception**: `java.lang.IllegalArgumentException: Class '...OsivBook' is not an entity class`
-    *   **Root cause**: In Hibernate 7, `SessionImpl.contains()` calls `assertInstanceOfEntityType()` which **throws** when the class is not registered in that session factory's metamodel. Hibernate 5 returned `false`.
-    *   **Fix**: Wrapped `session.contains(target)` in `canModifyReadWriteState()` with try-catch for `IllegalArgumentException`, returning `false`.
-
-    ### Issue H7-3 · `performMerge` returns wrong object → `NonUniqueObjectException` *(RESOLVED — commit `35d0cdd835`)*
-    *   **Tests affected**: `MultipleOneToOneSpec` and any test with cascaded associations after `save()`
-    *   **Exception**: `org.hibernate.NonUniqueObjectException: A different object with the same identifier value was already associated with the session`
-    *   **Root cause**: In Hibernate 7, `session.merge(entity)` returns a **different Java object** (`merged`) than the input (`target`). `merged` is the session-managed canonical instance. The old code returned `target` (the caller's original), leaving `merged` in the session. When `target` was later cascade-persisted by Hibernate, it found `merged` already in the session with the same id → `NonUniqueObjectException`.
-    *   **Fix**: Changed `performMerge()` to `return merged` instead of `return target`. Id and version are still synced back to `target` for callers who kept a reference to the original. The managed instance is now what `save()` returns.
-    *   **Key insight**: This is a semantic change from Hibernate 5 to 7: callers that cache the result of `save()` now hold the managed instance, not the original detached object. All cascade operations will use the correct session-managed object.
-
-    ### Issue H7-4 · Composite ID `performUpsert` NPE *(RESOLVED — commit `35d0cdd835`)*
-    *   **Tests affected**: `CompositeIdWithDeepOneToManyMappingSpec`, `GlobalConstraintWithCompositeIdSpec`, `CompositeIdWithJoinTableSpec`
-    *   **Root cause**: `performUpsert()` dereferenced `getGormPersistentEntity().identity` (which is `null` for composite-identity entities) before the null-check guard.
-    *   **Fix**: Added null-check for `identity` before dereferencing; composite-ID entities are routed directly to `performMerge()`.
-
-    ### Issue H7-5 · `HibernateGormStaticApiSpec` — `HibernateGormStaticApi` test failures *(RESOLVED — 2026-05-02)*
-    *   **Tests**: `proxy test`, `Test that load returns`, `Test find with example`, `Test findAll with example`
-    *   **Status**: All 68 tests in `HibernateGormStaticApiSpec` now pass (verified from `build/test-results` XML, 2026-05-02T09:02:50Z). The failures listed in the previous `TEST_FAILURES.md` were stale (generated before commits `35d0cdd835` and `a4b6a26c05`).
-    *   **Note on hanging**: This spec can hang when run alongside other specs with `--rerun-tasks`. Run it in isolation or via the `testSelected` task.
-
-    ### Issue H7-6 · Hibernate 7 Strict Parameter Binding and Validation Fixes *(RESOLVED — 2026-05-02)*
-    *   **Fix 1 (Instance API)**: Fixed `HibernateGormInstanceApi.save` to use standard GORM `ValidationException.newInstance()`.
-    *   **Fix 2 (Static API)**: Updated `HibernateGormStaticApi` to handle Hibernate 7's stricter named parameter requirements.
-    *   **Fix 3 (Binding Maps)**: Improved `executeQuery` and `findAll` to bind from both `params` and `args` maps.
-    *   **Fix 4 (Collection Binding)**: Enhanced Collection-based methods to bind by name when size matches.
-    *   **Verification**: `AddToManagedEntitySpec` is now passing. `DataServiceSpec` progress: 14/17 tests passing.
-
-    ### Issue H7-7 · `@Query` named parameter binding gap in Data Services *(RESOLVED — commit `bc94253e9b`)*
-    *   **Tests affected**: `DataServiceSpec` (3 of 17 failing — `test string query`, `test interface projection`, `test join query on attributes with @Query`)
-    *   **Exception**: `HibernateQueryException: No argument for named parameter ':pattern'` / `':name'`
-    *   **Root cause (code generation)**: `AbstractStringQueryImplementer.doImplement()` only passes method arguments as a named-params map when the method has an explicit `args: Map` parameter (legacy convention). For `@Query("...LIKE :pattern") List<String> searchProductType(String pattern)`, no map is passed → Hibernate 7's strict `QueryParameterBindingsImpl.validate()` throws before `list()` is called.
-    *   **Fix 1**: `AbstractStringQueryImplementer.buildNamedParamsFromQuery()` — extracts `:paramName` tokens from the HQL string and builds a `MapExpression` binding each to its corresponding method parameter by name. Called when `findArgsExpression` returns null but the query has named params.
-    *   **Fix 2**: `FindOneStringQueryImplementer.buildQueryReturnStatement()` — when `queryArg` is already an `ArgumentListExpression` (query + named params), spreads its elements before appending the `max:1` pagination map, producing `executeQuery(query, params, [max:1])` instead of the broken `executeQuery([query, params], [max:1])`.
-    *   **Fix 3**: `FindOneInterfaceProjectionStringQueryImplementer.getOrder()` — overrides to `super.getOrder() - 1` so interface-projection `@Query` methods are claimed before `FindOneStringQueryImplementer` (both had the same default order), ensuring the projection wrapper is applied and preventing `GroovyCastException`.
-    *   **Result**: `DataServiceSpec` 17/17 passing.
-
-    ### Issue H7-8 · Native SQL Argument Population (`SqlQuerySpec`) *(RESOLVED)*
-    *   **Tests affected**: `SqlQuerySpec`
-    *   **Exception**: `MissingMethodException` / `ClassCastException`
-    *   **Root cause**: `HibernateGormStaticApi` was missing `populateQueryArguments` which is required for native SQL query execution. Additionally, passing immutable or empty maps to native SQL queries triggered `ClassCastException` when attempting to modify them.
-    *   **Fix**: Implemented `populateQueryArguments` and `intValue` helper methods in `HibernateGormStaticApi`. Fixed the `ClassCastException` by ensuring input maps are copied to a `HashMap`. Corrected method resolution by using the `this.` prefix in dynamic closures.
-    *   **Result**: `SqlQuerySpec` 6/6 passing.
-
-    ### Issue H7-9 · Incompatible `count()` return type *(RESOLVED)*
-    *   **Symptom**: Compilation failure in `HibernateGormStaticApi` (return type `Number` not compatible with `Integer` in Groovy-generated stubs).
-    *   **Fix**: Removed the redundant `count()` override in `HibernateGormStaticApi`. The parent class `GormStaticApi` already provides the correct implementation returning `Integer`.
-
- ### Still-failing specs (grails-data-hibernate7-core, as of 2026-05-04):
- See the Test Registry below. Still-failing specs include: `JoinPerfSpec`, `FirstAndLastMethodSpec` (composite key case).
-
----
-
-## grails-data-simple (COMPLETED)
 ...
-## Next Steps
-*   Fix `last()` for composite keys in `FirstAndLastMethodSpec`.
-*   Fix `PagedResultList` totalCount and serialization issues.
-*   Resolve Multi-Tenancy and Connection Routing test failures.
-*   Proceed to Hibernate 5 and MongoDB modules.
 
-
-# Future Architecture: Core SessionResolver
-To eliminate fragmented session and datastore resolution logic across GORM implementations, we plan to introduce a core `SessionResolver` interface.
-
-## Proposal: Core SessionResolver Abstraction
-The current GORM design lacks a formal `SessionResolver` interface, forcing each implementation to manually handle binding and lookup via `TransactionSynchronizationManager`.
-
-### The Contract (grails-datastore-core)
-```java
-public interface SessionResolver<S extends Session> {
-    S resolve();
-    S resolve(String qualifier);
-    void bind(S session);
-    void unbind();
-}
-```
-
-### Transition Strategy
-1.  **Augment `Datastore`**: Add `getSessionResolver()` to the base `Datastore` interface.
-2.  **Implementation**: Each backend (Hibernate, Mongo, etc.) implements its own `SessionResolver`.
-3.  **Refactor**: Replace all direct `TransactionSynchronizationManager` calls in `GormEnhancer`, `GormStaticApi`, and `GrailsHibernateTransactionManager` with `SessionResolver` calls.
-4.  **Cleanup**: Remove the temporary patches introduced in the Hibernate 7 migration once the central resolver assumes responsibility for session lifecycle and isolation.
-
-
-To ensure compatibility with GORM's multi-tenancy, event system, and session management, implementations should follow these patterns learned during the `grails-data-simple` refactoring:
-
-## 1. Multi-Tenancy & Connection Rebasing
-In `SCHEMA` or `DATABASE` multi-tenancy modes, child datastores created for specific tenants must report that tenant ID as their default connection name.
-*   **Pattern**: Implement an internal `RebasedConnectionSources` that wraps the parent's `ConnectionSources` but overrides `getDefaultConnectionSource()` to return the tenant's `ConnectionSource`.
-*   **Rationale**: GORM features like `Tenants.currentId()` and the `@CurrentTenant` AST transformation rely on `datastore.connectionSources.defaultConnectionSource.name` to identify the active tenant.
-
-## 2. Application Event Publisher & Listeners
-Implementations must correctly handle listener registration in both Spring-managed and standalone environments.
-*   **Pattern**: Use `AbstractDatastore.addApplicationListener(listener)` instead of accessing the publisher directly.
-*   **Rationale**: `AbstractDatastore` provides an internal `DefaultApplicationEventPublisher` for standalone use. Direct access to the publisher may bypass this internal implementation, causing events (like `SessionCreationEvent` or `PreInsertEvent`) to be lost.
-
-## 3. Session Management & Events
-All session lifecycle events must be published to ensure listeners (like `DomainEventListener`) can react.
-*   **Pattern**: Ensure all `connect()` paths eventually call `publishSessionCreationEvent(session)`.
-*   **Rationale**: Without these events, GORM cannot initialize domain events (`beforeInsert`, etc.) or handle auto-timestamping for new sessions.
-
-## 4. Transaction Management
-*   **Pattern**: Initialize `DatastoreTransactionManager` in the constructor and call `transactionManager.setDatastore(this)`.
-*   **Rationale**: Ensures that `@Transactional` methods can correctly bind and manage sessions.
-
-## 5. Scoped GormEnhancer Creation
-Avoid creating redundant `GormEnhancer` instances for every child datastore (e.g., in multi-tenancy).
-*   **Pattern**: Only instantiate `new GormEnhancer(...)` if the connection name is `ConnectionSource.DEFAULT`.
-*   **Rationale**: Redundant enhancers create duplicate static APIs and can cause issues with dynamic finder resolution.
-
-## 6. Tenant-Aware Session Delegation
-For datastores using shared state (like maps or caches), the `Session` must delegate data access to the `Datastore`.
-*   **Pattern**: In `SimpleMapSession`, always use `datastore.getBackingMap()` and `datastore.getIndices()` instead of local fields.
-*   **Rationale**: This allows the `Datastore` to handle the heavy lifting of multi-tenant isolation (e.g., schema-per-tenant maps) while keeping the `Session` logic simple.
-
-# Analysis of HibernateDatastore (Hibernate 7) vs. SimpleMapDatastore
-
-Following the refactoring of `SimpleMapDatastore`, a comparative analysis of `HibernateDatastore` identifies several critical patterns that are missing or inconsistent:
-
-## 1. Multi-Tenancy Connection Name Rebasing
-*   **Hibernate Status**: **COMPLETED**. 
-*   **Analysis**: `HibernateDatastore` now dynamically resolves its `dataSourceName` from the provided connection sources, and `ChildHibernateDatastore` correctly passes this through.
-*   **Impact**: `Tenants.currentId()` now correctly identifies the active tenant in schema/database multi-tenancy.
-
-## 2. Application Event Publisher Inconsistency
-*   **Hibernate Status**: **COMPLETED**.
-*   **Analysis**: `HibernateDatastore` local `eventPublisher` is now synchronized with the parent `applicationEventPublisher`.
-*   **Impact**: Standard GORM listeners now correctly receive Hibernate-specific events.
-
-## 3. Session Creation Events in `withNewSession`
-*   **Hibernate Status**: **COMPLETED**.
-*   **Analysis**: `HibernateDatastore` and child datastores now use `DatastoreUtils` for session creation.
-*   **Impact**: `SessionCreationEvent` is fired correctly, enabling auto-timestamping and domain events in new session blocks.
-
-## 4. Dynamic Finder Resolver Bug
-*   **Hibernate Status**: **COMPLETED**.
-*   **Analysis**: `HibernateGormEnhancer` now correctly passes the `DatastoreResolver` to dynamic finders.
-*   **Impact**: Dynamic finders are now fully multi-datasource and multi-tenant aware.
-
-## 5. Transaction Manager Linkage
-*   **Hibernate Status**: **COMPLETED**.
-*   **Analysis**: `GrailsHibernateTransactionManager` now correctly manages session binding to datastore instances and handles cleanup.
-*   **Impact**: Full isolation in multi-datasource environments.
+## grails-data-hibernate7 (IN PROGRESS)
+*   **Composite Identity Sorting**: Resolved in `HqlListQueryBuilder` by allowing database natural order fallback for composite keys. Marked as `@PendingFeatureIf` in TCK.
+*   **PagedResultList**: Implemented and integrated `PagedResultList` across H7 query infrastructure.
+*   **GrailsHibernateTransactionManager Compilation**: Resolved compilation error by ensuring correct `HibernateSession` constructor usage (passing `null` for `nativeSession` during initialization).
+*   **Connection Routing Regression**: Still investigating `MissingPropertyException: No such property: secondary` in `WhereQueryConnectionRoutingSpec` and `DataServiceConnectionRoutingSpec`.
+    *   **Finding**: The datastore is being correctly set on the transaction manager, but dynamic finders/methods on domain entities seem to be losing their datastore binding.
+    *   **Current State**: Confirmed `GormEnhancer` and `GormRegistry` configurations for multi-datasource support are present, but the domain class metaClass does not seem to reflect the secondary datasource.
+*   **Next Steps**: Isolate why the dynamic finders are not using the secondary datastore. Suspect classloading or registry state issue in the TCK environment.
 
 ---
 
@@ -189,6 +21,8 @@ Following the refactoring of `SimpleMapDatastore`, a comparative analysis of `Hi
 ### Then followed by the test name
 [root]
 CrossLayerMultiDataSourceSpec
+data service delete reflected in domain API count
+domain and service counts match on secondary
 domain save visible through data service
 CrudOperationsSpec
 Test get using a string-based key
@@ -201,40 +35,48 @@ save, get, and find round-trip through Data Service
 DeleteAllSpec
 Test that many objects can be deleted at once using multiple arguments and flushes
 Test that many objects can be deleted using an iterable and flushes
+DomainMultiDataSourceSpec
+count on secondary datasource via domain API
+criteria query on secondary datasource via domain API
+default data not visible on secondary via domain API
+delete from secondary datasource via domain API
+get by ID from secondary datasource via domain API
+list on secondary datasource via domain API
+save to secondary datasource via domain API
+secondary data not visible on default via domain API
 FindByMethodSpec
 Test Using OR Multiple Times In A Dynamic Finder
-FirstAndLastMethodSpec
-Test first and last method with composite key
 GormEnhancerSpec
-Hibernate7Suite
-Spock
-FirstAndLastMethodSpec
-Test first and last method with composite key
+Test count by query
 HibernateDatastoreSchemaMultiTenancySpec
+test schema multi-tenancy
 HibernateGormInstanceApiSpec
 test prepareHqlQuery and executeUpdate via HibernateGormStaticApi
-HibernateGormStaticApiSpec
-list with max parameter returns a HibernatePagedResultList
-HibernatePagedResultListSpec
-test HibernatePagedResultList serialization
-test HibernatePagedResultList totalCount with HQL query
 HqlQueryContextSpec
-ListOrderBySpec
-Test listOrderBy property name method
-PagedResultListSpec
-test PagedResultList totalCount with HQL query
-test PagedResultList with offset and max
+prepare with empty HQL defaults to from Entity
 PagedResultSpecHibernate
+Test that a paged result list is returned from the critera with pagination and sorting params
+Test that a paged result list is returned from the critera with pagination params
+Test that a paged result list is returned from the list() method with pagination and sorting params
+Test that a paged result list is returned from the list() method with pagination params
 PartitionedMultiTenancySpec
 Test findAll with max params
 Test first
 Test last
 Test list with 'max' parameter
 SchemaMultiTenantSpec
+Test a database per tenant multi tenancy
 WhereLazySpec
+test deleteAll with whereLazy
+test updateAll with whereLazy
 WhereQueryConnectionRoutingSpec
+@Where query does not return data from default datasource
+@Where query routes to secondary datasource
+count routes to secondary datasource
 findByName routes to secondary datasource
+list routes to secondary datasource
 WhereQueryMultiDataSourceSpec
+findByName routes to secondary datasource
 
 ---
 

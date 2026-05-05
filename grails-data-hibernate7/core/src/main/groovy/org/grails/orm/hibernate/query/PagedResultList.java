@@ -33,38 +33,38 @@ import org.grails.orm.hibernate.cfg.domainbinding.hibernate.GrailsHibernatePersi
  * @author burt
  * @since 7.0.0
  */
-public class HibernatePagedResultList extends grails.gorm.PagedResultList {
+public class PagedResultList extends grails.gorm.PagedResultList {
 
     private final GrailsHibernatePersistentEntity entity;
     private final int max;
     private final int offset;
 
-    public HibernatePagedResultList(HibernateQuery query) {
+    public PagedResultList(HibernateQuery query) {
         super(query);
         this.entity = query.getEntity();
         this.max = resolveMax(query);
         this.offset = resolveOffset(query);
     }
 
-    public HibernatePagedResultList(Query query) {
+    public PagedResultList(Query query) {
         super(query);
         this.entity = (GrailsHibernatePersistentEntity) query.getEntity();
         this.max = resolveMax(query);
         this.offset = resolveOffset(query);
     }
 
-    public HibernatePagedResultList(GrailsHibernateTemplate template, GrailsHibernatePersistentEntity entity, Query query) {
+    public PagedResultList(GrailsHibernateTemplate template, GrailsHibernatePersistentEntity entity, Query query) {
         super(query);
         this.entity = entity;
         this.max = resolveMax(query);
         this.offset = resolveOffset(query);
     }
 
-    public HibernatePagedResultList(GrailsHibernateTemplate template, PersistentEntity entity, Query query) {
+    public PagedResultList(GrailsHibernateTemplate template, PersistentEntity entity, Query query) {
         this(template, (GrailsHibernatePersistentEntity) entity, query);
     }
 
-    private HibernatePagedResultList(GrailsHibernatePersistentEntity entity, int max, int offset, int totalCount, List resultList) {
+    private PagedResultList(GrailsHibernatePersistentEntity entity, int max, int offset, int totalCount, List resultList) {
         super(null);
         this.entity = entity;
         this.max = max;
@@ -142,7 +142,7 @@ public class HibernatePagedResultList extends grails.gorm.PagedResultList {
         }
 
         private Object readResolve() {
-            return new HibernatePagedResultList(null, max, offset, totalCount, resultList);
+            return new PagedResultList(null, max, offset, totalCount, resultList);
         }
     }
 }
