@@ -23,6 +23,7 @@ plugins {
     id 'org.springframework.boot'
     id 'io.spring.dependency-management'
     id "groovy"
+    id 'org.apache.grails.buildsrc.vulnerability-scan'
 }
 
 apply plugin: 'org.apache.grails.gradle.grails-gsp'
