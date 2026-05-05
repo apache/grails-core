@@ -55,9 +55,6 @@ class HibernateGormEnhancer extends GormEnhancer {
     HibernateGormEnhancer(HibernateDatastore datastore, PlatformTransactionManager transactionManager, ConnectionSourceSettings settings, Map<String, HibernateDatastore> datastoresByConnectionSource) {
         super(datastore, transactionManager, settings)
         this.datastoresByConnectionSource = datastoresByConnectionSource
-        if (datastore instanceof ChildHibernateDatastore) {
-            registry.removeDatastoreFromDiscovery(datastore)
-        }
     }
 
     @Override

@@ -20,6 +20,7 @@ package org.grails.orm.hibernate.query;
 
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
@@ -115,23 +116,7 @@ public class HqlListQueryBuilder {
         }
 
         // If no sort but order is present, default to identity
-        if (sort == null && order != null) {
-            org.grails.datastore.mapping.model.PersistentProperty identity = entity.getIdentity();
-            if (identity != null) {
-                return buildSortPart(identity.getName(), order instanceof String ? (String) order : "asc", isIgnoreCase);
-            }
-            org.grails.datastore.mapping.model.PersistentProperty[] compositeId = entity.getCompositeIdentity();
-            if (compositeId != null && compositeId.length > 0) {
-                List<String> parts = new ArrayList<>();
-                for (org.grails.datastore.mapping.model.PersistentProperty prop : compositeId) {
-                    parts.add(buildSortPart(prop.getName(), order instanceof String ? (String) order : "asc", isIgnoreCase));
-                }
-                return String.join(", ", parts);
-            }
-        }
-
-        // If no sort but order is present, default to identity
-        if (sort == null && order != null) {
+        if (order != null) {
             org.grails.datastore.mapping.model.PersistentProperty identity = entity.getIdentity();
             if (identity != null) {
                 return buildSortPart(identity.getName(), order instanceof String ? (String) order : "asc", isIgnoreCase);

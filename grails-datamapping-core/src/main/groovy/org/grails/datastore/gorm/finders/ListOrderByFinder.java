@@ -88,7 +88,7 @@ public class ListOrderByFinder extends AbstractFinder {
                     final Object order = args.remove("order");
                     if (order != null) {
                         if (order.toString().equalsIgnoreCase("desc")) {
-                            // In SimpleMap, we don't have getOrders().clear(), so we just add new ones which override
+                            q.clearOrders();
                             for (String propertyName : propertyNames) {
                                 q.order(Query.Order.desc(NameUtils.decapitalize(propertyName)));
                             }
