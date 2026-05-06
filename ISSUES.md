@@ -15,7 +15,7 @@
 | `grails-datastore-core/web` | ✅ | |
 | `grails-data-simple` | ✅ | |
 | `grails-data-hibernate7` (dependent modules) | ✅ | Passed previously |
-| `grails-data-mongodb-core` | 🔧 Compilation fix applied | Missing `ConnectionSource` import in `MongoStaticApi.groovy` |
+| `grails-data-mongodb-core` | 🔧 In progress — 34/558 failing (was 54) | See open issues below |
 | `grails-data-mongodb` + siblings | 🔲 Not yet run | Require live MongoDB |
 
 **Run command** (quarterly batches — full suite hangs):
@@ -64,6 +64,12 @@ Both must fire `PreQueryEvent` so `MultiTenantEventListener` can enable Hibernat
 | `GormEnhancerAllQualifiersSpec` (15 tests) | GormEnhancer NPE null-guard + entity secondary-datasource registration |
 | `GormRegistryScalabilitySpec` (parallel) | Assertions scoped to entity keys — not total map size |
 | `MongoStaticApi.groovy` | Added missing `ConnectionSource` import (compilation fix) |
+| `GormStaticApi.deleteAll()` | Uses `DetachedCriteria` instead of `Query.deleteAll()` (MongoQuery doesn't implement it) |
+| `GormStaticApi.eachTenant()` | Implemented via `GormRegistry.getDatastore(DEFAULT)` → `Tenants.eachTenant(root, callable)` |
+| `GormStaticApi.withId()` | Uses root (DEFAULT) datastore for `Tenants.withId()` — child datastores lack populated `datastoresByConnectionSource` |
+| `GormEnhancer.findDatastore()` priority 4 | DISCRIMINATOR/SCHEMA modes no longer attempt tenant resolution (only DATABASE mode does) |
+| `GormEnhancer.findDatastore()` priority 2 | Tries `getDatastoreForConnection()` before `getDatastoreForTenantId()` — fixes runtime-added connection sources |
+| `MongoStaticApi.createStaticApi()` | Override added so `forQualifier()` returns `MongoStaticApi` (not base `GormStaticApi`) |
 
 ### SCHEMA Multi-Tenancy Fix Detail
 `HibernateDatastore.getCurrentSession()` overridden with priority lookup:
@@ -77,23 +83,65 @@ Removed the `if (this instanceof ChildHibernateDatastore) return withNewSession(
 
 ## Open Issues
 
-### MongoDB — Known Failing Specs (from Q3 run, need live MongoDB)
+### MongoDB — grails-data-mongodb-core: 34 failures remaining (was 54)
 
-These specs need a live MongoDB to run. Expected failure areas:
+Last run: 2026-05-05. 551 tests, 34 failures.
 
-| Area | Failing Specs |
-|------|--------------|
-| Dirty checking | `DirtyCheckingSpec` (5 tests) |
-| Finders | `FindByExampleSpec` (2), `IsNullSpec` (2) |
-| First/Last | `FirstAndLastMethodSpec` (3) |
-| Paged result | `PagedResultSpec` (3) |
-| Validation | `ValidationSpec` (1) |
-| Where/Lazy | `WhereLazySpec` (2) |
-| Arrays | `BasicArraySpec` (3) |
-| Embedded | `EmbeddedCollectionAndInheritanceSpec`, `EmbeddedCollectionWithOneToOneSpec`, `EmbeddedUnsetSpec`, `EmbeddedWithNonEmbeddedCollectionsSpec` |
-| GeoJSON | `GeoJSONTypePersistenceSpec` (6) |
-| Multi-tenancy | `MongoConnectionSourcesSpec`, `MultiTenancySpec`, `MultipleDataSourceConnectionsSpec`, `SchemaBasedMultiTenancySpec`, `SingleTenancySpec`, `MongoStaticApiMultiTenancySpec` |
-| Other | `DisjunctionQuerySpec`, `NullifyPropertySpec`, `NullsAreNotStoredSpec`, `SimpleHasManySpec`, `MultipleConnectionsSpec` |
+#### To Fix (one by one)
+
+| Count | Spec | Root Cause | Status |
+|-------|------|------------|--------|
+| 12 | `PagedResultSpec` (TCK) | `list(max:N)` returns `MongoResultList` not `PagedResultList` | 🔲 |
+| 12 | `FirstAndLastMethodSpec` (TCK) | `last()` returns wrong record (ordering issue) | 🔲 |
+| 6 | `GeoJSONTypePersistenceSpec` | GeoJSON persistence — investigate individually | 🔲 |
+| 3 | `BasicArraySpec` | Array persistence — investigate individually | 🔲 |
+| 2 | `NullsAreNotStoredSpec` | Null handling — investigate individually | 🔲 |
+| 2 | `IsNullSpec` | Null query — investigate individually | 🔲 |
+| 2 | `FindByExampleSpec` | Example-based finders — investigate individually | 🔲 |
+| 1 | `ValidationSpec` | Investigate individually | 🔲 |
+| 1 | `SimpleHasManySpec` | Investigate individually | 🔲 |
+| 1 | `NullifyPropertySpec` | Investigate individually | 🔲 |
+| 1 | `DisjunctionQuerySpec` | Investigate individually | 🔲 |
+| 1 | `DirtyCheckUpdateSpec` | Investigate individually | 🔲 |
+| 1 | `BeforeUpdatePropertyPersistenceSpec` | Investigate individually | 🔲 |
+| 1 | `MongoDynamicPropertyOnEmbeddedSpec` | Embedded — investigate individually | 🔲 |
+| 1 | `InheritanceWithSingleEndedAssociationSpec` | Inheritance — investigate individually | 🔲 |
+| 1 | `EmbeddedWithNonEmbeddedCollectionsSpec` | Embedded — investigate individually | 🔲 |
+| 1 | `EmbeddedUnsetSpec` | Embedded — investigate individually | 🔲 |
+| 1 | `EmbeddedCollectionWithOneToOneSpec` | Embedded — investigate individually | 🔲 |
+| 1 | `EmbeddedCollectionAndInheritanceSpec` | Embedded — investigate individually | 🔲 |
+
+#### Skip (not real MongoDB failures)
+
+| Count | Spec | Reason |
+|-------|------|--------|
+| 6 | `MultipleDataSourceSpec` | Uses `SimpleMapDatastore` — not MongoDB-specific; failures are parallel test pollution noise |
+
+#### Already fixed (54 → 34)
+- `deleteAll()`: `DetachedCriteria` approach (was: `MongoQuery` lacks `Query.deleteAll()`)
+- `eachTenant()`: implemented (was: `UnsupportedOperationException`)
+- `SingleTenancySpec`, `MongoConnectionSourcesSpec`: DATABASE mode `withId` NPE resolved
+- `MongoStaticApiMultiTenancySpec`, `MultiTenancySpec`: DISCRIMINATOR mode `TenantNotFoundException` fixed
+- `MultipleConnectionsSpec`: `createStaticApi` override in `MongoStaticApi` (forQualifier now returns MongoStaticApi)
+- `MultipleDataSourceConnectionsSpec`: `getDatastoreForConnection` tried before `getDatastoreForTenantId` in priority 2
+
+---
+
+### H7 Example Tests — grails-test-examples-hibernate7-*
+
+Status to be determined. Modules:
+- `grails-test-examples-hibernate7-grails-data-service`
+- `grails-test-examples-hibernate7-grails-data-service-multi-datasource`
+- `grails-test-examples-hibernate7-grails-database-per-tenant`
+- `grails-test-examples-hibernate7-grails-hibernate`
+- `grails-test-examples-hibernate7-grails-hibernate-groovy-proxy`
+- `grails-test-examples-hibernate7-grails-multiple-datasources`
+- `grails-test-examples-hibernate7-grails-multitenant-multi-datasource`
+- `grails-test-examples-hibernate7-grails-partitioned-multi-tenancy`
+- `grails-test-examples-hibernate7-grails-schema-per-tenant`
+- `grails-test-examples-hibernate7-issue450`
+- `grails-test-examples-hibernate7-spring-boot-hibernate`
+- `grails-test-examples-hibernate7-standalone-hibernate`
 
 ---
 

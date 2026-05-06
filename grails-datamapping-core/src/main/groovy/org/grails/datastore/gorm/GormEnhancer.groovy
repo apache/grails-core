@@ -43,6 +43,7 @@ import org.grails.datastore.mapping.core.connections.ConnectionSourcesSupport
 import org.grails.datastore.mapping.model.MappingContext
 import org.grails.datastore.mapping.model.PersistentEntity
 import org.grails.datastore.mapping.multitenancy.MultiTenantCapableDatastore
+import org.grails.datastore.mapping.multitenancy.MultiTenancySettings
 import org.grails.datastore.mapping.multitenancy.exceptions.TenantNotFoundException
 import grails.gorm.multitenancy.Tenants
 import org.grails.datastore.mapping.reflect.MetaClassUtils
@@ -190,13 +191,33 @@ class GormEnhancer implements Closeable {
                 registry.registerDatastore(qualifier, dsToRegister)
                 registry.registerEntityDatastore(className, qualifier, dsToRegister)
             }
-            
-            registry.registerEntityDatastore(className, ConnectionSource.DEFAULT, datastore)
+
+            // Determine what to register under DEFAULT.
+            // If the entity declares explicit qualifiers that do NOT include DEFAULT (e.g. connections "test1","test2"),
+            // then the first declared qualifier is the entity's primary connection — register its datastore under DEFAULT
+            // so that GormEnhancer.findDatastore(entity, DEFAULT) resolves the correct sub-datastore.
+            List<String> entityQualifiers = ConnectionSourcesSupport.getConnectionSourceNames(entity)
+            boolean entityDeclaresDefault = entityQualifiers.contains(ConnectionSource.DEFAULT) ||
+                    entityQualifiers.contains(ConnectionSource.ALL)
+            if (!entityDeclaresDefault && !entityQualifiers.isEmpty()) {
+                String primaryQualifier = entityQualifiers.get(0)
+                Datastore primaryDs = datastore
+                if (datastore instanceof org.grails.datastore.mapping.core.connections.MultipleConnectionSourceCapableDatastore) {
+                    try {
+                        primaryDs = ((org.grails.datastore.mapping.core.connections.MultipleConnectionSourceCapableDatastore)datastore).getDatastoreForConnection(primaryQualifier)
+                    } catch (Throwable e) {
+                        // fall back to root datastore
+                    }
+                }
+                registry.registerEntityDatastore(className, ConnectionSource.DEFAULT, primaryDs)
+            } else {
+                registry.registerEntityDatastore(className, ConnectionSource.DEFAULT, datastore)
+            }
 
             // Also register entity-specific non-default qualifiers (e.g. declared via `datasource 'secondary'`)
             // so that GormRegistry.getDatastore(className, qualifier) resolves them even when those
             // qualifiers are not in the enhancer's own connectionSourceNames list.
-            for (String entityQualifier in ConnectionSourcesSupport.getConnectionSourceNames(entity)) {
+            for (String entityQualifier in entityQualifiers) {
                 if (!ConnectionSource.DEFAULT.equals(entityQualifier) && !ConnectionSource.ALL.equals(entityQualifier)) {
                     Datastore dsForQualifier = datastore
                     if (datastore instanceof org.grails.datastore.mapping.core.connections.MultipleConnectionSourceCapableDatastore) {
@@ -453,13 +474,25 @@ class GormEnhancer implements Closeable {
             Datastore ds = registry.getDatastore(className, qualifier)
             if (ds != null) return ds
             
-            // Fallback for multi-tenancy: Try to get the datastore from the default datastore if it is MultiTenantCapable
+            // Fallback: Try to get the datastore from the default datastore via connection name or tenant ID
             Datastore defaultDs = registry.getDatastore(className, ConnectionSource.DEFAULT)
+            // First try multi-datasource lookup (getDatastoreForConnection handles runtime-added sources)
+            if (defaultDs instanceof org.grails.datastore.mapping.core.connections.MultipleConnectionSourceCapableDatastore) {
+                try {
+                    RESOLVING_DATASTORE.set(depth + 1)
+                    ds = ((org.grails.datastore.mapping.core.connections.MultipleConnectionSourceCapableDatastore)defaultDs).getDatastoreForConnection(qualifier)
+                    if (ds != null && ds != defaultDs) return ds
+                } catch (Throwable e) {
+                    // ignore — connection name not found, fall through to tenant lookup
+                } finally {
+                    RESOLVING_DATASTORE.set(depth)
+                }
+            }
             if (defaultDs instanceof org.grails.datastore.mapping.multitenancy.MultiTenantCapableDatastore) {
                 try {
                     RESOLVING_DATASTORE.set(depth + 1)
                     ds = ((org.grails.datastore.mapping.multitenancy.MultiTenantCapableDatastore)defaultDs).getDatastoreForTenantId(qualifier)
-                    if (ds != null) return ds
+                    if (ds != null && ds != defaultDs) return ds
                 } catch (Throwable e) {
                     // ignore
                 } finally {
@@ -490,9 +523,13 @@ class GormEnhancer implements Closeable {
         Datastore defaultDs = registry.getDatastore(className, ConnectionSource.DEFAULT)
         if (defaultDs instanceof MultiTenantCapableDatastore) {
             MultiTenantCapableDatastore multiTenantCapableDatastore = (MultiTenantCapableDatastore) defaultDs
+            // Only DATABASE mode requires a tenant ID to select a different datastore.
+            // DISCRIMINATOR and SCHEMA modes share the same connection and should use defaultDs.
+            boolean isDatabaseMode = multiTenantCapableDatastore.getMultiTenancyMode() ==
+                    MultiTenancySettings.MultiTenancyMode.DATABASE
             try {
                 Serializable currentTenantId = CurrentTenantHolder.get()
-                if (currentTenantId == null && entity != null && MultiTenant.isAssignableFrom(entity)) {
+                if (currentTenantId == null && entity != null && MultiTenant.isAssignableFrom(entity) && isDatabaseMode) {
                     currentTenantId = multiTenantCapableDatastore.tenantResolver.resolveTenantIdentifier()
                 }
 
@@ -509,7 +546,7 @@ class GormEnhancer implements Closeable {
                     }
                 }
             } catch (Throwable e) {
-                if (entity != null && MultiTenant.isAssignableFrom(entity) && e instanceof TenantNotFoundException) {
+                if (entity != null && MultiTenant.isAssignableFrom(entity) && isDatabaseMode && e instanceof TenantNotFoundException) {
                     throw e
                 }
             }

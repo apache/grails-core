@@ -47,6 +47,7 @@ import org.springframework.transaction.PlatformTransactionManager
 import org.grails.datastore.mapping.transactions.TransactionCapableDatastore
 import org.grails.datastore.mapping.core.DatastoreUtils
 import grails.gorm.multitenancy.Tenants
+import grails.gorm.DetachedCriteria
 import org.grails.datastore.mapping.multitenancy.MultiTenantCapableDatastore
 import org.grails.datastore.mapping.multitenancy.exceptions.TenantNotFoundException
 
@@ -406,7 +407,7 @@ class GormStaticApi<D> extends AbstractGormApi<D> implements GormAllOperations<D
     @Override
     Number deleteAll() {
         execute({ Session session ->
-            session.createQuery(persistentClass).deleteAll()
+            session.deleteAll(new DetachedCriteria(persistentClass))
         } as SessionCallback<Number>)
     }
 
@@ -777,7 +778,12 @@ class GormStaticApi<D> extends AbstractGormApi<D> implements GormAllOperations<D
 
     @Override
     grails.gorm.api.GormAllOperations<D> eachTenant(Closure callable) {
-        throw new UnsupportedOperationException("eachTenant not supported")
+        Datastore ds = GormRegistry.instance.getDatastore(persistentClass.name, ConnectionSource.DEFAULT)
+        if (ds instanceof MultiTenantCapableDatastore) {
+            Tenants.eachTenant((MultiTenantCapableDatastore) ds, callable)
+            return this
+        }
+        throw new UnsupportedOperationException("eachTenant not supported for datastore: ${ds?.class?.simpleName}")
     }
 
     def <T1> T1 withTenantTransaction(Serializable tenantId, Closure<T1> callable) {
@@ -789,17 +795,18 @@ class GormStaticApi<D> extends AbstractGormApi<D> implements GormAllOperations<D
     }
 
     def <T1> T1 withId(Serializable tenantId, Closure<T1> callable) {
-        DatastoreResolver resolver = new DatastoreResolver() {
-            @Override Datastore resolve() { GormEnhancer.findDatastore(persistentClass, tenantId.toString()) }
+        // For multi-tenancy, always resolve via the DEFAULT (root/parent) datastore.
+        // Resolving the tenant-specific datastore and then calling withNewSession() on it
+        // would fail because child datastores have empty datastoresByConnectionSource maps.
+        Datastore defaultDs = GormRegistry.instance.getDatastore(persistentClass.name, ConnectionSource.DEFAULT)
+        if (defaultDs instanceof MultiTenantCapableDatastore) {
+            return (T1) Tenants.withId((MultiTenantCapableDatastore) defaultDs, tenantId, callable)
         }
-        Datastore tenantDatastore = resolver.resolve()
-        if (tenantDatastore instanceof MultiTenantCapableDatastore) {
-            return (T1) Tenants.withId((MultiTenantCapableDatastore)tenantDatastore, tenantId, callable)
-        } else {
-            return DatastoreUtils.execute(tenantDatastore, (Session session) -> {
-                return (T1) callable.call(session)
-            } as SessionCallback<T1>)
-        }
+        // Non-multi-tenant path: resolve the specific datastore for this connection/tenant key
+        Datastore tenantDatastore = GormEnhancer.findDatastore(persistentClass, tenantId.toString())
+        return DatastoreUtils.execute(tenantDatastore, (Session session) -> {
+            return (T1) callable.call(session)
+        } as SessionCallback<T1>)
     }
 
     def <T1> T1 withoutId(Closure<T1> callable) {
