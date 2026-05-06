@@ -55,6 +55,7 @@ import org.grails.datastore.mapping.mongo.MongoCodecSession
 import org.grails.datastore.mapping.mongo.MongoDatastore
 import org.grails.datastore.mapping.mongo.query.MongoQuery
 import org.grails.datastore.mapping.multitenancy.MultiTenancySettings
+import org.grails.datastore.mapping.core.connections.ConnectionSource
 
 /**
  * MongoDB static API implementation
