@@ -64,7 +64,7 @@ jobs:
         if: always()
         run: |
           echo "## 🔎 Code Style Report - Core Projects" >> $GITHUB_STEP_SUMMARY
-          for file in build/reports/codestyle/spotless-violations.txt build/reports/codestyle/checkstyle/*.xml build/reports/codestyle/codenarc/*.xml; do
+          for file in build/reports/codestyle/checkstyle/*.xml build/reports/codestyle/codenarc/*.xml; do
             [ -f "$file" ] || continue
             if grep -q "<error " "$file" || grep -q "<Violation " "$file"; then
               echo "### ❌ $(basename $file .xml)" >> $GITHUB_STEP_SUMMARY

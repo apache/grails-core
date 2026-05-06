@@ -28,7 +28,6 @@ import groovy.transform.CompileStatic
 import groovy.xml.XmlSlurper
 import groovy.xml.slurpersupport.GPathResult
 
-import com.diffplug.gradle.spotless.SpotlessTask
 import org.gradle.api.Plugin
 import org.gradle.api.Project
 import org.gradle.api.file.Directory
@@ -42,8 +41,6 @@ import org.gradle.api.plugins.quality.Pmd
 import org.gradle.api.plugins.quality.PmdExtension
 import org.gradle.api.plugins.quality.PmdPlugin
 
-import com.diffplug.gradle.spotless.SpotlessExtension
-import com.diffplug.gradle.spotless.SpotlessPlugin
 import com.github.spotbugs.snom.Confidence
 import com.github.spotbugs.snom.Effort
 import com.github.spotbugs.snom.SpotBugsExtension
@@ -64,10 +61,6 @@ class GrailsCodeStylePlugin implements Plugin<Project> {
     static String CHECKSTYLE_ENABLED_PROPERTY = 'grails.codestyle.enabled.checkstyle'
     static String CHECKSTYLE_CONFIG_FILE_NAME = 'checkstyle.xml'
     static String CHECKSTYLE_SUPPRESSION_CONFIG_FILE_NAME = 'checkstyle-suppressions.xml'
-
-    static String SPOTLESS_DIR_PROPERTY = 'grails.codestyle.dir.spotless'
-    static String SPOTLESS_ENABLED_PROPERTY = 'grails.codestyle.enabled.spotless'
-    static String SPOTLESS_GRECLIPSE_CONFIG_FILE_NAME = 'greclipse.properties'
 
     static String PMD_DIR_PROPERTY = 'grails.codestyle.dir.pmd'
     static String PMD_ENABLED_PROPERTY = 'grails.codestyle.enabled.pmd'
@@ -516,7 +509,6 @@ class GrailsCodeStylePlugin implements Plugin<Project> {
 
     private static void configureCodeStyle(Project project) {
         configureCheckstyle(project)
-        configureSpotless(project)
         configureCodenarc(project)
         configurePmd(project)
         configureSpotbugs(project)
@@ -533,9 +525,6 @@ class GrailsCodeStylePlugin implements Plugin<Project> {
             it.dependsOn(project.tasks.withType(Checkstyle).matching { t ->
                 checkTests || (!t.name.toLowerCase().contains('test') && !t.name.toLowerCase().contains('integrationtest'))
             })
-            if (GradleUtils.lookupProperty(project, SPOTLESS_ENABLED_PROPERTY, false)) {
-                it.dependsOn('spotlessCheck')
-            }
             if (GradleUtils.lookupProperty(project, PMD_ENABLED_PROPERTY, false)) {
                 it.dependsOn(project.tasks.withType(Pmd).matching { t ->
                     checkTests || (!t.name.toLowerCase().contains('test') && !t.name.toLowerCase().contains('integrationtest'))
@@ -580,105 +569,6 @@ class GrailsCodeStylePlugin implements Plugin<Project> {
             project.tasks.matching { it.name == 'checkstyleTest' }.configureEach {
                 it.enabled = false // Do not check test sources at this time
             }
-        }
-    }
-
-    @CompileDynamic
-    static void configureSpotless(Project project) {
-        if (!GradleUtils.lookupProperty(project, SPOTLESS_ENABLED_PROPERTY, false)) {
-            return
-        }
-
-        project.extensions.getByType(GrailsCodeStyleExtension).spotlessDirectory.set(project.provider {
-            def directory = project.hasProperty(SPOTLESS_DIR_PROPERTY) ?
-                    project.rootProject.layout.projectDirectory.dir(project.property(SPOTLESS_DIR_PROPERTY) as String) :
-                    project.rootProject.layout.buildDirectory.get().dir('codestyle').dir('spotless')
-
-            def toCreate = directory.asFile.toPath()
-            Files.createDirectories(toCreate)
-
-            createOrLoad(
-                    toCreate.resolve(SPOTLESS_GRECLIPSE_CONFIG_FILE_NAME),
-                    "${BASE_RESOURCE_PATH}/spotless/${SPOTLESS_GRECLIPSE_CONFIG_FILE_NAME}",
-                    project
-            )
-
-            directory
-        })
-
-        project.pluginManager.apply(SpotlessPlugin)
-
-        boolean applyToTests = GradleUtils.lookupProperty(project, TEST_STYLING_PROPERTY, false)
-
-        project.extensions.configure(SpotlessExtension) { SpotlessExtension spotless ->
-            def gce = project.extensions.getByType(GrailsCodeStyleExtension)
-            spotless.java { javaFmt ->
-                javaFmt.palantirJavaFormat()
-
-                // Import management (replaces Checkstyle ImportOrderCheck, AvoidStarImport,
-                // RedundantImport, UnusedImports)
-                javaFmt.importOrder('java|javax',
-                                     'groovy|org.apache.groovy|org.codehaus.groovy',
-                                     'jakarta',
-                                     '',
-                                     'io.spring|org.springframework',
-                                     'grails|org.apache.grails|org.grails',
-                                     '\\#')
-                javaFmt.removeUnusedImports()
-
-                // TODO: Switch to expandWildcardImports() once it no longer triggers afterEvaluate.
-                //  For now, forbidWildcardImports() reports violations without auto-fixing; wildcard
-                //  imports must be cleaned up manually.
-                javaFmt.forbidWildcardImports()
-
-                // Whitespace (replaces Checkstyle NewlineAtEndOfFile, FileTabCharacter)
-                javaFmt.trimTrailingWhitespace()
-                javaFmt.endWithNewline()
-                javaFmt.leadingTabsToSpaces(4)
-
-                List<String> javaIncludes = ['src/main/**/*.java']
-                if (applyToTests) {
-                    javaIncludes.add('src/test/**/*.java')
-                    javaIncludes.add('src/integrationTest/**/*.java')
-                }
-                javaFmt.target(project.fileTree(project.projectDir) { ft ->
-                    ft.include(javaIncludes)
-                })
-            }
-
-            // TODO: Groovy formatting is so close, but doesn't fully work
-//            spotless.groovy { groovyFmt ->
-//                // Groovy-Eclipse formatter for auto-fixing CodeNarc spacing/indentation violations.
-//                groovyFmt.greclipse()
-//                        .configFile(gce.spotlessDirectory.file(SPOTLESS_GRECLIPSE_CONFIG_FILE_NAME))
-//
-//                // Import management (matches CodeNarc MisorderedStaticImports, NoWildcardImports,
-//                // DuplicateImport, UnusedImport, UnnecessaryGroovyImport)
-//                groovyFmt.importOrder(DEFAULT_IMPORT_ORDER as String[])
-//
-//                // Remove unnecessary semicolons (matches CodeNarc UnnecessarySemicolon)
-//                groovyFmt.removeSemicolons()
-//
-//                // Whitespace (matches CodeNarc NoTabCharacter, FileEndsWithoutNewline)
-//                groovyFmt.trimTrailingWhitespace()
-//                groovyFmt.endWithNewline()
-//
-//                if (applyToTests) {
-//                    groovyFmt.excludeJava()
-//                } else {
-//                    // Only apply to main sources (excludeJava() cannot be combined with target())
-//                    groovyFmt.target(project.fileTree(project.projectDir) { ft ->
-//                        ft.include('src/main/**/*.groovy')
-//                    })
-//                }
-//            }
-        }
-
-        project.tasks.withType(SpotlessTask).configureEach {
-            it.group = 'verification'
-            // it.outputs.cacheIf { false }
-            it.notCompatibleWithConfigurationCache("Spotless greclipse classloader issues")
-            it.onlyIf { !project.hasProperty('skipCodeStyle') }
         }
     }
 

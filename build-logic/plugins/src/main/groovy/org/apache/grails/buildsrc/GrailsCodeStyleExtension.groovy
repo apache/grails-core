@@ -37,12 +37,6 @@ class GrailsCodeStyleExtension {
     final DirectoryProperty checkstyleDirectory
 
     /**
-     * Defaults to project.rootProject.buildDir/codestyle/spotless.
-     * Directory for Spotless configuration files (e.g. greclipse.properties).
-     */
-    final DirectoryProperty spotlessDirectory
-
-    /**
      * Defaults to project.rootProject.buildDir/codestyle/pmd.
      * Directory for PMD configuration files (e.g. pmd.xml).
      */
@@ -64,9 +58,6 @@ class GrailsCodeStyleExtension {
     GrailsCodeStyleExtension(ObjectFactory objects, Project project) {
         checkstyleDirectory = objects.directoryProperty().convention(
                 project.rootProject.layout.buildDirectory.dir('codestyle/checkstyle')
-        )
-        spotlessDirectory = objects.directoryProperty().convention(
-                project.rootProject.layout.buildDirectory.dir('codestyle/spotless')
         )
         pmdDirectory = objects.directoryProperty().convention(
                 project.rootProject.layout.buildDirectory.dir('codestyle/pmd')

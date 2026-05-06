@@ -68,7 +68,7 @@
         <module name="NoWhitespaceBefore"/>
         <module name="NoWhitespaceBeforeCaseDefaultColon"/>
         <module name="OperatorWrap">
-            <property name="option" value="eol"/> <!-- TODO: this doesn't match spotless so we can't use these together -->
+            <property name="option" value="eol"/>
         </module>
         <module name="ParenPad"/>
         <module name="SeparatorWrap">
