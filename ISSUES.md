@@ -129,19 +129,22 @@ Last run: 2026-05-05. 551 tests, 34 failures.
 
 ### H7 Example Tests — grails-test-examples-hibernate7-*
 
-Status to be determined. Modules:
-- `grails-test-examples-hibernate7-grails-data-service`
-- `grails-test-examples-hibernate7-grails-data-service-multi-datasource`
-- `grails-test-examples-hibernate7-grails-database-per-tenant`
-- `grails-test-examples-hibernate7-grails-hibernate`
-- `grails-test-examples-hibernate7-grails-hibernate-groovy-proxy`
-- `grails-test-examples-hibernate7-grails-multiple-datasources`
-- `grails-test-examples-hibernate7-grails-multitenant-multi-datasource`
-- `grails-test-examples-hibernate7-grails-partitioned-multi-tenancy`
-- `grails-test-examples-hibernate7-grails-schema-per-tenant`
-- `grails-test-examples-hibernate7-issue450`
-- `grails-test-examples-hibernate7-spring-boot-hibernate`
-- `grails-test-examples-hibernate7-standalone-hibernate`
+All 12 H7 example modules pass ✅
+
+| Module | Status | Notes |
+|--------|--------|-------|
+| `grails-test-examples-hibernate7-grails-data-service` | ✅ PASS | |
+| `grails-test-examples-hibernate7-grails-data-service-multi-datasource` | ✅ PASS | |
+| `grails-test-examples-hibernate7-grails-database-per-tenant` | ✅ PASS | Fixed `GrailsHibernateTemplate.executeWithNewSession()`: datasource shared across session factories in DATABASE multi-tenancy — must unbind/rebind even when `sessionHolder == null`. Removed non-functional `@Rollback("moreBooks")`; added explicit cleanup. |
+| `grails-test-examples-hibernate7-grails-hibernate` | ✅ PASS | Fixed `TransactionalTransform.weaveSetTargetDatastoreBody()`: guard against assigning `$transactionManager` when `ServiceTransformation` already provided a getter without a backing field. |
+| `grails-test-examples-hibernate7-grails-hibernate-groovy-proxy` | ✅ PASS | |
+| `grails-test-examples-hibernate7-grails-multiple-datasources` | ✅ PASS | |
+| `grails-test-examples-hibernate7-grails-multitenant-multi-datasource` | ✅ PASS | |
+| `grails-test-examples-hibernate7-grails-partitioned-multi-tenancy` | ✅ PASS | |
+| `grails-test-examples-hibernate7-grails-schema-per-tenant` | ✅ PASS | |
+| `grails-test-examples-hibernate7-issue450` | ✅ PASS | |
+| `grails-test-examples-hibernate7-spring-boot-hibernate` | ✅ PASS | |
+| `grails-test-examples-hibernate7-standalone-hibernate` | ✅ PASS | |
 
 ---
 
