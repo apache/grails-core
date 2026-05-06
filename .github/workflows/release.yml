@@ -52,6 +52,12 @@ jobs:
         run: echo "VERSION=${TAG#v}" >> "$GITHUB_ENV"
       - name: "🌐 Output Agent IP" # in the event RAO blocks this agent, this can be used to debug it
         run: curl -s https://api.ipify.org
+      - name: "🔬 Check Rate Limit"
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          current_limit=$(gh api rate_limit --jq '.resources.graphql')
+          echo "Current Rate Limit: $current_limit"
       - name: "📥 Checkout repository"
         uses: actions/checkout@v6
         with:
@@ -77,7 +83,7 @@ jobs:
       - name: "🐘 Setup Gradle"
         uses: gradle/actions/setup-gradle@0723195856401067f7a2779048b490ace7a47d7c # v5.0.2
         with:
-          develocity-access-key: ${{ secrets.GRAILS_DEVELOCITY_ACCESS_KEY }}
+          develocity-access-key: ${{ secrets.DEVELOCITY_ACCESS_KEY }}
       - name: "⚙️ Run pre-release"
         uses: apache/grails-github-actions/pre-release@asf
         env:
@@ -238,6 +244,12 @@ jobs:
     steps:
       - name: "📝 Establish release version"
         run: echo "VERSION=${TAG#v}" >> "$GITHUB_ENV"
+      - name: "🔬 Check Rate Limit"
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          current_limit=$(gh api rate_limit --jq '.resources.graphql')
+          echo "Current Rate Limit: $current_limit"
       - name: "📥 Checkout Grails Core repository"
         uses: actions/checkout@v6
         with:
@@ -357,6 +369,12 @@ jobs:
     steps:
       - name: "📝 Establish release version"
         run: echo "VERSION=${TAG#v}" >> "$GITHUB_ENV"
+      - name: "🔬 Check Rate Limit"
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          current_limit=$(gh api rate_limit --jq '.resources.graphql')
+          echo "Current Rate Limit: $current_limit"
       - name: "🛠️ Install tools"
         run: sudo apt-get install -y subversion subversion-tools tree gettext-base
       - name: "👀 Ensure dev/${{ env.SVN_PROJECT }} folder exists"
@@ -478,6 +496,12 @@ jobs:
     steps:
       - name: "📝 Establish release version"
         run: echo "VERSION=${TAG#v}" >> "$GITHUB_ENV"
+      - name: "🔬 Check Rate Limit"
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          current_limit=$(gh api rate_limit --jq '.resources.graphql')
+          echo "Current Rate Limit: $current_limit"
       - name: "📥 Checkout repository"
         uses: actions/checkout@v6
         with:
@@ -547,6 +571,12 @@ jobs:
     steps:
       - name: "📝 Establish release version"
         run: echo "VERSION=${TAG#v}" >> "$GITHUB_ENV"
+      - name: "🔬 Check Rate Limit"
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          current_limit=$(gh api rate_limit --jq '.resources.graphql')
+          echo "Current Rate Limit: $current_limit"
       - name: "⚙️ Maximize build space"
         run: |
           echo "-- Dotnet"
@@ -576,7 +606,7 @@ jobs:
       - name: "🐘 Setup Gradle"
         uses: gradle/actions/setup-gradle@0723195856401067f7a2779048b490ace7a47d7c # v5.0.2
         with:
-          develocity-access-key: ${{ secrets.GRAILS_DEVELOCITY_ACCESS_KEY }}
+          develocity-access-key: ${{ secrets.DEVELOCITY_ACCESS_KEY }}
       - name: "📖 Generate Documentation"
         run: ./gradlew grails-doc:build -PgithubBranch=${TARGET_BRANCH}
       - name: "🚀 Publish to GitHub Pages"
@@ -596,6 +626,12 @@ jobs:
     steps:
       - name: "📝 Establish release version"
         run: echo "VERSION=${TAG#v}" >> "$GITHUB_ENV"
+      - name: "🔬 Check Rate Limit"
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          current_limit=$(gh api rate_limit --jq '.resources.graphql')
+          echo "Current Rate Limit: $current_limit"
       - name: "📥 Checkout repository"
         uses: actions/checkout@v6
         with:
@@ -608,7 +644,7 @@ jobs:
       - name: "🐘 Setup Gradle"
         uses: gradle/actions/setup-gradle@0723195856401067f7a2779048b490ace7a47d7c # v5.0.2
         with:
-          develocity-access-key: ${{ secrets.GRAILS_DEVELOCITY_ACCESS_KEY }}
+          develocity-access-key: ${{ secrets.DEVELOCITY_ACCESS_KEY }}
       - name: "🚀 Grails SDK Minor Release"
         if: contains(env.VERSION, 'M') || contains(env.VERSION, 'RC')
         working-directory: grails-forge
@@ -636,6 +672,12 @@ jobs:
     steps:
       - name: "📝 Establish release version"
         run: echo "VERSION=${TAG#v}" >> "$GITHUB_ENV"
+      - name: "🔬 Check Rate Limit"
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          current_limit=$(gh api rate_limit --jq '.resources.graphql')
+          echo "Current Rate Limit: $current_limit"
       - name: "📥 Checkout repository"
         uses: actions/checkout@v6
         with:
@@ -644,6 +686,7 @@ jobs:
       - name: "⚙️ Run post-release"
         uses: apache/grails-github-actions/post-release@asf
         env:
+          PR_LABELS: skip-changelog
           RELEASE_SCRIPT_PATH: '.github/scripts/setSnapshotGrailsVersion.sh'
       - name: "🌎 MANUAL - Create Blog Post"
         run: |

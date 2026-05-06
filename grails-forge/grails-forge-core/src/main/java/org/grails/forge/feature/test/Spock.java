@@ -18,6 +18,7 @@
  */
 package org.grails.forge.feature.test;
 
+import io.micronaut.core.annotation.NonNull;
 import jakarta.inject.Singleton;
 import org.grails.forge.application.ApplicationType;
 import org.grails.forge.application.generator.GeneratorContext;
@@ -34,6 +35,21 @@ public class Spock implements Feature, DefaultFeature {
     @Override
     public String getName() {
         return "spock";
+    }
+
+    @NonNull
+    @Override
+    public String getTitle() {
+        return "Spock Testing Framework";
+    }
+
+    @NonNull
+    @Override
+    public String getDescription() {
+        return "Spock is a testing, specification, and mocking framework for JVM developers " +
+            "that emphasizes readability and clarity. By blending BDD concepts and Groovy's " +
+            "concise syntax, Spock helps teams write tests that are easy to understand and " +
+            "enjoyable to maintain.";
     }
 
     @Override

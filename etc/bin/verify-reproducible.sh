@@ -99,7 +99,7 @@ if [ -s diff.txt ]; then
   echo "Differences were found, diffing jar files ..."
   if [[ ! -f "vineflower.jar" ]]; then
       echo "Downloading Vineflower decompiler..."
-      curl -sL -o "vineflower.jar" https://github.com/Vineflower/vineflower/releases/download/1.11.1/vineflower-1.11.1.jar
+      curl -sL -o "vineflower.jar" https://github.com/Vineflower/vineflower/releases/download/1.12.0/vineflower-1.12.0.jar
       if [[ $? -ne 0 ]]; then
           echo "❌ Failed to download vineflower.jar ❌"
           exit 1

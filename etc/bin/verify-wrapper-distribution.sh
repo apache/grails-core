@@ -29,6 +29,7 @@ if [ -z "${RELEASE_TAG}" ]; then
 fi
 
 VERSION=${RELEASE_TAG#v}
+export PREFERRED_GRAILS_VERSION=${VERSION}
 
 cd $DOWNLOAD_LOCATION
 ZIP_FILE=$(ls "apache-grails-wrapper-${VERSION}-bin.zip" 2>/dev/null | head -n 1)
@@ -89,7 +90,7 @@ echo "Checking wrapper shell command ..."
 ./grailsw -t shell create-app ShellApp
 echo "✅ Generated Shell App"
 echo "Checking forge command"
-./grailsw -t forge create-app -x -g mongodb ForgeApp
+./grailsw -t forge create-app -x -g mongodb -f gradle-settings-file ForgeApp
 echo "✅ Generated Forge App"
 
 echo "✅✅✅ All wrapper binary distribution checks passed successfully for Apache Grails ${VERSION}."

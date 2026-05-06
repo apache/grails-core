@@ -16,19 +16,26 @@
  *  specific language governing permissions and limitations
  *  under the License.
  */
-
 package org.grails.plugins.sitemesh3
 
+import jakarta.servlet.DispatcherType
+import jakarta.servlet.Filter
+import jakarta.servlet.FilterChain
+import jakarta.servlet.ServletRequest
+import jakarta.servlet.ServletResponse
+
+import org.springframework.boot.web.servlet.FilterRegistrationBean
 import org.springframework.core.env.ConfigurableEnvironment
 import org.springframework.core.env.MapPropertySource
 import org.springframework.core.env.PropertySource
 
+import grails.config.Config
 import grails.core.DefaultGrailsApplication
 import grails.plugins.Plugin
+import grails.util.Environment
+import grails.util.Metadata
 import org.grails.config.PropertySourcesConfig
-import org.grails.gsp.compiler.GroovyPageParser
 import org.grails.plugins.web.taglib.RenderSitemeshTagLib
-import org.grails.web.config.http.GrailsFilters
 import org.grails.web.util.WebUtils
 
 class Sitemesh3GrailsPlugin extends Plugin {
@@ -48,55 +55,77 @@ class Sitemesh3GrailsPlugin extends Plugin {
     def loadBefore = ['groovyPages']
 
     def providedArtefacts = [
-        RenderSitemeshTagLib,
+            RenderSitemeshTagLib,
+            Sitemesh3LayoutTagLib,
     ]
 
     static PropertySource getDefaultPropertySource(ConfigurableEnvironment configurableEnvironment, String defaultLayout) {
-
         Map props = [
-                'grails.gsp.view.layoutViewResolver': 'false',
                 'sitemesh.decorator.metaTag': 'layout',
                 'sitemesh.decorator.attribute': WebUtils.LAYOUT_ATTRIBUTE,
                 'sitemesh.decorator.prefix': '/layouts/',
-                'sitemesh.filter.order': GrailsFilters.SITEMESH_FILTER.order,
-                'sitemesh.decorator.tagRuleBundles': ['org.sitemesh.content.tagrules.html.Sm2TagRuleBundle']
         ]
         if (defaultLayout) {
             props['sitemesh.decorator.default'] = defaultLayout
         }
-        // if property already exists, don't override
         props.clone().each {
             if (configurableEnvironment.getProperty(it.key)) {
                 props.remove(it.key)
             }
         }
-        return new MapPropertySource('defaultSitemesh3Properties', props)
+        new MapPropertySource('defaultSitemesh3Properties', props)
     }
 
     Closure doWithSpring() {
         { ->
             ConfigurableEnvironment configurableEnvironment = grailsApplication.mainContext.environment as ConfigurableEnvironment
             def propertySources = configurableEnvironment.getPropertySources()
-            // https://grails.apache.org/docs/latest/guide/single.html#layouts
-            // Default view should be application, but it is inefficient to add a rule for a page that may not exist.
             String defaultLayout = grailsApplication.getConfig().getProperty('grails.sitemesh.default.layout')
             propertySources.addFirst(getDefaultPropertySource(configurableEnvironment, defaultLayout))
-            propertySources.addFirst(new MapPropertySource('requiredSitemesh3Properties', [
-                    (GroovyPageParser.CONFIG_PROPERTY_GSP_GRAILS_LAYOUT_PREPROCESS): 'false'
-            ]))
             (grailsApplication as DefaultGrailsApplication).config = new PropertySourcesConfig(propertySources)
 
-            grailsLayoutHandlerMapping(GrailsLayoutHandlerMapping)
+            Config config = grailsApplication.getConfig()
+            boolean developmentMode = Metadata.getCurrent().isDevelopmentEnvironmentAvailable()
+            Environment env = Environment.current
+            boolean enableReload = env.isReloadEnabled() ||
+                    config.getProperty('grails.gsp.enable.reload', Boolean, false) ||
+                    (developmentMode && env == Environment.DEVELOPMENT)
+            String resolvedDefaultLayout = defaultLayout
+
+            // Bean names match the @ConditionalOnMissingBean(name = "contentProcessor"/"decoratorSelector")
+            // guards on upstream's SiteMeshViewResolverAutoConfiguration, so
+            // our implementations replace upstream's defaults.
+            contentProcessor(CaptureAwareContentProcessor)
+
+            decoratorSelector(Sitemesh3LayoutFinder, ref('groovyPageLocator')) {
+                gspReloadEnabled = enableReload
+                defaultDecoratorName = resolvedDefaultLayout ?: null
+                layoutCacheExpirationMillis = config.getProperty('grails.sitemesh.layout.cache.interval', Long, 5000L)
+            }
+
+            // Replace the filter registration from
+            // org.sitemesh.autoconfigure.SiteMeshAutoConfiguration with a no-op
+            // filter bean under the same name. SiteMeshAutoConfiguration is
+            // @ConditionalOnMissingBean(name = "sitemesh") so registering this
+            // bean disables the upstream filter-based integration entirely.
+            // Decoration is done by the Spring MVC view resolver chain.
+            sitemesh(FilterRegistrationBean) { bean ->
+                bean.autowire = false
+                filter = new NoopSitemeshFilter()
+                enabled = false
+                dispatcherTypes = EnumSet.of(DispatcherType.REQUEST)
+            }
         }
     }
 
-    void doWithApplicationContext() {}
-
-    void doWithDynamicMethods() {}
-
-    void onChange(Map<String, Object> event) {}
-
-    void onConfigChange(Map<String, Object> event) {}
-
-    void onShutdown(Map<String, Object> event) {}
+    // This class is never invoked (the FilterRegistrationBean has enabled = false).
+    // It exists solely so we can register a bean named "sitemesh" and satisfy
+    // SiteMeshAutoConfiguration's @ConditionalOnMissingBean(name = "sitemesh")
+    // guard — preventing the upstream filter-based integration from activating.
+    static class NoopSitemeshFilter implements Filter {
+        @Override
+        void doFilter(ServletRequest request, ServletResponse response, FilterChain chain) {
+            chain.doFilter(request, response)
+        }
+    }
 }

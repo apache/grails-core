@@ -31,6 +31,7 @@ fi
 SCRIPT_DIR=$( cd -- "$( dirname -- "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )
 CWD=$(pwd)
 VERSION=${RELEASE_TAG#v}
+export PREFERRED_GRAILS_VERSION=${VERSION}
 
 cleanup() {
   echo "❌ Verification failed. ❌"

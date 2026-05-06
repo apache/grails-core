@@ -22,19 +22,26 @@ import io.micronaut.core.annotation.NonNull;
 
 public enum GormImpl {
 
-    HIBERNATE("gorm-hibernate5"),
-    MONGODB("gorm-mongodb");
+    HIBERNATE("gorm-hibernate5", "Hibernate 5"),
+    MONGODB("gorm-mongodb", "MongoDB");
 
     public static final GormImpl DEFAULT_OPTION = HIBERNATE;
     private final String featureName;
+    private final String label;
 
-    GormImpl(String featureName) {
+    GormImpl(String featureName, String label) {
         this.featureName = featureName;
+        this.label = label;
     }
 
     @NonNull
     public String getName() {
         return featureName;
+    }
+
+    @NonNull
+    public String getLabel() {
+        return label;
     }
 
 }

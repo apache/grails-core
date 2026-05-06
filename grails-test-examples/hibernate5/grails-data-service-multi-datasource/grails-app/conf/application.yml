@@ -24,14 +24,6 @@ grails:
   codegen:
     defaultPackage: example
   mime:
-    disable:
-      accept:
-        header:
-          userAgents:
-            - Gecko
-            - WebKit
-            - Presto
-            - Trident
     types:
       all: '*/*'
       html:

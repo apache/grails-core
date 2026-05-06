@@ -19,6 +19,7 @@
 
 plugins {
     id 'org.apache.grails.buildsrc.properties'
+    id 'org.apache.grails.buildsrc.dependency-validator'
     id 'org.apache.grails.buildsrc.compile'
 }
 
@@ -41,6 +42,7 @@ dependencies {
     implementation 'org.apache.grails:grails-controllers'
     implementation 'org.apache.grails:grails-rest-transforms'
     implementation 'org.apache.grails:grails-sitemesh3'
+    implementation 'org.apache.grails:grails-async'
 
     testAndDevelopmentOnly platform(project(':grails-bom'))
     testAndDevelopmentOnly 'org.webjars.npm:bootstrap'
