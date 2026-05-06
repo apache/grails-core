@@ -229,11 +229,16 @@ class TransactionalTransform extends AbstractDatastoreMethodDecoratingTransforma
     @Override
     protected void weaveSetTargetDatastoreBody(SourceUnit source, AnnotationNode annotationNode, ClassNode declaringClassNode, Expression datastoreVar, BlockStatement setTargetDatastoreBody) {
         String transactionManagerFieldName = '$' + PROPERTY_TRANSACTION_MANAGER
-        VariableExpression transactionManagerPropertyExpr = varX(transactionManagerFieldName)
-        Statement assignConditional = ifS(notNullX(datastoreVar),
-                assignS(transactionManagerPropertyExpr, callX(castX(make(TransactionCapableDatastore), datastoreVar), GET_TRANSACTION_MANAGER_METHOD)))
-        setTargetDatastoreBody.addStatement(assignConditional)
-
+        // Only assign to $transactionManager if the field was declared on this class by weaveTransactionManagerAware().
+        // When ServiceTransformation runs first and provides getTransactionManager() as a method,
+        // weaveTransactionManagerAware() skips field creation, so assigning it here would cause
+        // MissingPropertyException at runtime.
+        if (declaringClassNode.getDeclaredField(transactionManagerFieldName) != null) {
+            VariableExpression transactionManagerPropertyExpr = varX(transactionManagerFieldName)
+            Statement assignConditional = ifS(notNullX(datastoreVar),
+                    assignS(transactionManagerPropertyExpr, callX(castX(make(TransactionCapableDatastore), datastoreVar), GET_TRANSACTION_MANAGER_METHOD)))
+            setTargetDatastoreBody.addStatement(assignConditional)
+        }
     }
 
     protected void weaveTransactionManagerAware(SourceUnit source, AnnotationNode annotationNode, ClassNode declaringClassNode) {

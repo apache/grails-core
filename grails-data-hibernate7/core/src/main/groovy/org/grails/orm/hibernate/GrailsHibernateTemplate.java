@@ -241,9 +241,13 @@ public class GrailsHibernateTemplate implements IHibernateTemplate {
             // if there are already bound holders, unbind them so they can be restored later
             if (sessionHolder != null) {
                 txResources.unbindResource(sessionFactory);
-                if (previousConnectionHolder != null) {
-                    txResources.unbindResource(dataSource);
-                }
+            }
+            // The datasource may be shared across session factories (e.g. in DATABASE multi-tenancy
+            // mode). If a connection was bound by an outer transaction (e.g. from HibernateSpec.setup),
+            // we must unbind it now so that HibernateTransactionManager.doBegin() can bind its own
+            // connection for the new session, regardless of whether a session holder already exists.
+            if (previousConnectionHolder != null) {
+                txResources.unbindResource(dataSource);
             }
 
             // create and bind a new session holder for the new session
@@ -298,9 +302,12 @@ public class GrailsHibernateTemplate implements IHibernateTemplate {
                 // now restore any previous state
                 if (previousHolder != null) {
                     txResources.bindResource(sessionFactory, previousHolder);
-                    if (previousConnectionHolder != null) {
-                        txResources.bindResource(dataSource, previousConnectionHolder);
-                    }
+                }
+                // Restore the previously-bound datasource connection, even when there was no
+                // prior session holder — the outer transaction's connection must be re-bound so
+                // it can continue after this new-session block returns.
+                if (previousConnectionHolder != null) {
+                    txResources.bindResource(dataSource, previousConnectionHolder);
                 }
             }
         }
