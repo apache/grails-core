@@ -74,6 +74,11 @@ class MongoStaticApi<D> extends GormStaticApi<D> implements MongoAllOperations<D
         super(persistentClass, mappingContext, finders, datastoreResolver, qualifier)
     }
 
+    @Override
+    protected GormStaticApi<D> createStaticApi(Class<D> persistentClass, org.grails.datastore.mapping.model.MappingContext mappingContext, List<FinderMethod> finders, org.grails.datastore.gorm.DatastoreResolver resolver, String qualifier) {
+        new MongoStaticApi<D>(persistentClass, mappingContext, finders, resolver, qualifier)
+    }
+
     FindIterable<D> find(Bson filter) {
         withSession { AbstractMongoSession session ->
             def entity = session.mappingContext.getPersistentEntity(persistentClass.name)
