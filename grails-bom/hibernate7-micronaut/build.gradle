@@ -163,7 +163,7 @@ tasks.register('extractConstraints', ExtractDependenciesTask).configure { Extrac
         rootProject.subprojects.each { p ->
             String artifactId = p.findProperty('pomArtifactId') as String ?: p.name
             String baseVersionName = artifactId.replaceAll('[.]', '-')
-            projectCoordinates["${p.group}:${ artifactId}:${p.version}" as String] = baseVersionName
+            projectCoordinates["${p.group}:${artifactId}:${p.version}" as String] = baseVersionName
         }
 
         for (Map.Entry<String, String> dependency : project.ext.gradleBuildProjects.entrySet()) {
@@ -235,7 +235,7 @@ ext {
                     ExtractedDependencyConstraint extractedConstraint = propertyNameCalculator.calculate(groupId, artifactId, inlineVersion, isBom)
                     if (extractedConstraint?.versionPropertyReference) {
                         // use the property reference instead of the hard coded version so that it can be
-                        // overriden by the spring boot dependency management plugin
+                        // overridden by the spring boot dependency management plugin
                         dep.version[0].value = extractedConstraint.versionPropertyReference
 
                         // Add an entry in the <properties> node with the actual version number
