@@ -330,6 +330,19 @@ project(':grails-data-mongodb').projectDir = new File(settingsDir, 'grails-data-
 include 'grails-data-mongodb-gson-templates'
 project(':grails-data-mongodb-gson-templates').projectDir = new File(settingsDir, 'grails-data-mongodb/gson-templates')
 
+// GraphQL
+// core
+include 'grails-data-graphql-core'
+project(':grails-data-graphql-core').projectDir = new File(settingsDir, 'grails-data-graphql/core')
+
+// documentation
+include 'grails-data-graphql-docs'
+project(':grails-data-graphql-docs').projectDir = new File(settingsDir, 'grails-data-graphql/docs')
+
+// plugins
+include 'grails-data-graphql'
+project(':grails-data-graphql').projectDir = new File(settingsDir, 'grails-data-graphql/plugin')
+
 // functional tests - mongodb examples
 include 'grails-test-examples-mongodb-base'
 project(':grails-test-examples-mongodb-base').projectDir = new File(settingsDir, 'grails-test-examples/mongodb/base')
@@ -348,6 +361,22 @@ project(':grails-test-examples-mongodb-test-data-service').projectDir = new File
 
 include 'grails-test-examples-mongodb-gson-templates'
 project(':grails-test-examples-mongodb-gson-templates').projectDir = new File(settingsDir, 'grails-test-examples/mongodb/gson-templates')
+
+// functional tests - graphql examples
+include 'grails-test-examples-graphql-grails-test-app'
+project(':grails-test-examples-graphql-grails-test-app').projectDir = new File(settingsDir, 'grails-test-examples/graphql/grails-test-app')
+
+include 'grails-test-examples-graphql-grails-docs-app'
+project(':grails-test-examples-graphql-grails-docs-app').projectDir = new File(settingsDir, 'grails-test-examples/graphql/grails-docs-app')
+
+include 'grails-test-examples-graphql-grails-tenant-app'
+project(':grails-test-examples-graphql-grails-tenant-app').projectDir = new File(settingsDir, 'grails-test-examples/graphql/grails-tenant-app')
+
+include 'grails-test-examples-graphql-grails-multi-datastore-app'
+project(':grails-test-examples-graphql-grails-multi-datastore-app').projectDir = new File(settingsDir, 'grails-test-examples/graphql/grails-multi-datastore-app')
+
+include 'grails-test-examples-graphql-spring-boot-app'
+project(':grails-test-examples-graphql-spring-boot-app').projectDir = new File(settingsDir, 'grails-test-examples/graphql/spring-boot-app')
 
 // profiles
 include 'grails-profiles-base'

@@ -127,6 +127,9 @@ def publishedProjects = [
         'grails-data-mongodb-ext',
         'grails-data-mongodb-gson-templates',
         'grails-data-mongodb-spring-boot',
+        // graphql
+        'grails-data-graphql',
+        'grails-data-graphql-core',
         // wrapper
         'grails-wrapper',
         // profiles
