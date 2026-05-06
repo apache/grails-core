@@ -217,6 +217,46 @@ public class GrailsHibernateTemplate implements IHibernateTemplate {
         return execute(hibernateCallback);
     }
 
+    /**
+     * Executes the given closure in a brand-new Hibernate {@link Session}, fully isolated from any
+     * session or transaction that may already be bound to the current thread.
+     *
+     * <h3>Thread-local state management</h3>
+     * <p>Before opening the new session this method suspends the caller's transactional context:
+     * <ul>
+     *   <li>Any existing {@link org.hibernate.engine.spi.SessionImplementor} bound to
+     *       {@link #sessionFactory} is unbound and later restored.</li>
+     *   <li>Any {@link org.springframework.jdbc.datasource.ConnectionHolder} bound to
+     *       {@link #dataSource} is unbound and later restored. This handles the case where the
+     *       datasource is <em>shared</em> across multiple session factories — most notably in
+     *       {@code DATABASE} multi-tenancy mode, where every tenant's session factory references
+     *       the same {@code LazyConnectionDataSourceProxy}. Without this unbinding,
+     *       {@link org.springframework.orm.hibernate5.HibernateTransactionManager#doBegin}
+     *       would throw {@code IllegalStateException: Already value [...] bound to thread}
+     *       when it tried to register the new session's connection.</li>
+     *   <li>Active {@link org.springframework.transaction.support.TransactionSynchronization}s
+     *       are cleared and restored so that existing listeners are not notified of lifecycle
+     *       events belonging to the inner session.</li>
+     * </ul>
+     *
+     * <h3>Resource restoration</h3>
+     * <p>The {@code finally} block always:
+     * <ol>
+     *   <li>Clears the new session's synchronizations.</li>
+     *   <li>Unbinds and releases the new session's JDBC connection (unless the datasource is a
+     *       {@link org.grails.datastore.gorm.jdbc.MultiTenantDataSource}).</li>
+     *   <li>Closes the new session.</li>
+     *   <li>Re-registers the caller's synchronizations.</li>
+     *   <li>Rebinds the caller's session holder (if one existed).</li>
+     *   <li>Rebinds the caller's connection holder (if one existed), independently of whether
+     *       a session holder was present — necessary for the shared-datasource case above.</li>
+     * </ol>
+     *
+     * @param <T>      the return type of the closure
+     * @param callable a {@link groovy.lang.Closure} that receives the new {@link Session} as its
+     *                 single argument and returns a result
+     * @return the value returned by {@code callable}
+     */
     @SuppressWarnings("PMD.DataflowAnomalyAnalysis")
     @Override
     public <T> T executeWithNewSession(final Closure<T> callable) {
