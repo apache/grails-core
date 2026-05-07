@@ -93,6 +93,10 @@ public abstract class AbstractCriteriaBuilder extends GroovyObjectSupport implem
         return this.targetClass;
     }
 
+    public PersistentEntity getPersistentEntity() {
+        return this.persistentEntity;
+    }
+
     public void setUniqueResult(boolean uniqueResult) {
         this.uniqueResult = uniqueResult;
     }

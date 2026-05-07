@@ -108,8 +108,8 @@ Last run: 2026-05-06. 551 tests, 34 failures.
 | Count | Spec | Root Cause | Status |
 |-------|------|------------|--------|
 | 6 | `GeoJSONTypePersistenceSpec` | Place.get() returns null after save (decode/cache issue) — **IN PROGRESS** | 🔧 |
-| 12 | `PagedResultSpec` (TCK) | `list(max:N)` returns `MongoResultList` not `PagedResultList` | 🔲 |
-| 12 | `FirstAndLastMethodSpec` (TCK) | `last()` returns wrong record (ordering issue) | 🔲 |
+| ✅ | `PagedResultSpec` (TCK) | `list(max:N)` returns `PagedResultList` | ✅ |
+| ✅ | `FirstAndLastMethodSpec` (TCK) | `last()` returns wrong record (ordering issue) | ✅ |
 | 3 | `BasicArraySpec` | Array persistence — investigate individually | 🔲 |
 | 2 | `NullsAreNotStoredSpec` | Null handling — investigate individually | 🔲 |
 | 2 | `IsNullSpec` | Null query — investigate individually | 🔲 |
@@ -165,6 +165,28 @@ All 12 H7 example modules pass ✅
 ---
 
 ## Architectural Debt
+
+---
+
+## Session Update (latest)
+
+### MongoDB specs fixed in this pass
+- ✅ `DisjunctionQuerySpec`
+- ✅ `BeforeUpdatePropertyPersistenceSpec`
+- ✅ `DirtyCheckUpdateSpec`
+- ✅ `MongoDynamicPropertyOnEmbeddedSpec`
+- ✅ `DebugGeoJSONSpec`
+- ✅ `SimpleHasManySpec`
+
+### Still failing
+- ❌ `InheritanceWithSingleEndedAssociationSpec`
+  - Symptom: `Proxy for [org.grails.datastore.gorm.mongo.Node:<id>] could not be initialized`
+  - Current status: blocked; likely polymorphic proxy resolution/retrieval path for root-type association (`Node childNode`) still returning null during lazy proxy initialization.
+
+### Datamapping core follow-up (DynamicFinder)
+- ✅ `DynamicFinder` compile regression fixed in `populateArgumentsForCriteria(BuildableCriteria, Map)` (removed invalid `getMappingContext()` usage on `BuildableCriteria` path).
+- ✅ Added/kept targeted coverage in `DynamicFinderSpec` for BuildableCriteria argument population behavior.
+- ✅ Cleared transient compile blocker in dirty tree by removing duplicate `getPersistentEntity()` definition in `AbstractDetachedCriteria.groovy`.
 
 `MultiTenancySettings.MultiTenancyMode.isSharedConnection()` returns `true` for both SCHEMA and DISCRIMINATOR. The correct long-term fix: `Tenants.withId()` in core should differentiate SCHEMA (needs new session from child datastore) from DISCRIMINATOR (reuses session, applies filter). H7 works around this via `HibernateDatastore.getCurrentSession()` priority lookup. **Revisit if H5 or MongoDB implement SCHEMA multi-tenancy.**
 

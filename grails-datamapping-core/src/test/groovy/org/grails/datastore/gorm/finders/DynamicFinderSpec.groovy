@@ -18,6 +18,7 @@
  */
 package org.grails.datastore.gorm.finders
 
+import org.grails.datastore.mapping.query.api.BuildableCriteria
 import spock.lang.Specification
 
 /**
@@ -41,5 +42,18 @@ class DynamicFinderSpec extends Specification {
         "findBy" | "findByTitle"           | 1          |    1        | "Title"            |  ['title']
         "findBy" | "findByTitleBetween"    | 2          |    1        | "TitleBetween"     |  ['title']
         "findBy" | "findByTitleAndAuthor"  | 2          |    2        | "TitleAndAuthor"   |  ['title', 'author']
+    }
+
+    void "populateArgumentsForCriteria does not require query mapping context for BuildableCriteria"() {
+        given:
+        BuildableCriteria query = Mock()
+        Map arguments = [order: 'desc']
+
+        when:
+        DynamicFinder.populateArgumentsForCriteria(query, arguments)
+
+        then:
+        noExceptionThrown()
+        0 * query.order(_)
     }
 }

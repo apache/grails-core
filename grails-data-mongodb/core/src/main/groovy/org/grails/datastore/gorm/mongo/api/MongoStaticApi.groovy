@@ -82,26 +82,6 @@ class MongoStaticApi<D> extends GormStaticApi<D> implements MongoAllOperations<D
     }
 
     @Override
-    D last(Map params) {
-        // When an explicit sort is given, delegate to base implementation
-        if (params?.containsKey('sort')) {
-            return (D) super.last(params)
-        }
-        // Without an explicit sort, use $natural: -1 to reverse insertion order.
-        // This correctly handles both simple and composite-key entities, since MongoDB
-        // natural order reflects physical insertion sequence regardless of key structure.
-        execute({ Session session ->
-            org.grails.datastore.mapping.query.Query q = session.createQuery(persistentClass)
-            Map<String, Object> p = new LinkedHashMap<String, Object>(params ?: [:] as Map<String, Object>)
-            p.put('max', 1)
-            p.put(MongoQuery.HINT_ARGUMENT, ['$natural': -1])
-            DynamicFinder.populateArgumentsForCriteria(persistentClass, q, p)
-            List<D> results = (List<D>) q.list()
-            results ? results.get(0) : null
-        } as SessionCallback<D>)
-    }
-
-    @Override
     List<D> findAll(D example, Map args) {
         execute({ Session session ->
             org.grails.datastore.mapping.query.Query query = session.createQuery(persistentClass)

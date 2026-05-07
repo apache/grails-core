@@ -41,6 +41,7 @@ import org.grails.datastore.gorm.multitenancy.TenantDelegatingGormOperations
 import org.springframework.transaction.PlatformTransactionManager
 import org.grails.datastore.mapping.transactions.TransactionCapableDatastore
 import org.grails.datastore.mapping.dirty.checking.DirtyCheckable
+import org.grails.datastore.gorm.schemaless.DynamicAttributes
 
 /**
  * GORM instance API implementation.
@@ -112,6 +113,9 @@ class GormInstanceApi<D> extends AbstractGormApi<D> implements GormInstanceOpera
                 def instanceApi = GormEnhancer.findInstanceApi(persistentClass, name)
                 return new DelegatingGormEntityApi(instanceApi, instance)
             }
+        }
+        if (instance instanceof DynamicAttributes) {
+            return ((DynamicAttributes) instance).getAt(name)
         }
         throw new MissingPropertyException(name, persistentClass)
     }
