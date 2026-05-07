@@ -85,15 +85,25 @@ Removed the `if (this instanceof ChildHibernateDatastore) return withNewSession(
 
 ### MongoDB — grails-data-mongodb-core: 34 failures remaining (was 54)
 
-Last run: 2026-05-05. 551 tests, 34 failures.
+Last run: 2026-05-06. 551 tests, 34 failures.
+
+**Current Investigation**: GeoJSON persistence failures — Place.get() returns null after save.
+
+Applied fixes (pending test validation):
+- `PersistentEntityCodec.retrieveCachedInstance()` — added missing return statements (lines 178, 181)
+- `MongoCodecEntityPersister.retrieveEntity()` — fixed class mismatch (line 158: persistentEntity.javaClass → pe.javaClass)
+
+Issue: Tests still failing. Simple entity retrieval (DebugGetSpec) passes. Failure specific to Place with GeoJSON fields. 
+- **Hypothesis**: Decode is failing silently for complex objects with many custom-typed fields
+- **Next**: Deep trace of decode path for Place with GeometryCollection
 
 #### To Fix (one by one)
 
 | Count | Spec | Root Cause | Status |
 |-------|------|------------|--------|
+| 6 | `GeoJSONTypePersistenceSpec` | Place.get() returns null after save (decode/cache issue) — **IN PROGRESS** | 🔧 |
 | 12 | `PagedResultSpec` (TCK) | `list(max:N)` returns `MongoResultList` not `PagedResultList` | 🔲 |
 | 12 | `FirstAndLastMethodSpec` (TCK) | `last()` returns wrong record (ordering issue) | 🔲 |
-| 6 | `GeoJSONTypePersistenceSpec` | GeoJSON persistence — investigate individually | 🔲 |
 | 3 | `BasicArraySpec` | Array persistence — investigate individually | 🔲 |
 | 2 | `NullsAreNotStoredSpec` | Null handling — investigate individually | 🔲 |
 | 2 | `IsNullSpec` | Null query — investigate individually | 🔲 |
