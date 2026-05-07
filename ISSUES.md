@@ -89,13 +89,19 @@ Last run: 2026-05-06. 551 tests, 34 failures.
 
 **Current Investigation**: GeoJSON persistence failures — Place.get() returns null after save.
 
-Applied fixes (pending test validation):
-- `PersistentEntityCodec.retrieveCachedInstance()` — added missing return statements (lines 178, 181)
-- `MongoCodecEntityPersister.retrieveEntity()` — fixed class mismatch (line 158: persistentEntity.javaClass → pe.javaClass)
+**Applied fixes** (uncommitted, pending validation):
+1. `PersistentEntityCodec.retrieveCachedInstance()` — added missing return statements (lines 178, 181)
+2. `MongoCodecEntityPersister.retrieveEntity()` — fixed class mismatch (line 158: persistentEntity.javaClass → pe.javaClass)
+3. `MongoCodecEntityPersister.retrieveEntity()` — wrapped in try-catch for debug logging
 
-Issue: Tests still failing. Simple entity retrieval (DebugGetSpec) passes. Failure specific to Place with GeoJSON fields. 
-- **Hypothesis**: Decode is failing silently for complex objects with many custom-typed fields
-- **Next**: Deep trace of decode path for Place with GeometryCollection
+**Investigation Results**:
+- ✅ Simple entity retrieval works (DebugGetSpec with String name)
+- ✅ Point field retrieval works (DebugGeoJSONDecodeSpec.test simple GeoJSON field)
+- ❌ GeometryCollection field returns null (DebugGeoJSONDecodeSpec.test GeoJSON collection field)
+- ❌ No exception thrown during retrieval — `.first()` is returning null
+- **Issue**: Codec decode for GeometryCollection is returning null instead of the entity instance
+- **Hypothesis**: The BsonPersistentEntityCodec decode path is returning null for complex multi-field entities with GeometryCollection
+- **Next**: Check if document exists in MongoDB (raw query test) and trace codec decode stack
 
 #### To Fix (one by one)
 
