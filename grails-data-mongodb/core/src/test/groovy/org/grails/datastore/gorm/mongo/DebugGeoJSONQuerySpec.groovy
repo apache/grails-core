@@ -10,7 +10,7 @@ import org.bson.Document
 class DebugGeoJSONQuerySpec extends MongoDatastoreSpec {
 
     void setupSpec() {
-        manager.addAllDomainClasses([PlaceWithGeoJSON])
+        manager.addAllDomainClasses([PlaceWithGeoJSONQuery])
     }
 
     void "test raw query for GeoJSON collection field"() {
@@ -18,7 +18,7 @@ class DebugGeoJSONQuerySpec extends MongoDatastoreSpec {
         def col = new GeometryCollection()
         col << Point.valueOf(5, 10)
         
-        def p = new PlaceWithGeoJSON(geometryCollection: col)
+        def p = new PlaceWithGeoJSONQuery(geometryCollection: col)
         p.save(flush: true, validate: false)
         def savedId = p.id
         println "Saved Place with id: ${savedId}"
@@ -27,7 +27,8 @@ class DebugGeoJSONQuerySpec extends MongoDatastoreSpec {
         manager.session.clear()
         
         and: "We do a raw query for the document"
-        def collection = manager.session.nativeEntry.getCollection('placeWithGeoJSON')
+        def entity = manager.mongoDatastore.mappingContext.getPersistentEntity(PlaceWithGeoJSONQuery.name)
+        def collection = manager.session.getCollection(entity)
         println "Collection: ${collection}"
         
         def query = new Document('_id', savedId)
@@ -42,7 +43,7 @@ class DebugGeoJSONQuerySpec extends MongoDatastoreSpec {
 }
 
 @Entity
-class PlaceWithGeoJSON {
+class PlaceWithGeoJSONQuery {
     Long id
     Point point
     GeometryCollection geometryCollection

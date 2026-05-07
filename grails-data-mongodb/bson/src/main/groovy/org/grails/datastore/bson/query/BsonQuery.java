@@ -131,13 +131,23 @@ public abstract class BsonQuery extends Query {
         queryHandlers.put(IsNull.class, new QueryHandler<IsNull>() {
             @SuppressWarnings("unchecked")
             public void handle(EmbeddedQueryEncoder queryEncoder, IsNull criterion, Document query, PersistentEntity entity) {
-                queryHandlers.get(Equals.class).handle(queryEncoder, new Equals(criterion.getProperty(), null), query, entity);
+                PersistentProperty persistentProperty = entity.getPropertyByName(criterion.getProperty());
+                if (persistentProperty instanceof ToOne && !(persistentProperty instanceof Embedded)) {
+                    query.put(criterion.getProperty(), null);
+                } else {
+                    queryHandlers.get(Equals.class).handle(queryEncoder, new Equals(criterion.getProperty(), null), query, entity);
+                }
             }
         });
         queryHandlers.put(IsNotNull.class, new QueryHandler<IsNotNull>() {
             @SuppressWarnings("unchecked")
             public void handle(EmbeddedQueryEncoder queryEncoder, IsNotNull criterion, Document query, PersistentEntity entity) {
-                queryHandlers.get(NotEquals.class).handle(queryEncoder, new NotEquals(criterion.getProperty(), null), query, entity);
+                PersistentProperty persistentProperty = entity.getPropertyByName(criterion.getProperty());
+                if (persistentProperty instanceof ToOne && !(persistentProperty instanceof Embedded)) {
+                    query.put(criterion.getProperty(), new Document(NE_OPERATOR, null));
+                } else {
+                    queryHandlers.get(NotEquals.class).handle(queryEncoder, new NotEquals(criterion.getProperty(), null), query, entity);
+                }
             }
         });
         queryHandlers.put(EqualsProperty.class, new QueryHandler<EqualsProperty>() {

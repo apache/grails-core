@@ -182,6 +182,8 @@ class GormInstanceApi<D> extends AbstractGormApi<D> implements GormInstanceOpera
     D save(D instance, Map arguments) {
         boolean shouldFlush = arguments?.containsKey("flush") ? (boolean)arguments.get("flush") : false
         boolean validate = arguments?.containsKey("validate") ? (boolean)arguments.get("validate") : true
+        boolean previousSkipValidation = false
+        boolean restoreSkipValidation = false
 
         if (validate) {
             Datastore ds = getDatastore()
@@ -200,15 +202,27 @@ class GormInstanceApi<D> extends AbstractGormApi<D> implements GormInstanceOpera
                 ((org.grails.datastore.mapping.core.connections.ConnectionSourcesProvider)ds).getConnectionSources().getDefaultConnectionSource().getName() :
                 org.grails.datastore.mapping.core.connections.ConnectionSource.DEFAULT
             GormEnhancer.findValidationApi(persistentClass, qualifier).clearErrors(instance)
+            if (instance instanceof GormValidateable) {
+                GormValidateable gormValidateable = (GormValidateable) instance
+                previousSkipValidation = gormValidateable.shouldSkipValidation()
+                gormValidateable.skipValidation(true)
+                restoreSkipValidation = true
+            }
         }
 
-        execute({ Session session ->
-            session.persist(instance)
-            if (shouldFlush) {
-                session.flush()
+        try {
+            execute({ Session session ->
+                session.persist(instance)
+                if (shouldFlush) {
+                    session.flush()
+                }
+                return instance
+            } as SessionCallback)
+        } finally {
+            if (restoreSkipValidation) {
+                ((GormValidateable) instance).skipValidation(previousSkipValidation)
             }
-            return instance
-        } as SessionCallback)
+        }
     }
 
     private boolean shouldFail(Map arguments) {
