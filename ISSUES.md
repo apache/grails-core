@@ -178,3 +178,55 @@ All 12 H7 example modules pass ✅
 4. **No `git push`** until full suite passes.
 5. Full suite hangs — run specs in quarters via `run_quarter.py` with `specs_q{1..4}.txt`.
 
+
+---
+
+## Session: MongoDB Cascade & Dirty Collection Fixes
+
+**Date**: Current Session  
+**Branch**: 8.0.x-hibernate7_gorm_enhance  
+**Focus**: MongoDB TCK test failures - cascade operations and dirty checking
+
+### Changes Made
+
+1. **Fixed embedded collection encoding during updates**
+   - File: `grails-data-mongodb/bson/src/main/groovy/org/grails/datastore/bson/codecs/BsonPersistentEntityCodec.groovy`
+   - Problem: Line 288-290 had `// TODO: embedded collections` - they weren't being encoded during parent updates
+   - Solution: Now encodes embedded collections using `EmbeddedCollectionEncoder`
+   - Impact: Fixes persistence of changes to embedded collection elements
+
+2. **Fixed dirty collection detection for MongoDB**
+   - File: `grails-datastore-core/src/main/groovy/org/grails/datastore/mapping/dirty/checking/DirtyCheckingSupport.groovy`
+   - Problem: `areAssociationsDirty()` only checked `PersistentCollection`, but MongoDB uses `DirtyCheckableCollection`
+   - Solution: Added check for `DirtyCheckableCollection.hasChanged()` in addition to `PersistentCollection.isDirty()`
+   - Impact: Parent entities with dirty children are now properly detected, triggering cascade operations
+
+### Test Status After Fixes
+
+**Passing Specs** (from ISSUES.md):
+- ✅ GeoJSONTypePersistenceSpec (14 tests) - PASSING
+- ✅ IsNullSpec (2 tests) - PASSING
+- ✅ FindByExampleSpec (2 tests) - PASSING
+- ✅ ValidationSpec (13+ tests) - PASSING
+- ⚠️ SimpleHasManySpec (1 of 2 tests) - BLOCKED on cascade semantics
+
+**Remaining High-Priority Failures**:
+- FirstAndLastMethodSpec (12 failures) - needs `last()` method fix
+- BasicArraySpec (3 failures)
+- NullsAreNotStoredSpec (2 failures)
+- 10+ single-failure specs
+
+### Known Blockers
+
+1. **SimpleHasManySpec Cascade Issue**
+   - Test expects: Modifying a child entity and saving parent should persist child changes
+   - Actual behavior: Changes to children with separate ObjectIds don't cascade
+   - Root cause: MongoDB hasMany relationships with separate documents aren't auto-cascading
+   - Investigation needed: MongoDB cascade semantics vs. Hibernate semantics
+
+### Next Steps
+
+1. Fix `last()` method ordering for FirstAndLastMethodSpec (12 failures)
+2. Investigate BasicArraySpec array persistence
+3. Fix NullsAreNotStoredSpec null handling
+4. Re-run full test suite after each fix to catch regressions
