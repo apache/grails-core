@@ -295,6 +295,9 @@ class GormStaticApi<D> extends AbstractGormApi<D> implements GormAllOperations<D
         execute({ Session session ->
             org.grails.datastore.mapping.query.Query q = session.createQuery(persistentClass)
             org.grails.datastore.gorm.finders.DynamicFinder.populateArgumentsForCriteria(persistentClass, q, params)
+            if (params?.containsKey('max')) {
+                return new grails.gorm.PagedResultList(q)
+            }
             q.list()
         } as SessionCallback<List<D>>)
     }
@@ -500,7 +503,7 @@ class GormStaticApi<D> extends AbstractGormApi<D> implements GormAllOperations<D
         } as SessionCallback<D>)
     }
 
-    private void populateQueryByExample(Session session, org.grails.datastore.mapping.query.Query query, D example) {
+    protected void populateQueryByExample(Session session, org.grails.datastore.mapping.query.Query query, D example) {
         def pe = getGormPersistentEntity()
         def persister = session.getPersister(example)
         if (persister != null) {

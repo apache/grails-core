@@ -44,10 +44,12 @@ import grails.gorm.multitenancy.Tenants
 import grails.mongodb.api.MongoAllOperations
 import org.grails.datastore.gorm.AbstractGormApi
 import org.grails.datastore.gorm.GormStaticApi
+import org.grails.datastore.gorm.finders.DynamicFinder
 import org.grails.datastore.gorm.finders.FinderMethod
 import org.grails.datastore.gorm.mongo.MongoCriteriaBuilder
 import org.grails.datastore.mapping.core.Datastore
 import org.grails.datastore.mapping.core.Session
+import org.grails.datastore.mapping.core.SessionCallback
 import org.grails.datastore.mapping.engine.EntityPersister
 import org.grails.datastore.mapping.engine.internal.MappingUtils
 import org.grails.datastore.mapping.mongo.AbstractMongoSession
@@ -77,6 +79,45 @@ class MongoStaticApi<D> extends GormStaticApi<D> implements MongoAllOperations<D
     @Override
     protected GormStaticApi<D> createStaticApi(Class<D> persistentClass, org.grails.datastore.mapping.model.MappingContext mappingContext, List<FinderMethod> finders, org.grails.datastore.gorm.DatastoreResolver resolver, String qualifier) {
         new MongoStaticApi<D>(persistentClass, mappingContext, finders, resolver, qualifier)
+    }
+
+    @Override
+    D last(Map params) {
+        // When an explicit sort is given, delegate to base implementation
+        if (params?.containsKey('sort')) {
+            return (D) super.last(params)
+        }
+        // Without an explicit sort, use $natural: -1 to reverse insertion order.
+        // This correctly handles both simple and composite-key entities, since MongoDB
+        // natural order reflects physical insertion sequence regardless of key structure.
+        execute({ Session session ->
+            org.grails.datastore.mapping.query.Query q = session.createQuery(persistentClass)
+            Map<String, Object> p = new LinkedHashMap<String, Object>(params ?: [:] as Map<String, Object>)
+            p.put('max', 1)
+            p.put(MongoQuery.HINT_ARGUMENT, ['$natural': -1])
+            DynamicFinder.populateArgumentsForCriteria(persistentClass, q, p)
+            List<D> results = (List<D>) q.list()
+            results ? results.get(0) : null
+        } as SessionCallback<D>)
+    }
+
+    @Override
+    List<D> findAll(D example, Map args) {
+        execute({ Session session ->
+            org.grails.datastore.mapping.query.Query query = session.createQuery(persistentClass)
+            populateQueryByExample(session, query, example)
+            if (args) {
+                Object maxVal = args.get(DynamicFinder.ARGUMENT_MAX)
+                Object offsetVal = args.get(DynamicFinder.ARGUMENT_OFFSET)
+                if (maxVal != null) {
+                    query.max(((Number) maxVal).intValue())
+                }
+                if (offsetVal != null) {
+                    query.offset(((Number) offsetVal).intValue())
+                }
+            }
+            (List<D>) query.list()
+        } as SessionCallback<List<D>>)
     }
 
     FindIterable<D> find(Bson filter) {

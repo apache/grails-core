@@ -175,10 +175,10 @@ class PersistentEntityCodec extends BsonPersistentEntityCodec {
             return cachedInstance
         }
         if (entity instanceof EmbeddedPersistentEntity) {
-            callback(AbstractDatastore.retrieveSession(MongoDatastore))
+            return callback(AbstractDatastore.retrieveSession(MongoDatastore))
         }
         else {
-            GormEnhancer.findStaticApi(entity.javaClass).withSession(callback)
+            return GormEnhancer.findStaticApi(entity.javaClass).withSession(callback)
         }
     }
 
