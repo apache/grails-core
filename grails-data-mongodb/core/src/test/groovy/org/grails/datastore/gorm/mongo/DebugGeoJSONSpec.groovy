@@ -6,6 +6,7 @@ import grails.persistence.Entity
 import com.mongodb.client.MongoCollection
 import org.bson.Document
 
+@Entity
 class DebugPlace {
     Long id
     String name

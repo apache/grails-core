@@ -117,7 +117,7 @@ public abstract class BsonQuery extends Query {
                 if ((persistentProperty instanceof Embedded) && criterion.getValue() != null) {
                     value = queryEncoder.encode((Embedded) persistentProperty, criterion.getValue());
                 } else {
-                    value = criterion.getValue();
+                    value = getPropertyQueryValue(entity, criterion.getProperty(), criterion.getValue());
                 }
                 if (value instanceof Pattern) {
                     Pattern pattern = (Pattern) value;
@@ -198,7 +198,7 @@ public abstract class BsonQuery extends Query {
             public void handle(EmbeddedQueryEncoder queryEncoder, NotEquals criterion, Document query, PersistentEntity entity) {
                 String propertyName = getPropertyName(entity, criterion);
                 Document notEqualQuery = getOrCreatePropertyQuery(query, propertyName);
-                notEqualQuery.put(NE_OPERATOR, criterion.getValue());
+                notEqualQuery.put(NE_OPERATOR, getPropertyQueryValue(entity, criterion.getProperty(), criterion.getValue()));
 
                 query.put(propertyName, notEqualQuery);
             }
@@ -793,6 +793,47 @@ public abstract class BsonQuery extends Query {
             }
         }
         return values;
+    }
+
+    /**
+     * Convert association values to their native query value (association id) so they work consistently
+     * for both find and aggregation/count queries.
+     *
+     * @param entity       The current entity
+     * @param propertyName The queried property name
+     * @param value        The criterion value
+     * @return The native value to use in the query
+     */
+    protected static Object getPropertyQueryValue(PersistentEntity entity, String propertyName, Object value) {
+        if (value == null) {
+            return null;
+        }
+
+        PersistentProperty property = entity.getPropertyByName(propertyName);
+        if (!(property instanceof ToOne) || property instanceof Embedded) {
+            return value;
+        }
+
+        MappingContext mappingContext = entity.getMappingContext();
+        ProxyHandler proxyHandler = mappingContext.getProxyHandler();
+        if (proxyHandler.isProxy(value)) {
+            return proxyHandler.getIdentifier(value);
+        }
+
+        if (mappingContext.isPersistentEntity(value)) {
+            PersistentEntity associatedEntity = mappingContext.getPersistentEntity(value.getClass().getName());
+            if (associatedEntity != null) {
+                EntityReflector reflector = mappingContext.getEntityReflector(associatedEntity);
+                return reflector.getIdentifier(value);
+            }
+        }
+
+        PersistentEntity associatedEntity = ((ToOne) property).getAssociatedEntity();
+        if (associatedEntity != null && associatedEntity.getIdentity() != null) {
+            return mappingContext.getConversionService().convert(value, associatedEntity.getIdentity().getType());
+        }
+
+        return value;
     }
 
     protected static Document getOrCreatePropertyQuery(Document query, String propertyName) {

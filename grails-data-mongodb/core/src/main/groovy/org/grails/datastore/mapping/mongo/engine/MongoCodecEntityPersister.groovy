@@ -161,6 +161,48 @@ class MongoCodecEntityPersister extends ThirdPartyCacheEntityPersister<Object> {
                         .find(idQuery, pe.javaClass)
                         .limit(1)
                         .first()
+                if (o == null && pe.isRoot()) {
+                    // If the requested root type cannot be decoded directly, resolve discriminator
+                    // from the raw document and retry with the concrete subclass.
+                    Document raw = mongoCollection
+                            .withDocumentClass(Document)
+                            .withCodecRegistry(mongoDatastore.codecRegistry)
+                            .find(idQuery, Document)
+                            .limit(1)
+                            .first()
+                    if (raw != null) {
+                        Object discriminator = raw.get(MONGO_CLASS_FIELD)
+                        if (discriminator != null) {
+                            PersistentEntity childEntity = pe.mappingContext
+                                    .getChildEntityByDiscriminator(pe.rootEntity, discriminator.toString())
+                            if (childEntity != null) {
+                                o = mongoCollection
+                                        .withDocumentClass(childEntity.javaClass)
+                                        .withCodecRegistry(mongoDatastore.codecRegistry)
+                                        .find(idQuery, childEntity.javaClass)
+                                        .limit(1)
+                                        .first()
+                            }
+                        }
+                    }
+                    if (o == null) {
+                        // Fallback for inheritance mappings where subclasses may be stored differently.
+                        for (PersistentEntity candidate : pe.mappingContext.persistentEntities) {
+                            if (candidate != pe && candidate.rootEntity == pe) {
+                                MongoCollection candidateCollection = getMongoCollection(candidate)
+                                o = candidateCollection
+                                        .withDocumentClass(candidate.javaClass)
+                                        .withCodecRegistry(mongoDatastore.codecRegistry)
+                                        .find(idQuery, candidate.javaClass)
+                                        .limit(1)
+                                        .first()
+                                if (o != null) {
+                                    break
+                                }
+                            }
+                        }
+                    }
+                }
             } catch (Exception e) {
                 println "ERROR in retrieveEntity for ${pe.name}: ${e.class.name}: ${e.message}"
                 e.printStackTrace()
@@ -203,82 +245,78 @@ class MongoCodecEntityPersister extends ThirdPartyCacheEntityPersister<Object> {
         if (isNotUpdateForAssignedId(persistentEntity, obj, isUpdate, assignedId, si)) {
             isUpdate = false
         }
-        if (isUpdate && !getSession().isDirty(obj)) {
-            return (Serializable) id
-        } else {
-            final EntityAccess entityAccess = createEntityAccess(entity, obj)
-            boolean isAssigned = isAssignedId(entity)
-            if (!isAssigned && idIsNull) {
-                id = generateIdentifier(entity)
-                if (id != null) {
-                    entityAccess.setIdentifier(id)
-                } else {
-                    throw new DataIntegrityViolationException("Failed to generate a valid identifier for entity [$obj]")
-                }
-            } else if (idIsNull) {
-                throw new DataIntegrityViolationException("Entity [$obj] has null identifier when identifier strategy is manual assignment. Assign an appropriate identifier before persisting.")
-            } else if (isAssigned && !si.isStateless(entity)) {
-                isUpdate = mongoCodecSession.contains(obj)
-            }
-
-            si.registerPending(obj)
-            processAssociations(mongoCodecSession, entity, entityAccess, obj, proxyFactory, isUpdate)
-
-            if (!isUpdate) {
-                MongoCodecEntityPersister self = this
-                mongoCodecSession.addPendingInsert(new PendingInsertAdapter(entity, id, obj, entityAccess) {
-                    @Override
-                    void run() {
-                        if (!cancelInsert(entity, entityAccess)) {
-                            updateCaches(entity, obj, id)
-                            addCascadeOperation(new PendingOperationAdapter(entity, id, obj) {
-                                @Override
-                                void run() {
-                                    self.firePostInsertEvent(entity, entityAccess)
-                                }
-                            })
-                        } else {
-                            setVetoed(true)
-                        }
-                    }
-                })
+        final EntityAccess entityAccess = createEntityAccess(entity, obj)
+        boolean isAssigned = isAssignedId(entity)
+        if (!isAssigned && idIsNull) {
+            id = generateIdentifier(entity)
+            if (id != null) {
+                entityAccess.setIdentifier(id)
             } else {
-                mongoCodecSession.addPendingUpdate(new PendingUpdateAdapter(entity, id, obj, entityAccess) {
-                    @Override
-                    void run() {
-                        // Take snapshot of all property values BEFORE the PreUpdate event fires
-                        Map<String, Object> beforeUpdateSnapshot = [:]
-                        if (obj instanceof DirtyCheckable) {
-                            for (PersistentProperty prop : entity.persistentProperties) {
-                                beforeUpdateSnapshot[prop.name] = entityAccess.getProperty(prop.name)
+                throw new DataIntegrityViolationException("Failed to generate a valid identifier for entity [$obj]")
+            }
+        } else if (idIsNull) {
+            throw new DataIntegrityViolationException("Entity [$obj] has null identifier when identifier strategy is manual assignment. Assign an appropriate identifier before persisting.")
+        } else if (isAssigned && !si.isStateless(entity)) {
+            isUpdate = mongoCodecSession.contains(obj)
+        }
+
+        si.registerPending(obj)
+        processAssociations(mongoCodecSession, entity, entityAccess, obj, proxyFactory, isUpdate)
+
+        if (!isUpdate) {
+            MongoCodecEntityPersister self = this
+            mongoCodecSession.addPendingInsert(new PendingInsertAdapter(entity, id, obj, entityAccess) {
+                @Override
+                void run() {
+                    if (!cancelInsert(entity, entityAccess)) {
+                        updateCaches(entity, obj, id)
+                        addCascadeOperation(new PendingOperationAdapter(entity, id, obj) {
+                            @Override
+                            void run() {
+                                self.firePostInsertEvent(entity, entityAccess)
                             }
-                        }
-                        if (!cancelUpdate(entity, entityAccess)) {
-                            // Compare with snapshot and mark modified properties dirty
-                            if (obj instanceof DirtyCheckable) {
-                                DirtyCheckable dirtyCheckable = (DirtyCheckable) obj
-                                for (PersistentProperty prop : entity.persistentProperties) {
-                                    Object oldValue = beforeUpdateSnapshot[prop.name]
-                                    Object newValue = entityAccess.getProperty(prop.name)
-                                    boolean valueChanged = oldValue != newValue && (oldValue == null || !oldValue.equals(newValue))
-                                    if (valueChanged) {
-                                        dirtyCheckable.markDirty(prop.name, newValue, oldValue)
-                                    }
-                                }
-                            }
-                            updateCaches(entity, obj, id)
-                            addCascadeOperation(new PendingOperationAdapter(entity, id, obj) {
-                                @Override
-                                void run() {
-                                    firePostUpdateEvent(entity, entityAccess)
-                                }
-                            })
-                        } else {
-                            setVetoed(true)
+                        })
+                    } else {
+                        setVetoed(true)
+                    }
+                }
+            })
+        } else {
+            mongoCodecSession.addPendingUpdate(new PendingUpdateAdapter(entity, id, obj, entityAccess) {
+                @Override
+                void run() {
+                    // Take snapshot of all property values BEFORE the PreUpdate event fires
+                    Map<String, Object> beforeUpdateSnapshot = [:]
+                    if (obj instanceof DirtyCheckable) {
+                        for (PersistentProperty prop : entity.persistentProperties) {
+                            beforeUpdateSnapshot[prop.name] = entityAccess.getProperty(prop.name)
                         }
                     }
-                })
-            }
+                    if (!cancelUpdate(entity, entityAccess)) {
+                        // Compare with snapshot and mark modified properties dirty
+                        if (obj instanceof DirtyCheckable) {
+                            DirtyCheckable dirtyCheckable = (DirtyCheckable) obj
+                            for (PersistentProperty prop : entity.persistentProperties) {
+                                Object oldValue = beforeUpdateSnapshot[prop.name]
+                                Object newValue = entityAccess.getProperty(prop.name)
+                                boolean valueChanged = oldValue != newValue && (oldValue == null || !oldValue.equals(newValue))
+                                if (valueChanged) {
+                                    dirtyCheckable.markDirty(prop.name, newValue, oldValue)
+                                }
+                            }
+                        }
+                        updateCaches(entity, obj, id)
+                        addCascadeOperation(new PendingOperationAdapter(entity, id, obj) {
+                            @Override
+                            void run() {
+                                firePostUpdateEvent(entity, entityAccess)
+                            }
+                        })
+                    } else {
+                        setVetoed(true)
+                    }
+                }
+            })
         }
         return id
     }
