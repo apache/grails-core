@@ -154,12 +154,18 @@ class MongoCodecEntityPersister extends ThirdPartyCacheEntityPersister<Object> {
         } else {
             MongoCollection mongoCollection = getMongoCollection(pe)
             Document idQuery = createIdQuery(key)
-            o = mongoCollection
-                    .withDocumentClass(persistentEntity.javaClass)
-                    .withCodecRegistry(mongoDatastore.codecRegistry)
-                    .find(idQuery, pe.javaClass)
-                    .limit(1)
-                    .first()
+            try {
+                o = mongoCollection
+                        .withDocumentClass(pe.javaClass)
+                        .withCodecRegistry(mongoDatastore.codecRegistry)
+                        .find(idQuery, pe.javaClass)
+                        .limit(1)
+                        .first()
+            } catch (Exception e) {
+                println "ERROR in retrieveEntity for ${pe.name}: ${e.class.name}: ${e.message}"
+                e.printStackTrace()
+                throw e
+            }
 
             if (o != null) {
                 if (!cancelLoad(pe, createEntityAccess(pe, o))) {
