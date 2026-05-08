@@ -317,6 +317,17 @@ interface Settings {
      */
     String SETTING_LOG_REMOTE_ADDR = 'grails.exceptionresolver.logRemoteAddr'
     /**
+     * Whether {@link org.grails.exceptions.reporting.DefaultStackTraceFilterer#filter(Throwable)}
+     * should emit the unfiltered stack trace to the dedicated {@code StackTrace} logger as a
+     * side effect, before trimming the trace in place. Defaults to {@code true} to preserve
+     * historical behaviour — non-resolver callers (for example {@code GrailsUtil.sanitizeRootCause},
+     * {@code GroovyPageView.deepSanitize}, custom plugin code) that previously relied on this
+     * side-effect emission continue to produce {@code StackTrace} entries. Set to {@code false}
+     * to disable the side-effect emission and rely solely on {@link #SETTING_LOG_FULL_STACKTRACE}
+     * for resolver-driven emission.
+     */
+    String SETTING_LOG_FULL_STACKTRACE_ON_FILTER = 'grails.exceptionresolver.logFullStackTraceOnFilter'
+    /**
      * The class to use for stacktrace filtering. Should be an instanceof {@link org.grails.exceptions.reporting.StackTraceFilterer}
      */
     String SETTING_LOGGING_STACKTRACE_FILTER_CLASS = 'grails.logging.stackTraceFiltererClass'

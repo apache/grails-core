@@ -63,7 +63,7 @@ class StackTraceFiltererSpec extends Specification {
         }
     }
 
-    def 'filter does not emit a StackTrace log entry for a single throwable'() {
+    def 'filter emits a StackTrace log entry for a single throwable by default'() {
         given: 'captured System.err'
             def originalErr = System.err
             def baos = new ByteArrayOutputStream()
@@ -78,6 +78,34 @@ class StackTraceFiltererSpec extends Specification {
 
         when: 'the exception is filtered'
             filterer.filter(exception)
+
+        then: "a 'Full Stack Trace:' entry is emitted by the filterer for backwards compatibility"
+            System.err.flush()
+            baos.toString().contains('Full Stack Trace:')
+
+        cleanup:
+            System.setErr(originalErr)
+    }
+
+    def 'filter does not emit a StackTrace log entry when logFullStackTraceOnFilter is disabled'() {
+        given: 'captured System.err'
+            def originalErr = System.err
+            def baos = new ByteArrayOutputStream()
+            System.setErr(new PrintStream(baos, true))
+
+        and: 'a filterer with the side-effect emission disabled'
+            def quietFilterer = new DefaultStackTraceFilterer()
+            quietFilterer.logFullStackTraceOnFilter = false
+
+        and: 'an exception whose stack trace mixes application and internal frames'
+            def exception = new RuntimeException('boom')
+            exception.stackTrace = [
+                new StackTraceElement('test.FooController', 'show', 'FooController.groovy', 6),
+                new StackTraceElement('java.lang.reflect.Method', 'invoke', 'Method.java', 580)
+            ] as StackTraceElement[]
+
+        when: 'the exception is filtered'
+            quietFilterer.filter(exception)
 
         then: "no 'Full Stack Trace:' entry is emitted by the filterer"
             System.err.flush()
@@ -134,7 +162,7 @@ class StackTraceFiltererSpec extends Specification {
             }
     }
 
-    def 'filter does not emit a StackTrace log entry when walking the cause chain'() {
+    def 'filter emits one StackTrace log entry per throwable when walking the cause chain by default'() {
         given: 'captured System.err'
             def originalErr = System.err
             def baos = new ByteArrayOutputStream()
@@ -155,6 +183,40 @@ class StackTraceFiltererSpec extends Specification {
 
         when: 'recursive filtering is applied to the top-level exception'
             filterer.filter(exception, true)
+
+        then: "a 'Full Stack Trace:' entry is emitted per throwable in the chain (pre-7.1 behaviour)"
+            System.err.flush()
+            baos.toString().count('Full Stack Trace:') == 2
+
+        cleanup:
+            System.setErr(originalErr)
+    }
+
+    def 'filter does not emit a StackTrace log entry when walking the cause chain with logFullStackTraceOnFilter disabled'() {
+        given: 'captured System.err'
+            def originalErr = System.err
+            def baos = new ByteArrayOutputStream()
+            System.setErr(new PrintStream(baos, true))
+
+        and: 'a filterer with the side-effect emission disabled'
+            def quietFilterer = new DefaultStackTraceFilterer()
+            quietFilterer.logFullStackTraceOnFilter = false
+
+        and: 'a wrapped exception whose wrapper and cause mix application and internal frames'
+            def rootCause = new IllegalStateException('root cause')
+            rootCause.stackTrace = [
+                new StackTraceElement('test.FooService', 'doStuff', 'FooService.groovy', 3),
+                new StackTraceElement('java.lang.reflect.Method', 'invoke', 'Method.java', 580)
+            ] as StackTraceElement[]
+
+            def exception = new RuntimeException('boom', rootCause)
+            exception.stackTrace = [
+                new StackTraceElement('test.FooController', 'show', 'FooController.groovy', 6),
+                new StackTraceElement('java.lang.reflect.Method', 'invoke', 'Method.java', 580)
+            ] as StackTraceElement[]
+
+        when: 'recursive filtering is applied to the top-level exception'
+            quietFilterer.filter(exception, true)
 
         then: "no 'Full Stack Trace:' entry is emitted for any throwable in the chain"
             System.err.flush()

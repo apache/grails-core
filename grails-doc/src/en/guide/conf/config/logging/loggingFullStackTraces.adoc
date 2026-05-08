@@ -87,6 +87,55 @@ Setting the `StackTrace` logger level to `OFF` in Logback makes the opt-in a no-
 This is useful if the property is enabled in a shared `application.yml` but a particular environment needs to
 silence the extra record.
 
+==== Side-Effect Emission From the Filterer
+
+In addition to the resolver-driven emission described above, `DefaultStackTraceFilterer.filter(Throwable)` emits
+the unfiltered stack trace to the `StackTrace` logger as a side effect _before_ trimming the trace in place.
+This preserves the pre-7.1 behaviour where any caller of the filterer — `GrailsExceptionResolver`,
+`GroovyPageView.deepSanitize`, `GrailsUtil.sanitizeRootCause`, or custom plugin code — produced a `StackTrace`
+log record. It means non-resolver code paths (for example, a scheduled job that calls
+`GrailsUtil.sanitizeRootCause(ex)` before logging via its own logger) continue to populate the `StackTrace`
+appender without an explicit emission call.
+
+The behaviour is enabled by default. To disable the side-effect emission and rely solely on
+`logFullStackTrace` for resolver-driven output, set:
+
+[source, yaml]
+.grails-app/conf/application.yml
+----
+grails:
+    exceptionresolver:
+        logFullStackTraceOnFilter: false
+----
+
+When the side-effect emission is enabled and `logFullStackTrace` is also enabled, a request exception produces
+both — one resolver-driven record (top-level exception with the full cause chain) and one record per throwable
+visited by the recursive filter walk. This matches pre-7.1 multiplicity. Pick the combination that suits your
+log-routing setup:
+
+[cols="1,1,3"]
+|===
+|`logFullStackTrace` |`logFullStackTraceOnFilter` |Behaviour for a request exception with N causes
+
+|`false` (default)
+|`true` (default)
+|N `StackTrace` records (one per throwable in the chain) + 1 resolver record. Matches pre-7.1 (minus a former
+duplicate "condensed" record).
+
+|`true`
+|`false`
+|1 `StackTrace` record (top-level with full chain) + 1 resolver record. Cleanest output; recommended for new
+deployments that don't depend on per-cause emission.
+
+|`true`
+|`true`
+|N+1 `StackTrace` records + 1 resolver record. Highest fidelity, most verbose.
+
+|`false`
+|`false`
+|1 resolver record only. Silent on `StackTrace`.
+|===
+
 ==== Including Per-Request Context in the Exception Log
 
 The resolver can append a small parenthesised clause of per-request context — the current user and the remote
