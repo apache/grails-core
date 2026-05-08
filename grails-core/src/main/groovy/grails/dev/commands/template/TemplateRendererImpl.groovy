@@ -63,16 +63,13 @@ class TemplateRendererImpl implements TemplateRenderer {
                 "render(Map) requires non-null 'template' and 'destination' entries; got template=${templateArg}, destination=${destArg}")
         }
         // Preserve already-normalized inputs instead of re-routing through template(..) / file(..).
-        // Note: this body being statically typed is *not* by itself enough to fix the Groovy 5/6
-        // regression - under @CompileStatic, the named-argument call site
-        // `templateRenderer.render(template: ..., destination: ...)` resolves to render(Map)
-        // and silently no-ops before reaching this body at all on both Groovy 5.0.6-SNAPSHOT
-        // and Groovy 6.0.0-SNAPSHOT. See the standalone reproducer at
-        // https://github.com/jamesfredley/groovy5-compiledynamic-trait-bug for the four
-        // call shapes that were tested. The actual workaround is at the call sites in
-        // grails-scaffolding (typed positional `templateRenderer.render(Resource, File, Map, boolean)`),
-        // and this body is kept statically typed as defence-in-depth so any caller that does
-        // reach render(Map) gets predictable dispatch.
+        // Use Map.get() and explicit null checks (above) instead of Groovy truthiness
+        // (`if (template && destination)`), because DefaultGroovyMethods.asBoolean(File) on
+        // Groovy 5+ returns `file.exists() && (file.isDirectory() || file.length() > 0)`.
+        // For a not-yet-generated destination File the truthy-check path silently no-ops.
+        // See https://github.com/jamesfredley/groovy5-compiledynamic-trait-bug/issues/1
+        // for the upstream confirmation from the Groovy team that File truthiness is the
+        // root cause (not @CompileStatic dispatch through the @Delegate chain).
         Resource templateResource
         if (templateArg instanceof Resource) {
             templateResource = (Resource) templateArg

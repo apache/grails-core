@@ -22,7 +22,6 @@ import java.nio.charset.StandardCharsets
 
 import groovy.text.GStringTemplateEngine
 import groovy.text.Template
-import groovy.transform.CompileDynamic
 import groovy.transform.CompileStatic
 
 import grails.codegen.model.Model
@@ -72,14 +71,25 @@ class TemplateRendererImpl implements TemplateRenderer, ProfileRepositoryAware {
      * @param namedArguments The named arguments are 'template', 'destination' and 'model'
      */
     @Override
-    @CompileDynamic
     void render(Map<String, Object> namedArguments) {
-        if (namedArguments?.template && namedArguments?.destination) {
-            def templateArg = namedArguments.template
-            def template = templateArg instanceof Resource ? templateArg : template(templateArg)
-            boolean overwrite = namedArguments.overwrite as Boolean ?: false
-            render(template, file(namedArguments.destination), namedArguments.model ?: [:], overwrite)
+        // Use containsKey / explicit null checks (not Groovy truthiness) because
+        // DefaultGroovyMethods.asBoolean(File) on Groovy 5+ returns
+        // file.exists() && (file.isDirectory() || file.length() > 0). For a
+        // not-yet-generated destination File, the truthiness path silently no-ops.
+        if (namedArguments == null || !namedArguments.containsKey('template') || !namedArguments.containsKey('destination')) {
+            return
         }
+        Object templateArg = namedArguments.get('template')
+        Object destArg = namedArguments.get('destination')
+        if (templateArg == null || destArg == null) {
+            return
+        }
+        Resource templateResource = templateArg instanceof Resource ? (Resource) templateArg : template(templateArg)
+        File destinationFile = destArg instanceof File ? (File) destArg : file(destArg)
+        Object modelArg = namedArguments.get('model')
+        Map model = modelArg instanceof Map ? (Map) modelArg : [:]
+        boolean overwrite = namedArguments.get('overwrite') as Boolean ?: false
+        render(templateResource, destinationFile, model, overwrite)
     }
 
     /**
