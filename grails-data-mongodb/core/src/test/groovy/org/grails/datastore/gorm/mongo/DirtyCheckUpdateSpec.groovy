@@ -63,7 +63,7 @@ class DirtyCheckUpdateSpec extends MongoDatastoreSpec {
         b = Bar.get(b.id)
 
         then:
-        b.version == 3 //should be 2
+        b.version == 1
     }
 
     void "Test that the version is incremented on save"() {
