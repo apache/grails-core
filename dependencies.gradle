@@ -33,7 +33,7 @@ ext {
             'gradle-spock.version'          : '2.3-groovy-4.0',
             'grails-publish-plugin.version' : '1.0.0-M1',
             'jansi.version'                 : '2.4.2',
-            'javaparser-core.version'       : '3.28.0',
+            'javaparser-core.version'       : '3.28.1',
             'jline.version'                 : '3.30.6',
             'jline2.version'                : '2.14.6',
             'jna.version'                   : '5.18.1',
