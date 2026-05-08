@@ -292,33 +292,6 @@ class GormEntityTransformation extends AbstractASTTransformation implements Comp
                 classNode.addMethod('$static_propertyMissing', Modifier.PUBLIC | Modifier.STATIC, AstUtils.OBJECT_CLASS_NODE, propertyMissingGetParameters, null, propertyMissingGetBody)
         markAsGenerated(classNode, propertyMissingNodeGetter)
 
-        // INSTANCE Object get(String name) - Groovy 6 generic-getter MOP regression workaround.
-        // On Groovy 6, MetaClassImpl picks up the inherited GormEntity.get(Serializable)
-        // entity-by-ID method as the genericGetMethod for instance property access on the
-        // implementing class, hijacking every dynamic property read - including ones that
-        // should fall through to propertyMissing(String) for datasource qualifiers. Result:
-        // book.someConnection.delete(flush: true) silently returns the get(Serializable) value
-        // (an entity row or null) instead of the expected DelegatingGormEntityApi, which then
-        // surfaces as "Unknown entity: java.util.LinkedHashMap" deep in Hibernate or as NPEs
-        // in HibernateRuntimeUtils.setupErrorsProperty.
-        // Workaround: add an instance Object get(String) directly on every @Entity class via
-        // AST. Groovy's instance MOP picks the more-specific String overload over the
-        // inherited Serializable one, so the generic-getter winds up routing through the
-        // existing propertyMissing(String) and yields a DelegatingGormEntityApi as expected.
-        // Standalone reproducer: https://github.com/jamesfredley/groovy6-get-as-generic-getter
-        // No upstream Apache Groovy JIRA filed yet; remove this shim once one is filed and fixed.
-        def instanceGetBody = new BlockStatement()
-        def instanceGetNameParam = new Parameter(ClassHelper.make(String), 'name')
-        def instanceGetArgs = new ArgumentListExpression(instanceGetNameParam)
-        def instanceGetMethodCall = new MethodCallExpression(new VariableExpression('this'), 'propertyMissing', instanceGetArgs)
-        instanceGetBody.addStatement(
-                new ExpressionStatement(instanceGetMethodCall)
-        )
-        def instanceGetParameters = [instanceGetNameParam] as Parameter[]
-        MethodNode instanceGetNode =
-                classNode.addMethod('get', Modifier.PUBLIC, AstUtils.OBJECT_CLASS_NODE, instanceGetParameters, null, instanceGetBody)
-        markAsGenerated(classNode, instanceGetNode)
-
         // now process named query associations
         // see https://grails.apache.org/docs/latest/ref/Domain%20Classes/namedQueries.html
 
