@@ -49,7 +49,7 @@ import org.grails.web.servlet.mvc.GrailsWebRequest
 @TagLib
 class ValidationTagLib implements TagLibrary {
 
-    static returnObjectForTags = ['message', 'fieldError']
+    static returnObjectForTags = ['message', 'fieldError', 'formatValue']
 
     MessageSource messageSource
     CodecLookup codecLookup
@@ -465,7 +465,7 @@ class ValidationTagLib implements TagLibrary {
      * formatted according to the current user's locale during the
      * conversion to a string.
      */
-    private def formatValue(value, String propertyPath = null, Boolean tagSyntaxCall = false) {
+    def formatValue(value, String propertyPath = null, Boolean tagSyntaxCall = false) {
         def webRequest = GrailsWebRequest.lookup()
         PropertyEditorRegistry registry = webRequest.getPropertyEditorRegistry()
         PropertyEditor editor = registry.findCustomEditor(value.getClass(), propertyPath)

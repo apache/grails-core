@@ -32,6 +32,13 @@ import org.grails.compiler.injection.ArtefactTypeAstTransformation;
 
 @GroovyASTTransformation(phase = CompilePhase.CANONICALIZATION)
 public class TagLibArtefactTypeAstTransformation extends ArtefactTypeAstTransformation {
+
+    /**
+     * System property to silence the closure-based tag deprecation warning emitted at compile time.
+     * Set to {@code false} to suppress (default {@code true}).
+     */
+    public static final String WARN_DEPRECATED_CLOSURES_PROPERTY = "grails.taglib.warnDeprecatedClosures";
+
     private static final ClassNode MY_TYPE = new ClassNode(TagLib.class);
     private static final ClassNode CLOSURE_TYPE = new ClassNode(Closure.class);
 
@@ -47,6 +54,9 @@ public class TagLibArtefactTypeAstTransformation extends ArtefactTypeAstTransfor
     }
 
     protected void addClosureTagDeprecationWarnings(SourceUnit sourceUnit, ClassNode classNode) {
+        if (!Boolean.parseBoolean(System.getProperty(WARN_DEPRECATED_CLOSURES_PROPERTY, "true"))) {
+            return;
+        }
         if (classNode.getPackageName() != null && classNode.getPackageName().startsWith("org.grails.plugins.web.taglib")) {
             return;
         }

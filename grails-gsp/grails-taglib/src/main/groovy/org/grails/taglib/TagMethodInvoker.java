@@ -36,30 +36,65 @@ import groovy.lang.Closure;
 import groovy.lang.GroovyObject;
 import groovy.lang.MissingMethodException;
 
+import grails.gsp.NotATag;
+
 public final class TagMethodInvoker {
 
     /**
-     * Method names inherited from framework traits and interfaces that must never
-     * be treated as tag methods.  These come from {@code TagLibrary},
-     * {@code TagLibraryInvoker}, {@code WebAttributes}, {@code ServletAttributes},
-     * and related Spring interfaces.
+     * Method names from framework traits, Spring lifecycle interfaces, and the like
+     * that must never be treated as tag methods regardless of the declaring class.
      */
     private static final Set<String> FRAMEWORK_METHOD_NAMES = Set.of(
+            "afterPropertiesSet",
+            "currentRequestAttributes",
+            "destroy",
             "initializeTagLibrary",
+            "onApplicationEvent",
             "raw",
             "throwTagError",
-            "withCodec",
-            "currentRequestAttributes"
+            "withCodec"
     );
 
-    private static final Set<String> NON_TAG_METHOD_NAMES = Set.of(
-            "afterPropertiesSet",
-            "destroy",
-            "equals",
-            "hashCode",
-            "onApplicationEvent",
-            "toString"
-    );
+    private static final Set<String> OBJECT_METHOD_SIGNATURES = collectSignatures(Object.class);
+    private static final Set<String> GROOVY_OBJECT_METHOD_SIGNATURES = collectSignatures(GroovyObject.class);
+
+    private static Set<String> collectSignatures(Class<?> type) {
+        Set<String> signatures = new HashSet<>();
+        for (Method method : type.getMethods()) {
+            signatures.add(signature(method));
+        }
+        return Collections.unmodifiableSet(signatures);
+    }
+
+    private static final ClassValue<Map<String, Field>> CLOSURE_FIELDS_BY_NAME = new ClassValue<>() {
+        @Override
+        protected Map<String, Field> computeValue(Class<?> type) {
+            Map<String, Field> fields = new HashMap<>();
+            Set<String> shadowed = new HashSet<>();
+            Class<?> current = type;
+            while (current != null && current != Object.class) {
+                for (Field field : current.getDeclaredFields()) {
+                    String name = field.getName();
+                    // A field declared in a more-derived class shadows any field of the
+                    // same name in a superclass, regardless of type. Match the previous
+                    // getDeclaredField-based lookup behavior.
+                    if (!shadowed.add(name)) {
+                        continue;
+                    }
+                    if (Modifier.isStatic(field.getModifiers())) {
+                        continue;
+                    }
+                    if (!Closure.class.isAssignableFrom(field.getType())) {
+                        continue;
+                    }
+                    field.setAccessible(true);
+                    fields.put(name, field);
+                }
+                current = current.getSuperclass();
+            }
+            return Collections.unmodifiableMap(fields);
+        }
+    };
 
     private static final ClassValue<Map<String, List<Method>>> INVOKABLE_METHODS_BY_NAME = new ClassValue<>() {
         @Override
@@ -74,9 +109,14 @@ public final class TagMethodInvoker {
             for (Map.Entry<String, List<Method>> entry : methodsByName.entrySet()) {
                 // Sort methods by descending parameter count so that (Map, Closure) signatures
                 // are tried before (Map) signatures, preventing infinite recursion when a
-                // 1-arg convenience overload delegates to the 2-arg variant.
+                // 1-arg convenience overload delegates to the 2-arg variant. Break ties by
+                // signature string so the resolution order is stable across JVMs (HotSpot,
+                // Graal, J9 may otherwise return getDeclaredMethods() in different orders).
                 List<Method> sorted = new ArrayList<>(entry.getValue());
-                sorted.sort((a, b) -> Integer.compare(b.getParameterCount(), a.getParameterCount()));
+                sorted.sort((a, b) -> {
+                    int byArity = Integer.compare(b.getParameterCount(), a.getParameterCount());
+                    return byArity != 0 ? byArity : signature(a).compareTo(signature(b));
+                });
                 immutableMethodsByName.put(entry.getKey(), Collections.unmodifiableList(sorted));
             }
             return Collections.unmodifiableMap(immutableMethodsByName);
@@ -87,22 +127,15 @@ public final class TagMethodInvoker {
     }
 
     public static Object getClosureTagProperty(GroovyObject tagLib, String tagName) {
-        Class<?> type = tagLib.getClass();
-        while (type != null && type != Object.class) {
-            try {
-                Field field = type.getDeclaredField(tagName);
-                if (!Modifier.isStatic(field.getModifiers()) && Closure.class.isAssignableFrom(field.getType())) {
-                    field.setAccessible(true);
-                    return field.get(tagLib);
-                }
-                return null;
-            } catch (NoSuchFieldException ignored) {
-                type = type.getSuperclass();
-            } catch (IllegalAccessException e) {
-                throw new RuntimeException(e);
-            }
+        Field field = CLOSURE_FIELDS_BY_NAME.get(tagLib.getClass()).get(tagName);
+        if (field == null) {
+            return null;
         }
-        return null;
+        try {
+            return field.get(tagLib);
+        } catch (IllegalAccessException e) {
+            throw new RuntimeException(e);
+        }
     }
 
     public static Collection<String> getInvokableTagMethodNames(Class<?> tagLibClass) {
@@ -140,6 +173,9 @@ public final class TagMethodInvoker {
                     if (targetException instanceof RuntimeException runtimeException) {
                         throw runtimeException;
                     }
+                    if (targetException instanceof Error error) {
+                        throw error;
+                    }
                     throw new RuntimeException(targetException);
                 }
             }
@@ -152,13 +188,10 @@ public final class TagMethodInvoker {
         if (!Modifier.isPublic(modifiers) || Modifier.isStatic(modifiers) || method.isBridge() || method.isSynthetic()) {
             return false;
         }
-        if (method.getDeclaringClass() == Object.class || method.getDeclaringClass() == GroovyObject.class) {
+        if (method.isAnnotationPresent(NotATag.class)) {
             return false;
         }
         String name = method.getName();
-        if (NON_TAG_METHOD_NAMES.contains(name)) {
-            return false;
-        }
         if (name.startsWith("get") && method.getParameterCount() == 0) {
             return false;
         }
@@ -173,6 +206,10 @@ public final class TagMethodInvoker {
             return false;
         }
         if (FRAMEWORK_METHOD_NAMES.contains(name)) {
+            return false;
+        }
+        String signature = signature(method);
+        if (OBJECT_METHOD_SIGNATURES.contains(signature) || GROOVY_OBJECT_METHOD_SIGNATURES.contains(signature)) {
             return false;
         }
         return true;
@@ -220,8 +257,14 @@ public final class TagMethodInvoker {
                 args[i] = body != null ? body : TagOutput.EMPTY_BODY_CLOSURE;
                 continue;
             }
-            Object value = attrs != null ? attrs.get(parameterName) : null;
-            if (value == null) {
+            // The attribute must be present in the map by parameter name. An absent
+            // attribute rejects this overload so resolution can try a different one.
+            if (attrs == null || !attrs.containsKey(parameterName)) {
+                return null;
+            }
+            Object value = attrs.get(parameterName);
+            // null is a legal binding for reference-typed parameters; primitives can't take it.
+            if (value == null && parameterType.isPrimitive()) {
                 return null;
             }
             args[i] = value;
