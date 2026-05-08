@@ -51,6 +51,26 @@ application {
     mainClass = 'org.grails.forge.analytics.postgres.Main'
 }
 graalvmNative.toolchainDetection = false
+graalvmNative {
+    // Pin to GraalVM Reachability Metadata Repository 0.3.35 (released 2026-03-06).
+    // The version bundled by Micronaut Gradle Application Plugin 4.6.2 selects the
+    // ch.qos.logback:logback-classic 1.4.9 metadata for our 1.5.17 runtime, whose
+    // --initialize-at-build-time=ch.qos.logback directive collides with the
+    // additional classes introduced in logback 1.5.x and produces "* the class
+    // was requested to be initialized at run time ... got initialized during
+    // image building" failures during dockerBuildNative.
+    //
+    // GRM 0.3.35 ships a 1.5.7 metadata directory for ch.qos.logback:logback-classic
+    // that covers 1.5.7-1.5.29 and contains only reachability-metadata.json (no
+    // native-image.properties / no --initialize-at-build-time directive), so the
+    // conflict goes away and reflection metadata is still provided. GRM 1.x
+    // releases use a new repository layout that is incompatible with the
+    // GraalVMReachabilityMetadataService bundled with this plugin, so we stay
+    // on the last 0.x release that contains the updated logback metadata.
+    metadataRepository {
+        version = '0.3.35'
+    }
+}
 micronaut {
     runtime('netty')
     testRuntime('junit5')
