@@ -112,20 +112,20 @@ class TemplateRendererImpl implements TemplateRenderer, ProfileRepositoryAware {
      * @param model The model
      */
     void render(CharSequence template, File destination, Map model = Collections.emptyMap(), boolean overwrite = false) {
-        if (template && destination) {
-            if (destination.exists() && !overwrite) {
-                executionContext.console.warn("Destination file ${projectPath(destination)} already exists, skipping...")
-            }
-            else {
-                def templateEngine = new GStringTemplateEngine()
-                try {
-                    def t = templateEngine.createTemplate(template.toString())
-                    writeTemplateToDestination(t, model, destination)
-                } catch (e) {
-                    destination.delete()
-                    throw new TemplateException("Error rendering template to destination ${projectPath(destination)}: ${e.message}", e)
-                }
-            }
+        if (template == null || destination == null) {
+            return
+        }
+        if (destination.exists() && !overwrite) {
+            executionContext.console.warn("Destination file ${projectPath(destination)} already exists, skipping...")
+            return
+        }
+        def templateEngine = new GStringTemplateEngine()
+        try {
+            def t = templateEngine.createTemplate(template.toString())
+            writeTemplateToDestination(t, model, destination)
+        } catch (e) {
+            destination.delete()
+            throw new TemplateException("Error rendering template to destination ${projectPath(destination)}: ${e.message}", e)
         }
     }
 
@@ -147,28 +147,28 @@ class TemplateRendererImpl implements TemplateRenderer, ProfileRepositoryAware {
      * @param model The model
      */
     void render(File template, File destination, Map model = Collections.emptyMap(), boolean overwrite = false) {
-        if (template && destination) {
-            if (destination.exists() && !overwrite) {
-                executionContext.console.warn("Destination file ${projectPath( destination)} already exists, skipping...")
+        if (template == null || destination == null) {
+            return
+        }
+        if (destination.exists() && !overwrite) {
+            executionContext.console.warn("Destination file ${projectPath( destination)} already exists, skipping...")
+            return
+        }
+        Template t = templateCache[template.absolutePath]
+        if (t == null) {
+            try {
+                def templateEngine = new GStringTemplateEngine()
+                t = templateEngine.createTemplate(template)
+            } catch (e) {
+                throw new TemplateException("Error rendering template [$template] to destination ${projectPath(destination)}: ${e.message}", e)
             }
-            else {
-                Template t = templateCache[template.absolutePath]
-                if (t == null) {
-                    try {
-                        def templateEngine = new GStringTemplateEngine()
-                        t = templateEngine.createTemplate(template)
-                    } catch (e) {
-                        throw new TemplateException("Error rendering template [$template] to destination ${projectPath(destination)}: ${e.message}", e)
-                    }
-                }
-                try {
-                    writeTemplateToDestination(t, model, destination)
-                    executionContext.console.addStatus("Rendered template ${template.name} to destination ${projectPath(destination)}")
-                } catch (Throwable e) {
-                    destination.delete()
-                    throw new TemplateException("Error rendering template [$template] to destination ${projectPath(destination)}: ${e.message}", e)
-                }
-            }
+        }
+        try {
+            writeTemplateToDestination(t, model, destination)
+            executionContext.console.addStatus("Rendered template ${template.name} to destination ${projectPath(destination)}")
+        } catch (Throwable e) {
+            destination.delete()
+            throw new TemplateException("Error rendering template [$template] to destination ${projectPath(destination)}: ${e.message}", e)
         }
     }
 
@@ -190,42 +190,41 @@ class TemplateRendererImpl implements TemplateRenderer, ProfileRepositoryAware {
      * @param model The model
      */
     void render(Resource template, File destination, Map model = Collections.emptyMap(), boolean overwrite = false) {
-        if (template && destination) {
-            if (destination.exists() && !overwrite) {
-                executionContext.console.warn("Destination file ${projectPath( destination )} already exists, skipping...")
-            }
-            else if (!template?.exists()) {
-                throw new TemplateException("Template [$template.filename] not found.")
-            }
-            else {
-                Template t = templateCache[template.filename]
-                if (t == null) {
-
+        if (template == null || destination == null) {
+            return
+        }
+        if (destination.exists() && !overwrite) {
+            executionContext.console.warn("Destination file ${projectPath( destination )} already exists, skipping...")
+            return
+        }
+        if (!template.exists()) {
+            throw new TemplateException("Template [$template.filename] not found.")
+        }
+        Template t = templateCache[template.filename]
+        if (t == null) {
+            try {
+                def templateEngine = new GStringTemplateEngine()
+                def reader = new InputStreamReader(template.inputStream, 'UTF-8')
+                try {
+                    t = templateEngine.createTemplate(reader)
+                } finally {
                     try {
-                        def templateEngine = new GStringTemplateEngine()
-                        def reader = new InputStreamReader(template.inputStream, 'UTF-8')
-                        try {
-                            t = templateEngine.createTemplate(reader)
-                        } finally {
-                            try {
-                                reader.close()
-                            } catch (e) {
-                                // ignore
-                            }
-                        }
+                        reader.close()
                     } catch (e) {
-                        throw new TemplateException("Error rendering template [$template.filename] to destination ${projectPath( destination )}: ${e.message}", e)
+                        // ignore
                     }
                 }
-                if (t != null) {
-                    try {
-                        writeTemplateToDestination(t, model, destination)
-                        executionContext.console.addStatus("Rendered template ${template.filename} to destination ${projectPath( destination )}")
-                    } catch (Throwable e) {
-                        destination.delete()
-                        throw new TemplateException("Error rendering template [$template.filename] to destination ${projectPath( destination )}: ${e.message}", e)
-                    }
-                }
+            } catch (e) {
+                throw new TemplateException("Error rendering template [$template.filename] to destination ${projectPath( destination )}: ${e.message}", e)
+            }
+        }
+        if (t != null) {
+            try {
+                writeTemplateToDestination(t, model, destination)
+                executionContext.console.addStatus("Rendered template ${template.filename} to destination ${projectPath( destination )}")
+            } catch (Throwable e) {
+                destination.delete()
+                throw new TemplateException("Error rendering template [$template.filename] to destination ${projectPath( destination )}: ${e.message}", e)
             }
         }
     }
