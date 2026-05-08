@@ -79,11 +79,11 @@ public class TestContainers implements Feature {
         });
 
         if (generatorContext.isFeaturePresent(Spock.class)) {
-            generatorContext.addDependency(testContainerTestDependency("spock"));
+            generatorContext.addDependency(testContainerTestDependency("testcontainers-spock"));
         }
 
         if (generatorContext.isFeaturePresent(MongoFeature.class) || generatorContext.isFeaturePresent(MongoGorm.class)) {
-            generatorContext.addDependency(testContainerTestDependency("mongodb"));
+            generatorContext.addDependency(testContainerTestDependency("testcontainers-mongodb"));
         }
     }
 
@@ -98,11 +98,11 @@ public class TestContainers implements Feature {
     @NonNull
     private static Optional<String> artifactIdForDriverFeature(@NonNull DatabaseDriverFeature driverFeature) {
         if (driverFeature instanceof MySQL) {
-            return Optional.of("mysql");
+            return Optional.of("testcontainers-mysql");
         } else if (driverFeature instanceof PostgreSQL) {
-            return Optional.of("postgresql");
+            return Optional.of("testcontainers-postgresql");
         } else if (driverFeature instanceof SQLServer) {
-            return Optional.of("mssqlserver");
+            return Optional.of("testcontainers-mssqlserver");
         }
         return Optional.empty();
     }

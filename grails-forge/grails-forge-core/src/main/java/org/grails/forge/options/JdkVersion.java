@@ -29,12 +29,12 @@ import java.util.stream.Collectors;
  * @since 6.0.0
  */
 public enum JdkVersion {
-    JDK_17(17),
     JDK_21(21),
     // 25 is an LTS release and will be supported by Spring Framework 6.2.x and Spring Boot 3.5.x
-    JDK_25(25);
+    JDK_25(25),
+    JDK_26(26);
 
-    public static final JdkVersion DEFAULT_OPTION = JDK_17;
+    public static final JdkVersion DEFAULT_OPTION = JDK_21;
 
     private static final List<Integer> SUPPORTED_JDKS = Arrays.stream(JdkVersion.values()).map(JdkVersion::majorVersion).collect(Collectors.toList());
 
