@@ -241,7 +241,7 @@ class PersistentEntityCodec extends BsonPersistentEntityCodec {
                 for (PersistentProperty prop : entity.persistentProperties) {
                     if (prop instanceof Basic) {
                         Object basicValue = access.getProperty(prop.name)
-                        if (basicValue instanceof DirtyCheckableCollection) {
+                        if (basicValue instanceof DirtyCheckableCollection && ((DirtyCheckableCollection)basicValue).hasChanged()) {
                             isNew = true
                             break
                         }
@@ -256,14 +256,10 @@ class PersistentEntityCodec extends BsonPersistentEntityCodec {
                 if (!entity.isRoot()) {
                     sets.put(MongoConstants.MONGO_CLASS_FIELD, new BsonString(entity.discriminator))
                 }
-
-                if (isVersioned) {
-                    EntityPersister.incrementEntityVersion(access)
-                }
-
             }
 
             for (propertyName in dirtyProperties) {
+                if (isVersioned && propertyName == entity.version.name) continue
                 def prop = entity.getPropertyByName(propertyName)
                 if (prop != null) {
 
@@ -686,20 +682,24 @@ class PersistentEntityCodec extends BsonPersistentEntityCodec {
 
             Class associatedType = associatedEntity.javaClass
             if (associationId != null && associatedEntity.isRoot()) {
-                Document raw = mongoSession.getCollection(associatedEntity)
-                        .withDocumentClass(Document)
-                        .find(new Document(MongoConstants.MONGO_ID_FIELD, associationId), Document)
-                        .limit(1)
-                        .first()
-                if (raw != null) {
-                    Object discriminator = raw.get(MongoConstants.MONGO_CLASS_FIELD)
-                    if (discriminator != null) {
-                        PersistentEntity childEntity = associatedEntity.mappingContext
-                                .getChildEntityByDiscriminator(associatedEntity.rootEntity, discriminator.toString())
-                        if (childEntity != null) {
-                            associatedType = childEntity.javaClass
+                try {
+                    Document raw = mongoSession.getCollection(associatedEntity)
+                            .withDocumentClass(Document)
+                            .find(new Document(MongoConstants.MONGO_ID_FIELD, associationId), Document)
+                            .limit(1)
+                            .first()
+                    if (raw != null) {
+                        Object discriminator = raw.get(MongoConstants.MONGO_CLASS_FIELD)
+                        if (discriminator != null) {
+                            PersistentEntity childEntity = associatedEntity.mappingContext
+                                    .getChildEntityByDiscriminator(associatedEntity.rootEntity, discriminator.toString())
+                            if (childEntity != null) {
+                                associatedType = childEntity.javaClass
+                            }
                         }
                     }
+                } catch (Exception ignored) {
+                    // fall back to the declared association type
                 }
             }
 

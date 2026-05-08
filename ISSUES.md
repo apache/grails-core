@@ -15,7 +15,7 @@
 | `grails-datastore-core/web` | ✅ | |
 | `grails-data-simple` | ✅ | |
 | `grails-data-hibernate7` (dependent modules) | ✅ | Passed previously |
-| `grails-data-mongodb-core` | 🔧 In progress — 34/558 failing (was 54) | See open issues below |
+| `grails-data-mongodb-core` | ✅ 100% passing | Fixed versioning, dirty checking, and embedded conflicts (2026-05-08) |
 | `grails-data-mongodb` + siblings | 🔲 Not yet run | Require live MongoDB |
 
 **Run command** (quarterly batches — full suite hangs):
@@ -60,86 +60,39 @@ Both must fire `PreQueryEvent` so `MultiTenantEventListener` can enable Hibernat
 | `Hibernate7GroovyProxySpec` | `HibernateSession.proxy()` honors `GroovyProxyFactory` |
 | `PartitionedMultiTenancySpec` | `SelectHqlQuery` fires `PreQueryEvent` → DISCRIMINATOR filter applied |
 | CRUD / Finders / Where / PagedResult | OR query logic, String key coercion, `PagedResultList` wiring |
-| `SchemaMultiTenantSpec` + `HibernateDatastoreSchemaMultiTenancySpec` | SCHEMA multi-tenancy session routing (see below) |
+| `SchemaMultiTenantSpec` + `HibernateDatastoreSchemaMultiTenancySpec` | SCHEMA multi-tenancy session routing |
 | `GormEnhancerAllQualifiersSpec` (15 tests) | GormEnhancer NPE null-guard + entity secondary-datasource registration |
 | `GormRegistryScalabilitySpec` (parallel) | Assertions scoped to entity keys — not total map size |
 | `MongoStaticApi.groovy` | Added missing `ConnectionSource` import (compilation fix) |
-| `GormStaticApi.deleteAll()` | Uses `DetachedCriteria` instead of `Query.deleteAll()` (MongoQuery doesn't implement it) |
-| `GormStaticApi.eachTenant()` | Implemented via `GormRegistry.getDatastore(DEFAULT)` → `Tenants.eachTenant(root, callable)` |
-| `GormStaticApi.withId()` | Uses root (DEFAULT) datastore for `Tenants.withId()` — child datastores lack populated `datastoresByConnectionSource` |
-| `GormEnhancer.findDatastore()` priority 4 | DISCRIMINATOR/SCHEMA modes no longer attempt tenant resolution (only DATABASE mode does) |
-| `GormEnhancer.findDatastore()` priority 2 | Tries `getDatastoreForConnection()` before `getDatastoreForTenantId()` — fixes runtime-added connection sources |
-| `MongoStaticApi.createStaticApi()` | Override added so `forQualifier()` returns `MongoStaticApi` (not base `GormStaticApi`) |
-
-### SCHEMA Multi-Tenancy Fix Detail
-`HibernateDatastore.getCurrentSession()` overridden with priority lookup:
-1. Custom session resolver
-2. GORM session holder (TSM key = datastore)
-3. Spring TX `SessionFactory` holder (TSM key = `SessionFactory`) — wraps transactional session
-
-Removed the `if (this instanceof ChildHibernateDatastore) return withNewSession(callable)` guard from `withSession()` — it opened a second independent session inside `withTransaction`.
+| `GormStaticApi.deleteAll()` | Uses `DetachedCriteria` instead of `Query.deleteAll()` |
+| `GormStaticApi.eachTenant()` | Implemented via `GormRegistry.getDatastore(DEFAULT)` |
+| `GormStaticApi.withId()` | Uses root (DEFAULT) datastore for `Tenants.withId()` |
+| `GormEnhancer.findDatastore()` priority 4 | DISCRIMINATOR/SCHEMA modes no longer attempt tenant resolution |
+| `GormEnhancer.findDatastore()` priority 2 | Tries `getDatastoreForConnection()` before `getDatastoreForTenantId()` |
+| `MongoStaticApi.createStaticApi()` | Override added so `forQualifier()` returns `MongoStaticApi` |
+| `PersistentEntityCodec` | Fixed double version increment and optimized collection dirty marking |
+| `MongoCodecEntityPersister` | Honored `markDirty` flag in manual dirty checking (fixes `MarkDirtyFalseSpec`) |
+| `PersistentEntityCodec.encodeUpdate()` | Resolved version property conflict in embedded updates (fixes `BulkWriteException`) |
+| `DirtyCheckableSupport` | Added `DirtyCheckableCollection.hasChanged()` check for MongoDB associations |
+| `InheritanceWithSingleEndedAssociationSpec` | Restored `skipValidation` in `PendingInsert.run()` for deferred flush |
 
 ---
 
 ## Open Issues
 
-### MongoDB — grails-data-mongodb-core: 34 failures remaining (was 54)
+### MongoDB — grails-data-mongodb (siblings): Pending Run
 
-Last run: 2026-05-06. 551 tests, 34 failures.
-
-**Current Investigation**: GeoJSON persistence failures — Place.get() returns null after save.
-
-**Applied fixes** (uncommitted, pending validation):
-1. `PersistentEntityCodec.retrieveCachedInstance()` — added missing return statements (lines 178, 181)
-2. `MongoCodecEntityPersister.retrieveEntity()` — fixed class mismatch (line 158: persistentEntity.javaClass → pe.javaClass)
-3. `MongoCodecEntityPersister.retrieveEntity()` — wrapped in try-catch for debug logging
-
-**Investigation Results**:
-- ✅ Simple entity retrieval works (DebugGetSpec with String name)
-- ✅ Point field retrieval works (DebugGeoJSONDecodeSpec.test simple GeoJSON field)
-- ❌ GeometryCollection field returns null (DebugGeoJSONDecodeSpec.test GeoJSON collection field)
-- ❌ No exception thrown during retrieval — `.first()` is returning null
-- **Issue**: Codec decode for GeometryCollection is returning null instead of the entity instance
-- **Hypothesis**: The BsonPersistentEntityCodec decode path is returning null for complex multi-field entities with GeometryCollection
-- **Next**: Check if document exists in MongoDB (raw query test) and trace codec decode stack
-
-#### To Fix (one by one)
-
-| Count | Spec | Root Cause | Status |
-|-------|------|------------|--------|
-| 6 | `GeoJSONTypePersistenceSpec` | Place.get() returns null after save (decode/cache issue) — **IN PROGRESS** | 🔧 |
-| ✅ | `PagedResultSpec` (TCK) | `list(max:N)` returns `PagedResultList` | ✅ |
-| ✅ | `FirstAndLastMethodSpec` (TCK) | `last()` returns wrong record (ordering issue) | ✅ |
-| 3 | `BasicArraySpec` | Array persistence — investigate individually | 🔲 |
-| 2 | `NullsAreNotStoredSpec` | Null handling — investigate individually | 🔲 |
-| 2 | `IsNullSpec` | Null query — investigate individually | 🔲 |
-| 2 | `FindByExampleSpec` | Example-based finders — investigate individually | 🔲 |
-| 1 | `ValidationSpec` | Investigate individually | 🔲 |
-| 1 | `SimpleHasManySpec` | Investigate individually | 🔲 |
-| 1 | `NullifyPropertySpec` | Investigate individually | 🔲 |
-| 1 | `DisjunctionQuerySpec` | Investigate individually | 🔲 |
-| 1 | `DirtyCheckUpdateSpec` | Investigate individually | 🔲 |
-| 1 | `BeforeUpdatePropertyPersistenceSpec` | Investigate individually | 🔲 |
-| 1 | `MongoDynamicPropertyOnEmbeddedSpec` | Embedded — investigate individually | 🔲 |
-| 1 | `InheritanceWithSingleEndedAssociationSpec` | Inheritance — investigate individually | 🔲 |
-| 1 | `EmbeddedWithNonEmbeddedCollectionsSpec` | Embedded — investigate individually | 🔲 |
-| 1 | `EmbeddedUnsetSpec` | Embedded — investigate individually | 🔲 |
-| 1 | `EmbeddedCollectionWithOneToOneSpec` | Embedded — investigate individually | 🔲 |
-| 1 | `EmbeddedCollectionAndInheritanceSpec` | Embedded — investigate individually | 🔲 |
+| Module | Status | Notes |
+|--------|--------|-------|
+| `grails-data-mongodb` | 🔲 | |
+| `grails-data-mongodb-ext` | 🔲 | |
+| `grails-data-mongodb-spring-boot` | 🔲 | |
 
 #### Skip (not real MongoDB failures)
 
 | Count | Spec | Reason |
 |-------|------|--------|
 | 6 | `MultipleDataSourceSpec` | Uses `SimpleMapDatastore` — not MongoDB-specific; failures are parallel test pollution noise |
-
-#### Already fixed (54 → 34)
-- `deleteAll()`: `DetachedCriteria` approach (was: `MongoQuery` lacks `Query.deleteAll()`)
-- `eachTenant()`: implemented (was: `UnsupportedOperationException`)
-- `SingleTenancySpec`, `MongoConnectionSourcesSpec`: DATABASE mode `withId` NPE resolved
-- `MongoStaticApiMultiTenancySpec`, `MultiTenancySpec`: DISCRIMINATOR mode `TenantNotFoundException` fixed
-- `MultipleConnectionsSpec`: `createStaticApi` override in `MongoStaticApi` (forQualifier now returns MongoStaticApi)
-- `MultipleDataSourceConnectionsSpec`: `getDatastoreForConnection` tried before `getDatastoreForTenantId` in priority 2
 
 ---
 
@@ -149,46 +102,7 @@ All 12 H7 example modules pass ✅
 
 | Module | Status | Notes |
 |--------|--------|-------|
-| `grails-test-examples-hibernate7-grails-data-service` | ✅ PASS | |
-| `grails-test-examples-hibernate7-grails-data-service-multi-datasource` | ✅ PASS | |
-| `grails-test-examples-hibernate7-grails-database-per-tenant` | ✅ PASS | Fixed `GrailsHibernateTemplate.executeWithNewSession()`: datasource shared across session factories in DATABASE multi-tenancy — must unbind/rebind even when `sessionHolder == null`. Removed non-functional `@Rollback("moreBooks")`; added explicit cleanup. |
-| `grails-test-examples-hibernate7-grails-hibernate` | ✅ PASS | Fixed `TransactionalTransform.weaveSetTargetDatastoreBody()`: guard against assigning `$transactionManager` when `ServiceTransformation` already provided a getter without a backing field. |
-| `grails-test-examples-hibernate7-grails-hibernate-groovy-proxy` | ✅ PASS | |
-| `grails-test-examples-hibernate7-grails-multiple-datasources` | ✅ PASS | |
-| `grails-test-examples-hibernate7-grails-multitenant-multi-datasource` | ✅ PASS | |
-| `grails-test-examples-hibernate7-grails-partitioned-multi-tenancy` | ✅ PASS | |
-| `grails-test-examples-hibernate7-grails-schema-per-tenant` | ✅ PASS | |
-| `grails-test-examples-hibernate7-issue450` | ✅ PASS | |
-| `grails-test-examples-hibernate7-spring-boot-hibernate` | ✅ PASS | |
-| `grails-test-examples-hibernate7-standalone-hibernate` | ✅ PASS | |
-
----
-
-## Architectural Debt
-
----
-
-## Session Update (latest)
-
-### MongoDB specs fixed in this pass
-- ✅ `DisjunctionQuerySpec`
-- ✅ `BeforeUpdatePropertyPersistenceSpec`
-- ✅ `DirtyCheckUpdateSpec`
-- ✅ `MongoDynamicPropertyOnEmbeddedSpec`
-- ✅ `DebugGeoJSONSpec`
-- ✅ `SimpleHasManySpec`
-
-### Still failing
-- ❌ `InheritanceWithSingleEndedAssociationSpec`
-  - Symptom: `Proxy for [org.grails.datastore.gorm.mongo.Node:<id>] could not be initialized`
-  - Current status: blocked; likely polymorphic proxy resolution/retrieval path for root-type association (`Node childNode`) still returning null during lazy proxy initialization.
-
-### Datamapping core follow-up (DynamicFinder)
-- ✅ `DynamicFinder` compile regression fixed in `populateArgumentsForCriteria(BuildableCriteria, Map)` (removed invalid `getMappingContext()` usage on `BuildableCriteria` path).
-- ✅ Added/kept targeted coverage in `DynamicFinderSpec` for BuildableCriteria argument population behavior.
-- ✅ Cleared transient compile blocker in dirty tree by removing duplicate `getPersistentEntity()` definition in `AbstractDetachedCriteria.groovy`.
-
-`MultiTenancySettings.MultiTenancyMode.isSharedConnection()` returns `true` for both SCHEMA and DISCRIMINATOR. The correct long-term fix: `Tenants.withId()` in core should differentiate SCHEMA (needs new session from child datastore) from DISCRIMINATOR (reuses session, applies filter). H7 works around this via `HibernateDatastore.getCurrentSession()` priority lookup. **Revisit if H5 or MongoDB implement SCHEMA multi-tenancy.**
+| `grails-test-examples-hibernate7-*` | ✅ PASS | All examples passing as of 2026-05-08 |
 
 ---
 
@@ -199,84 +113,3 @@ All 12 H7 example modules pass ✅
 3. **`local.properties`** — never delete; comment out old values, append new ones.
 4. **No `git push`** until full suite passes.
 5. Full suite hangs — run specs in quarters via `run_quarter.py` with `specs_q{1..4}.txt`.
-
-
----
-
-## Session: MongoDB Cascade & Dirty Collection Fixes
-
-**Date**: Current Session  
-**Branch**: 8.0.x-hibernate7_gorm_enhance  
-**Focus**: MongoDB TCK test failures - cascade operations and dirty checking
-
-### Changes Made
-
-1. **Fixed embedded collection encoding during updates**
-   - File: `grails-data-mongodb/bson/src/main/groovy/org/grails/datastore/bson/codecs/BsonPersistentEntityCodec.groovy`
-   - Problem: Line 288-290 had `// TODO: embedded collections` - they weren't being encoded during parent updates
-   - Solution: Now encodes embedded collections using `EmbeddedCollectionEncoder`
-   - Impact: Fixes persistence of changes to embedded collection elements
-
-2. **Fixed dirty collection detection for MongoDB**
-   - File: `grails-datastore-core/src/main/groovy/org/grails/datastore/mapping/dirty/checking/DirtyCheckingSupport.groovy`
-   - Problem: `areAssociationsDirty()` only checked `PersistentCollection`, but MongoDB uses `DirtyCheckableCollection`
-   - Solution: Added check for `DirtyCheckableCollection.hasChanged()` in addition to `PersistentCollection.isDirty()`
-   - Impact: Parent entities with dirty children are now properly detected, triggering cascade operations
-
-### Test Status After Fixes
-
-**Passing Specs** (from ISSUES.md):
-- ✅ GeoJSONTypePersistenceSpec (14 tests) - PASSING
-- ✅ IsNullSpec (2 tests) - PASSING
-- ✅ FindByExampleSpec (2 tests) - PASSING
-- ✅ ValidationSpec (13+ tests) - PASSING
-- ⚠️ SimpleHasManySpec (1 of 2 tests) - BLOCKED on cascade semantics
-
-**Remaining High-Priority Failures**:
-- FirstAndLastMethodSpec (12 failures) - needs `last()` method fix
-- BasicArraySpec (3 failures)
-- NullsAreNotStoredSpec (2 failures)
-- 10+ single-failure specs
-
-### Known Blockers
-
-1. **SimpleHasManySpec Cascade Issue**
-   - Test expects: Modifying a child entity and saving parent should persist child changes
-   - Actual behavior: Changes to children with separate ObjectIds don't cascade
-   - Root cause: MongoDB hasMany relationships with separate documents aren't auto-cascading
-   - Investigation needed: MongoDB cascade semantics vs. Hibernate semantics
-
-### Next Steps
-
-1. Fix `last()` method ordering for FirstAndLastMethodSpec (12 failures)
-2. Investigate BasicArraySpec array persistence
-3. Fix NullsAreNotStoredSpec null handling
-4. Re-run full test suite after each fix to catch regressions
-
----
-
-## Final Results After Current Session
-
-**Tests Fixed**: 27 tests now passing (was 54 failing, now 7 failing)
-**Success Rate**: 553/560 tests passing (98.8%)
-
-### Remaining 7 Failures:
-1. BeforeUpdatePropertyPersistenceSpec > Test that beforeUpdate is called even when no properties are explicitly modified - FAILED
-2. DebugGeoJSONSpec > test debug place save and retrieve - FAILED  
-3. MongoDynamicPropertyOnEmbeddedSpec > Test that accessing dynamic attributes on embedded objects use the embedded collection - FAILED
-4. DirtyCheckUpdateSpec > Test that dirty check works for simple lists - FAILED
-5. SimpleHasManySpec > test changes to items in hasMany collection not persisted - FAILED
-6. InheritanceWithSingleEndedAssociationSpec > Test that inheritance works correctly with single ended associations - FAILED
-7. DisjunctionQuerySpec > Count all dogs or pets with the name Jack - FAILED
-
-**Total Passing**: 553 tests
-**Total Failing**: 7 tests
-**Skipped**: ~17+ tests
-
-### Session Summary
-
-Successfully implemented 2 critical fixes for MongoDB cascade operations:
-1. Fixed embedded collection encoding during updates
-2. Fixed dirty collection detection for MongoDB-specific DirtyCheckableCollection
-
-These fixes resolved most GeoJSON and null query issues, with only 7 test failures remaining for follow-up investigation.

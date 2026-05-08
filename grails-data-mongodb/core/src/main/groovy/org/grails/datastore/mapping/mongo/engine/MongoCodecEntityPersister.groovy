@@ -34,8 +34,10 @@ import org.springframework.dao.CannotAcquireLockException
 import org.springframework.dao.DataIntegrityViolationException
 
 import grails.gorm.DetachedCriteria
+import org.grails.datastore.gorm.GormValidateable
 import org.grails.datastore.mapping.cache.TPCacheAdapterRepository
 import org.grails.datastore.mapping.config.Property
+import org.grails.datastore.mapping.config.Settings
 import org.grails.datastore.mapping.core.IdentityGenerationException
 import org.grails.datastore.mapping.core.SessionImplementor
 import org.grails.datastore.mapping.core.impl.PendingDeleteAdapter
@@ -87,6 +89,7 @@ class MongoCodecEntityPersister extends ThirdPartyCacheEntityPersister<Object> {
 
     protected final MongoCodecSession mongoSession
     protected final MongoDatastore mongoDatastore
+    protected final boolean markDirty
     protected boolean hasNumericalIdentifier = false
     protected boolean hasStringIdentifier = false
     protected final EntityReflector fastClassData
@@ -95,6 +98,7 @@ class MongoCodecEntityPersister extends ThirdPartyCacheEntityPersister<Object> {
         super(mappingContext, entity, session, publisher, cacheAdapterRepository)
         this.mongoSession = session
         this.mongoDatastore = session.datastore
+        this.markDirty = mongoDatastore.getConnectionSources().getBaseConfiguration().getProperty(Settings.SETTING_MARK_DIRTY, Boolean.class, true)
         this.fastClassData = FieldEntityAccess.getOrIntializeReflector(entity)
         PersistentProperty identity = entity.identity
         if (identity != null) {
@@ -204,8 +208,6 @@ class MongoCodecEntityPersister extends ThirdPartyCacheEntityPersister<Object> {
                     }
                 }
             } catch (Exception e) {
-                println "ERROR in retrieveEntity for ${pe.name}: ${e.class.name}: ${e.message}"
-                e.printStackTrace()
                 throw e
             }
 
@@ -265,10 +267,21 @@ class MongoCodecEntityPersister extends ThirdPartyCacheEntityPersister<Object> {
 
         if (!isUpdate) {
             MongoCodecEntityPersister self = this
+            // Capture skipValidation at persist() time. GormInstanceApi.save() sets skipValidation(true) before
+            // calling session.persist(), but resets it in a finally block after session.persist() returns.
+            // For deferred (non-flushing) saves, this means skipValidation is false by the time flush() runs.
+            // We capture the value here so we can restore it during the actual flush execution.
+            final boolean wasSkipValidation = (obj instanceof GormValidateable) ? ((GormValidateable) obj).shouldSkipValidation() : false
             mongoCodecSession.addPendingInsert(new PendingInsertAdapter(entity, id, obj, entityAccess) {
                 @Override
                 void run() {
-                    if (!cancelInsert(entity, entityAccess)) {
+                    // Restore skipValidation so the ValidationEventListener correctly skips
+                    // validation for entities that were originally saved with validate:false.
+                    if (wasSkipValidation && obj instanceof GormValidateable) {
+                        ((GormValidateable) obj).skipValidation(true)
+                    }
+                    boolean cancelled = cancelInsert(entity, entityAccess)
+                    if (!cancelled) {
                         updateCaches(entity, obj, id)
                         addCascadeOperation(new PendingOperationAdapter(entity, id, obj) {
                             @Override
@@ -294,7 +307,7 @@ class MongoCodecEntityPersister extends ThirdPartyCacheEntityPersister<Object> {
                     }
                     if (!cancelUpdate(entity, entityAccess)) {
                         // Compare with snapshot and mark modified properties dirty
-                        if (obj instanceof DirtyCheckable) {
+                        if (markDirty && obj instanceof DirtyCheckable) {
                             DirtyCheckable dirtyCheckable = (DirtyCheckable) obj
                             for (PersistentProperty prop : entity.persistentProperties) {
                                 Object oldValue = beforeUpdateSnapshot[prop.name]

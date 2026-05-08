@@ -19,6 +19,7 @@
 package org.grails.orm.hibernate;
 
 import org.hibernate.SessionFactory;
+import org.springframework.transaction.support.TransactionSynchronizationManager;
 
 import org.grails.datastore.gorm.events.ConfigurableApplicationEventPublisher;
 import org.grails.datastore.mapping.core.Session;
@@ -27,6 +28,7 @@ import org.grails.datastore.mapping.core.connections.ConnectionSources;
 import org.grails.orm.hibernate.cfg.HibernateMappingContext;
 import org.grails.orm.hibernate.cfg.Settings;
 import org.grails.orm.hibernate.connections.HibernateConnectionSourceSettings;
+import org.grails.orm.hibernate.support.hibernate7.SessionHolder;
 import org.grails.datastore.mapping.core.connections.SingletonConnectionSources;
 import java.util.Collections;
 
@@ -81,30 +83,33 @@ public class ChildHibernateDatastore extends HibernateDatastore {
     }
 
     /**
-     * Opens a real Hibernate session eagerly so that
-     * {@link HibernateSession#getNativeSession()} can return it directly
-     * without falling back to {@code SessionFactory.getCurrentSession()},
-     * which would throw "No Session found for current thread" when there is
-     * no surrounding transaction.
+     * Returns a {@link HibernateSession} for this child datastore's {@link SessionFactory}.
      *
-     * <p>This is required by the SCHEMA multi-tenancy model: each child
-     * datastore has its own {@link SessionFactory}, so {@code DatastoreUtils.execute()}
-     * (used internally by GORM finders like {@code count()}) must receive a
-     * session that is already open on the child's factory.</p>
+     * <p>When a Spring-managed transaction is active (e.g. inside {@code withNewTransaction}),
+     * the transaction manager binds the Hibernate session to TSM with key = {@link SessionFactory}.
+     * In that case we reuse that session so that any Hibernate filters enabled on it (e.g. the
+     * DISCRIMINATOR multi-tenancy filter set by {@link org.grails.orm.hibernate.multitenancy.MultiTenantEventListener})
+     * are visible to the query that {@code connect()} feeds.</p>
+     *
+     * <p>When no transaction session is bound (e.g. in SCHEMA mode where each child datastore
+     * has its own session factory and sessions are created explicitly), we open a new session.
+     * This preserves the original behaviour required by SCHEMA multi-tenancy.</p>
      *
      * <p>Session lifecycle is safe: {@link HibernateSession#disconnect()} closes
      * the {@code nativeSession} when it is non-null, and
      * {@code DatastoreUtils.closeSessionOrRegisterDeferredClose()} always delegates
      * to {@code disconnect()} for non-transactional sessions.</p>
-     *
-     * <p>NOTE: Long-term this routing logic belongs in
-     * {@code grails-datamapping-core} — {@code Tenants.withId()} should
-     * differentiate SCHEMA (needs a new session on the child factory) from
-     * DISCRIMINATOR (reuses the existing session). Until that core change is
-     * made, this override is the H7-only workaround.</p>
      */
     @Override
     public Session connect() {
-        return new HibernateSession(this, getSessionFactory(), getSessionFactory().openSession());
+        SessionFactory sf = getSessionFactory();
+        Object resource = TransactionSynchronizationManager.getResource(sf);
+        if (resource instanceof SessionHolder sfHolder) {
+            org.hibernate.Session nativeSession = sfHolder.getSession();
+            if (nativeSession != null && nativeSession.isOpen()) {
+                return new HibernateSession(this, sf, nativeSession);
+            }
+        }
+        return new HibernateSession(this, sf, sf.openSession());
     }
 }
