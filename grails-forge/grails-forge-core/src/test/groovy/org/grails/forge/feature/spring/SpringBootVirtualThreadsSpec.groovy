@@ -29,9 +29,9 @@ import org.grails.forge.options.TestFramework
 
 class SpringBootVirtualThreadsSpec extends BeanContextSpec implements CommandOutputFixture {
 
-    void "test spring boot virtual threads not enabled for JDK 17, when optional feature selected"() {
+    void "test spring boot virtual threads not enabled for JDK 21, when optional feature selected"() {
         when:
-        GeneratorContext commandContext = buildGeneratorContext(['spring-boot-virtual-threads'], new Options(DevelopmentReloading.DEFAULT_OPTION, JdkVersion.JDK_17))
+        GeneratorContext commandContext = buildGeneratorContext(['spring-boot-virtual-threads'], new Options(DevelopmentReloading.DEFAULT_OPTION, JdkVersion.JDK_21))
 
         then:
         commandContext.configuration.get('spring.threads.virtual.enabled'.toString()) == false
