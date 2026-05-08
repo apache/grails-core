@@ -47,11 +47,13 @@ class GroovyProxyFactory implements ProxyFactory {
     }
 
     @Override
-    @Override
     Class<?> getProxiedClass(Object o) {
-        if (isProxy(o)) {
-            return o.getClass().getSuperclass()
-        }
+        // Proxies created by this factory are real instances of the entity class
+        // with a ProxyInstanceMetaClass attached (see createProxy). The entity
+        // class therefore IS o.getClass() — no superclass walk needed. Walking
+        // up via getSuperclass() would yield java.lang.Object (entity classes
+        // typically extend Object directly), which then fails to resolve in
+        // MappingContext.getPersistentEntity(name) and breaks cascade validation.
         return o.getClass()
     }
 
