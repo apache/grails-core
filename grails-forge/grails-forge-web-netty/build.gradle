@@ -32,7 +32,20 @@ dependencies {
     implementation 'io.micronaut.gcp:micronaut-gcp-http-client'
 
     runtimeOnly 'ch.qos.logback:logback-classic'
-    runtimeOnly 'io.micronaut.serde:micronaut-serde-jackson'
+    // Forge's grails-forge-api DTO classes (VersionDTO, ApplicationTypeDTO,
+    // FeatureDTO, SelectOptionsDTO, Linkable, ...) are annotated with
+    // @Introspected only. micronaut-serde-jackson requires @Serdeable on
+    // each serializable type and rejects @Introspected-only classes at
+    // runtime, which surfaces in the deployed native image as
+    //   "Internal Server Error: Error encoding object [VersionDTO@..] to
+    //    JSON: No serializable introspection present for type VersionDTO."
+    // and breaks every JSON endpoint behind start.grails.org / next.grails.org
+    // / prev-snapshot.grails.org. The rest of the forge stack (forge-api,
+    // forge-core, analytics-postgres) still depends on
+    // io.micronaut:micronaut-jackson-databind, so keep the netty service on
+    // the same JSON runtime to match. If forge ever migrates to Serde end-
+    // to-end, every DTO needs @Serdeable / @SerdeImport at the same time.
+    runtimeOnly 'io.micronaut:micronaut-jackson-databind'
 
     testImplementation 'io.micronaut:micronaut-http-client'
     testImplementation 'io.micronaut.test:micronaut-test-spock'
