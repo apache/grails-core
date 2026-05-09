@@ -61,7 +61,10 @@ dependencies {
         // Re-declare base BOM constraints directly so enforcedPlatform() consumers
         // get forced versions. Constraints inherited via platform() are not enforced
         // by enforcedPlatform — only direct constraints are.
+        // Skip build-only entries (Gradle plugins, build-time AST tooling) that are
+        // managed by grails-gradle-bom but must not appear in the application BOM.
         for (def entry : gradleBomDependencies.entrySet()) {
+            if (entry.key in gradleBomBuildOnlyDependencyKeys) continue
             api entry.value
         }
         for (def entry : bomDependencies.entrySet()) {

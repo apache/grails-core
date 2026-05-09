@@ -87,7 +87,11 @@ dependencies {
         // by enforcedPlatform — only direct constraints are.
         // Skip entries we override below in customBomDependencies to avoid conflicting
         // strictly constraints under enforcedPlatform.
-        gradleBomDependencies.values().each { String coord ->
+        // Also skip build-only entries (Gradle plugins, build-time AST tooling) that
+        // are managed by grails-gradle-bom but must not appear in the application BOM.
+        gradleBomDependencies.entrySet().each { def entry ->
+            if (entry.key in gradleBomBuildOnlyDependencyKeys) return
+            String coord = entry.value
             def parts = coord.split(':')
             String key = parts[0] + ':' + parts[1]
             if (key in overriddenCoords) {

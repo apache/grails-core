@@ -71,6 +71,32 @@ ext {
             'spring-boot-loader-tools': "org.springframework.boot:spring-boot-loader-tools:${gradleBomDependencyVersions['spring-boot.version']}",
     ]
 
+    // Subset of gradleBomDependencies that exist solely to manage the Grails build's
+    // own classpath (Gradle plugins, AST-tooling helpers, asciidoctor-gradle, etc.) and
+    // are NOT meant to be exposed as managed-version constraints to end-user Grails
+    // applications via the published grails-bom / grails-default-bom / grails-hibernate5-bom /
+    // grails-micronaut-bom artifacts.
+    //
+    // The grails-gradle-bom (grails-gradle/bom) DOES include these because that BOM is
+    // explicitly the build-time platform. The application-facing BOMs in grails-bom/* skip
+    // entries listed here when they iterate gradleBomDependencies into their constraints.
+    //
+    // Why this matters: when one of these tools also appears as a transitive of an Apache
+    // Groovy artefact (javaparser-core is the canonical example - groovy-groovysh and
+    // groovy-ginq depend on it), an internal Groovy version bump leaks into resolution
+    // and then mismatches the constraint that the application BOM republishes,
+    // causing :validateDependencyVersions failures across most Grails modules. None of
+    // these are referenced by user-facing Grails artefacts; consumers who really need
+    // javaparser-core, the Spring Boot Gradle plugin, etc. can pin them directly or
+    // depend on grails-gradle-bom.
+    gradleBomBuildOnlyDependencyKeys = [
+            'asciidoctor-gradle-jvm',
+            'asset-pipeline-gradle',
+            'grails-publish-plugin',
+            'javaparser-core',
+            'spring-boot-gradle',
+    ] as Set
+
     bomDependencyVersions = [
             'asset-pipeline-bom.version'    : '5.1.0-M4',
             'bootstrap-icons.version'       : '1.13.1',
