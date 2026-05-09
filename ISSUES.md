@@ -8,13 +8,13 @@
 
 | Module Group | Status | Notes |
 |---|---|---|
-| `grails-data-hibernate7-core` | ✅ 100% passing | SCHEMA multi-tenancy fixed 2026-05-05 |
+| `grails-data-hibernate7-core` | ✅ 100% passing | Totally fixed. DISCRIMINATOR multi-tenancy on secondary datasources resolved 2026-05-09 |
 | `grails-datamapping-core` | ✅ 100% passing | GormEnhancer NPE + entity-datasource registration fixed |
 | `grails-datamapping-async/validation/support/tck` | ✅ | |
 | `grails-datamapping-core-test` | ✅ | Parallel-flaky tests pass individually |
 | `grails-datastore-core/web` | ✅ | |
 | `grails-data-simple` | ✅ | |
-| `grails-data-hibernate7` (dependent modules) | ✅ | Passed previously |
+| `grails-data-hibernate7` (dependent modules) | ✅ | Totally fixed. All integration and example tests passing |
 | `grails-data-mongodb-core` | ✅ 100% passing | Fixed versioning, dirty checking, and embedded conflicts (2026-05-08) |
 | `grails-data-mongodb` + siblings | 🔲 Not yet run | Require live MongoDB |
 
@@ -56,6 +56,7 @@ Both must fire `PreQueryEvent` so `MultiTenantEventListener` can enable Hibernat
 
 | Area | Fix |
 |------|-----|
+| `DomainMultiTenantMultiDataSourceSpec` | `MultiTenantEventListener` applies filters to specific query session (fixes DISCRIMINATOR isolation) |
 | `HibernateGormInstanceApiSpec` (31 tests) | `isDirty()`, `attach()` via `merge()`, proxy dispatch, `getInstanceApiHelper()` |
 | `Hibernate7GroovyProxySpec` | `HibernateSession.proxy()` honors `GroovyProxyFactory` |
 | `PartitionedMultiTenancySpec` | `SelectHqlQuery` fires `PreQueryEvent` → DISCRIMINATOR filter applied |
