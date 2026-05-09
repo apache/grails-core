@@ -15,7 +15,8 @@
 | `grails-datastore-core/web` | ✅ | |
 | `grails-data-simple` | ✅ | |
 | `grails-data-hibernate7` (dependent modules) | ✅ | Totally fixed. All integration and example tests passing |
-| `grails-data-mongodb-core` | ✅ 100% passing | Fixed versioning, dirty checking, and embedded conflicts (2026-05-08) |
+| `grails-data-hibernate5-core` | ✅ 100% passing | Aligned with GORM 8 API. Scalability O(M+N) verified 2026-05-09 |
+| `grails-data-mongodb-core` | ✅ 100% passing | Fixed versioning, dirty checking, and embedded conflicts. Scalability O(M+N) verified |
 | `grails-data-mongodb` + siblings | 🔲 Not yet run | Require live MongoDB |
 
 **Run command** (quarterly batches — full suite hangs):
@@ -27,7 +28,7 @@ python3 run_quarter.py specs_q1.txt --timeout 600
 
 ## Architecture Reference
 
-### Two Query Mechanisms (H7)
+### Two Query Mechanisms (H7/H5)
 | Mechanism | Class | Used by |
 |-----------|-------|---------|
 | JPA Criteria | `HibernateQuery` | `withCriteria {}`, `countBy*`, `findBy*` |
@@ -44,7 +45,7 @@ Both must fire `PreQueryEvent` so `MultiTenantEventListener` can enable Hibernat
 
 **Critical**: Do NOT modify `grails-datastore-core/MultiTenancySettings.groovy` — shared with H5 and MongoDB.
 
-### Session Lifecycle (H7)
+### Session Lifecycle (H7/H5)
 - `GrailsHibernateTransactionManager.doBegin()` binds `(datastore, sessionHolder)` to TSM
 - `withNewSession` creates a child session; cleanup restores outer session
 - `HibernateSession.getNativeSession()`: returns stored `nativeSession` if set, else `sessionFactory.getCurrentSession()`
@@ -56,6 +57,9 @@ Both must fire `PreQueryEvent` so `MultiTenantEventListener` can enable Hibernat
 
 | Area | Fix |
 |------|-----|
+| `GormRegistryScalabilitySpec` | Ported to H5 and MongoDB. Verified O(M+N) memory guarantee cross-module |
+| `grails-data-hibernate5-core` | Aligned API classes (Instance/Static/Enhancer) with GORM 8 structural changes |
+| `DataServiceSpec` (H5) | Fixed `@Query` compilation errors by aligning with standard HQL named parameters |
 | `DomainMultiTenantMultiDataSourceSpec` | `MultiTenantEventListener` applies filters to specific query session (fixes DISCRIMINATOR isolation) |
 | `HibernateGormInstanceApiSpec` (31 tests) | `isDirty()`, `attach()` via `merge()`, proxy dispatch, `getInstanceApiHelper()` |
 | `Hibernate7GroovyProxySpec` | `HibernateSession.proxy()` honors `GroovyProxyFactory` |

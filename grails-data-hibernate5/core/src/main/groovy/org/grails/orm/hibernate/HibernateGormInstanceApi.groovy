@@ -21,12 +21,15 @@ package org.grails.orm.hibernate
 import groovy.transform.CompileDynamic
 import groovy.transform.CompileStatic
 
+import org.hibernate.Session
 import org.hibernate.engine.spi.EntityEntry
 import org.hibernate.engine.spi.SessionImplementor
 import org.hibernate.persister.entity.EntityPersister
 import org.hibernate.tuple.NonIdentifierAttribute
 
 import org.grails.orm.hibernate.cfg.GrailsHibernateUtil
+import org.grails.datastore.mapping.model.MappingContext
+import org.grails.datastore.gorm.DatastoreResolver
 
 /**
  * The implementation of the GORM instance API contract for Hibernate.
@@ -40,9 +43,13 @@ class HibernateGormInstanceApi<D> extends AbstractHibernateGormInstanceApi<D> {
     protected InstanceApiHelper instanceApiHelper
 
     HibernateGormInstanceApi(Class<D> persistentClass, HibernateDatastore datastore, ClassLoader classLoader) {
-        super(persistentClass, datastore, classLoader, null)
-        hibernateTemplate = new GrailsHibernateTemplate(sessionFactory, datastore)
-        instanceApiHelper = new InstanceApiHelper((GrailsHibernateTemplate) hibernateTemplate)
+        super(persistentClass, datastore, classLoader)
+        instanceApiHelper = new InstanceApiHelper((GrailsHibernateTemplate) getHibernateTemplate())
+    }
+
+    HibernateGormInstanceApi(Class<D> persistentClass, MappingContext mappingContext, DatastoreResolver datastoreResolver, ClassLoader classLoader) {
+        super(persistentClass, mappingContext, datastoreResolver, classLoader)
+        instanceApiHelper = new InstanceApiHelper((GrailsHibernateTemplate) getHibernateTemplate())
     }
 
     /**
@@ -56,7 +63,7 @@ class HibernateGormInstanceApi<D> extends AbstractHibernateGormInstanceApi<D> {
 
     @CompileDynamic
     boolean isDirty(D instance, String fieldName) {
-        SessionImplementor session = (SessionImplementor) sessionFactory.currentSession
+        SessionImplementor session = (SessionImplementor) getHibernateDatastore().getSessionFactory().currentSession
         def entry = findEntityEntry(instance, session)
         if (!entry || !entry.loadedState) {
             return false
@@ -87,7 +94,7 @@ class HibernateGormInstanceApi<D> extends AbstractHibernateGormInstanceApi<D> {
      */
     @CompileDynamic
     boolean isDirty(D instance) {
-        SessionImplementor session = (SessionImplementor) sessionFactory.currentSession
+        SessionImplementor session = (SessionImplementor) getHibernateDatastore().getSessionFactory().currentSession
         def entry = findEntityEntry(instance, session)
         if (!entry || !entry.loadedState) {
             return false
@@ -107,7 +114,7 @@ class HibernateGormInstanceApi<D> extends AbstractHibernateGormInstanceApi<D> {
 
     @CompileDynamic
     List getDirtyPropertyNames(D instance) {
-        SessionImplementor session = (SessionImplementor) sessionFactory.currentSession
+        SessionImplementor session = (SessionImplementor) getHibernateDatastore().getSessionFactory().currentSession
         def entry = findEntityEntry(instance, session)
         if (!entry || !entry.loadedState) {
             return []
@@ -131,7 +138,7 @@ class HibernateGormInstanceApi<D> extends AbstractHibernateGormInstanceApi<D> {
      * @return The original persisted value
      */
     Object getPersistentValue(D instance, String fieldName) {
-        SessionImplementor session = (SessionImplementor) sessionFactory.currentSession
+        SessionImplementor session = (SessionImplementor) getHibernateDatastore().getSessionFactory().currentSession
         def entry = findEntityEntry(instance, session, false)
         if (!entry || !entry.loadedState) {
             return null
@@ -159,11 +166,39 @@ class HibernateGormInstanceApi<D> extends AbstractHibernateGormInstanceApi<D> {
 
     @Override
     void setObjectToReadWrite(Object target) {
-        GrailsHibernateUtil.setObjectToReadWrite(target, sessionFactory)
+        GrailsHibernateUtil.setObjectToReadWrite(target, getHibernateDatastore().getSessionFactory())
     }
 
     @Override
     void setObjectToReadOnly(Object target) {
-        GrailsHibernateUtil.setObjectToReadyOnly(target, sessionFactory)
+        GrailsHibernateUtil.setObjectToReadyOnly(target, getHibernateDatastore().getSessionFactory())
+    }
+
+    @Override
+    protected D performUpsert(D target, boolean shouldFlush) {
+        getHibernateTemplate().execute { Object session ->
+            if (((Session)session).contains(target)) {
+                if (shouldFlush) {
+                    ((Session)session).flush()
+                }
+                return target
+            } else {
+                Serializable id = (Serializable) org.codehaus.groovy.runtime.InvokerHelper.getProperty(target, getGormPersistentEntity().identity.name)
+                if (id == null) {
+                    markInsertActive()
+                    try {
+                        ((Session)session).save target
+                    } finally {
+                        resetInsertActive()
+                    }
+                } else {
+                    ((Session)session).update target
+                }
+                if (shouldFlush) {
+                    ((Session)session).flush()
+                }
+                return target
+            }
+        }
     }
 }

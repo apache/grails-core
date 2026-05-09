@@ -39,13 +39,16 @@ import org.grails.datastore.mapping.core.connections.ConnectionSourceSettings
 @CompileStatic
 class HibernateGormEnhancer extends GormEnhancer {
 
-    @Deprecated
+    private final PlatformTransactionManager transactionManager
+
     HibernateGormEnhancer(HibernateDatastore datastore, PlatformTransactionManager transactionManager) {
-        super(datastore, transactionManager)
+        super(datastore)
+        this.transactionManager = transactionManager
     }
 
     HibernateGormEnhancer(Datastore datastore, PlatformTransactionManager transactionManager, ConnectionSourceSettings settings) {
         super(datastore, transactionManager, settings)
+        this.transactionManager = transactionManager
     }
 
     @Override
@@ -57,20 +60,20 @@ class HibernateGormEnhancer extends GormEnhancer {
                 createDynamicFinders(hibernateDatastore),
                 resolver,
                 qualifier,
-                hibernateDatastore.mappingContext.classLoader
+                cls.classLoader
         )
     }
 
     @Override
     protected <D> GormInstanceApi<D> getInstanceApi(Class<D> cls, org.grails.datastore.gorm.DatastoreResolver resolver) {
         HibernateDatastore hibernateDatastore = (HibernateDatastore) datastore
-        new HibernateGormInstanceApi<D>(cls, hibernateDatastore.mappingContext, resolver, hibernateDatastore.mappingContext.classLoader)
+        new HibernateGormInstanceApi<D>(cls, hibernateDatastore.mappingContext, resolver, cls.classLoader)
     }
 
     @Override
     protected <D> GormValidationApi<D> getValidationApi(Class<D> cls, org.grails.datastore.gorm.DatastoreResolver resolver) {
         HibernateDatastore hibernateDatastore = (HibernateDatastore) datastore
-        new HibernateGormValidationApi<D>(cls, hibernateDatastore.mappingContext, resolver, hibernateDatastore.mappingContext.classLoader)
+        new GormValidationApi<D>(cls, hibernateDatastore.mappingContext, resolver)
     }
 
     @Override
