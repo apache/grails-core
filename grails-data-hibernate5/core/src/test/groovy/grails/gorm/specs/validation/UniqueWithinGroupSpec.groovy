@@ -48,8 +48,9 @@ class UniqueWithinGroupSpec extends Specification {
         Thing thing1 = new Thing(hello: 1, world: 2)
         thing1.insert(flush: true)
         sessionFactory.currentSession.flush()
+        sessionFactory.currentSession.clear()
         Thing thing2 = new Thing(hello: 1, world: 2)
-        thing2.insert(flush: true)
+        thing2.validate()
 
         then:
         notThrown(DuplicateKeyException)

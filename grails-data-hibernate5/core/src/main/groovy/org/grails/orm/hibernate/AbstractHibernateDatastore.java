@@ -371,7 +371,7 @@ public abstract class AbstractHibernateDatastore extends AbstractDatastore imple
     @Override
     public <T> T withSession(final Closure<T> callable) {
         Closure<T> multiTenantCallable = prepareMultiTenantClosure(callable);
-        return getHibernateTemplate().execute(multiTenantCallable);
+        return getHibernateTemplate().executeWithExistingOrCreateNewSession(getSessionFactory(), multiTenantCallable);
     }
 
     public <T> T withNewSession(final Closure<T> callable) {
@@ -422,23 +422,27 @@ public abstract class AbstractHibernateDatastore extends AbstractDatastore imple
 
     protected <T> Closure<T> prepareMultiTenantClosure(final Closure<T> callable) {
         final boolean isMultiTenant = getMultiTenancyMode() == MultiTenancySettings.MultiTenancyMode.DISCRIMINATOR;
-        Closure<T> multiTenantCallable;
-        if (isMultiTenant) {
-            multiTenantCallable = new Closure<>(this) {
-                @Override
-                public T call(Object... args) {
+        return new Closure<T>(this) {
+            @Override
+            public T call(Object... args) {
+                if (isMultiTenant) {
                     enableMultiTenancyFilter();
-                    try {
-                        return callable.call(args);
-                    } finally {
+                }
+                try {
+                    if (args.length > 0 && args[0] instanceof org.hibernate.Session) {
+                        Class[] parameterTypes = callable.getParameterTypes();
+                        if (parameterTypes.length > 0 && parameterTypes[0].isAssignableFrom(org.hibernate.Session.class)) {
+                            return callable.call(args[0]);
+                        }
+                        return callable.call(new HibernateSession(AbstractHibernateDatastore.this, getSessionFactory()));
+                    }
+                    return callable.call(args);
+                } finally {
+                    if (isMultiTenant) {
                         disableMultiTenancyFilter();
                     }
                 }
-            };
-        }
-        else {
-            multiTenantCallable = callable;
-        }
-        return multiTenantCallable;
+            }
+        };
     }
 }

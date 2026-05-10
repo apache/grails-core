@@ -71,7 +71,7 @@ import org.grails.datastore.mapping.model.config.GormProperties;
 import org.grails.datastore.mapping.reflect.ClassUtils;
 import org.grails.datastore.mapping.reflect.EntityReflector;
 import org.grails.datastore.mapping.validation.ValidationException;
-import org.grails.orm.hibernate.AbstractHibernateGormValidationApi;
+import org.grails.orm.hibernate.HibernateGormValidationApi;
 
 /**
  * <p>Invokes closure events on domain entities such as beforeInsert, beforeUpdate and beforeDelete.
@@ -145,7 +145,7 @@ public class ClosureEventListener implements SaveOrUpdateEventListener,
         }
 
         validateParams = new HashMap();
-        validateParams.put(AbstractHibernateGormValidationApi.ARGUMENT_DEEP_VALIDATE, Boolean.FALSE);
+        validateParams.put(HibernateGormValidationApi.ARGUMENT_DEEP_VALIDATE, Boolean.FALSE);
 
         try {
             actionQueueUpdatesField = ReflectionUtils.findField(ActionQueue.class, "updates");
@@ -296,7 +296,6 @@ public class ClosureEventListener implements SaveOrUpdateEventListener,
     }
 
     public void onValidate(ValidationEvent event) {
-        beforeValidateEventListener.call(event.getEntityObject(), event.getValidatedFields());
     }
 
     protected boolean doValidate(Object entity) {

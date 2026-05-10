@@ -91,6 +91,14 @@ dependencies {
     testRuntimeOnly 'org.springframework:spring-aop'
 }
 
+tasks.withType(Test) {
+    testLogging {
+        exceptionFormat = 'full'
+        showExceptions = true
+        showStackTraces = true
+    }
+}
+
 apply {
     from rootProject.layout.projectDirectory.file('gradle/hibernate5-test-config.gradle')
     from rootProject.layout.projectDirectory.file('gradle/grails-data-tck-config.gradle')

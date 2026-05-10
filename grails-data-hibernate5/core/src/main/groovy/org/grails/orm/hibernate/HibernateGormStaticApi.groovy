@@ -40,10 +40,11 @@ import org.springframework.transaction.support.TransactionSynchronizationManager
 
 import grails.orm.HibernateCriteriaBuilder
 import org.grails.datastore.gorm.GormEnhancer
+import org.grails.datastore.gorm.GormStaticApi
+import org.grails.datastore.mapping.core.Datastore
 import org.grails.datastore.gorm.finders.DynamicFinder
 import org.grails.datastore.gorm.finders.FinderMethod
 import org.grails.datastore.mapping.core.connections.ConnectionSource
-import org.grails.datastore.mapping.core.Datastore
 import org.grails.datastore.mapping.model.PersistentEntity
 import org.grails.datastore.mapping.model.MappingContext
 import org.grails.datastore.mapping.query.api.BuildableCriteria as GrailsCriteria
@@ -64,8 +65,6 @@ import org.grails.orm.hibernate.query.PagedResultList
 @CompileStatic
 class HibernateGormStaticApi<D> extends AbstractHibernateGormStaticApi<D> {
 
-    protected SessionFactory sessionFactory
-    protected ConversionService conversionService
     protected Class identityType
     protected ClassLoader classLoader
     private HibernateGormInstanceApi<D> instanceApi
@@ -75,9 +74,6 @@ class HibernateGormStaticApi<D> extends AbstractHibernateGormStaticApi<D> {
                 ClassLoader classLoader, PlatformTransactionManager transactionManager) {
         super(persistentClass, datastore, finders)
         this.classLoader = classLoader
-        sessionFactory = datastore.getSessionFactory()
-        conversionService = datastore.mappingContext.conversionService
-
         identityType = getGormPersistentEntity().identity?.type
         this.defaultFlushMode = datastore.getDefaultFlushMode()
         instanceApi = new HibernateGormInstanceApi<>(persistentClass, datastore, classLoader)
@@ -88,22 +84,19 @@ class HibernateGormStaticApi<D> extends AbstractHibernateGormStaticApi<D> {
         this.classLoader = classLoader
     }
 
-    protected HibernateDatastore getHibernateDatastore() {
-        (HibernateDatastore) getDatastore()
+    @Override
+    GormStaticApi<D> forQualifier(String qualifier) {
+        Datastore ds = getDatastore()
+        if (ds == null) return this
+
+        org.grails.datastore.gorm.DatastoreResolver resolver = new org.grails.datastore.gorm.DatastoreResolver() {
+            @Override Datastore resolve() { org.grails.datastore.gorm.GormEnhancer.findDatastore(persistentClass, qualifier) }
+        }
+        return new HibernateGormStaticApi<D>(persistentClass, ds.mappingContext, finders, resolver, qualifier, classLoader)
     }
 
     protected SessionFactory getSessionFactory() {
-        if (sessionFactory == null) {
-            return getHibernateDatastore().getSessionFactory()
-        }
-        return sessionFactory
-    }
-
-    protected ConversionService getConversionService() {
-        if (conversionService == null) {
-            return getHibernateDatastore().mappingContext.conversionService
-        }
-        return conversionService
+        getHibernateDatastore().getSessionFactory()
     }
 
     protected Class getIdentityType() {
@@ -166,11 +159,6 @@ class HibernateGormStaticApi<D> extends AbstractHibernateGormStaticApi<D> {
                 return hibernateQuery.list()
             }
         }
-    }
-
-    @Override
-    def propertyMissing(String name) {
-        return GormEnhancer.findStaticApi(persistentClass, name)
     }
 
     @Override
@@ -280,8 +268,9 @@ class HibernateGormStaticApi<D> extends AbstractHibernateGormStaticApi<D> {
 
     @Override
     protected HibernateHqlQuery createHqlQuery(org.grails.datastore.mapping.core.Session session, Query q) {
-        HibernateSession hibernateSession = new HibernateSession((HibernateDatastore) datastore, getSessionFactory())
-        FlushMode hibernateMode = ((Session)session.getNativeInterface()).getHibernateFlushMode()
+        HibernateSession hibernateSession = (HibernateSession) session ?: getHibernateSession()
+        Session nativeSession = hibernateSession.getHibernateTemplate().getSessionFactory().getCurrentSession()
+        FlushMode hibernateMode = nativeSession.getHibernateFlushMode()
         switch (hibernateMode) {
             case FlushMode.AUTO:
                 hibernateSession.setFlushMode(FlushModeType.AUTO)

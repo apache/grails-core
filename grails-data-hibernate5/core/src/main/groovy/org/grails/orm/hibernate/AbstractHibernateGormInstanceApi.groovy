@@ -40,6 +40,7 @@ import org.springframework.context.ApplicationEventPublisher
 import org.springframework.transaction.PlatformTransactionManager
 import org.springframework.validation.Errors
 import org.springframework.validation.Validator
+import org.grails.datastore.gorm.support.BeforeValidateHelper
 import org.grails.datastore.gorm.validation.CascadingValidator
 import org.grails.datastore.gorm.DatastoreResolver
 
@@ -61,12 +62,11 @@ abstract class AbstractHibernateGormInstanceApi<D> extends GormInstanceApi<D> {
         }
     }
 
-    protected IHibernateTemplate hibernateTemplate
+    protected final BeforeValidateHelper beforeValidateHelper = new BeforeValidateHelper()
     protected Class<? extends Exception> validationException
 
     AbstractHibernateGormInstanceApi(Class<D> persistentClass, HibernateDatastore datastore, ClassLoader classLoader) {
         super(persistentClass, datastore)
-        this.hibernateTemplate = (IHibernateTemplate) datastore.getHibernateTemplate()
         initializeValidationException(classLoader)
     }
 
@@ -76,16 +76,26 @@ abstract class AbstractHibernateGormInstanceApi<D> extends GormInstanceApi<D> {
     }
 
     protected void initializeValidationException(ClassLoader classLoader) {
-        for (cl in [classLoader, Thread.currentThread().getContextClassLoader(), AbstractHibernateGormInstanceApi.class.classLoader]) {
-            if (cl == null) continue
-            try {
-                this.validationException = (Class<? extends Exception>) cl.loadClass("grails.validation.ValidationException")
-                return
-            } catch (Throwable e) {
-                // ignore
+        // no-op, handled in createValidationException dynamically
+    }
+
+    protected Exception createValidationException(Errors errors) {
+        String msg = 'Validation Error(s) occurred during save()'
+        def classNames = ["grails.validation.ValidationException", "org.grails.datastore.mapping.validation.ValidationException"]
+        def loaders = [persistentClass.classLoader, Thread.currentThread().contextClassLoader, AbstractHibernateGormInstanceApi.class.classLoader].unique()
+        
+        for (className in classNames) {
+            for (loader in loaders) {
+                if (loader == null) continue
+                try {
+                    Class exClass = Class.forName(className, true, loader)
+                    return (Exception) exClass.getConstructor(String.class, Errors.class).newInstance(msg, errors)
+                } catch (Throwable e) {
+                    // ignore
+                }
             }
         }
-        this.validationException = org.grails.datastore.mapping.validation.ValidationException
+        return new org.grails.datastore.mapping.validation.ValidationException(msg, errors)
     }
 
     protected HibernateDatastore getHibernateDatastore() {
@@ -93,14 +103,11 @@ abstract class AbstractHibernateGormInstanceApi<D> extends GormInstanceApi<D> {
     }
 
     protected IHibernateTemplate getHibernateTemplate() {
-        if (hibernateTemplate == null) {
-            return (IHibernateTemplate) getHibernateDatastore().getHibernateTemplate()
-        }
-        return hibernateTemplate
+        return (IHibernateTemplate) getHibernateDatastore().getHibernateTemplate()
     }
 
     protected ProxyHandler getProxyHandler() {
-        return datastore.mappingContext.proxyHandler
+        return getDatastore().mappingContext.proxyHandler
     }
 
     protected boolean isAutoFlush() {
@@ -121,6 +128,7 @@ abstract class AbstractHibernateGormInstanceApi<D> extends GormInstanceApi<D> {
     D save(D target, Map arguments) {
 
         PersistentEntity domainClass = getGormPersistentEntity()
+        beforeValidateHelper.invokeBeforeValidate(target, null)
         runDeferredBinding()
         boolean shouldFlush = shouldFlush(arguments)
         boolean shouldValidate = shouldValidate(arguments, domainClass)
@@ -133,11 +141,11 @@ abstract class AbstractHibernateGormInstanceApi<D> extends GormInstanceApi<D> {
         }
 
         if (shouldValidate) {
-            Validator validator = datastore.mappingContext.getEntityValidator(domainClass)
+            Validator validator = getDatastore().mappingContext.getEntityValidator(domainClass)
             Errors errors = HibernateRuntimeUtils.setupErrorsProperty(target)
 
             if (validator) {
-                datastore.applicationEventPublisher?.publishEvent new ValidationEvent(datastore, target)
+                getDatastore().applicationEventPublisher?.publishEvent new ValidationEvent(getDatastore(), target)
 
                 if (validator instanceof CascadingValidator) {
                     ((CascadingValidator) validator).validate target, errors, deepValidate
@@ -150,7 +158,7 @@ abstract class AbstractHibernateGormInstanceApi<D> extends GormInstanceApi<D> {
                 if (errors.hasErrors()) {
                     handleValidationError(domainClass, target, errors)
                     if (shouldFail(arguments)) {
-                        throw validationException.newInstance('Validation Error(s) occurred during save()', errors)
+                        throw createValidationException(errors)
                     }
                     return null
                 }
@@ -158,7 +166,7 @@ abstract class AbstractHibernateGormInstanceApi<D> extends GormInstanceApi<D> {
             }
         }
 
-        autoRetrieveAssociations datastore, domainClass, target
+        autoRetrieveAssociations getDatastore(), domainClass, target
 
         GormValidateable validateable = (GormValidateable) target
         validateable.skipValidation(true)

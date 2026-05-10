@@ -29,7 +29,10 @@ import org.hibernate.tuple.NonIdentifierAttribute
 
 import org.grails.orm.hibernate.cfg.GrailsHibernateUtil
 import org.grails.datastore.mapping.model.MappingContext
+import org.grails.datastore.mapping.model.PersistentProperty
 import org.grails.datastore.gorm.DatastoreResolver
+import org.grails.datastore.gorm.GormInstanceApi
+import org.grails.datastore.mapping.core.Datastore
 
 /**
  * The implementation of the GORM instance API contract for Hibernate.
@@ -40,16 +43,31 @@ import org.grails.datastore.gorm.DatastoreResolver
 @CompileStatic
 class HibernateGormInstanceApi<D> extends AbstractHibernateGormInstanceApi<D> {
 
-    protected InstanceApiHelper instanceApiHelper
+    protected final ClassLoader classLoader
 
     HibernateGormInstanceApi(Class<D> persistentClass, HibernateDatastore datastore, ClassLoader classLoader) {
         super(persistentClass, datastore, classLoader)
-        instanceApiHelper = new InstanceApiHelper((GrailsHibernateTemplate) getHibernateTemplate())
+        this.classLoader = classLoader
     }
 
     HibernateGormInstanceApi(Class<D> persistentClass, MappingContext mappingContext, DatastoreResolver datastoreResolver, ClassLoader classLoader) {
         super(persistentClass, mappingContext, datastoreResolver, classLoader)
-        instanceApiHelper = new InstanceApiHelper((GrailsHibernateTemplate) getHibernateTemplate())
+        this.classLoader = classLoader
+    }
+
+    @Override
+    GormInstanceApi<D> forQualifier(String qualifier) {
+        Datastore ds = getDatastore()
+        if (ds == null) return this
+
+        org.grails.datastore.gorm.DatastoreResolver resolver = new org.grails.datastore.gorm.DatastoreResolver() {
+            @Override Datastore resolve() { org.grails.datastore.gorm.GormEnhancer.findDatastore(persistentClass, qualifier) }
+        }
+        return new HibernateGormInstanceApi<D>(persistentClass, ds.mappingContext, resolver, classLoader)
+    }
+
+    protected InstanceApiHelper getInstanceApiHelper() {
+        new InstanceApiHelper((GrailsHibernateTemplate) getHibernateTemplate())
     }
 
     /**
@@ -63,21 +81,23 @@ class HibernateGormInstanceApi<D> extends AbstractHibernateGormInstanceApi<D> {
 
     @CompileDynamic
     boolean isDirty(D instance, String fieldName) {
-        SessionImplementor session = (SessionImplementor) getHibernateDatastore().getSessionFactory().currentSession
-        def entry = findEntityEntry(instance, session)
-        if (!entry || !entry.loadedState) {
-            return false
-        }
+        getHibernateTemplate().execute { Object session ->
+            SessionImplementor sessionImplementor = (SessionImplementor) session
+            def entry = findEntityEntry(instance, sessionImplementor)
+            if (!entry || !entry.loadedState) {
+                return false
+            }
 
-        EntityPersister persister = entry.persister
-        Object[] values = persister.getPropertyValues(instance)
-        def dirtyProperties = findDirty(persister, values, entry, instance, session)
-        if (dirtyProperties == null) {
-            return false
-        }
-        else {
-            int fieldIndex = persister.getEntityMetamodel().getProperties().findIndexOf { NonIdentifierAttribute attribute -> fieldName == attribute.name }
-            return fieldIndex in dirtyProperties
+            EntityPersister persister = entry.persister
+            Object[] values = persister.getPropertyValues(instance)
+            def dirtyProperties = findDirty(persister, values, entry, instance, sessionImplementor)
+            if (dirtyProperties == null) {
+                return false
+            }
+            else {
+                int fieldIndex = persister.getEntityMetamodel().getProperties().findIndexOf { NonIdentifierAttribute attribute -> fieldName == attribute.name }
+                return fieldIndex in dirtyProperties
+            }
         }
     }
 
@@ -94,15 +114,17 @@ class HibernateGormInstanceApi<D> extends AbstractHibernateGormInstanceApi<D> {
      */
     @CompileDynamic
     boolean isDirty(D instance) {
-        SessionImplementor session = (SessionImplementor) getHibernateDatastore().getSessionFactory().currentSession
-        def entry = findEntityEntry(instance, session)
-        if (!entry || !entry.loadedState) {
-            return false
+        getHibernateTemplate().execute { Object session ->
+            SessionImplementor sessionImplementor = (SessionImplementor) session
+            def entry = findEntityEntry(instance, sessionImplementor)
+            if (!entry || !entry.loadedState) {
+                return false
+            }
+            EntityPersister persister = entry.persister
+            Object[] currentState = persister.getPropertyValues(instance)
+            def dirtyPropertyIndexes = findDirty(persister, currentState, entry, instance, sessionImplementor)
+            return dirtyPropertyIndexes != null
         }
-        EntityPersister persister = entry.persister
-        Object[] currentState = persister.getPropertyValues(instance)
-        def dirtyPropertyIndexes = findDirty(persister, currentState, entry, instance, session)
-        return dirtyPropertyIndexes != null
     }
 
     /**
@@ -114,21 +136,23 @@ class HibernateGormInstanceApi<D> extends AbstractHibernateGormInstanceApi<D> {
 
     @CompileDynamic
     List getDirtyPropertyNames(D instance) {
-        SessionImplementor session = (SessionImplementor) getHibernateDatastore().getSessionFactory().currentSession
-        def entry = findEntityEntry(instance, session)
-        if (!entry || !entry.loadedState) {
-            return []
-        }
+        getHibernateTemplate().execute { Object session ->
+            SessionImplementor sessionImplementor = (SessionImplementor) session
+            def entry = findEntityEntry(instance, sessionImplementor)
+            if (!entry || !entry.loadedState) {
+                return []
+            }
 
-        EntityPersister persister = entry.persister
-        Object[] currentState = persister.getPropertyValues(instance)
-        int[] dirtyPropertyIndexes = findDirty(persister, currentState, entry, instance, session)
-        List<String> names = []
-        def entityProperties = persister.getEntityMetamodel().getProperties()
-        for (index in dirtyPropertyIndexes) {
-            names.add(entityProperties[index].name)
+            EntityPersister persister = entry.persister
+            Object[] currentState = persister.getPropertyValues(instance)
+            int[] dirtyPropertyIndexes = findDirty(persister, currentState, entry, instance, sessionImplementor)
+            List<String> names = []
+            def entityProperties = persister.getEntityMetamodel().getProperties()
+            for (index in dirtyPropertyIndexes) {
+                names.add(entityProperties[index].name)
+            }
+            return names
         }
-        return names
     }
 
     /**
@@ -138,17 +162,19 @@ class HibernateGormInstanceApi<D> extends AbstractHibernateGormInstanceApi<D> {
      * @return The original persisted value
      */
     Object getPersistentValue(D instance, String fieldName) {
-        SessionImplementor session = (SessionImplementor) getHibernateDatastore().getSessionFactory().currentSession
-        def entry = findEntityEntry(instance, session, false)
-        if (!entry || !entry.loadedState) {
-            return null
-        }
+        getHibernateTemplate().execute { Object session ->
+            SessionImplementor sessionImplementor = (SessionImplementor) session
+            def entry = findEntityEntry(instance, sessionImplementor, false)
+            if (!entry || !entry.loadedState) {
+                return null
+            }
 
-        EntityPersister persister = entry.persister
-        int fieldIndex = persister.getEntityMetamodel().getProperties().findIndexOf {
-            NonIdentifierAttribute attribute -> fieldName == attribute.name
+            EntityPersister persister = entry.persister
+            int fieldIndex = persister.getEntityMetamodel().getProperties().findIndexOf {
+                NonIdentifierAttribute attribute -> fieldName == attribute.name
+            }
+            return fieldIndex == -1 ? null : entry.loadedState[fieldIndex]
         }
-        return fieldIndex == -1 ? null : entry.loadedState[fieldIndex]
     }
 
     protected EntityEntry findEntityEntry(D instance, SessionImplementor session, boolean forDirtyCheck = true) {
@@ -183,16 +209,22 @@ class HibernateGormInstanceApi<D> extends AbstractHibernateGormInstanceApi<D> {
                 }
                 return target
             } else {
-                Serializable id = (Serializable) org.codehaus.groovy.runtime.InvokerHelper.getProperty(target, getGormPersistentEntity().identity.name)
-                if (id == null) {
-                    markInsertActive()
-                    try {
-                        ((Session)session).save target
-                    } finally {
-                        resetInsertActive()
-                    }
+                PersistentProperty identityProperty = getGormPersistentEntity().identity
+                if (identityProperty == null) {
+                    // composite ID
+                    ((Session)session).saveOrUpdate(target)
                 } else {
-                    ((Session)session).update target
+                    Serializable id = (Serializable) org.codehaus.groovy.runtime.InvokerHelper.getProperty(target, identityProperty.name)
+                    if (id == null) {
+                        markInsertActive()
+                        try {
+                            ((Session)session).save target
+                        } finally {
+                            resetInsertActive()
+                        }
+                    } else {
+                        ((Session)session).update target
+                    }
                 }
                 if (shouldFlush) {
                     ((Session)session).flush()

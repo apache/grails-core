@@ -37,6 +37,7 @@ import org.grails.datastore.mapping.core.Datastore;
 import org.grails.datastore.mapping.engine.Persister;
 import org.grails.datastore.mapping.model.MappingContext;
 import org.grails.datastore.mapping.query.api.QueryAliasAwareSession;
+import org.grails.datastore.mapping.transactions.SessionOnlyTransaction;
 import org.grails.datastore.mapping.transactions.Transaction;
 
 /**
@@ -76,12 +77,12 @@ public abstract class AbstractHibernateSession extends AbstractAttributeStoringS
     }
 
     public Transaction beginTransaction() {
-        throw new UnsupportedOperationException("Use HibernatePlatformTransactionManager instead");
+        return beginTransaction(null);
     }
 
     @Override
     public Transaction beginTransaction(TransactionDefinition definition) {
-        throw new UnsupportedOperationException("Use HibernatePlatformTransactionManager instead");
+        return new SessionOnlyTransaction(getHibernateTemplate().getSessionFactory().getCurrentSession(), this);
     }
 
     public MappingContext getMappingContext() {
@@ -177,7 +178,7 @@ public abstract class AbstractHibernateSession extends AbstractAttributeStoringS
     }
 
     public Transaction getTransaction() {
-        throw new UnsupportedOperationException("Use HibernatePlatformTransactionManager instead");
+        return null;
     }
 
     @Override
@@ -190,13 +191,32 @@ public abstract class AbstractHibernateSession extends AbstractAttributeStoringS
         return datastore;
     }
 
-    public boolean isDirty(Object o) {
-        // not used, Hibernate manages dirty checking itself
-        return true;
+    public boolean isDirty(Object instance) {
+        if (instance == null) {
+            return false;
+        }
+        return hibernateTemplate.execute(session -> {
+            org.hibernate.engine.spi.SessionImplementor sessionImplementor = (org.hibernate.engine.spi.SessionImplementor) session;
+            org.hibernate.engine.spi.EntityEntry entry = sessionImplementor.getPersistenceContext().getEntry(instance);
+            if (entry != null) {
+                if (entry.requiresDirtyCheck(instance)) {
+                    return true;
+                }
+                org.hibernate.persister.entity.EntityPersister persister = entry.getPersister();
+                Object[] currentState = persister.getPropertyValues(instance);
+                Object[] loadedState = entry.getLoadedState();
+                if (loadedState == null) {
+                    return true;
+                }
+                int[] dirtyProperties = persister.findDirty(currentState, loadedState, instance, sessionImplementor);
+                return dirtyProperties != null && dirtyProperties.length > 0;
+            }
+            return false;
+        });
     }
 
     public Object getNativeInterface() {
-        return hibernateTemplate;
+        return getHibernateTemplate();
     }
 
     @Override
@@ -204,5 +224,6 @@ public abstract class AbstractHibernateSession extends AbstractAttributeStoringS
         // no-op
     }
 
+    public abstract IHibernateTemplate getHibernateTemplate();
     public abstract FlushModeType getFlushMode();
 }

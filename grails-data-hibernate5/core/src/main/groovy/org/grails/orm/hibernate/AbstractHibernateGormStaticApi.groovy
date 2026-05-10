@@ -64,11 +64,6 @@ import org.grails.datastore.gorm.DatastoreResolver
 @CompileStatic
 abstract class AbstractHibernateGormStaticApi<D> extends GormStaticApi<D> {
 
-    protected ProxyHandler proxyHandler
-    protected GrailsHibernateTemplate hibernateTemplate
-    protected ConversionService conversionService
-    protected final HibernateSession hibernateSession
-
     AbstractHibernateGormStaticApi(
             Class<D> persistentClass,
             HibernateDatastore datastore,
@@ -82,31 +77,34 @@ abstract class AbstractHibernateGormStaticApi<D> extends GormStaticApi<D> {
             List<FinderMethod> finders,
             PlatformTransactionManager transactionManager) {
         super(persistentClass, datastore.mappingContext, finders)
-        this.hibernateTemplate = new GrailsHibernateTemplate(datastore.getSessionFactory(), datastore)
-        this.conversionService = datastore.mappingContext.conversionService
-        this.proxyHandler = datastore.mappingContext.proxyHandler
-        this.hibernateSession = new HibernateSession(
-                (HibernateDatastore) datastore,
-                hibernateTemplate.getSessionFactory(),
-                hibernateTemplate.getFlushMode()
-        )
     }
 
     AbstractHibernateGormStaticApi(Class<D> persistentClass, MappingContext mappingContext, List<FinderMethod> finders, DatastoreResolver datastoreResolver, String qualifier) {
         super(persistentClass, mappingContext, finders, datastoreResolver, qualifier)
-        HibernateDatastore datastore = (HibernateDatastore) getDatastore()
-        this.hibernateTemplate = new GrailsHibernateTemplate(datastore.getSessionFactory(), datastore)
-        this.conversionService = datastore.mappingContext.conversionService
-        this.proxyHandler = datastore.mappingContext.proxyHandler
-        this.hibernateSession = new HibernateSession(
-                (HibernateDatastore) datastore,
-                hibernateTemplate.getSessionFactory(),
-                hibernateTemplate.getFlushMode()
-        )
     }
 
-    IHibernateTemplate getHibernateTemplate() {
-        return hibernateTemplate
+    protected HibernateDatastore getHibernateDatastore() {
+        (HibernateDatastore) getDatastore()
+    }
+
+    protected IHibernateTemplate getHibernateTemplate() {
+        getHibernateDatastore().getHibernateTemplate()
+    }
+
+    protected ConversionService getConversionService() {
+        getHibernateDatastore().mappingContext.conversionService
+    }
+
+    protected ProxyHandler getProxyHandler() {
+        getHibernateDatastore().mappingContext.proxyHandler
+    }
+
+    protected HibernateSession getHibernateSession() {
+        new HibernateSession(
+                getHibernateDatastore(),
+                getHibernateDatastore().getSessionFactory(),
+                getHibernateDatastore().getDefaultFlushMode()
+        )
     }
 
     @Override
@@ -455,98 +453,47 @@ abstract class AbstractHibernateGormStaticApi<D> extends GormStaticApi<D> {
 
     @Override
     List<D> findAll(CharSequence query) {
-        if (query instanceof GString) {
-            Map params = [:]
-            String hql = buildNamedParameterQueryFromGString((GString) query, params)
-            return findAll(hql, params, Collections.emptyMap())
-        }
-        else {
-            return super.findAll(query)
-        }
+        findAll(query, Collections.emptyMap(), Collections.emptyMap())
     }
 
     @Override
     List executeQuery(CharSequence query) {
-        if (query instanceof GString) {
-            Map params = [:]
-            String hql = buildNamedParameterQueryFromGString((GString) query, params)
-            return executeQuery(hql, params, Collections.emptyMap())
-        }
-        else {
-            return super.executeQuery(query)
-        }
+        executeQuery(query, Collections.emptyMap(), Collections.emptyMap())
     }
 
     @Override
     Integer executeUpdate(CharSequence query) {
-        if (query instanceof GString) {
-            Map params = [:]
-            String hql = buildNamedParameterQueryFromGString((GString) query, params)
-            return executeUpdate(hql, params, Collections.emptyMap())
-        }
-        else {
-            return super.executeUpdate(query)
-        }
+        executeUpdate(query, Collections.emptyMap(), Collections.emptyMap())
     }
 
     @Override
     D find(CharSequence query) {
-        if (query instanceof GString) {
-            Map params = [:]
-            String hql = buildNamedParameterQueryFromGString((GString) query, params)
-            return find(hql, params, Collections.emptyMap())
-        }
-        else {
-            return (D) super.find(query)
-        }
+        find(query, Collections.emptyMap(), Collections.emptyMap())
     }
 
     @Override
     D find(CharSequence query, Map params) {
-        if (query instanceof GString) {
-            Map newParams = new LinkedHashMap(params)
-            String hql = buildNamedParameterQueryFromGString((GString) query, newParams)
-            return find(hql, newParams, newParams)
-        }
-        else {
-            return (D) super.find(query, params)
-        }
+        find(query, params, params)
     }
 
     @Override
     List<D> findAll(CharSequence query, Map params) {
-        if (query instanceof GString) {
-            Map newParams = new LinkedHashMap(params)
-            String hql = buildNamedParameterQueryFromGString((GString) query, newParams)
-            return findAll(hql, newParams, newParams)
-        }
-        else {
-            return super.findAll(query, params)
-        }
+        findAll(query, params, params)
     }
 
     @Override
     List executeQuery(CharSequence query, Map args) {
-        if (query instanceof GString) {
-            Map newParams = new LinkedHashMap(args)
-            String hql = buildNamedParameterQueryFromGString((GString) query, newParams)
-            return executeQuery(hql, newParams, newParams)
-        }
-        else {
-            return super.executeQuery(query, args)
-        }
+        executeQuery(query, args, args)
     }
 
     @Override
     Integer executeUpdate(CharSequence query, Map args) {
-        if (query instanceof GString) {
-            Map newParams = new LinkedHashMap(args)
-            String hql = buildNamedParameterQueryFromGString((GString) query, newParams)
-            return executeUpdate(hql, newParams, newParams)
-        }
-        else {
-            return super.executeUpdate(query, args)
-        }
+        executeUpdate(query, args, args)
+    }
+
+    @Override
+    Integer executeUpdate(CharSequence query, Map params, Map args) {
+        throw new UnsupportedOperationException("This operation is not supported by this API implementation.")
     }
 
     @Override

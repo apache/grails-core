@@ -19,20 +19,19 @@
 package org.grails.orm.hibernate.cfg
 
 import groovy.transform.CompileStatic
-
+import org.grails.datastore.gorm.GormValidationApi
 import org.grails.orm.hibernate.AbstractHibernateGormInstanceApi
-import org.grails.orm.hibernate.AbstractHibernateGormValidationApi
 
 @CompileStatic
 class InstanceProxy {
 
     protected instance
-    protected AbstractHibernateGormValidationApi validateApi
+    protected GormValidationApi validateApi
     protected AbstractHibernateGormInstanceApi instanceApi
 
     protected final Set<String> validateMethods
 
-    InstanceProxy(instance, AbstractHibernateGormInstanceApi instanceApi, AbstractHibernateGormValidationApi validateApi) {
+    InstanceProxy(instance, AbstractHibernateGormInstanceApi instanceApi, GormValidationApi validateApi) {
         this.instance = instance
         this.instanceApi = instanceApi
         this.validateApi = validateApi
