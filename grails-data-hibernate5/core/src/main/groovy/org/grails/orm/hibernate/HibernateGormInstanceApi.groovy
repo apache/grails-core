@@ -21,6 +21,7 @@ package org.grails.orm.hibernate
 import groovy.transform.CompileDynamic
 import groovy.transform.CompileStatic
 
+import org.grails.orm.hibernate.support.HibernateRuntimeUtils
 import org.hibernate.Session
 import org.hibernate.engine.spi.EntityEntry
 import org.hibernate.engine.spi.SessionImplementor
@@ -209,19 +210,15 @@ class HibernateGormInstanceApi<D> extends AbstractHibernateGormInstanceApi<D> {
                 }
                 return target
             } else {
-                PersistentProperty identityProperty = getGormPersistentEntity().identity
+                org.grails.datastore.mapping.model.PersistentEntity identityEntity = getGormPersistentEntity()
+                PersistentProperty identityProperty = identityEntity.identity
                 if (identityProperty == null) {
                     // composite ID
                     ((Session)session).saveOrUpdate(target)
                 } else {
                     Serializable id = (Serializable) org.codehaus.groovy.runtime.InvokerHelper.getProperty(target, identityProperty.name)
-                    if (id == null) {
-                        markInsertActive()
-                        try {
-                            ((Session)session).save target
-                        } finally {
-                            resetInsertActive()
-                        }
+                    if (id == null || HibernateRuntimeUtils.isInsertActive()) {
+                        ((Session)session).save target
                     } else {
                         ((Session)session).update target
                     }

@@ -40,12 +40,15 @@ class DetachedCriteriaProjectionSpec extends Specification {
 
     @Transactional
     def setup() {
-        DetachedEntity.findAll().each { it.delete() }
-        Entity1.findAll().each { it.delete(flush: true) }
-        final entity1 = new Entity1(id: 1, field1: 'Correct').save()
-        new Entity1(id: 2, field1: 'Incorrect').save()
-        new DetachedEntity(id: 1, entityId: entity1.id, field: 'abc').save()
-        new DetachedEntity(id: 2, entityId: entity1.id, field: 'def').save()
+        DetachedEntity.withSession { session ->
+            DetachedEntity.findAll().each { it.delete() }
+            Entity1.findAll().each { it.delete(flush: true) }
+            final entity1 = new Entity1(field1: 'Correct').save(flush: true)
+            new Entity1(field1: 'Incorrect').save(flush: true)
+            new DetachedEntity(entityId: entity1.id, field: 'abc').save(flush: true)
+            new DetachedEntity(entityId: entity1.id, field: 'def').save(flush: true)
+            session.flush()
+        }
     }
 
     @Rollback
@@ -101,18 +104,28 @@ class DetachedCriteriaProjectionSpec extends Specification {
 }
 
 @Entity
-public class Entity1 {
+class Entity1 {
     Long id
     String field1
     static hasMany = [children : Entity2]
+    static mapping = {
+        version false
+    }
 }
 @Entity
 class Entity2 {
     static belongsTo = [parent: Entity1]
     String field
+    static mapping = {
+        version false
+    }
 }
 @Entity
 class DetachedEntity {
+    Long id
     Long entityId
     String field
+    static mapping = {
+        version false
+    }
 }

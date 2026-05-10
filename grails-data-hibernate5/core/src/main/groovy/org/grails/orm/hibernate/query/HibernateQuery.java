@@ -111,7 +111,14 @@ public class HibernateQuery extends AbstractHibernateQuery {
         super.clearOrders();
         if (criteria != null) {
             final CriteriaImpl impl = (CriteriaImpl) criteria;
-            impl.clearOrders();
+            try {
+                java.lang.reflect.Field field = CriteriaImpl.class.getDeclaredField("orderEntries");
+                field.setAccessible(true);
+                ((java.util.List) field.get(impl)).clear();
+            }
+            catch (Exception e) {
+                throw new org.grails.datastore.mapping.model.DatastoreConfigurationException("Exposed Hibernate Criteria API has changed, and orderEntries field is no longer accessible via reflection", e);
+            }
         }
         return this;
     }
