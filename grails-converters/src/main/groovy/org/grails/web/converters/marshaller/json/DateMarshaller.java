@@ -19,11 +19,8 @@
 package org.grails.web.converters.marshaller.json;
 
 import java.text.Format;
+import java.time.format.DateTimeFormatter;
 import java.util.Date;
-import java.util.Locale;
-import java.util.TimeZone;
-
-import org.apache.commons.lang3.time.FastDateFormat;
 
 import grails.converters.JSON;
 import org.grails.web.converters.exceptions.ConverterException;
@@ -31,29 +28,29 @@ import org.grails.web.converters.marshaller.ObjectMarshaller;
 import org.grails.web.json.JSONException;
 
 /**
- * JSON ObjectMarshaller which converts a Date Object, conforming to the ECMA-Script-Specification
- * Draft, to a String value.
+ * JSON ObjectMarshaller which converts a Date Object to an RFC 3339 / ISO 8601
+ * UTC instant string (e.g. {@code 2024-06-15T14:30:45.123Z}).
  *
  * @author Siegfried Puchbauer
  * @since 1.1
  */
 public class DateMarshaller implements ObjectMarshaller<JSON> {
 
-    private final Format formatter;
+    private final Format legacyFormatter;
 
     /**
      * Constructor with a custom formatter.
      * @param formatter the formatter
      */
     public DateMarshaller(Format formatter) {
-        this.formatter = formatter;
+        this.legacyFormatter = formatter;
     }
 
     /**
-     * Default constructor.
+     * Default constructor — uses {@link DateTimeFormatter#ISO_INSTANT}.
      */
     public DateMarshaller() {
-        this(FastDateFormat.getInstance("yyyy-MM-dd'T'HH:mm:ss.SSS'Z'", TimeZone.getTimeZone("GMT"), Locale.US));
+        this(null);
     }
 
     public boolean supports(Object object) {
@@ -62,7 +59,11 @@ public class DateMarshaller implements ObjectMarshaller<JSON> {
 
     public void marshalObject(Object object, JSON converter) throws ConverterException {
         try {
-            converter.getWriter().value(formatter.format(object));
+            Date date = (Date) object;
+            String formatted = legacyFormatter != null ?
+                    legacyFormatter.format(date) :
+                    DateTimeFormatter.ISO_INSTANT.format(date.toInstant());
+            converter.getWriter().value(formatted);
         }
         catch (JSONException e) {
             throw new ConverterException(e);

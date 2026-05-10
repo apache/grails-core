@@ -53,6 +53,6 @@ class MongoSyncSpec extends ApplicationContextSpec implements CommandOutputFixtu
 
         then:
         template.contains('implementation "org.mongodb:mongodb-driver-sync"')
-        template.contains('testImplementation "org.testcontainers:mongodb"')
+        template.contains('testImplementation "org.testcontainers:testcontainers-mongodb"')
     }
 }
