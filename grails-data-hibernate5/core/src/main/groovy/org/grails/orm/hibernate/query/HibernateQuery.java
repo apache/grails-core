@@ -107,6 +107,16 @@ public class HibernateQuery extends AbstractHibernateQuery {
     }
 
     @Override
+    public org.grails.datastore.mapping.query.Query clearOrders() {
+        super.clearOrders();
+        if (criteria != null) {
+            final CriteriaImpl impl = (CriteriaImpl) criteria;
+            impl.clearOrders();
+        }
+        return this;
+    }
+
+    @Override
     public Object clone() {
         final CriteriaImpl impl = (CriteriaImpl) criteria;
         final HibernateSession hibernateSession = (HibernateSession) getSession();
