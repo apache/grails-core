@@ -33,15 +33,22 @@ group = 'org.apache.grails'
 
 ext {
     pomTitle = 'Grails BOM Property Overrides Gradle Plugin'
-    pomDescription = 'A standalone Gradle plugin that enables Maven-style property-based version overrides for any Gradle platform() BOM. Reads the BOM POM <properties> block and lets consumers override versions via gradle.properties or ext[\'property.name\']. Reusable independently of Grails.'
+    pomDescription = 'A standalone Gradle plugin that enables Maven-style property-based version overrides ' +
+            'for any Gradle platform() BOM. Reads the BOM POM <properties> block and lets consumers ' +
+            'override versions via gradle.properties or ext[\'property.name\']. ' +
+            'Reusable independently of Grails.'
     pomMavenPublicationName = 'pluginMaven'
 }
 
 dependencies {
     implementation platform(project(':grails-gradle-bom'))
 
-    // compile with the Groovy version provided by Gradle
-    // see: https://docs.gradle.org/current/userguide/compatibility.html#groovy
+    // Compile against the Groovy version provided at runtime by the Gradle distribution
+    // running the build (the Gradle/Groovy compatibility matrix is documented at
+    // https://docs.gradle.org/current/userguide/compatibility.html#groovy). The `groovy`
+    // module is intentionally compileOnly: at runtime Gradle supplies its own copy and
+    // testCompileClasspath/testRuntimeClasspath excludes below prevent the Spock
+    // transitive copy from leaking onto the test classpath.
     compileOnly 'org.apache.groovy:groovy'
 
     // Testing - Gradle TestKit is auto-added by java-gradle-plugin
@@ -51,13 +58,13 @@ dependencies {
 }
 
 configurations {
-    testCompileClasspath.exclude group: 'org.apache.groovy', module: 'groovy'
-    testRuntimeClasspath.exclude group: 'org.apache.groovy', module: 'groovy'
+    testCompileClasspath.exclude(group: 'org.apache.groovy', module: 'groovy')
+    testRuntimeClasspath.exclude(group: 'org.apache.groovy', module: 'groovy')
 }
 
 gradlePlugin {
     plugins {
-        bomPropertyOverrides {
+        register('bomPropertyOverrides') {
             displayName = 'Grails BOM Property Overrides Plugin'
             description = 'Enables Maven-style property-based version overrides for any Gradle platform() BOM. ' +
                     'Apply this plugin and override versions via gradle.properties or ext[\'property.name\']. ' +
@@ -69,10 +76,8 @@ gradlePlugin {
     }
 }
 
-tasks.withType(Copy) {
-    configure {
-        duplicatesStrategy = DuplicatesStrategy.INCLUDE
-    }
+tasks.withType(Copy).configureEach {
+    duplicatesStrategy = DuplicatesStrategy.INCLUDE
 }
 
 apply {

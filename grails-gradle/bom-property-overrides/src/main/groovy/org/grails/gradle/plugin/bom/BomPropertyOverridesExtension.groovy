@@ -19,6 +19,7 @@
 package org.grails.gradle.plugin.bom
 
 import groovy.transform.CompileStatic
+import org.gradle.api.model.ObjectFactory
 import org.gradle.api.provider.ListProperty
 import org.gradle.api.provider.Property
 
@@ -77,7 +78,7 @@ class BomPropertyOverridesExtension {
      */
     final ListProperty<String> boms
 
-    BomPropertyOverridesExtension(org.gradle.api.model.ObjectFactory objects) {
+    BomPropertyOverridesExtension(ObjectFactory objects) {
         this.autoDetect = objects.property(Boolean).convention(true)
         this.boms = objects.listProperty(String).convention([])
     }

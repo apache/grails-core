@@ -358,7 +358,6 @@ ${importStatements}
 
     protected void applyDefaultPlugins(Project project) {
         applySpringBootPlugin(project)
-
         applyGrailsBom(project)
     }
 
@@ -524,13 +523,14 @@ ${importStatements}
             return
         }
 
-        // The Grails Gradle Plugin injects a regular platform(grails-bom) into every
-        // declarable configuration via applyGrailsBom(). For Micronaut projects the user
-        // must additionally declare an enforcedPlatform(grails-micronaut-bom) - a different
-        // BOM artifact that layers Micronaut-specific overrides on top of grails-bom. We
-        // scan all grails-micronaut-bom declarations on the 'implementation' configuration
-        // and accept the configuration as valid when at least one of them is an
-        // enforcedPlatform.
+        // The Grails Gradle Plugin injects a regular platform(grails-bom) into each
+        // declarable configuration via applyGrailsBom(), excluding code-quality and
+        // annotation-processor classpaths (see isExcludedFromBomPlatform). For Micronaut
+        // projects the user must additionally declare an enforcedPlatform(grails-micronaut-bom)
+        // - a different BOM artifact that layers Micronaut-specific overrides on top of
+        // grails-bom. We scan all grails-micronaut-bom declarations on the 'implementation'
+        // configuration and accept the configuration as valid when at least one of them is
+        // an enforcedPlatform.
         for (Dependency dep : implConfig.dependencies) {
             if (dep.name == 'grails-micronaut-bom' && dep instanceof ModuleDependency) {
                 Object categoryAttr = ((ModuleDependency) dep).attributes.getAttribute(

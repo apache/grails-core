@@ -110,11 +110,18 @@ dependencies {
     implementation platform('com.example:my-bom:1.0.0')
 }
 
-// gradle.properties or build.gradle
+// In build.gradle
 ext['slf4j.version'] = '2.0.13'
 ----
 
-By default the plugin auto-detects every `platform()` and `enforcedPlatform()` dependency declared on the project's configurations and registers each one for property-override processing. You can disable auto-detection or register additional BOMs explicitly via the `bomPropertyOverrides` extension:
+The same override can also be set in `gradle.properties` (note: `gradle.properties` only supports the `name=value` form, not the `ext[...]` syntax):
+
+[source,properties]
+----
+slf4j.version=2.0.13
+----
+
+By default, the plugin auto-detects every `platform()` and `enforcedPlatform()` dependency declared on the project's configurations and registers each one for property-override processing. You can disable auto-detection or register additional BOMs explicitly via the `bomPropertyOverrides` extension:
 
 [source,groovy]
 ----
