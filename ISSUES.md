@@ -15,7 +15,7 @@
 | `grails-datastore-core/web` | ✅ | |
 | `grails-data-simple` | ✅ | |
 | `grails-data-hibernate7` (dependent modules) | ✅ | Totally fixed. All integration and example tests passing |
-| `grails-data-hibernate5-core` | ✅ 100% passing | Aligned with GORM 8 API. Scalability O(M+N) verified 2026-05-09 |
+| `grails-data-hibernate5-core` | 🔴 35 failures | Needs investigation: Session management, Dirty checking, Optimistic locking, PagedResultList |
 | `grails-data-mongodb-core` | ✅ 100% passing | Fixed versioning, dirty checking, and embedded conflicts. Scalability O(M+N) verified |
 | `grails-data-mongodb` + siblings | 🔲 Not yet run | Require live MongoDB |
 
@@ -83,7 +83,7 @@ Both must fire `PreQueryEvent` so `MultiTenantEventListener` can enable Hibernat
 
 ---
 
-## Open Issues
+---
 
 ### MongoDB — grails-data-mongodb (siblings): Pending Run
 
