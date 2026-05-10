@@ -1,0 +1,53 @@
+# Licensed to the Apache Software Foundation (ASF) under one or more
+# contributor license agreements.  See the NOTICE file distributed with
+# this work for additional information regarding copyright ownership.
+# The ASF licenses this file to You under the Apache License, Version 2.0
+# (the "License"); you may not use this file except in compliance with
+# the License.  You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+# Git auto-detects text vs binary; text files are stored as LF in the index.
+* text=auto
+
+# Files that MUST be LF on every platform.
+# Shell scripts, the Gradle wrapper launcher, the published KEYS file, and the
+# Dockerfile all run on Linux during release verification. CRLF in any of them
+# breaks the verification flow (kernel rejects scripts with bash\r shebangs and
+# verify-keys.sh fails the byte-for-byte SVN comparison).
+*.sh           text eol=lf
+gradlew        text eol=lf
+KEYS           text eol=lf
+Dockerfile     text eol=lf
+*.properties   text eol=lf
+
+# Files that MUST be CRLF (Windows scripts).
+*.bat          text eol=crlf
+*.cmd          text eol=crlf
+gradlew.bat    text eol=crlf
+
+# Common binary types - never normalize.
+*.jar          binary
+*.zip          binary
+*.gz           binary
+*.tgz          binary
+*.7z           binary
+*.png          binary
+*.jpg          binary
+*.jpeg         binary
+*.gif          binary
+*.ico          binary
+*.pdf          binary
+*.p12          binary
+*.gpg          binary
+*.keystore     binary
+*.class        binary
+*.so           binary
+*.dylib        binary
+*.dll          binary
