@@ -118,6 +118,8 @@ class HibernateGormStaticApi<D> extends AbstractHibernateGormStaticApi<D> {
             CriteriaBuilder criteriaBuilder = ((Session)session).getCriteriaBuilder()
             CriteriaQuery criteriaQuery = criteriaBuilder.createQuery(entity.javaClass)
             Root queryRoot = criteriaQuery.from(entity.javaClass)
+
+            params = params ? new HashMap(params) : Collections.emptyMap()
             GrailsHibernateQueryUtils.populateArgumentsForCriteria(
                     entity,
                     criteriaQuery,
@@ -137,14 +139,15 @@ class HibernateGormStaticApi<D> extends AbstractHibernateGormStaticApi<D> {
                     true
             )
 
+            HibernateSession hibernateSession = new HibernateSession((HibernateDatastore) datastore, getSessionFactory())
             HibernateHqlQuery hibernateQuery = new HibernateHqlQuery(
-                    new HibernateSession((HibernateDatastore) datastore, getSessionFactory()),
+                    hibernateSession,
                     entity,
                     query
             )
+
             getHibernateTemplate().applySettings(query)
 
-            params = params ? new HashMap(params) : Collections.emptyMap()
             if (params.containsKey(DynamicFinder.ARGUMENT_MAX)) {
                 return new PagedResultList(
                         getHibernateTemplate(),

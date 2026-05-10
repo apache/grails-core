@@ -546,7 +546,7 @@ public class GrailsDomainBinder implements MetadataContributor {
         TenantId tenantId = referenced.getTenantId();
         if (tenantId != null) {
             String defaultColumnName = getDefaultColumnName(tenantId, sessionFactoryBeanName);
-            return ":tenantId = " + defaultColumnName;
+            return defaultColumnName + " = :tenantId";
         }
         else {
             return null;
@@ -1493,7 +1493,7 @@ public class GrailsDomainBinder implements MetadataContributor {
                 mappings.addFilterDefinition(new FilterDefinition(
                         GormProperties.TENANT_IDENTITY,
                         filterCondition,
-                        Collections.singletonMap(GormProperties.TENANT_IDENTITY, getProperty(persistentClass, tenantId.getName()).getType())
+                        Collections.singletonMap(GormProperties.TENANT_IDENTITY, org.hibernate.type.StringType.INSTANCE)
                 ));
             }
         }

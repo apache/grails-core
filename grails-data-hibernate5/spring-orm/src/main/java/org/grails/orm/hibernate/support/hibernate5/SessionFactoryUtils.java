@@ -182,14 +182,14 @@ public abstract class SessionFactoryUtils {
      * @return the corresponding DataAccessException instance
      */
     public static DataAccessException convertPersistenceException(PersistenceException ex) {
+        if (ex.getCause() instanceof HibernateException hibernateException) {
+            return convertHibernateAccessException(hibernateException);
+        }
         if (ex instanceof jakarta.persistence.OptimisticLockException) {
             return new OptimisticLockingFailureException(ex.getMessage(), ex);
         }
         if (ex instanceof jakarta.persistence.PessimisticLockException) {
             return new PessimisticLockingFailureException(ex.getMessage(), ex);
-        }
-        if (ex.getCause() instanceof HibernateException) {
-            return convertHibernateAccessException((HibernateException) ex.getCause());
         }
         return null;
     }
@@ -203,8 +203,14 @@ public abstract class SessionFactoryUtils {
      * @see HibernateTransactionManager#convertHibernateAccessException
      */
     public static DataAccessException convertHibernateAccessException(HibernateException ex) {
-        if (ex instanceof StaleObjectStateException || ex instanceof StaleStateException || ex instanceof OptimisticEntityLockException) {
-            return new OptimisticLockingFailureException(ex.getMessage(), ex);
+        if (ex instanceof StaleObjectStateException staleObjectStateException) {
+            return new HibernateOptimisticLockingFailureException(staleObjectStateException);
+        }
+        if (ex instanceof StaleStateException staleStateException) {
+            return new HibernateOptimisticLockingFailureException(staleStateException);
+        }
+        if (ex instanceof OptimisticEntityLockException optimisticEntityLockException) {
+            return new HibernateOptimisticLockingFailureException(optimisticEntityLockException);
         }
         if (ex instanceof JDBCConnectionException) {
             return new DataAccessResourceFailureException(ex.getMessage(), ex);

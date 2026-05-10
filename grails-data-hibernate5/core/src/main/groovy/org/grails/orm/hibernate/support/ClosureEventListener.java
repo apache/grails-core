@@ -354,7 +354,7 @@ public class ClosureEventListener implements SaveOrUpdateEventListener,
 
     private void synchronizeEntityUpdateActionState(AbstractPreDatabaseOperationEvent event, Object entity,
                                                     HashMap<Integer, Object> changedState) {
-        if (actionQueueUpdatesField != null && event instanceof PreInsertEvent && changedState.size() > 0) {
+        if (actionQueueUpdatesField != null && changedState.size() > 0) {
             try {
                 ExecutableList<EntityUpdateAction> updates = (ExecutableList<EntityUpdateAction>) actionQueueUpdatesField.get(event.getSession().getActionQueue());
                 if (updates != null) {
