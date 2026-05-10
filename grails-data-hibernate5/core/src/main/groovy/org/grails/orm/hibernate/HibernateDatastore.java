@@ -199,7 +199,7 @@ public class HibernateDatastore extends AbstractHibernateDatastore implements Me
         return new HibernateDatastore(singletonConnectionSources, mappingContext, eventPublisher) {
             @Override
             protected HibernateGormEnhancer initialize() {
-                return null;
+                return new HibernateGormEnhancer(this, transactionManager, getConnectionSources().getDefaultConnectionSource().getSettings());
             }
 
             @Override
@@ -460,6 +460,40 @@ public class HibernateDatastore extends AbstractHibernateDatastore implements Me
     }
 
     @Override
+    public Session getCurrentSession() throws ConnectionNotFoundException {
+        // Priority 1: custom session resolver
+        Session resolved = getSessionResolver().resolve();
+        if (resolved != null) {
+            return resolved;
+        }
+        // Priority 2: GORM session holder (key = this datastore)
+        org.grails.datastore.mapping.transactions.SessionHolder gormHolder =
+                (org.grails.datastore.mapping.transactions.SessionHolder)
+                        TransactionSynchronizationManager.getResource(this);
+        if (gormHolder != null) {
+            Session s = gormHolder.getValidatedSession();
+            if (s != null) {
+                return s;
+            }
+        }
+        // Priority 3: Spring TX SessionFactory holder (key = SessionFactory).
+        // When withTransaction{} is active, the TX manager binds the Hibernate session here.
+        SessionFactory sf = getSessionFactory();
+        if (sf != null) {
+            Object resource = TransactionSynchronizationManager.getResource(sf);
+            if (resource instanceof org.grails.orm.hibernate.support.hibernate5.SessionHolder) {
+                org.grails.orm.hibernate.support.hibernate5.SessionHolder sfHolder = (org.grails.orm.hibernate.support.hibernate5.SessionHolder) resource;
+                org.hibernate.Session nativeSession = sfHolder.getSession();
+                if (nativeSession != null && nativeSession.isOpen()) {
+                    return new HibernateSession(this, sf);
+                }
+            }
+        }
+        throw new ConnectionNotFoundException(
+                "No Datastore Session bound to thread, and configuration does not allow creation of non-transactional one here");
+    }
+
+    @Override
     public boolean hasCurrentSession() {
         return TransactionSynchronizationManager.getResource(sessionFactory) != null;
     }
@@ -530,12 +564,6 @@ public class HibernateDatastore extends AbstractHibernateDatastore implements Me
         org.hibernate.Session session = this.sessionFactory.openSession();
         session.setHibernateFlushMode(org.hibernate.FlushMode.valueOf(defaultFlushModeName));
         return session;
-    }
-
-    @Override
-    public Session getCurrentSession() throws ConnectionNotFoundException {
-        // HibernateSession, just a thin wrapper around default session handling so simply return a new instance here
-        return new HibernateSession(this, sessionFactory, getDefaultFlushMode());
     }
 
     @Override
@@ -652,10 +680,27 @@ public class HibernateDatastore extends AbstractHibernateDatastore implements Me
         HibernateDatastore childDatastore = new HibernateDatastore(singletonConnectionSources, (HibernateMappingContext) mappingContext, eventPublisher) {
             @Override
             protected HibernateGormEnhancer initialize() {
-                return null;
+                return new HibernateGormEnhancer(this, transactionManager, getConnectionSources().getDefaultConnectionSource().getSettings());
             }
         };
         datastoresByConnectionSource.put(connectionSource.getName(), childDatastore);
+    }
+
+    @Override
+    public void close() {
+        if (gormEnhancer != null) {
+            try {
+                gormEnhancer.close();
+            } catch (IOException e) {
+                // ignore
+            }
+        }
+        super.close();
+        for (HibernateDatastore datastore : datastoresByConnectionSource.values()) {
+            if (datastore != this) {
+                datastore.close();
+            }
+        }
     }
 
     private Metadata getMetadataInternal() {

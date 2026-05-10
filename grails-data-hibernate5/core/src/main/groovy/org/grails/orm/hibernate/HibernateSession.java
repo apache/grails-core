@@ -63,14 +63,14 @@ public class HibernateSession extends AbstractHibernateSession {
     ProxyHandler proxyHandler = new HibernateProxyHandler();
     DefaultTimestampProvider timestampProvider;
 
-    public HibernateSession(HibernateDatastore hibernateDatastore, SessionFactory sessionFactory, int defaultFlushMode) {
+    public HibernateSession(AbstractHibernateDatastore hibernateDatastore, SessionFactory sessionFactory) {
         super(hibernateDatastore, sessionFactory);
-
-        hibernateTemplate = new GrailsHibernateTemplate(sessionFactory, (HibernateDatastore) getDatastore());
+        hibernateTemplate = (IHibernateTemplate) hibernateDatastore.getHibernateTemplate();
     }
 
-    public HibernateSession(HibernateDatastore hibernateDatastore, SessionFactory sessionFactory) {
-        this(hibernateDatastore, sessionFactory, hibernateDatastore.getDefaultFlushMode());
+    public HibernateSession(AbstractHibernateDatastore hibernateDatastore, SessionFactory sessionFactory, int defaultFlushMode) {
+        super(hibernateDatastore, sessionFactory);
+        hibernateTemplate = (IHibernateTemplate) hibernateDatastore.getHibernateTemplate(defaultFlushMode);
     }
 
     @Override
@@ -95,28 +95,35 @@ public class HibernateSession extends AbstractHibernateSession {
      * @return The total number of records deleted
      */
     public long deleteAll(final QueryableCriteria criteria) {
-        return getHibernateTemplate().execute((GrailsHibernateTemplate.HibernateCallback<Integer>) session -> {
-            JpaQueryBuilder builder = new JpaQueryBuilder(criteria);
-            builder.setConversionService(getMappingContext().getConversionService());
-            builder.setHibernateCompatible(true);
-            JpaQueryInfo jpaQueryInfo = builder.buildDelete();
+        return (long) getHibernateTemplate().execute(new GrailsHibernateTemplate.HibernateCallback<Integer>() {
+            @Override
+            public Integer doInHibernate(Session session) {
+                JpaQueryBuilder builder = new JpaQueryBuilder(criteria);
+                builder.setConversionService(getMappingContext().getConversionService());
+                builder.setHibernateCompatible(true);
+                JpaQueryInfo jpaQueryInfo = builder.buildDelete();
 
-            org.hibernate.query.Query query = session.createQuery(jpaQueryInfo.getQuery());
-            getHibernateTemplate().applySettings(query);
+                org.hibernate.query.Query query = session.createQuery(jpaQueryInfo.getQuery());
+                getHibernateTemplate().applySettings(query);
 
-            List parameters = jpaQueryInfo.getParameters();
-            if (parameters != null) {
-                for (int i = 0, count = parameters.size(); i < count; i++) {
-                    query.setParameter(JpaQueryBuilder.PARAMETER_NAME_PREFIX + (i + 1), parameters.get(i));
+                List parameters = jpaQueryInfo.getParameters();
+                if (parameters != null) {
+                    for (int i = 0, count = parameters.size(); i < count; i++) {
+                        query.setParameter(JpaQueryBuilder.PARAMETER_NAME_PREFIX + (i + 1), parameters.get(i));
+                    }
                 }
-            }
 
-            HibernateHqlQuery hqlQuery = new HibernateHqlQuery(HibernateSession.this, criteria.getPersistentEntity(), query);
-            ApplicationEventPublisher applicationEventPublisher = datastore.getApplicationEventPublisher();
-            applicationEventPublisher.publishEvent(new PreQueryEvent(datastore, hqlQuery));
-            int result = query.executeUpdate();
-            applicationEventPublisher.publishEvent(new PostQueryEvent(datastore, hqlQuery, Collections.singletonList(result)));
-            return result;
+                HibernateHqlQuery hqlQuery = new HibernateHqlQuery(HibernateSession.this, criteria.getPersistentEntity(), query);
+                ApplicationEventPublisher applicationEventPublisher = datastore.getApplicationEventPublisher();
+                if(applicationEventPublisher != null) {
+                    applicationEventPublisher.publishEvent(new PreQueryEvent(datastore, hqlQuery));
+                }
+                int result = query.executeUpdate();
+                if(applicationEventPublisher != null) {
+                    applicationEventPublisher.publishEvent(new PostQueryEvent(datastore, hqlQuery, Collections.singletonList(result)));
+                }
+                return result;
+            }
         });
     }
 
@@ -128,55 +135,63 @@ public class HibernateSession extends AbstractHibernateSession {
      * @return The total number of records updated
      */
     public long updateAll(final QueryableCriteria criteria, final Map<String, Object> properties) {
-        return getHibernateTemplate().execute((GrailsHibernateTemplate.HibernateCallback<Integer>) session -> {
-            JpaQueryBuilder builder = new JpaQueryBuilder(criteria);
-            builder.setConversionService(getMappingContext().getConversionService());
-            builder.setHibernateCompatible(true);
-            PersistentEntity targetEntity = criteria.getPersistentEntity();
-            PersistentProperty lastUpdated = targetEntity.getPropertyByName(GormProperties.LAST_UPDATED);
-            if (lastUpdated != null && targetEntity.getMapping().getMappedForm().isAutoTimestamp()) {
-                if (timestampProvider == null) {
-                    timestampProvider = new DefaultTimestampProvider();
+        return (long) getHibernateTemplate().execute(new GrailsHibernateTemplate.HibernateCallback<Integer>() {
+            @Override
+            public Integer doInHibernate(Session session) {
+                JpaQueryBuilder builder = new JpaQueryBuilder(criteria);
+                builder.setConversionService(getMappingContext().getConversionService());
+                builder.setHibernateCompatible(true);
+                PersistentEntity targetEntity = criteria.getPersistentEntity();
+                PersistentProperty lastUpdated = targetEntity.getPropertyByName(GormProperties.LAST_UPDATED);
+                if (lastUpdated != null && targetEntity.getMapping().getMappedForm().isAutoTimestamp()) {
+                    if (timestampProvider == null) {
+                        timestampProvider = new DefaultTimestampProvider();
+                    }
+                    properties.put(GormProperties.LAST_UPDATED, timestampProvider.createTimestamp(lastUpdated.getType()));
                 }
-                properties.put(GormProperties.LAST_UPDATED, timestampProvider.createTimestamp(lastUpdated.getType()));
-            }
 
-            JpaQueryInfo jpaQueryInfo = builder.buildUpdate(properties);
+                JpaQueryInfo jpaQueryInfo = builder.buildUpdate(properties);
 
-            org.hibernate.query.Query query = session.createQuery(jpaQueryInfo.getQuery());
-            getHibernateTemplate().applySettings(query);
-            List parameters = jpaQueryInfo.getParameters();
-            if (parameters != null) {
-                for (int i = 0, count = parameters.size(); i < count; i++) {
-                    query.setParameter(JpaQueryBuilder.PARAMETER_NAME_PREFIX + (i + 1), parameters.get(i));
+                org.hibernate.query.Query query = session.createQuery(jpaQueryInfo.getQuery());
+                getHibernateTemplate().applySettings(query);
+                List parameters = jpaQueryInfo.getParameters();
+                if (parameters != null) {
+                    for (int i = 0, count = parameters.size(); i < count; i++) {
+                        query.setParameter(JpaQueryBuilder.PARAMETER_NAME_PREFIX + (i + 1), parameters.get(i));
+                    }
                 }
-            }
 
-            HibernateHqlQuery hqlQuery = new HibernateHqlQuery(HibernateSession.this, targetEntity, query);
-            ApplicationEventPublisher applicationEventPublisher = datastore.getApplicationEventPublisher();
-            applicationEventPublisher.publishEvent(new PreQueryEvent(datastore, hqlQuery));
-            int result = query.executeUpdate();
-            applicationEventPublisher.publishEvent(new PostQueryEvent(datastore, hqlQuery, Collections.singletonList(result)));
-            return result;
+                HibernateHqlQuery hqlQuery = new HibernateHqlQuery(HibernateSession.this, targetEntity, query);
+                ApplicationEventPublisher applicationEventPublisher = datastore.getApplicationEventPublisher();
+                if(applicationEventPublisher != null) {
+                    applicationEventPublisher.publishEvent(new PreQueryEvent(datastore, hqlQuery));
+                }
+                int result = query.executeUpdate();
+                if(applicationEventPublisher != null) {
+                    applicationEventPublisher.publishEvent(new PostQueryEvent(datastore, hqlQuery, Collections.singletonList(result)));
+                }
+                return result;
+            }
         });
     }
 
     public List retrieveAll(final Class type, final Iterable keys) {
         final PersistentEntity persistentEntity = getMappingContext().getPersistentEntity(type.getName());
-        return getHibernateTemplate().execute(session -> {
-            final CriteriaBuilder criteriaBuilder = session.getCriteriaBuilder();
-            CriteriaQuery criteriaQuery = criteriaBuilder.createQuery(type);
-            final Root root = criteriaQuery.from(type);
-            final String id = persistentEntity.getIdentity().getName();
-            criteriaQuery = criteriaQuery.where(
-                criteriaBuilder.in(
+        return (List) getHibernateTemplate().execute(new GrailsHibernateTemplate.HibernateCallback<List>() {
+            @Override
+            public List doInHibernate(Session session) {
+                final CriteriaBuilder criteriaBuilder = session.getCriteriaBuilder();
+                CriteriaQuery criteriaQuery = criteriaBuilder.createQuery(type);
+                final Root root = criteriaQuery.from(type);
+                final String id = persistentEntity.getIdentity().getName();
+                criteriaQuery = criteriaQuery.where(
                     root.get(id).in(getIterableAsCollection(keys))
-                )
-            );
-            final org.hibernate.query.Query jpaQuery = session.createQuery(criteriaQuery);
-            getHibernateTemplate().applySettings(jpaQuery);
+                );
+                final org.hibernate.query.Query jpaQuery = session.createQuery(criteriaQuery);
+                getHibernateTemplate().applySettings(jpaQuery);
 
-            return new HibernateHqlQuery(this, persistentEntity, jpaQuery).list();
+                return new HibernateHqlQuery(HibernateSession.this, persistentEntity, jpaQuery).list();
+            }
         });
     }
 
@@ -187,28 +202,33 @@ public class HibernateSession extends AbstractHibernateSession {
     @Override
     public Query createQuery(Class type, String alias) {
         final PersistentEntity persistentEntity = getMappingContext().getPersistentEntity(type.getName());
-        GrailsHibernateTemplate hibernateTemplate = getHibernateTemplate();
-        Session currentSession = hibernateTemplate.getSessionFactory().getCurrentSession();
-        final Criteria criteria = alias != null ? currentSession.createCriteria(type, alias) : currentSession.createCriteria(type);
-        hibernateTemplate.applySettings(criteria);
-        return new HibernateQuery(criteria, this, persistentEntity);
+        GrailsHibernateTemplate hibernateTemplate = (GrailsHibernateTemplate) getHibernateTemplate();
+        return (Query) hibernateTemplate.execute(new GrailsHibernateTemplate.HibernateCallback<Query>() {
+            @Override
+            public Query doInHibernate(Session session) {
+                final Criteria criteria = alias != null ? session.createCriteria(type, alias) : session.createCriteria(type);
+                hibernateTemplate.applySettings(criteria);
+                return new HibernateQuery(criteria, HibernateSession.this, persistentEntity);
+            }
+        });
     }
 
-    protected GrailsHibernateTemplate getHibernateTemplate() {
-        return (GrailsHibernateTemplate) getNativeInterface();
+    @Override
+    public IHibernateTemplate getHibernateTemplate() {
+        return hibernateTemplate;
     }
 
     public void setFlushMode(FlushModeType flushMode) {
         if (flushMode == FlushModeType.AUTO) {
-            hibernateTemplate.setFlushMode(GrailsHibernateTemplate.FLUSH_AUTO);
+            getHibernateTemplate().setFlushMode(GrailsHibernateTemplate.FLUSH_AUTO);
         }
         else if (flushMode == FlushModeType.COMMIT) {
-            hibernateTemplate.setFlushMode(GrailsHibernateTemplate.FLUSH_COMMIT);
+            getHibernateTemplate().setFlushMode(GrailsHibernateTemplate.FLUSH_COMMIT);
         }
     }
 
     public FlushModeType getFlushMode() {
-        switch (hibernateTemplate.getFlushMode()) {
+        switch (getHibernateTemplate().getFlushMode()) {
             case GrailsHibernateTemplate.FLUSH_AUTO: return FlushModeType.AUTO;
             case GrailsHibernateTemplate.FLUSH_COMMIT: return FlushModeType.COMMIT;
             case GrailsHibernateTemplate.FLUSH_ALWAYS: return FlushModeType.AUTO;

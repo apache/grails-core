@@ -70,6 +70,8 @@ public interface IHibernateTemplate {
 
     SessionFactory getSessionFactory();
 
+    <T> T execute(GrailsHibernateTemplate.HibernateCallback<T> action);
+
     <T> T execute(Closure<T> callable);
 
     <T> T executeWithNewSession(Closure<T> callable);

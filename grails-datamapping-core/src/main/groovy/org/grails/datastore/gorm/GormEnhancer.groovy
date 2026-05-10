@@ -504,7 +504,7 @@ class GormEnhancer implements Closeable {
 
         // PRIORITY 3: Check if ANY session is bound to the thread
         for (Datastore registeredDs in registry.allDatastores) {
-            if (TransactionSynchronizationManager.hasResource(registeredDs)) {
+            if (TransactionSynchronizationManager.hasResource(registeredDs) || registeredDs.hasCurrentSession()) {
                 if (className != null) {
                     if (registry.getDatastore(className, ConnectionSource.DEFAULT) == registeredDs) {
                         return registeredDs

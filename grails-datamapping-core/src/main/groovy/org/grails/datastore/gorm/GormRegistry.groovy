@@ -64,6 +64,23 @@ class GormRegistry {
      * Resets the global registry to a clean state.
      */
     static void reset() {
+        // Clear MetaClasses to prevent stale GORM methods
+        def classNames = new HashSet<String>()
+        classNames.addAll(instance.staticApis.keySet())
+        classNames.addAll(instance.instanceApis.keySet())
+        classNames.addAll(instance.validationApis.keySet())
+        
+        for (className in classNames) {
+            try {
+                Class cls = Class.forName(className, false, Thread.currentThread().contextClassLoader)
+                if (cls != null) {
+                    GroovySystem.metaClassRegistry.removeMetaClass(cls)
+                }
+            } catch (Throwable e) {
+                // ignore
+            }
+        }
+
         instance.staticApis.clear()
         instance.instanceApis.clear()
         instance.validationApis.clear()
