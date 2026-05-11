@@ -36,20 +36,25 @@ class DetachedCriteriaProjectionAliasSpec extends Specification {
 
     @Transactional
     def setup() {
-        DetachedEntity.findAll().each { it.delete() }
-        Entity1.findAll().each { it.delete(flush: true) }
-        Entity2.findAll().each { it.delete(flush: true) }
-        final entity1 = new Entity1(id: 1, field1: 'E1').save()
-        final entity2 = new Entity2(id: 2, field: 'E2', parent: entity1).save()
-        entity1.addToChildren(entity2)
-        new DetachedEntity(id: 1, entityId: entity1.id, field: 'DE1').save()
-        new DetachedEntity(id: 2, entityId: entity1.id, field: 'DE2').save()
+        DetachedEntity.withSession { session ->
+            DetachedEntity.findAll().each { it.delete() }
+            Entity1.findAll().each { it.delete(flush: true) }
+            Entity2.findAll().each { it.delete(flush: true) }
+            final entity1 = new Entity1(field1: 'E1')
+            final entity2 = new Entity2(field: 'E2', parent: entity1)
+            entity1.addToChildren(entity2)
+            entity1.save(flush: true)
+            new DetachedEntity(entityId: entity1.id, field: 'DE1').save(flush: true)
+            new DetachedEntity(entityId: entity1.id, field: 'DE2').save(flush: true)
+            session.flush()
+        }
     }
 
     @Rollback
     @Issue('https://github.com/grails/grails-data-hibernate5/issues/598')
     def 'test projection in detached criteria subquery with aliased join and restriction referencing join'() {
         setup:
+        final e1 = Entity1.findByField1("E1")
         final detachedCriteria = new DetachedCriteria(Entity1).build {
             createAlias("children", "e2")
             projections{
@@ -62,7 +67,7 @@ class DetachedCriteriaProjectionAliasSpec extends Specification {
             "in"("entityId", detachedCriteria)
         }
         then:
-        res.entityId.first() == 1L
+        res.entityId.first() == e1.id
     }
 
 
@@ -70,6 +75,7 @@ class DetachedCriteriaProjectionAliasSpec extends Specification {
     @Issue('https://github.com/grails/grails-data-hibernate5/issues/598')
     def 'test aliased projection in detached criteria subquery'() {
         setup:
+        final e1 = Entity1.findByField1("E1")
         final detachedCriteria = new DetachedCriteria(Entity2).build {
             createAlias("parent", "e1")
             projections{
@@ -82,6 +88,6 @@ class DetachedCriteriaProjectionAliasSpec extends Specification {
             "in"("entityId", detachedCriteria)
         }
         then:
-        res.entityId.first() == 2L
+        res.entityId.first() == e1.id
     }
 }

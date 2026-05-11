@@ -15,7 +15,7 @@
 | `grails-datastore-core/web` | ✅ | |
 | `grails-data-simple` | ✅ | |
 | `grails-data-hibernate7` (dependent modules) | ✅ | Totally fixed. All integration and example tests passing |
-| `grails-data-hibernate5-core` | 🔴 10 failures | Fixed compilation, first/last ordering, exception translation, and manual ID insertion. Remaining 10 failures (mostly dirty checking and multi-tenancy) need investigation. |
+| `grails-data-hibernate5-core` | 🔴 8 failures | Fixed compilation, first/last ordering, exception translation, manual ID insertion, and projection aliases. Remaining 8 failures (mostly dirty checking and multi-tenancy) need investigation. |
 | `grails-data-mongodb-core` | ✅ 100% passing | Fixed versioning, dirty checking, and embedded conflicts. Scalability O(M+N) verified |
 | `grails-data-mongodb` + siblings | 🔲 Not yet run | Require live MongoDB |
 
