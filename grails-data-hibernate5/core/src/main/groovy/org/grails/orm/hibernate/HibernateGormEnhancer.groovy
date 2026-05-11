@@ -81,7 +81,6 @@ class HibernateGormEnhancer extends GormEnhancer {
 
     @Override
     void registerEntity(PersistentEntity entity) {
-        System.out.println("DEBUG: HibernateGormEnhancer.registerEntity called for " + entity.getName());
         HibernateDatastore hds = (HibernateDatastore) datastore
         String defaultConnectionName = hds.connectionSources.defaultConnectionSource.name
         

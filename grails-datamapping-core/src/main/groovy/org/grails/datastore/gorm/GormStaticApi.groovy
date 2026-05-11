@@ -89,6 +89,51 @@ class GormStaticApi<D> extends AbstractGormApi<D> implements GormAllOperations<D
     }
 
     @Override
+    protected <T1> T1 execute(SessionCallback<T1> callback) {
+        Datastore ds = getDatastore()
+        if (ds == null) {
+            throw new IllegalStateException('Cannot execute session callback with null datastore')
+        }
+        if (qualifier != null && !ConnectionSource.DEFAULT.equals(qualifier) && ds instanceof MultiTenantCapableDatastore && ((MultiTenantCapableDatastore)ds).getMultiTenancyMode() == org.grails.datastore.mapping.multitenancy.MultiTenancySettings.MultiTenancyMode.DISCRIMINATOR) {
+            String connectionName = ConnectionSource.DEFAULT
+            if (ds instanceof org.grails.datastore.mapping.core.connections.MultipleConnectionSourceCapableDatastore) {
+                connectionName = ((org.grails.datastore.mapping.core.connections.MultipleConnectionSourceCapableDatastore) ds).connectionSources.defaultConnectionSource.name
+            }
+            if (!connectionName.equals(qualifier)) {
+                return Tenants.withId((MultiTenantCapableDatastore)ds, (Serializable)qualifier) {
+                    DatastoreUtils.execute(ds, callback)
+                }
+            }
+        }
+        return DatastoreUtils.execute(ds, callback)
+    }
+
+    @Override
+    protected void execute(org.grails.datastore.mapping.core.VoidSessionCallback callback) {
+        Datastore ds = getDatastore()
+        if (ds == null) {
+            throw new IllegalStateException('Cannot execute session callback with null datastore')
+        }
+        if (qualifier != null && !ConnectionSource.DEFAULT.equals(qualifier) && ds instanceof MultiTenantCapableDatastore && ((MultiTenantCapableDatastore)ds).getMultiTenancyMode() == org.grails.datastore.mapping.multitenancy.MultiTenancySettings.MultiTenancyMode.DISCRIMINATOR) {
+            String connectionName = ConnectionSource.DEFAULT
+            if (ds instanceof org.grails.datastore.mapping.core.connections.MultipleConnectionSourceCapableDatastore) {
+                connectionName = ((org.grails.datastore.mapping.core.connections.MultipleConnectionSourceCapableDatastore) ds).connectionSources.defaultConnectionSource.name
+            }
+            if (!connectionName.equals(qualifier)) {
+                Tenants.withId((MultiTenantCapableDatastore)ds, (Serializable)qualifier) {
+                    DatastoreUtils.execute(ds, callback)
+                }
+            }
+            else {
+                DatastoreUtils.execute(ds, callback)
+            }
+        }
+        else {
+            DatastoreUtils.execute(ds, callback)
+        }
+    }
+
+    @Override
     PersistentEntity getGormPersistentEntity() {
         super.getGormPersistentEntity()
     }
@@ -99,10 +144,12 @@ class GormStaticApi<D> extends AbstractGormApi<D> implements GormAllOperations<D
     }
 
     GormStaticApi<D> forQualifier(String qualifier) {
+        Datastore ds = getDatastore()
         DatastoreResolver resolver = new DatastoreResolver() {
             @Override Datastore resolve() { GormEnhancer.findDatastore(persistentClass, qualifier) }
         }
-        createStaticApi(persistentClass, getDatastore().mappingContext, finders, resolver, qualifier)
+        List<FinderMethod> qualifiedFinders = GormEnhancer.createDynamicFinders(resolver, ds.mappingContext)
+        createStaticApi(persistentClass, ds.mappingContext, qualifiedFinders, resolver, qualifier)
     }
 
     protected GormStaticApi<D> createStaticApi(Class<D> persistentClass, MappingContext mappingContext, List<FinderMethod> finders, DatastoreResolver resolver, String qualifier) {
@@ -382,7 +429,7 @@ class GormStaticApi<D> extends AbstractGormApi<D> implements GormAllOperations<D
 
     @Override
     grails.gorm.DetachedCriteria<D> where(Closure callable) {
-        new grails.gorm.DetachedCriteria<D>(persistentClass).where(callable)
+        new grails.gorm.DetachedCriteria<D>(persistentClass).withConnection(qualifier).where(callable)
     }
 
     @Override
@@ -767,11 +814,7 @@ class GormStaticApi<D> extends AbstractGormApi<D> implements GormAllOperations<D
 
     @Override
     grails.gorm.api.GormAllOperations<D> withTenant(Serializable tenantId) {
-        Datastore tenantDatastore = GormEnhancer.findDatastore(persistentClass, tenantId.toString())
-        DatastoreResolver resolver = new DatastoreResolver() {
-            @Override Datastore resolve() { tenantDatastore }
-        }
-        return (grails.gorm.api.GormAllOperations<D>) new GormStaticApi<D>(persistentClass, tenantDatastore.mappingContext, finders, resolver, tenantId.toString())
+        return (grails.gorm.api.GormAllOperations<D>) forQualifier(tenantId.toString())
     }
 
     @Override

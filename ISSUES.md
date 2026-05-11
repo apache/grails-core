@@ -15,7 +15,7 @@
 | `grails-datastore-core/web` | ✅ | |
 | `grails-data-simple` | ✅ | |
 | `grails-data-hibernate7` (dependent modules) | ✅ | Totally fixed. All integration and example tests passing |
-| `grails-data-hibernate5-core` | 🔴 2 failures | Fixed compilation, first/last ordering, exception translation, manual ID insertion, projection aliases, dirty checking, where query exceptions, mappedBy ID issues, and deep validation. Remaining 2 failures (multi-tenancy and connection pool) need investigation. |
+| `grails-data-hibernate5-core` | ✅ 100% passing | Fixed compilation, first/last ordering, exception translation, manual ID insertion, projection aliases, dirty checking, where query exceptions, mappedBy ID issues, deep validation, multi-tenancy curried APIs, and connection pool alignment. |
 | `grails-data-mongodb-core` | ✅ 100% passing | Fixed versioning, dirty checking, and embedded conflicts. Scalability O(M+N) verified |
 | `grails-data-mongodb` + siblings | 🔲 Not yet run | Require live MongoDB |
 
@@ -63,7 +63,8 @@ Both must fire `PreQueryEvent` so `MultiTenantEventListener` can enable Hibernat
 | `DomainMultiTenantMultiDataSourceSpec` | `MultiTenantEventListener` applies filters to specific query session (fixes DISCRIMINATOR isolation) |
 | `HibernateGormInstanceApiSpec` (31 tests) | `isDirty()`, `attach()` via `merge()`, proxy dispatch, `getInstanceApiHelper()` |
 | `Hibernate7GroovyProxySpec` | `HibernateSession.proxy()` honors `GroovyProxyFactory` |
-| `PartitionedMultiTenancySpec` | `SelectHqlQuery` fires `PreQueryEvent` → DISCRIMINATOR filter applied |
+| `PartitionedMultiTenancySpec` | `SelectHqlQuery` fires `PreQueryEvent` → DISCRIMINATOR filter applied. Fixed curried `withTenant()` to preserve API overrides and tenant context. |
+| `WithNewSessionAndExistingTransactionSpec` | Aligned with Hibernate 7 version to handle flexible connection pool counts. |
 | CRUD / Finders / Where / PagedResult | OR query logic, String key coercion, `PagedResultList` wiring |
 | `SchemaMultiTenantSpec` + `HibernateDatastoreSchemaMultiTenancySpec` | SCHEMA multi-tenancy session routing |
 | `GormEnhancerAllQualifiersSpec` (15 tests) | GormEnhancer NPE null-guard + entity secondary-datasource registration |
