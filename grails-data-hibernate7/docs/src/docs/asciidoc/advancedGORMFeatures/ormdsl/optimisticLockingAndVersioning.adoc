@@ -1,0 +1,58 @@
+////
+Licensed to the Apache Software Foundation (ASF) under one
+or more contributor license agreements.  See the NOTICE file
+distributed with this work for additional information
+regarding copyright ownership.  The ASF licenses this file
+to you under the Apache License, Version 2.0 (the
+"License"); you may not use this file except in compliance
+with the License.  You may obtain a copy of the License at
+
+https://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing,
+software distributed under the License is distributed on an
+"AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+KIND, either express or implied.  See the License for the
+specific language governing permissions and limitations
+under the License.
+////
+
+As discussed in the section on <<locking,Optimistic and Pessimistic Locking>>, by default GORM uses optimistic locking and automatically injects a `version` property into every class which is in turn mapped to a `version` column at the database level.
+
+If you're mapping to a legacy schema that doesn't have version columns (or there's some other reason why you don't want/need this feature) you can disable this with the `version` method:
+
+[source,java]
+----
+class Person {
+    ...
+    static mapping = {
+        table 'people'
+        version false
+    }
+}
+----
+
+NOTE: If you disable optimistic locking you are essentially on your own with regards to concurrent updates and are open to the risk of users losing data (due to data overriding) unless you use <<locking,pessimistic locking>>
+
+
+===== Version columns types
+
+
+By default GORM maps the `version` property as a `Long` that gets incremented by one each time an instance is updated. But Hibernate also supports using a `Timestamp`, for example:
+
+[source,java]
+----
+import java.sql.Timestamp
+
+class Person {
+
+    ...
+    Timestamp version
+
+    static mapping = {
+        table 'people'
+    }
+}
+----
+
+There's a slight risk that two updates occurring at nearly the same time on a fast server can end up with the same timestamp value but this risk is very low. One benefit of using a `Timestamp` instead of a `Long` is that you combine the optimistic locking and last-updated semantics into a single column.

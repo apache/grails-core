@@ -33,6 +33,7 @@ def publishedProjects = [
         'grails-base-bom',
         'grails-bom',
         'grails-hibernate5-bom',
+        'grails-hibernate7-bom',
         'grails-micronaut-bom',
         'grails-bootstrap',
         'grails-cache',
@@ -121,6 +122,12 @@ def publishedProjects = [
         'grails-data-hibernate5-dbmigration',
         'grails-data-hibernate5-spring-boot',
         'grails-data-hibernate5-spring-orm',
+        // hibernate7
+        'grails-data-hibernate7',
+        'grails-data-hibernate7-core',
+        'grails-data-hibernate7-dbmigration',
+        'grails-data-hibernate7-spring-boot',
+        'grails-data-hibernate7-spring-orm',
         // mongodb
         'grails-data-mongodb',
         'grails-data-mongodb-bson',
