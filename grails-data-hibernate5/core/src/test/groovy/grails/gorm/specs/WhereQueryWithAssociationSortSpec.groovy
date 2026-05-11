@@ -22,7 +22,7 @@ import grails.gorm.specs.entities.Club
 import grails.gorm.specs.entities.Team
 import org.apache.grails.data.hibernate5.core.GrailsDataHibernate5TckManager
 import org.apache.grails.data.testing.tck.base.GrailsDataTckSpec
-import org.hibernate.QueryException
+import org.grails.orm.hibernate.support.hibernate5.HibernateQueryException
 import spock.lang.Issue
 
 /**
@@ -48,7 +48,7 @@ class WhereQueryWithAssociationSortSpec extends GrailsDataTckSpec<GrailsDataHibe
 
 
         then: "an exception is thrown because no alias is specified"
-        thrown QueryException
+        thrown HibernateQueryException
 
 
         when: "a where query uses a sort on an association"
