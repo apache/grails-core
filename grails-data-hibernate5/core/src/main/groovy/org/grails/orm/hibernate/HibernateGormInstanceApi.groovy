@@ -218,7 +218,12 @@ class HibernateGormInstanceApi<D> extends AbstractHibernateGormInstanceApi<D> {
                 } else {
                     Serializable id = (Serializable) org.codehaus.groovy.runtime.InvokerHelper.getProperty(target, identityProperty.name)
                     if (id == null || (id instanceof Number && ((Number) id).longValue() == 0L) || HibernateRuntimeUtils.isInsertActive()) {
-                        ((Session)session).save target
+                        markInsertActive()
+                        try {
+                            ((Session)session).save target
+                        } finally {
+                            resetInsertActive()
+                        }
                     } else {
                         ((Session)session).update target
                     }

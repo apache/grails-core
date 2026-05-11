@@ -147,7 +147,6 @@ abstract class AbstractHibernateGormInstanceApi<D> extends GormInstanceApi<D> {
             if (validator) {
                 getDatastore().applicationEventPublisher?.publishEvent new ValidationEvent(getDatastore(), target)
 
-                println "AbstractHibernateGormInstanceApi validator class: " + validator?.getClass()?.getName()
                 if (validator instanceof grails.gorm.validation.CascadingValidator) {
                     ((grails.gorm.validation.CascadingValidator) validator).validate target, errors, deepValidate
                 } else if (validator instanceof org.grails.datastore.gorm.validation.CascadingValidator) {

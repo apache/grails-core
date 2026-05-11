@@ -39,7 +39,11 @@ class DeepValidationSpec extends GrailsDataTckSpec<GrailsDataHibernate5TckManage
 
         when: "save market with failing custom validator on child"
         Address address = new Address(streetName: "Main St.", landmark: "The Golder Gate Bridge", postalCode: "11").save(validate: false)
-        new Market(name: "Main", address: address).save(deepValidate: false)
+        def market = new Market(name: "Main", address: address)
+        def savedMarket = market.save(deepValidate: false)
+        if (!savedMarket) {
+            println "Market save failed with errors: " + market.errors
+        }
 
         then: "market is saved, no validation error"
         Market.count() == 1

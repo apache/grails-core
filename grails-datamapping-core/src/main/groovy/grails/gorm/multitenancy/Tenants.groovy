@@ -117,13 +117,11 @@ class Tenants {
      */
     static Serializable currentId(MultiTenantCapableDatastore multiTenantCapableDatastore) {
         def tenantId = CurrentTenantHolder.get(multiTenantCapableDatastore)
-        log.debug("Tenants.currentId: CurrentTenantHolder.get({}) returned {}", multiTenantCapableDatastore, tenantId)
         if (tenantId != null) {
             return tenantId
         } else {
             TenantResolver tenantResolver = multiTenantCapableDatastore.getTenantResolver()
             def resolved = tenantResolver.resolveTenantIdentifier()
-            log.debug("Tenants.currentId: tenantResolver returned {}", resolved)
             return resolved
         }
     }
