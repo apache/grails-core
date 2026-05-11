@@ -24,14 +24,6 @@ grails:
   codegen:
     defaultPackage: functional.tests
   mime:
-    disable:
-      accept:
-        header:
-          userAgents:
-            - Gecko
-            - WebKit
-            - Presto
-            - Trident
     types:
       all: '*/*'
       atom: application/atom+xml
@@ -55,22 +47,12 @@ grails:
       xml:
         - text/xml
         - application/xml
-    urlmapping:
-      cache:
-        maxsize: 1000
-    converters:
-      encoding: UTF-8
     views:
-      default:
-        codec: html
       gsp:
         encoding: UTF-8
         htmlcodec: xml
         codecs:
-          expression: html
-          scriptlets: html
-          taglib: none
-          staticparts: none
+          scriptlet: html
 ---
 hibernate:
   configClass: functional.tests.CustomHibernateMappingContextConfiguration
@@ -80,7 +62,7 @@ hibernate:
     queries: false
     use_second_level_cache: true
     use_query_cache: false
-    region.factory_class: 'org.hibernate.cache.jcache.internal.JCacheRegionFactory'
+    region.factory_class: 'org.hibernate.cache.ehcache.EhCacheRegionFactory'
 ---
 dataSource:
   pooled: true

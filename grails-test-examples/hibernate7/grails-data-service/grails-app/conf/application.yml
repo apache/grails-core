@@ -24,14 +24,6 @@ grails:
   codegen:
     defaultPackage: example
   mime:
-    disable:
-      accept:
-        header:
-          userAgents:
-            - Gecko
-            - WebKit
-            - Presto
-            - Trident
     types:
       json:
         - application/json
@@ -49,11 +41,6 @@ grails:
       rss: application/rss+xml
       text: text/plain
       all: '*/*'
-  urlmapping:
-    cache:
-      maxsize: 1000
-  converters:
-    encoding: UTF-8
 ---
 hibernate:
   cache:

@@ -18,8 +18,6 @@
  */
 package org.grails.web.taglib
 
-import spock.lang.PendingFeature
-
 import grails.artefact.Artefact
 import grails.testing.web.UrlMappingsUnitTest
 import spock.lang.Specification
