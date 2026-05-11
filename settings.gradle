@@ -309,6 +309,28 @@ findProject(':grails-data-hibernate5-dbmigration').projectDir = new File(setting
 include 'grails-data-hibernate5-spring-boot'
 findProject(':grails-data-hibernate5-spring-boot').projectDir = new File(settingsDir, 'grails-data-hibernate5/boot-plugin')
 
+// Data Mapping - Hibernate 7
+// Core
+include 'grails-data-hibernate7-core'
+findProject(':grails-data-hibernate7-core').projectDir = file('grails-data-hibernate7/core')
+
+include 'grails-data-hibernate7-spring-orm'
+findProject(':grails-data-hibernate7-spring-orm').projectDir = new File(settingsDir, 'grails-data-hibernate7/spring-orm')
+
+// Documentation
+include 'grails-data-hibernate7-docs'
+findProject(':grails-data-hibernate7-docs').projectDir = new File(settingsDir, 'grails-data-hibernate7/docs')
+
+// Plugins
+include ':grails-data-hibernate7'
+findProject(':grails-data-hibernate7').projectDir = new File(settingsDir, 'grails-data-hibernate7/grails-plugin')
+
+include 'grails-data-hibernate7-dbmigration'
+findProject(':grails-data-hibernate7-dbmigration').projectDir = new File(settingsDir, 'grails-data-hibernate7/dbmigration')
+
+include 'grails-data-hibernate7-spring-boot'
+findProject(':grails-data-hibernate7-spring-boot').projectDir = new File(settingsDir, 'grails-data-hibernate7/boot-plugin')
+
 // functional tests - Hibernate5 examples
 include 'grails-test-examples-hibernate5-grails-hibernate'
 project(':grails-test-examples-hibernate5-grails-hibernate').projectDir = new File(settingsDir, 'grails-test-examples/hibernate5/grails-hibernate')
