@@ -53,7 +53,7 @@ class IdentityEnumTypeSpec extends Specification {
     @Rollback
     void "test identity enum type 2"() {
         when:
-        new FooWithEnum(id: 1, name: "blah", mySuperValue: XEnum.X__TWO).save(insert:true, flush:true)
+        new FooWithEnum(name: "blah", mySuperValue: XEnum.X__TWO).save(flush:true)
         DataSource ds = hibernateDatastore.connectionSources.defaultConnectionSource.dataSource
         ResultSet resultSet = ds.getConnection().prepareStatement('select my_super_value from foo_with_enum').executeQuery()
 
