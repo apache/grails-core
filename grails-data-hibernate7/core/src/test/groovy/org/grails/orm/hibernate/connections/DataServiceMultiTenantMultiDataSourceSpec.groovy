@@ -273,7 +273,7 @@ abstract class MetricService implements MetricDataService {
      * executeUpdate routes to the analytics datasource.
      */
     void deleteAll() {
-        Metric.executeUpdate('delete from Metric where 1=1', [:])
+        Metric.executeUpdate('delete from Metric where 1=1')
     }
 
     /**
