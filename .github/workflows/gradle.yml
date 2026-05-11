@@ -267,6 +267,7 @@ jobs:
           -PonlyFunctionalTests
           -PskipCodeStyle
           -PskipHibernate5Tests
+          -PskipHibernate7Tests
           -PskipMongodbTests
   mongodbFunctional:
     if: ${{ !contains(github.event.head_commit.message, '[skip tests]') }}
@@ -344,6 +345,43 @@ jobs:
           --stacktrace
           -PgrailsIndy=${{ matrix.indy }}
           -PonlyHibernate5Tests
+          -PskipCodeStyle
+  hibernate7Functional:
+    if: ${{ !contains(github.event.head_commit.message, '[skip tests]') }}
+    name: "Hibernate7 Functional Tests (Java ${{ matrix.java }}, indy=${{ matrix.indy }})"
+    runs-on: ubuntu-24.04
+    strategy:
+      fail-fast: false
+      matrix:
+        java: [ 21, 25 ]
+        indy: [ false ]
+        include:
+          - java: 21
+            indy: true
+    steps:
+      - name: "Output Agent IP" # in the event RAO blocks this agent, this can be used to debug it
+        run: curl -s https://api.ipify.org
+      - name: "📥 Checkout the repository"
+        uses: actions/checkout@v6
+      - name: "☕️ Setup JDK"
+        uses: actions/setup-java@v4
+        with:
+          distribution: liberica
+          java-version: ${{ matrix.java }}
+      - name: "🐘 Setup Gradle"
+        uses: gradle/actions/setup-gradle@4d9f0ba0025fe599b4ebab900eb7f3a1d93ef4c2 # v5.0.0
+        with:
+          develocity-access-key: ${{ secrets.DEVELOCITY_ACCESS_KEY }}
+      - name: "🏃 Run Functional Tests"
+        env:
+          GITHUB_MAVEN_PASSWORD: ${{ secrets.GITHUB_TOKEN }}
+        run: >
+          ./gradlew bootJar check
+          --continue
+          --rerun-tasks
+          --stacktrace
+          -PgrailsIndy=${{ matrix.indy }}
+          -PonlyHibernate7Tests
           -PskipCodeStyle
   publishGradle:
     if: github.repository_owner == 'apache' && (github.event_name == 'push' || github.event_name == 'workflow_dispatch')
