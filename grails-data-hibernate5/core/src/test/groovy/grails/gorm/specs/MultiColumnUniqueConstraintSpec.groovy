@@ -23,11 +23,12 @@ import org.apache.grails.data.hibernate5.core.GrailsDataHibernate5TckManager
 import org.apache.grails.data.testing.tck.base.GrailsDataTckSpec
 import org.springframework.dao.DataIntegrityViolationException
 import spock.lang.Issue
+import spock.lang.PendingFeature
 
 @Issue('https://github.com/apache/grails-data-mapping/issues/617')
 class MultiColumnUniqueConstraintSpec extends GrailsDataTckSpec<GrailsDataHibernate5TckManager> {
     void setupSpec() {
-        manager.addAllDomainClasses([DomainOne, Task1, TaskLink])
+        manager.addAllDomainClasses([DomainOne, Task1, TaskLink, DomainTwo])
     }
 
     void "test generated unique constraints"() {
@@ -65,6 +66,20 @@ class MultiColumnUniqueConstraintSpec extends GrailsDataTckSpec<GrailsDataHibern
         then: 'DataIntegrityViolationException is thrown'
         thrown DataIntegrityViolationException
     }
+
+    @Issue('https://github.com/apache/grails-core/issues/14503')
+    @PendingFeature(reason = "Validator emits SQL without the discriminator clause when the discriminator is null. See #14503")
+    void "save with null discriminator succeeds when only non-null discriminator rows exist for the same main field"() {
+        given: 'a row with a non-null discriminator already exists for main field "A"'
+        new DomainTwo(name: 'A', discriminator: new Date()).save(flush: true, failOnError: true)
+
+        when: 'a new row is saved with null discriminator for the same main field'
+        DomainTwo saved = new DomainTwo(name: 'A', discriminator: null).save(flush: true)
+
+        then: 'the save passes — (A, null) is a distinct combination from (A, <date>)'
+        saved != null
+        saved.id != null
+    }
 }
 
 @Entity
@@ -92,5 +107,17 @@ class TaskLink {
 
     static constraints = {
         toTask unique: ['fromTask']
+    }
+}
+
+@Entity
+class DomainTwo {
+
+    String name
+    Date discriminator
+
+    static constraints = {
+        name           unique: ['discriminator']
+        discriminator  nullable: true
     }
 }
