@@ -26,6 +26,7 @@ import grails.test.hibernate.HibernateSpec
  */
 class HibernateSpecSpec extends HibernateSpec {
 
+
     void setup() {
         if (!Book.countByTitle("The Stand")) {
             new Book(title: "The Stand").save(flush:true)

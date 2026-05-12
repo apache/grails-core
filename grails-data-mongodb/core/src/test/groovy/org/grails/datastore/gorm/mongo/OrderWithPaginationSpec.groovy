@@ -18,7 +18,7 @@
  */
 package org.grails.datastore.gorm.mongo
 
-import grails.gorm.tests.Plant
+import grails.gorm.specs.Plant
 import org.apache.grails.data.mongo.core.GrailsDataMongoTckManager
 import org.apache.grails.data.testing.tck.base.GrailsDataTckSpec
 import spock.lang.Issue

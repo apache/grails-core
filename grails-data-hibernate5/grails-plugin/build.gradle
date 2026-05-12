@@ -32,8 +32,8 @@ group = 'org.apache.grails'
 
 ext {
     gormApiDocs = true
-    pomTitle = 'Grails GORM'
-    pomDescription = 'GORM - Grails Data Access Framework'
+    pomTitle = 'Grails GORM Hibernate 5 Plugin'
+    pomDescription = 'GORM - Grails Data Access Framework - Hibernate 5 Plugin'
 }
 
 dependencies {

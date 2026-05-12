@@ -18,10 +18,10 @@
  */
 package org.grails.datastore.gorm.mongo
 
-import grails.gorm.tests.Face
-import grails.gorm.tests.Nose
-import grails.gorm.tests.Person
-import grails.gorm.tests.Pet
+import grails.gorm.specs.Face
+import grails.gorm.specs.Nose
+import grails.gorm.specs.Person
+import grails.gorm.specs.Pet
 import org.apache.grails.data.mongo.core.GrailsDataMongoTckManager
 import org.apache.grails.data.testing.tck.base.GrailsDataTckSpec
 import org.bson.Document

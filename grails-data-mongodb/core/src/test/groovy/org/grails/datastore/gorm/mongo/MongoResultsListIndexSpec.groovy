@@ -18,7 +18,7 @@
  */
 package org.grails.datastore.gorm.mongo
 
-import grails.gorm.tests.Person
+import grails.gorm.specs.Person
 import org.apache.grails.data.mongo.core.GrailsDataMongoTckManager
 import org.apache.grails.data.testing.tck.base.GrailsDataTckSpec
 

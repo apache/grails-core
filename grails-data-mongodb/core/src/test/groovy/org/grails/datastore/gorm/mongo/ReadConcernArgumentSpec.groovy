@@ -34,13 +34,13 @@ import spock.lang.Ignore
 class ReadConcernArgumentSpec extends GrailsDataTckSpec<GrailsDataMongoTckManager> {
 
     void setupSpec() {
-        manager.domainClasses += [grails.gorm.tests.Person]
+        manager.domainClasses += [grails.gorm.specs.Person]
     }
 
     @Ignore
     void "Test that read concern work on criteria queries"() {
         when: "A criteria query is created with a hint"
-        CriteriaBuilder c = grails.gorm.tests.Person.createCriteria()
+        CriteriaBuilder c = grails.gorm.specs.Person.createCriteria()
         c.list {
             eq 'firstName', 'Bob'
             arguments readConcern: ReadConcern.MAJORITY
@@ -52,7 +52,7 @@ class ReadConcernArgumentSpec extends GrailsDataTckSpec<GrailsDataMongoTckManage
         c.query.@queryArguments == [readConcern: ReadConcern.MAJORITY]
 
         when: "A dynamic finder uses a hint"
-        def results = grails.gorm.tests.Person.findAllByFirstName("Bob", [readConcern: ReadConcern.MAJORITY])
+        def results = grails.gorm.specs.Person.findAllByFirstName("Bob", [readConcern: ReadConcern.MAJORITY])
 
         then: "The read concern is used"
         MongoQueryException exception2 = thrown()
@@ -62,7 +62,7 @@ class ReadConcernArgumentSpec extends GrailsDataTckSpec<GrailsDataMongoTckManage
     @Ignore
     void "Test that hints work on detached criteria queries"() {
         when: "A criteria query is created with a hint"
-        DetachedCriteria<grails.gorm.tests.Person> detachedCriteria = new DetachedCriteria<>(grails.gorm.tests.Person)
+        DetachedCriteria<grails.gorm.specs.Person> detachedCriteria = new DetachedCriteria<>(grails.gorm.specs.Person)
         detachedCriteria = detachedCriteria.build {
             eq 'firstName', 'Bob'
         }
@@ -77,13 +77,13 @@ class ReadConcernArgumentSpec extends GrailsDataTckSpec<GrailsDataMongoTckManage
 
     void "Test save with write concern"() {
         when:
-        grails.gorm.tests.Person.withSession { MongoCodecSession session ->
-            new grails.gorm.tests.Person(firstName: "Bob", lastName: "Smith").save(validate: false)
+        grails.gorm.specs.Person.withSession { MongoCodecSession session ->
+            new grails.gorm.specs.Person(firstName: "Bob", lastName: "Smith").save(validate: false)
             session.flush(WriteConcern.MAJORITY)
         }
 
         then:
-        grails.gorm.tests.Person.count() == 1
+        grails.gorm.specs.Person.count() == 1
 
     }
 }
