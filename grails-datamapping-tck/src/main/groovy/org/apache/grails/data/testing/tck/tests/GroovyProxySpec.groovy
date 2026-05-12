@@ -29,7 +29,7 @@ import org.grails.datastore.gorm.proxy.GroovyProxyFactory
 /**
  * @author graemerocher
  */
-@IgnoreIf({ System.getProperty('hibernate5.gorm.suite') || System.getProperty('hibernate6.gorm.suite') })
+@IgnoreIf({ System.getProperty('hibernate5.gorm.suite') || System.getProperty('hibernate7.gorm.suite') })
 // this test is ignored because Groovy proxies are not used with Hibernate
 class GroovyProxySpec extends GrailsDataTckSpec {
 

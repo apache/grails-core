@@ -35,7 +35,7 @@ import org.grails.datastore.mapping.query.event.PreQueryEvent
  * Tests for query events.
  */
 // TODO: the application context is null on hibernate tck tests, so this test errors on the add of the application listener
-@IgnoreIf({ System.getProperty('hibernate5.gorm.suite') || System.getProperty('hibernate6.gorm.suite') || System.getProperty('mongodb.gorm.suite') })
+@IgnoreIf({ System.getProperty('hibernate5.gorm.suite') || System.getProperty('hibernate7.gorm.suite') || System.getProperty('mongodb.gorm.suite') })
 class QueryEventsSpec extends GrailsDataTckSpec {
 
     SpecQueryEventListener listener
