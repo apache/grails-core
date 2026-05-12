@@ -18,8 +18,6 @@
  */
 package grails.gorm.services
 
-import spock.lang.Requires
-
 import grails.gorm.annotation.Entity
 import grails.gorm.validation.PersistentEntityValidator
 import grails.validation.ValidationException
