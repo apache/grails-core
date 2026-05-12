@@ -51,8 +51,6 @@ import org.springframework.transaction.support.ResourceHolderSupport;
 import org.springframework.transaction.support.TransactionSynchronizationManager;
 import org.springframework.util.Assert;
 
-import org.grails.orm.hibernate.support.hibernate7.support.OpenSessionInViewInterceptor;
-
 /**
  * Helper class that simplifies Hibernate data access code. Automatically
  * converts HibernateExceptions into DataAccessExceptions, following the
@@ -87,7 +85,7 @@ import org.grails.orm.hibernate.support.hibernate7.support.OpenSessionInViewInte
  * @see Session
  * @see LocalSessionFactoryBean
  * @see HibernateTransactionManager
- * @see OpenSessionInViewInterceptor
+ * @see org.grails.orm.hibernate.support.hibernate7.support.OpenSessionInViewInterceptor
  */
 public class HibernateTemplate implements HibernateOperations, InitializingBean {
 
