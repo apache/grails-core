@@ -58,7 +58,6 @@ class ServiceImplSpec extends Specification {
 
     }
 
-    @Requires({ System.getProperty('hibernate5.gorm.suite') == 'true' || System.getProperty('hibernate7.gorm.suite') == 'true' || System.getProperty('mongodb.gorm.suite') == 'true' })
     void "test list products"() {
         given:
         Product p1 = new Product(name: "Apple", type:"Fruit").save(flush:true)
@@ -85,6 +84,16 @@ class ServiceImplSpec extends Specification {
         productService.find("Orange", "Fruit").name == "Orange"
         productService.find("Apple", "Fruit", [max:2]) != null
         productService.find("Apple", "Device") == null
+    }
+
+    void "test find all by finder on simple map datastore"() {
+        given:
+        new Product(name: "Apple", type: "Fruit").save(flush: true)
+        new Product(name: "Orange", type: "Fruit").save(flush: true)
+
+        expect:
+        Product.findAllByName("Apple").size() == 1
+        Product.findAllByTypeLike("Fruit").size() == 2
     }
 
     void "test delete by id implementation"() {
