@@ -59,7 +59,7 @@ class TablePerSubClassAndEmbeddedSpec extends Specification {
         when:"A query is parsed that queries the embedded entity"
         def gcl = new GroovyClassLoader()
         DetachedCriteria criteria = gcl.parseClass('''
-import grails.gorm.tests.*
+import grails.gorm.specs.*
 
 Vendor.where {
     address.zip =~ '%44%'
