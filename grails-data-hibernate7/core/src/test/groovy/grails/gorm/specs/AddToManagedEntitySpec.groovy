@@ -37,8 +37,8 @@ class AddToManagedEntitySpec extends HibernateGormDatastoreSpec {
 
     void cleanup() {
         CascadeBook.withNewTransaction {
-            CascadeBook.executeUpdate('delete from CascadeBook')
-            CascadeAuthor.executeUpdate('delete from CascadeAuthor')
+            CascadeBook.executeUpdate('delete from CascadeBook', [:])
+            CascadeAuthor.executeUpdate('delete from CascadeAuthor', [:])
         }
     }
 
