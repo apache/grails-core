@@ -31,6 +31,7 @@ import org.grails.datastore.mapping.query.api.BuildableCriteria
 import org.grails.datastore.mapping.engine.EntityPersister
 import org.grails.datastore.mapping.model.MappingContext
 import org.grails.datastore.mapping.model.PersistentEntity
+import org.grails.datastore.mapping.model.config.GormProperties
 import org.grails.datastore.mapping.model.PersistentProperty
 import org.grails.datastore.mapping.model.types.Basic
 import org.grails.datastore.mapping.model.types.Simple
@@ -508,6 +509,9 @@ class HibernateGormStaticApi<D> extends GormStaticApi<D> {
         }
         else {
             for (prop in pe.persistentProperties) {
+                if (prop.name == GormProperties.VERSION) {
+                    continue
+                }
                 if (prop instanceof Simple || prop instanceof Basic) {
                     def val = ea.getProperty(prop.name)
                     if (val != null) {

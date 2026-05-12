@@ -55,7 +55,7 @@ import java.util.concurrent.atomic.AtomicLong;
  * @author Graeme Rocher
  * @since 1.0
  */
-public class SimpleMapDatastore extends AbstractDatastore implements TransactionCapableDatastore, MultiTenantCapableDatastore<Map<String, Map>, ConnectionSourceSettings>, Closeable {
+public class SimpleMapDatastore extends AbstractDatastore implements TransactionCapableDatastore, MultiTenantCapableDatastore<Map<String, Map>, ConnectionSourceSettings>, MultipleConnectionSourceCapableDatastore, Closeable {
 
     protected static final Map<MappingContext, SharedState> stateCache = new ConcurrentHashMap<>();
 
