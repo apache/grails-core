@@ -60,7 +60,7 @@ class OptimisticLockingSpec extends GrailsDataTckSpec {
     }
 
     // hibernate has a customized version of this
-    @IgnoreIf({ System.getProperty('hibernate5.gorm.suite') })
+    @IgnoreIf({ System.getProperty('hibernate5.gorm.suite') || System.getProperty('hibernate7.gorm.suite') })
     void "Test optimistic locking"() {
 
         given:
