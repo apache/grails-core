@@ -21,6 +21,8 @@ package org.apache.grails.buildsrc
 import java.time.LocalDateTime
 import java.time.format.DateTimeFormatter
 import groovy.xml.XmlSlurper
+import org.apache.tools.ant.taskdefs.condition.Os
+import org.gradle.api.GradleException
 import org.gradle.api.Plugin
 import org.gradle.api.Project
 import org.gradle.api.tasks.testing.Test
@@ -32,6 +34,46 @@ class GrailsTestPlugin implements Plugin<Project> {
     void apply(Project project) {
         if (project != project.rootProject) {
             return
+        }
+
+        project.tasks.register('runAll') { task ->
+            task.group = 'verification'
+            task.description = 'Runs selected test modules sequentially in isolated Gradle invocations'
+
+            task.finalizedBy('aggregateTestFailures')
+
+            task.doLast {
+                List<String> modulePaths = resolveModulePaths(project)
+                if (modulePaths.isEmpty()) {
+                    project.logger.lifecycle('No test modules were configured.')
+                    return
+                }
+
+                File gradleExecutable = resolveGradleExecutable(project)
+                File initScript = project.layout.projectDirectory.file('local-init.gradle').asFile
+                List<String> failedModules = []
+
+                modulePaths.each { modulePath ->
+                    project.logger.lifecycle("Running ${modulePath}:test")
+                    def result = project.exec { exec ->
+                        exec.workingDir = project.rootDir
+                        List<String> commandLine = [gradleExecutable.absolutePath, '--no-daemon', '-PmaxTestParallel=1']
+                        if (initScript.exists()) {
+                            commandLine.addAll(['-I', initScript.absolutePath])
+                        }
+                        commandLine.addAll(['--continue', "${modulePath}:test"])
+                        exec.commandLine = commandLine
+                        exec.ignoreExitValue = true
+                    }
+                    if (result.exitValue != 0) {
+                        failedModules << modulePath
+                    }
+                }
+
+                if (!failedModules.isEmpty()) {
+                    throw new GradleException("One or more modules failed: ${failedModules.join(', ')}")
+                }
+            }
         }
 
         project.tasks.register('aggregateTestFailures') { task ->
@@ -93,6 +135,26 @@ class GrailsTestPlugin implements Plugin<Project> {
                 writeReport(project, failures)
             }
         }
+    }
+
+    private static List<String> resolveModulePaths(Project project) {
+        def configuredModules = project.findProperty('grails.test.modules')?.toString()?.trim()
+        if (configuredModules) {
+            return configuredModules.split(',').collect { it.trim() }.findAll { it }
+        }
+
+        return project.subprojects.findAll { it.tasks.findByName('test') != null }
+                .collect { it.path }
+                .sort()
+    }
+
+    private static File resolveGradleExecutable(Project project) {
+        def executableName = Os.isFamily(Os.FAMILY_WINDOWS) ? 'gradlew.bat' : 'gradlew'
+        def executable = project.rootProject.layout.projectDirectory.file(executableName).asFile
+        if (!executable.exists()) {
+            throw new GradleException("Missing Gradle wrapper at ${executable.absolutePath}")
+        }
+        return executable
     }
 
     @CompileDynamic

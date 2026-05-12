@@ -36,7 +36,7 @@ import javax.inject.Inject
 import org.apache.tools.ant.taskdefs.condition.Os
 
 ext {
-    if (file('local.properties').exists()) {
+    if (!System.getenv().containsKey('CI') && file('local.properties').exists()) {
         def props = new Properties()
         file('local.properties').withInputStream { props.load(it) }
         props.each { key, value ->
