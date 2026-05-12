@@ -20,10 +20,9 @@ package org.grails.datastore.gorm.mongo
 
 import org.apache.grails.data.mongo.core.MongoDatastoreSpec
 
-import grails.gorm.tests.Pet
-import grails.gorm.tests.Person
+import grails.gorm.specs.Pet
+import grails.gorm.specs.Person
 import org.apache.grails.data.testing.tck.domains.PetType
-import org.apache.grails.data.mongo.core.GrailsDataMongoTckManager
 
 /**
  * @author Graeme Rocher

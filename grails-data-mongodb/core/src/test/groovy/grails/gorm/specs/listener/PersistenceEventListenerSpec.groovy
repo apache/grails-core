@@ -16,13 +16,12 @@
  *  specific language governing permissions and limitations
  *  under the License.
  */
-package grails.gorm.tests.listener
+package grails.gorm.specs.listener
 
 import org.apache.grails.data.mongo.core.MongoDatastoreSpec
 
 import grails.gorm.DetachedCriteria
 import grails.persistence.Entity
-import org.apache.grails.data.mongo.core.GrailsDataMongoTckManager
 import org.grails.datastore.mapping.core.Datastore
 import org.grails.datastore.mapping.engine.event.AbstractPersistenceEvent
 import org.grails.datastore.mapping.engine.event.AbstractPersistenceEventListener

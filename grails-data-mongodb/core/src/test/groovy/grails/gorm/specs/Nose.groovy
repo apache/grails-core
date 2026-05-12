@@ -16,7 +16,7 @@
  *  specific language governing permissions and limitations
  *  under the License.
  */
-package grails.gorm.tests
+package grails.gorm.specs
 
 import grails.persistence.Entity
 
@@ -24,16 +24,14 @@ import grails.persistence.Entity
  * @author graemerocher
  */
 @Entity
-class Face implements Serializable {
+class Nose implements Serializable {
     Long id
     Long version
-    String name
-    Nose nose
-    Person person
-    static hasOne = [nose: Nose]
-    static belongsTo = [person:Person]
+    boolean hasFreckles
+    Face face
+    static belongsTo = [face: Face]
 
-    static constraints = {
-        person nullable:true
+    static mapping = {
+        face index:true
     }
 }
