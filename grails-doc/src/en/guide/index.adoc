@@ -1770,11 +1770,6 @@ include::ref/Database Mapping/type.adoc[]
 
 include::ref/Database Mapping/updatable.adoc[]
 
-[[ref-database-mapping-updatable]]
-==== updatable
-
-include::ref/Database Mapping/updatable.adoc[]
-
 [[ref-database-mapping-version]]
 ==== version
 

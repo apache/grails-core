@@ -67,7 +67,7 @@ The `bindProperty` method in `GrailsPropertyBinder.java` has been successfully r
 
 #### Property & Value Binding (cfg.domainbinding package)
 *   **GrailsPropertyBinder**: Main coordinator for binding individual persistent properties to Hibernate `Value` objects.
-*   **PropertyBinder**: Binds Hibernate `Property` objects, handling updateable/insertable flags.
+*   **PropertyBinder**: Binds Hibernate `Property` objects, handling updatable/insertable flags.
 *   **SimpleValueBinder**: Binds simple types (String, Integer, etc.) to Hibernate `BasicValue`.
 *   **SimpleValueColumnBinder**: Handles the binding of columns to `SimpleValue` instances.
 *   **ComponentPropertyBinder**: Specialized binder for GORM embedded components.
