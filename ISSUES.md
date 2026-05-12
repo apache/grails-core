@@ -8,15 +8,15 @@
 
 | Module Group | Status | Notes |
 |---|---|---|
-| `grails-data-hibernate7-core` | ✅ 100% passing | Totally fixed. DISCRIMINATOR multi-tenancy on secondary datasources resolved 2026-05-09 |
+| `grails-data-hibernate7-core` | ✅ 100% passing | Fixed compilation, first/last ordering, exception translation, manual ID insertion, projection aliases, dirty checking, where query exceptions, mappedBy ID issues, deep validation, and findAll(example) guard logic. |
 | `grails-datamapping-core` | ✅ 100% passing | GormEnhancer NPE + entity-datasource registration fixed |
 | `grails-datamapping-async/validation/support/tck` | ✅ | |
-| `grails-datamapping-core-test` | ✅ | Parallel-flaky tests pass individually |
+| `grails-datamapping-core-test` | ✅ 100% passing | Fixed `SimpleMapDatastore` to implement `MultipleConnectionSourceCapableDatastore`. Restored `GormEnhancer` fallback to default datastore and enforced tenant resolution for all multi-tenancy modes. |
 | `grails-datastore-core/web` | ✅ | |
 | `grails-data-simple` | ✅ | |
 | `grails-data-hibernate7` (dependent modules) | ✅ | Totally fixed. All integration and example tests passing |
-| `grails-data-hibernate5-core` | ✅ 100% passing | Fixed compilation, first/last ordering, exception translation, manual ID insertion, projection aliases, dirty checking, where query exceptions, mappedBy ID issues, deep validation, multi-tenancy curried APIs, and connection pool alignment. |
-| `grails-data-mongodb-core` | ✅ 100% passing | Fixed versioning, dirty checking, and embedded conflicts. Scalability O(M+N) verified |
+| `grails-data-hibernate5-core` | ✅ 100% passing | Fixed compilation, first/last ordering, exception translation, manual ID insertion, projection aliases, dirty checking, where query exceptions, mappedBy ID issues, deep validation, multi-tenancy curried APIs (with datasource isolation), and connection pool alignment. |
+| `grails-data-mongodb-core` | ✅ 100% passing | Fixed versioning, dirty checking, and embedded conflicts. Added `GormRegistry.reset()` to multi-tenancy specs to resolve test isolation issues. |
 | `grails-data-mongodb` + siblings | 🔲 Not yet run | Require live MongoDB |
 
 **Run command** (quarterly batches — full suite hangs):
@@ -76,6 +76,7 @@ Both must fire `PreQueryEvent` so `MultiTenantEventListener` can enable Hibernat
 | `GormEnhancer.findDatastore()` priority 4 | DISCRIMINATOR/SCHEMA modes no longer attempt tenant resolution |
 | `GormEnhancer.findDatastore()` priority 2 | Tries `getDatastoreForConnection()` before `getDatastoreForTenantId()` |
 | `MongoStaticApi.createStaticApi()` | Override added so `forQualifier()` returns `MongoStaticApi` |
+| `gradle.properties` | Updated `grailsSpringSecurityVersion` to `7.0.3-SNAPSHOT` to resolve missing 7.0.2-SNAPSHOT artifact. |
 | `PersistentEntityCodec` | Fixed double version increment and optimized collection dirty marking |
 | `MongoCodecEntityPersister` | Honored `markDirty` flag in manual dirty checking (fixes `MarkDirtyFalseSpec`) |
 | `PersistentEntityCodec.encodeUpdate()` | Resolved version property conflict in embedded updates (fixes `BulkWriteException`) |
@@ -109,6 +110,27 @@ All 12 H7 example modules pass ✅
 | Module | Status | Notes |
 |--------|--------|-------|
 | `grails-test-examples-hibernate7-*` | ✅ PASS | All examples passing as of 2026-05-08 |
+
+---
+
+## Recent Fixes (2026-05-11)
+
+### Hibernate 5 / 7 Core
+- **Multi-Tenancy Curried APIs**: Fixed `GormStaticApi.withTenant()` to preserve datastore-specific API overrides and ensure tenant ID is bound during execution.
+- **Tenant Context in DISCRIMINATOR Mode**: Implemented `TenantBoundHibernateTemplate` to automatically wrap Hibernate operations in the correct tenant context.
+- **DataSource Isolation**: Refined tenant detection to prevent datasource qualifiers from being wrongly used as tenant IDs in DISCRIMINATOR mode.
+- **Deep Validation**: Fixed Jakarta Validator adapter to support `deepValidate: false` and properly handle `CascadingValidator` interfaces.
+- **Query Guard**: Fixed `findAll(example)` in Hibernate 7 to correctly ignore the `version` property, preventing false positives on empty example objects.
+- **StaleStateException**: Resolved manual and primitive-zero ID insertion issues in `performUpsert`.
+
+### GORM Data Mapping & Services
+- **`SimpleMapDatastore` Interface**: Made `SimpleMapDatastore` implement `MultipleConnectionSourceCapableDatastore`, enabling correct resolution of non-default connections in tests.
+- **`GormEnhancer` Fallback & Enforcement**: Restored fallback to default datastore for unregistered entities and enforced tenant resolution across all multi-tenancy modes (fixing `SCHEMA` and `DISCRIMINATOR` validation).
+- **Service Transform Fixes**: Resolved `IllegalStateException` in multi-tenant service tests by ensuring proper datastore fallback.
+
+### Build & Environment
+- **Dependency Resolution**: Updated `grails-spring-security` to `7.0.3-SNAPSHOT` to resolve missing artifacts.
+- **Memory Management**: Provided flattened sequential test command for 16GB RAM laptop verification.
 
 ---
 

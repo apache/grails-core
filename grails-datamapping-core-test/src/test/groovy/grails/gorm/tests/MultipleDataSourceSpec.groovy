@@ -30,6 +30,10 @@ import org.grails.datastore.mapping.simple.SimpleMapDatastore
 
 class MultipleDataSourceSpec extends Specification {
 
+    void setupSpec() {
+        org.grails.datastore.gorm.GormRegistry.reset()
+    }
+
     @AutoCleanup
     SimpleMapDatastore datastore = new SimpleMapDatastore(
             [ConnectionSource.DEFAULT, 'one'],
@@ -37,6 +41,7 @@ class MultipleDataSourceSpec extends Specification {
     )
 
     def setup() {
+        datastore.clearData()
         org.grails.datastore.gorm.GormEnhancer.setPreferredDatastore(datastore)
     }
 
@@ -50,6 +55,7 @@ class MultipleDataSourceSpec extends Specification {
         new Player(name: 'Keane').save(flush: true)
         def service = new PlayerService()
         def dataService = datastore.getService(IPlayerService)
+        
         dataService.savePlayer('Neville')
         
         expect:

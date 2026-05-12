@@ -419,14 +419,15 @@ class GormEnhancer implements Closeable {
                     try {
                         Datastore ds = ((org.grails.datastore.mapping.core.connections.MultipleConnectionSourceCapableDatastore)preferred).getDatastoreForConnection(qualifier)
                         if (ds != null) {
-                            // System.out.println "RESOLVED DATASTORE: $qualifier (via preferred child)"
                             return ds
                         }
                     } catch (Throwable e) {
                         // ignore
                     }
                 }
-                if (ConnectionSource.DEFAULT.equals(qualifier)) return preferred
+                if (ConnectionSource.DEFAULT.equals(qualifier)) {
+                    return preferred
+                }
             }
             else {
                 // For naked lookups, prefer the preferred datastore if it handles this entity
@@ -529,7 +530,7 @@ class GormEnhancer implements Closeable {
                     MultiTenancySettings.MultiTenancyMode.DATABASE
             try {
                 Serializable currentTenantId = CurrentTenantHolder.get()
-                if (currentTenantId == null && entity != null && MultiTenant.isAssignableFrom(entity) && isDatabaseMode) {
+                if (currentTenantId == null && entity != null && MultiTenant.isAssignableFrom(entity)) {
                     currentTenantId = multiTenantCapableDatastore.tenantResolver.resolveTenantIdentifier()
                 }
 
@@ -546,10 +547,14 @@ class GormEnhancer implements Closeable {
                     }
                 }
             } catch (Throwable e) {
-                if (entity != null && MultiTenant.isAssignableFrom(entity) && isDatabaseMode && e instanceof TenantNotFoundException) {
+                if (entity != null && MultiTenant.isAssignableFrom(entity) && e instanceof TenantNotFoundException) {
                     throw e
                 }
             }
+        }
+        
+        if (defaultDs == null) {
+            defaultDs = registry.getDatastore(null, ConnectionSource.DEFAULT)
         }
 
         if (defaultDs == null && entity != null) {

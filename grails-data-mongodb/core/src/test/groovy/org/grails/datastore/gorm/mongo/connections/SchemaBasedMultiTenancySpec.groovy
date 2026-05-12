@@ -43,6 +43,7 @@ class SchemaBasedMultiTenancySpec extends AutoStartedMongoSpec {
     }
 
     void setupSpec() {
+        org.grails.datastore.gorm.GormRegistry.reset()
         Map config = [
                 (MongoSettings.SETTING_URL): "mongodb://${mongoHost}:${mongoPort}/defaultDb" as String,
                 "grails.gorm.multiTenancy.mode"               :"SCHEMA",

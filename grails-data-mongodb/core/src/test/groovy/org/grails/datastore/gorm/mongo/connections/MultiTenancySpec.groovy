@@ -49,6 +49,7 @@ class MultiTenancySpec extends AutoStartedMongoSpec {
     }
 
     void setupSpec() {
+        org.grails.datastore.gorm.GormRegistry.reset()
         Map config = [
                 "grails.gorm.multiTenancy.mode"               :"DISCRIMINATOR",
                 "grails.gorm.multiTenancy.tenantResolverClass": MyResolver,
