@@ -84,6 +84,16 @@ class ServiceImplSpec extends Specification {
         productService.find("Apple", "Device") == null
     }
 
+    void "test find all by finder on simple map datastore"() {
+        given:
+        new Product(name: "Apple", type: "Fruit").save(flush: true)
+        new Product(name: "Orange", type: "Fruit").save(flush: true)
+
+        expect:
+        Product.findAllByName("Apple").size() == 1
+        Product.findAllByTypeLike("Fruit").size() == 2
+    }
+
     void "test delete by id implementation"() {
         given:
         Product p1 = new Product(name: "Apple", type:"Fruit").save(flush:true)

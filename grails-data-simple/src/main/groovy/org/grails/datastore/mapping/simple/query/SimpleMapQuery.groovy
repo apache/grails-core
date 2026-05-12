@@ -93,6 +93,11 @@ class SimpleMapQuery extends Query {
             def entityList = entityMap.values()
 
             projectionList.each { Query.Projection p ->
+                if (p instanceof Query.DistinctProjection) {
+                    if (projectionCount == 1) {
+                        results = new ArrayList(entityList).unique()
+                    }
+                }
 
                 if (p instanceof Query.IdProjection) {
                     if (projectionCount == 1) {
