@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package org.grails.orm.hibernate.support.hibernate5.support;
+package org.grails.orm.hibernate.support.hibernate7.support;
 
 import java.util.concurrent.Callable;
 
@@ -29,8 +29,8 @@ import org.springframework.web.context.request.async.CallableProcessingIntercept
 import org.springframework.web.context.request.async.DeferredResult;
 import org.springframework.web.context.request.async.DeferredResultProcessingInterceptor;
 
-import org.grails.orm.hibernate.support.hibernate5.SessionFactoryUtils;
-import org.grails.orm.hibernate.support.hibernate5.SessionHolder;
+import org.grails.orm.hibernate.support.hibernate7.SessionFactoryUtils;
+import org.grails.orm.hibernate.support.hibernate7.SessionHolder;
 
 /**
  * An interceptor with asynchronous web requests used in OpenSessionInViewFilter and

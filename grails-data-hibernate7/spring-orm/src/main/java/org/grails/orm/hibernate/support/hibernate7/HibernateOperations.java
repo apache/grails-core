@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package org.grails.orm.hibernate.support.hibernate5;
+package org.grails.orm.hibernate.support.hibernate7;
 
 import java.io.Serializable;
 import java.util.Collection;

@@ -50,7 +50,7 @@ import org.grails.orm.hibernate.query.AbstractHibernateCriteriaBuilder;
 import org.grails.orm.hibernate.query.AbstractHibernateQuery;
 import org.grails.orm.hibernate.query.HibernateProjectionAdapter;
 import org.grails.orm.hibernate.query.HibernateQuery;
-import org.grails.orm.hibernate.support.hibernate5.SessionHolder;
+import org.grails.orm.hibernate.support.hibernate7.SessionHolder;
 
 /**
  * <p>Wraps the Hibernate Criteria API in a builder. The builder can be retrieved through the "createCriteria()" dynamic static

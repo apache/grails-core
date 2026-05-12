@@ -38,10 +38,10 @@ import org.springframework.transaction.jta.SpringJtaSynchronizationAdapter;
 import org.springframework.transaction.support.TransactionSynchronization;
 import org.springframework.transaction.support.TransactionSynchronizationManager;
 
-import org.grails.orm.hibernate.support.hibernate5.SessionHolder;
-import org.grails.orm.hibernate.support.hibernate5.SpringFlushSynchronization;
-import org.grails.orm.hibernate.support.hibernate5.SpringJtaSessionContext;
-import org.grails.orm.hibernate.support.hibernate5.SpringSessionSynchronization;
+import org.grails.orm.hibernate.support.hibernate7.SessionHolder;
+import org.grails.orm.hibernate.support.hibernate7.SpringFlushSynchronization;
+import org.grails.orm.hibernate.support.hibernate7.SpringJtaSessionContext;
+import org.grails.orm.hibernate.support.hibernate7.SpringSessionSynchronization;
 
 /**
  * Based on org.springframework.orm.hibernate4.SpringSessionContext.

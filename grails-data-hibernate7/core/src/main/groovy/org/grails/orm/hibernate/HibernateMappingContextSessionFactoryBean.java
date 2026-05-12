@@ -56,7 +56,7 @@ import org.springframework.util.Assert;
 import org.grails.datastore.mapping.core.connections.ConnectionSource;
 import org.grails.orm.hibernate.cfg.HibernateMappingContext;
 import org.grails.orm.hibernate.cfg.HibernateMappingContextConfiguration;
-import org.grails.orm.hibernate.support.hibernate5.HibernateExceptionTranslator;
+import org.grails.orm.hibernate.support.hibernate7.HibernateExceptionTranslator;
 
 /**
  * Configures a SessionFactory using a {@link org.grails.orm.hibernate.cfg.HibernateMappingContext} and a {@link org.grails.orm.hibernate.cfg.HibernateMappingContextConfiguration}

@@ -147,25 +147,25 @@ However, if your application directly imports any of the following classes, you 
 | After (Grails 8)
 
 | `org.springframework.orm.hibernate5.HibernateTemplate`
-| `org.grails.orm.hibernate.support.hibernate5.HibernateTemplate`
+| `org.grails.orm.hibernate.support.hibernate7.HibernateTemplate`
 
 | `org.springframework.orm.hibernate5.HibernateTransactionManager`
-| `org.grails.orm.hibernate.support.hibernate5.HibernateTransactionManager`
+| `org.grails.orm.hibernate.support.hibernate7.HibernateTransactionManager`
 
 | `org.springframework.orm.hibernate5.LocalSessionFactoryBean`
-| `org.grails.orm.hibernate.support.hibernate5.LocalSessionFactoryBean`
+| `org.grails.orm.hibernate.support.hibernate7.LocalSessionFactoryBean`
 
 | `org.springframework.orm.hibernate5.SessionFactoryUtils`
-| `org.grails.orm.hibernate.support.hibernate5.SessionFactoryUtils`
+| `org.grails.orm.hibernate.support.hibernate7.SessionFactoryUtils`
 
 | `org.springframework.orm.hibernate5.SessionHolder`
-| `org.grails.orm.hibernate.support.hibernate5.SessionHolder`
+| `org.grails.orm.hibernate.support.hibernate7.SessionHolder`
 
 | `org.springframework.orm.hibernate5.HibernateCallback`
-| `org.grails.orm.hibernate.support.hibernate5.HibernateCallback`
+| `org.grails.orm.hibernate.support.hibernate7.HibernateCallback`
 
 | `org.springframework.orm.hibernate5.support.OpenSessionInViewInterceptor`
-| `org.grails.orm.hibernate.support.hibernate5.support.OpenSessionInViewInterceptor`
+| `org.grails.orm.hibernate.support.hibernate7.support.OpenSessionInViewInterceptor`
 |===
 
 All other classes from `org.springframework.orm.hibernate5` follow the same pattern - replace the `org.springframework.orm.hibernate5` prefix with `org.grails.orm.hibernate.support.hibernate5`.

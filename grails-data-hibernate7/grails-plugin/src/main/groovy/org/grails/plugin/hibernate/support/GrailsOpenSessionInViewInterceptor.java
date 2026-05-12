@@ -35,9 +35,9 @@ import org.grails.datastore.mapping.core.connections.ConnectionSource;
 import org.grails.orm.hibernate.AbstractHibernateDatastore;
 import org.grails.orm.hibernate.HibernateDatastore;
 import org.grails.orm.hibernate.connections.HibernateConnectionSourceSettings;
-import org.grails.orm.hibernate.support.hibernate5.SessionFactoryUtils;
-import org.grails.orm.hibernate.support.hibernate5.SessionHolder;
-import org.grails.orm.hibernate.support.hibernate5.support.OpenSessionInViewInterceptor;
+import org.grails.orm.hibernate.support.hibernate7.SessionFactoryUtils;
+import org.grails.orm.hibernate.support.hibernate7.SessionHolder;
+import org.grails.orm.hibernate.support.hibernate7.support.OpenSessionInViewInterceptor;
 
 /**
  * Extends the default Spring OSIV to support multiple datasources.

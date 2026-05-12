@@ -69,8 +69,8 @@ import org.springframework.transaction.support.TransactionSynchronization;
 import org.springframework.transaction.support.TransactionSynchronizationManager;
 import org.springframework.util.Assert;
 
-import org.grails.orm.hibernate.support.hibernate5.SessionFactoryUtils;
-import org.grails.orm.hibernate.support.hibernate5.SessionHolder;
+import org.grails.orm.hibernate.support.hibernate7.SessionFactoryUtils;
+import org.grails.orm.hibernate.support.hibernate7.SessionHolder;
 
 public class GrailsHibernateTemplate implements IHibernateTemplate {
 

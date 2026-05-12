@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package org.grails.orm.hibernate.support.hibernate5;
+package org.grails.orm.hibernate.support.hibernate7;
 
 import java.io.Serializable;
 import java.lang.reflect.InvocationHandler;
@@ -51,6 +51,8 @@ import org.springframework.transaction.support.ResourceHolderSupport;
 import org.springframework.transaction.support.TransactionSynchronizationManager;
 import org.springframework.util.Assert;
 
+import org.grails.orm.hibernate.support.hibernate7.support.OpenSessionInViewInterceptor;
+
 /**
  * Helper class that simplifies Hibernate data access code. Automatically
  * converts HibernateExceptions into DataAccessExceptions, following the
@@ -85,7 +87,7 @@ import org.springframework.util.Assert;
  * @see Session
  * @see LocalSessionFactoryBean
  * @see HibernateTransactionManager
- * @see org.grails.orm.hibernate.support.hibernate5.support.OpenSessionInViewInterceptor
+ * @see OpenSessionInViewInterceptor
  */
 public class HibernateTemplate implements HibernateOperations, InitializingBean {
 

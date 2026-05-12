@@ -14,32 +14,35 @@
  * limitations under the License.
  */
 
-package org.grails.orm.hibernate.support.hibernate5;
+package org.grails.orm.hibernate.support.hibernate7;
 
-import org.hibernate.HibernateException;
+import org.hibernate.QueryException;
 
-import org.springframework.dao.UncategorizedDataAccessException;
+import org.springframework.dao.InvalidDataAccessResourceUsageException;
 import org.springframework.lang.Nullable;
 
 /**
- * Hibernate-specific subclass of UncategorizedDataAccessException,
- * for Hibernate system errors that do not match any concrete
- * {@code org.springframework.dao} exceptions.
+ * Hibernate-specific subclass of InvalidDataAccessResourceUsageException,
+ * thrown on invalid HQL query syntax.
  *
  * @author Juergen Hoeller
  * @since 4.2
  * @see SessionFactoryUtils#convertHibernateAccessException
  */
 @SuppressWarnings("serial")
-public class HibernateSystemException extends UncategorizedDataAccessException {
+public class HibernateQueryException extends InvalidDataAccessResourceUsageException {
+
+    public HibernateQueryException(QueryException ex) {
+        super(ex.getMessage(), ex);
+    }
 
     /**
-     * Create a new HibernateSystemException,
-     * wrapping an arbitrary HibernateException.
-     * @param cause the HibernateException thrown
+     * Return the HQL query string that was invalid.
      */
-    public HibernateSystemException(@Nullable HibernateException cause) {
-        super(cause != null ? cause.getMessage() : null, cause);
+    @Nullable
+    public String getQueryString() {
+        QueryException cause = (QueryException) getCause();
+        return (cause != null ? cause.getQueryString() : null);
     }
 
 }
