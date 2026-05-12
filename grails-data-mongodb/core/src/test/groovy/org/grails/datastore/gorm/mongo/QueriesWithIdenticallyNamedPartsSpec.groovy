@@ -18,9 +18,10 @@
  */
 package org.grails.datastore.gorm.mongo
 
+import org.apache.grails.data.mongo.core.MongoDatastoreSpec
+
 import grails.persistence.Entity
 import org.apache.grails.data.mongo.core.GrailsDataMongoTckManager
-import org.apache.grails.data.testing.tck.base.GrailsDataTckSpec
 import org.bson.types.ObjectId
 import spock.lang.Issue
 
@@ -28,7 +29,7 @@ import spock.lang.Issue
  * Test cases for GPMONGODB-296 (and GPMONGODB-302).
  */
 @Issue('GPMONGODB-296')
-class QueriesWithIdenticallyNamedPartsSpec extends GrailsDataTckSpec<GrailsDataMongoTckManager> {
+class QueriesWithIdenticallyNamedPartsSpec extends MongoDatastoreSpec {
     void setupSpec() {
         manager.addAllDomainClasses([Foo])
     }

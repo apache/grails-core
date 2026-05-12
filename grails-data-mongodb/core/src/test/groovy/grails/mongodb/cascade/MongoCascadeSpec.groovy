@@ -18,10 +18,11 @@
  */
 package grails.mongodb.cascade
 
-import org.apache.grails.data.mongo.core.GrailsDataMongoTckManager
-import org.apache.grails.data.testing.tck.base.GrailsDataTckSpec
+import org.apache.grails.data.mongo.core.MongoDatastoreSpec
 
-class MongoCascadeSpec extends GrailsDataTckSpec<GrailsDataMongoTckManager> {
+import org.apache.grails.data.mongo.core.GrailsDataMongoTckManager
+
+class MongoCascadeSpec extends MongoDatastoreSpec {
     void setupSpec() {
         manager.addAllDomainClasses([Product, ProductLine])
     }

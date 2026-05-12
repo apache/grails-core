@@ -18,16 +18,16 @@
  */
 package org.grails.datastore.gorm.mongo
 
+import org.apache.grails.data.mongo.core.MongoDatastoreSpec
+
 import grails.gorm.specs.Person
-import org.apache.grails.data.mongo.core.GrailsDataMongoTckManager
-import org.apache.grails.data.testing.tck.base.GrailsDataTckSpec
 
 /**
  * Tests related to caching of entities.
  */
-class SessionCachingSpec extends GrailsDataTckSpec<GrailsDataMongoTckManager> {
+class SessionCachingSpec extends MongoDatastoreSpec {
     void setupSpec() {
-        manager.domainClasses += [Person]
+        manager.addAllDomainClasses([Person])
     }
 
     void "test cache used for get"() {

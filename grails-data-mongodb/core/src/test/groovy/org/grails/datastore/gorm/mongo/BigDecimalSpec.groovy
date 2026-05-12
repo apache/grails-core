@@ -18,16 +18,17 @@
  */
 package org.grails.datastore.gorm.mongo
 
+import org.apache.grails.data.mongo.core.MongoDatastoreSpec
+
 import grails.gorm.annotation.Entity
 import grails.mongodb.MongoEntity
 import org.apache.grails.data.mongo.core.GrailsDataMongoTckManager
-import org.apache.grails.data.testing.tck.base.GrailsDataTckSpec
 import org.bson.types.Decimal128
 
 /**
  * Created by graemerocher on 14/12/16.
  */
-class BigDecimalSpec extends GrailsDataTckSpec<GrailsDataMongoTckManager> {
+class BigDecimalSpec extends MongoDatastoreSpec {
 
     void setupSpec() {
         manager.addAllDomainClasses([BossMan])

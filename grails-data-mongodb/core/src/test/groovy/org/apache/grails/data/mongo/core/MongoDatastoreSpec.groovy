@@ -16,29 +16,9 @@
  *  specific language governing permissions and limitations
  *  under the License.
  */
-package org.grails.datastore.gorm.mongo
+package org.apache.grails.data.mongo.core
 
-import org.apache.grails.data.mongo.core.MongoDatastoreSpec
+import org.apache.grails.data.testing.tck.base.GrailsDataTckSpec
 
-import grails.gorm.specs.Pet
-
-class FindOrCreateWhereSpec extends MongoDatastoreSpec {
-
-    void setupSpec() {
-        manager.addAllDomainClasses([Person, Pet])
-    }
-
-    void "Test findOrCreateWhere with association"() {
-        given: "A domain class with a bidirectional one-to-many"
-        def person = new Person(firstName: "Fred", lastName: "Flinstone")
-        person.save(flush: true)
-        manager.session.clear()
-        person = Person.load(person.id)
-
-        when: "findByOrCreateWhere is called"
-        def pet = Pet.findOrCreateWhere(name: "Dino", owner: person)
-
-        then: "The instance was created"
-        pet != null
-    }
+abstract class MongoDatastoreSpec extends GrailsDataTckSpec<GrailsDataMongoTckManager> {
 }

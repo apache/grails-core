@@ -18,13 +18,14 @@
  */
 package org.grails.datastore.gorm.mongo
 
+import org.apache.grails.data.mongo.core.MongoDatastoreSpec
+
 import org.apache.grails.data.mongo.core.GrailsDataMongoTckManager
-import org.apache.grails.data.testing.tck.base.GrailsDataTckSpec
 
 /**
  * @author Graeme Rocher
  */
-class EmbeddedCollectionWithOneToOneSpec extends GrailsDataTckSpec<GrailsDataMongoTckManager> {
+class EmbeddedCollectionWithOneToOneSpec extends MongoDatastoreSpec {
 
     void setupSpec() {
         manager.addAllDomainClasses([Building, Room, RoomCompany])

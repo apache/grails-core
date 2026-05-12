@@ -18,14 +18,15 @@
  */
 package org.grails.datastore.gorm.mongo
 
+import org.apache.grails.data.mongo.core.MongoDatastoreSpec
+
 import grails.gorm.annotation.Entity
 import org.apache.grails.data.mongo.core.GrailsDataMongoTckManager
-import org.apache.grails.data.testing.tck.base.GrailsDataTckSpec
 
 /**
  * Created by Jim on 8/18/2016.
  */
-class EmbeddedBiDirectionalSpec extends GrailsDataTckSpec<GrailsDataMongoTckManager> {
+class EmbeddedBiDirectionalSpec extends MongoDatastoreSpec {
 
     void setupSpec() {
         manager.addAllDomainClasses([EBDDogOwner, EBDDog, EBDToy])

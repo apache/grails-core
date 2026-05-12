@@ -18,14 +18,15 @@
  */
 package org.grails.datastore.gorm.mongo
 
+import org.apache.grails.data.mongo.core.MongoDatastoreSpec
+
 import grails.persistence.Entity
 import org.apache.grails.data.mongo.core.GrailsDataMongoTckManager
-import org.apache.grails.data.testing.tck.base.GrailsDataTckSpec
 
-class EmbeddedWithIdSpecifiedSpec extends GrailsDataTckSpec<GrailsDataMongoTckManager> {
+class EmbeddedWithIdSpecifiedSpec extends MongoDatastoreSpec {
 
     void setupSpec() {
-        manager.domainClasses += [SystemCustomer, PreorderTreeNode, MultiLevelKpi]
+        manager.addAllDomainClasses([SystemCustomer, PreorderTreeNode, MultiLevelKpi])
     }
 
     void "Test that id is saved of embedded entity if specified"() {

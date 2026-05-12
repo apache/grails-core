@@ -18,12 +18,13 @@
  */
 package org.grails.datastore.gorm.mongo
 
+import org.apache.grails.data.mongo.core.MongoDatastoreSpec
+
 import com.mongodb.client.MongoClient
 import com.mongodb.client.MongoDatabase
 import grails.mongodb.MongoEntity
 import grails.persistence.Entity
 import org.apache.grails.data.mongo.core.GrailsDataMongoTckManager
-import org.apache.grails.data.testing.tck.base.GrailsDataTckSpec
 import org.grails.datastore.mapping.document.config.DocumentPersistentEntity
 import org.grails.datastore.mapping.model.PersistentEntity
 import org.grails.datastore.mapping.mongo.AbstractMongoSession
@@ -31,7 +32,7 @@ import org.grails.datastore.mapping.mongo.config.MongoAttribute
 import org.grails.datastore.mapping.mongo.config.MongoCollection
 import com.mongodb.WriteConcern
 
-class MongoEntityConfigSpec extends GrailsDataTckSpec<GrailsDataMongoTckManager> {
+class MongoEntityConfigSpec extends MongoDatastoreSpec {
 
     def "Test custom collection config"() {
         given:

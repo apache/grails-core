@@ -18,12 +18,13 @@
  */
 package org.grails.datastore.gorm.mongo
 
+import org.apache.grails.data.mongo.core.MongoDatastoreSpec
+
 import grails.persistence.Entity
 import org.apache.grails.data.mongo.core.GrailsDataMongoTckManager
-import org.apache.grails.data.testing.tck.base.GrailsDataTckSpec
 import org.bson.Document
 
-class EmbeddedWithNonEmbeddedAssociationsSpec extends GrailsDataTckSpec<GrailsDataMongoTckManager> {
+class EmbeddedWithNonEmbeddedAssociationsSpec extends MongoDatastoreSpec {
 
     void setupSpec() {
         manager.addAllDomainClasses([Boat, Sailor, Captain])

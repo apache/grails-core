@@ -18,11 +18,12 @@
  */
 package org.grails.datastore.gorm.mongo
 
+import org.apache.grails.data.mongo.core.MongoDatastoreSpec
+
 import grails.persistence.Entity
 import org.apache.grails.data.mongo.core.GrailsDataMongoTckManager
-import org.apache.grails.data.testing.tck.base.GrailsDataTckSpec
 
-class EmbeddedSimpleObjectSpec extends GrailsDataTckSpec<GrailsDataMongoTckManager> {
+class EmbeddedSimpleObjectSpec extends MongoDatastoreSpec {
     void setupSpec() {
         manager.addAllDomainClasses([Space])
     }

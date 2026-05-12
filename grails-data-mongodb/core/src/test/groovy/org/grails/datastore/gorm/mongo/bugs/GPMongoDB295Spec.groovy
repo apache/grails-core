@@ -18,15 +18,16 @@
  */
 package org.grails.datastore.gorm.mongo.bugs
 
+import org.apache.grails.data.mongo.core.MongoDatastoreSpec
+
 import grails.persistence.Entity
 import org.apache.grails.data.mongo.core.GrailsDataMongoTckManager
-import org.apache.grails.data.testing.tck.base.GrailsDataTckSpec
 import spock.lang.Issue
 
 /**
  * @author Graeme Rocher
  */
-class GPMongoDB295Spec extends GrailsDataTckSpec<GrailsDataMongoTckManager> {
+class GPMongoDB295Spec extends MongoDatastoreSpec {
     void setupSpec() {
         manager.addAllDomainClasses([InheritUser, ObjParent, UserGroup, User, UserObject])
     }

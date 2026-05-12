@@ -18,18 +18,18 @@
  */
 package org.grails.datastore.gorm.mongo
 
+import org.apache.grails.data.mongo.core.MongoDatastoreSpec
+
 import grails.gorm.specs.Pet
 import grails.gorm.specs.Person
-import org.apache.grails.data.mongo.core.GrailsDataMongoTckManager
-import org.apache.grails.data.testing.tck.base.GrailsDataTckSpec
 
 /**
  * Tests the nullification of properties
  */
-class NullifyPropertySpec extends GrailsDataTckSpec<GrailsDataMongoTckManager> {
+class NullifyPropertySpec extends MongoDatastoreSpec {
 
     void setupSpec() {
-        manager.domainClasses += [Pet, Person]
+        manager.addAllDomainClasses([Pet, Person])
     }
 
     void "Test nullify basic property"() {

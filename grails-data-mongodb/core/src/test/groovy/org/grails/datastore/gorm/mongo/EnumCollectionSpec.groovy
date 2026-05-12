@@ -18,11 +18,12 @@
  */
 package org.grails.datastore.gorm.mongo
 
+import org.apache.grails.data.mongo.core.MongoDatastoreSpec
+
 import grails.persistence.Entity
 import org.apache.grails.data.mongo.core.GrailsDataMongoTckManager
-import org.apache.grails.data.testing.tck.base.GrailsDataTckSpec
 
-class EnumCollectionSpec extends GrailsDataTckSpec<GrailsDataMongoTckManager> {
+class EnumCollectionSpec extends MongoDatastoreSpec {
 
     void setupSpec() {
         manager.addAllDomainClasses([Teacher, Teacher2, Teacher3, DerivedTeacher])
