@@ -30,7 +30,7 @@ import org.apache.grails.data.testing.tck.base.GrailsDataTckSpec
 class JakartaValidationSpec extends GrailsDataTckSpec<GrailsDataMongoTckManager> {
 
     void setupSpec() {
-        manager.domainClasses.addAll([JakartaProduct])
+        manager.addAllDomainClasses([JakartaProduct])
     }
 
     void "test jakarta.validator validation"() {

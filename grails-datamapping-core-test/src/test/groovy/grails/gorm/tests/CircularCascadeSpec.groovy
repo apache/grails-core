@@ -34,7 +34,7 @@ import spock.lang.Issue
  */
 class CircularCascadeSpec extends GrailsDataTckSpec<GrailsDataCoreTckManager> {
     void setupSpec() {
-        manager.domainClasses.addAll([SchoolPerson, ActivityValidate, SportValidate, TeamValidate, ArenaValidate])
+        manager.addAllDomainClasses([SchoolPerson, ActivityValidate, SportValidate, TeamValidate, ArenaValidate])
     }
 
     @Issue('https://github.com/apache/grails-data-mapping/issues/967')

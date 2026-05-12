@@ -26,7 +26,7 @@ import org.bson.types.ObjectId
 class ObjectIdPersistenceSpec extends GrailsDataTckSpec<GrailsDataMongoTckManager> {
 
     void setupSpec() {
-        manager.domainClasses.addAll([MongoObjectIdEntity])
+        manager.addAllDomainClasses([MongoObjectIdEntity])
     }
 
     def "Test that we can persist an object that has a BSON ObjectId"() {

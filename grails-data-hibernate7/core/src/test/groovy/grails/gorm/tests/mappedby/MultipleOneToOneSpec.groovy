@@ -28,7 +28,7 @@ import spock.lang.Issue
  */
 class MultipleOneToOneSpec extends GrailsDataTckSpec<GrailsDataHibernate7TckManager> {
     void setupSpec() {
-        manager.domainClasses.addAll([Org, OrgMember])
+        manager.addAllDomainClasses([Org, OrgMember])
     }
 
     @Issue('https://github.com/apache/grails-data-mapping/issues/950')

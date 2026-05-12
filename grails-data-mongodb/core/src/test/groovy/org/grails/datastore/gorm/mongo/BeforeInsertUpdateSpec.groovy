@@ -29,7 +29,7 @@ import spock.lang.Issue
  */
 class BeforeInsertUpdateSpec extends GrailsDataTckSpec<GrailsDataMongoTckManager> {
     void setupSpec() {
-        manager.domainClasses.addAll([BeforeInsertUser])
+        manager.addAllDomainClasses([BeforeInsertUser])
     }
 
     @Issue('GPMONGODB-251')

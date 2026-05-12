@@ -25,7 +25,7 @@ import org.apache.grails.data.testing.tck.base.GrailsDataTckSpec
 
 class EmbeddedWithNonEmbeddedCollectionsSpec extends GrailsDataTckSpec<GrailsDataMongoTckManager> {
     void setupSpec() {
-        manager.domainClasses.addAll([Ship, Crew, Sailor, Captain])
+        manager.addAllDomainClasses([Ship, Crew, Sailor, Captain])
     }
 
     void "Test that embedded collections can have non-embedded collections"() {

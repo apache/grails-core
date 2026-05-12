@@ -29,7 +29,7 @@ import jakarta.persistence.criteria.JoinType
 
 class DetachedCriteriaJoinSpec extends GrailsDataTckSpec<GrailsDataHibernate7TckManager> {
     void setupSpec() {
-        manager.domainClasses.addAll([Team, Club, Player, Contract])
+        manager.addAllDomainClasses([Team, Club, Player, Contract])
     }
 
     def "check if count works as expected"() {

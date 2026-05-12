@@ -26,7 +26,7 @@ import org.bson.types.ObjectId
 class DirtyCheckEmbeddedCollectionSpec extends GrailsDataTckSpec<GrailsDataMongoTckManager> {
 
     void setupSpec() {
-        manager.domainClasses.addAll([Foo, Bar])
+        manager.addAllDomainClasses([Foo, Bar])
     }
 
     def "Test that changes to basic collections are detected"() {

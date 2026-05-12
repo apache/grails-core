@@ -31,7 +31,7 @@ import grails.persistence.Entity
 class NullsAreNotStoredSpec extends GrailsDataTckSpec<GrailsDataMongoTckManager> {
 
     void setupSpec() {
-        manager.domainClasses.addAll([NANSPerson])
+        manager.addAllDomainClasses([NANSPerson])
     }
 
     void "Test that null values are not stored on domain creation"() {

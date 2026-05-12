@@ -26,7 +26,7 @@ import spock.lang.Issue
 class ListOneToManyOrderingSpec extends GrailsDataTckSpec<GrailsDataMongoTckManager> {
 
     void setupSpec() {
-        manager.domainClasses.addAll([Judge, Juror])
+        manager.addAllDomainClasses([Judge, Juror])
     }
 
     @Issue('GPMONGODB-162')

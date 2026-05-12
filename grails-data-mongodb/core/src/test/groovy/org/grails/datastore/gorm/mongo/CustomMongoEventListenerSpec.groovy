@@ -37,7 +37,7 @@ import static org.grails.datastore.mapping.engine.event.EventType.PreUpdate
 
 class CustomMongoEventListenerSpec extends GrailsDataTckSpec<GrailsDataMongoTckManager> {
     void setupSpec() {
-        manager.domainClasses.addAll([Listener])
+        manager.addAllDomainClasses([Listener])
     }
 
     void "Test corrects are triggered for persistence life cycle"() {

@@ -25,7 +25,7 @@ import org.apache.grails.data.testing.tck.base.GrailsDataTckSpec
 class EmbeddedWithinEmbeddedAssociationSpec extends GrailsDataTckSpec<GrailsDataMongoTckManager> {
 
     void setupSpec() {
-        manager.domainClasses.addAll([Customer, Vehicle, Maker, Part, Component])
+        manager.addAllDomainClasses([Customer, Vehicle, Maker, Part, Component])
     }
 
     void "Test that nested embedded associations can be persisted"() {

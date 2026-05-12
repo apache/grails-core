@@ -28,7 +28,7 @@ import spock.lang.Issue
  */
 class DeleteAllWhereSpec extends GrailsDataTckSpec<GrailsDataHibernate7TckManager> {
     void setupSpec() {
-        manager.domainClasses.addAll([Club])
+        manager.addAllDomainClasses([Club])
     }
 
     @Issue('https://github.com/apache/grails-data-mapping/issues/969')

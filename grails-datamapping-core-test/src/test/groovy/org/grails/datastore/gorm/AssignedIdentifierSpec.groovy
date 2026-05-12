@@ -27,7 +27,7 @@ import org.apache.grails.data.testing.tck.base.GrailsDataTckSpec
 class AssignedIdentifierSpec extends GrailsDataTckSpec<GrailsDataCoreTckManager> {
 
     void setupSpec() {
-        manager.domainClasses.addAll([River])
+        manager.addAllDomainClasses([River])
     }
 
     void "Test that entities can be saved, retrieved and updated with assigned ids"() {
