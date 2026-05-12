@@ -1,219 +1,101 @@
-# Hibernate 7 / MongoDB Migration — Issue Tracker
+<!--
+SPDX-License-Identifier: Apache-2.0
 
-**CURRENT FOCUS**: Batch-based local test workflow and stale tracker cleanup.
+Licensed to the Apache Software Foundation (ASF) under one or more
+contributor license agreements.  See the NOTICE file distributed with
+this work for additional information regarding copyright ownership.
+The ASF licenses this file to You under the Apache License, Version 2.0
+(the "License"); you may not use this file except in compliance with
+the License.  You may obtain a copy of the License at
 
----
+    https://www.apache.org/licenses/LICENSE-2.0
 
-## Module Status
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
+-->
 
-| Module Group | Status | Notes |
-|---|---|---|
-| `grails-data-hibernate7-core` | ✅ 100% passing | Fixed compilation, first/last ordering, exception translation, manual ID insertion, projection aliases, dirty checking, where query exceptions, mappedBy ID issues, deep validation, and findAll(example) guard logic. |
-| `grails-datamapping-core` | ✅ 100% passing | GormEnhancer NPE + entity-datasource registration fixed |
-| `grails-datamapping-async/validation/support/tck` | ✅ | |
-| `grails-datamapping-core-test` | ✅ 100% passing | Fixed `SimpleMapDatastore` to implement `MultipleConnectionSourceCapableDatastore`. Restored `GormEnhancer` fallback to default datastore and enforced tenant resolution for all multi-tenancy modes. |
-| `grails-datastore-core/web` | ✅ | |
-| `grails-data-simple` | ✅ | |
-| `grails-data-hibernate7` (dependent modules) | ✅ | Totally fixed. All integration and example tests passing |
-| `grails-data-hibernate5-core` | ✅ 100% passing | Fixed compilation, first/last ordering, exception translation, manual ID insertion, projection aliases, dirty checking, where query exceptions, mappedBy ID issues, deep validation, multi-tenancy curried APIs (with datasource isolation), and connection pool alignment. |
-| `grails-data-mongodb-core` | ✅ 100% passing | Fixed versioning, dirty checking, and embedded conflicts. Added `GormRegistry.reset()` to multi-tenancy specs to resolve test isolation issues. |
-| `grails-data-mongodb` + siblings | ✅ 100% passing | All integration and example tests passing |
+# GORM Scaling Program — Change Log and Optimization Backlog
 
-**Run command** (use only for small selected batches):
-```bash
-# Set grails.test.modules in local.properties, then run selected modules:
-./gradlew -I local-init.gradle testSelected
-
-# For reliable continuation after a failure, run a single module directly:
-./gradlew :<module>:test --continue
-```
+This document now tracks what has already changed for the O(M+N) scaling work and what can still be optimized. It is no longer a failure tracker.
 
 ---
 
-## Architecture Reference
+## 1) Core changes implemented
 
-### Two Query Mechanisms (H7/H5)
-| Mechanism | Class | Used by |
-|-----------|-------|---------|
-| JPA Criteria | `HibernateQuery` | `withCriteria {}`, `countBy*`, `findBy*` |
-| HQL | `SelectHqlQuery` / `HibernateHqlQuery` | `list(Map)`, `first()`, `last()`, `findAll()` |
+### Shared-registry architecture (O(M+N))
+- Introduced `GormRegistry` and moved registry responsibilities out of per-tenant duplication paths.
+- Refactored `GormEnhancer`, `GormStaticApi`, and `GormInstanceApi` to resolve APIs through shared registry data.
+- Updated tenant-aware resolution flow (`Tenants`, enhancer lookup paths, qualifier handling) to match shared registry behavior.
 
-Both must fire `PreQueryEvent` so `MultiTenantEventListener` can enable Hibernate filters.
+### Datastore integrations aligned to shared model
+- Hibernate 7: updated static/instance/enhancer APIs and related datastore/session/query wiring to use the new registry approach.
+- Hibernate 5: parallel alignment with H7 so API behavior stays consistent across both engines.
+- MongoDB: updated static API and codec/persister integration points to align with shared registry and tenant resolution changes.
+- SimpleMap datastore: large query/persister/session updates to keep core behavior consistent with new registry flow.
 
-### Multi-Tenancy Modes
-| Mode | `isSharedConnection()` | Session behaviour |
-|------|------------------------|-------------------|
-| DATABASE | false | Opens new session on child datastore |
-| SCHEMA | true | Calls closure directly — no new session |
-| DISCRIMINATOR | true | Calls closure directly — filter via PreQueryEvent |
+### Query and session behavior hardening
+- Refined key query/session paths in Hibernate and SimpleMap implementations where registry and tenant context are used.
+- Added or adjusted session-resolver/runtime utilities where needed to keep API behavior stable under multi-tenancy.
 
-**Critical**: Do NOT modify `grails-datastore-core/MultiTenancySettings.groovy` — shared with H5 and MongoDB.
+### Transform and compile-time behavior updates
+- Updated service and transactional transform logic to match registry/data access changes.
+- Reorganized transform test assets (including moved/expanded transform specs/classes).
 
-### Session Lifecycle (H7/H5)
-- `GrailsHibernateTransactionManager.doBegin()` binds `(datastore, sessionHolder)` to TSM
-- `withNewSession` creates a child session; cleanup restores outer session
-- `HibernateSession.getNativeSession()`: returns stored `nativeSession` if set, else `sessionFactory.getCurrentSession()`
-- Proxy reattach: use `session.merge(target)` — `session.lock(detached, NONE)` throws `DetachedObjectException` in H7
+### Test coverage expanded for scale + regressions
+- Added `GormRegistryScalabilitySpec` coverage across core modules (core, H5, H7, Mongo).
+- Added and updated regression coverage around enhancer, static API, transaction manager, and transform behavior.
 
----
-
-## Key Fixes Applied
-
-| Area | Fix |
-|------|-----|
-| `GormRegistryScalabilitySpec` | Ported to H5 and MongoDB. Verified O(M+N) memory guarantee cross-module |
-| `grails-data-hibernate5-core` | Aligned API classes (Instance/Static/Enhancer) with GORM 8 structural changes |
-| `DataServiceSpec` (H5) | Fixed `@Query` compilation errors by aligning with standard HQL named parameters |
-| `DomainMultiTenantMultiDataSourceSpec` | `MultiTenantEventListener` applies filters to specific query session (fixes DISCRIMINATOR isolation) |
-| `HibernateGormInstanceApiSpec` (31 tests) | `isDirty()`, `attach()` via `merge()`, proxy dispatch, `getInstanceApiHelper()` |
-| `Hibernate7GroovyProxySpec` | `HibernateSession.proxy()` honors `GroovyProxyFactory` |
-| `PartitionedMultiTenancySpec` | `SelectHqlQuery` fires `PreQueryEvent` → DISCRIMINATOR filter applied. Fixed curried `withTenant()` to preserve API overrides and tenant context. |
-| `WithNewSessionAndExistingTransactionSpec` | Aligned with Hibernate 7 version to handle flexible connection pool counts. |
-| CRUD / Finders / Where / PagedResult | OR query logic, String key coercion, `PagedResultList` wiring |
-| `SchemaMultiTenantSpec` + `HibernateDatastoreSchemaMultiTenancySpec` | SCHEMA multi-tenancy session routing |
-| `GormEnhancerAllQualifiersSpec` (15 tests) | GormEnhancer NPE null-guard + entity secondary-datasource registration |
-| `GormRegistryScalabilitySpec` (parallel) | Assertions scoped to entity keys — not total map size |
-| `MongoStaticApi.groovy` | Added missing `ConnectionSource` import (compilation fix) |
-| `GormStaticApi.deleteAll()` | Uses `DetachedCriteria` instead of `Query.deleteAll()` |
-| `GormStaticApi.eachTenant()` | Implemented via `GormRegistry.getDatastore(DEFAULT)` |
-| `GormStaticApi.withId()` | Uses root (DEFAULT) datastore for `Tenants.withId()` |
-| `GormEnhancer.findDatastore()` priority 4 | DISCRIMINATOR/SCHEMA modes no longer attempt tenant resolution |
-| `GormEnhancer.findDatastore()` priority 2 | Tries `getDatastoreForConnection()` before `getDatastoreForTenantId()` |
-| `MongoStaticApi.createStaticApi()` | Override added so `forQualifier()` returns `MongoStaticApi` |
-| `gradle.properties` | Updated `grailsSpringSecurityVersion` to `7.0.3-SNAPSHOT` to resolve missing 7.0.2-SNAPSHOT artifact. |
-| `PersistentEntityCodec` | Fixed double version increment and optimized collection dirty marking |
-| `MongoCodecEntityPersister` | Honored `markDirty` flag in manual dirty checking (fixes `MarkDirtyFalseSpec`) |
-| `PersistentEntityCodec.encodeUpdate()` | Resolved version property conflict in embedded updates (fixes `BulkWriteException`) |
-| `DirtyCheckableSupport` | Added `DirtyCheckableCollection.hasChanged()` check for MongoDB associations |
-| `InheritanceWithSingleEndedAssociationSpec` | Restored `skipValidation` in `PendingInsert.run()` for deferred flush |
+### Local selected-module workflow improvements
+- Selected-module runs now enforce CodeNarc/Checkstyle aggregation without forcing PMD/SpotBugs in that path.
+- `testSelected` flow remains focused on selected modules with aggregated test/style outputs.
 
 ---
 
----
+## 2) Potential optimization opportunities
 
-### MongoDB — grails-data-mongodb (siblings)
+## A. Registry/API hot-path efficiency
+**Goal:** reduce repeated lookup overhead under high tenant/entity counts.
 
-| Module | Status | Notes |
-|--------|--------|-------|
-| `grails-data-mongodb` | ✅ PASS | |
-| `grails-data-mongodb-ext` | ✅ PASS | |
-| `grails-data-mongodb-spring-boot` | ✅ PASS | |
+1. Cache normalized entity keys and qualifier maps in one place to reduce repeated normalization work.
+2. Audit repeated `findDatastore`/qualifier fallback chains and collapse duplicate branches.
+3. Benchmark `computeIfAbsent` and lock contention patterns in registry-heavy paths.
 
-#### Skip (not real MongoDB failures)
+## B. Tenant context and session routing
+**Goal:** lower context-switch overhead and reduce accidental cross-context work.
 
-| Count | Spec | Reason |
-|-------|------|--------|
-| 6 | `MultipleDataSourceSpec` | Uses `SimpleMapDatastore` — not MongoDB-specific; failures are parallel test pollution noise |
+1. Profile tenant context wrapping frequency in static API calls.
+2. Identify places where tenant/session context can be propagated once instead of re-resolved.
+3. Add targeted perf specs for DISCRIMINATOR and SCHEMA mode query loops.
 
----
+## C. Query builder/runtime allocation pressure
+**Goal:** reduce temporary object churn in frequently executed query paths.
 
-### H7 Example Tests — grails-test-examples-hibernate7-*
+1. Review HQL/criteria builder allocation patterns in H5/H7 and SimpleMap query implementations.
+2. Reuse immutable query metadata where safe.
+3. Add microbenchmarks for common `list/find/count` paths with multi-tenant datasets.
 
-All 12 H7 example modules pass ✅
+## D. Transform pipeline cost
+**Goal:** reduce compile-time overhead from service/transaction transforms.
 
-| Module | Status | Notes |
-|--------|--------|-------|
-| `grails-test-examples-hibernate7-*` | ✅ PASS | All examples passing as of 2026-05-08 |
+1. Measure transform execution hotspots after recent refactors.
+2. Consolidate duplicated transform helper logic.
+3. Add performance-oriented transform tests focused on large service sets.
 
----
+## E. Test/runtime throughput
+**Goal:** keep regression coverage while reducing local/CI cycle time.
 
-## Recent Fixes (2026-05-11)
-
-### Hibernate 5 / 7 Core
-- **Multi-Tenancy Curried APIs**: Fixed `GormStaticApi.withTenant()` to preserve datastore-specific API overrides and ensure tenant ID is bound during execution.
-- **Tenant Context in DISCRIMINATOR Mode**: Implemented `TenantBoundHibernateTemplate` to automatically wrap Hibernate operations in the correct tenant context.
-- **DataSource Isolation**: Refined tenant detection to prevent datasource qualifiers from being wrongly used as tenant IDs in DISCRIMINATOR mode.
-- **Deep Validation**: Fixed Jakarta Validator adapter to support `deepValidate: false` and properly handle `CascadingValidator` interfaces.
-- **Query Guard**: Fixed `findAll(example)` in Hibernate 7 to correctly ignore the `version` property, preventing false positives on empty example objects.
-- **StaleStateException**: Resolved manual and primitive-zero ID insertion issues in `performUpsert`.
-
-### GORM Data Mapping & Services
-- **`SimpleMapDatastore` Interface**: Made `SimpleMapDatastore` implement `MultipleConnectionSourceCapableDatastore`, enabling correct resolution of non-default connections in tests.
-- **`GormEnhancer` Fallback & Enforcement**: Restored fallback to default datastore for unregistered entities and enforced tenant resolution across all multi-tenancy modes (fixing `SCHEMA` and `DISCRIMINATOR` validation).
-- **Service Transform Fixes**: Resolved `IllegalStateException` in multi-tenant service tests by ensuring proper datastore fallback.
-
-### Build & Environment
-- **Dependency Resolution**: Updated `grails-spring-security` to `7.0.3-SNAPSHOT` to resolve missing artifacts.
-- **Memory Management**: Added isolation-mode guidance for smaller laptops; prefer selected-module runs over the full suite.
+1. Keep scalability specs, but tune dataset sizes for stable signal-to-cost ratio.
+2. Split long-running integration groups where practical.
+3. Continue selected-module execution strategy for local iteration, full-suite in CI.
 
 ---
 
-## Constraints
+## 3) Suggested tracking format for future updates
 
-1. **Can modify `grails-datamapping-core`** — must run all 253 tests before committing.
-2. **Never modify `grails-datastore-core`** — changes affect H5 and MongoDB.
-3. **`local.properties`** — never delete; comment out old values, append new ones.
-4. **No `git push`** until the relevant selected-module run and aggregate report pass.
-5. Full-suite local runs with `-I` OOM the daemon on this laptop — avoid running everything that way.
-
-## Local workflow
-1. Uncomment a small module batch in `local.properties`.
-2. Run `./gradlew -I local-init.gradle testSelected` for that batch only.
-3. If a test fails, switch to `./gradlew :<module>:test --continue` for reliable continuation.
-4. Do not run the full suite with `-I` on this laptop; it OOMs the daemon.
-
-## Run All
-Use the `runAll` task to execute the selected modules one at a time in separate Gradle invocations:
-
-```bash
-./gradlew -I local-init.gradle runAll
-```
-
-If `grails.test.modules` is set in `local.properties`, only those modules are run. Otherwise, `runAll` discovers every subproject with a `test` task, runs them sequentially, and still finishes by writing `TEST_FAILURES.md`.
-
-export GRADLE_OPTS="-Xmx6G -XX:MaxMetaspaceSize=1G" && \
-./gradlew :grails-data-hibernate7-dbmigration:test --continue -I local-init.gradle && \
-./gradlew :grails-data-hibernate7-spring-boot:test --continue -I local-init.gradle && \
-./gradlew :grails-data-hibernate7-spring-orm:test --continue -I local-init.gradle && \
-./gradlew :grails-data-mongodb:test --continue -I local-init.gradle && \
-./gradlew :grails-data-mongodb-bson:test --continue -I local-init.gradle && \
-./gradlew :grails-data-mongodb-core:test --continue -I local-init.gradle && \
-./gradlew :grails-data-mongodb-ext:test --continue -I local-init.gradle && \
-./gradlew :grails-data-mongodb-gson-templates:test --continue -I local-init.gradle && \
-./gradlew :grails-data-mongodb-spring-boot:test --continue -I local-init.gradle && \
-./gradlew :grails-data-simple:test --continue -I local-init.gradle && \
-./gradlew :grails-data-test-report:test --continue -I local-init.gradle && \
-./gradlew :grails-databinding:test --continue -I local-init.gradle && \
-./gradlew :grails-databinding-core:test --continue -I local-init.gradle && \
-./gradlew :grails-datamapping-async:test --continue -I local-init.gradle && \
-./gradlew :grails-datamapping-core:test --continue -I local-init.gradle && \
-./gradlew :grails-datamapping-core-test:test --continue -I local-init.gradle && \
-./gradlew :grails-datamapping-support:test --continue -I local-init.gradle && \
-./gradlew :grails-datamapping-tck:test --continue -I local-init.gradle && \
-./gradlew :grails-datamapping-validation:test --continue -I local-init.gradle && \
-./gradlew :grails-datasource:test --continue -I local-init.gradle && \
-./gradlew :grails-datastore-async:test --continue -I local-init.gradle && \
-./gradlew :grails-datastore-core:test --continue -I local-init.gradle && \
-./gradlew :grails-datastore-web:test --continue -I local-init.gradle && \
-./gradlew :grails-dependencies-assets:test --continue -I local-init.gradle && \
-./gradlew :grails-dependencies-starter-web:test --continue -I local-init.gradle && \
-./gradlew :grails-dependencies-test:test --continue -I local-init.gradle && \
-./gradlew :grails-domain-class:test --continue -I local-init.gradle && \
-./gradlew :grails-encoder:test --continue -I local-init.gradle && \
-./gradlew :grails-events:test --continue -I local-init.gradle && \
-./gradlew :grails-events-core:test --continue -I local-init.gradle && \
-./gradlew :grails-events-gpars:test --continue -I local-init.gradle && \
-./gradlew :grails-events-rxjava:test --continue -I local-init.gradle && \
-./gradlew :grails-events-rxjava2:test --continue -I local-init.gradle && \
-./gradlew :grails-events-rxjava3:test --continue -I local-init.gradle && \
-./gradlew :grails-events-spring:test --continue -I local-init.gradle && \
-./gradlew :grails-events-transforms:test --continue -I local-init.gradle && \
-./gradlew :grails-fields:test --continue -I local-init.gradle && \
-./gradlew :grails-geb:test --continue -I local-init.gradle && \
-./gradlew :grails-gsp:test --continue -I local-init.gradle && \
-./gradlew :grails-gsp-core:test --continue -I local-init.gradle && \
-./gradlew :grails-i18n:test --continue -I local-init.gradle && \
-./gradlew :grails-interceptors:test --continue -I local-init.gradle && \
-./gradlew :grails-layout:test --continue -I local-init.gradle && \
-./gradlew :grails-logging:test --continue -I local-init.gradle && \
-./gradlew :grails-micronaut:test --continue -I local-init.gradle && \
-./gradlew :grails-mimetypes:test --continue -I local-init.gradle && \
-./gradlew :grails-profiles-base:test --continue -I local-init.gradle && \
-./gradlew :grails-profiles-plugin:test --continue -I local-init.gradle && \
-./gradlew :grails-profiles-profile:test --continue -I local-init.gradle && \
-./gradlew :grails-profiles-rest-api:test --continue -I local-init.gradle && \
-./gradlew :grails-profiles-rest-api-plugin:test --continue -I local-init.gradle && \
-./gradlew :grails-profiles-web:test --continue -I local-init.gradle && \
-./gradlew :grails-profiles-web-plugin:test --continue -I local-init.gradle && \
-./gradlew :grails-rest-transforms:test --continue -I local-init.gradle && \
-./gradlew :grails-scaffolding:test --continue -I local-init.gradle && \
+When adding new work items to this file:
+- Record the **change** under section 1 with module + behavior impact.
+- Record follow-up work under section 2 with a short **goal** and concrete next actions.
+- Avoid adding pass/fail snapshots here; keep this file architectural and optimization-focused.
