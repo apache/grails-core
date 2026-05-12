@@ -238,7 +238,7 @@ class Project {
     }
 
     @Issue('GRAILS-8256')
-    @spock.lang.Requires({ System.getProperty('hibernate5.gorm.suite') == 'true' || System.getProperty('hibernate7.gorm.suite') == 'true' || System.getProperty('mongodb.gorm.suite') == 'true' })
+
     def "Test query with 3 level deep collection association"() {
         given: "some people with pets in groups"
         createPeopleInGroupsWithPets()
@@ -1503,7 +1503,7 @@ class Project {
         results.find { it.firstName == 'Fred' }
     }
 
-    @spock.lang.Requires({ System.getProperty('hibernate5.gorm.suite') == 'true' || System.getProperty('hibernate7.gorm.suite') == 'true' || System.getProperty('mongodb.gorm.suite') == 'true' })
+
     def "Test where query on sorted set"() {
         given: "Some people and groups"
         createPeopleAndGroups()

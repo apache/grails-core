@@ -83,7 +83,7 @@ class PersistenceEventListenerSpec extends GrailsDataTckSpec {
         listener.events[-2] instanceof PreDeleteEvent
     }
 
-    @spock.lang.Requires({ System.getProperty('hibernate5.gorm.suite') == 'true' || System.getProperty('hibernate7.gorm.suite') == 'true' || System.getProperty('mongodb.gorm.suite') == 'true' })
+
     void 'Test multi-delete events'() {
         given:
         def freds = (1..3).collect {
@@ -196,7 +196,7 @@ class PersistenceEventListenerSpec extends GrailsDataTckSpec {
         1 == listener.PostLoadCount
     }
 
-    @spock.lang.Requires({ System.getProperty('hibernate5.gorm.suite') == 'true' || System.getProperty('hibernate7.gorm.suite') == 'true' || System.getProperty('mongodb.gorm.suite') == 'true' })
+
     void 'Test multi-load events'() {
         given:
         def freds = (1..3).collect {

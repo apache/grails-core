@@ -31,7 +31,7 @@ class NotLikeSpec extends GrailsDataTckSpec<GrailsDataCoreTckManager> {
         manager.addAllDomainClasses([TestEntity])
     }
 
-    @spock.lang.Requires({ System.getProperty('hibernate5.gorm.suite') == 'true' || System.getProperty('hibernate7.gorm.suite') == 'true' || System.getProperty('mongodb.gorm.suite') == 'true' })
+
     void "test not like"() {
         when:
         new TestEntity(name:"Fred").save()

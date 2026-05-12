@@ -27,7 +27,7 @@ class NotNullQuerySpec extends GrailsDataTckSpec<GrailsDataCoreTckManager> {
         manager.addAllDomainClasses([NullMe, NullOther])
     }
 
-    @spock.lang.Requires({ System.getProperty('hibernate5.gorm.suite') == 'true' || System.getProperty('hibernate7.gorm.suite') == 'true' || System.getProperty('mongodb.gorm.suite') == 'true' })
+
     void "Test query of null value with dynamic finder"() {
         given:
         new NullMe(name: "Bob", job: "Builder").save()
@@ -68,7 +68,7 @@ class NotNullQuerySpec extends GrailsDataTckSpec<GrailsDataCoreTckManager> {
         results[0].name == "Bob"
     }
 
-    @spock.lang.Requires({ System.getProperty('hibernate5.gorm.suite') == 'true' || System.getProperty('hibernate7.gorm.suite') == 'true' || System.getProperty('mongodb.gorm.suite') == 'true' })
+
     void "Test query of null value with dynamic finder on association"() {
         given:
         new NullMe(name: "Bob", other: new NullOther(name: 'stuff').save()).save()
