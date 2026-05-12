@@ -548,7 +548,11 @@ class GormEnhancer implements Closeable {
                 }
             } catch (Throwable e) {
                 if (entity != null && MultiTenant.isAssignableFrom(entity) && e instanceof TenantNotFoundException) {
-                    throw e
+                    if (isDatabaseMode || multiTenantCapableDatastore.getMultiTenancyMode() == MultiTenancySettings.MultiTenancyMode.SCHEMA) {
+                        throw e
+                    }
+                    // For DISCRIMINATOR mode, we swallow it and return defaultDs so shared DB operations can proceed.
+                    // Entity operations (save, query) will still throw via event listeners or query builders.
                 }
             }
         }
