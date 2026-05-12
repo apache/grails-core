@@ -1,6 +1,6 @@
 # Hibernate 7 / MongoDB Migration — Issue Tracker
 
-**CURRENT FOCUS**: MongoDB module compilation and test failures.
+**CURRENT FOCUS**: Batch-based local test workflow and stale tracker cleanup.
 
 ---
 
@@ -19,9 +19,13 @@
 | `grails-data-mongodb-core` | ✅ 100% passing | Fixed versioning, dirty checking, and embedded conflicts. Added `GormRegistry.reset()` to multi-tenancy specs to resolve test isolation issues. |
 | `grails-data-mongodb` + siblings | ✅ 100% passing | All integration and example tests passing |
 
-**Run command** (quarterly batches — full suite hangs):
+**Run command** (use only for small selected batches):
 ```bash
-python3 run_quarter.py specs_q1.txt --timeout 600
+# Set grails.test.modules in local.properties, then run selected modules:
+./gradlew -I local-init.gradle testSelected
+
+# For reliable continuation after a failure, run a single module directly:
+./gradlew :<module>:test --continue
 ```
 
 ---
@@ -130,7 +134,7 @@ All 12 H7 example modules pass ✅
 
 ### Build & Environment
 - **Dependency Resolution**: Updated `grails-spring-security` to `7.0.3-SNAPSHOT` to resolve missing artifacts.
-- **Memory Management**: Provided flattened sequential test command for 16GB RAM laptop verification.
+- **Memory Management**: Added isolation-mode guidance for smaller laptops; prefer selected-module runs over the full suite.
 
 ---
 
@@ -139,35 +143,25 @@ All 12 H7 example modules pass ✅
 1. **Can modify `grails-datamapping-core`** — must run all 253 tests before committing.
 2. **Never modify `grails-datastore-core`** — changes affect H5 and MongoDB.
 3. **`local.properties`** — never delete; comment out old values, append new ones.
-4. **No `git push`** until full suite passes.
-5. Full suite hangs — run specs in quarters via `run_quarter.py` with `specs_q{1..4}.txt`.
+4. **No `git push`** until the relevant selected-module run and aggregate report pass.
+5. Full-suite local runs with `-I` OOM the daemon on this laptop — avoid running everything that way.
 
-## Running tests locally
+## Local workflow
+1. Uncomment a small module batch in `local.properties`.
+2. Run `./gradlew -I local-init.gradle testSelected` for that batch only.
+3. If a test fails, switch to `./gradlew :<module>:test --continue` for reliable continuation.
+4. Do not run the full suite with `-I` on this laptop; it OOMs the daemon.
+
+## Run All
+Use the `runAll` task to execute the selected modules one at a time in separate Gradle invocations:
+
+```bash
+./gradlew -I local-init.gradle runAll
+```
+
+If `grails.test.modules` is set in `local.properties`, only those modules are run. Otherwise, `runAll` discovers every subproject with a `test` task, runs them sequentially, and still finishes by writing `TEST_FAILURES.md`.
 
 export GRADLE_OPTS="-Xmx6G -XX:MaxMetaspaceSize=1G" && \
-./gradlew clean -I local-init.gradle && \
-./gradlew :grails-async:test --continue -I local-init.gradle && \
-./gradlew :grails-async-core:test --continue -I local-init.gradle && \
-./gradlew :grails-async-gpars:test --continue -I local-init.gradle && \
-./gradlew :grails-async-rxjava:test --continue -I local-init.gradle && \
-./gradlew :grails-async-rxjava2:test --continue -I local-init.gradle && \
-./gradlew :grails-async-rxjava3:test --continue -I local-init.gradle && \
-./gradlew :grails-bootstrap:test --continue -I local-init.gradle && \
-./gradlew :grails-cache:test --continue -I local-init.gradle && \
-./gradlew :grails-codecs:test --continue -I local-init.gradle && \
-./gradlew :grails-codecs-core:test --continue -I local-init.gradle && \
-./gradlew :grails-common:test --continue -I local-init.gradle && \
-./gradlew :grails-console:test --continue -I local-init.gradle && \
-./gradlew :grails-controllers:test --continue -I local-init.gradle && \
-./gradlew :grails-converters:test --continue -I local-init.gradle && \
-./gradlew :grails-core:test --continue -I local-init.gradle && \
-./gradlew :grails-data-hibernate5:test --continue -I local-init.gradle && \
-./gradlew :grails-data-hibernate5-core:test --continue -I local-init.gradle && \
-./gradlew :grails-data-hibernate5-dbmigration:test --continue -I local-init.gradle && \
-./gradlew :grails-data-hibernate5-spring-boot:test --continue -I local-init.gradle && \
-./gradlew :grails-data-hibernate5-spring-orm:test --continue -I local-init.gradle && \
-./gradlew :grails-data-hibernate7:test --continue -I local-init.gradle && \
-./gradlew :grails-data-hibernate7-core:test --continue -I local-init.gradle && \
 ./gradlew :grails-data-hibernate7-dbmigration:test --continue -I local-init.gradle && \
 ./gradlew :grails-data-hibernate7-spring-boot:test --continue -I local-init.gradle && \
 ./gradlew :grails-data-hibernate7-spring-orm:test --continue -I local-init.gradle && \
@@ -223,105 +217,3 @@ export GRADLE_OPTS="-Xmx6G -XX:MaxMetaspaceSize=1G" && \
 ./gradlew :grails-profiles-web-plugin:test --continue -I local-init.gradle && \
 ./gradlew :grails-rest-transforms:test --continue -I local-init.gradle && \
 ./gradlew :grails-scaffolding:test --continue -I local-init.gradle && \
-./gradlew :grails-services:test --continue -I local-init.gradle && \
-./gradlew :grails-shell-cli:test --continue -I local-init.gradle && \
-./gradlew :grails-spring:test --continue -I local-init.gradle && \
-./gradlew :grails-taglib:test --continue -I local-init.gradle && \
-./gradlew :grails-test-core:test --continue -I local-init.gradle && \
-./gradlew :grails-test-examples-app1:test --continue -I local-init.gradle && \
-./gradlew :grails-test-examples-app2:test --continue -I local-init.gradle && \
-./gradlew :grails-test-examples-app3:test --continue -I local-init.gradle && \
-./gradlew :grails-test-examples-app4:test --continue -I local-init.gradle && \
-./gradlew :grails-test-examples-app5:test --continue -I local-init.gradle && \
-./gradlew :grails-test-examples-async-events-pubsub-demo:test --continue -I local-init.gradle && \
-./gradlew :grails-test-examples-cache:test --continue -I local-init.gradle && \
-./gradlew :grails-test-examples-database-cleanup:test --continue -I local-init.gradle && \
-./gradlew :grails-test-examples-datasources:test --continue -I local-init.gradle && \
-./gradlew :grails-test-examples-demo33:test --continue -I local-init.gradle && \
-./gradlew :grails-test-examples-exploded:test --continue -I local-init.gradle && \
-./gradlew :grails-test-examples-external-configuration:test --continue -I local-init.gradle && \
-./gradlew :grails-test-examples-geb:test --continue -I local-init.gradle && \
-./gradlew :grails-test-examples-geb-context-path:test --continue -I local-init.gradle && \
-./gradlew :grails-test-examples-geb-gebconfig:test --continue -I local-init.gradle && \
-./gradlew :grails-test-examples-gorm:test --continue -I local-init.gradle && \
-./gradlew :grails-test-examples-gsp-layout:test --continue -I local-init.gradle && \
-./gradlew :grails-test-examples-hibernate5-grails-data-service:test --continue -I local-init.gradle && \
-./gradlew :grails-test-examples-hibernate5-grails-data-service-multi-datasource:test --continue -I local-init.gradle && \
-./gradlew :grails-test-examples-hibernate5-grails-database-per-tenant:test --continue -I local-init.gradle && \
-./gradlew :grails-test-examples-hibernate5-grails-hibernate:test --continue -I local-init.gradle && \
-./gradlew :grails-test-examples-hibernate5-grails-hibernate-groovy-proxy:test --continue -I local-init.gradle && \
-./gradlew :grails-test-examples-hibernate5-grails-multiple-datasources:test --continue -I local-init.gradle && \
-./gradlew :grails-test-examples-hibernate5-grails-multitenant-multi-datasource:test --continue -I local-init.gradle && \
-./gradlew :grails-test-examples-hibernate5-grails-partitioned-multi-tenancy:test --continue -I local-init.gradle && \
-./gradlew :grails-test-examples-hibernate5-grails-schema-per-tenant:test --continue -I local-init.gradle && \
-./gradlew :grails-test-examples-hibernate5-issue450:test --continue -I local-init.gradle && \
-./gradlew :grails-test-examples-hibernate5-spring-boot-hibernate:test --continue -I local-init.gradle && \
-./gradlew :grails-test-examples-hibernate5-standalone-hibernate:test --continue -I local-init.gradle && \
-./gradlew :grails-test-examples-hibernate7-grails-data-service:test --continue -I local-init.gradle && \
-./gradlew :grails-test-examples-hibernate7-grails-data-service-multi-datasource:test --continue -I local-init.gradle && \
-./gradlew :grails-test-examples-hibernate7-grails-database-per-tenant:test --continue -I local-init.gradle && \
-./gradlew :grails-test-examples-hibernate7-grails-hibernate:test --continue -I local-init.gradle && \
-./gradlew :grails-test-examples-hibernate7-grails-hibernate-groovy-proxy:test --continue -I local-init.gradle && \
-./gradlew :grails-test-examples-hibernate7-grails-multiple-datasources:test --continue -I local-init.gradle && \
-./gradlew :grails-test-examples-hibernate7-grails-multitenant-multi-datasource:test --continue -I local-init.gradle && \
-./gradlew :grails-test-examples-hibernate7-grails-partitioned-multi-tenancy:test --continue -I local-init.gradle && \
-./gradlew :grails-test-examples-hibernate7-grails-schema-per-tenant:test --continue -I local-init.gradle && \
-./gradlew :grails-test-examples-hibernate7-issue450:test --continue -I local-init.gradle && \
-./gradlew :grails-test-examples-hibernate7-spring-boot-hibernate:test --continue -I local-init.gradle && \
-./gradlew :grails-test-examples-hibernate7-standalone-hibernate:test --continue -I local-init.gradle && \
-./gradlew :grails-test-examples-hyphenated:test --continue -I local-init.gradle && \
-./gradlew :grails-test-examples-issue-11102:test --continue -I local-init.gradle && \
-./gradlew :grails-test-examples-issue-11767:test --continue -I local-init.gradle && \
-./gradlew :grails-test-examples-issue-15228:test --continue -I local-init.gradle && \
-./gradlew :grails-test-examples-issue-698-domain-save-npe:test --continue -I local-init.gradle && \
-./gradlew :grails-test-examples-issue-views-182:test --continue -I local-init.gradle && \
-./gradlew :grails-test-examples-micronaut:test --continue -I local-init.gradle && \
-./gradlew :grails-test-examples-micronaut-groovy-only:test --continue -I local-init.gradle && \
-./gradlew :grails-test-examples-mongodb-base:test --continue -I local-init.gradle && \
-./gradlew :grails-test-examples-mongodb-database-per-tenant:test --continue -I local-init.gradle && \
-./gradlew :grails-test-examples-mongodb-gson-templates:test --continue -I local-init.gradle && \
-./gradlew :grails-test-examples-mongodb-hibernate5:test --continue -I local-init.gradle && \
-./gradlew :grails-test-examples-mongodb-springboot:test --continue -I local-init.gradle && \
-./gradlew :grails-test-examples-mongodb-test-data-service:test --continue -I local-init.gradle && \
-./gradlew :grails-test-examples-namespaces:test --continue -I local-init.gradle && \
-./gradlew :grails-test-examples-plugins-exploded:test --continue -I local-init.gradle && \
-./gradlew :grails-test-examples-plugins-issue-11767:test --continue -I local-init.gradle && \
-./gradlew :grails-test-examples-plugins-issue11005:test --continue -I local-init.gradle && \
-./gradlew :grails-test-examples-plugins-loadafter:test --continue -I local-init.gradle && \
-./gradlew :grails-test-examples-plugins-loadfirst:test --continue -I local-init.gradle && \
-./gradlew :grails-test-examples-plugins-loadsecond:test --continue -I local-init.gradle && \
-./gradlew :grails-test-examples-plugins-micronaut-singleton:test --continue -I local-init.gradle && \
-./gradlew :grails-test-examples-scaffolding:test --continue -I local-init.gradle && \
-./gradlew :grails-test-examples-scaffolding-fields:test --continue -I local-init.gradle && \
-./gradlew :grails-test-examples-test-phases:test --continue -I local-init.gradle && \
-./gradlew :grails-test-examples-views-functional-tests:test --continue -I local-init.gradle && \
-./gradlew :grails-test-examples-views-functional-tests-plugin:test --continue -I local-init.gradle && \
-./gradlew :grails-test-suite-base:test --continue -I local-init.gradle && \
-./gradlew :grails-test-suite-persistence:test --continue -I local-init.gradle && \
-./gradlew :grails-test-suite-uber:test --continue -I local-init.gradle && \
-./gradlew :grails-test-suite-web:test --continue -I local-init.gradle && \
-./gradlew :grails-testing-support-core:test --continue -I local-init.gradle && \
-./gradlew :grails-testing-support-datamapping:test --continue -I local-init.gradle && \
-./gradlew :grails-testing-support-dbcleanup-core:test --continue -I local-init.gradle && \
-./gradlew :grails-testing-support-dbcleanup-h2:test --continue -I local-init.gradle && \
-./gradlew :grails-testing-support-dbcleanup-postgresql:test --continue -I local-init.gradle && \
-./gradlew :grails-testing-support-http-client:test --continue -I local-init.gradle && \
-./gradlew :grails-testing-support-mongodb:test --continue -I local-init.gradle && \
-./gradlew :grails-testing-support-views-gson:test --continue -I local-init.gradle && \
-./gradlew :grails-testing-support-web:test --continue -I local-init.gradle && \
-./gradlew :grails-url-mappings:test --continue -I local-init.gradle && \
-./gradlew :grails-validation:test --continue -I local-init.gradle && \
-./gradlew :grails-views-core:test --continue -I local-init.gradle && \
-./gradlew :grails-views-gson:test --continue -I local-init.gradle && \
-./gradlew :grails-views-markup:test --continue -I local-init.gradle && \
-./gradlew :grails-web-boot:test --continue -I local-init.gradle && \
-./gradlew :grails-web-common:test --continue -I local-init.gradle && \
-./gradlew :grails-web-core:test --continue -I local-init.gradle && \
-./gradlew :grails-web-databinding:test --continue -I local-init.gradle && \
-./gradlew :grails-web-gsp:test --continue -I local-init.gradle && \
-./gradlew :grails-web-gsp-taglib:test --continue -I local-init.gradle && \
-./gradlew :grails-web-jsp:test --continue -I local-init.gradle && \
-./gradlew :grails-web-mvc:test --continue -I local-init.gradle && \
-./gradlew :grails-web-taglib:test --continue -I local-init.gradle && \
-./gradlew :grails-web-url-mappings:test --continue -I local-init.gradle && \
-./gradlew aggregateTestFailures aggregateStyleViolations -I local-init.gradle
