@@ -16,7 +16,7 @@
  *  specific language governing permissions and limitations
  *  under the License.
  */
-package grails.gorm.tests
+package grails.gorm.specs
 
 import org.codehaus.groovy.ast.ClassNode
 import spock.lang.Specification

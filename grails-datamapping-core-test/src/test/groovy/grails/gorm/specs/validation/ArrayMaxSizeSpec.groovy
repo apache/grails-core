@@ -17,7 +17,7 @@
  *  under the License.
  */
 
-package grails.gorm.tests.validation
+package grails.gorm.specs.validation
 
 import grails.gorm.annotation.Entity
 import org.apache.grails.data.simple.core.GrailsDataCoreTckManager

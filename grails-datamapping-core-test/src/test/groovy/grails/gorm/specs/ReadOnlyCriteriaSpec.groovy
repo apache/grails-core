@@ -16,12 +16,27 @@
  *  specific language governing permissions and limitations
  *  under the License.
  */
-package grails.gorm.tests
+package grails.gorm.specs
 
-/**
- * @author Burt Beckwith
- */
-class OptimisticLockingSpec {
-    // TODO implement optimistic locking for simple map and delete this
-    void testNothing() {}
+import org.apache.grails.data.simple.core.GrailsDataCoreTckManager
+import org.apache.grails.data.testing.tck.base.GrailsDataTckSpec
+import org.apache.grails.data.testing.tck.domains.TestEntity
+import spock.lang.Issue
+
+class ReadOnlyCriteriaSpec extends GrailsDataTckSpec<GrailsDataCoreTckManager> {
+
+    void setupSpec() {
+        manager.addAllDomainClasses([TestEntity])
+    }
+
+    @Issue('GRAILS-11670')
+    void 'Test invoking readOnly in a criteria query'() {
+        when:
+        def results = TestEntity.withCriteria {
+            readOnly true
+        }
+
+        then:
+        results == []
+    }
 }
