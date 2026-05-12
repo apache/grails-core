@@ -48,9 +48,6 @@ class OrderBySpec extends GrailsDataTckSpec<GrailsDataCoreTckManager> {
         45 == result.age
     }
 
-    @Requires({ System.getProperty('hibernate5.gorm.suite') == 'true' ||
-            System.getProperty('hibernate7.gorm.suite') == 'true' ||
-            System.getProperty('mongodb.gorm.suite') == 'true' })
     def 'Test order by property name with dynamic finder using max'() {
         when:
         def results = TestEntity.findAllByAgeGreaterThanEquals(40, [sort: "age", order: 'desc', max: 1])

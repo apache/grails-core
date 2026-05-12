@@ -33,9 +33,6 @@ class CustomAutoTimestampSpec extends GrailsDataTckSpec<GrailsDataCoreTckManager
         manager.addAllDomainClasses([AutoTimestampedChildEntity, AutoTimestampedParentEntity, Image, RecordCustom, RecordWithAliases])
     }
 
-    @Requires({ System.getProperty('hibernate5.gorm.suite') == 'true' ||
-                System.getProperty('hibernate7.gorm.suite') == 'true' ||
-                System.getProperty('mongodb.gorm.suite') == 'true' })
     void "Test when the auto timestamp properties are customized, they are correctly set"() {
         when: "An entity is persisted"
         def r = new RecordCustom(name: "Test")

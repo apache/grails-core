@@ -31,7 +31,6 @@ import org.grails.datastore.mapping.core.OptimisticLockingException
 /**
  * @author Burt Beckwith
  */
-@Requires({ System.getProperty('hibernate5.gorm.suite') == 'true' || System.getProperty('hibernate7.gorm.suite') == 'true' || System.getProperty('mongodb.gorm.suite') == 'true' })
 class OptimisticLockingSpec extends GrailsDataTckSpec {
 
     def setupSpec() {

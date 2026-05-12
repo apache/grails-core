@@ -338,7 +338,6 @@ class ServiceImplSpec extends Specification {
 
     }
 
-    @Requires({ System.getProperty('hibernate5.gorm.suite') == 'true' || System.getProperty('hibernate7.gorm.suite') == 'true' || System.getProperty('mongodb.gorm.suite') == 'true' })
     void "test interface projection"() {
         given:
         ProductService productService = datastore.getService(ProductService)
