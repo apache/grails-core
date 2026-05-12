@@ -19,7 +19,6 @@
 package org.apache.grails.data.testing.tck.tests
 
 import spock.lang.IgnoreIf
-import spock.lang.Requires
 
 import org.apache.grails.data.testing.tck.base.GrailsDataTckSpec
 import org.apache.grails.data.testing.tck.domains.OptLockNotVersioned
