@@ -23,6 +23,7 @@ import org.apache.grails.data.simple.core.GrailsDataCoreTckManager
 import org.apache.grails.data.testing.tck.base.GrailsDataTckSpec
 
 class NotNullQuerySpec extends GrailsDataTckSpec<GrailsDataCoreTckManager> {
+
     void setupSpec() {
         manager.addAllDomainClasses([NullMe, NullOther])
     }
@@ -112,6 +113,7 @@ class NotNullQuerySpec extends GrailsDataTckSpec<GrailsDataCoreTckManager> {
 
 @Entity
 class NullMe {
+
     Long id
     String name
     String job
@@ -129,6 +131,7 @@ class NullMe {
 
 @Entity
 class NullOther {
+
     Long id
     String name
 

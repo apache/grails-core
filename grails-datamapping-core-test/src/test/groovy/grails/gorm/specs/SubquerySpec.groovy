@@ -19,9 +19,9 @@
 package grails.gorm.specs
 
 import grails.gorm.DetachedCriteria
-import org.apache.grails.data.testing.tck.domains.Person
 import org.apache.grails.data.simple.core.GrailsDataCoreTckManager
 import org.apache.grails.data.testing.tck.base.GrailsDataTckSpec
+import org.apache.grails.data.testing.tck.domains.Person
 
 /**
  * Tests for using subqueries in criteria and where method calls

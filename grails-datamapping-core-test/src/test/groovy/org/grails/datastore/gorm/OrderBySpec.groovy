@@ -18,11 +18,10 @@
  */
 package org.grails.datastore.gorm
 
-import org.apache.grails.data.testing.tck.domains.ChildEntity
-import org.apache.grails.data.testing.tck.domains.TestEntity
 import org.apache.grails.data.simple.core.GrailsDataCoreTckManager
 import org.apache.grails.data.testing.tck.base.GrailsDataTckSpec
-import spock.lang.Requires
+import org.apache.grails.data.testing.tck.domains.ChildEntity
+import org.apache.grails.data.testing.tck.domains.TestEntity
 
 /**
  * @author Daniel Wiell

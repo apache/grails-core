@@ -18,27 +18,30 @@
  */
 package grails.gorm.specs
 
+import groovy.transform.CompileStatic
+import org.codehaus.groovy.control.MultipleCompilationErrorsException
+
+import spock.lang.Issue
+import spock.lang.Shared
+
 import grails.gorm.DetachedCriteria
+import grails.persistence.Entity
+import org.apache.grails.data.simple.core.GrailsDataCoreTckManager
+import org.apache.grails.data.testing.tck.base.GrailsDataTckSpec
 import org.apache.grails.data.testing.tck.domains.Country
 import org.apache.grails.data.testing.tck.domains.Face
 import org.apache.grails.data.testing.tck.domains.Nose
-import org.apache.grails.data.testing.tck.domains.Pet
-import grails.persistence.Entity
-import groovy.transform.CompileStatic
 import org.apache.grails.data.testing.tck.domains.Person
-import org.apache.grails.data.simple.core.GrailsDataCoreTckManager
-import org.apache.grails.data.testing.tck.base.GrailsDataTckSpec
-import org.codehaus.groovy.control.MultipleCompilationErrorsException
+import org.apache.grails.data.testing.tck.domains.Pet
 import org.grails.datastore.gorm.query.transform.ApplyDetachedCriteriaTransform
 import org.grails.datastore.mapping.reflect.FieldEntityAccess
-import spock.lang.Issue
-import spock.lang.Shared
 
 /**
  * Tests for the new where method used to define detached criteria using the new DSL
  */
 @ApplyDetachedCriteriaTransform
 class WhereMethodSpec extends GrailsDataTckSpec<GrailsDataCoreTckManager> {
+
     @Shared
     def gcl
 
@@ -1549,6 +1552,7 @@ class Project {
     //@CompileStatic
     @ApplyDetachedCriteriaTransform
     static class DetachedCriteriaInnerClass {
+
         static Person findHomerWithWhereAndCompileStatic() {
             List<Person> results = Person.where { lastName == 'Simpson' }.list(max: 2)
             results[0]
@@ -1974,6 +1978,7 @@ class CallMe {
 
 @Entity
 class Continent {
+
     Long id
     Long version
 
@@ -1984,6 +1989,7 @@ class Continent {
 
 @Entity
 class Group {
+
     Long id
     String name
     SortedSet<Person> people = [] as SortedSet
@@ -1992,6 +1998,7 @@ class Group {
 
 @Entity
 class Proposal {
+
     Long id
     String name
     Advisor advisor
@@ -2006,6 +2013,7 @@ class Proposal {
 
 @Entity
 class Advisor {
+
     Long id
     String username
 

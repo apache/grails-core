@@ -18,11 +18,11 @@
  */
 package grails.gorm.specs
 
-import org.apache.grails.data.testing.tck.domains.Person
-import org.apache.grails.data.testing.tck.domains.TestEntity
+import spock.lang.Issue
+
 import org.apache.grails.data.simple.core.GrailsDataCoreTckManager
 import org.apache.grails.data.testing.tck.base.GrailsDataTckSpec
-import spock.lang.Issue
+import org.apache.grails.data.testing.tck.domains.TestEntity
 
 /**
  * Created by graemerocher on 16/02/2017.

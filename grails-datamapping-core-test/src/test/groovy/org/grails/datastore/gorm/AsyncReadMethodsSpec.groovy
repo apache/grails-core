@@ -20,9 +20,9 @@ package org.grails.datastore.gorm
 
 import grails.async.Promise
 import grails.async.Promises
-import org.apache.grails.data.testing.tck.domains.Person
 import org.apache.grails.data.simple.core.GrailsDataCoreTckManager
 import org.apache.grails.data.testing.tck.base.GrailsDataTckSpec
+import org.apache.grails.data.testing.tck.domains.Person
 
 /**
  */
@@ -63,7 +63,7 @@ class AsyncReadMethodsSpec extends GrailsDataTckSpec<GrailsDataCoreTckManager> {
         then: "A promise is returned"
         promise instanceof Promise
 
-        when: "The promise value is returned"
+                when : "The promise value is returned"
         def results = promise.get()
 
         then: "They are correct"

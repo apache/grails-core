@@ -18,17 +18,19 @@
  */
 package org.grails.datastore.gorm
 
+import spock.lang.Issue
+
 import grails.persistence.Entity
 import org.apache.grails.data.simple.core.GrailsDataCoreTckManager
 import org.apache.grails.data.testing.tck.base.GrailsDataTckSpec
 import org.grails.datastore.mapping.model.types.Association
-import spock.lang.Issue
 
 /**
  * @author graemerocher
  */
 @Issue('https://github.com/apache/grails-core/issues/669')
 class MappedByNoneSpec extends GrailsDataTckSpec<GrailsDataCoreTckManager> {
+
     void setupSpec() {
         manager.addAllDomainClasses([Player, SoftballTeamPreference])
     }
@@ -53,6 +55,7 @@ class Player {
 
 @Entity
 class SoftballTeamPreference {
+
     Long id
     Set players
     Player owner

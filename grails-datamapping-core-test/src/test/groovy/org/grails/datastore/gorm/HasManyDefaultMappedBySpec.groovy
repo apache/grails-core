@@ -24,6 +24,7 @@ import org.apache.grails.data.testing.tck.base.GrailsDataTckSpec
 import org.grails.datastore.mapping.model.types.Association
 
 class HasManyDefaultMappedBySpec extends GrailsDataTckSpec<GrailsDataCoreTckManager> {
+
     void setupSpec() {
         manager.addAllDomainClasses([MyDomain, ChildDomain])
     }
@@ -43,6 +44,7 @@ class HasManyDefaultMappedBySpec extends GrailsDataTckSpec<GrailsDataCoreTckMana
 
 @Entity
 class MyDomain {
+
     Long id
     Set childs
     static hasMany = [childs: ChildDomain]
@@ -50,6 +52,7 @@ class MyDomain {
 
 @Entity
 class ChildDomain {
+
     Long id
     static belongsTo = [parent: MyDomain]
 

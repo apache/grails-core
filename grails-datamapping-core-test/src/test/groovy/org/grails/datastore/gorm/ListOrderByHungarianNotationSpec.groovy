@@ -18,14 +18,15 @@
  */
 package org.grails.datastore.gorm
 
-import org.apache.grails.data.testing.tck.domains.ClassWithHungarianNotation
 import org.apache.grails.data.simple.core.GrailsDataCoreTckManager
 import org.apache.grails.data.testing.tck.base.GrailsDataTckSpec
+import org.apache.grails.data.testing.tck.domains.ClassWithHungarianNotation
 
 /**
  * Created by sdelamo on 12/10/2017.
  */
 class ListOrderByHungarianNotationSpec extends GrailsDataTckSpec<GrailsDataCoreTckManager> {
+
     void setupSpec() {
         manager.addAllDomainClasses([ClassWithHungarianNotation])
     }

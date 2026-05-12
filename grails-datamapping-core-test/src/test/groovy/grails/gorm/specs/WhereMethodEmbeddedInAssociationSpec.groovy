@@ -18,14 +18,16 @@
  */
 package grails.gorm.specs
 
+import spock.lang.Shared
+
 import org.apache.grails.data.simple.core.GrailsDataCoreTckManager
 import org.apache.grails.data.testing.tck.base.GrailsDataTckSpec
 import org.grails.datastore.gorm.query.transform.ApplyDetachedCriteriaTransform
 import org.grails.datastore.mapping.reflect.FieldEntityAccess
-import spock.lang.Shared
 
 @ApplyDetachedCriteriaTransform
 class WhereMethodEmbeddedInAssociationSpec extends GrailsDataTckSpec<GrailsDataCoreTckManager> {
+
     @Shared
     def gcl
 

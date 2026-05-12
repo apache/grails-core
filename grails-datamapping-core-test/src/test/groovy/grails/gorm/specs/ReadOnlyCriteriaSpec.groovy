@@ -18,10 +18,11 @@
  */
 package grails.gorm.specs
 
+import spock.lang.Issue
+
 import org.apache.grails.data.simple.core.GrailsDataCoreTckManager
 import org.apache.grails.data.testing.tck.base.GrailsDataTckSpec
 import org.apache.grails.data.testing.tck.domains.TestEntity
-import spock.lang.Issue
 
 class ReadOnlyCriteriaSpec extends GrailsDataTckSpec<GrailsDataCoreTckManager> {
 

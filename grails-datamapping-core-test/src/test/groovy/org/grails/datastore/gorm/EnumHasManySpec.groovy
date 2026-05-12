@@ -18,15 +18,17 @@
  */
 package org.grails.datastore.gorm
 
+import spock.lang.Issue
+
 import grails.persistence.Entity
 import org.apache.grails.data.simple.core.GrailsDataCoreTckManager
 import org.apache.grails.data.testing.tck.base.GrailsDataTckSpec
-import spock.lang.Issue
 
 /**
  * @author Graeme Rocher
  */
 class EnumHasManySpec extends GrailsDataTckSpec<GrailsDataCoreTckManager> {
+
     void setupSpec() {
         manager.addAllDomainClasses([Animal])
     }
@@ -75,6 +77,7 @@ class Animal {
 }
 
 enum Trait {
+
     TAIL,
     FOUR_LEGS,
     SPOTS,
