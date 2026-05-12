@@ -34,7 +34,6 @@ class RangeQuerySpec extends GrailsDataTckSpec {
         manager.addAllDomainClasses([Publication, TestEntity, Person, ChildEntity])
     }
 
-
     void "Test between query with dates"() {
         given:
         def now = new Date()
@@ -53,7 +52,6 @@ class RangeQuerySpec extends GrailsDataTckSpec {
         results != null
         results.size() == 2
     }
-
 
     void "Test between query"() {
         given:
@@ -82,7 +80,6 @@ class RangeQuerySpec extends GrailsDataTckSpec {
         then:
         4 == results.size()
     }
-
 
     void "Test greater than or equal to and less than or equal to queries"() {
         given:

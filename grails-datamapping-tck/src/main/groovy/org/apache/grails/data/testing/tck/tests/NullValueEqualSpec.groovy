@@ -28,7 +28,6 @@ class NullValueEqualSpec extends GrailsDataTckSpec {
         manager.addAllDomainClasses([TestEntity])
     }
 
-
     void "test null value in equal"() {
         when:
         new TestEntity(name: 'Fred', age: null).save(failOnError: true)

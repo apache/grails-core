@@ -82,7 +82,6 @@ class GormEnhancerSpec extends GrailsDataTckSpec {
         'Bob' == bob.name
     }
 
-
     void "Test dynamic finder with disjunction"() {
         given:
         def age = 40
@@ -134,7 +133,6 @@ class GormEnhancerSpec extends GrailsDataTckSpec {
         t.id == t.ident()
     }
 
-
     void "Test dynamic finder with pagination parameters"() {
         given:
         def age = 40
@@ -151,7 +149,6 @@ class GormEnhancerSpec extends GrailsDataTckSpec {
         2 == TestEntity.findAllByNameOrAge('Barney', 40).size()
         1 == TestEntity.findAllByNameOrAge('Barney', 40, [max: 1]).size()
     }
-
 
     void "Test in list query"() {
         given:
@@ -171,7 +168,6 @@ class GormEnhancerSpec extends GrailsDataTckSpec {
         2 == TestEntity.findAllByNameInListOrName(['Joe', 'Frank'], 'Bob').size()
     }
 
-
     void "Test like query"() {
         given:
         def age = 40
@@ -187,7 +183,6 @@ class GormEnhancerSpec extends GrailsDataTckSpec {
         results.find { it.name == 'Fred' } != null
         results.find { it.name == 'Frank' } != null
     }
-
 
     void "Test ilike query"() {
         given:

@@ -158,7 +158,6 @@ class EnumSpec extends GrailsDataTckSpec {
         instance3.isEmpty()
     }
 
-
     void "Test findAllBy()"() {
         given:
 
@@ -186,7 +185,6 @@ class EnumSpec extends GrailsDataTckSpec {
 
     }
 
-
     void "Test findAllBy() with clearing the session"() {
         given:
 
@@ -213,7 +211,6 @@ class EnumSpec extends GrailsDataTckSpec {
 
         instance3.isEmpty()
     }
-
 
     void "Test findAllBy()"() {
         given:

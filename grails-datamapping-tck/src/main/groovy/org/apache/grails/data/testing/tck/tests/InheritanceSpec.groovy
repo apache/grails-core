@@ -33,7 +33,6 @@ class InheritanceSpec extends GrailsDataTckSpec {
         manager.addAllDomainClasses([Practice, City, Country, Location])
     }
 
-
     void 'Test inheritance with dynamic finder'() {
 
         given:

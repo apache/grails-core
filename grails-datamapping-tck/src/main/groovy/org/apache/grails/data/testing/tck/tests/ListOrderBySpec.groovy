@@ -31,7 +31,6 @@ class ListOrderBySpec extends GrailsDataTckSpec {
         manager.addAllDomainClasses([TestEntity, ChildEntity])
     }
 
-
     void "Test listOrderBy property name method"() {
         given:
         def child = new ChildEntity(name: 'Child')

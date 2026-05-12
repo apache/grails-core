@@ -30,7 +30,6 @@ class NegationSpec extends GrailsDataTckSpec {
         manager.addAllDomainClasses([Book])
     }
 
-
     void "Test negation in dynamic finder"() {
         given:
         new Book(title: 'The Stand', author: 'Stephen King').save()

@@ -83,7 +83,6 @@ class PersistenceEventListenerSpec extends GrailsDataTckSpec {
         listener.events[-2] instanceof PreDeleteEvent
     }
 
-
     void 'Test multi-delete events'() {
         given:
         def freds = (1..3).collect {
@@ -195,7 +194,6 @@ class PersistenceEventListenerSpec extends GrailsDataTckSpec {
         }
         1 == listener.PostLoadCount
     }
-
 
     void 'Test multi-load events'() {
         given:

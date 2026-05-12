@@ -29,7 +29,6 @@ class RLikeSpec extends GrailsDataTckSpec {
         manager.addAllDomainClasses([RlikeFoo])
     }
 
-
     void "test rlike works"() {
         given:
         new RlikeFoo(name: 'ABC').save(flush: true)

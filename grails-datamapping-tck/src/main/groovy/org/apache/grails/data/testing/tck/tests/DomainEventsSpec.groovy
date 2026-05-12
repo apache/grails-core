@@ -159,7 +159,6 @@ class DomainEventsSpec extends GrailsDataTckSpec {
         1 == PersonEvent.STORE.afterDelete
     }
 
-
     void 'Test multi-delete events'() {
         given:
         def freds = (1..3).collect {
@@ -269,7 +268,6 @@ class DomainEventsSpec extends GrailsDataTckSpec {
         }
         1 == PersonEvent.STORE.afterLoad
     }
-
 
     void 'Test multi-load events'() {
         given:
