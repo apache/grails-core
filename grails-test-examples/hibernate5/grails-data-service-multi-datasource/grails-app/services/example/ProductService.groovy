@@ -47,12 +47,12 @@ abstract class ProductService {
 
     abstract List<Product> findAllByName(String name)
 
-    @Query("from ${Product p} where $p.name = $name")
+    @Query("from Product p where p.name = :name")
     abstract Product findOneByQuery(String name)
 
-    @Query("from ${Product p} where $p.amount >= $minAmount")
+    @Query("from Product p where p.amount >= :minAmount")
     abstract List<Product> findAllByQuery(Integer minAmount)
 
-    @Query("update ${Product p} set $p.amount = $newAmount where $p.name = $name")
+    @Query("update Product p set p.amount = :newAmount where p.name = :name")
     abstract Number updateAmountByName(String name, Integer newAmount)
 }
