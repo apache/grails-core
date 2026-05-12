@@ -35,7 +35,6 @@ import org.springframework.web.context.request.async.CallableProcessingIntercept
 import org.springframework.web.context.request.async.WebAsyncManager;
 import org.springframework.web.context.request.async.WebAsyncUtils;
 
-import org.grails.orm.hibernate.support.hibernate7.HibernateTransactionManager;
 import org.grails.orm.hibernate.support.hibernate7.SessionFactoryUtils;
 import org.grails.orm.hibernate.support.hibernate7.SessionHolder;
 
@@ -49,7 +48,7 @@ import org.grails.orm.hibernate.support.hibernate7.SessionHolder;
  *
  * <p>This interceptor makes Hibernate Sessions available via the current thread,
  * which will be autodetected by transaction managers. It is suitable for service layer
- * transactions via {@link HibernateTransactionManager}
+ * transactions via {@link org.grails.orm.hibernate.support.hibernate7.HibernateTransactionManager}
  * as well as for non-transactional execution (if configured appropriately).
  *
  * <p><b>WARNING:</b> Applying this interceptor to existing logic can cause issues
@@ -61,7 +60,7 @@ import org.grails.orm.hibernate.support.hibernate7.SessionHolder;
  *
  * @author Juergen Hoeller
  * @since 4.2
- * @see HibernateTransactionManager
+ * @see org.grails.orm.hibernate.support.hibernate7.HibernateTransactionManager
  * @see TransactionSynchronizationManager
  * @see SessionFactory#getCurrentSession()
  */
