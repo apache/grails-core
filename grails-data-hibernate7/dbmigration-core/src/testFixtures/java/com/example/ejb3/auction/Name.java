@@ -1,6 +1,7 @@
 package com.example.ejb3.auction;
 
 import jakarta.persistence.Embeddable;
+
 import lombok.Getter;
 import lombok.Setter;
 

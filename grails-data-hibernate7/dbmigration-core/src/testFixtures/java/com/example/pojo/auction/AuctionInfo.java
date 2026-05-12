@@ -1,8 +1,8 @@
 package com.example.pojo.auction;
 
-import lombok.Getter;
-
 import java.util.Date;
+
+import lombok.Getter;
 
 @Getter
 public class AuctionInfo {

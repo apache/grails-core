@@ -8,6 +8,7 @@ import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.ManyToOne;
 import jakarta.persistence.OneToMany;
+
 import lombok.Getter;
 import lombok.Setter;
 
@@ -29,8 +30,8 @@ public class AuctionItem extends Persistent {
     private int condition;
 
     public String toString() {
-        return shortDescription + " (" + description + ": " + condition
-                + "/10)";
+        return shortDescription + " (" + description + ": " + condition +
+                "/10)";
     }
 
 }

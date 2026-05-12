@@ -1,9 +1,9 @@
 package com.example.pojo.auction;
 
+import java.util.Date;
+
 import lombok.Getter;
 import lombok.Setter;
-
-import java.util.Date;
 
 @Getter
 @Setter
