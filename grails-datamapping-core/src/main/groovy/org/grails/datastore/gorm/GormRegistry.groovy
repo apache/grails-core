@@ -316,4 +316,91 @@ class GormRegistry {
         }
         return map
     }
+
+    /**
+     * Register API objects for a persistent entity.
+     * Creates and registers StaticApi, InstanceApi, and ValidationApi for the given entity.
+     *
+     * @param entity The persistent entity
+     * @param staticApi The static API implementation
+     * @param instanceApi The instance API implementation
+     * @param validationApi The validation API implementation
+     */
+    void registerEntityApis(String className, GormStaticApi staticApi, GormInstanceApi instanceApi, GormValidationApi validationApi) {
+        registerApi(className, staticApi, instanceApi, validationApi)
+    }
+
+    /**
+     * Register datastores for a persistent entity across multiple connection sources.
+     * Handles entity-specific datastore mappings for multi-tenant and multi-datasource scenarios.
+     *
+     * @param className The entity class name
+     * @param datastore The root datastore
+     * @param connectionSourceNames The list of connection source names
+     * @param entity The persistent entity (for entity-specific qualifier resolution)
+     */
+    void registerEntityDatastores(String className, Object datastore, List<String> connectionSourceNames, Object entity) {
+        if (datastore == null) return
+        
+        // Register datastores for each connection source
+        for (String qualifier in connectionSourceNames) {
+            Object dsToRegister = datastore
+            
+            // Get datastore for this specific connection source if supported
+            if (datastore instanceof org.grails.datastore.mapping.core.connections.MultipleConnectionSourceCapableDatastore) {
+                try {
+                    dsToRegister = ((org.grails.datastore.mapping.core.connections.MultipleConnectionSourceCapableDatastore) datastore).getDatastoreForConnection(qualifier)
+                } catch (Throwable e) {
+                    // ignore and use root datastore
+                }
+            }
+
+            // Skip non-default qualifiers for multi-tenant datastores
+            if (datastore instanceof org.grails.datastore.mapping.multitenancy.MultiTenantCapableDatastore && 
+                !ConnectionSource.DEFAULT.equals(qualifier) && 
+                dsToRegister == datastore) {
+                continue
+            }
+
+            registerDatastore(qualifier, (Datastore) dsToRegister)
+            registerEntityDatastore(className, qualifier, (Datastore) dsToRegister)
+        }
+
+        // Determine what to register under DEFAULT for entity-specific qualifiers
+        // If the entity declares explicit qualifiers that do NOT include DEFAULT (e.g. connections "test1","test2"),
+        // then the first declared qualifier is the entity's primary connection
+        List<String> entityQualifiers = org.grails.datastore.mapping.core.connections.ConnectionSourcesSupport.getConnectionSourceNames((org.grails.datastore.mapping.model.PersistentEntity) entity)
+        boolean entityDeclaresDefault = entityQualifiers.contains(ConnectionSource.DEFAULT) ||
+                entityQualifiers.contains(ConnectionSource.ALL)
+        
+        if (!entityDeclaresDefault && !entityQualifiers.isEmpty()) {
+            String primaryQualifier = entityQualifiers.get(0)
+            Object primaryDs = datastore
+            if (datastore instanceof org.grails.datastore.mapping.core.connections.MultipleConnectionSourceCapableDatastore) {
+                try {
+                    primaryDs = ((org.grails.datastore.mapping.core.connections.MultipleConnectionSourceCapableDatastore) datastore).getDatastoreForConnection(primaryQualifier)
+                } catch (Throwable e) {
+                    // fall back to root datastore
+                }
+            }
+            registerEntityDatastore(className, ConnectionSource.DEFAULT, (Datastore) primaryDs)
+        } else {
+            registerEntityDatastore(className, ConnectionSource.DEFAULT, (Datastore) datastore)
+        }
+
+        // Register entity-specific non-default qualifiers so they can be resolved later
+        for (String entityQualifier in entityQualifiers) {
+            if (!ConnectionSource.DEFAULT.equals(entityQualifier) && !ConnectionSource.ALL.equals(entityQualifier)) {
+                Object dsForQualifier = datastore
+                if (datastore instanceof org.grails.datastore.mapping.core.connections.MultipleConnectionSourceCapableDatastore) {
+                    try {
+                        dsForQualifier = ((org.grails.datastore.mapping.core.connections.MultipleConnectionSourceCapableDatastore) datastore).getDatastoreForConnection(entityQualifier)
+                    } catch (Throwable e) {
+                        // fall back to main datastore if the qualifier isn't available
+                    }
+                }
+                registerEntityDatastore(className, entityQualifier, (Datastore) dsForQualifier)
+            }
+        }
+    }
 }

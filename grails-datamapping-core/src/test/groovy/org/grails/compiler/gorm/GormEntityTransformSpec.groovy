@@ -37,7 +37,6 @@ class GormEntityTransformSpec extends Specification{
 
     void setup() {
         def datastore = new org.grails.datastore.mapping.simple.SimpleMapDatastore(Book, Author)
-        new org.grails.datastore.gorm.GormEnhancer(datastore)
     }
 
     def cleanup() {
@@ -205,7 +204,6 @@ class GormEntityTransformSpec extends Specification{
     void 'test property/method missing'() {
         given:
         def datastore = new org.grails.datastore.mapping.simple.SimpleMapDatastore(Book, Author)
-        new org.grails.datastore.gorm.GormEnhancer(datastore)
 
         when:
         Book.foo()

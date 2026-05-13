@@ -30,6 +30,7 @@ import org.grails.datastore.mapping.core.connections.ConnectionSourcesProvider
 import org.grails.datastore.mapping.model.ClassMapping
 import org.grails.datastore.mapping.model.MappingContext
 import org.grails.datastore.mapping.model.PersistentEntity
+import org.springframework.transaction.PlatformTransactionManager
 
 /**
  * Tests for {@link GormEnhancer#allQualifiers(Datastore, PersistentEntity)} to verify
@@ -52,7 +53,8 @@ class GormEnhancerAllQualifiersSpec extends Specification {
         def datastore = Mock(Datastore) {
             getMappingContext() >> mappingContext
         }
-        new GormEnhancer(datastore)
+        def transactionManager = Mock(PlatformTransactionManager)
+        new GormEnhancer(datastore, transactionManager, new ConnectionSourceSettings())
     }
 
     private GormEnhancer createEnhancer(GormRegistry registry) {
@@ -62,7 +64,8 @@ class GormEnhancerAllQualifiersSpec extends Specification {
         def datastore = Mock(Datastore) {
             getMappingContext() >> mappingContext
         }
-        new GormEnhancer(datastore, null, new ConnectionSourceSettings(), registry)
+        def transactionManager = Mock(PlatformTransactionManager)
+        new GormEnhancer(datastore, transactionManager, new ConnectionSourceSettings(), registry)
     }
 
     /**
@@ -147,7 +150,8 @@ class GormEnhancerAllQualifiersSpec extends Specification {
         given: "a MultiTenant entity on the default datasource"
         def entity = mockEntity(MultiTenantDefaultEntity, [ConnectionSource.DEFAULT])
         def datastore = mockMultiConnectionDatastore([ConnectionSource.DEFAULT, 'secondary', 'reporting'])
-        def enhancer = new GormEnhancer(datastore)
+        def transactionManager = Mock(PlatformTransactionManager)
+        def enhancer = new GormEnhancer(datastore, transactionManager, new ConnectionSourceSettings())
 
         when:
         def qualifiers = enhancer.allQualifiers(datastore, entity)
@@ -163,7 +167,8 @@ class GormEnhancerAllQualifiersSpec extends Specification {
         given: "a MultiTenant entity declared with ConnectionSource.ALL"
         def entity = mockEntity(MultiTenantAllEntity, [ConnectionSource.ALL])
         def datastore = mockMultiConnectionDatastore([ConnectionSource.DEFAULT, 'secondary'])
-        def enhancer = new GormEnhancer(datastore)
+        def transactionManager = Mock(PlatformTransactionManager)
+        def enhancer = new GormEnhancer(datastore, transactionManager, new ConnectionSourceSettings())
 
         when:
         def qualifiers = enhancer.allQualifiers(datastore, entity)
@@ -229,7 +234,8 @@ class GormEnhancerAllQualifiersSpec extends Specification {
         given: "a non-MultiTenant entity declared with ConnectionSource.ALL"
         def entity = mockEntity(NonMultiTenantAllEntity, [ConnectionSource.ALL])
         def datastore = mockMultiConnectionDatastore([ConnectionSource.DEFAULT, 'secondary'])
-        def enhancer = new GormEnhancer(datastore)
+        def transactionManager = Mock(PlatformTransactionManager)
+        def enhancer = new GormEnhancer(datastore, transactionManager, new ConnectionSourceSettings())
 
         when:
         def qualifiers = enhancer.allQualifiers(datastore, entity)

@@ -114,12 +114,11 @@ class GormEnhancer implements Closeable {
      */
     void registerEntity(PersistentEntity entity) {
         Datastore datastore = this.datastore
-        if (appliesToDatastore(datastore, entity)) {
+        if (!entity.isExternal()) {
             final Class cls = entity.javaClass
             String className = entity.name
 
-            // 1. Register API singletons (O(M) part).
-            // Re-register if any API entry is missing to keep maps consistent after partial cleanup.
+            // Register API singletons via registry
             if (registry.getStaticApi(className) == null ||
                 registry.getInstanceApi(className) == null ||
                 registry.getValidationApi(className) == null) {
@@ -132,67 +131,13 @@ class GormEnhancer implements Closeable {
                 GormInstanceApi instanceApi = getInstanceApi(cls, resolver)
                 GormValidationApi validationApi = getValidationApi(cls, resolver)
 
-                registry.registerApi(className, staticApi, instanceApi, validationApi)
+                registry.registerEntityApis(className, staticApi, instanceApi, validationApi)
             }
 
-            // 2. Register Datastores (O(N) part)
-            for (String qualifier in connectionSourceNames) {
-                Datastore dsToRegister = datastore
-                if (datastore instanceof org.grails.datastore.mapping.core.connections.MultipleConnectionSourceCapableDatastore) {
-                    try {
-                        dsToRegister = ((org.grails.datastore.mapping.core.connections.MultipleConnectionSourceCapableDatastore)datastore).getDatastoreForConnection(qualifier)
-                    } catch (Throwable e) {
-                        // ignore
-                    }
-                }
+            // Register datastore mappings via registry
+            registry.registerEntityDatastores(className, datastore, connectionSourceNames, entity)
 
-                if (datastore instanceof MultiTenantCapableDatastore && !ConnectionSource.DEFAULT.equals(qualifier) && dsToRegister == datastore) {
-                    continue
-                }
-
-                registry.registerDatastore(qualifier, dsToRegister)
-                registry.registerEntityDatastore(className, qualifier, dsToRegister)
-            }
-
-            // Determine what to register under DEFAULT.
-            // If the entity declares explicit qualifiers that do NOT include DEFAULT (e.g. connections "test1","test2"),
-            // then the first declared qualifier is the entity's primary connection — register its datastore under DEFAULT
-            // so that GormEnhancer.findDatastore(entity, DEFAULT) resolves the correct sub-datastore.
-            List<String> entityQualifiers = ConnectionSourcesSupport.getConnectionSourceNames(entity)
-            boolean entityDeclaresDefault = entityQualifiers.contains(ConnectionSource.DEFAULT) ||
-                    entityQualifiers.contains(ConnectionSource.ALL)
-            if (!entityDeclaresDefault && !entityQualifiers.isEmpty()) {
-                String primaryQualifier = entityQualifiers.get(0)
-                Datastore primaryDs = datastore
-                if (datastore instanceof org.grails.datastore.mapping.core.connections.MultipleConnectionSourceCapableDatastore) {
-                    try {
-                        primaryDs = ((org.grails.datastore.mapping.core.connections.MultipleConnectionSourceCapableDatastore)datastore).getDatastoreForConnection(primaryQualifier)
-                    } catch (Throwable e) {
-                        // fall back to root datastore
-                    }
-                }
-                registry.registerEntityDatastore(className, ConnectionSource.DEFAULT, primaryDs)
-            } else {
-                registry.registerEntityDatastore(className, ConnectionSource.DEFAULT, datastore)
-            }
-
-            // Also register entity-specific non-default qualifiers (e.g. declared via `datasource 'secondary'`)
-            // so that GormRegistry.getDatastore(className, qualifier) resolves them even when those
-            // qualifiers are not in the enhancer's own connectionSourceNames list.
-            for (String entityQualifier in entityQualifiers) {
-                if (!ConnectionSource.DEFAULT.equals(entityQualifier) && !ConnectionSource.ALL.equals(entityQualifier)) {
-                    Datastore dsForQualifier = datastore
-                    if (datastore instanceof org.grails.datastore.mapping.core.connections.MultipleConnectionSourceCapableDatastore) {
-                        try {
-                            dsForQualifier = ((org.grails.datastore.mapping.core.connections.MultipleConnectionSourceCapableDatastore)datastore).getDatastoreForConnection(entityQualifier)
-                        } catch (Throwable e) {
-                            // fall back to main datastore if the qualifier isn't available
-                        }
-                    }
-                    registry.registerEntityDatastore(className, entityQualifier, dsForQualifier)
-                }
-            }
-
+            // Add dynamic methods to the class
             addStaticMethods(entity)
             addInstanceMethods(entity, false)
         }
@@ -805,9 +750,7 @@ class GormEnhancer implements Closeable {
         }
     }
 
-    protected boolean appliesToDatastore(Datastore datastore, PersistentEntity entity) {
-        !entity.isExternal()
-    }
+
 
     @CompileDynamic
     protected void addInstanceMethods(PersistentEntity e, boolean onlyExtendedMethods) {

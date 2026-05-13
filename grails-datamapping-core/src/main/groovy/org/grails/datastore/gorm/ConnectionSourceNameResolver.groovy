@@ -44,7 +44,8 @@ class ConnectionSourceNameResolver {
             if (connectionSources != null) {
                 Iterable<ConnectionSource> allConnections = connectionSources.allConnectionSources
                 if (allConnections instanceof Collection) {
-                    return ((Collection<ConnectionSource>) allConnections).collect { it.name }
+                    List<String> names = ((Collection<ConnectionSource>) allConnections).collect { it.name }
+                    return names.isEmpty() ? [ConnectionSource.DEFAULT] : names
                 } else {
                     return allConnections?.collect { it.name } ?: [ConnectionSource.DEFAULT]
                 }
