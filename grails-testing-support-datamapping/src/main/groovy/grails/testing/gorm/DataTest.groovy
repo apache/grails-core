@@ -34,6 +34,7 @@ import org.grails.datastore.gorm.GormEnhancer
 import org.grails.datastore.mapping.config.Settings
 import org.grails.datastore.mapping.core.AbstractDatastore
 import org.grails.datastore.mapping.core.Session
+import org.grails.datastore.mapping.core.connections.ConnectionSourceSettings
 import org.grails.datastore.mapping.model.PersistentEntity
 import org.grails.datastore.mapping.model.lifecycle.Initializable
 import org.grails.datastore.mapping.services.Service
@@ -86,7 +87,8 @@ trait DataTest extends GrailsUnitTest {
             Validator validator = registerDomainClassValidator(entity)
             datastore.mappingContext.addEntityValidator(entity, validator)
         }
-        new GormEnhancer(datastore, transactionManager, getFailOnError())
+
+        new GormEnhancer(datastore, transactionManager, new ConnectionSourceSettings().failOnError(getFailOnError()))
 
         initializeMappingContext()
     }

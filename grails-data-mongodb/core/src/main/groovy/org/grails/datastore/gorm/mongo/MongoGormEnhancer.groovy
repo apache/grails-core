@@ -43,23 +43,12 @@ class MongoGormEnhancer extends GormEnhancer {
         GormRegistry.getInstance().registerApiFactory(MongoDatastore.class, new MongoGormApiFactory())
     }
 
-    MongoGormEnhancer(MongoDatastore datastore, PlatformTransactionManager transactionManager, boolean failOnError) {
-        super(datastore, transactionManager, failOnError)
-        registerMongoMethodExpressions()
-    }
 
     MongoGormEnhancer(MongoDatastore datastore, PlatformTransactionManager transactionManager, MongoConnectionSourceSettings settings) {
         super(datastore, transactionManager, settings)
         registerMongoMethodExpressions()
     }
 
-    MongoGormEnhancer(MongoDatastore datastore, PlatformTransactionManager transactionManager) {
-        this(datastore, transactionManager, false)
-    }
-
-    MongoGormEnhancer(MongoDatastore datastore) {
-        this(datastore, null)
-    }
 
     @Override
     protected <D> org.grails.datastore.gorm.mongo.api.MongoStaticApi<D> getStaticApi(Class<D> cls, DatastoreResolver resolver, String qualifier) {

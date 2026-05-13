@@ -116,7 +116,7 @@ public class SimpleMapDatastore extends AbstractDatastore implements Transaction
 
         GormRegistry.getInstance().registerDatastore(this.connectionName, this);
         if (ConnectionSource.DEFAULT.equals(this.connectionName)) {
-            new GormEnhancer(this, this.transactionManager);
+            new GormEnhancer(this, this.transactionManager, ((ConnectionSource<Map<String, Map>, ConnectionSourceSettings>)connectionSources.getDefaultConnectionSource()).getSettings());
         }
         addApplicationListener(new DomainEventListener(this));
         addApplicationListener(new AutoTimestampEventListener(this));

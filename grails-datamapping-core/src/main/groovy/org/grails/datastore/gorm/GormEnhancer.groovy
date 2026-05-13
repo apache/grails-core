@@ -69,36 +69,25 @@ class GormEnhancer implements Closeable {
      */
     boolean includeExternal = true
 
-    /**
-     * Construct a new GormEnhancer for the given arguments (backward compatible signature).
-     *
-     * @param datastore The datastore
-     * @param transactionManager The transaction manager
-     * @param failOnError Whether to fail on error
-     */
-    GormEnhancer(Datastore datastore, PlatformTransactionManager transactionManager, boolean failOnError) {
-        this(datastore, transactionManager, new ConnectionSourceSettings().failOnError(failOnError))
-    }
+
 
     /**
      * Construct a new GormEnhancer for the given arguments.
-     * All parameters except datastore are optional.
      *
      * @param datastore The datastore (required)
-     * @param transactionManager The transaction manager (optional, default: null)
-     * @param settings The connection source settings (optional, default: new instance)
-     * @param registry The GORM registry (optional, default: singleton instance)
+     * @param transactionManager The transaction manager (required)
+     * @param settings The connection source settings (required)
+     * @param registry The GORM registry (optional, defaults to singleton instance)
      */
     GormEnhancer(Datastore datastore, 
-                 PlatformTransactionManager transactionManager = null, 
-                 ConnectionSourceSettings settings = null,
-                 GormRegistry registry = null) {
+                 PlatformTransactionManager transactionManager, 
+                 ConnectionSourceSettings settings,
+                 GormRegistry registry = GormRegistry.getInstance()) {
         this.datastore = datastore
-        this.registry = registry ?: GormRegistry.getInstance()
+        this.registry = registry
         
-        ConnectionSourceSettings actualSettings = settings ?: new ConnectionSourceSettings()
-        this.failOnError = actualSettings.isFailOnError()
-        Boolean markDirty = actualSettings.getMarkDirty()
+        this.failOnError = settings.isFailOnError()
+        Boolean markDirty = settings.getMarkDirty()
         this.markDirty = markDirty == null ? true : markDirty
         this.transactionManager = transactionManager
 
