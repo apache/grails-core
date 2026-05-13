@@ -59,9 +59,9 @@ List<String> debugArguments = [
         '-Xrunjdwp:transport=dt_socket,server=y,suspend=y,address=5005'
 ]
 tasks.withType(Test).configureEach { Test task ->
-    boolean isHibernate5 = !project.name.startsWith('grails-test-examples-hibernate5')
-    boolean isHibernate7 = !project.name.startsWith('grails-test-examples-hibernate7')
-    boolean isMongo = !project.name.startsWith('grails-test-examples-mongodb')
+    boolean isHibernate5 = project.name.startsWith('grails-test-examples-hibernate5')
+    boolean isHibernate7 = project.name.startsWith('grails-test-examples-hibernate7')
+    boolean isMongo = project.name.startsWith('grails-test-examples-mongodb')
 
     // Honor DO_NOT_CACHE_TESTS=1 so developers can repeatedly invoke the same test command
     // without --rerun-tasks (and without recompiling everything else).
