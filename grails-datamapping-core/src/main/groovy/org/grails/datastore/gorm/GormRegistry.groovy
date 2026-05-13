@@ -22,6 +22,7 @@ import groovy.transform.CompileStatic
 import groovy.util.logging.Slf4j
 import org.grails.datastore.mapping.core.Datastore
 import org.grails.datastore.mapping.core.connections.ConnectionSource
+import org.grails.datastore.mapping.model.PersistentEntity
 
 import java.util.concurrent.ConcurrentHashMap
 
@@ -450,4 +451,44 @@ class GormRegistry {
         // Register datastore with default qualifier
         registerDatastore(defaultQualifier, (Datastore) datastore)
     }
+
+    /**
+     * Register a persistent entity with GORM, orchestrating API and datastore registration.
+     * This delegates to a GormEnhancer for creating the API instances.
+     *
+     * @param entity The persistent entity to register
+     * @param enhancer The GormEnhancer that provides API creation (optional, uses global if null)
+     */
+    void registerEntity(Object entity, Object enhancer = null) {
+        if (entity == null) return
+        
+        PersistentEntity persistentEntity = (PersistentEntity) entity
+        String className = persistentEntity.name
+        
+        if (enhancer != null) {
+            GormEnhancer gormEnhancer = (GormEnhancer) enhancer
+            
+            // Register API singletons via registry
+            if (getStaticApi(className) == null ||
+                getInstanceApi(className) == null ||
+                getValidationApi(className) == null) {
+                final Class cls = persistentEntity.javaClass
+                DatastoreResolver resolver = new DatastoreResolver() {
+                    @Override Datastore resolve() { apiResolver.findDatastore(cls, null) }
+                }
+
+                GormStaticApi staticApi = gormEnhancer.getStaticApi(cls, resolver, ConnectionSource.DEFAULT)
+                GormInstanceApi instanceApi = gormEnhancer.getInstanceApi(cls, resolver)
+                GormValidationApi validationApi = gormEnhancer.getValidationApi(cls, resolver)
+
+                registerEntityApis(className, staticApi, instanceApi, validationApi)
+            }
+
+            // Register datastore mappings
+            Datastore datastore = gormEnhancer.datastore
+            List<String> connectionSourceNames = gormEnhancer.connectionSourceNames
+            registerEntityDatastores(className, datastore, connectionSourceNames, persistentEntity)
+        }
+    }
 }
+

@@ -111,30 +111,10 @@ class GormEnhancer implements Closeable {
      * @param entity The entity
      */
     void registerEntity(PersistentEntity entity) {
-        Datastore datastore = this.datastore
         if (!entity.isExternal()) {
-            final Class cls = entity.javaClass
-            String className = entity.name
-
-            // Register API singletons via registry
-            if (registry.getStaticApi(className) == null ||
-                registry.getInstanceApi(className) == null ||
-                registry.getValidationApi(className) == null) {
-                final MappingContext mappingContext = entity.mappingContext
-                DatastoreResolver resolver = new DatastoreResolver() {
-                    @Override Datastore resolve() { registry.apiResolver.findDatastore(cls, null) }
-                }
-
-                GormStaticApi staticApi = getStaticApi(cls, resolver, ConnectionSource.DEFAULT)
-                GormInstanceApi instanceApi = getInstanceApi(cls, resolver)
-                GormValidationApi validationApi = getValidationApi(cls, resolver)
-
-                registry.registerEntityApis(className, staticApi, instanceApi, validationApi)
-            }
-
-            // Register datastore mappings via registry
-            registry.registerEntityDatastores(className, datastore, connectionSourceNames, entity)
-
+            // Delegate entity registration orchestration to the registry
+            registry.registerEntity(entity, this)
+            
             // Add dynamic methods to the class
             addStaticMethods(entity)
             addInstanceMethods(entity, false)
