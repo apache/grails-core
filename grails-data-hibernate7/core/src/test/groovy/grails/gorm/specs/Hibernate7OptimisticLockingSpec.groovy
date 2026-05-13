@@ -134,4 +134,71 @@ class Hibernate7OptimisticLockingSpec extends HibernateGormDatastoreSpec {
         ex == null
         o.name == 'locked in main session'
     }
+
+    void "Test optimistic locking with withNewSession"() {
+
+        given:
+        def o = new OptLockVersioned(name: 'locked').save(flush: true)
+        manager.session.clear()
+        manager.transactionManager.commit manager.transactionStatus
+        manager.transactionStatus = null
+
+        when:
+        OptLockVersioned.withTransaction {
+            o = OptLockVersioned.get(o.id)
+
+            OptLockVersioned.withNewSession { session ->
+                OptLockVersioned.withNewTransaction {
+                    def reloaded = OptLockVersioned.get(o.id)
+                    reloaded.name += ' in new session'
+                    reloaded.save(flush: true)
+                }
+            }
+
+            o.name += ' in main session'
+            o.save(flush: true)
+        }
+
+        then:
+        thrown OptimisticLockingFailureException
+    }
+
+    void "Test optimistic locking disabled with 'version false' using withNewSession"() {
+        given:
+        def o = new OptLockNotVersioned(name: 'locked').save(flush: true)
+        manager.session.clear()
+        manager.transactionManager.commit manager.transactionStatus
+        manager.transactionStatus = null
+
+        when:
+        def ex
+        OptLockNotVersioned.withTransaction {
+            o = OptLockNotVersioned.get(o.id)
+
+            OptLockNotVersioned.withNewSession { session ->
+                OptLockNotVersioned.withNewTransaction {
+                    def reloaded = OptLockNotVersioned.get(o.id)
+                    reloaded.name += ' in new session'
+                    reloaded.save(flush: true)
+                }
+            }
+
+            o.name += ' in main session'
+
+            try {
+                o.save(flush: true)
+            }
+            catch (e) {
+                ex = e
+                e.printStackTrace()
+            }
+
+            manager.session.clear()
+            o = OptLockNotVersioned.get(o.id)
+        }
+
+        then:
+        ex == null
+        o.name == 'locked in main session'
+    }
 }
