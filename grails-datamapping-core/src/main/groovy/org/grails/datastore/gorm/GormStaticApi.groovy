@@ -452,6 +452,7 @@ class GormStaticApi<D> extends AbstractGormApi<D> implements GormAllOperations<D
     List<Serializable> saveAll(Iterable<?> objectsToSave) {
         execute({ Session session ->
             session.persist(objectsToSave)
+            session.flush()
         } as SessionCallback<List<Serializable>>)
     }
 
