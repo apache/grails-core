@@ -30,13 +30,6 @@ import javax.inject.Inject
 import org.apache.tools.ant.taskdefs.condition.Os
 
 ext {
-    if (file('local.properties').exists()) {
-        def props = new Properties()
-        file('local.properties').withInputStream { props.load(it) }
-        props.each { key, value ->
-            project.extensions.extraProperties.set(key as String, value)
-        }
-    }
     isReproducibleBuild = System.getenv("SOURCE_DATE_EPOCH") != null
     buildInstant = java.util.Optional.ofNullable(System.getenv("SOURCE_DATE_EPOCH"))
             .filter(s -> !s.isEmpty())
