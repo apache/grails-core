@@ -78,38 +78,36 @@ class GormEnhancer implements Closeable {
      */
     boolean includeExternal = true
 
-    GormEnhancer(Datastore datastore) {
-        this(datastore, null, new ConnectionSourceSettings(), GormRegistry.getInstance())
-    }
-
-    GormEnhancer(Datastore datastore, PlatformTransactionManager transactionManager, boolean failOnError = false, boolean markDirty = true) {
-        this(datastore, transactionManager, new ConnectionSourceSettings().failOnError(failOnError).markDirty(markDirty), GormRegistry.getInstance())
-    }
-
     /**
-     * Construct a new GormEnhancer for the given arguments
+     * Construct a new GormEnhancer for the given arguments (backward compatible signature).
      *
      * @param datastore The datastore
      * @param transactionManager The transaction manager
-     * @param settings The settings
+     * @param failOnError Whether to fail on error
      */
-    GormEnhancer(Datastore datastore, PlatformTransactionManager transactionManager, ConnectionSourceSettings settings) {
-        this(datastore, transactionManager, settings, GormRegistry.getInstance())
+    GormEnhancer(Datastore datastore, PlatformTransactionManager transactionManager, boolean failOnError) {
+        this(datastore, transactionManager, new ConnectionSourceSettings().failOnError(failOnError))
     }
 
     /**
-     * Construct a new GormEnhancer for the given arguments
+     * Construct a new GormEnhancer for the given arguments.
+     * All parameters except datastore are optional.
      *
-     * @param datastore The datastore
-     * @param transactionManager The transaction manager
-     * @param settings The settings
-     * @param registry The registry to use
+     * @param datastore The datastore (required)
+     * @param transactionManager The transaction manager (optional, default: null)
+     * @param settings The connection source settings (optional, default: new instance)
+     * @param registry The GORM registry (optional, default: singleton instance)
      */
-    GormEnhancer(Datastore datastore, PlatformTransactionManager transactionManager, ConnectionSourceSettings settings, GormRegistry registry) {
+    GormEnhancer(Datastore datastore, 
+                 PlatformTransactionManager transactionManager = null, 
+                 ConnectionSourceSettings settings = null,
+                 GormRegistry registry = null) {
         this.datastore = datastore
         this.registry = registry ?: GormRegistry.getInstance()
-        this.failOnError = settings.isFailOnError()
-        Boolean markDirty = settings.getMarkDirty()
+        
+        ConnectionSourceSettings actualSettings = settings ?: new ConnectionSourceSettings()
+        this.failOnError = actualSettings.isFailOnError()
+        Boolean markDirty = actualSettings.getMarkDirty()
         this.markDirty = markDirty == null ? true : markDirty
         this.transactionManager = transactionManager
 

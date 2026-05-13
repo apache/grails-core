@@ -35,7 +35,7 @@ import org.grails.datastore.mapping.mongo.connections.MongoConnectionSourceSetti
 @CompileStatic
 class MongoGormEnhancer extends GormEnhancer {
 
-    MongoGormEnhancer(MongoDatastore datastore, PlatformTransactionManager transactionManager, boolean failOnError = false) {
+    MongoGormEnhancer(MongoDatastore datastore, PlatformTransactionManager transactionManager, boolean failOnError) {
         super(datastore, transactionManager, failOnError)
         registerMongoMethodExpressions()
     }
@@ -43,6 +43,14 @@ class MongoGormEnhancer extends GormEnhancer {
     MongoGormEnhancer(MongoDatastore datastore, PlatformTransactionManager transactionManager, MongoConnectionSourceSettings settings) {
         super(datastore, transactionManager, settings)
         registerMongoMethodExpressions()
+    }
+
+    MongoGormEnhancer(MongoDatastore datastore, PlatformTransactionManager transactionManager) {
+        this(datastore, transactionManager, false)
+    }
+
+    MongoGormEnhancer(MongoDatastore datastore) {
+        this(datastore, null)
     }
 
     static void registerMongoMethodExpressions() {
@@ -53,10 +61,6 @@ class MongoGormEnhancer extends GormEnhancer {
         DynamicFinder.registerNewMethodExpression(WithinCircle)
         DynamicFinder.registerNewMethodExpression(GeoWithin)
         DynamicFinder.registerNewMethodExpression(GeoIntersects)
-    }
-
-    MongoGormEnhancer(MongoDatastore datastore) {
-        this(datastore, null)
     }
 
 }
