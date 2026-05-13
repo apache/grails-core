@@ -45,7 +45,7 @@ class HibernateGormEnhancer extends GormEnhancer {
     private final PlatformTransactionManager transactionManager
 
     HibernateGormEnhancer(HibernateDatastore datastore, PlatformTransactionManager transactionManager) {
-        super(datastore)
+        super(datastore, transactionManager)
         this.transactionManager = transactionManager
     }
 
