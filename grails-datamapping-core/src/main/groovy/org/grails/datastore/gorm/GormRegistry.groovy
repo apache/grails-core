@@ -429,4 +429,25 @@ class GormRegistry {
             log.debug("Could not register GORM constraints: $e.message")
         }
     }
+
+    /**
+     * Initialize a datastore with GORM.
+     * Orchestrates constraint registration and datastore registration.
+     * Note: Entity-specific registration is still handled by GormEnhancer.
+     *
+     * @param datastore The datastore to initialize
+     * @param defaultQualifier The default connection source qualifier
+     */
+    void initializeDatastore(Object datastore, String defaultQualifier) {
+        if (datastore == null) return
+        
+        // Register constraints
+        registerConstraints(datastore)
+        
+        // Register datastore by type
+        registerDatastoreByType((Datastore) datastore)
+        
+        // Register datastore with default qualifier
+        registerDatastore(defaultQualifier, (Datastore) datastore)
+    }
 }

@@ -97,10 +97,8 @@ class GormEnhancer implements Closeable {
 
         this.connectionSourceNames = ConnectionSourceNameResolver.resolveConnectionSourceNames(datastore)
 
-        registry.registerConstraints(datastore)
-        this.registry.registerDatastoreByType(datastore)
         String qualifier = ConnectionSourceNameResolver.resolveDefaultConnectionSourceName(datastore)
-        this.registry.registerDatastore(qualifier, datastore)
+        registry.initializeDatastore(datastore, qualifier)
 
         for (entity in datastore.mappingContext.persistentEntities) {
             registerEntity(entity)
