@@ -772,7 +772,7 @@ public class MongoDatastore extends AbstractDatastore implements MappingContext.
 
             @Override
             protected <D> GormInstanceApi<D> getInstanceApi(Class<D> cls, org.grails.datastore.gorm.DatastoreResolver resolver) {
-                GormInstanceApi<D> instanceApi = new GormInstanceApi<>(cls, getMappingContext(), resolver);
+                org.grails.datastore.gorm.mongo.api.MongoGormInstanceApi<D> instanceApi = new org.grails.datastore.gorm.mongo.api.MongoGormInstanceApi<>(cls, getMappingContext(), resolver);
                 instanceApi.setFailOnError(getFailOnError());
                 instanceApi.setMarkDirty(getMarkDirty());
                 return instanceApi;

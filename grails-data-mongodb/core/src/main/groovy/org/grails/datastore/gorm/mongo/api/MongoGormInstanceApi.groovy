@@ -54,6 +54,18 @@ class MongoGormInstanceApi<D> extends GormInstanceApi<D> {
     }
 
     @Override
+    D save(D instance) {
+        // MongoDB requires explicit flush - set it by default
+        save(instance, [flush: true])
+    }
+
+    @Override
+    D save(D instance, boolean validate) {
+        // MongoDB requires explicit flush - set it by default
+        save(instance, [flush: true, validate: validate])
+    }
+
+    @Override
     D save(D instance, Map arguments) {
         // MongoDB requires explicit flush to persist pending operations
         // Ensure flush:true unless explicitly set to false
