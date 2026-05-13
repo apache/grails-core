@@ -106,7 +106,7 @@ class GormInstanceApi<D> extends AbstractGormApi<D> implements GormInstanceOpera
 
     GormInstanceApi<D> forQualifier(String qualifier) {
         DatastoreResolver resolver = new DatastoreResolver() {
-            @Override Datastore resolve() { GormEnhancer.findDatastore(persistentClass, qualifier, registry) }
+            @Override Datastore resolve() { registry.apiResolver.findDatastore(persistentClass, qualifier) }
         }
         getDatastore().mappingContext
         GormInstanceApi<D> newApi = new GormInstanceApi<D>(persistentClass, getDatastore().mappingContext, resolver, registry)
@@ -121,7 +121,7 @@ class GormInstanceApi<D> extends AbstractGormApi<D> implements GormInstanceOpera
         if (ds instanceof ConnectionSourcesProvider) {
             ConnectionSources sources = ((ConnectionSourcesProvider) ds).connectionSources
             if (sources != null && sources.getConnectionSource(name) != null) {
-                def instanceApi = GormEnhancer.findInstanceApi(persistentClass, name)
+                def instanceApi = registry.apiResolver.findInstanceApi(persistentClass, name)
                 return new DelegatingGormEntityApi(instanceApi, instance)
             }
         }
@@ -205,7 +205,7 @@ class GormInstanceApi<D> extends AbstractGormApi<D> implements GormInstanceOpera
             String qualifier = ds instanceof org.grails.datastore.mapping.core.connections.ConnectionSourcesProvider ?
                 ((org.grails.datastore.mapping.core.connections.ConnectionSourcesProvider)ds).getConnectionSources().getDefaultConnectionSource().getName() :
                 org.grails.datastore.mapping.core.connections.ConnectionSource.DEFAULT
-            if (!GormEnhancer.findValidationApi(persistentClass, qualifier).validate(instance, arguments)) {
+            if (!registry.apiResolver.findValidationApi(persistentClass, qualifier).validate(instance, arguments)) {
                 if (shouldFail(arguments)) {
                     throw validationException.newInstance('Validation Error(s) occurred during save()', instance.errors)
                 }
@@ -216,7 +216,7 @@ class GormInstanceApi<D> extends AbstractGormApi<D> implements GormInstanceOpera
             String qualifier = ds instanceof org.grails.datastore.mapping.core.connections.ConnectionSourcesProvider ?
                 ((org.grails.datastore.mapping.core.connections.ConnectionSourcesProvider)ds).getConnectionSources().getDefaultConnectionSource().getName() :
                 org.grails.datastore.mapping.core.connections.ConnectionSource.DEFAULT
-            GormEnhancer.findValidationApi(persistentClass, qualifier).clearErrors(instance)
+            registry.apiResolver.findValidationApi(persistentClass, qualifier).clearErrors(instance)
             if (instance instanceof GormValidateable) {
                 GormValidateable gormValidateable = (GormValidateable) instance
                 previousSkipValidation = gormValidateable.shouldSkipValidation()

@@ -80,5 +80,16 @@ Example with multiple tags:
   DO_NOT_CACHE_TESTS=1 ./gradlew :grails-gsp:test
   ```
 
+## GORM API resolution internals (core)
+
+The `grails-datamapping-core` module now supports instance-oriented API creation and lookup:
+
+- `GormApiFactory` defines the contract for creating `GormStaticApi`, `GormInstanceApi`, and `GormValidationApi`.
+- `DefaultGormApiFactory` is the core fallback implementation.
+- `GormApiResolver` is owned by `GormRegistry` for instance-based API/datastore resolution.
+- `GormRegistry` can register datastore-type factory overrides with `registerApiFactory(...)`.
+
+`GormEnhancer.find*` static entry points remain as compatibility delegates and are deprecated in favor of `GormRegistry.getInstance()` + resolver/factory access.
+
 ## Start a mongo docker container (containers will start by default)
 `docker run -d  --name mongo-on-docker  -p 27017:27017 mongo`

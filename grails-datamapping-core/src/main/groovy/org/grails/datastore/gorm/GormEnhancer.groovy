@@ -23,15 +23,7 @@ import groovy.transform.CompileStatic
 
 import grails.gorm.MultiTenant
 import grails.gorm.multitenancy.CurrentTenantHolder
-import org.grails.datastore.gorm.finders.CountByFinder
-import org.grails.datastore.gorm.finders.FindAllByBooleanFinder
-import org.grails.datastore.gorm.finders.FindAllByFinder
-import org.grails.datastore.gorm.finders.FindByBooleanFinder
-import org.grails.datastore.gorm.finders.FindByFinder
-import org.grails.datastore.gorm.finders.FindOrCreateByFinder
-import org.grails.datastore.gorm.finders.FindOrSaveByFinder
 import org.grails.datastore.gorm.finders.FinderMethod
-import org.grails.datastore.gorm.finders.ListOrderByFinder
 import org.grails.datastore.mapping.core.Datastore
 
 import org.springframework.transaction.support.TransactionSynchronizationManager
@@ -48,7 +40,6 @@ import org.grails.datastore.mapping.multitenancy.exceptions.TenantNotFoundExcept
 import grails.gorm.multitenancy.Tenants
 import org.grails.datastore.mapping.reflect.MetaClassUtils
 import org.grails.datastore.mapping.reflect.NameUtils
-import org.grails.datastore.mapping.transactions.TransactionCapableDatastore
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
 import org.springframework.transaction.PlatformTransactionManager
@@ -160,7 +151,7 @@ class GormEnhancer implements Closeable {
                 registry.getValidationApi(className) == null) {
                 final MappingContext mappingContext = entity.mappingContext
                 DatastoreResolver resolver = new DatastoreResolver() {
-                    @Override Datastore resolve() { GormEnhancer.findDatastore(cls, null, registry) }
+                    @Override Datastore resolve() { registry.apiResolver.findDatastore(cls, null) }
                 }
 
                 GormStaticApi staticApi = getStaticApi(cls, resolver, ConnectionSource.DEFAULT)
@@ -337,8 +328,12 @@ class GormEnhancer implements Closeable {
      *
      * @throws IllegalStateException if no static API is found for the type
      */
+    /**
+     * @deprecated Use {@code GormRegistry.getInstance().findStaticApi(entity, qualifier)}.
+     */
+    @Deprecated
     static <D> GormStaticApi<D> findStaticApi(Class<D> entity, String qualifier = null) {
-        findStaticApi(entity, qualifier, getRegistry())
+        getRegistry().apiResolver.findStaticApi(entity, qualifier)
     }
 
     static <D> GormStaticApi<D> findStaticApi(Class<D> entity, String qualifier, GormRegistry registry) {
@@ -361,8 +356,12 @@ class GormEnhancer implements Closeable {
      * @param qualifier The qualifier
      * @return The instance API
      */
+    /**
+     * @deprecated Use {@code GormRegistry.getInstance().findInstanceApi(entity, qualifier)}.
+     */
+    @Deprecated
     static <D> GormInstanceApi<D> findInstanceApi(Class<D> entity, String qualifier = null) {
-        findInstanceApi(entity, qualifier, getRegistry())
+        getRegistry().apiResolver.findInstanceApi(entity, qualifier)
     }
 
     static <D> GormInstanceApi<D> findInstanceApi(Class<D> entity, String qualifier, GormRegistry registry) {
@@ -385,8 +384,12 @@ class GormEnhancer implements Closeable {
      * @param qualifier The qualifier
      * @return The validation API
      */
+    /**
+     * @deprecated Use {@code GormRegistry.getInstance().findValidationApi(entity, qualifier)}.
+     */
+    @Deprecated
     static <D> GormValidationApi<D> findValidationApi(Class<D> entity, String qualifier = null) {
-        findValidationApi(entity, qualifier, getRegistry())
+        getRegistry().apiResolver.findValidationApi(entity, qualifier)
     }
 
     static <D> GormValidationApi<D> findValidationApi(Class<D> entity, String qualifier, GormRegistry registry) {
@@ -412,8 +415,12 @@ class GormEnhancer implements Closeable {
      * @throws IllegalStateException if no datastore is found for the type
      */
     @CompileDynamic
+    /**
+     * @deprecated Use {@code GormRegistry.getInstance().getApiResolver().findDatastore(entity, qualifier)}.
+     */
+    @Deprecated
     static Datastore findDatastore(Class entity, String qualifier = null) {
-        findDatastore(entity, qualifier, getRegistry())
+        getRegistry().apiResolver.findDatastore(entity, qualifier)
     }
 
     @CompileDynamic
@@ -589,9 +596,12 @@ class GormEnhancer implements Closeable {
      *
      * @throws IllegalStateException If no datastore is found for the type
      */
+    /**
+     * @deprecated Use {@code GormRegistry.getInstance().getApiResolver().findDatastoreByType(datastoreType)}.
+     */
+    @Deprecated
     static Datastore findDatastoreByType(Class<? extends Datastore> datastoreType) {
-        Datastore datastore = findDatastoreByType(datastoreType, getRegistry())
-        return datastore
+        return getRegistry().apiResolver.findDatastoreByType(datastoreType)
     }
 
     static Datastore findDatastoreByType(Class<? extends Datastore> datastoreType, GormRegistry registry) {
@@ -605,24 +615,24 @@ class GormEnhancer implements Closeable {
     /**
      * @return The transaction manager if there is only one
      */
+    /**
+     * @deprecated Use {@code GormRegistry.getInstance().getApiResolver().findSingleTransactionManager()}.
+     */
+    @Deprecated
     static PlatformTransactionManager findSingleTransactionManager() {
-        def ds = findSingleDatastore()
-        if (ds instanceof TransactionCapableDatastore) {
-            return ((TransactionCapableDatastore)ds).getTransactionManager()
-        }
-        return null
+        return getRegistry().apiResolver.findSingleTransactionManager()
     }
 
     /**
      * @param connectionName The connection name
      * @return The transaction manager
      */
+    /**
+     * @deprecated Use {@code GormRegistry.getInstance().getApiResolver().findSingleTransactionManager(connectionName)}.
+     */
+    @Deprecated
     static PlatformTransactionManager findSingleTransactionManager(String connectionName) {
-        def ds = findDatastore(null, connectionName, getRegistry())
-        if (ds instanceof TransactionCapableDatastore) {
-            return ((TransactionCapableDatastore)ds).getTransactionManager()
-        }
-        return null
+        return getRegistry().apiResolver.findSingleTransactionManager(connectionName)
     }
 
     /**
@@ -630,8 +640,12 @@ class GormEnhancer implements Closeable {
      *
      * @throws IllegalStateException If no datastore is found or more than one is configured
      */
+    /**
+     * @deprecated Use {@code GormRegistry.getInstance().getApiResolver().findSingleDatastore()}.
+     */
+    @Deprecated
     static Datastore findSingleDatastore() {
-        return findSingleDatastore(getRegistry())
+        return getRegistry().apiResolver.findSingleDatastore()
     }
 
     static Datastore findSingleDatastore(GormRegistry registry) {
@@ -666,12 +680,12 @@ class GormEnhancer implements Closeable {
      * @param qualifier The qualifier
      * @return The transaction manager
      */
+    /**
+     * @deprecated Use {@code GormRegistry.getInstance().getApiResolver().findTransactionManager(entity, qualifier)}.
+     */
+    @Deprecated
     static PlatformTransactionManager findTransactionManager(Class entity, String qualifier = null) {
-        Datastore datastore = findDatastore(entity, qualifier, getRegistry())
-        if (datastore instanceof TransactionCapableDatastore) {
-            return ((TransactionCapableDatastore)datastore).transactionManager
-        }
-        return null
+        return getRegistry().apiResolver.findTransactionManager(entity, qualifier)
     }
 
     /**
@@ -681,8 +695,12 @@ class GormEnhancer implements Closeable {
      * @param qualifier The qualifier
      * @return The entity
      */
+    /**
+     * @deprecated Use {@code GormRegistry.getInstance().getApiResolver().findEntity(entity, qualifier)}.
+     */
+    @Deprecated
     static PersistentEntity findEntity(Class entity, String qualifier = findTenantId(entity)) {
-        findDatastore(entity, qualifier, getRegistry()).getMappingContext().getPersistentEntity(entity.name)
+        return getRegistry().apiResolver.findEntity(entity, qualifier)
     }
 
     private static IllegalStateException stateException(Class entity) {
@@ -790,7 +808,7 @@ class GormEnhancer implements Closeable {
         ExpandoMetaClass mc = MetaClassUtils.getExpandoMetaClass(cls)
         
         mc.static.methodMissing = { String name, args ->
-            def api = GormEnhancer.findStaticApi(cls, null, registry)
+            def api = registry.apiResolver.findStaticApi(cls, null)
             try {
                 return api.invokeMethod(name, args)
             } catch (MissingMethodException mme) {
@@ -801,7 +819,7 @@ class GormEnhancer implements Closeable {
             }
         }
         mc.static.propertyMissing = { String name ->
-            def api = GormEnhancer.findStaticApi(cls, null, registry)
+            def api = registry.apiResolver.findStaticApi(cls, null)
             try {
                 return api.getProperty(name)
             } catch (MissingPropertyException mpe) {
@@ -823,7 +841,7 @@ class GormEnhancer implements Closeable {
         ExpandoMetaClass mc = MetaClassUtils.getExpandoMetaClass(cls)
         
         mc.methodMissing = { String name, args ->
-            def api = GormEnhancer.findInstanceApi(cls, null, registry)
+            def api = registry.apiResolver.findInstanceApi(cls, null)
             try {
                 return api.invokeMethod(name, args)
             } catch (MissingMethodException mme) {
@@ -834,7 +852,7 @@ class GormEnhancer implements Closeable {
             }
         }
         mc.propertyMissing = { String name ->
-            def api = GormEnhancer.findInstanceApi(cls, null, registry)
+            def api = registry.apiResolver.findInstanceApi(cls, null)
             try {
                 return api.getProperty(name)
             } catch (MissingPropertyException mpe) {
@@ -845,7 +863,7 @@ class GormEnhancer implements Closeable {
             }
         }
         mc.propertyMissing = { String name, val ->
-            GormEnhancer.findInstanceApi(cls, null, registry).setProperty(name, val)
+            registry.apiResolver.findInstanceApi(cls, null).setProperty(name, val)
         }
     }
 
@@ -856,7 +874,8 @@ class GormEnhancer implements Closeable {
 
     @CompileStatic
     protected <D> GormStaticApi<D> getStaticApi(Class<D> cls, DatastoreResolver resolver, String qualifier) {
-        new GormStaticApi<D>(cls, datastore.mappingContext, createDynamicFinders(resolver, datastore.mappingContext, registry), resolver, qualifier, registry)
+        GormApiFactory apiFactory = registry.getApiFactory(datastore)
+        return apiFactory.createStaticApi(cls, datastore.mappingContext, resolver, qualifier, registry)
     }
 
     @CompileStatic
@@ -866,10 +885,8 @@ class GormEnhancer implements Closeable {
 
     @CompileStatic
     protected <D> GormInstanceApi<D> getInstanceApi(Class<D> cls, DatastoreResolver resolver) {
-        def instanceApi = new GormInstanceApi<D>(cls, datastore.mappingContext, resolver, registry)
-        instanceApi.failOnError = failOnError
-        instanceApi.markDirty = markDirty
-        return instanceApi
+        GormApiFactory apiFactory = registry.getApiFactory(datastore)
+        return apiFactory.createInstanceApi(cls, datastore.mappingContext, resolver, registry, failOnError, markDirty)
     }
 
     @CompileStatic
@@ -879,14 +896,15 @@ class GormEnhancer implements Closeable {
 
     @CompileStatic
     protected <D> GormValidationApi<D> getValidationApi(Class<D> cls, DatastoreResolver resolver) {
-        new GormValidationApi<D>(cls, datastore.mappingContext, resolver, registry)
+        GormApiFactory apiFactory = registry.getApiFactory(datastore)
+        return apiFactory.createValidationApi(cls, datastore.mappingContext, resolver, registry)
     }
 
     protected DatastoreResolver getDatastoreResolver(Class cls) {
         new DatastoreResolver() {
             @Override
             Datastore resolve() {
-                GormEnhancer.findDatastore(cls, null, registry)
+                registry.apiResolver.findDatastore(cls, null)
             }
         }
     }
@@ -895,7 +913,7 @@ class GormEnhancer implements Closeable {
         new DatastoreResolver() {
             @Override
             Datastore resolve() {
-                GormEnhancer.findDatastore(null, null, registry)
+                registry.apiResolver.findDatastore(null, null)
             }
         }
     }
@@ -918,13 +936,6 @@ class GormEnhancer implements Closeable {
     }
 
     static List<FinderMethod> createDynamicFinders(DatastoreResolver datastoreResolver, MappingContext mappingContext, GormRegistry registry) {
-        [new FindOrCreateByFinder(datastoreResolver, mappingContext),
-         new FindOrSaveByFinder(datastoreResolver, mappingContext),
-         new FindByFinder(datastoreResolver, mappingContext),
-         new FindAllByFinder(datastoreResolver, mappingContext),
-         new FindAllByBooleanFinder(datastoreResolver, mappingContext),
-         new FindByBooleanFinder(datastoreResolver, mappingContext),
-         new CountByFinder(datastoreResolver, mappingContext),
-         new ListOrderByFinder(datastoreResolver, mappingContext)] as List<FinderMethod>
+        return registry.defaultApiFactory.createDynamicFinders(datastoreResolver, mappingContext)
     }
 }

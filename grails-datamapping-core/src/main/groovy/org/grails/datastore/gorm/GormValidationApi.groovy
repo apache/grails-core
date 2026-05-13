@@ -88,7 +88,7 @@ class GormValidationApi<D> extends AbstractGormApi<D> {
     GormValidationApi<D> forQualifier(String qualifier) {
         if (!hasDatastore) return this
         DatastoreResolver resolver = new DatastoreResolver() {
-            @Override Datastore resolve() { GormEnhancer.findDatastore(persistentClass, qualifier, registry) }
+            @Override Datastore resolve() { registry.apiResolver.findDatastore(persistentClass, qualifier) }
         }
         return new GormValidationApi<D>(persistentClass, mappingContext, resolver, registry)
     }

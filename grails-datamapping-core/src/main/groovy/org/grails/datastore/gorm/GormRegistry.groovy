@@ -39,6 +39,8 @@ import java.util.concurrent.ConcurrentHashMap
 class GormRegistry {
 
     private static final GormRegistry instance = new GormRegistry()
+    private final GormApiFactory defaultApiFactory = new DefaultGormApiFactory()
+    private final GormApiResolver apiResolver = new GormApiResolver(this)
 
     // O(M) storage for Entity APIs (indexed by Class Name)
     private final Map<String, GormStaticApi> staticApis = new ConcurrentHashMap<>()
@@ -52,6 +54,7 @@ class GormRegistry {
     private final Map<String, Map<String, Datastore>> entityDatastores = new ConcurrentHashMap<>()
 
     private final Map<Class, Datastore> datastoresByType = new ConcurrentHashMap<>()
+    private final Map<Class<? extends Datastore>, GormApiFactory> apiFactoriesByDatastoreType = new ConcurrentHashMap<>()
     
     // Set of all active datastore instances
     private final Set<Datastore> allDatastores = Collections.newSetFromMap(new ConcurrentHashMap<Datastore, Boolean>())
@@ -88,6 +91,41 @@ class GormRegistry {
         instance.entityDatastores.clear()
         instance.datastoresByType.clear()
         instance.allDatastores.clear()
+        instance.apiFactoriesByDatastoreType.clear()
+    }
+
+    GormApiResolver getApiResolver() {
+        return apiResolver
+    }
+
+    GormApiFactory getDefaultApiFactory() {
+        return defaultApiFactory
+    }
+
+    void registerApiFactory(Class<? extends Datastore> datastoreType, GormApiFactory apiFactory) {
+        if (datastoreType != null && apiFactory != null) {
+            apiFactoriesByDatastoreType.put(datastoreType, apiFactory)
+        }
+    }
+
+    GormApiFactory getApiFactory(Datastore datastore) {
+        if (datastore == null) {
+            return defaultApiFactory
+        }
+        GormApiFactory factory = apiFactoriesByDatastoreType.get(datastore.getClass())
+        return factory ?: defaultApiFactory
+    }
+
+    <D> GormStaticApi<D> findStaticApi(Class<D> entity, String qualifier = null) {
+        return apiResolver.findStaticApi(entity, qualifier)
+    }
+
+    <D> GormInstanceApi<D> findInstanceApi(Class<D> entity, String qualifier = null) {
+        return apiResolver.findInstanceApi(entity, qualifier)
+    }
+
+    <D> GormValidationApi<D> findValidationApi(Class<D> entity, String qualifier = null) {
+        return apiResolver.findValidationApi(entity, qualifier)
     }
 
     GormStaticApi getStaticApi(String className) {

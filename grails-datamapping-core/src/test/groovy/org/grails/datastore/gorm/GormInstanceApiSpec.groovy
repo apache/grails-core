@@ -31,20 +31,25 @@ class GormInstanceApiSpec extends Specification {
         given:
         Datastore datastore = mockDatastore()
         Session session = Mock(Session)
-        def api = new TestGormInstanceApi(datastore, session)
-        def entity = new TestValidateableEntity()
         List<TestValidateableEntity> cleared = []
-        def validationApi = new Expando(clearErrors: { Object... args ->
-            Object arg = args[0]
-            if (arg instanceof List) {
-                arg = ((List) arg).get(0)
+        def testValidationApi = new GormValidationApi<TestValidateableEntity>(TestValidateableEntity.class, datastore)
+        testValidationApi.metaClass.clearErrors = { Object entityArg ->
+            Object obj = entityArg
+            if (obj instanceof List) {
+                obj = ((List) obj).get(0)
             }
-            cleared << (TestValidateableEntity) arg
-        })
-        def originalMetaClass = GroovySystem.metaClassRegistry.getMetaClass(GormEnhancer)
-        GormEnhancer.metaClass.'static'.findValidationApi = { Class cls, String qualifier ->
-            validationApi
+            cleared << (TestValidateableEntity) obj
         }
+        
+        def registry = new GormRegistry() {
+            @Override
+            GormValidationApi getValidationApi(String className) {
+                return testValidationApi
+            }
+        }
+        
+        def api = new TestGormInstanceApi(datastore, session, registry)
+        def entity = new TestValidateableEntity()
 
         when:
         def result = api.save(entity, [validate: false, flush: true])
@@ -61,30 +66,32 @@ class GormInstanceApiSpec extends Specification {
         result.is(entity)
         cleared == [entity]
         !entity.shouldSkipValidation()
-
-        cleanup:
-        GroovySystem.metaClassRegistry.setMetaClass(GormEnhancer, originalMetaClass)
     }
 
     void "save validate false preserves preexisting skipValidation state"() {
         given:
         Datastore datastore = mockDatastore()
         Session session = Mock(Session)
-        def api = new TestGormInstanceApi(datastore, session)
+        List<TestValidateableEntity> cleared = []
+        def testValidationApi = new GormValidationApi<TestValidateableEntity>(TestValidateableEntity.class, datastore)
+        testValidationApi.metaClass.clearErrors = { Object entityArg ->
+            Object obj = entityArg
+            if (obj instanceof List) {
+                obj = ((List) obj).get(0)
+            }
+            cleared << (TestValidateableEntity) obj
+        }
+        
+        def registry = new GormRegistry() {
+            @Override
+            GormValidationApi getValidationApi(String className) {
+                return testValidationApi
+            }
+        }
+        
+        def api = new TestGormInstanceApi(datastore, session, registry)
         def entity = new TestValidateableEntity()
         entity.skipValidation(true)
-        List<TestValidateableEntity> cleared = []
-        def validationApi = new Expando(clearErrors: { Object... args ->
-            Object arg = args[0]
-            if (arg instanceof List) {
-                arg = ((List) arg).get(0)
-            }
-            cleared << (TestValidateableEntity) arg
-        })
-        def originalMetaClass = GroovySystem.metaClassRegistry.getMetaClass(GormEnhancer)
-        GormEnhancer.metaClass.'static'.findValidationApi = { Class cls, String qualifier ->
-            validationApi
-        }
 
         when:
         def result = api.save(entity, [validate: false])
@@ -101,9 +108,6 @@ class GormInstanceApiSpec extends Specification {
         result.is(entity)
         cleared == [entity]
         entity.shouldSkipValidation()
-
-        cleanup:
-        GroovySystem.metaClassRegistry.setMetaClass(GormEnhancer, originalMetaClass)
     }
 
     private Datastore mockDatastore() {
@@ -119,6 +123,11 @@ class GormInstanceApiSpec extends Specification {
 
         TestGormInstanceApi(Datastore datastore, Session session) {
             super(TestValidateableEntity.class, datastore)
+            this.session = session
+        }
+
+        TestGormInstanceApi(Datastore datastore, Session session, GormRegistry registry) {
+            super(TestValidateableEntity.class, datastore, registry)
             this.session = session
         }
 
