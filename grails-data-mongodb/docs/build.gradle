@@ -51,7 +51,7 @@ tasks.register('resolveMongodbVersion').configure { Task docTask ->
 dependencies {
     documentation platform(project(':grails-bom'))
     documentation 'org.fusesource.jansi:jansi'
-    documentation 'jline:jline'
+    documentation 'jline:jline:2.14.6'
     documentation 'org.apache.groovy:groovy'
     documentation 'org.apache.groovy:groovy-ant'
     documentation 'org.apache.groovy:groovy-groovydoc'

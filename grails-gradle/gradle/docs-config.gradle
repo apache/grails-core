@@ -23,7 +23,7 @@ dependencies {
     add('documentation', platform(project(':grails-gradle-bom')))
     add('documentation', 'org.fusesource.jansi:jansi')
     // TODO: Remove jline:jline (JLine 2) when upgrading to Groovy 5 (groovy-groovysh 5.x uses JLine 3)
-    add('documentation', 'jline:jline')
+    add('documentation', 'jline:jline:2.14.6')
     add('documentation', 'com.github.javaparser:javaparser-core')
     add('documentation', "org.apache.groovy:groovy:${bomDependencyVersions['groovy.version']}")
     add('documentation', "org.apache.groovy:groovy-groovydoc:${bomDependencyVersions['groovy.version']}")
