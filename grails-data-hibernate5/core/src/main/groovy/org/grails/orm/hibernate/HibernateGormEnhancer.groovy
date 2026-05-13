@@ -45,7 +45,7 @@ class HibernateGormEnhancer extends GormEnhancer {
     private final PlatformTransactionManager transactionManager
 
     HibernateGormEnhancer(HibernateDatastore datastore, PlatformTransactionManager transactionManager) {
-        super(datastore, transactionManager)
+        super(datastore, transactionManager, new ConnectionSourceSettings())
         this.transactionManager = transactionManager
     }
 
@@ -118,10 +118,5 @@ class HibernateGormEnhancer extends GormEnhancer {
 
         addStaticMethods(entity)
         addInstanceMethods(entity, false)
-    }
-
-    @Override
-    protected void registerConstraints(Datastore datastore) {
-        // no-op
     }
 }

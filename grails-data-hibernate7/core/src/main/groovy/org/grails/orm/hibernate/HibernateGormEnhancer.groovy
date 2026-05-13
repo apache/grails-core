@@ -191,9 +191,4 @@ class HibernateGormEnhancer extends GormEnhancer {
         addStaticMethods(entity)
         addInstanceMethods(entity, false)
     }
-
-    @Override
-    protected void registerConstraints(Datastore datastore) {
-        // no-op
-    }
 }

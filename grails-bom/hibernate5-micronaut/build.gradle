@@ -105,6 +105,8 @@ dependencies {
         }
         // Re-declare the Micronaut platform as a constraint for enforcedPlatform support
         api "io.micronaut.platform:micronaut-platform:$micronautPlatformVersion"
+        // Skip customBomDependencies that are overridden, as they're handled above
+        // Re-declare only those that should be included in the Micronaut BOM
         for (def entry : customBomDependencies.entrySet()) {
             def parts = entry.value.split(':')
             if (parts.length == 3) {
