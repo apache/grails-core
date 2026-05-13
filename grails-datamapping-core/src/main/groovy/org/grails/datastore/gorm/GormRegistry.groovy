@@ -19,6 +19,7 @@
 package org.grails.datastore.gorm
 
 import groovy.transform.CompileStatic
+import groovy.util.logging.Slf4j
 import org.grails.datastore.mapping.core.Datastore
 import org.grails.datastore.mapping.core.connections.ConnectionSource
 
@@ -35,7 +36,7 @@ import java.util.concurrent.ConcurrentHashMap
  * @author Walter Duque de Estrada
  * @since 8.0.0
  */
-@CompileStatic
+@Slf4j
 class GormRegistry {
 
     private static final GormRegistry instance = new GormRegistry()
@@ -401,6 +402,31 @@ class GormRegistry {
                 }
                 registerEntityDatastore(className, entityQualifier, (Datastore) dsForQualifier)
             }
+        }
+    }
+
+    /**
+     * Register constraints for all entities in a datastore.
+     * Delegates to the ConstraintsEvaluator if available in the mapping context.
+     *
+     * @param datastore The datastore containing the entities
+     */
+    void registerConstraints(Object datastore) {
+        if (datastore == null) return
+        
+        try {
+            def context = ((Datastore) datastore).mappingContext
+            def factory = context.mappingFactory
+            if (factory.hasProperty('entityContext')) {
+                def constraintsEvaluator = factory.entityContext.getBean(Class.forName("org.grails.datastore.gorm.validation.constraints.eval.ConstraintsEvaluator", false, GormRegistry.classLoader))
+                if (constraintsEvaluator != null) {
+                    for (entity in context.persistentEntities) {
+                        constraintsEvaluator.evaluate(entity.javaClass)
+                    }
+                }
+            }
+        } catch (Throwable e) {
+            log.debug("Could not register GORM constraints: $e.message")
         }
     }
 }

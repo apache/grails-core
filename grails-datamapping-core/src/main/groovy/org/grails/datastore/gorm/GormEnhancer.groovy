@@ -97,7 +97,7 @@ class GormEnhancer implements Closeable {
 
         this.connectionSourceNames = ConnectionSourceNameResolver.resolveConnectionSourceNames(datastore)
 
-        registerConstraints(datastore)
+        registry.registerConstraints(datastore)
         this.registry.registerDatastoreByType(datastore)
         String qualifier = ConnectionSourceNameResolver.resolveDefaultConnectionSourceName(datastore)
         this.registry.registerDatastore(qualifier, datastore)
@@ -667,24 +667,6 @@ class GormEnhancer implements Closeable {
             }
         } catch (Throwable e) {
             log.debug("Not running in Grails environment, cannot de-register constraints. ${e.message}")
-        }
-    }
-
-    @CompileDynamic
-    protected void registerConstraints(Datastore datastore) {
-        try {
-            def context = datastore.mappingContext
-            def factory = context.mappingFactory
-            if (factory.hasProperty('entityContext')) {
-                def constraintsEvaluator = factory.entityContext.getBean(Class.forName("org.grails.datastore.gorm.validation.constraints.eval.ConstraintsEvaluator", false, GormEnhancer.classLoader))
-                if (constraintsEvaluator != null) {
-                    for (entity in context.persistentEntities) {
-                        constraintsEvaluator.evaluate(entity.javaClass)
-                    }
-                }
-            }
-        } catch (Throwable e) {
-            log.debug("Could not register GORM constraints: $e.message")
         }
     }
 
