@@ -60,6 +60,6 @@ class MongoGormInstanceApi<D> extends GormInstanceApi<D> {
         if (!arguments?.containsKey("flush")) {
             arguments = (arguments ?: [:]) + [flush: true]
         }
-        super.save(instance, arguments)
+        return super.save(instance, arguments)
     }
 }
