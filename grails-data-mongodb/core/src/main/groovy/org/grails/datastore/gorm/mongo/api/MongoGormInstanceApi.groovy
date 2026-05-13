@@ -23,9 +23,8 @@ import groovy.transform.CompileStatic
 
 import org.grails.datastore.gorm.GormInstanceApi
 import org.grails.datastore.gorm.GormRegistry
+import org.grails.datastore.gorm.mongo.transactions.MongoTransactionContext
 import org.grails.datastore.mapping.core.Datastore
-import org.grails.datastore.mapping.core.Session
-import org.grails.datastore.mapping.core.SessionCallback
 import org.grails.datastore.mapping.model.MappingContext
 
 /**
@@ -55,23 +54,25 @@ class MongoGormInstanceApi<D> extends GormInstanceApi<D> {
 
     @Override
     D save(D instance) {
-        // MongoDB requires explicit flush - set it by default
-        save(instance, [flush: true])
+        save(instance, [:])
     }
 
     @Override
     D save(D instance, boolean validate) {
-        // MongoDB requires explicit flush - set it by default
-        save(instance, [flush: true, validate: validate])
+        save(instance, [validate: validate])
     }
 
     @Override
     D save(D instance, Map arguments) {
-        // MongoDB requires explicit flush to persist pending operations
-        // Ensure flush:true unless explicitly set to false
-        if (!arguments?.containsKey("flush")) {
+        // Only force flush outside active transactions.
+        // Inside a transaction, immediate flush breaks rollback semantics.
+        if (!arguments?.containsKey("flush") && shouldAutoFlushByDefault()) {
             arguments = (arguments ?: [:]) + [flush: true]
         }
         return super.save(instance, arguments)
+    }
+
+    protected boolean shouldAutoFlushByDefault() {
+        !MongoTransactionContext.isRollbackAwareActive()
     }
 }

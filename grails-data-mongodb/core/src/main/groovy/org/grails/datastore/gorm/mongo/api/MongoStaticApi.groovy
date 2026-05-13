@@ -47,6 +47,8 @@ import org.grails.datastore.gorm.GormStaticApi
 import org.grails.datastore.gorm.finders.DynamicFinder
 import org.grails.datastore.gorm.finders.FinderMethod
 import org.grails.datastore.gorm.mongo.MongoCriteriaBuilder
+import org.grails.datastore.gorm.mongo.transactions.MongoTransactionTemplateFactory
+import org.grails.datastore.gorm.transactions.TransactionTemplateFactory
 import org.grails.datastore.mapping.core.Datastore
 import org.grails.datastore.mapping.core.Session
 import org.grails.datastore.mapping.core.SessionCallback
@@ -79,6 +81,15 @@ class MongoStaticApi<D> extends GormStaticApi<D> implements MongoAllOperations<D
     @Override
     protected GormStaticApi<D> createStaticApi(Class<D> persistentClass, org.grails.datastore.mapping.model.MappingContext mappingContext, List<FinderMethod> finders, org.grails.datastore.gorm.DatastoreResolver resolver, String qualifier) {
         new MongoStaticApi<D>(persistentClass, mappingContext, finders, resolver, qualifier)
+    }
+
+    @Override
+    protected TransactionTemplateFactory getTransactionTemplateFactory() {
+        Datastore datastore = getDatastore()
+        if (datastore instanceof MongoDatastore) {
+            return new MongoTransactionTemplateFactory((MongoDatastore) datastore)
+        }
+        return super.getTransactionTemplateFactory()
     }
 
     @Override

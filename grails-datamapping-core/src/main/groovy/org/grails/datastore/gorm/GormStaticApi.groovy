@@ -33,6 +33,8 @@ import groovy.transform.CompileStatic
 
 import grails.gorm.transactions.GrailsTransactionTemplate
 import org.grails.datastore.gorm.finders.FinderMethod
+import org.grails.datastore.gorm.transactions.DefaultTransactionTemplateFactory
+import org.grails.datastore.gorm.transactions.TransactionTemplateFactory
 import org.grails.datastore.mapping.core.Datastore
 import org.grails.datastore.mapping.core.Session
 import org.grails.datastore.mapping.core.SessionCallback
@@ -61,6 +63,7 @@ import groovy.util.logging.Slf4j
 @CompileDynamic
 @Slf4j
 class GormStaticApi<D> extends AbstractGormApi<D> implements GormAllOperations<D> {
+    private static final TransactionTemplateFactory DEFAULT_TRANSACTION_TEMPLATE_FACTORY = new DefaultTransactionTemplateFactory()
 
     protected final List<FinderMethod> finders
     protected final String qualifier
@@ -645,7 +648,7 @@ class GormStaticApi<D> extends AbstractGormApi<D> implements GormAllOperations<D
 
     @Override
     def <T1> T1 withTransaction(Closure<T1> callable) {
-        new GrailsTransactionTemplate(getTransactionManager()).execute(callable)
+        createTransactionTemplate().execute(callable)
     }
 
     @Override
@@ -680,7 +683,19 @@ class GormStaticApi<D> extends AbstractGormApi<D> implements GormAllOperations<D
 
     @Override
     def <T1> T1 withTransaction(org.springframework.transaction.TransactionDefinition definition, Closure<T1> callable) {
-        new GrailsTransactionTemplate(getTransactionManager(), definition).execute(callable)
+        createTransactionTemplate(definition).execute(callable)
+    }
+
+    protected GrailsTransactionTemplate createTransactionTemplate() {
+        getTransactionTemplateFactory().createTransactionTemplate(getTransactionManager())
+    }
+
+    protected GrailsTransactionTemplate createTransactionTemplate(org.springframework.transaction.TransactionDefinition definition) {
+        getTransactionTemplateFactory().createTransactionTemplate(getTransactionManager(), definition)
+    }
+
+    protected TransactionTemplateFactory getTransactionTemplateFactory() {
+        DEFAULT_TRANSACTION_TEMPLATE_FACTORY
     }
 
     @Override

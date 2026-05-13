@@ -21,6 +21,9 @@ package org.grails.datastore.gorm.mongo
 
 import groovy.transform.CompileDynamic
 import org.grails.datastore.gorm.mongo.api.MongoGormInstanceApi
+import org.grails.datastore.gorm.mongo.transactions.MongoTransactionContext
+import org.grails.datastore.mapping.mongo.MongoDatastore
+import org.grails.datastore.mapping.mongo.config.MongoMappingContext
 import spock.lang.Specification
 
 /**
@@ -31,63 +34,68 @@ import spock.lang.Specification
  */
 @CompileDynamic
 class MongoGormInstanceApiSpec extends Specification {
+    private MongoDatastore datastore
 
-    void "MongoGormInstanceApi adds flush parameter when not present"() {
-        given: "arguments without flush key"
-        def args = [validate: false]
-        
-        when: "the MongoGormInstanceApi processes arguments"
-        // Simulate what the override does
-        if (!args?.containsKey("flush")) {
-            args = (args ?: [:]) + [flush: true]
+    void "auto-flush gate defaults to enabled outside rollback-aware context"() {
+        given:
+        def api = newApi()
+
+        expect:
+        api.exposedShouldAutoFlushByDefault()
+    }
+
+    void "auto-flush gate is disabled inside rollback-aware context only"() {
+        given:
+        def api = newApi()
+
+        expect:
+        api.exposedShouldAutoFlushByDefault()
+
+        when:
+        def insideGate = MongoTransactionContext.withRollbackAware {
+            api.exposedShouldAutoFlushByDefault()
         }
-        
-        then: "flush:true should be added"
-        args.containsKey("flush")
-        args.flush == true
-        args.validate == false  // Other args should be preserved
+
+        then:
+        !insideGate
+        api.exposedShouldAutoFlushByDefault()
     }
 
-    void "MongoGormInstanceApi preserves explicit flush=false"() {
-        given: "arguments with explicit flush=false"
-        def args = [flush: false, validate: true]
-        
-        when: "the MongoGormInstanceApi evaluates this"
-        if (!args?.containsKey("flush")) {
-            args = (args ?: [:]) + [flush: true]
+    void "auto-flush gate handles nested rollback-aware contexts and restores state"() {
+        given:
+        def api = newApi()
+
+        when:
+        def outer = MongoTransactionContext.withRollbackAware {
+            def inner = MongoTransactionContext.withRollbackAware {
+                api.exposedShouldAutoFlushByDefault()
+            }
+            [api.exposedShouldAutoFlushByDefault(), inner]
         }
-        
-        then: "flush=false should be preserved"
-        args.flush == false
-        args.validate == true
+
+        then:
+        !outer[0]
+        !outer[1]
+        api.exposedShouldAutoFlushByDefault()
     }
 
-    void "MongoGormInstanceApi boolean save calls map variant with flush"() {
-        given: "parameters for save(instance, boolean)"
-        def validateArg = true
-        
-        when: "simulating save(instance, boolean) behavior"
-        // This is what save(instance, boolean) does
-        def expectedArgs = [flush: true, validate: validateArg]
-        
-        then: "the parameters should be set correctly"
-        expectedArgs.flush == true
-        expectedArgs.validate == validateArg
+    private TestableMongoGormInstanceApi newApi() {
+        datastore = new MongoDatastore(new MongoMappingContext('GateEntity'))
+        new TestableMongoGormInstanceApi(datastore)
     }
 
-    void "MongoGormInstanceApi no-argument save calls map variant with flush"() {
-        given: "no additional parameters"
-        
-        when: "simulating save(instance) behavior"
-        // This is what save(instance) does
-        def expectedArgs = [flush: true]
-        
-        then: "flush should be true"
-        expectedArgs.flush == true
-        expectedArgs.size() == 1
+    void cleanup() {
+        datastore?.close()
+    }
+
+    @CompileDynamic
+    private static class TestableMongoGormInstanceApi extends MongoGormInstanceApi<Object> {
+        TestableMongoGormInstanceApi(MongoDatastore datastore) {
+            super(Object, datastore)
+        }
+
+        boolean exposedShouldAutoFlushByDefault() {
+            shouldAutoFlushByDefault()
+        }
     }
 }
-
-
-
-
