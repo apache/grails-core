@@ -36,7 +36,6 @@
 /grails.iws
 /idea-target
 /lib
-/local.properties
 /out
 /src
 /test/grails-app
@@ -64,9 +63,7 @@ tmp/
 !etc/bin
 etc/bin/results
 .vscode/
-STATE_SNAPSHOT.xml
-0_build_grails.txt
-*VIOLATIONS.md
-/TEST_FAILURES.md
+/scratch/
+/local.properties
 local-tasks.gradle
 local-init.gradle
