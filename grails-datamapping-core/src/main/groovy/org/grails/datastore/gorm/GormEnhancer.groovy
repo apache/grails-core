@@ -83,6 +83,10 @@ class GormEnhancer implements Closeable {
                  PlatformTransactionManager transactionManager, 
                  ConnectionSourceSettings settings,
                  GormRegistry registry = GormRegistry.getInstance()) {
+        assert datastore != null, 'Datastore is required'
+        assert transactionManager != null, 'PlatformTransactionManager is required'
+        assert settings != null, 'ConnectionSourceSettings is required'
+        
         this.datastore = datastore
         this.registry = registry
         
@@ -107,15 +111,13 @@ class GormEnhancer implements Closeable {
             this.connectionSourceNames = [ConnectionSource.DEFAULT]
         }
 
-        if (datastore != null) {
-            registerConstraints(datastore)
-            this.registry.registerDatastoreByType(datastore)
-            String qualifier = ConnectionSource.DEFAULT
-            if (datastore instanceof ConnectionSourcesProvider) {
-                qualifier = ((ConnectionSourcesProvider) datastore).connectionSources?.defaultConnectionSource?.name ?: ConnectionSource.DEFAULT
-            }
-            this.registry.registerDatastore(qualifier, datastore)
+        registerConstraints(datastore)
+        this.registry.registerDatastoreByType(datastore)
+        String qualifier = ConnectionSource.DEFAULT
+        if (datastore instanceof ConnectionSourcesProvider) {
+            qualifier = ((ConnectionSourcesProvider) datastore).connectionSources?.defaultConnectionSource?.name ?: ConnectionSource.DEFAULT
         }
+        this.registry.registerDatastore(qualifier, datastore)
 
         for (entity in datastore.mappingContext.persistentEntities) {
             registerEntity(entity)
