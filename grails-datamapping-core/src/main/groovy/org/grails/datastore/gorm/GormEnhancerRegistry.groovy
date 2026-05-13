@@ -39,7 +39,6 @@ class GormEnhancerRegistry {
 
     private final ThreadLocal<Integer> resolvingDatastore = ThreadLocal.withInitial { 0 }
     private final ThreadLocal<Datastore> preferredDatastore = new ThreadLocal<>()
-    private final Map<String, Map<String, Closure>> namedQueries = new ConcurrentHashMap<>()
 
     /**
      * @return The singleton instance
@@ -98,52 +97,4 @@ class GormEnhancerRegistry {
         preferredDatastore.remove()
     }
 
-    /**
-     * Register a named query closure for a domain class
-     *
-     * @param className The class name
-     * @param queryName The query name
-     * @param closure The query closure
-     */
-    void registerNamedQuery(String className, String queryName, Closure closure) {
-        namedQueries.computeIfAbsent(className) { new ConcurrentHashMap<String, Closure>() }
-                    .put(queryName, closure)
-    }
-
-    /**
-     * Get a named query closure
-     *
-     * @param className The class name
-     * @param queryName The query name
-     * @return The closure, or null if not found
-     */
-    Closure getNamedQuery(String className, String queryName) {
-        return namedQueries.get(className)?.get(queryName)
-    }
-
-    /**
-     * Get all named queries for a domain class
-     *
-     * @param className The class name
-     * @return A map of query names to closures, or an empty map if none exist
-     */
-    Map<String, Closure> getNamedQueries(String className) {
-        return namedQueries.getOrDefault(className, new ConcurrentHashMap<String, Closure>())
-    }
-
-    /**
-     * Clear all named queries for a domain class
-     *
-     * @param className The class name
-     */
-    void clearNamedQueries(String className) {
-        namedQueries.remove(className)
-    }
-
-    /**
-     * Clear all named queries
-     */
-    void clearAllNamedQueries() {
-        namedQueries.clear()
-    }
 }
