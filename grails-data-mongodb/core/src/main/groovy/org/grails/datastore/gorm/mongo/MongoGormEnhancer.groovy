@@ -22,6 +22,7 @@ import groovy.transform.CompileStatic
 
 import org.springframework.transaction.PlatformTransactionManager
 
+import org.grails.datastore.gorm.DatastoreResolver
 import org.grails.datastore.gorm.GormEnhancer
 import org.grails.datastore.gorm.GormRegistry
 import org.grails.datastore.gorm.finders.DynamicFinder
@@ -59,6 +60,11 @@ class MongoGormEnhancer extends GormEnhancer {
         this(datastore, null)
     }
 
+    @Override
+    protected <D> org.grails.datastore.gorm.mongo.api.MongoStaticApi<D> getStaticApi(Class<D> cls, DatastoreResolver resolver, String qualifier) {
+        MongoDatastore mongoDatastore = (MongoDatastore) datastore
+        return new org.grails.datastore.gorm.mongo.api.MongoStaticApi<D>(cls, mongoDatastore.mappingContext, createDynamicFinders(resolver, mongoDatastore.mappingContext), resolver, qualifier)
+    }
 
     static void registerMongoMethodExpressions() {
         DynamicFinder.registerNewMethodExpression(NearSphere)
