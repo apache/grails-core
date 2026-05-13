@@ -42,6 +42,10 @@ import org.grails.orm.hibernate.query.HibernatePagedResultList;
 import org.grails.orm.hibernate.query.HibernateQuery;
 import org.grails.orm.hibernate.query.HibernateQueryArgument;
 
+/**
+ * If you want to extend functionality of the HibernateCriteriaBuilder
+ * extend this class and override the methods you want
+ */
 public class CriteriaMethodInvoker {
 
     private static final Object UNHANDLED = new Object();
@@ -73,7 +77,7 @@ public class CriteriaMethodInvoker {
         return CriteriaMethods.fromName(name, HibernateCriteriaBuilder.class, args);
     }
 
-    private Object tryCriteriaConstruction(CriteriaMethods method, Object... args) {
+    protected Object tryCriteriaConstruction(CriteriaMethods method, Object... args) {
         if (method == null || !isCriteriaConstructionMethod(method, args)) {
             return UNHANDLED;
         }
@@ -144,7 +148,7 @@ public class CriteriaMethodInvoker {
         return result;
     }
 
-    private Object tryMetaMethod(String name, Object... args) {
+    protected Object tryMetaMethod(String name, Object... args) {
         MetaMethod metaMethod = builder.getMetaClass().getMetaMethod(name, args);
         if (metaMethod != null) {
             return metaMethod.invoke(builder, args);
@@ -153,7 +157,7 @@ public class CriteriaMethodInvoker {
     }
 
     @SuppressWarnings("PMD.DataflowAnomalyAnalysis")
-    private Object tryAssociationOrJunction(String name, CriteriaMethods method, Object... args) {
+    protected Object tryAssociationOrJunction(String name, CriteriaMethods method, Object... args) {
         if (!isAssociationQueryMethod(args) && !isAssociationQueryWithJoinSpecificationMethod(args)) {
             return UNHANDLED;
         }
@@ -358,15 +362,15 @@ public class CriteriaMethodInvoker {
         return UNHANDLED;
     }
 
-    private boolean isAssociationQueryMethod(Object... args) {
+    protected boolean isAssociationQueryMethod(Object... args) {
         return args.length == 1 && args[0] instanceof Closure;
     }
 
-    private boolean isAssociationQueryWithJoinSpecificationMethod(Object... args) {
+    protected boolean isAssociationQueryWithJoinSpecificationMethod(Object... args) {
         return args.length == 2 && (args[0] instanceof Number) && (args[1] instanceof Closure);
     }
 
-    private boolean isCriteriaConstructionMethod(CriteriaMethods method, Object... args) {
+    protected boolean isCriteriaConstructionMethod(CriteriaMethods method, Object... args) {
         return (method == CriteriaMethods.LIST_CALL &&
                         args.length == 2 &&
                         args[0] instanceof Map<?, ?> &&
@@ -380,7 +384,7 @@ public class CriteriaMethodInvoker {
                         (method == CriteriaMethods.SCROLL_CALL && args.length == 1 && args[0] instanceof Closure));
     }
 
-    private void invokeClosureNode(Object args) {
+    protected void invokeClosureNode(Object args) {
         Closure<?> callable = (Closure<?>) args;
         callable.setDelegate(builder);
         callable.setResolveStrategy(Closure.DELEGATE_FIRST);

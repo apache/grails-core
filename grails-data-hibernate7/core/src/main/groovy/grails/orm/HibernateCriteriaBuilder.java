@@ -111,6 +111,8 @@ import org.grails.orm.hibernate.support.hibernate7.SessionHolder;
  * equivalent JPA Criteria predicate. {@link grails.gorm.DetachedCriteria} can also be passed in
  * place of a closure to support multi-tenant and reusable query fragments.
  *
+ * To adjust the methods to be handled you have to extend this class, extend CriteriaMethodInvoker
+ *
  * @author Graeme Rocher
  * @author walterduquedeestrada
  * @see HibernateQuery
@@ -143,6 +145,7 @@ public class HibernateCriteriaBuilder extends GroovyObjectSupport implements Bui
 
     @SuppressWarnings("PMD.AvoidFieldNameMatchingMethodName")
     private boolean distinct = false;
+    private CriteriaMethodInvoker criteriaMethodInvoker;
 
     @SuppressWarnings({"rawtypes", "PMD.CloseResource"})
     public HibernateCriteriaBuilder(Class targetClass, SessionFactory sessionFactory, HibernateDatastore datastore) {
@@ -161,6 +164,7 @@ public class HibernateCriteriaBuilder extends GroovyObjectSupport implements Bui
         hibernateQuery = new HibernateQuery(
                 session, (GrailsHibernatePersistentEntity) datastore.getMappingContext().getPersistentEntity(targetClass.getName()));
         setDefaultFlushMode(GrailsHibernateTemplate.FLUSH_AUTO);
+        criteriaMethodInvoker = new CriteriaMethodInvoker(this);
     }
 
     public static final String ALIAS_SEPARATOR = ":";
@@ -1221,7 +1225,15 @@ public class HibernateCriteriaBuilder extends GroovyObjectSupport implements Bui
         Object[] args = obj.getClass().isArray() ?
                 (Object[]) obj :
                 (obj instanceof Collection ? ((Collection) obj).toArray() : new Object[] {obj});
-        return new CriteriaMethodInvoker(this).invokeMethod(name, args);
+        return criteriaMethodInvoker.invokeMethod(name, args);
+    }
+
+    /**
+     * Set this to customize the methods being supported
+     * @param criteriaMethodInvoker
+     */
+    public void setCriteriaMethodInvoker(CriteriaMethodInvoker criteriaMethodInvoker) {
+        this.criteriaMethodInvoker = criteriaMethodInvoker;
     }
 
     @Override
