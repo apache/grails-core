@@ -95,28 +95,11 @@ class GormEnhancer implements Closeable {
         this.markDirty = markDirty == null ? true : markDirty
         this.transactionManager = transactionManager
 
-        if (datastore instanceof ConnectionSourcesProvider) {
-            ConnectionSources connectionSources = ((ConnectionSourcesProvider) datastore).connectionSources
-            if (connectionSources != null) {
-                Iterable<ConnectionSource> allConnections = connectionSources.allConnectionSources
-                if (allConnections instanceof Collection) {
-                    this.connectionSourceNames = ((Collection<ConnectionSource>) allConnections).collect { it.name }
-                } else {
-                    this.connectionSourceNames = allConnections?.collect { it.name } ?: [ConnectionSource.DEFAULT]
-                }
-            } else {
-                this.connectionSourceNames = [ConnectionSource.DEFAULT]
-            }
-        } else {
-            this.connectionSourceNames = [ConnectionSource.DEFAULT]
-        }
+        this.connectionSourceNames = ConnectionSourceNameResolver.resolveConnectionSourceNames(datastore)
 
         registerConstraints(datastore)
         this.registry.registerDatastoreByType(datastore)
-        String qualifier = ConnectionSource.DEFAULT
-        if (datastore instanceof ConnectionSourcesProvider) {
-            qualifier = ((ConnectionSourcesProvider) datastore).connectionSources?.defaultConnectionSource?.name ?: ConnectionSource.DEFAULT
-        }
+        String qualifier = ConnectionSourceNameResolver.resolveDefaultConnectionSourceName(datastore)
         this.registry.registerDatastore(qualifier, datastore)
 
         for (entity in datastore.mappingContext.persistentEntities) {
