@@ -63,11 +63,8 @@ import java.util.concurrent.ConcurrentHashMap
 @CompileStatic
 class GormEnhancer implements Closeable {
 
-    private static final ThreadLocal<Integer> RESOLVING_DATASTORE = ThreadLocal.withInitial { 0 }
-    
-    private static final ThreadLocal<Datastore> PREFERRED_DATASTORE = new ThreadLocal<>()
-
-    private static final Map<String, Map<String, Closure>> NAMED_QUERIES = new ConcurrentHashMap<>()
+    private static final Logger log = LoggerFactory.getLogger(GormEnhancer)
+    private static final GormEnhancerRegistry STATE_REGISTRY = GormEnhancerRegistry.getInstance()
 
     private final GormRegistry registry
     private final List<String> connectionSourceNames
@@ -75,7 +72,6 @@ class GormEnhancer implements Closeable {
     PlatformTransactionManager transactionManager
     boolean failOnError = false
     boolean markDirty = true
-    private static final Logger log = LoggerFactory.getLogger(GormEnhancer)
 
     /**
      * Whether to include external entities
@@ -294,18 +290,18 @@ class GormEnhancer implements Closeable {
     }
 
     public static void setPreferredDatastore(Datastore datastore) {
-        PREFERRED_DATASTORE.set(datastore)
+        STATE_REGISTRY.setPreferredDatastore(datastore)
     }
 
     /**
      * @return The preferred datastore for the current thread
      */
     static Datastore getPreferredDatastore() {
-        return PREFERRED_DATASTORE.get()
+        return STATE_REGISTRY.getPreferredDatastore()
     }
 
     static void clearPreferredDatastore() {
-        PREFERRED_DATASTORE.remove()
+        STATE_REGISTRY.clearPreferredDatastore()
     }
 
     /**
@@ -424,7 +420,7 @@ class GormEnhancer implements Closeable {
 
     @CompileDynamic
     static Datastore findDatastore(Class entity, String qualifier, GormRegistry registry) {
-        int depth = RESOLVING_DATASTORE.get()
+        int depth = STATE_REGISTRY.getResolvingDatastoreDepth()
         if (depth > 5) {
             return registry.datastoresByQualifier.get(ConnectionSource.DEFAULT)
         }
@@ -432,7 +428,7 @@ class GormEnhancer implements Closeable {
         String className = entity != null ? NameUtils.getClassName(entity) : null
 
         // PRIORITY 1: Check preferred datastore for this thread
-        Datastore preferred = PREFERRED_DATASTORE.get()
+        Datastore preferred = STATE_REGISTRY.getPreferredDatastore()
         if (preferred != null) {
             if (qualifier != null) {
                 if (preferred instanceof org.grails.datastore.mapping.core.connections.MultipleConnectionSourceCapableDatastore) {
@@ -467,11 +463,11 @@ class GormEnhancer implements Closeable {
                             }
                             
                             if (tid != null && !ConnectionSource.DEFAULT.equals(tid.toString())) {
-                                RESOLVING_DATASTORE.set(depth + 1)
+                                STATE_REGISTRY.setResolvingDatastoreDepth(depth + 1)
                                 try {
                                     return findDatastore(entity, tid.toString(), registry)
                                 } finally {
-                                    RESOLVING_DATASTORE.set(depth)
+                                    STATE_REGISTRY.setResolvingDatastoreDepth(depth)
                                 }
                             }
                         } catch (Throwable e) {
@@ -500,24 +496,24 @@ class GormEnhancer implements Closeable {
             // First try multi-datasource lookup (getDatastoreForConnection handles runtime-added sources)
             if (defaultDs instanceof org.grails.datastore.mapping.core.connections.MultipleConnectionSourceCapableDatastore) {
                 try {
-                    RESOLVING_DATASTORE.set(depth + 1)
+                    STATE_REGISTRY.setResolvingDatastoreDepth(depth + 1)
                     ds = ((org.grails.datastore.mapping.core.connections.MultipleConnectionSourceCapableDatastore)defaultDs).getDatastoreForConnection(qualifier)
                     if (ds != null && ds != defaultDs) return ds
                 } catch (Throwable e) {
                     // ignore — connection name not found, fall through to tenant lookup
                 } finally {
-                    RESOLVING_DATASTORE.set(depth)
+                    STATE_REGISTRY.setResolvingDatastoreDepth(depth)
                 }
             }
             if (defaultDs instanceof org.grails.datastore.mapping.multitenancy.MultiTenantCapableDatastore) {
                 try {
-                    RESOLVING_DATASTORE.set(depth + 1)
+                    STATE_REGISTRY.setResolvingDatastoreDepth(depth + 1)
                     ds = ((org.grails.datastore.mapping.multitenancy.MultiTenantCapableDatastore)defaultDs).getDatastoreForTenantId(qualifier)
                     if (ds != null && ds != defaultDs) return ds
                 } catch (Throwable e) {
                     // ignore
                 } finally {
-                    RESOLVING_DATASTORE.set(depth)
+                    STATE_REGISTRY.setResolvingDatastoreDepth(depth)
                 }
             }
             return defaultDs
@@ -559,11 +555,11 @@ class GormEnhancer implements Closeable {
                 }
                 
                 if (currentTenantId != null && !ConnectionSource.DEFAULT.equals(currentTenantId.toString())) {
-                    RESOLVING_DATASTORE.set(depth + 1)
+                    STATE_REGISTRY.setResolvingDatastoreDepth(depth + 1)
                     try {
                         return findDatastore(entity, currentTenantId.toString(), registry)
                     } finally {
-                        RESOLVING_DATASTORE.set(depth)
+                        STATE_REGISTRY.setResolvingDatastoreDepth(depth)
                     }
                 }
             } catch (Throwable e) {
@@ -701,8 +697,8 @@ class GormEnhancer implements Closeable {
     @CompileStatic
     void close() throws IOException {
         removeConstraints()
-        if (PREFERRED_DATASTORE.get() == datastore) {
-            PREFERRED_DATASTORE.remove()
+        if (STATE_REGISTRY.getPreferredDatastore() == datastore) {
+            STATE_REGISTRY.clearPreferredDatastore()
         }
         registry.removeDatastore(datastore)
         def metaClassRegistry = GroovySystem.metaClassRegistry
