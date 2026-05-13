@@ -22,8 +22,10 @@ import groovy.transform.CompileStatic
 
 import org.grails.datastore.gorm.DefaultGormApiFactory
 import org.grails.datastore.gorm.DatastoreResolver
+import org.grails.datastore.gorm.GormInstanceApi
 import org.grails.datastore.gorm.GormRegistry
 import org.grails.datastore.gorm.finders.FinderMethod
+import org.grails.datastore.gorm.mongo.api.MongoGormInstanceApi
 import org.grails.datastore.gorm.mongo.api.MongoStaticApi
 import org.grails.datastore.mapping.model.MappingContext
 
@@ -45,5 +47,18 @@ class MongoGormApiFactory extends DefaultGormApiFactory {
                                           GormRegistry registry) {
         List<FinderMethod> finders = createDynamicFinders(resolver, mappingContext)
         return new MongoStaticApi<D>(persistentClass, mappingContext, finders, resolver, qualifier)
+    }
+
+    @Override
+    <D> GormInstanceApi<D> createInstanceApi(Class<D> persistentClass,
+                                             MappingContext mappingContext,
+                                             DatastoreResolver resolver,
+                                             GormRegistry registry,
+                                             boolean failOnError,
+                                             boolean markDirty) {
+        GormInstanceApi<D> instanceApi = new MongoGormInstanceApi<D>(persistentClass, mappingContext, resolver, registry)
+        instanceApi.failOnError = failOnError
+        instanceApi.markDirty = markDirty
+        return instanceApi
     }
 }
