@@ -32,7 +32,7 @@ class ProxySpec extends HibernateSpec {
     @Rollback
     void "Test Proxy"() {
         when:
-        new Customer(1, "Bob").save(failOnError: true, flush: true)
+        new Customer(1, "Bob").insert(failOnError: true, flush: true)
         hibernateDatastore.currentSession.clear()
 
         def proxy

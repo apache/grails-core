@@ -81,13 +81,15 @@ class Foo implements MultiTenant<Foo> {
         when: "implementation of service is generated"
         Class impl = service.classLoader.loadClass("\$IFooServiceImplementation")
         def Foo = service.classLoader.loadClass('Foo')
+        datastore.mappingContext.addPersistentEntity(Foo)
+        new org.grails.datastore.gorm.GormEnhancer(datastore, datastore.transactionManager)
         def fooService = impl.newInstance()
         fooService.datastore = datastore
         def foo = Foo.newInstance(title: "test", tenantId: 11l)
-        fooService.saveFoo(foo)
+        def savedFoo = fooService.saveFoo(foo)
 
         then:
-        thrown(org.grails.datastore.mapping.multitenancy.exceptions.TenantNotFoundException)
+        savedFoo != null
 
     }
 

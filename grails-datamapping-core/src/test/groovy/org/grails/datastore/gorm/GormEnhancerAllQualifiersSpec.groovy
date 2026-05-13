@@ -24,6 +24,7 @@ import grails.gorm.MultiTenant
 import org.grails.datastore.mapping.config.Entity
 import org.grails.datastore.mapping.core.Datastore
 import org.grails.datastore.mapping.core.connections.ConnectionSource
+import org.grails.datastore.mapping.core.connections.ConnectionSourceSettings
 import org.grails.datastore.mapping.core.connections.ConnectionSources
 import org.grails.datastore.mapping.core.connections.ConnectionSourcesProvider
 import org.grails.datastore.mapping.model.ClassMapping
@@ -52,6 +53,16 @@ class GormEnhancerAllQualifiersSpec extends Specification {
             getMappingContext() >> mappingContext
         }
         new GormEnhancer(datastore)
+    }
+
+    private GormEnhancer createEnhancer(GormRegistry registry) {
+        def mappingContext = Mock(MappingContext) {
+            getPersistentEntities() >> []
+        }
+        def datastore = Mock(Datastore) {
+            getMappingContext() >> mappingContext
+        }
+        new GormEnhancer(datastore, null, new ConnectionSourceSettings(), registry)
     }
 
     /**
@@ -197,6 +208,21 @@ class GormEnhancerAllQualifiersSpec extends Specification {
         enhancer.registerEntity(entity)
         then: "static api is available under DEFAULT qualifier"
         GormRegistry.instance.getDatastore(entity.name, ConnectionSource.DEFAULT) != null
+    }
+
+    void "registerEntity can resolve through injected registry without touching global singleton"() {
+        given:
+        def injectedRegistry = new GormRegistry()
+        def enhancer = createEnhancer(injectedRegistry)
+        def entity = mockEntity(NonMultiTenantDefaultEntity, [ConnectionSource.DEFAULT])
+
+        when:
+        enhancer.registerEntity(entity)
+
+        then:
+        injectedRegistry.getDatastore(entity.name, ConnectionSource.DEFAULT) != null
+        GormEnhancer.findStaticApi(NonMultiTenantDefaultEntity, null, injectedRegistry) != null
+        GormRegistry.instance.getDatastore(entity.name, ConnectionSource.DEFAULT) == null
     }
 
     void "non-MultiTenant entity with ALL datasource expands to all qualifiers"() {

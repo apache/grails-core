@@ -55,9 +55,15 @@ class GormInstanceApi<D> extends AbstractGormApi<D> implements GormInstanceOpera
     Class<? extends Exception> validationException = ValidationException.VALIDATION_EXCEPTION_TYPE
     boolean failOnError = false
     boolean markDirty = true
+    protected final GormRegistry registry
 
     GormInstanceApi(Class<D> persistentClass, Datastore datastore) {
+        this(persistentClass, datastore, null)
+    }
+
+    GormInstanceApi(Class<D> persistentClass, Datastore datastore, GormRegistry registry) {
         super(persistentClass, datastore)
+        this.registry = registry ?: GormEnhancer.getRegistry()
         if (datastore != null) {
             def mappingFactory = datastore.getMappingContext().getMappingFactory()
             try {
@@ -72,7 +78,12 @@ class GormInstanceApi<D> extends AbstractGormApi<D> implements GormInstanceOpera
     }
 
     GormInstanceApi(Class<D> persistentClass, MappingContext mappingContext, DatastoreResolver datastoreResolver) {
+        this(persistentClass, mappingContext, datastoreResolver, null)
+    }
+
+    GormInstanceApi(Class<D> persistentClass, MappingContext mappingContext, DatastoreResolver datastoreResolver, GormRegistry registry) {
         super(persistentClass, mappingContext, datastoreResolver)
+        this.registry = registry ?: GormEnhancer.getRegistry()
         def mappingFactory = mappingContext.getMappingFactory()
         try {
             def defaultSettings = mappingFactory.getClass().getMethod("getDefaultSettings").invoke(mappingFactory)
@@ -95,10 +106,10 @@ class GormInstanceApi<D> extends AbstractGormApi<D> implements GormInstanceOpera
 
     GormInstanceApi<D> forQualifier(String qualifier) {
         DatastoreResolver resolver = new DatastoreResolver() {
-            @Override Datastore resolve() { GormEnhancer.findDatastore(persistentClass, qualifier) }
+            @Override Datastore resolve() { GormEnhancer.findDatastore(persistentClass, qualifier, registry) }
         }
         getDatastore().mappingContext
-        GormInstanceApi<D> newApi = new GormInstanceApi<D>(persistentClass, getDatastore().mappingContext, resolver)
+        GormInstanceApi<D> newApi = new GormInstanceApi<D>(persistentClass, getDatastore().mappingContext, resolver, registry)
         newApi.failOnError = failOnError
         newApi.markDirty = markDirty
         return newApi

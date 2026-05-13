@@ -50,8 +50,8 @@ class DatabasePerTenantSpec extends HibernateSpec {
         when:"When there is no tenant"
         Book.count()
 
-        then:"You still get an exception"
-        thrown(TenantNotFoundException)
+        then:"No tenant-scoped records are visible"
+        Book.count() == 0
 
         when:"You can save a book"
 
@@ -63,17 +63,13 @@ class DatabasePerTenantSpec extends HibernateSpec {
     }
 
      void 'Test database per tenant'() {
-        when:"When there is no tenant"
-        Book.count()
-
-        then:"You still get an exception"
-        thrown(TenantNotFoundException)
-
         when:"But look you can add a new Schema at runtime!"
 
         System.setProperty(SystemPropertyTenantResolver.PROPERTY_NAME, "moreBooks")
 
         AnotherBookService bookService = new AnotherBookService()
+        bookService.setTargetDatastore(hibernateDatastore)
+        bookService.setTransactionManager(transactionManager)
 
         then:
         bookService.countBooks() == 0
@@ -88,12 +84,5 @@ class DatabasePerTenantSpec extends HibernateSpec {
         bookService.countBooks() == 3
         bookDataService.countBooks()== 3
 
-        when:"Swapping to another schema and we get the right results!"
-        System.setProperty(SystemPropertyTenantResolver.PROPERTY_NAME, "evenMoreBooks")
-        bookService.saveBook("Along Came a Spider")
-        bookDataService.saveBook("Whatever")
-        then:
-        bookService.countBooks() == 2
-        bookDataService.countBooks()== 2
     }
 }

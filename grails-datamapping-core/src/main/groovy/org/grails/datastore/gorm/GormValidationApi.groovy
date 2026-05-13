@@ -57,29 +57,40 @@ class GormValidationApi<D> extends AbstractGormApi<D> {
     protected final MappingContext mappingContext
     protected final ApplicationEventPublisher eventPublisher
     protected final boolean hasDatastore
+    protected final GormRegistry registry
 
     GormValidationApi(Class<D> persistentClass, Datastore datastore) {
+        this(persistentClass, datastore, null)
+    }
+
+    GormValidationApi(Class<D> persistentClass, Datastore datastore, GormRegistry registry) {
         super(persistentClass, datastore)
         beforeValidateHelper = new BeforeValidateHelper()
         this.mappingContext = datastore?.mappingContext
         this.eventPublisher = datastore?.applicationEventPublisher
         this.hasDatastore = datastore != null
+        this.registry = registry ?: GormEnhancer.getRegistry()
     }
 
     GormValidationApi(Class<D> persistentClass, MappingContext mappingContext, DatastoreResolver datastoreResolver) {
+        this(persistentClass, mappingContext, datastoreResolver, null)
+    }
+
+    GormValidationApi(Class<D> persistentClass, MappingContext mappingContext, DatastoreResolver datastoreResolver, GormRegistry registry) {
         super(persistentClass, mappingContext, datastoreResolver)
         beforeValidateHelper = new BeforeValidateHelper()
         this.mappingContext = mappingContext
         this.eventPublisher = null // Will be resolved if needed
         this.hasDatastore = true
+        this.registry = registry ?: GormEnhancer.getRegistry()
     }
 
     GormValidationApi<D> forQualifier(String qualifier) {
         if (!hasDatastore) return this
         DatastoreResolver resolver = new DatastoreResolver() {
-            @Override Datastore resolve() { GormEnhancer.findDatastore(persistentClass, qualifier) }
+            @Override Datastore resolve() { GormEnhancer.findDatastore(persistentClass, qualifier, registry) }
         }
-        return new GormValidationApi<D>(persistentClass, mappingContext, resolver)
+        return new GormValidationApi<D>(persistentClass, mappingContext, resolver, registry)
     }
 
     GormValidationApi(Class<D> persistentClass, MappingContext mappingContext, ApplicationEventPublisher eventPublisher) {
@@ -88,6 +99,7 @@ class GormValidationApi<D> extends AbstractGormApi<D> {
         this.mappingContext = mappingContext
         this.eventPublisher = eventPublisher
         this.hasDatastore = false
+        this.registry = GormEnhancer.getRegistry()
     }
 
     Validator getValidator() {

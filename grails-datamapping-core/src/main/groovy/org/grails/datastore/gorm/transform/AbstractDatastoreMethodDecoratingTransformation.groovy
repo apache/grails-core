@@ -161,7 +161,11 @@ abstract class AbstractDatastoreMethodDecoratingTransformation extends AbstractM
 
             MethodNode setterNode = declaringClassNode.addMethod('setTargetDatastore', Modifier.PUBLIC, VOID_TYPE, params(datastoresParam), null, setTargetDatastoresBody)
             markAsGenerated(declaringClassNode, setterNode)
-            AstUtils.addAnnotationIfNecessary(setterNode, Autowired)
+            if (!AstUtils.hasAnnotation(setterNode, Autowired)) {
+                AnnotationNode autowired = new AnnotationNode(make(Autowired))
+                autowired.addMember('required', constX(false))
+                setterNode.addAnnotation(autowired)
+            }
         }
         return
         }

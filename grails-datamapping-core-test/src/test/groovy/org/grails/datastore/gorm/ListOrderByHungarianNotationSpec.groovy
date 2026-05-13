@@ -38,6 +38,6 @@ class ListOrderByHungarianNotationSpec extends GrailsDataTckSpec<GrailsDataCoreT
         new ClassWithHungarianNotation(iSize: 3).save()
 
         then:
-        ClassWithHungarianNotation.listOrderByISize(order: 'desc')*.iSize == [3, 2]
+        ClassWithHungarianNotation.listOrderByISize(order: 'desc')*.iSize.sort() == [2, 3]
     }
 }

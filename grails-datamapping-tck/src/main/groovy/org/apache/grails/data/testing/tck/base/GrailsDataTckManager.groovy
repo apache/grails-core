@@ -21,6 +21,10 @@ package org.apache.grails.data.testing.tck.base
 import org.grails.datastore.gorm.GormRegistry
 import org.grails.datastore.mapping.core.DatastoreUtils
 import org.grails.datastore.mapping.core.Session
+import org.grails.datastore.mapping.transactions.TransactionCapableDatastore
+import org.springframework.transaction.PlatformTransactionManager
+import org.springframework.transaction.TransactionStatus
+import org.springframework.transaction.support.DefaultTransactionDefinition
 import spock.lang.Specification
 
 abstract class GrailsDataTckManager {
@@ -28,6 +32,8 @@ abstract class GrailsDataTckManager {
     static final CURRENT_TEST_NAME = 'current.gorm.test'
 
     Session session
+    PlatformTransactionManager transactionManager
+    TransactionStatus transactionStatus
 
     abstract Session createSession()
 
@@ -68,12 +74,23 @@ abstract class GrailsDataTckManager {
         System.setProperty(CURRENT_TEST_NAME, spec.getClass().simpleName - 'Spec')
         session = createSession()
         DatastoreUtils.bindSession(session)
+        if (session?.datastore instanceof TransactionCapableDatastore) {
+            transactionManager = ((TransactionCapableDatastore) session.datastore).transactionManager
+            if (transactionManager != null) {
+                transactionStatus = transactionManager.getTransaction(new DefaultTransactionDefinition())
+            }
+        }
     }
 
     void cleanup() {
         System.clearProperty(CURRENT_TEST_NAME)
 
         try {
+            if (transactionManager != null && transactionStatus != null && !transactionStatus.completed) {
+                transactionManager.rollback(transactionStatus)
+            }
+            transactionStatus = null
+            transactionManager = null
             if (session) {
                 session.disconnect()
                 DatastoreUtils.unbindSession(session)

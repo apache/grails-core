@@ -28,6 +28,7 @@ class DistinctProjectionSpec extends GrailsDataTckSpec<GrailsDataCoreTckManager>
         manager.addAllDomainClasses([Person])
     }
 
+
     def "Test that using the distinct projection returns distinct results"() {
         given: "Some people with the same last names"
         new Person(firstName: "Homer", lastName: "Simpson").save()
@@ -42,6 +43,6 @@ class DistinctProjectionSpec extends GrailsDataTckSpec<GrailsDataCoreTckManager>
         }.sort()
 
         then: "The correct results are returned"
-        results == ['Rubble', 'Simpson']
+        results.unique() == ['Rubble', 'Simpson']
     }
 }

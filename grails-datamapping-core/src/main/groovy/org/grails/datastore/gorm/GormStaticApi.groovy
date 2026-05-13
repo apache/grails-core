@@ -64,19 +64,25 @@ class GormStaticApi<D> extends AbstractGormApi<D> implements GormAllOperations<D
 
     protected final List<FinderMethod> finders
     protected final String qualifier
+    protected final GormRegistry registry
 
     GormStaticApi(Class<D> persistentClass, MappingContext mappingContext, List<FinderMethod> finders) {
-        this(persistentClass, mappingContext, finders, null, ConnectionSource.DEFAULT)
+        this(persistentClass, mappingContext, finders, null, ConnectionSource.DEFAULT, null)
     }
 
     GormStaticApi(Class<D> persistentClass, MappingContext mappingContext, List<FinderMethod> finders, String qualifier) {
-        this(persistentClass, mappingContext, finders, null, qualifier)
+        this(persistentClass, mappingContext, finders, null, qualifier, null)
     }
 
     GormStaticApi(Class<D> persistentClass, MappingContext mappingContext, List<FinderMethod> finders, DatastoreResolver resolver, String qualifier) {
+        this(persistentClass, mappingContext, finders, resolver, qualifier, null)
+    }
+
+    GormStaticApi(Class<D> persistentClass, MappingContext mappingContext, List<FinderMethod> finders, DatastoreResolver resolver, String qualifier, GormRegistry registry) {
         super(persistentClass, mappingContext, resolver)
         this.finders = finders
         this.qualifier = qualifier ?: ConnectionSource.DEFAULT
+        this.registry = registry ?: GormEnhancer.getRegistry()
     }
 
     @Override
@@ -146,14 +152,14 @@ class GormStaticApi<D> extends AbstractGormApi<D> implements GormAllOperations<D
     GormStaticApi<D> forQualifier(String qualifier) {
         Datastore ds = getDatastore()
         DatastoreResolver resolver = new DatastoreResolver() {
-            @Override Datastore resolve() { GormEnhancer.findDatastore(persistentClass, qualifier) }
+            @Override Datastore resolve() { GormEnhancer.findDatastore(persistentClass, qualifier, registry) }
         }
-        List<FinderMethod> qualifiedFinders = GormEnhancer.createDynamicFinders(resolver, ds.mappingContext)
+        List<FinderMethod> qualifiedFinders = GormEnhancer.createDynamicFinders(resolver, ds.mappingContext, registry)
         createStaticApi(persistentClass, ds.mappingContext, qualifiedFinders, resolver, qualifier)
     }
 
     protected GormStaticApi<D> createStaticApi(Class<D> persistentClass, MappingContext mappingContext, List<FinderMethod> finders, DatastoreResolver resolver, String qualifier) {
-        new GormStaticApi<D>(persistentClass, mappingContext, finders, resolver, qualifier)
+        new GormStaticApi<D>(persistentClass, mappingContext, finders, resolver, qualifier, registry)
     }
 
     @Override
@@ -182,10 +188,10 @@ class GormStaticApi<D> extends AbstractGormApi<D> implements GormAllOperations<D
             ConnectionSources sources = ((ConnectionSourcesProvider) ds).connectionSources
             if (sources != null) {
                 if (sources.getConnectionSource(name) != null) {
-                    return GormEnhancer.findStaticApi(persistentClass, name)
+                    return GormEnhancer.findStaticApi(persistentClass, name, registry)
                 }
                 if (name.equalsIgnoreCase(ConnectionSource.DEFAULT) || name.equalsIgnoreCase(ConnectionSource.OLD_DEFAULT)) {
-                    return GormEnhancer.findStaticApi(persistentClass, ConnectionSource.DEFAULT)
+                    return GormEnhancer.findStaticApi(persistentClass, ConnectionSource.DEFAULT, registry)
                 }
             }
         }
@@ -200,92 +206,92 @@ class GormStaticApi<D> extends AbstractGormApi<D> implements GormAllOperations<D
     // GormInstanceOperations delegation
     @Override
     def propertyMissing(D instance, String name) {
-        GormEnhancer.findInstanceApi(persistentClass).propertyMissing(instance, name)
+        GormEnhancer.findInstanceApi(persistentClass, null, registry).propertyMissing(instance, name)
     }
 
     @Override
     boolean instanceOf(D instance, Class cls) {
-        GormEnhancer.findInstanceApi(persistentClass).instanceOf(instance, cls)
+        GormEnhancer.findInstanceApi(persistentClass, null, registry).instanceOf(instance, cls)
     }
 
     @Override
     D lock(D instance) {
-        GormEnhancer.findInstanceApi(persistentClass).lock(instance)
+        GormEnhancer.findInstanceApi(persistentClass, null, registry).lock(instance)
     }
 
     @Override
     def <T1> T1 mutex(D instance, Closure<T1> callable) {
-        GormEnhancer.findInstanceApi(persistentClass).mutex(instance, callable)
+        GormEnhancer.findInstanceApi(persistentClass, null, registry).mutex(instance, callable)
     }
 
     @Override
     D refresh(D instance) {
-        GormEnhancer.findInstanceApi(persistentClass).refresh(instance)
+        GormEnhancer.findInstanceApi(persistentClass, null, registry).refresh(instance)
     }
 
     @Override
     D save(D instance) {
-        GormEnhancer.findInstanceApi(persistentClass).save(instance)
+        GormEnhancer.findInstanceApi(persistentClass, null, registry).save(instance)
     }
 
     @Override
     D insert(D instance) {
-        GormEnhancer.findInstanceApi(persistentClass).insert(instance)
+        GormEnhancer.findInstanceApi(persistentClass, null, registry).insert(instance)
     }
 
     @Override
     D insert(D instance, Map params) {
-        GormEnhancer.findInstanceApi(persistentClass).insert(instance, params)
+        GormEnhancer.findInstanceApi(persistentClass, null, registry).insert(instance, params)
     }
 
     @Override
     D merge(D instance) {
-        GormEnhancer.findInstanceApi(persistentClass).merge(instance)
+        GormEnhancer.findInstanceApi(persistentClass, null, registry).merge(instance)
     }
 
     @Override
     D merge(D instance, Map params) {
-        GormEnhancer.findInstanceApi(persistentClass).merge(instance, params)
+        GormEnhancer.findInstanceApi(persistentClass, null, registry).merge(instance, params)
     }
 
     @Override
     D save(D instance, boolean validate) {
-        GormEnhancer.findInstanceApi(persistentClass).save(instance, validate)
+        GormEnhancer.findInstanceApi(persistentClass, null, registry).save(instance, validate)
     }
 
     @Override
     D save(D instance, Map params) {
-        GormEnhancer.findInstanceApi(persistentClass).save(instance, params)
+        GormEnhancer.findInstanceApi(persistentClass, null, registry).save(instance, params)
     }
 
     @Override
     Serializable ident(D instance) {
-        GormEnhancer.findInstanceApi(persistentClass).ident(instance)
+        GormEnhancer.findInstanceApi(persistentClass, null, registry).ident(instance)
     }
 
     @Override
     D attach(D instance) {
-        GormEnhancer.findInstanceApi(persistentClass).attach(instance)
+        GormEnhancer.findInstanceApi(persistentClass, null, registry).attach(instance)
     }
 
     @Override
     boolean isAttached(D instance) {
-        GormEnhancer.findInstanceApi(persistentClass).isAttached(instance)
+        GormEnhancer.findInstanceApi(persistentClass, null, registry).isAttached(instance)
     }
 
     @Override
     void discard(D instance) {
-        GormEnhancer.findInstanceApi(persistentClass).discard(instance)
+        GormEnhancer.findInstanceApi(persistentClass, null, registry).discard(instance)
     }
 
     @Override
     void delete(D instance) {
-        GormEnhancer.findInstanceApi(persistentClass).delete(instance)
+        GormEnhancer.findInstanceApi(persistentClass, null, registry).delete(instance)
     }
 
     @Override
     void delete(D instance, Map params) {
-        GormEnhancer.findInstanceApi(persistentClass).delete(instance, params)
+        GormEnhancer.findInstanceApi(persistentClass, null, registry).delete(instance, params)
     }
 
     // GormStaticOperations
@@ -824,7 +830,7 @@ class GormStaticApi<D> extends AbstractGormApi<D> implements GormAllOperations<D
 
     @Override
     grails.gorm.api.GormAllOperations<D> eachTenant(Closure callable) {
-        Datastore ds = GormRegistry.instance.getDatastore(persistentClass.name, ConnectionSource.DEFAULT)
+        Datastore ds = registry.getDatastore(persistentClass.name, ConnectionSource.DEFAULT)
         if (ds instanceof MultiTenantCapableDatastore) {
             Tenants.eachTenant((MultiTenantCapableDatastore) ds, callable)
             return this
@@ -844,12 +850,12 @@ class GormStaticApi<D> extends AbstractGormApi<D> implements GormAllOperations<D
         // For multi-tenancy, always resolve via the DEFAULT (root/parent) datastore.
         // Resolving the tenant-specific datastore and then calling withNewSession() on it
         // would fail because child datastores have empty datastoresByConnectionSource maps.
-        Datastore defaultDs = GormRegistry.instance.getDatastore(persistentClass.name, ConnectionSource.DEFAULT)
+        Datastore defaultDs = registry.getDatastore(persistentClass.name, ConnectionSource.DEFAULT)
         if (defaultDs instanceof MultiTenantCapableDatastore) {
             return (T1) Tenants.withId((MultiTenantCapableDatastore) defaultDs, tenantId, callable)
         }
         // Non-multi-tenant path: resolve the specific datastore for this connection/tenant key
-        Datastore tenantDatastore = GormEnhancer.findDatastore(persistentClass, tenantId.toString())
+        Datastore tenantDatastore = GormEnhancer.findDatastore(persistentClass, tenantId.toString(), registry)
         return DatastoreUtils.execute(tenantDatastore, (Session session) -> {
             return (T1) callable.call(session)
         } as SessionCallback<T1>)
@@ -861,7 +867,7 @@ class GormStaticApi<D> extends AbstractGormApi<D> implements GormAllOperations<D
 
     def <T1> T1 withNewSession(Serializable tenantId, Closure<T1> callable) {
         DatastoreResolver resolver = new DatastoreResolver() {
-            @Override Datastore resolve() { GormEnhancer.findDatastore(persistentClass, tenantId.toString()) }
+            @Override Datastore resolve() { GormEnhancer.findDatastore(persistentClass, tenantId.toString(), registry) }
         }
         Datastore tenantDatastore = resolver.resolve()
         DatastoreUtils.executeWithNewSession(tenantDatastore, { Session session ->
