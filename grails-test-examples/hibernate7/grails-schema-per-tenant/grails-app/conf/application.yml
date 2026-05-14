@@ -54,7 +54,7 @@ grails:
       encoding: UTF-8
       htmlcodec: xml
       codecs:
-          scriptlet: html
+        scriptlet: html
 ---
 grails:
   gorm:

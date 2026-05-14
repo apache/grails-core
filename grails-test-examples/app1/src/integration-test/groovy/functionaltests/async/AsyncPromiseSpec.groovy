@@ -38,7 +38,8 @@ import org.apache.grails.testing.http.client.HttpClientSupport
 @Tag('http-client')
 class AsyncPromiseSpec extends Specification implements HttpClientSupport {
 
-    @Autowired AsyncProcessingService asyncProcessingService
+    @Autowired
+    AsyncProcessingService asyncProcessingService
 
     // ========== Basic Async Task Tests ==========
 
@@ -48,7 +49,7 @@ class AsyncPromiseSpec extends Specification implements HttpClientSupport {
 
         then: "task completes with success status"
         response.assertJson(200, [
-                status: 'completed',
+                status : 'completed',
                 message: 'Task finished'
         ])
     }
@@ -62,7 +63,7 @@ class AsyncPromiseSpec extends Specification implements HttpClientSupport {
 
         then: "computed result is correct"
         response.assertJson(200, [
-                input: value,
+                input : value,
                 result: value * value
         ])
     }
@@ -73,7 +74,7 @@ class AsyncPromiseSpec extends Specification implements HttpClientSupport {
 
         then: "all tasks complete"
         response.assertJson(200, [
-                status: 'completed',
+                status : 'completed',
                 results: [
                         'Task 1 result',
                         'Task 2 result',
@@ -92,7 +93,7 @@ class AsyncPromiseSpec extends Specification implements HttpClientSupport {
         then: "data is processed through all stages"
         response.assertJson(200, [
                 original: input,
-                final: input.toUpperCase().reverse()
+                final   : input.toUpperCase().reverse()
         ])
     }
 
@@ -139,7 +140,7 @@ class AsyncPromiseSpec extends Specification implements HttpClientSupport {
 
         then: "service processes input correctly"
         response.assertJson(200, [
-                input: input,
+                input : input,
                 result: "Processed: ${input.toUpperCase()}"
         ])
     }
@@ -153,7 +154,7 @@ class AsyncPromiseSpec extends Specification implements HttpClientSupport {
 
         then: "calculation is correct"
         response.assertJson(200, [
-                input: value,
+                input  : value,
                 squared: value * value
         ])
     }
@@ -202,7 +203,7 @@ class AsyncPromiseSpec extends Specification implements HttpClientSupport {
         response.assertJson(200, [
                 value1Squared: v1 * v1,  // 9
                 value2Squared: v2 * v2,  // 16
-                sum: (v1 * v1) + (v2 * v2)  // 25
+                sum          : (v1 * v1) + (v2 * v2)  // 25
         ])
     }
 
@@ -217,12 +218,12 @@ class AsyncPromiseSpec extends Specification implements HttpClientSupport {
 
         then: "data is processed correctly"
         response.assertJson(200, [
-                original: [
-                        name: 'test',
+                original : [
+                        name : 'test',
                         value: 'hello'
                 ],
                 processed: [
-                        name: 'TEST',
+                        name : 'TEST',
                         value: 'HELLO'
                 ]
         ])
@@ -234,9 +235,9 @@ class AsyncPromiseSpec extends Specification implements HttpClientSupport {
 
         then: "all stages are reported"
         response.assertJsonContains(200, [
-                status: 'completed',
+                status     : 'completed',
                 totalStages: 3,
-                stages: [
+                stages     : [
                         [action: 'initialize'],
                         [action: 'process'],
                         [action: 'finalize']
@@ -266,7 +267,7 @@ class AsyncPromiseSpec extends Specification implements HttpClientSupport {
 
         then: "async mode is used"
         response.assertJson(200, [
-                mode: 'async',
+                mode  : 'async',
                 result: "Async: ${input.toUpperCase()}"
         ])
     }
@@ -280,7 +281,7 @@ class AsyncPromiseSpec extends Specification implements HttpClientSupport {
 
         then: "sync mode is used"
         response.assertJson(200, [
-                mode: 'sync',
+                mode  : 'sync',
                 result: "Sync: ${input.toUpperCase()}"
         ])
     }

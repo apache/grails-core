@@ -24,7 +24,7 @@ import functional.tests.pages.BookShowPage
 import grails.plugin.geb.ContainerGebSpec
 import grails.testing.mixin.integration.Integration
 
-@Integration
+@Integration(applicationClass = Application)
 class BookControllerSpec extends ContainerGebSpec {
 
     void "Test list books"() {

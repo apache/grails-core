@@ -54,6 +54,10 @@ class MultiTenantMultiDataSourceSpec extends Specification {
 
     MetricService metricService
 
+    void cleanup() {
+        System.setProperty(SystemPropertyTenantResolver.PROPERTY_NAME, '')
+    }
+
     void setup() {
         tenant = 'tenant1'
         metricService = hibernateDatastore

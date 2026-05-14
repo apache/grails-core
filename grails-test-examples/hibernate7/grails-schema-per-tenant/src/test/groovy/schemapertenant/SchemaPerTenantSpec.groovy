@@ -53,6 +53,9 @@ class SchemaPerTenantSpec extends HibernateSpec implements GrailsUnitTest {
         hibernateDatastore.addTenantForSchema("moreBooks")
         hibernateDatastore.addTenantForSchema("evenMoreBooks")
     }
+    def cleanup() {
+        System.setProperty(SystemPropertyTenantResolver.PROPERTY_NAME, "")
+    }
 
     @Rollback("moreBooks")
     void "Test should rollback changes in a previous test"() {

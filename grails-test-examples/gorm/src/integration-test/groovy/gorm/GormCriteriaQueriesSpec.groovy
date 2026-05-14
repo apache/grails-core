@@ -24,7 +24,6 @@ import spock.lang.Unroll
 import grails.gorm.DetachedCriteria
 import grails.gorm.transactions.Rollback
 import grails.testing.mixin.integration.Integration
-
 /**
  * Tests for GORM Criteria Queries - both createCriteria() and DetachedCriteria.
  *
@@ -32,7 +31,7 @@ import grails.testing.mixin.integration.Integration
  * complex queries without writing HQL strings.
  */
 @Rollback
-@Integration
+@Integration(applicationClass = Application)
 class GormCriteriaQueriesSpec extends Specification {
 
     def setup() {
