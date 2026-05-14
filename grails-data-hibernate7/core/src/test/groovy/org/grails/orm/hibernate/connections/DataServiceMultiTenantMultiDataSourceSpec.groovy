@@ -56,9 +56,10 @@ import org.grails.orm.hibernate.HibernateDatastore
 @RestoreSystemProperties
 class DataServiceMultiTenantMultiDataSourceSpec extends Specification {
 
-    @Shared @AutoCleanup HibernateDatastore datastore
+    @AutoCleanup HibernateDatastore datastore
+    MetricService metricService
 
-    void setupSpec() {
+    void setup() {
         Map config = [
                 "grails.gorm.multiTenancy.mode": MultiTenancySettings.MultiTenancyMode.DISCRIMINATOR,
                 "grails.gorm.multiTenancy.tenantResolverClass": SystemPropertyTenantResolver,
@@ -74,11 +75,7 @@ class DataServiceMultiTenantMultiDataSourceSpec extends Specification {
 
         datastore = new HibernateDatastore(
                 DatastoreUtils.createPropertyResolver(config), Metric)
-    }
 
-    MetricService metricService
-
-    void setup() {
         tenant = 'tenant1'
         metricService = datastore
                 .getDatastoreForConnection('analytics')

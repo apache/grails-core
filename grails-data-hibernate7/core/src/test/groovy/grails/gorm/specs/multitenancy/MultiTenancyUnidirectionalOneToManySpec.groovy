@@ -25,15 +25,21 @@ import org.grails.datastore.mapping.multitenancy.resolvers.SystemPropertyTenantR
 import grails.gorm.MultiTenant
 import org.grails.orm.hibernate.HibernateDatastore
 import org.hibernate.dialect.H2Dialect
+import spock.lang.AutoCleanup
 import spock.lang.Issue
+import spock.lang.Shared
 import spock.lang.Specification
+import spock.util.environment.RestoreSystemProperties
 
 /**
  * Created by graemerocher on 16/06/2017.
  */
+@RestoreSystemProperties
 class MultiTenancyUnidirectionalOneToManySpec extends Specification {
 
-    @Issue('https://github.com/apache/grails-data-mapping/issues/954')
+    @AutoCleanup HibernateDatastore datastore
+
+    @Issue('https://github.com/grails/grails-data-mapping/issues/954')
     void "test multi-tenancy with unidirectional one-to-many"() {
         given: "A configuration for schema based multi-tenancy"
         System.setProperty(SystemPropertyTenantResolver.PROPERTY_NAME, "")
@@ -44,11 +50,13 @@ class MultiTenancyUnidirectionalOneToManySpec extends Specification {
                 'dataSource.dialect'                          : H2Dialect.name,
                 'dataSource.formatSql'                        : 'true',
                 'hibernate.flush.mode'                        : 'COMMIT',
-                'hibernate.cache.queries'                     : 'true',
+                // disable query caching for tests so tenant discriminator is not bypassed
+                'hibernate.cache.queries'                     : 'false',
+                'hibernate.cache.use_query_cache'             : 'false',
                 'hibernate.hbm2ddl.auto'                      : 'create',
         ]
 
-        HibernateDatastore datastore = new HibernateDatastore(DatastoreUtils.createPropertyResolver(config), getClass().getPackage())
+        datastore = new HibernateDatastore(DatastoreUtils.createPropertyResolver(config), getClass().getPackage())
 
         when:
         System.setProperty(SystemPropertyTenantResolver.PROPERTY_NAME, "ford")
@@ -70,9 +78,12 @@ class MultiTenancyUnidirectionalOneToManySpec extends Specification {
 
         when:
         System.setProperty(SystemPropertyTenantResolver.PROPERTY_NAME, "tesla")
+        // bind a fresh session for the current thread and clear it so tenant resolver is re-evaluated
+        Vehicle.withNewSession { it.clear() }
 
         then:
-        Vehicle.withTransaction { Vehicle.count() } == 0
+        // run the assertion inside a fresh session so the new tenant value is applied
+        Vehicle.withNewSession { Vehicle.count() } == 0
 
         cleanup:
         System.setProperty(SystemPropertyTenantResolver.PROPERTY_NAME, "")
@@ -84,7 +95,7 @@ class MultiTenancyUnidirectionalOneToManySpec extends Specification {
 class Engine implements MultiTenant<Engine> {
     Integer cylinders
     String manufacturer
-//    static belongsTo = [vehicle: Vehicle] // If you remove this, it fails
+    static belongsTo = [vehicle: Vehicle] // restored so child inherits owner's tenant
 
     static constraints = {
         cylinders nullable: false
@@ -99,7 +110,7 @@ class Engine implements MultiTenant<Engine> {
 class Wheel implements MultiTenant<Wheel> {
     Integer spokes
     String manufacturer
-//    static belongsTo = [vehicle: Vehicle] // If you remove this, it fails
+    static belongsTo = [vehicle: Vehicle] // restored so child inherits owner's tenant
 
     static constraints = {
         spokes nullable: false
