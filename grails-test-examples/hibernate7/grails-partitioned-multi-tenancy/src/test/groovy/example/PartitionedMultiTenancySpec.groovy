@@ -30,6 +30,9 @@ import spock.util.environment.RestoreSystemProperties
 @RestoreSystemProperties
 class PartitionedMultiTenancySpec extends HibernateSpec {
 
+    @Override
+    List<Class> getDomainClasses() { [Book] }
+
     BookService bookDataService = hibernateDatastore.getService(BookService)
 
     @Override
