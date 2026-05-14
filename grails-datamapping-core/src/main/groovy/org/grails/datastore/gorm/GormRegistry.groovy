@@ -134,24 +134,12 @@ class GormRegistry {
         return staticApiRegistry.get(className)
     }
 
-    GormStaticApi getStaticApi(String className, String qualifier) {
-        return staticApiRegistry.get(className, qualifier)
-    }
-
     GormInstanceApi getInstanceApi(String className) {
         return instanceApiRegistry.get(className)
     }
 
-    GormInstanceApi getInstanceApi(String className, String qualifier) {
-        return instanceApiRegistry.get(className, qualifier)
-    }
-
     GormValidationApi getValidationApi(String className) {
         return validationApiRegistry.get(className)
-    }
-
-    GormValidationApi getValidationApi(String className, String qualifier) {
-        return validationApiRegistry.get(className, qualifier)
     }
 
     /**
