@@ -208,15 +208,6 @@ class GormEnhancer implements Closeable {
         }
     }
 
-    /**
-     * Enhance a single entity
-     *
-     * @param e The entity
-     */
-    void enhance(PersistentEntity e) {
-        registerEntity(e)
-    }
-
     @CompileDynamic
     protected void addStaticMethods(PersistentEntity e) {
         def cls = e.javaClass
