@@ -31,7 +31,7 @@ class PagedResultSpec extends GrailsDataTckSpec {
         manager.addAllDomainClasses([Person])
     }
 
-    void "Test that a getTotalCount will return 0 on empty result from the list() method"() {
+    void 'Test that a getTotalCount will return 0 on empty result from the list() method'() {
         when: 'A query is executed that returns no results'
         def results = Person.list(max: 1)
 
@@ -40,7 +40,7 @@ class PagedResultSpec extends GrailsDataTckSpec {
         results.totalCount == 0
     }
 
-    void "Test that a paged result list is returned from the list() method with pagination params"() {
+    void 'Test that a paged result list is returned from the list() method with pagination params'() {
         given: 'Some people'
         createPeople()
 
@@ -55,7 +55,7 @@ class PagedResultSpec extends GrailsDataTckSpec {
         results.totalCount == 6
     }
 
-    void "Test that a paged result list is returned from the list() method with pagination and sorting params"() {
+    void 'Test that a paged result list is returned from the list() method with pagination and sorting params'() {
         given: 'Some people'
         createPeople()
 
@@ -70,13 +70,13 @@ class PagedResultSpec extends GrailsDataTckSpec {
         results.totalCount == 6
     }
 
-    void "Test that a getTotalCount will return 0 on empty result from the criteria"() {
+    void 'Test that a getTotalCount will return 0 on empty result from the criteria'() {
         given: 'Some people'
         createPeople()
 
         when: 'A query is executed that returns no results'
         def results = Person.createCriteria().list(max: 1) {
-            eq 'lastName', 'NotFound'
+            eq('lastName', 'NotFound')
         }
 
         then:
@@ -84,13 +84,13 @@ class PagedResultSpec extends GrailsDataTckSpec {
         results.totalCount == 0
     }
 
-    void "Test that a paged result list is returned from the critera with pagination params"() {
+    void 'Test that a paged result list is returned from the critera with pagination params'() {
         given: 'Some people'
         createPeople()
 
         when: 'The list method is used with pagination params'
         def results = Person.createCriteria().list(offset: 1, max: 2) {
-            eq 'lastName', 'Simpson'
+            eq('lastName', 'Simpson')
         }
 
         then: 'You get a paged result list back'
@@ -101,13 +101,13 @@ class PagedResultSpec extends GrailsDataTckSpec {
         results.totalCount == 4
     }
 
-    void "Test that a paged result list is returned from the critera with pagination and sorting params"() {
+    void 'Test that a paged result list is returned from the critera with pagination and sorting params'() {
         given: 'Some people'
         createPeople()
 
         when: 'The list method is used with pagination params'
         def results = Person.createCriteria().list(offset: 1, max: 2, sort: 'firstName', order: 'DESC') {
-            eq 'lastName', 'Simpson'
+            eq('lastName', 'Simpson')
         }
 
         then: 'You get a paged result list back'
