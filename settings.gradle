@@ -277,8 +277,9 @@ findProject(':grails-data-hibernate7-docs').projectDir = new File(settingsDir, '
 include ':grails-data-hibernate7'
 findProject(':grails-data-hibernate7').projectDir = new File(settingsDir, 'grails-data-hibernate7/grails-plugin')
 
-include 'grails-data-hibernate7-dbmigration-core'
-findProject(':grails-data-hibernate7-dbmigration-core').projectDir = new File(settingsDir, 'grails-data-hibernate7/dbmigration-core')
+// TODO: Hibernate 7 specific
+//include 'grails-data-hibernate7-dbmigration-core'
+//findProject(':grails-data-hibernate7-dbmigration-core').projectDir = new File(settingsDir, 'grails-data-hibernate7/dbmigration-core')
 
 include 'grails-data-hibernate7-dbmigration'
 findProject(':grails-data-hibernate7-dbmigration').projectDir = new File(settingsDir, 'grails-data-hibernate7/dbmigration')
