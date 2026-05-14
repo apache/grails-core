@@ -28,6 +28,7 @@ import org.grails.datastore.mapping.multitenancy.MultiTenancySettings
 import org.grails.datastore.mapping.multitenancy.exceptions.TenantNotFoundException
 import org.grails.datastore.mapping.multitenancy.resolvers.SystemPropertyTenantResolver
 import org.grails.datastore.mapping.simple.SimpleMapDatastore
+import org.grails.datastore.gorm.GormEnhancerRegistry
 import spock.lang.AutoCleanup
 import spock.util.environment.RestoreSystemProperties
 import spock.lang.Shared
@@ -52,11 +53,11 @@ class TenantServiceSpec extends Specification {
     )
 
     def setup() {
-        org.grails.datastore.gorm.GormEnhancer.setPreferredDatastore(datastore)
+        GormEnhancerRegistry.getInstance().setPreferredDatastore(datastore)
     }
 
     def cleanup() {
-        org.grails.datastore.gorm.GormEnhancer.clearPreferredDatastore()
+        GormEnhancerRegistry.getInstance().clearPreferredDatastore()
     }
 
     void "test multi tenancy with in-memory datastore"() {
@@ -114,4 +115,3 @@ class TenantServiceSpec extends Specification {
 class Team implements MultiTenant<Team> {
     String name
 }
-

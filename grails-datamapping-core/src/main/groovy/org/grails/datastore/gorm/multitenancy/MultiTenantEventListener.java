@@ -29,7 +29,7 @@ import org.grails.datastore.mapping.multitenancy.exceptions.TenantException;
 import org.grails.datastore.mapping.query.Query;
 import org.grails.datastore.mapping.query.event.PreQueryEvent;
 import org.springframework.context.ApplicationEvent;
-import org.grails.datastore.gorm.GormEnhancer;
+import org.grails.datastore.gorm.GormRegistry;
 
 import java.io.Serializable;
 import java.util.Arrays;
@@ -84,7 +84,7 @@ public class MultiTenantEventListener implements PersistenceEventListener {
                 PersistentEntity entity = query.getEntity();
                 if (entity.isMultiTenant()) {
                     if (datastore == null) {
-                        datastore = GormEnhancer.findDatastore(entity.getJavaClass());
+                        datastore = GormRegistry.getInstance().getApiResolver().findDatastore(entity.getJavaClass());
                     }
                     if (supportsSourceType(datastore.getClass()) && this.datastore.equals(datastore)) {
                         TenantId tenantId = entity.getTenantId();
@@ -112,7 +112,7 @@ public class MultiTenantEventListener implements PersistenceEventListener {
                 if (entity.isMultiTenant()) {
                     TenantId tenantId = entity.getTenantId();
                     if (datastore == null) {
-                        datastore = GormEnhancer.findDatastore(entity.getJavaClass());
+                        datastore = GormRegistry.getInstance().getApiResolver().findDatastore(entity.getJavaClass());
                     }
                     if (supportsSourceType(datastore.getClass()) && this.datastore.equals(datastore)) {
                         Serializable currentId = null;

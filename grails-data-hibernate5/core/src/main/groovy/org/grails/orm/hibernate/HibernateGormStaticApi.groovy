@@ -90,7 +90,7 @@ class HibernateGormStaticApi<D> extends AbstractHibernateGormStaticApi<D> {
         if (ds == null) return this
 
         org.grails.datastore.gorm.DatastoreResolver resolver = new org.grails.datastore.gorm.DatastoreResolver() {
-            @Override Datastore resolve() { org.grails.datastore.gorm.GormEnhancer.findDatastore(persistentClass, qualifier) }
+            @Override Datastore resolve() { org.grails.datastore.gorm.GormRegistry.instance.apiResolver.findDatastore(persistentClass, qualifier) }
         }
         List<FinderMethod> qualifiedFinders = registry.createDynamicFinders(resolver, ds.mappingContext)
         return new HibernateGormStaticApi<D>(persistentClass, ds.mappingContext, qualifiedFinders, resolver, qualifier, classLoader)

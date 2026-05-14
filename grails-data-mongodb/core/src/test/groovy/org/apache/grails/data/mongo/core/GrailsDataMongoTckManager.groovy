@@ -28,7 +28,7 @@ import org.apache.grails.data.testing.tck.base.GrailsDataTckManager
 import org.apache.grails.testing.mongo.AbstractMongoGrailsExtension
 import org.bson.Document
 import org.grails.datastore.bson.query.BsonQuery
-import org.grails.datastore.gorm.GormEnhancer
+import org.grails.datastore.gorm.GormRegistry
 import org.grails.datastore.gorm.mongo.Birthday
 import org.grails.datastore.gorm.validation.constraints.eval.DefaultConstraintEvaluator
 import org.grails.datastore.gorm.validation.constraints.registry.DefaultConstraintRegistry
@@ -147,7 +147,7 @@ class GrailsDataMongoTckManager extends GrailsDataTckManager {
                         }
                     }
             for (cls in domainClasses) {
-                GormEnhancer.findValidationApi(cls).validator = null
+                GormRegistry.instance.apiResolver.findValidationApi(cls).validator = null
             }
         }
         finally {

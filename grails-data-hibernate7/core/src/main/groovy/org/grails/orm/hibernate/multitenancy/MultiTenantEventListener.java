@@ -25,7 +25,7 @@ import jakarta.annotation.Nullable;
 import org.springframework.context.ApplicationEvent;
 
 import grails.gorm.multitenancy.Tenants;
-import org.grails.datastore.gorm.GormEnhancer;
+import org.grails.datastore.gorm.GormRegistry;
 import org.grails.datastore.mapping.core.Datastore;
 import org.grails.datastore.mapping.core.connections.ConnectionSource;
 import org.grails.datastore.mapping.engine.event.AbstractPersistenceEvent;
@@ -70,7 +70,7 @@ public class MultiTenantEventListener implements PersistenceEventListener {
 
                 PersistentEntity entity = query.getEntity();
                 if (entity.isMultiTenant()) {
-                    Datastore ds = (datastore != null) ? datastore : GormEnhancer.findDatastore(entity.getJavaClass());
+                    Datastore ds = (datastore != null) ? datastore : GormRegistry.getInstance().getApiResolver().findDatastore(entity.getJavaClass());
                     if (ds instanceof HibernateDatastore hibernateDatastore) {
                         hibernateDatastore.enableMultiTenancyFilter();
                     }
@@ -82,7 +82,7 @@ public class MultiTenantEventListener implements PersistenceEventListener {
                 PersistentEntity entity = persistenceEvent.getEntity();
                 if (entity.isMultiTenant()) {
                     TenantId<?> tenantId = entity.getTenantId();
-                    Datastore ds = (datastore != null) ? datastore : GormEnhancer.findDatastore(entity.getJavaClass());
+                    Datastore ds = (datastore != null) ? datastore : GormRegistry.getInstance().getApiResolver().findDatastore(entity.getJavaClass());
                     if (ds instanceof HibernateDatastore hibernateDatastore) {
                         Serializable currentId;
 

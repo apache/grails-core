@@ -21,6 +21,7 @@ package org.grails.datastore.gorm
 import grails.gorm.MultiTenant
 import grails.gorm.annotation.Entity
 import org.grails.datastore.mapping.config.Settings
+import org.grails.datastore.gorm.GormEnhancerRegistry
 import org.grails.datastore.mapping.core.DatastoreUtils
 import org.grails.datastore.mapping.core.connections.ConnectionSource
 import org.grails.datastore.mapping.multitenancy.AllTenantsResolver
@@ -60,11 +61,11 @@ class GormRegistryScalabilitySpec extends Specification {
     }
 
     void setup() {
-        GormEnhancer.setPreferredDatastore(datastore)
+        GormEnhancerRegistry.getInstance().setPreferredDatastore(datastore)
     }
 
     void cleanup() {
-        GormEnhancer.clearPreferredDatastore()
+        GormEnhancerRegistry.getInstance().clearPreferredDatastore()
     }
 
     // -------------------------------------------------------------------------

@@ -25,6 +25,7 @@ import grails.gorm.DetachedCriteria
 import grails.gorm.annotation.Entity
 import grails.gorm.services.Service
 import grails.gorm.transactions.Transactional
+import org.grails.datastore.gorm.GormEnhancerRegistry
 import org.grails.datastore.mapping.core.connections.ConnectionSource
 import org.grails.datastore.mapping.simple.SimpleMapDatastore
 
@@ -42,11 +43,11 @@ class MultipleDataSourceSpec extends Specification {
 
     def setup() {
         datastore.clearData()
-        org.grails.datastore.gorm.GormEnhancer.setPreferredDatastore(datastore)
+        GormEnhancerRegistry.getInstance().setPreferredDatastore(datastore)
     }
 
     def cleanup() {
-        org.grails.datastore.gorm.GormEnhancer.clearPreferredDatastore()
+        GormEnhancerRegistry.getInstance().clearPreferredDatastore()
     }
 
     void 'test multiple datasource support with in-memory GORM'() {

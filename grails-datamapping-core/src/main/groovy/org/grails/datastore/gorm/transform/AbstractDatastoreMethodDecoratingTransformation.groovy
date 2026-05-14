@@ -27,6 +27,7 @@ import org.codehaus.groovy.ast.FieldNode
 import org.codehaus.groovy.ast.MethodNode
 import org.codehaus.groovy.ast.Parameter
 import org.codehaus.groovy.ast.expr.ClassExpression
+import org.codehaus.groovy.ast.expr.ArgumentListExpression
 import org.codehaus.groovy.ast.expr.Expression
 import org.codehaus.groovy.ast.expr.MethodCallExpression
 import org.codehaus.groovy.ast.expr.VariableExpression
@@ -35,7 +36,7 @@ import org.codehaus.groovy.control.SourceUnit
 
 import org.springframework.beans.factory.annotation.Autowired
 
-import org.grails.datastore.gorm.GormEnhancer
+import org.grails.datastore.gorm.GormRegistry
 import org.grails.datastore.mapping.core.Datastore
 import org.grails.datastore.mapping.core.connections.MultipleConnectionSourceCapableDatastore
 import org.grails.datastore.mapping.reflect.AstUtils
@@ -89,7 +90,8 @@ abstract class AbstractDatastoreMethodDecoratingTransformation extends AbstractM
         Expression connectionName = annotationNode.getMember('connection')
         boolean hasDataSourceProperty = connectionName != null
         boolean isSpockTest = isSpockTest(declaringClassNode)
-        ClassExpression gormEnhancerExpr = classX(GormEnhancer)
+        MethodCallExpression registryExpr = new MethodCallExpression(classX(GormRegistry), 'getInstance', new ArgumentListExpression())
+        Expression apiResolverExpr = new MethodCallExpression(registryExpr, 'getApiResolver', new ArgumentListExpression())
 
         Expression datastoreAttribute = annotationNode.getMember('datastore')
         ClassNode defaultType = hasDataSourceProperty ? make(MultipleConnectionSourceCapableDatastore) : make(Datastore)
@@ -99,10 +101,10 @@ abstract class AbstractDatastoreMethodDecoratingTransformation extends AbstractM
         MethodCallExpression datastoreLookupCall
         MethodCallExpression datastoreLookupDefaultCall
         if (hasSpecificDatastore) {
-            datastoreLookupDefaultCall = callD(gormEnhancerExpr, 'findDatastoreByType', classX(datastoreType.getPlainNodeReference()))
+            datastoreLookupDefaultCall = callD(apiResolverExpr, 'findDatastoreByType', classX(datastoreType.getPlainNodeReference()))
         }
         else {
-            datastoreLookupDefaultCall = callD(gormEnhancerExpr, 'findSingleDatastore')
+            datastoreLookupDefaultCall = callD(apiResolverExpr, 'findSingleDatastore')
         }
         datastoreLookupCall = callD(datastoreLookupDefaultCall, METHOD_GET_DATASTORE_FOR_CONNECTION, varX(connectionNameParam))
 

@@ -120,13 +120,13 @@ class GrailsDataCoreTckManager extends GrailsDataTckManager {
     void setup(Class<? extends Specification> spec) {
         super.setup(spec)
         def datastore = getSimpleDatastore()
-        org.grails.datastore.gorm.GormEnhancer.setPreferredDatastore(datastore)
+        org.grails.datastore.gorm.GormEnhancerRegistry.getInstance().setPreferredDatastore(datastore)
     }
 
     @Override
     void cleanup() {
         super.cleanup()
-        org.grails.datastore.gorm.GormEnhancer.clearPreferredDatastore()
+        org.grails.datastore.gorm.GormEnhancerRegistry.getInstance().clearPreferredDatastore()
         if (simpleDatastore != null) {
             org.grails.datastore.gorm.GormRegistry.instance.removeDatastore(simpleDatastore)
             simpleDatastore.clearData()

@@ -459,37 +459,33 @@ class GormRegistry {
      * This delegates to a GormEnhancer for creating the API instances.
      *
      * @param entity The persistent entity to register
-     * @param enhancer The GormEnhancer that provides API creation (optional, uses global if null)
+     * @param enhancer The GormEnhancer that provides API creation
      */
-    void registerEntity(Object entity, Object enhancer = null) {
-        if (entity == null) return
-        
-        PersistentEntity persistentEntity = (PersistentEntity) entity
+    void registerEntity(PersistentEntity persistentEntity, GormEnhancer enhancer) {
+        assert persistentEntity != null, 'PersistentEntity is required'
+        assert enhancer != null, 'GormEnhancer is required'
+
         String className = persistentEntity.name
-        
-        if (enhancer != null) {
-            GormEnhancer gormEnhancer = (GormEnhancer) enhancer
-            
-            // Register API singletons via registry
-            if (getStaticApi(className) == null ||
-                getInstanceApi(className) == null ||
-                getValidationApi(className) == null) {
-                final Class cls = persistentEntity.javaClass
-                DatastoreResolver resolver = createClassDatastoreResolver(cls)
-                Datastore datastore = gormEnhancer.datastore
 
-                GormStaticApi staticApi = createStaticApi(cls, datastore, resolver, ConnectionSource.DEFAULT)
-                GormInstanceApi instanceApi = createInstanceApi(cls, datastore, resolver, gormEnhancer.failOnError, gormEnhancer.markDirty)
-                GormValidationApi validationApi = createValidationApi(cls, datastore, resolver)
+        // Register API singletons via registry
+        if (getStaticApi(className) == null ||
+            getInstanceApi(className) == null ||
+            getValidationApi(className) == null) {
+            final Class cls = persistentEntity.javaClass
+            DatastoreResolver resolver = createClassDatastoreResolver(cls)
+            Datastore datastore = enhancer.datastore
 
-                registerEntityApis(className, staticApi, instanceApi, validationApi)
-            }
+            GormStaticApi staticApi = createStaticApi(cls, datastore, resolver, ConnectionSource.DEFAULT)
+            GormInstanceApi instanceApi = createInstanceApi(cls, datastore, resolver, enhancer.failOnError, enhancer.markDirty)
+            GormValidationApi validationApi = createValidationApi(cls, datastore, resolver)
 
-            // Register datastore mappings
-            Datastore datastore = gormEnhancer.datastore
-            List<String> connectionSourceNames = gormEnhancer.connectionSourceNames
-            registerEntityDatastores(className, datastore, connectionSourceNames, persistentEntity)
+            registerEntityApis(className, staticApi, instanceApi, validationApi)
         }
+
+        // Register datastore mappings
+        Datastore datastore = enhancer.datastore
+        List<String> connectionSourceNames = enhancer.getConnectionSourceNames()
+        registerEntityDatastores(className, datastore, connectionSourceNames, persistentEntity)
     }
 
     /**
@@ -630,4 +626,3 @@ class GormRegistry {
         return createValidationApi(cls, datastore, resolver)
     }
 }
-

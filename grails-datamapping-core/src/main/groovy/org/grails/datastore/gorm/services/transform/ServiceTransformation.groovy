@@ -61,7 +61,7 @@ import grails.gorm.transactions.NotTransactional
 import grails.gorm.transactions.ReadOnly
 import grails.gorm.transactions.Transactional
 import org.apache.grails.common.compiler.GroovyTransformOrder
-import org.grails.datastore.gorm.GormEnhancer
+import org.grails.datastore.gorm.GormRegistry
 import org.grails.datastore.gorm.services.Implemented
 import org.grails.datastore.gorm.services.ServiceEnhancer
 import org.grails.datastore.gorm.services.ServiceImplementer
@@ -406,8 +406,9 @@ class ServiceTransformation extends AbstractTraitApplyingGormASTTransformation i
 
         if (classNode.getDeclaredMethod('getDatastore', ZERO_PARAMETERS) == null) {
             // Always override getDatastore() for dynamic resolution
+            def apiResolverExpr = callX(callX(classX(GormRegistry), 'getInstance'), 'getApiResolver')
             MethodNode datastoreGetterNode = classNode.addMethod('getDatastore', Modifier.PUBLIC, datastoreType.plainNodeReference, ZERO_PARAMETERS, null,
-                    returnS(callX(classX(GormEnhancer), 'findDatastore', args(classX(targetDomainClass))))
+                    returnS(callX(apiResolverExpr, 'findDatastore', args(classX(targetDomainClass))))
             )
             markAsGenerated(classNode, datastoreGetterNode)
         }
@@ -607,7 +608,7 @@ class ServiceTransformation extends AbstractTraitApplyingGormASTTransformation i
         def transactionManagerClassNode = ClassHelper.make(PlatformTransactionManager)
         def transactionCapableDatastore = ClassHelper.make(TransactionCapableDatastore)
         def multipleConnectionDatastore = ClassHelper.make(MultipleConnectionSourceCapableDatastore)
-        def gormEnhancerExpr = classX(GormEnhancer)
+        def apiResolverExpr = callX(callX(classX(GormRegistry), 'getInstance'), 'getApiResolver')
 
         // getDatastore() call (method from Service trait or overridden on impl)
         def datastoreVar = callX(varX('this'), 'getDatastore')
@@ -622,9 +623,9 @@ class ServiceTransformation extends AbstractTraitApplyingGormASTTransformation i
                 castX(transactionCapableDatastore, datastoreForConnection),
                 'transactionManager'
         )
-        // GormEnhancer.findSingleTransactionManager(connectionName)
+        // GormRegistry.getInstance().getApiResolver().findSingleTransactionManager(connectionName)
         def fallbackTxManager = callX(
-                gormEnhancerExpr,
+                apiResolverExpr,
                 'findSingleTransactionManager',
                 args(connectionExpr)
         )
@@ -654,7 +655,7 @@ class ServiceTransformation extends AbstractTraitApplyingGormASTTransformation i
 
         def transactionManagerClassNode = ClassHelper.make(PlatformTransactionManager)
         def transactionCapableDatastore = ClassHelper.make(TransactionCapableDatastore)
-        def gormEnhancerExpr = classX(GormEnhancer)
+        def apiResolverExpr = callX(callX(classX(GormRegistry), 'getInstance'), 'getApiResolver')
 
         // getDatastore() call (method from Service trait or overridden on impl)
         def datastoreVar = callX(varX('this'), 'getDatastore')
@@ -663,9 +664,9 @@ class ServiceTransformation extends AbstractTraitApplyingGormASTTransformation i
                 castX(transactionCapableDatastore, datastoreVar),
                 'transactionManager'
         )
-        // GormEnhancer.findSingleTransactionManager()
+        // GormRegistry.getInstance().getApiResolver().findSingleTransactionManager()
         def fallbackTxManager = callX(
-                gormEnhancerExpr,
+                apiResolverExpr,
                 'findSingleTransactionManager'
         )
 

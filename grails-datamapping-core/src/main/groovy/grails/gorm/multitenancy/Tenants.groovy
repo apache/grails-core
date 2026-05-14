@@ -22,7 +22,7 @@ package grails.gorm.multitenancy
 import groovy.transform.CompileStatic
 import groovy.util.logging.Slf4j
 
-import org.grails.datastore.gorm.GormEnhancer
+import org.grails.datastore.gorm.GormRegistry
 import org.grails.datastore.mapping.core.Datastore
 import org.grails.datastore.mapping.core.connections.ConnectionSource
 import org.grails.datastore.mapping.core.connections.ConnectionSources
@@ -48,13 +48,13 @@ class Tenants {
 
     static class DatastoreLocator {
         Datastore getDatastore() {
-            GormEnhancer.findSingleDatastore()
+            GormRegistry.instance.apiResolver.findSingleDatastore()
         }
         Datastore getDatastore(Class<? extends Datastore> datastoreClass) {
-            GormEnhancer.findDatastore(datastoreClass)
+            GormRegistry.instance.apiResolver.findDatastoreByType(datastoreClass)
         }
         Datastore getDatastoreForDomain(Class domainClass) {
-            GormEnhancer.findDatastore(domainClass)
+            GormRegistry.instance.apiResolver.findDatastore(domainClass)
         }
     }
 

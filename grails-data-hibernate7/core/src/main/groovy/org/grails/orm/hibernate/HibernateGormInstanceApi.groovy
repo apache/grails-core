@@ -124,7 +124,7 @@ class HibernateGormInstanceApi<D> extends GormInstanceApi<D> {
         if (ds == null) return this
         
         org.grails.datastore.gorm.DatastoreResolver resolver = new org.grails.datastore.gorm.DatastoreResolver() {
-            @Override Datastore resolve() { org.grails.datastore.gorm.GormEnhancer.findDatastore(persistentClass, qualifier) }
+            @Override Datastore resolve() { org.grails.datastore.gorm.GormRegistry.instance.apiResolver.findDatastore(persistentClass, qualifier) }
         }
         HibernateGormInstanceApi<D> newApi = new HibernateGormInstanceApi<D>(persistentClass, ds.mappingContext, resolver, classLoader)
         newApi.failOnError = failOnError

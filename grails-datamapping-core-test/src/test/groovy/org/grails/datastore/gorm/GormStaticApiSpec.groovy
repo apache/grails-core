@@ -21,6 +21,7 @@ package org.grails.datastore.gorm
 import grails.gorm.annotation.Entity
 import grails.gorm.MultiTenant
 import org.grails.datastore.mapping.simple.SimpleMapDatastore
+import org.grails.datastore.gorm.GormEnhancerRegistry
 import spock.lang.AutoCleanup
 import spock.lang.Shared
 import spock.lang.Specification
@@ -41,11 +42,11 @@ class GormStaticApiSpec extends Specification {
     )
 
     def setup() {
-        GormEnhancer.setPreferredDatastore(datastore)
+        GormEnhancerRegistry.getInstance().setPreferredDatastore(datastore)
     }
 
     def cleanup() {
-        GormEnhancer.clearPreferredDatastore()
+        GormEnhancerRegistry.getInstance().clearPreferredDatastore()
         datastore.clearData()
     }
 

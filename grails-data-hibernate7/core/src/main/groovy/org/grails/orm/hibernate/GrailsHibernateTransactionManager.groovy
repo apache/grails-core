@@ -74,7 +74,7 @@ class GrailsHibernateTransactionManager extends HibernateTransactionManager {
                     TransactionSynchronizationManager.bindResource(this.datastore, new org.grails.datastore.mapping.transactions.SessionHolder(session));
                 }
                 System.err.println "SETTING PREFERRED DATASTORE: ${this.datastore}"
-                org.grails.datastore.gorm.GormEnhancer.setPreferredDatastore(this.datastore)
+                org.grails.datastore.gorm.GormEnhancerRegistry.getInstance().setPreferredDatastore(this.datastore)
             } else {
                 System.err.println "DATASTORE IS NULL in TransactionManager!"
             }
@@ -85,7 +85,7 @@ class GrailsHibernateTransactionManager extends HibernateTransactionManager {
     protected void doCleanupAfterCompletion(Object transaction) {
         super.doCleanupAfterCompletion(transaction)
         if (this.datastore != null) {
-            org.grails.datastore.gorm.GormEnhancer.setPreferredDatastore(null)
+            org.grails.datastore.gorm.GormEnhancerRegistry.getInstance().clearPreferredDatastore()
             HibernateTransactionManager.HibernateTransactionObject txObject = (HibernateTransactionManager.HibernateTransactionObject) transaction
             if (txObject.isNewSessionHolder()) {
                 TransactionSynchronizationManager.unbindResourceIfPossible(this.datastore)

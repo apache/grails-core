@@ -40,7 +40,7 @@ import grails.gorm.multitenancy.Tenant
 import grails.gorm.multitenancy.TenantService
 import grails.gorm.multitenancy.WithoutTenant
 import org.apache.grails.common.compiler.GroovyTransformOrder
-import org.grails.datastore.gorm.GormEnhancer
+import org.grails.datastore.gorm.GormRegistry
 import org.grails.datastore.gorm.transform.AbstractDatastoreMethodDecoratingTransformation
 import org.grails.datastore.mapping.multitenancy.exceptions.TenantNotFoundException
 import org.grails.datastore.mapping.reflect.AstUtils
@@ -111,15 +111,18 @@ class TenantTransform extends AbstractDatastoreMethodDecoratingTransformation {
 
         if (isService) {
             // For services, resolve entirely via static bridge to avoid MetaClass recursion
-            ClassExpression gormEnhancerExpr = classX(GormEnhancer)
+            def registryExpr = new org.codehaus.groovy.ast.expr.MethodCallExpression(classX(GormRegistry), 'getInstance', org.codehaus.groovy.ast.expr.ArgumentListExpression.EMPTY_ARGUMENTS)
+            def apiResolverExpr = new org.codehaus.groovy.ast.expr.MethodCallExpression(registryExpr, 'getApiResolver', org.codehaus.groovy.ast.expr.ArgumentListExpression.EMPTY_ARGUMENTS)
             // Use the domain class from the @Service annotation
             AnnotationNode serviceAnn = findAnnotation(classNode, grails.gorm.services.Service)
             Expression domainClassExpr = serviceAnn?.getMember('value') ?: classX(org.codehaus.groovy.ast.ClassHelper.OBJECT_TYPE)
-            datastoreExpr = callX(gormEnhancerExpr, 'findDatastore', args(domainClassExpr))
+            datastoreExpr = callX(apiResolverExpr, 'findDatastore', args(domainClassExpr))
         }
         else {
             // Static bridge for regular objects too, to keep it stateless and avoid field injection
-            datastoreExpr = callX(classX(GormEnhancer), 'findSingleDatastore')
+            def registryExpr = new org.codehaus.groovy.ast.expr.MethodCallExpression(classX(GormRegistry), 'getInstance', org.codehaus.groovy.ast.expr.ArgumentListExpression.EMPTY_ARGUMENTS)
+            def apiResolverExpr = new org.codehaus.groovy.ast.expr.MethodCallExpression(registryExpr, 'getApiResolver', org.codehaus.groovy.ast.expr.ArgumentListExpression.EMPTY_ARGUMENTS)
+            datastoreExpr = callX(apiResolverExpr, 'findSingleDatastore')
         }
 
         newMethodBody.addStatement(

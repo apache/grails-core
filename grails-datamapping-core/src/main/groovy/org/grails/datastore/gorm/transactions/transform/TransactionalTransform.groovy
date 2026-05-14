@@ -49,7 +49,7 @@ import grails.gorm.transactions.ReadOnly
 import grails.gorm.transactions.Rollback
 import grails.gorm.transactions.Transactional
 import org.apache.grails.common.compiler.GroovyTransformOrder
-import org.grails.datastore.gorm.GormEnhancer
+import org.grails.datastore.gorm.GormRegistry
 import org.grails.datastore.gorm.multitenancy.transform.TenantTransform
 import org.grails.datastore.gorm.transform.AbstractDatastoreMethodDecoratingTransformation
 import org.grails.datastore.mapping.core.connections.MultipleConnectionSourceCapableDatastore
@@ -256,7 +256,8 @@ class TransactionalTransform extends AbstractDatastoreMethodDecoratingTransforma
         if (!hasOrInheritsProperty(declaringClassNode, PROPERTY_TRANSACTION_MANAGER)) {
 
             ClassNode transactionManagerClassNode = make(PlatformTransactionManager)
-            ClassExpression gormEnhancerExpr = classX(GormEnhancer)
+            Expression registryExpr = callX(classX(GormRegistry), 'getInstance')
+            Expression apiResolverExpr = callX(registryExpr, 'getApiResolver')
 
             String transactionManagerFieldName = '$' + PROPERTY_TRANSACTION_MANAGER
             FieldNode tmField = declaringClassNode.addField(transactionManagerFieldName, Modifier.PRIVATE, transactionManagerClassNode, null)
@@ -269,19 +270,19 @@ class TransactionalTransform extends AbstractDatastoreMethodDecoratingTransforma
 
                 // For services, resolve entirely via static bridge
                 if (hasDataSourceProperty) {
-                    transactionManagerLookupExpr = callX(gormEnhancerExpr, 'findTransactionManager', args(classX(nonGeneric(declaringClassNode)), connectionName))
+                    transactionManagerLookupExpr = callX(apiResolverExpr, 'findTransactionManager', args(classX(nonGeneric(declaringClassNode)), connectionName))
                 }
                 else {
-                    transactionManagerLookupExpr = callX(gormEnhancerExpr, 'findTransactionManager', args(classX(nonGeneric(declaringClassNode))))
+                    transactionManagerLookupExpr = callX(apiResolverExpr, 'findTransactionManager', args(classX(nonGeneric(declaringClassNode))))
                 }
             }
             else {
-                // For regular objects, use the static finders on GormEnhancer
+                // For regular objects, use the shared resolver
                 if (hasDataSourceProperty) {
-                    transactionManagerLookupExpr = callX(gormEnhancerExpr, 'findSingleTransactionManager', connectionName)
+                    transactionManagerLookupExpr = callX(apiResolverExpr, 'findSingleTransactionManager', connectionName)
                 }
                 else {
-                    transactionManagerLookupExpr = callX(gormEnhancerExpr, 'findSingleTransactionManager')
+                    transactionManagerLookupExpr = callX(apiResolverExpr, 'findSingleTransactionManager')
                 }
             }
 
@@ -339,22 +340,23 @@ class TransactionalTransform extends AbstractDatastoreMethodDecoratingTransforma
             transactionManagerExpression = propX(varThis(), PROPERTY_TRANSACTION_MANAGER)
         }
         else {
-            // For explicit connections, use the static lookup on GormEnhancer
-            ClassExpression gormEnhancerExpr = classX(GormEnhancer)
+            // For explicit connections, use the shared resolver
+            Expression registryExpr = callX(classX(GormRegistry), 'getInstance')
+            Expression apiResolverExpr = callX(registryExpr, 'getApiResolver')
             AnnotationNode serviceAnn = findAnnotation(classNode, grails.gorm.services.Service)
             if (serviceAnn != null) {
                 // For services, resolve entirely via static bridge using the domain class from @Service
                 Expression domainClassExpr = serviceAnn.getMember('value') ?: classX(org.codehaus.groovy.ast.ClassHelper.OBJECT_TYPE)
-                transactionManagerExpression = callX(gormEnhancerExpr, 'findTransactionManager', args(domainClassExpr, connectionName))
+                transactionManagerExpression = callX(apiResolverExpr, 'findTransactionManager', args(domainClassExpr, connectionName))
             }
             else {
                 // For non-services, use the datastore hint if present, otherwise fall back to single TM
                 Expression datastoreHint = annotationNode.getMember('datastore')
                 if (datastoreHint instanceof ClassExpression) {
-                    transactionManagerExpression = callX(gormEnhancerExpr, 'findTransactionManager', args(datastoreHint, connectionName))
+                    transactionManagerExpression = callX(apiResolverExpr, 'findTransactionManager', args(datastoreHint, connectionName))
                 }
                 else {
-                    transactionManagerExpression = callX(gormEnhancerExpr, 'findSingleTransactionManager', connectionName)
+                    transactionManagerExpression = callX(apiResolverExpr, 'findSingleTransactionManager', connectionName)
                 }
             }
         }

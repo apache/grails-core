@@ -169,7 +169,7 @@ class HibernateGormStaticApi<D> extends GormStaticApi<D> {
         if (ds == null) return this
 
         org.grails.datastore.gorm.DatastoreResolver resolver = new org.grails.datastore.gorm.DatastoreResolver() {
-            @Override Datastore resolve() { org.grails.datastore.gorm.GormEnhancer.findDatastore(persistentClass, qualifier) }
+            @Override Datastore resolve() { org.grails.datastore.gorm.GormRegistry.instance.apiResolver.findDatastore(persistentClass, qualifier) }
         }
         // Create new finders with the qualifier-specific resolver so dynamic finders (e.g. findByName)
         // execute against the correct (non-DEFAULT) datasource session factory.

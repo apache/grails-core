@@ -22,7 +22,6 @@ import grails.gorm.MultiTenant
 import grails.gorm.api.GormAllOperations
 import grails.gorm.multitenancy.Tenants
 import groovy.transform.CompileStatic
-import org.grails.datastore.gorm.GormEnhancer
 import org.grails.datastore.gorm.GormEntity
 import org.grails.datastore.gorm.GormRegistry
 import org.grails.datastore.gorm.GormStaticApi
@@ -102,7 +101,7 @@ trait Neo4jEntity<D> implements GormEntity<D>, DynamicAttributes {
      * @return The statement result
      */
     Result cypher(CharSequence cypher, Map params) {
-        GormEnhancer.findDatastore(getClass()).withSession { Neo4jSession session ->
+        GormRegistry.instance.apiResolver.findDatastore(getClass()).withSession { Neo4jSession session ->
             QueryRunner boltSession = getStatementRunner(session)
 
             String queryString
@@ -126,7 +125,7 @@ trait Neo4jEntity<D> implements GormEntity<D>, DynamicAttributes {
      * @return The statement result
      */
     Result cypher(String cypher, List params) {
-        GormEnhancer.findDatastore(getClass()).withSession { Neo4jSession session ->
+        GormRegistry.instance.apiResolver.findDatastore(getClass()).withSession { Neo4jSession session ->
             QueryRunner boltSession = getStatementRunner(session)
 
             Map<String, Object> paramsMap = new LinkedHashMap()
@@ -149,7 +148,7 @@ trait Neo4jEntity<D> implements GormEntity<D>, DynamicAttributes {
      * @return
      */
     Result cypher(String queryString) {
-        GormEnhancer.findDatastore(getClass()).withSession { Neo4jSession session ->
+        GormRegistry.instance.apiResolver.findDatastore(getClass()).withSession { Neo4jSession session ->
             Map<String, Object> arguments
             if (session.getDatastore().multiTenancyMode == MultiTenancySettings.MultiTenancyMode.DISCRIMINATOR) {
                 if (!queryString.contains("\$tenantId")) {
