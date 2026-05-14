@@ -140,16 +140,12 @@ class WebDriverContainerHolder {
 
         def gebConf = new ConfigurationLoader().conf
         def gebConfigExists = gebConf.rawConfig.size() != 0
-        def dockerImageName = createDockerImageName(DEFAULT_BROWSER)
         def customBrowser = gebConf.rawConfig.containerBrowser as String
+        def dockerImageName = createDockerImageName(customBrowser ?: DEFAULT_BROWSER)
 
         if (gebConfigExists) {
             validateDriverConf(gebConf)
-            if (customBrowser) {
-                // Prepare for creating a container matching
-                // the GebConfig `containerBrowser` property.
-                dockerImageName = createDockerImageName(customBrowser)
-            } else {
+            if (!customBrowser) {
                 log.info(
                         'No `containerBrowser` property found in GebConfig. ' +
                         'Using default [{}] container image.',
@@ -363,7 +359,18 @@ class WebDriverContainerHolder {
         container.host != ContainerGebConfiguration.DEFAULT_HOSTNAME_FROM_CONTAINER
     }
 
-    private static DockerImageName createDockerImageName(String browserName) {
+    private DockerImageName createDockerImageName(String browserName) {
+        // If a template is provided (e.g. via grails.geb.container.image.template in local.properties),
+        // use it to resolve the image. This allows for architecture-specific overrides (like ARM64).
+        if (settings.containerImageTemplate) {
+            return DockerImageName.parse(
+                    settings.containerImageTemplate
+                            .replace('${browser}', browserName)
+                            .replace('${version}', seleniumVersion)
+            )
+        }
+
+        // Fallback to the original hardcoded default
         DockerImageName.parse(
                 "selenium/standalone-$browserName:$seleniumVersion"
         )

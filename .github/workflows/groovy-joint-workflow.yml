@@ -17,10 +17,12 @@ name: "CI - Groovy Joint Validation Build"
 on:
   push:
     branches:
-      - '[4-9]+.[0-9]+.x'
+      - '[0-9]+.[0-9]+.x'
+      - '8.0.x-hibernate7.*'
   pull_request:
     branches:
-      - '[4-9]+.[0-9]+.x'
+      - '[0-9]+.[0-9]+.x'
+      - '8.0.x-hibernate7.*'
   workflow_dispatch:
 # queue jobs and only allow 1 run per branch due to the likelihood of hitting GitHub resource limits
 concurrency:
@@ -123,7 +125,6 @@ jobs:
         run: |
           cd groovy
           ./gradlew pTML -x groovydoc -x javadoc -x javadocAll -x groovydocAll -x asciidoc -x docGDK
-
   build_grails:
     needs: [build_groovy]
     runs-on: ubuntu-latest

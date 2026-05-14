@@ -89,6 +89,13 @@ tasks.withType(Test).configureEach {
         System.out.print('.')
         System.out.flush()
     }
+    // Bridge Geb-specific properties (e.g. from local.properties) to the Test JVM
+    // to allow local overrides of Docker images and other settings.
+    project.properties.each { key, value ->
+        if (key.toString().startsWith('grails.geb.')) {
+            systemProperty key, value
+        }
+    }
 }
 
 if (hasProperty('testBisect')) {
