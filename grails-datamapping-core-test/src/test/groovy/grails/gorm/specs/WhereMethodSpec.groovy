@@ -46,7 +46,7 @@ class WhereMethodSpec extends GrailsDataTckSpec<GrailsDataCoreTckManager> {
     def gcl
 
     void setupSpec() {
-        List<Class> list = [Continent, Group, Proposal, Advisor]
+        List<Class> list = [Continent, Group, Proposal, Advisor, Person, Pet, Face, Nose, Country]
 
         gcl = new GroovyClassLoader()
         list << gcl.parseClass('''
