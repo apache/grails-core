@@ -63,10 +63,6 @@ class CompilePlugin implements Plugin<Project> {
         project.tasks.withType(JavaCompile).configureEach {
             it.options.release.set(javaVersion)
         }
-        project.tasks.withType(AbstractCompile).configureEach {
-            it.sourceCompatibility = javaVersion.toString()
-            it.targetCompatibility = javaVersion.toString()
-        }
     }
 
     private static void configureJars(Project project) {
