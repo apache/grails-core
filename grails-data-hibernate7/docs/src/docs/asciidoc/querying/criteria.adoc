@@ -197,12 +197,12 @@ def peopleWithShortFirstNames = c.list {
 
 NOTE: Note that the parameter there is SQL. The `first_name` attribute referenced in the example refers to the persistence model, not the object model like in HQL queries.
 
-==== Setting properties in the Criteria instance
+==== Setting Properties in the Criteria Instance
 
 
 The builder allows setting properties that control how the query is executed.
 
-[source,java]
+[source,groovy]
 ----
 import org.hibernate.FetchMode
 ...
@@ -211,10 +211,12 @@ def results = c.list {
     firstResult(50)
     cache(true)
     readOnly(true)
-    lock(true) // Pessimistic locking
+    lock(true)
     fetchMode("aRelationship", FetchMode.JOIN)
 }
 ----
+
+If a node within the builder tree doesn't match a particular criterion it will attempt to set a property on the Criteria object itself. This allows full access to all the properties in the criteria.
 
 ==== Advanced Hibernate 7 Features
 
@@ -226,12 +228,40 @@ The Hibernate 7 criteria builder supports several advanced features:
 * **Fetch Mode:** Use `fetchMode("association", FetchMode.JOIN)` to specify Eager/Lazy fetching strategies.
 
 
+==== Using Scrollable Results
+
+
+You can use Hibernate's https://docs.hibernate.org/orm/7.0/javadocs/org/hibernate/ScrollableResults.html[ScrollableResults] feature by calling the scroll method:
+
+[source,groovy]
+----
+def results = crit.scroll {
+    maxResults(10)
+}
+def f = results.first()
+def l = results.last()
+def n = results.next()
+def p = results.previous()
+
+def future = results.scroll(10)
+def accountNumber = results.getLong('number')
+----
+
+To quote the Hibernate documentation on ScrollableResults:
+
+____
+A result iterator that allows moving around within the results by arbitrary increments. The Query / ScrollableResults pattern is very similar to the JDBC PreparedStatement / ResultSet pattern and the semantics of methods of this interface are similar to the similarly named methods on ResultSet.
+____
+
+Contrary to JDBC, columns of results are numbered from zero.
+
+
 ==== Querying with Eager Fetching
 
 
-Eager fetching can be achieved using a criteria query:
+In the section on eager and lazy fetching we discussed how to declaratively specify fetching to avoid the N+1 SELECT problem. However, this can also be achieved using a criteria query:
 
-[source,java]
+[source,groovy]
 ----
 def criteria = Task.createCriteria()
 def tasks = criteria.list{
@@ -242,21 +272,35 @@ def tasks = criteria.list{
 }
 ----
 
-Notice the usage of the `join` method: it tells the criteria API to use a `JOIN` to fetch the named associations with the `Task` instances. It's probably best not to use this for one-to-many associations though, because you will most likely end up with duplicate results. Instead, use the 'select' fetch mode:
+Notice the usage of the `join` method: it tells the criteria API to use a `JOIN` to fetch the named associations with the `Task` instances. It's probably best not to use this for one-to-many associations though, because you will most likely end up with duplicate results. Instead, use the `select` fetch mode:
 
 [source,groovy]
 ----
-import org.hibernate.FetchMode
+import org.hibernate.FetchMode as FM
 ...
 def results = Airport.withCriteria {
     eq "region", "EMEA"
-    fetchMode "flights", FetchMode.SELECT
+    fetchMode "flights", FM.SELECT
 }
 ----
 
-Although this approach triggers a second query to get the `flights` association, you will get reliable results  - even with the `maxResults` option.
+Although this approach triggers a second query to get the `flights` association, you will get reliable results — even with the `maxResults` option.
 
 NOTE: `fetchMode` and `join` are general settings of the query and can only be specified at the top-level, i.e. you cannot use them inside projections or association constraints.
+
+An important point to bear in mind is that if you include associations in the query constraints, those associations will automatically be eagerly loaded. For example, in this query:
+
+[source,groovy]
+----
+def results = Airport.withCriteria {
+    eq "region", "EMEA"
+    flights {
+        like "number", "BA%"
+    }
+}
+----
+
+the `flights` collection would be loaded eagerly via a join even though the fetch mode has not been explicitly set.
 
 
 ==== Method Reference
@@ -264,26 +308,25 @@ NOTE: `fetchMode` and `join` are general settings of the query and can only be s
 
 If you invoke the builder with no method name such as:
 
-[source,java]
+[source,groovy]
 ----
 c { ... }
 ----
 
-The build defaults to listing all the results and hence the above is equivalent to:
+The builder defaults to listing all the results and hence the above is equivalent to:
 
-[source,java]
+[source,groovy]
 ----
 c.list { ... }
 ----
 
 [format="csv", options="header"]
 |===
-
 Method,Description
 *list*,This is the default method. It returns all matching rows.
-*get*,Returns a unique result set i.e. just one row.
+*get*,Returns a unique result set i.e. just one row. The criteria has to be formed in a way that it only queries one row. This method is not to be confused with a limit to just the first row.
 *scroll*,Returns a scrollable result set.
-*listDistinct*,Allows listing only distinct entities.
+*listDistinct*,If subqueries or associations are used one may end up with the same row multiple times in the result set. This allows listing only distinct entities and is equivalent to `DISTINCT_ROOT_ENTITY` of the CriteriaSpecification class.
 *count*,Returns the number of matching rows.
 |===
 
@@ -293,7 +336,7 @@ Method,Description
 
 You can combine multiple criteria closures in the following way:
 
-[source,java]
+[source,groovy]
 ----
 def emeaCriteria = {
     eq "region", "EMEA"

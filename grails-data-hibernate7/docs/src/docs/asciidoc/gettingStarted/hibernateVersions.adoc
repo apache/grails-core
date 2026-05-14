@@ -17,3 +17,47 @@ specific language governing permissions and limitations
 under the License.
 ////
 
+[[gettingStarted-hibernateVersions]]
+== Hibernate Versions
+
+GORM for Hibernate 7 (`grails-data-hibernate7`) requires Hibernate ORM 7.x and Jakarta EE 10 (`jakarta.*` packages).
+
+=== Grails 8 with Hibernate 7
+
+Grails 8 ships with Hibernate 5 as the default, but provides first-class support for Hibernate 7 via a dedicated BOM and plugin artifact.
+
+[source,groovy]
+.build.gradle
+----
+dependencies {
+    implementation enforcedPlatform("org.apache.grails:grails-hibernate7-bom:{version}")
+    implementation "org.apache.grails:grails-hibernate7"
+}
+----
+
+Or using the Micronaut integration:
+
+[source,groovy]
+.build.gradle
+----
+dependencies {
+    implementation enforcedPlatform("org.apache.grails:grails-hibernate7-micronaut-bom:{version}")
+    implementation "org.apache.grails:grails-hibernate7"
+    implementation "org.apache.grails:grails-micronaut"
+}
+----
+
+=== Key Changes from Hibernate 5
+
+If you are migrating from Hibernate 5, review the following areas:
+
+* **Session API** — `Session.save()`, `update()`, `delete()`, `load()`, and `get()` were removed. GORM's own `save()`, `delete()`, `get()`, and `load()` methods are unaffected; only direct Hibernate `Session` usage inside `withSession` blocks is impacted.
+* **`CascadeType.SAVE_UPDATE` removed** — Use `CascadeType.ALL` or `CascadeType.PERSIST` + `CascadeType.MERGE`. The GORM ORM DSL `cascade: 'save-update'` string continues to work.
+* **`@Where` renamed** — `@org.hibernate.annotations.Where` was replaced by `@org.hibernate.annotations.SQLRestriction`.
+* **`@Proxy` removed** — Proxy configuration via annotation is no longer supported.
+* **`@LazyCollection` removed** — Use `fetch = FetchType.LAZY` / `EAGER` directly on the association annotation.
+* **Native query temporal types** — Native SQL queries now return `java.time` types instead of `java.sql` types. Set `hibernate.query.native.prefer_jdbc_datetime_types=true` to restore legacy behaviour during migration.
+* **DDL changes** — `char`/`Character` now maps to `varchar(1)` instead of `char(1)`. Oracle `float`/`double` map to `binary_float`/`binary_double`. Validate your schema before running `dbCreate=update` in production.
+* **Jakarta EE 10** — `javax.*` was already replaced by `jakarta.*` in Grails 7. Hibernate 7 requires Jakarta Persistence 3.2.
+
+See the https://docs.hibernate.org/orm/7.0/migration-guide/[Hibernate ORM 7.0 Migration Guide] and https://docs.hibernate.org/orm/6.0/migration-guide/[Hibernate ORM 6.0 Migration Guide] for the full list of changes.

@@ -17,7 +17,6 @@ specific language governing permissions and limitations
 under the License.
 ////
 
-[[detachedCriteria]]
 === Detached Criteria
 
 Detached Criteria are criteria queries that are not associated with any given database session/connection. Detached Criteria queries have many uses including allowing you to create common reusable criteria queries, execute subqueries and execute batch updates/deletes.

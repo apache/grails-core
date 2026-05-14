@@ -17,3 +17,16 @@ specific language governing permissions and limitations
 under the License.
 ////
 
+Constraints are how you define validation when using GORM entities.
+
+=== Applying Constraints
+
+include::applyingConstraints.adoc[]
+
+=== Constraints Reference
+
+include::constraintReference.adoc[]
+
+=== Constraints and Database Mapping
+
+include::gormConstraints.adoc[]
