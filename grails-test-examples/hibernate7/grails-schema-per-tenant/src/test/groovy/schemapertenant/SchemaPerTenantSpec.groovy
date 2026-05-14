@@ -24,10 +24,12 @@ import org.grails.datastore.mapping.config.Settings
 import org.grails.datastore.mapping.multitenancy.exceptions.TenantNotFoundException
 import org.grails.datastore.mapping.multitenancy.resolvers.SystemPropertyTenantResolver
 import org.grails.testing.GrailsUnitTest
+import spock.util.environment.RestoreSystemProperties
 
 /**
  * Created by graemerocher on 06/04/2017.
  */
+@RestoreSystemProperties
 class SchemaPerTenantSpec extends HibernateSpec implements GrailsUnitTest {
 
     @Override

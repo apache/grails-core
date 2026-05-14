@@ -22,7 +22,7 @@ import example.Metric
 import example.MetricService
 import org.hibernate.Session
 import spock.lang.Specification
-
+import spock.util.environment.RestoreSystemProperties
 
 import org.springframework.beans.factory.annotation.Autowired
 
@@ -46,6 +46,7 @@ import org.grails.orm.hibernate.HibernateDatastore
  * @see example.MetricService
  */
 @Integration
+@RestoreSystemProperties
 class MultiTenantMultiDataSourceSpec extends Specification {
 
     @Autowired
