@@ -212,18 +212,13 @@ class GormEnhancer implements Closeable {
      * Enhance a single entity
      *
      * @param e The entity
-     * @param onlyExtendedMethods Whether to only enhance with extended methods
      */
-    void enhance(PersistentEntity e, boolean onlyExtendedMethods = false) {
+    void enhance(PersistentEntity e) {
         registerEntity(e)
     }
 
-    void addStaticMethods(PersistentEntity entity) {
-        addStaticMethods(entity, false)
-    }
-
     @CompileDynamic
-    protected void addStaticMethods(PersistentEntity e, boolean onlyExtendedMethods) {
+    protected void addStaticMethods(PersistentEntity e) {
         def cls = e.javaClass
         ExpandoMetaClass mc = MetaClassUtils.getExpandoMetaClass(cls)
         
