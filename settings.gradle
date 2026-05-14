@@ -202,7 +202,7 @@ include(
         'grails-testing-support-web',
 
         // Test Report
-        'grails-data-test-report',
+        'grails-test-report',
 
         // wrapper
         'grails-wrapper',
