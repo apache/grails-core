@@ -1948,7 +1948,7 @@ class Pet {
         def gcl = new GroovyClassLoader(getClass().classLoader)
         Class callMe = gcl.parseClass('''
 import org.apache.grails.data.testing.tck.domains.*
-import grails.gorm.tests.*
+import grails.gorm.specs.*
 import grails.gorm.DetachedCriteria
 import grails.gorm.annotation.*
 import org.grails.datastore.gorm.query.transform.ApplyDetachedCriteriaTransform
