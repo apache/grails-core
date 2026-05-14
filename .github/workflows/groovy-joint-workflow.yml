@@ -66,8 +66,6 @@ jobs:
         uses: gradle/actions/setup-gradle@4d9f0ba0025fe599b4ebab900eb7f3a1d93ef4c2 # v5.0.0
         with:
           develocity-access-key: ${{ secrets.DEVELOCITY_ACCESS_KEY  }}
-      - name: "🔍 Setup TestLens"
-        uses: testlens-app/setup-testlens@v1
       - name: "📝 Store Groovy version to use when building Grails"
         id: groovy-version
         run: |
@@ -149,8 +147,6 @@ jobs:
         uses: gradle/actions/setup-gradle@4d9f0ba0025fe599b4ebab900eb7f3a1d93ef4c2 # v5.0.0
         with:
           develocity-access-key: ${{ secrets.DEVELOCITY_ACCESS_KEY  }}
-      - name: "🔍 Setup TestLens"
-        uses: testlens-app/setup-testlens@v1
       - name: "🗄️ Restore local Maven repository from cache"
         uses: actions/cache@v5
         with:
