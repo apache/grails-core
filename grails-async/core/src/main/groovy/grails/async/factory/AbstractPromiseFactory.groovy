@@ -84,6 +84,9 @@ abstract class AbstractPromiseFactory implements PromiseFactory {
      * @see PromiseFactory#createPromise(java.util.List, java.util.List)
      */
     <T> Promise<List<T>> createPromise(List<Closure<T>> closures, List<PromiseDecorator> decorators) {
+        if (closures == null) {
+            return new PromiseList<T>()
+        }
         List<Closure<T>> decoratedClosures = new ArrayList<Closure<T>>(closures.size())
         for (Closure<T> closure : closures) {
             decoratedClosures.add(applyDecorators(closure, decorators))
