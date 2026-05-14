@@ -37,7 +37,6 @@ import org.grails.datastore.mapping.simple.SimpleMapDatastore
 @RestoreSystemProperties
 class DatabasePerTenantSpec extends Specification {
 
-    @Shared
     @AutoCleanup
     SimpleMapDatastore datastore = new SimpleMapDatastore(
             DatastoreUtils.createPropertyResolver([(Settings.SETTING_MULTI_TENANCY_MODE)   : MultiTenancySettings.MultiTenancyMode.DATABASE,
@@ -46,7 +45,6 @@ class DatabasePerTenantSpec extends Specification {
             [ConnectionSource.DEFAULT, "foo", "bar"],
             Book
     )
-    @Shared
     IBookService bookDataService = datastore.getService(IBookService)
 
     void 'Test database per tenant'() {

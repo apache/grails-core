@@ -72,8 +72,7 @@ class MultiTenancyBidirectionalManyToManySpec extends Specification {
     @Shared DepartmentService departmentService
     @Shared UserService userService
 
-    @Shared @AutoCleanup HibernateDatastore datastore
-
+    @AutoCleanup HibernateDatastore datastore
 
     void setupSpec() {
         System.setProperty(SystemPropertyTenantResolver.PROPERTY_NAME, "oci")

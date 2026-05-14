@@ -27,7 +27,6 @@ import org.grails.orm.hibernate.HibernateDatastore
 import org.hibernate.dialect.H2Dialect
 import spock.lang.AutoCleanup
 import spock.lang.Issue
-import spock.lang.Shared
 import spock.lang.Specification
 import spock.util.environment.RestoreSystemProperties
 
@@ -37,9 +36,9 @@ import spock.util.environment.RestoreSystemProperties
 @RestoreSystemProperties
 class MultiTenancyUnidirectionalOneToManySpec extends Specification {
 
-    @Shared @AutoCleanup HibernateDatastore datastore
+    @AutoCleanup HibernateDatastore datastore
 
-    void setupSpec() {
+    void setup() {
         Map config = [
                 "grails.gorm.multiTenancy.mode"               : MultiTenancySettings.MultiTenancyMode.DISCRIMINATOR,
                 "grails.gorm.multiTenancy.tenantResolverClass": SystemPropertyTenantResolver.name,
@@ -56,9 +55,6 @@ class MultiTenancyUnidirectionalOneToManySpec extends Specification {
 
     @Issue('https://github.com/apache/grails-data-mapping/issues/954')
     void "test multi-tenancy with unidirectional one-to-many"() {
-        given: "A configuration for schema based multi-tenancy"
-        System.setProperty(SystemPropertyTenantResolver.PROPERTY_NAME, "")
-
         when:
         System.setProperty(SystemPropertyTenantResolver.PROPERTY_NAME, "ford")
         Vehicle.withTransaction {

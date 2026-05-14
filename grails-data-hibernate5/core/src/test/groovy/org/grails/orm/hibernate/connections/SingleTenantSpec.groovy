@@ -44,10 +44,9 @@ import java.sql.Connection
 @RestoreSystemProperties
 class SingleTenantSpec extends Specification {
 
-    @Shared @AutoCleanup HibernateDatastore datastore
+    @AutoCleanup HibernateDatastore datastore
 
-    void setupSpec() {
-        System.setProperty(SystemPropertyTenantResolver.PROPERTY_NAME, "")
+    void setup() {
         Map config = [
                 "grails.gorm.multiTenancy.mode":"DATABASE",
                 "grails.gorm.multiTenancy.tenantResolverClass":SystemPropertyTenantResolver,

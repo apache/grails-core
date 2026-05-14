@@ -42,7 +42,7 @@ import spock.util.environment.RestoreSystemProperties
 @RestoreSystemProperties
 class SingleTenantSpec extends Specification {
 
-    @Shared @AutoCleanup HibernateDatastore datastore
+    @AutoCleanup HibernateDatastore datastore
 
     void "Test a database per tenant multi tenancy"() {
         given:"A configuration for multiple data sources"
@@ -150,7 +150,6 @@ class SingleTenantSpec extends Specification {
         authorService.countAuthors() == 0
         authorService.countMoreAuthors() == 2
     }
-
 
 }
 

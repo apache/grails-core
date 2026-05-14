@@ -34,11 +34,10 @@ import spock.util.environment.RestoreSystemProperties
 /**
  * Created by graemerocher on 16/06/2017.
  */
-//TODO Multitenancy not working
 @RestoreSystemProperties
 class MultiTenancyUnidirectionalOneToManySpec extends Specification {
 
-    @Shared @AutoCleanup HibernateDatastore datastore
+    @AutoCleanup HibernateDatastore datastore
 
     @Issue('https://github.com/grails/grails-data-mapping/issues/954')
     void "test multi-tenancy with unidirectional one-to-many"() {

@@ -38,7 +38,7 @@ import spock.util.environment.RestoreSystemProperties
 @RestoreSystemProperties
 class SchemaMultiTenantSpec extends Specification {
 
-    @Shared @AutoCleanup HibernateDatastore datastore
+    @AutoCleanup HibernateDatastore datastore
 
     void "Test a database per tenant multi tenancy"() {
         given:"A configuration for multiple data sources"
