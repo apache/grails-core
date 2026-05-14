@@ -119,15 +119,15 @@ class GormRegistry {
     }
 
     <D> GormStaticApi<D> findStaticApi(Class<D> entity, String qualifier = null) {
-        return apiResolver.findStaticApi(entity, qualifier)
+        return staticApiRegistry.findStaticApi(entity, qualifier)
     }
 
     <D> GormInstanceApi<D> findInstanceApi(Class<D> entity, String qualifier = null) {
-        return apiResolver.findInstanceApi(entity, qualifier)
+        return instanceApiRegistry.findInstanceApi(entity, qualifier)
     }
 
     <D> GormValidationApi<D> findValidationApi(Class<D> entity, String qualifier = null) {
-        return apiResolver.findValidationApi(entity, qualifier)
+        return validationApiRegistry.findValidationApi(entity, qualifier)
     }
 
     GormStaticApi getStaticApi(String className) {

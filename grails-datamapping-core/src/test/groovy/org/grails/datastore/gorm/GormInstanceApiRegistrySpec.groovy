@@ -20,9 +20,10 @@ package org.grails.datastore.gorm
 
 import org.grails.datastore.mapping.core.Datastore
 import org.grails.datastore.mapping.core.connections.ConnectionSource
+import org.grails.datastore.mapping.model.MappingContext
 import spock.lang.Specification
 
-class GormApiResolverSpec extends Specification {
+class GormInstanceApiRegistrySpec extends Specification {
 
     void setup() {
         GormRegistry.reset()
@@ -32,38 +33,35 @@ class GormApiResolverSpec extends Specification {
         GormRegistry.reset()
     }
 
-    void 'resolver finds datastore by registered type'() {
+    void 'findInstanceApi resolves by qualifier'() {
         given:
-        GormRegistry registry = GormRegistry.instance
-        GormApiResolver resolver = registry.apiResolver
-        Datastore datastore = Mock(Datastore)
-        registry.registerDatastoreByType(datastore)
-
-        expect:
-        resolver.findDatastoreByType(datastore.getClass()).is(datastore)
-    }
-
-    void 'resolver finds the default datastore for a single configured datastore'() {
-        given:
-        GormRegistry registry = GormRegistry.instance
-        GormApiResolver resolver = registry.apiResolver
-        Datastore datastore = Mock(Datastore)
-        registry.registerDatastore(ConnectionSource.DEFAULT, datastore)
-
-        expect:
-        resolver.findSingleDatastore().is(datastore)
-    }
-
-    void 'resolver resolves datastores by qualifier'() {
-        given:
-        GormRegistry registry = GormRegistry.instance
-        GormApiResolver resolver = registry.apiResolver
-        Datastore defaultDatastore = Mock(Datastore)
-        Datastore secondaryDatastore = Mock(Datastore)
+        def registry = GormRegistry.instance
+        def apiRegistry = registry.instanceApiRegistry
+        def context = Stub(MappingContext) {
+            getMappingFactory() >> null
+        }
+        def defaultDatastore = Stub(Datastore) {
+            getMappingContext() >> context
+        }
+        def secondaryDatastore = Stub(Datastore) {
+            getMappingContext() >> context
+        }
+        def resolver = Stub(DatastoreResolver) {
+            resolve() >> defaultDatastore
+        }
+        def api = new GormInstanceApi(ApiRegistryEntity, context, resolver, registry)
+        apiRegistry.register(ApiRegistryEntity.name, api)
         registry.registerDatastore(ConnectionSource.DEFAULT, defaultDatastore)
         registry.registerDatastore('secondary', secondaryDatastore)
+        registry.registerEntityDatastore(ApiRegistryEntity.name, ConnectionSource.DEFAULT, defaultDatastore)
+        registry.registerEntityDatastore(ApiRegistryEntity.name, 'secondary', secondaryDatastore)
 
         expect:
-        resolver.findDatastore(null, 'secondary').is(secondaryDatastore)
+        apiRegistry.findInstanceApi(ApiRegistryEntity).is(api)
+        apiRegistry.findInstanceApi(ApiRegistryEntity, 'secondary') instanceof GormInstanceApi
+        !apiRegistry.findInstanceApi(ApiRegistryEntity, 'secondary').is(api)
+    }
+
+    static class ApiRegistryEntity {
     }
 }

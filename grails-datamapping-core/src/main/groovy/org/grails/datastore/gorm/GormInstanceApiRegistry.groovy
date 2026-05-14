@@ -19,6 +19,7 @@
 package org.grails.datastore.gorm
 
 import groovy.transform.CompileStatic
+import org.grails.datastore.mapping.core.connections.ConnectionSource
 
 @CompileStatic
 class GormInstanceApiRegistry extends AbstractGormApiRegistry<GormInstanceApi> {
@@ -30,5 +31,18 @@ class GormInstanceApiRegistry extends AbstractGormApiRegistry<GormInstanceApi> {
     @Override
     protected GormInstanceApi qualify(GormInstanceApi api, String qualifier) {
         return api.forQualifier(qualifier)
+    }
+
+    <D> GormInstanceApi<D> findInstanceApi(Class<D> entity, String qualifier = null) {
+        String className = className(entity)
+        GormInstanceApi api = get(className)
+        if (api == null) {
+            throw stateException(entity)
+        }
+
+        if (qualifier != null && qualifier != ConnectionSource.DEFAULT) {
+            return api.forQualifier(qualifier)
+        }
+        return (GormInstanceApi<D>) api
     }
 }

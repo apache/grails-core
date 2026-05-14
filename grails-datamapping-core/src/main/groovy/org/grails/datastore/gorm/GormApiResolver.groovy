@@ -51,42 +51,15 @@ class GormApiResolver {
     }
 
     <D> GormStaticApi<D> findStaticApi(Class<D> entity, String qualifier = null) {
-        String className = NameUtils.getClassName(entity)
-        GormStaticApi api = registry.getStaticApi(className)
-        if (api == null) {
-            throw stateException(entity)
-        }
-
-        if (qualifier != null && qualifier != ConnectionSource.DEFAULT) {
-            return api.forQualifier(qualifier)
-        }
-        return (GormStaticApi<D>) api
+        return registry.getStaticApiRegistry().findStaticApi(entity, qualifier)
     }
 
     <D> GormInstanceApi<D> findInstanceApi(Class<D> entity, String qualifier = null) {
-        String className = NameUtils.getClassName(entity)
-        GormInstanceApi api = registry.getInstanceApi(className)
-        if (api == null) {
-            throw stateException(entity)
-        }
-
-        if (qualifier != null && qualifier != ConnectionSource.DEFAULT) {
-            return api.forQualifier(qualifier)
-        }
-        return (GormInstanceApi<D>) api
+        return registry.getInstanceApiRegistry().findInstanceApi(entity, qualifier)
     }
 
     <D> GormValidationApi<D> findValidationApi(Class<D> entity, String qualifier = null) {
-        String className = NameUtils.getClassName(entity)
-        GormValidationApi api = registry.getValidationApi(className)
-        if (api == null) {
-            throw stateException(entity)
-        }
-
-        if (qualifier != null && qualifier != ConnectionSource.DEFAULT) {
-            return api.forQualifier(qualifier)
-        }
-        return (GormValidationApi<D>) api
+        return registry.getValidationApiRegistry().findValidationApi(entity, qualifier)
     }
 
     @CompileDynamic
@@ -314,7 +287,4 @@ class GormApiResolver {
         return ConnectionSource.DEFAULT
     }
 
-    private static IllegalStateException stateException(Class entity) {
-        return new IllegalStateException("No GORM implementation configured for class [${entity.name}]. Ensure GORM has been initialized correctly")
-    }
 }

@@ -21,6 +21,7 @@ package org.grails.datastore.gorm
 import groovy.transform.CompileStatic
 import org.grails.datastore.mapping.core.Datastore
 import org.grails.datastore.mapping.core.connections.ConnectionSource
+import org.grails.datastore.mapping.reflect.NameUtils
 
 import java.util.concurrent.ConcurrentHashMap
 
@@ -69,6 +70,14 @@ abstract class AbstractGormApiRegistry<T extends AbstractDatastoreApi> {
 
     void clear() {
         apis.clear()
+    }
+
+    protected String className(Class entity) {
+        return NameUtils.getClassName(entity)
+    }
+
+    protected IllegalStateException stateException(Class entity) {
+        return new IllegalStateException("No GORM implementation configured for class [${entity.name}]. Ensure GORM has been initialized correctly")
     }
 
     protected abstract T qualify(T api, String qualifier)
