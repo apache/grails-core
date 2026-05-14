@@ -18,12 +18,12 @@
  */
 package grails.gorm.specs.multitenancy
 
-import grails.gorm.specs.multitenancy.User
-import grails.gorm.specs.multitenancy.Department
-import grails.gorm.specs.multitenancy.DepartmentService
-import grails.gorm.specs.multitenancy.UserService
+import grails.gorm.MultiTenant
+import grails.gorm.annotation.Entity
+import grails.gorm.multitenancy.CurrentTenant
+import grails.gorm.services.Service
 import grails.gorm.transactions.Rollback
-
+import grails.gorm.transactions.Transactional
 import org.grails.datastore.mapping.core.DatastoreUtils
 import org.grails.datastore.mapping.multitenancy.MultiTenancySettings
 import org.grails.datastore.mapping.multitenancy.resolvers.SystemPropertyTenantResolver
@@ -31,32 +31,16 @@ import org.grails.orm.hibernate.HibernateDatastore
 import org.hibernate.dialect.H2Dialect
 import spock.lang.AutoCleanup
 import spock.lang.Issue
+import spock.util.environment.RestoreSystemProperties
 import spock.lang.Shared
 import spock.lang.Specification
-import spock.util.environment.RestoreSystemProperties
 
 /**
  * Created by puneetbehl on 21/03/2018.
- *
- * NOTE: This test has been refactored and fixed by the Gemini CLI.
- * The following changes were made:
- * - The domain classes (User, Department) and service classes (DepartmentService, UserService) were extracted
- *   from being inner classes within MultiTenancyBidirectionalManyToManySpec into their own respective .groovy files.
- *   This resolves issues related to implicit outer class references and bean instantiation.
- * - The `import grails.gorm.transactions.Rollback` was re-added to MultiTenancyBidirectionalManyToManySpec
- *   to ensure proper transaction rollback during testing.
- * - The `createSomeUsers` method was refactored to explicitly save User instances after they are added
- *   to the Department's users collection. This ensures the bidirectional relationship is correctly established
- *   and persisted, resolving TransientObjectException and MissingPropertyException.
- * - The `UserService.findAllByDepartment` method was changed to use a direct HQL query
- *   (`from User u where u.department = :department`) instead of criteria queries. This resolves
- *   PathElementException and NullPointerException issues encountered with criteria query attempts,
- *   providing a more robust way to query associations in a multi-tenant context.
  */
 @RestoreSystemProperties
 class MultiTenancyBidirectionalManyToManySpec extends Specification {
 
-    @Shared
     final Map config = [
             "grails.gorm.multiTenancy.mode":MultiTenancySettings.MultiTenancyMode.DISCRIMINATOR,
             "grails.gorm.multiTenancy.tenantResolverClass":SystemPropertyTenantResolver.name,
@@ -71,7 +55,8 @@ class MultiTenancyBidirectionalManyToManySpec extends Specification {
     @Shared DepartmentService departmentService
     @Shared UserService userService
 
-    @AutoCleanup HibernateDatastore datastore
+    @Shared @AutoCleanup HibernateDatastore datastore
+
 
     void setup() {
         System.setProperty(SystemPropertyTenantResolver.PROPERTY_NAME, "oci")
@@ -81,7 +66,7 @@ class MultiTenancyBidirectionalManyToManySpec extends Specification {
     }
 
     @Rollback
-    @Issue("https://github.com/grails/gorm-hibernate5/issues/58")
+    @Issue("https://github.com/grails/grails-data-hibernate5/issues/58")
     void "test hasMany and 'in' query with multi-tenancy" () {
         given:
         createSomeUsers()
@@ -94,19 +79,72 @@ class MultiTenancyBidirectionalManyToManySpec extends Specification {
     }
 
     Number createSomeUsers() {
-        Department department = new Department(name: "Grails")
-        department.addToUsers(new User(username: "John Doe"))
-        department.addToUsers(new User(username: "Hanna William"))
-        department.addToUsers(new User(username: "Mark"))
-        department.addToUsers(new User(username: "Karl"))
-
+        Department department = departmentService.save("Grails")
+        department.addToUsers(username: "John Doe").save()
+        department.addToUsers(username: "Hanna William").save()
+        department.addToUsers(username: "Mark").save()
+        department.addToUsers(username: "Karl").save()
         department.save(flush: true)
         department.users.size()
     }
 
 }
 
+@Entity
+class User implements MultiTenant<User> {
+    String username
+    String tenantId
 
+    static belongsTo = [Department]
+    static hasMany = [departments: Department]
+
+    static mapping = {
+        table '`user`'
+    }
+}
+
+@Entity
+class Department implements MultiTenant<Department> {
+    String name
+    String tenantId
+
+    static hasMany = [users: User]
+}
+
+@CurrentTenant
+@Service(Department)
+@Transactional
+abstract class DepartmentService {
+
+    UserService userService
+
+    abstract Department save(String name)
+
+    abstract Department save(Department department)
+
+    List<Department> findAllByUser(String username) {
+        User user = User.findByUsername(username)
+        Department.executeQuery('from Department d where :user in elements(d.users)', [user: user])
+    }
+
+    abstract Number count()
+
+}
+
+@CurrentTenant
+@Service(User)
+@Transactional
+abstract class UserService {
+
+    List<User> findAllByDepartment(String departmentName) {
+        Department department = Department.findByName(departmentName)
+        User.executeQuery('from User u where :department in elements(u.departments)', [department: department])
+    }
+
+    abstract User save(User user)
+
+    abstract Number count()
+}
 
 
 
