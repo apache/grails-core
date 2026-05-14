@@ -63,7 +63,12 @@ dependencies {
     }
     rootProject.subprojects
             .findAll { it.findProperty('gormApiDocs') }
-            .each { documentation project(":$it.name") }
+            .each {
+                // TODO: This needs fixed for hibernate 7, but with the hibernate version conflicts, we may need to do separate documentation publishing
+                if(!it.name.startsWith('grails-data-hibernate7')) {
+                    documentation project(":$it.name")
+                }
+            }
 
     // These are added to be able to resolve the mongo version from grails-bom
     // in the resolveMongodbVersion task
