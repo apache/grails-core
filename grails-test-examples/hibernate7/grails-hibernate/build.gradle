@@ -30,7 +30,7 @@ version = projectVersion
 group = 'examples'
 
 dependencies {
-    implementation platform(project(':grails-bom'))
+    implementation platform(project(':grails-hibernate7-bom'))
 
     implementation 'org.apache.grails:grails-data-hibernate7'
     implementation 'jakarta.persistence:jakarta.persistence-api'
@@ -45,7 +45,7 @@ dependencies {
         implementation 'org.apache.grails:grails-layout'
     }
 
-    testAndDevelopmentOnly platform(project(':grails-bom'))
+    testAndDevelopmentOnly platform(project(':grails-hibernate7-bom'))
     testAndDevelopmentOnly 'org.webjars.npm:jquery'
 
     runtimeOnly 'cloud.wondrify:asset-pipeline-grails'

@@ -85,7 +85,6 @@ tasks.named('asciidoctor', AsciidoctorTask) { AsciidoctorTask it ->
             'migrationPluginExamplesDir': project.layout.projectDirectory.dir('src/docs/asciidoc/databaseMigration').asFile.relativePath(rootProject.findProject(':grails-data-hibernate5-dbmigration').layout.projectDirectory.asFile),
             'migrationPluginGroupId'    : rootProject.findProject(':grails-data-hibernate5-dbmigration').group,
             'migrationPluginArtifactId' : rootProject.findProject(':grails-data-hibernate5-dbmigration').name,
-            'liquibaseHibernate5Version': liquibaseHibernate5Version
     ]
 }
 

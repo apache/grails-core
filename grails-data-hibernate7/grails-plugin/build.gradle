@@ -32,13 +32,13 @@ group = 'org.apache.grails'
 
 ext {
     gormApiDocs = true
-    pomTitle = 'Grails GORM'
-    pomDescription = 'GORM - Grails Data Access Framework'
+    pomTitle = 'Grails GORM Hibernate 7 Plugin'
+    pomDescription = 'GORM - Grails Data Access Framework - Hibernate 7 Plugin'
 }
 
 dependencies {
     // TODO: Clarify and clean up dependencies
-    implementation platform(project(':grails-bom'))
+    implementation platform(project(':grails-hibernate7-bom'))
 
     api "org.springframework.boot:spring-boot"
     api "org.springframework:spring-orm"

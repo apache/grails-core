@@ -29,7 +29,7 @@ group = 'examples'
 
 dependencies {
 
-    implementation platform(project(':grails-bom'))
+    implementation platform(project(':grails-hibernate7-bom'))
     implementation 'org.apache.grails.data:grails-data-hibernate7-core'
     implementation 'org.springframework:spring-tx'
 
