@@ -208,10 +208,6 @@ class GormEnhancer implements Closeable {
         }
     }
 
-    @CompileStatic
-    void enhance(boolean onlyExtendedMethods = false) {
-    }
-
     /**
      * Enhance a single entity
      *
