@@ -72,10 +72,9 @@ dependencies {
         }
     }
 
-    // Re-export the Micronaut platform so consumers of grails-micronaut-bom inherit Micronaut's
-    // managed versions transitively and don't need to declare the platform themselves.
-    // Exclude Groovy since we declare the required version explicitly below via customBomDependencies.
-    // Exclude Spock since the base BOM manages that version.
+    // Re-export the Micronaut platform so consumers inherit Micronaut's managed versions
+    // transitively. Exclude Groovy since we declare the required version explicitly via
+    // customBomDependencies. Exclude Spock since we manage that version ourselves.
     api(platform("io.micronaut.platform:micronaut-platform:$micronautPlatformVersion")) {
         exclude group: 'org.apache.groovy'
         exclude group: 'org.spockframework'

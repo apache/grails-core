@@ -34,7 +34,6 @@ def publishedProjects = [
         'grails-bom',
         'grails-hibernate5-bom',
         'grails-hibernate7-bom',
-        'grails-micronaut-bom',
         'grails-bootstrap',
         'grails-cache',
         'grails-codecs',
@@ -69,7 +68,6 @@ def publishedProjects = [
         'grails-interceptors',
         'grails-layout',
         'grails-logging',
-        'grails-micronaut',
         'grails-mimetypes',
         'grails-rest-transforms',
         'grails-scaffolding',
@@ -147,6 +145,16 @@ def publishedProjects = [
         'grails-profiles-web',
         'grails-profiles-web-plugin',
 ]
+
+def skipMicronautProjects = providers.gradleProperty('skipMicronautProjects').isPresent()
+if (!skipMicronautProjects) {
+    publishedProjects.addAll([
+            'grails-hibernate5-micronaut-bom',
+            'grails-hibernate7-micronaut-bom',
+            'grails-micronaut',
+            'grails-micronaut-bom',
+    ])
+}
 
 subprojects {
     if (name in publishedProjects) {

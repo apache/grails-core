@@ -117,6 +117,21 @@ class PropertyNameCalculator {
             possibleKey = lastIndex > 0 ? possibleKey.substring(0, lastIndex) : null
         }
 
+        // Fallback: check if any existing version property is a prefix of the artifact key.
+        // This handles cases like 'derbyclient' matching 'derby.version' to align with
+        // Spring Boot's BOM property naming conventions.
+        String artifactKey = keyMappings[found.coordinates]
+        if (artifactKey) {
+            String match = versions.keySet()
+                .findAll { it.endsWith('.version') }
+                .collect { it - '.version' }
+                .findAll { artifactKey.startsWith(it) }
+                .max { it.length() }
+            if (match) {
+                return "${match}.version" as String
+            }
+        }
+
         null
     }
 }
