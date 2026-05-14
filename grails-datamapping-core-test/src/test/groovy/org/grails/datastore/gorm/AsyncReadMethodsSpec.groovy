@@ -28,6 +28,9 @@ import org.apache.grails.data.testing.tck.domains.Person
  */
 class AsyncReadMethodsSpec extends GrailsDataTckSpec<GrailsDataCoreTckManager> {
 
+    void setupSpec() {
+        manager.addAllDomainClasses([Person])
+    }
 
     def "Test that normal GORM methods can be used within the doAsync method"() {
         given: "Some people"

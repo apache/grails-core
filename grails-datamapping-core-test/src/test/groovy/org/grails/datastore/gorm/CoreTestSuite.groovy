@@ -30,6 +30,5 @@ import org.apache.grails.data.testing.tck.tests.NotInListSpec
  */
 @Suite
 @SelectClasses([NotInListSpec])
-@spock.lang.IgnoreIf({ System.getProperty('core.gorm.suite') == 'true' })
 class CoreTestSuite {
 }

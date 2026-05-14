@@ -18,10 +18,13 @@
  */
 package org.apache.grails.data.testing.tck.tests
 
+import spock.lang.IgnoreIf
+
 import org.apache.grails.data.testing.tck.domains.Person
 import org.apache.grails.data.testing.tck.base.GrailsDataTckSpec
 
-@spock.lang.Requires({ System.getProperty('hibernate5.gorm.suite') == 'true' || System.getProperty('mongodb.gorm.suite') == 'true' || System.getProperty('core.gorm.suite') == 'true' })
+// Hibernate 7 has it's own test because it subtypes the paged list
+@IgnoreIf({ System.getProperty('hibernate7.gorm.suite') == 'true' })
 class PagedResultSpec extends GrailsDataTckSpec {
 
     void setupSpec() {
