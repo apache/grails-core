@@ -46,6 +46,10 @@ class GormInstanceApiSpec extends Specification {
             GormValidationApi getValidationApi(String className) {
                 return testValidationApi
             }
+            @Override
+            <D> GormValidationApi<D> findValidationApi(Class<D> entity, String qualifier = null) {
+                return testValidationApi
+            }
         }
         
         def api = new TestGormInstanceApi(datastore, session, registry)
@@ -85,6 +89,10 @@ class GormInstanceApiSpec extends Specification {
         def registry = new GormRegistry() {
             @Override
             GormValidationApi getValidationApi(String className) {
+                return testValidationApi
+            }
+            @Override
+            <D> GormValidationApi<D> findValidationApi(Class<D> entity, String qualifier = null) {
                 return testValidationApi
             }
         }

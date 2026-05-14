@@ -70,7 +70,7 @@ class ValidationEventListener extends AbstractPersistenceEventListener {
                     boolean hasErrors = false
                     if (source instanceof ConnectionSourcesProvider) {
                         def connectionSourceName = ((ConnectionSourcesProvider) source).connectionSources.defaultConnectionSource.name
-                        GormValidationApi validationApi = GormRegistry.instance.apiResolver.findValidationApi((Class<Object>) entityObject.getClass(), connectionSourceName)
+                        GormValidationApi validationApi = GormRegistry.instance.findValidationApi((Class<Object>) entityObject.getClass(), connectionSourceName)
                         hasErrors = !validationApi.validate((Object) entityObject)
                     }
                     else {

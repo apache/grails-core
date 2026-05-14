@@ -138,6 +138,6 @@ trait GormValidateable {
      */
     @Generated
     private GormValidationApi currentGormValidationApi() {
-        GormRegistry.instance.apiResolver.findValidationApi(getClass())
+        GormRegistry.instance.findValidationApi(getClass())
     }
 }

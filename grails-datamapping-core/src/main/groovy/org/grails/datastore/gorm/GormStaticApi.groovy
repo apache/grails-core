@@ -191,10 +191,10 @@ class GormStaticApi<D> extends AbstractGormApi<D> implements GormAllOperations<D
             ConnectionSources sources = ((ConnectionSourcesProvider) ds).connectionSources
             if (sources != null) {
                 if (sources.getConnectionSource(name) != null) {
-                    return registry.apiResolver.findStaticApi(persistentClass, name)
+                    return registry.findStaticApi(persistentClass, name)
                 }
                 if (name.equalsIgnoreCase(ConnectionSource.DEFAULT) || name.equalsIgnoreCase(ConnectionSource.OLD_DEFAULT)) {
-                    return registry.apiResolver.findStaticApi(persistentClass, ConnectionSource.DEFAULT)
+                    return registry.findStaticApi(persistentClass, ConnectionSource.DEFAULT)
                 }
             }
         }
@@ -209,92 +209,92 @@ class GormStaticApi<D> extends AbstractGormApi<D> implements GormAllOperations<D
     // GormInstanceOperations delegation
     @Override
     def propertyMissing(D instance, String name) {
-        registry.apiResolver.findInstanceApi(persistentClass, null).propertyMissing(instance, name)
+        registry.findInstanceApi(persistentClass, null).propertyMissing(instance, name)
     }
 
     @Override
     boolean instanceOf(D instance, Class cls) {
-        registry.apiResolver.findInstanceApi(persistentClass, null).instanceOf(instance, cls)
+        registry.findInstanceApi(persistentClass, null).instanceOf(instance, cls)
     }
 
     @Override
     D lock(D instance) {
-        registry.apiResolver.findInstanceApi(persistentClass, null).lock(instance)
+        registry.findInstanceApi(persistentClass, null).lock(instance)
     }
 
     @Override
     def <T1> T1 mutex(D instance, Closure<T1> callable) {
-        registry.apiResolver.findInstanceApi(persistentClass, null).mutex(instance, callable)
+        registry.findInstanceApi(persistentClass, null).mutex(instance, callable)
     }
 
     @Override
     D refresh(D instance) {
-        registry.apiResolver.findInstanceApi(persistentClass, null).refresh(instance)
+        registry.findInstanceApi(persistentClass, null).refresh(instance)
     }
 
     @Override
     D save(D instance) {
-        registry.apiResolver.findInstanceApi(persistentClass, null).save(instance)
+        registry.findInstanceApi(persistentClass, null).save(instance)
     }
 
     @Override
     D insert(D instance) {
-        registry.apiResolver.findInstanceApi(persistentClass, null).insert(instance)
+        registry.findInstanceApi(persistentClass, null).insert(instance)
     }
 
     @Override
     D insert(D instance, Map params) {
-        registry.apiResolver.findInstanceApi(persistentClass, null).insert(instance, params)
+        registry.findInstanceApi(persistentClass, null).insert(instance, params)
     }
 
     @Override
     D merge(D instance) {
-        registry.apiResolver.findInstanceApi(persistentClass, null).merge(instance)
+        registry.findInstanceApi(persistentClass, null).merge(instance)
     }
 
     @Override
     D merge(D instance, Map params) {
-        registry.apiResolver.findInstanceApi(persistentClass, null).merge(instance, params)
+        registry.findInstanceApi(persistentClass, null).merge(instance, params)
     }
 
     @Override
     D save(D instance, boolean validate) {
-        registry.apiResolver.findInstanceApi(persistentClass, null).save(instance, validate)
+        registry.findInstanceApi(persistentClass, null).save(instance, validate)
     }
 
     @Override
     D save(D instance, Map params) {
-        registry.apiResolver.findInstanceApi(persistentClass, null).save(instance, params)
+        registry.findInstanceApi(persistentClass, null).save(instance, params)
     }
 
     @Override
     Serializable ident(D instance) {
-        registry.apiResolver.findInstanceApi(persistentClass, null).ident(instance)
+        registry.findInstanceApi(persistentClass, null).ident(instance)
     }
 
     @Override
     D attach(D instance) {
-        registry.apiResolver.findInstanceApi(persistentClass, null).attach(instance)
+        registry.findInstanceApi(persistentClass, null).attach(instance)
     }
 
     @Override
     boolean isAttached(D instance) {
-        registry.apiResolver.findInstanceApi(persistentClass, null).isAttached(instance)
+        registry.findInstanceApi(persistentClass, null).isAttached(instance)
     }
 
     @Override
     void discard(D instance) {
-        registry.apiResolver.findInstanceApi(persistentClass, null).discard(instance)
+        registry.findInstanceApi(persistentClass, null).discard(instance)
     }
 
     @Override
     void delete(D instance) {
-        registry.apiResolver.findInstanceApi(persistentClass, null).delete(instance)
+        registry.findInstanceApi(persistentClass, null).delete(instance)
     }
 
     @Override
     void delete(D instance, Map params) {
-        registry.apiResolver.findInstanceApi(persistentClass, null).delete(instance, params)
+        registry.findInstanceApi(persistentClass, null).delete(instance, params)
     }
 
     // GormStaticOperations

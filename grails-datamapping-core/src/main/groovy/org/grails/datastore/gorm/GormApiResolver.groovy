@@ -287,4 +287,8 @@ class GormApiResolver {
         return ConnectionSource.DEFAULT
     }
 
+    private IllegalStateException stateException(Class entity) {
+        return new IllegalStateException("No GORM implementation configured for class [${entity.name}]. Ensure GORM has been initialized correctly")
+    }
+
 }

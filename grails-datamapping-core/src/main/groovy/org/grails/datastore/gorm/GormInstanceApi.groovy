@@ -121,7 +121,7 @@ class GormInstanceApi<D> extends AbstractGormApi<D> implements GormInstanceOpera
         if (ds instanceof ConnectionSourcesProvider) {
             ConnectionSources sources = ((ConnectionSourcesProvider) ds).connectionSources
             if (sources != null && sources.getConnectionSource(name) != null) {
-                def instanceApi = registry.apiResolver.findInstanceApi(persistentClass, name)
+                def instanceApi = registry.findInstanceApi(persistentClass, name)
                 return new DelegatingGormEntityApi(instanceApi, instance)
             }
         }
@@ -205,7 +205,7 @@ class GormInstanceApi<D> extends AbstractGormApi<D> implements GormInstanceOpera
             String qualifier = ds instanceof org.grails.datastore.mapping.core.connections.ConnectionSourcesProvider ?
                 ((org.grails.datastore.mapping.core.connections.ConnectionSourcesProvider)ds).getConnectionSources().getDefaultConnectionSource().getName() :
                 org.grails.datastore.mapping.core.connections.ConnectionSource.DEFAULT
-            if (!registry.apiResolver.findValidationApi(persistentClass, qualifier).validate(instance, arguments)) {
+            if (!registry.findValidationApi(persistentClass, qualifier).validate(instance, arguments)) {
                 if (shouldFail(arguments)) {
                     throw validationException.newInstance('Validation Error(s) occurred during save()', instance.errors)
                 }
@@ -216,7 +216,7 @@ class GormInstanceApi<D> extends AbstractGormApi<D> implements GormInstanceOpera
             String qualifier = ds instanceof org.grails.datastore.mapping.core.connections.ConnectionSourcesProvider ?
                 ((org.grails.datastore.mapping.core.connections.ConnectionSourcesProvider)ds).getConnectionSources().getDefaultConnectionSource().getName() :
                 org.grails.datastore.mapping.core.connections.ConnectionSource.DEFAULT
-            registry.apiResolver.findValidationApi(persistentClass, qualifier).clearErrors(instance)
+            registry.findValidationApi(persistentClass, qualifier).clearErrors(instance)
             if (instance instanceof GormValidateable) {
                 GormValidateable gormValidateable = (GormValidateable) instance
                 previousSkipValidation = gormValidateable.shouldSkipValidation()
