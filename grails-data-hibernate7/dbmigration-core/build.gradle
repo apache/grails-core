@@ -1,0 +1,99 @@
+/*
+ *  Licensed to the Apache Software Foundation (ASF) under one
+ *  or more contributor license agreements.  See the NOTICE file
+ *  distributed with this work for additional information
+ *  regarding copyright ownership.  The ASF licenses this file
+ *  to you under the Apache License, Version 2.0 (the
+ *  "License"); you may not use this file except in compliance
+ *  with the License.  You may obtain a copy of the License at
+ *
+ *    https://www.apache.org/licenses/LICENSE-2.0
+ *
+ *  Unless required by applicable law or agreed to in writing,
+ *  software distributed under the License is distributed on an
+ *  "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ *  KIND, either express or implied.  See the License for the
+ *  specific language governing permissions and limitations
+ *  under the License.
+ */
+
+plugins {
+    id 'groovy'
+    id 'java-library'
+    id 'java-test-fixtures'
+    id 'org.apache.grails.buildsrc.properties'
+    id 'org.apache.grails.buildsrc.dependency-validator'
+    id 'org.apache.grails.buildsrc.compile'
+    id 'org.apache.grails.buildsrc.publish'
+    id 'org.apache.grails.buildsrc.sbom'
+    id 'org.apache.grails.gradle.grails-code-style'
+}
+
+version = projectVersion
+group = 'org.apache.grails'
+
+ext {
+    pomTitle = 'Grails Database Migration Core for Hibernate 7'
+    pomDescription = 'Grails Database Migration integrations with Hibernate 7 & Liquibase'
+}
+
+configurations {
+    enversRuntime.extendsFrom(testImplementation)
+}
+
+dependencies {
+    implementation platform(project(':grails-hibernate7-bom'))
+
+    implementation("org.liquibase:liquibase-core")
+    implementation("org.hibernate.orm:hibernate-core")
+    implementation("org.hibernate.models:hibernate-models")
+    compileOnly("org.hibernate.orm:hibernate-envers")
+    testCompileOnly("org.hibernate.orm:hibernate-envers")
+
+    compileOnly "org.projectlombok:lombok"
+    annotationProcessor platform(project(':grails-hibernate7-bom'))
+    annotationProcessor 'org.projectlombok:lombok'
+
+    testFixturesApi platform(project(':grails-hibernate7-bom'))
+    testFixturesApi("org.hibernate.orm:hibernate-core")
+    testFixturesApi("org.hibernate.orm:hibernate-envers")
+    testFixturesCompileOnly "org.projectlombok:lombok"
+    testFixturesAnnotationProcessor platform(project(':grails-hibernate7-bom'))
+    testFixturesAnnotationProcessor 'org.projectlombok:lombok'
+
+    compileOnly 'org.springframework:spring-beans'
+    compileOnly 'org.springframework:spring-context'
+    compileOnly 'org.springframework:spring-orm'
+
+    testImplementation platform(project(':grails-hibernate7-bom'))
+    testCompileOnly "org.projectlombok:lombok"
+    testAnnotationProcessor platform(project(':grails-hibernate7-bom'))
+    testAnnotationProcessor "org.projectlombok:lombok"
+
+    testImplementation 'com.h2database:h2'
+    testImplementation 'org.hsqldb:hsqldb'
+    testImplementation('org.liquibase:liquibase-test-harness') {
+        exclude group: 'org.liquibase', module: 'liquibase-commercial'
+    }
+    testImplementation 'org.springframework:spring-test'
+    testImplementation 'org.springframework:spring-jdbc'
+    testImplementation 'org.springframework:spring-beans'
+    testImplementation 'org.springframework:spring-context'
+    testImplementation 'org.springframework:spring-orm'
+    testImplementation project(':grails-data-hibernate7-core')
+    testImplementation project(':grails-data-hibernate7')
+    testImplementation 'org.testcontainers:testcontainers'
+    testImplementation 'org.testcontainers:testcontainers-postgresql'
+    testImplementation 'org.testcontainers:testcontainers-spock'
+    testImplementation 'org.postgresql:postgresql'
+    enversRuntime("org.hibernate.orm:hibernate-envers")
+}
+
+tasks.named('test', Test) {
+    classpath += configurations.enversRuntime
+}
+
+apply {
+    from rootProject.layout.projectDirectory.file('gradle/hibernate7-test-config.gradle')
+    from rootProject.layout.projectDirectory.file('gradle/docs-config.gradle')
+}

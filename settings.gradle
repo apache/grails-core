@@ -261,6 +261,31 @@ project(':grails-data-docs-stage').projectDir = file('grails-data-docs/stage')
 include 'grails-data-simple'
 findProject(':grails-data-simple').projectDir = file('grails-data-simple')
 
+// Data Mapping - Hibernate 7
+// Core
+include 'grails-data-hibernate7-core'
+findProject(':grails-data-hibernate7-core').projectDir = file('grails-data-hibernate7/core')
+
+include 'grails-data-hibernate7-spring-orm'
+findProject(':grails-data-hibernate7-spring-orm').projectDir = new File(settingsDir, 'grails-data-hibernate7/spring-orm')
+
+// Documentation
+include 'grails-data-hibernate7-docs'
+findProject(':grails-data-hibernate7-docs').projectDir = new File(settingsDir, 'grails-data-hibernate7/docs')
+
+//// Plugins
+include ':grails-data-hibernate7'
+findProject(':grails-data-hibernate7').projectDir = new File(settingsDir, 'grails-data-hibernate7/grails-plugin')
+
+include 'grails-data-hibernate7-dbmigration-core'
+findProject(':grails-data-hibernate7-dbmigration-core').projectDir = new File(settingsDir, 'grails-data-hibernate7/dbmigration-core')
+
+include 'grails-data-hibernate7-dbmigration'
+findProject(':grails-data-hibernate7-dbmigration').projectDir = new File(settingsDir, 'grails-data-hibernate7/dbmigration')
+
+include 'grails-data-hibernate7-spring-boot'
+findProject(':grails-data-hibernate7-spring-boot').projectDir = new File(settingsDir, 'grails-data-hibernate7/boot-plugin')
+
 // Data Mapping - Hibernate 5
 // Core
 include 'grails-data-hibernate5-core'
@@ -282,28 +307,6 @@ findProject(':grails-data-hibernate5-dbmigration').projectDir = new File(setting
 
 include 'grails-data-hibernate5-spring-boot'
 findProject(':grails-data-hibernate5-spring-boot').projectDir = new File(settingsDir, 'grails-data-hibernate5/boot-plugin')
-
-// Data Mapping - Hibernate 7
-// Core
-include 'grails-data-hibernate7-core'
-findProject(':grails-data-hibernate7-core').projectDir = file('grails-data-hibernate7/core')
-
-include 'grails-data-hibernate7-spring-orm'
-findProject(':grails-data-hibernate7-spring-orm').projectDir = new File(settingsDir, 'grails-data-hibernate7/spring-orm')
-
-// Documentation
-include 'grails-data-hibernate7-docs'
-findProject(':grails-data-hibernate7-docs').projectDir = new File(settingsDir, 'grails-data-hibernate7/docs')
-
-// Plugins
-include ':grails-data-hibernate7'
-findProject(':grails-data-hibernate7').projectDir = new File(settingsDir, 'grails-data-hibernate7/grails-plugin')
-
-include 'grails-data-hibernate7-dbmigration'
-findProject(':grails-data-hibernate7-dbmigration').projectDir = new File(settingsDir, 'grails-data-hibernate7/dbmigration')
-
-include 'grails-data-hibernate7-spring-boot'
-findProject(':grails-data-hibernate7-spring-boot').projectDir = new File(settingsDir, 'grails-data-hibernate7/boot-plugin')
 
 // functional tests - Hibernate5 examples
 include 'grails-test-examples-hibernate5-grails-hibernate'
@@ -344,6 +347,7 @@ project(':grails-test-examples-hibernate5-issue450').projectDir = new File(setti
 include 'grails-test-examples-hibernate5-grails-multitenant-multi-datasource'
 project(':grails-test-examples-hibernate5-grails-multitenant-multi-datasource').projectDir = new File(settingsDir, 'grails-test-examples/hibernate5/grails-multitenant-multi-datasource')
 
+
 // functional tests - Hibernate7 examples
 include 'grails-test-examples-hibernate7-grails-hibernate'
 project(':grails-test-examples-hibernate7-grails-hibernate').projectDir = new File(settingsDir, 'grails-test-examples/hibernate7/grails-hibernate')
@@ -360,9 +364,6 @@ project(':grails-test-examples-hibernate7-grails-schema-per-tenant').projectDir 
 include 'grails-test-examples-hibernate7-grails-partitioned-multi-tenancy'
 project(':grails-test-examples-hibernate7-grails-partitioned-multi-tenancy').projectDir = new File(settingsDir, 'grails-test-examples/hibernate7/grails-partitioned-multi-tenancy')
 
-include 'grails-test-examples-hibernate7-grails-multitenant-multi-datasource'
-project(':grails-test-examples-hibernate7-grails-multitenant-multi-datasource').projectDir = new File(settingsDir, 'grails-test-examples/hibernate7/grails-multitenant-multi-datasource')
-
 include 'grails-test-examples-hibernate7-standalone-hibernate'
 project(':grails-test-examples-hibernate7-standalone-hibernate').projectDir = new File(settingsDir, 'grails-test-examples/hibernate7/standalone-hibernate')
 
@@ -374,6 +375,9 @@ project(':grails-test-examples-hibernate7-grails-data-service').projectDir = new
 
 include 'grails-test-examples-hibernate7-grails-data-service-multi-datasource'
 project(':grails-test-examples-hibernate7-grails-data-service-multi-datasource').projectDir = new File(settingsDir, 'grails-test-examples/hibernate7/grails-data-service-multi-datasource')
+
+include 'grails-test-examples-hibernate7-grails-multitenant-multi-datasource'
+project(':grails-test-examples-hibernate7-grails-multitenant-multi-datasource').projectDir = new File(settingsDir, 'grails-test-examples/hibernate7/grails-multitenant-multi-datasource')
 
 include 'grails-test-examples-hibernate7-grails-hibernate-groovy-proxy'
 project(':grails-test-examples-hibernate7-grails-hibernate-groovy-proxy').projectDir = new File(settingsDir, 'grails-test-examples/hibernate7/grails-hibernate-groovy-proxy')
