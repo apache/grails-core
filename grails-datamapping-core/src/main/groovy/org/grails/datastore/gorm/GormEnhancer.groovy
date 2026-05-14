@@ -102,7 +102,7 @@ class GormEnhancer implements Closeable {
             
             // Add dynamic methods to the class
             addStaticMethods(entity)
-            addInstanceMethods(entity, false)
+            addInstanceMethods(entity)
         }
     }
 
@@ -258,7 +258,7 @@ class GormEnhancer implements Closeable {
 
 
     @CompileDynamic
-    protected void addInstanceMethods(PersistentEntity e, boolean onlyExtendedMethods) {
+    protected void addInstanceMethods(PersistentEntity e) {
         Class cls = e.javaClass
         ExpandoMetaClass mc = MetaClassUtils.getExpandoMetaClass(cls)
         
