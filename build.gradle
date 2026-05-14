@@ -16,7 +16,6 @@
  */
 
 plugins {
-    id 'org.apache.grails.gradle.test-aggregation'
     id 'org.apache.grails.gradle.grails-code-style'
 }
 

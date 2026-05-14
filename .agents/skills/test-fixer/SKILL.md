@@ -1,116 +1,71 @@
 ---
 name: test-fixer
-description: Guide for running, aggregating, and fixing test failures across all grails-core modules using GrailsTestPlugin — producing TEST_FAILURES.md from multi-module XML test results
+description: Guide for running, reviewing, and fixing test failures across grails-core modules using Gradle test reports
 license: Apache-2.0
 ---
 <!--
 SPDX-License-Identifier: Apache-2.0
 
-Licensed to the Apache Software Foundation (ASF) under one or more contributor license agreements; and to You under the Apache License, Version 2.0. 
+Licensed to the Apache Software Foundation (ASF) under one or more contributor license agreements; and to You under the Apache License, Version 2.0.
 -->
 
 ## What I Do
 
-- Explain how `GrailsTestPlugin` aggregates test failures from all 60+ modules into a single `TEST_FAILURES.md` report.
-- Guide you through running tests across the entire repo with `--continue` so one failure doesn't stop the rest.
-- Help interpret `TEST_FAILURES.md`, navigate to failing specs, and fix the underlying issues.
+- Guide targeted and full test runs across grails-core modules.
+- Help interpret Gradle HTML and XML test reports.
+- Help triage failing specs, static state pollution, and module-specific regressions.
 
 ## When to Use Me
 
 Activate this skill when:
 
-- Running the full test suite and needing to see all failures in one place instead of tailing 60 separate reports.
-- Preparing a commit — `TEST_FAILURES.md` must report `All tests passed! 🎉` before merging.
-- Triaging which modules have regressions after a dependency upgrade or refactor.
-
----
-
-## Plugin Overview
-
-`GrailsTestPlugin` is applied to the **root project only** via the `org.apache.grails.gradle.test-aggregation` plugin ID (registered in `build-logic`).
-
-It registers a single `aggregateTestFailures` task that:
-
-1. Waits for (`mustRunAfter`) every `Test` task in every subproject.
-2. Scans all `build/test-results/**/*.xml` directories across subprojects and all top-level repo directories.
-3. Parses every `TEST-*.xml` JUnit report for `<failure>` and `<error>` elements.
-4. Writes `TEST_FAILURES.md` to the repo root — a Markdown table of failures grouped by module.
-
-Note: This plugin does **not** run tests itself. It only aggregates results already written to disk. Gradle's own test engine (JUnit Platform) handles test execution and XML report generation.
+- Running a failing module or specific spec.
+- Preparing a commit and verifying affected module tests.
+- Triaging regressions after a dependency upgrade or refactor.
+- Reviewing aggregate test results from `:grails-test-report`.
 
 ---
 
 ## Key Tasks
 
-### Targeted Testing (Recommended)
-To save time, clean old results and run only related tests:
+### Targeted Testing Recommended
+
+To save time, run only related tests:
 
 ```bash
-# 1. Clear stale XML reports
-./gradlew clean
-
-# 2. Run related tests and aggregate
-./gradlew :grails-data-hibernate7-core:test --tests "grails.gorm.tests.BasicCollection*" aggregateTestFailures --continue
+./gradlew :grails-data-hibernate7-core:test --tests "grails.gorm.tests.BasicCollection*"
 ```
 
 ### Full Run
+
 ```bash
-# Run all tests across all modules, continue even on failure, then aggregate
-./gradlew test aggregateTestFailures --continue
+./gradlew test --continue
 ```
 
-`--continue` is essential: without it, Gradle stops at the first failing module and `aggregateTestFailures` never runs.
-**ALWAYS run `clean` before a targeted run if you want `TEST_FAILURES.md` to reflect only the current run.**
+Use `--continue` when you need later modules to run after an earlier module fails.
 
 ---
 
-## Output File
+## Aggregate Test Reports
 
-`TEST_FAILURES.md` is written to the repo root. Format:
+The `grails-test-report` project owns repository test aggregation.
 
-```markdown
-# Test Failures Summary
-Generated on: 2026-04-10 12:00:00
-
-Found 3 failures.
-
-## Module: grails-data-hibernate7-core
-| Class | Test | Type | Message |
-| :--- | :--- | :--- | :--- |
-| org.grails.orm.hibernate.FooSpec | some feature | org.spockframework.runtime.SpockAssertionError | expected: ... |
+```bash
+./gradlew :grails-test-report:check --continue
 ```
 
-A clean run produces:
-```markdown
-All tests passed! 🎉
-```
+This generates:
 
-**A clean run should report no issues. Note that `TEST_FAILURES.md` is a generated artifact and is ignored by git, so it will not be committed.**
+- Unit HTML: `grails-test-report/build/reports/tests/test/index.html`
+- Unit Markdown: `grails-test-report/build/reports/tests/test.md`
+- Integration HTML: `grails-test-report/build/reports/tests/integrationTest/index.html`
+- Integration Markdown: `grails-test-report/build/reports/tests/integrationTest.md`
+- Combined HTML: `grails-test-report/build/reports/tests/combined/index.html`
+- Combined Markdown: `grails-test-report/build/reports/tests/combined.md`
 
----
+The aggregate report includes root subprojects that define matching `test` or `integrationTest` tasks.
 
-## Interpreting Failures
-
-Each row in the table gives you:
-
-| Column | Meaning |
-|--------|---------|
-| `Class` | Fully-qualified Spock spec or JUnit class |
-| `Test` | Feature method name (Spock) or test method name (JUnit) |
-| `Type` | Exception class (e.g. `SpockAssertionError`, `IllegalStateException`) |
-| `Message` | First 200 characters of the failure message or stack |
-
-### Common Failure Patterns
-
-| Type | Likely Cause |
-|------|-------------|
-| `ConditionNotSatisfiedException` | Spock `then:` assertion failed — check expected vs actual values |
-| `SpockAssertionError` | Explicit `assert` failed inside a spec |
-| `BeanCreationException` | Spring context failed to start — check `@SpringBootTest` config or missing beans |
-| `HibernateException` | Schema/session issue — check entity mapping or test datasource |
-| `IllegalStateException` | Missing setup, invalid test state, or static pollution from parallel tests |
-| `NullPointerException` | Uninitialized mock or service — check `given:` block |
-| `MissingMethodException` | Groovy dynamic dispatch failure — usually a missing method or wrong type |
+The collected unit and integration `Test` tasks are finalized by their matching aggregate report tasks. Reports are attempted after failures and after targeted module test runs, but they summarize the XML results currently available on disk. Use `--continue` for full-suite runs so Gradle keeps scheduling later test tasks after an earlier failure; without it, reports can be partial. Run `clean` first when stale XML results should be excluded.
 
 ---
 
@@ -124,11 +79,11 @@ Each row in the table gives you:
 ./gradlew :grails-data-hibernate7-dbmigration:test \
   --tests "org.grails.plugins.databasemigration.command.DbmGenerateGormChangelogCommandSpec"
 
-# A specific feature method (use the exact feature name)
+# A specific feature method
 ./gradlew :grails-data-hibernate7-core:test \
   --tests "org.grails.orm.hibernate.FooSpec.my feature name"
 
-# Force rerun even if Gradle thinks it's up-to-date
+# Force rerun even if Gradle thinks it is up-to-date
 ./gradlew :grails-data-hibernate7-core:test --rerun-tasks
 ```
 
@@ -141,8 +96,7 @@ Each row in the table gives you:
 | Unit tests | `src/test/groovy/` | `test` |
 | Integration tests | `src/integration-test/groovy/` | `integrationTest` |
 
-Most specs in grails-core are **unit tests** (`src/test/groovy/`) run by the `test` task.
-A small number of modules use `integrationTest` for full Spring context tests.
+Most specs in grails-core are unit tests (`src/test/groovy/`) run by the `test` task. A small number of modules use `integrationTest` for full Spring context tests.
 
 ---
 
@@ -150,11 +104,12 @@ A small number of modules use `integrationTest` for full Spring context tests.
 
 Tests run in parallel (`maxParallelForks` defaults to `4` on CI and to `availableProcessors * 3/4` otherwise; override with `-PmaxTestParallel`). This can cause:
 
-- **Static state pollution** — one test mutating a static field that another test reads.
-- **Port conflicts** — multiple test JVMs binding the same port.
-- **`@Shared` field contamination** — shared state not properly cleaned up between feature methods.
+- Static state pollution: one test mutating a static field that another test reads.
+- Port conflicts: multiple test JVMs binding the same port.
+- `@Shared` field contamination: shared state not properly cleaned up between feature methods.
 
-To diagnose flaky failures, re-run with forced serial execution:
+To diagnose flaky failures, rerun with forced serial execution:
+
 ```bash
 ./gradlew :module:test -PmaxTestParallel=1 --rerun-tasks
 ```
@@ -177,12 +132,11 @@ To diagnose flaky failures, re-run with forced serial execution:
 ## XML Report Location
 
 Gradle writes JUnit XML test results to:
-```
+
+```text
 <module>/build/test-results/
 ├── test/
-│   └── TEST-org.grails.SomSpec.xml
+│   └── TEST-org.grails.SomeSpec.xml
 └── integrationTest/
     └── TEST-org.grails.SomeIntegrationSpec.xml
 ```
-
-`aggregateTestFailures` scans all these directories automatically.
