@@ -18,10 +18,18 @@
  */
 package org.apache.grails.data.testing.tck.tests
 
-import org.apache.grails.data.testing.tck.base.GrailsDataTckSpec
-import org.apache.grails.data.testing.tck.domains.Person
+import spock.lang.IgnoreIf
 
+import org.apache.grails.data.testing.tck.domains.Person
+import org.apache.grails.data.testing.tck.base.GrailsDataTckSpec
+
+// Hibernate 7 has it's own test because it subtypes the paged list
+@IgnoreIf({ System.getProperty('hibernate7.gorm.suite') == 'true' })
 class PagedResultSpec extends GrailsDataTckSpec {
+
+    void setupSpec() {
+        manager.addAllDomainClasses([Person])
+    }
 
     void 'Test that a getTotalCount will return 0 on empty result from the list() method'() {
         when: 'A query is executed that returns no results'
