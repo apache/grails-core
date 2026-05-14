@@ -18,13 +18,14 @@
  */
 package grails.gorm.specs
 
+import org.apache.grails.data.simple.core.GrailsDataCoreTckManager
 import org.apache.grails.data.testing.tck.base.GrailsDataTckSpec
 import org.apache.grails.data.testing.tck.domains.ChildEntity
 import org.apache.grails.data.testing.tck.domains.TestEntity
-import org.apache.grails.data.simple.core.GrailsDataCoreTckManager
 import org.grails.datastore.gorm.validation.CascadingValidator
 
 class DeepValidateWithSaveSpec extends GrailsDataTckSpec<GrailsDataCoreTckManager> {
+
 
     void "save delegates deepValidate:true to CascadingValidator"() {
         given: "a CascadingValidator mock installed for TestEntity"
@@ -40,6 +41,7 @@ class DeepValidateWithSaveSpec extends GrailsDataTckSpec<GrailsDataCoreTckManage
         then: "CascadingValidator is called with cascade=true"
         1 * mockValidator.validate(entity, _, true)
     }
+
 
     void "save delegates deepValidate:false to CascadingValidator"() {
         given: "a CascadingValidator mock installed for TestEntity"

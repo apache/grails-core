@@ -23,6 +23,7 @@ import org.apache.grails.data.simple.core.GrailsDataCoreTckManager
 import org.apache.grails.data.testing.tck.base.GrailsDataTckSpec
 
 class CircularManyToOneSpec extends GrailsDataTckSpec<GrailsDataCoreTckManager> {
+
     void setupSpec() {
         manager.addAllDomainClasses([TreeNode])
     }
@@ -57,6 +58,7 @@ class CircularManyToOneSpec extends GrailsDataTckSpec<GrailsDataCoreTckManager> 
 
 @Entity
 class TreeNode {
+
     Long id
     TreeNode parent
     String name

@@ -18,23 +18,26 @@
  */
 package org.grails.datastore.gorm
 
+import spock.lang.AutoCleanup
+import spock.lang.Issue
+import spock.lang.Shared
+import spock.lang.Specification
+
 import grails.gorm.transactions.Transactional
 import grails.persistence.Entity
 import org.grails.datastore.gorm.validation.constraints.registry.DefaultValidatorRegistry
 import org.grails.datastore.mapping.config.Settings
 import org.grails.datastore.mapping.core.DatastoreUtils
 import org.grails.datastore.mapping.simple.SimpleMapDatastore
-import spock.lang.AutoCleanup
-import spock.lang.Issue
-import spock.lang.Shared
-import spock.lang.Specification
 
 class EmbeddedAssociationWithNoEntityAndGlobalNullableConstraintSpec extends Specification {
 
-    @Shared @AutoCleanup SimpleMapDatastore datastore = new SimpleMapDatastore(
-        DatastoreUtils.createPropertyResolver((Settings.SETTING_DEFAULT_CONSTRAINTS): { '*'(nullable: true) }),
-        [],
-        User2
+    @Shared
+    @AutoCleanup
+    SimpleMapDatastore datastore = new SimpleMapDatastore(
+            DatastoreUtils.createPropertyResolver((Settings.SETTING_DEFAULT_CONSTRAINTS): { '*'(nullable: true) }),
+            [],
+            User2
     )
 
     @Transactional
@@ -58,6 +61,7 @@ class EmbeddedAssociationWithNoEntityAndGlobalNullableConstraintSpec extends Spe
 
 @Entity
 class User2 {
+
     Long id
     String username
     String password
@@ -70,6 +74,7 @@ class User2 {
 }
 
 class Address2 {
+
     Long id
     String city
     String postCode

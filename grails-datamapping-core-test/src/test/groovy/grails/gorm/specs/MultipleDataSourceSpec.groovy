@@ -43,7 +43,7 @@ class MultipleDataSourceSpec extends Specification {
         def service = new PlayerService()
         def dataService = datastore.getService(IPlayerService)
         dataService.savePlayer('Neville')
-        
+
         expect:
         Player.count() == 2
         new DetachedCriteria<>(Player).count() == 2
@@ -118,6 +118,8 @@ class PlayerService {
 interface IPlayerService {
 
     Number countPlayers()
+
     Player savePlayer(String name)
+
     void deletePlayer(String name)
 }

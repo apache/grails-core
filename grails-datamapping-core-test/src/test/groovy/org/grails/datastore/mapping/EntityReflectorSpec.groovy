@@ -26,6 +26,7 @@ import org.apache.grails.data.testing.tck.base.GrailsDataTckSpec
  * Created by Jim on 8/19/2016.
  */
 class EntityReflectorSpec extends GrailsDataTckSpec<GrailsDataCoreTckManager> {
+
     void setupSpec() {
         manager.addAllDomainClasses([Library, LibraryBook])
     }
@@ -43,11 +44,13 @@ class EntityReflectorSpec extends GrailsDataTckSpec<GrailsDataCoreTckManager> {
 
 @Entity
 class Library {
+
     Long id
 }
 
 @Entity
 class LibraryBook {
+
     Long id
     Library library
 }

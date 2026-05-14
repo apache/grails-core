@@ -18,15 +18,20 @@
  */
 package org.grails.datastore.gorm
 
-import org.apache.grails.data.testing.tck.domains.ChildEntity
-import org.apache.grails.data.testing.tck.domains.TestEntity
 import org.apache.grails.data.simple.core.GrailsDataCoreTckManager
 import org.apache.grails.data.testing.tck.base.GrailsDataTckSpec
+import org.apache.grails.data.testing.tck.domains.ChildEntity
+import org.apache.grails.data.testing.tck.domains.TestEntity
 
 /**
  * @author Daniel Wiell
  */
 class OrderBySpec extends GrailsDataTckSpec<GrailsDataCoreTckManager> {
+
+    def setupSpec() {
+        manager.addAllDomainClasses([TestEntity])
+    }
+
     def setup() {
         def age = 40
         ["Bob", "Fred", "Barney", "Frank", "Joe", "Ernie"].each {

@@ -19,15 +19,19 @@
 package grails.gorm.specs
 
 import grails.gorm.DetachedCriteria
-import org.apache.grails.data.testing.tck.domains.Person
 import org.apache.grails.data.simple.core.GrailsDataCoreTckManager
 import org.apache.grails.data.testing.tck.base.GrailsDataTckSpec
+import org.apache.grails.data.testing.tck.domains.Person
 
 /**
  * Tests for using subqueries in criteria and where method calls
  *
  */
 class SubquerySpec extends GrailsDataTckSpec<GrailsDataCoreTckManager> {
+
+    def setupSpec() {
+        manager.addAllDomainClasses([Person])
+    }
 
     def "Test subquery with projection and criteria with closure"() {
         given: "A bunch of people"

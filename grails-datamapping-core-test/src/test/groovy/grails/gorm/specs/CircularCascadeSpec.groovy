@@ -18,6 +18,10 @@
  */
 package grails.gorm.specs
 
+import spock.lang.Issue
+
+import org.springframework.context.MessageSource
+
 import grails.gorm.annotation.Entity
 import grails.gorm.validation.PersistentEntityValidator
 import org.apache.grails.data.simple.core.GrailsDataCoreTckManager
@@ -25,14 +29,13 @@ import org.apache.grails.data.testing.tck.base.GrailsDataTckSpec
 import org.grails.datastore.gorm.validation.constraints.eval.DefaultConstraintEvaluator
 import org.grails.datastore.gorm.validation.constraints.registry.DefaultConstraintRegistry
 import org.grails.datastore.mapping.model.PersistentEntity
-import org.springframework.context.MessageSource
-import spock.lang.Issue
 
 /**
  * @author Graeme Rocher
  * @since 1.0
  */
 class CircularCascadeSpec extends GrailsDataTckSpec<GrailsDataCoreTckManager> {
+
     void setupSpec() {
         manager.addAllDomainClasses([SchoolPerson, ActivityValidate, SportValidate, TeamValidate, ArenaValidate])
     }
@@ -94,6 +97,7 @@ class CircularCascadeSpec extends GrailsDataTckSpec<GrailsDataCoreTckManager> {
 
 @Entity
 class SchoolPerson {
+
     String name
 
     static belongsTo = [master: SchoolPerson]
@@ -111,6 +115,7 @@ class SchoolPerson {
 
 @Entity
 class ActivityValidate {
+
     String name
 
     static hasMany = [sports: SportValidate]
@@ -118,6 +123,7 @@ class ActivityValidate {
 
 @Entity
 class SportValidate {
+
     String name
 
     static hasMany = [teams: TeamValidate, arenas: ArenaValidate]
@@ -125,10 +131,12 @@ class SportValidate {
 
 @Entity
 class TeamValidate {
+
     String name
 }
 
 @Entity
 class ArenaValidate {
+
     String name
 }

@@ -18,40 +18,46 @@
  */
 package org.grails.datastore.gorm
 
+import spock.lang.Issue
+
 import grails.persistence.Entity
 import org.apache.grails.data.simple.core.GrailsDataCoreTckManager
 import org.apache.grails.data.testing.tck.base.GrailsDataTckSpec
-import spock.lang.Issue
 
 class DomainWithPrimitiveGetterSpec extends GrailsDataTckSpec<GrailsDataCoreTckManager> {
+
     void setupSpec() {
         manager.addAllDomainClasses([DomainWithPrimitiveGetterAuthor, DomainWithPrimitiveGetterBook])
     }
 
     @Issue('GRAILS-8788')
     void "Test that a domain that contains a primitive getter maps correctly"() {
-        when:"The domain model is saved"
-            def author = new DomainWithPrimitiveGetterAuthor(name: "Stephen King")
-            author.save()
-            def book = new DomainWithPrimitiveGetterBook(title: "The Stand", author: author)
-            book.save flush:true
-        then:"The save executes correctly"
-            DomainWithPrimitiveGetterBook.count() == 1
-            DomainWithPrimitiveGetterAuthor.count() == 1
+        when: "The domain model is saved"
+        def author = new DomainWithPrimitiveGetterAuthor(name: "Stephen King")
+        author.save()
+        def book = new DomainWithPrimitiveGetterBook(title: "The Stand", author: author)
+        book.save flush: true
+        then: "The save executes correctly"
+        DomainWithPrimitiveGetterBook.count() == 1
+        DomainWithPrimitiveGetterAuthor.count() == 1
     }
 }
 
 @Entity
 class DomainWithPrimitiveGetterBook {
+
     Long id
     String title
     DomainWithPrimitiveGetterAuthor author
+
     int getValue(int param) {
         return 0
     }
 }
+
 @Entity
 class DomainWithPrimitiveGetterAuthor {
+
     Long id
     String name
     static hasMany = [books: DomainWithPrimitiveGetterBook]

@@ -18,10 +18,11 @@
  */
 package org.grails.datastore.gorm
 
+import spock.lang.Issue
+
 import org.apache.grails.data.simple.core.GrailsDataCoreTckManager
 import org.apache.grails.data.testing.tck.base.GrailsDataTckSpec
 import org.grails.datastore.gorm.query.transform.ApplyDetachedCriteriaTransform
-import spock.lang.Issue
 
 /**
  * ensure that detached criteria ast transformations work on annotated jpa entities
@@ -29,6 +30,7 @@ import spock.lang.Issue
 @ApplyDetachedCriteriaTransform
 @Issue('GRAILS-9750')
 class DetachedCriteriaJpaEntitySpec extends GrailsDataTckSpec<GrailsDataCoreTckManager> {
+
     void setupSpec() {
         manager.addAllDomainClasses([Todo])
     }
@@ -66,6 +68,7 @@ class DetachedCriteriaJpaEntitySpec extends GrailsDataTckSpec<GrailsDataCoreTckM
 @jakarta.persistence.Entity
 @grails.persistence.Entity
 class Todo {
+
     Long id
     String title
 }

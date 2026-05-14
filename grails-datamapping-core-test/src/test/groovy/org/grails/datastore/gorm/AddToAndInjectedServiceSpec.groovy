@@ -18,10 +18,11 @@
  */
 package org.grails.datastore.gorm
 
+import spock.lang.Issue
+
 import grails.persistence.Entity
 import org.apache.grails.data.simple.core.GrailsDataCoreTckManager
 import org.apache.grails.data.testing.tck.base.GrailsDataTckSpec
-import spock.lang.Issue
 
 class AddToAndInjectedServiceSpec extends GrailsDataTckSpec<GrailsDataCoreTckManager> {
 
@@ -31,19 +32,20 @@ class AddToAndInjectedServiceSpec extends GrailsDataTckSpec<GrailsDataCoreTckMan
 
     @Issue('GRAILS-9119')
     void "Test add to method with injected service present"() {
-        given:"A domain with an addTo relationship"
-            def pirate = new Pirate(name: 'Billy')
-            def ship = new Ship()
-        when:"The addTo method is called"
-            ship.addToPirates(pirate)
+        given: "A domain with an addTo relationship"
+        def pirate = new Pirate(name: 'Billy')
+        def ship = new Ship()
+        when: "The addTo method is called"
+        ship.addToPirates(pirate)
 
-        then:"It adds an associated entity correctly"
-            assert 1 == ship.pirates.size()
+        then: "It adds an associated entity correctly"
+        assert 1 == ship.pirates.size()
     }
 }
 
 @Entity
 class Pirate {
+
     Long id
     String name
     def pirateShipService
@@ -51,6 +53,7 @@ class Pirate {
 
 @Entity
 class Ship {
+
     Long id
     Set pirates
     static hasMany = [pirates: Pirate]

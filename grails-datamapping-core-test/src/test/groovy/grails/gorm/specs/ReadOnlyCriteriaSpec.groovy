@@ -18,12 +18,17 @@
  */
 package grails.gorm.specs
 
+import spock.lang.Issue
+
 import org.apache.grails.data.simple.core.GrailsDataCoreTckManager
 import org.apache.grails.data.testing.tck.base.GrailsDataTckSpec
-import spock.lang.Issue
 import org.apache.grails.data.testing.tck.domains.TestEntity
 
 class ReadOnlyCriteriaSpec extends GrailsDataTckSpec<GrailsDataCoreTckManager> {
+
+    void setupSpec() {
+        manager.addAllDomainClasses([TestEntity])
+    }
 
     @Issue('GRAILS-11670')
     void 'Test invoking readOnly in a criteria query'() {
