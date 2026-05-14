@@ -22,8 +22,6 @@ import grails.gorm.annotation.Entity
 import org.grails.datastore.mapping.core.DatastoreUtils
 import org.grails.orm.hibernate.HibernateDatastore
 import org.hibernate.dialect.H2Dialect
-import spock.lang.AutoCleanup
-import spock.lang.Shared
 import spock.lang.Specification
 
 /**
@@ -31,9 +29,8 @@ import spock.lang.Specification
  */
 class MultipleDataSourcesWithCachingSpec extends Specification {
 
-    @Shared @AutoCleanup HibernateDatastore datastore
-
-    void setupSpec() {
+    void "Test map to multiple data sources"() {
+        given: "A configuration for multiple data sources"
         Map config = [
                 'dataSource.url':"jdbc:h2:mem:grailsDB;LOCK_TIMEOUT=10000",
                 'dataSource.dbCreate': 'update',
@@ -46,11 +43,9 @@ class MultipleDataSourcesWithCachingSpec extends Specification {
                 'dataSources.books':[url:"jdbc:h2:mem:books;LOCK_TIMEOUT=10000"],
                 'dataSources.moreBooks':[url:"jdbc:h2:mem:moreBooks;LOCK_TIMEOUT=10000"]
         ]
-        datastore = new HibernateDatastore(DatastoreUtils.createPropertyResolver(config),CachingBook )
-    }
 
-    void "Test map to multiple data sources"() {
         when:
+        HibernateDatastore datastore = new HibernateDatastore(DatastoreUtils.createPropertyResolver(config), CachingBook)
         CachingBook book = CachingBook.withTransaction {
             new CachingBook(name:"The Stand").save(flush:true)
             CachingBook.get( CachingBook.first().id )
