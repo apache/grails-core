@@ -22,6 +22,8 @@ import spock.lang.Specification
 
 import org.grails.datastore.mapping.core.Datastore
 import org.grails.datastore.mapping.core.connections.ConnectionSource
+import org.grails.datastore.mapping.model.MappingContext
+import org.grails.datastore.gorm.DatastoreResolver
 
 /**
  * Tests for {@link GormRegistry#registerEntityApis(String, GormStaticApi, GormInstanceApi, GormValidationApi)}
@@ -39,35 +41,66 @@ class GormRegistryEntityRegistrationSpec extends Specification {
         GormRegistry.reset()
     }
 
-    void 'registerEntityApis registers static, instance, and validation APIs'() {
+    void 'registerApi stores static, instance, and validation APIs in dedicated registries'() {
         given:
         GormRegistry registry = GormRegistry.instance
-        String className = 'com.example.Book'
+        String className = RegistryBook.name
+        MappingContext mappingContext = Stub(MappingContext) {
+            getMappingFactory() >> null
+        }
+        Datastore datastore = Stub(Datastore) {
+            getMappingContext() >> mappingContext
+        }
+        DatastoreResolver datastoreResolver = Stub(DatastoreResolver) {
+            resolve() >> datastore
+        }
+        def staticApi = new GormStaticApi(RegistryBook, mappingContext, [], datastoreResolver, ConnectionSource.DEFAULT, registry)
+        def instanceApi = new GormInstanceApi(RegistryBook, mappingContext, datastoreResolver, registry)
+        def validationApi = new GormValidationApi(RegistryBook, mappingContext, datastoreResolver, registry)
 
         when:
-        // Note: We can't easily mock GormStaticApi, GormInstanceApi, etc. because they're not interfaces
-        // For this test, we'll verify the methods exist and can be called
-        def result = registry.staticApis
+        registry.registerApi(className, staticApi, instanceApi, validationApi)
         
         then:
-        result != null
-        result instanceof Map
+        registry.getStaticApiRegistry().containsKey(className)
+        registry.getInstanceApiRegistry().containsKey(className)
+        registry.getValidationApiRegistry().containsKey(className)
+        registry.getStaticApi(className).is(staticApi)
+        registry.getInstanceApi(className).is(instanceApi)
+        registry.getValidationApi(className).is(validationApi)
     }
 
-    void 'registerEntityApis overwrites existing registrations'() {
+    void 'registerApi overwrites existing registrations'() {
         given:
         GormRegistry registry = GormRegistry.instance
+        String className = RegistryBook.name
+        MappingContext mappingContext = Stub(MappingContext) {
+            getMappingFactory() >> null
+        }
+        Datastore datastore = Stub(Datastore) {
+            getMappingContext() >> mappingContext
+        }
+        DatastoreResolver datastoreResolver = Stub(DatastoreResolver) {
+            resolve() >> datastore
+        }
+        def firstStaticApi = new GormStaticApi(RegistryBook, mappingContext, [], datastoreResolver, ConnectionSource.DEFAULT, registry)
+        def firstInstanceApi = new GormInstanceApi(RegistryBook, mappingContext, datastoreResolver, registry)
+        def firstValidationApi = new GormValidationApi(RegistryBook, mappingContext, datastoreResolver, registry)
+        def secondStaticApi = new GormStaticApi(RegistryBook, mappingContext, [], datastoreResolver, ConnectionSource.DEFAULT, registry)
+        def secondInstanceApi = new GormInstanceApi(RegistryBook, mappingContext, datastoreResolver, registry)
+        def secondValidationApi = new GormValidationApi(RegistryBook, mappingContext, datastoreResolver, registry)
 
         when:
-        // Verify that the registry has the methods and they're callable
-        def staticApis = registry.staticApis
-        def instanceApis = registry.instanceApis
-        def validationApis = registry.validationApis
+        registry.registerApi(className, firstStaticApi, firstInstanceApi, firstValidationApi)
+        registry.registerApi(className, secondStaticApi, secondInstanceApi, secondValidationApi)
         
         then:
-        staticApis != null
-        instanceApis != null
-        validationApis != null
+        registry.getStaticApi(className).is(secondStaticApi)
+        registry.getInstanceApi(className).is(secondInstanceApi)
+        registry.getValidationApi(className).is(secondValidationApi)
+    }
+
+    class RegistryBook {
     }
 
     void 'registerEntityDatastores registers datastore for single connection source'() {

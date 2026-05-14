@@ -45,11 +45,9 @@ class GormRegistry {
     private static final GormRegistry instance = new GormRegistry()
     private final GormApiFactory defaultApiFactory = new DefaultGormApiFactory()
     private final GormApiResolver apiResolver = new GormApiResolver(this)
-
-    // O(M) storage for Entity APIs (indexed by Class Name)
-    private final Map<String, GormStaticApi> staticApis = new ConcurrentHashMap<>()
-    private final Map<String, GormInstanceApi> instanceApis = new ConcurrentHashMap<>()
-    private final Map<String, GormValidationApi> validationApis = new ConcurrentHashMap<>()
+    private final GormStaticApiRegistry staticApiRegistry = new GormStaticApiRegistry(this)
+    private final GormInstanceApiRegistry instanceApiRegistry = new GormInstanceApiRegistry(this)
+    private final GormValidationApiRegistry validationApiRegistry = new GormValidationApiRegistry(this)
     
     // O(N) storage for Datastores (indexed by Qualifier)
     private final Map<String, Datastore> datastoresByQualifier = new ConcurrentHashMap<>()
@@ -73,9 +71,9 @@ class GormRegistry {
     static void reset() {
         // Clear MetaClasses to prevent stale GORM methods
         def classNames = new HashSet<String>()
-        classNames.addAll(instance.staticApis.keySet())
-        classNames.addAll(instance.instanceApis.keySet())
-        classNames.addAll(instance.validationApis.keySet())
+        classNames.addAll(instance.staticApiRegistry.keySet())
+        classNames.addAll(instance.instanceApiRegistry.keySet())
+        classNames.addAll(instance.validationApiRegistry.keySet())
         
         for (className in classNames) {
             try {
@@ -88,9 +86,9 @@ class GormRegistry {
             }
         }
 
-        instance.staticApis.clear()
-        instance.instanceApis.clear()
-        instance.validationApis.clear()
+        instance.staticApiRegistry.clear()
+        instance.instanceApiRegistry.clear()
+        instance.validationApiRegistry.clear()
         instance.datastoresByQualifier.clear()
         instance.entityDatastores.clear()
         instance.datastoresByType.clear()
@@ -133,48 +131,27 @@ class GormRegistry {
     }
 
     GormStaticApi getStaticApi(String className) {
-        return staticApis.get(className)
+        return staticApiRegistry.get(className)
     }
 
     GormStaticApi getStaticApi(String className, String qualifier) {
-        GormStaticApi api = staticApis.get(className)
-        if (api != null && qualifier != null && qualifier != ConnectionSource.DEFAULT) {
-            Datastore ds = getDatastore(className, qualifier)
-            if (ds != null && ds != api.getDatastore()) {
-                return api.forQualifier(qualifier)
-            }
-        }
-        return api
+        return staticApiRegistry.get(className, qualifier)
     }
 
     GormInstanceApi getInstanceApi(String className) {
-        return instanceApis.get(className)
+        return instanceApiRegistry.get(className)
     }
 
     GormInstanceApi getInstanceApi(String className, String qualifier) {
-        GormInstanceApi api = instanceApis.get(className)
-        if (api != null && qualifier != null && qualifier != ConnectionSource.DEFAULT) {
-            Datastore ds = getDatastore(className, qualifier)
-            if (ds != null && ds != api.getDatastore()) {
-                return api.forQualifier(qualifier)
-            }
-        }
-        return api
+        return instanceApiRegistry.get(className, qualifier)
     }
 
     GormValidationApi getValidationApi(String className) {
-        return validationApis.get(className)
+        return validationApiRegistry.get(className)
     }
 
     GormValidationApi getValidationApi(String className, String qualifier) {
-        GormValidationApi api = validationApis.get(className)
-        if (api != null && qualifier != null && qualifier != ConnectionSource.DEFAULT) {
-            Datastore ds = getDatastore(className, qualifier)
-            if (ds != null && ds != api.getDatastore()) {
-                return api.forQualifier(qualifier)
-            }
-        }
-        return api
+        return validationApiRegistry.get(className, qualifier)
     }
 
     /**
@@ -203,9 +180,9 @@ class GormRegistry {
      * Registers GORM APIs for an entity.
      */
     void registerApi(String className, GormStaticApi staticApi, GormInstanceApi instanceApi, GormValidationApi validationApi) {
-        if (staticApi != null) staticApis.put(className, staticApi)
-        if (instanceApi != null) instanceApis.put(className, instanceApi)
-        if (validationApi != null) validationApis.put(className, validationApi)
+        staticApiRegistry.register(className, staticApi)
+        instanceApiRegistry.register(className, instanceApi)
+        validationApiRegistry.register(className, validationApi)
     }
 
     /**
@@ -299,6 +276,18 @@ class GormRegistry {
 
     Map<String, Datastore> getDatastoresByQualifier() {
         return datastoresByQualifier
+    }
+
+    GormStaticApiRegistry getStaticApiRegistry() {
+        return staticApiRegistry
+    }
+
+    GormInstanceApiRegistry getInstanceApiRegistry() {
+        return instanceApiRegistry
+    }
+
+    GormValidationApiRegistry getValidationApiRegistry() {
+        return validationApiRegistry
     }
 
     Map<Class, Datastore> getDatastoresByType() {

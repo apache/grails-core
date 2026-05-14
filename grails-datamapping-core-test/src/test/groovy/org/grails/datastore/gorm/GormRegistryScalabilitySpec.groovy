@@ -77,11 +77,11 @@ class GormRegistryScalabilitySpec extends Specification {
         GormRegistry registry = GormRegistry.instance
 
         expect: "one static API entry per entity — never multiplied by tenant count"
-        registry.staticApis.containsKey(CoreScalabilityBook.name)
-        registry.staticApis.containsKey(CoreScalabilityAuthor.name)
+        registry.staticApiRegistry.containsKey(CoreScalabilityBook.name)
+        registry.staticApiRegistry.containsKey(CoreScalabilityAuthor.name)
 
         and: "our two entities contribute exactly 2 keys (not 2 × tenant count)"
-        registry.staticApis.keySet().count { it == CoreScalabilityBook.name || it == CoreScalabilityAuthor.name } == 2
+        registry.staticApiRegistry.keySet().count { it == CoreScalabilityBook.name || it == CoreScalabilityAuthor.name } == 2
     }
 
     void "GormRegistry instanceApis map size equals number of entity classes (O(M))"() {
@@ -89,11 +89,11 @@ class GormRegistryScalabilitySpec extends Specification {
         GormRegistry registry = GormRegistry.instance
 
         expect:
-        registry.instanceApis.containsKey(CoreScalabilityBook.name)
-        registry.instanceApis.containsKey(CoreScalabilityAuthor.name)
+        registry.instanceApiRegistry.containsKey(CoreScalabilityBook.name)
+        registry.instanceApiRegistry.containsKey(CoreScalabilityAuthor.name)
 
         and: "our two entities contribute exactly 2 keys (not 2 × tenant count)"
-        registry.instanceApis.keySet().count { it == CoreScalabilityBook.name || it == CoreScalabilityAuthor.name } == 2
+        registry.instanceApiRegistry.keySet().count { it == CoreScalabilityBook.name || it == CoreScalabilityAuthor.name } == 2
     }
 
     void "GormRegistry validationApis map size equals number of entity classes (O(M))"() {
@@ -101,11 +101,11 @@ class GormRegistryScalabilitySpec extends Specification {
         GormRegistry registry = GormRegistry.instance
 
         expect:
-        registry.validationApis.containsKey(CoreScalabilityBook.name)
-        registry.validationApis.containsKey(CoreScalabilityAuthor.name)
+        registry.validationApiRegistry.containsKey(CoreScalabilityBook.name)
+        registry.validationApiRegistry.containsKey(CoreScalabilityAuthor.name)
 
         and: "our two entities contribute exactly 2 keys (not 2 × tenant count)"
-        registry.validationApis.keySet().count { it == CoreScalabilityBook.name || it == CoreScalabilityAuthor.name } == 2
+        registry.validationApiRegistry.keySet().count { it == CoreScalabilityBook.name || it == CoreScalabilityAuthor.name } == 2
     }
 
     // -------------------------------------------------------------------------
