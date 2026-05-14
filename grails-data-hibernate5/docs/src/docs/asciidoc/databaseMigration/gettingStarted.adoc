@@ -36,18 +36,6 @@ dependencies {
 }
 ----
 
-It is also recommended to add a direct dependency to liquibase because Spring Boot overrides the one provided by this plugin
-
-[source,groovy,subs="attributes"]
-----
-dependencies {
-   ...
-     implementation platform('grails-hibernate5-bom')
-     implementation "org.liquibase:liquibase-core"
-     implementation "org.liquibase.ext:liquibase-hibernate5"
-}
-----
-
 *Typical initial workflow*
 
 Next you'll need to create an initial changelog. You can use Liquibase XML or the plugin's Groovy DSL for individual files. You can even mix and match; Groovy files can include other Groovy files and Liquibase XML files (but XML files can't include Groovy files).
