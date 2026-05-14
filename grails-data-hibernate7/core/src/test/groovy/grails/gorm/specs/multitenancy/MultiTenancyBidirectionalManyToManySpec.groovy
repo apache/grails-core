@@ -49,15 +49,13 @@ class MultiTenancyBidirectionalManyToManySpec extends Specification {
             'hibernate.hbm2ddl.auto'                      : 'create',
     ]
 
-    @Shared
     DepartmentService departmentService
-    @Shared
     UserService userService
 
     @AutoCleanup
     HibernateDatastore datastore
 
-    void setupSpec() {
+    void setup() {
         System.setProperty(SystemPropertyTenantResolver.PROPERTY_NAME, "oci")
         datastore = new HibernateDatastore(DatastoreUtils.createPropertyResolver(config), getClass().getPackage())
         departmentService = datastore.getService(DepartmentService)

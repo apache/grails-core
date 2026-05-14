@@ -52,8 +52,8 @@ class MultiTenancyBidirectionalManyToManySpec extends Specification {
             'hibernate.hbm2ddl.auto': 'create',
     ]
 
-    @Shared DepartmentService departmentService
-    @Shared UserService userService
+    DepartmentService departmentService
+    UserService userService
 
     @AutoCleanup HibernateDatastore datastore
 
