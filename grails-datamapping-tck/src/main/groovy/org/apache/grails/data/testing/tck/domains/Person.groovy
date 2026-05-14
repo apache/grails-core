@@ -80,6 +80,8 @@ class Person implements Serializable, Comparable<Person>, AsyncEntity<Person> {
 
     @Override
     int compareTo(Person t) {
-        age <=> t.age
+        age <=> t.age ?:
+                firstName <=> t.firstName ?:
+                        lastName <=> t.lastName
     }
 }
