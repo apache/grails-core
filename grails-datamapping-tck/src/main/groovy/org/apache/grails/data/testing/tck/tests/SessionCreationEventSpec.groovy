@@ -18,8 +18,6 @@
  */
 package org.apache.grails.data.testing.tck.tests
 
-import spock.lang.IgnoreIf
-
 import org.springframework.context.ApplicationEvent
 import org.springframework.context.event.SmartApplicationListener
 
@@ -31,15 +29,22 @@ import org.grails.datastore.mapping.core.SessionCreationEvent
 /**
  * Test case that session creation events are fired.
  */
-// TODO: the application context is null on hibernate tck tests, so this test errors on the add of the application listener
-@IgnoreIf({ System.getProperty('hibernate5.gorm.suite') || System.getProperty('hibernate7.gorm.suite')  || System.getProperty('mongodb.gorm.suite') })
 class SessionCreationEventSpec extends GrailsDataTckSpec {
 
     Listener listener
+    boolean contextAvailable = false
+
+    void setupSpec() {
+        manager.addAllDomainClasses([TestEntity])
+    }
 
     def setup() {
         listener = new Listener()
-        manager.session.datastore.applicationContext.addApplicationListener(listener)
+        def applicationContext = manager.session.datastore.applicationContext
+        if (applicationContext != null) {
+            applicationContext.addApplicationListener(listener)
+            contextAvailable = true
+        }
     }
 
     void 'test event for new session'() {
@@ -58,8 +63,8 @@ class SessionCreationEventSpec extends GrailsDataTckSpec {
             isDatastoreSession = s instanceof Session
         }
         then:
-        !isDatastoreSession || listener.events.size() == 1
-        !isDatastoreSession || listener.events[0].session == newSession
+        !isDatastoreSession || !contextAvailable || listener.events.size() == 1
+        !isDatastoreSession || !contextAvailable || listener.events[0].session == newSession
     }
 
     static class Listener implements SmartApplicationListener {

@@ -28,6 +28,11 @@ import org.apache.grails.data.testing.tck.domains.Person
  */
 class FindByMethodSpec extends GrailsDataTckSpec {
 
+    @Override
+    void setupSpec() {
+        manager.addAllDomainClasses([Person, TckBook, Highway])
+    }
+
     void 'Test Using AND Multiple Times In A Dynamic Finder'() {
         given:
         new Person(firstName: 'Jake', lastName: 'Brown', age: 11).save()

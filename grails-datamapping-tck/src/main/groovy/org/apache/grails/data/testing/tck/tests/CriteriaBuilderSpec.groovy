@@ -18,14 +18,19 @@
  */
 package org.apache.grails.data.testing.tck.tests
 
-import org.apache.grails.data.testing.tck.base.GrailsDataTckSpec
 import org.apache.grails.data.testing.tck.domains.ChildEntity
+import org.apache.grails.data.testing.tck.domains.Task
 import org.apache.grails.data.testing.tck.domains.TestEntity
+import org.apache.grails.data.testing.tck.base.GrailsDataTckSpec
 
 /**
  * Abstract base test for criteria queries. Subclasses should do the necessary setup to configure GORM
  */
 class CriteriaBuilderSpec extends GrailsDataTckSpec {
+
+    void setupSpec() {
+        manager.addAllDomainClasses([TestEntity, ChildEntity, Task])
+    }
 
     void 'Test count distinct projection'() {
         given:
@@ -43,7 +48,7 @@ class CriteriaBuilderSpec extends GrailsDataTckSpec {
         when:
         def result = criteria.get {
             projections {
-                countDistinct('age')
+                countDistinct 'age'
             }
         }
 
@@ -58,7 +63,7 @@ class CriteriaBuilderSpec extends GrailsDataTckSpec {
         when:
         def result = TestEntity.createCriteria().get {
             projections { id() }
-            idEq(entity.id)
+            idEq entity.id
         }
 
         then:
@@ -71,7 +76,7 @@ class CriteriaBuilderSpec extends GrailsDataTckSpec {
         def entity = new TestEntity(name: 'Bob', age: 44, child: new ChildEntity(name: 'Child')).save(flush: true)
 
         when:
-        def result = TestEntity.createCriteria().get { idEq(entity.id) }
+        def result = TestEntity.createCriteria().get { idEq entity.id }
 
         then:
         result != null
@@ -136,7 +141,7 @@ class CriteriaBuilderSpec extends GrailsDataTckSpec {
         criteria = TestEntity.createCriteria()
         results = criteria.list {
             like('name', 'B%')
-            maxResults(1)
+            maxResults 1
         }
 
         then:
@@ -192,7 +197,7 @@ class CriteriaBuilderSpec extends GrailsDataTckSpec {
         when:
         def results = criteria.list {
             like('name', 'B%')
-            order('age')
+            order 'age'
         }
 
         then:
@@ -203,7 +208,7 @@ class CriteriaBuilderSpec extends GrailsDataTckSpec {
         criteria = TestEntity.createCriteria()
         results = criteria.list {
             like('name', 'B%')
-            order('age', 'desc')
+            order 'age', 'desc'
         }
 
         then:
@@ -217,14 +222,14 @@ class CriteriaBuilderSpec extends GrailsDataTckSpec {
         ['Bob', 'Fred', 'Barney', 'Frank'].each {
             new TestEntity(name: it, age: age++, child: new ChildEntity(name: "$it Child")).save()
         }
-        Thread.sleep(500)
+        Thread.sleep 500
 
         def criteria = TestEntity.createCriteria()
 
         when:
         def result = criteria.get {
             projections {
-                min('age')
+                min 'age'
             }
         }
 
@@ -235,7 +240,7 @@ class CriteriaBuilderSpec extends GrailsDataTckSpec {
         criteria = TestEntity.createCriteria()
         result = criteria.get {
             projections {
-                max('age')
+                max 'age'
             }
         }
 
@@ -246,8 +251,8 @@ class CriteriaBuilderSpec extends GrailsDataTckSpec {
         criteria = TestEntity.createCriteria()
         def results = criteria.list {
             projections {
-                max('age')
-                min('age')
+                max 'age'
+                min 'age'
             }
         }.flatten()
 
@@ -270,7 +275,7 @@ class CriteriaBuilderSpec extends GrailsDataTckSpec {
         when:
         def results = criteria.list {
             projections {
-                property('age')
+                property 'age'
             }
         }
 
@@ -292,7 +297,7 @@ class CriteriaBuilderSpec extends GrailsDataTckSpec {
         when:
         def results = criteria.list {
             projections {
-                property('child')
+                property 'child'
             }
         }
 

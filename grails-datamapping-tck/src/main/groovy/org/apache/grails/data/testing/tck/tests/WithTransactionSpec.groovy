@@ -18,18 +18,21 @@
  */
 package org.apache.grails.data.testing.tck.tests
 
-import groovy.transform.InheritConstructors
-
-import org.apache.grails.data.testing.tck.base.GrailsDataTckSpec
 import org.apache.grails.data.testing.tck.domains.ChildEntity
 import org.apache.grails.data.testing.tck.domains.TestEntity
+import groovy.transform.InheritConstructors
+import org.apache.grails.data.testing.tck.base.GrailsDataTckSpec
 
 /**
  * Transaction tests.
  */
 class WithTransactionSpec extends GrailsDataTckSpec {
 
-    void 'Test save() with transaction'() {
+    void setupSpec() {
+        manager.addAllDomainClasses([TestEntity, ChildEntity])
+    }
+
+    void "Test save() with transaction"() {
         given:
         TestEntity.withTransaction {
             new TestEntity(name: 'Bob', age: 50, child: new ChildEntity(name: 'Bob Child')).save()
@@ -47,7 +50,7 @@ class WithTransactionSpec extends GrailsDataTckSpec {
         'Fred' == results[1].name
     }
 
-    void 'Test rollback transaction'() {
+    void "Test rollback transaction"() {
         given:
         TestEntity.withNewTransaction { status ->
             new TestEntity(name: 'Bob', age: 50, child: new ChildEntity(name: 'Bob Child')).save()
@@ -64,7 +67,7 @@ class WithTransactionSpec extends GrailsDataTckSpec {
         results.size() == 0
     }
 
-    void 'Test rollback transaction with Runtime Exception'() {
+    void "Test rollback transaction with Runtime Exception"() {
         given:
         def ex
         try {
@@ -88,7 +91,7 @@ class WithTransactionSpec extends GrailsDataTckSpec {
         ex.message == 'bad'
     }
 
-    void 'Test rollback transaction with Exception'() {
+    void "Test rollback transaction with Exception"() {
         given:
         def ex
         try {

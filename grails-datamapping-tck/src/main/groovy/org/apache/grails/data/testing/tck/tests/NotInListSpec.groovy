@@ -18,15 +18,19 @@
  */
 package org.apache.grails.data.testing.tck.tests
 
-import org.apache.grails.data.testing.tck.base.GrailsDataTckSpec
 import org.apache.grails.data.testing.tck.domains.TestEntity
+import org.apache.grails.data.testing.tck.base.GrailsDataTckSpec
 
 /**
  * Created by graemerocher on 06/03/2017.
  */
 class NotInListSpec extends GrailsDataTckSpec {
 
-    void 'test not in list returns the correct results'() {
+    void setupSpec() {
+        manager.addAllDomainClasses([TestEntity])
+    }
+
+    void "test not in list returns the correct results"() {
         when:
         new TestEntity(name: 'Fred').save()
         new TestEntity(name: 'Bob').save()

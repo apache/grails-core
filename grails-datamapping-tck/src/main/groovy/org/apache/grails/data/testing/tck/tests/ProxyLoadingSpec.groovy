@@ -18,16 +18,20 @@
  */
 package org.apache.grails.data.testing.tck.tests
 
-import org.apache.grails.data.testing.tck.base.GrailsDataTckSpec
 import org.apache.grails.data.testing.tck.domains.ChildEntity
 import org.apache.grails.data.testing.tck.domains.TestEntity
+import org.apache.grails.data.testing.tck.base.GrailsDataTckSpec
 
 /**
  * Abstract base test for loading proxies. Subclasses should do the necessary setup to configure GORM
  */
 class ProxyLoadingSpec extends GrailsDataTckSpec {
 
-    void 'Test load proxied instance directly'() {
+    void setupSpec() {
+        manager.addAllDomainClasses([TestEntity, ChildEntity])
+    }
+
+    void "Test load proxied instance directly"() {
 
         given:
         def t = new TestEntity(name: 'Bob', age: 45, child: new ChildEntity(name: 'Test Child')).save(flush: true)
@@ -41,7 +45,7 @@ class ProxyLoadingSpec extends GrailsDataTckSpec {
         'Bob' == proxy.name
     }
 
-    void 'Test query using proxied association'() {
+    void "Test query using proxied association"() {
         given:
         def child = new ChildEntity(name: 'Test Child')
         def t = new TestEntity(name: 'Bob', age: 45, child: child).save()

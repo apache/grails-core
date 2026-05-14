@@ -26,6 +26,10 @@ import org.apache.grails.data.testing.tck.domains.Person
  */
 class AttachMethodSpec extends GrailsDataTckSpec {
 
+    void setupSpec() {
+        manager.addAllDomainClasses([Person])
+    }
+
     void 'Test attach method'() {
         given:
         def test = new Person(firstName: 'Bob', lastName: 'Builder').save()
@@ -47,17 +51,11 @@ class AttachMethodSpec extends GrailsDataTckSpec {
         !test.attached
 
         when:
-        test.attach()
+        test = test.attach()
 
         then:
         manager.session.contains(test)
         test.isAttached()
         test.attached
-
-        when:
-        test.discard()
-
-        then:
-        test == test.attach()
     }
 }

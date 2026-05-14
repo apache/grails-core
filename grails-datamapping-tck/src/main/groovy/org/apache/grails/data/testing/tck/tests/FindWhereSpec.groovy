@@ -18,12 +18,16 @@
  */
 package org.apache.grails.data.testing.tck.tests
 
-import org.apache.grails.data.testing.tck.base.GrailsDataTckSpec
 import org.apache.grails.data.testing.tck.domains.TestEntity
+import org.apache.grails.data.testing.tck.base.GrailsDataTckSpec
 
 class FindWhereSpec extends GrailsDataTckSpec {
 
-    def 'Test findWhere returns a matching Instance'() {
+    void setupSpec() {
+        manager.addAllDomainClasses([TestEntity])
+    }
+
+    def "Test findWhere returns a matching Instance"() {
         given:
         def entityId = new TestEntity(name: 'David', age: 27).save().id
 
@@ -36,7 +40,7 @@ class FindWhereSpec extends GrailsDataTckSpec {
         entityId == entity.id
     }
 
-    def 'Test findWhere with a GString property'() {
+    def "Test findWhere with a GString property"() {
         given:
         def entityId = new TestEntity(name: 'David', age: 27).save().id
         def property = 'name'
@@ -50,7 +54,7 @@ class FindWhereSpec extends GrailsDataTckSpec {
         entityId == entity.id
     }
 
-    def 'Test findAllWhere returns a matching Instance'() {
+    def "Test findAllWhere returns a matching Instance"() {
         given:
         def entityId = new TestEntity(name: 'David', age: 27).save().id
 
@@ -63,7 +67,7 @@ class FindWhereSpec extends GrailsDataTckSpec {
         entityId == entity[0].id
     }
 
-    def 'Test findAllWhere with a GString property'() {
+    def "Test findAllWhere with a GString property"() {
         given:
         def entityId = new TestEntity(name: 'David', age: 27).save().id
         def property = 'name'

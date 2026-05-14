@@ -18,12 +18,16 @@
  */
 package org.apache.grails.data.testing.tck.tests
 
-import org.apache.grails.data.testing.tck.base.GrailsDataTckSpec
 import org.apache.grails.data.testing.tck.domains.Plant
+import org.apache.grails.data.testing.tck.base.GrailsDataTckSpec
 
 class FindByExampleSpec extends GrailsDataTckSpec {
 
-    def 'Test findAll by example'() {
+    void setupSpec() {
+        manager.addAllDomainClasses([Plant])
+    }
+
+    def "Test findAll by example"() {
         given:
         new Plant(name: 'Pineapple', goesInPatch: false).save()
         new Plant(name: 'Cabbage', goesInPatch: true).save()
@@ -50,7 +54,7 @@ class FindByExampleSpec extends GrailsDataTckSpec {
         'Cabbage' in results*.name
     }
 
-    def 'Test find by example'() {
+    def "Test find by example"() {
         given:
         new Plant(name: 'Pineapple', goesInPatch: false).save()
         new Plant(name: 'Cabbage', goesInPatch: true).save()
