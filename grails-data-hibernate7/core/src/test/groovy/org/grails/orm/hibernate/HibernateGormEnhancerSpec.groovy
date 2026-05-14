@@ -21,6 +21,7 @@ package org.grails.orm.hibernate
 import grails.gorm.annotation.Entity
 import grails.gorm.specs.HibernateGormDatastoreSpec
 import org.grails.datastore.gorm.GormEnhancer
+import org.grails.datastore.gorm.GormRegistry
 import org.grails.datastore.mapping.core.connections.ConnectionSource
 
 class HibernateGormEnhancerSpec extends HibernateGormDatastoreSpec {
@@ -31,7 +32,7 @@ class HibernateGormEnhancerSpec extends HibernateGormDatastoreSpec {
 
     def "test findStaticApi"() {
         expect:
-        HibernateGormEnhancer.findStaticApi(HGESimple, ConnectionSource.DEFAULT) != null
+        GormRegistry.instance.findStaticApi(HGESimple, ConnectionSource.DEFAULT) != null
     }
 
     def "test getStaticApi, getInstanceApi, getValidationApi"() {

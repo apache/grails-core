@@ -29,6 +29,7 @@ import grails.util.GrailsNameUtils
 import org.grails.datastore.gorm.GormEnhancer
 import org.grails.datastore.gorm.GormEntity
 import org.grails.datastore.gorm.GormEntityApi
+import org.grails.datastore.gorm.GormRegistry
 
 @Artefact('Service')
 @ReadOnly
@@ -36,7 +37,7 @@ import org.grails.datastore.gorm.GormEntityApi
 class GormService<T extends GormEntity<T>> implements ScaffoldService<T, Serializable> {
 
     @Lazy
-    GormAllOperations<T> gormStaticApi = GormEnhancer.findStaticApi(resource) as GormAllOperations<T>
+    GormAllOperations<T> gormStaticApi = GormRegistry.instance.findStaticApi(resource) as GormAllOperations<T>
     Class<T> resource
     String resourceName
     String resourceClassName

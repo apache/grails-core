@@ -24,6 +24,7 @@ import groovy.transform.Generated
 
 import org.grails.datastore.gorm.GormEnhancer
 import org.grails.datastore.gorm.GormEntity
+import org.grails.datastore.gorm.GormRegistry
 import org.grails.datastore.gorm.async.GormAsyncStaticApi
 
 /**
@@ -40,6 +41,6 @@ trait AsyncEntity<D> extends GormEntity<D> {
      */
     @Generated
     static GormAsyncStaticApi<D> getAsync() {
-        return new GormAsyncStaticApi(GormEnhancer.findStaticApi(this))
+        return new GormAsyncStaticApi(GormRegistry.instance.findStaticApi((Class<D>) this))
     }
 }

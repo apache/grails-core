@@ -61,7 +61,7 @@ trait GormEntity<D> implements GormValidateable, DirtyCheckable, GormEntityApi<D
     @Generated
     @CompileDynamic
     def propertyMissing(String name) {
-        GormEnhancer.findInstanceApi(getClass()).propertyMissing(this, name)
+        GormRegistry.instance.findInstanceApi(getClass()).propertyMissing(this, name)
     }
 
     /**
@@ -1476,11 +1476,11 @@ trait GormEntity<D> implements GormValidateable, DirtyCheckable, GormEntityApi<D
 
     @Generated
     private GormInstanceApi<D> currentGormInstanceApi() {
-        (GormInstanceApi<D>) GormEnhancer.findInstanceApi(getClass())
+        (GormInstanceApi<D>) GormRegistry.instance.findInstanceApi((Class<D>) getClass())
     }
 
     @Generated
     private static GormStaticApi<D> currentGormStaticApi() {
-        return (GormStaticApi<D>) GormEnhancer.findStaticApi(this)
+        return (GormStaticApi<D>) GormRegistry.instance.findStaticApi((Class<D>) this)
     }
 }

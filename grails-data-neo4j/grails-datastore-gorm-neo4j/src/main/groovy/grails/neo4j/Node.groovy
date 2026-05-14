@@ -22,6 +22,7 @@ package grails.neo4j
 import groovy.transform.CompileStatic
 import org.grails.datastore.gorm.GormEnhancer
 import org.grails.datastore.gorm.GormEntity
+import org.grails.datastore.gorm.GormRegistry
 import org.grails.datastore.gorm.neo4j.api.Neo4jGormStaticApi
 import org.grails.datastore.gorm.schemaless.DynamicAttributes
 
@@ -61,7 +62,7 @@ trait Node<D> implements Neo4jEntity<D>, GormEntity<D>, DynamicAttributes {
      * @return The path
      */
     static Path<D, D> findPath(CharSequence cypher) {
-        ((Neo4jGormStaticApi) GormEnhancer.findStaticApi(this)).findPath(cypher, Collections.emptyMap())
+        ((Neo4jGormStaticApi) GormRegistry.instance.findStaticApi((Class<D>) this)).findPath(cypher, Collections.emptyMap())
     }
 
     /**
@@ -73,7 +74,7 @@ trait Node<D> implements Neo4jEntity<D>, GormEntity<D>, DynamicAttributes {
      * @return The path or null if non exists
      */
     static <F, T> Path<F, T> findShortestPath(F from, T to, int maxDistance = 10) {
-        ((Neo4jGormStaticApi) GormEnhancer.findStaticApi(this)).findShortestPath(from, to, maxDistance)
+        ((Neo4jGormStaticApi) GormRegistry.instance.findStaticApi((Class<D>) this)).findShortestPath(from, to, maxDistance)
     }
 
     /**
@@ -84,7 +85,7 @@ trait Node<D> implements Neo4jEntity<D>, GormEntity<D>, DynamicAttributes {
      * @return The relationship or null if it doesn't exist
      */
     static <F extends GormEntity, T extends GormEntity> Relationship<F, T> findRelationship(F from, T to) {
-        ((Neo4jGormStaticApi) GormEnhancer.findStaticApi(this)).findRelationship(from, to)
+        ((Neo4jGormStaticApi) GormRegistry.instance.findStaticApi((Class<D>) this)).findRelationship(from, to)
     }
 
     /**
@@ -95,7 +96,7 @@ trait Node<D> implements Neo4jEntity<D>, GormEntity<D>, DynamicAttributes {
      * @return The relationship or null if it doesn't exist
      */
     static <F extends GormEntity, T extends GormEntity> List<Relationship<F, T>> findRelationships(F from, T to, Map params = Collections.emptyMap()) {
-        ((Neo4jGormStaticApi) GormEnhancer.findStaticApi(this)).findRelationships(from, to, params)
+        ((Neo4jGormStaticApi) GormRegistry.instance.findStaticApi((Class<D>) this)).findRelationships(from, to, params)
     }
 
     /**
@@ -106,7 +107,7 @@ trait Node<D> implements Neo4jEntity<D>, GormEntity<D>, DynamicAttributes {
      * @return The relationship or null if it doesn't exist
      */
     static <F extends GormEntity, T extends GormEntity> List<Relationship<F, T>> findRelationships(Class<F> from, Class<T> to, Map params = Collections.emptyMap()) {
-        ((Neo4jGormStaticApi) GormEnhancer.findStaticApi(this)).findRelationships(from, to, params)
+        ((Neo4jGormStaticApi) GormRegistry.instance.findStaticApi((Class<D>) this)).findRelationships(from, to, params)
     }
     /**
      * Execute cypher that finds a path to the given entity
@@ -116,7 +117,7 @@ trait Node<D> implements Neo4jEntity<D>, GormEntity<D>, DynamicAttributes {
      * @return The path or null if non exists
      */
     static Path<D, D> findPath(CharSequence cypher, Map params) {
-        ((Neo4jGormStaticApi) GormEnhancer.findStaticApi(this)).findPath(cypher, params)
+        ((Neo4jGormStaticApi) GormRegistry.instance.findStaticApi((Class<D>) this)).findPath(cypher, params)
     }
 
     /**
@@ -127,7 +128,7 @@ trait Node<D> implements Neo4jEntity<D>, GormEntity<D>, DynamicAttributes {
      * @return The path
      */
     static <T> Path<D, T> findPathTo(Class<T> type, CharSequence cypher) {
-        ((Neo4jGormStaticApi) GormEnhancer.findStaticApi(this)).findPathTo(type, cypher, Collections.emptyMap())
+        ((Neo4jGormStaticApi) GormRegistry.instance.findStaticApi((Class<D>) this)).findPathTo(type, cypher, Collections.emptyMap())
     }
 
     /**
@@ -137,6 +138,6 @@ trait Node<D> implements Neo4jEntity<D>, GormEntity<D>, DynamicAttributes {
      * @return The path
      */
     static <T> Path<D, T> findPathTo(Class<T> type, CharSequence cypher, Map params) {
-        ((Neo4jGormStaticApi) GormEnhancer.findStaticApi(this)).findPathTo(type, cypher, params)
+        ((Neo4jGormStaticApi) GormRegistry.instance.findStaticApi((Class<D>) this)).findPathTo(type, cypher, params)
     }
 }

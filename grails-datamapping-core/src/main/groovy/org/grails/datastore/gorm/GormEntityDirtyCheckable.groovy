@@ -58,6 +58,6 @@ trait GormEntityDirtyCheckable extends DirtyCheckable {
 
     @Generated
     private GormInstanceApi currentGormInstanceApi() {
-        (GormInstanceApi) GormEnhancer.findInstanceApi(getClass())
+        (GormInstanceApi) GormRegistry.instance.findInstanceApi(getClass())
     }
 }

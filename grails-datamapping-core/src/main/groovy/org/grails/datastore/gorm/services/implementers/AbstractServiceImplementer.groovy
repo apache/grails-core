@@ -32,6 +32,7 @@ import org.codehaus.groovy.transform.trait.Traits
 import grails.gorm.multitenancy.TenantService
 import grails.gorm.transactions.TransactionService
 import org.grails.datastore.gorm.GormEnhancer
+import org.grails.datastore.gorm.GormRegistry
 import org.grails.datastore.gorm.multitenancy.transform.TenantTransform
 import org.grails.datastore.gorm.services.ServiceImplementer
 import org.grails.datastore.gorm.transactions.transform.TransactionalTransform
@@ -180,14 +181,18 @@ abstract class AbstractServiceImplementer implements PrefixedServiceImplementer,
     }
 
     protected Expression buildInstanceApiLookup(ClassNode domainClass, Expression connectionId) {
-        return AstMethodDispatchUtils.callD(
-            classX(GormEnhancer), 'findInstanceApi', args(classX(domainClass), connectionId ?: ConstantExpression.NULL)
+        return callX(
+                callX(classX(GormRegistry), 'getInstance'),
+                'findInstanceApi',
+                args(classX(domainClass), connectionId ?: ConstantExpression.NULL)
         )
     }
 
     protected Expression buildStaticApiLookup(ClassNode domainClass, Expression connectionId) {
-        return AstMethodDispatchUtils.callD(
-                classX(GormEnhancer), 'findStaticApi', args(classX(domainClass), connectionId ?: ConstantExpression.NULL)
+        return callX(
+                callX(classX(GormRegistry), 'getInstance'),
+                'findStaticApi',
+                args(classX(domainClass), connectionId ?: ConstantExpression.NULL)
         )
     }
 

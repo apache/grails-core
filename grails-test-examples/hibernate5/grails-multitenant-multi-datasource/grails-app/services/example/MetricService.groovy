@@ -22,6 +22,7 @@ package example
 import grails.gorm.services.Service
 import grails.gorm.transactions.Transactional
 import org.grails.datastore.gorm.GormEnhancer
+import org.grails.datastore.gorm.GormRegistry
 import org.grails.datastore.gorm.GormStaticApi
 
 /**
@@ -53,7 +54,7 @@ abstract class MetricService {
      * Statically compiled access to the secondary datasource via GormEnhancer.
      */
     private GormStaticApi<Metric> getSecondaryApi() {
-        GormEnhancer.findStaticApi(Metric, 'secondary')
+        GormRegistry.instance.findStaticApi(Metric, 'secondary')
     }
 
     /**

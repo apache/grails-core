@@ -34,6 +34,7 @@ import org.bson.conversions.Bson
 import grails.mongodb.api.MongoAllOperations
 import org.grails.datastore.gorm.GormEnhancer
 import org.grails.datastore.gorm.GormEntity
+import org.grails.datastore.gorm.GormRegistry
 import org.grails.datastore.gorm.mongo.MongoCriteriaBuilder
 import org.grails.datastore.gorm.mongo.api.MongoStaticApi
 import org.grails.datastore.gorm.schemaless.DynamicAttributes
@@ -239,7 +240,7 @@ trait MongoEntity<D> implements GormEntity<D>, DynamicAttributes {
      * @return The return value of the closure
      */
     static <T> T withConnection(String connectionName, @DelegatesTo(MongoAllOperations)Closure callable) {
-        def staticApi = GormEnhancer.findStaticApi(this, connectionName)
+        def staticApi = GormRegistry.instance.findStaticApi((Class<D>) this, connectionName)
         return (T) staticApi.withNewSession {
             callable.setDelegate(staticApi)
             return callable.call()
@@ -247,7 +248,7 @@ trait MongoEntity<D> implements GormEntity<D>, DynamicAttributes {
     }
 
     private static MongoStaticApi currentMongoStaticApi() {
-        (MongoStaticApi) GormEnhancer.findStaticApi(this)
+        (MongoStaticApi) GormRegistry.instance.findStaticApi((Class<D>) this)
     }
 
 }

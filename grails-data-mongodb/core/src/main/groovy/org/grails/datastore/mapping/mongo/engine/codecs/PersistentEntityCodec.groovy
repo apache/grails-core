@@ -48,6 +48,7 @@ import org.grails.datastore.bson.codecs.encoders.EmbeddedCollectionEncoder
 import org.grails.datastore.bson.codecs.encoders.EmbeddedEncoder
 import org.grails.datastore.bson.codecs.encoders.IdentityEncoder
 import org.grails.datastore.gorm.GormEnhancer
+import org.grails.datastore.gorm.GormRegistry
 import org.grails.datastore.gorm.schemaless.DynamicAttributes
 import org.grails.datastore.mapping.collection.PersistentList
 import org.grails.datastore.mapping.collection.PersistentSet
@@ -162,7 +163,7 @@ class PersistentEntityCodec extends BsonPersistentEntityCodec {
             callback(AbstractDatastore.retrieveSession(MongoDatastore))
         }
         else {
-            GormEnhancer.findStaticApi(entity.javaClass).withSession(callback)
+            GormRegistry.instance.findStaticApi(entity.javaClass).withSession(callback)
         }
     }
 
@@ -179,7 +180,7 @@ class PersistentEntityCodec extends BsonPersistentEntityCodec {
             return callback(AbstractDatastore.retrieveSession(MongoDatastore))
         }
         else {
-            return GormEnhancer.findStaticApi(entity.javaClass).withSession(callback)
+            return GormRegistry.instance.findStaticApi(entity.javaClass).withSession(callback)
         }
     }
 
@@ -301,7 +302,7 @@ class PersistentEntityCodec extends BsonPersistentEntityCodec {
             }
             else {
 
-                GormEnhancer.findStaticApi(entity.javaClass).withSession { Session mongoSession ->
+                GormRegistry.instance.findStaticApi(entity.javaClass).withSession { Session mongoSession ->
                     if (mongoSession != null) {
                         Document schemaless = (Document) mongoSession.getAttribute(value, SCHEMALESS_ATTRIBUTES)
                         if (schemaless != null) {
