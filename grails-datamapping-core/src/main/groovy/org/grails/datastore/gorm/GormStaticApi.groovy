@@ -157,7 +157,7 @@ class GormStaticApi<D> extends AbstractGormApi<D> implements GormAllOperations<D
         DatastoreResolver resolver = new DatastoreResolver() {
             @Override Datastore resolve() { registry.apiResolver.findDatastore(persistentClass, qualifier) }
         }
-        List<FinderMethod> qualifiedFinders = GormEnhancer.createDynamicFinders(resolver, ds.mappingContext, registry)
+        List<FinderMethod> qualifiedFinders = registry.createDynamicFinders(resolver, ds.mappingContext)
         createStaticApi(persistentClass, ds.mappingContext, qualifiedFinders, resolver, qualifier)
     }
 

@@ -36,7 +36,7 @@ import org.hibernate.engine.spi.Status
 import org.hibernate.persister.entity.EntityPersister
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
-import org.grails.datastore.gorm.GormEnhancer
+import org.grails.datastore.gorm.GormRegistry
 
 /**
  * Implementation of the {@link CustomEntityDirtinessStrategy} interface for Grails
@@ -59,7 +59,7 @@ class GrailsEntityDirtinessStrategy implements CustomEntityDirtinessStrategy {
     @Override
     boolean isDirty(Object entity, EntityPersister persister, Session session) {
         DirtyCheckable dirtyCheckable = cast(entity)
-        boolean dirty = !session.contains(entity) || dirtyCheckable.hasChanged() || DirtyCheckingSupport.areEmbeddedDirty(GormEnhancer.findEntity(Hibernate.getClass(entity)), entity)
+        boolean dirty = !session.contains(entity) || dirtyCheckable.hasChanged() || DirtyCheckingSupport.areEmbeddedDirty(GormRegistry.instance.apiResolver.findEntity(Hibernate.getClass(entity)), entity)
         return dirty
     }
 
@@ -68,7 +68,7 @@ class GrailsEntityDirtinessStrategy implements CustomEntityDirtinessStrategy {
         if (canDirtyCheck(entity, persister, session)) {
             cast(entity).trackChanges()
             try {
-                PersistentEntity persistentEntity = GormEnhancer.findEntity(Hibernate.getClass(entity))
+                PersistentEntity persistentEntity = GormRegistry.instance.apiResolver.findEntity(Hibernate.getClass(entity))
                 if (persistentEntity != null) {
                     resetDirtyEmbeddedObjects(persistentEntity, entity, persister, session)
                 }
@@ -122,7 +122,7 @@ class GrailsEntityDirtinessStrategy implements CustomEntityDirtinessStrategy {
                 return true
             }
 
-            final PersistentEntity persistentEntity = GormEnhancer.findEntity(Hibernate.getClass(entity))
+            final PersistentEntity persistentEntity = GormRegistry.instance.apiResolver.findEntity(Hibernate.getClass(entity))
             if (persistentEntity != null) {
                 final PersistentProperty property = persistentEntity.getPropertyByName(propertyName)
                 if (property instanceof Embedded) {

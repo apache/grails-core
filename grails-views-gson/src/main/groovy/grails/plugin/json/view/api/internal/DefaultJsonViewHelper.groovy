@@ -38,7 +38,7 @@ import grails.views.api.internal.DefaultGrailsViewHelper
 import grails.views.mvc.http.DelegatingParameters
 import grails.views.utils.ViewUtils
 import org.grails.core.util.IncludeExcludeSupport
-import org.grails.datastore.gorm.GormEnhancer
+import org.grails.datastore.gorm.GormRegistry
 import org.grails.datastore.mapping.model.MappingFactory
 import org.grails.datastore.mapping.model.PersistentEntity
 
@@ -97,7 +97,7 @@ class DefaultJsonViewHelper extends DefaultGrailsViewHelper {
     protected PersistentEntity findEntity(Object object) {
         def clazz = object.getClass()
         try {
-            return GormEnhancer.findEntity(clazz)
+            return GormRegistry.instance.apiResolver.findEntity(clazz)
         } catch (Throwable e) {
             return ((JsonView) view)?.mappingContext?.getPersistentEntity(clazz.name)
         }

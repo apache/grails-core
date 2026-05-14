@@ -22,11 +22,9 @@ import groovy.transform.CompileStatic
 
 import org.springframework.transaction.PlatformTransactionManager
 
-import org.grails.datastore.gorm.DatastoreResolver
 import org.grails.datastore.gorm.GormEnhancer
 import org.grails.datastore.gorm.GormRegistry
 import org.grails.datastore.gorm.finders.DynamicFinder
-import org.grails.datastore.gorm.mongo.api.MongoGormInstanceApi
 import org.grails.datastore.mapping.mongo.MongoDatastore
 import org.grails.datastore.mapping.mongo.connections.MongoConnectionSourceSettings
 
@@ -47,19 +45,6 @@ class MongoGormEnhancer extends GormEnhancer {
     MongoGormEnhancer(MongoDatastore datastore, PlatformTransactionManager transactionManager, MongoConnectionSourceSettings settings) {
         super(datastore, transactionManager, settings)
         registerMongoMethodExpressions()
-    }
-
-
-    @Override
-    protected <D> org.grails.datastore.gorm.mongo.api.MongoStaticApi<D> getStaticApi(Class<D> cls, DatastoreResolver resolver, String qualifier) {
-        MongoDatastore mongoDatastore = (MongoDatastore) datastore
-        return new org.grails.datastore.gorm.mongo.api.MongoStaticApi<D>(cls, mongoDatastore.mappingContext, createDynamicFinders(resolver, mongoDatastore.mappingContext), resolver, qualifier)
-    }
-
-    @Override
-    protected <D> org.grails.datastore.gorm.GormInstanceApi<D> getInstanceApi(Class<D> cls, DatastoreResolver resolver) {
-        MongoDatastore mongoDatastore = (MongoDatastore) datastore
-        return new MongoGormInstanceApi<D>(cls, mongoDatastore.mappingContext, resolver, registry)
     }
 
     static void registerMongoMethodExpressions() {

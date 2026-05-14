@@ -30,7 +30,7 @@ import org.hibernate.persister.entity.EntityPersister
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
 
-import org.grails.datastore.gorm.GormEnhancer
+import org.grails.datastore.gorm.GormRegistry
 import org.grails.datastore.mapping.dirty.checking.DirtyCheckable
 import org.grails.datastore.mapping.dirty.checking.DirtyCheckingSupport
 import org.grails.datastore.mapping.model.PersistentEntity
@@ -58,7 +58,7 @@ class GrailsEntityDirtinessStrategy implements CustomEntityDirtinessStrategy {
 
     @Override
     boolean isDirty(Object entity, EntityPersister persister, Session session) {
-        !session.contains(entity) || cast(entity).hasChanged() || DirtyCheckingSupport.areEmbeddedDirty(GormEnhancer.findEntity(Hibernate.getClass(entity)), entity)
+        !session.contains(entity) || cast(entity).hasChanged() || DirtyCheckingSupport.areEmbeddedDirty(GormRegistry.instance.apiResolver.findEntity(Hibernate.getClass(entity)), entity)
     }
 
     @Override
@@ -66,7 +66,7 @@ class GrailsEntityDirtinessStrategy implements CustomEntityDirtinessStrategy {
         if (canDirtyCheck(entity, persister, session)) {
             cast(entity).trackChanges()
             try {
-                PersistentEntity persistentEntity = GormEnhancer.findEntity(Hibernate.getClass(entity))
+                PersistentEntity persistentEntity = GormRegistry.instance.apiResolver.findEntity(Hibernate.getClass(entity))
                 if (persistentEntity != null) {
                     resetDirtyEmbeddedObjects(persistentEntity, entity, persister, session)
                 }
@@ -113,7 +113,7 @@ class GrailsEntityDirtinessStrategy implements CustomEntityDirtinessStrategy {
                                             return true
                                         }
                                         else {
-                                            PersistentEntity gormEntity = GormEnhancer.findEntity(Hibernate.getClass(entity))
+                                            PersistentEntity gormEntity = GormRegistry.instance.apiResolver.findEntity(Hibernate.getClass(entity))
                                             PersistentProperty prop = gormEntity.getPropertyByName(attributeInformation.name)
                                             if (prop instanceof Embedded) {
                                                 def val = prop.reader.read(entity)

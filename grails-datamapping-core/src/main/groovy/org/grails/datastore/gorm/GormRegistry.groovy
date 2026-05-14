@@ -22,7 +22,9 @@ import groovy.transform.CompileStatic
 import groovy.util.logging.Slf4j
 import org.grails.datastore.mapping.core.Datastore
 import org.grails.datastore.mapping.core.connections.ConnectionSource
+import org.grails.datastore.mapping.model.MappingContext
 import org.grails.datastore.mapping.model.PersistentEntity
+import org.grails.datastore.gorm.finders.FinderMethod
 
 import java.util.concurrent.ConcurrentHashMap
 
@@ -473,13 +475,12 @@ class GormRegistry {
                 getInstanceApi(className) == null ||
                 getValidationApi(className) == null) {
                 final Class cls = persistentEntity.javaClass
-                DatastoreResolver resolver = new DatastoreResolver() {
-                    @Override Datastore resolve() { apiResolver.findDatastore(cls, null) }
-                }
+                DatastoreResolver resolver = createClassDatastoreResolver(cls)
+                Datastore datastore = gormEnhancer.datastore
 
-                GormStaticApi staticApi = gormEnhancer.getStaticApi(cls, resolver, ConnectionSource.DEFAULT)
-                GormInstanceApi instanceApi = gormEnhancer.getInstanceApi(cls, resolver)
-                GormValidationApi validationApi = gormEnhancer.getValidationApi(cls, resolver)
+                GormStaticApi staticApi = createStaticApi(cls, datastore, resolver, ConnectionSource.DEFAULT)
+                GormInstanceApi instanceApi = createInstanceApi(cls, datastore, resolver, gormEnhancer.failOnError, gormEnhancer.markDirty)
+                GormValidationApi validationApi = createValidationApi(cls, datastore, resolver)
 
                 registerEntityApis(className, staticApi, instanceApi, validationApi)
             }
@@ -489,6 +490,144 @@ class GormRegistry {
             List<String> connectionSourceNames = gormEnhancer.connectionSourceNames
             registerEntityDatastores(className, datastore, connectionSourceNames, persistentEntity)
         }
+    }
+
+    /**
+     * Creates dynamic finders for the default datastore
+     *
+     * @return List of finder methods
+     */
+    List<FinderMethod> createDynamicFinders(Datastore targetDatastore) {
+        createDynamicFinders(new DatastoreResolver() {
+            @Override
+            Datastore resolve() {
+                targetDatastore
+            }
+        }, targetDatastore.getMappingContext())
+    }
+
+    /**
+     * Creates dynamic finders for the given resolver and mapping context
+     *
+     * @param datastoreResolver The datastore resolver
+     * @param mappingContext The mapping context
+     * @return List of finder methods
+     */
+    List<FinderMethod> createDynamicFinders(DatastoreResolver datastoreResolver, MappingContext mappingContext) {
+        return defaultApiFactory.createDynamicFinders(datastoreResolver, mappingContext)
+    }
+
+    /**
+     * Create a GormStaticApi for the given class and datastore
+     *
+     * @param cls The domain class
+     * @param datastore The datastore
+     * @param resolver The datastore resolver
+     * @param qualifier The connection qualifier
+     * @return The GormStaticApi instance
+     */
+    <D> GormStaticApi<D> createStaticApi(Class<D> cls, Datastore datastore, DatastoreResolver resolver, String qualifier) {
+        GormApiFactory apiFactory = getApiFactory(datastore)
+        return apiFactory.createStaticApi(cls, datastore.getMappingContext(), resolver, qualifier, this)
+    }
+
+    /**
+     * Create a GormInstanceApi for the given class and datastore
+     *
+     * @param cls The domain class
+     * @param datastore The datastore
+     * @param resolver The datastore resolver
+     * @param failOnError Whether to fail on error
+     * @param markDirty Whether to mark entities as dirty
+     * @return The GormInstanceApi instance
+     */
+    <D> GormInstanceApi<D> createInstanceApi(Class<D> cls, Datastore datastore, DatastoreResolver resolver, boolean failOnError, boolean markDirty) {
+        GormApiFactory apiFactory = getApiFactory(datastore)
+        return apiFactory.createInstanceApi(cls, datastore.getMappingContext(), resolver, this, failOnError, markDirty)
+    }
+
+    /**
+     * Create a GormValidationApi for the given class and datastore
+     *
+     * @param cls The domain class
+     * @param datastore The datastore
+     * @param resolver The datastore resolver
+     * @return The GormValidationApi instance
+     */
+    <D> GormValidationApi<D> createValidationApi(Class<D> cls, Datastore datastore, DatastoreResolver resolver) {
+        GormApiFactory apiFactory = getApiFactory(datastore)
+        return apiFactory.createValidationApi(cls, datastore.getMappingContext(), resolver, this)
+    }
+
+    /**
+     * Create a DatastoreResolver for the given class
+     *
+     * @param cls The class to resolve datastore for
+     * @return A DatastoreResolver instance
+     */
+    DatastoreResolver createClassDatastoreResolver(Class cls) {
+        new DatastoreResolver() {
+            @Override
+            Datastore resolve() {
+                apiResolver.findDatastore(cls, null)
+            }
+        }
+    }
+
+    /**
+     * Create the default DatastoreResolver
+     *
+     * @return A DatastoreResolver instance
+     */
+    DatastoreResolver createDefaultDatastoreResolver() {
+        new DatastoreResolver() {
+            @Override
+            Datastore resolve() {
+                apiResolver.findDatastore(null, null)
+            }
+        }
+    }
+
+    /**
+     * Get or create a GormStaticApi for the given class with the specified resolver and qualifier
+     * Subclasses can override to provide custom API implementations
+     *
+     * @param cls The domain class
+     * @param datastore The datastore instance
+     * @param resolver The datastore resolver
+     * @param qualifier The connection qualifier
+     * @return The GormStaticApi instance
+     */
+    <D> GormStaticApi<D> getStaticApi(Class<D> cls, Datastore datastore, DatastoreResolver resolver, String qualifier) {
+        return createStaticApi(cls, datastore, resolver, qualifier)
+    }
+
+    /**
+     * Get or create a GormInstanceApi for the given class with the specified resolver
+     * Subclasses can override to provide custom API implementations
+     *
+     * @param cls The domain class
+     * @param datastore The datastore instance
+     * @param resolver The datastore resolver
+     * @param failOnError Whether to fail on error
+     * @param markDirty Whether to mark entities as dirty
+     * @return The GormInstanceApi instance
+     */
+    <D> GormInstanceApi<D> getInstanceApi(Class<D> cls, Datastore datastore, DatastoreResolver resolver, boolean failOnError, boolean markDirty) {
+        return createInstanceApi(cls, datastore, resolver, failOnError, markDirty)
+    }
+
+    /**
+     * Get or create a GormValidationApi for the given class with the specified resolver
+     * Subclasses can override to provide custom API implementations
+     *
+     * @param cls The domain class
+     * @param datastore The datastore instance
+     * @param resolver The datastore resolver
+     * @return The GormValidationApi instance
+     */
+    <D> GormValidationApi<D> getValidationApi(Class<D> cls, Datastore datastore, DatastoreResolver resolver) {
+        return createValidationApi(cls, datastore, resolver)
     }
 }
 

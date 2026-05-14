@@ -168,6 +168,10 @@ class GormEnhancer implements Closeable {
         return qualifiers.unique()
     }
 
+    List<String> getConnectionSourceNames() {
+        return connectionSourceNames
+    }
+
     /**
      * @return The GORM registry instance
      */
@@ -570,36 +574,6 @@ class GormEnhancer implements Closeable {
         return allDatastores.first()
     }
 
-    /**
-     * Find the transaction manager for the given entity
-     *
-     * @param entity The entity class
-     * @param qualifier The qualifier
-     * @return The transaction manager
-     */
-    /**
-     * @deprecated Use {@code GormRegistry.getInstance().getApiResolver().findTransactionManager(entity, qualifier)}.
-     */
-    @Deprecated
-    static PlatformTransactionManager findTransactionManager(Class entity, String qualifier = null) {
-        return getRegistry().apiResolver.findTransactionManager(entity, qualifier)
-    }
-
-    /**
-     * Find an entity for the given entity class
-     *
-     * @param entity The entity class
-     * @param qualifier The qualifier
-     * @return The entity
-     */
-    /**
-     * @deprecated Use {@code GormRegistry.getInstance().getApiResolver().findEntity(entity, qualifier)}.
-     */
-    @Deprecated
-    static PersistentEntity findEntity(Class entity, String qualifier = findTenantId(entity)) {
-        return getRegistry().apiResolver.findEntity(entity, qualifier)
-    }
-
     private static IllegalStateException stateException(Class entity) {
         new IllegalStateException("No GORM implementation configured for class [${entity.name}]. Ensure GORM has been initialized correctly")
     }
@@ -648,21 +622,6 @@ class GormEnhancer implements Closeable {
         }
     }
 
-    @CompileStatic
-    List<FinderMethod> getFinders() {
-        if(finders == null) {
-            finders = Collections.unmodifiableList(createDynamicFinders(datastore))
-        }
-        return finders
-    }
-
-    List<FinderMethod> finders
-
-    /**
-     * Enhance all entities in the datastore
-     *
-     * @param onlyExtendedMethods Whether to only enhance with extended methods
-     */
     @CompileStatic
     void enhance(boolean onlyExtendedMethods = false) {
     }
@@ -744,75 +703,4 @@ class GormEnhancer implements Closeable {
         }
     }
 
-    @CompileStatic
-    protected <D> GormStaticApi<D> getStaticApi(Class<D> cls) {
-        getStaticApi(cls, getDatastoreResolver(cls), ConnectionSource.DEFAULT)
-    }
-
-    @CompileStatic
-    protected <D> GormStaticApi<D> getStaticApi(Class<D> cls, DatastoreResolver resolver, String qualifier) {
-        GormApiFactory apiFactory = registry.getApiFactory(datastore)
-        return apiFactory.createStaticApi(cls, datastore.mappingContext, resolver, qualifier, registry)
-    }
-
-    @CompileStatic
-    protected <D> GormInstanceApi<D> getInstanceApi(Class<D> cls) {
-        getInstanceApi(cls, getDatastoreResolver(cls))
-    }
-
-    @CompileStatic
-    protected <D> GormInstanceApi<D> getInstanceApi(Class<D> cls, DatastoreResolver resolver) {
-        GormApiFactory apiFactory = registry.getApiFactory(datastore)
-        return apiFactory.createInstanceApi(cls, datastore.mappingContext, resolver, registry, failOnError, markDirty)
-    }
-
-    @CompileStatic
-    protected <D> GormValidationApi<D> getValidationApi(Class<D> cls) {
-        getValidationApi(cls, getDatastoreResolver(cls))
-    }
-
-    @CompileStatic
-    protected <D> GormValidationApi<D> getValidationApi(Class<D> cls, DatastoreResolver resolver) {
-        GormApiFactory apiFactory = registry.getApiFactory(datastore)
-        return apiFactory.createValidationApi(cls, datastore.mappingContext, resolver, registry)
-    }
-
-    protected DatastoreResolver getDatastoreResolver(Class cls) {
-        new DatastoreResolver() {
-            @Override
-            Datastore resolve() {
-                registry.apiResolver.findDatastore(cls, null)
-            }
-        }
-    }
-
-    protected DatastoreResolver getDefaultDatastoreResolver() {
-        new DatastoreResolver() {
-            @Override
-            Datastore resolve() {
-                registry.apiResolver.findDatastore(null, null)
-            }
-        }
-    }
-
-    protected List<FinderMethod> createDynamicFinders() {
-        createDynamicFinders(getDefaultDatastoreResolver(), datastore.mappingContext, registry)
-    }
-
-    static List<FinderMethod> createDynamicFinders(Datastore targetDatastore) {
-        createDynamicFinders(new DatastoreResolver() {
-            @Override
-            Datastore resolve() {
-                targetDatastore
-            }
-        }, targetDatastore.getMappingContext(), getRegistry())
-    }
-
-    static List<FinderMethod> createDynamicFinders(DatastoreResolver datastoreResolver, MappingContext mappingContext) {
-        createDynamicFinders(datastoreResolver, mappingContext, getRegistry())
-    }
-
-    static List<FinderMethod> createDynamicFinders(DatastoreResolver datastoreResolver, MappingContext mappingContext, GormRegistry registry) {
-        return registry.defaultApiFactory.createDynamicFinders(datastoreResolver, mappingContext)
-    }
 }

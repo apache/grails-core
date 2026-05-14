@@ -174,7 +174,7 @@ class HibernateGormStaticApi<D> extends GormStaticApi<D> {
         // Create new finders with the qualifier-specific resolver so dynamic finders (e.g. findByName)
         // execute against the correct (non-DEFAULT) datasource session factory.
         List<org.grails.datastore.gorm.finders.FinderMethod> qualifiedFinders =
-                org.grails.datastore.gorm.GormEnhancer.createDynamicFinders(resolver, ds.mappingContext)
+                registry.createDynamicFinders(resolver, ds.mappingContext)
         HibernateGormStaticApi<D> newApi = new HibernateGormStaticApi<D>(persistentClass, ds.mappingContext, qualifiedFinders, resolver, qualifier, classLoader)
         return newApi
     }
