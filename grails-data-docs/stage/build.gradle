@@ -123,7 +123,7 @@ tasks.register('docs', Sync).configure { Sync it ->
     def guidesDir = project.layout.buildDirectory.dir('guides/grails-data')
     def mongoApiDir = project.layout.buildDirectory.dir('mongodb-api/grails-data')
     def hibernate5ApiDir = project.layout.buildDirectory.dir('hibernate5-api/grails-data')
-    def hibernate7ApiDir = project.layout.buildDirectory.dir('hibernate5-api/grails-data')
+    def hibernate7ApiDir = project.layout.buildDirectory.dir('hibernate7-api/grails-data')
     def dataCoreApiDir = project.layout.buildDirectory.dir('data-api')
 
     def combinedDir = project.layout.buildDirectory.dir('docs/grails-data')
