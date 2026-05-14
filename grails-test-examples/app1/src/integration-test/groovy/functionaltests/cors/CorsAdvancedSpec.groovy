@@ -27,7 +27,7 @@ import org.apache.grails.testing.http.client.HttpClientSupport
 /**
  * Integration tests for CORS (Cross-Origin Resource Sharing) functionality.
  * Tests preflight requests, CORS headers, and cross-origin scenarios.
- * 
+ *
  * Note: CORS is enabled for /api/** in application.yml
  */
 @Integration

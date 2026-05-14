@@ -26,7 +26,7 @@ import org.apache.grails.testing.http.client.HttpClientSupport
 
 /**
  * Comprehensive integration tests for advanced data binding features.
- * 
+ *
  * Tests cover:
  * - Map-based binding with nested objects
  * - @BindUsing annotation
