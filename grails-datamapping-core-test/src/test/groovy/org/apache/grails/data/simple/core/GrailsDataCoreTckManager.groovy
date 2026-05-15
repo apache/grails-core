@@ -97,7 +97,8 @@ class GrailsDataCoreTckManager extends GrailsDataTckManager {
         for (cls in domainClasses) {
             simple.mappingContext.addPersistentEntity(cls)
         }
-        def enhancer = new org.grails.datastore.gorm.GormEnhancer(simple, simple.transactionManager)
+        def settings = simple.connectionSources.defaultConnectionSource.settings
+        def enhancer = new org.grails.datastore.gorm.GormEnhancer(simple, simple.transactionManager, settings)
 
         PersistentEntity entity = simple.mappingContext.persistentEntities.find {
             PersistentEntity e -> e.name.contains("TestEntity")}

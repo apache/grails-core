@@ -1,0 +1,17 @@
+[project]
+name = "rlm-mcp"
+version = "0.1.0"
+description = "Python bridge for rlm-mcp"
+requires-python = ">=3.12"
+dependencies = [
+    "rlms",
+    "openai",
+    "pydantic",
+    "pyyaml>=6.0.3",
+]
+
+[tool.uv]
+dev-dependencies = [
+    "pytest",
+    "pytest-mock",
+]

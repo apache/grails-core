@@ -105,32 +105,6 @@ When adding new work items to this file:
 ## 4) Failing Tests from 0_build_grails.txt
 **Note**: The following pass/fail snapshot was explicitly requested.
 
-### Failing Integration/Compilation Tasks
-- `:grails-test-examples-gorm:compileGroovy`
-- `:grails-test-examples-app3:integrationTest`
-- `:grails-test-examples-app1:integrationTest`
-- `:grails-test-examples-exploded:integrationTest`
-- `:grails-test-examples-datasources:integrationTest`
-- `:grails-test-examples-hibernate5-grails-data-service-multi-datasource:integrationTest`
-- `:grails-test-examples-hibernate5-grails-data-service:integrationTest`
-- `:grails-test-examples-hibernate5-grails-database-per-tenant:integrationTest`
-- `:grails-test-examples-hibernate5-grails-multiple-datasources:integrationTest`
-- `:grails-test-examples-hibernate5-grails-multitenant-multi-datasource:integrationTest`
-- `:grails-test-examples-hibernate5-grails-partitioned-multi-tenancy:integrationTest`
-- `:grails-test-examples-hibernate5-grails-schema-per-tenant:integrationTest`
-- `:grails-test-examples-hibernate5-issue450:integrationTest`
-- `:grails-test-examples-hibernate7-grails-data-service-multi-datasource:integrationTest`
-- `:grails-test-examples-hibernate7-grails-database-per-tenant:integrationTest`
-- `:grails-test-examples-hibernate7-grails-multiple-datasources:integrationTest`
-- `:grails-test-examples-hibernate7-grails-multitenant-multi-datasource:integrationTest`
-- `:grails-test-examples-hibernate7-grails-partitioned-multi-tenancy:integrationTest`
-- `:grails-test-examples-hibernate7-grails-schema-per-tenant:integrationTest`
-- `:grails-test-examples-hibernate7-issue450:integrationTest`
-- `:grails-test-examples-mongodb-test-data-service:integrationTest`
-- `:grails-test-examples-plugins-exploded:integrationTest`
-- `:grails-test-examples-mongodb-hibernate5:integrationTest`
-- `:grails-test-examples-views-functional-tests:integrationTest`
-- `:grails-test-examples-scaffolding-fields:integrationTest`
 
 ### Modules with Failed Tests
 - `grails-data-hibernate5`
