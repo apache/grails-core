@@ -23,6 +23,7 @@ import groovy.transform.CompileStatic
 import org.springframework.transaction.PlatformTransactionManager
 
 import org.grails.datastore.gorm.GormEnhancer
+import org.grails.datastore.gorm.GormRegistry
 import org.grails.datastore.mapping.core.Datastore
 import org.grails.datastore.mapping.core.connections.ConnectionSourceSettings
 
@@ -40,14 +41,18 @@ class HibernateGormEnhancer extends GormEnhancer {
     private final PlatformTransactionManager transactionManager
 
     HibernateGormEnhancer(HibernateDatastore datastore, PlatformTransactionManager transactionManager) {
-        super(datastore, transactionManager, new ConnectionSourceSettings())
+        super(datastore, transactionManager, new ConnectionSourceSettings(), prepareRegistry())
         this.transactionManager = transactionManager
-        registry.registerApiFactory(HibernateDatastore, API_FACTORY)
     }
 
     HibernateGormEnhancer(Datastore datastore, PlatformTransactionManager transactionManager, ConnectionSourceSettings settings) {
-        super(datastore, transactionManager, settings)
+        super(datastore, transactionManager, settings, prepareRegistry())
         this.transactionManager = transactionManager
+    }
+
+    private static GormRegistry prepareRegistry() {
+        GormRegistry registry = GormRegistry.instance
         registry.registerApiFactory(HibernateDatastore, API_FACTORY)
+        return registry
     }
 }

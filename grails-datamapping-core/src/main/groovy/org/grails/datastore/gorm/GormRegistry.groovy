@@ -115,8 +115,30 @@ class GormRegistry {
         if (datastore == null) {
             return defaultApiFactory
         }
-        GormApiFactory factory = apiFactoriesByDatastoreType.get(datastore.getClass())
-        return factory ?: defaultApiFactory
+        Class<? extends Datastore> datastoreType = datastore.getClass()
+        GormApiFactory factory = apiFactoriesByDatastoreType.get(datastoreType)
+        if (factory != null) {
+            return factory
+        }
+
+        Class<?> current = datastoreType
+        while (current != null && Datastore.isAssignableFrom(current)) {
+            GormApiFactory inheritedFactory = apiFactoriesByDatastoreType.get((Class<? extends Datastore>) current)
+            if (inheritedFactory != null) {
+                apiFactoriesByDatastoreType.put(datastoreType, inheritedFactory)
+                return inheritedFactory
+            }
+            current = current.getSuperclass()
+        }
+
+        for (entry in apiFactoriesByDatastoreType.entrySet()) {
+            if (entry.key.isAssignableFrom(datastoreType)) {
+                apiFactoriesByDatastoreType.put(datastoreType, entry.value)
+                return entry.value
+            }
+        }
+
+        return defaultApiFactory
     }
 
     <D> GormStaticApi<D> findStaticApi(Class<D> entity, String qualifier = null) {

@@ -58,7 +58,8 @@ class GrailsEntityDirtinessStrategy implements CustomEntityDirtinessStrategy {
 
     @Override
     boolean isDirty(Object entity, EntityPersister persister, Session session) {
-        !session.contains(entity) || cast(entity).hasChanged() || DirtyCheckingSupport.areEmbeddedDirty(GormRegistry.instance.apiResolver.findEntity(Hibernate.getClass(entity)), entity)
+        PersistentEntity persistentEntity = GormRegistry.instance.apiResolver.findEntity(Hibernate.getClass(entity))
+        !session.contains(entity) || cast(entity).hasChanged() || (persistentEntity != null && DirtyCheckingSupport.areEmbeddedDirty(persistentEntity, entity))
     }
 
     @Override
@@ -114,19 +115,16 @@ class GrailsEntityDirtinessStrategy implements CustomEntityDirtinessStrategy {
                                         }
                                         else {
                                             PersistentEntity gormEntity = GormRegistry.instance.apiResolver.findEntity(Hibernate.getClass(entity))
-                                            PersistentProperty prop = gormEntity.getPropertyByName(attributeInformation.name)
-                                            if (prop instanceof Embedded) {
-                                                def val = prop.reader.read(entity)
-                                                if (val instanceof DirtyCheckable) {
-                                                    return ((DirtyCheckable) val).hasChanged()
-                                                }
-                                                else {
-                                                    return false
+                                            if (gormEntity != null) {
+                                                PersistentProperty prop = gormEntity.getPropertyByName(attributeInformation.name)
+                                                if (prop instanceof Embedded) {
+                                                    def val = prop.reader.read(entity)
+                                                    if (val instanceof DirtyCheckable) {
+                                                        return ((DirtyCheckable) val).hasChanged()
+                                                    }
                                                 }
                                             }
-                                            else {
-                                                return false
-                                            }
+                                            return false
                                         }
                                     }
                                 }

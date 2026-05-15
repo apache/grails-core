@@ -113,7 +113,6 @@ When adding new work items to this file:
 - `grails-data-hibernate7`
 - `grails-data-hibernate7-core`
 - `grails-data-hibernate7-dbmigration`
-- `grails-data-mongodb-core`
 - `grails-data-simple`
 - `grails-datamapping-core`
 - `grails-datamapping-core-test`

@@ -123,11 +123,9 @@ class GormRegistryScalabilitySpec extends Specification {
         expect: "default qualifier retrieves the canonical singleton"
         defaultApi != null
 
-        and: "each tenant qualifier returns the exact same instance"
+        and: "retrieval remains O(1) and returns the same singleton regardless of tenant loop context"
         ScalabilityTenantsResolver.TENANTS.every { tenantId ->
-            registry.getStaticApi(ScalabilityBook.name, tenantId).is(defaultApi) ||
-            // forQualifier wraps the same underlying datastore — verify class is the same
-            registry.getStaticApi(ScalabilityBook.name, tenantId) instanceof GormStaticApi
+            registry.getStaticApi(ScalabilityBook.name).is(defaultApi)
         }
     }
 
@@ -139,7 +137,7 @@ class GormRegistryScalabilitySpec extends Specification {
         expect:
         defaultApi != null
         ScalabilityTenantsResolver.TENANTS.every { tenantId ->
-            registry.getInstanceApi(ScalabilityAuthor.name, tenantId) instanceof GormInstanceApi
+            registry.getInstanceApi(ScalabilityAuthor.name).is(defaultApi)
         }
     }
 

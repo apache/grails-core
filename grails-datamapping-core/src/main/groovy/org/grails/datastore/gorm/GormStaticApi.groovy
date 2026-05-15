@@ -144,7 +144,14 @@ class GormStaticApi<D> extends AbstractGormApi<D> implements GormAllOperations<D
 
     @Override
     PersistentEntity getGormPersistentEntity() {
-        super.getGormPersistentEntity()
+        PersistentEntity entity = qualifier != null ? registry.apiResolver.findEntity(persistentClass, qualifier) : null
+        if (entity == null) {
+            entity = super.getGormPersistentEntity()
+        }
+        if (entity == null) {
+            entity = registry.apiResolver.findEntity(persistentClass)
+        }
+        entity
     }
 
     @Override

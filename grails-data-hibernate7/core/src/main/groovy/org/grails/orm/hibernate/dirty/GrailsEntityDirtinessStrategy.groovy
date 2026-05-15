@@ -59,7 +59,8 @@ class GrailsEntityDirtinessStrategy implements CustomEntityDirtinessStrategy {
     @Override
     boolean isDirty(Object entity, EntityPersister persister, Session session) {
         DirtyCheckable dirtyCheckable = cast(entity)
-        boolean dirty = !session.contains(entity) || dirtyCheckable.hasChanged() || DirtyCheckingSupport.areEmbeddedDirty(GormRegistry.instance.apiResolver.findEntity(Hibernate.getClass(entity)), entity)
+        PersistentEntity persistentEntity = GormRegistry.instance.apiResolver.findEntity(Hibernate.getClass(entity))
+        boolean dirty = !session.contains(entity) || dirtyCheckable.hasChanged() || (persistentEntity != null && DirtyCheckingSupport.areEmbeddedDirty(persistentEntity, entity))
         return dirty
     }
 

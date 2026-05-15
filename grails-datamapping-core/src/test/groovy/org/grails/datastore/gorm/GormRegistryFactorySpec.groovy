@@ -51,6 +51,17 @@ class GormRegistryFactorySpec extends Specification {
         registry.getApiFactory(datastore).is(customFactory)
     }
 
+    void 'registry resolves factory for datastore interface or superclass override'() {
+        given:
+        GormRegistry registry = GormRegistry.instance
+        Datastore datastore = Mock(Datastore)
+        GormApiFactory customFactory = Mock(GormApiFactory)
+        registry.registerApiFactory(Datastore, customFactory)
+
+        expect:
+        registry.getApiFactory(datastore).is(customFactory)
+    }
+
     void 'registry exposes singleton resolver instance'() {
         given:
         GormRegistry registry = GormRegistry.instance
