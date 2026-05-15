@@ -253,12 +253,9 @@ abstract class AbstractGrailsControllerUrlMappings implements UrlMappings {
         matches as UrlMappingInfo[]
     }
 
-    private static final String CAPTURED_WILDCARD = '(*)'
-    private static final String CAPTURED_DOUBLE_WILDCARD = '(**)'
-
     private static int literalTokenCount(UrlMappingInfo info) {
         String[] tokens = info.urlData?.tokens
-        tokens == null ? 0 : (int) tokens.count { String t -> t != CAPTURED_WILDCARD && t != CAPTURED_DOUBLE_WILDCARD && !t.startsWith('(') }
+        tokens == null ? 0 : (int) tokens.count { String t -> !t.contains('*') }
     }
 
     private static int nonRoutingParamCount(UrlMappingInfo info) {
