@@ -46,7 +46,8 @@ class SimpleMapQuerySpec extends Specification {
         datastore.mappingContext.setMultiTenancyMode(MultiTenancySettings.MultiTenancyMode.DISCRIMINATOR)
         PersistentEntity pe = datastore.mappingContext.addPersistentEntity(TestEntity)
         
-        new GormEnhancer(datastore, datastore.transactionManager).with {
+        def settings = datastore.connectionSources.defaultConnectionSource.settings
+        new GormEnhancer(datastore, datastore.transactionManager, settings).with {
             registerEntity(pe)
         }
         SimpleMapSession session = (SimpleMapSession) datastore.connect()
@@ -93,7 +94,8 @@ class SimpleMapQuerySpec extends Specification {
         }
         ctx.addApplicationListener(listener)
         
-        new GormEnhancer(datastore, datastore.transactionManager).with {
+        def settings = datastore.connectionSources.defaultConnectionSource.settings
+        new GormEnhancer(datastore, datastore.transactionManager, settings).with {
             registerEntity(pe)
         }
 
